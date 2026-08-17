@@ -19,6 +19,7 @@ import socket
 import threading
 import time
 import uuid
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -297,22 +298,86 @@ def _json_line(row: dict[str, Any]) -> str:
     return json.dumps(row, sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n"
 
 
+def _parse_inbox_rows(
+    inbox_path: Path,
+) -> tuple[list[dict[str, Any]], tuple[int, Exception] | None, dict[str, str]]:
+    """Parse every line, SPLITTING file corruption from row-contract violations.
+
+    Returns ``(rows, file_corruption, contract_violations)`` where
+    ``file_corruption`` is ``(line_number, exception)`` or ``None``, and
+    ``contract_violations`` maps ``event_id -> reason``.
+
+    THE TWO FAILURE CLASSES THIS USED TO CONFLATE.  ``_validate_row`` raises
+    ``InboxRowValidationError`` for FIELD RELATIONSHIPS -- an unknown
+    ``event_type``, a bad ``status``, an unparseable ``written_at_utc``, a
+    missing per-type text field.  The old code caught that in the SAME handler
+    as ``json.JSONDecodeError`` and ``shutil.move``d the entire inbox, so ONE
+    arm's malformed row deleted shared state for every reader (7 read consumers
+    plus a preflight gate).  The sister incident in the canonical task-status
+    ledger is the measured anchor (2026-08-17); this is the second site.
+
+    Sharpest live case: ``_validate_row`` demands an EXACT ``schema_version``
+    match, so bumping the schema would fail EVERY existing row and move the
+    shared inbox on the first read -- a routine migration would present as
+    total data loss.
+
+    They are not the same failure and must not share a response:
+
+    * FILE corruption -- the line is not JSON, or is not an object.  Later
+      offsets are untrustworthy; refusing beats serving a truncated prefix.
+      Quarantine stays.
+    * ROW-CONTRACT violation -- the line IS a well-formed JSON object and one
+      field relationship does not hold.  Every other row is exactly as valid as
+      it was a moment ago.  Isolating the offending ROW is proportionate;
+      moving the file is not.
+
+    Isolation is per-ROW here, not per-conversation: inbox rows are append-only
+    EVENTS, not a per-key state machine, so dropping one cannot make the others
+    incoherent.  (The task-status ledger isolates per-TASK precisely because
+    dropping one row there WOULD orphan that task's later rows.)
+
+    The offending exception is RETURNED, not swallowed, so the caller can chain
+    it with ``from`` -- why a line failed is the whole diagnostic.
+    """
+
+    rows: list[dict[str, Any]] = []
+    contract_violations: dict[str, str] = {}
+    for lineno, line in enumerate(inbox_path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as exc:
+            return rows, (lineno, exc), contract_violations
+        if not isinstance(row, dict):
+            # Parses as JSON, but there is no row to hold to a contract.
+            return rows, (lineno, ValueError("row is not an object")), contract_violations
+        try:
+            _validate_row(row)
+        except InboxRowValidationError as exc:
+            raw_id = row.get("event_id")
+            key = raw_id if isinstance(raw_id, str) and raw_id.strip() else f"<line {lineno}>"
+            # One entry per violating ROW, never per event_id.  ``setdefault``
+            # here would silently merge two DIFFERENT bad rows that happen to
+            # share an id, and then ``len(contract_violations)`` -- which the
+            # warning reports as a row count -- would understate the debt.  A
+            # count whose denominator is not what it claims is the defect class
+            # this module exists to stop; disambiguate by line instead.
+            if key in contract_violations:
+                key = f"{key} (line {lineno})"
+            contract_violations[key] = f"row contract violated at line {lineno}: {exc}"
+            continue
+        rows.append(row)
+    return rows, None, contract_violations
+
+
 def load_inbox_strict(path: Path | None = None) -> list[dict[str, Any]]:
     inbox_path = Path(path or INBOX_PATH)
     if not inbox_path.exists():
         return []
-    rows: list[dict[str, Any]] = []
-    current_lineno: int | str = "?"
-    try:
-        lines = inbox_path.read_text(encoding="utf-8").splitlines()
-        for lineno, line in enumerate(lines, start=1):
-            current_lineno = lineno
-            if not line.strip():
-                continue
-            row = json.loads(line)
-            _validate_row(row)
-            rows.append(row)
-    except (json.JSONDecodeError, InboxRowValidationError) as exc:
+    rows, file_corruption, contract_violations = _parse_inbox_rows(inbox_path)
+    if file_corruption is not None:
+        corrupt_line, corrupt_exc = file_corruption
         corrupt_path = inbox_path.with_name(
             f"{inbox_path.name}.corrupt.{_utc_now().strftime('%Y%m%dT%H%M%SZ')}"
         )
@@ -321,10 +386,45 @@ def load_inbox_strict(path: Path | None = None) -> list[dict[str, Any]]:
         except OSError:
             corrupt_path = inbox_path
         raise InboxRowCorruptError(
-            f"inbox JSONL at {inbox_path} is corrupt near line {current_lineno}; "
-            f"quarantined to {corrupt_path}: {exc}"
-        ) from exc
+            f"inbox JSONL at {inbox_path} is corrupt near line {corrupt_line}; "
+            f"quarantined to {corrupt_path}: {corrupt_exc}"
+        ) from corrupt_exc
+    if contract_violations:
+        # LOUD, never silent: an excluded event is debt somebody must clear, and
+        # a quiet skip is how "the inbox looks fine" becomes a lie.
+        detail = "; ".join(f"{eid}: {why}" for eid, why in sorted(contract_violations.items()))
+        warnings.warn(
+            f"codex_to_claude_inbox: {len(contract_violations)} row(s) UNREADABLE and "
+            f"EXCLUDED from {inbox_path} -- they violate the row contract and cannot be "
+            f"served, but the remaining {len(rows)} row(s) load and the inbox is NOT "
+            f"moved. Repair by appending a corrected event (the log is append-only). "
+            f"{detail}",
+            stacklevel=2,
+        )
     return rows
+
+
+def unreadable_inbox_rows(path: Path | None = None) -> dict[str, str]:
+    """``{event_id: reason}`` for rows the loader excludes.
+
+    The queryable half: a repair tool or audit asks here instead of parsing a
+    warning string.  Raises ``InboxRowCorruptError`` on an unparseable line
+    WITHOUT quarantining -- a read-only audit must not rename the file it
+    audits, and must not answer from a truncated read either.
+    """
+
+    inbox_path = Path(path or INBOX_PATH)
+    if not inbox_path.exists():
+        return {}
+    _rows, file_corruption, contract_violations = _parse_inbox_rows(inbox_path)
+    if file_corruption is not None:
+        corrupt_line, corrupt_exc = file_corruption
+        raise InboxRowCorruptError(
+            f"inbox JSONL at {inbox_path} line {corrupt_line} is unparseable; cannot "
+            f"report unreadable rows from a truncated read (not quarantined -- this is "
+            f"a read-only audit; call load_inbox_strict to quarantine)"
+        ) from corrupt_exc
+    return contract_violations
 
 
 def load_inbox(path: Path | None = None) -> list[dict[str, Any]]:
@@ -736,4 +836,5 @@ __all__ = [
     "query_open_questions",
     "query_open_questions_for_claude",
     "query_unread_relays",
+    "unreadable_inbox_rows",
 ]
