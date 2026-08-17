@@ -49,6 +49,7 @@ Axis `[macOS-CPU advisory]`; scorer-free, $0, no launches, no Modal.  `score_cla
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import math
 import os
@@ -377,12 +378,55 @@ def sweep(args: argparse.Namespace) -> int:
         row["breakeven_eta"] = total_B * RATE_DS_PER_BYTE / (flips * SEG_DS_PER_FLIP) \
             if flips > 0 else None
         rows.append(row)
+        # ALWAYS KEEP THE PAYLOAD -- per CANDIDATE, not only the winner's.  These blobs were
+        # materialized in memory; persisting only their LENGTHS is the measure-and-discard shape
+        # the rule forbids at the typing moment.  The whole 74-level family is ~56 MB.
+        row["retained"] = {
+            "mask": save_blob(work / "retained" / f"fo2h_mask_m{m:03d}.rc", r["_mask_blob"]),
+            "target": save_blob(work / "retained" / f"fo2h_target_m{m:03d}.rc", r["_tgt_blob"]),
+            "selected_cells": save_array(
+                work / "retained" / f"fo2h_selected_cells_m{m:03d}.npy", sel),
+        }
         best_blobs[m] = {"mask": r["_mask_blob"], "tgt": r["_tgt_blob"], "sel": sel}
         print(f"  [sweep] m={m:3d} flips={int(flips):6d} payload={payload_B:7d} B "
               f"side={side_live_B:6.1f} B  breakeven_eta={row['breakeven_eta']:.4f}", flush=True)
         progress(work, "leg2-level", {"cells": m, "flips": int(flips),
                                       "payload_B": payload_B,
                                       "breakeven_eta": row["breakeven_eta"]})
+
+    # --- marginal bundle cost: the statistic that decides inclusion, in REAL bytes -------------
+    # Adding cells m-1 -> m buys `dflips` for `dbytes`.  The bundle pays iff eta > dB/dflip
+    # divided by the seg market bar (1.273108 B per scored flip).  Recorded because it is the
+    # inclusion test itself, and because its ORDER is a measurable property of the ranking.
+    bar_B_per_flip = SEG_DS_PER_FLIP / RATE_DS_PER_BYTE
+    marg = []
+    for prev, cur in itertools.pairwise(rows):
+        df = cur["flips"] - prev["flips"]
+        db = cur["total_bytes_with_side_info"] - prev["total_bytes_with_side_info"]
+        if df > 0:
+            marg.append({"cells": cur["cells"], "d_flips": df, "d_bytes": db,
+                         "bytes_per_flip": db / df, "pays_iff_eta_above": (db / df) / bar_B_per_flip})
+    # Is the ranking MONOTONE in real marginal cost?  sr1 ranked cells by IDEAL per-cell entropy;
+    # if the real coder's marginal costs do not increase along that order, the ranking mis-orders
+    # the cells and a NON-PREFIX selection can beat every prefix measured here.
+    inversions = [(a["cells"], b["cells"]) for a, b in itertools.pairwise(marg)
+                  if b["bytes_per_flip"] < a["bytes_per_flip"]]
+    marginal_analysis = {
+        "bar_B_per_scored_flip": bar_B_per_flip,
+        "monotone_in_real_marginal_cost": not inversions,
+        "n_inversions": len(inversions),
+        # A "bundle" is the gap between consecutive CODED levels.  It is a single-cell marginal
+        # only when every level was coded; with a stepped tail the tail bundles are wider and the
+        # inversion count is correspondingly coarser.  Recorded so the granularity is never assumed.
+        "bundles_are_single_cell": levels == list(range(1, n_live + 1)),
+        "levels_coded": len(levels),
+        "interpretation":
+            "sr1's ranking is by IDEAL per-cell entropy.  Inversions mean the real coder charges "
+            "a LATER cell less per flip than an EARLIER one, so prefixes of this ranking do not "
+            "exhaust the family -- a greedy re-ranking on MEASURED marginal cost could beat every "
+            "row here.  That is an OWED follow-on, not something this arm measured.",
+        "rows": marg,
+    }
 
     # --- adjudication -------------------------------------------------------------------------
     incumbent = next((r for r in rows if r["cells"] == SR1_IDEAL_CELLS), None)
@@ -440,6 +484,7 @@ def sweep(args: argparse.Namespace) -> int:
         "frozen_pins": {"fo1_total_B": FO1_TOTAL_B, "fo1_breakeven_eta": FO1_BREAKEVEN_ETA,
                         "sr1_ideal_total_B": SR1_IDEAL_BYTES},
         "eta_grid": etas,
+        "marginal_bundle_analysis": marginal_analysis,
         "best_by_eta": best_by_eta,
         "min_breakeven_eta_row": {k: v for k, v in min_breakeven.items()
                                   if not k.startswith("_")},
