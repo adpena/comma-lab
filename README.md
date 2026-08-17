@@ -46,6 +46,21 @@ bytes.
 
 Scoring formula: `S = 100 * seg_distortion + sqrt(10 * pose_distortion) + 25 * rate`
 
+## Inherited substrate and attribution
+
+Work in this repository builds on published contest entries, and the borrowing is
+itemized rather than left to inference. The current candidate line descends from
+**PR #130 `semantic-pose-HPAC_CPR1`** (Fesal Fayed) and **PR #135
+`semantic-pose-HPAC_CPR1_polished`** (Shreyan Mohanty), which itself incorporates
+**PR #133 `cpr1_cbq_matched8`** (`JasonMo123`). The learned semantic renderer and
+pose carrier in our archives are PR #135's, byte-identical after decode; we do not
+claim them.
+
+The mechanism-level accounting — what is inherited, what is their idea in our
+implementation, and what is original here, each with a SHA-256 receipt — is
+[`.omx/research/ddm_pq1_submission_packet_prep_20260815/BORROWED_SUBSTRATE_ACCOUNTING.md`](.omx/research/ddm_pq1_submission_packet_prep_20260815/BORROWED_SUBSTRATE_ACCOUNTING.md).
+Read it before treating any learned content in this repository as ours.
+
 ## Evidence Grades
 
 | Grade | Public/writeup use | Minimum requirement |
@@ -129,8 +144,10 @@ Methodology long-form: [`docs/writeup/cuda_cpu_drift_methodology.md`](docs/write
 ### Related: `adpena/tac` standalone OSS package
 
 The reusable codec, predictor, search, and runtime-contract primitives developed
-in this research environment are open-sourced as standalone Python package
-**[`comma-lab/src/tac`](https://github.com/adpena/comma-lab/tree/main/src/tac)** (MIT licensed). This
+in this research environment are open-sourced as the standalone Python package
+**[`adpena/tac`](https://github.com/adpena/tac)** (MIT licensed), whose in-repo
+source lives at
+[`comma-lab/src/tac`](https://github.com/adpena/comma-lab/tree/main/src/tac). This
 `comma-lab` repo contains the full research environment, experimental
 scaffolding, council deliberations, dispatch ledgers, and state-of-development
 artifacts; `adpena/tac` is the curated production extract suitable for OSS

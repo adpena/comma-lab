@@ -31,11 +31,13 @@ measured rr4 result. The score-bearing payload is `archive.zip`; the receiver is
   `cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008`
 - Evaluation source commit: `e7ca85754bb9e6a4b319e5a8fa206366c90bd6f4`
 - Public source repository: https://github.com/adpena/comma-lab
-- Pinned source revision:
+- Pinned source revision (what the T4 evaluation ran from):
   https://github.com/adpena/comma-lab/commit/e7ca85754bb9e6a4b319e5a8fa206366c90bd6f4
+- Compression-script revision (the entry point landed after the evaluation pin):
+  https://github.com/adpena/comma-lab/commit/a411f612aaf095ec27ff05eaf38c5d8c17f28c30
 
-The public source pin must have its anonymous visibility verified before a pull
-request is opened.
+Two labelled revisions are given rather than one misstated one. Anonymous
+visibility of both was verified the day this packet was frozen.
 
 ## Custody correction: two receipt files in this tree are stale
 
@@ -57,6 +59,26 @@ value recorded in the exact-authority row. A reader must be able to reproduce th
 evaluated tree byte-for-byte, so the tree is left alone and the correction lives
 in this README, which is not part of the hashed set.
 
+The same two files also contain absolute paths from the machine that generated
+them. They are inert: nothing in `inflate.sh`, `inflate.py`, `cpr1/`, or
+`runtime/` reads either file. They are shipped only because the evaluated
+runtime-tree hash was computed over them, and for the same reason they are not
+edited.
+
+## Two names a reader will meet in the receiver
+
+Both are cosmetic and neither changes behaviour.
+
+- `CP135` and `F26` appear in `inflate.sh` as an error string, environment
+  variables, and file names. They are internal codenames for the inherited
+  PR130/PR135 lineage, kept because renaming them would change the evaluated
+  runtime-tree hash.
+- `inflate.sh` carries a `Darwin` branch that calls `brew --prefix libomp`. It is
+  **unreachable on the contest runner**: it requires `F26_TOKEN_DECODER` to equal
+  `native-hpac`, and the script defaults that variable to `python` with nothing
+  setting it otherwise. It is a local acceleration path, not a macOS
+  requirement. This submission assumes Linux.
+
 ## What this submission is
 
 A lossless entropy re-encode of an inherited archive. Seven of its eight parsed
@@ -66,8 +88,12 @@ ships in the receiver, stores zero archive bytes, and is driven entirely by
 already-decoded symbols. The decoded token field is unchanged, so `d_seg` and
 `d_pose` are unchanged by construction and the improvement is entirely rate.
 
-Read `BORROWED_SUBSTRATE_ACCOUNTING.md` before treating any of the learned
-content as ours. Most of it is not.
+Read `BORROWED_SUBSTRATE_ACCOUNTING.md`, shipped in this directory, before
+treating any of the learned content as ours. Most of it is not — the semantic
+renderer and the pose carrier are PR #135's, byte-identical after decode. The
+same table is reproduced inline in the pull-request body. It also records that
+the decode-time-corrector mechanism class was published first by PR #138, opened
+the same day our result was measured; we make no priority claim.
 
 ## Reproduction
 
@@ -89,7 +115,10 @@ value. Verified 2026-08-17 into a clean store: token stream
 `6c3757bd52a18d3c…` (match), archive `35ac2b9beb7e6fa8…` (match), determinism
 repeat byte-identical.
 
-To evaluate the shipped archive:
+To evaluate the shipped archive, first download `archive.zip` from the release
+asset linked in the pull request into this directory — `inflate.py` resolves it
+beside itself and refuses without it, and the upstream scorer reads it from the
+submission directory as well.
 
 ```bash
 sha256sum archive.zip
@@ -106,8 +135,20 @@ inferred from the other.
 
 ## Dependency closure
 
-The receiver installs its pinned dependencies into an isolated build directory
-when the environment does not already provide them. This is the existing
-fail-closed dependency-closure mechanism. It downloads no model, table, or
-video-derived payload. All score-bearing learned content is inside
-`archive.zip`.
+The receiver needs four things from the evaluation environment:
+
+- **PyTorch**, from the image.
+- **Brotli 1.2.0**, installed into an isolated build directory from a pinned
+  wheel when the environment does not already provide it. This is the existing
+  fail-closed dependency-closure mechanism: if it cannot be satisfied, the
+  receiver exits 69 with a named reason rather than continuing.
+- **`constriction`**, the entropy-coding library.
+- **A working C compiler.** `inflate.sh` compiles `runtime/entropy/rc64_backend.c`
+  into the build directory on every run, using `${CC:-cc}`. This is a hard
+  requirement and it is stated here because, unlike the Brotli path, it is not
+  guarded — on an image without a toolchain the script fails under `set -e` with
+  a raw compiler error rather than a diagnosis. The evaluated T4 image satisfies
+  it: inflation completed in 476.6 s.
+
+The receiver downloads no model, table, or video-derived payload. All
+score-bearing learned content is inside `archive.zip`.

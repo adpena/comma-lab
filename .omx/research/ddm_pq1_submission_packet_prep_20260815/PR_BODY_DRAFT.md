@@ -112,17 +112,30 @@ independently. That is below our own prior custodied row and below the best
 ranked score on the leaderboard at the time of writing (PR #135,
 `semantic-pose-HPAC_CPR1_polished`, 0.162).
 
-Two honesty qualifications we would rather state than have found:
+Three honesty qualifications we would rather state than have found:
 
-1. There is an open PR claiming `0.1591495384`. That figure is **author-claimed
-   and not yet evaluated by the maintainers**, as is ours until this PR is run.
-   We are not asserting a win over an unverified number; we are reporting our
-   measured one.
-2. The **innovation here is narrow and we scope it narrowly**: a zero-byte
+1. There is an open PR claiming `0.1591495384` (PR #138, `opal_v1`). That figure
+   is **author-claimed and not yet evaluated by the maintainers**, as is ours
+   until this PR is run. We are not asserting a win over an unverified number;
+   we are reporting our measured one.
+2. **PR #138 published our mechanism class first, and we did not know it when we
+   built ours.** Its online correction is learned from the already-decoded
+   prefix, reproduced identically by encoder and decoder, adds no table or weight
+   to the archive, and yields pure rate — the same idea as our corrector, by a
+   different construction (55 causal context families and an online mixer; ours
+   is a per-group statistical corrector). PR #138 opened 2026-08-17 08:31Z. Our
+   design work is dated in-repository from 2026-07-22, our first measured result
+   landed 14:41Z the same day, and we first read PR #138 at 19:32Z, after the
+   byte-close. We therefore describe this as **concurrent independent
+   development** and make **no priority claim**. PR #136 is adjacent and also
+   earlier.
+3. The **innovation here is narrow and we scope it narrowly**: a zero-byte
    decode-time probability corrector that losslessly saves 1,598 archive bytes.
-   The learned vehicle underneath — semantic renderer, carrier, HPAC probability
-   object — is PR130/PR135 lineage, is not ours, and is itemized below rather
-   than folded into the claim.
+   The learned vehicle underneath — the semantic renderer and the pose carrier —
+   is PR130/PR135 lineage, is not ours, and is itemized below rather than folded
+   into the claim. The one learned object in the archive that *is* ours is the
+   HPAC probability object: PR130's architecture, retrained here on our own label
+   field. It is inherited unchanged from the base candidate in this generation.
 
 # additional comments
 
@@ -138,22 +151,60 @@ is CPU-runnable and that the decoded content is identical; it is not a CPU score
 
 ## Borrowed-substrate accounting
 
+Classes: `inherited-substrate` (theirs, used as-is) · `mechanism-adopt-with-
+attribution` (their idea or source, our implementation or re-fit) ·
+`ours-original` (built here, with a receipt).
+
+"Byte-identical to base" means identical to the archive we inherited at the
+previous step, **not** identical to PR130's or PR135's bytes — the base already
+contains our retrained HPAC object and our compensation edits.
+
 | Section or mechanism | Classification | SHA-256 receipt and boundary |
 |---|---|---|
-| Semantic renderer state | `PR130/135-byte-identical` | decoded 36,051 B, `b489c73567046e64…`; byte-identical to base |
-| Carrier state | `PR130/135-byte-identical` | decoded 22,242 B, `196f0e5136f4d6bf…`; byte-identical to base |
-| Compressed model container | `PR130/135-byte-identical` | 70,453 B, `e35d12371fa79747…`; byte-identical to base |
-| HPAC probability object | `PR130-lineage`, inherited unchanged here | 17,952 B, `e8c0cfd73d3275ad…`; byte-identical to base |
-| Compensation blob | `PR130/135-byte-identical` | 36 B, `38792b4953318117…`; byte-identical to base |
-| Residual payload + table codes | `ours-original`, inherited unchanged here | residual `74775aab04c7615c…`; table codes `76afdc3ceda1212a…` |
-| **RC64 token stream (only changed section)** | **`ours-original` estimator over borrowed probabilities** | 110,512 B, `6c3757bd52a18d3c…` (base 112,110 B, `73a878891a31c366…`); corrector `96fd35aaf82c737a…` |
-| RC64 backend, encoder side | `PR135-byte-identical` | compiles PR135's `rc64_backend.c`, `5c75e2c70b89f148…`, unmodified |
-| RC64 backend, shipped receiver | `PR135-lineage-modified` | shipped `05839d1416e68a49…`, which **differs** from the PR135 source above |
+| Semantic renderer state | `inherited-substrate` (PR135, proven byte-identical) | decoded 36,051 B, `b489c73567046e64…` |
+| Pose carrier state | `inherited-substrate` (PR135, proven byte-identical) | decoded 22,242 B, `196f0e5136f4d6bf…` |
+| Compressed model container | `inherited-substrate`; unchanged from base, PR-level equality not independently verified | 70,453 B, `e35d12371fa79747…` |
+| **HPAC probability object** | **`mechanism-adopt-with-attribution`** — PR130's architecture, **retrained here on our own label field**; inherited unchanged in this generation | 17,952 B, `e8c0cfd73d3275ad…`; checkpoint ep0634 selected from 81 retained candidates |
+| Compensation blob | `mechanism-adopt-with-attribution` — container inherited, contents include our admitted edits | 36 B, `38792b4953318117…`; compensation pairs `[7, 96, 105, 176, 178, 517, 523]` |
+| Residual payload + table codes | `inherited-substrate`; **provenance unresolved, no originality claimed** | residual 100 B `74775aab04c7615c…`; table codes `76afdc3ceda1212a…` |
+| **RC64 token stream (only changed section)** | **`ours-original` estimator over inherited probabilities** | 110,512 B, `6c3757bd52a18d3c…` (base 112,110 B, `73a878891a31c366…`); corrector `96fd35aaf82c737a…` |
+| RC64 backend, encoder side | `inherited-substrate` (PR135, verbatim) | compiles PR135's `rc64_backend.c`, `5c75e2c70b89f148…`, unmodified |
+| RC64 backend, shipped receiver | `mechanism-adopt-with-attribution` (PR135-derived, modified) | shipped `05839d1416e68a49…`, which **differs** from the PR135 source above |
 | Receiver binding and archive assembly | `ours-original` | runtime tree `7acedb07e670e76c…`; archive `35ac2b9beb7e6fa8…` |
 | End-to-end compression entry point | `ours-original` | `experiments/ddm_pq2_compress_e2e.py`, rebuild verified |
 
 This is a lossless entropy re-encode on a PR130/PR135 learned substrate, not a
-claim that the learned vehicle is original.
+claim that the learned vehicle is original. The full accounting, including the
+ancestry chain and the two open provenance items, is in
+`BORROWED_SUBSTRATE_ACCOUNTING.md`, shipped beside this archive.
+
+## Credits and prior work
+
+Every number below was read from the pull request itself, not from our notes.
+
+- **PR #130 — `semantic-pose-HPAC_CPR1`, Fesal Fayed (`fesalfayed`)**, leaderboard
+  0.172, archive 191,052 B. The base vehicle: the semantic-token / HPAC / CPR1
+  architecture this submission descends from.
+- **PR #135 — `semantic-pose-HPAC_CPR1_polished`, Shreyan Mohanty (`codexblack`)**,
+  leaderboard 0.162, archive 186,724 B. The archive we actually built on. Its
+  semantic renderer and pose carrier are in our archive byte-identically after
+  decode, and our encoder compiles its `rc64_backend.c` unmodified. It is also
+  the score this submission is measured against.
+- **PR #133 — `cpr1_cbq_matched8`, `JasonMo123`**, leaderboard 0.166. Not taken
+  directly, but in our ancestry transitively: PR #135 already incorporates its
+  constrained basis and re-solved int12 carrier.
+- **PR #138 — `opal_v1`, Cristian (`ccastillo1043`)**, author-claimed 0.1591495384.
+  Published the same class of mechanism as our contribution — an online
+  decode-side probability correction that adds no archive bytes — six hours
+  before our first measured result. Concurrent and independent; see the
+  competitive section above. We make no priority claim.
+- **PR #136 — `hnerv_rc`, Jacky Li (`JPL11`)**. Adaptive range coding with
+  per-tensor context reset, on a different vehicle. Adjacent prior work.
+- **Upstream** — `commaai/comma_video_compression_challenge`: the scorer,
+  `evaluate.py` (`7da71a84ce24286b…`), the frozen SegNet and PoseNet weights, the
+  600-sample test list, and the 37,545,489-byte denominator.
+- **Third-party runtime** — PyTorch, Brotli 1.2.0, `constriction`, and a C
+  compiler at inflate time.
 
 ## Public source and reproducibility
 
