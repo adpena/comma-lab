@@ -32,5 +32,8 @@
   },
   "disposition": "PREPARED_HOLD_NOT_SUBMITTED",
   "schema": "ddm_pq1_packet_target.v1",
-  "swap_generation": 0
+  "swap_generation": 1,
+  "current_generation_candidate": "hv1_ep0634",
+  "current_generation_manifest": "/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/hv1_ep0634/GENERATION_MANIFEST.json",
+  "generation_1_recorded_utc": "2026-08-17T15:01:44.718780+00:00"
 }
