@@ -20,17 +20,48 @@ handed-down floor and the ten-run verdict is configuration, not physics.* That i
 outside n=1 nondeterminism. The tail is still falling: **−430 / −356 / −111 / −234** flips per 100
 over the last four evals. **It did not converge — it ran out of steps.**
 
-## What this overturns
+## What this does — and does NOT — overturn
 
-`ddm_l3000_no_descent_verdict_20260817` recorded, at FORMULATION scope:
+**verdict_scope: INSTANCE** — one seed (20260715), one config, 3,000 steps, on the burn-2/PR130-lineage
+QAT base, measured on the trainer's advisory `quantized_exact_seg`. An existence result is
+INSTANCE-scoped until repeated; the second seed is owed.
 
-> *this training formulation … does not descend below its own initialization on
-> `quantized_exact_seg`, **at any tested lr or window length.***
+⚠ **MAIN's first headline said `ddm_l3000_no_descent_verdict_20260817` is REFUTED. WITHDRAWN, same
+turn, before re-citation — and the truth is better than the claim.** L3000's scope reads:
 
-**That verdict is REFUTED — and the quoted clause says exactly why it was always going to be.**
-Ten runs tested lr (three decades) and window length (600 vs 3,000). **Not one varied the curriculum
-fractions.** The scope statement named its own blind spot and nobody read it as one. The formulation
-was never the thing that failed; a config nobody derived was.
+> **verdict_scope: FORMULATION** — this training formulation (QAT fine-tune from the PR130-lineage
+> init **under the CE → softplus_margin → expected_flip curriculum**) does not descend …
+
+**The curriculum is INSIDE its formulation.** EF3000 ran `ce=0, softplus=0` — a *different*
+curriculum, therefore a *different formulation*. Nothing in EF3000 tested L3000's formulation at a
+longer window. **L3000's verdict is INTACT AS SCOPED.** It is SUPERSEDED FOR ROUTING — its
+formulation is no longer the live one — which is a different and weaker statement than refuted.
+
+**And L3000 named this experiment itself.** Its own §"Not closed by this":
+
+> a *different* formulation (different init, **different curriculum shape**, absolute-step stage
+> boundaries, a schedule that does not spike +49,580 flips in its first 100 steps) is untested.
+> **The CE phase's opening excursion is where the entire debt is created** — every later phase is
+> repayment that never finishes.
+
+That is EF3000's design, its mechanism, and its result, written a day early. **The scope ladder did
+its job; the apparatus worked.** My "the verdict named its own blind spot and nobody read it as one"
+was false — L3000 read it correctly and said so under a heading that means exactly that. The reader
+who missed it was me, twice: once treating the no-descent result as closing the question, and once
+today calling the named successor a refutation. Both corrected here.
+
+The measured comparison stands unchanged:
+
+| arm | curriculum | steps | endpoint vs init |
+|---|---|---:|---:|
+| C0/A1/A2/A3 | 81.19% `ce` | 600 | +8,049 … +27,170, `best_step=0` |
+| `L3000_off` | 81.19% `ce` | 3,000 | +4,887, `best_step=0` |
+| `CE0` | 0% `ce` | 600 | +4,852, `best_step=0` |
+| `EF0` | 100% `expected_flip` | 600 | +636, `best_step=0` |
+| **`EF3000`** | **100% `expected_flip`** | **3,000** | **−2,286, `best_step=3000`** |
+
+Both ingredients were necessary. EF0 (aligned, short) reached parity but did not cross;
+`L3000_off` (long, misaligned) closed 43.5% of its debt and stalled. **Aligned × long crosses.**
 
 | arm | curriculum | steps | endpoint vs init |
 |---|---|---:|---:|

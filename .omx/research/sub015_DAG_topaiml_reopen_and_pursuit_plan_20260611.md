@@ -28367,3 +28367,26 @@ cheaper per step than `ce`. Same genus as this morning's `e`-vs-`r` conflation, 
 fitted across a mixture is a mixture rate. Quote `r` with its active loss.
 
 Memo `.omx/research/ddm_ef3000_first_descent_verdict_20260817.md`.
+
+### FEED-2026-08-17-EF3000 — SCOPE CORRECTION (same turn, before re-citation)
+
+**verdict_scope: INSTANCE** — EF3000 is one seed (20260715), one config, 3,000 steps, burn-2/PR130
+QAT base, advisory `quantized_exact_seg`. An existence result is INSTANCE-scoped until repeated.
+
+⚠ MAIN's headline "`ddm_l3000_no_descent_verdict` is REFUTED" is **WITHDRAWN**. L3000's scope reads
+*"this training formulation (QAT fine-tune from the PR130-lineage init **under the CE →
+softplus_margin → expected_flip curriculum**)"* — **the curriculum is INSIDE its formulation.**
+EF3000 ran `ce=0, softplus=0`, i.e. a DIFFERENT formulation. **L3000 is INTACT AS SCOPED**;
+it is SUPERSEDED FOR ROUTING (its formulation is no longer live), which is weaker than refuted.
+
+**And L3000 NAMED this experiment.** Its §"Not closed by this": *"a different formulation (different
+init, **different curriculum shape**, absolute-step stage boundaries, a schedule that does not spike
++49,580 flips in its first 100 steps) is untested. **The CE phase's opening excursion is where the
+entire debt is created.**"* That is EF3000's design, mechanism, and result — written a day early.
+**The scope ladder worked.** MAIN's "the verdict named its own blind spot and nobody read it as one"
+is FALSE: L3000 read it correctly under a heading that says so. The reader who missed it was MAIN,
+twice — treating no-descent as closing the question, then calling the named successor a refutation.
+
+Genus: over-scoping a POSITIVE existence result into a refutation of a correctly-scoped negative.
+Sister of [[the-instruments-own-units-level-and-aggregation-are-part-of-the-claim-20260816]] — the
+SCOPE of the claim being overturned is part of the overturning claim.
