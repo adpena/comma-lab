@@ -11,28 +11,30 @@ payload: `/Volumes/APDataStore/pact/ddm_t1h/`
 that reads this archive's pose 21.4× higher than the contest CUDA axis does, and that gap is
 the whole risk.**
 
-1. **Measured, n600, exact chain:** a single-coordinate integer re-solve of the shipped
-   carrier codes takes CPU-torch `d_pose` from **1.4746613e-4 → 8.471492e-5**, a ratio of
-   **0.57447** (−42.55%). **590 of 600 pairs improve.** Byte-identity control: **600/600, zero
-   failures.**
-2. **The bytes go DOWN.** The re-solved carrier costs **−5 B** in the counted archive
-   (181,161 → 181,156 B). Not "zero added bytes" — negative. The packed carrier section is
-   byte-length-identical (22,183 B both), so no offset moves.
+1. **Measured, n600, exact chain, two passes:** a single-coordinate integer re-solve of the
+   shipped carrier codes takes CPU-torch `d_pose` from **1.4746613e-4 → 8.471492e-5**
+   (pass 1, ratio 0.57447, 590/600 pairs improve) → **6.064679e-5** (pass 2, cumulative ratio
+   **0.41126**, −58.87%, 523/600 still improving). Byte-identity control on the shipped
+   lattice: **600/600, zero failures.** **The axis is NOT converged at pass 2.**
+2. **The bytes barely move, in either direction.** Pass 1 costs **−5 B**; pass 2 costs
+   **+8 B** on the counted archive (181,161 → 181,169 B). The packed carrier section is
+   byte-length-identical (22,183 B in every case), so no offset moves.
 3. **`d_seg` is invariant by construction**, not by hope: SegNet reads only the odd frame
    (`upstream/modules.py:108`) and no odd frame is touched.
-4. **A byte-closed candidate exists and every proof is green** — parse-back (receiver lattice
-   matches intent, 0 mismatched coordinates), determinism repeat (byte-identical), and all
-   five non-carrier sections byte-identical. Candidate `3dee2ee4…`, 181,156 B.
-5. **The headroom in S units.** On the advisory axis the pose term falls 0.038401 → 0.029106,
-   `ΔS = −0.009299`. Transferred to the T4 axis **as a ratio**, `ΔS = −0.002011` →
-   **projected S 0.156522**. Against the charter's 1e-4 fork threshold this is **20×** over
-   the bar, so this arm entered solve mode.
+4. **Two byte-closed candidates exist and every proof is green on both** — parse-back
+   (receiver lattice matches intent, 0 mismatched coordinates), determinism repeat
+   (byte-identical), and all five non-carrier sections byte-identical.
+   **Pass 2 = `d2da8449…`, 181,169 B (primary). Pass 1 = `3dee2ee4…`, 181,156 B (fallback).**
+5. **The headroom in S units.** Transferred to the T4 axis **as a ratio**:
+   pass 1 `ΔS = −0.002011` → S 0.156522; **pass 2 `ΔS = −0.002970` → projected S 0.155563**.
+   Against the charter's 1e-4 fork threshold this is **30×** over the bar, so this arm
+   entered solve mode.
 6. **The honest discount.** Our archive reads `d_pose` **1.4747e-4 on CPU-torch** and
    **6.88e-6 on contest-CUDA T4** — a **21.4×** level gap. So ~95% of the residual energy my
    accept oracle minimised is energy the CUDA axis does not see. The ratio-transfer in (5) is
    therefore an **upper** estimate; the pessimistic estimate is ≈ 0. I am not claiming
-   −0.002. I am claiming a **bounded-downside, unbounded-upside T4 probe**: bytes are −5,
-   `d_seg` is invariant, so the candidate **cannot lose** more than the noise floor, and one
+   −0.003. I am claiming a **bounded-downside T4 probe**: the byte delta is ±8 B and `d_seg`
+   is invariant by construction, so the candidate **cannot lose** more than 5e-6 S, and one
    T4 row settles a question no amount of local work can.
 
 **Prediction trial:** this is the third discriminator alongside fx1's mixer and the QAT
@@ -167,6 +169,25 @@ threshold. Small wins are the ones most likely to be instrument-specific, and th
 knob that trades a little headroom for robustness. The shipped candidate keeps **all 590**
 moves, because the byte cost is negative either way and `d_seg` cannot move.
 
+### The pass curve (PR133's own honesty standard)
+
+PR133 reported that neither its candidate nor its effort-matched control had converged by
+pass 8. Ours has not converged either, and here is the curve so the claim is checkable:
+
+| pass | `d_pose` (CPU-torch) | per-pass ratio | cumulative ratio | pairs improving | counted Δ bytes | T4 ratio-transfer S |
+|---|---|---|---|---|---|---|
+| shipped | 1.4746613e-4 | — | 1.00000 | — | 0 | 0.158533 |
+| 1 | 8.471492e-5 | 0.57447 | 0.57447 | 590 / 600 | **−5** | 0.156522 |
+| 2 | 6.064679e-5 | 0.71589 | **0.41126** | 523 / 600 | **+8** | **0.155563** |
+
+Pass 2 still accepts on 87% of pairs, so pass 3 has not been ruled out — it has simply not
+been run. Each pass costs ~30 min of local CPU and no money.
+
+A small internal consistency check worth naming: pass 2's byte-identity counter reports
+exactly **10** pairs matching the shipped render — precisely the 10 pairs pass 1 left
+unmoved. The control is disabled off the shipped lattice, but its residual reading still
+agrees with the bookkeeping.
+
 ### Why the shipped codes were so far from optimal
 
 Not because anyone erred. The lattice is PR130/CPR1's, fitted against **their** odd frame;
@@ -177,9 +198,14 @@ measurement is best read as *finishing an inherited fit*, not as beating a solve
 
 ### The instrument gap, stated plainly
 
-`d_pose` on this exact archive: **1.4747e-4** through the frozen CPU-torch chain (this arm,
-n600; independently reproduced by jc1 to 1.5e-5 relative, and matching the retained hv1
-CPU auth-eval report of 0.00014747) versus **6.88e-6** on the contest-CUDA T4 row.
+`d_pose` on this exact archive: **1.4746613e-4** through the frozen CPU-torch chain (this arm,
+n600) versus **6.88e-6** on the contest-CUDA T4 row.
+
+The CPU figure is not an artefact of my code. jc1 measured 1.474678e-4 on the predecessor
+lineage and the retained hv1 CPU auth-eval report prints 0.00014747 — three independent
+paths agreeing to ~1.2e-5 relative. (They agree because rr4 is a rate-only re-encode: its
+carrier, models and decoded tokens are byte-identical to that predecessor, so the render is
+the same bytes — which is also why I could reuse the retained `0.raw` instead of re-rendering.)
 
 That ratio, 21.4×, is not a rounding difference — and it is arithmetically forced, not
 inferred: at `d_pose` = 1.4747e-4 the pose term alone would be 0.038402, which with the
@@ -231,25 +257,38 @@ built so that a failed transfer costs nothing.
 
 ## 8. SEALED FIRE-ORDER (for MAIN)
 
-**Candidate (standalone, t1h-on-rr4):**
+**PRIMARY candidate — pass 2 (t1h-on-rr4):**
+
+| field | value |
+|---|---|
+| archive | `/Volumes/APDataStore/pact/ddm_t1h/candidate_pass2/archive.zip` |
+| sha256 | `d2da8449420be1a22d7c4a1799c2530062a2b3b448cb5d3fb9b836864a7fe754` |
+| bytes | **181,169** (shipped 181,161; **+8 B**) |
+| determinism repeat | `archive.repeat.zip`, byte-identical |
+| projected S (ratio transfer) | 0.155563 |
+
+**FALLBACK candidate — pass 1** (smaller, more conservative, fewer selected moves):
 
 | field | value |
 |---|---|
 | archive | `/Volumes/APDataStore/pact/ddm_t1h/candidate/archive.zip` |
 | sha256 | `3dee2ee4c9ed7ee81f5221b64258b43802a3d32c5ae08a193c707dae693dd0b3` |
-| bytes | **181,156** (shipped 181,161; **−5 B**) |
-| determinism repeat | `archive.repeat.zip`, byte-identical |
-| base | rr4 `35ac2b9b…`, 181,161 B |
-| runtime | unchanged — the receiver is not modified in any way |
+| bytes | **181,156** (**−5 B**) |
+| projected S (ratio transfer) | 0.156522 |
+
+Both share: base rr4 `35ac2b9b…` 181,161 B; **runtime unchanged** — the receiver is not
+modified in any way.
 
 **Standalone swappable section (for fx1's mixer byte-close):**
 
-| field | value |
-|---|---|
-| candidate section | `/Volumes/APDataStore/pact/ddm_t1h/candidate/carrier_section_candidate.bin` |
-| sha256 | `ab0a2e61ec5bc925f8be4578a6885fbf0f543cf0ea1b135c54672d55f6550e1f` |
-| shipped section | `carrier_section_shipped.bin`, sha `30c33886dcf40684…` |
-| bytes | **22,183 both — byte-length-identical** |
+| field | pass 2 (primary) | pass 1 (fallback) |
+|---|---|---|
+| path | `candidate_pass2/carrier_section_candidate.bin` | `candidate/carrier_section_candidate.bin` |
+| sha256 | `8ddeeb42dcf532f5e3f56bdabe0b0010966541303ab3a071b1160c0e75480b81` | `ab0a2e61ec5bc925f8be4578a6885fbf0f543cf0ea1b135c54672d55f6550e1f` |
+| bytes | **22,183** | **22,183** |
+
+Shipped section for diff: `carrier_section_shipped.bin`, sha `30c33886dcf40684…`, 22,183 B.
+**All three are the same length**, so the section is a true drop-in.
 
 It is the packed CAP1 carrier section, which the receiver dispatches on by exact length, so
 dropping it into another byte-close moves no offset. Only the Rice payload and its two
@@ -260,22 +299,28 @@ metadata and the Rice parameters are all carried through unchanged.
 
 1. **`d_seg` UNCHANGED to every printed digit.** Structural: no odd frame is touched. If
    `d_seg` moves at all, the build is wrong, not the theory — stop and investigate.
-2. **Archive bytes EXACTLY 181,156.**
+2. **Archive bytes EXACTLY 181,169** (pass 2) or **181,156** (pass 1).
 3. **`d_pose` FALLS.** If it rises, the CPU-torch accept oracle does not select moves that
    survive the CUDA instrument, and this whole family is refuted on this vehicle. That is a
    clean, valuable negative and should be recorded as one.
 
-**Expected band on the pose axis.** Optimistic (ratio transfers): `d_pose` 6.88e-6 → 3.95e-6,
-S → 0.156522. Pessimistic (nothing transfers): `d_pose` unchanged, S → 0.158530 (the −5 B
-alone). **Anything in that band is a win or a tie; only a `d_pose` INCREASE is a loss.**
+**Expected band on the pose axis, pass 2.** Optimistic (ratio transfers): `d_pose`
+6.88e-6 → 2.83e-6, S → 0.155563. Pessimistic (nothing transfers): `d_pose` unchanged,
+S → 0.158539 (the +8 B alone). **Anything in that band is a win or a ~5e-6 tie; only a
+`d_pose` INCREASE is a real loss.**
+
+**If only one row can be bought, buy pass 2.** It dominates pass 1 under any positive
+transfer, and its worst case is 13 B worse.
 
 ## 9. NEXT_IF_RESUMED
 
-1. **Pass 2 is running** (`--start-codes` from the pass-1 receiver lattice, receipt
-   `T1H_HEADROOM_PASS2.json`). PR133 was still accepting at pass 8, so the axis is unlikely
-   to be exhausted at pass 1. Compose it with
-   `--sweep T1H_HEADROOM_PASS2.json --base-codes candidate_base_codes.int32.npy`, then
-   rebuild. If it lands before the freeze it supersedes pass 1; pass 1 is the fallback.
+1. **Pass 3.** Pass 2 still accepted on 523/600 pairs, so the axis is not exhausted. One
+   command, ~30 min, no money:
+   `ddm_t1h_pose_coeff_headroom.py --pairs all --deltas=-2,-1,1,2 --start-codes
+   pass2/candidate_receiver_codes.int32.npy --receipt T1H_HEADROOM_PASS3.json`, then compose
+   with `--base-codes pass2/candidate_base_codes.int32.npy` and rebuild. Note the compose
+   receipt's `t4_ratio_transfer` is PER-PASS; the cumulative ratio must be taken against the
+   shipped base (1.4746613e-4), as §5's table does.
 2. **Multi-coordinate moves per pair are unmeasured.** Only one coordinate per pair was
    swept. The per-pair problem is 12-dimensional and jc1 measured cond(J_stack) = 12.02 with
    no null direction, so joint moves should buy more than the sum of single ones.
