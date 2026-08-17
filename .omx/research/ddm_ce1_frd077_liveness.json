@@ -10,7 +10,7 @@
   "artifact_checks": [
     {
       "label": "ce1_frd077_run_log",
-      "path": "/Volumes/APDataStore/pact/ddm_ce1/FRD077/launcher/run.log",
+      "path": "/Volumes/APDataStore/pact/ddm_ce1/FRD077/run.log",
       "max_age_s": 1200,
       "grace_s": 600
     }
