@@ -2,11 +2,16 @@
 
 `date_utc: 2026-08-16` · `owner: ddm_ra3` · `axis: [macOS-CPU advisory, upstream chain, n600]`
 `score_claim: false` · `promotable: false` · `frontier_moved: false`
-receipts: `/Volumes/APDataStore/pact/ddm_ra3/RA3_TRUST_REGION_REFIT_r11.json`,
-`/Volumes/APDataStore/pact/ddm_ra3/RA3_RATE_CHECK_r11.json`,
-`/Volumes/APDataStore/pact/ddm_jc1/retained/RA3_REPRO_INCUMBENT_r11.json`,
-prediction recorded before the rows landed:
-`/Volumes/APDataStore/pact/ddm_ra3/RA3_PREDICTION_BEFORE_REALISED.md`
+receipts: `/Volumes/APDataStore/pact/ddm_ra3/RA3_TRUST_REGION_REFIT_r11.json` (realised sweep,
+8,400 scorer forwards) · `RA3_AUTHORITY_GT_RESCORE_r11.json` (the priceable axis) ·
+`RA3_RATE_CHECK_r11.json` (byte credit through the shipped coder) ·
+`RA3_CORRECTED_PRICING_r11.json` · `RA3_DESIGN_r11.json` ·
+`/Volumes/APDataStore/pact/ddm_jc1/retained/RA3_REPRO_INCUMBENT_r11.json` (reproduction).
+Prediction + self-attack recorded BEFORE the rows landed:
+`/Volumes/APDataStore/pact/ddm_ra3/RA3_PREDICTION_BEFORE_REALISED.md`.
+Payloads (23 files, 8.4 MB) under `/Volumes/APDataStore/pact/ddm_ra3/retained/`, each with
+sha256 + byte count in its receipt — including the 600×12×6 generated `pose6` stack, which is
+what made the mid-arm GT fix cost zero recompute.
 
 ## THE ANSWER, FIRST
 
@@ -16,7 +21,7 @@ REFUSES by 35.5×. The family closes.**
 1. **The re-fit is a real, large effect.** Exact n600, per-pair realised acceptance, scored on the
    authority-tracking GT: the incumbent projection costs `ΔS_pose = +0.136386`; the trust-regioned
    per-pair re-fit costs `+0.043639` — **3.13× better on the score-relevant quantity** (7.76× in
-   `d_pose` ratio, 304.0× → 39.2× of base). 553 of 600 pairs improved.
+   `d_pose` ratio, 304.0× → 39.2× of base). **506 of 600 pairs improved** (553 on the PyAV axis).
 2. **It is still refused by 35.5×.** Net `ΔS = +0.042410` against a rate credit of `+0.001230`.
    Break-even needs another **35.5×**; the whole method just bought 3.13×.
 3. **Even PERFECT execution cannot reach the target.** At zero pose damage the rung returns only
@@ -174,11 +179,12 @@ authority `6.88e-06`, exactly as `pi2` measured. The fix lands.
   radius; loosening to μ=1e-4 explodes to 8,607× — **jc1's designer failure reproduced exactly**,
   now with the trust region as the dial that produces it continuously rather than as an accident.
 - **No global radius exists.** The accepted-slot histogram is spread across the entire four-decade
-  grid (46 at μ=1e-4 … 66 at μ=10 … 47 at the projection); nothing concentrates. Per-pair selection
+  grid — on the authority GT: 48 at μ=1e-4, 67 at μ=1e-3, 82 at μ=10, 50 at μ=100, 94 at the
+  projection — and nothing concentrates. Per-pair selection
   buys **3.07×** over the best single radius (8.2767e-04 → 2.6975e-04). This is the mechanism
   behind the whole result: the optimal trust-region radius is a per-pair property.
-- **The projection is never the answer for 553 of 600 pairs**, yet the 47 pairs that keep it are
-  real — the exhaustive shrink-on-ascent is doing work, not decorating.
+- **The projection is not the answer for 506 of 600 pairs**, yet the 94 that keep it are real —
+  the exhaustive shrink-on-ascent is doing work, not decorating.
 
 **The 12-bit storage tax is small, measured like-for-like on the authority axis.** Quantizing the
 stored `z` to the shipped code width moves the projection from `2.09335e-03` to `2.08725e-03`
