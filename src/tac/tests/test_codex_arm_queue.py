@@ -636,11 +636,23 @@ def test_recall_lint_silent_when_frontier_literal_is_current(q, tmp_path, monkey
 
 
 def test_recall_lint_flags_refuted_numeric_from_corrections_index(q, tmp_path, monkeypatch):
-    """The gx1/ra1 class: a charter quoting a value the corpus corrected."""
+    """The gx1/ra1 class: a charter quoting a value the corpus corrected.
+
+    ADJUDICATED 2026-08-17 (#1085), fixture corrected rather than deleted.  This
+    test passed against a fixture CLEANER than the real store: it named a single
+    unambiguous correction, while the live index pairs adjacent numbers inside a
+    marker-word window and records no quantity at all.  So it proved the leg
+    works on a store we do not have.  The fixture now carries the `quantity`
+    field the leg requires, which is what the test's own intent implied -- it
+    wants the rate bar IDENTIFIED, not merely digit-matched.  Its sister,
+    `test_stale_numbers_leg_is_silent_when_store_cannot_identify_quantities`,
+    pins the live-store behaviour so the silence cannot go unnoticed.
+    """
     index = tmp_path / "corrections.jsonl"
     index.write_text(
         json.dumps(
             {
+                "quantity": "live rate bar",
                 "refuted_value": "15157",
                 "corrected_value": "14414",
                 "source": ".omx/research/ddm_ra1_carrier_rank_refit_preproof_20260816.md",
@@ -846,3 +858,89 @@ def test_legacy_rows_without_any_retraction_load_unchanged(q, tmp_path):
     rows = q.load_next_if_resumed(out)
     assert [r["name"] for r in rows] == ["au1"]
     assert rows[0]["retracted"] is False and rows[0]["retraction_disposition"] is None
+
+
+# --- #1085: _lint_stale_numbers fails closed on a store that cannot identify quantities ---
+
+
+def _stale_number_module():
+    import importlib.util
+    import pathlib
+    import sys
+
+    root = pathlib.Path(__file__).resolve().parents[3]
+    spec = importlib.util.spec_from_file_location(
+        "_caq_stale", root / "tools" / "codex_arm_queue.py"
+    )
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["_caq_stale"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_stale_numbers_leg_is_silent_when_store_cannot_identify_quantities(tmp_path):
+    """The live corrections index pairs adjacent numbers in a window.
+
+    It records no quantity name, so `3000 -> 3.37`, `3000 -> 726` and
+    `3000 -> 0.05` are three unrelated quantities sharing four digits.  The leg
+    must emit nothing rather than assert "recorded as a REFUTED value" from
+    adjacency.  Measured 2026-08-17: 648 of 11,840 live rows are date-parse
+    artifacts (a bare year paired with a month fragment).
+    """
+
+    mod = _stale_number_module()
+    index = tmp_path / "no_identity.jsonl"
+    index.write_text(
+        json.dumps(
+            {
+                "refuted_value": "2026",
+                "corrected_value": "05",
+                "phrase": "superseded",
+                "source": "some_memo_20260521.md",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    mod.CORRECTIONS_INDEX = index
+    assert mod._corrections_index_identifies_quantities() is False
+    assert mod._lint_stale_numbers("charter written on 2026-08-17 at line 1179") == []
+
+
+def test_stale_numbers_leg_reactivates_when_the_store_names_the_quantity(tmp_path):
+    """POSITIVE CONTROL: the leg is retired-pending-store-repair, not deleted.
+
+    Rebuild the index with a quantity field and the leg must fire again on the
+    real case it was built for -- the 15,157 B rate bar superseded by 14,413.4.
+    Without this control the fix would be indistinguishable from deleting a
+    detector because it was inconvenient.
+    """
+
+    mod = _stale_number_module()
+    index = tmp_path / "with_identity.jsonl"
+    index.write_text(
+        json.dumps(
+            {
+                "quantity": "live rate bar",
+                "refuted_value": "15157",
+                "corrected_value": "14413.4",
+                "source": ".omx/research/ddm_rfo2_rate_ladder_20260815.md",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    mod.CORRECTIONS_INDEX = index
+    assert mod._corrections_index_identifies_quantities() is True
+    warnings = mod._lint_stale_numbers("the bar is 15,157 B against a superseded archive")
+    assert len(warnings) == 1
+    assert "15157" in warnings[0]
+    assert "14413.4" in warnings[0]
+
+
+def test_stale_numbers_leg_tolerates_a_missing_or_unreadable_store(tmp_path):
+    mod = _stale_number_module()
+    mod.CORRECTIONS_INDEX = tmp_path / "absent.jsonl"
+    assert mod._corrections_index_identifies_quantities() is False
+    assert mod._lint_stale_numbers("15,157 B") == []

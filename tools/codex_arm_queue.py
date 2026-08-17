@@ -1488,15 +1488,75 @@ def _lint_ownership(text: str, days: int) -> list[str]:
     ]
 
 
+_STALE_NUMBER_IDENTITY_FIELD = "quantity"
+"""Store field naming WHICH quantity a corrections row corrected.
+
+``_lint_stale_numbers`` stays fail-closed until the corrections index carries
+this.  Named as a constant so the leg self-reactivates on an index rebuild
+rather than needing a second code change.
+"""
+
+
+def _corrections_index_identifies_quantities() -> bool:
+    """Can the corrections store say WHICH quantity a number is?
+
+    Reads the first parseable row only -- the index is homogeneous by
+    construction (one builder, one schema) and this runs on every arm spawn,
+    so a full scan would be a spawn-time tax for a schema question.
+    """
+
+    try:
+        with CORRECTIONS_INDEX.open(encoding="utf-8") as stream:
+            for line in stream:
+                if not line.strip():
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                return bool(str(row.get(_STALE_NUMBER_IDENTITY_FIELD, "")).strip())
+    except OSError:
+        return False
+    return False
+
+
 def _lint_stale_numbers(text: str) -> list[str]:
     """Does the charter quote a number the corpus already corrected?
 
-    Consumes au1's corrections index (task #953) rather than building a second
-    one.  A charter literal that appears as some memo's `refuted_value` is the
-    gx1 class (-15,157 B quoted against a superseded archive).
+    RETIRED-PENDING-STORE-REPAIR, 2026-08-17 (MAIN, measured; task #1085).
+
+    Intent was the gx1 class: -15,157 B quoted against a superseded archive.
+    The leg cannot serve it, because the store it reads cannot say WHICH
+    quantity any number is.  A corrections-index row is built by scanning a
+    ~5-line window for a correction-marker word, then declaring the window's
+    first numeric literal `refuted_value` and its second `corrected_value`.
+    So `3000 -> 3.37`, `3000 -> 726` and `3000 -> 0.05` are three unrelated
+    quantities that share four digits, and `phrase` holds only the marker
+    ('superseded' / 'wrong' / 'stale'), never the subject.
+
+    Measured on the live index (11,840 rows) and on 13 August charters:
+      * 648 rows (5.47%) are date-parse artifacts -- a bare year paired with a
+        month fragment, e.g. `2026 -> 05`, which fires on nearly every charter;
+      * 691 rows (5.84%) carry a bare year as `refuted_value`;
+      * the leg produced 25 of 42 advisories across the sample, and every one
+        inspected was a bare-integer collision (a year, a line number, a step
+        count);
+      * `15,157` -- the canonical target named in this docstring -- has ZERO
+        rows in the index.  The real catch on that value came from
+        ``_lint_falsified_premises``, whose store records named quantities.
+
+    A detector whose store lacks the identifying information cannot be made
+    precise by tuning its consumer, and emitting "recorded as a REFUTED value"
+    from window adjacency asserts an authority the data does not carry.  Worse,
+    at 60% of all advisory volume it trains its only reader to skim the legs
+    that DO work.  So this leg fails closed until the store can identify the
+    quantity; ``_lint_falsified_premises`` (curated, named quantities) remains
+    the live path and is untouched.
     """
 
     if not CORRECTIONS_INDEX.is_file():
+        return []
+    if not _corrections_index_identifies_quantities():
         return []
     literals = {
         token.replace(",", "")
