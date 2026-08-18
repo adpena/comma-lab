@@ -19,11 +19,12 @@ repos and all signal and documentation and everything."*
 
 **1. The pre-registered prediction is UNTESTABLE as written, and finding that out is the result.**
 The charter predicted the 0.19 %-miss / 70 %-bits structure would reproduce on **≥3 other
-semantic-family PRs**. It cannot: **the semantic family does not contain three independent token
-streams.** PR132 and PR133 ship a **byte-identical** token stream — 116,980 B, sha `948379872ff8…`
-— which I verified from the bytes rather than inheriting the claim. PR135 is their parent and
-PR138 re-codes the same field. **Four PR numbers, one payload.** N archives sharing one payload
-are ONE sample.
+semantic-family PRs**. It cannot: **the semantic family contains at most TWO independent token
+fields, not four.** PR132 and PR133 ship a **byte-identical** token stream — 116,980 B, sha
+`948379872ff8…` — verified from the bytes in my own hands, not inherited. PR138 states a
+**bit-exact transcode of all 117,964,800 F26 (PR135) tokens**, so 135 and 138 are one field coded
+twice. **Four PR numbers, at most two payloads, and no third.** N archives sharing one payload are
+ONE sample.
 
 **2. The substitute test says the structure is REAL and NOT our-vehicle-specific — but the charter
 named the wrong invariant.** Holding our field fixed and swapping the prior family across a 266×
@@ -129,17 +130,34 @@ All MEASURED, all verified past the first look:
 
 ### 4a. Why the pre-registered form cannot run
 
-| PR | token stream | verdict |
-|---|---|---|
-| 132 | 116,980 B, sha `948379872ff8` | — |
-| 133 | 116,980 B, sha `948379872ff8` | **byte-identical to PR132** |
-| 135 | parent of both | same lineage |
-| 138 | re-coded; **0 shared aligned 4 KB blocks with PR133** | same *field*, new coder |
+| PR | token section | grade | verdict |
+|---|---:|---|---|
+| 132 | 116,980 B, sha `948379872ff8` | MEASURED | — |
+| 133 | 116,980 B, sha `948379872ff8` | MEASURED | **byte-identical to PR132** |
+| 135 (F26) | 114,706 B | RECEIPT | different size ⇒ a *second* group, not the same bytes as 132/133 |
+| 138 (opal) | 110,022 B; **0 shared 4 KB blocks with PR133** | RECEIPT + MEASURED | **bit-exact transcode of PR135's 117,964,800 tokens** — same field, new coder |
 
-Verified in my own hands: both archives are `u32 len ‖ xz section ‖ tail`, and the tails match by
-sha. hx1 §8.2 asserted this; I did not inherit it, I re-derived it — and the consequence is
-stronger than hx1 drew. **The semantic family is one token field wearing four PR numbers.** There
-are not three independent samples, so the prediction as written has no denominator.
+Verified in my own hands: both PR132/133 archives are `u32 len ‖ xz section ‖ tail`, and the tails
+match by sha. hx1 §8.2 asserted this; I re-derived it rather than inheriting it. **Two groups, at
+most two independent fields, no third** — so the prediction as written has no denominator.
+
+**Correction to my own first read:** I initially wrote "one field, four PR numbers." The opal
+receipt (F26 = 114,706 B vs PR133's 116,980 B) forces the weaker, correct claim: two groups. I
+have verified identity *within* each group and equality *between* groups is unverified either way.
+
+### 4c. Cross-coder rate on the same field SHAPE — where we actually stand
+
+| coder | token bytes | grade |
+|---|---:|---|
+| CPR1 HPAC (PR132/133) | 116,980 | MEASURED (by me) |
+| F26 (PR135) | 114,706 | RECEIPT (opal README) |
+| **opal rc64**, 55 causal families, Fisher-Newton mixer (PR138) | **110,022** | RECEIPT |
+| **ours, post-fx1 log-odds mixer** | **109,951.21** | RECEIPT (fx1 memo) |
+
+**Our coder is 71 B ahead of opal's.** Caveat welded on: same field *shape* (117,964,800 tokens),
+token *values* verified equal only *within* each group — so this is **directional, not a
+head-to-head**. It is still the first time we can place our token coder against the field's best
+published one on a comparable object.
 
 This is the *positive* form of the `[[same_defect_negatives_masquerade_as_family_convergence]]`
 law: N archives sharing one payload are ONE observation, and a leaderboard whose top six entries
@@ -170,10 +188,22 @@ code lengths are **lower bounds**, the miss fractions are exact.
   P_B2 96.24). Under the weak prior it collapses to 44.7 %. **The fx1 mixer axis is correct for any
   strong prior, not just ours.**
 
-**Honest bound:** this is a **substitute** for the pre-registered test, not the test itself. It
-varies the prior on one field; it does not vary the field. It cannot rule out that a *different*
-argmax field (a different video, a different class count) moves the share outside the band. What it
-does rule out is the specific falsifier the charter named — our neural prior being load-bearing.
+**Field variation, the second leg.** The prior-family table varies the prior on one field, so I
+also varied the field: 10 **disjoint** 60-frame blocks, prior refit **per block** (scene content
+differs sharply across the drive — the `[[prefix_bias]]` law).
+
+| | min | max | spread |
+|---|---:|---:|---|
+| miss bit share | 74.48 % | 75.75 % | **1.27 pp** |
+| miss fraction | 0.3029 % | 0.3631 % | 1.20× |
+
+The share is flat to ~1 pp while the content moves. **The invariant survives both axes.**
+
+**Honest bound:** this is still a **substitute** for the pre-registered test. Both legs live on
+*our* field; neither uses a competitor's decoded tokens. It cannot rule out that a genuinely
+different argmax field (different video, different class count) moves the share outside the band.
+What it does rule out is the specific falsifier the charter named — our neural prior being
+load-bearing — and it now rules it out under content variation too.
 
 **Free by-product:** our shipped neural prior codes the field ~**2.14× better** than the best
 classical causal context model measured (P_B2, 235,478 B lower bound vs ~110,511 B). That prices
@@ -199,20 +229,69 @@ repeat it.
 
 ---
 
-## 6. Ranked — what they know that we don't
+## 6. Leg B — the full surround (authors' repos, scripts, docs)
+
+Operator's scope extension. Prior sweeps (#413/#414, eh1, pi136) were extended, not redone. The
+coverage delta and full typed rows are in the prior store; the load-bearing part:
+
+**The single largest new surface is not a contest PR at all.** PR136's author (`JPL11`) maintains
+`commavq-compression`, an entry in comma's *other* challenge, and it is the only place in the
+whole wave where someone published a **measured context study on a comma token stream**:
+
+- **Context policy is worth 0.4 bits/token.** 2.908 → **2.4993 bits/tok** from overlapped
+  stride-5 windows vs restart windows — same model, same data, same coder, **only the context
+  policy changed**.
+- **The saturation curve is published**: CE by frame position 7.987 (f0) → 3.360 → 2.965 → … →
+  2.522 (f8) → 2.498 (f19). Saturates by ~frame 8; the first frame after a restart costs **3.2×**
+  the saturated rate.
+- **Do not pre-quantize the probability table**: float64 straight into the coder costs +0.0005
+  b/sym; a 16-bit pre-quantized table costs +0.013 b/sym — **26× worse**.
+
+That last one pairs with two independent range-coder receipts — opal's stream is **4.98 bits**
+above its own model ideal, F26's **4.32 bits** (fd135) — to give a clean law: **the arithmetic
+container is not a lever; the model is.** It also tensions usefully against hx1's §4 LAW
+("quantise every value in the probability path"): JPL11 achieves bit-exact sync instead by pinning
+the *op sequence* (same shapes, same kernels, static KV cache, matched `torch.compile`). Two
+different determinism cures, both valid, different costs.
+
+**Other receipts worth banking:** brotli sits **1.777 % ABOVE** per-tensor order-0 entropy on
+HNeRV weights (163,237 vs 160,387 B) — LZ77 loses to a trivial adaptive coder on weight tensors.
+Two drift channels are now quantified on identical bytes: cross-CPU-host **ΔS 3e-6, entirely in
+SegNet argmax ties**, versus cross-GPU **ΔS −0.001372, pose-dominated** — a ~450× ratio, and a
+reason to treat a third-party GPU number as a different axis, not a confirmation.
+
+**One claim I checked and REFUTED.** The sweep reported that CLAUDE.md's L14 row mislabels an
+extended schedule as "PR95 canonical" (claiming PR95's default is 22,650 epochs, not 29,650).
+**It does not survive our own receipt:** `public_pr95_intake_20260504_codex/profile_pr95_hnerv_muon_intake.md:32-46`
+records the same per-stage table and *"total release-view epochs: 29650"*, profiled **2026-05-04**
+— months before that repo existed. **Do not edit L14 on this claim.** A plausible correction to
+always-loaded instructions is exactly the thing to re-derive before propagating.
+
+**Genuinely absent from our records:** `latent_lr_mult = 10.0` — the per-pair latents optimized at
+10× the decoder-weight LR, in all eight published stages. That is a lever our L14 row does not
+carry.
+
+## 7. Ranked — what they know that we don't
 
 | # | row | grade | why it matters | consumer |
 |---|---|---|---|---|
-| **1** | **The top-6 leaderboard is ONE token field.** PR132≡PR133 by bytes; 135 parent; 138 recodes. | MEASURED | Every "the field converged on X" inference from PR counts is over-counted ~4×. Re-price any claim resting on cross-PR agreement. | #984 |
-| **2** | **`q` is 96-98 % of miss cost under ANY strong prior**, 44.7 % under a weak one. | MEASURED | The mixer axis generalises; a *weak*-prior section (a fresh sidecar with no learned model) needs the opposite treatment — spend on the relative law. | fx2 |
-| **3** | **PR86 is the un-fused ancestor grammar** — token stream is a NAMED member (113,900 B) and the HPAC model is coded with **PPMd**. | MEASURED | The only archive in the lineage where the token stream is separable without running a decoder. It is the cheapest place to test any token-model idea against a competitor object. | fx2 |
-| **4** | **Order-0 is closed corpus-wide** (median 0.99987, n=39). | MEASURED | Independent, 60-archive confirmation that byte-level coder search is spent. Stops re-opening it. | fx2 |
-| **5** | **PR96 threw away ΔS 6.19e-4 as zero-padding**; PR60/137 threw away 8.31e-4 as ZIP directory entries. | MEASURED | Container/packaging hygiene is worth more than a coder round to parts of the field. Ours is already at the floor — a closed axis, confirmed. | packet |
-| **6** | **PR61 encodes at 256×192, libsvtav1** (leaked in raw `meta.json`). | RECEIPT | A concrete classical-family operating point, free. | #984 |
-| **7** | **The plug-in order-1 bias bar** (≈5.7-6.8 KB at n≈10⁵). | MEASURED | Any future competitor-stream "context headroom" claim under this bar is noise. | fx2 |
-| **8** | **Our neural prior is 2.14× a 625-context classical model** on the same field. | DERIVED | Prices the neural prior's contribution to token rate; bounds what a classical fallback would cost. | fx2 |
+| **1** | **Context policy is worth 0.4 bits/token on a comma token stream**, with the saturation curve published (f0 costs 3.2× the f8 rate; saturates ~frame 8). | RECEIPT | fx2 is *choosing a context set right now*. This is a measured, same-domain answer to "how much context before it stops paying" — the strongest single import in the arm. | **fx2** |
+| **2** | **Do not pre-quantize the probability table**: +0.0005 b/sym (float64 direct) vs +0.013 b/sym (16-bit table) = **26×**. Pairs with two range coders landing 4.3-5.0 bits above their own ideal. | RECEIPT | Prices an fx2 design choice at byte zero and points *against* the "quantize the whole probability path" instinct. The container is not a lever; the model is. | **fx2** |
+| **3** | **`q` is 96-98 % of miss cost under ANY strong prior**, 44.7 % under a weak one. | MEASURED | The fx1 mixer axis generalises beyond our prior. And it flips: a *weak*-prior section (a fresh sidecar with no learned model) needs the opposite treatment — spend on the relative law. | **fx2** |
+| **4** | **The semantic family is at most TWO token fields, not four PRs** (132≡133 by bytes; 135≡138 by transcode). | MEASURED | Any "the field converged on X" inference from PR counts is over-counted ~2-4×. Re-price every claim resting on cross-PR agreement. | #984 |
+| **5** | **A standalone f0 pose carrier costs ~8 KB and lands ~0.196 — on the HNeRV lineage.** PR135 shipped f0 edits successfully on CPR1. | RECEIPT | Exactly the shape ps2 is designing. The transferable content is the **break-even**: a standalone f0 carrier must come in well under 8 KB. Verdict scope is lineage-specific — do not read it as a kill. | **ps2** |
+| **6** | **Two drift channels, quantified on identical bytes**: cross-CPU-host ΔS 3e-6 (all SegNet ties); cross-GPU ΔS −0.001372 (pose-dominated). ~450× apart. | RECEIPT + DERIVED | A third-party GPU number is a different axis, not a confirmation. Bounds how much of any cross-host disagreement is real. | #984 |
+| **7** | **Order-0 is closed corpus-wide** (median 0.99987, n=39, 60 archives) and **brotli sits 1.777 % above order-0 on HNeRV weights**. | MEASURED + RECEIPT | Independent, 60-archive confirmation that byte-level coder search is spent — *and* a same-family receipt that LZ77 loses to a trivial adaptive coder on weight tensors. Directly checkable against our own sections. | **fx2** |
+| **8** | **PR86 is the un-fused ancestor grammar** — token stream is a NAMED member (113,900 B), HPAC model coded with **PPMd**. | MEASURED | The only archive in the lineage where the token stream is separable without running a decoder — the cheapest place to get a second independent sample. | **fx2** |
 
-## 7. Borrowed-substrate accounting (NO-FAKE #7)
+*Also banked, below the cut:* our neural prior is **2.14×** a 625-context classical model on the
+same field (DERIVED); the plug-in order-1 bias bar ≈5.7-6.8 KB at n≈10⁵ (MEASURED — any future
+competitor-stream "context headroom" claim under it is noise); **PR96 threw away ΔS 6.19e-4 as
+zero-padding** and PR60/137 threw away 8.31e-4 on ZIP directory entries (MEASURED); PR61 encodes
+at **256×192, libsvtav1** (RECEIPT, leaked in raw `meta.json`); `latent_lr_mult=10.0` is absent
+from our L14 record (RECEIPT).
+
+## 8. Borrowed-substrate accounting (NO-FAKE #7)
 
 **This memo adopts no mechanism and lands no code.** Every artifact read is a public contest
 submission. All extraction ran on retained copies under `/Volumes/APDataStore/pact/`; **no file
@@ -222,10 +301,19 @@ and transfers to no one else's vehicle without their own measurement.
 
 ## NEXT_IF_RESUMED
 
-1. **Decode PR86's `tokens.bin` (113,900 B, retained, sha `14144bde4966`)** — the only competitor
-   token stream separable without a full renderer forward. It would convert §4a's blocking fact
-   into a real second independent sample and let the pre-registered test actually run.
-2. **Feed row 2 into fx2's context discovery**: the `q`-vs-relative-law split flips with prior
-   strength, so section-level model choice should branch on it rather than defaulting to the
-   token-stream shape.
-3. **Do not re-open order-0 anywhere in the packet** — row 4 closes it on 60 archives.
+1. **Feed rows 1-3 into fx2 before it picks its context set.** The saturation curve says context
+   pays steeply to ~frame 8 and flattens after; the pre-quantization receipt says keep the
+   probability table in float; the `q`-vs-relative-law split says branch the section-level model on
+   prior strength rather than defaulting to the token-stream shape. All three are inputs to a
+   decision fx2 is making now, and none of them cost a run.
+2. **Decode PR86's `tokens.bin`** (113,900 B, retained, sha `14144bde4966`) — the only competitor
+   token stream plausibly separable without a full renderer forward. It would convert §4a's
+   blocking fact into a real second independent sample and let the pre-registered test run as
+   written. **Feasibility unresolved at time of writing** — a sub-arm is reading whether PR86's
+   decode path is pure-python or requires a renderer forward; if it needs the renderer, this drops
+   below item 3 in value.
+3. **Give ps2 the 8 KB break-even** (row 5) as the standing bar for any standalone f0 carrier,
+   with its HNeRV-lineage verdict scope attached — it is a bar, not a kill.
+4. **Do not re-open order-0 anywhere in the packet** — row 7 closes it on 60 archives — and **do
+   not spend a unit on our container**: we are already at the measured 100 B floor.
+5. **Do not edit CLAUDE.md L14** on the 22,650-epoch claim; §6 records why it was refused.
