@@ -28587,3 +28587,25 @@ NOT FIRED (factorization negative by arithmetic) · **3 `--weight-qat-q3q4` MEAS
 4. **hg1 arm_a silent death CURED + RESUMED**: died Aug 16 22:54 at ep279/400 (no receipt, no error — launched with watchers:[], unnoticed ~17h; the make-silence-loud law's exact instance). Still descending at stop (gate d_seg 0.0565→0.0332 over 20 ep, COUPLED_DESCENT). Resumed 08-17 from intra_seg_trunk_tau_ep00279.npz via launch_detached_process + done-receipt hg1_arm_a_resume (counter 159, pid 68926); run.log ep000-279 preserved. Chain: arm_a→ep400 (~76 min) → arm_b hinge → §8 falsifier adjudication (#1100). jr1's sealed Leg-C matched-‖Δw‖ ticket (4 runs ~2.2h) queues behind. jr1 verdict banked: residual-judge STRUCTURALLY RETIRED (13.3% floor vs 6.1% signal, no n fixes it — SE_pred's leading 1); band objective DID rotate the realized step 66.3° (cos 0.402 vs 0.95 bar); W1 breaks the displacement law 3× (t=+12.87) → law narrowed to QAT-from-step-0 arms.
 
 STORES CONSULTED: MODAL_REMOTE_RESULT.json (rr2 + hv1 r2 rows), inflated_outputs manifests (3 shas), ddm_rr2_encoder_byteclose_20260817.md, m05/m23/et4 laws, R4_LADDER_VERDICT.json, ddm_wd3_n120_family_disposition_20260816.md, MP2_ADVISORY_ADJUDICATION.json, ddm_jr1_band_objective_judge_repair_20260817.md (§0 pre-registration + §2.4 power result + §5 ticket), ddm_hg1_ring0_margin_hinge_20260816.md §8, hg1 launch_receipt/telemetry.
+
+## FEED-t1h (2026-08-17/18, MAIN) — pose re-solve T4 verdict + receiver-pin law + gestalt-composition law
+- **t1h pass-2 T4 AUTHORITY ROW (call fc-01M092BSTGSHRQAS2BJ1KCVARC, 454s, ~$0.16): REFUSED.**
+  seg contribution 0.029611 = d_seg UNCHANGED to every digit (falsifier 1 ✓) · bytes 181,169 exact
+  (falsifier 2 ✓) · pose contribution 0.020847062 vs base 0.008295 — d_pose ROSE ~6.3×
+  (6.886e-6 → 4.346e-5), falsifier 3 FIRED. Recomputed S ≈ 0.17109 vs rr4 0.158533.
+  **VERDICT: the CPU-torch accept-oracle does NOT transfer to the T4 pose axis** (pre-registered
+  losing branch; composes with #1054's 21× CPU-pose degradation on identical bytes). The CPU
+  cumulative ratio 0.4113 was real ON THE CPU INSTRUMENT — the instruments' pose landscapes diverge.
+  Pass-3 (per-pass 0.7932 CPU, 428/600) MOOTED as filed; arm af41bb5e redirected to reformulate the
+  accept-oracle (dual-instrument acceptance hypothesis / honest FORMULATION close). Frontier UNMOVED.
+- **RECEIVER-PIN LAW (from fire attempts r1–r3)**: rr4-lineage inflate.py pins ARCHIVE_SHA256/
+  ARCHIVE_BYTES — archive+runtime are ONE sealed object; every candidate needs its own re-pinned
+  runtime tree + an end-to-end inflate.py main() smoke ("decode identical by construction" without
+  the real entry point is the naive shortcut the pin caught). Consumer: pq2 e2e compression script.
+- **GESTALT-COMPOSITION LAW (operator 08-17 "All negative signal is signal for gestalt")**: memory
+  negative-signal-composes-into-gestalt — cross-lane negative repeat = ONE structural fact; live-space
+  map = loop-entry (training/joint solve) or lossy-priced re-representation only. Today's row adds:
+  pose quantities do not transfer across scorer instruments — acceptance on the shipping axis only.
+- **Triality-leg adjudication (drift-detector, t1h compose commit)**: inherited-HPAC terminal solve,
+  no witness trainer lever/launch/curriculum touched → no witness_dsl Lever owed (#844 syntactic-
+  vocabulary match). DAG leg = this FEED; MEMORY leg = gestalt memory + index line.
