@@ -28665,3 +28665,43 @@ STORES CONSULTED: MODAL_REMOTE_RESULT.json (rr2 + hv1 r2 rows), inflated_outputs
   shipped disabled; PR112 shipped the exp()-free cure + per-section selector 2 months early).
 - Row 5 (pose): standalone f0 carrier ~8 KB → ~0.196, verdict_scope: instance — HNeRV lineage
   only; a break-even bar for the js8 line, not a kill.
+
+## FEED-fx2 (2026-08-18) — model-axis all-sections arm LANDED inside its pre-registered band; byte-close chain FIRED by MAIN
+- **Prediction adjudication (charter prior-law line, m38):** predicted −300..−900 B composed on the
+  token stream; MEASURED best −797.42 B (19 members, refused on decode margin 29 s) / RECOMMENDED
+  −710.84 B (13 members, margin 118 s vs fx1's T4-passed 160 s class). INSIDE the band. Falsifier
+  ("composed <−100 B ⇒ family near floor, measure R6 and close") NOT tripped — the model axis stays
+  open, and R6 was measured anyway: **~315 B** hit-event headroom under the richest context + fx1's
+  untouched **1,247 B** within-miss ceiling; held-out column shows online adaptation worth ~5,500 B
+  (field strongly non-stationary).
+- **Mechanism:** fx1's causal template was UNDER-USED — the real `group_index.u8` rule is exactly
+  `(x&63)+2*(y&63)`, making up-right `(+1,−1)` 98.6945% causal (identical to up, higher than left).
+  Widened 4-neighbour template + NEW local-homogeneity context (distinct decoded classes among
+  causal neighbours = decoded-partition boundary detector) drive the win. Two axes compose 79%
+  additively; lr plateau NARROWS with model size (2^-2 costs +408 B at 19 members where fx1
+  measured it flat at 8) — a members×lr interaction the fx1 prior did not carry.
+- **SSE/APM stage DEAD.** verdict_scope: formulation — SSE/APM secondary-estimation stage stacked on
+  the fx2 mixer output over the IX2TOK01 token stream (6 of 6 formulations +9.91..+139.56 B; cost
+  tracks context duplication with the mixer's own; learned-exponent rescue WORSE at +15.62 —
+  closes the family at this stacking, not SSE elsewhere).
+- **R5 all-sections:** archive has 3 disjoint model regions, not 8. Semantic-blob MODEL saturated
+  (order-1 +300.6, order-2 +769.2 B) but its SERIALIZATION is not: **−515 B** from byte-splitting
+  8,284 B of un-entropy-coded fp16 metadata (control reproduced the shipped 34,763 B section at
+  +0). Larger than the whole token win; needs a receiver-side un-split — own charter, next slot.
+- **pd1 relay adjudication (4 rows):** row 1 LZMA-tuning NOT-APPLICABLE (our sections are Brotli;
+  LZMA at those params measures WORSE +88/+33/+62) · row 2 serialization axis CONFIRMED −515 B ·
+  row 3 bit-share re-key TAKEN (arm's arithmetic already bit-keyed) · row 4 context prior DOES NOT
+  TRANSFER (388× operating-point gap — our stream runs 0.0075 bits/token). Cross-vehicle priors
+  transfer as AXES to race, not NUMBERS to adopt (the m21/L18 law, reproduced).
+- **Blocker adjudicated AT SOURCE (m53 instance):** the arm's "rc64 pin 5c75e2c7 matches no file on
+  either SSD" was a REFUTED negative-existence claim — the exact file exists at
+  `/Volumes/VertigoDataTier/pact/pr135_intake_20260810/experiment_book/src/cpr1_sub4/entropy/rc64_backend.c`
+  (sha matches; PR135 verbatim encoder-side source per pq1 accounting row 8a; the receiver-side
+  `runtime/entropy/rc64_backend.c` copies are a DIFFERENT role at 05839d14). Pin NOT stale; no
+  re-pin; fix = supply the path. Byte-close chain LAUNCHED detached (counter 174, pid 70206,
+  driver `/Volumes/APDataStore/pact/ddm_fx2/byteclose_a_driver.sh`, freshness re-verify of the
+  frozen drop-in as stage 0): targets archive 180,450±1 B / token 109,801±1 B / 7 sections
+  byte-identical / decoded field 9ba2e52b… at parse-back. On green: MAIN fires candidate A
+  (projected S 0.1580598, 10.05× naming bar) via tools/fire_modal_auth_eval.py; candidate B
+  (11-member, 142 s margin) is the sealed fallback; candidate C (19-member, −797 B) BANKED pending
+  a real T4 decode-headroom measurement. Task #1116.
