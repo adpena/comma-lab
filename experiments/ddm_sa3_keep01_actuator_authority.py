@@ -80,6 +80,23 @@ ROWS: Final = {
         "d_seg_delta_n600": None,
         "receipt": ADVISORY / "sm3r_keep87/attempt_0001/contest_auth_eval.json",
     },
+    # ck1 = keep01's row-prune composed with sa3/S2's surviving mixed-depth legs
+    # (frame_embed q3 + blocks.0.film q3, SM3R mode 6).  Advisory measured 2026-08-18
+    # (ddm_ck1 attempt_0002, n600): d_seg 0.00043336 (delta vs rr4_base 0.00042714),
+    # d_pose 0.00399327.  Archive 177,867 B sha 71026ec4df1918f6...
+    "ck1_composed": {
+        "raw": Path(
+            "/Volumes/APDataStore/pact/ddm_ck1/advisory_n600_cpu/ck1_composed"
+            "/attempt_0002/work/inflated/0.raw"
+        ),
+        "archive_bytes": 177_867,
+        "d_pose_n600": 3.99327e-3,
+        "d_seg_delta_n600": 6.22e-6,
+        "receipt": Path(
+            "/Volumes/APDataStore/pact/ddm_ck1/advisory_n600_cpu/ck1_composed"
+            "/attempt_0002/contest_auth_eval.json"
+        ),
+    },
 }
 
 D_POSE_BASE_CPU: Final = 1.474661e-04
