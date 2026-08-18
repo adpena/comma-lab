@@ -1,9 +1,9 @@
 {
   "audit": "AU1 measurement-integrity audit",
   "corrections_index": {
-    "memos_matched": 2733,
-    "memos_scanned": 7592,
-    "rows_emitted": 11840
+    "memos_matched": 3310,
+    "memos_scanned": 8830,
+    "rows_emitted": 14076
   },
   "decode_read_coverage": {
     "by_classification": {
@@ -19,18 +19,18 @@
     "source_sites_verified": 25
   },
   "headline_vs_body": {
-    "git_subjects_scanned": 213,
-    "memos_scanned": 7592,
+    "git_subjects_scanned": 221,
+    "memos_scanned": 8830,
     "negative_control_931_caught": false,
     "positive_control_933_caught": true,
-    "rows_emitted": 8157,
-    "task_rows_scanned": 522
+    "rows_emitted": 9171,
+    "task_rows_scanned": 565
   },
   "if_budget_checks": {
     "rows_emitted": 2,
     "task_867_module_referents": 2,
-    "task_885_current_git_log_oneline_wc_l": 14158,
-    "task_885_current_git_rev_list_count": 14158
+    "task_885_current_git_log_oneline_wc_l": 15309,
+    "task_885_current_git_rev_list_count": 15309
   },
   "registry_first_extension": {
     "rows_emitted": 1,

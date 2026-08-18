@@ -1747,6 +1747,34 @@ def _lint_bare_task_ids(text: str) -> list[str]:
     ]
 
 
+CORRECTIONS_INDEX_REBUILD_CMD = ".venv/bin/python tools/au1_measurement_integrity_audit.py"
+
+
+def _lint_corrections_index_freshness() -> list[str]:
+    """Advisory: how far behind the corpus the coarse net has fallen.
+
+    The index has no rebuild trigger — it was built once, by hand, and read for thirteen
+    days afterwards as though it were current.  A stale net cannot say "I found nothing"
+    and be believed, so its horizon travels with every advisory it feeds.
+    """
+    from tac.corrections_index_freshness import measure_index_freshness
+
+    freshness = measure_index_freshness(index_path=CORRECTIONS_INDEX)
+    if not freshness.warnings:
+        return []
+    return [*freshness.warnings, f"rebuild the corrections index: {CORRECTIONS_INDEX_REBUILD_CMD}"]
+
+
+def corrections_index_freshness_banner() -> str:
+    """The unconditional banner: a healthy index announces itself too, so silence is never a pass."""
+    from tac.corrections_index_freshness import freshness_banner, measure_index_freshness
+
+    return freshness_banner(
+        measure_index_freshness(index_path=CORRECTIONS_INDEX),
+        rebuild_command=CORRECTIONS_INDEX_REBUILD_CMD,
+    )
+
+
 def lint_charter_recall_advisories(prompt_path: str, days: int = 14) -> list[str]:
     """Charter-time recall/validation advisories (operator 2026-08-16).
 
@@ -1770,6 +1798,7 @@ def lint_charter_recall_advisories(prompt_path: str, days: int = 14) -> list[str
         lambda: _lint_falsified_premises(text),
         lambda: _lint_frontier_literals(text),
         lambda: _lint_bare_task_ids(text),
+        _lint_corrections_index_freshness,
     ):
         try:
             out.extend(leg())
@@ -1910,6 +1939,12 @@ def cmd_lint(args) -> int:
         print(f"REFUSED lint: {refusal}", file=sys.stderr)
         return 2
     assert prompt_file is not None
+    # Unconditional: the coarse net states its own horizon before it reports anything,
+    # so "no hits" can never be read as "clean" by a reader who cannot see the window.
+    try:
+        print(corrections_index_freshness_banner())
+    except Exception as exc:  # observability must never block a lint
+        print(f"[corrections-index] banner unavailable ({type(exc).__name__}: {exc})")
     problems = lint_charter_optimal_form(str(prompt_file))
     for problem in problems:
         print(f"charter-lint REFUSED [{args.name}]: {problem}")
