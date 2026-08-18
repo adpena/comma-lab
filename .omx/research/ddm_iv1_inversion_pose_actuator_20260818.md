@@ -514,3 +514,40 @@ trim, retained only as evidence. The candidate is `candidate_sd1m_archive.zip`.
    ("pose-COMPENSATED semantic edit") is written for edits made *for bytes*. This arm
    shows a third door — edits made *for pose at constant bytes* — which its
    three-point refusal table does not cover.
+
+## §8 — T4 VERDICT: REFUSED (+0.00645 S), and the projection was SIGN-INVERTED
+
+Call `fc-01M0AMYKHW7PPWBW2QQMD4MQ0W`, rc=0, 521 s, ~$0.16. Archive `49bb833e…`, 181,475 B.
+Score recomputed from components (NEVER the rounded `final_score: 0.16` display field):
+
+**S = 0.1641608174554752 [contest-CUDA T4, n600]** vs pointer **0.15771357797660338** ⇒ **+0.00645 REFUSED**.
+
+| term | pointer | iv1 | delta |
+|---|---|---|---|
+| seg  | 0.029611 | 0.029631 | +2.000e-05 |
+| pose | 0.008295 | 0.013693 | **+5.398e-03** |
+| rate | 0.119808 | 0.120837 | +1.029e-03 (+1,545 B) |
+| **S** | **0.157714** | **0.164161** | **+0.00645** |
+
+**The mechanism is the opposite of the hypothesis.** d_pose went 6.880e-06 → 1.875e-05 — **2.73× WORSE**.
+The inversion premise was that the semantic tensor could act as a *pose actuator*; measured on the
+shipping vehicle it is a pose *destroyer*, and pose supplies 84% of the regression. Rate adds the rest.
+
+**The lesson worth more than the row: every $0 leg held, and the DERIVED projection still had the
+wrong SIGN.** The arm's decode proof was exact (token stream byte-identical), its three frame-diff
+predictions all confirmed, and its band correction was the honest one — it explicitly refused the
+−90.48% aggregate (measured on a 21×-harder seeded-random subset) in favour of a band-corrected
+−0.00072..−0.00139. Reality: **+0.00645**. Not a magnitude miss — a sign flip. Careful $0 reasoning
+narrowed the number and never questioned its direction, because nothing in the $0 chain measured
+d_pose through the real scorer at all. The decode proof proved the bytes decode; it could not prove
+they score.
+
+`verdict_scope`: **INSTANCE** — this candidate (semantic-tensor edit + SD1M container) on sz1.
+The *family* question (can a semantic tensor carry pose at all) is NOT closed by one refused row;
+what IS measured is that this realization inverts the axis it aimed at. The sa1/qs5 line already
+established that uncompensated semantic edits damage pose linearly; iv1 is a third concordant
+instance, now on the live pointer. Reactivation would require in-compile Schur compensation
+(qs5's proven mechanism) applied to THIS tensor before any re-fire — not a re-tune of the same object.
+
+CPU/T4 sign question (left OPEN by the arm): **moot for this candidate** — it loses on T4, and the
+CPU axis is measured infeasible on this lineage (inflate 3,422.7 s vs the 1,800 s budget).
