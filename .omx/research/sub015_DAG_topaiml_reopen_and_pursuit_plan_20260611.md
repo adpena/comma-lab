@@ -28632,6 +28632,7 @@ STORES CONSULTED: MODAL_REMOTE_RESULT.json (rr2 + hv1 r2 rows), inflated_outputs
   sa1 #1114 admit bars re-derive from THIS pointer at fire time.
 
 ## FEED-ps2 (2026-08-18) — F2 projection lever REFUTED (joint axis); stale-figure propagation caught
+- verdict_scope: formulation — linear projected per-pair pose-correction overlays on the fx1/rr4 base (the F2/pn2/fo2h construction); the seg leg is POSITIVE and the joint/nonlinear pose family stays OPEN.
 - F2 REFUTED at FORMULATION scope: η(n=48) 0.5804 > bar 0.5196 (seg leg REAL) but pose ratio
   inverts (n=12 ×0.7935 = small-sample artifact → ×1.3725 stable n≥20; pose prefix-bias law m96
   again); composed seg −0.003204 + rate +0.002869 + pose +0.001424 = NET +0.001088 S LOSS
