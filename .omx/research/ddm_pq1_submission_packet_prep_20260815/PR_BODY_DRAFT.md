@@ -192,7 +192,7 @@ while the on-disk serialization is ours.
 | RC64 backend, encoder side | `inherited-substrate` (PR135, verbatim) | compiles PR135's `rc64_backend.c` unmodified |
 | RC64 backend, shipped receiver | `mechanism-adopt-with-attribution` (PR135-derived, modified) | shipped `05839d1416e68a49…`, which **differs** from the PR135 source |
 | Receiver binding and archive assembly | `ours-original` | validated runtime tree `0d0fc008d6a37bd5…`; archive `debb025f45bb42e3…` |
-| Compression chain | `ours-original` | fx2 byte-close driver + sz1 split builder; e2e re-bind in progress (stated above) |
+| Compression chain | `ours-original` | fx2 byte-close driver + sz1 split builder; e2e verified — rebuilt `debb025f…`/179,930 B exactly (stated above) |
 
 This remains a lossless re-encode program on a PR130/PR135 learned substrate,
 not a claim that the learned vehicle is original. The full accounting,
@@ -245,6 +245,7 @@ Every number below was read from the pull request itself, not from our notes.
   `experiments/ddm_sz1_semantic_metadata_split.py` (serialization split).
 
 Before submission the operator must verify anonymous visibility of the pinned
-source URLs, complete the e2e entry-point re-bind, and replace the
-download-status paragraph with the verified public archive URL and its hosted
-manifest.
+source URLs and replace the download-status paragraph with the verified public
+archive URL and its hosted manifest. (The e2e entry-point re-bind is complete:
+`RESULT_pq2_e2e.json` records the rebuild landing `debb025f…`/179,930 bytes
+exactly, all stages rc=0.)
