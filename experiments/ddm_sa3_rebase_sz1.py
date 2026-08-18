@@ -1,0 +1,733 @@
+"""ddm_sa3 -- re-base the sa2 pose-compensated semantic edit onto the sz1 pointer.
+
+WHY THIS ARM EXISTS
+-------------------
+``ddm_sa2`` proved a real mechanism: in-compile frame-0 Schur compensation cancels
+99.942% of the S2 semantic edit's pose damage for +36 B.  But it built its candidate
+on **rr4** (S 0.158533 @ 181,161 B) while the live pointer moved to **sz1**
+(S 0.15771357797660338 @ 179,930 B).  sa2's projected 0.157896 is WORSE than the live
+pointer, so the candidate is obsolete even though the mechanism is not.  That is the
+delta-without-its-baseline law firing on our own arm.
+
+TRANSFER vs IDENTITY -- the distinction this module is built around
+-------------------------------------------------------------------
+Carrying a Schur compensation across a *different* lattice is the qs4 disaster
+(+2.396e-4 pose, ~100x the seg win).  So this module does **not** assume transfer.
+It MEASURES whether sz1's decoded state equals rr4's, and refuses to build unless
+it does.  Measured result (``assert_decoded_identity``):
+
+    carrier lattice  max|delta| = 0        semantic body  byte-identical
+    carrier body     byte-identical        hpac body      byte-identical
+
+sz1's two moves (fx2 token re-encode, semantic byte-plane split) are both **container**
+transforms over an unchanged decoded state.  So the sa2 compensation is valid here by
+IDENTITY, not by transfer -- and the identity is asserted in code at build time, per
+the qs5 pattern, not argued in prose.
+
+WHAT IS ACTUALLY REBUILT
+------------------------
+The rate side is rebuilt from scratch, because rate does NOT carry:
+
+* ``tail``   -- sz1's fx2 token stream (109,897 B vs rr4's 110,608).  MEASURED here to
+  be byte-identical across rr4/S2/sa2, i.e. independent of both the semantic edit and
+  the carrier compensation, so it is borrowable verbatim.  -711 B.
+* ``semantic`` -- the S2-edited body, optionally byte-plane split.  The split's credit
+  on the *base* body was -520 B; on the *edited* body it must be re-measured, because
+  the S2 edit changes the body length (36,040 -> 38,514 B) and two credits over the
+  same redundancy do not add (the union-is-not-the-sum-of-its-legs law).
+* ``carrier`` -- the compensated lattice, re-encoded CPR1 -> CAP1 -> packed metadata.
+
+AXIS ``[macOS-CPU exact byte/container + receiver parse-back]``.  This module measures
+BYTES exactly.  It is not a score and it runs no scorer.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import shutil
+import struct
+import subprocess
+import sys
+import zipfile
+from pathlib import Path
+from types import SimpleNamespace
+from typing import Any, Final
+
+import numpy as np
+
+REPO: Final = Path(__file__).resolve().parents[1]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+
+from experiments.ddm_sa2_compile_candidate import (
+    _imports,
+    brotli_stream,
+    carrier_surface,
+    encode_carrier_body,
+    load_solved_codes,
+    patch_runtime_tree,
+)
+
+# --- the three pinned inputs, each verified from disk before use ----------------------
+
+SZ1_GENERATION: Final = Path(
+    "/Volumes/APDataStore/pact/ddm_pq1_submission_packet"
+    "/generations/gen3_sz1_composed_split"
+)
+SZ1_ARCHIVE_SHA256: Final = (
+    "debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a"
+)
+SZ1_ARCHIVE_BYTES: Final = 179_930
+
+RR4_RUNTIME: Final = Path(
+    "/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime"
+)
+SA1: Final = Path("/Volumes/APDataStore/pact/ddm_sa1")
+S2_ARCHIVE: Final = SA1 / "generations/S2_film23_q2_top3_q3/archive.zip"
+S2_ARCHIVE_SHA256: Final = (
+    "a36890b6541cf259b3f662996f8c3a935d0648aa977d02d30992aaa1e4feae29"
+)
+SA2_SOLVE_ROOT: Final = SA1 / "retained/sa2/n600"
+
+# --- the live pointer's measured components ------------------------------------------
+# Source: gen3_sz1_composed_split/{archive_manifest.json, report.txt}
+# [contest-CUDA T4, n600].  Recomputed from components, never the 2 dp display.
+SZ1_SCORE: Final = 0.15771357797660338
+SZ1_SEG_S: Final = 0.029611
+SZ1_POSE_S: Final = 0.008294576541331089
+SZ1_RATE_S: Final = 0.11980800143527229
+SZ1_D_SEG: Final = SZ1_SEG_S / 100.0
+SZ1_D_POSE: Final = (SZ1_POSE_S**2) / 10.0
+
+RATE_DENOMINATOR: Final = 37_545_489
+ADMIT_BAR_S: Final = -3.5e-6
+
+# --- sa2's measured same-instrument pose legs (frozen CPU-torch PoseNet, n600) --------
+# These are NOT re-measured here; they are valid by the decoded-state identity this
+# module asserts.  Their transfer to T4 is UNMEASURED -- see the memo.
+SA2_D_POSE_BASE_CPU: Final = 1.474661e-04
+SA2_D_POSE_COMPENSATED_CPU: Final = 1.479554e-04
+SA2_D_POSE_UNCOMPENSATED_CPU: Final = 9.865438e-04
+SA2_D_SEG_DELTA_CPU: Final = 1.72e-06  # S2's seg cost, in d_seg units
+SA2_ADVISORY_D_SEG_BASE_CPU: Final = 4.2714e-04
+
+# --- the shipped sz1 semantic split, used at its EXACT shipped constants --------------
+SZ1_RESERVED_SEMANTIC_SPLIT: Final = 0x01
+SZ1_SPLIT_OFFSET: Final = 49
+SZ1_SPLIT_LENGTH: Final = 8_284
+
+RX1_HEADER: Final = struct.Struct("<4sBBBBHHH")
+MEMBER_NAME: Final = "p"
+AXIS: Final = "[macOS-CPU exact byte/container + receiver parse-back]"
+
+
+class SA3Error(RuntimeError):
+    """A re-base precondition, identity gate, or parse-back control failed."""
+
+
+# --------------------------------------------------------------------------
+# input verification -- nothing is used before it is verified from disk
+# --------------------------------------------------------------------------
+
+
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def verify_sz1_base() -> dict[str, Any]:
+    """Refuse unless the live pointer's archive is exactly what the charter names."""
+    archive = SZ1_GENERATION / "archive.zip"
+    if not archive.exists():
+        raise SA3Error(f"sz1 archive missing: {archive}")
+    digest, size = sha256_file(archive), archive.stat().st_size
+    if digest != SZ1_ARCHIVE_SHA256:
+        raise SA3Error(f"sz1 archive sha differs: {digest} != {SZ1_ARCHIVE_SHA256}")
+    if size != SZ1_ARCHIVE_BYTES:
+        raise SA3Error(f"sz1 archive bytes differ: {size} != {SZ1_ARCHIVE_BYTES}")
+    members = zipfile.ZipFile(archive).infolist()
+    if len(members) != 1 or members[0].filename != MEMBER_NAME:
+        raise SA3Error("sz1 archive member layout differs")
+    recomputed = SZ1_SEG_S + SZ1_POSE_S + SZ1_RATE_S
+    if abs(recomputed - SZ1_SCORE) > 1e-12:
+        raise SA3Error(f"sz1 components do not recompute the score: {recomputed}")
+    return {
+        "archive": str(archive),
+        "sha256": digest,
+        "bytes": size,
+        "member": members[0].filename,
+        "member_bytes": members[0].file_size,
+        "score_recomputed_from_components": recomputed,
+        "seg_s": SZ1_SEG_S,
+        "pose_s": SZ1_POSE_S,
+        "rate_s": SZ1_RATE_S,
+        "d_seg": SZ1_D_SEG,
+        "d_pose": SZ1_D_POSE,
+    }
+
+
+def sections(archive: Path) -> dict[str, Any]:
+    """Split an RX1M member into its four sections plus the reserved flag byte."""
+    outer = zipfile.ZipFile(archive).read(MEMBER_NAME)
+    magic, version, codec, table_mode, reserved, hb, sb, cb = RX1_HEADER.unpack_from(outer)
+    offset = RX1_HEADER.size
+    hpac, offset = outer[offset : offset + hb], offset + hb
+    semantic, offset = outer[offset : offset + sb], offset + sb
+    carrier, offset = outer[offset : offset + cb], offset + cb
+    return {
+        "magic": magic, "version": version, "codec": codec,
+        "table_mode": table_mode, "reserved": reserved,
+        "hpac": hpac, "semantic": semantic, "carrier": carrier,
+        "tail": outer[offset:], "archive_bytes": archive.stat().st_size,
+    }
+
+
+# --------------------------------------------------------------------------
+# THE IDENTITY GATE -- the qs4 lesson, in code
+# --------------------------------------------------------------------------
+
+
+_DECODE_PROBE: Final = r'''
+import hashlib, json, sys
+from pathlib import Path
+from types import SimpleNamespace
+import numpy as np
+root, repo = sys.argv[1], sys.argv[2]
+book = "/Volumes/VertigoDataTier/pact/pr135_intake_20260810/experiment_book/src"
+sys.path.insert(0, repo); sys.path.insert(0, book)
+sys.path.insert(0, root); sys.path.insert(0, root + "/cpr1")
+import carrier_codec as cc
+import runtime.residual_archive as ra
+from runtime.carrier_repack import materialize_cpr1
+archive = Path(root) / "archive.zip"
+parts = ra.read_residual_archive(archive)
+canonical = materialize_cpr1(parts.carrier_blob, SimpleNamespace(N=600, CARRIER_DIM=12))
+_bs, _bc, _cs, enc = cc.decode_compact_carrier(
+    canonical, basis_count=12 * 3 * 24 * 32, frames=600, dimensions=12)
+d = (enc.astype(np.int64) >> 1) ^ -(enc.astype(np.int64) & 1)
+codes = np.cumsum(d, axis=0) & 0xFFF
+codes = np.where(codes >= 0x800, codes - 0x1000, codes).astype(np.int32)
+print(json.dumps({
+    "codes_sha256": hashlib.sha256(codes.tobytes()).hexdigest(),
+    "semantic_body_sha256": hashlib.sha256(parts.semantic_blob).hexdigest(),
+    "canonical_cpr1_sha256": hashlib.sha256(bytes(canonical)).hexdigest(),
+}))
+'''
+
+
+def _decode_through_own_runtime(root: Path) -> dict[str, str]:
+    """Decode an archive through the runtime tree that SHIPS with it.
+
+    Each root gets a fresh interpreter: rr4's ``residual_archive`` refuses
+    ``reserved != 0`` and so cannot read sz1 at all, and a shared interpreter
+    would silently serve one root's modules to the other.
+    """
+    done = subprocess.run(
+        [sys.executable, "-B", "-c", _DECODE_PROBE, str(root), str(REPO)],
+        capture_output=True, text=True, env={"PYTHONDONTWRITEBYTECODE": "1", "PATH": "/usr/bin:/bin"},
+    )
+    if done.returncode != 0:
+        raise SA3Error(f"decode probe failed under {root}: {done.stderr.strip()[-500:]}")
+    return json.loads(done.stdout.strip().splitlines()[-1])
+
+
+def assert_decoded_identity(work: Path) -> dict[str, Any]:
+    """Refuse to build unless sz1's decoded state EQUALS the one sa2 solved against.
+
+    The compensation is a function of (base carrier lattice, base frame_1, edited
+    frame_1).  If sz1 decodes the same lattice and the same semantic body as rr4,
+    those three objects are identical and the solution is valid by identity.  If any
+    of them differs, this is a cross-regime transfer and it must be re-solved from
+    scratch -- so this refuses rather than proceeding.
+    """
+    rr4 = _decode_through_own_runtime(scratch_runtime_copy(RR4_RUNTIME, work, "rr4"))
+    sz1 = _decode_through_own_runtime(scratch_runtime_copy(SZ1_GENERATION, work, "sz1"))
+
+    lattice_delta = 0 if rr4["codes_sha256"] == sz1["codes_sha256"] else -1
+    rr4_semantic, sz1_semantic = rr4["semantic_body_sha256"], sz1["semantic_body_sha256"]
+    rr4_carrier, sz1_carrier = rr4["canonical_cpr1_sha256"], sz1["canonical_cpr1_sha256"]
+
+    failures: list[str] = []
+    if lattice_delta != 0:
+        failures.append(
+            f"carrier lattice differs ({rr4['codes_sha256']} vs {sz1['codes_sha256']})"
+        )
+    if rr4_semantic != sz1_semantic:
+        failures.append(f"semantic body differs ({rr4_semantic} vs {sz1_semantic})")
+    if rr4_carrier != sz1_carrier:
+        failures.append("canonical CPR1 carrier body differs")
+    if failures:
+        raise SA3Error(
+            "sz1 is NOT decode-identical to the object sa2 solved against; a "
+            "compensation may not be carried across a different lattice (the qs4 "
+            "disaster). Re-solve in-compile instead. Failures: " + "; ".join(failures)
+        )
+    return {
+        "verdict": "IDENTITY",
+        "carrier_lattice_sha256": sz1["codes_sha256"],
+        "semantic_body_sha256": sz1_semantic,
+        "canonical_cpr1_sha256": sz1_carrier,
+        "note": (
+            "sz1's decoded state is byte-identical to rr4's; the sa2 compensation "
+            "is valid here by identity, not by transfer."
+        ),
+    }
+
+
+def assert_tail_independence() -> dict[str, Any]:
+    """Refuse to borrow sz1's fx2 tail unless the tail is provably edit-independent."""
+    rr4 = sections(RR4_RUNTIME / "archive.zip")
+    s2 = sections(S2_ARCHIVE)
+    if rr4["tail"] != s2["tail"]:
+        raise SA3Error(
+            "the token tail is NOT independent of the S2 semantic edit; sz1's fx2 "
+            "tail cannot be borrowed and fx2 must be re-run on S2's tokens"
+        )
+    if rr4["hpac"] != s2["hpac"]:
+        raise SA3Error("the hpac section is not independent of the S2 semantic edit")
+    sz1 = sections(SZ1_GENERATION / "archive.zip")
+    return {
+        "verdict": "INDEPENDENT",
+        "rr4_tail_bytes": len(rr4["tail"]),
+        "s2_tail_bytes": len(s2["tail"]),
+        "sz1_tail_bytes": len(sz1["tail"]),
+        "tail_delta_bytes": len(sz1["tail"]) - len(rr4["tail"]),
+        "tail_sha256_rr4": hashlib.sha256(rr4["tail"]).hexdigest(),
+        "tail_sha256_sz1": hashlib.sha256(sz1["tail"]).hexdigest(),
+    }
+
+
+# --------------------------------------------------------------------------
+# THE PACKET IS A CUSTODY ARTIFACT, NOT A WORKSPACE
+# --------------------------------------------------------------------------
+
+_SCRATCH_ROOTS: dict[Path, Path] = {}
+
+
+def scratch_runtime_copy(root: Path, work: Path, label: str) -> Path:
+    """Copy a runtime tree into scratch so nothing ever imports IN the packet.
+
+    An in-place ``import`` of the packet's receiver writes CPython bytecode (and, on
+    this filesystem, AppleDouble twins) INSIDE the hashed runtime tree.  That breaks
+    the pinned runtime-tree sha cited by report.txt/README/receipt r5, and the .pyc
+    embed absolute local paths -- a public-hygiene violation in a submission artifact.
+
+    This arm CAUSED exactly that at 2026-08-18T13:16:25Z: an ad-hoc identity probe
+    imported the sz1 receiver in place and wrote 15 .pyc plus 18 AppleDouble twins.
+    MAIN removed them (manifest ``gen3_receipts/PYCACHE_CONTAMINATION_REMOVED_20260818.json``,
+    33 files, removed 13:27:21Z) and proved restoration.  ``PYTHONDONTWRITEBYTECODE``
+    alone would have prevented it, but a copy removes the whole class: the packet is
+    never on any interpreter's import path at all.
+    """
+    cached = _SCRATCH_ROOTS.get(root)
+    if cached is not None and cached.exists():
+        return cached
+    dest = work / f"runtime_{label}"
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True)
+    for name in ("cpr1", "runtime"):
+        shutil.copytree(
+            root / name, dest / name,
+            ignore=shutil.ignore_patterns("__pycache__", "._*", "*.pyc"),
+        )
+    for name in ("archive.zip", "inflate.py", "inflate.sh"):
+        if (root / name).is_file():
+            shutil.copy2(root / name, dest / name)
+    _SCRATCH_ROOTS[root] = dest
+    return dest
+
+
+def assert_packet_pristine(root: Path) -> dict[str, Any]:
+    """Fail closed if a packet directory carries import or AppleDouble residue."""
+    found = sorted(
+        str(p.relative_to(root))
+        for p in root.rglob("*")
+        if p.name.startswith("._") or p.name == "__pycache__" or p.suffix == ".pyc"
+    )
+    return {
+        "root": str(root),
+        "residue_count": len(found),
+        "residue": found,
+        "total_files": sum(1 for p in root.rglob("*") if p.is_file()),
+        "pristine": not found,
+    }
+
+
+# --------------------------------------------------------------------------
+# the semantic byte-plane split, at sz1's EXACT shipped constants
+# --------------------------------------------------------------------------
+
+
+def split_region(body: bytes) -> bytes:
+    """Group the pinned region's byte planes (high plane, then low plane).
+
+    Uses sz1's SHIPPED constants unchanged, so the shipped receiver un-splits this
+    with zero receiver edits and zero new fitted parameters.  The transform is a pure
+    byte permutation, so it restores byte-exactly whatever the region contains --
+    correctness does not depend on the region being aligned to the metadata.  Only
+    the *profit* does, and the profit is measured, never assumed.
+    """
+    start, end = SZ1_SPLIT_OFFSET, SZ1_SPLIT_OFFSET + SZ1_SPLIT_LENGTH
+    if len(body) < end:
+        raise SA3Error("semantic body too short for the pinned split region")
+    region = np.frombuffer(body[start:end], dtype=np.uint8)
+    return body[:start] + region[1::2].tobytes() + region[0::2].tobytes() + body[end:]
+
+
+def unsplit_region(body: bytes) -> bytes:
+    """Exact inverse of :func:`split_region` -- mirrors the shipped receiver."""
+    start, end = SZ1_SPLIT_OFFSET, SZ1_SPLIT_OFFSET + SZ1_SPLIT_LENGTH
+    planes = np.frombuffer(body[start:end], dtype=np.uint8)
+    half = SZ1_SPLIT_LENGTH // 2
+    region = np.empty(SZ1_SPLIT_LENGTH, dtype=np.uint8)
+    region[1::2] = planes[:half]
+    region[0::2] = planes[half:]
+    return body[:start] + region.tobytes() + body[end:]
+
+
+def semantic_stream_for(body: bytes, *, split: bool) -> tuple[bytes, int]:
+    """Return (brotli stream, reserved byte) for a semantic body, split or not."""
+    if not split:
+        return brotli_stream(body), 0
+    permuted = split_region(body)
+    if unsplit_region(permuted) != body:
+        raise SA3Error("semantic split is not exactly invertible")
+    return brotli_stream(permuted), SZ1_RESERVED_SEMANTIC_SPLIT
+
+
+# --------------------------------------------------------------------------
+# the build
+# --------------------------------------------------------------------------
+
+
+_VERIFIER: Final = r'''
+import hashlib, json, sys
+from pathlib import Path
+from types import SimpleNamespace
+import numpy as np
+root, archive, expected = sys.argv[1], Path(sys.argv[2]), np.load(sys.argv[3])
+sys.path.insert(0, root); sys.path.insert(0, root + "/cpr1")
+import carrier_codec as cc
+import runtime.residual_archive as ra
+from runtime.carrier_repack import materialize_cpr1
+parts = ra.read_residual_archive(archive)
+canonical = materialize_cpr1(parts.carrier_blob, SimpleNamespace(N=600, CARRIER_DIM=12))
+_bs, _bc, _cs, enc = cc.decode_compact_carrier(
+    canonical, basis_count=12 * 3 * 24 * 32, frames=600, dimensions=12)
+d = (enc.astype(np.int64) >> 1) ^ -(enc.astype(np.int64) & 1)
+codes = np.cumsum(d, axis=0) & 0xFFF
+codes = np.where(codes >= 0x800, codes - 0x1000, codes).astype(np.int32)
+print(json.dumps({
+    "codes_match": bool(np.array_equal(codes, expected)),
+    "max_abs_code_deviation": int(np.max(np.abs(codes - expected))),
+    "semantic_sha256": hashlib.sha256(parts.semantic_blob).hexdigest(),
+    "runtime_root": root,
+}))
+'''
+
+
+def verify_parse_back(
+    *, archive: Path, runtime_root: Path, expected_codes: np.ndarray,
+    expected_semantic_sha256: str,
+) -> dict[str, Any]:
+    """Read the built archive back through the SHIPPING runtime, fresh interpreter."""
+    codes_path = archive.with_suffix(".expected_codes.npy")
+    np.save(codes_path, np.ascontiguousarray(expected_codes))
+    done = subprocess.run(
+        [sys.executable, "-B", "-c", _VERIFIER, str(runtime_root), str(archive), str(codes_path)],
+        capture_output=True, text=True,
+        env={"PYTHONDONTWRITEBYTECODE": "1", "PATH": "/usr/bin:/bin"},
+    )
+    if done.returncode != 0:
+        raise SA3Error(f"parse-back failed under {runtime_root}: {done.stderr.strip()[-500:]}")
+    report = json.loads(done.stdout.strip().splitlines()[-1])
+    if not report["codes_match"]:
+        raise SA3Error(
+            "parse-back carrier codes differ from the solved lattice "
+            f"(max abs deviation {report['max_abs_code_deviation']})"
+        )
+    if report["semantic_sha256"] != expected_semantic_sha256:
+        raise SA3Error("parse-back semantic section differs from the packed one")
+    report["status"] = "PASS"
+    return report
+
+
+def build_candidate(
+    *, codes: np.ndarray, split: bool, drop_overlay: bool, output: Path,
+    runtime_root: Path, mod: SimpleNamespace,
+) -> dict[str, Any]:
+    """Assemble sz1-tail + sz1-hpac + S2-semantic + compensated-carrier."""
+    s2 = carrier_surface(S2_ARCHIVE, mod)
+    sz1 = sections(SZ1_GENERATION / "archive.zip")
+
+    semantic_body = mod.ra._decompress_brotli(s2["semantic_stream"])
+    semantic_stream, reserved = semantic_stream_for(semantic_body, split=split)
+
+    overlay = b"" if drop_overlay else s2["overlay"]
+    encoded = encode_carrier_body(codes, s2, mod, overlay)
+    carrier_stream = brotli_stream(encoded["body"])
+
+    member = (
+        RX1_HEADER.pack(
+            sz1["magic"], sz1["version"], s2["codec"], s2["table_mode"], reserved,
+            len(sz1["hpac"]), len(semantic_stream), len(carrier_stream),
+        )
+        + sz1["hpac"] + semantic_stream + carrier_stream + sz1["tail"]
+    )
+    archive_bytes = mod.rx1.deterministic_zip(member)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_bytes(archive_bytes)
+
+    verify = verify_parse_back(
+        archive=output, runtime_root=runtime_root,
+        expected_codes=np.asarray(codes, dtype=np.int32),
+        expected_semantic_sha256=hashlib.sha256(s2["parts"].semantic_blob).hexdigest(),
+    )
+    return {
+        "archive_bytes": len(archive_bytes),
+        "archive_sha256": hashlib.sha256(archive_bytes).hexdigest(),
+        "archive_path": str(output),
+        "reserved": reserved,
+        "semantic_split": split,
+        "semantic_body_bytes": len(semantic_body),
+        "semantic_stream_bytes": len(semantic_stream),
+        "carrier_stream_bytes": len(carrier_stream),
+        "tail_bytes": len(sz1["tail"]),
+        "hpac_stream_bytes": len(sz1["hpac"]),
+        "overlay_dropped": bool(drop_overlay),
+        "changed_coordinates": int(
+            np.count_nonzero(np.asarray(codes, dtype=np.int32) != s2["codes"])
+        ),
+        "delta_bytes_vs_sz1": len(archive_bytes) - SZ1_ARCHIVE_BYTES,
+        "parse_back": verify,
+    }
+
+
+# --------------------------------------------------------------------------
+# the admit arithmetic, against the LIVE pointer
+# --------------------------------------------------------------------------
+
+
+def admit_arithmetic(delta_bytes: int, *, compensated: bool) -> dict[str, Any]:
+    """Price an archive against sz1's measured components.
+
+    ``compensated`` is NOT cosmetic.  The zero-compensation controls exist only to
+    price the compensation's marginal byte cost; they carry the FULL uncompensated
+    pose collapse (d_pose 9.865e-4 vs 1.475e-4 base).  Pricing a control with the
+    compensated pose model would make an archive that sa1 already refused look like
+    the best row in the table -- which is exactly what happened on the first run of
+    this module before this flag existed.
+
+    Both pose-transfer models are reported because they differ by 21x and the
+    campaign has not measured which one holds across the CPU->T4 boundary:
+
+    * ABSOLUTE -- the compensation's residual d_pose damage carries in absolute
+      units.  Conservative here, because sqrt(10*x) has a steeper marginal at
+      sz1's lower operating point (5/sqrt(10*x) is 4.63x larger at T4's d_pose
+      than at the CPU instrument's).
+    * RELATIVE -- the damage carries as a fraction of the base d_pose.
+
+    The ABSOLUTE model is the one this arm reports as its verdict.
+    """
+    rate_s = 25.0 * delta_bytes / RATE_DENOMINATOR
+
+    # seg: the compensation touches frame_0 only; SegNet reads frame_1
+    # (upstream/modules.py:109 -> x[:, -1, ...]), so the ONLY seg cost is S2's own.
+    seg_absolute = 100.0 * SA2_D_SEG_DELTA_CPU
+    seg_relative = seg_absolute * (SZ1_D_SEG / SA2_ADVISORY_D_SEG_BASE_CPU)
+
+    d_pose_after = (
+        SA2_D_POSE_COMPENSATED_CPU if compensated else SA2_D_POSE_UNCOMPENSATED_CPU
+    )
+    base_pose_s = (10.0 * SZ1_D_POSE) ** 0.5
+    damage_absolute = d_pose_after - SA2_D_POSE_BASE_CPU
+    pose_absolute = (10.0 * (SZ1_D_POSE + damage_absolute)) ** 0.5 - base_pose_s
+    ratio = d_pose_after / SA2_D_POSE_BASE_CPU
+    pose_relative = (10.0 * SZ1_D_POSE * ratio) ** 0.5 - base_pose_s
+
+    rows = {}
+    for name, seg_s, pose_s in (
+        ("absolute", seg_absolute, pose_absolute),
+        ("relative", seg_relative, pose_relative),
+    ):
+        net = rate_s + seg_s + pose_s
+        rows[name] = {
+            "rate_s": rate_s, "seg_s": seg_s, "pose_s": pose_s, "net_delta_s": net,
+            "projected_score": SZ1_SCORE + net,
+            "admits": bool(net < ADMIT_BAR_S),
+            "margin_vs_bar": net - ADMIT_BAR_S,
+        }
+    return {
+        "base_score": SZ1_SCORE,
+        "base_d_seg": SZ1_D_SEG,
+        "base_d_pose": SZ1_D_POSE,
+        "delta_bytes": delta_bytes,
+        "compensated": compensated,
+        "admit_bar_s": ADMIT_BAR_S,
+        "cpu_pose_cancellation_fraction": 1.0
+        - (SA2_D_POSE_COMPENSATED_CPU - SA2_D_POSE_BASE_CPU)
+        / (SA2_D_POSE_UNCOMPENSATED_CPU - SA2_D_POSE_BASE_CPU),
+        "models": rows,
+        "verdict_model": "absolute",
+        "transfer_caveat": (
+            "The compensation was fitted on the frozen CPU-torch PoseNet; the base "
+            "leg shows 21.4x CPU-vs-T4 d_pose drift on identical bytes. Transfer to "
+            "T4 is UNMEASURED. Both models are reported; neither is a score."
+        ),
+    }
+
+
+# --------------------------------------------------------------------------
+# staging
+# --------------------------------------------------------------------------
+
+
+def stage_generation(dest: Path, archive: Path, source_runtime: Path) -> dict[str, Any]:
+    """Copy the sz1 runtime tree, apply the carrier patch, re-pin inflate.py."""
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True)
+    for name in ("cpr1", "runtime"):
+        shutil.copytree(
+            source_runtime / name, dest / name,
+            ignore=shutil.ignore_patterns("__pycache__", "._*", "*.pyc"),
+        )
+    for name in ("inflate.py", "inflate.sh"):
+        shutil.copy2(source_runtime / name, dest / name)
+    patch = patch_runtime_tree(dest)
+    shutil.copy2(archive, dest / "archive.zip")
+
+    digest, size = sha256_file(dest / "archive.zip"), (dest / "archive.zip").stat().st_size
+    inflate = dest / "inflate.py"
+    source = inflate.read_text()
+    replaced = source.replace(SZ1_ARCHIVE_SHA256, digest).replace(
+        str(SZ1_ARCHIVE_BYTES), str(size)
+    ).replace(f"{SZ1_ARCHIVE_BYTES:_}", f"{size:_}")
+    inflate.write_text(replaced)
+    return {
+        "generation": str(dest),
+        "archive_sha256": digest,
+        "archive_bytes": size,
+        "runtime_patch": patch,
+        "inflate_pin_updated": replaced != source,
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--work", type=Path,
+                        default=Path("/Volumes/APDataStore/pact/ddm_sa3/build"))
+    parser.add_argument("--generation", type=Path,
+                        default=Path("/Volumes/APDataStore/pact/ddm_sa3/generations/sa3_rebased_sz1"))
+    parser.add_argument("--no-stage", action="store_true")
+    args = parser.parse_args(argv)
+
+    args.work.mkdir(parents=True, exist_ok=True)
+    base = verify_sz1_base()
+    pristine_before = assert_packet_pristine(SZ1_GENERATION)
+    if not pristine_before["pristine"]:
+        raise SA3Error(
+            "the sz1 packet already carries import/AppleDouble residue; refusing "
+            f"to work against a contaminated custody artifact: {pristine_before['residue']}"
+        )
+    mod = _imports()
+    identity = assert_decoded_identity(args.work)
+    tail = assert_tail_independence()
+    codes, solved = load_solved_codes(SA2_SOLVE_ROOT)
+    if len(solved) != 600:
+        raise SA3Error(f"expected 600 solved pairs, found {len(solved)}")
+
+    s2 = carrier_surface(S2_ARCHIVE, mod)
+    base_codes = s2["codes"]
+
+    # The compensated lattice's Rice residual stream has a different length, so the
+    # SHIPPED reader -- which dispatches the carrier on a pinned section length --
+    # refuses it.  sa2's variable-length patch is what makes it parse.  Stage the
+    # patched tree FIRST so every parse-back runs against the runtime that would
+    # actually ship with the candidate, never against a convenient stand-in.
+    shipped_runtime = scratch_runtime_copy(SZ1_GENERATION, args.work, "sz1")
+    patched_runtime = args.work / "runtime_sz1_patched"
+    if patched_runtime.exists():
+        shutil.rmtree(patched_runtime)
+    shutil.copytree(
+        shipped_runtime, patched_runtime,
+        ignore=shutil.ignore_patterns("__pycache__", "._*", "*.pyc"),
+    )
+    runtime_patch = patch_runtime_tree(patched_runtime)
+
+    results: dict[str, Any] = {}
+    for label, use_codes, split, root in (
+        ("control_nosplit", base_codes, False, shipped_runtime),
+        ("control_split", base_codes, True, shipped_runtime),
+        ("candidate_nosplit", codes, False, patched_runtime),
+        ("candidate_split", codes, True, patched_runtime),
+    ):
+        row = build_candidate(
+            codes=use_codes, split=split, drop_overlay=True,
+            output=args.work / f"{label}.zip",
+            runtime_root=root, mod=mod,
+        )
+        row["parse_back_runtime"] = (
+            "sz1_shipped_copy" if root is shipped_runtime else "sz1_copy+sa2_carrier_patch"
+        )
+        row["compensated"] = label.startswith("candidate")
+        row["admit"] = admit_arithmetic(
+            row["delta_bytes_vs_sz1"], compensated=row["compensated"]
+        )
+        results[label] = row
+        print(
+            f"{label:20s} {row['archive_bytes']:7d} B  "
+            f"d={row['delta_bytes_vs_sz1']:+6d}  sem={row['semantic_stream_bytes']:6d}  "
+            f"car={row['carrier_stream_bytes']:6d}  parse-back {row['parse_back']['status']}"
+        )
+
+    # Only a COMPENSATED archive is a candidate.  The controls are byte instruments,
+    # not shippable rows -- see admit_arithmetic's ``compensated`` docstring.
+    best = min(
+        (r for r in results.values() if r["compensated"]),
+        key=lambda r: r["admit"]["models"]["absolute"]["net_delta_s"],
+    )
+    if not best["admit"]["models"]["absolute"]["admits"]:
+        raise SA3Error(
+            "no compensated candidate clears the admit bar under the conservative "
+            f"model (best net {best['admit']['models']['absolute']['net_delta_s']:+.6e})"
+        )
+    report = {
+        "schema": "ddm_sa3_rebase.v1",
+        "axis": AXIS,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "base": base,
+        "identity_gate": identity,
+        "tail_gate": tail,
+        "carrier_runtime_patch": runtime_patch,
+        "solved_pairs": len(solved),
+        "results": results,
+        "best": best["archive_path"],
+        "compensation_marginal_bytes": {
+            "nosplit": results["candidate_nosplit"]["archive_bytes"]
+            - results["control_nosplit"]["archive_bytes"],
+            "split": results["candidate_split"]["archive_bytes"]
+            - results["control_split"]["archive_bytes"],
+        },
+        "semantic_split_credit_bytes": {
+            "on_S2_edited_body": results["candidate_split"]["semantic_stream_bytes"]
+            - results["candidate_nosplit"]["semantic_stream_bytes"],
+        },
+    }
+    if not args.no_stage:
+        report["staged"] = stage_generation(
+            args.generation, Path(best["archive_path"]), shipped_runtime
+        )
+    report["packet_pristine_before"] = pristine_before
+    report["packet_pristine_after"] = assert_packet_pristine(SZ1_GENERATION)
+    out = args.work / "SA3_REBASE.json"
+    out.write_text(json.dumps(report, indent=2, sort_keys=True))
+    print(f"\nreport -> {out}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
