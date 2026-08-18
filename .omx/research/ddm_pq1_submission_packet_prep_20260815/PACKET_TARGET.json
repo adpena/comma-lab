@@ -45,10 +45,19 @@
     "source_commit_note": "sz1 receiver + tests committed on main; see git log experiments/ddm_sz1_*"
   },
   "cpu_axis": {
-    "exact_candidate_score_status": "IN_FLIGHT",
+    "exact_candidate_score_status": "MEASURED_INFEASIBLE_WITHIN_CONTEST_BUDGET",
     "modal_call_id": "fc-01M09G62A7SZ7HZYE5Q28YS7VP",
-    "output_dir": "/Volumes/APDataStore/pact/ddm_sz1/cpu_row_composed/",
-    "note": "Fired on the exact candidate bytes 2026-08-18 (~$0.15). Recorded here at harvest. Prior CPU datum on frontier-lineage bytes: contest-CPU S 0.20513189 (#1054), CUDA better by 0.0432."
+    "measured_at_utc": "2026-08-18T03:56:05Z",
+    "inflate_wall_seconds": 3422.711146813,
+    "inflate_budget_seconds": 1800,
+    "token_decode_seconds": 3108.7304750509998,
+    "neural_render_seconds": 299.2728009090001,
+    "harness_behavior": "fail-closed TimeoutExpired at 1800 s (contest budget); the decode child completed after the timeout and wrote the full report \u2014 retained as a decode-correctness receipt, not a score",
+    "decode_correctness": "decoded token field sha256 9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52 on x86_64 CPU \u2014 exact match to the sealed falsifier; archive sha/bytes verified by preflight (debb025f, 179930)",
+    "cross_microarch_note": "x86_64 CPU raw output sha 19f0b7ae... differs from the local arm64 smoke e5539653...: the integer token decode is device-exact, the float neural render is not cross-microarchitecture bit-identical. Neither is a score.",
+    "adjudication": "MAIN 2026-08-18: the submission is declared GPU-required (now MEASURED, not assumed \u2014 CPU inflate 1.90x over budget). No contest-CPU score exists or is claimed on these bytes; this receipt replaces the pending-CPU-row debt.",
+    "artifacts_dir": "/Volumes/APDataStore/pact/ddm_sz1/cpu_row_composed/r1_artifacts/",
+    "spend_estimate_usd": 0.06
   },
   "reproduction": {
     "status": "PENDING_REBIND",

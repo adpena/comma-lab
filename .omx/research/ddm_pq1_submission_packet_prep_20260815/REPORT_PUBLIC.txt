@@ -50,9 +50,14 @@ byte-identical.
 
 === CPU boundary ===
 Evidence axis: [contest-CPU]
-Status on these exact archive bytes: IN FLIGHT; no CPU score is claimed yet.
-A CPU decode of these exact bytes has been demonstrated locally in a clean
-environment (raw output SHA-256 e5539653..., decoded token field 9ba2e52b...),
-which is runtime evidence, not a CPU score. The token coder is fixed-point
-integer arithmetic, so decode is device-exact by construction. CPU and CUDA
-are distinct score axes and neither is inferred from the other.
+Status on these exact archive bytes: MEASURED INFEASIBLE WITHIN THE CONTEST
+BUDGET. On a contest-like 4-thread x86_64 CPU, inflation of these bytes took
+3,422.7 seconds against the 1,800-second budget (token decode 3,108.7 s,
+neural render 299.3 s); the evaluation harness failed closed at exactly
+1,800 s, so no CPU score exists and none is claimed. The decode itself is
+correct: the decoded token field on x86_64 CPU hashes to the exact sealed
+value (9ba2e52b...). The integer token decode is device-exact; the float
+neural render is not bit-identical across CPU microarchitectures (the x86_64
+raw output differs from an arm64 smoke), which is expected and is not a
+score on either side. Consequence: this submission is GPU-required for
+evaluation, as a measured fact rather than a conservative assumption.

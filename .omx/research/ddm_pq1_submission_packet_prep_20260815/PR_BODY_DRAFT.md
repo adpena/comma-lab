@@ -35,7 +35,7 @@ Inflation wall time: 1143.270127967 seconds
 Evaluation wall time: 38.307284003 seconds
 
 Evidence axis: [contest-CPU]
-Status on these exact bytes: exact evaluation in flight; no CPU score claimed yet.
+Status on these exact bytes: inflation measured 3,422.7 s vs the 1,800 s budget on 4-thread x86_64 CPU; harness failed closed. GPU required; no CPU score exists or is claimed.
 ```
 
 # eval host info
@@ -58,15 +58,15 @@ the fact here.
 
 # does your submission require gpu for evaluation (inflation)?
 
-**Yes — treat this submission as requiring a GPU for evaluation.** The measured
-score above used a T4.
-
-Being precise rather than convenient: the receiver has been demonstrated to
-decode these exact bytes on CPU in a clean environment (raw output and decoded
-token field hash-verified), and the token coder is fixed-point integer
-arithmetic, so decode is device-exact by construction. An exact `[contest-CPU]`
-evaluation on these bytes is in flight; until it is harvested we do not claim a
-CPU score and we will not infer one from the CUDA row.
+**Yes — this submission requires a GPU for evaluation, as a measured fact.**
+The measured score above used a T4 (inflation 1,143.3 s of the 1,800 s
+budget). We also measured the CPU side rather than assuming it: on a
+contest-like 4-thread x86_64 CPU, inflation of these exact bytes took
+3,422.7 s against the 1,800 s budget (token decode 3,108.7 s), and the
+harness failed closed at 1,800 s. No CPU score exists and none is claimed.
+The decode itself is correct on CPU — the decoded token field hashes to the
+exact pinned value — so this is purely a wall-clock boundary, not a
+correctness one.
 
 # did you include the compression script? and want it to be merged?
 
@@ -158,12 +158,14 @@ Three honesty qualifications we would rather state than have found:
 ## Score and runtime boundary
 
 The CUDA score is a 600-sample exact evaluation of the archive hash printed
-above through the unmodified upstream scorer. CPU and CUDA are separate axes;
-the exact `[contest-CPU]` row on these bytes is in flight and will be reported
-when harvested, not inferred. One CPU receipt bounds feasibility without
-substituting for it: the receiver decoded these exact bytes on arm64 CPU in a
-clean environment and the decoded content is hash-identical to the reference
-decode. That proves CPU-runnability; it is not a CPU score.
+above through the unmodified upstream scorer. CPU and CUDA are separate axes.
+On the CPU axis we report a measured boundary instead of a pending promise:
+inflation of these exact bytes on a contest-like 4-thread x86_64 CPU took
+3,422.7 s against the 1,800 s budget, so no contest-CPU score exists on these
+bytes and none is claimed. The CPU decode is correct (decoded token field
+hash-identical to the pinned value); the boundary is wall-clock, and the
+dominant term is the token-mixer decode, which is the named optimization
+surface if CPU feasibility is ever wanted.
 
 ## Borrowed-substrate accounting
 

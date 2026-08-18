@@ -8,15 +8,16 @@ the receiver is `inflate.sh`, `inflate.py`, `cpr1/`, and `runtime/`.
 
 - `[contest-CUDA]`: a 600-sample exact evaluation on a Tesla T4 measured
   `S = 0.15771357797660338` on the archive identified below.
-- `[contest-CPU]`: an exact evaluation on these exact archive bytes is in
-  flight. Until it is harvested, **no CPU score is claimed.**
-- CPU runtime evidence, which is not a score: the receiver decoded these exact
-  bytes on arm64 CPU in a clean environment and produced a raw output whose
-  SHA-256 (`e5539653…`) and decoded token field (`9ba2e52b…`) match the
-  reference decode. The token coder is fixed-point integer arithmetic, so the
-  decode is device-exact by construction. That proves the packet is
-  CPU-runnable; it does not tell you the contest-CPU score, and it is not used
-  as if it did.
+- `[contest-CPU]`: **measured infeasible within the contest budget** — on a
+  contest-like 4-thread x86_64 CPU, inflation took 3,422.7 s against the
+  1,800 s budget (token decode 3,108.7 s), and the harness failed closed at
+  1,800 s. No CPU score exists and none is claimed. This submission is
+  GPU-required for evaluation as a measured fact.
+- CPU decode-correctness evidence, which is not a score: the decoded token
+  field on x86_64 CPU hashes to the exact sealed value (`9ba2e52b…`) — the
+  fixed-point integer token decode is device-exact. The float neural render
+  is not bit-identical across CPU microarchitectures (x86_64 raw output
+  differs from an arm64 smoke), which is expected.
 
 ## Exact identity
 
