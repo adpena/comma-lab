@@ -129,6 +129,9 @@ EDITED_ROWS: Final = {
         "source_runtime": Path(
             "/Volumes/APDataStore/pact/ddm_ck1/generations/ck1_composed"
         ),
+        # ck1's residual_archive.py predates DDM_SZ1_SEMANTIC_METADATA_SPLIT_V1:
+        # it requires reserved==0, so split-variant headers refuse at decode.
+        "supports_semantic_split": False,
     },
 }
 SA2_SOLVE_ROOT: Final = SA1 / "retained/sa2/n600"
