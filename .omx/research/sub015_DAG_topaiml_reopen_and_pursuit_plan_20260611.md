@@ -28776,3 +28776,25 @@ proven ×2: it caught fx2's import death AND sz1's wrong-corrector desync before
 POINTER_LINE. NEXT: sz1 composed (179,930 B debb025f…, smoke GREEN, all 4 PRE_FIRE_STEPS
 discharged) fires as the SEVENTH candidate, projected S 0.15771358. Sub-0.15 gap 0.00806; pose
 0.008295 ≈ 103% of the gap — pose is THE axis after the rate tail drains.
+
+## FEED-sz1row (2026-08-18) — SEVENTH pointer move: semantic-blob serialization split composed onto fx2-A
+
+**S 0.15771357797660338 @ 179,930 B [contest-CUDA T4, n600]**, archive sha
+debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a, call fc-01M09EHX5MMTJACMRADQPN9P7Z
+(~$0.16, wall 1,196 s). Δ −3.4625e-4 vs fx2-A (0.1580598246322269, superseded) = exactly the −520 B
+split credit at 25/37,545,489 per byte. MECHANISM: the RX1M semantic section's 8,284 B of raw
+interleaved fp16 metadata byte-planed (high bytes grouped, then low bytes) before the container's
+own Brotli — LZ match distance restored; receiver un-split is free code under rule 118, versioned
+in bit 0 of the existing reserved byte (zero transmitted bytes; inactive = byte-identity).
+DECODE-IDENTITY proven at the BYTE level: worker 0.raw sha 9a6b75e5… bit-identical to the fx2-A
+row; seg 0.029611 + pose 0.008294576541331089 digit-identical. Projection realized to 8 digits.
+SECTION-SCOPED law (fire order §extension): only the semantic blob pays (−520); carrier +12; hpac
+instrument uncalibrated — pd1's corpus-wide serialization prior does NOT generalize across our
+sections. FIRE HISTORY = 2 refusals, both banked as apparatus: r1 rc=5 — ExFAT AppleDouble
+._inflate.py respawned by the repin WRITE after stage-1 sanitize (ordering bug; permanent fix
+c8509b2538: post-repin re-sanitize in fire_modal_auth_eval.py, manifest key
+stage3b_post_repin_sanitized) · r2 rc=4 — hand-typed sha pin dropped a character; cure = shas by
+shell substitution from the sealed JSON, never hand-typed hex (least-hand-typing law). Sub-0.15
+gap 0.00771; pose 0.008295 ≈ 108% of gap — every remaining major route is pose. Custody:
+/Volumes/APDataStore/pact/ddm_sz1/ (6 archives, 2 runtime trees, r3_artifacts, RETENTION_MANIFEST).
+[p0-ledger-ok]
