@@ -51,7 +51,9 @@ prior candidate:
    applies the exact inverse permutation before parsing, so decoded values are
    unchanged. The transform is versioned in bit 0 of an existing reserved
    header byte: zero transmitted bytes, and an archive without the bit decodes
-   exactly as before.
+   exactly as before. The split offset was selected by argmax over offsets
+   0–400; roughly 22 of the 520 bytes are Brotli alignment noise fitted to
+   this frozen payload rather than mechanism (adjacent offsets swing ±20 B).
 
 Decode identity was verified at the byte level: the first inflated output file
 hashes identically between this row and the token-model-only row
@@ -142,7 +144,7 @@ The receiver needs four things from the evaluation environment:
 - **Brotli 1.2.0**, installed into an isolated build directory from a pinned
   wheel when the environment does not already provide it; if it cannot be
   satisfied, the receiver exits 69 with a named reason.
-- **`constriction`**, the entropy-coding library.
+- **NumPy**, from the image.
 - **A working C compiler.** `inflate.sh` compiles
   `runtime/entropy/rc64_backend.c` into the build directory on every run,
   using `${CC:-cc}`. On an image without a toolchain the script fails under

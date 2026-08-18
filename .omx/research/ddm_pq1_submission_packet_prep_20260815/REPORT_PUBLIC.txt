@@ -41,12 +41,13 @@ pure rate improvement. Vs generation 2 (0.15853325034789678 at 181,161 bytes):
 -1,231 bytes, delta S -0.00081967237.
 
 === Reproduction ===
-Status: PENDING_REBIND. The generation-2 reproduction entry point asserts the
-prior archive's hashes; the sz1 chain (fx2 byte-close driver + serialization
-split builder) is the reproduction path for these bytes and is being re-bound
-under the same fail-closed hash assertions before the strict chain can claim
-green. Determinism repeat at build time: archive.zip and archive.repeat.zip
-byte-identical.
+Status: VERIFIED. The end-to-end compression chain (fx2 byte-close driver +
+serialization split builder) was re-run under fail-closed hash assertions and
+rebuilt this exact archive: 3 stages, all rc=0; pre-split archive asserted at
+SHA-256 9de0f6db (180,450 bytes), final archive rebuilt to SHA-256
+debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a
+(179,930 bytes), matching the evaluated bytes exactly. Determinism repeat at
+build time: archive.zip and archive.repeat.zip byte-identical.
 
 === CPU boundary ===
 Evidence axis: [contest-CPU]

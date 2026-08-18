@@ -67,7 +67,7 @@ the 1,800-second inflate budget. Ours to satisfy, never ours to claim.
 |---|---|---|
 | PyTorch | `inherited-substrate` | third-party; provided by the evaluation image |
 | Brotli 1.2.0 | `inherited-substrate` | pinned wheel, self-installed fail-closed (`exit 69`) |
-| `constriction` | `inherited-substrate` | third-party entropy-coding library |
+| NumPy | `inherited-substrate` | third-party; provided by the evaluation image |
 | a working C compiler (`cc`) | `contest-frame` assumption | `inflate.sh:32` compiles the range-coder backend on every run. Satisfied on the evaluated T4 image. Declared here because it is a hard runtime requirement and, unlike Brotli, it is currently unguarded — see the README dependency note. |
 
 ---
@@ -212,6 +212,9 @@ delta-zero control. Classification: **`mechanism-adopt-with-attribution`** — b
 what is ours is the section-scoped measurement showing only the semantic section pays, the
 zero-transmitted-byte versioning in an existing reserved header bit, and the fail-closed
 receiver integration. We deliberately do not label a standard shuffle filter `ours-original`.
+Offset selection: argmax over offsets 0–400; the ~22 B improvement over the derived offset is
+Brotli alignment noise fitted to this frozen payload, not mechanism (adjacent offsets swing
+±20 B) — the same qualification the fx2 token-model row carries (commit `31c64e4ce0`).
 
 ### 7.3 The t1h conditional row did NOT ship
 

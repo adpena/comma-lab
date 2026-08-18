@@ -11,18 +11,21 @@ fixed. A pass cannot be counted while the strict compliance chain is red.
 | 2 | RUN 2026-08-18 | MAIN | `debb025f45bb42e3…4b037a` | `11fb93d563d6c12a…` (gen3.r3) | 2 — stale e2e "re-bind in progress" claims in PR body (accounting row + operator checklist); e2e was VERIFIED per `RESULT_pq2_e2e.json`. FIXED `412763e63f` | 0/5 |
 | 3 | RUN 2026-08-18 | MAIN | `debb025f45bb42e3…4b037a` | `11fb93d563d6c12a…` | 1 — swap-procedure step-7/refusal literal conditions unsatisfiable for gen-3 (CPU axis measured-infeasible; 82/86 terminal). FIXED `378752e9e2` (adjudication note, refusals unchanged) | 0/5 |
 | 4 | RUN 2026-08-18 | MAIN | `debb025f45bb42e3…4b037a` | `11fb93d563d6c12a…` | 0 — hash chain re-verified from disk: archive `debb025f`/179,930 · member `p` `be6db33b`/179,830 · inflate.sh `e1b3df4d` · inflate.py `5c5baf88` all match PACKET_TARGET + manifest; PR-body numbers reconcile with receipts | 1/5 |
-| 5 | NOT_RUN | unassigned (prefer fresh-eyes arm) | pending | pending | not reviewed | 1/5 |
+| 5 | RUN 2026-08-18 | FRESH-EYES Opus arm (no part in any generation) | `debb025f45bb42e3…4b037a` | `11fb93d563d6c12a…` (reviewed against r3) | **8** — F1 report.txt PENDING_REBIND vs VERIFIED elsewhere · F2 PR-body report block re-authored not copied · F3 `constriction` falsely declared in 3 public docs + numpy omitted · F4 README/accounting absent from packet · F5 14 stale `.pyc` w/ local paths outside the hashed walk · F6 three conflicting counter statements · F7 manifest portable-tree key held the non-portable value · F8 offset alignment-noise qualification undisclosed. Full report: `REVIEW_PASS5_FRESH_EYES.md`. ALL 8 FIXED same-day; packet re-verified `pre_submission_compliance.gen3.r4.json` = 82/86, same 4 typed reds, runtime tree + 34-file manifest byte-identical to r3 (all fixes on custody-excluded surfaces) | **0/5** |
 
 **Strict-chain-red clause, gen-3 adjudication (2026-08-18):** the clause "a
 pass cannot be counted while the strict compliance chain is red" is read
-against the gen-3 TERMINAL state 82/86: the 4 residual reds are each typed
-and documented (2 structural-by-construction, 1 by-design Brotli bootstrap
-per the e4 precedent, 1 operator-gated hosted manifest) per
-`COMPLIANCE_RUNBOOK.md` and the SWAP_PROCEDURE gen-3 adjudication note.
-Passes count against this adjudicated terminal state; none of the 4 reds is
-convertible by further work short of the operator's hosting authorization.
-Remaining: 4 consecutive clean passes (fresh-eyes reviewers preferred for at
-least two) before SELECT_ACTIVE_GENERATION.
+against the gen-3 TERMINAL state 82/86 (receipt r4 after the pass-5 fixes):
+the 4 residual reds are each typed and documented (2 structural-by-
+construction, 1 by-design Brotli bootstrap per the e4 precedent, 1 operator-
+gated hosted manifest) per `COMPLIANCE_RUNBOOK.md` and the SWAP_PROCEDURE
+gen-3 adjudication note. Passes count against this adjudicated terminal
+state; none of the 4 reds is convertible by further work short of the
+operator's hosting authorization. Remaining: **5 consecutive clean passes**
+(fresh-eyes reviewers preferred for at least two; the pass-5 arm proved why —
+four same-author passes missed what it found in one) before
+SELECT_ACTIVE_GENERATION. Counting rounds resume at round 6 against the
+post-fix packet + the r4 receipt.
 
 ## Round 1 — findings
 

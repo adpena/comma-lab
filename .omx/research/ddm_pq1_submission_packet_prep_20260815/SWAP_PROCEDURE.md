@@ -81,8 +81,8 @@ the refusal conditions themselves are not weakened:
   (2 structural-by-construction, 1 by-design dependency bootstrap under the
   e4 precedent, 1 operator-gated hosted manifest). None was converted by
   editing a receipt or a check.
-- Review counter: passes 1-4 complete (stale-count sweep · PR-body claims
-  vs receipts · accounting table · this swap-procedure dry-read); pass 5
-  (hash-chain re-verification) pending.
+- Review counter: `ADVERSARIAL_REVIEW_SCAFFOLD.md` is the SINGLE counter
+  authority — this document does not carry its own count. Read the scaffold's
+  header and table for the live state.
 - The final refusal condition is UNCHANGED and binding: no push, hosting
   action, or pull-request opening without explicit operator authorization.
