@@ -2203,26 +2203,61 @@ def inspect_dispatch_claims(
     }, checks
 
 
-def inspect_public_hygiene(paths: list[Path]) -> tuple[dict[str, Any], list[Check]]:
+def inspect_public_hygiene(
+    paths: list[Path], submission_dir: Path | None = None
+) -> tuple[dict[str, Any], list[Check]]:
+    """Scan for private-surface leaks in everything that will become public.
+
+    #1112: this check used to read ONLY the ``--public-scan-path`` extras, while
+    every sibling check in this file scans
+    ``_submission_public_files(submission_dir) + _public_scan_files(extras)``.
+    The one check whose whole job is finding leaked fleet IPs, local absolute
+    paths and credentials was therefore the ONLY one blind to the packet itself:
+    the generation-3 run passed it while scanning a single PR-body draft, having
+    never read the submission's own README.md, report.txt or archive_manifest.json.
+
+    A leak scanner that reports clean over a corpus it never opened is worse than
+    absent — absence is visible, and this reported GREEN. The denominator is now
+    emitted (``scanned_file_count``) so a future reader can see what was covered.
+    """
     checks: list[Check] = []
+    scanned = _submission_public_files(submission_dir) if submission_dir is not None else []
+    scanned += _public_scan_files(paths)
+    # de-dup while preserving order: a path may arrive from both sources
+    seen: set[Path] = set()
+    files = [f for f in scanned if not (f in seen or seen.add(f))]
+
     violations = check_public_release_hygiene(
         repo_root=REPO_ROOT,
-        scan_paths=paths,
+        scan_paths=paths + ([submission_dir] if submission_dir is not None else []),
         strict=False,
         verbose=False,
     )
     manual_hits: list[str] = []
-    for path in paths:
-        candidates = [path] if path.is_file() else sorted(path.rglob("*")) if path.is_dir() else []
-        for candidate in candidates:
-            if not candidate.is_file():
-                continue
-            for lineno, line in enumerate(candidate.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
-                if PRIVATE_SURFACE_RE.search(line):
-                    manual_hits.append(f"{_rel(candidate)}:{lineno}")
+    for candidate in files:
+        for lineno, line in enumerate(
+            candidate.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1
+        ):
+            if PRIVATE_SURFACE_RE.search(line):
+                manual_hits.append(f"{_rel(candidate)}:{lineno}")
     hits = sorted(set(violations + manual_hits))
     _add(checks, "public_scan_has_no_private_surface", not hits, ", ".join(hits[:20]))
-    return {"scan_paths": [_rel(path) for path in paths], "hits": hits}, checks
+    # A scan that opened nothing cannot certify anything. Fail closed rather than
+    # let an empty corpus read as clean — the exact shape of the original defect.
+    _add(
+        checks,
+        "public_scan_corpus_nonempty",
+        bool(files),
+        f"scanned {len(files)} file(s)"
+        + ("" if files else "; nothing to scan means nothing was certified"),
+    )
+    return {
+        "scan_paths": [_rel(path) for path in paths],
+        "submission_dir": _rel(submission_dir) if submission_dir is not None else None,
+        "scanned_files": [_rel(f) for f in files],
+        "scanned_file_count": len(files),
+        "hits": hits,
+    }, checks
 
 
 def _public_template_placeholder_hits(files: list[Path]) -> tuple[list[str], list[str]]:
@@ -3111,8 +3146,14 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
     )
     sections["dispatch_claims"] = claims_record
     checks.extend(claims_checks)
-    if args.public_scan_path:
-        hygiene_record, hygiene_checks = inspect_public_hygiene(args.public_scan_path)
+    # #1112: hygiene runs whenever there is a submission to leak FROM. Gating the
+    # whole section on `--public-scan-path` meant an invocation that omitted the
+    # flag got no leak scan at all, silently — vacuity by omission, one step worse
+    # than the narrow-corpus defect above it.
+    if args.public_scan_path or args.submission_dir:
+        hygiene_record, hygiene_checks = inspect_public_hygiene(
+            args.public_scan_path or [], submission_dir=args.submission_dir
+        )
         sections["public_hygiene"] = hygiene_record
         checks.extend(hygiene_checks)
 
