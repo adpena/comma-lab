@@ -330,3 +330,191 @@ transfer, and its worst case is 13 B worse.
    of speculative.
 4. **The `--min-gain-frac` conservative variant is built but unfired.** If the T4 row shows
    partial transfer, re-run the compose with a threshold and keep only the top moves.
+
+---
+
+# 10. PASS 3 — and the channel's measured capacity (appended 2026-08-17, respawn)
+
+## The answer, first
+
+**Pass 3 lands, but it also found the wall: the zero-added-byte channel has a HARD, measured
+capacity of 78,040 Rice bits, and pass 2 had already consumed the last 4 bits of it.** Pass 3's
+unconstrained composition needs 78,042 — two bits too many — and the pricer REFUSED it rather
+than mis-price a body the container cannot carry. Fitting it back inside costs almost nothing
+(2 substitutions, 2.6e-7 of energy, **99.9994%** of the gain retained), so pass 3 is real; but
+the "free byte" story from §4 is now qualified, and the qualification is structural.
+
+| pass | `d_pose` (CPU-torch) | cumulative ratio | counted Δ B | S (ratio transfers) | S (nothing transfers) |
+|---|---|---|---|---|---|
+| shipped rr4 | 1.4746613e-4 | 1.00000 | 0 | 0.158533 | 0.158533 |
+| 1 | 8.471492e-5 | 0.57447 | −5 | 0.156522 | 0.158530 |
+| 2 (**FIRED**) | 6.0646787e-5 | 0.41126 | +8 | 0.155563 | 0.158539 |
+| 3 conservative | 5.3144449e-5 | 0.36038 | +10 | 0.155225 | 0.158540 |
+| **3 full** | **4.8105804e-5** | **0.32622** | **+22** | **0.154991** | 0.158548 |
+
+## 10.1 The container has a hard bit budget, and it is now saturated
+
+The packed CAP1 section is dispatched by the receiver on an EXACT length, so the Rice payload
+field inside it has a fixed byte width. Read from the shipped archive rather than assumed:
+
+| quantity | value |
+|---|---|
+| shipped Rice bits | 78,036 |
+| payload field width | 9,755 B |
+| **maximum Rice bits the container can carry** | **78,040** |
+| shipped slack | **4 bits** |
+| pass 2 Rice bits | **78,040 — exactly at the ceiling** |
+| pass 3 unconstrained | 78,042 (**+2 over**) |
+
+So pass 2 did not merely cost +8 B; it spent the container's entire remaining bit slack. That
+is the fact §4's "a ±1 code move is FREE" needed and did not have: the move is free *per move*,
+but the aggregate has a ceiling, and three passes reached it.
+
+**The first compose attempt failed closed** — `COUNTED PRICE UNAVAILABLE: candidate Rice payload
+is 9756 B but the packed section is dispatched on an exact length requiring 9755 B`. That refusal
+is the tool working. It is also why this section exists rather than a quietly over-long archive.
+
+## 10.2 Fitting inside the budget: solve it, do not truncate it
+
+The obvious repair — drop the smallest-gain moves — is terrible here. Measured:
+
+| moves kept (by gain rank) | Rice bits | fits? | gain kept |
+|---|---|---|---|
+| 428 (all) | 78,042 | no | 100% |
+| 300 | 78,042 | no | 99.95% |
+| 200 | 78,041 | no | 98.2% |
+| 100 | 78,040 | **yes** | **81.1%** |
+
+Shedding 2 bits by gain-rank costs 19% of the gain, because gain rank and bit cost are almost
+unrelated. The sweep already stores every coordinate's exact energy (`per_coord`), and pairs are
+independent, so the right move is a constrained solve over already-measured quantities: **maximise
+measured pose gain subject to `rice_bits ≤ 78,040`**, substituting among measured options.
+
+`fit_to_bit_budget` (landed this session, commit `aa716795ba`) does exactly that — exhaustive over
+SINGLE substitutions (every pair × every measured per-coordinate option, plus reverting), choosing
+the minimum `energy increase / bits saved`. Two substitutions sufficed:
+
+| pair | substituted to | bits saved | energy cost |
+|---|---|---|---|
+| 443 | coord 4, δ +2 | 1 | 7.46e-8 |
+| 110 | coord 0, δ +2 | 1 | 1.88e-7 |
+
+Total cost **2.62e-7** against a 4.51e-2 gain: **99.9994% retained**, versus 81.1% for the
+truncation. No new scorer forward was run — every energy above was already measured exactly.
+
+Joint substitutions are not searched, so this is a good feasible point, not a proven optimum.
+
+## 10.3 The byte cost is rising, and it is not monotone in move count
+
+−5 B (pass 1) → +8 B (pass 2) → +22 B (pass 3). Re-solving moves codes off the AR(1)-predictable
+manifold, so the residuals get less brotli-compressible with each pass. The counted cost is also
+**not monotone in the number of moves** — fewer moves is not reliably fewer bytes:
+
+| `--min-gain-frac` | moves kept | `d_pose` | cumulative | counted Δ B | S (ratio transfers) |
+|---|---|---|---|---|---|
+| 0.00 (full) | 428 | 4.810580e-5 | 0.32622 | +22 | 0.154991 |
+| 0.05 | 276 | 4.828310e-5 | 0.32742 | +17 | 0.154996 |
+| 0.10 | 244 | 4.865545e-5 | 0.32994 | +35 | 0.155026 |
+| 0.20 | 185 | 5.114747e-5 | 0.34684 | +30 | 0.155144 |
+| **0.30** | **154** | **5.314445e-5** | **0.36038** | **+10** | **0.155225** |
+
+Every one of these still overflowed by 1 bit before repair — the ceiling binds regardless of
+threshold. And thr 0.30 is *cheaper in bytes* than thr 0.10 while keeping fewer, higher-confidence
+moves, which is why it is the conservative rung rather than 0.20.
+
+## 10.4 What the threshold ladder can and cannot answer
+
+A correctness constraint that shapes this: the composition identity ("candidate `d_pose` = mean of
+the measured per-pair energies") holds only when moves are folded into the lattice the sweep
+measured from. Pairs are independent, so thresholding a **later** pass on top of a **full** earlier
+pass is exactly measurable — but thresholding an **earlier** pass invalidates the later sweeps'
+energies for every pair whose earlier move was dropped. So the ladder above is a threshold on the
+pass-3 layer only, and a cumulative-thresholded chain would need the sweeps re-run.
+
+The data also weakens the winner's-curse worry for the early passes: at a 20% relative-gain
+threshold **536 of pass 1's 590 moves survive**, holding 96.7% of its gain. Pass-1 moves typically
+cut a pair's pose energy by well over 20% — they are not noise-scale wins. The marginal moves live
+in pass 3, which is precisely where the threshold is applied.
+
+## 10.5 SEALED FIRE-ORDER — pass 3 (for MAIN)
+
+**PRIMARY — pass 3 full:**
+
+| field | value |
+|---|---|
+| archive | `/Volumes/APDataStore/pact/ddm_t1h/candidate_pass3/archive.zip` |
+| sha256 | `bbb7c3650f890c8449762c65911777c0b6e1a58f322857ad1eb5845226f11534` |
+| bytes | **181,183** (shipped 181,161; **+22 B**) |
+| determinism repeat | byte-identical |
+| parse-back | receiver lattice matches intent, **0** mismatched coordinates |
+| non-carrier sections | all five byte-identical |
+| projected S (cumulative ratio transfer) | **0.154991** |
+
+**CONSERVATIVE — pass 3 at `--min-gain-frac 0.30`** (fewer, higher-confidence moves, cheaper):
+
+| field | value |
+|---|---|
+| archive | `/Volumes/APDataStore/pact/ddm_t1h/candidate_pass3_conservative/archive.zip` |
+| sha256 | `b6ebb65a78e89fc206d0e6bf4c43c959c29b04ea24aa87b939564f1d34786c3e` |
+| bytes | **181,171** (**+10 B**) |
+| projected S (cumulative ratio transfer) | **0.155225** |
+
+Both: base rr4 `35ac2b9b…`; **runtime unchanged**; all proofs green.
+
+**Standalone swappable sections for fx1** — both byte-LENGTH-identical to shipped (22,183 B), so
+the drop-in contract of §8 still holds and no offset moves:
+
+| variant | path | sha256 |
+|---|---|---|
+| pass 3 full | `candidate_pass3/carrier_section_candidate.bin` | `cacfe9cd24259e730f05cc9244a9bc3d78015186f29edb0c0d0cc26df036a172` |
+| pass 3 conservative | `candidate_pass3_conservative/carrier_section_candidate.bin` | `25c1e19ee37b9cefb7e0cc87a1c7b98bb5f592b121e4995cd7fa5745f78ee4c9` |
+| shipped (for diff) | `carrier_section_shipped.bin` | `30c33886dcf40684a5895c48e292d11a9180380f9d1219c0c6de81754bbb3aab` |
+
+⚠ **New constraint fx1 must honour:** the section is at its Rice-bit ceiling (78,040 / 78,040). A
+mixer that composes this section with any other carrier edit has **zero bits of slack** and must
+run the container-fit repair, or it will produce an unpackable section.
+
+**Pre-registered falsifiers — unchanged in kind, updated in value (all three must hold):**
+
+1. **`d_seg` UNCHANGED to every printed digit.** Structural: no odd frame is touched.
+2. **Archive bytes EXACTLY 181,183** (full) or **181,171** (conservative).
+3. **`d_pose` FALLS.** If it rises, the CPU-torch accept oracle does not select moves that survive
+   the CUDA instrument, and this family is refuted on this vehicle — a clean, valuable negative.
+
+**Expected band, pass 3 full.** Optimistic (cumulative ratio transfers): `d_pose` 6.88e-6 →
+**2.24e-6**, S → 0.154991. Pessimistic (nothing transfers): S → 0.158548, a **1.5e-5** loss from
+the +22 B alone. Only a `d_pose` increase is a real loss.
+
+**Ordering advice.** Do not buy a pass-3 row until the pass-2 row returns: pass 2 and pass 3 test
+the SAME transfer hypothesis, and pass 2's result re-prices pass 3 exactly. If pass 2 transfers,
+fire pass 3 full. If pass 2 transfers only partially, fire pass 3 conservative. If pass 2 shows no
+transfer or a rise, fire neither — thresholds keep the same *kind* of move and cannot rescue a
+failed transfer.
+
+## 10.6 Controls run this session
+
+| control | result |
+|---|---|
+| pass-2 recompose under the refactored selector | lattice **byte-identical**, receipt numbers identical (`pass2_regression/`) |
+| pass-3 recompose after the review fixes | lattice **byte-identical** (`pass3_recheck/`) |
+| conservative archive rebuilt from the regenerated lattice | **byte-identical**, not stale (`candidate_pass3_conservative_recheck/`) |
+| determinism repeat, both new candidates | byte-identical |
+| parse-back, both new candidates | 0 mismatched coordinates |
+| int12 guard mutation control | removing the guard makes the repair emit **2049**, outside signed-int12 — the test catches it |
+| new unit tests | 5 passed (`src/tac/tests/test_ddm_t1h_container_fit.py`) |
+
+## 10.7 NEXT_IF_RESUMED (supersedes §9 items 1 and 4)
+
+1. **Pass 4 is now a bad trade, and that is a measured verdict, not a guess.** The container is
+   saturated, so every further pass must BUY its bits by giving back pose, and the byte trend
+   (−5 → +8 → +22) is rising. Pass 4 would be the first pass whose repair cost is likely to be
+   material. Do not run it before a T4 row settles whether ANY of this transfers.
+2. **Multi-coordinate moves per pair remain unmeasured** (§9 item 2 stands, unchanged). They are
+   now MORE attractive than another pass: jc1 measured cond(J_stack) = 12.02 with no null
+   direction, so a joint per-pair solve should buy more pose per bit than a fourth single-coordinate
+   sweep — and bits, not forwards, are now the scarce resource.
+3. **The instrument question is still the real blocker** (§9 item 3, unchanged and now more urgent:
+   three passes of local gain are staked on one untested transfer assumption).
+4. **If the container ceiling itself is worth attacking**, the lever is the packed section's
+   exact-length dispatch, not the codes — that is a receiver/format change and belongs with fx1,
+   not inside this arm's "runtime unchanged" contract.
