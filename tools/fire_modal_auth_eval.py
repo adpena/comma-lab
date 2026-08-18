@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""fire_modal_auth_eval.py — the ONE deterministic path from candidate runtime to T4 row.
+"""fire_modal_auth_eval.py — the ONE deterministic path from candidate runtime to a contest row.
 
 Operator binding 2026-08-17: "Every mistake due to doing things by hand should be
 fixed and deterministic and no longer ad hoc or manual." This tool replaces the
@@ -47,6 +47,20 @@ Stages (all local until DISPATCH):
 Contest-axis note: F26_TOKEN_DECODER-style env overrides are deliberately NOT
 exposed — --inflate-env demotes the row to a diagnostic axis; decoder guards
 belong IN the fired tree (the rr4 lesson).
+
+Axis selection (--axis cuda|cpu, added 2026-08-18 for task #1105): the contest
+ranks a CPU axis the CUDA axis cannot stand in for, and pq1 sealed a contest-CPU
+fire-order that this tool could not execute — its own `canonical_chain_gap` reads
+"tools/fire_modal_auth_eval.py ... is CUDA-only. There is no CPU-axis equivalent.
+[so] a CPU row must currently be hand-assembled, which is the exact hazard the
+hand-assembled-dispatch law names as an error factory." The cure is a selector on
+THIS tool, never a second dispatcher: --axis picks the worker entrypoint
+(experiments/modal_auth_eval{,_cpu}.py::main), the [contest-CPU]/[contest-CUDA]
+evidence tag, and the poller deadline from one table. Every stage above — sanitize,
+local validate, computed sha pins, the archive/receiver seal, claim reconciliation,
+the auto-armed detached poller, the manifest — applies identically on both axes.
+Paired-axis semantics are unchanged: the worker still demands --pair-group-id or an
+explicit --single-axis-waiver-reason, on CPU exactly as on CUDA.
 """
 
 from __future__ import annotations
@@ -68,11 +82,90 @@ from tac.candidate_seal import (  # noqa: E402
     repin_receiver,
 )
 from tac.deploy.modal.auth_eval import validate_runtime_upload_file  # noqa: E402
+from tac.deploy.modal.paired_dispatch import (  # noqa: E402
+    PAIRED_AUTH_EVAL_CPU_WRAPPER,
+    PAIRED_AUTH_EVAL_CUDA_WRAPPER,
+    PAIRED_AUTH_EVAL_ENTRYPOINT,
+)
 
 VENV_PY = str(REPO / ".venv" / "bin" / "python")
 MODAL_BIN = str(REPO / ".venv" / "bin" / "modal")
 LITTER_BASENAMES = {".DS_Store"}
 LITTER_PREFIXES = ("._",)
+
+# The two contest score axes. CPU and CUDA are SEPARATE evidence spaces (neither is
+# ever inferred from the other), so the axis picks the worker entrypoint, the evidence
+# tag, and the watch deadline together — one table, never three hand-kept lists.
+#
+# The wrapper paths come from tac.deploy.modal.paired_dispatch so "which file is the CPU
+# worker" has ONE definition. Its paired_auth_eval_axis_command() command SHAPE is
+# deliberately NOT reused: it always emits --pair-group-id and has no
+# single_axis_waiver_reason parameter, so it cannot express the waived single-axis fire
+# that cured t1h r1/r2; it emits the runtime-tree pin only conditionally, weakening
+# failure F3's always-'auto'; and it appends --gpu, which would move the proven rr4/fx1
+# argv. Sharing the constants keeps one source of truth; sharing the shape would be a
+# mechanism reduction.
+AXES: dict[str, dict] = {
+    "cuda": {
+        "entrypoint": f"{PAIRED_AUTH_EVAL_CUDA_WRAPPER}::{PAIRED_AUTH_EVAL_ENTRYPOINT}",
+        "evidence_axis_tag": "[contest-CUDA]",
+        "score_axis": "contest_cuda",
+        # T4 decode+score inside the CUDA worker's @app.function(timeout=4800).
+        "poller_deadline_s": 2400.0,
+    },
+    "cpu": {
+        "entrypoint": f"{PAIRED_AUTH_EVAL_CPU_WRAPPER}::{PAIRED_AUTH_EVAL_ENTRYPOINT}",
+        "evidence_axis_tag": "[contest-CPU]",
+        "score_axis": "contest_cpu",
+        # The CPU worker is @app.function(cpu=8.0, memory=16 GiB, timeout=9000) and a
+        # 600-sample CPU scorer pass runs far longer than the T4 one. The watcher must
+        # OUTLIVE the worker or a paid call goes unwatched (failure F5); 2400 s — the
+        # CUDA default — would abandon every CPU row mid-flight.
+        "poller_deadline_s": 9600.0,
+    },
+}
+
+
+def axis_spec(axis: str) -> dict:
+    """Resolve the axis contract. Fail-closed: an unknown axis is never a row."""
+
+    key = str(axis or "").strip().lower()
+    spec = AXES.get(key)
+    if spec is None:
+        raise ValueError(
+            f"unknown auth-eval axis {axis!r}; evidence tagging is fail-closed — "
+            f"choose one of {sorted(AXES)}"
+        )
+    return {"axis": key, **spec}
+
+
+def write_fire_manifest(out_dir: Path, manifest: dict) -> Path:
+    """Write FIRE_MANIFEST.json, REFUSING an axis-untagged row.
+
+    A row whose axis is unrecorded cannot be read as [contest-CPU] or [contest-CUDA]
+    evidence later, and the apples-to-apples discipline forbids inferring one axis
+    from the other. So the manifest carries its axis tag or it is not written.
+    """
+
+    for key in ("axis", "evidence_axis_tag", "stage5_entrypoint"):
+        if not str(manifest.get(key) or "").strip():
+            raise ValueError(
+                f"refusing to write an axis-untagged FIRE_MANIFEST: missing {key!r}. "
+                "Every Modal auth-eval row carries its contest axis tag or it is not evidence."
+            )
+    known_tags = {spec["evidence_axis_tag"] for spec in AXES.values()}
+    tag = manifest["evidence_axis_tag"]
+    if tag not in known_tags:
+        raise ValueError(
+            f"refusing unknown evidence axis tag {tag!r}; expected one of {sorted(known_tags)}"
+        )
+    out_dir.mkdir(parents=True, exist_ok=True)
+    # A refusal receipt from an earlier attempt into this same dir would otherwise sit
+    # beside a real manifest and make a fire that DID take read as refused.
+    (out_dir / "FIRE_REFUSED.json").unlink(missing_ok=True)
+    path = out_dir / "FIRE_MANIFEST.json"
+    path.write_text(json.dumps(manifest, indent=2))
+    return path
 
 
 def _sha256(path: Path) -> str:
@@ -83,8 +176,16 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def sanitize_litter(runtime_dir: Path) -> list[str]:
-    """Delete macOS metadata litter. Returns relative paths removed."""
+def sanitize_litter(runtime_dir: Path, *, apply: bool = True) -> list[str]:
+    """macOS metadata litter. Returns relative paths removed (or, with
+    ``apply=False``, the paths that WOULD be removed).
+
+    A --dry-run must not mutate the tree it rehearses: these fires are aimed at
+    SEALED runtime dirs whose hashes another agent already recorded, and deleting a
+    file changes the runtime FILES digest the seal names. The dry-run therefore
+    reports the litter and validate_tree skips it, modelling the real path exactly
+    without touching a single byte.
+    """
 
     removed: list[str] = []
     for path in sorted(runtime_dir.rglob("*")):
@@ -93,24 +194,106 @@ def sanitize_litter(runtime_dir: Path) -> list[str]:
         name = path.name
         if name in LITTER_BASENAMES or any(name.startswith(p) for p in LITTER_PREFIXES):
             rel = str(path.relative_to(runtime_dir))
-            path.unlink()
+            if apply:
+                path.unlink()
             removed.append(rel)
     return removed
 
 
-def validate_tree(runtime_dir: Path) -> list[str]:
-    """Run the remote upload validators locally. Returns refusal messages."""
+def validate_tree(runtime_dir: Path, *, skip: frozenset[str] = frozenset()) -> list[str]:
+    """Run the remote upload validators locally. Returns refusal messages.
+
+    ``skip`` holds relative paths the sanitize stage has removed (or, on a dry run,
+    would remove) so both modes validate the same effective tree.
+    """
 
     refusals: list[str] = []
     for path in sorted(runtime_dir.rglob("*")):
         if not path.is_file():
             continue
         rel = str(path.relative_to(runtime_dir))
+        if rel in skip:
+            continue
         try:
             validate_runtime_upload_file(path, rel)
         except ValueError as exc:
             refusals.append(str(exc))
     return refusals
+
+
+def refuse(out_dir: Path, rc: int, reason: str, manifest: dict) -> int:
+    """Record a refusal ON DISK, then return its exit code.
+
+    The t1h r1 fire returned rc=5 and the nonzero exit was swallowed by a ``| tail`` on
+    the invocation, so a refused fire read as a successful one and the ladder cost two
+    more attempts ("never pipe a fire command"). A tool cannot stop a caller from piping,
+    but it can refuse to be silent: every refusal writes FIRE_REFUSED.json next to where
+    the manifest would have gone, so the evidence survives whatever the shell does with
+    the exit status. Presence of FIRE_REFUSED.json means NO call exists — never assume one.
+    """
+
+    manifest = {**manifest, "refused": True, "refusal_rc": rc, "refusal_reason": reason}
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / "FIRE_REFUSED.json").write_text(json.dumps(manifest, indent=2, default=str))
+        print(f"REFUSED (rc={rc}): {out_dir / 'FIRE_REFUSED.json'}")
+    except (OSError, TypeError, ValueError) as exc:
+        # Bookkeeping must NEVER mask the refusal it is recording. A manifest that will
+        # not serialize is a bug to see later; the refusal is the fact to see now.
+        print(f"REFUSED (rc={rc}); could not write refusal receipt: {exc}")
+    return rc
+
+
+def build_dispatch_argv(
+    *,
+    spec: dict,
+    archive: Path,
+    runtime_dir: Path,
+    archive_sha: str,
+    out_dir: Path,
+    lane_id: str,
+    instance_job_id: str,
+    claim_agent: str,
+    single_axis_waiver_reason: str = "",
+    pair_group_id: str = "",
+    claim_policy: str = "",
+) -> list[str]:
+    """Compose the fixed dispatch template. Identical on both axes but the entrypoint.
+
+    Every flag emitted here is declared by BOTH local_entrypoint signatures — the CPU
+    worker simply omits the CUDA-only knobs (gpu / scorer-device / inflate-device /
+    inflate-env), none of which this template emits. That parity is asserted against the
+    real signatures in tools/tests/test_fire_modal_auth_eval_axis.py, so never-invent-flags
+    is executed rather than eyeballed (pq1 verified it by hand; hand-verification is the
+    step this determinizes).
+
+    --expected-runtime-tree-sha256 is pinned 'auto' on BOTH axes (failure F3). That is not
+    a convenience: the projected and remote tree hashes are environment-coupled and
+    structurally disagree (the r9m deadlock), so both workers accept only ''/'auto'/the
+    runtime FILES digest and REFUSE any other value. Custody is carried by the transport
+    zip sha256 plus that FILES digest.
+    """
+
+    cmd = [
+        MODAL_BIN, "run", "--detach", spec["entrypoint"],
+        "--archive", str(archive),
+        "--submission-dir", str(runtime_dir),
+        "--inflate-sh", "inflate.sh",
+        "--expected-archive-sha256", archive_sha,
+        "--expected-runtime-tree-sha256", "auto",
+        "--output-dir", str(out_dir),
+        "--detach", "--provider-detach-ack",
+        "--lane-id", lane_id,
+        "--instance-job-id", instance_job_id,
+        "--claim-agent", claim_agent,
+    ]
+    if single_axis_waiver_reason:
+        cmd += ["--single-axis-waiver-reason", single_axis_waiver_reason]
+    if pair_group_id:
+        cmd += ["--pair-group-id", pair_group_id]
+    if claim_policy:
+        cmd += ["--claim-policy", claim_policy]
+    return cmd
 
 
 def reconcile_claims(auto_close_agent: str, dry_run: bool) -> dict:
@@ -173,8 +356,23 @@ def main() -> int:
     ap.add_argument("--lane-id", required=True)
     ap.add_argument("--instance-job-id", required=True)
     ap.add_argument("--claim-agent", default="MAIN")
+    ap.add_argument(
+        "--axis",
+        choices=sorted(AXES),
+        default="cuda",
+        help="contest score axis: cuda -> T4 CUDA worker, cpu -> the Linux x86_64 "
+        "contest-CPU worker (experiments/modal_auth_eval_cpu.py). Picks the entrypoint, "
+        "the evidence tag, and the poller deadline together.",
+    )
     ap.add_argument("--single-axis-waiver-reason", default="")
     ap.add_argument("--pair-group-id", default="")
+    ap.add_argument(
+        "--claim-policy",
+        default="",
+        choices=("", "open", "require_active"),
+        help="forwarded to the worker entrypoint when set; require_active refuses to "
+        "dispatch unless a live claim already covers this lane",
+    )
     ap.add_argument("--require-archive-sha", default="", help="sealed fire-order pin; mismatch refuses")
     ap.add_argument(
         "--repin-receiver",
@@ -182,9 +380,22 @@ def main() -> int:
         help="re-pin the staged receiver's ARCHIVE_SHA256/ARCHIVE_BYTES from the staged archive "
         "(the compose-time staging step; without it a mismatched tree refuses)",
     )
-    ap.add_argument("--poller-deadline-s", type=float, default=2400.0)
+    ap.add_argument(
+        "--poller-deadline-s",
+        type=float,
+        default=None,
+        help="default: axis-derived (cuda 2400 s, cpu 9600 s — the CPU worker's own "
+        "timeout is 9000 s and the watcher must outlive it)",
+    )
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
+
+    spec = axis_spec(args.axis)
+    poller_deadline_s = (
+        float(args.poller_deadline_s)
+        if args.poller_deadline_s is not None
+        else float(spec["poller_deadline_s"])
+    )
 
     runtime_dir = Path(args.runtime_dir).resolve()
     archive = Path(args.archive) if args.archive else runtime_dir / "archive.zip"
@@ -193,23 +404,35 @@ def main() -> int:
     out_dir = Path(args.output_dir)
     if not out_dir.is_absolute():
         out_dir = REPO / out_dir
-    manifest: dict = {"schema": "fire_modal_auth_eval.v1", "runtime_dir": str(runtime_dir)}
+    manifest: dict = {
+        "schema": "fire_modal_auth_eval.v2",
+        # Self-describing: a dry-run manifest carries no call_id, and a reader must never
+        # have to infer from an absence whether a fire actually took.
+        "dry_run": bool(args.dry_run),
+        "runtime_dir": str(runtime_dir),
+        "axis": spec["axis"],
+        "evidence_axis_tag": spec["evidence_axis_tag"],
+        "score_axis": spec["score_axis"],
+    }
 
     if not runtime_dir.is_dir():
         print(f"FATAL: runtime dir missing: {runtime_dir}")
-        return 2
+        return refuse(out_dir, 2, f"runtime dir missing: {runtime_dir}", manifest)
     if not (runtime_dir / "inflate.sh").is_file():
         print(f"FATAL: {runtime_dir}/inflate.sh missing — not a receiver runtime tree")
-        return 2
+        return refuse(out_dir, 2, "inflate.sh missing — not a receiver runtime tree", manifest)
     if not archive.is_file():
         print(f"FATAL: archive missing: {archive}")
-        return 2
+        return refuse(out_dir, 2, f"archive missing: {archive}", manifest)
 
-    manifest["stage1_sanitized"] = sanitize_litter(runtime_dir)
-    if manifest["stage1_sanitized"]:
-        print(f"SANITIZE: removed {len(manifest['stage1_sanitized'])} metadata-litter file(s)")
+    litter = sanitize_litter(runtime_dir, apply=not args.dry_run)
+    manifest["stage1_sanitized"] = litter
+    manifest["stage1_applied"] = not args.dry_run
+    if litter:
+        verb = "would remove" if args.dry_run else "removed"
+        print(f"SANITIZE: {verb} {len(litter)} metadata-litter file(s)")
 
-    refusals = validate_tree(runtime_dir)
+    refusals = validate_tree(runtime_dir, skip=frozenset(litter))
     manifest["stage2_refusals"] = refusals
     if refusals:
         print("VALIDATE: the remote upload path WOULD refuse this tree. Fix locally first:")
@@ -219,7 +442,7 @@ def main() -> int:
             "Payload-custody dirs (e.g. retained/) must be RELOCATED, never deleted "
             "(ALWAYS KEEP THE PAYLOAD): mv <dir> <runtime-dir>_retained_custody/"
         )
-        return 3
+        return refuse(out_dir, 3, "local validators would refuse this tree remotely", manifest)
 
     archive_sha = _sha256(archive)
     archive_bytes = archive.stat().st_size
@@ -230,7 +453,12 @@ def main() -> int:
             "FATAL: archive sha does not match the sealed fire-order pin "
             f"(pinned {args.require_archive_sha[:16]}…, actual {archive_sha[:16]}…)"
         )
-        return 4
+        return refuse(
+            out_dir,
+            4,
+            f"archive sha {archive_sha} does not match sealed pin {args.require_archive_sha}",
+            manifest,
+        )
 
     # Stage 3b SEAL — archive and runtime are ONE sealed object (the r3 law). The staged
     # receiver's own pin must name the staged archive's exact bytes. Nothing here is compared
@@ -255,7 +483,9 @@ def main() -> int:
             "Re-run with --repin-receiver to re-pin at compose time, or stage the archive "
             "this receiver names."
         )
-        return 6
+        return refuse(
+            out_dir, 6, "staged receiver pins a DIFFERENT candidate than the staged archive", manifest
+        )
     if seal.verdict == PIN_ABSENT:
         print(
             "WARNING: this receiver carries no archive pin, so the seal is weaker than the "
@@ -264,28 +494,26 @@ def main() -> int:
 
     manifest["stage4_claims"] = reconcile_claims(args.claim_agent, args.dry_run)
 
-    cmd = [
-        MODAL_BIN, "run", "--detach", "experiments/modal_auth_eval.py::main",
-        "--archive", str(archive),
-        "--submission-dir", str(runtime_dir),
-        "--inflate-sh", "inflate.sh",
-        "--expected-archive-sha256", archive_sha,
-        "--expected-runtime-tree-sha256", "auto",
-        "--output-dir", str(out_dir),
-        "--detach", "--provider-detach-ack",
-        "--lane-id", args.lane_id,
-        "--instance-job-id", args.instance_job_id,
-        "--claim-agent", args.claim_agent,
-    ]
-    if args.single_axis_waiver_reason:
-        cmd += ["--single-axis-waiver-reason", args.single_axis_waiver_reason]
-    if args.pair_group_id:
-        cmd += ["--pair-group-id", args.pair_group_id]
+    cmd = build_dispatch_argv(
+        spec=spec,
+        archive=archive,
+        runtime_dir=runtime_dir,
+        archive_sha=archive_sha,
+        out_dir=out_dir,
+        lane_id=args.lane_id,
+        instance_job_id=args.instance_job_id,
+        claim_agent=args.claim_agent,
+        single_axis_waiver_reason=args.single_axis_waiver_reason,
+        pair_group_id=args.pair_group_id,
+        claim_policy=args.claim_policy,
+    )
+    manifest["stage5_entrypoint"] = spec["entrypoint"]
     manifest["stage5_dispatch_argv"] = cmd
+    manifest["stage6_poller_deadline_s"] = poller_deadline_s
     if args.dry_run:
+        print(f"AXIS: {spec['axis']} {spec['evidence_axis_tag']} -> {spec['entrypoint']}")
         print("DRY-RUN: would dispatch:\n  " + " ".join(cmd))
-        out_dir.mkdir(parents=True, exist_ok=True)
-        (out_dir / "FIRE_MANIFEST.json").write_text(json.dumps(manifest, indent=2))
+        print(write_fire_manifest(out_dir, manifest))
         return 0
 
     disp = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True)
@@ -294,11 +522,11 @@ def main() -> int:
     spawn_path = out_dir / "modal_auth_eval_spawn.json"
     if not spawn_path.is_file():
         print("FATAL: dispatch produced no spawn record — the fire DID NOT take. Do not assume a call exists.")
-        return 5
+        return refuse(out_dir, 5, "dispatch produced no spawn record — the fire DID NOT take", manifest)
     call_id = json.loads(spawn_path.read_text()).get("call_id", "")
     if not call_id:
         print("FATAL: spawn record carries no call_id — refuse-loud, investigate before refiring.")
-        return 5
+        return refuse(out_dir, 5, "spawn record carries no call_id", manifest)
     manifest["stage5_call_id"] = call_id
     print(f"DISPATCHED: call {call_id}")
 
@@ -312,7 +540,7 @@ def main() -> int:
             "--", VENV_PY, str(REPO / "tools" / "modal_harvest_poller.py"),
             "--call-id", call_id,
             "--output-dir", str(out_dir),
-            "--deadline-s", str(args.poller_deadline_s),
+            "--deadline-s", str(poller_deadline_s),
         ],
         cwd=REPO, capture_output=True, text=True,
     )
@@ -324,8 +552,7 @@ def main() -> int:
         manifest["stage6_poller"] = {"error": arm.stdout[-400:] + arm.stderr[-400:]}
         print("WARNING: poller arm output unparsable — VERIFY THE WATCHER before ending the turn.")
 
-    (out_dir / "FIRE_MANIFEST.json").write_text(json.dumps(manifest, indent=2))
-    print(f"MANIFEST: {out_dir / 'FIRE_MANIFEST.json'}")
+    print(f"MANIFEST: {write_fire_manifest(out_dir, manifest)}")
     return 0
 
 
