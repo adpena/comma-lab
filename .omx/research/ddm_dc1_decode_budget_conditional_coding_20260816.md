@@ -1,4 +1,35 @@
-# ddm_dc1 — the coder axis is CLOSED on hv1, and the closure is now MEASURED on hv1
+# ddm_dc1 — the coder-SWAP ceiling is CLOSED on hv1 at fixed probabilities, and now MEASURED on hv1
+
+> ## ⚠ SCOPE NARROWED AT SOURCE — 2026-08-18 (`ddm_hd1`, from `ddm_na9` F5 instance #4)
+>
+> **The measurement below stands, every digit of it. The word it was given is one level too
+> wide, and that cost a day.**
+>
+> **MEASURED (unrefuted):** a **coder-SWAP ceiling of ≤7.80 B, GIVEN THE SHIPPED PROBABILITY
+> MODEL.** rc64 sits +0.00696% above its own model's cross-entropy; replacing the coder while
+> holding the probabilities fixed cannot return more than ~7.8 B. Nothing has refuted this.
+>
+> **NAMED (too wide):** *"the coder axis is CLOSED."* The coder axis contains the probability
+> model as well as the coder, and this unit measured only the second factor. This memo says so
+> itself at **§What I did NOT measure item 3** — *"A logistic-mixing CM coder was not built …
+> I am relying on the bound"* — which is the honest sentence the headline should have inherited.
+>
+> **REFUTED AT THE NAME LEVEL:** `ddm_fx1` (2026-08-17) built exactly that omitted object — a
+> fixed-point logistic log-odds mixer — and moved the **probability model**, not the coder:
+> **−560.07 B on the full n600 token field**, byte-closed at **180,601 B** (sha `65c75d7f…`,
+> repeat byte-identical, parse-back PASSED), **ΔS −3.72881e-4**. That is **72× the ≤7.8 B
+> ceiling** this memo measured, and it does not touch the ceiling, because it is a different
+> factor of the same product.
+>
+> **The lines this banner supersedes, named individually** (append-only per Catalog #110/#113 —
+> the original text is preserved, not rewritten, and each carries an inline marker):
+> the H1 above · **§Verdict-conditional at "The coder axis is closed on hv1, at the conditional
+> level"** · **§Consequence "the coding half of it does"** · **owed-row 4 "Retire the coder
+> family from the arm queue"**.
+>
+> **What an arm should take from this memo now:** do not race a *coder* on any hv1 section — that
+> is closed at ≤7.8 B and it earns the word. Do **not** read it as closing the *probability
+> model*; that cell is live, measured, and byte-closed by `fx1`.
 
 Date: 2026-08-16 · Owner: ddm_dc1 · Axis: `[macOS-CPU advisory / scorer-free byte measurement]`
 `score_claim=false` · `promotable=false` · pointer UNMOVED at 0.15959729295498598 @ 182,759 B.
@@ -189,6 +220,11 @@ worse and even its oracle is +32,057 B worse; on the three model sections the be
 conditional coder is +3,482 B worse and generic recodes are +0/+40 B. Every section is at or below
 its own bound. **The coder axis is closed on hv1, at the conditional level, measured on hv1.**
 
+> ⚠ **NARROWED 2026-08-18 (`ddm_hd1`).** Read as: *the coder-SWAP is closed at fixed
+> probabilities.* The races above hold the shipped probability model constant and vary the
+> coder. `fx1` varied the **model** instead and returned **−560.07 B** (72× this ceiling),
+> byte-closed. See the banner at the top of this memo.
+
 ## What I did NOT measure — stated plainly
 
 1. ~~HPAC's own cross-entropy on hv1.~~ **NOW MEASURED — this item is CLOSED** (see the verdict).
@@ -205,7 +241,9 @@ its own bound. **The coder axis is closed on hv1, at the conditional level, meas
 
 ## Consequence for the campaign
 
-The rate axis does not close — but the **coding** half of it does. Every remaining rate byte must
+The rate axis does not close — but the **coding** half of it does.
+⚠ **NARROWED 2026-08-18 (`ddm_hd1`):** the *code-length* half closes; the *model* half does not,
+and `fx1` measured −560.07 B inside it. Every remaining rate byte must
 come from a **better representation** (ddm_rc4 owns this: which parameters ship) or a **better
 model** (the learned prior). Our own record already names the live cell, verbatim from
 `RATE_AXIS_LOSSLESS_RACE.md` §5: *"The model-vs-code exchange rate is the unmeasured, gap-sized
@@ -224,7 +262,7 @@ does not bind the HPAC-class prior on this object.
 | 1 | ~~Measure HPAC's own cross-entropy on hv1.~~ **FIRED AND CLOSED this unit** — 215.8 s local, byte-identical replay, rc64 overhead +7.80 B (+0.00696%). Receipt `retained/hpac_cross_entropy_n600.json`. | ddm_dc1 | done | $0 |
 | 2 | **d(tokens)/d(model): does a larger HPAC prior keep returning >1 B per counted byte?** The only live cell in the rate axis. Needs training, so it is blocked while Modal is at $18.62/$20. | model owner | Modal budget reopens, or a local MLX training path lands | GPU |
 | 3 | Carrier is +18 B (+0.08%) above its own order-0 floor and ra2's arithmetic coder already found +263 B raw / ~230 B realized there. That is the only section with any measured slack, and it is 1.6% of the gap. | ddm_ra2 | already owned by ra2 | $0 |
-| 4 | Retire the coder family from the arm queue: no arm should propose a coder race on any hv1 section. Point them at this memo's race table. | MAIN | on read | $0 |
+| 4 | Retire the coder family from the arm queue: no arm should propose a coder race on any hv1 section. Point them at this memo's race table. ⚠ **NARROWED 2026-08-18 (`ddm_hd1`): retire the coder-SWAP family only.** The probability-MODEL family stays OPEN — `fx1` measured −560.07 B in it, byte-closed, 72× this memo's ceiling. Retiring "the coder family" as written told arms not to look at a live win. | MAIN | on read | $0 |
 
 **No fire-order is emitted.** No candidate archive was produced; nothing here is worth an exact row.
 

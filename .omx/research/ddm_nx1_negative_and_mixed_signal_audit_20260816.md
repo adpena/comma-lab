@@ -215,7 +215,7 @@ that measured it unless marked *(mine)*.
 
 | # | row | (a) scope I can defend | (b) denominator | (c) ceiling in S | (d) hidden win | (e) stale? |
 |---|---|---|---|---|---|---|
-| 1 | **dc1** coder axis CLOSED | **FAMILY, and it earns the word.** Not one race — a bound: the free-table ORACLE at 21 taps bottoms at 144,167 B vs a shipped 112,110 B stream | Real. rc64 measured at **1.00000** of the model cross-entropy from a byte-identical replay; `rc4` reproduced it independently to 0.02 B | **≤7.8 B = 5.19e-6 S = 0.05% of gap** | The **inverse** row: the learned prior returns **+3.81 B per counted byte**. dc1 called this "the only live cell"; `hm1` closed the table branch and `cl2` closed the network branch the same night | dc1's claim that the 831.5 s anchor is "UNVERIFIABLE" is **WRONG** — `hm1` located the primary receipt. Corrected at source by hm1 |
+| 1 | **dc1** coder axis CLOSED ⚠ **NARROWED 2026-08-18 (`ddm_hd1`, from `na9` F5 #4): read this row as coder-SWAP at FIXED probabilities. It does NOT close the probability-MODEL axis — `fx1` measured −560.07 B there, byte-closed at 180,601 B, 72× the ceiling below. This row's "FAMILY" promoted dc1's ceiling one level too wide and told arms not to look at a live win for a day.** | **FAMILY, and it earns the word.** Not one race — a bound: the free-table ORACLE at 21 taps bottoms at 144,167 B vs a shipped 112,110 B stream | Real. rc64 measured at **1.00000** of the model cross-entropy from a byte-identical replay; `rc4` reproduced it independently to 0.02 B | **≤7.8 B = 5.19e-6 S = 0.05% of gap** | The **inverse** row: the learned prior returns **+3.81 B per counted byte**. dc1 called this "the only live cell"; `hm1` closed the table branch and `cl2` closed the network branch the same night | dc1's claim that the 831.5 s anchor is "UNVERIFIABLE" is **WRONG** — `hm1` located the primary receipt. Corrected at source by hm1 |
 | 2 | **b2e** `REGIME_THESIS_INSTANCE_REFUTED` | **FORMULATION**, exactly as b2e labels it. And b2e's own caution is the honest read: the window moved the base by 1.4e-7 seg / 7.9e-7 pose, so *"this window did not train, so it did not train for editability"* | Real and pre-registered (50x collapse). Measured 0.75-1.06x — 4 orders of margin over reporting precision. n600, **not a prefix** | Even a perfect window must collapse pose damage **~75x** before these edits pay (b2e's own §4) | **YES — b2e NEXT #2.** "Does any lr/step budget move this trainer's base?" It is the gate on the entire seg-renderer route (Finding 1) and it is **unowned** | No |
 | 3 | **#1058** campaign close | QAT-leg: **INSTANCE** (correct). mp2: **FAMILY** on post-hoc semantic weight edits without joint re-descent — upheld by `ns1` §A and by `b2e` | Real: bar net < −3.5e-6; pose leg exceeds it ~10,000x | Smallest probe (−25 B) pays +0.0362 S. **1.4e-3 S per byte removed vs 6.66e-7 S/B of rate value — 3 orders over.** No magnitude clears | None. §3 route #2 (carrier rank, GATED) is now closed 5 ways | Route §3 item 2 is **stale**: it says carrier rank is "GATED, not fired". `ra2c`/`jc1`/`ra2`/`ra3`/`ra2crr` fired all five treatments the next day |
 | 4 | **rung-2 truncation** REFUTED 189-278x (`ra2c`) | **INSTANCE→FAMILY, correctly escalated.** ra2c §8.1 replaced an inherited round-number ladder with the complete computed table: miss monotone in r, never below 32.2x, flat spectrum | Real. Priced on both the advisory (1.5731x) and T4 (4.7394x) bars — closes on the **loosest**, the stronger statement | ra2c's own §8.4 named a **1,854 B per free dimension = 12.9% of gap** upside if `K ≥ 1` | **Fired and CLOSED the same day.** `jc1` measured **K = 0** at every tolerance 1e-16→1e-1; cond(J_stack)=12.02, column spread 2.16x. No free direction, no cheap one | **`gestalt` (16:27) is STALE**: its live ladder lists rung 2′ as *"OPEN — the named successor"*. `jc1` closed it at 18:20; `ra3` re-closed it at 20:50. Do not resume off that table |
@@ -244,8 +244,16 @@ that measured it unless marked *(mine)*.
 Do not spend a slot, an arm, or a charter on any of these. Each is closed on a **ceiling** or on a
 **bound**, not on a single failed attempt.
 
-1. **The entropy coder on every hv1 section** (`dc1`, `rc4`). Ceiling ≤7.8 B. Point new arms at
+1. **The entropy CODER on every hv1 section** (`dc1`, `rc4`). Ceiling ≤7.8 B. Point new arms at
    `tools/audit_archive_coder_axis.py` rather than letting them inherit the closure.
+   ⚠ **NARROWED 2026-08-18 (`ddm_hd1`).** This entry closes **coder-SWAP at fixed probabilities**,
+   and at that scope it is correct and unrefuted. It does **NOT** close the **probability model**
+   that feeds the coder: `ddm_fx1` (08-17) landed a fixed-point logistic log-odds mixer at
+   **−560.07 B** on the n600 token field, byte-closed **180,601 B** (sha `65c75d7f…`, parse-back
+   PASSED), **ΔS −3.72881e-4 = 72×** this ceiling. Per the legend below, a different probability
+   law **is** a new mechanism, so this entry never barred `fx1` — but as written it read as though
+   it did, which is how a live −3.73e-4 sat unlooked-at for a day. Do not inherit it any wider
+   than "coder-swap".
 2. **Additive correction tables and hand-designed conditioning** (`hm1`). Ceiling 2.47% of bar
    with the table free.
 3. **Lossless re-coding of any model section** (`mz1`, `mz2`, `dc1`). Exact savings 0 B; the

@@ -43,6 +43,91 @@ REFUTATION_PHRASES = (
     "withdrawn",
 )
 
+# --- the scope-word pass (ddm_hd1 2026-08-18, from ddm_na9 F5) -------------------------
+#
+# A closure is only as good as the OBJECT it names. Four measured instances of a memo
+# measuring a narrow object and naming a wide one; the fourth sat on a live -560 B win for
+# a day. The detector asks na9's one-line question of every closure sentence: does this
+# sentence carry the scope of what was actually measured?
+#
+# A flag is NOT a claim that the sentence is wrong. It is "this closure names a wide object
+# and states no scope" -- cheap to read, cheap to dismiss. The summary reports both sides,
+# because a detector that fires on everything is as uninformative as one that never fires.
+
+CLOSURE_WORDS = (
+    "closed",
+    "exhausted",
+    "dead",
+    "retired",
+    "saturated",
+    "settled",
+)
+
+#: Idioms of OUR OWN vocabulary that contain a closure word but assert no closure. Measured,
+#: not guessed: a first pass without these emitted 3,062 rows of which 382 were "byte-closed"
+#: (our standard phrase for a verified archive) and 257 "closed-form" (a kind of maths). A
+#: detector that fires on the house dialect is a detector nobody reads.
+CLOSURE_FALSE_FRIENDS = (
+    "byte-closed",
+    "byte closed",
+    "closed-form",
+    "closed form",
+    "closed-loop",
+    "closed loop",
+    "receiver-closed",
+    "fail-closed",
+    "fail closed",
+    "deadline",
+    "deadlock",
+    "dead code",
+    "dead flag",
+    "dead-flag",
+)
+
+#: The object nouns that make a closure a FAMILY-level claim rather than an instance one.
+#: Deliberately narrow. "all"/"any"/"every"/"whole" were measured as pure noise (1,588 of the
+#: first pass's 3,062 rows) because they appear in ordinary prose; they are dropped.
+WIDE_OBJECT_WORDS = (
+    "axis",
+    "family",
+    "families",
+    "class",
+    "paradigm",
+    "entire",
+)
+
+#: A closure word and a wide object noun in the same sentence but forty words apart are
+#: usually two unrelated clauses. Require them to be near each other.
+SCOPE_PROXIMITY_CHARS = 60
+
+#: A sentence that carries any of these is stating what it held fixed, i.e. it is already
+#: scoped. These are the HONEST form -- the denominator that proves the gauge can pass.
+SCOPE_QUALIFIERS = (
+    "given",
+    "at fixed",
+    "holding",
+    "held constant",
+    "held fixed",
+    "instance",
+    "formulation",
+    "scope",
+    "scoped",
+    "swap",
+    "only",
+    "assuming",
+    "under the",
+    "at this",
+    "on this",
+    "for this",
+    "measured on",
+    "narrowed",
+    "at the conditional level",
+    "within",
+    "restricted",
+    "sub-",
+    "verdict_scope",
+)
+
 
 def repo_rel(path: Path) -> str:
     try:
@@ -163,6 +248,113 @@ def split_title_body(text: str) -> tuple[str, str]:
         if stripped:
             return stripped, "\n".join(lines[idx + 1 :])
     return "", ""
+
+
+def _lowered_hits(text: str, vocabulary: tuple[str, ...]) -> list[str]:
+    lowered = text.lower()
+    return [word for word in vocabulary if word in lowered]
+
+
+def _word_spans(text: str, vocabulary: tuple[str, ...]) -> list[tuple[str, int]]:
+    """Whole-word occurrences with their offsets. Substring matching over-fires badly here."""
+    lowered = text.lower()
+    found: list[tuple[str, int]] = []
+    for word in vocabulary:
+        for match in re.finditer(rf"\b{re.escape(word)}\b", lowered):
+            found.append((word, match.start()))
+    return found
+
+
+def scope_word_rows(*, source: str, text: str) -> tuple[list[dict[str, object]], int]:
+    """Flag closure sentences that name a WIDE object without stating their scope.
+
+    Returns ``(rows, scoped_count)``. ``scoped_count`` is the honest denominator: closure
+    sentences that DID carry a qualifier, i.e. the ones the gauge deliberately let through.
+    Without it a reader cannot tell a clean corpus from a broken detector.
+    """
+    rows: list[dict[str, object]] = []
+    scoped = 0
+    for idx, line in enumerate(text.splitlines()):
+        stripped = line.strip()
+        # Skip table rules and blockquotes: a quoted or ruled line is not this memo asserting.
+        if not stripped or stripped.startswith(("|---", "> ", "#")):
+            continue
+        lowered = stripped.lower()
+        # Strip our own idioms before looking, so the house dialect cannot trip the gauge.
+        probe = lowered
+        for friend in CLOSURE_FALSE_FRIENDS:
+            probe = probe.replace(friend, " ")
+        closure_spans = _word_spans(probe, CLOSURE_WORDS)
+        if not closure_spans:
+            continue
+        wide_spans = _word_spans(probe, WIDE_OBJECT_WORDS)
+        if not wide_spans:
+            continue
+        near = [
+            (closure, wide)
+            for closure, c_at in closure_spans
+            for wide, w_at in wide_spans
+            if abs(c_at - w_at) <= SCOPE_PROXIMITY_CHARS
+        ]
+        if not near:
+            continue
+        qualifiers = _lowered_hits(stripped, SCOPE_QUALIFIERS)
+        if qualifiers:
+            scoped += 1
+            continue
+        rows.append(
+            {
+                "source": source,
+                "line": idx + 1,
+                "closure_words": sorted({closure for closure, _ in near}),
+                "wide_object_words": sorted({wide for _, wide in near}),
+                "sentence": stripped[:400],
+                "question": (
+                    "which object did this unit MEASURE, and is that the object this sentence NAMES?"
+                ),
+                "advisory_only": True,
+            }
+        )
+    return rows, scoped
+
+
+def scope_vs_object_detector(research_root: Path) -> tuple[list[dict[str, object]], dict[str, object]]:
+    """Run the scope-word pass over the memo corpus. Warn-only, denominators reported."""
+    rows: list[dict[str, object]] = []
+    scanned = 0
+    scoped_total = 0
+    flagged_sources: set[str] = set()
+    for path in iter_markdown_files(research_root):
+        scanned += 1
+        source = repo_rel(path)
+        found, scoped = scope_word_rows(source=source, text=read_text(path))
+        scoped_total += scoped
+        if found:
+            rows.extend(found)
+            flagged_sources.add(source)
+
+    # Positive control: the na9 F5 instance #4 sentence must be detectable in the shape the
+    # detector looks for. A gauge whose known-positive is invisible is not a gauge.
+    control_rows, _ = scope_word_rows(
+        source="<positive_control>", text="The coder axis is CLOSED on hv1."
+    )
+    # Negative control: the SAME claim, correctly scoped, must NOT fire.
+    negative_rows, negative_scoped = scope_word_rows(
+        source="<negative_control>",
+        text="The coder-swap axis is CLOSED given fixed probabilities.",
+    )
+
+    summary = {
+        "memos_scanned": scanned,
+        "rows_emitted": len(rows),
+        "sources_flagged": len(flagged_sources),
+        "closure_sentences_already_scoped": scoped_total,
+        "positive_control_caught": bool(control_rows),
+        "negative_control_caught": bool(negative_rows),
+        "negative_control_recognised_as_scoped": negative_scoped == 1,
+        "advisory_only": True,
+    }
+    return rows, summary
 
 
 def body_refutation_different_number(
@@ -787,6 +979,7 @@ def build_summary(
     headline_summary: Mapping[str, object],
     registry_summary: Mapping[str, object],
     if_budget_summary: Mapping[str, object],
+    scope_summary: Mapping[str, object],
 ) -> dict[str, object]:
     return {
         "audit": "AU1 measurement-integrity audit",
@@ -796,6 +989,7 @@ def build_summary(
         "headline_vs_body": dict(headline_summary),
         "registry_first_extension": dict(registry_summary),
         "if_budget_checks": dict(if_budget_summary),
+        "scope_vs_object": dict(scope_summary),
     }
 
 
@@ -807,6 +1001,7 @@ def run(outdir: Path) -> dict[str, object]:
     headline_rows, headline_summary = headline_body_detector(RESEARCH_ROOT, TASK_LEDGER)
     registry_rows, registry_summary = registry_first_rows(RESEARCH_ROOT)
     if_budget_check_rows, if_budget_summary = if_budget_rows()
+    scope_rows, scope_summary = scope_vs_object_detector(RESEARCH_ROOT)
 
     paths = {
         "decode_read_coverage": outdir / "au1_decode_read_coverage.jsonl",
@@ -814,6 +1009,7 @@ def run(outdir: Path) -> dict[str, object]:
         "headline_vs_body": outdir / "au1_headline_vs_body.jsonl",
         "registry_first_extension": outdir / "au1_registry_first_extension.jsonl",
         "if_budget_checks": outdir / "au1_if_budget_checks.jsonl",
+        "scope_vs_object": outdir / "au1_scope_vs_object.jsonl",
         "summary": outdir / "au1_summary.json",
     }
     write_jsonl(paths["decode_read_coverage"], decode_rows)
@@ -821,12 +1017,14 @@ def run(outdir: Path) -> dict[str, object]:
     write_jsonl(paths["headline_vs_body"], headline_rows)
     write_jsonl(paths["registry_first_extension"], registry_rows)
     write_jsonl(paths["if_budget_checks"], if_budget_check_rows)
+    write_jsonl(paths["scope_vs_object"], scope_rows)
     summary = build_summary(
         decode_summary=decode_summary,
         corrections_summary=corrections_summary,
         headline_summary=headline_summary,
         registry_summary=registry_summary,
         if_budget_summary=if_budget_summary,
+        scope_summary=scope_summary,
     )
     paths["summary"].write_text(
         json.dumps(summary, indent=2, sort_keys=True) + "\n",
