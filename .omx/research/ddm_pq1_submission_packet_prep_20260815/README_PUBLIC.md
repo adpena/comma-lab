@@ -103,12 +103,15 @@ Both are cosmetic and neither changes behaviour.
 
 ## Reproduction
 
-Status: being re-bound. The prior candidate's end-to-end entry point
-(`experiments/ddm_pq2_compress_e2e.py`) asserts the prior archive's hashes;
-the sz1 chain (the token-model byte-close driver plus the serialization-split
-builder, both in the public repository) is the reproduction path for these
-bytes and is being re-bound under the same fail-closed hash assertions. At
-build time the archive and a fresh-process repeat were byte-identical.
+Status: VERIFIED. The end-to-end entry point
+(`experiments/ddm_pq2_compress_e2e.py`) rebuilds these exact bytes from the
+retained checkpoint state under a candidate recipe: the token stream is
+re-encoded by the shipped probability model, the intermediate archive is
+hash-asserted, the serialization-split builder repacks the container with its
+own decode-bit-identity proof, and the final archive must hash to
+`debb025f45bb42e3…` at 179,930 bytes — a mismatch at any stage exits non-zero.
+The verification run reproduced the archive exactly, with a byte-identical
+fresh-process determinism repeat.
 
 To evaluate the shipped archive, first download `archive.zip` from the release
 asset linked in the pull request into this directory — `inflate.py` resolves

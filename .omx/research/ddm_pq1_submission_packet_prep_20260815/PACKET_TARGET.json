@@ -60,8 +60,12 @@
     "spend_estimate_usd": 0.06
   },
   "reproduction": {
-    "status": "PENDING_REBIND",
-    "note": "experiments/ddm_pq2_compress_e2e.py asserts the generation-2 (rr4) shas; per SWAP_PROCEDURE RESET_AUTHORITY it must be re-bound to the sz1 chain (fx2 byteclose_a_driver.sh + sz1 split builder) and re-verified before the strict chain can go green. Never convert red by copying the old receipt."
+    "status": "VERIFIED",
+    "verified_at_utc": "2026-08-18T05:12:00Z",
+    "entry_point": "experiments/ddm_pq2_compress_e2e.py",
+    "recipe": ".omx/research/ddm_pq1_submission_packet_prep_20260815/RECIPE_sz1_composed.json",
+    "receipt": "/Volumes/APDataStore/pact/ddm_pq2/e2e_sz1_composed/RESULT_pq2_e2e.json",
+    "note": "One canonical entry point rebuilt the composed candidate end-to-end from the four sha-verified retained inputs: fx2 13-context token re-encode (encode 210.1 s, determinism repeat byte-identical, token stream 5b09fd78... exact, pre-split archive 9de0f6db.../180,450 B exact) then the sz1 serialization split (decode bit-identity, base-unchanged, and token-verbatim proofs all green) -> final archive debb025f45bb42e3.../179,930 B EXACT. Fail-closed at every stage; a mismatch exits non-zero."
   },
   "generation_2_superseded": {
     "note": "Generation-2 (rr4) blocks preserved verbatim below per APPEND-ONLY; custody untouched.",

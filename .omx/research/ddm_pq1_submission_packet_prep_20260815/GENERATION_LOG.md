@@ -74,7 +74,12 @@ the real candidate and the authoritative receipt chain (sealed fire order +
 
 ## Reproduction at generation 3
 
-Status: PENDING_REBIND. `experiments/ddm_pq2_compress_e2e.py` asserts the
-generation-2 hashes; the sz1 chain (fx2 byte-close driver + split builder)
-must be re-bound under the same fail-closed assertions before the strict chain
-can claim reproduction green. Build-time determinism repeat: byte-identical.
+Status: VERIFIED (2026-08-18). `experiments/ddm_pq2_compress_e2e.py` was
+re-bound via a recipe-declared split stage (`RECIPE_sz1_composed.json`): the fx2
+token re-encode runs through the generic encoder (corrector selected by the
+recipe), the pre-split archive is asserted against `9de0f6db…`/180,450 B, the
+canonical sz1 split builder then repacks the container with its own decode
+bit-identity, base-unchanged and token-verbatim proofs, and the final archive
+is asserted against `debb025f45bb42e3…`/179,930 B. End-to-end run from the four
+sha-verified retained inputs: all assertions green, determinism repeat
+byte-identical. Receipt: `ddm_pq2/e2e_sz1_composed/RESULT_pq2_e2e.json`.

@@ -86,11 +86,11 @@ correctness one.
   checks the decoded token field against its pinned SHA-256
   (`9ba2e52b3096…`) — verified in a clean environment on CPU.
 
-Honesty note on packaging status: the prior generation's single entry point
-(`experiments/ddm_pq2_compress_e2e.py`) asserts the prior archive's hashes and
-is being re-bound to this generation's chain (the fx2 byte-close driver plus
-the sz1 split builder, both in the public repository) under the same
-fail-closed assertions. That re-bind completes before this draft is opened.
+The single entry point (`experiments/ddm_pq2_compress_e2e.py`, with this
+candidate's recipe file) has been verified end-to-end for these exact bytes:
+rebuilt from the retained inputs, every intermediate hash asserted, final
+archive reproduced at `debb025f45bb42e3…`/179,930 bytes with a byte-identical
+fresh-process repeat.
 
 # changes from upstream
 
