@@ -300,6 +300,91 @@ full sweep costs ~4 minutes. Route 2 is the close, and the 276 B stays on the ta
 **Consequence for the verdict:** a byte-closed candidate **now exists** and is
 retained. The S arithmetic below is over a real archive, not an unrealised one.
 
+## 7.3 PACKAGING DEFECT — the seal validated an inconsistent packet (mine)
+
+The first sealed packet **could not decode its own archive**, and the fire path caught
+it. Owned plainly:
+
+**What I did wrong.** I staged the gen tree by copying `work/runtime_copy` and
+swapping in the candidate `archive.zip` — and never re-pinned the receiver's
+`inflate.py:18-19` `ARCHIVE_SHA256` / `ARCHIVE_BYTES`, which still named the rr4
+base (`35ac2b9b…`, 181,161 B). `inflate.py:28-30` asserts both, so the tree was
+internally inconsistent and would have failed remotely **after the meter started**.
+
+**Hard evidence it was inconsistent at seal time** (not a later regression): the seal
+itself recorded `inflate.py` at sha `3ba93237bb811fc9…`, byte-identical to the
+base-pinned copy in both `work/runtime_copy` and the rr4 custody runtime.
+
+**Why my own parse-back could not catch it — the lesson.** My "shipping-receiver
+parse-back PASS, deviation 0.0" ran against the *correct* archive but through the
+receiver's **library modules** (`runtime.residual_archive.read_residual_archive` +
+`cpr1/ddm_mp2_semantic_receiver.unpack_variant_semantic_or_none`). It never invoked
+`inflate.py`, so `ARCHIVE_SHA256` was never evaluated. **Module-level parse-back is
+structurally blind to packet-level pinning: I validated the thing I built, not the
+thing that ships.** That PASS is re-scoped to module level and is NOT packet-level
+decode evidence. Full adjudication:
+`receipts/PARSEBACK_SCOPE_ADJUDICATION.json`.
+
+**Why the seal did not catch it either.** `make_candidate_seal.py` binds the runtime
+tree digest and the archive identity; it does not parse the receiver's internal
+`ARCHIVE_SHA256` constant. `SEAL_VALID` was therefore true and useless for this
+defect class — a real gap worth a gate, since a seal is exactly the object a reader
+trusts instead of re-checking.
+
+**Cure and current state.** The staged tree was re-pinned at 08:53:04 —
+audited: **exactly one file (`inflate.py`) and exactly two lines (18, 19)** changed,
+no other staged file touched. The re-pinned receiver now passes its own
+`_verify_input` against its own archive (PASS). MAIN rebuilt the seal as
+`FIRE_ORDER_iv1.repinned.json`, which I verified end to end: both receiver pins
+MATCH the live tree, the archive on disk matches, and the receiver's internal
+`ARCHIVE_SHA256`/`ARCHIVE_BYTES` are CONSISTENT with it. The T4 row is in flight
+under lane `ddm_iv1_sd1m_pose_actuator_t4_n600`; I did not mutate the tree while a
+paid dispatch reads it.
+
+**Standing rule for this arm's successors:** verify a candidate packet through its
+OWN entry point (`inflate.sh` / `inflate.py`) against its OWN archive **before**
+sealing. A library-level round-trip is necessary and not sufficient.
+
+## 7.4 PACKET DECODE PROOF — passed end to end, $0, before any paid row
+
+Run through the real entry point (`inflate.sh`, which builds its own RC64 backend —
+calling `inflate.py` directly fails for the missing `CPR1_RC64_LIBRARY`, itself a
+small confirmation that the `.sh` is the honest path). `rc=0`, 982 s, 600 pairs.
+
+| field (the receiver's own report) | value |
+|---|---|
+| `archive_sha256` self-reported | **`49bb833ea93ce5af…`** — the candidate |
+| `archive_bytes` | 181,475 |
+| `0.raw` | **3,662,409,600 B** (exact expected size) |
+| `raw_sha256` | `526772e3c292da79…` |
+| `decoded_token_sha256` | `9ba2e52b3096585…` — **byte-identical to the base decode** |
+| stage split | token decode 578.2 s · neural render 357.1 s · frame0 selector/IO 45.4 s |
+
+The token match is the load-bearing part: the HPAC / token / residual sections decode
+**exactly** as the base through the shipping receiver, which is what the design
+requires since only the semantic section moved.
+
+**Frame-level diff vs the retained base decode** (`receipts/decode_diff.json`), against
+three predictions written before reading the output — all three confirmed:
+
+| prediction | result |
+|---|---|
+| **P1** `frame_0` bit-identical for all 600 pairs | **TRUE** — 0 violations. The carrier is untouched; the edit is provably **frame_1-only**. |
+| **P2** `frame_1` differs for exactly the 44 re-solved pairs | **44 / 44 differ**, max abs deviation **17**, mean **8.84** |
+| **P3** `frame_1` also differs slightly for the other 556 | **556 / 556 differ**, max abs deviation **1**, mean **1.0** |
+
+P3 puts a pixel number on something this arm had measured only through pose and seg:
+the SD1M container's single perturbed global tensor reaches **every** pair as a
+uniform **±1 uint8 level**. The edit signal (max 17) is **17x** the container
+footprint (max 1) — clean separation between the mechanism and the packaging noise,
+and consistent with the +0.747% container pose penalty measured in §7.1.
+
+**Sequencing note.** This is exactly the evidence a paid T4 row would have bought,
+obtained locally for $0 and *before* any spend. The two T4 fire attempts both refused
+at `rc=5` (Modal image-build terminated externally) with **no spawn record and no
+call id** — no dispatch, no spend. Free local evidence before a paid row is the right
+order on its own merits, independent of why it happened here.
+
 ## 8. THE GATE — the CPU/T4 target question, which can flip the sign
 
 On **identical frames** the CPU advisory instrument reads d_pose **21.4x higher**
