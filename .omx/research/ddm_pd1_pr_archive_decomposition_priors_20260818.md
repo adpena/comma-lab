@@ -1,4 +1,4 @@
-# ddm_pd1 — decompose every competitor archive: the miss-bit share is prior-invariant, and the semantic family is ONE sample wearing four PR numbers
+# ddm_pd1 — decompose every competitor archive: the miss-bit SHARE is prior-invariant (the miss FRACTION is not), and four semantic-family PR numbers carry at most TWO token fields
 
 **Date:** 2026-08-18 · **Arm:** `ddm_pd1` (Opus) + 2 sub-arms · Charter
 `.omx/research/charters/ddm_pd1_pr_archive_decomposition_priors_20260818.md`
