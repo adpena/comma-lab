@@ -76,10 +76,37 @@ hash matches the sealed value, sha-bound supplementary terminal claim row).
 
 The 6 residual reds, each typed with its route:
 
-1. `auth_eval_schema_metric_consistency` — the r3 worker receipt is RAW (no
-   recomputed-from-components field). Route: produce the ADJUDICATED auth-eval
-   JSON per the generation-0 pattern (`receipts/cuda_auth/`), next work item.
-2. `auth_eval_raw_promotion_policy_blockers_absent` — same object, same route.
+> **CORRECTION 2026-08-18 (r3 receipt `pre_submission_compliance.gen3.r3.json`,
+> 82 GREEN / 4 RED).** The prior routes for reds 1-2 were STALE PROSE: the
+> "generation-0 pattern" never existed — gen-0's own final receipt
+> (`receipts/pre_submission_compliance.final.json` on Vertigo) is RED on the
+> same two checks, and its `receipts/cuda_auth/` JSON has no adjudication
+> fields (the adjudicator was never run). Verified at source 2026-08-18:
+> (a) red 1 was a vocabulary contradiction between two canonical surfaces —
+> `experiments/contest_auth_eval.py:2391` stamps
+> `canonical_score_source="report_8dp_components_plus_exact_archive_bytes"`
+> (pinned by 2 tests) while `tac/auth_eval_schema.py` demanded the older
+> literal; cured at the schema (commit `6449c7cdd5`, accepted-label set +
+> 2 tests, unknown labels still refused, numeric formula guard unchanged) —
+> now GREEN with the sealed receipt untouched. (b) red 2 is STRUCTURALLY
+> UNSATISFIABLE for any payload descended from the raw emitter: the blocker
+> trio is stamped unconditionally at `contest_auth_eval.py:2530`, and
+> `scripts/adjudicate_contest_auth_eval.py` carries the fields through
+> (`result_payload = dict(payload)`) while its `_check_raw_promotion_policy_gate`
+> treats their presence as gate-triggered ("must not be laundered") — running
+> the adjudicator would DOWNGRADE the payload and flip the currently-green
+> `auth_eval_adjudicated_raw_policy_clean` check red. Red 2 is therefore a
+> DOCUMENTED STRUCTURAL red, same class as red 3: the blockers' substantive
+> content is satisfied by the surrounding packet (compliance recorded =
+> gen3.r3 receipt; CPU reproduction adjudicated = the measured-infeasibility
+> receipt; submission policy gates = the 82/86 strict chain itself).
+> (c) red 6 was a status-vocabulary nit: the terminal claim row's status did
+> not start with a `completed_contest_cuda*`-family prefix; cured with a
+> conforming sha-bound terminal row appended 2026-08-18 — now GREEN.
+
+1. `auth_eval_schema_metric_consistency` — **GREEN as of r3** (see correction).
+2. `auth_eval_raw_promotion_policy_blockers_absent` — **DOCUMENTED STRUCTURAL
+   red** (see correction); never converted by editing the receipt or the check.
 3. `contest_cpu_auth_eval_exists` — STRUCTURALLY RED for this candidate: the
    CPU axis is MEASURED INFEASIBLE within the 1,800 s budget (inflate 3,422.7 s,
    receipt in PACKET_TARGET cpu_axis). No CPU score can legally exist; the
@@ -91,6 +118,6 @@ The 6 residual reds, each typed with its route:
    precedent; the check stays red by design and is never hand-edited.
 5. `hosted_archive_manifest_supplied` — OPERATOR-GATED: hosting authorization
    is part of the final one-line confirm.
-6. `dispatch_claim_successful_exact_eval_terminal_row` — wording/row-shape nit
-   in the claims table (3 matching rows, latest is the successful terminal);
-   adjudicate the checker's exact predicate next pass.
+6. `dispatch_claim_successful_exact_eval_terminal_row` — **GREEN as of r3**
+   (conforming `completed_contest_cuda_exact_eval_harvested` terminal row,
+   sha-bound to archive `debb025f…` + runtime tree `0d0fc008…`).
