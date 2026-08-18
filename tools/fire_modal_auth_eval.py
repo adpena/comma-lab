@@ -474,6 +474,14 @@ def main() -> int:
             f"{repin.new_sha256[:16]}…/{repin.new_bytes:,} B"
         )
         seal = check_pin_consistency(runtime_dir, archive_path=archive)
+        # On ExFAT/FAT volumes macOS re-creates AppleDouble ._ litter the instant the
+        # repin writes inflate.py; the upload path refuses hidden files, so sanitize
+        # must re-run after the LAST mutation of the tree (the sz1 r1 rc=5 refusal).
+        post_repin_litter = sanitize_litter(runtime_dir, apply=not args.dry_run)
+        manifest["stage3b_post_repin_sanitized"] = post_repin_litter
+        if post_repin_litter:
+            verb = "would remove" if args.dry_run else "removed"
+            print(f"SANITIZE(post-repin): {verb} {len(post_repin_litter)} metadata-litter file(s)")
     manifest["stage3b_seal"] = seal.to_dict()
     print(f"SEAL: {seal.summary()}")
     if seal.verdict == MISMATCH:
