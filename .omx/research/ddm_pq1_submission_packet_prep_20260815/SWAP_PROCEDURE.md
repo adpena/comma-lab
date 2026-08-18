@@ -2,20 +2,53 @@
 
 ## Trigger and invariant
 
-Swap generation 0 targets only e480b v2. A swap is permitted only after the
-e960 composition endpoint materializes one exact retained archive plus its
-receiver, reports archive bytes and SHA-256 from disk, and is selected by MAIN
-as the candidate to prepare. A projected candidate, an advisory checkpoint, or
-an archive without receiver closure cannot trigger a swap.
+**CANDIDATE-AGNOSTIC BY CONSTRUCTION (round-11 F4, 2026-08-18).** This paragraph
+used to name `e480b v2` and the `e960 composition endpoint` in the present tense
+as the only admissible trigger. Three generations were then swapped through a
+gate whose text described none of them, and the live pointer candidate — keep01,
+a FiLM row-prune with in-compile Schur pose compensation — could not satisfy the
+literal trigger at all. A trigger that hardcodes a candidate name goes stale the
+moment the frontier moves, which is the one thing the frontier reliably does.
+The trigger is therefore stated as a PROPERTY, read from the pointer at swap
+time, never as a name.
 
-The e480b packet remains retained. Never overwrite it in place and never reuse
-its authority receipts for changed bytes.
+A swap is permitted only when ALL of the following hold for the proposed
+candidate:
+
+1. **It is the live pointer candidate.** Read score and archive SHA-256 at swap
+   time from `.omx/state/canonical_frontier_pointer.json` — the canonical SoT
+   per CLAUDE.md "Frontier scores are pointer-only". Never from a memo, a
+   headline, or this file. Refresh the pointer first
+   (`tools/refresh_canonical_frontier.py`) and confirm its
+   `last_refreshed_utc` post-dates the candidate's own exact row; a pointer one
+   refresh behind is a stale world, not a green light.
+2. **It materializes one exact retained archive plus its receiver**, with
+   archive bytes and SHA-256 reported FROM DISK, not projected.
+3. **It carries a complete `candidate_seal.v1`** binding archive, runtime tree,
+   and receiver pins, with its falsifiers passed.
+4. **MAIN selects it** as the candidate to prepare.
+
+A projected candidate, an advisory checkpoint, or an archive without receiver
+closure cannot trigger a swap. Neither can a candidate the pointer does not
+carry — swapping to bytes our own frontier already dominates buys review passes
+that will need re-buying.
+
+**Candidate history (HISTORICAL — no longer a trigger condition).** Generation 0
+targeted e480b v2 and was gated on the e960 composition endpoint; generation 2
+was rr4; generation 3 is `gen3_sz1_composed_split`. These names are recorded as
+lineage, not as admissibility criteria. Any future reader: the trigger is the
+four properties above.
+
+Every retained packet stays retained. Never overwrite one in place and never
+reuse its authority receipts for changed bytes.
 
 ## Procedure
 
 1. `VERIFY_SOURCE` — owner `MAIN packet owner`; consumer `new generation
-   staging root`; fire trigger `selected e960-composed archive and receiver
-   exist under retained custody`. Hash the source archive and every executable
+   staging root`; fire trigger `the selected POINTER candidate's archive and
+   receiver exist under retained custody` (the four trigger properties above,
+   read from the pointer at swap time — never a hardcoded candidate name).
+   Hash the source archive and every executable
    runtime file, verify archive member safety and receiver parse-back, and stop
    on any mismatch.
 2. `STAGE_NEW_GENERATION` — owner `MAIN packet owner`; consumer
@@ -51,6 +84,38 @@ its authority receipts for changed bytes.
    PR body, public-scan paths) — a receipt older than any scanned file is
    stale by definition, so every fix batch that touches one ENDS by re-running
    the checker and re-pointing every receipt citation in the same batch.
+   **THE RECEIPT HAS THREE INPUTS, NOT ONE (round-11 F1):** a receipt is a joint
+   measurement of BYTES × INSTRUMENT × WORLD, and it is stale when ANY of the
+   three moves — (a) SURFACES: any edit to a file the checker scans; (b)
+   INSTRUMENT: any commit touching the checker or its helper modules, which is
+   how r5 came to claim 86 checks while the live checker ran 87; (c) WORLD: any
+   refresh of `.omx/state/canonical_frontier_pointer.json`, which is how a
+   green `frontier_no_regression_on_submitted_axis` went red with the packet
+   untouched. Every receipt now records all three in its `instrument_and_world`
+   block (`checker_source_sha256`, `frontier_pointer_state`,
+   `scanned_file_count`) — compare those against live state BEFORE citing a
+   receipt, rather than assuming the world stood still.
+   **CENSUS BOTH DIRECTORIES FIRST (round-11 F3/F6):** run
+   `tools/packet_census_guard.py` immediately BEFORE any receipt re-buy and
+   again immediately before publication — the same two moments this freshness
+   law already governs. Both surfaces, one invocation, and rc must be 0:
+
+   ```bash
+   .venv/bin/python tools/packet_census_guard.py \
+       --packet-dir <staged generation dir> \
+       --auth-eval-json <the row's contest_auth_eval.json> \
+       --prep-dir .omx/research/ddm_pq1_submission_packet_prep_20260815
+   ```
+
+   A non-zero rc REFUSES the re-buy: buying a receipt over a directory holding
+   files nobody declared certifies contaminants along with the packet. The
+   `--prep-dir` half is structural (the prep tree is FLAT — no subdirectories,
+   no dot-entries) and exists because a Stop-hook once wrote `.omx/state/*.json`
+   markers into the prep tree, where they sat staged for six hours invisible to
+   a packet-only census. Any `DOUBLE-DECLARED:` line in the output is
+   information, not a failure: it names a file both authorities cover, and
+   therefore a file whose loss from the runtime manifest this census cannot
+   catch.
    **NO HAND-TYPED VALUES (round-8 F4 + the r5-attempt-1 refusal):** every
    sha, size, and timestamp passed to the checker or written into a custody
    field is DERIVED (from a receipt, git, or the clock) — a hand-completed

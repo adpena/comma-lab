@@ -673,6 +673,13 @@ def main(argv: list[str] | None = None) -> int:
             "--call-id", call_id,
             "--output-dir", str(out_dir),
             "--deadline-s", str(poller_deadline_s),
+            # Round-11 F1(b) class cure: the poller writes a scalar anchor
+            # mirror under experiments/results so tac.frontier_scan can SEE a
+            # row whose --output-dir is an SSD custody path it never globs.
+            # The lane and label are passed here because the poller cannot know
+            # them; the P0 payload still stays at --output-dir.
+            "--lane-id", args.lane_id,
+            "--mirror-label", args.instance_job_id,
         ],
         cwd=REPO, capture_output=True, text=True,
     )

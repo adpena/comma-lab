@@ -77,8 +77,35 @@ RAW_PROMOTION_BLOCKER_FIELDS = (
     "rank_or_kill_blockers",
 )
 PRIVATE_SURFACE_RE = re.compile(
-    r"(/Users/|ssh\d+\.vast\.ai|fc-[A-Z0-9]{20,}|ap-[A-Za-z0-9]{12,}|sk-[A-Za-z0-9_-]{20,})"
+    r"(/Users/|/Volumes/|ssh\d+\.vast\.ai|fc-[A-Z0-9]{20,}|ap-[A-Za-z0-9]{12,}|sk-[A-Za-z0-9_-]{20,})"
 )
+"""Absolute-path and credential prefixes that must never reach a public surface.
+
+``/Volumes/`` added round-11 F2 (2026-08-18). MEASURED defect: the staged
+generation-3 packet shipped 63 distinct ``/Volumes/APDataStore/...`` paths inside
+two manifest-declared JSON receipts, and this pattern returned clean over them --
+twice, because ``/Volumes/`` was absent here AND the two files were outside the
+scan corpus. Either gap alone was sufficient to hide the leak; both are cured.
+
+The canonical sibling gate ``experiments/ddm_fx1_stage_candidate_runtime.py``
+(``LEAK_MARKERS``) has refused ``/Volumes/`` on staged trees since it landed. This
+scanner was the weaker of the two siblings on the identical property. They now
+agree on the local-volume prefix.
+
+Deliberately NOT added here: ``/home/``, ``/tmp/``, ``/private/``. Those appear
+legitimately in provenance receipts as REMOTE container paths (the runtime
+manifest's ``repo_relative_path`` rows read ``/tmp/modal_auth_eval/...`` from
+inside the Modal container) and would turn an honest remote path into a false
+red. The staging gate can be stricter because it scans a tree that never contains
+remote provenance; this scanner cannot. Scoped, not forgotten.
+"""
+
+# Local-volume prefixes searched as BYTES over non-UTF8 files. The round-10
+# incident is the reason: CPython writes the absolute source path into every
+# ``.pyc`` it emits, so bytecode caches carried the drive name and the arm
+# codename under a green hygiene report that had simply never opened them. A
+# line-oriented scan cannot see that; a byte substring search can.
+PRIVATE_SURFACE_BINARY_MARKERS: tuple[bytes, ...] = (b"/Users/", b"/Volumes/")
 INFLATE_SH_FORBIDDEN_EVAL_RE = re.compile(
     r"\b(?:evaluate\.py|contest_auth_eval|DistortionNet|segnet_sd_path|posenet_sd_path|compute_distortion)\b"
 )
@@ -2222,6 +2249,12 @@ def inspect_public_hygiene(
     """
     checks: list[Check] = []
     scanned = _submission_public_files(submission_dir) if submission_dir is not None else []
+    # Round-11 F2: the named-file list above is a CLOSED ENUMERATION, and the
+    # leak lived in two files it does not name. What ships is what is on disk,
+    # not what a hardcoded tuple chose to remember, so the corpus is now the
+    # DIRECTORY -- the same correction round 8 forced on the swap procedure's
+    # refresh list, applied to the scanner.
+    scanned += _submission_scan_files(submission_dir)
     scanned += _public_scan_files(paths)
     # de-dup while preserving order: a path may arrive from both sources
     seen: set[Path] = set()
@@ -2233,13 +2266,7 @@ def inspect_public_hygiene(
         strict=False,
         verbose=False,
     )
-    manual_hits: list[str] = []
-    for candidate in files:
-        for lineno, line in enumerate(
-            candidate.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1
-        ):
-            if PRIVATE_SURFACE_RE.search(line):
-                manual_hits.append(f"{_rel(candidate)}:{lineno}")
+    manual_hits = _private_surface_hits(files)
     hits = sorted(set(violations + manual_hits))
     _add(checks, "public_scan_has_no_private_surface", not hits, ", ".join(hits[:20]))
     # A scan that opened nothing cannot certify anything. Fail closed rather than
@@ -2455,6 +2482,155 @@ def _submission_public_files(submission_dir: Path) -> list[Path]:
         "archive_manifest.json",
     )
     return [submission_dir / name for name in names if (submission_dir / name).is_file()]
+
+
+def _instrument_source_files() -> list[Path]:
+    """The source files whose bytes decide what this receipt means.
+
+    Derived by module introspection, never a hand-typed path list: a hardcoded
+    list rots the moment a helper moves, and would then silently under-report
+    the instrument it claims to pin.
+    """
+    out: list[Path] = [Path(__file__).resolve()]
+    for module_obj in (check_public_release_hygiene, repo_relative):
+        module = sys.modules.get(getattr(module_obj, "__module__", ""))
+        source = getattr(module, "__file__", None)
+        if source:
+            out.append(Path(source).resolve())
+    try:
+        from tac import frontier_scan as _frontier_scan
+    except ImportError:
+        pass
+    else:
+        if getattr(_frontier_scan, "__file__", None):
+            out.append(Path(_frontier_scan.__file__).resolve())
+    seen: set[Path] = set()
+    return [p for p in out if p.is_file() and not (p in seen or seen.add(p))]
+
+
+def _instrument_and_world_provenance(sections: dict[str, Any]) -> dict[str, Any]:
+    """Self-date the receipt against the two inputs it never used to record.
+
+    ROUND-11 F1 CLASS CURE (2026-08-18). The shared assumption this campaign
+    operated within was *that a compliance receipt is a durable property of the
+    bytes*. It is not. It is a joint measurement of three things -- the bytes,
+    the INSTRUMENT that measured them, and the WORLD the instrument read -- and
+    on 2026-08-18 the latter two both moved under a receipt that recorded
+    neither:
+
+    * INSTRUMENT: commit ``0cf6127c5a`` rewrote ``inspect_public_hygiene`` 1h46m
+      after receipt r5 was bought. r5 carried 86 checks; the same packet under
+      the current checker carries 87. Nothing in r5's bytes dated it.
+    * WORLD: ``frontier_no_regression_on_submitted_axis`` reads the canonical
+      frontier pointer, which moved twice that afternoon (sa3, then keep01).
+      A check that was honestly green at 12:51Z was red by 17:15Z with the
+      packet unchanged.
+
+    The round-8 freshness law invalidates a receipt on any edit to a SCANNED
+    SURFACE. It had no clause for the other two inputs. This block records them
+    so a reader can date the receipt themselves rather than trusting that the
+    world stood still. It adds no check and changes no verdict -- it makes the
+    receipt say what it was measured against.
+    """
+    instrument: list[dict[str, str]] = []
+    for path in _instrument_source_files():
+        try:
+            instrument.append({"path": _rel(path), "sha256": sha256_file(path)})
+        except OSError:
+            continue
+
+    pointer_path = REPO_ROOT / ".omx/state/canonical_frontier_pointer.json"
+    pointer_state: dict[str, Any] = {"path": _rel(pointer_path), "present": False}
+    if pointer_path.is_file():
+        pointer_state["present"] = True
+        try:
+            pointer_state["file_sha256"] = sha256_file(pointer_path)
+        except OSError:
+            pass
+        payload = _load_json(pointer_path)
+        if isinstance(payload, dict):
+            pointer_state["last_refreshed_utc"] = payload.get("last_refreshed_utc")
+            for key in (
+                "effective_frontier",
+                "our_local_frontier_contest_cuda",
+                "our_local_frontier_contest_cpu",
+            ):
+                node = payload.get(key)
+                if isinstance(node, dict):
+                    pointer_state[key] = {
+                        "score": node.get("score"),
+                        "archive_sha256": node.get("archive_sha256"),
+                        "archive_size_bytes": node.get("archive_size_bytes"),
+                    }
+
+    hygiene = sections.get("public_hygiene")
+    scanned_file_count = (
+        hygiene.get("scanned_file_count") if isinstance(hygiene, dict) else None
+    )
+    return {
+        "schema": "compliance_instrument_and_world.v1",
+        "checker_source_sha256": instrument[0]["sha256"] if instrument else None,
+        "checker_source_files": instrument,
+        "frontier_pointer_state": pointer_state,
+        "scanned_file_count": scanned_file_count,
+        "note": (
+            "A receipt is bytes x instrument x world. Re-check all three before "
+            "citing this receipt: any of them moving makes it stale, not only an "
+            "edit to a scanned surface."
+        ),
+    }
+
+
+def _submission_scan_files(submission_dir: Path | None) -> list[Path]:
+    """Every regular file physically present in the staged submission directory.
+
+    Round-11 F2 (2026-08-18). ``_submission_public_files`` is a closed tuple of
+    seven names. The generation-3 leak -- 63 absolute local paths -- sat in
+    ``GENERATION_RECEIPT.json`` and ``RECEIVER_PARSEBACK.json``, which are
+    MANIFEST-DECLARED runtime files and therefore ship, but are not in that
+    tuple. The scanner reported clean over a corpus that never opened them.
+
+    The invariant a submission needs is not "the files we thought to list are
+    clean"; it is "the directory is clean". Enumerating the disk is the only
+    form of that claim which cannot be defeated by a file arriving that nobody
+    updated a tuple for -- which is also how the round-10 ``.pyc`` contaminants
+    got in. Directory, never a closed enumeration.
+    """
+    if submission_dir is None or not submission_dir.is_dir():
+        return []
+    return sorted(path for path in submission_dir.rglob("*") if path.is_file())
+
+
+def _private_surface_hits(files: list[Path]) -> list[str]:
+    """Locate private-surface leaks in ``files``; text by line, binary by bytes.
+
+    Binary files are searched as BYTES rather than skipped. Skipping them is the
+    exact hole the round-10 incident went through: CPython embeds the absolute
+    source path in every ``.pyc``, so bytecode caches carried the local drive
+    name past a hygiene report that had decoded nothing.
+    """
+    hits: list[str] = []
+    for candidate in files:
+        try:
+            blob = candidate.read_bytes()
+        except OSError:
+            continue
+        try:
+            text = blob.decode("utf-8")
+        except UnicodeDecodeError:
+            for marker in PRIVATE_SURFACE_BINARY_MARKERS:
+                if marker in blob:
+                    # Reported by LABEL, without the leading slash, so this
+                    # receipt does not itself become a matchable copy of the
+                    # prefix it is reporting (the fx1 staging gate's rule).
+                    hits.append(
+                        f"{_rel(candidate)}:binary:{marker.decode().strip('/')}"
+                    )
+            continue
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            if PRIVATE_SURFACE_RE.search(line):
+                hits.append(f"{_rel(candidate)}:{lineno}")
+    return hits
 
 
 def _public_scan_files(paths: list[Path]) -> list[Path]:
@@ -3287,6 +3463,7 @@ def build_report(args: argparse.Namespace) -> dict[str, Any]:
         "schema": SCHEMA,
         "passed": passed,
         "checks": [asdict(check) for check in checks],
+        "instrument_and_world": _instrument_and_world_provenance(sections),
         **sections,
     }
 

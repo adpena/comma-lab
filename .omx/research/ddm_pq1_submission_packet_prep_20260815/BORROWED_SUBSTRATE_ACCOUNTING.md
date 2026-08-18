@@ -1,4 +1,16 @@
-# Borrowed-substrate accounting — generation 3 (rr4 re-encode candidate)
+# Borrowed-substrate accounting — packet generation 3 (sz1 composed candidate, archive `debb025f45bb42e3…` / 179,930 B)
+
+> **Numbering, stated in the title's own neighbourhood (round-11 F5, 2026-08-18).** This
+> document's section headings count ITS OWN revisions; the packet's `GENERATION_LOG.md` counts
+> CANDIDATES. The two counters are one apart, so §7 is headed "Generation 4 amendment" while the
+> packet candidate it describes is generation 3. The title previously read "generation 3 (rr4
+> re-encode candidate)" — naming rr4, the generation-2 candidate at 181,161 B — long after §7
+> promoted the document to the sz1 composed candidate at 179,930 B. A maintainer who read only
+> the title concluded the wrong candidate was being submitted. Corrections must land in
+> HEADLINES, not only in bodies; the body was already correct and is unchanged.
+>
+> **§§1–6 were written against the rr4 candidate and are preserved verbatim, append-only. §7
+> carries every delta.** Read §7 before citing any figure from §§1–6.
 
 This accounting is mechanism-level and deliberately unflattering to us. The archive is a new
 exact-byte composition, but it is **not** a wholly original learned vehicle, and this table

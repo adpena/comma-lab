@@ -30,7 +30,22 @@ TWO THINGS THIS GUARD DELIBERATELY DOES NOT DO
    identical WHILE the 33 contaminants were present. A green tree sha is not evidence
    of a clean directory, and this module exists partly to record that.
 
-Exit codes: 0 census clean · 1 undeclared files present · 2 usage/IO error.
+TWO SURFACES, NOT ONE (round-11 F6)
+-----------------------------------
+``--packet-dir`` censuses the STAGED SUBMISSION directory against a manifest.
+``--prep-dir`` censuses the PACKET PREP directory, which has no manifest and
+cannot have one -- it is a working document set that grows every round. Round-11
+F6 found the identical CWD-resolved-write mechanism on that surface: a Stop-hook
+wrote ``.omx/state/*.json`` markers 31 seconds after a fix commit, into a nested
+``.omx/state/`` under the prep tree, where they sat staged in the git index for
+six hours. The packet-dir census could not see them and did not.
+
+The prep-dir invariant is STRUCTURAL rather than enumerated: the prep directory
+is a FLAT set of documents. No subdirectories, no dot-entries. That property
+needs no manifest, never rots as documents are added, and catches the whole
+CWD-resolved-write class -- every instance of which creates a nested path.
+
+Exit codes: 0 census clean · 1 undeclared/stray files present · 2 usage/IO error.
 """
 
 from __future__ import annotations
@@ -44,6 +59,16 @@ from pathlib import Path
 # Non-runtime surfaces that legitimately live in a staged packet. These are the
 # documentation/custody files the compliance checker treats as custody-excluded;
 # they are declared here explicitly so "extra file" means exactly that.
+#
+# ROUND-11 F3(c): two of these names -- GENERATION_RECEIPT.json and
+# RECEIVER_PARSEBACK.json -- are ALSO rows in the gen-3 runtime manifest. The
+# allowlist therefore MASKS them: if either were dropped from the manifest, the
+# census would still accept it silently, because the union covers it from the
+# other side. The names stay (they are legitimately present, and a generation
+# whose manifest omits them must still stage cleanly), but the overlap is now
+# REPORTED and printed loudly instead of being invisible arithmetic. A guard
+# that cannot say which of its two authorities is carrying a file is a guard
+# whose denominator lies.
 DECLARED_NON_RUNTIME: frozenset[str] = frozenset(
     {
         "README.md",
@@ -99,57 +124,154 @@ def census(packet_dir: Path, declared: set[str]) -> tuple[list[str], list[str]]:
     return undeclared, missing
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--packet-dir", required=True, type=Path)
-    parser.add_argument(
-        "--auth-eval-json",
-        required=True,
-        type=Path,
-        help="receipt carrying provenance.inflate_runtime_manifest (the authority)",
-    )
-    parser.add_argument("--json-out", type=Path)
-    args = parser.parse_args(argv)
+def prep_census(prep_dir: Path) -> tuple[list[str], list[str]]:
+    """Return (nested_paths, dot_entries) for a packet PREP directory.
 
+    Structural invariant, no manifest: the prep directory is a FLAT set of
+    documents. Anything at depth > 1, and any dot-entry at any depth, is a
+    stray. Round-11 F6's ``.omx/state/*.json`` markers are both at once.
+    """
+    nested: list[str] = []
+    dotted: list[str] = []
+    for dirpath, dirnames, filenames in os.walk(prep_dir):
+        for name in sorted(filenames):
+            rel = Path(dirpath, name).relative_to(prep_dir).as_posix()
+            if "/" in rel:
+                nested.append(rel)
+            if any(part.startswith(".") for part in Path(rel).parts):
+                dotted.append(rel)
+        dirnames.sort()
+    return sorted(set(nested)), sorted(set(dotted))
+
+
+def _run_packet_census(args: argparse.Namespace) -> tuple[int, dict[str, object]]:
     if not args.packet_dir.is_dir():
         print(f"REFUSE: packet dir not found: {args.packet_dir}", file=sys.stderr)
-        return 2
+        return 2, {}
+    if args.auth_eval_json is None:
+        print("REFUSE: --packet-dir requires --auth-eval-json", file=sys.stderr)
+        return 2, {}
     try:
         runtime_files = load_manifest_files(args.auth_eval_json)
     except (OSError, ValueError, KeyError) as exc:
         print(f"REFUSE: cannot read runtime manifest: {exc}", file=sys.stderr)
-        return 2
+        return 2, {}
 
-    declared = set(runtime_files) | set(DECLARED_NON_RUNTIME)
+    runtime_set = set(runtime_files)
+    declared = runtime_set | set(DECLARED_NON_RUNTIME)
+    # F3(c): the printed breakdown used to ADD the two list lengths while
+    # `declared` was their UNION, so the header read "39 declared (34 + 7)".
+    # 34 + 7 = 41. The two missing names were the overlap, and the arithmetic
+    # was the only place it was visible -- as a wrong number nobody reconciled.
+    overlap = sorted(runtime_set & set(DECLARED_NON_RUNTIME))
     undeclared, missing = census(args.packet_dir, declared)
 
     verdict = "CENSUS_CLEAN" if not undeclared else "UNDECLARED_FILES_PRESENT"
-    report = {
+    report: dict[str, object] = {
         "schema": "packet_census_guard.v1",
+        "mode": "packet",
         "packet_dir": str(args.packet_dir),
         "auth_eval_json": str(args.auth_eval_json),
+        "declared_total_count": len(declared),
         "declared_runtime_count": len(runtime_files),
         "declared_non_runtime_count": len(DECLARED_NON_RUNTIME),
+        "declared_overlap": overlap,
+        "declared_overlap_count": len(overlap),
         "on_disk_count": len(undeclared) + len(declared) - len(missing),
         "undeclared_files": undeclared,
         "missing_declared_files": missing,
         "verdict": verdict,
     }
-    if args.json_out:
-        args.json_out.write_text(json.dumps(report, indent=2))
 
     # Denominators always printed: a census that reports only its hits is the
-    # vacuity class this apparatus already paid for once.
+    # vacuity class this apparatus already paid for once. The arithmetic now
+    # reconciles -- union = runtime + non-runtime - overlap.
     print(
         f"census: {len(declared)} declared "
-        f"({len(runtime_files)} runtime + {len(DECLARED_NON_RUNTIME)} non-runtime) | "
+        f"({len(runtime_files)} runtime + {len(DECLARED_NON_RUNTIME)} non-runtime "
+        f"- {len(overlap)} in both) | "
         f"undeclared {len(undeclared)} | missing {len(missing)} | {verdict}"
     )
+    for name in overlap:
+        print(
+            f"  DOUBLE-DECLARED: {name} (runtime manifest AND non-runtime allowlist "
+            f"-- dropping it from the manifest would NOT be caught here)"
+        )
     for path in undeclared:
         print(f"  UNDECLARED: {path}")
     for path in missing:
         print(f"  MISSING:    {path}")
-    return 1 if undeclared else 0
+    return (1 if undeclared else 0), report
+
+
+def _run_prep_census(args: argparse.Namespace) -> tuple[int, dict[str, object]]:
+    if not args.prep_dir.is_dir():
+        print(f"REFUSE: prep dir not found: {args.prep_dir}", file=sys.stderr)
+        return 2, {}
+    nested, dotted = prep_census(args.prep_dir)
+    strays = sorted(set(nested) | set(dotted))
+    flat_count = sum(1 for p in args.prep_dir.iterdir() if p.is_file())
+    verdict = "PREP_CLEAN" if not strays else "PREP_STRAYS_PRESENT"
+    report: dict[str, object] = {
+        "schema": "packet_census_guard.v1",
+        "mode": "prep",
+        "prep_dir": str(args.prep_dir),
+        "flat_document_count": flat_count,
+        "nested_paths": nested,
+        "dot_entries": dotted,
+        "stray_count": len(strays),
+        "verdict": verdict,
+    }
+    print(
+        f"prep census: {flat_count} flat document(s) | "
+        f"nested {len(nested)} | dot-entries {len(dotted)} | {verdict}"
+    )
+    for path in strays:
+        print(f"  STRAY: {path}")
+    return (1 if strays else 0), report
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser.add_argument("--packet-dir", type=Path)
+    parser.add_argument(
+        "--auth-eval-json",
+        type=Path,
+        help="receipt carrying provenance.inflate_runtime_manifest (the authority)",
+    )
+    parser.add_argument(
+        "--prep-dir",
+        type=Path,
+        help="packet PREP directory; censused structurally (flat, no dot-entries)",
+    )
+    parser.add_argument("--json-out", type=Path)
+    args = parser.parse_args(argv)
+
+    if args.packet_dir is None and args.prep_dir is None:
+        print("REFUSE: pass --packet-dir and/or --prep-dir", file=sys.stderr)
+        return 2
+
+    reports: list[dict[str, object]] = []
+    worst = 0
+    if args.packet_dir is not None:
+        rc, report = _run_packet_census(args)
+        worst = max(worst, rc)
+        if report:
+            reports.append(report)
+        if rc == 2:
+            return 2
+    if args.prep_dir is not None:
+        rc, report = _run_prep_census(args)
+        worst = max(worst, rc)
+        if report:
+            reports.append(report)
+        if rc == 2:
+            return 2
+
+    if args.json_out:
+        payload = reports[0] if len(reports) == 1 else {"reports": reports}
+        args.json_out.write_text(json.dumps(payload, indent=2))
+    return worst
 
 
 if __name__ == "__main__":

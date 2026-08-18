@@ -15,14 +15,38 @@ the call ledger 'harvested' (rc=0) or 'failed'.
 """
 
 import argparse
+import hashlib
 import json
 import pathlib
+import re
 import sys
 import time
 from collections.abc import Callable
 from typing import Any
 
 REPO_SRC = "/Users/adpena/Projects/pact/src"
+REPO_ROOT = pathlib.Path(REPO_SRC).parent
+
+# Where a scanner-visible scalar mirror of a harvested row is written.
+# ``tac.frontier_scan.load_experiments_results_anchors`` globs
+# ``experiments/results/*/contest_auth_eval*.json`` -- ONE directory deep, and
+# the FILENAME must carry the ``contest_auth_eval`` stem. A mirror that misses
+# either half is invisible, which is the whole defect this cures, so both are
+# pinned here rather than left to a caller to remember.
+MIRROR_DIR_REL = "experiments/results/modal_auth_eval_mirror"
+MIRROR_NAME_TEMPLATE = "contest_auth_eval_{label}.json"
+
+_LABEL_SAFE_RE = re.compile(r"[^A-Za-z0-9_.-]+")
+
+# gpu_model substring -> canonical QUALIFYING_HARDWARE token in tac.frontier_scan.
+_GPU_SUBSTRATE_TOKENS: tuple[tuple[str, str], ...] = (
+    ("t4", "linux_x86_64_t4"),
+    ("a10g", "linux_x86_64_a10g"),
+    ("a100", "linux_x86_64_a100"),
+    ("4090", "linux_x86_64_4090"),
+    ("h100", "linux_x86_64_h100"),
+    ("l40s", "linux_x86_64_l40s"),
+)
 
 POLL_RESULT = "result"
 POLL_REMOTE_FAILURE = "remote_failure"
@@ -60,6 +84,142 @@ def _result_gpu(result: Any) -> str | None:
         if isinstance(value, str) and value.strip():
             return value.strip()
     return None
+
+
+def _canonical_substrate(result: dict[str, Any]) -> str | None:
+    """Canonical QUALIFYING_HARDWARE token for a harvested row, or None.
+
+    DERIVED from the measured hardware fields, never hand-typed and never
+    guessed. Returning None (rather than a plausible default) is deliberate:
+    an anchor carrying a hardware substrate nobody measured is a false
+    authority claim, and the frontier scanner would silently disqualify it
+    anyway. A blocker marker is written instead so the gap stays visible.
+    """
+    if result.get("gpu_t4_match") is True:
+        return "linux_x86_64_t4"
+    model = result.get("gpu_model") or result.get("gpu") or ""
+    lowered = str(model).lower()
+    for token, substrate in _GPU_SUBSTRATE_TOKENS:
+        if token in lowered:
+            return substrate
+    axis = str(result.get("score_axis") or "").lower()
+    if "cpu" in axis:
+        return "linux_x86_64_cpu"
+    return None
+
+
+def build_anchor_mirror(
+    result: dict[str, Any],
+    *,
+    lane_id: str | None,
+    source_receipt: pathlib.Path,
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Return (mirror_payload, blocker). Every field is COPIED, never re-derived.
+
+    The score is taken from ``score_recomputed_from_components`` and from
+    nowhere else. ``final_score`` is the ROUNDED field (0.16 on the row that
+    motivated this) and CLAUDE.md forbids reading it as a score; there is
+    deliberately no fallback to it, because a fallback is how a rounded number
+    becomes an anchor.
+    """
+    score = result.get("score_recomputed_from_components")
+    if not isinstance(score, (int, float)):
+        return None, "score_recomputed_from_components absent or non-numeric"
+    sha = result.get("expected_archive_sha256") or result.get("archive_sha256")
+    if not isinstance(sha, str) or not sha:
+        return None, "expected_archive_sha256 absent"
+    substrate = _canonical_substrate(result)
+    if substrate is None:
+        return None, f"no canonical hardware substrate derivable (gpu_model={result.get('gpu_model')!r})"
+
+    payload: dict[str, Any] = {
+        "schema": "modal_auth_eval_anchor_mirror.v1",
+        "score": score,
+        "score_axis": result.get("score_axis"),
+        "evidence_grade": result.get("evidence_grade"),
+        "archive_sha256": sha,
+        "archive_size_bytes": result.get("archive_size_bytes")
+        or result.get("expected_archive_size_bytes"),
+        "avg_segnet_dist": result.get("avg_segnet_dist"),
+        "avg_posenet_dist": result.get("avg_posenet_dist"),
+        "n_samples": result.get("n_samples"),
+        "hardware_substrate": substrate,
+        "gpu_t4_match": result.get("gpu_t4_match"),
+        "gpu_model_raw": result.get("gpu_model"),
+        "lane_id": lane_id,
+        "source_receipt": str(source_receipt),
+        "source_receipt_sha256": hashlib.sha256(source_receipt.read_bytes()).hexdigest()
+        if source_receipt.is_file()
+        else None,
+        "promotion_eligible": result.get("promotion_eligible"),
+        "note": (
+            "Scalar anchor mirror written at harvest time. The P0 payload stays "
+            "at the harvest --output-dir; only scalars are mirrored here so "
+            "tac.frontier_scan can see a row that landed on an SSD path outside "
+            "experiments/results. Fields copied from the harvested result, never "
+            "hand-typed; score is recomputed-from-components, never final_score."
+        ),
+    }
+    return payload, None
+
+
+def write_anchor_mirror(
+    result: Any,
+    *,
+    source_receipt: pathlib.Path,
+    label: str,
+    lane_id: str | None,
+    repo_root: pathlib.Path = REPO_ROOT,
+    out_dir: pathlib.Path | None = None,
+) -> pathlib.Path | None:
+    """Mirror a harvested row into the directory the frontier scanner reads.
+
+    WHY (round-11 F1(b) class cure, 2026-08-18). ``fire_modal_auth_eval.py``
+    harvests land wherever ``--output-dir`` points, and for large rows that is
+    an SSD custody path under ``/Volumes/...`` per the disk-tier rules.
+    ``tac.frontier_scan.load_experiments_results_anchors`` globs ONLY under
+    ``experiments/results``. A real, paid, contest-CUDA row could therefore be
+    complete on disk and invisible to the pointer -- which is exactly what
+    happened to the keep01 row and had to be repaired by hand.
+
+    The payload custody rule is unchanged: the bytes stay where --output-dir
+    put them. This writes SCALARS plus a hash-pinned pointer back to the
+    receipt, so the mirror can never become a competing custody claim.
+    """
+    if not isinstance(result, dict):
+        return None
+    mirror_dir = repo_root / MIRROR_DIR_REL
+    safe = _LABEL_SAFE_RE.sub("-", label).strip("-") or "unlabeled"
+    payload, blocker = build_anchor_mirror(
+        result, lane_id=lane_id, source_receipt=source_receipt
+    )
+    if payload is None:
+        # Make the gap DISCOVERABLE rather than only absent -- the same rule
+        # POLLER_UNARMED.json follows. An anchor that silently was not written
+        # is the signal loss this cure exists to end.
+        if out_dir is not None:
+            (out_dir / "MIRROR_UNWRITTEN.json").write_text(
+                json.dumps(
+                    {
+                        "schema": "modal_auth_eval_anchor_mirror_unwritten.v1",
+                        "blocker": blocker,
+                        "source_receipt": str(source_receipt),
+                        "consequence": (
+                            "this row is NOT visible to tac.frontier_scan; the "
+                            "pointer will not see it without a hand-made mirror"
+                        ),
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+        print(f"MIRROR NOT WRITTEN: {blocker}")
+        return None
+    mirror_dir.mkdir(parents=True, exist_ok=True)
+    path = mirror_dir / MIRROR_NAME_TEMPLATE.format(label=safe)
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    print(f"MIRROR: {path}")
+    return path
 
 
 def poll_modal_call(
@@ -119,6 +279,17 @@ def main() -> int:
     ap.add_argument("--result-name", default="MODAL_REMOTE_RESULT.json")
     ap.add_argument("--deadline-s", type=float, default=3 * 3600)
     ap.add_argument("--poll-s", type=float, default=60)
+    ap.add_argument("--lane-id", default=None, help="copied into the anchor mirror")
+    ap.add_argument(
+        "--mirror-label",
+        default=None,
+        help="filename stem for the scanner-visible mirror (default: output-dir name)",
+    )
+    ap.add_argument(
+        "--no-anchor-mirror",
+        action="store_true",
+        help="skip the experiments/results anchor mirror (diagnostic rows only)",
+    )
     args = ap.parse_args()
 
     sys.path.insert(0, REPO_SRC)
@@ -152,6 +323,14 @@ def main() -> int:
             gpu=_result_gpu(r),
             harvest_result={"result_path": str(result_path)},
         )
+        if not args.no_anchor_mirror:
+            write_anchor_mirror(
+                r,
+                source_receipt=result_path,
+                label=args.mirror_label or out.name,
+                lane_id=args.lane_id,
+                out_dir=out,
+            )
         (out / "poller.done").write_text("ok\n")
         return 0
 
