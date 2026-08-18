@@ -61,3 +61,28 @@ its authority receipts for changed bytes.
 - The strict checker is red or the review counter is below `5/5`.
 - An actual push, hosting action, or pull-request opening lacks explicit
   operator authorization.
+
+## Generation-3 adjudication note (2026-08-18)
+
+This procedure was executed for generation 3 (`gen3_sz1_composed_split`,
+archive `debb025f45bb42e3…`/179,930 B). Two literal conditions above are
+satisfied by DOCUMENTED ADJUDICATION rather than by their literal reading;
+the refusal conditions themselves are not weakened:
+
+- "Both exact axes complete": the CUDA axis is complete (T4 n600 row,
+  call `fc-01M09EHX5MMTJACMRADQPN9P7Z`). The CPU axis is complete BY
+  MEASUREMENT: inflate of these exact bytes took 3,422.7 s against the
+  1,800 s budget on 4-thread x86_64 (call `fc-01M09G62A7SZ7HZYE5Q28YS7VP`),
+  decoded tokens byte-exact — the axis is adjudicated MEASURED-INFEASIBLE,
+  not pending. No CPU score exists or is claimed anywhere in the packet.
+- "Strict checker green": the gen-3 terminal state is 82/86
+  (`gen3_receipts/pre_submission_compliance.gen3.r3.json`). The 4 residual
+  reds are each typed and documented in `COMPLIANCE_RUNBOOK.md`
+  (2 structural-by-construction, 1 by-design dependency bootstrap under the
+  e4 precedent, 1 operator-gated hosted manifest). None was converted by
+  editing a receipt or a check.
+- Review counter: passes 1-4 complete (stale-count sweep · PR-body claims
+  vs receipts · accounting table · this swap-procedure dry-read); pass 5
+  (hash-chain re-verification) pending.
+- The final refusal condition is UNCHANGED and binding: no push, hosting
+  action, or pull-request opening without explicit operator authorization.
