@@ -61,6 +61,12 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 
+from tac.candidate_seal import (  # noqa: E402
+    MISMATCH,
+    PIN_ABSENT,
+    check_pin_consistency,
+    repin_receiver,
+)
 from tac.deploy.modal.auth_eval import validate_runtime_upload_file  # noqa: E402
 
 VENV_PY = str(REPO / ".venv" / "bin" / "python")
@@ -170,6 +176,12 @@ def main() -> int:
     ap.add_argument("--single-axis-waiver-reason", default="")
     ap.add_argument("--pair-group-id", default="")
     ap.add_argument("--require-archive-sha", default="", help="sealed fire-order pin; mismatch refuses")
+    ap.add_argument(
+        "--repin-receiver",
+        action="store_true",
+        help="re-pin the staged receiver's ARCHIVE_SHA256/ARCHIVE_BYTES from the staged archive "
+        "(the compose-time staging step; without it a mismatched tree refuses)",
+    )
     ap.add_argument("--poller-deadline-s", type=float, default=2400.0)
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
@@ -219,6 +231,36 @@ def main() -> int:
             f"(pinned {args.require_archive_sha[:16]}…, actual {archive_sha[:16]}…)"
         )
         return 4
+
+    # Stage 3b SEAL — archive and runtime are ONE sealed object (the r3 law). The staged
+    # receiver's own pin must name the staged archive's exact bytes. Nothing here is compared
+    # against a remembered candidate: both sides are measured from this tree, at this moment,
+    # so it holds for rr4, fx1, sa1 and every successor without editing a literal.
+    seal = check_pin_consistency(runtime_dir, archive_path=archive)
+    if seal.verdict == MISMATCH and args.repin_receiver:
+        repin = repin_receiver(runtime_dir, archive_path=archive)
+        manifest["stage3b_repin"] = repin.to_dict()
+        print(
+            f"SEAL: re-pinned {seal.receiver_path.name} "
+            f"{str(repin.old_sha256)[:16]}…/{repin.old_bytes:,} B -> "
+            f"{repin.new_sha256[:16]}…/{repin.new_bytes:,} B"
+        )
+        seal = check_pin_consistency(runtime_dir, archive_path=archive)
+    manifest["stage3b_seal"] = seal.to_dict()
+    print(f"SEAL: {seal.summary()}")
+    if seal.verdict == MISMATCH:
+        print(
+            "FATAL: the staged receiver pins a DIFFERENT candidate than the staged archive. "
+            "This tree would be refused remotely at decode time, after the meter started. "
+            "Re-run with --repin-receiver to re-pin at compose time, or stage the archive "
+            "this receiver names."
+        )
+        return 6
+    if seal.verdict == PIN_ABSENT:
+        print(
+            "WARNING: this receiver carries no archive pin, so the seal is weaker than the "
+            "rr4 lineage's and the pin check is vacuous for this tree. Proceeding, loudly."
+        )
 
     manifest["stage4_claims"] = reconcile_claims(args.claim_agent, args.dry_run)
 

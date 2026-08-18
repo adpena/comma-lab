@@ -25,8 +25,19 @@ THE THREE STAGES.
       bit-faithfully from a retained frame-boundary checkpoint, which is what
       makes a cheap end-to-end verification possible.
 
-  ``verify``  (stage B gate)  Hashes the rebuilt archive and compares it against
-      the pinned sha256 and byte count.  Fail-closed: a mismatch exits non-zero.
+  ``verify``  (stage B gate)  Hashes the rebuilt archive and compares it against the
+      expected sha256 and byte count.  Fail-closed: a mismatch exits non-zero.
+
+      WHICH CANDIDATE IS EXPECTED IS RESOLVED AT RUN TIME, never latched in this file.
+      In priority order: ``--expected-archive-sha256`` + ``--expected-archive-bytes``;
+      or ``--candidate-runtime <dir>``, measured from a sealed tree whose receiver pin
+      must already agree with its own archive; or, by default, the canonical frontier
+      pointer read now.  A hardcoded expectation here previously refused every non-rr4
+      candidate BY CONSTRUCTION — the one entry point built to byte-close candidates
+      could not close the two that were waiting.  The rebuild RECIPE (corrector module,
+      token stream, base archive) is separate and still describes rr4 by default; a
+      different candidate supplies ``--recipe-json``, and asking for candidate X under
+      candidate Y's recipe is refused up front rather than deep inside the rebuild.
 
   ``decode``  (stage C)  Runs the shipped receiver over the rebuilt archive and
       checks that the decoded token field reproduces its pinned sha256.  This is
@@ -68,53 +79,96 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO / "src"))
+
+from tac.candidate_seal import (
+    CONSISTENT,
+    ArchiveIdentity,
+    SealContractError,
+    check_pin_consistency,
+    measure_archive_identity,
+    read_frontier_archive_identity,
+)
 
 ENCODER = REPO / "experiments" / "ddm_rr2_encoder_byteclose.py"
 RECEIVER = REPO / "experiments" / "ddm_rr2_receiver_close.py"
 
-# The candidate this entry point rebuilds.  These are the pinned, measured values
-# from the retained build receipt; they are assertions, never defaults to fall
-# back on.  A rebuild that does not reproduce them is a failure of the rebuild.
-EXPECTED_ARCHIVE_SHA256 = "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956"
-EXPECTED_ARCHIVE_BYTES = 181_161
-EXPECTED_TOKEN_SHA256 = "6c3757bd52a18d3c38e9120d56293f03c7aefd111fb9ee655b19d055e8d06b14"
-EXPECTED_TOKEN_BYTES = 110_512
-EXPECTED_DECODED_FIELD_SHA256 = (
-    "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52"
-)
-CORRECTOR_MODULE = "ddm_rr4_free_corrector_v2"
-
-# Every input the rebuild consumes, with the environment variable the stage
-# scripts read it from.  `sha256` is verified before any stage runs; `directory`
-# entries are verified through their named member file.
-INPUT_SPEC = {
-    "prepared_dir": {
-        "env": "TAC_PQ2_PREPARED_DIR",
-        "kind": "directory",
-        "member": "archive.zip",
-        "sha256": "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e",
-        "role": "base archive whose seven non-token sections are carried through unchanged",
-    },
-    "hm1_dir": {
-        "env": "TAC_PQ2_HM1_DIR",
-        "kind": "directory",
-        "member": "group_index.u8",
-        "sha256": None,
-        "role": "retained pre-correction HPAC logits, boundary buckets and group index",
-    },
-    "tokens_file": {
-        "env": "TAC_PQ2_TOKENS_FILE",
-        "kind": "file",
-        "sha256": EXPECTED_DECODED_FIELD_SHA256,
-        "role": "decoded token field the encoder replays; the distortion anchor",
-    },
-    "rc64_source": {
-        "env": "TAC_PQ2_RC64_SOURCE",
-        "kind": "file",
-        "sha256": "5c75e2c70b89f148bc9d117d4dbd39a24dfb2e72ec41b0a7e9b9cf490ca07ee6",
-        "role": "range-coder backend C source (inherited substrate; see the accounting table)",
-    },
+# THE REBUILD RECIPE, not an admission bar.  These values describe the PIPELINE that
+# produces the rr4 candidate: which corrector runs, which token stream the rebuild must
+# reproduce, which base archive it splices into.  They were measured from the retained
+# build receipt and they are assertions about that rebuild.
+#
+# They are deliberately NOT the expected-archive identity any more.  Latching that identity
+# here is what made this script refuse every non-rr4 candidate by construction -- fx1's
+# 180,601 B row and sa1's ladder could not be byte-closed through the one entry point built
+# to byte-close candidates.  The expected identity is now RESOLVED AT RUN TIME (see
+# `resolve_expected_archive`), and a caller rebuilding a different candidate must supply
+# that candidate's own recipe rather than silently asserting rr4's numbers over other bytes.
+RR4_RECIPE: dict[str, object] = {
+    "name": "rr4",
+    "archive_sha256": "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956",
+    "archive_bytes": 181_161,
+    "token_sha256": "6c3757bd52a18d3c38e9120d56293f03c7aefd111fb9ee655b19d055e8d06b14",
+    "token_bytes": 110_512,
+    "decoded_field_sha256": "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52",
+    "corrector_module": "ddm_rr4_free_corrector_v2",
+    "base_archive_sha256": "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e",
+    "rc64_source_sha256": "5c75e2c70b89f148bc9d117d4dbd39a24dfb2e72ec41b0a7e9b9cf490ca07ee6",
 }
+
+RECIPE_KEYS = tuple(RR4_RECIPE)
+
+
+def load_recipe(recipe_json: Path | None) -> dict[str, object]:
+    """Load the rebuild recipe: rr4's by default, a caller-supplied one otherwise."""
+    if recipe_json is None:
+        return dict(RR4_RECIPE)
+    document = json.loads(Path(recipe_json).read_text())
+    recipe = document.get("recipe", document)
+    unknown = sorted(set(recipe) - set(RECIPE_KEYS))
+    if unknown:
+        raise SystemExit(f"recipe carries unknown key(s): {unknown}; expected any of {list(RECIPE_KEYS)}")
+    missing = [key for key in RECIPE_KEYS if key not in recipe]
+    if missing:
+        raise SystemExit(f"recipe is missing required key(s): {missing}")
+    return dict(recipe)
+
+
+def input_spec(recipe: dict[str, object]) -> dict[str, dict[str, object]]:
+    """Every input the rebuild consumes, with the env var the stage scripts read it from.
+
+    ``sha256`` is verified before any stage runs; ``directory`` entries are verified through
+    their named member file.  The expected shas come from the RECIPE, so a caller rebuilding
+    a different candidate declares its inputs instead of inheriting rr4's.
+    """
+    return {
+        "prepared_dir": {
+            "env": "TAC_PQ2_PREPARED_DIR",
+            "kind": "directory",
+            "member": "archive.zip",
+            "sha256": recipe["base_archive_sha256"],
+            "role": "base archive whose seven non-token sections are carried through unchanged",
+        },
+        "hm1_dir": {
+            "env": "TAC_PQ2_HM1_DIR",
+            "kind": "directory",
+            "member": "group_index.u8",
+            "sha256": None,
+            "role": "retained pre-correction HPAC logits, boundary buckets and group index",
+        },
+        "tokens_file": {
+            "env": "TAC_PQ2_TOKENS_FILE",
+            "kind": "file",
+            "sha256": recipe["decoded_field_sha256"],
+            "role": "decoded token field the encoder replays; the distortion anchor",
+        },
+        "rc64_source": {
+            "env": "TAC_PQ2_RC64_SOURCE",
+            "kind": "file",
+            "sha256": recipe["rc64_source_sha256"],
+            "role": "range-coder backend C source (inherited substrate; see the accounting table)",
+        },
+    }
 
 
 def sha256_file(path: Path) -> str:
@@ -125,22 +179,65 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def emit_inputs_template() -> int:
+def emit_inputs_template(spec: dict[str, dict[str, object]]) -> int:
     """Print the input manifest schema without revealing any local layout."""
     template = {
         name: {
-            "path": f"<absolute path to the {spec['kind']}>",
-            "role": spec["role"],
-            "expected_sha256": spec["sha256"],
-            "environment_variable": spec["env"],
+            "path": f"<absolute path to the {entry['kind']}>",
+            "role": entry["role"],
+            "expected_sha256": entry["sha256"],
+            "environment_variable": entry["env"],
         }
-        for name, spec in INPUT_SPEC.items()
+        for name, entry in spec.items()
     }
     print(json.dumps({"inputs": template}, indent=2, sort_keys=True))
     return 0
 
 
-def resolve_inputs(inputs_json: Path | None) -> dict[str, Path]:
+def resolve_expected_archive(
+    expected_sha256: str,
+    expected_bytes: int | None,
+    candidate_runtime: Path | None,
+) -> ArchiveIdentity:
+    """Resolve WHICH candidate this rebuild must reproduce, at run time. Never a latched literal.
+
+    Three sources, in priority order, each of which names the candidate explicitly:
+
+      1. ``--expected-archive-sha256`` + ``--expected-archive-bytes`` — the operator says it.
+      2. ``--candidate-runtime <dir>`` — measured from a sealed candidate tree, whose own
+         receiver pin must agree with its archive first (archive+runtime are ONE object).
+      3. the canonical frontier pointer — "whatever we currently ship", read now, so the bar
+         moves when the pointer moves instead of rotting inside this file.
+    """
+    if expected_sha256 or expected_bytes is not None:
+        if not expected_sha256 or expected_bytes is None:
+            raise SystemExit(
+                "--expected-archive-sha256 and --expected-archive-bytes must be supplied together; "
+                "half an identity cannot verify a rebuild"
+            )
+        return ArchiveIdentity(sha256=expected_sha256.lower(), bytes=int(expected_bytes), source="cli")
+
+    if candidate_runtime is not None:
+        seal = check_pin_consistency(candidate_runtime)
+        if seal.verdict != CONSISTENT:
+            raise SystemExit(
+                f"--candidate-runtime {candidate_runtime} is not a sealed tree: {seal.summary()}"
+            )
+        identity = measure_archive_identity(candidate_runtime / "archive.zip")
+        return ArchiveIdentity(
+            sha256=identity.sha256, bytes=identity.bytes, source=f"candidate_runtime:{candidate_runtime}"
+        )
+
+    try:
+        return read_frontier_archive_identity()
+    except SealContractError as exc:
+        raise SystemExit(
+            f"could not derive the expected archive from the canonical frontier pointer: {exc}\n"
+            "Pass --expected-archive-sha256/--expected-archive-bytes or --candidate-runtime."
+        ) from exc
+
+
+def resolve_inputs(spec: dict[str, dict[str, object]], inputs_json: Path | None) -> dict[str, Path]:
     """Resolve every input root from the manifest, falling back to the environment.
 
     Fail-closed on a missing input: a rebuild that silently skips an input would
@@ -151,15 +248,15 @@ def resolve_inputs(inputs_json: Path | None) -> dict[str, Path]:
         document = json.loads(inputs_json.read_text())
         section = document.get("inputs", document)
         for name, entry in section.items():
-            if name in INPUT_SPEC:
+            if name in spec:
                 supplied[name] = entry["path"] if isinstance(entry, dict) else str(entry)
 
     resolved: dict[str, Path] = {}
     missing: list[str] = []
-    for name, spec in INPUT_SPEC.items():
-        raw = supplied.get(name) or os.environ.get(spec["env"])
+    for name, entry in spec.items():
+        raw = supplied.get(name) or os.environ.get(entry["env"])
         if not raw:
-            missing.append(f"{name} (--inputs-json entry or ${spec['env']})")
+            missing.append(f"{name} (--inputs-json entry or ${entry['env']})")
             continue
         resolved[name] = Path(raw)
     if missing:
@@ -171,18 +268,18 @@ def resolve_inputs(inputs_json: Path | None) -> dict[str, Path]:
     return resolved
 
 
-def verify_inputs(resolved: dict[str, Path]) -> list[dict[str, object]]:
+def verify_inputs(spec: dict[str, dict[str, object]], resolved: dict[str, Path]) -> list[dict[str, object]]:
     """Hash each input and refuse to proceed on a mismatch or an absent file."""
     manifest: list[dict[str, object]] = []
     problems: list[str] = []
-    for name, spec in INPUT_SPEC.items():
+    for name, entry in spec.items():
         root = resolved[name]
-        target = root / spec["member"] if spec["kind"] == "directory" else root
+        target = root / entry["member"] if entry["kind"] == "directory" else root
         if not target.is_file():
             problems.append(f"{name}: not found -> {target}")
             continue
         measured = sha256_file(target)
-        expected = spec["sha256"]
+        expected = entry["sha256"]
         ok = expected is None or measured == expected
         if not ok:
             problems.append(f"{name}: sha256 {measured} != expected {expected}")
@@ -194,7 +291,7 @@ def verify_inputs(resolved: dict[str, Path]) -> list[dict[str, object]]:
                 "sha256": measured,
                 "expected_sha256": expected,
                 "sha256_matches": ok,
-                "role": spec["role"],
+                "role": entry["role"],
             }
         )
     if problems:
@@ -202,12 +299,17 @@ def verify_inputs(resolved: dict[str, Path]) -> list[dict[str, object]]:
     return manifest
 
 
-def stage_environment(resolved: dict[str, Path], seed: int) -> dict[str, str]:
+def stage_environment(
+    spec: dict[str, dict[str, object]],
+    recipe: dict[str, object],
+    resolved: dict[str, Path],
+    seed: int,
+) -> dict[str, str]:
     """Build the child environment: input roots, corrector selection, and the seed."""
     environment = dict(os.environ)
-    for name, spec in INPUT_SPEC.items():
-        environment[spec["env"]] = str(resolved[name])
-    environment["TAC_RR2_CORRECTOR_MODULE"] = CORRECTOR_MODULE
+    for name, entry in spec.items():
+        environment[entry["env"]] = str(resolved[name])
+    environment["TAC_RR2_CORRECTOR_MODULE"] = str(recipe["corrector_module"])
     environment["PYTHONHASHSEED"] = str(seed)
     environment["TAC_PQ2_SEED"] = str(seed)
     return environment
@@ -224,15 +326,15 @@ def run_stage(argv: list[str], environment: dict[str, str], label: str) -> dict[
     return {"stage": label, "argv": argv, "returncode": 0, "elapsed_seconds": elapsed}
 
 
-def verify_archive(store: Path) -> dict[str, object]:
-    """Assert the rebuilt archive is byte-identical to the pinned candidate."""
+def verify_archive(store: Path, expected: ArchiveIdentity, recipe: dict[str, object]) -> dict[str, object]:
+    """Assert the rebuilt archive is byte-identical to the candidate resolved at run time."""
     archive = store / "retained" / "archive.zip"
     if not archive.is_file():
         raise SystemExit(f"no rebuilt archive at {archive}; run the build stage first")
     measured_sha = sha256_file(archive)
     measured_bytes = archive.stat().st_size
-    sha_ok = measured_sha == EXPECTED_ARCHIVE_SHA256
-    bytes_ok = measured_bytes == EXPECTED_ARCHIVE_BYTES
+    sha_ok = measured_sha == expected.sha256
+    bytes_ok = measured_bytes == expected.bytes
 
     repeat = store / "work" / "archive.repeat.zip"
     repeat_sha = sha256_file(repeat) if repeat.is_file() else None
@@ -245,14 +347,15 @@ def verify_archive(store: Path) -> dict[str, object]:
         "archive_path": str(archive),
         "archive_sha256": measured_sha,
         "archive_bytes": measured_bytes,
-        "expected_archive_sha256": EXPECTED_ARCHIVE_SHA256,
-        "expected_archive_bytes": EXPECTED_ARCHIVE_BYTES,
+        "expected_archive_sha256": expected.sha256,
+        "expected_archive_bytes": expected.bytes,
+        "expected_archive_source": expected.source,
         "sha256_matches": sha_ok,
         "bytes_match": bytes_ok,
         "determinism_repeat_sha256": repeat_sha,
         "determinism_repeat_byte_identical": deterministic,
         "token_stream_sha256": token_sha,
-        "token_stream_matches": None if token_sha is None else token_sha == EXPECTED_TOKEN_SHA256,
+        "token_stream_matches": None if token_sha is None else token_sha == recipe["token_sha256"],
     }
     if not (sha_ok and bytes_ok):
         print(json.dumps(result, indent=2, sort_keys=True))
@@ -305,19 +408,65 @@ def main() -> int:
         default=None,
         help="write the run receipt here (default: <store>/RESULT_pq2_e2e.json)",
     )
+    parser.add_argument(
+        "--expected-archive-sha256",
+        default="",
+        help="the candidate this rebuild must reproduce; with --expected-archive-bytes",
+    )
+    parser.add_argument(
+        "--expected-archive-bytes",
+        type=int,
+        default=None,
+        help="byte count of the candidate this rebuild must reproduce",
+    )
+    parser.add_argument(
+        "--candidate-runtime",
+        type=Path,
+        default=None,
+        help="derive the expected archive from a sealed candidate runtime tree "
+        "(its receiver pin must already agree with its archive)",
+    )
+    parser.add_argument(
+        "--recipe-json",
+        type=Path,
+        default=None,
+        help="rebuild recipe for a NON-rr4 candidate (corrector module, token/base/decoded "
+        "shas); required when the expected archive is not rr4's",
+    )
     args = parser.parse_args()
 
+    recipe = load_recipe(args.recipe_json)
+    spec = input_spec(recipe)
+
     if args.emit_inputs_template:
-        return emit_inputs_template()
+        return emit_inputs_template(spec)
 
     if args.store is None:
         parser.error("--store is required (or pass --emit-inputs-template)")
 
+    expected = resolve_expected_archive(
+        args.expected_archive_sha256, args.expected_archive_bytes, args.candidate_runtime
+    )
+
+    # CROSS-PIN GUARD. The recipe describes the pipeline; the expected identity names the
+    # product. Reproducing candidate X while still asserting rr4's token stream, decoded
+    # field and corrector is the wrong-object error in its most expensive form -- it would
+    # fail deep inside the rebuild and blame the algorithm. Refuse it up front, by name.
+    if expected.sha256 != recipe["archive_sha256"]:
+        raise SystemExit(
+            f"REFUSING a recipe/candidate mismatch: the expected archive is "
+            f"{expected.sha256[:16]}… ({expected.bytes:,} B, from {expected.source}) but the loaded "
+            f"rebuild recipe is {recipe['name']!r}, which produces {str(recipe['archive_sha256'])[:16]}… "
+            f"({int(recipe['archive_bytes']):,} B).\n"
+            "A different candidate needs its own recipe: pass --recipe-json, or point "
+            "--expected-archive-sha256/--expected-archive-bytes at the candidate this recipe builds."
+        )
+
     store = args.store
     store.mkdir(parents=True, exist_ok=True)
-    resolved = resolve_inputs(args.inputs_json)
-    input_manifest = verify_inputs(resolved)
-    environment = stage_environment(resolved, args.seed)
+    resolved = resolve_inputs(spec, args.inputs_json)
+    input_manifest = verify_inputs(spec, resolved)
+    environment = stage_environment(spec, recipe, resolved, args.seed)
 
     receipt: dict[str, object] = {
         "schema": "pact.pq2.compress_e2e.v1",
@@ -326,7 +475,9 @@ def main() -> int:
         "score_claim": False,
         "promotable": False,
         "seed": args.seed,
-        "corrector_module": CORRECTOR_MODULE,
+        "corrector_module": recipe["corrector_module"],
+        "recipe_name": recipe["name"],
+        "expected_archive": expected.to_dict(),
         "python_version": sys.version,
         "store": str(store),
         "input_manifest": input_manifest,
@@ -343,10 +494,11 @@ def main() -> int:
             ),
             "encoder_script": str(ENCODER.relative_to(REPO)),
             "receiver_script": str(RECEIVER.relative_to(REPO)),
-            "expected_archive_sha256": EXPECTED_ARCHIVE_SHA256,
-            "expected_archive_bytes": EXPECTED_ARCHIVE_BYTES,
-            "expected_token_bytes": EXPECTED_TOKEN_BYTES,
-            "expected_decoded_field_sha256": EXPECTED_DECODED_FIELD_SHA256,
+            "expected_archive_sha256": expected.sha256,
+            "expected_archive_bytes": expected.bytes,
+            "expected_archive_source": expected.source,
+            "expected_token_bytes": recipe["token_bytes"],
+            "expected_decoded_field_sha256": recipe["decoded_field_sha256"],
             "sections_rebuilt": "token_stream only; seven sections carried byte-identically",
         }
         print(json.dumps(receipt["provenance"], indent=2, sort_keys=True))
@@ -369,7 +521,7 @@ def main() -> int:
         receipt["stages_run"].append(run_stage(argv, environment, "build"))
 
     if args.stage in ("verify", "build", "all"):
-        receipt["verification"] = verify_archive(store)
+        receipt["verification"] = verify_archive(store, expected, recipe)
 
     if args.stage == "decode":
         for sub in ("build", "parseback"):
@@ -384,7 +536,7 @@ def main() -> int:
             receipt["stages_run"].append(run_stage(argv, environment, f"receiver-{sub}"))
         receipt["decode_note"] = (
             "receiver parse-back writes RESULT_receiver_parseback.json; the decoded "
-            f"token field must hash to {EXPECTED_DECODED_FIELD_SHA256}"
+            f"token field must hash to {recipe['decoded_field_sha256']}"
         )
 
     destination = args.receipt or (store / "RESULT_pq2_e2e.json")
