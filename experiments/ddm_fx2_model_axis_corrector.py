@@ -614,6 +614,7 @@ class Fx2ModelAxisMixer(FixedPointLogisticMixer):
 
 SHIPPED_CONFIG: dict = {
     "families": (
+        # ddm_fx1's eleven, unchanged.
         "shipped_joint",
         "temporal_spatial",
         "surprise_only",
@@ -625,19 +626,35 @@ SHIPPED_CONFIG: dict = {
         "shipped_fast256",
         "shipped_fast4096",
         "surprise_fast256",
+        # The two members the widened causal template unlocks.
+        "spatial4_surprise",
+        "homog_surprise",
     ),
-    "mixer_context": "cls_boundary_agree_ubin8",
+    "mixer_context": "cls_boundary_agree_homog_ubin8",
     "count_buckets": 1,
     "sse_context": "off",
     "sse_learn_weight": False,
     "normalize": True,
     "learn": True,
 }
-"""Frozen at ``ddm_fx1``'s shipped configuration until the fx2 race replaces it.
+"""The configuration this arm selected: **−710.84 B** on the full n600 field.
 
 A decoder takes no arguments, so anything configurable at encode time but not at
-decode time is a desynchronisation waiting to happen.  The race writes the winner
-here; until then this class ships the incumbent exactly.
+decode time is a desynchronisation waiting to happen; the encoder reads this same
+frozen dict.
+
+WHY THIS ROW AND NOT THE LARGEST ONE.  A 19-member build measured −797.42 B, 87 B
+better, and it is NOT frozen here.  ``ddm_fx1`` measured the real parse-back at
+1,502.29 s base and 1,639.78 s for its own candidate against a 1,800 s contest
+budget — 160.2 s of margin, the thinnest number in this lineage.  Serial timing
+of these builds projects that margin at **118 s here and 29 s at 19 members**.
+Twenty-nine seconds is not a margin, so the extra 87 B is refused.  The decode
+cost is what picks the candidate, which is why it was measured serially rather
+than inferred from the contended race times.
+
+``sse_context`` stays ``off`` because the SSE/APM stage measured NEGATIVE in six
+of six formulations (+9.91 B to +139.56 B); it is kept in the module because a
+measured negative with a working implementation is worth more than a deleted one.
 """
 
 
