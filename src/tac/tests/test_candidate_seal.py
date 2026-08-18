@@ -25,6 +25,7 @@ from tac.candidate_seal import (
     SEAL_BYTE_DRIFT,
     SEAL_FILE_MISSING,
     SEAL_PLACEHOLDER_PIN,
+    SEAL_RECEIVER_PIN_MISMATCH,
     SEAL_RUNTIME_DRIFT,
     SEAL_SCHEMA,
     SEAL_SCHEMA_VIOLATION,
@@ -37,6 +38,7 @@ from tac.candidate_seal import (
     compute_seal_sha256,
     load_seal,
     measure_runtime_digest,
+    repin_receiver,
     validate_seal,
     write_seal,
 )
@@ -611,3 +613,128 @@ def make_pointer_state(pointer_path: Path, axis: str) -> dict:
     from tac.candidate_seal import read_pointer_state
 
     return read_pointer_state(pointer_path=pointer_path, axis=axis)
+
+
+# ----------------------------------------------------------------------------------
+# RECEIVER-PIN CONSISTENCY (#1123)
+#
+# A tree can be internally INTACT and still be unable to decode itself: the receiver's
+# own ARCHIVE_SHA256/ARCHIVE_BYTES may name a DIFFERENT archive than the one sealed
+# beside it. Measured 2026-08-18 on ddm_iv1 -- seal 5574369a returned SEAL_VALID while
+# inflate.py pinned the rr4 base 35ac2b9b/181,161 B against a staged 49bb833e/181,475 B
+# archive. Caught only downstream at dispatch time, by a separate check.
+#
+# ORDERING IS THE WHOLE LESSON, and getting it wrong is how the first control FAILED:
+# planting the bad pin AFTER sealing trips SEAL_RUNTIME_DRIFT (the seal pins the
+# receiver FILE's sha), which leaves the pin check unreachable and the control vacuous.
+# The real class is SEALING A TREE THAT WAS ALREADY INCONSISTENT -- exactly what iv1
+# did -- so every red test below plants the donor pin BEFORE build_seal runs.
+# ----------------------------------------------------------------------------------
+
+IV1_DONOR_SHA = "35ac2b9b" + "e" * 56  # shaped like the rr4 base pin iv1 actually carried
+IV1_DONOR_BYTES = 181_161
+
+
+def _plant_donor_pin(runtime: Path, *, sha: str, size: int) -> None:
+    """Repoint the receiver at some OTHER archive; the staged archive is left alone."""
+    (runtime / "inflate.py").write_text(RECEIVER_PY.format(sha=sha, size=size))
+
+
+def test_a_seal_over_a_tree_that_cannot_decode_itself_refuses(tmp_path: Path) -> None:
+    runtime, _ = _stage_candidate(tmp_path)
+    _plant_donor_pin(runtime, sha=IV1_DONOR_SHA, size=IV1_DONOR_BYTES)
+    seal_path = _seal(tmp_path, runtime)
+    pointer = _write_pointer(tmp_path)
+
+    verdict = validate_seal(seal_path, pointer_path=pointer)
+
+    assert verdict.verdict == SEAL_RECEIVER_PIN_MISMATCH, verdict.summary()
+    assert not verdict.ok
+    summary = verdict.summary()
+    # The refusal must name BOTH disagreeing quantities and the cure. A verdict that
+    # only says "mismatch" makes the reader re-derive the diagnosis themselves.
+    assert "35ac2b9b" in summary
+    assert "181,161" in summary
+    assert "repin_receiver" in summary
+
+
+def test_a_byte_count_alone_disagreeing_refuses_at_the_seal(tmp_path: Path) -> None:
+    """The subtler half: sha agrees, ARCHIVE_BYTES does not. Still cannot decode."""
+    runtime, archive = _stage_candidate(tmp_path)
+    import hashlib
+
+    true_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    _plant_donor_pin(runtime, sha=true_sha, size=archive.stat().st_size + 1)
+    seal_path = _seal(tmp_path, runtime)
+
+    verdict = validate_seal(seal_path, pointer_path=_write_pointer(tmp_path))
+
+    assert verdict.verdict == SEAL_RECEIVER_PIN_MISMATCH, verdict.summary()
+
+
+def test_planting_the_bad_pin_after_sealing_trips_drift_not_pin_mismatch(tmp_path: Path) -> None:
+    """Pins the ordering lesson that corrected the first control.
+
+    This is NOT a redundant restatement of the drift tests above: it records WHY the
+    red tests must plant before sealing. If a future edit ever made this return
+    SEAL_RECEIVER_PIN_MISMATCH, the tree-integrity check would have stopped running
+    first -- a strictly weaker seal wearing a more specific verdict.
+    """
+    runtime, _ = _stage_candidate(tmp_path)
+    seal_path = _seal(tmp_path, runtime)  # sealed while CONSISTENT
+    _plant_donor_pin(runtime, sha=IV1_DONOR_SHA, size=IV1_DONOR_BYTES)  # mutate after
+
+    verdict = validate_seal(seal_path, pointer_path=_write_pointer(tmp_path))
+
+    assert verdict.verdict == SEAL_RUNTIME_DRIFT, verdict.summary()
+
+
+def test_repinning_then_resealing_validates(tmp_path: Path) -> None:
+    """The cure direction: the detector must not zero on its own remedy."""
+    runtime, archive = _stage_candidate(tmp_path)
+    _plant_donor_pin(runtime, sha=IV1_DONOR_SHA, size=IV1_DONOR_BYTES)
+    assert validate_seal(
+        _seal(tmp_path, runtime), pointer_path=_write_pointer(tmp_path)
+    ).verdict == SEAL_RECEIVER_PIN_MISMATCH
+
+    repin_receiver(runtime, archive_path=archive)
+    reseal = write_seal(
+        load_seal(_seal(tmp_path, runtime)), tmp_path / "SEAL_repinned.json"
+    )
+
+    verdict = validate_seal(reseal, pointer_path=_write_pointer(tmp_path))
+    assert verdict.verdict == SEAL_VALID, verdict.summary()
+
+
+def test_the_producer_refuses_to_emit_a_seal_over_a_mismatched_tree(tmp_path: Path, monkeypatch) -> None:
+    """The producer self-validates, so the fix reaches BOTH ends: create and bless.
+
+    Executed red-direction control for #1123: make_candidate_seal must refuse AND
+    delete its own output -- a seal that cannot be consumed is worse than none.
+    """
+    spec = importlib.util.spec_from_file_location("make_candidate_seal_pin_under_test", MAKE_TOOL)
+    make = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(make)
+
+    runtime, _ = _stage_candidate(tmp_path)
+    _plant_donor_pin(runtime, sha=IV1_DONOR_SHA, size=IV1_DONOR_BYTES)
+    pointer = _write_pointer(tmp_path)
+    monkeypatch.setattr(
+        make, "read_pointer_state", lambda axis="contest_cuda": make_pointer_state(pointer, axis)
+    )
+
+    out = tmp_path / "SEAL_should_not_exist.json"
+    rc = make.main(
+        [
+            "--candidate-id", "sm3r_keep01",
+            "--runtime-dir", str(runtime),
+            "--axis", "contest_cuda",
+            "--admit-bar-net-ds", "-3.5e-6",
+            "--archive-member", "0.bin",
+            "--out", str(out),
+        ]
+    )
+
+    assert rc != 0, "the producer sealed a tree that cannot decode itself"
+    assert not out.exists(), "a refused seal must not be left on disk for a reader to trust"
