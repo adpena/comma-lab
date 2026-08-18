@@ -73,7 +73,8 @@ property of the *object*, not of our search.
 | `pr86_hpac.pt.ppmd` / `master.pt.gz` / `slave.pt.gz` / `meta.pt` | 28,243 / 31,144 / 32,287 / 1,499 | `de7638c531c9` / `3f3ee2b19ba5` / `817294dea0d9` / `848381e2da1b` |
 | `pr96_p_constant_zero.bin` (the defect) | 930 | `bf04a4e2dd69` |
 
-**Typed prior store: `.omx/research/ddm_pd1_pr_decomposition_priors_20260818.jsonl` — 631 rows**,
+**Typed prior store: `.omx/research/ddm_pd1_pr_decomposition_priors_20260818.jsonl` — 661 rows**
+(493 MEASURED / 138 DERIVED / rest RECEIPT; 63 PRs; 0 rows missing evidence),
 schema `{pr, source, kind, section, stat, value, unit, evidence, sha256, grade, consumer}`. Every
 row is **generated from parsed bytes**, never hand-typed, so the store cannot drift from the
 artifacts.
@@ -278,10 +279,64 @@ always-loaded instructions is exactly the thing to re-derive before propagating.
 10× the decoder-weight LR, in all eight published stages. That is a lever our L14 row does not
 carry.
 
-## 7. Ranked — what they know that we don't
+## 7. Leg C — the grammar read, and the four things it changes
+
+Full section grammars, coder choices and `file:line` receipts are in the prior store. What moves
+a decision:
+
+**7a. The exact LZMA filter, re-derived byte-exactly in my own hands.** The semantic family's model
+bundle is `FORMAT_XZ / FILTER_LZMA2, dict_size=65536, **lc=0, lp=1, pb=0**`. Recompressing PR133's
+parsed 82,743 B bundle with those parameters reproduces the shipped **73,128 B section byte-for-byte**;
+stock `preset=9|EXTREME` (lc3/lp0/pb2) gives 74,220 B. **The tuning is worth 1,092 B (1.47 %).**
+`lp=1, lc=0` is a 2-byte-aligned literal model with zero literal-context bits — the right shape for
+**int16/fp16 arrays**. Nobody in the HNeRV family does it (PR101's only LZMA use is
+`FILTER_LZMA1, dict 4096, lc3/lp0/pb0` on latents). **This is the most directly actionable import
+in the arm: audit our own LZMA-coded array sections for it.**
+
+**7b. Their entropy coders are saturated; their weight SERIALISATION is not.** Re-coding each
+retained PR133 section standalone: tokens **0.0 %**, carrier **−0.2 %** — but the semantic renderer
+**−13.0 %** and the HPAC model **−25.9 %**. Total ~875 B on the table (ΔS 5.83e-4). opal closed
+most of it (down to 138 B) by recoding the *model* sections — int4 packing → adaptive rANS
+(−4,212 B) and IHS1 → IHS2 (−3,586 B) — **not** by improving the token coder.
+
+**7c. Two attributions in hx1 need correcting, and both point the same way.** (i) hx1 credits the
+rank-one maximal-projector split (T2) to PR138. **PR133 wrote it first, in Python, and shipped it
+DISABLED** — `HPAC_HIERARCHICAL = False` at `inflate.py:46`, with a complete `hierarchical_decode`
+at `:541-556`. (ii) hx1's §4 treats opal's libm desync hazard as an open class hazard and T6/T7
+treats the per-section coder selector as absent from the field. **PR112 shipped both cures in
+June** — a 256-entry precomputed `Q_TABLE` "so the decoder never calls `exp()`" plus IEEE-exact
+float64-only model construction (`codec_ctx.py:23-26, 96-125`), and a per-section coder-id bitmap.
+PR133 goes further still, quantising to an **int16 lattice before** the transcendental. The field
+solved this two months before opal shipped the hazard.
+
+**7d. The token axis is near-saturated field-wide.** On the identical 117,964,800-token field:
+PR86 (May, S≈0.27) **113,900 B** → PR133 116,980 → PR135 114,706 → PR138 **110,022 B**. Total span
+**5.95 %**, and the *oldest* entry is only **3.52 %** above the newest best. Three months of
+entropy-coding competition on this field bought under 6 %. Our 109,951 B sits just past the end of
+that race — which reframes §4c: we are not ahead by a lot, we are ahead at the point where the
+curve has already flattened.
+
+**One unexploited class, corpus-wide:** *nobody entropy-codes a scale array.* Every archive read
+stores fp16/fp32 per-tensor scales raw — PR100 `sca`, PR103 `sca`+`mins_scales`, PR101 interleaved,
+PR105/106 banked, PR133 inline.
+
+**PR86 decode feasibility, resolved:** **not pure-python.** It needs torch (a full `HPACMini`
+forward), constriction and pyppmd — 56,400 full-resolution forwards plus 117.9 M Python-level
+`Categorical` decodes, DERIVED at **>30 h**. A 5-frame prefix (~983 k symbols) is tractable, but a
+prefix is a different population (`[[prefix_bias]]`). This demotes the "get a second independent
+sample" item.
+
+## 8. Ranked — what they know that we don't
+
+> **Re-ranked after Leg C.** The single most *actionable* row is now **0** below — a byte-exact,
+> re-derived coder parameter we can check against our own sections today. Rows 1-8 were ranked
+> before the grammar read and are unchanged in content.
 
 | # | row | grade | why it matters | consumer |
 |---|---|---|---|---|
+| **0** | **`lc=0, lp=1, pb=0, dict=64 KiB` on LZMA'd array sections is worth 1,092 B (1.47 %)** vs stock preset 9\|EXTREME — re-derived byte-exactly against PR133's shipped section. | MEASURED | The only import in the arm that is a **concrete parameter we can test on our own bytes today**, at zero risk and zero training. `lp=1/lc=0` = 2-byte-aligned literals, zero literal-context bits — the right model for int16/fp16 arrays. **Audit our LZMA-coded sections.** | **packet** |
+| **0b** | **Entropy-coded sections are saturated; weight SERIALISATION is not** (PR133: tokens 0.0 %, carrier −0.2 %, semantic −13.0 %, HPAC model −25.9 %). And **nobody in the corpus entropy-codes a scale array.** | MEASURED | Redirects effort off the coder and onto how weights and scales are *serialised* — where opal actually found its bytes (−4,212 B and −3,586 B on model sections, not on tokens). | **fx2 / packet** |
+| **0c** | **The token axis is near-saturated field-wide**: 5.95 % total span across four coder generations on the identical field; PR86 (May, S≈0.27) is only 3.52 % off the newest best. | DERIVED | Recalibrates §4c: our 109,951 B lead is real but sits where the curve has flattened. Do not budget a large win here. | **fx2** |
 | **1** | **Context policy is worth 0.4 bits/token on a comma token stream**, with the saturation curve published (f0 costs 3.2× the f8 rate; saturates ~frame 8). | RECEIPT | fx2 is *choosing a context set right now*. This is a measured, same-domain answer to "how much context before it stops paying" — the strongest single import in the arm. | **fx2** |
 | **2** | **Do not pre-quantize the probability table**: +0.0005 b/sym (float64 direct) vs +0.013 b/sym (16-bit table) = **26×**. Pairs with two range coders landing 4.3-5.0 bits above their own ideal. | RECEIPT | Prices an fx2 design choice at byte zero and points *against* the "quantize the whole probability path" instinct. The container is not a lever; the model is. | **fx2** |
 | **3** | **`q` is 96-98 % of miss cost under ANY strong prior**, 44.7 % under a weak one. | MEASURED | The fx1 mixer axis generalises beyond our prior. And it flips: a *weak*-prior section (a fresh sidecar with no learned model) needs the opposite treatment — spend on the relative law. | **fx2** |
@@ -298,7 +353,7 @@ zero-padding** and PR60/137 threw away 8.31e-4 on ZIP directory entries (MEASURE
 at **256×192, libsvtav1** (RECEIPT, leaked in raw `meta.json`); `latent_lr_mult=10.0` is absent
 from our L14 record (RECEIPT).
 
-## 8. Borrowed-substrate accounting (NO-FAKE #7)
+## 9. Borrowed-substrate accounting (NO-FAKE #7)
 
 **This memo adopts no mechanism and lands no code.** Every artifact read is a public contest
 submission. All extraction ran on retained copies under `/Volumes/APDataStore/pact/`; **no file
@@ -308,19 +363,20 @@ and transfers to no one else's vehicle without their own measurement.
 
 ## NEXT_IF_RESUMED
 
-1. **Feed rows 1-3 into fx2 before it picks its context set.** The saturation curve says context
-   pays steeply to ~frame 8 and flattens after; the pre-quantization receipt says keep the
-   probability table in float; the `q`-vs-relative-law split says branch the section-level model on
-   prior strength rather than defaulting to the token-stream shape. All three are inputs to a
-   decision fx2 is making now, and none of them cost a run.
-2. **Decode PR86's `tokens.bin`** (113,900 B, retained, sha `14144bde4966`) — the only competitor
-   token stream plausibly separable without a full renderer forward. It would convert §4a's
-   blocking fact into a real second independent sample and let the pre-registered test run as
-   written. **Feasibility unresolved at time of writing** — a sub-arm is reading whether PR86's
-   decode path is pure-python or requires a renderer forward; if it needs the renderer, this drops
-   below item 3 in value.
-3. **Give ps2 the 8 KB break-even** (row 5) as the standing bar for any standalone f0 carrier,
-   with its HNeRV-lineage verdict scope attached — it is a bar, not a kill.
-4. **Do not re-open order-0 anywhere in the packet** — row 7 closes it on 60 archives — and **do
-   not spend a unit on our container**: we are already at the measured 100 B floor.
-5. **Do not edit CLAUDE.md L14** on the 22,650-epoch claim; §6 records why it was refused.
+1. **Audit our own LZMA-coded array sections for `lc=0, lp=1, pb=0`** (row 0). Byte-exact,
+   re-derived, zero training, testable today. Highest actionability in the arm.
+2. **Redirect the next rate unit off the coder and onto weight/scale serialisation** (row 0b):
+   their entropy-coded sections are saturated, their model sections carry 13-26 %, and **no one in
+   the corpus entropy-codes a scale array.**
+3. **Feed rows 1-3 into fx2 before it fixes its context set** — the saturation curve (context pays
+   steeply to ~frame 8, then flattens), the pre-quantization receipt (keep the probability table in
+   float; the arithmetic container is not a lever), and the `q`-vs-relative-law split (branch the
+   section model on prior strength). None cost a run.
+4. **Give ps2 the ~8 KB break-even** for a standalone f0 carrier, with its HNeRV-lineage verdict
+   scope attached — a bar, not a kill.
+5. **Do not re-open order-0** (closed on 60 archives), **do not spend a unit on our container**
+   (already at the measured 100 B floor), and **do not budget a large token-coder win** (row 0c).
+6. **Do not edit CLAUDE.md L14** on the 22,650-epoch claim; §6 records why it was refused.
+7. **Demoted:** decoding PR86's `tokens.bin` for a second independent sample. Leg C resolved it as
+   **not pure-python** (torch + constriction + pyppmd, >30 h full decode). A 5-frame prefix is
+   tractable but is a different population.
