@@ -369,11 +369,22 @@ def test_pq2_does_not_latch_an_expected_archive_identity_again() -> None:
 
 
 def test_the_fire_path_consumes_the_seal_check() -> None:
-    """The seal brick is only a cure if the one Modal fire path actually runs it."""
+    """Both seal bricks are only a cure if the one Modal fire path actually runs them.
+
+    The refusal assertions are regexes, not substrings: the original ``"return 6" in source``
+    matched a single formatting of the refusal call and went red the moment the line wrapped,
+    which is a gate that fails on style instead of on the property it guards.
+    """
+    import re
+
     source = _FIRE.read_text()
 
+    # Brick 1 — receiver-pin consistency, and it must REFUSE rather than merely report.
     assert "from tac.candidate_seal import" in source
     assert "check_pin_consistency" in source
     assert "repin_receiver" in source
-    # It must REFUSE, not merely report.
-    assert "return 6" in source
+    assert re.search(r"refuse\(\s*out_dir,\s*6,", source), "the pin MISMATCH branch must refuse with rc=6"
+
+    # Brick 2 — the seal DOCUMENT, validated before any other stage and refused on its own rc.
+    assert "validate_seal" in source
+    assert re.search(r"refuse_seal\(\s*seal_path,\s*out_dir,\s*7,", source), "a seal refusal owns rc=7"

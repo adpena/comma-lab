@@ -80,6 +80,7 @@ from tac.candidate_seal import (  # noqa: E402
     PIN_ABSENT,
     check_pin_consistency,
     repin_receiver,
+    validate_seal,
 )
 from tac.deploy.modal.auth_eval import validate_runtime_upload_file  # noqa: E402
 from tac.deploy.modal.paired_dispatch import (  # noqa: E402
@@ -244,6 +245,43 @@ def refuse(out_dir: Path, rc: int, reason: str, manifest: dict) -> int:
     return rc
 
 
+#: The seal's contest axis -> this tool's --axis. ``advisory`` is deliberately absent: an
+#: advisory seal is a real seal for a local row, but a paid Modal call always produces
+#: contest-axis evidence, so firing one from an advisory seal would mislabel the row.
+SEAL_AXIS_TO_FIRE_AXIS = {"contest_cuda": "cuda", "contest_cpu": "cpu"}
+
+#: Flags whose value the seal already carries. Supplying one alongside --seal is the
+#: hand-typed duplicate the error-factory law forbids: two sources of the same truth are
+#: two chances to disagree, and the one that disagrees silently is the one that fires.
+SEAL_OWNED_FLAGS = ("--runtime-dir", "--archive", "--require-archive-sha", "--axis")
+
+
+def refuse_seal(seal_path: Path, out_dir: Path, rc: int, reason: str, manifest: dict, detail: dict) -> int:
+    """Refuse a sealed fire LOUDLY, on stderr and on disk, twice.
+
+    The t1h r1 lesson is that a refusal which exists only as an exit code is a refusal a
+    pipe can erase. So a seal refusal writes a receipt NEXT TO THE SEAL (where the next
+    reader of that candidate will look) as well as the usual FIRE_REFUSED.json in the output
+    dir, and it writes the human line to stderr, which survives ``| tail`` on stdout.
+    """
+
+    receipt = {
+        "schema": "candidate_seal_fire_refusal.v1",
+        "seal_path": str(seal_path),
+        "refusal_rc": rc,
+        "refusal_reason": reason,
+        "seal_validation": detail,
+    }
+    try:
+        seal_receipt = seal_path.with_name(seal_path.name + ".REFUSED.json")
+        seal_receipt.write_text(json.dumps(receipt, indent=2, default=str))
+        print(f"SEAL REFUSAL RECEIPT: {seal_receipt}", file=sys.stderr)
+    except OSError as exc:  # pragma: no cover - custody volume unwritable
+        print(f"SEAL REFUSED; could not write receipt beside the seal: {exc}", file=sys.stderr)
+    print(f"SEAL REFUSED (rc={rc}): {reason}", file=sys.stderr)
+    return refuse(out_dir, rc, reason, {**manifest, "seal_refusal": receipt})
+
+
 def build_dispatch_argv(
     *,
     spec: dict,
@@ -348,9 +386,16 @@ def reconcile_claims(auto_close_agent: str, dry_run: bool) -> dict:
     return action
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--runtime-dir", required=True)
+    ap.add_argument(
+        "--seal",
+        default=None,
+        help="a candidate seal (tools/make_candidate_seal.py). Validated FIRST against disk; "
+        "the runtime dir, archive, archive-sha pin and axis are DERIVED from it, never "
+        "re-typed. Mutually exclusive with the flags it owns.",
+    )
+    ap.add_argument("--runtime-dir", default=None, help="required unless --seal supplies it")
     ap.add_argument("--archive", default=None, help="default: <runtime-dir>/archive.zip")
     ap.add_argument("--output-dir", required=True)
     ap.add_argument("--lane-id", required=True)
@@ -359,8 +404,11 @@ def main() -> int:
     ap.add_argument(
         "--axis",
         choices=sorted(AXES),
-        default="cuda",
-        help="contest score axis: cuda -> T4 CUDA worker, cpu -> the Linux x86_64 "
+        # None, not "cuda": the resolved default is still cuda (backward compatible), but a
+        # sentinel is the only way to tell "the caller asked for cuda" from "the caller said
+        # nothing", and --seal must refuse the former while accepting the latter.
+        default=None,
+        help="contest score axis (default: cuda): cuda -> T4 CUDA worker, cpu -> the Linux x86_64 "
         "contest-CPU worker (experiments/modal_auth_eval_cpu.py). Picks the entrypoint, "
         "the evidence tag, and the poller deadline together.",
     )
@@ -388,9 +436,70 @@ def main() -> int:
         "timeout is 9000 s and the watcher must outlive it)",
     )
     ap.add_argument("--dry-run", action="store_true")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
-    spec = axis_spec(args.axis)
+    # The dispatch subprocess runs with cwd=REPO, so a relative --output-dir must
+    # resolve against REPO here too or the spawn-record check reads the wrong dir.
+    out_dir = Path(args.output_dir)
+    if not out_dir.is_absolute():
+        out_dir = REPO / out_dir
+
+    # ---- STAGE 0 SEAL --------------------------------------------------------------
+    # Runs before every other stage and before any subprocess: a refused seal must cost
+    # nothing, least of all a paid call. Everything it derives is measured from disk by
+    # tac.candidate_seal.validate_seal, so a pin that drifted since the seal was written
+    # (the ps1u r1 class) refuses here instead of failing remotely on the meter.
+    seal_manifest: dict = {}
+    require_archive_sha = args.require_archive_sha
+    resolved_axis = args.axis
+    if args.seal:
+        seal_path = Path(args.seal).resolve()
+        supplied = [flag for flag in SEAL_OWNED_FLAGS if getattr(args, flag[2:].replace("-", "_"))]
+        if supplied:
+            reason = (
+                f"--seal owns {', '.join(SEAL_OWNED_FLAGS)}; {', '.join(supplied)} was also supplied by hand. "
+                "Two sources for one truth is the hand-assembly hazard — pass the seal alone."
+            )
+            print(f"FATAL: {reason}", file=sys.stderr)
+            return refuse_seal(seal_path, out_dir, 7, reason, {"seal_path": str(seal_path)}, {})
+        if args.repin_receiver:
+            reason = (
+                "--repin-receiver rewrites the staged receiver, which would invalidate the very seal "
+                "being consumed. Re-pin at compose time, then seal the result."
+            )
+            print(f"FATAL: {reason}", file=sys.stderr)
+            return refuse_seal(seal_path, out_dir, 7, reason, {"seal_path": str(seal_path)}, {})
+
+        verdict = validate_seal(seal_path)
+        seal_manifest = {"seal_path": str(seal_path), "seal_validation": verdict.to_dict()}
+        print(f"SEAL: {verdict.summary()}")
+        if not verdict.ok:
+            return refuse_seal(
+                seal_path, out_dir, 7, f"seal invalid: {verdict.verdict}", seal_manifest, verdict.to_dict()
+            )
+
+        document = json.loads(seal_path.read_text())
+        seal_axis = str(document.get("axis") or "")
+        if seal_axis not in SEAL_AXIS_TO_FIRE_AXIS:
+            reason = (
+                f"seal declares axis {seal_axis!r}; a paid Modal auth-eval row is contest evidence and "
+                f"can only be fired from {sorted(SEAL_AXIS_TO_FIRE_AXIS)}"
+            )
+            print(f"FATAL: {reason}", file=sys.stderr)
+            return refuse_seal(seal_path, out_dir, 7, reason, seal_manifest, verdict.to_dict())
+        resolved_axis = SEAL_AXIS_TO_FIRE_AXIS[seal_axis]
+        args.runtime_dir = document["runtime"]["path"]
+        args.archive = document["archive"]["path"]
+        require_archive_sha = document["archive"]["sha256"]
+        seal_manifest["seal_candidate_id"] = document.get("candidate_id")
+        seal_manifest["seal_sha256"] = document.get("seal_sha256")
+        seal_manifest["seal_admit_bar"] = document.get("admit_bar")
+
+    if not args.runtime_dir:
+        print("FATAL: --runtime-dir is required unless --seal supplies it", file=sys.stderr)
+        return refuse(out_dir, 2, "--runtime-dir is required unless --seal supplies it", {})
+
+    spec = axis_spec(resolved_axis or "cuda")
     poller_deadline_s = (
         float(args.poller_deadline_s)
         if args.poller_deadline_s is not None
@@ -399,12 +508,8 @@ def main() -> int:
 
     runtime_dir = Path(args.runtime_dir).resolve()
     archive = Path(args.archive) if args.archive else runtime_dir / "archive.zip"
-    # The dispatch subprocess runs with cwd=REPO, so a relative --output-dir must
-    # resolve against REPO here too or the spawn-record check reads the wrong dir.
-    out_dir = Path(args.output_dir)
-    if not out_dir.is_absolute():
-        out_dir = REPO / out_dir
     manifest: dict = {
+        **seal_manifest,
         "schema": "fire_modal_auth_eval.v2",
         # Self-describing: a dry-run manifest carries no call_id, and a reader must never
         # have to infer from an absence whether a fire actually took.
@@ -448,15 +553,15 @@ def main() -> int:
     archive_bytes = archive.stat().st_size
     manifest["stage3_archive"] = {"path": str(archive), "sha256": archive_sha, "bytes": archive_bytes}
     print(f"PIN: archive {archive_bytes} B sha {archive_sha[:16]}…")
-    if args.require_archive_sha and args.require_archive_sha.lower() != archive_sha:
+    if require_archive_sha and require_archive_sha.lower() != archive_sha:
         print(
             "FATAL: archive sha does not match the sealed fire-order pin "
-            f"(pinned {args.require_archive_sha[:16]}…, actual {archive_sha[:16]}…)"
+            f"(pinned {require_archive_sha[:16]}…, actual {archive_sha[:16]}…)"
         )
         return refuse(
             out_dir,
             4,
-            f"archive sha {archive_sha} does not match sealed pin {args.require_archive_sha}",
+            f"archive sha {archive_sha} does not match sealed pin {require_archive_sha}",
             manifest,
         )
 
