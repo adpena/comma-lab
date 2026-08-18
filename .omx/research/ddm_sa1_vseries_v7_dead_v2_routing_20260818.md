@@ -94,11 +94,19 @@ falls far SLOWER than rate credit as depth shallows — no rung of this ladder p
 byte-WORSE than sz1's own coding (+1,552 B). Family closed; seg has no compensator in this family
 (the Schur solve addresses pose only).
 
-**Routing (per §3's pre-registered fork).** The mass axis goes to the **sa3×keep01 composed
-candidate**: row-prune (keep01, −2,354 B, seg +5.24e-6 d_seg T4-measured) THEN S2 quantization
-(sa3, −790 B, seg +2.04e-6 T4-measured) on the composed semantic body, compensation re-solved
-IN-COMPILE against the composed object (the joint re-solve is the compile's normal path).
-Arithmetic if legs compose ~additively: rate ≈ −2.09e-3 S · seg ≈ +7.3e-4 S · pose ≈ +5e-4 S
-(keep01-class residual ×1.13 transfer) → net ≈ **−0.9e-3 S**, ~1.6× keep01's move. Falsifier:
-super-additive seg interaction (both edits touch the same tensors) — the advisory gate catches it
-for ~20 min before any authority spend.
+**Routing (per §3's pre-registered fork) — CORRECTED SAME-DAY.** The mass axis goes to the
+**sa3×keep01 composed candidate**, but the marginal is priced against the LIVE keep01 pointer,
+not sz1 (a delta without its baseline is unanchored; the baseline moved when keep01 was
+admitted). Coverage measured at source: keep01's `PRUNE_NAMES` = {blocks.1/2/3.film} (pruned to
+1% rows, survivors q4; all other 2-D tensors already q4 in the SM3R body); S2's recipe =
+films 2/3 @ q2 + {films 0/1, frame_embed} @ q3 (`builders/final.py:37`). Overlap: films 1/2/3
+are 99%-pruned in keep01, so S2's edits there buy ~nothing. The surviving marginal =
+frame_embed q4→q3 (≈ −570 B) + blocks.0.film q4→q3 (≈ −243 B) ≈ **−800 B ≈ −5.4e-4 S rate**,
+against S2-class seg (+~2e-4 S) and compensated-pose (+~2.7e-4 S) marginals →
+**projected net ≈ −5e-5 to −1e-4 S** — a CONTRIBUTOR rung (~1% of the gap), an order of
+magnitude below the earlier −0.9e-3 projection (which double-counted keep01's banked move; the
+error is preserved here per append-only honesty and superseded by this paragraph). Build cost is
+real: a composed SM3R mode (row-prune + per-tensor mixed depth) needs packer + receiver decode +
+parse-back before the advisory/authority/compile chain. Whether this rung outranks the js8 pose
+line (pose owns 69.38% of the gap per eu4) is a routing decision taken at the queue head, not
+inside this memo.
