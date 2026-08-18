@@ -8,7 +8,14 @@ decode-identical code-length measurement, full n600 · **Score claim: false** ·
 **The coder axis is NOT closed. The logistic mixer works, and the best architecture measures
 −560.07 B on the full n600 token field**, from 110,511.28 B to 109,951.21 B (−0.51%).
 
-* Projected archive **180,601 B** (from 181,161 B), projected **ΔS = −3.7288e-4**, projected
+> **STATUS UPDATE 2026-08-17 (§9 addendum below, written after this section).** Steps 1 and 2 of
+> the §8 fire-order are **DONE**: the candidate is **byte-closed at 180,601 B** (sha `65c75d7f…`,
+> repeat byte-identical) and the **parse-back PASSED** — decoded token field `9ba2e52b…` and the
+> 3.66 GB render `e5539653…`, both bit-identical to base, across two independent decodes. §8's
+> "do not fire a T4 row yet" is **superseded**: the row is now sealed and awaiting MAIN at
+> `.omx/research/ddm_fx1_t4_sealed_fire_order_20260817.json`. Read §9 before acting on §8.
+
+* Byte-closed archive **180,601 B** (from 181,161 B), **ΔS = −3.72881e-4**, projected
   **S = 0.158160369**. That is **37.3× the 1e-5 naming bar** and clears the charter's −500 B gate.
 * Distortion is unchanged **by construction**: only the probability law moves, the decoded token
   field is bit-identical, so d_seg and d_pose cannot change.
@@ -314,3 +321,147 @@ learner. The suite is not vacuous.
 4. **Miss-sector relative law** — now priced: **ceiling 1,247 B**, so worth at most a bounded effort.
 5. **Do NOT re-run `base_odds`** without a different formulation; the prior's tail is too heavy for a
    single learned exponent.
+
+---
+
+## 9. Addendum — closure: byte-close, parse-back, the packet defect I found, and the seal
+
+Written after §1-8, on the respawn. §8 said "do not fire a T4 row yet; the next step is local and
+free." That step is now done, and so is the one after it. **The row is sealed and awaiting MAIN.**
+
+### 9.1 Steps 1 and 2 closed
+
+| gate | pre-registered target | measured | verdict |
+|---|---|---|---|
+| archive bytes | 180,601 (±1) | **180,601** | hit, no slack used |
+| token stream bytes | 109,952 (±1) | **109,952** | hit |
+| every other section | byte-identical | **byte-identical** | pass |
+| archive repeat | byte-identical | **byte-identical** | pass |
+| decoded token field sha256 | `9ba2e52b…` (the rr4 target) | **`9ba2e52b…`** | **pass** |
+| rendered raw sha256 | equal to base | **`e5539653…`**, 3,662,409,600 B | **pass, twice** |
+
+The projection became a measurement without moving: **−560 B, ΔS −3.72881e-4, S 0.158160369334.**
+Distortion identity is now *measured* rather than *argued* — the render is bit-identical to base
+across two independent decodes on two separate tree stagings, so d_seg and d_pose cannot have moved.
+
+**The instrument control is the part worth banking.** A parallel byte-close run through the *same*
+pipeline with the *shipped* corrector (`byteclose_r1`, `corrector_module=ddm_rr4_free_corrector_v2`)
+reproduced the live frontier archive **byte-identically**: 181,161 B, sha `35ac2b9b…`. The pipeline
+reproduces the incumbent exactly before it is asked to beat it, so the 180,601-vs-181,161 comparison
+is on one instrument, not two.
+
+Decode cost, `[macOS-CPU advisory]`: **1,639.78 s vs the incumbent's 1,502.29 s = +137.49 s**, inside
+the 1,800 s budget with **160.2 s (8.9%) of margin**. That margin is the thinnest number in the whole
+order and it is advisory-local, which is exactly why candidate B stays on the order.
+
+### 9.2 The defect I found, and why every gate read green
+
+The staged tree carried **two `__pycache__` bytecode files, 60,282 B**, each embedding
+`/Volumes/APDataStore/pact/ddm_fx1/candidate_runtime/runtime/…` — the drive name and the arm
+codename. That is **sr1 B3 recurring in binary form**, in the very candidate whose charter was
+"B3-clean by construction."
+
+Three independent instruments all reported green over it:
+
+1. **The tree digest could not see it.** It is computed over the files `_skip` keeps, so anything
+   `_skip` drops is invisible *by construction*, however loudly it leaks. **"Excluded from the hash"
+   is not "absent from the packet"** — a judge copies the *directory*.
+2. **The hygiene scan skipped it.** It called `read_text()` and `continue`d on `UnicodeDecodeError`,
+   under the comment *"binary payloads carry no paths to leak."* That claim is simply false: CPython
+   writes the absolute source path into every `.pyc` it emits. The receipt then reported
+   `text_files_scanned: 31` — a numerator with **no denominator**, so a scan that opened nothing
+   would have looked identical to a scan that found nothing.
+3. **The check ran too early.** Worse than either: the staging step's own `verify_staged_replay`
+   imports the two staged correctors, so **the staging step created the leak it had just certified
+   absent.** A gate that runs before the action that causes the defect cannot fire.
+
+### 9.3 The cures — structural, not procedural
+
+Deleting the two files would have been the procedural fix, and the gauge would have stayed green for
+the next tree that grew them. The detector had to **change state on the cure**, so:
+
+* `assert_tree_is_path_clean` now scans **every physically present file as bytes**, binaries
+  included (`archive.zip` among them — previously never opened), and reports its **denominator**:
+  text / binary / total / skipped / offending. A green now carries the count that makes it falsifiable.
+* **`assert_no_stray_files`** (new) refuses any file present on disk but absent from the hashed
+  manifest — the class the digest is structurally blind to.
+* **`--verify-only`** (new) re-runs both gates against an existing tree, because the pollution
+  arrives *after* staging ends. This is the mode the packaging step must run.
+* `verify_staged_replay` now runs its subprocess under `-B` / `PYTHONDONTWRITEBYTECODE=1`, killing
+  the generator's self-pollution at the source.
+* Both gates **moved to last**, after every tree-touching step, so they certify the final on-disk
+  state.
+
+**Positive control, run in that order:** the new gate **REFUSED** the polluted tree (rc=1, both files
+named, marker `/Volumes/` cited); after the cure it **PASSED** (33 files scanned = 32 text + 1
+binary, 0 skipped, 0 offenders, 0 strays). Red → green on the cure, which is the only evidence that
+the gauge reads the disease rather than the weather. It also caught two bugs in my own patch on its
+first run, before they could pass silently.
+
+The 36 ExFAT AppleDouble `._` sidecars are handled structurally too — `tools/fire_modal_auth_eval.py`
+strips them itself (`SANITIZE: removed 36 metadata-litter file(s)`), and the tree digest is unchanged
+by the strip.
+
+**The re-staged tree is byte-identical to the tree that passed parse-back.** Re-running the patched
+generator reproduced `runtime_tree_sha256 = d9e39a36…`, archive `65c75d7f…`, staged replay
+879,609.6594294705 bits at **delta +0.000000**. Of the 33 files, exactly one differs from the
+parse-back record — `FX1_STAGING_RECEIPT.json` itself, which is excluded from the digest by design
+because it carries a timestamp. All 31 manifest files and `archive.zip` are byte-identical.
+
+sr1 **F15** is satisfied from birth: the staged `inflate.sh` carries the fail-closed C-compiler
+guard, and it **probes a real trivial compile** rather than trusting `command -v` — a stub `cc`
+passes existence and fails the build. Exit 69 with the dependency named, matching Brotli's precedent.
+
+### 9.4 Composability with ddm_t1h — measured, in both directions
+
+t1h banked a drop-in carrier section (22,183 B, sha `8ddeeb42…`) and the question was whether my
+candidate composes with it byte-mechanically. **It does — the two arms edit strictly disjoint byte
+ranges of the same archive member:**
+
+| arm | edit region (base member coords) | Δ bytes |
+|---|---|---:|
+| t1h (pose carrier) | `[12, 70,453)` | +8 |
+| fx1 (token stream) | `[70,561, 181,061)` | −560 |
+
+Disjoint, with a **108-byte untouched gap**. And the orthogonality is proven in *both* directions,
+not assumed from one: **fx1's carrier region is byte-identical to base**, and t1h's common suffix
+with base (110,608 B) **strictly contains** the whole token region (110,500 B), so t1h leaves the
+token stream untouched.
+
+**But it is not a raw splice, and I checked rather than assumed.** The 22,183-B packed section does
+not appear verbatim anywhere in the member — the container transforms it, and my first search for it
+returned zero occurrences in both base and candidate. The drop-in operates at the *unpacked*
+section level, so composing needs the **encoder**, which is exactly the `compose_path` the staging
+receipt already declares. Predicted composed archive **180,609 B** (−552 vs incumbent). The +8 B is
+t1h's counted cost; its pose gain is t1h's to price and is **not** in that number, and the composed
+row needs its **own** parse-back because the render changes.
+
+Recommendation: **fire A first** — it is closed, parse-backed and rate-only. The composed row is the
+natural *next* fire, not a reason to hold this one.
+
+### 9.5 The seal
+
+`.omx/research/ddm_fx1_t4_sealed_fire_order_20260817.json` — `SEALED_AWAITING_MAIN_FIRE`, ~$0.16.
+It pins the archive sha and bytes, the runtime tree sha, the manifest count, the pre-registered
+falsifiers, the expected band `[0.15816, 0.158161]` with its refusal condition, the decode-margin
+risk, the composability verdict, and a **dry-run-validated** command through the canonical
+`tools/fire_modal_auth_eval.py` (never hand-assembled). The pin check accepted:
+`PIN: archive 180601 B sha 65c75d7f097df930…`. The order carries **no absolute path** — B3 honored
+even in the operator-facing artifact.
+
+Candidate B is on the order as a **named fallback with its status stated honestly**: it is a code
+length only, not a closed candidate, and it needs its own byte-close and parse-back before it is
+fired. It is not derivable from A's receipts.
+
+**I fired nothing and spent nothing.** Own-vehicle frontier at seal:
+`S = 0.15853325034789678 @ 181,161 B [contest-CUDA T4 n600]` — **UNMOVED by this arm.** Only MAIN's
+fire can move it.
+
+### 9.6 NEXT_IF_RESUMED, re-ranked
+
+1. **MAIN fires candidate A** (sealed, ~$0.16). Converts −560 B into a pointer move.
+2. **Compose fx1 + t1h** via the encoder path in §9.4 → predicted 180,609 B plus t1h's pose gain.
+   Needs a fresh parse-back; the render changes.
+3. **Byte-close candidate B** only if A's T4 decode time lands above ~1,700 s.
+4. Items 2-5 of §8's NEXT_IF_RESUMED (hx1 scan-order members; SSE/APM second stage; the miss-sector
+   relative law, ceiling **1,247 B**) are unchanged and unstarted.

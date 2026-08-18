@@ -1,0 +1,179 @@
+{
+  "schema": "ddm_fx1_t4_sealed_fire_order.v1",
+  "sealed_at_utc": "2026-08-17",
+  "sealed_by": "ddm_fx1",
+  "disposition": "SEALED_AWAITING_MAIN_FIRE",
+  "fire_authority": "MAIN only. ddm_fx1 fired nothing and spent nothing.",
+  "axis_when_fired": "[contest-CUDA] Tesla T4 n600",
+  "estimated_cost_usd": 0.16,
+
+  "ssd_root": "APDataStore/pact/ddm_fx1",
+  "path_convention": "Every path below is relative to ssd_root unless it is a repo path. Absolute local paths are deliberately absent (sr1 B3). The shipped tree and its receipt are independently verified leak-free; see packet_hygiene.",
+
+  "incumbent": {
+    "label": "rr4 own-vehicle frontier",
+    "archive_bytes": 181161,
+    "archive_sha256": "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956",
+    "score_S": 0.15853325034789678,
+    "authority": "[contest-CUDA] Tesla T4 n600"
+  },
+
+  "candidate_A_primary": {
+    "id": "fx1_allfam_fast_logistic_mixer",
+    "mechanism": "fixed-point integer log-odds mixer (weighted GEOMETRIC mean in odds space) replacing the shipped arithmetic-mean-in-odds correction law. 11 members, mixer context cls_boundary_agree_ubin8, adaptive learner at lr 2^-4. Transcendental-free: dyadic weights are realised by repeated correctly-rounded sqrt, never log/exp.",
+    "runtime_dir": "candidate_runtime",
+    "archive": "candidate_runtime/archive.zip",
+    "archive_bytes": 180601,
+    "archive_sha256": "65c75d7f097df930760b6611209f9caf66f5b10914cefa8d954b6d7834f6b0c4",
+    "archive_repeat_byte_identical": true,
+    "runtime_tree_sha256": "d9e39a367658ff4ddb2ecd5d0393cef50ceb85031d5d529850b49da2fd868a35",
+    "runtime_tree_file_count": 31,
+    "member_name": "p",
+    "member_bytes": 180501,
+    "token_stream_bytes": 109952,
+    "token_stream_sha256_prefix": "23b983c51248c696",
+    "delta_bytes_vs_incumbent": -560,
+    "delta_S_rate": -0.000372881,
+    "projected_S": 0.158160369334,
+    "naming_bar_multiple": 37.29,
+    "distortion_claim": "d_seg and d_pose are UNCHANGED BY CONSTRUCTION: only the probability law moves, the decoded token field is bit-identical. This is the claim the falsifiers test, not an assumption to be trusted."
+  },
+
+  "candidate_B_fallback": {
+    "id": "fx1_k1_cb16",
+    "delta_bytes_vs_incumbent": -341,
+    "delta_S_rate": -0.000227058,
+    "projected_S": 0.158306192445,
+    "marginal_decode_seconds": 13.1,
+    "status": "NOT BYTE-CLOSED, NOT PARSE-BACKED. Measured only as a code length in the race.",
+    "before_firing_B": "It needs its own byte-close (step 1) and its own parse-back (step 2). Do not fire B off candidate A's receipts.",
+    "why_it_exists": "It buys 61% of A's saving for 10% of A's decode cost. It is the answer if T4 decode headroom turns out tighter than the local margin suggests."
+  },
+
+  "instrument_control": {
+    "claim": "The byte-close pipeline is faithful, so the candidate's 180,601 B is comparable to the incumbent's 181,161 B on the same instrument.",
+    "control_run": "byteclose_r1 with corrector_module=ddm_rr4_free_corrector_v2",
+    "control_archive_bytes": 181161,
+    "control_archive_sha256": "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956",
+    "control_verdict": "BYTE-IDENTICAL to the shipped frontier archive. The pipeline reproduces the incumbent exactly before it is asked to beat it."
+  },
+
+  "falsifiers_pre_registered": {
+    "decoded_token_field_sha256": {
+      "required": "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52",
+      "status_local": "PASSED",
+      "note": "Identical to the rr4/base decoded field. Any difference falsifies the decode-identity claim outright."
+    },
+    "raw_render_sha256": {
+      "required": "e5539653f598a1c31e28900888f450a6de019cb29864674f232ad2f8956b15c9",
+      "raw_bytes": 3662409600,
+      "status_local": "PASSED TWICE, on two independent decodes across two separate tree stagings"
+    },
+    "d_seg_and_d_pose": "EQUAL to base to all digits. Not 'close'. The claim is decode-identity, so any drift is a refusal, not a tolerance.",
+    "archive_bytes": "exactly 180601",
+    "archive_sha256": "exactly 65c75d7f097df930760b6611209f9caf66f5b10914cefa8d954b6d7834f6b0c4",
+    "decode_wall_clock": "must complete inside the contest 30-min (1800 s) budget"
+  },
+
+  "decode_wall_clock": {
+    "axis": "[macOS-CPU advisory] 4 threads, serial, warm cache",
+    "incumbent_seconds": 1502.29,
+    "candidate_A_seconds": 1639.78,
+    "marginal_seconds": 137.49,
+    "budget_seconds": 1800,
+    "local_margin_seconds": 160.22,
+    "local_margin_fraction": 0.089,
+    "RISK": "This is the thinnest number in the order and the reason candidate B exists. The 8.9% local margin is an ADVISORY macOS figure; it does not transfer to T4. The marginal +137.5 s is additive host-CPU numpy work and DOES carry. If the T4 host CPU is slower than the M5 Max on this serial path, the margin can vanish. rr4 itself already passed on T4, so the incumbent's headroom is proven and the candidate's is not.",
+    "decision_rule": "If the T4 row returns a decode time above ~1700 s, or times out, fall back to candidate B rather than re-tuning A."
+  },
+
+  "composability_with_ddm_t1h": {
+    "question": "Does candidate A compose byte-mechanically with t1h's banked drop-in carrier section?",
+    "t1h_carrier_section_bytes": 22183,
+    "t1h_carrier_section_sha256": "8ddeeb42dcf532f5e3f56bdabe0b0010966541303ab3a071b1160c0e75480b81",
+    "t1h_shipped_section_sha256": "30c33886dcf40684a5895c48e292d11a9180380f9d1219c0c6de81754bbb3aab",
+    "verdict": "COMPOSABLE — ORTHOGONAL BY MEASUREMENT, but NOT a raw byte splice.",
+    "measured_evidence": {
+      "carrier_edit_region_in_base_member_coords": [12, 70453],
+      "token_edit_region_in_base_member_coords": [70561, 181061],
+      "regions_disjoint": true,
+      "untouched_gap_bytes": 108,
+      "fx1_carrier_region_byte_identical_to_base": true,
+      "t1h_common_suffix_with_base_bytes": 110608,
+      "token_region_bytes": 110500,
+      "t1h_leaves_token_stream_untouched": "PROVEN: the common suffix (110,608 B) strictly contains the whole token region (110,500 B).",
+      "fx1_leaves_carrier_untouched": "PROVEN: fx1's carrier region is byte-identical to base.",
+      "orthogonality": "established in BOTH directions, byte-exactly"
+    },
+    "why_not_a_raw_splice": "The 22,183 B packed carrier section does not appear verbatim in the archive member — it is transformed by the container packing. The drop-in operates at the unpacked-section level, so composing requires the ENCODER, not a byte edit. This is exactly the compose_path the staging receipt already declares.",
+    "compose_path": [
+      "1. encoder byte-close with the fx1 corrector AND the t1h carrier section",
+      "2. re-run experiments/ddm_fx1_stage_candidate_runtime.py with --archive <new archive.zip>",
+      "3. re-run the parse-back falsifier against the new tree (fresh raw_sha256, since the pose carrier changes the render)"
+    ],
+    "predicted_composed_archive_bytes": 180609,
+    "predicted_composed_delta_bytes_vs_incumbent": -552,
+    "predicted_composed_S_rate_only": 0.158165696206,
+    "IMPORTANT": "The +8 B is t1h's counted cost. Its pose GAIN (cumulative d_pose ratio 0.4113) is t1h's to price and is NOT included in the S above, which moves the rate term only. The composed row is a genuine joint candidate, not a free lunch, and it needs its own parse-back because the rendered output changes.",
+    "sequencing_recommendation": "Fire candidate A first. It is closed, parse-backed and rate-only. The composed row is the natural NEXT fire, not a reason to delay this one."
+  },
+
+  "packet_hygiene": {
+    "sr1_B3_relative_path_law": "SATISFIED. 0 offending files across 33 physically present files (32 text + 1 binary), 0 skipped. The staging receipt itself carries no absolute path.",
+    "sr1_F15_c_compiler_guard": "PRESENT FROM BIRTH in the staged inflate.sh. Probes a REAL trivial compile (existence alone is not trusted — a stub cc passes `command -v`), exits 69 with the dependency named, matching the Brotli fail-closed precedent.",
+    "stray_files": 0,
+    "applefile_sidecars": 0,
+    "sidecar_note": "36 ExFAT AppleDouble sidecars were present and are stripped automatically by tools/fire_modal_auth_eval.py (it reported 'SANITIZE: removed 36 metadata-litter file(s)'). The tree digest is unchanged by the strip.",
+    "defect_found_and_cured_by_fx1": "The decode wrote two __pycache__ .pyc files (60,282 B) back INTO the staged tree, each embedding the absolute source path — a binary re-run of sr1 B3. Every gate read green: the tree digest excludes __pycache__ by construction, and the hygiene scan skipped binaries. Cured structurally, see structural_cures."
+  },
+
+  "structural_cures_landed": [
+    "assert_tree_is_path_clean now scans EVERY physically present file as bytes, binaries included, and reports its DENOMINATOR (text/binary/total/offenders/skipped) so a green cannot be vacuous.",
+    "assert_no_stray_files refuses any file present on disk but absent from the hashed manifest. The digest cannot see this class by construction: 'excluded from the hash' is not 'absent from the packet', and a judge copies the directory.",
+    "--verify-only re-runs both gates against an existing tree, because the defect is created AFTER staging finishes. A gate that can only run before the thing it guards against cannot fire.",
+    "verify_staged_replay now runs its subprocess with -B / PYTHONDONTWRITEBYTECODE=1. Root cause: the staging step's own replay imported the staged correctors and created the exact leak the staging step had just certified absent.",
+    "Both gates MOVED to run after every tree-touching step, immediately before the receipt is written, so they certify the final on-disk state rather than an intermediate one."
+  ],
+
+  "validated_fire_command": {
+    "status": "DRY-RUN VALIDATED (spend-free; the tool returns before dispatch under --dry-run)",
+    "canonical_tool": "tools/fire_modal_auth_eval.py",
+    "law": "Modal fires ONLY through this tool. Hand-assembled dispatch is the error factory (operator 2026-08-17).",
+    "argv": [
+      "env", "PYTHONPATH=src:upstream:$PWD", ".venv/bin/python", "tools/fire_modal_auth_eval.py",
+      "--runtime-dir", "<ssd_root>/candidate_runtime",
+      "--archive", "<ssd_root>/candidate_runtime/archive.zip",
+      "--output-dir", "<ssd_root>/t4_fire",
+      "--lane-id", "ddm_fx1_logistic_mixer_t4_n600",
+      "--instance-job-id", "<assigned at fire time>",
+      "--require-archive-sha", "65c75d7f097df930760b6611209f9caf66f5b10914cefa8d954b6d7834f6b0c4"
+    ],
+    "pin_check_result": "PIN: archive 180601 B sha 65c75d7f097df930... accepted",
+    "closure": "The tool arms its own poller. Endpoint closure is automatic; MAIN adjudicates the harvested row."
+  },
+
+  "expected_band": {
+    "S_point_estimate": 0.158160369334,
+    "band_low": 0.158160,
+    "band_high": 0.158161,
+    "band_basis": "The rate term is EXACT once the archive bytes are known (they are: 180,601, measured and repeat-identical). d_seg and d_pose are claimed unchanged and were verified locally through a full parse-back to a bit-identical decoded token field and a bit-identical 3.66 GB render. The only residual width is +/-0 on rate and whatever the T4 forward differs from the local decode-identity proof, which by construction should be zero.",
+    "refusal_condition": "Any returned S outside [0.1581, 0.1582] means the decode-identity claim broke on contest hardware. That is the rr2 failure mode (S 27.83 from libm desynchronisation) and it is precisely what the transcendental-free radical construction exists to prevent. Treat an out-of-band row as a cross-platform exactness finding, not as noise."
+  },
+
+  "honest_limits": [
+    "Selection on the scored clip: the member set, mixer context and learning rate were chosen by racing on the scored video. The FAMILY is robustly negative (30 of 33 rows) but the specific winning configuration is not claimed to be optimal on another clip.",
+    "Cross-platform exactness is ARGUED, not yet demonstrated. Every operation is IEEE correctly rounded and an AST gate refuses transcendentals, but rr2's lesson is that a correct local proof is not a cross-platform one. The T4 parse-back is a HARD gate, not a formality.",
+    "The decode margin is advisory-local and thin (8.9%).",
+    "Candidate B is a code-length measurement only; it is not a closed candidate."
+  ],
+
+  "score_claim": false,
+  "promotable": false,
+  "pointer_moved_by_this_arm": false,
+  "own_vehicle_frontier_at_seal": {
+    "S": 0.15853325034789678,
+    "archive_bytes": 181161,
+    "axis": "[contest-CUDA T4 n600]",
+    "note": "UNMOVED by ddm_fx1. Only MAIN's fire can move it."
+  }
+}
