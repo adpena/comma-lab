@@ -84,7 +84,9 @@ the refusal conditions themselves are not weakened:
   decoded tokens byte-exact — the axis is adjudicated MEASURED-INFEASIBLE,
   not pending. No CPU score exists or is claimed anywhere in the packet.
 - "Strict checker green": the gen-3 terminal state is 82/86
-  (`gen3_receipts/pre_submission_compliance.gen3.r3.json`). The 4 residual
+  (`gen3_receipts/pre_submission_compliance.gen3.r4.json` — the CANONICAL
+  terminal receipt, re-run after the round-5 fixes; r3 predates those edits
+  and is superseded). The 4 residual
   reds are each typed and documented in `COMPLIANCE_RUNBOOK.md`
   (2 structural-by-construction, 1 by-design dependency bootstrap under the
   e4 precedent, 1 operator-gated hosted manifest). None was converted by

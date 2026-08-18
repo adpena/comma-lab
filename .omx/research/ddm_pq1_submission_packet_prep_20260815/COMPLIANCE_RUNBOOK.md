@@ -3,6 +3,14 @@
 This runbook targets the active candidate in `PACKET_TARGET.json`. It executes
 the real strict checker; it is not a substitute for a green result.
 
+## Generation 0 run (2026-08-15) — HISTORICAL, retired e480b candidate
+
+The command block and custody paragraph below WERE the generation-0 invocation
+(archive `e3e6f440…`/183,502 B on VertigoDataTier). They are preserved as the
+template; every pinned value is superseded. The ACTIVE generation-3 values:
+archive `debb025f…`/179,930 B on APDataStore, submission tree `67059c1d…`,
+portable content tree `994f8aaa…`, receipt r4 (see "Generation 3" below).
+
 ```bash
 .venv/bin/python scripts/pre_submission_compliance_check.py \
   --contest-final \
@@ -30,13 +38,14 @@ when their real receipts exist. A future rerun must not point them at
 placeholders or hand-authored assertions.
 
 The public `README.md` and `report.txt` are inert documentation and are excluded
-from the checker/runtime content hash. The final strict run confirmed that the
-packet's executable runtime still matches the measured CUDA authority tree:
-full tree `77b94b5c02c6564024265e3692fc4add10b021038367f962103a648c34ca5035`
+from the checker/runtime content hash. The GENERATION-0 final strict run
+confirmed (2026-08-15, historical) that that packet's executable runtime
+matched its measured CUDA authority tree: full tree `77b94b5c02c6564024265e3692fc4add10b021038367f962103a648c34ca5035`
 and portable content tree
-`26c7d418ca26d7478e67f958354809503242298b5bf8f08c5ff0902508932a20`.
-There is therefore no local runtime-custody gap caused by adding the public
-documents.
+`26c7d418ca26d7478e67f958354809503242298b5bf8f08c5ff0902508932a20`
+(both GENERATION-0 values; the generation-3 counterparts are `67059c1d…` and
+`994f8aaa…` per the r4 paragraph below). The principle carries: adding the
+public documents creates no local runtime-custody gap.
 
 ## Contribution-convention gate
 

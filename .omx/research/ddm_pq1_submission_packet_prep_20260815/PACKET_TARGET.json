@@ -13,7 +13,7 @@
       "/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen3_sz1_composed_split/",
       "/Volumes/APDataStore/pact/ddm_sz1/ (archives + runtime trees + r3_artifacts + RETENTION_MANIFEST)"
     ],
-    "generation_manifest": "generations/gen3_sz1_composed_split/GENERATION_MANIFEST.json",
+    "generation_manifest": "generations/gen3_receipts/GENERATION_MANIFEST.json",
     "member": {
       "name": "p",
       "bytes": 179830,

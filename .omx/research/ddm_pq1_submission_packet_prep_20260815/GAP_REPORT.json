@@ -1,5 +1,12 @@
 {
   "schema": "pact.pq1.strict_compliance_gap_report.v1",
+  "status": "SUPERSEDED_BY_GENERATION_3",
+  "supersession": {
+    "superseded_utc": "2026-08-18T13:30:00Z",
+    "superseded_by": "generation 3 (sz1 composed) terminal compliance state",
+    "note": "This report describes GENERATION 2 (rr4 candidate, archive 35ac2b9b.../181,161 B, receipt ba596648...). The live candidate is generation 3: archive debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a / 179,930 B, canonical receipt gen3_receipts/pre_submission_compliance.gen3.r4.json (82/86; the 4 residual reds are typed and routed in COMPLIANCE_RUNBOOK.md). packet_disposition and submission_authority below are HISTORICAL generation-2 statements, not the current state. The gen-2 'additional_blocker: fire_modal_auth_eval.py is CUDA-only' is also RESOLVED: --axis cpu landed 2026-08-18 (task #1105) and the gen-3 CPU row was fired through it (measured infeasible, receipt in PACKET_TARGET cpu_axis).",
+    "live_counter_authority": "ADVERSARIAL_REVIEW_SCAFFOLD.md header and table"
+  },
   "swap_generation": 2,
   "refreshed_by": "ddm_pq2",
   "refreshed_utc": "2026-08-17T20:10:00Z",
@@ -54,14 +61,38 @@
     }
   ],
   "gaps_closed_this_generation": [
-    {"check": "submission_runtime_tree_matches_auth_eval", "cure": "staged exactly the 32 files in the evaluated manifest, excluding __pycache__ and submission custody files; the pinned tree hash 7acedb07 now reproduces"},
-    {"check": "dispatch_claim_terminal_row", "cure": "used the real lane and job ids and appended a terminal row"},
-    {"check": "dispatch_claim_successful_exact_eval_terminal_row", "cure": "terminal row restated in the canonical completed_contest_cuda status vocabulary"},
-    {"check": "dispatch_claim_terminal_archive_sha_bound", "cure": "terminal row notes now bind the archive sha256"},
-    {"check": "dispatch_claim_terminal_runtime_tree_sha_bound", "cure": "terminal row notes now bind the runtime tree sha256"},
-    {"check": "dispatch_claim_prior_active_row", "cure": "resolved with the corrected lane binding"},
-    {"check": "public_source_repo_link_present", "cure": "restored the repo and pinned-revision links to the public README"},
-    {"check": "required_file_present:report.txt and the report/label family", "cure": "staged a real submission directory rather than pointing the checker at the runtime tree"}
+    {
+      "check": "submission_runtime_tree_matches_auth_eval",
+      "cure": "staged exactly the 32 files in the evaluated manifest, excluding __pycache__ and submission custody files; the pinned tree hash 7acedb07 now reproduces"
+    },
+    {
+      "check": "dispatch_claim_terminal_row",
+      "cure": "used the real lane and job ids and appended a terminal row"
+    },
+    {
+      "check": "dispatch_claim_successful_exact_eval_terminal_row",
+      "cure": "terminal row restated in the canonical completed_contest_cuda status vocabulary"
+    },
+    {
+      "check": "dispatch_claim_terminal_archive_sha_bound",
+      "cure": "terminal row notes now bind the archive sha256"
+    },
+    {
+      "check": "dispatch_claim_terminal_runtime_tree_sha_bound",
+      "cure": "terminal row notes now bind the runtime tree sha256"
+    },
+    {
+      "check": "dispatch_claim_prior_active_row",
+      "cure": "resolved with the corrected lane binding"
+    },
+    {
+      "check": "public_source_repo_link_present",
+      "cure": "restored the repo and pinned-revision links to the public README"
+    },
+    {
+      "check": "required_file_present:report.txt and the report/label family",
+      "cure": "staged a real submission directory rather than pointing the checker at the runtime tree"
+    }
   ],
   "new_hazards_found_and_closed": [
     {

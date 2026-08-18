@@ -1,4 +1,8 @@
-# sz1 composed candidate — submission packet
+# sz1_composed_reencode — submission packet
+
+(Submission directory name: `submissions/sz1_composed_reencode/` — the exact
+string the PR body's "submission name" answer carries, per the upstream
+template's match-exactly requirement.)
 
 This directory describes the exact 179,930-byte archive and receiver used for
 the measured sz1 composed result. The score-bearing payload is `archive.zip`;

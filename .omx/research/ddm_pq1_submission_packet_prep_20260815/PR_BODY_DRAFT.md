@@ -1,4 +1,4 @@
-# submission name: sz1 composed re-encode
+# submission name: sz1_composed_reencode
 
 Prepared by the repository operator. **This is a hold-state draft.** It must not
 be opened as a pull request until the download URL, source-visibility check,
