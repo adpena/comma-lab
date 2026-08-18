@@ -64,3 +64,18 @@ who did not build generation 2.
 
 The fifth clean pass authorizes only a recommendation to MAIN. It does not
 authorize submission, push, or hosting.
+
+## Generation-3 swap note (2026-08-18)
+
+The candidate hot-swapped to the sz1 composed archive
+(`debb025f45bb42e3…`, 179,930 bytes, measured `[contest-CUDA]`
+0.15771357797660338). Round 1's findings were reviewed against the
+generation-2 (rr4) bytes and packet text; its three open findings carry
+forward where they are generation-independent (hosting authorization,
+Brotli-bootstrap policy, hygiene ledger rows). The counter remains `0/5`.
+All five counted passes must run against the generation-3 bytes, the
+refreshed packet documents (commits f4a3882345 / e54bdfa37e / 9fe84725f5),
+and a green strict compliance chain — which additionally requires the
+reproduction re-bind (`PENDING_REBIND` in `PACKET_TARGET.json`) to land
+first. The CPU axis is closed for review purposes: measured infeasible
+within the 1,800 s budget, receipt in `PACKET_TARGET.json` `cpu_axis`.

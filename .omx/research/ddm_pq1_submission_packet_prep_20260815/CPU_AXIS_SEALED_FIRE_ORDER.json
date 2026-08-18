@@ -3,8 +3,8 @@
   "swap_generation": 2,
   "prepared_by": "ddm_pq2",
   "prepared_utc": "2026-08-17T19:55:00Z",
-  "status": "NOT_DISPATCHED",
-  "disposition": "QUEUED_WITH_A_FIRE_ORDER",
+  "status": "SUPERSEDED_BY_EXECUTED_GEN3_FIRE",
+  "disposition": "SUPERSEDED",
   "owner": "MAIN",
   "axis": "[contest-CPU] Linux x86_64 n600",
   "archive": {
@@ -22,7 +22,7 @@
   "economics": {
     "modal_headroom_remaining_usd": 1.38,
     "headroom_authority": "measured billing authority, rv2 finding F5, 2026-08-17",
-    "cpu_row_precedent_usd": 0.40,
+    "cpu_row_precedent_usd": 0.4,
     "cpu_row_precedent_source": "measured MC36 predecessor CPU call",
     "estimated_share_of_remaining_headroom_pct": 29,
     "kind": "PROJECTION_NOT_SPEND",
@@ -145,5 +145,21 @@
     ],
     "rule": "The wrapper must volume-retain the inflated-output identity manifest before returning. No scalar-only result is sufficient."
   },
-  "fire_trigger": "MAIN only, and only after ALL of: operator GO; the canonical_chain_gap above is cured or explicitly waived; reconciliation reports zero live remote calls and zero active claims; the unique lane claim succeeds; the runtime dir still matches every sealed hash above."
+  "fire_trigger": "MAIN only, and only after ALL of: operator GO; the canonical_chain_gap above is cured or explicitly waived; reconciliation reports zero live remote calls and zero active claims; the unique lane claim succeeds; the runtime dir still matches every sealed hash above.",
+  "supersession": {
+    "superseded_utc": "2026-08-18T05:30:00Z",
+    "reason": "The candidate hot-swapped to generation 3 (sz1 composed, sha debb025f45bb42e3..., 179,930 B) before this gen-2 order fired. The CPU axis was then bought on the GEN-3 bytes via the canonical tool (tools/fire_modal_auth_eval.py --axis cpu), not via this sealed order.",
+    "executed_call_id": "fc-01M09G62A7SZ7HZYE5Q28YS7VP",
+    "outcome": "MEASURED_INFEASIBLE_WITHIN_CONTEST_BUDGET: inflate 3,422.7 s vs the 1,800 s budget on 4-thread x86_64 (token decode 3,108.7 s); harness fail-closed at 1,800 s; decoded token field 9ba2e52b... EXACT on CPU. No CPU score exists; GPU-required is now a measured fact.",
+    "outcome_recorded_in": [
+      "PACKET_TARGET.json cpu_axis",
+      "GENERATION_MANIFEST.json cpu_axis (gen3)",
+      "REPORT_PUBLIC.txt",
+      "README_PUBLIC.md",
+      "PR_BODY_DRAFT.md"
+    ],
+    "lane_terminal_row": "ddm_sz1_composed_cpu_n600 / completed_measured_infeasible_cpu_inflate_3423s_vs_1800s_budget",
+    "artifacts_dir": "/Volumes/APDataStore/pact/ddm_sz1/cpu_row_composed/r1_artifacts/",
+    "no_refire_rationale": "A dev-mode over-budget CPU score (--inflate-timeout bypass) would cost ~$0.15 + ~90 min and produce a number that can never be claimed under the contest budget; the infeasibility receipt is the complete honest disposition."
+  }
 }
