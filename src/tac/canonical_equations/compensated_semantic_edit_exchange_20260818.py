@@ -50,20 +50,57 @@ re-taking the square root -- never extrapolating the pose S-leg itself.
     mass x2 -> net -1.182e-04, retention 11.24%
     mass x4 -> net -2.660e-04, retention 12.64%
 
+THE PRECONDITION THIS MODEL CARRIES, and it is NOT free
+-------------------------------------------------------
+The extrapolation above holds ``residual_fraction`` -- the share of uncompensated pose damage
+the in-compile Schur compensation FAILS to cancel -- fixed at sa3's value. That is a
+precondition, not a law. sa1's 0.91x mass-linearity was measured on the UNCOMPENSATED family,
+where residual == damage; on the compensated family the residual is
+``(1 - cancellation) * damage``, and **cancellation is re-solved per object**. It is not a
+function of mass.
+
+**MEASURED FALSIFICATION (keep01, 2026-08-18, n600 advisory).** The keep01 row is the same
+family at 3.0x sa3's mass (-2,369 B vs -790 B). Naive mass-extrapolation predicts ~11.9%
+retention; the arm measured **42.2%** -- a 3.3x under-prediction -- because keep01's
+compensation cancels 99.9801% of a 4.44x LARGER uncompensated damage than sa3's row, clearing
+its own 99.9479% requirement with 2.62x margin on the residual. Better compensation on a
+bigger edit, not the concavity alone.
+
+Consequence: ``project_at_mass`` is CONSERVATIVE when a successor re-solves compensation at
+least as well as sa3 did, and WRONG IN THE DANGEROUS DIRECTION if a successor's compensation
+degrades. Pass ``residual_fraction_vs_unit`` explicitly whenever the successor's cancellation
+has been measured. Carrying sa3's implied cancellation onto a different object unexamined is
+the same cross-regime constant-transfer that cost qs4 +2.396e-04.
+
 Everywhere else on this campaign, concavity has been the enemy (a 2x worsening costs 1.41x
 what a 2x improvement buys, per ``ddm_asym1``). Here it is the friend, for exactly the same
 reason and with the sign flipped.
 
-THE CEILING, which is the routing verdict
-------------------------------------------
+THE CEILING -- CONDITIONAL, and its falsifier has already fired
+----------------------------------------------------------------
 Solving the same arithmetic for the mass that closes the 0.00765851 gap ALONE gives
-**52.1x**, requiring **41,160 B** of rate credit. The entire ``semantic_blob`` is
-**34,243 B**. The family is arithmetically incapable of closing the gap by itself at any
-mass, even in the physically impossible limit where the whole section goes to zero. It is a
-CONTRIBUTOR, not a route -- fire it for its net, compose it, and take the gap elsewhere.
+**52.1x**, requiring **41,160 B** of rate credit against a **34,243 B** ``semantic_blob``
+(1.20x the whole section) -- **at sa3's compensation quality**.
 
-Falsifier: a higher-mass rung whose measured retention beats the concavity prediction by
-more than the residual band. That would move the ceiling and this law with it.
+That qualifier is load-bearing, and the pre-registered falsifier ("a higher-mass rung whose
+measured retention beats the prediction") FIRED the same day. keep01, at 3.0x mass, measured
+42.2% retention against ~11.9% predicted, implying ``residual_fraction_vs_unit == 0.376``
+(2.66x better cancellation). At that quality the demand falls to **25,752 B = 0.75x the
+section -- nominally feasible.**
+
+So the honest verdict is NOT "contributor, never a route", which is what a ceiling computed
+at one fixed compensation quality wrongly asserted. It is:
+
+* the family is **NOT CLOSED as a route**;
+* whether it routes turns entirely on whether compensation quality HOLDS at high mass;
+* and 32.6x is **10.9x beyond keep01's measured point**, so the feasible verdict is a
+  projection resting on one extrapolated quantity -- the same shape as the infeasible
+  verdict it overturned. Neither is a finding.
+
+What WOULD settle it: a measured cancellation-vs-mass curve. Two points (sa3 at 1x, keep01
+at 3x) do not have one, and they disagree about the quantity the whole ceiling depends on.
+Until that curve exists, call ``family_cannot_close_alone`` with a MEASURED
+``residual_fraction_vs_unit`` and read ``feasible`` as conditional on it.
 
 ``verdict_scope``: the EXCHANGE RATIOS are INSTANCE (one measured member at one operating
 point); the SHAPE (rate/seg linear, pose concave, retention rising with mass) is
@@ -121,7 +158,23 @@ SEMANTIC_SECTION_BYTES = 34_243
 
 #: sa1's measured mass-linearity of pose damage: 0.91x of exactly linear. Extrapolate
 #: d_pose with this, then take sqrt(10*d_pose). Never extrapolate the pose S-leg.
+#: SCOPE: measured on the UNCOMPENSATED family, where residual == damage.
 SA1_POSE_MASS_LINEARITY = 0.91
+
+# --- keep01: the measured falsification of naive mass-extrapolation -------------------
+# ddm_sa3 keep01_authority/sm3r_keep01, n600 (all 600 pairs, representativeness 0.99998),
+# axis [macOS-CPU advisory, frozen CPU-torch PoseNet], score_claim=False.
+KEEP01_MASS_MULTIPLE = 2_369 / 790  # 2.9987x sa3's edit mass
+KEEP01_CANCELLATION_ACHIEVED = 0.9998012041204907
+KEEP01_CANCELLATION_REQUIRED = 0.9994794021137176
+KEEP01_MEAN_RESIDUAL_D_POSE = 7.408064299123584e-07
+KEEP01_MAX_RESIDUAL_ALLOWED = 1.940020465520849e-06
+KEEP01_PROJECTED_NET_S = -6.652669689221182e-04
+KEEP01_MEASURED_RETENTION = 0.42174  # net / |rate credit|, vs ~0.119 naively predicted
+#: How far naive mass-extrapolation under-predicted keep01. Not a correction factor to
+#: apply blindly -- it is the SIZE of the precondition, and the reason to measure
+#: cancellation per object rather than inherit it.
+KEEP01_NAIVE_UNDERPREDICTION_FACTOR = 3.3
 
 
 def _dec(value: float | Decimal) -> Decimal:
@@ -190,6 +243,7 @@ def project_at_mass(
     unit_rate_credit_S: float = RATE_CREDIT_S,
     unit_seg_damage_S: float = SEG_DAMAGE_S,
     unit_delta_d_pose: float | None = None,
+    residual_fraction_vs_unit: float = 1.0,
 ) -> dict:
     """Project the family's net S at ``mass`` x the sa3 edit, honoring the concavity.
 
@@ -201,9 +255,23 @@ def project_at_mass(
     The single most common way to get this wrong is to scale the pose S-leg directly --
     that assumes linearity the score function does not have, and it under-states the
     family everywhere above mass 1.
+
+    ``residual_fraction_vs_unit`` IS THE PRECONDITION, made explicit. It multiplies the
+    per-unit residual ``d_pose`` delta, so 1.0 (the default) means "this successor's
+    in-compile compensation cancels exactly as well as sa3's did". It is NOT a law:
+    cancellation is re-solved per object and does not follow from mass. keep01 measured
+    99.9801% cancellation at 3.0x mass where sa3's row implies less, which is why its
+    realized retention was 42.2% against ~11.9% predicted at the default -- a 3.3x
+    under-prediction (see KEEP01_* above).
+
+    Pass a MEASURED value whenever the successor's cancellation is known. Leaving the
+    default on an object whose compensation has NOT been re-solved is the cross-regime
+    constant transfer that cost qs4 +2.396e-04.
     """
     if mass <= 0:
         raise ValueError("mass must be positive")
+    if residual_fraction_vs_unit < 0:
+        raise ValueError("residual_fraction_vs_unit must be non-negative")
     getcontext().prec = 40
     m = _dec(mass)
     dp_base = _dec(base_d_pose)
@@ -211,7 +279,7 @@ def project_at_mass(
         _dec(unit_delta_d_pose)
         if unit_delta_d_pose is not None
         else _dec(ANCHOR_D_POSE) - dp_base
-    )
+    ) * _dec(residual_fraction_vs_unit)
     pose_leg = (Decimal(10) * (dp_base + m * dp_unit)).sqrt() - (Decimal(10) * dp_base).sqrt()
     seg_leg = m * _dec(unit_seg_damage_S)
     credit = m * _dec(unit_rate_credit_S)
@@ -225,23 +293,37 @@ def project_at_mass(
         "retention_fraction": float(-net / credit),
         "projected_d_pose": float(dp_base + m * dp_unit),
         "pose_leg_is_concave_in_mass": True,
+        "residual_fraction_vs_unit": residual_fraction_vs_unit,
+        "assumes_sa3_compensation_quality": residual_fraction_vs_unit == 1.0,
         "score_claim": False,
     }
 
 
-def family_cannot_close_alone(gap_S: float) -> dict:
+def family_cannot_close_alone(
+    gap_S: float, *, residual_fraction_vs_unit: float = 1.0
+) -> dict:
     """Mass (and rate-credit bytes) this family needs to close ``gap_S`` by itself.
 
     Returns the demand alongside the section that would have to supply it, so a caller
-    sees the infeasibility rather than a bare multiplier. At the sz1 gap the demand is
-    1.20x the ENTIRE semantic section -- the family is a contributor, never a route.
+    sees the infeasibility rather than a bare multiplier. At the sz1 gap and sa3's
+    compensation quality the demand is 1.20x the ENTIRE semantic section.
+
+    THE CEILING IS CONDITIONAL ON COMPENSATION QUALITY, not on the family. It inherits
+    ``project_at_mass``'s precondition, so ``residual_fraction_vs_unit`` moves it: keep01
+    measured 3.3x better retention than the default predicts, which shrinks the demand
+    correspondingly. Read ``feasible`` together with ``residual_fraction_vs_unit`` -- an
+    infeasible verdict at the default is a statement about sa3-quality compensation, NOT a
+    proof that no member of the family can route.
     """
     getcontext().prec = 40
     lo, hi = Decimal(1), Decimal(10_000)
     target = _dec(gap_S)
     for _ in range(200):
         mid = (lo + hi) / 2
-        if -_dec(project_at_mass(float(mid))["net_S"]) < target:
+        projected = project_at_mass(
+            float(mid), residual_fraction_vs_unit=residual_fraction_vs_unit
+        )
+        if -_dec(projected["net_S"]) < target:
             lo = mid
         else:
             hi = mid
@@ -254,6 +336,8 @@ def family_cannot_close_alone(gap_S: float) -> dict:
         "semantic_section_bytes": SEMANTIC_SECTION_BYTES,
         "fraction_of_semantic_section": bytes_needed / SEMANTIC_SECTION_BYTES,
         "feasible": bytes_needed <= SEMANTIC_SECTION_BYTES,
+        "residual_fraction_vs_unit": residual_fraction_vs_unit,
+        "ceiling_is_conditional_on_compensation_quality": True,
         "score_claim": False,
     }
 
@@ -464,6 +548,14 @@ __all__ = [
     "RATE_DENOMINATOR_BYTES",
     "RETENTION_FRACTION_AT_UNIT_MASS",
     "SA1_POSE_MASS_LINEARITY",
+    "KEEP01_MASS_MULTIPLE",
+    "KEEP01_CANCELLATION_ACHIEVED",
+    "KEEP01_CANCELLATION_REQUIRED",
+    "KEEP01_MEAN_RESIDUAL_D_POSE",
+    "KEEP01_MAX_RESIDUAL_ALLOWED",
+    "KEEP01_PROJECTED_NET_S",
+    "KEEP01_MEASURED_RETENTION",
+    "KEEP01_NAIVE_UNDERPREDICTION_FACTOR",
     "SEG_DAMAGE_FRACTION_OF_CREDIT",
     "SEG_DAMAGE_S",
     "SEMANTIC_SECTION_BYTES",
