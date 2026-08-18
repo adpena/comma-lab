@@ -28752,3 +28752,27 @@ a seg gain and NO measured pose cost on the only (advisory, 18.2×-optimistic-on
 matched epochs → config input to tc1's TR1 composition program + any future TR1 burn charter.
 Pointer UNMOVED; every number here is advisory; no score claim. verdict_scope: INSTANCE (this
 vehicle, this 400-ep budget, 36-pair gate instrument).
+
+## FEED-fx2row (2026-08-18) — SIXTH POINTER MOVE: fx2 candidate A T4 row [MAIN fire chain]
+
+**S 0.1580598246322269 @ 180,450 B [contest-CUDA T4, n600]** — archive sha 9de0f6db3ca7ae4e…,
+call fc-01M09CSS69CZGXMF0SGSXSZFTQ, ~$0.16, canonical_score recomputed from 8dp components +
+exact archive bytes. Realized EXACTLY at the sealed projection (16 digits). Δ −1.0054e-4 vs fx1
+= precisely the −151 B rate credit (151 × 25/37,545,489); seg 0.029611 and pose
+0.008294576541331089 IDENTICAL to fx1 to every digit — decode-identity PROVEN on the worker
+(decoded token field 9ba2e52b… bit-identical). Decode 1,180 s (620 s under budget; +137.5 s vs
+fx1 as the byteclose predicted — the 13-member mixer decode tax, priced and accepted).
+
+**The probability-MODEL axis paid TWICE on the same surface** ([[probability-model-axis-live-fx1-sweep-prior]]):
+fx1 −560 B (11 members, cls_boundary_agree_ubin8) → fx2 −151 B further (13 members, widened
+4-neighbour causal template × homogeneity context, 79% additive composition). Fire chain receipts:
+r1 refusal (custody-in-tree, $0) → r2 worker death (runtime-closure defect, ~$0.02, 13.5 s) →
+clean-env inflate.sh smoke (945 s, both falsifiers exact) → r3 green. The RUNTIME-CLOSURE LAW
+(flatten correctors package-relative + env -i smoke before every fire on a new tree) is now
+proven ×2: it caught fx2's import death AND sz1's wrong-corrector desync before they cost rows.
+
+**Chain state:** posterior anchor (pr130_lineage_hpac_cpr1_micro_edit) → pointer refreshed
+(effective_frontier = 0.1580598246322269, source continual_learning_posterior) → hot-state
+POINTER_LINE. NEXT: sz1 composed (179,930 B debb025f…, smoke GREEN, all 4 PRE_FIRE_STEPS
+discharged) fires as the SEVENTH candidate, projected S 0.15771358. Sub-0.15 gap 0.00806; pose
+0.008295 ≈ 103% of the gap — pose is THE axis after the rate tail drains.
