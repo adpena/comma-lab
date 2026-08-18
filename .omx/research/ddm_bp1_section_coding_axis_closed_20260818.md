@@ -73,6 +73,21 @@ Rate progress must come from **representation** — fewer or smaller symbols —
 them better. Per `ddm_asym1`, rate is the linear, additive, honest axis and needs 11,584 B
 (6.4% of the archive) to close the gap alone; none of it will come from the coder.
 
-`token_stream` (109,801 B, 61.0% of the archive) remains unprobed for byte-planing. It is an
-rc64 arithmetic-coded bitstream and expected null by construction — stated here as a
-**derivation, not a measurement**, exactly as xs1 stated it.
+## 5. The last derivation, converted to a measurement
+
+xs1 and this memo's first draft both closed `token_stream` (109,801 B, **61.0% of the archive**)
+by *derivation* — "rc64 arithmetic-coded, expected null by construction." That is now
+**MEASURED** (`BP1_TOKEN_STREAM.json`, stream persisted as `token_stream.shipped`, sha
+`5b09fd784a7c80cf`):
+
+| mechanism | bytes | ratio | Δ if shipped |
+|---|---:|---:|---:|
+| brotli q11 lgwin16 | 109,808 | 1.0001 | +7 |
+| brotli q11 lgwin24 | 109,806 | 1.0000 | +5 |
+| lzma XZ 9e | 109,864 | 1.0006 | +63 |
+| byte-plane k∈{2,3,4,8} → brotli | 109,808 | 1.0001 | +7 |
+
+Every mechanism COSTS bytes. The derivation was right, and now it is a measurement — so the
+section-coding axis is closed across **all four** sections, not three with one assumed. A
+derivation that survives its own measurement is worth more than one that was never tested;
+this one took two minutes.
