@@ -68,6 +68,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -93,6 +94,24 @@ VENV_PY = str(REPO / ".venv" / "bin" / "python")
 MODAL_BIN = str(REPO / ".venv" / "bin" / "modal")
 LITTER_BASENAMES = {".DS_Store"}
 LITTER_PREFIXES = ("._",)
+
+# launch_detached_process.py refuses --done-receipt outside this shape. We compose the
+# receipt from --instance-job-id, whose CONVENTION is "modal:<name>" — and ':' is not in
+# the allowed set, so the compose silently produced an unarmable name and the watcher
+# never started (fired 2026-08-18 on ddm_sa3; the call ran with no closer).
+# Bound to the launcher's own _RECEIPT_NAME by test, not by hope.
+_DONE_RECEIPT_ALLOWED = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
+
+
+def _done_receipt_name(instance_job_id: str) -> str:
+    """Sanitize an instance-job-id into a launcher-legal done-receipt name."""
+    cleaned = re.sub(r"[^A-Za-z0-9_.-]", "_", instance_job_id).lstrip("_.-")
+    if not cleaned:
+        cleaned = "auth_eval"
+    receipt = f"{cleaned}_harvest"[:128]
+    if not _DONE_RECEIPT_ALLOWED.fullmatch(receipt):  # pragma: no cover - belt and braces
+        raise ValueError(f"could not build a legal done-receipt from {instance_job_id!r}")
+    return receipt
 
 # The two contest score axes. CPU and CUDA are SEPARATE evidence spaces (neither is
 # ever inferred from the other), so the axis picks the worker entrypoint, the evidence
@@ -643,7 +662,7 @@ def main(argv: list[str] | None = None) -> int:
     manifest["stage5_call_id"] = call_id
     print(f"DISPATCHED: call {call_id}")
 
-    receipt = f"{args.instance_job_id}_harvest"
+    receipt = _done_receipt_name(args.instance_job_id)
     arm = subprocess.run(
         [
             VENV_PY, str(REPO / "tools" / "launch_detached_process.py"),
@@ -662,8 +681,35 @@ def main(argv: list[str] | None = None) -> int:
         manifest["stage6_poller"] = {"pid": arm_info.get("pid"), "done_receipt": receipt}
         print(f"POLLER ARMED: pid {arm_info.get('pid')} receipt {receipt}")
     except (json.JSONDecodeError, ValueError):
-        manifest["stage6_poller"] = {"error": arm.stdout[-400:] + arm.stderr[-400:]}
-        print("WARNING: poller arm output unparsable — VERIFY THE WATCHER before ending the turn.")
+        manifest["stage6_poller"] = {
+            "error": arm.stdout[-400:] + arm.stderr[-400:],
+            "attempted_done_receipt": receipt,
+            "poller_armed": False,
+        }
+        # The job IS live on Modal; refusing here would strand it worse. Make the
+        # unarmed state DISCOVERABLE instead of only printed — a scrollback warning
+        # is not a state anyone can query later.
+        (out_dir / "POLLER_UNARMED.json").write_text(
+            json.dumps(
+                {
+                    "schema": "fire_modal_auth_eval_poller_unarmed.v1",
+                    "call_id": call_id,
+                    "attempted_done_receipt": receipt,
+                    "instance_job_id": args.instance_job_id,
+                    "arm_stdout_tail": arm.stdout[-400:],
+                    "arm_stderr_tail": arm.stderr[-400:],
+                    "consequence": "NO watcher will close this call; harvest it by hand or arm one manually",
+                },
+                indent=1,
+            ),
+            encoding="utf-8",
+        )
+        print("=" * 72)
+        print("POLLER NOT ARMED — the call is LIVE with NO watcher.")
+        print(f"  call_id: {call_id}")
+        print(f"  marker:  {out_dir / 'POLLER_UNARMED.json'}")
+        print("  ARM ONE MANUALLY before ending the turn, or the row never closes.")
+        print("=" * 72)
 
     print(f"MANIFEST: {write_fire_manifest(out_dir, manifest)}")
     return 0
