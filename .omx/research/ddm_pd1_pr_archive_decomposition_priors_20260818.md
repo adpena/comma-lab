@@ -74,7 +74,7 @@ property of the *object*, not of our search.
 | `pr96_p_constant_zero.bin` (the defect) | 930 | `bf04a4e2dd69` |
 
 **Typed prior store: `.omx/research/ddm_pd1_pr_decomposition_priors_20260818.jsonl` — 661 rows**
-(493 MEASURED / 138 DERIVED / rest RECEIPT; 63 PRs; 0 rows missing evidence),
+(500 MEASURED / 142 DERIVED / 19 RECEIPT; 63 PRs; **0 rows missing evidence**),
 schema `{pr, source, kind, section, stat, value, unit, evidence, sha256, grade, consumer}`. Every
 row is **generated from parsed bytes**, never hand-typed, so the store cannot drift from the
 artifacts.
