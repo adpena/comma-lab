@@ -3,7 +3,9 @@
 > **SUPERSEDED — HISTORICAL (generation-0, the retired e480b candidate,
 > archive `e3e6f440…`). Written 2026-08-15; preserved append-only.** The live
 > candidate is generation-3 sz1 composed (`debb025f…`/179,930 B) with terminal
-> compliance receipt `gen3_receipts/pre_submission_compliance.gen3.r4.json`
+> compliance receipt `gen3_receipts/pre_submission_compliance.gen3.r5.json`
+> (sha `6f4f6dc8e3648eb0…`; r4 superseded — it predates the round-7 edits to two
+> files the checker scans)
 > (82/86; 4 adjudicated reds routed in `COMPLIANCE_RUNBOOK.md`). Every
 > present-tense gap statement below describes the generation-0 state, not the
 > current packet. The one gap this report named OUTSIDE the 86 checks (the

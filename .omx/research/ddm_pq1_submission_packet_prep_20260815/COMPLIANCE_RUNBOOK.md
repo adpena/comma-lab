@@ -9,7 +9,9 @@ The command block and custody paragraph below WERE the generation-0 invocation
 (archive `e3e6f440…`/183,502 B on VertigoDataTier). They are preserved as the
 template; every pinned value is superseded. The ACTIVE generation-3 values:
 archive `debb025f…`/179,930 B on APDataStore, submission tree `67059c1d…`,
-portable content tree `994f8aaa…`, receipt r4 (see "Generation 3" below).
+portable content tree `994f8aaa…`, receipt **r5** (`gen3_receipts/pre_submission_compliance.gen3.r5.json`,
+sha `6f4f6dc8e3648eb0…` — the CANONICAL terminal receipt; r3 and r4 are superseded,
+see "Generation 3" below).
 
 ```bash
 .venv/bin/python scripts/pre_submission_compliance_check.py \
@@ -44,7 +46,7 @@ matched its measured CUDA authority tree: full tree `77b94b5c02c6564024265e3692f
 and portable content tree
 `26c7d418ca26d7478e67f958354809503242298b5bf8f08c5ff0902508932a20`
 (both GENERATION-0 values; the generation-3 counterparts are `67059c1d…` and
-`994f8aaa…` per the r4 paragraph below). The principle carries: adding the
+`994f8aaa…` per the r5 paragraph below). The principle carries: adding the
 public documents creates no local runtime-custody gap.
 
 ## Contribution-convention gate

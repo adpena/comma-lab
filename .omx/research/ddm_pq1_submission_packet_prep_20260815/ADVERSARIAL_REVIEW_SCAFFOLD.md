@@ -18,7 +18,8 @@ fixed. A pass cannot be counted while the strict compliance chain is red.
 
 **Strict-chain-red clause, gen-3 adjudication (2026-08-18):** the clause "a
 pass cannot be counted while the strict compliance chain is red" is read
-against the gen-3 TERMINAL state 82/86 (receipt r4 after the pass-5 fixes):
+against the gen-3 TERMINAL state 82/86 (receipt **r5**, re-bought after the
+round-7/8 fixes; r3/r4 superseded):
 the 4 residual reds are each typed and documented (2 structural-by-
 construction, 1 by-design Brotli bootstrap per the e4 precedent, 1 operator-
 gated hosted manifest) per `COMPLIANCE_RUNBOOK.md` and the SWAP_PROCEDURE
@@ -95,7 +96,7 @@ generation-2 (rr4) bytes; generation-independent items carried forward.
 Statements below written at swap time and SINCE RESOLVED: the reproduction
 re-bind landed (PACKET_TARGET `reproduction.status = VERIFIED`, receipt
 `RESULT_pq2_e2e.json`, rebuilt `debb025f…` exactly); the compliance chain
-reached its adjudicated terminal state (r4, 82/86). The CPU axis is closed
+reached its adjudicated terminal state (r5, 82/86). The CPU axis is closed
 for review purposes: measured infeasible within the 1,800 s budget, receipt
 in `PACKET_TARGET.json` `cpu_axis`. For the live counter, read ONLY the
 header and table of this file.

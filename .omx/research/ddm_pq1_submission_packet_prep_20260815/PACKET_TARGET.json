@@ -108,7 +108,7 @@
         "RECEIVER_PARSEBACK.json"
       ],
       "explanation": "Both were inherited from the hv1_base_control source tree and describe a 182,759 B archive, not the 181,161 B archive they sit beside. They are stale LABELS, not stale proofs. This packet binds the three authoritative receipts instead and never cites the inherited pair.",
-      "supersession_record": "generations/gen3_receipts/CUSTODY_SUPERSEDED.json (also at the gen-2 store root /Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/CUSTODY_SUPERSEDED.json; moved OUT of candidate_runtime/ per the hashed-tree hazard record)",
+      "supersession_record": "GEN-2 RECORD (this block): /Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/CUSTODY_SUPERSEDED.json — sha256 8d65ac3f5b270a90183c1c3c5c5467a909900d1d27c053c10843f9a874d0b1fa, 2912 B, schema pact.custody_supersession.v1, archive 35ac2b9b…/181161 B; moved OUT of candidate_runtime/ per the hashed-tree hazard record. NOT THE SAME FILE as the gen-3 record generations/gen3_receipts/CUSTODY_SUPERSEDED.json (sha256 f1f3eebff5ba90c84689ab016ae7de2cf7285a50f9f8b7350db2b243fb2830d8, 1535 B, schema pq1_custody_superseded.v1, archive debb025f…/179930 B) — verify by sha, never by existence",
       "authoritative_receipts": [
         "RESULT_build.json",
         "RESULT_receiver_build.json",
