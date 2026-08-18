@@ -92,7 +92,24 @@
     "t1h_carrier_section_bytes": 22183,
     "t1h_carrier_section_sha256": "8ddeeb42dcf532f5e3f56bdabe0b0010966541303ab3a071b1160c0e75480b81",
     "t1h_shipped_section_sha256": "30c33886dcf40684a5895c48e292d11a9180380f9d1219c0c6de81754bbb3aab",
-    "verdict": "COMPOSABLE — ORTHOGONAL BY MEASUREMENT, but NOT a raw byte splice.",
+    "verdict_mechanical": "COMPOSABLE — ORTHOGONAL BY MEASUREMENT, but NOT a raw byte splice.",
+    "verdict_operational": "DO NOT COMPOSE WITH t1h PASS-2/PASS-3 VALUES. Superseded 2026-08-17 by the coordinator: the t1h pass-2 T4 row REFUSED — d_pose ROSE 6.3x. The CPU-torch pose accept-oracle does not transfer to the T4 axis. The mechanical orthogonality below is a measured byte fact and stands; the VALUES it would carry are refused.",
+    "what_candidate_A_actually_ships": {
+      "carrier_values": "THE SHIPPED ONES. Measured: candidate A's carrier region is byte-identical to base, so it inherits NOTHING from the refused re-solve.",
+      "carrier_region_sha256_prefix": "89ed28d976957a7a",
+      "why_this_arm_is_unaffected": "The mixer is a pure RATE mover. It changes only the probability law over an unchanged token field; the decoded field and the render are bit-identical to base. Bytes are axis-independent in a way a pose re-solve is not — which is exactly why t1h's axis-transfer failure does not touch this row."
+    },
+    "sha_naming_hazard_FLAGGED": {
+      "issue": "8ddeeb42… is the t1h pass-2 RE-SOLVED CANDIDATE section, NOT the shipped one. The shipped section is 30c33886…. A relay describing '8ddeeb42' as the shipped values would cause someone to ship the REFUSED values believing they are the incumbent's.",
+      "shipped_section_sha256": "30c33886dcf40684a5895c48e292d11a9180380f9d1219c0c6de81754bbb3aab",
+      "resolved_pass2_candidate_sha256": "8ddeeb42dcf532f5e3f56bdabe0b0010966541303ab3a071b1160c0e75480b81",
+      "verified_at_source": "ddm_t1h/candidate_pass2/T1H_CANDIDATE_ARCHIVE.json → standalone_carrier_section"
+    },
+    "carrier_swap_precondition_if_ever_attempted": {
+      "hard_constraint": "The CAP1 carrier section is at its Rice bit ceiling with ZERO slack: 78,036 of 78,040 bits used; t1h pass-2 consumed the last 4.",
+      "requirement": "ANY coefficient change to the carrier MUST run the container-fit repair (tac fit_to_bit_budget, landed by the t1h arm, 5 tests) or it risks overflowing the exact-length dispatch the receiver depends on.",
+      "section_contract": "22,183 B exact — the length-dispatch contract still holds."
+    },
     "measured_evidence": {
       "carrier_edit_region_in_base_member_coords": [12, 70453],
       "token_edit_region_in_base_member_coords": [70561, 181061],
@@ -114,8 +131,8 @@
     "predicted_composed_archive_bytes": 180609,
     "predicted_composed_delta_bytes_vs_incumbent": -552,
     "predicted_composed_S_rate_only": 0.158165696206,
-    "IMPORTANT": "The +8 B is t1h's counted cost. Its pose GAIN (cumulative d_pose ratio 0.4113) is t1h's to price and is NOT included in the S above, which moves the rate term only. The composed row is a genuine joint candidate, not a free lunch, and it needs its own parse-back because the rendered output changes.",
-    "sequencing_recommendation": "Fire candidate A first. It is closed, parse-backed and rate-only. The composed row is the natural NEXT fire, not a reason to delay this one."
+    "IMPORTANT": "The +8 B is t1h's counted cost. Its CPU-measured pose gain (cumulative d_pose ratio 0.4113) did NOT survive T4 — the pass-2 row refused with d_pose up 6.3x. The predicted composed numbers above are retained as the mechanical arithmetic ONLY; they are not a live candidate.",
+    "sequencing_recommendation": "Fire candidate A. It is closed, parse-backed, rate-only, and ships the SHIPPED carrier values. The composed row is NOT the next fire: it is blocked until a pose re-solve is accepted on the T4 axis itself rather than on the CPU-torch oracle. The measured orthogonality is banked for whenever such a re-solve exists."
   },
 
   "packet_hygiene": {

@@ -465,3 +465,69 @@ fire can move it.
 3. **Byte-close candidate B** only if A's T4 decode time lands above ~1,700 s.
 4. Items 2-5 of §8's NEXT_IF_RESUMED (hx1 scan-order members; SSE/APM second stage; the miss-sector
    relative law, ceiling **1,247 B**) are unchanged and unstarted.
+
+### 9.7 Correction to §9.4 — the composed row is BLOCKED (coordinator, 2026-08-17)
+
+§9.4 recommended the fx1+t1h composed row as "the natural next fire." **That recommendation is
+withdrawn.** Two facts arrived from the t1h arc after §9.4 was written:
+
+1. **The t1h pass-2 T4 row REFUSED — d_pose ROSE 6.3×.** The CPU-torch pose accept-oracle does not
+   transfer to the T4 axis. So the pose *gain* that made the composed row attractive is not real on
+   the axis that scores it.
+2. **The CAP1 carrier sits at its Rice bit ceiling with ZERO slack** — 78,036 of 78,040 bits, and
+   t1h pass-2 consumed the last 4. Any future coefficient change to the carrier must run the
+   container-fit repair (`tac fit_to_bit_budget`) or it risks overflowing the exact-length dispatch
+   the receiver relies on. The 22,183 B section contract still holds.
+
+**What survives unchanged:** the *mechanical* orthogonality in §9.4 is a measured byte fact and it
+stands — disjoint edit regions, proven in both directions. It is banked for whenever a pose re-solve
+is accepted *on the T4 axis itself*. What is withdrawn is the operational recommendation.
+
+**Candidate A is untouched by all of this, and the reason is structural.** It never edits the
+carrier: its carrier region is byte-identical to base (region sha `89ed28d9…`), so it ships the
+**shipped** values and inherits nothing from the refused re-solve. And the mixer is a pure **rate**
+mover — the decoded token field and the 3.66 GB render are bit-identical to base, so its claim is
+about *bytes*, which are axis-independent in exactly the way a pose re-solve is not. t1h's
+axis-transfer failure is the clean counter-example that shows why: a CPU-measured *distortion*
+improvement had to survive a change of axis and did not; a *byte count* has no axis to survive.
+
+**A naming hazard worth flagging, because it would ship the refused values.** The relay described
+"the SHIPPED carrier section 8ddeeb42-era values." Verified at source
+(`ddm_t1h/candidate_pass2/T1H_CANDIDATE_ARCHIVE.json`): **`8ddeeb42…` is the pass-2 RE-SOLVED
+candidate**; the **shipped** section is **`30c33886…`**. The intent of the instruction was
+unambiguous ("not the pass-2/pass-3 re-solved ones") so the action is unaffected, but anyone acting
+on the sha alone would install precisely the values the T4 row refused. Recorded in the fire-order
+under `sha_naming_hazard_FLAGGED`.
+
+### 9.8 Second review pass — findings taken, including one against my own cure
+
+An independent adversarial review of the staging generator returned 3 HIGH, 6 MEDIUM, 7 LOW. The
+ones that mattered, and what they cost:
+
+* **H2, and it is the one worth naming.** I built a "report the denominator" cure for a vacuous
+  hygiene gate and then **hardcoded `files_skipped_unscanned: 0`** into it — while the same receipt
+  reported 35 skipped sidecars. The vacuity bug reappeared *inside its own cure*, one function below
+  the docstring arguing against it. Now measured: `files_skipped_applefile` + `files_skipped_non_regular`.
+* **M5 — nothing in the receipt covered the bytes that actually ship.** `repin_inflate` hashed the
+  *source* archive it was handed, and `archive.zip` is excluded from the tree digest, so a truncated
+  copy would have surfaced only at decode time on paid hardware. The fidelity gate now re-hashes the
+  **shipped** copy against the pins.
+* **H1 — my stray gate could not detect drift.** It re-derived the manifest with the predicate that
+  built it, so manifest membership was true by construction: an edited or added file read green.
+  New `assert_tree_matches_receipt` compares the physical tree against the **pinned** receipt
+  manifest and re-derives the digest.
+* **H3** — `SKIP_NAMES` matched a *basename* at any depth, so a nested `runtime/archive.zip` would be
+  both silently not-copied and misfiled as a deliberate exclusion. Now anchored to the tree root.
+* **M1/M6/M3/M4** — digest now taken *after* the replay; the staged rr4 copy is byte-identity-enforced
+  (was reported, never enforced) and transcendental-gated (the rr2 constants live in that half);
+  `--skip-replay` writes `fidelity_verified: false` rather than merely omitting a key.
+
+**Controls, run in both directions:** one byte appended to a manifest file → REFUSE; file added →
+REFUSE; shipped archive truncated → REFUSE; receipt removed → REFUSE; empty directory → REFUSE
+(previously green); and after each restore → PASS. The gauges move both ways, so they read the
+disease rather than the weather.
+
+**The candidate did not move.** Re-running the fully patched generator reproduced
+`runtime_tree_sha256 = d9e39a36…`, archive `65c75d7f…` / 180,601 B, staged replay
+879,609.6594294705 bits at **delta +0.000000**, and 107/107 tests pass. Every fix landed in the
+instrument; none of them touched the bytes that ship.
