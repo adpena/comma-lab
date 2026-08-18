@@ -58,6 +58,7 @@ MODE_SCALE_VQ = 2
 MODE_BOTH_VQ = 3
 MODE_LOWRANK = 4
 MODE_ROW_PRUNE = 5
+MODE_ROW_PRUNE_MIXED = 6
 
 LOWRANK_NAMES = {
     "coord_mix.weight",
@@ -77,6 +78,15 @@ SELECTED_MIXED_Q3_NAMES = {
     "blocks.2.film.weight",
     "blocks.3.film.weight",
 }
+# The two SD1M "S2" legs that do NOT overlap the row-prune selection.  Films
+# 1/2/3 are 99%-pruned by MODE_ROW_PRUNE at keep_percent=1, so re-quantizing
+# them buys almost nothing; frame_embed and blocks.0.film are untouched by the
+# prune and keep their full q4 payload, so they are the surviving marginal.
+PRUNE_MIXED_Q3_NAMES = {
+    "frame_embed.weight",
+    "blocks.0.film.weight",
+}
+DEFAULT_SEMANTIC_BITS = 4
 SD1_PUBLIC_RECEIVER_COMMIT = "58f62cd22ff07562c0534c999d705fb9edfe5279"
 
 
@@ -196,26 +206,42 @@ def quantized_components(name: str, value: torch.Tensor, bits: int = 4) -> tuple
     )
 
 
-def standard_q4_payload(name: str, value: torch.Tensor) -> tuple[bytes, torch.Tensor]:
-    restored, scales, codes = quantized_components(name, value, 4)
-    payload = scales.tobytes() + sd1.pack_signed_bits(torch.from_numpy(codes), 4)
+def standard_qn_payload(name: str, value: torch.Tensor, bits: int) -> tuple[bytes, torch.Tensor]:
+    """Per-axis fp16 scales plus signed ``bits``-wide codes, the SD1M coding."""
+
+    if not 2 <= bits <= 8:
+        raise ValueError("semantic bit depth must be in [2, 8]")
+    restored, scales, codes = quantized_components(name, value, bits)
+    payload = scales.tobytes() + sd1.pack_signed_bits(torch.from_numpy(codes), bits)
     return payload, restored
 
 
-def decode_standard_q4(name: str, template: torch.Tensor, blob: memoryview) -> tuple[torch.Tensor, memoryview]:
+def standard_q4_payload(name: str, value: torch.Tensor) -> tuple[bytes, torch.Tensor]:
+    return standard_qn_payload(name, value, DEFAULT_SEMANTIC_BITS)
+
+
+def decode_standard_qn(
+    name: str, template: torch.Tensor, blob: memoryview, bits: int
+) -> tuple[torch.Tensor, memoryview]:
+    if not 2 <= bits <= 8:
+        raise ValueError("semantic bit depth must be in [2, 8]")
     shape = tuple(template.shape)
     embedding = name.endswith("embed.weight")
     scale_count = shape[-1] if embedding else shape[0]
     scale_bytes = scale_count * 2
     if len(blob) < scale_bytes:
-        raise ValueError(f"truncated q4 scales for {name}")
+        raise ValueError(f"truncated q{bits} scales for {name}")
     scales = torch.from_numpy(np.frombuffer(blob[:scale_bytes], dtype="<f2").copy()).float()
     remaining = blob[scale_bytes:]
-    codes, remaining = sd1.unpack_signed_bits(remaining, template.numel(), 4)
+    codes, remaining = sd1.unpack_signed_bits(remaining, template.numel(), bits)
     scale_shape = [1] * template.ndim
     scale_shape[-1 if embedding else 0] = scale_count
     restored = codes.reshape(shape).float() * scales.reshape(scale_shape)
     return restored, remaining
+
+
+def decode_standard_q4(name: str, template: torch.Tensor, blob: memoryview) -> tuple[torch.Tensor, memoryview]:
+    return decode_standard_qn(name, template, blob, DEFAULT_SEMANTIC_BITS)
 
 
 def fit_codebook(values: np.ndarray, size: int) -> tuple[np.ndarray, np.ndarray]:
@@ -563,6 +589,144 @@ def unpack_prune_candidate(blob: bytes, template: Mapping[str, torch.Tensor]) ->
     return restored
 
 
+def resolve_mixed_depths(
+    quantized_order: list[str], depths: Mapping[str, int]
+) -> OrderedDict[str, int]:
+    """Expand a sparse per-tensor depth override to the full quantized order."""
+
+    unknown = sorted(set(depths) - set(quantized_order))
+    if unknown:
+        raise ValueError(f"mixed-depth override names are absent from the tensor order: {unknown}")
+    resolved: OrderedDict[str, int] = OrderedDict()
+    for name in quantized_order:
+        bits = int(depths.get(name, DEFAULT_SEMANTIC_BITS))
+        if not 2 <= bits <= 8:
+            raise ValueError(f"mixed semantic bit depth for {name} must be in [2, 8]")
+        resolved[name] = bits
+    return resolved
+
+
+def pack_prune_mixed_candidate(
+    state: Mapping[str, torch.Tensor],
+    keep_percent: int,
+    depths: Mapping[str, int],
+) -> tuple[bytes, OrderedDict[str, torch.Tensor], dict[str, Any]]:
+    """MODE_ROW_PRUNE plus an SD1M-style per-tensor depth table.
+
+    The row-prune geometry is byte-identical to :func:`pack_prune_candidate`;
+    the only structural addition is the depth nibble table, which lets tensors
+    outside ``PRUNE_NAMES`` store at fewer than four bits.  Depths also apply to
+    the surviving rows of a pruned tensor, so ``depths = {}`` reproduces
+    MODE_ROW_PRUNE's payload with an eight-byte allocation-table prefix.
+    """
+
+    if not 1 <= keep_percent < 100:
+        raise ValueError("keep percentage must be in [1, 99]")
+    qnames = sd1.quantized_names(state)
+    allocation = resolve_mixed_depths(qnames, depths)
+    mask = mask_for_names(qnames, PRUNE_NAMES)
+    payload = bytearray(representation_header(MODE_ROW_PRUNE_MIXED, keep_percent))
+    payload.extend(struct.pack("<H", mask))
+    payload.extend(sd1._pack_depth_nibbles([allocation[name] for name in qnames]))
+    expected: OrderedDict[str, torch.Tensor] = OrderedDict()
+    kept_rows: dict[str, int] = {}
+    for name, value in state.items():
+        if value.ndim < 2:
+            stored = value.detach().cpu().to(torch.float16)
+            payload.extend(stored.numpy().astype("<f2", copy=False).tobytes())
+            expected[name] = stored.float()
+        elif name not in PRUNE_NAMES:
+            encoded, restored = standard_qn_payload(name, value, allocation[name])
+            payload.extend(encoded)
+            expected[name] = restored
+        else:
+            rows = value.shape[0]
+            keep = max(1, round(rows * keep_percent / 100.0))
+            flat = value.detach().cpu().float().reshape(rows, -1)
+            norms = flat.square().sum(dim=1)
+            order = sorted(range(rows), key=lambda index: (-float(norms[index]), index))
+            selected = np.zeros(rows, dtype=np.uint8)
+            selected[order[:keep]] = 1
+            mask_bytes = np.packbits(selected, bitorder="little").tobytes()
+            payload.extend(mask_bytes)
+            compact = flat[torch.from_numpy(selected.astype(bool))]
+            encoded, restored_compact = standard_qn_payload("pruned.rows", compact, allocation[name])
+            payload.extend(encoded)
+            restored = torch.zeros_like(flat)
+            restored[torch.from_numpy(selected.astype(bool))] = restored_compact
+            expected[name] = restored.reshape(value.shape)
+            kept_rows[name] = keep
+    return (
+        bytes(payload),
+        expected,
+        {
+            "keep_percent": keep_percent,
+            "selected_tensor_names": sorted(PRUNE_NAMES),
+            "kept_rows": kept_rows,
+            "selection_mask": mask,
+            "bit_allocation": dict(allocation),
+            "non_default_bit_allocation": {
+                name: bits for name, bits in allocation.items() if bits != DEFAULT_SEMANTIC_BITS
+            },
+        },
+    )
+
+
+def unpack_prune_mixed_candidate(
+    blob: bytes, template: Mapping[str, torch.Tensor]
+) -> OrderedDict[str, torch.Tensor]:
+    version, mode, keep_percent, reserved = blob[4:8]
+    if version != VERSION or mode != MODE_ROW_PRUNE_MIXED or reserved != 0:
+        raise ValueError("unsupported SM3R mixed-prune header")
+    if not 1 <= keep_percent < 100:
+        raise ValueError("invalid SM3R mixed-prune keep percentage")
+    remaining = memoryview(blob)[8:]
+    if len(remaining) < 2:
+        raise ValueError("truncated mixed-prune selection mask")
+    mask = struct.unpack_from("<H", remaining)[0]
+    remaining = remaining[2:]
+    qnames = sd1.quantized_names(template)
+    if mask != mask_for_names(qnames, PRUNE_NAMES):
+        raise ValueError("mixed-prune selection mask differs")
+    depth_bytes = (len(qnames) + 1) // 2
+    if len(remaining) < depth_bytes:
+        raise ValueError("truncated mixed-prune depth allocation")
+    depths = sd1._unpack_depth_nibbles(bytes(remaining[:depth_bytes]), len(qnames))
+    remaining = remaining[depth_bytes:]
+    allocation = OrderedDict(zip(qnames, depths, strict=True))
+    restored: OrderedDict[str, torch.Tensor] = OrderedDict()
+    for name, value in template.items():
+        if value.ndim < 2:
+            byte_count = value.numel() * 2
+            array = np.frombuffer(remaining[:byte_count], dtype="<f2").copy()
+            remaining = remaining[byte_count:]
+            restored[name] = torch.from_numpy(array.reshape(value.shape)).float()
+        elif name not in PRUNE_NAMES:
+            restored[name], remaining = decode_standard_qn(name, value, remaining, allocation[name])
+        else:
+            rows = value.shape[0]
+            mask_bytes = (rows + 7) // 8
+            selected = np.unpackbits(
+                np.frombuffer(remaining[:mask_bytes], dtype=np.uint8),
+                bitorder="little",
+            )[:rows].astype(bool)
+            remaining = remaining[mask_bytes:]
+            expected_keep = max(1, round(rows * keep_percent / 100.0))
+            if int(selected.sum()) != expected_keep:
+                raise ValueError(f"mixed-prune row count differs for {name}")
+            columns = value.numel() // rows
+            compact_template = torch.empty((expected_keep, columns), dtype=torch.float32)
+            compact, remaining = decode_standard_qn(
+                "pruned.rows", compact_template, remaining, allocation[name]
+            )
+            dense = torch.zeros((rows, columns), dtype=torch.float32)
+            dense[torch.from_numpy(selected)] = compact
+            restored[name] = dense.reshape(value.shape)
+    if remaining:
+        raise ValueError(f"SM3R mixed-prune payload has {len(remaining)} trailing bytes")
+    return restored
+
+
 def unpack_candidate(blob: bytes, template: Mapping[str, torch.Tensor]) -> OrderedDict[str, torch.Tensor]:
     if not blob.startswith(MAGIC) or len(blob) < 8:
         raise ValueError("not an SM3R payload")
@@ -573,6 +737,8 @@ def unpack_candidate(blob: bytes, template: Mapping[str, torch.Tensor]) -> Order
         return unpack_lowrank_candidate(blob, template)
     if mode == MODE_ROW_PRUNE:
         return unpack_prune_candidate(blob, template)
+    if mode == MODE_ROW_PRUNE_MIXED:
+        return unpack_prune_mixed_candidate(blob, template)
     raise ValueError(f"unknown SM3R mode {mode}")
 
 

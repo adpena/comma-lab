@@ -4,7 +4,8 @@
 The receiver is deliberately additive.  Untagged semantic payloads return
 ``None`` so the unchanged HV1 legacy q4 parser remains authoritative.  The
 only tagged formats accepted here are the retained SD1M mixed-precision
-packet and the SM3R row-prune packets used by MZ2/MP2 candidates.
+packet and the SM3R row-prune packets used by MZ2/MP2 candidates, in both the
+uniform-q4 (mode 5) and per-tensor mixed-depth (mode 6) variants.
 """
 
 from __future__ import annotations
@@ -21,6 +22,8 @@ SD1M_VERSION = 1
 SM3R_MAGIC = b"SM3R"
 SM3R_VERSION = 1
 SM3R_ROW_PRUNE_MODE = 5
+SM3R_ROW_PRUNE_MIXED_MODE = 6
+DEFAULT_SEMANTIC_BITS = 4
 
 SD1M_V1_NAMES = (
     "token_embed.weight",
@@ -121,6 +124,25 @@ def _decode_fp16(
     return torch.from_numpy(array.reshape(template.shape)).float(), remaining
 
 
+def _decode_depth_nibbles(
+    blob: memoryview,
+    count: int,
+    label: str,
+) -> tuple[list[int], memoryview]:
+    """Read a packed per-tensor bit-depth table (two four-bit depths per byte)."""
+
+    depth_bytes = (count + 1) // 2
+    depth_view, remaining = _take(blob, depth_bytes, f"{label} depth allocation")
+    packed = np.frombuffer(depth_view, dtype=np.uint8)
+    depths_array = np.empty(depth_bytes * 2, dtype=np.uint8)
+    depths_array[0::2] = packed & 0xF
+    depths_array[1::2] = packed >> 4
+    depths = depths_array[:count].astype(int).tolist()
+    if any(depth < 2 or depth > 8 for depth in depths):
+        raise MP2SemanticFormatError(f"invalid {label} bit depth")
+    return depths, remaining
+
+
 def _decode_sd1m(
     blob: bytes,
     template: Mapping[str, torch.Tensor],
@@ -134,15 +156,7 @@ def _decode_sd1m(
     count = blob[5]
     if version != SD1M_VERSION or count != len(names):
         raise MP2SemanticFormatError("unsupported SD1M header")
-    depth_bytes = (count + 1) // 2
-    depth_view, remaining = _take(memoryview(blob)[6:], depth_bytes, "SD1M depth allocation")
-    packed = np.frombuffer(depth_view, dtype=np.uint8)
-    depths_array = np.empty(depth_bytes * 2, dtype=np.uint8)
-    depths_array[0::2] = packed & 0xF
-    depths_array[1::2] = packed >> 4
-    depths = depths_array[:count].astype(int).tolist()
-    if any(depth < 2 or depth > 8 for depth in depths):
-        raise MP2SemanticFormatError("invalid SD1M bit depth")
+    depths, remaining = _decode_depth_nibbles(memoryview(blob)[6:], count, "SD1M")
     allocation = dict(zip(names, depths, strict=True))
     restored: OrderedDict[str, torch.Tensor] = OrderedDict()
     for name, value in template.items():
@@ -216,6 +230,76 @@ def _decode_row_prune(
     return restored
 
 
+def _decode_row_prune_mixed(
+    blob: bytes,
+    template: Mapping[str, torch.Tensor],
+) -> OrderedDict[str, torch.Tensor]:
+    """SM3R row-prune carrying an SD1M-style per-tensor bit-depth table.
+
+    Identical geometry to :func:`_decode_row_prune`; the depth table follows the
+    selection mask and supplies the code width for every rank>=2 tensor,
+    including the surviving rows of a pruned tensor.
+    """
+
+    if len(blob) < 10 or not blob.startswith(SM3R_MAGIC):
+        raise MP2SemanticFormatError("truncated SM3R mixed row-prune header")
+    version, mode, keep_percent, reserved = blob[4:8]
+    if version != SM3R_VERSION or mode != SM3R_ROW_PRUNE_MIXED_MODE or reserved != 0:
+        raise MP2SemanticFormatError("unsupported SM3R mixed row-prune header")
+    if not 1 <= keep_percent < 100:
+        raise MP2SemanticFormatError("invalid SM3R row-prune keep percentage")
+    remaining = memoryview(blob)[8:]
+    mask_view, remaining = _take(remaining, 2, "SM3R row-prune selection mask")
+    mask = struct.unpack_from("<H", mask_view)[0]
+    names = _quantized_names(template)
+    if mask != _selection_mask(names, ROW_PRUNE_NAMES):
+        raise MP2SemanticFormatError("SM3R row-prune selection mask differs")
+    depths, remaining = _decode_depth_nibbles(remaining, len(names), "SM3R")
+    allocation = dict(zip(names, depths, strict=True))
+
+    restored: OrderedDict[str, torch.Tensor] = OrderedDict()
+    for name, value in template.items():
+        if value.ndim < 2:
+            restored[name], remaining = _decode_fp16(name, value, remaining)
+        elif name not in ROW_PRUNE_NAMES:
+            restored[name], remaining = _decode_quantized(
+                name,
+                value,
+                remaining,
+                allocation[name],
+            )
+        else:
+            rows = int(value.shape[0])
+            mask_view, remaining = _take(
+                remaining,
+                (rows + 7) // 8,
+                f"SM3R selected rows for {name}",
+            )
+            selected = np.unpackbits(
+                np.frombuffer(mask_view, dtype=np.uint8),
+                bitorder="little",
+            )[:rows].astype(bool)
+            expected_keep = max(1, round(rows * keep_percent / 100.0))
+            if int(selected.sum()) != expected_keep:
+                raise MP2SemanticFormatError(f"SM3R row count differs for {name}")
+            columns = value.numel() // rows
+            compact_template = torch.empty((expected_keep, columns), dtype=torch.float32)
+            compact, remaining = _decode_quantized(
+                "pruned.rows",
+                compact_template,
+                remaining,
+                allocation[name],
+            )
+            dense = torch.zeros((rows, columns), dtype=torch.float32)
+            dense[torch.from_numpy(selected)] = compact
+            restored[name] = dense.reshape(value.shape)
+    if remaining:
+        raise MP2SemanticFormatError(
+            f"SM3R mixed row-prune payload has {len(remaining)} trailing bytes"
+        )
+    return restored
+
+
 def unpack_variant_semantic_or_none(
     blob: bytes,
     template: Mapping[str, torch.Tensor],
@@ -227,9 +311,11 @@ def unpack_variant_semantic_or_none(
     if blob.startswith(SM3R_MAGIC):
         if len(blob) < 6:
             raise MP2SemanticFormatError("truncated SM3R header")
-        if blob[5] != SM3R_ROW_PRUNE_MODE:
-            raise MP2SemanticFormatError(f"unsupported SM3R mode {blob[5]}")
-        return _decode_row_prune(blob, template)
+        if blob[5] == SM3R_ROW_PRUNE_MODE:
+            return _decode_row_prune(blob, template)
+        if blob[5] == SM3R_ROW_PRUNE_MIXED_MODE:
+            return _decode_row_prune_mixed(blob, template)
+        raise MP2SemanticFormatError(f"unsupported SM3R mode {blob[5]}")
     return None
 
 
@@ -237,6 +323,8 @@ __all__ = [
     "ROW_PRUNE_NAMES",
     "SD1M_MAGIC",
     "SM3R_MAGIC",
+    "SM3R_ROW_PRUNE_MIXED_MODE",
+    "SM3R_ROW_PRUNE_MODE",
     "MP2SemanticFormatError",
     "unpack_variant_semantic_or_none",
 ]
