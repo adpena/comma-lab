@@ -28816,10 +28816,16 @@ def check_memory_md_size_under_ceiling(
     if repo_memory.exists():
         candidates.append(repo_memory)
 
+    # The loader budget is BYTES, not lines (measured 2026-08-18, task #1125:
+    # a ~100-line index at 19,087 B fully loaded, so the 17,408 B budget is a
+    # guideline — but a byte-blind check never nags at all while dense one-line
+    # entries bloat past it). Warn on both dimensions.
+    byte_ceiling = 17_408
     violations: list[str] = []
     for path in candidates:
         try:
             n = sum(1 for _ in path.open("r", errors="ignore"))
+            n_bytes = path.stat().st_size
         except OSError:
             continue
         if n > ceiling:
@@ -28828,6 +28834,12 @@ def check_memory_md_size_under_ceiling(
                 f"entries to one line each (move detail into topic files), or "
                 f"prune obsolete entries to keep context windows from "
                 f"silently truncating the file."
+            )
+        if n_bytes > byte_ceiling:
+            violations.append(
+                f"{path}: {n_bytes} B (> {byte_ceiling} B guideline). Route "
+                f"verbose rows to the overflow topic file (m24) and keep "
+                f"one-line hooks in the index."
             )
 
     if verbose:
