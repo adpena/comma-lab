@@ -1,9 +1,9 @@
-# submission name: rr4 free-corrector re-encode
+# submission name: sz1 composed re-encode
 
 Prepared by the repository operator. **This is a hold-state draft.** It must not
 be opened as a pull request until the download URL, source-visibility check,
 strict compliance pass, and five consecutive clean review passes are complete.
-Generation 2 of this packet; it supersedes the e480b and hv1 drafts.
+Generation 3 of this packet; it supersedes the rr4, hv1, and e480b drafts.
 
 # upload zipped `archive.zip`
 
@@ -12,10 +12,10 @@ claimed in this draft.
 
 Exact file identity:
 
-- 181,161 bytes
-- SHA-256 `35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956`
-- single stored member `p`, 181,061 bytes, SHA-256
-  `1a6b40cc7bee289e5efd4ce81205888ef23829ed4a78c198344bb679ba9da47a`, CRC32 885609521
+- 179,930 bytes
+- SHA-256 `debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a`
+- single stored member `p`, 179,830 bytes, SHA-256
+  `be6db33bce471fe38b3d32cf6b421368721b1ea2ddd3f77b577f2bd27d06b7a8`, CRC32 3747474564
 
 # report.txt
 
@@ -27,15 +27,15 @@ Average PoseNet Distortion: 0.00000688
 Average SegNet Distortion: 0.00029611
 Seg contribution: 0.029611
 Pose contribution: 0.008294576541331089
-Rate contribution: 0.12062767380656568
-Archive size: 181161 bytes
-Archive SHA-256: 35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956
-Recomputed score: 0.15853325034789678
-Inflation wall time: 476.611040218 seconds
-Evaluation wall time: 61.047152556 seconds
+Rate contribution: 0.11980800143527229
+Archive size: 179930 bytes
+Archive SHA-256: debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a
+Recomputed score: 0.15771357797660338
+Inflation wall time: 1143.270127967 seconds
+Evaluation wall time: 38.307284003 seconds
 
 Evidence axis: [contest-CPU]
-Status on these exact bytes: pending; no CPU score claimed.
+Status on these exact bytes: exact evaluation in flight; no CPU score claimed yet.
 ```
 
 # eval host info
@@ -43,15 +43,18 @@ Status on these exact bytes: pending; no CPU score claimed.
 Linux x86_64, Tesla T4, all 600 samples, unmodified upstream scorer
 (`evaluate.py` SHA-256 `7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b`,
 upstream snapshot `cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008`).
-Inflation used 476.6 s of the 1,800 s budget — 3.78x headroom.
+Inflation used 1,143.3 s of the 1,800 s budget — 1.57x headroom. The
+token-mixer decode is the dominant cost; it is deterministic integer
+arithmetic.
 
 # build cost info
 
 No public total-training-cost claim is made. This submission adds **no training
-cost at all** over its base candidate: it is a lossless entropy re-encode of an
-already-trained archive, and the re-encode itself runs in well under a minute
-from the retained checkpoint. The base candidate's training cost is a separate
-figure and is not reconstructed after the fact here.
+cost at all** over its base candidate: both changes are lossless re-encodes of
+an already-trained archive (a decode-time probability model and a serialization
+permutation), and both run in minutes from the retained checkpoint. The base
+candidate's training cost is a separate figure and is not reconstructed after
+the fact here.
 
 # does your submission require gpu for evaluation (inflation)?
 
@@ -59,95 +62,108 @@ figure and is not reconstructed after the fact here.
 score above used a T4.
 
 Being precise rather than convenient: the receiver has been demonstrated to
-decode these exact bytes on CPU (the parse-back produced an output byte-identical
-to the base candidate's own CPU inflate), so CPU decoding is not impossible. But
-we have **not** measured a `[contest-CPU]` score on these bytes, and we will not
-infer one from the CUDA row. Until that row exists, "requires GPU" is the honest
-answer.
+decode these exact bytes on CPU in a clean environment (raw output and decoded
+token field hash-verified), and the token coder is fixed-point integer
+arithmetic, so decode is device-exact by construction. An exact `[contest-CPU]`
+evaluation on these bytes is in flight; until it is harvested we do not claim a
+CPU score and we will not infer one from the CUDA row.
 
 # did you include the compression script? and want it to be merged?
 
-**Yes, and it is offered for merge.** The entry point is
-`experiments/ddm_pq2_compress_e2e.py`. What it does, stated exactly:
+**Yes, and it is offered for merge.** The chain, stated exactly:
 
 - **Stage A — provenance (documented, not re-run).** Reproducing the underlying
-  checkpoint from raw video is multi-day GPU compute. The script emits the
-  lineage, the stage scripts, their arguments, and the input manifest with every
-  SHA-256. It does not pretend to re-run training.
-- **Stage B — build (exact and verifiable).** From the retained checkpoint it
-  replays the shipped decode order, re-encodes the token stream under the
-  decode-time corrector, splices it into the member, and repacks the archive.
-  It then **hashes the result and exits non-zero unless it equals
-  `35ac2b9beb7e6fa8…`**. It also writes a second archive from the same member and
-  records whether the two are byte-identical; only the sha and byte-count checks
-  gate the exit code (the repeat result is reported, not exit-gating).
+  checkpoint from raw video is multi-day GPU compute. The chain emits the
+  lineage, the stage scripts, their arguments, and the input manifest with
+  every SHA-256. It does not pretend to re-run training.
+- **Stage B — build (exact and verifiable).** From the retained checkpoint the
+  chain replays the shipped decode order, re-encodes the token stream under
+  the 13-context integer log-odds mixer, applies the semantic serialization
+  split, and repacks the archive. Each stage hashes its output and fails
+  closed on mismatch. At build time `archive.zip` and a fresh-process repeat
+  were byte-identical.
 - **Stage C — decode.** Runs the shipped receiver over the rebuilt archive and
-  checks the decoded token field against its pinned SHA-256.
+  checks the decoded token field against its pinned SHA-256
+  (`9ba2e52b3096…`) — verified in a clean environment on CPU.
 
-Verified on 2026-08-17: rebuilt into a clean store, token stream hashed
-`6c3757bd52a18d3c…` (match), archive hashed `35ac2b9beb7e6fa8…` (match),
-determinism repeat byte-identical.
-
-The script contains no local filesystem layout. Every input root is supplied
-through `--inputs-json` or the matching environment variables and is verified by
-SHA-256 before any stage runs; `--emit-inputs-template` prints the schema.
+Honesty note on packaging status: the prior generation's single entry point
+(`experiments/ddm_pq2_compress_e2e.py`) asserts the prior archive's hashes and
+is being re-bound to this generation's chain (the fx2 byte-close driver plus
+the sz1 split builder, both in the public repository) under the same
+fail-closed assertions. That re-bind completes before this draft is opened.
 
 # changes from upstream
 
-This submission changes **one section** of an inherited archive. Seven of the
-eight parsed sections are byte-identical to the base candidate; the eighth, the
-RC64 token stream, is re-encoded from 112,110 to 110,512 bytes by a decode-time
-probability corrector that ships in the receiver, stores zero archive bytes, and
-is driven entirely by already-decoded symbols. The decoded token field is
-byte-identical to the base candidate's (SHA-256 `9ba2e52b3096…`), so `d_seg` and
-`d_pose` are unchanged by construction and the entire improvement is rate.
+This submission changes **two sections** of an inherited archive, both
+losslessly:
+
+1. The RC64 token stream is re-encoded from 110,512 to 109,801 bytes by a
+   decode-time probability model (a 13-context fixed-point integer log-odds
+   mixer) that ships in the receiver, stores zero archive bytes, and is driven
+   entirely by already-decoded symbols. The decoded token field is
+   byte-identical (SHA-256 `9ba2e52b3096…`).
+2. 8,284 bytes of raw interleaved fp16 metadata in the semantic section are
+   byte-planed (all high bytes, then all low bytes) before the container's
+   Brotli pass, saving 520 bytes. The receiver applies the exact inverse
+   permutation before parsing; decoded values are unchanged. The transform is
+   versioned in bit 0 of an existing reserved header byte — zero transmitted
+   bytes, and an archive without the bit decodes exactly as before.
+
+Decode identity was verified at the byte level: the first inflated output
+hashes identically between this row and the token-model-only row
+(`9a6b75e5…`), so `d_seg` and `d_pose` are unchanged by construction and the
+entire improvement is rate.
 
 # competitive or innovative?
 
 **Competitive, on a measured row, stated against what is actually verified.**
 
 On the exact submitted bytes the measured `[contest-CUDA]` 600-sample score is
-`0.15853325034789678`, which we re-derived from the reported components
-independently. That is below our own prior custodied row and below the best
-ranked score on the leaderboard at the time of writing (PR #135,
-`semantic-pose-HPAC_CPR1_polished`, 0.162).
+`0.15771357797660338`, which we re-derived from the reported components
+independently. That is below the best ranked score on the leaderboard at the
+time of writing (PR #135, `semantic-pose-HPAC_CPR1_polished`, 0.162) and below
+our own prior custodied rows.
 
 Three honesty qualifications we would rather state than have found:
 
-1. There is an open PR claiming `0.1591495384` (PR #138, `opal_v1`). That figure
-   is **author-claimed and not yet evaluated by the maintainers**, as is ours
-   until this PR is run. We are not asserting a win over an unverified number;
-   we are reporting our measured one.
-2. **PR #138 published our mechanism class first, and we did not know it when we
-   built ours.** Its online correction is learned from the already-decoded
-   prefix, reproduced identically by encoder and decoder, adds no table or weight
-   to the archive, and yields pure rate — the same idea as our corrector, by a
-   different construction (55 causal context families and an online mixer; ours
-   is a per-group statistical corrector). PR #138 opened 2026-08-17 08:31Z. Our
-   design work is dated in-repository from 2026-07-22, our first measured result
-   landed 14:41Z the same day, and we first read PR #138 at 19:32Z, after the
-   byte-close. We therefore describe this as **concurrent independent
+1. There is an open PR claiming `0.1591495384` (PR #138, `opal_v1`). That
+   figure is **author-claimed and not yet evaluated by the maintainers**, as is
+   ours until this PR is run. Our measured number is lower than that claim,
+   but we are comparing a measured row against an unverified one and say so.
+2. **PR #138 published the decode-time-corrector mechanism class first, and we
+   did not know it when we built our first corrector.** Its online correction
+   is learned from the already-decoded prefix, reproduced identically by
+   encoder and decoder, adds no table or weight to the archive, and yields
+   pure rate — the same class as our token probability model, by a different
+   construction. PR #138 opened 2026-08-17 08:31Z; our first measured
+   corrector result landed 14:41Z the same day, and we first read PR #138 at
+   19:32Z, after our byte-close. We describe this as **concurrent independent
    development** and make **no priority claim**. PR #136 is adjacent and also
-   earlier.
-3. The **innovation here is narrow and we scope it narrowly**: a zero-byte
-   decode-time probability corrector that losslessly saves 1,598 archive bytes.
-   The learned vehicle underneath — the semantic renderer and the pose carrier —
-   is PR130/PR135 lineage, is not ours, and is itemized below rather than folded
-   into the claim. The one learned object in the archive that *is* ours is the
-   HPAC probability object: PR130's architecture, retrained here on our own label
-   field. It is inherited unchanged from the base candidate in this generation.
+   earlier. The 13-context mixer in this generation is our own deepening of
+   that shared mechanism class; the semantic serialization split is a separate
+   transform class (a storage-layout permutation, not a probability model).
+3. The **innovation here is narrow and we scope it narrowly**: two zero-byte
+   receiver mechanisms that losslessly save 2,829 archive bytes relative to
+   the inherited base (1,598 + 711 on the token stream across two
+   generations, 520 on the semantic serialization). The learned vehicle
+   underneath — the semantic renderer and the pose carrier — is PR130/PR135
+   lineage, is not ours, and is itemized below rather than folded into the
+   claim. The one learned object in the archive that *is* ours is the HPAC
+   probability object: PR130's architecture, retrained here on our own label
+   field. It is inherited unchanged from the base candidate in this
+   generation.
 
 # additional comments
 
 ## Score and runtime boundary
 
-The CUDA score is a 600-sample exact evaluation of the archive hash printed above
-through the unmodified upstream scorer. CPU and CUDA are separate axes and the
-exact `[contest-CPU]` score on these bytes remains pending. One CPU receipt bounds
-feasibility without substituting for that missing row: the receiver parse-back
-decoded these exact bytes on arm64 CPU and produced a 3,662,409,600-byte output
-whose SHA-256 equals the base candidate's own CPU inflate. That proves the packet
-is CPU-runnable and that the decoded content is identical; it is not a CPU score.
+The CUDA score is a 600-sample exact evaluation of the archive hash printed
+above through the unmodified upstream scorer. CPU and CUDA are separate axes;
+the exact `[contest-CPU]` row on these bytes is in flight and will be reported
+when harvested, not inferred. One CPU receipt bounds feasibility without
+substituting for it: the receiver decoded these exact bytes on arm64 CPU in a
+clean environment and the decoded content is hash-identical to the reference
+decode. That proves CPU-runnability; it is not a CPU score.
 
 ## Borrowed-substrate accounting
 
@@ -157,25 +173,28 @@ attribution` (their idea or source, our implementation or re-fit) ·
 
 "Byte-identical to base" means identical to the archive we inherited at the
 previous step, **not** identical to PR130's or PR135's bytes — the base already
-contains our retrained HPAC object and our compensation edits.
+contains our retrained HPAC object and our compensation edits. For the
+semantic section, "value-identical" means the decoded tensors are unchanged
+while the on-disk serialization is ours.
 
 | Section or mechanism | Classification | SHA-256 receipt and boundary |
 |---|---|---|
-| Semantic renderer state | `inherited-substrate` (PR135, proven byte-identical) | decoded 36,051 B, `b489c73567046e64…` |
-| Pose carrier state | `inherited-substrate` (PR135, proven byte-identical) | decoded 22,242 B, `196f0e5136f4d6bf…` |
+| Semantic renderer state | `inherited-substrate` (PR135 lineage, decoded values unchanged); **on-disk serialization ours** (byte-planed, receiver un-splits) | decoded values verified identical through the patched receiver; split length 8,284 B |
+| Pose carrier state | `inherited-substrate` (PR135, byte-identical) | decoded 22,242 B, `196f0e5136f4d6bf…` |
 | Compressed model container | `inherited-substrate`; unchanged from base, PR-level equality not independently verified | 70,453 B, `e35d12371fa79747…` |
-| **HPAC probability object** | **`mechanism-adopt-with-attribution`** — PR130's architecture, **retrained here on our own label field**; inherited unchanged in this generation | 17,952 B, `e8c0cfd73d3275ad…`; checkpoint ep0634 selected from 81 retained candidates |
-| Compensation blob | `mechanism-adopt-with-attribution` — container inherited, contents include our admitted edits | 36 B, `38792b4953318117…`; compensation pairs `[7, 96, 105, 176, 178, 517, 523]` |
-| Residual payload + table codes | `inherited-substrate`; **provenance unresolved, no originality claimed** | residual 100 B `74775aab04c7615c…`; table codes `76afdc3ceda1212a…` |
-| **RC64 token stream (only changed section)** | **`ours-original` estimator over inherited probabilities** | 110,512 B, `6c3757bd52a18d3c…` (base 112,110 B, `73a878891a31c366…`); corrector `96fd35aaf82c737a…` |
-| RC64 backend, encoder side | `inherited-substrate` (PR135, verbatim) | compiles PR135's `rc64_backend.c`, `5c75e2c70b89f148…`, unmodified |
-| RC64 backend, shipped receiver | `mechanism-adopt-with-attribution` (PR135-derived, modified) | shipped `05839d1416e68a49…`, which **differs** from the PR135 source above |
-| Receiver binding and archive assembly | `ours-original` | runtime tree `7acedb07e670e76c…`; archive `35ac2b9beb7e6fa8…` |
-| End-to-end compression entry point | `ours-original` | `experiments/ddm_pq2_compress_e2e.py`, rebuild verified |
+| **HPAC probability object** | **`mechanism-adopt-with-attribution`** — PR130's architecture, **retrained here on our own label field**; inherited unchanged in this generation | checkpoint ep0634 selected from 81 retained candidates |
+| Compensation blob | `mechanism-adopt-with-attribution` — container inherited, contents include our admitted edits | 36 B, `38792b4953318117…` |
+| Residual payload + table codes | `inherited-substrate`; **provenance unresolved, no originality claimed** | residual 100 B `74775aab04c7615c…` |
+| **RC64 token stream (re-encoded)** | **`ours-original` probability model over inherited symbols** — 13-context fixed-point integer log-odds mixer | 109,801 B, `5b09fd784a7c80cf…` (prior 110,512 B); decoded field `9ba2e52b3096…` unchanged |
+| **Semantic serialization split** | **`mechanism-adopt-with-attribution`** — byte-plane (shuffle-filter) layouts are standard compression practice (HDF5/Blosc lineage); the section-scoped application, zero-byte reserved-bit versioning, and receiver un-split are ours | −520 B measured through the container's own Brotli with a delta-zero control |
+| RC64 backend, encoder side | `inherited-substrate` (PR135, verbatim) | compiles PR135's `rc64_backend.c` unmodified |
+| RC64 backend, shipped receiver | `mechanism-adopt-with-attribution` (PR135-derived, modified) | shipped `05839d1416e68a49…`, which **differs** from the PR135 source |
+| Receiver binding and archive assembly | `ours-original` | validated runtime tree `0d0fc008d6a37bd5…`; archive `debb025f45bb42e3…` |
+| Compression chain | `ours-original` | fx2 byte-close driver + sz1 split builder; e2e re-bind in progress (stated above) |
 
-This is a lossless entropy re-encode on a PR130/PR135 learned substrate, not a
-claim that the learned vehicle is original. The full accounting, including the
-ancestry chain and the two open provenance items, is in
+This remains a lossless re-encode program on a PR130/PR135 learned substrate,
+not a claim that the learned vehicle is original. The full accounting,
+including the ancestry chain and the open provenance items, is in
 `BORROWED_SUBSTRATE_ACCOUNTING.md`, shipped beside this archive.
 
 ## Credits and prior work
@@ -187,17 +206,15 @@ Every number below was read from the pull request itself, not from our notes.
   architecture this submission descends from.
 - **PR #135 — `semantic-pose-HPAC_CPR1_polished`, Shreyan Mohanty (`codexblack`)**,
   leaderboard 0.162, archive 186,724 B. The archive we actually built on. Its
-  semantic renderer and pose carrier are in our archive byte-identically after
-  decode, and our encoder compiles its `rc64_backend.c` unmodified. It is also
-  the score this submission is measured against.
+  semantic renderer and pose carrier decode identically from our archive, and
+  our encoder compiles its `rc64_backend.c` unmodified. It is also the ranked
+  score this submission is measured against.
 - **PR #133 — `cpr1_cbq_matched8`, `JasonMo123`**, leaderboard 0.166. Not taken
   directly, but in our ancestry transitively: PR #135 already incorporates its
   constrained basis and re-solved int12 carrier.
 - **PR #138 — `opal_v1`, Cristian (`ccastillo1043`)**, author-claimed 0.1591495384.
-  Published the same class of mechanism as our contribution — an online
-  decode-side probability correction that adds no archive bytes — six hours
-  before our first measured result. Concurrent and independent; see the
-  competitive section above. We make no priority claim.
+  Published the decode-side probability-correction mechanism class first; see
+  the competitive section above. Concurrent and independent; no priority claim.
 - **PR #136 — `hnerv_rc`, Jacky Li (`JPL11`)**. Adaptive range coding with
   per-tensor context reset, on a different vehicle. Adjacent prior work.
 - **Upstream** — `commaai/comma_video_compression_challenge`: the scorer,
@@ -209,22 +226,23 @@ Every number below was read from the pull request itself, not from our notes.
 ## Public source and reproducibility
 
 - Source repository: https://github.com/adpena/comma-lab
-  (PUBLIC — operator-authorized re-publication 2026-08-17; anonymous visibility verified
-  HTTP 200 on the repo and on the evaluation pin, same-day)
-- Evaluation source pin: commit `e7ca85754bb9e6a4b319e5a8fa206366c90bd6f4` — the commit
-  the T4 evaluation actually ran from (matches `provenance.pact_commit` in the receipt)
-- Compression-script pin: commit `a411f612aaf095ec27ff05eaf38c5d8c17f28c30` — the commit
-  that carries `experiments/ddm_pq2_compress_e2e.py` (the entry point landed AFTER the
-  evaluation pin; two labelled pins are stated rather than one misstated pin)
-- Runtime tree SHA-256: `7acedb07e670e76c798f153ac53a3045b053074d702e226411a2353745b98351`
-- Portable executable-runtime content tree:
-  `4358aaf34fcbfc1cdc4a8865b9aead709199465c9909321abf279ebcd0fe3721`
-- Upstream snapshot: `cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008`
-- Compression entry point: `experiments/ddm_pq2_compress_e2e.py`; stage scripts
-  `experiments/ddm_rr2_encoder_byteclose.py` and
-  `experiments/ddm_rr2_receiver_close.py`; corrector
-  `experiments/ddm_rr4_free_corrector_v2.py`.
+  (anonymous visibility to be re-verified at packet freeze)
+- Evaluation source pin: commit `2e0af59966c4a1405bad342de5969d0de4d99f7a` —
+  the commit the T4 evaluation actually ran from (matches
+  `provenance.pact_commit` in the receipt)
+- Encoder source pins: commit `31c64e4ce0…` (semantic serialization split) and
+  commit `85880c77a6…` (token probability model, frozen shipped configuration)
+- Validated runtime tree SHA-256:
+  `0d0fc008d6a37bd5cfa804073e617a8ea30a7c6b6e6c4a1022e2c5d7ce6f9513`
+- Upstream snapshot:
+  `cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008`
+- Chain scripts: `experiments/ddm_rr2_encoder_byteclose.py` (encode/build),
+  `experiments/ddm_rr2_receiver_close.py` (receiver/parse-back),
+  `experiments/ddm_fx2_model_axis_corrector.py` and
+  `experiments/ddm_fx1_logistic_mixer_corrector.py` (token probability model),
+  `experiments/ddm_sz1_semantic_metadata_split.py` (serialization split).
 
 Before submission the operator must verify anonymous visibility of the pinned
-source URL and replace the download-status paragraph with the verified public
-archive URL and its hosted manifest.
+source URLs, complete the e2e entry-point re-bind, and replace the
+download-status paragraph with the verified public archive URL and its hosted
+manifest.

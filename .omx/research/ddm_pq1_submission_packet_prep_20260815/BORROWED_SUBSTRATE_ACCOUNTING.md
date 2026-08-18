@@ -180,3 +180,49 @@ not claim priority for the decode-time-corrector idea.
 3. **The C-compiler dependency** (§1.3) is currently unguarded in `inflate.sh`. Hash-safe cure for
    this candidate is the README declaration; any new receiver should carry a `command -v cc` guard
    from birth.
+
+---
+
+## 7. Generation 4 amendment — the hot swap landed (sz1 composed candidate; packet generation 3)
+
+Numbering note: this document's internal generations count its own revisions; the packet's
+`GENERATION_LOG.md` counts candidates. This amendment covers the packet's generation 3
+(archive `debb025f45bb42e3…`, 179,930 bytes, measured `[contest-CUDA]` 0.15771357797660338).
+Everything above stands for the rr4 candidate it was written against; the deltas are here,
+append-only.
+
+### 7.1 The fx1/fx2 conditional row is PROMOTED to the live table
+
+The §4 conditional row for the fixed-point integer log-odds mixer shipped, in its deepened
+`fx2` form: 13 contexts (causal spatial template + a decoded-class homogeneity context),
+integer-only arithmetic, zero archive bytes. Classification exactly as pre-written:
+**`mechanism-adopt-with-attribution`** — the device-exact fixed-point formulation and the
+context design are ours; the log-odds / context-mixing idea is the PAQ lineage (Matt Mahoney),
+published in this contest first by PR #138 and, in weaker form, PR #136. Token stream
+110,512 → 109,801 bytes; decoded field unchanged (`9ba2e52b3096…`). The §3 concurrency
+disclosure applies to this mechanism unchanged.
+
+### 7.2 NEW live row — semantic serialization split
+
+8,284 bytes of raw interleaved fp16 metadata in the semantic section are byte-planed (high-byte
+plane, then low-byte plane) before the container's Brotli pass; the receiver applies the exact
+inverse permutation before parsing; decoded values are unchanged; −520 bytes measured with a
+delta-zero control. Classification: **`mechanism-adopt-with-attribution`** — byte-plane
+(shuffle-filter) layouts are standard compression practice (the HDF5/Blosc shuffle lineage);
+what is ours is the section-scoped measurement showing only the semantic section pays, the
+zero-transmitted-byte versioning in an existing reserved header bit, and the fail-closed
+receiver integration. We deliberately do not label a standard shuffle filter `ours-original`.
+
+### 7.3 The t1h conditional row did NOT ship
+
+The pose-coefficient re-solve remains out of the archive; its §4 conditional row stands
+unchanged.
+
+### 7.4 Updated claim arithmetic (§5 claim 1)
+
+Cumulative lossless saving vs the inherited hv1 base: 2,829 bytes
+(1,598 rr4 corrector + 711 fx2 mixer on the token stream, 520 serialization split), decoded
+output provably unchanged at every step — the final step verified at the byte level (first
+inflated output hash-identical between the fx2-only and composed rows, `9a6b75e5…`). The
+per-generation claims in §5 otherwise stand; nothing in this amendment upgrades any
+classification in our favour.
