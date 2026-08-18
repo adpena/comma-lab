@@ -60,3 +60,37 @@ the following against the active packet generation:
 
 The strict checker does not by itself prove the last compression-source item.
 It is an additional publication gate and remains open for the current packet.
+
+## Generation 3 (sz1 composed) strict run — 2026-08-18
+
+Invocation: same checker, adapted values — submission dir
+`/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen3_sz1_composed_split`,
+archive sha `debb025f45bb42e3…`/179,930 B, runtime tree `0d0fc008d6a3…`,
+auth-eval JSON `ddm_sz1/t4_row_composed/r3_artifacts/contest_auth_eval.json`,
+lane `ddm_sz1_composed_t4_n600` / job `sz1_composed_r3`. Receipt:
+`generations/gen3_receipts/pre_submission_compliance.gen3.r2.json`.
+
+Result: **80 GREEN / 6 RED of 86** (r1 was 73/13; fixed mechanically: report.txt
+staged in, non-standard metadata moved to `gen3_receipts/` so the runtime-tree
+hash matches the sealed value, sha-bound supplementary terminal claim row).
+
+The 6 residual reds, each typed with its route:
+
+1. `auth_eval_schema_metric_consistency` — the r3 worker receipt is RAW (no
+   recomputed-from-components field). Route: produce the ADJUDICATED auth-eval
+   JSON per the generation-0 pattern (`receipts/cuda_auth/`), next work item.
+2. `auth_eval_raw_promotion_policy_blockers_absent` — same object, same route.
+3. `contest_cpu_auth_eval_exists` — STRUCTURALLY RED for this candidate: the
+   CPU axis is MEASURED INFEASIBLE within the 1,800 s budget (inflate 3,422.7 s,
+   receipt in PACKET_TARGET cpu_axis). No CPU score can legally exist; the
+   packet documents GPU-required as a measured fact. Documented waiver — never
+   converted by copying a receipt.
+4. `submission_runtime_has_no_network_install_or_local_paths` — inflate.sh:27
+   pinned-wheel dependency bootstrap (Brotli, fail-closed exit 69). Standing
+   MAIN policy adjudication per the e4/PR100/PR101 declared-dependency
+   precedent; the check stays red by design and is never hand-edited.
+5. `hosted_archive_manifest_supplied` — OPERATOR-GATED: hosting authorization
+   is part of the final one-line confirm.
+6. `dispatch_claim_successful_exact_eval_terminal_row` — wording/row-shape nit
+   in the claims table (3 matching rows, latest is the successful terminal);
+   adjudicate the checker's exact predicate next pass.
