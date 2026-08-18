@@ -547,6 +547,40 @@ the reason the charter's recall law exists.
    retain under `/Volumes/APDataStore/pact/ddm_na9/`. The ALWAYS-KEEP-THE-PAYLOAD law is satisfied
    vacuously, and I say so rather than leaving it unstated.
 
+## NEXT_IF_RESUMED — every row exits with a disposition, an owner and a fire trigger
+
+Per `follow_on_work_fires_immediately_or_it_is_orphan_poison_20260803` and [[m45]] (*you own
+everything*). **This arm may not fire, land `.py`, dispatch, or run a scorer**, so no row below can
+exit FIRED from here; each exits QUEUED-WITH-A-FIRE-ORDER or FOLDED, with the owner named.
+
+1. **QUEUED-WITH-A-FIRE-ORDER — owner MAIN.** Narrow the coder-axis closure at source, headline
+   **and** body: `ddm_dc1_…:1` / `:190` and `ddm_nx1_…` row 1 + *Genuinely closed* #1 → "coder-SWAP
+   ceiling ≤7.8 B given fixed probabilities". **Fire trigger: before the next arm inherits the
+   closure** — it is currently telling arms not to look at a live −3.73e-4. $0, `.md` only.
+2. **QUEUED-WITH-A-FIRE-ORDER — owner MAIN.** `fx1` candidate A, sealed at
+   `.omx/research/ddm_fx1_t4_sealed_fire_order_20260817.json`. **Fire trigger: MAIN's next paid
+   slot**, decode-cost check (+127.3 s) first. Settles GS1-PRED by its own named falsifier.
+3. **QUEUED-WITH-A-FIRE-ORDER — owner MAIN or the `pq2` successor.** Parameterize the e2e archive
+   pin (`--expected-archive-sha256` / `--expected-archive-bytes`, defaulting to
+   `canonical_frontier_pointer.json` at fire time). **Fire trigger: before the next non-rr4
+   candidate is byte-closed through `experiments/ddm_pq2_compress_e2e.py`** — `fx1` and `sa1` have
+   both already made that live. `.py` ⇒ review gate + targeted tests.
+4. **QUEUED-WITH-A-FIRE-ORDER — owner: the eval-harness maintainer.** Retain the `600×6` per-pair
+   pose array (~14 KB, zero extra compute) and re-read the two rows already fired
+   (`fc-01M092BS…` + rr4). **Fire trigger: before any further carrier re-solve** — `t1h` §11.4
+   item 1 blocks its own item 4 behind it.
+5. **QUEUED-WITH-A-FIRE-ORDER — owner MAIN.** The routing question two audits now share: does
+   hv1's semantic-renderer margin term admit a texture weight? **$0 source inspection.** **Fire
+   trigger: before `ns2` R2 or any `hg1` §8 consequence is acted on.**
+6. **QUEUED-WITH-A-FIRE-ORDER — owner MAIN.** Scope the `main_hot_state.md` sentence "POST-HOC BYTE
+   SURGERY ON THIS ARCHIVE IS EXHAUSTED" to the lossless axis `ra2` measured. **Fire trigger: next
+   hot-state edit.** $0.
+7. **FOLDED — the lattice micro-seam.** Closed on two independent grounds (F4 capacity + F3
+   oracle). No successor owed unless **both** a container-format change and an on-axis oracle land.
+8. **FOLDED into the map, no separate row — `ns2` R1/R3.** `r1b7`'s vacuous falsifier and the 13
+   pre-08-03 pose-on-prefix re-grades are carried at F6 and remain `ns2`'s owned rows; I
+   re-confirmed rather than re-derived them, and I am not forking a duplicate queue.
+
 **Own-vehicle frontier: rr4 `S 0.15853325034789678 @ 181,161 B [contest-CUDA T4, n600]`, archive sha
 `35ac2b9b…` — UNMOVED by this unit.** This arm ran no scorer, fired nothing, spent $0, and did not
 lower the score. It composed ~95 per-lane negatives into 6 structural facts, added 3 map edges,
