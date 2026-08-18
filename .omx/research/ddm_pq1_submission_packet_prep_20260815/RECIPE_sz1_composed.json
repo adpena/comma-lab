@@ -1,0 +1,20 @@
+{
+  "schema": "pq2_rebuild_recipe.v1",
+  "note": "Rebuild recipe for the sz1 COMPOSED candidate (packet generation 3): fx2 candidate-A 13-context token probability model (corrector_module) followed by the sz1 semantic serialization split (split_stage_*). Every value here was extracted programmatically from retained receipts; none is hand-typed.",
+  "recipe": {
+    "name": "sz1_composed",
+    "archive_sha256": "debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a",
+    "archive_bytes": 179930,
+    "token_sha256": "5b09fd784a7c80cfe69b49d098acaee60276bba56b837d32c7654e1ac7798a43",
+    "token_bytes": 109801,
+    "decoded_field_sha256": "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52",
+    "corrector_module": "ddm_fx2_model_axis_corrector",
+    "base_archive_sha256": "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e",
+    "rc64_source_sha256": "5c75e2c70b89f148bc9d117d4dbd39a24dfb2e72ec41b0a7e9b9cf490ca07ee6",
+    "pre_split_archive_sha256": "9de0f6db3ca7ae4efcd9237752b7c95ed1119d9285f8aadd92fee7c8c18547ef",
+    "pre_split_archive_bytes": 180450,
+    "split_stage_script": "ddm_sz1_build_split_archive.py",
+    "split_stage_base": "fx2_a",
+    "split_stage_profile": "tuned"
+  }
+}

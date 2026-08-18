@@ -118,6 +118,22 @@ RR4_RECIPE: dict[str, object] = {
 
 RECIPE_KEYS = tuple(RR4_RECIPE)
 
+# OPTIONAL split-stage keys, all-or-none.  A COMPOSED candidate is a token re-encode
+# FOLLOWED BY a container repack that this script's token-only rebuild cannot express
+# (see the "WHY NOT ddm_pq2_compress_e2e.py" note in ddm_sz1_build_split_archive.py).
+# When a recipe declares these, the build stage produces the PRE-split archive
+# (asserted against ``pre_split_archive_sha256``), the split stage runs the canonical
+# repack builder -- which carries its own base pin, deterministic-repack proof,
+# token-stream-verbatim proof and decode-bit-identity proof -- and the final assertion
+# is against the COMPOSED candidate named in ``archive_sha256``.
+SPLIT_RECIPE_KEYS = (
+    "pre_split_archive_sha256",
+    "pre_split_archive_bytes",
+    "split_stage_script",
+    "split_stage_base",
+    "split_stage_profile",
+)
+
 
 def load_recipe(recipe_json: Path | None) -> dict[str, object]:
     """Load the rebuild recipe: rr4's by default, a caller-supplied one otherwise."""
@@ -125,13 +141,29 @@ def load_recipe(recipe_json: Path | None) -> dict[str, object]:
         return dict(RR4_RECIPE)
     document = json.loads(Path(recipe_json).read_text())
     recipe = document.get("recipe", document)
-    unknown = sorted(set(recipe) - set(RECIPE_KEYS))
+    unknown = sorted(set(recipe) - set(RECIPE_KEYS) - set(SPLIT_RECIPE_KEYS))
     if unknown:
-        raise SystemExit(f"recipe carries unknown key(s): {unknown}; expected any of {list(RECIPE_KEYS)}")
+        raise SystemExit(
+            f"recipe carries unknown key(s): {unknown}; expected any of "
+            f"{list(RECIPE_KEYS) + list(SPLIT_RECIPE_KEYS)}"
+        )
     missing = [key for key in RECIPE_KEYS if key not in recipe]
     if missing:
         raise SystemExit(f"recipe is missing required key(s): {missing}")
     return dict(recipe)
+
+
+def split_spec(recipe: dict[str, object]) -> dict[str, object] | None:
+    """Return the split-stage declaration, or None.  All-or-none, fail-closed."""
+    present = [k for k in SPLIT_RECIPE_KEYS if recipe.get(k) not in (None, "")]
+    if not present:
+        return None
+    missing = [k for k in SPLIT_RECIPE_KEYS if k not in present]
+    if missing:
+        raise SystemExit(
+            f"split-stage recipe keys are all-or-none; present {present}, missing {missing}"
+        )
+    return {k: recipe[k] for k in SPLIT_RECIPE_KEYS}
 
 
 def input_spec(recipe: dict[str, object]) -> dict[str, dict[str, object]]:
@@ -312,6 +344,13 @@ def stage_environment(
     environment["TAC_RR2_CORRECTOR_MODULE"] = str(recipe["corrector_module"])
     environment["PYTHONHASHSEED"] = str(seed)
     environment["TAC_PQ2_SEED"] = str(seed)
+    # Stage scripts run with experiments/ as sys.path[0]; correctors that import
+    # through the ``experiments.`` package (fx2's mixer imports fx1's) need the
+    # repo root importable too.  Guaranteeing it HERE keeps every pinned source
+    # file byte-identical instead of editing a frozen corrector's import lines.
+    environment["PYTHONPATH"] = str(REPO) + (
+        os.pathsep + environment["PYTHONPATH"] if environment.get("PYTHONPATH") else ""
+    )
     return environment
 
 
@@ -462,6 +501,18 @@ def main() -> int:
             "--expected-archive-sha256/--expected-archive-bytes at the candidate this recipe builds."
         )
 
+    split = split_spec(recipe)
+    if split is None:
+        build_expected = expected
+    else:
+        # With a split stage, the token-only build produces the PRE-split archive;
+        # the recipe's ``archive_sha256`` names the COMPOSED product the split emits.
+        build_expected = ArchiveIdentity(
+            sha256=str(split["pre_split_archive_sha256"]).lower(),
+            bytes=int(split["pre_split_archive_bytes"]),
+            source="recipe:pre_split",
+        )
+
     store = args.store
     store.mkdir(parents=True, exist_ok=True)
     resolved = resolve_inputs(spec, args.inputs_json)
@@ -521,7 +572,54 @@ def main() -> int:
         receipt["stages_run"].append(run_stage(argv, environment, "build"))
 
     if args.stage in ("verify", "build", "all"):
-        receipt["verification"] = verify_archive(store, expected, recipe)
+        receipt["verification"] = verify_archive(store, build_expected, recipe)
+
+    if split is not None and args.stage in ("verify", "build", "all"):
+        script = REPO / "experiments" / str(split["split_stage_script"])
+        if not script.is_file():
+            raise SystemExit(f"split-stage script not found: {script}")
+        out_root = store / "split_stage"
+        if args.stage in ("build", "all"):
+            argv = [
+                sys.executable,
+                str(script),
+                "--base",
+                str(split["split_stage_base"]),
+                "--profile",
+                str(split["split_stage_profile"]),
+                "--out-root",
+                str(out_root),
+            ]
+            receipt["stages_run"].append(run_stage(argv, environment, "split"))
+        final = (
+            out_root
+            / f"archives/{split['split_stage_base']}__{split['split_stage_profile']}"
+            / "archive.zip"
+        )
+        if not final.is_file():
+            raise SystemExit(f"no split-stage archive at {final}; run the build stage first")
+        final_sha = sha256_file(final)
+        final_bytes = final.stat().st_size
+        report_path = final.parent / "BUILD_REPORT.json"
+        receipt["split_verification"] = {
+            "archive_path": str(final),
+            "archive_sha256": final_sha,
+            "archive_bytes": final_bytes,
+            "expected_archive_sha256": expected.sha256,
+            "expected_archive_bytes": expected.bytes,
+            "sha256_matches": final_sha == expected.sha256,
+            "bytes_match": final_bytes == expected.bytes,
+            "build_report": json.loads(report_path.read_text()) if report_path.is_file() else None,
+        }
+        if not (final_sha == expected.sha256 and final_bytes == expected.bytes):
+            print(json.dumps(receipt["split_verification"], indent=2, sort_keys=True))
+            raise SystemExit(
+                "SPLIT-STAGE VERIFICATION FAILED: composed bytes do not match the pinned candidate"
+            )
+        print(
+            f"[pq2] VERIFIED composed archive sha256={final_sha} bytes={final_bytes:,}",
+            flush=True,
+        )
 
     if args.stage == "decode":
         for sub in ("build", "parseback"):
