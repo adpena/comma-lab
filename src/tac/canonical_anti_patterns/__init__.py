@@ -97,6 +97,11 @@ from tac.canonical_anti_patterns.d7_d8_d9_builders import (
     build_micro_optimization_without_macro_escape_polishing_plateau_ceiling_v1,
     populate_d7_d8_d9_anti_patterns,
 )
+from tac.canonical_anti_patterns.hd1_falsifier_calibration_builders import (
+    build_all_hd1_falsifier_calibration_anti_patterns,
+    build_single_seed_falsifier_on_stochastic_endpoint_v1,
+    populate_hd1_falsifier_calibration_anti_patterns,
+)
 from tac.canonical_anti_patterns.na3_subset_bias_builders import (
     build_all_na3_subset_bias_anti_patterns,
     build_prefix_bias_sign_inversion_pose_axis_v1,
@@ -189,6 +194,7 @@ __all__ = [
     "append_empirical_falsification",
     "auto_recalibrate_from_continual_learning_posterior",
     "build_all_d7_d8_d9_anti_patterns",
+    "build_all_hd1_falsifier_calibration_anti_patterns",
     "build_all_initial_anti_patterns",
     "build_all_na3_subset_bias_anti_patterns",
     "build_all_na5_native_coordinate_anti_patterns",
@@ -197,6 +203,7 @@ __all__ = [
     "build_lossy_projection_shipped_expecting_decode_realization_v1",
     "build_micro_optimization_without_macro_escape_polishing_plateau_ceiling_v1",
     "build_prefix_bias_sign_inversion_pose_axis_v1",
+    "build_single_seed_falsifier_on_stochastic_endpoint_v1",
     "build_subset_default_silent_under_sampling_v1",
     "evaluate_explicit_override_for_anti_pattern",
     "get_anti_pattern_by_id",
@@ -204,6 +211,7 @@ __all__ = [
     "load_anti_patterns_strict",
     "match_stack_against_anti_patterns",
     "populate_d7_d8_d9_anti_patterns",
+    "populate_hd1_falsifier_calibration_anti_patterns",
     "populate_initial_anti_patterns",
     "populate_na3_subset_bias_anti_patterns",
     "populate_na5_native_coordinate_anti_patterns",

@@ -2782,6 +2782,19 @@ def main() -> int:
         help="Batch size for --scorer-input-cache-tensors-out-dir preprocessing.",
     )
     parser.add_argument(
+        "--retain-per-pair-distortion-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Optional directory in which to retain the PER-PAIR PoseNet/SegNet distortion "
+            "vectors that upstream reduces to one scalar and discards. OFF by default because "
+            "it is NOT free: upstream never exposes the per-pair array, so retention is a "
+            "SECOND scorer pass (~40 s contest-CUDA T4, ~214 s contest-CPU). It runs strictly "
+            "AFTER the scored result is in hand and cannot perturb any scored number; the "
+            "retained vectors are verified to reduce back to the reported scalars."
+        ),
+    )
+    parser.add_argument(
         "--scorer-input-cache-tensor-large-pair-threshold",
         type=int,
         default=64,
@@ -2998,6 +3011,45 @@ def main() -> int:
         )
         result["inflate_elapsed_seconds"] = inflate_elapsed_seconds
         result["contest_auth_eval_elapsed_seconds"] = time.monotonic() - exact_eval_t0
+
+        # ALWAYS KEEP THE PAYLOAD, opt-in half: upstream computes 600 per-pair distortion
+        # values and keeps only their mean. Retention runs HERE -- after the scored result
+        # exists -- so it cannot move a number, and it is a second pass, so it is off unless
+        # asked for. A failure to retain is a diagnostic loss, never an eval failure.
+        if args.retain_per_pair_distortion_dir is not None:
+            try:
+                from tac.pose_per_pair_retention import (
+                    compute_per_pair_distortion,
+                    retain_per_pair_distortion,
+                )
+
+                per_pair_pose, per_pair_seg, pose_vectors = compute_per_pair_distortion(
+                    upstream_dir=upstream_dir,
+                    submission_dir=work_dir,
+                    uncompressed_dir=upstream_dir / "videos",
+                    video_names_file=video_names_file,
+                    device=args.device,
+                )
+                retention = retain_per_pair_distortion(
+                    args.retain_per_pair_distortion_dir,
+                    per_pair_pose=per_pair_pose,
+                    per_pair_seg=per_pair_seg,
+                    reported_pose=result.get("avg_posenet_dist"),
+                    reported_seg=result.get("avg_segnet_dist"),
+                    pose_vectors=pose_vectors,
+                )
+                result["per_pair_distortion_retention"] = retention.to_dict()
+                print(
+                    f"[per-pair] retained {retention.pairs} pairs -> "
+                    f"{args.retain_per_pair_distortion_dir} "
+                    f"(verified={retention.verified})"
+                )
+            except Exception as exc:
+                result["per_pair_distortion_retention"] = {
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "note": "retention failed; the scored result above is unaffected",
+                }
+                print(f"[per-pair] retention FAILED (score unaffected): {type(exc).__name__}: {exc}")
 
         # Save final JSON next to the work dir
         result["provenance"] = prov
