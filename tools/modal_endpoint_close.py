@@ -372,8 +372,34 @@ def _safe_artifact_name(value: str) -> str:
     return safe
 
 
+def artifact_payload_bytes(payload: Any) -> tuple[bytes, str]:
+    """Coerce ANY returned artifact to bytes. Never returns without content.
+
+    ALWAYS KEEP THE PAYLOAD applies to receipts. Before 2026-08-18 this module
+    persisted only ``bytes`` artifacts and recorded every other type as the bare
+    label ``{"embedded_value_type": "str"}`` — a measured TYPE with the content
+    discarded, which is the canonical measure-and-discard signature. The rr4 CUDA
+    row returned ``contest_auth_eval.json`` and ``report.txt`` as ``str`` and both
+    were dropped (rv2 finding FO-2), forcing a recovery from the Modal result
+    cache. Encoding is recorded so the persisted bytes stay interpretable.
+    """
+
+    if isinstance(payload, bytes):
+        return payload, "bytes"
+    if isinstance(payload, (bytearray, memoryview)):
+        return bytes(payload), "bytes"
+    if isinstance(payload, str):
+        return payload.encode("utf-8"), "utf-8"
+    try:
+        return canonical_json_bytes(payload), "json"
+    except (TypeError, ValueError):
+        # Last resort: keep SOMETHING and say so. Raising here would discard the
+        # whole harvest of a paid call over one unserializable entry.
+        return repr(payload).encode("utf-8"), "repr"
+
+
 def persist_remote_result(result: dict[str, Any], output_dir: Path) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Materialize embedded bytes, then persist a JSON-safe remote result."""
+    """Materialize embedded artifacts, then persist a JSON-safe remote result."""
 
     safe_result = dict(result)
     artifact_records: dict[str, Any] = {}
@@ -383,12 +409,26 @@ def persist_remote_result(result: dict[str, Any], output_dir: Path) -> tuple[dic
             raise EndpointClosureError("result artifacts must be a mapping")
         for raw_name, payload in artifacts.items():
             name = _safe_artifact_name(str(raw_name))
-            if not isinstance(payload, bytes):
-                artifact_records[name] = {"embedded_value_type": type(payload).__name__}
-                continue
+            # Distinct raw names can normalize to the SAME safe name ("a-b" and "a_b"),
+            # and the later one would silently overwrite the earlier file — a payload
+            # dropped by a different door than the one this landing closed. Disambiguate
+            # rather than refuse: keeping both bytes beats failing a paid harvest.
+            if name in artifact_records:
+                stem, dot, suffix = name.partition(".")
+                collision = 2
+                while f"{stem}__{collision}{dot}{suffix}" in artifact_records:
+                    collision += 1
+                name = f"{stem}__{collision}{dot}{suffix}"
+            blob, encoding = artifact_payload_bytes(payload)
             destination = output_dir / "returned_artifacts" / name
-            atomic_bytes(destination, payload)
-            artifact_records[name] = file_record(destination)
+            atomic_bytes(destination, blob)
+            record = file_record(destination)
+            record["source_name"] = str(raw_name)
+            record["source_value_type"] = type(payload).__name__
+            record["persisted_encoding"] = encoding
+            if encoding == "repr":
+                record["lossy_repr"] = True
+            artifact_records[name] = record
     safe_result["materialized_artifacts"] = artifact_records
     result_path = output_dir / "MODAL_REMOTE_RESULT.json"
     atomic_json(result_path, safe_result)
