@@ -551,3 +551,47 @@ instance, now on the live pointer. Reactivation would require in-compile Schur c
 
 CPU/T4 sign question (left OPEN by the arm): **moot for this candidate** — it loses on T4, and the
 CPU axis is measured infeasible on this lineage (inflate 3,422.7 s vs the 1,800 s budget).
+
+## §9 — WHAT THE REFUSAL BUYS: the uncompensated-edit break-even, MEASURED
+
+The row is not just a dead candidate. It prices the whole family, because the frame diff
+separates the container from the edit and the T4 row gives the exact d_pose.
+
+DERIVATION (all inputs measured, no fitting):
+- container: 556/556 unedited pairs shift by exactly ±1 uint8 ⇒ arm-measured +0.747% pose
+  ⇒ `d_pose_container = 6.880e-06 × 1.00747 = 6.9314e-06`
+- edit: `1.875e-05 − 6.9314e-06 = 1.1819e-05` across the 44 re-solved pairs (P2, max dev 17)
+  ⇒ **2.6860e-07 d_pose per edited pair**
+- pose marginal at the pointer: `d/d(d_pose) √(10·d_pose) = 5/√(10·6.880e-06) = 602.8`
+  ⇒ **1.6192e-04 S cost per edited pair**
+- seg gain per flip: `100 / (600·512·384) = 8.4771e-07 S`
+
+⇒ **BREAK-EVEN = 191.0 seg flips PER EDITED PAIR** for an UNCOMPENSATED semantic edit.
+
+WHAT THE FAMILY ACTUALLY DELIVERS: re1 2.0 · qs2 3.6 · qs4 5.7 · qs5 5.7 flips/pair.
+**A 33–95× shortfall.** The family is not "close" and not tunable-into-range: no re-selection,
+support trim, or connective restoration on the same object moves 5.7 → 191.
+
+CONCORDANCE (this law retro-explains every row of the family, and it was derived from none of them):
+| candidate | flips/pair | pose tax | outcome |
+|---|---|---|---|
+| re1 | 2.0 | +8.108e-10 (≈0) | **ADMITTED** −1.207e-06 |
+| qs2 | 3.6 | +1.126e-07 (compensation byte-preserved) | **ADMITTED** −4.375e-06 |
+| qs5 | 5.7 | **−3.814e-07 (BELOW base)** | refused +2.520e-06 — on RATE, not pose |
+| qs4 | 5.7 | +2.396e-04 (stale compensation) | refused +2.438e-04 |
+| iv1 | 0 | +5.398e-03 (uncompensated) | refused +6.45e-03 |
+The admitted rows are exactly the rows that paid ~zero pose tax. Nothing else separates them.
+
+THE OPERATIONAL CONSEQUENCE: **compensation is not an optimization on this family, it is the
+entry condition.** qs5 vs iv1 differ by 2,560× in refusal margin (+2.5e-06 vs +6.45e-03), and
+the difference is in-compile Schur compensation. With compensation proven to drive d_pose BELOW
+base, the 191-flip bar collapses toward 0 and the binding constraint becomes RATE — which is
+exactly where qs5 actually failed (+26 B). That re-aims the family: stop hunting seg flips,
+start hunting bytes, and never ship an uncompensated semantic edit again.
+
+verdict_scope: **INSTANCE→FAMILY-PRICING.** The 191 is derived AT iv1's edit magnitude
+(max dev 17) on the sz1 pointer. sa1 measured pose damage linear in mass (0.91× of linear), so
+smaller edits cost proportionally less pose — but seg flips are an argmax THRESHOLD effect and
+need not scale the same way, so the RATIO at other magnitudes is UNMEASURED. Do not transfer
+191 to a different edit magnitude without re-deriving it; transfer the METHOD (separate the
+container, price the pose marginal at the live operating point, divide).
