@@ -1,0 +1,112 @@
+{
+  "schema": "ddm_sz1_sealed_fire_order.v1",
+  "sealed_at_utc": "2026-08-18",
+  "sealed_by": "ddm_sz1",
+  "disposition": "SEALED_AWAITING_MAIN_FIRE",
+  "fire_authority": "MAIN only. ddm_sz1 fired nothing and spent nothing ($0).",
+  "axis_when_fired": "[contest-CUDA] Tesla T4 n600",
+  "memo": ".omx/research/ddm_sz1_semantic_metadata_split_receiver_close_20260818.md",
+  "ssd_root": "/Volumes/APDataStore/pact/ddm_sz1",
+  "retention_manifest": "/Volumes/APDataStore/pact/ddm_sz1/RETENTION_MANIFEST.json",
+
+  "mechanism": "The RX1M semantic section's 8,284 B of fixed fp16 metadata (16 W4 scale arrays + 22 fp16 tensors) is stored as raw interleaved little-endian <f2 and is entropy-coded by nothing: an exponent byte alternates with a mantissa byte and the LZ match distance is destroyed. The encoder groups the two byte planes (all high bytes, then all low bytes) over a frozen region before the container's own Brotli; the receiver applies the exact inverse permutation before any parsing, restoring the F12 body byte-for-byte. Pure SERIALIZATION: decoded values are unchanged. The un-split is free receiver code under rule 118 -- no transmitted table, a single O(n) byte scatter. Versioning uses bit 0 of the RX1M header's existing `reserved` byte, so it costs ZERO transmitted bytes; reserved == 0 keeps today's exact code path (inactive is byte-identity) and unknown bits still refuse.",
+
+  "distortion_claim": "d_seg and d_pose are UNCHANGED BY CONSTRUCTION. The decode is bit-exact: nine decoded fields hash identically to the base through the patched receiver, so the rendered frames cannot change. This is a pure rate move.",
+
+  "pointer_context": {
+    "fx1_pointer_bytes": 180601,
+    "fx1_pointer_score_S": 0.15816036933414834,
+    "fx1_pointer_authority": "[contest-CUDA] Tesla T4 n600",
+    "rr4_base_bytes": 181161,
+    "note": "rr4 is 560 B BEHIND the fx1 pointer. The standalone split on rr4 therefore lands ABOVE the pointer and is NOT a shipping candidate. Only the fx2-composed rows beat it."
+  },
+
+  "PRIMARY": {
+    "id": "fx2_a__tuned",
+    "archive": "/Volumes/APDataStore/pact/ddm_sz1/archives/fx2_a__tuned/archive.zip",
+    "archive_sha256": "debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a",
+    "archive_bytes": 179930,
+    "split_offset": 49,
+    "split_length": 8284,
+    "delta_bytes_vs_fx1_pointer": -671,
+    "projected_S": 0.15771358,
+    "projected_delta_S_vs_pointer": -0.0004468,
+    "receiver_tree": "/Volumes/APDataStore/pact/ddm_sz1/runtime/tuned",
+    "caveat": "offset 49 is the argmax over offsets 0..400, fitted to this frozen payload. Safe (the un-split is a pure permutation) but it is coder alignment noise, not mechanism."
+  },
+
+  "ALTERNATE_defensible_constant": {
+    "id": "fx2_a__derived",
+    "archive": "/Volumes/APDataStore/pact/ddm_sz1/archives/fx2_a__derived/archive.zip",
+    "archive_sha256": "10bb1b058c4145233d69325536cf65c1e2b48c1194ca159e70623e4f13ec2f54",
+    "archive_bytes": 179952,
+    "split_offset": 30,
+    "split_length": 8284,
+    "delta_bytes_vs_fx1_pointer": -649,
+    "projected_S": 0.15772823,
+    "projected_delta_S_vs_pointer": -0.0004321,
+    "receiver_tree": "/Volumes/APDataStore/pact/ddm_sz1/runtime/derived",
+    "note": "Offset and length taken from the format itself (_OFFSET_BYTES, _fixed_metadata_bytes): zero fitted parameters. 22 B behind PRIMARY. This is the frozen SHIPPED_PROFILE in code."
+  },
+
+  "THIRD": {
+    "id": "fx2_a__fx2_r5c",
+    "archive": "/Volumes/APDataStore/pact/ddm_sz1/archives/fx2_a__fx2_r5c/archive.zip",
+    "archive_sha256": "e79faf46c835e5e4d4f81a127919e5f12f7e2dcad20348d5b75df020ab87458d",
+    "archive_bytes": 179935,
+    "split_offset": 41,
+    "delta_bytes_vs_fx1_pointer": -666,
+    "projected_S": 0.15771691,
+    "note": "Reproduces fx2's r5c -515 B exactly. Offset 41 is _HEADER_BYTES applied to a body whose real prefix is 30 -- misaligned by 11 B. Retained for lineage, not recommended over PRIMARY or ALTERNATE."
+  },
+
+  "NOT_FOR_FIRE": {
+    "ids": ["rr4__derived", "rr4__fx2_r5c", "rr4__tuned"],
+    "bytes": [180663, 180646, 180641],
+    "reason": "All three are ABOVE the fx1 pointer (+62, +45, +40 B). They are the clean standalone measurement of the lever on the rr4 base and are retained as evidence, not as candidates."
+  },
+
+  "composition": {
+    "base": "ddm_fx2 candidate A (fx2_d1_13x_homog_context), byte-closed AFTER its own fire-order was sealed as BLOCKED",
+    "base_archive": "/Volumes/APDataStore/pact/ddm_fx2/byteclose_a/retained/archive.zip",
+    "base_archive_sha256": "9de0f6db3ca7ae4efcd9237752b7c95ed1119d9285f8aadd92fee7c8c18547ef",
+    "base_archive_bytes": 180450,
+    "token_stream_sha256": "5b09fd784a7c80cfe69b49d098acaee60276bba56b837d32c7654e1ac7798a43",
+    "token_stream_bytes": 109801,
+    "token_stream_carried_verbatim": true,
+    "disjointness": "fx2 re-encodes the token stream (member tail); sz1 rewrites the semantic section (RX1M prefix). Disjoint byte ranges.",
+    "additivity_measured": "0 B interaction on all three profiles: 181161 - 711 - split reproduces the measured archive bytes EXACTLY. The archive is a single ZIP_STORED member, so archive delta == member delta == section delta; the three rr4 rows independently confirm slope 1 across three section lengths.",
+    "WARNING": "fx2 candidate A has NEVER had a distortion row measured on T4. Firing a composed archive buys TWO answers at once (fx2's token probability model AND sz1's split). If the row misses, the attribution is ambiguous. To separate them, fire fx2 candidate A alone first, or accept the joint result."
+  },
+
+  "PRE_FIRE_STEPS": [
+    "1. Re-pin the runtime tree. The candidate ships with the PATCHED receiver at <receiver_tree>/runtime/residual_archive.py. The archive and its runtime are ONE object: an archive with reserved bit 0 set will be REFUSED by any unpatched receiver (that is the fail-closed design, not a bug).",
+    "2. Entry-point smoke: run the real inflate.sh / parse-back on the candidate archive with the patched runtime, in a clean environment. This arm validated the receiver through read_residual_archive, NOT through a full inflate. The un-split runs before parsing and restores the body byte-exactly, so risk is low but NOT zero.",
+    "3. Re-derive the decoded token field sha256 from the parse-back and confirm it equals 9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52. This arm MEASURED that the token stream section bytes are bit-identical and the corrector untouched, and DERIVED that the decoded field therefore cannot change; step 2 makes it measured.",
+    "4. Confirm archive.zip and archive.repeat.zip are byte-identical (already verified locally at build time; re-verify after any copy across filesystems)."
+  ],
+
+  "falsifiers_pre_registered": {
+    "d_seg_and_d_pose": "EQUAL to the fx2-candidate-A row to ALL DIGITS. The claim is decode-identity, so any drift is a REFUSAL, not a regression -- it would mean the un-split did not restore the body and the weights are corrupt.",
+    "archive_bytes": "exactly 179930 (PRIMARY) / 179952 (ALTERNATE) / 179935 (THIRD). These are MEASURED archive bytes, not projections, so any deviation means the wrong file was fired.",
+    "archive_repeat": "byte-identical across a fresh process.",
+    "decode_wall_clock": "delta ~0 vs the fx2 candidate A row. The un-split is a single O(n) scatter over 8,284 bytes. A delta > 5 s falsifies the cost model and should be reported. NOT measured by this arm.",
+    "projected_S": "projected_S inherits the fx1 [contest-CUDA] distortion terms and is a PROJECTION. It becomes a score ONLY through an exact eval row. It is not a score claim."
+  },
+
+  "tests": "25 tests in experiments/test_ddm_sz1_semantic_metadata_split.py, all passing, ruff clean. Non-vacuity PROVEN: four injected mutations (inverse planes swapped, split made identity, receiver offset off-by-one, header patch dropped) were ALL caught.",
+
+  "bug_found_and_fixed": "set_rx1_reserved wrote byte index 8 (the low byte of hpac_bytes, a section length) instead of index 7 (reserved). Caught by the suite. The shipped archives were never affected -- the builder packs the header positionally -- but the helper would have corrupted a section length. It now re-reads the header and refuses if any other field moved.",
+
+  "extension_measured_not_shipped": {
+    "semantic_blob": {"control_delta": 0, "best_split_delta": -520, "verdict": "PAYS"},
+    "carrier_blob": {"control_delta": 0, "best_split_delta": 12, "verdict": "NO WIN"},
+    "hpac_blob": {"control_delta": 40, "verdict": "NOT MEASURABLE -- re-Brotli does not reproduce the shipped length, so the instrument is not calibrated on this section and any delta would measure the parameter mismatch, not the transform"},
+    "conclusion": "The semantic blob is the ONLY one of the three carrying un-entropy-coded fp16 metadata. pd1's corpus-wide serialization prior does NOT generalize across our sections."
+  },
+
+  "overlap_with_mz2": "mz2's q3/q4 and FiLM-prune candidates emit an SD1M/SM3R-tagged semantic body that REPLACES the F12/WANS1 body entirely. They are therefore MUTUALLY EXCLUSIVE with this split, not composable, unless the split is also implemented for the tagged formats. They are also lossy (548-7,991 decoded parameters change) and score-gated NOT_ADMITTED; this split is bit-exact and needs no scorer run.",
+
+  "spend": "$0. No Modal, no paid dispatch, no GPU, no n600 scorer job.",
+  "commit": "see git log for experiments/ddm_sz1_*.py and .omx/research/ddm_sz1_*"
+}
