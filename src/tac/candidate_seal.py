@@ -89,6 +89,7 @@ __all__ = [
     "SEAL_BYTE_DRIFT",
     "SEAL_FILE_MISSING",
     "SEAL_PLACEHOLDER_PIN",
+    "SEAL_RECEIVER_PIN_MISMATCH",
     "SEAL_RUNTIME_DRIFT",
     "SEAL_SCHEMA",
     "SEAL_SCHEMA_VIOLATION",
@@ -543,6 +544,12 @@ SEAL_BYTE_DRIFT = "SEAL_BYTE_DRIFT"
 SEAL_RUNTIME_DRIFT = "SEAL_RUNTIME_DRIFT"
 SEAL_BAR_DRIFT = "SEAL_BAR_DRIFT"
 SEAL_TAMPERED = "SEAL_TAMPERED"
+#: The staged receiver's OWN ``ARCHIVE_SHA256``/``ARCHIVE_BYTES`` constants name a different
+#: archive than the one sealed beside it — a tree that cannot decode itself.  Distinct from
+#: ``SEAL_RUNTIME_DRIFT`` (the receiver FILE changed) and from the ``RECEIVER_MISSING`` /
+#: ``ARCHIVE_MISSING`` pin verdicts (nothing to compare).  Here both sides are present, intact,
+#: and DISAGREE.
+SEAL_RECEIVER_PIN_MISMATCH = "SEAL_RECEIVER_PIN_MISMATCH"
 
 #: The axes a seal may declare.  ``advisory`` is included so a non-promotable local row can
 #: still be sealed with the same rigor — but it is NEVER a contest score, and the fire path
@@ -1140,6 +1147,32 @@ def validate_seal(
                 f"{runtime_now.sha256[:16]}… ({runtime_now.file_count} files, {runtime_now.total_bytes} B). "
                 "Every pinned receiver still matches, so the change is in an unpinned shipped file.",
             ),
+            observed=observed,
+        )
+
+    # ---- 5b. the receiver must name THIS archive ------------------------------------------
+    # The tree is proven intact and the archive proven byte-identical to the seal.  Neither
+    # fact answers the question a reader actually delegates to this verdict: can this tree
+    # DECODE the archive staged beside it?  ``inflate.py`` carries its own ARCHIVE_SHA256 /
+    # ARCHIVE_BYTES and asserts them at decode; a tree copied from another candidate keeps the
+    # DONOR's pin and refuses its own archive.  Both sides can be individually pristine while
+    # disagreeing — which is exactly the state that produced SEAL_VALID on an undecodable
+    # packet on 2026-08-18 (iv1: receiver pinned 35ac2b9b/181,161 B, archive was
+    # 49bb833e/181,475 B), caught only downstream at dispatch time.
+    #
+    # This lives INSIDE validate_seal, not beside it, because a seal is the object a reader
+    # trusts INSTEAD of re-checking.  Every consumer that behaves correctly — skipping its own
+    # verification because SEAL_VALID was returned — inherits whatever this function fails to
+    # look at.  Defense-in-depth downstream is not a substitute: a seal can be read by things
+    # that never dispatch.
+    pin_state = check_pin_consistency(runtime_dir, archive_path=archive_path)
+    if pin_state.verdict == MISMATCH:
+        return SealValidation(
+            verdict=SEAL_RECEIVER_PIN_MISMATCH,
+            seal_path=seal_path,
+            candidate_id=candidate_id,
+            axis=axis,
+            problems=(pin_state.summary(),),
             observed=observed,
         )
 
