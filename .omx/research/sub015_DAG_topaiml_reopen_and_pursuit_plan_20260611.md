@@ -28643,3 +28643,25 @@ STORES CONSULTED: MODAL_REMOTE_RESULT.json (rr2 + hv1 r2 rows), inflated_outputs
 - Pose axis routing after this refutation: joint/nonlinear line (js8) + fx2-R5 dxi model attack +
   ps2's optional m=34 probe (fires only if nothing beats 4.5%-of-gap). Pointer UNMOVED by this
   unit: fx1 S 0.15816036933414834 @ 180,601 B [contest-CUDA T4 n600].
+
+## FEED-pd1 (2026-08-18) — 60-archive decomposition → 661-row typed prior store ($0)
+- pd1 decomposed 60 competitor PR archives (5× charter target; 52 from the 2026-05-05 auto-intake
+  never structurally decomposed) into a typed prior store (661 rows, 0 schema violations, 11/11
+  retained streams sha-verified; /Volumes/APDataStore/pact/ddm_pd1/). Top consumables relayed to
+  the live fx2 arm: (1) LZMA array-section tuning lc=0,lp=1,pb=0 re-derived BYTE-EXACT vs PR133
+  (−1,092 B, testable on our bytes); (2) weight SERIALIZATION unsaturated (PR133 semantic −13.0%,
+  HPAC model −25.9%; nobody entropy-codes a scale array) — a different axis from the closed coder
+  races; (3) context policy 0.4 bits/token prior + saturation curve.
+- INVARIANT RE-KEY (binding): the miss-BIT-SHARE ~70% is the invariant (68.92–76.56% across prior
+  families); the "0.19% miss fraction" is a VEHICLE ARTIFACT (swings 266×). fx1-sweep-prior memory
+  corrected headline+body. q dominance (96–98%) holds under STRONG priors only (44.7% weak).
+- Prediction adjudication: the pre-registered ≥3-family reproduction test was UNTESTABLE as
+  registered — four semantic-family PR numbers carry AT MOST TWO distinct token payloads
+  (PR132≡PR133 byte-identical sha 948379872ff8; PR138 = bit-exact transcode of PR135). The
+  substitute (prior-family variation on our field) PASSED. Discovery: authors copy token fields.
+- Integrity: order-1 headroom claim caught as pure i.i.d. estimator bias by its own control
+  BEFORE entering the store; false L14/PR95-provenance claim REFUSED (our 2026-05-04 intake
+  predates the claimed repo); 2 hx1 attributions corrected (PR133 rank-one split first,
+  shipped disabled; PR112 shipped the exp()-free cure + per-section selector 2 months early).
+- Row 5 (pose): standalone f0 carrier ~8 KB → ~0.196, verdict_scope: instance — HNeRV lineage
+  only; a break-even bar for the js8 line, not a kill.
