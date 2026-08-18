@@ -142,11 +142,26 @@ The 6 residual reds, each typed with its route:
    (conforming `completed_contest_cuda_exact_eval_harvested` terminal row,
    sha-bound to archive `debb025f…` + runtime tree `0d0fc008…`).
 
-**r4 (2026-08-18, the CANONICAL terminal receipt) —
+**r4 (2026-08-18 09:56Z, superseded by r5) —
 `gen3_receipts/pre_submission_compliance.gen3.r4.json`: 82 GREEN / 4 RED,
 identical red set to r3.** Re-run with `--strict` after the review-pass-5
 fix batch (8 findings, all on custody-excluded surfaces: report.txt text,
 manifest portable-tree key, staged docs, deleted `__pycache__`); submission
 tree `67059c1d…`, portable content tree `994f8aaa…`, and the 34-file runtime
 manifest all byte-identical to r3 — measured proof the fixes were
-hash-neutral. All review passes from round 6 onward count against r4.
+hash-neutral. SUPERSEDED: round-7's fixes rewrote two checker-scanned files
+(PR body, packet README) AFTER r4 was produced — round-8 F2 caught the
+staleness (r4's own statement_preview still carried the pre-fix submission
+name).
+
+**r5 (2026-08-18, the CANONICAL terminal receipt) —
+`gen3_receipts/pre_submission_compliance.gen3.r5.json` (sha `6f4f6dc8e3648eb0…`):
+82 GREEN / 4 RED, identical red set to r3/r4, re-bought AFTER the round-7 and
+round-8 fix batches so every scanned surface it reads is current** (its
+statement_preview carries `sz1_composed_reencode`). The expected runtime-tree
+sha for the invocation was DERIVED from the r4 receipt, never hand-typed —
+the first r5 attempt used a hand-completed sha prefix and the checker
+correctly refused with two tree-mismatch reds, an executed demonstration of
+the no-hand-typed-values law. All review passes from round 9 onward count
+against r5. STANDING RULE: any fix batch that edits a checker-scanned
+surface ENDS by re-running the checker and re-pointing all receipt citations.

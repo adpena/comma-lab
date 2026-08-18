@@ -147,7 +147,7 @@
   },
   "fire_trigger": "MAIN only, and only after ALL of: operator GO; the canonical_chain_gap above is cured or explicitly waived; reconciliation reports zero live remote calls and zero active claims; the unique lane claim succeeds; the runtime dir still matches every sealed hash above.",
   "supersession": {
-    "superseded_utc": "2026-08-18T05:30:00Z",
+    "superseded_utc": "2026-08-18T05:00:51Z",
     "reason": "The candidate hot-swapped to generation 3 (sz1 composed, sha debb025f45bb42e3..., 179,930 B) before this gen-2 order fired. The CPU axis was then bought on the GEN-3 bytes via the canonical tool (tools/fire_modal_auth_eval.py --axis cpu), not via this sealed order.",
     "executed_call_id": "fc-01M09G62A7SZ7HZYE5Q28YS7VP",
     "outcome": "MEASURED_INFEASIBLE_WITHIN_CONTEST_BUDGET: inflate 3,422.7 s vs the 1,800 s budget on 4-thread x86_64 (token decode 3,108.7 s); harness fail-closed at 1,800 s; decoded token field 9ba2e52b... EXACT on CPU. No CPU score exists; GPU-required is now a measured fact.",

@@ -45,7 +45,17 @@ its authority receipts for changed bytes.
 5. `RERUN_STRICT_CHAIN` — owner `MAIN packet owner`; consumer `generation gap
    report and compliance JSON`; fire trigger `public packet refreshed`. Execute
    the exact strict checker with the new expected SHA and size. Record every red
-   item; never convert a red to green by copying an old receipt.
+   item; never convert a red to green by copying an old receipt. **RECEIPT
+   FRESHNESS LAW (round-8 F2):** the compliance receipt is INVALIDATED by any
+   edit to a surface the checker scans (packet README/report.txt/manifests,
+   PR body, public-scan paths) — a receipt older than any scanned file is
+   stale by definition, so every fix batch that touches one ENDS by re-running
+   the checker and re-pointing every receipt citation in the same batch.
+   **NO HAND-TYPED VALUES (round-8 F4 + the r5-attempt-1 refusal):** every
+   sha, size, and timestamp passed to the checker or written into a custody
+   field is DERIVED (from a receipt, git, or the clock) — a hand-completed
+   sha prefix and an invented `_utc` are the same defect; the seal contract's
+   no-hand-typed-sha principle binds here too.
 6. `DELTA_REVIEW` — owner `submission reviewers`; consumer `review scaffold`;
    fire trigger `strict checker receipt exists`. Compare generation 1 against
    generation 0 for archive, member grammar, receiver files, dependencies,
@@ -84,9 +94,9 @@ the refusal conditions themselves are not weakened:
   decoded tokens byte-exact — the axis is adjudicated MEASURED-INFEASIBLE,
   not pending. No CPU score exists or is claimed anywhere in the packet.
 - "Strict checker green": the gen-3 terminal state is 82/86
-  (`gen3_receipts/pre_submission_compliance.gen3.r4.json` — the CANONICAL
-  terminal receipt, re-run after the round-5 fixes; r3 predates those edits
-  and is superseded). The 4 residual
+  (`gen3_receipts/pre_submission_compliance.gen3.r5.json` — the CANONICAL
+  terminal receipt, re-bought after the round-7/8 fixes; r3 and r4 each
+  predate edits to checker-scanned surfaces and are superseded). The 4 residual
   reds are each typed and documented in `COMPLIANCE_RUNBOOK.md`
   (2 structural-by-construction, 1 by-design dependency bootstrap under the
   e4 precedent, 1 operator-gated hosted manifest). None was converted by
