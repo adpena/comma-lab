@@ -199,6 +199,120 @@ def counted_carrier_bytes(archive: Path, runtime: Path, new_rice_payload: bytes,
     }
 
 
+def packed_rice_bit_budget(archive: Path, runtime: Path) -> dict:
+    """Read the HARD Rice bit budget the packed CAP1 section can carry.
+
+    The receiver dispatches on an EXACT section length, so the Rice payload field inside it
+    has a fixed byte width.  That width -- not a compression ratio, not a heuristic -- is the
+    ceiling on the residual bitstream, and a composition that exceeds it cannot be carried at
+    all.  Reading it from the shipped archive rather than hardcoding it keeps the budget
+    bound to the container actually being modified.
+    """
+    import zipfile as zf
+
+    import brotli
+
+    if str(runtime) not in sys.path:
+        sys.path.insert(0, str(runtime))
+    from runtime import residual_archive as ra
+
+    member = zf.ZipFile(archive).read("p")
+    fields = ra.RX1_MODEL_HEADER.unpack_from(member)
+    start = ra.RX1_MODEL_HEADER.size + fields[5] + fields[6]
+    body = brotli.decompress(member[start : start + fields[7]])
+    packed = body[: ra.PACKED_CAP1_SECTION_BYTES]
+    shipped_rice_bits = int.from_bytes(packed[3:6], "little")
+    rice_payload_bytes = (shipped_rice_bits + 7) // 8
+    return {
+        "rice_payload_bytes": rice_payload_bytes,
+        "max_rice_bits": rice_payload_bytes * 8,
+        "shipped_rice_bits": shipped_rice_bits,
+        "shipped_slack_bits": rice_payload_bytes * 8 - shipped_rice_bits,
+    }
+
+
+def fit_to_bit_budget(
+    candidate: np.ndarray,
+    choice: list[tuple[int, int, float]],
+    rows: list[dict],
+    base_energies: np.ndarray,
+    encode_bits,
+    max_bits: int,
+) -> tuple[np.ndarray, list[tuple[int, int, float]], int, list[dict]]:
+    """Trade the least measured pose gain per bit until the composition fits the container.
+
+    Every alternative considered here is a move the sweep ALREADY evaluated exactly, so the
+    resulting energy is measured, never modelled: ``per_coord[c]`` holds the exact energy of
+    that pair's best move on coordinate ``c``, and pairs are independent, so substituting one
+    pair's choice changes that pair's energy and nothing else.
+
+    The search is exhaustive over SINGLE substitutions: every pair, every measured
+    per-coordinate option, plus reverting to no move.  It picks the substitution minimising
+    ``energy increase / bits saved`` -- a negative score (better pose AND fewer bits) is taken
+    first.  Joint substitutions are not searched, so the result is a good feasible point, not
+    a proven optimum, and the receipt says so.
+
+    ONE INTERACTION WITH ``--min-gain-frac`` WORTH STATING.  The repair scans every pair,
+    including pairs the threshold left unmoved, so it may re-admit a move the threshold
+    excluded -- but only when that move both saves a bit and lowers the measured energy, i.e.
+    only when it is better on BOTH axes.  Every such re-admission is listed in the receipt's
+    ``substitutions`` with a negative ``energy_cost``, so it is visible rather than silent.
+    """
+    # Copy rather than mutate: this function also RETURNS the choice, so a caller that kept a
+    # reference to the pre-repair selection would otherwise find it silently rewritten.
+    choice = list(choice)
+    bits, _payload, _ks = encode_bits(candidate)
+    log: list[dict] = []
+    while bits > max_bits:
+        best = None
+        for pair, (coord, delta, energy) in enumerate(choice):
+            options = [(-1, 0, float(base_energies[pair]))]
+            for entry in rows[pair]["per_coord"]:
+                if entry["best_delta"] != 0:
+                    options.append(
+                        (int(entry["coord"]), int(entry["best_delta"]), float(entry["energy"]))
+                    )
+            for alt_coord, alt_delta, alt_energy in options:
+                if alt_coord == coord and alt_delta == delta:
+                    continue
+                trial = candidate.copy()
+                if coord >= 0:
+                    trial[pair, coord] -= delta
+                if alt_coord >= 0:
+                    trial[pair, alt_coord] += alt_delta
+                    if not -2048 <= int(trial[pair, alt_coord]) <= 2047:
+                        continue
+                trial_bits, _, _ = encode_bits(trial)
+                saved = bits - trial_bits
+                if saved <= 0:
+                    continue
+                score = (alt_energy - energy) / saved
+                if best is None or score < best[0]:
+                    best = (score, pair, alt_coord, alt_delta, alt_energy, trial, trial_bits,
+                            saved, energy)
+        if best is None:
+            raise SystemExit(
+                f"CONTAINER INFEASIBLE: the composition needs {bits} Rice bits but the packed "
+                f"section carries at most {max_bits}, and no single measured substitution "
+                "saves a bit.  A smaller move set or a container format change is required."
+            )
+        score, pair, alt_coord, alt_delta, alt_energy, trial, trial_bits, saved, was = best
+        candidate = trial
+        choice[pair] = (alt_coord, alt_delta, alt_energy)
+        log.append({
+            "pair": pair,
+            "substituted_to_coord": alt_coord,
+            "substituted_to_delta": alt_delta,
+            "bits_saved": int(saved),
+            "energy_before": was,
+            "energy_after": alt_energy,
+            "energy_cost": alt_energy - was,
+            "energy_cost_per_bit_saved": score,
+        })
+        bits = trial_bits
+    return candidate, choice, bits, log
+
+
 def run(args) -> int:
     pricer = load_pricer()
     (carrier_repack, cap1, predictor, carrier_blob, selector_blob, info, model,
@@ -252,32 +366,53 @@ def run(args) -> int:
             raise SystemExit(f"base codes have shape {start.shape}, expected (600, 12)")
         base_codes = start
 
-    candidate = base_codes.copy()
-    kept = []
+    # ``fit_to_bit_budget`` indexes ``rows`` by pair id, so prove that ordering rather than
+    # trusting it: a shuffled sweep would silently substitute one pair's move onto another.
+    if [row["pair"] for row in rows] != list(range(N_PAIRS)):
+        raise SystemExit("sweep rows are not ordered by pair id; refusing to compose")
+
+    # The per-pair choice, held explicitly as (coord, delta, measured energy).  ``coord < 0``
+    # means no move.  Holding it this way lets the container-fit repair substitute a pair's
+    # choice and keep the candidate's energy exact.
+    choice = []
     for index, row in enumerate(rows):
-        if row["best_coord"] < 0 or row["best_delta"] == 0:
+        if (row["best_coord"] < 0 or row["best_delta"] == 0
+                or relative_gain[index] < args.min_gain_frac):
+            choice.append((-1, 0, float(base_energies[index])))
+        else:
+            choice.append(
+                (int(row["best_coord"]), int(row["best_delta"]), float(swept_best[index]))
+            )
+
+    candidate = base_codes.copy()
+    for pair, (coord, delta, _energy) in enumerate(choice):
+        if coord < 0:
             continue
-        if relative_gain[index] < args.min_gain_frac:
-            continue
-        value = int(candidate[row["pair"], row["best_coord"]]) + int(row["best_delta"])
+        value = int(candidate[pair, coord]) + delta
         if not -2048 <= value <= 2047:
-            raise SystemExit(f"move on pair {row['pair']} leaves signed-int12")
-        candidate[row["pair"], row["best_coord"]] = value
-        kept.append(index)
-    applied = len(kept)
+            raise SystemExit(f"move on pair {pair} leaves signed-int12")
+        candidate[pair, coord] = value
 
-    # The candidate's exact energy: measured best where a move was kept, measured base
-    # everywhere else.  Every term here was evaluated on the exact chain; none is modelled.
-    realized = base_energies.copy()
-    if kept:
-        index_array = np.asarray(kept, dtype=np.int64)
-        realized[index_array] = swept_best[index_array]
+    def encode_bits(codes):
+        residuals = pricer.forward_ar1(codes, model, predictor)
+        ks, payload, bits = carrier_repack._rice_encode(carrier_repack._zigzag(residuals), 1)
+        return int(bits), payload, ks.reshape(-1)
 
-    residuals = pricer.forward_ar1(candidate, model, predictor)
-    moved_ks, moved_payload, moved_bits = carrier_repack._rice_encode(
-        carrier_repack._zigzag(residuals), 1
-    )
-    moved_ks = moved_ks.reshape(-1)
+    budget = packed_rice_bit_budget(Path(args.archive), Path(args.runtime))
+    bits_before_repair, _, _ = encode_bits(candidate)
+    repair_log: list[dict] = []
+    if args.fit_packed_container:
+        candidate, choice, _bits, repair_log = fit_to_bit_budget(
+            candidate, choice, rows, base_energies, encode_bits, budget["max_rice_bits"]
+        )
+
+    applied = sum(1 for coord, _delta, _energy in choice if coord >= 0)
+
+    # The candidate's exact energy: the measured energy of whichever move each pair ended up
+    # with.  Every term here was evaluated on the exact chain; none is modelled.
+    realized = np.array([energy for _coord, _delta, energy in choice], dtype=np.float64)
+
+    moved_bits, moved_payload, moved_ks = encode_bits(candidate)
     carrier_bytes_before = len(carrier_blob)
     carrier_bytes_after = fixed_prefix + (moved_bits + 7) // 8
 
@@ -327,6 +462,33 @@ def run(args) -> int:
             0 if compensation_blob is None else len(compensation_blob)
         ),
         "min_gain_frac": args.min_gain_frac,
+        "packed_container_fit": {
+            "enabled": bool(args.fit_packed_container),
+            "max_rice_bits": budget["max_rice_bits"],
+            "shipped_rice_bits": budget["shipped_rice_bits"],
+            "shipped_slack_bits": budget["shipped_slack_bits"],
+            "rice_bits_before_repair": bits_before_repair,
+            "rice_bits_after_repair": int(moved_bits),
+            "overflow_bits_before_repair": max(
+                0, bits_before_repair - budget["max_rice_bits"]
+            ),
+            "substitutions": repair_log,
+            "gain_retained_fraction_vs_unconstrained": (
+                float((base_energies.sum() - realized.sum())
+                      / (base_energies.sum() - swept_best.sum()))
+                if base_energies.sum() > swept_best.sum() else None
+            ),
+            "gain_retained_note": (
+                "fraction of THIS SWEEP's total measured pose gain that survives BOTH the "
+                "--min-gain-frac filter AND the container repair, against the unconstrained "
+                "argmin selection.  It is not the repair's cost alone."
+            ),
+            "search_scope": (
+                "exhaustive over SINGLE substitutions (every pair x every measured "
+                "per-coordinate option, plus reverting to no move); joint substitutions are "
+                "not searched, so this is a good feasible point, not a proven optimum"
+            ),
+        },
         "gain_concentration": concentration,
         "pose_advisory": {
             "d_pose_before": d_pose_before,
@@ -397,6 +559,13 @@ def main() -> int:
     parser.add_argument(
         "--min-gain-frac", type=float, default=0.0,
         help="keep only moves whose measured relative pose gain clears this fraction",
+    )
+    parser.add_argument(
+        "--fit-packed-container", action="store_true",
+        help=(
+            "if the composition overflows the packed CAP1 section's exact Rice payload "
+            "width, substitute the cheapest measured moves until it fits"
+        ),
     )
     return run(parser.parse_args())
 
