@@ -10,7 +10,8 @@ this directory currently describe.
 |---|---|---:|---|---|---|
 | 0 | `e480b_v2_s1p25_c1p0_brotli_q10` | 183,502 | `e3e6f440b45bbb92…` | 0.1600920261571558 | superseded, retained |
 | 1 | `hv1_ep0634` | 182,759 | `80d9c8c6fdc72caa…` | 0.15959729295498598 | superseded, retained |
-| 2 | `rr4_free_corrector_v2_reencode` | 181,161 | `35ac2b9beb7e6fa8…` | **0.15853325034789678** | **ACTIVE, HOLD** |
+| 2 | `rr4_free_corrector_v2_reencode` | 181,161 | `35ac2b9beb7e6fa8…` | 0.15853325034789678 | superseded, retained |
+| 3 | `fx2_a__tuned` (sz1 composed split) | 179,930 | `debb025f45bb42e3…` | **0.15771357797660338** | **ACTIVE, HOLD** |
 
 ## What changed at generation 2
 
@@ -39,3 +40,41 @@ the exact-authority row.
 checkpoint and fails closed unless the bytes hash to the pinned value. Verified
 2026-08-17: token stream and archive hashes both matched, determinism repeat
 byte-identical.
+
+## What changed at generation 3
+
+Generation 3 composes two lossless rate moves over generation 2's decoded state:
+
+1. **Token probability model** (fx2 candidate A): the RC64 token stream is
+   re-encoded by a 13-context fixed-point integer log-odds mixer,
+   110,512 → 109,801 bytes. The decoded token field is unchanged
+   (SHA-256 `9ba2e52b3096…`).
+2. **Semantic serialization split** (sz1): 8,284 bytes of raw interleaved fp16
+   metadata in the semantic section are byte-planed (high-byte plane, then
+   low-byte plane) before the container Brotli, −520 bytes. The receiver
+   un-splits deterministically before parsing; decoded values are unchanged.
+   Versioned in bit 0 of an existing reserved header byte — zero transmitted
+   bytes; reserved == 0 keeps the exact prior code path.
+
+The two moves touch disjoint byte ranges and composed with measured 0 B
+interaction. Decode identity was proven at the byte level: worker output 0.raw
+hashes identically between this row and the fx2 candidate-A row
+(`9a6b75e5…`), so seg and pose carry over exactly. Net vs generation 2:
+−1,231 bytes, ΔS −0.00081967237 → **0.15771357797660338** at 179,930 bytes.
+
+## Custody note carried into generation 3
+
+The generation tree's `GENERATION_RECEIPT.json` and `RECEIVER_PARSEBACK.json`
+are inherited hv1-lineage labels (they describe a 182,759-byte archive). Per
+the generation-2 precedent they are deliberately NOT regenerated — the
+exact-authority row validated runtime-tree hash `0d0fc008d6a3…` over the sealed
+tree containing those exact bytes. `CUSTODY_SUPERSEDED.json` beside them names
+the real candidate and the authoritative receipt chain (sealed fire order +
+`FIRE_MANIFEST.json` stage3b seal + r3 auth-eval JSONs).
+
+## Reproduction at generation 3
+
+Status: PENDING_REBIND. `experiments/ddm_pq2_compress_e2e.py` asserts the
+generation-2 hashes; the sz1 chain (fx2 byte-close driver + split builder)
+must be re-bound under the same fail-closed assertions before the strict chain
+can claim reproduction green. Build-time determinism repeat: byte-identical.

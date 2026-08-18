@@ -1,20 +1,24 @@
 {
   "schema": "ddm_pq1_packet_target.v1",
-  "swap_generation": 2,
-  "generation_2_recorded_utc": "2026-08-17T19:50:00Z",
-  "generation_2_recorded_by": "ddm_pq2",
+  "swap_generation": 3,
+  "generation_3_recorded_utc": "2026-08-18T04:01:59Z",
+  "generation_3_recorded_by": "MAIN (#1111 hot-swap per SWAP_PROCEDURE; operator directive: pursue 1111 to completion)",
   "disposition": "PREPARED_HOLD_NOT_SUBMITTED",
   "submission_authority": "OPERATOR_GO_REQUIRED_NOT_GRANTED",
   "active_candidate": {
-    "candidate_id": "rr4_free_corrector_v2_reencode",
-    "archive_bytes": 181161,
-    "archive_sha256": "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956",
-    "retained_custody": "/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime/",
+    "candidate_id": "fx2_a__tuned (sz1 composed: fx2 token model + semantic-metadata serialization split)",
+    "archive_bytes": 179930,
+    "archive_sha256": "debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a",
+    "retained_custody": [
+      "/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen3_sz1_composed_split/",
+      "/Volumes/APDataStore/pact/ddm_sz1/ (archives + runtime trees + r3_artifacts + RETENTION_MANIFEST)"
+    ],
+    "generation_manifest": "generations/gen3_sz1_composed_split/GENERATION_MANIFEST.json",
     "member": {
       "name": "p",
-      "bytes": 181061,
-      "sha256": "1a6b40cc7bee289e5efd4ce81205888ef23829ed4a78c198344bb679ba9da47a",
-      "crc32": 885609521,
+      "bytes": 179830,
+      "sha256": "be6db33bce471fe38b3d32cf6b421368721b1ea2ddd3f77b577f2bd27d06b7a8",
+      "crc32": 3747474564,
       "compression": "stored"
     },
     "cuda_authority": {
@@ -23,45 +27,87 @@
       "n_samples": 600,
       "score_seg_contribution": 0.029611,
       "score_pose_contribution": 0.008294576541331089,
-      "score_rate_contribution": 0.12062767380656568,
-      "score_recomputed_from_components": 0.15853325034789678,
+      "score_rate_contribution": 0.11980800143527229,
+      "score_recomputed_from_components": 0.15771357797660338,
       "evidence_grade": "contest-CUDA",
-      "returned_artifacts_dir": "experiments/results/ddm_rr4_cuda_exact_contest_cuda_20260817_r1/returned_artifacts/"
+      "modal_call_id": "fc-01M09EHX5MMTJACMRADQPN9P7Z",
+      "returned_artifacts_dir": "/Volumes/APDataStore/pact/ddm_sz1/t4_row_composed/r3_artifacts/",
+      "decode_identity": "worker 0.raw sha256 9a6b75e55268a68ed7e1b59d9ee871f99b89b0960bd63efae12ca2aa3e8f2339 bit-identical to the fx2-A base row (sealed falsifier PASSED)",
+      "posterior_anchor": ".omx/state/continual_learning_posterior.json accepted_anchor_history[191]"
     }
   },
   "auth_runtime": {
-    "runtime_tree_sha256": "7acedb07e670e76c798f153ac53a3045b053074d702e226411a2353745b98351",
-    "runtime_content_tree_sha256": "4358aaf34fcbfc1cdc4a8865b9aead709199465c9909321abf279ebcd0fe3721",
-    "runtime_files_sha256": "ba713a2578418497ac8ba8067a4632e960e3a38b0224a0cac898bf5446312e03",
+    "runtime_tree": "generations/gen3_sz1_composed_split/ (flattened from the sealed tree /Volumes/APDataStore/pact/ddm_sz1/runtime/tuned, diff-verified identical excluding AppleDouble litter)",
     "inflate_script_sha256": "e1b3df4d9178a1572cf04bc2dd9d2ddcc8f6157deac8ec1c40e89b2114522d62",
-    "upstream_snapshot_sha256": "cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008",
-    "upstream_evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
-    "source_commit": "e7ca85754bb9e6a4b319e5a8fa206366c90bd6f4"
-  },
-  "custody_note": {
-    "stale_receipts_in_runtime_tree": [
-      "GENERATION_RECEIPT.json",
-      "RECEIVER_PARSEBACK.json"
-    ],
-    "explanation": "Both were inherited from the hv1_base_control source tree and describe a 182,759 B archive, not the 181,161 B archive they sit beside. They are stale LABELS, not stale proofs. This packet binds the three authoritative receipts instead and never cites the inherited pair.",
-    "supersession_record": "candidate_runtime/CUSTODY_SUPERSEDED.json",
-    "authoritative_receipts": [
-      "RESULT_build.json",
-      "RESULT_receiver_build.json",
-      "RESULT_parseback_v2.json"
-    ]
+    "inflate_py_sha256": "5c5baf88bd3e0b9860c80d496333bba902ee986ef5ee1dbc0a7724ba948ad6bd",
+    "file_inventory": "GENERATION_MANIFEST.json files{} \u2014 per-file sha256 for the full tree",
+    "seal_source": "/Volumes/APDataStore/pact/ddm_sz1/t4_row_composed/FIRE_MANIFEST.json stage3b_seal (pin == measured == debb025f...)",
+    "source_commit_note": "sz1 receiver + tests committed on main; see git log experiments/ddm_sz1_*"
   },
   "cpu_axis": {
-    "exact_candidate_score_status": "PENDING_NOT_MEASURED",
-    "fire_order": "CPU_AXIS_SEALED_FIRE_ORDER.json",
-    "fire_authority": "OPERATOR_GO_REQUIRED_NOT_GRANTED",
-    "note": "PR135 and PR138 both declare GPU-required evaluation, so a CPU row may be optional for submission. MAIN adjudicates. Not assumed either way."
+    "exact_candidate_score_status": "IN_FLIGHT",
+    "modal_call_id": "fc-01M09G62A7SZ7HZYE5Q28YS7VP",
+    "output_dir": "/Volumes/APDataStore/pact/ddm_sz1/cpu_row_composed/",
+    "note": "Fired on the exact candidate bytes 2026-08-18 (~$0.15). Recorded here at harvest. Prior CPU datum on frontier-lineage bytes: contest-CPU S 0.20513189 (#1054), CUDA better by 0.0432."
   },
   "reproduction": {
-    "entry_point": "experiments/ddm_pq2_compress_e2e.py",
-    "verified_utc": "2026-08-17T19:41:52Z",
-    "archive_sha_assertion": "PASSED",
-    "token_stream_sha_assertion": "PASSED",
-    "determinism_repeat_byte_identical": true
+    "status": "PENDING_REBIND",
+    "note": "experiments/ddm_pq2_compress_e2e.py asserts the generation-2 (rr4) shas; per SWAP_PROCEDURE RESET_AUTHORITY it must be re-bound to the sz1 chain (fx2 byteclose_a_driver.sh + sz1 split builder) and re-verified before the strict chain can go green. Never convert red by copying the old receipt."
+  },
+  "generation_2_superseded": {
+    "note": "Generation-2 (rr4) blocks preserved verbatim below per APPEND-ONLY; custody untouched.",
+    "active_candidate": {
+      "candidate_id": "rr4_free_corrector_v2_reencode",
+      "archive_bytes": 181161,
+      "archive_sha256": "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956",
+      "retained_custody": "/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime/",
+      "member": {
+        "name": "p",
+        "bytes": 181061,
+        "sha256": "1a6b40cc7bee289e5efd4ce81205888ef23829ed4a78c198344bb679ba9da47a",
+        "crc32": 885609521,
+        "compression": "stored"
+      },
+      "cuda_authority": {
+        "axis": "[contest-CUDA]",
+        "hardware": "Tesla T4",
+        "n_samples": 600,
+        "score_seg_contribution": 0.029611,
+        "score_pose_contribution": 0.008294576541331089,
+        "score_rate_contribution": 0.12062767380656568,
+        "score_recomputed_from_components": 0.15853325034789678,
+        "evidence_grade": "contest-CUDA",
+        "returned_artifacts_dir": "experiments/results/ddm_rr4_cuda_exact_contest_cuda_20260817_r1/returned_artifacts/"
+      }
+    },
+    "auth_runtime": {
+      "runtime_tree_sha256": "7acedb07e670e76c798f153ac53a3045b053074d702e226411a2353745b98351",
+      "runtime_content_tree_sha256": "4358aaf34fcbfc1cdc4a8865b9aead709199465c9909321abf279ebcd0fe3721",
+      "runtime_files_sha256": "ba713a2578418497ac8ba8067a4632e960e3a38b0224a0cac898bf5446312e03",
+      "inflate_script_sha256": "e1b3df4d9178a1572cf04bc2dd9d2ddcc8f6157deac8ec1c40e89b2114522d62",
+      "upstream_snapshot_sha256": "cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008",
+      "upstream_evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+      "source_commit": "e7ca85754bb9e6a4b319e5a8fa206366c90bd6f4"
+    },
+    "custody_note": {
+      "stale_receipts_in_runtime_tree": [
+        "GENERATION_RECEIPT.json",
+        "RECEIVER_PARSEBACK.json"
+      ],
+      "explanation": "Both were inherited from the hv1_base_control source tree and describe a 182,759 B archive, not the 181,161 B archive they sit beside. They are stale LABELS, not stale proofs. This packet binds the three authoritative receipts instead and never cites the inherited pair.",
+      "supersession_record": "candidate_runtime/CUSTODY_SUPERSEDED.json",
+      "authoritative_receipts": [
+        "RESULT_build.json",
+        "RESULT_receiver_build.json",
+        "RESULT_parseback_v2.json"
+      ]
+    },
+    "reproduction": {
+      "entry_point": "experiments/ddm_pq2_compress_e2e.py",
+      "verified_utc": "2026-08-17T19:41:52Z",
+      "archive_sha_assertion": "PASSED",
+      "token_stream_sha_assertion": "PASSED",
+      "determinism_repeat_byte_identical": true
+    }
   }
 }

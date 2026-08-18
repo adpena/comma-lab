@@ -1,49 +1,53 @@
 {
   "schema": "ddm_pq1_archive_manifest.v1",
-  "swap_generation": 2,
-  "candidate_id": "rr4_free_corrector_v2_reencode",
-  "archive_bytes": 181161,
-  "archive_sha256": "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956",
+  "swap_generation": 3,
+  "candidate_id": "fx2_a__tuned (sz1 composed: fx2 token model + semantic serialization split)",
+  "archive_bytes": 179930,
+  "archive_sha256": "debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a",
   "evidence_axis": "[contest-CUDA]",
   "n_samples": 600,
   "members": [
     {
       "name": "p",
       "compression_method": "stored",
-      "compress_size": 181061,
-      "file_size": 181061,
-      "crc": 885609521,
-      "sha256": "1a6b40cc7bee289e5efd4ce81205888ef23829ed4a78c198344bb679ba9da47a"
+      "compress_size": 179830,
+      "file_size": 179830,
+      "crc": 3747474564,
+      "sha256": "be6db33bce471fe38b3d32cf6b421368721b1ea2ddd3f77b577f2bd27d06b7a8"
     }
   ],
-  "member_sections_decoded": [
-    {"section": "compressed_models", "bytes": 70453, "sha256_prefix": "e35d12371fa79747", "byte_identical_to_base": true},
-    {"section": "semantic_blob", "bytes": 36051, "sha256_prefix": "b489c73567046e64", "byte_identical_to_base": true},
-    {"section": "carrier_blob", "bytes": 22242, "sha256_prefix": "196f0e5136f4d6bf", "byte_identical_to_base": true},
-    {"section": "hpac_blob", "bytes": 17952, "sha256_prefix": "e8c0cfd73d3275ad", "byte_identical_to_base": true},
-    {"section": "residual_payload", "bytes": 100, "sha256_prefix": "74775aab04c7615c", "byte_identical_to_base": true},
-    {"section": "compensation_blob", "bytes": 36, "sha256_prefix": "38792b4953318117", "byte_identical_to_base": true},
-    {"section": "table_codes", "bytes": null, "sha256_prefix": "76afdc3ceda1212a", "byte_identical_to_base": true},
-    {"section": "token_stream", "bytes": 110512, "sha256_prefix": "6c3757bd52a18d3c", "byte_identical_to_base": false}
-  ],
-  "sections_changed_vs_base": 1,
-  "sections_byte_identical_vs_base": 7,
-  "base_archive_sha256": "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e",
-  "base_archive_bytes": 182759,
-  "bytes_saved_vs_base": 1598,
-  "portable_runtime_content_tree_sha256": "4358aaf34fcbfc1cdc4a8865b9aead709199465c9909321abf279ebcd0fe3721",
-  "runtime_tree_sha256": "7acedb07e670e76c798f153ac53a3045b053074d702e226411a2353745b98351",
+  "composition_vs_bases": {
+    "fx2_candidate_a_base": {
+      "archive_sha256": "9de0f6db3ca7ae4efcd9237752b7c95ed1119d9285f8aadd92fee7c8c18547ef",
+      "archive_bytes": 180450,
+      "sections_changed": 1,
+      "change": "semantic section re-serialized: 8,284 B of raw interleaved fp16 metadata byte-planed (high-byte plane then low-byte plane) before the container Brotli; -520 B; decoded values bit-identical (nine decoded fields hash identical through the patched receiver)",
+      "decode_identity_proof": "worker 0.raw sha256 9a6b75e55268a68ed7e1b59d9ee871f99b89b0960bd63efae12ca2aa3e8f2339 bit-identical between the fx2-A row and this row"
+    },
+    "rr4_generation_2": {
+      "archive_sha256": "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956",
+      "archive_bytes": 181161,
+      "sections_changed": 2,
+      "change": "token_stream re-encoded by the fx2 13-context integer log-odds mixer (110,512 -> 109,801 B, decoded token field unchanged sha 9ba2e52b...) + the semantic serialization split (-520 B, values unchanged)"
+    }
+  },
+  "token_stream": {
+    "bytes": 109801,
+    "sha256": "5b09fd784a7c80cfe69b49d098acaee60276bba56b837d32c7654e1ac7798a43"
+  },
+  "decoded_field_sha256": "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52",
+  "decoded_field_note": "The decoded token field AND all decoded semantic values are byte-identical to the fx2 candidate-A row (and the token field to generation 2). Identical decoded state cannot move d_seg or d_pose; every delta vs those rows is a pure rate delta.",
+  "runtime_tree_sha256": "0d0fc008d6a37bd5cfa804073e617a8ea30a7c6b6e6c4a1022e2c5d7ce6f9513",
   "upstream_snapshot_sha256": "cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008",
-  "source_commit": "e7ca85754bb9e6a4b319e5a8fa206366c90bd6f4",
   "score_claim": true,
-  "score_recomputed_from_components": 0.15853325034789678,
+  "score_recomputed_from_components": 0.15771357797660338,
   "score_components": {
     "seg": 0.029611,
     "pose": 0.008294576541331089,
-    "rate": 0.12062767380656568
+    "rate": 0.11980800143527229
   },
-  "decoded_field_sha256": "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52",
-  "decoded_field_note": "The decoded token field is byte-identical to the base candidate's. An identical decoded field cannot move d_seg or d_pose, so the score delta against the base is a pure rate delta.",
-  "reproduction_entry_point": "experiments/ddm_pq2_compress_e2e.py",
-  "reproduction_verified": true
+  "modal_call_id": "fc-01M09EHX5MMTJACMRADQPN9P7Z",
+  "reproduction_entry_point": "PENDING_REBIND (see PACKET_TARGET.json reproduction block)",
+  "reproduction_verified": false,
+  "custody_note": "GENERATION_RECEIPT.json / RECEIVER_PARSEBACK.json in the generation tree are inherited hv1 labels, superseded by CUSTODY_SUPERSEDED.json; authoritative receipts are the sealed fire order + FIRE_MANIFEST stage3b_seal + r3 auth-eval JSONs."
 }
