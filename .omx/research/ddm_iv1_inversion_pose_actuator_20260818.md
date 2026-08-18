@@ -1,30 +1,36 @@
 # ddm_iv1 — the sa1 inversion: the semantic tensor as a POSE ACTUATOR (2026-08-18)
 
-**VERDICT — the pose mechanism WORKS and is measured; the byte realization does NOT
-yet exist; and the honest transfer number is ~7x smaller than the headline.**
+**VERDICT — the pose mechanism WORKS, the byte leg is CLOSED with a sealed archive,
+and the honest transfer number is ~7x smaller than the headline.**
 
 Re-solving the already-shipped per-pair `frame_embed` codes in the d_pose-descent
-direction reduced REALIZED d_pose by **-90.74%** on 48 seeded-random pairs
-(1.8012e-4 -> 1.6676e-5), measured through the exact shipping decode and the frozen
-CPU-torch PoseNet, with six passing instrument controls, a passing null control, and
-near-zero seg cross-talk (+5 flipped pixels on 12 pairs). Three findings then cut the
-headline down, and all three are measured:
+direction reduced REALIZED d_pose by **-90.48%** on 48 seeded-random pairs, measured
+**on the state the shippable candidate actually decodes to**, through the exact
+shipping decode and the frozen CPU-torch PoseNet — with six passing instrument
+controls, a passing null control, and near-zero seg cross-talk (+5 flipped pixels on
+12 pairs). The candidate is a real archive: **181,475 B (+314 B)**, sha
+`49bb833ea93ce5af...`, shipping-receiver parse-back **PASS deviation 0.0**, sealed at
+`FIRE_ORDER_iv1.json`.
+
+Four findings cut the headline down, and all four are measured:
 
 1. **Effectiveness collapses as the base error shrinks** (Spearman -0.65). The T4
    instrument's error scale sits in the *worst* band (ratio 0.59-0.72, not 0.093),
    confirmed by a second independent 260-pair scan + 30-pair solve. Band-corrected
-   DERIVED T4 projection: **ΔS ≈ -0.0010 to -0.0017**, not -0.0267.
-2. **The byte leg is NOT closed.** The 36,040 B semantic body is a hard fixed-offset
-   receiver contract; the solve overshoots it by +3 B, and the naive trim buys the
-   contract back only by reverting 43 of 44 rows (-90.74% -> **-10.78%**). The
-   "~zero byte" premise is **withdrawn**: rANS state cascade made a *single* changed
-   row cost +38 B.
-3. **A CPU/T4 target question can flip the sign entirely** (§8) and is unresolvable
+   DERIVED T4 projection: **ΔS ≈ -0.00072 to -0.00139**, not -0.0267.
+2. **The "~zero byte" premise is WITHDRAWN.** The 36,040 B body is a hard
+   fixed-offset receiver contract; rANS state cascade made a *single* changed row
+   cost +38 B, and the naive trim bought the contract back only by reverting 43 of 44
+   rows (-90.74% -> -10.78%). The close came from the SD1M container at a measured
+   **+314 B**.
+3. **The container is not free either.** SD1M preserves `frame_embed` exactly but
+   perturbs one global tensor, costing **+0.747%** on base pose — small, real, and
+   invisible without the 2x2 that measured it.
+4. **A CPU/T4 target question can flip the sign entirely** (§8) and is unresolvable
    locally.
 
-So: a real, well-controlled mechanism with a genuinely large advisory effect, an
-unfinished engineering realization, and one cheap T4 eval standing between it and a
-verdict. **No exact row moved. Frontier unmoved.**
+The two measured costs (seg +2.12e-4, rate +2.09e-4) consume 23-37% of the pose
+credit. **No exact row moved. Frontier unmoved.**
 
 Axis: `[macOS-CPU advisory, frozen CPU-torch PoseNet, seeded-random pair subset]` ·
 `score_claim=false` · `promotable=false`. No Modal, no GPU, no MLX, no lane claim.
@@ -179,18 +185,25 @@ pairs do better — so 0.723 (the band nearest the T4 scale) is the conservative
 anchor. The two legs differ by more than either's internal precision, so the honest
 statement is a **range, not a point**.
 
-**DERIVED band-corrected T4 projection** (label DERIVED, not measured):
+**DERIVED band-corrected T4 projection for the SHIPPABLE candidate** (label DERIVED,
+not measured). Band ratios are scaled by the measured SD1M container penalty
+(x1.02839, from `sd1m_solved / wans1_solved`), and both measured costs are carried:
 
-| term | conservative (0.723) | pooled (0.635) | low-band (0.594) |
+| term | conservative (0.743) | pooled (0.653) | low-band (0.611) |
 |---|---:|---:|---:|
-| T4 d_pose 6.88e-6 -> | 4.974e-6 | 4.369e-6 | 4.088e-6 |
-| pose term 0.0082946 -> | 0.0070528 | 0.0066097 | 0.0063938 |
-| ΔS_pose | -0.0012418 | -0.0016849 | -0.0019008 |
+| T4 d_pose 6.88e-6 -> | 5.115e-6 | 4.493e-6 | 4.203e-6 |
+| pose term 0.0082946 -> | 0.0071522 | 0.0067029 | 0.0064828 |
+| ΔS_pose | -0.0011424 | -0.0015917 | -0.0018117 |
 | ΔS_seg (measured, +5 px) | +0.0002119 | +0.0002119 | +0.0002119 |
-| **net (before rate)** | **≈ -0.00103** | **≈ -0.00147** | **≈ -0.00169** |
+| ΔS_rate (measured, +314 B) | +0.0002091 | +0.0002091 | +0.0002091 |
+| **net** | **≈ -0.00072** | **≈ -0.00117** | **≈ -0.00139** |
 
-That is **~294x to ~483x the -3.5e-6 bar**, and **13% to 22% of the 0.00771 gap** to
-sub-0.15 — before the rate term, which §7 shows is not yet closed.
+That is **~206x to ~397x the -3.5e-6 bar**, and **9.4% to 18.0% of the 0.00771 gap**
+to sub-0.15 — now over a **real, retained, parse-back-verified archive**. Route 1
+(§7.2), if it converges, removes ~276 B and moves the conservative end to ~-0.00091.
+
+The two measured costs (seg +2.12e-4, rate +2.09e-4) together consume **23% to 37%**
+of the pose credit. Neither is negligible; both are carried at face value.
 
 ## 7. The byte leg — NOT CLOSED. The "~zero byte" premise is qualified.
 
@@ -222,22 +235,70 @@ tens of bytes. At ~2% of the band-corrected pose credit this is affordable — b
 "~zero byte" is the wrong description and I withdraw it. The binding problem is the
 **length**, not the size.
 
-**Routes that remain (neither verified here).**
-1. **Length-constrained solve.** Each pair had ~9 verified candidates, several
-   improving. Swapping a few pairs to their 2nd-best k perturbs the stream length at
-   small pose cost, so hitting exactly 1,915 B with most of the gain intact is very
-   likely reachable — but it is a real constrained search, not a formality, and this
-   arm did not run it (the per-pair candidate lists were not persisted).
-2. **The `SD1M`/`SM3R` tagged container**, which the shipping receiver already
-   accepts at **variable length** (`residual_archive.py:190`; sa1 verified parse-back
-   deviation 0.0). Price: sa1's measured **+321 B** format penalty (+2.14e-4 S) —
-   ~17% of the band-corrected pose credit, i.e. affordable. **Caveat not verified
-   here:** SD1M re-quantises with its own scales, so it may not preserve the exact
-   solved values; that must be checked before relying on this route.
+### 7.1 CLOSED via the SD1M container — measured end to end
 
-**Consequence for the verdict:** the pose result is measured and stands; the
-**byte-closed candidate does not yet exist**. Any S arithmetic below is therefore a
-projection over an unrealised archive, and is labelled as such.
+The `SD1M` tagged container is accepted by the shipping receiver at **variable
+length** (`residual_archive.py:190`), which dissolves the fixed-offset constraint
+entirely. MAIN's condition was to **check, not assume**, that its re-quantisation
+preserves the solved values. Checked:
+
+| check | result |
+|---|---|
+| `frame_embed` preserved at q4 | **EXACT** — max abs deviation **0.00000**, 0 of 600 rows moved |
+| `frame_embed` preserved at q3 | **NO** — all 600 rows move, max code error 1.002 (q3 is unusable) |
+| other tensors perturbed | **1 of 38** — `blocks.3.film.weight`, max abs dev **2.76e-4** |
+| **archive** | **181,475 B = +314 B, ΔS_rate +2.0908e-4** |
+| archive sha256 | `49bb833ea93ce5afd291ab1c42f375bf86cdd40ced1194484095c642089d32c8` |
+| shipping-receiver parse-back | **PASS, deviation 0.0** (`ddm_mp2_semantic_receiver`) |
+| hpac / carrier / token / residual sections | byte-identical to base (asserted) |
+
+`blocks.3.film.weight` is **global**, so it changes frame_1 for every pair. The gain
+therefore had to be re-measured on the state the candidate actually decodes to — the
+qs4 lesson. Clean 2x2 over the 48 solve pairs, all realized through the real decode:
+
+| receiver state | mean d_pose | vs bought base |
+|---|---:|---:|
+| `wans1_base` (the bought base leg) | 1.80121e-4 | — |
+| `wans1_solved` (the solve as measured) | 1.66748e-5 | **-90.74%** |
+| `sd1m_base` (format penalty alone) | 1.81468e-4 | **+0.747%** |
+| **`sd1m_solved` (THE SHIPPABLE CANDIDATE)** | **1.71481e-5** | **-90.48%** |
+
+**The check was worth making: the container costs real pose** (+0.747% on the base,
++2.84% on the solved cell). It costs only **0.26 percentage points of the gain**, so
+the result survives — but it was not free, and asserting preservation without
+measuring would have been wrong by a measurable amount.
+
+**Seg is unmoved by the container:** flipped-pixel counts are *identical* for both
+containers (969 base, 974 solved), so Delta d_seg stays +2.1193e-6.
+
+### 7.2 Route 1 (native WANS1, length-constrained) — the remaining optimization
+
+Worth **~276 B = 1.84e-4 S** over route 2 if it converges. Two things were built for
+it and both work: `frame_embed_stream_bytes()`, a direct length computation that
+reproduces all three known full-encode results (36,040 / 36,043 / 36,040) at
+**0.24 s instead of ~50 s**; and a re-run solve persisting **26 verified candidates
+per pair** (each with a realized d_pose), so the assignment is a constrained choice
+over measured points rather than a model.
+
+**Result: it did not converge.** The greedy — cheapest cost-per-byte swap, one
+alternate per pair, no overshoot — moved the stream from **1,918 B to 1,917 B** and
+then exhausted its move set, two bytes short of the 1,915 B contract:
+
+| route 1 | value |
+|---|---|
+| target / achieved stream bytes | 1,915 / **1,917** |
+| WANS body | 36,042 (needs 36,040) |
+| rows changed | 44 |
+| constraint met | **NO** |
+
+**This is a limitation of the search, not a proof of impossibility** — verdict_scope:
+**FORMULATION** (this greedy, one-swap-per-pair, no-overshoot). The obvious
+un-tried moves are multiple swaps per pair and allowing overshoot then correcting
+with positive-dL swaps; the measurement machinery for both is now landed and each
+full sweep costs ~4 minutes. Route 2 is the close, and the 276 B stays on the table.
+
+**Consequence for the verdict:** a byte-closed candidate **now exists** and is
+retained. The S arithmetic below is over a real archive, not an unrealised one.
 
 ## 8. THE GATE — the CPU/T4 target question, which can flip the sign
 
@@ -310,22 +371,26 @@ Measured source: `experiments/ddm_iv1_pose_actuator.py` (stages
 
 ## 12. Routing
 
-**Ordering note:** the byte leg (§7) is unfinished, so there is **no candidate worth
-firing on T4 today**. The retained `candidate_archive.zip` is the trimmed -10.78% row
-and is NOT the candidate — firing it would spend a T4 eval on a gutted edit and
-answer nothing. Steps 1 and 2 are therefore in dependency order, not priority order.
+**The byte leg is now CLOSED (§7.1) and a sealed candidate exists.**
 
-1. **Close the byte leg first — local, $0.** Re-run the solve persisting each pair's
-   full verified candidate list, then search alternates for a code set whose
-   frame_embed stream lands on exactly 1,915 B. ~10 min of solve plus a cheap search.
-   Fall back to the `SD1M` container (+321 B, sa1-measured) if the constrained search
-   fails — but verify first that SD1M's re-quantisation preserves the solved values.
-2. **Then the T4 leg on that candidate — the decisive spend.** It resolves §8, whose
-   hypotheses differ by ~20x in opposite directions, and the answer is unambiguous
-   either way. MAIN owns the fire.
-3. If §8 resolves as (A): extend the solve to all 600 pairs under the same
-   length-preserving constraint. ~10 s/pair local CPU (~100 min for n600, $0); the
-   per-pair operation is identical — no new mechanism, only scope.
+Sealed fire-order: `/Volumes/APDataStore/pact/ddm_iv1/FIRE_ORDER_iv1.json`
+(`tools/make_candidate_seal.py`, seal sha `5574369a7d4641e6...`, runtime sha
+`496db319be4e9495...`, archive sha `49bb833ea93ce5af...` verified at seal time).
+Staged runtime: `generations/iv1_sd1m_pose_actuator/`.
+
+**Do NOT fire `retained/candidate_archive.zip`** — that is the gutted -10.78% naive
+trim, retained only as evidence. The candidate is `candidate_sd1m_archive.zip`.
+
+1. **ONE T4 eval on the sealed candidate — the decisive spend.** It resolves §8,
+   whose hypotheses differ by ~20x in opposite directions, and the answer is
+   unambiguous either way. MAIN owns the fire. Three falsifiers are sealed with it
+   (transfer / regression / seg).
+2. If §8 resolves as (A): extend the solve to all 600 pairs. ~10 s/pair local CPU
+   (~100 min for n600, $0); the per-pair operation is identical — no new mechanism,
+   only scope. Expect the population gain to be **smaller** than the 48-pair subset
+   implies, per §6.
+3. Optional, $0, worth ~1.84e-4 S: finish route 1 (§7.2) to drop the +314 B container
+   penalty to ~+38 B. The machinery is landed; only the search needs widening.
 3. The **global-tensor arm** (92.8% of the block) is the untouched half and carries a
    real generalization question; it deserves its own charter with a true
    solve-vs-heldout split.

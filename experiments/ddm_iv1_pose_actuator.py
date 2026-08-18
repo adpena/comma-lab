@@ -64,8 +64,19 @@ import numpy as np
 
 REPO: Final = Path("/Users/adpena/Projects/pact")
 UPSTREAM: Final = REPO / "upstream"
-RUNTIME: Final = Path(
+# PUBLIC-HYGIENE LAW (operator 2026-08-18): never import from, nor run Python with
+# cwd inside, a packet generation / custody runtime tree -- an in-place import writes
+# __pycache__ carrying ABSOLUTE LOCAL PATHS into a hashed runtime tree, which is both
+# a disclosure leak and a runtime-tree hash break.  We import from a COPY under this
+# arm's own scratch and assert the archive sha, so provenance is preserved by content
+# rather than by location.  Every invocation also sets PYTHONDONTWRITEBYTECODE=1.
+CUSTODY_RUNTIME: Final = Path(
     "/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime"
+)
+RUNTIME: Final = Path(
+    os.environ.get(
+        "IV1_RUNTIME", "/Volumes/APDataStore/pact/ddm_iv1/work/runtime_copy"
+    )
 )
 SA1: Final = Path("/Volumes/APDataStore/pact/ddm_sa1")
 BASE_ATTEMPT: Final = SA1 / "advisory_n600_cpu/rr4_base/attempt_0002"
@@ -396,6 +407,44 @@ def rebuild_archive(block: SemanticBlock, frame_codes: np.ndarray) -> tuple[byte
     )
     archive = rx1.deterministic_zip(model + tail)
     return archive, len(archive)
+
+
+def frame_embed_stream_bytes(frame_codes: np.ndarray) -> int:
+    """Length of the frame_embed W4 stream under the REAL WANS1 selection rule.
+
+    `encode_wans1` stores, per W4 tensor, whichever is smaller: the MSB-first
+    4-bit nibble packing, or adaptive rANS under the best of 4 catalog priors.
+    Every other stream, the header and the metadata are fixed-size and untouched
+    by an actuator edit, so the whole WANS1 body length moves exactly with this
+    one number.  Computing it directly is ~50x cheaper than a full
+    `encode_wans1`, which re-encodes all 16 tensors under all 4 priors.
+    """
+    book_src = EXPERIMENT_BOOK / "src"
+    sys.path.insert(0, str(book_src))
+    try:
+        from cpr1_sub4.bits import pack_signed
+        from cpr1_sub4.entropy.adaptive_ans import encode_adaptive
+    finally:
+        sys.path.pop(0)
+
+    codes = np.asarray(frame_codes, dtype=np.int16).reshape(-1)
+    raw = len(pack_signed(codes.astype(np.int8), 4))
+    symbols = (codes + 8).astype(np.uint8)
+    best = min(len(encode_adaptive(symbols, prior_index=p)) for p in range(4))
+    return min(best, raw)
+
+
+def wans_body_bytes_fast(block: SemanticBlock, frame_codes: np.ndarray) -> int:
+    """WANS1 body length for a re-solved actuator, without a full re-encode."""
+    _runtime_paths()
+    import runtime.residual_archive as residual_archive
+
+    base = frame_embed_stream_bytes(block.frame_codes)
+    return (
+        residual_archive.WANS_BODY_BYTES
+        + frame_embed_stream_bytes(frame_codes)
+        - base
+    )
 
 
 def encode_actuator_into_blob(block: SemanticBlock, frame_codes: np.ndarray) -> bytes:
@@ -774,6 +823,32 @@ def stage_solve(args: argparse.Namespace) -> int:
             np.square(realized_vectors - gt_vector[None, :]), axis=1
         )
         winner = int(realized.argmin())
+
+        # Persist EVERY verified candidate, not just the winner.  The byte leg
+        # needs alternates: the WANS1 body length is a fixed receiver contract,
+        # so the shippable assignment is a constrained choice over these, and a
+        # winner-only receipt cannot support it.
+        candidates: list[dict[str, Any]] = [
+            {"k": [0] * FRAME_DIM, "realized_d_pose": base_error}
+        ]
+        for index, (dim, delta) in enumerate(probes):
+            move = [0] * FRAME_DIM
+            move[dim] = delta
+            candidates.append(
+                {
+                    "k": move,
+                    "realized_d_pose": float(
+                        np.mean(np.square(vectors[2 + index] - gt_vector))
+                    ),
+                }
+            )
+        for index, combo in enumerate(proposals):
+            candidates.append(
+                {
+                    "k": [int(v) for v in combo],
+                    "realized_d_pose": float(realized[index]),
+                }
+            )
         accepted = bool(realized[winner] < base_error)
         chosen = np.asarray(proposals[winner], dtype=np.int32) if accepted else np.zeros(
             FRAME_DIM, dtype=np.int32
@@ -794,6 +869,7 @@ def stage_solve(args: argparse.Namespace) -> int:
                 "best_predicted_d_pose": float(predicted[order[0]]),
                 "best_single_move_d_pose": float(single[best_single_index]),
                 "winner_was_fallback": winner == len(proposals) - 1,
+                "candidates": candidates,
                 "seconds": round(time.time() - begin, 2),
             }
         )
