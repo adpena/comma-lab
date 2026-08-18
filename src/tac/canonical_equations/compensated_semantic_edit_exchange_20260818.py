@@ -176,6 +176,19 @@ KEEP01_MEASURED_RETENTION = 0.42174  # net / |rate credit|, vs ~0.119 naively pr
 #: cancellation per object rather than inherit it.
 KEEP01_NAIVE_UNDERPREDICTION_FACTOR = 3.3
 
+# --- keep01 T4 AUTHORITY (2026-08-18, contest-CUDA T4 n600 -- the ninth pointer move) ---
+# Archive 316d17f84817d2b10f084a71b6ca706c69411d738cdb7d5921aec9afb8c37f00 @ 177,576 B.
+# Net vs sz1 -5.516555e-04 (164.9x the harness's 3.3458e-06 report-8dp bound).
+KEEP01_T4_SCORE = 0.1571619225142182
+KEEP01_T4_NET_VS_SZ1 = -5.516555e-04
+#: T4-MEASURED retention (net / |rate credit|) at 3.0x mass, vs sa3's 0.1047 at 1x.
+#: Between the CPU-modeled 0.42174 and the fixed-quality concavity table's ~0.112.
+KEEP01_T4_MEASURED_RETENTION = 0.3519
+#: THE MEASURED CPU->T4 POSE TRANSFER: T4 residual d_pose 8.40e-07 over the CPU-solved
+#: 7.408e-07. The ABSOLUTE model (1.0x) under-predicted 13.4%; the RELATIVE model (21.4x)
+#: over-predicted 18.9x. Successor rungs project with ABSOLUTE x ~1.13 and still show both.
+KEEP01_T4_TRANSFER_FACTOR_VS_ABSOLUTE = 1.134
+
 
 def _dec(value: float | Decimal) -> Decimal:
     return value if isinstance(value, Decimal) else Decimal(repr(value))
@@ -556,6 +569,10 @@ __all__ = [
     "KEEP01_PROJECTED_NET_S",
     "KEEP01_MEASURED_RETENTION",
     "KEEP01_NAIVE_UNDERPREDICTION_FACTOR",
+    "KEEP01_T4_SCORE",
+    "KEEP01_T4_NET_VS_SZ1",
+    "KEEP01_T4_MEASURED_RETENTION",
+    "KEEP01_T4_TRANSFER_FACTOR_VS_ABSOLUTE",
     "SEG_DAMAGE_FRACTION_OF_CREDIT",
     "SEG_DAMAGE_S",
     "SEMANTIC_SECTION_BYTES",
