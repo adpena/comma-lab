@@ -47,6 +47,12 @@ admission bar and not worth a receiver change. Semantic returns exactly 0 becaus
 extracted its win; the greedy search rediscovers nothing further, which is a clean consistency
 check on both measurements.
 
+**Cap removed, answer unchanged.** The first region search bounded length at 4,096 B — *below*
+sz1's own winning region of 8,284 B, i.e. I had capped my search under the known-winning scale
+(the censored-cap genus, applied to myself). Re-run uncapped on `semantic` over
+`len ∈ {8192, 8284, 12288, 16384, 24576, 36040}` × `k ∈ {2,4}` × 2,048-stride offsets: **114 arms,
+zero negatives**, best +11. The cap was not what was hiding a win.
+
 ## 3. The finding that nearly became a fake win
 
 The first composed hpac result read **−215 B** — a clear win over the −39 bar. It was an
