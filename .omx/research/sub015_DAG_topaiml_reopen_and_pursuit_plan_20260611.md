@@ -28609,3 +28609,24 @@ STORES CONSULTED: MODAL_REMOTE_RESULT.json (rr2 + hv1 r2 rows), inflated_outputs
 - **Triality-leg adjudication (drift-detector, t1h compose commit)**: inherited-HPAC terminal solve,
   no witness trainer lever/launch/curriculum touched → no witness_dsl Lever owed (#844 syntactic-
   vocabulary match). DAG leg = this FEED; MEMORY leg = gestalt memory + index line.
+
+## FEED-fx1 (2026-08-18) — FIFTH micro-campaign pointer move: integer log-odds mixer
+- **POINTER MOVED**: fx1 fixed-point integer log-odds mixer on the rr4 base — S **0.15816036933414834**
+  @ 180,601 B [contest-CUDA T4, n600], archive sha 65c75d7f097df930…, call fc-01M093PYATMRZJMTBRVA79X1FF
+  (1161 s, ~$0.16, rc=0). Δ −3.7288e-4 vs rr4 0.15853325…. Realized INSIDE the sealed band
+  [0.15816, 0.158161], matching the projection 0.158160369 to 9 digits.
+- Mechanism: SMEVR's arithmetic-mean-in-odds member mixing → weighted GEOMETRIC mean in log-odds
+  space (11 members, context cls_boundary_agree_ubin8, adaptive lr 2^-4, transcendental-free integer
+  fixed-point) — a pure probability-model row, −560 B at decode-identical tokens
+  (decoded_token_field_sha256 = base 9ba2e52b…; seg 0.029611 + pose 0.008294576541331089 both
+  identical to rr4 to every digit). Settles na9's F5/GS1-PRED by its own falsifier: the coder-axis
+  "closed" verdict named the SEARCH axis, not the MODEL axis — the model axis paid.
+- Custody: retained archive + determinism repeat + per-candidate bits_*.npy payloads at
+  /Volumes/APDataStore/pact/ddm_fx1/ (ALWAYS KEEP THE PAYLOAD honored). Posterior anchor appended via
+  posterior_update_locked_from_auth_eval_json; pointer refreshed. Fire-ladder cures (no-pipe ·
+  axis-waiver · re-pinned runtime · fire tool only) all applied — first-try clean fire.
+- Convention note for #1115: seal runtime-tree hash (d9e39a36…, arm) vs fire-tool staged-tree
+  (504ca35b…) are two hash conventions over one custody; unify in the candidate-seal contract.
+- Consequences: sub-0.15 gap 0.00816; pose contribution 0.008295 ≈ 102% of gap — pose is THE axis
+  (F2 projection-lever n-scaling = ranked head). #1111 default candidate hot-swaps rr4 → fx1.
+  sa1 #1114 admit bars re-derive from THIS pointer at fire time.
