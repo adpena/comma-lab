@@ -28868,3 +28868,26 @@ section_coding_axis_closure_v1 with coding_candidate_admissible() as the fail-cl
 .omx/research/ddm_bp1_section_coding_axis_closed_20260818.md +
 .omx/research/ddm_xs1_cross_section_joint_coding_20260818.md; payloads + receipts
 /Volumes/APDataStore/pact/ddm_bp1/ (persisted BEFORE measuring, P0). [p0-ledger-ok]
+
+## FEED-vseries-closure (2026-08-18, MAIN) — SD1M mass ladder CLOSED at FORMULATION scope; wrong-metric law banked; routing re-adjudicated
+
+The keep01 ninth pointer move (S 0.1571619225142182 @ 177,576 B contest-CUDA T4, sha 316d17f8…)
+routed the mass axis to the SD1M V-series ladder. Both measured members died on the advisory
+instrument: V7 (live-pw q2) d_seg 138×/d_pose 2,538× keep01, credit overwhelmed 675×; V2 (the
+MILDEST rung, dead-tensors-only q2) d_seg 0.00342723 = seg +0.3 S vs −3.33e-3 S rate credit =
+90× underwater, pose 0.286 uncompensated. Family CLOSED: damage ∝ weight-mse^~0.4 falls slower
+than rate credit at every depth; V0 all-q4 is byte-WORSE than sz1; seg has no compensator in this
+family. MECHANISM = the durable law: weight-MSE is the WRONG sensitivity metric — per-tensor
+render amplification spans ~38,700× ("dead" pw) vs ~2,518× (live pw); rank edits by RENDERED
+damage (memory weight_mse_is_the_wrong_sensitivity_metric_20260818, MEMORY.md line added).
+SAME-DAY CORRECTION (unanchored-delta genus, caught in-flight): the composed sa3×keep01
+candidate's marginal re-priced vs the LIVE keep01 baseline at −5e-5..−1e-4 S (~1% of gap;
+coverage measured at source: PRUNE_NAMES films1/2/3 × S2 recipe final.py:37 → surviving legs =
+frame_embed q3 + blocks.0.film q3 ≈ −800 B), superseding a −0.9e-3 projection that
+double-counted the banked move. Queue-head receipts: MT1 T4 sign gate NEGATIVE
+(positive_t4_sign=false, sha fc2b5938…) closes the sealed joint-train leg; RX2 products stale on
+the MC36 base (consumer-mismatch). ROUTED: ddm_ck1 Opus arm (task #1128) builds the composed
+candidate (SM3R mode-6 row-prune+mixed-depth) → advisory → 3h Metal Schur solve → compile →
+seal → T4. Memos .omx/research/ddm_sa1_vseries_v7_dead_v2_routing_20260818.md (§1–§5, commits
+948a4d6cf5 · c30f92fbc9 · c0642562dc); advisory receipts + payloads persisted per P0 under
+/Volumes/APDataStore/pact/ddm_sa1/{advisory_n600_cpu,retained,generations}. [p0-ledger-ok]
