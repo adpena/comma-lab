@@ -111,6 +111,25 @@ EDITED_ROWS: Final = {
         "d_seg_delta_cpu": 4.77e-06,
         "d_pose_uncompensated_cpu": 3.87399e-03,
     },
+    # ck1: keep01's FiLM row-prune composed with S2's surviving legs (frame_embed q3 +
+    # blocks.0.film q3) via SM3R mode 6.  The mode-6 semantic body is opaque to this
+    # container assembler, but parse-back MUST run through a mode-6-capable receiver —
+    # sz1's shipped runtime predates mode 6, so this row stages from the ck1 generation
+    # tree (whose runtime decoded the full n600 advisory, attempt_0002 rc=0).
+    "ck1_composed": {
+        "archive": Path(
+            "/Volumes/APDataStore/pact/ddm_ck1/generations/ck1_composed/archive.zip"
+        ),
+        "sha256": "71026ec4df1918f6c3bb1ff48bc8e7ad03006cd8af15941638a2854de89a7ffa",
+        "solve_root": Path("/Volumes/APDataStore/pact/ddm_ck1/authority/ck1_composed"),
+        # advisory n600: ck1 d_seg 0.00043336 - base 0.00042714 (attempt_0002 receipts)
+        "d_seg_delta_cpu": 6.22e-06,
+        # advisory n600 uncompensated d_pose (== AUTHORITY.json subset.mean_uncompensated)
+        "d_pose_uncompensated_cpu": 3.99327e-03,
+        "source_runtime": Path(
+            "/Volumes/APDataStore/pact/ddm_ck1/generations/ck1_composed"
+        ),
+    },
 }
 SA2_SOLVE_ROOT: Final = SA1 / "retained/sa2/n600"
 
@@ -846,7 +865,11 @@ def main(argv: list[str] | None = None) -> int:
         residual_source = f"{args.row} own n600 solve (AUTHORITY.json, n={n_pairs})"
         del solve_id
 
-    shipped_runtime = scratch_runtime_copy(SZ1_GENERATION, args.work, "sz1")
+    # Per-row source runtime: the tree the candidate stages from AND parse-backs
+    # through must be able to DECODE the row's semantic body (a mode-6-blind runtime
+    # would fail parse-back loudly — fail-closed, but blocked).  Default stays sz1.
+    source_generation = Path(row_spec.get("source_runtime", SZ1_GENERATION))
+    shipped_runtime = scratch_runtime_copy(source_generation, args.work, "src")
     patched_runtime = args.work / "runtime_sz1_patched"
     if patched_runtime.exists():
         shutil.rmtree(patched_runtime)
