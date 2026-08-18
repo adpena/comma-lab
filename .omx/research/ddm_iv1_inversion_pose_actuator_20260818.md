@@ -595,3 +595,45 @@ smaller edits cost proportionally less pose — but seg flips are an argmax THRE
 need not scale the same way, so the RATIO at other magnitudes is UNMEASURED. Do not transfer
 191 to a different edit magnitude without re-deriving it; transfer the METHOD (separate the
 container, price the pose marginal at the live operating point, divide).
+
+## §10 — ERRATA (MAIN's own): the rate attribution was 4.9× over-stated, and the arm's
+## pre-registered falsifier fired on branch 2
+
+**ERRATUM.** §8 attributed the full **+1,545 B** to the candidate. That is the delta against the
+LIVE POINTER (sz1, 179,930 B). The candidate was BUILT on the rr4/sa1 base (**181,161 B**), which
+the pointer had already superseded. Decomposed:
+
+| bytes | source | S |
+|---|---|---|
+| **+314 B** | iv1's own mechanism | +2.091e-04 |
+| **+1,231 B** | superseded base lineage | +8.197e-04 |
+| +1,545 B | total vs pointer | +1.029e-03 |
+
+Both figures were right against their own denominator — the arm's +314 B against rr4, mine
++1,545 B against sz1. Filing it as MAIN's error because §8 named the larger number as the
+candidate's cost without stating its base. `measured_object_vs_named_object`, this time mine.
+
+**Verdict UNCHANGED.** Remove the entire base handicap and the row is still **+0.00563 REFUSED** —
+pose (+5.398e-03) dominates by 6.6×. But "+1,545 B" would have mispriced the next candidate in
+this lineage by 4.9×, and the §9 break-even is unaffected (it is pose-only, and both parties agree
+the pose base is 6.880e-06).
+
+**THE STRUCTURAL LESSON, which is worth more than the correction:** iv1 raced the pointer from
+**1,231 B behind** and nothing in its own chain could see that. A candidate inherits its base's
+lag as a silent handicap; the arm's local arithmetic was correct throughout and still could not
+surface it, because the handicap is invisible from inside the lineage. **Price every candidate
+against the LIVE pointer at seal time, not against the base it was built on** — the seal already
+pins `pointer_archive_sha256_at_seal`, so the check is available and was simply not read as a
+BYTE comparison.
+
+**THE ARM'S PRE-REGISTERED FALSIFIER FIRED — branch 2.** Before the row landed the arm registered
+two branches with opposite signs and ~20× separation:
+- d_pose FALLS below 6.88e-6 ⇒ CPU→T4 transfer holds, ΔS −0.00072..−0.00139
+- d_pose RISES above 6.88e-6 ⇒ **GT-decode hypothesis CONFIRMED, CPU-residual minimization is
+  ACTIVELY HARMFUL, the line STOPS**
+
+Measured **d_pose = 1.875e-05**, above the threshold ⇒ **branch 2**. This is a pre-registered
+family call, not a post-hoc read: **minimizing the CPU-measured pose residual does not transfer to
+the T4 instrument and is actively harmful on it.** That closes the CPU-residual-minimization route
+for this family on evidence its own author specified in advance — and it retires the CPU/T4 sign
+question the arm had left OPEN.
