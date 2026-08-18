@@ -70,15 +70,61 @@ but needed ≥180× — refused by ~68× over its credit. **Two mechanistically
 distinct edits now concord: lossy perturbation of the semantic FiLM tensor pays
 ~70–80× its rate credit in pose, while seg stays nearly invariant both times.**
 
-## Rank 3 — sm3r_keep87: LIVE (the slope anchor, last rank)
+## Rank 3 — sm3r_keep87: REFUSED, net ΔS = +0.04427 (the slope anchor)
 
-181,031 B (−130 B, credit −8.66e-5 S), archive `a16a58e55f63b141…`, deletes
-only the 13% least-important rows (rgb_rms-ranked). The only remaining admit
-path: those rows must be genuinely pose-inert (damage < 8.3e-5 S ≈ 250×
-sub-linear vs row fraction). The rgb_rms ranking gives no evidence either way —
-keep01 proved rgb_rms does not predict pose damage. Fired attempt_0001 on the
-same instrument; the three-point table closes the family measurement honestly
-whatever the verdict.
+181,031 B (−130 B, credit −8.656e-5 S), archive `a16a58e55f63b141…`, deletes
+only the 13% least-important rows (rgb_rms-ranked). Row (attempt_0001, rc=0,
+1,186 s, payload kept): S 0.24601735879880116, d_seg 0.00042778,
+d_pose 0.0006839.
+
+| term | ΔS |
+|---|---|
+| rate (−130 B) | −8.656e-5 |
+| seg (Δd_seg +6.4e-7) | +6.40e-5 |
+| pose (d_pose 1.47e-4 → 6.84e-4, 4.64×) | **+0.044296** |
+| **net** | **+0.044274** (bar: < −3.5e-6) |
+
+Damage is **512×** the rate credit — the worst ratio of the three, because the
+credit is tiny while the per-row pose load is not. The admit path required the
+bottom-13% rows to be pose-inert (~250× sub-linear damage); measured damage is
+**LINEAR** in deleted mass: keep01/keep87 deleted-mass ratio 7.62, absolute
+d_pose-increase ratio 6.95 → per-row damage 0.91× of exactly linear. Every
+semantic FiLM row carries ~equal pose load. rgb_rms is now proven pose-blind
+twice (keep01 and keep87 anchor both ends of its own ranking).
+
+## FAMILY VERDICT — lossy uncompensated semantic-FiLM edits: CLOSED, REFUSED 3/3
+
+verdict_scope: **FAMILY** — lossy UNCOMPENSATED perturbation of the semantic
+FiLM tensor on the rr4/cp135 base (deletion-heavy · quantization ·
+deletion-light; three mechanistically distinct edits, one instrument).
+
+The measured law: **the semantic FiLM tensor is nearly seg-INERT
+(Δd_seg ≤ +4.8e-6 all three rows) and uniformly pose-LOAD-BEARING
+(damage 68–512× the rate credit, linear in perturbed mass).** It is a pose
+carrier wearing a semantic name — consistent with eu4's route map (pose routes
+through the joint representation) and with why PR135 ships it whole.
+
+Three-point table (all same-instrument vs the bought base leg):
+
+| rank | mechanism | Δbytes | rate ΔS | pose ΔS | net ΔS | damage/credit |
+|---|---|---|---|---|---|---|
+| 1 keep01 | delete 99% of rows | −2,889 | −1.924e-3 | +0.158423 | +0.156976 | 82× |
+| 2 S2 quant | q2/q3 precision cut | −1,333 | −8.876e-4 | +0.060922 | +0.060207 | 68× |
+| 3 keep87 | delete bottom-13% (rgb_rms) | −130 | −8.656e-5 | +0.044296 | +0.044274 | 512× |
+
+Reactivation criteria (either reopens the family, neither is more pruning):
+1. **Pose-COMPENSATED semantic edit** — the qs5-proven in-compile Schur
+   compensation solved against the EDITED tensor (asserted in code, never
+   carried across regimes per the qs4 lesson). qs5 measured frame-1 seg edits
+   at ~zero pose tax once compensation is in-compile; the same machinery has
+   never been pointed at a semantic-tensor edit.
+2. **The js1/js8 joint-representation line** — a jointly-learned semantic+pose
+   representation replaces the tensor instead of editing it (the named major
+   pose route; every sa1 refusal this chain reinforces it).
+
+Cost of the whole family measurement: 4 advisory runs ≈ 80 min Metal-free CPU,
+$0 marginal (the base leg amortizes), all payloads retained under
+`/Volumes/APDataStore/pact/ddm_sa1/`.
 
 ## Apparatus lessons banked this chain
 
