@@ -88,6 +88,7 @@ SZ1_POSE_S: Final = 0.008294576541331089
 SZ1_D_POSE: Final = (SZ1_POSE_S**2) / 10.0
 SZ1_ARCHIVE_BYTES: Final = 179_930
 FX2_TAIL_CREDIT: Final = -711  # measured: sz1's token tail is edit-independent
+COMPENSATION_BYTES: Final = 38  # measured by ddm_sa3_rebase_sz1 on the sz1 container
 RATE_DENOMINATOR: Final = 37_545_489
 ADMIT_BAR_S: Final = -3.5e-6
 AXIS: Final = "[macOS-CPU advisory, frozen CPU-torch PoseNet]"
@@ -97,22 +98,58 @@ class SA3AuthorityError(RuntimeError):
     """An authority-probe precondition failed."""
 
 
-def required_cancellation(archive_bytes: int, d_seg_delta: float, damage: float) -> dict[str, Any]:
-    """How much of the damage must be cancelled for this row to clear the bar."""
-    delta_bytes = archive_bytes + FX2_TAIL_CREDIT - SZ1_ARCHIVE_BYTES
+def required_cancellation(
+    archive_bytes: int, d_seg_delta: float, damage: float,
+    compensation_bytes: int = COMPENSATION_BYTES,
+) -> dict[str, Any]:
+    """How much of the CPU-measured damage must be cancelled to clear the bar.
+
+    TWO MODELS, because the answer depends on one and only one unmeasured thing.
+    ``max_residual`` is an allowable increase in **T4** d_pose; ``damage`` is measured in
+    **CPU** d_pose.  Dividing one by the other is only valid under the ABSOLUTE transfer
+    model, where the two are numerically interchangeable.  Under the RELATIVE model the
+    allowed CPU residual is 21.4x larger and the requirement falls from 99.95% to 98.89% --
+    which flips whether sa2's demonstrated 99.9417% is short of the bar or comfortably past
+    it.  Reporting only the absolute number presents a model choice as a measurement, so
+    both are returned and the caller must show both.
+
+    The byte cost of the compensation itself is charged (sa2 measured +36 B, this arm +38 B);
+    omitting it overstated the pose headroom by 2.3%.
+    """
+    delta_bytes = archive_bytes + FX2_TAIL_CREDIT - SZ1_ARCHIVE_BYTES + compensation_bytes
     rate_s = 25.0 * delta_bytes / RATE_DENOMINATOR
     seg_s = 100.0 * d_seg_delta
     budget = -(rate_s + seg_s) + ADMIT_BAR_S
-    allowed_d_pose = ((SZ1_POSE_S + budget) ** 2) / 10.0
-    max_residual = allowed_d_pose - SZ1_D_POSE
+    allowed_d_pose_t4 = ((SZ1_POSE_S + budget) ** 2) / 10.0
+
+    # ABSOLUTE: the CPU-measured residual carries unchanged into T4 units.
+    max_residual_absolute = allowed_d_pose_t4 - SZ1_D_POSE
+    # RELATIVE: the residual carries as a FRACTION of the base, so the allowed CPU
+    # residual scales by the CPU/T4 base ratio (21.4x).
+    max_residual_relative = D_POSE_BASE_CPU * (allowed_d_pose_t4 / SZ1_D_POSE - 1.0)
+
     return {
         "delta_bytes_vs_sz1": delta_bytes,
+        "compensation_bytes_charged": compensation_bytes,
         "rate_s": rate_s,
         "seg_s": seg_s,
         "pose_budget_s": budget,
-        "max_residual_d_pose": max_residual,
+        "models": {
+            "absolute": {
+                "max_residual_d_pose": max_residual_absolute,
+                "required_cancellation": 1.0 - max_residual_absolute / damage,
+            },
+            "relative": {
+                "max_residual_d_pose": max_residual_relative,
+                "required_cancellation": 1.0 - max_residual_relative / damage,
+            },
+        },
         "uncompensated_damage": damage,
-        "required_cancellation": 1.0 - max_residual / damage,
+        "transfer_caveat": (
+            "The two models differ 21.4x on the allowed residual because that is the "
+            "measured CPU-vs-T4 d_pose drift on identical bytes. Which one holds is "
+            "UNMEASURED. Neither number is a score."
+        ),
     }
 
 
@@ -169,6 +206,21 @@ def main(argv: list[str] | None = None) -> int:
 
     out = args.out / args.row
     out.mkdir(parents=True, exist_ok=True)
+
+    # A completed run's AUTHORITY.json is a COMPLETION SIGNAL, and a stale one from a
+    # smaller run is indistinguishable from a fresh one by existence alone -- a monitor
+    # watching for the file fired on the n=16 artifact while the n=600 run was still at
+    # 124 pairs.  Retire any summary whose n differs before this run writes its own, so
+    # the file's presence always means "this n finished".
+    summary_path = out / "AUTHORITY.json"
+    if summary_path.is_file():
+        prior = json.loads(summary_path.read_text())
+        if int(prior.get("n_pairs", -1)) != len(pairs):
+            retired = summary_path.with_name(
+                f"AUTHORITY.n{prior.get('n_pairs', 'unknown')}.superseded.json"
+            )
+            summary_path.replace(retired)
+            print(f"retired stale summary (n={prior.get('n_pairs')}) -> {retired.name}\n")
     results: list[dict[str, Any]] = []
     started = time.perf_counter()
     for index, pair in enumerate(pairs):
@@ -206,7 +258,13 @@ def main(argv: list[str] | None = None) -> int:
     # Price the subset residual through the SAME admit arithmetic, scaled by the
     # representativeness ratio so the estimator's own bias is visible.
     ratio = subset_damage / damage_n600
-    projected_residual = subset_residual / ratio if ratio else float("nan")
+    if not (0.05 < ratio < 20.0):
+        raise SA3AuthorityError(
+            f"subset/n600 damage ratio {ratio:.4f} is outside [0.05, 20]. A negative or "
+            "near-zero ratio would flip the residual's sign or explode it; this subset is "
+            "not a usable estimator of the population."
+        )
+    projected_residual = subset_residual / ratio
     pose_s = ((10.0 * (SZ1_D_POSE + projected_residual)) ** 0.5) - (
         (10.0 * SZ1_D_POSE) ** 0.5
     )
@@ -250,16 +308,18 @@ def main(argv: list[str] | None = None) -> int:
         },
         "elapsed_seconds": time.perf_counter() - started,
     }
-    (out / "AUTHORITY.json").write_text(json.dumps(summary, indent=2, sort_keys=True))
+    summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True))
 
     print(f"\n=== {args.row}: n={len(pairs)} seeded-random pairs ===")
     print(f"subset damage / n600 damage : {ratio:.4f}  (representativeness control)")
     print(f"ACHIEVED cancellation       : {cancellation * 100:.4f}%")
-    print(f"REQUIRED cancellation       : {need['required_cancellation'] * 100:.4f}%")
+    for name, mdl in need["models"].items():
+        verdict = "clears" if cancellation >= mdl["required_cancellation"] else "SHORT"
+        print(f"  vs [{name:8s}] required {mdl['required_cancellation'] * 100:.4f}%  -> {verdict}")
     print(f"pairs better than base      : {summary['subset']['pairs_better_than_base']} of {len(pairs)}")
     print(f"projected net delta S       : {net:+.6e}  -> S {SZ1_SCORE + net:.9f}")
     print(f"admits (bar {ADMIT_BAR_S:+.1e})     : {summary['projection']['admits']}")
-    print(f"\nreport -> {out / 'AUTHORITY.json'}")
+    print(f"\nreport -> {summary_path}")
     return 0
 
 

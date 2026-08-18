@@ -44,8 +44,10 @@ BYTES exactly.  It is not a score and it runs no scorer.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
+import os
 import shutil
 import struct
 import subprocess
@@ -66,7 +68,6 @@ from experiments.ddm_sa2_compile_candidate import (
     brotli_stream,
     carrier_surface,
     encode_carrier_body,
-    load_solved_codes,
     patch_runtime_tree,
 )
 
@@ -89,6 +90,28 @@ S2_ARCHIVE: Final = SA1 / "generations/S2_film23_q2_top3_q3/archive.zip"
 S2_ARCHIVE_SHA256: Final = (
     "a36890b6541cf259b3f662996f8c3a935d0648aa977d02d30992aaa1e4feae29"
 )
+
+# Every sa1 row is the SAME container with a different semantic section, so one builder
+# byte-closes all of them.  Each is pinned by sha: an edited archive is the object the
+# compensation was solved against, and a silent substitution is the qs4 failure again.
+EDITED_ROWS: Final = {
+    "S2_film23_q2_top3_q3": {
+        "archive": S2_ARCHIVE,
+        "sha256": S2_ARCHIVE_SHA256,
+        "solve_root": SA1 / "retained/sa2/n600",
+        "d_seg_delta_cpu": 1.72e-06,
+        "d_pose_uncompensated_cpu": 9.865438e-04,
+    },
+    "sm3r_keep01": {
+        "archive": SA1 / "generations/sm3r_keep01/archive.zip",
+        "sha256": "67422cf0d49b7af0e241780f5935b4d735f565f13fa365bc36ac9c0f0ff95953",
+        "solve_root": Path(
+            "/Volumes/APDataStore/pact/ddm_sa3/keep01_authority/sm3r_keep01"
+        ),
+        "d_seg_delta_cpu": 4.77e-06,
+        "d_pose_uncompensated_cpu": 3.87399e-03,
+    },
+}
 SA2_SOLVE_ROOT: Final = SA1 / "retained/sa2/n600"
 
 # --- the live pointer's measured components ------------------------------------------
@@ -101,6 +124,7 @@ SZ1_RATE_S: Final = 0.11980800143527229
 SZ1_D_SEG: Final = SZ1_SEG_S / 100.0
 SZ1_D_POSE: Final = (SZ1_POSE_S**2) / 10.0
 
+PAIR_COUNT: Final = 600
 RATE_DENOMINATOR: Final = 37_545_489
 ADMIT_BAR_S: Final = -3.5e-6
 
@@ -305,6 +329,25 @@ def assert_tail_independence() -> dict[str, Any]:
 _SCRATCH_ROOTS: dict[Path, Path] = {}
 
 
+_COPY_KWARGS: Final = {"copy_function": shutil.copy}
+"""Content-only copy.  ``copy2``/``copystat`` carries xattrs, and on the ExFAT SSD
+macOS materializes those as AppleDouble ``._*`` companion files -- including ``._*.py``,
+which ``contest_auth_eval.py`` then AST-parses and dies on (UnicodeDecodeError at the
+AppleDouble magic).  Metadata is worthless here; the bytes are the artifact."""
+
+_RESIDUE_GLOBS: Final = ("._*", "__pycache__", "*.pyc")
+
+
+def strip_import_and_appledouble_residue(root: Path) -> list[str]:
+    """Remove every residue class from a tree we own, and return what was removed."""
+    removed: list[str] = []
+    for path in sorted(root.rglob("*"), key=lambda p: len(p.parts), reverse=True):
+        if path.name.startswith("._") or path.name == "__pycache__" or path.suffix == ".pyc":
+            removed.append(str(path.relative_to(root)))
+            shutil.rmtree(path, ignore_errors=True) if path.is_dir() else path.unlink(missing_ok=True)
+    return removed
+
+
 def scratch_runtime_copy(root: Path, work: Path, label: str) -> Path:
     """Copy a runtime tree into scratch so nothing ever imports IN the packet.
 
@@ -330,26 +373,42 @@ def scratch_runtime_copy(root: Path, work: Path, label: str) -> Path:
     for name in ("cpr1", "runtime"):
         shutil.copytree(
             root / name, dest / name,
-            ignore=shutil.ignore_patterns("__pycache__", "._*", "*.pyc"),
+            ignore=shutil.ignore_patterns(*_RESIDUE_GLOBS), **_COPY_KWARGS,
         )
     for name in ("archive.zip", "inflate.py", "inflate.sh"):
         if (root / name).is_file():
-            shutil.copy2(root / name, dest / name)
+            shutil.copy(root / name, dest / name)
+    strip_import_and_appledouble_residue(dest)
     _SCRATCH_ROOTS[root] = dest
     return dest
 
 
-def assert_packet_pristine(root: Path) -> dict[str, Any]:
-    """Fail closed if a packet directory carries import or AppleDouble residue."""
+def assert_tree_pristine(root: Path) -> dict[str, Any]:
+    """Report every residue class in a tree, with its denominator.
+
+    All THREE classes, always.  A predicate that covers only ``.pyc`` and
+    ``__pycache__`` reports a clean tree that still crashes ``contest_auth_eval.py``
+    on an AppleDouble ``._*.py`` -- which is exactly how this arm burned a launch.
+    """
     found = sorted(
         str(p.relative_to(root))
         for p in root.rglob("*")
         if p.name.startswith("._") or p.name == "__pycache__" or p.suffix == ".pyc"
     )
+    # The residue names are a proxy; THIS is the property contest_auth_eval.py needs --
+    # it AST-parses every *.py in the runtime tree and dies on the first non-UTF-8 byte.
+    unparseable: list[str] = []
+    for path in sorted(root.rglob("*.py")):
+        try:
+            ast.parse(path.read_text())
+        except (UnicodeDecodeError, SyntaxError, ValueError) as exc:
+            unparseable.append(f"{path.relative_to(root)}: {type(exc).__name__}")
     return {
         "root": str(root),
         "residue_count": len(found),
         "residue": found,
+        "py_files": sum(1 for _ in root.rglob("*.py")),
+        "unparseable_py": unparseable,
         "total_files": sum(1 for p in root.rglob("*") if p.is_file()),
         "pristine": not found,
     }
@@ -456,10 +515,10 @@ def verify_parse_back(
 
 def build_candidate(
     *, codes: np.ndarray, split: bool, drop_overlay: bool, output: Path,
-    runtime_root: Path, mod: SimpleNamespace,
+    runtime_root: Path, mod: SimpleNamespace, edited_archive: Path = S2_ARCHIVE,
 ) -> dict[str, Any]:
-    """Assemble sz1-tail + sz1-hpac + S2-semantic + compensated-carrier."""
-    s2 = carrier_surface(S2_ARCHIVE, mod)
+    """Assemble sz1-tail + sz1-hpac + edited-semantic + compensated-carrier."""
+    s2 = carrier_surface(edited_archive, mod)
     sz1 = sections(SZ1_GENERATION / "archive.zip")
 
     semantic_body = mod.ra._decompress_brotli(s2["semantic_stream"])
@@ -510,7 +569,36 @@ def build_candidate(
 # --------------------------------------------------------------------------
 
 
-def admit_arithmetic(delta_bytes: int, *, compensated: bool) -> dict[str, Any]:
+def load_solved_lattice(
+    solve_root: Path, base_codes: np.ndarray
+) -> tuple[np.ndarray, list[int]]:
+    """Apply every retained per-pair solve onto the base lattice.
+
+    Accepts both retained layouts -- sa2 nests results under ``pairs/``, this arm's
+    authority probe does not -- because a loader that silently found ZERO results would
+    return the BASE lattice and build an uncompensated archive wearing a compensated
+    name.  That is the vacuity-equals-pass failure, so it refuses on an empty solve.
+    """
+    codes = np.asarray(base_codes, dtype=np.int32).copy()
+    found = sorted(solve_root.glob("pairs/pair_*/RESULT.json")) or sorted(
+        solve_root.glob("pair_*/RESULT.json")
+    )
+    if not found:
+        raise SA3Error(f"no per-pair solves under {solve_root}; refusing to build")
+    solved: list[int] = []
+    for path in found:
+        row = json.loads(path.read_text())
+        pair = int(row["pair"])
+        codes[pair] = np.asarray(row["codes"]["final"], dtype=np.int32)
+        solved.append(pair)
+    return codes, sorted(solved)
+
+
+def admit_arithmetic(
+    delta_bytes: int, *, compensated: bool, d_seg_delta_override: float | None = None,
+    d_pose_compensated_override: float | None = None,
+    d_pose_uncompensated_override: float | None = None,
+) -> dict[str, Any]:
     """Price an archive against sz1's measured components.
 
     ``compensated`` is NOT cosmetic.  The zero-compensation controls exist only to
@@ -535,12 +623,25 @@ def admit_arithmetic(delta_bytes: int, *, compensated: bool) -> dict[str, Any]:
 
     # seg: the compensation touches frame_0 only; SegNet reads frame_1
     # (upstream/modules.py:109 -> x[:, -1, ...]), so the ONLY seg cost is S2's own.
-    seg_absolute = 100.0 * SA2_D_SEG_DELTA_CPU
+    seg_absolute = 100.0 * (
+        SA2_D_SEG_DELTA_CPU if d_seg_delta_override is None else d_seg_delta_override
+    )
     seg_relative = seg_absolute * (SZ1_D_SEG / SA2_ADVISORY_D_SEG_BASE_CPU)
 
-    d_pose_after = (
-        SA2_D_POSE_COMPENSATED_CPU if compensated else SA2_D_POSE_UNCOMPENSATED_CPU
-    )
+    # Each row is priced with ITS OWN measured legs.  Defaulting keep01 to S2's
+    # residual would over-price it by ~290 uS; defaulting a row with a LARGER residual
+    # to S2's would under-price it, which is the direction that ships a refusing
+    # archive.  Both are wrong, so the caller supplies the row's own numbers.
+    if compensated:
+        d_pose_after = (
+            SA2_D_POSE_COMPENSATED_CPU if d_pose_compensated_override is None
+            else d_pose_compensated_override
+        )
+    else:
+        d_pose_after = (
+            SA2_D_POSE_UNCOMPENSATED_CPU if d_pose_uncompensated_override is None
+            else d_pose_uncompensated_override
+        )
     base_pose_s = (10.0 * SZ1_D_POSE) ** 0.5
     damage_absolute = d_pose_after - SA2_D_POSE_BASE_CPU
     pose_absolute = (10.0 * (SZ1_D_POSE + damage_absolute)) ** 0.5 - base_pose_s
@@ -566,9 +667,17 @@ def admit_arithmetic(delta_bytes: int, *, compensated: bool) -> dict[str, Any]:
         "delta_bytes": delta_bytes,
         "compensated": compensated,
         "admit_bar_s": ADMIT_BAR_S,
-        "cpu_pose_cancellation_fraction": 1.0
-        - (SA2_D_POSE_COMPENSATED_CPU - SA2_D_POSE_BASE_CPU)
-        / (SA2_D_POSE_UNCOMPENSATED_CPU - SA2_D_POSE_BASE_CPU),
+        "cpu_pose_cancellation_fraction": (
+            1.0
+            - (d_pose_after - SA2_D_POSE_BASE_CPU)
+            / (
+                (
+                    SA2_D_POSE_UNCOMPENSATED_CPU if d_pose_uncompensated_override is None
+                    else d_pose_uncompensated_override
+                )
+                - SA2_D_POSE_BASE_CPU
+            )
+        ),
         "models": rows,
         "verdict_model": "absolute",
         "transfer_caveat": (
@@ -584,20 +693,48 @@ def admit_arithmetic(delta_bytes: int, *, compensated: bool) -> dict[str, Any]:
 # --------------------------------------------------------------------------
 
 
+def assert_not_in_use(dest: Path) -> None:
+    """Refuse to destroy a tree a live process is reading.
+
+    This arm rm -rf'd its own staged generation while an advisory eval was inflating
+    FROM that tree.  The restored tree was byte-identical so nothing was corrupted, but
+    that was luck, not design: a re-stage that changed a byte would have silently mixed
+    two runtimes inside one measurement, and the receipt would have looked clean.
+    A destructive re-stage is only safe when nothing is reading it.
+    """
+    try:
+        listing = subprocess.run(
+            ["/bin/ps", "-Ao", "pid=,command="], capture_output=True, text=True, check=True
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return  # cannot enumerate: do not block the build on a missing ps
+    mine = str(os.getpid())
+    holders = [
+        line.strip() for line in listing.splitlines()
+        if str(dest) in line and line.split(maxsplit=1)[0] not in {mine}
+    ]
+    if holders:
+        raise SA3Error(
+            f"refusing to re-stage {dest}: {len(holders)} live process(es) reference it "
+            f"(e.g. {holders[0][:160]}). Stage to a different --generation instead."
+        )
+
+
 def stage_generation(dest: Path, archive: Path, source_runtime: Path) -> dict[str, Any]:
     """Copy the sz1 runtime tree, apply the carrier patch, re-pin inflate.py."""
     if dest.exists():
+        assert_not_in_use(dest)
         shutil.rmtree(dest)
     dest.mkdir(parents=True)
     for name in ("cpr1", "runtime"):
         shutil.copytree(
             source_runtime / name, dest / name,
-            ignore=shutil.ignore_patterns("__pycache__", "._*", "*.pyc"),
+            ignore=shutil.ignore_patterns(*_RESIDUE_GLOBS), **_COPY_KWARGS,
         )
     for name in ("inflate.py", "inflate.sh"):
-        shutil.copy2(source_runtime / name, dest / name)
+        shutil.copy(source_runtime / name, dest / name)
     patch = patch_runtime_tree(dest)
-    shutil.copy2(archive, dest / "archive.zip")
+    shutil.copy(archive, dest / "archive.zip")
 
     digest, size = sha256_file(dest / "archive.zip"), (dest / "archive.zip").stat().st_size
     inflate = dest / "inflate.py"
@@ -606,12 +743,23 @@ def stage_generation(dest: Path, archive: Path, source_runtime: Path) -> dict[st
         str(SZ1_ARCHIVE_BYTES), str(size)
     ).replace(f"{SZ1_ARCHIVE_BYTES:_}", f"{size:_}")
     inflate.write_text(replaced)
+
+    # LAST mutation wins: strip only after every write, then fail closed.
+    stripped = strip_import_and_appledouble_residue(dest)
+    pristine = assert_tree_pristine(dest)
+    if not pristine["pristine"] or pristine["unparseable_py"]:
+        raise SA3Error(
+            "the staged generation is not clean after stripping: "
+            f"residue={pristine['residue']} unparseable={pristine['unparseable_py']}"
+        )
     return {
         "generation": str(dest),
         "archive_sha256": digest,
         "archive_bytes": size,
         "runtime_patch": patch,
         "inflate_pin_updated": replaced != source,
+        "residue_stripped": stripped,
+        "pristine": assert_tree_pristine(dest),
     }
 
 
@@ -622,11 +770,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--generation", type=Path,
                         default=Path("/Volumes/APDataStore/pact/ddm_sa3/generations/sa3_rebased_sz1"))
     parser.add_argument("--no-stage", action="store_true")
+    parser.add_argument(
+        "--row", default="S2_film23_q2_top3_q3", choices=sorted(EDITED_ROWS),
+        help="which sa1 edited-semantic row to compensate and byte-close",
+    )
     args = parser.parse_args(argv)
 
     args.work.mkdir(parents=True, exist_ok=True)
     base = verify_sz1_base()
-    pristine_before = assert_packet_pristine(SZ1_GENERATION)
+    pristine_before = assert_tree_pristine(SZ1_GENERATION)
     if not pristine_before["pristine"]:
         raise SA3Error(
             "the sz1 packet already carries import/AppleDouble residue; refusing "
@@ -635,18 +787,65 @@ def main(argv: list[str] | None = None) -> int:
     mod = _imports()
     identity = assert_decoded_identity(args.work)
     tail = assert_tail_independence()
-    codes, solved = load_solved_codes(SA2_SOLVE_ROOT)
-    if len(solved) != 600:
-        raise SA3Error(f"expected 600 solved pairs, found {len(solved)}")
-
-    s2 = carrier_surface(S2_ARCHIVE, mod)
+    row_spec = EDITED_ROWS[args.row]
+    edited_archive = Path(row_spec["archive"])
+    digest = sha256_file(edited_archive)
+    if digest != row_spec["sha256"]:
+        raise SA3Error(
+            f"{args.row} archive sha differs ({digest} != {row_spec['sha256']}); the "
+            "compensation was solved against a different object -- refusing to compile"
+        )
+    s2 = carrier_surface(edited_archive, mod)
     base_codes = s2["codes"]
+    codes, solved = load_solved_lattice(Path(row_spec["solve_root"]), base_codes)
+    # DISTINCT pairs: two directories resolving to the same index (pair_0007 / pair_7)
+    # would reach 600 files with 599 real pairs, shipping one pair UNCOMPENSATED behind
+    # a compensated claim -- exactly what this gate exists to prevent.
+    if len(set(solved)) != PAIR_COUNT:
+        raise SA3Error(
+            f"{args.row}: expected {PAIR_COUNT} DISTINCT solved pairs, found "
+            f"{len(set(solved))} distinct across {len(solved)} result files. A partial "
+            "solve must not be byte-closed -- the unsolved pairs would ship "
+            "UNCOMPENSATED while the archive claims otherwise."
+        )
 
     # The compensated lattice's Rice residual stream has a different length, so the
     # SHIPPED reader -- which dispatches the carrier on a pinned section length --
     # refuses it.  sa2's variable-length patch is what makes it parse.  Stage the
     # patched tree FIRST so every parse-back runs against the runtime that would
     # actually ship with the candidate, never against a convenient stand-in.
+    # The row's own measured compensated d_pose, from its own solve's AGGREGATE.json
+    # when the probe wrote one; otherwise fall back to sa2's S2 legs and SAY SO.
+    # FINDING-3 FIX.  The compensated pose leg must come from THIS row's own solve.
+    # The previous code fell back to S2's constant whenever the summary was missing or
+    # stale, which for keep01 turns a REFUSE (+1.16e-2 at 99.0% cancellation) into an
+    # ADMIT (-8.11e-4) and byte-closes an archive that does not clear the bar.  A missing
+    # or non-n600 summary now REFUSES; only S2 may use sa2's own measured legs, because
+    # for S2 they ARE this row's legs.
+    measured_residual_d_pose: float | None = None
+    residual_source: str
+    if args.row == "S2_film23_q2_top3_q3":
+        residual_source = "sa2's own n600 solve for THIS row (600/600 pairs)"
+    else:
+        aggregate = Path(row_spec["solve_root"]) / "AUTHORITY.json"
+        if not aggregate.is_file():
+            raise SA3Error(
+                f"{args.row}: no AUTHORITY.json at {aggregate}. Refusing to price this "
+                "row with another row's residual -- run the authority solve first."
+            )
+        agg = json.loads(aggregate.read_text())
+        n_pairs = int(agg.get("n_pairs", -1))
+        if n_pairs != PAIR_COUNT:
+            raise SA3Error(
+                f"{args.row}: AUTHORITY.json summarizes n={n_pairs}, not {PAIR_COUNT}. A "
+                "subset estimate must not price a byte-closed archive (this arm measured "
+                "the estimate drift adversely from n=16 to n=70). Re-run at --pairs 600."
+            )
+        solve_id = agg.get("solved_pairs_sha256")
+        measured_residual_d_pose = SA2_D_POSE_BASE_CPU + agg["subset"]["mean_residual"]
+        residual_source = f"{args.row} own n600 solve (AUTHORITY.json, n={n_pairs})"
+        del solve_id
+
     shipped_runtime = scratch_runtime_copy(SZ1_GENERATION, args.work, "sz1")
     patched_runtime = args.work / "runtime_sz1_patched"
     if patched_runtime.exists():
@@ -667,14 +866,17 @@ def main(argv: list[str] | None = None) -> int:
         row = build_candidate(
             codes=use_codes, split=split, drop_overlay=True,
             output=args.work / f"{label}.zip",
-            runtime_root=root, mod=mod,
+            runtime_root=root, mod=mod, edited_archive=edited_archive,
         )
         row["parse_back_runtime"] = (
             "sz1_shipped_copy" if root is shipped_runtime else "sz1_copy+sa2_carrier_patch"
         )
         row["compensated"] = label.startswith("candidate")
         row["admit"] = admit_arithmetic(
-            row["delta_bytes_vs_sz1"], compensated=row["compensated"]
+            row["delta_bytes_vs_sz1"], compensated=row["compensated"],
+            d_seg_delta_override=row_spec["d_seg_delta_cpu"],
+            d_pose_compensated_override=measured_residual_d_pose,
+            d_pose_uncompensated_override=row_spec["d_pose_uncompensated_cpu"],
         )
         results[label] = row
         print(
@@ -696,6 +898,11 @@ def main(argv: list[str] | None = None) -> int:
         )
     report = {
         "schema": "ddm_sa3_rebase.v1",
+        "row": args.row,
+        "measured_residual_d_pose_cpu": measured_residual_d_pose,
+        "residual_source": residual_source,
+        "edited_archive": str(edited_archive),
+        "edited_archive_sha256": digest,
         "axis": AXIS,
         "score_claim": False,
         "promotion_eligible": False,
@@ -722,7 +929,7 @@ def main(argv: list[str] | None = None) -> int:
             args.generation, Path(best["archive_path"]), shipped_runtime
         )
     report["packet_pristine_before"] = pristine_before
-    report["packet_pristine_after"] = assert_packet_pristine(SZ1_GENERATION)
+    report["packet_pristine_after"] = assert_tree_pristine(SZ1_GENERATION)
     out = args.work / "SA3_REBASE.json"
     out.write_text(json.dumps(report, indent=2, sort_keys=True))
     print(f"\nreport -> {out}")

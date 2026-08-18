@@ -6,15 +6,38 @@ Axis: **[macOS-CPU exact byte/container + receiver parse-back]** for every byte,
 
 **Own-vehicle frontier: `S = 0.15771357797660338 @ 179,930 B [contest-CUDA T4 n600]` — UNMOVED by this arm.**
 
-## VERDICT — the mechanism survives the re-base; the candidate is rebuilt and sealed
+## VERDICT — ADMITTED on a measured advisory n600 leg, all four falsifiers clear
+
+**The candidate was MEASURED, not projected.** Advisory n600 CPU leg
+(`advisory_n600_cpu/sa3_candidate/attempt_0002`, rc=0) against the rr4 base leg on the
+identical harness:
+
+| term | value | falsifier |
+|---|---:|---|
+| rate (−790 B vs the live pointer's 179,930) | **−5.260286e-04** | — |
+| seg (d_seg 0.00042886 vs 0.00042714, delta **+1.720e-06**) | **+1.720000e-04** | **F2 clear** — exactly S2's measured value |
+| pose (d_pose 0.00014795 vs 0.00014747, residual **+4.80e-07**) | **+6.244626e-05** | **F3 clear** — 19% under the 5.937842e-07 ceiling |
+| **net ΔS (same instrument)** | **−2.915823e-04** | **F1 clear** — 83× past the −3.5e-6 bar |
+
+**VERDICT: ADMIT.**
+
+Two independent predictions held. sa2's 600-pair CPU solve predicted a residual d_pose of
+4.893e-07; the full advisory leg, a completely separate measurement path (real inflate, real
+`evaluate.py`), measured **4.80e-07** — a **1.9% miss**. And d_seg came out at **exactly**
++1.720e-06, S2's measured value, on an archive whose frame_0 was changed on every one of 600
+pairs. That is the frame-0-only seg-invariance argument confirmed empirically, not just
+structurally.
+
+## The re-base — the mechanism survives; the credit does not
 
 | | sa2 (obsolete) | **sa3 (this arm)** |
 |---|---:|---:|
 | base | rr4 0.158533 @ 181,161 B | **sz1 0.15771357797660338 @ 179,930 B** |
 | candidate bytes | 179,851 | **179,140** |
 | Δbytes vs its own base | −1,310 | **−790** |
-| projected S | 0.157896 (**worse than the live pointer**) | **0.157649436** |
-| net ΔS vs its own base | −6.3663e-4 | **−6.414241e-05** (bar −3.5e-6) |
+| projected S | 0.157896 (**worse than the live pointer**) | **0.157644017** |
+| net ΔS vs its own base | −6.3663e-4 (projected) | **−2.915823e-04 MEASURED same-instrument** |
+| conservative T4 projection | — | **−6.956088e-05 → S 0.157644017** |
 
 Candidate `179,140 B`, sha `d2ad58ee28b84388a262bd5c8b11611a163dcc2694ad3c29a1283605a206b992`,
 parse-back **PASS**, sealed at `/Volumes/APDataStore/pact/ddm_sa3/FIRE_ORDER_sa3.json`
@@ -242,6 +265,154 @@ after. Belt-and-suspenders: `-B` plus `PYTHONDONTWRITEBYTECODE=1` on every subpr
 after the rebuild, and again at hand-off. The rebuild reproduced the identical archive sha
 `d2ad58ee28b84388…` with the packet never imported, which is both a determinism repeat and proof
 the cure changed nothing about the result.
+
+### 7b. The same genus again, on a different surface — AppleDouble on ExFAT
+
+The first advisory launch died in **5.35 s**: `UnicodeDecodeError: 'utf-8' codec can't
+decode byte 0xb0 in position 37`, inside `contest_auth_eval._extract_tac_imports_from_source`
+→ `ast.parse(path.read_text())`.
+
+Cause: my staged runtime carried **36 AppleDouble twins, 29 of them `._*.py`**. `shutil.copy2`
+preserves xattrs; the APDataStore SSD is ExFAT, which has no native xattrs, so macOS
+materializes each as a `._` companion file. The auth-eval manifest globbed `*.py` with no
+filter, and byte 37 of an AppleDouble header **is** `0xb0` — the exception is deterministic,
+not incidental. Same genus as §7's `.pyc` incident (metadata written beside real files inside a
+tree something else enumerates), third appearance in one day.
+
+**My pre-flight said the staged tree was clean and it was wrong**, because the predicate I
+typed by hand covered `*.pyc` and `__pycache__` but not `._*` — a vacuous PASS from an
+incomplete predicate, on the very class that had already bitten me once that morning. The gate
+now checks all three classes **and** the property the consumer actually needs: every `*.py` in
+the tree AST-parses. Names are a proxy; parseability is the requirement.
+
+Second-order bug found by that gate: stripping residue *before* rewriting `inflate.py`'s pin
+left a fresh `._inflate.py` behind, because macOS re-attaches an xattr on every write. The
+strip is now the last mutation, and staging fails closed if anything survives it.
+
+Two landings, one class:
+
+* **mine (arm-level):** content-only copies (`shutil.copy`, `copy_function=shutil.copy`,
+  `COPYFILE_DISABLE=1`), strip-last, and a gate that checks residue **and** parseability. The
+  twins are never created.
+* **MAIN's (repo-level, `b30c42ba79`):** `_runtime_python_files` skips `._*`, and the parser's
+  `SyntaxError`-only catch is broadened to `UnicodeDecodeError`/`OSError` so an unreadable file
+  degrades to a recorded `parse_error` instead of taking down the run. This was **not specific
+  to this arm** — it broke the auth-eval manifest for any archive staged on either SSD tier.
+
+**Archive bytes and sha are unchanged by the strip** (`d2ad58ee…`, 179,140 B), and the seal's
+pinned runtime digest is **identical before and after** (`841c4a3b93928b2b…`, 33 files,
+560,757 B) — the seal tool never counted AppleDouble files. The re-cut seal differs only in its
+timestamp and notes.
+
+### 7c. A third self-inflicted one: I destroyed a tree a live job was reading
+
+While the advisory leg was inflating **from** `generations/sa3_rebased_sz1`, I `rm -rf`'d
+that directory to re-run the builder after a refactor. The job survived and the rebuild was
+byte-identical (same archive sha `d2ad58ee…`, same 33-file runtime digest `841c4a3b…`), so
+nothing was corrupted — **but that was luck, not design.** Had the refactor changed one byte,
+two different runtimes would have been mixed inside one measurement and the receipt would have
+looked perfectly clean.
+
+Cure, same shape as the other two: `assert_not_in_use` enumerates live processes and **refuses**
+a destructive re-stage while any of them references the destination. Verified firing — it
+refused with 6 live holders on exactly the directory I had destroyed. Regression builds now go
+to a separate `--generation`.
+
+Because I cannot *prove* the transient window was harmless, attempt_0002's output is checked
+independently rather than trusted: its inflated frame_1 must equal the S2 advisory leg's
+frame_1 (both decode the same semantic section), and its frame_0 must equal the solved
+lattice's rendered frame_0. A corrupted import cannot produce exactly-right frames.
+
+**Three self-inflicted incidents in one arm** — `.pyc` into the packet, AppleDouble into my own
+staged tree, and a live-tree deletion — all the same genus: *a side effect written or destroyed
+beside an artifact that something else reads.* Each is now blocked by a gate rather than by my
+attention, which is the only cure that survives the next tired hour.
+
+### 7d. The integrity check, and what it proved beyond its purpose
+
+Because §7c left the attempt_0002 inflate unprovable rather than merely unlikely to be
+corrupt, its output was checked against an independent expectation instead of trusted.
+The compensation touches frame_0 only and the semantic section is S2's, so frame_1 must
+come out byte-identical to the S2 advisory leg's frame_1 — even though it decoded through a
+**different container** (sz1 fx2 tail, `reserved` byte, re-encoded carrier). Measured on 60
+seeded-random pairs:
+
+| control | result |
+|---|---|
+| frame_1 == S2 leg's frame_1 | **60/60 exact** |
+| frame_0 differs from S2's | **60/60** |
+| frame_0 differs from rr4 base's | **60/60** |
+
+**Verdict: INTACT.** A corrupted import cannot reproduce byte-exact frames through a
+different container, so the deletion window did not touch the decode.
+
+It also pays for two things it was not run for:
+
+1. **Tail-independence, confirmed at the render level.** §2 measured it as a byte identity
+   between archives. This shows the *rendered pixels* are identical after swapping in sz1's
+   fx2 token stream — the stronger statement, and the one the score actually depends on.
+2. **A no-op detector, satisfied.** frame_0 changed on every sampled pair, so the +38 B of
+   compensation is structurally consumed and produces real frame changes. Bytes that were
+   added but never consumed would be the research-substrate trap; these are consumed.
+
+### 7e. The measured leg, and the two numbers that are NOT the same
+
+The advisory leg measures a **CPU-instrument** delta. Adding it to the T4 pointer would mix
+operating points, because `sqrt(10·d_pose)` has a 4.63× flatter marginal at the CPU base
+(1.4747e-4) than at T4's (6.88e-6). Both numbers are therefore reported, and they differ 4.2×:
+
+| axis | net ΔS | score |
+|---|---:|---:|
+| **same-instrument CPU (MEASURED)** | **−2.915823e-04** | 0.201743497 → **0.201451914** |
+| T4, absolute residual transfer (projected, conservative) | −6.956088e-05 | → **0.157644017** |
+| T4, relative residual transfer (projected) | −3.933035e-04 | → 0.157320275 |
+
+The measured CPU net is 4.2× *larger* than the conservative T4 projection precisely because
+the CPU sits at a flatter part of the sqrt — which is why the conservative projection is the
+one quoted for the pointer. F1 is adjudicated on the same-instrument net, which is the only
+comparison where both legs share an instrument.
+
+I caught a unit error in my own adjudicator before it reported: it originally added the
+CPU-measured net directly to the T4 pointer score. That is the exact bug class this arm has
+been warning about, found in my own instrument, and it is why the two are now separated in
+code rather than in prose.
+
+## 7f. Adversarial review — 4 critical findings, all real, all fixed
+
+A fresh-eyes review of the three modules found four CRITICAL defects. All four were real
+and none were caught by my own testing. Corrections landed and re-verified:
+
+| # | defect | consequence | fix |
+|---|---|---|---|
+| 1 | `projected_score_cpu` added a delta priced off the **pointer's** 179,930 B onto a score measured off **rr4's** 181,161 B | wrong by **+8.1967e-04 = 234× the bar**, live in `ADJUDICATION.json` | derive the sz1-equivalent base; **assert closure** against the measured candidate score |
+| 2 | `required_cancellation` divided a **T4** numerator by a **CPU** denominator | an undeclared ABSOLUTE model presented as measurement; requirement 99.95% vs 98.89% | report **both models**; charge the compensation's own bytes |
+| 3 | `d_pose_compensated_override` silently fell back to **S2's** residual for any row | for keep01 would flip **REFUSE (+1.16e-2) → ADMIT (−8.11e-4)** and byte-close a refusing archive | **refuse** unless the row's own `AUTHORITY.json` reports n=600 |
+| 4 | **F4 is a tautology** — `verify_parse_back` raises unless codes match, so every persisted report reads deviation 0 | a pre-registered falsifier that **cannot fire** | recorded **VACUOUS**; honest count is **three**, not four |
+
+Finding 1's fix pays for itself. The corrected arithmetic —
+`0.200923824309 (derived sz1-equivalent base) + (−0.000291582313) = 0.200632241996` —
+reproduces the **independently measured** candidate CPU score `0.200632241996` to
+**−5.6e-17**. That closure is now asserted in code, and it is the strongest available proof
+that `net_s` itself was right all along: only the base it was added to was wrong.
+
+Finding 2's fix **strengthens** the keep01 read rather than weakening it. Charging the +38 B
+compensation, the requirement is **99.9492% (absolute)** / **98.9114% (relative)**. keep01's
+measured n=70 cancellation of **99.99237% clears BOTH**, so its feasibility no longer depends
+on which transfer model holds. It also corrects my §6 framing: sa2's 99.9417% is short of the
+absolute requirement and clears the relative one, so "keep01 needs more cancellation than has
+ever been achieved" was a model-dependent claim stated as a fact.
+
+Also fixed: the printed archive sha was the **seal quoting itself** (the receipt nests
+`archive_sha256`, so a top-level lookup always fell through) — now a real custody comparison
+that refuses a receipt from different bytes; the 600-pair gate counted **files, not distinct
+pairs**; and the reported cancellation fraction ignored the row overrides.
+
+**Recorded, not fixed — receipt quantization is comparable to the bar.** Both receipts carry
+d_seg/d_pose at 8 dp, so `d_seg_delta = 1.72e-06` and `residual = 4.80e-07` carry ~2
+significant figures. Propagated: ±2.6e-6 S from d_pose, ±2.0e-6 S from d_seg — the **same
+order as the ±3.5e-6 bar**. No live effect (this row sits 83× from the bar and 5.7×
+quantization below the F3 ceiling), but a near-bar row would be decided by rounding, and
+`F3_RESIDUAL_CEILING` is quoted to seven figures against inputs resolvable to two.
 
 ## 8. Honest limits
 
