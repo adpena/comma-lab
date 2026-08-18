@@ -207,8 +207,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"seg cost                : {need['seg_s']:+.6e} S")
     print(f"uncompensated damage    : {damage_n600:.6e} d_pose  "
           f"({damage_n600 / (9.865438e-4 - D_POSE_BASE_CPU):.2f}x S2's)")
-    print(f"max residual allowed    : {need['max_residual_d_pose']:.6e} d_pose")
-    print(f"REQUIRED cancellation   : {need['required_cancellation'] * 100:.4f}%")
+    for model_name, model in need["models"].items():
+        print(
+            f"max residual [{model_name:8s}]: {model['max_residual_d_pose']:.6e} d_pose  "
+            f"REQUIRED cancellation {model['required_cancellation'] * 100:.4f}%"
+        )
     print("sa2 ACHIEVED on S2      : 99.9417%\n")
 
     base_raw, edited_raw = load_raw(BASE_RAW), load_raw(row["raw"])
