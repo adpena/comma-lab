@@ -28713,3 +28713,42 @@ STORES CONSULTED: MODAL_REMOTE_RESULT.json (rr2 + hv1 r2 rows), inflated_outputs
 - **Standalone-vs-pointer subtlety:** the split alone on rr4 lands +40..+62 B ABOVE the fx1 pointer (rr4 is 560 B behind). Ships ONLY composed.
 - **THE r2 LESSON (fx2 candidate A fire, call fc-01M09AXG9G94D2KN81KCWV6XY8, worker rc=1 @13.5 s):** the shipped receiver's free_corrector.py imported `experiments.ddm_fx1_logistic_mixer_corrector` — a runtime-closure violation (HNeRV-parity L9) that the local byte-close chain could not see because the r1 PYTHONPATH=repo-root crutch put the repo on sys.path for BOTH encoder and receiver. **The crutch that fixes the encoder masks the closure defect in the receiver; only a clean-env entry-point smoke (inflate.sh, env -i) measures the worker path.** Cure = the fx1 shipped pattern: flatten the corrector chain into the runtime package (stage rr4_free_corrector.py + fx1_logistic_mixer_corrector.py, rewrite 5+2 import sites package-relative; loop-until-dry grep = 0 repo imports). SECOND CATCH from the same smoke discipline: sz1's receiver trees carried the rr4-v2 corrector instead of the fx2 mixer the composed token stream requires — a guaranteed T4 desync (the rr2 S=27.83 class); sz1's own seal had validated via read_residual_archive only and flagged the full-inflate smoke as the owed step. All 4 runtime trees fixed. Tool debt: fire_modal_auth_eval's pre-dispatch smoke does not EXECUTE a decode (13.5 s import death reached the worker) — bounded clean-env decode smoke = two-landing candidate.
 - **Chain state:** fx2-A clean-env smoke LIVE → r3 refire → potential SIXTH pointer move (0.1580598246322269); then sz1 composed (#1117) → potential SEVENTH (0.15771358). Custody: /Volumes/APDataStore/pact/ddm_sz1/ (6 archives + 4 artifacts, sha-pinned) + ddm_fx2/byteclose_a/.
+
+## FEED-hg1ab (2026-08-18) — ring0 margin-hinge A/B §8 falsifier adjudication [MAIN, matched epochs]
+
+**STORES CONSULTED:** ddm_hg1_ring0_margin_hinge_20260816.md §8/§9 (sealed falsifiers) · both arms'
+telemetry.jsonl final a1_gate rows · arm_a resume_safe_run_status.json (120 ep, rc clean).
+
+**The epoch mismatch is RESOLVED.** arm_a control (CE) resumed 280→399 (120 ep, 4,676 s); both arms
+now hold final a1_gate rows at epoch 399 = 400 total epochs each. Matched-epoch read, EMA shadow,
+36-pair gate, [macOS-CPU/MLX advisory]:
+
+| arm | d_seg (gate mean) | HT estimator | endpoint slope /ep | dpose_mean (advisory) | a1 class |
+|---|---|---|---|---|---|
+| A control CE | 0.016963393599898728 | 0.016815 | −4.63e-5 | 144.61 | COUPLED_DESCENT |
+| B margin hinge | 0.011571389657479746 | 0.011563 | −8.34e-7 | 142.96 | A1_REALIZATION_GAP_ALARM |
+
+**Falsifier 1 (seg recovery <25% of the re-derived ladder at the seg asymptote): NOT TRIGGERED.**
+Realized recovery at matched epochs = (0.016963−0.011571)/0.016963 = **31.79%** > the 25% bar =
+64.6% of the derived 49.2% ladder ceiling. CAVEAT, stated not hidden: arm_b IS at asymptote
+(−8.3e-7/ep) but arm_a is NOT (−4.63e-5/ep, still descending) — this is a matched-EPOCH verdict,
+not matched-asymptote; arm_a run longer could narrow the gap. The hinge wins the fair same-budget
+comparison; the asymptote-vs-asymptote comparison remains unmeasured.
+
+**Falsifier 2 (hinge active fraction ≈0 INERT / ≈frame global-push): TELEMETRY NOT EMITTED —
+named instrument gap** (no support/frac field in gate rows; only accepted_frac/termdom_frac exist).
+Outcome evidence refutes the INERT branch (a 31.8% d_seg delta cannot come from an inert term);
+the global-push branch shows no pose side-effect (advisory dpose 142.96 vs 144.61 — hinge arm
+equal-or-slightly-better). Future hinge runs owe a hinge_support_frac gate field.
+
+**Endpoint alarm read:** A1_REALIZATION_GAP_ALARM at arm_b ep399 is the expected ASYMPTOTE
+signature (interval Δd_seg ≈ 0 while ep_loss still 0.433 and flip churn continues), not a
+measurement confound of the A/B.
+
+**Routing (§8 table):** Arm C (hinge+Q3) fires ONLY on "seg gain AND measured pose cost" — B shows
+a seg gain and NO measured pose cost on the only (advisory, 18.2×-optimistic-on-pose) instrument ⇒
+**arm C does NOT fire on this evidence.** The margin hinge (--seg-form-start margin_hinge,
+--margin-target 0.03918, --margin-weighted-loss on) is now the MEASURED-BETTER TR1 seg form at
+matched epochs → config input to tc1's TR1 composition program + any future TR1 burn charter.
+Pointer UNMOVED; every number here is advisory; no score claim. verdict_scope: INSTANCE (this
+vehicle, this 400-ep budget, 36-pair gate instrument).
