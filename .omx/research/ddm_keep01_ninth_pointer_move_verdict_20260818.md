@@ -63,8 +63,10 @@ decodes SD1M natively, `runtime/residual_archive.py:190`, compose.py parse-back 
 V7_V6_livepw_q2: 166,718 B = −13,212 B vs sz1 = **16.7× keep01's rate credit; the rate leg
 alone (−8.80e-03 S) exceeds the entire remaining gap.** At the family's measured retention
 that projects roughly −2e-03 to −3e-03 S — IF the compensation solve holds at that mass and
-seg damage stays in family (sa1 measured the quantization family seg-INERT; keep01's row-prune
-seg landed at 0.55× its cap).
+seg damage stays in family. The seg prior cited here: sa1 measured its quantization edits
+seg-INERT (verdict_scope: formulation — semantic-tensor quantization edits on the rr4/sz1
+lineage, 3 measured members; NOT a family law, and the V-series' deeper 2-3 bit depths may
+leave it), and keep01's row-prune seg landed at 0.55× its pre-registered cap.
 
 Fired: advisory n600 CPU row on V7 (pid 49826, done-receipt `v7_advisory_n600_20260818`,
 archive sha `0ecf5d9c4a9b8082…` pinned, staged generation dir with the SD1M-capable runtime).
