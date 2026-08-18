@@ -28815,3 +28815,56 @@ the eval never ran. Lane ddm_sz1_composed_cpu_n600 closed terminal
 (completed_measured_infeasible_cpu_inflate_3423s_vs_1800s_budget). Artifacts:
 /Volumes/APDataStore/pact/ddm_sz1/cpu_row_composed/r1_artifacts/ (preflight + validation + logs +
 provenance; preflight verified archive sha/bytes debb025f…/179,930 before spend). [p0-ledger-ok]
+
+FEED-sa3 (2026-08-18): EIGHTH POINTER MOVE — the compensated semantic edit, re-based onto the sz1
+pointer. contest-CUDA T4 n600, archive d2ad58ee28b84388a262bd5c8b11611a163dcc2694ad3c29a1283605a206b992
+@ 179,140 B: S 0.15765851477950737 vs sz1's 0.15771357797660338 = NET −5.506320e-05, ADMITTED; all
+four sealed falsifiers PASS. Gap to 0.15: 0.00771 → 0.00766. LEG SPLIT, exact and summing to the
+harness recompute at 17 digits: rate −5.260286e-04 (−790 B) · pose +2.669654e-04 (0.508 of the credit,
+d_pose 6.880e-06→7.330e-06) · seg +2.040000e-04 (0.388, +241 flips, 1.19× the PRE-REGISTERED
+prediction — the collateral is modelable). Retention 10.5%. QUANTIZATION CUSTODY: the row's
+canonical_score_source is report_8dp_components_plus_exact_archive_bytes and the harness publishes
+report_8dp_score_worst_case_abs_error_bound 3.4205e-06 — the net is 16.1× the bound, so the sign is
+determinate BY A STATED MARGIN. That is the standing cure for the #1032 genus (a −4e-06 "result" that
+was one pose ULP): divide the delta by the bound before believing it. THE COUNTER-INTUITIVE LAW:
+retention RISES with edit mass (10.47% → 11.24% at ×2 → 12.64% at ×4) because rate/seg are linear
+while the pose leg is CONCAVE and this family pays pose upward, on the falling-marginal side.
+Everywhere else concavity is the enemy (ddm_asym1: a 2× worsening costs 1.41× what a 2× improvement
+buys); here it is the friend, same reason, sign flipped. Never scale the pose S-leg directly — scale
+d_pose, THEN take sqrt(10·d_pose). THE CEILING (the routing verdict): closing the gap on this family
+alone needs 52.1× mass = 41,160 B of rate credit vs a 34,243 B semantic_blob — 1.20× the WHOLE
+section, so the family is arithmetically incapable of routing at any mass; it CONTRIBUTES and
+composes. FAMILY LAW SETTLED: sa1 refused the UNCOMPENSATED version 3/3 at 68–512× the credit; sa3's
+compensated version pays 0.508× — the in-compile Schur compensation is a two-orders-of-magnitude
+difference, and qs4 proved the converse (a compensation carried from a DIFFERENT object cost
++2.396e-04). Re-solve in-compile, assert in code. Registered as canonical equation
+compensated_semantic_edit_exchange_v1 (project_at_mass / family_cannot_close_alone / exchange_legs).
+Memo .omx/research/ddm_sa3_compensated_edit_rebased_verdict_20260818.md; artifacts
+/Volumes/APDataStore/pact/ddm_sa3/t4_row_cuda/ with all eight embedded auth-eval artifacts now
+persisted separately per P0. [p0-ledger-ok]
+
+FEED-bp1 (2026-08-18): SECTION-CODING AXIS MEASURED SHUT — four mechanisms × all four sections of the
+sz1 archive, byte-exact through real coders, total honestly available −5 B = 3.3e-6 S. brotli
+parameter sweep (shipped at-or-beyond our encoder on all three model streams) · cross-section joint
+coding (+205 B, ALL 24 orders lose; every ordered conditional pair NEGATIVE — the streams are
+near-entropy and mutually dissimilar, so concatenation forces one adaptive model across different
+sources) · global byte-plane deinterleave (+31…+509 at every k) · region byte-plane (hpac +7 ·
+carrier −5 · semantic 0). token_stream — 61.0% of the archive — was closed by MEASUREMENT too (every
+mechanism costs bytes, ratio 1.0000–1.0006), converting this axis's last standing derivation into a
+receipt. Concordant with #996 and #1060: three independent closures agree. THREE PRECONDITIONS, each
+of which produced a wrong number once and now travel as METHOD: (1) CALIBRATE — our brotli reproduces
+semantic to the byte but lands +39 B on hpac (the CLI agrees; the shipped encoder found a better
+parse), so on hpac a candidate must beat −39 merely to TIE; a "−20 B win" there is a 19 B loss.
+(2) SHIP THE INVERSE — the first composed hpac result read −215 B and was an artifact of a LOSSY
+compositor (regions read from the original buffer while writing into a copy; overlaps clobbered each
+other). A verified forward/inverse pair (200 random op-sequences, all round-tripping byte-identical)
+converges to −32 = +7 WORSE than shipped. Live NO-FAKE instance: a transform that improves the metric
+by being lossy is not a rate win. (3) DON'T CENSOR YOUR OWN SEARCH — my region sweep capped length at
+4,096 B, BELOW sz1's own winning 8,284 B region; re-run uncapped (114 arms) found zero negatives, so
+the cap hid nothing, but that took a measurement. ROUTING: rate progress must come from
+REPRESENTATION, not coding — and per ddm_asym1 the rate axis needs 11,584 B (6.4% of the archive) to
+close the gap alone, none of it from the coder. Registered as canonical equation
+section_coding_axis_closure_v1 with coding_candidate_admissible() as the fail-closed gate. Memos
+.omx/research/ddm_bp1_section_coding_axis_closed_20260818.md +
+.omx/research/ddm_xs1_cross_section_joint_coding_20260818.md; payloads + receipts
+/Volumes/APDataStore/pact/ddm_bp1/ (persisted BEFORE measuring, P0). [p0-ledger-ok]
