@@ -38,3 +38,15 @@ will REPRODUCE (±20% on the bit share) on ≥3 other semantic-family PRs; falsi
 not, the structure is OUR-vehicle-specific and fx2's ceiling arithmetic must be re-derived.
 Deliverable: memo + typed prior JSONL + ranked what-they-know-that-we-don't rows w/ named
 consumers (fx2/ps2/#984 composed campaign).
+
+## SCOPE EXTENSION (operator 2026-08-18 "And other packages scripts and all upstream in
+## authors' repos and all signal and documentation and everything")
+Leg 2 — the FULL SURROUND of each PR, not just archive bytes: authors' repos (training scripts,
+packages, configs, notebooks, READMEs, issues/comments), their upstream dependencies and pinned
+versions, PR body/comment documentation, and any linked artifacts. RECALL FIRST: #413/#414
+author-GitHub sweeps (07-10) + eh1 PR130-author forensics — EXTEND those receipts, never redo
+covered ground; the delta = authors + repos that appeared or changed SINCE, plus everything the
+prior sweeps read as prose but never converted to TYPED rows. Same output contract: typed prior
+JSONL rows {source, kind∈{script,config,dep,doc,comment}, claim/stat, value, sha/url} into the
+same canonical prior store; ranked what-they-know rows w/ named consumers. Disclosure hygiene
+binds (read public sources only; nothing private leaves).
