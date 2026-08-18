@@ -113,10 +113,12 @@ EDITED_ROWS: Final = {
         "d_pose_uncompensated_cpu": 3.87399e-03,
     },
     # ck1: keep01's FiLM row-prune composed with S2's surviving legs (frame_embed q3 +
-    # blocks.0.film q3) via SM3R mode 6.  The mode-6 semantic body is opaque to this
-    # container assembler, but parse-back MUST run through a mode-6-capable receiver —
-    # sz1's shipped runtime predates mode 6, so this row stages from the ck1 generation
-    # tree (whose runtime decoded the full n600 advisory, attempt_0002 rc=0).
+    # blocks.0.film q3) via SM3R mode 6.  LINEAGE LESSON (the S=79.4 T4 refusal,
+    # fc-01M0BGYV): staging this row from the ck1 GENERATION tree paired sz1's
+    # fx1/rr4-encoded token bytes with ck1's PRE-fx1 free_corrector — arithmetic
+    # decode desyncs SILENTLY into garbage (parse-back is structure-only and cannot
+    # see it).  The correct composition is sz1's runtime (matching token chain) with
+    # ck1's RECEIVER overlaid (the only file that knows SM3R mode 6).
     "ck1_composed": {
         "archive": Path(
             "/Volumes/APDataStore/pact/ddm_ck1/generations/ck1_composed/archive.zip"
@@ -127,11 +129,14 @@ EDITED_ROWS: Final = {
         "d_seg_delta_cpu": 6.22e-06,
         # advisory n600 uncompensated d_pose (== AUTHORITY.json subset.mean_uncompensated)
         "d_pose_uncompensated_cpu": 3.99327e-03,
-        "source_runtime": Path(
-            "/Volumes/APDataStore/pact/ddm_ck1/generations/ck1_composed"
+        "runtime_overlays": (
+            (
+                Path("/Volumes/APDataStore/pact/ddm_ck1/generations/ck1_composed"),
+                "cpr1/ddm_mp2_semantic_receiver.py",
+            ),
         ),
-        # ck1's residual_archive.py predates DDM_SZ1_SEMANTIC_METADATA_SPLIT_V1:
-        # it requires reserved==0, so split-variant headers refuse at decode.
+        # nosplit-only stays: the keep01 winner was nosplit and this recovery pass
+        # does not widen scope to the split byte-plane on a mode-6 body.
         "supports_semantic_split": False,
     },
 }
@@ -881,11 +886,24 @@ def main(argv: list[str] | None = None) -> int:
         residual_source = f"{args.row} own n600 solve (AUTHORITY.json, n={n_pairs})"
         del solve_id
 
-    # Per-row source runtime: the tree the candidate stages from AND parse-backs
-    # through must be able to DECODE the row's semantic body (a mode-6-blind runtime
-    # would fail parse-back loudly — fail-closed, but blocked).  Default stays sz1.
+    # Per-row source runtime + overlays: the staged/parse-back tree must decode BOTH
+    # the token sections (lineage-matched coder chain — mixing lineages desyncs the
+    # arithmetic decode SILENTLY, the ck1 S=79.4 T4 refusal) AND the row's semantic
+    # body (receiver mode coverage).  Base = sz1's shipped runtime; per-row
+    # ``runtime_overlays`` copies named files from another tree over the base.
     source_generation = Path(row_spec.get("source_runtime", SZ1_GENERATION))
     shipped_runtime = scratch_runtime_copy(source_generation, args.work, "src")
+    for overlay_tree, overlay_rel in row_spec.get("runtime_overlays", ()):
+        overlay_src = Path(overlay_tree) / overlay_rel
+        overlay_dst = shipped_runtime / overlay_rel
+        if not overlay_src.is_file():
+            raise SA3Error(f"runtime overlay source missing: {overlay_src}")
+        if not overlay_dst.is_file():
+            raise SA3Error(
+                f"runtime overlay target absent in base tree (refusing to ADD "
+                f"files blind): {overlay_dst}"
+            )
+        shutil.copy(overlay_src, overlay_dst)
     patched_runtime = args.work / "runtime_sz1_patched"
     if patched_runtime.exists():
         shutil.rmtree(patched_runtime)
