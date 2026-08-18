@@ -28798,3 +28798,20 @@ shell substitution from the sealed JSON, never hand-typed hex (least-hand-typing
 gap 0.00771; pose 0.008295 ≈ 108% of gap — every remaining major route is pose. Custody:
 /Volumes/APDataStore/pact/ddm_sz1/ (6 archives, 2 runtime trees, r3_artifacts, RETENTION_MANIFEST).
 [p0-ledger-ok]
+
+FEED-sz1cpu (2026-08-18): CPU AXIS ON THE POINTER BYTES = MEASURED INFEASIBILITY RECEIPT, not a row.
+Modal contest-like CPU (4-thread x86_64, call fc-01M09G62A7SZ7HZYE5Q28YS7VP, ~$0.06): inflate of
+debb025f… took 3,422.7 s vs the 1,800 s budget (token decode 3,108.7 s = 91%, neural render 299.3 s);
+contest_auth_eval fail-closed at exactly 1,800 s (TimeoutExpired), the orphaned decode child completed
+and wrote the full report — retained as a decode-correctness receipt: decoded token field
+9ba2e52b3096… EXACT on x86_64 CPU (the sealed falsifier). Cross-microarch note: x86_64 raw
+19f0b7ae… ≠ arm64 smoke e5539653… — integer token decode device-exact, float neural render is not
+cross-microarchitecture bit-identical (expected; neither is a score). CONSEQUENCES: (1) the packet's
+GPU-required answer is now MEASURED (1.90× over budget), not conservative; (2) family law extended —
+the fx2 mixer decode is the wall-clock hot spot on BOTH axes (T4 inflate 1,143 s vs rr4's 477 s;
+CPU 3,109 s): native/C lowering of the mixer (rc64_backend pattern) is the named surface if CPU
+feasibility or T4 headroom is ever wanted; (3) #1054's CPU-degrades-pose-21× lesson never engaged —
+the eval never ran. Lane ddm_sz1_composed_cpu_n600 closed terminal
+(completed_measured_infeasible_cpu_inflate_3423s_vs_1800s_budget). Artifacts:
+/Volumes/APDataStore/pact/ddm_sz1/cpu_row_composed/r1_artifacts/ (preflight + validation + logs +
+provenance; preflight verified archive sha/bytes debb025f…/179,930 before spend). [p0-ledger-ok]
