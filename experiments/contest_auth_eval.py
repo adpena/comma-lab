@@ -149,6 +149,16 @@ def _runtime_python_files(runtime_root: Path) -> list[Path]:
         rel_parts = path.relative_to(runtime_root).parts
         if any(part in _RUNTIME_DEPENDENCY_SKIP_DIRS for part in rel_parts):
             continue
+        # AppleDouble sidecars (``._foo.py``) are ExFAT/HFS+ resource-fork
+        # METADATA, not Python source: binary, and their header byte 37 is
+        # 0xb0 so ``read_text()`` raises UnicodeDecodeError. Any archive staged
+        # on an ExFAT volume (APDataStore/VertigoDataTier) carries one twin per
+        # real file, so an unfiltered ``*.py`` glob crashes the whole manifest
+        # — measured 2026-08-18 on a 29-twin staged runtime. They can never be
+        # legitimate modules: ``._foo`` is not an importable identifier, so
+        # skipping them cannot change which REAL sources are hashed.
+        if path.name.startswith("._"):
+            continue
         paths.append(path)
     return sorted(paths, key=lambda p: p.relative_to(runtime_root).as_posix())
 
@@ -292,7 +302,13 @@ def _extract_tac_imports_from_source(
 ) -> tuple[set[str], str | None]:
     try:
         tree = ast.parse(source_path.read_text(), filename=str(source_path))
-    except SyntaxError as exc:
+    except (SyntaxError, UnicodeDecodeError, OSError) as exc:
+        # Defense-in-depth beside the AppleDouble filter in
+        # ``_runtime_python_files``: a file that is unreadable or not valid
+        # UTF-8 must become a RECORDED parse_error, never an uncaught crash
+        # that takes down the whole auth-eval run. The filter removes the known
+        # instance; this removes the class (the crash was UnicodeDecodeError,
+        # which the SyntaxError-only catch let escape).
         return set(), f"{exc.__class__.__name__}: {exc}"
 
     modules: set[str] = set()
