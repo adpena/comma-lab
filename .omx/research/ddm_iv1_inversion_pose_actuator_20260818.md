@@ -385,6 +385,37 @@ at `rc=5` (Modal image-build terminated externally) with **no spawn record and n
 call id** — no dispatch, no spend. Free local evidence before a paid row is the right
 order on its own merits, independent of why it happened here.
 
+## 7.5 APPARATUS NEAR-MISS — a waiter that both waits AND actuates
+
+I wrote a background waiter shaped
+`until ! pgrep -f "<job>"; do sleep; done; <launch route1>`. The intent was "launch
+when the predecessor finishes." The effect is a **latent actuator**: it fires on the
+predecessor's exit no matter what else has happened since, including after the same
+work was already run and adjudicated by hand.
+
+It fired. A duplicate `route1_search.py` launched (counter 220) ~30 minutes after
+route 1 had already been run, adjudicated, and written up — and `route1_search.py`
+writes `receipts/route1.json`, so it was on course to overwrite an adjudicated
+receipt while a reader might be mid-read. Caught only because the drained-waiter
+notification looked different from its siblings (`completed`, not `killed`), which is
+a thin thread to hang a catch on.
+
+Killed; receipt verified byte-identical to the pre-launch backup
+(`receipts/route1.adjudicated.json`, sha `64dcb342e0594ca0…`). No damage — the search
+is deterministic on identical inputs, so even a completed duplicate would have
+reproduced the same negative. The hazard was the *uncontrolled write*, not a wrong
+number.
+
+**Rule: waiters OBSERVE, they do not ACTUATE.** A wait condition and a launch decision
+have different lifetimes — the condition can become true long after the decision
+stopped being correct. Put the launch in the foreground where the decision is made,
+or gate the actuation on a freshness check it can still fail.
+
+Sister of the same-day genus: *an attempt is not an outcome* (I read a running
+`modal run` process as a live dispatch when both fire attempts had in fact refused
+with no spawn record). Both are the same error — **trusting a signal's existence
+instead of verifying the artifact it is supposed to have produced.**
+
 ## 8. THE GATE — the CPU/T4 target question, which can flip the sign
 
 On **identical frames** the CPU advisory instrument reads d_pose **21.4x higher**

@@ -122,6 +122,46 @@ NEVER_REASONING_ECHO = (
     "models and cause refusal storms (fallback storms). Read thinking blocks instead."
 )
 
+#: #1121 waiter discipline — a waiter that dies is a waiter that LIES about being done.
+#:
+#: Measured 2026-08-18: ddm_iv1 finished its real work, then re-invoked MAIN FOUR separate
+#: times as its backgrounded `sleep`-style waiters expired one by one. Every one of those
+#: notifications carried zero information — the arm's own words across them were "stale
+#: waiter", "drained waiter", "another drained solve waiter". Each cost a full orchestrator
+#: turn to read and dismiss. The waiters outlived the thing they were waiting for, and a
+#: dead waiter is indistinguishable at the notification boundary from a finished job.
+#:
+#: The cure has two halves. The NOISE half: bind the waiter to the completion artifact so it
+#: fires once, on a real event, and is reaped with its subject. The DANGEROUS half, found the
+#: same day by the same arm: a waiter shaped `until ! pgrep <predecessor>; do sleep; done;
+#: <launch successor>` is not a waiter at all — it is a LATENT ACTUATOR. It fired ~30 minutes
+#: after its successor step had already been run, adjudicated and written up, launching a
+#: duplicate that was on course to overwrite an adjudicated receipt mid-read. The arm caught
+#: it only because one notification said "completed" instead of "killed" — a thin thread.
+#:
+#: The mechanism, stated by that arm and worth keeping in its words: a wait CONDITION and a
+#: launch DECISION have different lifetimes. The condition can come true long after the
+#: decision stopped being correct.
+WAITER_DISCIPLINE = (
+    "WAITER DISCIPLINE (#1121), two rules. (1) WAITERS OBSERVE, THEY DO NOT ACTUATE. Never "
+    "write `until ! pgrep <predecessor>; do sleep; done; <launch successor>`. That is not a "
+    "wait, it is a latent actuator: a wait CONDITION and a launch DECISION have different "
+    "lifetimes, and the condition can come true long after the decision stopped being "
+    "correct. Measured 2026-08-18: one such waiter fired ~30 minutes after its step had "
+    "already run and been adjudicated, launching a duplicate on course to overwrite an "
+    "adjudicated receipt mid-read; it was caught only by a lucky difference in one "
+    "notification's wording. Re-decide at fire time, with fresh state, or don't fire. "
+    "(2) Never background a bare `sleep`/poll loop to wait for your own child work — those "
+    "waiters outlive their subject, expire independently, and each death re-invokes the "
+    "orchestrator with NO information (four consecutive zero-signal notifications the same "
+    "day, each costing a full turn, still arriving while this clause was being written). "
+    "Bind the wait to the completion ARTIFACT instead: launch through "
+    "tools/launch_detached_process.py with a `--done` marker, or poll a file/receipt the "
+    "work itself writes, so the waiter fires exactly once on a real event and is reaped "
+    "with its subject. Wait on an artifact's existence, never on a clock. A waiter that can "
+    "fire when nothing happened is not an instrument."
+)
+
 # --- #346 retrieval-first layer clauses (behavioral defaults as structure) -------------------
 #
 # Source: memory `apparatus_writes_better_than_it_reads_retrieval_first_nexus_20260707` —
@@ -675,6 +715,7 @@ def standard_contract(*, review: bool = True, triality: bool = True) -> str:
         RESEARCH_ORIGINAL_DESIGN_AUTHORITY,
         INTERNAL_LEVERAGE_AUTHORITY,
         RETAINED_REASONING,
+        WAITER_DISCIPLINE,
         CHECKPOINT_FINDINGS,
         FRESH_CONTEXT_VERIFIER,
         RECURSION_CLAUSE,
