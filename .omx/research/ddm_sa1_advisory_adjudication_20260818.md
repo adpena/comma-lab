@@ -51,14 +51,34 @@ this pose damage at keep87's −130 B credit is ~80× over bar — but rank 3
 (sm3r_keep87, the slope anchor) fires only if rank 2's mechanism read makes the
 slope worth buying.
 
-## Rank 2 — S2_film23_q2_top3_q3: LIVE
+## Rank 2 — S2_film23_q2_top3_q3: REFUSED, net ΔS = +0.06021
 
 Different mechanism (precision reduction on film23 rows, not deletion; SD1M
-family), 179,828 B (−1,333 B, credit −8.874e-4 S), archive `a36890b6541cf259…`.
-Staged at `generations/S2_film23_q2_top3_q3` (inflate.py re-pinned per the
-staging lesson), fired attempt_0001 on the same instrument. Admit needs
-pose+seg damage < ~8.84e-4 S — i.e., quantization must be ≥180× gentler than
-deletion on the pose axis.
+family), 179,828 B (−1,333 B, credit −8.876e-4 S), archive `a36890b6541cf259…`.
+Row (attempt_0001, rc=0, 1,186 s, payload kept): S 0.26195030040592626,
+d_seg 0.00042886, d_pose 0.00098653.
+
+| term | ΔS |
+|---|---|
+| rate (−1,333 B) | −8.876e-4 |
+| seg (Δd_seg +1.72e-6) | +1.72e-4 |
+| pose (d_pose 1.47e-4 → 9.87e-4, 6.7×) | **+0.060922** |
+| **net** | **+0.060207** (bar: < −3.5e-6) |
+
+Quantization is ~2.6× gentler than deletion on pose (6.7× degradation vs 26×)
+but needed ≥180× — refused by ~68× over its credit. **Two mechanistically
+distinct edits now concord: lossy perturbation of the semantic FiLM tensor pays
+~70–80× its rate credit in pose, while seg stays nearly invariant both times.**
+
+## Rank 3 — sm3r_keep87: LIVE (the slope anchor, last rank)
+
+181,031 B (−130 B, credit −8.66e-5 S), archive `a16a58e55f63b141…`, deletes
+only the 13% least-important rows (rgb_rms-ranked). The only remaining admit
+path: those rows must be genuinely pose-inert (damage < 8.3e-5 S ≈ 250×
+sub-linear vs row fraction). The rgb_rms ranking gives no evidence either way —
+keep01 proved rgb_rms does not predict pose damage. Fired attempt_0001 on the
+same instrument; the three-point table closes the family measurement honestly
+whatever the verdict.
 
 ## Apparatus lessons banked this chain
 
