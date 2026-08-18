@@ -58,8 +58,19 @@ the following against the active packet generation:
   the retained archive hash. Until that real proof exists, answer the template
   question “no” and do not imply reproducibility.
 
-The strict checker does not by itself prove the last compression-source item.
-It is an additional publication gate and remains open for the current packet.
+**Compression-source gate adjudication (2026-08-18, MAIN): SATISFIED under
+the pinned-inputs reading for generation 3.** The bundle exists and is real:
+`experiments/ddm_pq2_compress_e2e.py` + `RECIPE_sz1_composed.json` rebuilt the
+exact candidate end-to-end from four SHA-verified PINNED retained inputs —
+final archive `debb025f…`/179,930 B EXACT, every stage rc=0, fail-closed hash
+asserts, determinism repeat byte-identical (receipt `RESULT_pq2_e2e.json`).
+The inputs are pinned-retained, not public; the PR body discloses exactly
+that scope ("Stage A — provenance (documented, not re-run)") and does not
+imply training reproduction. The PR body's carefully-scoped "Yes, and it is
+offered for merge" therefore stands; the formerly open gate is closed.
+
+The strict checker does not by itself prove the compression-source item; the
+adjudication above closes it for the current packet.
 
 ## Generation 3 (sz1 composed) strict run — 2026-08-18
 
@@ -121,3 +132,12 @@ The 6 residual reds, each typed with its route:
 6. `dispatch_claim_successful_exact_eval_terminal_row` — **GREEN as of r3**
    (conforming `completed_contest_cuda_exact_eval_harvested` terminal row,
    sha-bound to archive `debb025f…` + runtime tree `0d0fc008…`).
+
+**r4 (2026-08-18, the CANONICAL terminal receipt) —
+`gen3_receipts/pre_submission_compliance.gen3.r4.json`: 82 GREEN / 4 RED,
+identical red set to r3.** Re-run with `--strict` after the review-pass-5
+fix batch (8 findings, all on custody-excluded surfaces: report.txt text,
+manifest portable-tree key, staged docs, deleted `__pycache__`); submission
+tree `67059c1d…`, portable content tree `994f8aaa…`, and the 34-file runtime
+manifest all byte-identical to r3 — measured proof the fixes were
+hash-neutral. All review passes from round 6 onward count against r4.

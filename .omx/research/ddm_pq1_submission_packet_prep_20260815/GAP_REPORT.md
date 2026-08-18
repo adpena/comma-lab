@@ -1,6 +1,17 @@
 # PQ1 strict-compliance gap report
 
-Disposition: **HOLD — packet prepared, not safe to PR or submit.**
+> **SUPERSEDED — HISTORICAL (generation-0, the retired e480b candidate,
+> archive `e3e6f440…`). Written 2026-08-15; preserved append-only.** The live
+> candidate is generation-3 sz1 composed (`debb025f…`/179,930 B) with terminal
+> compliance receipt `gen3_receipts/pre_submission_compliance.gen3.r4.json`
+> (82/86; 4 adjudicated reds routed in `COMPLIANCE_RUNBOOK.md`). Every
+> present-tense gap statement below describes the generation-0 state, not the
+> current packet. The one gap this report named OUTSIDE the 86 checks (the
+> compression-source reproduction bundle) is now ADJUDICATED SATISFIED under
+> the pinned-inputs reading — see the runbook's "Compression-source gate
+> adjudication" note.
+
+Disposition at time of writing (generation 0): **HOLD — packet prepared, not safe to PR or submit.**
 
 The final real strict check evaluated 86 checks: 78 passed and 8 failed. The
 exact candidate archive, member, CUDA authority receipt, executable runtime,

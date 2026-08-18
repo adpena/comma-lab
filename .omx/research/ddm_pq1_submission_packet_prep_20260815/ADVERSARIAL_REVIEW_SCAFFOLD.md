@@ -12,6 +12,7 @@ fixed. A pass cannot be counted while the strict compliance chain is red.
 | 3 | RUN 2026-08-18 | MAIN | `debb025f45bb42e3…4b037a` | `11fb93d563d6c12a…` | 1 — swap-procedure step-7/refusal literal conditions unsatisfiable for gen-3 (CPU axis measured-infeasible; 82/86 terminal). FIXED `378752e9e2` (adjudication note, refusals unchanged) | 0/5 |
 | 4 | RUN 2026-08-18 | MAIN | `debb025f45bb42e3…4b037a` | `11fb93d563d6c12a…` | 0 — hash chain re-verified from disk: archive `debb025f`/179,930 · member `p` `be6db33b`/179,830 · inflate.sh `e1b3df4d` · inflate.py `5c5baf88` all match PACKET_TARGET + manifest; PR-body numbers reconcile with receipts | 1/5 |
 | 5 | RUN 2026-08-18 | FRESH-EYES Opus arm (no part in any generation) | `debb025f45bb42e3…4b037a` | `11fb93d563d6c12a…` (reviewed against r3) | **8** — F1 report.txt PENDING_REBIND vs VERIFIED elsewhere · F2 PR-body report block re-authored not copied · F3 `constriction` falsely declared in 3 public docs + numpy omitted · F4 README/accounting absent from packet · F5 14 stale `.pyc` w/ local paths outside the hashed walk · F6 three conflicting counter statements · F7 manifest portable-tree key held the non-portable value · F8 offset alignment-noise qualification undisclosed. Full report: `REVIEW_PASS5_FRESH_EYES.md`. ALL 8 FIXED same-day; packet re-verified `pre_submission_compliance.gen3.r4.json` = 82/86, same 4 typed reds, runtime tree + 34-file manifest byte-identical to r3 (all fixes on custody-excluded surfaces) | **0/5** |
+| 6 | RUN 2026-08-18 | FRESH-EYES Opus arm #2 (no part in any generation or prior fix) | `debb025f45bb42e3…4b037a` | `f1303017…` (r4) | **6** — bytes/score/all-8-round-5-fixes verified CLEAN (PR-body block hashes string-equal to shipped report.txt; zero `.pyc`; S re-derived exactly); all 6 findings = stale satellite docs sharing ONE root cause (SWAP_PROCEDURE step-4 consumer list was a CLOSED enumeration omitting 5 siblings): repo `ARCHIVE_MANIFEST.json` PENDING_REBIND/false · scaffold swap note self-contradiction · runbook named r4 nowhere · `GAP_REPORT.md` gen-0 gaps in present tense · etiquette CPU row "pending" vs adjudicated infeasible · compression-source governance contradiction (runbook "answer no" vs PR body "Yes"). Full report: `REVIEW_PASS6_FRESH_EYES.md`. ALL 6 FIXED same-day + ROOT-CAUSE CURED (step-4 list is now a DIRECTORY, never an enumeration; un-refreshed docs must carry HISTORICAL banners) + the governance contradiction ADJUDICATED (compression-source gate SATISFIED under the pinned-inputs reading, receipt `RESULT_pq2_e2e.json`; PR body's scoped "Yes" stands). All fixes on custody-excluded `.md`/repo-side surfaces — packet bytes untouched | **0/5** |
 
 **Strict-chain-red clause, gen-3 adjudication (2026-08-18):** the clause "a
 pass cannot be counted while the strict compliance chain is red" is read
@@ -22,10 +23,11 @@ gated hosted manifest) per `COMPLIANCE_RUNBOOK.md` and the SWAP_PROCEDURE
 gen-3 adjudication note. Passes count against this adjudicated terminal
 state; none of the 4 reds is convertible by further work short of the
 operator's hosting authorization. Remaining: **5 consecutive clean passes**
-(fresh-eyes reviewers preferred for at least two; the pass-5 arm proved why —
-four same-author passes missed what it found in one) before
-SELECT_ACTIVE_GENERATION. Counting rounds resume at round 6 against the
-post-fix packet + the r4 receipt.
+(fresh-eyes reviewers preferred for at least two; passes 5 AND 6 both proved
+why — same-author passes 2-4 missed what each fresh arm found in one) before
+SELECT_ACTIVE_GENERATION. Counting rounds resume at round 7 against the
+post-round-6-fix satellite docs + the r4 receipt (packet bytes unchanged
+since r4).
 
 ## Round 1 — findings
 
@@ -79,17 +81,16 @@ who did not build generation 2.
 The fifth clean pass authorizes only a recommendation to MAIN. It does not
 authorize submission, push, or hosting.
 
-## Generation-3 swap note (2026-08-18)
+## Generation-3 swap note (2026-08-18) — HISTORICAL; the table above is the counter authority
 
 The candidate hot-swapped to the sz1 composed archive
 (`debb025f45bb42e3…`, 179,930 bytes, measured `[contest-CUDA]`
 0.15771357797660338). Round 1's findings were reviewed against the
-generation-2 (rr4) bytes and packet text; its three open findings carry
-forward where they are generation-independent (hosting authorization,
-Brotli-bootstrap policy, hygiene ledger rows). The counter remains `0/5`.
-All five counted passes must run against the generation-3 bytes, the
-refreshed packet documents (commits f4a3882345 / e54bdfa37e / 9fe84725f5),
-and a green strict compliance chain — which additionally requires the
-reproduction re-bind (`PENDING_REBIND` in `PACKET_TARGET.json`) to land
-first. The CPU axis is closed for review purposes: measured infeasible
-within the 1,800 s budget, receipt in `PACKET_TARGET.json` `cpu_axis`.
+generation-2 (rr4) bytes; generation-independent items carried forward.
+Statements below written at swap time and SINCE RESOLVED: the reproduction
+re-bind landed (PACKET_TARGET `reproduction.status = VERIFIED`, receipt
+`RESULT_pq2_e2e.json`, rebuilt `debb025f…` exactly); the compliance chain
+reached its adjudicated terminal state (r4, 82/86). The CPU axis is closed
+for review purposes: measured infeasible within the 1,800 s budget, receipt
+in `PACKET_TARGET.json` `cpu_axis`. For the live counter, read ONLY the
+header and table of this file.

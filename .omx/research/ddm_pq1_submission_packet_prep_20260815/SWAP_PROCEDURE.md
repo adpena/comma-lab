@@ -27,13 +27,21 @@ its authority receipts for changed bytes.
    and `[contest-CPU]` exact rows pending for the new bytes. No component, score,
    runtime, or lane receipt transfers merely because the renderer lineage is
    shared.
-4. `REFRESH_PUBLIC_PACKET` — owner `MAIN packet owner`; consumer `README.md`,
-   `report.txt`, `archive_manifest.json`, PR body, accounting table, packet
-   target, and CPU fire order`; fire trigger `real new receipts exist`. Replace
-   all archive/member/runtime/source/score fields from machine receipts, rerun
-   borrowed-substrate accounting at section level, and ensure the public body
-   contains no private infrastructure, local paths, provider transcript, or
-   machine attribution.
+4. `REFRESH_PUBLIC_PACKET` — owner `MAIN packet owner`; consumer = **EVERY
+   document in `.omx/research/ddm_pq1_submission_packet_prep_20260815/` AND
+   every staged public file in the active packet generation directory** —
+   the list is a DIRECTORY, never a closed enumeration (README, report.txt,
+   archive manifests BOTH repo-side and packet-side, PR body, accounting,
+   packet target, CPU fire order, gap report, etiquette, runbook, scaffold,
+   swap procedure itself). Fire trigger `real new receipts exist`. Replace
+   all archive/member/runtime/source/score fields from machine receipts,
+   rerun borrowed-substrate accounting at section level, and ensure the
+   public body contains no private infrastructure, local paths, provider
+   transcript, or machine attribution. **Any document deliberately NOT
+   refreshed must carry an explicit HISTORICAL/SUPERSEDED banner in the same
+   swap** — a stale present-tense sibling is a review finding by definition
+   (rounds 5 and 6 both paid this tax; round 6 traced all six of its findings
+   to this list having been closed).
 5. `RERUN_STRICT_CHAIN` — owner `MAIN packet owner`; consumer `generation gap
    report and compliance JSON`; fire trigger `public packet refreshed`. Execute
    the exact strict checker with the new expected SHA and size. Record every red

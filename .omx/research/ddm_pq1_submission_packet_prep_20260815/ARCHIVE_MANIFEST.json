@@ -47,7 +47,7 @@
     "rate": 0.11980800143527229
   },
   "modal_call_id": "fc-01M09EHX5MMTJACMRADQPN9P7Z",
-  "reproduction_entry_point": "PENDING_REBIND (see PACKET_TARGET.json reproduction block)",
-  "reproduction_verified": false,
+  "reproduction_entry_point": "experiments/ddm_pq2_compress_e2e.py with RECIPE_sz1_composed.json (VERIFIED 2026-08-18: rebuilt debb025f45bb42e3.../179,930 B exactly, all stages rc=0, determinism repeat byte-identical; receipt RESULT_pq2_e2e.json)",
+  "reproduction_verified": true,
   "custody_note": "GENERATION_RECEIPT.json / RECEIVER_PARSEBACK.json in the generation tree are inherited hv1 labels, superseded by CUSTODY_SUPERSEDED.json; authoritative receipts are the sealed fire order + FIRE_MANIFEST stage3b_seal + r3 auth-eval JSONs."
 }
