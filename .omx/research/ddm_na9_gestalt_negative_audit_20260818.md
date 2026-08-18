@@ -586,3 +586,12 @@ exit FIRED from here; each exits QUEUED-WITH-A-FIRE-ORDER or FOLDED, with the ow
 lower the score. It composed ~95 per-lane negatives into 6 structural facts, added 3 map edges,
 found one FAMILY closure that a measured row refutes at the name level, and found one determinism
 cure that will refuse the next candidate by construction.
+
+## ERRATA (MAIN, 2026-08-18, from ps2's verdict — headline-and-body law)
+F2's headline "0.010423 S of pose cost removable = 1.09× the gap" is CORRECTED: ps2/fo2h's n=48
+stratified run (already on disk BEFORE this memo; the n=12 basis was superseded-unconsumed) shows
+the pose ratio inverts (×0.7935 → ×1.3725 stable at n≥20) and the composed channel NETS
++0.001088 S — a LOSS. F2 is REFUTED at FORMULATION scope on the joint axis; family ceiling
++0.00037 S ≈ 4.5% of gap. The removal figure was priced against the unprojected arm, not the
+no-edit shipping baseline. Optional reopening: pose ratio at m=34 (family max 1.0911), low
+priority. Memo: .omx/research/ddm_ps2 verdict (arm aea8…); receipts: fo2h 2026-08-17T17:39:43Z.

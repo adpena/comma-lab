@@ -28630,3 +28630,15 @@ STORES CONSULTED: MODAL_REMOTE_RESULT.json (rr2 + hv1 r2 rows), inflated_outputs
 - Consequences: sub-0.15 gap 0.00816; pose contribution 0.008295 ≈ 102% of gap — pose is THE axis
   (F2 projection-lever n-scaling = ranked head). #1111 default candidate hot-swaps rr4 → fx1.
   sa1 #1114 admit bars re-derive from THIS pointer at fire time.
+
+## FEED-ps2 (2026-08-18) — F2 projection lever REFUTED (joint axis); stale-figure propagation caught
+- F2 REFUTED at FORMULATION scope: η(n=48) 0.5804 > bar 0.5196 (seg leg REAL) but pose ratio
+  inverts (n=12 ×0.7935 = small-sample artifact → ×1.3725 stable n≥20; pose prefix-bias law m96
+  again); composed seg −0.003204 + rate +0.002869 + pose +0.001424 = NET +0.001088 S LOSS
+  (bootstrap 95.8% lose). Family ceiling +0.00037 S = 4.5% of gap — na9's 1.09× headline was ~24×
+  over, priced vs the wrong baseline. Any earlier FEED row citing F2 as the pose head is
+  SUPERSEDED by this row. m44 vindicated: fo2h's n=48 was ON DISK 7h before the charter; four
+  docs propagated the stale n=12 figure — recall-at-spawn caught it, nothing rebuilt.
+- Pose axis routing after this refutation: joint/nonlinear line (js8) + fx2-R5 dxi model attack +
+  ps2's optional m=34 probe (fires only if nothing beats 4.5%-of-gap). Pointer UNMOVED by this
+  unit: fx1 S 0.15816036933414834 @ 180,601 B [contest-CUDA T4 n600].
