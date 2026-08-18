@@ -5,6 +5,16 @@
 `score_claim: false` · `promotable: false` · `pointer_moved: false`
 payload: `/Volumes/APDataStore/pact/ddm_t1h/`
 
+> # ⛔ REFUTED ON THE AUTHORITY AXIS — READ §11 BEFORE ANYTHING ELSE
+> The pass-2 candidate was fired on contest-CUDA T4 (`fc-01M092BSTGSHRQAS2BJ1KCVARC`) and
+> **REFUSED**. `d_seg` was unchanged and the byte arithmetic was exact — but `d_pose` **ROSE
+> 6.31×** (6.886e-6 → 4.346e-5), taking S from 0.158534 to **0.171091 (+0.012557)**. The
+> pre-registered falsifier 3 fired. **The CPU-torch accept oracle does not transfer to the
+> contest axis; it ANTI-transfers.** Everything below §1–§10 that projects a lower S is
+> superseded: those projections rest on a ratio-transfer assumption the row measured false.
+> **Do not fire pass 2, pass 3, or the conservative variant.** §11 carries the verdict, the
+> mechanism, the adjudication, and what is still standing.
+
 ## THE ANSWER, FIRST
 
 **The headroom is large, and it is cheaper than free — but it is measured on an instrument
@@ -36,6 +46,13 @@ the whole risk.**
    −0.003. I am claiming a **bounded-downside T4 probe**: the byte delta is ±8 B and `d_seg`
    is invariant by construction, so the candidate **cannot lose** more than 5e-6 S, and one
    T4 row settles a question no amount of local work can.
+
+   > ⛔ **THIS BOUND WAS WRONG, AND MEASURED WRONG: the row lost +0.012557 S, ~2,500× the
+   > "cannot lose more than 5e-6" I wrote here.** The error is instructive and is dissected in
+   > §11.2. In one line: I bounded the downside by treating "nothing transfers" as the floor,
+   > while my own falsifier 3 explicitly anticipated `d_pose` RISING — the two claims
+   > contradict each other and I shipped both in the same sealed order. Only `d_seg` and the
+   > byte delta were ever bounded; the pose axis never was.
 
 **Prediction trial:** this is the third discriminator alongside fx1's mixer and the QAT
 continuation. The measured outcome — a large, cheap, structurally-explained gain from a
@@ -255,7 +272,11 @@ built so that a failed transfer costs nothing.
 - `.omx/state/canonical_frontier_pointer.json` — rr4 sha `35ac2b9b…`, 181,161 B, S 0.15853325
   [contest-CUDA T4].
 
-## 8. SEALED FIRE-ORDER (for MAIN)
+## 8. SEALED FIRE-ORDER (for MAIN) — ⛔ FIRED AND REFUSED, DO NOT RE-FIRE
+
+> The pass-2 primary below WAS fired (`fc-01M092BSTGSHRQAS2BJ1KCVARC`, 454 s) and REFUSED:
+> `d_pose` rose 6.31×, S 0.171091. The projected-S rows in this section are superseded by
+> §11. The candidate bytes remain retained as the negative's evidence, not as a fire-order.
 
 **PRIMARY candidate — pass 2 (t1h-on-rr4):**
 
@@ -334,6 +355,12 @@ transfer, and its worst case is 13 B worse.
 ---
 
 # 10. PASS 3 — and the channel's measured capacity (appended 2026-08-17, respawn)
+
+> ⛔ **SUPERSEDED BY §11 for every S projection and the fire-order in §10.5.** Pass 3 composes
+> MORE of the same CPU-oracle moves that the T4 row refuted, so it is **mooted as filed and
+> must not be fired.** What SURVIVES from this section is the apparatus and the structural
+> measurement: the 78,040-bit container ceiling, the bit-budget fit, the byte-cost trend, and
+> the reach table — all of which are oracle-independent and are reused in §11.
 
 ## The answer, first
 
@@ -436,7 +463,11 @@ threshold **536 of pass 1's 590 moves survive**, holding 96.7% of its gain. Pass
 cut a pair's pose energy by well over 20% — they are not noise-scale wins. The marginal moves live
 in pass 3, which is precisely where the threshold is applied.
 
-## 10.5 SEALED FIRE-ORDER — pass 3 (for MAIN)
+## 10.5 SEALED FIRE-ORDER — pass 3 (for MAIN) — ⛔ WITHDRAWN, DO NOT FIRE
+
+> Withdrawn 2026-08-17 on the pass-2 T4 refusal. Both candidates below are byte-valid and
+> every structural proof still holds; what fails is the ORACLE that selected their moves. The
+> shas are retained so the negative is reproducible, not so the archives can be shipped.
 
 **PRIMARY — pass 3 full:**
 
@@ -518,3 +549,182 @@ failed transfer.
 4. **If the container ceiling itself is worth attacking**, the lever is the packed section's
    exact-length dispatch, not the codes — that is a receiver/format change and belongs with fx1,
    not inside this arm's "runtime unchanged" contract.
+
+---
+
+# 11. THE T4 VERDICT — the accept oracle ANTI-transfers (appended 2026-08-17)
+
+## The answer, first
+
+**Fired, refused, and the refusal is more informative than a pass would have been.** On
+contest-CUDA T4 (`fc-01M092BSTGSHRQAS2BJ1KCVARC`, `passed=true`, 454 s) the pass-2 candidate
+scored **S 0.171091 against rr4's 0.158534 — a loss of +0.012557.** Two of my three
+pre-registered falsifiers CONFIRMED the apparatus; the third refuted the science:
+
+| falsifier | prediction | measured on T4 | verdict |
+|---|---|---|---|
+| 1. `d_seg` unchanged to every digit | structural (SegNet reads only the odd frame) | seg contribution **0.029611**, unchanged | **PASS** |
+| 2. archive bytes exactly 181,169 | exact local byte arithmetic | **181,169** | **PASS** |
+| 3. `d_pose` FALLS | 6.886e-6 → 2.83e-6 | **4.346e-5 — ROSE 6.31×** | **FIRED** |
+
+I wrote of falsifier 3: *"If it rises, the CPU-torch accept oracle does not select moves that
+survive the CUDA instrument, and this whole family is refuted on this vehicle. That is a clean,
+valuable negative and should be recorded as one."* It rose. Recording it as one.
+
+## 11.1 The mechanism: the oracle spent real energy to buy phantom energy
+
+The two instruments did not merely disagree in level — **they moved in opposite directions
+under the same edit**:
+
+| quantity | shipped rr4 | pass 2 | change |
+|---|---|---|---|
+| CPU-torch `d_pose` (the accept oracle) | 1.4747e-4 | 6.0647e-5 | **fell 2.43×** |
+| contest-CUDA `d_pose` (the authority) | 6.886e-6 | 4.346e-5 | **ROSE 6.31×** |
+| CPU / CUDA level ratio | 21.42× | **1.40×** | collapsed 15.3× |
+
+That collapse kills the model §5 was working under. §5 treated the 21.4× as a fixed level gap
+and transferred the improvement **as a ratio**; a fixed gap cannot collapse to 1.40× under an
+edit. The gap was never a scale factor — it was a quantity the optimizer could and did consume.
+
+Bookkeeping this as `CPU = shared + phantom`, with CUDA measuring the shared part (**a MODEL,
+not a measurement** — the two chains may simply compute different functions, and additivity is
+assumed, not shown):
+
+| component | shipped | pass 2 | change |
+|---|---|---|---|
+| phantom (CPU-only) | 1.4058e-4 | 1.7187e-5 | fell 8.18× |
+| shared (CUDA-visible) | 6.886e-6 | 4.346e-5 | rose 6.31× |
+
+**The oracle removed 1.234e-4 of phantom energy and paid 3.657e-5 of REAL energy for it — an
+exchange rate of 0.296 real lost per phantom removed.** It is not that the moves failed to
+transfer. It is that the objective was ~95% phantom (§5 said this), so the argmin walked in a
+direction that was free in the phantom coordinate and expensive in the real one. Under that
+mechanism more passes dig deeper into the trade, which is why **pass 3 is predicted worse, not
+better** — direction predicted by the mechanism, magnitude NOT predicted from a single row.
+
+## 11.2 My own error, plainly
+
+I shipped two contradictory claims in one sealed order. §1 item 6 said the candidate *"cannot
+lose more than 5e-6 S"*; falsifier 3 said *"if `d_pose` rises, the family is refuted."* **A
+pre-registered falsifier for event X is an admission that X is possible, so no downside bound
+may assume X cannot happen.** The real bound was: `d_seg` bounded (structural), rate bounded
+(±8 B, exact), **pose unbounded**. The measured loss was ~2,500× my stated worst case.
+
+The lesson generalizes past this arm: *a "bounded-downside probe" is only bounded on the axes
+whose bound is structural or arithmetic. An axis governed by an untested transfer assumption is
+unbounded, and calling the probe "bounded-downside" launders that assumption into a guarantee.*
+This is the same genus as the banked "solve objective must live on the shipping axis" law and
+the "surrogate ≠ authority" NO-FAKE class; it composes with #1054's 21× CPU-pose degradation on
+identical bytes into one fact: **pose acceptance must be measured on the shipping axis.**
+
+## 11.3 Adjudicating the three reformulations
+
+### (a) Dual-instrument acceptance (CPU-torch ∧ MLX-PoseNet) — **REJECT as filed**
+
+The failure mode is not instrument NOISE, which a two-instrument intersection would suppress. It
+is a systematic **ordering** disagreement worth 6.31× on the authority axis. MLX-PoseNet is a
+third OFF-AXIS instrument, and the decisive question is where the phantom originates:
+
+- **If the phantom lives in the GROUND TRUTH** (our chain decodes GT through upstream's
+  `yuv420_to_rgb`; the contest axis uses `DaliVideoDataset`), then MLX inherits the identical GT
+  and the identical phantom. The intersection is then no closer to CUDA and the whole scheme is
+  a no-op dressed as a control.
+- **If the phantom lives in the FORWARD** (CPU vs CUDA PoseNet kernels), MLX is a genuinely
+  different forward and the intersection could help.
+
+**I cannot currently tell which**, and — this is a blind spot in my own §3 controls that I
+should name — my GT control proved *self-consistency*, not cross-instrument agreement: it
+compared jc1's retained GT against a re-derivation through the **same** upstream decode. It
+never touched the Dali path. So it could not have caught a GT-origin phantom.
+
+Also: the banked 0.55% MLX drift law is a **LEVEL** agreement law. Nothing in it constrains
+per-move ORDERING, which is precisely the quantity that failed here. Invoking it to license an
+ordering-sensitive accept rule would be a cross-regime constant transfer — a named failure genus.
+
+**Verdict: blocked on a precondition, not adopted.** Localize the phantom to FORWARD vs GT
+first (§11.4 item 1). If it is GT-origin, (a) is dead on arrival.
+
+### (b) Finer CUDA-side granularity — **honest split answer**
+
+Per-**pass** CUDA verification is not unaffordable: it is exactly what we just did, it cost one
+row and 454 s, and it **worked** — it caught a candidate that would have cost +0.0126 S before
+it shipped. That is the gate earning its keep.
+
+Per-**move** CUDA acceptance in the naive form IS unaffordable, and I will say so plainly: the
+pass-3 sweep alone ran **29,390 exact forwards**, and moving that on-axis means running the
+eval-side chain (Dali GT + CUDA PoseNet) 29,390 times per pass. **No cheap per-move on-axis
+oracle exists today.**
+
+But there is a cheap middle rung that does not exist only because nobody retained it. **The
+scorer already computes 600 per-pair pose vectors on every single eval and reduces them to one
+scalar.** Retaining that `600×6` array costs **~14 KB and zero extra compute**. With it from the
+two rows ALREADY fired (rr4 and pass-2), the per-pair correlation between CPU-predicted gain and
+CUDA-realised delta becomes measurable **for free**, and that one map decides the question §11.3(c)
+otherwise has to close on argument:
+
+- if the correlation is positive for large moves and negative only in the tail → `--min-gain-frac`
+  is revived, with the threshold set on CUDA-side evidence instead of CPU-side faith;
+- if the anti-correlation is uniform across the gain range → the family closes cleanly.
+
+**This is the highest-value, cheapest next step in the whole arm, and it is APPARATUS, not a new
+solve.** That the array was discarded is a measure-and-discard signal loss in the eval harness,
+not a law of nature.
+
+### (c) Formulation-scoped close — **ACCEPT, with the scope stated exactly**
+
+**REFUTED (verdict_scope: FORMULATION):** *accepting carrier-code moves against the frozen
+CPU-torch PoseNet chain on this vehicle.* Evidence: n=1 contest-CUDA row, pre-registered
+falsifier, effect size 6.31× — decisive at this scope despite n=1 because the predicted sign was
+wrong, not merely the magnitude.
+
+**NOT refuted, and explicitly preserved:**
+
+1. **The carrier re-solve PARADIGM.** PR133's eval-bot-confirmed `0.172141 → 0.165780` is the
+   same mechanism working — with its accept oracle **on its scoring axis**. Our defect is the
+   oracle, not the idea. Per CLAUDE.md "Forbidden premature KILL", this is
+   **DEFERRED-pending-on-axis-oracle**, not KILL. Reactivation criterion: an accept oracle whose
+   objective is measured on the shipping axis (§11.4 items 1–2).
+2. **`d_seg` invariance under carrier moves — now CONFIRMED ON THE AUTHORITY AXIS.** This was a
+   structural argument in §1; it is now a measured fact on contest CUDA, to every printed digit,
+   under 1,113 changed coordinates. **The carrier is a pure-pose actuator with zero seg risk.**
+   That is a genuine positive result and it is reusable by fx1 and any future carrier work.
+3. **The byte-pricing and container apparatus — CONFIRMED ON THE AUTHORITY AXIS.** Predicted
+   181,169 B, measured 181,169 B. The CAP1 re-encode, the brotli pricing, the parse-back and the
+   78,040-bit ceiling of §10.1 are all oracle-independent and all stand.
+4. **The bit-budget fit** (`fit_to_bit_budget`, commit `aa716795ba`) is a constrained solve over
+   measured quantities. It is orthogonal to which oracle supplies the energies and will be needed
+   by any successor that re-solves this carrier.
+
+## 11.4 NEXT_IF_RESUMED (supersedes §10.7)
+
+1. **Retain the per-pair `600×6` pose array in the eval harness, then re-read the two rows
+   already fired.** ~14 KB, zero extra compute, and it converts this arm's scalar negative into a
+   per-pair map that either revives the family with a CUDA-side threshold or closes it. **Do this
+   before any further solve.** If the fired rows' artifacts happen to have retained per-pair
+   components already, the analysis is free today.
+2. **Localize the phantom: FORWARD or GROUND TRUTH?** The single diagnostic is our GT versus the
+   contest's `DaliVideoDataset` GT on the same frames. This gates reformulation (a) entirely and
+   explains the 21.4× level gap that has now cost one row. It also repairs the blind spot in §3's
+   control.
+3. **A random-perturbation control would separate two readings I currently cannot.** Is `d_pose`
+   up 6.31× because the moves are ANTI-selected, or because ANY perturbation of this support size
+   costs ~6× (i.e. the carrier already sits at a sharp CUDA optimum)? These imply opposite
+   futures — a better oracle wins in the first, nothing wins in the second. One T4 row on a
+   seeded random ±1 perturbation over the same 1,113 coordinates decides it. **Cost: one row.
+   MAIN owns whether that is worth buying; I am not sealing it.**
+4. **Multi-coordinate per-pair moves stay QUEUED but are now BLOCKED behind item 1.** A richer
+   move set searched against a refuted oracle would only find a better phantom.
+5. **Do not fire pass 2, pass 3, or the conservative variant.** All four candidate archives stay
+   retained as the negative's evidence (shas in §8 and §10.5).
+
+## 11.5 STORES CONSULTED (this section)
+
+- The T4 row `fc-01M092BSTGSHRQAS2BJ1KCVARC` as relayed by MAIN: seg 0.029611, pose 0.020847062143141415,
+  bytes 181,169, S ≈ 0.171091. Component arithmetic re-derived here rather than accepted:
+  `d_pose = pose_contribution² / 10 = 4.346e-5`; `S = 0.029611 + 0.020847 + 25·181169/37,545,489
+  = 0.171091`. ✓
+- `#1054` — 21× CPU-pose degradation on identical bytes; the sister observation this composes with.
+- §5 of this memo — the 21.4× instrument gap and its two open readings, now the direct cause of
+  the refusal.
+- `.omx/research/ddm_hx1_pr_wave_harvest_20260817.md` — PR133's re-solve worked with an on-axis
+  accept oracle, which is what isolates OUR defect to the oracle rather than the paradigm.
