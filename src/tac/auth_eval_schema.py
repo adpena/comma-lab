@@ -24,6 +24,19 @@ CONTEST_AUTH_AXIS_BY_EVIDENCE_GRADE = {
 }
 ORIGINAL_VIDEO_BYTES = 37_545_489
 DEFAULT_FORMULA_ABS_TOL = 1e-6
+# Canonical-score provenance labels that mean "recomputed from components".
+# The canonical emitter (experiments/contest_auth_eval.py) stamps the second,
+# more precise label; the first is the historical schema literal. Both assert
+# the same provenance, and the numeric guard below (score vs the contest
+# formula over seg/pose/bytes) independently refuses payloads whose score does
+# not actually recompute — the label check is provenance-only, never the sole
+# numeric protection.
+RECOMPUTED_CANONICAL_SCORE_SOURCES = frozenset(
+    {
+        "score_recomputed_from_components",
+        "report_8dp_components_plus_exact_archive_bytes",
+    }
+)
 
 
 def numeric_or_none(value: Any) -> float | None:
@@ -232,7 +245,7 @@ def required_exact_eval_metric_blockers(
     for key in ("score", "pose_avg", "seg_avg", "rate_unscaled", "archive_size_bytes"):
         if metrics.get(key) is None:
             blockers.append(f"{key}_missing")
-    if metrics.get("canonical_score_source") != "score_recomputed_from_components":
+    if metrics.get("canonical_score_source") not in RECOMPUTED_CANONICAL_SCORE_SOURCES:
         blockers.append("canonical_score_source_not_recomputed_from_components")
     score = metrics.get("score")
     pose_avg = metrics.get("pose_avg")

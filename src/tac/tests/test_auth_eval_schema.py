@@ -120,6 +120,59 @@ def test_required_exact_eval_metric_blockers_catches_partial_sample_count() -> N
     ]
 
 
+def test_required_exact_eval_metric_blockers_accepts_canonical_emitter_source_label() -> None:
+    """The canonical emitter stamps report_8dp_components_plus_exact_archive_bytes.
+
+    experiments/contest_auth_eval.py:2391 is the producer; refusing its own
+    label made the check unsatisfiable for every raw payload (gen-0 and gen-3
+    submission packets were both red on it). Both labels assert
+    recomputed-from-components provenance; the numeric formula guard still
+    refuses payloads whose score does not recompute.
+    """
+
+    score = contest_formula_score(
+        seg_dist=0.000665,
+        pose_dist=0.00017099,
+        archive_bytes=178392,
+    )
+    metrics = eval_metric_summary(
+        {
+            "canonical_score": score,
+            "avg_posenet_dist": 0.00017099,
+            "avg_segnet_dist": 0.000665,
+            "rate_unscaled": 178392 / 37_545_489,
+            "archive_size_bytes": 178392,
+            "n_samples": 600,
+            "canonical_score_source": "report_8dp_components_plus_exact_archive_bytes",
+        }
+    )
+
+    assert required_exact_eval_metric_blockers(metrics, expected_n_samples=600) == []
+
+
+def test_required_exact_eval_metric_blockers_rejects_unknown_source_label() -> None:
+    score = contest_formula_score(
+        seg_dist=0.000665,
+        pose_dist=0.00017099,
+        archive_bytes=178392,
+    )
+    metrics = eval_metric_summary(
+        {
+            "canonical_score": score,
+            "avg_posenet_dist": 0.00017099,
+            "avg_segnet_dist": 0.000665,
+            "rate_unscaled": 178392 / 37_545_489,
+            "archive_size_bytes": 178392,
+            "n_samples": 600,
+            "canonical_score_source": "final_score_rounded",
+        }
+    )
+
+    assert required_exact_eval_metric_blockers(metrics, expected_n_samples=600) == [
+        "canonical_score_source_not_recomputed_from_components"
+    ]
+
+
 def test_required_exact_eval_metric_blockers_rejects_non_finite_scores() -> None:
     metrics = eval_metric_summary(
         {
