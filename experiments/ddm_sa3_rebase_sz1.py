@@ -48,6 +48,7 @@ import ast
 import hashlib
 import json
 import os
+import re
 import shutil
 import struct
 import subprocess
@@ -761,9 +762,21 @@ def stage_generation(dest: Path, archive: Path, source_runtime: Path) -> dict[st
     digest, size = sha256_file(dest / "archive.zip"), (dest / "archive.zip").stat().st_size
     inflate = dest / "inflate.py"
     source = inflate.read_text()
-    replaced = source.replace(SZ1_ARCHIVE_SHA256, digest).replace(
-        str(SZ1_ARCHIVE_BYTES), str(size)
-    ).replace(f"{SZ1_ARCHIVE_BYTES:_}", f"{size:_}")
+    # Re-pin by ASSIGNMENT PATTERN, not by substituting a known base literal:
+    # a non-sz1 source runtime pins ITS OWN generation sha, which a literal
+    # replace silently misses -- the staged inflate then refuses its own
+    # archive at decode (the ck1 r2 incident).  Fail closed if no pin moved.
+    replaced = re.sub(
+        r'(ARCHIVE_SHA256\s*=\s*")[0-9a-f]{64}(")', rf"\g<1>{digest}\g<2>", source
+    )
+    replaced = re.sub(
+        r"(ARCHIVE_BYTES\s*=\s*)[0-9_]+", rf"\g<1>{size:_}", replaced
+    )
+    if digest not in replaced or f"{size:_}" not in replaced:
+        raise SA3Error(
+            "inflate.py archive pin was not updated -- the staged tree would "
+            "refuse its own archive at decode"
+        )
     inflate.write_text(replaced)
 
     # LAST mutation wins: strip only after every write, then fail closed.
