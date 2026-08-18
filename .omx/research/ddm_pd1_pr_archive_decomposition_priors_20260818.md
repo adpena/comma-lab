@@ -126,6 +126,13 @@ All MEASURED, all verified past the first look:
   uncompressed inside a zip. 632 B under zlib-9. Its order-0 entropy is **4.48 b/B against a 7.89
   random control at the same n** — so this one is *real* structure, not estimator noise (§5).
 
+**Class sweep, so this is a finding and not an anecdote.** I swept every member of all 60 archives
+for low-entropy content (H0 < 6 b/B, raw ≥ 200 B). Eight members qualify; **PR96's is the only
+H0 = 0 case in the corpus.** The zero-padding defect is a **singleton, not a class** — nobody
+should go hunting for more. The recoverable total across the four actionable members (PR96 930 B,
+PR86 `meta.pt` 867 B, PR61 `meta.json` 220 B, PR60 `sidechannel.bin` 205 B) is ≈2.2 KB, **ΔS
+1.48e-3 of pure packaging waste** sitting in the field's counted archives.
+
 ## 4. The prediction verdict
 
 ### 4a. Why the pre-registered form cannot run
