@@ -74,3 +74,31 @@ contamination. Cure: purged the rebuildable `__pycache__` (trivial-cache delete,
 + `PYTHONDONTWRITEBYTECODE=1` in the advisory launch env so the run cannot re-contaminate
 its own instrument (the detector zeroes on the cure). Fourth confirmed AppleDouble
 instance; the first BLOCKING one.
+
+## 5. V2 verdict (landed 2026-08-18 ~18:40Z) — DEAD, and the family CLOSES
+
+`verdict_scope`: **FORMULATION** — SD1M mixed-precision (q2–q4) semantic-tensor quantization on
+the rr4/sz1 lineage, bracketed by its mildest and near-deepest measured members.
+
+V2 advisory n600 (rc=0, 1,186 s; receipt
+`advisory_n600_cpu/V2_dead_pw_film_q2/attempt_0002/contest_auth_eval.json`):
+d_seg **0.00342723** (≈8× keep01's advisory 0.00043191 → seg ΔS ≈ **+0.3 S**, ~90× the −3.33e-3 S
+rate credit) · d_pose 0.28587887 (74× keep01's, uncompensated) · S 2.15 @ 174,927 B.
+
+**Mechanism.** The "dead pathway" tensors are dead in weight-MSE only. blocks.2/3.pw at q2 carry
+mse ≈ 2e-7 yet produce d_seg 0.0034 — render amplification ≈ 38,700× (vs ≈ 2,518× for live pw,
+from the waterfall receipts). Films remain proven-cheap (sa3's S2 edit, which includes films-q2,
+landed +2.04e-6 d_seg on T4) — the V2 damage is attributable to the dead-pw q2 legs, which every
+rung V1+ shares. Scaling across the two measured members: damage ∝ weight-mse^~0.4, so damage
+falls far SLOWER than rate credit as depth shallows — no rung of this ladder pays. V0 (all-q4) is
+byte-WORSE than sz1's own coding (+1,552 B). Family closed; seg has no compensator in this family
+(the Schur solve addresses pose only).
+
+**Routing (per §3's pre-registered fork).** The mass axis goes to the **sa3×keep01 composed
+candidate**: row-prune (keep01, −2,354 B, seg +5.24e-6 d_seg T4-measured) THEN S2 quantization
+(sa3, −790 B, seg +2.04e-6 T4-measured) on the composed semantic body, compensation re-solved
+IN-COMPILE against the composed object (the joint re-solve is the compile's normal path).
+Arithmetic if legs compose ~additively: rate ≈ −2.09e-3 S · seg ≈ +7.3e-4 S · pose ≈ +5e-4 S
+(keep01-class residual ×1.13 transfer) → net ≈ **−0.9e-3 S**, ~1.6× keep01's move. Falsifier:
+super-additive seg interaction (both edits touch the same tensors) — the advisory gate catches it
+for ~20 min before any authority spend.
