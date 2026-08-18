@@ -879,13 +879,22 @@ def main(argv: list[str] | None = None) -> int:
     )
     runtime_patch = patch_runtime_tree(patched_runtime)
 
-    results: dict[str, Any] = {}
-    for label, use_codes, split, root in (
+    # Split variants set RX1 header reserved bit 0 (DDM_SZ1_SEMANTIC_METADATA_SPLIT_V1),
+    # which only the sz1-lineage residual_archive.py decodes; a runtime without that
+    # extension refuses the header outright ("invalid RX1 model metadata").  Rows on
+    # such runtimes declare supports_semantic_split=False and build nosplit-only.
+    supports_split = bool(row_spec.get("supports_semantic_split", True))
+    variant_plan = [
         ("control_nosplit", base_codes, False, shipped_runtime),
         ("control_split", base_codes, True, shipped_runtime),
         ("candidate_nosplit", codes, False, patched_runtime),
         ("candidate_split", codes, True, patched_runtime),
-    ):
+    ]
+    if not supports_split:
+        variant_plan = [v for v in variant_plan if not v[2]]
+
+    results: dict[str, Any] = {}
+    for label, use_codes, split, root in variant_plan:
         row = build_candidate(
             codes=use_codes, split=split, drop_overlay=True,
             output=args.work / f"{label}.zip",
@@ -936,16 +945,25 @@ def main(argv: list[str] | None = None) -> int:
         "solved_pairs": len(solved),
         "results": results,
         "best": best["archive_path"],
+        "supports_semantic_split": supports_split,
         "compensation_marginal_bytes": {
             "nosplit": results["candidate_nosplit"]["archive_bytes"]
             - results["control_nosplit"]["archive_bytes"],
-            "split": results["candidate_split"]["archive_bytes"]
-            - results["control_split"]["archive_bytes"],
+            **(
+                {
+                    "split": results["candidate_split"]["archive_bytes"]
+                    - results["control_split"]["archive_bytes"]
+                }
+                if supports_split
+                else {}
+            ),
         },
         "semantic_split_credit_bytes": {
             "on_S2_edited_body": results["candidate_split"]["semantic_stream_bytes"]
             - results["candidate_nosplit"]["semantic_stream_bytes"],
-        },
+        }
+        if supports_split
+        else {"on_S2_edited_body": None, "skipped": "runtime lacks split extension"},
     }
     if not args.no_stage:
         report["staged"] = stage_generation(
