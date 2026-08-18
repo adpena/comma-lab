@@ -1,5 +1,24 @@
 <!--
 generated_at: 2026-05-23T02:06:56Z
+last_refreshed_at: 2026-08-18T20:17:36Z
+last_refreshed_by: main:catalog316_citation_refresh_20260818
+from_state_hash: canonical_frontier_pointer_20260818_keep01
+-->
+
+> ## ⚠ FRESHNESS BANNER (2026-08-18) — the BODY of this report is a HISTORICAL
+> snapshot generated 2026-05-23 and is STALE. The live frontier is the canonical
+> pointer, not any row below.
+>
+> **CURRENT effective_frontier [contest-CUDA T4, n600]: S 0.1571619225142182**
+> archive sha `316d17f84817d2b10f084a71b6ca706c69411d738cdb7d5921aec9afb8c37f00`
+> (keep01 compensated edit, ninth pointer move, 2026-08-18; anchor mirror
+> `experiments/results/ddm_sa3_keep01_t4_row_r2_mirror/`). Every score cited in
+> the body (including "0.2053300290" as the CUDA frontier) is HISTORICAL as of
+> 2026-05-23. SoT: `.omx/state/canonical_frontier_pointer.json` via
+> `tools/refresh_canonical_frontier.py`.
+
+<!--
+generated_at: 2026-05-23T02:06:56Z
 from_state_hash: dqs1_pairset_rank009_local_advisory_drop_two_queue_20260523T0206Z
 regenerated_by: codex:dqs1_rank009_local_advisory_drop_two_queue_20260523
 last_refreshed_at: 2026-05-23T02:06:56Z

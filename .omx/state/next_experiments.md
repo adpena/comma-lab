@@ -167,11 +167,14 @@ June 6/7 HiNeRV/SNeRV ledgers, and the current dispatch ledger.
   Refresh from `reports/latest.md` and
   `.omx/state/canonical_frontier_pointer.json`; this file is a mirror, not a
   frontier source of truth.
-- Canonical scanner-derived best CUDA anchor:
-  `0.20533002902019143`
+- Canonical scanner-derived best CUDA anchor (refreshed 2026-08-18):
+  `0.1571619225142182`
   `[contest-CUDA T4]`, archive
-  `9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4`,
-  lane `lane_pr106_format0d_latent_score_table_20260516_contest_cuda`.
+  `316d17f84817d2b10f084a71b6ca706c69411d738cdb7d5921aec9afb8c37f00`,
+  lane `ddm_sa3_keep01_composed_t4_row_r2` (keep01 compensated edit, ninth
+  pointer move; anchor mirror `experiments/results/ddm_sa3_keep01_t4_row_r2_mirror/`).
+  Historical prior value: 0.20533002902019143 @ `9cb989cef519…`
+  (lane_pr106_format0d, 2026-05-16).
 - A1 remains the Stage-1 substrate for Rule #6 bolt-ons and the control arm
   for TT5L/L5-v2 score-lowering evidence, but not the best current axis floor:
   `0.19284757743677347` `[contest-CPU; GHA Linux x86_64 1:1]` and
