@@ -43,7 +43,7 @@ not in the arithmetic.
 Sign determinacy: the net is a DELTA between two independently-8dp-rounded rows,
 so both rows' error bounds apply and they ADD -- 3.336608e-06 + 3.345782e-06 =
 6.682391e-06. The net is 8.97x that summed bound. Dividing by one row's bound
-alone would report 17.97x, which overstates the margin by 2.00x.
+alone would report 17.96x, which overstates the margin by 2.00x.
 Unlike generation 3, this candidate does NOT hold decoded state constant: the
 edit changes semantic-section values, so both distortion legs move and are paid
 for out of the rate credit. Retained fraction of the rate credit: 0.228.

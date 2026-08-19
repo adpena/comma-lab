@@ -28827,7 +28827,7 @@ canonical_score_source is report_8dp_components_plus_exact_archive_bytes and the
 report_8dp_score_worst_case_abs_error_bound 3.4205e-06 — the net is [CORRECTED 2026-08-19, round-12 F1
 ddm_rv12f: this read "16.1× the bound"; it is 7.94×. A delta between two independently-8dp-rounded rows
 carries BOTH rows' bounds, which ADD: 3.4205e-06 (sa3, d_pose 7.330e-06) + 3.514018e-06 (sz1 base,
-d_pose 6.880e-06) = 6.934052e-06, and 5.506320e-05/6.934052e-06 = 7.94×. Sign UNCHANGED and still
+d_pose 6.880e-06) = 6.934518e-06, and 5.506320e-05/6.934518e-06 = 7.94×. Sign UNCHANGED and still
 determinate; only the stated margin was wrong] 7.94× the SUMMED bound, so the sign is
 determinate BY A STATED MARGIN. That is the standing cure for the #1032 genus (a −4e-06 "result" that
 was one pose ULP): divide the delta by the bound before believing it — by BOTH rows' bounds, because
