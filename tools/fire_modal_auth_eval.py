@@ -457,6 +457,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
 
+    # The worker's pairing validation treats these as mutually exclusive; passing both
+    # refuses REMOTELY after the image build (the ck1 cpu_row_r1 rc=5, 2026-08-19).
+    # A worker-side rule the firer can check must be checked here, before any subprocess.
+    if args.single_axis_waiver_reason and args.pair_group_id:
+        ap.error(
+            "--pair-group-id and --single-axis-waiver-reason are mutually exclusive "
+            "(the worker refuses both-set after the image build): pass --pair-group-id "
+            "when both legs fire as a registered pair, or the waiver alone when the "
+            "other leg was bought in a separate invocation."
+        )
+
     # The dispatch subprocess runs with cwd=REPO, so a relative --output-dir must
     # resolve against REPO here too or the spawn-record check reads the wrong dir.
     out_dir = Path(args.output_dir)
