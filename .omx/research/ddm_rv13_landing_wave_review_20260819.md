@@ -530,3 +530,16 @@ concentrating on the axis it has already proved cannot get there.
 
 Fixed by this review (documentation only): **F2** (ck2 memo margin), **F5** (both stale
 headlines), **F6** (memory rebase base).
+
+## verdict_scope (appended by MAIN per req R)
+
+verdict_scope: instance — every REFUTED row above (R1–R6) refutes a REVIEW SUSPICION about one
+specific object at one specific custody path (AppleDouble reach into the two shipped trees ·
+arithmetic of the two 2026-08-19 receipts · the two named identity controls · the ck2 build's
+determinism across two runs · the enumerated rc64 bodies · to1's F5 sha256+cmp discharge).
+None of these rows closes a family or paradigm; each binds only the object it hashed. The
+CONFIRMED defects (F1–F13) are likewise instance-scoped findings about named files/records,
+except F2 which is a RECURRENCE of the round-12 bounds GENUS (genus-level pattern, instances
+fixed individually). The Axis-E strategic read (pure-rate ceiling too small) is DERIVED
+arithmetic over measured rows, not a family kill — the container/re-encode family remains
+open for small-bore moves; the claim is only that it cannot supply 9,904 B alone.
