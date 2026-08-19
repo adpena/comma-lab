@@ -1,4 +1,5 @@
 {
+  "HISTORICAL_SUPERSEDED_BANNER": "HISTORICAL / SUPERSEDED 2026-08-19. This sealed CPU fire order was built for and EXECUTED on the GENERATION-3 bytes (debb025f.../179,930 B). The live candidate is generation 4 (35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3 / 177,182 B) and this order does NOT apply to it: a CPU row on the generation-4 bytes has NOT been fired and no fire order for it is sealed by the re-stage arm. Retained as lineage and as the source of the inherited infeasibility expectation.",
   "schema": "ddm_pq1_cpu_axis_sealed_fire_order.v1",
   "swap_generation": 2,
   "prepared_by": "ddm_pq2",

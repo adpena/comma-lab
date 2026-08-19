@@ -171,3 +171,61 @@ the refusal conditions themselves are not weakened:
   header and table for the live state.
 - The final refusal condition is UNCHANGED and binding: no push, hosting
   action, or pull-request opening without explicit operator authorization.
+
+## Generation-4 adjudication note (2026-08-19)
+
+This procedure was executed for generation 4 (`ck1_composed_rebased_r4`,
+archive `35c318d541d70370…`/177,182 B, `[contest-CUDA]` 0.15710198138050818).
+The four trigger properties were read at swap time, not assumed:
+
+1. **Live pointer candidate** — `.omx/state/canonical_frontier_pointer.json`
+   `effective_frontier` carries archive `35c318d541d70370…` at score
+   0.15710198138050818, `last_refreshed_utc 2026-08-18T23:57:41Z`, which
+   post-dates the candidate's own T4 row (started 23:34:44Z). Read from the
+   pointer, never from a memo.
+2. **One exact retained archive plus its receiver** — 33 files, hashed FROM
+   DISK; all 32 runtime-manifest rows byte-identical to the source tree,
+   `archive.zip` the 33rd and correctly outside the runtime manifest.
+3. **Complete `candidate_seal.v1`** — `CANDIDATE_SEAL_r4.json`, seal sha
+   `a64b3483c0d5d3b5…`, `SEAL_VALID` at fire time per `FIRE_MANIFEST.json`.
+4. **MAIN selection** — the re-stage was directed at this candidate by charter.
+
+Two literal conditions in step 7 are satisfied by DOCUMENTED ADJUDICATION
+rather than by their literal reading; the refusal conditions are unchanged:
+
+- **"Both exact axes complete": WEAKER THAN GENERATION 3, stated as such.** The
+  CUDA axis is complete (T4 n600 row). The CPU axis is **not measured on these
+  bytes** — generation 3 could adjudicate MEASURED-INFEASIBLE from a Modal
+  x86_64 CPU row on its own archive; generation 4 has no such row. The
+  infeasibility is an INHERITED expectation (same token decoder, 3,422.7 s vs
+  the 1,800 s budget on generation-3 bytes) and the packet says so everywhere.
+  No CPU score exists or is claimed. A local n600 decode-and-score on macOS
+  arm64 completed and is retained as decode-correctness evidence with
+  `score_axis=cpu_env_mismatch_advisory`, `score_claim=false` — it is never a
+  score on either axis.
+- **"Strict checker green": 83/87.** The 4 residual reds are each typed and
+  routed in `COMPLIANCE_RUNBOOK.md` (1 structural-by-construction, 1 the CPU
+  axis above, 1 by-design dependency bootstrap under the e4 precedent, 1
+  operator-gated hosted manifest). None was converted by editing a receipt or a
+  check. One red DID move to green by a legitimate action rather than an
+  adjudication: the terminal dispatch-claim row for lane
+  `ddm_ck1_composed_r4_t4` was appended after the harvested exact eval, which
+  CLAUDE.md requires for every completed dispatch.
+- Review counter: `ADVERSARIAL_REVIEW_SCAFFOLD.md` remains the SINGLE counter
+  authority. Rounds 1–11 reviewed superseded bytes; the counter was already
+  `0/5` and round 12 is the first review of this candidate.
+- The final refusal condition is UNCHANGED and binding: no push, hosting
+  action, or pull-request opening without explicit operator authorization. None
+  was performed at this re-stage.
+
+**Round-11 F2(a) disposition: CLOSED BY CONSTRUCTION, not by edit.** The fix arm
+refused to sanitize `GENERATION_RECEIPT.json` and `RECEIVER_PARSEBACK.json` in
+place because both were rows in the generation-3 hashed runtime manifest, so
+editing them would have shipped bytes the T4 row never evaluated under an
+unchanged manifest-derived tree hash. It deferred the cure to this re-stage. The
+ck1 lineage does not contain either file — the 32-row runtime manifest does not
+declare them and they are not on disk — so no edit was needed and no T4 row was
+spent. Proven with the compliance checker's own instrument: `PRIVATE_SURFACE_RE`
+plus the binary markers over all 37 staged files returns **0 hits**, and
+`public_scan_has_no_private_surface` is GREEN in the generation-4 receipt at 38
+files scanned.

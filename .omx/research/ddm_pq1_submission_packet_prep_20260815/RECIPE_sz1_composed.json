@@ -1,4 +1,5 @@
 {
+  "HISTORICAL_SUPERSEDED_BANNER": "HISTORICAL / SUPERSEDED 2026-08-19. This recipe drives the GENERATION-3 end-to-end rebuild (experiments/ddm_pq2_compress_e2e.py -> debb025f.../179,930 B), which is VERIFIED for generation 3 only. It does NOT rebuild the generation-4 candidate (35c318d5.../177,182 B), whose end-to-end rebuild is an OPEN item: see PACKET_TARGET.json reproduction.status = NOT_RE_VERIFIED_FOR_THESE_BYTES.",
   "schema": "pq2_rebuild_recipe.v1",
   "note": "Rebuild recipe for the sz1 COMPOSED candidate (packet generation 3): fx2 candidate-A 13-context token probability model (corrector_module) followed by the sz1 semantic serialization split (split_stage_*). Every value here was extracted programmatically from retained receipts; none is hand-typed.",
   "recipe": {

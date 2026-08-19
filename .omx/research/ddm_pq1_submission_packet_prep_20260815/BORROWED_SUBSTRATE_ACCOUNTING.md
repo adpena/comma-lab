@@ -1,5 +1,14 @@
-# Borrowed-substrate accounting — packet generation 3 (sz1 composed candidate, archive `debb025f45bb42e3…` / 179,930 B)
+# Borrowed-substrate accounting — packet generation 4 (ck1 composed row-prune candidate, archive `35c318d541d70370…` / 177,182 B)
 
+> **⚠ READ §8 FIRST.** Generation 4 breaks the single most load-bearing claim in
+> §§1–7: rows 1 and 2 of the §2 table classified the semantic renderer state and the pose
+> carrier state as `inherited-substrate` **proven byte-identical to PR #135 after decode**.
+> **That byte-identity is GONE at this generation.** The semantic values are now a lossy
+> re-representation of theirs, and 6,713 of 7,200 carrier coordinates were re-solved. §8
+> carries the re-classification and the attribution question it opens. Every figure in
+> §§1–7 stands for the candidate it was written against; none of them describes these bytes
+> except where §8 says it does.
+>
 > **Numbering, stated in the title's own neighbourhood (round-11 F5, 2026-08-18).** This
 > document's section headings count ITS OWN revisions; the packet's `GENERATION_LOG.md` counts
 > CANDIDATES. The two counters are one apart, so §7 is headed "Generation 4 amendment" while the
@@ -241,3 +250,107 @@ output provably unchanged at every step — the final step verified at the byte 
 inflated output hash-identical between the fx2-only and composed rows, `9a6b75e5…`). The
 per-generation claims in §5 otherwise stand; nothing in this amendment upgrades any
 classification in our favour.
+
+---
+
+## 8. Generation 5 amendment — packet generation 4, the ck1 composed row-prune candidate
+
+Archive `35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3`, 177,182 bytes,
+measured `[contest-CUDA]` 0.15710198138050818 on a Tesla T4 over 600 samples. The document's
+own section numbering runs one ahead of the packet's candidate numbering; see the banner.
+
+**This amendment is the least flattering one this document has carried, and the reason is
+structural rather than rhetorical.** Every prior generation's improvement was LOSSLESS: the
+decoded state was held constant and provably identical to the inherited vehicle's, which is
+what made "we borrowed their trained model and only re-coded the bytes" both true and easy to
+say. This candidate abandons that property. It re-quantizes their semantic tensors and
+re-solves their pose carrier. The result is smaller and scores better, but it is no longer a
+faithful reproduction of anyone's trained state — including theirs.
+
+### 8.1 Rows 1 and 2 lose their byte-identity — RE-CLASSIFIED
+
+| §2 row | was | now | receipt |
+|---|---|---|---|
+| 1 Semantic renderer state | `inherited-substrate` (PR135, **proven byte-identical after decode**) | `mechanism-adopt-with-attribution` — **our format over their values, and the values are lossily changed** | semantic body 36,130 B; stream 31,469 B; `SA3_REBASE.json:results.candidate_nosplit` |
+| 2 Pose carrier state | `inherited-substrate` (PR135, **proven byte-identical after decode**) | `mechanism-adopt-with-attribution` — **their solver form, our binding, their lattice re-solved** | 6,713 of 7,200 signed-int12 coordinates changed; `SA3_REBASE.json:results.candidate_nosplit.changed_coordinates` |
+
+Neither re-classification is an upgrade in our favour, and the direction matters. The
+underlying learned content is still PR #130 / PR #135's — we did not train a renderer or a
+pose model. What we did is take their trained tensors and represent them worse on purpose,
+then repair the damage to one scorer using their own solver form. Calling the result
+`ours-original` would be a fabrication; calling it `inherited-substrate` would now be a false
+claim of fidelity to their bytes. `mechanism-adopt-with-attribution` is the only honest cell.
+
+### 8.2 The two live mechanisms
+
+**SM3R mode 6 — row-pruned, mixed-depth semantic quantization.**
+`mechanism-adopt-with-attribution`. Three FiLM weight tensors keep only their two
+highest-L2-norm rows, sent as a row bitmask plus a compact kept-rows block; a per-tensor
+4-bit depth nibble table then drops `frame_embed.weight` and `blocks.0.film.weight` to 3-bit
+codes while the remaining quantized tensors stay at 4. **What is ours:** the SM3R/SD1M wire
+formats (defined in this repository, explicitly not understood by the public receiver), the
+measurement that identified those two tensors as the surviving marginal after a 99% row
+prune, and the fail-closed receiver integration (the receiver recomputes the tensor selection
+mask and refuses on mismatch). **What is not:** magnitude-based structured pruning and
+mixed-precision weight quantization are standard practice with a long public literature, and
+the tensors being pruned are PR #135's. We do not label a row-prune `ours-original`.
+
+**In-compile frame-0 pose compensation.** `mechanism-adopt-with-attribution`, and the
+attribution is heavier than the previous rows'. The solve adapts PR #135's own banked
+Gauss-Newton form and bounded integer-cube solver from its published experiment book; PR #135's
+competitive mechanism was itself "joint renderer edit followed by frame-0 carrier re-solve",
+so **the edit-then-recompensate pattern is theirs, not ours.** What is defensibly ours: the
+in-compile content-fingerprint binding that fails closed rather than carrying a compensation
+onto a changed lattice (this repository shipped that bug once and the guard is the cure), the
+frame-0/frame-1 disjointness argument that makes the compensation `d_seg`-invariant by
+construction, the step-matched Jacobian, and the rate route — folding the compensation into
+the existing Rice-coded lattice instead of a sidecar overlay, which is what turns roughly
+7,000 bytes into 41. Encoder-side disclosure: the build-time decode probe puts PR #135's
+experiment-book source on `sys.path`. It is encoder-side only and nothing from it enters the
+archive; §2 row 8a is the precedent for that kind of row.
+
+### 8.3 One row is DROPPED and one is UNCHANGED
+
+- **§7.2 semantic serialization split: DROPPED.** `reserved = 0`, `semantic_split = false`.
+  The row-prune changes the semantic body length, so the split's pinned region no longer
+  covers the metadata it was fitted to; re-measured on the edited body the split is
+  **negative**. Two credits over the same redundancy do not add. Its receiver support ships
+  and is inert on these bytes. The §7.4 cumulative-saving arithmetic therefore no longer
+  applies to the shipped archive: 520 of those 2,829 bytes are not in it.
+- **§7.1 fx2 token model: UNCHANGED and still shipping.** The tail section (token stream plus
+  residual payload and table codes, 109,897 B) and the HPAC stream (13,515 B) are spliced
+  byte-identically from the previous candidate. Its classification and its PR #138 / PR #136
+  concurrency disclosure stand verbatim.
+
+### 8.4 NEW row — carrier framing runtime patch
+
+`ours-original`, **zero counted bytes.** `runtime/residual_archive.py` gains
+`DDM_SA2_VARIABLE_PACKED_CAP1_V1`: the packed-CAP1 section length is derived from the
+section's own u24 bit counts instead of a pinned byte constant, because a compensated lattice
+does not have the base lattice's Rice-residual length. It is a generic framing algorithm and
+carries no video-derived content (rule 118); the compile receipt records
+`counted_bytes: 0` against it.
+
+### 8.5 Claim arithmetic
+
+Against the immediately prior row in this lineage (177,576 B, S 0.1571619225142182) the
+measured legs are rate −2.6235e-04, seg +1.7400e-04, pose +2.8407e-05, net −5.994113e-05 —
+about 23% of the rate credit retained. **The distortion legs are real costs, not rounding.**
+This is the first packet candidate whose improvement is not purely rate, and the two scorers
+are paid out of the byte saving rather than held constant.
+
+Two honest qualifications belong here rather than in a footnote:
+
+1. **The seg leg landed at roughly three times the modelled cost.** The realized net is 35%
+   of the pre-fire projection, and the entire miss is SegNet: this repository has a measured
+   CPU→CUDA transfer law for pose and none for seg, so the CPU-advisory seg delta that fed
+   the projection was an upper bound on the win, not an estimate of it. Recorded as a
+   standing gap, not smoothed over.
+2. **Reproduction is NOT re-verified for these bytes.** Generation 3 could claim an
+   end-to-end rebuild from pinned retained inputs through one entry point. That entry point
+   has not been re-run for this candidate. The compile receipt proves how these bytes were
+   assembled and the receiver parse-back passes over the shipped runtime, but the
+   generation-3 VERIFIED label does not transfer and is not inherited.
+
+Nothing in this amendment upgrades any classification in our favour, and two rows moved
+against us.

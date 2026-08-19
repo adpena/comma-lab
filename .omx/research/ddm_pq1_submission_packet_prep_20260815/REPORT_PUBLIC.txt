@@ -2,63 +2,70 @@
 Evidence axis: [contest-CUDA]
 Hardware: Tesla T4, Linux x86_64
 Samples: 600
-Archive SHA-256: debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a
-Archive size: 179930 bytes
-Member: p, 179830 bytes, stored, SHA-256 be6db33bce471fe38b3d32cf6b421368721b1ea2ddd3f77b577f2bd27d06b7a8
-Runtime tree SHA-256: 0d0fc008d6a37bd5cfa804073e617a8ea30a7c6b6e6c4a1022e2c5d7ce6f9513
+Archive SHA-256: 35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3
+Archive size: 177182 bytes
+Member: p, 177082 bytes, stored, SHA-256 ee904fbf6b10e4fadd69ca9c820bd7db0d334694bdf23c4a93147cd242d8c462
+Runtime tree SHA-256: da91e06744b94f77077303b2b760cb259aa84b078d998921fb99e018d52fff6f
+Portable runtime content tree SHA-256: 944c8c574f377cbe625c007b44bfc8e88ec572bf3fc7a2e9ac7aca5750217078
 Upstream snapshot SHA-256: cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008
 Upstream evaluate.py SHA-256: 7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b
 
 === Evaluation results over 600 samples ===
-Average PoseNet Distortion: 0.00000688
-Average SegNet Distortion: 0.00029611
-Seg contribution: 0.029611
-Pose contribution: 0.008294576541331089
-Rate contribution: 0.11980800143527229
-Recomputed score: 0.15771357797660338
+Average PoseNet Distortion: 0.00000777
+Average SegNet Distortion: 0.00030309
+Seg contribution: 0.030309
+Pose contribution: 0.008814760348415605
+Rate contribution: 0.11797822103209257
+Recomputed score: 0.15710198138050818
 Reported (2 dp display): 0.16
-Inflation wall time: 1143.270127967 seconds
-Evaluation wall time: 38.307284003 seconds
-Total authority wrapper wall time: 1191.703496111 seconds
-Inflate budget: 1800 seconds; measured headroom 1.574x
+Report-8dp worst-case absolute score error bound: 3.336608391523776e-06
+Inflation wall time: 1197.696784587 seconds
+Evaluation wall time: 40.764544933000025 seconds
+Total authority wrapper wall time: 1249.358265802 seconds
+Inflate budget: 1800 seconds; measured headroom 1.503x
 
 === Relationship to the prior candidates ===
-This archive composes two lossless rate moves on the same decoded state:
-1. Token stream re-encoded by a 13-context fixed-point integer log-odds mixer
-   (110,512 -> 109,801 bytes vs generation 2). The decoded token field is
-   byte-identical (SHA-256 9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52).
-2. Semantic-metadata serialization split: 8,284 bytes of raw interleaved fp16
-   metadata are byte-planed (high-byte plane, then low-byte plane) before the
-   container's Brotli pass (-520 bytes). The receiver applies the exact inverse
-   permutation before parsing; decoded values are unchanged. The transform is
-   versioned in bit 0 of an existing reserved header byte, costing zero
-   transmitted bytes; an archive without the bit decodes exactly as before.
-Decode identity was verified at the byte level: the first inflated output file
-hashes identically between this row and the fx2 candidate-A row
-(SHA-256 9a6b75e55268a68ed7e1b59d9ee871f99b89b0960bd63efae12ca2aa3e8f2339),
-so the seg and pose components carry over exactly and every byte saved is a
-pure rate improvement. Vs generation 2 (0.15853325034789678 at 181,161 bytes):
--1,231 bytes, delta S -0.00081967237.
+Prior packet generation 3 measured S = 0.15771357797660338 at 179930 bytes on the
+same axis and the same hardware class. This archive is -2748 bytes and
+delta S -0.0006115966 against it.
 
-=== Reproduction ===
-Status: VERIFIED. The end-to-end compression chain (fx2 byte-close driver +
-serialization split builder) was re-run under fail-closed hash assertions and
-rebuilt this exact archive: 3 stages, all rc=0; pre-split archive asserted at
-SHA-256 9de0f6db (180,450 bytes), final archive rebuilt to SHA-256
-debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a
-(179,930 bytes), matching the evaluated bytes exactly. Determinism repeat at
-build time: archive.zip and archive.repeat.zip byte-identical.
+The intermediate row between them (177576 bytes, S 0.1571619225142182) is the same
+lineage with the row-prune applied and no compensation edit; this archive is
+-394 bytes and net delta S -5.994113e-05 against that row.
+The measured leg split against it sums to the net:
+  rate -2.6235e-04 (-394 bytes)
+  seg  +1.7400e-04
+  pose +2.8407e-05
+  sum  -5.994113e-05
+Unlike generation 3, this candidate does NOT hold decoded state constant: the
+edit changes semantic-section values, so both distortion legs move and are paid
+for out of the rate credit. Retained fraction of the rate credit: 0.228.
 
 === CPU boundary ===
-Evidence axis: [contest-CPU]
-Status on these exact archive bytes: MEASURED INFEASIBLE WITHIN THE CONTEST
-BUDGET. On a contest-like 4-thread x86_64 CPU, inflation of these bytes took
-3,422.7 seconds against the 1,800-second budget (token decode 3,108.7 s,
-neural render 299.3 s); the evaluation harness failed closed at exactly
-1,800 s, so no CPU score exists and none is claimed. The decode itself is
-correct: the decoded token field on x86_64 CPU hashes to the exact sealed
-value (9ba2e52b...). The integer token decode is device-exact; the float
-neural render is not bit-identical across CPU microarchitectures (the x86_64
-raw output differs from an arm64 smoke), which is expected and is not a
-score on either side. Consequence: this submission is GPU-required for
-evaluation, as a measured fact rather than a conservative assumption.
+Evidence axis: [env-mismatch advisory] -- NOT a score, and NOT [contest-CPU].
+A full 600-sample local decode-and-score of these exact archive bytes ran on
+macOS arm64 (not the contest 4-thread x86_64 runner): inflate 941.187799999956 s,
+evaluate 406.79247495904565 s. The receipt stamps
+score_axis=cpu_env_mismatch_advisory, evidence_grade "auth-eval env mismatch advisory",
+score_claim=False, promotion_eligible=False.
+It is retained as a decode-correctness proof: the rate contribution
+(0.11797822103209257) is identical to the T4 row's, and the pose
+residual (0.00014829) matches the encoder-side authority solve to
+8 decimal places, which is what proves the composed receiver decodes the composed
+container correctly.
+
+Status of the [contest-CPU] axis on these exact bytes: NO ROW EXISTS. The prior
+generation-3 lineage measured contest-CPU inflate at 3422.711146813 s
+against the 1800 s budget on a contest-like 4-thread x86_64 CPU,
+and this candidate inherits that token decoder
+unchanged, so the axis is expected to remain infeasible -- but that expectation is
+INHERITED, not measured on these bytes. No CPU score exists and none is claimed.
+This submission is GPU-required for evaluation.
+
+=== Provenance ===
+Candidate seal: ck1_composed_rebased_r4, seal SHA-256 a64b3483c0d5d3b5a589c45590c503db94287b7182154f5e6c675149ddef65e3
+Seal validation at fire time: SEAL_VALID
+Torch: 2.5.1+cu124; CUDA 12.4; driver 580.95.05
+Source commit pinned into the eval container: 9e194bc1a7fe80e501752bb493d83a63b83d57a6
+Provider job identifiers are retained privately with the authority receipts and
+are deliberately not reproduced on this public surface.

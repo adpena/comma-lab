@@ -2,6 +2,15 @@
 
 Status: `HOLD`, consecutive clean passes: `0/5`.
 
+> **CANDIDATE CHANGED 2026-08-19 — rounds 1–11 reviewed SUPERSEDED BYTES.** The
+> packet was re-staged to generation 4 (`35c318d541d70370…` / 177,182 B,
+> `[contest-CUDA]` 0.15710198138050818) at the ck1 tenth-move boundary. Every
+> row below reviewed generation 2 or generation 3. Their findings and class
+> cures carry — the apparatus is candidate-agnostic — but **no clean pass on
+> superseded bytes counts toward this candidate**, and the counter was already
+> `0/5`. Round 12 is the first review of these bytes; see "Round 12 — what to
+> examine" at the end of this file.
+
 Any finding, however small, resets the counter to `0/5` after the finding is
 fixed. A pass cannot be counted while the strict compliance chain is red.
 
@@ -18,7 +27,22 @@ fixed. A pass cannot be counted while the strict compliance chain is red.
 | 9 | RUN 2026-08-18 | FRESH-EYES Opus arm #5 (no part in any generation, fix, or prior review) | `debb025f45bb42e3…4b037a` | `6f4f6dc8e3648eb0…` (r5) | **2** — bytes/score/custody CLEAN again; F1 (MED): three docs still cited the SUPERSEDED r4 as canonical after r5 was bought (receipt-citation class, round-8-F2's sister) · F2 (MED): `PACKET_TARGET.json`'s gen-2 block cited the GEN-3 custody record and asserted they were the same file — identity-vs-existence class. Full report: `REVIEW_PASS9_FRESH_EYES.md`. BOTH FIXED same-day in `cea1dbe3ce`, and F1 was fixed AT CLASS LEVEL: the reviewer named 3 sites, the population query `grep -rn "pre_submission_compliance"` found **5**, all 5 re-pointed — the first fix batch of this campaign to run the population query the root cause demands. F2 now cites BOTH shas so identity is checkable, never existence. r5 freshness preserved: no checker-scanned surface touched (verified, not assumed) | **0/5** |
 | 10 | RUN 2026-08-18 | FRESH-EYES Opus arm #6 (no part in any generation, fix, or prior review) | `debb025f45bb42e3…4b037a` | `6f4f6dc8e3648eb0…` (r5) | **3** — S re-derived bit-exact `0.15771357797660338` on all three terms (not the rounded field) · 34/34 runtime files · r5 freshness re-derived from the receipt's OWN scanned list across 8 named inputs · 16 live receipt citations of 34 · 118 path-like values of 476 strings across 8 JSON docs (107 resolve, 11 adjudicated) · 14 `*_utc` fields · 1,199 lines/10 docs zero prose-vs-adjudication contradictions · 747 lines/5 public surfaces zero hygiene hits — every class with a DENOMINATOR. Findings: F1 (MED) the staged dir held 33 undeclared files (15 `.pyc` + 18 AppleDouble + 3 `__pycache__`) between 13:16:25Z and 13:27:21Z, cause traced to source (`.omx/tmp/sa3/probe_identity.py:34-41` sys.path.insert + imports); the finding is the MISSING GUARD — rounds 5 and 9 read "zero .pyc" as proof of cleanliness and that quantity is now known unstable between rounds · F2 (MED) this scaffold had no round-9 row while declaring itself the counter authority · F3 (LOW) MAIN's removal receipt asserted the .pyc broke the pinned tree sha; the sha is MANIFEST-DERIVED and measurably never moved (34/34 identical DURING contamination). MAIN's mid-review remediation was verified from disk and adjudicated as NOT invalidating the round — the scored object never moved. Full report: `REVIEW_PASS10_FRESH_EYES.md`. ALL 3 FIXED same-day: F3 receipt corrected + false claim withdrawn in-record · F2 rows 9+10 added · F1 CLASS-CURED by `tools/packet_census_guard.py` (directory census: manifest ∪ declared exclusions, any extra file REFUSES) | **0/5** |
 
-**Strict-chain-red clause, gen-3 adjudication (2026-08-18):** the clause "a
+| 11 | RUN 2026-08-18 | FRESH-EYES Opus arm #7 (`ddm_rv8`) | `debb025f45bb42e3…4b037a` | `6f4f6dc8e3648eb0…` (r5, found STALE by INSTRUMENT and by WORLD) | **6** — F1 (MED-HIGH, new class) the canonical receipt r5 is stale on two axes the round-8 freshness law did not cover: the CHECKER changed 1h46m after r5 was bought (86 checks then, 87 live) and our own frontier moved past the candidate twice that day, so `frontier_no_regression_on_submitted_axis` was RED at contest-final severity — re-run measured 82/87 with 5 reds · F2 (MED, new class) **63 absolute local `/Volumes/…` paths shipping in `GENERATION_RECEIPT.json` (16) + `RECEIVER_PARSEBACK.json` (47)**, invisible to the leak scanner for two independent reasons · F3 (MED) the round-10 census guard had no consumer, no tests, and printed `39 declared (34 + 7)` · F4 (MED) the swap trigger still named `e480b`/`e960` in the present tense and could not admit the live pointer · F5 (LOW) accounting title named the wrong candidate · F6 two undeclared marker files staged in the git index inside the PREP tree. Full report: `.omx/research/p0_1111_review_round11_20260818.md`. Fixes: `.omx/research/p0_1111_round11_fixes_20260818.md` — F2(b)/F3/F4/F5/F6 + two class cures (receipts now carry `instrument_and_world`; harvests write a scanner-visible anchor mirror) all FIXED; **F2(a) REFUSED with a measurement** (sanitizing manifest-pinned bytes in place would ship bytes the T4 row never evaluated under an unchanged green tree hash) and deferred to the next re-stage | **0/5** |
+| 12 | PENDING — first review of generation 4 | fresh-eyes reviewer, no part in the re-stage | `35c318d541d70370…677e3` | `587af0cf78b67858…` (gen4.r1, 83/87) | — | — |
+
+**Strict-chain-red clause, gen-4 adjudication (2026-08-19):** the clause is read
+against the generation-4 terminal state **83 GREEN / 4 RED of 87** (receipt
+`gen4_receipts/pre_submission_compliance.gen4.r1.json`, sha `587af0cf78b67858…`).
+The red SET is identical in kind to generation 3's, and two of generation 3's
+hardest-won greens survived the swap (schema metric consistency, dispatch
+terminal row) while round-11 F1's fifth red is now green because this candidate
+IS the pointer. One red changed its JUSTIFICATION and the change is a
+weakening we state rather than hide: generation 3 could call the CPU axis
+MEASURED INFEASIBLE on its own bytes; **generation 4 has no CPU row at all**,
+and the infeasibility is an inherited expectation. Passes count against this
+adjudicated state.
+
+**HISTORICAL — the gen-3 clause, preserved:** the clause "a
 pass cannot be counted while the strict compliance chain is red" is read
 against the gen-3 TERMINAL state 82/86 (receipt **r5**, re-bought after the
 round-7/8 fixes; r3/r4 superseded):
@@ -102,3 +126,80 @@ reached its adjudicated terminal state (r5, 82/86). The CPU axis is closed
 for review purposes: measured infeasible within the 1,800 s budget, receipt
 in `PACKET_TARGET.json` `cpu_axis`. For the live counter, read ONLY the
 header and table of this file.
+
+---
+
+## Round 12 — what to examine
+
+Written by the re-stage arm (`ddm_pq3`), which therefore **cannot run round 12**.
+This list names where I believe a fresh reviewer is most likely to find something,
+including the places where I know my own work is thinnest.
+
+**The claim classes that are genuinely new at this generation.** Everything the
+first eleven rounds hardened was built around a LOSSLESS candidate: "decoded
+state is identical, therefore `d_seg` and `d_pose` carry over, therefore every
+byte is pure rate." That sentence is false here. The reviewer should assume the
+packet's prose has stale reflexes from that era and hunt for them specifically:
+
+1. **Every surviving "byte-identical", "decoded values unchanged", "pure rate",
+   or "lossless" sentence.** I rewrote the ones I found across README, report.txt,
+   PR body, accounting §8, generation log, and both manifests. A population query
+   (not a spot check) is the right instrument. The two §2 accounting rows that
+   changed class are the load-bearing ones; §§1–7 of that document are append-only
+   and still say `byte-identical` in the old rows by design, under a banner.
+2. **The borrowed-substrate re-classification itself.** I moved rows 1 and 2 from
+   `inherited-substrate` to `mechanism-adopt-with-attribution`. Argue the other
+   side: is a lossy re-quantization of someone else's trained tensors better
+   described as still-inherited (we changed only the representation) or as
+   something we should not be claiming any share of at all? The classification is
+   defensible, not obvious, and I chose the cell that puts more attribution on
+   PR #135 rather than less. Check the pose-compensation row especially — the
+   solver form is adapted from PR #135's published experiment book and the
+   edit-then-recompensate pattern is theirs, which I disclose in three places;
+   verify that disclosure is not softened anywhere.
+3. **The CPU-axis downgrade.** Generation 3 shipped a MEASURED infeasibility
+   receipt on its own bytes. Generation 4 has none, and I replaced the claim with
+   an inherited expectation everywhere I found it. Grep for any surviving sentence
+   that reads as if the CPU axis were measured HERE. The env-mismatch advisory is
+   a decode-correctness proof and must never read as a score; its own receipt
+   stamps `score_claim=False`, and the packet should never contradict that stamp.
+4. **The reproduction downgrade.** Generation 3's end-to-end VERIFIED label is
+   generation 3's. I set `reproduction_verified: false` and wrote the honest
+   note in five places. Check that no document still implies these exact bytes
+   were rebuilt end-to-end — including `RECIPE_sz1_composed.json`, which describes
+   generation 3's chain and is now banner-labelled rather than deleted.
+
+**Where my own process was weakest, named rather than left to be found.**
+
+5. **My staging script's census was VACUOUS on the class that actually bit it.**
+   It filtered `._*` out of BOTH sides of its comparison, so it reported "33
+   files, 0 undeclared" while 38 AppleDouble sidecars sat in the staged tree. The
+   census guard caught them on the next run. I removed them and re-verified all
+   33 files byte-identical, but the lesson is that a check which excludes a file
+   class cannot certify that class — the round-11 F2(b) blindness in miniature,
+   authored by the arm that had just read about it. Re-run the census yourself
+   rather than trusting mine.
+6. **I appended the terminal dispatch-claim row that turned one red green.** The
+   dispatch genuinely completed (rc=0, harvested, `poller.done` present) and
+   CLAUDE.md requires closing completed dispatches, so I hold this is hygiene and
+   not a converted red — but the arm that benefits from a green should not be the
+   only one who says so. Verify the row's contents against the receipt.
+7. **Section-level numbers I did not measure myself.** The semantic/carrier/tail
+   byte splits, the changed-coordinate count, and the cancellation fraction are
+   READ from `SA3_REBASE.json`, the compile receipt. I re-derived the score, the
+   leg split, both tree hashes, the member record, and the archive hash
+   independently; I did not re-derive the section split. If a number in the README
+   or accounting has no independent path, it is one of those.
+8. **`GENERATION_RECEIPT.json` / `RECEIVER_PARSEBACK.json` are MISSING, and that
+   is the fix.** The census prints them as missing-declared because they remain in
+   the guard's `DECLARED_NON_RUNTIME` allowlist. Confirm that this reads as
+   round-11 F2 closing by construction and not as a packet that lost two receipts.
+   Related: the guard's double-declaration overlap is now `0 in both`, so the
+   masking F3 identified is gone for this generation — check that the guard's
+   arithmetic still reconciles.
+
+**The standing invariants, unchanged.** Re-derive the score from components
+rather than reading `final_score`. Re-hash every manifest row from disk. Check
+receipt freshness on all three axes (surfaces, instrument, world) using the
+receipt's own `instrument_and_world` block. Confirm no push, hosting action, or
+PR opening has occurred.

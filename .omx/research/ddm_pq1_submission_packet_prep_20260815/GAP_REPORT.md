@@ -2,11 +2,15 @@
 
 > **SUPERSEDED — HISTORICAL (generation-0, the retired e480b candidate,
 > archive `e3e6f440…`). Written 2026-08-15; preserved append-only.** The live
-> candidate is generation-3 sz1 composed (`debb025f…`/179,930 B) with terminal
-> compliance receipt `gen3_receipts/pre_submission_compliance.gen3.r5.json`
-> (sha `6f4f6dc8e3648eb0…`; r4 superseded — it predates the round-7 edits to two
-> files the checker scans)
-> (82/86; 4 adjudicated reds routed in `COMPLIANCE_RUNBOOK.md`). Every
+> candidate is **generation-4 ck1 composed row-prune** (`35c318d541d70370…` /
+> 177,182 B, `[contest-CUDA]` 0.15710198138050818) with terminal compliance
+> receipt `gen4_receipts/pre_submission_compliance.gen4.r1.json`
+> (sha `587af0cf78b67858…`, **83 GREEN / 4 RED of 87**; the 4 adjudicated reds
+> are routed in `COMPLIANCE_RUNBOOK.md` section "Generation 4"). The
+> generation-3 line below is itself now historical: generation 3 was sz1
+> composed (`debb025f…`/179,930 B) with terminal receipt
+> `gen3_receipts/pre_submission_compliance.gen3.r5.json` (sha `6f4f6dc8e3648eb0…`,
+> 82/86). Every
 > present-tense gap statement below describes the generation-0 state, not the
 > current packet. The one gap this report named OUTSIDE the 86 checks (the
 > compression-source reproduction bundle) is now ADJUDICATED SATISFIED under

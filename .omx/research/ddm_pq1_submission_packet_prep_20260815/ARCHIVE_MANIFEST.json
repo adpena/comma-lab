@@ -1,53 +1,68 @@
 {
   "schema": "ddm_pq1_archive_manifest.v1",
-  "swap_generation": 3,
-  "candidate_id": "fx2_a__tuned (sz1 composed: fx2 token model + semantic serialization split)",
-  "archive_bytes": 179930,
-  "archive_sha256": "debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a",
+  "swap_generation": 4,
+  "candidate_id": "ck1_composed_rebased_r4 (ck1 composed: SM3R mode-6 row-prune + mixed depth, frame-0 pose compensation, sz1 runtime base + ck1 receiver overlay)",
+  "archive_bytes": 177182,
+  "archive_sha256": "35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3",
   "evidence_axis": "[contest-CUDA]",
   "n_samples": 600,
   "members": [
     {
-      "name": "p",
+      "compress_size": 177082,
       "compression_method": "stored",
-      "compress_size": 179830,
-      "file_size": 179830,
-      "crc": 3747474564,
-      "sha256": "be6db33bce471fe38b3d32cf6b421368721b1ea2ddd3f77b577f2bd27d06b7a8"
+      "crc": 1722708006,
+      "file_size": 177082,
+      "name": "p",
+      "sha256": "ee904fbf6b10e4fadd69ca9c820bd7db0d334694bdf23c4a93147cd242d8c462"
     }
   ],
+  "sections": {
+    "hpac_stream_bytes": 13515,
+    "semantic_stream_bytes": 31469,
+    "semantic_body_bytes": 36130,
+    "carrier_stream_bytes": 22187,
+    "tail_bytes": 109897,
+    "semantic_split": false,
+    "reserved_header_byte": 0,
+    "note": "hpac and tail are spliced BYTE-IDENTICALLY from the generation-3 candidate; semantic and carrier are rebuilt."
+  },
   "composition_vs_bases": {
-    "fx2_candidate_a_base": {
-      "archive_sha256": "9de0f6db3ca7ae4efcd9237752b7c95ed1119d9285f8aadd92fee7c8c18547ef",
-      "archive_bytes": 180450,
-      "sections_changed": 1,
-      "change": "semantic section re-serialized: 8,284 B of raw interleaved fp16 metadata byte-planed (high-byte plane then low-byte plane) before the container Brotli; -520 B; decoded values bit-identical (nine decoded fields hash identical through the patched receiver)",
-      "decode_identity_proof": "worker 0.raw sha256 9a6b75e55268a68ed7e1b59d9ee871f99b89b0960bd63efae12ca2aa3e8f2339 bit-identical between the fx2-A row and this row"
-    },
-    "rr4_generation_2": {
-      "archive_sha256": "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956",
-      "archive_bytes": 181161,
-      "sections_changed": 2,
-      "change": "token_stream re-encoded by the fx2 13-context integer log-odds mixer (110,512 -> 109,801 B, decoded token field unchanged sha 9ba2e52b...) + the semantic serialization split (-520 B, values unchanged)"
+    "sz1_generation_3": {
+      "archive_sha256": "debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a",
+      "archive_bytes": 179930,
+      "delta_bytes": -2748,
+      "change": "semantic section re-quantized under SM3R mode 6 (row-prune keep01 on blocks.{1,2,3}.film.weight, per-tensor depth table dropping frame_embed.weight and blocks.0.film.weight to 3-bit) and the frame-0 pose carrier re-solved to cancel the induced PoseNet damage; the generation-3 semantic byte-plane serialization split is OFF (re-measured negative on the edited body)."
     }
   },
-  "token_stream": {
-    "bytes": 109801,
-    "sha256": "5b09fd784a7c80cfe69b49d098acaee60276bba56b837d32c7654e1ac7798a43"
+  "decoded_state_note": "NOT decode-identical. Unlike generations 2 and 3, this candidate changes decoded values: the semantic tensors are lossily re-represented and 6713 of 7,200 signed-int12 carrier coordinates were re-solved. Both distortion legs move and are paid for out of the rate credit.",
+  "changed_carrier_coordinates": 6713,
+  "compensation_marginal_bytes": 41,
+  "compensation_cpu_cancellation_fraction": 0.999785072724653,
+  "receiver_parse_back": {
+    "codes_match": true,
+    "max_abs_code_deviation": 0,
+    "runtime_root": "/Volumes/APDataStore/pact/ddm_ck1/compile/runtime_sz1_patched",
+    "semantic_sha256": "17e0fd0b197ac147afe98397ef38f02f7915b69372d03c042e6be6fa0f992e50",
+    "status": "PASS"
   },
-  "decoded_field_sha256": "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52",
-  "decoded_field_note": "The decoded token field AND all decoded semantic values are byte-identical to the fx2 candidate-A row (and the token field to generation 2). Identical decoded state cannot move d_seg or d_pose; every delta vs those rows is a pure rate delta.",
-  "runtime_tree_sha256": "0d0fc008d6a37bd5cfa804073e617a8ea30a7c6b6e6c4a1022e2c5d7ce6f9513",
+  "runtime_tree_sha256": "da91e06744b94f77077303b2b760cb259aa84b078d998921fb99e018d52fff6f",
+  "runtime_content_tree_sha256": "944c8c574f377cbe625c007b44bfc8e88ec572bf3fc7a2e9ac7aca5750217078",
+  "portable_runtime_content_tree_sha256": "944c8c574f377cbe625c007b44bfc8e88ec572bf3fc7a2e9ac7aca5750217078",
+  "runtime_file_count": 32,
   "upstream_snapshot_sha256": "cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008",
+  "upstream_evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
   "score_claim": true,
-  "score_recomputed_from_components": 0.15771357797660338,
+  "score_recomputed_from_components": 0.15710198138050818,
   "score_components": {
-    "seg": 0.029611,
-    "pose": 0.008294576541331089,
-    "rate": 0.11980800143527229
+    "seg": 0.030309,
+    "pose": 0.008814760348415605,
+    "rate": 0.11797822103209257
   },
-  "modal_call_id": "fc-01M09EHX5MMTJACMRADQPN9P7Z",
-  "reproduction_entry_point": "experiments/ddm_pq2_compress_e2e.py with RECIPE_sz1_composed.json (VERIFIED 2026-08-18: rebuilt debb025f45bb42e3.../179,930 B exactly, all stages rc=0, determinism repeat byte-identical; receipt RESULT_pq2_e2e.json)",
-  "reproduction_verified": true,
-  "custody_note": "GENERATION_RECEIPT.json / RECEIVER_PARSEBACK.json in the generation tree are inherited hv1 labels, superseded by CUSTODY_SUPERSEDED.json; authoritative receipts are the sealed fire order + FIRE_MANIFEST stage3b_seal + r3 auth-eval JSONs."
+  "report_8dp_score_worst_case_abs_error_bound": 3.336608391523776e-06,
+  "candidate_seal_sha256": "a64b3483c0d5d3b5a589c45590c503db94287b7182154f5e6c675149ddef65e3",
+  "reproduction_entry_point": null,
+  "reproduction_verified": false,
+  "reproduction_note": "NOT re-verified for these bytes. The generation-3 single-entry-point end-to-end rebuild (experiments/ddm_pq2_compress_e2e.py) has not been re-run for this candidate and its VERIFIED label does NOT transfer. What exists is the compile receipt SA3_REBASE.json (fail-closed decoded-state identity assertion before build) plus receiver parse-back PASS at max_abs_code_deviation 0.",
+  "cpu_axis_note": "No contest-CPU row exists on these bytes. A full n600 LOCAL decode-and-score completed on macOS arm64 (score_axis=cpu_env_mismatch_advisory, score_claim=False, inflate 941.187799999956 s) and is retained as a decode-correctness proof only. The contest-CPU infeasibility expectation is INHERITED from the generation-3 lineage measurement, not measured here.",
+  "custody_note": "This generation's runtime tree contains NO inherited GENERATION_RECEIPT.json / RECEIVER_PARSEBACK.json. The two hv1-lineage files that carried 63 absolute local paths through generations 1-3 do not exist in this lineage, so the round-11 F2 exposure is closed by construction rather than by edit."
 }
