@@ -10,6 +10,31 @@
 - **status** IN PROGRESS — written incrementally, committed at every stage boundary.
   **Pointer UNMOVED** at contest-CUDA `0.15652626435208142` until a T4 row says otherwise.
 
+## ANSWER FIRST
+
+1. **The one modelled leg is now MEASURED, and the projection survives.** A re-encoder that
+   reproduces the shipped token stream **byte-identically** (109,696 B, sha `15054e5d…`)
+   prices jg1's 3-pair edit set at **+30 archive bytes = 4.1379 bits per changed token**.
+   That is **0.877x** jg1's modelled 4.718 — the real price is **12.3% CHEAPER**.
+2. **My pre-registered prediction was WRONG, and the error is instructive.** I predicted the
+   real price would be HIGHER (2-5x unsurprising) and recorded that before the run. **I
+   inferred MAGNITUDE from REACH.** The cascade is genuinely global — **317 of 600 frames
+   carry a nonzero bit delta** — but it contributes **-4.4 bits, -1.9%: a small CREDIT.**
+   101.9% of the cost is paid at the three edited frames.
+3. **Edit costs SUPERPOSE.** Two extra single-pair encodes give union/sum = **1.0258**, with
+   per-site interactions under 3% that change sign, and **exact** additivity at the archive
+   layer (10 + 6 + 14 = 30). Causality control is exact to 0.000000 bits. So rate may be
+   priced per chunk and summed — unlike seg gains and unlike compensation legs.
+4. **Re-priced at the measured rate, and charging the pose leg the headline omitted:**
+   seg -0.015259 · rate +0.003995 · pose +0.000314 = **net -0.010950 -> S ≈ 0.145576**,
+   clearing sub-0.15 by 0.004424. **This is still a PROJECTION** — the rate leg is measured,
+   the seg leg is 90 cells extrapolated 200x, the pose leg is n=3.
+5. **The whole goal now rests on ONE number: the n600 realized seg yield.** Sub-0.15 needs
+   it above **~1.06 cells per changed token**. jg1 measured 1.46-1.50 first-pass and
+   **0.390** iterated. The stopping rule is not a refinement; it is the result.
+6. **Pointer UNMOVED at 0.15652626435208142.** This arm produced an instrument, four
+   measured laws, one falsified prediction of my own, and a handoff spec — **not a row.**
+
 ## THE BASE (re-read from `.omx/state/canonical_frontier_pointer.json` at arm start)
 
 | term | value | S contribution |
@@ -265,6 +290,43 @@ seg yield swept):
 token at n600.** jg1 measured 1.462 and 1.500 on single passes and 0.390 when it iterated
 one pair to exhaustion — so the stopping rule is not a refinement, it is the whole game.
 Anything that pushes past the first pass walks the score back up.
+
+### S1h — DO EDIT COSTS SUPERPOSE? MEASURED: YES, to 2.6%.
+
+The single biggest scale-up risk in S1f is the cross-regime one — 4.1379 bits/token was
+measured at ONE edit density, and n600 is ~200x denser. The direct falsifier is whether
+edit costs ADD. Two more full 600-frame encodes, each editing ONE pair:
+
+| run | tokens | ideal bits | **archive ΔB** | bits/token |
+|---|---:|---:|---:|---:|
+| pair 468 alone | 19 | +76.132 | **+10** | 4.211 |
+| pair 513 alone | 19 | +42.940 | **+6** | 2.526 |
+| pair 283 alone (by causality, from the joint ledger) | 20 | +107.252 | +14 (implied) | — |
+| **joint, all three** | **58** | **+232.168** | **+30** | **4.138** |
+
+**Causality control, and it is exact:** the pair-468-only run's bit delta over frames 0-467
+is **0.000000**, and the pair-513-only run's over frames 0-512 is **0.000000**. The model
+never looks forward. That also re-proves the instrument end to end.
+
+| | value |
+|---|---:|
+| naive sum of the three legs | 226.324 bits |
+| **measured joint** | **232.168 bits** |
+| **union / sum** | **1.0258** |
+| interaction at site 468 (283 edited first) | **-1.210 bits (-1.53%)** |
+| interaction at site 513 (283+468 first) | **+1.588 bits (+2.51%)** |
+| archive bytes | 10 + 6 + 14 = 30 = **measured 30, exactly** |
+
+**THE LAW: token-edit RATE costs superpose to within 2.6%, and exactly at the archive
+layer.** Interactions are individually under 3% and change sign — an earlier edit can make
+a later one slightly cheaper or slightly dearer, with no systematic drift.
+
+**This is the opposite regime from `ddm_bu1`, and the distinction is load-bearing.** bu1
+measured joint compensation beating the naive union by **3.705x** — that is the
+COMPENSATION axis, where legs interact strongly. The RATE axis of token edits does not.
+So a successor may safely price rate per chunk and sum, while it may **not** sum seg gains
+(jg1 measured those decaying hard, 1.50 -> 0.390 cells/token under iteration) and may
+**not** sum compensation legs. Three axes, three different additivity laws, measured.
 
 ---
 
