@@ -28975,3 +28975,29 @@ seal → T4. Memos .omx/research/ddm_sa1_vseries_v7_dead_v2_routing_20260818.md 
   ratios ~0.96-0.99 = per-pair d_pose reductions solving against the TRUE objective), then the
   arm re-sharded pairs 200-600 into 4+ parallel workers. Full FEED lands with the arm's verdict
   (descent asymptote + realized d_pose* + net ΔS vs the summed report bound).
+
+## FEED-up2-final (2026-08-19) — THIRTEENTH-MOVE CANDIDATE + two structural answers
+- THE CANDIDATE (byte-close pending): shipping-objective pose solve CONVERGED on all 600
+  pairs WITH PROOF (no improving lattice neighbor; median 2 passes, max 10; 429 improved,
+  0 worsened) -> d_pose 7.769484e-06 -> 7.649247e-06 at ZERO archive bytes (970 coeffs
+  changed, same 9,759 B Rice payload) and ZERO d_seg (structural + measured). **Net
+  -6.846805e-05 = 19.6x bar, 12.0x summed bound; projected pointer 0.15652612881042932.**
+- ANSWER 1 (closes a CLAUDE.md open question): contest-CUDA and contest-CPU score against
+  DIFFERENT GT BY CONSTRUCTION (evaluate.py:31-42 device fork, assert-enforced); measured
+  av/dali 19.0866x == the 19.1x CPU-vs-CUDA pose gap — mechanism ATTRIBUTED. CPU advisories
+  score the PyAV objective -> advisory pose gates UNSOUND for CUDA candidates (replacement
+  DALI-GT gate pre-registered; GT-lineage gate built fail-closed, 8 tests).
+- ANSWER 2: up1's batch-shape mechanism HALF-falsified — pose_batch 1-vs-64 bit-identical;
+  only semantic_batch differs (1,326 px). Memory updated.
+- METHOD LAW (fd2's lesson re-proven at optimal form): gradient LM steps made REALIZED
+  d_pose worse at every damping (22x at lambda=1e-3) while the finite-difference control
+  proved the gradient correct — the lattice-coordinate descent with realized acceptance WON.
+- ROUTING: the carrier's remaining wall = its 12-DIM BASIS (6.4x excess step), not rate
+  (+5 B for the full +-4 range), not the int12 lattice (1.00-1.02x headroom). Basis change =
+  the named next pose family; the -6.85e-5 candidate = 1.04% of gap, fires FIRST.
+- BLOCKED-AND-DIAGNOSED: byte-close refused by a body-specific offset bug in the borrowed
+  t1h compose tool (k_base=packed[139] hardcoded; =177 on this body — its own identity
+  control fails) + the Rice payload is verbatim in CAP1 but not locatable in the stored
+  packed section. Packaging, not measurement. up3 fires the fix -> seal -> MAIN T4.
+- APPARATUS: #299 catalog quota brake HIT (next number 408 > 400) — the GT-lineage gate's
+  STRICT wire-in awaits the operator's stop-and-consolidate decision per CLAUDE.md.
