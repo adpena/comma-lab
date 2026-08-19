@@ -58,7 +58,11 @@ entropy/coefficient_ar1_codec.py,entropy/coefficient_predictor.py}` and `upstrea
    **47% of the entire pose gain.** I recovered it (§3) but the general claim "the CAP1
    Rice stream absorbs small perturbations for free" is false as stated: it is free in the
    *payload*, not in the *archive*. A one-coefficient flip already costs +3 B.
-6. **A defect that would have wasted the T4 fire, caught by the seal validator, not by
+6. **The candidate INFLATES end to end** — `returncode=0`, 954.5 s of the 1800 s budget,
+   3,662,409,600 raw bytes, STRICT validation passed, on the CK2-off container. The
+   decoded token stream hashes IDENTICALLY to the pointer body's, so the seg-hold is
+   confirmed at the decode level; the raw decode differs, so frame 0 really moved. §6.5.
+7. **A defect that would have wasted the T4 fire, caught by the seal validator, not by
    me.** The staged `inflate.py` pins `ARCHIVE_SHA256` and refuses any archive that does
    not match. My candidate would have been refused by its own receiver at decode time.
    Fixed with the canonical `tac.candidate_seal.repin_receiver`. **The seal is not
@@ -227,10 +231,17 @@ itself differs between decoders is still **OPEN and unowned**, sister of up2's �
    the CUDA decode differs from the CPU decode in exactly that structure. The aggregate
    bound (~5e-9 in d_pose) is ~20x smaller than the gain, so it should survive, but
    **"gain does not transfer" remains a live falsifier of the T4 row, not a formality.**
-5. **Is the CK2-off path exercised?** Yes — it is the `reserved == 0` branch the rr4
-   lineage uses, and the candidate parses through `read_residual_archive` on it. But the
-   full local advisory (inflate + evaluate) was still running when this memo landed;
-   its receipt is the last end-to-end proof and is owed below.
+5. **Is the CK2-off path exercised?** **Yes, and now measured end to end.** The candidate
+   INFLATES through the shipped receiver: `returncode=0`, 954.5 s against the 1800 s
+   budget, 3,662,409,600 raw bytes, STRICT validation passed
+   (`retained/GATE_inflate_runnability.json`). Two things that receipt proves which no
+   amount of parsing could: the decoded token stream hashes to
+   `9ba2e52b3096…` — **byte-identical to the pointer body's** — so the semantic half
+   really is untouched end to end and the seg-hold is observed at the DECODE level, not
+   just at the scorer; and the raw decode hashes to `534103c76e80…`, which **differs**
+   from the pointer's `ccbfa332…`, so frame 0 really did move. A byte-close that had
+   never been inflated would have been an unmeasured runnability claim, which is the
+   defect the #205 OOM taught.
 6. **What did I get wrong?** Two things, both caught by review rather than by design: the
    builder could return unverified bytes, and my first seg-leg implementation fed the
    scorer the wrong tensor layout with no weights loaded. Neither reached a number.
@@ -239,11 +250,13 @@ itself differs between decoders is still **OPEN and unowned**, sister of up2's �
 
 1. **Fire the T4 row.** MAIN owns the slot. The seal is validated and names its own
    command. Nothing else is needed from this arm.
-2. **Finish the local advisory receipt** (inflate + `evaluate.py --device cpu` on the
-   candidate). Launched here via `tools/fire_local_advisory.py`, attempt
-   `/Volumes/APDataStore/pact/ddm_up3/advisory/attempt_0001`. Expected per up2 §4d: seg
-   leg identical, and CPU-axis `d_pose` slightly WORSE (the two GT lineages pull opposite
-   ways) — which is a quantitative prediction the receipt can falsify.
+2. **Finish the local advisory `evaluate.py` leg.** The INFLATE half is done and passing
+   (§ANSWER-6); `evaluate.py --device cpu` was still running when this memo landed.
+   Attempt `/Volumes/APDataStore/pact/ddm_up3/advisory/attempt_0001`. Pre-registered
+   prediction per up2 §4d, which the receipt can falsify: seg leg identical to
+   0.00043336, and CPU-axis `d_pose` very slightly WORSE than 0.00014829 (the DALI and
+   PyAV GT lineages pull opposite ways under this actuator). **The advisory is NOT a gate
+   on the pose claim** — it scores the other objective.
 3. **~~Fix `ddm_t1h_compose_pass1.py` and `ddm_t1h_build_candidate_archive.py`~~ — DONE
    this turn, commit `b692954b3a`.** Both missed the CK2 un-interleave and both used the
    stale `PACKED_CAP1_SECTION_BYTES = 22_183` pin, at three sites. Fixed by routing all
