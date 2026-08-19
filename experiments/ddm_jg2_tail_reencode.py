@@ -40,8 +40,11 @@ about the model, the group order, the table, the corrector, or the probability
 quantization is reimplemented -- all of it is imported from the shipped runtime.
 
 THE CONTROL IS THE PROOF.  ``--stage control`` encodes the UNEDITED shipped token
-field and requires the output to be **byte-identical to the shipped 109,792 B
-tail**.  If that holds, this encoder is the exact inverse of the shipping decoder
+field and requires the output to be **byte-identical to the shipped 109,696 B RC64
+token stream** (the tail's 96 B fixed-residual prefix is carried through untouched,
+not re-encoded).  MEASURED 2026-08-19: it is, over all 109,696 bytes, sha
+``15054e5da33640bcb2e9d4589615c3b89b1312ce27fd9aa8e2a0ec0284b506f2``.
+If that holds, this encoder is the exact inverse of the shipping decoder
 on this body, and every byte delta it reports afterwards is real rather than
 modelled.  If it does not hold, the module refuses and reports no delta.
 
