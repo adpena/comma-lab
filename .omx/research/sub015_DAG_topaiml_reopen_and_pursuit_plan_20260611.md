@@ -29097,3 +29097,24 @@ seal → T4. Memos .omx/research/ddm_sa1_vseries_v7_dead_v2_routing_20260818.md 
   DAG leg; MEMORY line landed same turn.]
 - STORES CONSULTED: jg2 commits 85f59fba0b/1622a57308 + tx1 memo + na10 memo + bu1/mc36 union
   receipts (via tx1's citations) · tasks #1139/#1141/#1142/#1143.
+
+## FEED-jg2-landing (2026-08-19, MAIN adjudication of the ddm_jg2 landing)
+jg2 LANDED — no row, pointer unmoved, four measured findings beyond the mid-flight S1 FEED:
+(1) SUPERPOSITION LAW: token-edit RATE costs superpose (3 single-pair encodes union/sum
+1.0258, per-site interactions <3% and sign-varying, EXACT additivity at the archive layer
+10+6+14=30 B, causality control 0.000000 bits) — unlike seg gains (1.50→0.390 under
+iteration) and unlike compensation (bu1 3.705×). Per-axis composition law, now measured on
+all three axes. (2) EPISTEMIC LESSON (pre-registered, honestly refuted): the edit cascade
+reaches 317/600 frames yet nets −4.4 bits (a CREDIT) — dependency reach bounds WHERE an
+effect appears, never HOW BIG. (3) INSTRUMENT DEFECT CAUGHT: archive identity control
+failed on 3 central-directory bytes (create_system Unix-vs-DOS + external_attr) at ZERO
+length cost — invisible to any size check, seal-breaking; fixed+pinned in
+ddm_jg2_tail_reencode.py. (4) rc4 re-priced DOWN: the shipped corrector already harvests
+2,414 B of the same redundancy the drop family targets; drops need a dropped-position
+receiver. RE-PRICED PROJECTION: seg −0.015259 + rate +0.003995 + pose +0.000314 =
+−0.010950 → S ≈ 0.145576, conditioned on n600 realized yield ≥ ~1.06 cells/changed token.
+ROUTED: ddm_jg3 arm spawned on the binding S2 handoff spec (three-way {edit,drop,keep} ×
+realized-joint acceptance × measured rate × DALI-direct pose); memo
+ddm_jg2_sub015_chain_20260819.md; custody /Volumes/APDataStore/pact/ddm_jg2/. Equations-leg
+routing: the superposition law joins the one-waterfill/realized-acceptance/additive-GT
+registrations at the cw1 boundary.
