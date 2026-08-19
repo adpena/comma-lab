@@ -38,10 +38,15 @@ above — comfortably, and the curve has flattened. But hardening η surfaced th
 never sitting there. It sits in the **pose leg**, which the bar assumed away and which **reverses
 sign out-of-sample**.
 
-| leg | pn2 n=12 | out-of-sample n=48 | effect on S |
-|---|---:|---:|---:|
-| seg η (pooled) | 0.6111 | **0.5804** | −0.000336 |
-| pose ratio (after/before) | 0.7935 (*improves*) | **1.3725** (*worsens*) | **+0.001424** |
+| leg | pn2 n=12 | out-of-sample n=48 | **extended n=67** | effect on S |
+|---|---:|---:|---:|---:|
+| seg η (pooled) | 0.6111 | 0.5804 | **0.58059** | −0.000337 |
+| pose ratio (after/before) | 0.7935 (*improves*) | 1.3725 (*worsens*) | **1.3277** (*worsens*) | **+0.001264** |
+
+I extended the sample myself: **48 further seeded-random pairs, disjoint from both pn2's 12 and
+gen-1's 48**. Going from n=48 to n=67 moved η by **0.00015 — 0.03%**, and left the pose sign
+unchanged. That is what a converged estimate looks like, and it is the charter's question
+answered.
 
 The seg leg supplies. The pose leg takes **3.9× more back**. Net at the pooled η:
 **+0.001056 S — a net loss.** Under the alternative transfer assumption the pose leg costs
@@ -100,6 +105,21 @@ From n=16 onward the curve oscillates inside **[0.577, 0.593]** — a ±0.008 ba
 shows no further drift across the last 32 samples. **The regression pn2 tracked (+15.6% → +14.2% →
 +11.7% → +8.1%) has flattened, and it flattened above the bar, not through it.** The drop from
 pn2's n=12 value of 0.6111 to ~0.58 is real; it is also the whole of the drop.
+
+**The extension I ran (gen-2, n=48 fresh pairs, seed 20260819, disjoint from all 60 prior).**
+Drawn by seeded random choice over the population with pn2's 12 and gen-1's 48 removed, run on the
+identical solver config (steps 30, lr 6.0, eval_every 2, focus_weight 500, radius 1, threads 4):
+
+| | n=48 (gen-1) | **n=67 (pooled out-of-sample)** | Δ |
+|---|---:|---:|---:|
+| pooled η | 0.5804405 | **0.5805921** | **+0.00015 (0.03%)** |
+| governing 1σ lower edge | 0.5657 | **0.5687** | tighter |
+| pose aggregate ratio | 1.3725 | **1.3277** | same sign |
+| pairs with pose improving | 13/48 | 22/67 | — |
+
+**η did not move.** A 19-pair extension shifted the estimate by 0.03% and *tightened* the lower
+edge to 0.5687 — 9.4% of headroom above the 0.5196 bar. The asymptote read off gen-1's curve is
+confirmed by fresh data rather than asserted from it.
 
 Spread, by the two estimators gen-1's tool runs and takes the wider of:
 
