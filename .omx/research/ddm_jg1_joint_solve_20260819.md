@@ -7,8 +7,51 @@
   Modal job; MAIN owns the T4 slot.
 - **cost** $0.
 - **store** `/Volumes/APDataStore/pact/ddm_jg1/`
-- **status** IN PROGRESS — this memo is written incrementally, stage by stage, and
-  committed at every stage boundary.
+- **status** COMPLETE. Written incrementally and committed at every stage boundary.
+  **Pointer UNMOVED** at contest-CUDA `0.15652626435208142`. This arm produced a validated
+  instrument, four measured findings, one hard negative and its reversal — not a row.
+- **code** `experiments/ddm_jg1_seg_solve.py` · `src/tac/tests/test_ddm_jg1_seg_solve.py`
+  (17 tests) · commits `5199e87135`, `0977c3e093`, `fdc494a3a1`, `c784935485`,
+  `c43cefcd07`, `8c56347e64`, `22213c53d8`
+
+## ANSWER FIRST
+
+1. **S0 — the coordinate map.** The RX1 header counts three streams and **everything after
+   them is the tail**: hpac 13,515 B (the IHS1 probability model) · semantic 30,856 B
+   (renderer weights) · carrier 22,143 B (the pose CAP1, solved by up2/up3) · **tail
+   109,792 B = 62.2% of the archive = the HPAC-coded token payload.** The tokens are
+   `(600, 384, 512) uint8` in `{0..4}` — **a 5-class semantic label map**, 117,964,800
+   cells at 0.00745 bits/token. The seg actuator was never an opaque latent.
+2. **95.9% of the seg debt is render/re-segment loss, not stored-label error.** The stored
+   tokens are **99.9985% identical to the DALI GT argmax**; only 1,714 cells differ. The
+   debt lives in the paint -> re-segment round trip, so the actuator's job is
+   PRE-DISTORTION, not better labels.
+3. **A $0 local contest-axis seg instrument now exists** and reproduces the T4 leg to five
+   figures: **0.00030307 vs 0.00030309 (0.99995x)** on DALI, 1.00002x on PyAV, with a
+   **byte-exact** forward model.
+4. **The move class decides the sign.** Block/dilation moves realize WORSE at every radius
+   (r=1: -55%, r=2: -351%). Single-cell coordinate moves repair **1.55 cells per changed
+   token** and are perfectly additive within a sparse pass. Same lesson up2 learned on
+   pose: block/gradient steps lose, lattice coordinate descent with realized acceptance
+   wins.
+5. **THE HARD NEGATIVE: token seg edits destroy pose — mean `d_pose` x387.** Because frame
+   `2p` is a *photometric probe*, this vehicle encodes pose as a photometric relationship
+   between the frames, and the shipped carrier was solved against the ORIGINAL frame 1.
+   Two token edits (0.5% of camera pixels) move `d_pose` 6.5x. A seg-only solve would have
+   looked like a clean win and cost **+0.159 S**.
+6. **AND ITS REVERSAL: the carrier re-solve absorbs the damage at ~0 bytes.** Re-running
+   the carrier's own coordinate descent against the edited frame 1 recovers `d_pose` to
+   **1.073x of original** (1.01x / 1.34x / **0.87x** — one pair ends better than shipped),
+   moving 9-12 of 12 coefficients, well inside up2's measured "+/-4 on all 7,200
+   coefficients = +5 bytes" envelope. **The two actuators COMPOSE.**
+7. **S3 — pose basis enlargement is priced out by arithmetic, at $0.** The basis is
+   12,277 B (55.3% of the carrier body); doubling it costs up to **+0.008175 S** while the
+   entire pose leg is **0.008746 S**. Even `d_pose -> 0` nets +0.000571 S. The free move is
+   **re-orientation** of the existing 12 dims, still unowned.
+8. **The projection, and it is a projection.** At the measured first-pass rates the joint
+   move extrapolates to **-0.0104 S -> ~0.14614**. It rests on 3 pairs, a first pass, and a
+   rate price MODELLED from a different body's probability model. **52 seconds of
+   re-encoder replaces the only modelled leg.**
 
 STORES CONSULTED: `.omx/state/canonical_frontier_pointer.json` (re-read at start) ·
 `.omx/research/ddm_up2_shipping_object_pose_solve_20260819.md` (the method law, §3/§5/§8) ·
@@ -591,6 +634,67 @@ lengths).
 
 ---
 
+## S2b — THE COMPOSITION WORKS. THE CARRIER ABSORBS THE POSE DAMAGE, AT ~0 BYTES.
+
+The S2 negative is real but it is **not** the end of the move, because the damage lands in
+exactly the direction the carrier controls best. Test: take the S2-edited token field,
+render frame `2p+1` from it, and re-run the carrier's own lattice coordinate descent (the
+12 int12 codes, offsets +/-1/2/4, realized acceptance on `d_pose` against the DALI targets)
+against that NEW frame 1.
+
+| pair | `d_pose` original | edited frame1, SAME codes | **after carrier RE-SOLVE** | codes moved | passes |
+|---|---:|---:|---:|---:|---:|
+| 283 | 1.0989e-05 | 9.0402e-03 (**822.7x**) | **1.1098e-05 (1.01x)** | 12 | 5 |
+| 468 | 4.2551e-06 | 4.4506e-04 (**104.6x**) | **5.7074e-06 (1.34x)** | 9 | 3 |
+| 513 | 2.3061e-06 | 5.4207e-04 (**235.1x**) | **2.0027e-06 (0.87x — BETTER than shipped)** | 10 | 3 |
+| **mean** | | **387x damage** | **1.073x of original** | | |
+
+**The carrier recovers 98.7-100% of the pose damage in 39-64 s per pair, moving 9-12 of
+its 12 coefficients — and on pair 513 it ends BETTER than the shipped codes.** That last
+row is worth pausing on: the re-solve is not merely repairing, it is re-optimising against
+a frame 1 that up2 never saw, and sometimes finds a better optimum than the one up2
+converged to. The seg edit changed the pose problem, and the new problem is occasionally
+easier.
+
+Why it works, and why it was predictable from up2's own measurements: the carrier's
+dominant singular direction is the global photometric one (`sigma ~ 10-14.5`), and the
+damage a token edit does to the pose readout is photometric. The carrier has **12 free
+coefficients against 6 pose equations per pair** — underdetermined — so it has the slack to
+re-aim. The token edit does not consume the carrier's control authority; it moves the
+target, and the carrier follows.
+
+**And the re-aim is nearly free in bytes.** up2 §ANSWER-4 measured the CAP1/AR1 Rice stream
+absorbing coefficient perturbations at almost zero cost: **all 7,200 coefficients perturbed
+by +/-4 costs +5 bytes**; 1,000 coefficients at +/-1 costs +6 bits. The re-solve here moves
+9-12 coefficients per pair, well inside that envelope.
+
+### The joint move, and the arithmetic that follows
+
+> **edit tokens for seg -> re-solve the carrier for pose -> pay only the token bits.**
+
+| leg | per the measured first-pass rates | extrapolated to n600 |
+|---|---|---:|
+| seg | 1.552 cells/token realized (S2), 90 cells from 58 tokens on 3 pairs | 18,000 cells = **-0.0152588 S** |
+| rate | +4.718 bits/token (S1d, MODELLED, cross-body) on ~11,600 tokens | ~6,841 B = **+0.0045553 S** |
+| pose | `d_pose` 7.649e-06 -> 8.207e-06 (x1.073), so `sqrt(10 d_pose)` 0.008746 -> 0.009059 | **+0.0003133 S** |
+| **net** | | **-0.0103902 S** |
+
+Against the base `0.15652626435208142` that projects to **~0.14614 — below 0.15.**
+
+**I am not claiming that, and the distance between this and a claim is the whole point.**
+It is an extrapolation from 3 pairs, on a first pass, with a rate price MODELLED from a
+different body's probability model, never byte-closed, never through `evaluate.py`, on an
+axis whose contest row costs money. What it IS: the composition question the charter asked
+has a measured answer, and the answer is **yes — the two actuators compose, the pose
+damage is recoverable, and the recovery is byte-cheap.** That converts the seg axis from
+"refused by pose coupling" (which is what S2 alone said, and what the campaign has
+implicitly believed since `qs1`) into a live, priced, bounded path.
+
+The single measurement that would turn it into a row is item 1 of Owed: **52 seconds of
+re-encoder** for the exact byte delta.
+
+---
+
 ## My own round-1 adversarial review
 
 1. **Did I quote a prefix anywhere?** No. Every sub-n600 sample uses `up2.select_pairs`,
@@ -648,3 +752,20 @@ lengths).
 6. **DALI-lineage `margins` and decoded RGB do not exist locally** and cannot (DALI
    requires CUDA). Any seg work needing a margin field is PyAV-only today.
 
+
+---
+
+## Retained payload
+
+`/Volumes/APDataStore/pact/ddm_jg1/` — `JG1_RETENTION_MANIFEST.json` (12 files, sha256 +
+bytes each, 117,989,926 B). Headline: `retained/base_argmax_n600.npy` (the full n600 SegNet
+argmax field of the shipped decode, 117,964,928 B — the object every seg delta is measured
+against) · `retained/S1_instrument_validation_n600.json` (both lineages + the flip ledger) ·
+`retained/S1b_radius_sweep_n6.json` · `retained/S1d_rate_price_of_move.json` ·
+`retained/S1e_composition_greedy.json` · `retained/S2_joint_coupling.json` ·
+`retained/S2_edited_tokens.npz` (**the edited token payloads themselves**, not just their
+measured lengths) · `retained/S2b_carrier_resolve.json` · the four run logs.
+
+The 3.66 GB `0.raw` decode this arm reads is NOT copied: it is deterministically rebuildable
+from `archive.zip` + `inflate.sh` and already retained under `ddm_to1` custody, per the
+certify-or-block rule.
