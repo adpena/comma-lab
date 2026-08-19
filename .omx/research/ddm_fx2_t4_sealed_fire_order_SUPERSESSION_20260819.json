@@ -1,0 +1,9 @@
+{
+  "schema": "sealed_artifact_supersession.v1",
+  "supersedes_claim_in": "ddm_fx2_t4_sealed_fire_order_20260818.json",
+  "appended_utc": "2026-08-19T05:30:00Z",
+  "authority": "MAIN, consuming ddm_rv13 finding F1 (memo ddm_rv13_landing_wave_review_20260819.md, commit 0bf881ac1a) + ddm_rc1x (commit a6e07d42df)",
+  "corrected_claim": "The sealed document asserts about rc64 source sha 5c75e2c7...: 'No file on either SSD matches it'. FALSE: the content exists at /Volumes/VertigoDataTier/pact/pr135_intake_20260810/experiment_book/src/cpr1_sub4/entropy/rc64_backend.c (12,222 B) since 2026-08-10, disproved by direct hash (rv13, independently corroborated by rc1x). The claim failed the m53 negative-existence scope law: the sweep behind it never searched VertigoDataTier.",
+  "consequence": "The fire-order's rc64 blocker premise is VOID. fx2 D1 was byte-closed 2026-08-17; ma1 byte-closed on the D1 lineage 2026-08-19 (180,345 B) via the rc1x two-role recipe. Both lineages are now DOMINATED by the live pointer (to1 176,420 B) - the corrected status is UNBLOCKED-BUT-DOMINATED, not blocked.",
+  "sealed_content_untouched": true
+}
