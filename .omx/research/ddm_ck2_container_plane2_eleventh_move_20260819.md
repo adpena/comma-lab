@@ -139,6 +139,14 @@ headroom — free meaning zero distortion:
 | carrier | 22,187 | 12.53% | **−44 B (banked here)** | this arm |
 | hpac | 13,515 | 7.63% | 0 | re-Brotli +40; bp1 region byte-plane +7 |
 
+**The container axis on this base is now EXHAUSTED, and all of it is banked here.** All
+four sections were swept at k ∈ {2,3,4,5,6,8,12,16}: semantic −613 (k=2), carrier −44
+(k=2), hpac 0 (already at its Brotli fixed point; re-Brotli is +40), tail 0 (stored raw and
+incompressible — re-Brotli is +5, since it is arithmetic-coded). Total −657 B, all of it in
+this candidate. **There is no follow-on container rung on this lineage** — a later arm
+should not re-open it unless the body layout changes again, at which point the sweep is one
+cheap probe (`experiments/ddm_ck2_rate_ceiling_probe.py`).
+
 **Total credible free-rate reservoir ≈ 1,900 B ≈ 18% of the gap**, of which this row banks
 657 B. The remaining ~8,750 B would have to come from lossy representation change, and that
 family's exchange rate is measured: `compensated_semantic_edit_exchange_v1` (sa3, T4)
