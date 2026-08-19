@@ -265,3 +265,64 @@ seg yield swept):
 token at n600.** jg1 measured 1.462 and 1.500 on single passes and 0.390 when it iterated
 one pair to exhaustion — so the stopping rule is not a refinement, it is the whole game.
 Anything that pushes past the first pass walks the score back up.
+
+---
+
+## S2 / S3 — NOT REACHED, AND WHY, WITH THE WORK ROUTED
+
+**Honest state: this arm did not produce a row. The pointer is UNMOVED at 0.15652626435208142.**
+S1 was the charter's gate and it passed; S2 and S3 did not fit the unit, and saying that
+plainly is the landing.
+
+**What S2 actually costs, now that it is costed rather than assumed.** jg1 committed only
+`validate` to `experiments/ddm_jg1_seg_solve.py` — its greedy composition and joint-coupling
+work were ad-hoc and are not in the CLI. So S2 needs (a) a rate-aware greedy solver built on
+jg1's `propose_predistortion` / `evaluate_proposal`, (b) a render + re-segment per candidate
+site across 600 pairs, and (c) the carrier re-solve per edited pair, which MAIN's `ddm_na10`
+budgets at **6.5-10.7 h** for n600 alone. That is more than one unit.
+
+**Three things S2's successor inherits from this arm and must not re-derive:**
+
+1. **The rate leg is SOLVED as an instrument, not just as a number.**
+   `experiments/ddm_jg2_tail_reencode.py --stage encode` returns the exact `archive.zip`
+   delta for any edited token field on the pointer body, in ~16 min, at $0, resumable, with
+   a control that proves byte-identity. S2 should call it at chunk boundaries rather than
+   carry a bits-per-token constant at all.
+2. **4.1379 bits/token is a MEASURED CONSTANT AT ONE EDIT DENSITY** — 58 tokens sparse over
+   3 pairs. n600 is ~11,600 tokens over 600 pairs, a 200x denser regime. This is the
+   cross-regime-constant-transfer genus, so the constant is a PRIOR for planning and the
+   re-encoder is the authority for any accept decision. The superposition probe below is the
+   first evidence on that transfer.
+3. **The pose leg carries a charge the headline omitted:** +0.000314 S from the 1.073x
+   recovery. Per `ddm_na10` item 5 the 1.073x is n=3 and one of those pairs missed the
+   relevant bar, so S2 must print the recovery DISTRIBUTION with its band on seeded-random
+   pairs, never a mean. Per `ddm_na10` item 1 the PyAV-vs-DALI pose gap is **additive**
+   (C = 1.4061e-04), which is why the per-pair ratio spans 0.887-1,627 and why every pose
+   accept must score directly on DALI. jg1's actuator is verified DALI-clean
+   (`ddm_jg1_seg_solve.py:86`).
+
+### The rc4 rung-4 composition (MAIN's chain-extension candidate): assessed, NOT run, and re-priced downward
+
+MAIN routed rc4's reopened token drop as a candidate stage. I did not run it, and the reason
+is structural rather than scheduling:
+
+1. **rc4 is on the hv1 body** (`S = 0.15959729…` @ **182,759 B**, archive `80d9c8c6…`), not
+   our pointer (176,420 B, `7ce46fd7…`). Its `-3.243e-3 S` is exact **on that body**.
+2. **rc4's mechanism is not a token-field edit — it is a RECEIVER CHANGE.** It DROPS
+   positions whose model confidence exceeds a threshold and has the decoder substitute the
+   prediction. My re-encoder codes a full field; it cannot skip positions without a matching
+   receiver that knows which were dropped. So it is not a drop-in for this instrument.
+3. **And its rate gain should be SMALLER on our body — a falsifiable prediction.** MEASURED
+   here: hv1 codes the SAME token field (`9ba2e52b…`) with the SAME IHS1 blob
+   (`602115b3…`) in **112,110 B**; our body codes it in **109,696 B**. Our shipped
+   `FreeCorrector` already harvests **2,414 B** of exactly the redundancy rc4's
+   high-confidence drop targets. **The two mechanisms compete for the same bits**, so
+   rc4's 11,901 B saving cannot transfer intact, and its net `-3.243e-3` must be re-derived
+   on our body before it is quoted as half the gap.
+
+**Routing:** rc4-on-our-body is READY ∧ high-EV but needs a receiver that supports dropped
+positions before the pose question is even reachable. Its rate leg is then measurable exactly
+by `ddm_jg2_tail_reencode` in one 16-minute run. Its pose leg is the carrier re-solve, which
+jg1 showed cancels a x387 seg-edit perturbation down to 1.073x — encouraging for rc4's
+required 99.807%, but at a different amplitude and therefore unmeasured. **Owner: successor
+arm. Blocker: the dropped-position receiver. Fire condition: that receiver exists.**
