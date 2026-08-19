@@ -62,4 +62,39 @@ the load-bearing distinction for seed 8 and it is measured, not assumed.
 
 ---
 
-*(sections 1+ land as the sweeps return)*
+## 1. THE TOOLBOX, VERIFIED AT ITS OWN ARTIFACT (not from memo headlines)
+
+Repricing is only honest if the tools are real. Each row was checked this turn:
+
+| tool | verified how | what it actually voids |
+|---|---|---|
+| **up3 byte-close machinery** | ran `read_residual_archive` on `ddm_up3/candidate_runtime/archive.zip`; section budget above is my own parse | "cannot write the archive" — byte-close is now a function call, minutes not days |
+| **un-interleave law + derived offsets** | `residual_archive.py:188` CK2 un-interleave; canonical `carrier_section_from_archive` derives the packed portion from the body's own u24s | the class of **body-specific hardcoded offsets** (`packed[139]`, stale `PACKED_CAP1_SECTION_BYTES`) that blocked up2 |
+| **container search** | up3 §3 — CK2-off + brotli q10/lgwin16 recovered **+48 B → 0 B** | a rate tax on any small carrier perturbation |
+| **up2 DALI-GT pose instrument** | up3 §4 reproduced the shipping row: base `7.76948e-06` vs T4's `7.77e-06`; candidate predicted-to-printed **exact at 8 dp** | $0 exact pose measurement; no paid row needed to price a pose move |
+| **jg1 DALI-lineage seg instrument** | jg1 §ANSWER-3: **0.00030307 vs 0.00030309 = 0.99995×** of the T4 seg leg, byte-exact forward model | $0 contest-axis seg measurement |
+| **carrier re-solve** | jg1 §ANSWER-6: recovers `d_pose` to **1.073×** of original (1.01×/1.34×/**0.87×**) at ~0 B, 9–12 of 12 coefficients moved | **"a seg edit destroys pose"** — the ×387 hard negative. The actuators COMPOSE. |
+| **decode wall-clock headroom** | up3 §ANSWER-6 measured inflate at **954.5 s of the 1800 s budget** | "a richer decoder model is too slow" — there is **1.89×** measured headroom |
+| **coder tax** | jg2 §S1c: 555 B emitted vs **554.78 B ideal** from the model's own rows | "code it better" — the coder is within **0.04%** of its model. Only the MODEL is left. |
+| `candidate_seal.v1` + `repin_receiver` | up3 §ANSWER-7 — the seal caught a staged `inflate.py` `ARCHIVE_SHA256` pin that would have made the receiver refuse our own candidate | wasted paid fires |
+| `tools/fire_modal_auth_eval.py` · `tools/fire_local_advisory.py` | present on disk | hand-assembled dispatch, the measured error factory |
+
+**Two tools in my charter did NOT survive contact with their receipts — I record both against
+my own convenience:**
+
+1. **"The FREE 12-dim carrier re-orientation."** It is **not free.** `ddm_up2` owed-2 states
+   the re-fit *"requires pricing the basis section (Huffman-coded 5-bit codes) which is NOT
+   free."* jg1 §S3 calls re-orientation "the free move" only relative to basis *enlargement*
+   (which costs up to +0.008175 S, more than the entire pose leg). Changing basis VALUES at
+   constant dimension is free in the *payload* and **not** in the *archive* — precisely up3
+   §ANSWER-5's lesson, where a carrier perturbation cost **+48 B** and a one-coefficient flip
+   already costs **+3 B**. Re-orientation must be priced through brotli like everything else.
+   This does not kill the item; §2 shows its byte budget is large. It kills the word "free".
+2. **"qs5 in-compile Schur compensation makes frame-1 seg edits ~zero pose tax."** The live
+   mechanism that discharges the seg→pose coupling on THIS body is jg1's **carrier
+   re-solve**, measured at 1.073×. I price the coupling against that receipt, not against a
+   qs5 headline measured on an older body.
+
+---
+
+*(sections 2+ land as the sweeps return)*
