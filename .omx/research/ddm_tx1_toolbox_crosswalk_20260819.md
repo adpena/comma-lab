@@ -564,6 +564,36 @@ naive union **3.705×**) both forbid composing it afterwards.
 
 ---
 
+## 7b. LATE UPDATE — jg2's S1 landed while this arm was writing, and it UNIFIES #1 with jg2
+
+`ddm_jg2` §S1d measured the real rate on the shipped body: **+30 B archive delta for the
+3-pair edit set = 4.1379 bits per changed token = 0.877× the modelled 4.718 — 12.3%
+CHEAPER**, against a pre-registered prediction that it would be dearer. Its n600 projection
+moves to **net −0.010950 → S 0.145576**, i.e. through the goal.
+
+**What that does to CONVERT-NOW #1 — the honest re-rank.** With both constants now MEASURED
+the edit exchange is computable:
+
+- bytes per repaired argmax cell = 4.1379 bits / 1.5517 cells / 8 = **0.3333 B**
+- S returned per repaired cell **8.4771e-07** vs S spent **2.2195e-07** → **3.82×**
+
+So spending rate on edits pays **3.82:1**. The drop direction spends seg to save rate — the
+exact inverse — yet `ddm_rc4` measured it **net favourable too** (rate+seg −3.243e-3).
+**Both directions cannot pay at the same margin unless they act on different parts of the
+precision curve.** They do: the edit adds precision where argmax cells care, the drop removes
+it where they do not. **That makes the token field a WATERFILL that is currently sub-optimal
+in BOTH directions**, and it is the cleanest statement of why #1 and jg2 belong in one solve
+rather than two candidates.
+
+**Revised standing:** jg2's chain is **the route**, not a co-equal option — it is measured,
+running, and projects through the goal. CONVERT-NOW #1 is now best read as **the second
+direction of jg2's own waterfill** and as insurance if S2's n600 realization comes in under
+its 3-pair extrapolation (jg1's honest rung was −0.0066, which barely clears). Fire order
+§7 stands; the framing changes from "a competing 44.9%" to "the other half of one solve."
+
+`verdict_scope`: pricing only. jg2's +30 B is a 3-pair measurement and its n600 number remains
+an extrapolation until S2 realizes it; rc4's leg still needs re-measurement on this body.
+
 ## 8. STORES CONSULTED
 
 `.omx/state/canonical_frontier_pointer.json` (re-read at arm start) · the shipped archive
