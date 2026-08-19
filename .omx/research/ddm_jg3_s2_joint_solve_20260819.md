@@ -10,14 +10,16 @@
 - **status** IN PROGRESS — written incrementally, committed at every stage boundary.
   **Pointer UNMOVED** at contest-CUDA `0.15652626435208142`.
 - **code** `experiments/ddm_jg3_joint_solve.py` ·
-  `src/tac/tests/test_ddm_jg3_joint_solve.py` (27 tests) ·
-  `tools/ddm_jg3_rung_report.py` · commits `4ac56bc411`, `d4a0f56380`
+  `src/tac/tests/test_ddm_jg3_joint_solve.py` (30 tests) ·
+  `tools/ddm_jg3_rung_report.py` · `tools/ddm_jg3_edits_from_checkpoint.py` ·
+  commits `4ac56bc411`, `d4a0f56380`, `575f5a737a`, `c394566b65`, `5e8329cf74`
 
 ## ANSWER FIRST
 
-1. **No seal. The pointer is UNMOVED.** The n600 solve is launched, governed,
-   resumable and checkpointed per pair, but it costs **~22 h** at full mechanism and
-   did not fit this unit. Saying that plainly is the landing.
+1. **No seal. The pointer is UNMOVED at 0.15652626435208142.** The n600 solve is
+   LAUNCHED, detached (reparented to launchd), resumable and checkpointed per pair —
+   but it costs **~10.6-14 h** at full mechanism and did not fit this unit. Saying
+   that plainly is the landing.
 2. **Three defects in my own solver were caught by CONTROLS, not by reasoning**, and
    each one would have produced a confident wrong headline. The controls are the
    result of this arm as much as any number.
@@ -29,10 +31,14 @@
 4. **The hm1 logit model UNDER-PRICES a token edit by 2.2x** — 1.91 bits/token where
    `ddm_jg2` MEASURED 4.1379 on `archive.zip`. That systematically biased my
    configuration search toward too-dense edit sets. Measured, then fixed.
-5. **The realized yield is ~1.0–1.3 cells/changed token, not jg1's 1.55.** That is
-   above the 0.4063 accept-margin bar but **at or below the ~1.06 projection-survival
-   bar**, so on current evidence sub-0.15 by token edits alone is **marginal, not
-   comfortable** — which is exactly the number jg2 said the whole goal rests on.
+5. **The n=3 seeded-random rung lands on a KNIFE EDGE: projected S 0.150069 — 6.9e-05
+   ABOVE 0.15**, at yield 1.357 and 51.4% of the seg debt repaired. Token edits alone
+   very nearly clear and do not. **That makes the ra2+ra1 CPR1 lossless rider
+   (MEASURED −1.85e-4 S, $0) the MARGIN rather than optional polish:
+   0.150069 − 0.000185 = 0.149884.**
+6. **The re-encoder refused to certify its own delta** because I ran the encode before
+   the byte-identity control on this store. The guard worked; the ordering was my
+   error and is now item 0 of Owed.
 
 ## OPTIMAL FORM (operator binding 2026-08-19: "No naive or toy or less than recursive fractal optimal")
 
@@ -210,27 +216,37 @@ Read with `tools/ddm_jg3_rung_report.py --checkpoint <jsonl>`.
 **The n=3 rung, seeded-random pairs, MEASURED** (rate leg still the jg2 prior; pose at
 the 1.073x recovery):
 
-| n | flips | repaired | tokens | yield | repair% | net ΔS | projected S | clears 0.15 |
-|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| **3** | 111 | **57** | **42** | **1.357** | **51.4%** | **−0.006457** | **0.150069** | **NO — by 6.9e-05** |
+| n | repaired | tokens | yield | repair% | net ΔS | projected S | clears 0.15 |
+|---:|---:|---:|---:|---:|---:|---:|---|
+| **3** | 57 | 42 | 1.357 | 51.4% | −0.006457 | **0.150069** | **NO — by 6.9e-05** |
+| **12** | **234** | **178** | **1.315** | **47.9%** | **−0.006539** | **0.149987** | **YES — by 1.3e-05** |
 
-**That is the headline of this arm, and it is a knife edge.** Token edits alone land
-**0.000069 ABOVE 0.15** — about one part in 2,200 of the score. The yield (1.357) is
-comfortably above both bars; the repair fraction (51.4%) is close to what jg1's
-extrapolation assumed. The move very nearly clears on its own and does not.
+**Both rungs sit within one part in ten thousand of the target, on opposite sides of
+it.** n=3 misses by 6.9e-05; n=12 clears by 1.3e-05. The yield is stable across the two
+(1.357 -> 1.315) and the repair fraction drifts down slightly (51.4% -> 47.9%), which is
+what pushes the two rungs across the line in opposite directions. **Neither rung
+settles this.** What they jointly establish is the SHAPE of the answer: token edits
+alone land essentially exactly on 0.15, and the outcome is decided by terms smaller than
+the rung-to-rung noise.
+
+**That is the headline of this arm, and it is a knife edge.** The yield is comfortably
+above both bars and the repair fraction is close to what jg1's extrapolation assumed —
+and the projection still lands within ~1e-4 of the target in both directions.
 
 **Which makes the free lossless rider DECISIVE rather than optional.** The ra2+ra1
 CPR1 inner coder is **MEASURED at −1.85e-4 S**, lossless, round-trip exact, $0, with no
 scorer row and no pose budget consumed. Applied to this rung:
 
-> **0.150069 − 0.000185 = 0.149884 — clears sub-0.15.**
+> n=3:  **0.150069 − 0.000185 = 0.149884** — clears.
+> n=12: **0.149987 − 0.000185 = 0.149802** — clears with ~1.5x the margin of the
+> edit-only result.
 
 Spec clause 6 called it a "free lossless rider at byte-close." On this evidence it is
 not a rider; it is **the margin**. Any successor that treats it as optional polish will
 miss the goal by less than one part in two thousand.
 
-**Read this rung for what it is.** n=3 is three pairs. The per-pair spread is wide
-(yields 1.286 / 1.357 / 1.500 across the first rungs measured), the rate leg is the
+**Read these rungs for what they are.** n=3 is three pairs and n=12 is twelve. The per-pair spread is wide
+(per-pair yields span 1.18-1.50 across the first twelve), the rate leg is the
 sparse-density prior, and the pose leg is jg1's n=3 mean. It is quoted because it is
 measured and because it decides where the next unit points — not because three pairs
 settle a 600-pair question.
