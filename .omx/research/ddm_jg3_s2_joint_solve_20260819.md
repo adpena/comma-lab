@@ -207,7 +207,33 @@ population (pose prefixes 2.54–4.21x harder, seg prefixes 0.95–0.97x easier)
 
 Read with `tools/ddm_jg3_rung_report.py --checkpoint <jsonl>`.
 
-<!-- RUNGS_TABLE -->
+**The n=3 rung, seeded-random pairs, MEASURED** (rate leg still the jg2 prior; pose at
+the 1.073x recovery):
+
+| n | flips | repaired | tokens | yield | repair% | net ΔS | projected S | clears 0.15 |
+|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| **3** | 111 | **57** | **42** | **1.357** | **51.4%** | **−0.006457** | **0.150069** | **NO — by 6.9e-05** |
+
+**That is the headline of this arm, and it is a knife edge.** Token edits alone land
+**0.000069 ABOVE 0.15** — about one part in 2,200 of the score. The yield (1.357) is
+comfortably above both bars; the repair fraction (51.4%) is close to what jg1's
+extrapolation assumed. The move very nearly clears on its own and does not.
+
+**Which makes the free lossless rider DECISIVE rather than optional.** The ra2+ra1
+CPR1 inner coder is **MEASURED at −1.85e-4 S**, lossless, round-trip exact, $0, with no
+scorer row and no pose budget consumed. Applied to this rung:
+
+> **0.150069 − 0.000185 = 0.149884 — clears sub-0.15.**
+
+Spec clause 6 called it a "free lossless rider at byte-close." On this evidence it is
+not a rider; it is **the margin**. Any successor that treats it as optional polish will
+miss the goal by less than one part in two thousand.
+
+**Read this rung for what it is.** n=3 is three pairs. The per-pair spread is wide
+(yields 1.286 / 1.357 / 1.500 across the first rungs measured), the rate leg is the
+sparse-density prior, and the pose leg is jg1's n=3 mean. It is quoted because it is
+measured and because it decides where the next unit points — not because three pairs
+settle a 600-pair question.
 
 ## WHAT WOULD HAVE TO BE TRUE
 

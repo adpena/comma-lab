@@ -29118,3 +29118,65 @@ realized-joint acceptance × measured rate × DALI-direct pose); memo
 ddm_jg2_sub015_chain_20260819.md; custody /Volumes/APDataStore/pact/ddm_jg2/. Equations-leg
 routing: the superposition law joins the one-waterfill/realized-acceptance/additive-GT
 registrations at the cw1 boundary.
+
+## FEED-jg3 (2026-08-19) — S2 EXECUTED: three control-caught solver defects, a 2.2x logit under-price, and a KNIFE-EDGE n=3 rung
+
+MEASURED (`ddm_jg3`, `[macOS-CPU advisory]`, `score_claim=false`, `promotable=false`,
+$0, no Modal fire). **Pointer UNMOVED at contest-CUDA 0.15652626435208142.** Memo
+`.omx/research/ddm_jg3_s2_joint_solve_20260819.md`; code
+`experiments/ddm_jg3_joint_solve.py` (+30 tests), `tools/ddm_jg3_rung_report.py`,
+`tools/ddm_jg3_edits_from_checkpoint.py`; custody `/Volumes/APDataStore/pact/ddm_jg3/`.
+
+**(1) THE HEADLINE IS A KNIFE EDGE.** The n=3 seeded-random rung measures yield
+**1.357** cells/changed token and **51.4%** of the seg debt repaired, projecting
+net **−0.006457 → S 0.150069** — **6.9e-05 ABOVE 0.15**, one part in 2,200. Token
+edits alone very nearly clear and do not. **CONSEQUENCE: the ra2+ra1 CPR1 lossless
+rider (MEASURED −1.85e-4 S, $0, no scorer row, no pose budget) is not polish — it IS
+the margin: 0.150069 − 0.000185 = 0.149884.** Any successor treating it as optional
+misses the goal by less than one part in two thousand.
+
+**(2) THREE SOLVER DEFECTS, ALL CAUGHT BY CONTROLS RATHER THAN BY REASONING** — each
+would have produced a confident wrong headline. (D1) The accepted set was pooled
+across screening batches, so winners landed adjacent and became a BLOCK MOVE (jg1
+measured those at −55% r=1): pair 283 changed **66 tokens to repair 3 cells**
+(yield 0.0455) where jg1 got 25/20. Cured by a separation constraint on the ACCEPTED
+set, not just within screening batches. (D2) jg1's ">=64 px" additivity constant is an
+n=3 packing probe; borrowing it cost half the repair (9 of 38 flips vs jg1's 25). Cured
+by SWEEPING separation × keep-fraction, every point jointly rendered and re-segmented,
+winner chosen on the score's own objective. (D3) **the hm1 logits UNDER-PRICE a token
+edit by 2.2x** — 1.91 bits/token vs jg2's MEASURED 4.1379 on `archive.zip` — which
+systematically biased configuration search toward too-dense edit sets. jg1 S1d named
+the cross-body risk; this quantifies it. **REUSABLE: any arm using hm1 logits as an
+absolute rate price on the up3 body is under-pricing ~2.2x.**
+
+**(3) BASE ARITHMETIC CORRECTION owed to jg1 AND jg2.** Both quote
+`d_pose = 7.649246787e-06`; the T4 receipt carries **7.65e-06**, and only the receipt
+value reconstructs the pointer **bit-identically** (the inherited value misses by
+4.31e-07 in S). The two agree to 9.8e-05 relative — inside the receipt's 3-sig-fig
+quote, so not a contradiction between measurements — but the shipped score was computed
+from the receipt's number. Guarded by a test demanding EXACT reconstruction.
+
+**(4) METHOD LAW: every rung must be a random sample, and that had to be engineered.**
+`up2.select_pairs(600)` returns SORTED `arange(600)`, so any prefix of an n600 run is a
+CONTIGUOUS PAIR PREFIX — the bp2/na2 different-population trap. The n600 solve therefore
+visits in a **seeded permutation**, which makes every prefix an unbiased n-sample AND
+makes an interrupted 10-hour run still yield an honest estimate. Sister of the m88/m96
+prefix-bias genus, applied to run ORDER rather than to sampling.
+
+**(5) SPEC DELTAS DECLARED (OPTIMAL FORM).** One MECHANISM reduction: the `drop`
+proposal class is NOT implemented, because jg2 measured it is a RECEIVER CHANGE (the
+decoder must know dropped positions) and shipping one invalidates the byte-identity
+control chain the seal rests on. All other deltas are SCOPE (pose distribution,
+byte-close, seal — gated on the n600 solve). Within-pair proposal generation is NOT
+naive enumeration: site order is margin saliency (the Fisher surrogate, Pearson 0.978),
+scored by MIN margin per the canonical `MarginSaliencyRanker` discipline — a mean over
+a 961-cell window is the vacuity failure. Rankers ORDER; only realized joint ΔS accepts.
+
+**ROUTED / OWED:** the n600 solve is LAUNCHED, governed, resumable, per-pair
+checkpointed (`checkpoints/seg_solve_n600.jsonl`, ~10.6 h ETA, rungs readable at any
+time via `tools/ddm_jg3_rung_report.py`). Then: measured rate via
+`ddm_jg2_tail_reencode.py --stage encode`; pose recovery DISTRIBUTION with band via
+`up2.solve_pair_realized` against the EDITED frames; byte-close with the **cw1
+equal-byte tie-break to the LOWER index** (configs 5/6 tie at 176,420 B and only the
+lower reproduces the shipped bytes); the ra2+ra1 rider folded in as the margin; T4
+inflate wall-clock READ AND RECORDED at harvest.
