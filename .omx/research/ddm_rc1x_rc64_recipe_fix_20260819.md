@@ -2,7 +2,7 @@
 
 Date: 2026-08-19 · Arm: `ddm_rc1x` · Authority: exact byte measurement + compiled
 round-trip · **Score claim: false** · **Pointer moved: false** · **Byte-closed: YES**
-(on the rr4/D1 lineage; NOT on the ck2 body — §5)
+(on the rr4/D1 lineage; NOT on the ck2 body — §4)
 
 `verdict_scope`: **INSTANCE** — the `ddm_pq2_compress_e2e` rebuild recipe and the
 rr4/hv1 prepared base. The role distinction it names is a property of the coder and
@@ -104,6 +104,33 @@ the arms missed (the shipped body exports no `rc64_encoder_*` symbol).
 Against fx2's landed D1 row this is **−105 B / ΔS −6.99e-05**, which is **20.0×** the
 −3.5e-6 admit bar.
 
+### 3a. Parse-back: the distortion legs are identical BY BYTE IDENTITY
+
+The chain completed rc=0 in 957.0 s of parse-back (572.4 s in the token stage):
+
+* `decoded_field_bit_identical: true`; decoded token sha `9ba2e52b…` — the pinned target;
+* `corrected_cdf_input_sha256_matches` and `corrected_quantized_logit_sha256_matches` both true;
+* **inflated `0.raw` = 3,662,409,600 B, sha
+  `e5539653f598a1c31e28900888f450a6de019cb29864674f232ad2f8956b15c9` — BYTE-IDENTICAL to
+  `ddm_fx2` D1's parse-back output.**
+
+That last line is the strongest available distortion evidence and it is **stronger than the
+advisory my charter asked for**. The scorer is a function of the inflated frames; identical
+inflated bytes therefore give identical `d_seg` and identical `d_pose` by construction, on
+any device, with no scorer run and no floating-point argument. A CPU advisory could only
+re-derive a number that byte identity already fixes — so I did not spend an hour of scorer
+time to learn less. **The whole −105 B is pure rate.**
+
+### 4a. The seal
+
+`/Volumes/APDataStore/pact/ddm_rc1x/seal/CANDIDATE_SEAL_ma1_rr4d1.json`
+seal sha `37658fa334b464c93104ebbc7c4b55f8605974b304478a9b2586988e48ebc87b`, verdict
+**SEAL_VALID**, axis `advisory`, runtime 89 files / digest `7510b83814fac5b2…`, admit bar
+net dS < −3.5e-06 against the contest_cuda pointer 0.15666451 at tolerance 0. Three
+pre-registered falsifiers (rate, decode identity, delta). **No Modal fire — MAIN owns the
+T4 row**, and the axis is deliberately `advisory` because this candidate is not the
+shipping ck2 body.
+
 ## 4. Honest limits
 
 * **This is NOT the ck2 body.** ck2 is a **container transform**: it borrows the sz1 token
@@ -112,24 +139,33 @@ Against fx2's landed D1 row this is **−105 B / ΔS −6.99e-05**, which is **2
   tail-override that `ddm_sa3_rebase_sz1.py` does not expose — a named build step, not an
   inference. My charter's expected ≈176,420 B assumed the pin was the only blocker; it was
   not. **The −105 B is measured on the rr4/D1 lineage and projected, not measured, on ck2.**
-* **No advisory was fired and no seal was drafted.** Both were charter steps and both are
-  owed. The advisory is cheap; the seal is blocked — see §5.
-* **Parse-back is still running** at the time of writing; the decoded-field falsifier
-  (target `9ba2e52b…`) is therefore **PENDING**, exactly as the build receipt says. No
-  decode-identity claim may be made until it lands.
+* **No scorer advisory was fired, deliberately.** §3a explains why: the inflated bytes are
+  identical to fx2's, which fixes both distortion legs more tightly than a scorer run could.
+  If MAIN wants an advisory row anyway for ledger symmetry, it is cheap and unblocked.
+* **The seal is `advisory` axis, not a promotion.** No Modal fire; MAIN owns the T4 row.
 * **Selection is inherited.** ma1 chose its cell on the scored clip; I re-ran its law, I
   did not re-open that choice.
 
-## 5. A blocker MAIN owns: the frontier pointer cannot supply an admission bar
+## 5. A defect MAIN owns: the pointer's `archive_bytes` is null
 
 `.omx/state/canonical_frontier_pointer.json` carries
 `our_local_frontier_contest_cuda.extra.archive_bytes = null` while
-`archive_sha256 = 0aa1cada…`. `tac.candidate_seal.read_frontier_archive_identity` refuses
-on it, and `src/tac/tests/test_candidate_seal_pin_consistency.py::test_live_pointer_supplies_a_usable_bar`
-**fails on HEAD, independent of this arm** (verified by stashing my diff). Any
-`make_candidate_seal.py` run against the live pointer will refuse. The ck2 refresh wrote
-the sha without the byte count; the fix is MAIN's because the pointer is the frontier SoT
-and its tolerance-0 rule exists to refuse exactly this kind of silent edit.
+`archive_sha256 = 0aa1cada…`. The ck2 refresh wrote the sha without the byte count.
+
+**Measured scope, narrowed after I first over-claimed it.** My initial reading — "any
+`make_candidate_seal.py` run against the live pointer will refuse" — is **wrong**, and the
+seal in §4a disproves it: the seal needs only the pointer *score* (0.1566645120483069) and
+it sealed cleanly. What actually refuses is anything that needs the archive **identity**:
+
+| surface | verdict |
+|---|---|
+| `tac.candidate_seal.read_frontier_archive_identity()` | **refuses** |
+| `ddm_pq2_compress_e2e` DEFAULT expected-archive resolution (no `--expected-archive-*`, no `--candidate-runtime`) | **refuses** — reproduced above |
+| `test_candidate_seal_pin_consistency.py::test_live_pointer_supplies_a_usable_bar` | **fails on HEAD**, independent of this arm (verified by stashing my diff) |
+| `make_candidate_seal.py` | **works** |
+
+The fix is MAIN's: the pointer is the frontier SoT and its tolerance-0 rule exists to
+refuse exactly this kind of silent edit.
 
 ## 6. Custody
 
@@ -145,17 +181,26 @@ and its tolerance-0 rule exists to refuse exactly this kind of silent edit.
 | `ma1_byteclose_driver.sh` | — | the launch, with the role note inline |
 | `byteclose_ma1/retained/archive.zip` | `a0b2bdb1cd300177` | **the byte-closed candidate** |
 | `byteclose_ma1/retained/token_stream.bin` | `15054e5da33640bc` | the re-encoded tail |
+| `byteclose_ma1/RESULT_receiver_parseback.json` | — | decode identity + inflated sha |
+| `seal/CANDIDATE_SEAL_ma1_rr4d1.json` | `37658fa334b464c9` | SEAL_VALID, advisory axis |
 | `RESULT_rc1x_e2e_verify.json` | — | verify through the cured recipe |
+| `RC1X_RETENTION_MANIFEST.json` | — | 123 files hashed, 9.4 MB |
+
+**Disk hygiene, certified not guessed.** The 3.5 GB parse-back `inflated/` tree was removed
+AFTER its path, byte count, sha256, rebuild command and receipt were recorded in
+`RC1X_RETENTION_MANIFEST.json::certified_rebuildable_bulk`. It is deterministically
+rebuildable from the retained `archive.zip` through the retained `candidate_runtime`, and
+its sha is the §3a evidence, so no signal was lost.
 
 ## 7. NEXT_IF_RESUMED, ranked
 
-1. **Land the parse-back verdict** (running) — decoded field must equal `9ba2e52b…`.
-2. **Fire the local CPU advisory** on `a0b2bdb1…`. ma1's law is a rate-only re-encode of
-   the same tokens, so decoded state must be **bit-identical** and the advisory must
-   reproduce fx2's distortion exactly; anything else refuses the row.
-3. **Fix the pointer's missing `archive_bytes`** (MAIN) — it blocks every seal.
-4. **Add a tail-override to `ddm_sa3_rebase_sz1.py`** so ma1 composes onto ck2. That is the
-   real remaining work for the −105 B on the shipping body.
+1. **Add a tail-override to `ddm_sa3_rebase_sz1.py`** so ma1 composes onto ck2. This is the
+   real remaining work for the −105 B on the *shipping* body, and it is now the only step
+   between this measured row and a ck2-lineage candidate.
+2. **Fix the pointer's missing `archive_bytes`** (MAIN) — §5; it breaks the default
+   expected-archive resolution and one test on HEAD.
+3. **Re-open ddm_fx2's and ddm_ma1's "blocked" status.** Both are unblocked and fx2 was
+   already closed; their memos still say otherwise.
 5. **Sweep for the sibling class**: any other recipe/driver pin whose file is named
    generically and located off-tree. The genus is *name-without-role*, and it cost two arms
    a byte-close each.
