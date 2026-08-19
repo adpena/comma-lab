@@ -115,6 +115,69 @@ def pose_agg_ratio(rows: list[dict]) -> float:
     return float(da.mean() / db.mean()) if db.mean() else float("nan")
 
 
+def pose_lineage_bounds(rows: list[dict]) -> dict:
+    """Both defensible ways to carry a PyAV-lineage pose measurement onto the contest axis.
+
+    The eta gate decodes GT through PyAV (`av.open` + `yuv420_to_rgb`).  The contest scores DALI
+    GT, and `pose_gap_was_gt_cache_lineage_not_cuda_20260819` measured local PyAV pose at 19.09x
+    the contest-CUDA value.  So the measured *ratio* is a same-lineage quantity (sound), but
+    turning it into a Delta-S multiplies it against a contest-lineage ABSOLUTE base -- which is a
+    lineage crossing, and there are two defensible transfer assumptions:
+
+      ratio_transfers    -- the fractional insult carries over unchanged.
+      excess_transfers   -- the edit adds a fixed ABSOLUTE MSE excess (it perturbs the same
+                            pixels the same way); on a base ~15x smaller that same excess is a
+                            far larger fractional insult, and sqrt concavity punishes exactly
+                            there (sa3: the axis you PAY upward).
+
+    Neither is measured locally.  Both are reported so no caller silently picks one.
+    """
+    if not rows:
+        return {}
+    db = np.array([r["d_pose_before"] for r in rows], dtype=np.float64)
+    da = np.array([r["d_pose_after"] for r in rows], dtype=np.float64)
+    base = (10.0 * D_POSE_N600) ** 0.5
+    ratio = float(da.mean() / db.mean()) if db.mean() else float("nan")
+    excess = float(da.mean() - db.mean())
+    # d_pose is a mean squared error and cannot go below zero.  The absolute excess is measured
+    # on a PyAV base ~15x the contest one, so a large IMPROVEMENT can exceed the entire contest
+    # base and drive `D_POSE_N600 + excess` negative -- which `** 0.5` silently turns COMPLEX.
+    # Floor it at zero: the best an edit can do on this axis is erase the pose error, not invert
+    # it.  (Caught by test_pose_improvement_gives_negative_delta_s_on_both_bounds.)
+    contest_after = max(0.0, D_POSE_N600 + excess)
+    return {
+        "gt_lineage": "PyAV (av.open + frame_utils.yuv420_to_rgb) -- NOT the DALI GT the contest "
+                      "scores; up1 measured local pose at 19.09x contest-CUDA",
+        "local_base_over_contest_base": float(db.mean() / D_POSE_N600),
+        "delta_S_pose_ratio_transfers": (10.0 * D_POSE_N600 * ratio) ** 0.5 - base,
+        "delta_S_pose_excess_transfers": (10.0 * contest_after) ** 0.5 - base,
+        "implied_contest_ratio_excess_transfers": contest_after / D_POSE_N600,
+        "excess_transfer_floored_at_zero": bool(D_POSE_N600 + excess < 0.0),
+        "absolute_excess_local": excess,
+    }
+
+
+def joint_verdict(bounds: dict) -> str:
+    """Compose the leg Delta-S bounds into the only verdict S authorises.
+
+    `bounds` maps a transfer-assumption tag to the JOINT Delta-S (seg + rate + pose) under it.
+    A SUPPLIER label requires every bound to be negative: if the worst case still gains, the
+    channel supplies whatever the unresolved lineage question turns out to be.  If the bounds
+    straddle zero the answer depends on the thing this axis cannot measure, so the verdict is
+    refused rather than guessed.
+
+    NaN propagates to a refusal, never to a pass: `nan < 0` and `nan > 0` are both False.
+    """
+    if not bounds:
+        return "JOINT UNCOMPUTED-NO-POSE-ROWS"
+    worst, best = max(bounds.values()), min(bounds.values())
+    if worst < 0.0:
+        return "CHANNEL NET SUPPLIER"
+    if best > 0.0:
+        return "CHANNEL NET NON-SUPPLIER"
+    return "CHANNEL INDETERMINATE-ON-LINEAGE"
+
+
 def pose_concentration(rows: list[dict]) -> dict:
     """How much of the aggregate pose move comes from ONE pair.
 
@@ -262,15 +325,15 @@ def adjudicate(args: argparse.Namespace) -> int:
                             + ([eta_new - 2 * band["sigma_est_pooled"]] if band else [])))
 
     if eta_new <= FO1_BREAKEVEN_ETA:
-        verdict = "SUPPLIER REFUTED-AT-HARDENED-ETA"
+        seg_verdict = "SEG-LEG REFUTED-AT-HARDENED-ETA"
     elif lower_1sigma > FO1_BREAKEVEN_ETA:
-        verdict = "SUPPLIER CONFIRMED-HARDENED"
+        seg_verdict = "SEG-LEG SUPPLIER-ALIVE"
     else:
-        verdict = "INDETERMINATE-MORE-N"
+        seg_verdict = "SEG-LEG INDETERMINATE-MORE-N"
 
     # n required for the 1-sigma lower edge to clear the bar, if it does not already.
     n_required = None
-    if verdict == "INDETERMINATE-MORE-N" and eta_new > FO1_BREAKEVEN_ETA:
+    if seg_verdict == "SEG-LEG INDETERMINATE-MORE-N" and eta_new > FO1_BREAKEVEN_ETA:
         sd_n = boot["sd"] * np.sqrt(len(new_rows))       # sd scales ~1/sqrt(n)
         need = (sd_n / (eta_new - FO1_BREAKEVEN_ETA)) ** 2
         n_required = int(np.ceil(need))
@@ -291,6 +354,31 @@ def adjudicate(args: argparse.Namespace) -> int:
             "pn2_n12_projected_reference": 0.7935,
             "delta_S_pose": ((10.0 * D_POSE_N600 * pose_agg_ratio(new_rows)) ** 0.5
                              - (10.0 * D_POSE_N600) ** 0.5)}
+    pose.update(pose_lineage_bounds(new_rows))
+
+    # --- the JOINT verdict -------------------------------------------------------------------
+    # The score is 100*d_seg + sqrt(10*d_pose) + 25*bytes/37,545,489.  A verdict that inspects
+    # only the seg leg is a claim about S that S never authorised: gen-1 emitted
+    # "SUPPLIER CONFIRMED-HARDENED" off eta alone while this same dict carried a pose leg costing
+    # 3.9x the seg gain in the opposite direction.  The channel supplies only if the joint dS is
+    # negative under BOTH lineage-transfer bounds; if the bounds straddle zero it is
+    # INDETERMINATE-ON-LINEAGE and a DALI-GT measurement is owed before anything is priced.
+    seg_dS = net_dS(eta_new, flips, FO1_TOTAL_B)
+    joint_bounds = {k: seg_dS + pose[k] for k in
+                    ("delta_S_pose_ratio_transfers", "delta_S_pose_excess_transfers")
+                    if k in pose}
+    jv = joint_verdict(joint_bounds)
+    worst = max(joint_bounds.values()) if joint_bounds else None
+    best = min(joint_bounds.values()) if joint_bounds else None
+    verdict = f"{seg_verdict} | {jv}"
+    joint["verdict_composition"] = {
+        "seg_leg_dS_at_eta_new": seg_dS,
+        "pose_leg_dS_bounds": joint_bounds,
+        "joint_dS_best_case": best, "joint_dS_worst_case": worst,
+        "seg_verdict": seg_verdict, "joint_verdict": jv,
+        "rule": "the seg leg alone NEVER licenses a SUPPLIER label; the joint dS must be "
+                "negative under BOTH lineage-transfer bounds",
+    }
 
     matched = {}
     free_rows = load_rows(work / "free_matched16" / "ETA_GATE_ROWS.jsonl")
