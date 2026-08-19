@@ -92,6 +92,18 @@ UP2_D_POSE_BEFORE = 7.76948388629175e-06
 UP2_D_POSE_AFTER = 7.649246787072966e-06
 UP2_SOLVED_CODES = Path("/Volumes/APDataStore/pact/ddm_up2/retained/solved_codes.npy")
 
+#: THE LIVE POINTER BODY. ``ddm_up3`` landed the thirteenth move on 2026-08-19, so
+#: the body ``ddm_up2`` solved against (to1, 50e56145...) is SUPERSEDED. Every br1
+#: delta is measured against this body; measuring against to1 would re-count up2's
+#: already-banked gain.
+LIVE_RUNTIME = Path("/Volumes/APDataStore/pact/ddm_up3/candidate_runtime")
+LIVE_ARCHIVE_SHA256 = (
+    "7ce46fd7a845d5987903a0d85a56581961eb7716a55c38a7361e3b5ecae94b5f"
+)
+LIVE_POINTER_SCORE = 0.15652626435208142
+#: The live body's population d_pose on the DALI instrument = up2's solved value.
+LIVE_D_POSE = UP2_D_POSE_AFTER
+
 #: Admission bar for a net score move, in score units (negative is better).
 ADMIT_BAR = -3.5e-06
 
@@ -188,8 +200,35 @@ class Instrument:
     bmat: Any
 
 
-def load_instrument(*, verify_archive: bool = True, verify_sha: bool = False):
-    state = up2.load_carrier_state(up2.DEFAULT_RUNTIME, verify_archive=verify_archive)
+def load_instrument(
+    *,
+    runtime: Path | None = None,
+    expect_archive_sha256: str | None = None,
+    verify_sha: bool = False,
+):
+    """Load the carrier from a named runtime, pinned to an expected archive sha.
+
+    The runtime is an ARGUMENT because the pointer body moves: ``ddm_up3`` landed
+    the thirteenth move and the live body is no longer the one ``ddm_up2`` solved
+    against.  Measuring a delta against a superseded body double-counts a gain that
+    is already banked, so the body is named and its sha256 is checked, never
+    assumed ([[a_delta_without_its_baseline_is_unanchored_and_baselines_move_20260803]]).
+
+    Only ODD (frame-1, semantic) frames are read from the raw decode, and carrier
+    edits do not touch odd frames, so a decode of a body that differs only in its
+    carrier coefficients remains valid for frame 1.
+    """
+    runtime = Path(runtime) if runtime is not None else Path(up2.DEFAULT_RUNTIME)
+    if expect_archive_sha256:
+        observed = up2._sha256_file(runtime / "archive.zip")
+        if observed != expect_archive_sha256:
+            raise Br1Error(
+                f"runtime archive sha256 {observed} != expected {expect_archive_sha256}; "
+                "refusing to measure a delta against an unidentified body"
+            )
+    state = up2.load_carrier_state(
+        runtime, verify_archive=expect_archive_sha256 is None
+    )
     raw = up2.open_raw(up2.DEFAULT_RAW, verify_sha=verify_sha)
     targets, lineage = up2.load_gt_poses(up2.DEFAULT_DALI_GT)
     if lineage != up2.LINEAGE_DALI:
@@ -353,7 +392,9 @@ def run_gn(args) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     rows_path = out_dir / "rows.jsonl"
 
-    inst = load_instrument(verify_archive=not args.no_verify_archive)
+    inst = load_instrument(
+        runtime=Path(args.runtime), expect_archive_sha256=args.expect_archive_sha256
+    )
     pairs = sample_pairs(args.pairs, args.seed)
 
     if args.start_from == "up2":
@@ -431,7 +472,9 @@ def run_geometry(args) -> int:
 
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
-    inst = load_instrument(verify_archive=not args.no_verify_archive)
+    inst = load_instrument(
+        runtime=Path(args.runtime), expect_archive_sha256=args.expect_archive_sha256
+    )
 
     recon = functional.interpolate(
         inst.blow.float(), size=(EVAL_H, EVAL_W), mode="bicubic", align_corners=False
@@ -651,7 +694,9 @@ def run_ceiling(args) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     rows_path = out_dir / "rows.jsonl"
 
-    inst = load_instrument(verify_archive=not args.no_verify_archive)
+    inst = load_instrument(
+        runtime=Path(args.runtime), expect_archive_sha256=args.expect_archive_sha256
+    )
     pairs = sample_pairs(args.pairs, args.seed)
     done = load_done(rows_path)
     started = time.time()
@@ -780,8 +825,13 @@ def run_price(args) -> int:
     if not rows:
         raise Br1Error(f"no solved rows at {args.rows}")
 
-    archive = Path(up2.DEFAULT_RUNTIME) / "archive.zip"
-    runtime = Path(up2.DEFAULT_RUNTIME)
+    runtime = Path(args.runtime)
+    archive = runtime / "archive.zip"
+    observed = up2._sha256_file(archive)
+    if args.expect_archive_sha256 and observed != args.expect_archive_sha256:
+        raise Br1Error(
+            f"pricing archive sha256 {observed} != expected {args.expect_archive_sha256}"
+        )
     pricer = load_pricer(archive=archive, runtime=runtime)
     inst_codes = pricer.base_codes.astype(np.int32)
 
@@ -860,7 +910,8 @@ def build_parser() -> argparse.ArgumentParser:
     geo.add_argument("--pairs", type=int, default=32)
     geo.add_argument("--seed", type=int, default=20260819)
     geo.add_argument("--out", required=True)
-    geo.add_argument("--no-verify-archive", action="store_true")
+    geo.add_argument("--runtime", default=str(LIVE_RUNTIME))
+    geo.add_argument("--expect-archive-sha256", default=LIVE_ARCHIVE_SHA256)
     geo.set_defaults(func=run_geometry)
 
     gn = sub.add_parser("gn", help="damped Gauss-Newton lattice solve")
@@ -870,7 +921,8 @@ def build_parser() -> argparse.ArgumentParser:
     gn.add_argument("--start-from", choices=("shipped", "up2"), default="shipped")
     gn.add_argument("--no-polish", action="store_true")
     gn.add_argument("--out", required=True)
-    gn.add_argument("--no-verify-archive", action="store_true")
+    gn.add_argument("--runtime", default=str(LIVE_RUNTIME))
+    gn.add_argument("--expect-archive-sha256", default=LIVE_ARCHIVE_SHA256)
     gn.set_defaults(func=run_gn)
 
     ceil = sub.add_parser(
@@ -880,14 +932,16 @@ def build_parser() -> argparse.ArgumentParser:
     ceil.add_argument("--seed", type=int, default=20260819)
     ceil.add_argument("--iterations", type=int, default=40)
     ceil.add_argument("--out", required=True)
-    ceil.add_argument("--no-verify-archive", action="store_true")
+    ceil.add_argument("--runtime", default=str(LIVE_RUNTIME))
+    ceil.add_argument("--expect-archive-sha256", default=LIVE_ARCHIVE_SHA256)
     ceil.set_defaults(func=run_ceiling)
 
     price = sub.add_parser("price", help="byte-price solved rows, rate-aware selection")
     price.add_argument("--rows", required=True, help="rows.jsonl from mode=gn")
-    price.add_argument("--pointer-d-pose", type=float, default=UP2_D_POSE_BEFORE)
+    price.add_argument("--pointer-d-pose", type=float, default=LIVE_D_POSE)
     price.add_argument("--out", required=True)
-    price.add_argument("--no-verify-archive", action="store_true")
+    price.add_argument("--runtime", default=str(LIVE_RUNTIME))
+    price.add_argument("--expect-archive-sha256", default=LIVE_ARCHIVE_SHA256)
     price.set_defaults(func=run_price)
 
     return parser

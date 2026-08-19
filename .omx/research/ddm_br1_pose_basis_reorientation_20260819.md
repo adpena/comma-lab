@@ -26,7 +26,13 @@ Replacing the search with a damped Gauss-Newton step on the same basis, same lat
 | `br1` Gauss-Newton + ±2 polish, n12 random | **0.85985** | 44 | **0** |
 
 Net **ΔS = −7.819e-06 from 12 of 600 pairs alone**, at **zero bytes** — already 2.2× the −3.5e-06
-admit bar. The n600 run is in flight.
+admit bar, measured against the **to1** body those numbers were taken on.
+
+⚠ **That table is against a SUPERSEDED body — see "Baseline correction" below.** The n12 run and up2's
+n600 both sit on to1 (`50e56145…`). `ddm_up3` has since landed the thirteenth move, so the live pointer
+is `7ce46fd7…` at S 0.15652626 and already carries up2's solved codes. The comparison above is therefore
+`br1`-vs-`up2` **on equal footing**, not a claim of marginal gain over the live pointer. The marginal
+number is being re-measured against the live body.
 
 ---
 
@@ -133,6 +139,33 @@ half-ULP pose bound is **±8.97e-09** per row; the rate leg is exact at ΔB=0. T
 bound by ~436×.
 
 ---
+
+## Baseline correction — the pointer moved mid-arm
+
+Partway through the n600 run I checked `.omx/state/canonical_frontier_pointer.json` rather than trusting
+the charter's framing, and found the body had moved under me:
+
+| | body | S | d_pose (DALI, n600) |
+|---|---|---|---|
+| what up2 solved, what br1 first measured on | to1 `50e56145…` | 0.15659460 | 7.769484e-06 |
+| **live pointer** (`ddm_up3` thirteenth move) | **`7ce46fd7…`** | **0.15652626** | **7.649247e-06** |
+
+`ddm_up3` byte-closed up2's solved codes and landed a T4 row. So a `br1` delta measured from to1
+**double-counts a gain that is already banked**. The first n600 launch was stopped at 15/600 for exactly
+this reason and preserved as `work/gn_n600_STALE_BASELINE_to1/` rather than deleted — it is still valid
+as the head-to-head-vs-up2 comparison, just not as a marginal claim.
+
+The cure is structural, not a note: `load_instrument` now takes the runtime as an **argument** pinned by
+expected `archive.zip` sha256 and refuses a body it cannot identify, and every mode defaults to
+`LIVE_RUNTIME` / `LIVE_ARCHIVE_SHA256`. Pricing checks the same sha before it will price. A future arm
+cannot silently inherit a stale body the way this one nearly did.
+
+Reading the odd frames from the to1 decode remains valid and is not a shortcut: carrier edits touch only
+even frames, `br1` reads only `raw[2i+1]`, and up3 measured the decoded tokens byte-identical to the
+pointer.
+
+Genus: `[[a_delta_without_its_baseline_is_unanchored_and_baselines_move_20260803]]` — and it fired inside
+a single working day, on an arm whose charter named the older body as current.
 
 ## Composability with the live `jg3` fleet
 
