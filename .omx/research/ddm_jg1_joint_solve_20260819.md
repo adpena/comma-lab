@@ -233,4 +233,72 @@ established is the right one because seg is one graph with one hub:
    boundary is a far cheaper thing to fix than an erased structure, and it is the natural
    target of a one-cell pre-distortion.
 
+---
+
+## S1c — THE MOVE CLASS DECIDES THE SIGN. BLOCK MOVES FAIL; COORDINATE MOVES WORK.
+
+Every number below is REALIZED: the proposed token field goes through the receiver's own
+forward model (byte-exact per S1b control 2) and then through the frozen CPU SegNet.
+Nothing is predicted, linearised, or scored on a surrogate.
+
+### The block move — dilate the correct class around each failing cell — FAILS, hard
+
+n=6 seeded-random pairs, 268 base flips, DALI lineage:
+
+| family | tokens changed | flips repaired | % of debt | cells/token |
+|---|---:|---:|---:|---:|
+| `all_r0` (write GT only where the token is wrong) | 12 | **+9** | **+3.36%** | +0.750 |
+| `all_r1` (disk radius 1) | 576 | **-148** | -55.22% | -0.257 |
+| `all_r2` (disk radius 2) | 1,611 | **-942** | -351.49% | -0.585 |
+| `roadlane_r1` (restricted to the hub edge) | 326 | -117 | -43.66% | -0.359 |
+| `roadlane_r2` | 917 | -592 | -220.90% | -0.646 |
+
+Dilation is **strongly counterproductive**, and monotonically worse with radius. The
+mechanism is not subtle: widening a class in the token map paints a wider class in RGB,
+and SegNet faithfully reports the wider class — so the boundary simply moves to the other
+side and the new flips outnumber the repairs. `all_r0` independently reproduces S1a's
+predicted ~4% ceiling (+3.36%), which is a good check on both.
+
+### The coordinate move — ONE token, to an adjacent cell — WORKS
+
+Same instrument, 18 seeded-random flip sites over 3 seeded-random pairs, 40 realized
+evaluations, each move a SINGLE token set to the GT class at the failing cell or one of
+its four neighbours:
+
+| quantity | measured |
+|---|---:|
+| flip sites with an improving single-cell move | **12 / 18 (67%)** |
+| mean cells repaired per accepted move | **1.50** |
+| total cells repaired | 18, from 12 changed tokens |
+| **cells repaired per changed token** | **1.50** |
+| **break-even HPAC budget** | **15.3 bits/token** |
+
+**The winning move is almost always a single ADJACENT cell** — `(y, x-1)`, `(y+1, x)` —
+i.e. the minimal one-cell shift of a displaced boundary, exactly the mechanism S1b's
+ledger predicted when it measured the Road<->Lane debt as displacement rather than
+erasure.
+
+**This is up2's method law reproduced on a different axis and a different actuator.**
+There, a gradient LM solve was correct in its Jacobian and realized WORSE at every
+damping, while lattice coordinate descent with realized acceptance converged. Here a
+block/dilation move realizes worse at every radius, while the single-coordinate move
+realizes better at 67% of sites. **The failure of the block move is not evidence that the
+token actuator refuses — it is evidence that the move class was wrong**, and any prior
+verdict drawn from a block-shaped or blind-search proposal is scoped to that formulation,
+not to the actuator.
+
+### What is now the ONLY open question on this axis
+
+The seg side is measured and positive: 1.50 repaired cells per changed token. Against the
+S0 exchange rate (1 cell = 1.273 B = 10.18 bits) that buys a budget of **15.3 bits per
+changed token**. The field averages 0.00745 bits/token, so the IHS1 context model is very
+confident and a flip against it is not cheap.
+
+**Everything therefore reduces to one measurable number: what does the shipped IHS1 model
+actually charge for one changed token?** Under 15.3 bits, the seg axis opens; over it,
+it closes. That number is not estimated here — a re-encoder exists
+(`experiments/ddm_rr2_encoder_byteclose.py` + the `ddm_rr2_encoder_build` custody), so it
+can be MEASURED byte-closed rather than modelled. That is the next measurement, and it is
+the one that decides the axis.
+
 *(S2/S3 sections follow as they are measured.)*

@@ -493,8 +493,123 @@ def flip_ledger(
 
 
 # --------------------------------------------------------------------------------------
-# CLI
+# S1b -- pre-distortion proposals, and realized acceptance
 # --------------------------------------------------------------------------------------
+
+
+def _disk_offsets(radius: int) -> list[tuple[int, int]]:
+    """Integer disk of the given radius, including the centre."""
+    out = []
+    for dy in range(-radius, radius + 1):
+        for dx in range(-radius, radius + 1):
+            if dy * dy + dx * dx <= radius * radius:
+                out.append((dy, dx))
+    return out
+
+
+def propose_predistortion(
+    tokens_pair: np.ndarray,
+    argmax_pair: np.ndarray,
+    gt_pair: np.ndarray,
+    *,
+    radius: int,
+    edges: Sequence[tuple[int, int]] | None = None,
+) -> np.ndarray:
+    """Pre-distort the token map so the RENDERED frame re-segments closer to GT.
+
+    The mechanism is forced by the alphabet.  A token is one of five CLASS LABELS --
+    there is no "more strongly Road" symbol to write at a failing cell, and at 95.9% of
+    failing cells the token is ALREADY the right class (S1a).  So the only available
+    lever is SPATIAL: re-label a cell's neighbours to move the painted boundary.
+
+    For every cell where ``argmax != gt`` (optionally restricted to a set of ordered
+    class edges ``(gt_class, our_class)``), this writes ``gt`` into a disk of the given
+    radius.  ``radius=0`` is the degenerate "just store the right label" move, which
+    S1a already showed can reach at most ~4% of the debt; ``radius>=1`` is the actual
+    pre-distortion: it WIDENS the class the scorer is failing to see, at the cost of
+    overwriting neighbours that may have been correct.
+
+    That cost is real and is exactly why acceptance must be REALIZED rather than
+    predicted -- the move creates new flips as well as repairing old ones, and only the
+    frozen scorer knows the net.
+    """
+    proposal = tokens_pair.copy()
+    wrong = argmax_pair != gt_pair
+    if edges is not None:
+        mask = np.zeros_like(wrong)
+        for gt_class, our_class in edges:
+            mask |= (gt_pair == gt_class) & (argmax_pair == our_class)
+        wrong &= mask
+    ys, xs = np.nonzero(wrong)
+    if ys.size == 0:
+        return proposal
+    height, width = tokens_pair.shape
+    for dy, dx in _disk_offsets(radius):
+        yy = np.clip(ys + dy, 0, height - 1)
+        xx = np.clip(xs + dx, 0, width - 1)
+        proposal[yy, xx] = gt_pair[ys, xs]
+    return proposal
+
+
+@dataclass(frozen=True)
+class ProposalResult:
+    """One realized proposal, priced on both the seg and the rate axis."""
+
+    pair: int
+    label: str
+    tokens_changed: int
+    flips_before: int
+    flips_after: int
+    flips_repaired: int
+    accepted: bool
+
+    @property
+    def cells_per_changed_token(self) -> float:
+        return (
+            self.flips_repaired / self.tokens_changed if self.tokens_changed else 0.0
+        )
+
+    @property
+    def break_even_bits_per_token(self) -> float:
+        """Bits per changed token this proposal can afford and still be admissible.
+
+        One repaired cell is worth ``BYTES_PER_SEG_CELL`` bytes = 8x that in bits.  So
+        a proposal that repairs ``r`` cells using ``t`` changed tokens can spend
+        ``8 * BYTES_PER_SEG_CELL * r / t`` bits per token before the rate term eats it.
+        """
+        return 8.0 * BYTES_PER_SEG_CELL * self.cells_per_changed_token
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "pair": self.pair,
+            "label": self.label,
+            "tokens_changed": self.tokens_changed,
+            "flips_before": self.flips_before,
+            "flips_after": self.flips_after,
+            "flips_repaired": self.flips_repaired,
+            "accepted": self.accepted,
+            "cells_per_changed_token": self.cells_per_changed_token,
+            "break_even_bits_per_token": self.break_even_bits_per_token,
+        }
+
+
+def evaluate_proposal(
+    semantic,
+    net,
+    proposal_tokens: np.ndarray,
+    gt_pair: np.ndarray,
+    pair: int,
+) -> tuple[int, np.ndarray]:
+    """Render the proposed tokens and re-segment: the REALIZED objective.
+
+    No surrogate, no linearisation.  The frame goes through the receiver's own forward
+    model (proven byte-exact by ``forward_model_control``) and then through the frozen
+    CPU SegNet, which is the verdict authority.
+    """
+    frame = render_frame1(semantic, proposal_tokens[None], np.array([pair]))
+    argmax = argmax_from_camera_frames(net, frame)[0]
+    return int((argmax != gt_pair).sum()), argmax
+
 
 
 def _resolve_indices(pairs: int, seed: int) -> np.ndarray:
