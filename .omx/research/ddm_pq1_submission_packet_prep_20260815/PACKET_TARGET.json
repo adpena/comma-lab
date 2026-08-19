@@ -205,5 +205,43 @@
       "token_stream_sha_assertion": "PASSED",
       "determinism_repeat_byte_identical": true
     }
+  },
+  "disclosed_superseded_rows_same_archive": {
+    "added_utc": "2026-08-19",
+    "added_by": "ddm_rv12f (round-12 F6)",
+    "why": "These archive bytes were evaluated on contest-CUDA T4 twice. The packet documented only the second row. Publishing both is what makes the runtime-tree pin checkable rather than a thing the reader has to take on trust: same archive sha, same 600 samples, same hardware class, and the score moves by 79.25 because the receiver tree differs.",
+    "archive_sha256": "35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3",
+    "archive_bytes": 177182,
+    "rows": [
+      {
+        "runtime_tree_sha256": "71c754686eba2ca3ef97847e7f0424e097025fca8f57065a70ea695561fc0b8a",
+        "status": "SUPERSEDED",
+        "axis": "contest-CUDA T4 n600",
+        "d_seg": 0.41580084,
+        "d_pose": 142.15991211,
+        "score": 79.40216174747616,
+        "decode_rc": 0,
+        "cause": "mixed-lineage assembly desync: this archive's token bytes paired with a runtime forked before the probability-model change they were encoded against. Arithmetic decoding under a mismatched model does not raise -- it emits wrong symbols from the first divergent bin onward, so the decode returned rc 0 and produced garbage frames.",
+        "why_nothing_upstream_caught_it": "receiver parse-back is structure-level: sections and shas round-trip identically under either probability model, so it cannot see the mismatch.",
+        "typed_at": ".omx/research/ddm_ck1_t4_refusal_mixed_lineage_desync_20260818.md",
+        "receipt": "/Volumes/APDataStore/pact/ddm_ck1/t4_row/MODAL_REMOTE_RESULT.json"
+      },
+      {
+        "runtime_tree_sha256": "da91e06744b94f77077303b2b760cb259aa84b078d998921fb99e018d52fff6f",
+        "status": "AUTHORITY",
+        "axis": "contest-CUDA T4 n600",
+        "d_seg": 0.00030309,
+        "d_pose": 7.77e-06,
+        "score": 0.15710198138050818,
+        "decode_rc": 0,
+        "note": "the tree shipped in this packet and validated by the authority receipt"
+      }
+    ],
+    "consequence": "For this receiver the archive hash alone does NOT determine the score. A score claim on these bytes is valid only against runtime tree da91e067...",
+    "published_on": [
+      "REPORT_PUBLIC.txt",
+      "gen4 report.txt",
+      "PR_BODY_DRAFT.md"
+    ]
   }
 }

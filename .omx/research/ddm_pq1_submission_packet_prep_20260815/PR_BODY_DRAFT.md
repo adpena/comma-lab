@@ -57,14 +57,45 @@ delta S -0.0006115966 against it.
 The intermediate row between them (177576 bytes, S 0.1571619225142182) is the same
 lineage with the row-prune applied and no compensation edit; this archive is
 -394 bytes and net delta S -5.994113e-05 against that row.
-The measured leg split against it sums to the net:
+The measured leg split against it. The exact legs sum to the net to within 1e-18;
+the values below are DISPLAYED at 5 significant figures, so adding the printed
+strings gives -5.99430e-05 rather than the net. The rounding is in the display,
+not in the arithmetic.
   rate -2.6235e-04 (-394 bytes)
   seg  +1.7400e-04
   pose +2.8407e-05
-  sum  -5.994113e-05
+  net  -5.994113e-05
+Sign determinacy: the net is a DELTA between two independently-8dp-rounded rows,
+so both rows' error bounds apply and they ADD -- 3.336608e-06 + 3.345782e-06 =
+6.682391e-06. The net is 8.97x that summed bound. Dividing by one row's bound
+alone would report 17.97x, which overstates the margin by 2.00x.
 Unlike generation 3, this candidate does NOT hold decoded state constant: the
 edit changes semantic-section values, so both distortion legs move and are paid
 for out of the rate credit. Retained fraction of the rate credit: 0.228.
+
+=== Disclosed superseded rows on these exact bytes ===
+These archive bytes have been evaluated on contest-CUDA T4 TWICE. Both rows are
+recorded here, because the difference between them is the whole reason the
+runtime tree is pinned.
+
+  runtime tree 71c754686eba2ca3ef97847e7f0424e097025fca8f57065a70ea695561fc0b8a
+    d_seg 0.41580084 | d_pose 142.15991211 | S 79.40216174747616 | SUPERSEDED
+  runtime tree da91e06744b94f77077303b2b760cb259aa84b078d998921fb99e018d52fff6f
+    d_seg 0.00030309 | d_pose 0.00000777 | S 0.15710198138050818 | AUTHORITY
+
+Same archive SHA-256, same 600 samples, same hardware class; only the receiver
+tree differs. The superseded row paired this archive's token bytes with a runtime
+forked before the probability-model change those bytes were encoded against.
+Arithmetic decoding under a mismatched probability model does not error -- it
+returns rc=0 and emits wrong symbols from the first divergent bin onward, so the
+decode "succeeded" and produced garbage frames. Structural parse-back could not
+see it, because sections and hashes round-trip correctly either way.
+
+The reason to publish this: it is the empirical demonstration that for this
+receiver the archive hash alone does NOT determine the score, and that the
+runtime-tree pin is load-bearing rather than ceremonial. A score claim on these
+bytes is valid only against runtime tree da91e067..., which is the tree shipped
+here and the one the authority receipt validated.
 
 === CPU boundary ===
 Evidence axis: [env-mismatch advisory] -- NOT a score, and NOT [contest-CPU].
@@ -78,6 +109,16 @@ It is retained as a decode-correctness proof: the rate contribution
 residual (0.00014829) matches the encoder-side authority solve to
 8 decimal places, which is what proves the composed receiver decodes the composed
 container correctly.
+
+What that proof does NOT show: the advisory numbers do not transfer to the
+authority axis, and the drift is large and asymmetric. On the SAME bytes,
+d_pose is 0.00014829 locally against 0.00000777 on the T4 -- a factor of 19.08 --
+while d_seg drifts only 1.43x (0.00043336 against 0.00030309). Recomposed, the
+local run scores 0.19982 where the authority row scores 0.15710; the whole
+0.0427 gap is distortion, since the rate leg is identical by construction. The
+float neural render is not bit-identical across microarchitectures and the pose
+head amplifies that far harder than the SegNet argmax does. This evidence
+establishes DECODE IDENTITY only, never score transfer.
 
 Status of the [contest-CPU] axis on these exact bytes: NO ROW EXISTS. The prior
 generation-3 lineage measured contest-CPU inflate at 3422.711146813 s
@@ -237,7 +278,19 @@ Four honesty qualifications we would rather state than have found:
 ## Score and runtime boundary
 
 The CUDA score is a 600-sample exact evaluation of the archive hash printed
-above through the unmodified upstream scorer. CPU and CUDA are separate axes.
+above through the unmodified upstream scorer, **against the pinned runtime tree
+`da91e067…`**. That pin is load-bearing, and we would rather show why than
+assert it: these same archive bytes were also evaluated on T4 against an earlier
+receiver tree (`71c75468…`) and scored **79.402**, with both scorers destroyed.
+That run returned rc 0 — arithmetic decoding under a mismatched probability
+model does not raise, it simply emits wrong symbols and garbage frames, and
+structural parse-back cannot see it because the sections and hashes round-trip
+either way. The row is superseded and is enumerated in `report.txt`. We publish
+it because it is the direct evidence that for this receiver **the archive hash
+alone does not determine the score**; a score claim on these bytes is valid only
+against the runtime tree shipped here.
+
+CPU and CUDA are separate axes.
 On the CPU axis we report an absence rather than a pending promise: **no
 contest-CPU row exists on these bytes.** The nearest measurement is on an
 earlier candidate in this lineage sharing the same token decoder, where CPU
@@ -252,7 +305,12 @@ wanted.
 This is the first candidate in this packet whose improvement is not purely
 rate. Against the immediately prior row in this lineage (177,576 bytes,
 S 0.1571619225142182) the measured legs are rate −2.6235e-04, SegNet
-+1.7400e-04, PoseNet +2.8407e-05, for a net of −5.994113e-05. Roughly 23% of
++1.7400e-04, PoseNet +2.8407e-05, for a net of −5.994113e-05. Those leg values
+are shown at 5 significant figures; the exact legs sum to the net to 1e-18,
+while adding the printed strings gives −5.99430e-05. The net is a difference of
+two independently-8dp-rounded rows, so both rows' error bounds apply and add
+(3.336608e-06 + 3.345782e-06 = 6.682391e-06); the net clears that summed bound
+by **8.97×**, which is what makes the sign determinate. Roughly 23% of
 the rate credit survives the two distortion payments. The seg leg came in near
 three times its pre-fire model, and the reason is a real gap in our own
 instrumentation rather than a surprise about the vehicle: we have a measured
@@ -320,7 +378,20 @@ Every number below was read from the pull request itself, not from our notes.
   `evaluate.py` (`7da71a84ce24286b…`), the frozen SegNet and PoseNet weights, the
   600-sample test list, and the 37,545,489-byte denominator.
 - **Third-party runtime** — PyTorch, NumPy, Brotli 1.2.0, and a C compiler
-  at inflate time.
+  at inflate time. **One caveat worth stating on the record: `inflate.sh` is not
+  fully self-contained.** If the evaluation image does not already provide
+  `Brotli==1.2.0`, the script requires a `uv` binary on `PATH` and **fetches the
+  pinned wheel over the network** into an isolated build directory. It downloads
+  no model, table, or video-derived payload — only that published,
+  general-purpose library — but an air-gapped runner without Brotli cannot
+  inflate. Without `uv` the receiver exits 69 with a named reason; if the pin
+  cannot be resolved it aborts with rc 1 and the resolver's error text. The T4
+  authority run **did not take this branch** (its image already had Brotli), so
+  the branch was exercised separately against a bare virtual environment proven
+  to lack Brotli, on the authority image's Python minor version: probe took the
+  fallback, fetch returned rc 0, `brotli` imported at 1.2.0 and round-tripped.
+  Receipt `SMOKE_BOOTSTRAP_BARE_VENV.json` is retained with the authority
+  receipts.
 
 ## Public source and reproducibility
 

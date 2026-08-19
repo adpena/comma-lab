@@ -27,9 +27,20 @@ the receiver is `inflate.sh`, `inflate.py`, `cpr1/`, and `runtime/`.
   contribution (0.11797822103209257) is identical to the T4 row's, and its
   pose residual (0.00014829) matches the encoder-side solve to 8 decimal
   places. That agreement is what proves the composed receiver decodes the composed
-  container correctly; the float neural render is not bit-identical across
-  microarchitectures, which is expected and is why the local seg and pose numbers
-  are not a score on either axis.
+  container correctly.
+
+  **What it does NOT show, stated plainly: the advisory numbers do not transfer
+  to the authority axis, and the drift is large and asymmetric.** On the *same
+  bytes*, `d_pose` is 0.00014829 locally against 0.00000777 on the T4 — a factor
+  of **19.08** — while `d_seg` drifts only 1.43× (0.00043336 against 0.00030309).
+  Recomposed, the local run scores 0.19982 where the authority row scores
+  0.15710; the entire 0.0427 gap is distortion, since the rate leg is identical
+  by construction. The float neural render is not bit-identical across
+  microarchitectures, and the pose head amplifies that far harder than the SegNet
+  argmax does. So this evidence establishes **decode identity — that the receiver
+  reconstructs the intended decoded state — and nothing about score transfer.**
+  Wherever this document cites the local run as proof, that is the only claim
+  being made.
 
 ## Exact identity
 
@@ -167,12 +178,34 @@ from the other.
 
 ## Dependency closure
 
-The receiver needs four things from the evaluation environment:
+The receiver needs four things from the evaluation environment, and — only when
+the second of them is missing — a fifth: a `uv` binary and network egress.
 
 - **PyTorch**, from the image.
-- **Brotli 1.2.0**, installed into an isolated build directory from a pinned
-  wheel when the environment does not already provide it; if it cannot be
-  satisfied, the receiver exits 69 with a named reason.
+- **Brotli 1.2.0**, from the image when it is already there. **When it is not,
+  `inflate.sh` reaches the network.** This is the one place the receiver is not
+  self-contained, so it is spelled out rather than summarised:
+  - The script probes for `Brotli==1.2.0`. If the probe passes, nothing else
+    happens — **this is the path the T4 authority run took**, because that image
+    already provided Brotli. The fallback below did **not** execute during the
+    measured evaluation.
+  - If the probe fails, the script requires a **`uv` binary on `PATH`** and uses
+    it to fetch a **pinned, wheel-only `Brotli==1.2.0`** into an isolated build
+    directory (`--no-deps --only-binary :all:`), which it puts on `PYTHONPATH`
+    for that run alone. **That fetch is a network operation.** An air-gapped
+    runner whose image lacks Brotli cannot complete inflation.
+  - Without `uv`, the receiver exits **69** with a named reason. If `uv` is
+    present but the pin cannot be resolved — an interpreter with no matching
+    prebuilt wheel, or no network — the script aborts under `set -e` with
+    **rc 1** and the resolver's own error text, *not* the friendly 69. Both are
+    fail-closed; only the first is diagnosed.
+  - This branch has now been exercised directly rather than assumed. Against a
+    bare virtual environment proven to lack Brotli, on the authority image's
+    Python minor version (3.11), the probe correctly took the fallback, the
+    fetch returned rc 0, and `brotli` then imported at exactly 1.2.0 and
+    round-tripped. Receipt: `SMOKE_BOOTSTRAP_BARE_VENV.json`, retained beside
+    this packet's authority receipts. The same receipt records the failure mode
+    above, reproduced on an interpreter with no matching wheel.
 - **NumPy**, from the image.
 - **A working C compiler.** `inflate.sh` compiles
   `runtime/entropy/rc64_backend.c` into the build directory on every run,
@@ -180,5 +213,8 @@ The receiver needs four things from the evaluation environment:
   `set -e` with a raw compiler error rather than a diagnosis. The evaluated T4
   image satisfies it.
 
-The receiver downloads no model, table, or video-derived payload. All
-score-bearing learned content is inside `archive.zip`.
+The receiver downloads no model, table, or video-derived payload. The only thing
+it can ever fetch is the published, general-purpose `Brotli` library at a pinned
+version — never anything derived from the video, and never anything that carries
+score-bearing content. All score-bearing learned content is inside `archive.zip`
+and is counted in the rate term.
