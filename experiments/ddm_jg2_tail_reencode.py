@@ -204,17 +204,30 @@ def join_member(sections: dict[str, bytes]) -> bytes:
     )
 
 
+#: The shipped container's central-directory metadata.  MEASURED off the pointer
+#: archive, not chosen: ``create_system = 3`` (Unix) and ``external_attr =
+#: 0x81a40000`` (mode 0o100644 << 16).  Getting these wrong costs ZERO bytes and
+#: still breaks a byte-close seal -- the first identity control this module ran used
+#: zipfile's defaults (create_system 0, external_attr 0) and produced an archive of
+#: EXACTLY the right length whose sha differed in precisely 3 bytes.  Length-equal
+#: and byte-equal are different tests; a rate measurement only needs the first, a
+#: seal needs both.
+SHIPPED_ZIP_CREATE_SYSTEM = 3
+SHIPPED_ZIP_EXTERNAL_ATTR = 0x81A40000
+SHIPPED_ZIP_DATE_TIME = (1980, 1, 1, 0, 0, 0)
+
+
 def pack_archive(member: bytes, destination: Path) -> None:
-    """Repack a single STORED member `p`, matching the shipped container shape."""
+    """Repack a single STORED member `p`, reproducing the shipped container exactly."""
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(destination.suffix + ".partial")
     if temporary.exists():
         temporary.unlink()
     with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_STORED) as archive:
-        info = zipfile.ZipInfo("p", date_time=(1980, 1, 1, 0, 0, 0))
+        info = zipfile.ZipInfo("p", date_time=SHIPPED_ZIP_DATE_TIME)
         info.compress_type = zipfile.ZIP_STORED
-        info.external_attr = 0
-        info.create_system = 0
+        info.external_attr = SHIPPED_ZIP_EXTERNAL_ATTR
+        info.create_system = SHIPPED_ZIP_CREATE_SYSTEM
         archive.writestr(info, member)
     os.replace(temporary, destination)
 

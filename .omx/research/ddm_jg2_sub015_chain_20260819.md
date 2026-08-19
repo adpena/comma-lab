@@ -329,6 +329,31 @@ So a successor may safely price rate per chunk and sum, while it may **not** sum
 (jg1 measured those decaying hard, 1.50 -> 0.390 cells/token under iteration) and may
 **not** sum compensation legs. Three axes, three different additivity laws, measured.
 
+### S1i — THE ARCHIVE-LEVEL IDENTITY CONTROL, and the 3 bytes that would have broken a seal
+
+The stream-level control (S1e) proves the coder. It does NOT prove the CONTAINER. I ran the
+archive-level control rather than arguing it followed by construction, and it **failed**:
+
+| | first attempt | after the fix |
+|---|---|---|
+| re-packed archive bytes | 176,420 (**exactly right**) | 176,420 |
+| sha vs pointer `7ce46fd7…` | **MISMATCH** | **`7ce46fd7…` — PASS** |
+| differing byte positions | **3** | 0 |
+
+The three bytes are ZIP central-directory metadata: `create_system` (shipped **3** = Unix,
+zipfile's default 0 = MS-DOS) and the two `external_attr` bytes (shipped **0x81a40000** =
+mode 0o100644 << 16, default 0). **The payload was already byte-identical.**
+
+**The lesson, and it is a seal-breaker: LENGTH-EQUAL AND BYTE-EQUAL ARE DIFFERENT TESTS.**
+A rate measurement only needs the first — which is why the +30 B result was never in danger
+(both containers are the same length, and the re-packed candidate is still 176,450 B). A
+SEAL needs the second, and this failure mode costs zero bytes, so nothing in a size-based
+check would ever surface it. It is now pinned in `SHIPPED_ZIP_*` constants with a test.
+
+Full chain, all three links MEASURED: **the encoder reproduces the shipped token stream
+byte-identically -> splicing that stream back into the pointer reproduces `7ce46fd7…`
+byte-identically -> the edited candidate is +30 B.**
+
 ---
 
 ## S2 / S3 — NOT REACHED, AND WHY, WITH THE WORK ROUTED

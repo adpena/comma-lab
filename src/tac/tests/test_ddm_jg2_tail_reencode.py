@@ -124,6 +124,22 @@ def test_pack_archive_is_deterministic_across_two_writes(tmp_path):
     assert first.read_bytes() == second.read_bytes()
 
 
+def test_pack_archive_reproduces_the_shipped_central_directory_metadata(tmp_path):
+    """These three fields cost ZERO bytes and still break a byte-close seal.
+
+    The first identity control this module ran used zipfile's defaults and produced an
+    archive of EXACTLY the right length whose sha differed in precisely 3 bytes:
+    create_system (Unix vs MS-DOS) and the two external_attr bytes.
+    """
+    out = tmp_path / "a.zip"
+    jg2.pack_archive(_member(b"H", b"S", b"C", b"T"), out)
+    with zipfile.ZipFile(out) as archive:
+        info = archive.infolist()[0]
+    assert info.create_system == jg2.SHIPPED_ZIP_CREATE_SYSTEM == 3
+    assert info.external_attr == jg2.SHIPPED_ZIP_EXTERNAL_ATTR == 0x81A40000
+    assert info.date_time == jg2.SHIPPED_ZIP_DATE_TIME == (1980, 1, 1, 0, 0, 0)
+
+
 def test_read_archive_member_refuses_extra_members(tmp_path):
     out = tmp_path / "a.zip"
     with zipfile.ZipFile(out, "w") as archive:
