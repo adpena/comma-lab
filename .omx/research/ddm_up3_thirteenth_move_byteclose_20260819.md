@@ -8,7 +8,8 @@
   This arm fired no Modal job. MAIN owns the T4 slot.
 - **cost** $0.
 - **code** `experiments/ddm_up3_carrier_splice.py` · `experiments/ddm_up3_byteclose_gate.py`
-  · `src/tac/tests/test_ddm_up3_carrier_splice.py` (32 tests) · commit `17c801b134`
+  · `src/tac/tests/test_ddm_up3_carrier_splice.py` (35 tests) · commits `17c801b134`
+  (byte-close) + `b692954b3a` (canonical carrier-section helper + the `ddm_t1h` fix)
 - **store** `/Volumes/APDataStore/pact/ddm_up3/` (`UP3_RETENTION_MANIFEST.json`, 101 files)
 - **seal** `retained/CANDIDATE_SEAL_up3_r1.json`
   sha `89de991f84e64a27155ba1e67c455c82cbc72c7d58703fdb3817818d49ee82eb` — **SEAL_VALID**
@@ -243,15 +244,28 @@ itself differs between decoders is still **OPEN and unowned**, sister of up2's �
    `/Volumes/APDataStore/pact/ddm_up3/advisory/attempt_0001`. Expected per up2 §4d: seg
    leg identical, and CPU-axis `d_pose` slightly WORSE (the two GT lineages pull opposite
    ways) — which is a quantitative prediction the receipt can falsify.
-3. **Fix `ddm_t1h_compose_pass1.py` and `ddm_t1h_build_candidate_archive.py`.** Both miss
-   the CK2 un-interleave and both use the stale `PACKED_CAP1_SECTION_BYTES = 22_183` pin.
-   They are CORRECT for the rr4 body (`reserved = 0`, packed portion 22,174 + 9) and
-   **silently wrong** for every ck2/to1-lineage body. Same defect in
-   `compose_pass1.packed_rice_bit_budget`. **Unowned.**
+3. **~~Fix `ddm_t1h_compose_pass1.py` and `ddm_t1h_build_candidate_archive.py`~~ — DONE
+   this turn, commit `b692954b3a`.** Both missed the CK2 un-interleave and both used the
+   stale `PACKED_CAP1_SECTION_BYTES = 22_183` pin, at three sites. Fixed by routing all
+   three through one canonical helper, `carrier_section_from_archive`, which
+   un-interleaves when `reserved` bit 2 is set and DERIVES the packed portion from the
+   body's own u24 counts. **Behaviour-preserving where the pin was right:** on the rr4
+   body the helper reproduces the pinned split exactly (packed 22,183 B, overlay 36 B
+   starting with `COMPENSATION_MAGIC`, `k_base` 8), asserted by a test. On the to1 body it
+   now parses instead of refusing — `packed_rice_bit_budget` reads 9,759 payload bytes,
+   78,065 shipped bits, **7 bits of slack**, which is exactly the 7 bits the candidate
+   spends. A fourth latent defect was fixed in the same pass: `compose_pass1` compressed
+   the new body WITHOUT re-interleaving it, so on a CK2 body it would have priced a stream
+   the receiver cannot decode.
 4. **The stale pin is a class, not an instance.** `residual_archive.py:81` still defines
    `PACKED_CAP1_SECTION_BYTES` even in the to1 runtime, where the live path derives the
-   portion instead. Any future tool that reaches for the constant inherits the bug. A
-   gate that refuses a fixed-length read of the packed CAP1 section is the structural fix.
+   portion instead. Any future tool that reaches for the constant inherits the bug. The
+   helper now carries **two fail-closed guards** — the derived portion must lie inside the
+   body, and the parsed `k_base` must be `< 12` — so a wrong-buffer read REFUSES loudly
+   instead of returning 177. That is the self-protection half; the remaining structural
+   fix is a preflight gate refusing a fixed-length read of the packed CAP1 section, which
+   is **BLOCKED by the Catalog #299 quota brake** (next number > 400, no operator waiver),
+   the same brake up2 hit. **Operator decision owed.**
 5. **Re-price every prior "the Rice stream absorbs this for free" claim** against the
    compressed archive rather than the payload (§ANSWER-5). up2 §4b's overlay-vs-re-encode
    verdict used payload bytes on BOTH sides, so its ordering survives; its magnitudes do
