@@ -148,13 +148,60 @@ advisory) on the same macOS-arm64 CPU instrument, 600 pairs, python token decode
 **+0.93 s, +0.16%**. Well inside budget. ck2's T4 decode was ~941 s. The local advisory
 on this arm's own tree gives the definitive figure for this tree.
 
+## The decode, measured on THIS candidate
+
+`fire_local_advisory` attempt_0002, macOS-arm64 CPU, 600 pairs, python token decoder.
+The token stage settles the whole question:
+
+| | ck2 pointer | **to1 candidate** |
+|---|---|---|
+| archive | `0aa1cada…` 176,525 B | **`50e56145…` 176,420 B** |
+| token_stream | `5b09fd78…` (fx2) | **`15054e5d…` (ma1)** |
+| hpac_blob | `e8c0cfd7…` | `e8c0cfd7…` |
+| residual_payload | `74775aab…` | `74775aab…` |
+| corrected_quantized_logit | `562ac652…` | `562ac652…` |
+| corrected_cdf_input | `dd48843b…` | `dd48843b…` |
+| **decoded token field** | **`9ba2e52b…`** | **`9ba2e52b…`** |
+| token stage | 571.43 s | 578.08 s |
+
+The candidate ships a **different token stream** and decodes to the **same token field**.
+That the stream differs is what makes the control non-vacuous — the override is provably
+in effect, not a no-op wearing its name. Everything downstream of the token field is a
+deterministic function of it and of sections this arm did not touch.
+
+Token-stage cost: **+6.66 s, +1.17%** against the pointer on the same instrument. ck2's
+T4 decode was ~941 s; this is comfortably inside the 30-minute budget.
+
+### F5: the inflated output is byte-identical
+
+    candidate  0.raw  3,662,409,600 B  ccbfa3327d0f2486f8a2d7970fe89c5d56302eb1e04714d05eabff52278f1f9d
+    pointer    0.raw  3,662,409,600 B  ccbfa3327d0f2486f8a2d7970fe89c5d56302eb1e04714d05eabff52278f1f9d
+
+Equal by sha256 **and** by a direct `cmp` of the two files on disk. F5 discharged.
+
+This closes F2 and F3 at the strongest available level. The distortion legs are not
+"equal to 8dp" — they are equal **by construction**, because the scorer is a
+deterministic function of an output that is byte-for-byte the same. So the two-row 8dp
+bound quoted above is the conservative price and no longer the binding one: the net is
+pure rate and it is exact.
+
+**The advisory is therefore unnecessary for pricing this row, and this is stated plainly
+rather than hedged**: byte-identity of the decoded output is strictly stronger evidence
+than a scorer comparison, which could only ever agree to the reported decimals. The
+advisory was run because its dominant cost *is* the decode that produced this proof; its
+scorer half is confirmatory and blocks nothing.
+
 ## What is owed
 
-The local advisory (`fire_local_advisory`, attempt_0002) is the decode that discharges
-falsifiers F2/F3 by producing `0.raw` for comparison against the pointer's
-`ccbfa3327d0f2486…` (3,662,409,600 B). **NO Modal fire from this arm — MAIN owns T4.**
-The fire-order is: the seal, then a T4 row on
+**NO Modal fire from this arm — MAIN owns T4.** The fire-order is: the seal
+(`/Volumes/APDataStore/pact/ddm_to1/seal/CANDIDATE_SEAL_to1_r1.json`, sha
+`33e9239738d7fd7a…`, `SEAL_VALID`), then a T4 row on
 `/Volumes/APDataStore/pact/ddm_to1/generations/to1_tail_override_r1`.
+
+An advisory is **not** needed to price this row: byte-identity of the decode is strictly
+stronger than a scorer comparison, because it makes the distortion legs equal by
+construction rather than equal to 8dp. The advisory was run anyway, since its dominant
+cost is the decode that produces the identity proof.
 
 ## Custody
 
