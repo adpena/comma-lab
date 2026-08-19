@@ -28917,3 +28917,18 @@ seal → T4. Memos .omx/research/ddm_sa1_vseries_v7_dead_v2_routing_20260818.md 
 - NEXT EDGE: #1131 per-candidate rc64 recipe (stale rr4-era pin diagnosed; cure = pin derived
   from the SHIPPED 5,638-B runtime member) -> ma1 byte-close on the ck2 body = twelfth-move
   candidate (~-7e-5). Pose still routes js1/js8 exclusively. Verdict memo: 827f076608.
+
+## FEED-ck2-CORRIGENDUM (2026-08-19, rc1x landing) — the rc64 "stale pin" diagnosis was WRONG
+- CORRECTION to FEED-ck2's NEXT EDGE line: the rc64 pin was NEVER STALE. 5c75e2c7 (12,222 B) is
+  the ENCODER-role body, alive at /Volumes/VertigoDataTier/pact/pr135_intake_20260810/
+  experiment_book/src/cpr1_sub4/entropy/rc64_backend.c; the shipped 5,638-B member is
+  DECODER-ONLY. Cure landed = TWO-ROLE recipe (encoder source + shipped-member pin), RR4_RECIPE
+  untouched (a6e07d42df). m53 instance x2: ma1's "158 copies, neither matches" AND MAIN's
+  git+2-tier sweep both claimed absence beyond their searched scope — NEITHER searched
+  VertigoDataTier. Scope your negative-existence claims to the trees actually swept.
+- ma1 -105 B BYTE-CLOSED on the rr4/fx2-D1 lineage (180,345 B, inflated output byte-identical
+  to D1 -> distortion fixed by construction) but CANNOT reach the live ck2 pointer through the
+  token-only rebuild: ck2 borrows sz1's token tail VERBATIM. Real twelfth-move enabler =
+  tail-override build step in ddm_sa3_rebase_sz1.py (named, unbuilt). The sealed rr4-D1
+  candidate is DOMINATED by the 176,525-B pointer — NOT fired. Also corrected: fx2 D1 was
+  never pin-blocked (byte-closed 08-17); its sealed fire-order JSON is stale.
