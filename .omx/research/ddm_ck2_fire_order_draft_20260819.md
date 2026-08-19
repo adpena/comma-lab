@@ -83,3 +83,28 @@ No paid dispatch, no seal executed, no push, no PR, no hosting. The packet re-st
 `ddm_pq1` boundary (generation 5) is a separate consumer and is not touched here.
 
 STORES CONSULTED: run-artifacts (ck1 T4 receipt + advisory_rebased/attempt_0002 contest_auth_eval.json; CK2_CUSTODY_MANIFEST.json + six compiled-archive shas; fx1/fx2 rate receipts; mz2 retained-candidate payload sha 156112d0; t1h/iv1/qs5 T4 refusal rows) · memories (cpu-to-cuda-seg-transfer-has-no-law — seg legs discounted as upper bounds; probability-model-axis-live-fx1-sweep-prior — ctx≫members>lr inherited, not re-measured; cross-regime-constant-transfer — sz1 pinned (49, 8284) re-measured on ck1 body, not transferred; the-counted-byte-is-not-fungible) · research memos (ddm_bp1 section-coding closure re-read with its INSTANCE scope on sz1 body; ddm_sz1/ck1 landing memos) · tasks ledger (#1128 tenth-move row, #1111 packet state). Not consulted: canonical_equations evaluators, graph-memory reconstruct (candidate ranked from receipts directly).
+
+## VERDICT (appended by MAIN, 2026-08-19 ~02:45Z) — ELEVENTH POINTER MOVE ADMITTED
+
+Fired per §1–2 (r2; r1 was correctly refused by the Modal single-flight gate while the ck1
+contest-CPU row was live — that row then TIMED OUT at 1800s on Modal-CPU hardware, recorded as
+a CPU-axis disclosure fact, no score). Call fc-01M0BVWYZWS9VY23G5Z24EYG0Q, wall 1,303 s, ~$0.16.
+
+ALL FOUR FALSIFIERS HOLD EXACTLY [contest-CUDA T4, n600]:
+- F1 RATE: 176,525 B; score_rate_contribution 0.1175407516998913 — exact.
+- F2 SEG: avg_segnet_dist 0.00030309 — UNCHANGED from ck1 (bit-identity confirmed at authority).
+- F3 POSE: avg_posenet_dist 7.77e-06 — UNCHANGED.
+- F4 NET: canonical_score 0.1566645120483069 vs ck1 0.15710198138050818 = -4.3746933e-04,
+  matching the projection to the last digit. 125x the -3.5e-6 bar; 65.6x the summed two-row
+  8dp bound (6.673e-06 — bounds ADD for deltas and are unequal per row).
+
+Pointer auto-moved with ZERO manual steps (firer anchor mirror ->
+experiments/results/modal_auth_eval_mirror/contest_auth_eval_ck2_plane2_t4_r2_20260819.json ->
+refresh_canonical_frontier effective 0.1566645120). Gap to 0.15: 0.0066645.
+Successor: ma1 within-miss law (-105 B, priced on THIS body) fires as the twelfth-move rate
+candidate once #1131's per-candidate rc64 recipe lands.
+
+STORES CONSULTED: run-artifacts (ck2 t4_row_r2 MODAL_REMOTE_RESULT.json + report.txt; ck1
+advisory receipt; ck1 cpu_row_r2 timeout receipt; CK2_CUSTODY_MANIFEST) · memories
+(concavity/bounds-add exact margins; single-flight binding; bp1 INSTANCE-scope) · tasks ledger
+(#1129/#1130/#1131).
