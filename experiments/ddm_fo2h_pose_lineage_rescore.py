@@ -49,8 +49,10 @@ REPO = Path(__file__).resolve().parents[1]
 if str(REPO / "experiments") not in sys.path:
     sys.path.insert(0, str(REPO / "experiments"))
 
+# MUST match ddm_rt1_eta_gate_pose_constrained.DEFAULT_RAW -- a different decode of the same
+# pointer would silently change `dec0`/`dec1` and break the eta-gate reproduction control.
 DEFAULT_RAW = Path(
-    "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/"
+    "/Volumes/APDataStore/pact/ddm_wc1_advisory_decode_wallclock_20260815/runs/"
     "base_optimized_n600_r3/output/0.raw"
 )
 DEFAULT_GT_DALI = Path(
@@ -154,6 +156,27 @@ def aggregate(rows: list[dict], key: str) -> float:
     return float(a.mean() / b.mean()) if b.mean() else float("nan")
 
 
+def lineage_verdict(pyav_agg: float, dali_agg: float, *, tol: float = 1e-12) -> str:
+    """Does the pose leg point the same way on both lineages?
+
+    A product-of-signs test alone calls the DEGENERATE case (an edit that moves pose not at all,
+    so both aggregates are exactly 1.0) a sign FLIP, which is the opposite of what it is.  The
+    identity control -- `cam_edit = dec1` -- is exactly that case and is how this was caught, so
+    it gets its own branch rather than being folded into a strict inequality.
+    """
+    import math
+    if math.isnan(pyav_agg) or math.isnan(dali_agg):
+        return "UNDETERMINED-NAN-AGGREGATE"
+    dp, dd = pyav_agg - 1.0, dali_agg - 1.0
+    if abs(dp) <= tol or abs(dd) <= tol:
+        return "DEGENERATE-NO-POSE-CHANGE"
+    if dp > 0 and dd > 0:
+        return "SIGN AGREES ACROSS LINEAGES -- both WORSEN"
+    if dp < 0 and dd < 0:
+        return "SIGN AGREES ACROSS LINEAGES -- both IMPROVE"
+    return "SIGN FLIPS ACROSS LINEAGES"
+
+
 def control_vs_eta_gate(rows: list[dict], gate_rows_path: Path) -> dict:
     """The PyAV column MUST reproduce the eta gate's retained rows, or nothing here is believable."""
     if not gate_rows_path.is_file():
@@ -206,8 +229,7 @@ def main(argv: list[str] | None = None) -> int:
 
     pyav_agg, dali_agg = aggregate(rows, "pyav"), aggregate(rows, "dali")
     ctrl = control_vs_eta_gate(rows, args.frames_dir / "ETA_GATE_ROWS.jsonl")
-    verdict = ("SIGN AGREES ACROSS LINEAGES" if (pyav_agg - 1.0) * (dali_agg - 1.0) > 0
-               else "SIGN FLIPS ACROSS LINEAGES")
+    verdict = lineage_verdict(pyav_agg, dali_agg)
 
     summary = {
         "schema": "ddm_fo2h_pose_lineage_rescore.v1",

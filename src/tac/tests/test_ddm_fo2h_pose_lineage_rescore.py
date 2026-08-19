@@ -132,3 +132,40 @@ def test_default_gt_cache_is_the_dali_one_not_the_av_one() -> None:
     """up1's CLI defaulted to the AV cache and that is the phantom-19x trap; ours must not."""
     assert "dali" in rs.DEFAULT_GT_DALI.name.lower()
     assert "gt_cache_av" not in rs.DEFAULT_GT_DALI.name.lower()
+
+
+def test_identity_edit_is_degenerate_not_a_sign_flip() -> None:
+    """The identity control (`cam_edit = dec1`) gives 1.0/1.0; calling that a FLIP is backwards.
+
+    This is the bug the identity control actually caught: a bare product-of-signs test returns 0,
+    which is not > 0, so it fell through to SIGN FLIPS.
+    """
+    assert rs.lineage_verdict(1.0, 1.0) == "DEGENERATE-NO-POSE-CHANGE"
+
+
+def test_lineage_verdict_agrees_when_both_worsen() -> None:
+    assert "both WORSEN" in rs.lineage_verdict(1.3725, 1.12)
+
+
+def test_lineage_verdict_agrees_when_both_improve() -> None:
+    assert "both IMPROVE" in rs.lineage_verdict(0.79, 0.93)
+
+
+def test_lineage_verdict_flags_the_flip_this_arm_is_hunting() -> None:
+    """PyAV says the edit hurts pose, DALI says it helps -- the case that would rescue the channel."""
+    assert rs.lineage_verdict(1.3725, 0.88) == "SIGN FLIPS ACROSS LINEAGES"
+
+
+def test_lineage_verdict_nan_is_undetermined_never_agreement() -> None:
+    assert rs.lineage_verdict(float("nan"), 1.2) == "UNDETERMINED-NAN-AGGREGATE"
+
+
+def test_default_raw_matches_the_eta_gate_raw() -> None:
+    """The eta-gate reproduction control is only meaningful if both read the SAME decode.
+
+    A first draft of this module pointed at a plausible-looking but different raw path; the run
+    failed closed on a missing file, but had that path existed it would have produced a silently
+    different `dec0`/`dec1` and a broken control.
+    """
+    gate = pytest.importorskip("ddm_rt1_eta_gate_pose_constrained")
+    assert rs.DEFAULT_RAW == gate.DEFAULT_RAW
