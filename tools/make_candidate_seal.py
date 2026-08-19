@@ -108,10 +108,55 @@ def build_parser() -> argparse.ArgumentParser:
         help="an expected archive sha you already hold; CHECKED against the measured bytes and refuses "
         "on mismatch. It is never stored as the value — the disk is.",
     )
+    ap.add_argument(
+        "--bound-base-receipt",
+        default="",
+        help="path to the BASE row's auth-eval receipt (MODAL_REMOTE_RESULT.json or the inner "
+        "contest_auth_eval.json). When given, the seal pre-registers a COMPUTED report-8dp "
+        "bound falsifier instead of a hand-typed one. Never pass a bound as a number: there "
+        "is deliberately no flag for that.",
+    )
     ap.add_argument("--sealed-by", default="MAIN")
     ap.add_argument("--notes", default="")
     ap.add_argument("--json", action="store_true", help="print the seal document to stdout")
     return ap
+
+
+def compose_bound_falsifier(base_receipt_path: str) -> str:
+    """Pre-register the report-8dp bound falsifier with COMPUTED numbers.
+
+    WHY (rv13 F3 + F9, round-12 F1 + rv13 F2). Every bound that reached a seal or
+    a memo by hand was wrong in one of three ways: divided by ONE row's bound
+    when bounds ADD for a delta (2.00x overstatement, twice); listed one row's
+    AXIS addends under a two-row total so they summed to half; or re-derived the
+    pose bound from the rounded d_pose with the linearized form, disagreeing
+    with the harness's own published field in the 4th significant figure.
+
+    At seal time only the BASE row exists, so only its half can be stated. The
+    sentence therefore states the base half, names the rule, and says plainly
+    that the candidate's own bound ADDS once measured -- which is the fact whose
+    absence caused all three defects. ``tools/report_8dp_delta_bound.py``
+    composes the full two-row sentence at adjudication time.
+    """
+    from tac.report_8dp_bounds import row_bound_from_result  # noqa: PLC0415
+
+    path = Path(base_receipt_path)
+    if not path.is_file():
+        raise SealContractError(f"--bound-base-receipt is not a file: {path}")
+    try:
+        receipt = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SealContractError(f"--bound-base-receipt is not readable JSON: {exc}") from exc
+    row = row_bound_from_result(receipt, label="base")
+    return (
+        f"report-8dp bound (COMPUTED, source={row.source}): the base row's bound is "
+        f"{row.total:.6e} = seg {row.seg:.6e} + pose {row.pose:.6e} (d_pose {row.d_pose:.6e}). "
+        f"Bounds ADD for a DELTA, so the admissible margin must be judged against "
+        f"base + candidate, NOT against this row alone -- dividing by one row's bound "
+        f"overstates the margin by exactly 2.00x when the two rows' bounds are equal. "
+        f"Compose the two-row sentence with tools/report_8dp_delta_bound.py once the "
+        f"candidate row lands. Base receipt: {path}"
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -143,6 +188,9 @@ def main(argv: list[str] | None = None) -> int:
             require_pointer_archive_identity=not args.allow_pointer_candidate_change,
         )
         receivers = tuple(args.receiver) if args.receiver else ("inflate.py", "inflate.sh")
+        falsifiers = tuple(args.falsifier)
+        if args.bound_base_receipt:
+            falsifiers = falsifiers + (compose_bound_falsifier(args.bound_base_receipt),)
         document = build_seal(
             candidate_id=args.candidate_id,
             runtime_dir=runtime_dir,
@@ -152,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
             receiver_relative_paths=receivers,
             archive_member_name=args.archive_member,
             retained_payload_paths=tuple(args.retained_path),
-            falsifiers=tuple(args.falsifier),
+            falsifiers=falsifiers,
             sealed_by=args.sealed_by,
             notes=args.notes,
         )
