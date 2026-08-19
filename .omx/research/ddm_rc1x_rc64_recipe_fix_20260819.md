@@ -121,7 +121,7 @@ any device, with no scorer run and no floating-point argument. A CPU advisory co
 re-derive a number that byte identity already fixes — so I did not spend an hour of scorer
 time to learn less. **The whole −105 B is pure rate.**
 
-### 4a. The seal
+### 3b. The seal
 
 `/Volumes/APDataStore/pact/ddm_rc1x/seal/CANDIDATE_SEAL_ma1_rr4d1.json`
 seal sha `37658fa334b464c93104ebbc7c4b55f8605974b304478a9b2586988e48ebc87b`, verdict
