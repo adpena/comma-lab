@@ -10,7 +10,12 @@
   prior verdict's EVIDENCE still supports its LABEL under the five laws — never a claim
   that the re-graded family works. REOPENED means *the negative no longer binds*, not
   *the positive is proven*. Each REOPENED row carries the measurement that would settle it.
-- **status** IN PROGRESS — written incrementally, committed at every stage boundary.
+- **status** COMPLETE. Written incrementally, committed at every stage boundary (commits
+  `fe18d2ce79`, `fc0910f614`, `5d6b47040a`, `0a5fd4eb87`, `a65fab150c`, `7ec4b62c04`).
+  **Pointer UNMOVED** at contest-CUDA `0.15652626435208142`. This arm produced no row and
+  claims none: 24 verdicts re-graded at receipt, one law restated, one apparatus ask.
+- **durable** memory `gt_lineage_pose_gap_is_additive_not_multiplicative_20260819` + its
+  MEMORY.md index line — the L1′ correction, so it is not re-lost a third time.
 
 ---
 
