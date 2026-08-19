@@ -135,9 +135,41 @@ EDITED_ROWS: Final = {
                 "cpr1/ddm_mp2_semantic_receiver.py",
             ),
         ),
-        # nosplit-only stays: the keep01 winner was nosplit and this recovery pass
-        # does not widen scope to the split byte-plane on a mode-6 body.
+        # sz1's PINNED split constants (offset 49, length 8284) were fitted to sz1's
+        # body layout; the mode-6 row-prune moves that layout and they measure +59 B --
+        # a LOSS, and the cross-regime-constant-transfer law firing on our own tool.
         "supports_semantic_split": False,
+    },
+    # ck2: the ELEVENTH move.  Same sections, same decoded state, same compensated
+    # lattice as ck1_composed -- only the container serialization changes, so d_seg and
+    # d_pose are unchanged BY CONSTRUCTION and the whole delta is exact rate.  Requires
+    # the ck2 receiver overlay, which is what teaches reserved bits 0x02/0x04.
+    "ck2_plane2": {
+        "archive": Path(
+            "/Volumes/APDataStore/pact/ddm_ck1/generations/ck1_composed/archive.zip"
+        ),
+        "sha256": "71026ec4df1918f6c3bb1ff48bc8e7ad03006cd8af15941638a2854de89a7ffa",
+        "solve_root": Path("/Volumes/APDataStore/pact/ddm_ck1/authority/ck1_composed"),
+        "d_seg_delta_cpu": 6.22e-06,
+        "d_pose_uncompensated_cpu": 3.99327e-03,
+        "runtime_overlays": (
+            (
+                Path("/Volumes/APDataStore/pact/ddm_ck1/generations/ck1_composed"),
+                "cpr1/ddm_mp2_semantic_receiver.py",
+            ),
+            (
+                Path("/Volumes/APDataStore/pact/ddm_ck2/overlay"),
+                "runtime/residual_archive.py",
+            ),
+        ),
+        "supports_semantic_split": False,
+        # Identity first (it is the ck1 pointer archive and the control every credit is
+        # read against), then the two parameter-free container transforms.
+        "container_variants": (
+            ("none", False),
+            ("plane2", False),
+            ("plane2", True),
+        ),
     },
 }
 SA2_SOLVE_ROOT: Final = SA1 / "retained/sa2/n600"
@@ -169,6 +201,13 @@ SA2_ADVISORY_D_SEG_BASE_CPU: Final = 4.2714e-04
 SZ1_RESERVED_SEMANTIC_SPLIT: Final = 0x01
 SZ1_SPLIT_OFFSET: Final = 49
 SZ1_SPLIT_LENGTH: Final = 8_284
+
+# --- ck2's parameter-free whole-section split (DDM_CK2_WHOLE_SECTION_PLANE2_V1) -------
+# Only a runtime carrying the ck2 receiver overlay decodes these bits; rows without that
+# overlay must not list plane2 variants, and the header's unknown-bit guard refuses them
+# fail-closed if they ever do.
+CK2_RESERVED_SEMANTIC_PLANE2: Final = 0x02
+CK2_RESERVED_CARRIER_PLANE2: Final = 0x04
 
 RX1_HEADER: Final = struct.Struct("<4sBBBBHHH")
 MEMBER_NAME: Final = "p"
@@ -474,14 +513,86 @@ def unsplit_region(body: bytes) -> bytes:
     return body[:start] + region.tobytes() + body[end:]
 
 
-def semantic_stream_for(body: bytes, *, split: bool) -> tuple[bytes, int]:
-    """Return (brotli stream, reserved byte) for a semantic body, split or not."""
-    if not split:
+# Container variants are labelled by these suffixes.  ``none``/``pinned`` keep their
+# PRE-ck2 spellings on purpose: SA3_REBASE.json is read by
+# ``experiments/ddm_sa3_adjudicate_advisory.py`` and cited by the packet's borrowed-
+# substrate accounting, both by the literal key ``candidate_nosplit``.  Renaming the
+# label would have been a silent dangling-callsite break.
+_VARIANT_LABEL: Final = {"none": "nosplit", "pinned": "split", "plane2": "plane2"}
+
+
+def _variant_label(mode: str, carrier_plane2: bool) -> str:
+    return f"{_VARIANT_LABEL[mode]}{'_carrier2' if carrier_plane2 else ''}"
+
+
+def plane2(body: bytes) -> bytes:
+    """Whole-section 2-plane de-interleave: even plane, odd plane, odd tail untouched.
+
+    DDM_CK2_WHOLE_SECTION_PLANE2_V1.  Unlike :func:`split_region` this fits NOTHING --
+    there is no offset and no length to carry across a body-layout change, which is
+    exactly why it survives ck1's row-prune where sz1's pinned constants do not.
+
+    The receiver's inverse is a GENERATED text artifact (it ships inside the archive
+    runtime and cannot import this module), so this pair is deliberately duplicated in
+    ``experiments/ddm_ck2_build_receiver_overlay.py``.  The two copies are not trusted
+    to agree by inspection: parse-back decodes the built archive through the generated
+    receiver and compares the recovered codes and semantic sha, so a divergence fails
+    the build rather than shipping.
+    """
+    span = len(body) & ~1
+    planes = np.frombuffer(body[:span], dtype=np.uint8)
+    return planes[0::2].tobytes() + planes[1::2].tobytes() + body[span:]
+
+
+def unplane2(body: bytes) -> bytes:
+    """Exact inverse of :func:`plane2` -- mirrors the ck2 receiver overlay."""
+    span = len(body) & ~1
+    half = span // 2
+    restored = np.empty(span, dtype=np.uint8)
+    planes = np.frombuffer(body[:span], dtype=np.uint8)
+    restored[0::2] = planes[:half]
+    restored[1::2] = planes[half:]
+    return restored.tobytes() + body[span:]
+
+
+def semantic_stream_for(body: bytes, *, mode: str) -> tuple[bytes, int]:
+    """Return (brotli stream, reserved bits) for a semantic body under one mode.
+
+    ``none``   -- byte identity, reserved 0 (what a pre-sz1 receiver reads).
+    ``pinned`` -- sz1's fitted-region split at its EXACT shipped constants.
+    ``plane2`` -- ck2's parameter-free whole-section split.
+
+    Every non-identity mode proves its own inverse here before the stream is used, so a
+    permutation bug cannot reach the archive.
+    """
+    if mode == "none":
         return brotli_stream(body), 0
-    permuted = split_region(body)
-    if unsplit_region(permuted) != body:
-        raise SA3Error("semantic split is not exactly invertible")
-    return brotli_stream(permuted), SZ1_RESERVED_SEMANTIC_SPLIT
+    if mode == "pinned":
+        permuted = split_region(body)
+        if unsplit_region(permuted) != body:
+            raise SA3Error("semantic split is not exactly invertible")
+        return brotli_stream(permuted), SZ1_RESERVED_SEMANTIC_SPLIT
+    if mode == "plane2":
+        permuted = plane2(body)
+        if unplane2(permuted) != body:
+            raise SA3Error("semantic plane2 split is not exactly invertible")
+        return brotli_stream(permuted), CK2_RESERVED_SEMANTIC_PLANE2
+    raise SA3Error(f"unknown semantic container mode: {mode!r}")
+
+
+def carrier_stream_for(body: bytes, *, plane2_split: bool) -> tuple[bytes, int]:
+    """Return (brotli stream, reserved bits) for a carrier body.
+
+    The permutation happens BEFORE brotli and is undone BEFORE the packed-CAP1 framing
+    arithmetic runs, so the decoded lattice is bit-identical and the compensated pose
+    solution is untouched by construction.
+    """
+    if not plane2_split:
+        return brotli_stream(body), 0
+    permuted = plane2(body)
+    if unplane2(permuted) != body:
+        raise SA3Error("carrier plane2 split is not exactly invertible")
+    return brotli_stream(permuted), CK2_RESERVED_CARRIER_PLANE2
 
 
 # --------------------------------------------------------------------------
@@ -542,19 +653,25 @@ def verify_parse_back(
 
 
 def build_candidate(
-    *, codes: np.ndarray, split: bool, drop_overlay: bool, output: Path,
-    runtime_root: Path, mod: SimpleNamespace, edited_archive: Path = S2_ARCHIVE,
+    *, codes: np.ndarray, semantic_mode: str, carrier_plane2: bool, drop_overlay: bool,
+    output: Path, runtime_root: Path, mod: SimpleNamespace,
+    edited_archive: Path = S2_ARCHIVE,
 ) -> dict[str, Any]:
     """Assemble sz1-tail + sz1-hpac + edited-semantic + compensated-carrier."""
     s2 = carrier_surface(edited_archive, mod)
     sz1 = sections(SZ1_GENERATION / "archive.zip")
 
     semantic_body = mod.ra._decompress_brotli(s2["semantic_stream"])
-    semantic_stream, reserved = semantic_stream_for(semantic_body, split=split)
+    semantic_stream, semantic_reserved = semantic_stream_for(
+        semantic_body, mode=semantic_mode
+    )
 
     overlay = b"" if drop_overlay else s2["overlay"]
     encoded = encode_carrier_body(codes, s2, mod, overlay)
-    carrier_stream = brotli_stream(encoded["body"])
+    carrier_stream, carrier_reserved = carrier_stream_for(
+        encoded["body"], plane2_split=carrier_plane2
+    )
+    reserved = semantic_reserved | carrier_reserved
 
     member = (
         RX1_HEADER.pack(
@@ -577,7 +694,9 @@ def build_candidate(
         "archive_sha256": hashlib.sha256(archive_bytes).hexdigest(),
         "archive_path": str(output),
         "reserved": reserved,
-        "semantic_split": split,
+        "semantic_mode": semantic_mode,
+        "semantic_split": semantic_mode == "pinned",
+        "carrier_plane2": carrier_plane2,
         "semantic_body_bytes": len(semantic_body),
         "semantic_stream_bytes": len(semantic_stream),
         "carrier_stream_bytes": len(carrier_stream),
@@ -918,19 +1037,29 @@ def main(argv: list[str] | None = None) -> int:
     # extension refuses the header outright ("invalid RX1 model metadata").  Rows on
     # such runtimes declare supports_semantic_split=False and build nosplit-only.
     supports_split = bool(row_spec.get("supports_semantic_split", True))
-    variant_plan = [
-        ("control_nosplit", base_codes, False, shipped_runtime),
-        ("control_split", base_codes, True, shipped_runtime),
-        ("candidate_nosplit", codes, False, patched_runtime),
-        ("candidate_split", codes, True, patched_runtime),
-    ]
+    # A container variant is (semantic_mode, carrier_plane2).  Rows declare the set they
+    # can actually decode; the default reproduces the pre-ck2 plan exactly, so legacy
+    # rows rebuild byte-identically.
+    container_variants = row_spec.get(
+        "container_variants", (("none", False), ("pinned", False))
+    )
     if not supports_split:
-        variant_plan = [v for v in variant_plan if not v[2]]
+        container_variants = tuple(
+            v for v in container_variants if v[0] != "pinned"
+        )
+    variant_plan = [
+        (f"{stage}_{_variant_label(mode, car)}", use_codes, mode, car, root)
+        for stage, use_codes, root in (
+            ("control", base_codes, shipped_runtime),
+            ("candidate", codes, patched_runtime),
+        )
+        for mode, car in container_variants
+    ]
 
     results: dict[str, Any] = {}
-    for label, use_codes, split, root in variant_plan:
+    for label, use_codes, mode, car, root in variant_plan:
         row = build_candidate(
-            codes=use_codes, split=split, drop_overlay=True,
+            codes=use_codes, semantic_mode=mode, carrier_plane2=car, drop_overlay=True,
             output=args.work / f"{label}.zip",
             runtime_root=root, mod=mod, edited_archive=edited_archive,
         )
@@ -980,24 +1109,28 @@ def main(argv: list[str] | None = None) -> int:
         "results": results,
         "best": best["archive_path"],
         "supports_semantic_split": supports_split,
+        "container_variants": [list(v) for v in container_variants],
+        # The compensation's byte cost, read per container variant: candidate minus its
+        # OWN control, never across variants (two credits over the same redundancy do
+        # not add -- the union-is-not-the-sum-of-its-legs law).
         "compensation_marginal_bytes": {
-            "nosplit": results["candidate_nosplit"]["archive_bytes"]
-            - results["control_nosplit"]["archive_bytes"],
-            **(
-                {
-                    "split": results["candidate_split"]["archive_bytes"]
-                    - results["control_split"]["archive_bytes"]
-                }
-                if supports_split
-                else {}
-            ),
+            _variant_label(mode, car): (
+                results[f"candidate_{_variant_label(mode, car)}"]["archive_bytes"]
+                - results[f"control_{_variant_label(mode, car)}"]["archive_bytes"]
+            )
+            for mode, car in container_variants
         },
-        "semantic_split_credit_bytes": {
-            "on_S2_edited_body": results["candidate_split"]["semantic_stream_bytes"]
-            - results["candidate_nosplit"]["semantic_stream_bytes"],
+        # Container credit is measured against this row's OWN identity variant, so it is
+        # a property of THIS body rather than a constant carried from another lineage.
+        "container_credit_bytes_vs_identity": {
+            _variant_label(mode, car): (
+                results[f"candidate_{_variant_label(mode, car)}"]["archive_bytes"]
+                - results["candidate_nosplit"]["archive_bytes"]
+            )
+            for mode, car in container_variants
         }
-        if supports_split
-        else {"on_S2_edited_body": None, "skipped": "runtime lacks split extension"},
+        if ("none", False) in tuple(tuple(v) for v in container_variants)
+        else {"skipped": "row declares no identity variant to measure against"},
     }
     if not args.no_stage:
         report["staged"] = stage_generation(
