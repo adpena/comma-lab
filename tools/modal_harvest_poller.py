@@ -132,14 +132,24 @@ def build_anchor_mirror(
     if substrate is None:
         return None, f"no canonical hardware substrate derivable (gpu_model={result.get('gpu_model')!r})"
 
+    # The runtime tree is HALF the identity of a score (rv13 F4). It is copied,
+    # never derived: the receipt records the tree the paid call actually ran.
+    runtime_tree = result.get("expected_runtime_tree_sha256") or result.get("runtime_tree_sha256")
+    runtime_tree = runtime_tree if isinstance(runtime_tree, str) and runtime_tree else None
+
     payload: dict[str, Any] = {
-        "schema": "modal_auth_eval_anchor_mirror.v1",
+        "schema": "modal_auth_eval_anchor_mirror.v2",
         "score": score,
         "score_axis": result.get("score_axis"),
         "evidence_grade": result.get("evidence_grade"),
         "archive_sha256": sha,
         "archive_size_bytes": result.get("archive_size_bytes")
         or result.get("expected_archive_size_bytes"),
+        # --- receiver identity (v2, rv13 F4) ---------------------------
+        "runtime_tree_sha256": runtime_tree,
+        "inflate_sh_rel": result.get("inflate_sh_rel"),
+        "inflate_device_policy": result.get("inflate_device_policy"),
+        "submission_dir_zip_sha256": result.get("submission_dir_zip_sha256"),
         "avg_segnet_dist": result.get("avg_segnet_dist"),
         "avg_posenet_dist": result.get("avg_posenet_dist"),
         "n_samples": result.get("n_samples"),
@@ -147,6 +157,7 @@ def build_anchor_mirror(
         "gpu_t4_match": result.get("gpu_t4_match"),
         "gpu_model_raw": result.get("gpu_model"),
         "lane_id": lane_id,
+        "measured_at_utc": result.get("measured_at_utc") or result.get("harvested_at_utc"),
         "source_receipt": str(source_receipt),
         "source_receipt_sha256": hashlib.sha256(source_receipt.read_bytes()).hexdigest()
         if source_receipt.is_file()
@@ -157,7 +168,11 @@ def build_anchor_mirror(
             "at the harvest --output-dir; only scalars are mirrored here so "
             "tac.frontier_scan can see a row that landed on an SSD path outside "
             "experiments/results. Fields copied from the harvested result, never "
-            "hand-typed; score is recomputed-from-components, never final_score."
+            "hand-typed; score is recomputed-from-components, never final_score. "
+            "v2 adds runtime_tree_sha256: a score is a function of (archive, "
+            "runtime tree), and v1 keyed on the archive alone -- which let ONE "
+            "archive sha carry two contradictory passing contest-CUDA scores "
+            "(rv13 F4, measured)."
         ),
     }
     return payload, None
@@ -220,6 +235,190 @@ def write_anchor_mirror(
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     print(f"MIRROR: {path}")
     return path
+
+
+def backfill_runtime_custody(
+    mirror_path: pathlib.Path,
+    *,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Upgrade one v1 anchor mirror to v2 by recovering its runtime-tree sha.
+
+    This is RECOVERY, not repair-by-assertion. The value is read from the
+    ``source_receipt`` the mirror already pins by sha256, and the receipt is
+    re-hashed and checked against that pin BEFORE anything is copied. If the
+    receipt is absent or its bytes have moved, the row is left exactly as it is
+    and the reason is returned. Nothing is ever hand-typed, and a row whose
+    custody cannot be PROVED keeps its honest ``runtime_custody=missing`` stamp
+    rather than acquiring a plausible-looking one.
+
+    Returns a verdict dict; never raises on a single bad row.
+    """
+    verdict: dict[str, Any] = {"path": str(mirror_path), "action": None, "reason": None}
+    try:
+        payload = json.loads(mirror_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        verdict.update(action="skipped", reason=f"unreadable mirror: {type(exc).__name__}")
+        return verdict
+    if not isinstance(payload, dict):
+        verdict.update(action="skipped", reason="mirror is not a JSON object")
+        return verdict
+    if payload.get("runtime_tree_sha256"):
+        verdict.update(action="already_pinned", reason="runtime_tree_sha256 already present")
+        return verdict
+
+    receipt_path_str = payload.get("source_receipt")
+    pinned_sha = payload.get("source_receipt_sha256")
+    if not receipt_path_str or not pinned_sha:
+        verdict.update(action="refused", reason="mirror carries no hash-pinned source_receipt")
+        return verdict
+    receipt_path = pathlib.Path(receipt_path_str)
+    if not receipt_path.is_file():
+        verdict.update(action="refused", reason=f"source receipt not on disk: {receipt_path}")
+        return verdict
+    measured_sha = hashlib.sha256(receipt_path.read_bytes()).hexdigest()
+    if measured_sha != pinned_sha:
+        # The pin is the whole point. A receipt whose bytes moved is not the
+        # receipt this row was written from, and copying from it would forge
+        # custody rather than recover it.
+        verdict.update(
+            action="refused",
+            reason=f"source receipt sha mismatch (pinned {pinned_sha[:16]}…, measured {measured_sha[:16]}…)",
+        )
+        return verdict
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        verdict.update(action="refused", reason=f"unreadable receipt: {type(exc).__name__}")
+        return verdict
+
+    runtime_tree = receipt.get("expected_runtime_tree_sha256") or receipt.get("runtime_tree_sha256")
+    if not isinstance(runtime_tree, str) or not runtime_tree:
+        verdict.update(action="refused", reason="receipt carries no expected_runtime_tree_sha256")
+        return verdict
+
+    updated = dict(payload)
+    updated["schema"] = "modal_auth_eval_anchor_mirror.v2"
+    updated["runtime_tree_sha256"] = runtime_tree
+    for key in ("inflate_sh_rel", "inflate_device_policy", "submission_dir_zip_sha256"):
+        if updated.get(key) is None and receipt.get(key) is not None:
+            updated[key] = receipt.get(key)
+    updated["runtime_custody_backfilled"] = (
+        "recovered from the hash-pinned source_receipt (sha verified before copy); "
+        "the v1 writer never emitted this field (rv13 F4)"
+    )
+    verdict.update(action="backfilled", runtime_tree_sha256=runtime_tree, reason=None)
+    if not dry_run:
+        mirror_path.write_text(json.dumps(updated, indent=2), encoding="utf-8")
+    return verdict
+
+
+def _harvest_outcome_facts(result: Any) -> dict[str, Any]:
+    """The scored facts a harvested ledger row should carry, COPIED not derived.
+
+    rv13 F7 (systemic half): the last 20 ``harvested`` rows all carried
+    ``score: null``, ``score_axis: null``, ``archive_sha256: null``. The ledger
+    recorded THAT a harvest happened and never WHAT it scored, so every spend or
+    provenance question had to be answered from a memo instead of the ledger.
+
+    ``score`` is read ONLY from ``score_recomputed_from_components``. There is
+    deliberately no fallback to ``final_score`` -- that field is rounded to 2dp
+    (0.16 on the live row) and CLAUDE.md forbids reading it as a score. A
+    fallback is exactly how a rounded number becomes an anchor.
+    """
+    if not isinstance(result, dict):
+        return {}
+    facts: dict[str, Any] = {}
+    score = result.get("score_recomputed_from_components")
+    if isinstance(score, (int, float)) and not isinstance(score, bool):
+        facts["score"] = float(score)
+    for ledger_key, receipt_keys in (
+        ("score_axis", ("score_axis",)),
+        ("archive_sha256", ("expected_archive_sha256", "archive_sha256")),
+        ("archive_bytes", ("archive_size_bytes", "expected_archive_size_bytes")),
+        ("evidence_grade", ("evidence_grade",)),
+    ):
+        for key in receipt_keys:
+            value = result.get(key)
+            if value is not None:
+                facts[ledger_key] = value
+                break
+    return facts
+
+
+def _close_terminal_claim(
+    *,
+    lane_id: str | None,
+    call_id: str,
+    result: Any,
+    out_dir: pathlib.Path,
+    repo_root: pathlib.Path = REPO_ROOT,
+) -> str | None:
+    """Append the terminal dispatch-claim row for a harvested fire.
+
+    CLAUDE.md binds: *"When your dispatch completes (success or fail): append a
+    terminal row with the same lane_id and instance/job_id ... Do not leave
+    completed jobs as phantom active claims."* rv13 F7 measured the twelfth
+    pointer move (to1) sitting at ``active_modal_auth_eval_spawning`` with the
+    job long finished, because nothing on the harvest path ever closed it.
+
+    Closing here rather than in a hand-edit is the no-manual-dispatch binding:
+    the closer is armed at dispatch and MAIN only adjudicates. A close that
+    fails NEVER fails the harvest -- the payload and the ledger row are already
+    durable, and losing a real harvested row to a bookkeeping error would be a
+    strictly worse outcome than a claim that needs one manual close. The failure
+    is written to disk so it stays discoverable instead of only absent.
+    """
+    if not lane_id:
+        return "CLAIM NOT CLOSED: no --lane-id passed; the claim ledger is lane-keyed"
+    try:
+        sys.path.insert(0, REPO_SRC)
+        from tac.deploy.claims import DispatchClaimSpec, terminal_dispatch_claim
+
+        passed = isinstance(result, dict) and result.get("passed") is True
+        status = (
+            "completed_contest_cuda_exact_eval_harvested"
+            if passed
+            else "completed_modal_auth_eval_harvested_not_passed"
+        )
+        score = result.get("score_recomputed_from_components") if isinstance(result, dict) else None
+        note = (
+            f"auto-closed by modal_harvest_poller at harvest; call {call_id} rc=0"
+            + (f"; score_recomputed_from_components={score}" if score is not None else "")
+        )
+        terminal_dispatch_claim(
+            repo_root=repo_root,
+            spec=DispatchClaimSpec(
+                lane_id=lane_id,
+                instance_job_id=call_id,
+                agent="MAIN",
+                platform="modal",
+                notes=note,
+            ),
+            status=status,
+            notes=note,
+        )
+        return f"CLAIM CLOSED: {lane_id} / {call_id} -> {status}"
+    except Exception as exc:  # never fail a real harvest on bookkeeping
+        (out_dir / "CLAIM_CLOSE_FAILED.json").write_text(
+            json.dumps(
+                {
+                    "schema": "modal_harvest_claim_close_failed.v1",
+                    "lane_id": lane_id,
+                    "call_id": call_id,
+                    "error_class": type(exc).__name__,
+                    "error": str(exc)[:500],
+                    "consequence": (
+                        "the dispatch claim for this lane is still ACTIVE and will read as a "
+                        "phantom; close it with tools/claim_lane_dispatch.py claim --force "
+                        "--status completed_contest_cuda_exact_eval_harvested"
+                    ),
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        return f"CLAIM CLOSE FAILED ({type(exc).__name__}): {exc}"
 
 
 def poll_modal_call(
@@ -314,14 +513,27 @@ def main() -> int:
         # answered from memo prose. Record what is measured; never synthesise
         # cost from a rate table (the one row where a real cost_actual_usd and
         # an elapsed both exist proved a published-rate estimate 2.8x high).
+        #
+        # ``lane_id`` is threaded here (rv13 F7). The ``dispatched`` row carries
+        # it; the ``harvested`` row used to drop it, so a LANE-KEYED reconcile
+        # could not see any completed fire and classified every one of them as a
+        # "provable phantom". That is not hypothetical: ck2's terminal row states
+        # `stale_superseded_reconciled_no_live_call` for a call that had already
+        # harvested rc=0 under that exact lane 1h52m earlier, and two claims had
+        # to be closed by hand with --force. The scored facts go in for the same
+        # reason: the last 20 harvested rows recorded THAT a harvest happened and
+        # never WHAT it scored.
+        outcome_facts = _harvest_outcome_facts(r)
         update_call_id_outcome(
             call_id=args.call_id,
             status="harvested",
             rc=0,
             agent="MAIN",
+            lane_id=args.lane_id,
             elapsed_seconds=_result_elapsed_seconds(r),
             gpu=_result_gpu(r),
             harvest_result={"result_path": str(result_path)},
+            **outcome_facts,
         )
         if not args.no_anchor_mirror:
             write_anchor_mirror(
@@ -331,6 +543,14 @@ def main() -> int:
                 lane_id=args.lane_id,
                 out_dir=out,
             )
+        close_note = _close_terminal_claim(
+            lane_id=args.lane_id,
+            call_id=args.call_id,
+            result=r,
+            out_dir=out,
+        )
+        if close_note:
+            print(close_note)
         (out / "poller.done").write_text("ok\n")
         return 0
 

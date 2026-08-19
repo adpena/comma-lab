@@ -32,18 +32,33 @@ from __future__ import annotations
 import json
 import os
 import re
+import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
+
+
+class RuntimeCustodyWarning(UserWarning):
+    """A frontier anchor row carries a score without the runtime tree that produced it.
+
+    Its own category (not a bare ``UserWarning``) so a consumer can escalate it
+    to an error with ``warnings.simplefilter("error", RuntimeCustodyWarning)``
+    without also escalating unrelated warnings.
+    """
+
 
 __all__ = [
     "AXIS_LABELS",
     "FRONTIER_CITATION_SURFACE_PATHS",
     "QUALIFYING_AXES",
     "QUALIFYING_HARDWARE",
+    "RUNTIME_CUSTODY_MISSING",
+    "RUNTIME_CUSTODY_PINNED",
     "Anchor",
     "DriftRow",
+    "RuntimeCustodyWarning",
     "best_per_axis",
     "build_cpu_axis_optimal_payload",
     "build_frontier_scan_payload",
@@ -330,13 +345,130 @@ def load_experiments_results_anchors(repo_root: Path | str) -> list[Anchor]:
                     archive_sha256=str(sha),
                     hardware_substrate=str(hw).lower(),
                     source_path=str(path.relative_to(repo_root)),
-                    extra={
-                        "evidence_grade": data.get("evidence_grade"),
-                        "promotion_eligible": data.get("promotion_eligible"),
-                    },
+                    extra=_experiments_anchor_extra(data),
                 )
             )
     return out
+
+
+# ---------------------------------------------------------------------------
+# Custody carried out of an experiments/results anchor row (rv13 F4 + F12).
+# ---------------------------------------------------------------------------
+
+# The score of an archive is a function of ``(archive bytes, runtime tree)``,
+# never of the archive alone. rv13 measured the consequence on the live mirror:
+# archive ``35c318d5…`` carries BOTH 0.15710198 and 79.40216174 as
+# ``passed: true`` contest-CUDA rows, and the ONLY differing input is the
+# runtime tree (``71c75468…`` on the 79.40 row). A consumer that keys on the
+# archive sha alone cannot tell those two rows apart.
+#
+# Today's pointer is correct only by accident: ``min()`` selection happens to
+# reject the broken row, because a broken receiver can only RAISE distortion and
+# therefore RAISE S. The exposure the min-rule cannot catch is the reverse case
+# — a receiver that scores LOW for reasons the archive does not license. The
+# runtime-tree sha is precisely the custody that refuses it.
+RUNTIME_CUSTODY_PINNED = "pinned"
+RUNTIME_CUSTODY_MISSING = "missing"
+
+_ANCHOR_MIRROR_SCHEMA_PREFIX = "modal_auth_eval_anchor_mirror"
+
+
+def _first_present(data: Mapping[str, Any], *keys: str) -> Any:
+    """First non-None value among ``keys``, else None.
+
+    Deliberately NOT ``or``-chained: ``archive_size_bytes`` of 0 is a real
+    measurement and must not fall through to the next key.
+    """
+    for key in keys:
+        value = data.get(key)
+        if value is not None:
+            return value
+    return None
+
+
+def _coerce_archive_bytes(value: Any) -> int | None:
+    """Archive size as an int, or None. A non-integral size is not a size."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value.strip())
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _experiments_anchor_extra(data: Mapping[str, Any]) -> dict:
+    """Carry custody out of an ``experiments/results`` anchor row.
+
+    WHY (rv13 F12, measured RED on HEAD 2026-08-19). This loader used to build
+    ``extra`` with only ``evidence_grade`` + ``promotion_eligible``, while its
+    sister ``load_continual_learning_anchors`` carried ``archive_bytes``,
+    ``lane_id`` and ``measured_at_utc``. The anchor mirror WRITES all three
+    (``archive_size_bytes: 176420``, ``lane_id: lane_ddm_up3_…``), so three
+    populated fields were being read off disk and thrown away one line before
+    the pointer consumed them. The visible consequence was the CUDA leg's
+    ``archive_bytes: null`` / ``lane_id: null`` / ``measured_at_utc: null``,
+    which makes ``tac.candidate_seal.read_frontier_archive_identity()`` refuse
+    and turns ``test_live_pointer_supplies_a_usable_bar`` red. rv13 flagged this
+    against the ck2 refresh; the to1 and up3 refreshes reproduced it, because
+    the refresher never guarded the field it drops.
+
+    Naming reconciliation is deliberate: the mirror emits ``archive_size_bytes``
+    (the receipt's own field name) and the pointer reads ``archive_bytes``. Both
+    spellings are accepted here so neither producer has to be renamed.
+    """
+    extra: dict = {
+        "evidence_grade": data.get("evidence_grade"),
+        "promotion_eligible": data.get("promotion_eligible"),
+        "lane_id": data.get("lane_id"),
+        "measured_at_utc": _first_present(
+            data, "measured_at_utc", "harvested_at_utc", "observed_at_utc", "promoted_at_utc"
+        ),
+        "archive_bytes": _coerce_archive_bytes(
+            _first_present(data, "archive_bytes", "archive_size_bytes", "expected_archive_size_bytes")
+        ),
+    }
+
+    # --- runtime custody (rv13 F4) -------------------------------------
+    # Additive and legacy-tolerant per the fix charter: a row written before
+    # the v2 mirror schema keeps its score and its qualifying status, and is
+    # stamped MISSING so a consumer can down-rank it and a human can see why.
+    # Refusing legacy rows outright would invalidate the four good rows that
+    # already moved the pointer honestly.
+    runtime_tree = _first_present(data, "runtime_tree_sha256", "expected_runtime_tree_sha256")
+    extra["runtime_tree_sha256"] = runtime_tree if isinstance(runtime_tree, str) and runtime_tree else None
+    extra["runtime_custody"] = (
+        RUNTIME_CUSTODY_PINNED if extra["runtime_tree_sha256"] else RUNTIME_CUSTODY_MISSING
+    )
+    for key in ("receiver_sha256", "inflate_sh_rel", "inflate_device_policy", "source_receipt_sha256"):
+        value = data.get(key)
+        if value is not None:
+            extra[key] = value
+
+    schema = str(data.get("schema") or "")
+    if schema.startswith(_ANCHOR_MIRROR_SCHEMA_PREFIX):
+        extra["anchor_mirror_schema"] = schema
+        if extra["runtime_custody"] == RUNTIME_CUSTODY_MISSING:
+            # LOUD, not silent. A silent instrument is the vacuity==pass class:
+            # the reader cannot distinguish "custody checked and fine" from
+            # "custody never checked".
+            warnings.warn(
+                "frontier anchor mirror row lacks runtime-tree custody "
+                f"(schema={schema!r}, archive={str(data.get('archive_sha256'))[:16]}…, "
+                f"lane={data.get('lane_id')!r}). The score of an archive is a function of "
+                "(archive, runtime tree); without the tree sha two receivers on ONE archive "
+                "sha are indistinguishable (rv13 F4 measured exactly that). This row is "
+                "still readable but is stamped runtime_custody=missing and should be "
+                "down-ranked against a pinned row.",
+                RuntimeCustodyWarning,
+                stacklevel=2,
+            )
+    return extra
 
 
 def collect_all_anchors(repo_root: Path | str) -> list[Anchor]:
