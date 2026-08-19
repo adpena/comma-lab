@@ -240,6 +240,68 @@ def load_route_b():
     return module
 
 
+#: ``boundary`` is re-pinned by ``begin_frame`` at the top of every frame, and
+#: ``plane`` is a construction constant, so neither has to survive a checkpoint.
+#: Everything else does.
+_CHECKPOINT_EXEMPT = frozenset({"boundary", "plane"})
+
+
+def _state_names(obj: object) -> list[str]:
+    """Every attribute the object can hold: MRO ``__slots__`` plus ``__dict__``."""
+    names: list[str] = []
+    for cls in type(obj).__mro__:
+        for name in cls.__dict__.get("__slots__", ()) or ():
+            if name not in names:
+                names.append(name)
+    for name in getattr(obj, "__dict__", {}):
+        if name not in names:
+            names.append(name)
+    return names
+
+
+def _assert_corrector_is_checkpointable(corrector: object) -> None:
+    """Refuse a corrector whose ``state_dict`` does not cover the state it owns.
+
+    ddm_jg4 root-caused a silent resume corruption in the sister re-encoder:
+    ``state_dict`` is defined ONLY on the flat ``rr4``/``rr2`` base, so pointing a
+    checkpointing encoder at a SUBCLASSED corrector saves 7 arrays and drops the
+    rest -- the logistic-mixer weights, the within-miss tables, and every
+    ``MixerFamily`` count table.  The resumed run then restarts the model cold and
+    emits a stream that is not the one a straight-through encode produces, with no
+    error anywhere.  MEASURED coverage gap by module: ``ddm_rr2_free_corrector`` 0,
+    ``ddm_rr4_free_corrector_v2`` 0, ``ddm_fx1_logistic_mixer_corrector`` 69,
+    ``ddm_fx2_model_axis_corrector`` 81, ``ddm_ma1_within_miss_corrector`` 90.
+
+    This module's DEFAULT corrector is flat and therefore unaffected -- the sealed
+    proof chain is untouched.  The guard exists because ``TAC_RR2_CORRECTOR_MODULE``
+    explicitly invites a successor module, and the deeper correctors are exactly the
+    successors it would name.  Fail closed rather than emit an unprovable stream.
+    """
+    covered = set(corrector.state_dict())  # type: ignore[attr-defined]
+    uncovered = [
+        name
+        for name in _state_names(corrector)
+        if name not in covered
+        and name not in _CHECKPOINT_EXEMPT
+        and isinstance(getattr(corrector, name, None), np.ndarray)
+    ]
+    families = getattr(corrector, "families", ()) or ()
+    for index, family in enumerate(families):
+        uncovered += [
+            f"families[{index}].{name}"
+            for name in _state_names(family)
+            if isinstance(getattr(family, name, None), np.ndarray)
+        ]
+    if uncovered:
+        raise SystemExit(
+            f"REFUSING to checkpoint {CORRECTOR_MODULE}: its state_dict covers "
+            f"{len(covered)} keys but leaves {len(uncovered)} arrays unsaved "
+            f"(e.g. {uncovered[:5]}). Resuming would restart those cold and emit a "
+            "stream a straight-through encode does not reproduce. See "
+            ".omx/research/ddm_jg4_reencoder_mirror_fix_20260819.md."
+        )
+
+
 def compile_rc64(work: Path, route_b) -> tuple[Path, dict[str, object]]:
     """Compile the granted RC64 backend plus the snapshot/resume extension."""
     if sha256_file(RC64_SOURCE) != RC64_SOURCE_SHA:
@@ -293,6 +355,7 @@ def encode_stream(
     checkpoint_path = work / f"encode_{tag}.checkpoint.npz"
     encoder_state = work / f"encode_{tag}.encoder.bin"
     corrector = FreeCorrector(PLANE)
+    _assert_corrector_is_checkpointable(corrector)
     start_frame = 0
     code_bits = 0.0
     per_frame = np.zeros(N_FRAMES, dtype=np.float64)

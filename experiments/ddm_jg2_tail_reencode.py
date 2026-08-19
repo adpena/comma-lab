@@ -58,6 +58,28 @@ RESUMABILITY (P0).  Every ``--checkpoint-every`` frames the module atomically
 writes the RC64 encoder interval snapshot, the FreeCorrector state, the previous
 frame, and the per-frame bit ledger.  ``--resume`` continues bit-faithfully.
 
+RESUME WAS THE ``ddm_jg4`` DEFECT, AND THE CURE IS STRUCTURAL.  The v1 checkpoint
+called ``corrector.state_dict()``.  That method is defined ONLY on the ``rr4``
+base class (``runtime/rr4_free_corrector.py:318``) and returns 7 keys.  The live
+``FreeCorrector`` is three subclasses deeper -- ``Ma1WithinMissCorrector`` ->
+``Fx2ModelAxisMixer`` -> ``FixedPointLogisticMixer`` -> ``rr4.FreeCorrector`` --
+and neither subclass overrides it, so the checkpoint silently dropped **9 of the
+16 arrays the corrector owns plus all 39 arrays owned by its 13 ``MixerFamily``
+members**: the 4000x13 mixer ``weights``, ``sse_weight``, ``_miss_counts`` /
+``_miss_expect`` / ``_miss_seen``, and every family's ``counts``/``hits``/
+``phat_q``.  A resumed run therefore restarted the whole model-mixing half COLD
+while reporting nothing wrong.  MEASURED: the two failing controls diverge from
+the shipped stream at exactly their own resume frame and nowhere earlier.
+
+So the capture is no longer a hand-written key list.  ``corrector_state`` walks
+the object STRUCTURALLY -- every ``__slots__`` entry on every class in the MRO,
+plus ``__dict__``, plus the same walk over ``families`` -- so a future subclass
+cannot add state the checkpoint silently forgets.  And
+``uncaptured_divergent_state`` is the detector that would have caught v1: it
+diffs the live corrector against a COLD one and refuses if any attribute that has
+moved away from cold is absent from the capture.  The checkpoint carries a schema
+tag; a v1 checkpoint is REFUSED rather than resumed.
+
 ALWAYS KEEP THE PAYLOAD.  Every stage that materializes a stream writes the
 stream bytes and the per-frame bit ledger to the store and records sha256 +
 length.  No stage reports only a length.
@@ -91,16 +113,30 @@ REPO = Path(__file__).resolve().parents[1]
 # The body.  Both paths are DERIVED from the pointer, not chosen for convenience.
 # --------------------------------------------------------------------------------------
 
-#: The runtime tree whose decoder this module mirrors.  This is the POINTER body:
-#: its ``archive.zip`` IS sha 7ce46fd7.  The sibling ``ddm_to1/generations/
-#: to1_tail_override_r1`` carries byte-identical ``runtime/`` and ``cpr1/`` trees but
-#: pins the older archive sha in its own ``inflate.py``, so it is not used here.
+#: The runtime tree whose decoder this module mirrors.  The sibling
+#: ``ddm_to1/generations/to1_tail_override_r1`` carries byte-identical ``runtime/``
+#: and ``cpr1/`` trees but pins an older archive sha in its own ``inflate.py``, so
+#: it is not used here.
 DEFAULT_RUNTIME_ROOT = Path("/Volumes/APDataStore/pact/ddm_up3/candidate_runtime")
-#: The POINTER archive.  Byte-close splices into THIS.
-DEFAULT_POINTER_ARCHIVE = DEFAULT_RUNTIME_ROOT / "archive.zip"
-POINTER_ARCHIVE_SHA = "7ce46fd7a845d5987903a0d85a56581961eb7716a55c38a7361e3b5ecae94b5f"
-POINTER_ARCHIVE_BYTES = 176_420
-POINTER_MEMBER_BYTES = 176_320
+
+#: The pointer archive is DERIVED from ``--runtime-root``, never hand-typed.
+#:
+#: v1 pinned ``POINTER_ARCHIVE_SHA = 7ce46fd7...`` (the ``ddm_up3`` body, 176,420 B).
+#: That literal was doing two jobs and only one of them honestly: it DID stop a
+#: delta being spliced into some unrelated archive, but it also welded the module to
+#: one body, so the live ``ddm_br1`` pointer (sha 44e9e650..., 176,429 B) could not
+#: be measured at all -- even though both bodies carry the SAME token stream
+#: (sha 15054e5d..., 109,696 B) and the SAME 109,792 B tail, differing only in the
+#: RX1 ``reserved`` field and 9 B of carrier.  Hand-typing br1's numbers next to
+#: up3's would just have moved the weld.
+#:
+#: What the check actually needs to guarantee is "the archive I splice into is the
+#: body whose decoder I mirrored".  That is now asserted DIRECTLY -- the pointer
+#: member must be byte-identical to ``<runtime-root>/archive.zip``'s member -- which
+#: is strictly stronger than a sha literal and holds on any body.  ``--expect-
+#: pointer-sha256`` remains available when a caller wants to nail one specific body.
+def default_pointer_archive(runtime_root: Path) -> Path:
+    return Path(runtime_root) / "archive.zip"
 
 #: The shipped decoded token field (the receiver's own HPAC decode of the tail).
 DEFAULT_TOKENS = Path(
@@ -293,10 +329,20 @@ def resolve_rc64_base(route_b, work: Path) -> Path:
     return out
 
 
-def compile_rc64(work: Path, route_b) -> tuple[Path, dict[str, object]]:
-    base = resolve_rc64_base(route_b, work)
-    generated = work / "rc64_backend_jg2.c"
-    library = work / "librc64_jg2.dylib"
+def compile_rc64(work: Path, route_b, tag: str) -> tuple[Path, dict[str, object]]:
+    """Build the RC64 encoder into a PER-STAGE directory.
+
+    The module's own docstring says the control and the edited encode may run
+    concurrently.  They could not: both compiled ``rc64_backend_jg2.c`` and linked
+    ``librc64_jg2.dylib`` at the same paths inside one ``--store``, so two live
+    stages raced on the same ``cc -o`` output.  Giving the build its own directory
+    per stage costs nothing and makes the concurrency the docstring promises real.
+    """
+    build = work / f"rc64_{tag}"
+    build.mkdir(parents=True, exist_ok=True)
+    base = resolve_rc64_base(route_b, build)
+    generated = build / "rc64_backend_jg2.c"
+    library = build / "librc64_jg2.dylib"
     source = base.read_bytes() + ("\n" + route_b.RC64_CHECKPOINT_EXTENSION).encode()
     atomic_write(generated, source)
     command = [
@@ -385,6 +431,165 @@ def apply_edits(tokens: np.ndarray, edits_path: Path | None) -> tuple[np.ndarray
 
 
 # --------------------------------------------------------------------------------------
+# CORRECTOR STATE.  Captured structurally, so a subclass cannot be forgotten.
+# --------------------------------------------------------------------------------------
+
+#: Bumped when the capture changes shape.  A v1 checkpoint (``corrector.state_dict()``,
+#: 7 keys, model-mixing half missing) is REFUSED, never resumed: it is not a slower
+#: path to the same answer, it is a different and wrong answer.
+CHECKPOINT_SCHEMA = "ddm_jg4.corrector_state.v2"
+
+#: Ledger keys the checkpoint owns.  Namespaced state keys all contain a ``.``, so
+#: they cannot collide with these -- v1's "every key except these four" filter was
+#: one careless name away from mis-restoring.
+LEDGER_KEYS = frozenset({"schema", "frame", "code_bits", "per_frame", "previous"})
+
+
+def state_names(obj: object) -> list[str]:
+    """Every attribute name the object can hold, across its whole MRO.
+
+    ``vars()`` alone is NOT enough and that is the whole point: the ``rr4`` base
+    declares ``__slots__ = ('boundary','counts','have_prev','hits','phat_q','plane',
+    'prev1','prev2','run')`` while the three subclasses above it use ``__dict__``.
+    A ``vars()`` walk silently misses the base; a ``__slots__`` walk silently misses
+    the subclasses.  Only the union sees the whole object.
+    """
+    names: list[str] = []
+    for cls in type(obj).__mro__:
+        for name in cls.__dict__.get("__slots__", ()) or ():
+            if name not in names:
+                names.append(name)
+    for name in getattr(obj, "__dict__", {}):
+        if name not in names:
+            names.append(name)
+    return sorted(names)
+
+
+def _capture_value(value: object) -> np.ndarray | None:
+    """Serialize one attribute, or ``None`` if it is not state."""
+    if isinstance(value, np.ndarray):
+        return value
+    if isinstance(value, (bool, np.bool_)):
+        return np.array([bool(value)], dtype=np.bool_)
+    if isinstance(value, (int, np.integer)) and not isinstance(value, bool):
+        return np.array([int(value)], dtype=np.int64)
+    if isinstance(value, (float, np.floating)):
+        return np.array([float(value)], dtype=np.float64)
+    return None
+
+
+def corrector_state(corrector: object) -> dict[str, np.ndarray]:
+    """Every mutable value the corrector and its families own."""
+    state: dict[str, np.ndarray] = {}
+    for name in state_names(corrector):
+        if name == "families":
+            continue  # walked below, per family
+        captured = _capture_value(getattr(corrector, name, None))
+        if captured is not None:
+            state[f"self.{name}"] = captured
+    for index, family in enumerate(getattr(corrector, "families", ()) or ()):
+        for name in state_names(family):
+            captured = _capture_value(getattr(family, name, None))
+            if captured is not None:
+                state[f"fam.{index:02d}.{name}"] = captured
+    return state
+
+
+def _resolve_target(corrector: object, key: str) -> tuple[object, str]:
+    if key.startswith("self."):
+        return corrector, key[len("self.") :]
+    if key.startswith("fam."):
+        _, index, name = key.split(".", 2)
+        return corrector.families[int(index)], name  # type: ignore[attr-defined]
+    raise Jg2Error(f"unknown corrector state key {key!r}")
+
+
+def load_corrector_state(corrector: object, state: dict[str, np.ndarray]) -> None:
+    """Restore in place, then PROVE the restore landed.
+
+    The round-trip assertion is not ceremony.  A silent partial restore is exactly
+    the defect this function exists to end, so the function refuses to return
+    having half-done its job.
+    """
+    for key, value in state.items():
+        owner, name = _resolve_target(corrector, key)
+        current = getattr(owner, name, None)
+        array = np.asarray(value)
+        if isinstance(current, np.ndarray):
+            setattr(
+                owner,
+                name,
+                np.asarray(array, dtype=current.dtype).reshape(current.shape).copy(),
+            )
+        elif isinstance(current, (bool, np.bool_)):
+            setattr(owner, name, bool(array.reshape(-1)[0]))
+        elif isinstance(current, (int, np.integer)) and not isinstance(current, bool):
+            setattr(owner, name, int(array.reshape(-1)[0]))
+        elif isinstance(current, (float, np.floating)):
+            setattr(owner, name, float(array.reshape(-1)[0]))
+        else:
+            raise Jg2Error(f"cannot restore {key}: live attribute is {type(current)!r}")
+
+    restored = corrector_state(corrector)
+    if set(restored) != set(state):
+        missing = sorted(set(state) - set(restored)) + sorted(set(restored) - set(state))
+        raise Jg2Error(f"corrector restore changed the state key set: {missing[:8]}")
+    for key, value in state.items():
+        if not np.array_equal(restored[key], np.asarray(value)):
+            raise Jg2Error(f"corrector restore did not land for {key}")
+
+
+def uncaptured_divergent_state(
+    corrector: object, cold: object, captured: set[str]
+) -> list[str]:
+    """THE DETECTOR: any attribute that has moved away from cold and is not saved.
+
+    This is what makes the cure structural rather than a longer key list.  A cold
+    corrector is the state a resumed run would silently start from, so anything that
+    differs from cold and is not in the checkpoint is, by definition, state the
+    resume would lose.  Run against v1's capture this returns the 48 arrays v1
+    dropped; run against v2's it returns nothing.
+
+    Callables (the cell/mixer/SSE rules) are construction-time and are skipped.
+    """
+    lost: list[str] = []
+
+    def compare(live_owner: object, cold_owner: object, prefix: str) -> None:
+        for name in state_names(live_owner):
+            if name == "families":
+                continue
+            live = getattr(live_owner, name, None)
+            frozen = getattr(cold_owner, name, None)
+            if callable(live) or callable(frozen):
+                continue
+            if isinstance(live, np.ndarray) or isinstance(frozen, np.ndarray):
+                same = (
+                    isinstance(live, np.ndarray)
+                    and isinstance(frozen, np.ndarray)
+                    and live.shape == frozen.shape
+                    and bool(np.array_equal(live, frozen))
+                )
+            else:
+                try:
+                    same = bool(live == frozen)
+                except Exception:  # pragma: no cover - exotic attribute
+                    same = False
+            if not same and f"{prefix}{name}" not in captured:
+                lost.append(f"{prefix}{name}")
+
+    compare(corrector, cold, "self.")
+    live_families = list(getattr(corrector, "families", ()) or ())
+    cold_families = list(getattr(cold, "families", ()) or ())
+    if len(live_families) != len(cold_families):
+        lost.append("families:length")
+    for index, (live, frozen) in enumerate(
+        zip(live_families, cold_families, strict=True)
+    ):
+        compare(live, frozen, f"fam.{index:02d}.")
+    return lost
+
+
+# --------------------------------------------------------------------------------------
 # THE MIRROR.
 # --------------------------------------------------------------------------------------
 
@@ -437,17 +642,38 @@ def encode_tail(
     per_frame = np.zeros(N_PAIRS, dtype=np.float64)
     previous_seed: np.ndarray | None = None
 
+    #: The cold reference the DETECTOR diffs against.  Built once, not per checkpoint.
+    cold = FreeCorrector(renderer.EVAL_H * renderer.EVAL_W) if checkpoint_every else None
+
     if resume and checkpoint_path.is_file() and encoder_state.is_file():
         blob = np.load(checkpoint_path, allow_pickle=False)
+        schema = str(np.asarray(blob["schema"]).reshape(-1)[0]) if "schema" in blob.files else "v1"
+        if schema != CHECKPOINT_SCHEMA:
+            raise Jg2Error(
+                f"REFUSING a {schema!r} checkpoint at {checkpoint_path}. Only "
+                f"{CHECKPOINT_SCHEMA!r} carries the full corrector state; a v1 "
+                "checkpoint drops the mixer weights and every family table, so "
+                "resuming from it silently restarts the model cold and emits a "
+                "stream that is NOT the one a straight-through encode produces. "
+                "Delete the checkpoint and re-run without --resume."
+            )
         start_frame = int(blob["frame"][0])
         code_bits = float(blob["code_bits"][0])
         per_frame = np.asarray(blob["per_frame"], dtype=np.float64).copy()
         previous_seed = np.asarray(blob["previous"], dtype=np.uint8).copy()
-        corrector.load_state_dict(
-            {k: blob[k] for k in blob.files if k not in {"frame", "code_bits", "per_frame", "previous"}}
+        load_corrector_state(
+            corrector, {k: blob[k] for k in blob.files if k not in LEDGER_KEYS}
         )
         encoder = route_b.NativeRc64Encoder(library, encoder_state.read_bytes())
-        progress({"stage": f"encode_{tag}", "event": "resumed", "frame": start_frame})
+        progress(
+            {
+                "stage": f"encode_{tag}",
+                "event": "resumed",
+                "frame": start_frame,
+                "schema": schema,
+                "state_keys_restored": len(blob.files) - len(LEDGER_KEYS),
+            }
+        )
     else:
         encoder = route_b.NativeRc64Encoder(library)
 
@@ -503,15 +729,23 @@ def encode_tail(
             previous = current
 
             if checkpoint_every and (frame + 1) % checkpoint_every == 0 and frame + 1 < frames:
+                state = corrector_state(corrector)
+                lost = uncaptured_divergent_state(corrector, cold, set(state))
+                if lost:
+                    raise Jg2Error(
+                        f"checkpoint at frame {frame + 1} would LOSE corrector state "
+                        f"that has moved away from cold: {lost}. Extend the capture "
+                        "before writing a checkpoint that cannot be resumed faithfully."
+                    )
                 atomic_write(encoder_state, encoder.snapshot())
-                state_dict = corrector.state_dict()
                 np.savez(
                     work / f"encode_{tag}.checkpoint.npz.partial.npz",
+                    schema=np.array([CHECKPOINT_SCHEMA]),
                     frame=np.array([frame + 1], dtype=np.int64),
                     code_bits=np.array([code_bits], dtype=np.float64),
                     per_frame=per_frame,
                     previous=frame_tokens,
-                    **{k: np.asarray(v) for k, v in state_dict.items()},
+                    **state,
                 )
                 os.replace(
                     work / f"encode_{tag}.checkpoint.npz.partial.npz", checkpoint_path
@@ -522,6 +756,7 @@ def encode_tail(
                         "event": "checkpoint",
                         "frame": frame + 1,
                         "code_bytes_so_far": code_bits / 8.0,
+                        "state_keys_saved": len(state),
                         "elapsed_seconds": time.perf_counter() - started,
                     }
                 )
@@ -564,11 +799,11 @@ def _row_bits(rows: np.ndarray, symbols: np.ndarray) -> float:
 # --------------------------------------------------------------------------------------
 
 
-def _prepare(args) -> dict[str, Any]:
+def _prepare(args, tag: str) -> dict[str, Any]:
     work = Path(args.store) / "work"
     work.mkdir(parents=True, exist_ok=True)
     route_b = load_route_b()
-    library, build = compile_rc64(work, route_b)
+    library, build = compile_rc64(work, route_b, tag)
     residual, renderer, renderer_dir = load_runtime(Path(args.runtime_root))
     archive = Path(args.runtime_root) / "archive.zip"
     parts = residual.read_residual_archive(archive)
@@ -598,7 +833,7 @@ def _prepare(args) -> dict[str, Any]:
 
 def stage_control(args) -> dict[str, object]:
     """Encode the UNEDITED field; refuse unless the tail is byte-identical."""
-    env = _prepare(args)
+    env = _prepare(args, f"control_{args.frames}")
     tokens = load_tokens(Path(args.tokens))
     shipped_stream = env["sections"]["token_stream"]
     result = encode_tail(
@@ -654,7 +889,7 @@ def stage_encode(args) -> dict[str, object]:
     # two encodes are independent compute, so the control is required at REPORTING time
     # rather than at start time.  That lets both run concurrently without ever letting
     # an unproven encoder emit a trusted delta.
-    env = _prepare(args)
+    env = _prepare(args, args.tag)
     tokens = load_tokens(Path(args.tokens))
     field, edit_report = apply_edits(tokens, Path(args.edits) if args.edits else None)
     result = encode_tail(
@@ -676,18 +911,24 @@ def stage_encode(args) -> dict[str, object]:
     shipped_tail = env["sections"]["tail"]
 
     # NO-FAKE: a byte delta is only the POINTER's delta if it was spliced into the
-    # pointer's own bytes.  Verify that, rather than trusting the path.
+    # pointer's own bytes.  Verify that DIRECTLY -- the archive being spliced must be
+    # the very body whose decoder this encoder mirrored -- rather than against a sha
+    # literal that only recognises one historical body.
     pointer_path = Path(args.pointer_archive)
     pointer_sha = sha256_file(pointer_path)
-    if pointer_sha != POINTER_ARCHIVE_SHA:
+    if args.expect_pointer_sha256 and pointer_sha != args.expect_pointer_sha256:
         raise Jg2Error(
-            f"--pointer-archive is not the frontier pointer: {pointer_path} has sha "
-            f"{pointer_sha}, expected {POINTER_ARCHIVE_SHA}"
+            f"--pointer-archive {pointer_path} has sha {pointer_sha}, but "
+            f"--expect-pointer-sha256 requires {args.expect_pointer_sha256}"
         )
     pointer_member = read_archive_member(pointer_path)
-    if len(pointer_member) != POINTER_MEMBER_BYTES:
+    runtime_member = read_archive_member(Path(args.runtime_root) / "archive.zip")
+    if pointer_member != runtime_member:
         raise Jg2Error(
-            f"pointer member is {len(pointer_member)} B, expected {POINTER_MEMBER_BYTES}"
+            f"--pointer-archive {pointer_path} is not the body this encoder mirrored: "
+            f"its member ({len(pointer_member)} B) differs from "
+            f"{args.runtime_root}/archive.zip ({len(runtime_member)} B). Splicing a "
+            "stream into a body whose decoder produced a different one is not a delta."
         )
     pointer_sections = split_member(pointer_member)
     if pointer_sections["tail"] != shipped_tail:
@@ -703,6 +944,17 @@ def stage_encode(args) -> dict[str, object]:
     changed = int(edit_report["tokens_changed"])
 
     control_path = Path(args.store) / "retained" / f"S1_control_{N_PAIRS}.json"
+    # The control and this encode are the same length of compute, so whichever
+    # finishes first would otherwise report UNPROVEN purely on ordering and force a
+    # hand reconciliation afterwards.  Waiting is honest -- it changes nothing about
+    # what is proved, only when this process looks.
+    if args.wait_for_control_seconds and not control_path.is_file():
+        progress({"stage": "encode", "event": "waiting_for_control",
+                  "path": str(control_path), "seconds": args.wait_for_control_seconds})
+        deadline = time.monotonic() + args.wait_for_control_seconds
+        while time.monotonic() < deadline and not control_path.is_file():
+            time.sleep(5.0)
+
     control_ok = False
     control_fact: dict[str, object] | None = None
     if control_path.is_file():
@@ -724,6 +976,8 @@ def stage_encode(args) -> dict[str, object]:
         "archive_bytes_base": base_archive_bytes,
         "archive_bytes_candidate": candidate_bytes,
         "archive_delta_bytes": delta_bytes,
+        "pointer_archive": {"path": str(pointer_path), "bytes": base_archive_bytes,
+                            "sha256": pointer_sha},
         "candidate_archive": file_fact(candidate),
         "delta_S_rate": delta_bytes * S_PER_ARCHIVE_BYTE,
         "measured_bits_per_changed_token": (delta_bytes * 8.0 / changed) if changed else None,
@@ -756,13 +1010,28 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--stage", required=True, choices=("control", "encode"))
     parser.add_argument("--store", required=True, help="custody directory for this arm")
     parser.add_argument("--runtime-root", default=str(DEFAULT_RUNTIME_ROOT))
-    parser.add_argument("--pointer-archive", default=str(DEFAULT_POINTER_ARCHIVE))
+    parser.add_argument(
+        "--pointer-archive",
+        default=None,
+        help="archive to splice into; defaults to <runtime-root>/archive.zip",
+    )
+    parser.add_argument(
+        "--expect-pointer-sha256",
+        default=None,
+        help="optional pin: refuse unless the pointer archive has this sha256",
+    )
     parser.add_argument("--tokens", default=str(DEFAULT_TOKENS))
     parser.add_argument("--edits", default=None, help="npz of {pair: (384,512) uint8}")
     parser.add_argument("--tag", default="edited")
     parser.add_argument("--frames", type=int, default=N_PAIRS)
     parser.add_argument("--checkpoint-every", type=int, default=25)
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--wait-for-control-seconds",
+        type=float,
+        default=0.0,
+        help="encode stage: poll this long for a concurrent control receipt",
+    )
     return parser
 
 
@@ -770,6 +1039,8 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.frames < 1 or args.frames > N_PAIRS:
         raise SystemExit(f"--frames must be in 1..{N_PAIRS}")
+    if args.pointer_archive is None:
+        args.pointer_archive = str(default_pointer_archive(Path(args.runtime_root)))
     stage = {"control": stage_control, "encode": stage_encode}[args.stage]
     verdict = stage(args)
     progress({"stage": args.stage, "event": "done", **{
