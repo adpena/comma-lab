@@ -1,0 +1,120 @@
+{
+  "schema": "ddm_up2_finalize.v1",
+  "label": "N600_COMPLETE",
+  "axis": "[macOS-CPU advisory, frozen CPU-torch PoseNet]",
+  "score_claim": false,
+  "promotable": false,
+  "pairs_measured": 600,
+  "field_fraction": 1.0,
+  "yuv6_patch": {
+    "frame_utils_patched": true,
+    "modules_patched": true,
+    "max_abs_error": 0.0,
+    "samples": 5
+  },
+  "gt_lineage": {
+    "cuda_axis": "dali",
+    "cpu_axis": "av_pyav"
+  },
+  "pointer": {
+    "score": 0.15659459685822907,
+    "d_pose_t4": 7.77e-06,
+    "d_seg_t4": 0.00030309,
+    "archive_bytes": 176420
+  },
+  "measured_on_solved_pairs": {
+    "d_pose_dali_before": 7.76948388629175e-06,
+    "d_pose_dali_after": 7.649246787072966e-06,
+    "dali_ratio": 0.9845244419090788,
+    "pairs_improved": 429,
+    "pairs_worsened": 0
+  },
+  "cpu_axis_cross_price": {
+    "note": "SAME frames, PyAV GT. contest-CPU is a different objective (evaluate.py:31-42).",
+    "d_pose_av_before": 0.0001482928422309965,
+    "d_pose_av_after": 0.0001483534422259292,
+    "av_ratio": 1.0004086508426235,
+    "av_over_dali_before": 19.086575685244686,
+    "helps_cpu_axis": false
+  },
+  "full_resolve_candidate": {
+    "bytes": {
+      "control_reproduces_shipped_payload": true,
+      "rice_bits_shipped": 78065,
+      "rice_bits_candidate": 78072,
+      "rice_payload_bytes_shipped": 9759,
+      "rice_payload_bytes_candidate": 9759,
+      "delta_bytes": 0,
+      "changed_coordinates": 970
+    },
+    "priced": {
+      "d_pose_start": 7.77e-06,
+      "d_pose_final": 7.649762900781215e-06,
+      "pose_leg_start": 0.008814760348415605,
+      "pose_leg_final": 0.008746292300615853,
+      "delta_score_pose": -6.846804779975235e-05,
+      "delta_bytes": 0,
+      "delta_score_rate": 0.0,
+      "delta_score_seg": 0.0,
+      "net_delta_score": -6.846804779975235e-05,
+      "summed_report_bound": 5.694506025973831e-06,
+      "net_over_bound": 12.02352714835234,
+      "resolvable_by_the_t4_report": true,
+      "d_pose_below_report_resolution": false
+    }
+  },
+  "overlay_candidate": {
+    "pairs": [
+      60,
+      64,
+      67,
+      73,
+      85,
+      92,
+      94,
+      127,
+      138,
+      182,
+      188,
+      241,
+      283,
+      284,
+      408
+    ],
+    "support_per_pair": [
+      2,
+      3,
+      4,
+      3,
+      4,
+      5,
+      3,
+      2,
+      4,
+      4,
+      2,
+      2,
+      3,
+      4,
+      6
+    ],
+    "payload_bytes": 66,
+    "any_clipped": true,
+    "priced": {
+      "d_pose_start": 7.77e-06,
+      "d_pose_final": 7.748644801801743e-06,
+      "pose_leg_start": 0.008814760348415605,
+      "pose_leg_final": 0.008802638696323814,
+      "delta_score_pose": -1.2121652091790641e-05,
+      "delta_bytes": 66,
+      "delta_score_rate": 4.3946690906063314e-05,
+      "delta_score_seg": 0.0,
+      "net_delta_score": 3.182503881427267e-05,
+      "summed_report_bound": 5.676209472655848e-06,
+      "net_over_bound": 5.6067414297488956,
+      "resolvable_by_the_t4_report": true,
+      "d_pose_below_report_resolution": false
+    }
+  },
+  "elapsed_seconds": 95.70463490486145
+}

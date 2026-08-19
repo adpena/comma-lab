@@ -1,0 +1,110 @@
+{
+  "schema": "ddm_up2_determinism_control.v1",
+  "sampled_pairs": [
+    11,
+    54,
+    119,
+    130,
+    169,
+    181,
+    235,
+    236,
+    275,
+    347
+  ],
+  "all_d_pose_bit_identical": true,
+  "all_codes_identical": true,
+  "all_passes_identical": true,
+  "rows": [
+    {
+      "pair": 11,
+      "origin_process": "solve_n600_dali",
+      "final_d_pose_ref": 2.2478841781234382e-06,
+      "final_d_pose_rerun": 2.2478841781234382e-06,
+      "d_pose_bit_identical": true,
+      "codes_identical": true,
+      "passes_identical": true
+    },
+    {
+      "pair": 54,
+      "origin_process": "solve_n600_dali",
+      "final_d_pose_ref": 1.651395543012431e-05,
+      "final_d_pose_rerun": 1.651395543012431e-05,
+      "d_pose_bit_identical": true,
+      "codes_identical": true,
+      "passes_identical": true
+    },
+    {
+      "pair": 119,
+      "origin_process": "solve_n600_dali",
+      "final_d_pose_ref": 3.6799829650444965e-07,
+      "final_d_pose_rerun": 3.6799829650444965e-07,
+      "d_pose_bit_identical": true,
+      "codes_identical": true,
+      "passes_identical": true
+    },
+    {
+      "pair": 130,
+      "origin_process": "solve_n600_dali",
+      "final_d_pose_ref": 3.2544288238271304e-06,
+      "final_d_pose_rerun": 3.2544288238271304e-06,
+      "d_pose_bit_identical": true,
+      "codes_identical": true,
+      "passes_identical": true
+    },
+    {
+      "pair": 169,
+      "origin_process": "solve_n600_dali",
+      "final_d_pose_ref": 5.195215037799572e-06,
+      "final_d_pose_rerun": 5.195215037799572e-06,
+      "d_pose_bit_identical": true,
+      "codes_identical": true,
+      "passes_identical": true
+    },
+    {
+      "pair": 181,
+      "origin_process": "solve_n600_dali",
+      "final_d_pose_ref": 2.8092408342848354e-06,
+      "final_d_pose_rerun": 2.8092408342848354e-06,
+      "d_pose_bit_identical": true,
+      "codes_identical": true,
+      "passes_identical": true
+    },
+    {
+      "pair": 235,
+      "origin_process": "shard_225_250",
+      "final_d_pose_ref": 6.065175491345535e-06,
+      "final_d_pose_rerun": 6.065175491345535e-06,
+      "d_pose_bit_identical": true,
+      "codes_identical": true,
+      "passes_identical": true
+    },
+    {
+      "pair": 236,
+      "origin_process": "shard_225_250",
+      "final_d_pose_ref": 3.178638197737227e-06,
+      "final_d_pose_rerun": 3.178638197737227e-06,
+      "d_pose_bit_identical": true,
+      "codes_identical": true,
+      "passes_identical": true
+    },
+    {
+      "pair": 275,
+      "origin_process": "shard_250_340",
+      "final_d_pose_ref": 1.3653118326103589e-05,
+      "final_d_pose_rerun": 1.3653118326103589e-05,
+      "d_pose_bit_identical": true,
+      "codes_identical": true,
+      "passes_identical": true
+    },
+    {
+      "pair": 347,
+      "origin_process": "shard_340_430",
+      "final_d_pose_ref": 8.754609203414273e-06,
+      "final_d_pose_rerun": 8.754609203414273e-06,
+      "d_pose_bit_identical": true,
+      "codes_identical": true,
+      "passes_identical": true
+    }
+  ]
+}
