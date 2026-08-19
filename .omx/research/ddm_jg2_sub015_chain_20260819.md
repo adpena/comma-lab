@@ -475,3 +475,16 @@ reproduce `7ce46fd7…` byte-identically. Then double-compile determinism, conta
 if brotli responds adversely (up3's 48 B lesson: archive ΔB ≠ payload ΔB — measure at the
 archive layer), end-to-end `inflate` rc=0 in budget, then `candidate_seal.v1` with 8dp
 falsifiers from `tac.report_8dp_bounds` (never hand-typed).
+
+---
+**CORRECTION (MAIN, 2026-08-19, from ddm_rr5's pre-stage measurement — supersedes clause 6's
+figure):** the ra2+ra1 rider is **−1.2185e-4 S (183 B realized on the pointer body)**, NOT
+−1.85e-4. Provenance of the error: ra2's own receipt says +263 B raw / ~230 B realized and
+labels the realized half PROVISIONAL; tx1 added ra1's 48 B basis_scales leg WITHOUT a
+round-trip receipt; the sum then traveled as "MEASURED" through this memo's clause 6 into
+jg3 — a provisional→measured laundering across citation hops (the borrowed-number genus).
+Corrected knife-edge arithmetic: n=12 rung 0.149987 + rider → **0.149865** (still sub-0.15,
+6.3e-5 less headroom). Now PROVEN by rr5 (d1a0ef03c6): decode-identity through the real
+receiver (3 refusing controls; C4 end-to-end render owed, running), orders COMMUTE
+byte-identically, composition exactly additive (edits +30 B, rider −183 B). Harvest command
+in .omx/research/ddm_rr5_rider_prestage_20260819.md.
