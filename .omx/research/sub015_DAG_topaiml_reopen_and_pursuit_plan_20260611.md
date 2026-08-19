@@ -28966,3 +28966,12 @@ seal → T4. Memos .omx/research/ddm_sa1_vseries_v7_dead_v2_routing_20260818.md 
 - NEXT EDGE (up2 FIRED): structural GT-lineage confirmation -> batch-shape digest probe ->
   THE FIRST POSE SOLVE AIMED AT THE SHIPPING OBJECT (uncapped GN vs DALI GT on the to1
   body) -> fail-closed GT-lineage gate. Memory: pose_gap_was_gt_cache_lineage_not_cuda.
+
+## FEED-up2-interim (2026-08-19) — DALI GT structurally CONFIRMED; shipping-object solve sharded
+- The up2 arm's in-flight commits record gate 1 PASSED: DALI is STRUCTURALLY confirmed as the
+  T4 GT lineage (source-cited, not agreement-by-coincidence) — the up1 instrument premise holds.
+  GT-lineage gate built; t1h byte pricer + report-resolution pricing landed alongside.
+- The n600 shipping-objective pose solve is LIVE: serial run banked 200/600 rows (per-pair
+  ratios ~0.96-0.99 = per-pair d_pose reductions solving against the TRUE objective), then the
+  arm re-sharded pairs 200-600 into 4+ parallel workers. Full FEED lands with the arm's verdict
+  (descent asymptote + realized d_pose* + net ΔS vs the summed report bound).
