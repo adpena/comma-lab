@@ -207,23 +207,132 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 
 # -------------------------------------------------------------------------- status
-def _live_call_state(call_id: str) -> str:
-    """Bounded liveness probe of a FunctionCall; never raises."""
+def _live_call_state(call_id: str, state: dict | None = None) -> str:
+    """Bounded liveness probe of a FunctionCall; never raises.
+
+    Terminal observations are mirrored into the canonical call-id ledger per
+    Catalog #330 before the status string is returned.
+    """
     try:
         import modal
 
         try:
-            modal.functions.FunctionCall.from_id(call_id).get(timeout=2)
+            result = modal.functions.FunctionCall.from_id(call_id).get(timeout=2)
+            # The probe already paid for the payload; persist its structured
+            # signal instead of discarding it for a bare status string.
+            _mirror_terminal_call_state(
+                call_id,
+                harvested=_ledger_signal_fields(result),
+                fallback_claim={"status": "completed_modal_result_returned"},
+                state=state,
+            )
             return "completed"
         except TimeoutError:
+            # Plain poll timeout is NONTERMINAL — leave the ledger in-flight.
             return "running"
         except Exception as exc:
             name = type(exc).__name__
             if "OutputExpired" in name:
+                _mirror_terminal_call_state(
+                    call_id, harvested={"status": "expired"}, state=state
+                )
                 return "expired(>24h)"
             return f"unknown({name})"
     except Exception:
         return "unqueryable"
+
+
+# The exact fields the canonical ledger helper reads. `fire` wraps an ARBITRARY
+# launcher command, so a returned result may carry anything (including a large
+# artifact blob). The ledger is a small shared append-only JSONL under a size
+# policy, so the probe mirrors this bounded projection rather than dumping a
+# stranger's payload into it. Nothing the helper consumes is lost; persisting the
+# ARTIFACTS is `cmd_harvest`'s job (tools/harvest_modal_calls.py --execute),
+# which writes them to their own durable path.
+_LEDGER_SIGNAL_FIELDS: tuple[str, ...] = (
+    "status",
+    "crash_kind",
+    "rc",
+    "returncode",
+    "elapsed_seconds",
+    "score",
+    "score_axis",
+    "archive_sha256",
+    "archive_bytes",
+    "evidence_grade",
+)
+
+
+def _ledger_signal_fields(result: object) -> dict | None:
+    """Project a Modal result onto the fields the call-id ledger actually reads."""
+    if not isinstance(result, dict):
+        return None
+    projected = {k: result[k] for k in _LEDGER_SIGNAL_FIELDS if k in result}
+    return projected or None
+
+
+def _mirror_terminal_call_state(
+    call_id: str,
+    *,
+    harvested: dict | None,
+    fallback_claim: dict | None = None,
+    state: dict | None = None,
+) -> None:
+    """Catalog #330 — mirror a TERMINAL Modal observation into the call-id ledger.
+
+    ``status --live`` polls ``FunctionCall.get``, which is exactly the surface
+    Catalog #330 governs: a probe that observes terminal provider state and does
+    not mirror it leaves the canonical ledger stuck at ``dispatched`` forever
+    (the harvest-side sister of the Catalog #245 dispatch-registration gap).
+
+    Delegates to the canonical helper — the same thin-wrapper shape
+    ``tools/harvest_modal_calls.py`` and ``tools/parallel_harvest_actuator.py``
+    use — so classification stays in one place. Best-effort: a read-only status
+    command must not fail because the ledger hiccuped, but the failure is
+    printed rather than swallowed so the silence never passes for success.
+    """
+    try:
+        from tac.deploy.modal.harvest_outcomes import (
+            append_terminal_call_id_ledger_event,
+            call_ledger_status_from_terminal_harvest,
+        )
+
+        # rc-derived classification wins whenever the returned payload carries
+        # one (rc=0 -> harvested, rc!=0 -> failed). Only when the payload is
+        # unclassifiable do we fall back to the weaker — but still observed —
+        # claim that the provider returned a terminal result. Never fabricate an
+        # rc we did not see.
+        terminal_claim = None
+        if (
+            fallback_claim is not None
+            and call_ledger_status_from_terminal_harvest(harvested=harvested) is None
+        ):
+            terminal_claim = fallback_claim
+
+        metadata: dict = {"call_id": call_id, "platform": "modal"}
+        if isinstance(state, dict):
+            metadata["label"] = state.get("label")
+            metadata["dispatched_at_utc"] = state.get("started_at_utc")
+
+        outcome = append_terminal_call_id_ledger_event(
+            repo_root=REPO,
+            metadata=metadata,
+            harvested=harvested,
+            terminal_claim=terminal_claim,
+            agent="modal_dispatch_status_live",
+        )
+        reason = outcome.get("reason")
+        if not outcome.get("appended") and not outcome.get("already_terminal") and reason:
+            print(
+                f"WARN: call_id ledger not updated for {call_id}: {reason}",
+                file=sys.stderr,
+            )
+    except Exception as exc:  # never break a read-only status command
+        print(
+            f"WARN: call_id ledger mirror failed for {call_id}: "
+            f"{type(exc).__name__}: {exc}",
+            file=sys.stderr,
+        )
 
 
 def cmd_status(args: argparse.Namespace) -> int:
@@ -242,7 +351,7 @@ def cmd_status(args: argparse.Namespace) -> int:
             continue
         live = ""
         if args.live and st.get("call_id"):
-            live = _live_call_state(st["call_id"])
+            live = _live_call_state(st["call_id"], st)
         rows.append(
             {
                 "dispatch_id": st.get("dispatch_id"),

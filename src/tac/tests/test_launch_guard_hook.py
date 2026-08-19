@@ -371,3 +371,130 @@ def test_trainer_safe_tokens_still_allow_governed_trainer_launches():
     trainer invocation (launch_witness_run) still passes without a hatch."""
     allow, _ = hook.decide(".venv/bin/python tools/launch_witness_run.py --dry-run", {})
     assert allow is True
+
+
+# --- #1121 waiter discipline: the STRUCTURAL half of the two-landing cure ------
+#
+# Landing 1 (5d4b1818f5) put WAITER_DISCIPLINE into every composed subagent
+# prompt -- volitional. These pin the structural refusal. The FIRST four are the
+# load-bearing ones: the canonical artifact-bound waiter and the live fleet
+# watcher chain must keep working, or this guard breaks every arm on the box.
+
+
+def test_waiter_guard_allows_the_canonical_artifact_bound_wait():
+    """`until [ -f "$DONE" ]` is exactly what arms SHOULD write. Never refuse it."""
+    for cmd in (
+        'until [ -f "$DONE" ]; do sleep 30; done; cat "$DONE"',
+        "while [ ! -f .omx/tmp/codex_runs/x.done ]; do sleep 30; done",
+        'until test -f run/receipt.json; do sleep 10; done',
+    ):
+        allow, reason = hook.decide(cmd, _ENV_CLEAN, run_in_background=True)
+        assert allow is True, f"refused the CORRECT pattern: {cmd!r} -> {reason}"
+
+
+def test_waiter_guard_allows_the_canonical_launcher_and_live_watcher_chain():
+    """The fleet-watcher chain is live on this box; refusing it severs notifications."""
+    for cmd in (
+        ".venv/bin/python tools/launch_detached_process.py --output-dir r "
+        "--done-receipt n -- python x.py",
+        'bash -c "exec .venv/bin/python tools/codex_arm_watch.py"',
+        ".venv/bin/python tools/codex_arm_queue.py saturate --spawn",
+    ):
+        allow, reason = hook.decide(cmd, _ENV_CLEAN, run_in_background=True)
+        assert allow is True, f"refused a canonical surface: {cmd!r} -> {reason}"
+
+
+def test_waiter_guard_does_not_fire_on_commands_merely_describing_waiters():
+    """grep/echo ABOUT a waiter is inspection, not a spawn (the _READONLY_HEADS rule)."""
+    for cmd in (
+        'grep -rn "while true; do sleep 60; done" scripts/',
+        'echo "while true; do sleep 5; done"',
+    ):
+        allow, _ = hook.decide(cmd, _ENV_CLEAN, run_in_background=False)
+        assert allow is True, f"false positive on inspection: {cmd!r}"
+
+
+def test_waiter_guard_ignores_foreground_and_non_sleep_loops():
+    allow, _ = hook.decide(
+        'while read l; do echo "$l"; done < f.txt', _ENV_CLEAN, run_in_background=True
+    )
+    assert allow is True
+    # A clock-bound wait in the FOREGROUND is the harness's problem, not this
+    # guard's: it cannot orphan, because it dies with the shell.
+    allow, _ = hook.decide("sleep 600", _ENV_CLEAN, run_in_background=False)
+    assert allow is True
+
+
+def test_waiter_guard_blocks_process_table_bound_background_waits():
+    """A pgrep/kill -0 wait can fire when nothing happened -- it is not an instrument."""
+    for cmd in (
+        "while pgrep -f ddm_jg1 >/dev/null; do sleep 30; done",
+        "while kill -0 12345 2>/dev/null; do sleep 5; done",
+    ):
+        allow, reason = hook.decide(cmd, _ENV_CLEAN, run_in_background=True)
+        assert allow is False, f"orphan-prone waiter allowed: {cmd!r}"
+        assert "artifact" in reason.lower()
+
+
+def test_waiter_guard_blocks_bare_clock_waits_in_background():
+    """The measured noise half: each expiry re-invokes MAIN with zero information."""
+    for cmd in ("sleep 600", "sleep 300; echo done"):
+        allow, reason = hook.decide(cmd, _ENV_CLEAN, run_in_background=True)
+        assert allow is False, f"bare clock waiter allowed: {cmd!r}"
+        assert "#1121" in reason
+
+
+def test_waiter_guard_blocks_the_measured_latent_actuator_verbatim():
+    """The 2026-08-18 ddm_iv1 shape, which launched a duplicate ~30 min late.
+
+    Blocked in the FOREGROUND too: the harm is the duplicate launch over an
+    adjudicated receipt, not the notification.
+    """
+    cmd = (
+        "until ! pgrep -f route1_search.py; do sleep 60; done; "
+        ".venv/bin/python route2.py"
+    )
+    for bg in (False, True):
+        allow, reason = hook.decide(cmd, _ENV_CLEAN, run_in_background=bg)
+        assert allow is False, "the measured latent actuator was allowed"
+        assert "latent actuator" in reason.lower()
+        assert "re-decide at fire time" in reason.lower()
+
+
+def test_waiter_guard_honours_the_explicit_override():
+    cmd = "while pgrep -f x; do sleep 30; done"
+    allow, _ = hook.decide(cmd, {"TAC_LAUNCH_GUARD_OK": "1"}, run_in_background=True)
+    assert allow is True
+
+
+def test_trainer_safe_tokens_do_not_bypass_the_waiter_block():
+    """Same lesson as the codex-spawn ordering bug: a trainer token must not buy
+    a bypass of an orphan-class violation."""
+    for tok in ("safe_run", "launch_witness_run", "--skip-admission-gate"):
+        cmd = f"while pgrep -f {tok}; do sleep 30; done"
+        allow, _ = hook.decide(cmd, _ENV_CLEAN, run_in_background=True)
+        assert allow is False, f"trainer token {tok!r} bypassed the waiter block"
+
+
+def test_waiter_guard_does_not_fire_on_a_sleep_outside_the_loop_body():
+    """Review-pass-2 regression: the `sleep` must be INSIDE the loop.
+
+    `git log | while read c; do echo $c; done && sleep 5` is an ordinary command
+    with a trailing sleep. An earlier `while.*do.*sleep` pattern (no trailing
+    `done`) matched it. On a PreToolUse Bash hook a false positive costs every
+    arm, so the allow side is the load-bearing side.
+    """
+    allow, _ = hook.decide(
+        "git log --oneline | while read c; do echo $c; done && sleep 5",
+        _ENV_CLEAN,
+        run_in_background=True,
+    )
+    assert allow is True
+
+
+def test_waiter_guard_tail_split_is_word_boundary_aware():
+    """`.done` / `--done-receipt` / 'abandoned' must not be split as the `done` keyword."""
+    allow, _ = hook.decide(
+        "until [ -f x.done ]; do sleep 30; done", _ENV_CLEAN, run_in_background=True
+    )
+    assert allow is True

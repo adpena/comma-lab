@@ -28,7 +28,11 @@ Install:
 
 Environment overrides:
     PREFLIGHT_HOOK_ENABLED=0   Skip preflight (review gate still runs)
+    PREFLIGHT_SCOPE=dev|all    Gate scope for this run. `dev` = the bounded
+                               developer stack (layer 2 above; ~23s, 60s bound).
+                               Unset = the fast 0-gate mode (default, unchanged).
     PREFLIGHT_FULL=1           Run full whole-repo preflight instead of fast mode
+                               (equivalent to PREFLIGHT_SCOPE=all; takes precedence)
     PREFLIGHT_ALLOW_SLOW=1     Explicitly allow slow release/custody preflight
     PREFLIGHT_TIMEOUT_SECONDS  Override preflight subprocess timeout
     REVIEW_GATE_ENABLED=0      Skip review gate
@@ -755,8 +759,9 @@ def _echo_preflight_scope_coverage(stderr: str) -> None:
                 file=sys.stderr,
             )
             print(
-                "  Full developer gate set: PREFLIGHT_FULL=0 "
-                ".venv/bin/python -m tac.preflight --scope dev",
+                "  Full developer gate set, through this hook: "
+                "PREFLIGHT_SCOPE=dev git commit ...   (or standalone: "
+                ".venv/bin/python -m tac.preflight --scope dev)",
                 file=sys.stderr,
             )
             return
@@ -785,13 +790,50 @@ def effective_hook_wall_clock_bound_seconds() -> int:
             + _HOOK_FIXED_OVERHEAD_SECONDS)
 
 
+def _preflight_scope() -> str:
+    """Resolve this hook run's gate scope: ``none`` | ``dev`` | ``all`` (task #905).
+
+    THREE modes, not two. Until this branch landed the hook could only choose
+    between ``--no-codebase`` (0 gates — MEASURED 0 of 27 declared, in 0.52s)
+    and ``--scope all`` (the exhaustive release/custody sweep). The bounded
+    developer stack that layer 2 of this module's docstring has advertised since
+    it was written was UNREACHABLE FROM THE HOOK: ``tac.preflight``'s own
+    ``--scope`` already defaults to ``dev``, but the hook never selected it.
+
+    That absent branch is what made #905 read as "the RED gates block us". The
+    only reachable non-empty mode was the release sweep, which scans surfaces a
+    commit does not control (paths outside the repo, untracked files), so
+    "turn the hook on" meant "block every commit on the wrong scope". The fix is
+    the missing path, not a relaxed gate.
+
+    ``PREFLIGHT_FULL=1`` keeps precedence so every existing caller, runbook, and
+    test is unchanged, and the DEFAULT is unchanged: this ADDS a mode. No commit
+    that passed before blocks now.
+    """
+    if os.environ.get("PREFLIGHT_FULL", "0") == "1":
+        return "all"
+    requested = os.environ.get("PREFLIGHT_SCOPE", "").strip().lower()
+    if requested in {"dev", "all"}:
+        return requested
+    return "none"
+
+
 def _preflight_command() -> list[str]:
     """Return the preflight command for the current hook mode."""
     cmd = [".venv/bin/python", "-m", "tac.preflight"]
-    if os.environ.get("PREFLIGHT_FULL", "0") == "1":
+    scope = _preflight_scope()
+    if scope == "all":
         cmd.extend(["--scope", "all"])
         if os.environ.get("PREFLIGHT_ALLOW_SLOW", "0") == "1":
             cmd.append("--allow-slow-preflight")
+    elif scope == "dev":
+        cmd.extend(["--scope", "dev"])
+        # DELIBERATELY no `--acknowledge-empty-scope` here. That waiver is
+        # earned by the 0-gate mode alone, which has a designed reason to accept
+        # an empty scope. A dev scope that somehow examined 0 gates is a broken
+        # instrument, and it must refuse rc=3 rather than inherit another mode's
+        # vacuity waiver — vacuity-indistinguishable-from-PASS is the bug this
+        # hook reports on, so it must not be re-imported through the new branch.
     else:
         cmd.append("--no-codebase")
         # VACUITY ACKNOWLEDGEMENT (2026-08-01, task #842). `--no-codebase`
@@ -816,11 +858,18 @@ def _preflight_timeout_seconds() -> int:
         except ValueError:
             value = 0
         return value if value > 0 else 30
-    if (
-        os.environ.get("PREFLIGHT_FULL", "0") == "1"
-        and os.environ.get("PREFLIGHT_ALLOW_SLOW", "0") == "1"
-    ):
+    scope = _preflight_scope()
+    if scope == "all" and os.environ.get("PREFLIGHT_ALLOW_SLOW", "0") == "1":
         return 600
+    if scope == "dev":
+        # The mirrored half of the #905 gap: the dev scope had no timeout branch
+        # either. MEASURED (ddm_rg2, 2026-08-16): 22.7s warm / 24.3s cold. Against
+        # the 30s DX bound that is only 19-24% headroom, so one slow-gate
+        # regression would fail commits on the CLOCK instead of on a finding —
+        # and to a committer who sees "hook failed", a timeout is
+        # indistinguishable from a real refusal. Bound derived as 2x the COLD
+        # measurement (48.6s), rounded up to a whole minute for legibility.
+        return 60
     return 30
 
 

@@ -10,6 +10,9 @@ import tools.preflight_hook as preflight_hook
 
 def test_preflight_hook_defaults_to_no_codebase(monkeypatch) -> None:
     monkeypatch.delenv("PREFLIGHT_FULL", raising=False)
+    # PREFLIGHT_SCOPE joined the selector set with the #905 dev branch; clear it
+    # so this test asserts the DEFAULT rather than whatever the ambient shell has.
+    monkeypatch.delenv("PREFLIGHT_SCOPE", raising=False)
 
     # `--acknowledge-empty-scope` joined the contract 2026-08-01 (task #842):
     # `--no-codebase` examines 0 gates, and the CLI now refuses rc=3 on an
@@ -53,6 +56,121 @@ def test_preflight_hook_slow_release_mode_requires_separate_env(monkeypatch) -> 
         "--allow-slow-preflight",
     ]
     assert preflight_hook._preflight_timeout_seconds() == 600
+
+
+# --- task #905: the missing third hook mode (`--scope dev`) -------------------
+# The hook advertised a bounded developer stack in its own docstring but could
+# only emit 0 gates or the exhaustive release sweep. These pin the third branch,
+# its timeout, and — most importantly — that adding it did not weaken the other
+# two or leak the 0-gate vacuity waiver into it.
+
+
+def test_preflight_hook_dev_scope_branch_exists(monkeypatch) -> None:
+    monkeypatch.delenv("PREFLIGHT_FULL", raising=False)
+    monkeypatch.delenv("PREFLIGHT_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.setenv("PREFLIGHT_SCOPE", "dev")
+
+    assert preflight_hook._preflight_scope() == "dev"
+    assert preflight_hook._preflight_command() == [
+        ".venv/bin/python",
+        "-m",
+        "tac.preflight",
+        "--scope",
+        "dev",
+    ]
+
+
+def test_preflight_hook_dev_scope_never_acknowledges_empty_scope(monkeypatch) -> None:
+    """The vacuity waiver is earned by the 0-gate mode ONLY.
+
+    If it leaked into dev mode, a dev scope that examined 0 gates would print
+    PASSED instead of refusing rc=3 — re-importing the exact
+    vacuity-indistinguishable-from-PASS bug this hook reports on.
+    """
+    monkeypatch.delenv("PREFLIGHT_FULL", raising=False)
+    monkeypatch.setenv("PREFLIGHT_SCOPE", "dev")
+
+    assert "--acknowledge-empty-scope" not in preflight_hook._preflight_command()
+    assert "--no-codebase" not in preflight_hook._preflight_command()
+
+
+def test_preflight_hook_dev_scope_has_headroom_over_measured_cost(monkeypatch) -> None:
+    """MEASURED 22.7s warm / 24.3s cold (ddm_rg2). 30s left only 19-24% headroom.
+
+    A clock failure is indistinguishable from a finding to the committer, so the
+    dev branch must not inherit the 0-gate mode's 30s bound.
+    """
+    monkeypatch.delenv("PREFLIGHT_FULL", raising=False)
+    monkeypatch.delenv("PREFLIGHT_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.setenv("PREFLIGHT_SCOPE", "dev")
+
+    timeout = preflight_hook._preflight_timeout_seconds()
+    assert timeout == 60
+    assert timeout >= 2 * 24.3, "dev bound must clear 2x the COLD measurement"
+
+
+def test_preflight_hook_dev_scope_widens_the_serializer_lock_patience(monkeypatch) -> None:
+    """The serializer derives its lock patience from this bound; it must track."""
+    monkeypatch.delenv("PREFLIGHT_FULL", raising=False)
+    monkeypatch.delenv("PREFLIGHT_TIMEOUT_SECONDS", raising=False)
+
+    monkeypatch.delenv("PREFLIGHT_SCOPE", raising=False)
+    default_bound = preflight_hook.effective_hook_wall_clock_bound_seconds()
+    monkeypatch.setenv("PREFLIGHT_SCOPE", "dev")
+    dev_bound = preflight_hook.effective_hook_wall_clock_bound_seconds()
+
+    assert dev_bound == default_bound + 30
+
+
+def test_preflight_full_still_takes_precedence_over_scope(monkeypatch) -> None:
+    """Back-compat: every existing runbook/caller that sets PREFLIGHT_FULL is unchanged."""
+    monkeypatch.setenv("PREFLIGHT_FULL", "1")
+    monkeypatch.setenv("PREFLIGHT_SCOPE", "dev")
+    monkeypatch.delenv("PREFLIGHT_ALLOW_SLOW", raising=False)
+
+    assert preflight_hook._preflight_scope() == "all"
+    assert preflight_hook._preflight_command()[-2:] == ["--scope", "all"]
+
+
+def test_preflight_hook_unknown_scope_falls_back_to_the_default_mode(monkeypatch) -> None:
+    """An unrecognized value must not error and must not silently widen scope."""
+    monkeypatch.delenv("PREFLIGHT_FULL", raising=False)
+    monkeypatch.delenv("PREFLIGHT_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.setenv("PREFLIGHT_SCOPE", "definitely-not-a-scope")
+
+    assert preflight_hook._preflight_scope() == "none"
+    assert preflight_hook._preflight_command() == [
+        ".venv/bin/python",
+        "-m",
+        "tac.preflight",
+        "--no-codebase",
+        "--acknowledge-empty-scope",
+    ]
+    assert preflight_hook._preflight_timeout_seconds() == 30
+
+
+def test_preflight_hook_scope_all_matches_preflight_full(monkeypatch) -> None:
+    monkeypatch.delenv("PREFLIGHT_FULL", raising=False)
+    monkeypatch.setenv("PREFLIGHT_SCOPE", "all")
+    monkeypatch.setenv("PREFLIGHT_ALLOW_SLOW", "1")
+
+    assert preflight_hook._preflight_command() == [
+        ".venv/bin/python",
+        "-m",
+        "tac.preflight",
+        "--scope",
+        "all",
+        "--allow-slow-preflight",
+    ]
+    assert preflight_hook._preflight_timeout_seconds() == 600
+
+
+def test_preflight_hook_explicit_timeout_override_still_wins_in_dev(monkeypatch) -> None:
+    monkeypatch.delenv("PREFLIGHT_FULL", raising=False)
+    monkeypatch.setenv("PREFLIGHT_SCOPE", "dev")
+    monkeypatch.setenv("PREFLIGHT_TIMEOUT_SECONDS", "15")
+
+    assert preflight_hook._preflight_timeout_seconds() == 15
 
 
 def test_preflight_hook_timeout_env_is_bounded(monkeypatch) -> None:

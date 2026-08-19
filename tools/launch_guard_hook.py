@@ -115,6 +115,124 @@ def _is_backgrounded_long_runner(command: str, run_in_background: bool) -> bool:
     return bool(_LONG_RUNNER_RE.search(command))
 
 
+# --- #1121 waiter discipline — the STRUCTURAL half of the two-landing cure ------
+#
+# Landing 1 (`5d4b1818f5`, 2026-08-18) put WAITER_DISCIPLINE into every composed
+# subagent prompt (`src/tac/subagent_contract.py:145`). That half is VOLITIONAL:
+# it asks an arm not to type the shape. This half REFUSES it at the typing moment.
+#
+# MEASURED 2026-08-18 (ddm_iv1): (a) the NOISE half — four consecutive zero-signal
+# MAIN re-invocations as backgrounded sleep-waiters expired one by one, each
+# costing a full orchestrator turn; (b) the DANGEROUS half — an
+# `until ! pgrep <predecessor>; do sleep; done; <launch successor>` fired ~30 min
+# after its step had already been run and adjudicated, launching a duplicate on
+# course to overwrite an adjudicated receipt mid-read. It was caught only because
+# one notification said "completed" instead of "killed".
+#
+# The distinguishing test is the PREDICATE, in the contract's own words: "Wait on
+# an artifact's existence, never on a clock." An artifact-bound wait is the
+# CORRECT canonical pattern and stays ALLOWED — this must never refuse
+# `until [ -f "$DONE" ]; do sleep 30; done`, which is exactly what arms should
+# write. Only clock-bound and process-table-bound waits are refused, because only
+# those can fire when nothing happened.
+#
+# Deliberately NOT covered: `scripts/remote_*.sh` heartbeat subshells
+# (`( while true; do ...; sleep 60; done ) &`). Those run on rented GPU hosts,
+# are paired with a `trap ... EXIT` by `tools/canonical_lane_template.py:69-75`,
+# and have no channel into the session. They are a different population.
+# The `sleep` must sit INSIDE the loop body (between `do` and `done`). Without the
+# trailing `\bdone\b` this matched `git log | while read c; do echo $c; done && sleep 5`
+# — a perfectly ordinary command with a trailing sleep — as a poll loop. Review
+# pass 2 caught it; the false-positive cost on a PreToolUse Bash hook is every arm.
+_POLL_LOOP_RE = re.compile(r"\b(?:while|until)\b.*?\bdo\b.*?\bsleep\b.*?\bdone\b", re.S)
+_BARE_SLEEP_RE = re.compile(r"^\s*sleep\s+[\d.]+\s*$")
+_SLEEP_THEN_ACT_RE = re.compile(r"(?:^|[;&]\s*)sleep\s+[\d.]+\s*;")
+# Bracket/test forms only — a loose `-f` would match `rm -f`, `grep -f`, etc.
+_ARTIFACT_PREDICATE_RE = re.compile(
+    r"\[\s*!?\s*-[fesd]\s|\btest\s+!?\s*-[fesd]\s|\.done\b|\breceipt\b|--done-receipt\b"
+)
+_PROCESS_PREDICATE_RE = re.compile(r"\bpgrep\b|\bkill\s+-0\b|\bps\s+-p\b|\bpidof\b")
+_ACTUATION_RE = re.compile(
+    r"(?:\.venv/bin/)?python[0-9.]*\s|\bbash\s|\bmodal\s+run\b|\bnohup\b|launch_"
+)
+
+WAITER_BLOCK_MESSAGE = (
+    "BLOCKED by tools/launch_guard_hook.py: orphan-prone waiter (#1121, measured "
+    "2026-08-18). A wait bound to a CLOCK or to the PROCESS TABLE outlives its "
+    "subject, expires on its own, and each death re-invokes MAIN with NO "
+    "information (four consecutive zero-signal notifications in one day). Bind "
+    "the wait to the completion ARTIFACT instead: launch through "
+    ".venv/bin/python tools/launch_detached_process.py --output-dir <run_dir> "
+    "--done-receipt <name> -- <cmd...>  (the .done receipt lands in "
+    ".omx/tmp/codex_runs/ and the fleet watcher notifies MAIN exactly once), or "
+    "poll a file the work itself writes: until [ -f \"$DONE\" ]; do sleep 30; "
+    "done. Wait on an artifact's existence, never on a clock. Deliberate "
+    "override: TAC_LAUNCH_GUARD_OK=1."
+)
+
+WAITER_ACTUATOR_BLOCK_MESSAGE = (
+    "BLOCKED by tools/launch_guard_hook.py: latent actuator, not a waiter (#1121 "
+    "rule 1, measured 2026-08-18). `until ! pgrep <predecessor>; do sleep; done; "
+    "<launch successor>` is not a wait — a wait CONDITION and a launch DECISION "
+    "have different lifetimes, and the condition can come true long after the "
+    "decision stopped being correct. One such waiter fired ~30 min after its step "
+    "had already been run and adjudicated, launching a duplicate on course to "
+    "overwrite an adjudicated receipt mid-read. Re-decide at fire time with fresh "
+    "state (derive from run dirs/receipts, with a live-pid + receipt spawn-guard "
+    "— see tools/supervise_ddm_r1c_rung1.py:419), or don't fire. Deliberate "
+    "override: TAC_LAUNCH_GUARD_OK=1."
+)
+
+
+def _head_is_readonly(command: str) -> bool:
+    """True when the command merely INSPECTS text (grep/cat/echo about a waiter)."""
+    stripped = command.strip()
+    if not stripped:
+        return True
+    head = stripped.split()[0].rsplit("/", 1)[-1]
+    return head in _READONLY_HEADS
+
+
+def _is_orphan_prone_waiter(command: str, run_in_background: bool) -> bool:
+    """#1121 rule 2 — a BACKGROUNDED wait bound to a clock rather than an artifact."""
+    if not run_in_background:
+        return False
+    if any(marker in command for marker in _DETACH_SAFE_MARKERS):
+        return False
+    if _head_is_readonly(command):
+        return False
+    has_wait_shape = bool(
+        _POLL_LOOP_RE.search(command)
+        or _BARE_SLEEP_RE.search(command)
+        or _SLEEP_THEN_ACT_RE.search(command)
+    )
+    if not has_wait_shape:
+        return False
+    # The artifact predicate is the whole point: it makes the waiter fire on a
+    # real event. Its presence means this is the CORRECT pattern.
+    return not _ARTIFACT_PREDICATE_RE.search(command)
+
+
+def _is_latent_actuator_waiter(command: str) -> bool:
+    """#1121 rule 1 — a process-table poll loop that LAUNCHES when it drains.
+
+    Not gated on run_in_background: this shape is dangerous in the foreground
+    too, because the damage is the duplicate launch, not the notification.
+    """
+    if any(marker in command for marker in _DETACH_SAFE_MARKERS):
+        return False
+    if _head_is_readonly(command):
+        return False
+    if not _POLL_LOOP_RE.search(command):
+        return False
+    if not _PROCESS_PREDICATE_RE.search(command):
+        return False
+    # Word-boundary split: a bare `rsplit("done")` also splits "abandoned",
+    # "undone", "done_receipt" — and would then read the wrong text as the tail.
+    tail = re.split(r"\bdone\b", command)[-1]
+    return bool(_ACTUATION_RE.search(tail))
+
+
 def _split_segments(command: str) -> list[str]:
     """Split a shell command on ; && || | and newlines (coarse, conservative)."""
     parts = re.split(r"(?:;|&&|\|\||\||\n)", command)
@@ -249,6 +367,15 @@ def decide(
         command, run_in_background
     ):
         return False, SIGURG_BLOCK_MESSAGE
+    # #1121 waiter discipline. Placed with the other kill/orphan-class blocks and
+    # ABOVE the trainer safe-tokens, for the same reason those were moved: a
+    # trainer token must not buy a bypass of an orphan violation. The actuator
+    # check runs first — it is the harm-bearing half (a duplicate launch over an
+    # adjudicated receipt), the noise half only costs turns.
+    if _is_latent_actuator_waiter(command):
+        return False, WAITER_ACTUATOR_BLOCK_MESSAGE
+    if _is_orphan_prone_waiter(command, run_in_background):
+        return False, WAITER_BLOCK_MESSAGE
     if any(tok in command for tok in _SAFE_TOKENS):
         return True, ""
     # Whole-command pass FIRST (additive: can only add blocks, never new

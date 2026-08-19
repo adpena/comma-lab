@@ -28,9 +28,13 @@ Dispatch (detached; returns a call_id in seconds, remote runs ~60-70 min):
     PYTHONPATH=src:upstream:$PWD .venv/bin/modal run --detach \
         experiments/modal_ot_offset_n600_gate.py
 
-Harvest by call_id after completion:
-    .venv/bin/python -c "import modal; \
-      print(modal.functions.FunctionCall.from_id('<call_id>').get(timeout=5))"
+Harvest by call_id after completion, through the CANONICAL harvester. It mirrors
+the terminal outcome into ``.omx/state/modal_call_id_ledger.jsonl`` (Catalog
+#330); a hand-rolled ``FunctionCall.get`` poll retrieves the payload but leaves
+the call_id stuck at ``dispatched`` forever, so it is not an admissible harvest::
+
+    .venv/bin/python tools/harvest_modal_calls.py --from-ledger \
+        --call-id <call_id> --execute
 """
 
 from __future__ import annotations
@@ -211,7 +215,12 @@ def main(num_pairs: int = 600):
     (sentinel / "modal_call_id.txt").write_text(call_id + "\n")
     print(f"DISPATCHED via .spawn() call_id={call_id}")
     print(f"call_id saved: {sentinel / 'modal_call_id.txt'}")
+    # Catalog #330: point the operator at the CANONICAL harvester, which mirrors
+    # the terminal outcome into the call-id ledger. The raw
+    # ``FunctionCall.get`` poll this used to print harvests the payload but
+    # leaves the ledger row stuck at ``dispatched`` — printing it taught the very
+    # bug class the gate exists to refuse.
     print(
-        "Harvest: .venv/bin/python -c \"import modal; "
-        f"print(modal.functions.FunctionCall.from_id('{call_id}').get(timeout=5))\""
+        "Harvest: .venv/bin/python tools/harvest_modal_calls.py "
+        f"--from-ledger --call-id {call_id} --execute"
     )
