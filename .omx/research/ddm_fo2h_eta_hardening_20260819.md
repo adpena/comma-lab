@@ -469,3 +469,15 @@ new frame. Nothing is lost by the session ending.
   `test_ddm_fo2h_pose_lineage_rescore.py`. Two of them caught real bugs in my own new code: a
   sharp pose improvement drove `d_pose` negative and `** 0.5` silently complex, and the identity
   control exposed a degenerate case being labelled a sign flip.
+
+## POST-LANDING STRAGGLER HARVEST (MAIN, 2026-08-19 ~11:0xZ)
+A detached leg (`null_retain12`, launch_counter 257, rc=0 at 07:24 — AFTER this memo landed)
+wrote `ETA_GATE_VERDICT.json` for the SECOND channel (rt1 §5.4: 33,235 B M7-mask support,
+pre-registered bar 0.753, n=12 explicit pairs, schema ddm_rt1_eta_gate.v1, [macOS-CPU advisory],
+score_claim false). Result: pooled η **0.6398 < the 0.753 bar** (per-pair 0.468–0.889), pose
+ratio median **1.531× worsening** (max 5.32, only 2/12 improved), net_S_at_measured_eta
+**+0.003328** (rate 0.02213 S vs seg gain −0.02939 S at full-band-fix). VERDICT: CONSISTENT with
+this memo's closure — the second channel of the pose-null family ALSO refuses, on both the η bar
+AND the pose leg. No reversal; the family closure stands with two independent channel
+measurements. (Process note: this is the same finishes-after-memo genus gen-1 suffered for two
+days; the completion monitor surfaced this one in minutes — harvested same-hour.)
