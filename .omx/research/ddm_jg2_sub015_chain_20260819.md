@@ -320,9 +320,70 @@ is structural rather than scheduling:
    rc4's 11,901 B saving cannot transfer intact, and its net `-3.243e-3` must be re-derived
    on our body before it is quoted as half the gap.
 
-**Routing:** rc4-on-our-body is READY ∧ high-EV but needs a receiver that supports dropped
-positions before the pose question is even reachable. Its rate leg is then measurable exactly
-by `ddm_jg2_tail_reencode` in one 16-minute run. Its pose leg is the carrier re-solve, which
-jg1 showed cancels a x387 seg-edit perturbation down to 1.073x — encouraging for rc4's
-required 99.807%, but at a different amplitude and therefore unmeasured. **Owner: successor
-arm. Blocker: the dropped-position receiver. Fire condition: that receiver exists.**
+**SUPERSEDED IN PART, SAME TURN, by MAIN's second relay (`ddm_tx1`,
+`.omx/research/ddm_tx1_toolbox_crosswalk_20260819.md`).** tx1 independently re-priced rc4 on
+our body at **-0.002929 S** (44.9% of the gap, 1.77x margin on the pose break-even through
+the carrier re-solve) — **a 9.7% markdown from rc4's own -3.243e-3, in the direction this
+section predicted from the 2,414 B corrector overlap.** Two instruments agreeing on the sign
+of a cross-body transfer is worth more than either alone; I am not claiming tx1's markdown
+has my mechanism as its cause, only that the direction agrees.
+
+tx1's operative correction stands over my routing: **rc4's drops must NOT be run as a
+separate composed candidate.** My single-cell EDITS and rc4's DROPS act on the same token
+field in opposite directions and are **one waterfill**, sub-optimal if solved apart. Per
+`ddm_bu1`'s measured law — joint compensation beat the naive union by **3.705x** — the drop
+direction belongs INSIDE the S2 joint solve as a second proposal class, compensated jointly.
+
+---
+
+## THE S2 HANDOFF SPEC (binding on the successor)
+
+**Objective.** A rate-aware joint descent on the pointer body that lands a byte-closed
+candidate below 0.15 and hands MAIN a seal for the T4 fire.
+
+**1. The proposal class is THREE-WAY, not two.** Per cell: `edit` (single-cell coordinate
+move, jg1's measured winner) · `drop` (rc4's high-confidence prediction substitution) ·
+`keep`. Solving edits alone or drops alone is the sub-optimal half of one waterfill.
+Block/dilation moves are MEASURED WORSE at every radius (jg1 S1b: -55% at r=1, -351% at
+r=2) and are not a proposal class.
+
+**2. Acceptance is REALIZED and JOINT, never predicted.** Per pair: propose -> apply ->
+render through the receiver's own forward model -> re-segment on the frozen CPU SegNet ->
+carrier re-solve (up2's coordinate descent) against the EDITED frame -> score `d_pose`
+DIRECTLY on DALI GT. Accept only on realized joint improvement. **Never** multiply an
+advisory pose number by a lineage factor: the PyAV-vs-DALI gap is **additive**
+(C = 1.4061e-04, `ddm_na10` item 1), which is why the per-pair ratio spans 0.887-1,627.
+**Do not borrow qs5/qs1 machinery** — `qs1.GT_POSE` is still the PyAV table and optimizes
+the wrong objective (`ddm_na10` item 3).
+
+**3. The rate leg is measured, not modelled.** Call
+`experiments/ddm_jg2_tail_reencode.py --stage encode` at chunk boundaries. 4.1379
+bits/token is a PRIOR for planning only — it is one edit density (58 sparse tokens) and
+n600 is ~200x denser. The re-encoder is the authority for any accept that turns on rate.
+
+**4. The stopping rule IS the result.** Accept while `cells_repaired x 10.185 bits >
+cost_bits` and stop at the margin. jg1 measured first-pass yield 1.46-1.50 cells/token and
+**0.390** when one pair was iterated to exhaustion. Sub-0.15 needs the n600 realized yield
+to hold above **~1.06**; past the first pass the rate term overtakes the seg term and the
+score walks back up.
+
+**5. Print realized-vs-projected at every rung** (n = 3 / 12 / 48 / 150 / 600) and the pose
+recovery **distribution with its band**, never the 1.073x mean — it is n=3 and one of those
+pairs missed the relevant bar (`ddm_na10` item 5). Budget 6.5-10.7 h for the n600 re-solve.
+
+**6. Free lossless rider at byte-close.** The ra2+ra1 CPR1 inner coder is **lossless
+-1.85e-4 S** (53x the admit bar, no scorer row, no pose budget). Its self-defeating gate
+"fire only when >= 2 KB is in flight" is satisfied by this chain. Fold it into the
+byte-close stage.
+
+**7. The seal must record T4 inflate timing.** No T4 inflate-seconds figure exists for any
+recent body — the 954.5 s number is **arm64 advisory and withdrawn** (`ddm_tx1` item 4).
+Put "T4 inflate wall-clock READ AND RECORDED at harvest" in the receipt expectations: it is
+free at harvest time and it gates the model axis both ways.
+
+**8. Byte-close mechanics.** Splice into the POINTER member (the module verifies sha
+`7ce46fd7…` before splicing and refuses otherwise). Identity control: all edits OFF must
+reproduce `7ce46fd7…` byte-identically. Then double-compile determinism, container search
+if brotli responds adversely (up3's 48 B lesson: archive ΔB ≠ payload ΔB — measure at the
+archive layer), end-to-end `inflate` rc=0 in budget, then `candidate_seal.v1` with 8dp
+falsifiers from `tac.report_8dp_bounds` (never hand-typed).
