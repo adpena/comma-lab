@@ -136,6 +136,50 @@ Before the fix this pair diverged.
   receipt instead of reporting `UNPROVEN` purely on finishing order and forcing a
   hand reconciliation afterwards.
 
+## The rows this bought
+
+**Control, re-run on the `br1` body with 25-frame checkpoints ACTIVE — PASS.**
+Emitted 109,696 B, sha `15054e5da33640bcb2e9d4589615c3b89b1312ce27fd9aa8e2a0ec0284b506f2`,
+byte-identical to the shipped token stream over all 109,696 bytes, 919.91 s.
+The per-frame bit ledger matched the known-good `ddm_jg2` pass to five decimals at
+every checkpoint on the way (14,552.75857 / 23,973.20110 / 33,331.67075 /
+42,029.53125 / 49,921.74393 / … B at frames 75/125/175/225/275/…), so the pass was
+predictable long before the last frame. The encoder is the exact inverse of the
+shipping decoder on this body, and byte deltas measured with it are real.
+
+The spliced candidate also parses back through the **shipped**
+`read_residual_archive`: one member `p`, `RX1M` intact, `hpac`/`semantic`/`carrier`
+lengths unchanged (13,515 / 30,856 / 22,152), token stream the new one. And
+`archive_delta_bytes` equals `token_stream_delta_bytes` exactly — the member is
+STORED, so container overhead is flat and every added byte is coder output.
+
+**Encode, the definitive `ddm_wc2` edit set (`seg_edits_n600_complete.npz`, sha
+`a3143a71…`, 573 pairs, 10,900 token changes) — MEASURED.**
+
+| | base | candidate | Δ |
+|---|---:|---:|---:|
+| token stream | 109,696 B | 114,903 B | **+5,207 B** |
+| `archive.zip` | 176,429 B | 181,636 B | **+5,207 B** |
+
+* **3.8217 bits per changed token** — **0.810×** the `ddm_jg1` modelled 4.718.
+  jg1 named three reasons its number should be an UNDER-estimate; on the real
+  encoder, through the real cascade, on the real body, the true price is **cheaper**
+  than modelled, not dearer. The model was pessimistic, and the direction of its
+  own stated bias was wrong.
+* Rate leg **+0.003467 S**. `delta_trustworthy = true` — the byte-identical control
+  above is what earns that flag.
+* Candidate `4b0dc2724117aa30…`, 181,636 B; stream `1ab2d0e2d33f8ce3…`, 114,903 B.
+
+The seg leg is **not mine to claim**: `ddm_wc2` reports 15,155 repaired cells, which
+is `100 × 15155 / (600·384·512)` = **−0.012847 S** *if every repair realizes through
+the frozen scorer*. Against the measured rate leg that is a net **−0.009380 S** —
+a PROJECTION on a solver-claimed cell count, not a measured `d_seg`. What this arm
+measured is the rate leg alone, and it measured it exactly.
+
+A superseded sibling row (the 563-pair premature merge, +5,106 B, 3.8140 bits/token)
+is retained under `retained/superseded_n600_final/` with its reason, because it is a
+real control-backed measurement of a real edit set — just not the deliverable.
+
 ## Artifacts
 
 * Fix: `experiments/ddm_jg2_tail_reencode.py`
