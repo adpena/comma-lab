@@ -209,6 +209,10 @@ Our body's residual is **14.2× sparser**: `d_seg 0.00030309` → **35,754 flips
 | coherent (scaled by the measured 0.682 ratio) + label | 1.2596 | 45,035 | +0.029987 | −0.030309 | **−0.000322 ≈ break-even** |
 | *the old base's blended 0.8507 B/flip* | 0.8507 | 30,416 | +0.020253 | −0.030309 | *−0.010056 — **invalid**, that price belongs to the old density* |
 
+`verdict_scope`: **INSTANCE/pricing** — this re-anchors the family's *economics* to the up3
+body's residual density. It does **not** re-grade dc1's or wd1's measurements, which stand and
+which I reproduced. Validity of the original negatives belongs to `ddm_na10`.
+
 **The correction-stream family did not get shelved and stay shelved by accident — it died as
 the residual got sparse.** Position coding cost grows as `log2(1/ρ)`; the win at
 `ρ = 4.3e-3` is break-even at `ρ = 3.0e-4`. And its whole ceiling is the seg axis,
@@ -439,6 +443,14 @@ same scarce resource: the carrier's pose-recovery budget.**
 
 **Concretely:** if #1 is pursued, it should enter jg2's S2 as an additional coordinate in the
 same joint solve — not as a second candidate composed afterwards.
+
+### #6 — priced, live, but below the top 3 (recorded so the sweep is complete)
+
+| item | measured | why not top-3 |
+|---|---|---|
+| **`sa1`** — 18 lossy candidates, best **−2,889 B** (≈ **29% of the gap** if distortion were free) | bytes MEASURED; **distortion UNMEASURED** | it is the whole question, unmeasured. `ddm_ck2` already measured the lossy-representation exchange rate at **10.5% of rate credit retained at ×1 mass, 12.6% at ×4** — on that rate, −2,889 B gross returns ~300–360 B net. **A contributor, not a route.** |
+| **`mp2 keep25`** — 180,708 B, rate credit **−1.366e-3 MEASURED** | pose leg **UNMEASURED**, projected **+0.0278 S** from an n=2 dose-response — **2.8× the gap, wrong sign** | its named prerequisite is a **$0 local finite-difference probe, not a scorer run**, and nobody ran it partly because a `.done.done` receipt-naming defect silently killed the queue. **Fire the $0 probe; never the n600 score.** Also: its 182,759 B parent is 6,339 B stale, so the credit needs re-pricing before it means anything. |
+| **`ps1u`** sealed T4 order | rate leg **+588 B = a MEASURED COST**; seg leg not measured | `ddm_qw1`'s own header: *"the only sealed, dispatcher-validated order in the pile, and **it is a bad buy**."* Agreed — do not fire. |
 
 ---
 
