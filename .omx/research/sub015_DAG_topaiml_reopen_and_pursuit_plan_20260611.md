@@ -29063,3 +29063,37 @@ seal → T4. Memos .omx/research/ddm_sa1_vseries_v7_dead_v2_routing_20260818.md 
 - STORES CONSULTED: run-artifacts (jg1 memo + custody manifest + verdict logs; fo2h memo + gen-1
   LEG-1 verdict + FO1_CODER_RACE.json) · memories (pose_gap UPDATE 2/3 + concavity + #930 search
   pricing) · tasks (#1134→#1139, #1137, #1075).
+
+## FEED-jg2S1-tx1 (2026-08-19 ~12:0xZ) — S1 RATE CONFIRMED + the ONE-WATERFILL law + toolbox verdicts
+- **jg2 S1 REAL RATE LANDED (85f59fba0b): the modelled leg CONFIRMS.** Control re-encode
+  byte-identical (109,696 B tail, sha 15054e5d); the 3-pair edited payload costs **+30 B =
+  4.1379 bits/changed token = 0.877× of the +4.718 model** — the model was conservative. The
+  sub-0.15 projection's one modelled leg is now measured. jg2 routing commit (1622a57308):
+  S2/S3 not reached in-arm (n600 carrier re-solve alone 6.5–10.7 h); routing decision at its
+  landing. Edit exchange prices at **3.82:1**.
+- **tx1 LANDED (7 commits, memo ddm_tx1_toolbox_crosswalk_20260819.md): 16 items priced vs ~50
+  primary receipts — 9 NOT-CHEAPER · 3 CONVERT-NOW · 5 self-corrections.** CONVERT-NOW: (1)
+  token-DROP family (rc4/td1) re-priced **−0.002929 S = 44.9% of gap** (jg1's carrier re-solve
+  voids the 517× pose refusal at 1.77× margin) — and THE LAW: jg2's single-cell EDITS and rc4's
+  DROPS are **ONE WATERFILL sub-optimal in both directions on the same token field**; the drop
+  direction belongs INSIDE the S2 joint solve as a second proposal class (bu1: joint beat naive
+  union 3.705×), never as a composed second candidate. (2) ra2+ra1 CPR1 inner coder — LOSSLESS
+  −1.85e-4 S, 53× bar, rides the jg2 byte-close. (3) 12-dim basis re-orientation — break-even
+  affords 1,387 B at a mere 1.25× d_pose reduction (up2's owed item, now generously priced).
+- **NOT-CHEAPER heads (honest closures):** #827's −0.036 composition dead on a PHOTOMETRIC wall
+  (burn base trained w_seg-only; re-solving recovers nothing — cr2r floor 46× over break-even;
+  bodies are 360,331 B of dead grammar) · the lane program's premise falsified on this body
+  (stored labels 99.9985% GT-identical; lanes are lost in the RENDER) · the qs2/re1/qs5 bank
+  spent 08-14 and superseded by the full carrier re-solve. Do NOT re-mine ma1's −105 B (verified
+  already inside the shipped tail).
+- **INSTRUMENT GAP:** no T4 inflate-seconds figure exists for any recent body (the 954.5 s was
+  arm64 advisory, withdrawn) while contest-CPU is measured 1.90× over budget — the NEXT T4 fire
+  records inflate timing at harvest (free; gates the model axis both ways).
+- **TRIALITY ROUTING (equations leg):** the one-waterfill law + the 3.82:1 edit exchange + the
+  realized-acceptance method law route to canonical_equations via the LIVE ddm_cw1
+  canonicalization arm (#1143, F1/F2 registration is in its charter); the additive GT-lineage
+  law C=1.4061e-04 likewise (F5 instrument-refusal basis). If cw1 lands without them, MAIN owes
+  the registrations at the adoption boundary. [no-triality does NOT apply — this FEED is the
+  DAG leg; MEMORY line landed same turn.]
+- STORES CONSULTED: jg2 commits 85f59fba0b/1622a57308 + tx1 memo + na10 memo + bu1/mc36 union
+  receipts (via tx1's citations) · tasks #1139/#1141/#1142/#1143.
