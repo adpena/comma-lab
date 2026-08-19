@@ -29001,3 +29001,35 @@ seal → T4. Memos .omx/research/ddm_sa1_vseries_v7_dead_v2_routing_20260818.md 
   packed section. Packaging, not measurement. up3 fires the fix -> seal -> MAIN T4.
 - APPARATUS: #299 catalog quota brake HIT (next number 408 > 400) — the GT-lineage gate's
   STRICT wire-in awaits the operator's stop-and-consolidate decision per CLAUDE.md.
+
+## FEED-up3-t4 (2026-08-19 ~08:30Z) — THIRTEENTH POINTER MOVE ADMITTED [contest-CUDA T4, n600]
+- **S 0.15652626435208142 @ 176,420 B**, archive 7ce46fd7a845d5987903a0d85a56581961eb7716a55c38a7361e3b5ecae94b5f,
+  call fc-01M0CG6G4WTDFJAS0GDF8C62JK (~1,433 s, ~$0.16). Net vs to1: **−6.8333e-05** (19.5× bar,
+  10.2× summed 8dp bound). ALL FOUR FALSIFIERS EXACT: bytes 176,420 (ΔB=0, confirmed
+  independently by evaluate.py) · d_seg 0.00030309 UNCHANGED (token stream 9ba2e52b
+  byte-identical at decode) · d_pose printed the PREDICTED 7.65e-06 (realized 7.649246787e-06)
+  · recomputed S within 4.31e-7 of the exact-d_pose projection (pure pose 8dp quantization,
+  6.6× inside the per-row bound). Night arc: ck2 −4.375e-4 + to1 −6.99e-5 + up3 −6.833e-5 =
+  **−5.757e-4 in one night**, every projection realized.
+- **The move's substance**: up2's converged shipping-objective (DALI-GT) lattice pose solve —
+  970/7,200 dxi coefficients, coordinate descent w/ realized acceptance, convergence proof —
+  byte-closed by up3. Both up2 "blockers" were ONE missing transform: the stored carrier is
+  2-plane byte-interleaved (reserved 0x04) and the receiver un-interleaves at
+  residual_archive.py:188 before any offset read; k_base=packed[139] was the receiver's own
+  correct offset. ΔB=0 at the archive layer required a declared deterministic container search
+  (brotli compressed the perturbed payload 48 B worse — 47% of the pose gain — recovered by CK2
+  carrier off, q10/lgwin16). Cure landed at source in the t1h pricers (one canonical helper).
+- **LAW EXTENDED (up3): the CUDA/CPU GT fork moves BOTH axes** — same bytes, d_seg 0.00030309
+  (DALI) vs 0.00043336 (PyAV) = 1.43× from the GT decoder alone (pose 19.09×, rate identical).
+  No advisory absolute distortion on EITHER axis is the contest-CUDA value; same-lineage
+  differences stay sound. And the two-objective model is PREDICTIVE: up2 §4c forecast the
+  advisory d_pose 1.483534e-04 → measured 0.00014835 at report resolution.
+- **ROUTING**: pose family now runs EXCLUSIVELY through #1134 (joint solve; the 12-dim basis
+  wall, 6.4× excess step, is the named obstacle — basis enlargement priced by rate-in-loop, not
+  more coordinate descent). fo2h η-hardening re-fires per #1137 after the session-limit reset.
+  #1135 rv13 code fixes pending (F12 archive_bytes:null observed live in this pointer read).
+  #299 quota brake still awaits the operator stop-and-consolidate call.
+- STORES CONSULTED: run-artifacts (up3 t4_row_r1 MODAL_REMOTE_RESULT.json + seal
+  CANDIDATE_SEAL_up3_r1.json sha 89de991f + up2 UP2_RETENTION_MANIFEST + advisory attempt_0001
+  receipt) · memories (pose_gap_was_gt_cache_lineage_not_cuda UPDATE 2 + concavity/bounds-add +
+  measured-object-vs-named) · tasks ledger (#1133/#1134/#1135/#1136/#1137).
