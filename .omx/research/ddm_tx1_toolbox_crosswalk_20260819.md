@@ -97,4 +97,92 @@ my own convenience:**
 
 ---
 
-*(sections 2+ land as the sweeps return)*
+## 2. NOT CHEAPER — the items the toolbox does NOT rescue, with the reason
+
+I priced these first because a crosswalk that only finds treasure is not a crosswalk.
+
+### 2.1 The −0.036 S seg×rate composition (#827) — **NOT RESCUED. The blocker was never the tool.**
+
+Receipt: `.omx/research/ddm_cr1_composition_row_827_20260801.md` `[macOS-CPU advisory]`.
+Corrected apples-to-apples the prize is **larger** than advertised — `−0.0867981 S`
+(seg −0.0368766 + rate −0.0499214), so the recorded `−0.035996` understates it 2.41×.
+Three independent reasons the modern toolbox does not convert it:
+
+1. **The bodies do not exist any more.** Candidate `ep854` is **360,331 B**, baseline
+   `gr1_cell_drop50` **359,221 B**, in grammars `ddm_tr1_runtime_archive.v1` and
+   `ddm_pfs1_composed_archive.v3_warp`. We ship **176,420 B** of RX1/F24S. These are
+   **2.04× our whole archive**; the sections the composition edits have no counterpart in
+   the shipped object. `ddm_lv2_terminal_campaign_completeness_20260811.jsonl` rank 19
+   already ruled it **SUPERSEDED**: *"#827/#934 banked cell-drop/phase-field compositions
+   belong to the tq1c-era parent and do not transfer."*
+2. **The pose blocker is a PHOTOMETRIC wall, and the carrier re-solve does not cross it.**
+   `window_03/tr1_config.json` carries `w_seg 100.0`, `w_rate 0.05` and **no pose term of
+   any kind** — the burn base was trained pose-blind, so its frames carry no pose-legible
+   signal. Measured pose cost of the composition: **6.36× worse, 61 of 61 pairs unanimous**,
+   ≈ **+3.367 S** — about **39× the prize**. `ddm_cr2r` then measured the re-solve floor at
+   **≥ 4.0389 S**, i.e. **46× over break-even even if all 526 unsolved pairs returned exactly
+   zero**. jg1's carrier re-solve recovers pose *because the up3 body's frame 2p is a working
+   photometric probe with a solved carrier*; re-solving against frames never shaped for pose
+   recovers nothing. This is CLAUDE.md's standing law — **only JOINT descent crosses the
+   photometric wall** — and the toolbox contains no joint-descent-on-a-dead-base tool.
+3. **Cross-vehicle transfer is not automatic and here it plainly fails.** The 1.073× re-solve
+   law is proven on the HPAC/CAP1 body. The TR1 body has no CAP1 carrier to re-solve.
+
+**Verdict: NOT-CHEAPER. Blocker stands, restated correctly** — it needs a *pose-carrying
+base built by joint in-loop descent*, which is a trained-vehicle deliverable, not a tool.
+
+### 2.2 The lane program / Lane×ANNIHILATE 0.157 S (#934/#920) — **NOT RESCUED, and its premise is now falsified on our body**
+
+Receipt: `.omx/research/ddm_fl2_force_ledger_recovery_20260804.md`. The 0.157 S is a
+**description price** (Lane's total flip mass 185,801 × 8.477e-7 S/flip), explicitly *"the
+ceiling #934 aims at, not a delta in hand."* Its **realization half is UNMEASURED and ~0 on
+every built actuator**; aggregate re-inflation MEASURED **+0.2459 S HARMS**. Its gate `q3x`
+is **closed dead** (`codex_arm_queue.jsonl:66`), its research outputs never existed, and the
+only measurement on record is an n=2 smoke that FOLDED. Same lv2 rank-19 supersession.
+
+**The re-price that matters, and it is new:** the lane program assumed Lane content is
+*annihilated in the stored representation*. On the shipped body that is **false**. jg1
+measured the stored tokens **99.9985% identical to the DALI GT argmax — only 1,714 cells
+differ in 117,964,800** — and **95.9% of the seg debt is render/re-segment loss**. The lanes
+are stored fine; they are lost in the paint→re-segment round trip. **The lane program aims at
+a stage that is not where this body loses lanes.** Its energy belongs at the pre-distortion
+stage, which is exactly what `ddm_jg2` is already executing.
+
+### 2.3 The banked sub-band pool qs2 / re1 / qs5 — **ALREADY INSIDE THE BODY. There is no bank.**
+
+My charter asked whether these compose onto up3. They do not need to: **they already fired.**
+`.omx/research/ddm_bu1_bank_union_compile_20260817.md`: *"It was compiled on 2026-08-14 as
+`ddm_mc35`, repaired as `ddm_mc36` Variant C, fired on T4, and PROMOTED at ΔS = −2.068040e-5.
+The current hv1 ep0634 frontier carries it."* Subsumption proven at **event ID** — mc36's
+runtime parse-back recovers compensation pairs `[7, 96, 105, 176, 178, 517, 523]`. qs5 was
+consumed too (mc36 Variant A ran its exact-object DLS/int12 solve). The premise is a
+**registered falsified premise** (`falsified_premise_registry.jsonl:14`,
+`qs2_re1_bank_union_is_held_and_unfired_20260817`) and `ddm_rv2` §2.2 already REFUTED it
+(HIGH): *"There is no bank. There is no pending union."*
+
+**Doubly consumed, and this is the part no prior memo says:** `ddm_up2`/`ddm_up3` then
+re-solved the **entire n600 carrier** by coordinate descent to convergence. Any surviving
+per-pair compensation object from the cp135 era is superseded by that solve by construction.
+
+Two corrections against my own charter, recorded per the charter-time law: the pool is not
+"held below the naming bar" (it is spent), and cp135 (`186,252 B`) was never our current body.
+
+### 2.4 Renderer width distillation (wd2/wd3) — **NOT RESCUED; the miss is 6×, not an instrument artifact**
+
+Receipt: `.omx/research/ddm_wd3_n120_family_disposition_20260816.md`
+`[macOS-MPS eval / seeded nonprefix n120 advisory]`. The byte half is genuinely large — the
+W0_warm student's quantized semantic packet is **21,807 B (uniform int4, parse-back exact)**,
+≈**16 KB** under the incumbent semantic section, which is **0.01065 S = 163% of the whole
+gap**. But the seg half projects **+6.6e-4 raw d_seg** against a byte-derived bar of
+**1.07e-4** — **~6× over**, and the scorer-aware continuation measured 8.2×. Family verdict
+already recorded: fresh-init distillation at this budget is NEGATIVE, `verdict_scope: family`.
+
+Could jg1's better instrument rescue it? **No.** The wd3 miss is a *ratio* on a matched
+instrument (student 0.00106 vs base 0.000427 same-instrument); swapping to a 0.99995×
+contest-axis instrument moves both sides together. A 6× miss is not an instrument artifact.
+**Stays PARKED with its measured reactivation ladder** (warm-lineage-at-w56 · longer-budget
+fresh · curriculum-inherited birth). I make no new verdict here — `ddm_na10` owns validity.
+
+---
+
+*(sections 3+ land as the remaining sweeps return)*
