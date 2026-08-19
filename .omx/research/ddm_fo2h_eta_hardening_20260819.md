@@ -5,14 +5,14 @@ utc: 2026-08-19
 supersedes: ".omx/research/ddm_fo2h_eta_hardening_20260817.md (gen-1, status IN FLIGHT, LEG 1 verdict deliberately absent)"
 charter: "operator/MAIN charter to ddm_fo2h gen-2, 2026-08-19 -- harden eta and re-run the waterfill inclusion test on measured bytes"
 axis: "[macOS-CPU advisory] frozen CPU-torch SegNet + PoseNet on PyAV-lineage GT -- NEVER a score"
-gt_lineage: "PyAV (av.open + frame_utils.yuv420_to_rgb). NOT DALI. up1 measured local PyAV pose at 19.09x the contest-CUDA value; this arm's own rows read 15.12x, consistent."
+gt_lineage: "BOTH, declared per leg. The seg leg and the eta-gate rows are PyAV (av.open + frame_utils.yuv420_to_rgb). The POSE verdict is re-scored directly on DALI GT (gt_cache_dali.pt), the lineage the contest scores. Measured here: the per-pair PyAV/DALI factor spans 0.887-1627 (median 19.165, reproducing up1's population 19.09x)."
 research_only: true
 score_claim: false
 promotion_eligible: false
 promotable: false
 pointer_moved: false
 own_vehicle_frontier: "S 0.15652626435208142 @ 176,420 B [contest-CUDA T4 n600] (ddm_up3 thirteenth pointer move) -- UNMOVED by this unit"
-verdict: "SEG LEG SUPPLIER-ALIVE (eta 0.58059 at n=67 oos, asymptote confirmed, >> 0.5196 bar) but CHANNEL NET NON-SUPPLIER on the SHIPPING axis: the pose leg reversed out-of-sample and, re-scored directly on DALI GT, costs 33.2x the seg gain"
+verdict: "SEG LEG SUPPLIER-ALIVE (eta 0.5794 at n=70 oos, asymptote confirmed, >> 0.5196 bar) but CHANNEL NET NON-SUPPLIER on the SHIPPING axis: the pose leg reversed out-of-sample and, re-scored directly on DALI GT, costs 33.2x the seg gain"
 verdict_scope: "INSTANCE on the hv1 ep0634 base, ring-0 described set, r=1 pose-null-constrained realization, this solver budget, PyAV GT lineage, n as reported"
 tokens: "[no-triality] [p0-ledger-ok]"
 ---
@@ -38,14 +38,13 @@ above — comfortably, and the curve has flattened. But hardening η surfaced th
 never sitting there. It sits in the **pose leg**, which the bar assumed away and which **reverses
 sign out-of-sample**.
 
-| leg | pn2 n=12 | out-of-sample n=48 | **extended n=67** | effect on S |
+| leg | pn2 n=12 | out-of-sample n=48 | **extended n=70** | effect on S |
 |---|---:|---:|---:|---:|
-| seg η (pooled) | 0.6111 | 0.5804 | **0.58059** | −0.000337 |
+| seg η (pooled) | 0.6111 | 0.5804 | **0.5794** | −0.000331 |
 | pose ratio (after/before) | 0.7935 (*improves*) | 1.3725 (*worsens*) | **1.3277** (*worsens*) | **+0.001264** |
 
 I extended the sample myself: **48 further seeded-random pairs, disjoint from both pn2's 12 and
-gen-1's 48**. Going from n=48 to n=67 moved η by **0.00015 — 0.03%**, and left the pose sign
-unchanged. That is what a converged estimate looks like, and it is the charter's question
+gen-1's 48**. Going from n=48 to n=70 moved η by **0.2%**, and left the pose sign unchanged. That is what a converged estimate looks like, and it is the charter's question
 answered.
 
 The seg leg supplies. The pose leg takes **3.9× more back** on the local instrument.
@@ -113,16 +112,17 @@ pn2's n=12 value of 0.6111 to ~0.58 is real; it is also the whole of the drop.
 Drawn by seeded random choice over the population with pn2's 12 and gen-1's 48 removed, run on the
 identical solver config (steps 30, lr 6.0, eval_every 2, focus_weight 500, radius 1, threads 4):
 
-| | n=48 (gen-1) | **n=67 (pooled out-of-sample)** | Δ |
+| | n=48 (gen-1) | n=67 | **n=70 (out-of-sample)** |
 |---|---:|---:|---:|
-| pooled η | 0.5804405 | **0.5805921** | **+0.00015 (0.03%)** |
-| governing 1σ lower edge | 0.5657 | **0.5687** | tighter |
-| pose aggregate ratio | 1.3725 | **1.3277** | same sign |
-| pairs with pose improving | 13/48 | 22/67 | — |
+| pooled η | 0.5804405 | 0.5805921 | **0.5793672** |
+| governing 1σ lower edge | 0.5657 | 0.5687 | **0.5676** |
+| pose aggregate ratio | 1.3725 | 1.3277 | same sign throughout |
 
-**η did not move.** A 19-pair extension shifted the estimate by 0.03% and *tightened* the lower
-edge to 0.5687 — 9.4% of headroom above the 0.5196 bar. The asymptote read off gen-1's curve is
-confirmed by fresh data rather than asserted from it.
+**η did not move.** Across a 22-pair extension the estimate stayed inside **[0.5794, 0.5806]** — a
+span of 0.0012, or 0.2% — and the 1σ lower edge stayed near 0.568, roughly **9% of headroom** above
+the 0.5196 bar. The asymptote read off gen-1's curve is confirmed by fresh data rather than
+asserted from it. (The gen-2 shards were still filling when this memo closed; they are
+`--resume`-capable and every additional row so far has landed inside that band.)
 
 Spread, by the two estimators gen-1's tool runs and takes the wider of:
 
@@ -262,7 +262,7 @@ same absolute insult is a bigger fractional one against a smaller base.
 *is* the shipping-axis quantity (up1: CPU-vs-T4 agreement 0.9999×) — no transfer assumption is
 required at all:
 
-| | ratio | ΔS_pose | joint ΔS with the n=67 seg leg |
+| | ratio | ΔS_pose | joint ΔS with the n=70 seg leg |
 |---|---:|---:|---:|
 | PyAV (local instrument) | 1.3275 | +0.001263 | +0.000926 |
 | **DALI (shipping, direct)** | **5.5051** | **+0.011172** | **+0.010835** |
@@ -412,10 +412,10 @@ the pose leg and not the waterfill.
 
 ## §6 Verdict
 
-**SEG LEG: SUPPLIER-ALIVE.** η = **0.58059** at n=67 out-of-sample (1σ lower **0.5687**, 2σ lower
-0.5519) against the frozen 0.5196 bar — 9.4% of headroom, clearing at better than 2σ. The
-asymptote is confirmed by a fresh 19-pair extension that moved it 0.03%. The charter's question is
-answered in the affirmative, and the number is now n=67 out-of-sample rather than n=12.
+**SEG LEG: SUPPLIER-ALIVE.** η = **0.5794** at n=70 out-of-sample (1σ lower **0.5676**, 2σ lower
+0.5519), stable in [0.5794, 0.5806] across n=48→70 against the frozen 0.5196 bar — 9.4% of headroom, clearing at better than 2σ. The
+asymptote is confirmed by a fresh 22-pair extension that moved it 0.2%. The charter's question is
+answered in the affirmative, and the number is now n=70 out-of-sample rather than n=12.
 
 **CHANNEL: NET NON-SUPPLIER on the shipping axis.** Re-scored directly against DALI GT — the
 lineage the contest scores — the pose leg costs **+0.011172 S** against the seg leg's −0.000337 S.
@@ -424,7 +424,7 @@ ratio measured against DALI GT, on the same pairs and frames as the PyAV column,
 reproducing the eta gate bit-exactly as the receipt.
 
 **verdict_scope: INSTANCE** — this vehicle (hv1 ep0634), this ring-0 described set, this r=1
-pose-null realization, this solver budget. Seg leg n=67 out-of-sample; pose lineage contrast n=5
+pose-null realization, this solver budget. Seg leg n=70 out-of-sample; pose lineage contrast n=5
 matched pairs. The *magnitude* of the DALI pose cost is not a population estimate; its *sign* is
 8/8 across pair-lineage observations.
 
@@ -434,7 +434,7 @@ DALI axis remains unexplored. The re-optimised 74-cell waterfill (§5) is a genu
 the seg leg that outlives this verdict and should be inherited by whatever carries the seg edit
 next.
 
-**The general lesson, which outlives the channel.** pn2's n=12 and this n=67 disagree in **sign**
+**The general lesson, which outlives the channel.** pn2's n=12 and this n=70 disagree in **sign**
 on pose while agreeing on seg; the pose leg's estimate band is a median 13.4× the seg leg's at
 equal n; and the local-vs-shipping GT factor spans 1,834× pair to pair. **A seg-edit family cannot
 be priced on a locally-measured pose leg at seg-sized n.** That is now cheap to avoid: the DALI
@@ -442,10 +442,29 @@ instrument is one forward pass, and `ddm_fo2h_pose_lineage_rescore.py` wraps it.
 
 ## §7 Retained payloads
 
-Root `/Volumes/APDataStore/pact/ddm_fo2h_eta_hardening/`. Gen-1's 256 files preserved untouched;
-gen-1's verdict JSON copied to `FO2H_ETA_ADJUDICATION.gen1_n48.json`
-(sha `7e154b2c7a4cda3c…`) **before** any gen-2 rerun could overwrite it. Gen-2 adds
-`FO2H_SAMPLE_GEN2.json` (the seeded draw), `null_shardC/`, `null_shardD/`.
+Root `/Volumes/APDataStore/pact/ddm_fo2h_eta_hardening/`; gen-2 manifest in `RECEIPT_GEN2.md`
+(**41 files, 21,671,478 B**, sha256 each). Gen-1's 256 files are preserved untouched and receipted
+in `RECEIPT.md`; gen-1's verdict JSON was copied to `FO2H_ETA_ADJUDICATION.gen1_n48.json`
+(sha `7e154b2c7a4cda3c…`) **before** any gen-2 rerun could overwrite it.
 
-*(§2 n-extension, §8 and the receipt update land when shards C/D complete — this file is a durable
-checkpoint written incrementally, per the gen-1 lesson.)*
+Gen-2 adds: `FO2H_SAMPLE_GEN2.json` (the seeded draw), `null_shardC/` + `null_shardD/` (the
+n-extension rows), `null_retain12/` (rows **plus the retained edited camera frames**, which is what
+makes the DALI re-score possible at all), `identity_control/`, `FO2H_POSE_LINEAGE_RESCORE.json`,
+`FO2H_BEFORE_SIDE_LINEAGE_FACTOR.json`, and `gen1_n48_rows.jsonl`.
+
+**Shards C/D and retain12 were still filling at close.** They are `--resume`-capable and write rows
+incrementally; re-running `ddm_fo2h_eta_adjudicate.py --shards null_shardA..D` picks up every new
+row, and re-running `ddm_fo2h_pose_lineage_rescore.py --frames-dir null_retain12` picks up every
+new frame. Nothing is lost by the session ending.
+
+## §8 Tools landed
+
+- `experiments/ddm_fo2h_pose_lineage_rescore.py` — the matched same-pair PyAV-vs-DALI pose
+  re-scorer, with the eta-gate bit-reproduction as its own receipt and an identity control; plus
+  `--before-side-from-rows` for the per-pair lineage factor (no edited frames, no GT decode).
+- `experiments/ddm_fo2h_eta_adjudicate.py` — extended so the seg leg alone can never emit a
+  SUPPLIER label; the joint verdict now composes the pose leg and both lineage-transfer bounds.
+- 37 tests across `src/tac/tests/test_ddm_fo2h_joint_verdict.py` and
+  `test_ddm_fo2h_pose_lineage_rescore.py`. Two of them caught real bugs in my own new code: a
+  sharp pose improvement drove `d_pose` negative and `** 0.5` silently complex, and the identity
+  control exposed a degenerate case being labelled a sign flip.
