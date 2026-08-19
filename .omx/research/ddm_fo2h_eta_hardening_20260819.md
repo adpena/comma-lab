@@ -481,3 +481,9 @@ this memo's closure — the second channel of the pose-null family ALSO refuses,
 AND the pose leg. No reversal; the family closure stands with two independent channel
 measurements. (Process note: this is the same finishes-after-memo genus gen-1 suffered for two
 days; the completion monitor surfaced this one in minutes — harvested same-hour.)
+
+**Straggler 2 (null_shardC, rc=0 at launch_counter 255, harvested same-hour):** n=24 explicit
+pairs, pooled η **0.533 < the 0.753 bar** (0/24 pairs above bar; per-pair 0.348–0.689), pose
+ratio median 1.291× worsening (max 18.3), net_S_at_measured_eta **+0.00646**. Third independent
+refusal — the rt1-channel closure now rests on n=12 AND n=24 measurements plus the gen-2
+headline. Family closure unchanged, confidence strengthened.
