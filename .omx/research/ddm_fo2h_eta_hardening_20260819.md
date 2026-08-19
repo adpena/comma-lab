@@ -190,6 +190,51 @@ ratio of means and the pairs carrying the most pose mass happen to degrade propo
 35 of 48 pairs worsen. This is not a tail artifact — it is the central tendency, and the headline
 number is the *charitable* reading of it.
 
+### §4.2 Why pn2 and this arm disagree on pose: it was a 1-in-476 draw
+
+pn2's 12 rows reproduce their 0.7935 exactly from rt1's retained file, so the disagreement is not
+an arithmetic difference. I asked the sampling question directly: **resample n=12 without
+replacement from this arm's 48 out-of-sample rows, 20,000 times, and ask where 0.7935 falls.**
+
+| | p2.5 | p16 | median | p84 | p97.5 |
+|---|---:|---:|---:|---:|---:|
+| n=12 aggregate pose ratio | 0.896 | 1.065 | **1.374** | 1.890 | 2.580 |
+
+**pn2's 0.7935 sits at the 0.21st percentile — a 1-in-476 draw.** Ordinary sampling noise would
+read pose as *improving* (ratio < 1.0) in **9.5%** of n=12 draws, so an "improving" read was always
+reasonably likely; a read as *low* as 0.7935 was not.
+
+**The symmetry check says this is pose-specific, not an instrument shift.** Running the identical
+resample on the seg leg puts pn2's η = 0.6111 at the **86.8th percentile** — mildly favourable and
+entirely ordinary. A difference in the forward instrument (rt1's unrecorded thread count, [[et4]])
+would have moved *both* legs. It moved one. So the honest reading is that pn2's pose number was an
+unlucky-for-us extreme of a very heavy-tailed statistic, and it should never have been load-bearing
+at n=12.
+
+### §4.3 The two legs need different n — and only one of them has converged
+
+Running the cumulative-curve diagnostic on **both** legs over the same 48 rows in the same shuffled
+order:
+
+| | n=24 | n=32 | n=40 | n=48 | **range over n=32…48** |
+|---|---:|---:|---:|---:|---:|
+| seg η | 0.593 | 0.592 | 0.585 | 0.580 | **0.0090** |
+| pose ratio | 1.300 | 1.324 | 1.442 | 1.373 | **0.1960** |
+
+**The pose leg's estimate is still wandering across a band 21.8× wider than the seg leg's at the
+same n.** η has an asymptote at n=48; the pose ratio does not.
+
+This is the finding I would most want carried forward, because it is a statement about the
+*instrument*, not about this channel: **an n that settles a seg claim does not settle a pose
+claim on the same rows.** It is the quantitative form of [[m96]] — the pose axis is where subset
+estimates go wrong — and it predicts that every future arm pricing a seg-edit family will
+under-sample its pose leg by roughly an order of magnitude in n unless it checks.
+
+**What is settled anyway: the sign.** Every cumulative value from n≈20 onward is above 1.0, and the
+whole n≥24 band is 1.30–1.52. The *magnitude* of the pose cost is unresolved; the *direction* is
+not. Since the verdict turns on the sign — even the band's floor of 1.30 costs +0.001163 S, 3.5×
+the seg gain — the NON-SUPPLIER verdict is stable across the unconverged range.
+
 ## §5 LEG 2 — the inclusion test on measured bytes (gen-1, verified not re-run)
 
 Gen-1 completed this leg and I verified its controls rather than repeating 44 s of coding. Its
