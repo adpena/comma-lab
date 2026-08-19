@@ -361,22 +361,61 @@ coder/model/representation matrix, the object was only identified today, the tes
 `ddm_bp1` itself routes rate progress to exactly this level. **Test it, expect a negative,
 and bank the negative as the closure of the rate axis.**
 
-### #4 — RECONCILE THE DECODE WALL-CLOCK BUDGET (blocks fx2's E1 rung, and more)
-**cost $0 · worth ~87 B directly, but it un-gates a whole class**
+### #3 (tie) — ra2 + ra1: the CPR1 inner-coder win that is LOSSLESS, $0, unowned, and gated by a self-defeating rule
+**ΔS ≈ −1.85e-4 = 2.8% of the gap · zero distortion risk · no scorer row needed**
 
-Two margin figures are in circulation and they differ by **7.2×**:
+| stream | shipped | best adaptive | result |
+|---|---:|---:|---|
+| basis (27,648 symbols) | 12,277 B | 12,046 B | **+231 B** (−32 B dead table) |
+| coefficients (7,200 values) | 9,878 B | 10,293 B | **−415 B — Rice WINS, do NOT swap** |
 
-- fx2's `SHIPPED_CONFIG` **freezes D1 and refuses E1** on the grounds that E1 projects
-  *"29 s of 1,800 s margin (1.6%)"* against D1's **118 s**, i.e. +87 B for +89 s = 0.98 B/s.
-- `ddm_up3` **measured the shipped candidate inflating end to end in 954.5 s of the 1,800 s
-  budget** — `returncode=0`, STRICT validation passed, 3,662,409,600 raw bytes — i.e.
-  **845.5 s of margin.**
+Net **+263 B raw MEASURED** (round-trip exact 27,648/27,648), ~230 B realized, plus ra1's
+`basis_scales` 48 B → **~278 B ⇒ ΔS −1.85e-4**, clearing the −3.5e-6 admit bar by **53×**.
+It is **lossless**, so `d_seg` and `d_pose` are unchanged *by construction* — no scorer run,
+no advisory row, no axis-transfer question, no pose-recovery budget consumed.
 
-**Caveat, stated plainly:** up3's 954.5 s is a **local macOS** decode; the contest budget is
-30 min on a T4 or a 4-core/16 GB CPU, and we have no contest-host decode timing for this
-body. So I do **not** claim the E1 refusal is void. I claim the two numbers must be
-reconciled before wall-clock is used to refuse *anything* — that reconciliation is $0, and it
-gates every "richer decoder model" proposal, not just E1.
+**Why it never fired, verbatim from `ddm_qw1`:** *"`ra2` row 3: 'fire only when a rung of
+≥2 KB is also in flight — 230 B does not justify a receiver change alone.' I checked:
+nothing ≥2 KB is in flight. By its own gate this row never fires. That gate should be
+retired."* **The gate's own condition is now MET** — `ddm_jg2` is building a receiver-touching
+candidate. So ra2/ra1 should simply **ride jg2's byte-close** at zero marginal receiver cost.
+
+Re-pricing owed (small): ra2's base was hv1's 22,161 B carrier; up3's is 22,246 B, and
+up2/up3 re-solved the coefficients. The **coefficient** finding is unaffected (Rice wins —
+don't touch it); the **basis** saving should survive since the pose solve moved coefficients,
+not the basis — but it must be re-measured, not assumed.
+
+### #4 — THE ONE UNMEASURED CELL: structure-exploiting representation (see §4 #3 above)
+
+### #5 — DECODE WALL-CLOCK: NOT a free lunch, and the direction is the opposite of my draft
+
+My first pass read up3's 954.5 s inflate as **1.89× of free headroom** and treated fx2's
+E1 refusal as probably void. **The sweep corrected me, and the correction matters:**
+
+1. **On the contest-CPU axis we are already 1.90× OVER budget — MEASURED.**
+   `ddm_pq1/PACKET_TARGET.json` gen3: `inflate_wall_seconds 3422.71` against
+   `inflate_budget_seconds 1800`, `token_decode_seconds 3108.73` (**91%** of it),
+   `harness_behavior: fail-closed TimeoutExpired at 1800 s`,
+   status **`MEASURED_INFEASIBLE_WITHIN_CONTEST_BUDGET`**. Confirmed a generation later —
+   gen4 ck1 `failed_modal_cpu_inflate_timeout_1800s`. The submission is declared
+   **GPU-required**, now measured rather than assumed.
+2. **There is NO T4 inflate-seconds figure for any recent candidate.** Every number I can
+   source is macOS-arm64 advisory (954.5 s, 941.19 s) or contest-CPU x86_64 (3,422.7 s).
+   **My "1.89× headroom" was inferred from an arm64 instrument and I withdraw it as a
+   measurement.** It remains a plausible advisory signal and nothing more.
+
+**So decode compute is not a currency we have proven we hold.** fx2's E1 refusal may well be
+correct. The genuinely cheap, genuinely owed action is a **single T4 inflate-seconds
+measurement on the up3 body** — we already fire T4 rows, and the timing falls out of one.
+Until it exists, no arm should spend decode budget on the strength of the arm64 number, and
+no arm should refuse a rung on the strength of the 118 s figure either. Both are unanchored.
+
+**The one asset that could reopen the CPU axis:** `F26R`, SEALED, with a DERIVED contest-CPU
+total of **1,321.6 s — 278.4 s below the 1,600 s gate** (F26Q measured the token stage
+383.35 → 203.84 s, F26R 203.84 → 147.01 s). But it rides the inherited F26/MC36 186,269-B
+archive, not up3, and `ddm_rfo2` prices it correctly: *"Native integer decode may make a
+candidate contest-CPU viable but cannot lower archive S by itself. Projected ΔS=0."*
+**It is a submission-validity asset, not a score asset.**
 
 ---
 
@@ -403,4 +442,163 @@ same joint solve — not as a second candidate composed afterwards.
 
 ---
 
-*(§6 adjacent/tangential lands as the last sweep returns)*
+## 6. ADJACENT AND TANGENTIAL
+
+### 6.1 Allocation honesty: the trained line is retired, and the arithmetic says so
+
+| line | best byte-closed S | axis | status |
+|---|---:|---|---|
+| trained / TR1 own-vehicle | **0.7541524541914318** @ 358,084 B | `[contest-CPU]` Modal Linux x86_64, n600 | **RETIRED** |
+| shipped-body (inherited lineage) | **0.15652626435208142** @ 176,420 B | `[contest-CUDA]` T4, n600 | **LIVE** |
+
+`ddm_tc1` retires it on arithmetic, not fatigue: TR1's best-ever `d_seg` 0.00389011 makes the
+**seg term alone 0.389011**, versus a total seg+rate budget of 0.151303 — **2.571× the entire
+budget**. Even a zero-byte archive with free pose lands **S 0.397306 = 2.49× the frontier**.
+Its pose machinery has **never fired** (all 15 `--jd1-*` flags default-off and unset; the
+archive ships an inert 83 B `pose_stub.sec`). The trained line is **4.7×** worse.
+**Marginal effort pays on the shipped body. There is no allocation dilemma.**
+
+Two trained-line footnotes worth keeping: wd2's ep60 route was the only trained path ever
+projected *through* the goal (≈0.1480), and `ddm_na10` re-audited it **today** under the fresh
+lineage laws — *"Applying the sharper instrument makes the negative stronger, not weaker."*
+And no `[contest-CUDA]` row has ever been measured on the own vehicle.
+
+### 6.2 The two objectives have diverged, and nobody owns it
+
+The same 176,420 bytes, scored two ways (both MEASURED, up3 §5/§8):
+
+| objective | seg | pose | rate | **S** |
+|---|---:|---:|---:|---:|
+| contest-CUDA (DALI GT) | 0.030309 | 0.008746 | 0.117471 | **0.156526** |
+| advisory-CPU (PyAV GT) | 0.043336 | 0.038516 | 0.117471 | **0.199323** |
+
+Ratios PyAV/DALI: **seg 1.43×, pose 19.4×.** Our whole pose campaign — up1, up2, up3, the
+carrier solve, CONVERT-NOW #2 — is optimizing a term that is **4.4× larger** on the other
+objective and largely does not transfer. `ddm_up2` owed-1 flagged it: *"Nobody owns the
+two-objective question."* Still nobody. This is not urgent while the goal is met on either
+axis, but it means **the CPU-axis bank (0.18804) will not be beaten by the CUDA-axis work**,
+and a family prior puts up3 at ≈0.199 on CPU — worse than the bank. **No contest-CPU row
+exists on the up3 body, or on any body since gen3.**
+
+### 6.3 Packet gen5 is three moves stale
+
+`ddm_pq1` is frozen at **gen4 = ck1, 177,182 B, S 0.15710198138**, `PREPARED_HOLD_NOT_SUBMITTED`,
+`OPERATOR_GO_REQUIRED_NOT_GRANTED`. Three pointer moves have landed since — ck2 −4.375e-4,
+to1 −6.99e-5, up3 −6.833e-5 = **−5.757e-4 total**, i.e. the packet is **762 B / 5.757e-4 S
+stale**. **No gen5 directory, file or receipt exists**; it is queued at the freeze boundary
+behind round-13 review. gen4 carries 83 GREEN / 4 RED on the strict 87-check
+`--contest-final`, and an owed `NOT_RE_VERIFIED_FOR_THESE_BYTES` reproduction that will
+re-open on up3 bytes. **Cost is $0 local** — the expensive part (fresh 87-check run) is
+deliberately deferred so the packet refreshes once. That is the right call; it just means
+gen5 should fold all three moves in a single pass.
+
+### 6.4 MLX / Metal is cold
+
+Both ports (`ddm_wc1` HPAC throughput, `ddm_wc2` HPAC MPS) are
+`BUILT / QUEUED-WITH-A-FIRE-ORDER / **BLOCKED-ENVIRONMENT**` with **zero measurements
+produced** — wc2 reports Torch MPS built-but-unavailable; wc1 died on `nice: Operation not
+permitted` after 42 s. MLX otherwise appears only as a pytest hazard. The wc1 *decode*
+ladder did land real numbers on M5 CPU (516.8 s optimized, 370.4 s cached, token decode
+5.9 s) and its conclusion is the honest one: *"The remaining wall is the RENDER, not the
+token decode"* — neural render is 86% of the cached total. **Not a score lever
+(`ΔS = 0`); a feasibility lever for §5's CPU-axis problem.**
+
+### 6.5 The systemic defect this crosswalk should be read against
+
+`ddm_qw1` names it exactly, and I nearly repeated it this turn:
+
+> *"`gx1` (10:17), `hv2` (18:37) and `fb1` (19:12) each independently enumerated 'the bank'
+> today and each concluded it totals −5.5818e-06. `ra2` landed at 20:50. Its credit is **27×
+> the entire bank they summed**, and `grep -ci cpr1` returns **0** in all three. They were not
+> careless — **they could not see it.** The defect is that the bank total is a hand-recomputed
+> number in prose with no live consumer."*
+
+**My own instance of it, caught and recorded:** the adjacent sweep returned `ddm_ma1`'s
+**−104.584 B / ΔS −6.9915e-05** as "the highest-value orphan, blocker receipted as void." It
+is **not an orphan — it is already inside the shipped body.** `ddm_to1` landed ma1's tail as
+the twelfth move. **I did not take that from the memo chain; I re-derived it from the shipped
+archive this turn** — reassembling the tail object (96 B fixed table + RC64 stream) out of
+`ddm_up3/candidate_runtime/archive.zip` through its own receiver gives **109,792 B, sha
+`4bc30d3f8ec1aecb`**, byte-identical to the tail `ddm_to1` reports for ma1. Anyone re-mining
+that −105 B would be double-counting a credit already banked. **This is the same stale-aggregate genus, one layer up: a sweep over memos
+returns credits that the archive has already absorbed.** The structural cure is the one qw1
+names — a live consumer that reads credits from the *archive*, not from prose. Until that
+exists, **every re-pricing memo (including this one) must verify each credit against the
+shipped bytes**, which is why §0's section budget was parsed from the archive rather than
+quoted. `ddm_oq1` measured the scale of the problem: of 437 backlog rows, **ZERO postdate the
+08-06 PR130 intake** and **68.2% are dead mass**; its 81 QUEUED rows are denominated against a
+182,759 B body that is now four generations stale.
+
+---
+
+## 7. FIRE ORDER FOR MAIN — top 3
+
+| # | item | projected ΔS | label | cost | why now |
+|---|---|---:|---|---:|---|
+| **1** | **Token-drop family (rc4/td1) re-priced against jg1's carrier re-solve** — enter it as an extra coordinate in **jg2's S2 joint solve**, never as a separate composed candidate | **−0.002929** (44.9% of gap) at jg1's measured 1.073× recovery; still −0.001865 at jg1's worst pair | rate+seg leg MEASURED (hv1-era, same lineage); recovery MEASURED n=3; composition **DERIVED** | **$0**, all instruments exist | rc4 refused an ***uncompensated*** drop by 517×; compensation now exists and break-even tolerates 1.9× where jg1 delivered 1.073× — a **1.77× margin** |
+| **2** | **ra2 + ra1 CPR1 inner coder** — retire the self-defeating ≥2 KB gate and ride jg2's byte-close | **−1.85e-4** (2.8% of gap), 53× the admit bar | **MEASURED**, round-trip exact | **$0** | **lossless** ⇒ zero distortion risk, zero pose-budget consumption, no scorer row; unowned; its gate's own condition is now met |
+| **3** | **12-dim pose basis re-orientation** (up2 owed-2 / jg1 §S3) | break-even affords **1,387 B at just 1.25×**, 3,847 B at 2× | budget **DERIVED**; achievable factor **UNMEASURED** | **$0** | up2 called it *"the single highest-value follow-on"* (6.4× median demanded-step reduction) and it has sat unowned; a carrier edit has never needed more than 48 B |
+
+**Two things MAIN should also just do, both $0 and both blocking-adjacent:**
+(a) take **T4 inflate-seconds** on the next fire — it costs nothing extra and anchors the
+wall-clock argument that currently gates the whole model axis in both directions;
+(b) fold all three stale moves into **gen5** in one pass at the freeze boundary.
+
+**And the redirect for `ddm_jg2`:** §5's composition warning. If #1 is taken, it must enter
+S2's joint solve as an additional coordinate — one re-encode, one joint carrier re-solve, one
+candidate. jg2's own S1b finding (no per-token price; blast radius global through pair 599)
+and `ddm_bu1`'s measured law (*"never price a union as the SUM of its legs"*; mc36 beat the
+naive union **3.705×**) both forbid composing it afterwards.
+
+---
+
+## 8. STORES CONSULTED
+
+`.omx/state/canonical_frontier_pointer.json` (re-read at arm start) · the shipped archive
+itself, parsed through its own receiver at
+`/Volumes/APDataStore/pact/ddm_up3/candidate_runtime/{archive.zip,runtime/residual_archive.py,cpr1/inflate.py}`
+· `ddm_up3_thirteenth_move_byteclose_20260819.md` · `ddm_up2_shipping_object_pose_solve_20260819.md`
+· `ddm_jg1_joint_solve_20260819.md` · `ddm_jg2_sub015_chain_20260819.md` (live sister, read-only)
+· `ddm_cr1_composition_row_827_20260801.md` · `ddm_cr2r_ep854_pose_resolve_refuted_matched_control_20260802.md`
+· `ddm_fl2_force_ledger_recovery_20260804.md` · `ddm_lp1_lane_program_20260803.md`
+· `ddm_bu1_bank_union_compile_20260817.md` · `ddm_fb1_stale_bar_rebase_and_bank_union_20260816.md`
+· `ddm_rv2_frontier_adversarial_review_r1_20260817.md` · `falsified_premise_registry.jsonl`
+· `ddm_qs2_r2_admitted_verdict_20260813.md` · `ddm_re1_round1_dual_axis_verdict_20260814.md`
+· `ddm_qs5_verdict_and_no_toy_enforcement_20260813.md` · `ddm_me1_micro_edit_engine_20260817.md`
+· `ddm_ba31_negative_surfaces_20260731.md` · `ddm_dc1_correction_label_cost_and_qa03_censoring_20260801.md`
++ `ddm_dc1_label_price_n600_20260801.json` · `ddm_wd1_pose_wiring_falsified_and_correction_minimum_scale_20260802.md`
+· `ddm_tz1_token_sweep_rate_attack_20260804.md` · `ddm_tq1_preempted_by_rt1_and_sl2_composition_20260805.md`
+· `ddm_rc4_rung4_token_drop_verdict_20260816.md` · `ddm_td1_token_drop_schur_arithmetic_20260816.md`
+· `ddm_rl1_roadlane_interface_price_20260803.md` · `ddm_cg3_counted_gt_recovery_20260804.md`
+· `ddm_pz4a_precision_preproof_20260811.md` · `ddm_rfo1_fresh_hybrid_compose_20260814.md`
+· `ddm_bp1_section_coding_axis_closed_20260818.md` · `ddm_fx1_fixed_point_logistic_mixer_20260817.md`
+· `ddm_fx2_model_axis_all_sections_20260818.md` · `ddm_ma1_model_axis_miss_cost_20260819.md`
+· `ddm_to1_tail_override_twelfth_move_20260819.md` · `ddm_ck2_container_plane2_eleventh_move_20260819.md`
+· `ddm_qw1_unfired_wins_inventory_20260816.md` · `ddm_wd3_n120_family_disposition_20260816.md`
+· `ddm_tc1_tr1_lifecycle_spec_20260817.md` · `ddm_r9m_first_contest_cpu_row_20260804/` ·
+`ddm_pq1_submission_packet_prep_20260815/{PACKET_TARGET.json,GENERATION_LOG.md}` ·
+`ddm_f26p_runtime_cpu_lift_20260814.md` · `ddm_wc1_decode_wallclock_verdict_20260816.md` ·
+`ddm_dc1_decode_budget_conditional_coding_20260816.md` · `ddm_oq1_orphan_queue_drain_20260817.md`
++ `ddm_oq1_drain_dispositions_20260817.json` · `ddm_lv2_terminal_campaign_completeness_20260811.jsonl`
+· `ddm_gx1_gap_closure_composition_table_20260816.md` · `ddm_na10_negative_audit_fresh_laws_20260819.md`
+(live sister, read-only) · `.omx/state/active_lane_dispatch_claims.md` · memories
+`[[never-price-a-union-as-the-sum-of-its-legs]]` · `[[m89]]` ·
+`[[orphan_sweeps_that_do_not_write_the_store_are_the_disease_20260803]]` ·
+`[[concavity_helps_when_you_pay_the_axis_upward_20260818]]` ·
+`[[my_own_charters_fail_the_charter_time_optimal_form_law_20260817]]` ·
+`[[the_denominator_and_the_falsifier_can_both_be_vacuous_20260816]]` · `[[m34]]` · `[[m88]]` · `[[m96]]`.
+
+## 9. WHAT I GOT WRONG, RECORDED
+
+1. **My charter called the 12-dim carrier re-orientation "FREE."** It is not — up2 says the
+   basis section is Huffman-coded and *"NOT free"*; up3 measured a carrier perturbation at
+   **+48 B**. Corrected in §1; the item survives on its byte budget, not on being free.
+2. **My charter treated qs2/re1/qs5 as a live bank.** They were spent on 2026-08-14 (mc36
+   Variant C, PROMOTED −2.068040e-5) and then superseded again by up2/up3's full carrier
+   re-solve. A registered falsified premise already said so.
+3. **My seed-8 thesis — "the tail's model is where the money is" — is REFUTED.** The model
+   axis has ~400 B + ~75 B left; the coder axis −5 B. Rate cannot close the gap alone.
+4. **I read up3's 954.5 s local inflate as 1.89× of contest headroom.** It is an arm64
+   advisory number; the contest-CPU axis is MEASURED 1.90× **over** budget. Withdrawn in §5.
+5. **I nearly re-banked `ddm_ma1`'s −105 B as an orphan.** It is already in the shipped body
+   via `ddm_to1`. Recorded in §6.5 as an instance of the defect, not a footnote.
