@@ -77,4 +77,68 @@ memory `concavity_helps_when_you_pay_the_axis_upward_20260818`.
 
 ## S1 — THE REAL RATE
 
-(in progress; findings land here before S2 starts)
+### S1a — the coordinate correction, measured before anything was encoded
+
+Two things jg1 recorded needed fixing, and both are structural rather than cosmetic:
+
+1. **The tail is not all coder output.** `read_residual_archive` (`runtime/residual_archive.py:478-494`)
+   splits it: **109,792 B tail = 96 B compact fixed residual table + 109,696 B RC64
+   stream.** A re-encoder that compares its output against the whole tail is 96 B off by
+   construction. This module carries the 96 B prefix through untouched and byte-checks
+   only the stream.
+2. **The pointer body is `ddm_up3/candidate_runtime/`, not the to1 tree.** The to1 tree's
+   `inflate.py:19` pins `ARCHIVE_SHA256 = "50e56145..."` and would refuse the pointer
+   archive. MEASURED here: the two archives' `runtime/` and `cpr1/` trees are identical,
+   and section-wise `hpac`, `semantic` and `tail` are **byte-identical** — **only the
+   carrier differs** (`f59210d7...` vs `4ef50093...`). So jg1's tail work transfers, but
+   the splice target is the pointer.
+
+### S1b — THE FINDING THAT DECIDES THE METHOD: there is no per-token price
+
+jg1's `+4.718 bits/token` is a **per-symbol marginal**: the cost of flipping one token
+holding every other probability fixed. Reading the shipped decoder
+(`decode_production_tokens`, `:600-649`) shows that quantity does not exist for this
+coder. **Four independent feedback paths make a token's price depend on other tokens'
+VALUES:**
+
+| # | path | file:line | reach |
+|---|---|---|---|
+| 1 | `sparse.selected_logits(current, context, group)` — `current` is the partially-decoded frame, one-hot'd into the conv | `residual_archive.py:617`, `cpr1/hpac_integer_sparse.py:161-170` | the 189 later groups of the SAME frame |
+| 2 | `context = model.prepare_frame_context(index, previous)` — `conv_past` + SPM on the previous decoded frame | `:603`, `cpr1/hpac_integer.py:330-362` | all of frame n+1 |
+| 3 | `boundary = _boundary_buckets(previous_cpu)` — the fixed-table row index is a distance-to-class-edge map of the previous frame | `:605-608`, `:515-534`, `:621` | all of frame n+1 |
+| 4 | `FreeCorrector` Krichevsky-Trofimov counters, updated only from decoded symbols and **never reset per frame** | `free_corrector.py:290-308`, `173-175` | **the entire remaining stream** |
+
+Path 4 alone makes the blast radius of one changed token **global and unbounded** — one
+edit in pair 283 perturbs the probability of every symbol through pair 599. There is no
+local window to price, and `ddm_hm1`'s retained `base_logits_int16_n600.i16` — which
+`ddm_rr2`'s encoder memmaps — becomes **wrong** the moment a token changes. `ddm_rr2`
+states its own precondition at `:40-43`: its logits are valid *"because the decoded field
+is unchanged by construction."* A jg2 token edit is exactly what breaks that.
+
+**So the modelled 4.718 was never going to be checkable by a better model. It is
+replaceable only by encoding the whole 600-frame stream along the new trajectory and
+stat'ing `archive.zip`.** That is what `experiments/ddm_jg2_tail_reencode.py` does: it is
+`decode_production_tokens` line for line with the decode call replaced by an encode of the
+known symbol, importing the model, group plan, boundary map, fixed table, corrector and
+probability quantization from the shipped runtime rather than reimplementing any of them.
+
+### S1c — the encoder is the exact inverse (smoke, n=2 frames)
+
+The RC64 encoder half is not in the shipped tree (`runtime/entropy/rc64_backend.c`, sha
+`05839d14...`, is **decoder-only**). It comes from the `ddm_rr2` lineage source pinned at
+sha `5c75e2c7...` plus `route_b_rc64.RC64_CHECKPOINT_EXTENSION`. That pairing is not
+assumed to invert this decoder — it is **tested**:
+
+| quantity | value |
+|---|---:|
+| frames encoded | 2 |
+| emitted bytes | 555 |
+| **prefix bytes agreeing with the shipped stream** | **554** |
+| ideal code length from the probability rows | 554.78 B |
+| wall clock | 2.88 s (1.44 s/frame -> ~14.4 min for n600) |
+
+The single trailing byte is the coder's end-of-stream flush at frame 2, which the shipped
+stream does not have there. **554 of 555 bytes agree**, and the emitted length sits 0.22 B
+above the ideal code length — the coder tax, measured rather than assumed. The full
+600-frame control (which must be byte-identical, not prefix-identical) is the binding
+proof and is running.
