@@ -118,7 +118,7 @@ before it is trusted.
 
 ## 2. The controls
 
-Every one is executable (`src/tac/tests/test_ddm_up3_carrier_splice.py`, 32 tests, no
+Every one is executable (`src/tac/tests/test_ddm_up3_carrier_splice.py`, 35 tests, no
 skips — I checked the denominator, because a skipped control reads as a pass).
 
 | control | result |
