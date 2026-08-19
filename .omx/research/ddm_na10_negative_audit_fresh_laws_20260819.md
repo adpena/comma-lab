@@ -257,3 +257,111 @@ reconciliation is a merge and not a revert: pi2 bounded the inflate device-depen
 (`pose_batch` 1-vs-64 is bit-identical over 1.83e9 pixels; only `semantic_batch` differs, at
 1,326 pixels, max |Δ|=1). And jg1's DALI-scored seg instrument (0.99995×) plus the L2/L3/L4
 results are new work that pi2 does not contain.
+
+---
+
+## §5 REOPENED — ordered by projected S value
+
+### 5.1 `ddm_rc4` rung-4 token drop — **REOPENED**. Its own named door has since been measured OPEN.
+
+**This is the audit's highest-value row, and it is the cleanest kind: rc4 did everything
+right, stated exactly what would overturn it, and was overturned three days later by an arm
+that did not know it was answering rc4.**
+
+Receipt: `.omx/research/ddm_rc4_rung4_token_drop_verdict_20260816.md` (2026-08-16), §VERDICT.
+
+rc4 is *not* lineage-confounded, and I want that on the record because the inventory pass
+flagged it as an L1 candidate and the source refutes that. rc4 scored its pose leg against
+`gt_cache_dali.pt["pose"]` **per pi2's fix**, cross-checked it against PyAV (1.7% different),
+and noted the drop is a *paired differential* so the offset cancels. rc4 is the one arm in
+this corpus that had already absorbed pi2. **L1 does not touch it.**
+
+What refused it was the pose leg, and rc4 named its single open door precisely:
+
+> "The charter's own composition — qs5's **in-compile frame-0 Schur compensation** — is
+> untested at this amplitude and is the one door left. It must cancel **99.807%** of the pose
+> perturbation to make the rung net-negative … What is unmeasured is its reach at this
+> amplitude and the carrier's re-coding cost across all 600 pairs."
+
+rc4 even derived the structural case that jg1 later confirmed — *"6 pose equations, 12 free
+coefficients per pair."* It was right, and it correctly refused to claim it without measuring.
+
+**jg1 §S2b measured that reach on 2026-08-19.** Same mechanism (token edit perturbs frame 1;
+the 12-coefficient carrier re-solves against the perturbed frame), realized acceptance,
+DALI targets:
+
+| pair | orig `d_pose` | damaged | re-solved | cancellation |
+|---|---:|---:|---:|---:|
+| 283 | 1.0989e-05 | 9.0402e-03 | 1.1098e-05 | 99.9988% |
+| 468 | 4.2551e-06 | 4.4506e-04 | 5.7074e-06 | 99.6705% |
+| 513 | 2.3061e-06 | 5.4207e-04 | 2.0027e-06 | 100.0562% |
+| **aggregate** (the `avg_posenet_dist` quantity) | | | | **99.9874%** |
+
+**99.9874% measured vs 99.807% required — the door clears by +0.18 pp.** And the amplitude
+objection rc4 raised is answered by coincidence rather than by design: rc4's damage is
+`3.3279e-03`; jg1's mean per-pair damage is `3.3366e-03`. **Ratio 1.00×.** jg1 tested the
+compensation at, to three figures, exactly the amplitude rc4 said was untested.
+
+**Classification: REOPENED — UNMEASURED, not positive.** The prize is real: rc4's rate+seg
+leg is `−3.243e-3 S` with the *rate leg exact*, which is 34% of hv1's gap to 0.15 and **50%
+of the live jg2 base's 0.006526 gap**.
+
+**What is honestly still open, and it is not small:**
+
+1. **n = 3.** Pair 468 alone reaches only 99.6705% — *below* rc4's bar. The aggregate clears
+   because pair 283 dominates the sum. Under **L5** (pose band 13.4× seg's; ~100× the pairs
+   for equal precision) a 3-pair aggregate on the pose axis is exactly where estimates
+   wander, and the margin is 0.18 pp.
+2. **Two different bodies.** rc4 prices hv1 @182,759 B; jg1 measures on the up3 pointer
+   @176,420 B. Same carrier architecture, different archive.
+3. **rc4's second unmeasured item is still unmeasured** — "the carrier's re-coding cost
+   across all 600 pairs." jg1 bounds it by up2's envelope (±4 on all 7,200 coefficients =
+   +5 B) but did not encode it.
+4. **Wall-clock.** jg1's re-solve is 39–64 s/pair ⇒ **6.5–10.7 h for n600**. That is a real
+   budget item, not a footnote.
+
+**Resolving measurement:** run the jg1 carrier re-solve against rc4's retained rung-4
+token-drop deltas, on ≥60 seeded-random pairs (not 3, not a prefix), aggregate by
+ratio-of-sums, and report the realized cancellation with its band. **Consumer:** the jg2
+chain (§6) — it is already building this exact actuator, so the marginal cost is the pair
+count, not new code. **Cost:** $0, ~40–65 min of local CPU at n=60; rc4's deltas are retained
+at `/Volumes/APDataStore/pact/ddm_rc4_rung4_token_drop_20260816/`.
+
+### 5.2 The already-registered re-measures that never fired — **REOPENED as a queue, not as verdicts**
+
+The inventory pass surfaced something worth more than any single re-grade: **at least eight
+prior negative audits already exist** (`na1` 08-02 · `na2` 08-03 · `na5` 08-09 · `na7` 08-14 ·
+`nx1`/`ns1` 08-16 · `ns2` 08-17 · `na9` 08-18, plus `rv1` 07-28 and the 07-07/07-10 re-audits),
+and several of their outputs are **registered re-measures that were never fired**:
+
+| row | registered | state |
+|---|---|---|
+| `#ddm_na2_strided_rerun_four_pose_family_verdicts_20260803` — 4 pose-family verdicts resting on n8/n24 **contiguous prefix** docs | 08-03 | pending, never fired |
+| `ddm_na5_pose_stratified_texture_representative_n120_blocked` | 08-09 | DEFER — harness absent |
+| `ddm_na5_pose_mladder_representative_n120_blocked` | 08-09 | DEFER — `pose_mladder.py` + A2 logs absent |
+| `ddm_na5_pose_l2_truedepth_representative_n120_blocked` | 08-09 | DEFER — depth cache absent |
+| `ddm_na5_pose_carrier_arms_representative_n120_blocked` | 08-09 | DEFER — source parity |
+| `na5_prefix_bias_ratio_rederivation_and_pose_source_parity_block` | 08-09 | DEFER — `source_parity_not_slot_availability` |
+
+Every one is a **pose** re-measure blocked on **source parity or absent harness** — and L1′
+plus jg1's $0 DALI instruments (pose table at 1.00081×, seg at 0.99995×) are precisely the
+missing apparatus. **The blocker class these rows were parked on has dissolved.**
+
+I am explicitly *not* re-grading the four na2 pose-family verdicts here. na2 already graded
+them correctly (STANDING on weak evidence, reopenable by a seeded random n≥120) and the
+honest state is that the re-run was owed and never happened. **Adding a ninth audit on top of
+eight is the wrong move; draining this queue is the right one.** Consumer: whichever arm owns
+the pose axis next. Cost: the n≥120 DALI-lineage re-runs are now $0 local, gated only on
+rebuilding the absent harnesses.
+
+### 5.3 Candidates carried forward, not adjudicated
+
+The inventory ranked 30; I verified two at source within this arm's budget (`wd2` → STANDS,
+`rc4` → REOPENED). The remainder are **carried as candidates with their triggering evidence
+recorded, not as re-grades** — asserting a verdict I did not verify at source would be the
+failure this audit exists to catch. Highest-ranked unverified, all **L2** (pose damage from a
+token/row edit priced with no carrier re-solve), all now answerable by the same §5.1
+measurement: `qw1/mp2 deep prune` (pose leg UNMEASURED, projected +0.027) · `hv2 rank-3`
+(REFUSED at +0.0362 S) · `b2e` edit-replay ×3 (n=50, **L5**) · `ra2c` rank-4 (its own memo
+finds the damage law over-predicts 9.23×) · `td1` token-drop Schur (explicitly "modeled
+−4.4e-4 *assumes no* compensation").
