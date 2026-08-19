@@ -209,18 +209,18 @@ def run(args) -> int:
     # STANDALONE SWAPPABLE SECTION.  The packed CAP1 carrier section is the unit another
     # arm can drop into its own byte-close: it is byte-LENGTH-identical to the shipped one
     # (the receiver dispatches on that exact length), so composing it changes no offset.
-    import brotli
 
     if str(runtime) not in sys.path:
         sys.path.insert(0, str(runtime))
-    from runtime import residual_archive as ra
+
+    # DDM_UP3 FIX: the pinned-length read silently misparses any CK2-interleaved body
+    # (to1/ck2 lineage).  The canonical helper un-interleaves and derives the portion.
+    if str(Path(__file__).resolve().parent) not in sys.path:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from ddm_up3_carrier_splice import carrier_section_from_archive
 
     def packed_section(path: Path) -> bytes:
-        member_bytes = zipfile.ZipFile(path).read("p")
-        fields = ra.RX1_MODEL_HEADER.unpack_from(member_bytes)
-        start = ra.RX1_MODEL_HEADER.size + fields[5] + fields[6]
-        body = brotli.decompress(member_bytes[start : start + fields[7]])
-        return body[: ra.PACKED_CAP1_SECTION_BYTES]
+        return carrier_section_from_archive(path, runtime).packed
 
     section = {}
     for label, source in (("shipped", archive), ("candidate", out / "archive.zip")):

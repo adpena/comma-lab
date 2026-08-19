@@ -81,7 +81,6 @@ def counted_carrier_bytes(archive: Path, runtime: Path, new_rice_payload: bytes,
     that pair cannot be packed without a format change, and this reports that rather than
     silently mis-pricing it.
     """
-    import zipfile as zf
 
     import brotli
 
@@ -89,21 +88,36 @@ def counted_carrier_bytes(archive: Path, runtime: Path, new_rice_payload: bytes,
         sys.path.insert(0, str(runtime))
     from runtime import residual_archive as ra
 
+    # DDM_UP3 FIX: this used to read ``brotli.decompress(stream)[:PACKED_CAP1_SECTION_BYTES]``.
+    # That is correct ONLY for a body whose reserved bit 2 is clear (no CK2 carrier plane
+    # interleave) and whose packed portion equals that pinned constant.  On the to1/ck2
+    # lineage both premises fail SILENTLY: byte 139 then reads 177 instead of the true
+    # k_base 8, and every candidate -- including the shipped codes -- is refused as
+    # escaping the k window.  The canonical helper un-interleaves and DERIVES the portion
+    # from the body's own u24 counts; on the rr4 body it reproduces the pinned split
+    # exactly (packed 22,183 B, overlay 36 B), so this is behaviour-preserving there.
+    if str(Path(__file__).resolve().parent) not in sys.path:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import zipfile as zf
+
+    from ddm_up3_carrier_splice import (
+        _ck2_interleave_planes,
+        carrier_section_from_archive,
+    )
+
     member = zf.ZipFile(archive).read("p")
     header = ra.RX1_MODEL_HEADER
-    magic, version, codec, table_mode, reserved, hpac_b, sem_b, car_b = header.unpack_from(
-        member
-    )
+    _m, _v, _codec, _tm, _reserved, hpac_b, sem_b, car_b = header.unpack_from(member)
     offset = header.size + hpac_b + sem_b
-    stream = member[offset : offset + car_b]
-    body = brotli.decompress(stream)
-    if brotli.compress(body, quality=11, lgwin=24) != stream:
+    section = carrier_section_from_archive(archive, runtime)
+    stream, body = section.stream, section.body
+    if brotli.compress(section.raw, quality=11, lgwin=24) != stream:
         raise SystemExit(
             "brotli(quality=11, lgwin=24) does not reproduce the shipped carrier stream; "
             "the counted price cannot be proven under these parameters"
         )
-    packed_len = ra.PACKED_CAP1_SECTION_BYTES
-    packed, overlay = body[:packed_len], body[packed_len:]
+    packed, overlay = section.packed, section.overlay
+    packed_len = len(packed)
 
     k_base = packed[139]
     offsets = np.asarray(new_ks, dtype=np.int64) - int(k_base)
@@ -175,7 +189,13 @@ def counted_carrier_bytes(archive: Path, runtime: Path, new_rice_payload: bytes,
 
     new_packed = assemble(new_rice_bits, ks_field, new_rice_payload)
     new_body = new_packed + overlay
-    new_stream = brotli.compress(new_body, quality=11, lgwin=24)
+    # DDM_UP3 FIX: a CK2-interleaved body must be RE-interleaved before it is compressed,
+    # or the stream the price describes is not the stream the receiver would decode.
+    new_stream = brotli.compress(
+        _ck2_interleave_planes(new_body) if section.ck2_carrier else new_body,
+        quality=11,
+        lgwin=24,
+    )
     return {
         "packable": True,
         "new_stream": new_stream,
@@ -208,19 +228,18 @@ def packed_rice_bit_budget(archive: Path, runtime: Path) -> dict:
     all.  Reading it from the shipped archive rather than hardcoding it keeps the budget
     bound to the container actually being modified.
     """
-    import zipfile as zf
 
-    import brotli
 
     if str(runtime) not in sys.path:
         sys.path.insert(0, str(runtime))
-    from runtime import residual_archive as ra
 
-    member = zf.ZipFile(archive).read("p")
-    fields = ra.RX1_MODEL_HEADER.unpack_from(member)
-    start = ra.RX1_MODEL_HEADER.size + fields[5] + fields[6]
-    body = brotli.decompress(member[start : start + fields[7]])
-    packed = body[: ra.PACKED_CAP1_SECTION_BYTES]
+    # DDM_UP3 FIX: see packed_carrier_section -- the pinned-length read misparses any
+    # CK2-interleaved body.
+    if str(Path(__file__).resolve().parent) not in sys.path:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from ddm_up3_carrier_splice import carrier_section_from_archive
+
+    packed = carrier_section_from_archive(archive, runtime).packed
     shipped_rice_bits = int.from_bytes(packed[3:6], "little")
     rice_payload_bytes = (shipped_rice_bits + 7) // 8
     return {

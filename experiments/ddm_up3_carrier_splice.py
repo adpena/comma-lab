@@ -251,6 +251,81 @@ class ShippedBody:
         return bool(self.rx1_header[4] & 0x04)
 
 
+@dataclass(frozen=True)
+class CarrierSection:
+    """The packed CAP1 carrier section, split the way the RECEIVER splits it.
+
+    The canonical surface for any tool that wants the carrier bytes out of an archive.
+    It exists because three sites in the ``ddm_t1h`` pricers did this by hand as
+    ``brotli.decompress(stream)[:PACKED_CAP1_SECTION_BYTES]``, which is correct only for
+    a body whose ``reserved`` bit 2 is clear AND whose packed portion happens to equal
+    that pinned constant.  On the to1/ck2 lineage both premises fail, silently: the body
+    is still 2-plane interleaved, so byte 139 reads 177 instead of the true ``k_base`` 8.
+    """
+
+    reserved: int
+    ck2_carrier: bool
+    stream: bytes  # the brotli stream stored in the archive
+    raw: bytes  # brotli-decompressed, still interleaved if ck2_carrier
+    body: bytes  # post-CK2: what the receiver's offset arithmetic reads
+    packed_portion: int  # DERIVED from the body's own u24 bit counts
+    packed: bytes  # packed CAP1 section incl. the selector tail
+    overlay: bytes  # trailing compensation overlay, or b""
+
+
+def carrier_section_from_archive(
+    archive_path: Path, runtime_dir: Path = DEFAULT_RUNTIME
+) -> CarrierSection:
+    """Extract the carrier section from ``archive_path`` exactly as the receiver does."""
+    ra, _cr, _ar1, _cp = _import_runtime(runtime_dir)
+    member = zipfile.ZipFile(archive_path).read("p")
+    fields = ra.RX1_MODEL_HEADER.unpack_from(member)
+    reserved, hpac_bytes, semantic_bytes, carrier_bytes = fields[4:]
+    start = ra.RX1_MODEL_HEADER.size + hpac_bytes + semantic_bytes
+    stream = member[start : start + carrier_bytes]
+    raw = ra._decompress_brotli(stream)
+    ck2 = bool(reserved & ra.CK2_RESERVED_CARRIER_PLANE2)
+    body = ra._ck2_uninterleave_planes(raw) if ck2 else raw
+    basis_bits = int.from_bytes(body[0:3], "little")
+    residual_bits = int.from_bytes(body[3:6], "little")
+    portion = (
+        PACKED_METADATA_OFFSET
+        + PACKED_METADATA_BYTES
+        + (basis_bits + 7) // 8
+        + (residual_bits + 7) // 8
+    )
+    if not 0 < portion <= len(body):
+        raise Up3Error(
+            f"derived packed CAP1 portion {portion} is outside the {len(body)}-byte body"
+        )
+    # The selector tail follows the packed portion; a compensation overlay, when present,
+    # follows the selector and is magic-tagged (residual_archive.py:231-234).
+    tail = body[portion:]
+    selector_bytes = len(tail)
+    if tail[9:].startswith(ra.COMPENSATION_MAGIC):
+        selector_bytes = 9
+    packed_len = portion + selector_bytes
+    section = CarrierSection(
+        reserved=reserved,
+        ck2_carrier=ck2,
+        stream=stream,
+        raw=raw,
+        body=body,
+        packed_portion=portion,
+        packed=body[:packed_len],
+        overlay=body[packed_len:],
+    )
+    layout = packed_metadata_layout()
+    k_base = section.packed[PACKED_METADATA_OFFSET + layout["k_base"][0]]
+    if k_base >= 12:
+        raise Up3Error(
+            f"parsed Rice k_base {k_base} is outside the receiver's domain (<12); the "
+            "carrier section was read from the wrong buffer -- apply the CK2 "
+            "un-interleave and derive the packed portion from the body's u24 counts"
+        )
+    return section
+
+
 def parse_shipped_body(
     runtime_dir: Path = DEFAULT_RUNTIME, *, verify_sha: bool = True
 ) -> ShippedBody:

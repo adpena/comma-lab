@@ -309,3 +309,75 @@ def test_gate_rate_term_charges_a_byte_delta():
     assert gate.rate_term(176_468) - gate.rate_term(176_420) == pytest.approx(
         25 * 48 / 37_545_489, rel=1e-12
     )
+
+
+# --------------------------------------------------------------------------
+# The canonical carrier-section helper (the ddm_t1h silent-misparse fix).
+# --------------------------------------------------------------------------
+
+_RR4_ARCHIVE = Path(
+    "/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/retained/archive.zip"
+)
+
+
+@needs_body
+def test_carrier_section_on_the_ck2_lineage_reads_the_true_k_base():
+    """On a CK2-interleaved body the pinned-length read yields 177; the helper yields 8."""
+    section = up3.carrier_section_from_archive(_RUNTIME / "archive.zip", _RUNTIME)
+    assert section.ck2_carrier is True
+    assert section.reserved == 0x6
+    assert section.packed_portion == 22_178
+    assert len(section.packed) == 22_187
+    assert section.overlay == b""
+    k_offset = up3.PACKED_METADATA_OFFSET + up3.packed_metadata_layout()["k_base"][0]
+    assert section.packed[k_offset] == 8
+    # The defect this helper exists to kill: the same offset on the raw (interleaved)
+    # buffer is the 177 ddm_up2 reported as a body-specific literal.
+    assert section.raw[k_offset] == 177
+
+
+@pytest.mark.skipif(not _RR4_ARCHIVE.is_file(), reason="rr4 body not on this host")
+@needs_body
+def test_carrier_section_is_behaviour_preserving_on_the_rr4_body():
+    """The helper must reproduce the pinned split exactly where the pin was correct."""
+    ra, _cr, _ar1, _cp = up3._import_runtime(_RUNTIME)
+    section = up3.carrier_section_from_archive(_RR4_ARCHIVE, _RUNTIME)
+    assert section.ck2_carrier is False
+    assert len(section.packed) == ra.PACKED_CAP1_SECTION_BYTES == 22_183
+    assert section.packed == section.body[: ra.PACKED_CAP1_SECTION_BYTES]
+    assert len(section.overlay) == 36
+    assert section.overlay.startswith(ra.COMPENSATION_MAGIC)
+
+
+@needs_body
+def test_carrier_section_refuses_a_wrong_buffer_read():
+    """A wrong-buffer read must REFUSE loudly instead of returning garbage.
+
+    Two guards stand behind each other.  The framing guard fires first here: read on the
+    still-interleaved buffer, the u24 bit counts derive a 662,747-byte packed portion
+    against a 22,187-byte body.  The k_base domain guard (``k_base < 12``) is the second
+    line for any body that clears the framing check.
+    """
+    import zipfile as zf
+
+    ra, _cr, _ar1, _cp = up3._import_runtime(_RUNTIME)
+    member = zf.ZipFile(_RUNTIME / "archive.zip").read("p")
+    fields = ra.RX1_MODEL_HEADER.unpack_from(member)
+    # Clear the CK2 carrier bit WITHOUT un-interleaving the payload: the exact state the
+    # ddm_t1h pricers were in.  The helper must refuse rather than read byte 139 as 177.
+    forged = bytearray(member)
+    # RX1_MODEL_HEADER is '<4sBBBBHHH': magic[0:4] version[4] codec[5]
+    # table_mode[6] reserved[7].
+    forged[7] = fields[4] & ~ra.CK2_RESERVED_CARRIER_PLANE2
+    import io
+
+    buffer = io.BytesIO()
+    with zf.ZipFile(buffer, "w", zf.ZIP_STORED) as archive:
+        archive.writestr("p", bytes(forged))
+    tmp = Path(up3.__file__).parent / "_up3_forged_test.zip"
+    try:
+        tmp.write_bytes(buffer.getvalue())
+        with pytest.raises(up3.Up3Error, match="outside the"):
+            up3.carrier_section_from_archive(tmp, _RUNTIME)
+    finally:
+        tmp.unlink(missing_ok=True)
