@@ -202,14 +202,25 @@ of 9,437,184 argmax pixels changed** — while frame 0 really moved (1,777,321 p
 * clears the **−3.5e-06** admit bar by **19.6x**; clears the summed two-row 8dp pose bound
   (`5.694696952803294e-06`, and bounds ADD) by **12.1x**. Resolvable.
 
-## 5. On the GT-lineage question my charter raised
+## 5. The GT-lineage question my charter raised — ANSWERED, and the answer is "no"
 
 My charter asked whether seg GT is lineage-stable between the DALI and PyAV decodes before
-trusting an advisory `d_seg` check. **I did not need to answer it, and I should say so
-rather than assert a convenient answer.** The seg leg here is measured as candidate-vs-
-pointer on the SAME decode, which is a difference of two quantities that share whatever GT
-they are compared against — so the lineage cancels by construction. Whether the seg GT
-itself differs between decoders is still **OPEN and unowned**, sister of up2's §8 item 1.
+trusting an advisory `d_seg` check. **It is not.** The same archive bytes
+(`50e561454b23026d…`), the same 600 samples, scored on the two axes:
+
+| axis | GT decoder | `d_seg` |
+|---|---|---:|
+| contest-CUDA (the T4 receipt) | DALI | **0.00030309** |
+| contest-CPU (the advisory) | PyAV | **0.00043336** |
+
+**A ratio of 1.43x on the seg axis**, from the ground-truth decoder alone. So up2's
+finding generalises: the GT-lineage fork is not a pose phenomenon, it moves seg too — just
+far less violently than pose's 19.09x. `AXIS_GT_LINEAGE` governs BOTH scorer terms.
+
+The consequence for this arm is small and worth stating precisely: my seg check is a
+candidate-vs-pointer difference on ONE lineage, so the lineage cancels and the check is
+sound. What is NOT sound — and what this table forbids — is quoting an advisory `d_seg`
+as if it were the contest-CUDA `d_seg`. They are 1.43x apart on the very body we ship.
 
 ## 6. My own round-1 adversarial review
 
@@ -250,13 +261,8 @@ itself differs between decoders is still **OPEN and unowned**, sister of up2's �
 
 1. **Fire the T4 row.** MAIN owns the slot. The seal is validated and names its own
    command. Nothing else is needed from this arm.
-2. **Finish the local advisory `evaluate.py` leg.** The INFLATE half is done and passing
-   (§ANSWER-6); `evaluate.py --device cpu` was still running when this memo landed.
-   Attempt `/Volumes/APDataStore/pact/ddm_up3/advisory/attempt_0001`. Pre-registered
-   prediction per up2 §4d, which the receipt can falsify: seg leg identical to
-   0.00043336, and CPU-axis `d_pose` very slightly WORSE than 0.00014829 (the DALI and
-   PyAV GT lineages pull opposite ways under this actuator). **The advisory is NOT a gate
-   on the pose claim** — it scores the other objective.
+2. **~~Finish the local advisory~~ — DONE, and it CONFIRMED a pre-registered numeric
+   prediction.** `evaluate.py --device cpu`, `rc=0`, 414.1 s, n600. See §9.
 3. **~~Fix `ddm_t1h_compose_pass1.py` and `ddm_t1h_build_candidate_archive.py`~~ — DONE
    this turn, commit `b692954b3a`.** Both missed the CK2 un-interleave and both used the
    stale `PACKED_CAP1_SECTION_BYTES = 22_183` pin, at three sites. Fixed by routing all
@@ -287,7 +293,37 @@ itself differs between decoders is still **OPEN and unowned**, sister of up2's �
    byte-close is a function call, so any improved code set can be priced end-to-end in
    seconds. Still unowned.
 
-## 8. Retained payload
+## 8. The advisory was a pre-registered falsifier, and up2's two-objective model survived it
+
+The advisory is NOT a gate on the pose claim — it runs `evaluate.py --device cpu`, which
+takes the `else` branch at `evaluate.py:40` and scores **PyAV** GT, a different objective
+from the DALI GT the contest-CUDA row scores. What it CAN do is test up2 §4c's model,
+which predicted a specific number before this run existed.
+
+| prediction (pre-registered) | predicted | measured | verdict |
+|---|---:|---:|---|
+| seg leg unchanged | 0.00043336 | **0.00043336** | **CONFIRMED** |
+| CPU-axis `d_pose` slightly WORSE | 1.483534e-04 -> 8dp **0.00014835** | **0.00014835** | **CONFIRMED, exact at report resolution** |
+| rate unchanged | 0.004698833460392539 | **0.004698833460392539** | **CONFIRMED** |
+
+Base advisory: seg 0.00043336, pose 0.00014829, rate 0.004698833460392539.
+
+Three things this buys. **(a)** The seg-hold is now confirmed by the contest's own
+evaluator over the full 600 samples, not only by my n48 scorer sample and the structural
+slice. **(b)** `evaluate.py` independently confirms **ΔB = 0** from the archive it was
+handed — falsifier F1 is closed by the evaluator itself, not by my byte count. **(c)** up2
+§4c's GT-lineage model made a quantitative prediction and hit it **to the reported
+precision**: the CPU axis moves +6e-08 in `d_pose`, i.e. very slightly WORSE, exactly the
+sign and magnitude predicted from the measured `av/dali` ratio. A model that predicts a
+number and then meets it is worth more than the negative result it came wrapped in.
+
+The advisory-axis score moves 0.1993152771430045 -> 0.199323066854955 (+7.79e-06). **That
+is the wrong axis and it is not a score claim.** Quoted only because it is the direction
+the model predicts, and a reader who saw it without §4c would misread it as a regression.
+
+Receipt: `retained/GATE_advisory_prediction_test.json`, log `retained/ADVISORY_run.log`.
+
+## 9. Retained payload
 
 `/Volumes/APDataStore/pact/ddm_up3/` — `UP3_RETENTION_MANIFEST.json` (101 files, sha256 +
 bytes each). Headline: `retained/candidate_up3_pose_solved.zip`
