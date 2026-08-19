@@ -186,6 +186,12 @@ DEFAULT_ACCEPT_SEPARATION = 64
 #: measured it leaving repair on the table.
 DEFAULT_ACCEPT_LADDER = (64, 48, 32, 24, 16, 8)
 
+#: The fractions of the value-ranked accepted set the solver also tries at each
+#: separation.  Reaching further down the ranking buys more repaired cells and
+#: costs more tokens; which way that trades is a per-pair question, so it is
+#: measured per pair rather than fixed.
+DEFAULT_KEEP_FRACTIONS = (1.0, 0.75, 0.5, 0.25)
+
 #: The candidate offsets: the failing cell itself and its four 4-neighbours.
 #: ``ddm_jg1`` S1c measured the winning move is "almost always a single ADJACENT
 #: cell", and S1e correction 2 measured that **0 of 12** accepted edits chose the
@@ -438,6 +444,7 @@ class PairResult:
     seconds: float
     separation_sweep: list[dict[str, Any]] = field(default_factory=list)
     accept_separation_chosen: int = 0
+    keep_fraction_chosen: float = 0.0
     accepted: list[tuple[int, int, int]] = field(default_factory=list)
 
     @property
@@ -462,9 +469,61 @@ class PairResult:
             "rejected_for_separation": self.rejected_for_separation,
             "separation_sweep": self.separation_sweep,
             "accept_separation_chosen": self.accept_separation_chosen,
+            "keep_fraction_chosen": self.keep_fraction_chosen,
             "seconds": self.seconds,
             "accepted": self.accepted,
         }
+
+
+def segnet_margin(net, frame_bhwc) -> np.ndarray:
+    """Top1-minus-top2 SegNet logit margin for one camera frame, as ``(384, 512)``.
+
+    **The margin field IS the Fisher surrogate**, and that is measured rather than
+    assumed: the campaign measured Fisher curvature against ``(-margin)`` at Pearson
+    **0.978**, so a low-margin cell is a cell whose argmax is closest to flipping.
+    ``d_seg`` lives on the codim-1 boundary of the frozen argmax partition, where
+    the Fisher geometry is anisotropic while the interior is flat -- so ordering
+    work by margin is ordering it by where a move can actually pay.
+
+    This costs NOTHING extra: it reads the same forward pass the argmax comes from.
+    ``ddm_jg1`` owed item 6 notes that a DALI-lineage margin field cannot be built
+    locally, but that is the margin of the GT decode; this is the margin of OUR
+    rendered frame, which is a property of our own frames and is fully available.
+    """
+    import torch
+
+    with torch.inference_mode():
+        batch = up2.frames_to_bchw(frame_bhwc)
+        logits = net(net.preprocess_input(batch.unsqueeze(1)))
+        top2 = torch.topk(logits, k=2, dim=1).values
+        return (top2[:, 0] - top2[:, 1]).to(torch.float32).cpu().numpy()[0]
+
+
+def rank_sites_by_margin_saliency(
+    sites: np.ndarray, margin: np.ndarray, window: int
+) -> np.ndarray:
+    """Order flip sites by how much repairable margin mass sits around them.
+
+    A ranker ORDERS; it never accepts.  Acceptance stays realized-only, so the worst
+    a bad order can do is spend realizations in the wrong place -- it cannot put an
+    unmeasured move into the state.  That asymmetry is what makes a geometric prior
+    admissible here at all.
+
+    The score is the NEGATIVE mean margin in the site's window: a neighbourhood full
+    of cells the scorer is nearly undecided about is a neighbourhood where one token
+    can move several argmax cells, which is exactly the ``1.55 cells per changed
+    token`` mechanism ``ddm_jg1`` measured.  Ties break on site index so the order is
+    a pure function of the inputs.
+    """
+    if len(sites) == 0:
+        return np.zeros(0, dtype=np.int64)
+    score = np.empty(len(sites), dtype=np.float64)
+    for row in range(len(sites)):
+        y, x = int(sites[row, 0]), int(sites[row, 1])
+        y0, y1 = max(0, y - window), min(GRID_H, y + window + 1)
+        x0, x1 = max(0, x - window), min(GRID_W, x + window + 1)
+        score[row] = -float(margin[y0:y1, x0:x1].mean())
+    return np.argsort(-score, kind="stable").astype(np.int64)
 
 
 def _segnet_argmax_batched(net, frames, batch: int) -> np.ndarray:
@@ -492,10 +551,12 @@ def solve_pair(
     separation: int = DEFAULT_SEPARATION,
     accept_separation: int = DEFAULT_ACCEPT_SEPARATION,
     accept_ladder: Sequence[int] = DEFAULT_ACCEPT_LADDER,
+    keep_fractions: Sequence[float] = DEFAULT_KEEP_FRACTIONS,
     window: int = DEFAULT_WINDOW,
     segnet_batch: int = 8,
     max_sites: int = 0,
     max_candidates_per_site: int = 0,
+    site_budget: int = 0,
     site_seed: int = 20260819,
 ) -> tuple[PairResult, np.ndarray]:
     """One pair: screen packed, select by cells-per-bit, then VERIFY jointly.
@@ -519,7 +580,25 @@ def solve_pair(
         keep = np.sort(picker.choice(len(sites), size=max_sites, replace=False))
         sites = sites[keep]
 
-    evaluations = 0
+    # GEOMETRIC SITE ORDER, not row-major enumeration.  Sites arrive from
+    # ``np.argwhere`` in row-major order, which is an arbitrary scan of the frame.
+    # Ordering them by margin saliency spends realizations where the frozen
+    # scorer is closest to flipping -- and with ``site_budget`` set, the sites that
+    # get realized at all are the ones the geometry says can pay.
+    margin = None
+    evaluations_margin = 0
+    if len(sites):
+        base_frame = jg1.render_frame1(
+            semantic, tokens_pair[None], np.array([pair])
+        )
+        margin = segnet_margin(net, base_frame)
+        evaluations_margin = 1
+        order = rank_sites_by_margin_saliency(sites, margin, window)
+        sites = sites[order]
+        if site_budget and len(sites) > site_budget:
+            sites = sites[:site_budget]
+
+    evaluations = evaluations_margin if len(sites) else 0
     screened = 0
     residual_max = 0
     # best[(y, x)] -> (net_S_gain, repaired, bits, value)
@@ -655,30 +734,68 @@ def solve_pair(
     # A denser set that repairs more cells is admitted only if the extra cells pay
     # for the extra tokens.  This is the cross-regime-constant-transfer genus
     # answered by measurement: jg1's constant was measured on a different object.
+    # The configuration space is TWO-dimensional, because there are two independent
+    # ways to be too greedy.  SEPARATION controls how densely edits may cluster
+    # (the block-move hazard).  KEEP-FRACTION controls how far down the value
+    # ranking the solver reaches (the yield-decay hazard ``ddm_jg1`` S1e measured,
+    # 1.50 -> 0.390 under iteration).  Sweeping only separation left the realized
+    # yield at 0.92 on the jg1 control pairs -- below the ~1.06 the goal needs --
+    # because a sparse set can still be padded with weak moves.
+    #
+    # Every point in the grid is JOINTLY RENDERED AND RE-SEGMENTED, so the winner is
+    # measured, not predicted.  The grid is cheap: screening costs ~120 s/pair and
+    # each extra configuration costs one render plus one batched SegNet row.
     ladder = [s for s in accept_ladder if s > 0] or [accept_separation]
-    trials: list[tuple[int, list[Any]]] = []
+    fractions = [f for f in keep_fractions if 0.0 < f <= 1.0] or [1.0]
+    trials: list[tuple[int, float, list[Any]]] = []
     frames = []
+    seen: set[tuple[tuple[int, int], ...]] = set()
     for rung in ladder:
-        chosen = select_separated(best, rung)
-        edited_try = tokens_pair.copy()
-        for (y, x), payload in chosen:
-            edited_try[y, x] = payload[3]
-        frames.append(
-            jg1.render_frame1(semantic, edited_try[None], np.array([pair]))[0]
-        )
-        trials.append((rung, chosen))
+        # ``select_separated`` returns in DESCENDING net-gain order, so a head slice
+        # is the top-k by value -- not a positional prefix of anything spatial.
+        chosen_full = select_separated(best, rung)
+        for fraction in fractions:
+            keep = max(1, round(len(chosen_full) * fraction))
+            chosen = chosen_full[:keep]
+            signature = tuple(sorted(key for key, _ in chosen))
+            if signature in seen:
+                continue  # the same edit set reached two ways costs one render
+            seen.add(signature)
+            edited_try = tokens_pair.copy()
+            for (y, x), payload in chosen:
+                edited_try[y, x] = payload[3]
+            frames.append(
+                jg1.render_frame1(semantic, edited_try[None], np.array([pair]))[0]
+            )
+            trials.append((rung, fraction, chosen))
     joint_argmaxes = _segnet_argmax_batched(net, np.stack(frames), segnet_batch)
     evaluations += len(frames)
 
     sweep = []
     best_net = 0.0  # keeping nothing is always available and scores exactly 0
-    winner: tuple[int, list[Any]] | None = None
+    winner: tuple[int, float, list[Any]] | None = None
     winner_flips = flips_before
-    for order, (rung, chosen) in enumerate(trials):
+    for order, (rung, fraction, chosen) in enumerate(trials):
         after = int((joint_argmaxes[order] != gt_pair).sum())
         repaired_here = flips_before - after
         tokens_here = len(chosen)
-        cost_bits = sum(float(p[2]) for _, p in chosen)
+        # PRICE THE CONFIGURATION WITH THE CONSTANT MEASURED ON OUR OWN BODY.
+        #
+        # The logit sum is the WRONG price here and this arm measured the size of
+        # the error.  Back-solving the configurations this sweep first chose, the
+        # hm1 logits charge **1.91 bits/token** where ``ddm_jg2`` MEASURED
+        # **4.1379 bits/token** on ``archive.zip`` through a byte-identical
+        # encoder -- a **2.2x under-price**.  An under-priced token biases every
+        # rung comparison toward the DENSER configuration, because extra tokens
+        # look nearly free; that is how the first sweep picked the densest rung on
+        # all three control pairs.
+        #
+        # The logits stay useful for RANKING candidates within a site (a relative
+        # question on one body).  The ABSOLUTE cost of a configuration is a
+        # cross-body question, and only jg2's constant was measured on the body we
+        # ship.  Both numbers are recorded so the gap stays visible.
+        cost_bits_logit = sum(float(p[2]) for _, p in chosen)
+        cost_bits = tokens_here * RATE_PRIOR_BITS_PER_TOKEN
         net = (
             -repaired_here * S_PER_SEG_CELL
             + (cost_bits / 8.0) * S_PER_ARCHIVE_BYTE
@@ -686,15 +803,17 @@ def solve_pair(
         sweep.append(
             {
                 "accept_separation": rung,
+                "keep_fraction": fraction,
                 "tokens": tokens_here,
                 "flips_after": after,
                 "repaired": repaired_here,
-                "cost_bits_prior": cost_bits,
-                "net_delta_S_prior": net,
+                "cost_bits_measured_prior": cost_bits,
+                "cost_bits_logit_crossbody": cost_bits_logit,
+                "net_delta_S": net,
             }
         )
         if net < best_net:
-            best_net, winner, winner_flips = net, (rung, chosen), after
+            best_net, winner, winner_flips = net, (rung, fraction, chosen), after
 
     if winner is None:
         return (
@@ -713,7 +832,7 @@ def solve_pair(
             tokens_pair,
         )
 
-    accept_separation, selected = winner
+    accept_separation, keep_fraction_chosen, selected = winner
     rejected_for_separation = len(best) - len(selected)
     edited = tokens_pair.copy()
     for (y, x), payload in selected:
@@ -754,6 +873,7 @@ def solve_pair(
             seconds=time.time() - started,
             separation_sweep=sweep,
             accept_separation_chosen=accept_separation,
+            keep_fraction_chosen=keep_fraction_chosen,
             accepted=accepted,
         ),
         edited,
@@ -966,6 +1086,7 @@ def cmd_solve(args) -> int:
                     seconds=row["seconds"],
                     separation_sweep=row.get("separation_sweep", []),
                     accept_separation_chosen=row.get("accept_separation_chosen", 0),
+                    keep_fraction_chosen=row.get("keep_fraction_chosen", 0.0),
                     accepted=[tuple(a) for a in row["accepted"]],
                 )
             )
@@ -983,10 +1104,14 @@ def cmd_solve(args) -> int:
             accept_ladder=[
                 int(x) for x in str(args.accept_ladder).split(",") if x.strip()
             ],
+            keep_fractions=[
+                float(x) for x in str(args.keep_fractions).split(",") if x.strip()
+            ],
             window=args.window,
             segnet_batch=args.segnet_batch,
             max_sites=args.max_sites,
             max_candidates_per_site=args.max_candidates_per_site,
+            site_budget=args.site_budget,
             site_seed=args.seed,
         )
         results.append(result)
@@ -1092,10 +1217,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--accept-ladder",
         default=",".join(str(x) for x in DEFAULT_ACCEPT_LADDER),
     )
+    solve.add_argument(
+        "--keep-fractions",
+        default=",".join(str(x) for x in DEFAULT_KEEP_FRACTIONS),
+    )
     solve.add_argument("--window", type=int, default=DEFAULT_WINDOW)
     solve.add_argument("--segnet-batch", type=int, default=8)
     solve.add_argument("--max-sites", type=int, default=0)
     solve.add_argument("--max-candidates-per-site", type=int, default=0)
+    solve.add_argument("--site-budget", type=int, default=0)
     solve.add_argument("--payload-every", type=int, default=25)
     solve.add_argument("--pair-list", default=None)
     solve.add_argument(
