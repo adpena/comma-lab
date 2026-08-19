@@ -9,10 +9,11 @@ from_state_hash: canonical_frontier_pointer_20260818_keep01
 > snapshot generated 2026-05-23 and is STALE. The live frontier is the canonical
 > pointer, not any row below.
 >
-> **CURRENT effective_frontier [contest-CUDA T4, n600]: S 0.1571619225142182**
-> archive sha `316d17f84817d2b10f084a71b6ca706c69411d738cdb7d5921aec9afb8c37f00`
-> (keep01 compensated edit, ninth pointer move, 2026-08-18; anchor mirror
-> `experiments/results/ddm_sa3_keep01_t4_row_r2_mirror/`). Every score cited in
+> **CURRENT effective_frontier [contest-CUDA T4, n600]: S 0.15710198138050818**
+> archive sha `35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3`
+> (ck1 sa3×keep01 composed candidate, tenth pointer move, 2026-08-19; anchor
+> mirror `experiments/results/modal_auth_eval_mirror/`). Historical prior:
+> keep01 0.1571619225142182 @ `316d17f8…` (ninth move). Every score cited in
 > the body (including "0.2053300290" as the CUDA frontier) is HISTORICAL as of
 > 2026-05-23. SoT: `.omx/state/canonical_frontier_pointer.json` via
 > `tools/refresh_canonical_frontier.py`.
@@ -86,12 +87,12 @@ pointer because it is the actual ranked surface. This row does not imply local
 archive custody or our progress. The scanner-derived table below is retained
 for custody-specific local comparisons and must not be called the score to beat.
 
-### Current best - last rechecked 2026-07-25T19:52:29Z
+### Current best - last rechecked 2026-08-19T00:03:36Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
 | **`[contest-CPU Linux x86_64]`** | **0.1880443980** | `196acd18e4ca` | linux_x86_64_cpu | `lane_pr128_click_import_NONSUBMISSION_defensive_bank_20260712` |
-| **`[contest-CUDA T4]`** | **0.2053300290** | `9cb989cef519` | linux_x86_64_t4 | `lane_pr106_format0d_latent_score_table_20260516_contest_cuda` |
+| **`[contest-CUDA T4]`** | **0.1571019814** | `35c318d541d7` | linux_x86_64_t4 | `<none>` |
 
 ### 2026-05-22 MLX portable-local-substrate refresh
 

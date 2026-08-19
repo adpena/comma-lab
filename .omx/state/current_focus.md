@@ -55,6 +55,17 @@
 > Its value is the first genuine exact row for our own vehicle + the never-done CALIBRATION of our
 > advisory n600 protocol against the real evaluator.
 >
+> > ⛔ **CORRECTED 2026-08-03 by `ddm_qd1` (`0bfeb8733b`) — the −0.0983195 is against a STALE
+> > v4d-era reference (0.7685479). Against the LIVE best (`cx1`, 353,808 B, seg+rate 0.6667652)
+> > the same archive is `+0.0034632` WORSE**: +5,413 B of rate (+0.0036043) buys −0.0001411 of seg,
+> > a 25× loss. Byte-driven, so it survives even if the two seg legs are not strictly comparable.
+> > Restated as an exchange rate (MAIN, independently): 0.0001411 S of seg over 600×512×384 px is
+> > **166.4 flips for 5,413 B = 32.53 B/flip**, against our measured `W = 1.273108215332031` B/flip
+> > = **25.55×** the going rate. `cell_drop50` needs a **25.5× byte cut** (5,413 → ≤212 B) to be
+> > net-positive. **The CALIBRATION rationale above survives; the SCORE rationale does not** — and
+> > MAIN's "VERIFIED BY MAIN" verified the arithmetic against the reference it was handed, not
+> > against live-best. Name the baseline, not just the delta.
+>
 > **📏 gc16 BOUNDS MY RESTART ENTHUSIASM — correctly.** The impulse **I = 1,212.6 is FIXED and
 > CADENCE-INDEPENDENT** (99.7% delivered by epoch 67 regardless of window length), and gc14's geometric
 > envelope caps 2× cadence at **~0.019 S ≈ 2.4% of the 0.802 S gap**. The campaign has moreover NEVER
@@ -748,9 +759,12 @@
 > arithmetic unchanged: ladder ⇒ ~0.65-0.70 advisory, does NOT reach 0.172141;
 > burn-4's rate re-race (~0.19-0.28 S) is the gap-sized lever.
 
-> **Pointer honesty:** submittable local baseline `0.1910828242 [contest-CPU]` UNMOVED;
-> effective competitive bar `0.172141` (official PR #130, [contest-CUDA] reconstruction).
-> All local rows `[macOS-CPU advisory]`, `score_claim=false`.
+> **Pointer honesty (updated 2026-08-19):** effective competitive bar is now OUR OWN row
+> `0.15710198138050818 [contest-CUDA T4]` (ck1 composed, tenth pointer move, archive
+> `35c318d5…`), below PR #130's `0.172141` reconstruction. Submittable local CPU baseline
+> `0.1910828242 [contest-CPU]` unchanged. Historical context in this block: at the time of
+> the surrounding 07-30 text the bar was PR #130's 0.172141 and local rows were
+> `[macOS-CPU advisory]`, `score_claim=false`.
 >
 > **State:** THE AUTONOMOUS WORKFLOW POLICY (gc11, fe12a36a14, rules W1-W11/OP1) is
 > ADOPTED AND BINDING — the standing GO removes WAITING, never RIGOR. The pa1r Pool-A
@@ -898,10 +912,10 @@ operator queue when they conflict with this section.
   `.omx/state/canonical_frontier_pointer.json`; this file is a mirror, not a
   frontier source of truth.
 - Canonical scanner-derived best CUDA anchor:
-  `0.20533002902019143`
+  `0.15710198138050818`
   `[contest-CUDA T4]`, archive
-  `9cb989cef519ed1771f6c9dc18c988ee93d01a2925da1913d63f9015d6247cf4`,
-  lane `lane_pr106_format0d_latent_score_table_20260516_contest_cuda`.
+  `35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3`,
+  lane `<none>`.
 - A1 remains the Rule #6 control substrate, not the best current axis floor:
   `0.19284757743677347` `[contest-CPU; GHA Linux x86_64 1:1]` and
   `0.2263520234784395` `[contest-CUDA T4]`.
