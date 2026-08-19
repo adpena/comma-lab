@@ -1,0 +1,284 @@
+"""Measure the realized score legs of the ddm_up3 byte-closed candidate.
+
+The candidate is scored on the RECOMPILED BYTES, not on the solver's in-memory codes:
+the carrier state is loaded back out of the candidate ``archive.zip`` through the
+shipped receiver, so anything the splice damaged would show up here as a changed
+``d_pose`` rather than being assumed away.
+
+Three legs, each with its own control:
+
+* **pose** -- ``d_pose`` over all 600 pairs against the DALI ground truth, which is the
+  objective the contest-CUDA row actually scores (``upstream/evaluate.py:31-42`` binds
+  ``DaliVideoDataset`` to the CUDA device).  The BASE control re-measures the shipped
+  codes on the same instrument and must reproduce ``ddm_up2``'s 7.769484e-06.
+* **seg** -- SegNet reads only the last frame (``upstream/modules.py:108``) and the
+  candidate's semantic/hpac/token sections are byte-identical to the pointer's, so the
+  seg leg is structurally untouched.  Measured anyway on a seeded random sample.
+* **rate** -- the archive byte count, read off the file.
+
+Sampling honours ``ddm_na2``/``ddm_bp2``: any sub-n600 sample is seeded RANDOM, never a
+prefix, because pose prefixes measure 2.54-4.21x harder than the population.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import sys
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "experiments"))
+
+import ddm_up2_shipping_pose_solve as up2
+
+CANDIDATE_RUNTIME = Path("/Volumes/APDataStore/pact/ddm_up3/candidate_runtime")
+POINTER_RUNTIME = up2.DEFAULT_RUNTIME
+
+# Pointer legs, re-read from ddm_to1's T4 receipt (never inferred).
+POINTER_SCORE = up2.POINTER_SCORE
+POINTER_D_POSE_T4 = up2.POINTER_D_POSE_T4
+POINTER_D_SEG_T4 = up2.POINTER_D_SEG_T4
+POINTER_ARCHIVE_BYTES = up2.POINTER_ARCHIVE_BYTES
+RATE_DENOMINATOR = 37_545_489
+
+# ddm_up2's converged n600 numbers, quoted here only so this run can FALSIFY them.
+UP2_BASE_D_POSE = 7.769484e-06
+UP2_SOLVED_D_POSE = 7.649247e-06
+ADMIT_BAR = -3.5e-06
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def rate_term(archive_bytes: int) -> float:
+    return 25.0 * archive_bytes / RATE_DENOMINATOR
+
+
+def score_from(d_pose: float, d_seg: float, archive_bytes: int) -> float:
+    return (
+        100.0 * d_seg
+        + float(np.sqrt(10.0 * d_pose))
+        + rate_term(archive_bytes)
+    )
+
+
+def measure_pose_leg(
+    runtime_dir: Path,
+    *,
+    pairs: int,
+    seed: int,
+    batch_size: int,
+    checkpoint: Path | None,
+) -> dict[str, Any]:
+    """d_pose over the field, from the carrier state inside ``runtime_dir``'s archive."""
+    import torch
+
+    torch.manual_seed(seed)
+    targets, lineage = up2.load_gt_poses(up2.DEFAULT_DALI_GT)
+    up2.verify_gt_lineage(axis="contest_cuda", declared_lineage=lineage)
+    state = up2.load_carrier_state(runtime_dir, verify_archive=False)
+    raw = up2.open_raw(up2.DEFAULT_RAW, verify_sha=True)
+    posenet = up2.load_posenet()
+    indices = (
+        np.arange(up2.N_PAIRS_TOTAL, dtype=np.int64)
+        if pairs >= up2.N_PAIRS_TOTAL
+        else up2.select_pairs(pairs, seed)
+    )
+    done: dict[int, float] = {}
+    if checkpoint is not None and checkpoint.is_file():
+        done = {int(k): float(v) for k, v in json.loads(checkpoint.read_text()).items()}
+    todo = np.asarray([i for i in indices if int(i) not in done], dtype=np.int64)
+    for start in range(0, len(todo), batch_size):
+        chunk = todo[start : start + batch_size]
+        per_pair, _poses = up2.measure_pose(
+            posenet, state, state.coefficients, raw, targets, chunk,
+            batch_size=batch_size,
+        )
+        done.update({int(p): float(v) for p, v in zip(chunk, per_pair, strict=True)})
+        if checkpoint is not None:
+            tmp = checkpoint.with_suffix(".tmp")
+            tmp.write_text(json.dumps(done))
+            tmp.replace(checkpoint)
+    values = np.asarray([done[int(i)] for i in indices], dtype=np.float64)
+    return {
+        "runtime_dir": str(runtime_dir),
+        "archive_sha256": _sha256_file(runtime_dir / "archive.zip"),
+        "archive_bytes": (runtime_dir / "archive.zip").stat().st_size,
+        "gt_lineage": lineage,
+        "pairs": len(indices),
+        "sampling": "full_field" if pairs >= up2.N_PAIRS_TOTAL else f"seeded_random_{seed}",
+        "d_pose": float(values.mean()),
+        "codes_sha256": hashlib.sha256(
+            np.ascontiguousarray(state.codes, dtype=np.int32).tobytes()
+        ).hexdigest(),
+        # Priced against the T4 receipt's legs, holding seg and rate fixed.  The seg
+        # and rate legs are held because both are measured unchanged, not assumed.
+        "pointer_d_pose_t4": POINTER_D_POSE_T4,
+        "pointer_d_seg_t4": POINTER_D_SEG_T4,
+        "pointer_archive_bytes": POINTER_ARCHIVE_BYTES,
+        "pointer_score": POINTER_SCORE,
+        "net_delta_s_vs_t4_receipt": score_from(
+            float(values.mean()), POINTER_D_SEG_T4, POINTER_ARCHIVE_BYTES
+        ) - score_from(POINTER_D_POSE_T4, POINTER_D_SEG_T4, POINTER_ARCHIVE_BYTES),
+        "projected_pointer_score": score_from(
+            float(values.mean()), POINTER_D_SEG_T4, POINTER_ARCHIVE_BYTES
+        ),
+        "clears_admit_bar": bool(
+            score_from(float(values.mean()), POINTER_D_SEG_T4, POINTER_ARCHIVE_BYTES)
+            - score_from(POINTER_D_POSE_T4, POINTER_D_SEG_T4, POINTER_ARCHIVE_BYTES)
+            < ADMIT_BAR
+        ),
+    }
+
+
+def measure_seg_leg(
+    runtime_dir: Path, *, pairs: int, seed: int, batch_size: int
+) -> dict[str, Any]:
+    """Seg leg through the REAL upstream scorer: candidate frames vs pointer frames.
+
+    ``DistortionNet.compute_distortion`` is the contest's own function, so the seg
+    number here is the scorer's, not a re-implementation.  Inputs are ``b t h w c``
+    (``modules.py:145``), which is why the frames are fed channels-last.
+    """
+    import torch
+
+    upstream = REPO / "upstream"
+    sys.path.insert(0, str(upstream))
+    try:
+        from modules import DistortionNet, posenet_sd_path, segnet_sd_path
+    finally:
+        sys.path.pop(0)
+
+    state_candidate = up2.load_carrier_state(runtime_dir, verify_archive=False)
+    state_pointer = up2.load_carrier_state(POINTER_RUNTIME, verify_archive=False)
+    raw = up2.open_raw(up2.DEFAULT_RAW, verify_sha=True)
+    indices = (
+        up2.select_pairs(pairs, seed)
+        if pairs < up2.N_PAIRS_TOTAL
+        else np.arange(up2.N_PAIRS_TOTAL, dtype=np.int64)
+    )
+    net = DistortionNet().eval()
+    net.load_state_dicts(posenet_sd_path, segnet_sd_path, torch.device("cpu"))
+    for parameter in net.parameters():
+        parameter.requires_grad_(False)
+
+    changed_frame0 = 0
+    max_abs_frame0_delta = 0.0
+    argmax_mismatch = 0
+    total_pixels = 0
+    seg_distortions: list[float] = []
+    for start in range(0, len(indices), batch_size):
+        chunk = indices[start : start + batch_size]
+        frame1 = up2.frames_to_bchw(raw[2 * chunk + 1])
+        with torch.inference_mode():
+            f0_cand = up2.render_frame0(
+                state_candidate.coefficients[chunk],
+                state_candidate,
+                chunk,
+                differentiable=False,
+            )
+            f0_base = up2.render_frame0(
+                state_pointer.coefficients[chunk],
+                state_pointer,
+                chunk,
+                differentiable=False,
+            )
+            delta = (f0_cand - f0_base).abs()
+            changed_frame0 += int((delta > 0).sum())
+            max_abs_frame0_delta = max(max_abs_frame0_delta, float(delta.max()))
+            # modules.py:145 wants b t h w c.
+            pair_cand = torch.stack([f0_cand, frame1], dim=1).permute(0, 1, 3, 4, 2)
+            pair_base = torch.stack([f0_base, frame1], dim=1).permute(0, 1, 3, 4, 2)
+            _pose_d, seg_d = net.compute_distortion(pair_cand, pair_base)
+            seg_distortions.extend(seg_d.to(torch.float64).tolist())
+            seg_in_cand = net.segnet.preprocess_input(
+                pair_cand.permute(0, 1, 4, 2, 3).float()
+            )
+            seg_in_base = net.segnet.preprocess_input(
+                pair_base.permute(0, 1, 4, 2, 3).float()
+            )
+            am_cand = net.segnet(seg_in_cand).argmax(dim=1)
+            am_base = net.segnet(seg_in_base).argmax(dim=1)
+            argmax_mismatch += int((am_cand != am_base).sum())
+            total_pixels += int(am_base.numel())
+    return {
+        "pairs": len(indices),
+        "sampling": f"seeded_random_{seed}" if pairs < up2.N_PAIRS_TOTAL else "full_field",
+        "frame0_pixels_changed": changed_frame0,
+        "frame0_max_abs_delta": max_abs_frame0_delta,
+        "segnet_argmax_pixels_compared": total_pixels,
+        "segnet_argmax_pixels_changed": argmax_mismatch,
+        "d_seg_candidate_vs_pointer": float(np.mean(seg_distortions)),
+        "d_seg_max_per_pair": float(np.max(seg_distortions)),
+        "structural_reason": (
+            "upstream/modules.py:108 slices x[:, -1, ...]; frame 1 comes from the "
+            "semantic/hpac/token sections, which are byte-identical to the pointer"
+        ),
+    }
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--candidate-runtime", type=Path, default=CANDIDATE_RUNTIME)
+    parser.add_argument("--leg", choices=("pose", "pose-base", "seg"), required=True)
+    parser.add_argument("--pairs", type=int, default=600)
+    parser.add_argument("--seed", type=int, default=20260819)
+    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--checkpoint", type=Path)
+    parser.add_argument("--json-out", type=Path, required=True)
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    if args.leg == "pose":
+        report = measure_pose_leg(
+            args.candidate_runtime,
+            pairs=args.pairs,
+            seed=args.seed,
+            batch_size=args.batch_size,
+            checkpoint=args.checkpoint,
+        )
+        report["leg"] = "pose_candidate"
+        report["up2_predicted_d_pose"] = UP2_SOLVED_D_POSE
+    elif args.leg == "pose-base":
+        report = measure_pose_leg(
+            POINTER_RUNTIME,
+            pairs=args.pairs,
+            seed=args.seed,
+            batch_size=args.batch_size,
+            checkpoint=args.checkpoint,
+        )
+        report["leg"] = "pose_base_control"
+        report["up2_predicted_d_pose"] = UP2_BASE_D_POSE
+    else:
+        report = measure_seg_leg(
+            args.candidate_runtime,
+            pairs=args.pairs,
+            seed=args.seed,
+            batch_size=args.batch_size,
+        )
+        report["leg"] = "seg"
+    if "d_pose" in report:
+        predicted = report["up2_predicted_d_pose"]
+        report["ratio_vs_up2_prediction"] = report["d_pose"] / predicted
+    args.json_out.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(report, indent=2, sort_keys=True)
+    args.json_out.write_text(text + "\n")
+    print(text)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
