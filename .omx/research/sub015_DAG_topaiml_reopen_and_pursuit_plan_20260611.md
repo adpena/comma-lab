@@ -28932,3 +28932,19 @@ seal → T4. Memos .omx/research/ddm_sa1_vseries_v7_dead_v2_routing_20260818.md 
   tail-override build step in ddm_sa3_rebase_sz1.py (named, unbuilt). The sealed rr4-D1
   candidate is DOMINATED by the 176,525-B pointer — NOT fired. Also corrected: fx2 D1 was
   never pin-blocked (byte-closed 08-17); its sealed fire-order JSON is stale.
+
+## FEED-to1 (2026-08-19) — TWELFTH POINTER MOVE: ma1 law reaches the pointer via tail-override
+- MOVE: to1 tail-override (ma1 within-miss re-encode of the sz1 token tail spliced onto the
+  ck2 body) -> **S 0.15659459685822907 @ 176,420 B [contest-CUDA T4, n600]**, sha 50e56145.
+  Net vs ck2 -6.991519e-05 PURE RATE (-105 B); 19.98x bar, 10.48x summed 8dp bound. Distortion
+  axes UNCHANGED (byte-identical inflated output; identical decoded token field 9ba2e52b with a
+  DIFFERENT shipped stream = the non-vacuous identity control). Gap to 0.15: 0.00659460.
+- NIGHT ARC: moves 11+12 in one session, both container/re-encode class, both realized to the
+  LAST DIGIT (-5.074e-4 combined). The class's virtue is structural: decoded-state identity
+  makes the T4 row a falsifier, not an estimate.
+- CHAIN LESSON: reaching the pointer required a BUILD (tail-override splice step) because ck2
+  borrowed sz1's tail verbatim — the compose path could not express a re-encoded tail. The law
+  itself transferred as IDENTITY (ck2 tail == fx2-D1 tail byte-identical), not as a projection.
+- AXIS STATE: model/rate axis near-exhausted (ma1 reservoir deflated to ~475 B real headroom);
+  remaining mass per eu4 = pose 69.38% of gap (js1/js8 joint line ONLY) + seg carriage. Next
+  rate rungs are small-bore; next MAJOR mass requires the joint line or trained-receiver #982.
