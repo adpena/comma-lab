@@ -246,3 +246,149 @@ def test_manifest_absent_refuses(tmp_path):
     bad.write_text(json.dumps({"provenance": {}}))
     with pytest.raises(KeyError):
         guard.load_manifest_files(bad)
+
+
+# --------------------------------------------------------------------------
+# receipts-dir census (round-12 F5)
+#
+# The finding: the AppleDouble cure covered the staged tree -- the directory the
+# guard walks -- and stopped there, leaving one ._ sidecar per real receipt in
+# gen4_receipts/ and five more one level up in generations/. These tests are the
+# positive controls for both surfaces.
+# --------------------------------------------------------------------------
+
+
+def _receipts(tmp_path: Path, names: list[str], *, parent_names: list[str] | None = None) -> Path:
+    parent = tmp_path / "generations"
+    parent.mkdir(parents=True, exist_ok=True)
+    receipts = parent / "gen4_receipts"
+    receipts.mkdir()
+    for name in names:
+        target = receipts / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("x")
+    for name in parent_names or []:
+        (parent / name).write_text("x")
+    return receipts
+
+
+def test_receipts_census_clean_custody_store_passes(tmp_path, capsys):
+    receipts = _receipts(tmp_path, ["contest_auth_eval.json", "report.txt", "provenance.json"])
+    rc = guard.main(["--receipts-dir", str(receipts)])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "RECEIPTS_CLEAN" in out
+    # denominator is always printed, not just the hits
+    assert "3 flat custody file(s)" in out
+
+
+def test_receipts_census_catches_planted_appledouble_sidecar(tmp_path, capsys):
+    """Positive control: the exact round-12 F5 artefact."""
+    receipts = _receipts(tmp_path, ["contest_auth_eval.json"])
+    (receipts / "._contest_auth_eval.json").write_bytes(bytes([0x00, 0x05, 0x16, 0x07]))
+    rc = guard.main(["--receipts-dir", str(receipts)])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "RECEIPTS_STRAYS_PRESENT" in out
+    assert "STRAY: ._contest_auth_eval.json" in out
+
+
+def test_receipts_census_catches_sidecar_one_level_up(tmp_path, capsys):
+    """The 'generations/ holds five ._* entries' surface the review measured."""
+    receipts = _receipts(
+        tmp_path, ["contest_auth_eval.json"], parent_names=["._gen4_receipts"]
+    )
+    rc = guard.main(["--receipts-dir", str(receipts)])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "STRAY: ../._gen4_receipts" in out
+    assert "parent dot-entries 1" in out
+
+
+def test_receipts_census_catches_nested_pycache(tmp_path, capsys):
+    receipts = _receipts(tmp_path, ["report.txt", "__pycache__/thing.cpython-313.pyc"])
+    rc = guard.main(["--receipts-dir", str(receipts)])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "STRAY: __pycache__/thing.cpython-313.pyc" in out
+
+
+def test_receipts_census_catches_dot_entry_at_depth(tmp_path, capsys):
+    receipts = _receipts(tmp_path, ["report.txt", "sub/._buried"])
+    rc = guard.main(["--receipts-dir", str(receipts)])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "STRAY: sub/._buried" in out
+
+
+def test_receipts_dir_is_repeatable_and_returns_worst_rc(tmp_path, capsys):
+    clean = _receipts(tmp_path, ["report.txt"])
+    dirty_parent = tmp_path / "gen3"
+    dirty_parent.mkdir()
+    dirty = dirty_parent / "gen3_receipts"
+    dirty.mkdir()
+    (dirty / "report.txt").write_text("x")
+    (dirty / "._report.txt").write_text("x")
+    rc = guard.main(["--receipts-dir", str(clean), "--receipts-dir", str(dirty)])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "RECEIPTS_CLEAN" in out
+    assert "RECEIPTS_STRAYS_PRESENT" in out
+
+
+def test_receipts_census_alone_is_a_valid_invocation(tmp_path):
+    receipts = _receipts(tmp_path, ["report.txt"])
+    assert guard.main(["--receipts-dir", str(receipts)]) == 0
+
+
+def test_missing_receipts_dir_refuses(tmp_path):
+    assert guard.main(["--receipts-dir", str(tmp_path / "nope")]) == 2
+
+
+def test_receipts_census_json_out_carries_both_surfaces(tmp_path):
+    receipts = _receipts(
+        tmp_path, ["report.txt", "._report.txt"], parent_names=["._gen4_receipts"]
+    )
+    out_json = tmp_path / "census.json"
+    rc = guard.main(["--receipts-dir", str(receipts), "--json-out", str(out_json)])
+    assert rc == 1
+    payload = json.loads(out_json.read_text())
+    assert payload["mode"] == "receipts"
+    assert payload["dot_entries"] == ["._report.txt"]
+    assert payload["parent_dot_entries"] == ["../._gen4_receipts"]
+    assert payload["stray_count"] == 2
+    # a sidecar is not a receipt: the denominator counts real custody files only
+    assert payload["flat_custody_file_count"] == 1
+
+
+def test_receipts_census_does_not_delete_what_it_finds(tmp_path):
+    """A guard that repairs what it measures cannot be trusted to report it."""
+    receipts = _receipts(tmp_path, ["report.txt"])
+    sidecar = receipts / "._report.txt"
+    sidecar.write_text("x")
+    guard.main(["--receipts-dir", str(receipts)])
+    assert sidecar.exists()
+
+
+def test_no_mode_message_names_receipts_dir(tmp_path, capsys):
+    assert guard.main([]) == 2
+    assert "--receipts-dir" in capsys.readouterr().err
+
+
+def test_receipts_census_ignores_dot_directory_beside_the_store(tmp_path, capsys):
+    """A .git beside a receipts dir must not manufacture a stray."""
+    receipts = _receipts(tmp_path, ["report.txt"])
+    (receipts.parent / ".git").mkdir()
+    rc = guard.main(["--receipts-dir", str(receipts)])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "RECEIPTS_CLEAN" in out
+    assert ".git" not in out
+
+
+def test_receipts_census_still_catches_dot_file_beside_the_store(tmp_path, capsys):
+    """...but a dot-FILE one level up is still a stray (.DS_Store, ._sidecar)."""
+    receipts = _receipts(tmp_path, ["report.txt"], parent_names=[".DS_Store"])
+    rc = guard.main(["--receipts-dir", str(receipts)])
+    assert rc == 1
+    assert "STRAY: ../.DS_Store" in capsys.readouterr().out

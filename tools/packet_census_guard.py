@@ -45,6 +45,39 @@ is a FLAT set of documents. No subdirectories, no dot-entries. That property
 needs no manifest, never rots as documents are added, and catches the whole
 CWD-resolved-write class -- every instance of which creates a nested path.
 
+THREE SURFACES, NOT TWO (round-12 F5)
+-------------------------------------
+Round 12 found the AppleDouble cure had covered the STAGED TREE -- the directory
+this guard walks -- and stopped there. Its sibling ``gen4_receipts/``, the custody
+store every packet document cites, held one ``._*`` sidecar per real receipt, and
+``generations/`` held five more one level up. Neither surface was censused by
+anything. A cure that covers exactly the directory the guard happens to walk is
+an instance fix wearing a gate's clothes, which is the defect this module already
+exists to refuse.
+
+``--receipts-dir`` closes it with the same structural invariant as ``--prep-dir``:
+a custody store is a FLAT set of files, no nested paths, no dot-entries at any
+depth. It additionally censuses the receipts directory's IMMEDIATE PARENT for
+dot-entries, non-recursively -- that is the exact "one level up" surface round 12
+measured, and making the operator remember to pass it separately would rebuild the
+hole.
+
+WHY DELETION IS NOT ENOUGH, MEASURED (round-12 F5)
+--------------------------------------------------
+On the ExFAT custody tier macOS attaches ``com.apple.provenance`` to files written
+by the managed process, and the OS then materializes a ``._`` sidecar to hold that
+attribute. Measured three ways during the round-12 cure: ``shutil.copy2`` produced
+sidecars; ``shutil.copyfile``, which copies content only, produced them too; and a
+bare ``pathlib.Path.write_text("hello")`` produced ``.__plain_write_test.txt``. The
+class is NOT a copy-function choice and cannot be written around. It regenerated
+inside its own cure -- the arm found 14 sidecars in a directory the review had
+counted 13 in, because the arm's own receipt had just been written there. So the
+only durable answer is detection: strip (``xattr -rc``) and delete at freeze, and
+let this census refuse if the next write puts them back.
+
+This guard DETECTS and REFUSES. It never deletes. A guard that repairs what it
+measures cannot be trusted to report what it found.
+
 Exit codes: 0 census clean · 1 undeclared/stray files present · 2 usage/IO error.
 """
 
@@ -142,6 +175,72 @@ def prep_census(prep_dir: Path) -> tuple[list[str], list[str]]:
                 dotted.append(rel)
         dirnames.sort()
     return sorted(set(nested)), sorted(set(dotted))
+
+
+def receipts_census(receipts_dir: Path) -> tuple[list[str], list[str], list[str]]:
+    """Return (nested_paths, dot_entries, parent_dot_entries) for a custody store.
+
+    Same structural invariant as ``prep_census`` -- a receipts directory is a FLAT
+    set of custody files -- plus a non-recursive sweep of the IMMEDIATE PARENT for
+    dot-entries. Round-12 F5 measured the AppleDouble class on both surfaces at
+    once, so censusing one and not the other leaves the finding half-open.
+    """
+    # The flat/no-dots half is EXACTLY the prep invariant; reuse it rather than
+    # re-walking, so the two surfaces cannot drift apart.
+    nested, dotted = prep_census(receipts_dir)
+
+    # The parent sweep looks at FILES only. An AppleDouble sidecar for a directory
+    # is itself a file (``generations/._gen4_receipts``), so nothing is missed --
+    # while a legitimate dot-DIRECTORY beside the custody store (``.git`` when a
+    # receipts dir lives inside a repo) does not manufacture a false stray. A guard
+    # that cries wolf on ``.git`` is a guard someone turns off.
+    parent_dotted: list[str] = []
+    parent = receipts_dir.parent
+    if parent != receipts_dir:
+        try:
+            entries = sorted(parent.iterdir())
+        except OSError:
+            entries = []
+        for entry in entries:
+            if entry.name.startswith(".") and entry.is_file():
+                parent_dotted.append(f"../{entry.name}")
+    return nested, dotted, sorted(set(parent_dotted))
+
+
+def _run_receipts_census(receipts_dir: Path) -> tuple[int, dict[str, object]]:
+    if not receipts_dir.is_dir():
+        print(f"REFUSE: receipts dir not found: {receipts_dir}", file=sys.stderr)
+        return 2, {}
+    nested, dotted, parent_dotted = receipts_census(receipts_dir)
+    strays = sorted(set(nested) | set(dotted) | set(parent_dotted))
+    # Denominator counts REAL custody files -- a sidecar is not a receipt, and
+    # counting it as one would inflate the number a reader reconciles against.
+    flat_count = sum(
+        1 for p in receipts_dir.iterdir() if p.is_file() and not p.name.startswith(".")
+    )
+    verdict = "RECEIPTS_CLEAN" if not strays else "RECEIPTS_STRAYS_PRESENT"
+    report: dict[str, object] = {
+        "schema": "packet_census_guard.v1",
+        "mode": "receipts",
+        "receipts_dir": str(receipts_dir),
+        "parent_dir": str(receipts_dir.parent),
+        "flat_custody_file_count": flat_count,
+        "nested_paths": nested,
+        "dot_entries": dotted,
+        "parent_dot_entries": parent_dotted,
+        "stray_count": len(strays),
+        "verdict": verdict,
+    }
+    # Denominator first, always: a census that prints only its hits is the vacuity
+    # class. flat_custody_file_count is what a reader checks the receipt list against.
+    print(
+        f"receipts census {receipts_dir.name}: {flat_count} flat custody file(s) | "
+        f"nested {len(nested)} | dot-entries {len(dotted)} | "
+        f"parent dot-entries {len(parent_dotted)} | {verdict}"
+    )
+    for path in strays:
+        print(f"  STRAY: {path}")
+    return (1 if strays else 0), report
 
 
 def _run_packet_census(args: argparse.Namespace) -> tuple[int, dict[str, object]]:
@@ -244,11 +343,24 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="packet PREP directory; censused structurally (flat, no dot-entries)",
     )
+    parser.add_argument(
+        "--receipts-dir",
+        type=Path,
+        action="append",
+        default=None,
+        help=(
+            "custody/receipts directory; censused structurally (flat, no dot-entries) "
+            "together with its immediate parent. Repeatable."
+        ),
+    )
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args(argv)
 
-    if args.packet_dir is None and args.prep_dir is None:
-        print("REFUSE: pass --packet-dir and/or --prep-dir", file=sys.stderr)
+    if args.packet_dir is None and args.prep_dir is None and not args.receipts_dir:
+        print(
+            "REFUSE: pass --packet-dir and/or --prep-dir and/or --receipts-dir",
+            file=sys.stderr,
+        )
         return 2
 
     reports: list[dict[str, object]] = []
@@ -262,6 +374,13 @@ def main(argv: list[str] | None = None) -> int:
             return 2
     if args.prep_dir is not None:
         rc, report = _run_prep_census(args)
+        worst = max(worst, rc)
+        if report:
+            reports.append(report)
+        if rc == 2:
+            return 2
+    for receipts_dir in args.receipts_dir or []:
+        rc, report = _run_receipts_census(receipts_dir)
         worst = max(worst, rc)
         if report:
             reports.append(report)
