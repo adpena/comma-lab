@@ -81,3 +81,5 @@ Gap to 0.15 after this row: 0.00666451 (from 0.00710198) — **6.16% closed**.
 
 No paid dispatch, no seal executed, no push, no PR, no hosting. The packet re-stage at the
 `ddm_pq1` boundary (generation 5) is a separate consumer and is not touched here.
+
+STORES CONSULTED: run-artifacts (ck1 T4 receipt + advisory_rebased/attempt_0002 contest_auth_eval.json; CK2_CUSTODY_MANIFEST.json + six compiled-archive shas; fx1/fx2 rate receipts; mz2 retained-candidate payload sha 156112d0; t1h/iv1/qs5 T4 refusal rows) · memories (cpu-to-cuda-seg-transfer-has-no-law — seg legs discounted as upper bounds; probability-model-axis-live-fx1-sweep-prior — ctx≫members>lr inherited, not re-measured; cross-regime-constant-transfer — sz1 pinned (49, 8284) re-measured on ck1 body, not transferred; the-counted-byte-is-not-fungible) · research memos (ddm_bp1 section-coding closure re-read with its INSTANCE scope on sz1 body; ddm_sz1/ck1 landing memos) · tasks ledger (#1128 tenth-move row, #1111 packet state). Not consulted: canonical_equations evaluators, graph-memory reconstruct (candidate ranked from receipts directly).
