@@ -164,6 +164,32 @@ unmeasured.
 the loss by 12×; it does not change the sign. That is the useful shape of this result — the
 verdict is robust to the one thing I could not measure locally.
 
+### §4.1 The degradation is broad, and the aggregate flatters it
+
+An aggregate ratio can be owned by one heavy pair, so I attacked my own number two ways.
+
+**Drop the heaviest pairs by |excess| and recompute:**
+
+| dropped | 0 | 1 | 2 | 3 | 5 | 8 | 12 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| aggregate ratio | 1.373 | 1.262 | 1.192 | **1.139** | 1.174 | 1.453 | 1.305 |
+| ΔS_pose | +0.001424 | +0.001025 | +0.000761 | **+0.000556** | +0.000694 | +0.001705 | +0.001181 |
+
+Pose still worsens after every trim. The most favourable trim available (drop the 3 heaviest, 45
+pairs left) still costs **+0.000556 S — 1.7× the seg gain.** The verdict survives adversarial
+outlier removal.
+
+**And the aggregate is the *kind* estimator here.** The per-pair distribution:
+
+| p10 | p25 | **median** | p75 | p90 |
+|---:|---:|---:|---:|---:|
+| 0.437 | 0.763 | **1.698** | 3.232 | 8.901 |
+
+The **median pair degrades 1.70×**, worse than the 1.373 aggregate, because the aggregate is a
+ratio of means and the pairs carrying the most pose mass happen to degrade proportionally least.
+35 of 48 pairs worsen. This is not a tail artifact — it is the central tendency, and the headline
+number is the *charitable* reading of it.
+
 ## §5 LEG 2 — the inclusion test on measured bytes (gen-1, verified not re-run)
 
 Gen-1 completed this leg and I verified its controls rather than repeating 44 s of coding. Its
