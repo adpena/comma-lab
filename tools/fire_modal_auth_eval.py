@@ -467,6 +467,16 @@ def main(argv: list[str] | None = None) -> int:
             "when both legs fire as a registered pair, or the waiver alone when the "
             "other leg was bought in a separate invocation."
         )
+    # NEITHER-set is equally a guaranteed worker refusal ("paired-by-default"), but that
+    # one arrives AFTER the image build with its message buried under the mount tree —
+    # the br1 triple-refusal (2026-08-19, task #1152) spent two blind rc=5 rounds on it.
+    # A worker-side rule the firer can check must be checked here, before any subprocess.
+    if not args.single_axis_waiver_reason and not args.pair_group_id:
+        ap.error(
+            "the worker is paired-by-default: pass --pair-group-id (shared by the "
+            "CPU/CUDA sibling jobs) for a paired fire, or --single-axis-waiver-reason "
+            "with a substantive rationale for a single-axis row."
+        )
 
     # The dispatch subprocess runs with cwd=REPO, so a relative --output-dir must
     # resolve against REPO here too or the spawn-record check reads the wrong dir.
@@ -662,9 +672,27 @@ def main(argv: list[str] | None = None) -> int:
     disp = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True)
     sys.stdout.write(disp.stdout[-2000:])
     sys.stderr.write(disp.stderr[-2000:])
+    # Persist the FULL dispatch output: the 2000-char echo above is a courtesy tail, and
+    # modal's mount tree fills it — the br1 incident (#1152) hid a one-line entrypoint
+    # refusal behind it for two rounds. The files, not the echo, are the diagnostic record.
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "dispatch_stdout.log").write_text(disp.stdout)
+    (out_dir / "dispatch_stderr.log").write_text(disp.stderr)
+    refusal_lines = [
+        ln
+        for stream in (disp.stdout, disp.stderr)
+        for ln in stream.splitlines()
+        if ln.startswith(("FATAL", "REFUSED", "Traceback", "Error:"))
+        or "PreflightError" in ln
+        or "refuse" in ln.lower()
+    ][:20]
     spawn_path = out_dir / "modal_auth_eval_spawn.json"
     if not spawn_path.is_file():
+        manifest["entrypoint_refusal_lines"] = refusal_lines
+        for ln in refusal_lines:
+            print(f"ENTRYPOINT SAID: {ln}")
         print("FATAL: dispatch produced no spawn record — the fire DID NOT take. Do not assume a call exists.")
+        print(f"Full dispatch output: {out_dir / 'dispatch_stdout.log'} / dispatch_stderr.log")
         return refuse(out_dir, 5, "dispatch produced no spawn record — the fire DID NOT take", manifest)
     call_id = json.loads(spawn_path.read_text()).get("call_id", "")
     if not call_id:
