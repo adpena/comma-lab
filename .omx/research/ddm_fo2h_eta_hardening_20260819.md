@@ -44,9 +44,14 @@ sign out-of-sample**.
 | pose ratio (after/before) | 0.7935 (*improves*) | **1.3725** (*worsens*) | **+0.001424** |
 
 The seg leg supplies. The pose leg takes **3.9× more back**. Net at the pooled η:
-**+0.001056 S — a net loss.** Under the alternative lineage-transfer assumption the pose leg costs
-**+0.013075 S** and the loss is 35× the seg gain. **Both bounds are positive**, so the joint
-verdict does not depend on resolving the lineage question.
+**+0.001056 S — a net loss.** Under the alternative transfer assumption the pose leg costs
+**+0.013075 S** and the loss is 35× the seg gain.
+
+**Scope that honestly (§4.0): this pose result is on the PyAV GT lineage, and it does not
+automatically transfer to the contest axis.** I first wrote that the two transfer bounds made the
+verdict lineage-robust; the algebra says otherwise, and I withdraw it. The channel is
+NON-SUPPLIER **as measured**; the contest-axis sign is undetermined and a DALI re-measurement is
+owed. I have launched the retained-frames run that makes it a matched, same-pair comparison.
 
 ## §1 The charter's premise was stale — gen-1 did not die empty
 
@@ -159,10 +164,45 @@ adding a fixed absolute MSE excess is a *much* larger fractional insult on the t
 √ concavity punishes exactly there (sa3: the axis you *pay* upward). Which assumption holds is
 unmeasured.
 
-**It does not matter for this verdict.** Both bounds are positive and both exceed the seg leg's
-−0.000336. The channel is a net loss under either. The lineage question changes the *magnitude* of
-the loss by 12×; it does not change the sign. That is the useful shape of this result — the
-verdict is robust to the one thing I could not measure locally.
+Both bounds are positive and both exceed the seg leg's −0.000336, so on the PyAV lineage the
+channel is a net loss under either.
+
+### §4.0 …and I must withdraw the "robust to lineage" claim I first wrote here
+
+My first draft of this section said the verdict was *robust* to the lineage question because both
+transfer bounds agree in sign. **That is wrong, and the algebra says so.**
+
+up1 established that only the **GT side** changes with the device — the compressed side is the same
+`TensorVideoDataset` on both axes. So with `p_b` = PoseNet(base pair), `p_a` = PoseNet(edited
+pair), `Δ = p_a − p_b`, and GT vector `g`:
+
+```
+d_pose_before = |p_b − g|²
+d_pose_after  = |p_b − g + Δ|²
+excess        = 2 (p_b − g) · Δ + |Δ|²
+```
+
+**The excess carries a cross term in `(p_b − g)`, and `g_pyav ≠ g_dali`.** The edit moves `p_a`
+identically on both axes — Δ is lineage-independent — but the *error vector it is projected
+against* is not. When `|Δ|` is small next to the error (here `excess/before` = 37%, so it is), the
+cross term dominates, and a cross term can change **sign** when `g` changes.
+
+So my two "bounds" are not a bracket at all. They are two guesses that happen to agree, and the
+decomposition shows the quantity they estimate is not determined by anything I measured. **A
+19×-inflated baseline is exactly the regime where a perturbation can look damaging against the
+phantom error and benign against the real one.**
+
+**Corrected position:** the pose leg is measured **NON-SUPPLIER on the PyAV lineage**, and the
+contest-axis sign is **NOT DETERMINED** by this arm. The joint verdict below is scoped to the PyAV
+lineage accordingly, and the DALI re-measurement is the owed next step — not a refinement.
+
+**It is also now cheap.** The instrument exists locally and is reusable on arbitrary frames:
+`gt_cache_dali.pt` (`/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/`, 117,980,732 B,
+a `(600,6)` pose target cache) plus `ddm_up1_decode_axis_photometric_probe.pose_vectors()`, which
+is pure `(B,2,H,W,C) → (B,6)` and touches no archive. up1 reproduced the T4 pose row at **0.9999×**
+in ~140 s at $0. I have therefore launched a 12-pair run with `--retain-frames` **on pairs drawn
+from gen-1's own n=48 set**, so the successor gets a matched same-pair PyAV-vs-DALI comparison
+rather than a fresh sample confounded with the lineage change.
 
 ### §4.1 The degradation is broad, and the aggregate flatters it
 
