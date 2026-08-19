@@ -384,4 +384,79 @@ and a row, and they are named rather than waved at:
 6. **No byte-closed archive exists.** Nothing here has been through the re-encoder, so
    every rate figure is modelled, not measured on `archive.zip`.
 
+---
+
+## S1e — CORRECTION TO S1d. THE YIELD DECAYS, AND THE AXIS IS OPEN ONLY WITH A STOPPING RULE.
+
+S1d's "the axis is OPEN" was drawn from a **first-pass** yield of 1.50 cells per changed
+token, and S1d itself named non-additivity as the caveat most likely to halve it. It was
+measured, by two independent runs, and **it does more than halve it.**
+
+| run | passes | tokens changed | cells repaired | cells/token |
+|---|---:|---:|---:|---:|
+| this arm, pair 283, single pass | 1 | 13 | 19 | **1.462** |
+| this arm, S1c sampled sites | 1 | 12 | 18 | 1.500 |
+| **sister scout, pair 133, iterated** | **8** | **77** | **30** | **0.390** |
+
+The first pass is efficient and the two single-pass measurements agree (1.46, 1.50). But
+pushing the same pair to 25.9% of its own seg debt drove the average to **0.390**. The
+marginal yield **decays hard**.
+
+That changes the sign of the verdict, because the budget is proportional to the yield:
+
+| yield regime | budget (bits/token) | measured cost | verdict |
+|---|---:|---:|---|
+| first pass, 1.46 cells/token | **14.9** | +4.718 mean | **net positive, 3.2x margin** |
+| iterated to 8 passes, 0.390 | **3.97** | +4.718 mean | **net NEGATIVE** |
+
+**So the axis is not simply open. It is open up to a stopping point and closed past it.**
+A seg-greedy solve that chases every repairable cell walks straight past the point where
+the rate term overtakes the seg term and ends up worse than the base. The correct
+formulation is not "descend until converged" — which is what worked for the pose carrier,
+where bytes were nearly free — but **a rate-aware descent with a Lagrangian stopping rule**:
+accept a move only while `cells_repaired x 10.18 bits > cost_bits`, and stop when the
+marginal move stops clearing it.
+
+Two things make the stopping rule more favourable than the table's flat comparison, and
+both are measured rather than hoped:
+
+1. **+4.718 bits is the mean over ALL four neighbour candidates; a solver pays the
+   CHEAPEST.** The distribution is wide — p25 = +0.902, p10 = -2.344, and **20% of moves
+   are free or better**. A cost-aware selector that ranks candidates by
+   `cells_repaired / bits` rather than by cells alone pays far less than the mean.
+2. **The early repairs are the cheap ones.** Diminishing returns cuts both ways: the
+   first-pass margin is 3.2x, so there is real headroom before the rule bites.
+
+**Honest extrapolation, with its error bars stated.** At the first-pass rate (~13 edits
+per pair repairing ~19 cells) over 600 pairs: ~11,400 cells repaired (`-0.00966 S`) for
+~7,800 changed tokens at 4.718 bits (`+0.00306 S`), net **~-0.0066 S** — which would
+cover the 0.006526 gap. **I do not claim that.** It extrapolates one pass on two pairs to
+600, uses the mean rather than the cheapest-neighbour cost, ignores the cross-body model
+gap (S1d caveat 3), and has never been byte-closed. It is quoted only to show the axis is
+worth the next unit's compute, not as a projected row.
+
+### Three corrections this arm owes to its own charter and its own S1c
+
+1. **The "~1000x" refusal is mis-attributed.** It is not task #930 on this actuator; it is
+   **`ddm_sm1`** (`.omx/research/ddm_sm1_seg_search_transfer_20260803.md:343`), and it
+   **was** realized coordinate descent — but on a **different actuator**: a 4-channel x
+   16-level 16x16-cell token code inside a 767,812 B TR1 archive the live parser refuses,
+   carrying `verdict_scope: INSTANCE`. It never scoped to the dense 5-ary map this arm
+   actuates. The reopening was justified; the justification is now precise.
+   Sisters: `#869 = ddm_tw1` is a **rate** arm that computed no `d_seg` at all; `#978` is a
+   counted receiver-side conv module, not token edits.
+2. **My S1c proposal family was too narrow, and in an informative way.** I only ever tried
+   setting a neighbour to the **GT class**. A sister sweep over all five classes found
+   that **0 of 12 accepted single-token edits chose the GT class.** The winning edits are
+   **adversarial** — they write a class that is *wrong* at that cell in order to steer the
+   painted RGB so SegNet lands on GT. That is pre-distortion confirmed at the edit level,
+   and it means my 1.46-1.50 is a **lower bound on per-move quality**: the true best move
+   is outside the family I searched.
+3. **Edits are local, which licenses spatial packing.** A single token flip changes a
+   **median of 1** argmax pixel, with Chebyshev radius 0-11 px in 9 of 10 trials. Applying
+   all improving edits at >=64 px separation jointly reproduced the sum of their solo
+   deltas at ratios **1.000 / 0.818 / 0.750**. So many well-separated proposals can share
+   one render+SegNet forward, taking a site from ~2.33 s to ~48 ms — a ~48x speedup that
+   makes an n600 rate-aware solve affordable at $0.
+
 *(S2/S3 sections follow as they are measured.)*
