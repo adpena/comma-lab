@@ -1,0 +1,18 @@
+{
+  "schema": "pact.run_liveness_watcher.config.v1",
+  "pid_file": "/Volumes/APDataStore/pact/ddm_br1/work/gn_n600/launcher/resource_safe_run_child.pid",
+  "alert_path": "/Users/adpena/Projects/pact/.omx/tmp/ddm_br1/liveness.alert.json",
+  "poll_s": 60,
+  "initial_delay_s": 0,
+  "warmup_s": 300,
+  "receipt_checks": [],
+  "heartbeat_checks": [],
+  "artifact_checks": [
+    {
+      "label": "br1_gn_rows",
+      "path": "/Volumes/APDataStore/pact/ddm_br1/work/gn_n600/rows.jsonl",
+      "max_age_s": 1800,
+      "grace_s": 900
+    }
+  ]
+}
