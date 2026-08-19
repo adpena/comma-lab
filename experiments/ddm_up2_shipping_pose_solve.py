@@ -989,6 +989,86 @@ def run_solve(config: SolveConfig) -> dict[str, Any]:
     return summary
 
 
+def price_full_resolve_bytes(
+    runtime_dir: Path, candidate_codes: np.ndarray
+) -> tuple[dict[str, Any], np.ndarray]:
+    """Measured archive-byte delta of a re-solved coefficient lattice.
+
+    Reuses ``ddm_t1h``'s pricer, which models the counted CAP1 container exactly:
+    everything but the Rice residual payload is independent of the coefficient
+    codes, so ``carrier_bytes = fixed_prefix + ceil(rice_bits / 8)``. The pricer
+    is required to reproduce the SHIPPED bit count from the shipped codes before
+    any candidate number is returned -- otherwise the delta is unanchored.
+    """
+    sys.path.insert(0, str(REPO / "experiments"))
+    try:
+        import ddm_t1h_carrier_byte_pricer as pricer  # type: ignore[import-not-found]
+    finally:
+        sys.path.pop(0)
+    (carrier_repack, _cap1, predictor, carrier_blob, _selector, info, model,
+     base_codes, _comp) = pricer.load_shipped(runtime_dir / "archive.zip", runtime_dir)
+    _, shipped_bits = pricer.rice_bits(base_codes, model, carrier_repack, predictor)
+    if shipped_bits != int(info["rice_payload_bits"]):
+        raise Up2Error(
+            "byte pricer does not reproduce the shipped Rice payload "
+            f"({shipped_bits} vs {info['rice_payload_bits']}); delta would be unanchored"
+        )
+    _, candidate_bits = pricer.rice_bits(
+        np.asarray(candidate_codes, dtype=np.int32), model, carrier_repack, predictor
+    )
+    shipped_bytes = (shipped_bits + 7) // 8
+    candidate_bytes = (candidate_bits + 7) // 8
+    report = {
+        "control_reproduces_shipped_payload": True,
+        "rice_bits_shipped": int(shipped_bits),
+        "rice_bits_candidate": int(candidate_bits),
+        "rice_payload_bytes_shipped": int(shipped_bytes),
+        "rice_payload_bytes_candidate": int(candidate_bytes),
+        "delta_bytes": int(candidate_bytes - shipped_bytes),
+        "changed_coordinates": int((np.asarray(candidate_codes) != base_codes).sum()),
+    }
+    # Returned separately, never inside the report: the report is JSON-dumped and
+    # a numpy array in it would crash the dump at the worst possible moment.
+    return report, base_codes.astype(np.int32)
+
+
+def price_candidate(
+    *,
+    d_pose_start: float,
+    d_pose_final: float,
+    delta_bytes: int,
+    d_seg_delta: float = 0.0,
+) -> dict[str, Any]:
+    """Net score delta with the report-resolution bound stated honestly.
+
+    The 8dp d_pose report has a half-ULP of 5e-9, and its score consequence GROWS
+    as d_pose falls. Bounds ADD across the two rows being differenced, so the
+    quoted bound is the SUM, and the improvement is quoted as a multiple of it.
+    """
+    leg_start = pose_leg(d_pose_start)
+    leg_final = pose_leg(d_pose_final)
+    delta_pose = leg_final - leg_start
+    delta_rate = delta_bytes * BYTE_TO_SCORE
+    delta_seg = 100.0 * d_seg_delta
+    net = delta_pose + delta_rate + delta_seg
+    bound = pose_report_bound(d_pose_start) + pose_report_bound(d_pose_final)
+    return {
+        "d_pose_start": d_pose_start,
+        "d_pose_final": d_pose_final,
+        "pose_leg_start": leg_start,
+        "pose_leg_final": leg_final,
+        "delta_score_pose": delta_pose,
+        "delta_bytes": int(delta_bytes),
+        "delta_score_rate": delta_rate,
+        "delta_score_seg": delta_seg,
+        "net_delta_score": net,
+        "summed_report_bound": bound,
+        "net_over_bound": abs(net) / bound if bound else float("inf"),
+        "resolvable_by_the_t4_report": abs(net) > bound,
+        "d_pose_below_report_resolution": d_pose_final < resolvable_d_pose_floor(),
+    }
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)

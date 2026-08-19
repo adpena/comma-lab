@@ -395,6 +395,60 @@ class TestOverlayPricing:
 
 
 # ---------------------------------------------------------------------------
+# Candidate pricing -- net delta S, with the report bound stated.
+# ---------------------------------------------------------------------------
+
+
+class TestPriceCandidate:
+    def test_pure_pose_gain_is_negative_score(self):
+        priced = up2.price_candidate(
+            d_pose_start=7.77e-06, d_pose_final=7.60e-06, delta_bytes=0
+        )
+        assert priced["delta_score_pose"] < 0
+        assert priced["net_delta_score"] == pytest.approx(priced["delta_score_pose"])
+
+    def test_bytes_are_charged_at_the_upstream_rate(self):
+        priced = up2.price_candidate(
+            d_pose_start=7.77e-06, d_pose_final=7.77e-06, delta_bytes=100
+        )
+        assert priced["delta_score_rate"] == pytest.approx(100 * 25 / 37_545_489)
+        assert priced["net_delta_score"] > 0  # pure cost, no gain
+
+    def test_bounds_add_across_the_two_rows(self):
+        priced = up2.price_candidate(
+            d_pose_start=7.77e-06, d_pose_final=7.00e-06, delta_bytes=0
+        )
+        expected = up2.pose_report_bound(7.77e-06) + up2.pose_report_bound(7.00e-06)
+        assert priced["summed_report_bound"] == pytest.approx(expected)
+
+    def test_a_gain_under_the_bound_is_flagged_unresolvable(self):
+        priced = up2.price_candidate(
+            d_pose_start=7.77e-06, d_pose_final=7.769999e-06, delta_bytes=0
+        )
+        assert priced["resolvable_by_the_t4_report"] is False
+
+    def test_a_real_gain_is_flagged_resolvable(self):
+        priced = up2.price_candidate(
+            d_pose_start=7.77e-06, d_pose_final=7.00e-06, delta_bytes=0
+        )
+        assert priced["resolvable_by_the_t4_report"] is True
+        assert priced["net_over_bound"] > 1.0
+
+    def test_report_resolution_floor_is_flagged(self):
+        priced = up2.price_candidate(
+            d_pose_start=7.77e-06, d_pose_final=1e-09, delta_bytes=0
+        )
+        assert priced["d_pose_below_report_resolution"] is True
+
+    def test_seg_motion_is_charged_at_one_hundred(self):
+        priced = up2.price_candidate(
+            d_pose_start=7.77e-06, d_pose_final=7.77e-06, delta_bytes=0, d_seg_delta=1e-6
+        )
+        assert priced["delta_score_seg"] == pytest.approx(1e-4)
+        assert priced["net_delta_score"] == pytest.approx(1e-4)
+
+
+# ---------------------------------------------------------------------------
 # Conditioning report -- the statistic that explains the verdict.
 # ---------------------------------------------------------------------------
 
