@@ -98,4 +98,139 @@ axis is therefore not a free-actuator problem like pose was: every proposal must
 against this exchange rate, and the honest question is not "can we flip cells" but
 "can we flip a cell for less than 1.273 bytes".
 
-*(S1/S2/S3 sections follow as they are measured.)*
+---
+
+## S1a — THE SEG DEBT IS NOT STORED-LABEL ERROR. IT IS RENDER/RE-SEGMENT LOSS.
+
+The first thing to measure on the seg axis is not a solve, it is a decomposition: does
+the stored token map already equal the GT label map? Pure array comparison over the whole
+117,964,800-cell field, both lineages:
+
+| comparison | disagreeing cells | as a `d_seg`-equivalent | vs realized `d_seg` |
+|---|---:|---:|---:|
+| tokens vs **GT[dali]** | **1,714** | 0.00001453 | **0.05x** |
+| tokens vs GT[av_pyav] | 20,763 | 0.00017601 | 0.41x |
+| GT[dali] vs GT[av_pyav] | 20,671 | 0.00017523 | — |
+
+**Three findings, none of them assumed:**
+
+1. **The stored tokens are 99.9985% identical to the DALI GT argmax.** The encoder stored
+   the label map essentially exactly.
+2. **The encoder was fit against the DALI lineage** — the contest-CUDA axis. The token
+   field's disagreement with PyAV GT (20,763) is almost entirely just the lineage gap
+   itself (20,671). Nobody had established which lineage the shipped tokens target; they
+   target the one that ships.
+3. **95% of the realized seg debt is render/re-segment loss.** Realized `d_seg` is
+   0.00030309 = ~35,754 disagreeing cells, of which only ~1,714 (5%) could possibly be
+   blamed on a wrong stored label. The other ~34,040 cells are cells where **we stored the
+   RIGHT label, the renderer painted it, and SegNet did not read it back.**
+
+### What that does to the strategy — and to the prior refusal
+
+This inverts the obvious attack. "Store better labels" addresses at most 5% of the debt
+and costs rate to do it. The live mechanism is the **paint -> re-segment round trip**, and
+the only actuator that reaches it is **PRE-DISTORTION**: deliberately setting a token
+*away* from GT so the painted RGB drives SegNet's argmax *back onto* GT. That is the
+"invert the frozen space" thesis applied to the seg axis, and it is a different move class
+from anything the token actuator has been asked for before.
+
+It also reframes the standing refusal. A search that hunts for *better labels* is hunting
+in the 5%, and would correctly price out. Whether pre-distortion prices out is a separate,
+unmeasured question — and it is the question S1b answers.
+
+### The rate arithmetic that governs it (measured, tight)
+
+A pre-distortion is a **substitution, not an addition**: the token count never changes,
+only the value, so the cost is exactly the HPAC model's surprise at the new symbol.
+Against the exchange rate from S0 — **1 repaired cell = 1.273 archive bytes = 10.18
+bits** — the admission test per pre-distorted token is:
+
+> `cells_repaired_by_this_flip x 10.18 bits > log2(p_old / p_new)` under the shipped
+> IHS1 model.
+
+The field averages 0.00745 bits/token, so the context model is extremely confident and a
+flip against it is not cheap. But one token flip perturbs RGB over the renderer's
+receptive field (`TokenBlock` dilations 1,1,2,4 over 3x3 kernels, so ~17 px), and SegNet
+then re-segments a still larger neighbourhood — so a single flip can repair **several**
+cells. The sign of this inequality is therefore genuinely open and is exactly what a
+realized-descent probe measures.
+
+---
+
+## S1b — THE INSTRUMENT, AND ITS TWO CONTROLS
+
+Before a single proposal is scored, the instrument has to reproduce the row it claims to
+improve. Two independent controls, both passed:
+
+### Control 1 — the seg leg, n600, BOTH lineages
+
+`experiments/ddm_jg1_seg_solve.py validate --pairs 600`. SegNet argmax of frame `2p+1`
+read straight out of the receiver's own `0.raw`, scored against each GT cache by
+`SegNet.compute_distortion`'s own definition (`modules.py:111-113`):
+
+| lineage | measured `d_seg` | published | ratio |
+|---|---:|---:|---:|
+| **dali** (contest-CUDA) | **0.00030307** | 0.00030309 | **0.99995** |
+| av_pyav (advisory) | 0.00043337 | 0.00043336 | 1.00002 |
+
+**This is a $0 local instrument that reproduces the T4 seg leg to five significant
+figures** — the seg analogue of up2's 0.99993x pose instrument, and it did not exist
+before this arm. Both lineages are reproduced from the same argmax field, which is
+computed once: the argmax is a property of OUR frames alone, so sharing it across
+lineages is the factorisation, not an approximation.
+
+### Control 2 — the forward model is the receiver's, byte for byte
+
+Re-rendering the SHIPPED tokens through the shipped `SemanticTokenRenderer`
+(66,339 params, loaded exactly as `runtime/f26_inflate.py:481-494` loads it) and diffing
+against the shipped decode:
+
+| pairs | pixels compared | pixels changed | max abs delta |
+|---:|---:|---:|---:|
+| 4 (seeded) | 12,208,032 | **0** | **0** |
+
+**Byte-exact.** One detail here is load-bearing and was inherited rather than
+rediscovered: `cpr1/inflate.py:312` sets `semantic_batch = 8 if cuda else 1`, and up2 §6
+MEASURED batch shape to be byte-changing on this exact half (1,326 pixels at +/-1). Had I
+rendered at batch 8 for speed, this control would have failed for a reason that has
+nothing to do with tokens. Rendering costs **0.25 s/pair**.
+
+### The flip ledger — n600, DALI lineage, 35,752 flips
+
+| decomposition | count | share |
+|---|---:|---:|
+| flips where the **stored token already equals GT** | **34,296** | **95.9%** |
+| flips where the stored token is wrong | 1,456 | 4.1% |
+
+and by the EDGE the flip lies on (`gt -> ours`), which is the decomposition `ddm_pc2`
+established is the right one because seg is one graph with one hub:
+
+| edge | flips | share |
+|---|---:|---:|
+| **Lane -> Road** | **8,619** | **24.11%** |
+| **Road -> Lane** | **6,797** | **19.01%** |
+| Road -> Undrivable | 3,773 | 10.55% |
+| Undrivable -> Road | 3,407 | 9.53% |
+| Undrivable -> Movable | 3,100 | 8.67% |
+| Movable -> Undrivable | 2,997 | 8.38% |
+| Road -> Movable | 2,453 | 6.86% |
+| Movable -> Road | 1,825 | 5.10% |
+| MyCar -> Road | 1,262 | 3.53% |
+| Road -> MyCar | 996 | 2.79% |
+
+**Two findings that change where the seg attack points.**
+
+1. **The Road<->Lane edge alone carries 43.1% of the entire seg debt.** Lane is
+   **0.586%** of the field by area but appears in **44.3%** of flips — a **75x**
+   over-representation. Road is in 81.5% of flips, re-confirming `ddm_pc2`'s hub finding
+   (87.8%) on an independent body.
+2. **It is DISPLACEMENT, not erasure.** The campaign's standing reading of the lane
+   long-tail is *erasure* — the witness drops the lowest-persistence features. If that
+   were the mechanism here, `Lane -> Road` would swamp `Road -> Lane`. Measured, they are
+   **8,619 vs 6,797 — a ratio of only 1.27**, i.e. near-balanced, with a net lane loss of
+   just 1,822 cells against 15,416 lane-edge flips total. **88% of the Road<->Lane debt is
+   a boundary that is in the wrong PLACE, not a lane that is missing.** A displaced
+   boundary is a far cheaper thing to fix than an erased structure, and it is the natural
+   target of a one-cell pre-distortion.
+
+*(S2/S3 sections follow as they are measured.)*
