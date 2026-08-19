@@ -149,6 +149,30 @@ def score_rows(pairs: list[int], frames_dir: Path, raw: np.memmap,
     return rows
 
 
+def before_side_lineage_factors(pairs: list[int], raw: np.memmap, gt_dali: np.ndarray,
+                                gate_rows: dict[int, dict], threads: int) -> list[dict]:
+    """Per-pair PyAV/DALI factor on the BEFORE side only -- no edited frames, no GT decode.
+
+    The PyAV before-side value is already on disk in the eta gate's rows, and the DALI one needs
+    only `PoseNet([dec0, dec1])` against the cached target.  So the factor that up1 reported as a
+    population 19.09x can be resolved PER PAIR for free.  It is not a constant, and that is the
+    whole reason a PyAV-measured ratio cannot be assumed to transfer.
+    """
+    from ddm_rt1_eta_gate_pose_constrained import Scorer
+
+    sc = Scorer(threads)
+    out = []
+    for t in pairs:
+        g = gt_dali[t]
+        o = sc.pose_out(np.stack([np.asarray(raw[2 * t]), np.asarray(raw[2 * t + 1])]))
+        p = np.asarray(o["pose"].detach().cpu(), dtype=np.float64)[0, :6]
+        dali_before = float(((g - p) ** 2).mean())
+        pyav_before = float(gate_rows[t]["d_pose_before"])
+        out.append({"pair": t, "pyav_before": pyav_before, "dali_before": dali_before,
+                    "lineage_factor": pyav_before / dali_before if dali_before else None})
+    return out
+
+
 def aggregate(rows: list[dict], key: str) -> float:
     """mean(after)/mean(before) -- the evaluate.py aggregation, never a mean of ratios."""
     b = np.array([r[f"{key}_d_pose_before"] for r in rows], dtype=np.float64)
@@ -208,6 +232,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--gt-mkv", type=Path, default=DEFAULT_GT_MKV)
     ap.add_argument("--threads", type=int, default=4)
     ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--before-side-from-rows", type=Path, default=None,
+                    help="eta-gate ETA_GATE_ROWS.jsonl; measure the per-pair BEFORE-side "
+                         "PyAV/DALI factor for every pair in it and exit (no edited frames "
+                         "needed, no GT decode)")
     args = ap.parse_args(argv)
 
     from ddm_up1_decode_axis_photometric_probe import load_gt_poses
@@ -218,6 +246,37 @@ def main(argv: list[str] | None = None) -> int:
         raise Fo2hLineageError(
             f"gt cache at {args.gt_dali} reports lineage {lineage!r}, not 'dali' -- refusing: "
             "the whole point of this instrument is which GT it holds")
+
+    if args.before_side_from_rows is not None:
+        gate_rows = {json.loads(x)["pair"]: json.loads(x)
+                     for x in args.before_side_from_rows.read_text().splitlines() if x.strip()}
+        pairs = sorted(gate_rows)
+        rows = before_side_lineage_factors(pairs, open_raw(args.raw), gt_dali, gate_rows,
+                                           args.threads)
+        f = np.array([r["lineage_factor"] for r in rows], dtype=np.float64)
+        summary = {
+            "schema": "ddm_fo2h_before_side_lineage_factor.v1",
+            "axis": "[macOS-CPU advisory] frozen CPU-torch PoseNet -- NEVER a score",
+            "score_claim": False, "promotable": False, "pointer_moved": False,
+            "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "n_pairs": len(rows), "gt_lineage": lineage,
+            "factor_min": float(f.min()), "factor_p25": float(np.percentile(f, 25)),
+            "factor_median": float(np.median(f)), "factor_p75": float(np.percentile(f, 75)),
+            "factor_max": float(f.max()),
+            "population_factor_pooled": float(
+                np.array([r["pyav_before"] for r in rows]).mean()
+                / np.array([r["dali_before"] for r in rows]).mean()),
+            "up1_population_reference": 19.09,
+            "note": "the per-pair factor is NOT a constant; a population figure may never be "
+                    "applied per pair (the m88 genus one level down)",
+            "rows": rows,
+        }
+        p = (args.out or args.frames_dir) / "FO2H_BEFORE_SIDE_LINEAGE_FACTOR.json"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps(summary, indent=1, sort_keys=True))
+        print(json.dumps({k: v for k, v in summary.items() if k != "rows"},
+                         indent=1, sort_keys=True))
+        return 0
 
     pairs = retained_pairs(args.frames_dir)
     if not pairs:

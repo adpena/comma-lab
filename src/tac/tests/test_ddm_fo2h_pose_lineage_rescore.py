@@ -160,6 +160,30 @@ def test_lineage_verdict_nan_is_undetermined_never_agreement() -> None:
     assert rs.lineage_verdict(float("nan"), 1.2) == "UNDETERMINED-NAN-AGGREGATE"
 
 
+def test_before_side_factor_is_pyav_over_dali_per_pair(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The factor must be per-pair PyAV/DALI, so heterogeneity is visible rather than averaged."""
+    import numpy as np
+
+    class _FakeScorer:
+        def __init__(self, _threads: int) -> None:
+            pass
+
+        def pose_out(self, _pair):
+            import torch
+            return {"pose": torch.zeros(1, 12, dtype=torch.float64)}
+
+    import ddm_rt1_eta_gate_pose_constrained as gate
+    monkeypatch.setattr(gate, "Scorer", _FakeScorer)
+
+    raw = np.zeros((4, rs.H, rs.W, rs.C), dtype=np.uint8)
+    gt_dali = np.zeros((rs.N_PAIRS, 6), dtype=np.float64)
+    gt_dali[1] = 1.0                       # dali_before = mean(1^2) = 1.0
+    gate_rows = {1: {"pair": 1, "d_pose_before": 5.0}}
+    out = rs.before_side_lineage_factors([1], raw, gt_dali, gate_rows, 1)
+    assert out[0]["dali_before"] == pytest.approx(1.0)
+    assert out[0]["lineage_factor"] == pytest.approx(5.0)
+
+
 def test_default_raw_matches_the_eta_gate_raw() -> None:
     """The eta-gate reproduction control is only meaningful if both read the SAME decode.
 
