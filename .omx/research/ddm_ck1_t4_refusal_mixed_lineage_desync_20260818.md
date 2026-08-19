@@ -95,3 +95,37 @@ AUTHORITY.json) → re-seal (new runtime digest; r3 seal STALE post-r4 overlay
 re-stage) → T4 refire (~$0.16). If the advisory refuses on SCORE → the
 authority solve's decoded-state identity assumption is next in the fault tree
 (ck1's L_ck1 vs sz1's L_sz1 lattice).
+
+## 6. VERDICT — the TENTH pointer move (appended at harvest, 2026-08-19 ~00:00Z)
+
+The chain completed end-to-end and the row was **ADMITTED**:
+
+- **Advisory attempt_0002 CLEAN** (rc=0, inflate 941 s, evaluate 407 s):
+  canonical_score 0.19982266166528362, d_seg 0.00043336 (in the AUTHORITY band),
+  d_pose 0.00014829 (matches the authority solve to 8dp — the decoded-state
+  identity assumption HELD, ending the fault tree). The composed-archive CPU
+  advisory class gate (§3.3) PASSED on its first real use.
+- **r4 seal** `a64b3483…` (runtime digest `5d7bd6f6…`, 33 files, seal OUTSIDE
+  the runtime tree per the r3 lesson) → `fire_modal_auth_eval.py --seal` with
+  the standing F26 single-axis waiver (#1049/#1054).
+- **T4 row** (call `fc-01M0BKKHWT2S2ZTET8BKXNPEXW`, 1,302 s, ~$0.16):
+  **S 0.15710198138050818 @ 177,182 B [contest-CUDA T4, n600]** — d_seg
+  0.00030309 · d_pose 7.77e-6 · rate 0.11797822. Receipt persisted at
+  `/Volumes/APDataStore/pact/ddm_ck1/t4_row_r4/MODAL_REMOTE_RESULT.json` (P0).
+- **Net vs keep01** (0.1571619225142182 @ 177,576 B): **−5.994113e-05,
+  ADMITTED** (17.1× the sealed −3.5e-6 bar). Leg split (sums exactly):
+  rate −2.6235e-4 (−394 B) · seg +1.7400e-4 · pose +2.8407e-5.
+- **Pointer moved with ZERO manual steps**: the firer's scanner-visible anchor
+  mirror (`experiments/results/modal_auth_eval_mirror/…ck1_r4…json`, the rv8f
+  cure) let `refresh_canonical_frontier.py` pick up the row directly —
+  effective_frontier now 0.1571019814 [contest-CUDA]. Gap to 0.15: 0.00710.
+
+**HONEST SHORTFALL (new empirical gap, do not re-forget):** realized −5.99e-5
+is **35% of the −1.72e-4 projection**. The pose leg transferred fine, the
+rate leg is exact by construction — the miss is entirely the SEG leg, which
+landed at **+1.7400e-4 on T4** vs a much smaller CPU-modeled delta. We have a
+measured CPU→CUDA transfer law for POSE (ABSOLUTE+13%) and **none for SEG**.
+Until a seg sibling law is measured, composed-candidate projections that lean
+on a CPU-advisory seg delta must be treated as UPPER BOUNDS on the realized
+win, and the admit bar arithmetic should discount the seg leg accordingly.
+Memory: `cpu_to_cuda_seg_transfer_has_no_law_20260819`.
