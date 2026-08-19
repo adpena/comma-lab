@@ -3,9 +3,12 @@
 - **arm** `ddm_up3` (task #1136, up2 owed-item 7 / the byte-close of the converged
   thirteenth-move pose candidate)
 - **date** 2026-08-19
-- **axis** `[macOS-CPU advisory, frozen CPU-torch PoseNet + DALI GT]` · `score_claim=false` ·
-  `promotable=false`. **Pointer UNMOVED** at contest-CUDA `0.15659459685822907`.
-  This arm fired no Modal job. MAIN owns the T4 slot.
+- **axis** `[macOS-CPU advisory, frozen CPU-torch PoseNet + DALI GT]` for everything this arm
+  measured · `score_claim=false` · `promotable=false`. This arm fired no Modal job.
+  **UPDATE, after the memo first landed: MAIN fired the sealed candidate on T4 and it
+  LANDED. The pointer MOVED, `0.15659459685822907` -> `0.15652626435208142`
+  (Δ `-6.833250614765585e-05`), archive `7ce46fd7a845d598…`. All four pre-registered
+  falsifiers PASSED, F4 exactly. §10.**
 - **cost** $0.
 - **code** `experiments/ddm_up3_carrier_splice.py` · `experiments/ddm_up3_byteclose_gate.py`
   · `src/tac/tests/test_ddm_up3_carrier_splice.py` (35 tests) · commits `17c801b134`
@@ -322,6 +325,40 @@ is the wrong axis and it is not a score claim.** Quoted only because it is the d
 the model predicts, and a reader who saw it without §4c would misread it as a regression.
 
 Receipt: `retained/GATE_advisory_prediction_test.json`, log `retained/ADVISORY_run.log`.
+
+## 10. The T4 row landed and the pointer MOVED
+
+Receipt: `experiments/results/modal_auth_eval_mirror/contest_auth_eval_up3_thirteenth_move_t4_r1_20260819.json`
+(`score_axis=contest_cuda`, `evidence_grade=contest-CUDA`, `gpu_t4_match=true`), fired by
+MAIN on archive `7ce46fd7a845d5987903a0d85a56581961eb7716a55c38a7361e3b5ecae94b5f`.
+
+**Pointer `0.15659459685822907` -> `0.15652626435208142`, Δ `-6.833250614765585e-05`**,
+19.5x the -3.5e-06 admit bar. Every falsifier this arm pre-registered was checked against
+the row, not re-fit to it:
+
+| falsifier | pre-registered | T4 observed | verdict |
+|---|---|---|---|
+| F1 rate | 176,420 B, rate 0.11747083650981346 | unchanged | **PASSED** |
+| F2 seg | `d_seg` 0.00030309 | **0.00030309** | **PASSED** |
+| F3 pose | 8dp report prints **0.00000765** (from 0.00000777) | **7.65e-06** | **PASSED** |
+| F4 net | implied S **0.15652626435208142** | **0.15652626435208142** | **PASSED, exact** |
+
+F3 and F4 are the ones worth pausing on. This arm predicted the *printed* value at report
+resolution before the row existed, from a CPU-side DALI-GT measurement, and the contest
+CUDA evaluator printed exactly that. The GT-lineage instrument (up1's, structurally
+confirmed by up2, used here) transfers.
+
+**Honest scale.** This closes **1.04%** of the gap that stood to sub-0.15;
+`0.00652626` remains. up2's verdict is unchanged and this row confirms rather than
+softens it: **the pose carrier is not where sub-0.15 comes from.** It was worth landing
+because it was real, byte-free, and already paid for — not because it is a path.
+
+**On the seal's status now.** `validate_seal` returns **SEAL_BAR_DRIFT**, and that is the
+apparatus working, not a defect. The seal's admit bar was anchored to the PRE-MOVE pointer
+with tolerance 0; the pointer has since moved to this very candidate, so the baseline the
+bar names no longer exists. The seal was `SEAL_VALID` when written and when fired. Reading
+`SEAL_BAR_DRIFT` as a failed seal would be the "delta without its baseline" error in
+reverse. Receipt: `retained/T4_ROW_FALSIFIER_CLOSEOUT.json`.
 
 ## 9. Retained payload
 
