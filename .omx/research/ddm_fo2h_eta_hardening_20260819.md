@@ -196,7 +196,45 @@ phantom error and benign against the real one.**
 contest-axis sign is **NOT DETERMINED** by this arm. The joint verdict below is scoped to the PyAV
 lineage accordingly, and the DALI re-measurement is the owed next step — not a refinement.
 
-**It is also now cheap.** The instrument exists locally and is reusable on arbitrary frames:
+### §4.0b I then measured it — and the shipping axis is WORSE, not better
+
+I did not leave the withdrawal as a caveat. `experiments/ddm_fo2h_pose_lineage_rescore.py` scores
+both lineages on the **same pairs, same frames, one process**, so the contrast is the lineage and
+nothing else.
+
+**Controls first, because the whole instrument rests on them:**
+
+| control | result |
+|---|---|
+| identity edit (`cam_edit = dec1`) | `pose_delta_norm2` = **0.0 exactly**; both aggregates **1.000** |
+| PyAV column vs the eta gate's retained rows | **worst relative error 0.0** — bit-exact reproduction |
+| pair 15 `d_pose_before`, PyAV | `6.142644e-05` — gen-1's retained row to every digit |
+| DALI cache lineage | asserted `"dali"`, refuses anything else |
+
+**The measured result (n=2 pairs, both from gen-1's own n=48 set):**
+
+| | PyAV (local) | **DALI (shipping)** |
+|---|---:|---:|
+| aggregate pose ratio | 1.4024 | **1.8645** |
+| pairs worsening | 2/2 | **2/2** |
+
+**Verdict: SIGN AGREES ACROSS LINEAGES — both worsen, and the DALI degradation is 1.33× the PyAV
+one.** The "phantom rescue" hypothesis — that the edit only looks damaging against an inflated
+baseline — is **not** what the data show at this n. The damage is real on the axis that ships, and
+larger there, which is the direction the absolute-excess reasoning predicted: the same absolute
+insult is a bigger fractional one against a smaller base.
+
+**n=2 is two pairs.** This is a matched contrast with a perfect control, not a population estimate;
+it cannot carry a verdict on its own and I am not asking it to. What it does is remove the
+*rescue* from the live hypotheses and put the burden back on anyone who wants to argue the channel
+survives on the contest axis.
+
+**And the phantom is wildly pair-specific**, which is itself why the ratio could never have been
+assumed to transfer: the before-side PyAV/DALI factor is **56.75× on pair 15 and 1.00× on pair 22**.
+There is no single lineage scaling — quoting up1's population 19.09× as if it applied per-pair
+would have been the [[m88]] error one level down.
+
+**The instrument is cheap and reusable.** It exists locally and works on arbitrary frames:
 `gt_cache_dali.pt` (`/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/`, 117,980,732 B,
 a `(600,6)` pose target cache) plus `ddm_up1_decode_axis_photometric_probe.pose_vectors()`, which
 is pure `(B,2,H,W,C) → (B,6)` and touches no archive. up1 reproduced the T4 pose row at **0.9999×**
