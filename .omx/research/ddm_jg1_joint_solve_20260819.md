@@ -301,4 +301,87 @@ it closes. That number is not estimated here — a re-encoder exists
 can be MEASURED byte-closed rather than modelled. That is the next measurement, and it is
 the one that decides the axis.
 
+---
+
+## S1d — THE RATE PRICE OF THE MOVE. THE AXIS IS OPEN.
+
+The break-even budget is 15.28 bits per changed token (S1c). The question is what the
+shipped IHS1 model actually charges. Measured against the model's own per-cell class
+logits (`ddm_hm1_20260816/retained/base_logits_int16_n600.i16`, `(600, 196608, 5)` int16).
+
+### The model reconstruction is validated before it is used
+
+I got this wrong on the first pass and caught it on a control, so the control is worth
+stating. The int16 logits are stored in units of **1/8** (`LOGIT_SCALE = 8`, the runtime's
+`HPAC_LOGIT_PRECISION`); I first divided by 256 and got a field-average of 1.525
+bits/token against a shipped stream of 0.00745 — a **200x** disagreement that could only
+mean I was scoring the wrong distribution. At the correct scale:
+
+| quantity | value |
+|---|---:|
+| base-only cross-entropy, my reconstruction | **0.007880 bits/token** -> 116,199 B |
+| hm1 receipt, base **+ table** correction | 0.007603 bits/token -> 112,109.58 B |
+| the shipped stream that receipt priced | **112,110 B** (agrees to 0.42 B) |
+| the to1 body's token tail (ours) | 109,792 B -> 0.007446 bits/token |
+
+Base-only lands 3.6% above base+table, and the gap is exactly the table correction I
+omitted. **The reconstruction is the coder's own distribution, not a look-alike.**
+
+### The price, on 20 seeded-random pairs / 2,309 candidate move cells
+
+| quantity | mean | median |
+|---|---:|---:|
+| cost of the CURRENT token at move sites | 0.792 bits | 0.091 bits |
+| cost of the TARGET token at move sites | 5.511 bits | 4.398 bits |
+| **delta per changed token** | **+4.718 bits** | **+4.328 bits** |
+
+| percentile | p10 | p25 | p50 | p75 | p90 | p99 |
+|---|---:|---:|---:|---:|---:|---:|
+| delta bits | -2.344 | +0.902 | +4.328 | +8.295 | +12.443 | +19.642 |
+
+* **moves under the 15.28-bit budget: 95.6%**
+* **moves that are FREE or cheaper (delta <= 0): 20.0%**
+* the solver pays the CHEAPEST of the four neighbours per site, so this all-neighbours
+  distribution is an **upper bound** on what a solve actually spends.
+
+**And the mechanism is the one the S1c geometry predicted.** The field averages 0.00788
+bits/token because the interior is near-certain — but at the class boundaries where every
+one of our moves lives, the model already hedges: the CURRENT token there costs 0.792 bits
+(median 0.091), roughly **100x the field average**. A boundary token is a coin the model is
+already unsure about, so re-labelling it is cheap. The expensive tokens are in the
+interior, and we never touch the interior.
+
+### The headline arithmetic
+
+Per changed token: repairs 1.50 cells and costs 4.718 bits = 0.590 B.
+
+| leg | per changed token |
+|---|---:|
+| seg gain | `-1.50 x 8.477e-07` = **-1.2716e-06 S** |
+| rate cost | `+0.590 x 6.6586e-07` = **+3.928e-07 S** |
+| **net** | **-8.79e-07 S per changed token** |
+
+Equivalently, per repaired cell the net is **-4.549e-07 S**, i.e. **the move keeps 54% of
+its gross seg gain after paying rate**. Closing the remaining **0.006526** to sub-0.15 on
+this axis alone would need **~14,346 repaired cells — 40% of the 35,752 flips.** The probe
+found an improving move at **67%** of sampled sites, so 40% is not obviously out of reach.
+
+**That is a GO signal for the axis, and it is NOT a result.** Six things stand between it
+and a row, and they are named rather than waved at:
+
+1. **1.50 cells/token rests on n=18 sites over 3 pairs.** Small.
+2. **Gains are almost certainly NOT additive** — neighbouring repairs overlap, so the
+   realized total will be below the sum of per-site gains. This is the one that can most
+   easily halve the estimate, and it is being measured (S1e).
+3. **Cross-body transfer.** The logits are the hm1/`182,759 B` generation; we ship to1
+   (`109,792 B`), whose model is SHARPER. A sharper model charges MORE per flip. This is
+   the cross-regime-constant-transfer genus and it is a real risk to the 4.718.
+4. **Context coupling.** The HPAC model decodes in 190 groups and feeds decoded tokens
+   forward as context, so changing a token perturbs downstream logits. The per-symbol
+   delta is first-order and exact only for the changed symbol itself; many simultaneous
+   changes compound this.
+5. **The table correction is omitted** from the marginal number (base-only logits).
+6. **No byte-closed archive exists.** Nothing here has been through the re-encoder, so
+   every rate figure is modelled, not measured on `archive.zip`.
+
 *(S2/S3 sections follow as they are measured.)*
