@@ -229,10 +229,28 @@ it cannot carry a verdict on its own and I am not asking it to. What it does is 
 *rescue* from the live hypotheses and put the burden back on anyone who wants to argue the channel
 survives on the contest axis.
 
-**And the phantom is wildly pair-specific**, which is itself why the ratio could never have been
-assumed to transfer: the before-side PyAV/DALI factor is **56.75× on pair 15 and 1.00× on pair 22**.
-There is no single lineage scaling — quoting up1's population 19.09× as if it applied per-pair
-would have been the [[m88]] error one level down.
+### §4.0c The lineage factor is not a constant — it spans 1,834× across pairs
+
+The before-side factor needs no edited frames and no GT decode (the PyAV value is already in the
+gate's rows; the DALI one is one PoseNet forward against the cache), so I measured it on **all 48**
+of gen-1's pairs:
+
+| min | p25 | **median** | p75 | max | pooled |
+|---:|---:|---:|---:|---:|---:|
+| **0.887** | 4.03 | **19.165** | 79.90 | **1,627.4** | 26.05 |
+
+**The median independently reproduces up1's population 19.09× to three significant figures** —
+a clean corroboration of that result from a different arm on a different sample.
+
+**And the population figure describes almost no individual pair.** The factor runs from 0.887
+(where the local instrument is very slightly *optimistic*) to 1,627 (where it is reading essentially
+pure phantom), a span of **1,834×**. Half the pairs sit outside [4.0, 79.9].
+
+This is the [[m88]] genus one level down — *a population statistic is not a per-pair one* — and it
+is the concrete reason a PyAV-measured pose ratio can never be assumed to transfer by scaling. It
+also generalises well past this arm: **any unit that prices a pose effect against local PyAV GT is
+working in a regime whose distortion varies by three orders of magnitude pair to pair**, and the
+only safe move is to re-score on DALI, which now costs one forward pass.
 
 **The instrument is cheap and reusable.** It exists locally and works on arbitrary frames:
 `gt_cache_dali.pt` (`/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/`, 117,980,732 B,
