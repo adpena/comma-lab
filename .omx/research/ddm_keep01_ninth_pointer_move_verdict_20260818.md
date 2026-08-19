@@ -37,8 +37,17 @@ gap closed.
 
 All four sealed falsifiers PASS: F1 net (158× the −3.5e-06 bar) · F2 d_pose 7.72e-06 ≤
 8.773e-06 · F3 seg +5.24e-06 = 0.55× the pre-registered +9.54e-06 cap · F4 clean.
-Quantization custody: `report_8dp_score_worst_case_abs_error_bound = 3.345782e-06`; the net is
-**164.9× the bound**. Sign determinate by a stated margin (the #1032 cure, applied).
+Quantization custody: `report_8dp_score_worst_case_abs_error_bound = 3.345782e-06`.
+
+**⚠ CORRECTED 2026-08-19 (round-12 F1, `ddm_rv12f`): the margin read 164.9×; it is 80.4×.**
+The net is a DELTA between two independently-8dp-rounded rows, so the bounds **ADD**. This row's
+bound is 3.345782e-06 (d_pose 7.72e-06); the sz1 base's is 3.514018e-06 (d_pose 6.880e-06 — the
+pose bound is `5/sqrt(10·d_pose)·0.5e-8`, so the SMALLER d_pose carries the LARGER bound). Summed:
+6.859800e-06, and 5.516555e-04 / 6.859800e-06 = **80.4×**. Doubling this row's own bound is the
+quick approximation and gives 82.5×; the exact two-row sum is 80.4× because the two rows do not
+have equal bounds. **Sign determinate by a stated margin** — 80.4× is decisive either way; only
+the stated number was wrong. The #1032 cure is "divide the delta by the bound"; this is the cure
+applied to its own arithmetic.
 
 ## 3. The two model updates this row buys
 

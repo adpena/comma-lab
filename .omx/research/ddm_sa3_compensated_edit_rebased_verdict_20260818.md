@@ -38,10 +38,17 @@ a decomposition, not a reconciliation.
 
 **Quantization custody.** `canonical_score_source = report_8dp_components_plus_exact_archive_bytes`
 — the score is built from 8-dp components, and the harness publishes
-`report_8dp_score_worst_case_abs_error_bound = 3.4205e-06` (pose ±2.92e-06, seg ±5e-07). The net
-is **16.1× that bound**. The sign is determinate by a stated margin. That is the standing cure for
-the `#1032` genus, where a −4e-06 "result" turned out to be one pose ULP wearing a verdict's
-clothes: **always divide the delta by the bound before believing it.**
+`report_8dp_score_worst_case_abs_error_bound = 3.4205e-06` (pose ±2.92e-06, seg ±5e-07).
+
+**⚠ CORRECTED 2026-08-19 (round-12 F1, `ddm_rv12f`): the margin read 16.1×; it is 7.94×.**
+The net is a DELTA between two independently-8dp-rounded rows, so the bounds **ADD**. This row's
+bound is 3.4205e-06 (d_pose 7.330e-06); the sz1 base's is 3.514018e-06 (d_pose 6.880e-06 — the
+pose bound is `5/sqrt(10·d_pose)·0.5e-8`, so the SMALLER d_pose carries the LARGER bound). Summed:
+6.934052e-06, and 5.506320e-05 / 6.934052e-06 = **7.94×**. Doubling this row's own bound is the
+quick approximation and gives 8.05×; the exact two-row sum is 7.94×. **The sign is still
+determinate by a stated margin.** That is the standing cure for the `#1032` genus, where a −4e-06
+"result" turned out to be one pose ULP wearing a verdict's clothes: **always divide the delta by
+the bound before believing it — and by BOTH rows' bounds, because a delta has two.**
 
 ## 3. The four sealed falsifiers — all PASS
 

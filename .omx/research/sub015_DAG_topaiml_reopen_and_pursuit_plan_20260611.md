@@ -28824,9 +28824,15 @@ harness recompute at 17 digits: rate −5.260286e-04 (−790 B) · pose +2.66965
 d_pose 6.880e-06→7.330e-06) · seg +2.040000e-04 (0.388, +241 flips, 1.19× the PRE-REGISTERED
 prediction — the collateral is modelable). Retention 10.5%. QUANTIZATION CUSTODY: the row's
 canonical_score_source is report_8dp_components_plus_exact_archive_bytes and the harness publishes
-report_8dp_score_worst_case_abs_error_bound 3.4205e-06 — the net is 16.1× the bound, so the sign is
+report_8dp_score_worst_case_abs_error_bound 3.4205e-06 — the net is [CORRECTED 2026-08-19, round-12 F1
+ddm_rv12f: this read "16.1× the bound"; it is 7.94×. A delta between two independently-8dp-rounded rows
+carries BOTH rows' bounds, which ADD: 3.4205e-06 (sa3, d_pose 7.330e-06) + 3.514018e-06 (sz1 base,
+d_pose 6.880e-06) = 6.934052e-06, and 5.506320e-05/6.934052e-06 = 7.94×. Sign UNCHANGED and still
+determinate; only the stated margin was wrong] 7.94× the SUMMED bound, so the sign is
 determinate BY A STATED MARGIN. That is the standing cure for the #1032 genus (a −4e-06 "result" that
-was one pose ULP): divide the delta by the bound before believing it. THE COUNTER-INTUITIVE LAW:
+was one pose ULP): divide the delta by the bound before believing it — by BOTH rows' bounds, because
+a delta has two. The same correction applies to the keep01 row (164.9× → 80.4×) and the ck1/gen4
+packet row (18.0× → 8.97×). THE COUNTER-INTUITIVE LAW:
 retention RISES with edit mass (10.47% → 11.24% at ×2 → 12.64% at ×4) because rate/seg are linear
 while the pose leg is CONCAVE and this family pays pose upward, on the falling-marginal side.
 Everywhere else concavity is the enemy (ddm_asym1: a 2× worsening costs 1.41× what a 2× improvement
