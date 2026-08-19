@@ -83,9 +83,10 @@ Both rest on the same modelled constant. That is why S1 runs before anything els
 
 | stage | what it settles | status |
 |---|---|---|
-| S1 | REAL `ΔB` for jg1's retained 3-pair edit set, through a real encoder on the to1 body | IN PROGRESS |
-| S2 | n600 joint solve, seeded-random pair order, rate-aware acceptance | GATED on S1 |
-| S3 | byte-close + identity control + determinism + seal | GATED on S2 |
+| S1 | REAL `ΔB` for jg1's retained 3-pair edit set, through a real encoder on the pointer body | **DONE — control byte-identical; +30 B = 4.1379 bits/token = 0.877x modelled** |
+| S1h | do edit costs superpose? (the density-transfer falsifier) | **DONE — union/sum 1.0258; exact at the archive layer** |
+| S2 | n600 joint solve, seeded-random pair order, rate-aware acceptance | **NOT REACHED** — handed off with a binding spec below (carrier re-solve alone is 6.5-10.7 h) |
+| S3 | byte-close + identity control + determinism + seal | **NOT REACHED** — gated on S2; mechanics specified below |
 
 **HONESTY RAIL (charter, binding).** `-0.0104 S` is a 3-pair extrapolation. Realized-vs-
 projected is printed at every scale rung. A smaller honest win still seals and fires; an
