@@ -470,3 +470,119 @@ joint line that every pose refusal currently reinforces.
   "CPU-vs-T4 drift on the SAME bytes"; the sister sweep reproduced 21.416× by swapping
   **only the GT table** with pose vectors held fixed, and pi2 bounded true forward drift at
   3.572e-12. Mechanism misattributed; verdict unaffected (sa1 predates up1 by one day).
+
+---
+
+## §6 THE CONSOLIDATED RE-GRADE TABLE
+
+Every row was verified at its **receipt**. Rows marked ⚠ are ones where a charter premise (mine
+or the sweep's) was **wrong at source** and the audit had to refuse the reopening it expected.
+
+| # | verdict | original scope | law(s) | class | resolving measurement | consumer | cost |
+|---|---|---|---|---|---|---|---|
+| 1 | **`rc4` rung-4 token drop** REFUSED on pose 517× | FORMULATION, uncompensated | **L2** | **REOPENED** | jg1 re-solve vs rc4's retained deltas, ≥60 seeded-random pairs, ratio-of-sums | jg2 §S2 | $0, 40–65 min |
+| 2 | **`ps135b` pass-4 carrier** REFUTED (real T4 row) | INSTANCE | **L1′** | **REOPENED** | re-run solve w/ objective **and** pair-selection on DALI, then 1 T4 row | pu3 §6, pk4 routing, js1/js8 | $0 + **$0.16** |
+| 3 | **`ps1u` r2** REFUSED +1.686e-02 | INSTANCE | **L1′+L3** | **REOPENED** | same; selector `top_mass_pairs` is PyAV-ranked (Spearman 0.122 vs DALI, 1/30 overlap) | pu3 §6 | $0 + $0.16 |
+| 4 | **`sq2` R8 pose guard** BLOCKED, 113.1× damage | INSTANCE | **L2** | **REOPENED** | re-run R8 with carrier re-solve, same 32 pairs | sq-line | $0, ~4 h |
+| 5 | **`js6b`** 200/200 held, 0 survivors | FORMULATION, *unprojected* bank | **L2+L5** | **REOPENED** | re-screen with compensated pose envelope + qs2's measured 5.667 B/pair | js-line | **$0, minutes** |
+| 6 | **`qs3`** post-mortem ×3 | INSTANCE, "one missing authority field" | **L1′** | **REOPENED** | verify local DALI seg argmax vs retained T4 field, then run attribution | qs2 step-2, cb1 re-scores | **$0** |
+| 7 | **`qs2` dead-zone** steps 2–4 | INSTANCE | **L1′** | **REOPENED** | 1 T4 dual-axis row on the step-2 lattice | qs-line | $0.16 (or $0 after #6) |
+| 8 | **`cb1` Lane band** REJECTED +22.7 d_pose | INSTANCE | **L1′+L2** | **REOPENED** | re-take with carrier re-solve in the loop; Lane = 53% of enemy | cb1 | $0 |
+| 9 | **`cb1` MyCar hood** ADMITTED −0.051646 | INSTANCE | **L1′+L18** | **REOPENED** ⚠ *a reopened **win**, the uncomfortable direction* — 98% of the ΔS is an ancestor-vehicle pose absolute (implied base `d_pose ≈ 31`) | re-score on DALI | cb1 | $0, ~140 s |
+| 10 | **`pg1`-GN celldrop50** 3.06× over break-even | instance (a table row, not a verdict) | **L1′+L3+L5** | **REOPENED** — margin 3.06× **smaller than the fork**; double-inflated (AV + hardest-first) | re-score 113 pairs on DALI | pg1 | **$0, ~140 s** |
+| 11 | `wd2` ep60 student REFUSED | instance | L1 | **STANDS** — margin 624×; estimator makes it **worse** (+0.9501 vs +0.9207) | — | — | — |
+| 12 | `et1` address-band DEAD | FORMULATION | L1/L5 | **STANDS** — η is a ratio; bar is DERIVED; m96 makes it *more* secure | — | — | — |
+| 13 | `sa1` family closure REFUSED 3/3 | family | L1′ | **STANDS** ⚠ charter premise refuted: **not** a T4 row, all advisory — stands anyway on same-instrument deltas (√ deflation 4.63× ⇒ +0.0328/+0.0124/+0.0096 vs −3.5e-6 bar) | — | — | — |
+| 14 | `pk3`/`pk4` frame-0 overlays GATE_FAIL | FORMULATION | L1′+L5 | **SHARPENED** — re-scored on DALI at $0, **sign unchanged**; but fit target was 95.4% artifact ⇒ scope narrows to *PyAV-fit* overlays | optional DALI re-fit | pk-line | $0 |
+| 15 | `qs1` headline REFUSED +2.4257e-5 | instance | L1 (cancels) | **STANDS** — matched-base T4 dual-axis, all three legs one instrument | — | — | — |
+| 16 | `qs2` fired candidate / `qs2` R2 ADMITTED | component | L1 (cancels) | **STANDS** ×2 | — | — | — |
+| 17 | `fp1` f′ ≥ 0.008305 INSTANCE-DEAD | FORMULATION | L1 (cancels) | **STANDS** — floor and 0.0051 threshold are the *same* AV cache; rider: never quote against a contest-axis seg number | — | — | — |
+| 18 | `pj1` f_photometric CONFOUNDED | FORMULATION | L1 (rider) | **STANDS** — an internal-invalidity finding; no cross-lineage comparison exists | — | — | — |
+| 19 | `lc1` per-edge labels −12,884 | FORMULATION/ROUTING | **L4 corroborates** | **STANDS** ⚠ both charter premises wrong: n32 was **seeded stratified, not a prefix** (m88 1.0100×), and there is **no pose leg at all** — so L2 and L5 cannot apply. 32/32 pairs worsened (p≈2.3e-10) | — | — | — |
+| 20 | `cb1` per-class carrier NO_VERDICT | — | none | **STANDS** ⚠ charter premise wrong: the blocker is **byte-close / receiver-rate custody**, not pose measurement. **No law builds an encoder.** | — | — | — |
+| 21 | `sq1` F4 r=1 capture 0.8668 < 0.90 | FORMULATION | **L3+L4 corroborate** | **STANDS** — the cap is *move-class-independent by construction* (an upper bound on any r=1 realizer, "independent of eta") | — | — | — |
+| 22 | `pg1`-GN ep854 723× over | formulation | L1 (magnitude only) | **STANDS** — no correction reaches 723×; rider: the magnitude is an AV absolute and may **not** be divided by 19.09× | — | — | — |
+| 23 | `ra3` 35.5× refusal | instance | — | **STANDS** — already priced on the authority GT (1.00081×). The one clean row in pu3's six. | — | — | — |
+| 24 | `pg1` P7 yuv6-null projection cure | QUEUED, never fired | L2 | **RE-ROUTE** — `js6b`/JS4 measured 8.836e-4 residual leakage after first-order nulling; `pz1` measured null-space membership not surviving a lattice change (attenuation 1.662×). L2's re-solve is the *measured-working* alternative. Prefer it before spending the MLX-host run. | pg1 | — |
+| 25 | `na2` 4 pose-family verdicts + `na5` ×5 blocked re-measures | STANDING-on-weak-evidence | L1′+L5 | **REOPENED as a QUEUE** — every one is a pose re-measure parked on *source parity / absent harness*; that blocker class has dissolved | whichever arm owns pose next | $0 local, gated on rebuilding harnesses |
+
+**Tally: 24 verdicts adjudicated at receipt — 13 STANDS · 10 REOPENED · 1 SHARPENED-only · 1
+RE-ROUTE**, plus one reopened queue of 6 registered-but-never-fired re-measures, drawn from an
+inventory of **207 negative probe-ledger rows · 93 keyword-negative task rows · ~57 deferral
+D-rows · 158 strict verdict-negative memos**. Four charter premises (⚠) were refuted at source
+and the expected reopenings refused.
+
+**The audit is not a rubber stamp in either direction.** More than half the adjudicated rows
+stand, two stand *more strongly* under the sharper instrument (`wd2` +0.0294 worse; `et1`
+tighter under m96), and three of the campaign's own arms — `sq1`, `rc4`, `qs2` — turn out to
+have discovered or correctly flagged these laws **before** they were named. `sq1` (08-03)
+measured L3's move-class contrast and L4's 100%-render-loss decomposition sixteen days early;
+`rc4` (08-16) had already absorbed pi2 and stated its own overturning condition to three
+decimals; `qs2` (08-13) observed the 21.4× fork empirically and correctly refused to act on it.
+
+---
+
+## §7 WHAT SHOULD CHANGE THE LIVE `jg2` CHAIN'S COURSE — IMMEDIATELY
+
+`jg2` (task #1139) is live at S1, base `S = 0.15652626435208142`, gap **0.006526**.
+
+**First, the reassurance, because it is the thing most at risk.** I checked
+`experiments/ddm_jg1_seg_solve.py` at source: it loads `gt_cache_dali.pt` (`:86`) with the AV
+cache present only as the labelled comparison (`:89`). **jg1's actuator and jg1's L2 carrier
+re-solve are DALI-targeted. The chain jg2 inherits is clean.** That is not luck — jg1 read the
+receiver at source rather than borrowing constants.
+
+Four items, in order of urgency:
+
+1. **⚠ Do NOT borrow `qs5` machinery without repointing it.** `rc4` named "qs5's in-compile
+   frame-0 Schur compensation" as its open door, and `pk4`'s routing block calls the route
+   "qs5-proven" — but `experiments/ddm_qs5_resolve_compensation.py:183,783` targets
+   **`qs1.GT_POSE`, the PyAV table**. Any jg2 reach for qs5 code inherits a 19× misaimed
+   objective. jg2's own re-solve (jg1's, DALI) is the correct actuator; keep it.
+2. **Fold `rc4` into S2 — it is a 50%-of-gap rate lever that jg2's own actuator unlocks.**
+   rc4's rung-4 rate leg is **exact** and its rate+seg gain is **−3.243e-3 S = 50% of jg2's
+   0.006526 gap**. It was refused only on the uncompensated pose leg, and §5.1 shows jg1's
+   re-solve clears rc4's stated 99.807% bar (99.987%) at 1.00× the amplitude. The deltas are
+   retained. jg2 is already building the exact machinery; the marginal cost is pair count, not
+   code.
+3. **Correct one leg of jg1's §S2 retro-explanation — and note it *reinforces* jg2's plan.**
+   jg1 wrote that `qs1`'s refusal was "read as the token actuator being weak" when really "the
+   pose coupling is what refuses it." At the qs1 receipt the legs are seg `−2.712674e-5`, pose
+   `+1.126177e-7`, rate `+5.127114e-5` — **the rate leg is 455× the pose leg.** qs1's pose was
+   already cured by Schur compensation; qs1 refused **on rate**, exactly as its own text says.
+   The claim holds for `js8`/`vd1`, not for `qs1`. **Consequence for jg2: rate is the binding
+   leg on this axis, which is precisely why S1 (measure the real rate) before S2 is the right
+   ordering.** The audit endorses jg2's stage order.
+   *And a positive closure jg2 may cite:* qs1 pre-registered "get compensation ≤6.8 B/pair" as
+   its reactivation lever. It paid 12.83 B/pair; qs2 got 5.667; jg1's re-solve moves 9–12
+   **already-shipped** coefficients, which up2 measured the Rice stream absorbing at +5 B for
+   all 7,200 ≈ **0.83 B/pair** — satisfying qs1's own lever by an order of magnitude.
+4. **Print the POSE recovery ratio with its band at every rung, not just seg realized-vs-projected.**
+   jg2's honesty rail currently prints the seg leg. The pose leg is the underpowered one:
+   the 1.073× recovery is **n=3**, and pair 468 alone reaches only 99.6705% — *below* rc4's
+   bar. Under **L5** (pose band 13.4× seg's; ~100× the pairs for equal precision) this is the
+   leg that wanders. Use **seeded-random pairs**, aggregate by **ratio-of-sums** (not mean of
+   ratios), and report the band. The asymmetry matters: at a 1.5× recovery instead of 1.073×
+   the pose cost rises to ~+0.00197 S ≈ **25% of the gap**; at 2× it is ~55%.
+   **Budget note:** the re-solve is 39–64 s/pair ⇒ **6.5–10.7 h for n600.** That is an S2
+   schedule item, not a footnote.
+
+---
+
+## §8 THE ONE APPARATUS CHANGE THIS AUDIT ASKS FOR
+
+Not a ninth audit. **§4 shows the corpus already held the pose law and no surface put it in
+front of the arms that needed it** — pi2 landed 08-16, `qs1_frame0_schur_coupled_solve.py` was
+last touched 08-13 and was never repointed, and three independent agents (two 08-19 arms and
+me) re-derived the same constant by measurement rather than by recall. `src/tac/gt_lineage_registry.json`
+already exists and already answers the question **by content hash**. What is missing is that
+nothing *consults* it at the moment an arm loads a GT table.
+
+**Ask:** a fail-closed GT-lineage assertion at the load site — any experiment that loads a GT
+pose or seg table resolves its sha against the registry and refuses (or loudly labels) a
+lineage that does not match the objective the arm declares. `up1` already named "build/keep the
+fail-closed GT-lineage gate" as owed. This audit supplies its business case: **five of the ten
+reopened rows above exist only because that gate does not.**
+
+Sisters: [[m56]] (unwired-but-built — the cure existed for three days and reached nothing) ·
+[[charter_recall_validation_is_apparatus_not_volition_20260816]] · [[m18]].
