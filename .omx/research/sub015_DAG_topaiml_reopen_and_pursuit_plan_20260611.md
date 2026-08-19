@@ -28948,3 +28948,21 @@ seal → T4. Memos .omx/research/ddm_sa1_vseries_v7_dead_v2_routing_20260818.md 
 - AXIS STATE: model/rate axis near-exhausted (ma1 reservoir deflated to ~475 B real headroom);
   remaining mass per eu4 = pose 69.38% of gap (js1/js8 joint line ONLY) + seg carriage. Next
   rate rungs are small-bore; next MAJOR mass requires the joint line or trained-receiver #982.
+
+## FEED-up1 (2026-08-19) — INSTRUMENT EUREKA: the pose gap was GT-cache lineage, not CUDA
+- MEASURED (389b83d5b3, payload ddm_up1/ 42 files): the 19-24x local-vs-CUDA pose gap is the
+  GT decode LINEAGE (AV/PyAV vs DALI), not hardware. DALI-GT local CPU: n600 d_pose
+  7.769511e-06 vs T4 7.77e-06 = **0.9999x, $0, 140 s** — an exact local pose instrument for
+  the shipping object. "Only CUDA can measure pose" blocker class DISSOLVED.
+- EXPLAINS both paid pose refusals (ps1u +1.686e-2 · t1h +0.012557): each solved vs AV GT =
+  stripped ~23.7x PHANTOM error absent on the shipping axis, then paid real error on T4.
+- REOPENS pv1's pose-carrier closure (AV-GT floor 1.285917e-05 vs DALI-GT ship 6.88e-06 =
+  two objects) -> UNMEASURED. NOT reopened: relinearization cap (uncapping = 0.1549%, the
+  "13-23%/iter" was an n=1 STALE_REHEARSAL in EIGHT charters incl. MAIN's own up1 charter —
+  charter-recall-law instance 9) + post-hoc/stored family.
+- MECHANISM BANKED: device-dependent decode localized to cpr1/inflate.py:312/:335
+  (semantic_batch/pose_batch = 8/64 if cuda else 1) — et4's batch-shape law now has its
+  exact lines. Compliance defect, ownerless, not a score lever.
+- NEXT EDGE (up2 FIRED): structural GT-lineage confirmation -> batch-shape digest probe ->
+  THE FIRST POSE SOLVE AIMED AT THE SHIPPING OBJECT (uncapped GN vs DALI GT on the to1
+  body) -> fail-closed GT-lineage gate. Memory: pose_gap_was_gt_cache_lineage_not_cuda.
