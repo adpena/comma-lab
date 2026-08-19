@@ -305,3 +305,33 @@ candidate is a re-runnable transform rather than a fixed overlay.
   `test_image_step_is_invariant_under_basis_remixing` failed because I wrote the change-of-basis Jacobian
   as `jac @ inv(rot)` instead of `jac @ rot.T`. The module was right; the test was wrong. The comment
   recording that is kept in the test.
+
+## T4 AUTHORITY ROW — FOURTEENTH POINTER MOVE (MAIN, 2026-08-19 ~19:45Z)
+
+Call `fc-01M0DQECXABB3PBMS4REVT5P76` (T4, n600, 1,305.7 s, ~$0.16), archive
+`44e9e6507d60bf8b6429ce066983aa814b23f2f929869aa5a10a8b8dacda5c7d` (176,429 B), seal
+`dab3ed9420649d0ee162322213402d8d3a85969eaeb3f12b2c90f2c3b89f15bf` (SEAL_VALID, receiver
+re-pinned via tac.candidate_seal.repin_receiver at staging):
+
+- **S = 0.15615242950573233** (recomputed from components; printed 0.16 is display rounding)
+- d_seg **0.00030309 — UNCHANGED** (the byte-identity proof held on the shipping axis)
+- pose report 7e-06 (advisory realized 6.993157e-06, ratio 0.91423 vs up3)
+- rate 176,429 B (+9 vs up3)
+- **Net vs up3 pointer 0.15652626435208142: −3.7383e-4 ADMITTED** — advisory projected
+  −3.7750e-4; realization error +3.67e-6, inside the summed 8dp report bounds. 107× the
+  −3.5e-6 admit bar. Gap to 0.15: 0.00652626 → **0.00615243**.
+
+Pointer + effective_frontier updated (refresh_canonical_frontier --update-local); lane
+`lane_ddm_br1_gn_pose_resolve_t4_20260819` closed `completed_harvested_pointer_moved`.
+
+### Fire-chain incident (three refusals, now #1152)
+
+The T4 fire was refused twice with "dispatch produced no spawn record" (rc=5). The real
+cause — visible only in a full-capture reproduction — was the entrypoint's pairing gate:
+single-axis runs require `--single-axis-waiver-reason`, which the fire calls omitted; the
+firer echoes only the last 2000 chars of dispatch output and modal's mount tree filled the
+tail, censoring the one-line refusal. Silent-instrument family. Two-landing filed as task
+#1152: (a) stage-0 must REQUIRE the waiver when the seal's axis is single, (b) FIRE_REFUSED
+must carry the entrypoint's refusal line verbatim, (c) M1 class-population sweep of other
+seal-derivable requirements. Side lesson: MAIN's manual lane pre-claim was also wrong —
+the canonical chain owns claiming end-to-end (hand-assembled-dispatch class).
