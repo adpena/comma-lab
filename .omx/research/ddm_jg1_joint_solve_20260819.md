@@ -589,3 +589,62 @@ See `retained/S2_joint_coupling.json` and `retained/S2_edited_tokens.npz` (the e
 payloads are retained per the always-keep-the-payload rule, not just their measured
 lengths).
 
+---
+
+## My own round-1 adversarial review
+
+1. **Did I quote a prefix anywhere?** No. Every sub-n600 sample uses `up2.select_pairs`,
+   which refuses a contiguous prefix below n600. The instrument validation is full-field
+   n600. This mattered more than usual here: `ddm_bp2`/`ddm_na2` measured seg prefixes
+   0.95-0.97x *easier* and pose prefixes 2.54-4.21x *harder*, and S2 quotes both axes.
+2. **Is the instrument circular?** The seg instrument reproduces two independently
+   published numbers on two different lineages (0.99995x, 1.00002x) that it was not fitted
+   to, and the forward model is byte-exact against a decode it did not produce. Neither
+   could be true of a look-alike.
+3. **Did I catch my own error?** One, and it would have produced a confident wrong
+   headline: I priced the token move with the logits scaled by 256 instead of 8 and got
+   +0.147 bits/token, which would have read as "essentially free". The 200x disagreement
+   with the shipped stream's own bits/token is what exposed it (S1d). The lesson is the
+   one the campaign already knows — validate the instrument against a number it must
+   reproduce BEFORE quoting a delta from it — and I needed it.
+4. **Did I over-claim in S1d?** Yes, and S1e is the correction, written as a correction
+   rather than a quiet edit. "The axis is OPEN" was true of the first-pass yield and false
+   of the iterated yield; the honest statement is "open up to a stopping point". A sister
+   arm's independent 8-pass measurement is what forced it.
+5. **Is my S1c proposal family complete?** No — I only tried the GT class, and a sister
+   sweep found **0 of 12** accepted edits chose GT. My numbers are therefore a LOWER bound
+   on per-move quality, which I have said in S1e rather than left implicit.
+6. **Is the S2 extrapolation legitimate?** The per-pair `d_pose` factors (822x, 105x,
+   235x) are measured; the field-level `+0.159 S` is an EXTRAPOLATION from 3 pairs and is
+   labelled as such. It does not need to be tight — the seg gain would have to be wrong by
+   an order of magnitude for the sign to change.
+7. **Cross-body transfer is the weakest leg I lean on.** The rate price (+4.718 bits)
+   comes from the hm1/`182,759 B` model generation, not from to1's own (sharper) model.
+   That is the cross-regime-constant-transfer genus, and a sharper model charges MORE. The
+   fix is not a better estimate, it is the re-encoder: 52 s for an exact answer.
+8. **What I did not do.** No byte-closed archive, no re-encoder run, no seal, no n600
+   solve. Every rate number here is modelled. The arm produced measurements and one hard
+   negative, not a row — and the pointer is UNMOVED at 0.15652626435208142.
+
+---
+
+## Owed, with owners
+
+1. **Run the re-encoder on an edited token field.** 52 s for the exact byte delta, which
+   replaces the modelled +4.718 bits and closes S1d caveats 3, 4 and 5 at once.
+   `experiments/ddm_rr2_encoder_byteclose.py` is pinned to an older archive and needs
+   re-pointing at the to1 body. **Unowned; this is the cheapest high-value item on the
+   board.**
+2. **Finish the S2b composition test at n>3.** If the carrier re-solve recovers pose, the
+   joint move is live and the seg axis reopens with a real budget; if it does not, the
+   token actuator is refused on this vehicle and that is a family verdict worth banking.
+3. **Re-orient the 12-dim carrier basis** (up2 owed item 2) — the ONLY pose move whose
+   rate leg is free (S3). Still unowned after two arms.
+4. **A rate-aware seg solve**, if item 1 clears: sparse-and-wide (first pass across all 600
+   pairs), spatially packed at >=64 px separation (~48x speedup), ranking candidates by
+   `cells_repaired / bits` rather than by cells, with the Lagrangian stopping rule of S1e.
+5. **The all-class proposal family** (S1e correction 2), since GT-class edits are
+   measurably not the best move.
+6. **DALI-lineage `margins` and decoded RGB do not exist locally** and cannot (DALI
+   requires CUDA). Any seg work needing a margin field is PyAV-only today.
+
