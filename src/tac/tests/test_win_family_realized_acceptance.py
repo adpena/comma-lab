@@ -17,7 +17,6 @@ import pytest
 from tac.win_families import proposal_rankers as pr
 from tac.win_families import realized_acceptance as ra
 
-
 # --- a tiny family: minimise squared distance to a target on an integer lattice ---
 
 
