@@ -5,11 +5,20 @@
 reproduce ck1's advisory distortion to 8dp. This candidate is a pure container transform,
 so the decoded state is bit-identical and the advisory is a falsifier, not an estimate:
 
-| axis | ck1 advisory (attempt_0002) | ck2 required | if it differs |
+Read from ck1's own advisory receipt
+(`/Volumes/APDataStore/pact/ddm_ck1/advisory_rebased/attempt_0002/contest_auth_eval.json`),
+not from prose:
+
+| field | ck1 advisory (attempt_0002) | ck2 required | if it differs |
 |---|---|---|---|
-| d_seg | 0.00043336 | **identical** | bit-identity claim is FALSE — void the candidate |
-| d_pose | 0.00014829 | **identical** | bit-identity claim is FALSE — void the candidate |
-| canonical_score | 0.19982266166528362 | ck1's minus 25·657/37,545,489 = **0.19938519…** | rate arithmetic is wrong |
+| `avg_segnet_dist` | 0.00043336 | **identical** | bit-identity claim is FALSE — void the candidate |
+| `avg_posenet_dist` | 0.00014829 | **identical** | bit-identity claim is FALSE — void the candidate |
+| `score_rate_contribution` | 0.11797822103209257 | **0.11754075169989130** | rate arithmetic is wrong |
+| `canonical_score` | 0.19982266166528362 | **0.19938519233308236** | as above |
+| `archive_size_bytes` | 177,182 | **176,525** | wrong bytes under test |
+
+The advisory delta is **−4.3746933e-04**, identical to the T4-axis delta, because the rate
+term is axis-independent and the two distortion terms do not move.
 
 Do not fire on a clean-but-drifted advisory. A drift on either distortion axis means the
 receiver overlay is not the permutation it claims to be, and the whole basis of the row is
