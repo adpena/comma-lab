@@ -234,6 +234,11 @@ def write_stored_single_member_zip(path: str | Path, *, member_name: str, payloa
     info = zipfile.ZipInfo(member_name, date_time=FIXED_DATE_TIME)
     info.compress_type = zipfile.ZIP_STORED
     info.external_attr = 0o100644 << 16
+    # Pin the host-system byte: zipfile leaves create_system at the PLATFORM
+    # default (3 on POSIX, 0 on win32), so the same payload packs to different
+    # central-directory bytes on a Windows host at zero length cost (ddm_jg2
+    # S1i). 3 is what POSIX already emitted -- byte-identical here, a fix there.
+    info.create_system = 3
     with zipfile.ZipFile(target, "w", compression=zipfile.ZIP_STORED, allowZip64=False) as zf:
         zf.writestr(info, payload, compress_type=zipfile.ZIP_STORED)
 

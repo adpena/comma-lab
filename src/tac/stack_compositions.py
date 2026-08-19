@@ -409,6 +409,13 @@ def compose_jnwcs_with_ec(
             info = zipfile.ZipInfo(filename=arc_name, date_time=_FIXED_ZIP_TIMESTAMP)
             info.compress_type = zipfile.ZIP_DEFLATED
             info.create_system = 3  # unix attribute slot — matches submission.py
+            # Pin the permission bits too. CPython's ZipFile._open_to_write
+            # substitutes ``0o600 << 16`` whenever external_attr is left at 0,
+            # so an unpinned member silently inherits an implementation default
+            # at ZERO length cost -- invisible to any size check, seal-breaking
+            # on a byte check (ddm_jg2 S1i). 0o600 is exactly what this builder
+            # already emitted, so pinning it is byte-identical, not a change.
+            info.external_attr = 0o600 << 16
             zf.writestr(info, src.read_bytes(), compresslevel=9)
 
     return output_archive_path

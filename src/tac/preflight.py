@@ -2401,6 +2401,187 @@ def check_evidence_authority_claims_producer_identity_backfill_ready(
     return violations
 
 
+#: GT DECODE-LINEAGE OBJECTIVE CUSTODY -- Catalog #351 SCOPE EXTENSION (ddm_sp2,
+#: 2026-08-19). Not a new catalog row: it follows the 2026-07-20 precedent in
+#: CLAUDE.md's "2026-07-14 catalog amendments" section, where #351 absorbed a new
+#: refusal surface rather than claim a number ("a Catalog #351 scope extension,
+#: not a new gate or number, per the post-#400 Catalog #299 consolidation rule").
+#: The #299 quota brake stands at 407/400. #351 already owns "evidence-authority
+#: claims are custodied"; WHICH GROUND TRUTH an instrument solved against is the
+#: same custody question one level down.
+#:
+#: THE BUG THIS EXTINCTS. ``ddm_pi2`` (2026-08-16) measured one advisory
+#: instrument reading TWO ground truths at once: the seg half from a DALI/nvdec
+#: argmax cache, the pose half decoded fresh with PyAV. That split WAS the entire
+#: 21.4x advisory-vs-CUDA pose offset the campaign had been charging to hardware
+#: drift. Cost of not knowing: a published dither row 11.4x optimistic. Fixed at
+#: the sites on 2026-08-19 (commit ``809199d24f`` repointed qs1 + mt1 to the DALI
+#: table) -- but NOTHING stopped the next tool from loading the PyAV-lineage table
+#: as its objective. ``tac.gt_lineage`` (landed 2026-08-16) is the
+#: content-addressed authority; ``cw1`` measured that almost nobody consumes it,
+#: and that up2/jg1 resolve lineage by FILENAME SUBSTRING instead -- the #936
+#: adoption-decay pattern. This extension makes the non-adoption visible.
+#:
+#: WHY THE CANONICAL-ROUTE TEST IS MODULE-EXACT. Clearing on a bare
+#: ``gt_lineage`` substring would clear ``ddm_up2``, whose own local
+#: ``verify_gt_lineage()`` is the filename-substring resolver this extension
+#: exists to surface. The route test therefore requires the CANONICAL module.
+#:
+#: WHAT THE GAUGE READS IF THE CURE IS APPLIED AND NOTHING ELSE CHANGES. It does
+#: NOT count "loads that call assert_gt_lineage" -- that reaches 100% by adding
+#: imports, measuring instrumentation instead of reality (the trap
+#: ``tac.gt_lineage``'s own docstring rejects). It counts sites still reading a
+#: GT artifact whose lineage is UNDECLARED. Declaring without repointing moves it
+#: by zero; only what an instrument READS moves it.
+#:
+#: SCOPE, AND WHY ``gt_argmax*.npy`` IS OUT OF IT (MEASURED, ddm_sp2). Including
+#: the seg argmax cache takes the flagged population from 18 files / 37 artifact
+#: sites to 93 files / 153 sites -- and that cache is a SINGLE established
+#: lineage (pi2 + gl1 measured it DALI). A 93-row warn-only flood is a gauge
+#: nobody reads. Widening condition: a second seg-argmax lineage is observed, OR
+#: the pose scope reaches live-count 0. WARN-ONLY at landing; see
+#: ``.omx/research/ddm_sp2_two_landing_protections_20260819.md``.
+_GT_LINEAGE_OPT_OUT = "GT_LINEAGE_OK"
+_GT_LINEAGE_MIN_RATIONALE_LEN = 8
+_GT_LINEAGE_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset(
+    {
+        "<rationale>",
+        "<reason>",
+        "rationale",
+        "reason",
+        "tbd",
+        "todo",
+        "placeholder",
+        "pending",
+        "n/a",
+        "na",
+        "ok",
+        "fine",
+    }
+)
+#: Pose GT table + the paired DALI/AV GT caches: the artifacts where the two
+#: legitimate decodes yield a DIFFERENT OBJECTIVE (pose MSE gap 1.4061e-04).
+_GT_LINEAGE_ARTIFACT_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"gt_first6[\w.\-]*\.npy"),
+    re.compile(r"gt_cache_[\w.\-]*\.pt"),
+)
+#: Module-exact. A bare ``gt_lineage`` substring would clear up2's local
+#: filename-substring resolver -- see the block comment above.
+_GT_LINEAGE_CANONICAL_ROUTES = (
+    "tac.gt_lineage",
+    "from tac import gt_lineage",
+)
+#: An artifact literal naming the authority lineage declares itself.
+_GT_LINEAGE_DALI_MARKER = "dali"
+_GT_LINEAGE_SCAN_DIRS = ("src", "tools", "experiments", "scripts")
+_GT_LINEAGE_MAX_PRINTED = 12
+_GT_LINEAGE_RULE_CHAIN = (
+    "rule chain: source line names a lineage-sensitive GT artifact "
+    "(gt_first6*.npy | gt_cache_*.pt) AND the literal does not name the DALI "
+    "authority lineage AND the file does not route through the canonical "
+    f"tac.gt_lineage registry AND no same-line `# {_GT_LINEAGE_OPT_OUT}:"
+    "<rationale>` -> UNDECLARED SOLVE-OBJECTIVE LINEAGE. Why it matters: the two "
+    "legitimate decodes differ by pose MSE 1.4061e-04 and a 1.4425x d_seg "
+    "penalty, so reading the wrong one silently reproduces the contest-CPU axis "
+    "while claiming to be advisory-for-CUDA (ddm_pi2: 21.4x pose offset "
+    "misattributed to hardware; a published row 11.4x optimistic). Fix, in "
+    "preference order: (1) repoint the objective at the DALI-lineage artifact; "
+    "(2) route the load through tac.gt_lineage.assert_gt_lineage() so the sha "
+    "is checked, not the filename; (3) if the PyAV lineage is genuinely the "
+    f"right target, add a same-line `# {_GT_LINEAGE_OPT_OUT}:<rationale>` "
+    "waiver naming why."
+)
+
+
+def _gt_lineage_waiver_rationale(line: str) -> str | None:
+    """Extract a same-line ``# GT_LINEAGE_OK:<rationale>`` waiver."""
+    marker = f"# {_GT_LINEAGE_OPT_OUT}:"
+    idx = line.find(marker)
+    if idx < 0:
+        return None
+    rationale = line[idx + len(marker):].strip().rstrip("'\"`*,").strip()
+    if not rationale:
+        return None
+    if rationale.lower() in _GT_LINEAGE_PLACEHOLDER_RATIONALES:
+        return None
+    if len(rationale) < _GT_LINEAGE_MIN_RATIONALE_LEN:
+        return None
+    return rationale
+
+
+def _gt_artifact_hits_outside_comment(line: str) -> list[str]:
+    """Artifact literals on ``line`` that are NOT inside a trailing comment.
+
+    A comment that merely NAMES the PyAV artifact while the code loads the DALI
+    one is documentation, not consumption -- flagging it is a false positive
+    (measured on ``ddm_mt1_*``, whose comments cite the advisory lineage by name
+    directly above a DALI load).
+    """
+    hits = [m for pat in _GT_LINEAGE_ARTIFACT_PATTERNS for m in pat.finditer(line)]
+    if not hits:
+        return []
+    comment_idx = line.find("#")
+    if comment_idx < 0:
+        return [m.group(0) for m in hits]
+    return [m.group(0) for m in hits if m.start() < comment_idx]
+
+
+def _check_351_gt_lineage_objective_custody(repo_root: Path) -> list[str]:
+    """Scope extension of Catalog #351: GT DECODE-LINEAGE objective custody.
+
+    Flags sites consuming a lineage-sensitive ground-truth artifact whose decode
+    lineage is neither declared in the path, nor established through the
+    canonical ``tac.gt_lineage`` registry, nor waived on the line. WARN-ONLY.
+    """
+    violations: list[str] = []
+    # Prefilter to files that mention a GT artifact at all. Measured (ddm_sp2):
+    # walking src+tools+experiments cost 0.69 s of a 30.0 s preflight budget;
+    # one ripgrep pass removes nearly all of it. Falls back to the pure-Python
+    # walker when ripgrep is unavailable, so behaviour is identical either way.
+    candidates = _rg_python_files_matching_regex(
+        repo_root, list(_GT_LINEAGE_SCAN_DIRS), r"gt_first6|gt_cache_",
+    )
+    if candidates is None:
+        candidates = tuple(_iter_python_files(repo_root, list(_GT_LINEAGE_SCAN_DIRS)))
+    for path in candidates:
+        if "__pycache__" in path.parts:
+            continue
+        try:
+            rel_posix = path.relative_to(repo_root).as_posix()
+        except ValueError:
+            continue
+        if rel_posix.startswith("experiments/results/"):
+            continue
+        if "/tests/" in rel_posix or path.name.startswith("test_"):
+            continue
+        # The registry module and this scanner DEFINE the vocabulary.
+        if rel_posix == "src/tac/gt_lineage.py" or rel_posix.startswith("src/tac/preflight"):
+            continue
+        if _is_oss_export_mirror_path(path):
+            continue
+        try:
+            text = path.read_text()
+        except (UnicodeDecodeError, FileNotFoundError, OSError):
+            continue
+        if not any(pat.search(text) for pat in _GT_LINEAGE_ARTIFACT_PATTERNS):
+            continue
+        if any(route in text for route in _GT_LINEAGE_CANONICAL_ROUTES):
+            continue
+        for lineno, line in enumerate(text.splitlines(), 1):
+            hits = _gt_artifact_hits_outside_comment(line)
+            if not hits:
+                continue
+            if any(_GT_LINEAGE_DALI_MARKER in h.lower() for h in hits):
+                continue
+            if _gt_lineage_waiver_rationale(line) is not None:
+                continue
+            violations.append(
+                f"{rel_posix}:{lineno}: GT artifact {sorted(set(hits))} consumed "
+                "with UNDECLARED decode lineage."
+            )
+    return violations
+
+
 def _check_351_canonical_producer_identity(repo_root: Path) -> list[str]:
     """Scope extension of Catalog #351 for parameterized verified producers.
 
@@ -2527,7 +2708,25 @@ def check_evidence_authority_claims_are_custodied(
             "check_evidence_authority_claims_are_custodied found authority schema/producer custody defects:\n  "
             + "\n  ".join(item[:500] for item in custody_extensions[:10])
         )
-    return [*violations, *custody_extensions]
+    # WARN-ONLY scope extension (ddm_sp2 2026-08-19): GT decode-lineage objective
+    # custody. Reported and returned, deliberately NOT raised, so this gate's
+    # existing strict contract is unchanged by the extension.
+    gt_lineage_warnings = _check_351_gt_lineage_objective_custody(root)
+    if verbose:
+        status = (
+            f"WARN {len(gt_lineage_warnings)} finding(s)"
+            if gt_lineage_warnings
+            else "OK"
+        )
+        print(f"  [gt-lineage-objective-custody] {status} (WARN-ONLY; ddm_sp2)")
+        if gt_lineage_warnings:
+            print(f"    {_GT_LINEAGE_RULE_CHAIN}")
+            for item in gt_lineage_warnings[:_GT_LINEAGE_MAX_PRINTED]:
+                print(f"    - {item}")
+            remaining = len(gt_lineage_warnings) - _GT_LINEAGE_MAX_PRINTED
+            if remaining > 0:
+                print(f"    - ... and {remaining} more (full list in return value)")
+    return [*violations, *custody_extensions, *gt_lineage_warnings]
 
 
 def preflight_all(
@@ -17981,6 +18180,270 @@ def check_nvdec_probe_has_error_classification(
 
 
 # ── Check E: archive builders must use deterministic zip ────────────────────
+#
+# SCOPE EXTENSION 2026-08-19 (``ddm_sp2``): ENVIRONMENT-SENSITIVE ZIP METADATA.
+#
+# This is a scope extension of Check E, NOT a new catalog row. It follows the
+# 2026-07-20 Catalog #351 precedent recorded in CLAUDE.md's "2026-07-14 catalog
+# amendments" section, where an existing strict gate absorbed a new refusal
+# surface in place of claiming a number: "This is a Catalog #351 scope
+# extension, not a new gate or number, per the post-#400 Catalog #299
+# consolidation rule." The Catalog #299 quota brake stands at 407/400, so a new
+# number is unavailable and consolidation into the semantically adjacent gate is
+# the required path. Check E already owns "archive builders emit byte-identical
+# zips"; the metadata axis is the same invariant on a different field.
+#
+# THE BUG THIS EXTINCTS (``ddm_jg2`` S1i, 2026-08-19).
+# An archive-level identity control re-packed the shipped tail and produced an
+# archive of EXACTLY the right length -- 176,420 B, matching the pointer -- whose
+# sha256 nevertheless MISMATCHED. Three bytes differed, all ZIP central-directory
+# metadata: ``create_system`` and the two ``external_attr`` bytes. The payload was
+# already byte-identical. The lesson, verbatim from the memo: "LENGTH-EQUAL AND
+# BYTE-EQUAL ARE DIFFERENT TESTS." A rate measurement needs only the first, so
+# the rate result was never in danger; a SEAL needs the second, and this failure
+# mode costs ZERO bytes, so nothing in any size-based check could ever surface it.
+#
+# WHY IT IS SILENT (measured on this interpreter, CPython 3.13.12 / darwin):
+#   * ``ZipInfo.create_system`` defaults to the PLATFORM: 3 on POSIX, 0 on win32.
+#     The same builder therefore emits different central-directory bytes on a
+#     Windows host, at identical length.
+#   * ``ZipFile._open_to_write`` contains ``if not zinfo.external_attr:
+#     zinfo.external_attr = 0o600 << 16``. Leaving ``external_attr`` unset does
+#     NOT emit 0 -- it silently emits an INTERPRETER default that a future CPython
+#     is free to change.
+#   * A bare ``writestr(name, data)`` additionally stamps the member with
+#     ``time.localtime()`` -- the build wall-clock.
+# Counter-control (``ddm_sp2``): two archives differing only in ``external_attr``
+# are 208 B and 208 B -- equal length, 2 differing bytes. That is the jg2
+# signature reproduced from first principles.
+#
+# WHAT THE GAUGE READS IF THE CURE IS APPLIED AND NOTHING ELSE CHANGES.
+# This scanner does NOT count "files that mention a pin" -- that would rise to
+# 100% by adding comments. It counts write-mode ``ZipFile`` sites whose emitted
+# central-directory metadata is chosen by the ENVIRONMENT rather than by the
+# builder. Adding a declaration without pinning moves it by zero.
+#
+# WARN-ONLY at landing per the CLAUDE.md "Strict-flip atomicity rule". See
+# ``.omx/research/ddm_sp2_two_landing_protections_20260819.md`` for the measured
+# live-count table and the strict-flip condition.
+_ZIP_METADATA_ENV_OPT_OUT = "ZIP_METADATA_ENV_OK"
+_ZIP_METADATA_MIN_RATIONALE_LEN = 8
+_ZIP_METADATA_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset(
+    {
+        "<rationale>",
+        "<reason>",
+        "rationale",
+        "reason",
+        "tbd",
+        "todo",
+        "placeholder",
+        "pending",
+        "n/a",
+        "na",
+        "ok",
+        "fine",
+    }
+)
+#: Literal pin of the two central-directory fields. BOTH are required: pinning
+#: one and leaving the other is exactly the half-fix that produced the jg2 defect.
+_ZIP_METADATA_PIN_TOKENS = ("create_system", "external_attr")
+#: Canonical helpers that pin both fields on the caller's behalf. A file routing
+#: through one of these is compliant without naming the fields itself -- this is
+#: how ``archive_optimizer.py`` and ``pr79_segaction_payload.py`` are already
+#: correct even though a token grep says otherwise.
+_ZIP_METADATA_PIN_HELPERS = (
+    "write_deterministic_zip_member",
+    "write_deterministic_zip_file",
+    "deterministic_zip_directory",
+    "deterministic_zip_info",
+)
+_ZIP_METADATA_WRITE_MODE_PREFIXES = ("w", "a", "x")
+#: Library scope. Deliberately the shipping library, not ``experiments/``: these
+#: are the builders whose bytes can reach an ``archive.zip`` under seal.
+_ZIP_METADATA_SCAN_DIRS = ("src/tac",)
+
+
+def _zip_metadata_waiver_rationale(line: str) -> str | None:
+    """Extract a same-line ``# ZIP_METADATA_ENV_OK:<rationale>`` waiver.
+
+    Returns ``None`` when absent, empty, a known placeholder, or too short.
+    Placeholder rejection follows the Catalog #287 sister discipline: a waiver
+    whose rationale is ``<reason>`` is not a waiver, it is an unexplained bypass.
+    """
+    marker = f"# {_ZIP_METADATA_ENV_OPT_OUT}:"
+    idx = line.find(marker)
+    if idx < 0:
+        return None
+    rationale = line[idx + len(marker):].strip().rstrip("'\"`*,").strip()
+    if not rationale:
+        return None
+    if rationale.lower() in _ZIP_METADATA_PLACEHOLDER_RATIONALES:
+        return None
+    if len(rationale) < _ZIP_METADATA_MIN_RATIONALE_LEN:
+        return None
+    return rationale
+
+
+def _write_mode_zipfile_call_lines(tree: ast.AST) -> list[int]:
+    """Line numbers of ``zipfile.ZipFile(...)`` calls opened for writing.
+
+    Read mode is irrelevant here: a reader emits no central directory. Modes
+    ``w`` / ``a`` / ``x`` all write members and therefore all choose metadata.
+    """
+    lines: list[int] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        try:
+            func_str = ast.unparse(node.func)
+        except Exception:  # pragma: no cover - defensive on exotic AST
+            continue
+        if not func_str.endswith("ZipFile"):
+            continue
+        mode: object = None
+        if len(node.args) >= 2 and isinstance(node.args[1], ast.Constant):
+            mode = node.args[1].value
+        for kw in node.keywords:
+            if kw.arg == "mode" and isinstance(kw.value, ast.Constant):
+                mode = kw.value.value
+        if isinstance(mode, str) and mode.startswith(_ZIP_METADATA_WRITE_MODE_PREFIXES):
+            lines.append(node.lineno)
+    return sorted(lines)
+
+
+def _scan_python_for_env_sensitive_zip_metadata(
+    path: Path, repo_root: Path,
+) -> list[str]:
+    """Flag write-mode ZIP builders that let the environment pick member metadata.
+
+    A site is CLEAR when the file either (a) literally pins BOTH
+    ``create_system`` and ``external_attr``, (b) routes through a canonical
+    deterministic-zip helper, or (c) carries a same-line
+    ``# ZIP_METADATA_ENV_OK:<rationale>`` waiver on the ``ZipFile(...)`` line.
+    """
+    try:
+        rel = path.relative_to(repo_root)
+    except ValueError:
+        rel = path
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError, OSError):
+        return []
+    if "ZipFile" not in text:
+        return []
+    # Cheap text clearances BEFORE the AST parse. Both are file-scoped by
+    # design, matching the sister `_scan_python_for_nondeterministic_zip`: a file
+    # that pins both fields, or routes through a canonical helper, is clear.
+    # Ordering them first means only genuine violation candidates pay for a
+    # parse -- measured (ddm_sp2) as the dominant cost of this scan.
+    if all(token in text for token in _ZIP_METADATA_PIN_TOKENS):
+        return []
+    if any(helper in text for helper in _ZIP_METADATA_PIN_HELPERS):
+        return []
+    try:
+        tree = ast.parse(text, filename=str(path))
+    except SyntaxError:
+        return []
+    call_lines = _write_mode_zipfile_call_lines(tree)
+    if not call_lines:
+        return []
+    source_lines = text.splitlines()
+    missing = [t for t in _ZIP_METADATA_PIN_TOKENS if t not in text]
+    violations: list[str] = []
+    for lineno in call_lines:
+        line = source_lines[lineno - 1] if 0 < lineno <= len(source_lines) else ""
+        if _zip_metadata_waiver_rationale(line) is not None:
+            continue
+        violations.append(
+            f"{rel}:{lineno}: write-mode ZipFile does not pin "
+            f"{' + '.join(missing)} -> environment picks those "
+            "central-directory bytes."
+        )
+    return violations
+
+
+#: The rule chain, printed ONCE per run rather than repeated on all N rows.
+#: CLAUDE.md "Preflight failure messages must cite the rule chain" requires the
+#: named rule, its concrete value, and the operator-actionable fix in the gate
+#: OUTPUT; repeating 400 characters on every row buries it instead.
+_ZIP_METADATA_RULE_CHAIN = (
+    "rule chain: write-mode ZipFile(...) AND file does not pin create_system "
+    "AND file does not pin external_attr AND no canonical deterministic-zip "
+    f"helper AND no same-line `# {_ZIP_METADATA_ENV_OPT_OUT}:<rationale>` "
+    "-> ENVIRONMENT-CHOSEN ZIP METADATA. Why it is silent: CPython substitutes "
+    "a PLATFORM default for create_system (3 POSIX / 0 win32) and `0o600 << 16` "
+    "for an unset external_attr, at ZERO length cost -- invisible to every size "
+    "check, seal-breaking on a byte check (ddm_jg2 S1i: 3 differing bytes at an "
+    "identical 176,420 B length; ddm_sp2 counter-control: 208 B vs 208 B, 2 "
+    "differing bytes). Fix, in preference order: (1) set BOTH fields on the "
+    "ZipInfo, pinning the value the builder ALREADY emits so the pin is "
+    "byte-identical -- verify with a before/after sha; (2) route through "
+    "tac.submission_archive.write_deterministic_zip_member(); (3) if the "
+    "metadata is legitimately inherited (e.g. cloned from a source archive), add "
+    f"a same-line `# {_ZIP_METADATA_ENV_OPT_OUT}:<rationale>` waiver."
+)
+#: Cap the per-run print so a 30-row warn-only population stays readable. The
+#: FULL list is always in the returned value -- the cap is display-only.
+_ZIP_METADATA_MAX_PRINTED = 12
+
+
+def _zip_metadata_candidate_files(root: Path) -> tuple[Path, ...]:
+    """Only files that mention ``ZipFile`` can host the defect.
+
+    Measured (``ddm_sp2``): reading every ``src/tac`` .py cost 1.29 s, and this
+    gate is submitted twice by ``preflight_all`` -- ~2.6 s against a
+    ``DEFAULT_PREFLIGHT_CLI_TIMEOUT_S`` of 30.0 s, i.e. ~9% of the whole budget
+    spent re-reading files that cannot possibly match. One ripgrep pass replaces
+    it. Falls back to the pure-Python walker when ripgrep is unavailable, so
+    behaviour is identical either way -- only the cost differs.
+    """
+    matched = _rg_python_files_matching_regex(
+        root, list(_ZIP_METADATA_SCAN_DIRS), r"ZipFile",
+    )
+    if matched is None:
+        return tuple(_iter_python_files(root, list(_ZIP_METADATA_SCAN_DIRS)))
+    return matched
+
+
+def _scan_library_for_env_sensitive_zip_metadata(
+    root: Path, *, verbose: bool = True,
+) -> list[str]:
+    """Run the metadata scan over the shipping library. WARN-ONLY at landing."""
+    violations: list[str] = []
+    scanned = 0
+    for path in _zip_metadata_candidate_files(root):
+        if "__pycache__" in path.parts:
+            continue
+        try:
+            rel_posix = path.relative_to(root).as_posix()
+        except ValueError:
+            rel_posix = path.as_posix()
+        # Tests build throwaway fixture archives; their bytes never ship.
+        if "/tests/" in rel_posix or path.name.startswith("test_"):
+            continue
+        # This module DEFINES the tokens; scanning it self-matches.
+        if rel_posix.startswith("src/tac/preflight"):
+            continue
+        if _is_oss_export_mirror_path(path):
+            continue
+        scanned += 1
+        violations.extend(_scan_python_for_env_sensitive_zip_metadata(path, root))
+    if verbose:
+        status = f"WARN {len(violations)} finding(s)" if violations else "OK"
+        print(
+            f"  [zip-metadata-env-sensitivity] {status} / {scanned} library .py "
+            "scanned (WARN-ONLY scope extension of Check E; ddm_sp2)"
+        )
+        if violations:
+            print(f"    {_ZIP_METADATA_RULE_CHAIN}")
+            for item in violations[:_ZIP_METADATA_MAX_PRINTED]:
+                print(f"    - {item}")
+            remaining = len(violations) - _ZIP_METADATA_MAX_PRINTED
+            if remaining > 0:
+                print(f"    - ... and {remaining} more (full list in return value)")
+    return violations
+
+
 _DET_ZIP_OPT_OUT = "DETERMINISTIC_ZIP_OK"
 _DET_ZIP_HINT_FNS = (
     "_deterministic_zip_write",
@@ -18044,8 +18507,23 @@ def check_archive_builders_use_deterministic_zip(
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
-    """Guard Finding #5: archive-build scripts produce byte-identical zips."""
+    """Guard Finding #5: archive-build scripts produce byte-identical zips.
+
+    Carries the 2026-08-19 ``ddm_sp2`` SCOPE EXTENSION for environment-sensitive
+    ZIP member metadata (``create_system`` / ``external_attr``) over the shipping
+    library. The extension is WARN-ONLY: its findings are returned to the caller
+    but are deliberately EXCLUDED from the strict raise below, so this gate's
+    existing strict contract is unchanged by the extension. See the block comment
+    above ``_ZIP_METADATA_ENV_OPT_OUT`` for the bug class and the #351
+    scope-extension precedent this follows instead of claiming a catalog number.
+    """
     root = Path(repo_root or REPO_ROOT).resolve()
+    # Run the extension BEFORE the incremental-cache short-circuit below: the
+    # cache is keyed on the archive-build script fingerprint, which says nothing
+    # about the library files this extension scans.
+    metadata_warnings = _scan_library_for_env_sensitive_zip_metadata(
+        root, verbose=verbose,
+    )
     violations: list[str] = []
     n_scanned = 0
     # Cover experiments/*build*.py + experiments/results/lane_*_*/build*.py
@@ -18102,7 +18580,7 @@ def check_archive_builders_use_deterministic_zip(
                 "  [det-zip] OK: cached "
                 f"{cache_row.get('candidate_count', '?')} archive-build script(s)"
             )
-        return []
+        return list(metadata_warnings)
     for p in candidates:
         if "__pycache__" in p.parts:
             continue
@@ -18164,7 +18642,10 @@ def check_archive_builders_use_deterministic_zip(
             + "\n".join(f"  - {v}" for v in violations)
             + "\n\nUse fixed-timestamp ZipInfo + writestr (codex R5-r6 #5)."
         )
-    return violations
+    # WARN-ONLY: the ddm_sp2 metadata extension is reported, never raised. Its
+    # strict-flip condition is recorded in
+    # .omx/research/ddm_sp2_two_landing_protections_20260819.md.
+    return [*violations, *metadata_warnings]
 
 
 _RAW_EXTRACTALL_ALLOWED = {

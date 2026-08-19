@@ -634,6 +634,28 @@ class ScorerCorrectionTargets(nn.Module):
         return buf
 
 
+#: Fixed ZIP member metadata. A bare ``writestr(name, data)`` stamps the member
+#: with the BUILD WALL-CLOCK, leaves ``create_system`` at the platform default
+#: (3 on POSIX, 0 on win32), and lets CPython substitute ``0o600 << 16`` for an
+#: unset ``external_attr``. All three are environment-sensitive and cost ZERO
+#: length, so no size check can see them and any byte-level seal breaks on them
+#: (``ddm_jg2`` S1i measured exactly this: 3 differing central-directory bytes
+#: at an identical archive length). The values below are what this builder
+#: already emitted on POSIX apart from the timestamp.
+_FIXED_ZIP_DATE_TIME = (1980, 1, 1, 0, 0, 0)
+_ZIP_CREATE_SYSTEM = 3  # unix
+_ZIP_EXTERNAL_ATTR = 0o600 << 16
+
+
+def _write_archive_member(zf: zipfile.ZipFile, name: str, data: bytes) -> None:
+    """Write one member with fixed timestamp, host system, and permission bits."""
+    info = zipfile.ZipInfo(name, date_time=_FIXED_ZIP_DATE_TIME)
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.create_system = _ZIP_CREATE_SYSTEM
+    info.external_attr = _ZIP_EXTERNAL_ATTR
+    zf.writestr(info, data, compresslevel=9)
+
+
 def build_minimal_archive(
     codebook: TextureAtomCodebook,
     motion_params: torch.Tensor | None,
@@ -667,11 +689,11 @@ def build_minimal_archive(
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
         # Codebook
-        zf.writestr("codebook.bin", codebook.serialize())
+        _write_archive_member(zf, "codebook.bin", codebook.serialize())
 
         # Motion field
         if motion_params is not None and motion_codec is not None:
-            zf.writestr("motion.bin", motion_codec.serialize(motion_params))
+            _write_archive_member(zf, "motion.bin", motion_codec.serialize(motion_params))
 
         # Corrections (per-frame)
         if correction_data is not None and corrections_codec is not None:
@@ -680,16 +702,16 @@ def build_minimal_archive(
                 # (T, K, 2) and (T, K, 3) — serialize each frame
                 for t in range(indices.shape[0]):
                     data = corrections_codec.serialize(indices[t], values[t])
-                    zf.writestr(f"corrections_{t:04d}.bin", data)
+                    _write_archive_member(zf, f"corrections_{t:04d}.bin", data)
             else:
                 # Single frame
-                zf.writestr("corrections_0000.bin",
-                            corrections_codec.serialize(indices, values))
+                _write_archive_member(zf, "corrections_0000.bin",
+                                      corrections_codec.serialize(indices, values))
 
         # Assignment maps (compact: 1 byte per tile, since num_atoms <= 256)
         if assignment_maps is not None:
             assign_bytes = assignment_maps.detach().cpu().byte().numpy().tobytes()
-            zf.writestr("assignments.bin", assign_bytes)
+            _write_archive_member(zf, "assignments.bin", assign_bytes)
 
     return buf.getvalue()
 

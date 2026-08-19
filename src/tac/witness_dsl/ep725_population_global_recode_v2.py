@@ -853,7 +853,7 @@ def _clone_zip(
     output = io.BytesIO()
     cloned = copy.copy(info)
     compress_type = zipfile.ZIP_STORED if profile.kind == "store" else zipfile.ZIP_DEFLATED
-    with zipfile.ZipFile(output, mode="w") as archive:
+    with zipfile.ZipFile(output, mode="w") as archive:  # ZIP_METADATA_ENV_OK: member metadata is CLONED from the source archive's own ZipInfo (copy.copy above), so create_system/external_attr are REPRODUCED from the source, never chosen by this host -- pinning them here would overwrite the lineage this population recode exists to preserve
         archive.comment = archive_comment
         archive.writestr(
             cloned,

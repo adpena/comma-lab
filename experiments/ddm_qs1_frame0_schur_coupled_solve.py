@@ -66,7 +66,7 @@ CP135_BASE_POSE: Final = Path(
 # solve against the PyAV table optimizes the wrong objective. GT_POSE is the DALI table;
 # the PyAV table stays available ONLY for lineage-labeled advisory comparisons.
 GT_POSE: Final = CP135_BASE_POSE.with_name("gt_first6_dali_n600.npy")
-GT_POSE_PYAV_ADVISORY: Final = CP135_BASE_POSE.with_name("gt_first6_n600.npy")
+GT_POSE_PYAV_ADVISORY: Final = CP135_BASE_POSE.with_name("gt_first6_n600.npy")  # GT_LINEAGE_OK: the PyAV table is bound here under an explicitly lineage-labeled name and is NOT the solve objective -- GT_POSE on the line above is the DALI table (#1142 cure, commit 809199d24f); retained only for labeled advisory comparison
 JS6_BANK: Final = Path(
     "/Volumes/VertigoDataTier/pact/ddm_js6_seg_representation_join_20260813/"
     "proposal_bank"

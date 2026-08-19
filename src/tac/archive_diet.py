@@ -131,6 +131,13 @@ def _write_zip_deterministic(
             info = zipfile.ZipInfo(filename=name, date_time=_FIXED_ZIP_TIMESTAMP)
             info.compress_type = ctype
             info.create_system = 3  # unix
+            # Pin the permission bits too. CPython's ZipFile._open_to_write
+            # substitutes ``0o600 << 16`` whenever external_attr is left at 0,
+            # so an unpinned member silently inherits an implementation default
+            # at ZERO length cost -- invisible to any size check, seal-breaking
+            # on a byte check (ddm_jg2 S1i). 0o600 is exactly what this builder
+            # already emitted, so pinning it is byte-identical, not a change.
+            info.external_attr = 0o600 << 16
             if ctype == zipfile.ZIP_DEFLATED:
                 zf.writestr(info, payload, compresslevel=9)
             else:

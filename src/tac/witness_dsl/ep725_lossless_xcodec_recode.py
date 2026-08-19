@@ -312,7 +312,7 @@ def _pack_lvls1(manifest: bytes, base: bytes, code: bytes, pose: bytes) -> bytes
 def _clone_zip(info: zipfile.ZipInfo, archive_comment: bytes, member: bytes, level: int | None) -> bytes:
     output = io.BytesIO()
     cloned = copy.copy(info)
-    with zipfile.ZipFile(output, mode="w") as archive:
+    with zipfile.ZipFile(output, mode="w") as archive:  # ZIP_METADATA_ENV_OK: member metadata is CLONED from the source archive's own ZipInfo (copy.copy above), so create_system/external_attr are REPRODUCED from the source, never chosen by this host -- pinning them here would overwrite the lineage this lossless recode exists to preserve
         archive.comment = archive_comment
         archive.writestr(
             cloned,

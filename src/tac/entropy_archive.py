@@ -612,6 +612,28 @@ def dequantize_weights(
 # ── Archive building ────────────────────────────────────────────────────
 
 
+#: Fixed ZIP member metadata. A bare ``writestr(name, data)`` stamps the member
+#: with the BUILD WALL-CLOCK, leaves ``create_system`` at the platform default
+#: (3 on POSIX, 0 on win32), and lets CPython substitute ``0o600 << 16`` for an
+#: unset ``external_attr``. All three are environment-sensitive and cost ZERO
+#: length, so no size check can see them and any byte-level seal breaks on them
+#: (``ddm_jg2`` S1i measured exactly this: 3 differing central-directory bytes
+#: at an identical archive length). The values below are what this builder
+#: already emitted on POSIX apart from the timestamp.
+_FIXED_ZIP_DATE_TIME = (1980, 1, 1, 0, 0, 0)
+_ZIP_CREATE_SYSTEM = 3  # unix
+_ZIP_EXTERNAL_ATTR = 0o600 << 16
+
+
+def _write_archive_member(zf: zipfile.ZipFile, name: str, data: bytes) -> None:
+    """Write one STORED member with fixed timestamp, host system, permission bits."""
+    info = zipfile.ZipInfo(name, date_time=_FIXED_ZIP_DATE_TIME)
+    info.compress_type = zipfile.ZIP_STORED
+    info.create_system = _ZIP_CREATE_SYSTEM
+    info.external_attr = _ZIP_EXTERNAL_ATTR
+    zf.writestr(info, data)
+
+
 def build_entropy_archive(
     video_mkv: bytes | None = None,
     postfilter_weights: dict[str, torch.Tensor] | bytes | None = None,
@@ -655,13 +677,13 @@ def build_entropy_archive(
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as zf:
         # 1. Video MKV
         if video_mkv is not None:
-            zf.writestr("video.mkv", video_mkv)
+            _write_archive_member(zf, "video.mkv", video_mkv)
 
         # 2. Postfilter weights
         if postfilter_weights is not None:
             if isinstance(postfilter_weights, bytes):
                 # Already compressed (e.g., from self_compress.py)
-                zf.writestr("postfilter.bin", postfilter_weights)
+                _write_archive_member(zf, "postfilter.bin", postfilter_weights)
             else:
                 # Quantize and entropy-code the state dict
                 symbols, weight_meta = quantize_weights(postfilter_weights, num_symbols)
@@ -672,15 +694,15 @@ def build_entropy_archive(
                 encoded = encode_with_entropy_model(symbols, entropy_model)
                 meta_json = json.dumps(weight_meta, separators=(",", ":")).encode("utf-8")
 
-                zf.writestr("weights_encoded.bin", encoded)
-                zf.writestr("weights_meta.json", meta_json)
+                _write_archive_member(zf, "weights_encoded.bin", encoded)
+                _write_archive_member(zf, "weights_meta.json", meta_json)
 
         # 3. Masks (store as-is)
         if masks is not None:
             if isinstance(masks, bytes):
-                zf.writestr("masks.bin", masks)
+                _write_archive_member(zf, "masks.bin", masks)
             else:
-                zf.writestr("masks.bin", masks.cpu().to(torch.uint8).numpy().tobytes())
+                _write_archive_member(zf, "masks.bin", masks.cpu().to(torch.uint8).numpy().tobytes())
 
         # 4. Pose targets
         if pose_targets is not None:
@@ -702,13 +724,13 @@ def build_entropy_archive(
                 "count": int(symbols_pose.shape[0]),
                 "num_symbols": num_symbols,
             }
-            zf.writestr("pose_encoded.bin", encoded_pose)
-            zf.writestr("pose_meta.json", json.dumps(pose_meta, separators=(",", ":")).encode("utf-8"))
-            zf.writestr("pose_entropy.bin", pose_entropy.serialize())
+            _write_archive_member(zf, "pose_encoded.bin", encoded_pose)
+            _write_archive_member(zf, "pose_meta.json", json.dumps(pose_meta, separators=(",", ":")).encode("utf-8"))
+            _write_archive_member(zf, "pose_entropy.bin", pose_entropy.serialize())
 
         # 5. Entropy model (shared for weights)
         if postfilter_weights is not None and not isinstance(postfilter_weights, bytes):
-            zf.writestr("entropy_model.bin", entropy_model.serialize())
+            _write_archive_member(zf, "entropy_model.bin", entropy_model.serialize())
 
     return buf.getvalue()
 

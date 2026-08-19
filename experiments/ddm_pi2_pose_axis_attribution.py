@@ -757,7 +757,7 @@ def stage_addit(args: argparse.Namespace) -> int:
 #                                       i.e. the pose cost of ps1u's device-dependent inflate.
 # ============================================================================================
 DEFAULT_GT_CACHE_AV = Path(
-    "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_av.pt")
+    "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_av.pt")  # GT_LINEAGE_OK: pi2 is the instrument that MEASURED the two-lineage split; it binds BOTH caches (DALI on the next line) precisely to difference them -- naming the AV lineage is the measurement
 DEFAULT_GT_CACHE_DALI = Path(
     "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt")
 

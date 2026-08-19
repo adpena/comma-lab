@@ -181,6 +181,11 @@ def _zinfo(name: str) -> zipfile.ZipInfo:
     info.date_time = (1980, 1, 1, 0, 0, 0)
     info.compress_type = zipfile.ZIP_DEFLATED
     info.external_attr = (0o644 & 0xFFFF) << 16
+    # Pin the host-system byte: zipfile leaves create_system at the PLATFORM
+    # default (3 on POSIX, 0 on win32), so the same payload packs to different
+    # central-directory bytes on a Windows host at zero length cost (ddm_jg2
+    # S1i). 3 is what POSIX already emitted -- byte-identical here, a fix there.
+    info.create_system = 3
     return info
 
 

@@ -202,6 +202,27 @@ def apply_prior_weighting(
     return logits + float(alpha) * log_prior.to(dtype=logits.dtype)
 
 
+#: Fixed ZIP member metadata for the appended prior. A bare
+#: ``writestr(name, data)`` stamps the member with the BUILD WALL-CLOCK and
+#: leaves ``create_system`` at the platform default -- environment-sensitive
+#: bytes that cost zero length, so no size check can see them, and that break
+#: any byte-level seal over the archive (``ddm_jg2`` S1i, 3 differing bytes).
+#: ``0o600`` and DEFLATE-at-default-level are exactly what this appender
+#: already emitted; only the timestamp and host byte become deterministic.
+_PRIOR_ZIP_DATE_TIME = (1980, 1, 1, 0, 0, 0)
+_PRIOR_ZIP_CREATE_SYSTEM = 3  # unix
+_PRIOR_ZIP_EXTERNAL_ATTR = 0o600 << 16
+
+
+def _deterministic_prior_member(arcname: str) -> zipfile.ZipInfo:
+    """Build the fixed-metadata ``ZipInfo`` used for the appended prior."""
+    info = zipfile.ZipInfo(arcname, date_time=_PRIOR_ZIP_DATE_TIME)
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.create_system = _PRIOR_ZIP_CREATE_SYSTEM
+    info.external_attr = _PRIOR_ZIP_EXTERNAL_ATTR
+    return info
+
+
 def save_prior_to_archive(
     prior: np.ndarray | "torch.Tensor" | str | Path,
     archive_zip_path: str | Path,
@@ -260,6 +281,6 @@ def save_prior_to_archive(
                 f"Archive already contains {arcname!r}: {archive_zip_path}. "
                 "Rebuild the archive instead of appending a duplicate."
             )
-        zf.writestr(arcname, prior_bytes)
+        zf.writestr(_deterministic_prior_member(arcname), prior_bytes)
 
     return len(prior_bytes)

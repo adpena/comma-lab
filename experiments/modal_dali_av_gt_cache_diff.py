@@ -196,7 +196,7 @@ def build_and_diff() -> dict:
     import torch
 
     REMOTE_WORK.mkdir(parents=True, exist_ok=True)
-    av_cache = REMOTE_WORK / "gt_cache_av.pt"
+    av_cache = REMOTE_WORK / "gt_cache_av.pt"  # GT_LINEAGE_OK: this is the #906 PRODUCER that builds BOTH caches in order to diff them -- naming the AV lineage is the job, not an undeclared objective
     dali_cache = REMOTE_WORK / "gt_cache_dali.pt"
     av_report = REMOTE_WORK / "report_av.json"
     dali_report = REMOTE_WORK / "report_dali_vs_av.json"

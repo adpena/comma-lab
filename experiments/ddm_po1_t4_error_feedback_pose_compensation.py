@@ -587,7 +587,7 @@ def _round_paths(round_root: Path) -> tuple[Path, dict[str, Path]]:
         raise PO1SolveError(f"T4 round is not complete: {final}")
     vector_root = round_root / "retained/pose_vectors"
     paths = {
-        "gt": vector_root / "gt_first6_n600.npy",
+        "gt": vector_root / "gt_first6_n600.npy",  # GT_LINEAGE_OK: round-local custody -- this is the T4 round's OWN emitted GT, read from that round's retained/pose_vectors/ next to the candidate vectors it is differenced against, so GT and candidate share one decode by construction; adjudicated correct (ddm_sp2)
         "first": vector_root / "candidate_first_first6_n600.npy",
         "repeat": vector_root / "candidate_repeat_first6_n600.npy",
         "error": vector_root / "pair_error_rms_n600.npy",

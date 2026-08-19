@@ -47,7 +47,7 @@ DEFAULT_STAGE08 = (
 DEFAULT_CHROMA_RECEIPT = Path(
     ".omx/research/ddm_rm1_20260808/chroma_siting_sensitivity.json"
 )
-DEFAULT_AV_CACHE = SSD_ROOT / "ddm_chroma_dali_av_20260809/gt_cache_av.pt"
+DEFAULT_AV_CACHE = SSD_ROOT / "ddm_chroma_dali_av_20260809/gt_cache_av.pt"  # GT_LINEAGE_OK: a seg-axis SOURCE AUDIT that binds both lineages side by side (DALI on the next line) in order to compare them; the AV binding is the audit's subject, not its objective
 DEFAULT_DALI_CACHE = SSD_ROOT / "ddm_chroma_dali_av_20260809/gt_cache_dali.pt"
 DEFAULT_SD1_RESULT = Path(
     ".omx/research/ddm_sd1_semantic_20260809/SD1_RESULTS.json"
