@@ -365,3 +365,108 @@ measurement: `qw1/mp2 deep prune` (pose leg UNMEASURED, projected +0.027) · `hv
 (REFUSED at +0.0362 S) · `b2e` edit-replay ×3 (n=50, **L5**) · `ra2c` rank-4 (its own memo
 finds the damage law over-predicts 9.23×) · `td1` token-drop Schur (explicitly "modeled
 −4.4e-4 *assumes no* compensation").
+
+### 5.4 `ps135b` / `ps1u` pose-carrier terminals — **REOPENED, instrument-confounded** — and this collapses `pu3`'s convergence claim
+
+**The mechanism, settled by content-hash not by argument.** The constant `qs1.GT_POSE` — the
+GT pose table the whole pose-solve chain minimizes against — resolves to sha
+`82ed61ce6a11a6612502527fbb6864a22fe6c6099312e637d971214ab660fb27`, which
+`src/tac/gt_lineage_registry.json` classifies as **`PYAV_YUV420_TO_RGB`**, evidence
+`EMPIRICAL_NEAREST_RULER_POSE_MSE`, measurement *"pose: MSE **1.406151e-04** vs DALI ruler,
+**4.889832e-12** vs AV ruler."* It is the AV table to eleven decimal places. The registry
+also records exactly one artifact named `gt_first6_n600.npy` and it is `DALI_NVDEC` (sha
+`1f2fe6d1…`) — the basename collision `gl1` was built to catch.
+
+**A fourth independent route to `C`.** That registry line measures the PyAV↔DALI GT distance
+*directly*, table against table: `1.406151e-04`. Compare §2's 3-body offset `1.406058e-04`,
+pi2's `1.4061324889e-04`, and the sister sweep's independent `MSE(GT_PyAV, GT_DALI) =
+1.406149e-04`. **Four routes, four methods, agreeing to 0.007%.** This is no longer an
+empirical fit: `C` **is** the mean-squared distance between our two GT pose tables, which is
+why it is additive in level and a property of the clip rather than of any candidate. L1′ is
+now mechanically closed.
+
+**What that did to `ps135` pass 4.** The receipt is
+`.omx/research/ddm_hc1_hy1_container_push_20260812.md:198` — *"pass 4's `d_pose=9.67e-06`
+CPU advisory state realizes as `1.4674e-04` on CUDA."* Read it against the base (PyAV
+`1.4747e-04` / DALI `6.886e-06`): the carrier drove the **PyAV** residual down 15× and landed
+on the shipping axis at 104.4% of the table distance. **It swapped the two residuals.** The
+verdict recorded — *"ps135 pass4 pose carrier REFUTED"*, a genuine `[contest-CUDA T4, n600]`
+row at `S 0.192632768165` — is a true measurement of a carrier **aimed at the wrong target**.
+This is not a carrier that lacks pose authority; it is one with ample authority, pointed 19×
+away from the objective that ships.
+
+**`ps1u` carries a second, independent defect.** Its `top_mass_pairs` selector
+(`experiments/ddm_ps1u_uncapped_pose_solve.py:131-141`) ranks pairs by **PyAV** residual
+mass. Measured rank correlation against the DALI ranking: **Spearman 0.1222, top-30 overlap
+1 of 30 (3.3%)**. The solve spent its whole budget on a nearly disjoint pair set from the one
+carrying shipping-axis debt. Its T4 row (`d_pose 6.146e-05`) sits 40.8% of the way from base
+toward the wrong target — the signature of a solver working correctly on the wrong problem.
+
+**The consequence that matters most — `pu3`'s 6/6 collapses to 4/6 + one instance.** `pu3` §6
+concluded *"no measured carrier-addressable pose headroom exists on the shipping object"* from
+**"six distinct mechanisms, all negative,"** and explicitly discharged the same-defect law:
+*"these do not share a defect — refit, overlay, carrier swap, GN solve, basis, and iteration
+budget are different mechanisms."* **The actuators differ; the objective does not.** `pk4`,
+`ps135b` and `ps1u` all minimize against `qs1.GT_POSE`. Under pu3's own cited law
+([[same_defect_negatives_masquerade_as_family_convergence_20260805]]) those three are **one
+instance, not three**. `ra3` **STANDS** — it priced its 35.5× refusal on the authority GT
+(`6.88559506e-06`, 1.00081× contest-CUDA) and is clean. So the convergence that licensed the
+campaign's belief that pose is closed rests on a materially thinner base than it claimed.
+
+**Blast radius, and it is the [[m56]] shape — the cure is built but unwired.** `pi2` landed
+the lineage finding on **2026-08-16** (`ed153d0203`).
+`experiments/ddm_qs1_frame0_schur_coupled_solve.py` was last touched **2026-08-13** and has
+never been repointed. `gt_cache_dali.pt` *is* wired into the diagnostic and rescore tools
+(pi2, rc4, ra3-rescore, sg2) and into the successor solver `ddm_up2_shipping_pose_solve.py` —
+but **not into the solve chain that drew these verdicts**. Files loading the PyAV constant:
+`pk3 · pk4 · ps1u · qs1 · qs2 · qs5 · mc35`, plus `ddm_mt1_978_multitoken_screen.py:79` and
+`ddm_mt1_modal_multitoken_sign_gate.py:100` which hardcode the PyAV path. **Note `qs5` is on
+that list** — and `qs5` is the compensation route `rc4` §5.1 named as its one open door, and
+that `pk4`'s routing block calls "qs5-proven."
+
+**Classification: REOPENED — UNMEASURED.** I am claiming the negatives do not bind, not that
+headroom exists. The sister sweep re-scored `pk4`'s retained heldout vectors against the DALI
+table at $0 and the **sign did not change** — so the *tested, PyAV-fit* candidates fail on
+the shipping axis too (that is why `pk3/pk4` below are SHARPENED, not reopened). A
+DALI-*targeted* solve is a different, unmeasured object.
+
+**Resolving measurement, two rungs.** (1) **$0 diagnosis:** `d_pose` is a pure function of
+(generated pose6, GT pose6), so re-scoring `ps135` pass-4's retained pose6 against
+`gt_cache_dali.pt["pose"]` is arithmetic on retained bytes — it confirms the floor and
+recovers nothing. (2) **The real answer:** re-run the pass-4 solve with **both** the objective
+and the pair selection pointed at the DALI table, then one T4 row. Local solve $0; **one T4
+row ≈ $0.16.** **Consumer:** the `pu3` §6 verdict, the `pk4` routing block, and the js1/js8
+joint line that every pose refusal currently reinforces.
+
+### 5.5 Three verdicts that **STAND** on re-examination
+
+- **`et1` address-band closure — STANDS.** The pose-viability question the charter raised
+  does not bite: η is a **ratio** on one field (lineage cancels), the `0.61491` bar is
+  **DERIVED** from the band's own bytes (no lineage, no n), and et1 had already quarantined
+  its pose leg as subset-scoped after its own self-catch. The shortfall is 2.04× / 12.7σ and
+  break-even *rises* monotonically with radius, so it is settled from the rate side without
+  the realizer. [[m96]] makes it *more* secure, not less: et1 records these pairs as 0.2692×
+  of population, i.e. 3.7× **easier** on pose, so a representative sample lowers the
+  pose-viable η further.
+- **`pk3` / `pk4` frame-0 linear overlays — STANDS, SHARPENED.** Re-scored on DALI at $0:
+  every rung still hurts or does nothing (rung 42 −7.57e-06, rung 250 0.0, rung 1000
+  −3.93e-05). **What narrows:** the fit target was 95.4% artifact (heldout base MSE 5.22e-05
+  PyAV vs 6.83e-06 DALI, 7.6× inflated), and "differences cancel" does **not** rescue it —
+  the gate metric carries `g` linearly and the candidate was *produced* by solving against
+  `g`. Read the ceiling as scoped to *linear overlays fit against a PyAV-contaminated
+  residual*, not to the formulation. Settling re-run: repoint `qs1.GT_POSE`, recompute stages
+  20–40 (the 64-pair Jacobian bank is retained and GT-independent) — **$0**.
+- **`sa1` family closure — STANDS, but the charter's premise about it is REFUTED.** My
+  charter believed sa1 closed on a T4 row. It did not: all three candidate rows are
+  `[macOS-CPU advisory n600, env-mismatch grade]`; the only T4 anchor is the *base*. It
+  stands anyway, and for the right reason — sa1 bought a same-instrument base leg and
+  adjudicates **deltas** against it. Deflating each pose leg to the shipping operating point
+  (the √ makes the inflation exactly √21.416 = **4.63×**) gives net ΔS ≈ +0.0328 / +0.0124 /
+  +0.0096 against a −3.5e-6 bar: refusals survive by 3–4 orders of magnitude. **Sharpening
+  that matters operationally:** the carried-forward damage law "68–512× the rate credit"
+  becomes **~15–110×** on the shipping axis, so sa1's reactivation criterion (~250×
+  sub-linear damage for keep87) currently holds successors to a bar **4.6× stricter than the
+  shipping axis requires**. Second sharpening: sa1 line 19 attributes its 21.4× to
+  "CPU-vs-T4 drift on the SAME bytes"; the sister sweep reproduced 21.416× by swapping
+  **only the GT table** with pose vectors held fixed, and pi2 bounded true forward drift at
+  3.572e-12. Mechanism misattributed; verdict unaffected (sa1 predates up1 by one day).
