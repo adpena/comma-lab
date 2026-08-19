@@ -1,0 +1,174 @@
+{
+  "all_controls_pass": true,
+  "axis": "[macOS-CPU exact byte measurement]",
+  "consumer": "ddm_cw1_container_consumer_proof",
+  "determinism_control": {
+    "bytes": 176420,
+    "control": "double_compile_determinism",
+    "first_sha256": "50e561454b23026d3870f056747e848a49bd5f2b1e23930155d1281aeee91927",
+    "passed": true,
+    "second_sha256": "50e561454b23026d3870f056747e848a49bd5f2b1e23930155d1281aeee91927"
+  },
+  "expected_winner_sha256": "7ce46fd7a845d5987903a0d85a56581961eb7716a55c38a7361e3b5ecae94b5f",
+  "identity_control": {
+    "control": "identity_shipped_config_reproduces_shipped_archive",
+    "expected_sha256": "50e561454b23026d3870f056747e848a49bd5f2b1e23930155d1281aeee91927",
+    "observed_bytes": 176420,
+    "observed_sha256": "50e561454b23026d3870f056747e848a49bd5f2b1e23930155d1281aeee91927",
+    "passed": true
+  },
+  "promotable": false,
+  "runtime_dir": "/Volumes/APDataStore/pact/ddm_to1/generations/to1_tail_override_r1",
+  "score_claim": false,
+  "search": {
+    "admissible": 8,
+    "axis": "[macOS-CPU exact byte measurement]",
+    "candidates": [
+      {
+        "admissible": true,
+        "archive_bytes": 176468,
+        "archive_sha256": "a5be29aad5e19e4b9c7dee1a8dc615609119ce794074e92c6d72d42e572aba7d",
+        "config": {
+          "brotli_lgwin": 24,
+          "brotli_quality": 11,
+          "interleave": true,
+          "label": "shipped",
+          "section_order": null
+        },
+        "error": null,
+        "index": 0,
+        "parse_back_exact": true
+      },
+      {
+        "admissible": true,
+        "archive_bytes": 176444,
+        "archive_sha256": "88428123c49eff4332970ca089ac153cf4aed3724c2476433bf6629814f039d1",
+        "config": {
+          "brotli_lgwin": 16,
+          "brotli_quality": 10,
+          "interleave": true,
+          "label": "",
+          "section_order": null
+        },
+        "error": null,
+        "index": 1,
+        "parse_back_exact": true
+      },
+      {
+        "admissible": true,
+        "archive_bytes": 176468,
+        "archive_sha256": "5f32eca2ed1a3bb6f5dfda8071b9501966ad3eb33b286cf5c890f79d8ddd921e",
+        "config": {
+          "brotli_lgwin": 16,
+          "brotli_quality": 9,
+          "interleave": true,
+          "label": "",
+          "section_order": null
+        },
+        "error": null,
+        "index": 2,
+        "parse_back_exact": true
+      },
+      {
+        "admissible": true,
+        "archive_bytes": 176422,
+        "archive_sha256": "cb2681314d11024f6492843acea4a28d39880915a50f13cc7281b4e9a4f8a449",
+        "config": {
+          "brotli_lgwin": 24,
+          "brotli_quality": 11,
+          "interleave": false,
+          "label": "",
+          "section_order": null
+        },
+        "error": null,
+        "index": 3,
+        "parse_back_exact": true
+      },
+      {
+        "admissible": true,
+        "archive_bytes": 176422,
+        "archive_sha256": "b336d509f8097cafed7f37c13ebd659ffd31b5d7fc7ccff86636233839b83dad",
+        "config": {
+          "brotli_lgwin": 10,
+          "brotli_quality": 11,
+          "interleave": false,
+          "label": "",
+          "section_order": null
+        },
+        "error": null,
+        "index": 4,
+        "parse_back_exact": true
+      },
+      {
+        "admissible": true,
+        "archive_bytes": 176420,
+        "archive_sha256": "7ce46fd7a845d5987903a0d85a56581961eb7716a55c38a7361e3b5ecae94b5f",
+        "config": {
+          "brotli_lgwin": 16,
+          "brotli_quality": 10,
+          "interleave": false,
+          "label": "",
+          "section_order": null
+        },
+        "error": null,
+        "index": 5,
+        "parse_back_exact": true
+      },
+      {
+        "admissible": true,
+        "archive_bytes": 176420,
+        "archive_sha256": "8c8f8135205f5c999d1027937ed16743ded7946668d2d2b84cfdabba51583c06",
+        "config": {
+          "brotli_lgwin": 10,
+          "brotli_quality": 10,
+          "interleave": false,
+          "label": "",
+          "section_order": null
+        },
+        "error": null,
+        "index": 6,
+        "parse_back_exact": true
+      },
+      {
+        "admissible": true,
+        "archive_bytes": 176468,
+        "archive_sha256": "cdfe5ef0b2b429cb077f2907f98817c189224fbc610fa653b1f9ad93fdebe9de",
+        "config": {
+          "brotli_lgwin": 16,
+          "brotli_quality": 9,
+          "interleave": false,
+          "label": "",
+          "section_order": null
+        },
+        "error": null,
+        "index": 7,
+        "parse_back_exact": true
+      }
+    ],
+    "delta_archive_bytes": -48,
+    "delta_score": -3.196122974986422e-05,
+    "incumbent_archive_bytes": 176468,
+    "measurement_note": "delta_archive_bytes is the MEASURED size of archive.zip, never a payload length. ddm_up3 measured a +7-bit payload change costing +48 archive bytes.",
+    "score_claim": false,
+    "seal_digest": "71e63bef6927e14996a2b6f5fa8c2e78d7d0d99624366349f151e08f5a1a023a",
+    "searched": 8,
+    "space_name": "up3_declared_container_space",
+    "tie_broken_to_incumbent": false,
+    "winner": {
+      "admissible": true,
+      "archive_bytes": 176420,
+      "archive_sha256": "7ce46fd7a845d5987903a0d85a56581961eb7716a55c38a7361e3b5ecae94b5f",
+      "config": {
+        "brotli_lgwin": 16,
+        "brotli_quality": 10,
+        "interleave": false,
+        "label": "",
+        "section_order": null
+      },
+      "error": null,
+      "index": 5,
+      "parse_back_exact": true
+    }
+  },
+  "winner_reproduces_thirteenth_move": true
+}
