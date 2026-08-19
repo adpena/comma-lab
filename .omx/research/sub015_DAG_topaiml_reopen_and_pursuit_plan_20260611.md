@@ -28897,3 +28897,23 @@ candidate (SM3R mode-6 row-prune+mixed-depth) → advisory → 3h Metal Schur so
 seal → T4. Memos .omx/research/ddm_sa1_vseries_v7_dead_v2_routing_20260818.md (§1–§5, commits
 948a4d6cf5 · c30f92fbc9 · c0642562dc); advisory receipts + payloads persisted per P0 under
 /Volumes/APDataStore/pact/ddm_sa1/{advisory_n600_cpu,retained,generations}. [p0-ledger-ok]
+
+## FEED-ck2 (2026-08-19) — ELEVENTH POINTER MOVE: container transform, projection exact
+- MOVE: ck2 plane2 parameter-free whole-section 2-plane container transform on the ck1 base ->
+  **S 0.1566645120483069 @ 176,525 B [contest-CUDA T4, n600]**, sha 0aa1cada2ca79ad43a11bfa72e
+  (full sha in seal 10b349c5 + t4_row_r2 custody). Net vs ck1 -4.3746933e-04 PURE RATE (-657 B:
+  semantic -613, compensated carrier -44); both distortion axes BIT-IDENTICAL (0.00030309 /
+  7.77e-06). 125x the -3.5e-6 bar; 65.6x the summed two-row 8dp bound. Gap to 0.15: 0.0066645.
+- LAW REINFORCED (bp1 genus): section-coding verdicts are INSTANCE-scoped to the BODY measured —
+  the transform that lost -5 B on sz1's body wins -613 B on ck1's row-pruned body; sz1's pinned
+  (offset 49, len 8284) split constants measure +59 B on this body (cross-regime constant law
+  firing inside our own tool). Container-only candidates carry ZERO transfer exposure — the
+  projection realized to the last digit, vs the tenth move's 35% seg-transfer realization.
+- AXIS FACTS BANKED: CPU decode on this lineage = MEASURED over-budget (1800s timeout on
+  Modal-CPU vs 941s T4; disclosure fact, not a score). ma1 within-miss law = -105 B on BOTH
+  live bodies (ΔS -6.99e-5, 20x bar, bit-identical nesting control); miss-cost reservoir
+  DEFLATED: fx1's 1,247 B ceiling was perfect-oracle (~180 B hindsight-real), the 77,241 B
+  framing was an entropy not headroom — model axis near-exhausted after ma1.
+- NEXT EDGE: #1131 per-candidate rc64 recipe (stale rr4-era pin diagnosed; cure = pin derived
+  from the SHIPPED 5,638-B runtime member) -> ma1 byte-close on the ck2 body = twelfth-move
+  candidate (~-7e-5). Pose still routes js1/js8 exclusively. Verdict memo: 827f076608.
