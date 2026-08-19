@@ -168,3 +168,100 @@ forward.** The cascade is not sign-symmetric; it should cost.
 | what falsifies "the axis survives" | realized cost above the exchange rate at jg1's 1.55 cells/token, i.e. **> ~15.8 bits per changed token** |
 
 The measurement decides it either way, and the curve gets reported whichever way it falls.
+
+### S1e — THE CONTROL PASSED, BYTE-IDENTICAL
+
+| quantity | value |
+|---|---|
+| frames encoded | 600 |
+| emitted stream | **109,696 B** |
+| emitted sha256 | `15054e5da33640bcb2e9d4589615c3b89b1312ce27fd9aa8e2a0ec0284b506f2` |
+| shipped stream sha256 | `15054e5da33640bcb2e9d4589615c3b89b1312ce27fd9aa8e2a0ec0284b506f2` |
+| `byte_identical` | **true** (all 109,696 B) |
+| wall clock | 969.8 s |
+
+**This encoder is the exact inverse of the shipping decoder on the pointer body.** Same
+model, same 190-group wavefront, same boundary map, same fixed table, same corrector, same
+probability quantization, same coder, same flush. Every byte delta below is therefore a
+MEASUREMENT of `archive.zip`, not a model of it.
+
+### S1f — THE REAL RATE. MY PRE-REGISTERED PREDICTION WAS WRONG.
+
+| quantity | value |
+|---|---:|
+| tokens changed | 58 (pairs 283/468/513) |
+| token stream | 109,696 -> **109,726 B** |
+| **archive.zip** | 176,420 -> **176,450 B** |
+| **archive delta** | **+30 B** |
+| **measured bits per changed token** | **4.1379** |
+| jg1 modelled | 4.718 |
+| **realized / modelled** | **0.877** |
+| `ΔS_rate` | **+0.0000200** |
+
+**I predicted the real price would be HIGHER than modelled, and named 2-5x as unsurprising.
+It is 0.877x — 12.3% CHEAPER.** The prediction is recorded above and is not being edited.
+
+**Where my reasoning failed, precisely: I inferred MAGNITUDE from REACH.** The four causal
+paths are real and the cascade is genuinely global — the per-frame ledger shows **317 of
+600 frames carry a nonzero bit delta, the first at 283 and the last at 599**, exactly as
+the mechanism says. But reach is not cost:
+
+| where the bits are paid | bits | share |
+|---|---:|---:|
+| at the three EDITED frames | +236.577 | **101.9%** |
+| **cascade (the other 314 perturbed frames)** | **-4.409** | **-1.9%** |
+| total (ideal code length) | +232.168 | 100% |
+
+**The cascade is structurally unbounded and numerically negligible — here a small CREDIT,
+not a cost.** Per-edit: pair 283 +94.2 bits, pair 468 +77.6, pair 513 +64.7; the 30 frames
+after pair 513 come back **-15.4 bits**. Re-labelling a boundary cell toward the true class
+makes the following frames slightly MORE predictable, and that nearly cancels the local
+surprise the later edits create.
+
+The local price also came in under the model, for the reason jg1 itself flagged: **4.718
+was the mean over all four neighbour candidates, and a solver pays the accepted one.**
+Measured at the sites: **4.079 bits/token**. So jg1's constant was directionally right and
+mildly conservative, and its three named caveats (cross-body, context coupling, omitted
+table) net out to **-12.3%**, not the multiple I expected.
+
+| bits/token, three ways | value |
+|---|---:|
+| at the edit sites only | 4.0789 |
+| including the whole cascade (ideal) | 4.0029 |
+| **realized on `archive.zip`** | **4.1379** |
+
+The 0.135 bits/token between ideal and realized is the coder tax — measured, not assumed.
+
+### S1g — THE RE-PRICED PROJECTION, at the measured rate
+
+Same first-pass rates jg1 measured (58 tokens / 90 repaired cells over 3 pairs), scaled to
+600 pairs, with the rate leg now MEASURED and **with a pose charge the -0.0104 headline
+omitted** (the carrier re-solve recovers `d_pose` to 1.073x, which is not free through the
+sqrt):
+
+| leg | value | S |
+|---|---|---:|
+| seg | 18,000 repaired cells | **-0.015259** |
+| rate | 11,600 tokens @ 4.1379 bits = 6,000 B | **+0.003995** |
+| pose | carrier re-solve 1.073x on `d_pose` | **+0.000314** |
+| **net** | | **-0.010950** |
+| **projected S** | | **0.145576** |
+
+**That clears sub-0.15 with 0.004424 of margin — and it is still a PROJECTION.** The rate
+leg is now measured; the seg leg is 90 cells extrapolated 200x, and the pose leg is n=3.
+
+**What would have to be true to miss 0.15** (rate and pose held at their measured values,
+seg yield swept):
+
+| realized yield (cells/changed token) | repaired | net S | S |
+|---|---:|---:|---:|
+| **1.5517 (jg1 measured, first pass)** | 18,000 | -0.010950 | **0.145576** |
+| 1.2000 | 13,920 | -0.007491 | 0.149035 |
+| **1.0000 (break-even for the goal is near here)** | 11,600 | -0.005525 | **0.151002** |
+| 0.8000 | 9,280 | -0.003558 | 0.152968 |
+| 0.3900 (jg1's 8-pass iterated yield) | 4,524 | +0.001033 | 0.157559 |
+
+**The goal survives if and only if the first-pass yield holds above ~1.06 cells/changed
+token at n600.** jg1 measured 1.462 and 1.500 on single passes and 0.390 when it iterated
+one pair to exhaustion — so the stopping rule is not a refinement, it is the whole game.
+Anything that pushes past the first pass walks the score back up.
