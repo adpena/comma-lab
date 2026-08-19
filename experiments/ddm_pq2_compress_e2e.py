@@ -104,6 +104,30 @@ RECEIVER = REPO / "experiments" / "ddm_rr2_receiver_close.py"
 # to byte-close candidates.  The expected identity is now RESOLVED AT RUN TIME (see
 # `resolve_expected_archive`), and a caller rebuilding a different candidate must supply
 # that candidate's own recipe rather than silently asserting rr4's numbers over other bytes.
+# ``rc64_source_sha256`` NAMES THE ENCODER ROLE, NOT THE SHIPPED MEMBER.  Two distinct
+# bodies wear the file name ``rc64_backend.c`` and conflating them cost two arms a
+# byte-close each:
+#
+#   ENCODER role   12,222 B  5c75e2c7…  encoder + decoder.  ``ddm_rr2_encoder_byteclose``
+#                                       appends the 2,603 B checkpoint/resume extension
+#                                       and compiles the 14,825 B result at build time.
+#   SHIPPED role    5,638 B  05839d14…  DECODER ONLY -- the member the archive carries at
+#                                       runtime/entropy/.  It exports no encoder symbol,
+#                                       so it can never drive the encode stage.
+#
+# THE PIN IS CORRECT AND THE FILE EXISTS.  ddm_ma1's memo (2026-08-19 §7) reported the
+# opposite -- "158 copies, 2 distinct contents, neither matches ... clearing this pin is
+# the first owed step" -- after hashing every ``rc64_backend.c`` it could find.  That scan
+# missed the encoder body, which has been at
+# ``<VertigoDataTier>/pact/pr135_intake_20260810/experiment_book/src/cpr1_sub4/entropy/``
+# since 2026-08-10, and ddm_fx2's own byte-close chain USED it successfully on 2026-08-17
+# (180,450 B, archive-repeat byte-identical).  The blocker was never a stale sha; it was
+# that nothing named the ROLE or the location, so a search keyed on the file name found
+# only the shipped decoder and concluded the pin was unclearable.  Redundantly, the
+# encoder body is also exactly recoverable from the pipeline's own retained
+# ``rc64_backend_checkpoint.c`` by removing the extension.  A recipe MAY additionally pin
+# the shipped receiver member through ``rc64_shipped_member_sha256`` (see
+# RECEIVER_RECIPE_KEYS) so both halves of the coder are custodied by name.
 RR4_RECIPE: dict[str, object] = {
     "name": "rr4",
     "archive_sha256": "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956",
@@ -117,6 +141,12 @@ RR4_RECIPE: dict[str, object] = {
 }
 
 RECIPE_KEYS = tuple(RR4_RECIPE)
+
+# OPTIONAL receiver-role key.  When a recipe declares it, the shipped decoder member
+# becomes a VERIFIED INPUT alongside the encoder source, so the rebuild pins both halves
+# of the coder by role instead of pinning one and inheriting the other by accident.
+# Absent, behaviour is exactly as before -- rr4's recipe does not declare it.
+RECEIVER_RECIPE_KEYS = ("rc64_shipped_member_sha256",)
 
 # OPTIONAL split-stage keys, all-or-none.  A COMPOSED candidate is a token re-encode
 # FOLLOWED BY a container repack that this script's token-only rebuild cannot express
@@ -141,11 +171,13 @@ def load_recipe(recipe_json: Path | None) -> dict[str, object]:
         return dict(RR4_RECIPE)
     document = json.loads(Path(recipe_json).read_text())
     recipe = document.get("recipe", document)
-    unknown = sorted(set(recipe) - set(RECIPE_KEYS) - set(SPLIT_RECIPE_KEYS))
+    unknown = sorted(
+        set(recipe) - set(RECIPE_KEYS) - set(SPLIT_RECIPE_KEYS) - set(RECEIVER_RECIPE_KEYS)
+    )
     if unknown:
         raise SystemExit(
             f"recipe carries unknown key(s): {unknown}; expected any of "
-            f"{list(RECIPE_KEYS) + list(SPLIT_RECIPE_KEYS)}"
+            f"{list(RECIPE_KEYS) + list(SPLIT_RECIPE_KEYS) + list(RECEIVER_RECIPE_KEYS)}"
         )
     missing = [key for key in RECIPE_KEYS if key not in recipe]
     if missing:
@@ -173,7 +205,7 @@ def input_spec(recipe: dict[str, object]) -> dict[str, dict[str, object]]:
     their named member file.  The expected shas come from the RECIPE, so a caller rebuilding
     a different candidate declares its inputs instead of inheriting rr4's.
     """
-    return {
+    spec: dict[str, dict[str, object]] = {
         "prepared_dir": {
             "env": "TAC_PQ2_PREPARED_DIR",
             "kind": "directory",
@@ -198,9 +230,40 @@ def input_spec(recipe: dict[str, object]) -> dict[str, dict[str, object]]:
             "env": "TAC_PQ2_RC64_SOURCE",
             "kind": "file",
             "sha256": recipe["rc64_source_sha256"],
-            "role": "range-coder backend C source (inherited substrate; see the accounting table)",
+            "role": (
+                "RC64 ENCODER-ROLE C source (encoder + decoder, 12,222 B); the build stage "
+                "appends the checkpoint/resume extension and compiles it. NOT the shipped "
+                "runtime/entropy member -- see rc64_shipped_member below"
+            ),
         },
     }
+    # PRESENT-BUT-EMPTY MUST REFUSE, never silently skip.  A recipe author who declares
+    # the receiver pin and leaves it blank would otherwise get a verification that quietly
+    # checks nothing -- the silent-instrument failure this whole edit exists to end.
+    if "rc64_shipped_member_sha256" in recipe:
+        shipped = recipe["rc64_shipped_member_sha256"]
+        if not isinstance(shipped, str) or not _is_sha256(shipped):
+            raise SystemExit(
+                "recipe declares rc64_shipped_member_sha256 but its value is not a "
+                f"64-character lowercase hex sha256: {shipped!r}. Remove the key or pin "
+                "the real shipped runtime/entropy/rc64_backend.c sha."
+            )
+        spec["rc64_shipped_member"] = {
+            "env": "TAC_PQ2_RC64_SHIPPED_MEMBER",
+            "kind": "file",
+            "sha256": shipped,
+            "role": (
+                "RC64 SHIPPED receiver member (decoder only, 5,638 B) carried at "
+                "runtime/entropy/rc64_backend.c; pinned so both coder roles are custodied "
+                "by name rather than one being inherited by accident"
+            ),
+        }
+    return spec
+
+
+def _is_sha256(value: str) -> bool:
+    """A sha256 pin is 64 lowercase hex characters; anything else is not a pin."""
+    return len(value) == 64 and all(c in "0123456789abcdef" for c in value)
 
 
 def sha256_file(path: Path) -> str:
