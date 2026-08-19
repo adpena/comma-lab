@@ -250,8 +250,68 @@ cells repaired at n600 and `y` is the realized yield:
 | 0.600 | 24,995 | 69.9% |
 | 0.4063 | impossible at any repair | — |
 
+## THE CHAIN IS PROVEN END TO END, AND THE PAYLOAD CLAIM IS CHECKABLE
+
+Two things that de-risk MAIN's harvest, both verified rather than asserted:
+
+1. **The per-pair checkpoint IS the payload.** `tools/ddm_jg3_edits_from_checkpoint.py`
+   rebuilds the edited token planes from the JSONL's sparse `(y, x, value)` records
+   against the sha-pinned base field, and **refuses if the reconstructed token count
+   disagrees with the count the checkpoint recorded**. So "always keep the payload" is
+   a checked property here, not a claim — the bytes are recoverable at any moment,
+   including mid-run, without waiting for the npz mirror.
+2. **solve -> reconstruct -> re-encode -> `archive.zip` delta runs end to end.** The
+   reconstructed edit set was fed straight into `ddm_jg2_tail_reencode.py --stage
+   encode` on the pointer body. That is the exact path a seal must take, exercised
+   before anyone needs it under time pressure.
+
+### And the instrument REFUSED TO CERTIFY ITS OWN NUMBER, which is the best thing it did
+
+The encode returned a delta **and flagged it untrustworthy**:
+
+```
+{"event": "UNPROVEN", "note": "payload retained, but the 600-frame control has not
+ proved this encoder byte-identical on this body; the delta is NOT trustworthy"}
+{"archive_delta_bytes": 31, "delta_trustworthy": false, "control": null, ...}
+```
+
+`ddm_jg2` ran its byte-identity control **in its own store**; my store carries no
+control record, so the encoder fails closed rather than letting me quote a number whose
+instrument was never proven here. **That is the vacuity-equals-pass failure being
+actively prevented** — a skipped control would otherwise have read as green.
+
+The numbers, quoted as UNPROVEN and not as a result:
+
+| quantity | value |
+|---|---:|
+| tokens changed (6 pairs) | 68 |
+| token stream | 109,696 -> 109,727 B |
+| `archive.zip` | 176,420 -> 176,451 B (**+31 B**) |
+| bits per changed token | **3.6471** |
+| vs jg2's MEASURED 4.1379 | **0.881x** |
+| `delta_trustworthy` | **false** |
+
+Read carefully, this is mildly *encouraging* and firmly *not evidence*: at ~17% higher
+edit density than jg2's probe the implied price went **down** (3.65 vs 4.14 bits/token),
+where the cross-regime worry was that it would go up. But 68 tokens over 6 pairs is
+still the sparse regime, not the ~11,000-token regime an n600 solve produces, and the
+instrument itself says the delta is not trustworthy on this store.
+
+**Owed, and cheap: `ddm_jg2_tail_reencode.py --stage control` in the jg3 store — ~16 min,
+$0 — flips `delta_trustworthy` to true and makes every later rate number quotable.**
+It was not run first here, and it should have been; that ordering is now in Owed.
+
+**The n600 solve is safely detached.** PID 81175 has been reparented to `launchd`
+(PPID 1), so it survives this session; it checkpoints every pair and resumes with
+`--resume`. Rungs are readable at any moment.
+
 ## Owed, with owners
 
+0. **Run `ddm_jg2_tail_reencode.py --stage control --store <jg3 store>` FIRST**
+   (~16 min, $0). It proves the encoder byte-identical on this body and flips
+   `delta_trustworthy` to true. Every rate number this arm or a successor quotes from
+   the jg3 store is UNPROVEN until it runs. I ran the encode before the control; that
+   ordering was wrong and the instrument caught it.
 1. **The n600 solve must finish** (~22 h from launch, resumable, per-pair checkpoints
    at `/Volumes/APDataStore/pact/ddm_jg3/checkpoints/seg_solve_n600.jsonl`). Rungs are
    readable at any time. **Owner: MAIN's harvest, or a successor arm with `--resume`.**
