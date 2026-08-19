@@ -302,3 +302,63 @@ correction) · `[[read-closed-negatives-as-actuator-datasheets]]`.
 5. **Re-derive `min_count` whenever a model in this family moves regime.** §3 is the second
    receipt in two arms that an inherited constant flipped a family verdict, not just a byte
    count (fx2 §5's learning-rate plateau was the first).
+
+---
+
+## SUPERSESSION (append-only, added 2026-08-19 by `ddm_rv14f` — original text above UNTOUCHED)
+
+Per Catalog #110/#113 the claims above are preserved verbatim as
+HISTORICAL_PROVENANCE. This section supersedes one of them.
+
+**Superseded claim — §7 "Honest limits", first bullet (lines 226-229):**
+
+> *"I hashed **every** `rc64_backend.c` on both trees: 158 copies, **2 distinct contents**
+> (`05839d14…` ×157, `b249b77b…` ×1), and **neither matches**."*
+
+**and §NEXT_IF_RESUMED item 1 (lines 290-292):**
+
+> *"Clear the `rc64_source_sha256` pin … Until it clears, no token-stream work in this
+> lineage can produce an archive byte."*
+
+### The correction
+
+**The pinned file exists and has since 2026-08-10.** Measured by direct hash:
+
+    /Volumes/VertigoDataTier/pact/pr135_intake_20260810/experiment_book/src/cpr1_sub4/entropy/rc64_backend.c
+    sha256 5c75e2c70b89f148bc9d117d4dbd39a24dfb2e72ec41b0a7e9b9cf490ca07ee6   12,222 B
+
+Three arms reached this independently: `ddm_rc1x` (a6e07d42df), `ddm_rv13` from the
+filesystem, and this registry pass. **The pin blocker was never real.** ma1's byte-close was
+not blocked by a missing file; it was blocked by a sweep whose scope did not reach the tree
+the file was on.
+
+### The denominator, with its scope stated (`m53`)
+
+The "158 copies, 2 distinct contents" count is not wrong — it is **scoped**, and the scope
+was not stated beside the number. Re-measured with the scope declared:
+
+    scope:  /Volumes/VertigoDataTier/pact + /Volumes/APDataStore/pact + /Users/adpena/Projects/pact
+    method: find -name rc64_backend.c -not -name '._*' -type f, then sha256 every hit
+    result: 241 files, 4 distinct contents
+
+Three published counts for what read as one sweep — ma1 *158 copies*, fx2 *252 `.c` files*,
+rc1x *232 copies* — are three different scopes over two different populations (`rc64_backend.c`
+files vs all `.c` files). None stated its scope. That is the `m53` negative-existence law
+half-applied: rc1x named the genus, and the campaign kept publishing bare counts.
+
+**The four bodies are now enumerated once, with roles**, in
+`reverse_engineering/rc64_backend_role_registry.{md,json}`. Read that before searching for
+this filename again — a name-keyed search has 241 hits and can land on any of four bodies,
+two of them encoder-class.
+
+### Corrected status
+
+**UNBLOCKED-BUT-DOMINATED, not blocked.** ma1 byte-closed on the D1 lineage 2026-08-19 at
+180,345 B via the rc1x two-role recipe. That is dominated by the live pointer (to1 176,420 B,
+and since then up3 at S 0.15652626). The owed step in NEXT_IF_RESUMED item 1 is **discharged**;
+items 2-5 are unaffected by this correction.
+
+Sources: `.omx/research/ddm_rv13_landing_wave_review_20260819.md` §F1/§F8/§F13 ·
+`.omx/research/ddm_rc1x_rc64_recipe_fix_20260819.md` ·
+`.omx/research/ddm_fx2_t4_sealed_fire_order_SUPERSESSION_20260819.json` ·
+`.omx/research/ddm_rv14f_rv13_fix_batch_20260819.md`

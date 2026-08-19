@@ -475,3 +475,66 @@ Fire-order: `.omx/research/ddm_fx2_t4_sealed_fire_order_20260818.json`.
    §6 shows the floor keeps falling as the context is enriched (108,522 → 108,151 B), but cell
    occupancy falls with it (7,667 → 2,057 observations per used cell), so the next context must buy
    its richness from a feature with real structure rather than from a cross product.
+
+---
+
+## SUPERSESSION (append-only, added 2026-08-19 by `ddm_rv14f` — original text above UNTOUCHED)
+
+Per Catalog #110/#113 the claims above are preserved verbatim as
+HISTORICAL_PROVENANCE. This section supersedes one of them.
+
+**Superseded claim — the "Code length, not archive bytes" bullet (lines 336-341):**
+
+> *"I attempted the byte-close and it is blocked at input verification … `ddm_pq2_compress_e2e.py`'s
+> default recipe pins `rc64_source_sha256 = 5c75e2c7…`, and **no file on either SSD matches it** —
+> I hashed all 252 `.c` files under the pact tree and every `rc64_backend.c` copy is `05839d1416e68a49…`."*
+
+**and §"MAIN byte-closes…" item 2 (line 461):**
+
+> *"after clearing the `rc64_source_sha256` pin blocker in §9."*
+
+### The correction
+
+**The pinned file exists and has since 2026-08-10** — eight days before this memo declared it
+absent. Measured by direct hash:
+
+    /Volumes/VertigoDataTier/pact/pr135_intake_20260810/experiment_book/src/cpr1_sub4/entropy/rc64_backend.c
+    sha256 5c75e2c70b89f148bc9d117d4dbd39a24dfb2e72ec41b0a7e9b9cf490ca07ee6   12,222 B
+
+Reached independently by `ddm_rc1x` (a6e07d42df), `ddm_rv13`, and this registry pass. The
+same false claim in the **sealed** fire order is superseded separately by
+`.omx/research/ddm_fx2_t4_sealed_fire_order_SUPERSESSION_20260819.json` (sealed content
+untouched).
+
+**Two claims in that bullet need separating**, because only one of them is wrong:
+
+* *"blocked at input verification, not at the algorithm"* — the diagnosis was right about
+  **where**; the fail-closed check was working, and refusing to bypass it was correct.
+* *"no file on either SSD matches it"* — **false**. The sweep hashed 252 `.c` files "under the
+  pact tree", a scope that did not reach
+  `/Volumes/VertigoDataTier/pact/pr135_intake_20260810/`. A scoped miss was published as a
+  universal absence. That is the `m53` failure shape: a negative-existence claim needs an
+  exhaustive search or the honest form *"did not find in `<scope>`"*.
+
+### The denominator, with its scope stated
+
+    scope:  /Volumes/VertigoDataTier/pact + /Volumes/APDataStore/pact + /Users/adpena/Projects/pact
+    method: find -name rc64_backend.c -not -name '._*' -type f, then sha256 every hit
+    result: 241 files, 4 distinct contents
+
+Also false in the superseded bullet: *"every `rc64_backend.c` copy is `05839d1416e68a49…`"*.
+There are **four** distinct bodies, and **two are encoder-class** — including a 14,825 B
+checkpoint-extended encoder sitting under the plain name `rc64_backend.c`, twice. The full
+role table is `reverse_engineering/rc64_backend_role_registry.{md,json}`.
+
+### Corrected status
+
+**UNBLOCKED-BUT-DOMINATED, not blocked.** fx2's D1 was byte-closed 2026-08-17. The recipe fix
+the bullet asks for (a `--recipe-json` carrying the correct pin) landed as `ddm_rc1x`'s
+two-role recipe. Both lineages are dominated by the live pointer. §9's blocker premise is
+**void**; the rest of the memo's measurements are unaffected — this correction touches the
+byte-close status only, not a single code-length number.
+
+Sources: `.omx/research/ddm_rv13_landing_wave_review_20260819.md` §F1/§F8/§F13 ·
+`.omx/research/ddm_rc1x_rc64_recipe_fix_20260819.md` ·
+`.omx/research/ddm_rv14f_rv13_fix_batch_20260819.md`

@@ -1,0 +1,51 @@
+{
+  "schema": "rc64_backend_role_registry.v1",
+  "measured_at_utc": "2026-08-19T11:45:32.268275+00:00",
+  "measured_by": "ddm_rv14f (rv13 F13)",
+  "scope": [
+    "/Volumes/VertigoDataTier/pact",
+    "/Volumes/APDataStore/pact",
+    "/Users/adpena/Projects/pact"
+  ],
+  "method": "find -name rc64_backend.c -not -name '._*' -type f, then sha256 every hit",
+  "files_found": 241,
+  "distinct_contents": 4,
+  "bodies": [
+    {
+      "sha256": "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996",
+      "sha256_short": "05839d1416e68a49",
+      "bytes": 5638,
+      "copies": 237,
+      "role": "shipped_receiver_decoder_only",
+      "note": "Ships INSIDE every archive's runtime/entropy/. Decoder-only: it is what the contest runtime executes at inflate time.",
+      "canonical_path": "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/auth_runtime_dir/runtime/entropy/rc64_backend.c"
+    },
+    {
+      "sha256": "1941923a94e4e0a191a43ab2330349195fcb0942756bb03e71e887375bd53eb2",
+      "sha256_short": "1941923a94e4e0a1",
+      "bytes": 14825,
+      "copies": 2,
+      "role": "checkpoint_extended_encoder",
+      "note": "Encoder + a 2,603 B checkpoint/resume block. rc1x calls this 'rc64_backend_checkpoint.c', but on disk it ALSO sits under the plain name rc64_backend.c -- twice. This is the fourth body rc1x's two-role table missed, and it is encoder-class, i.e. exactly the class whose absence the fx2 fire order wrongly asserted.",
+      "canonical_path": "/Volumes/VertigoDataTier/pact/ddm_rc64p_20260810/runtime/rc64_backend.c"
+    },
+    {
+      "sha256": "b249b77bb06a27c8f31a48282321ff3b04773a2555a9dfe20d114d25b3103bd6",
+      "sha256_short": "b249b77bb06a27c8",
+      "bytes": 22179,
+      "copies": 1,
+      "role": "foreign_intake_pr138_opal_v1",
+      "note": "Not ours. A PR138 opal_v1 intake body. Never a candidate for the pq2 pin.",
+      "canonical_path": "/Volumes/APDataStore/pact/ddm_pq2/intake/pr138_src/submissions/opal_v1/runtime/entropy/rc64_backend.c"
+    },
+    {
+      "sha256": "5c75e2c70b89f148bc9d117d4dbd39a24dfb2e72ec41b0a7e9b9cf490ca07ee6",
+      "sha256_short": "5c75e2c70b89f148",
+      "bytes": 12222,
+      "copies": 1,
+      "role": "encoder_THE_PIN",
+      "note": "The body experiments/ddm_pq2_compress_e2e.py's default recipe pins as rc64_source_sha256. Present on VertigoDataTier since 2026-08-10.",
+      "canonical_path": "/Volumes/VertigoDataTier/pact/pr135_intake_20260810/experiment_book/src/cpr1_sub4/entropy/rc64_backend.c"
+    }
+  ]
+}
