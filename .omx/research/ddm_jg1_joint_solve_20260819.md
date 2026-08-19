@@ -459,4 +459,133 @@ worth the next unit's compute, not as a projected row.
    one render+SegNet forward, taking a site from ~2.33 s to ~48 ms — a ~48x speedup that
    makes an n600 rate-aware solve affordable at $0.
 
-*(S2/S3 sections follow as they are measured.)*
+---
+
+## S3 — POSE BASIS ENLARGEMENT IS PRICED OUT BY THE BYTE MAP. RE-ORIENT INSTEAD.
+
+`ddm_up2` §5 measured the pose wall as the **12-dimensional basis**: the residual sits in
+the carrier Jacobian's smallest singular direction, so nulling it demands a median **6.4x**
+larger frame perturbation than a basis relaxed to full 24x32 freedom. My charter asks for
+the minimal basis extension that spans that excess step, priced with rate in the loop.
+
+**It does not need a probe. The shipped byte map already refuses it.** Measured from the
+archive through the up3 parser:
+
+| carrier component | bytes | share of the carrier body |
+|---|---:|---:|
+| **basis** (12 x 3 x 24 x 32 = 27,648 coefficients @ 3.552 bits) | **12,277** | **55.3%** |
+| Rice payload (the 600 x 12 int12 coefficients) | 9,759 | 44.0% |
+| metadata + scales + selector tail | ~150 | 0.7% |
+
+The basis is the **majority of the carrier section**, and it is a fixed cost shared across
+all 600 pairs. So adding dimensions scales the dominant term:
+
+| move | rate cost | best possible seg/pose return |
+|---|---:|---:|
+| 12 -> 24 dims (double the basis) | **up to +12,277 B = +0.008175 S** | the ENTIRE pose leg is **0.008746 S** |
+
+**Even driving `d_pose` to exactly zero would net `+0.000571 S`** — and that is against an
+uncompressed upper bound on the cost, with the whole pose leg surrendered to pay for it.
+Basis enlargement cannot reach sub-0.15 on this vehicle; it cannot even pay for itself
+with certainty. **Verdict: refused on arithmetic, `verdict_scope: family` for
+dimension-adding on this carrier layout, at $0.**
+
+**What the same arithmetic licenses instead.** up2's finding was that the basis is
+mis-ORIENTED, not too small — the residual lands on the *smallest* singular direction. A
+**re-orientation of the existing 12 dimensions costs ZERO extra coefficients**: same
+27,648 basis values, same 12,277 B envelope, different numbers (the entropy of the new
+values is the only second-order cost). That is up2's owed item 2, it is the only pose move
+whose rate leg is free, and it remains unowned. **The pose axis's next move is
+re-orientation, not enlargement** — and this arm's contribution is to have priced the
+alternative out before anyone spent a run on it.
+
+---
+
+## S2 — THE JOINT COUPLING
+
+The reason this arm exists. `upstream/modules.py:108` gives the asymmetry: SegNet reads
+only frame `2p+1`, PoseNet reads both. So the carrier is a pose-only actuator with zero
+seg obligation (which is why up2's solve was seg-free by construction), while **the token
+edits of S1 land in a frame PoseNet also reads**. A seg gain bought with tokens is
+therefore NOT automatically free on pose, and nothing in the campaign had measured that.
+
+Measured here: first-pass greedy seg descent on seeded-random pairs, then `d_pose` through
+the frozen CPU PoseNet against the **DALI** GT targets (lineage gate VERIFIED at run time,
+`up2.verify_gt_lineage(axis="contest_cuda") -> VERIFIED`), with frame `2p` held at the
+shipped decode.
+
+### The measurement — and it is the hardest negative this arm found
+
+3 seeded-random pairs, first-pass greedy seg descent, `d_pose` on the DALI targets:
+
+| pair | seg flips | tokens | `d_pose` before | `d_pose` after | factor |
+|---|---|---:|---:|---:|---:|
+| 283 | 38 -> 13 | 20 | 1.0989e-05 | **9.0402e-03** | **822x** |
+| 468 | 70 -> 37 | 19 | 4.2551e-06 | 4.4506e-04 | 105x |
+| 513 | 80 -> 48 | 19 | 2.3061e-06 | 5.4207e-04 | 235x |
+| **total** | **90 cells repaired** | **58** | | **mean delta +3.3366e-03** | |
+
+The seg leg behaved exactly as S1 said it would — **1.552 cells/token**, matching S1e's
+1.651 and S1c's 1.50. **The pose leg was destroyed.**
+
+Priced on the shipping objective, extrapolating the per-pair mean to the field:
+
+| leg | value |
+|---|---:|
+| seg gain (18,000 cells) | **-0.01526 S** |
+| `d_pose` 7.649e-06 -> 3.345e-03, so `sqrt(10 d_pose)` 0.008746 -> 0.1829 | **+0.1742 S** |
+| **net** | **+0.159 S — catastrophically worse** |
+
+**The pose damage is ~11x the seg gain.** A token-only seg solve is refused on the joint
+objective by an order of magnitude, and it would have looked like a clean win to anyone
+measuring only `d_seg`. That is precisely the trap this arm was built to find.
+
+### The mechanism, measured rather than inferred
+
+A sensitivity ramp on pair 283 (random single-token edits, camera pixels changed vs
+`d_pose`):
+
+| edits | camera px changed | `d_pose` |
+|---:|---:|---:|
+| 0 | 0 | 1.0989e-05 |
+| 1 | 0 | 1.0989e-05 |
+| 2 | 5,294 (0.5%) | 7.1887e-05 |
+| 5 | 17,090 | 1.7985e-04 |
+| 10 | 20,727 | 2.4488e-05 |
+| 20 | 50,014 | 3.2735e-04 |
+
+**Two edits — half a percent of the camera frame — move `d_pose` 6.5x, and the response
+is non-monotonic** (10 edits reads lower than 5). This is not a smooth gradient; it is an
+erratic, high-gain response.
+
+The reason is structural and it explains why nobody could have guessed the magnitude.
+Frame `2p` is not a picture — it is `127.5 + amplitude x (12-dim basis)`, a **photometric
+probe**. up2 §5 measured the carrier's dominant singular direction as "almost certainly
+the global photometric one" (sigma ~ 10-14.5). **So this vehicle encodes pose as a
+photometric relationship between the probe frame and the semantic frame.** Frame `2p+1`'s
+photometry is half of that code, and the shipped carrier coefficients were solved by up2
+**to convergence against the ORIGINAL frame `2p+1`**. Editing tokens moves frame 1 out
+from under a converged solve.
+
+**This also retro-explains the campaign's oldest seg result.** `ddm_qs1` measured 189
+changed pixels buying 32 net flips and refused it on rate; `js8`/`vd1` measured 136 of 200
+singleton edits harmful. Those refusals were read as the token actuator being weak. The
+measurement here says something sharper: **the seg actuator is strong (1.55 cells/token)
+and the pose coupling is what refuses it.**
+
+### The composition question this opens — and it is the RIGHT question
+
+Because the damage lands in the direction the carrier has the MOST authority over (the
+global photometric one, sigma ~ 10-14.5 against sigma_min ~ 0.011), a **carrier re-solve**
+is not obviously hopeless: the carrier's 12 free coefficients per pair exist precisely to
+set the photometric relationship, and up2 proved they have real authority (429/600 pairs
+improved, 0 worsened). The token edit does not consume the carrier's control; it moves the
+target the carrier is aiming at.
+
+So the joint move is **not** "edit tokens" — it is "edit tokens, THEN re-solve the carrier
+against the new frame 1". That is measured in S2b.
+
+See `retained/S2_joint_coupling.json` and `retained/S2_edited_tokens.npz` (the edited token
+payloads are retained per the always-keep-the-payload rule, not just their measured
+lengths).
+
