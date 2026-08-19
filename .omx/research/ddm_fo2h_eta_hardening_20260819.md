@@ -487,3 +487,11 @@ pairs, pooled η **0.533 < the 0.753 bar** (0/24 pairs above bar; per-pair 0.348
 ratio median 1.291× worsening (max 18.3), net_S_at_measured_eta **+0.00646**. Third independent
 refusal — the rt1-channel closure now rests on n=12 AND n=24 measurements plus the gen-2
 headline. Family closure unchanged, confidence strengthened.
+
+**Straggler 3 (null_shardD, rc=0 at launch_counter 256, harvested same-hour):** n=24 pairs under
+the HARD yuv6 null-space pose projection, pooled η **0.5614 < the 0.753 bar** (0/24 above; per-pair
+0.377–0.710), pose ratio median 1.187× (9 pairs improved — the hard projection does reduce pose
+damage vs shardC's 1.291×, but not enough), net_S_at_measured_eta **+0.005632**. FOURTH independent
+refusal. The channel family is closed on the gen-2 headline plus THREE straggler channels spanning
+soft-retain, plain, and hard-projected realizations — the η shortfall is a property of the r=1
+edit-support formulation, not of any one pose-protection variant.
