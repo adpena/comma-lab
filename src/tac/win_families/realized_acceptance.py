@@ -57,9 +57,9 @@ THE JOINT OBJECTIVE IS IN SCORE UNITS
 -------------------------------------
 ``ddm_up2`` descends d_pose; ``ddm_jg1`` counts seg flips.  Neither is directly
 comparable, and a seg repair that costs rate is not admissible just because flips fell.
-So the engine's objective is contracted to return **score units** (the same units as
-``100*d_seg + sqrt(10*d_pose) + 25*B/N``), and a family adapts its native quantity into
-those units.  That is what makes "accept iff realized joint dS < 0" a single rule rather
+So the engine's objective is contracted to return **score units** -- the units of
+``upstream/evaluate.py:92``, owned by :mod:`tac.contest_score` -- and a family adapts its
+native quantity into those units.  That is what makes "accept iff realized joint dS < 0" a single rule rather
 than four incompatible ones.
 """
 

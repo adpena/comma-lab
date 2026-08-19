@@ -50,6 +50,8 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
+from tac import contest_score
+
 __all__ = [
     "Calibration",
     "ModelAxisError",
@@ -58,9 +60,8 @@ __all__ = [
     "bits_to_bytes_ceiling",
 ]
 
-#: ``upstream/evaluate.py:64`` -- the rate denominator.
-CONTEST_UNCOMPRESSED_BYTES = 37_545_489
-RATE_WEIGHT = 25.0
+#: Re-exported from the canonical helper so no second denominator exists in the repo.
+CONTEST_UNCOMPRESSED_BYTES = contest_score.UNCOMPRESSED_SIZE_BYTES
 
 #: ``ddm_fx1``'s measured parse-back calibration between modelled code length and the
 #: realized container.  Recorded here as a NAMED ANCHOR for reuse, never as a default:
@@ -239,7 +240,8 @@ class ModelAxisReservoir:
     ) -> float:
         """Projected rate-leg score delta for a SAVING of ``modelled_bytes``.
 
-        Returns a NEGATIVE number for a saving, matching the score convention.
+        Returns a NEGATIVE number for a saving, matching the score convention.  The rate
+        arithmetic is :func:`tac.contest_score.rate_term`; nothing is re-derived here.
         """
         projected = self.project_archive_bytes(
             modelled_bytes,
@@ -247,7 +249,7 @@ class ModelAxisReservoir:
             regime=regime,
             allow_cross_regime=allow_cross_regime,
         )
-        return -RATE_WEIGHT * projected / CONTEST_UNCOMPRESSED_BYTES
+        return -contest_score.rate_term(abs(projected))
 
     def saturated_sectors(self, *, threshold: float = 0.99) -> tuple[str, ...]:
         """Sectors at or above ``threshold`` of their ceiling.

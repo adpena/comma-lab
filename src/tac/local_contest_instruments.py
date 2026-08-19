@@ -251,17 +251,17 @@ def assert_pose_absolute_quotable(
 
 
 def seg_leg(d_seg: float) -> float:
-    """SegNet contribution ``100 * d_seg``.  Delegates to :mod:`tac.contest_score`."""
+    """The SegNet leg of the score.  Delegates to :func:`tac.contest_score.seg_term`."""
     return contest_score.seg_term(d_seg)
 
 
 def pose_leg(d_pose: float) -> float:
-    """PoseNet contribution ``sqrt(10 * d_pose)``.  Delegates to :mod:`tac.contest_score`."""
+    """The PoseNet leg of the score.  Delegates to :func:`tac.contest_score.pose_term`."""
     return contest_score.pose_term(d_pose)
 
 
 def rate_leg(archive_bytes: int | float) -> float:
-    """Rate contribution ``25 * archive_bytes / 37_545_489``.  Delegates to contest_score."""
+    """The rate leg of the score.  Delegates to :func:`tac.contest_score.rate_term`."""
     return contest_score.rate_term(archive_bytes)
 
 
@@ -273,7 +273,7 @@ def contest_score_from_legs(d_seg: float, d_pose: float, archive_bytes: int | fl
 def pose_report_bound(d_pose: float) -> float:
     """Half-ULP bound of the 8dp d_pose report, in SCORE units.
 
-    ``d(pose leg)/d(d_pose) = 5/sqrt(10*d_pose)`` GROWS as d_pose falls, so the reporting
+    The pose leg's derivative in d_pose GROWS as d_pose falls, so the reporting
     bound on a *good* carrier is larger than on a bad one.  Any claim whose magnitude is
     below this bound is not resolvable from the printed report at all.
     """

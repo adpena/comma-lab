@@ -50,6 +50,8 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from tac import contest_score
+
 __all__ = [
     "CONTEST_UNCOMPRESSED_BYTES",
     "ContainerCandidate",
@@ -63,10 +65,8 @@ __all__ = [
     "search_container_space",
 ]
 
-#: ``upstream/evaluate.py:64`` -- the rate denominator.
-CONTEST_UNCOMPRESSED_BYTES = 37_545_489
-#: ``upstream/evaluate.py:92`` -- the rate weight.
-RATE_WEIGHT = 25.0
+#: Re-exported from the canonical helper so no second denominator exists in the repo.
+CONTEST_UNCOMPRESSED_BYTES = contest_score.UNCOMPRESSED_SIZE_BYTES
 
 
 class ContainerOptimizerError(RuntimeError):
@@ -74,8 +74,15 @@ class ContainerOptimizerError(RuntimeError):
 
 
 def bytes_to_score(delta_bytes: int | float) -> float:
-    """Convert an ARCHIVE byte delta into score units.  Negative bytes = negative score."""
-    return RATE_WEIGHT * float(delta_bytes) / CONTEST_UNCOMPRESSED_BYTES
+    """Convert an ARCHIVE byte delta into score units.  Negative bytes = negative score.
+
+    Delegates to :func:`tac.contest_score.rate_term`, which owns the weight, the
+    denominator, and upstream's exact binary64 association order.  ``rate_term`` takes a
+    non-negative size, so the sign is carried outside the magnitude rather than by
+    re-deriving the arithmetic here.
+    """
+    magnitude = contest_score.rate_term(abs(float(delta_bytes)))
+    return -magnitude if delta_bytes < 0 else magnitude
 
 
 # ---------------------------------------------------------------------------

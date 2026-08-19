@@ -37,8 +37,6 @@ from tac.canonical_equations.equation import (
 from tac.provenance.builders import build_provenance_for_research_sidecar
 
 MEMO = ".omx/research/ddm_cw1_win_family_canonicalization_20260819.md"
-CONTEST_UNCOMPRESSED_BYTES = 37_545_489
-RATE_WEIGHT = 25.0
 
 #: MEASURED ``ddm_pi2`` 2026-08-16: the MSE between the PyAV and DALI GT pose tables.
 #: float32 reference 0.00014061325055081397; float64 re-reduction 0.00014061324889363773.
