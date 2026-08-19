@@ -29033,3 +29033,33 @@ seal → T4. Memos .omx/research/ddm_sa1_vseries_v7_dead_v2_routing_20260818.md 
   CANDIDATE_SEAL_up3_r1.json sha 89de991f + up2 UP2_RETENTION_MANIFEST + advisory attempt_0001
   receipt) · memories (pose_gap_was_gt_cache_lineage_not_cuda UPDATE 2 + concavity/bounds-add +
   measured-object-vs-named) · tasks ledger (#1133/#1134/#1135/#1136/#1137).
+
+## FEED-jg1-fo2h (2026-08-19 ~10:30Z) — COMPOSITION PROVEN (projected sub-0.15) + pose-null channel CLOSED
+- **ddm_jg1 (8 commits, custody ddm_jg1/ 12 files w/ retained edited payloads): the seg and pose
+  actuators COMPOSE on the up3 body.** S0: the tail (109,792 B, 62.2% of archive) is an HPAC-coded
+  (600,384,512) uint8 5-class TOKEN LABEL MAP at 0.00745 bits/token — not an opaque latent. S1: a
+  $0 DALI-lineage seg instrument reproduces the T4 seg leg at 0.99995×; 95.9% of seg debt is
+  render/re-segment loss (stored tokens 99.9985% identical to DALI GT argmax — rt1's #1075 law
+  confirmed on the shipped body). Move class: SINGLE-CELL token moves repair 1.55 argmax
+  cells/changed token (+4.718 bits/token MODELLED vs 15.8-bit boundary budget); block/dilation
+  worse at every radius. S2 THE LAW: token seg edits destroy pose ×387, but re-running the
+  carrier's own coordinate descent against the edited frame recovers d_pose to mean 1.073× at ~0
+  bytes (one pair BETTER than shipped) — a seg-only solve would have cost +0.159 S; the JOINT
+  re-solve is the vehicle. 3-pair projection: net −0.0104 S → ~0.14614 (SUB-0.15), with exactly
+  ONE modelled leg (rate, priced on a different body's model) — replaceable by 52 s of re-encoder.
+  S3: pose basis enlargement REFUSED on arithmetic (basis 12,277 B ≥ the whole pose leg 0.008746 S
+  even at d_pose→0); the free move is 12-dim re-orientation (owed). **Successor ddm_jg2 LIVE
+  (#1139): real rate → n600 joint solve (seeded-random, realized acceptance, per-pair DALI pose
+  gate) → byte-close → seal → MAIN T4.**
+- **ddm_fo2h gen-2 (16 commits, 41 sha-receipted payloads): the pose-null seg channel is CLOSED —
+  NET NON-SUPPLIER on the shipping axis.** η itself HARDENED (0.5794 at n=70 out-of-sample vs the
+  0.5196 bar, >2σ) but the FO-1 bar assumed the pose leg away: DALI-scored, the channel's pose
+  cost is +0.011172 S vs seg −0.000331 = **33.2×**, 5/5 pairs worsening. Gen-1's
+  SUPPLIER-CONFIRMED verdict read η alone.
+- **GT-LINEAGE LAW SHARPENED (memory UPDATE 3):** the 19.09× pose factor is a population MEDIAN —
+  per-pair it spans 0.887–1,627 (median 19.165 reproduces up1's figure and describes almost no
+  individual pair; fo2h pair 52: local 3× better vs shipping 47× worse). Every per-pair pose
+  decision scores DIRECTLY on DALI GT. Variance law: pose bands are 13.4× seg's at equal n.
+- STORES CONSULTED: run-artifacts (jg1 memo + custody manifest + verdict logs; fo2h memo + gen-1
+  LEG-1 verdict + FO1_CODER_RACE.json) · memories (pose_gap UPDATE 2/3 + concavity + #930 search
+  pricing) · tasks (#1134→#1139, #1137, #1075).
