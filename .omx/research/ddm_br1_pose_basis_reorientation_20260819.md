@@ -25,14 +25,49 @@ Replacing the search with a damped Gauss-Newton step on the same basis, same lat
 | `up2` ±2 coordinate descent, n600 | 0.98452 | 970 | 0 |
 | `br1` Gauss-Newton + ±2 polish, n12 random | **0.85985** | 44 | **0** |
 
-Net **ΔS = −7.819e-06 from 12 of 600 pairs alone**, at **zero bytes** — already 2.2× the −3.5e-06
-admit bar, measured against the **to1** body those numbers were taken on.
+⚠ That first table is `br1`-vs-`up2` on the **to1** body, which `ddm_up3` has since superseded. The
+LANDED result below is measured and byte-closed against the **live** pointer `7ce46fd7…`, on top of
+up2's own solved codes.
 
-⚠ **That table is against a SUPERSEDED body — see "Baseline correction" below.** The n12 run and up2's
-n600 both sit on to1 (`50e56145…`). `ddm_up3` has since landed the thirteenth move, so the live pointer
-is `7ce46fd7…` at S 0.15652626 and already carries up2's solved codes. The comparison above is therefore
-`br1`-vs-`up2` **on equal footing**, not a claim of marginal gain over the live pointer. The marginal
-number is being re-measured against the live body.
+## THE RESULT — n600, byte-closed against the live pointer
+
+| | live pointer `7ce46fd7` | **br1 candidate** |
+|---|---|---|
+| d_pose (DALI, n600) | 7.649247e-06 | **6.993157e-06** |
+| ratio | — | **0.91423** |
+| archive bytes | 176,420 | **176,429** (ΔB **+9**) |
+| archive sha256 | `7ce46fd7a845d598…` | `44e9e6507d60bf8b…` |
+
+```
+ΔS_pose  = -3.834877e-04
+ΔS_rate  = +5.992731e-06      (+9 B)
+ΔS_seg   =  0                 (byte-identical odd-frame sections, proven below)
+--------------------------------------------
+NET ΔS   = -3.774950e-04      vs the -3.5e-06 admit bar  =  107.9x
+```
+
+**204 of 600 pairs improved, 0 worsened**, 2,323 of 7,200 coefficients changed across 200 pairs.
+Advisory projected score **0.15614877** — `[macOS-CPU advisory]`, `score_claim=false`; only
+`upstream/evaluate.py` on contest hardware makes it a score.
+
+**Report bounds, both addends, unequal by construction** (the pose leg's sensitivity grows as d_pose
+falls, so they must not be summed into one figure): live ±2.858450e-06, candidate ±2.989533e-06. The net
+clears their sum by 64.5×, so the move is resolvable by the T4 8dp report rather than lost in it.
+
+The admission sweep priced every level by BUILDING the archive, and the full set won — bytes are not
+monotone in pairs admitted, because brotli and the CK2 container search re-optimise per candidate:
+
+| pairs admitted | archive bytes | ΔB | ΔS_pose | ΔS_rate | net ΔS |
+|---|---|---|---|---|---|
+| 20 | 176,431 | +11 | −1.5105e-04 | +7.324e-06 | −1.4373e-04 |
+| 51 | 176,429 | +9 | −2.4880e-04 | +5.993e-06 | −2.4281e-04 |
+| 102 | 176,453 | +33 | −3.4108e-04 | +2.197e-05 | −3.1911e-04 |
+| 153 | 176,460 | +40 | −3.7497e-04 | +2.663e-05 | −3.4833e-04 |
+| **204 (all)** | **176,429** | **+9** | **−3.8349e-04** | **+5.993e-06** | **−3.7749e-04** |
+
+Splice-ready codes: `retained/byte_close_n600/br1_candidate_codes.npy`
+Archive: `retained/byte_close_n600/archives/archive_level_0204.zip` (every level retained, not just the
+winner).
 
 ---
 
@@ -211,8 +246,21 @@ Disjoint archive sections, and a clean division of labour:
 - `jg3` edits **tokens** → the semantic stream → **frame 1** (the seg master).
 - `br1` edits **carrier coefficients** → **frame 0** (the pose carrier).
 
-d_seg is invariant under `br1` **by construction**: SegNet reads only the odd frame
-(`upstream/modules.py:108`) and `br1` writes only even frames.
+d_seg is invariant under `br1` **by construction AND verified at the bytes**. SegNet reads only the odd
+frame (`upstream/modules.py:108`); `br1` writes only even frames. Rather than rest on that argument, the
+finished candidate was diffed against the live pointer section by section:
+
+| archive section | identical to live? | bytes |
+|---|---|---|
+| `token_stream` (odd-frame tokens) | **yes** | 109,696 |
+| `semantic_blob` | **yes** | 36,130 |
+| `hpac_blob` | **yes** | 17,952 |
+| `compressed_models` (the carrier) | no — the only change | 66,528 |
+
+Every section that produces frame 1 is byte-identical, so d_seg cannot move. Parse-back also confirms the
+candidate decodes to exactly the intended codes, differing from the live body in 200 pairs / 2,323
+coordinates — the solve, and nothing else. (`token_stream` at 109,696 B matches `ddm_jg2`'s own
+byte-identical control, an independent cross-check that this is the same object jg3 is editing.)
 
 The coupling runs one way. PoseNet reads *both* frames, so `jg3`'s token edits change frame 1 and
 therefore change the pose residual — `jg3`'s own header records that a token-only seg solve costs ~387×
@@ -227,11 +275,15 @@ candidate is a re-runnable transform rather than a fixed overlay.
 
 ## What is owed
 
-1. **n600 GN solve** — in flight (pid 55772, `work/gn_n600/`, resumable, ~4 h). Then re-price and
-   byte-close. The n12 net is a subset measurement, not the population number.
-2. **Byte-close** through the up3-cured path. up2's two blockers were one missing transform (the carrier
-   is 2-plane byte-interleaved, reserved bit `0x04`, un-interleaved at `residual_archive.py:188` before
-   any offset read) plus a stale section pin; that cure exists, so this is packaging, not new measurement.
+1. ~~n600 GN solve~~ — **DONE**, 9,018 s, 600/600, rc=0.
+2. ~~Byte-close~~ — **DONE** through `ddm_up3_carrier_splice`, parse-back verified, ΔB +9 B.
+3. **A contest-CUDA T4 row on the candidate.** Everything above is `[macOS-CPU advisory]` on the DALI
+   instrument, which reproduces the T4 pose row at 0.9999× but is not a score. The candidate archive
+   `44e9e650…` is splice-ready and needs the exact-eval fire that only MAIN owns.
+4. **Compose with `jg3`.** The two moves are on disjoint sections; the composed candidate must re-run
+   this arm's coefficient transform AFTER jg3's token edits land, because those edits change frame 1 and
+   therefore the pose residual. That re-run is cheap and the design is re-runnable for exactly this
+   reason.
 3. **Subspace re-choice** — MEASURED at n=120 as worth ~21 points of d_pose (Gauss-Newton 0.9448 vs the
    free-field ceiling 0.7347). Charter it after the Gauss-Newton row lands, and price its bytes first: a
    re-chosen basis re-quantizes all 27,648 stored codes and changes their brotli compressibility, so
