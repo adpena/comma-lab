@@ -50728,7 +50728,68 @@ def check_quantize_degenerate_range_clamped_correctly(
             "dequant recovers `lo` exactly:\n  "
             + "\n  ".join(v[:300] for v in violations[:5])
         )
-    return violations
+
+    # ── SCOPE EXTENSION 2026-08-19 (ddm_sp2, handing ddm_fx4 its owed gate) ──
+    # Catalog #161 owns "the degenerate-value guard must be correct". This
+    # extension owns the sister half: "...and must SURVIVE to the stored value."
+    # Not a new catalog number -- the 2026-07-20 Catalog #351 precedent in
+    # CLAUDE.md's "2026-07-14 catalog amendments" section ("a scope extension,
+    # not a new gate or number, per the post-#400 Catalog #299 consolidation
+    # rule"); the #299 quota brake stands at 407/400.
+    #
+    # THE BUG (ddm_fx4, commit 61c41ab166): a positive floor applied to a scale
+    # and then destroyed by a narrowing fp16 cast one line later, because fp16's
+    # smallest positive value is 2**-24 and everything below half of it rounds to
+    # zero. The dequantiser then divides by the stored 0. Found at 35 sites in 22
+    # files. fx4 fixed all 35 and shipped the predicate in its own test sweep,
+    # but could not wire preflight (this file was owned by another arm), so the
+    # class had a cure and no gate.
+    #
+    # ONE DETECTOR, NOT TWO: the predicate lives in `tac.fp16_floor_guard` and is
+    # consumed by BOTH this gate and fx4's regression sweep. Re-typing it here
+    # would have produced two detectors for one class, which drift apart --
+    # the split-bank failure this repo has already paid for once.
+    #
+    # STRICT from byte one: live count measured 0 at landing (fx4 having fixed
+    # all 35 sites), which is exactly the condition the CLAUDE.md "Strict-flip
+    # atomicity rule" names for flipping in the same batch.
+    from tac.fp16_floor_guard import scan_repo_for_fp16_destroyed_floors
+
+    fp16_violations, fp16_scanned = scan_repo_for_fp16_destroyed_floors(root)
+    if verbose:
+        # Report the DENOMINATOR: a sweep that matched nothing must never read as
+        # green (the silent-instrument / vacuity-equals-pass class).
+        status = f"{len(fp16_violations)} violation(s)" if fp16_violations else "OK"
+        print(
+            f"  [fp16-floor-survives-narrowing-cast] {status} "
+            f"({fp16_scanned} guard-and-cast site(s) scanned)"
+        )
+        for item in fp16_violations[:10]:
+            print(f"    - {item[:220]}")
+    if fp16_violations and strict:
+        raise PreflightError(
+            "check_quantize_degenerate_range_clamped_correctly (ddm_fx4 scope "
+            f"extension) found {len(fp16_violations)} site(s) where a narrowing "
+            "fp16 cast destroys the positive floor written to guard against a "
+            "zero scale. rule chain: a floor (clamp(min=..) | clamp_min(..) | "
+            "max(x, ..)) AND a float16/.half() cast in or near the same "
+            "statement AND no floor AFTER the cast AND the existing floor is "
+            "below 2**-24 AND the cure is not on a nearby following statement "
+            "AND the site carries no substantive same-line waiver -> THE STORED "
+            "SCALE CAN BE ZERO and the dequantiser divides by it. Fix: re-apply "
+            "the floor AFTER the cast at "
+            "tac.fp16_floor_guard.FP16_MIN_POSITIVE (5.960464477539063e-08), on "
+            "the value actually stored and read back -- on the same statement or "
+            "the next one, both are accepted. This is byte-neutral "
+            "wherever the encoder already worked -- the clamp engages only below "
+            "2**-24. If the stored value is genuinely re-floored somewhere this "
+            "static detector cannot see, waive the line with "
+            "`# FP16_POSTCAST_FLOOR_OK:<substantive reason>` (placeholders and "
+            "rationales under 4 characters are rejected). "
+            "Anchor: ddm_fx4 (commit 61c41ab166), 35 sites / 22 files.\n  "
+            + "\n  ".join(v[:300] for v in fp16_violations[:5])
+        )
+    return [*violations, *fp16_violations]
 
 
 # ============================================================================

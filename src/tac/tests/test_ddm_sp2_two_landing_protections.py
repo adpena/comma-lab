@@ -497,3 +497,128 @@ def test_gt_lineage_extension_is_warn_only_not_raising():
     warn_returned = check_evidence_authority_claims_are_custodied(strict=False, verbose=False)
     for item in findings:
         assert item in warn_returned, "extension findings must reach the caller"
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CLASS 3 -- fp16 cast destroys its own floor (ddm_fx4's owed gate, folded
+# here as a Catalog #161 scope extension while ddm_sp2 owns preflight.py)
+# ═══════════════════════════════════════════════════════════════════════════
+
+from tac.fp16_floor_guard import (  # noqa: E402
+    FP16_MIN_POSITIVE,
+    floor_is_fp16_safe,
+    scan_repo_for_fp16_destroyed_floors,
+    scan_text_for_fp16_destroyed_floors,
+)
+from tac.preflight import (  # noqa: E402
+    check_quantize_degenerate_range_clamped_correctly,
+)
+
+
+def test_the_canonical_pre_fix_expression_is_caught():
+    src = "x = ((maxs - mins).float() / 255.0).clamp(min=1e-8).to(torch.float16)\n"
+    assert len(scan_text_for_fp16_destroyed_floors(src, "m.py")) == 1
+
+
+def test_the_cured_form_floor_after_the_cast_is_clear():
+    src = (
+        "x = ((maxs - mins).float() / 255.0).to(torch.float16)"
+        ".clamp(min=_FP16_MIN_POSITIVE)\n"
+    )
+    assert scan_text_for_fp16_destroyed_floors(src, "m.py") == []
+
+
+def test_the_cross_statement_form_is_caught():
+    """A same-statement-only detector would see half the class."""
+    src = (
+        "scale = max(max_abs, 1e-8) / 127.0\n"
+        "scale_fp16 = torch.tensor([scale], torch.float16)\n"
+    )
+    assert len(scan_text_for_fp16_destroyed_floors(src, "m.py")) == 1
+
+
+def test_a_floor_at_or_above_the_fp16_subnormal_is_safe():
+    src = "x = y.clamp(min=5.960464477539063e-08).to(torch.float16)\n"
+    assert scan_text_for_fp16_destroyed_floors(src, "m.py") == []
+
+
+def test_half_call_form_is_detected():
+    src = "x = y.clamp_min(1e-12).half()\n"
+    assert len(scan_text_for_fp16_destroyed_floors(src, "m.py")) == 1
+
+
+def test_a_site_with_no_floor_is_not_flagged():
+    """No guard was intended there; the gate refuses unfalsifiable rows."""
+    src = "x = y.to(torch.float16)\n"
+    assert scan_text_for_fp16_destroyed_floors(src, "m.py") == []
+
+
+def test_a_non_literal_floor_is_treated_as_safe():
+    """Report only what can be PROVEN statically."""
+    assert floor_is_fp16_safe("some_variable") is True
+
+
+def test_floor_safety_boundary_is_pinned_one_ulp_either_side():
+    assert floor_is_fp16_safe(repr(FP16_MIN_POSITIVE)) is True
+    assert floor_is_fp16_safe("1e-08") is False
+    assert floor_is_fp16_safe("_FP16_MIN_POSITIVE") is True
+
+
+def test_a_docstring_quoting_the_pre_fix_expression_is_not_a_violation():
+    """The ddm_fx3 blindness, cured: prose is documentation, not code."""
+    src = (
+        '"""Example of the bug:\n\n'
+        "    x = y.clamp(min=1e-8).to(torch.float16)\n"
+        '"""\n'
+        "z = 1\n"
+    )
+    assert scan_text_for_fp16_destroyed_floors(src, "m.py") == []
+
+
+def test_a_trailing_comment_quoting_the_pattern_is_not_a_violation():
+    src = "z = 1  # x = y.clamp(min=1e-8).to(torch.float16)\n"
+    assert scan_text_for_fp16_destroyed_floors(src, "m.py") == []
+
+
+def test_the_live_class_is_clean_and_the_sweep_is_not_vacuous():
+    violations, scanned = scan_repo_for_fp16_destroyed_floors(REPO_ROOT)
+    assert scanned > 0, "a sweep that measured nothing must not read as green"
+    assert violations == [], violations
+
+
+def test_negative_control_reintroducing_the_bug_is_caught(tmp_path):
+    """The detector must FAIL on re-introduction, or it proves nothing."""
+    _write(
+        tmp_path,
+        "src/tac/offender.py",
+        "import torch\n\n\ndef pack(maxs, mins):\n"
+        "    return ((maxs - mins).float() / 255.0).clamp(min=1e-8).to(torch.float16)\n",
+    )
+    violations, scanned = scan_repo_for_fp16_destroyed_floors(tmp_path)
+    assert scanned == 1
+    assert len(violations) == 1 and "src/tac/offender.py" in violations[0]
+
+
+def test_the_gate_raises_strict_when_the_class_is_reintroduced(tmp_path):
+    (tmp_path / "src" / "tac" / "substrates").mkdir(parents=True)
+    _write(
+        tmp_path,
+        "tools/offender.py",
+        "import torch\n\n\ndef pack(x):\n"
+        "    return x.clamp_min(1e-12).to(torch.float16)\n",
+    )
+    try:
+        check_quantize_degenerate_range_clamped_correctly(
+            repo_root=tmp_path, strict=True, verbose=False,
+        )
+    except PreflightError as exc:
+        assert "fp16" in str(exc) and "2**-24" in str(exc)
+    else:  # pragma: no cover - the gate must refuse
+        raise AssertionError("strict gate did not refuse a reintroduced fp16 defect")
+
+
+def test_the_gate_is_clean_on_the_live_repo_under_strict():
+    out = check_quantize_degenerate_range_clamped_correctly(
+        repo_root=REPO_ROOT, strict=True, verbose=False,
+    )
+    assert out == [], out

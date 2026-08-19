@@ -27,10 +27,11 @@ any new site narrows a guarded value to fp16 without re-flooring it.
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import pytest
+
+from tac.fp16_floor_guard import scan_repo_for_fp16_destroyed_floors
 
 torch = pytest.importorskip("torch")
 
@@ -164,115 +165,27 @@ def test_pose_filler_preflight_survives_perfectly_constant_poses():
 
 # --------------------------------------------------------------------------
 # 3. CLASS SWEEP -- fail on re-introduction anywhere in the repo
+#
+# The predicate itself lives in ``tac.fp16_floor_guard`` (extracted by
+# ``ddm_sp2`` 2026-08-19 when it wired the preflight gate this suite was
+# owed). Keeping a second copy here would give ONE class TWO detectors that
+# drift apart -- the split-bank failure -- so the local copy is deleted and
+# both consumers import the shared module.
 # --------------------------------------------------------------------------
-
-_SCANNED_ROOTS = ("src/tac", "tools", "experiments", "scripts")
-
-# Frozen custody snapshots of past runs are historical artifacts, not live code.
-_EXCLUDED_PARTS = ("experiments/results/", "/tests/", "upstream/")
-
-_FLOAT16 = re.compile(r"float16|\.half\s*\(\)")
-_FLOOR = re.compile(r"(?:clamp\s*\(\s*min\s*=|clamp_min\s*\(|max\s*\(\s*[A-Za-z_][\w.]*\s*,)\s*([\w.+-]+)")
-_SAFE_FLOOR_NAMES = ("_FP16_MIN_POSITIVE", "FP16_MIN_POSITIVE")
-
-
-_ASSIGN = re.compile(r"^([A-Za-z_]\w*)\s*=(?!=)")
-_LOOKBACK = 3
-
-
-def _logical_statements(text: str):
-    """Yield (line_number, joined_statement) merging bracket continuations."""
-    lines = text.splitlines()
-    buf: list[str] = []
-    start = 0
-    depth = 0
-    for i, raw in enumerate(lines, start=1):
-        if not buf:
-            start = i
-        buf.append(raw.strip())
-        depth += raw.count("(") + raw.count("[") - raw.count(")") - raw.count("]")
-        if depth <= 0:
-            yield start, " ".join(buf)
-            buf, depth = [], 0
-
-
-def _inherited_floors(statements, index: int, stmt: str):
-    """Floors applied in a nearby PRECEDING statement to a name this one casts.
-
-    The destroy-your-own-guard pattern also occurs across two lines::
-
-        scale = max(max_abs, 1e-8) / 127.0            # floor here
-        scale_fp16 = torch.tensor([scale], torch.float16)   # cast there
-
-    so a same-statement-only detector would see half the class.
-    """
-    out = []
-    for back in range(1, _LOOKBACK + 1):
-        j = index - back
-        if j < 0:
-            break
-        prev = statements[j][1]
-        assigned = _ASSIGN.match(prev)
-        if not assigned:
-            continue
-        name = assigned.group(1)
-        if not re.search(rf"\b{re.escape(name)}\b", stmt):
-            continue
-        out.extend(_FLOOR.finditer(prev))
-    return out
-
-
-def _floor_is_fp16_safe(token: str) -> bool:
-    if token in _SAFE_FLOOR_NAMES:
-        return True
-    try:
-        return float(token) >= FP16_MIN_POSITIVE
-    except ValueError:
-        # A non-literal, non-canonical floor (a variable) is not auditable here;
-        # treat it as safe so the sweep reports only what it can prove.
-        return True
 
 
 def test_no_guarded_value_is_narrowed_to_fp16_without_being_re_floored():
     """A floor followed by an fp16 cast must be re-applied AFTER that cast.
 
-    The detector zeroes on the cure: it reads the LAST floor in the statement and
-    requires it to sit after the ``float16`` token and be fp16-representable.
+    The predicate now lives in ``tac.fp16_floor_guard`` so that this regression
+    sweep and the preflight gate (a Catalog #161 scope extension, wired by
+    ``ddm_sp2`` 2026-08-19) are ONE detector rather than two that can drift --
+    the split-bank failure. The behaviour is unchanged apart from one
+    improvement the shared module adds: docstrings and comments are blanked
+    before scanning, so a memo-quoting docstring no longer reads as a live
+    violation (the blindness ``ddm_fx3`` named in Catalog #330).
     """
-    violations: list[str] = []
-    scanned = 0
-
-    for root in _SCANNED_ROOTS:
-        base = REPO_ROOT / root
-        if not base.exists():
-            continue
-        for path in sorted(base.rglob("*.py")):
-            rel = path.relative_to(REPO_ROOT).as_posix()
-            if any(part in rel for part in _EXCLUDED_PARTS):
-                continue
-            try:
-                text = path.read_text(errors="replace")
-            except OSError:
-                continue
-            if "float16" not in text and ".half()" not in text:
-                continue
-            statements = list(_logical_statements(text))
-            for index, (lineno, stmt) in enumerate(statements):
-                cast = _FLOAT16.search(stmt)
-                if not cast:
-                    continue
-                same_line = list(_FLOOR.finditer(stmt))
-                floors = same_line + _inherited_floors(statements, index, stmt)
-                if not floors:
-                    continue  # no guard intended at this site
-                scanned += 1
-                # Only a floor applied AFTER the cast protects the stored value.
-                trailing = [m for m in same_line if m.start() > cast.end()]
-                if trailing and all(_floor_is_fp16_safe(m.group(1)) for m in trailing):
-                    continue  # re-floored after the cast -- cured
-                if all(_floor_is_fp16_safe(m.group(1)) for m in floors):
-                    continue  # every floor is fp16-representable anyway
-                violations.append(f"{rel}:{lineno}: {stmt[:150]}")
+    violations, scanned = scan_repo_for_fp16_destroyed_floors(REPO_ROOT)
 
     assert scanned > 0, "class sweep found no guard-and-cast sites -- detector is vacuous"
     assert not violations, (

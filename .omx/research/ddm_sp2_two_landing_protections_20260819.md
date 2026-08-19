@@ -205,6 +205,99 @@ Waivers granted — each verified at the source before granting, not taken on th
 
 ---
 
+## 3b. CLASS 3 (FOLDED) — fp16 cast destroys its own floor, `ddm_fx4`'s owed gate
+
+Routed by the coordinator while this arm owned `preflight.py`. `ddm_fx4` (commit `61c41ab166`)
+fixed the class at **35 sites / 22 files** and explicitly recorded the gate as *"Owed, not done:
+the STRICT preflight wire-in… `src/tac/preflight.py` is owned by `ddm_sp2` this session, so the
+gate lives in the test suite only."* Taken, because a cure without a gate is exactly the half-landing
+the non-negotiable forbids.
+
+**The class.** A positive floor on a scale, destroyed by a narrowing cast one line later:
+`((maxs - mins).float() / 255.0).clamp(min=1e-8).to(torch.float16)`. fp16's smallest positive value
+is `2**-24 = 5.960464e-08`; everything below half of that rounds to zero, so the `clamp` written to
+keep the scale non-zero is undone by the very next operation and the dequantiser divides by the
+stored 0. The class also spans two statements, which a same-statement detector would half-miss.
+
+**Host: `check_quantize_degenerate_range_clamped_correctly` (Catalog #161).** Exact adjacency —
+#161 owns *"the degenerate-value guard must be correct"*; this extension owns the sister half,
+*"…and must SURVIVE to the stored value."* Same #351 precedent, no new number.
+
+**ONE detector, not two.** fx4's predicate lived inside its own test sweep. Re-typing it in preflight
+would have created two detectors for one class, which drift — the split-bank failure this repo has
+already paid for. Instead the predicate was extracted to **`src/tac/fp16_floor_guard.py`**, and BOTH
+consumers now import it: fx4's regression sweep (refactored, 29/29 still pass) and the preflight gate.
+
+**Landed STRICT, not warn-only.** Live count measured **0** (fx4 having fixed all 35 sites), which is
+precisely the condition the atomicity rule names for flipping in the same batch. This class earns
+strict where my two did not — the discipline working, not an exception to it.
+
+| | value |
+|---|---|
+| live violations | **0** |
+| guard-and-cast sites scanned (denominator, reported every run) | **36** |
+| negative control | reintroducing either variant in a temp tree is caught; strict gate refuses |
+
+**Precision improvements the shared module adds, and how they were found.** Extraction immediately
+exposed defects that the test-only sweep had never had to face, each found by measurement:
+
+1. **Prose read as code.** This module's own docstring, which quotes the pre-fix expression, tripped
+   the raw-text predicate — 2 phantom rows, denominator inflated 40 → 36. Exactly the blindness
+   `ddm_fx3` named in Catalog #330.
+2. **My first cure was itself blind.** I stripped comments with `line.find("#")`. A `#` inside a
+   string literal (`"#fff"`) both truncates the line and unbalances its brackets, so
+   `_logical_statements` returns NOTHING for the rest of the file — the file then scans clean AND
+   contributes zero to the denominator, so even the vacuity guard cannot see it. An instrument that
+   cannot tell "checked clean" from "did not check". Replaced with the real `tokenize` pass, which is
+   the cure fx3 actually prescribed.
+3. **The canonical cure was reported as a violation.** The two-statement form —
+   `sf = torch.tensor([scale], dtype=torch.float16)` then `sf = sf.clamp_min(_FP16_MIN_POSITIVE)` —
+   is how the fix is naturally written, and a same-statement-only detector calls it a defect. On a
+   STRICT gate that refuses an engineer's commit and tells them to do what they have already done,
+   which is how a gate earns a waiver it should never have needed. Cured by
+   `_cured_in_a_later_statement`, with a substantive-rationale `FP16_POSTCAST_FLOOR_OK` waiver
+   (Catalog #287 placeholder rejection) as the last resort rather than the first.
+
+**Wall-clock, measured and fixed twice.** The first working version cost **9.67 s** — 32% of the
+30.0 s `DEFAULT_PREFLIGHT_CLI_TIMEOUT_S`, inside a STRICT gate. A ripgrep prefilter plus a two-stage
+design (cheap raw pass; pay for tokenization only where a guard-and-cast site actually exists) brought
+it to **1.57 s**, with the answer unchanged at 0 violations / 36 sites.
+
+---
+
+## 3c. `ddm_fx3` detector debt — RECORDED, not folded (with the cure, verbatim)
+
+Both items are precision improvements to **Catalog #330**, which is currently GREEN (0 offenders)
+after fx3's fix. Neither composes with the ZIP / GT-lineage / fp16 invariants, so folding them would
+have been scope creep against a green gate rather than protection of a live class. Recorded with
+their cures so the next `preflight.py` owner lands them verbatim.
+
+1. **`_check_330_line_is_comment_or_literal` is not string-literal aware**
+   (`src/tac/preflight.py`, fx3 cites `:62234`). It is a line-level lexical guess: it skips a line
+   that *starts* with a quote, so a docstring CONTINUATION line beginning with `print(` reads as
+   code. Measured consequence: the detector's own two hits on
+   `experiments/modal_ot_offset_n600_gate.py` **disagreed with each other** — line 216 (inside an
+   f-string, starts with `f"`) correctly skipped, line 33 (docstring continuation) falsely flagged.
+   **Cure, now available verbatim:** `tac.fp16_floor_guard._blank_docstrings_and_comments` implements
+   exactly the prescribed fix (walk the AST, blank every bare-string `Expr` span, preserve line
+   numbers, strip trailing comments, fall back to raw text on parse failure). Lift it or import it.
+   Ladder: WRONG-OBJECT (raw text treated as code), sister SILENT-INSTRUMENT.
+
+2. **The detection window is asymmetric, `-20/+180` lines** (fx3 cites `src/tac/preflight.py:62289`).
+   A compliant file whose mirroring helper is defined *above* its `.get()` still reads as a
+   violation; fx3 hit this directly and worked around it by MOVING `_mirror_terminal_call_state`
+   below `_live_call_state`, which it flags as a workaround, not the cure. **Cure:** widen the
+   backward window, or resolve the enclosing function's call graph. **Caution I add:** naively
+   widening the backward window trades a false positive for a false NEGATIVE — an unrelated
+   `append_terminal_call_id_ledger_event(` far above would falsely clear a real offender. The
+   call-graph resolution is the sound half; the window widening is not. Do not land the cheap one.
+
+fx3's other named debt is not preflight-surface and stays with its owners:
+`tools/codex_companion_spawn.sh:96-100` (`rc=unknown_detached`, blocked on the codex lane being
+walled until Aug 20), and the absent shared waiter helper.
+
+---
+
 ## 4. Strict-flip conditions
 
 Both extensions are WARN-ONLY, and both host gates run `strict=True` in `preflight_all`. The
@@ -215,6 +308,9 @@ form (no lineage row may ever appear in a raise message).
 
 The CLAUDE.md "Strict-flip atomicity rule" says flip in the same batch when live count is 0. It is
 not 0 — 30 and 11 — so the rule does not license a flip here. Conditions:
+
+CLASS 3 is **already STRICT** (live count 0 at landing), so the table below covers only the two
+warn-only extensions.
 
 | extension | strict-flip when |
 |---|---|
