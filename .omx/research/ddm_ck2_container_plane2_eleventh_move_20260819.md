@@ -149,11 +149,25 @@ the other side: closing its gap needed 1.20× the whole semantic section, so the
 **CONTRIBUTOR, not a route.**
 
 So: the rate axis is the cleanest road *per byte* — exact, immune to the seg-transfer
-discount, and it is where this row lives — but its measured reservoir on this lineage is
-about 2 KB, not 10.7 KB. **Rate alone does not reach 0.15 from here.** The remaining 82% of
-the gap is a representation question (a smaller sufficient statistic, not a better
-container), and on the current evidence that is the js1/js8 joint-nonlinear line, not a
-container or coder rung.
+discount, and it is where this row lives — but its **priced** reservoir on this lineage is
+about 2 KB, not 10.7 KB. **Rate alone does not reach 0.15 from the priced inventory.**
+
+**The one place a rate route could still live, stated so it is not lost.** fx1's bit
+decomposition of the tail (n600, 117,964,800 positions) measured that 0.190% of positions
+are misses and they carry **70.01% of the bits — 78,489 B**, of which **77,241 B is the
+cost of *being* a miss**, the quantity the mixer's `q` adapts. That single number is the
+largest reservoir anywhere in the archive: it is 43.7% of the whole member and **7.2× the
+entire 10,666 B gap**. Realized against it so far: fx1 −560 B, then fx2 −797 B — about
+**1.9% extracted**. Closing the gap on rate alone therefore needs roughly an **11%**
+improvement in the miss-cost model. Nothing priced supports that today (fx1's remaining
+named item is a 1,247 B sector-law ceiling; SSE/APM measured losing 6/6; scan-order is
+already harvested), so it is not a route I can rank. But it is the correct place to point a
+model-axis arm, and it is unpriced rather than refused — the distinction matters, because
+every other section in the table above has been measured to saturation.
+
+The remaining ~82% of the gap is otherwise a representation question — a smaller sufficient
+statistic, not a better container — which on current evidence is the js1/js8 joint-nonlinear
+line rather than any container or coder rung.
 
 ---
 
