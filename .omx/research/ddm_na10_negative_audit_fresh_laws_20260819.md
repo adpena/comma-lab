@@ -158,6 +158,15 @@ confirmation block.
 the sharper instrument makes the negative *stronger*, not weaker — which is the outcome that
 distinguishes an audit from a rescue mission.
 
+**Correction to my own §2 — it is a REDISCOVERY, and that is the audit's headline finding.**
+See §4. `ddm_pi2` measured the additive floor on 2026-08-16, three days before the laws I
+was sent to apply, to ten significant figures. My §2 arithmetic reproduces it independently
+(1.406058e-04 vs pi2's 1.4061324889e-04, 0.005% apart) which is a useful *confirmation* —
+but the law was already ours, and I found it by re-deriving rather than by recalling. I am
+leaving §2 standing rather than deleting it, because the rediscovery **is** the evidence for
+§4, and because an audit that quietly overwrote its own error would be the exact failure it
+is auditing ([[save-memories-not-apologies-anti-forgetfulness]]).
+
 **One thing in it IS corrected.** The memo priced the pose leg by importing a `21×` axis
 constant ("21× CUDA degradation per #1054") — the exact multiplicative transfer §2 shows is
 the wrong functional form. The verdict does not depend on it (the margin is 624×), but the
@@ -168,3 +177,83 @@ CPU-vs-T4 gaps here are d_seg 1.443× / d_pose 1.778×") records the confusion i
 weeks apart, agreeing to 1%.
 
 
+
+---
+
+## §4 THE HEADLINE — THE "MODERN UNDERSTANDING" I WAS SENT TO APPLY IS ITSELF A REDISCOVERY, IN A WORSE FORM
+
+The operator asked me to re-grade the negative corpus *given our modern understanding*. The
+audit's largest finding is about that understanding: **its pose half was already measured on
+2026-08-16 by `ddm_pi2`, more completely and in a strictly better functional form, and the
+2026-08-19 line re-derived it without citing it — restating as a multiplicative factor the
+exact thing pi2 had explicitly refuted.**
+
+Receipt: `.omx/research/ddm_pi2_pose_axis_attribution_20260816.md`, frontmatter + §ANSWER +
+§0.1–§0.5.
+
+### 4.1 What pi2 already had, three days earlier
+
+| pi2 (2026-08-16) | the 08-19 line |
+|---|---|
+| §ANSWER decomposes the offset **exhaustively**: (A) GT-decode path `1.4061324889e-04` = **99.9960%**; (B) scorer-forward + platform `3.572e-12` = 0.0000025%; (C) our inflate's device dependence **≤ 5.576e-09 = ≤0.0040%** | up1 announces the GT-cache lineage as an "INSTRUMENT EUREKA" and localizes device-dependence to `cpr1/inflate.py:312/:335` as a live mechanism |
+| §0.1 names the retained **DALI GT pose table** (sha `a91d9825…`, 117,980,732 B, `(600,6) float32`) and measures it reproducing contest-CUDA at **1.00081×** | up1 reports the $0 DALI-GT local instrument at 0.9999× as new |
+| §0.3 the seg cache is **already** DALI (`d_seg` ratio 1.00021); PyAV GT costs **1.4425×** | up3 reports the seg lineage factor 1.43× as new |
+| §0.2 **"Never rescale an advisory `dS_pose`. Never quote an advisory `d_pose` ratio."** Gives the exact conversion `dS_pose = sqrt(10(6.88e-06 + Δd_pose_abs)) − sqrt(10·6.88e-06)` | **L1 is stated as a ratio**: median 19.09×, per-pair span 0.887–1,627 |
+| §0.4 **"Why a single multiplier would have been wrong"** — a flat multiplier is wrong by up to **52%** across four rn1 rows; the conversion matches rn1's independent absolute cross-check to **0.2%** | fo2h §4.0c presents the 1,834× per-pair span as a new discovery about the factor |
+
+**Citation audit** (`grep -c "pi2"`): `up2` 1 (and only as *"its unbuilt …"*, i.e. dismissed
+as unfinished rather than consumed as law) · `jg1` **0** · `fo2h` **0** · `jg2` **0** ·
+the memory node that carries L1 into every session, `pose_gap_was_gt_cache_lineage_not_cuda_20260819`,
+**0**. Occurrences of "additive floor" or `1.4061` in all five: **0**.
+
+### 4.2 Why the form regression is not cosmetic
+
+pi2 §0.4's arithmetic is the proof: the multiplicative form is wrong by up to **52%** on
+real rows, and its error is *systematic in the direction that matters* — the ratio inflates
+as a candidate improves, so the better the candidate, the worse the multiplicative transfer
+mis-prices it. The additive form has no such bias; the floor cancels exactly in an absolute
+delta. pi2 §0.4 also shows the practical cost: `rn1`'s ratio-based worked-through gave
+`+0.0217` where the correct conversion gives `+0.027545`, and pi2's strengthened reading is
+that a one-LSB dither is **2.87× the entire remaining gap**, not "25% of it."
+
+The 08-19 line's own difficulties are downstream of the regression. fo2h §4.0c had to
+discover, painfully and across 48 pairs, that the factor "is not a constant — it spans
+1,834×." Under pi2's form that span needs no discovery: the per-pair ratio is
+`1 + C_pair/true_pair`, so it *must* diverge wherever `true_pair` is small. A law stated in
+the right variables would have predicted fo2h's headline instead of being surprised by it.
+
+### 4.3 The correction, and what it costs
+
+`L1` should be restated in pi2's form, with pi2 as its source, and the two artifacts
+reconciled rather than one silently superseding the other:
+
+> **L1′ (restated).** The advisory/contest split is a **GT-lineage split inside our own
+> tooling**. In `d_pose` it is an **additive floor** `C = 1.4061e-04` (99.996% of the total
+> offset; scorer-forward and platform terms are ≤0.004%). Quote advisory pose only as an
+> **absolute Δd_pose** and convert with pi2 §0.2. **Never** a ratio, **never** a rescaled
+> `dS_pose`. In `d_seg` the split is multiplicative, **1.4425×** (pi2 §0.3) / 1.43× (up3) —
+> but only because our seg cache was *already* the authority decode. The fix, not the
+> caveat, is to point advisory pose at the retained DALI table (pi2 §0.1).
+
+Cost: an edit to the memory node and a DAG FEED line. **$0, no measurement.** The
+measurements were all done on 08-16 and again on 08-19.
+
+### 4.4 The class, and the honest part
+
+This is [[m18]] (writes outrank reads) and the anti-forgetfulness backbone, firing on a
+three-day horizon — the shortest-latency instance the campaign has recorded, and inside the
+window where the artifact was still the newest thing in `.omx/research`. Both the 08-19 arms
+and **I** hit it: my §2 re-derived pi2's constant from scratch rather than recalling it.
+Three independent agents reached the same number by measurement and none by memory. That is
+not a discipline failure by any one arm; it is an apparatus gap — the corpus had the law and
+no surface put it in front of the arms that needed it. Sisters:
+[[charter_recall_validation_is_apparatus_not_volition_20260816]] (the cure is at the spawn
+site, not in anyone's volition) · [[m44]] (never recall from working memory alone) ·
+[[m36]] (defer-at-source into one canonical ledger).
+
+**The one thing the 08-19 line adds that pi2 did not have** — and it is real, so the
+reconciliation is a merge and not a revert: pi2 bounded the inflate device-dependence at
+≤0.0040% of the offset but did not resolve it; up2 §6 *falsified half of it* by measurement
+(`pose_batch` 1-vs-64 is bit-identical over 1.83e9 pixels; only `semantic_batch` differs, at
+1,326 pixels, max |Δ|=1). And jg1's DALI-scored seg instrument (0.99995×) plus the L2/L3/L4
+results are new work that pi2 does not contain.
