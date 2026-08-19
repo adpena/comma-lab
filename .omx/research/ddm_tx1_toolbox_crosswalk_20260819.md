@@ -183,6 +183,224 @@ contest-axis instrument moves both sides together. A 6× miss is not an instrume
 **Stays PARKED with its measured reactivation ladder** (warm-lineage-at-w56 · longer-budget
 fresh · curriculum-inherited birth). I make no new verdict here — `ddm_na10` owns validity.
 
+### 2.5 The aimed-correction stream (#832, "12.44% of the gap") — **it RAN, and re-anchored to our body its sign INVERTS**
+
+The vacuity question is answered: **the $0 scorer-free test ran.** Receipt
+`.omx/research/ddm_dc1_label_price_n600_20260801.json` (generated 2026-08-02T01:07:19Z,
+n600, both pre-registered controls PASS, label price **0.2627 B/flip** MEASURED), re-derived
+independently by `ddm_wd1`, adjudicated `VERIFIED_CONSUMED`, FOLDED at `ddm_zc1`. Nobody
+needs to re-run it.
+
+**But every price in that family is anchored to a gap of `0.7918468` and a base with
+`d_seg = 0.00431179` — and hv2 recorded the binding condition: *"any consumer must
+re-anchor."* I re-anchored it. This is the crosswalk's job, so I did the arithmetic:**
+
+Position cost is the interpolation-free bound `log2(1/ρ)/8` B/flip, where ρ is the residual
+density. **Control first:** on the old base ρ = 4.312e-03 and my formula returns
+**0.9822 B/flip** — *exactly* ba31's published uniform bound. The instrument reproduces the
+receipt, so the re-anchor is trustworthy.
+
+Our body's residual is **14.2× sparser**: `d_seg 0.00030309` → **35,754 flips**,
+ρ = **3.031e-04**, so the position bound rises to **1.4610 B/flip (1.49×)**.
+
+| price basis (our body) | B/flip | bytes | rate +S | seg −S | **NET S** |
+|---|---:|---:|---:|---:|---:|
+| uniform bound + measured label | 1.7237 | 61,628 | +0.041036 | −0.030309 | **+0.010727 LOSS** |
+| coherent (scaled by the measured 0.682 ratio) + label | 1.2596 | 45,035 | +0.029987 | −0.030309 | **−0.000322 ≈ break-even** |
+| *the old base's blended 0.8507 B/flip* | 0.8507 | 30,416 | +0.020253 | −0.030309 | *−0.010056 — **invalid**, that price belongs to the old density* |
+
+**The correction-stream family did not get shelved and stay shelved by accident — it died as
+the residual got sparse.** Position coding cost grows as `log2(1/ρ)`; the win at
+`ρ = 4.3e-3` is break-even at `ρ = 3.0e-4`. And its whole ceiling is the seg axis,
+**0.030309 S**, even if corrections were free. Labelled **DERIVED** (from two MEASURED
+prices plus a validated control). **NOT-CHEAPER — and now with a mechanism, not a shrug.**
+
+**The cross-check that matters, and it points at the live chain.** jg1's pre-distortion
+actuator repairs **1.55 cells per changed token** at a MODELLED **4.718 bits/token** =
+**0.3805 B per repaired cell** — **3.31× cheaper** than the correction stream's best
+coherent price at our density. Even if jg2's re-encoder finds the real token price is 3×
+worse than modelled, the token actuator still ties. **This independently explains why
+`ddm_jg2`'s chain is the live one and the correction stream is not.**
+
+### 2.6 The adaptive token map (#869, "−113,555 B") — **NOT RESCUED; its target object does not exist on our body**
+
+Two independent reasons, either fatal:
+
+1. **Already a MEASURED NEGATIVE.** Fired on the fz4 `sub_final` vehicle: `d_seg` +8.4675e-4
+   against a pre-registered 7.56e-4 bound, and `d_pose` **0.168** vs baseline 0.00071 — the
+   pose bank destroyed, R8 guard FAIL, recomputed ΔS **+1.221 S**. `ddm_lv2` rank 21 is
+   explicit: ***"never import −113555 B."***
+2. **The mechanism has no target here.** It coarsens tokens onto sub-lattices *"KEEPING the
+   container's global levels=16 alphabet."* Our tokens are **5-class labels in `{0..4}`**
+   (`cpr1/inflate.py:95`, `NUM_CLASSES = 5`). There is no 16-level alphabet to coarsen.
+   The actuator is not expensive here — it is **undefined** here.
+
+Its causal law does transfer as a lesson, and it is the same law jg1 re-measured
+independently: *"the pose sections are SOLVED AGAINST the exact token field. Any post-hoc
+token mutation invalidates them."* That is jg1's ×387 hard negative, discovered twice.
+
+### 2.7 Lane crop (#939) — **NOT RESCUED, killed by realization, and redundant on our body**
+
+The n32 survivor row (272,869 B projected, 0.911× W) was re-measured at n600 and
+**realization killed it**: described 9,591 → fixed 4,768, **collateral 15,994**, survival
+**0.497**, sample seg+rate **ΔS +0.254116** — a large loss. `ddm_lv2` rank 37:
+**LESSON-ONLY**. On top of that it is now redundant: it ships a *description of GT Lane
+geometry*, and our body already stores tokens **99.9985% identical to the GT argmax**. We
+are not missing the lanes; we are losing them in the render.
+
+### 2.8 pz4 QAT (2,000 B pre-proof gate) — **gate FAILED by 2,232 B; closed at formulation scope**
+
+`ddm_pz4a`: *"best exact gross joint saving is 500 B and best counted net is −2,232 B"* —
+i.e. it went the wrong way against a +2,000 B gate. Recorded REFUTED. The raw int16-width
+proxy predicted 8.16 KB where the exact inner coder **grew by 12 B** (a 680× proxy failure
+worth remembering). The one live sub-item, **aware in-loop QAT**, is explicitly *"only a
+jointly trained representation"* — trained-vehicle line, not this body. **NOT-CHEAPER.**
+
+### 2.9 rate_crush (#949) — **fire-condition NOW met, but the content is subsumed**
+
+Honest status: it **never fired**, has **no measured number anywhere**, authority axis
+*"[unmerged source residue; no current-object measurement]"*, disposition
+`QUEUED-W-FIRE-ORDER` with fire trigger *"terminal complete candidate is selected."*
+**That trigger is now met** — up3 is sealed, byte-closed and inflating. But its Target A
+("meta-compression of the counted description bytes") **is** the tail/model axis I rank #1
+below, and its Target B ("fit a compact generative model to our own decoded output") is
+what this vehicle already does (semantic renderer + token field). I therefore do not raise
+it as a separate item; I fold its dual research mandate — day-fresh learned entropy models
+**and** oldest-math sleepers (CTW/PPM, Krichevsky–Trofimov, enumerative coding) — into
+CONVERT-NOW #1, where it has a real target object. Its retained worktree residue (3 files,
+sha-certified) still needs a custody owner.
+
 ---
 
-*(sections 3+ land as the remaining sweeps return)*
+## 3. THE RATE AXIS IS MEASURED SHUT — except in one cell. My seed-8 thesis was WRONG.
+
+I came in expecting the tail's probability model to be the money. It is not, and the
+receipts say so plainly. Recording it against my own charter:
+
+| level | status | measured remainder |
+|---|---|---:|
+| **coder** (choice of coder + byte layout) | **CLOSED** — `ddm_bp1`, byte-exact, 4 mechanisms | **−5 B** total; on the tail every mechanism *costs* (+5 to +63 B) |
+| **model** (contexts, mixing, correctors) | **CLOSED** — `ddm_fx2` R6 floors + `ddm_ma1` | **~400 B** hit-event + **~75 B** within-miss |
+| **representation** (fewer/smaller symbols) | **OPEN — and one cell is empty** | see §4 |
+
+`ddm_ma1` explicitly **withdrew** the seductive big number: *"77,241.46 B is an entropy,
+overwhelmingly irreducible. That framing is a vacuous denominator and I am withdrawing it."*
+I will not resurrect it. The honest tail reservoir is **a few hundred bytes, not 77 KB.**
+Against a 9,801 B need, `ddm_ck2`'s total credible free-rate inventory is **≈1,900 B ≈ 18%
+of the gap.** **Rate alone cannot close the gap with any known machinery.** `ddm_bp1` §4
+routes it correctly: *"Rate progress must come from representation — fewer or smaller
+symbols — not from coding them better."*
+
+One measured warning for anyone tempted by a static/offline model: fx2's held-out column is
+**worse in every row** (114,788.9 vs 109,264.09 online). *"The field is strongly
+non-stationary: online adaptation is worth more than 5,500 B."* Any representation proposal
+that gives up online adaptation starts 5,500 B in debt.
+
+---
+
+## 4. CONVERT-NOW — ranked, with the tool that voids each blocker
+
+### #1 — THE TOKEN-DROP FAMILY (rc4/td1), re-priced against jg1's carrier re-solve
+**Projected NET −0.002929 S = 44.9% of the gap · cost $0 · all instruments exist**
+
+| field | value |
+|---|---|
+| **why it was shelved** | `ddm_rc4_rung4_token_drop_verdict_20260816`: *"Rung 4 is REFUSED as an uncompensated drop — on the POSE leg, by 517×."* Rate leg exact and favourable, rate+seg gain **−3.243e-3 S** MEASURED, but pose cost **+0.17432 S = 53.8×** the gain. `delta_d_pose` 3.3279e-3 against an allowed 6.431e-6. |
+| **which tool voids it** | **jg1's carrier re-solve.** rc4's damage is **435×** our `d_pose`; jg1 measured **387× mean damage recovered to 1.073× of original at ~0 bytes** (1.01× / 1.34× / **0.87×** — one pair ends *better* than shipped), 9–12 of 12 coefficients moved, well inside up2's "±4 on all 7,200 coefficients = +5 B" envelope. **Same damage class, same magnitude, measured recoverable.** The word "uncompensated" in rc4's own verdict is the tell: it refused an *uncompensated* drop, and compensation now exists. |
+| **the margin** | Break-even allows the re-solve to leave `d_pose` at **1.9×** current. jg1 delivered **1.073×** — a **1.77× safety margin**. Even at jg1's *worst* pair (1.34×) the move still nets **−0.001865 = 28.6% of the gap**. |
+| **projected S** | recover to 1.073× → `dS_pose +0.000314`, NET **−0.002929** (44.9% of gap). At 2× recovery it turns +0.000380 (a loss) — so the re-solve quality is the whole ballgame and must be measured, not assumed. |
+| **label** | rate+seg leg **MEASURED** (hv1-era body, same lineage, same 5-class object); recovery factor **MEASURED n=3**; the composition **DERIVED**. **Not a row.** |
+| **honest transfer risk** | rc4 measured on the hv1-era body; since then the archive moved 182,759 → 176,420 B, so the tail is already 105 B leaner and part of the rate credit may be spent. Re-measurement on the up3 body is mandatory, not a formality. This is *not* the TR1-era transfer problem — same receiver family, same 5-class map — but it is not free either. |
+| **fire order** | (1) re-run rc4's best rung on the up3 token field; (2) score seg with **jg1's $0 instrument** (0.99995× of T4); (3) run the **carrier re-solve** against the dropped field and measure `d_pose` on **up2's DALI-GT instrument** ($0, exact); (4) byte-close through **jg2's re-encoder** (the only honest rate instrument — see the composition warning below); (5) seal, then one T4 row. |
+
+### #2 — THE 12-DIM POSE BASIS RE-ORIENTATION (up2 owed-2 / jg1 §S3) — still unowned
+**Byte budget is large and nobody has spent an hour on it · cost $0**
+
+Not free (§1), but the break-even budget is generous, which is the point nobody has computed:
+
+| `d_pose` reduction | new pose leg | ΔS_pose | **bytes affordable at break-even** |
+|---:|---:|---:|---:|
+| 1.25× | 0.007823 | −0.000923 | **1,387 B** |
+| 1.5× | 0.007141 | −0.001605 | **2,410 B** |
+| 2× | 0.006184 | −0.002562 | **3,847 B** |
+| 4× | 0.004373 | −0.004373 | **6,567 B** |
+
+For scale: up3's whole carrier perturbation cost **+48 B**, and a one-coefficient flip costs
+**+3 B**. So even a 1.25× improvement has ~29× the byte headroom a carrier edit has ever
+needed. up2 measured the enabling quantity — **6.4× median demanded-step reduction** from
+re-fitting the basis to the measured pose-residual subspace — and called it *"the single
+highest-value follow-on."* It has sat unowned since.
+
+**What is NOT known and must be measured, not assumed:** the map from "6.4× smaller demanded
+step" to an actual `d_pose` factor. The solve already **converged** on the current basis, so
+any gain comes from spanning a better subspace. Label: **UNMEASURED**. The break-even table
+is **DERIVED**. Cheap to settle — up2's instrument is exact and $0, up3's byte-close is a
+function call.
+
+### #3 — THE ONE EMPTY CELL: structure-exploiting representation of the 5-class label map
+**cost $0, ~15 min/arm · honest prior UNFAVOURABLE · but the cell is genuinely empty**
+
+`jg1` established **only today (2026-08-19)** that the tail is a plain `(600,384,512)` 5-class
+label map. The sweep's explicit finding: **no run-length, connected-component, contour or
+chain-code representation has ever been measured on this object.** Every such receipt in the
+campaign (`contour_string_flip_coding_n600_20260707`, #307) is on the **flip residual** of the
+level-set witness lineage — a different object on a different vehicle.
+
+**And the premise that killed it there does not hold here.** That NO-GO's stated reason was
+*"the measured residual is confetti (mean component 3.1 px; 38.5% of flips in ≤3 px
+components)"* — the coder was fine, the object was not. The 5-class label map is the
+opposite: large coherent regions (Undrivable 49.5%, MyCar 25.4%, Road 23.2% of area) with a
+static ego-hood core. A contour/RLE premise that fails on confetti is exactly the premise
+that could hold on a region map.
+
+**I will not oversell it.** The current model already codes this field at **0.0074392
+bits/token** and sits within **~315 B** of its own conditional-entropy floor — that is a very
+strong incumbent, and the floor is hindsight-optimal so the true remainder is smaller. My
+prior is that this loses. But it is the only unmeasured cell in an otherwise-complete
+coder/model/representation matrix, the object was only identified today, the test is $0, and
+`ddm_bp1` itself routes rate progress to exactly this level. **Test it, expect a negative,
+and bank the negative as the closure of the rate axis.**
+
+### #4 — RECONCILE THE DECODE WALL-CLOCK BUDGET (blocks fx2's E1 rung, and more)
+**cost $0 · worth ~87 B directly, but it un-gates a whole class**
+
+Two margin figures are in circulation and they differ by **7.2×**:
+
+- fx2's `SHIPPED_CONFIG` **freezes D1 and refuses E1** on the grounds that E1 projects
+  *"29 s of 1,800 s margin (1.6%)"* against D1's **118 s**, i.e. +87 B for +89 s = 0.98 B/s.
+- `ddm_up3` **measured the shipped candidate inflating end to end in 954.5 s of the 1,800 s
+  budget** — `returncode=0`, STRICT validation passed, 3,662,409,600 raw bytes — i.e.
+  **845.5 s of margin.**
+
+**Caveat, stated plainly:** up3's 954.5 s is a **local macOS** decode; the contest budget is
+30 min on a T4 or a 4-core/16 GB CPU, and we have no contest-host decode timing for this
+body. So I do **not** claim the E1 refusal is void. I claim the two numbers must be
+reconciled before wall-clock is used to refuse *anything* — that reconciliation is $0, and it
+gates every "richer decoder model" proposal, not just E1.
+
+---
+
+## 5. THE COMPOSITION WARNING MAIN AND jg2 SHOULD READ FIRST
+
+`ddm_jg2` is spending bytes on token edits to **buy seg**. CONVERT-NOW #1 spends seg to
+**buy bytes**. They are opposite directions on the *same actuator*, and **both consume the
+same scarce resource: the carrier's pose-recovery budget.**
+
+- The re-solve must absorb the **combined** damage, not each in turn. Break-even tolerates
+  `d_pose` ≤ **1.9×** current *in total*; jg1's 1.073× was measured on seg edits alone.
+- `ddm_bu1`'s measured law binds here: **"never price a union as the SUM of its legs'
+  compensation objects"** — mc36 beat the naive union **3.705×** by fresh-Schur-solving
+  compensation *jointly* over the composed object. And `ddm_gx1`: *"qs4 carried a stale
+  compensation and paid +2.396e-4 in d_pose."*
+- `ddm_jg2` §S1b's finding makes this sharper, not softer: there is **no per-token price** —
+  four feedback paths (partially-decoded frame into `sparse.selected_logits`;
+  `prepare_frame_context`; `_boundary_buckets`; never-reset KT counters) make one edit's blast
+  radius **global through pair 599**. So a drop and an edit on the same field cannot be priced
+  separately at all. **One joint re-encode, one joint carrier re-solve, one candidate.**
+
+**Concretely:** if #1 is pursued, it should enter jg2's S2 as an additional coordinate in the
+same joint solve — not as a second candidate composed afterwards.
+
+---
+
+*(§6 adjacent/tangential lands as the last sweep returns)*
