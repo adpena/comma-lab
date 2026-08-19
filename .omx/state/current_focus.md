@@ -759,9 +759,12 @@
 > arithmetic unchanged: ladder ⇒ ~0.65-0.70 advisory, does NOT reach 0.172141;
 > burn-4's rate re-race (~0.19-0.28 S) is the gap-sized lever.
 
-> **Pointer honesty (updated 2026-08-19):** effective competitive bar is now OUR OWN row
-> `0.15710198138050818 [contest-CUDA T4]` (ck1 composed, tenth pointer move, archive
-> `35c318d5…`), below PR #130's `0.172141` reconstruction. Submittable local CPU baseline
+> **Pointer honesty (updated 2026-08-19, corrected by `ddm_rv13` round-13 F5):** effective
+> competitive bar is now OUR OWN row `0.15659459685822907 [contest-CUDA T4]` (to1
+> tail-override, **twelfth** pointer move, archive `50e56145…` @ 176,420 B), below PR #130's
+> `0.172141` reconstruction. Priors: ck2 `0.1566645120483069` @ `0aa1cada…` (eleventh),
+> ck1 `0.15710198138050818` @ `35c318d5…` (tenth — this block named it as current until
+> round-13 caught it; the same file was already correct further down). Submittable local CPU baseline
 > `0.1910828242 [contest-CPU]` unchanged. Historical context in this block: at the time of
 > the surrounding 07-30 text the bar was PR #130's 0.172141 and local rows were
 > `[macOS-CPU advisory]`, `score_claim=false`.
@@ -912,9 +915,9 @@ operator queue when they conflict with this section.
   `.omx/state/canonical_frontier_pointer.json`; this file is a mirror, not a
   frontier source of truth.
 - Canonical scanner-derived best CUDA anchor:
-  `0.15710198138050818`
+  `0.15659459685822907`
   `[contest-CUDA T4]`, archive
-  `35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3`,
+  `50e561454b23026d3870f056747e848a49bd5f2b1e23930155d1281aeee91927`,
   lane `<none>`.
 - A1 remains the Rule #6 control substrate, not the best current axis floor:
   `0.19284757743677347` `[contest-CPU; GHA Linux x86_64 1:1]` and

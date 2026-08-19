@@ -24,9 +24,21 @@ MAIN's to fire.
 | **net ΔS** | **−4.374693e-04** |
 | projected S | **0.15666451204830689** |
 | vs the −3.5e-6 admit bar | **125.0×** |
-| vs ck1's report-8dp error bound (3.336608e-6) | **131.1×** |
+| vs the SUMMED two-row report-8dp bound (6.673217e-6) | **65.6×** |
 | fraction of the 0.00710198 gap to 0.15 | **6.16%** |
 | staged runtime | `/Volumes/APDataStore/pact/ddm_ck2/generations/ck2_plane2_r1` (33 files, pristine) |
+
+**⚠ CORRECTED 2026-08-19 (round-13 F2, `ddm_rv13`): the margin row read "vs ck1's
+report-8dp error bound (3.336608e-6) | 131.1×"; it is 65.6× against the SUMMED two-row
+bound.** The net is a DELTA between two independently-8dp-rounded T4 rows, so both rows'
+bounds **ADD** — 3.336608e-06 (ck1) + 3.336608e-06 (ck2) = 6.673217e-06 — and
+4.374693e-04 / 6.673217e-06 = **65.6×**, not the 131.1× that dividing by one row's bound
+alone produces. The overstatement is exactly 2.00×, the same signature round-12 F1 named
+(`8a059d5932`, `6e976eeafd`). This candidate's own **seal** already stated 65.6× correctly,
+so the seal and this memo disagreed; the seal was right. **The sign is unchanged and still
+determinate** — 65.6× clears the bar with room. Only the stated margin was wrong. A cure
+whose whole content is "divide by the bound" has to be carried into the next row that
+quotes one.
 
 **The distortion legs are zero by construction, not by measurement, and that is the point.**
 This candidate changes only how four already-decided section bodies are laid out before

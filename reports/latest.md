@@ -9,11 +9,18 @@ from_state_hash: canonical_frontier_pointer_20260818_keep01
 > snapshot generated 2026-05-23 and is STALE. The live frontier is the canonical
 > pointer, not any row below.
 >
-> **CURRENT effective_frontier [contest-CUDA T4, n600]: S 0.15710198138050818**
-> archive sha `35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3`
-> (ck1 sa3×keep01 composed candidate, tenth pointer move, 2026-08-19; anchor
-> mirror `experiments/results/modal_auth_eval_mirror/`). Historical prior:
-> keep01 0.1571619225142182 @ `316d17f8…` (ninth move). Every score cited in
+> **CURRENT effective_frontier [contest-CUDA T4, n600]: S 0.15659459685822907**
+> archive sha `50e561454b23026d3870f056747e848a49bd5f2b1e23930155d1281aeee91927`
+> @ 176,420 B (to1 tail-override, **twelfth** pointer move, 2026-08-19; anchor
+> mirror `experiments/results/modal_auth_eval_mirror/`). Historical priors:
+> ck2 0.1566645120483069 @ `0aa1cada…` @ 176,525 B (eleventh move); ck1
+> 0.15710198138050818 @ `35c318d5…` @ 177,182 B (tenth move); keep01
+> 0.1571619225142182 @ `316d17f8…` (ninth move).
+> *(⚠ corrected 2026-08-19 by `ddm_rv13` round-13 F5: this banner still named the
+> tenth move as CURRENT while the generated table below already carried the
+> twelfth. The canonical pointer is always
+> `.omx/state/canonical_frontier_pointer.json`, never this banner.)*
+> Every score cited in
 > the body (including "0.2053300290" as the CUDA frontier) is HISTORICAL as of
 > 2026-05-23. SoT: `.omx/state/canonical_frontier_pointer.json` via
 > `tools/refresh_canonical_frontier.py`.
@@ -87,12 +94,12 @@ pointer because it is the actual ranked surface. This row does not imply local
 archive custody or our progress. The scanner-derived table below is retained
 for custody-specific local comparisons and must not be called the score to beat.
 
-### Current best - last rechecked 2026-08-19T00:03:36Z
+### Current best - last rechecked 2026-08-19T04:38:58Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
 | **`[contest-CPU Linux x86_64]`** | **0.1880443980** | `196acd18e4ca` | linux_x86_64_cpu | `lane_pr128_click_import_NONSUBMISSION_defensive_bank_20260712` |
-| **`[contest-CUDA T4]`** | **0.1571019814** | `35c318d541d7` | linux_x86_64_t4 | `<none>` |
+| **`[contest-CUDA T4]`** | **0.1565945969** | `50e561454b23` | linux_x86_64_t4 | `<none>` |
 
 ### 2026-05-22 MLX portable-local-substrate refresh
 
