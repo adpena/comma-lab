@@ -221,14 +221,25 @@ order:
 | seg η | 0.593 | 0.592 | 0.585 | 0.580 | **0.0090** |
 | pose ratio | 1.300 | 1.324 | 1.442 | 1.373 | **0.1960** |
 
-**The pose leg's estimate is still wandering across a band 21.8× wider than the seg leg's at the
-same n.** η has an asymptote at n=48; the pose ratio does not.
+That single shuffle makes the pose band 21.8× the seg band — **and quoting that number would have
+been the exact error this memo is about.** One shuffle is one draw. Repeating the diagnostic over
+**2,000 random shuffles**:
+
+| | median | p10 | p90 | min | fraction pose-band wider |
+|---|---:|---:|---:|---:|---:|
+| pose band ÷ seg band | **13.4×** | 5.9× | 27.9× | 1.3× | **100.0%** |
+
+**The pose leg's estimate wanders across a band a median 13.4× wider than the seg leg's at the same
+n, and it is wider in every one of the 2,000 shuffles.** η has an asymptote at n=48; the pose ratio
+does not. (I am recording the 21.8× and its correction rather than quietly replacing it, because
+the failure mode — reading a statistic off one draw — is the finding.)
 
 This is the finding I would most want carried forward, because it is a statement about the
 *instrument*, not about this channel: **an n that settles a seg claim does not settle a pose
 claim on the same rows.** It is the quantitative form of [[m96]] — the pose axis is where subset
-estimates go wrong — and it predicts that every future arm pricing a seg-edit family will
-under-sample its pose leg by roughly an order of magnitude in n unless it checks.
+estimates go wrong — and since variance falls as ~1/n, a 13.4× band implies the pose leg needs
+roughly **two orders of magnitude more pairs** than the seg leg for equal precision. Every future
+arm pricing a seg-edit family will under-sample its pose leg unless it checks.
 
 **What is settled anyway: the sign.** Every cumulative value from n≈20 onward is above 1.0, and the
 whole n≥24 band is 1.30–1.52. The *magnitude* of the pose cost is unresolved; the *direction* is
