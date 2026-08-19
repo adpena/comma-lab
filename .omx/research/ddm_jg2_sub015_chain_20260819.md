@@ -142,3 +142,29 @@ stream does not have there. **554 of 555 bytes agree**, and the emitted length s
 above the ideal code length — the coder tax, measured rather than assumed. The full
 600-frame control (which must be byte-identical, not prefix-identical) is the binding
 proof and is running.
+
+### S1d — PRE-REGISTERED PREDICTION, written before the n600 encode returned
+
+Pre-registering because the honest reading of the mechanism says the modelled number
+should be **too low**, and I would rather be on record than fit a story afterwards.
+
+**The edit set.** jg1's retained 3-pair payload changes **58 tokens** (pair 283: 20,
+pair 468: 19, pair 513: 19). At jg1's modelled `+4.718 bits/token` that is
+**+273.6 bits = +34.2 B -> +0.0000228 S**.
+
+**Why I expect the real price to be higher, and it is not only the three caveats jg1
+listed.** jg1's own S0 measured that the stored tokens are **99.9985% identical to the
+DALI GT argmax** — the shipped label field is essentially the true segmentation. The seg
+actuator is therefore **PRE-DISTORTION**: it deliberately moves tokens *away* from the
+natural field so that after `render -> re-segment` the argmax lands closer to GT. But the
+IHS1 model is a prior fitted to the natural field. **So every edit moves a token toward
+what the model finds less likely, and the four causal paths propagate that surprise
+forward.** The cascade is not sign-symmetric; it should cost.
+
+| | prediction |
+|---|---|
+| sign of `archive_delta_bytes` | **positive** (costs bytes) |
+| realized / modelled ratio | **> 1**, and 2-5x would not surprise me |
+| what falsifies "the axis survives" | realized cost above the exchange rate at jg1's 1.55 cells/token, i.e. **> ~15.8 bits per changed token** |
+
+The measurement decides it either way, and the curve gets reported whichever way it falls.
