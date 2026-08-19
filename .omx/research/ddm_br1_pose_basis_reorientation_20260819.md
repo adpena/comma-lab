@@ -146,28 +146,36 @@ Before attributing any remaining gap to the basis, price the ceiling. `mode=ceil
 **unconstrained** 24×32×3 frame-0 field — 2304 dof, no 12-dim basis, no int12 lattice — through the exact
 receiver path (both rounds, the clamp, the selector) against DALI GT.
 
-Measured, 6 seeded-random pairs (`retained/ceiling_n6/`):
+Measured on the **live** body, seeded-random pairs:
 
-| | d_pose ratio |
-|---|---|
-| free 2304-dof field (the ceiling) | **0.5148** |
-| 12-dim basis + int12 + Gauss-Newton | ~0.80 (n3, live body) |
-| 12-dim basis + int12 + up2's ±2 search | 0.98452 (n600) |
+| | d_pose ratio | n |
+|---|---|---|
+| free 2304-dof field (the ceiling) | **0.7347** | **120** |
+| ~~free 2304-dof field~~ (superseded, thin sample) | ~~0.5148~~ | 6 |
+| 12-dim basis + int12 + Gauss-Newton, on top of up2 | 0.9448 | 40 (partial) |
+| 12-dim basis + int12 + up2's ±2 search | 0.98452 | 600 |
 
-Two things follow, and they point in opposite directions:
+**The n=6 figure was wrong by a wide margin and is withdrawn.** I wrote the "n=6 is thin for pose" caveat
+into this memo and then the caveat fired on my own number: 0.5148 → **0.7347** at n=120. Pose's estimate
+band is ~13.4× seg's at equal n (`ddm_fo2h`), which is exactly why the re-measure was owed before anything
+was chartered on the gap. Only the n=120 row is load-bearing.
+
+Two things follow:
 
 1. **d_pose is NOT fully cancellable.** First order says 6 equations in 2304 unknowns is exactly solvable,
-   yet the realized optimum stops near half. The uint8 rounds, the clamp, the bicubic resampling and
-   PoseNet's own nonlinearity leave an irreducible floor. Any claim that the carrier "should" reach
-   d_pose ≈ 0 is refuted. (0.5148 is the best value this optimizer realized, so it bounds the achievable
-   ratio from above; the true floor may sit lower.)
-2. **The subspace re-choice has real headroom.** Between Gauss-Newton on the shipped span (~0.80) and the
-   free-field ceiling (~0.51) sits roughly 29 points of d_pose that the 12-dim span and the lattice are
-   leaving on the table. That is the honest size of the prize for re-**choosing** the 12 directions — the
-   non-null generalization of F1, at identical storage — and it is now a measured quantity rather than a
-   hope.
+   yet the realized optimum stops around three-quarters. The uint8 rounds, the clamp, the bicubic
+   resampling and PoseNet's own nonlinearity leave a large irreducible floor. Any claim that the carrier
+   "should" reach d_pose ≈ 0 is refuted. (0.7347 is the best value this optimizer realized, so it bounds
+   the achievable ratio from above; the true floor may sit lower.)
+2. **The subspace re-choice prize is real but modest — ~21 points, not 29.** Between Gauss-Newton on the
+   shipped span (0.9448, partial) and the free-field ceiling (0.7347) sits roughly 21 points of d_pose
+   that the 12-dim span and the lattice leave on the table. Against the ~0.0087 pose leg that is worth
+   order 1e-3 S if fully realized — but a re-chosen span captures only part of it, and unlike
+   Gauss-Newton it is not obviously free (a re-chosen basis re-quantizes 27,648 codes and changes their
+   compressibility).
 
-Ordering stands: Gauss-Newton first (it pays now, at zero bytes), subspace re-choice second.
+Ordering stands and is now better supported: Gauss-Newton first (it pays now, at zero bytes), subspace
+re-choice second and only with its byte price measured up front.
 
 ## Baseline correction — the pointer moved mid-arm
 
@@ -224,13 +232,12 @@ candidate is a re-runnable transform rather than a fixed overlay.
 2. **Byte-close** through the up3-cured path. up2's two blockers were one missing transform (the carrier
    is 2-plane byte-interleaved, reserved bit `0x04`, un-interleaved at `residual_archive.py:188` before
    any offset read) plus a stale section pin; that cure exists, so this is packaging, not new measurement.
-3. **Subspace re-choice** — now MEASURED as worth ~29 points of d_pose (Gauss-Newton ~0.80 vs the
-   free-field ceiling ~0.51), at identical storage. Charter it after the Gauss-Newton row lands. Its
-   instrument is PCA over the per-pair optimal target fields, not over the steps: the new span must hold
-   the carrier the pairs actually want, not the correction from where they happen to sit.
-4. **A wider ceiling sample.** n=6 is thin for pose, whose estimate band is ~13.4× seg's at equal n
-   (`ddm_fo2h`). The 0.5148 figure is directional; it should be re-measured at n≥120 before any charter
-   prices itself on the 29-point gap.
+3. **Subspace re-choice** — MEASURED at n=120 as worth ~21 points of d_pose (Gauss-Newton 0.9448 vs the
+   free-field ceiling 0.7347). Charter it after the Gauss-Newton row lands, and price its bytes first: a
+   re-chosen basis re-quantizes all 27,648 stored codes and changes their brotli compressibility, so
+   unlike the coefficient-only move it is NOT free by construction. Its instrument is PCA over the
+   per-pair optimal target fields, not over the steps: the new span must hold the carrier the pairs
+   actually want, not the correction from where they happen to sit.
 
 ## Genus notes
 
