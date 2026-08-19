@@ -656,10 +656,26 @@ def build_candidate(
     *, codes: np.ndarray, semantic_mode: str, carrier_plane2: bool, drop_overlay: bool,
     output: Path, runtime_root: Path, mod: SimpleNamespace,
     edited_archive: Path = S2_ARCHIVE,
+    tail_override: bytes | None = None,
 ) -> dict[str, Any]:
-    """Assemble sz1-tail + sz1-hpac + edited-semantic + compensated-carrier."""
+    """Assemble sz1-tail + sz1-hpac + edited-semantic + compensated-carrier.
+
+    ``tail_override`` substitutes a RE-ENCODED token tail for sz1's verbatim one.
+    Until ``ddm_to1`` there was no such step, so every rate win on the token
+    stream was unreachable from this body: the composer re-serialises the
+    semantic and carrier sections and then borrows the tail as-is.
+
+    The override is legal ONLY when the substituted tail re-encodes THIS body's
+    own token field -- the receiver must decode to the same tokens, or the
+    arithmetic decode desyncs silently and the archive scores as garbage (the
+    ck1 S=79.4 T4 refusal).  Callers own that gate;
+    ``ddm_to1_tail_override.tail_identity_gate`` is the canonical one, and it
+    proves the substitution by byte equality of the tail being replaced rather
+    than by argument.  A shorter tail is not evidence of a valid one.
+    """
     s2 = carrier_surface(edited_archive, mod)
     sz1 = sections(SZ1_GENERATION / "archive.zip")
+    tail = sz1["tail"] if tail_override is None else tail_override
 
     semantic_body = mod.ra._decompress_brotli(s2["semantic_stream"])
     semantic_stream, semantic_reserved = semantic_stream_for(
@@ -678,7 +694,7 @@ def build_candidate(
             sz1["magic"], sz1["version"], s2["codec"], s2["table_mode"], reserved,
             len(sz1["hpac"]), len(semantic_stream), len(carrier_stream),
         )
-        + sz1["hpac"] + semantic_stream + carrier_stream + sz1["tail"]
+        + sz1["hpac"] + semantic_stream + carrier_stream + tail
     )
     archive_bytes = mod.rx1.deterministic_zip(member)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -700,7 +716,9 @@ def build_candidate(
         "semantic_body_bytes": len(semantic_body),
         "semantic_stream_bytes": len(semantic_stream),
         "carrier_stream_bytes": len(carrier_stream),
-        "tail_bytes": len(sz1["tail"]),
+        "tail_bytes": len(tail),
+        "tail_sha256": hashlib.sha256(tail).hexdigest(),
+        "tail_overridden": tail_override is not None,
         "hpac_stream_bytes": len(sz1["hpac"]),
         "overlay_dropped": bool(drop_overlay),
         "changed_coordinates": int(
