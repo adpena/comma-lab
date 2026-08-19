@@ -510,6 +510,16 @@ def test_the_fire_path_refuses_an_advisory_seal(tmp_path: Path, monkeypatch) -> 
     seal_path = _seal(tmp_path, runtime, axis="advisory")
     module = _load_fire_tool()
     _forbid_subprocess(monkeypatch, module)
+    # The fire tool's default pointer is the LIVE repo pointer; this fixture's bar pins the
+    # synthetic POINTER_SCORE, so without injection SEAL_BAR_DRIFT fires on every honest
+    # pointer move BEFORE the advisory-axis check under test is reached (#1138 genus:
+    # a frozen fixture must not depend on the campaign's own success).
+    synthetic_pointer = _write_pointer(tmp_path)
+    monkeypatch.setattr(
+        module,
+        "validate_seal",
+        lambda p, pointer_path=synthetic_pointer: validate_seal(p, pointer_path=pointer_path),
+    )
 
     rc = module.main(
         [
@@ -570,6 +580,15 @@ def test_the_producer_cli_seals_and_validates_its_own_output(tmp_path: Path, mon
     pointer = _write_pointer(tmp_path)
     monkeypatch.setattr(
         make, "read_pointer_state", lambda axis="contest_cuda": make_pointer_state(pointer, axis)
+    )
+    # The producer SELF-validates its output (make_candidate_seal.py calls validate_seal
+    # with the default LIVE pointer) while the bar above came from the synthetic pointer —
+    # inject the same synthetic pointer into the self-validation so the test cannot go RED
+    # on an honest pointer move (#1138 genus).
+    monkeypatch.setattr(
+        make,
+        "validate_seal",
+        lambda p, pointer_path=pointer: validate_seal(p, pointer_path=pointer_path),
     )
 
     out = tmp_path / "SEAL_produced.json"
