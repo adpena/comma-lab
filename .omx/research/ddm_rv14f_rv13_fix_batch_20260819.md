@@ -270,6 +270,22 @@ Reported rather than absorbed:
    with the pre-rv14f pointer restored. A test that must be edited each time the campaign
    succeeds is a maintenance trap; it should read the live pointer or pin a fixture.
 
+### Scope boundary of the F4 warning, stated plainly
+
+The `RuntimeCustodyWarning` fires only on **anchor-mirror** rows; the `runtime_custody` stamp
+is applied to **every** row. Measured on the live CUDA anchor set after the batch:
+
+| score | custody | mirror row? |
+|---:|---|---|
+| 0.15652626 / 0.15659460 / 0.15666451 / 0.15710198 / 79.40216175 | `pinned` | yes |
+| 0.15716192 (`keep01_t4`) | **`missing`** | **no** — a hand-made anchor from an earlier arm |
+
+So one non-mirror anchor still feeds the scanner without runtime custody. It is **visible**
+(stamped `missing`) but **not loud**, because warning on every legacy hand-made anchor would
+trade one silent instrument for alarm fatigue — and an alarm nobody reads is the same failure
+in a different costume. This is a deliberate boundary, not an oversight; the refusal follow-on
+below is where it closes.
+
 ## What I did NOT do
 
 * No Modal fire, no paid dispatch, no score claim, no pointer move. The pointer's **score** is
