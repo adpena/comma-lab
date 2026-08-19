@@ -12,7 +12,7 @@ promotion_eligible: false
 promotable: false
 pointer_moved: false
 own_vehicle_frontier: "S 0.15652626435208142 @ 176,420 B [contest-CUDA T4 n600] (ddm_up3 thirteenth pointer move) -- UNMOVED by this unit"
-verdict: "SEG LEG SUPPLIER-ALIVE (eta 0.5794 at n=70 oos, asymptote confirmed, >> 0.5196 bar) but CHANNEL NET NON-SUPPLIER on the SHIPPING axis: the pose leg reversed out-of-sample and, re-scored directly on DALI GT, costs 33.2x the seg gain"
+verdict: "SEG LEG SUPPLIER-ALIVE (eta 0.5794 at n=70 oos, asymptote confirmed, >> 0.5196 bar) but CHANNEL NET NON-SUPPLIER on the SHIPPING axis: the pose leg reversed out-of-sample and, re-scored directly on DALI GT, costs 41.3x the seg gain"
 verdict_scope: "INSTANCE on the hv1 ep0634 base, ring-0 described set, r=1 pose-null-constrained realization, this solver budget, PyAV GT lineage, n as reported"
 tokens: "[no-triality] [p0-ledger-ok]"
 ---
@@ -54,10 +54,10 @@ about transfer (§4.0–§4.0c). On **DALI** GT the edit is worse, not better:
 
 | | pose ratio | ΔS_pose | joint ΔS |
 |---|---:|---:|---:|
-| PyAV (local) | 1.3275 | +0.001263 | +0.000926 |
-| **DALI (shipping, direct)** | **5.5051** | **+0.011172** | **+0.010835** |
+| PyAV (local) | 1.7555 | +0.002696 | +0.002360 |
+| **DALI (shipping, direct)** | **7.1610** | **+0.013908** | **+0.013571** |
 
-**On the axis that ships, the pose leg costs 33.2× what the seg leg supplies**, with 5/5 pairs
+**On the axis that ships, the pose leg costs 41.3× what the seg leg supplies**, with 6/6 pairs
 worsening on DALI and the PyAV column reproducing the eta gate bit-exactly as its receipt.
 
 ## §1 The charter's premise was stale — gen-1 did not die empty
@@ -234,7 +234,7 @@ nothing else.
 | pair 15 `d_pose_before`, PyAV | `6.142644e-05` — gen-1's retained row to every digit |
 | DALI cache lineage | asserted `"dali"`, refuses anything else |
 
-**The measured result (n=5 pairs, all from gen-1's own n=48 set):**
+**The measured result (n=6 pairs, all from gen-1's own n=48 set):**
 
 | pair | PyAV ratio | **DALI ratio** |
 |---|---:|---:|
@@ -243,8 +243,9 @@ nothing else.
 | 27 | 1.680 | **15.024** |
 | 35 | 1.315 | **3.950** |
 | **52** | **0.321** *(improves 3×)* | **47.203** *(worsens 47×)* |
-| **aggregate** | **1.3275** | **5.5051** |
-| pairs worsening | 4/5 | **5/5** |
+| 85 | 5.013 | **7.690** |
+| **aggregate** | **1.7555** | **7.1610** |
+| pairs worsening | 5/6 | **6/6** |
 
 **Pair 52 is the whole finding in one row.** The local instrument reports the edit making pose
 **three times better**; on the lineage that ships it makes pose **forty-seven times worse**. Same
@@ -253,7 +254,7 @@ for that pair would have been exactly backwards, and it would have looked like t
 result in the sample.
 
 **Verdict: SIGN AGREES ACROSS LINEAGES in aggregate — both worsen, and the DALI degradation is
-4.15× the PyAV one** — but it agrees *despite* per-pair flips, not because the axes track. The "phantom rescue" hypothesis — that the edit only looks damaging against an inflated
+4.08× the PyAV one** — but it agrees *despite* per-pair flips, not because the axes track. The "phantom rescue" hypothesis — that the edit only looks damaging against an inflated
 baseline — is the opposite of what the data show. The damage is real on the axis that ships and
 **substantially larger there**, which is the direction the absolute-excess reasoning predicted: the
 same absolute insult is a bigger fractional one against a smaller base.
@@ -264,14 +265,14 @@ required at all:
 
 | | ratio | ΔS_pose | joint ΔS with the n=70 seg leg |
 |---|---:|---:|---:|
-| PyAV (local instrument) | 1.3275 | +0.001263 | +0.000926 |
-| **DALI (shipping, direct)** | **5.5051** | **+0.011172** | **+0.010835** |
+| PyAV (local instrument) | 1.7555 | +0.002696 | +0.002360 |
+| **DALI (shipping, direct)** | **7.1610** | **+0.013908** | **+0.013571** |
 
-**On the axis that ships, the pose leg costs 33.2× the seg leg's gain.**
+**On the axis that ships, the pose leg costs 41.3× the seg leg's gain.**
 
-**n=5 is five pairs, and the aggregate is volatile** (1.86 at n=2 → 4.03 at n=4 → 5.51 at n=5) — no population
-estimate of the magnitude is claimed. What is not volatile is the direction on the shipping axis: **5 of 5 DALI
-observations worsen**, and the PyAV column reproduces the eta gate bit-exactly throughout, so the
+**n=6 is six pairs, and the aggregate is volatile — it CLIMBS monotonically with n** (1.86 at n=2 → 4.03 at n=4 → 5.51 at n=5 → 7.16 at n=6), which is heavy-tail accumulation, not convergence — no population
+estimate of the magnitude is claimed. What is not volatile is the direction on the shipping axis: **6 of 6 DALI
+observations worsen**, and every added pair has made the cost worse, never better, and the PyAV column reproduces the eta gate bit-exactly throughout, so the
 instrument is measuring the gate's own object.
 
 ### §4.0c The lineage factor is not a constant — it spans 1,834× across pairs
@@ -418,13 +419,13 @@ asymptote is confirmed by a fresh 22-pair extension that moved it 0.2%. The char
 answered in the affirmative, and the number is now n=70 out-of-sample rather than n=12.
 
 **CHANNEL: NET NON-SUPPLIER on the shipping axis.** Re-scored directly against DALI GT — the
-lineage the contest scores — the pose leg costs **+0.011172 S** against the seg leg's −0.000337 S.
-**33.2× more than the channel supplies.** No transfer assumption is involved: this is a DALI-GT
+lineage the contest scores — the pose leg costs **+0.013908 S** against the seg leg's −0.000337 S.
+**41.3× more than the channel supplies.** No transfer assumption is involved: this is a DALI-GT
 ratio measured against DALI GT, on the same pairs and frames as the PyAV column, with that column
 reproducing the eta gate bit-exactly as the receipt.
 
 **verdict_scope: INSTANCE** — this vehicle (hv1 ep0634), this ring-0 described set, this r=1
-pose-null realization, this solver budget. Seg leg n=70 out-of-sample; pose lineage contrast n=5
+pose-null realization, this solver budget. Seg leg n=70 out-of-sample; pose lineage contrast n=6
 matched pairs. The *magnitude* of the DALI pose cost is not a population estimate; its *sign* is
 8/8 across pair-lineage observations.
 
