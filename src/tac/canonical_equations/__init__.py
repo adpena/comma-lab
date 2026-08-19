@@ -152,6 +152,16 @@ from tac.canonical_equations.ddm_cr1_seg_only_base_pose_degradation_20260801 imp
     populate_seg_only_base_pose_degradation_v1,
     pose_degradation_ratio,
 )
+from tac.canonical_equations.ddm_cw1_win_family_laws_20260819 import (
+    ALL_CW1_WIN_FAMILY_BUILDERS,
+    build_container_archive_vs_payload_delta_v1,
+    build_gt_lineage_additive_pose_offset_v1,
+    build_realized_acceptance_monotonicity_v1,
+    container_attributable_bytes,
+    populate_cw1_win_family_laws,
+    pose_pyav_from_dali,
+    realized_acceptance_worsened_count,
+)
 from tac.canonical_equations.ddm_gc9_seg_rate_product_law_20260730 import (
     build_seg_rate_product_law_v1,
     populate_seg_rate_product_law_v1,
@@ -460,6 +470,7 @@ from tac.canonical_equations.yopo_first_layer_costate_20260712 import (
 
 __all__ = [
     "ALL_CURRICULUM_DERIVATION_BUILDERS",
+    "ALL_CW1_WIN_FAMILY_BUILDERS",
     "ALL_DEEPMATH_AMORTIZING_ARGMAX_BUILDERS",
     "CANONICAL_EQUATIONS_REGISTRY_LOCK",
     "CANONICAL_EQUATIONS_REGISTRY_PATH",
