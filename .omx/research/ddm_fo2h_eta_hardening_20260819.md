@@ -231,23 +231,38 @@ nothing else.
 | pair 15 `d_pose_before`, PyAV | `6.142644e-05` — gen-1's retained row to every digit |
 | DALI cache lineage | asserted `"dali"`, refuses anything else |
 
-**The measured result (n=2 pairs, both from gen-1's own n=48 set):**
+**The measured result (n=4 pairs, all from gen-1's own n=48 set):**
 
-| | PyAV (local) | **DALI (shipping)** |
+| pair | PyAV ratio | **DALI ratio** |
 |---|---:|---:|
-| aggregate pose ratio | 1.4024 | **1.8645** |
-| pairs worsening | 2/2 | **2/2** |
+| 15 | 1.382 | **2.367** |
+| 22 | 1.726 | **1.720** |
+| 27 | 1.680 | **15.024** |
+| 35 | 1.315 | **3.950** |
+| **aggregate** | **1.4648** | **4.0330** |
+| pairs worsening | 4/4 | **4/4** |
 
-**Verdict: SIGN AGREES ACROSS LINEAGES — both worsen, and the DALI degradation is 1.33× the PyAV
+**Verdict: SIGN AGREES ACROSS LINEAGES — both worsen, and the DALI degradation is 2.75× the PyAV
 one.** The "phantom rescue" hypothesis — that the edit only looks damaging against an inflated
-baseline — is **not** what the data show at this n. The damage is real on the axis that ships, and
-larger there, which is the direction the absolute-excess reasoning predicted: the same absolute
-insult is a bigger fractional one against a smaller base.
+baseline — is the opposite of what the data show. The damage is real on the axis that ships and
+**substantially larger there**, which is the direction the absolute-excess reasoning predicted: the
+same absolute insult is a bigger fractional one against a smaller base.
 
-**n=2 is two pairs.** This is a matched contrast with a perfect control, not a population estimate;
-it cannot carry a verdict on its own and I am not asking it to. What it does is remove the
-*rescue* from the live hypotheses and put the burden back on anyone who wants to argue the channel
-survives on the contest axis.
+**This replaces the bracket with a direct measurement.** A DALI-GT ratio measured against DALI GT
+*is* the shipping-axis quantity (up1: CPU-vs-T4 agreement 0.9999×) — no transfer assumption is
+required at all:
+
+| | ratio | ΔS_pose | joint ΔS with the n=67 seg leg |
+|---|---:|---:|---:|
+| PyAV (local instrument) | 1.4648 | +0.001745 | +0.001409 |
+| **DALI (shipping, direct)** | **4.0330** | **+0.008366** | **+0.008030** |
+
+**On the axis that ships, the pose leg costs 24.9× the seg leg's gain.**
+
+**n=4 is four pairs, and the aggregate is volatile** (1.86 at n=2 → 4.03 at n=4) — no population
+estimate of the magnitude is claimed. What is not volatile is the direction: **8 of 8 pair-lineage
+observations worsen**, and the PyAV column reproduces the eta gate bit-exactly throughout, so the
+instrument is measuring the gate's own object.
 
 ### §4.0c The lineage factor is not a constant — it spans 1,834× across pairs
 
