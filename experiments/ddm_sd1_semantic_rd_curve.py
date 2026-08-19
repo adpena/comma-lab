@@ -42,6 +42,13 @@ import torch
 from safetensors.torch import load_file
 
 
+
+# fp16's smallest positive (subnormal) value, 2**-24 = 5.960464e-08.  A positive
+# floor applied in fp32 BELOW this rounds to EXACTLY 0.0 when narrowed to fp16,
+# silently re-opening the divide-by-zero / zero-scale the floor exists to close.
+# The floor must therefore be re-applied AFTER the cast.
+_FP16_MIN_POSITIVE = 5.960464477539063e-08
+
 ORIGINAL_BYTES = 37_545_489
 EXPECTED_BASE_ARCHIVE_BYTES = 191_052
 EXPECTED_BASE_ARCHIVE_SHA256 = (
@@ -173,7 +180,7 @@ def quantized_tensor(
         else tuple(range(1, source.ndim))
     )
     scale = source.abs().amax(dim=reduce_dims, keepdim=True).clamp_min(1e-8)
-    scale = (scale / limit).to(torch.float16)
+    scale = (scale / limit).to(torch.float16).clamp(min=_FP16_MIN_POSITIVE)
     codes = (source / scale.float()).round().clamp(-limit, limit).to(torch.int8)
     restored = codes.float() * scale.float()
     scale_bytes = scale.reshape(-1).numpy().astype("<f2", copy=False).tobytes()

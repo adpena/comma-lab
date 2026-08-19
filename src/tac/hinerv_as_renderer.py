@@ -481,12 +481,20 @@ def train_step_hinerv(
 # ── Quantization + archive packing ───────────────────────────────────────
 
 
+# fp16's smallest positive (subnormal) value, 2**-24 = 5.960464e-08.  A positive
+# floor applied in fp32 BELOW this rounds to EXACTLY 0.0 when narrowed to fp16,
+# silently re-opening the divide-by-zero / zero-scale the floor exists to close.
+# The floor must therefore be re-applied AFTER the cast, on the value actually
+# stored and read back by the decoder.
+_FP16_MIN_POSITIVE = 5.960464477539063e-08
+
+
 def _quantize_per_tensor_int8_with_fp16_scale(
     tensor: torch.Tensor,
 ) -> tuple[torch.Tensor, torch.Tensor]:
     max_abs = float(tensor.abs().max().item())
     scale = max(max_abs, 1e-8) / 127.0
-    scale_fp16 = torch.tensor([scale], dtype=torch.float16)
+    scale_fp16 = torch.tensor([scale], dtype=torch.float16).clamp(min=_FP16_MIN_POSITIVE)
     q = (tensor / scale).round().clamp(-128, 127).to(torch.int8)
     return q, scale_fp16
 
@@ -497,7 +505,12 @@ def _quantize_latent_table_uint8_delta_split(latents: torch.Tensor) -> bytes:
     n, d = latents.shape
     mins = latents.min(dim=0).values.to(torch.float16)
     maxs = latents.max(dim=0).values.to(torch.float16)
-    scales = ((maxs - mins).float() / 255.0).clamp(min=1e-8).to(torch.float16)
+    scales = (
+        ((maxs - mins).float() / 255.0)
+        .clamp(min=1e-8)
+        .to(torch.float16)
+        .clamp(min=_FP16_MIN_POSITIVE)
+    )
     q = ((latents - mins.float()) / scales.float()).round().clamp(0, 255).to(torch.int32)
     delta = torch.zeros_like(q)
     delta[0] = q[0]

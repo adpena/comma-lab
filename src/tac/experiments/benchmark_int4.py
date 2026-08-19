@@ -25,6 +25,13 @@ import numpy as np
 
 from tac.architectures import build_postfilter
 
+
+# fp16's smallest positive (subnormal) value, 2**-24 = 5.960464e-08.  A positive
+# floor applied in fp32 BELOW this rounds to EXACTLY 0.0 when narrowed to fp16,
+# silently re-opening the divide-by-zero / zero-scale the floor exists to close.
+# The floor must therefore be re-applied AFTER the cast.
+_FP16_MIN_POSITIVE = 5.960464477539063e-08
+
 # R41 fix: PROJECT_ROOT was used in CLI defaults without being defined.
 # Resolve from this file's location.
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -309,7 +316,9 @@ def main():
                     scale = w.abs().max().clamp(min=1e-10) / 127.0
                     q = (w / scale).round().clamp(-128, 127).to(torch.int8)
                 int8_state[f"{name}.weight"] = q
-                int8_state[f"{name}.weight_scale"] = scale.half() if w.ndim >= 2 else scale.half()
+                int8_state[f"{name}.weight_scale"] = scale.half().clamp(
+                    min=_FP16_MIN_POSITIVE
+                )
                 if module.bias is not None:
                     int8_state[f"{name}.bias"] = module.bias.data.half()
         torch.save(int8_state, int8_path)

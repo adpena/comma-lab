@@ -33,6 +33,12 @@ import brotli
 import numpy as np
 import torch
 
+# fp16's smallest positive (subnormal) value, 2**-24 = 5.960464e-08.  A positive
+# floor applied in fp32 BELOW this rounds to EXACTLY 0.0 when narrowed to fp16,
+# silently re-opening the divide-by-zero / zero-scale the floor exists to close.
+# The floor must therefore be re-applied AFTER the cast.
+_FP16_MIN_POSITIVE = 5.960464477539063e-08
+
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sd1 = importlib.import_module("experiments.ddm_sd1_semantic_rd_curve")
@@ -196,7 +202,7 @@ def quantized_components(name: str, value: torch.Tensor, bits: int = 4) -> tuple
     embedding = name.endswith("embed.weight")
     reduce_dims = tuple(range(source.ndim - 1)) if embedding else tuple(range(1, source.ndim))
     scales = source.abs().amax(dim=reduce_dims, keepdim=True).clamp_min(1e-8) / limit
-    scales = scales.to(torch.float16)
+    scales = scales.to(torch.float16).clamp(min=_FP16_MIN_POSITIVE)
     codes = (source / scales.float()).round().clamp(-limit, limit).to(torch.int8)
     restored = codes.float() * scales.float()
     return (

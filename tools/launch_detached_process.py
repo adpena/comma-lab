@@ -540,6 +540,41 @@ def _safe_run_wrapper_flag(effective_cmd: Sequence[str], flag: str) -> str | Non
     return value
 
 
+def _sweep_superseded_values(
+    node: Any,
+    corrections: Mapping[str, str],
+    trail: str,
+    found: list[dict[str, str]],
+) -> Any:
+    """Apply an already-proven path correction to EVERY occurrence of that value.
+
+    The key-name corrections above fix ``pid_file`` and ``log_path`` because those
+    are the names the launcher knows.  A config is free to carry the SAME drifted
+    path under any other key -- ``success_receipts[].path`` is the live one, and
+    it is read by the watcher exactly like the keys that were just corrected.
+    Fixing by key name alone therefore repairs one holder of a wrong value and
+    leaves its twin untouched, in the same file, while announcing success.
+
+    So once a value is PROVEN wrong (the launcher derived the right one), sweep
+    it by VALUE across the whole document.  Every replacement is recorded with
+    its JSON path so the supersession stays as loud as a key-name one.
+    """
+    if isinstance(node, dict):
+        return {
+            key: _sweep_superseded_values(value, corrections, f"{trail}.{key}", found)
+            for key, value in node.items()
+        }
+    if isinstance(node, list):
+        return [
+            _sweep_superseded_values(item, corrections, f"{trail}[{index}]", found)
+            for index, item in enumerate(node)
+        ]
+    if isinstance(node, str) and node in corrections:
+        found.append({"key": trail.lstrip("."), "declared": node, "derived": corrections[node]})
+        return corrections[node]
+    return node
+
+
 def _derive_watcher_config(
     config_path: Path,
     *,
@@ -588,6 +623,14 @@ def _derive_watcher_config(
         fall back to the hand-typed value.  The launcher does NOT invent a path
         it does not own.  ``pid_file`` remains mandatory in the watcher's own
         ``load_config``, so an absent value still fails closed there.
+      * a value proven wrong under one key is swept by VALUE across the whole
+        document -> ``value_swept``.  Correcting by key NAME alone repairs the
+        holder the launcher happens to know and leaves an identical wrong value
+        under any other key -- ``success_receipts[].path`` above is handed back
+        as ``config_declared`` without its path ever being inspected, so the
+        same drifted ``stdout.log`` survived in the very file where ``log_path``
+        had just been corrected for it.  One wrong path, one correction,
+        everywhere it appears.
 
     Deriving from the argv rather than from ``resource_budget`` is deliberate:
     the argv is the thing the child obeys.  The budget record is cross-checked
@@ -674,6 +717,32 @@ def _derive_watcher_config(
             )
             config["log_path"] = str(log_path)
             changed = True
+
+    # Correct by VALUE, not only by key name.  Anything the launcher just proved
+    # wrong under a known key is equally wrong wherever else it appears -- most
+    # concretely inside ``success_receipts[].path``, which the branch above hands
+    # back as ``config_declared`` without ever looking at the path it contains.
+    corrections = {
+        str(row["declared"]): str(row["derived"])
+        for row in record["supersessions"]
+        if isinstance(row.get("declared"), str) and row["declared"] != row["derived"]
+    }
+    if corrections:
+        swept: list[dict[str, str]] = []
+        config = _sweep_superseded_values(config, corrections, "", swept)
+        for row in swept:
+            record["supersessions"].append({**row, "source": "value_swept"})
+            changed = True
+        if swept:
+            record["value_sweep"] = swept
+            # The record snapshots taken above predate the sweep; refresh them so
+            # the manifest reports what the watcher will actually read.
+            if config.get("success_receipts"):
+                record["success_receipts"]["value"] = config["success_receipts"]
+            if "log_path" in config:
+                record["log_path"]["value"] = config["log_path"]
+            if config.get("pid_file") is not None:
+                record["pid_file"]["value"] = config["pid_file"]
 
     if not changed:
         return config_path, record

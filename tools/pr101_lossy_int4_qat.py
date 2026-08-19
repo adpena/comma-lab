@@ -65,6 +65,12 @@ sys.path.insert(0, str(REPO_ROOT / "tools"))
 
 from tac.pr101_split_brotli_codec import FIXED_STATE_SCHEMA  # noqa: E402
 
+# fp16's smallest positive (subnormal) value, 2**-24 = 5.960464e-08.  A positive
+# floor applied in fp32 BELOW this rounds to EXACTLY 0.0 when narrowed to fp16,
+# silently re-opening the divide-by-zero / zero-scale the floor exists to close.
+# The floor must therefore be re-applied AFTER the cast.
+_FP16_MIN_POSITIVE = 5.960464477539063e-08
+
 TOOL_NAME = "tools/pr101_lossy_int4_qat.py"
 SCHEMA_VERSION = "pr101_lossy_int4_qat.v1"
 INT4_RANGE = 7  # symmetric: [-7, +7], 15 levels (with zero)
@@ -159,12 +165,16 @@ def _block_scales_max_based(flat: torch.Tensor, block_size: int) -> torch.Tensor
     if n_full > 0:
         body = flat[: n_full * block_size].view(n_full, block_size)
         abs_max = body.abs().amax(dim=1).clamp(min=1e-12)
-        scale_f = (abs_max / INT4_RANGE).to(torch.float16).to(torch.float32)
+        scale_f = (
+            (abs_max / INT4_RANGE).to(torch.float16).clamp(min=_FP16_MIN_POSITIVE).to(torch.float32)
+        )
         parts.append(scale_f.unsqueeze(1).expand(-1, block_size).reshape(-1))
     if tail:
         tail_block = flat[n_full * block_size :]
         abs_max_t = tail_block.abs().max().clamp(min=1e-12).unsqueeze(0)
-        scale_t = (abs_max_t / INT4_RANGE).to(torch.float16).to(torch.float32)
+        scale_t = (
+            (abs_max_t / INT4_RANGE).to(torch.float16).clamp(min=_FP16_MIN_POSITIVE).to(torch.float32)
+        )
         parts.append(scale_t.expand(tail_block.numel()))
     return torch.cat(parts)
 
@@ -227,8 +237,18 @@ class FakeQuantInt4BlockLearnable(torch.autograd.Function):
         n = flat.numel()
         n_full = n // block_size
         tail = n - n_full * block_size
-        # Snap scales to fp16 to match the on-disk encoder.
-        scale_fp16 = scale_per_block.detach().clamp(min=1e-12).to(torch.float16).to(torch.float32)
+        # Snap scales to fp16 to match the on-disk encoder.  The 1e-12 floor is
+        # applied in fp32 and then narrowed to fp16, where anything <= 2.98e-08
+        # rounds to EXACTLY 0.0 -- the floor destroyed itself.  Re-apply it AFTER
+        # the cast, at fp16's smallest positive value, so an all-zero block cannot
+        # divide by zero here nor be dequantized with a zero scale on disk.
+        scale_fp16 = (
+            scale_per_block.detach()
+            .clamp(min=1e-12)
+            .to(torch.float16)
+            .clamp(min=_FP16_MIN_POSITIVE)
+            .to(torch.float32)
+        )
         per_elem_parts: list[torch.Tensor] = []
         if n_full > 0:
             per_elem_parts.append(

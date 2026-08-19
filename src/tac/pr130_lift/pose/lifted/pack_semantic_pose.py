@@ -27,6 +27,13 @@ from learned_pose_carrier_oracle import quantize_basis
 from semantic_renderer_oracle import SemanticTokenRenderer
 
 
+
+# fp16's smallest positive (subnormal) value, 2**-24 = 5.960464e-08.  A positive
+# floor applied in fp32 BELOW this rounds to EXACTLY 0.0 when narrowed to fp16,
+# silently re-opening the divide-by-zero / zero-scale the floor exists to close.
+# The floor must therefore be re-applied AFTER the cast.
+_FP16_MIN_POSITIVE = 5.960464477539063e-08
+
 def pack_signed_int4(codes: torch.Tensor) -> bytes:
     values = codes.detach().cpu().numpy().astype(np.int8, copy=False).reshape(-1)
     nibbles = (values.astype(np.int16) & 0xF).astype(np.uint8)
@@ -116,7 +123,7 @@ def quantize_semantic(value: torch.Tensor, bits: int, embedding: bool):
     limit = 7
     reduce_dims = tuple(range(source.ndim - 1)) if embedding else tuple(range(1, source.ndim))
     scale = source.abs().amax(dim=reduce_dims, keepdim=True).clamp_min(1e-8) / limit
-    scale = scale.to(torch.float16)
+    scale = scale.to(torch.float16).clamp(min=_FP16_MIN_POSITIVE)
     q = (source / scale.float()).round().clamp(-limit, limit).to(torch.int8)
     restored = q.float() * scale.float()
     return restored, scale.reshape(-1).numpy().tobytes() + pack_signed_int4(q)

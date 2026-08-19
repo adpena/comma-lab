@@ -56,6 +56,12 @@ from typing import Any
 
 import torch
 
+# fp16's smallest positive (subnormal) value, 2**-24 = 5.960464e-08.  A positive
+# floor applied in fp32 BELOW this rounds to EXACTLY 0.0 when narrowed to fp16,
+# silently re-opening the divide-by-zero / zero-scale the floor exists to close.
+# The floor must therefore be re-applied AFTER the cast.
+_FP16_MIN_POSITIVE = 5.960464477539063e-08
+
 __all__ = [
     "SELECTED_MIXED_Q3_NAMES",
     "FILM_ROW_FAMILY",
@@ -181,7 +187,7 @@ def deployed_fake_quant(name: str, value: torch.Tensor, bits: int) -> torch.Tens
         tuple(range(value.ndim - 1)) if embedding else tuple(range(1, value.ndim))
     )
     scale = value.detach().abs().amax(dim=reduce_dims, keepdim=True).clamp_min(1e-8)
-    scale = (scale / limit).to(torch.float16).float()
+    scale = (scale / limit).to(torch.float16).clamp(min=_FP16_MIN_POSITIVE).float()
     codes = torch.round(value / scale).clamp(-limit, limit)
     restored = codes * scale
     return value + (restored - value).detach()

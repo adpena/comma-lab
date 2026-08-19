@@ -65,6 +65,12 @@ from tac.pose_delta_codec import encode_pose_deltas  # noqa: E402
 from tac.pose_delta_codec_v2 import encode_pose_delta_v2  # noqa: E402
 
 
+# fp16's smallest positive (subnormal) value, 2**-24 = 5.960464e-08.  A positive
+# floor applied in fp32 BELOW this rounds to EXACTLY 0.0 when narrowed to fp16,
+# silently re-opening the divide-by-zero / zero-scale the floor exists to close.
+# The floor must therefore be re-applied AFTER the cast.
+_FP16_MIN_POSITIVE = 5.960464477539063e-08
+
 _DEFAULT_POSES = (
     _REPO_ROOT / "submissions" / "baseline_dilated_h64_0_90" / "optimized_poses.pt"
 )
@@ -116,7 +122,17 @@ def _can_quantize(poses: torch.Tensor, tol: float = 5e-2) -> bool:
     anchor_fp16 = poses_f[0].to(torch.float16).to(torch.float32)
     deltas = poses_f[1:] - poses_f[:-1]
     abs_deltas = deltas.abs()
-    delta_scale = abs_deltas.max(dim=0).values.clamp(min=1e-8).to(torch.float16).to(torch.float32)
+    # The 1e-8 floor is applied in fp32 but the value is then narrowed to fp16,
+    # where anything <= 2.98e-08 rounds to EXACTLY 0.0 -- so the floor destroyed
+    # itself and the division below became a divide-by-zero on a constant channel.
+    # Re-apply the floor AFTER the cast, at fp16's smallest positive value.
+    delta_scale = (
+        abs_deltas.max(dim=0)
+        .values.clamp(min=1e-8)
+        .to(torch.float16)
+        .clamp(min=_FP16_MIN_POSITIVE)
+        .to(torch.float32)
+    )
     deltas_q_float = (deltas / delta_scale.unsqueeze(0)) * 127.0
     deltas_q = deltas_q_float.round().clamp(-127, 127)
     deltas_recovered = (deltas_q / 127.0) * delta_scale.unsqueeze(0)

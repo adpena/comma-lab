@@ -25,6 +25,13 @@ from safetensors.torch import load_file
 from semantic_renderer_oracle import SemanticTokenRenderer, render_for_seg
 
 
+
+# fp16's smallest positive (subnormal) value, 2**-24 = 5.960464e-08.  A positive
+# floor applied in fp32 BELOW this rounds to EXACTLY 0.0 when narrowed to fp16,
+# silently re-opening the divide-by-zero / zero-scale the floor exists to close.
+# The floor must therefore be re-applied AFTER the cast.
+_FP16_MIN_POSITIVE = 5.960464477539063e-08
+
 def quantize_tensor(value: torch.Tensor, bits: int, embedding: bool) -> tuple[torch.Tensor, int]:
     limit = (1 << (bits - 1)) - 1
     source = value.detach().float()
@@ -37,7 +44,7 @@ def quantize_tensor(value: torch.Tensor, bits: int, embedding: bool) -> tuple[to
     else:
         reduce_dims = tuple(range(1, source.ndim))
         scale = source.abs().amax(dim=reduce_dims, keepdim=True).clamp_min(1e-8) / limit
-    scale = scale.to(torch.float16)
+    scale = scale.to(torch.float16).clamp(min=_FP16_MIN_POSITIVE)
     q = (source / scale.float()).round().clamp(-limit, limit)
     restored = q * scale.float()
     code_bytes = (source.numel() * bits + 7) // 8

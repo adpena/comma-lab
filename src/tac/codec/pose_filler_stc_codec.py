@@ -92,6 +92,13 @@ import torch
 from tac.codec.syndrome_trellis_codec import make_submatrix
 
 
+
+# fp16's smallest positive (subnormal) value, 2**-24 = 5.960464e-08.  A positive
+# floor applied in fp32 BELOW this rounds to EXACTLY 0.0 when narrowed to fp16,
+# silently re-opening the divide-by-zero / zero-scale the floor exists to close.
+# The floor must therefore be re-applied AFTER the cast.
+_FP16_MIN_POSITIVE = 5.960464477539063e-08
+
 FSTC_MAGIC: bytes = b"FSTC"
 FSTC_VERSION: int = 1
 FSTC_DEFAULT_CONSTRAINT_HEIGHT: int = 3   # 8-state trellis (Filler 2011 canonical small)
@@ -164,7 +171,11 @@ def _quantize_pose_deltas(
     delta_scale = abs_deltas.max(dim=0).values.clamp(min=1e-8)
     deltas_q_float = (deltas / delta_scale.unsqueeze(0)) * 127.0
     deltas_q = deltas_q_float.round().clamp(-127, 127).to(torch.int8)
-    return anchor.to(torch.float16), delta_scale.to(torch.float16), deltas_q.numpy().astype(np.int8)
+    return (
+        anchor.to(torch.float16),
+        delta_scale.to(torch.float16).clamp(min=_FP16_MIN_POSITIVE),
+        deltas_q.numpy().astype(np.int8),
+    )
 
 
 def _dequantize_pose_deltas(
