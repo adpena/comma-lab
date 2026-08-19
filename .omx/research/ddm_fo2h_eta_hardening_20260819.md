@@ -12,7 +12,7 @@ promotion_eligible: false
 promotable: false
 pointer_moved: false
 own_vehicle_frontier: "S 0.15652626435208142 @ 176,420 B [contest-CUDA T4 n600] (ddm_up3 thirteenth pointer move) -- UNMOVED by this unit"
-verdict: "SEG LEG SUPPLIER-ALIVE (eta asymptote ~0.58 >> 0.5196 bar) but CHANNEL NET NON-SUPPLIER: the pose leg reversed out-of-sample and costs 2.9x-35x the seg gain"
+verdict: "SEG LEG SUPPLIER-ALIVE (eta 0.58059 at n=67 oos, asymptote confirmed, >> 0.5196 bar) but CHANNEL NET NON-SUPPLIER on the SHIPPING axis: the pose leg reversed out-of-sample and, re-scored directly on DALI GT, costs 24.9x the seg gain"
 verdict_scope: "INSTANCE on the hv1 ep0634 base, ring-0 described set, r=1 pose-null-constrained realization, this solver budget, PyAV GT lineage, n as reported"
 tokens: "[no-triality] [p0-ledger-ok]"
 ---
@@ -48,15 +48,18 @@ gen-1's 48**. Going from n=48 to n=67 moved η by **0.00015 — 0.03%**, and lef
 unchanged. That is what a converged estimate looks like, and it is the charter's question
 answered.
 
-The seg leg supplies. The pose leg takes **3.9× more back**. Net at the pooled η:
-**+0.001056 S — a net loss.** Under the alternative transfer assumption the pose leg costs
-**+0.013075 S** and the loss is 35× the seg gain.
+The seg leg supplies. The pose leg takes **3.9× more back** on the local instrument.
 
-**Scope that honestly (§4.0): this pose result is on the PyAV GT lineage, and it does not
-automatically transfer to the contest axis.** I first wrote that the two transfer bounds made the
-verdict lineage-robust; the algebra says otherwise, and I withdraw it. The channel is
-NON-SUPPLIER **as measured**; the contest-axis sign is undetermined and a DALI re-measurement is
-owed. I have launched the retained-frames run that makes it a matched, same-pair comparison.
+**Then I re-scored the pose leg on the GT lineage the contest actually uses**, rather than arguing
+about transfer (§4.0–§4.0c). On **DALI** GT the edit is worse, not better:
+
+| | pose ratio | ΔS_pose | joint ΔS |
+|---|---:|---:|---:|
+| PyAV (local) | 1.4648 | +0.001745 | +0.001409 |
+| **DALI (shipping, direct)** | **4.0330** | **+0.008366** | **+0.008030** |
+
+**On the axis that ships, the pose leg costs 24.9× what the seg leg supplies**, with 4/4 pairs
+worsening on both lineages and the PyAV column reproducing the eta gate bit-exactly as its receipt.
 
 ## §1 The charter's premise was stale — gen-1 did not die empty
 
@@ -402,18 +405,33 @@ the pose leg and not the waterfill.
 
 ## §6 Verdict
 
-**SEG LEG: SUPPLIER-ALIVE.** η_∞ = 0.580 (1σ lower 0.5657, 2σ lower 0.5519) against the frozen
-0.5196 bar; the curve is flat across the last 32 out-of-sample pairs. The charter's question is
-answered in the affirmative and the number is now n=48 out-of-sample, not n=12.
+**SEG LEG: SUPPLIER-ALIVE.** η = **0.58059** at n=67 out-of-sample (1σ lower **0.5687**, 2σ lower
+0.5519) against the frozen 0.5196 bar — 9.4% of headroom, clearing at better than 2σ. The
+asymptote is confirmed by a fresh 19-pair extension that moved it 0.03%. The charter's question is
+answered in the affirmative, and the number is now n=67 out-of-sample rather than n=12.
 
-**CHANNEL: NET NON-SUPPLIER**, +0.001056 S (ratio-transfer) to +0.012707 S (absolute-transfer),
-against a −0.000336 S seg gain. **verdict_scope: INSTANCE** — this vehicle, this described set,
-this r=1 pose-null realization, this solver budget, PyAV GT lineage, n=48 out-of-sample.
+**CHANNEL: NET NON-SUPPLIER on the shipping axis.** Re-scored directly against DALI GT — the
+lineage the contest scores — the pose leg costs **+0.008366 S** against the seg leg's −0.000337 S.
+**24.9× more than the channel supplies.** No transfer assumption is involved: this is a DALI-GT
+ratio measured against DALI GT, on the same pairs and frames as the PyAV column, with that column
+reproducing the eta gate bit-exactly as the receipt.
 
-**What this does NOT close.** The pose-null *mechanism* is not refuted as a family; one solver
-budget at r=1 is refuted at delivering it. pn2's n=12 and this n=48 disagree in **sign** on pose,
-which is itself the finding that the pose axis needs a live-population measurement before any
-channel in this family is priced again.
+**verdict_scope: INSTANCE** — this vehicle (hv1 ep0634), this ring-0 described set, this r=1
+pose-null realization, this solver budget. Seg leg n=67 out-of-sample; pose lineage contrast n=4
+matched pairs. The *magnitude* of the DALI pose cost is not a population estimate; its *sign* is
+8/8 across pair-lineage observations.
+
+**What this does NOT close.** The pose-null *mechanism* is not refuted as a family — one solver
+budget at r=1 is refuted at delivering it, and a realization that actually holds pose fixed on the
+DALI axis remains unexplored. The re-optimised 74-cell waterfill (§5) is a genuine improvement to
+the seg leg that outlives this verdict and should be inherited by whatever carries the seg edit
+next.
+
+**The general lesson, which outlives the channel.** pn2's n=12 and this n=67 disagree in **sign**
+on pose while agreeing on seg; the pose leg's estimate band is a median 13.4× the seg leg's at
+equal n; and the local-vs-shipping GT factor spans 1,834× pair to pair. **A seg-edit family cannot
+be priced on a locally-measured pose leg at seg-sized n.** That is now cheap to avoid: the DALI
+instrument is one forward pass, and `ddm_fo2h_pose_lineage_rescore.py` wraps it.
 
 ## §7 Retained payloads
 
