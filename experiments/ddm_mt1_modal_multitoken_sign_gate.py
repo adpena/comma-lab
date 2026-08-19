@@ -97,9 +97,11 @@ DEFAULT_GT_FIELD: Final = Path(
     "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/"
     "contest_cuda/ddm_js1b_20260813b/retained/fields/gt_argmax_n600.npy"
 )
+# GT LINEAGE (#1142 cure, 2026-08-19): DALI table = the T4/shipping-axis objective; the prior
+# gt_first6_n600.npy is the PyAV/advisory lineage (additive gap C = 1.406151e-04).
 DEFAULT_GT_POSE: Final = Path(
     "/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver/"
-    "direct_v6/full_n600_eval/retained/pose_vectors/gt_first6_n600.npy"
+    "direct_v6/full_n600_eval/retained/pose_vectors/gt_first6_dali_n600.npy"
 )
 DEFAULT_MODEL: Final = LOCAL_ROOT / "stages/20_collateral_finish/ema.mt1.br"
 DEFAULT_SELECTION: Final = LOCAL_ROOT / "inputs/SELECTION.json"

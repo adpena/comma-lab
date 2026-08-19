@@ -76,9 +76,11 @@ BASE_FIELD: Final = Path(
     "contest_cuda/ddm_js1b_20260813b/retained/fields/"
     "cp135_base_argmax_n600.npy"
 )
+# GT LINEAGE (#1142 cure, 2026-08-19): DALI table = the shipping-axis objective; the prior
+# gt_first6_n600.npy is the PyAV/advisory lineage (additive gap C = 1.406151e-04).
 GT_POSE: Final = Path(
     "/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver/"
-    "direct_v6/full_n600_eval/retained/pose_vectors/gt_first6_n600.npy"
+    "direct_v6/full_n600_eval/retained/pose_vectors/gt_first6_dali_n600.npy"
 )
 
 SEED: Final = 2_026_081_4978

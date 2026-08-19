@@ -60,7 +60,13 @@ CP135_BASE_POSE: Final = Path(
     "direct_v6/full_n600_eval/retained/pose_vectors/"
     "cp135_base_first6_n600.npy"
 )
-GT_POSE: Final = CP135_BASE_POSE.with_name("gt_first6_n600.npy")
+# GT LINEAGE (#1142 cure, 2026-08-19): the shipping axis (contest-CUDA T4) scores against
+# DALI-decoded GT (upstream/evaluate.py:31-42 device fork). The PyAV table differs by the
+# ADDITIVE constant C = MSE(dali, pyav) = 1.406151e-04 (verified at materialization), so any
+# solve against the PyAV table optimizes the wrong objective. GT_POSE is the DALI table;
+# the PyAV table stays available ONLY for lineage-labeled advisory comparisons.
+GT_POSE: Final = CP135_BASE_POSE.with_name("gt_first6_dali_n600.npy")
+GT_POSE_PYAV_ADVISORY: Final = CP135_BASE_POSE.with_name("gt_first6_n600.npy")
 JS6_BANK: Final = Path(
     "/Volumes/VertigoDataTier/pact/ddm_js6_seg_representation_join_20260813/"
     "proposal_bank"
