@@ -509,11 +509,20 @@ def rank_sites_by_margin_saliency(
     unmeasured move into the state.  That asymmetry is what makes a geometric prior
     admissible here at all.
 
-    The score is the NEGATIVE mean margin in the site's window: a neighbourhood full
-    of cells the scorer is nearly undecided about is a neighbourhood where one token
-    can move several argmax cells, which is exactly the ``1.55 cells per changed
-    token`` mechanism ``ddm_jg1`` measured.  Ties break on site index so the order is
-    a pure function of the inputs.
+    The score is the **MINIMUM** margin in the site's window, lowest first -- and the
+    choice of minimum over mean is taken from the canonical ranker rather than
+    invented here.  ``tac.win_families.proposal_rankers.MarginSaliencyRanker`` scores
+    a proposal by the minimum margin over the cells it changes and states the reason:
+    *"one cell close to flipping is the opportunity, and averaging would let a large
+    untouched-margin region hide it."*
+
+    That argument binds harder here than there.  A +/-15 window is **961 cells**, and
+    a mean over it is dominated by the confident interior -- which is precisely the
+    vacuity failure (a washed-out instrument reads as uniform, and a uniform ranking
+    is a constant wearing a geometry's name).  This arm's first version used the
+    mean; it is corrected to the canonical discipline.
+
+    Ties break on site index so the order is a pure function of the inputs.
     """
     if len(sites) == 0:
         return np.zeros(0, dtype=np.int64)
@@ -522,8 +531,8 @@ def rank_sites_by_margin_saliency(
         y, x = int(sites[row, 0]), int(sites[row, 1])
         y0, y1 = max(0, y - window), min(GRID_H, y + window + 1)
         x0, x1 = max(0, x - window), min(GRID_W, x + window + 1)
-        score[row] = -float(margin[y0:y1, x0:x1].mean())
-    return np.argsort(-score, kind="stable").astype(np.int64)
+        score[row] = float(margin[y0:y1, x0:x1].min())
+    return np.argsort(score, kind="stable").astype(np.int64)
 
 
 def _segnet_argmax_batched(net, frames, batch: int) -> np.ndarray:

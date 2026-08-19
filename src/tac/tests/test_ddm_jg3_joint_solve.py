@@ -371,3 +371,43 @@ def test_base_components_come_from_the_t4_receipt_not_a_memo():
     assert receipt["avg_posenet_dist"] == jg3.BASE_D_POSE
     assert receipt["archive_size_bytes"] == jg3.BASE_ARCHIVE_BYTES
     assert receipt["score"] == jg3.BASE_S
+
+
+# ---------------------------------------------------------------------------
+# The geometric site ranker
+# ---------------------------------------------------------------------------
+
+
+def test_margin_ranker_puts_the_nearly_indifferent_site_first():
+    """Lowest minimum margin sorts first -- that site is closest to flipping."""
+    margin = np.full((jg3.GRID_H, jg3.GRID_W), 5.0, dtype=np.float32)
+    margin[300, 300] = 0.01  # one nearly-indifferent cell near the second site
+    sites = np.array([[100, 100], [300, 305]])
+    order = jg3.rank_sites_by_margin_saliency(sites, margin, 15)
+    assert order.tolist() == [1, 0]
+
+
+def test_margin_ranker_uses_min_not_mean():
+    """The canonical discipline: one flippable cell must not be averaged away.
+
+    Site A's window holds a single near-zero margin cell in an otherwise confident
+    neighbourhood; site B's window is uniformly middling with a HIGHER minimum.  The
+    mean would rank B first; the minimum -- which is what
+    ``tac.win_families.proposal_rankers.MarginSaliencyRanker`` uses, and why -- ranks
+    A first.
+    """
+    margin = np.full((jg3.GRID_H, jg3.GRID_W), 9.0, dtype=np.float32)
+    margin[100, 100] = 0.001                       # site A: one cell about to flip
+    margin[300 - 15 : 300 + 16, 300 - 15 : 300 + 16] = 1.0  # site B: uniformly low-ish
+    sites = np.array([[100, 100], [300, 300]])
+    order = jg3.rank_sites_by_margin_saliency(sites, margin, 15)
+    assert order.tolist() == [0, 1], "min-margin must beat a lower mean"
+
+
+def test_margin_ranker_is_deterministic_and_total():
+    margin = np.random.default_rng(3).random((jg3.GRID_H, jg3.GRID_W)).astype(np.float32)
+    sites = np.array([[10, 10], [200, 200], [350, 400]])
+    first = jg3.rank_sites_by_margin_saliency(sites, margin, 15)
+    second = jg3.rank_sites_by_margin_saliency(sites, margin, 15)
+    assert first.tolist() == second.tolist()
+    assert sorted(first.tolist()) == [0, 1, 2]
