@@ -63,6 +63,7 @@ __all__ = [
     "WAIVER_TOKEN",
     "analyze_text",
     "floor_is_fp16_safe",
+    "neutralize_prose",
     "scan_repo_for_fp16_destroyed_floors",
     "scan_text_for_fp16_destroyed_floors",
     "waiver_rationale_is_substantive",
@@ -130,7 +131,9 @@ def waiver_rationale_is_substantive(rationale: str) -> bool:
     return cleaned.lower() not in _PLACEHOLDER_RATIONALES
 
 
-def _neutralize_prose(text: str) -> tuple[str, frozenset[int]]:
+def neutralize_prose(
+    text: str, *, blank_all_strings: bool = False,
+) -> tuple[str, frozenset[int]]:
     """Return ``(code_only_text, waived_line_numbers)``.
 
     Replaces the previous ``line.find("#")`` comment strip, which had a SILENT
@@ -151,6 +154,15 @@ def _neutralize_prose(text: str) -> tuple[str, frozenset[int]]:
     * SINGLE-LINE strings keep their text but lose ``#`` and brackets, so
       ``astype("float16")`` is still detected as a real narrowing cast while a
       string can no longer corrupt comment-stripping or bracket depth.
+
+    ``blank_all_strings`` (default OFF, so the fp16 behaviour above is exactly
+    preserved) blanks single-line string CONTENT too. Catalog #330 needs that
+    stronger form: its token, ``FunctionCall.from_id``, carries no bracket, so
+    sanitising a one-line f-string leaves the token intact and a recovery-command
+    string still reads as a live harvester. Measured on this repo: the weaker
+    form would have added 3 false positives to a STRICT green gate. This is a
+    PARAMETER rather than a second function on purpose -- one detector for one
+    question, per the split-bank discipline.
 
     Line numbers and line counts are always preserved. Falls back to the raw
     text on a tokenize failure -- a file we cannot parse is better over-scanned
@@ -190,7 +202,7 @@ def _neutralize_prose(text: str) -> tuple[str, frozenset[int]]:
                 waived.add(srow)
             _edit(srow, scol, erow, ecol, blank=True)
         elif tok.type in string_types:
-            _edit(srow, scol, erow, ecol, blank=erow > srow)
+            _edit(srow, scol, erow, ecol, blank=blank_all_strings or erow > srow)
 
     return "\n".join("".join(row) for row in grid), frozenset(waived)
 
@@ -333,7 +345,7 @@ def analyze_text(text: str, rel: str) -> tuple[list[str], int]:
     """
     if not _FLOAT16.search(text) or not _FLOOR_TOKEN.search(text):
         return [], 0
-    code, waived = _neutralize_prose(text)
+    code, waived = neutralize_prose(text)
     return _analyze_statements(_logical_statements(code), rel, waived)
 
 

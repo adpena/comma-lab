@@ -62773,9 +62773,30 @@ def _check_330_has_nonplaceholder_waiver(text: str) -> bool:
     return False
 
 
-def _check_330_line_is_comment_or_literal(line: str) -> bool:
-    stripped = line.lstrip()
-    return "``" in line or stripped.startswith(("#", '"', "'", "f\"", "f'", "r\"", "r'"))
+def _check_330_code_lines(text: str) -> list[str]:
+    """Return ``text``'s lines with all prose neutralized, line numbers preserved.
+
+    Replaces ``_check_330_line_is_comment_or_literal``, a line-level lexical
+    guess that asked "does this line START with a quote?" and therefore
+    DISAGREED WITH ITSELF: ``ddm_fx3`` measured two hits in
+    ``experiments/modal_ot_offset_n600_gate.py`` where line 216 (inside an
+    f-string, so it starts with ``f"``) was correctly skipped while line 33 (a
+    docstring CONTINUATION, which starts with ``print(``) was falsely flagged.
+    The cure fx3 prescribed is to ask the real tokenizer instead, which is what
+    ``tac.fp16_floor_guard.neutralize_prose`` does.
+
+    ``blank_all_strings=True`` is required here and not for fp16: this gate's
+    token, ``FunctionCall.from_id``, contains no bracket, so merely sanitizing a
+    single-line f-string would leave the token readable and a printed recovery
+    command would scan as a live harvester. Measured on this repo, the weaker
+    form adds 3 false positives to this STRICT, currently-green gate.
+
+    Imported, never re-typed: one detector for one question (ddm_sp3, closing
+    ddm_fx3 debt item 1 with the cure ddm_sp2 recorded).
+    """
+    from tac.fp16_floor_guard import neutralize_prose
+
+    return neutralize_prose(text, blank_all_strings=True)[0].splitlines()
 
 
 def check_modal_harvesters_record_call_id_outcome(
@@ -62820,11 +62841,22 @@ def check_modal_harvesters_record_call_id_outcome(
                 text = py.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
+            # Cheap SUPERSET pre-filter before the tokenize pass below. Without
+            # it every .py file under the scan roots is tokenized: measured
+            # 17.98 s, 60% of the 30.0 s DEFAULT_PREFLIGHT_CLI_TIMEOUT_S, inside
+            # a STRICT gate. A file that never mentions the token cannot host a
+            # violation, so skipping it can save work but can never hide one.
+            if "FunctionCall.from_id" not in text:
+                continue
             lines = text.splitlines()
+            code_lines = _check_330_code_lines(text)
             for lineno, line in enumerate(lines):
                 if "FunctionCall.from_id" not in line:
                     continue
-                if _check_330_line_is_comment_or_literal(line):
+                # String-literal awareness, via the shared tokenize-based
+                # neutralizer: if the token survives prose-blanking it is code.
+                code_line = code_lines[lineno] if lineno < len(code_lines) else ""
+                if "FunctionCall.from_id" not in code_line:
                     continue
                 # Harvester terminalization often happens after artifact writes,
                 # terminal-claim evidence, and summary construction. Keep this
@@ -84138,6 +84170,102 @@ def _check_348_added_check_defs_from_git(
     )
 
 
+# ── SCOPE EXTENSION 2026-08-19 (ddm_sp3) — the CLASS-POPULATION line ────────
+# Catalog #348 owns "a landing that changes the defect state owes a SWEEP
+# beyond its own incident site." It enforces that on the TEMPORAL axis: a new
+# gate must sweep history for the verdicts its bug class already tainted. This
+# extension enforces the same invariant on the SPATIAL axis: a landing that
+# FIXES a defect must state how many OTHER live sites that defect's class has.
+# Same invariant, different field -- not a new catalog number, per the
+# 2026-07-20 Catalog #351 precedent recorded in CLAUDE.md's "2026-07-14 catalog
+# amendments" section ("a scope extension, not a new gate or number, per the
+# post-#400 Catalog #299 consolidation rule"). The #299 quota brake is at
+# 407/400, so a new number is not available and not needed.
+#
+# THE META-BUG (M1, operator's bug-ladder directive 2026-08-19): the two-landing
+# rule's TRIGGER is manual for arm-discovered defects. Measured anchor: ddm_jg2
+# fixed its own 3-byte zip defect at ONE site and reported it; nobody swept the
+# 20-site population until the operator asked. A class-fix that stops at the
+# incident site leaves the class live everywhere else, wearing green.
+#
+# WHAT THE GAUGE READS IF THE CURE IS APPLIED AND NOTHING ELSE CHANGES: it
+# requires a population token AND a NUMBER within the following few lines, so
+# adding the words "class population" without measuring anything moves it by
+# zero. It cannot verify the number is CORRECT -- only that the arm was made to
+# state one. That limit is real and is why this lands warn-only.
+_CHECK_348_CLASS_POP_CUTOFF = "20260820"
+_CHECK_348_MEMO_DATE_RE = re.compile(r"(20\d{6})")
+#: A memo RECORDS A FIXED DEFECT. Calibrated on the live corpus, not guessed:
+#: the charter's literal predicate (FIXED|CURED|defect|bug + any hex token)
+#: fired on 198 of 280 memos over 7 days -- a flood nobody reads, which is the
+#: same failure ddm_sp2 refused when it kept its ZIP guard at library scope.
+#: These three shapes trigger 25 of 280 and catch all three known exemplars.
+_CHECK_348_FIX_LANDED_RES = (
+    re.compile(r"\btwo[- ]landing\b|\bsecond landing\b|\bself[- ]protection\b", re.I),
+    re.compile(r"\bfix(?:ed)?\b[^.\n]{0,40}\b\d+\s+(?:sites?|files?|call ?sites?)", re.I),
+    re.compile(r"\*\*FIXED\*\*|\|\s*\*?\*?FIXED"),
+)
+_CHECK_348_CLASS_POP_RE = re.compile(
+    r"CLASS[-_ ]POPULATION|live count|live sites|population (?:count|measured|swept)",
+    re.I,
+)
+_CHECK_348_CLASS_POP_WAIVER_RE = re.compile(
+    r"CLASS_POPULATION_WAIVED\s*:\s*(.+?)\s*$", re.M
+)
+_CHECK_348_DIGIT_RE = re.compile(r"\d")
+_CHECK_348_CLASS_POP_LOOKAHEAD = 4
+
+
+def _check_348_class_population_line_violations(root: Path) -> tuple[list[str], int]:
+    """Memos recording a fixed defect must state that defect class's population.
+
+    Returns ``(violations, scanned)``. The caller MUST report ``scanned`` -- a
+    sweep that matched no memo is a vacuous run, not a green one.
+    """
+    research = root / ".omx/research"
+    if not research.is_dir():
+        return [], 0
+    violations: list[str] = []
+    scanned = 0
+    for memo in sorted(research.glob("*.md")):
+        dates = _CHECK_348_MEMO_DATE_RE.findall(memo.stem)
+        if not dates or dates[-1] < _CHECK_348_CLASS_POP_CUTOFF:
+            continue
+        try:
+            text = memo.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if not any(pattern.search(text) for pattern in _CHECK_348_FIX_LANDED_RES):
+            continue
+        scanned += 1
+        waiver = _CHECK_348_CLASS_POP_WAIVER_RE.search(text)
+        if waiver is not None and _check_348_rationale_is_real(waiver.group(1)):
+            continue
+        lines = text.splitlines()
+        stated = False
+        for index, line in enumerate(lines):
+            if not _CHECK_348_CLASS_POP_RE.search(line):
+                continue
+            window = lines[index : index + _CHECK_348_CLASS_POP_LOOKAHEAD]
+            if any(_CHECK_348_DIGIT_RE.search(entry) for entry in window):
+                stated = True
+                break
+        if not stated:
+            violations.append(
+                f"{memo.relative_to(root).as_posix()}: records a fixed defect but states "
+                "no CLASS-POPULATION. rule chain: the memo claims a landed fix "
+                "(two-landing / self-protection / 'fixed N sites' / FIXED verdict) AND "
+                "no population token carries a number within 4 lines AND no substantive "
+                "CLASS_POPULATION_WAIVED rationale -> the class may still be live at "
+                "every site the fix did not touch (meta-bug M1: ddm_jg2 fixed 1 of 20 "
+                "zip sites and the population went unmeasured until the operator asked). "
+                "Fix: add a CLASS-POPULATION line stating how many live sites the "
+                "defect's class has (found / breaching / fixed / out-of-scope), or waive "
+                "with `# CLASS_POPULATION_WAIVED:<substantive reason>`."
+            )
+    return violations, scanned
+
+
 def check_new_gate_landing_includes_retroactive_sweep_evidence(
     *,
     strict: bool = False,
@@ -84162,10 +84290,29 @@ def check_new_gate_landing_includes_retroactive_sweep_evidence(
     """
 
     root = Path(repo_root) if repo_root is not None else REPO_ROOT
+
+    # Scope extension runs first: it reads memos, not git, so it must not be
+    # skipped by the not-a-git-checkout early return below.
+    class_pop_violations, class_pop_scanned = _check_348_class_population_line_violations(root)
+    if verbose:
+        status = (
+            f"{len(class_pop_violations)} memo(s) missing a CLASS-POPULATION line"
+            if class_pop_violations
+            else "OK"
+        )
+        # Report the DENOMINATOR: a sweep that matched no memo must never read
+        # as green (the silent-instrument class).
+        print(
+            f"  [catalog-348-class-population] {status} "
+            f"({class_pop_scanned} fix-recording memo(s) scanned)"
+        )
+        for item in class_pop_violations[:8]:
+            print(f"    - {item[:240]}")
+
     if not (root / ".git").exists():
         if verbose:
             print("  [catalog-348] OK (not a git checkout)")
-        return []
+        return [*class_pop_violations]
 
     violations: list[str] = []
     seen: set[tuple[str, str]] = set()
@@ -84244,7 +84391,10 @@ def check_new_gate_landing_includes_retroactive_sweep_evidence(
             "RETROACTIVE_SWEEP_WAIVED rationale:\n  "
             + "\n  ".join(v[:400] for v in violations[:8])
         )
-    return violations
+    # WARN-ONLY, deliberately: the ddm_sp3 CLASS-POPULATION rows are returned to
+    # the caller but are excluded from the raise above, so this extension can
+    # never block a commit. Strict-flip condition is recorded in the memo.
+    return [*violations, *class_pop_violations]
 
 
 # ────────────────────────────────────────────────────────────────────────────
