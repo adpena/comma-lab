@@ -607,3 +607,4 @@ experiments/manim_levelset/assets/
 
 # Ephemeral per-arm scratch (venvs, build caches) — rebuildable, never tracked
 experiments/.scratch/
+!submissions/robust_current/jg5_sub015_runtime/runtime/archive.zip

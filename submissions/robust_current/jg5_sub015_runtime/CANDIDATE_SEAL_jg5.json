@@ -1,0 +1,50 @@
+{
+  "admit_bar": {
+    "derivation": {
+      "pointer_archive_sha256_at_seal": "44e9e6507d60bf8b6429ce066983aa814b23f2f929869aa5a10a8b8dacda5c7d",
+      "pointer_axis": "contest_cuda",
+      "pointer_score_at_seal": 0.15615242950573233,
+      "pointer_tolerance_abs": 0.0,
+      "require_pointer_archive_identity": true
+    },
+    "net_dS_threshold": -3.5e-06,
+    "rule": "net dS = dS_rate + 100*(d_seg_new - d_seg_base) + (sqrt(10*d_pose_new) - sqrt(10*d_pose_base)) < threshold"
+  },
+  "archive": {
+    "bytes": 180625,
+    "path": "/Volumes/APDataStore/pact/ddm_jg5/candidate_runtime_jg5/archive.zip",
+    "sha256": "f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e"
+  },
+  "axis": "contest_cuda",
+  "candidate_id": "jg5_joint_waterfill_455",
+  "falsifiers": [
+    "advisory projects S=0.14838267 (seg 0.02013338 T4-projected from the jg1 DALI instrument + pose 0.00797852 [macOS-CPU advisory, DALI GT, batch 8] + rate 0.12027077 EXACT). A T4 row with net dS >= -3.5e-6 vs the br1 pointer refutes the joint waterfill admission.",
+    "d_seg must NOT move from the 455-edit subset value: every frame-1 section (hpac, semantic, token tail) is byte-identical to the subset body, proved per built level. A T4 d_seg differing from the subset projection refutes the seg-invariance argument."
+  ],
+  "notes": "Joint edit+carrier waterfill: 455 of 573 jg3 seg edits admitted, carrier re-solved on the candidate's own renders with a derived materiality stop rule (600/600 pairs stopped on no_improving_step; zero budget hits).",
+  "receiver_pins": [
+    {
+      "bytes": 2281,
+      "relative_path": "inflate.py",
+      "sha256": "78dc0386a52e1e3e527defb74e77493efd747ff67fc95c5c54d85be3eb2e9ee5"
+    },
+    {
+      "bytes": 2203,
+      "relative_path": "inflate.sh",
+      "sha256": "e1b3df4d9178a1572cf04bc2dd9d2ddcc8f6157deac8ec1c40e89b2114522d62"
+    }
+  ],
+  "retained_payload_paths": [
+    "/Volumes/APDataStore/pact/ddm_jg5/retained/final"
+  ],
+  "runtime": {
+    "file_count": 34,
+    "path": "/Volumes/APDataStore/pact/ddm_jg5/candidate_runtime_jg5",
+    "sha256": "a5d23cee3caa5cc5d1c9fe3bd042cae26245f8c2c21986cd514ce9057daf9a44",
+    "total_bytes": 582094
+  },
+  "schema": "candidate_seal.v1",
+  "seal_sha256": "96e9860aad9021e6dc9a9619036b54bd0a2205f60468e8585089db1d8044a7d0",
+  "sealed_at_utc": "2026-08-20T06:22:40.149912+00:00",
+  "sealed_by": "ddm_jg5"
+}
