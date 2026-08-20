@@ -867,13 +867,17 @@ def _measure_candidate(
     replayed_batch_starts: set[int],
     base_coder_frames: Mapping[str, bytes],
     g4_by_bucket: Mapping[str, str],
+    run_id: str = RUN_ID,
+    lane_id: str = LANE_ID,
+    checkpoint_schema: str = CHECKPOINT_SCHEMA,
+    candidate_prefix: str = "pf3",
 ) -> dict[str, Any]:
     bulk = Path(config.bulk_root)
     checkpoint = bulk / "stage_checkpoints/02_candidates" / f"{index:03d}.json"
     if checkpoint.exists():
         value = json.loads(checkpoint.read_bytes())
         if (
-            value.get("schema") != CHECKPOINT_SCHEMA
+            value.get("schema") != checkpoint_schema
             or value.get("typed_config_sha256") != config_sha256
             or value.get("source_checkpoint_sha256") != inventory_row["checkpoint_sha256"]
         ):
@@ -988,13 +992,13 @@ def _measure_candidate(
         joint_delta=distortion["delta_D_joint"],
     )
     candidate_id = (
-        f"pf3_{str(inventory_row['receiver_actuator_id']).replace('.', '_')}"
+        f"{candidate_prefix}_{str(inventory_row['receiver_actuator_id']).replace('.', '_')}"
         f"__{str(inventory_row['direction_id']).lower()}"
     )
     value = {
-        "schema": CHECKPOINT_SCHEMA,
-        "run_id": RUN_ID,
-        "lane_id": LANE_ID,
+        "schema": checkpoint_schema,
+        "run_id": run_id,
+        "lane_id": lane_id,
         "candidate_id": candidate_id,
         "coordinate_id": inventory_row["receiver_actuator_id"],
         "coordinate_owner_bucket_id": inventory_row["owner_bucket_id"],

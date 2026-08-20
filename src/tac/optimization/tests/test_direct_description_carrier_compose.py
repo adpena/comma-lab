@@ -49,6 +49,7 @@ from tac.optimization.direct_description_carrier_compose import (
     compile_carrier_compose_archive,
     decode_scorer_solved_template_bank,
     encode_scorer_solved_template_bank,
+    encode_static_class_mask_rule,
     parse_carrier_compose_archive,
     prove_carrier_archive_fail_closed,
     receive_carrier_compose_archive,
@@ -673,6 +674,41 @@ def test_v14_counted_realization_profile_places_hard_semantics_at_camera_resolut
     assert ruled.custody["realization_static_rule_id"] == "movable_midband_parametric"
     assert any(row["stratum"] == "receiver_static_cell_rule" for row in recursive_carrier_byte_rows(ruled_archive))
     assert not np.array_equal(camera, ruled.render_camera_pairs((0, 63)))
+
+
+def test_v14_mycar_static_mask_rule_is_small_parseback_exact_and_receiver_visible() -> None:
+    labels = np.zeros((64, 384, 512), dtype=np.int64)
+    labels[:, 24:40, 32:48] = 3
+    payload, _metadata = encode_g1_movable_worldsheet(labels)
+    profile = ReceiverRealizationProfileV1(
+        role_rgb_u8=((0, 153, 0), (11, 3, 9), (51, 255, 204), (107, 0, 114), (63, 72, 63))
+    )
+    mask = np.zeros((384, 512), dtype=bool)
+    mask[300:384, 80:432] = True
+    static_rule = encode_static_class_mask_rule(mask, target_class=4)
+    assert len(static_rule) < 500
+    archive, _ = compile_carrier_compose_archive(
+        _predictor(),
+        worldsheet_g1_payload=payload,
+        realization_profile=profile,
+        realization_static_rule_payload=static_rule,
+        realization_static_rule_id="mycar_static_mask",
+    )
+    receiver = receive_carrier_compose_archive(archive)
+    assert receiver.realization_static_rule_id == "mycar_static_mask"
+    assert receiver.realization_static_rule_codes is not None
+    assert np.all(receiver.realization_static_rule_codes[mask] == 29)
+    assert np.all(receiver.realization_static_rule_codes[~mask] == -1)
+    assert receiver.custody["realization_static_rule_active_sites"] == int(mask.sum())
+    control, _ = compile_carrier_compose_archive(
+        _predictor(),
+        worldsheet_g1_payload=payload,
+        realization_profile=profile,
+    )
+    assert not np.array_equal(
+        receive_carrier_compose_archive(control).render_camera_pairs((0, 63)),
+        receiver.render_camera_pairs((0, 63)),
+    )
 
 
 def test_v15_counted_row_band_templates_extend_v14_receiver_without_decode_scorer() -> None:
