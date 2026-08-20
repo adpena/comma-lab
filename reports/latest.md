@@ -1,25 +1,27 @@
 <!--
 generated_at: 2026-05-23T02:06:56Z
-last_refreshed_at: 2026-08-18T20:17:36Z
-last_refreshed_by: main:catalog316_citation_refresh_20260818
-from_state_hash: canonical_frontier_pointer_20260818_keep01
+last_refreshed_at: 2026-08-20T07:35:00Z
+last_refreshed_by: main:catalog316_jg5_sub015_refresh_20260820
+from_state_hash: canonical_frontier_pointer_20260820_jg5_waterfill455
 -->
 
-> ## ⚠ FRESHNESS BANNER (2026-08-18) — the BODY of this report is a HISTORICAL
+> ## ⚠ FRESHNESS BANNER (2026-08-20) — the BODY of this report is a HISTORICAL
 > snapshot generated 2026-05-23 and is STALE. The live frontier is the canonical
 > pointer, not any row below.
 >
-> **CURRENT effective_frontier [contest-CUDA T4, n600]: S 0.15659459685822907**
-> archive sha `50e561454b23026d3870f056747e848a49bd5f2b1e23930155d1281aeee91927`
-> @ 176,420 B (to1 tail-override, **twelfth** pointer move, 2026-08-19; anchor
-> mirror `experiments/results/modal_auth_eval_mirror/`). Historical priors:
-> ck2 0.1566645120483069 @ `0aa1cada…` @ 176,525 B (eleventh move); ck1
-> 0.15710198138050818 @ `35c318d5…` @ 177,182 B (tenth move); keep01
-> 0.1571619225142182 @ `316d17f8…` (ninth move).
-> *(⚠ corrected 2026-08-19 by `ddm_rv13` round-13 F5: this banner still named the
-> tenth move as CURRENT while the generated table below already carried the
-> twelfth. The canonical pointer is always
-> `.omx/state/canonical_frontier_pointer.json`, never this banner.)*
+> **CURRENT effective_frontier [contest-CUDA T4, n600]: S 0.14839100138338618 —
+> THE FIRST SUB-0.15 EXACT ROW (THE GOAL's T3 target ACHIEVED, fifteenth pointer
+> move, 2026-08-20).** archive sha
+> `f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e` @ 180,625 B
+> (jg5_joint_waterfill_455: 455-of-573 seg token edits kept by per-pair pose-
+> multiplier waterfill on the to1/br1 body; d_seg 0.00020139 · d_pose 6.37e-6 ·
+> rate 0.1202708; call fc-01M0EZ3DR3HVB8HBKWEG2P12CT; beats the best PUBLIC
+> leaderboard entry PR135=0.162 by 0.0136; anchor mirror
+> `experiments/results/modal_auth_eval_mirror/`, custody
+> `/Volumes/APDataStore/pact/ddm_jg5/`). Historical priors: br1
+> 0.15615242950573233 @ `44e9e650…` @ 176,429 B (fourteenth move); to1
+> 0.15659459685822907 @ `50e56145…` @ 176,420 B (twelfth move); ck2
+> 0.1566645120483069 @ `0aa1cada…` (eleventh move).
 > Every score cited in
 > the body (including "0.2053300290" as the CUDA frontier) is HISTORICAL as of
 > 2026-05-23. SoT: `.omx/state/canonical_frontier_pointer.json` via
@@ -94,12 +96,12 @@ pointer because it is the actual ranked surface. This row does not imply local
 archive custody or our progress. The scanner-derived table below is retained
 for custody-specific local comparisons and must not be called the score to beat.
 
-### Current best - last rechecked 2026-08-19T04:38:58Z
+### Current best - last rechecked 2026-08-19T08:19:05Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
 | **`[contest-CPU Linux x86_64]`** | **0.1880443980** | `196acd18e4ca` | linux_x86_64_cpu | `lane_pr128_click_import_NONSUBMISSION_defensive_bank_20260712` |
-| **`[contest-CUDA T4]`** | **0.1565945969** | `50e561454b23` | linux_x86_64_t4 | `<none>` |
+| **`[contest-CUDA T4]`** | **0.1565262644** | `7ce46fd7a845` | linux_x86_64_t4 | `<none>` |
 
 ### 2026-05-22 MLX portable-local-substrate refresh
 
