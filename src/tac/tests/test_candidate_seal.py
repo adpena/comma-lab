@@ -447,6 +447,11 @@ def test_the_fire_path_refuses_a_drifted_seal_without_dispatching(tmp_path: Path
             "--output-dir", str(out_dir),
             "--lane-id", "lane_test",
             "--instance-job-id", "job_test",
+            # The fire tool became paired-by-default on 2026-08-18 (CPU and CUDA are
+            # separate evidence spaces). These five invocations were never updated, so
+            # argparse exited 2 and all five have been RED since -- masking the seal
+            # refusals they exist to prove. Restored by ddm_rr7 2026-08-20.
+            "--single-axis-waiver-reason", "unit test of the seal refusal path; no axis claim",
         ]
     )
 
@@ -474,6 +479,8 @@ def test_the_fire_path_refuses_hand_typed_duplicates_of_sealed_values(tmp_path: 
             "--output-dir", str(tmp_path / "out"),
             "--lane-id", "lane_test",
             "--instance-job-id", "job_test",
+            # paired-by-default since 2026-08-18; see the note on the first fire-path test.
+            "--single-axis-waiver-reason", "unit test of the seal refusal path; no axis claim",
         ]
     )
 
@@ -496,6 +503,8 @@ def test_the_fire_path_refuses_a_repin_against_a_seal(tmp_path: Path, monkeypatc
             "--output-dir", str(tmp_path / "out"),
             "--lane-id", "lane_test",
             "--instance-job-id", "job_test",
+            # paired-by-default since 2026-08-18; see the note on the first fire-path test.
+            "--single-axis-waiver-reason", "unit test of the seal refusal path; no axis claim",
         ]
     )
 
@@ -527,6 +536,8 @@ def test_the_fire_path_refuses_an_advisory_seal(tmp_path: Path, monkeypatch) -> 
             "--output-dir", str(tmp_path / "out"),
             "--lane-id", "lane_test",
             "--instance-job-id", "job_test",
+            # paired-by-default since 2026-08-18; see the note on the first fire-path test.
+            "--single-axis-waiver-reason", "unit test of the seal refusal path; no axis claim",
         ]
     )
 
@@ -558,6 +569,8 @@ def test_the_no_seal_path_is_unchanged(tmp_path: Path, monkeypatch) -> None:
             "--output-dir", str(out_dir),
             "--lane-id", "lane_test",
             "--instance-job-id", "job_test",
+            # paired-by-default since 2026-08-18; see the note on the first fire-path test.
+            "--single-axis-waiver-reason", "unit test of the seal refusal path; no axis claim",
             "--dry-run",
         ]
     )
