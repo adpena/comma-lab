@@ -59,8 +59,10 @@ import tomllib
 import zipfile
 from pathlib import Path, PurePosixPath
 
+from tac.contest_budget import budget_verdict_for_receipt
 from tac.contest_compliance import compute_upstream_snapshot_sha256
 from tac.device_axis_eval import is_contest_cuda_equivalent_gpu
+from tac.gt_lineage import AUTHORITY_LINEAGE, GtLineageError, runtime_decode_lineage
 
 # Line-buffer stdout so progress flushes to log files immediately.
 try:
@@ -626,13 +628,13 @@ def _external_python_environment_versions(python_executable: Path) -> dict:
         return {
             "python_executable": str(python_executable),
             "query_error": repr(exc),
-            "packages": {name: None for name in AUTH_EVAL_ENV_PACKAGES},
+            "packages": dict.fromkeys(AUTH_EVAL_ENV_PACKAGES),
         }
     if not isinstance(payload, dict):
         return {
             "python_executable": str(python_executable),
             "query_error": "non_object_json",
-            "packages": {name: None for name in AUTH_EVAL_ENV_PACKAGES},
+            "packages": dict.fromkeys(AUTH_EVAL_ENV_PACKAGES),
         }
     return payload
 
@@ -1115,12 +1117,14 @@ def _build_auth_eval_environment_report(
         # interpreter itself and equality would be ``x != x`` -- a check that
         # cannot fire. Range satisfaction is enforced instead, inside the
         # derivation, where a failure refuses via ``query_error`` above.
-        if reference.get("python_version_reference_kind") != "requires_python_range":
-            if evaluation.get("python_version") != reference.get("python_version"):
-                mismatches["python"] = {
-                    "evaluation": evaluation.get("python_version"),
-                    "reference": reference.get("python_version"),
-                }
+        if (
+            reference.get("python_version_reference_kind") != "requires_python_range"
+            and evaluation.get("python_version") != reference.get("python_version")
+        ):
+            mismatches["python"] = {
+                "evaluation": evaluation.get("python_version"),
+                "reference": reference.get("python_version"),
+            }
         for name in AUTH_EVAL_ENV_PACKAGES:
             if eval_packages.get(name) != ref_packages.get(name):
                 mismatches[name] = {
@@ -1300,6 +1304,235 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
     with open(out, "w") as f:
         json.dump(prov, f, indent=2)
     return prov
+
+
+def _detect_decode_path(inflate_env_overrides: dict[str, str] | None) -> str | None:
+    """Which rung of the decode dispatch ladder ran, when anything reports it.
+
+    The fail-closed dispatch ladder (AVX-512 -> AVX2 -> scalar-C -> NEON -> Python) is SILENT
+    by design, so the seconds alone cannot tell a native decode from a Python fallback. This
+    reads the channels that actually exist today and returns ``None`` otherwise -- an honest
+    "unreported" is worth more than a guessed label, and ``tac.contest_budget`` grades the
+    unreported case explicitly rather than treating it as fine.
+
+    No new CLI flag: a flag every caller must remember to pass is an orphan generator.
+    """
+    for key in ("F26_TOKEN_DECODER", "PACT_DECODE_PATH"):
+        if inflate_env_overrides and inflate_env_overrides.get(key):
+            return str(inflate_env_overrides[key])
+        value = os.environ.get(key, "").strip()
+        if value:
+            return value
+    return None
+
+
+def _upstream_scorer_batch_shape(upstream_dir: Path) -> dict:
+    """Read upstream's dataloader batch shape from source, not from memory.
+
+    et4 law: a forward's VALUES move with (code, weights, threads, batch, device), so a receipt
+    that omits the batch shape cannot be compared against another run. The harness deliberately
+    does NOT pin these (see ``_run_upstream_evaluate``), so the effective values are upstream's
+    argparse defaults -- which means they must be READ, and re-read on every upstream bump.
+    """
+    shape: dict = {
+        "schema": "upstream_scorer_batch_shape_v1",
+        "harness_pins_batch_shape": False,
+        "harness_pin_note": (
+            "contest_auth_eval passes no --batch-size/--num-threads/--prefetch-queue-depth/"
+            "--seed, so upstream's own defaults are in force; these are read from source"
+        ),
+        "source": "upstream/evaluate.py argparse defaults + upstream/frame_utils.py seq_len",
+    }
+    wanted = {"batch_size", "num_threads", "prefetch_queue_depth", "seed"}
+    try:
+        tree = ast.parse((upstream_dir / "evaluate.py").read_text())
+    except (OSError, SyntaxError) as exc:
+        shape["parse_error"] = f"{type(exc).__name__}: {exc}"
+        return shape
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+            continue
+        if node.func.attr != "add_argument" or not node.args:
+            continue
+        flag = node.args[0]
+        if not (isinstance(flag, ast.Constant) and isinstance(flag.value, str)):
+            continue
+        dest = flag.value.lstrip("-").replace("-", "_")
+        if dest not in wanted:
+            continue
+        for kw in node.keywords:
+            if kw.arg == "default" and isinstance(kw.value, ast.Constant):
+                shape[dest] = kw.value.value
+    try:
+        fu = ast.parse((upstream_dir / "frame_utils.py").read_text())
+    except (OSError, SyntaxError) as exc:
+        shape["seq_len_parse_error"] = f"{type(exc).__name__}: {exc}"
+        return shape
+    for node in ast.walk(fu):
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == "seq_len":
+                    shape["seq_len"] = node.value.value
+    return shape
+
+
+def _record_instrument_tuple(
+    prov: dict,
+    upstream_dir: Path,
+    args: argparse.Namespace,
+    *,
+    decode_path: str | None,
+) -> dict:
+    """Record the full et4 instrument tuple: code, weights, threads, batch, device, decode path.
+
+    ``ddm_et4`` MEASURED that a scorer forward's values move with the batch shape, so a receipt
+    carrying only ``torch_version`` cannot be compared against another run -- and comparing two
+    incomparable receipts is how a phantom delta gets published. Prior to this the harness
+    recorded ONLY ``torch_version`` (one leg of five).
+    """
+    weights: list[dict] = []
+    for name in ("posenet.safetensors", "segnet.safetensors"):
+        path = upstream_dir / "models" / name
+        weights.append(
+            {
+                "name": name,
+                "path": str(path),
+                "exists": path.is_file(),
+                "bytes": path.stat().st_size if path.is_file() else None,
+                "sha256": _sha256(path, prefix=0) if path.is_file() else None,
+            }
+        )
+
+    threads: dict = {
+        "os_cpu_count": os.cpu_count(),
+        "env": {
+            k: os.environ.get(k)
+            for k in (
+                "OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS",
+                "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS",
+            )
+        },
+    }
+    try:
+        import torch
+
+        threads["torch_get_num_threads"] = torch.get_num_threads()
+        threads["torch_get_num_interop_threads"] = torch.get_num_interop_threads()
+    except (ImportError, RuntimeError) as exc:
+        threads["torch_thread_probe_error"] = f"{type(exc).__name__}: {exc}"
+
+    tup = {
+        "schema": "contest_auth_eval_instrument_tuple_v1",
+        "law": (
+            "ddm_et4: forward VALUES move with (code, weights, threads, batch, device). Two "
+            "receipts are comparable only when this whole tuple matches; a delta across a "
+            "mismatched tuple is an instrument artifact, not a finding."
+        ),
+        "code": {
+            "pact_commit": prov.get("pact_commit"),
+            "pact_commit_source": prov.get("pact_commit_source"),
+            "upstream_commit": prov.get("upstream_commit"),
+            "upstream_snapshot_sha256": prov.get("upstream_snapshot_sha256"),
+            "inflate_script_sha256": prov.get("inflate_script_sha256"),
+            "runtime_files_sha256": (
+                (prov.get("inflate_runtime_manifest") or {}).get("runtime_files_sha256")
+            ),
+            "upstream_evaluate_py": (
+                (prov.get("inflate_runtime_manifest") or {}).get("upstream_evaluate_py")
+            ),
+        },
+        "weights": weights,
+        "threads": threads,
+        "batch": _upstream_scorer_batch_shape(upstream_dir),
+        "device": {
+            "eval_device_requested": args.device,
+            "inflate_device_policy": args.inflate_device,
+            "gpu_model": prov.get("gpu_model"),
+            "gpu_driver": prov.get("gpu_driver"),
+            "gpu_t4_match": prov.get("gpu_t4_match"),
+            "cuda_available": prov.get("cuda_available"),
+            "cuda_version": prov.get("cuda_version"),
+            "torch_version": prov.get("torch_version"),
+            "platform_system": prov.get("platform_system"),
+            "platform_machine": prov.get("platform_machine"),
+        },
+        "decode_path": decode_path,
+        "decode_path_reported": decode_path is not None,
+        "decode_path_source": (
+            "F26_TOKEN_DECODER / PACT_DECODE_PATH env or --inflate-env override"
+            if decode_path is not None
+            else "not reported by this runtime generation"
+        ),
+    }
+    prov["instrument_tuple"] = tup
+    return tup
+
+
+def _record_gt_lineage(prov: dict, upstream_dir: Path, video_names_file: Path,
+                       args: argparse.Namespace) -> dict:
+    """Record which GROUND-TRUTH decode lineage this run's score was measured against.
+
+    ``ddm_pi2`` MEASURED that one instrument reading two ground truths costs 1.4425x on d_seg
+    and +1.4061e-04 additive on d_pose -- it silently reproduces the contest-CPU axis while
+    claiming otherwise -- and ``ddm_dg1``'s cure (``src/tac/gt_lineage``) never reached this
+    emitter: ``gt_lineage`` had ZERO occurrences in contest_auth_eval.py.
+
+    Here the lineage is DERIVABLE AT SOURCE rather than guessed: ``upstream/evaluate.py:31-42``
+    forks ``DefaultDatasetClass`` on ``device.type == "cuda"`` -> ``DaliVideoDataset``, else
+    ``AVVideoDataset``. The lineage NAMES come from ``tac.gt_lineage`` -- reused, never invented.
+    """
+    decoder = "DaliVideoDataset" if args.device == "cuda" else "AVVideoDataset"
+    row: dict = {
+        "schema": "contest_auth_eval_gt_lineage_v1",
+        "runtime_decoder": decoder,
+        "eval_device": args.device,
+        "vocabulary_source": "tac.gt_lineage.RUNTIME_DECODE_LINEAGE (ddm_gl1/ddm_dg1)",
+        "fork_source": "upstream/evaluate.py:31-42 (DefaultDatasetClass on device.type == 'cuda')",
+        "authority_lineage": AUTHORITY_LINEAGE,
+    }
+    try:
+        lineage = runtime_decode_lineage(decoder)
+    except GtLineageError as exc:
+        row["lineage"] = None
+        row["lineage_error"] = f"{type(exc).__name__}: {exc}"
+    else:
+        row["lineage"] = lineage
+        row["is_authority_lineage"] = lineage == AUTHORITY_LINEAGE
+        row["evidence"] = "PRODUCER_DECLARED_BY_UPSTREAM_DEVICE_FORK"
+        # This lineage is the one upstream ITSELF selects for this device, so it is always
+        # correct FOR THIS AXIS. `is_authority_lineage: false` is therefore a comparability
+        # flag, never a defect flag -- a contest-CPU row is supposed to be PyAV.
+        row["lineage_is_axis_native"] = True
+        row["lineage_is_axis_native_note"] = (
+            "derived from upstream's own device fork, so it is by construction the lineage the "
+            "contest runner for this device uses; is_authority_lineage compares it against the "
+            "contest-CUDA row's lineage and is a COMPARABILITY flag, not a defect"
+        )
+        if lineage != AUTHORITY_LINEAGE:
+            row["cross_lineage_note"] = (
+                f"this run's GT is {lineage}, NOT the {AUTHORITY_LINEAGE} lineage the "
+                "contest-CUDA authority row is measured against. Correct for this axis; NOT "
+                "comparable across axes -- a delta taken against a DALI_NVDEC receipt is a "
+                "CROSS-LINEAGE delta (ddm_pi2: 1.4425x d_seg, +1.4061e-04 additive d_pose)"
+            )
+
+    # The GT INPUTS themselves: lineage names the decoder, these name the bytes it decoded.
+    uncompressed_dir = upstream_dir / "videos"
+    inputs: list[dict] = []
+    for name in [n.strip() for n in video_names_file.read_text().splitlines() if n.strip()]:
+        src = uncompressed_dir / name
+        inputs.append(
+            {
+                "video_name": name,
+                "path": str(src),
+                "exists": src.is_file(),
+                "bytes": src.stat().st_size if src.is_file() else None,
+                "sha256": _sha256(src, prefix=0) if src.is_file() else None,
+            }
+        )
+    row["gt_video_inputs"] = inputs
+    prov["gt_lineage"] = row
+    return row
 
 
 def _record_inflate_runtime_artifacts(prov: dict, work_dir: Path, extracted_dir: Path) -> None:
@@ -2728,10 +2961,20 @@ def main() -> int:
                         help="Allow temp-dir evidence for diagnostic scratch only; "
                              "never use for score custody.")
     parser.add_argument("--inflate-timeout", type=int, default=1800,
-                        help="Inflate.sh timeout in seconds. Contest budget "
-                             "is 30 min (1800s) on T4. Default matches.")
+                        help="Inflate.sh timeout in seconds. NOT the contest budget: "
+                             "eval.yml:30's timeout-minutes: 30 bounds the WHOLE CI JOB "
+                             "(checkout + lfs + uv sync + ffmpeg + unzip + inflate + "
+                             "evaluate + upload), so the ceiling on inflate alone is the "
+                             "RESIDUAL after CI setup and upstream evaluate -- CUDA "
+                             "[822,1302]s / CPU [1044,1332]s (PROJECTION, tac.contest_budget). "
+                             "This default deliberately does NOT enforce that; it is a "
+                             "development stop-loss. The budget is graded, not enforced: see "
+                             "contest_budget_verdict in the emitted receipt.")
     parser.add_argument("--evaluate-timeout", type=int, default=1800,
-                        help="upstream/evaluate.py timeout in seconds.")
+                        help="upstream/evaluate.py timeout in seconds. Note this default "
+                             "plus --inflate-timeout permits 3600s -- TWICE the 30-minute "
+                             "job wall. Both are development stop-losses, not budget gates; "
+                             "the budget gate is contest_budget_verdict in the receipt.")
     parser.add_argument("--keep-work-dir", action="store_true",
                         help="Don't delete work dir on success (for debugging)")
     parser.add_argument("--expected-runtime-tree-sha256", default=None,
@@ -2959,8 +3202,22 @@ def main() -> int:
             prov["inflate_env_override_mode"] = "diagnostic_non_promotable"
         _validate_expected_runtime_tree(prov, args.expected_runtime_tree_sha256)
         _validate_expected_runtime_files(prov, args.expected_runtime_files_sha256)
+
+        # Receipt hardening (ddm_wc2 Surface B). These ADD provenance; they never touch a
+        # measured number, and every one of them writes a field a later reader would otherwise
+        # have to guess at.
+        decode_path = _detect_decode_path(inflate_env_overrides)
+        _record_instrument_tuple(prov, upstream_dir, args, decode_path=decode_path)
+        gt_lineage_row = _record_gt_lineage(prov, upstream_dir, video_names_file, args)
+        with open(work_dir / "provenance.json", "w") as f:
+            json.dump(prov, f, indent=2)
         print(f"[contest_auth_eval] provenance saved: {work_dir / 'provenance.json'}")
         print(f"[contest_auth_eval] archive sha256: {prov['archive_sha256']}")
+        print(
+            f"[contest_auth_eval] gt_lineage: {gt_lineage_row.get('lineage')} "
+            f"via {gt_lineage_row['runtime_decoder']} "
+            f"(authority={gt_lineage_row.get('is_authority_lineage')})"
+        )
 
         # Stage 1: extract archive
         extracted = work_dir / "extracted"
@@ -3081,6 +3338,18 @@ def main() -> int:
                 diagnostic_blockers=diagnostic_blockers or None,
             )
         )
+        # ddm_wc2 item 3: the wall-clock budget verdict. The harness allows inflate 1800 s AND
+        # evaluate 1800 s -- 3,600 s, twice the 30-minute CI JOB wall (eval.yml:30) -- and until
+        # now nothing summed setup + inflate + evaluate against that wall, so a candidate could
+        # pass this gate and still time out in the real CI (measured precedent: lc2/PR130 at
+        # 1,958 s -> rc=1 on a FASTER 8-core box than the contest's 4 vCPU). Runs AFTER the score
+        # exists, adds a verdict and no measurement, and never raises: a guard on the gating
+        # instrument must not be able to take down a valid score.
+        budget = budget_verdict_for_receipt(result, decode_path=decode_path)
+        result["contest_budget_verdict"] = budget
+        result["gt_lineage"] = gt_lineage_row
+        result["instrument_tuple"] = prov.get("instrument_tuple")
+
         result["work_dir"] = str(work_dir)
         out_json = work_dir / "contest_auth_eval.json"
         with open(out_json, "w") as f:
@@ -3102,6 +3371,14 @@ def main() -> int:
         print(f"  SegNet dist:    {result['avg_segnet_dist']:.6f}")
         print(f"  Rate (unscaled): {result['rate_unscaled']:.6f}")
         print(f"  Archive bytes:  {result['archive_size_bytes']:,}")
+        print(f"  Axis:           {result.get('lane_tag')}")
+        print(f"  GT lineage:     {gt_lineage_row.get('lineage')} "
+              f"({gt_lineage_row['runtime_decoder']})")
+        print(f"  Wall budget:    {budget['verdict']} "
+              f"[{budget.get('axis') or 'non-contest axis'}] "
+              f"inflate={result.get('inflate_elapsed_seconds')} "
+              f"evaluate={result.get('evaluate_elapsed_seconds')}")
+        print(f"                  {budget.get('rationale') or budget.get('reason')}")
         print(f"  Result JSON:    {out_json}")
         if args.json_out is not None:
             print(f"  Durable JSON:   {args.json_out.resolve()}")
