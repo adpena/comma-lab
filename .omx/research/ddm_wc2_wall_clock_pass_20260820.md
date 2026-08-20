@@ -679,6 +679,84 @@ axis; (b) three nominally-8-core `evaluate.py` measurements disagree — **176.3
 corroborate each other, but ft1's MC36 row measured **113.9 s**. That outlier is unexplained and
 should not be averaged into anything until it is.
 
+### PORT RESULT (ddm_wc2c, head `1da04b7014`, ledger `ddm_wc2c_native_split_identity_and_speedup_20260820.md`)
+
+#### P0 CUSTODY — the submission's decoder is not in version control
+
+**Verified independently by me** (`git ls-files`): `f26_inflate.py` → **0** repo paths;
+`hpac_inference.py` → **0**; `cpr1/` → **0** files. The two apparent hits (`free_corrector.py`,
+`residual_archive.py`) are glob collisions with `rr4_free_corrector.py`. The arm's count: **24 of 34
+files** in the jg5 candidate tree have no repo source — including `inflate.py`, `inflate.sh`,
+`f26_inflate.py`, `residual_archive.py`, `free_corrector.py`, and all of `cpr1/`.
+
+**The decoder for the first sub-0.15 archive exists only on one external SSD at 93% capacity, with
+no version control and no second copy.** This outranks every wall-clock item in this memo: a disk
+failure loses the submission outright, and no identity receipt can be reproduced without the tree
+that produced it. Escalated to MAIN as P0. It is also *why* the refusal lift had to be a stager with
+asserted rewrites rather than a hand edit.
+
+#### MY CHARTER NAMED THE WRONG OBJECT
+
+I tasked the arm to *"port the ddm_rr2 FreeCorrector"*. The module the shipping tree actually loads
+as `runtime/free_corrector.py` is **`ddm_ma1`'s `Ma1WithinMissCorrector`** — the tip of a four-level
+chain `rr4 → fx1 → fx2 → ma1`, **2,121 lines of stateful float64**, not one function. In mitigation,
+the stale name came from the shipping code's own refusal string (`f26_inflate.py:435-441` says
+"ddm_rr2 free probability corrector") and I propagated it without checking the module header — which
+I had in fact read. The arm re-derived instead of confirming and caught it. **Re-derive-don't-confirm
+worked, one level down from where I applied it.**
+
+#### The port that was actually right: split, not whole
+
+Profile first (`experiments/ddm_wc2c_token_stage_profile.py`, n600, 114,000 iterations,
+`[macOS-CPU advisory]`): **63.8% integer HPAC model / 33.4% float64 corrector / ~3% other**. The arm
+lowered the **integer** half — where lanes are exact and addition *is* associative — and left the
+float64 half in its audited numpy form, where a reordered reduction has a measured failure mode of
+**S = 27.83**. That is the §PORT DESIGN NOTE discipline applied as a partition rather than a
+constraint, and it is the better answer.
+
+#### Identity — full n600, PASS
+
+Against the jg5 receipt (archive `f3bce5d2…`, 180,625 B), for **both** the dispatched NEON build and
+the intrinsic-free scalar twin: `decoded_token_sha256` `cc10a7b0…`, `corrected_quantized_logit_sha256`
+`8269fe1a…`, `corrected_cdf_input_sha256` `370a5e2a…`, `decoder_bit_position` `910837`, and the
+retained 117,964,800 B token payload — **all MATCH**. A local macOS-arm64 decode reproduces a
+`[contest-CUDA T4]` receipt exactly. Thread counts 1/4/8 agree at n12; 1/4 at n600.
+
+#### Speedup — straddles the bar, and the arm refused to quote the favourable run
+
+| row | n600 s | ratio |
+|---|---:|---:|
+| pure-Python shipping loop | 578.716 | 1.000x |
+| split native, **shipped build**, 4 threads | 326.160 | **1.774x** |
+| split native, prior build, 4 threads | 315.614 | 1.834x |
+
+Two runs of byte-identical work differ by **3.3% — wider than the distance to the 1.804x PASS bar.**
+So **WARN (≥1.096x) is secured; PASS is unresolved by the local proxy.** Integer model alone:
+369.292 s → 109.372 s = **3.376x**.
+
+**This is not a shipping-axis number.** The T4 baseline runs the sparse model on CUDA; this ran it on
+CPU torch. Transferring the ratio is the cross-regime-constant genus. **One T4 row resolves it —
+fire-order owed to whoever holds the fire path.**
+
+#### Honest negatives and hardening
+
+- Hand NEON kernels are **within 0.4%** of the auto-vectorised scalar build at n600 — retained for
+  the runtime x86 dispatch, **not because they measured faster**.
+- Dispatch verified: arm64/**NEON** + **scalar**. x86 **AVX2 UNVERIFIED**, T4 **sm_75 UNVERIFIED** —
+  compiled and reviewed, never executed.
+- Compile-at-decode added **0.203 s** (3 repeats, M5 Max), and is **plausibly net-negative** on
+  prelude time because the arm removed an OpenMP dependency that shelled out to `brew --prefix
+  libomp` **at decode time**. Worth flagging beyond speed: **`brew` does not exist on a Linux CI
+  runner**, so that shell-out is a candidate second reason the native path was stranded — refused by
+  flag *and* Linux-broken. HYPOTHESIS, not verified by me.
+- Two defects the arm found in its own C during review and fixed: uninvalidated cached geometry
+  (out-of-bounds write on a second model) and a worker-pool counter a short job could pollute. Both
+  unreachable in this flow — which is why they would have survived and detonated later.
+- **Not done, correctly not claimed:** per-frame resume does not exist (`rc64_backend.c` exports no
+  state save/restore); resume granularity remains the whole token stage. The staged tree changes the
+  runtime-tree sha and decoder fingerprint, so it **owes a fresh full-field identity run** before it
+  is submittable.
+
 **GO IS LIVE. Sequencing per the coordinator: (1) corrector port + sha-identity proof against the
 jg5 body — critical path; (2) budget predicate; (3) C1-folded Surface-A single landing; (4) harness
 lineage/tuple hardening; then recursive-fractal + arch-gating depth.** Fire condition for P1–P5: MAIN's GO carrying the
