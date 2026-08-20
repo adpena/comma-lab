@@ -43,13 +43,22 @@ from tac.followon_ledger import (
     task_join_canary,
 )
 
-SCHEMA = "tac.followon_backlog_join.v1"
+SCHEMA = "tac.followon_backlog_join.v2"
 AXIS = "[macOS-CPU advisory; scorer-free backlog join; no scorer forwards]"
 DEFAULT_OWNER = "codex-qj1-followon-drain"
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _TASK_REF_RX = re.compile(r"#(\d{1,4})\b")
 _CLOSED_STATUSES = frozenset({"completed", "cancelled"})
+_P1A_HEAD_MEMO = "ddm_p1a_followon_unknown_adjudication_20260801.md"
+_P2A_HEAD_MEMO = "ddm_p2a_task_backlog_drain_20260801.md"
+_P1A_DECLARED_OPEN_ITEMS = 29
+_P2A_DECLARED_NEVER_NAMED_ROWS = 18
+_ARM_REF_RX = re.compile(r"\b([a-z]{1,5}\d+[a-z]?)\b")
+_TAG_RX = re.compile(r"<[^>]+>")
+_MD_STRONG_RX = re.compile(r"\*\*([^*]+)\*\*")
+_MD_EM_RX = re.compile(r"\*([^*]+)\*")
+_MD_CODE_RX = re.compile(r"`([^`]+)`")
 
 
 def _utc_now() -> str:
@@ -146,6 +155,328 @@ def _handoff_owner(row: Handoff, matches: Sequence[dict[str, Any]]) -> str:
 def _short(text: str, limit: int = 320) -> str:
     flat = " ".join(str(text).split())
     return flat if len(flat) <= limit else flat[: limit - 3] + "..."
+
+
+def _clean_markdown_cell(text: str) -> str:
+    value = text.strip()
+    value = _MD_STRONG_RX.sub(r"\1", value)
+    value = _MD_EM_RX.sub(r"\1", value)
+    value = _MD_CODE_RX.sub(r"\1", value)
+    value = _TAG_RX.sub("", value)
+    return _short(value.replace("\\|", "|"))
+
+
+def _split_markdown_row(line: str) -> list[str]:
+    """Split one markdown table row, honoring escaped pipes."""
+    stripped = line.strip()
+    if not stripped.startswith("|"):
+        return []
+    if stripped.endswith("|"):
+        stripped = stripped[:-1]
+    stripped = stripped[1:]
+    cells: list[str] = []
+    buf: list[str] = []
+    escaped = False
+    for char in stripped:
+        if escaped:
+            buf.append(char)
+            escaped = False
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if char == "|":
+            cells.append(_clean_markdown_cell("".join(buf)))
+            buf = []
+            continue
+        buf.append(char)
+    cells.append(_clean_markdown_cell("".join(buf)))
+    return cells
+
+
+def _is_table_separator(cells: Sequence[str]) -> bool:
+    return bool(cells) and all(re.fullmatch(r":?-{2,}:?", cell.strip()) for cell in cells)
+
+
+def _owner_from_source_refs(refs: str, tasks: dict[str, dict[str, Any]] | None = None) -> str:
+    task_ids = task_refs(refs)
+    if tasks:
+        owner = _owner_from_matches(_task_matches(task_ids, tasks))
+        if owner != DEFAULT_OWNER:
+            return owner
+    if "deferral" in refs.casefold():
+        return "deferral-ledger"
+    for match in _ARM_REF_RX.finditer(refs):
+        slug = match.group(1)
+        if slug.upper().startswith(("QA", "QD", "QE")):
+            continue
+        if slug.startswith("ddm_"):
+            return slug
+        return f"ddm_{slug}"
+    return DEFAULT_OWNER
+
+
+def _head_record(
+    *,
+    memo: str,
+    line_no: int,
+    source_id: str,
+    origin_task_ids: Sequence[str],
+    rank: int,
+    item: str,
+    refs: str,
+    evidence: str,
+    verdict: str,
+    disposition: str,
+    owner: str,
+    fire_order: str,
+    cost_tier: str | None = None,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload = {
+        "source": "ranked_followon_head",
+        "source_id": source_id,
+        "memo": memo,
+        "line_no": line_no,
+        "origin_task_ids": list(origin_task_ids),
+        "rank": rank,
+        "cost_tier": cost_tier or "",
+        "item": item,
+        "text": _short(evidence),
+        "source_refs": refs,
+        "verdict": verdict,
+        "reason": (
+            "Structured head-drain row parsed from the cost-to-falsify source memo; "
+            "this row is owned explicitly so it cannot remain an archaeology item."
+        ),
+        "evidence": [evidence] if evidence else [],
+        "disposition": disposition,
+        "owner": owner,
+        "fire_order": fire_order,
+    }
+    if extra:
+        payload.update(extra)
+    return payload
+
+
+def _p1a_fire_order(rank: int, item: str, evidence: str) -> str:
+    if rank == 1:
+        return (
+            "Read the ms4d composite-R adjoint through a registered phi reducer. "
+            "If no reducer exists, land that reducer first; do not design or fire D+/- from a guessed scalar."
+        )
+    if "scorer pass" in evidence.casefold() or "full-n600" in evidence.casefold():
+        return (
+            "Queue behind the active scorer owner with the exact source row and falsifier; "
+            "qj1 does not own the n600 slot."
+        )
+    if "vehicle-scope-owed" in evidence.casefold():
+        return (
+            "First adjudicate whether the row still applies to the live own-vehicle line; "
+            "then fire or fold with the vehicle-scope reason."
+        )
+    return (
+        "Fire the named zero-dollar/local check if still applicable, or append a typed fold/blocker "
+        "with the cited source row."
+    )
+
+
+def _extract_p1a_ranked_head(
+    memo_root: Path,
+    *,
+    tasks: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    path = memo_root / _P1A_HEAD_MEMO
+    if not path.is_file():
+        return []
+    rows: list[dict[str, Any]] = []
+    in_section = False
+    tier: str | None = None
+    for line_no, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        if line.startswith("## §3 The 29 open items"):
+            in_section = True
+            continue
+        if in_section and line.startswith("## §4 "):
+            break
+        if not in_section:
+            continue
+        if line.startswith("### "):
+            tier = _clean_markdown_cell(line.lstrip("#").strip())
+            continue
+        cells = _split_markdown_row(line)
+        if len(cells) < 4 or _is_table_separator(cells) or not cells[0].isdigit():
+            continue
+        rank = int(cells[0])
+        item, refs, evidence = cells[1], cells[2], cells[3]
+        rows.append(
+            _head_record(
+                memo=path.name,
+                line_no=line_no,
+                source_id=f"{path.name}#p1a-item-{rank:02d}",
+                origin_task_ids=("879", "886"),
+                rank=rank,
+                cost_tier=tier,
+                item=item,
+                refs=refs,
+                evidence=evidence,
+                verdict="OPEN-RANKED-BY-COST-TO-FALSIFY",
+                disposition="QUEUED-WITH-FIRE-ORDER",
+                owner=_owner_from_source_refs(refs, tasks),
+                fire_order=_p1a_fire_order(rank, item, evidence),
+            )
+        )
+    return rows
+
+
+def _extract_p2a_adjudications(path: Path) -> dict[str, dict[str, str]]:
+    out: dict[str, dict[str, str]] = {}
+    in_section = False
+    for line_no, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        if line.startswith("## §5 THE ADJUDICATION"):
+            in_section = True
+            continue
+        if in_section and line.startswith("## §6 "):
+            break
+        if not in_section:
+            continue
+        cells = _split_markdown_row(line)
+        if len(cells) < 4 or _is_table_separator(cells):
+            continue
+        task_id = re.sub(r"\D", "", cells[0])
+        if not task_id:
+            continue
+        out[task_id] = {
+            "line_no": str(line_no),
+            "verdict": cells[1],
+            "evidence": cells[2],
+            "cost_to_falsify": cells[3],
+        }
+    return out
+
+
+def _p2a_disposition(verdict: str) -> tuple[str, str]:
+    folded = verdict.casefold()
+    if "already-closed" in folded:
+        return (
+            "FOLDED",
+            "Append or preserve the closing artifact citation; no fire order remains for the original row.",
+        )
+    if "superseded" in folded:
+        return (
+            "HONESTLY-DROPPED-WITH-REASON",
+            "Drop the superseded original framing and open any successor as a new explicitly owned row.",
+        )
+    return (
+        "QUEUED-WITH-FIRE-ORDER",
+        "Run the stated grep/read check, then append CLOSING-ARTIFACT, typed blocker, or explicit fold.",
+    )
+
+
+def _extract_p2a_ranked_head(
+    memo_root: Path,
+    *,
+    tasks: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    path = memo_root / _P2A_HEAD_MEMO
+    if not path.is_file():
+        return []
+    adjudications = _extract_p2a_adjudications(path)
+    rows: list[dict[str, Any]] = []
+    in_section = False
+    rank = 0
+    for line_no, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+        if line.startswith("## §4 THE ONE WORKING SIGNAL"):
+            in_section = True
+            continue
+        if in_section and line.startswith("## §5 "):
+            break
+        if not in_section:
+            continue
+        cells = _split_markdown_row(line)
+        if len(cells) < 5 or _is_table_separator(cells):
+            continue
+        task_id = re.sub(r"\D", "", cells[0])
+        if not task_id:
+            continue
+        rank += 1
+        adjudicated = adjudications.get(task_id)
+        if adjudicated:
+            verdict = adjudicated["verdict"]
+            evidence = adjudicated["evidence"]
+            cost = adjudicated["cost_to_falsify"]
+            disposition, fire_order = _p2a_disposition(verdict)
+        else:
+            verdict = "NEVER-NAMED-IN-13736-COMMITS"
+            evidence = (
+                f"status={cells[1]}; updates={cells[2]}; created={cells[3]}; "
+                f"subject={cells[4]}"
+            )
+            cost = "one controlled grep/read"
+            disposition, fire_order = (
+                "QUEUED-WITH-FIRE-ORDER",
+                "One controlled grep/read: either locate a closing artifact or append a typed blocker/fold.",
+            )
+        rows.append(
+            _head_record(
+                memo=path.name,
+                line_no=line_no,
+                source_id=f"{path.name}#p2a-never-named-{task_id}",
+                origin_task_ids=("880", "887"),
+                rank=rank,
+                cost_tier="p2a never-named commit sweep",
+                item=cells[4],
+                refs=f"#{task_id}",
+                evidence=evidence,
+                verdict=verdict,
+                disposition=disposition,
+                owner=_owner_from_source_refs(f"#{task_id}", tasks),
+                fire_order=fire_order,
+                extra={
+                    "task_id": task_id,
+                    "task_status": cells[1],
+                    "task_updates": cells[2],
+                    "created": cells[3],
+                    "cost_to_falsify": cost,
+                },
+            )
+        )
+    return rows
+
+
+def extract_ranked_head_dispositions(
+    memo_root: Path,
+    *,
+    tasks: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Structured head-drain rows from #879/#886/#887 source memos."""
+    rows: list[dict[str, Any]] = []
+    rows.extend(_extract_p1a_ranked_head(memo_root, tasks=tasks))
+    rows.extend(_extract_p2a_ranked_head(memo_root, tasks=tasks))
+    return rows
+
+
+def _ranked_head_scope(memo_root: Path, rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    declared_by_source: dict[str, int] = {}
+    for name, declared in (
+        (_P1A_HEAD_MEMO, _P1A_DECLARED_OPEN_ITEMS),
+        (_P2A_HEAD_MEMO, _P2A_DECLARED_NEVER_NAMED_ROWS),
+    ):
+        if (memo_root / name).is_file():
+            declared_by_source[name] = declared
+    parsed_by_source = dict(sorted(Counter(str(row.get("memo", "")) for row in rows).items()))
+    declared = sum(declared_by_source.values())
+    return {
+        "surface": "ranked-followon-head",
+        "examined": len(rows),
+        "declared": declared,
+        "population": declared,
+        "note": (
+            "structured cost-to-falsify head rows parsed from p1a/p2a source memos; "
+            "denominator is the source-declared 29 open items plus 18 never-named task rows"
+        ),
+        "source_declared_counts": dict(sorted(declared_by_source.items())),
+        "source_parsed_counts": parsed_by_source,
+    }
 
 
 def _disposition_for_memo(verdict: ExecutionVerdict) -> tuple[str, str]:
@@ -363,6 +694,9 @@ def build_followon_backlog_join(
     handoff_pairs.sort(key=lambda pair: (HANDOFF_VERDICTS.index(pair[1].verdict), pair[0].memo, pair[0].line_no))
 
     dispositions: list[dict[str, Any]] = []
+    ranked_head_rows = extract_ranked_head_dispositions(memos, tasks=tasks)
+    ranked_head_scope = _ranked_head_scope(memos, ranked_head_rows)
+    dispositions.extend(ranked_head_rows)
     dispositions.extend(_memo_record(row, verdict, tasks=tasks) for row, verdict in memo_pairs)
     dispositions.extend(_task_record(row, verdict) for row, verdict in task_pairs)
     dispositions.extend(_handoff_record(row, verdict, tasks=tasks) for row, verdict in handoff_pairs)
@@ -373,10 +707,17 @@ def build_followon_backlog_join(
         "FIRED": 2,
         "FOLDED": 3,
     }
+    source_priority = {
+        "ranked_followon_head": 0,
+        "memo_followon": 1,
+        "canonical_task": 2,
+        "handoff": 3,
+    }
     dispositions.sort(
         key=lambda row: (
             priority.get(str(row.get("disposition")), 9),
-            str(row.get("source")),
+            source_priority.get(str(row.get("source")), 9),
+            int(row.get("rank") or 999_999),
             str(row.get("source_id")),
         )
     )
@@ -442,11 +783,29 @@ def build_followon_backlog_join(
                 "population": handoff_extract_scope.population,
                 "note": successor_index.reason,
             },
+            "ranked_head": ranked_head_scope,
         },
         "summaries": {
             "memo_followon_verdicts": memo_counts,
             "task_execution_verdicts": task_join_counts,
             "handoff_verdicts": handoff_counts,
+            "ranked_head_rows": len(ranked_head_rows),
+            "ranked_head_declared": ranked_head_scope["declared"],
+            "ranked_head_parse_coverage": (
+                None
+                if ranked_head_scope["declared"] == 0
+                else len(ranked_head_rows) / ranked_head_scope["declared"]
+            ),
+            "ranked_head_dispositions": dict(
+                Counter(str(row.get("disposition")) for row in ranked_head_rows)
+            ),
+            "zero_dollar_never_run_class": {
+                "source": "tac.followon_ledger.extract_followons + classify_execution",
+                "derivation": "ACTION_RX and CHEAP_RX over memo lines; execution joined against artifact corpus",
+                "followon_rows": len(followons),
+                "verdicts": memo_counts,
+                "denominator": _scope_dict(followon_scope),
+            },
             "memo_rows_with_task_refs": with_refs,
             "memo_rows_with_repo_task_match": refs_present,
             "memo_task_ref_coverage": (
@@ -486,6 +845,11 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"handoffs: {summaries['handoff_verdicts']}."
         ),
         (
+            f"Ranked head rows: {summaries['ranked_head_rows']}/"
+            f"{summaries['ranked_head_declared']} parsed; "
+            f"dispositions: {summaries['ranked_head_dispositions']}."
+        ),
+        (
             f"Queued rows with owner: {summaries['queued_with_owner']}; "
             f"unowned queued rows: {summaries['unowned_queued_rows']}."
         ),
@@ -495,7 +859,19 @@ def render_markdown(report: dict[str, Any]) -> str:
         "| source | id | verdict | disposition | owner | fire order |",
         "|---|---|---|---|---|---|",
     ]
-    for row in report["dispositions"][:40]:
+    ranked_rows = [
+        row for row in report["dispositions"]
+        if row.get("source") == "ranked_followon_head"
+    ]
+    if ranked_rows:
+        generic_rows = [
+            row for row in report["dispositions"]
+            if row.get("source") != "ranked_followon_head"
+        ]
+        table_rows = ranked_rows + generic_rows[: max(0, 40 - len(ranked_rows))]
+    else:
+        table_rows = report["dispositions"][:40]
+    for row in table_rows:
         lines.append(
             "| {source} | {source_id} | {verdict} | {disposition} | {owner} | {fire_order} |".format(
                 source=str(row.get("source", "")).replace("|", "\\|"),
@@ -512,6 +888,7 @@ def render_markdown(report: dict[str, Any]) -> str:
             "## Boundaries",
             "",
             "- This is a repo-visible join, not the live harness TaskList.",
+            "- The ranked-head denominator is parsed from p1a/p2a source memos; rows outside those source tables are not silently adjudicated.",
             "- `EXECUTED`/`ADVANCED` are candidate closure signals, not proof without hand verification.",
             "- Score pointer is not touched; `score_claim=false`.",
         ]

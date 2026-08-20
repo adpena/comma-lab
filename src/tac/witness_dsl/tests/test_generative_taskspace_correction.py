@@ -19,13 +19,16 @@ from tac.optimization.direct_description_carrier_compose import (
     ROLE_CLASS_IDS,
     BoundaryCoefficientDelta,
     BoundaryShearletAtomV1,
+    DirectDescriptionError,
     IslandShapeAtomV1,
     MovableWorldsheetKnotV1,
     MovableWorldsheetTrackV1,
     ReceiverRealizationProfileV1,
     TopologyEventV1,
     _apply_boundary_shearlet_atoms,
+    _event_mask,
     _island_shape_mask,
+    requires_pose6_transport,
 )
 from tac.witness_dsl.generative_taskspace_correction import (
     CompiledGenerativeCorrectionV1,
@@ -137,6 +140,13 @@ def test_compiles_canonical_existing_primitives_and_generates_obligations() -> N
     )
 
     assert first.packet == second.packet
+    assert (
+        hashlib.sha256(first.packet).hexdigest() == "d146e5a19cba16f7ab2feff8661bc3192043fb953ef211c56a6edc2f0f17c935"
+    )
+    assert (
+        hashlib.sha256(memoryview(first.decoded.labels).cast("B")).hexdigest()
+        == "143cb722fe74e21ecd9e9f6468ce99855b82f566dd56cb9d2fb6a94bdadbc829"
+    )
     assert first.receipt.packet_bytes == len(first.packet)
     assert first.receipt.total_atoms == 5
     assert first.receipt.max_active_atoms_per_pair == 4
@@ -272,6 +282,46 @@ def test_existing_shearlet_and_island_codecs_drive_the_same_receiver_semantics()
     assert compiled.receipt.debt_after_cells == 200
 
 
+@pytest.mark.parametrize("atom_kind", ["event", "island"])
+def test_zero_gain_masks_do_not_read_pose_and_nonzero_gain_none_fails_closed(atom_kind: str) -> None:
+    pose_a = np.zeros((2, 6), dtype=np.int16)
+    pose_b = np.array([[300, -250, 0, 0, 0, 0], [-300, 250, 0, 0, 0, 0]], dtype=np.int16)
+    if atom_kind == "event":
+        zero_gain = TopologyEventV1(10, "Lane", "birth", "box", 2, 10, 20, 14, 28)
+        nonzero_gain = TopologyEventV1(10, "Lane", "birth", "box", 2, 10, 20, 14, 28, 1, 0)
+    else:
+        zero_gain = IslandShapeAtomV1(10, "birth", 2, 100, 140, 6, 12, 0, 0, 0, 8)
+        nonzero_gain = IslandShapeAtomV1(10, "birth", 2, 100, 140, 6, 12, 0, 0, 0, 8, 0, 1)
+
+    def render(
+        atom: TopologyEventV1 | IslandShapeAtomV1,
+        pose: np.ndarray | None,
+    ) -> np.ndarray:
+        if type(atom) is TopologyEventV1:
+            return _event_mask(
+                atom,
+                source_pair_id=11,
+                source_pair_start=10,
+                pose6_codes=pose,
+            )
+        if type(atom) is IslandShapeAtomV1:
+            return _island_shape_mask(
+                atom,
+                source_pair_id=11,
+                source_pair_start=10,
+                pose6_codes=pose,
+            )
+        raise AssertionError("closed test atom type escaped")
+
+    assert requires_pose6_transport(zero_gain) is False
+    assert requires_pose6_transport(nonzero_gain) is True
+    without_pose = render(zero_gain, None)
+    assert np.array_equal(without_pose, render(zero_gain, pose_a))
+    assert np.array_equal(without_pose, render(zero_gain, pose_b))
+    with pytest.raises(DirectDescriptionError, match="requires Pose6 transport"):
+        render(nonzero_gain, None)
+
+
 def test_mutation_truncation_and_identity_drift_refuse() -> None:
     state = _state()
     packet = _compile().packet
@@ -305,6 +355,11 @@ def test_exact_target_reconstruction_by_compact_generator_is_candidate_eligible(
         _state(),
         exact_program,
         teacher_evidence=_teacher(target_labels=exact_target),
+    )
+    assert len(compiled.packet) == 141
+    assert (
+        hashlib.sha256(compiled.packet).hexdigest()
+        == "1fd833ee310800688c76a3bb7c1af8ea287d8d02fb1997c9d7f0e23c3f735230"
     )
     assert compiled.receipt.debt_after_cells == 0
     assert compiled.receipt.debt_delta_cells == -compiled.receipt.debt_before_cells

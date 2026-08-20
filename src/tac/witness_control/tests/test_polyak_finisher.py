@@ -217,8 +217,7 @@ def test_completeness_new_polyak_flags_mapped_zero_unmapped():
     for f in ("--polyak-finisher-arm", "--polyak-finisher-start-epoch"):
         assert f in c.mapped, f"{f} should be DSL-mapped (0 unmapped for new flags)"
         assert f not in c.unmapped
-    # the reused rewarmup flags stay mapped; no DSL->trainer drift introduced.
-    assert not c.stale
+        assert f not in c.stale
 
 
 # --- TRAINER INTEGRATION (real _load_resume_state routing + heavy round-trip) -

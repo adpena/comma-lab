@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import datetime as _dt
+import re
 import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -11,6 +12,125 @@ from pathlib import Path
 from typing import Any, Literal
 
 SCHEMA_VERSION = "canonical_task_status_v1_20260518"
+
+# ---------------------------------------------------------------------------
+# ΔS CUSTODY (ddm_op3, 2026-08-03) -- a delta is only meaningful WITH its arguments.
+# ---------------------------------------------------------------------------
+# MEASURED, 417 ledger rows: 8 carry a typed ``actual_delta_s``, 8 carry a ΔS-shaped
+# claim only in free text, 1 overlaps -> 15 distinct rows assert a ΔS, and the existing
+# ``[empirical:]`` invariant is able to see exactly ONE of them. The two rows that
+# actually misdirected readers this week (a "-0.0983195" and a "-0.0866789 S UNLOCK")
+# both carry ``actual_delta_s = None`` and state their number in ``title``.
+#
+# That is why this is not a one-line addition to the field check: the number moved OUT
+# of the field the schema polices and into the prose it does not. Guarding only the
+# typed field would have produced a gate that passes both live failures.
+#
+# Three coordinates are required, because three were separately lost:
+#   baseline  -- our own frontier moved SIX times in one day (0.9639878 -> 0.8264972),
+#                so a delta with no reference is not stale-ish, it is undefined.
+#   term_set  -- a delta over a SUBSET of {seg, pose, rate} is not a ΔS at all. The
+#                "-0.0866" above is seg+rate only; its real composed row is +19.22,
+#                because the omitted pose term is 234.7x the advertised prize.
+#   population -- a prefix of a temporally-correlated list is a scene block, not a
+#                sample: n=73 read -0.122 WIN where its own n600 read +0.152 LOSS.
+
+BASELINE_TOKEN = re.compile(r"\[baseline:[^\]=]+=[^\]]+\]")
+PARTIAL_TERMS_TOKEN = re.compile(r"\[partial:[^\]]+\]")
+POPULATION_TOKEN = re.compile(r"\[n=\d+\]|\[n600\]")
+
+# A ΔS-shaped assertion in free text: a signed 3+-decimal magnitude adjacent to an S
+# label. Deliberately narrow -- it matched 8 of 417 rows (1.9%), so it is a claim
+# detector, not a number detector.
+FREE_TEXT_DELTA_S = re.compile(
+    r"[-+−]\s?\d*\.\d{3,}\s*S\b"
+    r"|\bd(?:elta)?[_ ]?S\s*[=:]\s*[-+−]?\d*\.\d{3,}"
+    r"|ΔS\s*[=:]?\s*[-+−]?\d*\.\d{3,}"
+)
+
+# Prose that marks a delta as covering only part of S.
+PARTIAL_COMPOSITE_PROSE = re.compile(
+    r"seg[_ +]?(?:plus[_ ]?)?rate|seg[-_ ]only|pose[-_ ]only|rate[-_ ]only|seg\+rate|S_add",
+    re.IGNORECASE,
+)
+
+# An explicit reference COMPARISON in prose ("... vs ref 0.7685479 (-0.0983195) ...").
+#
+# This pattern exists because of a correction to this module's own first draft. The row
+# that misdirected hardest states its delta as a bare parenthesised number with no S
+# label at all, so the claim detector above does NOT see it -- and a control that
+# "replayed" it with an S appended would have been testing an edited row, not the real
+# one. MEASURED: 2 of 417 rows (0.5%), both genuine ΔS claims, so this is specific.
+#
+# It also sharpens what the rule is actually for. That row DID name its reference. The
+# defect was that it named a bare NUMBER -- 0.7685479 -- which no reader can date,
+# locate, or re-derive, so nobody could see it had been superseded five times. Naming a
+# baseline is necessary; naming a RE-DERIVABLE one is the requirement.
+BARE_REFERENCE_PROSE = re.compile(
+    r"\bvs\.?\s+(?:ref|reference|baseline|base)\b"
+    r"|\bagainst\s+(?:ref|reference|baseline)\b"
+    r"|\bbaseline\s*[=:]\s*\d",
+    re.IGNORECASE,
+)
+
+
+def delta_s_custody_findings(
+    *,
+    actual_delta_s: float | None,
+    event_notes: str,
+    title: str = "",
+) -> tuple[str, ...]:
+    """Return the ΔS-custody defects of a row. Empty tuple == custodied.
+
+    ONE implementation, TWO policies: the reader WARNS on these findings so the
+    append-only ledger stays totally readable (a historical row cannot be rewritten, and
+    a reader that raises on history is worse than the defect it reports), while the
+    writer REFUSES them so no new uncustodied delta can be minted. That split is the
+    same one already used for malformed ``event_notes`` in this module.
+    """
+    text = f"{title}\n{event_notes}"
+    claims_in_free_text = bool(FREE_TEXT_DELTA_S.search(text))
+    compares_to_reference = bool(BARE_REFERENCE_PROSE.search(text))
+    asserts_delta = actual_delta_s is not None or claims_in_free_text or compares_to_reference
+    if not asserts_delta:
+        return ()
+
+    findings: list[str] = []
+    has_partial_token = bool(PARTIAL_TERMS_TOKEN.search(text))
+    reads_partial = bool(PARTIAL_COMPOSITE_PROSE.search(text))
+
+    if not BASELINE_TOKEN.search(text):
+        detail = (
+            "a bare reference NUMBER is not a baseline -- nobody can date, locate or "
+            "re-derive it, which is exactly how a reference that had been superseded "
+            "five times kept being divided by"
+            if compares_to_reference
+            else "our own frontier moved six times in one day"
+        )
+        findings.append(
+            "MISSING_BASELINE: a ΔS asserts a difference, so it is undefined without the "
+            "row it was measured against. Add [baseline:<artifact-locator>=<S recomputed "
+            f"from components>] -- {detail}"
+        )
+    if reads_partial and not has_partial_token:
+        findings.append(
+            "UNDECLARED_PARTIAL_COMPOSITE: this row reads as a delta over a SUBSET of "
+            "{seg, pose, rate}, which is not a ΔS. Declare it as [partial:seg+rate] so a "
+            "downstream reader cannot drop the qualifier -- one such row advertised "
+            "-0.0866 while its composed row measured +19.22"
+        )
+    if has_partial_token and actual_delta_s is not None:
+        findings.append(
+            "PARTIAL_IN_TYPED_FIELD: actual_delta_s is the FULL-S delta; a partial "
+            "composite must stay in the notes and leave the typed field None"
+        )
+    if not POPULATION_TOKEN.search(text):
+        findings.append(
+            "MISSING_POPULATION: state [n600] or [n=<k>] -- a subset of a temporally "
+            "correlated video list is a different population, not a smaller sample of "
+            "the same one"
+        )
+    return tuple(findings)
 
 Status = Literal["pending", "in_progress", "completed", "blocked", "deferred", "cancelled"]
 Owner = Literal["claude", "codex", "operator"] | str
@@ -159,6 +279,21 @@ class CanonicalTaskStatusRow:
                 raise ValueError("predicted_delta_s_band lower bound exceeds upper bound")
         if self.actual_delta_s is not None and "[empirical:" not in self.event_notes:
             raise ValueError("actual_delta_s rows must include an [empirical:<path>] event note")
+        # ΔS custody: WARN here, REFUSE at the writer. The ledger is append-only, so a
+        # reader must stay total over history (see _coerce_event_notes); raising would
+        # break campaign-wide recall on 15 legitimately historical rows. The findings are
+        # still surfaced so staleness is DETECTABLE rather than discoverable.
+        custody = delta_s_custody_findings(
+            actual_delta_s=self.actual_delta_s,
+            event_notes=self.event_notes,
+            title=self.title,
+        )
+        if custody:
+            warnings.warn(
+                f"canonical_task_status: task {self.task_id} asserts a ΔS without full "
+                f"custody: {'; '.join(custody)}",
+                stacklevel=2,
+            )
         object.__setattr__(self, "commit_shas", tuple(str(v) for v in self.commit_shas))
         object.__setattr__(self, "blockers", tuple(str(v) for v in self.blockers))
         if self.predicted_delta_s_band is not None:

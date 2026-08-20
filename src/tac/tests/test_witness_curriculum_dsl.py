@@ -24,6 +24,7 @@ from tac.witness_dsl import (
     PoseDecouple,
     Preserve,
     SoftBoundary,
+    StageTransitionSoftVelocityBlend,
     StiefelW,
     TauFrozen,
     real_store_true_flags,
@@ -217,6 +218,21 @@ def test_soft_boundary_replaces_beta_steplim():
     arm = BASELINE.with_lever(SoftBoundary(2.0))
     assert arm.flag_dict()["--hosc-beta"] == 2.0 and arm.epochs > BASELINE.epochs
     assert arm.validate() == []
+
+
+def test_stage_transition_soft_velocity_blend_default_off_is_arg_inert():
+    lever = StageTransitionSoftVelocityBlend(beta2=0.999, c=2.0)
+    arm = BASELINE.with_lever(lever)
+    assert lever.overrides == {}
+    assert arm.flag_dict() == BASELINE.flag_dict()
+    assert arm.validate() == []
+    assert "m_new=(1-a(t))*m_mapped+a(t)*m_fresh" in lever.notes
+    assert "2000 optimizer steps" in lever.notes
+
+
+def test_stage_transition_soft_velocity_blend_enabled_refuses_until_consumer_exists():
+    with pytest.raises(ValueError, match="no levelset trainer consumer"):
+        StageTransitionSoftVelocityBlend(enabled=True)
 
 
 # --- LEVER-A (FiLM-rank-fix) + LEVER-B (thin-lane prior) DSL levers (task: film-rank-fix + lane-prior) ---

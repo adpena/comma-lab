@@ -3,7 +3,7 @@
 **Verdict: CLEAN.** The crate source is PURE DECODE LOGIC. No learned or
 video-derived constant is embedded in the binary or the source. This satisfies
 the CLAUDE.md "Native eval-time runtime discipline" payload-cleanliness contract:
-the decoder is FIXED, rate-free code; the partition labels / contours the SegNet
+the decoder is FIXED, rate-free code; the partition labels the SegNet
 derives masks from are carried in `archive.zip` (the LZMA payload bytes), NOT in
 the binary.
 
@@ -11,7 +11,7 @@ the binary.
 
 | module | logic | inputs (caller-supplied) | embedded constants |
 |--------|-------|--------------------------|--------------------|
-| `contour.rs` | RAW-LZMA2 decompress → raw `uint8` label bytes (mirror of `contour_codec.decode_partition`) | LZMA payload bytes (from archive), `(H, W)` shape | LZMA codec config only: preset level `9`, `lc=0`, `lp=0`, `pb=0` (= `contour_codec._LZMA_FILTERS`) |
+| `contour.rs` | RAW-LZMA2 decompress → raw `uint8` label bytes (mirror of `dense_raster_lzma_baseline.decode_partition`) | LZMA payload bytes (from archive), `(H, W)` shape | LZMA codec config only: preset level `9`, `lc=0`, `lp=0`, `pb=0` (= `dense_raster_lzma_baseline._LZMA_FILTERS`) |
 | `dseg.rs` | popcount(XOR) of two label arrays → `flip_count` / `d_seg` rate | two `uint8` label arrays | none (loop counters / `n_pixels` arithmetic) |
 | `components.rs` | raster-scan flood-fill → 4-connected `region_of` id map (mirror of `partition.connected_components`) | `uint8` argmax array, `(H, W)`, `n_classes` | 4-connectivity neighbour offsets `[(-1,0),(1,0),(0,-1),(0,1)]` |
 | `conformance.rs` | golden-vector loader + SHA-256 parity helper | manifest JSON + produced bytes | none |
@@ -28,7 +28,7 @@ contour.rs:     const LZMA_PB: u32 = 0;               # position-bits (codec con
 ```
 
 All five are **structural codec / connectivity configuration**, identical to the
-Python oracle's `contour_codec._LZMA_FILTERS` and `partition._CONN4`. None encode
+Python oracle's `dense_raster_lzma_baseline._LZMA_FILTERS` and `partition._CONN4`. None encode
 a video-derived label, a trained weight, a Fourier table, a per-pair mod code, or
 any other answer-from-the-data.
 

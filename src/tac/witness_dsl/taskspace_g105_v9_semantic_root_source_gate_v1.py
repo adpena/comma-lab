@@ -1,16 +1,17 @@
-"""G105 fresh-source gate for a V9/V10 learned semantic-root producer.
+"""Historical G105 inventory gate, superseded by the physical G109/G111 seam.
 
 This module is deliberately a custody gate, not a second task-space IR.  The
 only semantic population/evidence types it constructs are imported from
 ``taskspace_selected_solution_compiler``.  It reads the real V9 checkpoint
 arrays and refuses to call historical or subset state a fresh G105 source.
 
-The learned training surface is the one the public V9 byte-close path actually
-consumes: population-shared generator tensors plus two chronological latent
-rows per pair.  The G105 root owns Y1 only, so candidate packing projects the
-odd row ``code[2*p+1]`` and discards frame-0 rows; one G94-V2 owner remains
-exclusive for Y0.  Topology/procedural atoms may complement the learned RGB
-surface, but do not replace it.
+This module remains readable for historical receipts, but it is no longer
+promotion authority: it predates the physical G109 target projection, cold
+``fresh_producer`` lineage, generated-Y1 conditional ownership, and exact G105
+packet compiler.  New work must use
+``taskspace_g105_exact_v9_semantic_root_adapter_v1`` plus the G112 total-state
+partition.  The permanent superseded blocker below prevents the old FreSh/G94
+contract from being mistaken for a current green gate.
 """
 
 from __future__ import annotations
@@ -38,7 +39,10 @@ SCHEMA_V1: Final = "tac.taskspace_g105_v9_semantic_root_source_gate.v1"
 LINEAGE_SCHEMA_V1: Final = "tac.taskspace_g105_v9_semantic_root_lineage.v1"
 EXPECTED_PAIR_COUNT: Final = 600
 EXPECTED_LATENT_ROWS: Final = 2 * EXPECTED_PAIR_COUNT
-TEMPORAL_CODE_TRANSFORM: Final = "frame_separated_mod256_temporal_delta_v1"
+TEMPORAL_CODE_TRANSFORM: Final = "best_of_raw_i16le_and_delta_rice_v1"
+CANONICAL_SUCCESSOR: Final = (
+    "tac.witness_dsl.taskspace_g105_exact_v9_semantic_root_adapter_v1"
+)
 Y1_LATENT_PROJECTION: Final = "root_latent[p]=code[2*p+1]"
 
 _SOURCE_AUTHORITY_NAMES: Final = (
@@ -96,6 +100,9 @@ class G105BlockerCodeV1(StrEnum):
     CHECKPOINT_NOT_FRESH_INIT = "G105_CHECKPOINT_NOT_FRESH_INIT"
     CHECKPOINT_NOT_STAGE_RESUMABLE = "G105_CHECKPOINT_NOT_STAGE_RESUMABLE"
     CHECKPOINT_SOURCE_AUTHORITY_DRIFT = "G105_CHECKPOINT_SOURCE_AUTHORITY_DRIFT"
+    SUPERSEDED_BY_PHYSICAL_G109_G111_G112 = (
+        "G105_SUPERSEDED_BY_PHYSICAL_G109_G111_G112"
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -263,6 +270,8 @@ class G105SourceGateReceiptV1:
             "score_claim": False,
             "candidate_claim": False,
             "pointer_mutation_allowed": False,
+            "authority_status": "SUPERSEDED_HISTORICAL_INVENTORY_ONLY",
+            "canonical_successor": CANONICAL_SUCCESSOR,
             "ready_for_semantic_root_adapter": self.ready_for_semantic_root_adapter,
             "selected_solution_authority": ("src/tac/witness_dsl/taskspace_selected_solution_compiler.py"),
             "source_authority_sha256": self.source_authority_sha256,
@@ -279,7 +288,7 @@ class G105SourceGateReceiptV1:
                 "counted_semantic_root_y1_latents": Y1_LATENT_PROJECTION,
                 "expected_counted_semantic_root_y1_rows": EXPECTED_PAIR_COUNT,
                 "frame0_latents": "encoder-only compute overhead; discard before candidate packing",
-                "exclusive_y0_owner": "one G94-V2 conditional Y0 owner",
+                "exclusive_y0_owner": "G110 typed conditional Y0|final-G105-Y1",
                 "historical_full_state_temporal_code_transform": TEMPORAL_CODE_TRANSFORM,
                 "topology_factor_is_not_a_substitute_for_learned_rgb_state": True,
             },
@@ -423,7 +432,9 @@ def candidate_physical_blockers(
 ) -> tuple[G105BlockerCodeV1, ...]:
     """Derive readiness from checkpoint bytes, never lineage assertions."""
 
-    blockers: list[G105BlockerCodeV1] = []
+    blockers: list[G105BlockerCodeV1] = [
+        G105BlockerCodeV1.SUPERSEDED_BY_PHYSICAL_G109_G111_G112
+    ]
     if not candidate.full_n600:
         blockers.append(G105BlockerCodeV1.CHECKPOINT_NOT_FULL_N600)
     if not candidate.learned_surface_complete:
@@ -575,7 +586,7 @@ def audit_g105_source_premise(config_path: Path) -> G105SourceGateReceiptV1:
         )
 
     unique_blockers = tuple(dict.fromkeys(blockers))
-    status = "READY_FOR_SEMANTIC_ROOT_ADAPTER" if not unique_blockers else "BLOCKED_NO_FRESH_SOURCE"
+    status = "SUPERSEDED_HISTORICAL_INVENTORY_ONLY"
     return G105SourceGateReceiptV1(
         status=status,
         source_authority_sha256=source_authority_sha256,

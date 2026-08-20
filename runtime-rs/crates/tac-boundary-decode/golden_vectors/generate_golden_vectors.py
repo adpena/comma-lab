@@ -6,7 +6,7 @@ of the *decoded raw output* the Rust port must reproduce bit-for-bit, plus the i
 byte fixtures the Rust port reads (so we do NOT reimplement numpy's RNG in Rust).
 
 NO FAKE: every vector is produced by the REAL boundary_math oracle functions
-(``encode_partition`` / ``decode_partition`` for the contour codec; the popcount
+(``encode_partition`` / ``decode_partition`` for the dense-raster LZMA baseline; the popcount
 ``d_seg_*`` functionals; ``connected_components`` for the RAG). The vectors are NOT
 hand-authored constants — they are the deterministic output of the oracle on pinned
 inputs. The Rust crate's parity test reads these fixtures, runs the Rust decode, and
@@ -24,7 +24,7 @@ from pathlib import Path
 import numpy as np
 
 from tac.boundary_math.bitmask_dseg import d_seg_reference, flip_count
-from tac.boundary_math.contour_codec import encode_partition
+from tac.boundary_math.dense_raster_lzma_baseline import encode_partition
 from tac.boundary_math.partition import connected_components
 
 HERE = Path(__file__).resolve().parent
@@ -46,8 +46,8 @@ def _write_bin(name: str, data: bytes) -> None:
 def _structured_partition(h: int, w: int, seed: int) -> np.ndarray:
     """A realistic SegNet-style partition: contiguous bands + objects (NOT random noise).
 
-    The contour codec exploits constant-label runs (interior = free); a structured
-    partition exercises the real boundary-entropy compression path the codec is for.
+    The dense-raster LZMA baseline exploits constant-label runs; a structured
+    partition exercises the real label-raster compression path the baseline covers.
     """
 
     rng = np.random.default_rng(seed)
@@ -67,7 +67,7 @@ def _structured_partition(h: int, w: int, seed: int) -> np.ndarray:
     return lab.astype(np.uint8)
 
 
-# ── Vector 1: contour codec DECODE (LZMA-RAW payload -> raw label-map bytes) ──
+# ── Vector 1: dense-raster LZMA DECODE (LZMA-RAW payload -> raw label-map bytes) ──
 def gen_contour_decode_full() -> None:
     """Full-resolution 384x512 partition — the contest seg target shape."""
 

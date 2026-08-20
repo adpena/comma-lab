@@ -65,6 +65,8 @@ from tac.witness_dsl.pair_population_envelope import (
     derive_ir_coverage,
     reopen_pbr2_pair_reference,
     reopen_typed_pair_reference,
+    validate_counted_program_sections,
+    validate_reverse_causal_counted_program_sections,
 )
 from tac.witness_dsl.progressive_geometry_residual import build_progressive_geometry_residual
 from tac.witness_dsl.tests.test_factorized_v9_predictor import _program
@@ -378,6 +380,7 @@ def _section_provenance(
     artifact_classes = {
         CountedSectionRole.GENERATIVE_CORRECTION: CountedArtifactClass.GENERATOR_PARAMETERS,
         CountedSectionRole.FRAME1_PREIMAGE: CountedArtifactClass.FRAME_PREIMAGE_PARAMETERS,
+        CountedSectionRole.FRAME0_FROM_EXACT_Y1: CountedArtifactClass.COUPLED_PREIMAGE_PARAMETERS,
         CountedSectionRole.FRAME0_POSE_RESIDUAL: CountedArtifactClass.POSE_RESIDUAL_PARAMETERS,
         CountedSectionRole.TERMINAL_QUOTIENT: CountedArtifactClass.TERMINAL_QUOTIENT,
     }
@@ -505,6 +508,80 @@ def _compact_receiver(bundle: _Bundle):
         )
 
     return receive
+
+
+def _reverse_program_and_sections(
+    bundle: _Bundle,
+) -> tuple[bytes, tuple[CountedProgramSection, ...]]:
+    reverse_a = canonical_json_bytes({"schema": "test.reverse_causal_A.v1", "control": 1})
+    payloads = (bundle.g_program, reverse_a)
+    roles = (
+        CountedSectionRole.GENERATIVE_CORRECTION,
+        CountedSectionRole.FRAME0_FROM_EXACT_Y1,
+    )
+    producer_source_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    sections: list[CountedProgramSection] = []
+    cursor = 0
+    for role, payload in zip(roles, payloads, strict=True):
+        sections.append(
+            CountedProgramSection(
+                role=role,
+                offset=cursor,
+                byte_length=len(payload),
+                payload_sha256=hashlib.sha256(payload).hexdigest(),
+                provenance=_section_provenance(
+                    role,
+                    producer_source_sha256=producer_source_sha256,
+                    derivation_input_sha256=bundle.predictor_state.binding_sha256,
+                ),
+            )
+        )
+        cursor += len(payload)
+    return b"".join(payloads), tuple(sections)
+
+
+def test_legacy_and_reverse_causal_counted_grammars_are_disjoint(
+    complete_bundle: _Bundle,
+) -> None:
+    legacy_program = _compact_program_bytes(complete_bundle)
+    legacy_sections = _compact_receiver(complete_bundle)(legacy_program).section_manifest
+    reverse_program, reverse_sections = _reverse_program_and_sections(complete_bundle)
+
+    validate_counted_program_sections(legacy_program, legacy_sections)
+    validate_reverse_causal_counted_program_sections(reverse_program, reverse_sections)
+
+    with pytest.raises(PairPopulationEnvelopeError, match="legacy G/frame1/frame0-pose"):
+        validate_counted_program_sections(reverse_program, reverse_sections)
+    with pytest.raises(PairPopulationEnvelopeError, match="G/frame0-from-exact-Y1"):
+        validate_reverse_causal_counted_program_sections(legacy_program, legacy_sections)
+
+
+def test_legacy_compact_seal_rejects_reverse_causal_a_manifest(
+    complete_bundle: _Bundle,
+) -> None:
+    reverse_program, reverse_sections = _reverse_program_and_sections(complete_bundle)
+    legacy_program = _compact_program_bytes(complete_bundle)
+    legacy_decoded = _compact_receiver(complete_bundle)(legacy_program)
+
+    def reverse_role_receiver(program: bytes) -> CompactGeneratorDecode:
+        if program != reverse_program:
+            raise PairPopulationEnvelopeError("reverse-role receiver got foreign bytes")
+        return replace(
+            legacy_decoded,
+            consumed_program_sha256=hashlib.sha256(program).hexdigest(),
+            section_manifest=reverse_sections,
+            role_counterfactuals=tuple(
+                RoleCounterfactualProgram(section.role, program) for section in reverse_sections
+            ),
+        )
+
+    with pytest.raises(PairPopulationEnvelopeError, match="legacy G/frame1/frame0-pose"):
+        CompactObligationGeneratorProgram.seal(
+            reverse_program,
+            join=complete_bundle.join,
+            receiver=reverse_role_receiver,
+            receiver_source_bytes=_receiver_source_bytes(),
+        )
 
 
 class _TypedPairs:

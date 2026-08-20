@@ -5,13 +5,16 @@ import hashlib
 import json
 import math
 import os
-from decimal import Decimal
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
+from decimal import ROUND_CEILING, Decimal
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 import tac.optimization.direct_description_minimizer as ddm
+from tac.canonical_frontier_pointer import POINTER_SCHEMA_VERSION
 from tac.optimization.direct_description_minimizer import (
     ChargedFreePartitionRowV1,
     CountedDescriptionStreamV1,
@@ -46,6 +49,7 @@ from tac.optimization.s4_archive_composer import (
     build_payload_manifest,
     canonical_json_bytes,
 )
+from tac.witness_dsl.dynamic_frontier_target import load_dynamic_frontier_target
 
 H = "1" * 64
 GIT_SHA = "a" * 40
@@ -138,6 +142,41 @@ def _target_receipt(tmp_path: Path, *, planning_only: bool = False) -> tuple[Pat
     }
     path = tmp_path / ("target_planning.json" if planning_only else "target.json")
     return path, _write_jcs(path, value)
+
+
+def _dynamic_frontier_snapshot(repo: Path, *, score: float = 0.25):
+    now = datetime.now(UTC).isoformat()
+    entry = {
+        "score": score,
+        "rank": 1,
+        "name": "synthetic-public-row",
+        "pr_number": 9001,
+        "pr_url": "https://invalid.example/synthetic",
+    }
+    payload = {
+        "schema_version": POINTER_SCHEMA_VERSION,
+        "our_local_frontier_contest_cpu": None,
+        "our_local_frontier_contest_cuda": None,
+        "submitted_pr_number_for_current_frontier": None,
+        "upstream_leaderboard_snapshot": {
+            "best_entry": dict(entry),
+            "entries": [dict(entry)],
+        },
+        "upstream_leaderboard_snapshot_at_utc": now,
+        "last_refreshed_utc": now,
+        "auto_update_on_dispatch_completion": True,
+        "pointer_refresh_command": "synthetic-fixture-do-not-run",
+        "refresh_provenance": {"fixture": True},
+        "effective_frontier": {
+            "score": 0.001,
+            "source": "forged-cache-must-not-steer",
+            "axis": "forged",
+        },
+    }
+    pointer = repo / ".omx/state/canonical_frontier_pointer.json"
+    pointer.parent.mkdir(parents=True, exist_ok=True)
+    pointer.write_text(json.dumps(payload), encoding="utf-8")
+    return load_dynamic_frontier_target(repo_root=repo, now_utc_iso=now), now
 
 
 def _completion_certificate(tmp_path: Path, grammar_sha: str = H) -> tuple[dict, str, str]:
@@ -425,30 +464,118 @@ def test_settled_baseline_reexpression_when_ssd_is_present() -> None:
     assert receipt["source_archive_sha256"] == ddm.S4_BASELINE_SHA256
 
 
-def test_caps_are_sha_bound_decimal_and_ceil_minus_one(tmp_path: Path) -> None:
+def test_caps_are_sha_bound_dynamic_decimal_and_ceil_minus_one(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    frontier_repo = tmp_path / "frontier"
+    snapshot, now = _dynamic_frontier_snapshot(frontier_repo)
+    monkeypatch.setattr(ddm, "_DYNAMIC_TARGET_REPO_ROOT", frontier_repo)
     target, sha = _target_receipt(tmp_path)
-    caps = derive_ceil_minus_one_caps(target, sha)
-    assert caps["pointer_cap_bytes"] == 216_223
+    caps = derive_ceil_minus_one_caps(
+        target, sha, frontier_snapshot=snapshot, now_utc_iso=now
+    )
+    nonrate = Decimal(100) * Decimal(caps["solved_d_seg"]) + (
+        Decimal(10) * Decimal(caps["solved_d_pose"])
+    ).sqrt()
+    continuous = (
+        (Decimal(str(snapshot.target_score)) - nonrate)
+        * Decimal(ddm.SOURCE_BYTES)
+        / Decimal(25)
+    )
+    expected_pointer_cap = int(continuous.to_integral_value(rounding=ROUND_CEILING)) - 1
+    assert caps["pointer_cap_bytes"] == expected_pointer_cap
+    assert caps["pointer_score"] == str(snapshot.target_score)
+    assert caps["dynamic_frontier_target"]["pointer_sha256"] == snapshot.pointer_sha256
     assert caps["strict_0_15_cap_bytes"] == 154_524
     assert caps["strict_cap_role"] == "stretch_only"
     with pytest.raises(DirectDescriptionError, match="SHA-256 mismatch"):
-        derive_ceil_minus_one_caps(target, "0" * 64)
+        derive_ceil_minus_one_caps(
+            target, "0" * 64, frontier_snapshot=snapshot, now_utc_iso=now
+        )
     planning, planning_sha = _target_receipt(tmp_path, planning_only=True)
     with pytest.raises(DirectDescriptionError, match="planning"):
-        derive_ceil_minus_one_caps(planning, planning_sha)
+        derive_ceil_minus_one_caps(
+            planning, planning_sha, frontier_snapshot=snapshot, now_utc_iso=now
+        )
     bad = tmp_path / "float.json"
     bad_value = json.loads(target.read_text())
     bad_value["solved_d_seg"] = 0.00015196
     bad_value["solved_d_pose"] = 0.00010184
     bad_sha = _write_jcs(bad, bad_value)
     with pytest.raises(DirectDescriptionError, match="strings"):
-        derive_ceil_minus_one_caps(bad, bad_sha)
+        derive_ceil_minus_one_caps(
+            bad, bad_sha, frontier_snapshot=snapshot, now_utc_iso=now
+        )
     rounded = tmp_path / "rounded.json"
     rounded_value = json.loads(target.read_text())
     rounded_value["solved_d_seg"] = "0.00015196"
     rounded_value["solved_d_pose"] = "0.00010184"
     with pytest.raises(DirectDescriptionError, match="display-rounded"):
-        derive_ceil_minus_one_caps(rounded, _write_jcs(rounded, rounded_value))
+        derive_ceil_minus_one_caps(
+            rounded,
+            _write_jcs(rounded, rounded_value),
+            frontier_snapshot=snapshot,
+            now_utc_iso=now,
+        )
+
+
+def test_caps_refuse_forged_stale_and_path_swapped_frontier_snapshots(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    frontier_repo = tmp_path / "canonical"
+    snapshot, now = _dynamic_frontier_snapshot(frontier_repo)
+    monkeypatch.setattr(ddm, "_DYNAMIC_TARGET_REPO_ROOT", frontier_repo)
+    target, sha = _target_receipt(tmp_path / "target")
+
+    with pytest.raises(DirectDescriptionError, match="changed after snapshot"):
+        derive_ceil_minus_one_caps(
+            target,
+            sha,
+            frontier_snapshot=replace(snapshot, target_score=0.001),
+            now_utc_iso=now,
+        )
+    stale_time = (datetime.fromisoformat(now) - timedelta(hours=25)).isoformat()
+    with pytest.raises(DirectDescriptionError, match="24-hour"):
+        derive_ceil_minus_one_caps(
+            target,
+            sha,
+            frontier_snapshot=replace(snapshot, last_refreshed_utc=stale_time),
+            now_utc_iso=now,
+        )
+    swapped_repo = tmp_path / "swapped"
+    swapped, _ = _dynamic_frontier_snapshot(swapped_repo, score=0.24)
+    with pytest.raises(DirectDescriptionError, match="noncanonical pointer path"):
+        derive_ceil_minus_one_caps(
+            target, sha, frontier_snapshot=swapped, now_utc_iso=now
+        )
+
+
+def test_caps_refuse_pointer_refresh_during_receipt_custody_checks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    frontier_repo = tmp_path / "canonical"
+    snapshot, now = _dynamic_frontier_snapshot(frontier_repo)
+    monkeypatch.setattr(ddm, "_DYNAMIC_TARGET_REPO_ROOT", frontier_repo)
+    target, sha = _target_receipt(tmp_path / "target")
+    original_decode = ddm._duplicate_refusing_json
+    replaced = False
+
+    def replace_pointer_once(payload: bytes):
+        nonlocal replaced
+        decoded = original_decode(payload)
+        if not replaced:
+            replaced = True
+            _dynamic_frontier_snapshot(frontier_repo, score=0.24)
+        return decoded
+
+    monkeypatch.setattr(ddm, "_duplicate_refusing_json", replace_pointer_once)
+    with pytest.raises(DirectDescriptionError, match="changed after snapshot"):
+        derive_ceil_minus_one_caps(
+            target, sha, frontier_snapshot=snapshot, now_utc_iso=now
+        )
 
 
 def test_numpy_reference_is_seeded_deterministic_and_rejects_alias_types() -> None:

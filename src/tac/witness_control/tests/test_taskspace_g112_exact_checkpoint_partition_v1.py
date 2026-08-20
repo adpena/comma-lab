@@ -8,6 +8,20 @@ import numpy as np
 import pytest
 
 from tac.witness_control import fresh_producer_lineage_v1 as lineage
+from tac.witness_control.g111_schedule_control_state_v1 import (
+    new_state as new_g111_schedule_control_state,
+)
+from tac.witness_control.g111_schedule_control_state_v1 import (
+    state_arrays as g111_schedule_control_state_arrays,
+)
+from tac.witness_control.g111_verdict_barrier_v1 import ImmutableVerdictResult
+from tac.witness_control.trajectory_transaction_v2 import (
+    ATOMIC_OWNERS,
+    CANONICAL_DOMAIN_COVERAGE,
+    MANIFEST_KEY,
+    build_manifest,
+    manifest_array,
+)
 from tac.witness_control import taskspace_g112_exact_checkpoint_partition_v1 as subject
 from tac.witness_dsl import (
     taskspace_g105_exact_v9_semantic_root_adapter_v1 as g105,
@@ -38,6 +52,116 @@ def _fake_target_arrays() -> dict[str, np.ndarray]:
         "__cfg_target_authority_sha256": np.asarray("2" * 64),
         "__cfg_g46_target_evidence_sha256": np.asarray("3" * 64),
         "__cfg_verdict_batch": np.asarray(16),
+    }
+
+
+def _native_arrays_for_pair(
+    *,
+    deploy: dict[str, np.ndarray],
+    resume: dict[str, np.ndarray],
+    typed_config_sha256: str,
+) -> dict[str, np.ndarray]:
+    direct_prefixes = (
+        lineage.RESUME_LIVE_PREFIX,
+        lineage.RESUME_EMA_PREFIX,
+        lineage.RESUME_OPT_PREFIX,
+        lineage.RESUME_SEED_LIVE_PREFIX,
+        lineage.RESUME_SEED_OPT_PREFIX,
+        lineage.RESUME_POLYAK_PREFIX,
+    )
+    direct_resume = {
+        key: value
+        for key, value in resume.items()
+        if key.startswith(direct_prefixes)
+    }
+    lineage_payload = {
+        key: np.atleast_1d(value)
+        for key, value in resume.items()
+        if key.startswith("__cfg_fresh_")
+    }
+    control = {
+        key: np.atleast_1d(value)
+        for key, value in resume.items()
+        if key not in direct_resume and key not in lineage_payload
+    }
+    epoch = int(np.asarray(resume["__resume_epoch"]).item())
+    o3 = new_g111_schedule_control_state(
+        typed_config_sha256=typed_config_sha256,
+        completed_epoch=epoch,
+        next_epoch=epoch + 1,
+        accepted_optimizer_steps=0,
+        stop_latched=False,
+        control_scalars={},
+        resume_control_arrays=control,
+    )
+    o3_arrays = g111_schedule_control_state_arrays(
+        o3,
+        prefix="__g111_o3__",
+    )
+    encoded_o6 = ImmutableVerdictResult.capture(
+        submission_seq=0,
+        result_id="g111-o6-lineage-envelope",
+        payload={"lineage": lineage_payload},
+    )
+    o6_payload = np.zeros(64 * 1024, dtype=np.uint8)
+    o6_payload[: len(encoded_o6.payload_bytes)] = np.frombuffer(
+        encoded_o6.payload_bytes,
+        dtype=np.uint8,
+    )
+    by_owner = {
+        ATOMIC_OWNERS[0]: {
+            **{f"deploy.{key}": value for key, value in deploy.items()},
+            **{
+                f"resume.{key}": value
+                for key, value in direct_resume.items()
+            },
+        },
+        ATOMIC_OWNERS[1]: {
+            "controller.__test_o2_state": np.asarray([1], dtype=np.int64),
+        },
+        ATOMIC_OWNERS[2]: {
+            f"controller.{key}": value
+            for key, value in o3_arrays.items()
+        },
+        ATOMIC_OWNERS[3]: {
+            "barrier.__test_o4_state": np.asarray([1], dtype=np.int64),
+        },
+        ATOMIC_OWNERS[4]: {
+            "controller.__test_o5_state": np.asarray([1], dtype=np.int64),
+        },
+        ATOMIC_OWNERS[5]: {
+            "lineage.__g111_o6__schema": np.frombuffer(
+                b"tac.g111_lineage_envelope_arrays.v1",
+                dtype=np.uint8,
+            ).copy(),
+            "lineage.__g111_o6__payload": o6_payload,
+            "lineage.__g111_o6__payload_length": np.asarray(
+                len(encoded_o6.payload_bytes),
+                dtype=np.int64,
+            ),
+            "lineage.__g111_o6__sha256": np.frombuffer(
+                encoded_o6.result_sha256.encode("ascii"),
+                dtype=np.uint8,
+            ).copy(),
+        },
+    }
+    arrays = {
+        key: np.asarray(value)
+        for state in by_owner.values()
+        for key, value in state.items()
+    }
+    manifest = build_manifest(
+        arrays,
+        owner_claims={
+            owner: tuple(sorted(state))
+            for owner, state in by_owner.items()
+        },
+        activity=dict.fromkeys(ATOMIC_OWNERS, True),
+        domain_coverage=dict(CANONICAL_DOMAIN_COVERAGE),
+    )
+    return {
+        **arrays,
+        MANIFEST_KEY: manifest_array(manifest),
     }
 
 
@@ -134,7 +258,7 @@ def _source_arrays() -> dict[str, np.ndarray]:
         ).reshape(600, 6),
     }
     seed = 112
-    initial_sha = hashlib.sha256(b"g111-initial").hexdigest()
+    initial_sha = hashlib.sha256(b"g111-initial-placeholder").hexdigest()
     root_dsl = hashlib.sha256(b"g111-root-dsl").hexdigest()
     launch_dsl = hashlib.sha256(b"g111-launch-dsl").hexdigest()
     target_projection_sha = "1" * 64
@@ -159,7 +283,7 @@ def _source_arrays() -> dict[str, np.ndarray]:
         "__cfg_fresh_current_launch_dsl_compile_hash": np.asarray(
             launch_dsl
         ),
-        "__epoch": np.asarray(17),
+        "__epoch": np.asarray(0),
         "__cfg_activation": np.asarray("hosc"),
         "__cfg_upstream_snapshot_schema": np.asarray(g105.UPSTREAM_SOURCE_CLOSURE_SCHEMA),
         "__cfg_upstream_snapshot_sha256": np.asarray(g105.UPSTREAM_SOURCE_CLOSURE_SHA256),
@@ -192,6 +316,22 @@ def _source_arrays() -> dict[str, np.ndarray]:
         "__cfg_pose_carrier_xi_formula": np.asarray("xi_stored+residual_scale*dxi"),
         "__cfg_pose_carrier_y1_selected_preimage_schema": np.asarray(subject.Y1_SELECTED_PREIMAGE_SCHEMA),
     }
+    provisional = {**params, **configs, **_fake_target_arrays()}
+    initial_sha = lineage.fresh_resume_semantic_state_sha256_from_flat(
+        _resume_arrays(provisional)
+    )
+    root_sha = lineage.fresh_producer_root_sha256(
+        seed=seed,
+        dsl_compile_hash=root_dsl,
+        target_projection_sha256=target_projection_sha,
+        initial_state_sha256=initial_sha,
+    )
+    configs.update(
+        {
+            "__cfg_fresh_lineage_root_sha256": np.asarray(root_sha),
+            "__cfg_fresh_initial_state_sha256": np.asarray(initial_sha),
+        }
+    )
     return {**params, **configs, **_fake_target_arrays()}
 
 
@@ -199,6 +339,26 @@ def _write_checkpoint(path: Path, arrays: dict[str, np.ndarray]) -> str:
     payload = subject._deterministic_npz_bytes(arrays)
     path.write_bytes(payload)
     return hashlib.sha256(payload).hexdigest()
+
+
+def _refresh_root_lineage(arrays: dict[str, np.ndarray]) -> None:
+    initial_sha = lineage.fresh_resume_semantic_state_sha256_from_flat(
+        _resume_arrays(arrays)
+    )
+    root_sha = lineage.fresh_producer_root_sha256(
+        seed=int(np.asarray(arrays["__cfg_fresh_seed"]).item()),
+        dsl_compile_hash=str(
+            np.asarray(arrays["__cfg_fresh_dsl_compile_hash"]).item()
+        ),
+        target_projection_sha256=str(
+            np.asarray(
+                arrays["__cfg_fresh_target_projection_sha256"]
+            ).item()
+        ),
+        initial_state_sha256=initial_sha,
+    )
+    arrays["__cfg_fresh_initial_state_sha256"] = np.asarray(initial_sha)
+    arrays["__cfg_fresh_lineage_root_sha256"] = np.asarray(root_sha)
 
 
 def _resume_arrays(
@@ -216,7 +376,7 @@ def _resume_arrays(
         resume[lineage.RESUME_LIVE_PREFIX + key] = np.asarray(value).copy()
         resume[lineage.RESUME_EMA_PREFIX + key] = np.asarray(value).copy()
     resume[lineage.RESUME_OPT_PREFIX + "step"] = np.asarray(
-        17,
+        0,
         dtype=np.int64,
     )
     resume[lineage.RESUME_OPT_PREFIX + "m"] = np.zeros(
@@ -236,7 +396,7 @@ def _resume_arrays(
             }
         ):
             resume[key] = np.asarray(value).copy()
-    stage = "tau_softplus"
+    stage = "stageColdRoot"
     event_ledger = json.dumps(
         {
             "schema": lineage.RESUME_EVENT_LEDGER_SCHEMA,
@@ -251,10 +411,16 @@ def _resume_arrays(
     resume.update(
         {
             "__cfg_film_stiefel": np.asarray(0),
-            "__resume_epoch": np.asarray(17),
+            "__resume_epoch": np.asarray(0),
             "__resume_has_opt": np.asarray(1),
             "__resume_semantic_schema": np.asarray(
                 lineage.RESUME_SEMANTIC_SCHEMA
+            ),
+            "__cfg_seed_islands": np.asarray(0),
+            "__resume_primary_optimizer_family": np.asarray("adamw"),
+            "__resume_has_seed": np.asarray(0),
+            "__resume_active_trainable_components_json": np.asarray(
+                '["primary_model"]'
             ),
             "__resume_stage": np.asarray(stage),
             "__resume_event_ledger_json": np.asarray(event_ledger),
@@ -278,7 +444,7 @@ def _resume_arrays(
         ),
         parent_checkpoint_id_sha256=parent_checkpoint_id,
         state_sha256=state_sha,
-        epoch=17,
+        epoch=0,
         stage=stage,
     )
     resume.update(
@@ -291,7 +457,7 @@ def _resume_arrays(
                 checkpoint_id
             ),
             "__cfg_fresh_lineage_epoch": np.asarray(
-                17,
+                0,
                 dtype=np.int64,
             ),
             "__cfg_fresh_lineage_stage": np.asarray(stage),
@@ -306,16 +472,31 @@ def _publish_source_node(
     name: str,
     arrays: dict[str, np.ndarray],
 ) -> lineage.FreshProducerPhysicalCheckpointNodeV1:
+    _refresh_root_lineage(arrays)
     source_dir = tmp_path / f"{name}-sources"
     source_dir.mkdir()
     run_dir = tmp_path / f"{name}-run"
     run_dir.mkdir()
     deploy_path = source_dir / "deploy.npz"
     resume_path = source_dir / "resume.npz"
+    native_path = source_dir / "native.npz"
     deploy_sha = _write_checkpoint(deploy_path, arrays)
+    resume_arrays = _resume_arrays(arrays)
     resume_sha = _write_checkpoint(
         resume_path,
-        _resume_arrays(arrays),
+        resume_arrays,
+    )
+    native_sha = _write_checkpoint(
+        native_path,
+        _native_arrays_for_pair(
+            deploy=arrays,
+            resume=resume_arrays,
+            typed_config_sha256=str(
+                arrays[
+                    "__cfg_fresh_current_launch_dsl_compile_hash"
+                ].item()
+            ),
+        ),
     )
     return lineage.write_fresh_physical_checkpoint_node_v1(
         out_dir=run_dir,
@@ -328,6 +509,8 @@ def _publish_source_node(
                 "__cfg_fresh_current_launch_dsl_compile_hash"
             ].item()
         ),
+        native_checkpoint=native_path,
+        expected_native_sha256=native_sha,
     )
 
 
@@ -417,14 +600,24 @@ def test_odd_only_partition_is_deterministic_and_even_invariant(
         first_node.pair.deploy.sha256
         != second_node.pair.deploy.sha256
     )
-    assert first.semantic_child_sha256 == second.semantic_child_sha256
-    assert first.initializer_sha256 == second.initializer_sha256
     assert first.semantic_packet_sha256 == second.semantic_packet_sha256
-
-    child = subject.open_g112_semantic_child(
+    first_child = subject.open_g112_semantic_child(
         first.semantic_child_path,
         expected_sha256=first.semantic_child_sha256,
     )
+    second_child = subject.open_g112_semantic_child(
+        second.semantic_child_path,
+        expected_sha256=second.semantic_child_sha256,
+    )
+    assert np.array_equal(first_child.code_y1, second_child.code_y1)
+    assert (
+        first_child.semantic_packet_sha256
+        == second_child.semantic_packet_sha256
+        == first.semantic_packet_sha256
+    )
+    assert first.initializer_sha256 == second.initializer_sha256
+
+    child = first_child
     initializer = subject.open_g112_pose_initializer(
         first.initializer_path,
         expected_sha256=first.initializer_sha256,

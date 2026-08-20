@@ -713,10 +713,22 @@ def test_briefing_skip_reconciler_omits_phase3(tmp_path: Path):
     assert "Phase 3 — Post-dispatch" not in proc.stdout
 
 
+def test_briefing_refuses_numeric_target_override() -> None:
+    proc = subprocess.run(
+        [sys.executable, str(BRIEFING), "--target-score", "0.001"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 2
+    assert "unrecognized arguments: --target-score" in proc.stderr
+
+
 def test_briefing_json_composite_has_all_three_keys(tmp_path: Path):
     proc = _run_fixture_backed(tmp_path, "--json", "--top", "3")
     out = json.loads(proc.stdout)
-    assert out["target_score"] == 0.19
+    assert out["target_score"] == out["dynamic_frontier_target"]["target_score"]
+    assert len(out["dynamic_frontier_target"]["pointer_sha256"]) == 64
     assert "codex_inbox_summary" in out
     assert out["codex_inbox_summary"]["schema_version"] == "codex_to_claude_inbox_v1_20260518"
     assert "open_questions_count" in out["codex_inbox_summary"]
@@ -1520,6 +1532,7 @@ def test_operator_briefing_nerv_plan_filters_feedback_authority_leaks(
 
 def test_briefing_hides_above_target_rows_by_default_but_can_show_them():
     mod = _load_briefing_module()
+    target = mod.load_score_target_snapshot()
 
     hidden = "\n\n".join(
         [
@@ -1530,7 +1543,7 @@ def test_briefing_hides_above_target_rows_by_default_but_can_show_them():
     )
     assert "lane_pr106_latent_sidecar —" not in hidden
     assert "lane_pr106_yshift_sidechannel —" not in hidden
-    assert "hidden inactive/above target 0.1900" in hidden
+    assert f"hidden inactive/above target {target.target_score:.4f}" in hidden
     assert "lane_pr106_stacked —" not in hidden
     assert "lane_pr106_stacked[dispatch_gate_blocked]" in hidden
 
@@ -1549,6 +1562,7 @@ def test_briefing_hides_above_target_rows_by_default_but_can_show_them():
 
 def test_phase_worklist_active_rows_require_dispatch_ready_contract():
     mod = _load_briefing_module()
+    target = mod.load_score_target_snapshot()
     groups = [
         mod.PHASE_1_SUPPLEMENTARY_LANES,
         mod.PHASE_4_GATED_LANES,
@@ -1558,12 +1572,12 @@ def test_phase_worklist_active_rows_require_dispatch_ready_contract():
     for lanes in groups:
         rows = mod._annotate_score_target_lanes(
             lanes,
-            target_score=0.19,
+            target_snapshot=target,
             active_only=False,
         )
         active_rows = mod._annotate_score_target_lanes(
             lanes,
-            target_score=0.19,
+            target_snapshot=target,
             active_only=True,
         )
         for row in rows:

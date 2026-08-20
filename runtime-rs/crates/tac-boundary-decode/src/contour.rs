@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Contour codec DECODE — native port of `tac.boundary_math.contour_codec.decode_partition`.
+//! Dense-raster LZMA DECODE — native port of
+//! `tac.boundary_math.dense_raster_lzma_baseline.decode_partition`.
 //!
 //! The Python oracle stores the SegNet argmax partition `L*` as a RAW-LZMA2
 //! stream of the per-pixel `uint8` class labels (raster order). Interior pixels
-//! are constant-label runs, so LZMA2 compresses to ~boundary entropy. Decode is
+//! are often constant-label runs, so LZMA2 compresses them well. Decode is
 //! `lzma.decompress(payload, FORMAT_RAW, [LZMA2 preset 9|EXTREME, lc=0,lp=0,pb=0])`
 //! → reshape `(H, W)`.
 //!
@@ -25,13 +26,13 @@ use crate::{BoundaryDecodeError, Result};
 ///
 /// For RAW decode, the decoder must use the same `dict_size` (set by the preset)
 /// and the explicit `lc`/`lp`/`pb` overrides as the encoder. These are the codec
-/// config from `contour_codec._LZMA_FILTERS`, NOT learned/video data.
+/// config from `dense_raster_lzma_baseline._LZMA_FILTERS`, NOT learned/video data.
 const LZMA_PRESET_LEVEL_9: u32 = 9;
 const LZMA_LC: u32 = 0;
 const LZMA_LP: u32 = 0;
 const LZMA_PB: u32 = 0;
 
-/// Build the RAW-LZMA2 filter chain that mirrors `contour_codec._LZMA_FILTERS`.
+/// Build the RAW-LZMA2 filter chain that mirrors `dense_raster_lzma_baseline._LZMA_FILTERS`.
 fn contour_filters() -> Result<Filters> {
     let mut opts = LzmaOptions::new_preset(LZMA_PRESET_LEVEL_9 | PRESET_EXTREME)
         .map_err(|e| BoundaryDecodeError::LzmaDecode(format!("preset init: {e:?}")))?;
@@ -43,7 +44,7 @@ fn contour_filters() -> Result<Filters> {
     Ok(filters)
 }
 
-/// Decode a RAW-LZMA2 contour payload into the raw `uint8` label bytes.
+/// Decode a RAW-LZMA2 dense-label payload into the raw `uint8` label bytes.
 ///
 /// `expected_len = height * width` is the decoded byte count the `(H, W)` shape
 /// implies; the decode fails closed if the produced length differs (shape lie).

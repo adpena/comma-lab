@@ -8,7 +8,7 @@ a dense 384x512x3 RGB array.  Each connected component of constant label is a
 of the other.
 
 Connected components are computed via ``scipy.ndimage.label`` per class (4-connectivity,
-matching the contour codec's chain-code neighbourhood).  This is a real labelling of
+matching the 4-neighbour boundary-walk convention).  This is a real labelling of
 the array, NOT a placeholder — tests verify component counts + adjacency on known
 partitions.
 
@@ -25,7 +25,7 @@ from dataclasses import dataclass
 import numpy as np
 from scipy import ndimage
 
-# 4-connectivity structuring element (matches chain-code boundary neighbourhood).
+# 4-connectivity structuring element (matches the boundary-walk neighbourhood).
 _CONN4 = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=bool)
 
 

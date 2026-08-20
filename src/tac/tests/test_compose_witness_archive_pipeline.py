@@ -14,15 +14,19 @@ AUTOMATED pipeline never actually tested the hybrid. The tests here cross the se
     to the numpy oracle -- the inflate==train end-to-end proof through the TOOL (G1.3 + the META-bug
     end-to-end handoff-contract test).
 
-means != ends: this validates the PLUMBING. The pointer is UNMOVED 0.19110; it moves only on a
-byte-closed upstream/evaluate.py row from the (HELD) residual-INR GPU run. [macOS-CPU advisory].
+means != ends: this validates the PLUMBING. The live competitive target comes from a byte-bound
+dynamic pointer snapshot; the pointer moves only through the canonical workflow after a byte-closed
+upstream/evaluate.py row from the (HELD) residual-INR GPU run. [macOS-CPU advisory].
 """
+
 from __future__ import annotations
 
 import importlib.util
 import json
 import subprocess
 import sys
+from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
@@ -33,7 +37,48 @@ for _p in (REPO, REPO / "src", REPO / "upstream"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
+from tac.canonical_frontier_pointer import POINTER_SCHEMA_VERSION  # noqa: E402
+from tac.witness_dsl.dynamic_frontier_target import (  # noqa: E402
+    DynamicFrontierTargetError,
+    DynamicFrontierTargetSnapshot,
+    load_dynamic_frontier_target,
+)
+
 _HAS_TORCH = importlib.util.find_spec("torch") is not None
+
+
+def _pointer_payload(score: float) -> dict[str, object]:
+    now = datetime.now(UTC).isoformat()
+    entry = {
+        "score": score,
+        "rank": 1,
+        "name": "synthetic-public-row",
+        "pr_number": 9001,
+        "pr_url": "https://invalid.example/synthetic",
+    }
+    return {
+        "schema_version": POINTER_SCHEMA_VERSION,
+        "our_local_frontier_contest_cpu": None,
+        "our_local_frontier_contest_cuda": None,
+        "submitted_pr_number_for_current_frontier": None,
+        "upstream_leaderboard_snapshot": {
+            "best_entry": dict(entry),
+            "entries": [dict(entry)],
+        },
+        "upstream_leaderboard_snapshot_at_utc": now,
+        "last_refreshed_utc": now,
+        "auto_update_on_dispatch_completion": True,
+        "pointer_refresh_command": "synthetic-fixture-do-not-run",
+        "refresh_provenance": {"fixture": True},
+        "effective_frontier": None,
+    }
+
+
+def _dynamic_target(repo: Path, score: float = 0.172) -> DynamicFrontierTargetSnapshot:
+    path = repo / ".omx/state/canonical_frontier_pointer.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(_pointer_payload(score)), encoding="utf-8")
+    return load_dynamic_frontier_target(repo_root=repo)
 
 
 def _load_compose_tool():
@@ -73,14 +118,23 @@ def _synth_ema_npz(path, *, H, W, hidden, n_hidden, mod, bank, n_classes=5, seed
         params[f"hidden.{li}.weight"] = lin(hidden, hidden)
         params[f"hidden.{li}.bias"] = (rng.standard_normal(hidden) * 0.1).astype(np.float32)
     cfg_keys = {
-        "__cfg_n_hidden": np.asarray(n_hidden), "__cfg_hidden_dim": np.asarray(hidden),
-        "__cfg_softmax_temp": np.asarray(0.1), "__cfg_activation": np.asarray("hosc"),
-        "__cfg_chroma": np.asarray(1), "__cfg_wire_w0": np.asarray(20.0), "__cfg_wire_s0": np.asarray(10.0),
-        "__cfg_hosc_beta": np.asarray(4.0), "__cfg_hosc_omega": np.asarray(1.0),
-        "__bank_n_scales": np.asarray(bank["n_scales"]), "__bank_n_orient0": np.asarray(bank["n_orient0"]),
-        "__bank_f0": np.asarray(bank["f0"]), "__bank_base": np.asarray(bank["base"]),
-        "__bank_n_iso": np.asarray(bank["n_iso"]), "__render_hw": np.asarray([H, W]),
-        "__cfg_max_bank_freq": np.asarray(-1.0), "__epoch": np.asarray(123),
+        "__cfg_n_hidden": np.asarray(n_hidden),
+        "__cfg_hidden_dim": np.asarray(hidden),
+        "__cfg_softmax_temp": np.asarray(0.1),
+        "__cfg_activation": np.asarray("hosc"),
+        "__cfg_chroma": np.asarray(1),
+        "__cfg_wire_w0": np.asarray(20.0),
+        "__cfg_wire_s0": np.asarray(10.0),
+        "__cfg_hosc_beta": np.asarray(4.0),
+        "__cfg_hosc_omega": np.asarray(1.0),
+        "__bank_n_scales": np.asarray(bank["n_scales"]),
+        "__bank_n_orient0": np.asarray(bank["n_orient0"]),
+        "__bank_f0": np.asarray(bank["f0"]),
+        "__bank_base": np.asarray(bank["base"]),
+        "__bank_n_iso": np.asarray(bank["n_iso"]),
+        "__render_hw": np.asarray([H, W]),
+        "__cfg_max_bank_freq": np.asarray(-1.0),
+        "__epoch": np.asarray(123),
     }
     np.savez(path, **params, **cfg_keys)
     return params
@@ -146,8 +200,16 @@ def test_phase_a_emits_residual_only_command_not_structured_init():
     from tac.v2_compose.launch_command import build_residual_only_command
 
     cmd = build_residual_only_command(
-        out_dir="experiments/results/_x", gt_cache="c.npz", residual_target_npz="b.npz",
-        num_pairs=8, epochs=10, seed=0, hidden_dim=48, mod_dim=16, strict=True)
+        out_dir="experiments/results/_x",
+        gt_cache="c.npz",
+        residual_target_npz="b.npz",
+        num_pairs=8,
+        epochs=10,
+        seed=0,
+        hidden_dim=48,
+        mod_dim=16,
+        strict=True,
+    )
     assert cmd.all_flags_valid, f"emitted unknown flags: {cmd.unknown_flags}"
     assert "--residual-mode" in cmd.command and "--residual-target-npz" in cmd.command
     assert "--structured-init" not in cmd.command and "--lane-prior-phi1" not in cmd.command
@@ -162,39 +224,26 @@ def test_warp_codes_are_physical_regime():
     assert tool._warp_codes_for_clip() == screw_regime_warp_codes(SCREW_REGIME) == [0, 0, 2, 0, 1]
 
 
-def test_effective_target_is_loaded_from_canonical_pointer(tmp_path):
-    """The codec compiler must not retain a stale hardcoded frontier score."""
+def test_compose_target_payload_requires_live_snapshot(tmp_path):
+    """The codec compiler reports the recomputed, byte-bound live target."""
     tool = _load_compose_tool()
-    pointer = tmp_path / "canonical_frontier_pointer.json"
-    pointer.write_text(
-        json.dumps(
-            {
-                "effective_frontier": {
-                    "score": 0.172,
-                    "axis": "official_leaderboard",
-                    "custody": "external target only",
-                    "evidence_grade": "[official-leaderboard display]",
-                    "score_precision": "official_display",
-                    "source": "upstream_official_leaderboard",
-                }
-            }
-        ),
-        encoding="utf-8",
-    )
+    target = _dynamic_target(tmp_path)
 
-    target = tool.load_effective_frontier_target(pointer)
+    payload = tool.validated_frontier_target_payload(target)
 
-    assert target["score"] == 0.172
-    assert target["axis"] == "official_leaderboard"
-    assert target["custody"] == "external target only"
+    assert payload["target_score"] == 0.172
+    assert payload["selected_axis"] == "official_leaderboard"
+    assert payload["selected_custody"] == "external target only; no local archive authority implied"
+    assert payload["pointer_sha256"] == target.pointer_sha256
 
 
-def test_coupled_surface_charges_external_keyframe_payload() -> None:
+def test_coupled_surface_charges_external_keyframe_payload(tmp_path: Path) -> None:
     """Phase-B planning score uses ZIP plus every external counted byte."""
     tool = _load_compose_tool()
+    target = _dynamic_target(tmp_path)
 
     audit = tool.coupled_score_surface_payload(
-        target_score=0.172,
+        frontier_target=target,
         d_seg=0.0002,
         d_pose=0.00002331,
         archive_zip_bytes=167_125,
@@ -207,6 +256,43 @@ def test_coupled_surface_charges_external_keyframe_payload() -> None:
     assert audit["admission_rule"].startswith("exact coupled score")
 
 
+def test_coupled_surface_refuses_forged_or_refreshed_target(tmp_path: Path) -> None:
+    tool = _load_compose_tool()
+    target = _dynamic_target(tmp_path)
+    forged = replace(target, target_score=0.19110)
+
+    with pytest.raises(DynamicFrontierTargetError, match="changed after snapshot"):
+        tool.coupled_score_surface_payload(
+            frontier_target=forged,
+            d_seg=0.0,
+            d_pose=0.0,
+            archive_zip_bytes=1,
+        )
+
+    Path(target.pointer_path).write_text(
+        json.dumps(_pointer_payload(0.171)),
+        encoding="utf-8",
+    )
+    with pytest.raises(DynamicFrontierTargetError, match="changed after snapshot"):
+        tool.coupled_score_surface_payload(
+            frontier_target=target,
+            d_seg=0.0,
+            d_pose=0.0,
+            archive_zip_bytes=1,
+        )
+
+
+def test_noncanonical_pointer_override_is_refused_before_load(tmp_path: Path) -> None:
+    from types import SimpleNamespace
+
+    tool = _load_compose_tool()
+    foreign = tmp_path / "forged.json"
+    foreign.write_text("{}", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="cannot substitute a non-canonical"):
+        tool._frontier_snapshot_for_args(SimpleNamespace(frontier_pointer=str(foreign)))
+
+
 def _build_store_and_pose(tmp_path, *, H, W, n_pairs, reach_kstar, n_classes=5):
     from tac.v2_compose.archive_grammar import build_store_blob
     from tac.v2_compose.pose_sidecar import build_pose_sidecar_from_cache_poses
@@ -216,8 +302,9 @@ def _build_store_and_pose(tmp_path, *, H, W, n_pairs, reach_kstar, n_classes=5):
     kf = rng.randint(0, n_classes, (len(keyframes), H, W)).astype(np.int64)
     palette = (rng.rand(n_classes, 3) * 255).astype(np.float32)
     warp_codes = [0, 0, 2, 0, 1]  # physical regime codes (the inflate consumes them)
-    store_blob = build_store_blob(keyframes, kf, palette, (0.16, 0.05, 0.02), warp_codes,
-                                  reach_kstar, n_pairs, n_classes=n_classes)
+    store_blob = build_store_blob(
+        keyframes, kf, palette, (0.16, 0.05, 0.02), warp_codes, reach_kstar, n_pairs, n_classes=n_classes
+    )
     poses = (rng.standard_normal((n_pairs, 6)) * 0.05).astype(np.float32)
     pose_path = tmp_path / "posenet_targets.bin"
     build_pose_sidecar_from_cache_poses(poses, pose_path)
@@ -244,12 +331,14 @@ def test_phase_b_residual_archive_inflate_equals_oracle_end_to_end(tmp_path):
     H, W, n_pairs, reach_kstar = 24, 32, 3, 2
     bank = {"n_scales": 2, "n_orient0": 3, "f0": 2.0, "base": 2.0, "n_iso": 2}
     store_blob, pose_blob, poses_f16 = _build_store_and_pose(
-        tmp_path, H=H, W=W, n_pairs=n_pairs, reach_kstar=reach_kstar)
+        tmp_path, H=H, W=W, n_pairs=n_pairs, reach_kstar=reach_kstar
+    )
 
     weights = tmp_path / "levelset_witness_ema_BEST.npz"
     _synth_ema_npz(weights, H=H, W=W, hidden=6, n_hidden=2, mod=4, bank=bank)
     residual_blob, _cfg = tool.residual_blob_from_weights_npz(
-        weights, learn_classes=(1, 3), dilate=1, mask_mode="boundary_annulus")
+        weights, learn_classes=(1, 3), dilate=1, mask_mode="boundary_annulus"
+    )
 
     blob = pack_v2_archive(store_blob, residual_blob, pose_blob, b'{"format_version":"v2.0"}')
     pkt = tmp_path / "packet"
@@ -257,8 +346,9 @@ def test_phase_b_residual_archive_inflate_equals_oracle_end_to_end(tmp_path):
     (pkt / "0.bin").write_bytes(blob)
 
     dst = pkt / "0.raw"
-    r = subprocess.run([sys.executable, str(pkt / "inflate.py"), str(pkt / "0.bin"), str(dst)],
-                       capture_output=True, text=True)
+    r = subprocess.run(
+        [sys.executable, str(pkt / "inflate.py"), str(pkt / "0.bin"), str(dst)], capture_output=True, text=True
+    )
     assert r.returncode == 0, f"inflate failed: {r.stderr}"
     raw = np.fromfile(dst, dtype=np.uint8).reshape(2 * n_pairs, 874, 1164, 3)
 
@@ -268,7 +358,8 @@ def test_phase_b_residual_archive_inflate_equals_oracle_end_to_end(tmp_path):
     assert np.array_equal(raw, oracle), (
         "the TOOL-assembled residual archive inflate MUST be bit-identical to the numpy oracle "
         f"(max abs diff {int(np.abs(raw.astype(int) - oracle.astype(int)).max())}) -- the end-to-end "
-        "handoff-contract proof (B1 + META-bug)")
+        "handoff-contract proof (B1 + META-bug)"
+    )
     # the inflate composes (residual present) -> f0 != f1 somewhere (not the flat floor).
     assert not all(np.array_equal(raw[2 * p], raw[2 * p + 1]) for p in range(n_pairs))
 
@@ -322,8 +413,7 @@ def test_keyframe_payload_path_counts_st_size_and_overrides_bytes(tmp_path):
     blob = tmp_path / "keyframes.bin"
     payload = b"\x00" * 4096
     blob.write_bytes(payload)
-    kf = tool.keyframe_payload_accounting(
-        _kf_args(keyframe_payload_bytes=999999, keyframe_payload_path=str(blob)))
+    kf = tool.keyframe_payload_accounting(_kf_args(keyframe_payload_bytes=999999, keyframe_payload_path=str(blob)))
     assert kf["keyframe_blob_bytes"] == len(payload)
     assert kf["keyframe_blob_rate"] == rate_term(len(payload))
     assert kf["source"] == "real_payload_file"

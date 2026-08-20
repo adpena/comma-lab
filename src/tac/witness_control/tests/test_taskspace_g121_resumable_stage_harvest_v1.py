@@ -712,6 +712,115 @@ def test_custodied_scoped_obstruction_supplies_its_own_live_target(
         g121._validate_blocked_attempt(row)
 
 
+def test_pointer_matching_scoped_obstruction_reuses_without_scorer_replay(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target = _target()
+    physical = _physical(tmp_path, "reusable-scoped")
+    source = g121._source_from_completed_physical(physical)
+    obstruction = _binding(
+        tmp_path / "reusable-scoped" / "g120-obstruction.json",
+        b"g120-obstruction",
+    )
+    snapshot = g121.DynamicFrontierTargetSnapshot(
+        pointer_path=str(tmp_path / "frontier.json"),
+        pointer_bytes=100,
+        pointer_sha256="1" * 64,
+        pointer_device=1,
+        pointer_inode=2,
+        pointer_mtime_ns=3,
+        last_refreshed_utc="2026-07-27T12:00:00+00:00",
+        source_snapshot_at_utc=None,
+        target_score=0.172,
+        selected_axis="contest-CPU",
+        selected_source="our_local_frontier_contest_cpu",
+        selected_source_kind="exact",
+        selected_score_precision="exact",
+        selected_custody="archive",
+        selected_evidence_grade="authority",
+        selected_archive_sha256="2" * 64,
+        selected_lane_id="lane",
+        selected_hardware_substrate="cpu",
+        selection_rule="minimum",
+    )
+    opened = SimpleNamespace(
+        receipt={
+            "pointer_snapshot": dict(vars(snapshot)),
+            "live_target": target,
+            "physical_stage_identity": physical,
+            "seg_scorer": {"fresh_direct_scorer_calls": 0},
+        },
+    )
+    fake_g120 = SimpleNamespace(
+        open_g120_exact_distortion_obstruction_v1=(
+            lambda path, *, expected_sha256: opened
+            if path == Path(str(obstruction["path"]))
+            and expected_sha256 == obstruction["sha256"]
+            else pytest.fail("wrong reusable obstruction binding")
+        ),
+    )
+    prior = g121._compile_blocked_attempt(
+        stage_tag="reusable-scoped",
+        source_stage_identity=source,
+        live_target=target,
+        blocker_code="G120ExactDistortionObstruction",
+        blocker_detail="exact prefix crossed",
+        g120_scoped_obstruction=obstruction,
+    )
+    stage = {
+        "stage_tag": "reusable-scoped",
+        "source_stage_identity": source,
+    }
+    monkeypatch.setattr(
+        g121,
+        "verify_dynamic_frontier_target_snapshot",
+        lambda value: value,
+    )
+    assert (
+        g121._open_reusable_scoped_obstruction(
+            g120_module=fake_g120,
+            prior=prior,
+            stage=stage,
+        )
+        is opened
+    )
+    assert g121._scoped_obstruction_scorer_replay_count(opened) == 0
+    opened.receipt["seg_scorer"]["fresh_direct_scorer_calls"] = 2
+    assert g121._scoped_obstruction_scorer_replay_count(opened) == 1
+
+    monkeypatch.setattr(
+        g121,
+        "verify_dynamic_frontier_target_snapshot",
+        lambda _value: (_ for _ in ()).throw(
+            g121.DynamicFrontierTargetError("pointer moved")
+        ),
+    )
+    assert (
+        g121._open_reusable_scoped_obstruction(
+            g120_module=fake_g120,
+            prior=prior,
+            stage=stage,
+        )
+        is None
+    )
+
+
+def test_scoped_obstruction_replay_telemetry_rejects_malformed_calls() -> None:
+    opened = SimpleNamespace(
+        receipt={
+            "seg_scorer": {
+                "fresh_direct_scorer_calls": True,
+            },
+        },
+    )
+    with pytest.raises(
+        g121.G121StageHarvestError,
+        match="telemetry differs",
+    ):
+        g121._scoped_obstruction_scorer_replay_count(opened)
+
+
 def test_strict_fixture_opener_round_trips_population(tmp_path: Path) -> None:
     target = _target()
     physical = _physical(tmp_path, "open")

@@ -61,12 +61,18 @@ def _scoped_obstruction_inputs() -> dict[str, object]:
             ),
         ),
         g109_custody={
-            "segnet_weights": {"sha256": _sha("weights")},
+            "segnet_weights": {
+                "path": "/physical/segnet.pth",
+                "bytes": 10,
+                "sha256": _sha("weights"),
+            },
             "upstream_closure": {"tree_sha256": _sha("upstream")},
+            "scorer_runtime_identity_sha256": _sha("seg-scorer"),
         },
     )
     engine_receipt = {
         "stage_tag": authority.stage_tag,
+        "completed_batch_count": 2,
         "effective_frontier_target_exact": {
             "decimal": "0.172",
             "numerator": 43,
@@ -162,6 +168,133 @@ def test_engine_prefix_obstruction_is_scoped_not_public_prune(
             identity_field="obstruction_identity_sha256",
         )
     )
+
+
+def test_scoped_obstruction_opener_recurses_target_scorer_and_axis_custody(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inputs = _scoped_obstruction_inputs()
+    authority = inputs["authority"]
+    engine = inputs["engine_obstruction"]
+    monkeypatch.setattr(
+        subject,
+        "_exact_target_from_snapshot",
+        lambda _snapshot_value: ("0.172", 43, 250),
+    )
+    monkeypatch.setattr(
+        subject._v1,
+        "dynamic_snapshot_identity_sha256",
+        lambda _snapshot_value: inputs["pointer_identity"],
+    )
+    receipt = subject._build_exact_distortion_obstruction_receipt(
+        **{
+            key: value
+            for key, value in inputs.items()
+            if key != "pointer_identity"
+        },
+    )
+    receipt_path = tmp_path / "g120-obstruction.json"
+    payload = subject._canonical_json(receipt)
+    receipt_path.write_bytes(payload)
+    monkeypatch.setattr(
+        subject,
+        "_reopen_binding",
+        lambda _value, *, name: b"receipt",
+    )
+    monkeypatch.setattr(
+        subject,
+        "open_g111_parsed_g105_exact_prefix_obstruction_v1",
+        lambda *_args, **_kwargs: engine,
+    )
+    monkeypatch.setattr(
+        subject,
+        "open_g112_partition_receipt",
+        lambda *_args, **_kwargs: authority.g112,
+    )
+    monkeypatch.setattr(
+        subject._v1,
+        "_physical_stage_identity",
+        lambda _g112: (
+            authority.physical_stage_identity,
+            authority.physical_stage_identity_sha256,
+            authority.stage_tag,
+        ),
+    )
+    monkeypatch.setattr(
+        subject,
+        "_reopen_g109_target_custody",
+        lambda _value, *, g112, context: (
+            authority.g109_custody,
+            authority.target_labels,
+        ),
+    )
+    monkeypatch.setattr(
+        subject,
+        "_reopen_runtime_tree",
+        lambda value: value,
+    )
+    monkeypatch.setattr(
+        subject._v1,
+        "_regular_file_identity",
+        lambda _path, *, name: authority.g109_custody[
+            "segnet_weights"
+        ],
+    )
+    monkeypatch.setattr(
+        subject._v1,
+        "_reopen_upstream_closure",
+        lambda value: value,
+    )
+
+    opened = subject.open_g120_exact_distortion_obstruction_v1(
+        receipt_path,
+        expected_sha256=hashlib.sha256(payload).hexdigest(),
+    )
+    assert opened.receipt["evidence_axis"] == subject.EVIDENCE_AXIS
+
+    monkeypatch.setattr(
+        subject,
+        "_reopen_g109_target_custody",
+        lambda _value, *, g112, context: (
+            authority.g109_custody,
+            np.ones_like(authority.target_labels),
+        ),
+    )
+    with pytest.raises(
+        subject.G120ProductionAuthorityV2Error,
+        match="custody, target, or authority",
+    ):
+        subject.open_g120_exact_distortion_obstruction_v1(
+            receipt_path,
+            expected_sha256=hashlib.sha256(payload).hexdigest(),
+        )
+
+    monkeypatch.setattr(
+        subject,
+        "_reopen_g109_target_custody",
+        lambda _value, *, g112, context: (
+            authority.g109_custody,
+            authority.target_labels,
+        ),
+    )
+    changed = dict(receipt)
+    changed["evidence_axis"] = "[wrong-axis]"
+    changed["obstruction_identity_sha256"] = subject._receipt_identity(
+        changed,
+        identity_field="obstruction_identity_sha256",
+    )
+    changed_payload = subject._canonical_json(changed)
+    changed_path = tmp_path / "g120-obstruction-wrong-axis.json"
+    changed_path.write_bytes(changed_payload)
+    with pytest.raises(
+        subject.G120ProductionAuthorityV2Error,
+        match="custody, target, or authority",
+    ):
+        subject.open_g120_exact_distortion_obstruction_v1(
+            changed_path,
+            expected_sha256=hashlib.sha256(changed_payload).hexdigest(),
+        )
 
 
 def test_scoped_obstruction_refuses_runtime_change_and_pointer_toctou(

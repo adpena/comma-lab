@@ -2,7 +2,8 @@
 """Context-adaptive arithmetic codec for the SegNet argmax partition ``L*``.
 
 This is the TOP-AIML (SOTA) replacement for the prototype's LZMA-over-raw-labels
-partition store (``tac.boundary_math.contour_codec.partition_description_bytes``).
+partition store
+(``tac.boundary_math.dense_raster_lzma_baseline.partition_description_bytes``).
 The prototype measured 669-873 B/frame -> rate term 0.27-0.35 alone, DEAD on rate.
 
 The partition is a 5-class label map of large smooth regions (road / sky / car /

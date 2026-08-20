@@ -39,6 +39,7 @@ from tac.probe_outcomes_ledger import (
     EVENT_OPERATOR_OVERRIDE,
     EVENT_RATIFIED,
     EVENT_SUPERSEDED,
+    EVENT_VEHICLE_ROUTING,
     LOCK_TIMEOUT_SECONDS,
     PROBE_OUTCOMES_LEDGER_PATH,
     SCHEMA_VERSION,
@@ -100,6 +101,7 @@ def test_valid_event_types_canonical_set() -> None:
             EVENT_EXPIRED,
             EVENT_OPERATOR_OVERRIDE,
             EVENT_BACKFILL,
+            EVENT_VEHICLE_ROUTING,
         }
     ) == VALID_EVENT_TYPES
 

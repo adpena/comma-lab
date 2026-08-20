@@ -3,14 +3,26 @@
 
 These helpers do not make score claims. They only keep operator worklists
 focused on candidates whose declared predicted band can plausibly beat the
-current score-lowering target.
+current score-lowering target. The target is always loaded from, or verified
+against, this checkout's canonical frontier pointer. Numeric target overrides
+and arbitrary pointer paths are deliberately not part of the API.
 """
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Literal
 
-DEFAULT_SCORE_LOWERING_TARGET = 0.19
+from tac.canonical_frontier_pointer import CANONICAL_FRONTIER_POINTER_PATH
+from tac.witness_dsl.dynamic_frontier_target import (
+    DynamicFrontierTargetError,
+    DynamicFrontierTargetSnapshot,
+    load_dynamic_frontier_target,
+    verify_dynamic_frontier_target_snapshot,
+)
+
+_DYNAMIC_TARGET_REPO_ROOT = Path(__file__).resolve().parents[2]
 
 ScoreTargetStatus = Literal[
     "target_plausible",
@@ -30,6 +42,11 @@ class ScoreTargetDecision:
     predicted_low: float | None
     predicted_high: float | None
     reason: str
+    target_pointer_path: str
+    target_pointer_sha256: str
+    target_last_refreshed_utc: str
+    target_selected_axis: str
+    target_selected_source: str
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -39,7 +56,43 @@ class ScoreTargetDecision:
             "predicted_low": self.predicted_low,
             "predicted_high": self.predicted_high,
             "reason": self.reason,
+            "target_pointer_path": self.target_pointer_path,
+            "target_pointer_sha256": self.target_pointer_sha256,
+            "target_last_refreshed_utc": self.target_last_refreshed_utc,
+            "target_selected_axis": self.target_selected_axis,
+            "target_selected_source": self.target_selected_source,
         }
+
+
+def _expected_pointer_path() -> str:
+    return os.path.abspath(os.fspath(_DYNAMIC_TARGET_REPO_ROOT / CANONICAL_FRONTIER_POINTER_PATH))
+
+
+def _require_canonical_snapshot(
+    snapshot: DynamicFrontierTargetSnapshot,
+    *,
+    now_utc_iso: str | None,
+) -> DynamicFrontierTargetSnapshot:
+    if not isinstance(snapshot, DynamicFrontierTargetSnapshot):
+        raise TypeError("target_snapshot must be a DynamicFrontierTargetSnapshot")
+    if snapshot.pointer_path != _expected_pointer_path():
+        raise DynamicFrontierTargetError(
+            "score routing refuses a snapshot from a noncanonical pointer path"
+        )
+    return verify_dynamic_frontier_target_snapshot(snapshot, now_utc_iso=now_utc_iso)
+
+
+def load_score_target_snapshot(
+    *,
+    now_utc_iso: str | None = None,
+) -> DynamicFrontierTargetSnapshot:
+    """Load this checkout's canonical target without accepting a path input."""
+
+    snapshot = load_dynamic_frontier_target(
+        repo_root=_DYNAMIC_TARGET_REPO_ROOT,
+        now_utc_iso=now_utc_iso,
+    )
+    return _require_canonical_snapshot(snapshot, now_utc_iso=now_utc_iso)
 
 
 def parse_predicted_band(value: Any) -> tuple[float, float] | None:
@@ -67,8 +120,9 @@ def parse_predicted_band(value: Any) -> tuple[float, float] | None:
 def decide_score_target_routing(
     predicted_band: Any,
     *,
-    target_score: float = DEFAULT_SCORE_LOWERING_TARGET,
+    target_snapshot: DynamicFrontierTargetSnapshot | None = None,
     keep_unknown: bool = True,
+    now_utc_iso: str | None = None,
 ) -> ScoreTargetDecision:
     """Return whether a predicted band should stay active for target pursuit.
 
@@ -78,8 +132,19 @@ def decide_score_target_routing(
     as historical/reference rows by callers that opt into showing them.
     """
 
-    if target_score <= 0.0:
-        raise ValueError("target_score must be positive")
+    snapshot = (
+        load_score_target_snapshot(now_utc_iso=now_utc_iso)
+        if target_snapshot is None
+        else _require_canonical_snapshot(target_snapshot, now_utc_iso=now_utc_iso)
+    )
+    target_score = snapshot.target_score
+    custody = {
+        "target_pointer_path": snapshot.pointer_path,
+        "target_pointer_sha256": snapshot.pointer_sha256,
+        "target_last_refreshed_utc": snapshot.last_refreshed_utc,
+        "target_selected_axis": snapshot.selected_axis,
+        "target_selected_source": snapshot.selected_source,
+    }
     try:
         band = parse_predicted_band(predicted_band)
     except (TypeError, ValueError) as exc:
@@ -90,6 +155,7 @@ def decide_score_target_routing(
             predicted_low=None,
             predicted_high=None,
             reason=f"invalid predicted band; {'kept' if keep_unknown else 'hidden'}: {exc}",
+            **custody,
         )
     if band is None:
         return ScoreTargetDecision(
@@ -99,6 +165,7 @@ def decide_score_target_routing(
             predicted_low=None,
             predicted_high=None,
             reason=f"missing predicted band; {'kept' if keep_unknown else 'hidden'}",
+            **custody,
         )
     low, high = band
     if low < target_score:
@@ -112,6 +179,7 @@ def decide_score_target_routing(
                 f"predicted low {low:.6f} is below target {target_score:.6f}; "
                 "keep for exact-eval routing"
             ),
+            **custody,
         )
     return ScoreTargetDecision(
         active=False,
@@ -123,4 +191,5 @@ def decide_score_target_routing(
             f"predicted band [{low:.6f}, {high:.6f}] does not beat target "
             f"{target_score:.6f}; hide from active routing"
         ),
+        **custody,
     )

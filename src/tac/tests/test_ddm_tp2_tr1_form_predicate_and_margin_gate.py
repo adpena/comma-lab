@@ -10,11 +10,11 @@ predicate. The fix keys the predicate on the loss FORM (``state_form["form"]``),
 ROW 3 (third block): the #274 spike/coherent PRODUCER, ported from the levelset trainer onto
 the live vehicle. Cross-validated at n600 against two independent implementations.
 
-ROW 2 (second block): ``--margin-weighted-loss on`` is threaded into ``make_loss_fn`` for
-every seg form, but the ``tau_softplus`` and ``l7_softplus`` branches never read
-``apply_mw`` -- the flag is declared-ON and INERT for those forms. Guarded by a STRUCTURAL
-test that parses the canonical loss source, so the honoring set cannot drift out of sync
-with the branches that actually implement it.
+ROW 2 (second block): ``--margin-weighted-loss on`` must be consumed by every reachable
+seg form that claims to honor it. EN1 wires the previously missing ``tau_softplus`` consumer;
+``l7_softplus`` remains intentionally outside this lever because it carries its own hard-pixel
+weight. Guarded by a STRUCTURAL test that parses the canonical loss source, so the honoring set
+cannot drift out of sync with the branches that actually implement it.
 """
 
 from __future__ import annotations
@@ -192,11 +192,11 @@ def test_honoring_set_matches_the_branches_that_actually_read_apply_mw():
         f"loss source honors {sorted(measured)}. Update the constant (and the refusal message).")
 
 
-def test_the_two_inert_forms_are_exactly_tau_softplus_and_l7_softplus():
-    """Documents the MEASURED bug: these two branches ignore the flag entirely."""
+def test_the_only_inert_form_is_l7_softplus():
+    """EN1 regression: tau_softplus now honors the flag; only l7_softplus ignores it."""
     branches = _apply_mw_branches_from_source()
     inert = sorted(f for f, reads in branches.items() if not reads)
-    assert inert == ["l7_softplus", "tau_softplus"], inert
+    assert inert == ["l7_softplus"], inert
 
 
 def test_reachable_forms_ce_reaches_tau_and_the_others_are_terminal():
@@ -212,20 +212,45 @@ def test_off_never_refuses_for_any_form():
         assert_margin_weighted_loss_is_honored(form, "off")  # must not raise
 
 
-@pytest.mark.parametrize("form", ["ce", "tau_softplus"])
-def test_on_refuses_for_forms_that_reach_an_inert_branch(form):
-    """'ce' must ALSO refuse -- it is honored only until the knee, then dies silently.
-    This is the exact configuration the entire b4s burn lineage launched with."""
+@pytest.mark.parametrize("form", SEG_FORM_START_CHOICES)
+def test_on_is_allowed_for_forms_that_honor_it(form):
+    assert_margin_weighted_loss_is_honored(form, "on")  # must not raise
+
+
+def test_on_refuses_for_l7_softplus_only():
+    """l7_softplus is not an argparse start choice, but the guard must still fail closed if a
+    future transition or direct call reaches it under this lever."""
     with pytest.raises(SystemExit) as exc:
-        assert_margin_weighted_loss_is_honored(form, "on")
+        assert_margin_weighted_loss_is_honored("l7_softplus", "on")
     msg = str(exc.value)
-    assert "tau_softplus" in msg and "INERT" in msg
+    assert "l7_softplus" in msg and "INERT" in msg
     assert "drop --margin-weighted-loss" in msg      # the message is actionable
 
 
-@pytest.mark.parametrize("form", ["unify_tau", "margin_hinge"])
-def test_on_is_allowed_for_forms_that_honor_it(form):
-    assert_margin_weighted_loss_is_honored(form, "on")  # must not raise
+def test_tau_softplus_margin_weighted_loss_calls_the_live_margin_weight_consumer():
+    """EN1 source proof: the tau branch's apply_mw block must call the same live-margin
+    weighting function used by CE/unify/hinge, not merely mention the flag."""
+    from experiments.train_witness_realized_through_R_mlx import make_loss_fn
+
+    tree = ast.parse(inspect.getsource(make_loss_fn))
+    inner = next(n for n in ast.walk(tree)
+                 if isinstance(n, ast.FunctionDef) and n.name == "loss_fn")
+
+    def _is_tau_test(node) -> bool:
+        t = node.test
+        return (isinstance(t, ast.Compare) and isinstance(t.left, ast.Name)
+                and t.left.id == "form" and isinstance(t.ops[0], ast.Eq)
+                and isinstance(t.comparators[0], ast.Constant)
+                and t.comparators[0].value == "tau_softplus")
+
+    tau_branch = next(n for n in ast.walk(inner) if isinstance(n, ast.If) and _is_tau_test(n))
+    apply_blocks = [n for n in ast.walk(ast.Module(body=tau_branch.body, type_ignores=[]))
+                    if isinstance(n, ast.If) and isinstance(n.test, ast.Name)
+                    and n.test.id == "apply_mw"]
+    assert len(apply_blocks) == 1
+    calls = [n.func.id for n in ast.walk(apply_blocks[0])
+             if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)]
+    assert "_live_margin_weight" in calls
 
 
 def test_refusal_is_wired_into_the_trainer_before_the_loss_is_built():

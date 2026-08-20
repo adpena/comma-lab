@@ -31,8 +31,9 @@ fund steepest-first until marginal == lambda*).  The result is a kept/merged dec
 per region + the resulting partition + the exact (bytes, flips, d_seg) it lands at.
 
 NO FAKE: the merge actually rewrites the label map by region id, the bytes come from
-the real contour codec, the flips from the real popcount, and the keep decision is
-the closed-form 1.27-threshold — there is NO parameter sweep, NO candidate search.
+the real dense-raster LZMA baseline, the flips from the real popcount, and the keep
+decision is the closed-form 1.27-threshold — there is NO parameter sweep, NO
+candidate search.
 """
 
 from __future__ import annotations
@@ -42,7 +43,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from tac.boundary_math.bitmask_dseg import d_seg_reference, flip_count
-from tac.boundary_math.contour_codec import partition_description_bytes
+from tac.boundary_math.dense_raster_lzma_baseline import partition_description_bytes
 from tac.boundary_math.partition import RegionAdjacencyGraph, build_region_adjacency_graph
 
 # ── The water level (spec §10) ──────────────────────────────────────────────
@@ -69,7 +70,7 @@ class RegionMergePlan:
 
     ``merged_partition`` is the partition after applying every below-water merge.
     ``kept_region_ids`` / ``merged_region_ids`` record the per-region decision.
-    ``bytes_before`` / ``bytes_after`` are the real contour-codec description bytes.
+    ``bytes_before`` / ``bytes_after`` are real dense-raster LZMA description bytes.
     ``flips_before`` / ``flips_after`` are popcount seg-debt vs ``L*``.
     ``water_level`` is the bytes/flip threshold used.
     """
@@ -116,8 +117,8 @@ def solve_mdl_region_merge(
     direction: a region is a *merge candidate* only when it is SMALLER than its
     largest neighbour (merge small -> large; we never dissolve a large region into a
     tiny one — that would inflate both bytes and flips).  For each merge candidate we
-    measure the REAL marginal description bytes it costs (the contour-codec size delta
-    of contracting it into that neighbour) and the flips that contraction would
+    measure the REAL marginal description bytes it costs (the dense-raster LZMA size
+    delta of contracting it into that neighbour) and the flips that contraction would
     re-incur (its pixels that currently AGREE with GT but would not after the merge).
 
     Decision (the closed-form 1.27-B/flip water-level threshold, NOT a sweep):
@@ -126,7 +127,7 @@ def solve_mdl_region_merge(
 
     A region whose pixels disagree with GT everywhere fixes zero flips, so it is
     merged at any positive water level (it pays bytes for nothing).  A region that
-    pays rent (its contour bytes are cheaper than the flips it saves at the water
+    pays rent (its encoded bytes are cheaper than the flips it saves at the water
     price) is kept.  d_seg is recomputed exactly (popcount) after the contractions.
     """
 

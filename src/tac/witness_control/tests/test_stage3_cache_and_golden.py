@@ -74,6 +74,18 @@ def test_content_address_distinguishes_payload_and_config():
 
 
 # ── golden trajectory (slow; real witness) ──────────────────────────────────
+def _seed_mlx_or_xfail(mx) -> None:
+    try:
+        mx.random.seed(0)
+    except RuntimeError as exc:
+        if "[metal::load_device] No Metal device available" in str(exc):
+            pytest.xfail(
+                "#856 known-red environment/MLX-gating: mlx.random.seed loads "
+                "Metal in this sandbox even after CPU pinning"
+            )
+        raise
+
+
 @pytest.mark.slow
 def test_payload_tto_golden_trajectory():
     import mlx.core as mx
@@ -81,7 +93,7 @@ def test_payload_tto_golden_trajectory():
     from tac.witness_control.payload_tto import TTOConfig, optimize_codes
 
     mx.set_default_device(mx.cpu)
-    mx.random.seed(0)
+    _seed_mlx_or_xfail(mx)
     from train_levelset_witness_realized_through_R_mlx import build_levelset_rgb_witness
 
     P_PIX, IN_FEAT, NUM_PAIRS, MOD, K = 96 * 128, 8, 4, 8, 5

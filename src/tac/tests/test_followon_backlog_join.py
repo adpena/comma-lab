@@ -137,3 +137,73 @@ def test_render_markdown_contains_boundaries(tmp_path: Path) -> None:
     text = render_markdown(report)
     assert "repo-visible join" in text
     assert "score_claim=false" in text
+
+
+def test_ranked_head_rows_are_wired_with_declared_denominator(tmp_path: Path) -> None:
+    _memo(
+        tmp_path,
+        "ddm_p1a_followon_unknown_adjudication_20260801.md",
+        """# p1a
+
+## §3 The 29 open items, ranked by COST-TO-FALSIFY
+
+### T0 -- a read
+
+| # | item | rows | evidence / next measurement |
+|---|---|---|---|
+| 1 | phi reducer gate | gc15:390 | $0 read before D+/- |
+
+## §4 QA52
+""",
+    )
+    _memo(
+        tmp_path,
+        "ddm_p2a_task_backlog_drain_20260801.md",
+        """# p2a
+
+## §4 THE ONE WORKING SIGNAL
+
+| # | status | upd | created | subject |
+|---|---|---:|---|---|
+| **375** | pending | 0 | 07-09 | Auto-push Stop hook |
+| 450 | pending | 0 | 07-12 | Lens Engine |
+
+## §5 THE ADJUDICATION
+
+| # | verdict | evidence (hand-verified) | cost-to-falsify |
+|---|---|---|---|
+| **375** | **ALREADY-CLOSED** | content verified | ~0 |
+
+## §6 THE CURE
+""",
+    )
+    report = build_followon_backlog_join(
+        memo_root=tmp_path,
+        since=date(2026, 8, 1),
+        today=date(2026, 8, 4),
+        task_rows=[
+            _task("375", owner="MAIN"),
+            _task("450", owner="ddm_lens"),
+        ],
+        corpus=_corpus(),
+        successor_index=_index(),
+    )
+
+    assert report["schema"] == "tac.followon_backlog_join.v2"
+    assert report["scopes"]["ranked_head"]["declared"] == 47
+    assert report["summaries"]["ranked_head_rows"] == 3
+    assert report["summaries"]["ranked_head_parse_coverage"] == 3 / 47
+    assert report["summaries"]["ranked_head_dispositions"] == {
+        "QUEUED-WITH-FIRE-ORDER": 2,
+        "FOLDED": 1,
+    }
+    assert report["dispositions"][0]["source"] == "ranked_followon_head"
+    assert report["dispositions"][0]["rank"] == 1
+    assert "registered phi reducer" in report["dispositions"][0]["fire_order"]
+    folded = next(
+        row
+        for row in report["dispositions"]
+        if row["source_id"].endswith("p2a-never-named-375")
+    )
+    assert folded["disposition"] == "FOLDED"
+    assert report["summaries"]["unowned_queued_rows"] == 0

@@ -23,9 +23,10 @@ The clip-agnostic rule (the ONE generalizable question, the depth x rigidity gra
 
 NO-FAKE: this module makes NO score claim. It is plan-time arithmetic over MEASURED advisory
 dicts (the grok warp-through-R recoverability + the screw-reach k*). The split is the known
-optimum; the predicted bytes are a budget, not a measurement. The frontier pointer is UNMOVED
-0.19110 and moves ONLY on a byte-closed ``upstream/evaluate.py`` exact row (CPU + CUDA). Every
-returned number is ``[advisory / plan-time] NON-PROMOTABLE``.
+optimum; the predicted bytes are a budget, not a measurement. The competitive target is a
+required, live :class:`DynamicFrontierTargetSnapshot`; it moves ONLY through the canonical
+frontier-pointer workflow after a byte-closed ``upstream/evaluate.py`` exact row (CPU + CUDA).
+Every returned number is ``[advisory / plan-time] NON-PROMOTABLE``.
 
 CLASS-INDEX DISCIPLINE (CLAUDE.md NON-NEGOTIABLE): the DECISION uses ONLY the measured d_seg
 signature (persist / warp / static / rel_improvement), NEVER a hardcoded class index. The
@@ -37,24 +38,30 @@ from __future__ import annotations
 
 import json
 import math
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
 from tac.contest_score import break_even_d_seg, rate_term
+from tac.witness_dsl.dynamic_frontier_target import (
+    DynamicFrontierTargetSnapshot,
+    score_sublevel_against_dynamic_frontier,
+    verify_dynamic_frontier_target_snapshot,
+)
 
 __all__ = [
-    "ClassRecoverability",
-    "ClassAssignment",
-    "StoreLearnAssignment",
     "DECISION_GENERATE",
     "DECISION_LEARN",
     "WARP_GROUND_HOMOGRAPHY",
     "WARP_IDENTITY",
     "WARP_ROTATION_ONLY",
+    "ClassAssignment",
+    "ClassRecoverability",
+    "StoreLearnAssignment",
     "encode_known_split",
-    "load_warp_recoverability_from_grok",
     "load_reach_kstar",
+    "load_warp_recoverability_from_grok",
+    "validated_frontier_target_payload",
 ]
 
 # Decision + warp-type sentinels (string constants so the assignment is human-readable JSON).
@@ -64,8 +71,6 @@ WARP_GROUND_HOMOGRAPHY = "ground_homography"
 WARP_IDENTITY = "identity"
 WARP_ROTATION_ONLY = "rotation_only"
 
-# Default frontier target (the score the v2 row must beat). Pointer-sourced, advisory only.
-_FRONTIER_S = 0.19110
 # The d_pose the stored sidecar achieves (FEED-lj / scorer_targets; advisory).
 _D_POSE_SIDECAR = 3.4e-5
 # The measured deterministic-bulk d_seg floor (FEED-ll / ladder R1; advisory).
@@ -81,11 +86,11 @@ class ClassRecoverability:
     """
 
     cls_name: str
-    persist_dseg: float                 # k=0 / persist-to-keyframe d_seg for this class' GT region
-    warp_dseg: float                    # ground-homography-warped d_seg for this class' GT region
-    static_dseg: float | None           # single-canonical-mask d_seg (staticity), if measured
-    rel_improvement: float              # (persist - warp) / persist ; > 0 means warp HELPS
-    target_area: float                  # mean per-frame area fraction of this GT class
+    persist_dseg: float  # k=0 / persist-to-keyframe d_seg for this class' GT region
+    warp_dseg: float  # ground-homography-warped d_seg for this class' GT region
+    static_dseg: float | None  # single-canonical-mask d_seg (staticity), if measured
+    rel_improvement: float  # (persist - warp) / persist ; > 0 means warp HELPS
+    target_area: float  # mean per-frame area fraction of this GT class
 
     @property
     def best_dseg(self) -> float:
@@ -101,11 +106,24 @@ class ClassAssignment:
     """The KNOWN-OPTIMAL per-class assignment emitted by :func:`encode_known_split`."""
 
     cls_name: str
-    cls_index: int | None               # METADATA ONLY (canonical order); never the decision basis
-    decision: str                       # DECISION_GENERATE | DECISION_LEARN
-    warp_type: str | None               # WARP_* for GENERATE; None for LEARN
+    cls_index: int | None  # METADATA ONLY (canonical order); never the decision basis
+    decision: str  # DECISION_GENERATE | DECISION_LEARN
+    warp_type: str | None  # WARP_* for GENERATE; None for LEARN
     recoverability: ClassRecoverability
     rationale: str
+
+
+def validated_frontier_target_payload(
+    snapshot: DynamicFrontierTargetSnapshot,
+) -> dict[str, Any]:
+    """Return a JSON-safe target receipt only after reopening its canonical pointer.
+
+    This is a non-score planning guard: it validates type, freshness, byte identity,
+    and the recomputed target without manufacturing a dummy score coordinate.
+    """
+
+    verify_dynamic_frontier_target_snapshot(snapshot)
+    return asdict(snapshot)
 
 
 @dataclass(frozen=True)
@@ -118,22 +136,31 @@ class StoreLearnAssignment:
     keyframe_count: int
     generate_classes: tuple[str, ...]
     learn_classes: tuple[str, ...]
-    residual_target_classes: tuple[str, ...]   # the classes the residual INR must carry (== LEARN)
-    predicted_bytes: dict[str, int | None]     # section -> bytes (LEARN is None == OPEN)
+    residual_target_classes: tuple[str, ...]  # the classes the residual INR must carry (== LEARN)
+    predicted_bytes: dict[str, int | None]  # section -> bytes (LEARN is None == OPEN)
     predicted_rate: dict[str, float]
-    break_even: dict[str, float]               # break-even d_seg at the known-store rate
+    break_even: dict[str, float]  # break-even d_seg at the known-store rate
+    frontier_target: DynamicFrontierTargetSnapshot
     recoverability_dseg_max: float
     confirmed_by_attribution: bool | None
     authority: str
     notes: tuple[str, ...] = field(default_factory=tuple)
 
+    def __post_init__(self) -> None:
+        # A caller-constructed or stale snapshot must fail before a plan object can
+        # exist.  ``to_json`` repeats this check because the pointer may refresh
+        # between planning and report emission.
+        validated_frontier_target_payload(self.frontier_target)
+
     def to_json(self) -> dict[str, Any]:
         """Machine-readable plan (max-observability; human-readable + diff-able)."""
+        frontier_target = validated_frontier_target_payload(self.frontier_target)
         return {
             "authority": self.authority,
             "score_claim": False,
             "promotable": False,
-            "frontier_pointer": "UNMOVED 0.19110",
+            "frontier_target": frontier_target,
+            "competitive_target_score": self.frontier_target.target_score,
             "n_pairs": self.n_pairs,
             "reach_kstar": self.reach_kstar,
             "keyframe_count": self.keyframe_count,
@@ -168,6 +195,7 @@ def encode_known_split(
     warp_through_R: dict[str, ClassRecoverability],
     reach_kstar: int,
     *,
+    frontier_target: DynamicFrontierTargetSnapshot,
     n_pairs: int = 600,
     attribution: dict[str, Any] | None = None,
     class_index_map: dict[str, int] | None = None,
@@ -200,6 +228,8 @@ def encode_known_split(
     Args:
         warp_through_R: per-class measured recoverability (the generalization parameter).
         reach_kstar: screw-reach k* (FEED-ll); keyframe budget = ceil(n_pairs / kstar).
+        frontier_target: required live, source-bound competitive-target snapshot.  It is
+            reopened before boundary arithmetic and again before report serialization.
         n_pairs: clip pair count (600 for the canonical contest clip).
         attribution: OPTIONAL Step-1 per-stage attribution. Used ONLY to CONFIRM the known
             split (assert the bulk is stage-stable, the residual is Lane+movables) + size the
@@ -219,6 +249,10 @@ def encode_known_split(
         raise ValueError(f"encode_known_split: reach_kstar must be a positive int, got {reach_kstar!r}")
     if n_pairs <= 0:
         raise ValueError(f"encode_known_split: n_pairs must be positive, got {n_pairs}")
+
+    # Validate before any target-dependent planning is admitted.  This refuses a
+    # caller-fabricated score and a snapshot whose pointer has refreshed or gone stale.
+    validated_frontier_target_payload(frontier_target)
 
     class_index_map = class_index_map or {}
     per_class: dict[str, ClassAssignment] = {}
@@ -270,10 +304,10 @@ def encode_known_split(
             rationale=rationale,
         )
 
-    keyframe_count = int(math.ceil(n_pairs / reach_kstar))
+    keyframe_count = math.ceil(n_pairs / reach_kstar)
 
     # --- predicted byte budget (a plan; the tool overrides STORE bytes with real measurements) ---
-    keyframe_bytes = int(round(keyframe_count * bytes_per_keyframe))
+    keyframe_bytes = round(keyframe_count * bytes_per_keyframe)
     store_bytes = keyframe_bytes + int(palette_bytes) + int(warp_mask_calib_bytes)
     predicted_bytes: dict[str, int | None] = {
         "store_keyframes": keyframe_bytes,
@@ -282,7 +316,7 @@ def encode_known_split(
         "store_total": store_bytes,
         "pose_sidecar": int(pose_sidecar_bytes),
         "learn_residual_inr": None,  # OPEN — the single unmeasured quantity (the GPU run)
-        "free_generated": 0,         # warp / SDF / ramp / lane-geom / Fourier (rule-118 FREE)
+        "free_generated": 0,  # warp / SDF / ramp / lane-geom / Fourier (rule-118 FREE)
     }
     known_store_bytes = store_bytes + int(pose_sidecar_bytes)
     predicted_rate: dict[str, float] = {
@@ -294,12 +328,20 @@ def encode_known_split(
 
     # break-even d_seg at the KNOWN-store rate (residual INR == 0 bytes): the live target the
     # residual INR must hit. If positive, d_seg alone can reach the frontier given store+pose.
-    be_frontier = break_even_d_seg(
-        _FRONTIER_S, _D_POSE_SIDECAR, known_store_bytes, uncompressed_size=uncompressed_size
+    frontier_surface = score_sublevel_against_dynamic_frontier(
+        frontier_target,
+        d_seg=0.0,
+        d_pose=_D_POSE_SIDECAR,
+        archive_bytes=known_store_bytes,
+        reference_bytes=uncompressed_size,
     )
-    be_sub015 = break_even_d_seg(
-        0.15, _D_POSE_SIDECAR, known_store_bytes, uncompressed_size=uncompressed_size
-    )
+    be_frontier = frontier_surface.boundary_d_seg_given_pose_and_bytes
+    if be_frontier is None:
+        raise ValueError(
+            "known store plus pose assumption already exceeds the live competitive target; "
+            "no non-negative d_seg boundary exists"
+        )
+    be_sub015 = break_even_d_seg(0.15, _D_POSE_SIDECAR, known_store_bytes, uncompressed_size=uncompressed_size)
     break_even = {
         "d_seg_to_beat_frontier_at_known_store": be_frontier,
         "d_seg_to_sub015_at_known_store": be_sub015,
@@ -330,6 +372,7 @@ def encode_known_split(
         predicted_bytes=predicted_bytes,
         predicted_rate=predicted_rate,
         break_even=break_even,
+        frontier_target=frontier_target,
         recoverability_dseg_max=float(recoverability_dseg_max),
         confirmed_by_attribution=confirmed,
         authority=authority,
@@ -337,9 +380,7 @@ def encode_known_split(
     )
 
 
-def _confirm_with_attribution(
-    attribution: dict[str, Any], generate: set[str], learn: set[str]
-) -> bool:
+def _confirm_with_attribution(attribution: dict[str, Any], generate: set[str], learn: set[str]) -> bool:
     """CONFIRM (not re-decide) the known split against Step-1 attribution.
 
     The attribution should show the GENERATE classes are stage-stable (bulk) while the LEARN

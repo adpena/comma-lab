@@ -2217,6 +2217,89 @@ def run_g120_parsed_stage_production_authority_v2(
     )
 
 
+def _reopen_g109_target_custody(
+    value: object,
+    *,
+    g112: Any,
+    context: str,
+) -> tuple[dict[str, Any], np.ndarray]:
+    """Reopen the one G109 target/scorer root shared by all G120 receipts."""
+
+    if type(context) is not str or not context:
+        raise G120ProductionAuthorityV2Error(
+            "G109 custody context is malformed"
+        )
+    if (
+        type(value) is not dict
+        or set(value)
+        != {
+            "projection_sha256",
+            "aggregate_receipt",
+            "target_labels_sha256",
+            "source_video",
+            "segnet_weights",
+            "upstream_closure",
+            "scorer_runtime_identity_sha256",
+        }
+        or type(value.get("aggregate_receipt")) is not dict
+    ):
+        raise G120ProductionAuthorityV2Error(
+            f"{context} lacks physical G109 custody"
+        )
+    g109 = value
+    aggregate = g109["aggregate_receipt"]
+    scalars = g112.semantic_child.g105_scalars
+    projection_json = scalars.get(_v1.CHECKPOINT_PROJECTION_KEY)
+    projection_sha = scalars.get(_v1.CHECKPOINT_PROJECTION_SHA_KEY)
+    if not isinstance(projection_json, str) or not isinstance(
+        projection_sha,
+        str,
+    ):
+        raise G120ProductionAuthorityV2Error(
+            f"{context} G112 semantic child lacks its G109 projection"
+        )
+    try:
+        projection = _v1.reopen_v9_training_target_projection(
+            projection_json=projection_json,
+            expected_projection_sha256=projection_sha,
+        )
+    except Exception as exc:
+        raise G120ProductionAuthorityV2Error(
+            f"{context} G112 target projection cannot be reopened"
+        ) from exc
+    pair = g112.source_chain.current.pair
+    if (
+        projection_sha != g109["projection_sha256"]
+        or projection_sha != g112.initializer.target_projection_sha256
+        or projection_sha != pair.target_projection_sha256
+        or projection.get("aggregate_receipt") != aggregate
+    ):
+        raise G120ProductionAuthorityV2Error(
+            f"{context} G112/G111/G109 target projection differs"
+        )
+    loader = V9TrainingTargetCapsuleLoaderV1.open(
+        Path(str(aggregate.get("path"))),
+        expected_sha256=str(aggregate.get("sha256")),
+    )
+    target_labels = np.ascontiguousarray(
+        loader.targets.seg_labels_u8,
+        dtype=np.uint8,
+    )
+    if (
+        loader.pair_count != PRODUCTION_PAIR_COUNT
+        or loader.batch_pairs != PRODUCTION_BATCH_PAIRS
+        or loader.seg_hw != PRODUCTION_SEG_HW
+        or target_labels.shape
+        != (PRODUCTION_PAIR_COUNT, *PRODUCTION_SEG_HW)
+        or _sha256(memoryview(target_labels))
+        != g109.get("target_labels_sha256")
+    ):
+        raise G120ProductionAuthorityV2Error(
+            f"{context} physical G109 labels/geometry differ"
+        )
+    return g109, target_labels
+
+
 def open_g120_exact_distortion_obstruction_v1(
     path: Path,
     *,
@@ -2250,6 +2333,13 @@ def open_g120_exact_distortion_obstruction_v1(
     physical_stage, physical_stage_sha, stage_tag = (
         _v1._physical_stage_identity(g112)
     )
+    g109, target_labels = _reopen_g109_target_custody(
+        value["g109_custody"],
+        g112=g112,
+        context="scoped obstruction",
+    )
+    scorer = value["seg_scorer"]
+    progress_identity = engine.receipt["progress_identity"]
     live = value["live_target"]
     rational = live.get("score_rational") if type(live) is dict else None
     try:
@@ -2264,7 +2354,8 @@ def open_g120_exact_distortion_obstruction_v1(
     public_runtime = value["public_runtime"]
     false_authority = value["false_authority"]
     if (
-        value["disposition"] != BLOCKED_SCOPED
+        value["evidence_axis"] != EVIDENCE_AXIS
+        or value["disposition"] != BLOCKED_SCOPED
         or value["verdict_scope"]
         != (
             "one_physical_stage_engine_prefix_without_"
@@ -2274,6 +2365,39 @@ def open_g120_exact_distortion_obstruction_v1(
         or engine.receipt["stage_tag"] != stage_tag
         or physical_stage != value["physical_stage_identity"]
         or physical_stage_sha != value["physical_stage_identity_sha256"]
+        or progress_identity["source_checkpoint_identity_sha256"]
+        != physical_stage_sha
+        or progress_identity["target_labels_sha256"]
+        != _sha256(memoryview(target_labels))
+        or progress_identity["seg_scorer_identity_sha256"]
+        != g109["scorer_runtime_identity_sha256"]
+        or progress_identity["pose_initializer_identity_sha256"]
+        != g112.initializer.checkpoint_sha256
+        or progress_identity["pair_count"] != PRODUCTION_PAIR_COUNT
+        or progress_identity["batch_sizes"] != list(VERDICT_BATCH_SIZES)
+        or type(scorer) is not dict
+        or set(scorer)
+        != {
+            "identity_sha256",
+            "device",
+            "fresh_direct_scorer_calls",
+            "weights_pre",
+            "weights_post",
+            "upstream_closure_pre",
+            "upstream_closure_post",
+        }
+        or scorer.get("identity_sha256")
+        != g109["scorer_runtime_identity_sha256"]
+        or scorer.get("device") != "cpu"
+        or type(scorer.get("fresh_direct_scorer_calls")) is not int
+        or scorer["fresh_direct_scorer_calls"] < 0
+        or scorer["fresh_direct_scorer_calls"]
+        > engine.receipt["completed_batch_count"]
+        or scorer.get("weights_pre") != scorer.get("weights_post")
+        or scorer.get("weights_pre") != g109["segnet_weights"]
+        or scorer.get("upstream_closure_pre")
+        != scorer.get("upstream_closure_post")
+        or scorer.get("upstream_closure_pre") != g109["upstream_closure"]
         or type(live) is not dict
         or set(live)
         != {
@@ -2300,6 +2424,16 @@ def open_g120_exact_distortion_obstruction_v1(
         or value["production_authority_closed"] is not False
         or value["semantic_only"] is not True
         or type(public_runtime) is not dict
+        or set(public_runtime)
+        != {
+            "source_pre",
+            "sealed_tree_sha256",
+            "source_post",
+            "sealed_runtime_captured",
+            "public_prefix_execution_performed",
+            "public_prefix_equality",
+            "cross_wire_prefix_equality",
+        }
         or _reopen_runtime_tree(public_runtime.get("source_pre"))
         != public_runtime.get("source_pre")
         or public_runtime.get("source_pre")
@@ -2323,6 +2457,23 @@ def open_g120_exact_distortion_obstruction_v1(
         raise G120ProductionAuthorityV2Error(
             "G120 scoped obstruction custody, target, or authority differs"
         )
+    try:
+        if (
+            _v1._regular_file_identity(
+                Path(scorer["weights_pre"]["path"]),
+                name="scoped-obstruction SegNet weights",
+            )
+            != scorer["weights_pre"]
+            or _v1._reopen_upstream_closure(
+                scorer["upstream_closure_pre"]
+            )
+            != scorer["upstream_closure_pre"]
+        ):
+            raise G120ProductionAuthorityV2Error(
+                "scoped-obstruction scorer files changed"
+            )
+    except _v1.G120ProductionAuthorityError as exc:
+        raise G120ProductionAuthorityV2Error(str(exc)) from exc
     return G120ExactDistortionObstructionV1(
         receipt_path=path,
         receipt_sha256=physical["sha256"],
@@ -2346,7 +2497,8 @@ def open_g120_stage_measurement_v2(
         name="G120-v2 measurement receipt",
     )
     if (
-        value["pointer_independent"] is not True
+        value["evidence_axis"] != EVIDENCE_AXIS
+        or value["pointer_independent"] is not True
         or value["pair_count"] != PRODUCTION_PAIR_COUNT
         or value["batch_sizes"] != list(VERDICT_BATCH_SIZES)
         or value["pixel_denominator"] != PIXEL_DENOMINATOR
@@ -2368,59 +2520,11 @@ def open_g120_stage_measurement_v2(
         or g112.initializer.checkpoint_sha256 != value["pose_initializer_identity_sha256"]
     ):
         raise G120ProductionAuthorityV2Error("measurement G112/deploy/resume/lineage custody differs")
-    g109 = value["g109_custody"]
-    if (
-        type(g109) is not dict
-        or set(g109)
-        != {
-            "projection_sha256",
-            "aggregate_receipt",
-            "target_labels_sha256",
-            "source_video",
-            "segnet_weights",
-            "upstream_closure",
-            "scorer_runtime_identity_sha256",
-        }
-        or type(g109.get("aggregate_receipt")) is not dict
-    ):
-        raise G120ProductionAuthorityV2Error("measurement lacks physical G109 custody")
-    aggregate = g109["aggregate_receipt"]
-    scalars = g112.semantic_child.g105_scalars
-    projection_json = scalars.get(_v1.CHECKPOINT_PROJECTION_KEY)
-    projection_sha = scalars.get(_v1.CHECKPOINT_PROJECTION_SHA_KEY)
-    if not isinstance(projection_json, str) or not isinstance(projection_sha, str):
-        raise G120ProductionAuthorityV2Error("measurement G112 semantic child lacks its G109 projection")
-    try:
-        projection = _v1.reopen_v9_training_target_projection(
-            projection_json=projection_json,
-            expected_projection_sha256=projection_sha,
-        )
-    except Exception as exc:
-        raise G120ProductionAuthorityV2Error("measurement G112 target projection cannot be reopened") from exc
-    pair = g112.source_chain.current.pair
-    if (
-        projection_sha != g109["projection_sha256"]
-        or projection_sha != g112.initializer.target_projection_sha256
-        or projection_sha != pair.target_projection_sha256
-        or projection.get("aggregate_receipt") != aggregate
-    ):
-        raise G120ProductionAuthorityV2Error("measurement G112/G111/G109 target projection differs")
-    loader = V9TrainingTargetCapsuleLoaderV1.open(
-        Path(str(aggregate.get("path"))),
-        expected_sha256=str(aggregate.get("sha256")),
+    g109, target_labels = _reopen_g109_target_custody(
+        value["g109_custody"],
+        g112=g112,
+        context="measurement",
     )
-    target_labels = np.ascontiguousarray(
-        loader.targets.seg_labels_u8,
-        dtype=np.uint8,
-    )
-    if (
-        loader.pair_count != PRODUCTION_PAIR_COUNT
-        or loader.batch_pairs != PRODUCTION_BATCH_PAIRS
-        or loader.seg_hw != PRODUCTION_SEG_HW
-        or target_labels.shape != (PRODUCTION_PAIR_COUNT, *PRODUCTION_SEG_HW)
-        or _sha256(memoryview(target_labels)) != g109.get("target_labels_sha256")
-    ):
-        raise G120ProductionAuthorityV2Error("measurement physical G109 labels/geometry differ")
     scorer = value["seg_scorer"]
     if (
         type(scorer) is not dict

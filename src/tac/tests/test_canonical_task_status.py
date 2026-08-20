@@ -122,6 +122,10 @@ def test_actual_delta_requires_empirical_note(tmp_path: Path) -> None:
         session_id="s1",
         repo_root=tmp_path,
     )
+    # FULL ΔS custody supplied, empirical tag deliberately withheld: the ORIGINAL
+    # invariant must still be the one that fires. Pinned this way so the ddm_op3 custody
+    # clause cannot mask the older evidence clause by raising first on an unrelated
+    # defect -- two independent gates, each provably reachable.
     with pytest.raises(ValueError, match="empirical"):
         update_status(
             "memo::ITEM_3",
@@ -130,6 +134,7 @@ def test_actual_delta_requires_empirical_note(tmp_path: Path) -> None:
             session_id="s1",
             repo_root=tmp_path,
             actual_delta_s=-0.01,
+            notes="[baseline:eval_root/submissions/v4d_ms8/report.txt=0.8984335] [n600]",
         )
 
 
@@ -157,7 +162,10 @@ def test_note_after_empirical_completion_carries_evidence_tag(tmp_path: Path) ->
         session_id="s1",
         repo_root=tmp_path,
         actual_delta_s=-0.01,
-        notes="[empirical:experiments/results/example.json] measured anchor",
+        notes=(
+            "[empirical:experiments/results/example.json] measured anchor "
+            "[baseline:eval_root/submissions/v4d_ms8/report.txt=0.8984335] [n600]"
+        ),
     )
     note = append_note(
         "memo::ITEM_5",
@@ -359,3 +367,240 @@ def test_the_backfilled_orphans_are_registered() -> None:
         row = latest_status_by_task_id(tid)
         assert row is not None, f"#{tid} lost its registration"
         assert row.title.strip(), f"#{tid} registered with an empty title"
+
+
+# ---------------------------------------------------------------------------
+# ddm_op3 (2026-08-03) -- ΔS CUSTODY CLAUSES.
+#
+# The two rows that actually misdirected readers this week are REPLAYED here verbatim.
+# That is the point: a gate justified by incidents it cannot reproduce is a story, and
+# the obvious design (one more clause on `actual_delta_s`) would have PASSED both of
+# them, because both carry actual_delta_s = None and state their number in `title`.
+#
+# MEASURED live counts over the 417-row ledger at landing:
+#   8 rows carry a typed actual_delta_s      (0 of them name a baseline)
+#   8 rows assert a ΔS only in free text     (1 overlaps the above)
+#   -> 15 distinct rows assert a ΔS; the pre-existing invariant could see 1.
+# New rows: live count 0 by construction, because the writer refuses at mint time and
+# the reader only warns. No backfill is owed before this binds.
+# ---------------------------------------------------------------------------
+
+from tac.canonical_task_status.contract import (
+    CanonicalTaskStatusRow,
+    delta_s_custody_findings,
+)
+from tac.canonical_task_status.writer import DeltaSCustodyError
+
+# VERBATIM from .omx/state/canonical_task_status.jsonl, task 826 and task 827.
+#
+# The 826 string below is byte-exact and it CORRECTS this test's own first draft, which
+# rendered the delta as "= -0.0983195 S". The real row writes it as a bare parenthesised
+# number with no S label anywhere. A control that replays an edited row is not a control;
+# it certifies the detector against a case chosen to suit it. Fixing the fabrication is
+# what surfaced the sharper rule: 826 DID name a reference ("vs ref 0.7685479"), so the
+# defect was never a missing baseline -- it was an UN-RE-DERIVABLE one.
+_REAL_826_TITLE = (
+    "FIRE-ORDER-0: gr1_cell_drop50_archive.zip (359,221 B, sha256 a6398e44...) "
+    "byte-closed at seg_plus_rate 0.6702284 vs ref 0.7685479 (-0.0983195), "
+    "never through exact eval"
+)
+_REAL_827_TITLE = (
+    "THE COMPOSITION ROW: ep854 seg base composed onto the v4d pose payload, "
+    "byte-closed at 285,529 B (seg+rate -0.0866789 S = 11.178% of gap)"
+)
+
+
+def _findings(title: str, notes: str = "", delta: float | None = None) -> tuple[str, ...]:
+    return delta_s_custody_findings(actual_delta_s=delta, event_notes=notes, title=title)
+
+
+def test_POSITIVE_CONTROL_the_real_826_row_is_caught():
+    """KNOWN-BAD, replayed VERBATIM. Its -0.0983195 was measured against a v4d-era
+    reference and re-prices to +0.0034632 against the live best -- an INVERSION. It
+    carries actual_delta_s=None AND no S label, so it is reachable only through the
+    reference-comparison clause."""
+    found = _findings(_REAL_826_TITLE)
+    assert any(f.startswith("MISSING_BASELINE") for f in found)
+    assert any(f.startswith("UNDECLARED_PARTIAL_COMPOSITE") for f in found)
+    # The specific diagnosis, not just "something is missing".
+    assert any("bare reference NUMBER" in f for f in found)
+
+
+def test_MEASURED_LIMIT_an_unlabelled_bare_delta_is_still_invisible():
+    """The honest boundary of this instrument, pinned so it cannot be overstated.
+
+    Detection keys on CLAIM LANGUAGE -- an S label, or reference-comparison prose. A
+    delta written as a naked parenthesised number with neither would pass, and widening
+    to 'any signed decimal' would fire on coordinates, byte counts and ratios across the
+    whole ledger. This test exists so the next reader learns that limit from the suite
+    rather than from a missed row."""
+    assert _findings("some row (-0.0983195), never through exact eval") == ()
+
+
+def test_POSITIVE_CONTROL_the_real_827_row_is_caught_as_a_partial_composite():
+    """KNOWN-BAD, replayed verbatim. The sharpest case: a delta over a SUBSET of the S
+    terms is not a ΔS. Its omitted pose term measured +19.302316 -- 234.7x the prize it
+    was advertising -- so the real composed row is +19.22, not -0.0866."""
+    found = _findings(_REAL_827_TITLE)
+    assert any(f.startswith("UNDECLARED_PARTIAL_COMPOSITE") for f in found)
+    assert any(f.startswith("MISSING_BASELINE") for f in found)
+
+
+def test_POSITIVE_CONTROL_a_fully_custodied_row_passes():
+    """KNOWN-GOOD. Without this the clause could be satisfied by refusing everything."""
+    assert _findings(
+        "gr1_cell_drop50 re-priced",
+        notes=(
+            "[empirical:eval_root/submissions/v4d_cx1_pj2ix2/report.txt] "
+            "[baseline:eval_root/submissions/v4d_cx1_pj2ix2/report.txt=0.8264972] "
+            "[n600] re-priced to +0.0034632 S"
+        ),
+        delta=+0.0034632,
+    ) == ()
+
+
+def test_POSITIVE_CONTROL_rows_that_assert_no_delta_are_not_touched():
+    """The clause must be SILENT on the 402 of 417 rows that assert nothing. A gate that
+    fires everywhere is noise, and noise is how a real finding gets ignored."""
+    assert _findings("plain infrastructure task", notes="landed a loader; no score claim") == ()
+    assert _findings("archive is 353,808 bytes at 0.00431179 d_seg") == ()
+
+
+def test_partial_composite_may_not_occupy_the_typed_full_S_field():
+    found = _findings(
+        "seg+rate leg",
+        notes="[empirical:x] [baseline:y=0.8264972] [n600] [partial:seg+rate]",
+        delta=-0.0822362,
+    )
+    assert any(f.startswith("PARTIAL_IN_TYPED_FIELD") for f in found)
+    # ... and with the typed field left None, the declared partial is accepted.
+    assert _findings(
+        "seg+rate leg",
+        notes="[empirical:x] [baseline:y=0.8264972] [n600] [partial:seg+rate] -0.0822362 S",
+    ) == ()
+
+
+def test_population_coordinate_is_required():
+    """n=73 read -0.122 WIN where its own n600 read +0.152 LOSS."""
+    assert any(
+        f.startswith("MISSING_POPULATION")
+        for f in _findings("x", notes="[empirical:x] [baseline:y=0.82] delta -0.0100 S")
+    )
+    assert not any(
+        f.startswith("MISSING_POPULATION")
+        for f in _findings("x", notes="[empirical:x] [baseline:y=0.82] [n=73] -0.0100 S")
+    )
+
+
+def test_reader_WARNS_and_stays_total_over_history(tmp_path: Path) -> None:
+    """The append-only ledger has 15 historical rows that predate this rule. A reader
+    that RAISED on them would break campaign-wide recall -- strictly worse than the
+    defect it reports. So: warn, and keep returning the row."""
+    row = CanonicalTaskStatusRow(
+        task_id="826",
+        source_design_memo=".omx/research/memo.md",
+        title=_REAL_826_TITLE,
+        status="pending",
+        owner="claude",
+        event_type="registered",
+        event_timestamp_utc="2026-07-31T20:30:18.741140Z",
+        event_actor="claude",
+        written_at_utc="2026-07-31T20:30:18.741140Z",
+        written_pid=1,
+        written_host="h",
+        session_id="s",
+    )
+    with pytest.warns(UserWarning, match="without full custody"):
+        rebuilt = CanonicalTaskStatusRow.from_json_obj(row.to_json_obj())
+    assert rebuilt.title == _REAL_826_TITLE  # total: the row still comes back
+
+
+def test_writer_REFUSES_a_new_uncustodied_delta(tmp_path: Path) -> None:
+    """The other half of the split: no NEW uncustodied ΔS can be minted."""
+    register_task(
+        "memo::ITEM_OP3",
+        ".omx/research/memo.md",
+        "custody gate",
+        "claude",
+        actor="t",
+        session_id="s1",
+        repo_root=tmp_path,
+    )
+    update_status(
+        "memo::ITEM_OP3", "in_progress", actor="t", session_id="s1", repo_root=tmp_path
+    )
+    with pytest.raises(DeltaSCustodyError, match="MISSING_BASELINE"):
+        update_status(
+            "memo::ITEM_OP3",
+            "completed",
+            actor="t",
+            session_id="s1",
+            repo_root=tmp_path,
+            actual_delta_s=-0.0675451,
+            notes="[empirical:eval_root/submissions/v4d_pj2/report.txt] pose win",
+        )
+
+
+def test_writer_REFUSES_a_free_text_delta_at_REGISTRATION(tmp_path: Path) -> None:
+    """Registration is where the class actually entered: both real rows stated their ΔS
+    in the title at register time with actual_delta_s=None."""
+    with pytest.raises(DeltaSCustodyError):
+        register_task(
+            "memo::ITEM_OP3B",
+            ".omx/research/memo.md",
+            _REAL_826_TITLE,
+            "claude",
+            actor="t",
+            session_id="s1",
+            repo_root=tmp_path,
+        )
+
+
+def test_writer_ACCEPTS_a_custodied_delta(tmp_path: Path) -> None:
+    """KNOWN-GOOD end-to-end: the gate is passable, so it is a gate and not a wall."""
+    register_task(
+        "memo::ITEM_OP3C",
+        ".omx/research/memo.md",
+        "custodied win",
+        "claude",
+        actor="t",
+        session_id="s1",
+        repo_root=tmp_path,
+    )
+    update_status(
+        "memo::ITEM_OP3C", "in_progress", actor="t", session_id="s1", repo_root=tmp_path
+    )
+    row = update_status(
+        "memo::ITEM_OP3C",
+        "completed",
+        actor="t",
+        session_id="s1",
+        repo_root=tmp_path,
+        actual_delta_s=-0.0675451,
+        notes=(
+            "[empirical:eval_root/submissions/v4d_pj2/report.txt] "
+            "[baseline:eval_root/submissions/v4d_ms8/report.txt=0.8984335] [n600]"
+        ),
+    )
+    assert row.actual_delta_s == pytest.approx(-0.0675451)
+
+
+def test_append_note_carries_forward_without_re_demanding_custody(tmp_path: Path) -> None:
+    """You must custody what you ASSERT; you may carry forward what someone else did.
+    Gating the carry-forward path would make historical tasks un-annotatable."""
+    register_task(
+        "memo::ITEM_OP3D", ".omx/research/memo.md", "carry", "claude",
+        actor="t", session_id="s1", repo_root=tmp_path,
+    )
+    update_status("memo::ITEM_OP3D", "in_progress", actor="t", session_id="s1", repo_root=tmp_path)
+    update_status(
+        "memo::ITEM_OP3D", "completed", actor="t", session_id="s1", repo_root=tmp_path,
+        actual_delta_s=-0.01,
+        notes=(
+            "[empirical:x.json] [baseline:eval_root/submissions/v4d_ms8/report.txt=0.8984335] [n600]"
+        ),
+    )
+    note = append_note(
+        "memo::ITEM_OP3D", "operator reviewed", actor="t", session_id="s1", repo_root=tmp_path
+    )
+    assert note.actual_delta_s == pytest.approx(-0.01)

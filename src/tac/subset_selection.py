@@ -19,6 +19,13 @@ seg    flip-prone pixel density      0.97x  0.95x  0.96x  0.97x  EASIER (3-5%)
 pose   ``d_pose_shipped_f16``        2.54x  2.64x  2.65x  4.21x  HARDER (154-321%)
 ===== ============================= ====== ====== ====== ====== ==================
 
+Pose re-derived 2026-08-04 by ``ddm_mi1`` from the 600-row PFS1 D2 receipt
+``/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d2/d2_ep_solve.partial.jsonl``
+(sha256 ``d2853c92090c28ebe558ece4a21b2847b55e25c9d768bef167bcba9dc67b72e5``,
+field ``d_pose_shipped_f16``). Nuance preserved: under this module's current
+p01/p99 random band, n=24's 2.535x prefix is inside the band, while n=48/64/96
+are outside; n=8 is not bankable population evidence.
+
 Independently re-derived here for the seg axis (2026-08-03, ``ddm_ss1``, by
 streaming ``gt_n600.npz`` ``margins``, 0.38 s): at flip-margin thresholds
 0.01/0.05/0.10/0.25 -- a 25x span -- the n=24/48/64/96 prefix ratios are
@@ -56,7 +63,7 @@ Three design commitments, each answering a measured failure
    +/-10%" tolerance would be exactly the borrowed-constant poison the campaign
    keeps paying for. Instead :func:`governing_ratio` bootstraps the ratio's own
    null distribution from the population at the *same* n and seed policy, and
-   reports p05/p95. na2's measured random-sample p95 at n=96 (1.48x) is then a
+   reports a derived null band. na2's measured random-sample p95 at n=96 (1.48x) is then a
    *derived output* of this function, not a magic number inside it.
 
 3. **An absent or empty governing table is VACUOUS, never PASS.** The genus

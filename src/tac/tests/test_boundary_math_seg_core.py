@@ -2,8 +2,9 @@
 """Behavior tests for the boundary_math seg-core (task #52).
 
 NO-FAKE discipline (CLAUDE.md class 2 — tests verify BEHAVIOR, not constants):
-- contour codec: assert ENCODE->DECODE is bit-exact AND that it compresses (a fake
-  identity codec would fail the compression assertion on a low-boundary partition).
+- dense-raster LZMA baseline: assert ENCODE->DECODE is bit-exact AND that it
+  compresses (a fake identity codec would fail the compression assertion on a
+  low-boundary partition).
 - d_seg: assert the popcount form EQUALS the reference argmax-compare on random
   partitions (a fake constant-returning d_seg would fail).
 - region-merge: assert the solve actually DROPS the predicted tiny regions and
@@ -26,7 +27,7 @@ from tac.boundary_math.bitmask_dseg import (
     d_seg_reference,
     flip_count,
 )
-from tac.boundary_math.contour_codec import (
+from tac.boundary_math.dense_raster_lzma_baseline import (
     decode_partition,
     encode_partition,
     partition_description_bytes,
@@ -87,8 +88,8 @@ def test_class_masks_rejects_out_of_range():
         class_masks_from_argmax(np.array([[0, 5]]), n_classes=5)
 
 
-# ── contour codec ───────────────────────────────────────────────────────────
-def test_contour_codec_roundtrip_bit_exact():
+# ── dense-raster LZMA baseline ──────────────────────────────────────────────
+def test_dense_raster_lzma_baseline_roundtrip_bit_exact():
     rng = np.random.default_rng(3)
     a = rng.integers(0, 5, size=(48, 64)).astype(np.int64)
     code = encode_partition(a)
@@ -96,7 +97,7 @@ def test_contour_codec_roundtrip_bit_exact():
     assert np.array_equal(decoded, a), "codec must be a bit-exact reversible identity"
 
 
-def test_contour_codec_compresses_low_boundary_partition():
+def test_dense_raster_lzma_baseline_compresses_low_boundary_partition():
     # A 2-region partition (one vertical boundary) is mostly constant runs; the codec
     # must compress it well below the raw uint8 size.  A FAKE (identity) codec would
     # store all H*W bytes and fail this.
@@ -107,8 +108,8 @@ def test_contour_codec_compresses_low_boundary_partition():
     assert n < raw * 0.05, f"low-boundary partition should compress hugely: {n} vs raw {raw}"
 
 
-def test_contour_codec_grows_with_boundary_complexity():
-    # A high-boundary (checkerboard) partition has more boundary entropy than a
+def test_dense_raster_lzma_baseline_grows_with_boundary_complexity():
+    # A high-boundary (checkerboard) partition has less label-raster regularity than a
     # single-split partition -> more bytes.  This proves the byte cost tracks
     # boundary, not area (both have the same area).
     low = np.zeros((64, 64), dtype=np.int64)

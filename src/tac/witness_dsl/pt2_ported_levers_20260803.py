@@ -13,11 +13,10 @@ Nothing about the force was re-implemented, which is why these are class (a) POR
 
 **Why they fire on the LIVE vehicle, which is the part that is easy to get wrong.**  Focal and
 the Fisher density fold into ``seg_pixel_w``, and the natural-gradient transform rewrites
-``seg_logits``; both surfaces are read by EVERY seg-loss branch before the mean.  Contrast
-``--margin-weighted-loss``, whose ``apply_mw`` guard the ``tau_softplus`` branch does not contain
-at all — and ``tau_softplus`` is the form the live burn lineage occupied for ~100% of its epochs
-(``MARGIN_WEIGHTED_HONORING_SEG_FORMS`` / ddm_tp2 row 2).  A force that composes through
-``apply_mw`` would have been a flag that cannot act on the vehicle we ship; these do not.
+``seg_logits``; both surfaces are read by EVERY seg-loss branch before the mean.  EN1 separately
+wires ``--margin-weighted-loss`` into ``tau_softplus`` and leaves it owned by the existing
+``tr1_seg_margin_weight`` DSL lever; these four ports remain the distinct retired-trainer forces
+that were unreachable only because TR1 never declared their own flags.
 
 **Registry contract.**  Every factory here is default-OFF and score-affecting, so each is a
 duty-to-measure row the moment this module exists: ``package_known_levers()`` AST-scans the whole
@@ -70,7 +69,7 @@ def lever_seg_focal_gamma(gamma: float = 2.0) -> Lever:
         name=f"tr1_focal_gamma{gamma:g}",
         overrides={"--seg-focal-gamma": str(gamma)},
         notes="ddm_pt2 PORT of SegFocalGamma; folds into seg_pixel_w => honored by EVERY seg form "
-              "including tau_softplus (unlike --margin-weighted-loss); default 0.0 => "
+              "including tau_softplus; default 0.0 => "
               "byte-identical; falsifier in the factory docstring",
         constant_manifest={
             "--seg-focal-gamma": {

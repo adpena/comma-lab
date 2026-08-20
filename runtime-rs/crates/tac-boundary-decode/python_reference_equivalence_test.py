@@ -24,7 +24,7 @@ from pathlib import Path
 import numpy as np
 
 from tac.boundary_math.bitmask_dseg import d_seg_reference, flip_count
-from tac.boundary_math.contour_codec import ContourCode, decode_partition
+from tac.boundary_math.dense_raster_lzma_baseline import ContourCode, decode_partition
 from tac.boundary_math.partition import connected_components
 
 HERE = Path(__file__).resolve().parent / "golden_vectors"

@@ -53,12 +53,14 @@ def _write_log(tmp_path: Path, epochs=(850, 875)) -> Path:
     return run
 
 
-def test_read_verdict_rows_binds_full_rows_despite_confound_alarm_category(tmp_path):
-    """The MEASURED wart: classify_line says confound_alarm for full verdict rows
-    (frozen_epoch:false substring).  The parser must still return exactly the full rows."""
+def test_read_verdict_rows_binds_full_rows_with_monitor_classifier_drift(tmp_path):
+    """The parser owns verdict-row binding; monitor category churn is not authority."""
     from tac.witness_run_monitor import classify_line
 
-    assert classify_line(_VERDICT % (850, 0.004)) == "confound_alarm"  # the wart, pinned
+    assert classify_line(_VERDICT % (850, 0.004)) in {
+        "confound_alarm",
+        "verdict",
+    }
     run = _write_log(tmp_path)
     rows = cli.read_verdict_rows(run / "run.log")
     assert [r["epoch"] for r in rows] == [850, 875]

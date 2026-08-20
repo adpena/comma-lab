@@ -17,7 +17,7 @@
 //!
 //! | fn | Python oracle | parity gate |
 //! |----|---------------|-------------|
-//! | [`contour::decode_partition_raw`] | `contour_codec.decode_partition` | `contour_decode_{full,small}_v1` |
+//! | [`contour::decode_partition_raw`] | `dense_raster_lzma_baseline.decode_partition` | `contour_decode_{full,small}_v1` |
 //! | [`dseg::flip_count`] / [`dseg::d_seg`] | `bitmask_dseg.flip_count` / `d_seg_reference` | `dseg_popcount_v1` |
 //! | [`components::connected_components`] | `partition.connected_components` | `connected_components_v1` |
 

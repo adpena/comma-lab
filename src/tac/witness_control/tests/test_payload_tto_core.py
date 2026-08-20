@@ -33,12 +33,24 @@ for _p in (_REPO, _REPO / "src", _REPO / "experiments", _REPO / "upstream"):
 pytestmark = pytest.mark.slow
 
 
+def _seed_mlx_or_xfail(mx) -> None:
+    try:
+        mx.random.seed(0)
+    except RuntimeError as exc:
+        if "[metal::load_device] No Metal device available" in str(exc):
+            pytest.xfail(
+                "#856 known-red environment/MLX-gating: mlx.random.seed loads "
+                "Metal in this sandbox even after CPU pinning"
+            )
+        raise
+
+
 def _build_ctx():
     """A small REAL witness + a real seg-CE loss closure on real MLX renders (CPU, deterministic)."""
     import mlx.core as mx
 
     mx.set_default_device(mx.cpu)
-    mx.random.seed(0)  # nn.Linear init draws from the GLOBAL MLX PRNG -> seed so every build is identical
+    _seed_mlx_or_xfail(mx)  # nn.Linear init draws from the GLOBAL MLX PRNG.
     from train_levelset_witness_realized_through_R_mlx import build_levelset_rgb_witness
 
     P_PIX, IN_FEAT = 96 * 128, 8

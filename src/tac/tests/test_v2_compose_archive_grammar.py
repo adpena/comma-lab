@@ -224,7 +224,7 @@ def test_store_blob_roundtrip_keyframes_bit_exact():
     blob = build_store_blob(indices, kf, palette, calib, warp_codes, reach_kstar=47, n_pairs=600)
     parsed = parse_store_blob(blob)
     assert parsed.keyframe_indices == indices
-    assert np.array_equal(parsed.keyframe_lstars, kf)  # contour codec is bit-exact
+    assert np.array_equal(parsed.keyframe_lstars, kf)  # dense-raster LZMA is bit-exact
     assert parsed.calib == pytest.approx(calib)
     assert parsed.warp_type_codes == warp_codes
     assert parsed.reach_kstar == 47

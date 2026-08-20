@@ -116,6 +116,7 @@ class CompactProgramRole(StrEnum):
 class CountedSectionRole(StrEnum):
     GENERATIVE_CORRECTION = "generative_correction"
     FRAME1_PREIMAGE = "frame1_preimage"
+    FRAME0_FROM_EXACT_Y1 = "frame0_from_exact_y1"
     FRAME0_POSE_RESIDUAL = "frame0_pose_residual"
     TERMINAL_QUOTIENT = "terminal_quotient"
 
@@ -136,6 +137,7 @@ class CountedArtifactClass(StrEnum):
 
     GENERATOR_PARAMETERS = "generator_parameters"
     FRAME_PREIMAGE_PARAMETERS = "frame_preimage_parameters"
+    COUPLED_PREIMAGE_PARAMETERS = "coupled_preimage_parameters"
     DENSE_REALIZED_Y = "dense_realized_y"
     CAMERA_PREIMAGE = "camera_preimage"
     POSE_RESIDUAL_PARAMETERS = "pose_residual_parameters"
@@ -1090,7 +1092,10 @@ class SectionCausalityReceipt:
         if self.role in (CountedSectionRole.GENERATIVE_CORRECTION, CountedSectionRole.FRAME1_PREIMAGE):
             if not self.y1_changed:
                 raise PairPopulationEnvelopeError(f"counted {self.role.value} counterfactual did not change Y1")
-        elif self.role is CountedSectionRole.FRAME0_POSE_RESIDUAL:
+        elif self.role in (
+            CountedSectionRole.FRAME0_FROM_EXACT_Y1,
+            CountedSectionRole.FRAME0_POSE_RESIDUAL,
+        ):
             if not self.y0_changed or self.y1_changed:
                 raise PairPopulationEnvelopeError("counted frame0 counterfactual must change Y0 with Y1 fixed")
         elif not (self.y0_changed or self.y1_changed):
@@ -1315,14 +1320,44 @@ def _validate_section_manifest(
     program: bytes,
     sections: tuple[CountedProgramSection, ...],
 ) -> None:
-    expected_roles = (
+    legacy_roles = (
         CountedSectionRole.GENERATIVE_CORRECTION,
         CountedSectionRole.FRAME1_PREIMAGE,
         CountedSectionRole.FRAME0_POSE_RESIDUAL,
     )
     roles = tuple(section.role for section in sections)
-    if roles not in (expected_roles, (*expected_roles, CountedSectionRole.TERMINAL_QUOTIENT)):
-        raise PairPopulationEnvelopeError("counted section roles/order differ from G/frame1/frame0[/terminal]")
+    allowed_roles = (legacy_roles, (*legacy_roles, CountedSectionRole.TERMINAL_QUOTIENT))
+    if roles not in allowed_roles:
+        raise PairPopulationEnvelopeError(
+            "counted section roles/order differ from legacy G/frame1/frame0-pose[/terminal]"
+        )
+    _validate_counted_section_bytes(program, sections)
+
+
+def _validate_reverse_causal_section_manifest(
+    program: bytes,
+    sections: tuple[CountedProgramSection, ...],
+) -> None:
+    reverse_causal_roles = (
+        CountedSectionRole.GENERATIVE_CORRECTION,
+        CountedSectionRole.FRAME0_FROM_EXACT_Y1,
+    )
+    roles = tuple(section.role for section in sections)
+    allowed_roles = (
+        reverse_causal_roles,
+        (*reverse_causal_roles, CountedSectionRole.TERMINAL_QUOTIENT),
+    )
+    if roles not in allowed_roles:
+        raise PairPopulationEnvelopeError(
+            "reverse-causal counted section roles/order differ from G/frame0-from-exact-Y1[/terminal]"
+        )
+    _validate_counted_section_bytes(program, sections)
+
+
+def _validate_counted_section_bytes(
+    program: bytes,
+    sections: tuple[CountedProgramSection, ...],
+) -> None:
     cursor = 0
     for section in sections:
         if section.offset != cursor or section.stop > len(program):
@@ -1332,6 +1367,37 @@ def _validate_section_manifest(
         cursor = section.stop
     if cursor != len(program):
         raise PairPopulationEnvelopeError("counted section manifest leaves unconsumed program bytes")
+
+
+def validate_counted_program_sections(
+    program: bytes,
+    sections: tuple[CountedProgramSection, ...],
+) -> None:
+    """Validate the legacy Pose6-owned G/frame1/frame0-pose byte partition."""
+
+    if not isinstance(program, bytes) or not program:
+        raise PairPopulationEnvelopeError("counted program must be exact nonempty bytes")
+    if type(sections) is not tuple:
+        raise PairPopulationEnvelopeError("counted section manifest must be an exact tuple")
+    _validate_section_manifest(program, sections)
+
+
+def validate_reverse_causal_counted_program_sections(
+    program: bytes,
+    sections: tuple[CountedProgramSection, ...],
+) -> None:
+    """Validate the disjoint reverse-causal G/frame0-from-exact-Y1 partition.
+
+    ``FRAME0_FROM_EXACT_Y1`` is a coupled preimage conditioned on an already
+    exact ``Y1``.  It is neither the legacy frame1 actuator nor the residual
+    beyond V9 Pose6, so this grammar must not enter the legacy Compact seal.
+    """
+
+    if not isinstance(program, bytes) or not program:
+        raise PairPopulationEnvelopeError("reverse-causal counted program must be exact nonempty bytes")
+    if type(sections) is not tuple:
+        raise PairPopulationEnvelopeError("reverse-causal counted section manifest must be an exact tuple")
+    _validate_reverse_causal_section_manifest(program, sections)
 
 
 def _decoded_behavior_identity(
@@ -2140,4 +2206,6 @@ __all__ = [
     "derive_ir_coverage",
     "reopen_pbr2_pair_reference",
     "reopen_typed_pair_reference",
+    "validate_counted_program_sections",
+    "validate_reverse_causal_counted_program_sections",
 ]

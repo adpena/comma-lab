@@ -3613,10 +3613,8 @@ class OptimalPerPairTreatmentPlan:
       at the recovered primal solution.
     - ``feasibility_certificate``: per-constraint pass/fail dict.
     - ``predicted_score_delta``: aggregate ΔS prediction.
-    - ``predicted_score_delta_confidence_interval``: bootstrap-style CI from
-      per-pair Jacobian uncertainty (placeholder: ±5% of ΔS until a paired
-      empirical anchor calibrates it). Per CLAUDE.md "Apples-to-apples
-      evidence discipline" this is a PREDICTION, not a score claim.
+    - ``predicted_score_delta_confidence_interval``: uncalibrated symmetric
+      ±5% heuristic retained for schema compatibility, not statistical coverage.
     - ``operating_point``: dict of d_seg_op / d_pose_op / R_op preserved
       from input so downstream consumers can re-derive the coefficient.
     - ``treatment_catalog_sha``: catalog identity for re-play.
@@ -3649,6 +3647,13 @@ class OptimalPerPairTreatmentPlan:
     score_claim: bool = False
     promotion_eligible: bool = False
     ready_for_exact_eval_dispatch: bool = False
+    endpoint_proposal_generator_only: bool = True
+    global_optimality_claim: bool = False
+    sign_reversal_safe: bool = False
+    locally_nonimproving_candidates_pruned_by_recovery: bool = True
+    whole_object_rebuild_required: bool = True
+    confidence_interval_calibrated: bool = False
+    confidence_interval_kind: str = "UNCALIBRATED_SYMMETRIC_HEURISTIC"
 
     def __post_init__(self) -> None:
         # Apples-to-apples discipline: forbid score-claim leakage.
@@ -3667,6 +3672,19 @@ class OptimalPerPairTreatmentPlan:
         if self.catalog_consumer_id != OPTIMAL_PLAN_CONSUMER_ID:
             raise OptimalPerPairTreatmentPlanError(
                 f"catalog_consumer_id must be {OPTIMAL_PLAN_CONSUMER_ID}; got {self.catalog_consumer_id}"
+            )
+        if (
+            self.endpoint_proposal_generator_only is not True
+            or self.global_optimality_claim is not False
+            or self.sign_reversal_safe is not False
+            or self.locally_nonimproving_candidates_pruned_by_recovery is not True
+            or self.whole_object_rebuild_required is not True
+            or self.confidence_interval_calibrated is not False
+            or self.confidence_interval_kind != "UNCALIBRATED_SYMMETRIC_HEURISTIC"
+        ):
+            raise OptimalPerPairTreatmentPlanError(
+                "per-pair ADMM/greedy output is an uncalibrated proposal surface, not a "
+                "sign-reversal-safe global whole-object optimum"
             )
 
 
@@ -4551,7 +4569,7 @@ def per_pair_optimal_treatment_plan_via_lagrangian_dual(
     kkt_tolerance: float = 1e-5,
     write_sidecar: bool = True,
 ) -> OptimalPerPairTreatmentPlan:
-    """Operator-binding Lagrangian-dual per-pair treatment planner (Consumer 15).
+    """Lagrangian-dual per-pair treatment proposal planner (Consumer 15).
 
     REPLACES the earlier heuristic
     ``per_pair_byte_class_venn_to_substrate_dispatch_decision`` sketch per the
@@ -4581,6 +4599,10 @@ def per_pair_optimal_treatment_plan_via_lagrangian_dual(
     ``evidence_grade='predicted'`` per CLAUDE.md "Apples-to-apples evidence
     discipline" — NEVER claims contest-CUDA until a paired auth-eval anchor
     is appended.
+
+    Historical API names retain ``optimal`` for compatibility. Greedy recovery
+    prunes locally harmful actions, so measured composition sign reversals make
+    this an acquisition proposal only; G33 whole-object rebuilds decide.
 
     Per the operator's 3 explicit weaknesses:
       (1) **Interaction modeling**: each assignment carries
@@ -4701,8 +4723,7 @@ def per_pair_optimal_treatment_plan_via_lagrangian_dual(
     # Aggregate predicted ΔS
     predicted_delta_s = float(sum(a.predicted_delta_s_contribution for a in assignments))
 
-    # Confidence interval: ±5% bootstrap-style placeholder; calibrated by a
-    # paired empirical anchor in future revisions (per Catalog #227 sister).
+    # Uncalibrated ±5% symmetric heuristic retained for schema compatibility.
     ci_half_width = max(abs(predicted_delta_s) * 0.05, 1e-6)
     ci = (predicted_delta_s - ci_half_width, predicted_delta_s + ci_half_width)
 
@@ -4751,6 +4772,15 @@ def per_pair_optimal_treatment_plan_via_lagrangian_dual(
             "score_claim": plan_obj.score_claim,
             "promotion_eligible": plan_obj.promotion_eligible,
             "ready_for_exact_eval_dispatch": plan_obj.ready_for_exact_eval_dispatch,
+            "endpoint_proposal_generator_only": plan_obj.endpoint_proposal_generator_only,
+            "global_optimality_claim": plan_obj.global_optimality_claim,
+            "sign_reversal_safe": plan_obj.sign_reversal_safe,
+            "locally_nonimproving_candidates_pruned_by_recovery": (
+                plan_obj.locally_nonimproving_candidates_pruned_by_recovery
+            ),
+            "whole_object_rebuild_required": plan_obj.whole_object_rebuild_required,
+            "confidence_interval_calibrated": plan_obj.confidence_interval_calibrated,
+            "confidence_interval_kind": plan_obj.confidence_interval_kind,
             "measurement_axis": measurement_axis,
             "measurement_hardware": measurement_hardware,
             "operating_point": plan_obj.operating_point,

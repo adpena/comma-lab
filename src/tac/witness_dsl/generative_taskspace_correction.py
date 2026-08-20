@@ -87,6 +87,7 @@ from tac.optimization.direct_description_carrier_compose import (
     _event_mask,
     _island_shape_mask,
     _worldsheet_track_mask,
+    requires_pose6_transport,
 )
 from tac.optimization.direct_description_minimizer import DirectDescriptionError
 from tac.witness_dsl.factorized_v9_predictor import (
@@ -785,7 +786,7 @@ def _apply_program(
                 event,
                 source_pair_id=source_pair,
                 source_pair_start=state.pair_start,
-                pose6_codes=state.pose6_codes,
+                pose6_codes=state.pose6_codes if requires_pose6_transport(event) else None,
             )
             masks[event.role] = (
                 masks[event.role] | event_sites if event.action == "birth" else masks[event.role] & ~event_sites
@@ -795,7 +796,7 @@ def _apply_program(
                 atom,
                 source_pair_id=source_pair,
                 source_pair_start=state.pair_start,
-                pose6_codes=state.pose6_codes,
+                pose6_codes=state.pose6_codes if requires_pose6_transport(atom) else None,
             )
             masks["Movable"] = (
                 masks["Movable"] | atom_sites if atom.action == "birth" else masks["Movable"] & ~atom_sites

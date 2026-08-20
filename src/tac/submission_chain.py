@@ -308,8 +308,22 @@ class ArchiveByteLedger:
         return self.residual_bytes == 0 and self.payload_reencodes_identically
 
 
-# Section names for the ix2/v4d four-section joint group, in shipped order.
-_IX2_JOINT_NAMES: Final = ("config", "renderer", "selector", "pose_warp")
+# Section names for the ix2/v4d joint group, in shipped order.
+#
+# The first four are the base v4d group.  ``frame0_pose_repair`` is the OPTIONAL
+# fifth section (ddm_fz1's F0PR1 int16 DCT frame_0 pose-repair stream): archives
+# that do not carry it simply have four sections, and the extra name is unused,
+# so naming it here cannot change any existing ledger.  It is named rather than
+# left to the ``section_{i}`` fallback because an unnamed counted section is a
+# section no reader can attribute bytes to -- the ledger would still CLOSE while
+# reporting "section_4", which is exactly the silent-instrument shape.
+_IX2_JOINT_NAMES: Final = (
+    "config",
+    "renderer",
+    "selector",
+    "pose_warp",
+    "frame0_pose_repair",
+)
 
 
 def _section_magic(blob: bytes) -> str | None:

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import math
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -422,6 +423,13 @@ def test_happy_path_returns_typed_plan(
     assert plan.score_claim is False
     assert plan.promotion_eligible is False
     assert plan.ready_for_exact_eval_dispatch is False
+    assert plan.endpoint_proposal_generator_only is True
+    assert plan.global_optimality_claim is False
+    assert plan.sign_reversal_safe is False
+    assert plan.locally_nonimproving_candidates_pruned_by_recovery is True
+    assert plan.whole_object_rebuild_required is True
+    assert plan.confidence_interval_calibrated is False
+    assert plan.confidence_interval_kind == "UNCALIBRATED_SYMMETRIC_HEURISTIC"
 
 
 def test_plan_post_init_forbids_score_claim_leakage():
@@ -447,6 +455,20 @@ def test_plan_post_init_forbids_score_claim_leakage():
             is_pareto_feasible=True,
             score_claim=True,  # forbidden
         )
+
+
+def test_plan_cannot_relabel_greedy_recovery_as_global_optimum(
+    per_pair_grad_small, archive_sha256, operating_point_pr106, axis_meta, tmp_root
+):
+    plan = mgc.per_pair_optimal_treatment_plan_via_lagrangian_dual(
+        per_pair_grad_small,
+        archive_sha256=archive_sha256,
+        operating_point=operating_point_pr106,
+        write_sidecar=False,
+        **axis_meta,
+    )
+    with pytest.raises(mgc.OptimalPerPairTreatmentPlanError, match="proposal surface"):
+        replace(plan, global_optimality_claim=True)
 
 
 def test_plan_post_init_forbids_wrong_evidence_grade():
@@ -687,6 +709,13 @@ def test_sidecar_json_emit_writes_to_canonical_path(
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["endpoint_proposal_generator_only"] is True
+    assert payload["global_optimality_claim"] is False
+    assert payload["sign_reversal_safe"] is False
+    assert payload["locally_nonimproving_candidates_pruned_by_recovery"] is True
+    assert payload["whole_object_rebuild_required"] is True
+    assert payload["confidence_interval_calibrated"] is False
+    assert payload["confidence_interval_kind"] == "UNCALIBRATED_SYMMETRIC_HEURISTIC"
     assert payload["archive_sha256"] == archive_sha256
     assert "weakness_addressment" in payload
     assert "wire_in_hooks" in payload

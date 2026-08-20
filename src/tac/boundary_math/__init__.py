@@ -12,8 +12,10 @@ the RIGHT data structures + a real combinatorial SOLVE:
 
 - :mod:`tac.boundary_math.partition` — region adjacency graph + connected components
   of ``L*`` (contiguity).  The O(boundary) representation.
-- :mod:`tac.boundary_math.contour_codec` — boundary contour codec (chain-code) with
-  exact roundtrip; the partition's description length (bytes).
+- :mod:`tac.boundary_math.dense_raster_lzma_baseline` — exact dense-label
+  RAW-LZMA2 baseline; not a boundary-edge codec.
+- :mod:`tac.boundary_math.context_partition_codec` — context/range-coded
+  partition-store replacement for the dense baseline.
 - :mod:`tac.boundary_math.bitmask_dseg` — exact ``d_seg = popcount(XOR)/N`` over the
   5 class masks (the bitmask functional that evaluate.py actually scores).
 - :mod:`tac.boundary_math.margin_polytope` — per-pixel margin-polytope free-budget
@@ -34,8 +36,9 @@ from tac.boundary_math.bitmask_dseg import (
     d_seg_bitmask,
     d_seg_reference,
 )
-from tac.boundary_math.contour_codec import (
+from tac.boundary_math.dense_raster_lzma_baseline import (
     ContourCode,
+    DenseRasterLzmaCode,
     decode_partition,
     encode_partition,
     partition_description_bytes,
@@ -120,6 +123,7 @@ __all__ = [
     "WATER_LEVEL_BYTES_PER_FLIP",
     "ClassPalette",
     "ContourCode",
+    "DenseRasterLzmaCode",
     "GeneratorConfig",
     "LaneCenterline",
     "LaneHeadstartCorpusResult",

@@ -5919,6 +5919,58 @@ def ResumeLRWarmup(beta2: float = 0.999, steps_per_epoch: int = 75, c: float = 2
     )
 
 
+def StageTransitionSoftVelocityBlend(
+    *,
+    enabled: bool = False,
+    beta2: float = 0.999,
+    c: float = 2.0,
+    alpha_start: float = 0.0,
+    alpha_end: float = 1.0,
+    shape: str = "linear",
+    clip_rms: float | None = None,
+) -> Lever:
+    """FA1/FB1 default-off DSL stub for the soft first-moment boundary blend.
+
+    The treatment is the named optimizer-state arithmetic
+    ``m_new=(1-alpha(t))*m_mapped+alpha(t)*m_fresh`` over a beta2-derived optimizer-step
+    window.  There is intentionally no trainer flag here yet: the levelset trainer has no
+    soft-blend consumer, and emitting an invented flag would violate the DSL contract.  The
+    ON state therefore refuses until a captured replay corpus and trainer consumer land.
+    """
+
+    from tac.optimization.stage_transition_soft_velocity_blend import (
+        StageTransitionSoftVelocityBlendConfig,
+    )
+
+    cfg = StageTransitionSoftVelocityBlendConfig.from_beta2(
+        beta2,
+        c=c,
+        alpha_start=alpha_start,
+        alpha_end=alpha_end,
+        shape=shape,
+        clip_rms=clip_rms,
+    )
+    if enabled:
+        raise ValueError(
+            "StageTransitionSoftVelocityBlend(enabled=True) has no levelset trainer consumer yet; "
+            "capture a stage-boundary optimizer-state replay corpus and land the trainer hook "
+            "before enabling"
+        )
+    clip_note = "off" if cfg.clip_rms is None else str(float(cfg.clip_rms))
+    return Lever(
+        "stage_transition_soft_velocity_blend_off",
+        overrides={},
+        notes=(
+            "ddm_fb1 FA1 soft velocity blend DESIGNED-STUB default OFF; no trainer flags emitted "
+            f"(never-invent-flags). Arithmetic: m_new=(1-a(t))*m_mapped+a(t)*m_fresh over "
+            f"{cfg.window_steps} optimizer steps derived as ceil({c}/(1-{beta2})); "
+            f"alpha={cfg.alpha_start}->{cfg.alpha_end} shape={cfg.shape}; clip_rms={clip_note}. "
+            "ON requires captured previous optimizer state plus recorded post-boundary gradients "
+            "and a named levelset trainer consumer."
+        ),
+    )
+
+
 def PoseEngageWPoseRamp() -> Lever:
     """p0_resume_warmup_geometry_20260717 item 6b (#518): cosine w_pose ramp-in at pose engage.
 

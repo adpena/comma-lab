@@ -32,7 +32,7 @@ import struct
 import tempfile
 import zipfile
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from decimal import ROUND_CEILING, Decimal, InvalidOperation, localcontext
 from fractions import Fraction
 from pathlib import Path
@@ -42,6 +42,7 @@ import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, StrictStr, model_validator
 
 from tac.artifact_quarantine import is_quarantined_archive_bytes, scan_text
+from tac.canonical_frontier_pointer import CANONICAL_FRONTIER_POINTER_PATH
 from tac.optimization.s4_archive_composer import (
     SECTION_ORDER,
     SectionBytes,
@@ -49,12 +50,20 @@ from tac.optimization.s4_archive_composer import (
     parse_sections,
     serialize_sections,
 )
+from tac.witness_dsl.dynamic_frontier_target import (
+    DynamicFrontierTargetError,
+    DynamicFrontierTargetSnapshot,
+    load_dynamic_frontier_target,
+    verify_dynamic_frontier_target_snapshot,
+)
 
 PRIMARY_SPEC_REL: Final = ".omx/research/direct_description_minimizer_PRIMARY_SPEC_20260721T214800Z.md"
 PRIMARY_SPEC_SHA256: Final = "3ae7166e633d46e6341c3565e0fd2d475c501e6120fa68c419ce89e931f37aa9"
 SOURCE_BYTES: Final = 37_545_489
 SEED: Final = 1234
-POINTER_SCORE_TEXT: Final = "0.1910828242"
+# Compatibility for settled receipt-only sibling lanes. Numeric consumers must
+# use the verified dynamic snapshot API below.
+POINTER_SCORE_TEXT: Final = "DYNAMIC_FRONTIER_TARGET_NOT_CONSUMED"
 STRICT_SCORE_TEXT: Final = "0.15"
 RATE_LAMBDA: Final = Fraction(25, SOURCE_BYTES)
 TOLERANCE_RUNG_TEXT: Final = ("0.000152", "0.000300", "0.000500", "0.000800")
@@ -68,6 +77,7 @@ S4_BASELINE_ARCHIVE: Final = (
 S4_BASELINE_BYTES: Final = 451_191
 S4_BASELINE_SHA256: Final = "d84f2fe053239d1542ba381420e9569d431ed2015e22e60e49ef48f1321696ed"
 _REPO_ROOT: Final = Path(__file__).resolve().parents[3]
+_DYNAMIC_TARGET_REPO_ROOT = _REPO_ROOT
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _SAFE_COMPONENT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
@@ -133,6 +143,39 @@ _CUSTODY_OUTPUT_SHAPE: Final = (64, 2, 8, 8, 3)
 
 class DirectDescriptionError(ValueError):
     """A typed description, custody record, or launch precondition is invalid."""
+
+
+def _expected_dynamic_pointer_path() -> str:
+    return os.path.abspath(
+        os.fspath(_DYNAMIC_TARGET_REPO_ROOT / CANONICAL_FRONTIER_POINTER_PATH)
+    )
+
+
+def _require_dynamic_frontier_snapshot(
+    snapshot: DynamicFrontierTargetSnapshot | None,
+    *,
+    now_utc_iso: str | None,
+) -> DynamicFrontierTargetSnapshot:
+    try:
+        if snapshot is None:
+            snapshot = load_dynamic_frontier_target(
+                repo_root=_DYNAMIC_TARGET_REPO_ROOT,
+                now_utc_iso=now_utc_iso,
+            )
+        if not isinstance(snapshot, DynamicFrontierTargetSnapshot):
+            raise TypeError("frontier_snapshot must be a DynamicFrontierTargetSnapshot")
+        if snapshot.pointer_path != _expected_dynamic_pointer_path():
+            raise DirectDescriptionError(
+                "direct-description target refuses a snapshot from a noncanonical pointer path"
+            )
+        return verify_dynamic_frontier_target_snapshot(
+            snapshot,
+            now_utc_iso=now_utc_iso,
+        )
+    except (DynamicFrontierTargetError, TypeError) as exc:
+        raise DirectDescriptionError(
+            f"dynamic frontier target is not current and canonical: {exc}"
+        ) from exc
 
 
 def _sha256(payload: bytes) -> str:
@@ -1237,13 +1280,23 @@ def numpy_reference_rank(candidates: Sequence[Mapping[str, Any]], *, seed: int =
     return sorted(ranked, key=lambda row: (row["score"], row["tie_break"], row["candidate_id"]))
 
 
-def derive_ceil_minus_one_caps(target_receipt_path: Path, expected_sha256: str) -> dict[str, Any]:
+def derive_ceil_minus_one_caps(
+    target_receipt_path: Path,
+    expected_sha256: str,
+    *,
+    frontier_snapshot: DynamicFrontierTargetSnapshot | None = None,
+    now_utc_iso: str | None = None,
+) -> dict[str, Any]:
     """Derive binding integer caps from a SHA-bound full-precision receipt.
 
     Decimal strings are mandatory.  JSON floats and planning-only receipts are
     refused so displayed rounded values cannot leak into a launch config.
     """
 
+    frontier = _require_dynamic_frontier_snapshot(
+        frontier_snapshot,
+        now_utc_iso=now_utc_iso,
+    )
     expected_sha256 = _require_sha256(expected_sha256, "expected_sha256")
     path = Path(target_receipt_path)
     try:
@@ -1329,15 +1382,20 @@ def derive_ceil_minus_one_caps(target_receipt_path: Path, expected_sha256: str) 
             integer_cap = int(continuous.to_integral_value(rounding=ROUND_CEILING)) - 1
             return integer_cap, continuous
 
-        pointer_cap, pointer_continuous = cap(POINTER_SCORE_TEXT)
+        dynamic_frontier_score_text = str(frontier.target_score)
+        pointer_cap, pointer_continuous = cap(dynamic_frontier_score_text)
         strict_cap, strict_continuous = cap(STRICT_SCORE_TEXT)
+    # Custody checks above can overlap an atomic pointer refresh. Reopen the
+    # same snapshot before returning executable caps.
+    _require_dynamic_frontier_snapshot(frontier, now_utc_iso=now_utc_iso)
     return {
         "schema": "direct_description_ceil_minus_one_caps.v1",
         "full_precision_target_receipt_path": str(path),
         "full_precision_target_receipt_sha256": observed_sha256,
         "solved_d_seg": d_seg_text,
         "solved_d_pose": d_pose_text,
-        "pointer_score": POINTER_SCORE_TEXT,
+        "pointer_score": dynamic_frontier_score_text,
+        "dynamic_frontier_target": asdict(frontier),
         "pointer_cap_bytes": pointer_cap,
         "pointer_continuous_bytes": format(pointer_continuous, "f"),
         "pointer_cap_formula": "ceil_minus_one",

@@ -237,4 +237,8 @@ def test_blocker_names_are_candidate_claim_explicit() -> None:
         G105BlockerCodeV1.FRESH_G46_SOURCE_BOUND_CHECKPOINT_OWED.value
         == "G105_FRESH_G46_SOURCE_BOUND_V9_V10_CHECKPOINT_OWED"
     )
+    assert (
+        G105BlockerCodeV1.SUPERSEDED_BY_PHYSICAL_G109_G111_G112.value
+        == "G105_SUPERSEDED_BY_PHYSICAL_G109_G111_G112"
+    )
     assert json.loads(json.dumps([item.value for item in G105BlockerCodeV1]))

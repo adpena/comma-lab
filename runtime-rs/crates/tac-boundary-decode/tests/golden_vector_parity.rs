@@ -45,7 +45,7 @@ fn try_load_bin(name: &str) -> Option<Vec<u8>> {
     Some(std::fs::read(&path).expect("input fixture must read"))
 }
 
-// ── Contour codec DECODE parity (RAW-LZMA2 → raw label bytes) ────────────────
+// ── Dense-raster LZMA DECODE parity (RAW-LZMA2 → raw label bytes) ────────────
 
 fn contour_decode_case(name: &str, payload_fixture: &str) {
     let manifest = match try_load(name) {

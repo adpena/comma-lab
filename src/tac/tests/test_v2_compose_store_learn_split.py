@@ -3,10 +3,14 @@
 
 from __future__ import annotations
 
+import json
+from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
+from tac.canonical_frontier_pointer import POINTER_SCHEMA_VERSION
 from tac.v2_compose.store_learn_split import (
     DECISION_GENERATE,
     DECISION_LEARN,
@@ -18,8 +22,53 @@ from tac.v2_compose.store_learn_split import (
     load_reach_kstar,
     load_warp_recoverability_from_grok,
 )
+from tac.witness_dsl.dynamic_frontier_target import (
+    DynamicFrontierTargetError,
+    DynamicFrontierTargetSnapshot,
+    load_dynamic_frontier_target,
+)
 
 _REPO = Path(__file__).resolve().parents[3]
+
+
+def _pointer_payload(score: float) -> dict[str, object]:
+    now = datetime.now(UTC).isoformat()
+    entry = {
+        "score": score,
+        "rank": 1,
+        "name": "synthetic-public-row",
+        "pr_number": 9001,
+        "pr_url": "https://invalid.example/synthetic",
+    }
+    return {
+        "schema_version": POINTER_SCHEMA_VERSION,
+        "our_local_frontier_contest_cpu": None,
+        "our_local_frontier_contest_cuda": None,
+        "submitted_pr_number_for_current_frontier": None,
+        "upstream_leaderboard_snapshot": {
+            "best_entry": dict(entry),
+            "entries": [dict(entry)],
+        },
+        "upstream_leaderboard_snapshot_at_utc": now,
+        "last_refreshed_utc": now,
+        "auto_update_on_dispatch_completion": True,
+        "pointer_refresh_command": "synthetic-fixture-do-not-run",
+        "refresh_provenance": {"fixture": True},
+        "effective_frontier": None,
+    }
+
+
+def _write_pointer(repo: Path, score: float) -> Path:
+    path = repo / ".omx/state/canonical_frontier_pointer.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(_pointer_payload(score)), encoding="utf-8")
+    return path
+
+
+@pytest.fixture
+def frontier_target(tmp_path: Path) -> DynamicFrontierTargetSnapshot:
+    _write_pointer(tmp_path, 0.172)
+    return load_dynamic_frontier_target(repo_root=tmp_path)
 
 
 def _measured_like() -> dict[str, ClassRecoverability]:
@@ -33,9 +82,9 @@ def _measured_like() -> dict[str, ClassRecoverability]:
     }
 
 
-def test_known_split_matches_measured_optimum():
+def test_known_split_matches_measured_optimum(frontier_target: DynamicFrontierTargetSnapshot):
     """The rule reproduces the KNOWN split: Road=ground, Undriv=rotonly, MyCar=identity; Lane+Movable=LEARN."""
-    plan = encode_known_split(_measured_like(), reach_kstar=47, n_pairs=600)
+    plan = encode_known_split(_measured_like(), reach_kstar=47, frontier_target=frontier_target, n_pairs=600)
     assert plan.per_class["Road"].decision == DECISION_GENERATE
     assert plan.per_class["Road"].warp_type == WARP_GROUND_HOMOGRAPHY
     assert plan.per_class["Undriv"].decision == DECISION_GENERATE
@@ -50,44 +99,59 @@ def test_known_split_matches_measured_optimum():
     assert set(plan.residual_target_classes) == {"Lane", "Movable"}
 
 
-def test_keyframe_count_is_ceil():
-    plan = encode_known_split(_measured_like(), reach_kstar=47, n_pairs=600)
+def test_keyframe_count_is_ceil(frontier_target: DynamicFrontierTargetSnapshot):
+    plan = encode_known_split(_measured_like(), reach_kstar=47, frontier_target=frontier_target, n_pairs=600)
     assert plan.keyframe_count == 13  # ceil(600/47)
-    plan2 = encode_known_split(_measured_like(), reach_kstar=50, n_pairs=600)
+    plan2 = encode_known_split(_measured_like(), reach_kstar=50, frontier_target=frontier_target, n_pairs=600)
     assert plan2.keyframe_count == 12  # ceil(600/50)
 
 
-def test_break_even_is_positive_and_below_floor():
+def test_break_even_is_positive_and_below_floor(frontier_target: DynamicFrontierTargetSnapshot):
     """At the known-store rate the frontier break-even d_seg is positive (~0.0017) and BELOW the
     deterministic bulk floor (0.0185) -> the residual INR must close the gap (FACT 2)."""
-    plan = encode_known_split(_measured_like(), reach_kstar=47, n_pairs=600)
+    plan = encode_known_split(_measured_like(), reach_kstar=47, frontier_target=frontier_target, n_pairs=600)
     be = plan.break_even["d_seg_to_beat_frontier_at_known_store"]
     assert 0.0 < be < 0.005
     assert plan.break_even["deterministic_bulk_dseg_floor"] > be  # the gap the residual must close
 
 
-def test_learn_byte_cost_is_open():
-    plan = encode_known_split(_measured_like(), reach_kstar=47, n_pairs=600)
+def test_learn_byte_cost_is_open(frontier_target: DynamicFrontierTargetSnapshot):
+    plan = encode_known_split(_measured_like(), reach_kstar=47, frontier_target=frontier_target, n_pairs=600)
     assert plan.predicted_bytes["learn_residual_inr"] is None  # OPEN — the GPU run
-    assert plan.predicted_bytes["free_generated"] == 0          # rule-118 FREE
+    assert plan.predicted_bytes["free_generated"] == 0  # rule-118 FREE
     assert plan.predicted_bytes["store_total"] > 0
 
 
-def test_threshold_moves_decision():
+def test_threshold_moves_decision(frontier_target: DynamicFrontierTargetSnapshot):
     """A class just above the recoverability threshold is LEARN; just below is GENERATE."""
     rec = {"X": ClassRecoverability("X", 0.10, 0.10, None, 0.0, 0.1)}
-    learn = encode_known_split(rec, reach_kstar=47, n_pairs=600, recoverability_dseg_max=0.05)
+    learn = encode_known_split(
+        rec,
+        reach_kstar=47,
+        frontier_target=frontier_target,
+        n_pairs=600,
+        recoverability_dseg_max=0.05,
+    )
     assert learn.per_class["X"].decision == DECISION_LEARN
-    gen = encode_known_split(rec, reach_kstar=47, n_pairs=600, recoverability_dseg_max=0.2)
+    gen = encode_known_split(
+        rec,
+        reach_kstar=47,
+        frontier_target=frontier_target,
+        n_pairs=600,
+        recoverability_dseg_max=0.2,
+    )
     assert gen.per_class["X"].decision == DECISION_GENERATE
 
 
-def test_class_index_is_metadata_only_not_decision():
+def test_class_index_is_metadata_only_not_decision(frontier_target: DynamicFrontierTargetSnapshot):
     """The decision must not depend on the class index (CLAUDE.md NO-hardcode-index rule)."""
     rec = _measured_like()
-    p_no_map = encode_known_split(rec, reach_kstar=47, n_pairs=600)
+    p_no_map = encode_known_split(rec, reach_kstar=47, frontier_target=frontier_target, n_pairs=600)
     p_scrambled = encode_known_split(
-        rec, reach_kstar=47, n_pairs=600,
+        rec,
+        reach_kstar=47,
+        frontier_target=frontier_target,
+        n_pairs=600,
         class_index_map={"Road": 4, "Lane": 0, "Undriv": 1, "Movable": 3, "MyCar": 2},
     )
     # identical decisions regardless of the (metadata-only) index map
@@ -97,36 +161,66 @@ def test_class_index_is_metadata_only_not_decision():
     assert p_scrambled.per_class["Road"].cls_index == 4  # recorded, but not used
 
 
-def test_attribution_confirmation():
+def test_attribution_confirmation(frontier_target: DynamicFrontierTargetSnapshot):
     rec = _measured_like()
     confirmed = encode_known_split(
-        rec, reach_kstar=47, n_pairs=600,
+        rec,
+        reach_kstar=47,
+        frontier_target=frontier_target,
+        n_pairs=600,
         attribution={"residual_classes": ["Lane", "Movable"]},
     )
     assert confirmed.confirmed_by_attribution is True
     diverged = encode_known_split(
-        rec, reach_kstar=47, n_pairs=600,
+        rec,
+        reach_kstar=47,
+        frontier_target=frontier_target,
+        n_pairs=600,
         attribution={"residual_classes": ["Road"]},  # Road is GENERATE -> divergence is a FINDING
     )
     assert diverged.confirmed_by_attribution is False  # never overrides; records the finding
 
 
-def test_empty_and_bad_inputs_raise():
+def test_empty_and_bad_inputs_raise(frontier_target: DynamicFrontierTargetSnapshot):
     with pytest.raises(ValueError):
-        encode_known_split({}, reach_kstar=47, n_pairs=600)
+        encode_known_split({}, reach_kstar=47, frontier_target=frontier_target, n_pairs=600)
     with pytest.raises(ValueError):
-        encode_known_split(_measured_like(), reach_kstar=0, n_pairs=600)
+        encode_known_split(_measured_like(), reach_kstar=0, frontier_target=frontier_target, n_pairs=600)
     with pytest.raises(ValueError):
-        encode_known_split(_measured_like(), reach_kstar=47, n_pairs=0)
+        encode_known_split(_measured_like(), reach_kstar=47, frontier_target=frontier_target, n_pairs=0)
 
 
-def test_to_json_roundtrips_shape():
-    plan = encode_known_split(_measured_like(), reach_kstar=47, n_pairs=600)
+def test_to_json_roundtrips_shape(frontier_target: DynamicFrontierTargetSnapshot):
+    plan = encode_known_split(_measured_like(), reach_kstar=47, frontier_target=frontier_target, n_pairs=600)
     j = plan.to_json()
     assert j["score_claim"] is False
     assert j["promotable"] is False
+    assert j["competitive_target_score"] == 0.172
+    assert j["frontier_target"]["pointer_sha256"] == frontier_target.pointer_sha256
+    assert "frontier_pointer" not in j
     assert set(j["per_class"]) == set(_measured_like())
     assert j["keyframe_count"] == 13
+
+
+def test_forged_target_is_refused_before_plan_exists(
+    frontier_target: DynamicFrontierTargetSnapshot,
+) -> None:
+    forged = replace(frontier_target, target_score=0.19110)
+    with pytest.raises(DynamicFrontierTargetError, match="changed after snapshot"):
+        encode_known_split(_measured_like(), reach_kstar=47, frontier_target=forged, n_pairs=600)
+
+
+def test_plan_report_refuses_pointer_refresh(
+    frontier_target: DynamicFrontierTargetSnapshot,
+) -> None:
+    plan = encode_known_split(_measured_like(), reach_kstar=47, frontier_target=frontier_target, n_pairs=600)
+    Path(frontier_target.pointer_path).write_text(
+        json.dumps(_pointer_payload(0.171)),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(DynamicFrontierTargetError, match="changed after snapshot"):
+        plan.to_json()
 
 
 # --- real-data smoke (skipped if the measured JSONs are absent) ---
@@ -135,10 +229,10 @@ _REACH = _REPO / "experiments/results/screw_reach/reach_n96.json"
 
 
 @pytest.mark.skipif(not (_GROK.exists() and _REACH.exists()), reason="measured JSONs absent")
-def test_real_measured_data_reproduces_known_split():
+def test_real_measured_data_reproduces_known_split(frontier_target: DynamicFrontierTargetSnapshot):
     rec = load_warp_recoverability_from_grok(_GROK)
     kstar = load_reach_kstar(_REACH)
-    plan = encode_known_split(rec, kstar, n_pairs=600)
+    plan = encode_known_split(rec, kstar, frontier_target=frontier_target, n_pairs=600)
     assert set(plan.generate_classes) == {"Road", "Undriv", "MyCar"}
     assert set(plan.learn_classes) == {"Lane", "Movable"}
     assert kstar == 47

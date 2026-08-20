@@ -18,7 +18,7 @@ Key honesty about d_seg measurement (NO FAKE class 8 — measure the exact funct
         target).  This is the exact label map evaluate.py compares against.
     (2) round-trip consistency: encode L* -> decode -> assert bit-exact (the codec
         stores the scored object losslessly), and the byte cost is the real
-        contour-codec length.
+        dense-raster LZMA baseline length.
 
   The region-merge SOLVE produces a merged partition; its d_seg vs L* is the EXACT
   popcount (the same functional evaluate.py scores), because a carrier that
@@ -42,7 +42,7 @@ from pathlib import Path
 import numpy as np
 
 from tac.boundary_math.bitmask_dseg import d_seg_reference
-from tac.boundary_math.contour_codec import decode_partition, encode_partition
+from tac.boundary_math.dense_raster_lzma_baseline import decode_partition, encode_partition
 from tac.boundary_math.region_merge import (
     WATER_LEVEL_BYTES_PER_FLIP,
     RegionMergePlan,
@@ -126,7 +126,7 @@ class SegCoreResult:
 
     pair_idx: int
     shape: tuple[int, int]
-    partition_bytes: int  # real contour-codec description length of L*
+    partition_bytes: int  # real dense-raster LZMA baseline description length of L*
     roundtrip_exact: bool  # codec encode->decode == L* bit-exact
     d_seg_lstar: float  # d_seg of stored L* vs scored L* (== 0 by construction)
     n_regions: int  # connected components of L*
@@ -142,8 +142,8 @@ def build_and_measure_lstar(
 ) -> SegCoreResult:
     """Extract L* on the real scorer, encode it, and report the exact typed row.
 
-    This is the PREDICTED case: storing the exact contour-coded partition lands at
-    d_seg == 0 (it IS the SegNet argmax) at byte cost == the contour-codec length.
+    This is the PREDICTED case: storing the exact dense-label partition lands at
+    d_seg == 0 (it IS the SegNet argmax) at byte cost == the dense-raster LZMA length.
     """
 
     from tac.boundary_math.partition import build_region_adjacency_graph

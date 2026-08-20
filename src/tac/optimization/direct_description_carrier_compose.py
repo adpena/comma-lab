@@ -580,6 +580,20 @@ class IslandShapeAtomV1:
             raise DirectDescriptionError("one-pair island shapes must not carry inert transport gains")
 
 
+def requires_pose6_transport(atom: TopologyEventV1 | IslandShapeAtomV1) -> bool:
+    """Return whether an event/island receiver output can depend on Pose6.
+
+    Transport dependence is carried by the two quantized gains, not by the
+    nominal primitive family or its lifetime.  Keeping this predicate next to
+    the primitive definitions gives admission and rasterization one shared
+    source of truth.
+    """
+
+    if type(atom) not in {TopologyEventV1, IslandShapeAtomV1}:
+        raise DirectDescriptionError("Pose6 dependency requires an exact topology-event or island-shape atom")
+    return atom.transport_gain_x_q4 != 0 or atom.transport_gain_y_q4 != 0
+
+
 @dataclass(frozen=True, order=True, slots=True)
 class MovableWorldsheetTrackV1:
     """One persist-unless-event Movable object in the PREDICT grammar.
@@ -2288,19 +2302,26 @@ def _event_mask(
     *,
     source_pair_id: int,
     source_pair_start: int,
-    pose6_codes: np.ndarray,
+    pose6_codes: np.ndarray | None,
 ) -> np.ndarray:
     """Rasterize one parametric topology event; target cells never enter."""
 
+    transport_required = requires_pose6_transport(event)
+    if transport_required and pose6_codes is None:
+        raise DirectDescriptionError("nonzero-gain topology event requires Pose6 transport")
     if not event.pair_index <= source_pair_id < event.pair_index + event.lifetime:
         return np.zeros((384, 512), dtype=bool)
-    birth_local = event.pair_index - source_pair_start
-    current_local = source_pair_id - source_pair_start
-    if not (0 <= birth_local < len(pose6_codes) and 0 <= current_local < len(pose6_codes)):
-        raise DirectDescriptionError("topology-event Pose6 transport address escaped the local window")
-    pose_delta = pose6_codes[current_local].astype(np.int16) - pose6_codes[birth_local].astype(np.int16)
-    dx = int(np.rint(float(pose_delta[0]) * event.transport_gain_x_q4 / 16.0))
-    dy = int(np.rint(float(pose_delta[1]) * event.transport_gain_y_q4 / 16.0))
+    dx = 0
+    dy = 0
+    if transport_required:
+        assert pose6_codes is not None
+        birth_local = event.pair_index - source_pair_start
+        current_local = source_pair_id - source_pair_start
+        if not (0 <= birth_local < len(pose6_codes) and 0 <= current_local < len(pose6_codes)):
+            raise DirectDescriptionError("topology-event Pose6 transport address escaped the local window")
+        pose_delta = pose6_codes[current_local].astype(np.int16) - pose6_codes[birth_local].astype(np.int16)
+        dx = int(np.rint(float(pose_delta[0]) * event.transport_gain_x_q4 / 16.0))
+        dy = int(np.rint(float(pose_delta[1]) * event.transport_gain_y_q4 / 16.0))
     y0, y1 = event.y0 + dy, event.y1 + dy
     x0, x1 = event.x0 + dx, event.x1 + dx
     clipped_y0, clipped_y1 = max(0, y0), min(384, y1)
@@ -2326,19 +2347,28 @@ def _island_shape_mask(
     *,
     source_pair_id: int,
     source_pair_start: int,
-    pose6_codes: np.ndarray,
+    pose6_codes: np.ndarray | None,
 ) -> np.ndarray:
     """Synthesize a moment-shaped island with one compact curvelet lobe."""
 
+    transport_required = requires_pose6_transport(atom)
+    if transport_required and pose6_codes is None:
+        raise DirectDescriptionError("nonzero-gain island shape requires Pose6 transport")
     if not atom.pair_index <= source_pair_id < atom.pair_index + atom.lifetime:
         return np.zeros((384, 512), dtype=bool)
-    birth_local = atom.pair_index - source_pair_start
-    current_local = source_pair_id - source_pair_start
-    if not (0 <= birth_local < len(pose6_codes) and 0 <= current_local < len(pose6_codes)):
-        raise DirectDescriptionError("island-shape Pose6 transport address escaped the local window")
-    pose_delta = pose6_codes[current_local].astype(np.int16) - pose6_codes[birth_local].astype(np.int16)
-    center_x = atom.center_x + int(np.rint(float(pose_delta[0]) * atom.transport_gain_x_q4 / 16.0))
-    center_y = atom.center_y + int(np.rint(float(pose_delta[1]) * atom.transport_gain_y_q4 / 16.0))
+    dx = 0
+    dy = 0
+    if transport_required:
+        assert pose6_codes is not None
+        birth_local = atom.pair_index - source_pair_start
+        current_local = source_pair_id - source_pair_start
+        if not (0 <= birth_local < len(pose6_codes) and 0 <= current_local < len(pose6_codes)):
+            raise DirectDescriptionError("island-shape Pose6 transport address escaped the local window")
+        pose_delta = pose6_codes[current_local].astype(np.int16) - pose6_codes[birth_local].astype(np.int16)
+        dx = int(np.rint(float(pose_delta[0]) * atom.transport_gain_x_q4 / 16.0))
+        dy = int(np.rint(float(pose_delta[1]) * atom.transport_gain_y_q4 / 16.0))
+    center_x = atom.center_x + dx
+    center_y = atom.center_y + dy
     extent = max(atom.radius_x, atom.radius_y) * 2
     y0, y1 = max(0, center_y - extent), min(384, center_y + extent + 1)
     x0, x1 = max(0, center_x - extent), min(512, center_x + extent + 1)
@@ -3016,14 +3046,18 @@ def receive_carrier_compose_archive(
         "topology_event_count": len(topology_events),
         "topology_event_parse_reencode_identical": _encode_topology_events(topology_events)
         == members.get(EVENT_CORRECTION_MEMBER, b""),
-        "topology_events_consume_counted_pose6_transport": any(row.lifetime > 1 for row in topology_events),
+        "topology_events_consume_counted_pose6_transport": any(
+            requires_pose6_transport(row) for row in topology_events
+        ),
         "boundary_shearlet_count": len(boundary_shearlets),
         "boundary_shearlet_parse_reencode_identical": _encode_boundary_shearlet_atoms(boundary_shearlets)
         == members.get(BOUNDARY_SHEARLET_MEMBER, b""),
         "island_shape_count": len(island_shapes),
         "island_shape_parse_reencode_identical": _encode_island_shape_atoms(island_shapes)
         == members.get(ISLAND_SHAPE_MEMBER, b""),
-        "island_shapes_consume_counted_pose6_transport": any(row.lifetime > 1 for row in island_shapes),
+        "island_shapes_consume_counted_pose6_transport": any(
+            requires_pose6_transport(row) for row in island_shapes
+        ),
         "worldsheet_track_count": len(worldsheet_tracks),
         "worldsheet_track_parse_reencode_identical": _encode_worldsheet_tracks(worldsheet_tracks)
         == members.get(WORLDSHEET_TRACK_MEMBER, b""),
@@ -3228,4 +3262,5 @@ __all__ = [
     "prove_carrier_archive_fail_closed",
     "receive_carrier_compose_archive",
     "recursive_carrier_byte_rows",
+    "requires_pose6_transport",
 ]

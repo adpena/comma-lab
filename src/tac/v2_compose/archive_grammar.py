@@ -44,7 +44,7 @@ from typing import Any
 
 import numpy as np
 
-from tac.boundary_math.contour_codec import ContourCode, decode_partition, encode_partition
+from tac.boundary_math.dense_raster_lzma_baseline import ContourCode, decode_partition, encode_partition
 from tac.contest_score import rate_term
 
 __all__ = [
@@ -116,7 +116,7 @@ class V2StoreBlob:
     """Parsed store_blob (the COUNTED STORE+GENERATE payload)."""
 
     keyframe_indices: list[int]
-    keyframe_lstars: np.ndarray         # (n_kf, H, W) int64 (decoded bit-exact from contour codes)
+    keyframe_lstars: np.ndarray         # (n_kf, H, W) int64 (decoded from dense-raster LZMA)
     palette: np.ndarray                 # (5, 3) float32
     calib: tuple[float, float, float]   # (s_t, s_r, pitch)
     warp_type_codes: list[int]          # per-class warp-type code (len n_classes)
@@ -257,7 +257,7 @@ def unpack_v2_archive(blob: bytes) -> tuple[bytes, bytes, bytes, dict[str, Any]]
 
 
 # ---------------------------------------------------------------------------
-# store_blob: keyframes (contour-coded) + palette + calib + warp-mask + kstar.
+# store_blob: keyframes (dense-raster LZMA) + palette + calib + warp-mask + kstar.
 # ---------------------------------------------------------------------------
 def build_store_blob(
     keyframe_indices: list[int],
@@ -270,7 +270,7 @@ def build_store_blob(
     *,
     n_classes: int = 5,
 ) -> bytes:
-    """Serialize the STORE payload. Keyframes -> contour_codec (LZMA, bit-exact). Palette fp16,
+    """Serialize the STORE payload. Keyframes -> dense-raster LZMA (bit-exact). Palette fp16,
     calib f64, warp-mask 1 byte/class. The generic warp/render that re-expands this is FREE."""
     kf = np.asarray(keyframe_lstars, dtype=np.int64)
     if kf.ndim != 3 or kf.shape[0] != len(keyframe_indices):
@@ -291,7 +291,7 @@ def build_store_blob(
     buf += palette.astype(np.float16).tobytes()
     buf += struct.pack("<ddd", float(calib[0]), float(calib[1]), float(calib[2]))
     buf += bytes(int(c) & 0xFF for c in warp_type_codes)
-    # keyframes: idx(<I) + contour_len(<I) + contour_payload (per keyframe)
+    # keyframes: idx(<I) + lzma_len(<I) + dense-label LZMA payload (per keyframe)
     for i, idx in enumerate(keyframe_indices):
         code: ContourCode = encode_partition(kf[i], n_classes=n_classes)
         buf += struct.pack("<I", int(idx))
@@ -301,7 +301,7 @@ def build_store_blob(
 
 
 def parse_store_blob(store_blob: bytes) -> V2StoreBlob:
-    """Inverse of :func:`build_store_blob` (decodes keyframes bit-exact via contour_codec)."""
+    """Inverse of :func:`build_store_blob` (decodes keyframes bit-exact via dense-raster LZMA)."""
     store_blob = _require_bytes(store_blob, "store_blob")
     if store_blob[: len(_STORE_MAGIC)] != _STORE_MAGIC:
         raise ValueError("bad store_blob magic")

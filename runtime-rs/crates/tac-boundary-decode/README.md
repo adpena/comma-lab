@@ -13,11 +13,11 @@ oracle's. Promotion of a primitive = its parity test goes green
 
 | primitive | Rust fn | Python oracle | parity vector | parity |
 |-----------|---------|---------------|---------------|--------|
-| contour codec decode | `contour::decode_partition_raw` / `decode_partition_hw` | `contour_codec.decode_partition` (RAW-LZMA2) | `contour_decode_{full,small}_v1` | bit-identical ✅ |
+| dense-raster LZMA decode | `contour::decode_partition_raw` / `decode_partition_hw` | `dense_raster_lzma_baseline.decode_partition` (RAW-LZMA2) | `contour_decode_{full,small}_v1` | bit-identical ✅ |
 | d_seg popcount | `dseg::flip_count` / `dseg::d_seg` | `bitmask_dseg.flip_count` / `d_seg_reference` | `dseg_popcount_v1` | bit-identical ✅ |
 | connected components | `components::connected_components` | `partition.connected_components` (4-conn) | `connected_components_v1` | bit-identical ✅ |
 
-The contour decode + reshape IS the inflate-time "region rasterize / fill": the
+The dense-label decode + reshape IS the inflate-time "region rasterize / fill": the
 decoded label map is the rasterized partition (each pixel's class label),
 interiors reconstructed from constant-label runs.
 
@@ -31,7 +31,7 @@ Apples-to-apples on the same fixture bytes/shapes (M5 Max, release):
 | flip_count 64x96 | 0.0013 | 0.0008 | 1.71× |
 | connected_components 32x48 | 0.152 | 0.0094 | **16.2×** |
 
-The contour decode + d_seg wins are bounded (both sides call the same liblzma C
+The dense-label decode + d_seg wins are bounded (both sides call the same liblzma C
 core / numpy already vectorizes the XOR). The connected-components win is large
 because the dedicated raster flood-fill replaces `scipy.ndimage.label`'s heavy
 generic-label machinery.
@@ -49,8 +49,8 @@ generic-label machinery.
 Per CLAUDE.md "Native eval-time runtime discipline": the binary is FIXED,
 rate-free decode code. ZERO learned/video-derived constants are embedded — only
 structural codec config (LZMA preset/lc/lp/pb) + 4-connectivity offsets. The
-partition labels / contours the SegNet derives masks from are carried in
-`archive.zip` (the LZMA payload bytes), byte-charged in the rate term. See
+partition labels the SegNet derives masks from are carried in `archive.zip`
+(the LZMA payload bytes), byte-charged in the rate term. See
 `binary_source_audit.md` + `embedded_constants_audit.txt` +
 `archive_payload_manifest.json`.
 

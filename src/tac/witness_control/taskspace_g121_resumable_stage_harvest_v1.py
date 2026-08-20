@@ -27,6 +27,12 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any, Final
 
+from tac.witness_dsl.dynamic_frontier_target import (
+    DynamicFrontierTargetError,
+    DynamicFrontierTargetSnapshot,
+    verify_dynamic_frontier_target_snapshot,
+)
+
 RETAINED_PREPOSE_SCHEMA: Final = "tac.g121_retained_prepose.v2"
 STAGE_MEASUREMENT_SCHEMA: Final = "tac.g121_stage_measurement.v2"
 COMPLETION_RECEIPT_SCHEMA: Final = "tac.g121_completion_receipt.v2"
@@ -1306,6 +1312,77 @@ def _validate_blocked_attempt(value: object) -> dict[str, Any]:
     return value
 
 
+def _open_reusable_scoped_obstruction(
+    *,
+    g120_module: Any,
+    prior: Mapping[str, object] | None,
+    stage: Mapping[str, object],
+) -> Any | None:
+    """Reuse only an exact G120 blocker whose pointer snapshot is still live."""
+
+    if (
+        prior is None
+        or prior.get("attempt_status") != "BLOCKED"
+        or "g120_scoped_obstruction" not in prior
+        or prior.get("source_stage_identity")
+        != stage.get("source_stage_identity")
+    ):
+        return None
+    binding = prior["g120_scoped_obstruction"]
+    _validate_file_binding_shape(
+        binding,
+        name="reusable G120 scoped obstruction",
+    )
+    opened = getattr(
+        g120_module,
+        G120_REQUIRED_SCOPED_OBSTRUCTION_OPENER,
+    )(
+        Path(str(binding["path"])),
+        expected_sha256=str(binding["sha256"]),
+    )
+    try:
+        snapshot = DynamicFrontierTargetSnapshot(
+            **opened.receipt["pointer_snapshot"]
+        )
+    except (KeyError, TypeError) as exc:
+        raise G121StageHarvestError(
+            "reusable G120 scoped obstruction has a malformed pointer snapshot"
+        ) from exc
+    try:
+        verify_dynamic_frontier_target_snapshot(snapshot)
+    except DynamicFrontierTargetError:
+        return None
+    if (
+        opened.receipt["live_target"] != prior["live_target"]
+        or _source_from_completed_physical(
+            opened.receipt["physical_stage_identity"]
+        )
+        != prior["source_stage_identity"]
+    ):
+        raise G121StageHarvestError(
+            "reusable G120 scoped obstruction differs from prior custody"
+        )
+    return opened
+
+
+def _scoped_obstruction_scorer_replay_count(opened: Any) -> int:
+    """Count one stage replay iff this obstruction made fresh scorer calls."""
+
+    try:
+        calls = opened.receipt["seg_scorer"][
+            "fresh_direct_scorer_calls"
+        ]
+    except (AttributeError, KeyError, TypeError) as exc:
+        raise G121StageHarvestError(
+            "G120 scoped obstruction lacks exact scorer replay telemetry"
+        ) from exc
+    if type(calls) is not int or calls < 0:
+        raise G121StageHarvestError(
+            "G120 scoped obstruction scorer replay telemetry differs"
+        )
+    return int(calls > 0)
+
+
 def _read_stage_ledger(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
@@ -1847,6 +1924,18 @@ def _harvest_g111_stages_impl(
             "g111_checkpoint_id_sha256"
         ]
         prior = latest_by_checkpoint.get(checkpoint_id)
+        reusable_obstruction = _open_reusable_scoped_obstruction(
+            g120_module=g120_module,
+            prior=prior,
+            stage=stage,
+        )
+        if reusable_obstruction is not None:
+            if prior is None:
+                raise AssertionError(
+                    "reusable obstruction exists without a prior row"
+                )
+            stage_rows.append(prior)
+            continue
         try:
             g112_binding = _materialize_or_open_g112_stage(
                 producer=producer,
@@ -1949,7 +2038,9 @@ def _harvest_g111_stages_impl(
             )
             _append_attempt(ledger_path, row)
             stage_rows.append(row)
-            scorer_replay_count += 1
+            scorer_replay_count += (
+                _scoped_obstruction_scorer_replay_count(opened)
+            )
         except Exception as exc:
             pending_blockers.append(
                 (

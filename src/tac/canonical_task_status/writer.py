@@ -18,6 +18,7 @@ from .contract import (
     VALID_TRANSITIONS,
     CanonicalTaskStatusInvalidTransitionError,
     CanonicalTaskStatusRow,
+    delta_s_custody_findings,
 )
 from .loader import (
     latest_status_by_task_id,
@@ -27,6 +28,40 @@ from .loader import (
 )
 
 LOCK_TIMEOUT_SECONDS = 30.0
+
+
+class DeltaSCustodyError(ValueError):
+    """Raised when a NEWLY ASSERTED ΔS is minted without its arguments.
+
+    The reader only warns (the ledger is append-only and must stay readable over 15
+    historical rows that predate this rule); the writer refuses, so the live count for
+    NEW rows is 0 by construction and no backfill is owed before it binds.
+
+    The distinction that makes this safe: you must custody what you ASSERT, but you may
+    carry forward what someone else asserted. ``append_note`` propagates a prior row's
+    ``actual_delta_s`` and is therefore not gated -- only the explicit assertion path is.
+    """
+
+
+def _refuse_uncustodied_delta_s(
+    *,
+    task_id: str,
+    actual_delta_s: float | None,
+    event_notes: str,
+    title: str,
+) -> None:
+    findings = delta_s_custody_findings(
+        actual_delta_s=actual_delta_s, event_notes=event_notes, title=title
+    )
+    if findings:
+        joined = "\n  - ".join(findings)
+        raise DeltaSCustodyError(
+            f"refusing to append an uncustodied ΔS for task {task_id}:\n  - {joined}\n"
+            "A ΔS carried without its arguments is the defect that cost six arms in one "
+            "day; compute the live figures with "
+            "tac.canonical_equations.gap_decomposition_against_floor_20260802"
+            ".live_operating_point()."
+        )
 
 
 def _now_iso() -> str:
@@ -121,6 +156,12 @@ def register_task(
         existing = latest_status_by_task_id(task_id, repo_root)
         if existing is not None:
             return existing
+        # The two rows that actually misdirected readers stated their ΔS in the TITLE
+        # with actual_delta_s = None, so the registration path is where the class
+        # entered. Gating only the typed field would have passed both.
+        _refuse_uncustodied_delta_s(
+            task_id=task_id, actual_delta_s=None, event_notes=notes, title=title
+        )
         row = CanonicalTaskStatusRow(
             task_id=task_id,
             source_design_memo=str(source_design_memo),
@@ -158,6 +199,12 @@ def update_status(
         if prev is None:
             raise KeyError(f"unknown canonical task_id: {task_id}")
         _assert_transition(prev, new_status)
+        _refuse_uncustodied_delta_s(
+            task_id=prev.task_id,
+            actual_delta_s=actual_delta_s,
+            event_notes=notes,
+            title=prev.title,
+        )
         now = _monotonic_event_timestamp(prev)
         event_type = {
             "completed": "completion",

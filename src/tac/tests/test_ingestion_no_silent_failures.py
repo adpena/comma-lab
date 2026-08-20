@@ -191,13 +191,28 @@ def test_the_live_ledger_loads_and_any_anomaly_is_visible():
     import json
 
     malformed = 0
+    total_rows = 0
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         for line in ledger.read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
+            total_rows += 1
             obj = json.loads(line)
             if not isinstance(obj.get("event_notes", ""), str):
                 malformed += 1
             CanonicalTaskStatusRow.from_json_obj(obj)  # must never raise
-    assert len(caught) == malformed, "every malformed row must produce exactly one warning"
+    # Count BY CLASS. The original `len(caught) == malformed` was broader than its own
+    # intent: it asserted that the event_notes coercion is the ONLY thing the reader can
+    # ever warn about, so any second independent warning class would fail it. ddm_op3
+    # added one (ΔS custody). The invariant that actually matters -- one warning per
+    # malformed row, and never a silent pass -- is preserved by filtering.
+    coercion = [w for w in caught if "not str" in str(w.message)]
+    custody = [w for w in caught if "without full custody" in str(w.message)]
+    assert len(coercion) == malformed, "every malformed row must produce exactly one warning"
+    assert len(coercion) + len(custody) == len(caught), (
+        f"unclassified reader warning(s) over {total_rows} rows: "
+        f"{[str(w.message)[:120] for w in caught if w not in coercion and w not in custody]}"
+    )
+    # Scope denominator, so a future run that examines ZERO rows cannot read as a pass.
+    assert total_rows > 0, "empty ledger scope is VACUOUS, never a pass"

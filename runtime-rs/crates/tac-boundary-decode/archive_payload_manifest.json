@@ -6,13 +6,13 @@
   "what_the_archive_carries": {
     "contour_payload": "The RAW-LZMA2-compressed per-pixel uint8 SegNet argmax label map (the partition L*). This is the score-relevant, video-derived data. It lives in archive.zip and is byte-charged in the rate term (25*B/D). The Rust decoder READS it; it does NOT embed it.",
     "rate_charged": true,
-    "produced_by": "src/tac/boundary_math/contour_codec.py::encode_partition (the Python oracle / encoder)"
+    "produced_by": "src/tac/boundary_math/dense_raster_lzma_baseline.py::encode_partition (the Python oracle / encoder; contour_codec.py is a compatibility shim)"
   },
   "what_the_binary_carries": {
     "decode_logic": "FIXED, rate-free decode code: RAW-LZMA2 decompress + reshape (contour), popcount-XOR (d_seg), raster flood-fill 4-connectivity (connected components).",
     "embedded_constants": [
-      {"name": "LZMA preset level 9 | EXTREME", "kind": "codec config", "source_of_truth": "contour_codec._LZMA_FILTERS", "learned_or_video_derived": false},
-      {"name": "lc=0, lp=0, pb=0", "kind": "LZMA literal/position bits", "source_of_truth": "contour_codec._LZMA_FILTERS", "learned_or_video_derived": false},
+      {"name": "LZMA preset level 9 | EXTREME", "kind": "codec config", "source_of_truth": "dense_raster_lzma_baseline._LZMA_FILTERS", "learned_or_video_derived": false},
+      {"name": "lc=0, lp=0, pb=0", "kind": "LZMA literal/position bits", "source_of_truth": "dense_raster_lzma_baseline._LZMA_FILTERS", "learned_or_video_derived": false},
       {"name": "4-connectivity neighbour offsets", "kind": "connectivity config", "source_of_truth": "partition._CONN4", "learned_or_video_derived": false}
     ],
     "learned_constants_embedded": 0,
@@ -22,9 +22,9 @@
   },
   "primitives_lowered": [
     {
-      "name": "contour codec decode",
+      "name": "dense-raster LZMA decode",
       "rust_fn": "contour::decode_partition_raw / decode_partition_hw",
-      "python_oracle": "tac.boundary_math.contour_codec.decode_partition",
+      "python_oracle": "tac.boundary_math.dense_raster_lzma_baseline.decode_partition",
       "golden_vectors": ["contour_decode_full_v1", "contour_decode_small_v1"],
       "parity": "bit-identical (decoded-raw SHA-256 == Python oracle)",
       "settled": true
