@@ -29219,3 +29219,23 @@ KEEP/DROP decided only on matched-shape re-measures. **EQUATIONS-LEG OWED:** reg
 the stopping rule + waterfill admission (one currency: S-units vs ±3.5e-6) as a
 canonical equation at the next equations-touching landing — owner MAIN, consumer =
 the pose-aware joint seg solver charter (fires at seal boundary).
+
+## FEED-jg5t4 (2026-08-20) — THE FIRST SUB-0.15 EXACT ROW: T3 ACHIEVED
+**S 0.14839100138338618 @ 180,625 B [contest-CUDA T4, n600]** — archive
+f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e, call
+fc-01M0EZ3DR3HVB8HBKWEG2P12CT, Tesla T4 verified, upstream evaluate.py 7da71a84…, 600 samples.
+Components: d_seg 0.00020139 → seg 0.020139 · d_pose 6.37e-6 → pose 0.007981227975693965 ·
+rate 0.1202707734076922 (exact archive stat). canonical_score_source =
+report_8dp_components_plus_exact_archive_bytes; worst-case 8dp bound 3.63e-6 — the −0.00776143
+margin vs br1 is 2,136× that bound, so sub-0.15 is UNCONDITIONAL. Fifteenth pointer move;
+effective_frontier = our row; best PUBLIC entry (PR135) = 0.162 → ours 0.0136 below world-best.
+Seal projection 0.14838267 realized +8.3e-6 (seg leg +5.6e-7 raw; pose leg 8dp-consistent) —
+the jg1 DALI instrument's 0.99995× T4 calibration held end-to-end. THE GOAL ladder's T3
+(sub-0.15) is satisfied by the exact definition: archive under our custody, upstream/evaluate.py,
+600-sample, contest-CUDA 1:1 hardware, now effective_frontier. Decode timing on the same
+receipt (stage_seconds): token decode 1,341.54 s (94.5% of inflate 1,419.9 s) · render 54.5 s —
+REFUSE vs the CI residual window [822,1302] s ⇒ the rr2 FreeCorrector→native-hpac port (wc2
+item 1) is the SUBMISSION critical path before #1111. Equations-leg: the FEED-jg5 stopping-rule
++ waterfill-admission registration debt (owner MAIN) now also covers the T4-realization anchor
+(projection→realized residual +8.3e-6 at n600). Next: wc2 wall pass (FULL GO) · pose-aware
+joint seg solver charter (aimed by jg5 exchange rates) · #1111 packet on this row + rr5 rider.
