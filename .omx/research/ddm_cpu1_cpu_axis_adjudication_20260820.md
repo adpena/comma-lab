@@ -247,9 +247,11 @@ The plan's decision rule had two branches. Neither survives contact in the form 
    no operating point on this vehicle where CPU is the better declaration.
 
 **What would change this verdict.** A carrier re-solved against the PyAV GT lineage would move the
-score half; only that. The wall half needs the token stage to get ~3.3x faster on 4 x86 vCPUs —
-and `ddm_rr7` already measured the native port going the WRONG way on contest-class vCPUs
-(0.867x, 15.3% slower). Both would have to land. Neither is close.
+score half; only that. The wall half needs the token stage to get roughly **3.3x** faster on 4 x86
+vCPUs — and `ddm_rr7` already measured the native port going the WRONG way on contest-class vCPUs:
+**0.867x on the TOKEN stage** (1,341.5 s CUDA-python vs 1,546.6 s native-scalar-CPU, i.e. 15.3%
+slower on that stage; the whole-inflate ratio is 13.6% — both denominators stated per `ddm_pq8`).
+Both would have to land. Neither is close.
 
 **Not owed, and deliberately not fired:** a re-run with `--inflate-timeout 7200` would buy the
 CPU score row for another ~$0.15-0.30. It is **not worth it for the declaration**, because the
