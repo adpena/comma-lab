@@ -25,6 +25,28 @@
   "keying": "sha256 of file bytes -- NEVER path or basename",
   "axis": "[macOS-CPU advisory] lineage classification -- NEVER a score",
   "score_claim": false,
+  "merged_censuses": [
+    "experiments/ddm_gl2_raw_gt_lineage_census.py"
+  ],
+  "last_merged_utc": "2026-08-17T06:31:38Z",
+  "amendments": [
+    {
+      "utc": "2026-08-20T06:33:12Z",
+      "git_head": "d0b134f2b406a34830dfd90d2d2f9d85bc76eb54",
+      "added_sha256": [
+        "8d5cfa83df55b89493ba43b1e5386d792c836c32791666192499a089068e7eff"
+      ],
+      "path_unioned_sha256": [],
+      "note": "additive merge via --merge-into; denominators above describe the original full census, not this pass"
+    },
+    {
+      "utc": "2026-08-20T06:36:16Z",
+      "git_head": "d0b134f2b406a34830dfd90d2d2f9d85bc76eb54",
+      "added_sha256": [],
+      "path_unioned_sha256": [],
+      "note": "additive merge via --merge-into; denominators above describe the original full census, not this pass"
+    }
+  ],
   "artifacts": [
     {
       "sha256": "026a4ad9e5e152488544bf6bc6ceb7b510f2913f02a6529ca32d684ea3ebc898",
@@ -540,6 +562,21 @@
       ]
     },
     {
+      "sha256": "8d5cfa83df55b89493ba43b1e5386d792c836c32791666192499a089068e7eff",
+      "bytes": 14528,
+      "basename": "gt_first6_dali_n600.npy",
+      "lineage": "DALI_NVDEC",
+      "lineage_evidence": "EMPIRICAL_EXACT_MATCH",
+      "measurement": "pose: MSE 0.000000e+00 vs DALI ruler, 1.406132e-04 vs AV ruler",
+      "claim_boundary": "Bit-identical to a producer-declared ruler over the full population; content identity is as strong as empirical evidence gets. It still does not recover the original argv, package versions, or host.",
+      "known_paths": [
+        "/Volumes/VertigoDataTier/pact/ddm_pz4_joint_target_conditioned_receiver/direct_v6/full_n600_eval/retained/pose_vectors/gt_first6_dali_n600.npy"
+      ],
+      "known_basenames": [
+        "gt_first6_dali_n600.npy"
+      ]
+    },
+    {
       "sha256": "91d3ff11a904c476b56a8be8af2225fb4a390d02fac9d3b09ef4704ad6e77248",
       "bytes": 117964928,
       "basename": "gt_argmax.npy",
@@ -928,9 +965,5 @@
         "gt_argmax_n600.npy"
       ]
     }
-  ],
-  "merged_censuses": [
-    "experiments/ddm_gl2_raw_gt_lineage_census.py"
-  ],
-  "last_merged_utc": "2026-08-17T06:31:38Z"
+  ]
 }

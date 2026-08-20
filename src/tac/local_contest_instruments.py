@@ -82,10 +82,12 @@ __all__ = [
     "AXIS_CONTEST_CUDA",
     "AXIS_GT_LINEAGE",
     "AXIS_MACOS_CPU_ADVISORY",
+    "CrossLineageDelta",
     "InstrumentReceipt",
     "InstrumentRefusal",
     "PoseAbsoluteRefused",
     "assert_axis_lineage",
+    "assert_comparable_legs",
     "assert_pose_absolute_quotable",
     "contest_score_from_legs",
     "d_pose_per_pair",
@@ -94,6 +96,7 @@ __all__ = [
     "pose_leg",
     "pose_report_bound",
     "rate_leg",
+    "receipt_delta",
     "required_lineage_for_axis",
     "resolvable_d_pose_floor",
     "seg_leg",
@@ -138,6 +141,29 @@ ADVISORY_FLOOR_CLIP = "upstream/videos/0.mkv"
 
 #: ``upstream/evaluate.py:95`` prints d_pose at 8 decimals; half-ULP of that report.
 _REPORT_HALF_ULP = 0.5e-8
+
+#: Minimum length of a substantive cross-lineage rationale.  Mirrors the
+#: placeholder-rejection discipline the preflight waivers already use, so a waiver
+#: cannot be satisfied by typing "ok".
+_MIN_RATIONALE_LEN = 8
+_PLACEHOLDER_RATIONALES: frozenset[str] = frozenset(
+    {
+        "<rationale>",
+        "<reason>",
+        "rationale",
+        "reason",
+        "tbd",
+        "todo",
+        "placeholder",
+        "pending",
+        "n/a",
+        "na",
+        "ok",
+        "fine",
+        "because",
+        "testing",
+    }
+)
 
 #: Total pairs in the scored field.
 N_PAIRS_TOTAL = 600
@@ -393,6 +419,200 @@ class InstrumentReceipt:
                 f"gt_lineage == {gt_lineage.DALI_NVDEC}."
             ),
         }
+
+
+# ---------------------------------------------------------------------------
+# The DELTA guard.  Two legs, one instrument, one lineage -- or no verdict.
+# ---------------------------------------------------------------------------
+#
+# WHY THIS EXISTS, AND WHY THE EXISTING GUARDS COULD NOT SEE IT.
+# ``gt_lineage.assert_gt_lineage`` answers "is THIS artifact the right lineage?"
+# and ``gt_lineage.assert_single_lineage`` answers "does ONE instrument's set of
+# GT sources span two lineages?" (the ddm_pi2 defect).  Both operate on GT FILES.
+#
+# The 2026-08-19 ``jg4`` refusal was neither shape.  Two SEPARATE measurements,
+# each internally single-lineage and each individually valid, were subtracted:
+# a candidate advisory seg of 0.0003244 (PyAV lineage) minus a T4 base of
+# 0.00030309 (DALI lineage).  The T4 leg had NO local GT file at all -- it was a
+# number read out of a contest report -- so no file-keyed guard could reach it.
+# The subtraction "measured" a candidate effect of +2.1e-05 and the candidate was
+# called net-negative.  Same-instrument, that candidate had IMPROVED on BOTH
+# instruments (advisory -1.090e-4, jg1-DALI -1.285e-4); the base's own advisory
+# reading is 0.00043336 = 1.430x its T4 value, i.e. the "effect" was the LINEAGE
+# FORK, not the candidate.  A working sub-0.15 candidate (projecting S ~ 0.1467)
+# was nearly killed by that one subtraction.
+#
+# The lesson generalises past lineage: a difference is only a measurement of the
+# thing that changed when EVERYTHING ELSE is held fixed.  So this guard checks the
+# full comparability tuple -- (axis, gt_lineage, pairs, sampling) -- not lineage
+# alone.  The population legs matter for the same reason: a 600-pair leg minus a
+# 96-pair leg is also a fork, and on this clip prefix bias runs 2.54-4.21x HARDER
+# on pose and 0.95-0.97x EASIER on seg, so it can invert a verdict's sign.
+
+
+class CrossLineageDelta(InstrumentRefusal):
+    """A delta was requested between operands that are not the same object."""
+
+
+#: Human-readable cost of getting each axis' fork wrong, quoted in refusals so the
+#: message teaches the mechanism instead of merely blocking.
+_FORK_COST_NOTE: dict[str, str] = {
+    "d_seg": (
+        f"seg forks MULTIPLICATIVELY by ~{ADVISORY_SEG_MULTIPLICATIVE_FACTOR}x "
+        "(ddm_pi2; jg4 measured 1.430x on the live pointer)"
+    ),
+    "d_pose": (
+        f"pose forks ADDITIVELY by +{ADVISORY_POSE_ADDITIVE_FLOOR:.4e} "
+        "(ddm_pi2/ddm_na10; the per-pair RATIO spans 0.887-1,627, so no "
+        "multiplicative transfer exists)"
+    ),
+}
+
+
+def assert_comparable_legs(
+    *,
+    candidate_axis: str,
+    candidate_lineage: str,
+    base_axis: str,
+    base_lineage: str,
+    quantity: str = "d_seg",
+    candidate_pairs: int | None = None,
+    base_pairs: int | None = None,
+    instrument: str = "<unnamed instrument>",
+    allow_cross_lineage_rationale: str | None = None,
+) -> None:
+    """Refuse a two-leg comparison whose legs are not the same measured object.
+
+    This is the ``jg4`` refusal written as a predicate.  Call it before computing
+    ANY candidate-minus-base difference, gate verdict, or "improved/regressed"
+    claim built from two separately-measured numbers.
+
+    Args:
+        candidate_axis / base_axis: the score axis each leg was measured on.
+        candidate_lineage / base_lineage: the GT decode lineage each leg READ.
+            Pass what was actually read, not what the axis implies -- a local
+            advisory instrument pointed at the DALI tables reads DALI.
+        quantity: which leg is being differenced (``d_seg`` / ``d_pose`` /
+            ``archive_bytes`` / ``score``).  Only used to quote the fork cost.
+        candidate_pairs / base_pairs: population size of each leg, when known.
+            Differing populations are refused for the same reason as differing
+            lineages -- prefix bias inverts sign per axis on this clip.
+        instrument: caller name, quoted in the refusal.
+        allow_cross_lineage_rationale: a NON-EMPTY, substantive reason to permit a
+            deliberate cross-lineage diagnostic (e.g. measuring the fork itself).
+            Naming it is the point: the different-objective choice becomes visible
+            in the code and in review.  Placeholder strings are rejected.  It waives
+            the two SAME-INSTRUMENT checks (lineage, axis) and deliberately NOT the
+            population check: "I meant to cross lineages" is not a reason to also
+            cross populations, and one flag that silently switches off every refusal
+            is the over-broad-waiver shape this repo already pays for elsewhere.
+
+    Raises:
+        CrossLineageDelta: the legs differ in lineage, axis, or population and no
+            substantive rationale was supplied.
+        InstrumentRefusal: an axis is unknown, or the rationale is a placeholder.
+    """
+    required_lineage_for_axis(candidate_axis)  # refuses an unknown axis
+    required_lineage_for_axis(base_axis)
+
+    waived = False
+    if allow_cross_lineage_rationale is not None:
+        rationale = allow_cross_lineage_rationale.strip()
+        if len(rationale) < _MIN_RATIONALE_LEN or rationale.lower() in _PLACEHOLDER_RATIONALES:
+            raise InstrumentRefusal(
+                f"{instrument}: allow_cross_lineage_rationale={allow_cross_lineage_rationale!r} "
+                "is a placeholder, not a reason. Name the diagnostic that genuinely "
+                "needs two lineages, or fetch the same-lineage base leg instead."
+            )
+        waived = True
+
+    if candidate_lineage != base_lineage and not waived:
+        cost = _FORK_COST_NOTE.get(quantity, "the two GT decodes are different objectives")
+        raise CrossLineageDelta(
+            f"{instrument}: refusing a {quantity} delta across GT lineages -- candidate leg "
+            f"read {candidate_lineage!r} (axis {candidate_axis!r}), base leg read "
+            f"{base_lineage!r} (axis {base_axis!r}). Such a difference is dominated by the "
+            f"decode fork, not by the candidate: {cost}. This is the ddm_jg4 false refusal, "
+            "which nearly killed a candidate projecting S ~ 0.1467 whose edits had realized "
+            "100.00% (15,155/15,155 cells). Fix: fetch the base leg measured on the "
+            "candidate's lineage (it is usually already on disk in a prior advisory JSON), "
+            "or pass allow_cross_lineage_rationale=... if measuring the fork IS the goal."
+        )
+
+    if candidate_axis != base_axis and candidate_lineage == base_lineage and not waived:
+        raise CrossLineageDelta(
+            f"{instrument}: refusing a {quantity} delta between axis {candidate_axis!r} and "
+            f"axis {base_axis!r}. The lineages happen to agree, but the axes do not, so the "
+            "legs are not the same instrument and the difference is not attributable to the "
+            "candidate. Re-measure both legs on one axis."
+        )
+
+    # NOT gated on ``waived`` -- see the argument docstring.
+    if (
+        candidate_pairs is not None
+        and base_pairs is not None
+        and candidate_pairs != base_pairs
+    ):
+        raise CrossLineageDelta(
+            f"{instrument}: refusing a {quantity} delta between populations of "
+            f"{candidate_pairs} and {base_pairs} pairs. A prefix (or any differing subset) of "
+            "a skewed population is a DIFFERENT population: on this clip prefix bias runs "
+            "2.54-4.21x HARDER on pose and 0.95-0.97x EASIER on seg, so an unmatched "
+            "population can invert the sign of the verdict. Score both legs on the same pairs."
+        )
+
+
+def receipt_delta(
+    candidate: InstrumentReceipt,
+    base: InstrumentReceipt,
+    *,
+    quantity: str = "d_seg",
+    allow_cross_lineage_rationale: str | None = None,
+) -> float:
+    """``candidate - base`` for one leg, refusing unless the receipts are comparable.
+
+    The safe way to difference two local measurements.  Every precondition
+    :func:`assert_comparable_legs` checks is enforced from the receipts' own
+    recorded fields, so a caller cannot accidentally compare a PyAV advisory row
+    against a DALI contest row -- the shape of the ``jg4`` refusal.
+
+    Args:
+        candidate: the receipt whose effect is being measured.
+        base: the receipt it is measured against.
+        quantity: ``d_seg`` / ``d_pose`` / ``archive_bytes``.
+        allow_cross_lineage_rationale: see :func:`assert_comparable_legs`.
+
+    Returns:
+        The signed difference; negative means the candidate improved that leg.
+
+    Raises:
+        CrossLineageDelta: the receipts are not comparable.
+        InstrumentRefusal: unknown quantity, or a leg is missing from a receipt.
+    """
+    if quantity not in {"d_seg", "d_pose", "archive_bytes"}:
+        raise InstrumentRefusal(
+            f"{candidate.instrument}: unknown delta quantity {quantity!r}; "
+            "expected one of d_seg / d_pose / archive_bytes"
+        )
+    assert_comparable_legs(
+        candidate_axis=candidate.axis,
+        candidate_lineage=candidate.gt_lineage,
+        base_axis=base.axis,
+        base_lineage=base.gt_lineage,
+        quantity=quantity,
+        candidate_pairs=candidate.pairs,
+        base_pairs=base.pairs,
+        instrument=f"{candidate.instrument} vs {base.instrument}",
+        allow_cross_lineage_rationale=allow_cross_lineage_rationale,
+    )
+    lhs = getattr(candidate, quantity)
+    rhs = getattr(base, quantity)
+    if lhs is None or rhs is None:
+        raise InstrumentRefusal(
+            f"{candidate.instrument} vs {base.instrument}: cannot difference {quantity} -- "
+            f"candidate={lhs}, base={rhs}. A missing leg is not a zero delta."
+        )
+    return float(lhs) - float(rhs)
 
 
 # ---------------------------------------------------------------------------

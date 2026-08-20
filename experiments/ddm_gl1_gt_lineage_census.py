@@ -514,6 +514,80 @@ def build_registry(census: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+class RegistryMergeConflict(RuntimeError):
+    """A sha256 already in the registry classified differently on re-measurement."""
+
+
+def merge_registry(existing: dict[str, Any], addition: dict[str, Any]) -> dict[str, Any]:
+    """Fold newly classified artifacts into an existing registry, additively.
+
+    WHY A MERGE PATH EXISTS (ddm_dg1, 2026-08-20).  The registry is content-addressed
+    and rebuilt wholesale from a full census, but a full census needs a disk sweep of
+    every GT artifact on both SSD tiers.  When ONE new artifact appears -- the
+    2026-08-19 GT-lineage cure materialised ``gt_first6_dali_n600.npy`` and repointed
+    ``qs1.GT_POSE`` at it -- the choice was between an expensive full re-census and
+    leaving the cure's own target UNREGISTERED.  It was left unregistered, so
+    ``assert_gt_lineage`` refused the very table the cure installed: the guard could
+    not certify the fix.  This path closes that without inviting a hand-edited
+    registry (the parallel-authority failure this module exists to prevent).
+
+    Merge rules, in order of strictness:
+
+    * A sha256 present in BOTH must classify IDENTICALLY.  Content-addressed lineage
+      is a function of the bytes; disagreement means one measurement is wrong and is
+      raised, never silently resolved by preferring one side.
+    * ``known_paths`` / ``known_basenames`` are UNIONED.  One content is legitimately
+      known by several names -- that is the collision ``ddm_gl1`` measured and the
+      reason the registry is keyed by sha in the first place.
+    * The header's ``denominators`` describe the ORIGINAL full census and are kept
+      verbatim; an ``amendments`` list records each additive pass so a reader can
+      always tell a full census from a full census plus patches.
+
+    Raises:
+        RegistryMergeConflict: a shared sha256 carries two different lineages.
+    """
+    merged = {k: v for k, v in existing.items() if k != "artifacts"}
+    by_sha: dict[str, dict[str, Any]] = {
+        row["sha256"]: dict(row) for row in existing.get("artifacts", [])
+    }
+    added: list[str] = []
+    updated: list[str] = []
+    for row in addition.get("artifacts", []):
+        digest = row["sha256"]
+        prior = by_sha.get(digest)
+        if prior is None:
+            by_sha[digest] = dict(row)
+            added.append(digest)
+            continue
+        if prior.get("lineage") != row.get("lineage"):
+            raise RegistryMergeConflict(
+                f"sha256 {digest} is {prior.get('lineage')} in the existing registry but "
+                f"{row.get('lineage')} on re-measurement. Content-addressed lineage must be "
+                "a function of the bytes; resolve the disagreement before merging."
+            )
+        names = sorted(set(prior.get("known_paths", [])) | set(row.get("known_paths", [])))
+        if names != prior.get("known_paths"):
+            updated.append(digest)
+        prior["known_paths"] = names
+        prior["known_basenames"] = sorted({Path(p).name for p in names})
+    merged["artifacts"] = [by_sha[k] for k in sorted(by_sha)]
+    amendments = list(existing.get("amendments", []))
+    amendments.append(
+        {
+            "utc": addition.get("produced_utc", ""),
+            "git_head": addition.get("git_head", ""),
+            "added_sha256": sorted(added),
+            "path_unioned_sha256": sorted(set(updated)),
+            "note": (
+                "additive merge via --merge-into; denominators above describe the "
+                "original full census, not this pass"
+            ),
+        }
+    )
+    merged["amendments"] = amendments
+    return merged
+
+
 def _claim_boundary(row: dict[str, Any]) -> str:
     """State exactly how far each lineage label may be pushed.  Vocabulary follows FX4."""
     ev = row.get("lineage_evidence", "NONE")
@@ -603,7 +677,68 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="skip measurement and rebuild the registry from an existing census JSON",
     )
+    ap.add_argument(
+        "--classify-path",
+        type=Path,
+        action="append",
+        default=None,
+        help=(
+            "classify these specific artifacts instead of running a full sweep; "
+            "intended for --merge-into (registering one newly materialised table)"
+        ),
+    )
+    ap.add_argument(
+        "--merge-into",
+        type=Path,
+        default=None,
+        help=(
+            "fold the classified artifacts ADDITIVELY into this existing registry "
+            "instead of overwriting it; refuses if a shared sha256 reclassifies"
+        ),
+    )
     args = ap.parse_args(argv)
+
+    if args.classify_path:
+        # Validate BEFORE the expensive classification: loading both 117 MB rulers and
+        # measuring against them costs real time, and erroring afterwards wastes it.
+        if args.merge_into is None:
+            ap.error("--classify-path requires --merge-into (refusing to overwrite a full census)")
+        if not args.merge_into.is_file():
+            ap.error(f"--merge-into {args.merge_into} does not exist; nothing to merge into")
+        rulers = Rulers.load()
+        rows = [classify_artifact(Path(p), rulers) for p in args.classify_path]
+        for row in rows:
+            print(
+                f"[gl1] {row.get('basename')} sha={row.get('sha256', '')[:12]} "
+                f"-> {row.get('lineage')} ({row.get('lineage_evidence')})",
+                flush=True,
+            )
+        addition = build_registry(
+            {
+                "artifacts": rows,
+                "utc_finished": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "git_head": subprocess.run(
+                    ["git", "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    cwd=REPO_ROOT,
+                ).stdout.strip(),
+                "rulers": {"dali": {"path": str(RULER_DALI), "sha256": RULER_DALI_SHA},
+                           "av": {"path": str(RULER_AV), "sha256": RULER_AV_SHA}},
+                "decisive_margin": DECISIVE_MARGIN,
+                "denominators": {"classified": len(rows)},
+                "axis": "[macOS-CPU advisory] lineage classification -- NEVER a score",
+            }
+        )
+        existing = json.loads(args.merge_into.read_text())
+        merged = merge_registry(existing, addition)
+        before = len(existing.get("artifacts", []))
+        args.merge_into.write_text(json.dumps(merged, indent=2))
+        print(
+            f"[gl1] merged {args.merge_into}: {before} -> {len(merged['artifacts'])} entries",
+            flush=True,
+        )
+        return 0
 
     if args.from_census is not None:
         census = json.loads(args.from_census.read_text())

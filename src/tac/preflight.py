@@ -2534,21 +2534,36 @@ def _check_351_gt_lineage_objective_custody(repo_root: Path) -> list[str]:
     canonical ``tac.gt_lineage`` registry, nor waived on the line. WARN-ONLY.
     """
     violations: list[str] = []
+    # ABSOLUTE-ROOT NORMALISATION (ddm_dg1 2026-08-20 -- MEASURED VACUITY FIX).
+    # ``_rg_python_files_matching_regex`` returns ABSOLUTE paths regardless of the
+    # root it was handed.  With a RELATIVE ``repo_root`` (``Path(".")`` -- the form
+    # CLAUDE.md documents for operator audit invocations, e.g.
+    # ``tools/audit_research_state_tracking.py --repo-root .``) every
+    # ``path.relative_to(repo_root)`` below raised ``ValueError``, which the bare
+    # ``continue`` swallowed: 139 prefilter candidates entered the loop and ZERO
+    # reached the line scan, so the gate reported a clean 0 findings while 11 real
+    # findings stood. Measured both ways on 2026-08-20: relative root -> 0,
+    # absolute root -> 11. That is the VACUITY==PASS shape (a skip counted as a
+    # pass) this repo names as a silent-instrument bug class -- and it disabled the
+    # one gate built to stop the GT-lineage bug class from recurring. Resolving BOTH
+    # sides makes the ValueError branch genuinely unreachable for in-repo files
+    # rather than merely unlikely.
+    root = Path(repo_root).resolve()
     # Prefilter to files that mention a GT artifact at all. Measured (ddm_sp2):
     # walking src+tools+experiments cost 0.69 s of a 30.0 s preflight budget;
     # one ripgrep pass removes nearly all of it. Falls back to the pure-Python
     # walker when ripgrep is unavailable, so behaviour is identical either way.
     candidates = _rg_python_files_matching_regex(
-        repo_root, list(_GT_LINEAGE_SCAN_DIRS), r"gt_first6|gt_cache_",
+        root, list(_GT_LINEAGE_SCAN_DIRS), r"gt_first6|gt_cache_",
     )
     if candidates is None:
-        candidates = tuple(_iter_python_files(repo_root, list(_GT_LINEAGE_SCAN_DIRS)))
+        candidates = tuple(_iter_python_files(root, list(_GT_LINEAGE_SCAN_DIRS)))
     for path in candidates:
         if "__pycache__" in path.parts:
             continue
         try:
-            rel_posix = path.relative_to(repo_root).as_posix()
-        except ValueError:
+            rel_posix = path.resolve().relative_to(root).as_posix()
+        except (ValueError, OSError):
             continue
         if rel_posix.startswith("experiments/results/"):
             continue
