@@ -1985,6 +1985,90 @@ def cmd_lint(args) -> int:
     return 3 if problems else 0
 
 
+_CHARTER_TEMPLATE = """\
+# {name} — <FILL: one-line title; any harness task id MUST carry its owning memo \
+filename on the same line (the m89 task-ledger split — arms cannot resolve bare ids)>
+
+## MANDATE
+
+Operator {date}: *"<FILL: operator verbatim, or the routed finding + its source memo>"*
+<FILL: what this arm will build/measure/race and why NOW — one paragraph.>
+
+## SCOPE
+
+1. <FILL: item — every claim to be checked/produced, with its authority path>
+
+## HARD CONSTRAINTS
+
+- `upstream/` READ-ONLY. NO Modal fire from the arm (MAIN owns dispatch + single-flight).
+- Serializer commits w/ post-edit `--expected-content-sha256`; `.py` = 2 genuine review passes.
+- ALWAYS KEEP THE PAYLOAD; bulky receipts to `/Volumes/APDataStore/pact/{name}/`.
+- <FILL: charter-specific constraints — file-ownership boundaries vs parallel arms, etc.>
+
+## PRIOR NEGATIVE SIGNAL (bearing dead-ends this charter consumes)
+
+- <FILL: each bearing negative/refusal/no-go WITH its owning memo filename — a build
+  charter designed blind to the measured failure corpus is naive by construction
+  (operator 2026-08-15). If genuinely first-of-family: replace this section body with
+  NEGATIVES_NA:(a real rationale, 8+ chars, never angle-bracketed).>
+
+## OPTIMAL FORM
+
+- Family exemplar: <FILL: the family's landed form — memo + commit sha. The lint REFUSES
+  this template until a real sha/commit pin appears here and the family exemplar is
+  cited with the word 'reference' or a receipt path.>
+- SCOPE reductions declared per row. MECHANISM reductions FORBIDDEN.
+- **PRIOR-LAW PREDICTION (falsifiable):** <FILL: what prior law predicts here> FALSIFIER:
+  <FILL: the observation that refutes it — count it plainly if it lands.>
+
+## DELIVERABLE
+
+`.omx/research/{name}_{date}.md` — <FILL: typed rows contract>. Commit via the
+serializer. End with the own-vehicle frontier line.
+"""
+
+
+def cmd_scaffold(args) -> int:
+    """Emit a lint-complete charter skeleton, then lint it (task: self-protect the
+    hand-authored-charter class — MAIN paid the same lint-refusal tax on 08-17 AND
+    08-20; charters must be born FROM the machine that judges them).
+
+    The raw template is deliberately UN-SPAWNABLE: its OPTIMAL FORM section carries
+    no sha pin and no family-reference token, so ``cmd_add`` refuses it until the
+    author fills real content. That is the executed-positive-control property —
+    the scaffold cannot be used to bypass the lint with empty sections.
+    """
+
+    date = datetime.now(UTC).strftime("%Y%m%d")
+    out = Path(args.out) if args.out else (
+        _REPO / ".omx" / "research" / "charters" / f"{args.name}_{date}.md"
+    )
+    if out.exists():
+        print(f"REFUSED scaffold: {out} already exists (never overwrite a charter)",
+              file=sys.stderr)
+        return 2
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(_CHARTER_TEMPLATE.format(name=args.name, date=date), encoding="utf-8")
+    print(f"scaffolded {out}")
+    problems = lint_charter_optimal_form(str(out))
+    for problem in problems:
+        print(f"charter-lint (expected on raw template) [{args.name}]: {problem}")
+    if not problems:
+        print(
+            f"WARNING [{args.name}]: raw template passed the lint — the un-spawnable "
+            f"property is BROKEN; fix the template before trusting the scaffold",
+            file=sys.stderr,
+        )
+        return 4
+    print(
+        f"\nnext steps (after filling every <FILL:> slot):\n"
+        f"  .venv/bin/python tools/codex_arm_queue.py lint --prompt {out} --name {args.name}\n"
+        f"  .venv/bin/python tools/codex_arm_queue.py add --name {args.name} --prompt {out} --rank <N>\n"
+        f"  .venv/bin/python tools/codex_arm_queue.py saturate --spawn"
+    )
+    return 0
+
+
 def cmd_mark(args) -> int:
     append_row({"name": args.name, "status": args.status, "event": "mark"})
     print(f"{args.name} -> {args.status}")
@@ -2110,6 +2194,10 @@ def main(argv=None) -> int:
     p.add_argument("--prompt", required=True)
     p.add_argument("--name", default="charter")
     p.set_defaults(fn=cmd_lint)
+    p = sub.add_parser("scaffold")
+    p.add_argument("--name", required=True)
+    p.add_argument("--out", default=None)
+    p.set_defaults(fn=cmd_scaffold)
     p = sub.add_parser("saturate")
     p.add_argument("--spawn", action="store_true")
     p.set_defaults(fn=cmd_saturate)

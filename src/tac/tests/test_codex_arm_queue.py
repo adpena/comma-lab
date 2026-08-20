@@ -979,3 +979,66 @@ def test_stale_numbers_leg_tolerates_a_missing_or_unreadable_store(tmp_path):
     mod.CORRECTIONS_INDEX = tmp_path / "absent.jsonl"
     assert mod._corrections_index_identifies_quantities() is False
     assert mod._lint_stale_numbers("15,157 B") == []
+
+
+# ---------------------------------------------------------------------------
+# scaffold subcommand (operator 2026-08-20 "Must self protect and fix
+# permanently" — the hand-authored-charter lint-refusal class, paid on 08-17
+# AND 08-20; charters are born FROM the machine that judges them)
+# ---------------------------------------------------------------------------
+
+
+def test_scaffold_template_carries_every_lint_required_section():
+    mod = _load()
+    text = mod._CHARTER_TEMPLATE.format(name="zz_t", date="20990101")
+    for header in (
+        "## MANDATE",
+        "## SCOPE",
+        "## HARD CONSTRAINTS",
+        "## PRIOR NEGATIVE SIGNAL",
+        "## OPTIMAL FORM",
+        "## DELIVERABLE",
+        "PRIOR-LAW PREDICTION",
+        "FALSIFIER",
+    ):
+        assert header in text, f"template lost required section {header!r}"
+
+
+def test_scaffold_raw_template_is_unspawnable(tmp_path):
+    """The un-spawnable property: an unfilled template must FAIL the
+    optimal-form lint (no sha pin can appear in placeholders), so the
+    scaffold cannot be used to bypass the charter lint with empty sections."""
+    mod = _load()
+    charter = tmp_path / "zz_raw_20990101.md"
+    charter.write_text(
+        mod._CHARTER_TEMPLATE.format(name="zz_raw", date="20990101"),
+        encoding="utf-8",
+    )
+    problems = mod.lint_charter_optimal_form(str(charter))
+    assert problems, "raw scaffold template PASSED the lint — un-spawnable property broken"
+
+
+def test_scaffold_refuses_overwrite(tmp_path):
+    mod = _load()
+    out = tmp_path / "zz_exists.md"
+    out.write_text("existing charter", encoding="utf-8")
+    rc = mod.cmd_scaffold(Namespace(name="zz_exists", out=str(out)))
+    assert rc == 2
+    assert out.read_text(encoding="utf-8") == "existing charter"
+
+
+def test_scaffold_filled_template_passes_lint(tmp_path):
+    """The negative direction: a genuinely filled charter must pass — the
+    template must not be structurally impossible to satisfy."""
+    mod = _load()
+    text = mod._CHARTER_TEMPLATE.format(name="zz_fill", date="20990101")
+    text = text.replace(
+        "- Family exemplar: <FILL: the family's landed form — memo + commit sha. The lint REFUSES\n"
+        "  this template until a real sha/commit pin appears here and the family exemplar is\n"
+        "  cited with the word 'reference' or a receipt path.>",
+        "- Family reference: the landed pq9 review-round form, commit fd8e6024c7.",
+    )
+    charter = tmp_path / "zz_fill_20990101.md"
+    charter.write_text(text, encoding="utf-8")
+    problems = mod.lint_charter_optimal_form(str(charter))
+    assert problems == [], f"filled template still refused: {problems}"
