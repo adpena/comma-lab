@@ -22,9 +22,7 @@ Report-8dp worst-case absolute score error bound: 3.63296497868841e-06
 Inflation wall time: 1419.9042126240001 seconds
 Evaluation wall time: 51.427507448999904 seconds
 Total authority wrapper wall time: 1484.80307526 seconds
-Inflate budget: 1800 seconds; inflation alone uses 1419.9 s, a 1.268x margin.
-That margin is not the binding one: the CI limit is 30 minutes on the WHOLE job,
-so read the budget section below before using this line.
+Budget: the 1800 s CI limit covers the WHOLE job, not inflation alone -- see below.
 
 The printed "0.15" is a 2-decimal DISPLAY of the evaluator's own final_score field.
 The score claimed on this submission is the value recomputed from the reported
@@ -37,8 +35,7 @@ same axis and the same hardware class. This archive is +3443 bytes and
 delta S -0.008710980 against it.
 
 This candidate SPENDS rate to buy distortion, the opposite direction from every
-prior generation in this packet. A reader comparing byte counts alone would read
-the +3443 as a regression. The measured leg split against generation 4:
+prior generation in this packet. The measured leg split against generation 4:
   rate +2.2926e-03 (+3443 bytes)
   seg  -1.0170e-02
   pose -8.3353e-04
@@ -48,9 +45,8 @@ the printed strings need not reproduce the net digit for digit.
 
 Sign determinacy: the net is a DELTA between two independently-8dp-rounded rows,
 so both rows' error bounds apply and they ADD -- 3.336608e-06 + 3.632965e-06 =
-6.969573e-06. The net is 1249.86x that summed bound. Dividing by one row's bound
-alone would overstate the margin by about 2x; at this magnitude the sign of the
-net is unaffected either way.
+6.969573e-06. The net is 1249.86x that summed bound. One row's bound alone gives a
+2x larger margin; the sign of the net is the same either way.
 
 Like generation 4 and unlike generation 3, this candidate does NOT hold decoded
 state constant: both distortion legs move, and here they move in our favour while
@@ -86,22 +82,18 @@ fits only at the most optimistic end, by about 10.7 s. Our own wall-clock
 assessment therefore grades this WARN, not PASS: a margin of 10.7 s on a
 warm-cache assumption is not a margin.
 
-Where the time goes: token decode is 1341.5 s of the 1419.9 s inflation, 94.5%.
-(Against the 1401.58 s sum of instrumented stages the same figure is 95.72%; the
-denominator is stated because both appear in our notes.) The cost is one hot
-stage, not diffuse overhead. A native port of that stage's integer half exists and
-reproduces this candidate's decode bit-for-bit on the full 600-frame field at
-1.77-1.83x on local hardware. That range STRADDLES the 1.804x speedup our own bar
-requires, and local run-to-run variance is wider than the distance to it, so the
-port is not shown to close the budget. It is also NOT in the tree evaluated here,
-and folding it would move the runtime-tree hash and require a new exact
-evaluation. It is available work, not a fix claimed on these bytes.
+Where the time goes: token decode is 1341.5 s of the 1419.9 s inflation, 94.5%
+(95.72% against the 1401.58 s instrumented-stage sum). One hot stage, not diffuse
+overhead. A native port of that stage's integer half reproduces this candidate's
+decode bit-for-bit on the full 600-frame field at 1.77-1.83x on local hardware.
+That range straddles the 1.804x our own bar requires, so the port is not shown to
+close the budget. It is not in the tree evaluated here; folding it would move the
+runtime-tree hash and require a new exact evaluation.
 
 Two residual windows for the non-inflation steps on the CUDA path disagree in
 verdict: [822, 1302] s grades this candidate REFUSE, and [890.6, 1430.6] s -- that
 same window re-derived with a larger evaluation-time allowance -- grades it WARN.
-They are ours, they are projections rather than measurements, and they are not
-reconciled. Both are stated.
+Both are our own projections, not measurements, and they are not reconciled.
 
 On the CPU path the same assessment projects 1414-1913 s of inflation against a
 residual of [1044, 1332] s, which is over budget in every corner. The prior

@@ -48,9 +48,7 @@ Report-8dp worst-case absolute score error bound: 3.63296497868841e-06
 Inflation wall time: 1419.9042126240001 seconds
 Evaluation wall time: 51.427507448999904 seconds
 Total authority wrapper wall time: 1484.80307526 seconds
-Inflate budget: 1800 seconds; inflation alone uses 1419.9 s, a 1.268x margin.
-That margin is not the binding one: the CI limit is 30 minutes on the WHOLE job,
-so read the budget section below before using this line.
+Budget: the 1800 s CI limit covers the WHOLE job, not inflation alone -- see below.
 
 The printed "0.15" is a 2-decimal DISPLAY of the evaluator's own final_score field.
 The score claimed on this submission is the value recomputed from the reported
@@ -63,8 +61,7 @@ same axis and the same hardware class. This archive is +3443 bytes and
 delta S -0.008710980 against it.
 
 This candidate SPENDS rate to buy distortion, the opposite direction from every
-prior generation in this packet. A reader comparing byte counts alone would read
-the +3443 as a regression. The measured leg split against generation 4:
+prior generation in this packet. The measured leg split against generation 4:
   rate +2.2926e-03 (+3443 bytes)
   seg  -1.0170e-02
   pose -8.3353e-04
@@ -74,9 +71,8 @@ the printed strings need not reproduce the net digit for digit.
 
 Sign determinacy: the net is a DELTA between two independently-8dp-rounded rows,
 so both rows' error bounds apply and they ADD -- 3.336608e-06 + 3.632965e-06 =
-6.969573e-06. The net is 1249.86x that summed bound. Dividing by one row's bound
-alone would overstate the margin by about 2x; at this magnitude the sign of the
-net is unaffected either way.
+6.969573e-06. The net is 1249.86x that summed bound. One row's bound alone gives a
+2x larger margin; the sign of the net is the same either way.
 
 Like generation 4 and unlike generation 3, this candidate does NOT hold decoded
 state constant: both distortion legs move, and here they move in our favour while
@@ -112,22 +108,18 @@ fits only at the most optimistic end, by about 10.7 s. Our own wall-clock
 assessment therefore grades this WARN, not PASS: a margin of 10.7 s on a
 warm-cache assumption is not a margin.
 
-Where the time goes: token decode is 1341.5 s of the 1419.9 s inflation, 94.5%.
-(Against the 1401.58 s sum of instrumented stages the same figure is 95.72%; the
-denominator is stated because both appear in our notes.) The cost is one hot
-stage, not diffuse overhead. A native port of that stage's integer half exists and
-reproduces this candidate's decode bit-for-bit on the full 600-frame field at
-1.77-1.83x on local hardware. That range STRADDLES the 1.804x speedup our own bar
-requires, and local run-to-run variance is wider than the distance to it, so the
-port is not shown to close the budget. It is also NOT in the tree evaluated here,
-and folding it would move the runtime-tree hash and require a new exact
-evaluation. It is available work, not a fix claimed on these bytes.
+Where the time goes: token decode is 1341.5 s of the 1419.9 s inflation, 94.5%
+(95.72% against the 1401.58 s instrumented-stage sum). One hot stage, not diffuse
+overhead. A native port of that stage's integer half reproduces this candidate's
+decode bit-for-bit on the full 600-frame field at 1.77-1.83x on local hardware.
+That range straddles the 1.804x our own bar requires, so the port is not shown to
+close the budget. It is not in the tree evaluated here; folding it would move the
+runtime-tree hash and require a new exact evaluation.
 
 Two residual windows for the non-inflation steps on the CUDA path disagree in
 verdict: [822, 1302] s grades this candidate REFUSE, and [890.6, 1430.6] s -- that
 same window re-derived with a larger evaluation-time allowance -- grades it WARN.
-They are ours, they are projections rather than measurements, and they are not
-reconciled. Both are stated.
+Both are our own projections, not measurements, and they are not reconciled.
 
 On the CPU path the same assessment projects 1414-1913 s of inflation against a
 residual of [1044, 1332] s, which is over budget in every corner. The prior
@@ -176,18 +168,16 @@ authority run, inflation took 1,419.9 s and evaluation 51.4 s: 1,471.3 s of the
 30-minute job wall, leaving about 328.7 s for checkout, dependency install and
 archive download. We grade our own submission WARN, not PASS, on this axis.
 
-Token decode is 1,341.5 s of that 1,419.9 s, 94.5% — one hot stage, not diffuse
-overhead. We have a native port of its integer half that reproduces this
-candidate's evaluated decode bit-for-bit on the full 600-frame field at 1.77–1.83×
-on local hardware. That range straddles the 1.804× our own bar requires and local
-variance is wider than the gap, so the port is **not** shown to close the budget;
-it is also not in the tree evaluated here, and folding it would move the
-runtime-tree hash and require a new exact evaluation.
+Token decode is 1,341.5 s of that 1,419.9 s, 94.5% — one hot stage. We have a
+native port of its integer half that reproduces this candidate's evaluated decode
+bit-for-bit on the full 600-frame field at 1.77–1.83× locally. That range straddles
+the 1.804× our own bar requires, so it is **not** shown to close the budget, and it
+is not in the tree evaluated here.
 
 Two of our own residual windows for the non-inflation CI steps disagree:
-`[822, 1302] s` grades this REFUSE, and `[890.6, 1430.6] s` — the same window
-re-derived with a larger evaluation-time allowance — grades it WARN. Both are
-projections, not measurements, and they are not reconciled. Both are stated.
+`[822, 1302] s` grades this REFUSE, `[890.6, 1430.6] s` (same window, larger
+evaluation allowance) grades it WARN. Both are projections, not measurements, and
+they are not reconciled.
 
 **These exact bytes have not been measured on a contest CPU** and no CPU score is
 claimed. The prior lineage measured contest-CPU inflation at 3,422.7 s against the
@@ -224,9 +214,8 @@ is unmodified. The scorer was not touched.
 **Competitive, on one measured row.**
 
 On the exact submitted bytes the measured `[contest-CUDA]` 600-sample score is
-`0.14839100138338618`, re-derived from the reported components rather than read
-off the evaluator's rounded `final_score` field. That is below the best ranked
-leaderboard score as read on 2026-08-20 (PR #135,
+`0.14839100138338618`, recomputed from the reported components. That is below the
+best ranked leaderboard score as read on 2026-08-20 (PR #135,
 `semantic-pose-HPAC_CPR1_polished`, 0.162) and below every prior row in our own
 custody.
 
@@ -262,8 +251,7 @@ rule (**600 of 600 pairs stopped on `no_improving_step`, zero budget hits**).
 
 Against the prior candidate (177,182 bytes, S 0.15710198138050818) this archive is
 **+3,443 bytes** for a net **−8.7110e-03**: it spends rate and buys both distortion
-legs, the reverse of every earlier candidate here. A reader comparing byte counts
-alone would misread the larger archive as a regression. The leg split and its error
+legs, the reverse of every earlier candidate here. The leg split and its error
 bounds are in the report above.
 
 ## Borrowed-substrate accounting

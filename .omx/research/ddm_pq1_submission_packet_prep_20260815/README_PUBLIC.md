@@ -26,13 +26,12 @@ measured `[contest-CUDA]` 600-sample score is **0.14839100138338618**.
   and none is claimed. This submission is GPU-required for evaluation.
 - **The open runtime risk.** Inflation took 1419.9 s of a 30-minute job wall —
   the largest open risk on this submission, and a runtime risk, not a score risk.
-  The cost is one hot stage: **token decode alone is 1341.5 s of that 1419.9 s,
-  94.5%.** We hold a native port of that stage's integer half which reproduces
-  this candidate's decode bit-for-bit on the full 600-frame field at 1.77–1.83× on
-  local hardware — a range that straddles the 1.804× our own bar requires, so the
-  port is not shown to close the budget. It is also not in the tree evaluated
-  here; folding it would move the runtime-tree hash and require a new exact
-  evaluation. Full numbers are in `report.txt` under "Evaluation-time budget".
+  One hot stage: **token decode alone is 1341.5 s of that 1419.9 s, 94.5%.** We
+  hold a native port of its integer half that reproduces this candidate's decode
+  bit-for-bit on the full 600-frame field at 1.77–1.83× locally — a range that
+  straddles the 1.804× our own bar requires, so it is not shown to close the
+  budget, and it is not in the tree evaluated here. Full numbers are in
+  `report.txt` under "Evaluation-time budget".
 - **What is not authority.** Any local macOS number, any advisory row, and any
   projection appearing in our own research notes is not a score and is not used
   here.
@@ -80,9 +79,8 @@ edits and the pose carrier are decided — together instead of one after the oth
    budget hits**, so the stopping criterion was never the binding constraint.
 
 The net effect is the reverse of every prior generation in this packet: it
-**spends** 3,443 bytes and buys both distortion legs, for a net `-0.008710980`. A
-reader scanning byte counts alone would misread the larger archive as a
-regression, so the leg split is published in `report.txt`.
+**spends** 3,443 bytes and buys both distortion legs, for a net `-0.008710980`.
+The leg split is published in `report.txt`.
 
 The tail sections, the HPAC stream and the 13-context fixed-point integer
 log-odds mixer that produces the token stream are carried over from the prior
