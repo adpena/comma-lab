@@ -1,9 +1,24 @@
 audit=PASS
-scope=retained F26R C source, Python binding, optimized binaries, and scalar-twin binaries
-command_1=strings <each-retained-binary> | rg '9ba2e52b|f0ba4bb4|617e9fcf|ba0d529b'
+scope=ddm_wc2c C source and both locally built receiver binaries (dispatched + F26_FORCE_SCALAR twin)
+date_utc=2026-08-20
+host=Apple M5 Max, macOS 26.4 arm64, Apple clang 21.0.0
+
+command_1=strings <each-built-binary> | grep -Eo 'cc10a7b0|8269fe1a|370a5e2a|6bf8acf8|f3bce5d2|9ba2e52b'
 command_1_matches=0
-command_2=rg '[0-9a-f]{32,}' f26_hpac_native.c experiments/ddm_f26q_f26_hpac_native.py
+command_1_note=covers the jg5 token, corrected-logit, CDF, raw and archive SHA prefixes plus the historical MC36 token prefix
+
+command_2=grep -Eo '[0-9a-f]{32,}' runtime-rs/native/f26-hpac/f26_hpac_native.c
 command_2_matches=0
-generic_shape_constants=alphabet 5; channels 64; patch 64 direct-context specialization; RC64 total 2^31; RC64 interval constants
-archive_derived_inputs=all weights; biases; exponents; residual table; plans; frame codes; frame context codes; conv-A deltas; RC64 stream
+
+command_3=otool -L <each-built-binary>
+command_3_result=/usr/lib/libSystem.B.dylib only; no libomp, no third-party runtime
+
+dispatched_binary_sha256=5d74dfa118e7474608ecef63f7615f9886f2ab8c083d190d905de85c8fe65019
+scalar_twin_binary_sha256=7e771d4cc86c5cca21c2939f898279de5e33b01585d6b5d32d86ef6cfd77104c
+
+generic_shape_constants=alphabet 5; channels 64; patch 64; RC64 total 2^31; RC64 interval constants; F26_MAX_THREADS 32; default thread width 4
+archive_derived_inputs=all weights; biases; exponents; residual table; group plans; frame codes; frame context codes; conv-A deltas; RC64 stream
 learned_or_video_derived_constants_embedded=none found in audited scope
+
+wc2c_additions_reviewed=split entry points (frame_begin/group_logits/group_commit); pthread worker pool; runtime ISA dispatch; int32 MAC accumulators
+wc2c_additions_verdict=all generic decoder algorithm; none consumes or embeds archive content at compile time
