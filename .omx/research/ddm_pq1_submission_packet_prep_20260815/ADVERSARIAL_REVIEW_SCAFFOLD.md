@@ -2,6 +2,17 @@
 
 Status: `HOLD`, consecutive clean passes: `0/5`.
 
+> **CANDIDATE CHANGED 2026-08-20 — rounds 1–12 reviewed SUPERSEDED BYTES.** The
+> packet was re-staged to generation 5 (`f3bce5d259a08183…` / 180,625 B,
+> `[contest-CUDA]` **0.14839100138338618** — the first sub-0.15 row in this
+> packet's history) at the fifteenth pointer move. Every row below reviewed
+> generation 2, 3 or 4. Their findings and class cures carry — the apparatus is
+> candidate-agnostic — but **no clean pass on superseded bytes counts toward this
+> candidate**, and the counter was already `0/5`. **Round 13 is the first review
+> of these bytes**; see "Round 13 — what to examine" at the end of this file.
+>
+> Prior banner preserved verbatim:
+>
 > **CANDIDATE CHANGED 2026-08-19 — rounds 1–11 reviewed SUPERSEDED BYTES.** The
 > packet was re-staged to generation 4 (`35c318d541d70370…` / 177,182 B,
 > `[contest-CUDA]` 0.15710198138050818) at the ck1 tenth-move boundary. Every
@@ -28,7 +39,8 @@ fixed. A pass cannot be counted while the strict compliance chain is red.
 | 10 | RUN 2026-08-18 | FRESH-EYES Opus arm #6 (no part in any generation, fix, or prior review) | `debb025f45bb42e3…4b037a` | `6f4f6dc8e3648eb0…` (r5) | **3** — S re-derived bit-exact `0.15771357797660338` on all three terms (not the rounded field) · 34/34 runtime files · r5 freshness re-derived from the receipt's OWN scanned list across 8 named inputs · 16 live receipt citations of 34 · 118 path-like values of 476 strings across 8 JSON docs (107 resolve, 11 adjudicated) · 14 `*_utc` fields · 1,199 lines/10 docs zero prose-vs-adjudication contradictions · 747 lines/5 public surfaces zero hygiene hits — every class with a DENOMINATOR. Findings: F1 (MED) the staged dir held 33 undeclared files (15 `.pyc` + 18 AppleDouble + 3 `__pycache__`) between 13:16:25Z and 13:27:21Z, cause traced to source (`.omx/tmp/sa3/probe_identity.py:34-41` sys.path.insert + imports); the finding is the MISSING GUARD — rounds 5 and 9 read "zero .pyc" as proof of cleanliness and that quantity is now known unstable between rounds · F2 (MED) this scaffold had no round-9 row while declaring itself the counter authority · F3 (LOW) MAIN's removal receipt asserted the .pyc broke the pinned tree sha; the sha is MANIFEST-DERIVED and measurably never moved (34/34 identical DURING contamination). MAIN's mid-review remediation was verified from disk and adjudicated as NOT invalidating the round — the scored object never moved. Full report: `REVIEW_PASS10_FRESH_EYES.md`. ALL 3 FIXED same-day: F3 receipt corrected + false claim withdrawn in-record · F2 rows 9+10 added · F1 CLASS-CURED by `tools/packet_census_guard.py` (directory census: manifest ∪ declared exclusions, any extra file REFUSES) | **0/5** |
 
 | 11 | RUN 2026-08-18 | FRESH-EYES Opus arm #7 (`ddm_rv8`) | `debb025f45bb42e3…4b037a` | `6f4f6dc8e3648eb0…` (r5, found STALE by INSTRUMENT and by WORLD) | **6** — F1 (MED-HIGH, new class) the canonical receipt r5 is stale on two axes the round-8 freshness law did not cover: the CHECKER changed 1h46m after r5 was bought (86 checks then, 87 live) and our own frontier moved past the candidate twice that day, so `frontier_no_regression_on_submitted_axis` was RED at contest-final severity — re-run measured 82/87 with 5 reds · F2 (MED, new class) **63 absolute local `/Volumes/…` paths shipping in `GENERATION_RECEIPT.json` (16) + `RECEIVER_PARSEBACK.json` (47)**, invisible to the leak scanner for two independent reasons · F3 (MED) the round-10 census guard had no consumer, no tests, and printed `39 declared (34 + 7)` · F4 (MED) the swap trigger still named `e480b`/`e960` in the present tense and could not admit the live pointer · F5 (LOW) accounting title named the wrong candidate · F6 two undeclared marker files staged in the git index inside the PREP tree. Full report: `.omx/research/p0_1111_review_round11_20260818.md`. Fixes: `.omx/research/p0_1111_round11_fixes_20260818.md` — F2(b)/F3/F4/F5/F6 + two class cures (receipts now carry `instrument_and_world`; harvests write a scanner-visible anchor mirror) all FIXED; **F2(a) REFUSED with a measurement** (sanitizing manifest-pinned bytes in place would ship bytes the T4 row never evaluated under an unchanged green tree hash) and deferred to the next re-stage | **0/5** |
-| 12 | PENDING — first review of generation 4 | fresh-eyes reviewer, no part in the re-stage | `35c318d541d70370…677e3` | `587af0cf78b67858…` (gen4.r1, 83/87) | — | — |
+| 12 | RUN 2026-08-19 | FRESH-EYES Opus arm #8 (`ddm_rv12`) | `35c318d541d70370…677e3` | `587af0cf78b67858…` (gen4.r1, 83/87) | **6** — F1 (MED) sign-determinacy margin divided by ONE row's 8dp bound for a TWO-row delta; "18.0x" should be **8.97x**, overstated by exactly 2.00x, and flagged as a CLASS across sister docs · F2 (MED) decode-time **network** dependency (`uv` + egress) undisclosed and the bootstrap branch never exercised on the authority run · F3 (MED) **19.08x** advisory-vs-authority pose drift on identical bytes undisclosed (d_seg drifts only 1.43x) · F4 (LOW) shipped leg split asserted "sums to the net" while printed 5-sig-fig values do not · F5 (LOW) AppleDouble cure applied to the staged tree but not to `gen4_receipts/` or `generations/` · F6 (LOW) the superseded **79.40216174747616** contest-CUDA row on the IDENTICAL archive sha undisclosed. Full report: `.omx/research/p0_1111_round12_review_20260819.md`. ALL 6 FIXED (commits `d39cd384b3`, `6e976eeafd`) | **0/5** |
+| — | ROW ADDED LATE 2026-08-20 by `ddm_pq3` | — | — | — | Round 12 was RUN and FIXED on 2026-08-19 but no scaffold row was written — the round-10 F2 class ("this scaffold had no round-N row while declaring itself the counter authority") recurring for the third time. Recorded here by the re-stage arm rather than left for a reviewer to rediscover. **The recurrence is itself the finding**: two class-fixes have failed to stop it, because both cured the missing ROW and neither cured the missing STEP — nothing in `SWAP_PROCEDURE.md` step 6 requires the scaffold row as part of a fix batch. | **0/5** |
 
 **Strict-chain-red clause, gen-4 adjudication (2026-08-19):** the clause is read
 against the generation-4 terminal state **83 GREEN / 4 RED of 87** (receipt
@@ -203,3 +215,46 @@ rather than reading `final_score`. Re-hash every manifest row from disk. Check
 receipt freshness on all three axes (surfaces, instrument, world) using the
 receipt's own `instrument_and_world` block. Confirm no push, hosting action, or
 PR opening has occurred.
+
+
+---
+
+## Round 13 — what to examine (written by `ddm_pq3`, who therefore cannot run it)
+
+This list is written by the arm that staged generation 5. It names the thin spots
+I know about; a fresh reviewer should not treat it as exhaustive.
+
+1. **Re-derive the score from the receipt yourself**, from all three components,
+   and confirm `0.14839100138338618` rather than the evaluator's printed `0.15`.
+   The display rounds UP across the exact boundary this packet claims. Check that
+   no surface anywhere states `0.15` as the claim.
+2. **Re-run the staging proof.** `tools/stage_contest_submission_packet.py` is
+   NEW and unreviewed by anyone but its author. Verify independently that the 33
+   staged runtime files hash to the manifest, and that
+   `runtime_tree_sha256` re-derived from the staged rows equals `2103073d…`. My
+   tool asserts this; do not take its word.
+3. **The tool has no tests.** That is owed and named. Its census logic is the same
+   class that produced the round-10 F1 and round-12 F5 findings, and I wrote it
+   in the same session in which I then hit the AppleDouble recurrence myself.
+4. **Argue the other side of the accounting.** §9 classifies the joint admission
+   waterfill as `ours-original` at 0 counted bytes. Is a decision rule over
+   someone else's representation really ours to claim, and does the §9.3 "what is
+   not ours" paragraph do enough work?
+5. **The terminal dispatch row I appended.** Three compliance reds went green
+   because I appended a claim row binding both full shas. The dispatch genuinely
+   completed and was harvested — but the arm that benefits from a green should not
+   be the only one who says so. Verify the row against the receipt.
+6. **Population-query the byte-direction sentences.** This is the first candidate
+   whose archive GREW. Grep every surviving sentence that assumes bytes fall
+   ("smaller", "byte reduction", "rate credit") and confirm none of them now
+   describes these bytes.
+7. **The wall-clock disclosure.** I graded the T4 path WARN on a derived residual
+   window, not a measured CI run. Check whether the packet ever states the WARN as
+   though it were measured, and whether 10.7 s of margin is disclosed everywhere it
+   should be.
+8. **The GPU-routing document.** I measured that the one-line flip moves the tree
+   sha and therefore costs a new T4 row. Verify that measurement independently, and
+   check that no surface implies variant (a) is free.
+9. **The AppleDouble ordering law.** I purged 51 sidecars mid-session and re-ran
+   the census. Confirm the packet, prep and receipts trees are all clean AT THE
+   MOMENT YOU LOOK, because any write to the ExFAT volume re-creates them.

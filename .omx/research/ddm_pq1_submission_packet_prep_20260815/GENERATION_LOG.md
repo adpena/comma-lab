@@ -12,7 +12,8 @@ this directory currently describe.
 | 1 | `hv1_ep0634` | 182,759 | `80d9c8c6fdc72caa…` | 0.15959729295498598 | superseded, retained |
 | 2 | `rr4_free_corrector_v2_reencode` | 181,161 | `35ac2b9beb7e6fa8…` | 0.15853325034789678 | superseded, retained |
 | 3 | `fx2_a__tuned` (sz1 composed split) | 179,930 | `debb025f45bb42e3…` | 0.15771357797660338 | superseded, retained |
-| 4 | `ck1_composed_rebased_r4` (SM3R mode-6 row-prune + frame-0 pose compensation) | 177,182 | `35c318d541d70370…` | **0.15710198138050818** | **ACTIVE, HOLD** |
+| 4 | `ck1_composed_rebased_r4` (SM3R mode-6 row-prune + frame-0 pose compensation) | 177,182 | `35c318d541d70370…` | 0.15710198138050818 | superseded, retained |
+| 5 | `jg5_joint_waterfill_455` (joint admission waterfill + carrier re-solve on own renders) | 180,625 | `f3bce5d259a08183…` | **0.14839100138338618** | **ACTIVE, HOLD** |
 
 ## What changed at generation 2
 
@@ -144,3 +145,73 @@ bit-identity, base-unchanged and token-verbatim proofs, and the final archive
 is asserted against `debb025f45bb42e3…`/179,930 B. End-to-end run from the four
 sha-verified retained inputs: all assertions green, determinism repeat
 byte-identical. Receipt: `ddm_pq2/e2e_sz1_composed/RESULT_pq2_e2e.json`.
+
+
+## What changed at generation 5 — the first sub-0.15 row, and the first that SPENDS rate
+
+Generation 5 is the first candidate in this packet to measure **below 0.15** on
+`[contest-CUDA]`, and the first to move in the opposite direction on bytes.
+
+**The archive is LARGER: 180,625 B, +3,443 B against generation 4.** A reader
+comparing byte counts alone would read that as a regression. It is not. The legs
+against generation 4 are rate **+2.2926e-03**, seg **−1.0170e-02**, pose
+**−8.3353e-04**, for a net of **−8.7110e-03**. Rate is spent; both distortion legs
+are bought.
+
+**The mechanism.** The prior composition applied all 573 seg token edits and then
+re-solved the pose carrier. Measured, that direction is seg-descending but not
+pose-null: the edits cost roughly 13× more pose than they bought in seg, and the
+composed result scored far worse than either part suggested. Generation 5 stops
+composing two finished candidates and solves the admission jointly:
+
+1. Edit admission is swept over a Lagrange multiplier on pose damage. **455 of the
+   573 edits are admitted**; the other 118 are dropped and those pairs keep the
+   prior carrier's codes.
+2. The frame-0 pose carrier is re-solved against the **candidate's own edited
+   renders** rather than the base renders, under a derived materiality stop rule.
+   **600 of 600 pairs stopped on `no_improving_step` with zero budget hits**, so
+   the stopping criterion was never the binding constraint.
+
+**Sign determinacy, stated the correct way.** The net is a delta between two
+independently 8dp-rounded rows, so both bounds apply and ADD: 3.336608e-06 +
+3.632965e-06 = 6.969573e-06. The net is **1249.86×** that summed bound. (Dividing
+by one row's bound alone — the round-12 F1 defect — would overstate by about 2×;
+at this magnitude the conclusion is unaffected, but the arithmetic is stated
+correctly regardless.)
+
+**The display trap.** The evaluator prints `Final score: … = 0.15`. That is a
+2-decimal display that rounds UP across exactly the boundary this candidate sits
+on. The claim is the value recomputed from components, `0.14839100138338618`,
+with a worst-case 8dp bound of `3.633e-06` — about 443× clear of 0.15.
+
+## Custody note carried into generation 5
+
+The source runtime tree carried **27 `__pycache__/*.pyc` files and 2 AppleDouble
+sidecars** that are not in the 33-row runtime manifest. None of them reached the
+packet: generation 5 was staged with `tools/stage_contest_submission_packet.py`,
+which selects files **by the manifest** rather than by globbing, so contamination
+is excluded by construction rather than by a cleanup pass. The excluded classes
+are reported with exact paths in `STAGING_RECEIPT.json` — a census that drops a
+class silently is the generation-4 defect, and this one names its denominator.
+
+A second, separate contamination did occur and was caught: writing the four public
+docs onto the ExFAT volume caused macOS to create **51 new AppleDouble sidecars**
+across the generations tree. `tools/packet_census_guard.py` caught all 51 with
+exact paths; they were purged and the census re-run clean. **The ordering law this
+establishes: purge AppleDouble immediately before the census and the compliance
+re-buy, because any write to the volume re-creates them.**
+
+The harvested authority receipts were persisted as **Python `bytes` reprs** — the
+files literally begin with `b'` and carry `\n` as two characters. They were decoded
+and each decode was proved round-trip exact before use
+(`HARVEST_DECODE_RECEIPT.json`). The shipped `report.txt` therefore carries the
+evaluator's own text, not a re-authoring.
+
+## Reproduction at generation 5 — NOT re-verified
+
+`experiments/ddm_pq2_compress_e2e.py` has **not** been re-run for these bytes. The
+generation-3 VERIFIED label belongs to generation 3 and does not transfer. What
+exists for this candidate: the candidate seal binding archive to receiver
+(`SEAL_VALID`), the staging proof that this directory is byte-identical to the
+evaluated tree with the tree hash **re-derived from the staged rows**, and the
+authority receipt itself.

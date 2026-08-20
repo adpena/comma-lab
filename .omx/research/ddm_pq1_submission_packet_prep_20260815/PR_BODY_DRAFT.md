@@ -1,423 +1,298 @@
-# submission name: ck1_composed_rowprune
+# submission name: jg5_joint_waterfill
 
-Prepared by the repository operator. **This is a hold-state draft.** It must not
-be opened as a pull request until the download URL, source-visibility check,
-strict compliance pass, and five consecutive clean review passes are complete.
-Generation 4 of this packet; it supersedes the sz1-composed, rr4, hv1, and e480b
-drafts.
+> **STATE: PREPARED, NOT SUBMITTED.** This body is staged for review. No archive
+> has been hosted, no pull request has been opened, and the score below is not
+> published anywhere. Opening the PR and hosting the archive are reserved to the
+> repository owner.
 
-# upload zipped `archive.zip`
+# upload zipped archive.zip
 
-Download status: pending operator-authorized public hosting. No public URL is
-claimed in this draft.
+**Download:** pending operator-authorized hosting. No URL is claimed here, because
+no URL exists yet. The exact bytes a judge would download are pinned:
 
-Exact file identity:
+| Property | Value |
+|---|---|
+| SHA-256 | `f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e` |
+| Size | 180,625 bytes |
+| Members | 1 — `p`, 180,525 bytes, stored, SHA-256 `54b445da3a1a4b4c7012c83b25c3e0d87daab5ce10cd54a1598cfb239ab05b4a` |
 
-- 177,182 bytes
-- SHA-256 `35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3`
-- single stored member `p`, 177,082 bytes, SHA-256
-  `ee904fbf6b10e4fadd69ca9c820bd7db0d334694bdf23c4a93147cd242d8c462`, CRC32 1722708006
+The submission is only valid against runtime tree
+`2103073d739fc3f27d329ea0785ea3010307360c2380af0476e16d0f5b57cb9b`. That is not
+boilerplate — see "Score and runtime boundary" below for the measured reason.
 
 # report.txt
-
-The complete `report.txt` shipped beside the archive, copied verbatim:
 
 ```text
 === Exact result identity ===
 Evidence axis: [contest-CUDA]
 Hardware: Tesla T4, Linux x86_64
 Samples: 600
-Archive SHA-256: 35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3
-Archive size: 177182 bytes
-Member: p, 177082 bytes, stored, SHA-256 ee904fbf6b10e4fadd69ca9c820bd7db0d334694bdf23c4a93147cd242d8c462
-Runtime tree SHA-256: da91e06744b94f77077303b2b760cb259aa84b078d998921fb99e018d52fff6f
-Portable runtime content tree SHA-256: 944c8c574f377cbe625c007b44bfc8e88ec572bf3fc7a2e9ac7aca5750217078
+Archive SHA-256: f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e
+Archive size: 180625 bytes
+Member: p, 180525 bytes, stored, SHA-256 54b445da3a1a4b4c7012c83b25c3e0d87daab5ce10cd54a1598cfb239ab05b4a
+Runtime tree SHA-256: 2103073d739fc3f27d329ea0785ea3010307360c2380af0476e16d0f5b57cb9b
+Portable runtime content tree SHA-256: 3ba9987771e1be967cf80942faedc7c5f6641f15039e03dd2b0909fd6613ab99
 Upstream snapshot SHA-256: cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008
 Upstream evaluate.py SHA-256: 7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b
 
 === Evaluation results over 600 samples ===
-Average PoseNet Distortion: 0.00000777
-Average SegNet Distortion: 0.00030309
-Seg contribution: 0.030309
-Pose contribution: 0.008814760348415605
-Rate contribution: 0.11797822103209257
-Recomputed score: 0.15710198138050818
-Reported (2 dp display): 0.16
-Report-8dp worst-case absolute score error bound: 3.336608391523776e-06
-Inflation wall time: 1197.696784587 seconds
-Evaluation wall time: 40.764544933000025 seconds
-Total authority wrapper wall time: 1249.358265802 seconds
-Inflate budget: 1800 seconds; measured headroom 1.503x
+Average PoseNet Distortion: 0.00000637
+Average SegNet Distortion: 0.00020139
+Seg contribution: 0.020139
+Pose contribution: 0.007981227975693965
+Rate contribution: 0.1202707734076922
+Recomputed score: 0.14839100138338618
+Reported (2 dp display): 0.15
+Report-8dp worst-case absolute score error bound: 3.63296497868841e-06
+Inflation wall time: 1419.9042126240001 seconds
+Evaluation wall time: 51.427507448999904 seconds
+Total authority wrapper wall time: 1484.80307526 seconds
+Inflate budget: 1800 seconds; measured headroom 1.268x
 
-=== Relationship to the prior candidates ===
-Prior packet generation 3 measured S = 0.15771357797660338 at 179930 bytes on the
-same axis and the same hardware class. This archive is -2748 bytes and
-delta S -0.0006115966 against it.
+The printed "0.15" is a 2-decimal DISPLAY of the evaluator's own final_score field.
+The score claimed on this submission is the value recomputed from the reported
+components, 0.14839100138338618, which is what the line above records. The
+display rounds up across the 0.15 boundary; the components do not.
 
-The intermediate row between them (177576 bytes, S 0.1571619225142182) is the same
-lineage with the row-prune applied and no compensation edit; this archive is
--394 bytes and net delta S -5.994113e-05 against that row.
-The measured leg split against it. The exact legs sum to the net to within 1e-18;
-the values below are DISPLAYED at 5 significant figures, so adding the printed
-strings gives -5.99430e-05 rather than the net. The rounding is in the display,
-not in the arithmetic.
-  rate -2.6235e-04 (-394 bytes)
-  seg  +1.7400e-04
-  pose +2.8407e-05
-  net  -5.994113e-05
+=== Relationship to the prior candidate ===
+Prior packet generation 4 measured S = 0.15710198138050818 at 177182 bytes on the
+same axis and the same hardware class. This archive is +3443 bytes and
+delta S -0.008710980 against it.
+
+This candidate SPENDS rate to buy distortion, which is the opposite direction
+from every prior generation in this packet, and it is worth stating plainly
+because a reader scanning byte counts alone would read the +3443 as a regression.
+The measured leg split against generation 4:
+  rate +2.2926e-03 (+3443 bytes)
+  seg  -1.0170e-02
+  pose -8.3353e-04
+  net  -8.7110e-03
+The legs sum to the net; the values above are DISPLAYED at 5 significant figures,
+so adding the printed strings need not reproduce the net digit for digit. The
+rounding is in the display, not in the arithmetic.
+
 Sign determinacy: the net is a DELTA between two independently-8dp-rounded rows,
-so both rows' error bounds apply and they ADD -- 3.336608e-06 + 3.345782e-06 =
-6.682391e-06. The net is 8.97x that summed bound. Dividing by one row's bound
-alone would report 17.96x, which overstates the margin by 2.00x.
-Unlike generation 3, this candidate does NOT hold decoded state constant: the
-edit changes semantic-section values, so both distortion legs move and are paid
-for out of the rate credit. Retained fraction of the rate credit: 0.228.
+so both rows' error bounds apply and they ADD -- 3.336608e-06 + 3.632965e-06 =
+6.969573e-06. The net is 1249.86x that summed bound. Dividing by one row's bound
+alone would overstate the margin by about 2x; at this magnitude the conclusion is
+unaffected, but the arithmetic is stated the correct way regardless.
 
-=== Disclosed superseded rows on these exact bytes ===
-These archive bytes have been evaluated on contest-CUDA T4 TWICE. Both rows are
-recorded here, because the difference between them is the whole reason the
-runtime tree is pinned.
+Like generation 4 and unlike generation 3, this candidate does NOT hold decoded
+state constant: both distortion legs move, and here they move in our favour while
+the rate leg is paid.
 
-  runtime tree 71c754686eba2ca3ef97847e7f0424e097025fca8f57065a70ea695561fc0b8a
-    d_seg 0.41580084 | d_pose 142.15991211 | S 79.40216174747616 | SUPERSEDED
-  runtime tree da91e06744b94f77077303b2b760cb259aa84b078d998921fb99e018d52fff6f
-    d_seg 0.00030309 | d_pose 0.00000777 | S 0.15710198138050818 | AUTHORITY
+=== Runtime tree pin ===
+These archive bytes have been evaluated on contest-CUDA T4 exactly ONCE, under
+runtime tree 2103073d..., which is the tree shipped here. No superseded row
+exists on these bytes.
 
-Same archive SHA-256, same 600 samples, same hardware class; only the receiver
-tree differs. The superseded row paired this archive's token bytes with a runtime
-forked before the probability-model change those bytes were encoded against.
-Arithmetic decoding under a mismatched probability model does not error -- it
-returns rc=0 and emits wrong symbols from the first divergent bin onward, so the
-decode "succeeded" and produced garbage frames. Structural parse-back could not
-see it, because sections and hashes round-trip correctly either way.
+The pin is still load-bearing, and the reason is empirical rather than theoretical.
+The previous generation's archive was evaluated TWICE on identical bytes and
+scored 79.40216174747616 under one receiver tree and 0.15710198138050818 under
+another. Arithmetic decoding under a mismatched probability model does not error:
+it returns rc=0 and emits wrong symbols from the first divergent bin onward, so
+the decode "succeeds" and produces garbage frames, and structural parse-back
+cannot see it because sections and hashes round-trip correctly either way.
 
-The reason to publish this: it is the empirical demonstration that for this
-receiver the archive hash alone does NOT determine the score, and that the
-runtime-tree pin is load-bearing rather than ceremonial. A score claim on these
-bytes is valid only against runtime tree da91e067..., which is the tree shipped
-here and the one the authority receipt validated.
+For this receiver the archive hash alone does NOT determine the score. A score
+claim on these bytes is valid only against runtime tree 2103073d..., the tree
+shipped here and the one the authority receipt validated.
+
+=== Evaluation-time budget: a disclosed live risk ===
+The official evaluation has a 30-minute limit (upstream/README.md:114), and the
+CI job carries that limit as timeout-minutes: 30 on the WHOLE job
+(upstream/.github/workflows/eval.yml:30) -- not on inflation alone.
+
+Measured on the authority run: inflation 1419.9 s plus evaluation 51.4 s =
+1471.3 s of the 1800 s job wall, leaving 328.7 s for checkout, dependency
+installation and archive download. Against the internally derived residual window
+for those remaining steps on the CUDA path, [890.6, 1430.6] s, this candidate
+fits only at the most optimistic end, by about 10.7 s. Our own wall-clock
+assessment therefore grades this WARN, not PASS: a margin of 10.7 s on a
+warm-cache assumption is not a margin.
+
+On the CPU path the same assessment projects 1414-1913 s of inflation against a
+residual of [1044, 1332] s, which is over budget in every corner. The prior
+lineage MEASURED contest-CPU inflation at 3422.711146813 s against the 1800 s
+budget. This candidate ships the same token decoder, so the CPU path is expected
+to remain infeasible -- that expectation is INHERITED, not measured on these bytes.
+
+This is disclosed rather than discovered. It is the single largest risk on this
+submission, and it is a runtime risk, not a correctness or score risk: the score
+above is measured on the exact submitted bytes.
 
 === CPU boundary ===
-Evidence axis: [env-mismatch advisory] -- NOT a score, and NOT [contest-CPU].
-A full 600-sample local decode-and-score of these exact archive bytes ran on
-macOS arm64 (not the contest 4-thread x86_64 runner): inflate 941.187799999956 s,
-evaluate 406.79247495904565 s. The receipt stamps
-score_axis=cpu_env_mismatch_advisory, evidence_grade "auth-eval env mismatch advisory",
-score_claim=False, promotion_eligible=False.
-It is retained as a decode-correctness proof: the rate contribution
-(0.11797822103209257) is identical to the T4 row's, and the pose
-residual (0.00014829) matches the encoder-side authority solve to
-8 decimal places, which is what proves the composed receiver decodes the composed
-container correctly.
-
-What that proof does NOT show: the advisory numbers do not transfer to the
-authority axis, and the drift is large and asymmetric. On the SAME bytes,
-d_pose is 0.00014829 locally against 0.00000777 on the T4 -- a factor of 19.08 --
-while d_seg drifts only 1.43x (0.00043336 against 0.00030309). Recomposed, the
-local run scores 0.19982 where the authority row scores 0.15710; the whole
-0.0427 gap is distortion, since the rate leg is identical by construction. The
-float neural render is not bit-identical across microarchitectures and the pose
-head amplifies that far harder than the SegNet argmax does. This evidence
-establishes DECODE IDENTITY only, never score transfer.
-
-Status of the [contest-CPU] axis on these exact bytes: NO ROW EXISTS. The prior
-generation-3 lineage measured contest-CPU inflate at 3422.711146813 s
-against the 1800 s budget on a contest-like 4-thread x86_64 CPU,
-and this candidate inherits that token decoder
-unchanged, so the axis is expected to remain infeasible -- but that expectation is
-INHERITED, not measured on these bytes. No CPU score exists and none is claimed.
-This submission is GPU-required for evaluation.
+Status of the [contest-CPU] axis on these exact bytes: NO ROW EXISTS. No CPU
+score exists and none is claimed. This submission is GPU-required for evaluation.
 
 === Provenance ===
-Candidate seal: ck1_composed_rebased_r4, seal SHA-256 a64b3483c0d5d3b5a589c45590c503db94287b7182154f5e6c675149ddef65e3
+Candidate seal: jg5_joint_waterfill_455, seal SHA-256 96e9860aad9021e6dc9a9619036b54bd0a2205f60468e8585089db1d8044a7d0
 Seal validation at fire time: SEAL_VALID
-Torch: 2.5.1+cu124; CUDA 12.4; driver 580.95.05
-Source commit pinned into the eval container: 9e194bc1a7fe80e501752bb493d83a63b83d57a6
+Torch (auth wrapper): 2.5.1+cu124; CUDA 12.4; driver 580.95.05; Tesla T4 confirmed
+Evaluation environment: torch 2.9.0+cu128, torchvision 0.24.0+cu128, numpy 2.3.4, timm 1.0.22
+Source commit pinned into the eval container: 56e239829091e56ced913b464f3a6d4e9d5127c5
 Provider job identifiers are retained privately with the authority receipts and
 are deliberately not reproduced on this public surface.
 ```
 
 # eval host info
 
-Linux x86_64, Tesla T4, all 600 samples, unmodified upstream scorer
-(`evaluate.py` SHA-256 `7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b`,
-upstream snapshot `cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008`).
-Inflation used 1,197.7 s of the 1,800 s budget — 1.50x headroom. The
-token-mixer decode is the dominant cost; it is deterministic integer
-arithmetic.
+Modal, Tesla T4 (confirmed by the harness, not assumed), Linux x86_64, driver
+580.95.05, CUDA 12.4. Evaluation environment: torch 2.9.0+cu128,
+torchvision 0.24.0+cu128, numpy 2.3.4, timm 1.0.22. All 600 public samples.
 
 # build cost info
 
-No public total-training-cost claim is made. This submission adds **no training
-cost at all** over its base candidate. Nothing was trained: the semantic tensors
-are re-quantized arithmetically, and the pose carrier is re-solved by a
-deterministic numerical solve against the frozen scorer at compile time. Both
-run in minutes of CPU from the retained checkpoint. The base candidate's
-training cost is a separate figure and is not reconstructed after the fact here.
+The candidate was produced from an already-trained inherited model state; no new
+model was trained for it. The work that produced these bytes is a compile-time
+solve (edit admission plus a carrier re-solve), run on local hardware. The
+exact-evaluation row itself is a single T4 run of about 25 minutes.
 
 # does your submission require gpu for evaluation (inflation)?
 
-**Yes — this submission requires a GPU for evaluation.** The measured score
-above used a T4 (inflation 1,197.7 s of the 1,800 s budget).
+**Yes — and this answer carries a measured caveat that a judge should read before
+scheduling the run.**
 
-We state the basis honestly rather than borrowing a stronger one. An earlier
-candidate in this same lineage, sharing this token decoder unchanged, was
-measured on a contest-like 4-thread x86_64 CPU at 3,422.7 s of inflation against
-the 1,800 s budget; that harness failed closed at 1,800 s. **These exact bytes
-have not been measured on a contest CPU.** No contest-CPU score exists on them
-and none is claimed. The decode itself is correct off-GPU — a full 600-sample
-local decode-and-score of these exact bytes ran to completion — so the boundary
-is wall-clock, not correctness.
+`inflate.py` performs a neural render, which is why this submission is
+GPU-routed. **These exact bytes have not been measured on a contest CPU**, and no
+CPU score is claimed. Our own projection for the CPU path is that inflation would
+exceed the 30-minute budget; the immediately prior lineage measured contest-CPU
+inflation at 3,422.7 s against an 1,800 s budget, and this candidate ships the
+same token decoder.
+
+**The T4 path is measured but tight.** Inflation took 1,419.9 s and evaluation
+51.4 s, so 1,471.3 s of the 30-minute job wall is accounted for, leaving about
+328.7 s for checkout, dependency installation and archive download. We grade our
+own submission WARN rather than PASS on this axis and say so here rather than
+letting a judge discover it as a timeout.
 
 # did you include the compression script? and want it to be merged?
 
-**Yes, and it is offered for merge — with one scope reduction stated up front.**
-The chain, stated exactly:
-
-- **Stage A — provenance (documented, not re-run).** Reproducing the underlying
-  checkpoint from raw video is multi-day GPU compute. The chain emits the
-  lineage, the stage scripts, their arguments, and the input manifest with
-  every SHA-256. It does not pretend to re-run training.
-- **Stage B — build (exact and verifiable).** From the retained checkpoint the
-  chain replays the shipped decode order, re-quantizes the semantic section
-  under the row-prune / mixed-depth format, re-solves the frame-0 pose carrier
-  against the frozen scorer, and repacks the archive. Each stage hashes its
-  output and fails closed on mismatch. The build additionally asserts, before
-  it will run at all, that the decoded state it is compensating against is the
-  state the compensation was solved on — a compensation carried onto a changed
-  lattice is a silent wrong answer, and this repository has shipped that bug
-  once.
-- **Stage C — decode.** Runs the shipped receiver over the archive and checks
-  the parsed codes against the encoder's — `PASS` at
-  `max_abs_code_deviation = 0`.
-
-**Scope reduction, stated rather than inherited.** The previous generation could
-claim that one entry point rebuilt its exact bytes end-to-end from pinned
-retained inputs. **That entry point has not been re-run for this candidate.**
-The compile receipt proves how these bytes were assembled and the receiver
-parse-back passes over the shipped runtime, but the previous generation's
-end-to-end VERIFIED label does not transfer and we do not carry it forward.
+**Scope reduction, stated rather than inherited.** The repository contains an
+end-to-end rebuild entry point that reconstructs an archive from pinned retained
+inputs and refuses to exit 0 unless the rebuilt bytes hash to the pinned SHA-256.
+**That entry point has not been re-run for this candidate**, so we are not
+claiming a verified end-to-end rebuild for these bytes. We are not asking for a
+compression script to be merged.
 
 # changes from upstream
 
-This submission changes **two sections** of an inherited archive. Unlike every
-prior generation of this packet, the changes are **not lossless** — the decoded
-state moves, and both distortion terms are paid for out of the byte saving.
-
-1. **Semantic section — row-pruned, mixed-depth re-quantization.** Three FiLM
-   weight tensors keep only their two highest-L2-norm rows, transmitted as a
-   row bitmask plus a compact kept-rows block; a per-tensor 4-bit depth table
-   then drops `frame_embed.weight` and `blocks.0.film.weight` to 3-bit codes
-   while the remaining quantized tensors stay at 4. The receiver recomputes the
-   tensor selection mask and refuses on mismatch. The resulting semantic stream
-   is 31,469 bytes.
-2. **Pose carrier — compile-time frame-0 compensation.** The re-quantization
-   damages PoseNet, because PoseNet reads the frame pair while the semantic
-   renderer produces only frame 1. The frame-0 carrier lattice is therefore
-   re-solved at compile time — a damped Gauss-Newton step on the
-   receiver-realized Jacobian followed by a multi-scale integer descent — so
-   the induced pose error is cancelled in the frame SegNet does not read.
-   6,713 of the 7,200 signed-int12 carrier coordinates change; the compensation
-   costs 41 archive bytes and cancels 99.98% of the leakage energy in the local
-   solve.
-
-The token stream and the HPAC stream are spliced byte-identically from the
-previous candidate. The previous candidate's semantic byte-plane serialization
-split is **off** here: the row-prune changes the semantic body length, and
-re-measured on the edited body that split is negative. Its receiver support
-ships and is inert on these bytes.
+None. The pinned upstream snapshot
+(`cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008`,
+`evaluate.py` `7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b`)
+is unmodified. The scorer was not touched.
 
 # competitive or innovative?
 
 **Competitive, on a measured row, stated against what is actually verified.**
 
 On the exact submitted bytes the measured `[contest-CUDA]` 600-sample score is
-`0.15710198138050818`, which we re-derived from the reported components
-independently. That is below the best ranked score on the leaderboard at the
-time of writing (PR #135, `semantic-pose-HPAC_CPR1_polished`, 0.162) and below
-our own prior custodied rows.
+`0.14839100138338618`, which we re-derived from the reported components
+independently rather than reading the evaluator's rounded `final_score` field.
+That is below the best ranked score on the leaderboard at the time of writing
+(PR #135, `semantic-pose-HPAC_CPR1_polished`, 0.162) and below every prior row in
+our own custody.
 
-Four honesty qualifications we would rather state than have found:
+Four qualifications, so the claim is not read as more than it is:
 
-1. There is an open PR claiming `0.1591495384` (PR #138, `opal_v1`). That
-   figure is **author-claimed and not yet evaluated by the maintainers**, as is
-   ours until this PR is run. Our measured number is lower than that claim,
-   but we are comparing a measured row against an unverified one and say so.
-2. **PR #138 published the decode-time-corrector mechanism class first, and we
-   did not know it when we built our first corrector.** Its online correction
-   is learned from the already-decoded prefix, reproduced identically by
-   encoder and decoder, adds no table or weight to the archive, and yields
-   pure rate — the same class as our token probability model, by a different
-   construction. PR #138 opened 2026-08-17 08:31Z; our first measured
-   corrector result landed 14:41Z the same day, and we first read PR #138 at
-   19:32Z, after our byte-close. We describe this as **concurrent independent
-   development** and make **no priority claim**. PR #136 is adjacent and also
-   earlier.
-3. **The edit-then-recompensate pattern is PR #135's, not ours, and our solver
-   adapts theirs.** PR #135's own competitive mechanism was a joint renderer
-   edit followed by a frame-0 carrier re-solve, and the damped Gauss-Newton
-   form plus bounded integer-cube solver our compensation uses are adapted from
-   its published experiment book. What is ours in that mechanism is narrower:
-   the compile-time binding that refuses to carry a compensation onto a changed
-   lattice, the frame-0/frame-1 disjointness argument that makes the
-   compensation SegNet-invariant by construction, and the rate route that folds
-   the compensation into the existing Rice-coded lattice instead of a sidecar —
-   which is what turns roughly 7,000 bytes into 41.
-4. **This generation stops being a purely lossless program, and the
-   originality claim gets narrower, not wider.** Previous generations could say
-   "we re-coded their bytes and the decoded state is provably identical." This
-   one re-quantizes their trained semantic tensors and re-solves their pose
-   carrier. The learned vehicle underneath is still PR130/PR135 lineage and is
-   still not ours; what changed is that we no longer reproduce it faithfully.
-   The one learned object in the archive that *is* ours remains the HPAC
-   probability object: PR130's architecture, retrained here on our own label
-   field, inherited unchanged in this generation.
+1. **The printed score is `0.15`; the claim is `0.14839100138338618`.** The
+   evaluator prints a 2-decimal display that rounds up across exactly the
+   boundary this submission sits on. The claim rests on the components.
+2. **The claim carries a bound.** The components are reported at 8 decimal
+   places, giving a worst-case absolute score error of `3.633e-06`. The claim is
+   `0.14839100138338618 ± 3.633e-06`; the distance to 0.15 is about 443× that
+   bound, so the sub-0.15 statement is not a rounding artifact.
+3. **The improvement is a re-decision over borrowed content, not a new model.**
+   No artifact was trained for this candidate. What is ours is the decision rule;
+   what it operates on is PR #130 / PR #135's trained state. The accounting table
+   below is explicit about which is which.
+4. **One axis is measured, one is not.** `[contest-CUDA]` is measured on these
+   bytes. `[contest-CPU]` is not, and the evaluation-time budget on the GPU path
+   is tight enough that we grade it WARN ourselves.
 
 # additional comments
 
 ## Score and runtime boundary
 
-The CUDA score is a 600-sample exact evaluation of the archive hash printed
-above through the unmodified upstream scorer, **against the pinned runtime tree
-`da91e067…`**. That pin is load-bearing, and we would rather show why than
-assert it: these same archive bytes were also evaluated on T4 against an earlier
-receiver tree (`71c75468…`) and scored **79.402**, with both scorers destroyed.
-That run returned rc 0 — arithmetic decoding under a mismatched probability
-model does not raise, it simply emits wrong symbols and garbage frames, and
-structural parse-back cannot see it because the sections and hashes round-trip
-either way. The row is superseded and is enumerated in `report.txt`. We publish
-it because it is the direct evidence that for this receiver **the archive hash
-alone does not determine the score**; a score claim on these bytes is valid only
-against the runtime tree shipped here.
-
-CPU and CUDA are separate axes.
-On the CPU axis we report an absence rather than a pending promise: **no
-contest-CPU row exists on these bytes.** The nearest measurement is on an
-earlier candidate in this lineage sharing the same token decoder, where CPU
-inflation took 3,422.7 s against the 1,800 s budget. We do not transfer that
-number onto these bytes as if it were measured here; we state it as the reason
-the axis is expected to remain infeasible. The dominant term is the token-mixer
-decode, which is the named optimization surface if CPU feasibility is ever
-wanted.
+The runtime-tree pin is load-bearing and the reason is empirical, not theoretical.
+The previous candidate in this lineage was evaluated twice on **byte-identical
+archive bytes** and scored 79.40216174747616 under one receiver tree and
+0.15710198138050818 under another. Arithmetic decoding under a mismatched
+probability model does not raise: it returns rc=0 and emits wrong symbols from the
+first divergent bin onward, so the decode "succeeds" and produces garbage frames,
+and structural parse-back cannot see it because sections and hashes round-trip
+correctly either way. **For this receiver the archive hash alone does not
+determine the score.** These bytes have exactly one row, under the tree shipped here.
 
 ## What the distortion legs cost
 
-This is the first candidate in this packet whose improvement is not purely
-rate. Against the immediately prior row in this lineage (177,576 bytes,
-S 0.1571619225142182) the measured legs are rate −2.6235e-04, SegNet
-+1.7400e-04, PoseNet +2.8407e-05, for a net of −5.994113e-05. Those leg values
-are shown at 5 significant figures; the exact legs sum to the net to 1e-18,
-while adding the printed strings gives −5.99430e-05. The net is a difference of
-two independently-8dp-rounded rows, so both rows' error bounds apply and add
-(3.336608e-06 + 3.345782e-06 = 6.682391e-06); the net clears that summed bound
-by **8.97×**, which is what makes the sign determinate. Roughly 23% of
-the rate credit survives the two distortion payments. The seg leg came in near
-three times its pre-fire model, and the reason is a real gap in our own
-instrumentation rather than a surprise about the vehicle: we have a measured
-CPU-to-CUDA transfer relationship for the pose term and none for the seg term,
-so the CPU-side estimate that fed the projection was an upper bound on the win.
-We record that as an open gap.
+Against the prior candidate (177,182 bytes, S 0.15710198138050818) this archive is
+**+3,443 bytes** and the legs are rate +2.2926e-03, seg −1.0170e-02,
+pose −8.3353e-04, for a net of **−8.7110e-03**. This candidate spends rate and buys
+both distortion legs — the reverse of every earlier candidate in this lineage — so
+a reader comparing byte counts alone would misread the larger archive as a
+regression. Sign determinacy: the net is a delta between two independently
+8dp-rounded rows, so both bounds apply and add (3.336608e-06 + 3.632965e-06 =
+6.969573e-06); the net is 1249.86× that summed bound.
 
 ## Borrowed-substrate accounting
 
-Classes: `inherited-substrate` (theirs, used as-is) · `mechanism-adopt-with-
-attribution` (their idea or source, our implementation or re-fit) ·
-`ours-original` (built here, with a receipt).
+Most of the learned content in this archive is **not ours**, and the packet ships a
+full table (`BORROWED_SUBSTRATE_ACCOUNTING.md`). Summary:
 
-**Read this first: the two largest rows changed class at this generation.** In
-every previous generation the semantic renderer state and the pose carrier state
-were `inherited-substrate` and *proven byte-identical to PR135 after decode*.
-That byte-identity is gone. We now ship a lossy re-representation of their
-semantic tensors and a re-solved version of their pose carrier. That is not an
-upgrade in our favour — it means we can no longer claim faithful reproduction of
-their work, and it does not make the underlying learned content ours.
-
-| Section or mechanism | Classification | Receipt and boundary |
+| Section / mechanism | Class | Note |
 |---|---|---|
-| Semantic renderer state | **`mechanism-adopt-with-attribution` — our format over their values, and the values are lossily changed** (was: `inherited-substrate`, byte-identical) | semantic body 36,130 B, stream 31,469 B; row-prune keeps 2 rows each of `blocks.{1,2,3}.film.weight`; `frame_embed.weight` and `blocks.0.film.weight` at 3-bit |
-| Pose carrier state | **`mechanism-adopt-with-attribution` — their solver form, our binding, their lattice re-solved** (was: `inherited-substrate`, byte-identical) | 6,713 of 7,200 signed-int12 coordinates changed; +41 archive bytes; 99.98% leakage cancellation in the local solve |
-| Compressed model container | `inherited-substrate`; unchanged from base, PR-level equality not independently verified | 70,453 B, `e35d12371fa79747…` |
-| **HPAC probability object** | **`mechanism-adopt-with-attribution`** — PR130's architecture, **retrained here on our own label field**; inherited unchanged in this generation | HPAC stream 13,515 B, spliced byte-identically from the prior candidate |
-| Residual payload + table codes | `inherited-substrate`; **provenance unresolved, no originality claimed** | carried inside the 109,897 B tail, spliced byte-identically |
-| **RC64 token stream** | **`ours-original` probability model over inherited symbols** — 13-context fixed-point integer log-odds mixer, zero archive bytes | unchanged from the prior candidate; inside the 109,897 B tail |
-| **Row-prune / mixed-depth semantic format** | **`mechanism-adopt-with-attribution`** — magnitude-based structured pruning and mixed-precision weight quantization are standard practice with a long public literature, and the tensors are PR135's; ours are the wire format, the measurement identifying the two surviving marginal tensors, and the fail-closed receiver integration | semantic stream 31,469 B; receiver recomputes the selection mask and refuses on mismatch |
-| **Frame-0 pose compensation** | **`mechanism-adopt-with-attribution`** — the edit-then-recompensate pattern and the Gauss-Newton / integer-cube solver form are PR135's; ours are the compile-time content-fingerprint binding, the SegNet-invariance-by-construction argument, the step-matched Jacobian, and the in-lattice rate route | +41 B against a zero-compensation control; encoder-side only dependency on PR135's experiment-book source, nothing from which enters the archive |
-| Carrier framing runtime patch | `ours-original`, **zero counted bytes** | `runtime/residual_archive.py`: packed-CAP1 length derived from the section's own bit counts instead of a pinned constant; generic framing algorithm, no video-derived content |
-| Semantic serialization split | **DROPPED this generation** | reserved bit 0; re-measured negative on the edited body |
-| RC64 backend, encoder side | `inherited-substrate` (PR135, verbatim) | compiles PR135's `rc64_backend.c` unmodified |
-| RC64 backend, shipped receiver | `mechanism-adopt-with-attribution` (PR135-derived, modified) | shipped `05839d1416e68a49…`, which **differs** from the PR135 source |
-| Receiver binding and archive assembly | `ours-original` | validated runtime tree `da91e06744b94f77…`; archive `35c318d541d70370…` |
-| Compression chain | `ours-original` **— e2e re-verification NOT carried forward for these bytes** | compile receipt with fail-closed identity assertion; the single-entry-point rebuild claim belongs to the previous generation only |
+| Semantic renderer state | mechanism-adopt-with-attribution | PR #130/#135 trained values, lossily re-represented in our format. **Not byte-identical to theirs after decode.** |
+| Pose carrier state | mechanism-adopt-with-attribution | Their solver form, our binding, their lattice re-solved |
+| Compressed model container | inherited-substrate | PR #130/#135 |
+| HPAC probability object | inherited-substrate | Architecture PR #130/#135 |
+| Compensation blob | mechanism-adopt-with-attribution | Edit-then-recompensate is PR #135's pattern |
+| Residual payload + table codes | inherited-substrate | PR #130/#135 |
+| RC64 token stream | mechanism-adopt-with-attribution | Model-axis work ours; coder theirs |
+| RC64 backend (encoder + shipped receiver) | inherited-substrate | PR #130/#135 |
+| Receiver binding / assembly / custody | ours-original | |
+| **Joint admission waterfill** | **ours-original** | **0 counted archive bytes** — selects and re-solves inside existing sections |
 
-The full accounting, including the ancestry chain, the re-classification
-argument, and the open provenance items, is in
-`BORROWED_SUBSTRATE_ACCOUNTING.md`, shipped beside this archive.
+The one mechanism we claim at this candidate: edit admission and pose compensation
+are solved **jointly** — admission swept over a Lagrange multiplier on pose damage,
+455 of 573 edits admitted, and the carrier re-solved against this candidate's own
+edited renders under a derived materiality stop rule (600/600 pairs stopped on
+`no_improving_step`, zero budget hits). The predecessor kept all 573 edits and paid
+roughly 13× more pose than the edits bought in seg. A better decision rule over
+someone else's representation is a contribution to the decision, not to the
+representation, and we do not claim otherwise.
 
 ## Credits and prior work
 
-Every number below was read from the pull request itself, not from our notes.
-
-- **PR #130 — `semantic-pose-HPAC_CPR1`, Fesal Fayed (`fesalfayed`)**, leaderboard
-  0.172, archive 191,052 B. The base vehicle: the semantic-token / HPAC / CPR1
-  architecture this submission descends from.
-- **PR #135 — `semantic-pose-HPAC_CPR1_polished`, Shreyan Mohanty (`codexblack`)**,
-  leaderboard 0.162, archive 186,724 B. The archive we actually built on. Its
-  semantic renderer and pose carrier are the learned content inside ours; our
-  encoder compiles its `rc64_backend.c` unmodified, and our pose compensation
-  adapts the solver form from its published experiment book. It is also the
-  ranked score this submission is measured against.
-- **PR #133 — `cpr1_cbq_matched8`, `JasonMo123`**, leaderboard 0.166. Not taken
-  directly, but in our ancestry transitively: PR #135 already incorporates its
-  constrained basis and re-solved int12 carrier.
-- **PR #138 — `opal_v1`, Cristian (`ccastillo1043`)**, author-claimed 0.1591495384.
-  Published the decode-side probability-correction mechanism class first; see
-  the competitive section above. Concurrent and independent; no priority claim.
-- **PR #136 — `hnerv_rc`, Jacky Li (`JPL11`)**. Adaptive range coding with
-  per-tensor context reset, on a different vehicle. Adjacent prior work.
-- **Upstream** — `commaai/comma_video_compression_challenge`: the scorer,
-  `evaluate.py` (`7da71a84ce24286b…`), the frozen SegNet and PoseNet weights, the
-  600-sample test list, and the 37,545,489-byte denominator.
-- **Third-party runtime** — PyTorch, NumPy, Brotli 1.2.0, and a C compiler
-  at inflate time. **One caveat worth stating on the record: `inflate.sh` is not
-  fully self-contained.** If the evaluation image does not already provide
-  `Brotli==1.2.0`, the script requires a `uv` binary on `PATH` and **fetches the
-  pinned wheel over the network** into an isolated build directory. It downloads
-  no model, table, or video-derived payload — only that published,
-  general-purpose library — but an air-gapped runner without Brotli cannot
-  inflate. Without `uv` the receiver exits 69 with a named reason; if the pin
-  cannot be resolved it aborts with rc 1 and the resolver's error text. The T4
-  authority run **did not take this branch** (its image already had Brotli), so
-  the branch was exercised separately against a bare virtual environment proven
-  to lack Brotli, on the authority image's Python minor version: probe took the
-  fallback, fetch returned rc 0, `brotli` imported at 1.2.0 and round-tripped.
-  Receipt `SMOKE_BOOTSTRAP_BARE_VENV.json` is retained with the authority
-  receipts.
+- **PR #130 `semantic-pose-HPAC_CPR1`** by Fesal Fayed (`fesalfayed`) — the
+  origin of this vehicle.
+- **PR #135 `semantic-pose-HPAC_CPR1_polished`** by Shreyan Mohanty
+  (`codexblack`) — the trained state this submission re-represents, and the
+  edit-then-recompensate pattern.
+- **PR #133 `cpr1_cbq_matched8`** by `JasonMo123` — transitively in this
+  ancestry via PR #135; named because a reader tracing our substrate reaches it
+  whether or not we mention it.
+- **PR #138 `opal_v1`** — published the decode-time-corrector mechanism class
+  first. We make no priority claim on it.
+- **One caveat worth stating on the record: `inflate.sh` is not fully
+  self-contained.** It requires `Brotli==1.2.0` exactly and will call
+  `uv pip install` — reaching the **network at decode time** — if that version is
+  not already present, exiting 69 if `uv` is absent. It also invokes a C compiler
+  at decode time. This follows the declared-dependency precedent set by earlier
+  accepted submissions here, but "no network at decode time" is a reasonable
+  expectation and this submission does not meet it.
 
 ## Public source and reproducibility
 
-- Source repository: https://github.com/adpena/comma-lab
-  (anonymous visibility to be re-verified at packet freeze)
-- Evaluation source pin: commit `9e194bc1a7fe80e501752bb493d83a63b83d57a6` —
-  the commit the T4 evaluation actually ran from (matches
-  `provenance.pact_commit` in the receipt)
-- Encoder source pins: to be re-pinned at packet freeze against the public
-  mirror; the compile receipt for these exact bytes is retained with the
-  packet's authority receipts
-- Validated runtime tree SHA-256:
-  `da91e06744b94f77077303b2b760cb259aa84b078d998921fb99e018d52fff6f`
-- Portable runtime content tree SHA-256:
-  `944c8c574f377cbe625c007b44bfc8e88ec572bf3fc7a2e9ac7aca5750217078`
-- Upstream snapshot:
-  `cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008`
-- Chain scripts: `experiments/ddm_rr2_encoder_byteclose.py` (encode/build),
-  `experiments/ddm_rr2_receiver_close.py` (receiver/parse-back),
-  `experiments/ddm_fx2_model_axis_corrector.py` and
-  `experiments/ddm_fx1_logistic_mixer_corrector.py` (token probability model),
-  `experiments/ddm_sm3_semantic_representation.py` (row-prune / mixed-depth
-  semantic format), `experiments/ddm_sa3_rebase_sz1.py` (compensated compile).
+- Public source repository: https://github.com/adpena/comma-lab
+- Source commit pinned into the evaluation container:
+  `56e239829091e56ced913b464f3a6d4e9d5127c5`
+- The submitted bytes are bound to their receiver by hash rather than by
+  description: archive SHA-256
+  `f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e` against
+  runtime tree SHA-256
+  `2103073d739fc3f27d329ea0785ea3010307360c2380af0476e16d0f5b57cb9b`. Either one
+  alone is insufficient to reproduce the score; the pair is the identity.
 
-Before submission the operator must verify anonymous visibility of the pinned
-source URLs and replace the download-status paragraph with the verified public
-archive URL and its hosted manifest. Two items are open by construction and
-must not be quietly closed: the end-to-end rebuild has not been re-run for these
-bytes, and no contest-CPU row exists on them.
+Two items are open by construction and must not be quietly closed: the end-to-end
+rebuild has not been re-run for these bytes, and no contest-CPU row exists on them.

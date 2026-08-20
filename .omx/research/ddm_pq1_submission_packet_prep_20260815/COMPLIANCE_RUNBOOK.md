@@ -275,3 +275,106 @@ when their real receipts exist.
 - `public_scan_has_no_private_surface` — GREEN at 38 files scanned. On
   generation 3 the same check went RED with 63 hits once the round-11 F2(b)
   scanner fix landed. See the custody note in `GENERATION_LOG.md`.
+
+
+---
+
+## Generation 5 (ACTIVE) — jg5 joint-waterfill candidate, the first sub-0.15 row
+
+Result: **83 GREEN / 4 RED of 87**, strict `--contest-final`. Receipt
+`generations/gen5_receipts/pre_submission_compliance.gen5.r2.json`. Checker source
+sha `c4145263037225337d0edda409f513aa5030191afd740036212862043647fad9`.
+Public hygiene GREEN at **39 files scanned, 0 hits** — the denominator is reported
+because a scan that opened nothing cannot certify anything.
+
+### The census clause runs FIRST, and the purge runs before the census
+
+**Ordering law established at this generation.** Writing any file onto the ExFAT
+volume causes macOS to create AppleDouble `._*` sidecars. Staging generation 5
+produced a clean tree; writing the four public docs into it then created **51**
+sidecars across the generations tree, which `packet_census_guard.py` caught with
+exact paths. Therefore: **purge, then census, then buy the receipt** — in that
+order, with no writes in between.
+
+```bash
+GEN5=/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen5_jg5_waterfill
+R=/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen5_receipts
+
+find /Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations -name '._*' -delete
+
+.venv/bin/python tools/packet_census_guard.py \
+    --packet-dir "$GEN5" \
+    --auth-eval-json "$R/contest_auth_eval.json" \
+    --prep-dir .omx/research/ddm_pq1_submission_packet_prep_20260815 \
+    --receipts-dir "$R"
+
+.venv/bin/python scripts/pre_submission_compliance_check.py \
+  --contest-final \
+  --strict \
+  --submission-dir "$GEN5" \
+  --archive "$GEN5/archive.zip" \
+  --auth-eval-json "$R/contest_auth_eval.json" \
+  --archive-manifest-json "$GEN5/archive_manifest.json" \
+  --submission-score-axis contest_cuda \
+  --expect-single-member p \
+  --expected-archive-sha256 f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e \
+  --expected-archive-size-bytes 180625 \
+  --expected-runtime-tree-sha256 2103073d739fc3f27d329ea0785ea3010307360c2380af0476e16d0f5b57cb9b \
+  --dispatch-claims-md .omx/state/active_lane_dispatch_claims.md \
+  --expected-lane-id lane_ddm_jg5_waterfill455_t4_20260820 \
+  --expected-job-id ddm_jg5_t4_r1 \
+  --competitive-or-innovative-statement-file .omx/research/ddm_pq1_submission_packet_prep_20260815/PR_BODY_DRAFT.md \
+  --public-scan-path .omx/research/ddm_pq1_submission_packet_prep_20260815/PR_BODY_DRAFT.md \
+  --json-out "$R/pre_submission_compliance.gen5.r2.json"
+```
+
+Staging itself is now a committed tool rather than an ad-hoc script:
+
+```bash
+.venv/bin/python tools/stage_contest_submission_packet.py \
+    --auth-eval-json "$R/contest_auth_eval.json" \
+    --source-runtime-dir /Volumes/APDataStore/pact/ddm_jg5/candidate_runtime_jg5 \
+    --out-dir "$GEN5" \
+    --expected-archive-sha256 f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e \
+    --expected-archive-size-bytes 180625 \
+    --json-out "$R/STAGING_RECEIPT.json"
+```
+
+### The four reds, with routes
+
+| # | Check | Why red | Owner | Class |
+|---|---|---|---|---|
+| 1 | `auth_eval_raw_promotion_policy_blockers_absent` | Blockers stamped unconditionally by the raw emitter; running the adjudicator would DOWNGRADE the payload and flip a currently-green sibling | MAIN | **STRUCTURAL** |
+| 2 | `contest_cpu_auth_eval_exists` | No CPU row exists on these bytes; the prior lineage measured the axis infeasible (3,422.7 s vs 1,800 s) and this candidate ships the same token decoder | MAIN | **CURABLE** by a paid CPU row; expected to measure infeasible |
+| 3 | `submission_runtime_has_no_network_install_or_local_paths` | `inflate.sh:27` pinned-wheel Brotli bootstrap | MAIN | **BY DESIGN**, e4/PR100/PR101 declared-dependency precedent |
+| 4 | `hosted_archive_manifest_supplied` | No hosting authorization | **Operator** | **OPERATOR-GATED** |
+
+### r1 → r2: four reds CURED, not adjudicated
+
+The first receipt (`pre_submission_compliance.gen5.r1.json`) measured **79/87 with
+8 reds**. The four extra reds were fixed at source rather than argued away:
+
+- `public_source_repo_link_present` — the rewritten PR body had dropped the public
+  source repository link. Restored, together with the pinned 40-char source commit
+  and the archive↔runtime sha binding.
+- `dispatch_claim_successful_exact_eval_terminal_row` — the existing terminal row's
+  status (`completed_modal_auth_eval_harvested`) is not in the checker's accepted
+  prefix set for a successful exact CUDA eval.
+- `dispatch_claim_terminal_archive_sha_bound` and
+  `dispatch_claim_terminal_runtime_tree_sha_bound` — the existing row carried only
+  the 8-character archive sha prefix; the checker requires the full 64 characters
+  of **both** the archive sha and the runtime tree sha.
+
+All three dispatch rows were cured by appending one conforming terminal claim via
+`tools/claim_lane_dispatch.py`, binding both full shas. The dispatch genuinely
+completed and was harvested, so the row is the hygiene CLAUDE.md requires — but it
+was appended by the arm that benefits from it being green, and is **FLAGGED for
+independent verification in round 13** for exactly that reason.
+
+### A reader's caution on this receipt
+
+The checker writes its JSON and exits `1` in strict mode **with no stdout at all**.
+An empty log is not a crash. Read the receipt, and read it with the key `passed` —
+the rows do not carry an `ok` field, and a reader that looks for one will score the
+packet 0/87 and raise a false alarm. That mistake was made and caught during this
+generation.

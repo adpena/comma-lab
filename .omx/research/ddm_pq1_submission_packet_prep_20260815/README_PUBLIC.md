@@ -1,220 +1,137 @@
-# ck1_composed_rowprune — submission packet
+# jg5_joint_waterfill — submission packet
 
-(Submission directory name: `submissions/ck1_composed_rowprune/` — the exact
-string the PR body's "submission name" answer carries, per the upstream
-template's match-exactly requirement.)
+This directory is a prepared submission packet held at
+`submissions/jg5_joint_waterfill/`. It is **not submitted**. It is staged so
+that every claim below can be checked against a receipt before anyone acts on it.
 
-This directory describes the exact 177,182-byte archive and receiver used for
-the measured ck1 composed result. The score-bearing payload is `archive.zip`;
-the receiver is `inflate.sh`, `inflate.py`, `cpr1/`, and `runtime/`.
+The one number this packet exists to carry: on the exact bytes in this directory,
+the measured `[contest-CUDA]` 600-sample score is **0.14839100138338618**.
 
 ## Evidence boundary
 
-- `[contest-CUDA]`: a 600-sample exact evaluation on a
-  Tesla T4 measured `S = 0.15710198138050818` on the
-  archive identified below. The harness publishes its own quantization custody:
-  the score is built from 8-decimal-place report components with a worst-case
-  absolute error bound of 3.336608391523776e-06.
-- `[contest-CPU]`: **no row exists on these bytes, and none is claimed.** An
-  earlier candidate in this lineage measured CPU inflate at 3422.711146813 s
-  against the 1800 s budget on a contest-like 4-thread x86_64 CPU; this
-  candidate ships that token decoder unchanged, so the axis is expected to stay
-  infeasible. That expectation is INHERITED, not measured here. This submission
-  is GPU-required for evaluation.
-- Decode-correctness evidence, which is **not** a score: a full 600-sample local
-  decode-and-score of these exact bytes ran to completion on macOS arm64
-  (`score_axis=cpu_env_mismatch_advisory`, `score_claim=False`). Its rate
-  contribution (0.11797822103209257) is identical to the T4 row's, and its
-  pose residual (0.00014829) matches the encoder-side solve to 8 decimal
-  places. That agreement is what proves the composed receiver decodes the composed
-  container correctly.
+Read this before reading anything else, because it is where most submissions
+overstate themselves.
 
-  **What it does NOT show, stated plainly: the advisory numbers do not transfer
-  to the authority axis, and the drift is large and asymmetric.** On the *same
-  bytes*, `d_pose` is 0.00014829 locally against 0.00000777 on the T4 — a factor
-  of **19.08** — while `d_seg` drifts only 1.43× (0.00043336 against 0.00030309).
-  Recomposed, the local run scores 0.19982 where the authority row scores
-  0.15710; the entire 0.0427 gap is distortion, since the rate leg is identical
-  by construction. The float neural render is not bit-identical across
-  microarchitectures, and the pose head amplifies that far harder than the SegNet
-  argmax does. So this evidence establishes **decode identity — that the receiver
-  reconstructs the intended decoded state — and nothing about score transfer.**
-  Wherever this document cites the local run as proof, that is the only claim
-  being made.
+- **What is measured.** One exact evaluation: `upstream/evaluate.py` at
+  `--device cuda` on a Tesla T4, Linux x86_64, over all 600 public samples,
+  driven through this directory's own `inflate.sh` on this directory's own
+  `archive.zip`. Score, both distortion legs and the rate leg all come from that
+  run. The score published here is **recomputed from the reported components**,
+  not read off the evaluator's rounded `final_score` field — that field prints
+  `0.15`, a 2-decimal display that rounds up across the very boundary this
+  submission sits on.
+- **The precision of that claim.** The evaluator reports its distortion
+  components at 8 decimal places, so the recomputed score carries a worst-case
+  absolute error bound of `3.63296497868841e-06`. The claim is
+  `0.14839100138338618 ± 3.633e-06`. The distance from that interval to 0.15 is
+  about 443 times the bound, so the sub-0.15 statement is not a rounding artifact.
+- **What is NOT measured.** There is **no `[contest-CPU]` row on these bytes**,
+  and none is claimed. This submission is GPU-required for evaluation.
+- **The open runtime risk.** Inflation took 1419.9 s of a 30-minute job wall.
+  That is disclosed in full in `report.txt` under "Evaluation-time budget", and
+  it is the largest open risk on this submission. It is a runtime risk, not a
+  score risk.
+- **What is not authority.** Any local macOS number, any advisory row, and any
+  projection appearing in our own research notes is not a score and is not used
+  here.
 
 ## Exact identity
 
-- Archive SHA-256:
-  `35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3`
-- Archive bytes: `177182`
-- Member: `p`, `177082` bytes, stored, SHA-256
-  `ee904fbf6b10e4fadd69ca9c820bd7db0d334694bdf23c4a93147cd242d8c462`
-- Runtime tree SHA-256 (validated by the exact-authority run):
-  `da91e06744b94f77077303b2b760cb259aa84b078d998921fb99e018d52fff6f`
-- Portable runtime content tree SHA-256:
-  `944c8c574f377cbe625c007b44bfc8e88ec572bf3fc7a2e9ac7aca5750217078`
-- Upstream snapshot SHA-256:
-  `cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008`
-- Encoder source commits (public repository, to be re-pinned at packet freeze):
-  see the pull-request body; the compile receipt for these exact bytes is
-  `SA3_REBASE.json`, retained beside this packet's receipts.
-- Public source repository: https://github.com/adpena/comma-lab
+| Property | Value |
+|---|---|
+| Archive SHA-256 | `f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e` |
+| Archive size | 180,625 bytes |
+| Member | `p`, 180,525 bytes, stored, SHA-256 `54b445da3a1a4b4c7012c83b25c3e0d87daab5ce10cd54a1598cfb239ab05b4a` |
+| Members in archive | 1 |
+| Runtime tree SHA-256 | `2103073d739fc3f27d329ea0785ea3010307360c2380af0476e16d0f5b57cb9b` |
+| Portable runtime content tree SHA-256 | `3ba9987771e1be967cf80942faedc7c5f6641f15039e03dd2b0909fd6613ab99` |
+| Upstream snapshot SHA-256 | `cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008` |
+| Upstream `evaluate.py` SHA-256 | `7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b` |
+| Candidate seal SHA-256 | `96e9860aad9021e6dc9a9619036b54bd0a2205f60468e8585089db1d8044a7d0` (`SEAL_VALID`) |
+
+The runtime tree hash is load-bearing rather than ceremonial, and the reason is
+empirical. See "Runtime tree pin" in `report.txt`: the previous generation's
+archive scored 79.40 under one receiver tree and 0.157 under another, on
+byte-identical archive bytes. For this receiver, the archive hash alone does not
+determine the score.
 
 ## What this submission is
 
-The same inherited vehicle as the prior candidate, with the semantic section
-re-quantized and the resulting pose damage cancelled at compile time.
+The same inherited vehicle as the prior candidate. What changed is how the seg
+edits and the pose carrier are decided — together instead of one after the other.
 
-1. **Row-pruned, mixed-depth semantic quantization (SM3R mode 6).** Three FiLM
-   weight tensors keep only their two highest-L2 rows, transmitted as a row
-   bitmask plus a compact kept-rows block; a per-tensor 4-bit depth table then
-   lets two more tensors (`frame_embed.weight` and `blocks.0.film.weight`) drop
-   from 4-bit to 3-bit codes while the rest stay at 4. The resulting semantic
-   stream is 31,469 bytes and carries a 36,130-byte body.
-   **This is lossy:** the decoded semantic
-   values are no longer PR #130/#135's. The receiver learns the new layout from
-   one file, `cpr1/ddm_mp2_semantic_receiver.py`; the mode number is carried in
-   the container, so an archive that does not use it decodes through the exact
-   prior code path.
-2. **In-compile frame-0 pose compensation.** Re-quantizing the semantic section
-   damages PoseNet, because PoseNet reads the frame pair while the semantic
-   renderer produces only frame 1. Rather than accept that damage, the frame-0
-   carrier lattice is re-solved at compile time — a damped Gauss-Newton step on
-   the receiver-realized Jacobian followed by a multi-scale integer descent — so
-   the induced pose error is cancelled in the frame SegNet does not read.
-   6,713 of the 7,200 signed-int12 carrier coordinates change. The
-   compensation costs 41 archive
-   bytes, and its effect is measured rather than assumed: the local solve cancels
-   99.9785% of the leakage energy. **The
-   decoded pose carrier is therefore no longer byte-identical to PR #135's
-   either.**
-3. **What this candidate does NOT ship.** The prior candidate's semantic
-   byte-plane serialization split is **off** here (`semantic_split=False`,
-   reserved bit 0). The row-prune changes the semantic body length, and two
-   credits over the same redundancy do not add — re-measured on the edited body,
-   the split is negative. Its receiver support remains in the tree and is inert
-   on these bytes.
+1. **The problem this candidate solves.** The prior composition applied all 573
+   seg token edits and then re-solved the pose carrier. Measured, that direction
+   is seg-descending but not pose-null: the edits bought seg and cost about 13
+   times more pose than they bought, and the composed result scored far worse
+   than either part suggested. Solving one axis and then repairing the other is
+   the failure; the two are one problem.
+2. **Joint admission by waterfill (this candidate's mechanism).** Edit admission
+   is swept over a Lagrange multiplier on pose damage rather than fixed in
+   advance, so each edit is kept only if it pays for the pose it costs.
+   **455 of the 573 edits are admitted**; the other 118 are dropped and those
+   pairs keep the prior carrier's codes.
+3. **Carrier re-solve against this candidate's own renders.** The frame-0 pose
+   carrier is re-solved against the edited renders this archive actually decodes
+   to — not against the base renders — so the compensation is fitted to the
+   state that ships. The descent uses a derived materiality stop rule rather than
+   a fixed iteration budget: **600 of 600 pairs stopped on `no_improving_step`,
+   with zero budget hits**, so the stopping criterion was never the binding
+   constraint.
 
-The tail section — the fx2 token stream plus the residual payload and table
-codes — is carried over byte-identically from the prior candidate
-(109,897 bytes), and so is the HPAC stream
-(13,515 bytes). The 13-context fixed-point integer log-odds mixer
-that produces the token stream is unchanged and still stores zero archive bytes.
+The net effect is the reverse of every prior generation in this packet: it
+**spends** 3,443 bytes and buys both distortion legs, for a net
+`-0.008710980`. A reader scanning byte counts alone would misread the larger
+archive as a regression, so the leg split is published in `report.txt`.
 
-**Unlike the prior candidate, this one does not hold decoded state constant.**
-The previous generation's whole improvement was rate, with `d_seg` and `d_pose`
-provably unchanged. This one buys 394 bytes and pays for them in
-both distortion legs. Against the immediately prior row in this lineage
-(177,576 bytes, S 0.1571619225142182) the measured legs are
-rate -2.6235e-04, seg +1.7400e-04, pose +2.8407e-05, for a net of
--5.994113e-05; 22.8% of the rate credit is retained.
-Against packet generation 3
-(179,930 bytes, S 0.15771357797660338) the net is
--0.0006115966.
+The tail sections, the HPAC stream and the 13-context fixed-point integer
+log-odds mixer that produces the token stream are carried over from the prior
+candidate.
 
-Read `BORROWED_SUBSTRATE_ACCOUNTING.md`, shipped in this directory, before
-treating any of the learned content as ours. Most of it is still not ours: the
-semantic renderer and the pose carrier are PR #130 / PR #135's trained state,
-and the compressed model container, the HPAC probability object's architecture,
-the residual payload, and the range-coder backend all come from that lineage.
-What changed at this generation is that we no longer reproduce the renderer and
-carrier states BYTE-IDENTICALLY after decode — we ship a lossy re-representation
-of theirs — which raises the attribution question rather than settling it, and
-the accounting says so in its own section. The same table is reproduced inline in
-the pull-request body. It also records that the decode-time-corrector mechanism
-class was published first by PR #138, and that the edit-then-recompensate pattern
-is PR #135's; we make no priority claim on either.
+**Read `BORROWED_SUBSTRATE_ACCOUNTING.md`, shipped in this directory, before
+treating any of the learned content as ours.** Most of it is not: the semantic
+renderer state and the pose carrier state originate in PR #130 and PR #135, and
+the compressed model container, the HPAC probability object's architecture, the
+residual payload and the range-coder backend all come from that lineage. This
+candidate ships a lossy re-representation of their trained state, which raises
+the attribution question rather than settling it, and the accounting says so in
+its own words. The same table is reproduced inline in the pull-request body.
 
 ## Two names a reader will meet in the receiver
 
 Both are cosmetic and neither changes behaviour.
 
 - `CP135` and `F26` appear in `inflate.sh` as an error string, environment
-  variables, and file names. They are internal codenames for the inherited
+  variables and file names. They are internal codenames for the inherited
   PR130/PR135 lineage, kept because renaming them would change the evaluated
   runtime-tree hash.
-- `inflate.sh` carries a `Darwin` branch that calls `brew --prefix libomp`. It
-  is **unreachable on the contest runner**: it requires `F26_TOKEN_DECODER` to
-  equal `native-hpac`, and the script defaults that variable to `python` with
-  nothing setting it otherwise. This submission assumes Linux.
-
-## Reproduction
-
-The compile that produced these exact bytes is retained with its receipt
-(`SA3_REBASE.json`): it asserts the decoded-state identity between the two
-lineages BEFORE building — refusing rather than carrying a compensation across a
-changed lattice — then reassembles tail, HPAC, edited semantic, and compensated
-carrier sections, and the resulting archive is pinned at SHA-256
-`35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3` / 177,182 bytes. Receiver
-parse-back over the shipped runtime returned `PASS` with
-`max_abs_code_deviation = 0`.
-
-An end-to-end rebuild of this candidate from pinned retained inputs through one
-entry point — the property the previous generation could claim — has **not** been
-re-run for these bytes. That is an open item, and the pull-request body says so
-rather than inheriting the prior generation's VERIFIED label.
-
-To evaluate the shipped archive, first download `archive.zip` from the release
-asset linked in the pull request into this directory — `inflate.py` resolves it
-beside itself and refuses without it.
-
-```bash
-sha256sum archive.zip
-mkdir -p archive inflated
-unzip -q archive.zip -d archive
-./inflate.sh archive inflated public_test_video_names.txt
-bash evaluate.sh --submission-dir . --device cuda
-```
-
-Measured on the T4 authority run: inflation 1197.696784587 s, evaluation
-40.764544933000025 s — 1.503× headroom against the
-1800 s inflate budget. The token-mixer decode is the dominant cost; it is pure
-integer arithmetic and deterministic.
-
-The CUDA score claim is valid only when the archive hash, runtime tree, upstream
-snapshot, 600-sample count, and reported components all match the retained
-authority receipt. CPU and CUDA are distinct score axes and neither is inferred
-from the other.
+- `inflate.sh` carries a `Darwin` branch that calls `brew --prefix libomp`. It is
+  **unreachable on the contest runner**: it requires `F26_TOKEN_DECODER` to equal
+  `native-hpac`, and the script defaults that variable to `python` with nothing
+  setting it otherwise. This submission assumes Linux.
 
 ## Dependency closure
 
-The receiver needs four things from the evaluation environment, and — only when
-the second of them is missing — a fifth: a `uv` binary and network egress.
+`inflate.sh` is **not fully self-contained**, and that is stated here rather than
+left for a reader to discover:
 
-- **PyTorch**, from the image.
-- **Brotli 1.2.0**, from the image when it is already there. **When it is not,
-  `inflate.sh` reaches the network.** This is the one place the receiver is not
-  self-contained, so it is spelled out rather than summarised:
-  - The script probes for `Brotli==1.2.0`. If the probe passes, nothing else
-    happens — **this is the path the T4 authority run took**, because that image
-    already provided Brotli. The fallback below did **not** execute during the
-    measured evaluation.
-  - If the probe fails, the script requires a **`uv` binary on `PATH`** and uses
-    it to fetch a **pinned, wheel-only `Brotli==1.2.0`** into an isolated build
-    directory (`--no-deps --only-binary :all:`), which it puts on `PYTHONPATH`
-    for that run alone. **That fetch is a network operation.** An air-gapped
-    runner whose image lacks Brotli cannot complete inflation.
-  - Without `uv`, the receiver exits **69** with a named reason. If `uv` is
-    present but the pin cannot be resolved — an interpreter with no matching
-    prebuilt wheel, or no network — the script aborts under `set -e` with
-    **rc 1** and the resolver's own error text, *not* the friendly 69. Both are
-    fail-closed; only the first is diagnosed.
-  - This branch has now been exercised directly rather than assumed. Against a
-    bare virtual environment proven to lack Brotli, on the authority image's
-    Python minor version (3.11), the probe correctly took the fallback, the
-    fetch returned rc 0, and `brotli` then imported at exactly 1.2.0 and
-    round-tripped. Receipt: `SMOKE_BOOTSTRAP_BARE_VENV.json`, retained beside
-    this packet's authority receipts. The same receipt records the failure mode
-    above, reproduced on an interpreter with no matching wheel.
-- **NumPy**, from the image.
-- **A working C compiler.** `inflate.sh` compiles
-  `runtime/entropy/rc64_backend.c` into the build directory on every run,
-  using `${CC:-cc}`. On an image without a toolchain the script fails under
-  `set -e` with a raw compiler error rather than a diagnosis. The evaluated T4
-  image satisfies it.
+- It requires **`Brotli==1.2.0`** exactly. If the interpreter does not already
+  have that version, the script calls `uv pip install --only-binary :all:
+  "Brotli==1.2.0"`, which **reaches the network at decode time**. If `uv` is
+  absent the script exits 69 rather than proceeding — it fails closed, but it
+  does fail.
+- It invokes a **C compiler** (`${CC:-cc}`) at decode time to build
+  `runtime/entropy/rc64_backend.c`. The compiler is assumed present on the runner.
+- Otherwise: PyTorch and NumPy, both already required by the evaluator itself.
 
-The receiver downloads no model, table, or video-derived payload. The only thing
-it can ever fetch is the published, general-purpose `Brotli` library at a pinned
-version — never anything derived from the video, and never anything that carries
-score-bearing content. All score-bearing learned content is inside `archive.zip`
-and is counted in the rate term.
+The declared-dependency approach follows the precedent set by earlier accepted
+submissions in this contest, which likewise declared a pinned Brotli. It is
+flagged here because "no network at decode time" is a reasonable thing for a
+judge to expect, and this submission does not meet it.
+
+## Reproduction
+
+The end-to-end rebuild entry point has **not been re-run for these bytes**. That
+is an open item, stated rather than papered over. What does exist for this
+candidate is the seal binding archive to receiver, the staging proof that this
+directory is byte-identical to the evaluated tree, and the authority receipt.

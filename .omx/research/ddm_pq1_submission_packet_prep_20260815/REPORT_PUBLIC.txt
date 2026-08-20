@@ -2,111 +2,109 @@
 Evidence axis: [contest-CUDA]
 Hardware: Tesla T4, Linux x86_64
 Samples: 600
-Archive SHA-256: 35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3
-Archive size: 177182 bytes
-Member: p, 177082 bytes, stored, SHA-256 ee904fbf6b10e4fadd69ca9c820bd7db0d334694bdf23c4a93147cd242d8c462
-Runtime tree SHA-256: da91e06744b94f77077303b2b760cb259aa84b078d998921fb99e018d52fff6f
-Portable runtime content tree SHA-256: 944c8c574f377cbe625c007b44bfc8e88ec572bf3fc7a2e9ac7aca5750217078
+Archive SHA-256: f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e
+Archive size: 180625 bytes
+Member: p, 180525 bytes, stored, SHA-256 54b445da3a1a4b4c7012c83b25c3e0d87daab5ce10cd54a1598cfb239ab05b4a
+Runtime tree SHA-256: 2103073d739fc3f27d329ea0785ea3010307360c2380af0476e16d0f5b57cb9b
+Portable runtime content tree SHA-256: 3ba9987771e1be967cf80942faedc7c5f6641f15039e03dd2b0909fd6613ab99
 Upstream snapshot SHA-256: cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008
 Upstream evaluate.py SHA-256: 7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b
 
 === Evaluation results over 600 samples ===
-Average PoseNet Distortion: 0.00000777
-Average SegNet Distortion: 0.00030309
-Seg contribution: 0.030309
-Pose contribution: 0.008814760348415605
-Rate contribution: 0.11797822103209257
-Recomputed score: 0.15710198138050818
-Reported (2 dp display): 0.16
-Report-8dp worst-case absolute score error bound: 3.336608391523776e-06
-Inflation wall time: 1197.696784587 seconds
-Evaluation wall time: 40.764544933000025 seconds
-Total authority wrapper wall time: 1249.358265802 seconds
-Inflate budget: 1800 seconds; measured headroom 1.503x
+Average PoseNet Distortion: 0.00000637
+Average SegNet Distortion: 0.00020139
+Seg contribution: 0.020139
+Pose contribution: 0.007981227975693965
+Rate contribution: 0.1202707734076922
+Recomputed score: 0.14839100138338618
+Reported (2 dp display): 0.15
+Report-8dp worst-case absolute score error bound: 3.63296497868841e-06
+Inflation wall time: 1419.9042126240001 seconds
+Evaluation wall time: 51.427507448999904 seconds
+Total authority wrapper wall time: 1484.80307526 seconds
+Inflate budget: 1800 seconds; measured headroom 1.268x
 
-=== Relationship to the prior candidates ===
-Prior packet generation 3 measured S = 0.15771357797660338 at 179930 bytes on the
-same axis and the same hardware class. This archive is -2748 bytes and
-delta S -0.0006115966 against it.
+The printed "0.15" is a 2-decimal DISPLAY of the evaluator's own final_score field.
+The score claimed on this submission is the value recomputed from the reported
+components, 0.14839100138338618, which is what the line above records. The
+display rounds up across the 0.15 boundary; the components do not.
 
-The intermediate row between them (177576 bytes, S 0.1571619225142182) is the same
-lineage with the row-prune applied and no compensation edit; this archive is
--394 bytes and net delta S -5.994113e-05 against that row.
-The measured leg split against it. The exact legs sum to the net to within 1e-18;
-the values below are DISPLAYED at 5 significant figures, so adding the printed
-strings gives -5.99430e-05 rather than the net. The rounding is in the display,
-not in the arithmetic.
-  rate -2.6235e-04 (-394 bytes)
-  seg  +1.7400e-04
-  pose +2.8407e-05
-  net  -5.994113e-05
+=== Relationship to the prior candidate ===
+Prior packet generation 4 measured S = 0.15710198138050818 at 177182 bytes on the
+same axis and the same hardware class. This archive is +3443 bytes and
+delta S -0.008710980 against it.
+
+This candidate SPENDS rate to buy distortion, which is the opposite direction
+from every prior generation in this packet, and it is worth stating plainly
+because a reader scanning byte counts alone would read the +3443 as a regression.
+The measured leg split against generation 4:
+  rate +2.2926e-03 (+3443 bytes)
+  seg  -1.0170e-02
+  pose -8.3353e-04
+  net  -8.7110e-03
+The legs sum to the net; the values above are DISPLAYED at 5 significant figures,
+so adding the printed strings need not reproduce the net digit for digit. The
+rounding is in the display, not in the arithmetic.
+
 Sign determinacy: the net is a DELTA between two independently-8dp-rounded rows,
-so both rows' error bounds apply and they ADD -- 3.336608e-06 + 3.345782e-06 =
-6.682391e-06. The net is 8.97x that summed bound. Dividing by one row's bound
-alone would report 17.96x, which overstates the margin by 2.00x.
-Unlike generation 3, this candidate does NOT hold decoded state constant: the
-edit changes semantic-section values, so both distortion legs move and are paid
-for out of the rate credit. Retained fraction of the rate credit: 0.228.
+so both rows' error bounds apply and they ADD -- 3.336608e-06 + 3.632965e-06 =
+6.969573e-06. The net is 1249.86x that summed bound. Dividing by one row's bound
+alone would overstate the margin by about 2x; at this magnitude the conclusion is
+unaffected, but the arithmetic is stated the correct way regardless.
 
-=== Disclosed superseded rows on these exact bytes ===
-These archive bytes have been evaluated on contest-CUDA T4 TWICE. Both rows are
-recorded here, because the difference between them is the whole reason the
-runtime tree is pinned.
+Like generation 4 and unlike generation 3, this candidate does NOT hold decoded
+state constant: both distortion legs move, and here they move in our favour while
+the rate leg is paid.
 
-  runtime tree 71c754686eba2ca3ef97847e7f0424e097025fca8f57065a70ea695561fc0b8a
-    d_seg 0.41580084 | d_pose 142.15991211 | S 79.40216174747616 | SUPERSEDED
-  runtime tree da91e06744b94f77077303b2b760cb259aa84b078d998921fb99e018d52fff6f
-    d_seg 0.00030309 | d_pose 0.00000777 | S 0.15710198138050818 | AUTHORITY
+=== Runtime tree pin ===
+These archive bytes have been evaluated on contest-CUDA T4 exactly ONCE, under
+runtime tree 2103073d..., which is the tree shipped here. No superseded row
+exists on these bytes.
 
-Same archive SHA-256, same 600 samples, same hardware class; only the receiver
-tree differs. The superseded row paired this archive's token bytes with a runtime
-forked before the probability-model change those bytes were encoded against.
-Arithmetic decoding under a mismatched probability model does not error -- it
-returns rc=0 and emits wrong symbols from the first divergent bin onward, so the
-decode "succeeded" and produced garbage frames. Structural parse-back could not
-see it, because sections and hashes round-trip correctly either way.
+The pin is still load-bearing, and the reason is empirical rather than theoretical.
+The previous generation's archive was evaluated TWICE on identical bytes and
+scored 79.40216174747616 under one receiver tree and 0.15710198138050818 under
+another. Arithmetic decoding under a mismatched probability model does not error:
+it returns rc=0 and emits wrong symbols from the first divergent bin onward, so
+the decode "succeeds" and produces garbage frames, and structural parse-back
+cannot see it because sections and hashes round-trip correctly either way.
 
-The reason to publish this: it is the empirical demonstration that for this
-receiver the archive hash alone does NOT determine the score, and that the
-runtime-tree pin is load-bearing rather than ceremonial. A score claim on these
-bytes is valid only against runtime tree da91e067..., which is the tree shipped
-here and the one the authority receipt validated.
+For this receiver the archive hash alone does NOT determine the score. A score
+claim on these bytes is valid only against runtime tree 2103073d..., the tree
+shipped here and the one the authority receipt validated.
+
+=== Evaluation-time budget: a disclosed live risk ===
+The official evaluation has a 30-minute limit (upstream/README.md:114), and the
+CI job carries that limit as timeout-minutes: 30 on the WHOLE job
+(upstream/.github/workflows/eval.yml:30) -- not on inflation alone.
+
+Measured on the authority run: inflation 1419.9 s plus evaluation 51.4 s =
+1471.3 s of the 1800 s job wall, leaving 328.7 s for checkout, dependency
+installation and archive download. Against the internally derived residual window
+for those remaining steps on the CUDA path, [890.6, 1430.6] s, this candidate
+fits only at the most optimistic end, by about 10.7 s. Our own wall-clock
+assessment therefore grades this WARN, not PASS: a margin of 10.7 s on a
+warm-cache assumption is not a margin.
+
+On the CPU path the same assessment projects 1414-1913 s of inflation against a
+residual of [1044, 1332] s, which is over budget in every corner. The prior
+lineage MEASURED contest-CPU inflation at 3422.711146813 s against the 1800 s
+budget. This candidate ships the same token decoder, so the CPU path is expected
+to remain infeasible -- that expectation is INHERITED, not measured on these bytes.
+
+This is disclosed rather than discovered. It is the single largest risk on this
+submission, and it is a runtime risk, not a correctness or score risk: the score
+above is measured on the exact submitted bytes.
 
 === CPU boundary ===
-Evidence axis: [env-mismatch advisory] -- NOT a score, and NOT [contest-CPU].
-A full 600-sample local decode-and-score of these exact archive bytes ran on
-macOS arm64 (not the contest 4-thread x86_64 runner): inflate 941.187799999956 s,
-evaluate 406.79247495904565 s. The receipt stamps
-score_axis=cpu_env_mismatch_advisory, evidence_grade "auth-eval env mismatch advisory",
-score_claim=False, promotion_eligible=False.
-It is retained as a decode-correctness proof: the rate contribution
-(0.11797822103209257) is identical to the T4 row's, and the pose
-residual (0.00014829) matches the encoder-side authority solve to
-8 decimal places, which is what proves the composed receiver decodes the composed
-container correctly.
-
-What that proof does NOT show: the advisory numbers do not transfer to the
-authority axis, and the drift is large and asymmetric. On the SAME bytes,
-d_pose is 0.00014829 locally against 0.00000777 on the T4 -- a factor of 19.08 --
-while d_seg drifts only 1.43x (0.00043336 against 0.00030309). Recomposed, the
-local run scores 0.19982 where the authority row scores 0.15710; the whole
-0.0427 gap is distortion, since the rate leg is identical by construction. The
-float neural render is not bit-identical across microarchitectures and the pose
-head amplifies that far harder than the SegNet argmax does. This evidence
-establishes DECODE IDENTITY only, never score transfer.
-
-Status of the [contest-CPU] axis on these exact bytes: NO ROW EXISTS. The prior
-generation-3 lineage measured contest-CPU inflate at 3422.711146813 s
-against the 1800 s budget on a contest-like 4-thread x86_64 CPU,
-and this candidate inherits that token decoder
-unchanged, so the axis is expected to remain infeasible -- but that expectation is
-INHERITED, not measured on these bytes. No CPU score exists and none is claimed.
-This submission is GPU-required for evaluation.
+Status of the [contest-CPU] axis on these exact bytes: NO ROW EXISTS. No CPU
+score exists and none is claimed. This submission is GPU-required for evaluation.
 
 === Provenance ===
-Candidate seal: ck1_composed_rebased_r4, seal SHA-256 a64b3483c0d5d3b5a589c45590c503db94287b7182154f5e6c675149ddef65e3
+Candidate seal: jg5_joint_waterfill_455, seal SHA-256 96e9860aad9021e6dc9a9619036b54bd0a2205f60468e8585089db1d8044a7d0
 Seal validation at fire time: SEAL_VALID
-Torch: 2.5.1+cu124; CUDA 12.4; driver 580.95.05
-Source commit pinned into the eval container: 9e194bc1a7fe80e501752bb493d83a63b83d57a6
+Torch (auth wrapper): 2.5.1+cu124; CUDA 12.4; driver 580.95.05; Tesla T4 confirmed
+Evaluation environment: torch 2.9.0+cu128, torchvision 0.24.0+cu128, numpy 2.3.4, timm 1.0.22
+Source commit pinned into the eval container: 56e239829091e56ced913b464f3a6d4e9d5127c5
 Provider job identifiers are retained privately with the authority receipts and
 are deliberately not reproduced on this public surface.

@@ -1,3 +1,20 @@
+# Borrowed-substrate accounting — packet generation 5 (jg5 joint-waterfill candidate, archive `f3bce5d259a08183…` / 180,625 B)
+
+> **⚠ READ §9 FIRST.** This document is APPEND-ONLY and its section numbers count ITS OWN
+> revisions, one ahead of the packet's `GENERATION_LOG.md`, which counts CANDIDATES. So §9 is
+> the live section and it describes packet generation 5. Every figure in §§1–8 stands for the
+> candidate it was written against; none of them describes these bytes except where §9 says it
+> does. The prior title and banner are preserved immediately below, unedited.
+>
+> **What §9 changes.** Generation 5 keeps generation 4's re-classification of rows 1 and 2
+> (the semantic renderer state and the pose carrier state are no longer byte-identical to
+> PR #135 after decode) and adds a new `ours-original` mechanism row for the joint admission
+> waterfill. It does NOT restore any byte-identity claim.
+
+---
+
+## Preserved generation-4 title and banner (verbatim, append-only)
+
 # Borrowed-substrate accounting — packet generation 4 (ck1 composed row-prune candidate, archive `35c318d541d70370…` / 177,182 B)
 
 > **⚠ READ §8 FIRST.** Generation 4 breaks the single most load-bearing claim in
@@ -354,3 +371,83 @@ Two honest qualifications belong here rather than in a footnote:
 
 Nothing in this amendment upgrades any classification in our favour, and two rows moved
 against us.
+
+
+---
+
+## 9. Generation 6 amendment — packet generation 5, the jg5 joint-waterfill candidate
+
+Archive `f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e`, 180,625 B,
+`[contest-CUDA]` T4 n600 S = 0.14839100138338618.
+
+### 9.1 Ancestry — one step appended to §1.1
+
+The §1.1 chain is unchanged through generation 4 and gains one step:
+
+| Step | What | Archive bytes |
+|---|---|---:|
+| … | (§1.1 chain through the generation-4 candidate) | 177,182 |
+| **this** | **jg5 joint admission waterfill + carrier re-solve on the candidate's own renders** | **180,625** |
+
+The ancestry root is unchanged and is restated here so it is never one link away
+from a reader: **PR #130 `semantic-pose-HPAC_CPR1` by Fesal Fayed (`fesalfayed`)**
+and **PR #135 `semantic-pose-HPAC_CPR1_polished` by Shreyan Mohanty (`codexblack`)**,
+with **PR #133 `cpr1_cbq_matched8` by `JasonMo123`** transitively in the ancestry via
+PR #135. The trained semantic renderer state and the pose carrier state that this
+submission re-represents are theirs. We claim no part of them.
+
+### 9.2 Rows carried forward from §8 UNCHANGED
+
+| §2 row | Class at this generation | Note |
+|---|---|---|
+| 1 Semantic renderer state | `mechanism-adopt-with-attribution` | Our format over PR #135's values, values lossily changed. §8.1 unchanged. |
+| 2 Pose carrier state | `mechanism-adopt-with-attribution` | Their solver form, our binding, their lattice re-solved. §8.1 unchanged. |
+| 3 Compressed model container | `inherited-substrate` | PR #130/#135. |
+| 4 HPAC probability object | `inherited-substrate` | Architecture PR #130/#135. |
+| 5 Compensation blob | `mechanism-adopt-with-attribution` | Edit-then-recompensate is PR #135's pattern. |
+| 6 Residual payload + table codes | `inherited-substrate` | PR #130/#135. |
+| 7 RC64 token stream | `mechanism-adopt-with-attribution` | fx1/fx2 model-axis work is ours; the coder is theirs. |
+| 8a/8b RC64 backend | `inherited-substrate` | Encoder-side and shipped receiver both. |
+| 9 Receiver binding / assembly / custody | `ours-original` | Unchanged from §8. |
+| 10 End-to-end compression entry point | `ours-original` | Unchanged from §8; **not re-run for these bytes.** |
+
+### 9.3 NEW `ours-original` row — joint admission waterfill
+
+| Field | Value |
+|---|---|
+| Mechanism | Joint admission of seg token edits and the pose carrier as ONE waterfill, swept over a Lagrange multiplier on pose damage, with the carrier re-solved against the candidate's OWN edited renders |
+| Class | `ours-original` |
+| Counted archive bytes attributable to the mechanism | **0** — it selects and re-solves values inside sections that already exist; it adds no new section |
+| Receipt | `.omx/research/ddm_jg5_pose_resolve_on_edited_renders_20260819.md`; seal `96e9860aad9021e6…`; admitted 455 of 573 edits; 600/600 pairs stopped on `no_improving_step` with zero budget hits |
+
+**What is ours.** The decision rule. The predecessor kept all 573 edits and paid about 13
+times more pose than the edits bought in seg; the waterfill admits an edit only if it pays
+for the pose it costs, and the stop rule for the carrier descent is derived from materiality
+rather than set as a fixed iteration budget.
+
+**What is not ours.** Everything the rule operates ON. The renderer state, the carrier
+lattice, the container, the probability model architecture and the range coder are the
+inherited PR #130 / PR #135 substrate. A better decision rule over someone else's
+representation is a contribution to the decision, not to the representation.
+
+**Prior art we do not claim.** The decode-time-corrector mechanism class was published first
+by **PR #138 `opal_v1`**; the edit-then-recompensate pattern is **PR #135's**. We make no
+priority claim on either. Solving admission and compensation jointly rather than in sequence
+is the part we claim, and only that part.
+
+### 9.4 Claim arithmetic
+
+Score 0.14839100138338618 = seg 0.020139 + pose 0.007981227975693965 + rate 0.1202707734076922.
+
+Against packet generation 4 the legs are rate +2.2926e-03 (+3,443 bytes), seg −1.0170e-02,
+pose −8.3353e-04, net −8.7110e-03. Both distortion legs are bought and the rate leg is paid —
+the reverse of every earlier generation in this packet.
+
+**Two honest qualifications, restated rather than inherited.**
+
+1. **The improvement is a re-decision over borrowed content.** No new learned artifact was
+   trained for this candidate. The gain comes from choosing which of someone else's
+   representations to perturb and by how much.
+2. **The end-to-end rebuild has not been re-run for these bytes.** §2 row 10 remains
+   `ours-original` as a mechanism, but its verification status for THIS candidate is open,
+   and it is listed as owed rather than quietly carried over.
