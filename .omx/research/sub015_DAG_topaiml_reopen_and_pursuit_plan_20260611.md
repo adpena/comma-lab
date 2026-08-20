@@ -29180,3 +29180,42 @@ time via `tools/ddm_jg3_rung_report.py`). Then: measured rate via
 equal-byte tie-break to the LOWER index** (configs 5/6 tie at 176,420 B and only the
 lower reproduces the shipped bytes); the ra2+ra1 rider folded in as the margin; T4
 inflate wall-clock READ AND RECORDED at harvest.
+
+## FEED-jg5 (2026-08-20) — joint edit+carrier waterfill: SEALED S 0.14838267 advisory (first sub-0.15 candidate)
+
+**Arc (jg4→jg5):** the jg4 advisory REFUSAL was a cross-instrument false negative
+(PyAV-lineage candidate leg vs DALI-lineage T4 base; the base's own advisory seg is
+1.430× T4). Same-instrument per-pair decomposition proved the seg edits realized
+EXACTLY (delta_mean × 117,964,800 = 15,155.0 cells; 573/573 edited pairs improved,
+delta_sum_unedited = 0.0). But the composition was honestly NOT sub-0.15: measured
+d_pose 3.268e-3 = 467× the pointer (token edits move frame_1 under PoseNet). Cure =
+jg5: (1) GN+polish carrier re-solve per pair, all 600 (571 improved, 0 worsened,
+mean → 4.17e-4, bimodal ~49% at-or-below base); (2) DERIVED stopping rule replacing
+three arbitrary constants — iterate while remaining_dd·dS/dd_i > 3.5e-6/600 with
+dS/dd_i = 10/(1200·√(10·m)) at the operating point m and geometric-tail projection
+remaining_dd = last_step·r/(1−r); result 600/600 stop_reason=no_improving_step, zero
+cap/floor stops = a true fixed point of the shipped basis; (3) per-pair KEEP/DROP
+waterfill over the pose Lagrange multiplier (sqrt-concavity; DROP = byte-identical
+base by proof) → 455/573 kept, d_pose 6.366e-6 BELOW the base 6.993e-6; (4) subset
+re-encode EXACT: archive 180,625 B (+4,196), 3.837 bits/changed token = 0.813× model.
+
+**Composed (SEAL_VALID, archive f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e):**
+seg 0.02013338 [jg1 DALI, 0.99995× T4] + pose 0.00797852 [macOS-CPU advisory, DALI GT,
+batch 8] + rate 0.12027077 [EXACT] = **S 0.14838267**, net −0.00776976 vs pointer
+0.15615243. End-to-end advisory reproduction decode IN FLIGHT (the fire gate); T4 fire
+next. Receipts: /Volumes/APDataStore/pact/ddm_jg5/ (JG5_RETENTION_MANIFEST 63 files,
+CANDIDATE_SEAL_jg5.json). Commit 63a509f928.
+
+**NEW LAWS this feed:** (a) edits are a POSE ACTUATOR — the re-solved carrier on
+edited renders lands BELOW the base pose floor on ~49% of pairs (best 467×, pair 240);
+the damage model "edit=cost, carrier=compensation" is incomplete — a solver may choose
+seg edits partly FOR carrier geometry (the pose-aware successor's design premise).
+(b) The derived materiality-floor stopping rule (score-arithmetic + measured T4 band)
+is provenance-clean and transferable to ANY per-pair iterative solve; the inherited
+br1 tolerance was the FIFTH cross-regime constant transfer. (c) Third truncation
+class found: GN→polish ONCE (no re-entry) — refine alternates to typed stop_reason.
+(d) Forward value moves with batch shape up to 7.7e-3 rel on small values (et4 live);
+KEEP/DROP decided only on matched-shape re-measures. **EQUATIONS-LEG OWED:** register
+the stopping rule + waterfill admission (one currency: S-units vs ±3.5e-6) as a
+canonical equation at the next equations-touching landing — owner MAIN, consumer =
+the pose-aware joint seg solver charter (fires at seal boundary).
