@@ -501,6 +501,55 @@ budget item. Rule for the hardening pass: fail-closed at **boundaries** — arch
 lengths, exact-consumption asserts, final byte count, final raw sha, atomic writes, storage
 preflight — **never per-group**.
 
+### Released build scope (operator, 2026-08-20): *"Port and lower and optimize all necessary."* + *"Recursive fractal optimization and include OS and arch gating and fully leverage all native features possible."*
+
+Scorer-free build + identity proving is RELEASED. Still held for GO-with-numbers: any local scorer
+pass, any advisory decode, any timing measurement needing a quiet machine, and any **MEASURED**
+speedup claim. Build receipts may say **BUILT + IDENTITY-PROVEN**; every speed figure stays a
+labelled PROJECTION until the GO.
+
+#### Architecture consequence — dispatch is a design constraint, not a wrapper
+
+The arch-gating amendment landed *before* any C was written, which changes the port's shape:
+`native-hpac` must be a **runtime-dispatched** family with a fail-closed floor, not a compile-time
+build flavour.
+
+| level (fractal) | target | gate |
+|---|---|---|
+| instruction | SIMD width, integer ops | **cpuid AT RUNTIME** — AVX2 vs AVX-512 probed, never assumed (contest silicon unknown); NEON on arm64 |
+| loop | the 114,000-iteration token loop: memory layout, branch structure, kill the per-group `tobytes()` copies (C2) | profile-led |
+| function | fuse the corrector **into** the decode inner loop rather than calling across it | the port itself |
+| stage | overlap decode / render / hash where dependency-free — note §3.2: the token loop itself is **not** parallelisable | dependency analysis |
+| pipeline | setup/download overlap in the harness | Surface B |
+
+**Dispatch ladder, fail-closed at every rung:** `AVX-512 → AVX2 → SSE2/scalar-C → NEON (arm64) →
+Python`. Fall back to the proven Python path on **compile failure, cpuid miss, or a decode-start
+identity check failure**. *A wrong-fast decode is forbidden; a slow-correct one is merely a WARN on
+the budget predicate.*
+
+**Determinism is what makes gating legal.** Same archive → bit-identical `0.raw` on every
+OS/arch/dispatch path. The token decode is **integer** arithmetic, so SIMD lanes are naturally exact
+— keep it that way: **no FP shortcuts in the coder**. The neural render keeps its existing torch
+numeric path unless bitwise equivalence is proven. Cross-path identity =
+`decoded_token_sha256` + full `0.raw` sha compared across scalar / SIMD / native on the real br1 +
+jg5 bodies, **per path, per platform reachable**. Locally reachable now: arm64/NEON + scalar.
+x86_64 AVX2/AVX-512 and the T4 sm_75 path are **UNVERIFIED until the GO** — labelled as such, never
+assumed.
+
+#### Compile-at-decode is already proven and already priced
+
+The shipping prelude **already compiles `rc64_backend.so` at decode time** and costs **4.012 s**
+(§2, `inflate_elapsed − total_including_raw_sha256`). So compile-at-decode is a demonstrated,
+budget-visible mechanism, not a new risk. Adding the HPAC native compile extends that prelude; per
+the amendment its cost is counted **inside** the budget arithmetic, including the cold-cache CI
+corner. Against a projected ~916 s token-stage win, a few seconds of `cc` is trivially favourable —
+but it is priced, not waved through.
+
+**Integration point:** because the fallback is fail-closed and therefore *silent by design*, the
+budget predicate (§7.1) must read **which decode path actually ran** from the receipt and grade
+accordingly — a Python-fallback decode on the contest box is precisely the WARN/REFUSE case the
+predicate exists to surface. `decode_path` joins the et4 instrument tuple.
+
 **HOLD CONTINUES until the jg5 row confirms.** Fire condition for P1–P5: MAIN's GO carrying the
 jg5 `token_decode` + `inflate_elapsed` numbers. Those numbers also settle §2.1 — if jg5's token
 decode is at or above br1's 1,186.93 s, the RR2-corrector attribution for the 3.42x regression
