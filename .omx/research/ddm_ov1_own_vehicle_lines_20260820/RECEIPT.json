@@ -1,0 +1,260 @@
+{
+ "schema": "ddm_ov1_owner_state.v1",
+ "arm": "ddm_ov1",
+ "utc": "2026-08-20",
+ "axis": "[macOS-CPU advisory / retained-telemetry advisory] unless a row says [contest-CUDA T4 n600]",
+ "score_claim": false,
+ "promotion_eligible": false,
+ "promotable": false,
+ "pointer_moved": false,
+ "ran_upstream_evaluate_py": false,
+ "scorer_forwards_run": 0,
+ "launches": 0,
+ "modal_fires": 0,
+ "usd_spent": 0.0,
+ "bar": {
+  "lane_id": "lane_ddm_jg5_waterfill455_t4_20260820",
+  "score": 0.14839100138338618,
+  "archive_bytes": 180625,
+  "archive_sha256": "f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e",
+  "avg_segnet_dist": 0.00020139,
+  "avg_posenet_dist": 6.37e-06,
+  "components": {
+   "seg": 0.020139,
+   "pose": 0.007981227975693965,
+   "rate": 0.1202707734076922
+  },
+  "identity_residual": 0.0,
+  "seg_plus_rate_budget_pose_granted": 0.1404097734076922,
+  "source": "experiments/results/modal_auth_eval_mirror/contest_auth_eval_ddm_jg5_t4_r1.json"
+ },
+ "tr1_adjudication": {
+  "verdict": "CLOSED",
+  "verdict_scope": "FAMILY on the question 'can TR1 be the frontier vehicle'; INSTANCE elsewhere",
+  "cure_source_flags_verified_at_source": {
+   "ce-fraction": {
+    "tr1": 0,
+    "pr130_lift": 1
+   },
+   "softplus-fraction": {
+    "tr1": 0,
+    "pr130_lift": 1
+   },
+   "band-objective-weight": {
+    "tr1": 0,
+    "pr130_lift": 1
+   }
+  },
+  "cure_factor_granted_illegally": 13.6069,
+  "tr1_best_ever_dseg": 0.00389011,
+  "tr1_best_ever_dseg_receipt": "pfs1 D1 archive 624ffe57 (n600 upstream/evaluate.py), via tc1 s1.2",
+  "pre_cure": {
+   "seg_term": 0.389011,
+   "seg_over_budget": 2.770540757661307,
+   "free_archive_S": 0.39699222797569395,
+   "free_archive_x_bar": 2.675312008644084
+  },
+  "post_cure": {
+   "dseg": 0.0002858924516238085,
+   "seg_term": 0.02858924516238085,
+   "seg_over_budget": 0.20361292856281057,
+   "binding_term": "RATE (flipped from seg)",
+   "byte_ceiling_cured": 167934.25652834107,
+   "byte_ceiling_perfect_seg": 210870.14411884,
+   "tr1_smallest_byteclosed": 353805,
+   "over_cured_ceiling_x": 2.1068065998808936,
+   "over_perfect_seg_ceiling_x": 1.6778335381636875,
+   "tr1_smallest_byteclosed_rate_term": 0.23558422690938982,
+   "rate_term_x_entire_bar": 1.5875910581715758
+  },
+  "reactivation_condition": "a TR1 archive < 167,934 B counted WITH d_seg <= 2.86e-4, byte-closed through a TR1-native exporter (does not exist; tc1 G5)"
+ },
+ "semantic_primary": {
+  "verdict": "CLOSED-BY-ADOPTION",
+  "verdict_scope": "FORMULATION on hand-coder lossless label coding",
+  "live_label_half_bytes": 123211,
+  "live_split": {
+   "rc64_base_tokens": 109696,
+   "hpac_model": 13515
+  },
+  "raced_alternatives": {
+   "tk1_pp1kt_gt_lstars": 173617,
+   "tk1_pp1kt_tq1c_argmax": 142001,
+   "hb1_projected_our_gt_hpac": 135732,
+   "pr130_shipped_gt_hpac": 137159
+  },
+  "live_better_fraction": {
+   "vs_gt_lstars": 0.29032871205008726,
+   "vs_tq1c": 0.13232301180977601,
+   "vs_hb1_target": 0.09224795921374473,
+   "vs_pr130": 0.10169219664768625
+  },
+  "realization_gap": {
+   "hv1_label_error": 8.48e-06,
+   "hv1_realized_dseg": 0.00029611,
+   "ratio": 34.9186320754717
+  },
+  "hb1_disposition": "CLOSED-BY-SUPERSESSION; both blockers (CUDA, #906 GT-lineage) lifted, target still 9.2% worse than shipping",
+  "hb1_stretch_rows_still_alive": [
+   "CPR1 Huffman/Rice repack of the model",
+   "bit-depth self-compression of the HPAC model"
+  ]
+ },
+ "orphan_discharge_hg1_arm_b": {
+  "source_of_orphan": "tc1 s8 row 5 named fold-point; arm_b landed after the seal; unread 3 days",
+  "custody": "/Volumes/APDataStore/pact/ddm_hg1_ring0_hinge_ab_20260816/{arm_a_control_ce,arm_b_hinge}/telemetry.jsonl",
+  "axis": "[retained MLX/Metal training-telemetry advisory]",
+  "verdict_scope": "INSTANCE on the TR1 vehicle at 400 fresh epochs",
+  "design": "both fresh-start, 400 ep, one axis --seg-form; gate set verified IDENTICAL (36 pair ids)",
+  "endpoint_ep": 399,
+  "arm_a": {
+   "seg_form": "tau_softplus",
+   "dseg": 0.016963393599898728,
+   "total_counted_bytes": 523315
+  },
+  "arm_b": {
+   "seg_form": "margin_hinge",
+   "dseg": 0.011571389657479746,
+   "total_counted_bytes": 433226
+  },
+  "dseg_ratio_b_over_a": 0.6821388414608753,
+  "dseg_improvement_x": 1.4659772163954043,
+  "bytes_ratio_b_over_a": 0.8278493832586492,
+  "paired_test": {
+   "n": 36,
+   "mean_b_minus_a": -0.005392,
+   "se": 0.00049677,
+   "t": -10.854,
+   "b_better": 33,
+   "b_worse": 3,
+   "tie": 0
+  },
+  "prefix_bias_check": {
+   "is_prefix": false,
+   "id_min": 1,
+   "id_max": 566,
+   "id_mean": 322.64,
+   "deciles_populated": 10
+  },
+  "does_not_reopen_tr1": {
+   "arm_b_seg_term": 1.1571389657479745,
+   "x_budget": 8.241156848733878,
+   "x_worse_than_tr1_warm_best": 2.9745661838559183
+  },
+  "cross_vehicle": "corroborates #1091's AXIS on a second vehicle; magnitudes differ 9.3x and NEITHER transfers"
+ },
+ "orphan_discharge_dxi": {
+  "source_of_orphan": "fx2 R5 charter named dxi/pose; delivered memo priced only the semantic blob",
+  "object": "/Volumes/APDataStore/pact/ddm_t1h/shipped_base_codes.int32.npy",
+  "shape": [
+   600,
+   12
+  ],
+  "dtype": "int32",
+  "value_range": [
+   -2047,
+   2047
+  ],
+  "unique_values": 2357,
+  "smevr_applicability": "REFUSED, structural: ddm_r7_token_coder.py:258-270 requires uint8 [P,H,W,C] with 2<=levels<=16; alphabet is 4095 levels",
+  "positive_control": {
+   "pass": false,
+   "target_rice_bits": 78036,
+   "best_reconstruction_bits": 78963,
+   "formulation": "per-coordinate temporal-delta zigzag Rice at shipped ks",
+   "error_pct": 1.19,
+   "consequence": "race CANNOT price the shipped section; headroom reported as a BOUND"
+  },
+  "bounds_bytes": {
+   "shipped_rice_payload": 9754.5,
+   "order0_percoord_temporal_delta": 7966.8,
+   "order0_percoord_raw": 7976.6,
+   "best_real_coder_on_code_array": 10101
+  },
+  "headroom_bytes": 1787.7,
+  "headroom_fraction": 0.183,
+  "delta_S_ceiling": -0.0011903560504965057,
+  "posthoc_recompression_MEASURED_DEAD": {
+   "whole_section_bytes": 22183,
+   "whole_section_delta": -37,
+   "fixed_prefix_bytes": 12467,
+   "fixed_prefix_delta": -87,
+   "rice_tail_delta": 4,
+   "H0_bits_per_byte": 7.9726
+  },
+  "law": "the headroom is reachable only by changing the coder that PRODUCES the section, never by recompressing its output",
+  "payloads_persisted": "/Volumes/APDataStore/pact/ddm_ov1/retained/ (12 payloads + DXI_CODER_RACE.json, per-file sha256)"
+ },
+ "smevr_charter_premise_correction": {
+  "claim": "two unfired SMEVR legs",
+  "finding": "leg (a) Lane-crop was FIRED TWICE and LOST",
+  "cg3_20260804": {
+   "smevr_r7_nibble": 252434,
+   "brotli_q11_winner": 206688
+  },
+  "bf1_20260805": {
+   "smevr_r7_nibble": 252417,
+   "brotli_q11_winner": 205135
+  },
+  "sv2_base_rule": {
+   "smevr_native": 346478,
+   "shipped": 341295,
+   "delta": 5183
+  },
+  "cp135": "SMEVR 0 wins / 14 sections"
+ },
+ "fire_orders": [
+  {
+   "id": "F1",
+   "order": "dxi in-encoder re-code",
+   "verdict": "FIRE",
+   "cost": "$0 local scorer-free",
+   "precondition": "reproduce the shipped 78,036 Rice bits BIT-EXACTLY first",
+   "ceiling_bytes": 1787.7,
+   "delta_S_ceiling": -0.0011903560504965057,
+   "note": "receiver cost NOT included; derive the admission bar from canonical_frontier_pointer.json AT FIRE TIME"
+  },
+  {
+   "id": "F2",
+   "order": "carry the seg-objective-FORM axis (not its magnitude) into the live #1091 sweep",
+   "verdict": "FIRE as a lesson"
+  },
+  {
+   "id": "F3",
+   "order": "hb1 HPAC-on-our-labels",
+   "verdict": "FOLD",
+   "reason": "target 135,732 B is 9.2% worse than the shipping 123,211 B"
+  },
+  {
+   "id": "F4",
+   "order": "hy1 capstone hybrid",
+   "verdict": "FIRE ONLY ON REBASE onto the jg5 container, then ONE joint scorer replay"
+  },
+  {
+   "id": "F5",
+   "order": "TR1 all rows incl. tc1's sealed class_field ticket",
+   "verdict": "FOLD"
+  },
+  {
+   "id": "F6",
+   "order": "SMEVR Lane-crop leg",
+   "verdict": "FOLD - already fired twice and lost"
+  },
+  {
+   "id": "F7",
+   "order": "LOTTO",
+   "verdict": "FOLD - mask is 1 B above its combinatorial bound"
+  },
+  {
+   "id": "F8",
+   "order": "witness/level-set",
+   "verdict": "FOLD - superseded twice, lessons only"
+  }
+ ],
+ "owed_to_main": [
+  "455 vs 454 admitted-edit label discrepancy: jg5 memo/hot_state say 455, CLOSE.json winning level says pairs_admitted 454 (same bytes, same sha)",
+  "correct the charter premise that the Lane-crop SMEVR leg is unfired",
+  "main_hot_state.md NEXT_BOUNDARIES still carries the hv1 bar (0.15959729) and a 168,345 B ceiling - stale against the 08-20 jg5 pointer"
+ ],
+ "own_vehicle_frontier": "jg5 waterfill-455 - S 0.14839100138338618 @ 180,625 B [contest-CUDA T4 n600] - UNMOVED by this unit"
+}
