@@ -6,7 +6,7 @@ compose/freeze boundary) over the 08-15 chain: the wd2 width-distillation build 
 the e960 governed early-stop + ep634 checkpoint selection, and the hv1 compose-chain assumptions.
 Your job is to REFUTE, not to confirm. Every finding: severity + concrete failure scenario +
 receipt (file:line / sha / arithmetic). Every seeded hypothesis gets an explicit
-CONFIRMED / REFUTED / INDETERMINATE-with-named-resolving-measurement verdict — no silent skips.
+CONFIRMED / REFUTED / INDETERMINATE-with-named-resolving-measurement verdict — no silent skips. # VERDICT_SCOPE_OK:charter vocabulary spec naming the verdict categories the arm must use — not a verdict itself; the arm's landed verdicts carry their own scopes
 
 ## REVIEW TARGETS (pinned)
 - wd2 build commit 706a8f9d9680989aa5d0c1ff67d2950ffa88df12: experiments/ddm_wd2_width_distillation_build.py
@@ -59,7 +59,7 @@ H8 ACCUM GEOMETRY: batch_size=1 × accumulation_steps=8 claimed to "preserve the
 - No code edits except trivial-and-tested doc/comment fixes; route all fixes to MAIN as findings.
 - Serializer commits (tools/commit_autosha.sh), [no-triality] [p0-ledger-ok]. Memo:
   .omx/research/ddm_av1_wd2_earlystop_adversarial_review_20260815.md with the findings table,
-  per-hypothesis verdicts, DEAD-ENDS + LIVE-HYPOTHESES, and a ranked MAIN-adjudication queue.
+  per-hypothesis verdicts, DEAD-ENDS + LIVE-HYPOTHESES, and a ranked MAIN-adjudication queue. # VERDICT_SCOPE_OK:deliverable section names in a charter, not verdicts — the landed memo's rows carry their own scopes
   Checkpoint via tools/subagent_checkpoint.py every ~10 tool uses. End with the vehicle frontier line.
 
 ## OPTIMAL FORM

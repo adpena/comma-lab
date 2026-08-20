@@ -17,7 +17,7 @@ treatment / compensation stage) · predicted effect direction · falsifier}.
     coverage-integrated render (#220) · paint ordering + margin-optimal prototype colors solved
     from the frozen head (v14 cures) · mc1 hood static reassert.
 (b) **Training-time survival forces** (in-loop): R_surv (R-in-loop, texture-dependent flips,
-    low-pass kills naive sine) · PR95 L17 sigma-noise schedule 0.2→0.1 (uint8-roundtrip
+    low-pass kills naive sine) · PR95 L17 sigma-noise schedule 0.2→0.1 (uint8-roundtrip # MAGNITUDE_DISMISSAL_OK:verbatim recap of the MEASURED CLAUDE.md lever-3 R_surv mechanism (Gibbs aliasing, 2026-06-25) — a fact citation in a charter, not a new dismissal
     simulation — the PR-corpus ancestor of eval_roundtrip) · L14 QAT staging · fd2's
     uint8-STE+R lesson (SPEC_tr1) · UNIWARD/margin-saliency placement (errors in texture =
     undetectable; msal_uni lever) · sub-quantum staging (camera-Q8, quarter-quantum caps
