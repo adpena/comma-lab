@@ -13,8 +13,19 @@ publication. Those remain the operator's one-line confirm.
 
 ## 0. The proof that matters first
 
+> ⚠ **CORRECTED after review round 1 (rv15 F2).** The claim below originally leaned on the
+> staging tool's own re-derivation. **That re-derivation was a tautology:**
+> `rederive_tree_sha256` consumed the manifest's OWN rows, so it re-hashed its own input and
+> could not fail on content drift. The real check at the time was the per-file re-hash beside
+> it. **Fixed in the mechanism, not the wording** (`d678b60c24`): the derivation now consumes
+> the FRESHLY MEASURED sha/bytes of every staged copy, the per-file diffs are demoted to the
+> diagnostic that explains a failure, and three tests pin it — including one that mutates staged
+> content and asserts the tree check itself catches it, and one that asserts substituting a
+> measured digest moves the derived hash. My own verification below was always honest, because
+> it hashed the bytes on disk rather than trusting the tool; that is why its value stands.
+
 `runtime_tree_sha256` = **`2103073d739fc3f27d329ea0785ea3010307360c2380af0476e16d0f5b57cb9b`,
-UNCHANGED**, re-derived independently from the 33 enumerated manifest rows after the
+UNCHANGED**, re-derived from the MEASURED bytes of the 33 enumerated rows after the
 re-stage — not read back from the receipt that produced it. All 33 rows verify
 byte-identical on disk, and the archive is still `f3bce5d2…` at 180,625 B. The
 `0.14839100138338618` row therefore still applies to the staged tree.
@@ -151,3 +162,138 @@ and the trailing sidecar from the receipt write itself was removed afterwards. Z
 
 **Pointer: UNMOVED**, by construction. `0.14839100138338618` `[contest-CUDA T4, n600]`,
 archive `f3bce5d2…`, 180,625 B.
+
+---
+
+# ROUND-1 REVIEW (rv15) FIX BATCH — 2026-08-20
+
+## F1 (HIGH) — "15.3% slower" carried the wrong denominator on all three surfaces
+
+**Confirmed and fixed.** 15.3% is the **token-stage** ratio, `1546.617/1341.540 = 1.15287`. It
+was paired with the **inflate** pair `1612.579/1419.904`, which is **13.57%**. Two different
+denominators, one number.
+
+Fixed by stating **both** ratios with their denominators inline on every surface, rather than
+picking one — the port is slower on both, and the smaller inflate figure has a mechanism worth
+saying out loud: the rest of inflate is unchanged and dilutes the stage ratio.
+
+| Surface | Before | After |
+|---|---|---|
+| `report.txt` | "1612.6 s against 1419.9 s … 15.3% SLOWER" | both pairs, both ratios, with the dilution reason |
+| `README.md:36` | "15.3% slower (1612.6 s against 1419.9 s)" | "15.3% slower on the token stage it replaces (1546.6/1341.5) and 13.6% slower on whole inflate (1612.6/1419.9)" |
+| `PR_BODY:245` | "15.3% SLOWER: 1,612.6 s against 1,419.9 s" | both, with denominators |
+| `PR_BODY:377` | "15.3% slower on a contest T4" (no numbers) | "…on the token stage it replaces (1,546.6 s against 1,341.5 s)" |
+| `PR_BODY:163-164` | inside the mirrored block | fixed by regenerating the mirror from `report.txt` |
+
+Residual check: every remaining `15.3%` occurrence was scanned; **0** pair it with the inflate
+times alone.
+
+## Denominator sweep — round-2 demand #4
+
+Two wrong-referent defects in one wave, so this is a live class, not two incidents. Swept
+**78 distinct percentage/ratio/× values** across the three public surfaces. Every value whose
+numerator and denominator are both quoted was recomputed:
+
+| Value | Denominator | Reproduces? |
+|---|---|---|
+| 94.5% | 1341.5 / 1419.9 inflate | 94.478 ✓ |
+| 95.72% | 1341.540 / 1401.58 stage sum | 95.716 ✓ |
+| **15.3%** | **1546.617 / 1341.540 token stage** | 15.287 ✓ (was mis-paired) |
+| **13.6%** | **1612.579 / 1419.904 inflate** | 13.570 ✓ (new, named) |
+| 81.05% | rate 0.12027077 / S 0.14839100 | 81.050 ✓ |
+| 37.7% / 62.2% | 66,528 and 109,696 / 176,420 B | 37.710 / 62.179 ✓ |
+| 13.4× | 0.172 pose / 0.012847 seg | 13.388 ✓ |
+| 443× | (0.15 − S) / 3.633e-06 | 442.884 ✓ |
+| 1249.86× | 8.7110e-03 / 6.969573e-06 | 1249.861 ✓ |
+| 8.0× | 3.268e-3 / 4.089e-4 | 7.992 ✓ |
+| 467× / 195× | 2.5345e-03/5.4316e-06 · 2.1402e-03/1.0997e-05 | 466.6 / 194.6 ✓ |
+| 12.8× | (0.0054967−0.0051147) / 2.99e-5 | 12.776 ✓ |
+| 266× | 50.48% / 0.190% | 265.684 ✓ |
+| 455× | 5.127114e-5 / 1.126177e-7 | 455.267 ✓ |
+| 4.1% / 95.9% | complementary | ✓ |
+| 4× / 2× | 1/0.23 and 1.87/1.0 | 4.348 / 1.870 ✓ |
+
+**Four failed the sweep and were fixed:**
+
+1. **"about 2.5× under its own estimate"** — the band is 120–180 s against 51.4 s measured, i.e.
+   **2.3× to 3.5×**. The single figure sat inside the band but named no denominator. Now states
+   "51.4 s measured against a 120–180 s allowance, i.e. 2.3x to 3.5x under."
+2. **"roughly 1000× to matter"** — the reciprocal of the quoted 0.06% headroom is ~1,667×, so
+   the figure did not reproduce from its own sentence. Restated as "clear that 0.06% headroom by
+   roughly three orders of magnitude", which does.
+3. **"2.8× the gap"** — denominator unnamed. Now "2.8× the gap it was measured against".
+4. **"58× the incumbent"** — denominator unnamed. Now "58× the incumbent carrier's `d_pose`".
+
+Also tightened: **"1.8× faster locally"** → the measured range **1.77–1.83×**, so the figure
+carries its own uncertainty rather than a round number.
+
+Values whose denominator is named in words and not derivable from quoted numbers (measured
+ratios, acceptable): 2.12× the debt paid off · 203,000× the interior flip rate · 1.662×
+attenuation · 38,700×/2,518× weight-to-render amplification · 90× underwater.
+
+## F2 (MED) — the named identity proof was a tautology
+
+**Confirmed, and fixed in the mechanism.** `rederive_tree_sha256` consumed the manifest's own
+rows (`staged_rows.append(row)`), so it re-hashed the tool's input: it could not fail on content
+drift, while being the thing the receipt and my ledger both called the proof.
+
+Fix (`d678b60c24`): each staged copy is measured after the copy and a **measured row** carrying
+those digests is what the derivation consumes. The tree comparison is now genuinely load-bearing
+and the per-file diffs are the **diagnostic** attached to its failure message. Receipt field
+renamed `runtime_tree_sha256_rederived_from_measured_staged_bytes`, with a sibling
+`runtime_tree_sha256_rederivation_input` naming the input and the tautology it avoids. Module
+docstring point 3 rewritten. Three tests pin it: content drift caught *by the tree check* with
+the file named, digest/byte substitution moving the derived hash, and the receipt naming its
+input. **49 tests pass**, ruff clean.
+
+## F3 (LOW-MED) — the 202-word claim was self-graded
+
+The template-shaped body has no §A–§G markers, so the figure was not independently checkable.
+**Attribution published** — the claim covers exactly these three inserted passages:
+
+| pq6 section | Lands in | Opens with | Words |
+|---|---|---|---|
+| §C + §E + §F | `# changes from upstream` | "What changed is on our side. Every mechanism that moved this score…" | 82 |
+| §A + §D | `# competitive or innovative?` | "Where the headroom is, measured: rate is **81.05%** of this score…" | 76 |
+| §B | `# additional comments` | "**Priced and unbuilt.** A third admission branch that drops the token outright…" | 44 |
+| | | **total** | **202** |
+
+Anyone can recompute it from those three anchors. It remains **2 words over** the plan's 200,
+which I am reporting rather than shaving a qualifier to hide.
+
+## F4 (LOW) — rr6 commit headline overstates its diff
+
+**Confirmed.** `a886ddb340` says "default it on"; the shipped tree defaults to `python`
+(`inflate.sh:36`) and hard-refuses `native-hpac` (`f26_inflate.py:435-441`) — which is correct,
+and which rr7 later vindicated by measuring the port slower on the contest axis. The pushed
+message cannot be amended, so an **append-only headline correction** was added to
+`ddm_rr6_native_token_decode_ship_20260820.md`; nothing in that memo's body is retracted.
+
+## Re-stage receipt
+
+Purge → stage → sidecar purge → census → receipt, in that order, no writes between census and
+receipt.
+
+| | before | after |
+|---|---|---|
+| packet `README.md` | `1c0ed5b46c5bb7a7…` | `d12ca41cd17b422b…` |
+| packet `report.txt` | `99eadeb36e1af8b8…` | `cbc73b68c6cca447…` |
+| packet `archive.zip` | `f3bce5d259a08183…` | `f3bce5d259a08183…` **unchanged** |
+| `runtime_tree_sha256` | `2103073d739fc3f2…` | `2103073d739fc3f2…` **unchanged** |
+
+Verified independently of the tool, by hashing the bytes on disk and re-deriving from the
+measured digests: **33/33 rows byte-identical**, tree sha `2103073d…` reproduced, archive
+`f3bce5d2…` at 180,625 B. Census `CENSUS_CLEAN` / `PREP_CLEAN` / `RECEIPTS_CLEAN`, rc=0, 43
+files, 0 sidecars. Mirror re-verified by construction: PR block == prep report == packet
+`report.txt`. **No runtime row and no archive byte was touched.**
+
+## Two things found while fixing, worth their own rows
+
+1. **A SIGKILL leaves a half-staged packet.** The tool's fail-closed cleanup runs on
+   `StagingError`, not on signals; a foreground timeout killed a stage mid-copy and left 30 of 43
+   files on disk. The census would have caught it, but the tool's own guarantee has a hole. Not
+   fixed here — it needs a signal handler or a stage-to-temp-then-rename, which is a design
+   change past this fix batch's scope. **Recorded as owed.**
+2. **The SSD tier is at 96% capacity** (77 GiB free), and staging 43 small files took ~9 minutes
+   against seconds earlier in the same session, with `dasd` pinned at 95%. The certify-and-move
+   reclaim is already owed elsewhere; this is a second, independent reason it is now urgent.
