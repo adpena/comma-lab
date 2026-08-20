@@ -1,0 +1,542 @@
+{
+ "comments": [
+  {
+   "body": "@xa8zz Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:13Z",
+   "pr": 60,
+   "state": "MERGED",
+   "title": "Add codex_metric_yshift_av1 submission"
+  },
+  {
+   "body": "@kshitijgetsac Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:15Z",
+   "pr": 61,
+   "state": "MERGED",
+   "title": "Add delta residual codec submission"
+  },
+  {
+   "body": "@amoghmunikote Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:17Z",
+   "pr": 62,
+   "state": "MERGED",
+   "title": "fp4_mask_gen"
+  },
+  {
+   "body": "@patattzel Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:19Z",
+   "pr": 63,
+   "state": "CLOSED",
+   "title": "add qpose14 submission"
+  },
+  {
+   "body": "@avocardio Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:21Z",
+   "pr": 64,
+   "state": "CLOSED",
+   "title": "Add unified_brotli submission"
+  },
+  {
+   "body": "@henosis-us Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:23Z",
+   "pr": 65,
+   "state": "CLOSED",
+   "title": "henosis_qz_n3z_r25_clean (0.32)"
+  },
+  {
+   "body": "can you host the zip file outside of the repo? you can drag and drop it in the comments here.",
+   "created_at": "2026-05-03T02:05:06Z",
+   "pr": 67,
+   "state": "MERGED",
+   "title": "qpose14_r55_segactions_minp (0.31)"
+  },
+  {
+   "body": "@EthanYangTW Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:25Z",
+   "pr": 67,
+   "state": "MERGED",
+   "title": "qpose14_r55_segactions_minp (0.31)"
+  },
+  {
+   "body": "ahah \r\nwill leave this open in case you want to finishing the write-up",
+   "created_at": "2026-05-03T02:06:08Z",
+   "pr": 70,
+   "state": "CLOSED",
+   "title": "Add mask_decoder submission"
+  },
+  {
+   "body": "nice visualizations! can you host them somewhere else? I would like to keep the repo lightweight.",
+   "created_at": "2026-05-03T02:07:05Z",
+   "pr": 71,
+   "state": "MERGED",
+   "title": "tomasdousek - ditcher"
+  },
+  {
+   "body": "@TomDousek Thanks for the amazing write-up. We had an impressive batch of submissions, and after a lot of consideration, we decided to award the prize to Aaron's submission: https://aaronleslie.dev/blog/comma-compression\r\n\r\nThat said, we\u2019d still love to link your write-up in the README if you\u2019re okay with that.",
+   "created_at": "2026-05-05T21:21:29Z",
+   "pr": 71,
+   "state": "MERGED",
+   "title": "tomasdousek - ditcher"
+  },
+  {
+   "body": "@TomDousek Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:27Z",
+   "pr": 71,
+   "state": "MERGED",
+   "title": "tomasdousek - ditcher"
+  },
+  {
+   "body": "can you link the zip file?",
+   "created_at": "2026-05-03T02:01:12Z",
+   "pr": 73,
+   "state": "CLOSED",
+   "title": "emir_flatpack: lossless tightening of qpose14 (-5,625 bytes)"
+  },
+  {
+   "body": "can you add your deps in your submission folder instead of project level?",
+   "created_at": "2026-05-03T02:10:58Z",
+   "pr": 74,
+   "state": "MERGED",
+   "title": "ph4ntom_drv (0.35)"
+  },
+  {
+   "body": "same as other PRs, please host the assets somewhere else, I would like to keep the repo lightweight",
+   "created_at": "2026-05-03T02:24:23Z",
+   "pr": 74,
+   "state": "MERGED",
+   "title": "ph4ntom_drv (0.35)"
+  },
+  {
+   "body": "@hypery11 Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:29Z",
+   "pr": 74,
+   "state": "MERGED",
+   "title": "ph4ntom_drv (0.35)"
+  },
+  {
+   "body": "@1kuna Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:31Z",
+   "pr": 76,
+   "state": "CLOSED",
+   "title": "Add qpose14_poseq6 submission"
+  },
+  {
+   "body": "@nick-neely Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:33Z",
+   "pr": 77,
+   "state": "CLOSED",
+   "title": "qzs3_tile_delta_r147 (0.31)"
+  },
+  {
+   "body": "@EthanYangTW Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:35Z",
+   "pr": 79,
+   "state": "MERGED",
+   "title": "qpose14_r55_segactions_minp v2 (0.31)"
+  },
+  {
+   "body": "@erichasinternet Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:37Z",
+   "pr": 81,
+   "state": "CLOSED",
+   "title": "qzs3 range mask"
+  },
+  {
+   "body": "@ottokunkel Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:39Z",
+   "pr": 84,
+   "state": "CLOSED",
+   "title": "Rang Mask Optimizations (0.275)"
+  },
+  {
+   "body": "@ottokunkel Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:41Z",
+   "pr": 85,
+   "state": "CLOSED",
+   "title": "Adaptive masking joint frame model"
+  },
+  {
+   "body": "great write-up! \r\nwould you mind moving the archive, the assets, and the write-up to a different repo? I would like to keep this repo lightweight. ",
+   "created_at": "2026-05-04T02:44:53Z",
+   "pr": 86,
+   "state": "MERGED",
+   "title": "jas0xf_adversarial_neural_representation (0.27)"
+  },
+  {
+   "body": "@jas0xf Thanks for the amazing write-up. We had an impressive batch of submissions, and after a lot of consideration, we decided to award the prize to Aaron's submission: https://aaronleslie.dev/blog/comma-compression\r\n\r\nThat said, we\u2019d still love to link your write-up in the README if you\u2019re okay with that.",
+   "created_at": "2026-05-05T21:21:57Z",
+   "pr": 86,
+   "state": "MERGED",
+   "title": "jas0xf_adversarial_neural_representation (0.27)"
+  },
+  {
+   "body": "@jas0xf Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:43Z",
+   "pr": 86,
+   "state": "MERGED",
+   "title": "jas0xf_adversarial_neural_representation (0.27)"
+  },
+  {
+   "body": "yeah gaming the scoring script details is pretty easy, this will be fixed in the next round!",
+   "created_at": "2026-05-04T02:36:33Z",
+   "pr": 87,
+   "state": "CLOSED",
+   "title": "Add 100_bytes submission"
+  },
+  {
+   "body": "@SajayR Thanks for the amazing write-up. We had an impressive batch of submissions, and after a lot of consideration, we decided to award the prize to Aaron's submission: https://aaronleslie.dev/blog/comma-compression\r\n\r\nThat said, we\u2019d still love to link your write-up in the README if you\u2019re okay with that.",
+   "created_at": "2026-05-05T21:24:39Z",
+   "pr": 90,
+   "state": "CLOSED",
+   "title": "add qrepro submission(0.28)"
+  },
+  {
+   "body": "@SajayR Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:45Z",
+   "pr": 90,
+   "state": "CLOSED",
+   "title": "add qrepro submission(0.28)"
+  },
+  {
+   "body": "@ottokunkel Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:47Z",
+   "pr": 91,
+   "state": "CLOSED",
+   "title": "Hpac coder hybrid"
+  },
+  {
+   "body": "@nick-neely Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:49Z",
+   "pr": 92,
+   "state": "CLOSED",
+   "title": "qzs3_range_joint_r258 (0.26)"
+  },
+  {
+   "body": "@dllu Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:51Z",
+   "pr": 93,
+   "state": "CLOSED",
+   "title": "flatpup"
+  },
+  {
+   "body": "`<re:vent>` we are going to reward folks publishing their code even if not in top 3",
+   "created_at": "2026-05-04T16:29:05Z",
+   "pr": 95,
+   "state": "MERGED",
+   "title": "hnerv_muon submission (0.20)"
+  },
+  {
+   "body": "yeah there is a small hw difference in the decode, I ran all submissions in t4 for a fair comparison.\r\n",
+   "created_at": "2026-05-04T17:43:10Z",
+   "pr": 95,
+   "state": "MERGED",
+   "title": "hnerv_muon submission (0.20)"
+  },
+  {
+   "body": "great submission and write-up!",
+   "created_at": "2026-05-04T20:06:29Z",
+   "pr": 95,
+   "state": "MERGED",
+   "title": "hnerv_muon submission (0.20)"
+  },
+  {
+   "body": "@AaronLeslie138 This submission won an honorable prize and best write-up prize. Please email me at {first name}@comma.ai for logistics.\r\nLet us know if you are looking for a job/internship as well.\r\nCongratulations!",
+   "created_at": "2026-05-05T19:58:38Z",
+   "pr": 95,
+   "state": "MERGED",
+   "title": "hnerv_muon submission (0.20)"
+  },
+  {
+   "body": "small typo in your write-up title \"Spritually\" -> \"Spiritually\"",
+   "created_at": "2026-05-05T20:11:31Z",
+   "pr": 95,
+   "state": "MERGED",
+   "title": "hnerv_muon submission (0.20)"
+  },
+  {
+   "body": "@rem2 Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:53Z",
+   "pr": 96,
+   "state": "CLOSED",
+   "title": "rem2_HNeRV submission (0.21)"
+  },
+  {
+   "body": "yeah there is a small hw difference in the decode, I ran all submissions in t4 for a fair comparison.",
+   "created_at": "2026-05-04T17:52:36Z",
+   "pr": 97,
+   "state": "CLOSED",
+   "title": "vibe_coder_final_boss (0.23)"
+  },
+  {
+   "body": "@BradyMeighan Thanks for the amazing write-up. We had an impressive batch of submissions, and after a lot of consideration, we decided to award the prize to Aaron's submission: https://aaronleslie.dev/blog/comma-compression\r\n\r\nThat said, we\u2019d still love to link your write-up in the README if you\u2019re okay with that.",
+   "created_at": "2026-05-05T21:20:16Z",
+   "pr": 97,
+   "state": "CLOSED",
+   "title": "vibe_coder_final_boss (0.23)"
+  },
+  {
+   "body": "@BradyMeighan Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:55Z",
+   "pr": 97,
+   "state": "CLOSED",
+   "title": "vibe_coder_final_boss (0.23)"
+  },
+  {
+   "body": "@EthanYangTW Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:57Z",
+   "pr": 98,
+   "state": "MERGED",
+   "title": "hnerv_muon_finetuned_from_pr95 (0.1963)"
+  },
+  {
+   "body": "Sure, updating the table. My reading was that this is mostly built on top of #95 with a perturbation addition. But since many submissions picked up your perturbation trick, you can argue that it's significant enough to be considered novel.",
+   "created_at": "2026-05-05T21:32:48Z",
+   "pr": 100,
+   "state": "CLOSED",
+   "title": "hnerv_lc_v2 submission (0.1954)"
+  },
+  {
+   "body": "@BradyMeighan Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:05:59Z",
+   "pr": 100,
+   "state": "CLOSED",
+   "title": "hnerv_lc_v2 submission (0.1954)"
+  },
+  {
+   "body": "gg!",
+   "created_at": "2026-05-05T18:14:20Z",
+   "pr": 101,
+   "state": "CLOSED",
+   "title": "add hnerv ft microcodec submission"
+  },
+  {
+   "body": "@SajayR  This submission won # 1 prize. Please email me at {first name}@comma.ai for logistics.\r\nLet us know if you are looking for a job/internship as well.\r\nCongratulations!",
+   "created_at": "2026-05-05T19:53:10Z",
+   "pr": 101,
+   "state": "CLOSED",
+   "title": "add hnerv ft microcodec submission"
+  },
+  {
+   "body": "please move the zip file outside of the pr (you can drag and drop it here and copy the link in the pr template)",
+   "created_at": "2026-05-04T16:32:45Z",
+   "pr": 102,
+   "state": "MERGED",
+   "title": "hnerv_lc_v2_scale095_rplus1 submission (0.19538 CPU)"
+  },
+  {
+   "body": "[archive.zip](https://github.com/user-attachments/files/27369164/archive.zip)\r\n",
+   "created_at": "2026-05-04T16:54:02Z",
+   "pr": 102,
+   "state": "MERGED",
+   "title": "hnerv_lc_v2_scale095_rplus1 submission (0.19538 CPU)"
+  },
+  {
+   "body": "@EthanYangTW This submission won # 3 prize. Please email me at {first name}@comma.ai for logistics.\r\nLet us know if you are looking for a job/internship as well.\r\nCongratulations!",
+   "created_at": "2026-05-05T19:53:47Z",
+   "pr": 102,
+   "state": "MERGED",
+   "title": "hnerv_lc_v2_scale095_rplus1 submission (0.19538 CPU)"
+  },
+  {
+   "body": "you're welcome to run the workflow on your own fork. I think it's fair to run all submissions on the same hw. When I first compared the hw differences, it only made a tiny difference, but I guess the more performance squeezing happens the bigger effect small pixel differences make.\r\nfyi #103 is winning a 3rd spot, congrats!",
+   "created_at": "2026-05-04T21:48:59Z",
+   "pr": 103,
+   "state": "CLOSED",
+   "title": "hnerv_lc_ac submission (0.19)"
+  },
+  {
+   "body": "To re-iterate, the choice was between:\r\n\r\n(i) run on different hw - making the scores not comparable between submissions, because they're not computed with the same ground truth video\r\n(ii) run on the same hw - making the score comparable\r\n\r\nI chose (ii) which degraded a bunch of submissions, the top 3 submissions were already very close, so there was a shake-up. \r\n\r\nWould you like to renounce your 3rd place?",
+   "created_at": "2026-05-05T04:12:36Z",
+   "pr": 103,
+   "state": "CLOSED",
+   "title": "hnerv_lc_ac submission (0.19)"
+  },
+  {
+   "body": "re: renouncing your 3rd place.\r\n\r\nI'm asking that because it seems that you're not willing to have a productive discussion about the evaluation score in the open :) I'm happy to be proven wrong, or re-evaluate my trade-offs, but trying to influence things privately is not the way to do so :) \r\n\r\nIf you read the scores as a black box number, then I agree that each solution gets to pick the runtime and optimizes w.r.t. that runtime and gets scored. But the score has a physical meaning that depends on the ground truth video, so having that be mismatched makes things non comparable 100%. One way to fix this is to make the score relative to a baseline computed on the solution runtime. Maybe for the next phase, or maybe we'll just do one runtime.\r\n\r\nre: breakthrough open solutions.\r\n\r\n@AaronLeslie138 and other folks are getting prizes for sharing their code and being fair game :) ",
+   "created_at": "2026-05-05T17:11:28Z",
+   "pr": 103,
+   "state": "CLOSED",
+   "title": "hnerv_lc_ac submission (0.19)"
+  },
+  {
+   "body": "@rem2 This submission won # 2 prize. Please email me at {first name}@comma.ai for logistics.\r\nLet us know if you are looking for a job/internship as well.\r\nCongratulations!",
+   "created_at": "2026-05-05T19:53:26Z",
+   "pr": 103,
+   "state": "CLOSED",
+   "title": "hnerv_lc_ac submission (0.19)"
+  },
+  {
+   "body": "@patattzel Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:06:01Z",
+   "pr": 104,
+   "state": "CLOSED",
+   "title": "qhnerv_ft_best"
+  },
+  {
+   "body": "@valtterivalo This submission won an honorable prize. Please email me at {first name}@comma.ai for logistics.\r\nLet us know if you are looking for a job/internship as well.\r\nCongratulations!",
+   "created_at": "2026-05-05T19:59:07Z",
+   "pr": 105,
+   "state": "MERGED",
+   "title": "kitchen_sink (0.19797)"
+  },
+  {
+   "body": "Also @valtterivalo Thanks for the amazing write-up. We had an impressive batch of submissions, and after a lot of consideration, we decided to award the prize to Aaron's submission: https://aaronleslie.dev/blog/comma-compression\r\n\r\nThat said, we\u2019d still love to link your write-up in the README if you\u2019re okay with that.",
+   "created_at": "2026-05-05T21:23:02Z",
+   "pr": 105,
+   "state": "MERGED",
+   "title": "kitchen_sink (0.19797)"
+  },
+  {
+   "body": "@adpena Congratulations on making it onto the leaderboard! I hope you had fun competing in the challenge and learned something new along the way. If you are looking for a job or internship, please email givemeajob@comma.ai with a link to this PR. See you in the next challenge!",
+   "created_at": "2026-05-05T22:06:03Z",
+   "pr": 107,
+   "state": "CLOSED",
+   "title": "apogee submission (0.2293)"
+  },
+  {
+   "body": "closing this pr per the new submission guidelines, the tricks used are already established in several past submissions\r\n\r\n\"\"\"\r\n is this submission competitive or innovative? explain why\r\ncompetitive: better than top # 1 submission\r\ninnovative: it has a novel idea that is not on the leaderboard yet, might not be competitive, but has potential\r\n\"\"\"",
+   "created_at": "2026-05-11T19:19:57Z",
+   "pr": 108,
+   "state": "CLOSED",
+   "title": "andimin01"
+  },
+  {
+   "body": "can you update the pr with the new template, including an easy to understand response to: \r\n```\r\n# is this submission competitive or innovative? explain why\r\n<!-- competitive: better than top #1 submission -->\r\n<!-- innovative: it has a novel idea that is not on the leaderboard yet, might not be competitive, but has potential -->\r\n\r\n```",
+   "created_at": "2026-05-25T21:19:01Z",
+   "pr": 110,
+   "state": "MERGED",
+   "title": "hnerv_fec6_fixed_huffman_k16"
+  },
+  {
+   "body": "is the downscale with Lanczos? Spline? \r\nthis doesn't seem to do much better than this for example: https://github.com/commaai/comma_video_compression_challenge/pull/37",
+   "created_at": "2026-06-24T23:07:38Z",
+   "pr": 116,
+   "state": "CLOSED",
+   "title": "svtav1_512_grain20"
+  },
+  {
+   "body": "closing for now, please re-open when ready",
+   "created_at": "2026-06-29T21:13:13Z",
+   "pr": 116,
+   "state": "CLOSED",
+   "title": "svtav1_512_grain20"
+  },
+  {
+   "body": "closing as these methods are already well represented in the leaderboard",
+   "created_at": "2026-06-24T22:58:54Z",
+   "pr": 117,
+   "state": "CLOSED",
+   "title": "Add nihal_av1 submission: SVT-AV1 codec, score 2.09"
+  },
+  {
+   "body": "A few comments: \r\n- this write up only reports on 4 negative experiments\r\n- all the experiments only used the off-the-shelf trained HNeRV model with no further changes, besides 3.3 which tried to distilled it\r\n- the fact that these 4 experiments did not improve the score does not mean that the \"The comma video-compression leaderboard's top cluster (0.192\u20130.199) is a genuinely *saturated Pareto frontier*\"\r\n\r\nGiven this: \r\n- I am happy to merge the write-up as a negative experiment report, but only if you fix the conclusion\r\n- No need to have the code here but the description of the experiments have to be improved\r\n- The best write-up award has already been awarded to #95\r\n\r\nClosing for now until further updates.",
+   "created_at": "2026-06-29T21:27:06Z",
+   "pr": 118,
+   "state": "CLOSED",
+   "title": "frontier_study: why the 0.192 compression frontier is saturated (write-up + reproducible study)"
+  },
+  {
+   "body": "closing as these methods are already well represented in the leaderboard",
+   "created_at": "2026-06-29T21:02:27Z",
+   "pr": 120,
+   "state": "CLOSED",
+   "title": "Add video compression submission"
+  },
+  {
+   "body": "too micro optimized, the files and arrays introduced are larger than the bytes saved",
+   "created_at": "2026-07-03T03:18:55Z",
+   "pr": 121,
+   "state": "CLOSED",
+   "title": "rhnerv_comma_mgrid submission (0.191)"
+  },
+  {
+   "body": "added to leaderboard, congrats \r\nthe code has too much overlap with code that is already merged though, so we won't merge it unless you refactor to reuse bits and pieces that are already there\r\nfeel free to reopen",
+   "created_at": "2026-07-12T01:11:46Z",
+   "pr": 125,
+   "state": "CLOSED",
+   "title": "hnerv_qlp"
+  },
+  {
+   "body": "added to leaderboard, congrats \r\nthe code has too much overlap with code that is already merged though, so we won't merge it unless you refactor to reuse bits and pieces that are already there\r\nfeel free to reopen",
+   "created_at": "2026-07-12T01:11:56Z",
+   "pr": 127,
+   "state": "CLOSED",
+   "title": "qlp_exactgrid"
+  },
+  {
+   "body": "added to leaderboard, and sent you an email for the internship,\r\nthe code has too much overlap with code that is already merged though, so we won't merge it unless you refactor to reuse bits and pieces that are already there\r\nfeel free to reopen",
+   "created_at": "2026-07-12T01:12:33Z",
+   "pr": 128,
+   "state": "CLOSED",
+   "title": "rhnerv_latent_polish (0.187946)"
+  },
+  {
+   "body": "see https://github.com/commaai/comma_video_compression_challenge/blob/master/README.md#coding-agents-and-llms-policy",
+   "created_at": "2026-08-07T05:48:33Z",
+   "pr": 133,
+   "state": "CLOSED",
+   "title": "cpr1_cbq_matched8 submission (0.1658)"
+  },
+  {
+   "body": "added to the leaderboard congrats",
+   "created_at": "2026-08-10T17:38:27Z",
+   "pr": 133,
+   "state": "CLOSED",
+   "title": "cpr1_cbq_matched8 submission (0.1658)"
+  },
+  {
+   "body": "see https://github.com/commaai/comma_video_compression_challenge/blob/master/README.md#coding-agents-and-llms-policy",
+   "created_at": "2026-08-07T05:49:12Z",
+   "pr": 134,
+   "state": "CLOSED",
+   "title": "Add metricwarp_av1 submission"
+  },
+  {
+   "body": "see https://github.com/commaai/comma_video_compression_challenge/blob/master/README.md#coding-agents-and-llms-policy",
+   "created_at": "2026-08-07T05:48:54Z",
+   "pr": 135,
+   "state": "CLOSED",
+   "title": "semantic-pose-HPAC_CPR1_polished (0.162)"
+  },
+  {
+   "body": "This is a new policy. Also you\u2019re welcome to re-open this PR with a real description. What were the ideas you had? Which ones worked? \r\nIf you expect your PR to be reviewed by a human, you have to show that there was some human work. ",
+   "created_at": "2026-08-07T11:46:33Z",
+   "pr": 135,
+   "state": "CLOSED",
+   "title": "semantic-pose-HPAC_CPR1_polished (0.162)"
+  },
+  {
+   "body": "We don\u2019t need more verbose, we need more precise. The description should read: \r\n- **THIS** is the baseline submission and score\u2026 \r\n- **THIS** file/function/etc was changed to do **THIS** instead and achieved score\u2026\r\n- Optionally: **THIS** didn\u2019t work better\u2026\r\n- Optionally: **THIS** is my llm setup and prompts\u2026 ",
+   "created_at": "2026-08-07T13:44:46Z",
+   "pr": 135,
+   "state": "CLOSED",
+   "title": "semantic-pose-HPAC_CPR1_polished (0.162)"
+  },
+  {
+   "body": "added to leaderboard",
+   "created_at": "2026-08-08T04:34:34Z",
+   "pr": 135,
+   "state": "CLOSED",
+   "title": "semantic-pose-HPAC_CPR1_polished (0.162)"
+  },
+  {
+   "body": "sending you an email",
+   "created_at": "2026-08-10T17:38:51Z",
+   "pr": 135,
+   "state": "CLOSED",
+   "title": "semantic-pose-HPAC_CPR1_polished (0.162)"
+  },
+  {
+   "body": "please see https://github.com/commaai/comma_video_compression_challenge#coding-agents-and-llms-policy",
+   "created_at": "2026-08-07T22:27:31Z",
+   "pr": 136,
+   "state": "CLOSED",
+   "title": "hnerv_rc: 0.19258 (CPU axis) \u2014 adaptive range coder on the hnerv_muon pipeline"
+  }
+ ],
+ "fetched_at_utc": "2026-08-20",
+ "pr_range": "60-140",
+ "schema": "yousfi_comment_census_v1",
+ "source": "gh pr view <N> --repo commaai/comma_video_compression_challenge --comments",
+ "threads_retrieved": 81,
+ "yousfi_comment_count": 76
+}
