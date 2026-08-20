@@ -8,8 +8,10 @@ Status: **MEASURED. Identity proven on both axes. Verdict: BUILD the corrector p
 
 ## THE ANSWER, FIRST
 
-**The corrector is 71.7% of the shipped T4 token stage — 917.929 s — and a 2.03× port clears
-the CI wall.** Not 59.2% (rr6's borrowed local fraction), not 31.4% (this arm's own local
+**The corrector is 71.7% of the shipped T4 token stage — 917.929 s — and the measured
+break-even band is 2.03–2.22× for frame B and 2.77–3.08× for frame A.** The lower endpoint
+uses cd1's original inflate anchor; the upper endpoint re-anchors on jg5 and its measured
+run-to-run band. Not 59.2% (rr6's borrowed local fraction), not 31.4% (this arm's own local
 measurement). The T4 row inverts the local split, and the inversion is the finding: on T4 the
 GPU carries the model *faster than a laptop CPU does* (267.2 s vs 443.8 s) **including all
 114,000 host↔device round trips**, while the float64 corrector meets container vCPUs that are
@@ -19,9 +21,11 @@ Two consequences fall straight out. `ddm_rr6` §2.4's latency reading is **falsi
 round trips were never the problem. And `ddm_rr7`'s 15.3% regression is **explained**: it
 lowered the 21% to C and moved it onto the weak silicon, leaving the 72% in numpy.
 
-**VERDICT: BUILD the corrector port.** Break-even is 2.03× (frame B) / 2.77× (frame A) — the
-*low* end of what a C port of vectorised numpy delivers. `#1162` sync-elimination (≈165 s) is
-optional post-port polish, not shipping-critical.
+**VERDICT: BUILD the corrector port.** Break-even is 2.03–2.22× (frame B) / 2.77–3.08×
+(frame A), and the later port clears the conservative endpoints. The sync-elimination work
+item — remove `model_d2h_sync` plus orchestration syncs — must be decided by content, not by
+its repo-unresolvable harness id: removing d2h alone lowers the frame-B bar to 1.75× and makes
+k=2 a pass rather than the measured −7.6 s miss.
 
 ---
 
@@ -433,18 +437,27 @@ unattributed 1.520 s (1.21 µs per timed region — the instrument bounding itse
 | corrector | 211.221 | **918.755** | **4.350×** |
 | orchestration | 18.021 | 90.365 | 5.014× |
 
-The T4 container vCPU is **4.4–5.0× slower than an M5 Max core** on numpy. The GPU, meanwhile,
+Under unmatched thread instruments, the observed **4.4–5.0× T4/local ratio is an upper bound,
+not a per-core measurement**: local used torch threads=6 with BLAS unpinned; T4 used torch=1
+with OMP/MKL/OPENBLAS=1. The GPU, meanwhile,
 **wins its half by 1.66×** — carrying the model *including* all 114,000 host↔device round
 trips faster than a laptop CPU does without them.
+
+**Shipping-axis supersession (MAIN, later 2026-08-20):** rr8 measured the ported tree end to end
+at 464.558564563 s inflate and 403.698 s token stage on Tesla T4. The post-port token stage is
+already below cd1's modeled 423.6 s non-corrector residual, so this local/T4 split does not
+transfer numerically. Use `ddm_rr8_t4_wallclock_verdict_20260820.md` for the shipping decision;
+retain this section only as the historical mechanism that selected the correct port.
 
 **This falsifies `ddm_rr6` §2.4's "For" argument.** rr6 reasoned that the T4 token stage being
 2.28× slower than a laptop CPU was "strong corroboration of the latency-bound reading —
 114,000 iterations, each two host↔device round trips around a tiny kernel." Measured: the
 round-trip-bearing half is the *fast* half on T4. The whole 2.28× gap is the corrector and the
 orchestration meeting weak container vCPUs. **The round trips were never the problem**, which
-also demotes `#1162`'s sync-elimination half (`model_d2h_sync` 74.140 + orchestration
-90.365 ≈ **165 s**) to optional polish: it is 5.6× smaller than the corrector and is not on
-the critical path.
+also makes the separately named sync-elimination work (`model_d2h_sync` 74.140 +
+orchestration 90.365 ≈ **165 s**) a measured co-actuator rather than a bare-id routing claim.
+It is 5.6× smaller than the corrector, but d2h removal alone lowers the frame-B corrector bar
+to 1.75× and therefore decides the k=2 corner.
 
 **And it explains `ddm_rr7`'s loss quantitatively.** rr7 moved the model OFF the GPU onto those
 vCPUs — the one half the GPU was doing well — and left the corrector in numpy. The corrector is
@@ -475,15 +488,18 @@ Ceiling: an infinitely fast corrector puts inflate at **441.921 s**, charged 490
 | port speedup k | token s | inflate s | charged s | frame A | frame B narrow margin |
 |---:|---:|---:|---:|---|---:|
 | 2.0 | 821.1 | 900.9 | 949.6 | WARN | −7.6 |
-| **2.03** | — | 893.3 | 942.0 | WARN | **0.0 → frame B PASS** |
-| **2.77** | — | 773.3 | 822.0 | **frame A PASS** | +120.0 |
+| **2.03 (original B endpoint)** | — | 893.3 | 942.0 | WARN | **0.0 → frame B PASS on cd1 anchor** |
+| **2.22 (re-anchored B endpoint)** | 775.6 | 855.4 | 904.1 | WARN | PASS |
+| **2.77 (original A endpoint)** | — | 773.3 | 822.0 | **frame A PASS on cd1 anchor** | +120.0 |
+| **3.08 (re-anchored A endpoint)** | 660.2 | 739.9 | 788.6 | **PASS** | PASS |
 | 3.0 | 668.1 | 747.9 | 796.6 | **PASS** | +145.4 |
 | 5.0 | 545.7 | 625.5 | 674.2 | PASS | +267.8 |
 | 10.0 | 454.0 | 533.7 | 582.4 | PASS | +359.6 |
 | ∞ | 362.2 | 441.9 | 490.6 | PASS | +451.4 |
 
-**The required speedup is 2.03× for frame B and 2.77× for frame A — the LOW end of the 2–4×
-band a C port of vectorised numpy plausibly delivers.** Not the high end, not a stretch. This
+**The required speedup is a band: 2.03–2.22× for frame B and 2.77–3.08× for frame A.** The
+low endpoint uses the original cd1 inflate anchor; the high endpoint uses the jg5/noise
+re-anchor promised in §6.1. This is the low end of what a C port of vectorised numpy plausibly delivers. This
 is the first candidate in the whole decode-wall line whose break-even sits below what the
 mechanism is expected to give.
 
@@ -493,10 +509,12 @@ One frame correction, which strengthens rather than weakens it: 822 s is frame A
 cold-cache ceiling, so comparing inflate *alone* against it mixes the frames. Done properly the
 port must also carry the 48.685 s evaluate — and it still clears, at 674 s (k=5), 582 s (k=10)
 and 537 s (k=20). **The verdict survives the stricter reading**, and frame B's own derived
-window `[893.315, 1433.315]` gives the earlier 2.03× break-even.
+window `[893.315, 1433.315]` gives the 2.03× lower endpoint; the jg5/noise re-anchor gives
+2.22×. At k=2 the original calculation misses frame B by 7.6 s. Removing d2h sync first
+lowers that bar to 1.75×.
 
-**`#1162` routing, one line: corrector-port = shipping-critical; sync-elimination = optional
-post-port polish.**
+**Content routing, one line:** corrector port = shipping-critical; sync-elimination = measure
+as a co-actuator before choosing a marginal k, because it flips the k=2 verdict.
 
 ### 6.5 A censored cap ate the first harvest (ca1 genus)
 
@@ -607,9 +625,45 @@ corrector-port decision was missing, and the answer is unambiguous: **build it.*
    (`experiments/ddm_cd1_stage_instrumented_runtime.py`), the tree regenerates from committed
    state, and `experiments/ddm_cd1_corrector_ceiling.py` re-prices any future row from its own
    receipt. Re-run the stager against the ported tree and the same three families come back.
-3. **The break-even is a MEASURED bar, not a hope.** 2.03× / 2.77×. A port that lands below
-   2.03× has not cleared anything, and the pre-registered table says so in advance.
+3. **The break-even is a MEASURED band, not a hope.** 2.03–2.22× / 2.77–3.08×. A port that
+   lands below 2.03× has not cleared either frame-B anchor; one between 2.03× and 2.22× has
+   an anchor-dependent verdict and must not be called an unconditional pass.
 4. **Do not price the port on a local host.** This arm's own local number was 31.4% — off the
    shipping answer by 2.3× in the *conservative* direction, and rr6's was off by 0.83× in the
    optimistic one. Neither host tells you about the other. The corrector's cost is a property
    of the vCPU it lands on.
+
+---
+
+## SUPERSESSION (appended 2026-08-20 by MAIN — APPEND-ONLY, nothing above is mutated)
+
+**The quantitative split above is FALSIFIED by direct end-to-end measurement. The verdict is
+VINDICATED.** Both halves matter and they are different claims.
+
+`ddm_rr8`'s T4 row (`fc-01M0FZKTSY9ZRH2TEX27TZACKP`, `fa6863305c`) measured the shipped token stage
+**after** the port at **403.698 s**. This memo's split implies a non-corrector residual of
+1,341.540 − 917.929 = **423.611 s**. The post-port stage is **19.9 s BELOW that residual** — so if
+the 917.929 s / 71.7% split transferred numerically, the ported corrector would have to run in
+negative time. It does not transfer.
+
+| claim | status |
+|---|---|
+| "corrector is 71.7% of the T4 token stage / 917.929 s" | **FALSIFIED** on the T4 axis |
+| "break-even 2.03–2.22× (frame B) / 2.77–3.08× (frame A)" | **MOOT** — superseded by end-to-end measurement |
+| **"BUILD the corrector port"** | **VINDICATED** — built, bit-identical, 3.056× end-to-end |
+| identity proofs on both axes | UNAFFECTED — those were measured, not modeled |
+
+**Mechanism** (`ddm_rv15` F4, now confirmed by receipt rather than argument): this memo's two halves
+were measured on unmatched instruments — local `torch=6` threads with BLAS unpinned, versus T4's
+`torch=1`, `OMP=MKL=1` — against our own pin-`(code, weights, threads, batch)` law. The
+[[cross-regime constant transfer]] genus.
+
+**Consequence for readers: do not cite this memo's absolute seconds or derived ratios on the T4
+axis.** The end-to-end row supersedes them. `verdict_scope: INSTANCE` — the falsification is of
+these numbers on this axis; the decomposition METHOD is sound and its local measurements stand as
+local measurements.
+
+**Why this note exists here.** `ddm_rr8` named this cure but landed it only in its own memo, so this
+surface kept publishing the falsified split unwarned — the [[corrections land in bodies, headlines
+keep the stale number]] genus applied across documents rather than within one. Caught in the round-3
+adversarial pass and paid at the source surface.
