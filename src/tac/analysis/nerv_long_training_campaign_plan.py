@@ -88,6 +88,7 @@ from tac.contest_eval_contract import build_score_allocation_contract
 from tac.optimization.recon_pixel_weight_surface import (
     JOINT_RECON_PIXEL_WEIGHT_MANIFEST_SCHEMA,
 )
+from tac.payload_retention import portable_path_form
 from tac.substrates._shared.mlx_score_aware.adapter import (
     SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
 )
@@ -114,7 +115,7 @@ HINERV_DISTORTION_BIRTH_RATE_GATE_SCHEMA = (
 DISTORTION_BIRTH_RATE_EVIDENCE_SCHEMA = (
     "nerv_distortion_birth_before_rate_pressure_evidence.v1"
 )
-DEFAULT_OUTPUT_ROOT = "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns"
+DEFAULT_OUTPUT_ROOT = "$PACT_TIER1/nerv_long_training_campaigns"
 DEFAULT_EPOCHS = 29_650
 DEFAULT_BATCH_PAIRS = 8
 DEFAULT_LEARNING_RATE = 1.0e-3
@@ -732,6 +733,8 @@ def build_nerv_long_training_campaign_plan(
     snerv_lf_hf_replacement_queue_artifact_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Build the shared HiNeRV/SNeRV long-training campaign matrix."""
+
+    output_root = portable_path_form(output_root)
 
     _require_schema(
         hinerv_modelsize_budget,

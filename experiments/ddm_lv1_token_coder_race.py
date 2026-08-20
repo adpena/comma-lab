@@ -36,12 +36,18 @@ from pathlib import Path
 
 import numpy as np
 
-from tac.payload_retention import retain_candidates, retain_payload, retention_root
+from tac.payload_retention import (
+    portable_retention_record,
+    resolve_portable_path,
+    retain_candidates,
+    retain_payload,
+    retention_root,
+)
 
 POINTER_LINE = "0.1910828242 [contest-CPU] UNMOVED"
-DEFAULT_CKPT = ("/Volumes/VertigoDataTier/pact/ddm_tb1_20260728/t2_n600_lotto/"
+DEFAULT_CKPT = ("$PACT_TIER1/ddm_tb1_20260728/t2_n600_lotto/"
                 "checkpoints/stage_seg_trunk_tau_final.npz")
-DEFAULT_GT = ("/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/"
+DEFAULT_GT = ("~/Projects/pact/experiments/results/mlx_fleet_gt_cache/"
               "gt_n600.npz")
 BORDER = 99  # context fill sentinel (outside any token alphabet)
 
@@ -182,14 +188,17 @@ def race_generic_coders(
     rows: dict = {name: len(blob) for name, blob in payloads.items()}
     # The coder INPUTS are retained too: without them the race is not reproducible
     # byte-identically, which is the property the retention rule exists to protect.
-    custody = retain_candidates(
-        retain_dir, {f"{label}.{name}": blob for name, blob in payloads.items()}
+    custody = {
+        name: portable_retention_record(record)
+        for name, record in retain_candidates(
+            retain_dir, {f"{label}.{name}": blob for name, blob in payloads.items()}
+        ).items()
+    }
+    custody[f"{label}.source_raw"] = portable_retention_record(
+        retain_payload(retain_dir / f"{label}.source_raw.bin", raw)
     )
-    custody[f"{label}.source_raw"] = retain_payload(
-        retain_dir / f"{label}.source_raw.bin", raw
-    )
-    custody[f"{label}.source_tdelta"] = retain_payload(
-        retain_dir / f"{label}.source_tdelta.bin", dt
+    custody[f"{label}.source_tdelta"] = portable_retention_record(
+        retain_payload(retain_dir / f"{label}.source_tdelta.bin", dt)
     )
     rows["_retained"] = custody
     if brotli_error is not None:
@@ -333,18 +342,20 @@ def main() -> int:
     ap.add_argument("--stage", choices=("bytes", "validate"), default="bytes")
     ap.add_argument("--variants", default="Q1_deepL8,Q2_deepL4_midL8,"
                                           "T1_revert_small_deep,QT_Q2_plus_T1")
-    ap.add_argument("--out", default="/Volumes/VertigoDataTier/pact/ddm_lv1_20260728/"
+    ap.add_argument("--out", default="$PACT_TIER1/ddm_lv1_20260728/"
                                      "c_token_stack_race/receipt.json")
     ap.add_argument("--chunk", type=int, default=32)
     ap.add_argument("--retain-dir", default=None,
                     help="where coder payloads are retained; default resolves the SSD "
                          "tier waterfall (ALWAYS KEEP THE PAYLOAD, P0)")
     args = ap.parse_args()
-    out_path = Path(args.out)
+    args.ckpt = resolve_portable_path(args.ckpt).as_posix()
+    args.gt_cache = resolve_portable_path(args.gt_cache).as_posix()
+    out_path = resolve_portable_path(args.out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     # Resolved BEFORE any encode: retention is a precondition for running, so a full
     # tier must fail the run here rather than after minutes of discarded compression.
-    retain_dir = (Path(args.retain_dir) if args.retain_dir
+    retain_dir = (resolve_portable_path(args.retain_dir) if args.retain_dir
                   else retention_root("ddm_lv1_token_coder_race"))
     retain_dir.mkdir(parents=True, exist_ok=True)
     receipt: dict = {}
@@ -368,8 +379,8 @@ def main() -> int:
         base_payload = zlib.compress(base.tobytes(), 9)
         base_bytes = {
             "zlib9": len(base_payload),
-            "_retained": retain_payload(
-                retain_dir / "F1_staticbase.zlib9.bin", base_payload)}
+            "_retained": portable_retention_record(
+                retain_payload(retain_dir / "F1_staticbase.zlib9.bin", base_payload))}
         rows["F1_staticbase_delta"] = {
             "base": base_bytes,
             "delta": {
@@ -389,8 +400,11 @@ def main() -> int:
                 "F1_delta_zlib9_tdelta": delta_race["zlib9_tdelta"],
                 "F1_delta_retained": delta_race["_retained"],
                 "F1_base_zlib9": len(vbase_payload),
-                "F1_base_retained": retain_payload(
-                    retain_dir / f"variant_{name}_base.zlib9.bin", vbase_payload),
+                "F1_base_retained": portable_retention_record(
+                    retain_payload(
+                        retain_dir / f"variant_{name}_base.zlib9.bin", vbase_payload
+                    )
+                ),
                 "dseg_validity": "PENDING (--stage validate; lossy adopt gate)"}
         receipt["bytes_race"] = rows
         receipt["ledger_anchor_note"] = (

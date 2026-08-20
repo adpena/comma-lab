@@ -50,7 +50,16 @@ import torch
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "experiments"))
-SUB_PU2 = Path("/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/submission_pu2")
+sys.path.insert(0, str(REPO / "src"))
+
+from tac.payload_retention import (  # noqa: E402
+    portable_retention_record,
+    resolve_portable_path,
+    retain_payload,
+    retention_root,
+)
+
+SUB_PU2 = resolve_portable_path("$PACT_TIER1/ddm_pu2_20260803/submission_pu2")
 sys.path.insert(0, str(SUB_PU2))
 
 from ddm_et1_ph1_block16_on_our_vehicle import solve_blocks, translate_blocks  # noqa: E402
@@ -70,9 +79,6 @@ from ddm_sq1_stage_decomposition_and_solved_paint import (  # noqa: E402
     resize_to_scorer,
 )
 
-sys.path.insert(0, str(REPO / "src"))
-from tac.payload_retention import retain_payload, retention_root  # noqa: E402
-
 S_PER_FLIP = 100.0 / (N_PAIRS_TOTAL * SEG_H * SEG_W)
 RATE_PER_BYTE = 25.0 / 37_545_489.0
 BLOCK = 16
@@ -80,7 +86,7 @@ DS = 16                       # TR1 grid_downsample (asserted at runtime)
 GROSS_N600_S = 0.18039        # et1 re-solved block16 gross on our field (n600 label ceiling)
 OFFSET_LZMA1_N600 = 57_809    # bz1-measured LZMA1 price of the label-solved n600 offset field
 POSE_STREAM_N600 = 57_600     # 96 B/pair k=4 frame_0 repair (bz1 G1/G2 PASS)
-OUT_DIR = Path("/Volumes/VertigoDataTier/pact/ddm_lr2_20260804")
+OUT_DIR = resolve_portable_path("$PACT_TIER1/ddm_lr2_20260804")
 
 
 def lzma1_raw(b: bytes) -> int:
@@ -246,7 +252,9 @@ def retain_arm_payload(arm: str, pair: int, payload: bytes) -> dict:
     2026-08-16, so a fixed first-tier write fails mid-run.
     """
     root = retention_root("ddm_lr2", need_bytes=len(payload)) / f"pair{pair:03d}"
-    return retain_payload(root / f"{arm}.carrier.bin", payload)
+    return portable_retention_record(
+        retain_payload(root / f"{arm}.carrier.bin", payload)
+    )
 
 
 def base_header(tag: str) -> dict:
@@ -672,7 +680,7 @@ def run_keys(args, sc, dec, raw, gt_frames, pairs) -> None:
     import ddm_tr1_runtime as tr1
 
     nby, nbx = SEG_H // BLOCK, SEG_W // BLOCK
-    argmax_dir = Path("/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache")
+    argmax_dir = resolve_portable_path("$PACT_TIER1/ddm_pu2_20260803/argmax_cache")
     gt_c = np.load(argmax_dir / "gt_argmax_n600.npy", mmap_mode="r")
     cx_c = np.load(argmax_dir / "cx1_argmax_n600.npy", mmap_mode="r")
     static_set = np.zeros((SEG_H, SEG_W), dtype=bool)
@@ -800,7 +808,7 @@ def run_fo1(args, sc, dec, raw, gt_frames, pairs) -> None:
     from ddm_sq1_pose_null_constrained_paint import pose_null_projector, project_null
 
     nby, nbx = SEG_H // BLOCK, SEG_W // BLOCK
-    argmax_dir = Path("/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache")
+    argmax_dir = resolve_portable_path("$PACT_TIER1/ddm_pu2_20260803/argmax_cache")
     gt_c = np.load(argmax_dir / "gt_argmax_n600.npy", mmap_mode="r")
     cx_c = np.load(argmax_dir / "cx1_argmax_n600.npy", mmap_mode="r")
     static_set = np.zeros((SEG_H, SEG_W), dtype=bool)
@@ -965,7 +973,7 @@ def run_tx(args, sc, dec, raw, gt_frames, pairs) -> None:
     from ddm_sq1_stage_decomposition_and_solved_paint import solve_margin_optimal_paint
 
     nby, nbx = SEG_H // BLOCK, SEG_W // BLOCK
-    argmax_dir = Path("/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache")
+    argmax_dir = resolve_portable_path("$PACT_TIER1/ddm_pu2_20260803/argmax_cache")
     gt_c = np.load(argmax_dir / "gt_argmax_n600.npy", mmap_mode="r")
     cx_c = np.load(argmax_dir / "cx1_argmax_n600.npy", mmap_mode="r")
     static_set = np.zeros((SEG_H, SEG_W), dtype=bool)

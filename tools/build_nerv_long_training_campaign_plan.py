@@ -17,10 +17,6 @@ except ModuleNotFoundError:  # pragma: no cover
 
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
-DEFAULT_SSD_ROOTS = (
-    Path("/Volumes/VertigoDataTier/pact"),
-    Path("/Volumes/APDataStore/pact"),
-)
 DEFAULT_CANDIDATE_FEEDBACK_ROOT_SUFFIXES = (
     Path("experiments/results"),
     Path("nerv_long_training_campaigns"),
@@ -34,6 +30,7 @@ from tac.analysis.nerv_long_training_campaign_plan import (  # noqa: E402
     build_nerv_long_training_campaign_plan,
     render_nerv_long_training_campaign_plan_markdown,
 )
+from tac.payload_retention import portable_path_form, storage_tiers  # noqa: E402
 from tac.repo_io import (  # noqa: E402
     ArtifactWriteError,
     json_text,
@@ -42,6 +39,8 @@ from tac.repo_io import (  # noqa: E402
     write_json_artifact,
     write_text_artifact,
 )
+
+DEFAULT_SSD_ROOTS = storage_tiers()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -392,7 +391,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--output-root",
-        default="/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns",
+        default="$PACT_TIER1/nerv_long_training_campaigns",
     )
     parser.add_argument("--max-candidates-per-family", type=int, default=3)
     parser.add_argument(
@@ -462,7 +461,7 @@ def main(argv: list[str] | None = None) -> int:
         epochs=args.epochs,
         batch_pairs=args.batch_pairs,
         learning_rate=args.learning_rate,
-        output_root=args.output_root,
+        output_root=portable_path_form(args.output_root),
         max_candidates_per_family=args.max_candidates_per_family,
         joint_recon_weight_manifest_paths=tuple(args.joint_recon_weight_manifest),
         candidate_feedback_sources=tuple(_load_feedback_sources(candidate_feedback_paths)),
@@ -816,7 +815,7 @@ def _discover_archive_section_telemetry_paths(
 def _is_candidate_feedback_source(path: Path) -> bool:
     try:
         payload = _load(path)
-    except (OSError, TypeError, json.JSONDecodeError):
+    except (OSError, TypeError, UnicodeDecodeError, json.JSONDecodeError):
         return False
     if payload.get("schema") == "nerv_candidate_feedback_row.v1":
         return True

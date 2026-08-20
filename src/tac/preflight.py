@@ -6121,6 +6121,19 @@ def preflight_all(
             ),
             strict=False,
         )
+        # Catalog #208 scope extension (ddm_sw1 2026-08-20): preserve the
+        # historical docs census, and additionally refuse new/modified staged
+        # files anywhere in the public repository from adding operator-home or
+        # mounted-volume paths. Warn-only because the baseline remains nonzero;
+        # the staged-only delta surface itself starts at zero.
+        _parallel.run(
+            "check_no_new_or_modified_absolute_local_paths",
+            "[changed-absolute-paths]",
+            lambda: check_no_new_or_modified_absolute_local_paths(
+                strict=False, verbose=verbose,
+            ),
+            strict=False,
+        )
         # 2026-04-29 PM: silent-default override class. Audit hardened in
         # commit 4eeb6452 (246 noisy -> 0 actionable); 3 real bugs fixed in
         # commit 256c5e42. Lands STRICT directly at 0 live violations.
@@ -18977,6 +18990,139 @@ def public_release_hygiene_violations_for_text(rel: str, text: str) -> list[str]
                     f"{label}. Redact into a placeholder, local manifest, "
                     f"or private custody artifact before GitHub/site publish."
                 )
+    return violations
+
+
+_CHANGED_ABSOLUTE_PATH_RE = re.compile(
+    r"(?:/Users/[A-Za-z0-9_.+-]+|/Volumes/)"  # ABSOLUTE_PATH_OK:guard-detector-pattern
+)
+_CHANGED_ABSOLUTE_PATH_WAIVER_RE = re.compile(
+    r"#\s*ABSOLUTE_PATH_OK\s*:\s*(?P<rationale>[^\r\n]+)$"
+)
+_CHANGED_ABSOLUTE_PATH_PLACEHOLDER_RATIONALES = frozenset(
+    {
+        "reason",
+        "rationale",
+        "placeholder",
+        "todo",
+        "tbd",
+        "intentional",
+        "required",
+    }
+)
+
+
+def _absolute_path_waiver_is_specific(line: str) -> bool:
+    match = _CHANGED_ABSOLUTE_PATH_WAIVER_RE.search(line)
+    if match is None:
+        return False
+    rationale = match.group("rationale").strip()
+    lowered = rationale.lower().replace("_", "-")
+    if not rationale or rationale.startswith("<") or rationale.endswith(">"):
+        return False
+    if lowered in _CHANGED_ABSOLUTE_PATH_PLACEHOLDER_RATIONALES:
+        return False
+    first_word = re.split(r"[-:\s]", lowered, maxsplit=1)[0]
+    if first_word in {"todo", "tbd", "reason", "rationale", "placeholder"}:
+        return False
+    return len(rationale) >= 8
+
+
+def changed_absolute_path_violations_for_text(rel: str, text: str) -> list[str]:
+    """Return unwaived operator-home/mounted-volume paths in one changed blob."""
+
+    violations: list[str] = []
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        if not _CHANGED_ABSOLUTE_PATH_RE.search(line):
+            continue
+        if _absolute_path_waiver_is_specific(line):
+            continue
+        violations.append(
+            f"{rel}:{lineno}: changed file carries a local absolute path; "
+            "replace it with ~, $HOME, $PACT_TIER1, or $PACT_TIER2. "
+            "A rare intentional resolver-boundary literal requires same-line "
+            "# ABSOLUTE_PATH_OK:<specific-rationale>; placeholder rationales are refused."
+        )
+    return violations
+
+
+def _changed_absolute_path_staged_paths(root: Path) -> list[str]:
+    result = subprocess.run(
+        ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise PreflightError(
+            "could not enumerate staged paths for absolute-path guard: "
+            + result.stderr.strip()
+        )
+    return [line for line in result.stdout.splitlines() if line]
+
+
+def _changed_absolute_path_text(root: Path, rel: str, *, staged: bool) -> str | None:
+    if staged:
+        result = subprocess.run(
+            ["git", "show", f":{rel}"],
+            cwd=root,
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            try:
+                return result.stdout.decode("utf-8")
+            except UnicodeDecodeError:
+                return None
+    path = root / rel
+    if not path.is_file():
+        return None
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def check_no_new_or_modified_absolute_local_paths(
+    *,
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+    candidate_paths: Sequence[str] | None = None,
+) -> list[str]:
+    """Catalog #208 extension: scan only staged new/modified public-repo blobs.
+
+    ``candidate_paths`` is an explicit worktree scan surface for tests and positive
+    controls. The default reads blobs from the Git index, so an unstaged cleanup
+    cannot hide a violation that would actually be committed.
+    """
+
+    root = (repo_root or REPO_ROOT).resolve()
+    staged = candidate_paths is None
+    paths = (
+        _changed_absolute_path_staged_paths(root)
+        if staged
+        else sorted(set(candidate_paths or ()))
+    )
+    violations: list[str] = []
+    scanned = 0
+    for rel in paths:
+        text = _changed_absolute_path_text(root, rel, staged=staged)
+        if text is None:
+            continue
+        scanned += 1
+        violations.extend(changed_absolute_path_violations_for_text(rel, text))
+    if verbose:
+        state = f"{len(violations)} violation(s)" if violations else "OK"
+        print(f"  [changed-absolute-paths] {state}: {scanned} changed file(s) scanned")
+        for violation in violations[:20]:
+            print(f"    - {violation}")
+    if violations and strict:
+        raise PreflightError(
+            "check_no_new_or_modified_absolute_local_paths found "
+            f"{len(violations)} violation(s):\n  " + "\n  ".join(violations[:20])
+        )
     return violations
 
 
@@ -58689,7 +58835,7 @@ def check_no_unguarded_rmtree_in_build_tools(
 # Anchor: OSS v0.2.0-rc1 audit commit c293ba425 found 2 tracked files
 # (docs/superpowers/plans/2026-04-10-anti-drift-runtime-hardening.md and
 # docs/superpowers/specs/2026-04-10-anti-drift-runtime-design.md) leaking
-# `/Users/adpena/Projects/pact/...` paths into the OSS release surface.
+# `~/Projects/pact/...` paths into the OSS release surface.
 # This STRICT gate refuses any docs/**/*.md state that re-introduces the
 # pattern.
 #

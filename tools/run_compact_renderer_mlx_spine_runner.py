@@ -789,6 +789,7 @@ from tac.local_acceleration.pr95_hnerv_mlx_contract import (  # noqa: E402
     PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
     PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
 )
+from tac.payload_retention import resolve_portable_path, storage_tiers  # noqa: E402
 from tac.score_geometry import (  # noqa: E402
     CONTEST_REFERENCE_BYTES,
     POSE_COEFFICIENT_INSIDE_SQRT,
@@ -869,10 +870,7 @@ DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS = DEFAULT_CHECKPOINT_INTERVAL_
 DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N = 4
 DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N = 2
 RAW_NERV_MODELSIZE_BUDGET_SCHEMAS = frozenset({"nerv_modelsize_budget.v1", "snerv_modelsize_budget.v1"})
-DEFAULT_SSD_ROOTS = (
-    Path("/Volumes/VertigoDataTier/pact"),
-    Path("/Volumes/APDataStore/pact"),
-)
+DEFAULT_SSD_ROOTS = storage_tiers()
 DEFAULT_PR95_SOURCE_ARCHIVE_ZIP = (
     REPO_ROOT / "experiments/results/public_pr_archive_release_view" / "public_pr95_intake_20260505_auto/archive.zip"
 )
@@ -29227,7 +29225,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     ceilings = tuple(args.hard_byte_ceiling or DEFAULT_BASE_RENDERER_BYTE_CEILINGS)
     byte_cap_feedback_rows = _load_modelsize_byte_cap_feedback_rows(args.modelsize_byte_cap_feedback_json)
-    output_dir = args.output_dir or _default_output_dir()
+    output_dir = resolve_portable_path(args.output_dir) if args.output_dir else _default_output_dir()
     if args.recover_interrupted_report_from_startup_marker:
         report = _write_compact_family_interrupted_report_from_startup_marker(
             output_dir=Path(output_dir).expanduser().resolve(strict=False),
@@ -30298,7 +30296,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _resolve(path: str | Path, *, base: Path) -> Path:
-    p = Path(path).expanduser()
+    p = resolve_portable_path(path).expanduser()
     return p if p.is_absolute() else (base / p).resolve(strict=False)
 
 
@@ -30321,15 +30319,15 @@ def _resolve_source_video_path(
     candidates: list[Path] = []
     if env_override:
         candidates.append(Path(env_override).expanduser())
-    raw = Path(path).expanduser()
+    raw = resolve_portable_path(path).expanduser()
     candidates.append(raw if raw.is_absolute() else (base / raw))
     if upstream_dir is not None and not raw.is_absolute() and raw.parts and raw.parts[0] == "upstream":
         upstream = Path(upstream_dir).expanduser().resolve(strict=False)
         candidates.append(upstream / Path(*raw.parts[1:]))
     if not raw.is_absolute():
-        candidates.append(Path("/Users/adpena/Projects/pact") / raw)
+        candidates.append(Path.home() / "Projects" / "pact" / raw)
     elif raw.name == "0.mkv" and "upstream" in raw.parts and "videos" in raw.parts:
-        candidates.append(Path("/Users/adpena/Projects/pact/upstream/videos/0.mkv"))
+        candidates.append(Path.home() / "Projects" / "pact" / "upstream" / "videos" / "0.mkv")
     for candidate in candidates:
         resolved = candidate.resolve(strict=False)
         if resolved.is_file():

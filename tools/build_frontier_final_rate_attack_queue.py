@@ -51,6 +51,7 @@ from tac.optimization.inverse_steganalysis_acquisition import (  # noqa: E402
     MATERIALIZER_ARCHIVE_DELTA_OBSERVATION_KIND,
     observations_from_queue_observation,
 )
+from tac.payload_retention import storage_tiers  # noqa: E402
 from tac.repo_io import (  # noqa: E402
     ArtifactWriteError,
     json_line,
@@ -77,10 +78,7 @@ def _display_path(path: str | Path) -> str:
 
 
 def _default_results_root() -> Path:
-    for root in (
-        Path("/Volumes/VertigoDataTier/experiments/results"),
-        Path("/Volumes/APDataStore/experiments/results"),
-    ):
+    for root in (tier / "experiments" / "results" for tier in storage_tiers()):
         if _can_create_child(root):
             return root
     return REPO_ROOT / "experiments" / "results"

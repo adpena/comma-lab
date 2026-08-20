@@ -681,7 +681,7 @@ FROZEN objects (the fixed information space everything is optimized against): S=
 
 ### DAG FEED 2026-06-25x (KD UNBLOCKED + MEASURED — soft-logit distillation breaks the wall MARGINALLY at its optimal-form; operator "distill seg alone")
 **Operator (2026-06-25): "what did quantizr do with seg? Can we use PR95 archive or any already trained things to train seg alone. Distill seg alone."** Quantizr's SegNet training used `kl_on_logits()` T=2.0 (Hinton-2015 soft-logit distillation). FEED-w item-2 had DEFERRED KL-on-logits ONLY because the target cache stored argmax(u8)+margin(f16), NOT the full 5-class logits. **This unit REMOVED that exact blocker** and MEASURED KD into the witness.
-**TEACHER STORE BUILT (NO-FAKE, the blocker FEED-w named):** `tools/build_segnet_teacher_logits.py` runs the FROZEN contest SegNet (CPU, EXACT lever-B authority path) over the n600 GT pairs → full 5-class logits `(600,5,384,512)` fp16 = **1.18 GB** at `/Volumes/VertigoDataTier/pact/lever_b_score_native_argmax_smoke_20260610/teacher_logits_n600/` (sha256 41d3ef53…, manifest+rebuild-cmd, certify-or-block disk hygiene, SSD not /tmp). 312s build. NO-FAKE verify: argmax(teacher_logits)==cached gt_segnet_argmax.u8 (disagree 2.4e-5 = fp16-tie boundaries only → the teacher IS the same frozen authority whose argmax is the d_seg oracle).
+**TEACHER STORE BUILT (NO-FAKE, the blocker FEED-w named):** `tools/build_segnet_teacher_logits.py` runs the FROZEN contest SegNet (CPU, EXACT lever-B authority path) over the n600 GT pairs → full 5-class logits `(600,5,384,512)` fp16 = **1.18 GB** at `$PACT_TIER1/lever_b_score_native_argmax_smoke_20260610/teacher_logits_n600/` (sha256 41d3ef53…, manifest+rebuild-cmd, certify-or-block disk hygiene, SSD not /tmp). 312s build. NO-FAKE verify: argmax(teacher_logits)==cached gt_segnet_argmax.u8 (disagree 2.4e-5 = fp16-tie boundaries only → the teacher IS the same frozen authority whose argmax is the d_seg oracle).
 **KD LOSS LANDED (serializer head 2f6eb92f4):** `tools/witness_capstone_deepmath_smoke.py` `kd_kl_logits()` = `T²·KL(softmax(teacher/T)‖softmax(student/T))` (Hinton/Quantizr direction) + `--kd-weight`/`--kd-temp`(2.0)/`--kd-ce-blend`/`--teacher-logits-dir` (kd_weight=0.0 default = exact backward-compat, prior arms unchanged) + 10 NO-FAKE behavior tests (KL=0 iff student==teacher, T² scaling, gradient flows, closed-form numpy parity, loader hw-mismatch fail-closed; 19 pass total). py_compile OK.
 **MEASURED KD ARMS (`[macOS-MLX research-signal]`, NOT byte-closed, frozen CPU-torch SegNet argmax authority, baseline relu-cap all-class-dir h128/nh5/mod48 lr2e-3 450ep best 0.002447):**
 | arm | config | best d_seg | vs 0.002447 |
@@ -7024,7 +7024,7 @@ This emits `tools/spawn_durable_daemon.py --label … --log … --projected-gb 4
 
 **TUNNEL = QUICK fallback (named blocked).** `CLOUDFLARE_API_TOKEN` can READ accounts/zones/tunnels but POST cfd_tunnel AND access/apps both return **403** (token lacks Tunnel:Edit + Access:Edit) → comma-lab.adpena.com named tunnel + Cloudflare Access could NOT be created via API. Fell back to a working trycloudflare quick tunnel, gated at the APP layer (public/tunnel requests need the access key; local 127.0.0.1 open) so the method-describing TRIALITY tab is NOT publicly exposed (upholds Public Disclosure Hygiene). FLAG: to get the stable URL + email-SSO Access, grant the token Tunnel:Edit + Access:Edit OR `cloudflared tunnel login` (cert.pem), then re-run the supervisor.
 
-**TELEMETRY/SAFETY notes:** (1) the original training pid 26124 was replaced by a SIBLING codex agent's faster Metal-backward `_fast` variant (now 93320/93321, same script/out-dir) — I did NOT touch training (cleanup classifies any `train_levelset_witness` cmd as non-killable by construction); switched inactivity-teardown + UI training-liveness to a SIGNATURE check so the stale pid can't false-trigger teardown. (2) this host's Tailscale resolver (100.100.100.100) returns NXDOMAIN for `*.trycloudflare.com` → tunnel liveness uses the cloudflared PROCESS (resolver-independent), not an HTTPS probe (which would false-restart and churn the URL).
+**TELEMETRY/SAFETY notes:** (1) the original training pid 26124 was replaced by a SIBLING codex agent's faster Metal-backward `_fast` variant (now 93320/93321, same script/out-dir) — I did NOT touch training (cleanup classifies any `train_levelset_witness` cmd as non-killable by construction); switched inactivity-teardown + UI training-liveness to a SIGNATURE check so the stale pid can't false-trigger teardown. (2) this host's Tailscale resolver (<TAILSCALE_RESOLVER_IP>) returns NXDOMAIN for `*.trycloudflare.com` → tunnel liveness uses the cloudflared PROCESS (resolver-independent), not an HTTPS probe (which would false-restart and churn the URL).
 
 **Live URL (interim, app-key-gated):** in `.omx/tmp/dash_levelset_deploy/URL.txt` (gitignored; holds the secret key + `?k=` authed URL). Quick-tunnel URL rotates on supervisor relaunch / connector death.
 
@@ -17043,7 +17043,7 @@ ADMIT_AT_SNAPSHOT; trim removes ONLY fresh_frequency_shift_init, whose implement
 self-orient directional bank over the self-orient-OFF V9 parent; self-orient direct transfer ~zero MEASURED at
 owed-16 n600; FreSh cold-start delta UNMEASURED → trim NOT claimed score-neutral). R2 B=1/B=2 n600 command
 PREPARED (r2_..._after_GO.sh). R3 SSD root: agent PermissionError was SANDBOX-only — main created
-/Volumes/VertigoDataTier/pact/witness_runs. R4 remaining REAL producer gaps: D-A 8-field component timers +
+$PACT_TIER1/witness_runs. R4 remaining REAL producer gaps: D-A 8-field component timers +
 D-B engagement callbacks (boundary rows land but don't emit these) — the LAST build before the GO decision.
 
 ## FEED-precision-matrix-20260713 (pointer node; full FEED in precision_backend_matrix_DAG_FEED_20260713.md)
@@ -21732,7 +21732,7 @@ verdict_scope: formulation — the generated-vocabulary column-generation FORMUL
 
 ## FEED-603-m5-custody-two-vehicle-reconciliation (2026-07-23, MAIN custody, Opus-4.8 non-Fable custody-only turn)
 
-**Arm:** ddm_m5_multicoefficient_solve_coverage (commit e253802498, merged from /Users/adpena/Projects/pact worktree). Dispositioned reviewed_committed.
+**Arm:** ddm_m5_multicoefficient_solve_coverage (commit e253802498, merged from ~/Projects/pact worktree). Dispositioned reviewed_committed.
 
 **m5 measured (per-stratum, v19b receiver-closed replay, [macOS-CPU frozen-scorer advisory], score_claim=false):**
 - Road 2,210,770 control errors → +82,824 net closed = **3.7%** (residual 2,127,946)
@@ -24949,7 +24949,7 @@ RUNG 1 (READY, $0, decisive): argmax-flip support after xi-PREDICT via frozen Se
 < 0.5x blur => xi-temporal is the task lever + coherent order fires; >= blur => 2D warp neutral for task
 too, escalate PREDICT to depth/MPI. Pointer UNMOVED. [no-triality: eqs leg owed to rung-1 measurement]
 Artifacts: .omx/research/ddm_oc1_xi_temporal_predict_measured_20260727.md +
-/Volumes/VertigoDataTier/pact/ddm_oc1_20260727/xi_n1200_q9.json + experiments/ddm_oc1_xi_temporal_measure.py.
+$PACT_TIER1/ddm_oc1_20260727/xi_n1200_q9.json + experiments/ddm_oc1_xi_temporal_measure.py.
 
 
 FEED-oc1-rung1-flip-support (2026-07-27, arm ddm_oc1, task-domain measurement DONE, n600):
@@ -25008,7 +25008,7 @@ coder flagged DECODE-RISK (verify non-Python-per-symbol). Pointer UNMOVED 0.1910
 experiments/ddm_r2s_stratified_flip_support.py (3a8af14f91) + experiments/ddm_r2s_sparse_residual_
 byteaccount.py (dbc3e5b80f). Memo .omx/research/ddm_r2s_stratified_and_sparse_residual_20260728.md (PLUG-IN
 LEDGER: 18 assets USED/RACED/N-A incl Bridge-5 correction blind⊂ker(A) + round-4 free-depth crown-jewel
-gated). Artifacts SSD /Volumes/VertigoDataTier/pact/ddm_r2s_20260727/{flip_support_n600_strat,sparse_
+gated). Artifacts SSD $PACT_TIER1/ddm_r2s_20260727/{flip_support_n600_strat,sparse_
 byteaccount_n600}.json.
 
 ## FEED-fc1 (2026-07-28) — ASSEMBLY CAPSTONE: STAGE-1 tier-mover H(flip|context) MEASURED (F6 NULL→FILLED) + full compose. [no-triality] [p0-ledger-ok]
@@ -25040,7 +25040,7 @@ near-solved needs UNBUILT realization; copy-base close = rate wall, worse than r
 SOLVED to its floor; the wall is the frame carrier + solved pose, routed to MAIN. Pointer UNMOVED 0.19108.
 Tools: experiments/ddm_fc1_{context_cache,flip_entropy,stage2_coders,stage3_frame0_crush,stage5_compose}.py.
 Memo .omx/research/ddm_fc1_assembly_capstone_flip_entropy_and_compose_20260728.md (PLUG-IN LEDGER: 13
-assets USED/NAMED/N-A). Artifacts SSD /Volumes/VertigoDataTier/pact/ddm_fc1_20260728/{entropy,stage2_coders,
+assets USED/NAMED/N-A). Artifacts SSD $PACT_TIER1/ddm_fc1_20260728/{entropy,stage2_coders,
 stage3_frame0_crush,stage5_compose}_n600.json + chunks/.
 
 FEED-sp1 (2026-07-28, ddm_sp1 B3 rung, worktree off 3ad18419ee): the CONTOUR SUPPORT CODER is BUILT +
@@ -25065,7 +25065,7 @@ is dominated. R2 (values, B2+B7 shared rung): int8×3 range(A)-residual incumben
 (median 1.11, 64.1%≤2) is GATED on sc1's scorer line-search (derived bound only). Pointer UNMOVED 0.19108.
 Tools: experiments/ddm_sp1_{contour_support_coder,values_coder,base_transfer_h_contract}.py. Memo
 .omx/research/ddm_sp1_contour_support_coder_20260728.md. Artifacts SSD
-/Volumes/VertigoDataTier/pact/ddm_sp1_20260728/{r1_contour_support,r2_values_coder}_n600.json.
+$PACT_TIER1/ddm_sp1_20260728/{r1_contour_support,r2_values_coder}_n600.json.
 
 FEED-cl1 (2026-07-29, ddm_cl1 $0 paper-crosswalk, MAIN, no code/no launches): CliffordNet (arXiv 2601.06793
 v2, Zhongping Ji, single author; "geometric product uv=u·v+u∧v as sole interaction; No-FFN; Nano 1.4M→77.82%
@@ -25113,7 +25113,7 @@ no new savings); QA08 (context mixing) = lossless coder swap, composes only by r
 DROPPED stream (never sum). **Bottom line: rate lever real+large; exact S is POSE-bound not
 rate-bound; rung DONE at build level, pointer UNMOVED 0.1910828242 [contest-CPU]; next = MAIN
 fires 2 staged gates (~34 min).** Memo .omx/research/ddm_wr1_reverse_waterfill_20260729.md;
-receipts /Volumes/VertigoDataTier/pact/ddm_wr1_20260729/. [no-triality] [p0-ledger-ok]
+receipts $PACT_TIER1/ddm_wr1_20260729/. [no-triality] [p0-ledger-ok]
 
 ## FEED-2026-07-30-b (MAIN): the 07-30 pose-physics arc — v4b composed gate FIRED + three honest law-overturns [pointer 0.1910828242 [contest-CPU] UNMOVED; all rows macOS-CPU advisory]
 
@@ -25451,7 +25451,7 @@ verdict is asserted in this FEED. Pointer 0.1910828242 [contest-CPU] UNMOVED.
 ## FEED-wr1gb (2026-07-30) — wr1 Gate-B staged exact gate MEASURED: knee-B truncation REFUTED at this operating point (instance)
 
 MAIN fired the wr1-staged Gate-B realized gate (`experiments/stage_wr1_realized_gate.sh kneeB cpu`,
-full 600-sample evaluate path, receipt `/Volumes/VertigoDataTier/pact/ddm_wr1_20260729/wr1_kneeB_realized_gate_receipt.json`,
+full 600-sample evaluate path, receipt `$PACT_TIER1/ddm_wr1_20260729/wr1_kneeB_realized_gate_receipt.json`,
 schema ddm_wr1_realized_gate.v1) per gc9 row-1 + su2 stage-1 + Hotz dissent. All [macOS-CPU advisory].
 
 - MEASURED composed row @ 174,578 B: d_seg 0.01001419 (term 1.0014) · d_pose 0.48164272 (term 2.1946) · rate 0.1162 → **S = 3.3122** vs REF 2.256641 (pfs1 D1): **+1.056 net**.
@@ -25559,7 +25559,7 @@ delta UNMOVED (0.1910828242 [contest-CPU]) — means, not end.
 - The clean capacity-vs-objective arbiter: the QA75 distill-WINDOW with the SEGNET FIELD teacher
   (logits/margins on the solve frames — scorer-space, vehicle-agnostic; the field, not the pixels).
   MAIN fired the b2b field pass (tools/ddm_b2b_segnet_field_pass.py --frame-source qa75_solve
-  --field-kind distill_logit_margin, out /Volumes/VertigoDataTier/pact/ddm_b2b_qa75_field_20260730)
+  --field-kind distill_logit_margin, out $PACT_TIER1/ddm_b2b_qa75_field_20260730)
   in the freed scorer slot; monitor armed. Next rung after: QA75 distill-window resume from the E2
   endpoint, slope-ratio vs plain continuation = the real capacity split; then the gc9 §4 row-2 replace.
 - TR1's own measured floor stands: E2 0.0052766 (endpoint compile re-verified byte-identical by pj1:
@@ -25654,7 +25654,7 @@ Memo `.omx/research/ddm_zb1_cheap_batch_20260730.md`. All [macOS-CPU advisory]; 
 
 - **QA80 EXACT flip-distance field (item 1, MEASURED n600, DONE):** real frozen CPU-torch SegNet over
   the 600 burn frame1s (materialized from QA24 endpoint e7640dee via render_frame1_camera_uint8; frames
-  npy sha 937f9672…). Out `/Volumes/VertigoDataTier/pact/ddm_zb1_qa80_field_20260730/` (600 npz; per-pair
+  npy sha 937f9672…). Out `$PACT_TIER1/ddm_zb1_qa80_field_20260730/` (600 npz; per-pair
   sha custody 600/600; manifest v1). Budget for QA83 class_field_photo + ea1-N3: q50 median 1.8181, q05
   0.4302, tightest ~1.9e-6 (zero budget at boundary). verdict_scope: producer MEASURED; consumers OPEN.
 - **S2 ν-audit rate-side (item 2, $0):** on NEW-best B (dw1 control ep440 EMA). Base SMEVR stream
@@ -25778,7 +25778,7 @@ RETIRED) + non-additive-pools LAW.
   C(24,2)=276 excludes the 24 single-D16-row bands (boundaries-vs-rows off-by-one). The enumeration covers
   the full 300 SUPERSET ⇒ the rowband arm is a THEOREM, not a sample.
 - **THEOREM FIRED on the real n600 field** ($0, sha-verified, q50 1.8107, custody
-  `/Volumes/VertigoDataTier/pact/ddm_pa1b_theorem_20260730_per_row_flip_mass_D8.npy`): the provably-rate-
+  `$PACT_TIER1/ddm_pa1b_theorem_20260730_per_row_flip_mass_D8.npy`): the provably-rate-
   optimal min-cells band at the op1 ≥50% gate is render rows **[160,240) at 1248 independent cells — EXACTLY
   the QA84 default grammar's band + DOF.** The exact-flip-distance field independently recovers the QA74
   `rowband_flip_mass_foveation_band_v1` typing AND certifies the pre-registered rowband default is
@@ -25954,7 +25954,7 @@ telemetry port (trainer already logs betti0/erasure at :858). NOTHING-MORE added
 ## FEED-pa1r (2026-07-31) — Pool-A race FIRED (D16 warm-tail realization): additive-S hull NOT moved; in-loop co-location tax MEASURED; control tail = the live mover
 
 Task #793 execution (memo `.omx/research/ddm_pa1r_pool_a_race_20260730.md`; custody
-`/Volumes/VertigoDataTier/pact/ddm_pa1r_20260730/`). Grid reality forced the D16 warm-tail
+`$PACT_TIER1/ddm_pa1r_20260730/`). Grid reality forced the D16 warm-tail
 realization (NO D8 parent exists; rowband = fresh-burn class, BLOCKED). Seal: B EMA-shadow SMEVR
 re-derived 255,907 EXACT (the shipped state is the EMA shadow — live params give 269,437); endpoint
 harness validated on B to +1.9e-7 vs nv1. MEASURED (n600 realized through R, real coder, all
@@ -26008,7 +26008,7 @@ P5 FOLDED — QA91 erased-lane analyzer ($0, NO scorer, exact scipy 8-conn on gt
 burn terminated BEFORE the lane birth plateau. VERDICT: BIRTH_PLATEAU_KEY_CANDIDATE (erased mass is NOT
 GT-flicker; #315 does NOT close the corpus). RELATIVE SIGNIFICANCE: Lane = 0.1377 S-units (26% of the
 0.494 endpoint seg-term); recoverable (super-nucleus) bound dS ~0.134. Memo
-`.omx/research/ddm_fp1_class_field_projection_20260731.md`; custody `/Volumes/VertigoDataTier/pact/ddm_fp1_20260731/`
+`.omx/research/ddm_fp1_class_field_projection_20260731.md`; custody `$PACT_TIER1/ddm_fp1_20260731/`
 (receiver floors, prototypes, head-init receipt, fprime receipt, qa91_erased_lane.json). **Pointer
 0.1910828242 [contest-CPU] UNMOVED (all means; no exact row; [macOS-CPU advisory], score_claim=false).**
 [no-triality] [p0-ledger-ok]
@@ -26067,7 +26067,7 @@ HARD-EARNED; teacher-staleness cured by gated re-check. **Pointer 0.1910828242 [
 **FEED-qa92 (2026-07-31, task #801, ddm_qa92, claude-opus-4-8) — gc12 RUNG 0 FIRED-MEASURED: the
 Lane-carrier receiver discriminator ⇒ RUNG 2 SKIPS TO BURN-4.** Memo
 `.omx/research/ddm_qa92_carrier_discriminator_20260731.md`; custody
-`/Volumes/VertigoDataTier/pact/ddm_qa92_20260731/` (qa92_verdict.json + 5 chunk npz + custody manifest).
+`$PACT_TIER1/ddm_qa92_20260731/` (qa92_verdict.json + 5 chunk npz + custody manifest).
 Pointer **0.1910828242 [contest-CPU] UNMOVED**; all [macOS-CPU advisory], score_claim=false. THE
 MEASUREMENT (gc12 §4, n600, frozen CPU-torch SegNet authority NEVER MPS): render control_tail ep499 →
 deploy R → SegNet = BASE d_seg **0.0049411 (== pa1r NEW BEST endpoint EXACTLY — harness validated)**;
@@ -26184,7 +26184,7 @@ crash-resume from receipts, pidfile singleton, ticket rebuild-hash verified agai
 re-check FOLDED into the supervisor terminal stage → `rung1_endpoint_manifest.json` + `rung1.done`
 marker; exact S-unit P re-measure (QA92 base-pass, 8-conn) OWED TO MAIN (manifest carries the
 DERIVED-ESTIMATE erased-count + the named exact method). MAIN consumes the marker at its next wake.
-Custody `/Volumes/VertigoDataTier/pact/ddm_r1c_20260731/` (manifest, tickets, windows, decisions);
+Custody `$PACT_TIER1/ddm_r1c_20260731/` (manifest, tickets, windows, decisions);
 task 803 registered→in_progress (flips completed when MAIN consumes the endpoint). [no-triality]
 [p0-ledger-ok]
 
@@ -26205,7 +26205,7 @@ accounting:** KD-from-birth's target pool is P≤0.044 S — LARGER than the par
 arm's own continuation has STALLED/regressed against it, and paint-on-texture is QA92-net-negative (oracle
 +0.30 S WORSE); no measured crossing mechanism yet. Small driver `experiments/ddm_xp1_exact_p.py`
 (3e588562d1…) REUSES QA92's `erased_super_nucleus_mask`+P-L353 verbatim (base pass only, 133s n600). Custody
-`/Volumes/VertigoDataTier/pact/ddm_xp1_20260731/` (verdict + 5 chunks + custody manifest); memo
+`$PACT_TIER1/ddm_xp1_20260731/` (verdict + 5 chunks + custody manifest); memo
 `.omx/research/ddm_xp1_exact_p_20260731.md`. b4s consumes this P line at burn-4 fire time. task 806
 registered→in_progress→completed (actor ddm_xp1). [no-triality] [p0-ledger-ok]
 
@@ -26417,7 +26417,7 @@ its floor, 66.8% ru1-flicker-typed = erasure-tail regime, needs positional carri
 scope INSTANCE (xp1 ep641 r1c endpoint; ru1 typing ep399 tb1 = cross-base structure label per gc13 §0.6).
 Consumers: cg1 (R2) sandwich distortion-floor leg + first-guarded-set confirmation; gc13 §4 backcast v2.
 Memo `.omx/research/ddm_fl1_perclass_flicker_floors_20260731.md`; custody
-`/Volumes/VertigoDataTier/pact/ddm_fl1_20260731/` (verdict + join_falsifier + driver + manifest).
+`$PACT_TIER1/ddm_fl1_20260731/` (verdict + join_falsifier + driver + manifest).
 All rows `[macOS-CPU advisory]` derived-from-cached-GT, score_claim=false. Pointer 0.1910828242
 [contest-CPU] UNMOVED — this is MEANS. [no-triality] [p0-ledger-ok]
 
@@ -27387,7 +27387,7 @@ converge on ONE action.
   All 86 carried ONE reason — `joinable=False`: the detector **declined**, never tried-and-failed. And
   **the closure evidence was on the same line it read** — 32 rows name queue ids whose STATUS cell says
   FIRED/CLOSED/BUILT; reading that column resolves **21 of 86 for free**. `ORPHANED` is **structurally
-  unreachable on this host** (`/Volumes/APDataStore/pact` absent) — so fo1's `ORPHANED=0` is
+  unreachable on this host** (`$PACT_TIER2` absent) — so fo1's `ORPHANED=0` is
   *uninterpretable*, the vacuity genus inside our own new detector.
 - **Task rows (p2a):** reconstructed the ledger by replaying 882 `TaskCreate` + 1,607 `TaskUpdate`
   (3.0 GB) → **880 tasks, zero id gaps, 114 open**. Verdicts: 2 ALREADY-CLOSED · 2 REAL-OPEN ·
@@ -27683,7 +27683,7 @@ learned implicit edge conditioning in the JS1 stage-0 lineage after a current-ve
 exists and MAIN owns the scorer lane.
 
 CLOSING-ARTIFACT: `.omx/research/ddm_gv2_lane_road_grammar_v2_20260812.md`; retained store
-`/Volumes/VertigoDataTier/pact/ddm_gv2_20260812/event_store_target_anchored_v2/`.
+`$PACT_TIER1/ddm_gv2_20260812/event_store_target_anchored_v2/`.
 
 <!-- FEED-ddm-sa1-20260813 -->
 ### FEED — ddm_sa1 tiny counted shipping-axis Seg actuator
@@ -27697,7 +27697,7 @@ CP135), with projected Seg −37/600, robust 0, pose +1.1596e-6, joint +0.001284
 candidate-only exact T4 receiver/field gate; admission requires at most 33,417 flips versus 34,970
 and negative mixed-axis gate delta S. F2 remains ineligible until that field lands. Receipt:
 `.omx/research/ddm_sa1_shipping_axis_seg_actuator_20260813.md`; retained store:
-`/Volumes/VertigoDataTier/pact/ddm_sa1_20260813/`.
+`$PACT_TIER1/ddm_sa1_20260813/`.
 
 ## FEED-2026-08-15-cpu-authority-staged (MAIN)
 Trajectory point: pq1 packet red #1 (contest-CPU authority leg, dual-axis submission mandate)
@@ -28066,7 +28066,7 @@ rungs derived monotone) — see the arm's verdict memo; the two are different cl
 
 **Built:** `experiments/ddm_jc1_carrier_pose_jacobian.py` — `J_i = ∂pose6/∂coeff_i ∈ R^{6×12}`,
 n600, through the shipped chain, 501 s. Retained at
-`/Volumes/APDataStore/pact/ddm_jc1/retained/` (`jacobian_pose6_x_coeff12.float64.npy`,
+`$PACT_TIER2/ddm_jc1/retained/` (`jacobian_pose6_x_coeff12.float64.npy`,
 sha `fc5743c970c13f4f`, 345,728 B, + GT/gen pose, coeff, Gram, selector modes).
 **Forward exact, backward STE** — the exact quantized chain's Jacobian is 0 a.e.
 
@@ -28571,7 +28571,7 @@ NOT FIRED (factorization negative by arithmetic) · **3 `--weight-qat-q3q4` MEAS
 - **The channel still does NOT deliver — removing pose MOVES the binding constraint to byte supply:** at the measured η, rt1's describe-everything channel is a NON-SUPPLIER (+0.004171 S even at zero pose) and sr1's waterfill only a marginal SUPPLIER (−0.000526 S, 5.5% of gap) on IDEAL-ENTROPY bytes no real coder has priced. **Pointer UNMOVED.** verdict_scope: instance (this endpoint, hv1 base, [macOS-CPU advisory], score_claim false; n=12 seeded-random declared SCOPE reduction — may refute a bar, cannot license a LIVE verdict).
 - **The decision point is FO-1, FIRED (arm LIVE):** real M0–M7 coder race on the reconstructed 41-cell waterfill selection, roundtrip-verified, vs the frozen pre-registered bar — **≤ 5,066 B → the pose-null seg-edit family gets its first real supplier; > 5,066 B → sr1's number is an ideal-entropy artifact and rt1's CLOSED verdict is restored.**
 - **Method note the arm pre-registered and that HELD:** the η advantage regressed +15.6% → +14.2% → +11.7% → +8.1% as n grew (direction never moved) — the headline is a DIRECTION and an ORDER OF MAGNITUDE, never a level.
-- **Triality legs:** DAG = this row. DSL = N/A with reason (solve-side channel measurement; no Lever changed — the projector lives in the j11/rt2 tool surface, not the trainer). equations = N/A with reason (level regresses with n by the arm's own pre-registration; registering the multiplier now would be the unlicensed-constant class — an equation leg fires IF FO-1 admits the channel and a stable exchange rate exists). STORES CONSULTED: pn2 memo §5–§7 (final table + FO ledger), rt2 memo (null-space derivation), SR1_WATERFILL.json (FO-1 input), Q3 #837 (the 2026-07-31 kernel this validates), retained payloads `/Volumes/APDataStore/pact/ddm_pn2/`.
+- **Triality legs:** DAG = this row. DSL = N/A with reason (solve-side channel measurement; no Lever changed — the projector lives in the j11/rt2 tool surface, not the trainer). equations = N/A with reason (level regresses with n by the arm's own pre-registration; registering the multiplier now would be the unlicensed-constant class — an equation leg fires IF FO-1 admits the channel and a stable exchange rate exists). STORES CONSULTED: pn2 memo §5–§7 (final table + FO ledger), rt2 memo (null-space derivation), SR1_WATERFILL.json (FO-1 input), Q3 #837 (the 2026-07-31 kernel this validates), retained payloads `$PACT_TIER2/ddm_pn2/`.
 
 **FEED-2026-08-17d addendum — operator floor recalibration ("The theoretical floor is even lower"):** re-derived from `information_theoretic_floor_T_floor_20260610.md` (not working memory): NO nontrivial proven floor; the quoted 0.11797 is the OLD carrier's own iid coding floor, not the problem's; ESTIMATE band **0.07–0.13, rate-dominated** (same-arch perfect closure ~0.121 · smaller decoder ~0.085–0.10 · direct-grammar amortizer ~0.045–0.072). Consequence: hv1's rate term alone (0.1216917 = 76.2% of S) ≈ the band top — sub-0.15-then-sub-0.12 headroom lives on the ACHIEVER-CLASS B_min axis, and the live family's own fitted asymptote (e960 mid-run fit, joint floor 130,875 B ≈ rate 0.0871) already sits inside the band. Routing weight = headroom-to-floor, not only gap-to-0.15. Encoded: memory `theoretical_floor_is_below_the_goal_20260817` + hot-state pointer_line FLOOR LEDGER + MEMORY.md m66 row folded. fl1's per-class smooth-label floors remain FORMULATION-scoped (pierced by phase-faithful renderers) — cite ru1's ~6e-4 reachable for the seg sandwich leg, never the 5.3e-3.
 
@@ -28582,7 +28582,7 @@ NOT FIRED (factorization negative by arithmetic) · **3 `--weight-qat-q3q4` MEAS
 ## FEED-2026-08-17f — rr2 T4 refusal (device-scoped decode-identity law) · R4 REFUTED · wd3 fresh-init PARKED · hg1 silent death cured
 
 1. **rr2 free-decode T4 row REFUSED S 27.832302540259292 [contest-CUDA T4 n600]** (call fc-01M0889RGGV57B50NJG8NH2GE4, ~$0.16, archive 181,161 B sha 48d5d469…, pin verified). Mechanism ISOLATED from three retained inflate hashes at 3,662,409,600 B: hv1 CPU e5539653… (arm's identity proof) · hv1's own T4 9a6b75e5… (scores seg 0.00029611/pose 6.88e-6 ✓) · rr2 T4 23dcabdb… (garbage — seg 301×, pose 35.29). The rr2 re-encode used CPU AR-prior probabilities; T4 free-decode conditions on CUDA probabilities → adaptive desync. **NEW LAW: decode-identity proofs are DEVICE-SCOPED** — a CPU byte-identity proof does not license a CUDA fire on a context-coded stream; require encode-against-decode-device-probs OR integer-exact (device-invariant) context. verdict_scope: INSTANCE (encoder family survives). Cure LIVE: ddm_rr4 arm (#1099) — CUDA-prob dump (~$0.16) → local re-encode → refire (~$0.16); expected components = hv1 T4 seg/pose exactly + rate 25·B/37,545,489 ⇒ −0.0010640 S. MAIN's fire-time single-axis waiver crossed the device boundary — recorded as MAIN's error. Memo: ddm_rr2_t4_refusal_device_scoped_decode_identity_20260817.md (362463ca80). Lane terminal failed_device_scoped_decode_desync. **SEQUENCING DECISION: the hv1 CPU-authority evidence row (~$0.40, pq1 red #1) is HELD BEHIND the rr4 verdict** — if rr4 lands, the frontier moves to the cured bytes and the CPU row buys on THOSE; if rr4 fails, buy on hv1. Sequenced-behind, not dropped.
-2. **R4 flat-anchor band repaint α-ladder: REFUTED 5/5 on its own pre-registered falsifier** ("REFUTED iff worse at every alpha"): base d_seg 0.000296173/34,938 flips; α=0.02 +217 flips (+0.000184 S) · 0.05 +1,948 · 0.1 +9,913 · 0.2 +49,143 · 0.4 +270,717 · 1.0 +1,628,865 (+1.3808 S) — MONOTONE worse. [macOS-CPU advisory]. verdict_scope: formulation (band-blend correction on this base). Receipt: /Volumes/APDataStore/pact/ddm_rt1_seg_roundtrip_20260816/r4_alpha_ladder/R4_LADDER_VERDICT.json. rt1 line: R4 rung closed (jr1 §Why-this-rung table already cites it).
+2. **R4 flat-anchor band repaint α-ladder: REFUTED 5/5 on its own pre-registered falsifier** ("REFUTED iff worse at every alpha"): base d_seg 0.000296173/34,938 flips; α=0.02 +217 flips (+0.000184 S) · 0.05 +1,948 · 0.1 +9,913 · 0.2 +49,143 · 0.4 +270,717 · 1.0 +1,628,865 (+1.3808 S) — MONOTONE worse. [macOS-CPU advisory]. verdict_scope: formulation (band-blend correction on this base). Receipt: $PACT_TIER2/ddm_rt1_seg_roundtrip_20260816/r4_alpha_ladder/R4_LADDER_VERDICT.json. rt1 line: R4 rung closed (jr1 §Why-this-rung table already cites it).
 3. **wd3 fresh-init distillation family PARKED at n120** (seeded stratified nonprefix, same instrument): D56 fresh dense 2.01× seg vs W0_warm (Δscore +1.4806) · F64 fresh factorized 2.41× (+1.1093) — both instance negatives UPHELD, reproducing n60 with the m96-predicted softening. Reactivation ladder recorded (warm-lineage-at-w56 · longer-budget fresh · curriculum-inherited birth). Memo: ddm_wd3_n120_family_disposition_20260816.md. Consequence: the rate-rung (−15,157 B) fresh-distillation leg is dead; live rate legs = W0-warm continuation + mp2 Stage-2 carrier-rank (22,032 B pool). mp2 keep75∖keep87 differential REFUSED +0.0362 net (pose 3.77× — all three row-prune candidates dead on pose fragility; MP2_ADVISORY_ADJUDICATION.json).
 4. **hg1 arm_a silent death CURED + RESUMED**: died Aug 16 22:54 at ep279/400 (no receipt, no error — launched with watchers:[], unnoticed ~17h; the make-silence-loud law's exact instance). Still descending at stop (gate d_seg 0.0565→0.0332 over 20 ep, COUPLED_DESCENT). Resumed 08-17 from intra_seg_trunk_tau_ep00279.npz via launch_detached_process + done-receipt hg1_arm_a_resume (counter 159, pid 68926); run.log ep000-279 preserved. Chain: arm_a→ep400 (~76 min) → arm_b hinge → §8 falsifier adjudication (#1100). jr1's sealed Leg-C matched-‖Δw‖ ticket (4 runs ~2.2h) queues behind. jr1 verdict banked: residual-judge STRUCTURALLY RETIRED (13.3% floor vs 6.1% signal, no n fixes it — SE_pred's leading 1); band objective DID rotate the realized step 66.3° (cos 0.402 vs 0.95 bar); W1 breaks the displacement law 3× (t=+12.87) → law narrowed to QAT-from-step-0 arms.
 
@@ -28622,7 +28622,7 @@ STORES CONSULTED: MODAL_REMOTE_RESULT.json (rr2 + hv1 r2 rows), inflated_outputs
   identical to rr4 to every digit). Settles na9's F5/GS1-PRED by its own falsifier: the coder-axis
   "closed" verdict named the SEARCH axis, not the MODEL axis — the model axis paid.
 - Custody: retained archive + determinism repeat + per-candidate bits_*.npy payloads at
-  /Volumes/APDataStore/pact/ddm_fx1/ (ALWAYS KEEP THE PAYLOAD honored). Posterior anchor appended via
+  $PACT_TIER2/ddm_fx1/ (ALWAYS KEEP THE PAYLOAD honored). Posterior anchor appended via
   posterior_update_locked_from_auth_eval_json; pointer refreshed. Fire-ladder cures (no-pipe ·
   axis-waiver · re-pinned runtime · fire tool only) all applied — first-try clean fire.
 - Convention note for #1115: seal runtime-tree hash (d9e39a36…, arm) vs fire-tool staged-tree
@@ -28647,7 +28647,7 @@ STORES CONSULTED: MODAL_REMOTE_RESULT.json (rr2 + hv1 r2 rows), inflated_outputs
 ## FEED-pd1 (2026-08-18) — 60-archive decomposition → 661-row typed prior store ($0)
 - pd1 decomposed 60 competitor PR archives (5× charter target; 52 from the 2026-05-05 auto-intake
   never structurally decomposed) into a typed prior store (661 rows, 0 schema violations, 11/11
-  retained streams sha-verified; /Volumes/APDataStore/pact/ddm_pd1/). Top consumables relayed to
+  retained streams sha-verified; $PACT_TIER2/ddm_pd1/). Top consumables relayed to
   the live fx2 arm: (1) LZMA array-section tuning lc=0,lp=1,pb=0 re-derived BYTE-EXACT vs PR133
   (−1,092 B, testable on our bytes); (2) weight SERIALIZATION unsaturated (PR133 semantic −13.0%,
   HPAC model −25.9%; nobody entropy-codes a scale array) — a different axis from the closed coder
@@ -28695,11 +28695,11 @@ STORES CONSULTED: MODAL_REMOTE_RESULT.json (rr2 + hv1 r2 rows), inflated_outputs
   transfer as AXES to race, not NUMBERS to adopt (the m21/L18 law, reproduced).
 - **Blocker adjudicated AT SOURCE (m53 instance):** the arm's "rc64 pin 5c75e2c7 matches no file on
   either SSD" was a REFUTED negative-existence claim — the exact file exists at
-  `/Volumes/VertigoDataTier/pact/pr135_intake_20260810/experiment_book/src/cpr1_sub4/entropy/rc64_backend.c`
+  `$PACT_TIER1/pr135_intake_20260810/experiment_book/src/cpr1_sub4/entropy/rc64_backend.c`
   (sha matches; PR135 verbatim encoder-side source per pq1 accounting row 8a; the receiver-side
   `runtime/entropy/rc64_backend.c` copies are a DIFFERENT role at 05839d14). Pin NOT stale; no
   re-pin; fix = supply the path. Byte-close chain LAUNCHED detached (counter 174, pid 70206,
-  driver `/Volumes/APDataStore/pact/ddm_fx2/byteclose_a_driver.sh`, freshness re-verify of the
+  driver `$PACT_TIER2/ddm_fx2/byteclose_a_driver.sh`, freshness re-verify of the
   frozen drop-in as stage 0): targets archive 180,450±1 B / token 109,801±1 B / 7 sections
   byte-identical / decoded field 9ba2e52b… at parse-back. On green: MAIN fires candidate A
   (projected S 0.1580598, 10.05× naming bar) via tools/fire_modal_auth_eval.py; candidate B
@@ -28712,7 +28712,7 @@ STORES CONSULTED: MODAL_REMOTE_RESULT.json (rr2 + hv1 r2 rows), inflated_outputs
 - **Extension NEGATIVE (verdict_scope: FORMULATION — RX1M sections of this vehicle):** only the semantic blob pays (−520). carrier_blob best +12 B (no win); hpac_blob NOT MEASURABLE (control misses +40 — instrument uncalibrated there, honestly refused). **pd1's corpus-wide serialization prior does NOT generalize across our sections** — consumed as direction, priced per section.
 - **Standalone-vs-pointer subtlety:** the split alone on rr4 lands +40..+62 B ABOVE the fx1 pointer (rr4 is 560 B behind). Ships ONLY composed.
 - **THE r2 LESSON (fx2 candidate A fire, call fc-01M09AXG9G94D2KN81KCWV6XY8, worker rc=1 @13.5 s):** the shipped receiver's free_corrector.py imported `experiments.ddm_fx1_logistic_mixer_corrector` — a runtime-closure violation (HNeRV-parity L9) that the local byte-close chain could not see because the r1 PYTHONPATH=repo-root crutch put the repo on sys.path for BOTH encoder and receiver. **The crutch that fixes the encoder masks the closure defect in the receiver; only a clean-env entry-point smoke (inflate.sh, env -i) measures the worker path.** Cure = the fx1 shipped pattern: flatten the corrector chain into the runtime package (stage rr4_free_corrector.py + fx1_logistic_mixer_corrector.py, rewrite 5+2 import sites package-relative; loop-until-dry grep = 0 repo imports). SECOND CATCH from the same smoke discipline: sz1's receiver trees carried the rr4-v2 corrector instead of the fx2 mixer the composed token stream requires — a guaranteed T4 desync (the rr2 S=27.83 class); sz1's own seal had validated via read_residual_archive only and flagged the full-inflate smoke as the owed step. All 4 runtime trees fixed. Tool debt: fire_modal_auth_eval's pre-dispatch smoke does not EXECUTE a decode (13.5 s import death reached the worker) — bounded clean-env decode smoke = two-landing candidate.
-- **Chain state:** fx2-A clean-env smoke LIVE → r3 refire → potential SIXTH pointer move (0.1580598246322269); then sz1 composed (#1117) → potential SEVENTH (0.15771358). Custody: /Volumes/APDataStore/pact/ddm_sz1/ (6 archives + 4 artifacts, sha-pinned) + ddm_fx2/byteclose_a/.
+- **Chain state:** fx2-A clean-env smoke LIVE → r3 refire → potential SIXTH pointer move (0.1580598246322269); then sz1 composed (#1117) → potential SEVENTH (0.15771358). Custody: $PACT_TIER2/ddm_sz1/ (6 archives + 4 artifacts, sha-pinned) + ddm_fx2/byteclose_a/.
 
 ## FEED-hg1ab (2026-08-18) — ring0 margin-hinge A/B §8 falsifier adjudication [MAIN, matched epochs]
 
@@ -28796,7 +28796,7 @@ c8509b2538: post-repin re-sanitize in fire_modal_auth_eval.py, manifest key
 stage3b_post_repin_sanitized) · r2 rc=4 — hand-typed sha pin dropped a character; cure = shas by
 shell substitution from the sealed JSON, never hand-typed hex (least-hand-typing law). Sub-0.15
 gap 0.00771; pose 0.008295 ≈ 108% of gap — every remaining major route is pose. Custody:
-/Volumes/APDataStore/pact/ddm_sz1/ (6 archives, 2 runtime trees, r3_artifacts, RETENTION_MANIFEST).
+$PACT_TIER2/ddm_sz1/ (6 archives, 2 runtime trees, r3_artifacts, RETENTION_MANIFEST).
 [p0-ledger-ok]
 
 FEED-sz1cpu (2026-08-18): CPU AXIS ON THE POINTER BYTES = MEASURED INFEASIBILITY RECEIPT, not a row.
@@ -28813,7 +28813,7 @@ CPU 3,109 s): native/C lowering of the mixer (rc64_backend pattern) is the named
 feasibility or T4 headroom is ever wanted; (3) #1054's CPU-degrades-pose-21× lesson never engaged —
 the eval never ran. Lane ddm_sz1_composed_cpu_n600 closed terminal
 (completed_measured_infeasible_cpu_inflate_3423s_vs_1800s_budget). Artifacts:
-/Volumes/APDataStore/pact/ddm_sz1/cpu_row_composed/r1_artifacts/ (preflight + validation + logs +
+$PACT_TIER2/ddm_sz1/cpu_row_composed/r1_artifacts/ (preflight + validation + logs +
 provenance; preflight verified archive sha/bytes debb025f…/179,930 before spend). [p0-ledger-ok]
 
 FEED-sa3 (2026-08-18): EIGHTH POINTER MOVE — the compensated semantic edit, re-based onto the sz1
@@ -28846,7 +28846,7 @@ difference, and qs4 proved the converse (a compensation carried from a DIFFERENT
 +2.396e-04). Re-solve in-compile, assert in code. Registered as canonical equation
 compensated_semantic_edit_exchange_v1 (project_at_mass / family_cannot_close_alone / exchange_legs).
 Memo .omx/research/ddm_sa3_compensated_edit_rebased_verdict_20260818.md; artifacts
-/Volumes/APDataStore/pact/ddm_sa3/t4_row_cuda/ with all eight embedded auth-eval artifacts now
+$PACT_TIER2/ddm_sa3/t4_row_cuda/ with all eight embedded auth-eval artifacts now
 persisted separately per P0. [p0-ledger-ok]
 
 FEED-bp1 (2026-08-18): SECTION-CODING AXIS MEASURED SHUT — four mechanisms × all four sections of the
@@ -28873,7 +28873,7 @@ close the gap alone, none of it from the coder. Registered as canonical equation
 section_coding_axis_closure_v1 with coding_candidate_admissible() as the fail-closed gate. Memos
 .omx/research/ddm_bp1_section_coding_axis_closed_20260818.md +
 .omx/research/ddm_xs1_cross_section_joint_coding_20260818.md; payloads + receipts
-/Volumes/APDataStore/pact/ddm_bp1/ (persisted BEFORE measuring, P0). [p0-ledger-ok]
+$PACT_TIER2/ddm_bp1/ (persisted BEFORE measuring, P0). [p0-ledger-ok]
 
 ## FEED-vseries-closure (2026-08-18, MAIN) — SD1M mass ladder CLOSED at FORMULATION scope; wrong-metric law banked; routing re-adjudicated
 
@@ -28896,7 +28896,7 @@ the MC36 base (consumer-mismatch). ROUTED: ddm_ck1 Opus arm (task #1128) builds 
 candidate (SM3R mode-6 row-prune+mixed-depth) → advisory → 3h Metal Schur solve → compile →
 seal → T4. Memos .omx/research/ddm_sa1_vseries_v7_dead_v2_routing_20260818.md (§1–§5, commits
 948a4d6cf5 · c30f92fbc9 · c0642562dc); advisory receipts + payloads persisted per P0 under
-/Volumes/APDataStore/pact/ddm_sa1/{advisory_n600_cpu,retained,generations}. [p0-ledger-ok]
+$PACT_TIER2/ddm_sa1/{advisory_n600_cpu,retained,generations}. [p0-ledger-ok]
 
 ## FEED-ck2 (2026-08-19) — ELEVENTH POINTER MOVE: container transform, projection exact
 - MOVE: ck2 plane2 parameter-free whole-section 2-plane container transform on the ck1 base ->
@@ -28920,7 +28920,7 @@ seal → T4. Memos .omx/research/ddm_sa1_vseries_v7_dead_v2_routing_20260818.md 
 
 ## FEED-ck2-CORRIGENDUM (2026-08-19, rc1x landing) — the rc64 "stale pin" diagnosis was WRONG
 - CORRECTION to FEED-ck2's NEXT EDGE line: the rc64 pin was NEVER STALE. 5c75e2c7 (12,222 B) is
-  the ENCODER-role body, alive at /Volumes/VertigoDataTier/pact/pr135_intake_20260810/
+  the ENCODER-role body, alive at $PACT_TIER1/pr135_intake_20260810/
   experiment_book/src/cpr1_sub4/entropy/rc64_backend.c; the shipped 5,638-B member is
   DECODER-ONLY. Cure landed = TWO-ROLE recipe (encoder source + shipped-member pin), RR4_RECIPE
   untouched (a6e07d42df). m53 instance x2: ma1's "158 copies, neither matches" AND MAIN's
@@ -29115,7 +29115,7 @@ receiver. RE-PRICED PROJECTION: seg −0.015259 + rate +0.003995 + pose +0.00031
 −0.010950 → S ≈ 0.145576, conditioned on n600 realized yield ≥ ~1.06 cells/changed token.
 ROUTED: ddm_jg3 arm spawned on the binding S2 handoff spec (three-way {edit,drop,keep} ×
 realized-joint acceptance × measured rate × DALI-direct pose); memo
-ddm_jg2_sub015_chain_20260819.md; custody /Volumes/APDataStore/pact/ddm_jg2/. Equations-leg
+ddm_jg2_sub015_chain_20260819.md; custody $PACT_TIER2/ddm_jg2/. Equations-leg
 routing: the superposition law joins the one-waterfill/realized-acceptance/additive-GT
 registrations at the cw1 boundary.
 
@@ -29125,7 +29125,7 @@ MEASURED (`ddm_jg3`, `[macOS-CPU advisory]`, `score_claim=false`, `promotable=fa
 $0, no Modal fire). **Pointer UNMOVED at contest-CUDA 0.15652626435208142.** Memo
 `.omx/research/ddm_jg3_s2_joint_solve_20260819.md`; code
 `experiments/ddm_jg3_joint_solve.py` (+30 tests), `tools/ddm_jg3_rung_report.py`,
-`tools/ddm_jg3_edits_from_checkpoint.py`; custody `/Volumes/APDataStore/pact/ddm_jg3/`.
+`tools/ddm_jg3_edits_from_checkpoint.py`; custody `$PACT_TIER2/ddm_jg3/`.
 
 **(1) THE HEADLINE IS A KNIFE EDGE.** The n=3 seeded-random rung measures yield
 **1.357** cells/changed token and **51.4%** of the seg debt repaired, projecting
@@ -29203,7 +29203,7 @@ re-encode EXACT: archive 180,625 B (+4,196), 3.837 bits/changed token = 0.813× 
 seg 0.02013338 [jg1 DALI, 0.99995× T4] + pose 0.00797852 [macOS-CPU advisory, DALI GT,
 batch 8] + rate 0.12027077 [EXACT] = **S 0.14838267**, net −0.00776976 vs pointer
 0.15615243. End-to-end advisory reproduction decode IN FLIGHT (the fire gate); T4 fire
-next. Receipts: /Volumes/APDataStore/pact/ddm_jg5/ (JG5_RETENTION_MANIFEST 63 files,
+next. Receipts: $PACT_TIER2/ddm_jg5/ (JG5_RETENTION_MANIFEST 63 files,
 CANDIDATE_SEAL_jg5.json). Commit 63a509f928.
 
 **NEW LAWS this feed:** (a) edits are a POSE ACTUATOR — the re-solved carrier on

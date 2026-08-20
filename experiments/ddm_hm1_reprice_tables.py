@@ -27,7 +27,7 @@ from typing import Any
 import brotli
 import numpy as np
 
-from tac.payload_retention import retain_candidates
+from tac.payload_retention import portable_retention_record, retain_candidates
 
 NUM_CLASSES = 5
 RCF1_TABLE_BITS = 6
@@ -97,11 +97,14 @@ def price_table(path: Path, rung: str, retained: Path) -> dict[str, Any]:
     # the min().  A length is not a payload, and the loser is exactly what a re-audit
     # needs to re-derive the choice -- the anchor's discarded ANS payload was later
     # measured at -2,120 B against the coder that had been kept.
-    records = retain_candidates(
-        retained,
-        {f"table_{rung}.rcf1": body, f"table_{rung}.rcf1.br": compressed},
-        suffix="",
-    )
+    records = {
+        name: portable_retention_record(record)
+        for name, record in retain_candidates(
+            retained,
+            {f"table_{rung}.rcf1": body, f"table_{rung}.rcf1.br": compressed},
+            suffix="",
+        ).items()
+    }
     raw_record = records[f"table_{rung}.rcf1"]
     compressed_record = records[f"table_{rung}.rcf1.br"]
 

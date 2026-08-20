@@ -55,14 +55,14 @@ real claim; there is no score claim.
 
 ```bash
 .venv/bin/python tools/run_hi_nerv_backend_only_b2_exact_eval.py \
-    --archive /Volumes/VertigoDataTier/pact/<candidate>/archive_backend_only.zip \
-    --replay-row /Volumes/VertigoDataTier/pact/<candidate>/hi_nerv_backend_only_exact_replay.json \
+    --archive $PACT_TIER1/<candidate>/archive_backend_only.zip \
+    --replay-row $PACT_TIER1/<candidate>/hi_nerv_backend_only_exact_replay.json \
     --device cpu \
-    --work-root /Volumes/VertigoDataTier/pact/b2_bridge_work_<utc> \
-    --out-row /Volumes/VertigoDataTier/pact/b2_bridge_work_<utc>/hi_nerv_backend_only_exact_eval.json
+    --work-root $PACT_TIER1/b2_bridge_work_<utc> \
+    --out-row $PACT_TIER1/b2_bridge_work_<utc>/hi_nerv_backend_only_exact_eval.json
 ```
 
-- `--work-root`: prefer SSD (`/Volumes/VertigoDataTier/pact/...`) or repo
+- `--work-root`: prefer SSD (`$PACT_TIER1/...`, then `$PACT_TIER2/...`) or repo
   `.omx/tmp`. The bridge **refuses** the system `/tmp` tree (disk hygiene).
 - `--inflate-python` (default `.venv/bin/python`): the interpreter the inflate.sh
   subprocess uses (`${PYTHON}`). It **must** satisfy the contest dep-closure
@@ -133,8 +133,8 @@ it becomes one command:
 ```bash
 .venv/bin/python tools/run_hi_nerv_backend_only_b2_exact_eval.py \
     --archive <B1_600pair_archive.zip> --device cpu \
-    --work-root /Volumes/VertigoDataTier/pact/b2_<utc> \
-    --out-row /Volumes/VertigoDataTier/pact/b2_<utc>/exact_eval.json
+    --work-root $PACT_TIER1/b2_<utc> \
+    --out-row $PACT_TIER1/b2_<utc>/exact_eval.json
 ```
 (and again with `--device cuda` for the CUDA axis).
 
