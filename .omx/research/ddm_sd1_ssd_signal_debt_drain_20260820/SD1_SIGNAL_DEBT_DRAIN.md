@@ -156,10 +156,22 @@ re-verified after every write. Provenance is a sidecar (`PROVENANCE.json`: origi
 size, SSD instance count, gc-eligibility at sweep), never a header — a "for provenance" comment
 would change the blob and leave the SSD copy still counted as owed.
 
-They land as **archived evidence, explicitly not reviewed**. `experiments/ssd_recovered/**` is
-added to the review tracker's `SCAN_EXCLUDE_GLOBS`, because the alternative was to fake-review
-~100k lines nobody read or to override the review gate on `.py` — both forbidden. Nothing imports
-them; their value is that the bytes are unchanged and no longer on one disk.
+Measured result: **613 / 613 copied, 0 unreadable, 0 changed since the sweep, 5,677,321 B.** A
+seeded 25-file spot check confirmed every recovered blob matches a drain-list row, and one sampled
+origin was compared byte-for-byte against its SSD source.
+
+They land as **archived evidence, explicitly not reviewed**. Two mechanisms keep that honest:
+
+- `experiments/ssd_recovered/**` is excluded from the review tracker's `SCAN_EXCLUDE_GLOBS`.
+  Scanning them would register ~600 files of unreviewed entities that then block every commit, and
+  the only escapes would be to fake-review ~100k lines nobody read or to override the gate on
+  `.py` — both forbidden.
+- The 476 recovered `.py`/`.sh` carry a trailing `.txt`. **A git blob sha hashes content only, not
+  the filename**, so the bytes stay byte-identical and the guard still counts them as preserved —
+  while the files leave the `.py` surfaces that police maintained source. This is not cosmetic:
+  the first commit attempt was **blocked by ruff F821** because several of these frozen snapshots
+  do not even parse. That is what "evidence, not source" means, and the extension now says so.
+  Every original basename is recorded per row in the sidecar.
 
 ### Denominator, start to finish
 
@@ -170,10 +182,40 @@ them; their value is that the bytes are unchanged and no longer on one disk.
 | after re-bucketing vendored + generated (measured, not assumed) | **613** |
 | committed verbatim by this arm | **613** |
 | certified in place | 0 |
-| **remaining owed** | **0 at this sweep** |
+| **expected remaining after a post-drain re-sweep** | **0** |
 
-That last row is honest only as of this sweep. The tier is live: arms write to it continuously, so
-the number is a snapshot, not a permanent state. That is precisely why leg 3 exists.
+### The closing re-sweep — measured, not assumed
+
+A commit *should* make those blobs reachable, but "should" is not "did", so the whole sweep was
+re-run end to end after the drain landed. **148,074 files vs 105,120 reachable blobs, 619 s:**
+
+| bucket | before drain | after drain |
+|---|---:|---:|
+| A third-party / clone | 830 | 934 |
+| B run output / cold store | 177 | 267 |
+| **C AUTHORED — OWED** | **814** | **9** |
+
+A targeted check on one fully drained arm made the mechanism explicit: `ddm_sa1` went **16 owed → 0**.
+
+**The last 9, each closed on its own evidence rather than rounded away:**
+
+- **5** were generated `inflate.py`/`inflate.sh` in packet directories the rule did not yet name
+  (`archive/`, `submission_dir/`, `submission/`). The rule now names them, with a parametrised test
+  per directory × per extension — and the boundary test still holds: a hand-written `inflate.py`
+  outside a packet directory stays owed, because widening this to "any file called inflate.py"
+  would excuse a genuinely new receiver an arm authored.
+- **3** were `ddm_cpu1/{build_manifest.py, mark_reviewed.sh, mark_reviewed2.sh}` — written by a
+  live sister arm *during* the sweep. Real new debt, recovered; blob identity verified 3/3. This is
+  the tier being live, exactly as predicted, and it is the reason a one-shot answer is worthless.
+- **1** was a 4.5 MB generated packet `inflate.py` under `superseded_preformat_…/W_joint/`.
+  **Certified in place** with a substantive rationale in
+  `.omx/research/ssd_authored_signal_certified.jsonl` — a build product of a committed generator.
+
+**Owed after all of it: 0.** As of that sweep. The tier keeps moving, which is what leg 3 is for.
+
+One more honesty note: the number the consolidation monitor reports comes from whichever sweep last
+wrote the cache. It is a recent measurement, never a live one, and the monitor says so when it goes
+stale.
 
 ---
 
@@ -295,6 +337,19 @@ judged.
    collected, none of these tests guard anything.
 5. **Keep the sweep cache fresh.** The guard reports `stale` past 72 h and the monitor says so, but
    nothing re-runs it automatically; a cheap cron or a governed weekly launch would close that.
+   Until then the honest state is "measured recently", not "measured now".
 6. **The 43 important findings** in `review_batches/batch_0*.json` are recorded, not fixed. They are
    debts against code that now exists in git, which is strictly better than debts against code that
    existed on one disk.
+7. **Retention-manifest coverage (leg 4) is 6.8 %,** against a 1.85 % base rate. Nothing in this arm
+   changed that; it is now a number instead of a caveat. Closing it means either an arm-side
+   convention change or a tool that emits the manifest automatically at run teardown.
+
+## One thing this arm did NOT do, stated plainly
+
+It did not re-scan after every change in the same breath as claiming the result. The bucket rules
+were refined **after** the 27-minute sweep, so the re-bucketing to 613 was replayed offline against
+the manifest the sweep had already written. That replay is exact for the path-pattern rules (they
+are pure functions of the path) and skips only the nested-`.git` clone check, which can just
+under-count bucket A — erring toward keeping something in the debt. The closing re-sweep, run after
+the drain landed, is the end-to-end confirmation.

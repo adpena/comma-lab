@@ -226,8 +226,23 @@ def test_generated_packet_inflate_buckets_B(tmp_path):
     assert report["denominator"]["bucket_C_authored_OWED"] == 0
 
 
+@pytest.mark.parametrize("d", ["packet", "submission", "submission_dir", "archive", "runtime_tree"])
+@pytest.mark.parametrize("name", ["inflate.py", "inflate.sh"])
+def test_generated_inflate_in_every_measured_packet_dir_buckets_B(tmp_path, d, name):
+    f = tmp_path / "ddm_arm" / d / name
+    f.parent.mkdir(parents=True)
+    f.write_text("# emitted by the archive builder\n")
+    report = mod.scan(roots=[tmp_path], reachable=set(), odb=set())
+    assert report["denominator"]["bucket_B_run_output_or_coldstore"] == 1
+    assert report["denominator"]["bucket_C_authored_OWED"] == 0
+
+
 def test_an_authored_inflate_outside_a_packet_dir_stays_owed(tmp_path):
-    """Only `<packet-ish>/inflate.py` is a build product. A hand-written one elsewhere is debt."""
+    """Only `<packet-ish>/inflate.py` is a build product. A hand-written one elsewhere is debt.
+
+    This is the boundary the generated-file rule must not cross: widening it to "any file named
+    inflate.py" would silently excuse a genuinely new receiver an arm authored on the SSD.
+    """
     f = tmp_path / "ddm_arm" / "builders" / "inflate.py"
     f.parent.mkdir(parents=True)
     f.write_text("def build(): return 1\n")

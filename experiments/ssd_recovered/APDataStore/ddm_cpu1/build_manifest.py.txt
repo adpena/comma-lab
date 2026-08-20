@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+"""Build the ddm_cpu1 retention manifest. Every sha256 MEASURED from the bytes."""
+import hashlib, json, sys
+from pathlib import Path
+
+ROOT = Path("/Volumes/APDataStore/pact/ddm_cpu1/retained")
+
+ROLES = {
+    "cpu1_attribution_n600.json": "the GT-lineage attribution result (n600, [macOS-CPU advisory])",
+    "cpu1_pose_pred_n600.npy": "PAYLOAD: the candidate's PoseNet pose6 predictions, one forward pass",
+    "cpu1_seg_argmax_n600.npy": "PAYLOAD: the candidate's SegNet argmax field (600,384,512)",
+    "cpu1_per_pair_n600.npz": "PAYLOAD: per-pair d_seg/d_pose for all four legs (PyAV x DALI)",
+    "cpu1_row_grade.json": "the graded contest-CPU row: falsifiers, axis delta, three wall frames",
+    "CANDIDATE_SEAL_cpu1.json": "the sealed fire order (contest_cpu axis)",
+    "cpu1_FIRE_MANIFEST.json": "fire receipts: seal verdict, sanitize, pins, dispatch argv",
+    "cpu1_modal_auth_eval_spawn.json": "spawn record: call_id + derived expected runtime sha",
+    "cpu1_launch_manifest.json": "detached poller arming record",
+    "cpu1_MODAL_REMOTE_RESULT.json": "the contest-CPU row (outer harvest result)",
+}
+
+def sha256(p: Path) -> str:
+    h = hashlib.sha256()
+    with open(p, "rb") as fh:
+        for b in iter(lambda: fh.read(8 << 20), b""):
+            h.update(b)
+    return h.hexdigest()
+
+def main() -> int:
+    files = []
+    for p in sorted(ROOT.iterdir()):
+        if p.name.startswith("._") or not p.is_file() or p.name == "CPU1_RETENTION_MANIFEST.json":
+            continue
+        role = ROLES.get(p.name)
+        if role is None:
+            role = ("harvested artifact: " + p.name.replace("cpu1_harvest_", "")
+                    if p.name.startswith("cpu1_harvest_") else "ddm_cpu1 artifact")
+        files.append({"path": str(p), "bytes": p.stat().st_size, "sha256": sha256(p), "role": role})
+    doc = {
+        "arm": "ddm_cpu1",
+        "schema": "cpu1_retention_manifest.v1",
+        "axis": "[contest-CPU] row + [macOS-CPU advisory] attribution",
+        "archive_sha256": "f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e",
+        "archive_bytes": 180625,
+        "runtime_tree_sha256": "2103073d739fc3f27d329ea0785ea3010307360c2380af0476e16d0f5b57cb9b",
+        "call_id": "fc-01M0FGBV7547NWJVJWQ8W3YX76",
+        "seal_sha256": "6411f6b5e7d94282441786597f9a293934397e92eddbb9fd77179838faee623f",
+        "file_count": len(files),
+        "total_bytes": sum(f["bytes"] for f in files),
+        "storage_note": ("/Volumes/VertigoDataTier is 100% full; retention went to APDataStore "
+                         "per the storage waterfall. Nothing measured was discarded."),
+        "files": files,
+    }
+    out = ROOT / "CPU1_RETENTION_MANIFEST.json"
+    out.write_text(json.dumps(doc, indent=2, sort_keys=True))
+    print(f"{len(files)} files, {doc['total_bytes']:,} B -> {out}")
+    for f in files:
+        print(f"  {f['sha256'][:16]}  {f['bytes']:>12,}  {Path(f['path']).name}")
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())

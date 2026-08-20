@@ -1,0 +1,194 @@
+{
+ "tool": "tools/audit_ssd_authored_signal.py",
+ "date_utc": "2026-08-20T13:21:58+00:00",
+ "elapsed_s": 619.0,
+ "method": {
+  "identity": "git blob sha1 vs blobs REACHABLE from a ref (`git rev-list --objects --all`)",
+  "why_not_odb": "`--batch-all-objects` also returns staged-never-committed and orphaned blobs that `git gc --prune` deletes and no clone receives; counting those as preserved under-reports the debt.",
+  "roots": [
+   "/Volumes/APDataStore/pact",
+   "/Volumes/VertigoDataTier/pact"
+  ],
+  "extensions": [
+   ".c",
+   ".h",
+   ".md",
+   ".py",
+   ".rs",
+   ".sh",
+   ".toml",
+   ".yaml",
+   ".yml"
+  ],
+  "pruned_dirs": [
+   ".cargo",
+   ".conda",
+   ".git",
+   ".mypy_cache",
+   ".pytest_cache",
+   ".ruff_cache",
+   ".rustup",
+   ".tox",
+   ".venv",
+   "__pycache__",
+   "build",
+   "conda-meta",
+   "dist",
+   "node_modules",
+   "site-packages",
+   "target",
+   "venv",
+   "wheels"
+  ]
+ },
+ "denominator": {
+  "ssd_code_like_files_scanned": 148074,
+  "files_unreadable": 0,
+  "roots_absent_from_this_machine": [],
+  "reachable_blobs_in_repo": 105120,
+  "odb_blobs_in_repo": 130309,
+  "gc_eligible_blobs_in_repo": 25264,
+  "absent_file_instances": 3893,
+  "absent_DISTINCT_blobs": 1210,
+  "bucket_A_third_party_or_clone": 934,
+  "bucket_B_run_output_or_coldstore": 267,
+  "bucket_C_authored_OWED": 9,
+  "bucket_C_of_which_gc_eligible": 0,
+  "bucket_D_certified_in_place": 0
+ },
+ "bucket_definitions": {
+  "A": "third-party intake / OSS harvest / upstream mirror / nested clone \u2014 operator policy leaves these in place.",
+  "B": "experiments/results/** and cold_store/** \u2014 bulky rebuildable run output, untracked by repo convention.",
+  "C": "candidate AUTHORED sources in arm workspaces. Default disposition is COMMIT. THIS IS THE DEBT.",
+  "D": "bucket-C blobs certified in place by an owner with a substantive rationale (append-only ledger)."
+ },
+ "unreadable_sample": [],
+ "owed": [
+  {
+   "blob_sha1": "481860310e613dc8583b4b1da57b23f1457dc014",
+   "ext": "py",
+   "size_bytes": 4475775,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/evidence/ddm_e5_e4_ws1_exporter_adapter_20260724/superseded_preformat_20260724T1340Z/W_joint/inflate.py",
+   "instance_count": 4
+  },
+  {
+   "blob_sha1": "cf5040502647386e7caee6bdce1674b9545c18e4",
+   "ext": "py",
+   "size_bytes": 3012,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_cpu1/build_manifest.py",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "e0c6085be64af532866eebb414967241fcf093c2",
+   "ext": "py",
+   "size_bytes": 2436,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/pr101_optimal_grammar_campaign_summary_len24_20260601T184235Z/submission_dir/inflate.py",
+   "instance_count": 2
+  },
+  {
+   "blob_sha1": "490560fc78ff75d8a3e95facc24b885e65540729",
+   "ext": "py",
+   "size_bytes": 1278,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/hprc_section_value_profiles/pact_nerv_pact_nerv_selector_v4_psv4_ccb349766791f52a/mlx_work/neutralize_selectors_rc/archive/inflate.py",
+   "instance_count": 34
+  },
+  {
+   "blob_sha1": "63883efbdcaa6bec39799b8038f3af1a4e1818b7",
+   "ext": "py",
+   "size_bytes": 1260,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/compact_renderer_mlx_spine_runner_pact_vq_full600_ema_cb600_120ep_codex_v2/mlx_cache_work/pact_nerv_vq_full600/archive/inflate.py",
+   "instance_count": 90
+  },
+  {
+   "blob_sha1": "50c8004d6a1d8ba33a6180dc1e3275d251df3f75",
+   "ext": "sh",
+   "size_bytes": 687,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_cpu1/mark_reviewed.sh",
+   "instance_count": 1
+  },
+  {
+   "blob_sha1": "551e7aca19161a1185000b8246cc9c86b8211b65",
+   "ext": "sh",
+   "size_bytes": 453,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/snerv_scoreweighted_pose0p01_waterfill_zero_package_16pair_metadataonly_20260602T014215Z/submission/inflate.sh",
+   "instance_count": 128
+  },
+  {
+   "blob_sha1": "c3bac7fdb780c14632a59626ea2f2ef8e94b0549",
+   "ext": "sh",
+   "size_bytes": 434,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/VertigoDataTier/pact/hinerv_mlx_local_training_fitprobe_gate_20260602T_now/hi_nerv_local_tiny_1pairs/submission/inflate.sh",
+   "instance_count": 820
+  },
+  {
+   "blob_sha1": "91e36fcd03ecc7e6eca5cd1c26d0cb4602441d42",
+   "ext": "sh",
+   "size_bytes": 336,
+   "bucket": "C",
+   "durability": "absent",
+   "representative_path": "/Volumes/APDataStore/pact/ddm_cpu1/mark_reviewed2.sh",
+   "instance_count": 1
+  }
+ ],
+ "certified_in_place": [],
+ "bucket_A_sample": [
+  "/Volumes/APDataStore/pact/ddm_vh2_20260810/commit_clone/src/tac/probe_outcomes_ledger.py",
+  "/Volumes/APDataStore/pact/ddm_vh2_20260810/commit_clone/src/tac/tests/test_probe_outcomes_ledger.py",
+  "/Volumes/APDataStore/pact/ddm_vh2_20260810/commit_clone/tools/costate_digest.py",
+  "/Volumes/APDataStore/pact/ddm_vh2_20260810/commit_clone_narrow/tools/costate_digest.py",
+  "/Volumes/APDataStore/pact/ddm_vh2_20260810/commit_clone_final/src/tac/probe_outcomes_ledger.py",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/parse_sections.py",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/INTAKE_ANATOMY.md",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/pr138_src/submissions/opal_v1/compress.sh",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/pr138_src/submissions/opal_v1/inflate.py",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/pr138_src/submissions/opal_v1/inflate.sh",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/pr138_src/submissions/opal_v1/runtime/residual_archive.py",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/pr138_src/submissions/opal_v1/runtime/entropy/opal_model_impl.c",
+  "/Volumes/APDataStore/pact/ddm_pq2/intake/pr138_src/submissions/opal_v1/runtime/entropy/rc64_backend.c",
+  "/Volumes/APDataStore/pact/ddm_hx1/intake/pr136/submissions/hnerv_rc/README.md",
+  "/Volumes/APDataStore/pact/ddm_hx1/intake/pr136/submissions/hnerv_rc/compress.sh",
+  "/Volumes/APDataStore/pact/ddm_hx1/intake/pr136/submissions/hnerv_rc/inflate.py",
+  "/Volumes/APDataStore/pact/ddm_hx1/intake/pr136/submissions/hnerv_rc/src/codec.py",
+  "/Volumes/APDataStore/pact/ddm_hx1/intake/pr136/submissions/hnerv_rc/src/codec_rc.py",
+  "/Volumes/APDataStore/pact/ddm_hx1/intake/pr136/submissions/hnerv_rc/src/data.py",
+  "/Volumes/APDataStore/pact/ddm_hx1/intake/pr133/submissions/cpr1_cbq_matched8/CREDITS.md"
+ ],
+ "bucket_B_sample": [
+  "/Volumes/APDataStore/pact/submittable_custody_mirror_20260811/pz4_receiver/ddm_pz4_joint_target_conditioned_receiver/direct_v2/submission/inflate.py",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/codex_reorientation_plan_20260606Tcurrent/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/hi_nerv_contrast_floor_16p3e_20260605T052731Z/hi_nerv_mlx_training/ema_archive_selection/ema/submission/inflate.py",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/hi_nerv_gpu_alias_fixed_queue_smoke_nojoint_20260602T2108Z/hi_nerv_mlx_training/ema_archive_selection/ema/submission/inflate.py",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/plan_20260605T0559Z_direct_live_semantic_controls/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_16pair_nondegenerate_feedback_20260605Tapproved_codex/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_16pair_nondegenerate_feedback_v2_20260605Tapproved_codex/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_auto_bytecap_native_rate_aware_training/checkpoint_harvest_epoch012999_ema/snerv_checkpoint_archive_bound_package/submission/inflate.py",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_auto_bytecap_native_rate_aware_training/checkpoint_harvest_epoch012999_ema/snerv_checkpoint_archive_bound_package/submission/src/tac/substrates/snerv_inverse_steg_carrier/official_tub.py",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_bounded_channelmean_v23_all_evidence_20260605Tcodex/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_candidate_channelmean_v29_renderer_value_waived_20260605Tcodex/snerv_snerv_np600_haar_lv1_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adofficial_oms0p05_skchannelmean_int8_symmetric_ceil178000_native_rate_aware_training/snerv_mlx_native_export/native_train_export/snerv_mlx_native_archive_bound_package/submission/inflate.py",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_candidate_channelmean_v29_renderer_value_waived_20260605Tcodex/snerv_snerv_np600_haar_lv1_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adofficial_oms0p05_skchannelmean_int8_symmetric_ceil178000_native_rate_aware_training/snerv_mlx_native_export/native_train_export/snerv_mlx_native_archive_bound_package/submission/src/tac/substrates/snerv_inverse_steg_carrier/lf_payload_codec.py",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_lf_conditioned_hf_channel_value_pass_v20_20260605Tcodex/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_lf_conditioned_hf_channel_value_pass_v21_runnable_20260605Tcodex/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_lf_hf_tiny_anchor_v23_20260605Tcodex/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adspectra_oms0p05_int8_symm_66ae723339c7/snerv_lf_payload_archive_recode.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_official_snar2_zero_mfu_smoke_20260605Tcodex/snerv_2pair_1epoch_official_channelmean_snar2_zero_mfu/snerv_mlx_native_export/native_train_export/snerv_mlx_native_archive_bound_package/submission/src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_renderer_gate_hinerv_feedback_20260605T0343Z_codex/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_renderer_gate_hinerv_feedback_20260605T0352Z_codex/nerv_long_training_campaign_plan.md",
+  "/Volumes/APDataStore/pact/vertigo_coldstore_20260811/nerv_long_training_campaigns/snerv_source_forward_export_bound_v4_20260605Tcodex/nerv_long_training_campaign_plan.md"
+ ]
+}

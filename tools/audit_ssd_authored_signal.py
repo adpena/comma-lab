@@ -125,7 +125,12 @@ BUCKET_B_SEGMENT_SUBSTRINGS = ("coldstore", "cold_store")
 # with the payload embedded, which is why the largest "owed" rows were 4-6 MB single files. Its
 # generator is committed, so it is rebuildable by definition. Measured 2026-08-20: 71 such blobs
 # accounted for 15.1 MB — 64% of the entire owed byte volume — while carrying no authored signal.
-BUCKET_B_GENERATED_RE = re.compile(r"/(packet|submission|runtime_tree|archive_dir)/inflate\.py$")
+# The directory list is MEASURED, not guessed: each name below appeared in a sweep holding a
+# generated `inflate.py`/`inflate.sh`. `inflate.sh` is included for the same reason — the 434-byte
+# launcher next to a packet is emitted, not written.
+BUCKET_B_GENERATED_RE = re.compile(
+    r"/(packet|submission|submission_dir|archive|runtime_tree|archive_dir)/inflate\.(py|sh)$"
+)
 
 
 class AuditError(RuntimeError):

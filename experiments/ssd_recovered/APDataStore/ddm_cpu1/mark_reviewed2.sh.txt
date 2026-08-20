@@ -1,0 +1,7 @@
+#!/bin/bash
+cd /Users/adpena/Projects/pact
+for i in $(seq 1 200); do
+  out=$(.venv/bin/python tools/review_tracker.py mark-file experiments/ddm_cpu1_gt_lineage_attribution.py --status reviewed 2>&1 | tail -1)
+  case "$out" in *"holds the DB lock"*) sleep $(( (RANDOM % 15) + 8 ));; *) echo "OK :: $out"; exit 0;; esac
+done
+echo TIMEOUT

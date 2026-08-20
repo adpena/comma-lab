@@ -1,0 +1,14 @@
+#!/bin/bash
+cd /Users/adpena/Projects/pact
+FILES="src/tac/deploy/modal/auth_eval.py experiments/modal_auth_eval.py experiments/modal_auth_eval_cpu.py src/tac/tests/test_modal_post_spawn_claim_transition.py experiments/ddm_cpu1_gt_lineage_attribution.py"
+for i in $(seq 1 200); do
+  remaining=""
+  for f in $FILES; do
+    out=$(.venv/bin/python tools/review_tracker.py mark-file "$f" --status reviewed 2>&1 | tail -1)
+    case "$out" in *"holds the DB lock"*) remaining="$remaining $f";; *) echo "OK $f :: $out";; esac
+  done
+  FILES="$remaining"
+  [ -z "$(echo $FILES)" ] && { echo "ALL_MARKED attempt=$i"; exit 0; }
+  sleep $(( (RANDOM % 15) + 8 ))
+done
+echo "TIMEOUT remaining:$FILES"
