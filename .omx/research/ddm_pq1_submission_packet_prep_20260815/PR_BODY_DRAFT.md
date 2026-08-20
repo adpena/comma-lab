@@ -180,13 +180,15 @@ be decomposed to say how much of the token stage is still Python. Pricing that
 split on the contest axis is the next measurement. No build claim is made here
 before it exists.
 
-On the CPU path the same assessment projects 1414-1913 s of inflation against a
-residual of [1044, 1332] s, which is over budget in every corner. The prior
-lineage recorded contest-CPU inflation at 3422.711146813 s against the 1800 s
-budget; that figure is INHERITED from an earlier body and is NOT measured on these
-bytes. No contest-CPU row exists on this archive at all. This candidate ships the
-same token decoder, so the CPU path is expected to remain infeasible, and that
-expectation is inherited too.
+On the CPU path the projection is superseded by measurement. Contest-CPU inflation
+was measured on the shipped bytes at **4,369.6 s** (Modal, Linux x86_64, 4 torch
+threads, 2026-08-20) — over the [1044, 1332] s residual by 3,037.6 s, and 2.43x
+the entire 1,800 s job wall on its own; `upstream/evaluate.py` never ran. The
+3,422.711146813 s figure previously quoted for this lineage was inherited from an
+earlier body, not measured on these bytes, and understated the real cost by
+946.9 s (+27.7%). Token decode is 90.8% of the measured wall and runs 2.957x
+slower than the CUDA path on the same archive, which decodes to a bit-identical
+token stream on both axes. No contest-CPU SCORE row exists and none is claimed.
 
 This is the single largest risk on this submission. It is a runtime risk, not a
 correctness or score risk: the score above is measured on the exact submitted
@@ -259,11 +261,13 @@ Porting the decode-time corrector as well would move more of the same work onto
 those same vCPUs, so it inherits that result. It is unmeasured on the contest
 axis and we make no claim for it.
 
-**These exact bytes have not been measured on a contest CPU** and no CPU score is
-claimed. The 3,422.7 s contest-CPU inflation sometimes quoted for this lineage is
-**inherited from an earlier body, not measured on these bytes**; this candidate
-ships the same token decoder, so we expect the CPU path to remain over budget, and
-that expectation is inherited too.
+**These exact bytes WERE measured on a contest CPU on 2026-08-20** and no CPU
+score is claimed: inflation alone took **4,369.6 s** against the 1,800 s job wall
+(2.43x), so the evaluator never ran — the CPU path is measured over budget, not
+projected. The 3,422.7 s figure sometimes quoted for this lineage was **inherited
+from an earlier body** and understated the real cost by 946.9 s (+27.7%); it is
+superseded. The decoded token stream is bit-identical on both axes, so this is a
+wall result, not a decode failure.
 
 Full numbers are in the report above under "Evaluation-time budget".
 

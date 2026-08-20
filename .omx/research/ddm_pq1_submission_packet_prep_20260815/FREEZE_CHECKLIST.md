@@ -109,7 +109,11 @@ first review of these bytes, and its examination list is written in
    load-bearing for the identity proof, and only its author has read it.
 2. **Reproduction NOT re-verified for these bytes.** `ddm_pq2_compress_e2e.py` has
    not been re-run for `f3bce5d2…`.
-3. **No contest-CPU row on these bytes**, and the axis is expected to be infeasible.
+3. **No contest-CPU SCORE row on these bytes** — and the axis is now measured infeasible, not
+   merely "expected to be". `ddm_cpu1` (call `fc-01M0FGBV7547NWJVJWQ8W3YX76`, 2026-08-20) measured
+   contest-CPU inflation at **4,369.6 s** against a **1,800 s** total job wall; `upstream/evaluate.py`
+   never ran. The archive sha (`f3bce5d2…`, 180,625 B) and the decoded token stream (`cc10a7b0…`,
+   bit position 910837) both reproduce, so this is a wall result, not a decode failure.
 4. **The wall-clock WARN is DERIVED, not measured in CI.** 10.7 s of margin against
    a derived residual window is the largest open risk on this submission.
 5. **The terminal dispatch claim row was appended by this arm**, turning three

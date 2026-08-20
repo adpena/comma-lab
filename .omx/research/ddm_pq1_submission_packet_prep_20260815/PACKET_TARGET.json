@@ -55,8 +55,15 @@
     "harvest_decode_note": "The harvested receipts were persisted as Python bytes-reprs (files literally begin b'). generations/gen5_receipts/HARVEST_DECODE_RECEIPT.json proves each decode round-trip exact before use."
   },
   "cpu_axis": {
-    "exact_candidate_score_status": "NO_ROW_EXISTS_ON_THESE_BYTES",
-    "adjudication": "ddm_pq3 2026-08-20: no contest-CPU row exists or is claimed on these bytes. The prior lineage MEASURED contest-CPU inflate at 3422.711146813 s against the 1800 s budget; this candidate ships the same token decoder, so the axis is EXPECTED to remain infeasible - inherited, not measured.",
+    "exact_candidate_score_status": "MEASURED_INFEASIBLE_WITHIN_CONTEST_BUDGET",
+    "modal_call_id": "fc-01M0FGBV7547NWJVJWQ8W3YX76",
+    "measured_at_utc": "2026-08-20",
+    "inflate_wall_seconds": 4369.600210089,
+    "inflate_budget_seconds": 1800,
+    "token_decode_seconds": 3966.8,
+    "decode_correctness": "decoded token stream sha256 cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb at bit position 910837 on x86_64 CPU - bit-identical to the CUDA axis on the same archive (f3bce5d2, 180625 B)",
+    "superseded_reference": "the prior lineage's 3422.711146813 s (gen-3 bytes debb025f) was inherited onto this candidate and understated the measured cost by 946.9 s (+27.7%); superseded by this row",
+    "adjudication": "ddm_cpu1 2026-08-20: contest-CPU inflation MEASURED on the shipped bytes at 4369.6 s vs the 1800 s job wall (2.43x); upstream/evaluate.py never ran, so no contest-CPU SCORE exists or is claimed. GPU-required is a measured fact on these exact bytes. Memo .omx/research/ddm_cpu1_cpu_axis_adjudication_20260820.md.",
     "wall_clock_risk": {
       "axis": "[contest-CUDA T4, measured]",
       "inflate_seconds": 1419.9042126240001,

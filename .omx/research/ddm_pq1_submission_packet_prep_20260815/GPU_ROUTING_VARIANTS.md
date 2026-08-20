@@ -47,12 +47,13 @@ Our internally derived residual window for those remaining steps on the CUDA pat
 **10.7 s**. That is graded **WARN, not PASS**: a 10.7 s margin resting on a warm-cache
 assumption is not a margin.
 
-On the CPU path the same assessment projects **1,414–1,913 s** of inflation against a
-residual of `[1,044, 1,332] s` — **over budget in every corner**. The prior lineage
-MEASURED contest-CPU inflation at 3,422.711146813 s against the 1,800 s budget, and this
-candidate ships the same token decoder.
+On the CPU path the projection is superseded by measurement: `ddm_cpu1` (2026-08-20)
+MEASURED contest-CPU inflation on THESE bytes at **4,369.6 s** — over the `[1,044, 1,332] s`
+residual by 3,037.6 s and **2.43x the entire 1,800 s job wall** on its own. The prior
+lineage's 3,422.711146813 s (gen-3 bytes) understated this candidate's cost by 946.9 s
+(+27.7%). The decoded token stream is bit-identical on both axes.
 
-**Conclusion: CPU routing is expected to time out. T4 routing is tight but measured.**
+**Conclusion: CPU routing is MEASURED to time out on these exact bytes. T4 routing is tight but measured.**
 
 ## 4. THE MEASUREMENT THAT BREAKS THE SYMMETRY
 

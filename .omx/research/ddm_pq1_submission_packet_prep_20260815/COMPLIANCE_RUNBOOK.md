@@ -136,10 +136,13 @@ The 6 residual reds, each typed with its route:
 2. `auth_eval_raw_promotion_policy_blockers_absent` — **DOCUMENTED STRUCTURAL
    red** (see correction); never converted by editing the receipt or the check.
 3. `contest_cpu_auth_eval_exists` — STRUCTURALLY RED for this candidate: the
-   CPU axis is MEASURED INFEASIBLE within the 1,800 s budget (inflate 3,422.7 s,
-   receipt in PACKET_TARGET cpu_axis). No CPU score can legally exist; the
-   packet documents GPU-required as a measured fact. Documented waiver — never
-   converted by copying a receipt.
+   CPU axis is MEASURED INFEASIBLE within the 1,800 s budget on THESE EXACT
+   BYTES (`ddm_cpu1` 2026-08-20, call `fc-01M0FGBV7547NWJVJWQ8W3YX76`: inflate
+   4,369.6 s = 2.43x the whole job wall; the evaluator never ran; receipt in
+   PACKET_TARGET cpu_axis). The 3,422.7 s figure previously cited here was
+   inherited from gen-3 bytes and understated the cost by 946.9 s. No CPU score
+   can legally exist; the packet documents GPU-required as a measured fact.
+   Documented waiver — never converted by copying a receipt.
 4. `submission_runtime_has_no_network_install_or_local_paths` — inflate.sh:27
    pinned-wheel dependency bootstrap (Brotli, fail-closed exit 69). Standing
    MAIN policy adjudication per the e4/PR100/PR101 declared-dependency

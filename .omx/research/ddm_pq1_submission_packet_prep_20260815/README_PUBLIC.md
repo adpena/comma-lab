@@ -22,9 +22,14 @@ measured `[contest-CUDA]` 600-sample score is **0.14839100138338618**.
   absolute error bound of `3.63296497868841e-06`. The claim is
   `0.14839100138338618 ± 3.633e-06`. The distance from that interval to 0.15 is
   about 443 times the bound, so the sub-0.15 statement is not a rounding artifact.
-- **What is NOT measured.** There is **no `[contest-CPU]` row on these bytes**,
-  and none is claimed. This submission is GPU-required for evaluation; the
-  requested runner is `linux-nvidia-t4`.
+- **What is NOT measured.** There is **no `[contest-CPU]` score row on these bytes**, and none
+  is claimed. The CPU axis was measured on 2026-08-20 (Modal, Linux x86_64, 4 threads) and the
+  evaluator never ran: inflation alone took **4,369.6 s**, **2.43x the entire 1,800 s job wall**,
+  so the harness's 30-minute inflate budget refused first. Token decode is 90.8% of that and runs
+  **2.957x** slower than the CUDA path (3,966.8 s vs 1,341.5 s) on the same archive, which decodes
+  to a bit-identical token stream (`cc10a7b0…`) on both axes. This submission is therefore
+  GPU-required for evaluation, by measurement rather than by projection; the requested runner is
+  `linux-nvidia-t4`.
 - **The open runtime risk.** Inflation took 1419.9 s of a 30-minute job wall —
   the largest open risk on this submission, and a runtime risk, not a score risk.
   One hot stage: **token decode alone is 1341.5 s of that 1419.9 s, 94.5%.** We

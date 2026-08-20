@@ -193,13 +193,15 @@ The four trigger properties were read at swap time, not assumed:
 Two literal conditions in step 7 are satisfied by DOCUMENTED ADJUDICATION
 rather than by their literal reading; the refusal conditions are unchanged:
 
-- **"Both exact axes complete": WEAKER THAN GENERATION 3, stated as such.** The
-  CUDA axis is complete (T4 n600 row). The CPU axis is **not measured on these
-  bytes** — generation 3 could adjudicate MEASURED-INFEASIBLE from a Modal
-  x86_64 CPU row on its own archive; generation 4 has no such row. The
-  infeasibility is an INHERITED expectation (same token decoder, 3,422.7 s vs
-  the 1,800 s budget on generation-3 bytes) and the packet says so everywhere.
-  No CPU score exists or is claimed. A local n600 decode-and-score on macOS
+- **"Both exact axes complete": SATISFIED BY MEASUREMENT on both axes as of
+  2026-08-20.** The CUDA axis is complete (T4 n600 row). The CPU axis is
+  adjudicated MEASURED-INFEASIBLE **on these exact bytes** — `ddm_cpu1` (call
+  `fc-01M0FGBV7547NWJVJWQ8W3YX76`) measured inflate at **4,369.6 s** against the
+  1,800 s job wall (2.43x); the evaluator never ran, so no CPU score exists or
+  is claimed. This SUPERSEDES the earlier inherited-expectation wording: the
+  3,422.7 s gen-3 figure understated this candidate's cost by 946.9 s (+27.7%).
+  The decoded token stream is bit-identical on both axes, so this is a wall
+  result, not a decode failure. A local n600 decode-and-score on macOS
   arm64 completed and is retained as decode-correctness evidence with
   `score_axis=cpu_env_mismatch_advisory`, `score_claim=false` — it is never a
   score on either axis.
