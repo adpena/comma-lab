@@ -100,6 +100,7 @@ ROUTE_NEW = '''        if token_decoder == "native-hpac":
                 renderer_dir,
                 device,
                 checkpoint_dir=native_progress,
+                frame_limit=pair_count,
             )
 '''
 

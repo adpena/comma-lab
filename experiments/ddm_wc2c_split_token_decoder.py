@@ -90,12 +90,20 @@ def decode_split_tokens(
     device: Any,
     *,
     checkpoint_dir: Path,
+    frame_limit: int | None = None,
 ) -> tuple[Any, dict[str, object]]:
     """Decode the full F26 token field through the split native path.
 
     Signature and return shape match
     ``runtime.residual_archive.decode_production_tokens`` so the caller in
     ``f26_inflate`` swaps one call, not a pipeline.
+
+    ``frame_limit`` preserves the advisory prefix-inflation path that
+    ``f26_inflate`` routed exclusively through the native decoder
+    (``"advisory prefix inflation requires the resumable native token path"``).
+    Dropping it would have silently decoded all 600 frames when a prefix was
+    asked for -- a behaviour regression that no test would have caught because
+    the identity proof only ever runs the full field.
 
     ``device`` is accepted for signature compatibility and DELIBERATELY not used
     to place the token model: this path is CPU-native by construction.  That is
@@ -144,7 +152,9 @@ def decode_split_tokens(
     height = int(runtime.EVAL_H)
     width = int(runtime.EVAL_W)
     plane = height * width
-    total_frames = int(runtime.N)
+    total_frames = int(runtime.N if frame_limit is None else frame_limit)
+    if total_frames <= 0 or total_frames > int(runtime.N):
+        raise SplitTokenDecodeError("frame_limit is outside the real n600 field")
     groups = int(buffers.native.groups)
     model_ref = ctypes.byref(buffers.native)
 
@@ -281,6 +291,7 @@ def decode_split_tokens(
         "decoder_bit_position": int(coder.bit_position),
         "token_decoder": "native-hpac-split",
         "token_device": "cpu",
+        "frames_decoded": total_frames,
         "decode_path": library.f26_hpac_dispatch_path().decode("ascii"),
         "decode_threads": int(library.f26_hpac_thread_count()),
         "native_library_sha256": hashlib.sha256(library_path.read_bytes()).hexdigest(),
