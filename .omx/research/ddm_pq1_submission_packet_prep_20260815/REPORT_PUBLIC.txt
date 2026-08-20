@@ -22,7 +22,9 @@ Report-8dp worst-case absolute score error bound: 3.63296497868841e-06
 Inflation wall time: 1419.9042126240001 seconds
 Evaluation wall time: 51.427507448999904 seconds
 Total authority wrapper wall time: 1484.80307526 seconds
-Inflate budget: 1800 seconds; measured headroom 1.268x
+Inflate budget: 1800 seconds; inflation alone uses 1419.9 s, a 1.268x margin.
+That margin is not the binding one: the CI limit is 30 minutes on the WHOLE job,
+so read the budget section below before using this line.
 
 The printed "0.15" is a 2-decimal DISPLAY of the evaluator's own final_score field.
 The score claimed on this submission is the value recomputed from the reported
@@ -34,23 +36,21 @@ Prior packet generation 4 measured S = 0.15710198138050818 at 177182 bytes on th
 same axis and the same hardware class. This archive is +3443 bytes and
 delta S -0.008710980 against it.
 
-This candidate SPENDS rate to buy distortion, which is the opposite direction
-from every prior generation in this packet, and it is worth stating plainly
-because a reader scanning byte counts alone would read the +3443 as a regression.
-The measured leg split against generation 4:
+This candidate SPENDS rate to buy distortion, the opposite direction from every
+prior generation in this packet. A reader comparing byte counts alone would read
+the +3443 as a regression. The measured leg split against generation 4:
   rate +2.2926e-03 (+3443 bytes)
   seg  -1.0170e-02
   pose -8.3353e-04
   net  -8.7110e-03
-The legs sum to the net; the values above are DISPLAYED at 5 significant figures,
-so adding the printed strings need not reproduce the net digit for digit. The
-rounding is in the display, not in the arithmetic.
+The legs sum to the net. They are DISPLAYED at 5 significant figures, so adding
+the printed strings need not reproduce the net digit for digit.
 
 Sign determinacy: the net is a DELTA between two independently-8dp-rounded rows,
 so both rows' error bounds apply and they ADD -- 3.336608e-06 + 3.632965e-06 =
 6.969573e-06. The net is 1249.86x that summed bound. Dividing by one row's bound
-alone would overstate the margin by about 2x; at this magnitude the conclusion is
-unaffected, but the arithmetic is stated the correct way regardless.
+alone would overstate the margin by about 2x; at this magnitude the sign of the
+net is unaffected either way.
 
 Like generation 4 and unlike generation 3, this candidate does NOT hold decoded
 state constant: both distortion legs move, and here they move in our favour while
@@ -61,7 +61,7 @@ These archive bytes have been evaluated on contest-CUDA T4 exactly ONCE, under
 runtime tree 2103073d..., which is the tree shipped here. No superseded row
 exists on these bytes.
 
-The pin is still load-bearing, and the reason is empirical rather than theoretical.
+The pin is load-bearing, and the reason is measured, not theoretical.
 The previous generation's archive was evaluated TWICE on identical bytes and
 scored 79.40216174747616 under one receiver tree and 0.15710198138050818 under
 another. Arithmetic decoding under a mismatched probability model does not error:
@@ -86,17 +86,22 @@ fits only at the most optimistic end, by about 10.7 s. Our own wall-clock
 assessment therefore grades this WARN, not PASS: a margin of 10.7 s on a
 warm-cache assumption is not a margin.
 
-Where the time goes: token decode is 1341.5 s, or 95.72% of inflation. The cost is
-one hot stage, not diffuse overhead. A native port of that stage's integer half
-exists and reproduces this candidate's decode bit-for-bit on the full 600-frame
-field at 1.77-1.83x on local hardware. It is NOT in the tree evaluated here, and
-folding it would move the runtime-tree hash and require a new exact evaluation, so
-it is disclosed as available work rather than claimed as a fix.
+Where the time goes: token decode is 1341.5 s of the 1419.9 s inflation, 94.5%.
+(Against the 1401.58 s sum of instrumented stages the same figure is 95.72%; the
+denominator is stated because both appear in our notes.) The cost is one hot
+stage, not diffuse overhead. A native port of that stage's integer half exists and
+reproduces this candidate's decode bit-for-bit on the full 600-frame field at
+1.77-1.83x on local hardware. That range STRADDLES the 1.804x speedup our own bar
+requires, and local run-to-run variance is wider than the distance to it, so the
+port is not shown to close the budget. It is also NOT in the tree evaluated here,
+and folding it would move the runtime-tree hash and require a new exact
+evaluation. It is available work, not a fix claimed on these bytes.
 
-Two internally derived residual windows exist for the non-inflation steps on the
-CUDA path -- [890.6, 1430.6] s and a tighter [822, 1302] s -- and they disagree in
-verdict: the first grades this candidate WARN, the second REFUSE. They are not
-reconciled. Both are stated here rather than quoting whichever is kinder.
+Two residual windows for the non-inflation steps on the CUDA path disagree in
+verdict: [822, 1302] s grades this candidate REFUSE, and [890.6, 1430.6] s -- that
+same window re-derived with a larger evaluation-time allowance -- grades it WARN.
+They are ours, they are projections rather than measurements, and they are not
+reconciled. Both are stated.
 
 On the CPU path the same assessment projects 1414-1913 s of inflation against a
 residual of [1044, 1332] s, which is over budget in every corner. The prior
@@ -104,9 +109,9 @@ lineage MEASURED contest-CPU inflation at 3422.711146813 s against the 1800 s
 budget. This candidate ships the same token decoder, so the CPU path is expected
 to remain infeasible -- that expectation is INHERITED, not measured on these bytes.
 
-This is disclosed rather than discovered. It is the single largest risk on this
-submission, and it is a runtime risk, not a correctness or score risk: the score
-above is measured on the exact submitted bytes.
+This is the single largest risk on this submission. It is a runtime risk, not a
+correctness or score risk: the score above is measured on the exact submitted
+bytes.
 
 === CPU boundary ===
 Status of the [contest-CPU] axis on these exact bytes: NO ROW EXISTS. No CPU
