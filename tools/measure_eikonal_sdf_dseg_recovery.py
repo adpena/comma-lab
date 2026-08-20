@@ -11,7 +11,7 @@ generator recover from a TINY boundary descriptor, and what residual is irreduci
 This sizes the witness rate-half before any GPU spend.
 
 ARMS (each emits (d_seg, bytes/frame) -> the RD curve):
-  A  lossless ceiling     LZMA-over-labels (contour_codec); d_seg=0 EXACT; boundary entropy.
+  A  lossless ceiling     dense-raster LZMA-over-labels; d_seg=0 EXACT.
   B  coarse-seed eikonal  block-majority seed grid + free NN/eikonal-Voronoi argmax recon.
                           (NN-upsample == euclidean-distance argmax from grid seeds; verified.)
   C  control points       per-class cv2 contour + approxPolyDP control points + free SDF-argmax.
@@ -19,7 +19,8 @@ ARMS (each emits (d_seg, bytes/frame) -> the RD curve):
 
 REUSES (no reinvention):
   tac.boundary_math.bitmask_dseg.d_seg_reference          (canonical d_seg AUTHORITY)
-  tac.boundary_math.contour_codec.partition_description_bytes (lossless LZMA ceiling)
+  tac.boundary_math.dense_raster_lzma_baseline.partition_description_bytes
+  (lossless LZMA ceiling)
   tac.boundary_math.lever_b_levelset_generator.signed_distance_fields (eikonal SDF form)
   tac.boundary_math.lane_sdf_component.build_structured_lane_sdf + decompose (FEED-dj/dm)
   tac.contest_score (score-unit interpretation)
@@ -58,7 +59,7 @@ for _p in (str(_REPO / "src"), str(_REPO)):
         sys.path.insert(0, _p)
 
 from tac.boundary_math.bitmask_dseg import d_seg_reference  # noqa: E402
-from tac.boundary_math.contour_codec import _LZMA_FILTERS, partition_description_bytes  # noqa: E402
+from tac.boundary_math.dense_raster_lzma_baseline import _LZMA_FILTERS, partition_description_bytes  # noqa: E402
 from tac.contest_score import UNCOMPRESSED_SIZE_BYTES  # noqa: E402
 
 N_CLASSES = 5
@@ -224,7 +225,7 @@ def main() -> None:
         seq_joint = len(lzma.compress(lstars.astype(np.uint8).tobytes(),
                                       format=lzma.FORMAT_RAW, filters=_LZMA_FILTERS))
         results["arms"]["A_lossless_ceiling"] = {
-            "desc": "LZMA lossless full-partition (d_seg=0 EXACT); boundary entropy. "
+            "desc": "dense-raster LZMA lossless full-partition (d_seg=0 EXACT); encoded label-map bytes. "
                     "SOTA context-arith codec gets this to ~425 B/frame (FEED-af).",
             "d_seg": 0.0,
             "bytes_per_frame_indep": float(np.mean(per_frame)),

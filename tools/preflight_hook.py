@@ -1122,9 +1122,12 @@ def run_subset_selection_scan(staged: list[str]) -> int:
     # One terse line stating the DENOMINATOR. The sibling #184 scan is silent on
     # success, but this landing's whole thesis is that a silent instrument is
     # indistinguishable from one that examined nothing — so it says what it read.
+    # "in scope", not "examined": scan_staged may skip seal-pinned custody files
+    # by design (reported in its own detail), and this line must not claim more
+    # than the gate did (m50 denominator honesty; jg5 custody commit 2026-08-20).
     print(
         f"{GREEN}[preflight-hook] subset-selection: {len(staged)} staged .py "
-        f"examined, no new silent subsets{RST}",
+        f"in scope, no new silent subsets{RST}",
         file=sys.stderr,
     )
     return 0

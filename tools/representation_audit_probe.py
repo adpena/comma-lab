@@ -56,7 +56,7 @@ def boundary_fraction(argmax_hw: np.ndarray) -> float:
     """Fraction of pixels on a 4-neighbour class contour (the O(boundary) seg cost).
 
     A pixel is "on a boundary" if its label differs from its right OR bottom
-    neighbour.  This is the geometric quantity the contour codec captures: interiors
+    neighbour.  This is the geometric quantity a real contour codec would capture: interiors
     are free constant-fill, only the boundary carries description length.
     """
     a = np.asarray(argmax_hw)

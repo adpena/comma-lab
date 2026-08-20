@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+_DYNAMIC_TARGET_REPO_ROOT = REPO_ROOT
 SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
@@ -43,10 +44,18 @@ from tac.canonical_equations.ddm_m7_realization_transfer_20260723 import (  # no
     require_score_gap_closure,
     score_gap_decomposition,
 )
+from tac.canonical_frontier_pointer import CANONICAL_FRONTIER_POINTER_PATH  # noqa: E402
+from tac.witness_dsl.dynamic_frontier_target import (  # noqa: E402
+    DynamicFrontierTargetError,
+    DynamicFrontierTargetSnapshot,
+    load_dynamic_frontier_target,
+    verify_dynamic_frontier_target_snapshot,
+)
 
-CONFIG_SCHEMA = "ddm_m7_relaxed_receiver_realize_config.v1"
+CONFIG_SCHEMA = "ddm_m7_relaxed_receiver_realize_config.v2"
 CHECKPOINT_SCHEMA = "ddm_m7_relaxed_receiver_batch_checkpoint.v1"
-RECEIPT_SCHEMA = "ddm_m7_relaxed_receiver_realization_receipt.v1"
+RECEIPT_SCHEMA = "ddm_m7_relaxed_receiver_realization_receipt.v2"
+REROUTE_AUDIT_SCHEMA = "ddm_m7_dynamic_frontier_reroute_audit.v1"
 IDENTITY_SCHEMA = "ddm_m7_relaxed_receiver_run_identity.v1"
 EVIDENCE_AXIS = "[macOS-CPU frozen-scorer advisory]"
 ROUTING_CANDIDATE = "BYTE-CLOSED_CANDIDATE_FOR_MODAL_EXACT_EVAL"
@@ -69,8 +78,6 @@ EXPECTED_CONSTANTS: dict[str, Any] = {
     "batch_pairs": 16,
     "num_threads": 2,
     "seed": 1234,
-    "pointer_score": 0.1910828242,
-    "fork_threshold": 0.19108,
     "reference_bytes": 37545489,
     "counterfactual_d_seg": 0.00015196,
     "counterfactual_d_pose": 0.00010184,
@@ -91,6 +98,39 @@ CONFIG_FIELDS = frozenset((*PATH_FIELDS, *EXPECTED_CONSTANTS))
 
 class RealizationRefusal(RuntimeError):
     """Fail-closed refusal for invalid custody, resume, or measurement state."""
+
+
+def _expected_dynamic_pointer_path() -> str:
+    return os.path.abspath(
+        os.fspath(_DYNAMIC_TARGET_REPO_ROOT / CANONICAL_FRONTIER_POINTER_PATH)
+    )
+
+
+def _require_dynamic_frontier_snapshot(
+    snapshot: DynamicFrontierTargetSnapshot | None,
+    *,
+    now_utc_iso: str | None,
+) -> DynamicFrontierTargetSnapshot:
+    try:
+        if snapshot is None:
+            snapshot = load_dynamic_frontier_target(
+                repo_root=_DYNAMIC_TARGET_REPO_ROOT,
+                now_utc_iso=now_utc_iso,
+            )
+        if not isinstance(snapshot, DynamicFrontierTargetSnapshot):
+            raise TypeError("frontier_snapshot must be a DynamicFrontierTargetSnapshot")
+        if snapshot.pointer_path != _expected_dynamic_pointer_path():
+            raise RealizationRefusal(
+                "realization routing refuses a snapshot from a noncanonical pointer path"
+            )
+        return verify_dynamic_frontier_target_snapshot(
+            snapshot,
+            now_utc_iso=now_utc_iso,
+        )
+    except (DynamicFrontierTargetError, TypeError) as exc:
+        raise RealizationRefusal(
+            f"dynamic frontier target is not current and canonical: {exc}"
+        ) from exc
 
 
 def _canonical_json_bytes(value: Any) -> bytes:
@@ -149,8 +189,6 @@ class RealizeConfig:
     batch_pairs: int
     num_threads: int
     seed: int
-    pointer_score: float
-    fork_threshold: float
     reference_bytes: int
     counterfactual_d_seg: float
     counterfactual_d_pose: float
@@ -991,7 +1029,13 @@ def build_final_receipt(
     roundtrip: Mapping[str, Any],
     pair_rows: Sequence[Mapping[str, Any]],
     checkpoints: Sequence[Mapping[str, Any]],
+    frontier_snapshot: DynamicFrontierTargetSnapshot | None = None,
+    now_utc_iso: str | None = None,
 ) -> dict[str, Any]:
+    frontier = _require_dynamic_frontier_snapshot(
+        frontier_snapshot,
+        now_utc_iso=now_utc_iso,
+    )
     aggregates = aggregate_pair_rows(pair_rows, n_pairs=config.n_pairs)
     normalized_checkpoints = _validate_checkpoint_summaries(
         checkpoints,
@@ -1025,7 +1069,7 @@ def build_final_receipt(
     )
     routing = (
         ROUTING_CANDIDATE
-        if realized.total < config.fork_threshold
+        if realized.total < frontier.target_score
         else ROUTING_NOT_CANDIDATE
     )
     receipt = {
@@ -1058,13 +1102,10 @@ def build_final_receipt(
         },
         "realization_transfer_ratios": dataclasses.asdict(ratios),
         "counterfactual_to_realized_score_gap": _gap_mapping(gap),
+        "dynamic_frontier_target": dataclasses.asdict(frontier),
         "comparisons": {
-            "pointer_score": config.pointer_score,
-            "delta_vs_pointer": realized.total - config.pointer_score,
-            "strict_fork_threshold": config.fork_threshold,
-            "delta_vs_strict_fork_threshold": (
-                realized.total - config.fork_threshold
-            ),
+            "dynamic_frontier_target_score": frontier.target_score,
+            "delta_vs_dynamic_frontier": realized.total - frontier.target_score,
             "counterfactual_score": counterfactual.total,
             "delta_vs_counterfactual": realized.total - counterfactual.total,
         },
@@ -1076,11 +1117,54 @@ def build_final_receipt(
         "ready_for_exact_eval_dispatch": False,
     }
     receipt = _with_body_hash(receipt, field="receipt_sha256")
-    verify_final_receipt(receipt)
+    verify_final_receipt(
+        receipt,
+        frontier_snapshot=frontier,
+        now_utc_iso=now_utc_iso,
+    )
     return receipt
 
 
-def verify_final_receipt(receipt: Mapping[str, Any]) -> None:
+def verify_final_receipt(
+    receipt: Mapping[str, Any],
+    *,
+    frontier_snapshot: DynamicFrontierTargetSnapshot | None = None,
+    now_utc_iso: str | None = None,
+) -> None:
+    frontier = _require_dynamic_frontier_snapshot(
+        frontier_snapshot,
+        now_utc_iso=now_utc_iso,
+    )
+    if receipt.get("dynamic_frontier_target") != dataclasses.asdict(frontier):
+        raise RealizationRefusal(
+            "final receipt does not bind the current canonical dynamic frontier"
+        )
+    _verify_final_receipt_structure(
+        receipt,
+        expected_target_score=frontier.target_score,
+    )
+
+
+def _verify_final_receipt_structure(
+    receipt: Mapping[str, Any],
+    *,
+    expected_target_score: float,
+) -> float:
+    """Verify immutable receipt truth against one explicitly named threshold.
+
+    This helper deliberately does not read live pointer state.  Historical
+    receipt validation and current routing are separate operations: the former
+    preserves what was measured, while the latter must reopen today's pointer.
+    """
+
+    if (
+        isinstance(expected_target_score, bool)
+        or not isinstance(expected_target_score, (int, float))
+        or not math.isfinite(float(expected_target_score))
+        or float(expected_target_score) <= 0.0
+    ):
+        raise RealizationRefusal("final receipt target score is invalid")
+    target_score = float(expected_target_score)
     if receipt.get("schema") != RECEIPT_SCHEMA:
         raise RealizationRefusal("unexpected final receipt schema")
     _validate_body_hash(receipt, field="receipt_sha256")
@@ -1093,18 +1177,57 @@ def verify_final_receipt(receipt: Mapping[str, Any]) -> None:
             raise RealizationRefusal(f"authority field must remain false: {field}")
     if receipt.get("evidence_axis") != EVIDENCE_AXIS:
         raise RealizationRefusal("final receipt evidence axis differs")
+    embedded_frontier = receipt.get("dynamic_frontier_target")
+    if not isinstance(embedded_frontier, Mapping):
+        raise RealizationRefusal("final receipt has no embedded frontier snapshot")
+    embedded_target = embedded_frontier.get("target_score")
+    if (
+        isinstance(embedded_target, bool)
+        or not isinstance(embedded_target, (int, float))
+        or not math.isfinite(float(embedded_target))
+        or float(embedded_target) != target_score
+    ):
+        raise RealizationRefusal("embedded frontier target differs from the verification threshold")
     realized = receipt.get("realized", {}).get("score_terms", {})
     score = realized.get("total")
-    threshold = receipt.get("comparisons", {}).get("strict_fork_threshold")
-    if not isinstance(score, (int, float)) or not isinstance(
-        threshold, (int, float)
+    threshold = receipt.get("comparisons", {}).get("dynamic_frontier_target_score")
+    if (
+        isinstance(score, bool)
+        or not isinstance(score, (int, float))
+        or not math.isfinite(float(score))
+        or isinstance(threshold, bool)
+        or not isinstance(threshold, (int, float))
+        or not math.isfinite(float(threshold))
     ):
-        raise RealizationRefusal("final routing inputs are missing")
+        raise RealizationRefusal("final dynamic-frontier routing inputs are missing")
+    if float(threshold) != target_score:
+        raise RealizationRefusal(
+            "final routing threshold differs from the embedded dynamic frontier"
+        )
+    score_value = float(score)
+    comparisons = receipt.get("comparisons", {})
+    recorded_delta = comparisons.get("delta_vs_dynamic_frontier")
+    if (
+        isinstance(recorded_delta, bool)
+        or not isinstance(recorded_delta, (int, float))
+        or not math.isfinite(float(recorded_delta))
+        or not math.isclose(
+            float(recorded_delta),
+            score_value - target_score,
+            rel_tol=0.0,
+            abs_tol=1e-15,
+        )
+    ):
+        raise RealizationRefusal("final dynamic-frontier delta does not close")
     expected_routing = (
-        ROUTING_CANDIDATE if score < threshold else ROUTING_NOT_CANDIDATE
+        ROUTING_CANDIDATE if score_value < target_score else ROUTING_NOT_CANDIDATE
     )
     if receipt.get("routing_label") != expected_routing:
         raise RealizationRefusal("final routing label does not match realized score")
+    if receipt.get("main_review_and_dispatch_required") is not (
+        expected_routing == ROUTING_CANDIDATE
+    ):
+        raise RealizationRefusal("final review/dispatch flag does not match routing")
     gap_raw = receipt.get("counterfactual_to_realized_score_gap", {})
     try:
         gap = ScoreGapDecomposition(
@@ -1121,6 +1244,65 @@ def verify_final_receipt(receipt: Mapping[str, Any]) -> None:
         raise RealizationRefusal(str(exc)) from exc
     if gap.rate != 0.0:
         raise RealizationRefusal("final rate gap must be exactly zero")
+    return score_value
+
+
+def verify_historical_final_receipt(receipt: Mapping[str, Any]) -> None:
+    """Verify a stored receipt against its own immutable pointer snapshot.
+
+    This establishes historical structural integrity only.  It does not say
+    that the embedded threshold is current and must never steer a new action.
+    """
+
+    embedded = receipt.get("dynamic_frontier_target")
+    if not isinstance(embedded, Mapping):
+        raise RealizationRefusal("historical receipt has no embedded frontier snapshot")
+    target_score = embedded.get("target_score")
+    _verify_final_receipt_structure(
+        receipt,
+        expected_target_score=target_score,
+    )
+
+
+def reroute_final_receipt_against_current_frontier(
+    receipt: Mapping[str, Any],
+    *,
+    frontier_snapshot: DynamicFrontierTargetSnapshot | None = None,
+    now_utc_iso: str | None = None,
+) -> dict[str, Any]:
+    """Return a new current-pointer audit without mutating historical truth."""
+
+    verify_historical_final_receipt(receipt)
+    frontier = _require_dynamic_frontier_snapshot(
+        frontier_snapshot,
+        now_utc_iso=now_utc_iso,
+    )
+    realized_total = float(receipt["realized"]["score_terms"]["total"])
+    current_routing = (
+        ROUTING_CANDIDATE
+        if realized_total < frontier.target_score
+        else ROUTING_NOT_CANDIDATE
+    )
+    embedded = receipt["dynamic_frontier_target"]
+    audit = {
+        "schema": REROUTE_AUDIT_SCHEMA,
+        "historical_receipt_sha256": receipt["receipt_sha256"],
+        "historical_pointer_sha256": embedded["pointer_sha256"],
+        "historical_target_score": embedded["target_score"],
+        "current_dynamic_frontier_target": dataclasses.asdict(frontier),
+        "current_target_score": frontier.target_score,
+        "realized_total": realized_total,
+        "delta_vs_current_frontier": realized_total - frontier.target_score,
+        "current_routing_label": current_routing,
+        "pointer_moved": embedded["pointer_sha256"] != frontier.pointer_sha256,
+        "historical_structure_verified": True,
+        "current_pointer_reopened_and_verified": True,
+        "research_only": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    return _with_body_hash(audit, field="audit_sha256")
 
 
 def _require_module_under(module: Any, root: Path, *, label: str) -> None:

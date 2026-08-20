@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from datetime import UTC, datetime
@@ -46,7 +47,6 @@ for _p in (_REPO, _REPO / "src", _REPO / "upstream"):
 
 from tac.contest_compliance import compute_upstream_snapshot_sha256  # noqa: E402
 from tac.contest_score import rate_term  # noqa: E402
-from tac.score_geometry import score_sublevel_audit  # noqa: E402
 from tac.v2_compose import archive_grammar as ag  # noqa: E402
 from tac.v2_compose import bulk_generator as bg  # noqa: E402
 from tac.v2_compose import launch_command as lc  # noqa: E402
@@ -65,6 +65,12 @@ from tac.v2_compose.store_learn_split import (  # noqa: E402
     encode_known_split,
     load_reach_kstar,
     load_warp_recoverability_from_grok,
+    validated_frontier_target_payload,
+)
+from tac.witness_dsl.dynamic_frontier_target import (  # noqa: E402
+    DynamicFrontierTargetSnapshot,
+    load_dynamic_frontier_target,
+    score_sublevel_against_dynamic_frontier,
 )
 
 # SCREW_REGIME is the single source of truth for the per-class PHYSICAL warp regime (A3.1: one
@@ -88,39 +94,22 @@ def _resolve(p: str) -> Path:
     return pp if pp.is_absolute() else (_REPO / pp)
 
 
-def load_effective_frontier_target(pointer_path: str | Path) -> dict[str, Any]:
-    """Load the competitive target from the canonical pointer, fail closed."""
-    path = _resolve(str(pointer_path))
-    try:
-        pointer = json.loads(path.read_text(encoding="utf-8"))
-        effective = pointer["effective_frontier"]
-        score = float(effective["score"])
-    except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+def _frontier_snapshot_for_args(args: argparse.Namespace) -> DynamicFrontierTargetSnapshot:
+    """Load only the canonical target path through the fail-closed dynamic API."""
+
+    requested = _resolve(getattr(args, "frontier_pointer", _DEFAULT_FRONTIER_POINTER))
+    canonical = _resolve(_DEFAULT_FRONTIER_POINTER)
+    if os.path.abspath(os.fspath(requested)) != os.path.abspath(os.fspath(canonical)):
         raise ValueError(
-            f"canonical frontier pointer lacks a usable effective score: {path}"
-        ) from exc
-    if score < 0.0:
-        raise ValueError(f"canonical effective frontier score is negative: {score}")
-    return {
-        "score": score,
-        "axis": effective.get("axis"),
-        "custody": effective.get("custody"),
-        "evidence_grade": effective.get("evidence_grade"),
-        "score_precision": effective.get("score_precision"),
-        "source": effective.get("source"),
-        "pointer_path": str(path),
-    }
-
-
-def _frontier_target_for_args(args: argparse.Namespace) -> dict[str, Any]:
-    return load_effective_frontier_target(
-        getattr(args, "frontier_pointer", _DEFAULT_FRONTIER_POINTER)
-    )
+            "--frontier-pointer cannot substitute a non-canonical competitive target; "
+            f"expected {canonical}, got {requested}"
+        )
+    return load_dynamic_frontier_target(repo_root=_REPO)
 
 
 def coupled_score_surface_payload(
     *,
-    target_score: float,
+    frontier_target: DynamicFrontierTargetSnapshot,
     d_seg: float,
     d_pose: float,
     archive_zip_bytes: int,
@@ -128,8 +117,8 @@ def coupled_score_surface_payload(
 ) -> dict[str, Any]:
     """Return the exact coupled audit with every counted byte charged."""
     honest_total_bytes = archive_zip_bytes + external_counted_bytes
-    audit = score_sublevel_audit(
-        target_score=target_score,
+    audit = score_sublevel_against_dynamic_frontier(
+        frontier_target,
         d_seg=d_seg,
         d_pose=d_pose,
         archive_bytes=honest_total_bytes,
@@ -147,9 +136,7 @@ def coupled_score_surface_payload(
         "external_counted_bytes": external_counted_bytes,
         "conditional_d_seg_boundary": audit.boundary_d_seg_given_pose_and_bytes,
         "conditional_d_pose_boundary": audit.boundary_d_pose_given_seg_and_bytes,
-        "conditional_archive_byte_boundary": (
-            audit.boundary_archive_bytes_given_distortions
-        ),
+        "conditional_archive_byte_boundary": (audit.boundary_archive_bytes_given_distortions),
         "admission_rule": "exact coupled score only; component coordinates are conditional",
     }
 
@@ -157,9 +144,7 @@ def coupled_score_surface_payload(
 def _git_head() -> str | None:
     """``git rev-parse HEAD`` (provenance; A1.1). None if git is unavailable."""
     try:
-        out = subprocess.run(
-            ["git", "rev-parse", "HEAD"], cwd=str(_REPO), capture_output=True, text=True, timeout=10
-        )
+        out = subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(_REPO), capture_output=True, text=True, timeout=10)
         return out.stdout.strip() if out.returncode == 0 and out.stdout.strip() else None
     except (OSError, subprocess.SubprocessError):
         return None
@@ -234,10 +219,14 @@ def keyframe_payload_accounting(args: argparse.Namespace) -> dict[str, Any]:
         "payload_path": real_path,
         "keyframe_count_hint": getattr(args, "keyframe_count", None),
         "rule_118": {
-            "COUNTED (archive.zip)": ("stored real keyframe luma (video-derived); warped at decode by "
-                                      "the per-pair ego twist to synthesize frame0"),
-            "FREE (inflate.py)": ("plane homography + exp_se3 + inverse-warp bilinear + R (generic "
-                                  "algorithm) + the DUAL-USE twist (already counted in the pose sidecar)"),
+            "COUNTED (archive.zip)": (
+                "stored real keyframe luma (video-derived); warped at decode by "
+                "the per-pair ego twist to synthesize frame0"
+            ),
+            "FREE (inflate.py)": (
+                "plane homography + exp_se3 + inverse-warp bilinear + R (generic "
+                "algorithm) + the DUAL-USE twist (already counted in the pose sidecar)"
+            ),
         },
         "note": (
             "NO real-luma pose-carrier keyframes counted (0 B). Pose path = the stored screw/twist "
@@ -245,8 +234,8 @@ def keyframe_payload_accounting(args: argparse.Namespace) -> dict[str, Any]:
             "real-luma --pose-carrier ROW (the #205 sealed config) REQUIRES a keyframe payload > 0 "
             "here; pass --keyframe-payload-bytes (measured codec, memo warp_keyframe_payload_rate_"
             "minimization_20260702 §2) or --keyframe-payload-path <blob>."
-            if kbytes == 0 else
-            f"real-luma pose-carrier keyframes: {kbytes} B ({source}) COUNTED into the rate "
+            if kbytes == 0
+            else f"real-luma pose-carrier keyframes: {kbytes} B ({source}) COUNTED into the rate "
             f"(+{rate_term(kbytes):.5f}). Codec/resolution/count MEASURED in the "
             "warp_keyframe_payload_rate_minimization memo; the cheap-vs-expensive branch is decided by "
             "the residual-compensation measurement (memo §4.2, needs the trained #205 residual)."
@@ -254,10 +243,17 @@ def keyframe_payload_accounting(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
-def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
+def phase_a(
+    args: argparse.Namespace,
+    out_dir: Path,
+    *,
+    frontier_target: DynamicFrontierTargetSnapshot,
+) -> dict[str, Any]:
     """PHASE-A: plan + deterministic bulk + residual target + pose sidecar + launch command."""
-    frontier_target = _frontier_target_for_args(args)
-    target_score = float(frontier_target["score"])
+    # Verify at entry; target-dependent helpers and final report serialization
+    # repeat the reopen so a mid-run pointer refresh fails closed.
+    validated_frontier_target_payload(frontier_target)
+    target_score = frontier_target.target_score
     cache = _resolve(args.gt_cache)
     print(f"[phase-A] loading GT cache {cache} ...", file=sys.stderr)
     z = np.load(cache, allow_pickle=False)
@@ -269,31 +265,50 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
     # --- Step 2: encode the KNOWN split ---
     rec = load_warp_recoverability_from_grok(_resolve(args.grok_results))
     kstar = load_reach_kstar(_resolve(args.reach_json))
-    plan = encode_known_split(rec, kstar, n_pairs=args.n_pairs_clip)
-    print(f"[phase-A] split: GENERATE={plan.generate_classes} LEARN={plan.learn_classes} "
-          f"keyframes={plan.keyframe_count} reach_k*={kstar}", file=sys.stderr)
+    plan = encode_known_split(
+        rec,
+        kstar,
+        frontier_target=frontier_target,
+        n_pairs=args.n_pairs_clip,
+    )
+    print(
+        f"[phase-A] split: GENERATE={plan.generate_classes} LEARN={plan.learn_classes} "
+        f"keyframes={plan.keyframe_count} reach_k*={kstar}",
+        file=sys.stderr,
+    )
 
     # --- Step 3: deterministic bulk through R (proven warp path) ---
     cfg = bg.load_calibration_from_reach(_resolve(args.reach_json), reach_kstar=kstar, n_pairs=n_pairs)
-    print(f"[phase-A] generating deterministic bulk through R for {n_pairs} pairs "
-          f"(calib s_t={cfg.s_t:.5f} s_r={cfg.s_r} pitch={cfg.pitch:.4f}) ...", file=sys.stderr)
+    print(
+        f"[phase-A] generating deterministic bulk through R for {n_pairs} pairs "
+        f"(calib s_t={cfg.s_t:.5f} s_r={cfg.s_r} pitch={cfg.pitch:.4f}) ...",
+        file=sys.stderr,
+    )
     bulk = bg.generate_bulk_argmax_stack(lstars, gt_f1, gt_poses, cfg, verbose=True)
-    print(f"[phase-A] bulk d_seg floor: full={bulk.bulk_dseg_full:.4f} bulk={bulk.bulk_dseg_bulk:.4f} "
-          f"| SegNet selfcheck ok={bulk.k0_faithful} (max_px={bulk.segnet_selfcheck_max_px}) "
-          f"| k0 R1-floor={bulk.k0_bulk_mean:.4f} (within n96 ref={bulk.k0_within_r1_ref})", file=sys.stderr)
+    print(
+        f"[phase-A] bulk d_seg floor: full={bulk.bulk_dseg_full:.4f} bulk={bulk.bulk_dseg_bulk:.4f} "
+        f"| SegNet selfcheck ok={bulk.k0_faithful} (max_px={bulk.segnet_selfcheck_max_px}) "
+        f"| k0 R1-floor={bulk.k0_bulk_mean:.4f} (within n96 ref={bulk.k0_within_r1_ref})",
+        file=sys.stderr,
+    )
     if not bulk.k0_faithful:
-        print("[phase-A] WARNING: SegNet selfcheck FAILED (gt_f1->argmax != cached lstars) — the "
-              "render->R->SegNet path is NOT the contest path; treat ALL bulk numbers as suspect.",
-              file=sys.stderr)
+        print(
+            "[phase-A] WARNING: SegNet selfcheck FAILED (gt_f1->argmax != cached lstars) — the "
+            "render->R->SegNet path is NOT the contest path; treat ALL bulk numbers as suspect.",
+            file=sys.stderr,
+        )
 
     # --- Step 4: residual target (bulk SUBTRACTED) -- the DIAGNOSTIC floor (which cells bulk gets
     # wrong, by GT class). The residual_mask here is the coverage-gate reference (B2). ---
     residual = rt.compute_residual_target(bulk.bulk_argmax_through_R, lstars)
     residual_path = out_dir / "residual_target.npz"
     residual_bytes = rt.save_residual_target(residual, residual_path)
-    print(f"[phase-A] residual target (diagnostic): bulk_dseg_floor={residual.bulk_dseg:.4f} "
-          f"residual_classes_ranked={residual.residual_classes_ranked[:3]} "
-          f"-> {residual_path} ({residual_bytes} B training artifact)", file=sys.stderr)
+    print(
+        f"[phase-A] residual target (diagnostic): bulk_dseg_floor={residual.bulk_dseg:.4f} "
+        f"residual_classes_ranked={residual.residual_classes_ranked[:3]} "
+        f"-> {residual_path} ({residual_bytes} B training artifact)",
+        file=sys.stderr,
+    )
 
     # --- Step 5: pose sidecar (dual-use STORED screw/twist; $0 from cache poses) ---
     pose_path = out_dir / "posenet_targets.bin"
@@ -327,16 +342,19 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
     kf_bytes = int(kf["keyframe_blob_bytes"])
     known_store_excl_kf = store_bytes_proj600 + pose_bytes
     known_store = known_store_excl_kf + kf_bytes  # HONEST total: partition store + pose sidecar + keyframes
-    conditional_surface = score_sublevel_audit(
-        target_score=target_score,
+    conditional_surface = score_sublevel_against_dynamic_frontier(
+        frontier_target,
         d_seg=0.0,
         d_pose=_D_POSE_SIDECAR,
         archive_bytes=known_store,
     )
     break_even_dseg = conditional_surface.boundary_d_seg_given_pose_and_bytes
-    print(f"[phase-A] keyframe payload (real-luma pose carrier): {kf_bytes} B "
-          f"({kf['source']}; rate +{kf['keyframe_blob_rate']:.5f}) -> honest known-store "
-          f"{known_store} B (rate {rate_term(known_store):.5f})", file=sys.stderr)
+    print(
+        f"[phase-A] keyframe payload (real-luma pose carrier): {kf_bytes} B "
+        f"({kf['source']}; rate +{kf['keyframe_blob_rate']:.5f}) -> honest known-store "
+        f"{known_store} B (rate {rate_term(known_store):.5f})",
+        file=sys.stderr,
+    )
     budget = {
         "store_blob_bytes_measured_subset": store_bytes,
         "store_keyframes_measured": measured_kf,
@@ -355,7 +373,8 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
         "deterministic_bulk_dseg_floor": residual.bulk_dseg,
         "conditional_d_seg_boundary_at_known_store_and_pose_assumption": break_even_dseg,
         "coupled_target_score": target_score,
-        "coupled_target_custody": frontier_target,
+        # Filled from a final pointer reopen immediately before report return.
+        "coupled_target_custody": None,
         "d_pose_planning_assumption": _D_POSE_SIDECAR,
         "d_pose_assumption_note": (
             "BUDGET assumption (the stored-screw/twist TARGET), NOT yet validated for THIS composed "
@@ -367,18 +386,23 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
     # --residual-mode actually consumes (NOT residual_target.npz). The deterministic bulk RGB +
     # the boundary-annulus composition mask (B2) at render res; the COUNTED bytes are the INR
     # weights the trainer PRODUCES, never this bundle. ---
-    print("[phase-A] generating deterministic bulk render + warped labels for the residual bundle ...",
-          file=sys.stderr)
+    print("[phase-A] generating deterministic bulk render + warped labels for the residual bundle ...", file=sys.stderr)
     bulk_rgb, warped_labels = bg.generate_bulk_render_and_labels(lstars, gt_poses, cfg, bulk.palette)
     bundle = build_residual_training_bundle(
-        bulk_rgb, warped_labels,
-        learn_classes=LEARN_CLASSES, dilate=DEFAULT_ANNULUS_DILATE, mode=MASK_MODE_BOUNDARY_ANNULUS,
+        bulk_rgb,
+        warped_labels,
+        learn_classes=LEARN_CLASSES,
+        dilate=DEFAULT_ANNULUS_DILATE,
+        mode=MASK_MODE_BOUNDARY_ANNULUS,
     )
     bundle_path = out_dir / _RESIDUAL_BUNDLE_NAME
     bundle_bytes = save_residual_training_bundle(bundle, bundle_path)
-    print(f"[phase-A] residual BUNDLE (trainer input): mask_mode={bundle.mask_mode} "
-          f"dilate={bundle.dilate} override_frac={float(bundle.composition_mask.mean()):.4f} "
-          f"-> {bundle_path} ({bundle_bytes} B training artifact)", file=sys.stderr)
+    print(
+        f"[phase-A] residual BUNDLE (trainer input): mask_mode={bundle.mask_mode} "
+        f"dilate={bundle.dilate} override_frac={float(bundle.composition_mask.mean()):.4f} "
+        f"-> {bundle_path} ({bundle_bytes} B training artifact)",
+        file=sys.stderr,
+    )
 
     # --- Step 4c (NEW, the B2 GEOMETRY gate): does the composition mask COVER the residual the
     # INR must close? Gate only on the CONDITIONAL d_seg coordinate of the live score surface. ---
@@ -388,23 +412,30 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
             "no non-negative d_seg boundary exists"
         )
     coverage = measure_composition_coverage(
-        residual.residual_mask, bundle.composition_mask, dseg_budget=break_even_dseg)
+        residual.residual_mask, bundle.composition_mask, dseg_budget=break_even_dseg
+    )
     cov_summary = coverage.to_summary()
-    print(f"[phase-A] COVERAGE GATE: coverage={coverage.coverage:.4f} "
-          f"unreachable_dseg={coverage.unreachable_dseg:.5f} "
-          f"(conditional target boundary={break_even_dseg:.5f}) "
-          f"-> GATE {'PASS' if coverage.passes_gate else 'FLAG (NO-GO: geometry ceiling)'}",
-          file=sys.stderr)
+    print(
+        f"[phase-A] COVERAGE GATE: coverage={coverage.coverage:.4f} "
+        f"unreachable_dseg={coverage.unreachable_dseg:.5f} "
+        f"(conditional target boundary={break_even_dseg:.5f}) "
+        f"-> GATE {'PASS' if coverage.passes_gate else 'FLAG (NO-GO: geometry ceiling)'}",
+        file=sys.stderr,
+    )
     if not coverage.passes_gate:
-        print("[phase-A] WARNING: the composition mask does NOT cover enough of the residual — the "
-              "INR can NEVER close the uncovered flips (a GEOMETRY ceiling, NOT an INR-capacity wall). "
-              "Widen the annulus (--residual-dilate) or switch mask_mode=union BEFORE the GPU GO.",
-              file=sys.stderr)
+        print(
+            "[phase-A] WARNING: the composition mask does NOT cover enough of the residual — the "
+            "INR can NEVER close the uncovered flips (a GEOMETRY ceiling, NOT an INR-capacity wall). "
+            "Widen the annulus (--residual-dilate) or switch mask_mode=union BEFORE the GPU GO.",
+            file=sys.stderr,
+        )
 
     # --- Step 6 (emit): the CORRECTED residual-ONLY launch command (--residual-mode +
     # --residual-target-npz pointed at the BUNDLE). NO --structured-init (that bakes the bulk into
     # the weights = NO rate shrink). HOLD for operator GO. ---
-    residual_run_dir = str(_resolve(args.residual_run_dir)) if args.residual_run_dir else str(out_dir / "residual_inr_run")
+    residual_run_dir = (
+        str(_resolve(args.residual_run_dir)) if args.residual_run_dir else str(out_dir / "residual_inr_run")
+    )
     launch = lc.build_residual_only_command(
         out_dir=residual_run_dir,
         gt_cache=str(cache),
@@ -416,9 +447,14 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
         mod_dim=args.residual_mod_dim,
         strict=True,
     )
-    print(f"[phase-A] residual-ONLY launch command FLAG-VALIDATED "
-          f"(all_valid={launch.all_flags_valid}); HOLD for operator GO.", file=sys.stderr)
+    print(
+        f"[phase-A] residual-ONLY launch command FLAG-VALIDATED "
+        f"(all_valid={launch.all_flags_valid}); HOLD for operator GO.",
+        file=sys.stderr,
+    )
 
+    frontier_target_receipt = validated_frontier_target_payload(frontier_target)
+    budget["coupled_target_custody"] = frontier_target_receipt
     report = {
         "phase": "A",
         "tool": "compose_witness_archive",
@@ -427,7 +463,7 @@ def phase_a(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
         "authority": "[macOS-CPU advisory] NON-PROMOTABLE",
         "score_claim": False,
         "promotable": False,
-        "frontier_target": frontier_target,
+        "frontier_target": frontier_target_receipt,
         "pointer_moved": False,
         "gt_cache": str(cache),
         "n_pairs_cache": n_pairs,
@@ -505,12 +541,20 @@ def residual_blob_from_weights_npz(
         raise ValueError(f"{weights_npz}: trained INR weights must include the per-frame 'code' latent")
     if "out_sdf.weight" not in params:
         raise ValueError(f"{weights_npz}: trained INR weights must include 'out_sdf.weight'")
-    for req in ("__cfg_n_hidden", "__cfg_hidden_dim", "__bank_n_scales", "__bank_n_orient0",
-                "__bank_f0", "__bank_base", "__bank_n_iso"):
+    for req in (
+        "__cfg_n_hidden",
+        "__cfg_hidden_dim",
+        "__bank_n_scales",
+        "__bank_n_orient0",
+        "__bank_f0",
+        "__bank_base",
+        "__bank_n_iso",
+    ):
         if req not in z.files:
             raise ValueError(
                 f"{weights_npz}: missing required cfg key {req!r} (not an EMA-checkpoint npz from "
-                "_build_ema_checkpoint_arrays). Cannot reconstruct the forward contract.")
+                "_build_ema_checkpoint_arrays). Cannot reconstruct the forward contract."
+            )
 
     def _g(key: str, cast, default=None):
         return cast(z[key]) if key in z.files else default
@@ -531,7 +575,8 @@ def residual_blob_from_weights_npz(
         "wire_w0": _g("__cfg_wire_w0", float, 20.0),
         "wire_s0": _g("__cfg_wire_s0", float, 10.0),
         "chroma": bool(_g("__cfg_chroma", int, 1)),
-        "render_h": render_h, "render_w": render_w,
+        "render_h": render_h,
+        "render_w": render_w,
         "bank_n_scales": _g("__bank_n_scales", int),
         "bank_n_orient0": _g("__bank_n_orient0", int),
         "bank_f0": _g("__bank_f0", float),
@@ -545,15 +590,20 @@ def residual_blob_from_weights_npz(
     return ag.build_residual_blob(params, inr_cfg), inr_cfg
 
 
-def phase_b(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
+def phase_b(
+    args: argparse.Namespace,
+    out_dir: Path,
+    *,
+    frontier_target: DynamicFrontierTargetSnapshot,
+) -> dict[str, Any]:
     """PHASE-B: assemble the 4-section archive, inflate, realize d_seg (+ advisory d_pose) through R,
     emit the staged dual CPU/CUDA eval command.
 
     With ``--residual-inr-weights`` it byte-closes the REAL v2 row (store + residual INR + pose);
     without it, the DETERMINISTIC FLOOR (empty residual). (B1: the residual-INR section + inflate
     compose hook are now wired -- no SystemExit.)"""
-    frontier_target = _frontier_target_for_args(args)
-    target_score = float(frontier_target["score"])
+    validated_frontier_target_payload(frontier_target)
+    target_score = frontier_target.target_score
     cache = _resolve(args.gt_cache)
     z = np.load(cache, allow_pickle=False)
     lstars = np.asarray(z["lstars"], dtype=np.int64)
@@ -601,26 +651,31 @@ def phase_b(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
             learn_classes = bundle.learn_classes
             dilate = bundle.dilate
             mask_mode = bundle.mask_mode
-            print(f"[phase-B] residual mask params from bundle {bundle_path.name}: "
-                  f"learn_classes={list(learn_classes)} dilate={dilate} mask_mode={mask_mode}",
-                  file=sys.stderr)
+            print(
+                f"[phase-B] residual mask params from bundle {bundle_path.name}: "
+                f"learn_classes={list(learn_classes)} dilate={dilate} mask_mode={mask_mode}",
+                file=sys.stderr,
+            )
         else:
-            print(f"[phase-B] WARNING: no residual bundle at {bundle_path} -- using DEFAULTS "
-                  f"(learn_classes={list(learn_classes)} dilate={dilate} mask_mode={mask_mode}). "
-                  "Pass --residual-bundle to guarantee the inflate mask matches the trained mask.",
-                  file=sys.stderr)
+            print(
+                f"[phase-B] WARNING: no residual bundle at {bundle_path} -- using DEFAULTS "
+                f"(learn_classes={list(learn_classes)} dilate={dilate} mask_mode={mask_mode}). "
+                "Pass --residual-bundle to guarantee the inflate mask matches the trained mask.",
+                file=sys.stderr,
+            )
         residual_blob, inr_cfg = residual_blob_from_weights_npz(
-            weights, learn_classes=learn_classes, dilate=dilate, mask_mode=mask_mode)
+            weights, learn_classes=learn_classes, dilate=dilate, mask_mode=mask_mode
+        )
         residual_info = {
             "present": True,
             "weights_npz": str(weights),
             "bundle": str(bundle_path) if bundle_path.exists() else None,
             "residual_blob_bytes": len(residual_blob),
-            "inr_cfg": {k: v for k, v in inr_cfg.items()
-                        if k not in ("base_shapes", "base_scales", "base_param_order")},
+            "inr_cfg": {
+                k: v for k, v in inr_cfg.items() if k not in ("base_shapes", "base_scales", "base_param_order")
+            },
         }
-        print(f"[phase-B] residual INR section: {len(residual_blob)} B (the COUNTED LEARN-tier rate)",
-              file=sys.stderr)
+        print(f"[phase-B] residual INR section: {len(residual_blob)} B (the COUNTED LEARN-tier rate)", file=sys.stderr)
 
     manifest = {
         "format_version": "v2.0",
@@ -632,8 +687,10 @@ def phase_b(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
         "mlx_free_inflate": True,
         "loads_no_scorers_at_inflate": True,
         "note": (
-            "v2 row (store + residual INR + pose)" if residual_blob else
-            "deterministic FLOOR archive (empty residual); the residual INR closes d_seg + d_pose."),
+            "v2 row (store + residual INR + pose)"
+            if residual_blob
+            else "deterministic FLOOR archive (empty residual); the residual INR closes d_seg + d_pose."
+        ),
     }
     manifest_bytes = json.dumps(manifest, separators=(",", ":")).encode("utf-8")
 
@@ -662,17 +719,25 @@ def phase_b(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
             "inflate (a separate wiring dependency, flagged; not fabricated here)."
         ),
     }
-    print(f"[phase-B] archive.zip = {zip_bytes} B (rate {acct['rate']:.5f}); sections={acct['section_bytes']}"
-          + (f"; + keyframe payload {kf_bytes} B -> honest rate {acct['honest_rate_incl_keyframes']:.5f}"
-             if kf_bytes else "; keyframe payload 0 B (stored-sidecar pose path)"),
-          file=sys.stderr)
+    print(
+        f"[phase-B] archive.zip = {zip_bytes} B (rate {acct['rate']:.5f}); sections={acct['section_bytes']}"
+        + (
+            f"; + keyframe payload {kf_bytes} B -> honest rate {acct['honest_rate_incl_keyframes']:.5f}"
+            if kf_bytes
+            else "; keyframe payload 0 B (stored-sidecar pose path)"
+        ),
+        file=sys.stderr,
+    )
 
     realized: dict[str, Any] = {"skipped": bool(args.skip_inflate)}
     if not args.skip_inflate:
         realized = _inflate_and_realize(
-            packet_dir, lstars,
+            packet_dir,
+            lstars,
             gt_poses=(gt_poses if args.measure_dpose else None),
-            max_pairs=args.max_pairs, dpose_max_pairs=args.dpose_max_pairs)
+            max_pairs=args.max_pairs,
+            dpose_max_pairs=args.dpose_max_pairs,
+        )
 
     d_seg = realized.get("d_seg_realized", None)
     d_pose_measured = realized.get("d_pose_realized", None)
@@ -685,7 +750,7 @@ def phase_b(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
         # stored-target BUDGET, clearly labeled as an assumption (NO-FAKE #8).
         d_pose_for_s = d_pose_measured if d_pose_measured is not None else _D_POSE_SIDECAR
         coupled_score_surface = coupled_score_surface_payload(
-            target_score=target_score,
+            frontier_target=frontier_target,
             d_seg=d_seg,
             d_pose=d_pose_for_s,
             archive_zip_bytes=zip_bytes,
@@ -693,12 +758,19 @@ def phase_b(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
         )
         s_budget = float(coupled_score_surface["score"])
         s_budget_note = (
-            "S = realized d_seg + " + ("MEASURED composed d_pose" if d_pose_measured is not None
-            else "stored-target d_pose BUDGET 3.4e-5 (NOT measured for this composition)")
-            + " + honest counted rate (archive.zip plus any external keyframe payload). " + (
+            "S = realized d_seg + "
+            + (
+                "MEASURED composed d_pose"
+                if d_pose_measured is not None
+                else "stored-target d_pose BUDGET 3.4e-5 (NOT measured for this composition)"
+            )
+            + " + honest counted rate (archive.zip plus any external keyframe payload). "
+            + (
                 "DETERMINISTIC FLOOR row (empty residual; f0==f1 so PoseNet sees ~no motion -> "
-                "d_pose high). Confirms FACT 2; NOT the v2 row." if is_floor else
-                "v2 row (store + residual INR + pose).")
+                "d_pose high). Confirms FACT 2; NOT the v2 row."
+                if is_floor
+                else "v2 row (store + residual INR + pose)."
+            )
             + " [advisory] until upstream/evaluate.py runs these bytes (CPU+CUDA)."
         )
 
@@ -708,6 +780,7 @@ def phase_b(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
         f"--device cpu  # [contest-CPU] authoritative ONLY on Linux x86_64; then --device cuda on T4"
     )
 
+    frontier_target_receipt = validated_frontier_target_payload(frontier_target)
     return {
         "phase": "B",
         "tool": "compose_witness_archive",
@@ -716,7 +789,7 @@ def phase_b(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
         "authority": "[advisory] NON-PROMOTABLE",
         "score_claim": False,
         "promotable": False,
-        "frontier_target": frontier_target,
+        "frontier_target": frontier_target_receipt,
         "pointer_moved": False,
         "archive_zip": str(zip_path),
         "warp_type_codes": warp_codes,
@@ -729,8 +802,11 @@ def phase_b(args: argparse.Namespace, out_dir: Path) -> dict[str, Any]:
         "d_pose_axis": (
             "OPEN: d_pose of the composed witness is validated through PoseNet on the inflated pairs "
             "(advisory) "
-            + (f"= {d_pose_measured:.6g} on {realized.get('dpose_pairs_scored')} pairs"
-               if d_pose_measured is not None else "(not measured this run; pass --measure-dpose)")
+            + (
+                f"= {d_pose_measured:.6g} on {realized.get('dpose_pairs_scored')} pairs"
+                if d_pose_measured is not None
+                else "(not measured this run; pass --measure-dpose)"
+            )
             + ". The pose sidecar stores the screw/twist (dual-use warp->d_seg AND pose->d_pose); "
             "the 3.4e-5 figure is the stored-target BUDGET, NOT a measured composed d_pose (NO-FAKE)."
         ),
@@ -797,6 +873,7 @@ def _inflate_and_realize(
     dpose_n = 0 if gt_poses is None else min(int(dpose_max_pairs or 0), int(lstars.shape[0]))
     dpose_frames: list[Any] = []  # (H,W,3) uint8 torch tensors for the advisory d_pose pairs
     import torch
+
     with open(dst_raw, "rb") as f:
         for p in range(n_pairs):
             f0 = np.frombuffer(f.read(frame_bytes), dtype=np.uint8).reshape(CAM_H, CAM_W, 3)
@@ -854,45 +931,82 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--residual-hidden-dim", type=int, default=48, help="residual INR width (< full 96)")
     ap.add_argument("--residual-mod-dim", type=int, default=16, help="residual INR code dim (< full 32)")
     ap.add_argument("--residual-run-dir", default=None, help="where the GPU residual run would write")
-    ap.add_argument("--residual-inr-weights", default=None,
-                    help="(PHASE-B) trained residual-INR EMA-shadow npz -> assembles the REAL v2 row")
-    ap.add_argument("--residual-bundle", default=None,
-                    help="(PHASE-B) the residual bundle the INR trained against (learn_classes/dilate/"
-                         "mask_mode for the inflate mask). Default <out_dir>/residual_bundle.npz")
+    ap.add_argument(
+        "--residual-inr-weights",
+        default=None,
+        help="(PHASE-B) trained residual-INR EMA-shadow npz -> assembles the REAL v2 row",
+    )
+    ap.add_argument(
+        "--residual-bundle",
+        default=None,
+        help="(PHASE-B) the residual bundle the INR trained against (learn_classes/dilate/"
+        "mask_mode for the inflate mask). Default <out_dir>/residual_bundle.npz",
+    )
     # real-luma pose-carrier keyframe payload (EXPLICIT rule-118 COUNTED line item; the accounting
     # gap warp_keyframe_payload_rate_minimization_20260702 flags). Default 0 -> stored-sidecar pose.
-    ap.add_argument("--keyframe-payload-bytes", type=int, default=0,
-                    help="EXPLICIT measured byte count of the stored real-luma pose-carrier keyframes "
-                         "(video-derived -> COUNTED in the rate). From the codec sweep in memo "
-                         "warp_keyframe_payload_rate_minimization_20260702 §2 (e.g. 384x512 HEVC crf34 "
-                         "13-keyframe ~32875 B). Default 0 = no real-luma carrier (pose via stored sidecar).")
-    ap.add_argument("--keyframe-payload-path", type=str, default=None,
-                    help="path to a REAL stored keyframe blob; its st_size is COUNTED (overrides "
-                         "--keyframe-payload-bytes). The warp decode stays FREE (rule-118).")
-    ap.add_argument("--keyframe-count", type=int, default=None,
-                    help="observability hint: number of stored keyframes (reach-gate schedule; ~13).")
+    ap.add_argument(
+        "--keyframe-payload-bytes",
+        type=int,
+        default=0,
+        help="EXPLICIT measured byte count of the stored real-luma pose-carrier keyframes "
+        "(video-derived -> COUNTED in the rate). From the codec sweep in memo "
+        "warp_keyframe_payload_rate_minimization_20260702 §2 (e.g. 384x512 HEVC crf34 "
+        "13-keyframe ~32875 B). Default 0 = no real-luma carrier (pose via stored sidecar).",
+    )
+    ap.add_argument(
+        "--keyframe-payload-path",
+        type=str,
+        default=None,
+        help="path to a REAL stored keyframe blob; its st_size is COUNTED (overrides "
+        "--keyframe-payload-bytes). The warp decode stays FREE (rule-118).",
+    )
+    ap.add_argument(
+        "--keyframe-count",
+        type=int,
+        default=None,
+        help="observability hint: number of stored keyframes (reach-gate schedule; ~13).",
+    )
     ap.add_argument("--max-pairs", type=int, default=None, help="(PHASE-B) cap inflate+d_seg pairs for speed")
-    ap.add_argument("--measure-dpose", action="store_true",
-                    help="(PHASE-B) measure advisory composed d_pose through the frozen CPU PoseNet (B3)")
-    ap.add_argument("--dpose-max-pairs", type=int, default=16,
-                    help="(PHASE-B) cap the advisory d_pose pairs (PoseNet CPU forward is slow)")
+    ap.add_argument(
+        "--measure-dpose",
+        action="store_true",
+        help="(PHASE-B) measure advisory composed d_pose through the frozen CPU PoseNet (B3)",
+    )
+    ap.add_argument(
+        "--dpose-max-pairs",
+        type=int,
+        default=16,
+        help="(PHASE-B) cap the advisory d_pose pairs (PoseNet CPU forward is slow)",
+    )
     ap.add_argument("--skip-inflate", action="store_true", help="(PHASE-B) byte-close only, no inflate/parity")
     ap.add_argument("--out-dir", default=None, help="output dir (default experiments/results/v2_compose_<ts>)")
     args = ap.parse_args(argv)
+
+    # One source-bound target snapshot is explicit input to every phase.  Each
+    # phase reopens it before target-dependent arithmetic and report emission.
+    frontier_target = _frontier_snapshot_for_args(args)
 
     out_dir = _resolve(args.out_dir) if args.out_dir else (_REPO / "experiments" / "results" / f"v2_compose_{_utc()}")
     out_dir.mkdir(parents=True, exist_ok=True)
 
     reports: dict[str, Any] = {}
     if args.phase in ("A", "both"):
-        reports["phase_a"] = phase_a(args, out_dir)
+        reports["phase_a"] = phase_a(
+            args,
+            out_dir,
+            frontier_target=frontier_target,
+        )
         (out_dir / "phase_a_report.json").write_text(json.dumps(reports["phase_a"], indent=2))
         print(f"[phase-A] report -> {out_dir / 'phase_a_report.json'}", flush=True)
         print("\n=== RESIDUAL-INR LAUNCH COMMAND (HOLD for operator GO) ===")
         print(reports["phase_a"]["residual_inr_launch_command"]["command"])
         print("===========================================================\n")
     if args.phase in ("B", "both"):
-        reports["phase_b"] = phase_b(args, out_dir)
+        reports["phase_b"] = phase_b(
+            args,
+            out_dir,
+            frontier_target=frontier_target,
+        )
         (out_dir / "phase_b_report.json").write_text(json.dumps(reports["phase_b"], indent=2))
         print(f"[phase-B] report -> {out_dir / 'phase_b_report.json'}", flush=True)
         if reports["phase_b"].get("staged_exact_eval_cmd"):

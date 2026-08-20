@@ -109,6 +109,31 @@ def test_current_v10_measurement_path_is_pointer_literal_clean() -> None:
     assert result["strict_violation_count"] == 0
 
 
+def test_screw_reach_gate_consumes_dynamic_pointer_without_competitive_literal() -> None:
+    target = audit.REPO / "tools/measure_screw_reach_through_R.py"
+    result = audit.build_audit(
+        roots=[target],
+        pointer_path=audit.DEFAULT_POINTER,
+        strict_paths=[target],
+    )
+    assert result["competitive_pointer_literal_count"] == 0
+    assert result["strict_violation_count"] == 0
+
+
+def test_taskspace_measurement_gates_consume_dynamic_pointer_without_literals() -> None:
+    targets = [
+        audit.REPO / "experiments/feedy_byteclosed_exact_row_probe.py",
+        audit.REPO / "experiments/measure_symbolic_topological_partition_mdl.py",
+    ]
+    result = audit.build_audit(
+        roots=targets,
+        pointer_path=audit.DEFAULT_POINTER,
+        strict_paths=targets,
+    )
+    assert result["competitive_pointer_literal_count"] == 0
+    assert result["strict_violation_count"] == 0
+
+
 def test_audit_catches_attribute_mapping_defaults_and_comparison_aliases(tmp_path: Path) -> None:
     root = tmp_path / "code"
     root.mkdir()

@@ -7,7 +7,7 @@ FORWARD via the stratified per-class screw-warp keep d_seg low for k frames -- a
 for HOW MANY (the REACH k*)? The reach determines the keyframe budget (~600/k*),
 which determines the partition-store RATE, which determines whether the v2
 "store-canonical + warp = cheap partition" thesis beats the store-everything
-partition wall (rate 0.277 ALONE > frontier 0.191).
+partition wall under the current canonical competitive target.
 
 WHAT THIS BUILDS ON (already MEASURED; reuse, do NOT reinvent):
   * The ladder (``tools/measure_segnet_fooling_ladder.py``) R operator + render:
@@ -43,8 +43,8 @@ the ladder R1 render == d_seg_bulk ~0.0185. A built-in assertion checks |k0 - R1
 
 AUTHORITY / HONESTY FIREWALL (CLAUDE.md):
   * ``[macOS advisory / CPU-torch research-signal]`` ONLY. NOT a contest score. The
-    canonical frontier pointer 0.19110 is UNMOVED and this measurement does NOT move
-    it (only an n600 byte-closed exact eval is a score). score_claim/promotable=False.
+    canonical frontier pointer is reopened at execution and this measurement does NOT
+    move it (only an n600 byte-closed exact eval is a score). score_claim/promotable=False.
   * d_seg = REAL argmax-disagreement vs the cached frozen CPU-torch SegNet argmax
     ``lstars``. A NO-FAKE self-check asserts SegNet(gt_f1)==lstars exactly and ABORTS
     otherwise. Exact CPU-torch, NEVER MPS.
@@ -71,10 +71,10 @@ COUNTED. Honest geometry, not a smuggled per-frame argmax/warp table.
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import sys
 import time
-import zlib
 from math import ceil
 from pathlib import Path
 
@@ -84,6 +84,11 @@ REPO = Path(__file__).resolve().parents[1]
 for _p in (REPO, REPO / "src", REPO / "upstream"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
+
+from tac.witness_dsl.dynamic_frontier_target import (  # noqa: E402
+    DynamicFrontierTargetError,
+    load_dynamic_frontier_target,
+)
 
 # Reuse the screw-homography machinery (SAME R/t construction, warp, intrinsics).
 from tools.measure_pose_warp_dseg import (  # noqa: E402
@@ -96,6 +101,7 @@ from tools.measure_pose_warp_dseg import (  # noqa: E402
     intrinsics_at,
     warp_labels,
 )
+
 # Reuse the ladder's render primitives (SAME ramp + bilinear resize + byte est).
 from tools.measure_segnet_fooling_ladder import (  # noqa: E402
     _brotli_or_zlib,
@@ -249,9 +255,14 @@ def main(argv=None) -> int:
     ap.add_argument("--r1-check-pairs", type=int, default=96,
                     help="# pairs to reproduce the ladder R1 floor at k=0 (NO-FAKE pipeline faithfulness)")
     args = ap.parse_args(argv)
+    try:
+        dynamic_frontier = load_dynamic_frontier_target(repo_root=REPO)
+    except DynamicFrontierTargetError as exc:
+        raise RuntimeError(f"current canonical competitive target is unavailable: {exc}") from exc
 
     import torch
     import torch.nn.functional as F
+
     from tac.boundary_math.seg_core import load_real_segnet
     from tac.optimization.frame1_seg_repair_atoms import measure_segnet_argmax
 
@@ -437,11 +448,11 @@ def main(argv=None) -> int:
 
     # ---- verdict (reach + RATE axis, per the task's GREEN/AMBER/RED definition) ----
     # GREEN  : reach large + partition rate small enough that partition+pose+tiny lane
-    #          residual plausibly fits under frontier 0.191 -> build the n600 materializer.
+    #          residual plausibly fits under the current target -> build the n600 materializer.
     # AMBER  : marginal -> needs the 3D-scene approach or tighter coding.
     # RED    : reach tiny -> store-partition rate wall stands -> pivot to distortion-quant.
     # NOTE: k_star is the STRATIFIED reach (primary). The d_seg FLOOR is a SEPARATE axis.
-    frontier = 0.19110
+    frontier = dynamic_frontier.target_score
     rate_headroom = frontier - rate_partition_plus_pose
     if k_star <= 1 and persist_reach_k <= 1:
         verdict = "RED"
@@ -482,7 +493,8 @@ def main(argv=None) -> int:
         "authority": "numpy/CPU-torch (NEVER MPS)",
         "score_claim": False, "promotion_eligible": False, "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False, "promotable": False,
-        "frontier_pointer": "UNMOVED 0.19110",
+        "dynamic_frontier_target": dataclasses.asdict(dynamic_frontier),
+        "frontier_pointer": "REOPENED_CURRENT_CANONICAL_POINTER_UNMOVED_BY_THIS_TOOL",
         "cache": str(cache.relative_to(REPO)) if str(cache).startswith(str(REPO)) else str(cache),
         "n_pairs_cache": P, "anchors": anchors, "ks": ks,
         "R_operator": ("warp partition@384 -> render(class-mean + R1 sigma=1.0 ramp) -> bicubic UP "
@@ -523,7 +535,7 @@ def main(argv=None) -> int:
             "rate_pose_sidecar": rate_pose,
             "rate_partition_plus_pose": rate_partition_plus_pose,
             "store_everything_partition_wall_rate": 0.277,
-            "frontier_rate_for_reference": "frontier S=0.19110 (rate ~0.118 at PR95 size)",
+            "current_dynamic_frontier_score": frontier,
         },
         "verdict": verdict,
         "verdict_note": verdict_note,

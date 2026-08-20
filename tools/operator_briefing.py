@@ -21,6 +21,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import hashlib
 import json
 import os
@@ -291,8 +292,12 @@ from tac.optimizer.exact_ready_axis_repair import (  # noqa: E402
     plan_exact_ready_score_axis_repairs_from_audit,
 )
 from tac.score_target_filter import (  # noqa: E402
-    DEFAULT_SCORE_LOWERING_TARGET,
     decide_score_target_routing,
+    load_score_target_snapshot,
+)
+from tac.witness_dsl.dynamic_frontier_target import (  # noqa: E402
+    DynamicFrontierTargetError,
+    DynamicFrontierTargetSnapshot,
 )
 
 # Phase-1 supplementary lanes: pre-registered dispatches that don't fit the
@@ -462,7 +467,7 @@ PHASE_5_COMPOSITION_LANES = [
 def _annotate_score_target_lanes(
     lanes: list[dict[str, object]],
     *,
-    target_score: float,
+    target_snapshot: DynamicFrontierTargetSnapshot,
     active_only: bool,
 ) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
@@ -474,7 +479,7 @@ def _annotate_score_target_lanes(
         )
         decision = decide_score_target_routing(
             row.get("predicted_band"),
-            target_score=target_score,
+            target_snapshot=target_snapshot,
             keep_unknown=False,
         )
         row["score_target_routing"] = decision.to_dict()
@@ -538,13 +543,13 @@ def _lane_dispatch_routing(
 def _hidden_above_target_summary(
     lanes: list[dict[str, object]],
     *,
-    target_score: float,
+    target_snapshot: DynamicFrontierTargetSnapshot,
 ) -> str:
     hidden = [
         row
         for row in _annotate_score_target_lanes(
             lanes,
-            target_score=target_score,
+            target_snapshot=target_snapshot,
             active_only=False,
         )
         if not bool(row["dispatch_routing"]["active"])
@@ -555,7 +560,7 @@ def _hidden_above_target_summary(
         f"{row['lane_id']}[{row['dispatch_routing']['status']}]" for row in hidden
     )
     return (
-        f"\n\n  hidden inactive/above target {target_score:.4f}: "
+        f"\n\n  hidden inactive/above target {target_snapshot.target_score:.4f}: "
         f"{len(hidden)} row(s): {lane_ids}"
     )
 
@@ -581,12 +586,13 @@ def _score_target_line(lane: dict[str, object]) -> str:
 
 def _format_supplementary_lanes(
     *,
-    target_score: float = DEFAULT_SCORE_LOWERING_TARGET,
+    target_snapshot: DynamicFrontierTargetSnapshot | None = None,
     show_above_target: bool = False,
 ) -> str:
+    snapshot = target_snapshot or load_score_target_snapshot()
     lanes = _annotate_score_target_lanes(
         PHASE_1_SUPPLEMENTARY_LANES,
-        target_score=target_score,
+        target_snapshot=snapshot,
         active_only=not show_above_target,
     )
     lines = []
@@ -600,9 +606,16 @@ def _format_supplementary_lanes(
             f"    Operator one-liner:\n"
             f"      {lane['one_liner']}"
         )
-    text = "\n\n".join(lines) if lines else f"  (none active below target {target_score:.4f})"
+    text = (
+        "\n\n".join(lines)
+        if lines
+        else f"  (none active below target {snapshot.target_score:.4f})"
+    )
     if not show_above_target:
-        text += _hidden_above_target_summary(PHASE_1_SUPPLEMENTARY_LANES, target_score=target_score)
+        text += _hidden_above_target_summary(
+            PHASE_1_SUPPLEMENTARY_LANES,
+            target_snapshot=snapshot,
+        )
     return text
 
 
@@ -7095,12 +7108,13 @@ def _format_non_dispatchable_readiness_artifacts() -> str:
 
 def _format_gated_lanes(
     *,
-    target_score: float = DEFAULT_SCORE_LOWERING_TARGET,
+    target_snapshot: DynamicFrontierTargetSnapshot | None = None,
     show_above_target: bool = False,
 ) -> str:
+    snapshot = target_snapshot or load_score_target_snapshot()
     lanes = _annotate_score_target_lanes(
         PHASE_4_GATED_LANES,
-        target_score=target_score,
+        target_snapshot=snapshot,
         active_only=not show_above_target,
     )
     lines = []
@@ -7115,20 +7129,28 @@ def _format_gated_lanes(
             f"    Operator one-liner (post-gate):\n"
             f"      {lane['one_liner']}"
         )
-    text = "\n\n".join(lines) if lines else f"  (none active below target {target_score:.4f})"
+    text = (
+        "\n\n".join(lines)
+        if lines
+        else f"  (none active below target {snapshot.target_score:.4f})"
+    )
     if not show_above_target:
-        text += _hidden_above_target_summary(PHASE_4_GATED_LANES, target_score=target_score)
+        text += _hidden_above_target_summary(
+            PHASE_4_GATED_LANES,
+            target_snapshot=snapshot,
+        )
     return text
 
 
 def _format_composition_lanes(
     *,
-    target_score: float = DEFAULT_SCORE_LOWERING_TARGET,
+    target_snapshot: DynamicFrontierTargetSnapshot | None = None,
     show_above_target: bool = False,
 ) -> str:
+    snapshot = target_snapshot or load_score_target_snapshot()
     lanes = _annotate_score_target_lanes(
         PHASE_5_COMPOSITION_LANES,
-        target_score=target_score,
+        target_snapshot=snapshot,
         active_only=not show_above_target,
     )
     lines = []
@@ -7143,9 +7165,16 @@ def _format_composition_lanes(
             f"    Operator one-liner (post-gate):\n"
             f"      {lane['one_liner']}"
         )
-    text = "\n\n".join(lines) if lines else f"  (none active below target {target_score:.4f})"
+    text = (
+        "\n\n".join(lines)
+        if lines
+        else f"  (none active below target {snapshot.target_score:.4f})"
+    )
     if not show_above_target:
-        text += _hidden_above_target_summary(PHASE_5_COMPOSITION_LANES, target_score=target_score)
+        text += _hidden_above_target_summary(
+            PHASE_5_COMPOSITION_LANES,
+            target_snapshot=snapshot,
+        )
     return text
 
 
@@ -9200,20 +9229,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--top", type=int, default=20,
                         help="Cap dashboard rows (default: 20).")
     parser.add_argument(
-        "--target-score",
-        type=float,
-        default=DEFAULT_SCORE_LOWERING_TARGET,
-        help=(
-            "Default active-routing cutoff for predicted candidate rows "
-            f"(default: {DEFAULT_SCORE_LOWERING_TARGET:.2f}). Rows whose "
-            "predicted low cannot beat this remain historical unless "
-            "--show-above-target is supplied."
-        ),
-    )
-    parser.add_argument(
         "--show-above-target",
         action="store_true",
-        help="Show predicted rows above --target-score in human-readable sections.",
+        help="Show rows above the verified canonical dynamic frontier target.",
     )
     parser.add_argument("--skip-pareto", action="store_true",
                         help="Skip Phase 1 (Pareto pre-dispatch matrix).")
@@ -9239,6 +9257,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"FATAL: missing dependency tool {tool.relative_to(REPO_ROOT)}",
                   file=sys.stderr)
             return 2
+    try:
+        target_snapshot = load_score_target_snapshot()
+    except DynamicFrontierTargetError as exc:
+        print(f"FATAL: canonical dynamic frontier target unavailable: {exc}", file=sys.stderr)
+        return 2
     if args.refresh_provider_readiness and not CLOUD_PROVIDER_READINESS.is_file():
         print(
             f"FATAL: missing dependency tool {CLOUD_PROVIDER_READINESS.relative_to(REPO_ROOT)}",
@@ -9249,7 +9272,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.json:
         dispatch_claim_summary = _dispatch_claim_summary()
         out = {
-            "target_score": args.target_score,
+            "target_score": target_snapshot.target_score,
+            "dynamic_frontier_target": dataclasses.asdict(target_snapshot),
             "codex_inbox_summary": _codex_inbox_summary(),
             "dispatch_claim_summary": dispatch_claim_summary,
             "dispatch_claim_historical_summary": _dispatch_claim_historical_summary(),
@@ -9301,12 +9325,12 @@ def main(argv: list[str] | None = None) -> int:
             out["pareto"] = _run_json(PARETO, ["--json"])
             out["supplementary_lanes"] = _annotate_score_target_lanes(
                 PHASE_1_SUPPLEMENTARY_LANES,
-                target_score=args.target_score,
+                target_snapshot=target_snapshot,
                 active_only=False,
             )
             out["active_supplementary_lanes"] = _annotate_score_target_lanes(
                 PHASE_1_SUPPLEMENTARY_LANES,
-                target_score=args.target_score,
+                target_snapshot=target_snapshot,
                 active_only=True,
             )
             out["exact_eval_packets"] = _exact_eval_packet_summaries()
@@ -9318,23 +9342,23 @@ def main(argv: list[str] | None = None) -> int:
         if not args.skip_gated:
             out["gated_lanes"] = _annotate_score_target_lanes(
                 PHASE_4_GATED_LANES,
-                target_score=args.target_score,
+                target_snapshot=target_snapshot,
                 active_only=False,
             )
             out["active_gated_lanes"] = _annotate_score_target_lanes(
                 PHASE_4_GATED_LANES,
-                target_score=args.target_score,
+                target_snapshot=target_snapshot,
                 active_only=True,
             )
         if not args.skip_composition:
             out["composition_lanes"] = _annotate_score_target_lanes(
                 PHASE_5_COMPOSITION_LANES,
-                target_score=args.target_score,
+                target_snapshot=target_snapshot,
                 active_only=False,
             )
             out["active_composition_lanes"] = _annotate_score_target_lanes(
                 PHASE_5_COMPOSITION_LANES,
-                target_score=args.target_score,
+                target_snapshot=target_snapshot,
                 active_only=True,
             )
         print(json.dumps(out, indent=2, default=str))
@@ -9371,7 +9395,7 @@ def main(argv: list[str] | None = None) -> int:
         parts.append(_section(
             "Phase 1 supplementary — pre-registered non-Pareto lanes",
             _format_supplementary_lanes(
-                target_score=args.target_score,
+                target_snapshot=target_snapshot,
                 show_above_target=args.show_above_target,
             ),
         ))
@@ -9409,7 +9433,7 @@ def main(argv: list[str] | None = None) -> int:
         parts.append(_section(
             "Phase 4 — Gated next-tick lanes (sequential validation)",
             _format_gated_lanes(
-                target_score=args.target_score,
+                target_snapshot=target_snapshot,
                 show_above_target=args.show_above_target,
             ),
         ))
@@ -9417,7 +9441,7 @@ def main(argv: list[str] | None = None) -> int:
         parts.append(_section(
             "Phase 5 — Meta-composition lanes (single-dispatch payoff of multi-sister stacks)",
             _format_composition_lanes(
-                target_score=args.target_score,
+                target_snapshot=target_snapshot,
                 show_above_target=args.show_above_target,
             ),
         ))

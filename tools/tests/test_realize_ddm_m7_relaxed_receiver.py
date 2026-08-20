@@ -5,11 +5,15 @@ import hashlib
 import io
 import json
 import zipfile
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import numpy as np
 import pytest
 
+import tools.realize_ddm_m7_relaxed_receiver as realization_module
+from tac.canonical_frontier_pointer import POINTER_SCHEMA_VERSION
+from tac.witness_dsl.dynamic_frontier_target import load_dynamic_frontier_target
 from tools.realize_ddm_m7_relaxed_receiver import (
     CHECKPOINT_SCHEMA,
     EVIDENCE_AXIS,
@@ -26,9 +30,11 @@ from tools.realize_ddm_m7_relaxed_receiver import (
     measure_batch_stream,
     parse_args,
     require_roundtrip_identity,
+    reroute_final_receipt_against_current_frontier,
     validate_archive_contract,
     validate_config_paths,
     verify_final_receipt,
+    verify_historical_final_receipt,
     write_batch_checkpoint,
 )
 
@@ -45,6 +51,41 @@ def _config_mapping(tmp_path: Path) -> dict[str, object]:
 
 def _config(tmp_path: Path) -> RealizeConfig:
     return RealizeConfig.from_mapping(_config_mapping(tmp_path))
+
+
+def _dynamic_frontier_snapshot(repo: Path, *, score: float = 0.25):
+    now = datetime.now(UTC).isoformat()
+    entry = {
+        "score": score,
+        "rank": 1,
+        "name": "synthetic-public-row",
+        "pr_number": 9001,
+        "pr_url": "https://invalid.example/synthetic",
+    }
+    payload = {
+        "schema_version": POINTER_SCHEMA_VERSION,
+        "our_local_frontier_contest_cpu": None,
+        "our_local_frontier_contest_cuda": None,
+        "submitted_pr_number_for_current_frontier": None,
+        "upstream_leaderboard_snapshot": {
+            "best_entry": dict(entry),
+            "entries": [dict(entry)],
+        },
+        "upstream_leaderboard_snapshot_at_utc": now,
+        "last_refreshed_utc": now,
+        "auto_update_on_dispatch_completion": True,
+        "pointer_refresh_command": "synthetic-fixture-do-not-run",
+        "refresh_provenance": {"fixture": True},
+        "effective_frontier": {
+            "score": 0.001,
+            "source": "forged-cache-must-not-steer",
+            "axis": "forged",
+        },
+    }
+    pointer = repo / ".omx/state/canonical_frontier_pointer.json"
+    pointer.parent.mkdir(parents=True, exist_ok=True)
+    pointer.write_text(json.dumps(payload), encoding="utf-8")
+    return load_dynamic_frontier_target(repo_root=repo, now_utc_iso=now), now
 
 
 def _materialize_required_paths(tmp_path: Path) -> None:
@@ -205,6 +246,12 @@ def test_typed_config_accepts_only_exact_schema_and_constants(tmp_path: Path) ->
     authority["score_claim"] = True
     with pytest.raises(RealizationRefusal, match="sealed value"):
         RealizeConfig.from_mapping(authority)
+
+    stale_target = _config_mapping(tmp_path)
+    stale_target["pointer_score"] = 0.001
+    stale_target["fork_threshold"] = 0.001
+    with pytest.raises(RealizationRefusal, match="unknown config keys"):
+        RealizeConfig.from_mapping(stale_target)
 
 
 def test_cli_exposes_only_required_config() -> None:
@@ -426,15 +473,19 @@ def test_synthetic_scorer_free_batch_path() -> None:
     ("d_seg", "d_pose", "expected_routing"),
     [
         (0.0, 0.0, ROUTING_CANDIDATE),
-        (0.001, 0.0, ROUTING_NOT_CANDIDATE),
+        (0.002, 0.0, ROUTING_NOT_CANDIDATE),
     ],
 )
 def test_final_routing_and_false_authority_flags(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
     d_seg: float,
     d_pose: float,
     expected_routing: str,
 ) -> None:
+    frontier_repo = tmp_path / "frontier"
+    snapshot, now = _dynamic_frontier_snapshot(frontier_repo)
+    monkeypatch.setattr(realization_module, "_DYNAMIC_TARGET_REPO_ROOT", frontier_repo)
     receipt = build_final_receipt(
         config=_config(tmp_path),
         identity_bundle=_identity_bundle(),
@@ -442,22 +493,35 @@ def test_final_routing_and_false_authority_flags(
         roundtrip=_roundtrip(),
         pair_rows=_pair_rows(d_seg, d_pose),
         checkpoints=_checkpoint_summaries(),
+        frontier_snapshot=snapshot,
+        now_utc_iso=now,
     )
     assert receipt["routing_label"] == expected_routing
     assert receipt["evidence_axis"] == EVIDENCE_AXIS
     assert receipt["score_claim"] is False
     assert receipt["promotion_eligible"] is False
     assert receipt["ready_for_exact_eval_dispatch"] is False
+    assert receipt["dynamic_frontier_target"]["target_score"] == snapshot.target_score
+    assert receipt["dynamic_frontier_target"]["pointer_sha256"] == snapshot.pointer_sha256
+    assert receipt["comparisons"]["dynamic_frontier_target_score"] == snapshot.target_score
     assert (
         receipt["counterfactual_to_realized_score_gap"]["rate"] == 0.0
     )
     assert "different high-byte exact-C1 object" in (
         receipt["arithmetic_counterfactual"]["caveat"]
     )
-    verify_final_receipt(receipt)
+    verify_final_receipt(
+        receipt, frontier_snapshot=snapshot, now_utc_iso=now
+    )
 
 
-def test_receipt_verifier_refuses_authority_escalation(tmp_path: Path) -> None:
+def test_receipt_verifier_refuses_authority_escalation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    frontier_repo = tmp_path / "frontier"
+    snapshot, now = _dynamic_frontier_snapshot(frontier_repo)
+    monkeypatch.setattr(realization_module, "_DYNAMIC_TARGET_REPO_ROOT", frontier_repo)
     receipt = build_final_receipt(
         config=_config(tmp_path),
         identity_bundle=_identity_bundle(),
@@ -465,10 +529,89 @@ def test_receipt_verifier_refuses_authority_escalation(tmp_path: Path) -> None:
         roundtrip=_roundtrip(),
         pair_rows=_pair_rows(0.0, 0.0),
         checkpoints=_checkpoint_summaries(),
+        frontier_snapshot=snapshot,
+        now_utc_iso=now,
     )
     receipt["promotion_eligible"] = True
     with pytest.raises(
         RealizationRefusal,
         match=r"receipt_sha256 mismatch|authority field",
     ):
-        verify_final_receipt(receipt)
+        verify_final_receipt(
+            receipt, frontier_snapshot=snapshot, now_utc_iso=now
+        )
+
+
+def test_final_routing_refuses_forged_stale_and_path_swapped_snapshots(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    frontier_repo = tmp_path / "canonical"
+    snapshot, now = _dynamic_frontier_snapshot(frontier_repo)
+    monkeypatch.setattr(realization_module, "_DYNAMIC_TARGET_REPO_ROOT", frontier_repo)
+    kwargs = {
+        "config": _config(tmp_path),
+        "identity_bundle": _identity_bundle(),
+        "archive": _archive_custody(),
+        "roundtrip": _roundtrip(),
+        "pair_rows": _pair_rows(0.0, 0.0),
+        "checkpoints": _checkpoint_summaries(),
+        "now_utc_iso": now,
+    }
+    with pytest.raises(RealizationRefusal, match="changed after snapshot"):
+        build_final_receipt(
+            **kwargs,
+            frontier_snapshot=dataclasses.replace(snapshot, target_score=0.001),
+        )
+    stale_time = (datetime.fromisoformat(now) - timedelta(hours=25)).isoformat()
+    with pytest.raises(RealizationRefusal, match="24-hour"):
+        build_final_receipt(
+            **kwargs,
+            frontier_snapshot=dataclasses.replace(
+                snapshot, last_refreshed_utc=stale_time
+            ),
+        )
+    swapped_repo = tmp_path / "swapped"
+    swapped, _ = _dynamic_frontier_snapshot(swapped_repo, score=0.24)
+    with pytest.raises(RealizationRefusal, match="noncanonical pointer path"):
+        build_final_receipt(**kwargs, frontier_snapshot=swapped)
+
+
+def test_historical_receipt_survives_pointer_move_but_new_routing_reopens_current(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    frontier_repo = tmp_path / "frontier"
+    historical, now = _dynamic_frontier_snapshot(frontier_repo, score=0.25)
+    monkeypatch.setattr(realization_module, "_DYNAMIC_TARGET_REPO_ROOT", frontier_repo)
+    receipt = build_final_receipt(
+        config=_config(tmp_path),
+        identity_bundle=_identity_bundle(),
+        archive=_archive_custody(),
+        roundtrip=_roundtrip(),
+        pair_rows=_pair_rows(0.0, 0.0),
+        checkpoints=_checkpoint_summaries(),
+        frontier_snapshot=historical,
+        now_utc_iso=now,
+    )
+    assert receipt["routing_label"] == ROUTING_CANDIDATE
+
+    current, current_now = _dynamic_frontier_snapshot(frontier_repo, score=0.10)
+    verify_historical_final_receipt(receipt)
+    with pytest.raises(RealizationRefusal, match="does not bind the current"):
+        verify_final_receipt(
+            receipt,
+            frontier_snapshot=current,
+            now_utc_iso=current_now,
+        )
+
+    audit = reroute_final_receipt_against_current_frontier(
+        receipt,
+        frontier_snapshot=current,
+        now_utc_iso=current_now,
+    )
+    assert audit["historical_target_score"] == 0.25
+    assert audit["current_target_score"] == 0.10
+    assert audit["pointer_moved"] is True
+    assert audit["current_routing_label"] == ROUTING_NOT_CANDIDATE
+    assert audit["score_claim"] is False

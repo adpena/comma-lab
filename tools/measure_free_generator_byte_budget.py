@@ -62,7 +62,7 @@ for _p in (str(_REPO / "src"), str(_REPO)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from tac.boundary_math.contour_codec import _LZMA_FILTERS, partition_description_bytes  # noqa: E402
+from tac.boundary_math.dense_raster_lzma_baseline import _LZMA_FILTERS, partition_description_bytes  # noqa: E402
 from tac.contest_score import UNCOMPRESSED_SIZE_BYTES  # noqa: E402
 
 N_CLASSES = 5

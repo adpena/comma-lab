@@ -30,7 +30,7 @@ if str(REPO) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from tac.boundary_math.contour_codec import encode_partition  # noqa: E402
+from tac.boundary_math.dense_raster_lzma_baseline import encode_partition  # noqa: E402
 from tac.boundary_math.defect_network_rate_code import (  # noqa: E402
     encode_defect_tube_recode,
 )
@@ -82,7 +82,7 @@ def _execution_source_custody() -> dict[str, dict[str, Any]]:
         "phase_residual_carrier": REPO / "src/tac/boundary_math/phase_residual_carrier.py",
         "xi_spline_residual_coder": REPO
         / "src/tac/boundary_math/xi_spline_residual_coder.py",
-        "contour_codec": REPO / "src/tac/boundary_math/contour_codec.py",
+        "dense_raster_lzma_baseline": REPO / "src/tac/boundary_math/dense_raster_lzma_baseline.py",
         "class_role_detector": REPO / "src/tac/boundary_math/movable_deshare.py",
         "through_r_canary_tool": REPO / "tools/levelset_byte_close_and_eval.py",
     }
@@ -240,7 +240,7 @@ def run(gt_cache: Path, output_dir: Path, through_r_report: Path | None) -> dict
             "reconstruction_bit_identical": incumbent_report.reconstruction_bit_identical,
             "review_status": "fresh-eyes-reviewed(0); incumbent source inspected this session",
         },
-        "contour_codec_context": {
+        "dense_raster_lzma_baseline_context": {
             "meaning": "lossless full label-map description baseline; not co-stored with the phase recode",
             "sum_payload_bytes_600": int(sum(contour_sizes)),
             "mean_payload_bytes_per_frame": float(np.mean(contour_sizes)),
