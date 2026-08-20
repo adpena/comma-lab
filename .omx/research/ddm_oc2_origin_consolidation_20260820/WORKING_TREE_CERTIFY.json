@@ -1,0 +1,1033 @@
+{
+ "arm": "ddm_oc2",
+ "date_utc": "2026-08-20",
+ "what": "Working-tree files DELIBERATELY NOT committed during the origin consolidation, with the certify record the certify-or-block rule requires.",
+ "policy": "Operator steer 2026-08-20: authored code and memos are never certified-in-place; payloads, checkpoints, videos and archives stay on the SSD tier. Everything below is payload/rebuildable/runtime-noise, not authorship.",
+ "totals": {
+  "files": 144,
+  "bytes": 87872557,
+  "by_ext": {
+   "log": 27,
+   "json": 5,
+   "npz": 76,
+   "jsonl": 2,
+   "zip": 2,
+   "dr7t": 1,
+   "bin": 1,
+   "pyc": 5,
+   "": 1,
+   "pid": 24
+  }
+ },
+ "rebuildable": "Every npz/log entry is reproducible by re-running its arm's launch script, which IS committed; the receipt JSON beside each carries the measured findings.",
+ "files": [
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/run.log",
+   "bytes": 1886885,
+   "sha256": "6675a202c981d6921cf6bb145154f6745cd2dafbe2520cb71162c155b94684a7",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/result.json",
+   "bytes": 1884175,
+   "sha256": "72b5f4f2d7953f4f5880f22d6399d5a089558716655c92752c697b472db12d32",
+   "ext": "json",
+   "reason": "oversized derived result JSON/JSONL (>200KB) \u2014 rebuildable run output, SSD tier."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step006000.npz",
+   "bytes": 1448810,
+   "sha256": "5a219b611909c683ebd439c918c286dca5a88cf1fe87e10fcb557f1f71b8a4a2",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx.latest.npz",
+   "bytes": 1448810,
+   "sha256": "5a219b611909c683ebd439c918c286dca5a88cf1fe87e10fcb557f1f71b8a4a2",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step005750.npz",
+   "bytes": 1422949,
+   "sha256": "b47a2676ecacd7d97ac98e026ee3107db4cb9a605ec2c92434f8435afd541029",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step005500.npz",
+   "bytes": 1397152,
+   "sha256": "655a5fefbf4bdf04b7ea5e8636d61e62f92260fa493e1453b3b3993002d8b396",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mem_probe_resume/mlx_stage_step005253.npz",
+   "bytes": 1371875,
+   "sha256": "08cb2035ae2e233b6a76553cccd4f02f6f35627bd2a4dd51994503d880ebc7cb",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mem_probe_resume/mlx.latest.npz",
+   "bytes": 1371875,
+   "sha256": "08cb2035ae2e233b6a76553cccd4f02f6f35627bd2a4dd51994503d880ebc7cb",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step005250.npz",
+   "bytes": 1371345,
+   "sha256": "0ae37eb962a93040882b8aa195921f9525b194d4445d61a691300feb7f70e686",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step005000.npz",
+   "bytes": 1345457,
+   "sha256": "2163f3db05aed47c4b978edc565b6d23a31b2307cc5848f776d45a1bad44e81c",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx.latest.npz",
+   "bytes": 1340103,
+   "sha256": "29b755b296f82d5fcc6536e1a8025ec7aa10f377ce81d3bf58ad996951f48d42",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step005000.npz",
+   "bytes": 1340103,
+   "sha256": "29b755b296f82d5fcc6536e1a8025ec7aa10f377ce81d3bf58ad996951f48d42",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step004750.npz",
+   "bytes": 1319569,
+   "sha256": "6d935e24f2c3d3e89515a580ba1340496053ee342d329868743ce535e6f7aa1d",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step004750.npz",
+   "bytes": 1314520,
+   "sha256": "ca3cc83114f218ea2bf30eda063412a0581f26e3c58cab89d41ef2d35c99eef0",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step004500.npz",
+   "bytes": 1293712,
+   "sha256": "a199a743b0fff3a10097faf5fd805bec2bbcf41b4699b299e01fcc697db8d888",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step004500.npz",
+   "bytes": 1288948,
+   "sha256": "44f635c9901666825dc34a660258709d314a2b080dca9790696ed5640f0a36ba",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step004250.npz",
+   "bytes": 1267932,
+   "sha256": "62032e604ff591eb497932f4874d8e78670f6ff33547e876e0f9dedfe647c9c5",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step004250.npz",
+   "bytes": 1263473,
+   "sha256": "492f78555edf7ad04a95eebdcf099dc9ee3aefa64792d148623334d9678aeacf",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step004000.npz",
+   "bytes": 1242150,
+   "sha256": "d99e83ef484446c8dbb2342e28b573a7d02f0c9b01fb1794cd176e397dfc80c9",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step004000.npz",
+   "bytes": 1237968,
+   "sha256": "f49d58c0dece2035f67e875c18bfd914d1be5bb4a4aa97b4cb87ff73442eb4bc",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step003750.npz",
+   "bytes": 1216401,
+   "sha256": "952bed61dd8f6d8b5b4ab16e1fa5d446400b85fcba8213f5443f5c5188bf4eb4",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step003750.npz",
+   "bytes": 1212508,
+   "sha256": "45b3d5e16cd9e756a028946f3b482dcb60e1b66de0e59d6421de8fb1c1bd8f5f",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step003500.npz",
+   "bytes": 1190715,
+   "sha256": "14682f7b6526d167e0a6b272ed371e74f1fd7d4a5821910b778fcfaa95ddc2a5",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mem_probe_resume/mlx.latest.npz",
+   "bytes": 1187546,
+   "sha256": "c5182afa4133e4c18202c6125790d5de884cc7686ca0299a743bd75cfa847cce",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mem_probe_resume/mlx_stage_step003503.npz",
+   "bytes": 1187546,
+   "sha256": "c5182afa4133e4c18202c6125790d5de884cc7686ca0299a743bd75cfa847cce",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mem_probe_resume/mlx_stage_step003501.npz",
+   "bytes": 1187268,
+   "sha256": "abbd212aea9df2f1c20d493c3f1c2e3a91beca66568db2cb4820c24abf089d4b",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step003500.npz",
+   "bytes": 1187127,
+   "sha256": "906091baa8559a37247fc33b7a29dd368e03ef016d88cfebbfb649d3acdbbebc",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step003250.npz",
+   "bytes": 1165040,
+   "sha256": "543ad45a32ae6d4ac84cfd7fbb6845afb0c7bfc29525992dcf9744ec7540c382",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_rr16_20260807/runtime_checks/repeat_final_a/checkpoint_copies/mlx_stage_step003250.npz",
+   "bytes": 1165040,
+   "sha256": "543ad45a32ae6d4ac84cfd7fbb6845afb0c7bfc29525992dcf9744ec7540c382",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_rr16_20260807/runtime_checks/repeat_final_gt_a/checkpoint_copies/mlx_stage_step003250.npz",
+   "bytes": 1165040,
+   "sha256": "543ad45a32ae6d4ac84cfd7fbb6845afb0c7bfc29525992dcf9744ec7540c382",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_rr16_20260807/runtime_checks/repeat_final_gt_b/checkpoint_copies/mlx_stage_step003250.npz",
+   "bytes": 1165040,
+   "sha256": "543ad45a32ae6d4ac84cfd7fbb6845afb0c7bfc29525992dcf9744ec7540c382",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step003250.npz",
+   "bytes": 1161750,
+   "sha256": "7bd9c5de26e64f484aefb07f97c2f52589e5bdae90454664f9b6dd2160dc1223",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step003000.npz",
+   "bytes": 1139341,
+   "sha256": "293109877ae6b1af1ddeaa76ad8ba6a98ad9b34ba8ba7968957eb0523d1a5cc5",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step003000.npz",
+   "bytes": 1136355,
+   "sha256": "a192673cffb6e722b027d346c41d4b19bd377a1f5eb95d9aac5085ba4886d45b",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step002750.npz",
+   "bytes": 1113416,
+   "sha256": "b7c4a9ff8484f82577a82b2ed27d8bdbf722d2771f29465f050ab9e9eadf45e6",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step002750.npz",
+   "bytes": 1110722,
+   "sha256": "fdafe0261964006ea39c68850c9034460e77d817787991c663ae1e286a0f7978",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step002500.npz",
+   "bytes": 1087509,
+   "sha256": "4305e252ba2a33da425f72826e382cfdd24da94d7cdc12dc133dc4ce55d97ff2",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step002500.npz",
+   "bytes": 1085105,
+   "sha256": "21e9d93438387e35a643c8332e0df765f8ce066b27f7cb5a09c1def8f87e6c1c",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step002250.npz",
+   "bytes": 1061615,
+   "sha256": "8899359bfb3d3e696c624ac96aa9bdffc9cb8eaedbdc7df1180995113b315517",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step002250.npz",
+   "bytes": 1059509,
+   "sha256": "329aaa34882ced5f048133fd7ad5cb01b29598443dd1e6d435287fac61cdc963",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step002000.npz",
+   "bytes": 1035706,
+   "sha256": "beca53298366ee13f60429b7ab8b5536bb47ec28048e6604314e62a350955bed",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step002000.npz",
+   "bytes": 1033897,
+   "sha256": "4951b1e2211b9bb4caca2d8900b2bc48a7f8363fa5def5528b185a4f34306b04",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step001750.npz",
+   "bytes": 1009816,
+   "sha256": "6e39ec1c091a412452abec209c67d1a4ba473b7a7668f64c71fe1b491300fcba",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step001750.npz",
+   "bytes": 1008307,
+   "sha256": "f07a9f8da2cca987554f2d762632c23c94bc67608dd4fd0378521583bf93831e",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step001500.npz",
+   "bytes": 983954,
+   "sha256": "b01ee1e41018dda863c2eb6c3e708a71c512b002b765a1462b27ff40ed35986a",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step001500.npz",
+   "bytes": 982704,
+   "sha256": "8991f0bc22eee24c705666e71f3fc442be680a60a154306256301614414c0b42",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step001250.npz",
+   "bytes": 958111,
+   "sha256": "cc57c115d24b626b95d08a99227351dd40d094d8144e24e1c0727750e3f38ab7",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step001250.npz",
+   "bytes": 957105,
+   "sha256": "d27dc201388f94c7eea53e0bc083db929f1348ee30b94407b9136106420ed2e1",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step001000.npz",
+   "bytes": 932280,
+   "sha256": "08b0e34dedc95365017f1c79ba9ceb5c40676398ca5a1f1851d0b62a1cd31a55",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step001000.npz",
+   "bytes": 931498,
+   "sha256": "3c962e72fa5b782d604878936a5a3ff782f11d8fe1385d126372567d6c44fcb5",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step000750.npz",
+   "bytes": 906727,
+   "sha256": "96f4190ab86d3bcbb14ea1cb4bed1dd6334f249442801b9b54b22440a157d050",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step000750.npz",
+   "bytes": 906167,
+   "sha256": "e4a0ae81ae68e7748e396cf3370a68d9aa02e722617247c5a975d20d64608b93",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step000500.npz",
+   "bytes": 881177,
+   "sha256": "72c7a5ff0681958d0633f4f6913a96412dce08db68adbd392aea9bb46120ddd3",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step000500.npz",
+   "bytes": 880831,
+   "sha256": "52570dd9eee3e9cbe54007a96338cfff87ea9ea3e06035bbb23c58f178fa5902",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mlx_stage_step000250.npz",
+   "bytes": 855626,
+   "sha256": "43334c2cf6b77c0b59371e62ec65395b0d71e885f88b08499069af8ed6bfe202",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mlx_stage_step000250.npz",
+   "bytes": 855484,
+   "sha256": "8bb987eb9bd1b2997f478601e3b5397b61ccb2398a715801d1ae557d2a8bc468",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma/run_1/mlx.latest.npz",
+   "bytes": 831396,
+   "sha256": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma/run_1/mlx_stage_step000005.npz",
+   "bytes": 831396,
+   "sha256": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma/run_2/mlx.latest.npz",
+   "bytes": 831396,
+   "sha256": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma/run_2/mlx_stage_step000005.npz",
+   "bytes": 831396,
+   "sha256": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma/run_3/mlx.latest.npz",
+   "bytes": 831396,
+   "sha256": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma/run_3/mlx_stage_step000005.npz",
+   "bytes": 831396,
+   "sha256": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma/run_4/mlx.latest.npz",
+   "bytes": 831396,
+   "sha256": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma/run_4/mlx_stage_step000005.npz",
+   "bytes": 831396,
+   "sha256": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma/run_5/mlx.latest.npz",
+   "bytes": 831396,
+   "sha256": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma/run_5/mlx_stage_step000005.npz",
+   "bytes": 831396,
+   "sha256": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma/run_fp32/mlx.latest.npz",
+   "bytes": 831391,
+   "sha256": "9f5ec7ef3ee5cb6b376e1cfbc201a9ffd950870f2969c42c3a08884d06236302",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma/run_fp32/mlx_stage_step000005.npz",
+   "bytes": 831391,
+   "sha256": "9f5ec7ef3ee5cb6b376e1cfbc201a9ffd950870f2969c42c3a08884d06236302",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/run/n120_metal/mem_probe/mlx.latest.npz",
+   "bytes": 831272,
+   "sha256": "88afd5dbace08796ac1beb8c04bbadd8d39fe280eb59487ead18c8849748c0e3",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/run/n120_metal/mem_probe/mlx_stage_step000003.npz",
+   "bytes": 831272,
+   "sha256": "88afd5dbace08796ac1beb8c04bbadd8d39fe280eb59487ead18c8849748c0e3",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/run/fp32_mem_probe/mlx.latest.npz",
+   "bytes": 831269,
+   "sha256": "6f06c1ffefe1363299fe518b59ba44fa25d3bb18ff05d1135c886a7c74e168b1",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/run/fp32_mem_probe/mlx_stage_step000003.npz",
+   "bytes": 831269,
+   "sha256": "6f06c1ffefe1363299fe518b59ba44fa25d3bb18ff05d1135c886a7c74e168b1",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mem_probe/mlx.latest.npz",
+   "bytes": 830712,
+   "sha256": "2dcfbddf49f18c305c40afab5b650fddb452289ec3b22636f02e3263f27187d3",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mem_probe/mlx_stage_step000003.npz",
+   "bytes": 830712,
+   "sha256": "2dcfbddf49f18c305c40afab5b650fddb452289ec3b22636f02e3263f27187d3",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/mem_probe/mlx.latest.npz",
+   "bytes": 830611,
+   "sha256": "fa779466d6b59d4ef1c50e638c6808e7e6ee65594f54a249b0a8bcaef1ebf4f4",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/mem_probe/mlx_stage_step000003.npz",
+   "bytes": 830611,
+   "sha256": "fa779466d6b59d4ef1c50e638c6808e7e6ee65594f54a249b0a8bcaef1ebf4f4",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mem_probe/mlx.latest.npz",
+   "bytes": 830611,
+   "sha256": "34f6e5f72504a99f90fa7ca97029b1ce317f50ec18e2603f77f3cf4c902b615b",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mem_probe/mlx_stage_step000003.npz",
+   "bytes": 830611,
+   "sha256": "34f6e5f72504a99f90fa7ca97029b1ce317f50ec18e2603f77f3cf4c902b615b",
+   "ext": "npz",
+   "reason": "MLX training checkpoint / array payload \u2014 rebuildable bulk; disk rules route this to the SSD tier, not git."
+  },
+  {
+   "path": "reports/ddm_bp2/reach_n600.jsonl",
+   "bytes": 678373,
+   "sha256": "448d0a582717306dcb9ba5fac40f38c5d8fd5abcc095f5cd016b39319b90e886",
+   "ext": "jsonl",
+   "reason": "oversized derived result JSON/JSONL (>200KB) \u2014 rebuildable run output, SSD tier."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma_leg_v2_logs/run.log",
+   "bytes": 438754,
+   "sha256": "a0fa32f3d26674ce79968ee4e1fddc9d13072475bd66c0137422183b983c81bc",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_fz3_20260804/sub_final_eval_01/archive.zip",
+   "bytes": 358084,
+   "sha256": "ad5dd0e4fbe5b13ab53a5995a6d77cc558c25f40b63f894ea50ad336bd50fb66",
+   "ext": "zip",
+   "reason": "payload artifact with manifest custody elsewhere; bytes belong on the SSD tier."
+  },
+  {
+   "path": ".omx/research/ddm_mx1t_20260807/mx1t_driver_result.json",
+   "bytes": 321412,
+   "sha256": "6a6845795c458d996ebcebdf840bc54f11b1ac04edf17dbe77c1eb669df89d20",
+   "ext": "json",
+   "reason": "oversized derived result JSON/JSONL (>200KB) \u2014 rebuildable run output, SSD tier."
+  },
+  {
+   "path": ".omx/research/ddm_mx1t_20260807/mx1t_facets_result.json",
+   "bytes": 298899,
+   "sha256": "ebb7e89fbbc5fad27325e3bf9085c694898280a453a543bf85346ef54d6f6491",
+   "ext": "json",
+   "reason": "oversized derived result JSON/JSONL (>200KB) \u2014 rebuildable run output, SSD tier."
+  },
+  {
+   "path": "ep854_tokens.dr7t",
+   "bytes": 271505,
+   "sha256": "1bab7aef76b634165d3befa689d97503d7292da83b5dcfa38657eb7e3cae7abb",
+   "ext": "dr7t",
+   "reason": "payload artifact with manifest custody elsewhere; bytes belong on the SSD tier."
+  },
+  {
+   "path": ".omx/research/ddm_fz3_20260804/sub_map_repair/archive.zip",
+   "bytes": 240992,
+   "sha256": "eada9fe852ac8ee505fa3094fc602b4178fab2719ee990887a4533a2eccf0c7f",
+   "ext": "zip",
+   "reason": "payload artifact with manifest custody elsewhere; bytes belong on the SSD tier."
+  },
+  {
+   "path": ".omx/research/ddm_fz3_20260804/sub_map_repair/archive/0.bin",
+   "bytes": 240884,
+   "sha256": "a7bc3505f48b53a2cf2b37d241c412305d92d0b83e0fdf79c09d7e951aea2ffb",
+   "ext": "bin",
+   "reason": "payload artifact with manifest custody elsewhere; bytes belong on the SSD tier."
+  },
+  {
+   "path": "reports/ddm_bp2/overlap_n600.jsonl",
+   "bytes": 232003,
+   "sha256": "a93293bfdbe18896f74d1a6da01658157987aa2a7031ee4752df2223f185d90b",
+   "ext": "jsonl",
+   "reason": "oversized derived result JSON/JSONL (>200KB) \u2014 rebuildable run output, SSD tier."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/seal_metal_leg_logs/run.log",
+   "bytes": 129603,
+   "sha256": "977d9eaad77f1fc8fcf8e12252261158d1914500db96c32726357ae61728e69d",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mem_probe_resume/run.log",
+   "bytes": 128006,
+   "sha256": "3844de3a0f842997f049361445579710ae249d1e1a878ad10c8e5f03ddd15125",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mem_probe/run.log",
+   "bytes": 64615,
+   "sha256": "15bbb0c1bcefc7291daf7e2a6bf3d82445596b6e5f68d178c83d76ca60472b23",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": "experiments/ddm_hm1_20260810/__pycache__/run_hm1_frame_dim_curve.cpython-313.pyc",
+   "bytes": 48715,
+   "sha256": "288a9bb44281c8eb2f833520388f59e48b34f746ebc5dff4a160f3fedea5f91e",
+   "ext": "pyc",
+   "reason": "Python bytecode \u2014 gitignored build product."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/dseg_leg_logs/run.log",
+   "bytes": 44562,
+   "sha256": "aa6a93773bf3f9e4027e0bc8e2f2ca0cdf3dd173dbcb84ef6db48fc7ec111b37",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_se1_20260804/__pycache__/measure_se1_survival.cpython-313.pyc",
+   "bytes": 27810,
+   "sha256": "903be6cbfba5b5cf79c3802a20b03162b2c09079db07262a016fdb191c833bfc",
+   "ext": "pyc",
+   "reason": "Python bytecode \u2014 gitignored build product."
+  },
+  {
+   "path": ".omx/research/ddm_hb3_20260808/clean60/run.log",
+   "bytes": 26020,
+   "sha256": "0d677d2fb936e8ca018febdf802f8ce8a81cd408c8c228366e303d86f31a56f9",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_rc64p_native_cpu_decode_20260810_modal/contest_cpu_diag/contest_auth_eval.stdout.log",
+   "bytes": 20796,
+   "sha256": "89a3a95c5d47aa7a8ed3112ff45235e3fd2bad0bce506f1cbd4c780d9751e1de",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_hb3_20260808/resume_qat_lrmatched/run.log",
+   "bytes": 14195,
+   "sha256": "6574879c213e4f5b5412fa0a6bcc6b59467b591dd8c0e0e4569f6d546987c5e1",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_hb3_20260808/run/run.log",
+   "bytes": 5562,
+   "sha256": "44ed4eb7a96cf0921b7684bc471e0b4bf9cc6679a19224bb97dc3d87b3bb0b8e",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": "experiments/ddm_hm1_20260810/__pycache__/resume_hm1_full.cpython-313.pyc",
+   "bytes": 4758,
+   "sha256": "c363e81267a66517ae4cc9ffa9711e20b4ea8ee0b74d8aa2e3bdee92d0ba67f2",
+   "ext": "pyc",
+   "reason": "Python bytecode \u2014 gitignored build product."
+  },
+  {
+   "path": "experiments/ddm_hm1_20260810/__pycache__/test_hm1_frame_dim_curve.cpython-313.pyc",
+   "bytes": 3974,
+   "sha256": "903247bbff91b76c4a7428b91c67210605ef2e5b8b18f2701668723df26f414e",
+   "ext": "pyc",
+   "reason": "Python bytecode \u2014 gitignored build product."
+  },
+  {
+   "path": "experiments/ddm_hm1_20260810/__pycache__/resume_hm1_cell.cpython-313.pyc",
+   "bytes": 3688,
+   "sha256": "e0c71aadf383386ab52e15b7b472a559a96d8199a65bb5dffde2767617a5086e",
+   "ext": "pyc",
+   "reason": "Python bytecode \u2014 gitignored build product."
+  },
+  {
+   "path": ".omx/research/ddm_wc1_20260807/bench_run/run.log",
+   "bytes": 3470,
+   "sha256": "926f25c753ccc2dd9d24660f84ab5745f56fcc6694f381cb87a6336a9d88813a",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_wc3_20260808/profile_run/run.log",
+   "bytes": 2744,
+   "sha256": "f3102bad09f2668a968145ab5ea59b8cd42e8b12062ddeb9e80c79c58a102bb8",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_rc64p_native_cpu_decode_20260810_modal/contest_cpu/contest_auth_eval.stderr.log",
+   "bytes": 2274,
+   "sha256": "ef29bfa49c344dfb3f8eff44625b48f737a1adcdc16c38961c6614bfaaffab04",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/run.log",
+   "bytes": 1734,
+   "sha256": "ca794451dc3eeab7d92aaa5d91c313f5657431342e051ed8c0a60b811dd2662a",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_rc64p_native_cpu_decode_20260810_modal/contest_cpu/contest_auth_eval.stdout.log",
+   "bytes": 1615,
+   "sha256": "78a6e1c3abc88cc03d11f5aa31d7469972f9c1084009eca430a760d45f83449d",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_wc1_20260807/bench_run2/run.log",
+   "bytes": 1478,
+   "sha256": "ede11b9fb9840fa28328061293dba76dd3b3b748310017b6f779de42694a1889",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_cr1_20260801/land.log",
+   "bytes": 1463,
+   "sha256": "754fe24114a7bfa19d99105d8eaeb375c38fad52ca01199c04b99cb186ad418e",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/run/n120_metal/run.log",
+   "bytes": 1373,
+   "sha256": "4c3846b2403f132f95c2f43d57ebdc844b8dce548c3a677367764b7f69bff46c",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_hb3_20260808/resume_qat/run.log",
+   "bytes": 1306,
+   "sha256": "a9597afe3a78d2d7415ab4e5386d686c4d5c9f4b1102b75ebb08c749b8881893",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_mx1g_20260807/fire_arm_veh_resume/run.log",
+   "bytes": 1261,
+   "sha256": "d6a0e8464962bb0e7b9ccf28e9c33b617b33a0dfaceda6257b0c7fc47075ba7b",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_rm1_20260808/chroma_siting_run/run.log",
+   "bytes": 775,
+   "sha256": "39efaa842819be9dcd6413b085c8ef8d5e6e63de83f84de7fc1e6a7ec9d55c68",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_r9m_first_contest_cpu_row_20260804/modal_exact_eval_results/contest_cpu/contest_auth_eval.stderr.log",
+   "bytes": 653,
+   "sha256": "42b7cc5f651b94d9aaa8d5519b9e378504815ebb36eb4ae33576a8caba0c05d5",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma_leg_logs/run.log",
+   "bytes": 438,
+   "sha256": "316e49c3495f7f252c9013da73a288554aa4629cdb4f8e9e778cbcb3daf19f5d",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_ekh1_20260805/.done",
+   "bytes": 413,
+   "sha256": "c33e9d7cfcfddf01fa314704227d538cda3aaa9b4a5b176e2cf0d2f28249c54f",
+   "ext": "",
+   "reason": "oversized derived result JSON/JSONL (>200KB) \u2014 rebuildable run output, SSD tier."
+  },
+  {
+   "path": ".omx/research/ddm_rc64p_native_cpu_decode_20260810_modal/contest_cpu_diag/contest_auth_eval.stderr.log",
+   "bytes": 233,
+   "sha256": "5d94987a05ac85e26bdc438f626f333c282068586a51a0d3d0f7b80e3cd2ca8f",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_hb3_20260808/cpu_control/run.log",
+   "bytes": 212,
+   "sha256": "66318103f3baf86668cdcd686d2bc84b6882e3c063fe69d92fdcf106e4e3c508",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": "src/tac/pr130_runtime/fx1_runtime_tree/.omx/state/triality_drift_marker.json",
+   "bytes": 133,
+   "sha256": "90260a614f75ad3578a3ca284308c23e5104604ea90f1a50a70d1faa051b74cf",
+   "ext": "json",
+   "reason": "CONTAMINATION of a tracked 9-file runtime tree whose sha is cited by evaluated rows; committing it would change runtime_tree identity. Delete from the tree instead."
+  },
+  {
+   "path": "src/tac/pr130_runtime/fx1_runtime_tree/.omx/state/magnitude_dismissal_marker.json",
+   "bytes": 133,
+   "sha256": "332d1f77547c85ca0fcf3c741af290624f7e69b8888f06d5f337ea0e7833431a",
+   "ext": "json",
+   "reason": "CONTAMINATION of a tracked 9-file runtime tree whose sha is cited by evaluated rows; committing it would change runtime_tree identity. Delete from the tree instead."
+  },
+  {
+   "path": ".omx/research/ddm_rr11_20260807/runtime_checks/launch_dead_child/run.log",
+   "bytes": 16,
+   "sha256": "4c650fd9a52b8a9dd0bbf6134d3146e408096406a5eb88e6feddd8a22ae59b98",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  },
+  {
+   "path": ".omx/research/ddm_hb3_20260808/clean60/run.pid",
+   "bytes": 6,
+   "sha256": "028847389a00038ddb7a7d2846256da934cd0d57cd81858b321f8f8810fffc64",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_hb3_20260808/cpu_control/run.pid",
+   "bytes": 6,
+   "sha256": "379c05330789bc79f06fac72949de8d357eef39902ca0943dddf1fefd53cd408",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_hb3_20260808/resume_qat/run.pid",
+   "bytes": 6,
+   "sha256": "1e0ff47e0e663478271afbab006baa0b77258b2abf7efb958d4228e1b6676b3b",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_hb3_20260808/resume_qat_lrmatched/run.pid",
+   "bytes": 6,
+   "sha256": "263b6caa1ba6803b2875d97ed5521862caf92e0f3940b2fde1f21e22047e11b0",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_hb3_20260808/run/run.pid",
+   "bytes": 6,
+   "sha256": "dcf6b8a27dad41be342b473eedfc27d5b77cfe0a6ac9f95d77f0a4dcfb8a911d",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/dseg_leg_logs/run.pid",
+   "bytes": 6,
+   "sha256": "ae903d86be8de2b779f204d39d43798b908fc66485424c50aba9f9a7a7d7b498",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/run/n120_metal/run.pid",
+   "bytes": 6,
+   "sha256": "bcb1997821cd7da0f5bac9eea5f9814955ea6f021c9cc3df35353b992b96b5a7",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/run/n120_metal/safe_run_fresh_child.pid",
+   "bytes": 6,
+   "sha256": "c809a3f2f0d32f3c3666362d6f3b3d18a7e34c6bbfbbd5235069ce9f4c5e20d3",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/seal_metal_leg_logs/run.pid",
+   "bytes": 6,
+   "sha256": "cf15f56701dbdf239146815a47f64b7c4afbf4e016f0c091890632addab08ac4",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/run.pid",
+   "bytes": 6,
+   "sha256": "2b8727fbe5fc286665a3b64f52fe4cafefb3e2e40985e2e3df9d495888822401",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/safe_run/argv_n32_arm_veh_resume.2026_08_08T04_51_26_086619Z_pid83945.status.json.child.pid",
+   "bytes": 6,
+   "sha256": "70a82ad787949880e5e5c0dbe87d93f9635d2e0835bcf8d4531bfcc0fb54738b",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/safe_run/argv_n32_arm_veh.2026_08_08T04_51_26_086619Z_pid83945.status.json.child.pid",
+   "bytes": 6,
+   "sha256": "63560396a2ab2ca8cf4e19a55357db400118a22c769fef4e9236d9587e3681a5",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mem_probe/run.pid",
+   "bytes": 6,
+   "sha256": "f197936ea5537361e858bb7c7dbe8a2e8888865b0330e8b2db883804ae087d12",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_mx1g_20260807/fire_arm_veh_resume/run.pid",
+   "bytes": 6,
+   "sha256": "260db6fc4e5974ae18064b57cccd52b78f375aff12cd14e23376f4abfd435c35",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_rm1_20260808/chroma_siting_run/run.pid",
+   "bytes": 6,
+   "sha256": "1cd16501aee929cb575243c5510c24f2cefe3a3d6243b2d9d126d2754d642ed1",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_rr11_20260807/runtime_checks/launch_dead_child/run.pid",
+   "bytes": 6,
+   "sha256": "0888fcee241f124df885a943359c3d4e2da2dc4bcf6379a1ce1fb456fd2a7c18",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_wc1_20260807/bench_run2/run.pid",
+   "bytes": 6,
+   "sha256": "22e0e378abd3b6622a5947d93c24ffbbcb84b9a07621d49d3208717080cc1350",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_wc3_20260808/profile_run/run.pid",
+   "bytes": 6,
+   "sha256": "bb244c7fd6fb377d7e89604e499434fd1e2baa129e09cdcb1860f60f42994579",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma_leg_logs/run.pid",
+   "bytes": 5,
+   "sha256": "3f3b477bb52279f0883280de028a0390e39adf23e769c42af854f7ccce17da6c",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_m1_20260808/sigma_leg_v2_logs/run.pid",
+   "bytes": 5,
+   "sha256": "2259433a0dc445e87dff769b62c3d24e53c4a68e0e42bf52e069ab2dee825928",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/run.pid",
+   "bytes": 5,
+   "sha256": "efb8df22e48ca598fab29ed3e0105378773fcd338545e39a089d57750a4cec08",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/safe_run/argv_n32_arm_cap_resume.2026_08_08T02_55_36_199303Z_pid2556.status.json.child.pid",
+   "bytes": 5,
+   "sha256": "a3ef41cd288ea5f3f1c54ae4d578111a41d60f3ceff70fdc4a22cdcaa6464a07",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_wc1_20260807/bench_run/run.pid",
+   "bytes": 5,
+   "sha256": "5eecdbd3cb88bb41e274858ad00e2088f43ca6350d70d5102e26c8bab2c87053",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mem_probe_resume/run.pid",
+   "bytes": 4,
+   "sha256": "cd1f7fa2be52425b90bfd563bfe5df873000a900f0c7bdbe1095ff28fee19e6c",
+   "ext": "pid",
+   "reason": "process-liveness marker \u2014 LIVE_STATE, never committed (artifact-lifecycle rule)."
+  },
+  {
+   "path": ".omx/research/ddm_r9m_first_contest_cpu_row_20260804/modal_exact_eval_results/contest_cpu/contest_auth_eval.stdout.log",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "ext": "log",
+   "reason": "raw run log \u2014 rebuildable run output; the receipt JSON beside it carries the findings."
+  }
+ ]
+}

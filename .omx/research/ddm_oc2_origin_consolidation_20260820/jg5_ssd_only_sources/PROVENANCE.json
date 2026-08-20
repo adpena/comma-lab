@@ -1,0 +1,31 @@
+{
+ "arm": "ddm_oc2",
+ "date_utc": "2026-08-20",
+ "what": "The only three jg5 workspace sources that had NO byte-identical blob anywhere in this repo's git history. Committed VERBATIM.",
+ "why_no_provenance_header": "Adding a header would change the bytes, so the SSD original would keep showing up as an untracked gap in every future sweep and the copies would silently diverge. Provenance lives here instead; the files stay byte-identical to their SSD origins.",
+ "context": "The wc2 custody P0 (commit 2d61b51988, 44 files / 10,547 insertions) already versioned the shipping jg5 runtime tree, archive and T4 receipts. These three are the residue that pass left behind.",
+ "not_the_shipping_runtime": "None of these three is part of the sealed runtime tree sha 2103073d739fc3f27d329ea0785ea3010307360c2380af0476e16d0f5b57cb9b. They are work-subset variants (a 455-pair body runtime inflate, and two rc64 coder sources). Committing them does not touch the evaluated row.",
+ "files": [
+  {
+   "committed_path": ".omx/research/ddm_oc2_origin_consolidation_20260820/jg5_ssd_only_sources/body_runtime_subset455/inflate.py",
+   "ssd_origin_path": "/Volumes/APDataStore/pact/ddm_jg5/work/body_runtime_subset455/inflate.py",
+   "bytes": 2281,
+   "sha256": "a84a27fb700f08d7bcb92f83b4e369216f75fc3d52fb3145f4cff71e2e7fd6a8",
+   "byte_identical_to_origin": true
+  },
+  {
+   "committed_path": ".omx/research/ddm_oc2_origin_consolidation_20260820/jg5_ssd_only_sources/rc64_jg5_subset455/rc64_backend_jg2.c",
+   "ssd_origin_path": "/Volumes/APDataStore/pact/ddm_jg5/work/reencode_subset/work/rc64_jg5_subset455/rc64_backend_jg2.c",
+   "bytes": 14825,
+   "sha256": "1941923a94e4e0a191a43ab2330349195fcb0942756bb03e71e887375bd53eb2",
+   "byte_identical_to_origin": true
+  },
+  {
+   "committed_path": ".omx/research/ddm_oc2_origin_consolidation_20260820/jg5_ssd_only_sources/rc64_jg5_subset455/rc64_base.c",
+   "ssd_origin_path": "/Volumes/APDataStore/pact/ddm_jg5/work/reencode_subset/work/rc64_jg5_subset455/rc64_base.c",
+   "bytes": 12222,
+   "sha256": "5c75e2c70b89f148bc9d117d4dbd39a24dfb2e72ec41b0a7e9b9cf490ca07ee6",
+   "byte_identical_to_origin": true
+  }
+ ]
+}
