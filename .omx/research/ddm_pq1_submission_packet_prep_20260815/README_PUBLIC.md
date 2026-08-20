@@ -23,7 +23,8 @@ measured `[contest-CUDA]` 600-sample score is **0.14839100138338618**.
   `0.14839100138338618 ± 3.633e-06`. The distance from that interval to 0.15 is
   about 443 times the bound, so the sub-0.15 statement is not a rounding artifact.
 - **What is NOT measured.** There is **no `[contest-CPU]` row on these bytes**,
-  and none is claimed. This submission is GPU-required for evaluation.
+  and none is claimed. This submission is GPU-required for evaluation; the
+  requested runner is `linux-nvidia-t4`.
 - **The open runtime risk.** Inflation took 1419.9 s of a 30-minute job wall —
   the largest open risk on this submission, and a runtime risk, not a score risk.
   One hot stage: **token decode alone is 1341.5 s of that 1419.9 s, 94.5%.** We

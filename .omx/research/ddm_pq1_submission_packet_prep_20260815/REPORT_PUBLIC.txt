@@ -107,7 +107,8 @@ bytes.
 
 === CPU boundary ===
 Status of the [contest-CPU] axis on these exact bytes: NO ROW EXISTS. No CPU
-score exists and none is claimed. This submission is GPU-required for evaluation.
+score exists and none is claimed. This submission is GPU-required for evaluation;
+the requested runner is linux-nvidia-t4.
 
 === Provenance ===
 Candidate seal: jg5_joint_waterfill_455, seal SHA-256 96e9860aad9021e6dc9a9619036b54bd0a2205f60468e8585089db1d8044a7d0

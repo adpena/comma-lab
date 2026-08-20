@@ -133,7 +133,8 @@ bytes.
 
 === CPU boundary ===
 Status of the [contest-CPU] axis on these exact bytes: NO ROW EXISTS. No CPU
-score exists and none is claimed. This submission is GPU-required for evaluation.
+score exists and none is claimed. This submission is GPU-required for evaluation;
+the requested runner is linux-nvidia-t4.
 
 === Provenance ===
 Candidate seal: jg5_joint_waterfill_455, seal SHA-256 96e9860aad9021e6dc9a9619036b54bd0a2205f60468e8585089db1d8044a7d0
@@ -160,8 +161,8 @@ exact-evaluation row is a single T4 run of about 25 minutes.
 
 # does your submission require gpu for evaluation (inflation)?
 
-**Yes, and the GPU path is measured but tight. Please read this before scheduling
-the run.**
+**Yes. Requested runner: `linux-nvidia-t4`.** The GPU path is measured but tight,
+so please read this before scheduling the run.
 
 `inflate.py` performs a neural render, so this submission is GPU-routed. On the
 authority run, inflation took 1,419.9 s and evaluation 51.4 s: 1,471.3 s of the
@@ -238,21 +239,29 @@ Four qualifications:
 
 # additional comments
 
-## What this candidate changes
+## Baseline, change, score
 
-Same inherited vehicle as the prior candidate. What changed is how the seg token
-edits and the pose carrier are decided: **jointly, not one after the other.** The
-predecessor applied all 573 edits and then re-solved the carrier; the edits bought
-−0.012847 S on seg and cost +0.172 S on pose, a 13.4× loss. Here admission is swept over a
-Lagrange multiplier on pose damage, so an edit is kept only if it pays for the pose
-it costs (**455 of 573 admitted**) and the carrier is then re-solved against the
-edited renders this archive actually decodes to, under a derived materiality stop
-rule (**600 of 600 pairs stopped on `no_improving_step`, zero budget hits**).
+**Baseline.** Our own prior candidate on this vehicle: **S 0.15710198138050818 at
+177,182 bytes** `[contest-CUDA T4, n600]`. It applied all 573 seg token edits and
+then re-solved the pose carrier. Those edits bought −0.012847 S on seg and cost
++0.172 S on pose — a 13.4× loss.
 
-Against the prior candidate (177,182 bytes, S 0.15710198138050818) this archive is
-**+3,443 bytes** for a net **−8.7110e-03**: it spends rate and buys both distortion
-legs, the reverse of every earlier candidate here. The leg split and its error
-bounds are in the report above.
+**Change.** Edit admission and the pose carrier are now solved **jointly**.
+Admission is swept over a Lagrange multiplier on pose damage, so an edit is kept
+only if it pays for the pose it costs (**455 of 573 admitted**), and the carrier is
+re-solved against the edited renders this archive actually decodes to, under a
+derived materiality stop rule (**600 of 600 pairs stopped on `no_improving_step`,
+zero budget hits**).
+
+**Score.** **S 0.14839100138338618 at 180,625 bytes**, same axis: **+3,443 bytes**
+for a net **−8.7110e-03**. It spends rate and buys both distortion legs, the
+reverse of every earlier candidate here. Leg split and error bounds are in the
+report above.
+
+**What did not work better.** The three-way `{edit, drop, keep}` solve shipped only
+two branches — `drop` needs a receiver change this body has no path for. And a
+12-dimensional pose-basis re-orientation is a measured null: re-mixing the basis
+leaves the reachable correction invariant to 1.9e-08, so it ships nothing.
 
 ## Borrowed-substrate accounting
 
@@ -310,24 +319,21 @@ archive byte** and none changes a classification above.
   registry that hashed all 241 copies of `rc64_backend.c` across our custody roots
   and separated four distinct bodies by role.
 
-**Two corrections to our own record, both against us.** A 12-dimensional pose-basis
-re-orientation we investigated is a measured null — re-mixing the basis leaves the
-reachable correction invariant to 1.9e-08 — and ships nothing. And the three-way
-`{edit, drop, keep}` solve shipped only two branches: `drop` needs a receiver change
-this body has no path for, so it is headroom, not a delivered mechanism.
-
 The full table, with a receipt on every row, is
 `BORROWED_SUBSTRATE_ACCOUNTING.md` §9.5.
 
 ## Credits and prior work
 
-- **PR #130 `semantic-pose-HPAC_CPR1`** by Fesal Fayed (`fesalfayed`) — the
-  origin of this vehicle.
-- **PR #135 `semantic-pose-HPAC_CPR1_polished`** by Shreyan Mohanty
-  (`codexblack`) — the trained state this submission re-represents, and the
-  edit-then-recompensate pattern.
-- **PR #133 `cpr1_cbq_matched8`** by `JasonMo123` — transitively in this ancestry
-  via PR #135; named because a reader tracing our substrate reaches it.
+This submission runs on PR #130's vehicle and PR #135's trained state. Most of what
+decodes here is theirs, and the semantic-token plus HPAC design is a good one to
+build on.
+
+- **PR #130 `semantic-pose-HPAC_CPR1`** by Fesal Fayed (`fesalfayed`) — the origin
+  of this vehicle.
+- **PR #135 `semantic-pose-HPAC_CPR1_polished`** by Shreyan Mohanty (`codexblack`)
+  — the trained state this submission re-represents, and the edit-then-recompensate
+  pattern.
+- **PR #133 `cpr1_cbq_matched8`** by `JasonMo123` — in this ancestry via PR #135.
 - **PR #138 `opal_v1`** — published the decode-time-corrector mechanism class
   first. We make no priority claim on it.
 
@@ -373,3 +379,5 @@ a T4; see the runtime risk below before scheduling.
   runtime tree SHA-256
   `2103073d739fc3f27d329ea0785ea3010307360c2380af0476e16d0f5b57cb9b`. Either one
   alone is insufficient to reproduce the score; the pair is the identity.
+
+Thanks for running the contest. Happy to answer questions or re-run anything here.
