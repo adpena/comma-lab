@@ -13151,6 +13151,13 @@ def _scan_python_for_mps_fallback(
         # Upstream contest baseline (av1_crf31_bicubic) - vendored from
         # comma's organizer baseline submission, not our code.
         "/av1_crf31_bicubic/",
+        # Seal-pinned custody trees (candidate_seal.v1 byte-identity copies of
+        # SHIPPED runtime bytes, e.g. the jg5 sub-0.15 decoder). A demanded
+        # in-file edit would break the sha custody the tree exists to preserve
+        # (Catalog #109 class). General predicate:
+        # tac.subset_selection_gate.seal_pinned_custody_dirs; this marker covers
+        # the repo-wide substring layer for the one live instance.
+        "/jg5_sub015_runtime/",
     )
     if any(marker in rel_s for marker in _VENDORED_PATH_MARKERS):
         return []

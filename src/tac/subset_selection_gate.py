@@ -12,7 +12,9 @@ and does not carry a waiver. That signature is the measured generator of the
 defect: ``ddm_na2`` found **110 tools** slicing ``[:n]`` on pairs/frames with
 **zero** offering an alternative, so an omitted selection mode did not mean
 "unknown", it meant "prefix" -- on the pose axis a prefix measures **2.54-4.21x
-HARDER** than the population, which is precisely the false-negative shape.
+HARDER** than the population, which is precisely the false-negative shape. The
+pose ratios were re-derived by ``ddm_mi1`` from receipt sha256
+``d2853c92090c28ebe558ece4a21b2847b55e25c9d768bef167bcba9dc67b72e5``.
 
 Where it runs, and why that is the whole design
 ------------------------------------------------
@@ -201,7 +203,8 @@ def _violations_for_text(
         out.append(
             f"{rel}:{lineno}: `{hint}` takes a subset with no declared selection "
             f"mode, so it is a video-order PREFIX (measured: prefix is 2.54-4.21x "
-            f"HARDER than the population on the pose axis). Select via "
+            f"HARDER than the population on the pose axis; ddm_mi1 receipt "
+            f"d2853c92090c). Select via "
             f"`tac.subset_selection.select(..., mode=...)` -- which also reports the "
             f"subset/population ratio -- or add "
             f"`# {WAIVER_MARKER}:<why a prefix is correct here>`."
@@ -212,6 +215,44 @@ def _violations_for_text(
 def _waiver_on_line(source_line: str) -> bool:
     m = re.search(r"#[ \t]*" + re.escape(WAIVER_MARKER) + r":[ \t]*(\S.*)", source_line)
     return bool(m and _rationale_ok(m.group(1)))
+
+
+def seal_pinned_custody_dirs(repo_root: Path) -> tuple[str, ...]:
+    """Repo-relative dirs whose trees are candidate_seal.v1 byte-identity custody.
+
+    A directory carrying a ``CANDIDATE_SEAL_*.json`` is a sha-pinned custody
+    copy of shipped runtime bytes (candidate_seal.v1 pins every member file's
+    sha256). A scanner that demands an in-file edit there — e.g. a same-line
+    waiver comment — would CHANGE the pinned bytes and break the custody it
+    exists to protect (Catalog #109 pristine-clone class; the jg5 sub-0.15
+    decoder commit incident, 2026-08-20). Skipping these files loses no
+    protection: the seal itself is the drift detector for that tree.
+
+    Discovery is INDEX-based (tracked + staged names), never a filesystem walk,
+    so the cost is two cheap git calls even on a 60k-file tree. A git failure
+    returns () — fail toward SCANNING (worst case a refusal), never toward a
+    silent skip.
+    """
+    dirs: set[str] = set()
+    for cmd in (
+        ["git", "ls-files"],
+        ["git", "diff", "--cached", "--name-only", "--diff-filter=A"],
+    ):
+        try:
+            out = subprocess.check_output(cmd, cwd=repo_root, text=True)
+        except (subprocess.CalledProcessError, OSError):
+            return ()
+        for line in out.splitlines():
+            name = line.rsplit("/", 1)[-1]
+            if name.startswith("CANDIDATE_SEAL_") and name.endswith(".json"):
+                parent = line.rsplit("/", 1)[0] if "/" in line else ""
+                if parent:  # a repo-root seal must never blanket the whole repo
+                    dirs.add(parent)
+    return tuple(sorted(dirs))
+
+
+def _under_custody_dir(rel: str, custody_dirs: tuple[str, ...]) -> bool:
+    return any(rel == d or rel.startswith(d + "/") for d in custody_dirs)
 
 
 def staged_py_files(repo_root: Path) -> list[str] | None:
@@ -305,7 +346,14 @@ def scan_staged(
     violations: list[str] = []
     examined = 0
     unexamined: list[str] = []
+    custody_dirs = seal_pinned_custody_dirs(root)
+    custody_skipped = 0
     for rel in rels:
+        if _under_custody_dir(rel, custody_dirs):
+            # Byte-identity custody: a waiver edit here would break the seal
+            # this tree ships under. Counted and reported, never silent.
+            custody_skipped += 1
+            continue
         path = root / rel
         try:
             text = path.read_text(encoding="utf-8")
@@ -323,6 +371,11 @@ def scan_staged(
         violations.extend(_violations_for_text(text, rel, only_lines=scope))
 
     detail = f"{examined} of {len(rels)} staged .py file(s) examined"
+    if custody_skipped:
+        detail += (
+            f"; {custody_skipped} seal-pinned custody file(s) skipped by design "
+            "(candidate_seal.v1 byte-identity, Catalog #109 class)"
+        )
     if unexamined:
         detail += f"; NOT examined (not a pass): {'; '.join(unexamined)}"
         # Review pass 2, on pass 1's own fix: `_finish` prints ok_detail ONLY when
@@ -369,10 +422,13 @@ def in_scope_py_files(repo_root: Path) -> list[str] | None:
         )
     except (subprocess.CalledProcessError, OSError):
         return None
+    custody_dirs = seal_pinned_custody_dirs(repo_root)
     return [
         line
         for line in out.splitlines()
-        if line and not line.startswith("experiments/results/")
+        if line
+        and not line.startswith("experiments/results/")
+        and not _under_custody_dir(line, custody_dirs)
     ]
 
 
