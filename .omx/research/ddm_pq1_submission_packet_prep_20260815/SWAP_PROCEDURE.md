@@ -87,7 +87,13 @@ reuse its authority receipts for changed bytes.
    time in the freeze receipt. A prior candidate's working URL is historical
    evidence only; it never transfers across a swap. If the push is not authorized
    or the downloaded bytes differ, HOLD publication rather than leaving the old
-   URL in place.
+   URL in place. **SHIP verify_files_digest.py (rv17 R6-F1):** the published
+   submission directory MUST include `verify_files_digest.py` from the prep tree
+   — two published surfaces (the MANIFEST.sha256 header and the PR body's
+   verification appendix) instruct reviewers to run it, and it is NOT a manifest
+   row, so no integrity check catches its absence. After the copy, run
+   `python3 verify_files_digest.py` from the published tree root and require
+   PASS before publication.
 5. `RERUN_STRICT_CHAIN` — owner `MAIN packet owner`; consumer `generation gap
    report and compliance JSON`; fire trigger `public packet refreshed`. Execute
    the exact strict checker with the new expected SHA and size. Record every red

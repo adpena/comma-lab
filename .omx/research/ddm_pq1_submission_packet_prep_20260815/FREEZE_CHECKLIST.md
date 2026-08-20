@@ -107,6 +107,11 @@ different runtime tree. `SWAP_PROCEDURE.md` step 4A is the instrument — push t
 exact bytes, derive a raw URL pinned to that 40-character commit, download it fresh,
 and require HTTP 200 plus SHA-256 and byte-count equality before publication.
 
+Step 4A ALSO ships `verify_files_digest.py` into the published submission
+directory (rv17 R6-F1: two published surfaces instruct reviewers to run it, and
+it is not a manifest row — nothing else checks its presence). Run it from the
+published tree root and require PASS before publication.
+
 ## (e) Review counter — 0 of 5, NOT a blocker the arm can clear
 
 `SWAP_PROCEDURE.md` step 7 requires **five consecutive clean passes**. The counter is

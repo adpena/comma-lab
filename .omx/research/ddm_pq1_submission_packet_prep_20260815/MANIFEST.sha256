@@ -17,7 +17,7 @@
 # axis-equal but folds in a repo-local import scan, so it is NOT files-only
 # reproducible; see PACKET_TARGET.json.) Neither
 # pin derives from a recursive walk of this directory. The packet also ships
-# non-runtime documents (this file,
+# non-runtime documents (this file, verify_files_digest.py,
 # README.md, report.txt, LICENSE, THIRD_PARTY_NOTICES.md, compress.py,
 # COMPRESS.md, archive_manifest.json, BORROWED_SUBSTRATE_ACCOUNTING.md) which
 # a fresh walk would pick up by suffix; they carry no runtime role and cannot
