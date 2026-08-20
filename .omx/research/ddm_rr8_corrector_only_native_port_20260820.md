@@ -1,7 +1,7 @@
 # ddm_rr8 — the corrector-only native port: bit-identical, and 4.45× on its own scope
 
 Date: 2026-08-20 · Owner: ddm_rr8 (Opus build arm) · Archive `f3bce5d2…` (180,625 B) **UNTOUCHED**
-Status: **BUILT. Identity PROVEN on the real decoder trace, tables included. Speedup MEASURED
+Status: **BUILT. Identity PROVEN at n600 on BOTH candidate trees — 0.raw byte-identical, score exact. Speedup MEASURED
 4.450× median / 4.646× best `[macOS-CPU advisory]` against a pre-registered bar of 2.03× / 2.77×.**
 Shipping axis UNMEASURED — one T4 row owed, and this arm does not touch the paid axis.
 
@@ -226,6 +226,52 @@ The source also compiles with **zero warnings** under
 does remove "the optimiser reassociated something" from the list of ways the T4 build could
 diverge, which was the largest remaining unmeasured risk in the identity argument.
 
+### 3.8 The composed tree — identity re-proven, and the port's scope measured by cd1's OWN instrument
+
+The composed tree (§10) was run locally at n600 rather than left for a paid row to execute
+first. Its token stage reproduces every anchor, and the receipt again names the port:
+
+| anchor | measured | verdict |
+|---|---|---|
+| `free_corrector` | `NativeFreeCorrector` | **the port, not the fallback** |
+| `decoded_token_sha256` | `cc10a7b09353c0af…0992636efb` | **MATCH** |
+| `corrected_quantized_logit_sha256` | `8269fe1aad031620…55c4eec4dd` | **MATCH** |
+| `corrected_cdf_input_sha256` | `370a5e2a85ccbb1e…6b04e46000` | **MATCH** |
+| `decoder_bit_position` | 910837 | **MATCH** |
+
+**And because it carries cd1's decomposition, it measures the port's own scope directly** —
+same instrument, same host, same three calls, no subtraction:
+
+| | cd1 (numpy corrector) | rr8 (C corrector) | ratio |
+|---|---:|---:|---:|
+| **`port_scope_seconds`** | **211.113** | **35.143** | **6.007×** |
+| corrector family | 211.221 | 35.241 | 5.994× |
+| `corrector_coding_row` | 121.288 | 12.842 | 9.445× |
+| `corrector_observe` | 60.849 | 11.223 | 5.422× |
+| `corrector_group_state` | 28.976 | 11.078 | 2.615× |
+
+`coding_row` — the member that cd1 named as 41% of the whole T4 token stage and told the next
+arm to port first — is down **9.4×**, which is where the win concentrates.
+
+**Three independent local estimates now exist, and they disagree in an informative way:**
+
+| method | ratio | what it controls for |
+|---|---:|---|
+| trace bench, one process, alternating | **4.450×** | tightest control; but only the first 8 frames, cold tables |
+| cross-run subtraction, plain tree | 5.313× | full 600 frames; two runs, so carries both runs' noise |
+| cd1's instrument, scope-isolated | **6.007×** | full 600 frames AND scope-isolated; two runs |
+
+The spread is not noise, it is the **cold-vs-warm table regime**: over the first 8 frames the
+within-miss sector holds ~3,187 records against a lifetime ~223,694, so numpy does far less of
+the work the C is best at. **4.450× is therefore the CONSERVATIVE floor and remains the number
+this memo prices against**; the full-run numbers say the real local figure is nearer 6×.
+
+The corrector has also stopped being the local bottleneck: it is now **7.9% of the loop**
+(35.24 s of 448.37 s), down from 31.4%, and the integer model is 88.7%. On the LOCAL axis the
+next lever would be the model — but on the SHIPPING axis cd1 measured the opposite split, and
+`ddm_rr7` already MEASURED that porting the model there is a 15.3% regression. **Do not carry
+this local re-ranking onto T4; it is the cross-regime error in its purest form.**
+
 ## 4. The two refusals, and why they are different classes
 
 **Config drift REFUSES.** The C compiles the frozen configuration in as constants. The binding
@@ -394,6 +440,17 @@ Both seals pre-register the four token anchors, the T4 `0.raw` lineage sha, the 
 and a **PURPOSE GATE** on `free_corrector` — so a row that silently measured the Python fallback
 refuses instead of being read as a port result. Admit bar is net dS **exactly 0.0**: a nonzero
 delta is a defect in the port, never a re-pricing of the candidate.
+
+**Both trees are VERIFIED, so the recommendation is unconditional.** The PLAIN tree was run at
+n600 end to end (§3.5): `0.raw` byte-identical and the score exact. The COMPOSED tree was run at
+n600 too (§3.8): all four token anchors reproduced and `free_corrector` again named the port —
+so **no paid dispatch is the first execution of this composition**, which was the point of
+running it locally at $0 rather than discovering it on Modal.
+
+Fire the COMPOSED tree. It answers the wall-clock question AND returns `port_scope_seconds`, so
+the shipping-axis k stops being inferred by subtraction and becomes measured — replacing the
+weakest number in this memo. The seal's falsifiers remain the backstop either way: a divergence
+refuses on the `0.raw` anchor and costs the dispatch, never the submission.
 
 ```
 .venv/bin/python tools/fire_modal_auth_eval.py \
