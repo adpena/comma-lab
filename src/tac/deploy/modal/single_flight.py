@@ -280,6 +280,56 @@ def _resolve_modal_bin() -> str | None:
     return shutil.which("modal")
 
 
+def _running_container_app_ids(
+    modal_bin: str, *, timeout_seconds: float = _CLOUD_TIMEOUT_SECONDS
+) -> set[str] | None:
+    """App ids that have an ACTUALLY RUNNING container, or None if unknowable.
+
+    WHY THIS EXISTS (MEASURED 2026-08-20, ``ddm_rr7``). ``modal app list``'s ``tasks`` count
+    is NOT a liveness signal for ephemeral/detached apps: a detached app whose containers
+    exited but which was never explicitly stopped keeps a non-zero count indefinitely. On the
+    operator's account it reported three live apps aged **272.8 h, 168.9 h and 143.5 h**
+    (``comma-dali-av-gt-diff``, ``comma-ddm-sa1-t4-sign-gate``,
+    ``comma-ddm-re1-round1-t4-sign-gate``) while ``modal container list`` showed exactly ONE
+    active container — the auth-eval row being fired at that moment. Six-to-eleven-day-old
+    "running tasks" for jobs that take minutes are stale metadata, not compute.
+
+    That matters because this leg had been silently skipping (the CLI was not on PATH). Simply
+    restoring it would have traded a silent SKIP for a false REFUSE on every future dispatch —
+    a guard that blocks correct work is not an improvement over one that greens by not looking.
+    So the ``app list`` predicate is kept as a NECESSARY condition and intersected with the
+    authoritative one.
+
+    Fail-CLOSED toward the old behaviour: when the container query is unavailable this returns
+    None and the caller applies the ``tasks``-only predicate, which over-reports. Over-reporting
+    costs a refusal the operator can override with a rationale; under-reporting costs a double
+    fire. The conservative direction is the one that keeps the guard.
+    """
+    try:
+        proc = subprocess.run(
+            [modal_bin, "container", "list", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        containers = json.loads(proc.stdout or "[]")
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(containers, list):
+        return None
+    return {
+        str(c.get("app_id") or c.get("App ID") or "")
+        for c in containers
+        if isinstance(c, dict) and (c.get("app_id") or c.get("App ID"))
+    }
+
+
 def cloud_live_modal_apps(*, timeout_seconds: float = _CLOUD_TIMEOUT_SECONDS) -> list[str] | None:
     """Live cross-check: ``modal app list --json`` apps with running tasks.
 
@@ -325,6 +375,7 @@ def cloud_live_modal_apps(*, timeout_seconds: float = _CLOUD_TIMEOUT_SECONDS) ->
             file=sys.stderr,
         )
         return None
+    running_app_ids = _running_container_app_ids(modal_bin, timeout_seconds=timeout_seconds)
     live: list[str] = []
     if isinstance(apps, list):
         for app in apps:
@@ -337,6 +388,10 @@ def cloud_live_modal_apps(*, timeout_seconds: float = _CLOUD_TIMEOUT_SECONDS) ->
             except ValueError:
                 tasks = 0
             if tasks > 0 and "stopped" not in state:
+                app_id = str(app.get("App ID") or app.get("app_id") or "")
+                if running_app_ids is not None and app_id and app_id not in running_app_ids:
+                    # Stale task count, not live compute. See _running_container_app_ids.
+                    continue
                 name = str(
                     app.get("Description")
                     or app.get("description")
