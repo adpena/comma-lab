@@ -73,3 +73,53 @@ wk2r counted 167 uncommitted entries in the main worktree on 2026-08-03. By this
 had grown to 280 porcelain entries / 1,049 files. **764 documents and 181 sources were committed**;
 the remainder is bulk that belongs on the SSD tier by the disk rules. See
 `WORKING_TREE_DISPOSITION.md` for the itemized split and the certify records.
+
+## 4. The three sh1 files the review gate held back — BLOCKED, preserved losslessly
+
+`sh1_held_deltas_BLOCKED_ON_FIXES.patch` (19,028 B, sha256
+`c2e488b255dd31f5994d1e7ea838af1e0c9245546b20b284383f17de4e417999`, 470 lines) carries the additive
+sh1 deltas for:
+
+- `src/tac/optimization/ddm_runtime_receiver.py` (+329)
+- `src/tac/optimization/tests/test_direct_description_carrier_compose.py` (+36)
+- `tools/materialize_ddm_pf3_finite_prices.py` (+9 / −5)
+
+They are **not committed**. A real review pass (`REVIEW_FINDINGS_OWED.md`) found 1 critical and 5
+important correctness bugs in these files, so the review gate refuses them and the three files are
+marked `needs_fix` in the review tracker. `REVIEW_GATE_OVERRIDE` was **not** used — CLAUDE.md
+forbids it for `.py` and the gate is right here.
+
+**Nothing is lost and main is not degraded.** All three files already exist on `main` in working
+form, and all six bugs pre-exist there, so `main` is exactly as correct as it was. The patch is the
+custody record for the 374 added lines.
+
+**Owed to MAIN:** fix the six findings, then apply this patch. Note the incident in §5 — because
+`a886ddb340` already attached sh1 as a second parent, git considers sh1 fully merged and will never
+re-offer these deltas. This patch is the only path by which they can still land.
+
+## 5. INCIDENT — a merge left open outside the serializer lock
+
+While this arm held `git merge --no-ff --no-commit ddm/sh1_integration_20260727` open and stepped
+away to do other work, arm `ddm_rr6` ran its own commit. Git attached **this arm's `MERGE_HEAD`**
+(sh1, `6a77427ca1`) as the **second parent** of `a886ddb340` while committing only ddm_rr6's own
+three files.
+
+Consequences, measured:
+
+- `git merge-base --is-ancestor 6a77427ca1 main` → **YES**. main's DAG says sh1 is merged.
+- `git diff a886ddb340^1 a886ddb340` → **3 files, 340 insertions** — ddm_rr6's own work only.
+- sh1's 7,637 insertions were left sitting **in the index**, in the tree of no commit.
+
+Had the index been reset, that content would have been silently lost *while the DAG claimed it had
+landed* — the worst shape of this failure. It was recovered by committing the staged set explicitly
+(36 files) plus this patch (3 files).
+
+**Cause: this arm's error**, not ddm_rr6's. Leaving a merge open across other tool calls is exactly
+the concurrent-index race `tools/subagent_commit_serializer.py` exists to prevent; the serializer
+only protects the `git add` + `git commit` window, and an open `MERGE_HEAD` sits outside it. The de1
+merge that followed was performed merge-and-commit **atomically in a single invocation**.
+
+**Cure worth building (named, not built):** the serializer should refuse to start, or warn loudly,
+when `MERGE_HEAD` exists but the caller did not declare a merge — and a merge helper should wrap
+`git merge --no-commit` + serializer commit as one locked operation so the open-merge window cannot
+be left unattended.

@@ -1,0 +1,470 @@
+diff --git a/src/tac/optimization/ddm_runtime_receiver.py b/src/tac/optimization/ddm_runtime_receiver.py
+index f1759c8123..c02cc70d38 100644
+--- a/src/tac/optimization/ddm_runtime_receiver.py
++++ b/src/tac/optimization/ddm_runtime_receiver.py
+@@ -38,6 +38,7 @@ E4_WS1_SCHEMA = "ddm_e4_ws1_runtime_archive.v1"
+ E5A_SCHEMA = "ddm_e5a_midcampaign_runtime_archive.v1"
+ IC1_SCHEMA = "ddm_ic1_runtime_archive.v1"
+ IC2_SCHEMA = "ddm_ic2_runtime_archive.v1"
++CB1_SCHEMA = "ddm_cb1_rg4_perclass_runtime_archive.v1"
+ RECEIVER_GRAMMAR_ADMISSION_SCHEMA = "ddm_receiver_grammar_admission.v1"
+ RATE_DOCTRINE_SCHEMA = "ddm_four_clause_rate_doctrine.v1"
+ TYPED_STREAM_SCHEMA = "ddm_typed_stream_tag.v1"
+@@ -82,6 +83,7 @@ LZMA_FILTERS = [
+ ]
+ EXPECTED_MEMBERS = ("manifest.json", "base/chart.ddb", "semantic/composed.dds")
+ EXPECTED_WS1_MEMBERS = ("manifest.json", "state/ws1.ddj5")
++EXPECTED_CB1_MEMBERS = ("manifest.json", "state/rg4.ddr4")
+ EXPECTED_CC3_MEMBERS = ("manifest/pc1.json", "pose/pc1.ddp", "parent/ws1.zip")
+ EXPECTED_EXTENSION_SLOTS = [
+     {
+@@ -272,6 +274,21 @@ def _read_exact_ws1_members(archive_dir: Path) -> dict[str, bytes]:
+     return result
+ 
+ 
++def _read_exact_cb1_members(archive_dir: Path) -> dict[str, bytes]:
++    observed = tuple(
++        sorted(path.relative_to(archive_dir).as_posix() for path in archive_dir.rglob("*") if path.is_file())
++    )
++    if observed != tuple(sorted(EXPECTED_CB1_MEMBERS)):
++        raise ReceiverError(f"extracted CB1 packet members differ: {observed!r} != {EXPECTED_CB1_MEMBERS!r}")
++    result: dict[str, bytes] = {}
++    for name in EXPECTED_CB1_MEMBERS:
++        path = archive_dir / name
++        if path.is_symlink() or not path.is_file():
++            raise ReceiverError(f"CB1 packet member is not one regular file: {name}")
++        result[name] = path.read_bytes()
++    return result
++
++
+ def _read_exact_cc3_members(archive_dir: Path) -> dict[str, bytes]:
+     expected_directories = {
+         PurePosixPath(name).parent.as_posix()
+@@ -720,6 +737,119 @@ def _validate_ws1_manifest(
+     return manifest
+ 
+ 
++def _validate_cb1_manifest(
++    manifest: Any,
++    members: dict[str, bytes],
++) -> dict[str, Any]:
++    """Validate one opaque RG4 source-local state on E4's framed coder path."""
++
++    if not isinstance(manifest, dict) or set(manifest) != {
++        "dependencies",
++        "false_authority",
++        "geometry",
++        "output",
++        "schema",
++        "sections",
++        "state",
++    }:
++        raise ReceiverError("CB1 manifest keys differ from the sealed schema")
++    if manifest.get("schema") != CB1_SCHEMA:
++        raise ReceiverError("CB1 manifest schema differs")
++    if manifest["false_authority"] != {
++        "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
++        "research_only": True,
++        "score_claim": False,
++    }:
++        raise ReceiverError("CB1 false-authority contract changed")
++    if manifest["geometry"] != {
++        "camera_hw": [CAMERA_H, CAMERA_W],
++        "channels": CHANNELS,
++        "frames_per_pair": FRAMES_PER_PAIR,
++        "pair_count": 600,
++        "scorer_hw": [PAIR_H, PAIR_W],
++    }:
++        raise ReceiverError("CB1 geometry differs")
++    framed = members["state/rg4.ddr4"]
++    if len(framed) < BLOB_HEADER.size:
++        raise ReceiverError("CB1 state frame is truncated")
++    codec = BLOB_HEADER.unpack_from(framed)[2]
++    expected_dependencies = (
++        ["numpy", "scipy", "torch", "brotli"]
++        if codec == 1
++        else ["numpy", "scipy", "torch"]
++        if codec == 2
++        else None
++    )
++    if expected_dependencies is None or manifest["dependencies"] != expected_dependencies:
++        raise ReceiverError("CB1 runtime dependency contract changed")
++    sections = manifest["sections"]
++    if (
++        not isinstance(sections, list)
++        or len(sections) != 1
++        or not isinstance(sections[0], dict)
++        or set(sections[0]) != {"bytes", "member", "sha256", "typed_stream_tag"}
++        or sections[0]["member"] != "state/rg4.ddr4"
++        or sections[0]["bytes"] != len(framed)
++        or sections[0]["sha256"] != _sha256(framed)
++    ):
++        raise ReceiverError("CB1 packet section custody differs")
++    tag = sections[0]["typed_stream_tag"]
++    if (
++        not isinstance(tag, dict)
++        or tag
++        != {
++            "schema": TYPED_STREAM_SCHEMA,
++            "type": "SKELETON",
++            "layer_home": "L1_program",
++            "evaluate_py_recursion_level_cited": (
++                "L1_program -> L3_raster -> L4_scorer_feature -> L5_verdict"
++            ),
++            "counted_bytes": len(framed),
++            "free_receiver_code": True,
++        }
++    ):
++        raise ReceiverError("CB1 packet typed-stream custody differs")
++    state = manifest["state"]
++    if (
++        not isinstance(state, dict)
++        or set(state)
++        != {
++            "batch_pairs",
++            "name",
++            "parent_archive_sha256",
++            "pc1_packet_sha256",
++            "source_archive_bytes",
++            "source_archive_sha256",
++            "source_schema",
++        }
++        or state["batch_pairs"] != 32
++        or not isinstance(state["name"], str)
++        or not state["name"]
++        or state["source_schema"] != "ddm_rg4_pc1_source_local_composition.v1"
++        or isinstance(state["source_archive_bytes"], bool)
++        or not isinstance(state["source_archive_bytes"], int)
++        or state["source_archive_bytes"] <= 0
++        or any(
++            not _is_lower_sha256(state[key])
++            for key in (
++                "parent_archive_sha256",
++                "pc1_packet_sha256",
++                "source_archive_sha256",
++            )
++        )
++    ):
++        raise ReceiverError("CB1 typed source state differs")
++    output = manifest["output"]
++    if (
++        not isinstance(output, dict)
++        or set(output) != {"bytes", "sha256"}
++        or output["bytes"] != 600 * FRAMES_PER_PAIR * CAMERA_H * CAMERA_W * CHANNELS
++        or not _is_lower_sha256(output["sha256"])
++    ):
++        raise ReceiverError("CB1 output identity is malformed")
++    return manifest
++
++
+ def _reconstruct_e5a_la1_bundle(
+     bundle: bytes,
+ ) -> tuple[bytes, tuple[dict[str, Any], ...]]:
+@@ -1514,6 +1644,196 @@ def _install_ws1_source_bundle(checkpoint_root: Path) -> dict[str, Any]:
+     }
+ 
+ 
++def _inflate_cb1(
++    *,
++    archive_dir: Path,
++    output_dir: Path,
++    final_path: Path,
++    relative: PurePosixPath,
++    started: float,
++) -> dict[str, Any]:
++    """Inflate one RG4 source-local archive through the E4 framed runtime."""
++
++    members = _read_exact_cb1_members(archive_dir)
++    manifest_payload = members["manifest.json"]
++    manifest_sha256 = _sha256(manifest_payload)
++    manifest = _validate_cb1_manifest(
++        _duplicate_refusing_json(manifest_payload, label="manifest.json"),
++        members,
++    )
++    source_archive, dimensions = _parse_blob(
++        members["state/rg4.ddr4"],
++        expected_kind=0,
++        label="state/rg4.ddr4",
++    )
++    if dimensions:
++        raise ReceiverError("CB1 state blob must be an opaque rank-zero container")
++    state = manifest["state"]
++    if (
++        len(source_archive) != state["source_archive_bytes"]
++        or _sha256(source_archive) != state["source_archive_sha256"]
++    ):
++        raise ReceiverError("CB1 reconstructed source custody differs")
++    checkpoint_root = (
++        output_dir.parent
++        / ".ddm_runtime_checkpoints"
++        / state["source_archive_sha256"]
++        / relative.with_suffix("").as_posix().replace("/", "__")
++    )
++    checkpoint_root.mkdir(parents=True, exist_ok=True)
++    expected_bytes = int(manifest["output"]["bytes"])
++    required_free_bytes = expected_bytes * 2 + SAFETY_BYTES
++    free_bytes = shutil.disk_usage(checkpoint_root).free
++    if free_bytes < required_free_bytes:
++        raise ReceiverError(f"storage preflight failed: {free_bytes} < {required_free_bytes}")
++    source_bundle = _install_ws1_source_bundle(checkpoint_root)
++    try:
++        import numpy as np
++
++        from tac.optimization.ddm_pc1_pose_stream import serialize_pc1_packet
++        from tac.optimization.ddm_rg4_g3_blocks_and_active_tube import (
++            parse_source_local_composition_archive,
++            receive_source_local_pc1_camera_pairs,
++        )
++        from tac.optimization.ddm_ws1_warm_start import (
++            parse_ws1_warm_start_archive,
++            receive_ws1_warm_start_archive,
++        )
++    except ImportError as exc:
++        raise ReceiverError("bundled CB1 receiver import failed") from exc
++    parent_archive, packet, source_manifest = parse_source_local_composition_archive(source_archive)
++    parsed_parent = parse_ws1_warm_start_archive(parent_archive)
++    if parsed_parent.exact_reemit() != parent_archive:
++        raise ReceiverError("CB1 parent parse/re-emit changed source bytes")
++    if (
++        source_manifest["schema"] != state["source_schema"]
++        or _sha256(parent_archive) != state["parent_archive_sha256"]
++        or _sha256(serialize_pc1_packet(packet)) != state["pc1_packet_sha256"]
++    ):
++        raise ReceiverError("CB1 nested source identities differ")
++    parent_receiver = receive_ws1_warm_start_archive(parent_archive)
++    try:
++        movable_layer = next(layer for layer in parent_receiver.layers if layer.role == "Movable")
++    except StopIteration as exc:
++        raise ReceiverError("CB1 parent lacks a Movable layer") from exc
++
++    batch_pairs = int(state["batch_pairs"])
++    stage_rows: list[dict[str, Any]] = []
++    stage_paths: list[Path] = []
++    render_seconds = 0.0
++    for start in range(0, 600, batch_pairs):
++        stop = min(start + batch_pairs, 600)
++        stage_path = checkpoint_root / f"pairs_{start:04d}_{stop:04d}.raw"
++        state_path = checkpoint_root / f"pairs_{start:04d}_{stop:04d}.json"
++        expected_stage_bytes = (stop - start) * FRAMES_PER_PAIR * CAMERA_H * CAMERA_W * CHANNELS
++        preserved = _load_preserved_stage(
++            stage_path=stage_path,
++            state_path=state_path,
++            manifest_sha256=manifest_sha256,
++            start=start,
++            stop=stop,
++            expected_bytes=expected_stage_bytes,
++        )
++        if preserved is None:
++            stage_started = time.monotonic()
++            pair_ids = tuple(range(start, stop))
++            parent_camera = parent_receiver.render_camera_pairs(pair_ids)
++            movable_masks = np.stack(
++                [
++                    parent_receiver._mask_for_layer(
++                        movable_layer,
++                        pair_id,
++                        replace_g1_movable=True,
++                    )
++                    for pair_id in pair_ids
++                ],
++                axis=0,
++            ).astype(np.bool_)
++            camera = receive_source_local_pc1_camera_pairs(
++                parent_camera=parent_camera,
++                packet=packet,
++                pair_ids=pair_ids,
++                movable_masks=movable_masks,
++            )
++            rendered = torch.from_numpy(camera)
++            if (
++                rendered.dtype != torch.uint8
++                or tuple(rendered.shape)
++                != (
++                    stop - start,
++                    FRAMES_PER_PAIR,
++                    CAMERA_H,
++                    CAMERA_W,
++                    CHANNELS,
++                )
++                or not rendered.is_contiguous()
++            ):
++                raise ReceiverError("CB1 receiver rendered noncanonical camera bytes")
++            render_seconds += time.monotonic() - stage_started
++            row = _write_or_adopt_rendered_stage(
++                stage_path=stage_path,
++                state_path=state_path,
++                rendered=rendered,
++                manifest_sha256=manifest_sha256,
++                start=start,
++                stop=stop,
++            )
++        else:
++            row = preserved
++        stage_rows.append(row)
++        stage_paths.append(stage_path)
++    final_bytes, final_sha256 = _assemble_final(
++        final_path=final_path,
++        stage_rows=stage_rows,
++        stage_paths=stage_paths,
++        expected_bytes=expected_bytes,
++        expected_sha256=str(manifest["output"]["sha256"]),
++    )
++    receipt = {
++        "coder": (
++            "brotli_q11"
++            if BLOB_HEADER.unpack_from(members["state/rg4.ddr4"])[2] == 1
++            else "lzma1_raw_d1m_lc3_lp0_pb2"
++        ),
++        "dependencies": manifest["dependencies"],
++        "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
++        "final": {
++            "bytes": final_bytes,
++            "path": str(final_path),
++            "sha256": final_sha256,
++        },
++        "grammar_admission": {
++            "parent_parse_reemit_byte_identical": True,
++            "source_archive_bytes": len(source_archive),
++            "source_archive_sha256": _sha256(source_archive),
++            "source_local_parse_reemit_byte_identical": True,
++        },
++        "member_consumption": [
++            {
++                "bytes": len(members[name]),
++                "member": name,
++                "sha256": _sha256(members[name]),
++            }
++            for name in EXPECTED_CB1_MEMBERS
++        ],
++        "pair_count": 600,
++        "render_seconds": format(render_seconds, ".6f"),
++        "research_only": True,
++        "resume": {
++            "all_stage_checkpoints_preserved": True,
++            "checkpoint_root": str(checkpoint_root),
++            "stage_count": len(stage_rows),
++        },
++        "runtime_source_bundle": source_bundle,
++        "schema": "ddm_cb1_rg4_perclass_runtime_inflate_receipt.v1",
++        "score_claim": False,
++        "fixed_torch_threads": 4,
++        "total_seconds": format(time.monotonic() - started, ".6f"),
++    }
++    _atomic_json(checkpoint_root / "inflate_receipt.json", receipt)
++    return receipt
++
++
+ def _inflate_ws1(
+     *,
+     archive_dir: Path,
+@@ -1963,6 +2283,15 @@ def inflate(archive_dir: Path, output_dir: Path, video_names_file: Path) -> dict
+             started=started,
+         )
+ 
++    if (archive_dir / "state/rg4.ddr4").is_file():
++        return _inflate_cb1(
++            archive_dir=archive_dir,
++            output_dir=output_dir,
++            final_path=final_path,
++            relative=relative,
++            started=started,
++        )
++
+     if (archive_dir / "state/ws1.ddj5").is_file():
+         return _inflate_ws1(
+             archive_dir=archive_dir,
+diff --git a/src/tac/optimization/tests/test_direct_description_carrier_compose.py b/src/tac/optimization/tests/test_direct_description_carrier_compose.py
+index 49af42deff..ed5c58981a 100644
+--- a/src/tac/optimization/tests/test_direct_description_carrier_compose.py
++++ b/src/tac/optimization/tests/test_direct_description_carrier_compose.py
+@@ -48,6 +48,7 @@ from tac.optimization.direct_description_carrier_compose import (
+     compile_carrier_compose_archive,
+     decode_scorer_solved_template_bank,
+     encode_scorer_solved_template_bank,
++    encode_static_class_mask_rule,
+     parse_carrier_compose_archive,
+     prove_carrier_archive_fail_closed,
+     receive_carrier_compose_archive,
+@@ -674,6 +675,41 @@ def test_v14_counted_realization_profile_places_hard_semantics_at_camera_resolut
+     assert not np.array_equal(camera, ruled.render_camera_pairs((0, 63)))
+ 
+ 
++def test_v14_mycar_static_mask_rule_is_small_parseback_exact_and_receiver_visible() -> None:
++    labels = np.zeros((64, 384, 512), dtype=np.int64)
++    labels[:, 24:40, 32:48] = 3
++    payload, _metadata = encode_g1_movable_worldsheet(labels)
++    profile = ReceiverRealizationProfileV1(
++        role_rgb_u8=((0, 153, 0), (11, 3, 9), (51, 255, 204), (107, 0, 114), (63, 72, 63))
++    )
++    mask = np.zeros((384, 512), dtype=bool)
++    mask[300:384, 80:432] = True
++    static_rule = encode_static_class_mask_rule(mask, target_class=4)
++    assert len(static_rule) < 500
++    archive, _ = compile_carrier_compose_archive(
++        _predictor(),
++        worldsheet_g1_payload=payload,
++        realization_profile=profile,
++        realization_static_rule_payload=static_rule,
++        realization_static_rule_id="mycar_static_mask",
++    )
++    receiver = receive_carrier_compose_archive(archive)
++    assert receiver.realization_static_rule_id == "mycar_static_mask"
++    assert receiver.realization_static_rule_codes is not None
++    assert np.all(receiver.realization_static_rule_codes[mask] == 29)
++    assert np.all(receiver.realization_static_rule_codes[~mask] == -1)
++    assert receiver.custody["realization_static_rule_active_sites"] == int(mask.sum())
++    control, _ = compile_carrier_compose_archive(
++        _predictor(),
++        worldsheet_g1_payload=payload,
++        realization_profile=profile,
++    )
++    assert not np.array_equal(
++        receive_carrier_compose_archive(control).render_camera_pairs((0, 63)),
++        receiver.render_camera_pairs((0, 63)),
++    )
++
++
+ def test_v15_counted_row_band_templates_extend_v14_receiver_without_decode_scorer() -> None:
+     labels = np.zeros((64, 384, 512), dtype=np.int64)
+     labels[:, 24:40, 32:48] = 3
+diff --git a/tools/materialize_ddm_pf3_finite_prices.py b/tools/materialize_ddm_pf3_finite_prices.py
+index 3d79b278b3..07e7f7fdde 100644
+--- a/tools/materialize_ddm_pf3_finite_prices.py
++++ b/tools/materialize_ddm_pf3_finite_prices.py
+@@ -708,13 +708,17 @@ def _measure_candidate(
+     replayed_batch_starts: set[int],
+     base_coder_frames: Mapping[str, bytes],
+     g4_by_bucket: Mapping[str, str],
++    run_id: str = RUN_ID,
++    lane_id: str = LANE_ID,
++    checkpoint_schema: str = CHECKPOINT_SCHEMA,
++    candidate_prefix: str = "pf3",
+ ) -> dict[str, Any]:
+     bulk = Path(config.bulk_root)
+     checkpoint = bulk / "stage_checkpoints/02_candidates" / f"{index:03d}.json"
+     if checkpoint.exists():
+         value = json.loads(checkpoint.read_bytes())
+         if (
+-            value.get("schema") != CHECKPOINT_SCHEMA
++            value.get("schema") != checkpoint_schema
+             or value.get("typed_config_sha256") != config_sha256
+             or value.get("source_checkpoint_sha256") != inventory_row["checkpoint_sha256"]
+         ):
+@@ -829,13 +833,13 @@ def _measure_candidate(
+         joint_delta=distortion["delta_D_joint"],
+     )
+     candidate_id = (
+-        f"pf3_{str(inventory_row['receiver_actuator_id']).replace('.', '_')}"
++        f"{candidate_prefix}_{str(inventory_row['receiver_actuator_id']).replace('.', '_')}"
+         f"__{str(inventory_row['direction_id']).lower()}"
+     )
+     value = {
+-        "schema": CHECKPOINT_SCHEMA,
+-        "run_id": RUN_ID,
+-        "lane_id": LANE_ID,
++        "schema": checkpoint_schema,
++        "run_id": run_id,
++        "lane_id": lane_id,
+         "candidate_id": candidate_id,
+         "coordinate_id": inventory_row["receiver_actuator_id"],
+         "coordinate_owner_bucket_id": inventory_row["owner_bucket_id"],
