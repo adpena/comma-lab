@@ -87,8 +87,12 @@ reuse its authority receipts for changed bytes.
    time in the freeze receipt. A prior candidate's working URL is historical
    evidence only; it never transfers across a swap. If the push is not authorized
    or the downloaded bytes differ, HOLD publication rather than leaving the old
-   URL in place. **SHIP verify_files_digest.py (rv17 R6-F1):** the published
-   submission directory MUST include `verify_files_digest.py` from the prep tree
+   URL in place. **SHIP verify_files_digest.py (rv17 R6-F1) AND the corrected
+   BORROWED_SUBSTRATE_ACCOUNTING.md (rv17 R10-F1):** the published submission
+   directory MUST include `verify_files_digest.py` from the prep tree, and MUST
+   publish the PREP-TREE `BORROWED_SUBSTRATE_ACCOUNTING.md` (which carries the
+   §10.6 citation erratum) in place of the frozen copy, which predates it —
+   frozen custody stays untouched as history
    — two published surfaces (the MANIFEST.sha256 header and the PR body's
    verification appendix) instruct reviewers to run it, and it is NOT a manifest
    row, so no integrity check catches its absence. After the copy, run

@@ -589,3 +589,23 @@ re-decision over borrowed content — no new learned artifact was trained for th
 and the end-to-end rebuild has still not been re-run for these bytes. Neither mechanism added
 here weakens or strengthens either statement; they change how the same decided content is
 coded and decoded, not what it is.
+
+### 10.6 Erratum — §2 row 3's manifest citation is stale (rv17 round 10, R10-F1)
+
+The preserved §2 table (the rr4-candidate generation) backs row 3's compressed-model-container
+figures — 70,453 B, sha `e35d12371fa79747…` — with the citation `ARCHIVE_MANIFEST.json:21`.
+That citation is stale five ways against the SHIPPED packet and is corrected here without
+editing §2 (append-only): the archive manifest is regenerated per candidate; the shipped
+generation-6 copy is the lowercase `archive_manifest.json`, is 20 lines long (line 21 does not
+exist), contains neither that sha nor that byte figure, and records THIS candidate's container
+at `sections.compressed_models_bytes` = **66,413 B**. On a case-sensitive filesystem the
+uppercase name does not resolve at all (the working copy is uppercase; the shipped copy is
+lowercase — one file on macOS, two names on Linux).
+
+**The row-3 values themselves were backed at their own generation**: the per-section
+verification in `REVIEW_PASS8_FRESH_EYES.md:221-223` matched the model container to
+`e35d1237…`/70,453 B against the rr4 archive (`35ac2b9b…`, 181,161 B), which remains under
+supersession custody (see `PACKET_TARGET.json`, GEN-2 record). The defect was the citation,
+not the figures. The LIVE chain is unaffected: §9.2 row 3 carries no manifest citation, and
+§10.2 carries §9.2 forward. Shipped citations are now machine-checked by
+`verify_citations.py` (erratum-covered citations are noted, not failed).

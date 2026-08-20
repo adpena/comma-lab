@@ -63,6 +63,11 @@ def _derived_coverage(prep: Path, frozen: Path, tracked: set[str], failures: lis
     archive_manifest.json are one coupled pair here and two distinct files on
     the contest's case-sensitive Linux, so a case mismatch is itself reported.
     AppleDouble ._* sidecars are excluded (environmental, #1122).
+
+    Top-level-only is COMPLETE today because the prep tree has zero
+    subdirectories (an invariant packet_census_guard enforces); if the prep
+    tree ever gains a subdirectory this scope silently narrows -- revisit
+    then (rv17 round-10 note).
     """
     prep_names = {p.name.casefold(): p.name for p in prep.iterdir() if p.is_file()}
     frozen_names = {
