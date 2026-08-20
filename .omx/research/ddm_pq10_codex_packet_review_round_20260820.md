@@ -209,6 +209,9 @@ did not stage the composed packet and did not alter any runtime or packet byte.
 
 ## DEAD-ENDS
 
+verdict_scope: instance — closed repair/packaging routes for the jg5→rc2 swap on THIS packet
+generation only; process-route closures, not technique/family negatives.
+
 - A document-only substitution of `df7fd266…` into the current packet is closed: it would leave the old jg5 archive/runtime behind and create a fake identity claim.
 - Counting this round as clean after later fixes is closed: findings reset the counter and fixes require a new independent pass.
 - Reusing jg5's hosted URL, 33-row manifest, `2103073d…` runtime pin or score recompute for the composed object is closed: the measured objects differ.
