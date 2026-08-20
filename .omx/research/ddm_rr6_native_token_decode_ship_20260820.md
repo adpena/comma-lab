@@ -75,7 +75,8 @@ The 117,964,800-byte token field was re-hashed independently of the receipt and 
 | run | token decoder | `0.raw` bytes | `0.raw` sha256 |
 |---|---|---:|---|
 | `ddm_jg5/advisory_final` | `python` | 3,662,409,600 | `7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7` |
-| `ddm_rr6/advisory_native_r1` | `native-hpac-split` | 3,662,409,600 | `7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7` |
+| `ddm_rr6/advisory_native_r1` (driven) | `native-hpac-split`, NEON | 3,662,409,600 | `7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7` |
+| **`ddm_rr6/advisory_ship_r2` (bare)** | **`native-hpac-split`, scalar** | 3,662,409,600 | `7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7` |
 
 **Byte-for-byte identical across all 3.66 GB** (`aggregate_sha256 23fc14a6…` likewise). Both runs
 then score identically through `evaluate.py`, to the last digit — `canonical_score`
@@ -99,11 +100,12 @@ Both rows: Apple M5 Max, `torch 2.12.1`, `cpu_num_threads 4`, `cpu_num_interop_t
 | token decoder | run | token stage s | **whole inflate s** | token ratio |
 |---|---|---:|---:|---:|
 | `python` | `ddm_jg5/advisory_final` | **589.456** | **978.873** | 1.000x |
-| `native-hpac-split` | `ddm_rr6/advisory_native_r1` | **329.370** | **707.0** | **1.790x** |
+| `native-hpac-split` (NEON, driven) | `ddm_rr6/advisory_native_r1` | **329.370** | **707.0** | **1.790x** |
+| `native-hpac-split` (scalar, **bare**) | `ddm_rr6/advisory_ship_r2` | **316.165** | **692.5** | **1.865x** |
 
-The whole inflate falls **978.873 s → 707.0 s = 1.384x**, and the 271.9 s saved reconciles with the
-260.1 s token delta to within 12 s of prelude and I/O noise — an arithmetic consistency check that
-the saving is where the receipt says it is and not somewhere else.
+The whole inflate falls **978.873 s → 707.0 s → 692.5 s**, i.e. **1.384x** and **1.414x**. On r1 the
+271.9 s saved reconciles with the 260.1 s token delta to within 12 s of prelude and I/O noise — an
+arithmetic consistency check that the saving is where the receipt says it is and not somewhere else.
 
 `ddm_wc2c`'s bench driver measured 326.160 s for the same work; the real runtime lands within 1% of
 it, which is the corroboration that its bench was representative.
@@ -125,6 +127,8 @@ what a human can reach, which is precisely the thing that was already true and a
 | `decode_threads` | `4` | the hard-coded default |
 | `decode_runtime_seconds` | **316.165** | **1.865x** vs python 589.456 |
 | all four identity anchors | `cc10a7b0…` / `8269fe1a…` / `370a5e2a…` / `910837` | **MATCH** the `[contest-CUDA T4]` receipt |
+| `0.raw` | `7246a4ff…`, 3,662,409,600 B | **byte-identical** to the python baseline |
+| `inflate_elapsed_seconds` | **692.5** | vs the python path's 978.873 s |
 
 So the tree that would actually ship — bare invocation, intrinsic-free build — reproduces the T4
 token field exactly, and does it 4.0% faster than r1's NEON build (316.165 vs 329.370 s), which is
@@ -216,8 +220,9 @@ Two measured facts pull in opposite directions and neither settles it:
   with few or slow vCPUs shrinks the win; the CPU-side baseline it must beat also gets slower, so
   even the sign of the *ratio* change is not determined by argument.
 
-Quoting the 1.790x as a shipping figure would be the cross-regime constant-transfer genus with the
-regimes swapped end for end. It is a local advisory number and nothing more.
+Quoting **either** local ratio — the unfavourable 1.790x or the favourable 1.865x — as a shipping
+figure would be the cross-regime constant-transfer genus with the regimes swapped end for end. Both
+are local advisory numbers and nothing more.
 
 ---
 
@@ -277,6 +282,19 @@ Also worth reading off the same row: `decode_path` should be `scalar` (the FORCE
 `decode_threads` should be `4`. A `token_decoder: python` in the receipt means the native build
 failed on the runner and fell back — the intended failure mode, and exactly the case §2.1 says the
 budget predicate must be able to see.
+
+**The staged tree needs no custody of its own — it is regenerable from committed state**, which is
+the better answer to `ddm_wc2c`'s P0 custody finding than copying bytes around. The jg5 base is now
+in git (`submissions/robust_current/jg5_sub015_runtime`, commit `2d61b51988`), and every difference
+is produced by committed sources — the stager, `runtime-rs/native/f26-hpac/f26_hpac_native.c`, and
+`experiments/ddm_wc2c_split_token_decoder.py`. One command rebuilds it, and refuses if any input
+drifted:
+
+```
+.venv/bin/python experiments/ddm_wc2c_stage_native_split_runtime.py \
+  --base /Volumes/APDataStore/pact/ddm_jg5/candidate_runtime_jg5 \
+  --output <fresh-dir>
+```
 
 **Re-pin owed before the fire:** the harness enforces the runtime tree SHA in three places
 (`contest_auth_eval.py` `_validate_expected_runtime_tree` :1554, `_validate_expected_runtime_files`
