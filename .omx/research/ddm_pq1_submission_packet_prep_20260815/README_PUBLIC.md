@@ -30,7 +30,12 @@ overstate themselves.
 - **The open runtime risk.** Inflation took 1419.9 s of a 30-minute job wall.
   That is disclosed in full in `report.txt` under "Evaluation-time budget", and
   it is the largest open risk on this submission. It is a runtime risk, not a
-  score risk.
+  score risk. The cost is concentrated rather than diffuse: **token decode alone
+  is 1341.5 s, 95.72% of inflation.** We hold a native port of that stage's
+  integer half which reproduces this candidate's decode bit-for-bit on the full
+  600-frame field at 1.77–1.83× on local hardware; it is **not** in the tree
+  evaluated here, and folding it would move the runtime-tree hash and require a
+  new exact evaluation. Disclosed as available work, not claimed as a fix.
 - **What is not authority.** Any local macOS number, any advisory row, and any
   projection appearing in our own research notes is not a score and is not used
   here.
@@ -131,7 +136,22 @@ judge to expect, and this submission does not meet it.
 
 ## Reproduction
 
-The end-to-end rebuild entry point has **not been re-run for these bytes**. That
-is an open item, stated rather than papered over. What does exist for this
-candidate is the seal binding archive to receiver, the staging proof that this
-directory is byte-identical to the evaluated tree, and the authority receipt.
+The end-to-end rebuild entry point has **not been re-run for these bytes, and it
+cannot rebuild them.** Those are two different statements and only making the first
+would invite the wrong conclusion. That entry point rebuilds the token stream and
+carries the other seven sections through verbatim; this candidate's chain also
+re-decides content in sections it copies — the seg token edit solve, the edit
+splice, the admission waterfill and the pose-carrier re-solve. No configuration
+closes that gap, so the script refuses this archive by name and names the builders
+that do produce it.
+
+What does exist for this candidate is the seal binding archive to receiver, the
+staging proof that this directory is byte-identical to the evaluated tree, and the
+authority receipt.
+
+One further reproducibility limit, disclosed rather than left to be discovered: a
+census of the 34 files in this candidate's tree found **24 with no source in
+version control**, including the receiver modules and `inflate.sh` itself. The
+shipped bytes are pinned by hash and the decode is deterministic, so what a judge
+runs is fully determined — but a reader who expects to rebuild the receiver from a
+public repository cannot currently do so.

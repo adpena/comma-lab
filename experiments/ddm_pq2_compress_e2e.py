@@ -7,7 +7,10 @@ the rebuilt bytes hash to the pinned sha256.  It orchestrates the two instrument
 that actually produced the candidate -- it does not reimplement them, so what this
 script proves is what the shipped pipeline does, not a parallel reconstruction of it.
 
-THE THREE STAGES.
+THE STAGES.  Three phases -- A, B, C -- across four subcommands.  The count is
+stated because an earlier revision of this docstring said "three stages" and then
+listed four headings, which is the kind of small incoherence that makes a reader
+stop trusting the larger claims.
 
   ``provenance``  (stage A, documented, no compute)  Emits the training lineage that
       produced the checkpoint: the stage scripts, their arguments, the corrector
@@ -50,6 +53,28 @@ THE THREE STAGES.
       it: the shipped ``inflate.sh`` is the real decode path, takes no private
       input, and is what the evaluator runs.  Stage C exists to prove the
       decoded field is unchanged, not to be the decode entry point.
+
+WHAT THIS ENTRY POINT EXPRESSES -- AND WHAT IT DOES NOT.  Read this before
+concluding that re-running it would reproduce whatever archive we currently ship.
+
+  EXPRESSIBLE.  A candidate whose build chain is (i) a re-encode of the TOKEN
+      stream under a decode-time probability corrector, optionally followed by
+      (ii) a CONTAINER repack declared through ``SPLIT_RECIPE_KEYS``.  The other
+      seven parsed sections are carried through verbatim.  That is the rr4 and
+      sz1 shape, and for those candidates this script is a genuine byte-close.
+
+  NOT EXPRESSIBLE.  A candidate whose chain also RE-DECIDES CONTENT -- semantic
+      re-quantization, seg token edits, edit admission, or a pose-carrier
+      re-solve.  Those stages write sections this script copies verbatim, so no
+      recipe can make a token-only rebuild produce their bytes.  Such candidates
+      are named in ``NOT_EXPRESSIBLE`` and are REFUSED BY NAME, with their real
+      builders cited, rather than being met with "pass ``--recipe-json``" -- an
+      answer that is true for a missing recipe and false for a missing stage.
+
+  This matters at the default invocation.  With no flags the expected archive is
+      read from the canonical frontier pointer, i.e. whatever we currently ship.
+      If that candidate is not expressible, the honest response is a typed
+      refusal that says which stages are missing, not a generic mismatch.
 
 NO PRIVATE PATHS.  This file contains no filesystem layout.  Every input root is
 supplied by the caller through ``--inputs-json`` (or the matching environment
@@ -104,16 +129,31 @@ RECEIVER = REPO / "experiments" / "ddm_rr2_receiver_close.py"
 # to byte-close candidates.  The expected identity is now RESOLVED AT RUN TIME (see
 # `resolve_expected_archive`), and a caller rebuilding a different candidate must supply
 # that candidate's own recipe rather than silently asserting rr4's numbers over other bytes.
-# ``rc64_source_sha256`` NAMES THE ENCODER ROLE, NOT THE SHIPPED MEMBER.  Two distinct
-# bodies wear the file name ``rc64_backend.c`` and conflating them cost two arms a
-# byte-close each:
+# ``rc64_source_sha256`` NAMES THE ENCODER ROLE, NOT THE SHIPPED MEMBER.  FOUR distinct
+# bodies wear the file name ``rc64_backend.c``, and conflating them cost two arms a
+# byte-close each.  The count is MEASURED, not remembered: ``ddm_rv14f`` hashed all 241
+# copies across the three custody roots on 2026-08-19 and found four contents
+# (``reverse_engineering/rc64_backend_role_registry.json``).  An earlier revision of this
+# comment said "two", which is the same undercount that makes a filename search look
+# conclusive when it is not:
 #
-#   ENCODER role   12,222 B  5c75e2c7…  encoder + decoder.  ``ddm_rr2_encoder_byteclose``
-#                                       appends the 2,603 B checkpoint/resume extension
-#                                       and compiles the 14,825 B result at build time.
-#   SHIPPED role    5,638 B  05839d14…  DECODER ONLY -- the member the archive carries at
-#                                       runtime/entropy/.  It exports no encoder symbol,
-#                                       so it can never drive the encode stage.
+#   ENCODER role      12,222 B  5c75e2c7…  1 copy.  Encoder + decoder.  THE PIN below.
+#                                          ``ddm_rr2_encoder_byteclose`` appends the
+#                                          2,603 B checkpoint/resume extension and
+#                                          compiles the 14,825 B result at build time.
+#   SHIPPED role       5,638 B  05839d14…  237 copies.  DECODER ONLY -- the member every
+#                                          archive carries at runtime/entropy/.  It
+#                                          exports no encoder symbol, so it can never
+#                                          drive the encode stage.
+#   CHECKPOINT-EXT    14,825 B  1941923a…  2 copies.  The encoder WITH the extension
+#                                          already appended; also sits under the plain
+#                                          name.  The encoder body is exactly recoverable
+#                                          from it by removing the extension.
+#   FOREIGN INTAKE    22,179 B  b249b77b…  1 copy.  A PR #138 ``opal_v1`` intake body.
+#                                          NOT OURS and never a candidate for any pin.
+#
+# The last row is why the count matters: a search keyed on the file name can reach a
+# third party's source, and pinning it would silently build against foreign code.
 #
 # THE PIN IS CORRECT AND THE FILE EXISTS.  ddm_ma1's memo (2026-08-19 §7) reported the
 # opposite -- "158 copies, 2 distinct contents, neither matches ... clearing this pin is
@@ -163,6 +203,86 @@ SPLIT_RECIPE_KEYS = (
     "split_stage_base",
     "split_stage_profile",
 )
+
+#: The SHIPPED receiver member, named as a constant so a recipe author pins the measured
+#: value instead of retyping a sha from a comment.  Role and count are from the measured
+#: registry cited above; this is the DECODER-only body, never the encoder pin.
+RC64_SHIPPED_MEMBER_SHA256 = (
+    "05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996"
+)
+RC64_ROLE_REGISTRY = "reverse_engineering/rc64_backend_role_registry.json"
+
+
+class RebuildNotExpressible(SystemExit):
+    """The requested candidate's build chain is outside this entry point's grammar."""
+
+
+#: Candidates this script CANNOT rebuild, keyed by archive sha256, with the reason
+#: stated as MISSING STAGES rather than as a missing recipe.
+#:
+#: WHY A REGISTRY AND NOT A GENERIC ERROR.  The cross-pin guard below already refuses a
+#: recipe/candidate mismatch, and its advice -- "pass ``--recipe-json``" -- is correct
+#: for a candidate this grammar can express.  For a candidate it cannot, that advice is
+#: an over-promise: a reader would write a recipe, watch the rebuild fail deep inside
+#: the encode stage, and blame the algorithm.  Worse, the packet's accounting lists this
+#: entry point as ``ours-original``, so a reviewer may reasonably try the default
+#: invocation first.  Naming the gap is the fail-closed answer; silence is the fake one.
+NOT_EXPRESSIBLE: dict[str, dict[str, object]] = {
+    "f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e": {
+        "name": "jg5_joint_waterfill_455",
+        "archive_bytes": 180_625,
+        "missing_stages": [
+            "seg token edit solve over 573 pairs -- writes the SEMANTIC stream, which "
+            "this script copies verbatim (experiments/ddm_jg3_joint_solve.py)",
+            "splice of those edits into the br1 body, producing the jg4 candidate body",
+            "joint edit-admission waterfill swept over a Lagrange multiplier on pose "
+            "damage, 455 of 573 edits admitted "
+            "(experiments/ddm_jg5_pose_resolve_on_edited_renders.py)",
+            "pose-carrier re-solve against the candidate's OWN renders and the archive "
+            "rebuild that re-encodes the carrier stream "
+            "(experiments/ddm_up3_carrier_splice.py::build_archive, damped Gauss-Newton "
+            "from experiments/ddm_br1_pose_basis_reorientation.py::gn_solve_pair)",
+        ],
+        "receipt": ".omx/research/ddm_jg5_pose_resolve_on_edited_renders_20260819.md",
+    },
+    "35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3": {
+        "name": "ck1_composed_row_prune",
+        "archive_bytes": 177_182,
+        "missing_stages": [
+            "SM3R mode-6 row-pruned, mixed-depth semantic re-quantization -- re-writes "
+            "the semantic section this script copies verbatim "
+            "(experiments/ddm_ck1_build_composed_archive.py)",
+            "in-compile frame-0 pose compensation folded into the existing Rice-coded "
+            "lattice (experiments/ddm_ck1_pose_resolve_kneeA.py)",
+        ],
+        "receipt": (
+            ".omx/research/ddm_pq1_submission_packet_prep_20260815/"
+            "BORROWED_SUBSTRATE_ACCOUNTING.md (section 8)"
+        ),
+    },
+}
+
+
+def refuse_if_not_expressible(expected: ArchiveIdentity) -> None:
+    """Refuse a candidate outside this grammar, by name, before any stage runs."""
+    entry = NOT_EXPRESSIBLE.get(expected.sha256)
+    if entry is None:
+        return
+    stages = "\n".join(f"    - {stage}" for stage in entry["missing_stages"])
+    raise RebuildNotExpressible(
+        f"REFUSING: candidate {entry['name']} ({expected.sha256[:16]}…, "
+        f"{int(entry['archive_bytes']):,} B, resolved from {expected.source}) is NOT "
+        "expressible by this entry point.\n"
+        "This script rebuilds the TOKEN stream (optionally plus a declared container "
+        "repack) and carries the other seven sections through verbatim. This candidate's "
+        "chain also re-decides content in sections this script copies:\n"
+        f"{stages}\n"
+        "No --recipe-json can close that gap: the missing stages are missing STAGES, not "
+        "a missing recipe. Rebuild it with the builders named above.\n"
+        f"Receipt: {entry['receipt']}\n"
+        "To exercise this script on a candidate it CAN rebuild, pass that candidate's "
+        "--expected-archive-sha256/--expected-archive-bytes with its --recipe-json."
+    )
 
 
 def load_recipe(recipe_json: Path | None) -> dict[str, object]:
@@ -364,7 +484,18 @@ def resolve_inputs(spec: dict[str, dict[str, object]], inputs_json: Path | None)
 
 
 def verify_inputs(spec: dict[str, dict[str, object]], resolved: dict[str, Path]) -> list[dict[str, object]]:
-    """Hash each input and refuse to proceed on a mismatch or an absent file."""
+    """Hash each input and refuse to proceed on a mismatch or an absent file.
+
+    REPORTS ITS DENOMINATOR.  A verification loop over an empty or partly-unpinned spec
+    passes silently, and a silent pass reads exactly like a real one.  So this prints
+    ``verified N/M inputs, P pinned`` and refuses an empty spec outright: vacuity is a
+    refusal here, never a green.
+    """
+    if not spec:
+        raise SystemExit(
+            "input spec is empty: there is nothing to verify, and an empty verification "
+            "is not a passing one. Check the loaded recipe."
+        )
     manifest: list[dict[str, object]] = []
     problems: list[str] = []
     for name, entry in spec.items():
@@ -391,6 +522,12 @@ def verify_inputs(spec: dict[str, dict[str, object]], resolved: dict[str, Path])
         )
     if problems:
         raise SystemExit("input verification failed:\n  " + "\n  ".join(problems))
+    pinned = sum(1 for entry in spec.values() if entry["sha256"] is not None)
+    print(
+        f"[pq2] verified {len(manifest)}/{len(spec)} inputs, {pinned} of them sha256-pinned "
+        f"({len(spec) - pinned} present-but-unpinned by recipe design)",
+        flush=True,
+    )
     return manifest
 
 
@@ -549,6 +686,12 @@ def main() -> int:
     expected = resolve_expected_archive(
         args.expected_archive_sha256, args.expected_archive_bytes, args.candidate_runtime
     )
+
+    # GRAMMAR GUARD, checked BEFORE the cross-pin guard. If the candidate is outside this
+    # script's grammar the honest message names the missing STAGES; the cross-pin guard's
+    # "pass --recipe-json" would be an over-promise, and reaching it first would hide the
+    # real reason behind a fixable-looking one.
+    refuse_if_not_expressible(expected)
 
     # CROSS-PIN GUARD. The recipe describes the pipeline; the expected identity names the
     # product. Reproducing candidate X while still asserting rr4's token stream, decoded

@@ -86,6 +86,18 @@ fits only at the most optimistic end, by about 10.7 s. Our own wall-clock
 assessment therefore grades this WARN, not PASS: a margin of 10.7 s on a
 warm-cache assumption is not a margin.
 
+Where the time goes: token decode is 1341.5 s, or 95.72% of inflation. The cost is
+one hot stage, not diffuse overhead. A native port of that stage's integer half
+exists and reproduces this candidate's decode bit-for-bit on the full 600-frame
+field at 1.77-1.83x on local hardware. It is NOT in the tree evaluated here, and
+folding it would move the runtime-tree hash and require a new exact evaluation, so
+it is disclosed as available work rather than claimed as a fix.
+
+Two internally derived residual windows exist for the non-inflation steps on the
+CUDA path -- [890.6, 1430.6] s and a tighter [822, 1302] s -- and they disagree in
+verdict: the first grades this candidate WARN, the second REFUSE. They are not
+reconciled. Both are stated here rather than quoting whichever is kinder.
+
 On the CPU path the same assessment projects 1414-1913 s of inflation against a
 residual of [1044, 1332] s, which is over budget in every corner. The prior
 lineage MEASURED contest-CPU inflation at 3422.711146813 s against the 1800 s

@@ -111,6 +111,18 @@ fits only at the most optimistic end, by about 10.7 s. Our own wall-clock
 assessment therefore grades this WARN, not PASS: a margin of 10.7 s on a
 warm-cache assumption is not a margin.
 
+Where the time goes: token decode is 1341.5 s, or 95.72% of inflation. The cost is
+one hot stage, not diffuse overhead. A native port of that stage's integer half
+exists and reproduces this candidate's decode bit-for-bit on the full 600-frame
+field at 1.77-1.83x on local hardware. It is NOT in the tree evaluated here, and
+folding it would move the runtime-tree hash and require a new exact evaluation, so
+it is disclosed as available work rather than claimed as a fix.
+
+Two internally derived residual windows exist for the non-inflation steps on the
+CUDA path -- [890.6, 1430.6] s and a tighter [822, 1302] s -- and they disagree in
+verdict: the first grades this candidate WARN, the second REFUSE. They are not
+reconciled. Both are stated here rather than quoting whichever is kinder.
+
 On the CPU path the same assessment projects 1414-1913 s of inflation against a
 residual of [1044, 1332] s, which is over budget in every corner. The prior
 lineage MEASURED contest-CPU inflation at 3422.711146813 s against the 1800 s
@@ -166,14 +178,40 @@ same token decoder.
 own submission WARN rather than PASS on this axis and say so here rather than
 letting a judge discover it as a timeout.
 
+**Where the time goes, and a disagreement inside our own notes.** The cost is
+concentrated, not diffuse: **token decode is 1,341.5 s, or 95.72% of inflation.**
+That is a single hot stage, and we have a native port of its integer half which
+reproduces this candidate's evaluated decode bit-for-bit on the full 600-frame
+field while running 1.77–1.83× faster on local hardware. It is **not** in the tree
+evaluated here, and folding it would move the runtime-tree hash and therefore
+require a new exact evaluation — so it is disclosed as available work, not claimed
+as a fix.
+
+We also hold two internally derived residual windows for the non-inflation steps on
+the CUDA path — `[890.6, 1430.6] s` and a tighter `[822, 1302] s` — and they
+disagree in verdict: the first grades this candidate WARN, the second grades it
+REFUSE. We have not reconciled them, and we would rather say so than quote whichever
+one is kinder. Either way the measured facts are the same and the risk is real.
+
 # did you include the compression script? and want it to be merged?
 
 **Scope reduction, stated rather than inherited.** The repository contains an
 end-to-end rebuild entry point that reconstructs an archive from pinned retained
 inputs and refuses to exit 0 unless the rebuilt bytes hash to the pinned SHA-256.
-**That entry point has not been re-run for this candidate**, so we are not
-claiming a verified end-to-end rebuild for these bytes. We are not asking for a
-compression script to be merged.
+**That entry point has not been re-run for this candidate, and it also cannot
+rebuild it** — the two facts are different and only stating the first would invite
+the wrong conclusion.
+
+The entry point rebuilds the *token stream* (optionally plus a declared container
+repack) and carries the other seven sections through verbatim. This candidate's
+chain additionally re-decides content in sections that entry point copies: the seg
+token edit solve, the edit splice, the admission waterfill and the pose-carrier
+re-solve. No configuration closes that gap, so the script refuses this archive by
+name and cites the builders that do produce it, rather than failing deep inside a
+rebuild and leaving a reader to blame the algorithm.
+
+We are not claiming a verified end-to-end rebuild for these bytes, and we are not
+asking for a compression script to be merged.
 
 # changes from upstream
 
@@ -261,6 +299,48 @@ edited renders under a derived materiality stop rule (600/600 pairs stopped on
 roughly 13× more pose than the edits bought in seg. A better decision rule over
 someone else's representation is a contribution to the decision, not to the
 representation, and we do not claim otherwise.
+
+## What else in this work is ours
+
+The table above is section-scoped: it answers "what is in the archive and whose is
+it". Several mechanisms of ours shaped this candidate without owning a section, and
+listing only the section rows under-reports our own side of the ledger. **None of
+these adds a counted archive byte** and none changes a classification above.
+
+- **The instruments that priced every decision exactly.** A tail re-encoder that is
+  the exact inverse of the shipping decoder, so an edit's cost is the measured
+  archive delta rather than a bits-per-token estimate (3.8373 measured bits per
+  changed token at this candidate's scale); and the measured superposition law —
+  token-edit rate costs add, interactions under 3% — that lets the waterfill sum
+  per-chunk rate instead of re-encoding every subset.
+- **Two zero-distortion rate steps in this archive's ancestry.** A parameter-free
+  container transform that re-lays out four already-decided section bodies before
+  the Brotli pass, with the receiver restoring each byte-for-byte before parsing, so
+  both distortion legs are zero *by construction* (−657 B); and a tail-override
+  build step (−105 B) without which every token-stream rate win measured elsewhere
+  was structurally unreachable from the shipping body.
+- **The pose solve.** A damped Gauss-Newton carrier solve — the residual demands a
+  multi-coordinate step of 57 to 14,079 integer code units, which the previous
+  single-coordinate ±2 search could never travel — plus an uncapped convergence
+  proof over all 600 pairs at zero added bytes, and the un-interleave discovery that
+  turned two byte-close blockers into one missing transform.
+- **A decode-time probability corrector on the miss class**, online and
+  decode-identical; the shipped `runtime/free_corrector.py` is that corrector.
+- **Custody apparatus that makes the numbers above checkable rather than
+  believable**: a seal contract that re-derives every pin from disk and refuses a
+  paid evaluation on drift, one canonical score arithmetic byte-identical to
+  `upstream/evaluate.py:92`, a manifest-driven packet stager whose census reports its
+  own denominator, and a registry that hashed all 241 copies of `rc64_backend.c`
+  across our custody roots and separated four distinct bodies by role.
+
+**Two corrections to our own record, both against us.** A 12-dimensional pose-basis
+re-orientation we investigated is a *measured null* — re-mixing the basis leaves the
+reachable correction invariant to 1.9e-08 — and it ships nothing. And the three-way
+`{edit, drop, keep}` solve shipped only two branches: `drop` needs a receiver change
+this body has no path for, so it is owed headroom, not a delivered mechanism.
+
+The full table, with a receipt on every row, is
+`BORROWED_SUBSTRATE_ACCOUNTING.md` §9.5.
 
 ## Credits and prior work
 

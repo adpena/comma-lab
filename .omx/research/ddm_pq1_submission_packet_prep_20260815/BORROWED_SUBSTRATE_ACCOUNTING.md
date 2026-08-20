@@ -451,3 +451,56 @@ the reverse of every earlier generation in this packet.
 2. **The end-to-end rebuild has not been re-run for these bytes.** §2 row 10 remains
    `ours-original` as a mechanism, but its verification status for THIS candidate is open,
    and it is listed as owed rather than quietly carried over.
+
+### 9.5 Mechanisms of OURS that this document had not named — completeness amendment
+
+**Why this subsection exists (append-only, nothing above is altered).** §§1–9.4 are
+SECTION-scoped: they answer "what is in the archive and whose is it?". A mechanism that
+shaped the candidate without owning a section — a solver, an instrument, a pricing law, a
+piece of custody apparatus — therefore had no row, and eleven such mechanisms were absent.
+Nine of them are `ours-original`. **None of them changes a single classification above, and
+none adds counted archive bytes**, so this amendment does not move the borrow/own boundary;
+it stops the ledger from under-reporting our own side of it. Full table with receipts:
+`.omx/research/ddm_pq4_packet_completeness_20260820/CONTRIBUTIONS_INVENTORY.md`.
+
+**Build-chain instruments and solves — all `ours-original`, all 0 counted bytes.**
+
+| Mechanism | What it does | Receipt | Measured |
+|---|---|---|---|
+| jg2 tail re-encoder | The exact inverse of the shipping decoder: `decode_production_tokens` line-for-line with decode replaced by encode. Returns the **exact archive delta** of any edited token field rather than a bits-per-token constant. jg5 re-encoded the 455 admitted edits with it | `.omx/research/ddm_jg2_sub015_chain_20260819.md` | control byte-identical at 109,696 B; 3.8373 measured bits per changed token |
+| Edit-cost superposition law | Token-edit RATE costs ADD; interactions under 3% and sign-changing. This is what licenses the waterfill to sum per-chunk rate | same | union/sum 1.0258; 10+6+14 = measured 30 exactly |
+| Container transform "plane2" (ck2) | Parameter-free re-layout of four already-decided section bodies before Brotli; the receiver restores each byte-for-byte before parsing, so both distortion legs are zero **by construction** | `.omx/research/ddm_ck2_container_plane2_eleventh_move_20260819.md` | **−657 B**, d_seg 0, d_pose 0 |
+| Tail-override build step (to1) | The missing step that substitutes a **re-encoded** tail into the pointer body. Without it every token-stream rate win measured elsewhere was structurally unreachable from the pointer | `.omx/research/ddm_to1_tail_override_twelfth_move_20260819.md` | **−105 B**, pure rate |
+| Within-miss corrector (ma1) | Per-cell multiplicative correction on the miss class, online, decode-identical. **The shipped `runtime/free_corrector.py` IS `Ma1WithinMissCorrector`** | `.omx/research/ddm_ma1_model_axis_miss_cost_20260819.md` | −104.584 B on the n600 field. Its own "77,241 B reservoir" framing was withdrawn as a vacuous denominator |
+| Uncapped pose GN solve (up2) | Carrier coordinate descent run uncapped to a convergence proof on all 600 pairs at zero bytes | `.omx/research/ddm_up2_shipping_object_pose_solve_20260819.md` | 429 pairs improved, **0 worsened**, ΔB = 0 |
+| Un-interleave discovery + Rice splice (up3) | Both byte-close blockers were ONE missing transform: the stored carrier is 2-plane byte-interleaved and the receiver un-interleaves before reading any offset. This is the splice tool every jg5 level is built with | `.omx/research/ddm_up3_thirteenth_move_byteclose_20260819.md` | byte-closed at ΔB = 0; corrected a stale pin 22,183 → 22,178 |
+| Damped GN carrier solve (br1) | The residual demands a **multi-coordinate** step of 57–14,079 int12 units, which up2's ±2 single-coordinate search could never travel. jg5 reuses `gn_solve_pair` verbatim | `.omx/research/ddm_br1_pose_basis_reorientation_20260819.md` | d_pose ×0.91423 at ΔB +9; 204 improved, **0 worsened** |
+| jg4 checkpoint fix | `state_dict()` was defined only on the flat base class while the shipped corrector is three subclasses deeper, so a resumed encode restarted the model-mixing half **cold** while every log line looked healthy. This is the correctness precondition for jg5's `delta_trustworthy=true` | `.omx/research/ddm_jg4_reencoder_mirror_fix_20260819.md` | saved 7 of 97 values, dropping 9.68 MB of live state |
+
+**Custody and measurement apparatus — `ours-original`, no bytes, but the reason the numbers
+in this document can be checked rather than believed.** The candidate-seal contract
+(`src/tac/candidate_seal.py`; re-derives every pin from disk and refuses a paid call on
+drift), the canonical contest-score arithmetic (`src/tac/contest_score.py`; byte-identical to
+`upstream/evaluate.py:92`), the manifest-driven packet stager and its census guard
+(`tools/stage_contest_submission_packet.py`, `tools/packet_census_guard.py`), the canonical
+dispatch firers, the RC64 backend role registry
+(`reverse_engineering/rc64_backend_role_registry.json` — 241 copies of `rc64_backend.c`, four
+distinct bodies, one of them a third party's), and the dual-axis T4 materializer that buys
+both scoring axes from one dispatch.
+
+**One `ours-original` research line that is NOT in these bytes.** The level-set / task-space
+witness — coding the task-sufficient statistic (argmax partition plus ego-pose) instead of RGB.
+It is named here so the ledger is complete, and marked **research-only**: this candidate is not
+a witness vehicle and the line never byte-closed below the pointer.
+Receipt: `docs/paper/novel_contributions_and_originality_accounting.md`.
+
+**Two corrections this amendment makes to the record, both against us.**
+
+1. **The 12-dim basis re-orientation is a MEASURED NULL.** Re-mixing the stored basis leaves
+   the reachable pose correction invariant to 1.9e-08. It ships nothing. What shipped from br1
+   is the GN solve above. Any reading that credits a "basis re-orientation" in these bytes is
+   wrong.
+2. **The three-way `{edit, drop, keep}` solve shipped only two of its three branches.**
+   `drop` requires a receiver change the pointer body has no path for, so implementing it would
+   invalidate the byte-identity control chain the seal rests on. Shipped: `edit` + `keep`.
+   `drop` is owed headroom, not a delivered mechanism.
