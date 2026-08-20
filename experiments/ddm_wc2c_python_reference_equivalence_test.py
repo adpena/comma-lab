@@ -18,8 +18,12 @@ FOUR CHECKS, each a refusal on its own:
    the portable twin, this check fails before any speed is quoted.
 3. **Token-field byte equality.**  The retained token payloads of the two builds
    are compared byte for byte, not merely by their own reported digest.
-4. **Thread-count independence.**  Runs at different ``F26_HPAC_THREADS`` values
-   agree, which is the observable form of "no cross-thread reduction exists".
+4. **Build and thread independence.**  Every retained variation agrees: the
+   dispatched build and the intrinsic-free twin, at different
+   ``F26_HPAC_THREADS`` values.  Thread-count agreement is the observable form
+   of "no cross-thread reduction exists"; the set deliberately includes a
+   SAME-BUILD thread pair, because a comparison that varies build and thread
+   together proves neither one on its own.
 
 A missing receipt is reported as MISSING and fails the run.  It is never treated
 as a pass: a check that silently skips is a check that reads green on an empty
@@ -153,13 +157,13 @@ def run_checks(retained: Path) -> dict[str, Any]:
         }
     )
 
-    thread_rows = sorted(retained.glob("wc2c_thread_independence_t*.json"))
+    thread_rows = sorted(retained.glob("wc2c_thread_independence_*.json"))
     if not thread_rows:
         results.append(
             {
-                "check": "thread_count_independence",
+                "check": "build_and_thread_independence",
                 "key": "receipts_present",
-                "expected": ">=2 thread rows",
+                "expected": ">=2 build/thread rows",
                 "measured": 0,
                 "pass": False,
             }
@@ -171,7 +175,7 @@ def run_checks(retained: Path) -> dict[str, Any]:
             for key in IDENTITY_KEYS:
                 results.append(
                     {
-                        "check": "thread_count_independence",
+                        "check": "build_and_thread_independence",
                         "build": row_path.name,
                         "key": key,
                         "expected": reference.get(key),
