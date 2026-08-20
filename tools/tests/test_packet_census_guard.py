@@ -129,7 +129,11 @@ def test_double_declaration_arithmetic_reconciles(tmp_path, capsys):
     )
     out = capsys.readouterr().out
     assert "DOUBLE-DECLARED: GENERATION_RECEIPT.json" in out
-    assert "2 runtime + 7 non-runtime - 1 in both" in out
+    # Derive the expected breakdown from the constant rather than hardcoding it:
+    # a literal here drifts silently the next time the declared set grows, which
+    # is exactly the hardcoded-count class this test exists to catch.
+    non_runtime = len(guard.DECLARED_NON_RUNTIME)
+    assert f"2 runtime + {non_runtime} non-runtime - 1 in both" in out
 
 
 # --------------------------------------------------------------------------

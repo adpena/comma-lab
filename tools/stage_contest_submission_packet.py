@@ -76,7 +76,50 @@ DECLARED_NON_RUNTIME: frozenset[str] = frozenset(
         "GENERATION_RECEIPT.json",
         "RECEIVER_PARSEBACK.json",
         "BORROWED_SUBSTRATE_ACCOUNTING.md",
+        # Merge-eligibility and licensing surface. Every merged neural submission
+        # in this contest ships a licence and a compression script; we vendor
+        # modified third-party code, which makes the notices obligation heavier
+        # for us, not lighter. None of these suffixes is in
+        # ``_RUNTIME_DEPENDENCY_SUFFIXES`` except ``compress.py`` -- see
+        # ``RUNTIME_TREE_SHA256_SCOPE`` below for why that is safe and what it
+        # obliges a re-validator to do.
+        "LICENSE",
+        "THIRD_PARTY_NOTICES.md",
+        "MANIFEST.sha256",
+        "compress.py",
+        "COMPRESS.md",
     }
+)
+
+# Why the pin is over ENUMERATED ROWS and not over a directory walk.
+#
+# ``experiments/contest_auth_eval.py::_runtime_root_file_manifest`` walks
+# ``root.rglob("*")`` and keeps every file whose suffix is in
+# ``_RUNTIME_DEPENDENCY_SUFFIXES`` (``.py``, ``.sh``, ``.txt``, ``.json``,
+# ``.c``). The manifest is therefore NOT a closed allowlist: it is whatever
+# matched on the evaluated host. Two consequences we must state rather than
+# discover:
+#
+# 1. ``report.txt`` and ``archive_manifest.json`` are manifest-ELIGIBLE by
+#    suffix yet absent from the pinned rows, because the evaluated
+#    ``submission_dir`` never contained them. So a staged packet ALREADY
+#    differs from a fresh walk of the evaluated tree, before we add anything.
+# 2. Staging ``compress.py`` widens that difference by one more file.
+#
+# Neither touches the score: ``upstream/evaluate.py`` sizes ``archive.zip``
+# only. But a re-validator who re-walks the directory will compute a different
+# tree hash and read it as corruption. The pin is over the enumerated rows, and
+# this string is written into every staging receipt so that rule travels with
+# the packet instead of living in one arm's memo.
+RUNTIME_TREE_SHA256_SCOPE: str = (
+    "runtime_tree_sha256 is pinned over the ENUMERATED runtime-manifest rows "
+    "recorded in this receipt, NOT over a fresh recursive walk of the staged "
+    "directory. Re-validation MUST hash the enumerated rows. The staged packet "
+    "intentionally carries additional non-runtime documents (licence, notices, "
+    "per-file manifest, compression script and its README) that a fresh walk "
+    "would pick up by suffix; they are declared here, they carry no runtime "
+    "role, and they cannot change the score because evaluate.py sizes "
+    "archive.zip only."
 )
 
 # File classes that must never enter a staged packet. These are reported with
@@ -195,6 +238,26 @@ def census_source(source: Path, declared: Iterable[str]) -> dict[str, Any]:
     }
 
 
+def parse_doc_spec(spec: str) -> tuple[Path, str]:
+    """Parse a ``SRC=DESTREL`` document staging spec.
+
+    Split on the LAST ``=`` so a source path containing one still parses. The
+    destination is validated against ``DECLARED_NON_RUNTIME`` by the caller;
+    this function only splits and rejects the empty halves.
+    """
+    if "=" not in spec:
+        raise StagingError(
+            f"--doc expects SRC=DESTREL (destination relative to the packet root); got {spec!r}"
+        )
+    src_text, dest = spec.rsplit("=", 1)
+    src_text, dest = src_text.strip(), dest.strip()
+    if not src_text or not dest:
+        raise StagingError(f"--doc has an empty source or destination: {spec!r}")
+    if Path(dest).is_absolute() or ".." in Path(dest).parts:
+        raise StagingError(f"--doc destination must be a relative path inside the packet: {dest!r}")
+    return Path(src_text), dest
+
+
 def stage(
     *,
     auth_eval_json: Path,
@@ -203,8 +266,18 @@ def stage(
     archive_name: str = "archive.zip",
     expected_archive_sha256: str | None = None,
     expected_archive_size_bytes: int | None = None,
+    docs: Iterable[tuple[Path, str]] = (),
 ) -> dict[str, Any]:
-    """Stage the packet and return a receipt proving the tree identity."""
+    """Stage the packet and return a receipt proving the tree identity.
+
+    ``docs`` are non-runtime packet documents (``SRC``, ``DESTREL``) pairs. They
+    are copied through this tool rather than by hand for the same reason the
+    runtime rows are: a packet assembled by three different mechanisms is a
+    packet whose contents nobody can prove. Every destination must already be
+    declared in ``DECLARED_NON_RUNTIME`` -- otherwise the census guard, which
+    shares that constant, would report the file as undeclared. That coupling is
+    enforced here rather than documented, so the two tools cannot drift.
+    """
     receipt = load_possibly_repr_json(auth_eval_json)
     manifest = extract_runtime_manifest(receipt)
     rows = [dict(row) for row in manifest["files"]]
@@ -212,6 +285,29 @@ def stage(
 
     if not source_runtime_dir.is_dir():
         raise StagingError(f"source runtime dir does not exist: {source_runtime_dir}")
+
+    # Validate every doc BEFORE the output directory is created, so a bad spec
+    # costs nothing and cannot leave a half-staged tree behind.
+    doc_pairs = [(Path(src), str(dest)) for src, dest in docs]
+    seen_dests: set[str] = set()
+    for src, dest in doc_pairs:
+        if dest not in DECLARED_NON_RUNTIME:
+            raise StagingError(
+                f"--doc destination {dest!r} is not in DECLARED_NON_RUNTIME. "
+                "Add it to that constant in BOTH this tool and "
+                "tools/packet_census_guard.py, or the census will report the "
+                "staged file as undeclared."
+            )
+        if dest in declared_rel:
+            raise StagingError(
+                f"--doc destination {dest!r} collides with a runtime manifest row; "
+                "refusing to overwrite proven runtime content with a document"
+            )
+        if dest in seen_dests:
+            raise StagingError(f"--doc destination {dest!r} given twice")
+        seen_dests.add(dest)
+        if not src.is_file():
+            raise StagingError(f"--doc source does not exist: {src}")
 
     # The census's "declared" set is the runtime manifest UNION the non-runtime
     # allowlist, so a source tree that already carries packet docs (README.md,
@@ -272,6 +368,26 @@ def stage(
                 "re-derived runtime_tree_sha256 does not match the receipt "
                 f"({rederived} vs {declared_tree}); the staged tree is NOT the evaluated tree"
             )
+
+        # Documents are copied AFTER the tree identity is proved, so a document
+        # can never be implicated in a failed identity proof.
+        staged_docs: list[dict[str, Any]] = []
+        for src, dest in doc_pairs:
+            dst = out_dir / dest
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+            payload = dst.read_bytes()
+            src_payload = src.read_bytes()
+            if payload != src_payload:
+                raise StagingError(f"{dest}: staged document differs from its source after copy")
+            staged_docs.append(
+                {
+                    "relative_path": dest,
+                    "source": str(src),
+                    "sha256": sha256_bytes(payload),
+                    "bytes": len(payload),
+                }
+            )
     except Exception:
         shutil.rmtree(out_dir, ignore_errors=True)
         raise
@@ -286,7 +402,10 @@ def stage(
         "runtime_files_declared": len(rows),
         "runtime_tree_sha256": declared_tree,
         "runtime_tree_sha256_rederived_from_staged": rederived,
+        "runtime_tree_sha256_scope": RUNTIME_TREE_SHA256_SCOPE,
         "runtime_content_tree_sha256": manifest.get("runtime_content_tree_sha256"),
+        "staged_documents": staged_docs,
+        "staged_document_count": len(staged_docs),
         "archive": {
             "name": archive_name,
             "sha256": archive_sha,
@@ -314,10 +433,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--archive-name", default="archive.zip")
     parser.add_argument("--expected-archive-sha256", default=None)
     parser.add_argument("--expected-archive-size-bytes", type=int, default=None)
+    parser.add_argument(
+        "--doc",
+        action="append",
+        default=None,
+        metavar="SRC=DESTREL",
+        help=(
+            "stage a non-runtime packet document, e.g. "
+            "--doc README_PUBLIC.md=README.md . Repeatable. The destination must "
+            "already appear in DECLARED_NON_RUNTIME (shared with "
+            "tools/packet_census_guard.py) or staging refuses."
+        ),
+    )
     parser.add_argument("--json-out", type=Path, default=None)
     args = parser.parse_args(argv)
 
     try:
+        docs = [parse_doc_spec(spec) for spec in (args.doc or [])]
         record = stage(
             auth_eval_json=args.auth_eval_json,
             source_runtime_dir=args.source_runtime_dir,
@@ -325,6 +457,7 @@ def main(argv: list[str] | None = None) -> int:
             archive_name=args.archive_name,
             expected_archive_sha256=args.expected_archive_sha256,
             expected_archive_size_bytes=args.expected_archive_size_bytes,
+            docs=docs,
         )
     except StagingError as exc:
         print(f"STAGING REFUSED: {exc}", file=sys.stderr)
@@ -336,6 +469,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  runtime_tree_sha256    : {record['runtime_tree_sha256']}")
     print(f"  re-derived from staged : {record['runtime_tree_sha256_rederived_from_staged']}")
     print(f"  archive                : {record['archive']['sha256']} ({record['archive']['bytes']} B)")
+    for doc in record["staged_documents"]:
+        print(f"  document               : {doc['relative_path']} ({doc['bytes']} B, {doc['sha256'][:12]})")
     print(
         f"  source census          : {census['source_real_file_count']} real files, "
         f"{census['undeclared_real_file_count']} undeclared, "

@@ -111,6 +111,16 @@ DECLARED_NON_RUNTIME: frozenset[str] = frozenset(
         "GENERATION_RECEIPT.json",
         "RECEIVER_PARSEBACK.json",
         "BORROWED_SUBSTRATE_ACCOUNTING.md",
+        # Merge-eligibility and licensing surface. MUST stay identical to
+        # tools/stage_contest_submission_packet.py::DECLARED_NON_RUNTIME -- the
+        # stager refuses to place a document whose destination is not in this
+        # set, so a drift between the two constants surfaces as a refusal at
+        # staging time rather than as an undeclared file at census time.
+        "LICENSE",
+        "THIRD_PARTY_NOTICES.md",
+        "MANIFEST.sha256",
+        "compress.py",
+        "COMPRESS.md",
     }
 )
 
