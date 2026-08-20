@@ -359,13 +359,60 @@ seconds compound** across every future candidate gate.
 - **P2 — device probe for item 2**, validated on the existing digests before any full decode.
 - **P3 — the `FreeCorrector` C port (item 1)**, gated by the scalar-twin double-build byte-equality
   driver that already exists (`experiments/ddm_f26r_hpac_hot_stage_final_rung.py`).
-- **P4 — budget predicate landing (item 3).**
+- **P4 — budget predicate landing (item 3).** Spec in §7.1.
 - **P5 — CPU-axis render batching (item 5)** and the digest/sha256 trims (items 4, 6).
 
 **Identity discipline, every probe:** `sha256(inflated/0.raw)` before == after on the same archive;
 for native paths additionally the scalar-twin equality; for eval-side changes, value-identity or a
 **new named instrument** with its own calibration receipt against a T4 row — never a silent mutation
 of the gating instrument (et4).
+
+### 7.1 P4 spec — the budget predicate, and why its windows must not be bare constants
+
+**Requirement (MAIN, 2026-08-20):** the predicate carries BOTH residual windows —
+`CUDA [822, 1302] s` and `CPU [1044, 1332] s` — as named constants with this memo's derivation as
+provenance, rather than re-deriving them silently at each call site.
+
+**Refinement (accepted and specified here).** A bare `T_RESIDUAL_CUDA = (822, 1302)` would reproduce
+*exactly the defect this arm just caught*. The "2.17x headroom" number was wrong not because anyone
+mis-multiplied, but because the denominator had been baked into a quotable scalar whose inputs were
+no longer visible — so nobody could see that it priced `T_ci_setup` and `T_evaluate` at zero, or
+that it came off an 8-vCPU box. A hardcoded `822` is the same shape one generation later. This is
+the constants-are-poison genus (memory: CONSTANTS→LAWS) and the value-provenance ladder (#351).
+
+So the window lands as the **evaluated output of a recorded derivation**, with the constant cached
+for callers but carrying its inputs and grade:
+
+| input | value | grade | source |
+|---|---|---|---|
+| `JOB_WALL_S` | 1800 | **MEASURED at source** | `eval.yml:30` |
+| per-step CI seconds | ua2's step table | **ESTIMATED** | ua2:189 |
+| `git lfs pull` payload | 132,856,531 B | **MEASURED** | ua2 |
+| `uv sync --group cu128` payload | 3,190,398,780 B | **MEASURED** | ua2 |
+| `uv sync --group cpu` payload | ~78 MB | **MEASURED** | ua2 |
+| `cache_state` | `warm` \| `cold` | **input axis** | `setup-uv` `enable-cache: true` |
+| → `T_residual(axis, cache_state)` | CUDA [822,1302] / CPU [1044,1332] | **PROJECTION** | derived here |
+
+The emitted constant must therefore carry `grade: PROJECTION` and
+`provenance: {ua2:189, ddm_wc2 §1.1/§5, receipt br1_t4_shipping_stage_split.json}`. Any consumer
+quoting the window as MEASURED is a false-authority claim — the step seconds have never been timed
+on a real runner, only the payload sizes have.
+
+**Verdict vocabulary — three-valued, never boolean.** The window has two ends *because* the answer
+depends on the uv cache state, which is the whole finding. Collapsing that to `fits: true/false`
+would erase the dependency the predicate exists to surface (m52: a bool flag is a UI over a
+continuum). So:
+
+- **PASS** — `t_inflate + t_evaluate` inside the window's *narrow* (worst-case) end → fits even on a
+  cold cache.
+- **WARN** — inside the wide end but outside the narrow → fits only if the runner's uv cache is
+  warm. **br1 sits here today** (1,246.93 s vs `[822, 1302]`).
+- **REFUSE** — outside both → projected timeout. **MC36-on-4-vCPU sits here** (1,414–1,913 s vs
+  `[1044, 1332]`).
+
+The predicate takes `axis`, the measured `inflate_elapsed_seconds`, and `evaluate_elapsed_seconds`
+from the harness receipt it already writes, so it adds a verdict and no new measurement. It is a
+guard on the gating instrument, not a change to the shipped packet.
 
 ---
 
@@ -392,6 +439,21 @@ of the gating instrument (et4).
 - **Disposition: HOLDING.** $0 phase complete. P0 resolved and it changed the arm's conclusion:
   this is not a polish exercise — **the shipping wall is a live risk to the sub-0.15 submission on
   both axes**, and the dominant term is the token decode, not the render.
-- **P0b is $0 and requested of MAIN**: harvest `stage_seconds` from the jg5 T4 row.
 - **No wc2 measurement, build, scorer pass, or pointer movement.** Wall clock is not a score axis
   and this arm will not move the pointer.
+
+### Adjudication + routing (MAIN, 2026-08-20)
+
+| item | disposition |
+|---|---|
+| axis-scoped-finding catch (wc1 render-86% vs shipping 95.5% token decode); stranded `native-hpac` attribution; corrected CPU budget arithmetic | **BANKED in #835** |
+| GPU-requirement packet decision (§5.3) | **routed to operator at the #1111 boundary** |
+| **P0b** — harvest `stage_seconds.token_decode_or_checkpoint_load` + `inflate_elapsed_seconds` from the jg5 T4 row, call **`fc-01M0EZ3DR3HVB8HBKWEG2P12CT`** (in flight) | **OWNED BY MAIN**; delivered to wc2 with the GO |
+| ranked head (1) rr2 `FreeCorrector` C port behind the scalar-twin driver · (2) token model off CUDA on T4 with sha-provable identity · (3) harness budget predicate | **stands as filed** |
+| addition to (3): both residual windows as named constants with wc2's derivation as provenance | **specified in §7.1**, with the constants-are-poison refinement and a three-valued verdict |
+
+**HOLD CONTINUES until the jg5 row confirms.** Fire condition for P1–P5: MAIN's GO carrying the
+jg5 `token_decode` + `inflate_elapsed` numbers. Those numbers also settle §2.1 — if jg5's token
+decode is at or above br1's 1,186.93 s, the RR2-corrector attribution for the 3.42x regression
+gains a second point and the item-1 port becomes the critical path for the submission, not just the
+fastest win.
