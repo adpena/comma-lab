@@ -1,0 +1,32 @@
+{
+  "schema": "ddm_pf3b_rank_v1_invalidation.v1",
+  "invalidated_root": "/Volumes/VertigoDataTier/pact/ddm_pf3b_52probe_joint_improving_hunt_20260725T202800Z",
+  "replacement_root": "/Volumes/VertigoDataTier/pact/ddm_pf3b_52probe_joint_improving_hunt_20260725T202800Z_v2",
+  "reason": "The v1 ranking subtracted PF2/MS6 event cells from composite-R support cells. These are different causal coordinates: composite-R support is the actuation footprint, while SegNet receptive fields can expand changed argmax cells beyond it. The subtraction and its claimed outside-event upper bound are invalid. No batch16 authority measurement ran.",
+  "invalidated_artifacts": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pf3b_52probe_joint_improving_hunt_20260725T202800Z/stage_checkpoints/00_storage_preflight.json",
+      "bytes": 458,
+      "sha256": "9ed71445194c3703798b5642a9139150b3f6ffca0afd5fb5965d229875dfc3c5"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pf3b_52probe_joint_improving_hunt_20260725T202800Z/stage_checkpoints/01_ranking/12d14cdc61d7784f__negative_one_quantum.json",
+      "bytes": 2569,
+      "sha256": "980019db4c7f9062d1b3ca5e18df251139e7579c307d9d0fe11894beb6e7c21e"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pf3b_52probe_joint_improving_hunt_20260725T202800Z/stage_checkpoints/01_ranking/756ae323427a63cb__negative_one_quantum.json",
+      "bytes": 2721,
+      "sha256": "b9908ce2b8acf7d0cfcdca35c58257d101f5af9bf1a336db97b1e1b050abf67c"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pf3b_52probe_joint_improving_hunt_20260725T202800Z/stage_checkpoints/01_ranking/a784d477f49110d8__negative_one_quantum.json",
+      "bytes": 2099,
+      "sha256": "fd55d29aed5ebc3e1187271adf14b3201ec94c8a12531f291604a8fca3aeba4e"
+    }
+  ],
+  "preservation": "INVALIDATED_BYTES_RETAINED_IN_PLACE_NO_SIGNAL_LOSS",
+  "score_claim": false,
+  "authority_measurement_count": 0,
+  "verdict_scope": "INVALIDATED_RANKING_FORMULATION_ONLY"
+}

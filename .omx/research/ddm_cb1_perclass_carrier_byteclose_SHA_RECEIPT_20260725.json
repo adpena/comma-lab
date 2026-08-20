@@ -1,0 +1,144 @@
+{
+  "schema": "ddm_cb1_perclass_carrier_byteclose_integrity_manifest.v1",
+  "run_id": "ddm_cb1_perclass_carrier_byteclose_20260725T203310Z",
+  "created_utc": "2026-07-25T22:13:59Z",
+  "producer_base_git_sha": "2d7ed6024500204c3e279f29ec041adcacca00ab",
+  "delegation_checkpoint_key": "codex_delegate:ddm_cb1_perclass_carrier_byteclose:20260725T203310Z",
+  "delegated_authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_cb1_perclass_carrier_byteclose_20260725T203310Z.wrapped.prompt.txt",
+    "bytes": 5969,
+    "sha256": "551beb0734c378f4e03c08644cbd4759f9def6091693dbc5b215b622dba4f3bd"
+  },
+  "files": [
+    {
+      "path": ".omx/research/configs/ddm_cb1_perclass_carrier_byteclose_20260725.json",
+      "bytes": 2002,
+      "sha256": "ead83ffb6428c58288d9d7a29adc965ec25861677b60ddfc926bbd9e25d954ba",
+      "role": "typed_config"
+    },
+    {
+      "path": ".omx/research/ddm_cb1_perclass_carrier_byteclose_20260725/ddm_cb1_perclass_carrier_byteclose_receipt.json",
+      "bytes": 25493,
+      "sha256": "a4332eb2d8010854ec7be292f8232ece23f40a4e6da1b0a7bda5c4d2a99977fb",
+      "role": "n600_measurement_and_c1_rows"
+    },
+    {
+      "path": ".omx/research/ddm_cb1_perclass_carrier_byteclose_20260725/runtime/inflate.py",
+      "bytes": 4732860,
+      "sha256": "224e8f48c0ed90144cab5c2863cd46555cd2bc8a782c0ce321232d31a6c502ba",
+      "role": "emitted_free_receiver"
+    },
+    {
+      "path": ".omx/research/ddm_cb1_perclass_carrier_byteclose_20260725/runtime/inflate.sh",
+      "bytes": 431,
+      "sha256": "69d4f3afe99a0a4671149b7550fe3b03d51f0e2e2811c4af91eaf37e8e310ec2",
+      "role": "runtime_entrypoint"
+    },
+    {
+      "path": ".omx/research/ddm_cb1_perclass_carrier_byteclose_20260725/packets/control/archive.zip",
+      "bytes": 131301,
+      "sha256": "a08e8f629ebd58921187ade2178bf13ead9123d5caa24f08b1ecd9b1de4b3211",
+      "role": "byteclosed_control"
+    },
+    {
+      "path": ".omx/research/ddm_cb1_perclass_carrier_byteclose_20260725/packets/mycar_static_mask/archive.zip",
+      "bytes": 131620,
+      "sha256": "5e1441180f83a6d1d12dc72b574d6801f815c555ede3ca2f56ccb228bc45c3b3",
+      "role": "byteclosed_mycar_candidate"
+    },
+    {
+      "path": ".omx/research/ddm_cb1_perclass_carrier_byteclose_20260725/packets/lane_band_v13_polished/archive.zip",
+      "bytes": 132831,
+      "sha256": "8f22f22eaece59bd7e559162d09b37595ae2f450046b8d919c81543439d026c4",
+      "role": "byteclosed_lane_candidate"
+    },
+    {
+      "path": ".omx/research/codex_findings_ddm_cb1_perclass_carrier_byteclose_20260725_codex.md",
+      "bytes": 12021,
+      "sha256": "a0ea8fb5a80462679a0554a0ef11c9437781d0750afc6cb6490595b7e350fc5e",
+      "role": "findings"
+    },
+    {
+      "path": ".omx/research/ddm_cb1_perclass_carrier_byteclose_DAG_FEED_20260725.md",
+      "bytes": 4505,
+      "sha256": "b7247debcab37388d9bfdd99335c674c9d92c797f170286792a22d4424d35cab",
+      "role": "dag_feed"
+    },
+    {
+      "path": "src/tac/optimization/ddm_runtime_exporter.py",
+      "bytes": 106859,
+      "sha256": "aa302a51c4861a00c468a98dfac1b3ed965ba736645b306aada5ce4562d65a97",
+      "role": "cb1_e4_exporter"
+    },
+    {
+      "path": "src/tac/optimization/ddm_runtime_receiver.py",
+      "bytes": 98051,
+      "sha256": "a819564a48be8fb03d99344d7f8fadeae041a868cbfc8d6e3058012050e19616",
+      "role": "cb1_emitted_runtime_source"
+    },
+    {
+      "path": "src/tac/optimization/direct_description_carrier_compose.py",
+      "bytes": 157798,
+      "sha256": "4170277c2fd23bcd6fa88e011efdd252837c48b35fabd52bbefe8f9e4481f9db",
+      "role": "target-bearing_static_carrier"
+    },
+    {
+      "path": "src/tac/optimization/tests/test_ddm_runtime_exporter.py",
+      "bytes": 35949,
+      "sha256": "b78dd4ad77f9d119f55e671dd45c2322b05b02c2174e3f65fed1d3b684604f5f",
+      "role": "runtime_tests"
+    },
+    {
+      "path": "src/tac/optimization/tests/test_direct_description_carrier_compose.py",
+      "bytes": 38060,
+      "sha256": "9bfc154326f449a27364c138ab7cd50550bd154ae7221ec088a5e814c52f4b7e",
+      "role": "carrier_tests"
+    },
+    {
+      "path": "tools/measure_ddm_cb1_perclass_carrier_byteclose.py",
+      "bytes": 40118,
+      "sha256": "5826dc7f6d22416184b77516d51dd26f985ddd4eb58c000b60b6ec1dfd3db398",
+      "role": "resumable_n600_measurement"
+    },
+    {
+      "path": "tools/tests/test_measure_ddm_cb1_perclass_carrier_byteclose.py",
+      "bytes": 3622,
+      "sha256": "4ec683b06088be8e9dadc08a05ac71aa2d1c7a6d780158da660a00133b77cc09",
+      "role": "measurement_policy_tests"
+    }
+  ],
+  "external_preserved_outputs": [
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cb1_perclass_carrier_byteclose_20260725T203310Z/runtime/control/output/0.raw",
+      "bytes": 3662409600,
+      "sha256": "9b41b650f6be21e2ae9822c41c2429140531e8c4af4d96c284f7ebaca6bcc373"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cb1_perclass_carrier_byteclose_20260725T203310Z/runtime/mycar_static_mask/output/0.raw",
+      "bytes": 3662409600,
+      "sha256": "a6cee0402433f079107e890a4570541de8ff5171f9ac8b1ae1a716e2d02c4302"
+    },
+    {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cb1_perclass_carrier_byteclose_20260725T203310Z/runtime/lane_band_v13_polished/output/0.raw",
+      "bytes": 3662409600,
+      "sha256": "26e0d27e15dc3752d5029fabaace1a51039b169c56eb8907a4d4c99d98861dcc"
+    }
+  ],
+  "verification": {
+    "carrier_test_file": "26 passed",
+    "runtime_exporter_test_file": "28 passed",
+    "focused_cb1_and_measurement_tests": "7 passed",
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "batch_receipt_count": 114,
+    "batch_aggregate_rederived": true,
+    "raw_sha256_freshly_rederived": true,
+    "three_clean_review_passes": true
+  },
+  "research_only": true,
+  "score_claim": false,
+  "exact_eval": false,
+  "pointer_moved": false,
+  "main_landing_review_required": true,
+  "verdict": "CB1_HAS_STRICT_NEGATIVE_JOINT_ROW"
+}

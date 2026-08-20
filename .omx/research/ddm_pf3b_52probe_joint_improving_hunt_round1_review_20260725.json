@@ -1,0 +1,69 @@
+{
+  "schema": "ddm_pf3b_round1_adversarial_review.v1",
+  "reviewer": "OWN_ROUND1_ADVERSARIAL_SELF_REVIEW",
+  "review_scope": "implementation, ranking order, source custody, immutable checkpoints, stop rule, neighborhood completeness, E4 parseback, delta arithmetic, verdict language",
+  "review_disposition": "PASS_AFTER_CATCH_AND_FIX",
+  "caught_issue": {
+    "issue": "The first ranking formulation subtracted PF2/MS6 event cells from composite-R actuation-support cells even though SegNet receptive fields can expand argmax changes beyond the support footprint.",
+    "authority_measurements_before_detection": 0,
+    "repair": "Preserved and invalidated all v1 bytes; restarted all 52 ranks under checkpoint schema v2, a new typed-config SHA, and a new SSD root. The two coordinates are now stored and ranked separately.",
+    "invalidation_path": ".omx/research/ddm_pf3b_rank_v1_invalidation_20260725.json",
+    "invalidation_sha256": "b318f4e3b8ba512e95f2b3259bad8d807aa94521577cded9d98332378441355c"
+  },
+  "independent_rederivations": {
+    "typed_config_sha_matches_receipt": true,
+    "rank_rows_exactly_52_unique_and_contiguous": true,
+    "rank_order_recomputed_from_policy": true,
+    "all_rank_checkpoint_hashes_and_sizes_match": true,
+    "all_new_authority_checkpoint_hashes_and_sizes_match": true,
+    "rank1_joint_delta_nonnegative": true,
+    "rank2_is_first_strict_negative_joint_delta": true,
+    "winner_e4_parseback_equals_candidate_archive_bytes": true,
+    "winner_e4_delta_bytes_recomputed_as_860": true,
+    "winner_rate_term_recomputed": 0.0005726386996850674,
+    "winner_total_delta_S_recomputed": 0.00046464625533549665,
+    "four_row_sign_and_adjacent_magnitude_neighborhood_complete": true,
+    "v1_invalidated_bytes_retained_and_hash_verified": true,
+    "pointer_unchanged_language_present": true,
+    "main_landing_review_required": true
+  },
+  "source_hashes": {
+    "runner": {
+      "path": "tools/hunt_ddm_pf3b_joint_improving_edge.py",
+      "bytes": 40558,
+      "sha256": "71cfd1570c44f84313e334a0fa1254cc71080b0311ec79a1f0a9a200fa4ac2f5"
+    },
+    "pf3_runner_refactor": {
+      "path": "tools/materialize_ddm_pf3_finite_prices.py",
+      "bytes": 56022,
+      "sha256": "bdf3b82084098bae649d290994903cbbfb118ff15a16347e847acf506c54ac0d"
+    },
+    "tests": {
+      "path": "tools/tests/test_hunt_ddm_pf3b_joint_improving_edge.py",
+      "bytes": 2784,
+      "sha256": "ece92eae72518176dbffe04becc5f54ffdb9b8453ef96c227a99362cf59fe475"
+    },
+    "typed_config": {
+      "path": ".omx/research/configs/ddm_pf3b_52probe_joint_improving_hunt_20260725.json",
+      "bytes": 1725,
+      "sha256": "8ba5e18b26c1e160b29b84585967378353b8f27e543a0ce91c16f4b4e383a8a7"
+    }
+  },
+  "evidence_hashes": {
+    "receipt_sha256": "dca2de9ecaf6130dd026c2d4e5a14ced0cf6f619cfd48979b196d61226734ab8",
+    "ranked_inventory_sha256": "ae8f6a0152fcfe15bcab8db901e6da1de822340f93139a00829183b0fba3bd1e",
+    "dag_feed_sha256": "0d1ebb7a24ff094bbbe632c01659ff19ce5db6583e0c517d89f8743a4aabca7c"
+  },
+  "verification": {
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "pytest": "10 passed",
+    "git_diff_check": "PASS",
+    "warnings": "Two pre-existing-style Pydantic schema-field shadow warnings; no failure"
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "pointer_delta": "UNCHANGED",
+  "verdict_scope": "INSTANCE V19C endpoint x sealed support-positive RG3 signs",
+  "main_landing_review_required": true
+}

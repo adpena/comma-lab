@@ -9,6 +9,7 @@ import struct
 import zipfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 import torch
 
@@ -18,6 +19,10 @@ from tac.optimization.ddm_e5a_midcampaign_adapter import (
     DDME5AMidcampaignCheckpointAdapterConfigV1,
     DDME5ASolveMemberAdapterConfigV1,
     compile_solve_member_bundle,
+)
+from tac.optimization.ddm_pc1_pose_stream import PC1PosePacketV1
+from tac.optimization.ddm_rg4_g3_blocks_and_active_tube import (
+    build_source_local_composition_archive,
 )
 from tools import rehearse_ddm_runtime_upstream as harness
 
@@ -297,6 +302,53 @@ def test_ws1_packet_reconstructs_source_and_refuses_stream_or_coder_tamper() -> 
             expected_kind=0,
             label="state/ws1.ddj5",
         )
+
+
+def test_cb1_rg4_packet_reconstructs_source_local_state_through_e4_frame() -> None:
+    config = exporter.load_config(W_SEG_CONFIG)
+    assert isinstance(config, exporter.DDME4WS1RuntimeExporterConfigV1)
+    parent = Path(config.source_archive_path).read_bytes()
+    packet = PC1PosePacketV1(
+        active=False,
+        pair_count=600,
+        xi_scales=(1.0,) * 6,
+        residual_scale=1.0,
+        q_xi=np.zeros((2, 6), dtype=np.int16),
+        q_luma_phase=np.zeros((2, 4), dtype=np.int8),
+    )
+    source = build_source_local_composition_archive(
+        parent_archive=parent,
+        parent_sha256=hashlib.sha256(parent).hexdigest(),
+        packet=packet,
+    )
+    archive, receipt = exporter.compile_cb1_rg4_runtime_packet(
+        source,
+        state_name="test_cb1_inactive_source_local",
+        output_bytes=600 * 2 * 874 * 1164 * 3,
+        output_sha256="a" * 64,
+    )
+    assert receipt["packet_parseback_source_byte_identical"] is True
+    assert receipt["coder"] in {
+        exporter.BROTLI_Q11_CODER,
+        exporter.E3_LZMA1_CODER,
+    }
+    with zipfile.ZipFile(io.BytesIO(archive), "r") as handle:
+        members = {
+            name: handle.read(name)
+            for name in exporter.EXPECTED_CB1_MEMBERS
+        }
+    manifest = receiver._validate_cb1_manifest(
+        json.loads(members["manifest.json"]),
+        members,
+    )
+    reconstructed, dimensions = receiver._parse_blob(
+        members["state/rg4.ddr4"],
+        expected_kind=0,
+        label="state/rg4.ddr4",
+    )
+    assert manifest["schema"] == exporter.CB1_SCHEMA
+    assert reconstructed == source
+    assert dimensions == ()
 
 
 def test_e5a_la1_bundle_reconstructs_step50_state_and_refuses_tamper() -> None:

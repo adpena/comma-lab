@@ -73,6 +73,7 @@ E4_WS1_SCHEMA = "ddm_e4_ws1_runtime_archive.v1"
 E5A_SCHEMA = "ddm_e5a_midcampaign_runtime_archive.v1"
 IC1_SCHEMA = "ddm_ic1_runtime_archive.v1"
 IC2_SCHEMA = "ddm_ic2_runtime_archive.v1"
+CB1_SCHEMA = "ddm_cb1_rg4_perclass_runtime_archive.v1"
 RATE_DOCTRINE_SCHEMA = "ddm_four_clause_rate_doctrine.v1"
 CONFIG_SCHEMA = "DDME1RuntimeExporterConfigV1"
 E2_CONFIG_SCHEMA = "DDME2RuntimeExporterConfigV1"
@@ -98,6 +99,7 @@ STATE_NAME = "v15_j2_lane_seed_theta0"
 EXPECTED_DOF_COUNT = 368
 EXPECTED_MEMBERS = ("manifest.json", "base/chart.ddb", "semantic/composed.dds")
 EXPECTED_WS1_MEMBERS = ("manifest.json", "state/ws1.ddj5")
+EXPECTED_CB1_MEMBERS = ("manifest.json", "state/rg4.ddr4")
 EXTENSION_SLOTS = (
     {
         "active_member": None,
@@ -1072,6 +1074,7 @@ def _runtime_cleanliness(runtime: bytes) -> dict[str, Any]:
         "tac.optimization.ddm_cc3_mixed_coder_receiver",
         "tac.optimization.ddm_la1_layer_assignment_context_pricing",
         "tac.optimization.ddm_pc1_pose_stream",
+        "tac.optimization.ddm_rg4_g3_blocks_and_active_tube",
         "tac.optimization.direct_description_carrier_compose",
         "tac.optimization.direct_description_coupled_margin",
         "tac.optimization.direct_description_preuint8_channel",
@@ -1381,6 +1384,7 @@ def _ws1_runtime_source_bundle() -> bytes:
     queue = [
         "tac.optimization.ddm_cc3_mixed_coder_receiver",
         "tac.optimization.ddm_la1_layer_assignment_context_pricing",
+        "tac.optimization.ddm_rg4_g3_blocks_and_active_tube",
         "tac.optimization.ddm_ws1_warm_start",
     ]
     visited: set[str] = set()
@@ -1478,6 +1482,133 @@ def cc3_runtime_payload() -> bytes:
     payload = _ws1_runtime_payload()
     _runtime_cleanliness(payload)
     return payload
+
+
+def compile_cb1_rg4_runtime_packet(
+    source_archive: bytes,
+    *,
+    state_name: str,
+    output_bytes: int,
+    output_sha256: str,
+) -> tuple[bytes, dict[str, Any]]:
+    """Compile one RG4 source-local state through E4's exact framed coder."""
+
+    from tac.optimization.ddm_pc1_pose_stream import serialize_pc1_packet
+    from tac.optimization.ddm_rg4_g3_blocks_and_active_tube import (
+        parse_source_local_composition_archive,
+    )
+    from tac.optimization.ddm_ws1_warm_start import parse_ws1_warm_start_archive
+
+    source = bytes(source_archive)
+    if not isinstance(state_name, str) or not state_name:
+        raise ExporterError("CB1 state_name must be nonempty")
+    expected_output_bytes = 600 * FRAMES_PER_PAIR * CAMERA_H * CAMERA_W * CHANNELS
+    if (
+        isinstance(output_bytes, bool)
+        or output_bytes != expected_output_bytes
+        or re.fullmatch(r"[0-9a-f]{64}", output_sha256) is None
+    ):
+        raise ExporterError("CB1 output identity is invalid")
+    parent_archive, packet, source_manifest = parse_source_local_composition_archive(source)
+    parsed_parent = parse_ws1_warm_start_archive(parent_archive)
+    if parsed_parent.exact_reemit() != parent_archive:
+        raise ExporterError("CB1 parent parse/re-emit changed source bytes")
+    coder = _ws1_e4_coder()
+    state_member = _frame_blob(source, kind=0, coder=coder)
+    dependencies = (
+        ["numpy", "scipy", "torch", "brotli"]
+        if coder == BROTLI_Q11_CODER
+        else ["numpy", "scipy", "torch"]
+    )
+    manifest = {
+        "dependencies": dependencies,
+        "false_authority": {
+            "evidence_axis": EVIDENCE_AXIS,
+            "research_only": True,
+            "score_claim": False,
+        },
+        "geometry": {
+            "camera_hw": [CAMERA_H, CAMERA_W],
+            "channels": CHANNELS,
+            "frames_per_pair": FRAMES_PER_PAIR,
+            "pair_count": 600,
+            "scorer_hw": [PAIR_H, PAIR_W],
+        },
+        "output": {
+            "bytes": output_bytes,
+            "sha256": output_sha256,
+        },
+        "schema": CB1_SCHEMA,
+        "sections": [
+            {
+                "bytes": len(state_member),
+                "member": "state/rg4.ddr4",
+                "sha256": _sha256(state_member),
+                "typed_stream_tag": TypedStreamTag(
+                    type=StreamType.SKELETON,
+                    layer_home=LayerHome.L1_PROGRAM,
+                    evaluate_py_recursion_level_cited=(
+                        "L1_program -> L3_raster -> L4_scorer_feature -> L5_verdict"
+                    ),
+                    counted_bytes=len(state_member),
+                    free_receiver_code=True,
+                ).to_dict(),
+            }
+        ],
+        "state": {
+            "batch_pairs": 32,
+            "name": state_name,
+            "parent_archive_sha256": _sha256(parent_archive),
+            "pc1_packet_sha256": _sha256(serialize_pc1_packet(packet)),
+            "source_archive_bytes": len(source),
+            "source_archive_sha256": _sha256(source),
+            "source_schema": source_manifest["schema"],
+        },
+    }
+    members = {
+        "manifest.json": rfc8785_canonicalize(manifest),
+        "state/rg4.ddr4": state_member,
+    }
+    archive = _deterministic_zip(
+        members,
+        expected_members=EXPECTED_CB1_MEMBERS,
+    )
+    if (
+        _deterministic_zip(
+            members,
+            expected_members=EXPECTED_CB1_MEMBERS,
+        )
+        != archive
+    ):
+        raise ExporterError("CB1 runtime archive compiler is nondeterministic")
+    with zipfile.ZipFile(io.BytesIO(archive), "r") as handle:
+        parsed_members = {name: handle.read(name) for name in EXPECTED_CB1_MEMBERS}
+    parsed_manifest = runtime._validate_cb1_manifest(
+        json.loads(parsed_members["manifest.json"]),
+        parsed_members,
+    )
+    reconstructed, dimensions = runtime._parse_blob(
+        parsed_members["state/rg4.ddr4"],
+        expected_kind=0,
+        label="state/rg4.ddr4",
+    )
+    if dimensions or reconstructed != source:
+        raise ExporterError("CB1 packet parse-back changed source archive bytes")
+    return archive, {
+        "archive_bytes": len(archive),
+        "archive_sha256": _sha256(archive),
+        "coder": coder,
+        "compiler_determinism_x2": True,
+        "manifest": parsed_manifest,
+        "member_homes": _zip_home_ledger(
+            archive,
+            expected_members=EXPECTED_CB1_MEMBERS,
+        ),
+        "member_order": list(EXPECTED_CB1_MEMBERS),
+        "packet_parseback_source_byte_identical": True,
+        "runtime_payload": _ws1_runtime_payload(),
+        "inflate_sh": _inflate_sh(),
+    }
 
 
 def derive_ws1_grammar_stream_manifest(

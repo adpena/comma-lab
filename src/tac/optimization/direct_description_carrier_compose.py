@@ -99,6 +99,7 @@ _STATIC_RULE_IDS: Final = {
     "movable_midband_parametric": b"G4MB",
     "horizon_row_parametric": b"G4HR",
     "static_image_sparse_all": b"G4SR",
+    "mycar_static_mask": b"G4HM",
 }
 _STATIC_RULE_LZMA_FILTERS: Final = [{"id": lzma.FILTER_LZMA1, "dict_size": 1 << 20, "lc": 3, "lp": 0, "pb": 2}]
 
@@ -369,6 +370,50 @@ def _read_uleb128(payload: bytes, offset: int) -> tuple[int, int]:
     raise DirectDescriptionError("static rule ULEB128 is overlong")
 
 
+def encode_static_class_mask_rule(
+    mask: np.ndarray,
+    *,
+    target_class: int,
+) -> bytes:
+    """Encode one frame-shared class mask as a counted receiver rule.
+
+    The target class is an encode-side, self-detected result and is carried in
+    the payload; the decoder never assumes a fixed class index. Generic
+    unpacking and painting stay in the free runtime.
+    """
+
+    value = np.asarray(mask, dtype=bool)
+    if value.shape != (384, 512):
+        raise DirectDescriptionError("static class mask geometry differs")
+    if (
+        isinstance(target_class, (bool, np.bool_))
+        or not isinstance(target_class, (int, np.integer))
+        or not 0 <= int(target_class) < len(CLASS_ORDER)
+    ):
+        raise DirectDescriptionError("static class mask target is invalid")
+    packed = np.packbits(value.reshape(-1), bitorder="little").tobytes()
+    raw = (
+        struct.pack(
+            ">4sBBHH",
+            _STATIC_RULE_IDS["mycar_static_mask"],
+            1,
+            int(target_class),
+            384,
+            512,
+        )
+        + packed
+    )
+    coded = lzma.compress(
+        raw,
+        format=lzma.FORMAT_RAW,
+        filters=_STATIC_RULE_LZMA_FILTERS,
+    )
+    payload = bytes([_STATIC_RULE_CODEC_LZMA_RAW]) + coded
+    if _decode_realization_static_rule(payload, "mycar_static_mask") is None:
+        raise DirectDescriptionError("static class mask self-check failed")
+    return payload
+
+
 def _decode_realization_static_rule(
     payload: bytes,
     opportunity_id: str | None,
@@ -394,7 +439,25 @@ def _decode_realization_static_rule(
     if raw[:4] != _STATIC_RULE_IDS[opportunity_id]:
         raise DirectDescriptionError("static rule magic differs from its opportunity identifier")
     codes = np.full((384, 512), -1, dtype=np.int16)
-    if opportunity_id == "movable_midband_parametric":
+    if opportunity_id == "mycar_static_mask":
+        header = struct.Struct(">4sBBHH")
+        packed_bytes = (384 * 512 + 7) // 8
+        if len(raw) != header.size + packed_bytes:
+            raise DirectDescriptionError("MyCar static-mask rule length is invalid")
+        _magic, version, target_class, height, width = header.unpack_from(raw)
+        if (
+            version != 1
+            or (height, width) != (384, 512)
+            or target_class >= len(CLASS_ORDER)
+        ):
+            raise DirectDescriptionError("MyCar static-mask rule geometry is invalid")
+        mask = np.unpackbits(
+            np.frombuffer(raw, dtype=np.uint8, offset=header.size),
+            bitorder="little",
+            count=384 * 512,
+        ).reshape(384, 512)
+        codes[np.asarray(mask, dtype=bool)] = 25 + int(target_class)
+    elif opportunity_id == "movable_midband_parametric":
         row = struct.Struct(">4sBHHBB")
         if len(raw) != row.size:
             raise DirectDescriptionError("Movable-midband static rule length is invalid")
@@ -431,7 +494,13 @@ def _decode_realization_static_rule(
         if offset != len(raw):
             raise DirectDescriptionError("sparse static rule has trailing bytes")
     active = codes >= 0
-    if np.any(codes[active] >= 25) or np.any(codes[active] // 5 == codes[active] % 5):
+    transition = active & (codes < 25)
+    wildcard = active & (codes >= 25) & (codes < 30)
+    if (
+        np.any(codes[active] >= 30)
+        or np.any(codes[transition] // 5 == codes[transition] % 5)
+        or np.any(active & ~(transition | wildcard))
+    ):
         raise DirectDescriptionError("static rule transition codes are invalid")
     return np.ascontiguousarray(codes)
 
@@ -2761,7 +2830,12 @@ class CarrierComposeReceiverV1:
             source = rules // 5
             target = rules % 5
             for local_index in range(len(indexes)):
-                admitted = (rules >= 0) & (semantic_cells[local_index] == source)
+                wildcard = (rules >= 25) & (rules < 30)
+                admitted = wildcard | (
+                    (rules >= 0)
+                    & (rules < 25)
+                    & (semantic_cells[local_index] == source)
+                )
                 for target_id, role in enumerate(CLASS_ORDER):
                     target_mask = admitted & (target == target_id)
                     if not np.any(target_mask):
@@ -3258,6 +3332,7 @@ __all__ = [
     "ReceiverRealizationProfileV1",
     "TopologyEventV1",
     "compile_carrier_compose_archive",
+    "encode_static_class_mask_rule",
     "parse_carrier_compose_archive",
     "prove_carrier_archive_fail_closed",
     "receive_carrier_compose_archive",

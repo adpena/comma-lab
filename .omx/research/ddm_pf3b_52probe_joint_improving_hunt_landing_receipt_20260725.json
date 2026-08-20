@@ -1,0 +1,104 @@
+{
+  "schema": "ddm_pf3b_landing_sha_receipt.v1",
+  "run_id": "ddm_pf3b_52probe_joint_improving_hunt_20260725T202800Z",
+  "delegation_checkpoint_key": "codex_delegate:ddm_pf3b_52probe_joint_improving_hunt:20260725T202800Z",
+  "delegated_authority": {
+    "path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_pf3b_52probe_joint_improving_hunt_20260725T202800Z.wrapped.prompt.txt",
+    "bytes": 6828,
+    "sha256": "c6020b30cd22594a3954df316729623d3cb9c8756f43f0d39ba1ebe3e184082d"
+  },
+  "git_custody_before_landing": {
+    "branch": "codexwt/ddm_pf3b_52probe_joint_improving_hunt_20260725T202800Z",
+    "head": "c279f1bdf98adfee4087a6b36a14a6c14b290fa0",
+    "pf3_origin_commit": "7f9f803a60",
+    "pf3_adopted_commit": "c279f1bdf98adfee4087a6b36a14a6c14b290fa0"
+  },
+  "implementation": [
+    {
+      "path": "tools/hunt_ddm_pf3b_joint_improving_edge.py",
+      "bytes": 40558,
+      "sha256": "71cfd1570c44f84313e334a0fa1254cc71080b0311ec79a1f0a9a200fa4ac2f5"
+    },
+    {
+      "path": "tools/materialize_ddm_pf3_finite_prices.py",
+      "bytes": 56022,
+      "sha256": "bdf3b82084098bae649d290994903cbbfb118ff15a16347e847acf506c54ac0d"
+    },
+    {
+      "path": "tools/tests/test_hunt_ddm_pf3b_joint_improving_edge.py",
+      "bytes": 2784,
+      "sha256": "ece92eae72518176dbffe04becc5f54ffdb9b8453ef96c227a99362cf59fe475"
+    },
+    {
+      "path": ".omx/research/configs/ddm_pf3b_52probe_joint_improving_hunt_20260725.json",
+      "bytes": 1725,
+      "sha256": "8ba5e18b26c1e160b29b84585967378353b8f27e543a0ce91c16f4b4e383a8a7"
+    }
+  ],
+  "measurement_evidence": [
+    {
+      "path": ".omx/research/ddm_pf3b_52probe_joint_improving_hunt_20260725T202800Z/receipt.json",
+      "bytes": 179253,
+      "sha256": "dca2de9ecaf6130dd026c2d4e5a14ced0cf6f619cfd48979b196d61226734ab8"
+    },
+    {
+      "path": ".omx/research/ddm_pf3b_52probe_joint_improving_hunt_20260725T202800Z/ranked_inventory.json",
+      "bytes": 137648,
+      "sha256": "ae8f6a0152fcfe15bcab8db901e6da1de822340f93139a00829183b0fba3bd1e"
+    },
+    {
+      "path": ".omx/research/ddm_pf3b_52probe_joint_improving_hunt_20260725T202800Z/DAG_FEED.json",
+      "bytes": 869,
+      "sha256": "0d1ebb7a24ff094bbbe632c01659ff19ce5db6583e0c517d89f8743a4aabca7c"
+    },
+    {
+      "path": ".omx/research/ddm_pf3b_rank_v1_invalidation_20260725.json",
+      "bytes": 1999,
+      "sha256": "b318f4e3b8ba512e95f2b3259bad8d807aa94521577cded9d98332378441355c"
+    }
+  ],
+  "human_readable_evidence": [
+    {
+      "path": ".omx/research/codex_findings_ddm_pf3b_52probe_joint_improving_hunt_20260725_codex.md",
+      "bytes": 5410,
+      "sha256": "6ca7efbb003e5aa4c9a36118b59f1c3268426e6524c77c45ee48063ab70e0b3e"
+    },
+    {
+      "path": ".omx/research/ddm_pf3b_52probe_joint_improving_hunt_DAG_FEED_20260725.md",
+      "bytes": 846,
+      "sha256": "b454a16f01ad17b5867e26b4d4f31989bd550abb113293c69ed33a23eda03e7d"
+    },
+    {
+      "path": ".omx/research/ddm_pf3b_52probe_joint_improving_hunt_round1_review_20260725.json",
+      "bytes": 3477,
+      "sha256": "ba3d715bbef9b80ad68826c444205d1be5ff73eb052e302f938e38a2c1e73f36"
+    }
+  ],
+  "state_custody": {
+    "lane_id": "ddm_pf3b_52probe_joint_improving_hunt",
+    "lane_registry_sha256": "1a97f88651f463dbc73f9555e726591b4d8bbb860c8ed025d1189df676dea4b5",
+    "lane_maturity_audit_sha256": "d9a486bf78001940ae3be4d38bd8a22a84b064609bc8154cd545dcb1a4492471"
+  },
+  "verification": {
+    "ruff": "PASS",
+    "py_compile": "PASS",
+    "pytest": "10 passed",
+    "git_diff_check": "PASS",
+    "independent_E4_parseback": "PASS_BYTE_IDENTICAL",
+    "rank_policy_rederivation": "PASS_52_OF_52",
+    "review_tracker": "42 entities reviewed across 3 changed Python files under round1_adversarial"
+  },
+  "outcome": {
+    "verdict": "FOUND_STRICT_JOINT_IMPROVING_EXISTING_RG3_EDGE",
+    "coordinate_id": "rg3.finer_event.pair523.class0_4.boundary.transient.band04.fine01.mag1",
+    "direction_id": "NEGATIVE_ONE_QUANTUM",
+    "delta_D_joint": -0.00010799244434957068,
+    "delta_counted_bytes_E4": 860,
+    "delta_S_physical_edge": 0.00046464625533549665,
+    "pointer_delta": "UNCHANGED",
+    "goal_progress": "NOT_ACHIEVED"
+  },
+  "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+  "score_claim": false,
+  "main_landing_review_required": true
+}
