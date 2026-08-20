@@ -24,7 +24,7 @@ projection (0.14827847122030854) realized to 2 ULP. `effective_frontier` updated
 GPU `Tesla T4`, `gpu_t4_match: True`, n600, `evidence_grade: contest-CUDA`, receipt
 `/Volumes/APDataStore/pact/ddm_rc2/t4_row_r2/MODAL_REMOTE_RESULT.json`.
 
-## DECODE IDENTITY — confirmed at the component level; the rr2 desync did NOT occur
+## DECODE IDENTITY — confirmed at the TOKEN level (decoded_token_sha256 match); the rr2 desync did NOT occur
 
 Both distortion components are byte-for-byte equal to jg5's across all 600 pairs on the
 deterministic CUDA scorer. The rr2 (#1096) failure mode — CPU-prob encode vs CUDA-prob decode —

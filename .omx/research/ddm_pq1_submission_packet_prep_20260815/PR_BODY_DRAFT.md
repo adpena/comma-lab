@@ -482,7 +482,11 @@ legs run today; the hosted leg cannot run until these bytes are published, and i
 is written to refuse rather than to resolve against the superseded archive.
 
 ```bash
-# 1. Runtime pin. 36 rows, and they ARE the tree hash.
+# 1. Runtime integrity. 36 per-file rows (the authority tree hash fdd57749...
+# additionally binds the root directory name, the tac import manifest, and
+# upstream/evaluate.py, so it is not reproducible from these rows alone; the
+# reviewer-reproducible content digest is runtime_content_tree_sha256
+# ccd9f7ab..., see MANIFEST.sha256 header + PACKET_TARGET.json).
 shasum -a 256 -c MANIFEST.sha256
 # expect 36 lines ending in: OK
 

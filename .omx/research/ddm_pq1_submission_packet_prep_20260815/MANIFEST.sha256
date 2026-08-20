@@ -1,9 +1,16 @@
 # MANIFEST.sha256 -- per-file digests of the EVALUATED runtime tree.
 #
-# These 36 rows ARE the pin. runtime_tree_sha256
+# These 36 rows verify per-file integrity. The authority pin runtime_tree_sha256
 # fdd5774921319a317a385a9594489aa97e45cebc0f6f20cdc50fe8aaeb08a7f2
-# is derived from exactly this enumerated row set, NOT from a recursive walk
-# of this directory. The packet also ships non-runtime documents (this file,
+# hashes MORE than these rows: it additionally binds the root directory name,
+# the repo-local tac import manifest, and upstream/evaluate.py, so it is NOT
+# reproducible from these 36 files alone (rv17 R2-F2). The digest a reviewer
+# CAN reproduce from exactly these files is the environment-decoupled
+# runtime_content_tree_sha256
+# ccd9f7aba9b5f7837e749e856f178586ad496d51d1011306422a5740c56c915c
+# (equal on both axes; see PACKET_TARGET.json cross_axis_tree_note). Neither
+# pin derives from a recursive walk of this directory. The packet also ships
+# non-runtime documents (this file,
 # README.md, report.txt, LICENSE, THIRD_PARTY_NOTICES.md, compress.py,
 # COMPRESS.md, archive_manifest.json, BORROWED_SUBSTRATE_ACCOUNTING.md) which
 # a fresh walk would pick up by suffix; they carry no runtime role and cannot
