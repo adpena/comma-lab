@@ -57,6 +57,18 @@ SENSITIVE_RUNTIME_UPLOAD_NAMES = {
 RUNTIME_UPLOAD_BASENAME_ALLOWLIST = frozenset(
     {
         "ddm_r7_token_coder.py",
+        # ddm_rr7 (2026-08-20), the SECOND instance of the same collision: the
+        # rr6 native token-decode port stages this module as
+        # runtime/f26_split_token_decoder.py, and the "token" marker blocked the
+        # wall-clock T4 row that adjudicates the CI decode budget. Reviewed:
+        # 298 lines, byte-identical to the committed, git-tracked repo source
+        # experiments/ddm_wc2c_split_token_decoder.py (sha256 98a1295c…), zero
+        # credential-shaped content; every "token" is the video/entropy-coding
+        # noun. Recurrence is the signal: the marker will keep firing on this
+        # domain's core noun, so entries are expected to accumulate. Widening
+        # the marker is NOT the cure — an exact-basename allowlist cannot widen
+        # silently, whereas a pattern exemption could.
+        "f26_split_token_decoder.py",
     }
 )
 
