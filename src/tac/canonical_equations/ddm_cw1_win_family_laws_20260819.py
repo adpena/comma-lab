@@ -244,6 +244,34 @@ def build_gt_lineage_additive_pose_offset_v1() -> CanonicalEquation:
             noise_floor=None,
             noise_floor_provenance=None,
         ),
+        EmpiricalAnchor(
+            anchor_id="cw1_gt_lineage_offset_cpu1_frontier_mechanism_20260820",
+            measurement_utc="2026-08-20T00:00:00Z",
+            inputs={"d_pose_dali": 6.365873831275037e-06},
+            predicted_output={"d_pose_pyav": pose_pyav_from_dali(6.365873831275037e-06)},
+            empirical_output={"d_pose_pyav": 0.0001470109098134673},
+            residual=abs(pose_pyav_from_dali(6.365873831275037e-06) - 0.0001470109098134673),
+            source_artifact=".omx/research/ddm_cpu1_cpu_axis_adjudication_20260820.md",
+            measurement_method=(
+                "ddm_cpu1 n600 on the sub-0.15 frontier bytes (archive f3bce5d2..., 180,625 B): "
+                "ONE macOS-CPU scorer forward pass over the retained inflated raws, then the SAME "
+                "candidate outputs scored against BOTH registry-pinned GT pose tables "
+                "(PyAV 82ed61ce..., DALI 8d5cfa83...). First measurement of the law's MECHANISM "
+                "rather than its value: writing e = P - B, the identity "
+                "mean||P-A||^2 = C + mean||P-B||^2 + 2*mean<e, B-A> closes to the last digit with "
+                "cross term 2.9942e-08 (0.02%), i.e. the candidate's residual pose error is "
+                "ORTHOGONAL to the offset between the two GT tables -- which is WHY C acts as a "
+                "floor. Same run: the per-pair RATIO spans 0.530 to 983,016 (median 54.1), "
+                "confirming the ratio form is not a law. Positive control: the PyAV leg reproduces "
+                "the jg5 macOS-CPU advisory row (d_seg 0.00034740 / d_pose 0.00014701) exactly at "
+                "8 dp, and the DALI leg reproduces the [contest-CUDA T4] row to -4.2e-08 seg / "
+                "-4.1e-09 pose."
+            ),
+            provenance=provenance,
+            empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+            noise_floor=None,
+            noise_floor_provenance=None,
+        ),
     )
     return CanonicalEquation(
         equation_id="cw1_gt_lineage_additive_pose_offset_v1",
