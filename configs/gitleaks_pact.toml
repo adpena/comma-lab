@@ -1,0 +1,24 @@
+title = "pact campaign-specific token shapes (extends default)"
+[extend]
+useDefault = true
+
+[[rules]]
+id = "modal-token"
+description = "Modal token id/secret"
+regex = '''\b(ak|as|tok)-[A-Za-z0-9]{20,}\b'''
+[[rules]]
+id = "huggingface-token"
+description = "HuggingFace token"
+regex = '''\bhf_[A-Za-z0-9]{30,}\b'''
+[[rules]]
+id = "anthropic-key"
+description = "Anthropic API key"
+regex = '''\bsk-ant-[A-Za-z0-9\-_]{20,}\b'''
+[[rules]]
+id = "tailscale-key"
+description = "Tailscale auth key"
+regex = '''\btskey-[a-z]+-[A-Za-z0-9\-]{10,}\b'''
+[[rules]]
+id = "wandb-key-context"
+description = "wandb api key in context"
+regex = '''wandb[_\- ]?(api[_\- ]?key|login)["'=: ]+[a-f0-9]{40}'''

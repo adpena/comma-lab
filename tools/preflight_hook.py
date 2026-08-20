@@ -1577,6 +1577,106 @@ def run_modal_closure_manifest_scan(staged_added: list[str]) -> int:
     return 0
 
 
+def run_staged_secrets_scan() -> int:
+    """Step 1i: BLOCKING secrets scan over the staged diff (operator 2026-08-20).
+
+    The .playwright-mcp incident: a bare `git add` in a 236-file commit swept in
+    browser-console logs carrying credential-shaped strings, publicly, for four
+    months. History cannot be selectively cleaned (each sha commits to its full
+    tree + parent), so the only durable cure is refusing the commit that carries
+    the secret. `gitleaks protect --staged` scans exactly the bytes about to be
+    committed — the typing-moment surface, not a post-hoc audit.
+
+    Ruleset: configs/gitleaks_pact.toml extends the default rules with the
+    campaign's own token shapes (Modal/HF/Anthropic/Tailscale/wandb) — the
+    default ruleset alone missed every one of those (the #1086 vacuous-control
+    lesson: a control that cannot fail proves nothing).
+
+    Loud on every path: absent binary and tool errors WARN with the reason
+    (skip-as-green is the #875/#1050 vacuity class); findings REFUSE with
+    redacted output only. Waiver: TAC_SECRETS_WAIVE=1 for a deliberate,
+    operator-reviewed exception.
+    """
+
+    if os.environ.get("TAC_SECRETS_WAIVE") == "1":
+        print(
+            f"{YELLOW}[preflight-hook] staged secrets scan WAIVED via "
+            f"TAC_SECRETS_WAIVE=1 — deliberate exception, not a pass{RST}",
+            file=sys.stderr,
+        )
+        return 0
+    try:
+        staged_count = len(
+            subprocess.run(
+                ["git", "diff", "--cached", "--name-only"],
+                capture_output=True, text=True, check=True, cwd=REPO_ROOT,
+            ).stdout.splitlines()
+        )
+    except (subprocess.CalledProcessError, OSError):
+        staged_count = -1
+    if staged_count == 0:
+        return 0
+    config = REPO_ROOT / "configs" / "gitleaks_pact.toml"
+    cmd = ["gitleaks", "protect", "--staged", "--no-banner", "--redact"]
+    if config.is_file():
+        cmd += ["--config", str(config)]
+    else:
+        print(
+            f"{YELLOW}[preflight-hook] staged secrets scan: campaign ruleset "
+            f"missing at {config} — falling back to gitleaks defaults (the "
+            f"Modal/HF/Anthropic/Tailscale shapes are NOT covered){RST}",
+            file=sys.stderr,
+        )
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, cwd=REPO_ROOT, timeout=120
+        )
+    except FileNotFoundError:
+        print(
+            f"{YELLOW}[preflight-hook] staged secrets scan SKIPPED: gitleaks "
+            f"binary absent ({staged_count} staged file(s) UNSCANNED — install "
+            f"via `brew install gitleaks` to restore the guard){RST}",
+            file=sys.stderr,
+        )
+        return 0
+    except subprocess.TimeoutExpired:
+        print(
+            f"{YELLOW}[preflight-hook] staged secrets scan TIMED OUT at 120s "
+            f"({staged_count} staged file(s) UNSCANNED — not a pass){RST}",
+            file=sys.stderr,
+        )
+        return 0
+    if result.returncode == 0:
+        print(
+            f"{GREEN}[preflight-hook] staged secrets scan: "
+            f"{staged_count} staged file(s), 0 findings{RST}",
+            file=sys.stderr,
+        )
+        return 0
+    if result.returncode == 1:
+        print(
+            f"{RED}[preflight-hook] SECRETS IN STAGED DIFF — commit REFUSED "
+            f"({staged_count} staged file(s) scanned). Redacted findings:{RST}",
+            file=sys.stderr,
+        )
+        tail = (result.stdout + result.stderr).strip().splitlines()[-20:]
+        for line in tail:
+            print(f"[preflight-hook]   {line}", file=sys.stderr)
+        print(
+            f"{RED}[preflight-hook] Remove the secret (and rotate it if real). "
+            f"Deliberate exception: TAC_SECRETS_WAIVE=1{RST}",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        f"{YELLOW}[preflight-hook] staged secrets scan: gitleaks error "
+        f"rc={result.returncode} ({staged_count} staged file(s) UNSCANNED — "
+        f"not a pass): {(result.stderr or '').strip()[:200]}{RST}",
+        file=sys.stderr,
+    )
+    return 0
+
+
 def main() -> int:
     staged = _staged_py_files()
     staged_added = _staged_added_py_files()
@@ -1640,6 +1740,15 @@ def main() -> int:
     # Step 1h: AC1 additive Modal endpoint-closure coverage. Warn-only in this
     # first landing; only newly-added dispatcher files are in its denominator.
     rc = run_modal_closure_manifest_scan(staged_added)
+    if rc != 0:
+        return rc
+
+    # Step 1i: BLOCKING staged-diff secrets scan. Same placement rationale as
+    # 1b-1g — before run_preflight(), which early-returns on failure. This is
+    # the .playwright-mcp never-again guard: the credential-shaped strings that
+    # sat in public history for four months entered via one bare `git add`;
+    # this step reads exactly the staged bytes at the typing moment.
+    rc = run_staged_secrets_scan()
     if rc != 0:
         return rc
 
