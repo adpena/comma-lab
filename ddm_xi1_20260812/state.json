@@ -1,0 +1,14 @@
+{
+  "arm": "ddm_xi1",
+  "complete": false,
+  "created_utc": "2026-08-12T00:00:00Z",
+  "mission": "matched learned xi context rate screen plus exact CP135 pose-carrier prior race",
+  "output_root": "/Volumes/APDataStore/pact/ddm_xi1_20260812",
+  "payload_policy": "retain every materialized payload with bytes and sha256",
+  "schema": "ddm_xi1_state.v1",
+  "stages": {
+    "leg_a": "pending",
+    "leg_b": "pending",
+    "receipt": "pending"
+  }
+}
