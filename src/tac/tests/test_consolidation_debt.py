@@ -90,6 +90,78 @@ def test_main_remains_nonblocking_for_consolidate_now(monkeypatch, capsys):
     assert "CONSOLIDATE-NOW" in capsys.readouterr().out
 
 
+def test_ssd_only_code_reads_the_sweep_cache(tmp_path, monkeypatch):
+    cache = tmp_path / "ssd.json"
+    from datetime import UTC, datetime
+
+    cache.write_text(json.dumps({
+        "date_utc": datetime.now(UTC).isoformat(timespec="seconds"),
+        "owed_authored_blobs": 7,
+        "owed_of_which_gc_eligible": 2,
+        "scanned": 1234,
+        "certified_in_place": 1,
+        "roots_absent": [],
+    }), encoding="utf-8")
+    monkeypatch.setattr(MONITOR, "SSD_CACHE", cache)
+    MONITOR._DEGRADED.clear()
+    count, detail = MONITOR._ssd_only_code()
+    assert count == 7
+    assert detail["state"] == "fresh"
+    assert detail["gc_eligible"] == 2
+    assert MONITOR._DEGRADED == []
+
+
+def test_missing_ssd_cache_is_degraded_not_a_clean_zero(tmp_path, monkeypatch):
+    """An absent measurement and a measured zero are different answers."""
+    monkeypatch.setattr(MONITOR, "SSD_CACHE", tmp_path / "nope.json")
+    MONITOR._DEGRADED.clear()
+    count, detail = MONITOR._ssd_only_code()
+    assert count == 0
+    assert detail["state"] == "no_cache"
+    assert MONITOR._DEGRADED, "a missing sweep must register as a blind read"
+
+
+def test_stale_ssd_cache_is_degraded(tmp_path, monkeypatch):
+    from datetime import UTC, datetime, timedelta
+
+    old = datetime.now(UTC) - timedelta(hours=MONITOR.SSD_CACHE_MAX_AGE_H + 1)
+    cache = tmp_path / "ssd.json"
+    cache.write_text(json.dumps({
+        "date_utc": old.isoformat(timespec="seconds"), "owed_authored_blobs": 0,
+    }), encoding="utf-8")
+    monkeypatch.setattr(MONITOR, "SSD_CACHE", cache)
+    MONITOR._DEGRADED.clear()
+    _, detail = MONITOR._ssd_only_code()
+    assert detail["state"] == "stale"
+    assert any("stale" in d for d in MONITOR._DEGRADED)
+
+
+def test_partial_ssd_sweep_is_flagged(tmp_path, monkeypatch):
+    from datetime import UTC, datetime
+
+    cache = tmp_path / "ssd.json"
+    cache.write_text(json.dumps({
+        "date_utc": datetime.now(UTC).isoformat(timespec="seconds"),
+        "owed_authored_blobs": 3,
+        "roots_absent": ["/Volumes/VertigoDataTier/pact"],
+    }), encoding="utf-8")
+    monkeypatch.setattr(MONITOR, "SSD_CACHE", cache)
+    MONITOR._DEGRADED.clear()
+    _, detail = MONITOR._ssd_only_code()
+    assert detail["state"] == "partial"
+    assert any("PARTIAL" in d for d in MONITOR._DEGRADED)
+
+
+def test_fmt_tolerates_a_report_without_the_ssd_component():
+    """Callers that predate the component must not crash the monitor."""
+    text = MONITOR._fmt({
+        "verdict": "OK", "severity": 0,
+        "components": {"pile_files": (0, 0), "landings": (0, 0)},
+        "signal_detail": {},
+    })
+    assert "consolidation-debt" in text
+
+
 def test_quiet_ok_suppresses_clean_report(monkeypatch, capsys):
     monkeypatch.setattr(
         MONITOR,

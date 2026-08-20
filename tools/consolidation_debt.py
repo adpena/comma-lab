@@ -16,6 +16,12 @@ DEBT COMPONENTS (each with a threshold; the verdict is the max severity):
   3. STALE-SINCE    — commits since the last consolidation/reconciliation-tagged commit.
   4. SIGNAL RATIO   — recent research memos vs system-intelligence commits (canonical_equations
                       / witness_dsl), a COARSE heuristic for un-routed findings (labeled as such).
+  5. SSD-ONLY CODE  — authored sources that exist on the SSD tier and NOWHERE in reachable git
+                      history, so one disk loses them (ddm_oc2 measured 1,071 such blobs on
+                      2026-08-20). Read from the cache `tools/audit_ssd_authored_signal.py
+                      --write-cache` writes; a full byte-identity sweep is minutes of I/O and
+                      must not run on every session boundary. A STALE cache is reported as its
+                      own state — an old clean number is not a current clean number.
 
 USAGE:
   .venv/bin/python tools/consolidation_debt.py            # human report + verdict
@@ -41,7 +47,12 @@ TH = {
     "landings": (1, 3),           # undispositioned landed arms
     "stale_commits": (25, 60),    # commits since last consolidation-tagged commit
     "signal_ratio": (12.0, 30.0), # memos-per-system-intelligence-commit (24h) — HEURISTIC
+    "ssd_only_code": (1, 50),     # authored blobs living on the SSD alone (0 is the target)
 }
+# How old the SSD sweep may be before its number stops counting as current. Chosen to match the
+# cadence at which arms create SSD workspaces (daily), not an arbitrary round number.
+SSD_CACHE_MAX_AGE_H = 72
+SSD_CACHE = REPO / ".omx" / "state" / "ssd_authored_signal_debt.json"
 _CONSOLIDATION_RE = r"consolidat|signal.reconciliation|reconcile|drain|signal-loss"
 
 
@@ -150,6 +161,51 @@ def _signal_ratio() -> tuple[int, int, float]:
     return n_memos, n_si, ratio
 
 
+def _ssd_only_code(path: Path | None = None) -> tuple[int, dict]:
+    """Authored blobs living on the SSD alone, read from the sweep cache.
+
+    Returns (count, detail). A missing or stale cache returns a count of 0 with a detail that says
+    so, and `compute` records the degradation — because an absent measurement and a measured zero
+    are not the same answer, and laundering the first into the second is the false all-clear this
+    monitor already refuses on the git side.
+
+    The cache location is resolved at CALL time; an early-bound default would ignore a redirected
+    `SSD_CACHE` and silently report "no cache" against the wrong path.
+    """
+    path = path or SSD_CACHE
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        _DEGRADED.append(f"ssd sweep cache unreadable: {type(exc).__name__}")
+        return 0, {"state": "no_cache",
+                   "hint": "run tools/audit_ssd_authored_signal.py --write-cache"}
+    stamp = str(raw.get("date_utc", ""))
+    age_h = None
+    try:
+        from datetime import UTC, datetime
+
+        age_h = (datetime.now(UTC) - datetime.fromisoformat(stamp)).total_seconds() / 3600.0
+    except (TypeError, ValueError):
+        pass
+    detail = {
+        "state": "fresh",
+        "measured_at_utc": stamp,
+        "age_hours": round(age_h, 1) if age_h is not None else None,
+        "scanned": raw.get("scanned"),
+        "gc_eligible": raw.get("owed_of_which_gc_eligible"),
+        "certified_in_place": raw.get("certified_in_place"),
+        "roots_absent": raw.get("roots_absent") or [],
+    }
+    if age_h is None or age_h > SSD_CACHE_MAX_AGE_H:
+        detail["state"] = "stale"
+        _DEGRADED.append(
+            f"ssd sweep cache stale ({detail['age_hours']}h > {SSD_CACHE_MAX_AGE_H}h)")
+    if detail["roots_absent"]:
+        detail["state"] = "partial"
+        _DEGRADED.append(f"ssd sweep was PARTIAL — unmounted: {detail['roots_absent']}")
+    return int(raw.get("owed_authored_blobs") or 0), detail
+
+
 def _sev(value: float, soon: float, now: float) -> int:
     return 2 if value >= now else 1 if value >= soon else 0
 
@@ -160,12 +216,14 @@ def compute() -> dict:
     land = _undispositioned_landings()
     stale = _stale_commits()
     n_memos, n_si, ratio = _signal_ratio()
+    ssd_only, ssd_detail = _ssd_only_code()
     comps = {
         "pile_files": (pf, _sev(pf, *TH["pile_files"])),
         "pile_lines": (pl, _sev(pl, *TH["pile_lines"])),
         "landings": (land, _sev(land, *TH["landings"])),
         "stale_commits": (stale, _sev(stale, *TH["stale_commits"])),
         "signal_ratio": (round(ratio, 1), _sev(ratio, *TH["signal_ratio"])),
+        "ssd_only_code": (ssd_only, _sev(ssd_only, *TH["ssd_only_code"])),
     }
     sev = max(s for _, s in comps.values())
     verdict = ("CONSOLIDATE-NOW" if sev == 2 else "CONSOLIDATE-SOON" if sev == 1 else "OK")
@@ -176,7 +234,8 @@ def compute() -> dict:
         # all-clear, which is worse than no report.
         verdict = "DEGRADED"
     return {"verdict": verdict, "severity": sev, "components": comps, "degraded": degraded,
-            "signal_detail": {"memos_24h": n_memos, "system_intelligence_commits_24h": n_si}}
+            "signal_detail": {"memos_24h": n_memos, "system_intelligence_commits_24h": n_si},
+            "ssd_detail": ssd_detail}
 
 
 def _fmt(r: dict) -> str:
@@ -186,10 +245,23 @@ def _fmt(r: dict) -> str:
         lines.append(f"  ! BLIND on {len(r['degraded'])} git read(s) — components below "
                      f"may under-report: {'; '.join(r['degraded'][:2])}")
     for k, (v, s) in r["components"].items():
-        if s or k in ("pile_files", "landings"):
+        if s or k in ("pile_files", "landings", "ssd_only_code"):
             soon, now = TH[k]
             lines.append(f"  {icon[s]} {k}: {v}  (soon>={soon} now>={now})")
-    if r["components"]["signal_ratio"][1]:
+    d = r.get("ssd_detail")
+    ssd = r["components"].get("ssd_only_code")
+    if d and ssd:
+        if d.get("state") != "fresh":
+            lines.append(f"    ssd sweep {d.get('state', '?')} "
+                         f"({d.get('measured_at_utc') or 'never'}) — the SSD number above is NOT "
+                         f"current; refresh with tools/audit_ssd_authored_signal.py --write-cache")
+        elif ssd[1]:
+            lines.append(f"    authored code living on the SSD alone: {ssd[0]} blobs "
+                         f"({d.get('gc_eligible')} gc-eligible) measured {d.get('age_hours')}h ago "
+                         f"over {d.get('scanned'):,} files — commit them or certify with a rationale.")
+    # `.get`, not `[...]`: a caller (or an older cached report) may carry a partial component set,
+    # and a formatter that raises turns an advisory monitor into a session-boundary crash.
+    if (r["components"].get("signal_ratio") or (0, 0))[1]:
         d = r["signal_detail"]
         lines.append(f"    signal-ratio HEURISTIC: {d['memos_24h']} research memos vs "
                      f"{d['system_intelligence_commits_24h']} canonical_equations/DSL commits (24h) "
