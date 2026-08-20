@@ -1,0 +1,1874 @@
+{
+  "corpus_root": "/Users/adpena/Projects/pact/.omx/research",
+  "denominator_definition": "top-level filesystem entries under .omx/research whose basename starts ddm_; files and directories each count once",
+  "lineage_definition": "leading alphabetic arm-family token before first digit; no-digit tokens remain whole",
+  "lineages": {
+    "366": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "a": {
+      "artifacts": 6,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 6
+    },
+    "aa": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ab": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ah": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ai": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "al": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "am": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ap": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ar": {
+      "artifacts": 13,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 13
+    },
+    "as": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "at": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "au": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "audit": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ax": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "b": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "ba": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "bc": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "bd": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "bf": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "bi": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "bl": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "bn": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "bo": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "bp": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "br": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "bs": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "burn": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "bz": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "c": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "ca": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "cb": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "cc": {
+      "artifacts": 10,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 10
+    },
+    "ce": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "cf": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "cg": {
+      "artifacts": 10,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 10
+    },
+    "ch": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "ci": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ck": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "cl": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "cn": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "co": {
+      "artifacts": 21,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 21
+    },
+    "coe": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "cons": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "control": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "costate": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "cp": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "cq": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "cr": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "cs": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ct": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "cu": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "cv": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "cvg": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "cw": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "cx": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "da": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "db": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "dc": {
+      "artifacts": 6,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 6
+    },
+    "dd": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "deferral": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "df": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "dg": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "dk": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "dm": {
+      "artifacts": 11,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 11
+    },
+    "dn": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "dq": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "dr": {
+      "artifacts": 11,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 11
+    },
+    "dt": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "dv": {
+      "artifacts": 7,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 7
+    },
+    "dw": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "dy": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "e": {
+      "artifacts": 18,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 18
+    },
+    "ea": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "eb": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ed": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "ee": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "eg": {
+      "artifacts": 6,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 6
+    },
+    "eh": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ek": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "ekh": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "en": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "entropy": {
+      "artifacts": 7,
+      "harvested": 7,
+      "routed": 7,
+      "un_harvested": 0
+    },
+    "er": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "et": {
+      "artifacts": 10,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 10
+    },
+    "eu": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "ev": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "fa": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "fb": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "fc": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "fd": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "ffm": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "fh": {
+      "artifacts": 1,
+      "harvested": 1,
+      "routed": 1,
+      "un_harvested": 0
+    },
+    "fl": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "fm": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "fo": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "fp": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "fr": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "ft": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "fu": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "full": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "fw": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "fx": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "fz": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "g": {
+      "artifacts": 9,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 9
+    },
+    "ga": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "gb": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "gc": {
+      "artifacts": 29,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 29
+    },
+    "gd": {
+      "artifacts": 8,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 8
+    },
+    "gdl": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "gk": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "gp": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "gr": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "gt": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "hb": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "hg": {
+      "artifacts": 6,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 6
+    },
+    "hl": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "hp": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "hr": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "hs": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "hv": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "hw": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "hy": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ic": {
+      "artifacts": 13,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 13
+    },
+    "if": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ig": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "is": {
+      "artifacts": 13,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 13
+    },
+    "iv": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "ix": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "j": {
+      "artifacts": 45,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 45
+    },
+    "ja": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "jb": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "jd": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "js": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "kl": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ks": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "kt": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "la": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "lc": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "lg": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "lh": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "lm": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "lp": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "lr": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "lt": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "lv": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "lw": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "lx": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "m": {
+      "artifacts": 31,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 31
+    },
+    "main": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "map": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "mc": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "mdl": {
+      "artifacts": 6,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 6
+    },
+    "measurement": {
+      "artifacts": 7,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 7
+    },
+    "menu": {
+      "artifacts": 10,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 10
+    },
+    "mf": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "mg": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "mh": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "mhar": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "mi": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "mp": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "mq": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "mr": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "ms": {
+      "artifacts": 49,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 49
+    },
+    "mt": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "mx": {
+      "artifacts": 11,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 11
+    },
+    "n": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "na": {
+      "artifacts": 8,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 8
+    },
+    "naive": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "nb": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "ng": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "np": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "nv": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "oa": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ob": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "oc": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "od": {
+      "artifacts": 9,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 9
+    },
+    "of": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "oh": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "op": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "os": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "p": {
+      "artifacts": 11,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 11
+    },
+    "pa": {
+      "artifacts": 9,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 9
+    },
+    "pan": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "pb": {
+      "artifacts": 11,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 11
+    },
+    "pc": {
+      "artifacts": 10,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 10
+    },
+    "pe": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "pf": {
+      "artifacts": 7,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 7
+    },
+    "pfs": {
+      "artifacts": 7,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 7
+    },
+    "pg": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "ph": {
+      "artifacts": 11,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 11
+    },
+    "pi": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "pj": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "pk": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "plan": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "pm": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "pn": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "polytope": {
+      "artifacts": 6,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 6
+    },
+    "pose": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "pp": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "pq": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "pr": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "ps": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "pt": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "pu": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "pw": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "pz": {
+      "artifacts": 6,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 6
+    },
+    "q": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "qa": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "qd": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "qj": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "qo": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "qp": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "r": {
+      "artifacts": 12,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 12
+    },
+    "ra": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "rc": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "rd": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "receiver": {
+      "artifacts": 14,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 14
+    },
+    "rf": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "rg": {
+      "artifacts": 18,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 18
+    },
+    "rh": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "ri": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "rl": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "rm": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "rp": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "rr": {
+      "artifacts": 19,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 19
+    },
+    "rs": {
+      "artifacts": 6,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 6
+    },
+    "rsf": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "rt": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "ru": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "rv": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "rw": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "rx": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "rz": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "sb": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "sc": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "sched": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "scorer": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "sd": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "se": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "seg": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "sf": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "sg": {
+      "artifacts": 12,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 12
+    },
+    "sh": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "si": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "sj": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "sl": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "sm": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "sn": {
+      "artifacts": 8,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 8
+    },
+    "sp": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "sq": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "sr": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ss": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "st": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "stl": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "structured": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "su": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "sub": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "surface": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "sv": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "sw": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "sx": {
+      "artifacts": 11,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 11
+    },
+    "sy": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "target": {
+      "artifacts": 6,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 6
+    },
+    "tb": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "tc": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "td": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ti": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "tj": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "tk": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "tl": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "tm": {
+      "artifacts": 6,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 6
+    },
+    "tp": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "tq": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "tr": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "train": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "ts": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "tt": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "tw": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ty": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "tz": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "ua": {
+      "artifacts": 7,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 7
+    },
+    "ub": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "uf": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "uh": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "upstream": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "us": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "uv": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "v": {
+      "artifacts": 121,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 121
+    },
+    "vae": {
+      "artifacts": 4,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 4
+    },
+    "vc": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "vh": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "vo": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "vp": {
+      "artifacts": 1,
+      "harvested": 1,
+      "routed": 1,
+      "un_harvested": 0
+    },
+    "vs": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "wc": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "wd": {
+      "artifacts": 3,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 3
+    },
+    "wf": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "wi": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "wk": {
+      "artifacts": 5,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 5
+    },
+    "wl": {
+      "artifacts": 1,
+      "harvested": 1,
+      "routed": 1,
+      "un_harvested": 0
+    },
+    "wp": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "wr": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "ws": {
+      "artifacts": 18,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 18
+    },
+    "xa": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "xi": {
+      "artifacts": 2,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 2
+    },
+    "xo": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "xp": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "zb": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    },
+    "zc": {
+      "artifacts": 1,
+      "harvested": 0,
+      "routed": 0,
+      "un_harvested": 1
+    }
+  },
+  "schema": "vehicle_routing_coverage.v1",
+  "totals": {
+    "artifacts": 1238,
+    "harvested": 10,
+    "routed": 10,
+    "un_harvested": 1228
+  }
+}

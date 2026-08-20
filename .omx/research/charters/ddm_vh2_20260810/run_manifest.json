@@ -1,0 +1,121 @@
+{
+  "axis": "[macOS-CPU advisory, scorer-free]",
+  "command": ".venv/bin/python tools/ddm_vh2_vehicle_routing_ledger.py",
+  "corpus_before": 1238,
+  "ledger": {
+    "bytes_after": 1389340,
+    "bytes_before": 1304655,
+    "path": "/Users/adpena/Projects/pact/.omx/state/probe_outcomes.jsonl",
+    "rows_already_present": 0,
+    "rows_appended": 48,
+    "sha256_after": "4608d8f06b0e8545105e3e26fcf9e859db54e3c8c9a09b1e6489bd8ec9a1bd12",
+    "sha256_before": "8ba96c1e5f65fec4e42ded0e9ec3fedc138b7e3ebe2963067675376092c79dde"
+  },
+  "markdown_count": 7093,
+  "retained_outputs": [
+    {
+      "bytes": 43063,
+      "path": "/Volumes/APDataStore/pact/ddm_vh2_20260810/routing_rows_input.json",
+      "sha256": "be63e6ab403053f494d8455de4c4acaa6e5c316eff1cc3b6a25775294a7ca022"
+    },
+    {
+      "bytes": 33510,
+      "path": "/Volumes/APDataStore/pact/ddm_vh2_20260810/coverage.json",
+      "sha256": "1f56ac8fdee4ee6bd7024df4e254997aaa05aaf55dfb3d3fd8e8cedffb8758c4"
+    },
+    {
+      "bytes": 7694,
+      "path": "/Volumes/APDataStore/pact/ddm_vh2_20260810/partition_table.md",
+      "sha256": "cb02e0864ec3dd99f880bbbeafa437b2bd0c9d6a2f3071dd1aed018b2b8e0261"
+    },
+    {
+      "bytes": 3107,
+      "path": "/Volumes/APDataStore/pact/ddm_vh2_20260810/ROUTING_LEDGER_REPORT.md",
+      "sha256": "c27f44ca725c7335507a811efeeadd4304c190242c9ed5ef78d2f2f597b1e0ef"
+    },
+    {
+      "bytes": 43063,
+      "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_vh2_20260810/routing_rows_input.json",
+      "sha256": "be63e6ab403053f494d8455de4c4acaa6e5c316eff1cc3b6a25775294a7ca022"
+    },
+    {
+      "bytes": 33510,
+      "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_vh2_20260810/coverage.json",
+      "sha256": "1f56ac8fdee4ee6bd7024df4e254997aaa05aaf55dfb3d3fd8e8cedffb8758c4"
+    },
+    {
+      "bytes": 7694,
+      "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_vh2_20260810/partition_table.md",
+      "sha256": "cb02e0864ec3dd99f880bbbeafa437b2bd0c9d6a2f3071dd1aed018b2b8e0261"
+    },
+    {
+      "bytes": 3107,
+      "path": "/Users/adpena/Projects/pact/.omx/research/charters/ddm_vh2_20260810/ROUTING_LEDGER_REPORT.md",
+      "sha256": "c27f44ca725c7335507a811efeeadd4304c190242c9ed5ef78d2f2f597b1e0ef"
+    },
+    {
+      "bytes": 1389340,
+      "path": "/Volumes/APDataStore/pact/ddm_vh2_20260810/probe_outcomes.after.jsonl",
+      "sha256": "4608d8f06b0e8545105e3e26fcf9e859db54e3c8c9a09b1e6489bd8ec9a1bd12"
+    },
+    {
+      "bytes": 1991,
+      "path": "/Volumes/APDataStore/pact/ddm_vh2_20260810/source_manifest.json",
+      "sha256": "c5595dd46bfa7674bf5152c3c8dd126c6296937a1b1480aab72179b075cca39b"
+    }
+  ],
+  "schema": "ddm_vh2_retention_manifest.v1",
+  "score_claim": false,
+  "sources": [
+    {
+      "kind": "file",
+      "path": ".omx/research/ddm_wl1_20260805/TRANSFER_TABLE.md",
+      "sha256": "387d6101c3a3db7438f2a23006bc072dc34089a21a021231b65408f75d8820af"
+    },
+    {
+      "kind": "file",
+      "path": ".omx/research/ddm_fh1_forces_harvest_20260731.md",
+      "sha256": "cd07ed755c7e9704147ae8b6bf0b615bf205e295c4ec961e7ea08d44d2b50491"
+    },
+    {
+      "kind": "file",
+      "path": ".omx/research/ddm_vp1_20260810/VP1_RESCORING_REPORT.md",
+      "sha256": "d2987ea776956b585122e98c4b7c70597ed9b97ae348d7bd761061b9b6aaed37"
+    },
+    {
+      "kind": "file",
+      "path": ".omx/research/ddm_entropy_priced_member_n64_603_613_20260722T044916Z.config.json",
+      "sha256": "034b365037d38bdb3566d1f86832e4b79b1acd4da41c8baa067cf5d99389dc27"
+    },
+    {
+      "kind": "directory",
+      "path": ".omx/research/ddm_entropy_priced_member_n64_603_613_20260722T044916Z_artifacts",
+      "sha256": "927932f0e105e7dc8f8c7cda2aeab66f31776eb480a07da411b9a5cd72641784"
+    },
+    {
+      "kind": "file",
+      "path": ".omx/research/ddm_entropy_priced_member_n64_603_613_20260722T045940Z.md",
+      "sha256": "4eaf407071263e042c241ece0fef06e51012fea528c788639509625ce54e0ed9"
+    },
+    {
+      "kind": "file",
+      "path": ".omx/research/ddm_entropy_priced_member_n64_603_613_DAG_FEED_20260722T045940Z.md",
+      "sha256": "bf12a25ad91fe5d7a012acfeb1335348ecb76db7f77f222dbee9a60f26865678"
+    },
+    {
+      "kind": "file",
+      "path": ".omx/research/ddm_entropy_priced_member_n64_603_613_blocker_register_20260722T045940Z.json",
+      "sha256": "1c398562e0cb2c31c198d7f64ce8678403431fce92609d871ce4bd6dfd8dbe45"
+    },
+    {
+      "kind": "file",
+      "path": ".omx/research/ddm_entropy_priced_member_n64_603_613_canonical_equations_20260722T045940Z.md",
+      "sha256": "bfc1669c755e8ee582d668c541ee7fe6572e2b08fc51bccf88c0b9ae479f7838"
+    },
+    {
+      "kind": "file",
+      "path": ".omx/research/ddm_entropy_priced_member_n64_603_613_register_20260722T045940Z.jsonl",
+      "sha256": "0d32d438aaa7db791a203193565a5f553b32f0969c1fadb47f5f77083797ad69"
+    }
+  ]
+}
