@@ -212,21 +212,56 @@ frame B = [822, 1302] + (evaluate_estimate 120..180 s − evaluate_measured 51.4
 
 Frame B's wide end is already met: jg5 fits it by **10.668 s** today.
 
-**The pre-registered verdict rule:**
+**The CEILING ladder (k → ∞, unbeatable by any build):**
 
 * **P < 169.3 s → CLOSE.** Even a perfect corrector port cannot move any published verdict:
   frame A stays REFUSE, frame B stays WARN. The decode-wall axis is measured dry.
 * **169.3 ≤ P < 529.3 s → CONDITIONAL.** A perfect port flips frame A REFUSE→WARN and buys
-  frame-B margin, but frame B never reaches PASS. Admissible only with the *achievable* k
-  named, not the perfect one.
-* **P ≥ 529.3 s → BUILD**, with the required k stated.
+  frame-B margin, but frame B never reaches PASS.
+* **P ≥ 529.3 s → BUILD** is arithmetically possible, with the required k stated.
 
-And one prior that must be applied honestly rather than borrowed: `ddm_rr6` §2.1 MEASURED the
-native token decoder's win as **thread-borne** (1.007× at one thread, 1.865× at four). The
-corrector's per-group work is a few thousand positions of already-vectorised numpy behind a
-strict data dependence, so a C port's win comes from removing temporaries and interpreter
-overhead, not from a thread pool. **A realistic k is 2–4×, which removes 0.50–0.75·P, not P.**
-The ceiling row is the bound; the k rows are the forecast.
+A ceiling is not a forecast, and quoting it as one is how a dead port gets built. `ddm_rr6`
+§2.1 MEASURED the native token decoder's win as **thread-borne** — 1.007× at one thread against
+1.865× at four, i.e. lowering numpy to C bought nothing on its own. The corrector's per-group
+work is a few thousand positions of already-vectorised numpy behind a strict data dependence,
+so a C port buys removed temporaries and interpreter overhead, not a thread pool. **A realistic
+k is 2–4×.** At k = 3 the port removes ⅔·P, and the ladder moves:
+
+**The REALISTIC ladder (k = 3):**
+
+* **P < 254 s → CLOSE.** A 3× port cannot even flip frame A.
+* **254 ≤ P < 794 s → frame A REFUSE→WARN**, plus frame-B margin. No frame-B PASS.
+* **P ≥ 794 s → frame B PASS.**
+
+The 794 s threshold deserves a moment: it is **59.2% of the 1,341.540 s token stage — exactly
+`ddm_rr6` §6's borrowed fraction.** Had this arm carried that number onto T4, the corrector
+port would have priced out as *precisely break-even for a cold-cache PASS*, the most seductive
+possible answer. That coincidence is a good reason to measure the denominator you actually
+ship on.
+
+### 3.1 The pre-registered decision table
+
+Written before the row landed and retained at
+`retained/cd1_preregistered_decision_table.json`, so the verdict indexes into it rather than
+being composed after the fact. `A@∞` is the frame-A verdict at a perfect port; `A@k3` at a
+realistic one; `k_A_wide` / `k_B_narrow` are the speedups needed to reach frame A's wide end
+and frame B's narrow end (`none` = unreachable at any k).
+
+| P (s) | share of token | ceiling inflate | A@∞ | A@k3 | inflate@k3 | k_A_wide | k_B_narrow | rule |
+|---:|---:|---:|---|---|---:|---:|---:|---|
+| 100.0 | 7.4% | 1319.9 | REFUSE | REFUSE | 1353.2 | none | none | **CLOSE** |
+| 169.3 | 12.6% | 1250.6 | WARN | REFUSE | 1307.0 | ∞ | none | boundary |
+| 200.0 | 14.9% | 1219.9 | WARN | REFUSE | 1286.6 | 6.52 | none | CONDITIONAL |
+| 300.0 | 22.4% | 1119.9 | WARN | **WARN** | 1219.9 | 2.30 | none | CONDITIONAL |
+| 400.0 | 29.8% | 1019.9 | WARN | WARN | 1153.2 | 1.73 | none | CONDITIONAL |
+| 480.0 | 35.8% | 939.9 | WARN | WARN | 1099.9 | 1.55 | none | CONDITIONAL |
+| 529.3 | 39.5% | 890.6 | WARN | WARN | 1067.0 | 1.47 | none | BUILD |
+| 600.0 | 44.7% | 819.9 | WARN | WARN | 1019.9 | 1.39 | 8.49 | BUILD |
+| 700.0 | 52.2% | 719.9 | **PASS** | WARN | 953.2 | 1.32 | 4.10 | BUILD |
+
+Reading it plainly: **frame-B PASS is out of reach for any realistic port** — it first becomes
+reachable at all near P = 600 s, and then only at k = 8.5. The prize actually on offer is
+frame A REFUSE→WARN, which a 3× port delivers from about P = 300 s.
 
 **rr7's wall does NOT transfer to this port, and saying so precisely matters.** rr7 lost
 because it moved the sparse model OFF the T4's GPU ONTO its vCPUs — weaker silicon for that
