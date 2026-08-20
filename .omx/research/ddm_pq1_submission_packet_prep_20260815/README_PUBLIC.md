@@ -1,55 +1,60 @@
-# jg5_joint_waterfill — submission packet
+# joint_waterfill_rider — submission packet
 
 This directory is a prepared submission packet held at
-`submissions/jg5_joint_waterfill/`. It is **not submitted**. Every claim below is
+`submissions/joint_waterfill_rider/`. It is **not submitted**. Every claim below is
 backed by a retained custody receipt; those receipts are held outside the public
 submission directory.
 
 The one number this packet carries: on the exact bytes in this directory, the
-measured `[contest-CUDA]` 600-sample score is **0.14839100138338618**.
+measured `[contest-CUDA]` 600-sample score is **0.14827847122030852**.
 
 ## Evidence boundary
 
 - **What is measured.** One exact evaluation: `upstream/evaluate.py` at
   `--device cuda` on a Tesla T4, Linux x86_64, over all 600 public samples,
   driven through this directory's own `inflate.sh` on this directory's own
-  `archive.zip`. Score, both distortion legs and the rate leg all come from that
-  run. The score published here is **recomputed from the reported components**,
-  not read off the evaluator's rounded `final_score` field — that field prints
-  `0.15`, a 2-decimal display that rounds up across the very boundary this
-  submission sits on.
+  `archive.zip`. Score, both distortion legs, the rate leg and the wall times all
+  come from that run. The score published here is **recomputed from the reported
+  components**, not read off the evaluator's rounded `final_score` field — that
+  field prints `0.15`, a 2-decimal display that rounds up across the very boundary
+  this submission sits on.
 - **The precision of that claim.** The evaluator reports its distortion
   components at 8 decimal places, so the recomputed score carries a worst-case
   absolute error bound of `3.63296497868841e-06`. The claim is
-  `0.14839100138338618 ± 3.633e-06`. The distance from that interval to 0.15 is
-  about 443 times the bound, so the sub-0.15 statement is not a rounding artifact.
-- **What is NOT measured for the possible final object.** The composed rider plus
-  clean native-corrector runtime is locally decode-proven at full n600 and sealed,
-  but it has no fresh contest-CUDA or contest-CPU receipt yet. Its score, timing
-  and CPU boundary are therefore **GATED-ON-RC2**; none is transferred from jg5,
-  an instrumented tree, or a contended local receiver.
-- **The open runtime risk.** Populate the final runtime declaration only from the
-  composed candidate's fresh `[contest-CUDA T4, n600]` receipt and fresh
-  `[contest-CPU, n600]` attempt receipt. Until then no PASS/WARN/REFUSE timing
-  verdict is made for the shipping object. The requested runner remains
-  `linux-nvidia-t4`.
+  `0.14827847122030852 ± 3.633e-06`. The distance from that interval to 0.15 is
+  about 474 times the bound, so the sub-0.15 statement is not a rounding artifact.
+- **Decode time is measured, not projected.** Inflation of these exact bytes on
+  the shipping runtime took **458.752594349 s** and evaluation **39.723591300 s**
+  on the T4 axis, for **498.476185649 s** charged. What is NOT measured by us is
+  the rest of the CI job: checkout, `uv sync`, apt and upload leave a residual
+  window of 822 s (cold uv cache) to 1302 s (warm) for our decode, and every
+  per-step second inside that window is an estimate that has never been timed on a
+  real contest runner. The charged time fits the COLD end — the binding corner —
+  with 323.524 s of margin. See "Runtime and decode budget".
+- **The CPU axis is closed by measurement, not pending.** These bytes were run on
+  Linux x86_64 CPU and inflation was killed at the 1800 s contest wall before
+  `evaluate.py` started. No CPU score exists and none is claimed. The decode
+  itself is correct there — the decoded token stream is bit-identical to the CUDA
+  axis — it is simply too slow. The requested runner is `linux-nvidia-t4`.
 - **What is not authority.** Any local macOS number, any advisory row, and any
   projection appearing in our own research notes is not a score and is not used
-  here.
+  here. Where a projection is unavoidable — the CI residual window above — it is
+  labelled as one.
 
 ## Exact identity
 
 | Property | Value |
 |---|---|
-| Archive SHA-256 | `f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e` |
-| Archive size | 180,625 bytes |
-| Member | `p`, 180,525 bytes, stored, SHA-256 `54b445da3a1a4b4c7012c83b25c3e0d87daab5ce10cd54a1598cfb239ab05b4a` |
+| Archive SHA-256 | `df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080` |
+| Archive size | 180,456 bytes |
+| Member | `p`, 180,356 bytes, stored, SHA-256 `83fa979c1118499b7dd6083cb20bb66f3f8f47e32cfc16ff30ea66449d81cdf3` |
 | Members in archive | 1 |
-| Runtime tree SHA-256 | `2103073d739fc3f27d329ea0785ea3010307360c2380af0476e16d0f5b57cb9b` |
-| Portable runtime content tree SHA-256 | `3ba9987771e1be967cf80942faedc7c5f6641f15039e03dd2b0909fd6613ab99` |
+| Runtime tree SHA-256 | `fdd5774921319a317a385a9594489aa97e45cebc0f6f20cdc50fe8aaeb08a7f2` |
+| Runtime manifest rows | 36 (`MANIFEST.sha256`) |
+| Portable runtime content tree SHA-256 | `ccd9f7aba9b5f7837e749e856f178586ad496d51d1011306422a5740c56c915c` |
 | Upstream snapshot SHA-256 | `cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008` |
 | Upstream `evaluate.py` SHA-256 | `7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b` |
-| Candidate seal SHA-256 | `96e9860aad9021e6dc9a9619036b54bd0a2205f60468e8585089db1d8044a7d0` (`SEAL_VALID`) |
+| Candidate seal SHA-256 | `2e32079c5de2cff9e2c2e6788eb74e8152127273aa0f977cf11cb302a3547005` (`SEAL_VALID`) |
 
 The runtime tree hash is load-bearing, and the reason is measured. See "Runtime
 tree pin" in `report.txt`: the previous generation's archive scored 79.40 under one
@@ -58,8 +63,26 @@ receiver, the archive hash alone does not determine the score.
 
 ## What this submission is
 
-The same inherited vehicle as the prior candidate. What changed is how the seg
-edits and the pose carrier are decided — together instead of one after the other.
+The same inherited vehicle as the prior candidates. Three things changed across the
+last two generations, and they are independent of each other:
+
+- **How the seg edits and the pose carrier are decided** — together instead of one
+  after the other. That is the body, items 1–3 below, and it is what moved the
+  distortion legs.
+- **How the carrier's basis stream is coded** — a lossless rider that re-encodes
+  the same carrier body under an adaptive arithmetic basis. It changes no decoded
+  value and buys **169 bytes**.
+- **What decodes the correction stream** — the free corrector is now a C port
+  instead of the Python implementation. It changes no decoded value either and
+  buys **961 s of inflation wall**, which is what makes the decode budget fit.
+
+The first is measured in the distortion legs. The second and third are *proved* not
+to touch them: on the shipping axis this archive and the prior generation's archive
+emit **byte-identical** 600-pair inflated output, both hashing to
+`6bf8acf8d4412e43f8ddf810bcf63feb6435b758196b708fd61e77fe61e79883` at 3,662,409,600
+bytes. Identical scorer input through the same deterministic scorer gives identical
+scorer output, so the entire score delta between the two generations is the rate
+leg, exactly `25 × (−169) / 37,545,489 = −1.1253016e-04`.
 
 1. **The problem.** The prior composition applied all 573 seg token edits and then
    re-solved the pose carrier. Measured, that direction is seg-descending but not
@@ -79,9 +102,11 @@ edits and the pose carrier are decided — together instead of one after the oth
    iteration budget: **600 of 600 pairs stopped on `no_improving_step`, with zero
    budget hits**, so the stopping criterion was never the binding constraint.
 
-The net effect is the reverse of every prior generation in this packet: it
-**spends** 3,443 bytes and buys both distortion legs, for a net `-0.008710980`.
-The leg split is published in `report.txt`.
+The net effect of the body is the reverse of every prior generation in this packet:
+it **spends** bytes and buys both distortion legs. Against packet generation 4
+(177,182 B, `0.15710198138050818`) this archive is +3,274 bytes for a net
+`-0.008823510`, of which `-1.1253016e-04` is the rider giving 169 of those bytes
+back at zero distortion cost. The leg split is published in `report.txt`.
 
 The tail sections, the HPAC stream and the 13-context fixed-point integer
 log-odds mixer that produces the token stream are carried over from the prior
@@ -98,7 +123,7 @@ table is reproduced inline in the pull-request body.
 
 ## Where this approach has headroom
 
-**Rate is 81.05% of the score.** One archive byte costs `25 / 37,545,489 =
+**Rate is 81.04% of the score.** One archive byte costs `25 / 37,545,489 =
 6.658590e-07` score units. On rate alone, 27,620 further bytes would reach 0.13 and
 42,638 would reach 0.12.
 
@@ -108,7 +133,7 @@ models 66,528 B (37.7%), fixed table 96 B, ZIP overhead 100 B. The token stream
 runs at 0.0074392 bits per token over 117,964,800 tokens. The model half is
 semantic 36,130 B, carrier 22,246 B and probability object 17,952 B before
 compression. This budget is measured on the 176,420 B body, not on the shipped
-180,625 B body.
+180,456 B body.
 
 **The probability-model axis paid three times after the coder search was believed
 exhausted.** A fixed-point log-odds mixer measured −560.07 B, a widened causal
@@ -190,8 +215,14 @@ prediction of success.
    `group(x, y) = (x & 63) + 2·(y & 63)`; under it the up-right neighbour is
    98.6945% causal. Widening the template bought −710.84 B and is free receiver
    code. Recorded next step: further members from the same scan-order read.
-7. **Decode cost.** A shipping constraint, not a score move. See the runtime risk
-   above: the native port is measured and does not ship.
+7. **Decode cost.** A shipping constraint, not a score move — and it is now closed
+   rather than open. The C port of the free corrector **ships in this packet**
+   (`runtime/f26_corrector_native.c`, `runtime/native_free_corrector.py`) and the
+   receipt shows `NativeFreeCorrector` engaged on both axes. It cut measured
+   inflation from 1419.904212624 s to 458.752594349 s, a 3.10× drop, which is what
+   moved the budget verdict from over-ceiling to PASS with margin. An earlier
+   edition of this section said the port "does not ship"; that statement described
+   the previous generation and is superseded here.
 
 ### Directions we measured and closed, with the mechanism that closed them
 
@@ -239,12 +270,20 @@ dropped: the row-prune that landed alongside it changed the semantic body's leng
 and re-measured on the edited body the split is negative. A byte credit measured in
 one regime does not survive into another. Its receiver support ships and is inert.
 
-**A lossless rider on the carrier's basis stream.** Measured at 183 B
-(`−1.2185e-4` score units) against a budget of `−1.85e-4` — the same cross-regime
-transfer failure, one memo downstream. It was then declined for a second,
-independent reason: folding a lossless change still changes archive bytes, so the
-resulting score would be derived rather than measured. It must be re-run last on
-the final body.
+**A lossless rider on the carrier's basis stream — SUPERSEDED: it shipped.** The
+historical row read: measured at 183 B (`−1.2185e-4` score units) against a budget
+of `−1.85e-4` — the same cross-regime transfer failure, one memo downstream — then
+declined for a second, independent reason: folding a lossless change still changes
+archive bytes, so the resulting score would be derived rather than measured, and it
+must be re-run last on the final body.
+
+That is exactly what happened, and it is why this row is superseded rather than
+deleted. The rider was re-measured **on the final body**, where it is worth **169 B**
+(not 183 B — the cross-regime warning was correct about the number), and the
+resulting archive was then evaluated in its own right, so the score is measured
+rather than derived. Both objections were answered by doing the work in the order
+the row demanded. The rider ships: reserved header flag `0x08` engages
+`restore_carrier_body` on the receiver, restoring a 22,316 B carrier blob.
 
 **Search quality on the token codebook.** Both pathologies we suspected are present
 and both are priced out: under-convergence is worth `3.238e-04` score units and
@@ -671,32 +710,109 @@ submissions in this contest, which likewise declared a pinned Brotli. It is
 flagged because "no network at decode time" is a reasonable thing for a judge to
 expect, and this submission does not meet it.
 
+## Runtime and decode budget
+
+The official limit is 30 minutes (`upstream/README.md:114`), carried in CI as
+`timeout-minutes: 30` on the **whole job** (`upstream/.github/workflows/eval.yml:30`),
+not on inflation alone. So the question is not "does inflation fit 1800 s" but
+"does inflation plus evaluation fit what the rest of the job leaves".
+
+**Measured, `[contest-CUDA T4, n600]`, on these exact bytes and this exact runtime:**
+
+| stage | seconds |
+|---|---:|
+| archive setup | 0.564833165 |
+| frame-0 selector and I/O | 3.608821572 |
+| neural render and resize | 41.950293628 |
+| token decode | 397.876589923 |
+| **inflation total** | **458.752594349** |
+| evaluation | 39.723591300 |
+| **charged (inflation + evaluation)** | **498.476185649** |
+
+**Projected, not measured by us:** the rest of the CI job. Checkout, `uv sync`,
+apt and upload leave a residual of **822 s** with a cold `uv` cache and **1302 s**
+with a warm one. Only the 1800 s job wall and the install payload *sizes* are
+measured; every per-step second inside that window is an estimate that has never
+been timed on a real contest runner, and the largest single mover between the two
+ends is the 3.19 GB CUDA dependency install. Quoting that window as measured would
+be a false claim, so it is labelled.
+
+**Verdict: PASS at the binding corner.** 498.476 s charged against the 822 s cold
+end leaves 323.524 s of margin, and the cold end is the corner that binds. This is
+also conservative in our disfavour: the residual already nets out an estimated
+evaluation term, so charging the measured evaluation against it double-counts by
+that estimate.
+
+**Why this section exists.** The previous generation charged 1471.331720073 s on
+the same axis and the same wrapper — over **both** ends of that window. Replacing
+the Python free corrector with the C port cut inflation 3.10×, from 1419.904212624 s
+to 458.752594349 s, at zero change to any decoded value. The decode budget is the
+one axis where this generation is not a marginal improvement on its predecessor but
+a different verdict.
+
+**On CPU the same work does not fit, and that is measured too.** Inflation of these
+bytes on Linux x86_64 CPU was killed at the 1800 s wall before `evaluate.py`
+started. The receiver's own instrumentation finished afterwards at 2850.781244341 s,
+of which token decode alone was 2427.166373672 s (6.10× its CUDA cost) and the
+render stage 410.182710582 s (9.78×). The decode is *correct* there — the decoded
+token stream hashes to
+`cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb` on both axes, at
+the same final decoder bit position, with the same `NativeFreeCorrector` engaged.
+It is a wall result, not a decode failure. No CPU score exists and none is claimed;
+the requested runner is `linux-nvidia-t4`.
+
 ## How to verify
 
-From this submission directory. These commands verify the current hosted jg5
-object; if RC2 replaces it, update every URL and expected identity from the fresh
-receipts before running them.
+From this submission directory. The first and last blocks verify the object in
+front of you and need no network. The middle block verifies the hosted copy and
+cannot run until the archive is published — see the gate note below it.
 
 ```bash
+# 1. The runtime pin. 36 rows, and they ARE the tree hash.
 shasum -a 256 -c MANIFEST.sha256
-# expect 33 lines ending in: OK
+# expect 36 lines ending in: OK
 
-ARCHIVE_URL=https://raw.githubusercontent.com/adpena/comma-lab/2d61b51988799ec3561d5f8a6f659aeb88cc99d9/submissions/robust_current/jg5_sub015_runtime/runtime/archive.zip
+# 2. The archive identity, from the bytes in this directory.
+shasum -a 256 archive.zip
+# expect df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080
+wc -c < archive.zip
+# expect 180456
+python3 -c 'import zipfile,hashlib; z=zipfile.ZipFile("archive.zip"); i,=z.infolist(); assert (i.filename,i.file_size,i.compress_type)==("p",180356,0), i; print("member p", i.file_size, hashlib.sha256(z.read("p")).hexdigest())'
+# expect member p 180356 83fa979c1118499b7dd6083cb20bb66f3f8f47e32cfc16ff30ea66449d81cdf3
+```
+
+```bash
+# 3. HOSTED-COPY LEG — NOT YET RUNNABLE. Set both URLs from the publication commit.
+ARCHIVE_URL=${ARCHIVE_URL:?set to the raw URL pinned to the commit that carries THIS archive}
+T4_RECEIPT_URL=${T4_RECEIPT_URL:?set to the raw URL of THIS row's T4 receipt at that same commit}
+
 LOCAL_SHA=$(shasum -a 256 archive.zip | awk '{print $1}')
 HOSTED_SHA=$(curl -fsSL "$ARCHIVE_URL" | shasum -a 256 | awk '{print $1}')
 test "$LOCAL_SHA" = "$HOSTED_SHA"
-test "$LOCAL_SHA" = f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e
+test "$LOCAL_SHA" = df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080
 
-T4_RECEIPT_URL=https://raw.githubusercontent.com/adpena/comma-lab/2d61b51988799ec3561d5f8a6f659aeb88cc99d9/submissions/robust_current/jg5_sub015_runtime/t4_receipts/MODAL_REMOTE_RESULT.json
-curl -fsSL "$T4_RECEIPT_URL" | python3 -c 'import json,math,sys; r=json.load(sys.stdin); s=100*r["avg_segnet_dist"]+math.sqrt(10*r["avg_posenet_dist"])+25*r["archive_size_bytes"]/37545489; assert r["n_samples"]==600 and r["gpu_t4_match"] is True and r["score_axis"]=="contest_cuda"; assert r["expected_archive_sha256"]=="f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e" and r["expected_runtime_tree_sha256"]=="2103073d739fc3f27d329ea0785ea3010307360c2380af0476e16d0f5b57cb9b"; assert abs(s-r["score_recomputed_from_components"])<1e-15; print(f"recomputed_score={s:.17g}")'
+curl -fsSL "$T4_RECEIPT_URL" | python3 -c 'import json,math,sys; r=json.load(sys.stdin); s=100*r["avg_segnet_dist"]+math.sqrt(10*r["avg_posenet_dist"])+25*r["archive_size_bytes"]/37545489; assert r["n_samples"]==600 and r["gpu_t4_match"] is True and r["score_axis"]=="contest_cuda"; assert r["expected_archive_sha256"]=="df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080" and r["expected_runtime_tree_sha256"]=="fdd5774921319a317a385a9594489aa97e45cebc0f6f20cdc50fe8aaeb08a7f2"; assert abs(s-r["score_recomputed_from_components"])<1e-15; print(f"recomputed_score={s:.17g}")'
+```
 
+**Gate note, stated plainly because it is the one thing this packet cannot yet
+prove to you.** The archive above has never been published, so there is no hosted
+URL for it. The previous generation's URL is deliberately NOT reused: it serves a
+different archive (`f3bce5d2…`, 180,625 B) under a different 33-row runtime tree,
+and a verification command that succeeded against it would be proving the wrong
+object. Block 3 therefore refuses to run rather than pointing at the old bytes.
+Publishing these exact bytes and pinning both URLs to that commit is the last
+step before submission, and it is held for the repository operator.
+
+```bash
+# 4. The evaluation itself.
 bash ../../evaluate.sh --submission-dir . --device cuda
 ```
 
 Expect `Average PoseNet Distortion: 0.00000637`, `Average SegNet Distortion:
 0.00020139`, and `Final score: 0.15` at the evaluator's 2-decimal display. The
-score claimed here, `0.14839100138338618`, is those components recomputed. The
-shipping runtime and its budget verdict remain GATED-ON-RC2.
+score claimed here, `0.14827847122030852`, is those components recomputed.
+Measured wall on the reference T4: 458.752594349 s inflation, 39.723591300 s
+evaluation.
 
 ## Reproduction
 
@@ -712,7 +828,7 @@ produce it.
 submission you cannot inspect is a submission you cannot trust. `compress.py`
 rebuilds the token stream exactly and carries the other seven sections through
 byte-identically; run it against this archive and it refuses **by name, before
-doing any work**, naming the four stages it does not express and the builder that
+doing any work**, naming the stages it does not express and the builder that
 performs each one. `compress.py provenance` emits the full lineage with a SHA-256
 for every input.
 
@@ -720,12 +836,15 @@ What does exist for this candidate is the seal binding archive to receiver, the
 staging proof that this directory is byte-identical to the evaluated tree, and the
 authority receipt.
 
-**Source is available.** All **33 of the 33 files** enumerated by this candidate's
-evaluated runtime manifest, plus the exact `archive.zip`, are in version control at
-`submissions/robust_current/jg5_sub015_runtime/runtime/` in
-<https://github.com/adpena/comma-lab>, each byte-identical by SHA-256 to the tree
-the score was measured on — the receiver modules, `inflate.py` and `inflate.sh`
-included. An earlier draft of this README disclosed that 24 of those 34 had no
-source in version control; that was true when written and has since been closed.
+**Source is mostly available, and the gap is named rather than rounded off.**
+**33 of the 36 files** enumerated by this candidate's evaluated runtime manifest are
+already in version control in <https://github.com/adpena/comma-lab>, byte-identical
+by SHA-256, spread across `submissions/robust_current/jg5_sub015_runtime/runtime/`,
+`experiments/`, `src/tac/` and `runtime-rs/native/f26-corrector/`. The three that are
+not are the two entry points and one receiver module this candidate rewired —
+`inflate.py`, `inflate.sh` and `runtime/residual_archive.py` — together with the
+exact `archive.zip`. Publishing those four is part of the same operator step that
+pins the download URL, and this paragraph is written to be re-measured then rather
+than assumed.
 The shipped bytes are pinned by hash and the decode is deterministic, so what a
 judge runs is fully determined either way.

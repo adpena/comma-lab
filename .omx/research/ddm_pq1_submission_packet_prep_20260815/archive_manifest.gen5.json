@@ -1,4 +1,8 @@
 {
+  "status": "HISTORICAL_SUPERSEDED",
+  "superseded_by": "archive_manifest.gen6.json",
+  "superseded_on_utc": "2026-08-20T22:14:22.588866+00:00",
+  "supersession_note": "Packet generation 5 (jg5). Retained as lineage only. The shipping object is the generation-6 composed candidate in archive_manifest.gen6.json; every value below describes the SUPERSEDED object and must not be read as current.",
   "archive_bytes": 180625,
   "archive_sha256": "f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e",
   "evidence_axis": "[contest-CUDA]",

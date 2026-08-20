@@ -1,0 +1,20 @@
+{
+  "archive_bytes": 180456,
+  "archive_sha256": "df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080",
+  "evidence_axis": "[contest-CUDA]",
+  "members": [
+    {
+      "compress_size": 180356,
+      "compression_method": "stored",
+      "crc": 3771533310,
+      "file_size": 180356,
+      "name": "p",
+      "sha256": "83fa979c1118499b7dd6083cb20bb66f3f8f47e32cfc16ff30ea66449d81cdf3"
+    }
+  ],
+  "n_samples": 600,
+  "portable_runtime_content_tree_sha256": "ccd9f7aba9b5f7837e749e856f178586ad496d51d1011306422a5740c56c915c",
+  "schema": "ddm_pq1_archive_manifest.v1",
+  "score_claim": true,
+  "score_recomputed_from_components": 0.14827847122030852
+}

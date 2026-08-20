@@ -2,6 +2,24 @@
 
 Status: `HOLD`, consecutive clean passes: `0/5`.
 
+> **CANDIDATE CHANGED AGAIN 2026-08-20 (second change that day) — rounds 1–13
+> reviewed SUPERSEDED BYTES.** The packet was re-staged to generation 6, the
+> composed candidate (`df7fd266e1b7488c…` / 180,456 B, 36-row runtime tree
+> `fdd57749…`, `[contest-CUDA]` **0.14827847122030852**) at the sixteenth pointer
+> move. Every row below reviewed generation 2, 3, 4 or 5. Their findings and class
+> cures carry — the apparatus is candidate-agnostic — but **no clean pass on
+> superseded bytes counts toward this candidate**, and the counter was already
+> `0/5`. **Round 14 is the first review of these bytes**; see "Round 14 — what to
+> examine" at the end of this file.
+>
+> Note for the next reviewer: generation 5's body decodes to the *same state* as
+> this one (identical n600 raw output on the shipping axis), so generation 5's
+> DISTORTION reasoning transfers verbatim. Nothing else does — archive, runtime
+> tree, manifest row count, timings, hosted URL and compliance receipt are all
+> different objects.
+>
+> Prior banners preserved verbatim:
+>
 > **CANDIDATE CHANGED 2026-08-20 — rounds 1–12 reviewed SUPERSEDED BYTES.** The
 > packet was re-staged to generation 5 (`f3bce5d259a08183…` / 180,625 B,
 > `[contest-CUDA]` **0.14839100138338618** — the first sub-0.15 row in this
@@ -10,9 +28,9 @@ Status: `HOLD`, consecutive clean passes: `0/5`.
 > candidate-agnostic — but **no clean pass on superseded bytes counts toward this
 > candidate**, and the counter was already `0/5`. **Round 13 is the first review
 > of these bytes**; see "Round 13 — what to examine" at the end of this file.
->
+> 
 > Prior banner preserved verbatim:
->
+> 
 > **CANDIDATE CHANGED 2026-08-19 — rounds 1–11 reviewed SUPERSEDED BYTES.** The
 > packet was re-staged to generation 4 (`35c318d541d70370…` / 177,182 B,
 > `[contest-CUDA]` 0.15710198138050818) at the ck1 tenth-move boundary. Every
@@ -40,6 +58,7 @@ fixed. A pass cannot be counted while the strict compliance chain is red.
 
 | 11 | RUN 2026-08-18 | FRESH-EYES Opus arm #7 (`ddm_rv8`) | `debb025f45bb42e3…4b037a` | `6f4f6dc8e3648eb0…` (r5, found STALE by INSTRUMENT and by WORLD) | **6** — F1 (MED-HIGH, new class) the canonical receipt r5 is stale on two axes the round-8 freshness law did not cover: the CHECKER changed 1h46m after r5 was bought (86 checks then, 87 live) and our own frontier moved past the candidate twice that day, so `frontier_no_regression_on_submitted_axis` was RED at contest-final severity — re-run measured 82/87 with 5 reds · F2 (MED, new class) **63 absolute local `/Volumes/…` paths shipping in `GENERATION_RECEIPT.json` (16) + `RECEIVER_PARSEBACK.json` (47)**, invisible to the leak scanner for two independent reasons · F3 (MED) the round-10 census guard had no consumer, no tests, and printed `39 declared (34 + 7)` · F4 (MED) the swap trigger still named `e480b`/`e960` in the present tense and could not admit the live pointer · F5 (LOW) accounting title named the wrong candidate · F6 two undeclared marker files staged in the git index inside the PREP tree. Full report: `.omx/research/p0_1111_review_round11_20260818.md`. Fixes: `.omx/research/p0_1111_round11_fixes_20260818.md` — F2(b)/F3/F4/F5/F6 + two class cures (receipts now carry `instrument_and_world`; harvests write a scanner-visible anchor mirror) all FIXED; **F2(a) REFUSED with a measurement** (sanitizing manifest-pinned bytes in place would ship bytes the T4 row never evaluated under an unchanged green tree hash) and deferred to the next re-stage | **0/5** |
 | 12 | RUN 2026-08-19 | FRESH-EYES Opus arm #8 (`ddm_rv12`) | `35c318d541d70370…677e3` | `587af0cf78b67858…` (gen4.r1, 83/87) | **6** — F1 (MED) sign-determinacy margin divided by ONE row's 8dp bound for a TWO-row delta; "18.0x" should be **8.97x**, overstated by exactly 2.00x, and flagged as a CLASS across sister docs · F2 (MED) decode-time **network** dependency (`uv` + egress) undisclosed and the bootstrap branch never exercised on the authority run · F3 (MED) **19.08x** advisory-vs-authority pose drift on identical bytes undisclosed (d_seg drifts only 1.43x) · F4 (LOW) shipped leg split asserted "sums to the net" while printed 5-sig-fig values do not · F5 (LOW) AppleDouble cure applied to the staged tree but not to `gen4_receipts/` or `generations/` · F6 (LOW) the superseded **79.40216174747616** contest-CUDA row on the IDENTICAL archive sha undisclosed. Full report: `.omx/research/p0_1111_round12_review_20260819.md`. ALL 6 FIXED (commits `d39cd384b3`, `6e976eeafd`) | **0/5** |
+| 13 | RUN 2026-08-20 | FRESH-EYES codex cross-family arm (`ddm_pq10`) | `f3bce5d259a08183…8acb7e` (gen-5, SUPERSEDED same day by gen-6) | none re-bought this round | **4** — F1 (BLOCKING) the selected-object swap never reached the packet: the old archive SHA in 17 files, old byte count in 16, old score in 14, old runtime pin in 11, and ZERO files naming the selected composed object · F2 (HIGH) `GATED-ON-RC2` in 33 places after both fresh receipts already existed, plus two stale method statements (183 B rider "declined", native port "does not ship") · F3 (MED-HIGH) repo-side `ARCHIVE_MANIFEST.json` stale at generation 4 even on its own named object · F4 (BLOCKING for a counted pass) the reviewer appendix executes against the wrong object. The round left every packet byte untouched and routed the indivisible typed swap rather than manufacturing a partial fix. Full report: `.omx/research/ddm_pq10_codex_packet_review_round_20260820.md`. ALL 4 FIXED by the generation-6 swap (`ddm_pq11`), which is why round 14 reviews different bytes | **0/5** |
 | — | ROW ADDED LATE 2026-08-20 by `ddm_pq3` | — | — | — | Round 12 was RUN and FIXED on 2026-08-19 but no scaffold row was written — the round-10 F2 class ("this scaffold had no round-N row while declaring itself the counter authority") recurring for the third time. Recorded here by the re-stage arm rather than left for a reviewer to rediscover. **The recurrence is itself the finding**: two class-fixes have failed to stop it, because both cured the missing ROW and neither cured the missing STEP — nothing in `SWAP_PROCEDURE.md` step 6 requires the scaffold row as part of a fix batch. | **0/5** |
 
 **Strict-chain-red clause, gen-4 adjudication (2026-08-19):** the clause is read
@@ -219,10 +238,54 @@ PR opening has occurred.
 
 ---
 
-## Round 13 — what to examine (written by `ddm_pq3`, who therefore cannot run it)
+## Round 14 — what to examine (written by `ddm_pq11`, who therefore cannot run it)
 
-This list is written by the arm that staged generation 5. It names the thin spots
-I know about; a fresh reviewer should not treat it as exhaustive.
+This list is written by the arm that executed the generation-6 swap. It names the
+thin spots I know about; a fresh reviewer should not treat it as exhaustive. The
+generation-5 list is preserved below it, because most of its items are about the
+body, and the body did not change.
+
+1. **Re-derive the score from the receipt yourself**, from all three components,
+   and confirm `0.14827847122030852` rather than the evaluator's printed `0.15`.
+   Check that no surface anywhere states `0.15` as the claim.
+2. **Re-run the staging proof on 36 rows.** Verify independently that the staged
+   runtime files hash to `MANIFEST.sha256`, and that `runtime_tree_sha256`
+   re-derived from freshly measured staged bytes — not from the manifest's own
+   claimed digests — equals `fdd57749…`. The receipt asserts it; do not take its
+   word, and do not take mine.
+3. **Attack the identity claim I lean on hardest.** I claim the generation-5 and
+   generation-6 objects emit byte-identical n600 output on the shipping axis, and
+   I use that to call the score delta EXACT rather than bound-limited. Both raw
+   SHA-256 values are in the two T4 receipts. If they are not equal, the exactness
+   claim collapses back to a bounded delta and several sentences are wrong.
+4. **Check what I did NOT fill from the receipt.** The `GATED-ON-RC2` markers are
+   gone, but the CI residual window (822–1302 s) is still a projection and must
+   still read as one everywhere. Grep for any sentence that has quietly promoted
+   it to a measurement.
+5. **The compliance receipt does not exist for these bytes.** I did not re-buy it,
+   deliberately — bytes, surfaces and pointer all moved, so the generation-5
+   receipt is stale on all three inputs of the freshness law. Confirm no surface
+   cites a generation-5 compliance number as current.
+6. **The hosted URL is blank on purpose.** Verify that no leg of any verification
+   command resolves to the superseded archive, and that the blank is disclosed as
+   a held step rather than an oversight.
+7. **Population-query the byte-direction sentences again.** Generation 5 grew;
+   generation 6 shrank by 169 B against it while still being larger than
+   generation 4. Any sentence that says "spends bytes" or "gives bytes back" now
+   needs its reference row named.
+8. **The 33-of-36 version-control disclosure.** I measured it; re-measure it. The
+   three unpublished files are the two entry points and one receiver module, and
+   that set will change the moment the operator publishes.
+9. **The AppleDouble ordering law.** Confirm the packet, prep and receipts trees
+   are clean AT THE MOMENT YOU LOOK — any write to the ExFAT volume re-creates the
+   sidecars, and I wrote to that volume repeatedly during the swap.
+
+---
+
+## Round 13 — what to examine (written by `ddm_pq3`, who staged generation 5)
+
+Preserved for the body-level items, which still apply. Items naming 33 rows,
+`2103073d…` or `0.14839100138338618` describe the SUPERSEDED generation-5 object.
 
 1. **Re-derive the score from the receipt yourself**, from all three components,
    and confirm `0.14839100138338618` rather than the evaluator's printed `0.15`.

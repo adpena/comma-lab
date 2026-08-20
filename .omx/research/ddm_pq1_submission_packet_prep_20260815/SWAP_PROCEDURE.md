@@ -246,3 +246,69 @@ spent. Proven with the compliance checker's own instrument: `PRIVATE_SURFACE_RE`
 plus the binary markers over all 37 staged files returns **0 hits**, and
 `public_scan_has_no_private_surface` is GREEN in the generation-4 receipt at 38
 files scanned.
+
+
+## Generation-6 adjudication note (2026-08-20)
+
+This procedure was executed for generation 6 (`ddm_rc2_object_b_clean_port_rr5_rider`,
+archive `df7fd266e1b7488c…`/180,456 B, 36-row runtime tree `fdd57749…`,
+`[contest-CUDA]` 0.14827847122030852). The four trigger properties were read at swap
+time, not assumed:
+
+1. **Live pointer candidate** — `.omx/state/canonical_frontier_pointer.json`
+   `effective_frontier` carries archive `df7fd266e1b7488c…` at score
+   0.14827847122030852, `last_refreshed_utc 2026-08-20T18:53:07Z`, which post-dates
+   the candidate's own T4 row (started 18:43:06Z). Read from the pointer, never from
+   a memo.
+2. **One exact retained archive plus its receiver** — hashed FROM DISK: 180,456 B,
+   `df7fd266…`, one stored member `p` at 180,356 B with safe naming; all 36
+   runtime-manifest rows byte-identical to the source tree, and `archive.zip`
+   correctly outside the runtime manifest.
+3. **Complete `candidate_seal.v1`** — `CANDIDATE_SEAL_rc2_composed.json`, seal sha
+   `2e32079c5de2cff9…`, `SEAL_VALID` at fire time per `FIRE_MANIFEST.json`. One of
+   its falsifiers was still open at seal time and is now **MEASURED PASS**: the
+   contest-CUDA n600 `0.raw` was required to equal
+   `6bf8acf8d4412e43f8ddf810bcf63feb6435b758196b708fd61e77fe61e79883`, and the T4
+   receipt measures exactly that.
+4. **MAIN selection** — the swap was directed at this candidate by charter, after
+   MAIN resolved the prior charter's `2103073d… UNCHANGED` guard in favour of the
+   selected object's measured identity.
+
+Steps 1 through 4 were executed. **Step 4A was NOT**, and neither was anything
+downstream of it.
+
+- **What "both exact axes complete" means here.** The CUDA axis is complete (T4 n600
+  row, call `fc-01M0G7QCQPACVJV29D7AAQSXAA`). The CPU axis is adjudicated
+  MEASURED-INFEASIBLE **on these exact bytes** — call
+  `fc-01M0G8AQVBZBEZ5GWVZM5YVX53`, inflation killed at the 1,800 s contest wall
+  before `evaluate.py` started, receiver report afterwards at 2,850.781244341 s with
+  token decode alone at 2,427.166373672 s. The decoded token stream is bit-identical
+  across the two axes at the same decoder bit position, so this is a wall result, not
+  a decode failure. No CPU score exists or is claimed anywhere in the packet. Unlike
+  the generation-4 note above, **no figure was inherited from a prior lineage**; this
+  object measured its own.
+- **"Strict checker green": NOT MEASURED — deliberately owed.** No compliance receipt
+  was bought for these bytes. Under the receipt-freshness law a receipt is a joint
+  measurement of BYTES × INSTRUMENT × WORLD, and all three moved at this swap: the
+  archive and runtime changed, every checker-scanned surface was rewritten, and the
+  frontier pointer advanced to this candidate. Generation 5's `83/87` is therefore
+  stale on every axis and is not carried forward, not cited as current, and not
+  converted by adjudication. Re-buying both censuses and the strict chain is queued
+  with its exact invocation in `COMPLIANCE_RUNBOOK.md` §"Generation 6".
+- **Review counter:** `ADVERSARIAL_REVIEW_SCAFFOLD.md` remains the SINGLE counter
+  authority. Rounds 1–13 reviewed superseded bytes; the counter was already `0/5` and
+  round 14 is the first review of this candidate.
+- **The final refusal condition is UNCHANGED and binding:** no push, hosting action,
+  or pull-request opening without explicit operator authorization. None was performed
+  at this swap. The PR body's download field is deliberately blank and every hosted
+  verification leg is written to refuse rather than resolve against the superseded
+  archive, so the packet cannot accidentally certify the wrong object while the gate
+  is held.
+
+**Round-13 (`ddm_pq10`) F1–F4 disposition: CLOSED BY THIS SWAP, not by edit.** That
+round refused to substitute the new identity into the old packet by prose, on the
+grounds that it would leave the old archive and runtime behind and manufacture a fake
+identity claim. It was right, and the cure was the indivisible swap rather than the
+document edit: archive, runtime, 36-row manifest, receipts, axis declarations and every
+packet document moved together, and the reviewer appendix now executes against the
+object it names.

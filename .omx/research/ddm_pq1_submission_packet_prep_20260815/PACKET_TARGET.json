@@ -1,100 +1,124 @@
 {
   "schema": "ddm_pq1_packet_target.v1",
-  "swap_generation": 5,
+  "swap_generation": 6,
   "generation_4_recorded_utc": "2026-08-19T00:26:00Z",
   "generation_4_recorded_by": "ddm_pq3 (task #1111 re-stage at the ck1 tenth-move boundary, per SWAP_PROCEDURE steps 1-5)",
   "disposition": "PREPARED_HOLD_NOT_SUBMITTED",
   "submission_authority": "OPERATOR_GO_REQUIRED_NOT_GRANTED",
   "active_candidate": {
-    "candidate_id": "jg5_joint_waterfill_455 (joint admission waterfill: 455 of 573 seg edits admitted, pose carrier re-solved on the candidate's own edited renders)",
-    "archive_bytes": 180625,
-    "archive_sha256": "f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e",
+    "candidate_id": "ddm_rc2_object_b_clean_port_rr5_rider",
+    "candidate_description": "composed: the generation-5 joint-waterfill body decoded byte-for-byte unchanged, re-encoded through the RR5 adaptive arithmetic carrier rider, decoded by the clean C port of the free corrector",
+    "archive_bytes": 180456,
+    "archive_sha256": "df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080",
     "retained_custody": [
-      "/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen5_jg5_waterfill/",
-      "/Volumes/APDataStore/pact/ddm_jg5/ (candidate_runtime_jg5 + retained + t4_row_r1 + CANDIDATE_SEAL_jg5.json)"
+      "/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen6_rc2_composed/",
+      "/Volumes/APDataStore/pact/ddm_rc1/candidate_runtime_composed/ (source archive + 36-row runtime)",
+      "/Volumes/APDataStore/pact/ddm_rc2/ (seals, composed decode receipts, t4_row_r2, cpu_row_r1)"
     ],
-    "generation_receipts": "generations/gen5_receipts/",
+    "generation_receipts": "generations/gen6_receipts/",
     "member": {
       "name": "p",
-      "bytes": 180525,
-      "sha256": "54b445da3a1a4b4c7012c83b25c3e0d87daab5ce10cd54a1598cfb239ab05b4a",
-      "crc32": 888234132,
+      "bytes": 180356,
+      "sha256": "83fa979c1118499b7dd6083cb20bb66f3f8f47e32cfc16ff30ea66449d81cdf3",
+      "crc32": 3771533310,
       "compression": "stored"
     },
     "cuda_authority": {
       "axis": "[contest-CUDA]",
       "hardware": "Tesla T4",
+      "gpu_t4_match": true,
       "n_samples": 600,
       "score_seg_contribution": 0.020139,
       "score_pose_contribution": 0.007981227975693965,
-      "score_rate_contribution": 0.1202707734076922,
-      "score_recomputed_from_components": 0.14839100138338618,
+      "score_rate_contribution": 0.12015824324461456,
+      "score_recomputed_from_components": 0.14827847122030852,
       "reported_final_score_display_2dp": 0.15,
       "report_8dp_score_worst_case_abs_error_bound": 3.63296497868841e-06,
       "evidence_grade": "contest-CUDA",
-      "modal_call_id": "fc-01M0EZ3DR3HVB8HBKWEG2P12CT",
-      "lane_id": "lane_ddm_jg5_waterfill455_t4_20260820",
-      "instance_job_id": "ddm_jg5_t4_r1",
-      "inflate_elapsed_seconds": 1419.9042126240001,
-      "evaluate_elapsed_seconds": 51.427507448999904,
-      "candidate_seal": "96e9860aad9021e6dc9a9619036b54bd0a2205f60468e8585089db1d8044a7d0",
+      "modal_call_id": "fc-01M0G7QCQPACVJV29D7AAQSXAA",
+      "lane_id": "lane_ddm_rc2_composed_cuda_20260820",
+      "instance_job_id": "ddm_rc2_t4_r2",
+      "inflate_elapsed_seconds": 458.752594349,
+      "evaluate_elapsed_seconds": 39.72359129999995,
+      "contest_auth_eval_elapsed_seconds": 508.81608174799993,
+      "charged_seconds": 498.47618564899994,
+      "budget_verdict": "PASS",
+      "budget_window_seconds": [
+        822,
+        1302
+      ],
+      "budget_window_grade": "PROJECTION",
+      "inflated_raw_sha256": "6bf8acf8d4412e43f8ddf810bcf63feb6435b758196b708fd61e77fe61e79883",
+      "inflated_raw_bytes": 3662409600,
+      "candidate_seal": "2e32079c5de2cff9e2c2e6788eb74e8152127273aa0f977cf11cb302a3547005",
       "seal_validation_at_fire": "SEAL_VALID",
-      "display_vs_canonical_note": "The evaluator prints final_score 0.15 as a 2dp display; the claim is the value recomputed from components, 0.14839100138338618, +/- 3.63296497868841e-06."
+      "receipt": "/Volumes/APDataStore/pact/ddm_rc2/t4_row_r2/MODAL_REMOTE_RESULT.json",
+      "display_vs_canonical_note": "The evaluator prints final_score 0.15 as a 2dp display; the claim is the value recomputed from components, 0.14827847122030852, +/- 3.63296497868841e-06."
+    },
+    "decode_identity_vs_generation_5": {
+      "claim": "BYTE-IDENTICAL inflated output on the shipping axis",
+      "generation_5_t4_raw_sha256": "6bf8acf8d4412e43f8ddf810bcf63feb6435b758196b708fd61e77fe61e79883",
+      "generation_6_t4_raw_sha256": "6bf8acf8d4412e43f8ddf810bcf63feb6435b758196b708fd61e77fe61e79883",
+      "raw_bytes": 3662409600,
+      "consequence": "both distortion legs are exactly equal, so the whole delta is rate and is exact: -0.00011253016307766206 at -169 bytes",
+      "generation_5_receipt": "/Volumes/APDataStore/pact/ddm_jg5/t4_row_r1/MODAL_REMOTE_RESULT.json"
     }
   },
   "auth_runtime": {
-    "runtime_tree": "generations/gen5_jg5_waterfill/ (38 files = 33-row runtime manifest + archive.zip + 4 public docs)",
-    "runtime_tree_sha256": "2103073d739fc3f27d329ea0785ea3010307360c2380af0476e16d0f5b57cb9b",
-    "runtime_content_tree_sha256": "3ba9987771e1be967cf80942faedc7c5f6641f15039e03dd2b0909fd6613ab99",
-    "portable_runtime_content_tree_sha256": "3ba9987771e1be967cf80942faedc7c5f6641f15039e03dd2b0909fd6613ab99",
-    "inflate_script_sha256": "e1b3df4d9178a1572cf04bc2dd9d2ddcc8f6157deac8ec1c40e89b2114522d62",
+    "runtime_tree": "generations/gen6_rc2_composed/ (46 files = 36-row runtime manifest + archive.zip + 9 public documents)",
+    "runtime_file_count": 36,
+    "runtime_tree_sha256": "fdd5774921319a317a385a9594489aa97e45cebc0f6f20cdc50fe8aaeb08a7f2",
+    "runtime_content_tree_sha256": "ccd9f7aba9b5f7837e749e856f178586ad496d51d1011306422a5740c56c915c",
+    "portable_runtime_content_tree_sha256": "ccd9f7aba9b5f7837e749e856f178586ad496d51d1011306422a5740c56c915c",
+    "runtime_files_sha256": "e8dcbc6542d6f4752559726a6b88bd645f5974a2d941a0bbaef6f9932dc8cb8f",
+    "inflate_script_sha256": "971eaa12b78e716825741ea86c28f9362eb9be077cc8cb3b873810ca979beb65",
     "upstream_snapshot_sha256": "cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008",
     "upstream_evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
-    "seal_source": "/Volumes/APDataStore/pact/ddm_jg5/CANDIDATE_SEAL_jg5.json (seal 96e9860aad9021e6..., SEAL_VALID)",
-    "staging_proof": "generations/gen5_receipts/STAGING_RECEIPT.json - 33/33 manifest rows re-hashed byte-identical AFTER copy, and runtime_tree_sha256 RE-DERIVED from the staged rows equals the receipt's. Staged via tools/stage_contest_submission_packet.py (manifest-driven copy; 27 .pyc + 2 AppleDouble in the source tree excluded BY CONSTRUCTION and reported with exact paths).",
-    "harvest_decode_note": "The harvested receipts were persisted as Python bytes-reprs (files literally begin b'). generations/gen5_receipts/HARVEST_DECODE_RECEIPT.json proves each decode round-trip exact before use."
+    "seal_source": "/Volumes/APDataStore/pact/ddm_rc2/CANDIDATE_SEAL_rc2_composed.json (seal 2e32079c5de2cff9..., SEAL_VALID)",
+    "staging_proof": "generations/gen6_receipts/STAGING_RECEIPT.json - 36/36 manifest rows re-hashed byte-identical AFTER copy, and runtime_tree_sha256 RE-DERIVED from the measured staged bytes equals the authority receipt's tree. The re-derivation input is freshly measured staged bytes, never the manifest's own claimed digests.",
+    "cross_axis_tree_note": "The CPU axis records a different canonical runtime_tree_sha256 (90244e171009aac9291847cfeb7d1d77b949f165b4bbebcae037afe9cc2ef519) because that hash includes host-specific path metadata. The portable identity is equal on both axes: runtime_content_tree_sha256 ccd9f7aba9b5f7837e749e856f178586ad496d51d1011306422a5740c56c915c and runtime_files_sha256 e8dcbc6542d6f4752559726a6b88bd645f5974a2d941a0bbaef6f9932dc8cb8f over the same 36 rows. The packet pins the CUDA authority tree, which is the axis it claims."
   },
   "cpu_axis": {
     "exact_candidate_score_status": "MEASURED_INFEASIBLE_WITHIN_CONTEST_BUDGET",
-    "modal_call_id": "fc-01M0FGBV7547NWJVJWQ8W3YX76",
+    "measured_on": "the exact generation-6 archive and runtime (not inherited from any prior lineage)",
+    "modal_call_id": "fc-01M0G8AQVBZBEZ5GWVZM5YVX53",
     "measured_at_utc": "2026-08-20",
-    "inflate_wall_seconds": 4369.600210089,
+    "platform": "Linux x86_64",
     "inflate_budget_seconds": 1800,
-    "token_decode_seconds": 3966.8,
-    "decode_correctness": "decoded token stream sha256 cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb at bit position 910837 on x86_64 CPU - bit-identical to the CUDA axis on the same archive (f3bce5d2, 180625 B)",
-    "superseded_reference": "the prior lineage's 3422.711146813 s (gen-3 bytes debb025f) was inherited onto this candidate and understated the measured cost by 946.9 s (+27.7%); superseded by this row",
-    "adjudication": "ddm_cpu1 2026-08-20: contest-CPU inflation MEASURED on the shipped bytes at 4369.6 s vs the 1800 s job wall (2.43x); upstream/evaluate.py never ran, so no contest-CPU SCORE exists or is claimed. GPU-required is a measured fact on these exact bytes. Memo .omx/research/ddm_cpu1_cpu_axis_adjudication_20260820.md.",
+    "outcome": "inflate TIMED OUT at the 1800 s contest wall; evaluate.py never ran; no CPU score exists",
+    "receiver_report_total_seconds": 2850.781244341,
+    "token_decode_seconds": 2427.166373672,
+    "neural_render_seconds": 410.18271058200025,
+    "decode_correctness": "decoded token stream sha256 cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb at bit position 910837 on x86_64 CPU - bit-identical to the CUDA axis, same NativeFreeCorrector. Wall failure, not decode failure.",
+    "receipt": "/Volumes/APDataStore/pact/ddm_rc2/cpu_row_r1/MODAL_REMOTE_RESULT.json",
+    "adjudication": "ddm_pq11 2026-08-20: contest-CPU inflation on the shipping bytes was killed at the 1800 s wall; upstream/evaluate.py never ran, so no contest-CPU SCORE exists and none is claimed. The requested runner is linux-nvidia-t4.",
+    "no_inherited_figure": "Prior generations' CPU walls (3422.7 s on gen-3 bytes, 4369.6 s on the ck1/jg5 lineage) are NOT carried onto this object. This row is measured on these bytes.",
     "wall_clock_risk": {
       "axis": "[contest-CUDA T4, measured]",
-      "inflate_seconds": 1419.9042126240001,
-      "evaluate_seconds": 51.427507448999904,
+      "inflate_seconds": 458.752594349,
+      "evaluate_seconds": 39.72359129999995,
+      "charged_seconds": 498.47618564899994,
       "job_wall_seconds": 1800,
-      "residual_for_setup_seconds": 328.66827992699996,
-      "derived_cuda_residual_window_seconds": [
-        890.6,
-        1430.6
+      "residual_window_seconds": [
+        822,
+        1302
       ],
-      "grade": "WARN",
-      "note": "Fits the optimistic end of the derived residual window by about 10.7 s. CPU path projects 1414-1913 s against a residual of [1044,1332] s - over budget in every corner. Source: ddm_wc2 wall-clock pass 2026-08-20 and its same-day self-correction."
+      "residual_window_grade": "PROJECTION",
+      "grade": "PASS",
+      "note": "498.476 s charged <= 822 s cold-cache ceiling on contest-CUDA: fits even when the runner's uv cache misses. The predecessor generation charged 1471.331720073 s on the same axis and wrapper - over BOTH ends of that window. The clean C port of the free corrector is what moved it: inflation fell 3.10x, from 1419.9042126240001 s to 458.752594349 s."
     }
   },
   "reproduction": {
     "status": "NOT_RE_VERIFIED_FOR_THESE_BYTES",
-    "note": "experiments/ddm_pq2_compress_e2e.py has NOT been re-run for this candidate. The generation-3 VERIFIED label does not transfer.",
-    "owed": "an end-to-end rebuild of f3bce5d2... from pinned retained inputs through one entry point"
+    "note": "experiments/ddm_pq2_compress_e2e.py has NOT been re-run for the composed candidate. No prior VERIFIED label transfers.",
+    "owed": "an end-to-end rebuild of df7fd266... from pinned retained inputs through one entry point",
+    "what_exists_instead": "two independent full-n600 receiver executions reproducing the retained local raw bytes (COMPOSED_DECODE_RECEIPT.json), a SEAL_VALID candidate seal, and byte-identical n600 inflated output against the predecessor row ON the shipping axis"
   },
   "compliance": {
-    "receipt": "generations/gen5_receipts/pre_submission_compliance.gen5.r2.json",
-    "result": "83 GREEN / 4 RED of 87, strict --contest-final",
-    "reds": [
-      "auth_eval_raw_promotion_policy_blockers_absent - DOCUMENTED STRUCTURAL (running the adjudicator downgrades the payload and flips a currently-green sibling)",
-      "contest_cpu_auth_eval_exists - no CPU row exists on these bytes; see cpu_axis",
-      "submission_runtime_has_no_network_install_or_local_paths - inflate.sh:27 pinned-wheel Brotli bootstrap, standing MAIN policy adjudication under the e4/PR100/PR101 declared-dependency precedent",
-      "hosted_archive_manifest_supplied - OPERATOR-GATED hosting authorization"
-    ],
-    "note": "Identical red SET to generation 4. r1 measured 79/87 with 4 additional reds; all four were CURED, not adjudicated: public_source_repo_link_present (repo link restored to the PR body) and the three dispatch-claim rows (a conforming terminal row was appended binding BOTH full 64-char shas). The appended row is FLAGGED for independent review because the arm that benefits from it being green should not be the only one who says so.",
-    "census": "generations/gen5_receipts/CENSUS_gen5.json - CENSUS_CLEAN / PREP_CLEAN / RECEIPTS_CLEAN, rc=0",
-    "public_hygiene": "public_scan_has_no_private_surface GREEN at 39 files scanned, 0 hits"
+    "receipt": "OWED - NOT RE-BOUGHT FOR THESE BYTES",
+    "status": "The generation-5 receipt (generations/gen5_receipts/pre_submission_compliance.gen5.pq9.r5.json) is STALE by the receipt-freshness law: the bytes, the scanned surfaces and the frontier pointer have all moved. It is NOT carried forward and NOT cited as this generation's state.",
+    "next_action": "rerun tools/packet_census_guard.py over generations/gen6_rc2_composed/ plus the prep dir, then the strict chain with --expected-archive-sha256 df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080 --expected-archive-size-bytes 180456, preserving every red with a typed disposition",
+    "owner": "MAIN compliance owner (SWAP_PROCEDURE step 5)"
   },
   "generation_3_superseded": {
     "note": "Generation-3 (sz1 composed split) blocks preserved verbatim below per APPEND-ONLY; custody untouched.",
@@ -381,6 +405,106 @@
   "gpu_routing_decision": {
     "status": "RESERVED_TO_OPERATOR_AT_FREEZE",
     "document": ".omx/research/ddm_pq1_submission_packet_prep_20260815/GPU_ROUTING_VARIANTS.md",
-    "measured_finding": "The two variants are NOT symmetric. inflate.sh is a pinned runtime-manifest row, so the one-line CUDA fail-fast moves runtime_tree_sha256 from 2103073d... to 75a1aeef... (MEASURED), and the authority row does not apply to the edited tree. Variant (b) current/auto costs zero and is what is staged; variant (a) gpu-required-explicit costs a NEW T4 row plus a full re-stage."
-  }
+    "measured_finding": "The two variants are NOT symmetric. inflate.sh is a pinned runtime-manifest row, so the one-line CUDA fail-fast moves runtime_tree_sha256 from 2103073d... to 75a1aeef... (MEASURED), and the authority row does not apply to the edited tree. Variant (b) current/auto costs zero and is what is staged; variant (a) gpu-required-explicit costs a NEW T4 row plus a full re-stage.",
+    "measured_finding_scope": "MEASURED ON THE GENERATION-5 33-ROW TREE. The hash pair 2103073d... -> 75a1aeef... describes that tree and does NOT transfer to generation 6's 36-row tree fdd57749..., where the flipped hash has not been measured. The MECHANISM transfers and is arithmetic, not empirical: any edit to a manifest-pinned file changes runtime_tree_sha256, because the tree hash is a function of the row set. Carrying the CONSTANT across trees would be the cross-regime constant-transfer error this packet has already paid for twice.",
+    "live_tree_sha256_generation_6": "fdd5774921319a317a385a9594489aa97e45cebc0f6f20cdc50fe8aaeb08a7f2"
+  },
+  "generation_5_superseded": {
+    "note": "Generation-5 (jg5 joint waterfill) blocks preserved verbatim below per APPEND-ONLY; custody untouched. Superseded by generation 6 on 2026-08-20T22:20:14.064530+00:00.",
+    "active_candidate": {
+      "candidate_id": "jg5_joint_waterfill_455 (joint admission waterfill: 455 of 573 seg edits admitted, pose carrier re-solved on the candidate's own edited renders)",
+      "archive_bytes": 180625,
+      "archive_sha256": "f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e",
+      "retained_custody": [
+        "/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen5_jg5_waterfill/",
+        "/Volumes/APDataStore/pact/ddm_jg5/ (candidate_runtime_jg5 + retained + t4_row_r1 + CANDIDATE_SEAL_jg5.json)"
+      ],
+      "generation_receipts": "generations/gen5_receipts/",
+      "member": {
+        "name": "p",
+        "bytes": 180525,
+        "sha256": "54b445da3a1a4b4c7012c83b25c3e0d87daab5ce10cd54a1598cfb239ab05b4a",
+        "crc32": 888234132,
+        "compression": "stored"
+      },
+      "cuda_authority": {
+        "axis": "[contest-CUDA]",
+        "hardware": "Tesla T4",
+        "n_samples": 600,
+        "score_seg_contribution": 0.020139,
+        "score_pose_contribution": 0.007981227975693965,
+        "score_rate_contribution": 0.1202707734076922,
+        "score_recomputed_from_components": 0.14839100138338618,
+        "reported_final_score_display_2dp": 0.15,
+        "report_8dp_score_worst_case_abs_error_bound": 3.63296497868841e-06,
+        "evidence_grade": "contest-CUDA",
+        "modal_call_id": "fc-01M0EZ3DR3HVB8HBKWEG2P12CT",
+        "lane_id": "lane_ddm_jg5_waterfill455_t4_20260820",
+        "instance_job_id": "ddm_jg5_t4_r1",
+        "inflate_elapsed_seconds": 1419.9042126240001,
+        "evaluate_elapsed_seconds": 51.427507448999904,
+        "candidate_seal": "96e9860aad9021e6dc9a9619036b54bd0a2205f60468e8585089db1d8044a7d0",
+        "seal_validation_at_fire": "SEAL_VALID",
+        "display_vs_canonical_note": "The evaluator prints final_score 0.15 as a 2dp display; the claim is the value recomputed from components, 0.14839100138338618, +/- 3.63296497868841e-06."
+      }
+    },
+    "auth_runtime": {
+      "runtime_tree": "generations/gen5_jg5_waterfill/ (38 files = 33-row runtime manifest + archive.zip + 4 public docs)",
+      "runtime_tree_sha256": "2103073d739fc3f27d329ea0785ea3010307360c2380af0476e16d0f5b57cb9b",
+      "runtime_content_tree_sha256": "3ba9987771e1be967cf80942faedc7c5f6641f15039e03dd2b0909fd6613ab99",
+      "portable_runtime_content_tree_sha256": "3ba9987771e1be967cf80942faedc7c5f6641f15039e03dd2b0909fd6613ab99",
+      "inflate_script_sha256": "e1b3df4d9178a1572cf04bc2dd9d2ddcc8f6157deac8ec1c40e89b2114522d62",
+      "upstream_snapshot_sha256": "cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008",
+      "upstream_evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
+      "seal_source": "/Volumes/APDataStore/pact/ddm_jg5/CANDIDATE_SEAL_jg5.json (seal 96e9860aad9021e6..., SEAL_VALID)",
+      "staging_proof": "generations/gen5_receipts/STAGING_RECEIPT.json - 33/33 manifest rows re-hashed byte-identical AFTER copy, and runtime_tree_sha256 RE-DERIVED from the staged rows equals the receipt's. Staged via tools/stage_contest_submission_packet.py (manifest-driven copy; 27 .pyc + 2 AppleDouble in the source tree excluded BY CONSTRUCTION and reported with exact paths).",
+      "harvest_decode_note": "The harvested receipts were persisted as Python bytes-reprs (files literally begin b'). generations/gen5_receipts/HARVEST_DECODE_RECEIPT.json proves each decode round-trip exact before use."
+    },
+    "cpu_axis": {
+      "exact_candidate_score_status": "MEASURED_INFEASIBLE_WITHIN_CONTEST_BUDGET",
+      "modal_call_id": "fc-01M0FGBV7547NWJVJWQ8W3YX76",
+      "measured_at_utc": "2026-08-20",
+      "inflate_wall_seconds": 4369.600210089,
+      "inflate_budget_seconds": 1800,
+      "token_decode_seconds": 3966.8,
+      "decode_correctness": "decoded token stream sha256 cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb at bit position 910837 on x86_64 CPU - bit-identical to the CUDA axis on the same archive (f3bce5d2, 180625 B)",
+      "superseded_reference": "the prior lineage's 3422.711146813 s (gen-3 bytes debb025f) was inherited onto this candidate and understated the measured cost by 946.9 s (+27.7%); superseded by this row",
+      "adjudication": "ddm_cpu1 2026-08-20: contest-CPU inflation MEASURED on the shipped bytes at 4369.6 s vs the 1800 s job wall (2.43x); upstream/evaluate.py never ran, so no contest-CPU SCORE exists or is claimed. GPU-required is a measured fact on these exact bytes. Memo .omx/research/ddm_cpu1_cpu_axis_adjudication_20260820.md.",
+      "wall_clock_risk": {
+        "axis": "[contest-CUDA T4, measured]",
+        "inflate_seconds": 1419.9042126240001,
+        "evaluate_seconds": 51.427507448999904,
+        "job_wall_seconds": 1800,
+        "residual_for_setup_seconds": 328.66827992699996,
+        "derived_cuda_residual_window_seconds": [
+          890.6,
+          1430.6
+        ],
+        "grade": "WARN",
+        "note": "Fits the optimistic end of the derived residual window by about 10.7 s. CPU path projects 1414-1913 s against a residual of [1044,1332] s - over budget in every corner. Source: ddm_wc2 wall-clock pass 2026-08-20 and its same-day self-correction."
+      }
+    },
+    "reproduction": {
+      "status": "NOT_RE_VERIFIED_FOR_THESE_BYTES",
+      "note": "experiments/ddm_pq2_compress_e2e.py has NOT been re-run for this candidate. The generation-3 VERIFIED label does not transfer.",
+      "owed": "an end-to-end rebuild of f3bce5d2... from pinned retained inputs through one entry point"
+    },
+    "compliance": {
+      "receipt": "generations/gen5_receipts/pre_submission_compliance.gen5.r2.json",
+      "result": "83 GREEN / 4 RED of 87, strict --contest-final",
+      "reds": [
+        "auth_eval_raw_promotion_policy_blockers_absent - DOCUMENTED STRUCTURAL (running the adjudicator downgrades the payload and flips a currently-green sibling)",
+        "contest_cpu_auth_eval_exists - no CPU row exists on these bytes; see cpu_axis",
+        "submission_runtime_has_no_network_install_or_local_paths - inflate.sh:27 pinned-wheel Brotli bootstrap, standing MAIN policy adjudication under the e4/PR100/PR101 declared-dependency precedent",
+        "hosted_archive_manifest_supplied - OPERATOR-GATED hosting authorization"
+      ],
+      "note": "Identical red SET to generation 4. r1 measured 79/87 with 4 additional reds; all four were CURED, not adjudicated: public_source_repo_link_present (repo link restored to the PR body) and the three dispatch-claim rows (a conforming terminal row was appended binding BOTH full 64-char shas). The appended row is FLAGGED for independent review because the arm that benefits from it being green should not be the only one who says so.",
+      "census": "generations/gen5_receipts/CENSUS_gen5.json - CENSUS_CLEAN / PREP_CLEAN / RECEIPTS_CLEAN, rc=0",
+      "public_hygiene": "public_scan_has_no_private_surface GREEN at 39 files scanned, 0 hits"
+    },
+    "recorded_utc": "2026-08-20T07:56:01Z",
+    "recorded_by": "ddm_pq3 (rebase onto the first sub-0.15 exact row, per SWAP_PROCEDURE steps 1-5)"
+  },
+  "generation_6_recorded_utc": "2026-08-20T22:20:14.064530+00:00",
+  "generation_6_recorded_by": "ddm_pq11 (typed candidate swap jg5 -> rc2 composed, per SWAP_PROCEDURE steps 1-4; step 4A hosted re-pin and publication remain OPERATOR-GATED and were NOT performed)"
 }

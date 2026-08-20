@@ -7,9 +7,9 @@ asks for one and because a submission you cannot inspect is a submission you can
 ## The honest headline
 
 `compress.py` **cannot rebuild the `archive.zip` in this submission**
-(`f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e`, 180,625 B). Run it against
-that archive and it refuses by name, before doing any work, and prints the four build stages it
-does not express and the script that really performs each one.
+(`df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080`, 180,456 B). Run it against
+that archive and it refuses by name, before doing any work, and prints the build stages it does
+not express and the script that really performs each one.
 
 That refusal is deliberate. The alternative — a script that runs, produces different bytes, and
 reports success — is worse than no script.

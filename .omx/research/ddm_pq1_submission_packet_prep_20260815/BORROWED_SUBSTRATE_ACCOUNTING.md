@@ -1,10 +1,17 @@
-# Borrowed-substrate accounting — packet generation 5 (jg5 joint-waterfill candidate, archive `f3bce5d259a08183…` / 180,625 B)
+# Borrowed-substrate accounting — packet generation 6 (the composed rider × native port, archive `df7fd266e1b7488c…` / 180,456 B)
 
-> **⚠ READ §9 FIRST.** This document is APPEND-ONLY and its section numbers count ITS OWN
-> revisions, one ahead of the packet's `GENERATION_LOG.md`, which counts CANDIDATES. So §9 is
-> the live section and it describes packet generation 5. Every figure in §§1–8 stands for the
-> candidate it was written against; none of them describes these bytes except where §9 says it
+> **⚠ READ §10 FIRST.** This document is APPEND-ONLY and its section numbers count ITS OWN
+> revisions, one ahead of the packet's `GENERATION_LOG.md`, which counts CANDIDATES. So §10 is
+> the live section and it describes packet generation 6. Every figure in §§1–9 stands for the
+> candidate it was written against; none of them describes these bytes except where §10 says it
 > does. The prior title and banner are preserved immediately below, unedited.
+
+> **⚠ READ §9 FIRST.** (prior banner, preserved unedited) This document is APPEND-ONLY and its
+> section numbers count ITS OWN revisions, one ahead of the packet's `GENERATION_LOG.md`, which
+> counts CANDIDATES. So §9 is the live section and it describes packet generation 5. Every
+> figure in §§1–8 stands for the candidate it was written against; none of them describes these
+> bytes except where §9 says it does. The prior title and banner are preserved immediately
+> below, unedited.
 >
 > **What §9 changes.** Generation 5 keeps generation 4's re-classification of rows 1 and 2
 > (the semantic renderer state and the pose carrier state are no longer byte-identical to
@@ -504,3 +511,81 @@ Receipt: `docs/paper/novel_contributions_and_originality_accounting.md`.
    `drop` requires a receiver change the pointer body has no path for, so implementing it would
    invalidate the byte-identity control chain the seal rests on. Shipped: `edit` + `keep`.
    `drop` is owed headroom, not a delivered mechanism.
+
+
+---
+
+## 10. Generation 7 amendment — packet generation 6, the composed rider × native port
+
+Archive `df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080`, 180,456 B,
+`[contest-CUDA]` T4 n600 S = 0.14827847122030852.
+
+**This amendment moves no borrow/own boundary.** Both new mechanisms are decode-identical,
+which is measured rather than asserted: on the shipping axis this candidate and the
+generation-5 candidate emit byte-identical n600 inflated output, both hashing to
+`6bf8acf8d4412e43f8ddf810bcf63feb6435b758196b708fd61e77fe61e79883` at 3,662,409,600 B. Every
+§9.2 classification therefore carries forward untouched — the values inside every borrowed
+section are the same values.
+
+### 10.1 Ancestry — one step appended to §9.1
+
+| Step | What | Archive bytes |
+|---|---|---:|
+| … | (§9.1 chain through the generation-5 candidate) | 180,625 |
+| **this** | **RR5 lossless carrier rider + clean C port of the free corrector** | **180,456** |
+
+The ancestry root is unchanged and is restated here so it is never one link away from a
+reader: **PR #130 `semantic-pose-HPAC_CPR1` by Fesal Fayed (`fesalfayed`)** and **PR #135
+`semantic-pose-HPAC_CPR1_polished` by Shreyan Mohanty (`codexblack`)**, with **PR #133
+`cpr1_cbq_matched8` by `JasonMo123`** transitively in the ancestry via PR #135. The trained
+semantic renderer state and the pose carrier state that this submission re-represents are
+theirs. We claim no part of them. **PR #138** remains the concurrent public disclosure of the
+same mechanism class recorded in §3; nothing in this amendment changes that record, and
+neither new mechanism here is drawn from it.
+
+### 10.2 Rows carried forward from §9.2 UNCHANGED
+
+All ten rows carry with their §9.2 classes. The decode-identity measurement above is what
+licenses that: a mechanism that provably changes no decoded value cannot change whose values
+they are.
+
+### 10.3 NEW row — the RR5 lossless carrier rider
+
+| Field | Value |
+|---|---|
+| Mechanism | The carrier body is re-encoded under an adaptive arithmetic basis. Reserved header flag `0x08` engages `restore_carrier_body` on the receiver, which restores a 22,316 B carrier blob before parsing |
+| Class | `mechanism-adopt-with-attribution` |
+| Why not `ours-original` | The basis, the coder and the carrier body it re-encodes are all inherited. What is ours is the re-encoding decision, the flag-and-restore receiver path, and the measurement that it is lossless on this body — a re-representation of borrowed content, which is the same class §9.2 assigns rows 1 and 2 |
+| Counted archive bytes attributable | **−169** (it removes bytes; it adds no section) |
+| Shipped receiver files | `runtime/rr5_arith_basis.py`, plus the restore branch in the archive parser |
+| Distortion effect | **Zero, measured** — identical n600 raw output on the shipping axis |
+| Honest note | Its earlier measurement of 183 B was taken on a different body and did not transfer. The shipped figure is re-measured on the final body, and the resulting archive was then evaluated in its own right rather than having its score derived |
+
+### 10.4 NEW row — the clean C port of the free corrector
+
+| Field | Value |
+|---|---|
+| Mechanism | `runtime/f26_corrector_native.c` plus its `runtime/native_free_corrector.py` binding replace the Python implementation of the within-miss corrector at decode time |
+| Class | `ours-original` (the port), operating on a `mechanism-adopt-with-attribution` object (the corrector law itself, §9.5's `ma1`) |
+| Counted archive bytes attributable | **0** — it is receiver code, and receiver code is free; the archive is unchanged by it |
+| Measured effect | Inflation 1419.904212624 s → **458.752594349 s**, a **3.10×** drop. The authority receipt records `free_corrector: NativeFreeCorrector` on both axes, so the Python fallback did not engage |
+| Distortion effect | **Zero, measured** — same identical raw output as above |
+| Why it matters to the accounting | It buys no score directly. It is the difference between a decode that fits the contest budget and one that does not, and that is a shipping fact rather than a rate or distortion claim |
+
+### 10.5 Claim arithmetic
+
+Score 0.14827847122030852 = seg 0.020139 + pose 0.007981227975693965 + rate 0.12015824324461456.
+
+Against packet generation 5 the split is unusually simple and worth stating precisely: seg
+**0.000000**, pose **0.000000**, rate **−1.1253016e-04** at −169 bytes. The distortion legs
+are not merely small — they are exactly zero, because the two objects decode to identical
+frames. The whole delta is the rider.
+
+Against packet generation 4 the legs are rate +2.1801e-03 (+3,274 bytes), seg −1.0170e-02,
+pose −8.3353e-04, net −8.8235e-03.
+
+**The two honest qualifications from §9.4 stand unchanged.** The improvement is still a
+re-decision over borrowed content — no new learned artifact was trained for this candidate —
+and the end-to-end rebuild has still not been re-run for these bytes. Neither mechanism added
+here weakens or strengthens either statement; they change how the same decided content is
+coded and decoded, not what it is.

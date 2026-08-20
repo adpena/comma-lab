@@ -1,68 +1,70 @@
 {
   "schema": "ddm_pq1_archive_manifest.v1",
-  "swap_generation": 4,
-  "candidate_id": "ck1_composed_rebased_r4 (ck1 composed: SM3R mode-6 row-prune + mixed depth, frame-0 pose compensation, sz1 runtime base + ck1 receiver overlay)",
-  "archive_bytes": 177182,
-  "archive_sha256": "35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3",
+  "swap_generation": 6,
+  "candidate_id": "ddm_rc2_object_b_clean_port_rr5_rider",
+  "candidate_description": "composed: jg5 joint-waterfill body, decoded byte-for-byte unchanged, re-encoded through the RR5 adaptive arithmetic carrier rider and decoded by the clean C port of the free corrector",
+  "archive_bytes": 180456,
+  "archive_sha256": "df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080",
   "evidence_axis": "[contest-CUDA]",
   "n_samples": 600,
   "members": [
     {
-      "compress_size": 177082,
+      "compress_size": 180356,
       "compression_method": "stored",
-      "crc": 1722708006,
-      "file_size": 177082,
+      "crc": 3771533310,
+      "file_size": 180356,
       "name": "p",
-      "sha256": "ee904fbf6b10e4fadd69ca9c820bd7db0d334694bdf23c4a93147cd242d8c462"
+      "sha256": "83fa979c1118499b7dd6083cb20bb66f3f8f47e32cfc16ff30ea66449d81cdf3"
     }
   ],
   "sections": {
-    "hpac_stream_bytes": 13515,
-    "semantic_stream_bytes": 31469,
-    "semantic_body_bytes": 36130,
-    "carrier_stream_bytes": 22187,
-    "tail_bytes": 109897,
-    "semantic_split": false,
-    "reserved_header_byte": 0,
-    "note": "hpac and tail are spliced BYTE-IDENTICALLY from the generation-3 candidate; semantic and carrier are rebuilt."
+    "magic": "RX1M",
+    "version": 1,
+    "reserved_header_byte": 10,
+    "rr5_flag": 8,
+    "restore_carrier_body_required": true,
+    "carrier_blob_bytes_after_restore": 22316,
+    "token_stream_bytes": 113847,
+    "compressed_models_bytes": 66413,
+    "note": "parsed from the exact shipping archive by the shipping receiver; source /Volumes/APDataStore/pact/ddm_rc2/COMPOSED_DECODE_RECEIPT.json"
   },
   "composition_vs_bases": {
-    "sz1_generation_3": {
-      "archive_sha256": "debb025f45bb42e3b8131714cf462a9963e449bc65ff5eade9484fde094b037a",
-      "archive_bytes": 179930,
-      "delta_bytes": -2748,
-      "change": "semantic section re-quantized under SM3R mode 6 (row-prune keep01 on blocks.{1,2,3}.film.weight, per-tensor depth table dropping frame_embed.weight and blocks.0.film.weight to 3-bit) and the frame-0 pose carrier re-solved to cancel the induced PoseNet damage; the generation-3 semantic byte-plane serialization split is OFF (re-measured negative on the edited body)."
+    "packet_generation_5": {
+      "archive_sha256": "f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e",
+      "archive_bytes": 180625,
+      "delta_bytes": -169,
+      "delta_score": -0.00011253016307766206,
+      "change": "the carrier body is re-encoded losslessly under the RR5 adaptive arithmetic basis (reserved flag 0x08 engages restore_carrier_body on the receiver). No decoded value moves; the whole delta is rate."
     }
   },
-  "decoded_state_note": "NOT decode-identical. Unlike generations 2 and 3, this candidate changes decoded values: the semantic tensors are lossily re-represented and 6713 of 7,200 signed-int12 carrier coordinates were re-solved. Both distortion legs move and are paid for out of the rate credit.",
-  "changed_carrier_coordinates": 6713,
-  "compensation_marginal_bytes": 41,
-  "compensation_cpu_cancellation_fraction": 0.999785072724653,
+  "decoded_state_note": "DECODE-IDENTICAL to packet generation 5, MEASURED on the shipping axis: both rows' n600 inflated output hashes to 6bf8acf8d4412e43f8ddf810bcf63feb6435b758196b708fd61e77fe61e79883 at 3662409600 bytes. Both distortion legs are therefore exactly equal, not merely equal at 8dp.",
   "receiver_parse_back": {
-    "codes_match": true,
-    "max_abs_code_deviation": 0,
-    "runtime_root": "/Volumes/APDataStore/pact/ddm_ck1/compile/runtime_sz1_patched",
-    "semantic_sha256": "17e0fd0b197ac147afe98397ef38f02f7915b69372d03c042e6be6fa0f992e50",
-    "status": "PASS"
+    "status": "PASS",
+    "method": "two independent full-n600 real inflate.sh executions on the exact shipping runtime (macOS arm64, advisory axis) both reproduced the retained local raw bytes with the RR5 restore branch and NativeFreeCorrector engaged The decoded token stream from that run digests to sha256 cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb, which is the same digest the contest-CUDA and contest-CPU authority rows both report.",
+    "local_raw_sha256": "7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7",
+    "receipt": "/Volumes/APDataStore/pact/ddm_rc2/COMPOSED_DECODE_RECEIPT.json"
   },
-  "runtime_tree_sha256": "da91e06744b94f77077303b2b760cb259aa84b078d998921fb99e018d52fff6f",
-  "runtime_content_tree_sha256": "944c8c574f377cbe625c007b44bfc8e88ec572bf3fc7a2e9ac7aca5750217078",
-  "portable_runtime_content_tree_sha256": "944c8c574f377cbe625c007b44bfc8e88ec572bf3fc7a2e9ac7aca5750217078",
-  "runtime_file_count": 32,
+  "runtime_tree_sha256": "fdd5774921319a317a385a9594489aa97e45cebc0f6f20cdc50fe8aaeb08a7f2",
+  "runtime_content_tree_sha256": "ccd9f7aba9b5f7837e749e856f178586ad496d51d1011306422a5740c56c915c",
+  "portable_runtime_content_tree_sha256": "ccd9f7aba9b5f7837e749e856f178586ad496d51d1011306422a5740c56c915c",
+  "runtime_files_sha256": "e8dcbc6542d6f4752559726a6b88bd645f5974a2d941a0bbaef6f9932dc8cb8f",
+  "runtime_file_count": 36,
   "upstream_snapshot_sha256": "cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008",
   "upstream_evaluate_py_sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b",
   "score_claim": true,
-  "score_recomputed_from_components": 0.15710198138050818,
+  "score_recomputed_from_components": 0.14827847122030852,
   "score_components": {
-    "seg": 0.030309,
-    "pose": 0.008814760348415605,
-    "rate": 0.11797822103209257
+    "seg": 0.020139,
+    "pose": 0.007981227975693965,
+    "rate": 0.12015824324461456
   },
-  "report_8dp_score_worst_case_abs_error_bound": 3.336608391523776e-06,
-  "candidate_seal_sha256": "a64b3483c0d5d3b5a589c45590c503db94287b7182154f5e6c675149ddef65e3",
+  "report_8dp_score_worst_case_abs_error_bound": 3.63296497868841e-06,
+  "candidate_seal_sha256": "2e32079c5de2cff9e2c2e6788eb74e8152127273aa0f977cf11cb302a3547005",
+  "cuda_axis_note": "MEASURED [contest-CUDA T4, n600]. inflate 458.752594349 s, evaluate 39.72359129999995 s, charged 498.47618564899994 s, budget verdict PASS against the 822 s cold-uv-cache residual ceiling (window [822, 1302] is a PROJECTION; only the 1800 s job wall and the install payload sizes are measured). Receipt /Volumes/APDataStore/pact/ddm_rc2/t4_row_r2/MODAL_REMOTE_RESULT.json.",
+  "cpu_axis_note": "MEASURED WALL-INFEASIBLE on these exact bytes. No contest-CPU score exists or is claimed. Inflation was killed at the 1800 s contest wall before evaluate.py started; the receiver's own report then completed at 2850.781244341 s with token decode alone at 2427.166373672 s. Decode CORRECTNESS is intact across axes: decoded_token_sha256 cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb is identical to the CUDA row at the same decoder bit position. This is a wall result, not a decode failure. Receipt /Volumes/APDataStore/pact/ddm_rc2/cpu_row_r1/MODAL_REMOTE_RESULT.json.",
+  "cross_axis_tree_note": "The two axes' canonical runtime_tree_sha256 values differ (fdd5774921319a317a385a9594489aa97e45cebc0f6f20cdc50fe8aaeb08a7f2 on CUDA, 90244e171009aac9291847cfeb7d1d77b949f165b4bbebcae037afe9cc2ef519 on CPU) because that hash includes host-specific path metadata. The portable identity matches exactly on both: runtime_content_tree_sha256 ccd9f7aba9b5f7837e749e856f178586ad496d51d1011306422a5740c56c915c and runtime_files_sha256 e8dcbc6542d6f4752559726a6b88bd645f5974a2d941a0bbaef6f9932dc8cb8f, over the same 36 rows. The packet pins the CUDA authority tree, which is the axis it claims, and uses the portable content identity for the cross-axis join.",
   "reproduction_entry_point": null,
   "reproduction_verified": false,
-  "reproduction_note": "NOT re-verified for these bytes. The generation-3 single-entry-point end-to-end rebuild (experiments/ddm_pq2_compress_e2e.py) has not been re-run for this candidate and its VERIFIED label does NOT transfer. What exists is the compile receipt SA3_REBASE.json (fail-closed decoded-state identity assertion before build) plus receiver parse-back PASS at max_abs_code_deviation 0.",
-  "cpu_axis_note": "No contest-CPU row exists on these bytes. A full n600 LOCAL decode-and-score completed on macOS arm64 (score_axis=cpu_env_mismatch_advisory, score_claim=False, inflate 941.187799999956 s) and is retained as a decode-correctness proof only. The contest-CPU infeasibility expectation is INHERITED from the generation-3 lineage measurement, not measured here.",
-  "custody_note": "This generation's runtime tree contains NO inherited GENERATION_RECEIPT.json / RECEIVER_PARSEBACK.json. The two hv1-lineage files that carried 63 absolute local paths through generations 1-3 do not exist in this lineage, so the round-11 F2 exposure is closed by construction rather than by edit."
+  "reproduction_note": "NOT re-verified end-to-end for these bytes. The single-entry-point rebuild (experiments/ddm_pq2_compress_e2e.py) has not been re-run for the composed candidate and no VERIFIED label transfers to it. What exists instead is stronger on the identity question and weaker on the build question: two independent full-n600 receiver executions, a sealed candidate (SEAL_VALID at fire time), and byte-identical inflated output against the predecessor row on the shipping axis.",
+  "custody_note": "This generation's runtime tree carries no inherited GENERATION_RECEIPT.json or RECEIVER_PARSEBACK.json; the 36 manifest rows are the whole runtime and none of them is a provenance sidecar carrying local absolute paths."
 }

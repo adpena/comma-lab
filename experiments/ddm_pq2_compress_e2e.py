@@ -228,6 +228,20 @@ class RebuildNotExpressible(SystemExit):
 #: entry point as ``ours-original``, so a reviewer may reasonably try the default
 #: invocation first.  Naming the gap is the fail-closed answer; silence is the fake one.
 NOT_EXPRESSIBLE: dict[str, dict[str, object]] = {
+    "df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080": {
+        "name": "rc2_composed_rider_native_port",
+        "archive_bytes": 180_456,
+        "missing_stages": [
+            "every stage the jg5 body needs (see the jg5 entry below) -- this "
+            "candidate's decoded state is byte-identical to jg5's, so it inherits "
+            "the whole missing chain rather than replacing it",
+            "the RR5 lossless re-encode of the carrier body under an adaptive "
+            "arithmetic basis, which sets reserved header flag 0x08 and is what "
+            "makes this archive 169 B smaller than jg5's "
+            "(runtime/rr5_arith_basis.py on the receiver side)",
+        ],
+        "receipt": ".omx/research/ddm_rc2_t4_row_sixteenth_move_20260820.md",
+    },
     "f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e": {
         "name": "jg5_joint_waterfill_455",
         "archive_bytes": 180_625,

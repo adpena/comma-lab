@@ -13,7 +13,41 @@ this directory currently describe.
 | 2 | `rr4_free_corrector_v2_reencode` | 181,161 | `35ac2b9beb7e6fa8…` | 0.15853325034789678 | superseded, retained |
 | 3 | `fx2_a__tuned` (sz1 composed split) | 179,930 | `debb025f45bb42e3…` | 0.15771357797660338 | superseded, retained |
 | 4 | `ck1_composed_rebased_r4` (SM3R mode-6 row-prune + frame-0 pose compensation) | 177,182 | `35c318d541d70370…` | 0.15710198138050818 | superseded, retained |
-| 5 | `jg5_joint_waterfill_455` (joint admission waterfill + carrier re-solve on own renders) | 180,625 | `f3bce5d259a08183…` | **0.14839100138338618** | **ACTIVE, HOLD** |
+| 5 | `jg5_joint_waterfill_455` (joint admission waterfill + carrier re-solve on own renders) | 180,625 | `f3bce5d259a08183…` | 0.14839100138338618 | superseded, retained |
+| 6 | `ddm_rc2_object_b_clean_port_rr5_rider` (generation-5 body + RR5 lossless carrier rider + clean C port of the free corrector) | 180,456 | `df7fd266e1b7488c…` | **0.14827847122030852** | **ACTIVE, HOLD** |
+
+## What changed at generation 6
+
+Two changes, both **decode-identical**, and that is the whole story of this
+generation.
+
+1. **The RR5 lossless rider.** The carrier body is re-encoded under an adaptive
+   arithmetic basis; reserved header flag `0x08` engages `restore_carrier_body` on
+   the receiver, restoring a 22,316 B carrier blob. Worth **−169 bytes**.
+2. **The clean C port of the free corrector.** `runtime/f26_corrector_native.c` and
+   `runtime/native_free_corrector.py` replace the Python implementation. Worth
+   **zero bytes** and **961.2 s** of inflation wall.
+
+Neither touches a decoded value, and this is measured rather than asserted: on the
+contest-CUDA T4 axis, generation 5 and generation 6 emit **byte-identical** n600
+inflated output, both hashing to
+`6bf8acf8d4412e43f8ddf810bcf63feb6435b758196b708fd61e77fe61e79883` at 3,662,409,600
+bytes. Both distortion legs are therefore exactly equal — `d_seg 0.00020139`,
+`d_pose 0.00000637` on both rows — and the entire score delta is rate:
+`25 × (−169) / 37,545,489 = −1.1253016e-04`, which is exactly what the two
+recomputed scores differ by.
+
+The runtime tree changed shape as well as content: 33 rows became **36**
+(`fdd57749…`), because the rider and the native corrector add receiver modules.
+That is why generation 5's authority row could not be carried and this generation
+bought its own.
+
+**The decode budget is the part that is not marginal.** Generation 5 charged
+1,471.3 s on the T4 axis, over both ends of the projected CI residual window
+[822, 1302] s. Generation 6 charges **498.5 s** — a PASS at the binding cold-cache
+corner with 323.5 s of margin. On the CPU axis both generations are infeasible;
+generation 6's own measurement is a kill at the 1,800 s wall with token decode alone
+at 2,427.2 s.
 
 ## What changed at generation 2
 
@@ -181,8 +215,10 @@ correctly regardless.)
 
 **The display trap.** The evaluator prints `Final score: … = 0.15`. That is a
 2-decimal display that rounds UP across exactly the boundary this candidate sits
-on. The claim is the value recomputed from components, `0.14839100138338618`,
-with a worst-case 8dp bound of `3.633e-06` — about 443× clear of 0.15.
+on. Generation 5's claim was the value recomputed from components,
+`0.14839100138338618`, with a worst-case 8dp bound of `3.633e-06` — about 443×
+clear of 0.15. (Generation 6 inherits the trap and clears it by 474×; see its own
+section above.)
 
 ## Custody note carried into generation 5
 

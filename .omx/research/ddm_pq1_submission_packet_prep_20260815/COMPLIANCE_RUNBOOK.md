@@ -3,11 +3,12 @@
 This runbook targets the active candidate in `PACKET_TARGET.json`. It executes
 the real strict checker; it is not a substitute for a green result.
 
-> **ACTIVE SECTION: "Generation 4" at the bottom of this file.** Everything above
-> it describes superseded candidates and is retained as lineage. The active
-> receipt is `generations/gen4_receipts/pre_submission_compliance.gen4.r1.json`
-> (83 GREEN / 4 RED of 87). The generation-3 r5 receipt and its 82/86 arithmetic
-> are HISTORICAL.
+> **ACTIVE SECTION: "Generation 6" at the bottom of this file.** Everything above
+> it describes superseded candidates and is retained as lineage. **Generation 6 has
+> no compliance receipt yet** — it was deliberately not re-bought at the swap,
+> because a receipt is a joint measurement of BYTES × INSTRUMENT × WORLD and all
+> three moved. Every receipt named above (gen-5 `pq9.r5` 83/87, gen-4 `r1` 83/87,
+> gen-3 `r5` 82/86) is HISTORICAL and none of their arithmetic carries.
 
 ## Generation 0 run (2026-08-15) — HISTORICAL, retired e480b candidate
 
@@ -179,7 +180,7 @@ surface ENDS by re-running the checker and re-pointing all receipt citations.
 
 ---
 
-## Generation 4 (ck1 composed row-prune) strict run — 2026-08-19 — ACTIVE
+## Generation 4 (ck1 composed row-prune) strict run — 2026-08-19 — HISTORICAL
 
 Result: **83 GREEN / 4 RED of 87**, strict `--contest-final`. Receipt
 `generations/gen4_receipts/pre_submission_compliance.gen4.r1.json`
@@ -282,7 +283,12 @@ when their real receipts exist.
 
 ---
 
-## Generation 5 (ACTIVE) — jg5 joint-waterfill candidate, the first sub-0.15 row
+## Generation 5 (HISTORICAL) — jg5 joint-waterfill candidate, the first sub-0.15 row
+
+> **SUPERSEDED 2026-08-20 by generation 6.** Every command, sha, byte count and receipt
+> below pins the jg5 object. Do not run these invocations against the shipping packet:
+> the expected-identity flags would refuse, which is the tool behaving correctly. The
+> live invocation is in "Generation 6" at the bottom of this file.
 
 Result: **83 GREEN / 4 RED of 87**, strict `--contest-final`. Receipt
 `generations/gen5_receipts/pre_submission_compliance.gen5.r2.json`. Checker source
@@ -381,3 +387,93 @@ An empty log is not a crash. Read the receipt, and read it with the key `passed`
 the rows do not carry an `ok` field, and a reader that looks for one will score the
 packet 0/87 and raise a false alarm. That mistake was made and caught during this
 generation.
+
+
+## Generation 6 (ACTIVE) — the composed rider × native port
+
+**Object.** archive `df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080`
+at 180,456 B, member `p` 180,356 B stored; 36-row runtime tree
+`fdd5774921319a317a385a9594489aa97e45cebc0f6f20cdc50fe8aaeb08a7f2`; `[contest-CUDA
+T4, n600]` **0.14827847122030852**.
+
+**Receipt status: OWED.** Nothing in this section reports a measured compliance
+result, because none exists for these bytes. Reporting generation 5's would be the
+stale-receipt defect this runbook already names.
+
+### Run it in this order
+
+Census first — both directories, one invocation, `rc` must be 0. Buying a receipt
+over a directory holding files nobody declared certifies the contaminants too.
+
+```bash
+GEN6=/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen6_rc2_composed
+R=/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen6_receipts
+
+.venv/bin/python tools/packet_census_guard.py \
+    --packet-dir "$GEN6" \
+    --auth-eval-json "$R/contest_auth_eval.json" \
+    --prep-dir .omx/research/ddm_pq1_submission_packet_prep_20260815
+```
+
+Then the strict chain:
+
+```bash
+.venv/bin/python scripts/pre_submission_compliance_check.py \
+  --contest-final \
+  --strict \
+  --submission-dir "$GEN6" \
+  --archive "$GEN6/archive.zip" \
+  --auth-eval-json "$R/contest_auth_eval.json" \
+  --archive-manifest-json "$GEN6/archive_manifest.json" \
+  --submission-score-axis contest_cuda \
+  --expect-single-member p \
+  --expected-archive-sha256 df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080 \
+  --expected-archive-size-bytes 180456 \
+  --expected-runtime-tree-sha256 fdd5774921319a317a385a9594489aa97e45cebc0f6f20cdc50fe8aaeb08a7f2 \
+  --dispatch-claims-md .omx/state/active_lane_dispatch_claims.md \
+  --expected-lane-id lane_ddm_rc2_composed_cuda_20260820 \
+  --expected-job-id ddm_rc2_composed_cuda_r2 \
+  --competitive-or-innovative-statement-file .omx/research/ddm_pq1_submission_packet_prep_20260815/PR_BODY_DRAFT.md \
+  --public-scan-path .omx/research/ddm_pq1_submission_packet_prep_20260815/PR_BODY_DRAFT.md \
+  --json-out "$R/pre_submission_compliance.gen6.r1.json"
+```
+
+Staging, for the record — this is the invocation that produced the tree, and it
+re-derives the tree hash from freshly measured staged bytes rather than from the
+manifest's own claimed digests:
+
+```bash
+.venv/bin/python tools/stage_contest_submission_packet.py \
+    --auth-eval-json "$R/contest_auth_eval.json" \
+    --source-runtime-dir /Volumes/APDataStore/pact/ddm_rc1/candidate_runtime_composed \
+    --out-dir "$GEN6" \
+    --expected-archive-sha256 df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080 \
+    --expected-archive-size-bytes 180456 \
+    --json-out "$R/STAGING_RECEIPT.json"
+```
+
+### The reds to expect, and how their status changed
+
+These are PREDICTIONS from the generation-5 red set plus what this object measured;
+they are not results. Whoever runs the chain records what actually fires.
+
+| # | Check | Expected state on these bytes | Owner | Class |
+|---|---|---|---|---|
+| 1 | `auth_eval_raw_promotion_policy_blockers_absent` | Still red. Blockers are stamped unconditionally by the raw emitter; running the adjudicator would DOWNGRADE the payload and flip a currently-green sibling | MAIN | **STRUCTURAL** |
+| 2 | `contest_cpu_auth_eval_exists` | Still red, and now for a **measured** reason rather than an inherited expectation: the CPU row on THESE bytes was fired and inflation was killed at the 1800 s wall before the evaluator started | MAIN | **MEASURED INFEASIBLE** — no longer "curable by a paid row"; the row was bought and it settled the question |
+| 3 | `submission_runtime_has_no_network_install_or_local_paths` | Still red. `inflate.sh` pinned-wheel Brotli bootstrap | MAIN | **BY DESIGN**, e4/PR100/PR101 declared-dependency precedent |
+| 4 | `hosted_archive_manifest_supplied` | Still red until the operator publishes. The archive has never been hosted and the PR body's download field is deliberately blank | **Operator** | **OPERATOR-GATED** |
+
+The dispatch-claim checks should now find their terminal rows: lane
+`lane_ddm_rc2_composed_cuda_20260820` closed `completed_harvested` binding archive
+`df7fd266…`, and the CPU lane `lane_ddm_rc2_composed_cpu_20260820` closed
+`failed_inflate_timeout_cpu_wall` on the same bytes.
+
+### One thing this generation changes about red #2
+
+Generation 5 carried red #2 with the note "expected to measure infeasible", inherited
+from an older lineage's 3,422.7 s figure. That inheritance was wrong by 946.9 s when it
+was finally measured on ck1's bytes, which is why this generation measured its own:
+inflation killed at 1,800 s, receiver report 2,850.781244341 s, token decode alone
+2,427.166373672 s, decoded token stream bit-identical to the CUDA axis. The axis is
+closed by measurement on the shipping object, and no figure was carried onto it.

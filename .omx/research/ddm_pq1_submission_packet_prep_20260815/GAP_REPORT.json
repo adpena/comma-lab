@@ -1,4 +1,5 @@
 {
+  "HISTORICAL_SUPERSEDED_BANNER": "SUPERSEDED / HISTORICAL. Refreshed pointer 2026-08-20 (ddm_pq11): the live candidate is packet generation 6, archive df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080 at 180456 B through the 36-row runtime tree fdd5774921319a317a385a9594489aa97e45cebc0f6f20cdc50fe8aaeb08a7f2, [contest-CUDA] 0.14827847122030852. Generation 6 has NO compliance receipt yet; it was not re-bought at the swap because bytes, scanned surfaces and the frontier pointer all moved. Every red disposition below is generation-0 history.",
   "schema": "pact.pq1.strict_compliance_gap_report.v1",
   "status": "SUPERSEDED_BY_GENERATION_4",
   "supersession": {
