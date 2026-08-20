@@ -1,0 +1,279 @@
+{
+  "argv_key": "argv_n32_arm_cap_resume",
+  "axis": "[apparatus / scorer-free]",
+  "checks": [
+    {
+      "detail": {
+        "age_seconds": 179.07424330711365,
+        "freshness_rule": "receipt mtime must be <= 6h old because host memory state drifts across reboots",
+        "freshness_window_seconds": 21600,
+        "receipt_mtime_utc": "2026-08-08T02:53:15.866862Z"
+      },
+      "name": "receipt_freshness",
+      "reason": "freshness_ok",
+      "status": "passed"
+    },
+    {
+      "name": "receipt_parse",
+      "status": "passed"
+    },
+    {
+      "name": "receipt_schema",
+      "status": "passed"
+    },
+    {
+      "name": "receipt_status",
+      "status": "passed"
+    },
+    {
+      "detail": {
+        "current_host": {
+          "machine": "arm64",
+          "node": "Primary",
+          "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+          "system": "Darwin"
+        },
+        "receipt_host": {
+          "machine": "arm64",
+          "node": "Primary",
+          "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+          "system": "Darwin"
+        }
+      },
+      "name": "host",
+      "reason": "host_ok",
+      "status": "passed"
+    },
+    {
+      "detail": {
+        "final_has_mlx": true,
+        "has_limit_stage": true,
+        "required_stage": "after_train_step_005253",
+        "sample_count": 34,
+        "train_step_sample_count": 2
+      },
+      "name": "samples",
+      "reason": "samples_ok",
+      "status": "passed"
+    },
+    {
+      "detail": {
+        "memory_limits": {
+          "available_gib_at_start": 91.662689,
+          "budget_gb": 24.0,
+          "cache_limit": 6442450944,
+          "calls": [
+            {
+              "hard_limit": false,
+              "previous_value_bytes": 130567005798,
+              "signature": "(*args, **kwargs)",
+              "signature_form": "value_only_soft_guideline",
+              "status": "applied",
+              "target": "set_memory_limit",
+              "value_bytes": 25769803776
+            },
+            {
+              "hard_limit": false,
+              "previous_value_bytes": 130567005798,
+              "signature": "(*args, **kwargs)",
+              "signature_form": "value_only_soft_guideline",
+              "status": "applied",
+              "target": "set_cache_limit",
+              "value_bytes": 6442450944
+            },
+            {
+              "hard_limit": false,
+              "previous_value_bytes": 0,
+              "signature": "(*args, **kwargs)",
+              "signature_form": "value_only_soft_guideline",
+              "status": "applied",
+              "target": "set_wired_limit",
+              "value_bytes": 25769803776
+            }
+          ],
+          "enforcement": "software_stage_step_cap",
+          "hard_limit_deprecated_reason": "MLX 0.31.2 set_memory_limit(limit) is soft and has no relaxed=False API.",
+          "hard_limit_required": false,
+          "hard_limit_satisfied": false,
+          "mem_probe_cap_gb": 24.0,
+          "memory_limit": 25769803776,
+          "soft_limit_allowed_by_cli": false,
+          "software_budget_bytes": 25769803776,
+          "software_budget_rule": "mx.get_active_memory() + max(0, process_rss - start_process_rss) <= budget",
+          "software_cap_installed": true,
+          "software_cap_required": true,
+          "source": "mem_probe_min_24gb_default_35pct_of_available_memory_at_start",
+          "wired_limit": 25769803776,
+          "wired_limit_derivation": {
+            "derived_wired_fraction": 0.35,
+            "source": "min_budget_bytes_35pct_total_memory",
+            "system_total_bytes": 137438953472,
+            "wired_limit": 25769803776
+          },
+          "wired_limit_semantics": "MLX 0.31.2 set_wired_limit limits memory kept resident on macOS 15+; set_memory_limit is only a graph-evaluation guideline and is not a hard allocation cap."
+        },
+        "software_budget": {
+          "budget_bytes": 25769803776,
+          "budget_gib": 24.0,
+          "check_count": 107,
+          "enforcement": "software_stage_step_cap",
+          "last_check": {
+            "budget_bytes": 25769803776,
+            "budget_gib": 24.0,
+            "check_index": 107,
+            "combined_gib": 1.289817,
+            "mlx_active_gib": 0.043708,
+            "rss_delta_from_start_gib": 1.246109,
+            "stage": "after_resume_check",
+            "timestamp_utc": "2026-08-08T02:53:15.865628Z",
+            "within_budget": true
+          },
+          "peak_combined_gib": 2.132095,
+          "required": true,
+          "rule": "mx.get_active_memory() + max(0, process_rss - start_process_rss) <= budget"
+        }
+      },
+      "name": "memory_limits",
+      "reason": "software_memory_cap_ok",
+      "status": "passed"
+    },
+    {
+      "detail": {
+        "comparisons": {
+          "allow_soft_mem_limit": {
+            "fire": false,
+            "match": true,
+            "receipt": false
+          },
+          "bits": {
+            "fire": 4,
+            "match": true,
+            "receipt": 4
+          },
+          "ce_fraction": {
+            "fire": 0.0,
+            "match": true,
+            "receipt": 0.0
+          },
+          "compile_train_loss": {
+            "fire": false,
+            "match": true,
+            "receipt": false
+          },
+          "device": {
+            "fire": "gpu",
+            "match": true,
+            "receipt": "gpu"
+          },
+          "init": {
+            "fire": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
+            "match": true,
+            "receipt": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt"
+          },
+          "input_cache": {
+            "fire": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+            "match": true,
+            "receipt": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt"
+          },
+          "lr": {
+            "fire": 2e-07,
+            "match": true,
+            "receipt": 2e-07
+          },
+          "mem_budget_gb": {
+            "fire": null,
+            "match": true,
+            "receipt": null
+          },
+          "microbatch_pairs": {
+            "fire": 4,
+            "match": true,
+            "receipt": 4
+          },
+          "mode": {
+            "fire": "mlx-train",
+            "match": true,
+            "receipt": "mlx-train"
+          },
+          "pairs": {
+            "fire": 32,
+            "match": true,
+            "receipt": 32
+          },
+          "perf_thread_pin": {
+            "fire": "off",
+            "match": true,
+            "receipt": "off"
+          },
+          "softplus_fraction": {
+            "fire": -999.0,
+            "match": true,
+            "receipt": -999.0
+          },
+          "target_cache": {
+            "fire": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+            "match": true,
+            "receipt": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt"
+          },
+          "train_compute_dtype": {
+            "fire": "fp32",
+            "match": true,
+            "receipt": "fp32"
+          }
+        }
+      },
+      "name": "config_match",
+      "reason": "config_ok",
+      "status": "passed"
+    }
+  ],
+  "error": null,
+  "fire_config": {
+    "allow_soft_mem_limit": false,
+    "bits": 4,
+    "ce_fraction": 0.0,
+    "compile_train_loss": false,
+    "device": "gpu",
+    "fire_argv_key": "argv_n32_arm_cap_resume",
+    "fire_guard_verdict": "/Users/adpena/Projects/pact/.omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/fire_guard/argv_n32_arm_cap_resume.2026_08_08T02_55_36_199303Z_pid2556.json",
+    "init": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
+    "input_cache": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+    "launch_ticket_path": "/Users/adpena/Projects/pact/.omx/research/ddm_mx1g_20260807/launch_ticket_mx1g_from_regen2.json",
+    "lr": 2e-07,
+    "mem_budget_gb": null,
+    "microbatch_pairs": 4,
+    "mode": "mlx-train",
+    "pairs": 32,
+    "perf_thread_pin": "off",
+    "softplus_fraction": -999.0,
+    "target_cache": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+    "train_compute_dtype": "fp32"
+  },
+  "reason": "fire_guard_passed",
+  "reason_code": "fire_guard_passed",
+  "receipt_config": {
+    "allow_soft_mem_limit": false,
+    "bits": 4,
+    "ce_fraction": 0.0,
+    "compile_train_loss": false,
+    "device": "gpu",
+    "init": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
+    "input_cache": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+    "lr": 2e-07,
+    "mem_budget_gb": null,
+    "microbatch_pairs": 4,
+    "mode": "mlx-train",
+    "pairs": 32,
+    "perf_thread_pin": "off",
+    "softplus_fraction": -999.0,
+    "target_cache": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+    "train_compute_dtype": "fp32"
+  },
+  "receipt_path": "/Users/adpena/Projects/pact/.omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mem_probe_resume/mem_probe_receipt.json",
+  "schema": "ddm_mx1_fire_guard_verdict.v1",
+  "score_claim": false,
+  "status": "passed",
+  "ticket_path": ".omx/research/ddm_mx1g_20260807/launch_ticket_mx1g_from_regen2.json",
+  "timestamp_utc": "2026-08-08T02:56:14.949230Z",
+  "verdict_path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/fire_guard/argv_n32_arm_cap_resume.2026_08_08T02_55_36_199303Z_pid2556.json"
+}

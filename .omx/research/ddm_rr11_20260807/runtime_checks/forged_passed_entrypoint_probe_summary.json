@@ -1,0 +1,8 @@
+{
+  "blocker": "local MLX runtime unavailable; run the launch-ticket argv on MAIN Metal host",
+  "entrypoint_reached_device_probe": true,
+  "fake_verdict_path": ".omx/research/ddm_rr11_20260807/runtime_checks/forged_passed_fire_guard_verdict.json",
+  "probe_out": ".omx/research/ddm_rr11_20260807/runtime_checks/forged_passed_entrypoint_probe.json",
+  "result_status": "blocked",
+  "system_exit_code": 2
+}

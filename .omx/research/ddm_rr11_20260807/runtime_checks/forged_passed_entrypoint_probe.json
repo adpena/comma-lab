@@ -1,0 +1,18 @@
+{
+  "blocker": "local MLX runtime unavailable; run the launch-ticket argv on MAIN Metal host",
+  "launch_ticket": {
+    "schema": "rr11_probe_ticket"
+  },
+  "mlx_probe": {
+    "forced_by": "rr11_no_metal_fire",
+    "status": "blocked"
+  },
+  "mode": "mlx-train",
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "schema": "ddm_mx1_pr130_semantic_renderer_driver.v1",
+  "score_claim": false,
+  "source_repo_head": "2f94596bb0136d342254022a5c9584756eae0468",
+  "source_repo_root": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
+  "status": "blocked",
+  "torch": "2.12.1"
+}

@@ -1,0 +1,712 @@
+{
+  "axis": "[macOS-CPU advisory / CPU Torch SegNet-only]",
+  "baseline": {
+    "archive": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/archive.zip",
+    "archive_sha256": "ad5dd0e4fbe5b13ab53a5995a6d77cc558c25f40b63f894ea50ad336bd50fb66",
+    "base_raw": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/inflated/0.raw",
+    "base_raw_bytes": 3662409600,
+    "base_raw_sha256_head_1MiB": "a80617c2740de0a0820c28bf1a444952df59b35c024fe235149f3b5e8109815a",
+    "d_pose": 0.0007145917,
+    "d_seg": 0.00431179,
+    "own_vehicle_frontier": "S = 0.7541459 @ 358084 B [macOS-CPU advisory]"
+  },
+  "boundaries": [
+    "SegNet-only: PoseNet was not run, so this is not a contest score or net-S verdict.",
+    "n32 stratified random, not n600 and not prefix.",
+    "Region-coherent paints use square scorer-grid neighborhoods; they are a coherence instrument, not a shipped receiver.",
+    "No variant archive was built; bytes are priced separately in the description leg."
+  ],
+  "captured_at_utc": "2026-08-04T19:52:23.734886Z",
+  "controls": {
+    "baseline_argmax_matches_cached_current": true,
+    "baseline_argmax_mismatch_cells": 0,
+    "segnet_reads_frame": "frame_1 only per upstream/modules.py SegNet.preprocess_input",
+    "target_definition": "Road<->Lane cells where cached current argmax differs from cached GT argmax"
+  },
+  "inputs": {
+    "current_argmax": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/cx1_argmax_n600.npy",
+    "current_argmax_sha256": "5e903de650e60ec6a64b34eb455fa1bc911223551d0b31e9ae45cc906e1490be",
+    "gt_argmax": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/gt_argmax_n600.npy",
+    "gt_argmax_sha256": "b74a14b226a5aceb5824899898bcb06e5413c54b7db2441268da7bc91a10db5d",
+    "segnet_weights": "/Users/adpena/Projects/pact/upstream/models/segnet.safetensors",
+    "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+  },
+  "margin_bins": [
+    {
+      "bin": 0,
+      "count": 3102,
+      "hi": -0.9970307350158691,
+      "lo": -11.22191572189331
+    },
+    {
+      "bin": 1,
+      "count": 3102,
+      "hi": -0.482851505279541,
+      "lo": -0.9970307350158691
+    },
+    {
+      "bin": 2,
+      "count": 3102,
+      "hi": -0.19918513298034668,
+      "lo": -0.482851505279541
+    },
+    {
+      "bin": 3,
+      "count": 3102,
+      "hi": -2.6702880859375e-05,
+      "lo": -0.19918513298034668
+    }
+  ],
+  "n600_run": false,
+  "n_pairs": 32,
+  "pairs": [
+    31,
+    43,
+    62,
+    82,
+    94,
+    118,
+    147,
+    165,
+    167,
+    182,
+    185,
+    200,
+    237,
+    241,
+    247,
+    259,
+    272,
+    286,
+    288,
+    292,
+    296,
+    306,
+    327,
+    382,
+    390,
+    419,
+    473,
+    488,
+    525,
+    555,
+    560,
+    581
+  ],
+  "promotion_eligible": false,
+  "runtime": {
+    "argv": [
+      ".omx/research/ddm_se1_20260804/measure_se1_survival.py",
+      "--n-pairs",
+      "32",
+      "--batch-size",
+      "4",
+      "--torch-threads",
+      "4"
+    ],
+    "elapsed_seconds": 252.02730858372524,
+    "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12 (main, Mar 10 2026, 18:26:32) [Clang 21.1.4 ]",
+    "torch": "2.12.1",
+    "torch_threads": 4
+  },
+  "schema": "ddm_se1_survival_measurement.v1",
+  "score_claim": false,
+  "seed": 20260804,
+  "selection_mode": "stratified-random non-prefix quartiles by Road/Lane target count",
+  "target_cells_selected": 12407,
+  "target_cells_total_n600": 235148,
+  "taxonomy": {
+    "killer_assignment": "private_support_partially_effective",
+    "private_full_color_survival": 0.36431046989602645,
+    "r_attenuation_vs_segnet_region_coupling": "The private support makes the target scorer input move, but the SegNet prediction can still be vetoed by the stride-2 stem/receptive-field context; region_r1/r2 separates that from pure amplitude.",
+    "region_r1_full_color_survival": 0.36995244619972595,
+    "region_r2_full_color_survival": 0.22825824131538647,
+    "uint8_amplitude_floor": "delta_1 changes support bytes; failure at delta_1 is not a no-emission claim"
+  },
+  "variants": [
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 0,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.0
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 0,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.0
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 0,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.0
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 169,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.054480980012894906
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 169,
+      "eligible_target_cells": 12407,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 96,
+      "global_flip_delta_vs_baseline": -114,
+      "global_variant_flips_subset": 25940,
+      "max_delta": 1,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 12238,
+      "subset_dseg_delta": -1.811981201171875e-05,
+      "subset_seg_score_delta": -0.001811981201171875,
+      "target_survival": 0.01362134279036028,
+      "variant": "private_delta_1",
+      "verdict_scope": "SegNet-only bounded n32 stratified selected fz4 sub_final; not pose, not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 0,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.0
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 0,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.0
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 0,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.0
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 284,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.0915538362346873
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 284,
+      "eligible_target_cells": 12407,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 178,
+      "global_flip_delta_vs_baseline": -189,
+      "global_variant_flips_subset": 25865,
+      "max_delta": 2,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 12123,
+      "subset_dseg_delta": -3.0040740966796875e-05,
+      "subset_seg_score_delta": -0.0030040740966796875,
+      "target_survival": 0.022890303860723785,
+      "variant": "private_delta_2",
+      "verdict_scope": "SegNet-only bounded n32 stratified selected fz4 sub_final; not pose, not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 0,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.0
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 1,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.0003224766204450177
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 9,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.0029013539651837525
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 563,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.18149580915538363
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 573,
+      "eligible_target_cells": 12407,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 345,
+      "global_flip_delta_vs_baseline": -390,
+      "global_variant_flips_subset": 25664,
+      "max_delta": 4,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 11834,
+      "subset_dseg_delta": -6.198883056640625e-05,
+      "subset_seg_score_delta": -0.006198883056640625,
+      "target_survival": 0.04618360602885468,
+      "variant": "private_delta_4",
+      "verdict_scope": "SegNet-only bounded n32 stratified selected fz4 sub_final; not pose, not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 4,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.0012894906511927789
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 12,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.003869719445340213
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 125,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.04029658284977434
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 993,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.32011605415860733
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 1134,
+      "eligible_target_cells": 12407,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 686,
+      "global_flip_delta_vs_baseline": -804,
+      "global_variant_flips_subset": 25250,
+      "max_delta": 8,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 11273,
+      "subset_dseg_delta": -0.0001277923583984375,
+      "subset_seg_score_delta": -0.01277923583984375,
+      "target_survival": 0.0914000161199323,
+      "variant": "private_delta_8",
+      "verdict_scope": "SegNet-only bounded n32 stratified selected fz4 sub_final; not pose, not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 38,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.012250161186331399
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 110,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.03547242824895195
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 463,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.14925854287556414
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1490,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.4803352675693101
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 2101,
+      "eligible_target_cells": 12407,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 1474,
+      "global_flip_delta_vs_baseline": -1387,
+      "global_variant_flips_subset": 24667,
+      "max_delta": 16,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 10306,
+      "subset_dseg_delta": -0.00022045771280924478,
+      "subset_seg_score_delta": -0.02204577128092448,
+      "target_survival": 0.16933988877246717,
+      "variant": "private_delta_16",
+      "verdict_scope": "SegNet-only bounded n32 stratified selected fz4 sub_final; not pose, not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 165,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.05319148936170213
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 430,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.13866494679135763
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 955,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.30786589297227596
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1716,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.5531914893617021
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 3266,
+      "eligible_target_cells": 12407,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 3081,
+      "global_flip_delta_vs_baseline": -1563,
+      "global_variant_flips_subset": 24491,
+      "max_delta": 32,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 9141,
+      "subset_dseg_delta": -0.0002484321594238281,
+      "subset_seg_score_delta": -0.024843215942382812,
+      "target_survival": 0.26323849439832353,
+      "variant": "private_delta_32",
+      "verdict_scope": "SegNet-only bounded n32 stratified selected fz4 sub_final; not pose, not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 283,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.0912314635718891
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 658,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.21218961625282168
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 1187,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.38265635074145715
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1724,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.5557704706640877
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 3852,
+      "eligible_target_cells": 12407,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 5075,
+      "global_flip_delta_vs_baseline": -733,
+      "global_variant_flips_subset": 25321,
+      "max_delta": 64,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 8555,
+      "subset_dseg_delta": -0.00011650721232096355,
+      "subset_seg_score_delta": -0.011650721232096354,
+      "target_survival": 0.3104698960264367,
+      "variant": "private_delta_64",
+      "verdict_scope": "SegNet-only bounded n32 stratified selected fz4 sub_final; not pose, not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 409,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.13185041908446163
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 855,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.27571751048049015
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 1362,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.43907156673114117
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1771,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.5709219858156028
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 4397,
+      "eligible_target_cells": 12407,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 6545,
+      "global_flip_delta_vs_baseline": -120,
+      "global_variant_flips_subset": 25934,
+      "max_delta": 128,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 8010,
+      "subset_dseg_delta": -1.9073486328125e-05,
+      "subset_seg_score_delta": -0.0019073486328125,
+      "target_survival": 0.3543967115338116,
+      "variant": "private_delta_128",
+      "verdict_scope": "SegNet-only bounded n32 stratified selected fz4 sub_final; not pose, not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 446,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.14377820760799484
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 897,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.2892615285391809
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 1392,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.44874274661508706
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1785,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.5754352030947776
+        }
+      ],
+      "camera_channel_values_changed": 148102,
+      "camera_support_writes": 49628,
+      "coherence_radius": 0,
+      "corrected_target_cells": 4520,
+      "eligible_target_cells": 12407,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 6790,
+      "global_flip_delta_vs_baseline": -22,
+      "global_variant_flips_subset": 26032,
+      "max_delta": null,
+      "scorer_grid_cells_touched_with_duplicates": 12407,
+      "still_wrong_target_cells": 7887,
+      "subset_dseg_delta": -3.4968058268229165e-06,
+      "subset_seg_score_delta": -0.0003496805826822917,
+      "target_survival": 0.36431046989602645,
+      "variant": "ed1_private_full_color",
+      "verdict_scope": "SegNet-only bounded n32 stratified selected fz4 sub_final; not pose, not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 567,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.1827852998065764
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 1129,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.364076104482425
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 1401,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.45164410058027077
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 1493,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.4813023855577047
+        }
+      ],
+      "camera_channel_values_changed": 776984,
+      "camera_support_writes": 446004,
+      "coherence_radius": 1,
+      "corrected_target_cells": 4590,
+      "eligible_target_cells": 12407,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 35925,
+      "global_flip_delta_vs_baseline": 27150,
+      "global_variant_flips_subset": 53204,
+      "max_delta": null,
+      "scorer_grid_cells_touched_with_duplicates": 111501,
+      "still_wrong_target_cells": 7817,
+      "subset_dseg_delta": 0.004315376281738281,
+      "subset_seg_score_delta": 0.4315376281738281,
+      "target_survival": 0.36995244619972595,
+      "variant": "region_r1_full_color",
+      "verdict_scope": "SegNet-only bounded n32 stratified selected fz4 sub_final; not pose, not n600, not contest authority"
+    },
+    {
+      "by_baseline_margin_quartile": [
+        {
+          "baseline_target_margin_hi": -0.9970307350158691,
+          "baseline_target_margin_lo": -11.22191572189331,
+          "bin": 0,
+          "corrected_target_cells": 320,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.1031592520954223
+        },
+        {
+          "baseline_target_margin_hi": -0.482851505279541,
+          "baseline_target_margin_lo": -0.9970307350158691,
+          "bin": 1,
+          "corrected_target_cells": 689,
+          "eligible_target_cells": 3101,
+          "target_survival": 0.22218639148661723
+        },
+        {
+          "baseline_target_margin_hi": -0.19918513298034668,
+          "baseline_target_margin_lo": -0.482851505279541,
+          "bin": 2,
+          "corrected_target_cells": 891,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.2872340425531915
+        },
+        {
+          "baseline_target_margin_hi": -2.6702880859375e-05,
+          "baseline_target_margin_lo": -0.19918513298034668,
+          "bin": 3,
+          "corrected_target_cells": 932,
+          "eligible_target_cells": 3102,
+          "target_survival": 0.3004513217279175
+        }
+      ],
+      "camera_channel_values_changed": 1650458,
+      "camera_support_writes": 1237520,
+      "coherence_radius": 2,
+      "corrected_target_cells": 2832,
+      "eligible_target_cells": 12407,
+      "global_baseline_flips_subset": 26054,
+      "global_collateral_new_wrong_non_target": 93623,
+      "global_flip_delta_vs_baseline": 86040,
+      "global_variant_flips_subset": 112094,
+      "max_delta": null,
+      "scorer_grid_cells_touched_with_duplicates": 309380,
+      "still_wrong_target_cells": 9575,
+      "subset_dseg_delta": 0.013675689697265625,
+      "subset_seg_score_delta": 1.3675689697265625,
+      "target_survival": 0.22825824131538647,
+      "variant": "region_r2_full_color",
+      "verdict_scope": "SegNet-only bounded n32 stratified selected fz4 sub_final; not pose, not n600, not contest authority"
+    }
+  ]
+}

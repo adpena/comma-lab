@@ -1,0 +1,28 @@
+{
+  "argv": [
+    "/bin/sleep",
+    "5"
+  ],
+  "child_pid": 39800,
+  "elapsed_s": 0.578,
+  "exit": 124,
+  "generated_utc": "2026-08-07T13:21:29Z",
+  "kill_action": {
+    "action": "SIGTERM_then_SIGKILL_process_group",
+    "elapsed_s": 0.257,
+    "reason": "timeout",
+    "timeout_s": 0.2
+  },
+  "label": "rr11_timeout",
+  "last_sample_ts": "2026-08-07T13:21:28Z",
+  "peak_rss_kib": 0,
+  "peak_rss_mib": 0.0,
+  "peak_rss_observed": true,
+  "pgid": 39800,
+  "poll_s": 0.05,
+  "rss_limit_mib": 512,
+  "schema": "safe_run_status_receipt.v1",
+  "start_utc": "2026-08-07T13:21:28Z",
+  "status": "timeout",
+  "timeout_s": 0.2
+}

@@ -1,0 +1,23 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "tools/measure_chroma_siting_argmax_sensitivity.py",
+    "--num-sample-pairs",
+    "120",
+    "--seed",
+    "20260809"
+  ],
+  "authority": "[macOS-CPU advisory] frozen CPU-torch SegNet; sensitivity probe, not a score",
+  "cwd": "/Users/adpena/Projects/pact",
+  "detach_method": "subprocess.Popen(start_new_session=True)",
+  "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/chroma_siting_n120.done",
+  "dry_run": false,
+  "generated_utc": "2026-08-09T01:03:48Z",
+  "git_sha": "4bfba0560bf371e5d851ed72d2c7ddebdd311f0e",
+  "log_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rm1_20260808/chroma_siting_run/run.log",
+  "output_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_rm1_20260808/chroma_siting_run",
+  "pid": 61662,
+  "pid_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rm1_20260808/chroma_siting_run/run.pid",
+  "purpose": "#906 chroma-siting argmax sensitivity, n=120 stratified \u2014 prices the DALI/AV Modal dispatch at $0",
+  "schema": "detached_local_process_launch.v1"
+}

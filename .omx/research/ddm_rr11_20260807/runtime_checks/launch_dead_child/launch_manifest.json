@@ -1,0 +1,19 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "-c",
+    "import sys; print(\"rr11 dead child\"); sys.exit(7)"
+  ],
+  "authority": "local detached execution; downstream artifacts decide authority",
+  "cwd": "/Users/adpena/Projects/pact",
+  "detach_method": "subprocess.Popen(start_new_session=True)",
+  "dry_run": false,
+  "generated_utc": "2026-08-07T13:21:28Z",
+  "git_sha": "50aac0ee16f47d92bb597e1ab8658355deb990b4",
+  "log_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rr11_20260807/runtime_checks/launch_dead_child/run.log",
+  "output_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_rr11_20260807/runtime_checks/launch_dead_child",
+  "pid": 39803,
+  "pid_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rr11_20260807/runtime_checks/launch_dead_child/run.pid",
+  "purpose": "detached local long run",
+  "schema": "detached_local_process_launch.v1"
+}

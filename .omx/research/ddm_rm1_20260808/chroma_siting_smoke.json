@@ -1,0 +1,61 @@
+{
+  "probe": "chroma_siting_argmax_sensitivity",
+  "axis_label": "[macOS-CPU advisory]",
+  "score_claim": false,
+  "promotable": false,
+  "video": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+  "seed": 20260809,
+  "n_sampled_pairs": 4,
+  "n_pairs_total": 24,
+  "sampling": "stratified_random_one_per_stratum",
+  "positive_control": {
+    "checked": true,
+    "centered_path_byte_identical_to_upstream": true,
+    "control_pair_idx": 3
+  },
+  "elapsed_seconds": 12.7,
+  "pooled_argmax_disagree_frac": 0.000141143798828125,
+  "mean_argmax_disagree_frac": 0.000141143798828125,
+  "max_argmax_disagree_frac": 0.00018310546875,
+  "min_argmax_disagree_frac": 8.646647135416667e-05,
+  "pairs_with_any_disagreement": 4,
+  "reference_pr130_d_seg": 0.00028609,
+  "rows": [
+    {
+      "pair_idx": 3,
+      "argmax_pixels": 196608,
+      "argmax_disagree_pixels": 36,
+      "argmax_disagree_frac": 0.00018310546875,
+      "rgb_max_abs_delta": 30,
+      "rgb_mean_abs_delta": 0.5851724503998679,
+      "rgb_changed_frac": 0.44778454053855693
+    },
+    {
+      "pair_idx": 10,
+      "argmax_pixels": 196608,
+      "argmax_disagree_pixels": 17,
+      "argmax_disagree_frac": 8.646647135416667e-05,
+      "rgb_max_abs_delta": 26,
+      "rgb_mean_abs_delta": 0.5341837242890582,
+      "rgb_changed_frac": 0.41075482108828026
+    },
+    {
+      "pair_idx": 13,
+      "argmax_pixels": 196608,
+      "argmax_disagree_pixels": 30,
+      "argmax_disagree_frac": 0.000152587890625,
+      "rgb_max_abs_delta": 23,
+      "rgb_mean_abs_delta": 0.5621669405846905,
+      "rgb_changed_frac": 0.43122953806149916
+    },
+    {
+      "pair_idx": 20,
+      "argmax_pixels": 196608,
+      "argmax_disagree_pixels": 28,
+      "argmax_disagree_frac": 0.00014241536458333334,
+      "rgb_max_abs_delta": 25,
+      "rgb_mean_abs_delta": 0.5587170806891725,
+      "rgb_changed_frac": 0.4290571977530858
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "experiments/ddm_mx1_pr130_semantic_renderer.py",
+    "--mode",
+    "controlled-train",
+    "--launch-ticket-path",
+    ".omx/research/ddm_m1_20260808/launch_ticket_v5_event_driven.json",
+    "--fire-argv-key",
+    "argv_m1_controller_fresh",
+    "--out",
+    ".omx/research/ddm_m1_20260808/run/n120_metal/controller_fresh_result.json"
+  ],
+  "authority": "local detached execution; downstream artifacts decide authority",
+  "cwd": "/Users/adpena/Projects/pact",
+  "detach_method": "subprocess.Popen(start_new_session=True)",
+  "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/m1_controller_fresh.done.done",
+  "dry_run": false,
+  "generated_utc": "2026-08-09T00:01:50Z",
+  "git_sha": "0acc42e2534e87d4a53aaaa5a783970ab8e09b4c",
+  "log_path": "/Users/adpena/Projects/pact/.omx/research/ddm_m1_20260808/run/n120_metal/run.log",
+  "output_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_m1_20260808/run/n120_metal",
+  "pid": 21352,
+  "pid_path": "/Users/adpena/Projects/pact/.omx/research/ddm_m1_20260808/run/n120_metal/run.pid",
+  "purpose": "detached local long run",
+  "schema": "detached_local_process_launch.v1"
+}

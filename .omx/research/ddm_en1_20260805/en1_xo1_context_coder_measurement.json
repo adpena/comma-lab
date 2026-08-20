@@ -1,0 +1,280 @@
+{
+  "axis": "[macOS-CPU scorer-free byte-only]",
+  "baselines": {
+    "forced_ix2_brotli_q11_parts": {
+      "base_brotli_q11_bytes": 1297,
+      "base_payload_bytes": 1536,
+      "residual_brotli_q11_bytes": 339970,
+      "residual_payload_bytes": 921600,
+      "token_frame_header_magic_bytes": 28
+    },
+    "forced_ix2_brotli_q11_token_frame_bytes": 341295,
+    "forced_ix2_brotli_q11_token_frame_sha256": "cbd4b49fe6d678de68772ba29797e8663d847242641b1cb4fe39abcd91c5d9be",
+    "ix2_auto_token_frame_bytes": 341295,
+    "ix2_auto_token_frame_sha256": "cbd4b49fe6d678de68772ba29797e8663d847242641b1cb4fe39abcd91c5d9be",
+    "r7_brotli11_bytes": 396442,
+    "r7_smevr_bytes": 346478
+  },
+  "best_row": {
+    "base_brotli_q11_bytes": 1297,
+    "context_counts_max": 945384,
+    "context_counts_min": 897816,
+    "context_counts_sum": 1843200,
+    "context_residual_brotli_q11_bytes": 339197,
+    "context_total_bytes": 340735,
+    "delta_vs_forced_brotli_q11_bytes": -560,
+    "length_table_bytes_u32": 8,
+    "mode": "cell_score_context",
+    "n_contexts": 2,
+    "packet_bytes": 201,
+    "raw_residual_payload_bytes": 921600,
+    "threshold_bytes_f32": 4,
+    "threshold_count": 1
+  },
+  "context_score": {
+    "cell_score_max": 1.42978835105896,
+    "cell_score_mean": -3.2584736347198486,
+    "cell_score_min": -4.863123893737793,
+    "cell_score_shape": [
+      600,
+      24,
+      32
+    ],
+    "compute_seconds": 1.847,
+    "source": "XO1 packet dequantized additive named-feature head over cached cx1 argmax/token activity"
+  },
+  "decoder_causal_boundary": "This pricing used cached rendered argmax/token-derived XO1 scores; no decoder-legal context feature path was built, so even a byte win would still need a receiver-causal build.",
+  "go_bars": {
+    "eu2_weak_go_saved_bytes": 15000,
+    "pa2_projected_context_floor_saved_bytes_range": [
+      19543,
+      28179
+    ]
+  },
+  "input_artifacts": {
+    "cx1_argmax": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/cx1_argmax_n600.npy",
+      "sha256": "5e903de650e60ec6a64b34eb455fa1bc911223551d0b31e9ae45cc906e1490be"
+    },
+    "tokens": {
+      "path": "/Volumes/VertigoDataTier/pact/ddm_br1_20260803/cx1_tokens.npy",
+      "sha256": "d4eacbf619d09aeda1c15a5015b0cd45ab2d3de33d349c881b7e0f59dc803a56"
+    },
+    "xo1_packet": {
+      "bytes": 201,
+      "parse_back": {
+        "consumed_exactly_once": true,
+        "feature_blocks": [
+          {
+            "name": "dist_to_boundary_bucket",
+            "size": 17
+          },
+          {
+            "name": "receiver_class",
+            "size": 5
+          },
+          {
+            "name": "nearest_differing_class_or_interior",
+            "size": 6
+          },
+          {
+            "name": "row_bucket",
+            "size": 8
+          },
+          {
+            "name": "col_bucket",
+            "size": 8
+          },
+          {
+            "name": "token_activity_bucket",
+            "size": 8
+          }
+        ],
+        "final_cursor": 201,
+        "n_weights": 52,
+        "packet_len": 201,
+        "q_bias": -29,
+        "scale": 0.01317919697612524,
+        "version": 1,
+        "weights_sha256": "aa7f7f2a061f9d8e219235ae3cd85e75a95542c4d3ab0bc44b41092a0181d2ad"
+      },
+      "path": "/Volumes/VertigoDataTier/pact/ddm_xo1_20260805/xo1_control_head.xo1pkt",
+      "sha256": "e2a48e785e05615ddad913eb2d8673452c1b748eccf7c2be66f04ea0b0f5a450"
+    }
+  },
+  "n_pairs": 600,
+  "rows": [
+    {
+      "base_brotli_q11_bytes": 1297,
+      "context_counts_max": 945384,
+      "context_counts_min": 897816,
+      "context_counts_sum": 1843200,
+      "context_residual_brotli_q11_bytes": 339197,
+      "context_total_bytes": 340735,
+      "delta_vs_forced_brotli_q11_bytes": -560,
+      "length_table_bytes_u32": 8,
+      "mode": "cell_score_context",
+      "n_contexts": 2,
+      "packet_bytes": 201,
+      "raw_residual_payload_bytes": 921600,
+      "threshold_bytes_f32": 4,
+      "threshold_count": 1
+    },
+    {
+      "base_brotli_q11_bytes": 1297,
+      "context_counts_max": 484584,
+      "context_counts_min": 444500,
+      "context_counts_sum": 1843200,
+      "context_residual_brotli_q11_bytes": 339808,
+      "context_total_bytes": 341362,
+      "delta_vs_forced_brotli_q11_bytes": 67,
+      "length_table_bytes_u32": 16,
+      "mode": "cell_score_context",
+      "n_contexts": 4,
+      "packet_bytes": 201,
+      "raw_residual_payload_bytes": 921600,
+      "threshold_bytes_f32": 12,
+      "threshold_count": 3
+    },
+    {
+      "base_brotli_q11_bytes": 1297,
+      "context_counts_max": 264920,
+      "context_counts_min": 179580,
+      "context_counts_sum": 1843200,
+      "context_residual_brotli_q11_bytes": 340099,
+      "context_total_bytes": 341685,
+      "delta_vs_forced_brotli_q11_bytes": 390,
+      "length_table_bytes_u32": 32,
+      "mode": "cell_score_context",
+      "n_contexts": 8,
+      "packet_bytes": 201,
+      "raw_residual_payload_bytes": 921600,
+      "threshold_bytes_f32": 28,
+      "threshold_count": 7
+    },
+    {
+      "base_brotli_q11_bytes": 1297,
+      "context_counts_max": 164228,
+      "context_counts_min": 55784,
+      "context_counts_sum": 1843200,
+      "context_residual_brotli_q11_bytes": 342573,
+      "context_total_bytes": 344223,
+      "delta_vs_forced_brotli_q11_bytes": 2928,
+      "length_table_bytes_u32": 64,
+      "mode": "cell_score_context",
+      "n_contexts": 16,
+      "packet_bytes": 201,
+      "raw_residual_payload_bytes": 921600,
+      "threshold_bytes_f32": 60,
+      "threshold_count": 15
+    },
+    {
+      "base_brotli_q11_bytes": 1297,
+      "context_counts_max": 103364,
+      "context_counts_min": 0,
+      "context_counts_sum": 1843200,
+      "context_residual_brotli_q11_bytes": 346964,
+      "context_total_bytes": 348742,
+      "delta_vs_forced_brotli_q11_bytes": 7447,
+      "length_table_bytes_u32": 128,
+      "mode": "cell_score_context",
+      "n_contexts": 32,
+      "packet_bytes": 201,
+      "raw_residual_payload_bytes": 921600,
+      "threshold_bytes_f32": 124,
+      "threshold_count": 31
+    },
+    {
+      "base_brotli_q11_bytes": 1297,
+      "context_counts_max": 921600,
+      "context_counts_min": 921600,
+      "context_counts_sum": 1843200,
+      "context_residual_brotli_q11_bytes": 345510,
+      "context_total_bytes": 347048,
+      "delta_vs_forced_brotli_q11_bytes": 5753,
+      "length_table_bytes_u32": 8,
+      "mode": "pair_score_context",
+      "n_contexts": 2,
+      "packet_bytes": 201,
+      "raw_residual_payload_bytes": 921600,
+      "threshold_bytes_f32": 4,
+      "threshold_count": 1
+    },
+    {
+      "base_brotli_q11_bytes": 1297,
+      "context_counts_max": 460800,
+      "context_counts_min": 460800,
+      "context_counts_sum": 1843200,
+      "context_residual_brotli_q11_bytes": 352607,
+      "context_total_bytes": 354161,
+      "delta_vs_forced_brotli_q11_bytes": 12866,
+      "length_table_bytes_u32": 16,
+      "mode": "pair_score_context",
+      "n_contexts": 4,
+      "packet_bytes": 201,
+      "raw_residual_payload_bytes": 921600,
+      "threshold_bytes_f32": 12,
+      "threshold_count": 3
+    },
+    {
+      "base_brotli_q11_bytes": 1297,
+      "context_counts_max": 230400,
+      "context_counts_min": 230400,
+      "context_counts_sum": 1843200,
+      "context_residual_brotli_q11_bytes": 363889,
+      "context_total_bytes": 365475,
+      "delta_vs_forced_brotli_q11_bytes": 24180,
+      "length_table_bytes_u32": 32,
+      "mode": "pair_score_context",
+      "n_contexts": 8,
+      "packet_bytes": 201,
+      "raw_residual_payload_bytes": 921600,
+      "threshold_bytes_f32": 28,
+      "threshold_count": 7
+    },
+    {
+      "base_brotli_q11_bytes": 1297,
+      "context_counts_max": 116736,
+      "context_counts_min": 113664,
+      "context_counts_sum": 1843200,
+      "context_residual_brotli_q11_bytes": 370386,
+      "context_total_bytes": 372036,
+      "delta_vs_forced_brotli_q11_bytes": 30741,
+      "length_table_bytes_u32": 64,
+      "mode": "pair_score_context",
+      "n_contexts": 16,
+      "packet_bytes": 201,
+      "raw_residual_payload_bytes": 921600,
+      "threshold_bytes_f32": 60,
+      "threshold_count": 15
+    },
+    {
+      "base_brotli_q11_bytes": 1297,
+      "context_counts_max": 58368,
+      "context_counts_min": 55296,
+      "context_counts_sum": 1843200,
+      "context_residual_brotli_q11_bytes": 378002,
+      "context_total_bytes": 379780,
+      "delta_vs_forced_brotli_q11_bytes": 38485,
+      "length_table_bytes_u32": 128,
+      "mode": "pair_score_context",
+      "n_contexts": 32,
+      "packet_bytes": 201,
+      "raw_residual_payload_bytes": 921600,
+      "threshold_bytes_f32": 124,
+      "threshold_count": 31
+    }
+  ],
+  "schema": "ddm_en1_xo1_context_coder_measurement.v1",
+  "score_claim": false,
+  "scorer_forwards": 0,
+  "token_shape": [
+    600,
+    24,
+    32,
+    4
+  ],
+  "upstream_evaluate_py": false,
+  "verdict": "NO_GO_FORMULATION_CONTEXT_CODED_BY_XO1_SCORE",
+  "verdict_reason": "best context-coded row is larger than the live forced Brotli-Q11/IX2 baseline"
+}

@@ -1,0 +1,10 @@
+{
+  "after_mem_probe_receipt_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rr11_20260807/runtime_checks/ticket_clobber_probe/launch_arm_cap/n32_metal/mem_probe/launch_arm_cap/n32_metal/mem_probe/mem_probe_receipt.json",
+  "after_owned_run_root": "/Users/adpena/Projects/pact/.omx/research/ddm_rr11_20260807/runtime_checks/ticket_clobber_probe/launch_arm_cap/n32_metal/mem_probe",
+  "after_veh_input_contains_gt": true,
+  "after_veh_input_contains_tq1c": false,
+  "before_mem_probe_receipt_path": ".omx/research/ddm_mx1d_20260807/row1_v2_two_arm/launch_arm_cap/n32_metal/mem_probe/mem_probe_receipt.json",
+  "before_veh_input_contains_tq1c": true,
+  "system_exit_code": 2,
+  "ticket_changed": true
+}

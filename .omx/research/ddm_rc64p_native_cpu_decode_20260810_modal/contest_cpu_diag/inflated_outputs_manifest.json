@@ -1,0 +1,17 @@
+{
+  "schema": "contest_auth_eval_inflated_output_manifest_v1",
+  "inflated_dir": "/root/modal_auth_eval_cpu_work/eval_work/inflated",
+  "video_names_file": "/workspace/pact/upstream/public_test_video_names.txt",
+  "raw_file_count": 1,
+  "total_bytes": 3662409600,
+  "files": [
+    {
+      "video_name": "0.mkv",
+      "relative_path": "0.raw",
+      "exists": true,
+      "bytes": 3662409600,
+      "sha256": "b849fec40b1d7e30de8bcd9ddc5f2940b17a47f338f09f5b7984cbc96ffcf67a"
+    }
+  ],
+  "aggregate_sha256": "f77648f9d61276b83caa55bf6e63b2ca0d246ae6b6b2488a91bae0509f5bf048"
+}

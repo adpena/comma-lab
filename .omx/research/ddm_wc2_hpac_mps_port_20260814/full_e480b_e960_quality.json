@@ -1,0 +1,40 @@
+{
+  "schema": "pact.run_quality_poller.config.v1",
+  "log_path": "/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/gpu_race/full_e480b_e960/launcher/run.log",
+  "pid_file": "/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/gpu_race/full_e480b_e960/launcher/run.pid",
+  "telemetry_path": "/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/gpu_race/full_e480b_e960/watchers/quality_telemetry.jsonl",
+  "alert_path": "/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/gpu_race/full_e480b_e960/watchers/quality.alert.json",
+  "poll_s": 60,
+  "eval_period_s": 3600,
+  "stale_periods": 3,
+  "startup_grace_s": 1800,
+  "json_marker": "\"estimated_joint_bytes\"",
+  "fields": {
+    "epoch": "epoch",
+    "value": "estimated_joint_bytes",
+    "phase": "phase",
+    "finite": [
+      "bpp",
+      "top1_error"
+    ]
+  },
+  "bar_value": 131220,
+  "bar_start_epoch": 481,
+  "phase_knee": {
+    "epoch": 481,
+    "window_epochs": 3,
+    "shock_multiplier": 1.25,
+    "continuous_phase": "continuous"
+  },
+  "best_not_latest": {
+    "phase": "discrete_qat",
+    "min_rows": 4,
+    "lag_epochs": 6
+  },
+  "alert_conditions": {
+    "joint_regression": false,
+    "qat_knee_shock": false,
+    "nan_or_garbage": true,
+    "stale_telemetry": true
+  }
+}

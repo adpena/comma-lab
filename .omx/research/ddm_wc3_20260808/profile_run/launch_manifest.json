@@ -1,0 +1,21 @@
+{
+  "argv": [
+    ".venv/bin/python",
+    "experiments/ddm_wc3_step_profile.py",
+    "--dtypes",
+    "fp32,fp16"
+  ],
+  "authority": "local detached execution; downstream artifacts decide authority",
+  "cwd": "/Users/adpena/Projects/pact",
+  "detach_method": "subprocess.Popen(start_new_session=True)",
+  "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/wc3_profile_done.done",
+  "dry_run": false,
+  "generated_utc": "2026-08-08T17:16:32Z",
+  "git_sha": "d29df564f169f9cd1dee7219575fd56696a4309a",
+  "log_path": "/Users/adpena/Projects/pact/.omx/research/ddm_wc3_20260808/profile_run/run.log",
+  "output_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_wc3_20260808/profile_run",
+  "pid": 18555,
+  "pid_path": "/Users/adpena/Projects/pact/.omx/research/ddm_wc3_20260808/profile_run/run.pid",
+  "purpose": "detached local long run",
+  "schema": "detached_local_process_launch.v1"
+}

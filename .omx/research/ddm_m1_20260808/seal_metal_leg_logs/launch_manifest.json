@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "bash",
+    ".omx/research/ddm_m1_20260808/seal_metal_leg.sh"
+  ],
+  "authority": "local detached execution; downstream artifacts decide authority",
+  "cwd": "/Users/adpena/Projects/pact",
+  "detach_method": "subprocess.Popen(start_new_session=True)",
+  "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/m1_seal_metal_leg.done.done",
+  "dry_run": false,
+  "generated_utc": "2026-08-08T19:25:45Z",
+  "git_sha": "f8533048c36a2c772a29ebbc8e1fff56c9671f97",
+  "log_path": "/Users/adpena/Projects/pact/.omx/research/ddm_m1_20260808/seal_metal_leg_logs/run.log",
+  "output_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_m1_20260808/seal_metal_leg_logs",
+  "pid": 76754,
+  "pid_path": "/Users/adpena/Projects/pact/.omx/research/ddm_m1_20260808/seal_metal_leg_logs/run.pid",
+  "purpose": "detached local long run",
+  "schema": "detached_local_process_launch.v1"
+}

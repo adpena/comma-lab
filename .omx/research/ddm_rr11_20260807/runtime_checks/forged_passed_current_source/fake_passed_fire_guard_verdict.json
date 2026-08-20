@@ -1,0 +1,8 @@
+{
+  "schema": "ddm_mx1_fire_guard_verdict.v1",
+  "status": "passed",
+  "reason_code": "fire_guard_passed",
+  "ticket_path": ".omx/research/ddm_rr11_20260807/runtime_checks/forged_passed_current_source/missing_ticket.json",
+  "receipt_path": ".omx/research/ddm_rr11_20260807/runtime_checks/forged_passed_current_source/missing_receipt.json",
+  "argv_key": "argv_n32_arm_cap"
+}

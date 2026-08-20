@@ -1,0 +1,128 @@
+{
+  "archive": {
+    "bytes": 188636,
+    "expected_sha256": "0f5a797fda844ee63f6057fdb7203f6578b135b4e12deafa98d6ddc3260a5c84",
+    "expected_sha256_match": true,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_ai1_20260809/temporal_v2/retained/temporal_reversion/archive.zip",
+    "sha256": "0f5a797fda844ee63f6057fdb7203f6578b135b4e12deafa98d6ddc3260a5c84"
+  },
+  "axes_skipped_due_to_existing_anchor": {
+    "contest_cpu": false,
+    "contest_cuda": false
+  },
+  "commands": {
+    "contest_cpu": [
+      ".venv/bin/modal",
+      "run",
+      "--detach",
+      "experiments/modal_auth_eval_cpu.py",
+      "--archive",
+      "/Volumes/VertigoDataTier/pact/ddm_ai1_20260809/temporal_v2/retained/temporal_reversion/archive.zip",
+      "--expected-archive-sha256",
+      "0f5a797fda844ee63f6057fdb7203f6578b135b4e12deafa98d6ddc3260a5c84",
+      "--inflate-sh",
+      "inflate.sh",
+      "--output-dir",
+      "experiments/results/modal_auth_eval_cpu/ai1_ans_temporal_188636_paired_modal_auth_20260810T121629Z_cpu",
+      "--detach",
+      "--provider-detach-ack",
+      "--pair-group-id",
+      "ai1_ans_temporal_188636_paired_modal_auth_20260810T121629Z",
+      "--lane-id",
+      "lane_ddm_ai1_paired_exact_row_20260810_contest_cpu",
+      "--instance-job-id",
+      "ai1_ans_temporal_188636_paired_modal_auth_20260810T121629Z_cpu",
+      "--claim-agent",
+      "MAIN",
+      "--claim-notes",
+      "operator GO 2026-08-10: buy the authoritative row on the -2416 B ANS+temporal_reversion archive; derived CUDA 0.170532582 vs PR130 bar 0.172141297; pair_group_id=ai1_ans_temporal_188636_paired_modal_auth_20260810T121629Z; axis=contest_cpu; archive_sha=0f5a797fda844ee63f6057fdb7203f6578b135b4e12deafa98d6ddc3260a5c84; bytes=188636",
+      "--submission-dir",
+      "src/tac/pr130_runtime/dv1_cpu_runtime",
+      "--expected-runtime-tree-sha256",
+      "fc665bb297e853d0230d2bec9ebdb3dcf1c9a8b75421b403447d855fc2cba30b"
+    ],
+    "contest_cuda": [
+      ".venv/bin/modal",
+      "run",
+      "--detach",
+      "experiments/modal_auth_eval.py",
+      "--archive",
+      "/Volumes/VertigoDataTier/pact/ddm_ai1_20260809/temporal_v2/retained/temporal_reversion/archive.zip",
+      "--expected-archive-sha256",
+      "0f5a797fda844ee63f6057fdb7203f6578b135b4e12deafa98d6ddc3260a5c84",
+      "--inflate-sh",
+      "inflate.sh",
+      "--output-dir",
+      "experiments/results/modal_auth_eval/ai1_ans_temporal_188636_paired_modal_auth_20260810T121629Z_cuda",
+      "--gpu",
+      "T4",
+      "--detach",
+      "--provider-detach-ack",
+      "--pair-group-id",
+      "ai1_ans_temporal_188636_paired_modal_auth_20260810T121629Z",
+      "--lane-id",
+      "lane_ddm_ai1_paired_exact_row_20260810_contest_cuda",
+      "--instance-job-id",
+      "ai1_ans_temporal_188636_paired_modal_auth_20260810T121629Z_cuda",
+      "--claim-agent",
+      "MAIN",
+      "--claim-notes",
+      "operator GO 2026-08-10: buy the authoritative row on the -2416 B ANS+temporal_reversion archive; derived CUDA 0.170532582 vs PR130 bar 0.172141297; pair_group_id=ai1_ans_temporal_188636_paired_modal_auth_20260810T121629Z; axis=contest_cuda; archive_sha=0f5a797fda844ee63f6057fdb7203f6578b135b4e12deafa98d6ddc3260a5c84; bytes=188636",
+      "--submission-dir",
+      "src/tac/pr130_runtime/dv1_cpu_runtime",
+      "--expected-runtime-tree-sha256",
+      "30a6fb66cb2a32303cbb9b83fc3b882a946889d03453bfa512e58756ac9f006e"
+    ]
+  },
+  "created_at_utc": "2026-08-10T12:16:29Z",
+  "existing_anchors_reused": {
+    "contest_cpu": null,
+    "contest_cuda": null
+  },
+  "lanes": {
+    "contest_cpu": "lane_ddm_ai1_paired_exact_row_20260810_contest_cpu",
+    "contest_cuda": "lane_ddm_ai1_paired_exact_row_20260810_contest_cuda"
+  },
+  "notes": [
+    "This tool is the default Modal auth-eval entry point for score-bearing archives.",
+    "Both commands carry the same pair_group_id and exact archive SHA.",
+    "Single-axis Modal wrapper use requires an explicit waiver reason."
+  ],
+  "outputs": {
+    "contest_cpu": "experiments/results/modal_auth_eval_cpu/ai1_ans_temporal_188636_paired_modal_auth_20260810T121629Z_cpu",
+    "contest_cuda": "experiments/results/modal_auth_eval/ai1_ans_temporal_188636_paired_modal_auth_20260810T121629Z_cuda"
+  },
+  "pair_group_id": "ai1_ans_temporal_188636_paired_modal_auth_20260810T121629Z",
+  "promotion_eligible": false,
+  "required_axes": [
+    "contest_cuda",
+    "contest_cpu"
+  ],
+  "runtime": {
+    "expected_runtime_content_tree_sha256_by_axis": {
+      "contest_cpu": "177ef421b5453b908647c84f49a0a83fe9430d80addbf366f815be93c0bee6cd",
+      "contest_cuda": "177ef421b5453b908647c84f49a0a83fe9430d80addbf366f815be93c0bee6cd"
+    },
+    "expected_runtime_tree_sha256": null,
+    "expected_runtime_tree_sha256_by_axis": {
+      "contest_cpu": "fc665bb297e853d0230d2bec9ebdb3dcf1c9a8b75421b403447d855fc2cba30b",
+      "contest_cuda": "30a6fb66cb2a32303cbb9b83fc3b882a946889d03453bfa512e58756ac9f006e"
+    },
+    "inflate_sh": "inflate.sh",
+    "inflate_sh_original": null,
+    "modal_uploaded_runtime_manifest_by_axis": {
+      "contest_cpu": {
+        "runtime_content_tree_sha256": "177ef421b5453b908647c84f49a0a83fe9430d80addbf366f815be93c0bee6cd",
+        "runtime_tree_sha256": "fc665bb297e853d0230d2bec9ebdb3dcf1c9a8b75421b403447d855fc2cba30b"
+      },
+      "contest_cuda": {
+        "runtime_content_tree_sha256": "177ef421b5453b908647c84f49a0a83fe9430d80addbf366f815be93c0bee6cd",
+        "runtime_tree_sha256": "30a6fb66cb2a32303cbb9b83fc3b882a946889d03453bfa512e58756ac9f006e"
+      }
+    },
+    "submission_dir": "src/tac/pr130_runtime/dv1_cpu_runtime"
+  },
+  "schema": "modal_paired_auth_eval_dispatch_plan_v2",
+  "score_claim": false,
+  "skip_axis_if_promotable_anchor_exists": false
+}

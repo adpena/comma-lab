@@ -1,0 +1,68 @@
+{
+ "schema": "ddm_fz1_compose_rowB.v1",
+ "axis": "[macOS-CPU frozen-scorer advisory] NON-PROMOTABLE",
+ "score_claim": false,
+ "archive": ".omx/research/ddm_fz3_20260804/sub_map_repair/archive.zip",
+ "archive_bytes": 240992,
+ "archive_sha256": "eada9fe852ac8ee505fa3094fc602b4178fab2719ee990887a4533a2eccf0c7f",
+ "payload_src": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/payload_map.bin",
+ "d_seg_mapped_advisory": 0.0051585303412543405,
+ "repaired_pairs": [
+  18,
+  44,
+  74,
+  523
+ ],
+ "runner_true_d_pose": {
+  "18": 0.00036178939626552165,
+  "44": 0.0002508357574697584,
+  "74": 0.0007062645745463669,
+  "523": 0.0006012324593029916
+ },
+ "d_pose_mean_advisory": 0.16711179193462158,
+ "S_pred_advisory": 1.9690369769073008,
+ "S_live_best": 0.7910689,
+ "delta_pred": 1.1779680769073009,
+ "ledger_sections": [
+  {
+   "index": 0,
+   "name": "config",
+   "raw_bytes": 36,
+   "sha256": "fc4f23ac9e31ba266ace26131319eb5b574d69e1d505fb1fc20a9dbc79a240d6",
+   "magic": null,
+   "counted": true
+  },
+  {
+   "index": 1,
+   "name": "renderer",
+   "raw_bytes": 3266,
+   "sha256": "3b8eb0c24f9e6d8b547a23a5db29a1dbbd03db474fbba3638b0c3dd858ca7009",
+   "magic": "IX2REN01",
+   "counted": true
+  },
+  {
+   "index": 2,
+   "name": "selector",
+   "raw_bytes": 535,
+   "sha256": "8fc5c3fc65eb051b65ebf01d4b008e52d606097194c57884e739eae2ad8382e1",
+   "magic": "{\"activa",
+   "counted": true
+  },
+  {
+   "index": 3,
+   "name": "pose_warp",
+   "raw_bytes": 8751,
+   "sha256": "d1d073e55aacf991491365d13716fededb169854b78bb203c34c84ca880c25db",
+   "magic": "PFS1WPD1",
+   "counted": true
+  },
+  {
+   "index": 4,
+   "name": "frame0_pose_repair",
+   "raw_bytes": 842,
+   "sha256": "d760ee9f315a4c18f071eafed4b4fc6aded53cf4bd328a2a91f870c20633350b",
+   "magic": null,
+   "counted": true
+  }
+ ]
+}

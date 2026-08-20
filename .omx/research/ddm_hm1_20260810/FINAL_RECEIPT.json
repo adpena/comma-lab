@@ -1,0 +1,1355 @@
+{
+  "authority_boundary": "no scorer slot claimed; no upstream/evaluate.py run",
+  "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+  "complete": true,
+  "exact_eval_fired": false,
+  "free_side_audit": {
+    "bit_depth_boundary": "per-row depths are needed to parse the variable-bit weight stream before weights exist; they are not decoder-derivable under IHS1 without a new self-delimiting representation",
+    "counted_video_derived_objects": [
+      "all learned HPAC weights, biases, exponents, and per-row depths",
+      "600-by-D frame embeddings",
+      "Range-coded semantic tokens"
+    ],
+    "derive_instead_of_store_finding": "none proven on the exact shipped D8 model",
+    "derived_generic_receiver_objects_already_free": [
+      "patch-group masks and sparse gather plans",
+      "coordinate grids and causal scan order",
+      "integer arithmetic and Range decoder algorithm"
+    ]
+  },
+  "full_n600": {
+    "archive": {
+      "archive": {
+        "bytes": 191112,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop5/archive.zip",
+        "sha256": "ffaf7cbeb3e8211c2f8c9cf9f643c7faf1e0d5bd26de2a453d8630968e92ff1d"
+      },
+      "archive_repeat": {
+        "bytes": 191112,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop5/archive.repeat.zip",
+        "sha256": "ffaf7cbeb3e8211c2f8c9cf9f643c7faf1e0d5bd26de2a453d8630968e92ff1d"
+      },
+      "axis": "[macOS-CPU advisory, scorer-free]",
+      "candidate": "frame_dim7_drop5",
+      "changed_values": 1,
+      "delta_bytes_vs_exact_base": 60,
+      "derived_rate_score_delta": 3.995153718733028e-05,
+      "hpac_raw": {
+        "bytes": 19165,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop5/hpac.raw",
+        "sha256": "03cec34165a7a20dd131adafc17658a02c142de6ffb5eed4715d40305d410081"
+      },
+      "mechanism": "drop deployed frame-conditioning dimensions (5,); HPM300 receiver checkpoint",
+      "member": {
+        "bytes": 191012,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop5/p",
+        "sha256": "e6232e3fa3e4cf0e1c89c1af803f92f2616510b4fb59ded0f346da5b39709f32"
+      },
+      "model_exact_to_control": false,
+      "models_raw": {
+        "bytes": 82479,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop5/models.raw",
+        "sha256": "f4b1f2147253fface66e6a9ca2757fce315e288ac7e38177992116abb417de37"
+      },
+      "models_xz": {
+        "bytes": 73520,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop5/models.xz",
+        "sha256": "d7c2be8b64c40dad77db28df9f4cabb21db7d22df755446eaf0f597e0788ca23"
+      },
+      "repeat_identical": true,
+      "score_claim": false,
+      "token_payload": {
+        "bytes": 117488,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop5/tokens.hpm1",
+        "sha256": "a2906df405be674504f52defb52e38e7ea1e20c146260f8590367394d2408627"
+      },
+      "zip_breakdown": {
+        "central_comment": 0,
+        "central_extra": 0,
+        "central_filename": 1,
+        "central_header": 46,
+        "eocd": 22,
+        "local_extra": 0,
+        "local_filename": 1,
+        "local_header": 30,
+        "member_data": 191012,
+        "zip_comment": 0
+      }
+    },
+    "base_model_plus_raw_range_bytes": 132144,
+    "candidate": "frame_dim7_drop5",
+    "decoded_token_count": 117964800,
+    "decoded_token_sha256": "c5c7671d037b6912980c57929a5b6d789d250ee6a93e3b0a6018cf9f63e32ece",
+    "delta_model_plus_raw_range_bytes_vs_base": 64,
+    "dropped_dimensions": [
+      5
+    ],
+    "frame_dim": 7,
+    "frame_parity": {
+      "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+      "base_raw": {
+        "bytes": 3662409600,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_hp3_20260810/retained/winner_submissions/requant_frame_embed_step2_hpm300_004436ea59780708_f59bf2e8fe46/inflated/0.raw",
+        "sha256": "a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353"
+      },
+      "byte_identical": true,
+      "candidate_raw": {
+        "bytes": 3662409600,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw",
+        "sha256": "a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353"
+      },
+      "frame_bytes": 3052008,
+      "rows": {
+        "even_pose_carrier": {
+          "changed_bytes": 0,
+          "changed_fraction": 0.0,
+          "denominator_bytes": 1831204800,
+          "frames": 600,
+          "max_abs": 0,
+          "mean_abs_delta": 0.0
+        },
+        "odd_semantic": {
+          "changed_bytes": 0,
+          "changed_fraction": 0.0,
+          "denominator_bytes": 1831204800,
+          "frames": 600,
+          "max_abs": 0,
+          "mean_abs_delta": 0.0
+        }
+      },
+      "schema": "ddm_hm1_frame_parity_screen.v1",
+      "score_claim": false
+    },
+    "hpac_xz": {
+      "bytes": 14744,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop5/hpac.xz",
+      "sha256": "5a04fe8b293fd5c74ff1484f04b83d7a0472fad3d7d6d7d5863c90042c854bd1"
+    },
+    "kept_dimensions": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      6,
+      7
+    ],
+    "model_plus_raw_range_bytes": 132208,
+    "raw_range": {
+      "bytes": 117464,
+      "sha256": "204eb97068ce3d656007434baac5ce29f56701df76e3748ad4f3e5e10a712c0f"
+    },
+    "receiver": {
+      "argv": [
+        "bash",
+        "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflate.sh",
+        "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/archive",
+        "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated",
+        "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/source_repo_sparse/upstream/public_test_video_names.txt"
+      ],
+      "axis": "[macOS-CPU advisory, scorer-free]",
+      "checkpoint_files": [
+        {
+          "bytes": 286,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/decode_stage_300.json",
+          "sha256": "d7718eb69d0e00fc51e35f297e905eb977033d2ab495c5ef94c66e88d79a61ac"
+        },
+        {
+          "bytes": 285,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/decode_stage_600.json",
+          "sha256": "07b613f0b72f017322d5e08ec224966127388eb9a70688d735443be2bc67481a"
+        },
+        {
+          "bytes": 259,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_024.json",
+          "sha256": "850c1ea546e4bd681e69cb5682fbcb34ed06a302f52b466911c9b330d88c07f5"
+        },
+        {
+          "bytes": 259,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_048.json",
+          "sha256": "7b371d9477f7747cc4f8d58933d91c469f1fb87a6ad81f2328ff596052cd1d3b"
+        },
+        {
+          "bytes": 259,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_072.json",
+          "sha256": "fa11573c86201da0125549e01cd97e877f8639249d16b6c6173b618f8cfec329"
+        },
+        {
+          "bytes": 259,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_096.json",
+          "sha256": "59063de8b1ee3dd917e5036a28a2b9e9676081187849bd6a8255220b152f6e9a"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_120.json",
+          "sha256": "313fa410eeeb400ae519ada001362c4cd2caf9c993c1442af0291f33906bb440"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_144.json",
+          "sha256": "def6724833c4254fa7cafd1fb85b62fe6b967eccac9e6630bbf56e226033abdc"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_168.json",
+          "sha256": "4605e92ac204626ecf2339c5049618700559051cf9e40c2e5c603ffd6804707b"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_192.json",
+          "sha256": "619e1296a40c8a932d5012f57149765a3f8583db280b8ad9dcc3f5d2f8430304"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_216.json",
+          "sha256": "56d2ef62d74a5dc47feada0e43c0024cd7888ec097bf0353971eac001717682b"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_240.json",
+          "sha256": "0401595eaebf77fcf34a243ee00d29e915f3135dd8fa2d5be80eacf65f626eac"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_264.json",
+          "sha256": "4482c061e15875bb8e2d41f802caa2349c9321bb81e8d0449496a5128149283a"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_288.json",
+          "sha256": "bcdc22183b11b8aa8e0ce0b2a6d9f514e79bf347559a33d2ee00ecfd285abff8"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_312.json",
+          "sha256": "90105e7598ce6c527780e4d878a552de59903f67f3a181edbe817330238a9bfa"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_336.json",
+          "sha256": "047bc9f56c2724583ddaf9e7a8c9c6d9ff3354a4ebc29a936ceb079a1268ffb5"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_360.json",
+          "sha256": "3ff8fcbebee4314f98e90d1f3c9837a62f24b0250c901ff9db8a920b1c3ee83c"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_384.json",
+          "sha256": "210c02071ca45b671f1753549d1352dbdccfba93ddd91865e4a727efda021ef6"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_408.json",
+          "sha256": "2c12be1980bf558baa28bcd12a473ab64193b5dbc4356334b902f3f3f81e8d1b"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_432.json",
+          "sha256": "289c9df113412d137343047bfd84a686fd6510abfc53f89e8c8aa12739d1d757"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_456.json",
+          "sha256": "f5c1c534da2e6d77d170c7c8c5e64a0f806810ea8b4a900aa141718081afad70"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_480.json",
+          "sha256": "0320f32468e2b08b2dc535a78714d5741480c4a3b5c0feeea6be5c377a263088"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_504.json",
+          "sha256": "14da06b2124bd35baa516bf9128fe2784e766c162da64cda508552c6c5587f7f"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_528.json",
+          "sha256": "c47d8e08810b3a5153ffe1c90627817394155eaf8d5f22effc592e8e3735944c"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_552.json",
+          "sha256": "da2f38efa3a0b2e74b7b20c74d5f8ad8df1b5336582b3c3a8bbade309e569c76"
+        },
+        {
+          "bytes": 260,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_576.json",
+          "sha256": "35e48971a606b49d2d93eee6a5d56979666f12dd5a37b2190342c6917c23ba69"
+        },
+        {
+          "bytes": 259,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_carrier_stage_600.json",
+          "sha256": "eb101d289f8b342f27c06791f368a3ddff47c561b4a2a1e2013ac24a66116b2e"
+        },
+        {
+          "bytes": 257,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_024.json",
+          "sha256": "3a9be0b5a15732e1a4180261bdb3b7c168f043216929fc4190f1aa480b2eb088"
+        },
+        {
+          "bytes": 257,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_048.json",
+          "sha256": "88e331708e78c6938928501b4190d371f2ef007cc5ff1128a034c55a593973b3"
+        },
+        {
+          "bytes": 257,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_072.json",
+          "sha256": "4573fbe4cded1f5510731569fa699f016f04dcc089d303d41966ba0c04806c88"
+        },
+        {
+          "bytes": 257,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_096.json",
+          "sha256": "0d46a73957159ef9de4d3324a3e7a29968387af1b1f386d6a1fbcf7356155aec"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_120.json",
+          "sha256": "b07b368486e7a4eda0384ec9d8a5b07eaa669a850d6283e7d1e66c9934607dda"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_144.json",
+          "sha256": "c07619b4a09f0783df35d8cf52669b20e10643ea96b9cc81611c1f70f2d7226a"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_168.json",
+          "sha256": "b284215032161b471c7df63a45adcb67319833c49288341d7d7e703ff903c407"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_192.json",
+          "sha256": "937de6a8e6e0d3f914b2b6aea7b41c2bcbf20b07906a58a721d73f3a6b17f36f"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_216.json",
+          "sha256": "dae12b262b27bf43155ea1e6db4e3920ba1bd79ae181e8b8b601d51a2a84470f"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_240.json",
+          "sha256": "218be670caa6bf40351981d3fb3fe5cf27266ce310ff76e5c07ee4dd8ff894c5"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_264.json",
+          "sha256": "81c3ca5ec2632558d1b33508553c8edb53f8fbba17125fa153ed8b378b050923"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_288.json",
+          "sha256": "2019fcb5b2411887a2c375c242f95618212f9f384940cdedc17683932795f48c"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_312.json",
+          "sha256": "e670715a8f993de464cfe6b16a518f7fba4fd0acf2f8c6caf1cb9be8ffffa38f"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_336.json",
+          "sha256": "5e724f989481b722b6ca2f0cf114d833945a4d5c17b3a92301333553ae201243"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_360.json",
+          "sha256": "82f35bd169a9892850f795dc38d232fbee79e41497de01f0d8b7df68f6fcda2f"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_384.json",
+          "sha256": "591cc37e15e6e2f95843d4647cff3d5bf5da3a4a3f2d5e1632f5d82e6ebaf9c4"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_408.json",
+          "sha256": "d7101385f333f9f879a970fe0e9abeff6ab099c201564599eeeddb90a8a91a62"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_432.json",
+          "sha256": "5a0529d4ce1aca59ec4a18b30cb58958d6356e0ca9b2447f497deb64574ddae5"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_456.json",
+          "sha256": "dc1319d31acdc4343180336569095deb562e5d5c377422172d407844f6ea3b56"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_480.json",
+          "sha256": "6934bb7ec9337bd5bd37101385f3de6d980178bc58096b1c50a68ab53a5e704f"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_504.json",
+          "sha256": "5471aa73d12ba4f61cb5aab77b1f2990c47086f1a85fdc0018bfce0d1c05950f"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_528.json",
+          "sha256": "e1caf3cede761653fad128a0b8ee929cb4d4487da177e52807ad2944eaf02ff2"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_552.json",
+          "sha256": "d06e6a7f3f1fa48959ad8dd7334e70acfd8de2cc96aef2364b6889fd98387fa7"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_576.json",
+          "sha256": "94b060d536e38a4f211770aaa8148072ec82b954108c381c01100463ff4ae385"
+        },
+        {
+          "bytes": 258,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/render_master_stage_600.json",
+          "sha256": "5da436f5a2fc4dda70b293acf6ec74d30e82d7ca0a46899a4d58639990e6640b"
+        }
+      ],
+      "decoded_tokens": {
+        "bytes": 117964800,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw.hp3_state/tokens.u8",
+        "sha256": "c5c7671d037b6912980c57929a5b6d789d250ee6a93e3b0a6018cf9f63e32ece"
+      },
+      "decoded_tokens_exact": true,
+      "inflated_raw": {
+        "bytes": 3662409600,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw",
+        "sha256": "a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353"
+      },
+      "log": {
+        "bytes": 530,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflate.log",
+        "sha256": "3c01502ca2a1795adcdca6768b9b316d49a42116c25e1aedbf07ed84eef5b96e"
+      },
+      "render_state": {
+        "carriers_completed": 600,
+        "complete": true,
+        "masters_completed": 600,
+        "output_bytes": 3662409600,
+        "output_path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/winner_submission/inflated/0.raw",
+        "schema": "ddm_hp3_render_resume.v1"
+      },
+      "returncode": 0,
+      "score_claim": false,
+      "wall_s": 0.7378237920347601
+    },
+    "receiver_storage_preflight": {
+      "free_bytes": 5143986176,
+      "required_free_bytes": 4294967296,
+      "total_bytes": 2000189177856,
+      "used_bytes": 1995045191680
+    },
+    "resumable_token_payload": {
+      "bytes": 117488,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop5/tokens.hpm1",
+      "sha256": "a2906df405be674504f52defb52e38e7ea1e20c146260f8590367394d2408627"
+    }
+  },
+  "pins": {
+    "base_archive": {
+      "bytes": 191052,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pr130_reproduce_20260809/reproduction/archive.zip",
+      "sha256": "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd"
+    },
+    "base_raw": {
+      "bytes": 3662409600,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_hp3_20260810/retained/winner_submissions/requant_frame_embed_step2_hpm300_004436ea59780708_f59bf2e8fe46/inflated/0.raw",
+      "sha256": "a18eb42a8da9399bcc03e795e17597bfbd459412dbb37990117665f48c4c0353"
+    },
+    "cache": {
+      "bytes": 117981301,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_pr130_encode_tokens_metal_20260809/caches/gt_cache_600_official_ada.pt",
+      "sha256": "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195"
+    },
+    "canonical_range": {
+      "bytes": 116980,
+      "path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/hpac/hpac_selfcompress_l1_fastbits_e60.tokens.bin",
+      "sha256": "948379872ff81a4e5d948ec301c143be00ebd0033544c8abdfb4af0f4c4a15eb"
+    },
+    "checkpoint": {
+      "bytes": 177041,
+      "path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/hpac_selfcompress_l1_fastbits_e60.pt",
+      "sha256": "0f4775920aeb2fb419555cc4d68703dd90b88be9d24c82466a99fddc1b1f1aa7"
+    },
+    "dt1_manifest": {
+      "bytes": 16813,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_dt1_20260809/retained/chunk_manifest.json",
+      "sha256": "23089d6f627e1da56a3f947900727e94ee4a99d1a2ce30fd582aeeac3130caea"
+    },
+    "intake_codec": {
+      "bytes": 9444,
+      "path": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/code/codec_hpac_integer.py",
+      "sha256": "70632168250cbecc40b9d6de5da5b167adeb56031368311ff936404a1ceba7e0"
+    },
+    "intake_head": "e34f31bc4969042c0051ac81aa3c56884419a231"
+  },
+  "pointer_moved": false,
+  "schema": "ddm_hm1_hpac_frame_dim_curve.v1",
+  "score_claim": false,
+  "selection": {
+    "best_d7": "frame_dim7_drop5",
+    "best_projection": "frame_dim7_drop5",
+    "d6_candidates": [
+      "frame_dim6_drop0_5",
+      "frame_dim6_drop1_5",
+      "frame_dim6_drop2_5",
+      "frame_dim6_drop3_5",
+      "frame_dim6_drop4_5",
+      "frame_dim6_drop5_6",
+      "frame_dim6_drop5_7"
+    ],
+    "frame_ids": [
+      0,
+      8,
+      10,
+      14,
+      15,
+      33,
+      34,
+      36,
+      43,
+      46,
+      52,
+      59,
+      61,
+      72,
+      83,
+      92,
+      107,
+      109,
+      110,
+      114,
+      116,
+      117,
+      118,
+      119,
+      124,
+      129,
+      130,
+      147,
+      148,
+      151,
+      152,
+      156,
+      158,
+      162,
+      171,
+      175,
+      181,
+      186,
+      188,
+      192,
+      198,
+      203,
+      206,
+      213,
+      223,
+      225,
+      227,
+      230,
+      241,
+      251,
+      253,
+      255,
+      267,
+      269,
+      272,
+      273,
+      276,
+      277,
+      278,
+      279,
+      312,
+      314,
+      322,
+      325,
+      327,
+      333,
+      337,
+      342,
+      343,
+      347,
+      354,
+      359,
+      360,
+      362,
+      379,
+      380,
+      383,
+      384,
+      385,
+      394,
+      397,
+      409,
+      416,
+      419,
+      422,
+      424,
+      433,
+      436,
+      442,
+      447,
+      459,
+      460,
+      465,
+      472,
+      476,
+      478,
+      486,
+      488,
+      489,
+      492,
+      501,
+      507,
+      515,
+      518,
+      528,
+      530,
+      533,
+      534,
+      546,
+      547,
+      550,
+      554,
+      557,
+      563,
+      564,
+      567,
+      572,
+      584,
+      586,
+      592
+    ],
+    "mode": "seeded stratified random n120; 10 strata x 12 frames; never a prefix",
+    "projection_multiplier": 5.0,
+    "rows": [
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim8_dropnone",
+        "dropped_dimensions": [],
+        "frame_dim": 8,
+        "hpac_xz": {
+          "bytes": 15164,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim8_dropnone/hpac.xz",
+          "sha256": "ef8bb9d59bdd3916fb77713c11cdcb85e029f01d80b82472a40ab28f7e56a9ee"
+        },
+        "kept_dimensions": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "projected_n600_ideal_joint_bytes": 129892,
+        "projected_n600_ideal_token_bytes": 114728,
+        "projected_n600_range_joint_bytes": 132044,
+        "projected_n600_range_token_bytes": 116880,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim8_dropnone/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 183563.63121463382,
+        "sample_range": {
+          "bytes": 23376,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim8_dropnone/tokens.range",
+          "sha256": "a629c379d5193834702e7a0203d585e3fb230f44ada9437e76b56b4b3da79dcf"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      },
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim7_drop0",
+        "dropped_dimensions": [
+          0
+        ],
+        "frame_dim": 7,
+        "hpac_xz": {
+          "bytes": 14708,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop0/hpac.xz",
+          "sha256": "a2c74e65b9a4e442aebfeb773ad5826b3ca5b3be0ffbb9fc7206ec4fa214acfa"
+        },
+        "kept_dimensions": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "projected_n600_ideal_joint_bytes": 130010,
+        "projected_n600_ideal_token_bytes": 115302,
+        "projected_n600_range_joint_bytes": 132088,
+        "projected_n600_range_token_bytes": 117380,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop0/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 184481.65206549678,
+        "sample_range": {
+          "bytes": 23476,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop0/tokens.range",
+          "sha256": "ba722dd0654362b56a80004ad196f190d0ff890f0b92105929e418e11f7ef18a"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      },
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim7_drop1",
+        "dropped_dimensions": [
+          1
+        ],
+        "frame_dim": 7,
+        "hpac_xz": {
+          "bytes": 14748,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop1/hpac.xz",
+          "sha256": "6b4b79ef3a8ac90213d0f028305d371bef778be81643ad19bdd19fed73660047"
+        },
+        "kept_dimensions": [
+          0,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "projected_n600_ideal_joint_bytes": 129882,
+        "projected_n600_ideal_token_bytes": 115134,
+        "projected_n600_range_joint_bytes": 132008,
+        "projected_n600_range_token_bytes": 117260,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop1/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 184212.9624335038,
+        "sample_range": {
+          "bytes": 23452,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop1/tokens.range",
+          "sha256": "9217c10041df3f1356348e7ecabe78ad54d348119ac81cb8b560821d4e076ef0"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      },
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim7_drop2",
+        "dropped_dimensions": [
+          2
+        ],
+        "frame_dim": 7,
+        "hpac_xz": {
+          "bytes": 14764,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop2/hpac.xz",
+          "sha256": "416c3188765143b491b3e14e8875e4d72a1223f3871723774bff26f600a43247"
+        },
+        "kept_dimensions": [
+          0,
+          1,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "projected_n600_ideal_joint_bytes": 129931,
+        "projected_n600_ideal_token_bytes": 115167,
+        "projected_n600_range_joint_bytes": 132084,
+        "projected_n600_range_token_bytes": 117320,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop2/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 184266.3117970208,
+        "sample_range": {
+          "bytes": 23464,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop2/tokens.range",
+          "sha256": "1e77c6efd4e95487c17ffd552fbcfbe3abcc5680aec15b700244cd00f22654c6"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      },
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim7_drop3",
+        "dropped_dimensions": [
+          3
+        ],
+        "frame_dim": 7,
+        "hpac_xz": {
+          "bytes": 14744,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop3/hpac.xz",
+          "sha256": "1fd7a3dd7e89d2d798c6b9ea5aac2612887fa1496c9494939df3db8e2fbcb519"
+        },
+        "kept_dimensions": [
+          0,
+          1,
+          2,
+          4,
+          5,
+          6,
+          7
+        ],
+        "projected_n600_ideal_joint_bytes": 129973,
+        "projected_n600_ideal_token_bytes": 115229,
+        "projected_n600_range_joint_bytes": 132084,
+        "projected_n600_range_token_bytes": 117340,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop3/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 184365.6803135288,
+        "sample_range": {
+          "bytes": 23468,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop3/tokens.range",
+          "sha256": "6af3e85c9363b70e991fa24df2da92537b9dd263f191ce9f661a73d01c250636"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      },
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim7_drop4",
+        "dropped_dimensions": [
+          4
+        ],
+        "frame_dim": 7,
+        "hpac_xz": {
+          "bytes": 14788,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop4/hpac.xz",
+          "sha256": "a9f5b658dff1f632d2abd535fbc2801ac43a815ed1263b54d89642d13202a565"
+        },
+        "kept_dimensions": [
+          0,
+          1,
+          2,
+          3,
+          5,
+          6,
+          7
+        ],
+        "projected_n600_ideal_joint_bytes": 129898,
+        "projected_n600_ideal_token_bytes": 115110,
+        "projected_n600_range_joint_bytes": 132048,
+        "projected_n600_range_token_bytes": 117260,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop4/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 184174.65418836422,
+        "sample_range": {
+          "bytes": 23452,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop4/tokens.range",
+          "sha256": "ea35dc638e77616b2ff5449b084a9d3e5633c5b6a430b7e0ef3af2e05d4ee039"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      },
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim7_drop5",
+        "dropped_dimensions": [
+          5
+        ],
+        "frame_dim": 7,
+        "hpac_xz": {
+          "bytes": 14744,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop5/hpac.xz",
+          "sha256": "5a04fe8b293fd5c74ff1484f04b83d7a0472fad3d7d6d7d5863c90042c854bd1"
+        },
+        "kept_dimensions": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          6,
+          7
+        ],
+        "projected_n600_ideal_joint_bytes": 129880,
+        "projected_n600_ideal_token_bytes": 115136,
+        "projected_n600_range_joint_bytes": 132004,
+        "projected_n600_range_token_bytes": 117260,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop5/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 184216.9461944383,
+        "sample_range": {
+          "bytes": 23452,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop5/tokens.range",
+          "sha256": "a5be0a1b0c990e13e04e4b966a57d87d8a96cbb726439d77ab85981fd127ee5c"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      },
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim7_drop6",
+        "dropped_dimensions": [
+          6
+        ],
+        "frame_dim": 7,
+        "hpac_xz": {
+          "bytes": 14724,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop6/hpac.xz",
+          "sha256": "30b3e026250749de35bc25fe72d8ba5495c479adaeed2c92203c0abbf1d533b5"
+        },
+        "kept_dimensions": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          7
+        ],
+        "projected_n600_ideal_joint_bytes": 130043,
+        "projected_n600_ideal_token_bytes": 115319,
+        "projected_n600_range_joint_bytes": 132184,
+        "projected_n600_range_token_bytes": 117460,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop6/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 184509.0107515328,
+        "sample_range": {
+          "bytes": 23492,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop6/tokens.range",
+          "sha256": "1ec49e62c9bb2a2e93f5861d1547bfb3927802ed42a518b4612170a87d04f31e"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      },
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim7_drop7",
+        "dropped_dimensions": [
+          7
+        ],
+        "frame_dim": 7,
+        "hpac_xz": {
+          "bytes": 14820,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim7_drop7/hpac.xz",
+          "sha256": "3c93777aba30059f22948e843a61e725f7d3ffd50fc15d02d7c44891d2b3b43b"
+        },
+        "kept_dimensions": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "projected_n600_ideal_joint_bytes": 130001,
+        "projected_n600_ideal_token_bytes": 115181,
+        "projected_n600_range_joint_bytes": 132140,
+        "projected_n600_range_token_bytes": 117320,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop7/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 184288.0877180908,
+        "sample_range": {
+          "bytes": 23464,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim7_drop7/tokens.range",
+          "sha256": "d78dc0ad77a0b2f719cff6e11d606f5f3507bf555d91ee15a3beca1662795cf2"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      },
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim6_drop0_5",
+        "dropped_dimensions": [
+          0,
+          5
+        ],
+        "frame_dim": 6,
+        "hpac_xz": {
+          "bytes": 14436,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim6_drop0_5/hpac.xz",
+          "sha256": "ec78737e10895dc1708f761f368e3ca59a1a46d6109dad1686fda7ae5f458a06"
+        },
+        "kept_dimensions": [
+          1,
+          2,
+          3,
+          4,
+          6,
+          7
+        ],
+        "projected_n600_ideal_joint_bytes": 130149,
+        "projected_n600_ideal_token_bytes": 115713,
+        "projected_n600_range_joint_bytes": 132276,
+        "projected_n600_range_token_bytes": 117840,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim6_drop0_5/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 185140.07145587052,
+        "sample_range": {
+          "bytes": 23568,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim6_drop0_5/tokens.range",
+          "sha256": "7e2fc480d45b53d2e69620124b7105f4b1d36c3dd706a938ba1e5b7a148a5e9b"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      },
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim6_drop1_5",
+        "dropped_dimensions": [
+          1,
+          5
+        ],
+        "frame_dim": 6,
+        "hpac_xz": {
+          "bytes": 14424,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim6_drop1_5/hpac.xz",
+          "sha256": "4397f6532d23569ddc06b2b69438959f5fd56dccd4887827849d0ff127b00268"
+        },
+        "kept_dimensions": [
+          0,
+          2,
+          3,
+          4,
+          6,
+          7
+        ],
+        "projected_n600_ideal_joint_bytes": 129935,
+        "projected_n600_ideal_token_bytes": 115511,
+        "projected_n600_range_joint_bytes": 132024,
+        "projected_n600_range_token_bytes": 117600,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim6_drop1_5/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 184817.03483037118,
+        "sample_range": {
+          "bytes": 23520,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim6_drop1_5/tokens.range",
+          "sha256": "10eb3edc30891f6d9dfc937b0c41c68cb0fce8255673391bffb6e723278f42e3"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      },
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim6_drop2_5",
+        "dropped_dimensions": [
+          2,
+          5
+        ],
+        "frame_dim": 6,
+        "hpac_xz": {
+          "bytes": 14380,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim6_drop2_5/hpac.xz",
+          "sha256": "5aba47b8a00b42a999b8c5239d93c3d92ea5c436dbd5faa6220840464ece6b6d"
+        },
+        "kept_dimensions": [
+          0,
+          1,
+          3,
+          4,
+          6,
+          7
+        ],
+        "projected_n600_ideal_joint_bytes": 129944,
+        "projected_n600_ideal_token_bytes": 115564,
+        "projected_n600_range_joint_bytes": 132060,
+        "projected_n600_range_token_bytes": 117680,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim6_drop2_5/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 184901.53810843223,
+        "sample_range": {
+          "bytes": 23536,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim6_drop2_5/tokens.range",
+          "sha256": "77c30cb6b364fb259b73673552f35c6edba6d4c5a94fa3db34e197d6fd0bfccf"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      },
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim6_drop3_5",
+        "dropped_dimensions": [
+          3,
+          5
+        ],
+        "frame_dim": 6,
+        "hpac_xz": {
+          "bytes": 14428,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim6_drop3_5/hpac.xz",
+          "sha256": "cd43b6315fb5a5490251c012c2ef80352403018fb9f54893f06077b4f36b8c77"
+        },
+        "kept_dimensions": [
+          0,
+          1,
+          2,
+          4,
+          6,
+          7
+        ],
+        "projected_n600_ideal_joint_bytes": 130047,
+        "projected_n600_ideal_token_bytes": 115619,
+        "projected_n600_range_joint_bytes": 132188,
+        "projected_n600_range_token_bytes": 117760,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim6_drop3_5/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 184988.85426437756,
+        "sample_range": {
+          "bytes": 23552,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim6_drop3_5/tokens.range",
+          "sha256": "887dae849da23f16a762182634fb4455695096984210e4be3a0ae4f3dadbfbc8"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      },
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim6_drop4_5",
+        "dropped_dimensions": [
+          4,
+          5
+        ],
+        "frame_dim": 6,
+        "hpac_xz": {
+          "bytes": 14468,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim6_drop4_5/hpac.xz",
+          "sha256": "def2f0f228548d7d539c5efe5fce93b1cdb1fce0bff8c9af193e6ef0ecc139c7"
+        },
+        "kept_dimensions": [
+          0,
+          1,
+          2,
+          3,
+          6,
+          7
+        ],
+        "projected_n600_ideal_joint_bytes": 129981,
+        "projected_n600_ideal_token_bytes": 115513,
+        "projected_n600_range_joint_bytes": 132108,
+        "projected_n600_range_token_bytes": 117640,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim6_drop4_5/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 184819.35965950554,
+        "sample_range": {
+          "bytes": 23528,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim6_drop4_5/tokens.range",
+          "sha256": "717ad1da13a79682c43182d3697b38f482209250241f76b9a5c541e5c96c128a"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      },
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim6_drop5_6",
+        "dropped_dimensions": [
+          5,
+          6
+        ],
+        "frame_dim": 6,
+        "hpac_xz": {
+          "bytes": 14392,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim6_drop5_6/hpac.xz",
+          "sha256": "0d718234d18f47ec282ed6b7131759a1b5183b7ab4f26bd6c3b5569a759aed43"
+        },
+        "kept_dimensions": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          7
+        ],
+        "projected_n600_ideal_joint_bytes": 130140,
+        "projected_n600_ideal_token_bytes": 115748,
+        "projected_n600_range_joint_bytes": 132292,
+        "projected_n600_range_token_bytes": 117900,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim6_drop5_6/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 185195.28143100094,
+        "sample_range": {
+          "bytes": 23580,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim6_drop5_6/tokens.range",
+          "sha256": "1b9477735672937bed9ab73cbff84567e49aa5ef6eb882a5fdb99849315c4a04"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      },
+      {
+        "axis": "[macOS-CPU advisory; scorer-free real serialized bytes]",
+        "candidate": "frame_dim6_drop5_7",
+        "dropped_dimensions": [
+          5,
+          7
+        ],
+        "frame_dim": 6,
+        "hpac_xz": {
+          "bytes": 14436,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/candidates/frame_dim6_drop5_7/hpac.xz",
+          "sha256": "4cffc35ace4d7ce09f84c4758941afd89fa6670868d2b2c09ad0e0da2276d611"
+        },
+        "kept_dimensions": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          6
+        ],
+        "projected_n600_ideal_joint_bytes": 130022,
+        "projected_n600_ideal_token_bytes": 115586,
+        "projected_n600_range_joint_bytes": 132136,
+        "projected_n600_range_token_bytes": 117700,
+        "projection_warning": "selection-only Horvitz-Thompson-style 5x token projection; full model counted once; Range finite-state/framing effects are remeasured only for the selected n600 cell",
+        "sample_decode_exact": true,
+        "sample_decoded": {
+          "bytes": 23592960,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim6_drop5_7/tokens.decoded.u8",
+          "sha256": "fedf7e9ea5c22c6bf4e80fd1e143fe7dfeb8e3046285c6a5d1f872a81ee6320b"
+        },
+        "sample_fraction": 0.2,
+        "sample_frames": 120,
+        "sample_ideal_bits": 184936.02294430148,
+        "sample_range": {
+          "bytes": 23540,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_hm1_20260810/retained/selection/frame_dim6_drop5_7/tokens.range",
+          "sha256": "4c4def85041f66d3a332c5cab85ba788f7bc00d5eb3c7444c358d3d4cec314ad"
+        },
+        "sample_tokens": 23592960,
+        "score_claim": false,
+        "selection_mode": "seeded_stratified_random_n120; 10 strata x 12 frames"
+      }
+    ],
+    "seed": 20260810,
+    "selected_for_n600": "frame_dim7_drop5",
+    "selection_disposition": "PROJECTED_WINNER_NONCONTROL"
+  },
+  "storage_preflight": {
+    "free_bytes": 5144010752,
+    "required_free_bytes": 4294967296,
+    "total_bytes": 2000189177856,
+    "used_bytes": 1995045167104
+  },
+  "trained_growth_side": {
+    "blockers_observed_here": [
+      "torch MPS is built but unavailable in the sandbox process",
+      "the live claim registry has an active ddm_sd2 local_metal owner",
+      "Terminal and Ghostty are blocked from Computer Use automation"
+    ],
+    "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_cl1_capacity_20260809/",
+    "owner": "ddm_cl1_capacity MAIN unsandboxed Metal executor",
+    "status": "QUEUED-WITH-EXISTING-FIRE-ORDER"
+  }
+}

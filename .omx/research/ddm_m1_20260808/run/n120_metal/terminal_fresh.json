@@ -1,0 +1,10 @@
+{
+  "action": "ROLLBACK_OR_RETREAT",
+  "child_exit": 9,
+  "generated_utc": "2026-08-09T00:01:51.721988Z",
+  "safe_run_status_receipt": ".omx/research/ddm_m1_20260808/run/n120_metal/safe_run_fresh_status.json",
+  "safe_run_status_sha256": "f356f102aa76c67be31e1a563bb12622a75f27fd00a8e54687688c954a2c0917",
+  "schema": "ddm_m1_terminal_receipt.v1",
+  "status": "failed",
+  "terminal_mode": "child_exit_without_training_terminal"
+}

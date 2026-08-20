@@ -1,0 +1,18 @@
+{
+  "schema": "pact.run_liveness_watcher.config.v1",
+  "pid_file": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/advisory_n600_cpu/launcher/run.pid",
+  "alert_path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/advisory_n600_cpu/watchers/liveness.alert.json",
+  "poll_s": 120,
+  "initial_delay_s": 0,
+  "warmup_s": 1800,
+  "receipt_checks": [],
+  "heartbeat_checks": [],
+  "artifact_checks": [
+    {
+      "label": "wd2_advisory_n600_run_log",
+      "path": "/Volumes/APDataStore/pact/ddm_wd2_width_distillation/primary_flattened_d4_w64/retained/candidates/flattened_d4_w64_epoch_0060/attempt_0000/advisory_n600_cpu/launcher/run.log",
+      "max_age_s": 5400,
+      "grace_s": 1800
+    }
+  ]
+}

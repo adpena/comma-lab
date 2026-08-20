@@ -1,0 +1,25 @@
+{
+  "artifact_names": [
+    "contest_auth_eval.stderr.log",
+    "contest_auth_eval.stdout.log",
+    "modal_cpu_auth_eval_validation.json",
+    "modal_cpu_preflight.json",
+    "provenance.json"
+  ],
+  "avg_posenet_dist": null,
+  "avg_segnet_dist": null,
+  "call_id": "fc-01KZPZSXSP2RZ0XSW0FHHEQVZ0",
+  "diagnostic_blockers": [
+    "missing_canonical_contest_auth_eval_json"
+  ],
+  "output_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_rc64p_native_cpu_decode_20260810_modal/contest_cpu",
+  "passed": false,
+  "promotion_eligible": false,
+  "recovered_at_utc": "2026-08-11T04:24:24Z",
+  "result_json": "/Users/adpena/Projects/pact/.omx/research/ddm_rc64p_native_cpu_decode_20260810_modal/contest_cpu/modal_cpu_auth_eval_result.json",
+  "returncode": 1,
+  "schema_version": "modal_auth_eval_recover_summary_v1",
+  "score_claim": false,
+  "score_recomputed_from_components": null,
+  "status": "recovered"
+}

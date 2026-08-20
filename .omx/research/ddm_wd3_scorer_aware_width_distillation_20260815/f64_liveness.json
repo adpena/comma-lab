@@ -1,0 +1,18 @@
+{
+  "schema": "pact.run_liveness_watcher.config.v1",
+  "pid_file": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/fire_rung5_f64/launcher/run.pid",
+  "alert_path": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/fire_rung5_f64/watchers/liveness.alert.json",
+  "poll_s": 120,
+  "initial_delay_s": 0,
+  "warmup_s": 300,
+  "receipt_checks": [],
+  "heartbeat_checks": [],
+  "artifact_checks": [
+    {
+      "label": "wd3_f64_safe_run_status",
+      "path": "/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation/fire_rung5_f64/launcher/safe_run_status.json",
+      "max_age_s": 600,
+      "grace_s": 300
+    }
+  ]
+}

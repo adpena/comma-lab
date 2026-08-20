@@ -1,0 +1,907 @@
+{
+  "mlx_probe": {
+    "reason": "torch-facets is CPU-only and does not import or probe MLX/Metal",
+    "status": "not_run"
+  },
+  "mode": "torch-facets",
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "schema": "ddm_mx1_pr130_semantic_renderer_driver.v1",
+  "score_claim": false,
+  "source_repo_head": "2f94596bb0136d342254022a5c9584756eae0468",
+  "source_repo_root": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
+  "status": "passed",
+  "torch": "2.12.1",
+  "torch_facets": {
+    "anchor_check": {
+      "abs_diff": 0.0,
+      "expected_d_seg": 0.0010732014973958333,
+      "measured_d_seg": 0.0010732014973958333,
+      "status": "passed",
+      "step": 3250,
+      "tolerance": 1e-12
+    },
+    "axis": "[macOS-CPU advisory torch upstream SegNet]",
+    "batching_scheme": {
+      "segnet_batch_size": 32,
+      "target_batch_shape": [
+        32,
+        384,
+        512
+      ],
+      "token_batch_shape": [
+        32,
+        384,
+        512
+      ]
+    },
+    "cache_load": {
+      "input": {
+        "cache_bytes": 943720076,
+        "cache_path": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+        "full_dtype_seen": "torch.int64",
+        "full_shape_seen": [
+          600,
+          384,
+          512
+        ],
+        "selected_dtype": "torch.int64",
+        "selected_pair_count": 32,
+        "selected_shape": [
+          32,
+          384,
+          512
+        ]
+      },
+      "subset_before_materialize": "torch.load_index_clone_del_full_cache",
+      "target": {
+        "cache_bytes": 943720076,
+        "cache_path": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+        "full_dtype_seen": "torch.int64",
+        "full_shape_seen": [
+          600,
+          384,
+          512
+        ],
+        "selected_dtype": "torch.int64",
+        "selected_pair_count": 32,
+        "selected_shape": [
+          32,
+          384,
+          512
+        ],
+        "shared_with_input_cache": true
+      }
+    },
+    "checkpoint_copy_receipts_jsonl": ".omx/research/ddm_rr16_20260807/runtime_checks/repeat_final_gt_b/mx1t_checkpoint_copy_receipts.jsonl",
+    "checkpoint_dir": ".omx/research/ddm_mx1t_20260807/checkpoint_copies",
+    "checkpoint_rows": [
+      {
+        "aggregate_d_seg": 0.0010732014973958333,
+        "axis": "[macOS-CPU advisory torch upstream SegNet]",
+        "checkpoint": {
+          "copied_at_utc": "2026-08-07T23:05:44.220250Z",
+          "copy_bytes": 1165040,
+          "copy_path": ".omx/research/ddm_rr16_20260807/runtime_checks/repeat_final_gt_b/checkpoint_copies/mlx_stage_step003250.npz",
+          "copy_sha256": "543ad45a32ae6d4ac84cfd7fbb6845afb0c7bfc29525992dcf9744ec7540c382",
+          "schema": "ddm_mx1t_checkpoint_copy.v1",
+          "source_bytes": 1165040,
+          "source_path": ".omx/research/ddm_mx1t_20260807/checkpoint_copies/mlx_stage_step003250.npz",
+          "source_sha256": "543ad45a32ae6d4ac84cfd7fbb6845afb0c7bfc29525992dcf9744ec7540c382",
+          "status": "copied",
+          "step": 3250
+        },
+        "checkpoint_meta": {
+          "axis": "[macOS-MLX research-signal]",
+          "format": "mlx_npz",
+          "param_count": 38,
+          "score_claim": false,
+          "step": 3250
+        },
+        "class_facets": {
+          "class_order": [
+            {
+              "class_id": 0,
+              "class_name": "Road"
+            },
+            {
+              "class_id": 1,
+              "class_name": "Lane"
+            },
+            {
+              "class_id": 2,
+              "class_name": "Undrivable"
+            },
+            {
+              "class_id": 3,
+              "class_name": "Movable"
+            },
+            {
+              "class_id": 4,
+              "class_name": "MyCar"
+            }
+          ],
+          "class_order_provenance": "CLAUDE.md canonical comma10k order; no luma-sort",
+          "directed_confusion_counts": [
+            {
+              "gt_class_id": 0,
+              "gt_class_name": "Road",
+              "is_correct": true,
+              "pixels": 1461373,
+              "pred_class_id": 0,
+              "pred_class_name": "Road"
+            },
+            {
+              "gt_class_id": 0,
+              "gt_class_name": "Road",
+              "is_correct": false,
+              "pixels": 3842,
+              "pred_class_id": 1,
+              "pred_class_name": "Lane"
+            },
+            {
+              "gt_class_id": 0,
+              "gt_class_name": "Road",
+              "is_correct": false,
+              "pixels": 658,
+              "pred_class_id": 2,
+              "pred_class_name": "Undrivable"
+            },
+            {
+              "gt_class_id": 0,
+              "gt_class_name": "Road",
+              "is_correct": false,
+              "pixels": 289,
+              "pred_class_id": 3,
+              "pred_class_name": "Movable"
+            },
+            {
+              "gt_class_id": 0,
+              "gt_class_name": "Road",
+              "is_correct": false,
+              "pixels": 660,
+              "pred_class_id": 4,
+              "pred_class_name": "MyCar"
+            },
+            {
+              "gt_class_id": 1,
+              "gt_class_name": "Lane",
+              "is_correct": false,
+              "pixels": 472,
+              "pred_class_id": 0,
+              "pred_class_name": "Road"
+            },
+            {
+              "gt_class_id": 1,
+              "gt_class_name": "Lane",
+              "is_correct": true,
+              "pixels": 37428,
+              "pred_class_id": 1,
+              "pred_class_name": "Lane"
+            },
+            {
+              "gt_class_id": 1,
+              "gt_class_name": "Lane",
+              "is_correct": false,
+              "pixels": 0,
+              "pred_class_id": 2,
+              "pred_class_name": "Undrivable"
+            },
+            {
+              "gt_class_id": 1,
+              "gt_class_name": "Lane",
+              "is_correct": false,
+              "pixels": 3,
+              "pred_class_id": 3,
+              "pred_class_name": "Movable"
+            },
+            {
+              "gt_class_id": 1,
+              "gt_class_name": "Lane",
+              "is_correct": false,
+              "pixels": 64,
+              "pred_class_id": 4,
+              "pred_class_name": "MyCar"
+            },
+            {
+              "gt_class_id": 2,
+              "gt_class_name": "Undrivable",
+              "is_correct": false,
+              "pixels": 218,
+              "pred_class_id": 0,
+              "pred_class_name": "Road"
+            },
+            {
+              "gt_class_id": 2,
+              "gt_class_name": "Undrivable",
+              "is_correct": false,
+              "pixels": 1,
+              "pred_class_id": 1,
+              "pred_class_name": "Lane"
+            },
+            {
+              "gt_class_id": 2,
+              "gt_class_name": "Undrivable",
+              "is_correct": true,
+              "pixels": 3113597,
+              "pred_class_id": 2,
+              "pred_class_name": "Undrivable"
+            },
+            {
+              "gt_class_id": 2,
+              "gt_class_name": "Undrivable",
+              "is_correct": false,
+              "pixels": 254,
+              "pred_class_id": 3,
+              "pred_class_name": "Movable"
+            },
+            {
+              "gt_class_id": 2,
+              "gt_class_name": "Undrivable",
+              "is_correct": false,
+              "pixels": 0,
+              "pred_class_id": 4,
+              "pred_class_name": "MyCar"
+            },
+            {
+              "gt_class_id": 3,
+              "gt_class_name": "Movable",
+              "is_correct": false,
+              "pixels": 95,
+              "pred_class_id": 0,
+              "pred_class_name": "Road"
+            },
+            {
+              "gt_class_id": 3,
+              "gt_class_name": "Movable",
+              "is_correct": false,
+              "pixels": 2,
+              "pred_class_id": 1,
+              "pred_class_name": "Lane"
+            },
+            {
+              "gt_class_id": 3,
+              "gt_class_name": "Movable",
+              "is_correct": false,
+              "pixels": 165,
+              "pred_class_id": 2,
+              "pred_class_name": "Undrivable"
+            },
+            {
+              "gt_class_id": 3,
+              "gt_class_name": "Movable",
+              "is_correct": true,
+              "pixels": 73330,
+              "pred_class_id": 3,
+              "pred_class_name": "Movable"
+            },
+            {
+              "gt_class_id": 3,
+              "gt_class_name": "Movable",
+              "is_correct": false,
+              "pixels": 0,
+              "pred_class_id": 4,
+              "pred_class_name": "MyCar"
+            },
+            {
+              "gt_class_id": 4,
+              "gt_class_name": "MyCar",
+              "is_correct": false,
+              "pixels": 27,
+              "pred_class_id": 0,
+              "pred_class_name": "Road"
+            },
+            {
+              "gt_class_id": 4,
+              "gt_class_name": "MyCar",
+              "is_correct": false,
+              "pixels": 2,
+              "pred_class_id": 1,
+              "pred_class_name": "Lane"
+            },
+            {
+              "gt_class_id": 4,
+              "gt_class_name": "MyCar",
+              "is_correct": false,
+              "pixels": 0,
+              "pred_class_id": 2,
+              "pred_class_name": "Undrivable"
+            },
+            {
+              "gt_class_id": 4,
+              "gt_class_name": "MyCar",
+              "is_correct": false,
+              "pixels": 0,
+              "pred_class_id": 3,
+              "pred_class_name": "Movable"
+            },
+            {
+              "gt_class_id": 4,
+              "gt_class_name": "MyCar",
+              "is_correct": true,
+              "pixels": 1598976,
+              "pred_class_id": 4,
+              "pred_class_name": "MyCar"
+            }
+          ],
+          "per_class_d_seg": [
+            {
+              "class_id": 0,
+              "class_name": "Road",
+              "gt_mispredicted": 5449,
+              "gt_mispredicted_rate": 0.0037148338380526063,
+              "gt_sites": 1466822,
+              "pred_false_positive": 812,
+              "pred_false_positive_rate": 0.0005553332854597743,
+              "pred_sites": 1462185
+            },
+            {
+              "class_id": 1,
+              "class_name": "Lane",
+              "gt_mispredicted": 539,
+              "gt_mispredicted_rate": 0.014196539099744516,
+              "gt_sites": 37967,
+              "pred_false_positive": 3847,
+              "pred_false_positive_rate": 0.09320411871592973,
+              "pred_sites": 41275
+            },
+            {
+              "class_id": 2,
+              "class_name": "Undrivable",
+              "gt_mispredicted": 473,
+              "gt_mispredicted_rate": 0.00015189125485297377,
+              "gt_sites": 3114070,
+              "pred_false_positive": 823,
+              "pred_false_positive_rate": 0.0002642546605788558,
+              "pred_sites": 3114420
+            },
+            {
+              "class_id": 3,
+              "class_name": "Movable",
+              "gt_mispredicted": 262,
+              "gt_mispredicted_rate": 0.003560169583650397,
+              "gt_sites": 73592,
+              "pred_false_positive": 546,
+              "pred_false_positive_rate": 0.007390762899994585,
+              "pred_sites": 73876
+            },
+            {
+              "class_id": 4,
+              "class_name": "MyCar",
+              "gt_mispredicted": 29,
+              "gt_mispredicted_rate": 1.8136278498191062e-05,
+              "gt_sites": 1599005,
+              "pred_false_positive": 724,
+              "pred_false_positive_rate": 0.0004525848596611865,
+              "pred_sites": 1599700
+            }
+          ]
+        },
+        "comparison_to_mlx_proxy": {
+          "authority_minus_mlx_proxy_d_seg": 4.514058430989576e-05,
+          "authority_over_mlx_proxy_d_seg": 1.043908472479901,
+          "mlx_in_training_d_seg_batch": 0.0010280609130859375
+        },
+        "contest_faithful_roundtrip": "lifted.render_for_seg(..., exact_path=True): bilinear up to 874x1164, uint8 STE, bilinear down to 384x512",
+        "elapsed_seconds": 27.934034824371338,
+        "flip_set_churn_vs_previous": {
+          "denominator_current_mismatch_pixels": 6752,
+          "ratio_vs_current_mismatch": null,
+          "status": "not_available_first_checkpoint",
+          "symmetric_difference_pixels": null
+        },
+        "host": {
+          "machine": "arm64",
+          "node": "Primary",
+          "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+          "system": "Darwin"
+        },
+        "margin_histogram_correct_boundary_band_pixels": {
+          "bins": [
+            {
+              "count": 1640,
+              "fraction": 0.012464752871073412,
+              "hi": 0.05,
+              "lo": 0.0,
+              "range": "0-0.05"
+            },
+            {
+              "count": 2015,
+              "fraction": 0.015314925021471297,
+              "hi": 0.1,
+              "lo": 0.05,
+              "range": "0.05-0.1"
+            },
+            {
+              "count": 8615,
+              "fraction": 0.06547795486847406,
+              "hi": 0.25,
+              "lo": 0.1,
+              "range": "0.1-0.25"
+            },
+            {
+              "count": 22550,
+              "fraction": 0.17139035197725944,
+              "hi": 0.5,
+              "lo": 0.25,
+              "range": "0.25-0.5"
+            },
+            {
+              "count": 96751,
+              "fraction": 0.7353520152617218,
+              "hi": null,
+              "lo": 0.5,
+              "range": ">0.5"
+            }
+          ],
+          "total": 131571
+        },
+        "margin_histogram_mismatched_pixels": {
+          "bins": [
+            {
+              "count": 1510,
+              "fraction": 0.22363744075829384,
+              "hi": 0.05,
+              "lo": 0.0,
+              "range": "0-0.05"
+            },
+            {
+              "count": 1206,
+              "fraction": 0.1786137440758294,
+              "hi": 0.1,
+              "lo": 0.05,
+              "range": "0.05-0.1"
+            },
+            {
+              "count": 2302,
+              "fraction": 0.340936018957346,
+              "hi": 0.25,
+              "lo": 0.1,
+              "range": "0.1-0.25"
+            },
+            {
+              "count": 1344,
+              "fraction": 0.1990521327014218,
+              "hi": 0.5,
+              "lo": 0.25,
+              "range": "0.25-0.5"
+            },
+            {
+              "count": 390,
+              "fraction": 0.057760663507109004,
+              "hi": null,
+              "lo": 0.5,
+              "range": ">0.5"
+            }
+          ],
+          "total": 6752
+        },
+        "mlx_history_row": {
+          "d_seg_batch": 0.0010280609130859375,
+          "loss": 0.00022769803763367236,
+          "lr": 8.810146567839183e-08,
+          "phase": "expected_flip",
+          "step": 3250
+        },
+        "pair_count": 32,
+        "pair_ids": [
+          8,
+          28,
+          40,
+          65,
+          91,
+          97,
+          128,
+          149,
+          152,
+          188,
+          201,
+          209,
+          246,
+          252,
+          284,
+          285,
+          307,
+          334,
+          346,
+          379,
+          398,
+          406,
+          432,
+          437,
+          464,
+          491,
+          497,
+          514,
+          538,
+          561,
+          577,
+          591
+        ],
+        "per_pair_d_seg": [
+          {
+            "d_seg": 0.0014139811197916667,
+            "mismatch_pixels": 278,
+            "pair_id": 8,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0011393229166666667,
+            "mismatch_pixels": 224,
+            "pair_id": 28,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0010986328125,
+            "mismatch_pixels": 216,
+            "pair_id": 40,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0010325113932291667,
+            "mismatch_pixels": 203,
+            "pair_id": 65,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0013326009114583333,
+            "mismatch_pixels": 262,
+            "pair_id": 91,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0012105305989583333,
+            "mismatch_pixels": 238,
+            "pair_id": 97,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0012563069661458333,
+            "mismatch_pixels": 247,
+            "pair_id": 128,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0008188883463541666,
+            "mismatch_pixels": 161,
+            "pair_id": 149,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0012054443359375,
+            "mismatch_pixels": 237,
+            "pair_id": 152,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0013783772786458333,
+            "mismatch_pixels": 271,
+            "pair_id": 188,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0008951822916666666,
+            "mismatch_pixels": 176,
+            "pair_id": 201,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0011545817057291667,
+            "mismatch_pixels": 227,
+            "pair_id": 209,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0008087158203125,
+            "mismatch_pixels": 159,
+            "pair_id": 246,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0010223388671875,
+            "mismatch_pixels": 201,
+            "pair_id": 252,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0011952718098958333,
+            "mismatch_pixels": 235,
+            "pair_id": 284,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0010019938151041667,
+            "mismatch_pixels": 197,
+            "pair_id": 285,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0011749267578125,
+            "mismatch_pixels": 231,
+            "pair_id": 307,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0011037190755208333,
+            "mismatch_pixels": 217,
+            "pair_id": 334,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0009562174479166666,
+            "mismatch_pixels": 188,
+            "pair_id": 346,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0009256998697916666,
+            "mismatch_pixels": 182,
+            "pair_id": 379,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0007578531901041666,
+            "mismatch_pixels": 149,
+            "pair_id": 398,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0009562174479166666,
+            "mismatch_pixels": 188,
+            "pair_id": 406,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.001007080078125,
+            "mismatch_pixels": 198,
+            "pair_id": 432,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0010223388671875,
+            "mismatch_pixels": 201,
+            "pair_id": 437,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0009816487630208333,
+            "mismatch_pixels": 193,
+            "pair_id": 464,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0009307861328125,
+            "mismatch_pixels": 183,
+            "pair_id": 491,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0012156168619791667,
+            "mismatch_pixels": 239,
+            "pair_id": 497,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0010579427083333333,
+            "mismatch_pixels": 208,
+            "pair_id": 514,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0011088053385416667,
+            "mismatch_pixels": 218,
+            "pair_id": 538,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0011698404947916667,
+            "mismatch_pixels": 230,
+            "pair_id": 561,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0009816487630208333,
+            "mismatch_pixels": 193,
+            "pair_id": 577,
+            "pixels": 196608
+          },
+          {
+            "d_seg": 0.0010274251302083333,
+            "mismatch_pixels": 202,
+            "pair_id": 591,
+            "pixels": 196608
+          }
+        ],
+        "row_kind": "checkpoint",
+        "schema": "ddm_mx1t_checkpoint_facet_row.v1",
+        "score_claim": false,
+        "scorer_batch_shapes": [
+          [
+            32,
+            3,
+            384,
+            512
+          ]
+        ],
+        "segnet_batch_size": 32,
+        "segnet_chunk_batch_sizes": [
+          32
+        ],
+        "source_repo_head": "2f94596bb0136d342254022a5c9584756eae0468",
+        "source_repo_root": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
+        "status": "passed",
+        "target_batch_shape": [
+          32,
+          384,
+          512
+        ],
+        "token_batch_shape": [
+          32,
+          384,
+          512
+        ],
+        "total_mismatch_pixels": 6752,
+        "total_pixels": 6291456,
+        "verdict_scope": "n32 arm-instrument checkpoint-series facets"
+      }
+    ],
+    "findings_path": ".omx/research/ddm_rr16_20260807/runtime_checks/repeat_final_gt_b/MX1T_FINDINGS.md",
+    "host": {
+      "machine": "arm64",
+      "node": "Primary",
+      "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+      "system": "Darwin"
+    },
+    "iteration_verdict": {
+      "best_tail_average_delta_vs_final_d_seg": null,
+      "best_tail_average_k": null,
+      "churn_verdict": "unmeasured_single_row",
+      "first_mismatch_far_fraction_gt_0p5": 0.057760663507109004,
+      "first_mismatch_near_fraction_le_0p1": 0.4022511848341232,
+      "last_mismatch_far_fraction_gt_0p5": 0.057760663507109004,
+      "last_mismatch_near_fraction_le_0p1": 0.4022511848341232,
+      "margin_verdict": "far_margin_stuck_not_improving",
+      "median_churn_ratio_vs_current_mismatch": null,
+      "recommended_next_config_delta": "do_not_assume_more_steps_pay_without_new_objective_or_capacity_change",
+      "recommended_next_config_delta_basis": "series did not show the clean near-flip/low-churn continuation signature",
+      "residual_classes_latest": {
+        "gt_mispredicted_top": [
+          {
+            "class_id": 0,
+            "class_name": "Road",
+            "gt_mispredicted": 5449,
+            "gt_mispredicted_rate": 0.0037148338380526063,
+            "gt_sites": 1466822,
+            "pred_false_positive": 812,
+            "pred_false_positive_rate": 0.0005553332854597743,
+            "pred_sites": 1462185
+          },
+          {
+            "class_id": 1,
+            "class_name": "Lane",
+            "gt_mispredicted": 539,
+            "gt_mispredicted_rate": 0.014196539099744516,
+            "gt_sites": 37967,
+            "pred_false_positive": 3847,
+            "pred_false_positive_rate": 0.09320411871592973,
+            "pred_sites": 41275
+          },
+          {
+            "class_id": 2,
+            "class_name": "Undrivable",
+            "gt_mispredicted": 473,
+            "gt_mispredicted_rate": 0.00015189125485297377,
+            "gt_sites": 3114070,
+            "pred_false_positive": 823,
+            "pred_false_positive_rate": 0.0002642546605788558,
+            "pred_sites": 3114420
+          }
+        ],
+        "pred_false_positive_top": [
+          {
+            "class_id": 1,
+            "class_name": "Lane",
+            "gt_mispredicted": 539,
+            "gt_mispredicted_rate": 0.014196539099744516,
+            "gt_sites": 37967,
+            "pred_false_positive": 3847,
+            "pred_false_positive_rate": 0.09320411871592973,
+            "pred_sites": 41275
+          },
+          {
+            "class_id": 2,
+            "class_name": "Undrivable",
+            "gt_mispredicted": 473,
+            "gt_mispredicted_rate": 0.00015189125485297377,
+            "gt_sites": 3114070,
+            "pred_false_positive": 823,
+            "pred_false_positive_rate": 0.0002642546605788558,
+            "pred_sites": 3114420
+          },
+          {
+            "class_id": 0,
+            "class_name": "Road",
+            "gt_mispredicted": 5449,
+            "gt_mispredicted_rate": 0.0037148338380526063,
+            "gt_sites": 1466822,
+            "pred_false_positive": 812,
+            "pred_false_positive_rate": 0.0005553332854597743,
+            "pred_sites": 1462185
+          }
+        ]
+      },
+      "residual_pairs_latest_top5": [
+        {
+          "d_seg": 0.0014139811197916667,
+          "mismatch_pixels": 278,
+          "pair_id": 8,
+          "pixels": 196608
+        },
+        {
+          "d_seg": 0.0013783772786458333,
+          "mismatch_pixels": 271,
+          "pair_id": 188,
+          "pixels": 196608
+        },
+        {
+          "d_seg": 0.0013326009114583333,
+          "mismatch_pixels": 262,
+          "pair_id": 91,
+          "pixels": 196608
+        },
+        {
+          "d_seg": 0.0012563069661458333,
+          "mismatch_pixels": 247,
+          "pair_id": 128,
+          "pixels": 196608
+        },
+        {
+          "d_seg": 0.0012156168619791667,
+          "mismatch_pixels": 239,
+          "pair_id": 497,
+          "pixels": 196608
+        }
+      ],
+      "tail_average_verdict": "tail_average_loses_or_unavailable"
+    },
+    "out_dir": ".omx/research/ddm_rr16_20260807/runtime_checks/repeat_final_gt_b",
+    "recall_evidence": [
+      {
+        "changed_plan": "Kept CPU-only, score_claim=false, copied checkpoints before reading, and used mx1h step-1500 as a hard anchor.",
+        "found": "mx1t owns only the n32 CPU-torch scorer instrument; live frontier is S=0.7534578126155775 @ 357,837 B and contest pointer is borrowed/unmoved.",
+        "query": "CHARTER.md, _common_contract.md, PROGRAM.md, CLAUDE.md/AGENTS.md, docs/operating_manual_craft_handoff.md, .omx/state/main_hot_state.md, upstream/evaluate.py",
+        "scope": "Governing files"
+      },
+      {
+        "changed_plan": "Extended the existing loader/verdict path with torch-facets instead of adding a new loader.",
+        "found": "MX1H already implemented strict MLX NPZ -> torch loading and CPU upstream SegNet verdict; RR14 added fail-closed NPZ/history tests.",
+        "query": "torch-verdict|mx1h|d7f557bb7c|0.0010689099629720051",
+        "scope": "Prior MX1 verdict"
+      },
+      {
+        "changed_plan": "Used a scoped post-hoc simple parameter mean for MX1 checkpoints and labeled it as this vehicle/stage only, not a general EMA verdict.",
+        "found": "dy2 registered jd1_plateau_tail_average_ema_v1 and documented an explicit growing-horizon tail average law for JD1.",
+        "query": "git log --grep dy2 and .omx/research/ddm_dy2_20260805/RECEIPT.md",
+        "scope": "Tail-average precedent"
+      },
+      {
+        "changed_plan": "No score recomputation was promoted; tail average stayed a measured A/B row under the n32 advisory axis.",
+        "found": "Relevant entries include score_marginal_lagrange_multipliers_v1, ema_decay_substrate_stage_aware_v1, and jd1_plateau_tail_average_ema_v1.",
+        "query": ".venv/bin/python tools/list_canonical_equations.py --json | rg 'jd1_plateau|ema_decay|score_marginal|SegNet'",
+        "scope": "Canonical equations"
+      },
+      {
+        "changed_plan": "Per-class facets use that fixed class order and record the provenance in every row.",
+        "found": "Canonical comma10k order is Road/Lane/Undrivable/Movable/MyCar; luma-sort is forbidden and historically wrong.",
+        "query": "CLAUDE.md SegNet class table and class-order corpus search",
+        "scope": "Class order"
+      }
+    ],
+    "receipts_jsonl": ".omx/research/ddm_rr16_20260807/runtime_checks/repeat_final_gt_b/mx1t_facets_receipts.jsonl",
+    "result_path": ".omx/research/ddm_rr16_20260807/runtime_checks/repeat_final_gt_b/mx1t_facets_result.json",
+    "schema": "ddm_mx1t_torch_facets_result.v1",
+    "score_claim": false,
+    "status": "passed",
+    "tail_average_rows": [],
+    "verdict_scope": "n32 arm-instrument checkpoint-series facets"
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "schema": "pact.ddm_mi1_measurement_integrity.v1",
+  "date": "2026-08-04",
+  "git_head": "5f54e74c1ee90546d03b7914166c07cff5fca820",
+  "axis": "[scorer-free measurement-integrity audit]",
+  "score_claim": false,
+  "scorer_free": true,
+  "frontier_moved": false,
+  "pose_subset_bias": {
+    "status": "RE-DERIVED_NOT_WITHDRAWN",
+    "source_path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d2/d2_ep_solve.partial.jsonl",
+    "source_sha256": "d2853c92090c28ebe558ece4a21b2847b55e25c9d768bef167bcba9dc67b72e5",
+    "field": "d_pose_shipped_f16",
+    "rows": 600,
+    "population_mean": 0.15950891917937635,
+    "population_min": 0.00001550457860419417,
+    "population_median": 0.0027725068756561688,
+    "population_max": 4.831315525536987,
+    "prefix_rows": [
+      {
+        "n": 8,
+        "ratio": 1.2789847387169815,
+        "verdict": "MATCHED",
+        "null_p01": 0.011470440699667536,
+        "null_p99": 4.196492175582582
+      },
+      {
+        "n": 24,
+        "subset_mean": 0.404431,
+        "ratio": 2.535475579649216,
+        "verdict": "MATCHED",
+        "null_p01": 0.1524377506921971,
+        "null_p99": 2.7778327061911896
+      },
+      {
+        "n": 48,
+        "subset_mean": 0.421133,
+        "ratio": 2.640181689154513,
+        "verdict": "DIFFERENT_POPULATION",
+        "null_p01": 0.3322813323011768,
+        "null_p99": 2.0900912478675866
+      },
+      {
+        "n": 64,
+        "subset_mean": 0.422343,
+        "ratio": 2.6477688499984713,
+        "verdict": "DIFFERENT_POPULATION",
+        "null_p01": 0.3970243766748759,
+        "null_p99": 1.8689177314412946
+      },
+      {
+        "n": 96,
+        "subset_mean": 0.671017,
+        "ratio": 4.206770932037034,
+        "verdict": "DIFFERENT_POPULATION",
+        "null_p01": 0.495942827624851,
+        "null_p99": 1.6674383926835443
+      },
+      {
+        "n": 120,
+        "ratio": 3.83269928390052,
+        "verdict": "DIFFERENT_POPULATION",
+        "null_p01": 0.5309188041357771,
+        "null_p99": 1.5856927159087342
+      }
+    ],
+    "sixty_pair_block_means": [
+      0.4064574677343671,
+      0.8162419728947162,
+      0.08284583730141847,
+      0.04134430503495017,
+      0.025498122996739807,
+      0.043397990407523075,
+      0.010275387279786217,
+      0.013430519655914387,
+      0.10915908787810258,
+      0.04643850061024548
+    ],
+    "block_max_min_ratio": 79.43661398538532,
+    "structural_cure": "src/tac/tests/fixtures/subset_selection/pfs1_d2_pose_population.json plus src/tac/tests/test_subset_selection.py"
+  },
+  "git_log_wc_count": {
+    "status": "ACTIVE_IN_RTK_REPRODUCED",
+    "plain_zsh_git_log_oneline_wc_l": 14065,
+    "plain_zsh_git_rev_list_count_head": 14065,
+    "rtk_git_log_oneline_wc_l": 50,
+    "rtk_git_rev_list_count_head": 14065,
+    "rtk_undercount_factor": 281.3,
+    "structural_cure": "src/tac/measurement_integrity.py find_git_log_wc_count_consumers; use git rev-list --count"
+  },
+  "rounded_final_score": {
+    "status": "LIVE_CONSUMERS_PATCHED",
+    "consumers": [
+      {
+        "path": "src/comma_lab/evaluate.py",
+        "before": "EvaluationSummary.current_workflow_score used parsed upstream final_score display",
+        "after": "current_workflow_score recomputes from pose, seg, and rate"
+      },
+      {
+        "path": "experiments/contest_eval.py",
+        "before": "parse_report stored upstream Final score as score",
+        "after": "parse_report stores reported_final_score_display_rounded and sets score from score_recomputed_from_components"
+      },
+      {
+        "path": "src/tac/eval/auth_eval.py",
+        "before": "ReportMetrics.best_score preferred parsed final_score display",
+        "after": "ReportMetrics.best_score prefers computed_score from components"
+      }
+    ]
+  },
+  "subset_scope_censoring": {
+    "status": "DEBT_VISIBLE_NEW_SITES_REFUSED",
+    "instrument": "src/tac/subset_selection_gate.py scan_repo",
+    "in_scope_tracked_py_files": 10754,
+    "violations": 207,
+    "files": 136,
+    "structural_cure": "scan_staged is wired into tools/preflight_hook.py for added-line strict refusal; whole-repo migration remains 207-site debt"
+  }
+}

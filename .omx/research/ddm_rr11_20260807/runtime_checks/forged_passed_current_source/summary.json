@@ -1,0 +1,6 @@
+{
+  "entrypoint_wrote_probe_out": false,
+  "fake_verdict_path": ".omx/research/ddm_rr11_20260807/runtime_checks/forged_passed_current_source/fake_passed_fire_guard_verdict.json",
+  "probe_out": ".omx/research/ddm_rr11_20260807/runtime_checks/forged_passed_current_source/probe_out.json",
+  "system_exit_code": 9
+}

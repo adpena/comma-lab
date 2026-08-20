@@ -1,0 +1,245 @@
+{
+  "argv": [
+    "experiments/train_tr1_partition_renderer_mlx.py",
+    "--num-pairs",
+    "600",
+    "--out-dir",
+    "/Volumes/VertigoDataTier/pact/ddm_tp1_20260805/smoke_birth_off",
+    "--seed",
+    "0",
+    "--basin-handoff",
+    "off",
+    "--batch-pairs",
+    "8",
+    "--byte-ledger-coder",
+    "smevr",
+    "--class-weight-lane",
+    "1.3",
+    "--code-width",
+    "4",
+    "--epochs",
+    "821",
+    "--gate-every",
+    "5",
+    "--grid-downsample",
+    "16",
+    "--lane-guard",
+    "--lane-guard-born-weight",
+    "0.25",
+    "--lane-guard-budget-s",
+    "0.0",
+    "--lane-guard-eta",
+    "0.0",
+    "--lane-guard-lambda-max",
+    "5.0",
+    "--lane-guard-lambda-step-cap",
+    "0.0",
+    "--lane-guard-margin-floor-weight",
+    "0.5",
+    "--lotto-mask-density-init",
+    "0.5",
+    "--lotto-seed",
+    "118",
+    "--lr",
+    "0.002",
+    "--margin-target",
+    "1.0",
+    "--max-wall-minutes",
+    "30.0",
+    "--persist-optimizer-state",
+    "on",
+    "--rate-model",
+    "entropy",
+    "--renderer-width",
+    "24",
+    "--seg-form-start",
+    "ce",
+    "--telemetry-v9-port",
+    "on",
+    "--token-cell-mask",
+    "/Volumes/VertigoDataTier/pact/ddm_sg1_20260731/qa24_grid_keep_mask_50.npy",
+    "--token-init-mode",
+    "solve_project",
+    "--token-quant-anneal",
+    "at_knee",
+    "--token-quant-levels",
+    "16",
+    "--token-ste",
+    "round",
+    "--token-temporal-mode",
+    "shared_base",
+    "--variant",
+    "lotto",
+    "--w-rate",
+    "0.05",
+    "--w-seg",
+    "100.0",
+    "--gt-cache",
+    "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+    "--resume-from",
+    "/Volumes/VertigoDataTier/pact/ddm_b4s_20260731/window_02/checkpoints/stage_seg_trunk_tau_final.npz",
+    "--full-confirm"
+  ],
+  "levers": [
+    {
+      "name": "tr1_variant_lotto",
+      "notes": "A2 race arm: plain-conv vs G1-LOTTO supermask under matched counted bytes",
+      "overrides": {
+        "--variant": "lotto"
+      }
+    },
+    {
+      "name": "tr1_token_grid_D16_c4",
+      "notes": "grid pitch vs bytes; ERF-bounded (r50~85px); Pareto-raced",
+      "overrides": {
+        "--code-width": "4",
+        "--grid-downsample": "16"
+      }
+    },
+    {
+      "name": "tr1_renderer_w24",
+      "notes": "G3 capacity; topology derives from D (conv0 + per-up conv + head)",
+      "overrides": {
+        "--renderer-width": "24"
+      }
+    },
+    {
+      "name": "tr1_token_quant_L16_round",
+      "notes": "S2.1 fd2-wall STE across the description lattice; STE variant RACED",
+      "overrides": {
+        "--token-quant-levels": "16",
+        "--token-ste": "round"
+      }
+    },
+    {
+      "name": "tr1_token_temporal_shared_base",
+      "notes": "Einstein d_cov/d_gauge force: identity-xi shared base vs A/B control",
+      "overrides": {
+        "--token-temporal-mode": "shared_base"
+      }
+    },
+    {
+      "name": "tr1_seg_ce",
+      "notes": "scorer-in-loop seg trunk; pose TERMINAL (#383) \u2014 no pose flag exists on this trainer by design; margin_hinge = step-native raced form; class_weight_lane = sn1 sided-asymmetry lever",
+      "overrides": {
+        "--class-weight-lane": "1.3",
+        "--margin-target": "1.0",
+        "--seg-form-start": "ce",
+        "--w-seg": "100.0"
+      }
+    },
+    {
+      "name": "tr1_token_init_solve_project",
+      "notes": "lv1 B solve-init: eu1 teacher-as-init-oracle \u2014 v3 ANALYTIC projection of the materializable solution-set member (GT frame_1 at the render plane, area-mean downsample) into token space as base+delta before the scorer loop; zero = tb1 gauge-hygiene control (ker(A) stays at the zero lattice point). Adopt iff strictly better realized d_seg at matched epoch (pre-registered lv1 B rule; v1 joint-L2 + v2 token-gradient formulations MEASURED inadmissible \u2014 custody in the lv1 memo)",
+      "overrides": {
+        "--token-init-mode": "solve_project"
+      }
+    },
+    {
+      "name": "tr1_basin_handoff_off",
+      "notes": "operator x2 2026-07-28 burn schedule rule: TRAIN ONLY TO CONDITION \u2014 on basin-entry (TerminalSolve \u00a716.1 validity: quadratic crawl + topology stable + no transitions + zero-alarm COUPLED_DESCENT window) STOP permanently and hand off to the solve executors (#423 quadratic_basin_finisher_probe GN/CG + eg1 E3 QDBS rail cf7172e747 + #383 terminal pose; v19 realized acceptance vs the handoff full-confirm baseline). Saddle/grokking #216/#475 disambiguation: stalled solve + still-descending training => resume training, re-arm doubled window. SHORTENS the sealed wall-clock (train-least realized)",
+      "overrides": {
+        "--basin-handoff": "off"
+      }
+    },
+    {
+      "name": "tr1_a1_gate_every5",
+      "notes": "A1 (fd2 binding transfer lesson): realized-argmax gate cadence",
+      "overrides": {
+        "--gate-every": "5"
+      }
+    },
+    {
+      "name": "tr1_token_cell_mask",
+      "notes": "\u00a73.1 coarse-from-birth keep-set (gr1 cell_drop50 -0.098 post-hoc bound; falsifier: re-burn endpoint d_seg >= 0.004310 at matched bytes => coarse-from-birth closes at INSTANCE, solve-distillation leads)",
+      "overrides": {
+        "--token-cell-mask": "/Volumes/VertigoDataTier/pact/ddm_sg1_20260731/qa24_grid_keep_mask_50.npy"
+      }
+    },
+    {
+      "name": "tr1_token_quant_anneal_at_knee",
+      "notes": "\u00a73.3(a) staged quantizer engagement; falsifier: annealed-STE endpoint d_seg >= from-birth-STE at matched bytes => no basin benefit, close",
+      "overrides": {
+        "--token-quant-anneal": "at_knee"
+      }
+    },
+    {
+      "name": "tr1_rate_in_loss_entropy",
+      "notes": "\u00a73.4 stl1 row-8 rate-in-loss LAW; falsifier: rate-in-loss arm archive bytes not lower than distortion-only at matched d_seg => law does not bind this payload, fall back to post-hoc coding (gr1/lv1 stack)",
+      "overrides": {
+        "--rate-model": "entropy",
+        "--w-rate": "0.05"
+      }
+    },
+    {
+      "name": "tr1_byte_ledger_coder_smevr",
+      "notes": "QA86(b) census T5: decisions priced by the shipped SMEVR coder; falsifier N/A (observability/decision-quality fix, not a score lever)",
+      "overrides": {
+        "--byte-ledger-coder": "smevr"
+      }
+    },
+    {
+      "name": "tr1_lotto_seed118",
+      "notes": "rule-118: PRNG expansion FREE; seed+density COUNTED in selector ledger",
+      "overrides": {
+        "--lotto-mask-density-init": "0.5",
+        "--lotto-seed": "118"
+      }
+    },
+    {
+      "name": "tr1_telemetry_v9_port_on",
+      "notes": "ddm_tp1 v9 telemetry port (loss_terms #304 + term_domination/term_inert #321 + #404 positive-control + Q7 lever_engage). Observability-as-Lever: default-off for sealed-lineage byte-identity, controller/ticket turns on on-demand (read-only; no falsifier \u2014 telemetry never moves S)",
+      "overrides": {
+        "--telemetry-v9-port": "on"
+      }
+    },
+    {
+      "name": "tr1_lane_guard_lambda",
+      "notes": "lg1 piece 1: dual-ascent Lane budget constraint; realized g from the a1 gate's EXISTING argmax (zero new scorer passes); complementarity lambda*g telemetry (#549 KKTDiagnostics-aligned)",
+      "overrides": {
+        "--lane-guard": true,
+        "--lane-guard-budget-s": "0.0",
+        "--lane-guard-eta": "0.0",
+        "--lane-guard-lambda-max": "5.0",
+        "--lane-guard-lambda-step-cap": "0.0"
+      }
+    },
+    {
+      "name": "tr1_lane_guard_born",
+      "notes": "lg1 piece 2: born-lane support protection; weight RACED (no measured own-optimum yet); sensitivity scale MEASURED (fractal memo \u00a72 head normals)",
+      "overrides": {
+        "--lane-guard": true,
+        "--lane-guard-born-weight": "0.25"
+      }
+    },
+    {
+      "name": "tr1_lane_guard_margin_floor",
+      "notes": "lg1 piece 3: margin floor per flip-prone Lane pixel, d=|m|/||dw|| closed-form lineage (rank-4 head); floor derived per-run at first gate (pct=10)",
+      "overrides": {
+        "--lane-guard": true,
+        "--lane-guard-margin-floor-weight": "0.5"
+      }
+    },
+    {
+      "name": "tr1_window_ep821",
+      "notes": "bounded governed window; checkpoint-on-exit (P0 resumability)",
+      "overrides": {
+        "--batch-pairs": "8",
+        "--epochs": "821",
+        "--lr": "0.002",
+        "--max-wall-minutes": "30.0"
+      }
+    },
+    {
+      "name": "tr1_persist_optimizer_state_on",
+      "notes": "ddm_op2 OP2-1 optimizer-state persistence; parent b4s checkpoint has no moments, so the first boundary records no-opt-state and future checkpoints persist.",
+      "overrides": {
+        "--persist-optimizer-state": "on"
+      }
+    }
+  ],
+  "schema": "ddm_tb1_tr1_sealed_ticket.v1",
+  "score_claim": false,
+  "ticket_hash": "87a5c2fa600dbd38f9dc70c2f2143c482b6d15521f869d5c1d707634441556b5",
+  "trainer": "experiments/train_tr1_partition_renderer_mlx.py"
+}

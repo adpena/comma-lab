@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-08-04T19:14:23Z",
+  "tool": "experiments/contest_auth_eval.py",
+  "archive_path": "/tmp/modal_auth_eval_cpu/archive.zip",
+  "archive_sha256": "ad5dd0e4fbe5b13ab53a5995a6d77cc558c25f40b63f894ea50ad336bd50fb66",
+  "archive_size_bytes": 358084,
+  "inflate_script": "/tmp/modal_auth_eval_cpu/submission_dir/inflate.sh",
+  "inflate_script_sha256": "a867293d116506d601d91c7ee4a02078fde8405cbec6b44ae66fbcec2fe07ca8",
+  "inflate_runtime_manifest": {
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "runtime_root": "/tmp/modal_auth_eval_cpu/submission_dir",
+    "runtime_file_count": 10,
+    "runtime_tree_sha256": "9982203ba6d00b2467b77f3719219e6030ab23221270a743920158810358700c",
+    "runtime_content_tree_sha256": "592a6c804c1e91d8fa801d052e592d040133b09ab0ba1331384ed39fe05a4599",
+    "files": [
+      {
+        "relative_path": "compose_receipt.json",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/compose_receipt.json",
+        "bytes": 2440,
+        "sha256": "ba3f36bffeb99244141aead20faa24cc5660e69ffde31192feabe1c2197b8b90"
+      },
+      {
+        "relative_path": "ddm_ix2_archive_container.py",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/ddm_ix2_archive_container.py",
+        "bytes": 29213,
+        "sha256": "e77039e2a60ac3d11f79285e75f5b98e509f8f9546d13ea138a3e40a23fa0d99"
+      },
+      {
+        "relative_path": "ddm_r7_token_coder.py",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/ddm_r7_token_coder.py",
+        "bytes": 39404,
+        "sha256": "2a9c5a3a0b113eb0217c6549d057bc92df4bc76b0a311f72782a954936836136"
+      },
+      {
+        "relative_path": "ddm_tr1_runtime.py",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/ddm_tr1_runtime.py",
+        "bytes": 48443,
+        "sha256": "f3b93708b542e53d7a135233d8ba51bd406a5f6b6a55a7b80855369e9cebb2e9"
+      },
+      {
+        "relative_path": "fz2_byteclose_receipt.json",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/fz2_byteclose_receipt.json",
+        "bytes": 5853,
+        "sha256": "d7285e918b359597f57f613c543f8d4a615aebf5680577fc26122588e6c097ce"
+      },
+      {
+        "relative_path": "inflate.sh",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/inflate.sh",
+        "bytes": 139,
+        "sha256": "a867293d116506d601d91c7ee4a02078fde8405cbec6b44ae66fbcec2fe07ca8"
+      },
+      {
+        "relative_path": "inflate_runner.py",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/inflate_runner.py",
+        "bytes": 20221,
+        "sha256": "930bf44b81a51f967a47def47c31a3700ced934732087e361e55ef173e314ee9"
+      },
+      {
+        "relative_path": "pfs1_warp_receiver.py",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/pfs1_warp_receiver.py",
+        "bytes": 3926,
+        "sha256": "ddfb9f9c24e3c95f37f946191909291e2ebc16b3a48a971e230785606a50062a"
+      },
+      {
+        "relative_path": "repair_entropy_coder_runtime_adapters.py",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/repair_entropy_coder_runtime_adapters.py",
+        "bytes": 11255,
+        "sha256": "8ef8520d5ed5ccb7ce83d5b4faf7f3dc580c7f9de6c90f55e32854346421a14e"
+      },
+      {
+        "relative_path": "report.txt",
+        "repo_relative_path": "/tmp/modal_auth_eval_cpu/submission_dir/report.txt",
+        "bytes": 737,
+        "sha256": "f7eb9d21bff94092ff623d452d0d6b456b69645982acb5fd8417d3842ad60b30"
+      }
+    ],
+    "external_dependency_roots": [],
+    "repo_local_tac_import_manifest": {
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "discovery": "static_ast_recursive_import_closure",
+      "runtime_root_name": "submission_dir",
+      "tac_root_relative_path": "src/tac",
+      "root_import_modules": [
+        "tac.optimization.ddm_ix2_archive_container"
+      ],
+      "unresolved_modules": [
+        "tac.optimization.ddm_ix2_archive_container"
+      ],
+      "parse_errors": [],
+      "module_count": 1,
+      "file_count": 0,
+      "files": []
+    },
+    "upstream_evaluate_py": {
+      "relative_path": "evaluate.py",
+      "bytes": 6005,
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "upstream_dir": "/workspace/pact/upstream",
+  "upstream_snapshot_sha256": "92f2b06a2a0940868aa715d8d365d05f0fc9ae362110c8f455e05baf93a88e54",
+  "device": "cpu",
+  "platform_system": "Linux",
+  "platform_machine": "x86_64",
+  "platform_processor": "",
+  "inflate_timeout_seconds": 1800,
+  "evaluate_timeout_seconds": 5400,
+  "video_names_file": "/workspace/pact/upstream/public_test_video_names.txt",
+  "sys_argv": [
+    "/workspace/pact/experiments/contest_auth_eval.py",
+    "--archive",
+    "/tmp/modal_auth_eval_cpu/archive.zip",
+    "--inflate-sh",
+    "/tmp/modal_auth_eval_cpu/submission_dir/inflate.sh",
+    "--upstream-dir",
+    "/workspace/pact/upstream",
+    "--video-names-file",
+    "/workspace/pact/upstream/public_test_video_names.txt",
+    "--device",
+    "cpu",
+    "--keep-work-dir",
+    "--work-dir",
+    "/root/modal_auth_eval_cpu_work/eval_work",
+    "--inflate-timeout",
+    "1800",
+    "--evaluate-timeout",
+    "5400",
+    "--expected-runtime-tree-sha256",
+    "3ea13f96213785d6db7751849334b8ceba285560255f3fce6552c6ab1584c523"
+  ],
+  "effective_inflate_python": "/usr/local/bin/python",
+  "modal_auth_eval_advisory_only": false,
+  "env_vars": {
+    "PYTHONPATH": "/root:/workspace/pact/src:/workspace/pact/upstream:/workspace/pact",
+    "CUDA_VISIBLE_DEVICES": "",
+    "CUBLAS_WORKSPACE_CONFIG": ":4096:8",
+    "PYTHONHASHSEED": "0",
+    "PYTORCH_CUDA_ALLOC_CONF": null,
+    "LD_LIBRARY_PATH": null,
+    "CONFIG_ENV_PATH": null,
+    "PYTHON_INFLATE": null,
+    "LANE_MM_SIGMA": null,
+    "INFLATE_BROTLI_SPEC": null,
+    "INFLATE_AV_SPEC": null,
+    "INFLATE_TORCH_SPEC": null,
+    "INFLATE_TORCHVISION_SPEC": null,
+    "INFLATE_NUMPY_SPEC": null,
+    "MODAL_AUTH_EVAL_ADVISORY_ONLY": null,
+    "UV_BIN": "/usr/local/bin/uv",
+    "UV_PROJECT_ENVIRONMENT": "/tmp/modal_auth_eval_cpu/uv_project_env",
+    "PYTHON": "/usr/local/bin/python"
+  },
+  "gpu_model": "<error:FileNotFoundError(2, 'No such file or directory')>",
+  "gpu_driver": "<error:FileNotFoundError(2, 'No such file or directory')>",
+  "gpu_t4_match": false,
+  "torch_version": "2.5.1+cpu",
+  "cuda_version": null,
+  "cuda_available": false,
+  "mps_available": false,
+  "ffmpeg_version": "ffmpeg version 5.1.8-0+deb12u1 Copyright (c) 2000-2025 the FFmpeg developers",
+  "libsvtav1_version": "configuration: --prefix=/usr --extra-version=0+deb12u1 --toolchain=hardened --libdir=/usr/lib/x86_64-linux-gnu --incdir=/usr/include/x86_64-linux-gnu --arch=amd64 --enable-gpl --disable-stripping --enable-gnutls --enable-ladspa --enable-libaom --enable-libass --enable-libbluray --enable-libbs2b --enable-libcaca --enable-libcdio --enable-libcodec2 --enable-libdav1d --enable-libflite --enable-libfontconfig --enable-libfreetype --enable-libfribidi --enable-libglslang --enable-libgme --enable-libgsm --enable-libjack --enable-libmp3lame --enable-libmysofa --enable-libopenjpeg --enable-libopenmpt --enable-libopus --enable-libpulse --enable-librabbitmq --enable-librist --enable-librubberband --enable-libshine --enable-libsnappy --enable-libsoxr --enable-libspeex --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtheora --enable-libtwolame --enable-libvidstab --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx265 --enable-libxml2 --enable-libxvid --enable-libzimg --enable-libzmq --enable-libzvbi --enable-lv2 --enable-omx --enable-openal --enable-opencl --enable-opengl --enable-sdl2 --disable-sndio --enable-libjxl --enable-pocketsphinx --enable-librsvg --enable-libmfx --enable-libdc1394 --enable-libdrm --enable-libiec61883 --enable-chromaprint --enable-frei0r --enable-libx264 --enable-libplacebo --enable-librav1e --enable-shared",
+  "pact_commit": "6e127af6ac2d120195abfc39b87bbc414f854f40",
+  "pact_commit_source": "PACT_SOURCE_COMMIT"
+}

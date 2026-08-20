@@ -1,0 +1,173 @@
+{
+  "axis": "[optimizer-state arithmetic / scorer-free audit]",
+  "backtest_rows": [
+    {
+      "axis": "[optimizer-state arithmetic / scorer-free audit]",
+      "corpus": "J3 finalsmoke 366 opening window",
+      "observed_opening_signal": {
+        "step1_first_moment_rms": 0.0026064301628862334,
+        "step1_gradient_norm_telemetry": 1.3735015609101762,
+        "step1_local_final_d_seg": 0.026437124237418175,
+        "step1_local_initial_d_seg": 0.02626546286046505,
+        "step1_reconstructed_gradient_rms_from_first_moment": 0.026064301628862335,
+        "step4_n600_d_pose": 163.0613308426994,
+        "step4_n600_d_seg": 0.027603208753797744,
+        "uncorrected_adam_eta_step1": 3.1622776601683773
+      },
+      "previous_mapped_m_available": false,
+      "reconstructable_gradient_vectors": 1,
+      "refusal_reasons": [
+        "missing previous mapped first-moment state at the stage boundary",
+        "missing full recorded post-boundary gradient sequence (1/4 vectors)"
+      ],
+      "required_gradient_vectors": 4,
+      "soft_blend_backtest": "REFUSED",
+      "sources": [
+        {
+          "bytes": 11370,
+          "exists": true,
+          "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j3_366_fullrun_finalsmoke_64c421698c_20260723T030700Z/checkpoints/01_island_worldsheet_joint_descent_intra_global000001.npz",
+          "sha256": "6e85c716cf262039f0a5b18d9ea95ce9a2115b9aa46e4240dbddbd44cc578f56"
+        },
+        {
+          "bytes": 13385,
+          "exists": true,
+          "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j3_366_fullrun_finalsmoke_64c421698c_20260723T030700Z/checkpoints/01_island_worldsheet_joint_descent_intra_global000004.npz",
+          "sha256": "a4892de5b6af4cfabdf4c06d807e20ececc85498d7f93a137f189813693d2c58"
+        },
+        {
+          "bytes": 1206,
+          "exists": true,
+          "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j3_366_fullrun_finalsmoke_64c421698c_20260723T030700Z/telemetry/step000001.json",
+          "sha256": "1b827d7b4b50d2c3d5a353079a58b48b39fe1531b63e039e968d3943b49d859b"
+        },
+        {
+          "bytes": 9876,
+          "exists": true,
+          "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j3_366_fullrun_finalsmoke_64c421698c_20260723T030700Z/full_run_receipt.json",
+          "sha256": "ff8e85df7fcd4da5b0fce11691ce874bd485555c1545fe6e27ab657709dac5cb"
+        },
+        {
+          "bytes": 1461,
+          "exists": true,
+          "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j3_366_fullrun_finalsmoke_64c421698c_20260723T030700Z/verdicts/01_island_worldsheet_joint_descent_step000004_n600.json",
+          "sha256": "12ed4c8a9fd0aca7c216e06eea91d0493372109d1e508d41f1a09a62239335d9"
+        }
+      ],
+      "status": "PARTIAL_STEP1_ONLY_REFUSED"
+    },
+    {
+      "axis": "[optimizer-state arithmetic / scorer-free audit]",
+      "checkpoint_keys": [
+        "__ddmjd_optimizer_state_sha256",
+        "__ddmjd_step",
+        "__ddmjd_typed_config_hash",
+        "__resume_registry_manifest",
+        "ema",
+        "first_moment",
+        "metadata",
+        "second_moment",
+        "theta"
+      ],
+      "corpus": "J4 warm-start reform 366 opening window",
+      "observed_opening_signal": {
+        "diagnosis_warm_start_optimizer_state_loadable": false,
+        "step1_gradient_norm_telemetry": 1.372286340806738,
+        "step1_lr_rewarmup_factor": 0.1,
+        "step1_realized_boundary_crossed": false
+      },
+      "previous_mapped_m_available": false,
+      "reconstructable_gradient_vectors": 0,
+      "refusal_reasons": [
+        "missing previous mapped first-moment state at the stage boundary",
+        "missing full recorded post-boundary gradient sequence (0/4 vectors)"
+      ],
+      "required_gradient_vectors": 4,
+      "soft_blend_backtest": "REFUSED",
+      "sources": [
+        {
+          "bytes": 13917,
+          "exists": true,
+          "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j4_366_warmstart_smoke_9c3575aa_20260723T042700Z/checkpoints/01_island_worldsheet_joint_descent_blocked_global000004.npz",
+          "sha256": "60d3585da08834703b07f3ba256f5db496761940e322228636709b84a923f216"
+        },
+        {
+          "bytes": 1380,
+          "exists": true,
+          "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j4_366_warmstart_smoke_9c3575aa_20260723T042700Z/telemetry/step000001.json",
+          "sha256": "db18bbe1f60ff5061b51287a6c2707433be6bae94240c7a1de0db5208e086ec9"
+        },
+        {
+          "bytes": 11036,
+          "exists": true,
+          "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j4_366_warmstart_smoke_9c3575aa_20260723T042700Z/full_run_receipt.json",
+          "sha256": "d7e85f0553f17472d6fe0b522085820b71780f7e87ddaa7279d6ee52160f8d64"
+        },
+        {
+          "bytes": 4707,
+          "exists": true,
+          "path": "/Users/adpena/Projects/pact/.omx/research/ddm_j4_366_warm_start_diagnosis_receipt_20260723.json",
+          "sha256": "a4ac23d6a3ae4f8776536ee7adf9649432405a8df98013fc6cedd374c03dfbb5"
+        }
+      ],
+      "status": "REFUSED_MISSING_REPLAY_CUSTODY"
+    },
+    {
+      "axis": "[optimizer-state arithmetic / scorer-free audit]",
+      "corpus": "JD-line TR1 continuation windows",
+      "observed_opening_signal": {
+        "sample_adam_bias_correction": false,
+        "sample_event": "start",
+        "sample_has_gradient_vector": false,
+        "sample_optimizer_moment_keys_found": 20,
+        "sample_reset_arm": "B"
+      },
+      "previous_mapped_m_available": true,
+      "reconstructable_gradient_vectors": 0,
+      "refusal_reasons": [
+        "missing full recorded post-boundary gradient sequence (0/4 vectors)"
+      ],
+      "required_gradient_vectors": 4,
+      "sample_window": "/Volumes/VertigoDataTier/pact/ddm_jd4_20260805/tr1_jd4_cont_ep1766_q3on",
+      "soft_blend_backtest": "REFUSED",
+      "sources": [
+        {
+          "bytes": 15321,
+          "exists": true,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_jd4_20260805/tr1_jd4_cont_ep1766_q3on/tr1_window_receipt.json",
+          "sha256": "cfff6bd8f0da0e04badbe421a438b24a4d307ce7b6c29ebbe3b5d7f24ad1d11f"
+        },
+        {
+          "bytes": 256795,
+          "exists": true,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_jd4_20260805/tr1_jd4_cont_ep1766_q3on/telemetry.jsonl",
+          "sha256": "eff15166d36d2a8fc78f406033d63fc6475cc88f8a22e5726f3eff3ab901a03f"
+        },
+        {
+          "bytes": 29930443,
+          "exists": true,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_jd4_20260805/tr1_jd4_cont_ep1766_q3on/checkpoints/intra_joint_pose_finish_ep01769.npz",
+          "sha256": "b5590c1ceaa8baed642d0ec54e103ee0a3a31af461a022111ca40986fdbd6b79"
+        }
+      ],
+      "status": "REFUSED_SCALAR_TELEMETRY_ONLY",
+      "windows_found": 6
+    }
+  ],
+  "consumer_trainer": "experiments/train_levelset_witness_realized_through_R_mlx.py",
+  "fire_condition": "Capture a real stage-boundary checkpoint with previous mapped optimizer state, the deterministic post-boundary gradient vectors for the beta2 window or a pre-registered shorter opening slice, and matched cold/reset controls; then rerun this scorer-free arithmetic backtest and only enable the trainer consumer if the soft blend wins both controls at matched update RMS.",
+  "schema": "ddm_fb1_stage_transition_soft_velocity_blend_backtest.v1",
+  "score_claim": false,
+  "scorer_launched": false,
+  "soft_blend_treatment": {
+    "alpha_end": 1.0,
+    "alpha_start": 0.0,
+    "clip_rms": null,
+    "formula": "m_new=(1-alpha(t))*m_mapped+alpha(t)*m_fresh",
+    "shape": "linear",
+    "window_derivation": "ceil(2.0/(1-0.999)) optimizer steps",
+    "window_steps": 2000
+  },
+  "training_launched": false,
+  "verdict": "LESSON-ONLY-confirmed"
+}

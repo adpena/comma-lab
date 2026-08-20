@@ -1,0 +1,23 @@
+{
+  "abs_diff": 0.0034941037495930995,
+  "axis": "[macOS-CPU advisory torch upstream SegNet]",
+  "checkpoint": {
+    "copied_at_utc": "2026-08-07T23:03:11.965453Z",
+    "copy_bytes": 1165040,
+    "copy_path": ".omx/research/ddm_rr16_20260807/runtime_checks/repeat_final_a/checkpoint_copies/mlx_stage_step003250.npz",
+    "copy_sha256": "543ad45a32ae6d4ac84cfd7fbb6845afb0c7bfc29525992dcf9744ec7540c382",
+    "schema": "ddm_mx1t_checkpoint_copy.v1",
+    "source_bytes": 1165040,
+    "source_path": ".omx/research/ddm_mx1t_20260807/checkpoint_copies/mlx_stage_step003250.npz",
+    "source_sha256": "543ad45a32ae6d4ac84cfd7fbb6845afb0c7bfc29525992dcf9744ec7540c382",
+    "status": "copied",
+    "step": 3250
+  },
+  "expected_d_seg": 0.0010732014973958333,
+  "measured_d_seg": 0.004567305246988933,
+  "reason": "step-1500 CPU-torch anchor did not reproduce mx1h; stopped before later checkpoints/tail averages",
+  "schema": "ddm_mx1t_anchor_blocker.v1",
+  "score_claim": false,
+  "status": "blocked",
+  "tolerance": 1e-12
+}

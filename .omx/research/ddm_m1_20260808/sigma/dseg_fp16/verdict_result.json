@@ -1,0 +1,996 @@
+{
+  "mlx_probe": {
+    "reason": "torch-verdict is CPU-only and does not import or probe MLX/Metal",
+    "status": "not_run"
+  },
+  "mode": "torch-verdict",
+  "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+  "schema": "ddm_mx1_pr130_semantic_renderer_driver.v1",
+  "score_claim": false,
+  "source_repo_head": "2f94596bb0136d342254022a5c9584756eae0468",
+  "source_repo_root": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
+  "status": "passed",
+  "torch": "2.12.1",
+  "torch_verdict": {
+    "aggregate_d_seg": 0.0010835435655381944,
+    "axis": "[macOS-CPU advisory torch upstream SegNet]",
+    "cache_load": {
+      "cache_residency": "selected",
+      "full_cache_resident_tensor_count": 0,
+      "input": {
+        "cache_bytes": 943720076,
+        "cache_path": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+        "full_cache_resident": false,
+        "full_dtype_seen": "torch.int64",
+        "full_shape_seen": [
+          600,
+          384,
+          512
+        ],
+        "retained_tensor_dtype": null,
+        "retained_tensor_shape": null,
+        "selected_dtype": "torch.int64",
+        "selected_pair_count": 120,
+        "selected_shape": [
+          120,
+          384,
+          512
+        ]
+      },
+      "subset_before_materialize": "torch.load_index_clone_del_full_cache",
+      "target": {
+        "cache_bytes": 943720076,
+        "cache_path": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+        "full_cache_resident": false,
+        "full_dtype_seen": "torch.int64",
+        "full_shape_seen": [
+          600,
+          384,
+          512
+        ],
+        "retained_tensor_dtype": null,
+        "retained_tensor_shape": null,
+        "selected_dtype": "torch.int64",
+        "selected_pair_count": 120,
+        "selected_shape": [
+          120,
+          384,
+          512
+        ],
+        "shared_with_input_cache": true
+      }
+    },
+    "checkpoint": {
+      "axis": "[macOS-MLX research-signal]",
+      "bytes": 831396,
+      "format": "mlx_npz",
+      "param_count": 38,
+      "path": ".omx/research/ddm_m1_20260808/sigma/run_1/mlx_stage_step000005.npz",
+      "score_claim": false,
+      "sha256": "56047d059595b36887a77b2940ebfd15f607413ee82cbd09f2eb946e50eba55c",
+      "step": 5
+    },
+    "comparison_row": {
+      "authority_minus_fp1_floor_d_seg": -0.007221456434461805,
+      "authority_minus_mlx_proxy_d_seg": 2.7211507161458304e-05,
+      "authority_over_fp1_floor_d_seg": 0.1304688218589036,
+      "authority_over_mlx_proxy_d_seg": 1.0257603723617688,
+      "checkpoint_step": 5,
+      "fp1_flat_paint_floor_d_seg": 0.008305,
+      "mlx_history_row": {
+        "d_seg_batch": 0.001056332058376736,
+        "loss": 0.0003770271432586014,
+        "lr": 1.999999943436137e-09,
+        "phase": "expected_flip",
+        "step": 5
+      },
+      "mlx_in_training_d_seg_batch": 0.001056332058376736
+    },
+    "contest_faithful_roundtrip": "lifted.render_for_seg(..., exact_path=True): bilinear up to 874x1164, uint8 STE, bilinear down to 384x512",
+    "elapsed_seconds": 85.21824717521667,
+    "host": {
+      "machine": "arm64",
+      "node": "Primary",
+      "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+      "system": "Darwin"
+    },
+    "input_cache": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+    "pair_count": 120,
+    "pair_ids": [
+      4,
+      6,
+      10,
+      18,
+      21,
+      28,
+      32,
+      38,
+      42,
+      45,
+      52,
+      58,
+      60,
+      67,
+      71,
+      77,
+      81,
+      88,
+      94,
+      99,
+      101,
+      108,
+      113,
+      118,
+      124,
+      127,
+      134,
+      138,
+      144,
+      148,
+      151,
+      157,
+      162,
+      167,
+      173,
+      178,
+      180,
+      185,
+      192,
+      196,
+      203,
+      205,
+      214,
+      218,
+      224,
+      225,
+      231,
+      236,
+      241,
+      245,
+      253,
+      258,
+      260,
+      269,
+      271,
+      279,
+      282,
+      287,
+      290,
+      295,
+      302,
+      308,
+      313,
+      318,
+      322,
+      329,
+      333,
+      336,
+      342,
+      345,
+      354,
+      358,
+      362,
+      365,
+      371,
+      377,
+      384,
+      386,
+      392,
+      399,
+      400,
+      409,
+      411,
+      417,
+      422,
+      427,
+      431,
+      437,
+      440,
+      449,
+      452,
+      456,
+      462,
+      468,
+      472,
+      476,
+      483,
+      488,
+      492,
+      497,
+      502,
+      505,
+      514,
+      516,
+      521,
+      528,
+      534,
+      538,
+      541,
+      549,
+      553,
+      559,
+      562,
+      565,
+      571,
+      578,
+      584,
+      586,
+      591,
+      595
+    ],
+    "per_pair_d_seg": [
+      {
+        "d_seg": 0.00115966796875,
+        "mismatch_pixels": 228,
+        "pair_id": 4,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010223388671875,
+        "mismatch_pixels": 201,
+        "pair_id": 6,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011393229166666667,
+        "mismatch_pixels": 224,
+        "pair_id": 10,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010426839192708333,
+        "mismatch_pixels": 205,
+        "pair_id": 18,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0012257893880208333,
+        "mismatch_pixels": 241,
+        "pair_id": 21,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011647542317708333,
+        "mismatch_pixels": 229,
+        "pair_id": 28,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.00140380859375,
+        "mismatch_pixels": 276,
+        "pair_id": 32,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0013326009114583333,
+        "mismatch_pixels": 262,
+        "pair_id": 38,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0013478597005208333,
+        "mismatch_pixels": 265,
+        "pair_id": 42,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.001129150390625,
+        "mismatch_pixels": 222,
+        "pair_id": 45,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0013173421223958333,
+        "mismatch_pixels": 259,
+        "pair_id": 52,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0013885498046875,
+        "mismatch_pixels": 273,
+        "pair_id": 58,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.000946044921875,
+        "mismatch_pixels": 186,
+        "pair_id": 60,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0013631184895833333,
+        "mismatch_pixels": 268,
+        "pair_id": 67,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0012613932291666667,
+        "mismatch_pixels": 248,
+        "pair_id": 71,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0012257893880208333,
+        "mismatch_pixels": 241,
+        "pair_id": 77,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.00091552734375,
+        "mismatch_pixels": 180,
+        "pair_id": 81,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010630289713541667,
+        "mismatch_pixels": 209,
+        "pair_id": 88,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009002685546875,
+        "mismatch_pixels": 177,
+        "pair_id": 94,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010325113932291667,
+        "mismatch_pixels": 203,
+        "pair_id": 99,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010019938151041667,
+        "mismatch_pixels": 197,
+        "pair_id": 101,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011088053385416667,
+        "mismatch_pixels": 218,
+        "pair_id": 108,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010223388671875,
+        "mismatch_pixels": 201,
+        "pair_id": 113,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011545817057291667,
+        "mismatch_pixels": 227,
+        "pair_id": 118,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0012054443359375,
+        "mismatch_pixels": 237,
+        "pair_id": 124,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0012868245442708333,
+        "mismatch_pixels": 253,
+        "pair_id": 127,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0013275146484375,
+        "mismatch_pixels": 261,
+        "pair_id": 134,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.001312255859375,
+        "mismatch_pixels": 258,
+        "pair_id": 138,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009206136067708334,
+        "mismatch_pixels": 181,
+        "pair_id": 144,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009969075520833333,
+        "mismatch_pixels": 196,
+        "pair_id": 148,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0012868245442708333,
+        "mismatch_pixels": 253,
+        "pair_id": 151,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0008595784505208334,
+        "mismatch_pixels": 169,
+        "pair_id": 157,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011545817057291667,
+        "mismatch_pixels": 227,
+        "pair_id": 162,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009816487630208333,
+        "mismatch_pixels": 193,
+        "pair_id": 167,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.001068115234375,
+        "mismatch_pixels": 210,
+        "pair_id": 173,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0015716552734375,
+        "mismatch_pixels": 309,
+        "pair_id": 178,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.00115966796875,
+        "mismatch_pixels": 228,
+        "pair_id": 180,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009511311848958334,
+        "mismatch_pixels": 187,
+        "pair_id": 185,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011393229166666667,
+        "mismatch_pixels": 224,
+        "pair_id": 192,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010274251302083333,
+        "mismatch_pixels": 202,
+        "pair_id": 196,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009002685546875,
+        "mismatch_pixels": 177,
+        "pair_id": 203,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0008290608723958334,
+        "mismatch_pixels": 163,
+        "pair_id": 205,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010223388671875,
+        "mismatch_pixels": 201,
+        "pair_id": 214,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011088053385416667,
+        "mismatch_pixels": 218,
+        "pair_id": 218,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010274251302083333,
+        "mismatch_pixels": 202,
+        "pair_id": 224,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010426839192708333,
+        "mismatch_pixels": 205,
+        "pair_id": 225,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.000885009765625,
+        "mismatch_pixels": 174,
+        "pair_id": 231,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.001068115234375,
+        "mismatch_pixels": 210,
+        "pair_id": 236,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0007883707682291666,
+        "mismatch_pixels": 155,
+        "pair_id": 241,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0008494059244791666,
+        "mismatch_pixels": 167,
+        "pair_id": 245,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0008341471354166666,
+        "mismatch_pixels": 164,
+        "pair_id": 253,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0008036295572916666,
+        "mismatch_pixels": 158,
+        "pair_id": 258,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.000823974609375,
+        "mismatch_pixels": 162,
+        "pair_id": 260,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.000946044921875,
+        "mismatch_pixels": 186,
+        "pair_id": 269,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.001251220703125,
+        "mismatch_pixels": 246,
+        "pair_id": 271,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.00091552734375,
+        "mismatch_pixels": 180,
+        "pair_id": 279,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010172526041666667,
+        "mismatch_pixels": 200,
+        "pair_id": 282,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0008443196614583334,
+        "mismatch_pixels": 166,
+        "pair_id": 287,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0007781982421875,
+        "mismatch_pixels": 153,
+        "pair_id": 290,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0008900960286458334,
+        "mismatch_pixels": 175,
+        "pair_id": 295,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0008494059244791666,
+        "mismatch_pixels": 167,
+        "pair_id": 302,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0008392333984375,
+        "mismatch_pixels": 165,
+        "pair_id": 308,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009104410807291666,
+        "mismatch_pixels": 179,
+        "pair_id": 313,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009714762369791666,
+        "mismatch_pixels": 191,
+        "pair_id": 318,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0008443196614583334,
+        "mismatch_pixels": 166,
+        "pair_id": 322,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011088053385416667,
+        "mismatch_pixels": 218,
+        "pair_id": 329,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009867350260416667,
+        "mismatch_pixels": 194,
+        "pair_id": 333,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009511311848958334,
+        "mismatch_pixels": 187,
+        "pair_id": 336,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009969075520833333,
+        "mismatch_pixels": 196,
+        "pair_id": 342,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009867350260416667,
+        "mismatch_pixels": 194,
+        "pair_id": 345,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.000946044921875,
+        "mismatch_pixels": 186,
+        "pair_id": 354,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010732014973958333,
+        "mismatch_pixels": 211,
+        "pair_id": 358,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0007832845052083334,
+        "mismatch_pixels": 154,
+        "pair_id": 362,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.000823974609375,
+        "mismatch_pixels": 162,
+        "pair_id": 365,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0008595784505208334,
+        "mismatch_pixels": 169,
+        "pair_id": 371,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010274251302083333,
+        "mismatch_pixels": 202,
+        "pair_id": 377,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0007883707682291666,
+        "mismatch_pixels": 155,
+        "pair_id": 384,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009358723958333334,
+        "mismatch_pixels": 184,
+        "pair_id": 386,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009053548177083334,
+        "mismatch_pixels": 178,
+        "pair_id": 392,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011240641276041667,
+        "mismatch_pixels": 221,
+        "pair_id": 399,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0008646647135416666,
+        "mismatch_pixels": 170,
+        "pair_id": 400,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.000946044921875,
+        "mismatch_pixels": 186,
+        "pair_id": 409,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.000946044921875,
+        "mismatch_pixels": 186,
+        "pair_id": 411,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010579427083333333,
+        "mismatch_pixels": 208,
+        "pair_id": 417,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0008799235026041666,
+        "mismatch_pixels": 173,
+        "pair_id": 422,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011647542317708333,
+        "mismatch_pixels": 229,
+        "pair_id": 427,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0012969970703125,
+        "mismatch_pixels": 255,
+        "pair_id": 431,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.000946044921875,
+        "mismatch_pixels": 186,
+        "pair_id": 437,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010019938151041667,
+        "mismatch_pixels": 197,
+        "pair_id": 440,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009409586588541666,
+        "mismatch_pixels": 185,
+        "pair_id": 449,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009867350260416667,
+        "mismatch_pixels": 194,
+        "pair_id": 452,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0012613932291666667,
+        "mismatch_pixels": 248,
+        "pair_id": 456,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011952718098958333,
+        "mismatch_pixels": 235,
+        "pair_id": 462,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011850992838541667,
+        "mismatch_pixels": 233,
+        "pair_id": 468,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.00152587890625,
+        "mismatch_pixels": 300,
+        "pair_id": 472,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.001007080078125,
+        "mismatch_pixels": 198,
+        "pair_id": 476,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0009053548177083334,
+        "mismatch_pixels": 178,
+        "pair_id": 483,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.00189208984375,
+        "mismatch_pixels": 372,
+        "pair_id": 488,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0012410481770833333,
+        "mismatch_pixels": 244,
+        "pair_id": 492,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011800130208333333,
+        "mismatch_pixels": 232,
+        "pair_id": 497,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011545817057291667,
+        "mismatch_pixels": 227,
+        "pair_id": 502,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010019938151041667,
+        "mismatch_pixels": 197,
+        "pair_id": 505,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010986328125,
+        "mismatch_pixels": 216,
+        "pair_id": 514,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0015055338541666667,
+        "mismatch_pixels": 296,
+        "pair_id": 516,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0016682942708333333,
+        "mismatch_pixels": 328,
+        "pair_id": 521,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011749267578125,
+        "mismatch_pixels": 231,
+        "pair_id": 528,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.001312255859375,
+        "mismatch_pixels": 258,
+        "pair_id": 534,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010935465494791667,
+        "mismatch_pixels": 215,
+        "pair_id": 538,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0013682047526041667,
+        "mismatch_pixels": 269,
+        "pair_id": 541,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.001251220703125,
+        "mismatch_pixels": 246,
+        "pair_id": 549,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0008799235026041666,
+        "mismatch_pixels": 173,
+        "pair_id": 553,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011952718098958333,
+        "mismatch_pixels": 235,
+        "pair_id": 559,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0011800130208333333,
+        "mismatch_pixels": 232,
+        "pair_id": 562,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0012156168619791667,
+        "mismatch_pixels": 239,
+        "pair_id": 565,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0012664794921875,
+        "mismatch_pixels": 249,
+        "pair_id": 571,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0012461344401041667,
+        "mismatch_pixels": 245,
+        "pair_id": 578,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0012257893880208333,
+        "mismatch_pixels": 241,
+        "pair_id": 584,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010426839192708333,
+        "mismatch_pixels": 205,
+        "pair_id": 586,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0010477701822916667,
+        "mismatch_pixels": 206,
+        "pair_id": 591,
+        "pixels": 196608
+      },
+      {
+        "d_seg": 0.0014139811197916667,
+        "mismatch_pixels": 278,
+        "pair_id": 595,
+        "pixels": 196608
+      }
+    ],
+    "schema": "ddm_mx1_torch_verdict.v1",
+    "score_claim": false,
+    "scorer_batch_shapes": [
+      [
+        32,
+        3,
+        384,
+        512
+      ],
+      [
+        32,
+        3,
+        384,
+        512
+      ],
+      [
+        32,
+        3,
+        384,
+        512
+      ],
+      [
+        24,
+        3,
+        384,
+        512
+      ]
+    ],
+    "segnet_batch_size": 32,
+    "segnet_chunk_batch_sizes": [
+      32,
+      32,
+      32,
+      24
+    ],
+    "source_repo_head": "2f94596bb0136d342254022a5c9584756eae0468",
+    "source_repo_root": "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo",
+    "status": "passed",
+    "target_batch_shape": [
+      120,
+      384,
+      512
+    ],
+    "target_cache": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/gt_seg_cache.pt",
+    "token_batch_shape": [
+      120,
+      384,
+      512
+    ],
+    "total_mismatch_pixels": 25564,
+    "total_pixels": 23592960,
+    "verdict_scope": "n32 arm-selection instrument"
+  }
+}

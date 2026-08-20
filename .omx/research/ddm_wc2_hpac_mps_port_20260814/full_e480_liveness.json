@@ -1,0 +1,18 @@
+{
+  "schema": "pact.run_liveness_watcher.config.v1",
+  "pid_file": "/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/gpu_race/full_e480/launcher/run.pid",
+  "alert_path": "/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/gpu_race/full_e480/watchers/liveness.alert.json",
+  "poll_s": 60,
+  "initial_delay_s": 0,
+  "warmup_s": 1800,
+  "receipt_checks": [],
+  "heartbeat_checks": [],
+  "artifact_checks": [
+    {
+      "label": "full_mps_log",
+      "path": "/Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/gpu_race/full_e480/launcher/run.log",
+      "max_age_s": 10800,
+      "grace_s": 1800
+    }
+  ]
+}
