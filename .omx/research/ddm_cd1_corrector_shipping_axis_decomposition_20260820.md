@@ -56,7 +56,10 @@ operands, same order, same values. Everything else in the diff is addition.
 The git-tracked base at `submissions/robust_current/jg5_sub015_runtime/runtime` was verified
 byte-identical to the SSD candidate tree `/Volumes/APDataStore/pact/ddm_jg5/candidate_runtime_jg5`
 (same 34 files, same 582,094 B, same tree sha) before staging, so the instrument is
-reproducible from committed state.
+reproducible from committed state — and that was PROVED, not assumed: re-running the stager
+from the committed base regenerates `67dc3e320d401b88…` exactly, changing the same one file
+(`retained/cd1_runtime_reproducibility_receipt.json`). The fired tree is the proved tree, so
+it needs no custody of its own.
 
 ### 1.1 Identity, PROVEN on the local axis — twice, at two depths
 
@@ -79,8 +82,18 @@ forced by the byte identity and is recorded as the arithmetic check it is, not a
 evidence.
 
 **The 0.raw sha is the gate; the score is the echo.** The T4 row's gate is the *other* lineage
-sha, `6bf8acf8d441…` — CUDA and CPU render are separate numeric regimes and comparing them
-would be the cross-regime error (rr6 §1). Both are pre-registered in the seal.
+sha, `6bf8acf8d441…`; comparing it to the local one would be the cross-regime error (rr6 §1).
+Both are pre-registered in the seal.
+
+**Refinement from `ddm_cpu1`'s landing, adopted here: the raw is PLATFORM-scoped, not
+axis-scoped.** Three lineages are now measured for this same archive —
+`aff13c89…` (Linux-CPU), `6bf8acf8…` (T4), `7246a4ff…` (macOS-CPU) — so "CUDA vs CPU" was the
+wrong cut; the render is a torch forward and each PLATFORM is its own numeric regime. The
+**token field is not**: `decoded_token_sha256 cc10a7b0…` and `decoder_bit_position 910837`
+reproduce identically on T4 and on contest-CPU. That is load-bearing for this arm — it means
+the decomposition's *object* (the decoded field) is axis-invariant, and only its *seconds* are
+axis-scoped. The instrument measures a stage that is doing provably the same work everywhere;
+what changes across axes is how long each part of it takes.
 
 ### 1.2 The timing cost is BOUNDED BY MEASUREMENT, not by argument
 
@@ -337,10 +350,13 @@ validated end-to-end.
   the four token anchors; **the breakdown must be PRESENT** or the dispatch bought nothing;
   and the instrumented token stage against jg5's 1,341.540 s as an overhead+noise bound
 
-**Single-flight:** `ddm_cpu1` holds the Modal lane (`fc-01M0FGBV7547NWJVJWQ8W3YX76`,
-dispatched 11:54:37Z, CPU worker). This arm waits on a detached ledger-bound waiter and fires
-when the ledger shows zero live calls. **This section is updated with the measured row and the
-verdict when it lands.**
+**Single-flight honoured.** `ddm_cpu1` held the lane until `fc-01M0FGBV7547NWJVJWQ8W3YX76`
+harvested at 13:09:52Z; this arm waited on a detached ledger-bound waiter and fired at
+13:19:15Z once the ledger showed zero live calls.
+
+**DISPATCHED:** call `fc-01M0FN6S7A7EXZEJYABW4TMHA8`, lane
+`lane_ddm_cd1_corrector_shipping_axis_decomposition_t4_20260820`, poller armed.
+**This section is updated with the measured row and the verdict when it lands.**
 
 ---
 
@@ -367,6 +383,21 @@ verdict when it lands.**
    reports the holder's liveness, or a longer default wait than 8 s on a 320 MB database.
 4. **Every arm hand-builds its retention manifest** (rr7, rr6, and now this one — the third).
    Past the least-typing threshold; it wants a canonical `tools/` surface.
+5. **`tools/fire_modal_auth_eval.py` cannot survive a foreground `Bash`, and its rc=144 death
+   leaves a LIVE ORPHAN that keeps walking toward the paid dispatch.** Measured here as a
+   near-miss. The firer takes >3 min (seal validation, sanitize of 37 metadata files on ExFAT,
+   `modal run --detach`), which exceeds the foreground reaper trigger. The reaper killed the
+   SHELL; the python child survived at PPID 1 and kept running. **I then checked the ledger,
+   the claims table and the output dir — all empty — and read that as "it did nothing".** It
+   had simply not got there yet. I re-fired, and for about a minute two firers were racing the
+   same lane toward the same paid dispatch; the orphan was killed before either reached
+   `modal run`, and the ledger shows zero live calls across the whole window, so no duplicate
+   spend occurred. **The generalisable error is the inference, not the reaper: absence of a
+   downstream artifact seconds after an rc=144 is indistinguishable from a process that never
+   started.** The check is `pgrep -f fire_modal_auth_eval`, and the launch guard that already
+   mandates the canonical launcher for WAITERS should mandate it for the FIRER too. (Minor
+   sister: the detached firer's stdout is block-buffered, so `run.log` stays 0 bytes until it
+   exits — `PYTHONUNBUFFERED=1` would give live progress.)
 
 ---
 
