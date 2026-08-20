@@ -150,6 +150,23 @@ Against the charter's derived bars — **WARN ≥ 1.096x, PASS ≥ 1.804x** — 
 comfortably and sits at the PASS boundary inside its own noise. The honest verdict is: **WARN is
 secured, PASS is unresolved, and one T4 row resolves it.**
 
+## 4a. Compile-at-decode cost — MEASURED, not waved through
+
+The native library is compiled inside the 30-minute wall, so its build time is a budget item and is
+priced rather than assumed. MEASURED, three repeats, Apple M5 Max / clang 21, `-O3 -mcpu=native`:
+
+| translation unit | seconds |
+|---|---:|
+| `f26_hpac_native.c` (added by this path) | **0.203 / 0.204 / 0.207** |
+| `rc64_backend.c` (already in the prelude) | 0.058 / 0.059 |
+
+**~0.2 s added** against a token stage measured in hundreds of seconds. PROJECTION: a contest vCPU is
+slower, so call it 1-2 s there; still trivially favourable, and still priced rather than waved through.
+
+The change is plausibly net-NEGATIVE on prelude time: the removed OpenMP branch shelled out to
+`brew --prefix libomp` on Darwin, which costs more than the compile it was guarding — and could fail
+outright, which is the real reason to be rid of it.
+
 ## 5. Headroom, priced
 
 The corrector is now **62.8%** of the split run. Porting it is the only remaining large lever:
