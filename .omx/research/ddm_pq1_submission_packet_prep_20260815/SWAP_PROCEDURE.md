@@ -75,6 +75,19 @@ reuse its authority receipts for changed bytes.
    swap** — a stale present-tense sibling is a review finding by definition
    (rounds 5 and 6 both paid this tax; round 6 traced all six of its findings
    to this list having been closed).
+4A. `REPUBLISH_AND_REPIN_HOSTED_ARCHIVE` — owner `operator + MAIN packet owner`;
+   consumer `PR_BODY_DRAFT.md download field, hosted-archive identity check, and
+   final freeze receipt`; fire trigger `the exact shipping archive is selected,
+   sealed, and operator authorizes the public-repository push`. Commit and push
+   the **exact selected archive bytes** to the public source repository, derive a
+   raw URL pinned to that new 40-character commit, and replace every prior hosted
+   URL in the packet. Then download that URL as a fresh network read, require HTTP
+   200, and require its SHA-256 and byte count to equal the selected archive on
+   disk. Record the commit, URL, downloaded SHA-256, downloaded bytes and check
+   time in the freeze receipt. A prior candidate's working URL is historical
+   evidence only; it never transfers across a swap. If the push is not authorized
+   or the downloaded bytes differ, HOLD publication rather than leaving the old
+   URL in place.
 5. `RERUN_STRICT_CHAIN` — owner `MAIN packet owner`; consumer `generation gap
    report and compliance JSON`; fire trigger `public packet refreshed`. Execute
    the exact strict checker with the new expected SHA and size. Record every red
@@ -141,6 +154,8 @@ reuse its authority receipts for changed bytes.
 - Only one score axis exists.
 - Any public artifact contains unresolved placeholders or private operational
   details.
+- The hosted archive URL is not pinned to the commit that carries the selected
+  archive, or a fresh download does not match the selected SHA-256 and byte count.
 - The strict checker is red or the review counter is below `5/5`.
 - An actual push, hosting action, or pull-request opening lacks explicit
   operator authorization.

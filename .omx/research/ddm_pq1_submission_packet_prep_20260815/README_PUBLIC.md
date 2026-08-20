@@ -2,7 +2,8 @@
 
 This directory is a prepared submission packet held at
 `submissions/jg5_joint_waterfill/`. It is **not submitted**. Every claim below is
-backed by a receipt in the packet.
+backed by a retained custody receipt; those receipts are held outside the public
+submission directory.
 
 The one number this packet carries: on the exact bytes in this directory, the
 measured `[contest-CUDA]` 600-sample score is **0.14839100138338618**.
@@ -22,29 +23,16 @@ measured `[contest-CUDA]` 600-sample score is **0.14839100138338618**.
   absolute error bound of `3.63296497868841e-06`. The claim is
   `0.14839100138338618 ± 3.633e-06`. The distance from that interval to 0.15 is
   about 443 times the bound, so the sub-0.15 statement is not a rounding artifact.
-- **What is NOT measured.** There is **no `[contest-CPU]` score row on these bytes**, and none
-  is claimed. The CPU axis was measured on 2026-08-20 (Modal, Linux x86_64, 4 threads) and the
-  evaluator never ran: inflation alone took **4,369.6 s**, **2.43x the entire 1,800 s job wall**,
-  so the harness's 30-minute inflate budget refused first. Token decode is 90.8% of that and runs
-  **2.957x** slower than the CUDA path (3,966.8 s vs 1,341.5 s) on the same archive, which decodes
-  to a bit-identical token stream (`cc10a7b0…`) on both axes. This submission is therefore
-  GPU-required for evaluation, by measurement rather than by projection; the requested runner is
+- **What is NOT measured for the possible final object.** The composed rider plus
+  clean native-corrector runtime is locally decode-proven at full n600 and sealed,
+  but it has no fresh contest-CUDA or contest-CPU receipt yet. Its score, timing
+  and CPU boundary are therefore **GATED-ON-RC2**; none is transferred from jg5,
+  an instrumented tree, or a contended local receiver.
+- **The open runtime risk.** Populate the final runtime declaration only from the
+  composed candidate's fresh `[contest-CUDA T4, n600]` receipt and fresh
+  `[contest-CPU, n600]` attempt receipt. Until then no PASS/WARN/REFUSE timing
+  verdict is made for the shipping object. The requested runner remains
   `linux-nvidia-t4`.
-- **The open runtime risk.** Inflation took 1419.9 s of a 30-minute job wall —
-  the largest open risk on this submission, and a runtime risk, not a score risk.
-  One hot stage: **token decode alone is 1341.5 s of that 1419.9 s, 94.5%.** We
-  hold a native port of its integer half that reproduces this candidate's decode
-  bit-for-bit on the full 600-frame field at 1.77–1.83× locally — a range that
-  straddles the 1.804× our own bar requires, so it is not shown to close the
-  budget, and **it is not in the tree evaluated here.** That last clause is now
-  policy rather than caution: we measured the port on a contest T4 and it came
-  back slower on both denominators — **15.3% slower on the token stage it
-  replaces** (1546.6 s against 1341.5 s) and **13.6% slower on whole inflate**
-  (1612.6 s against 1419.9 s), the smaller figure because the rest of inflate is
-  unchanged and dilutes the stage ratio. The split moves the decode off the GPU
-  onto much weaker host vCPUs. Putting it in the tree would cost 193 s of
-  inflate. Full numbers are in `report.txt` under "Evaluation-time budget",
-  where the budget is graded in all three frames.
 - **What is not authority.** Any local macOS number, any advisory row, and any
   projection appearing in our own research notes is not a score and is not used
   here.
@@ -685,20 +673,30 @@ expect, and this submission does not meet it.
 
 ## How to verify
 
-From a checkout of the contest repository, with this directory at
-`submissions/jg5_joint_waterfill/` and `archive.zip` downloaded into it:
+From this submission directory. These commands verify the current hosted jg5
+object; if RC2 replaces it, update every URL and expected identity from the fresh
+receipts before running them.
 
 ```bash
-sha256sum submissions/jg5_joint_waterfill/archive.zip
-# expect f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e
+shasum -a 256 -c MANIFEST.sha256
+# expect 33 lines ending in: OK
 
-bash evaluate.sh --submission-dir ./submissions/jg5_joint_waterfill --device cuda
+ARCHIVE_URL=https://raw.githubusercontent.com/adpena/comma-lab/2d61b51988799ec3561d5f8a6f659aeb88cc99d9/submissions/robust_current/jg5_sub015_runtime/runtime/archive.zip
+LOCAL_SHA=$(shasum -a 256 archive.zip | awk '{print $1}')
+HOSTED_SHA=$(curl -fsSL "$ARCHIVE_URL" | shasum -a 256 | awk '{print $1}')
+test "$LOCAL_SHA" = "$HOSTED_SHA"
+test "$LOCAL_SHA" = f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e
+
+T4_RECEIPT_URL=https://raw.githubusercontent.com/adpena/comma-lab/2d61b51988799ec3561d5f8a6f659aeb88cc99d9/submissions/robust_current/jg5_sub015_runtime/t4_receipts/MODAL_REMOTE_RESULT.json
+curl -fsSL "$T4_RECEIPT_URL" | python3 -c 'import json,math,sys; r=json.load(sys.stdin); s=100*r["avg_segnet_dist"]+math.sqrt(10*r["avg_posenet_dist"])+25*r["archive_size_bytes"]/37545489; assert r["n_samples"]==600 and r["gpu_t4_match"] is True and r["score_axis"]=="contest_cuda"; assert r["expected_archive_sha256"]=="f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e" and r["expected_runtime_tree_sha256"]=="2103073d739fc3f27d329ea0785ea3010307360c2380af0476e16d0f5b57cb9b"; assert abs(s-r["score_recomputed_from_components"])<1e-15; print(f"recomputed_score={s:.17g}")'
+
+bash ../../evaluate.sh --submission-dir . --device cuda
 ```
 
 Expect `Average PoseNet Distortion: 0.00000637`, `Average SegNet Distortion:
 0.00020139`, and `Final score: 0.15` at the evaluator's 2-decimal display. The
-score claimed here, `0.14839100138338618`, is those components recomputed. Budget
-about 25 minutes on a T4 and read the runtime risk above first.
+score claimed here, `0.14839100138338618`, is those components recomputed. The
+shipping runtime and its budget verdict remain GATED-ON-RC2.
 
 ## Reproduction
 
@@ -722,8 +720,8 @@ What does exist for this candidate is the seal binding archive to receiver, the
 staging proof that this directory is byte-identical to the evaluated tree, and the
 authority receipt.
 
-**Source is available.** All **34 of the 34 files** in this candidate's runtime
-tree are in version control at
+**Source is available.** All **33 of the 33 files** enumerated by this candidate's
+evaluated runtime manifest, plus the exact `archive.zip`, are in version control at
 `submissions/robust_current/jg5_sub015_runtime/runtime/` in
 <https://github.com/adpena/comma-lab>, each byte-identical by SHA-256 to the tree
 the score was measured on — the receiver modules, `inflate.py` and `inflate.sh`

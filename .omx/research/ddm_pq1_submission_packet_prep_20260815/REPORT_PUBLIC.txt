@@ -19,10 +19,10 @@ Rate contribution: 0.1202707734076922
 Recomputed score: 0.14839100138338618
 Reported (2 dp display): 0.15
 Report-8dp worst-case absolute score error bound: 3.63296497868841e-06
-Inflation wall time: 1419.9042126240001 seconds
-Evaluation wall time: 51.427507448999904 seconds
-Total authority wrapper wall time: 1484.80307526 seconds
-Budget: the 1800 s CI limit covers the WHOLE job, not inflation alone -- see below.
+Inflation wall time: GATED-ON-RC2 -- populate only from the fresh composed-tree contest-CUDA receipt
+Evaluation wall time: GATED-ON-RC2 -- populate only from that same receipt
+Total authority wrapper wall time: GATED-ON-RC2 -- populate only from that same receipt
+Budget: GATED-ON-RC2 -- the 1800 s CI limit covers the WHOLE job, not inflation alone.
 
 The printed "0.15" is a 2-decimal DISPLAY of the evaluator's own final_score field.
 The score claimed on this submission is the value recomputed from the reported
@@ -80,83 +80,31 @@ For this receiver the archive hash alone does NOT determine the score. A score
 claim on these bytes is valid only against runtime tree 2103073d..., the tree
 shipped here and the one the authority receipt validated.
 
-=== Evaluation-time budget: a disclosed live risk ===
+=== Evaluation-time budget: GATED-ON-RC2 ===
 The official evaluation has a 30-minute limit (upstream/README.md:114), and the
 CI job carries that limit as timeout-minutes: 30 on the WHOLE job
 (upstream/.github/workflows/eval.yml:30) -- not on inflation alone.
 
-Measured on the authority run: inflation 1419.9 s plus evaluation 51.4 s =
-1471.3 s of the 1800 s job wall.
+The possible final shipping object composes the rider archive with the clean
+native-corrector runtime. Its real receiver has completed two full local n600
+decodes with byte-identical output, and it is sealed, but those local runs were
+contended and are not transferable to either contest axis.
 
-We grade that measurement in THREE FRAMES, and publish all three. They are one
-measurement seen three ways, not three results:
+Populate this section only from two fresh receipts on the exact composed bytes
+and runtime tree:
 
-  A. Charged total (inflation + evaluation) against our canonical residual window
-     for the remaining CI steps on the CUDA path, [822, 1302] s. 1471.3 s is
-     169.3 s OVER the ceiling. Verdict REFUSE.
-  B. Inflation alone against that same window re-derived with the MEASURED
-     evaluation time in place of the estimated one, [890.6, 1430.6] s. 1419.9 s
-     fits, by 10.7 s. Verdict WARN.
-  C. Absolute job wall. 1471.3 s of 1800 s leaves 328.7 s of headroom for
-     checkout, dependency installation and archive download.
+  A. [contest-CUDA T4, n600]: inflation, evaluation, wrapper total, runtime-tree
+     SHA-256, archive SHA-256, and the recomputed score components.
+  B. [contest-CPU, n600]: measured inflation outcome and whether evaluate.py ran.
 
-Frames A and B are related exactly by
-  [890.6, 1430.6] = [822, 1302] + (evaluate_est 120...180 - evaluate_measured 51.4)
-so they do NOT disagree: B is A corrected for evaluation coming in well under its
-own estimate -- 51.4 s measured against a 120-180 s allowance, i.e. 2.3x to 3.5x
-under. An earlier draft of this packet described them as two
-windows that disagree and were unreconciled. That was wrong, and it is withdrawn:
-there is one derivation and two framings of it. Quoting either one alone hides
-the evaluation correction, so both are stated. Only the 1471.3 s is measured; the
-residual window for the non-inflation steps is our own projection in both frames.
-
-Where the time goes: token decode is 1341.5 s of the 1419.9 s inflation, 94.5%
-(95.72% against the 1401.58 s instrumented-stage sum). One hot stage, not diffuse
-overhead.
-
-We built the obvious cure, measured it on the contest axis, and it lost. A native
-port of that stage's integer half reproduces this candidate's decode BIT-FOR-BIT:
-the same 3,662,409,600-byte raw output by SHA-256, the same distortion components,
-the same score. On local hardware it runs 1.77-1.83x faster -- a range that
-straddles the 1.804x our own bar requires, and our own receipt declines to call it
-a PASS because run-to-run variance exceeds the distance to the bar. On a contest
-T4 the sign INVERTS, and both denominators are worth stating because they differ:
-on the TOKEN STAGE the port took 1546.6 s against 1341.5 s for the stage it
-replaces, 15.3% slower (1546.6/1341.5); on WHOLE INFLATE the ported tree took
-1612.6 s against 1419.9 s for the tree shipped here, 13.6% slower (1612.6/1419.9),
-because the rest of inflate is unchanged and dilutes the stage ratio. Either way
-the sign is negative. The split moves the decode off the GPU onto host
-vCPUs far weaker than the laptop cores the local number came from. So the port
-does NOT ship, and lowering this stage to native CPU is closed as a wall-clock
-lever on this hardware. That measurement cost no score: the row is byte-identical
-to the one claimed above.
-
-A second port -- lowering the decode-time corrector as well -- moves still more of
-the same work onto the same host vCPUs that just lost by 205 s, so it inherits
-that result rather than escaping it. It is UNMEASURED on the contest axis: the
-shipping report emits no native-versus-Python sub-stage split, so this row cannot
-be decomposed to say how much of the token stage is still Python. Pricing that
-split on the contest axis is the next measurement. No build claim is made here
-before it exists.
-
-On the CPU path the projection is superseded by measurement. Contest-CPU
-inflation was measured on the shipped bytes at 4369.6 s (Modal, Linux x86_64,
-4 torch threads, 2026-08-20) — over the [1044, 1332] s residual by 3037.6 s, and
-2.43x the entire 1800 s job wall on its own; upstream/evaluate.py never ran. The
-3422.711146813 s figure previously quoted for this lineage was inherited from an
-earlier body, not measured on these bytes, and understated the real cost by
-946.9 s (+27.7%). Token decode is 90.8% of the measured wall and runs 2.957x
-slower than the CUDA path on the same archive, which decodes to a bit-identical
-token stream on both axes. No contest-CPU SCORE row exists and none is claimed.
-
-This is the single largest risk on this submission. It is a runtime risk, not a
-correctness or score risk: the score above is measured on the exact submitted
-bytes.
+The instrumented-tree T4 observation and the local receiver observations are
+different objects or regimes. Neither is a shipping-runtime figure. Until the
+fresh receipts exist, the runtime verdict is GATED-ON-RC2 and no PASS/WARN/REFUSE
+runtime claim is made for the composed object.
 
 === CPU boundary ===
-Status of the [contest-CPU] axis on these exact bytes: NO ROW EXISTS. No CPU
-score exists and none is claimed. This submission is GPU-required for evaluation;
-the requested runner is linux-nvidia-t4.
+Status of the final shipping object's [contest-CPU] axis: GATED-ON-RC2. No CPU
+score is claimed. The requested evaluation runner remains linux-nvidia-t4.
 
 === Provenance ===
 Candidate seal: jg5_joint_waterfill_455, seal SHA-256 96e9860aad9021e6dc9a9619036b54bd0a2205f60468e8585089db1d8044a7d0
