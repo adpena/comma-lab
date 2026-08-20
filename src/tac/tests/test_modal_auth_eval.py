@@ -134,8 +134,24 @@ def _hermetic_single_flight(monkeypatch, request):
     The guard's own semantics stay covered by its dedicated module tests; the
     RECORDING stub here lets ``test_main_calls_single_flight_guard`` still
     prove the wire-in is live without touching real state.
+
+    THE WRITE SIDE MATTERS TOO (added by ``ddm_rr7`` 2026-08-20). Stubbing only
+    the READ side left these tests isolated FROM the guard while still POISONING
+    the data the guard serves to everyone else: ``main()`` calls
+    ``register_dispatched_call_id_fail_closed``
+    (experiments/modal_auth_eval.py:1479), which appended the fixtures' fake
+    ``fc-test-modal-auth*`` object_ids to the PRODUCTION
+    ``.omx/state/modal_call_id_ledger.jsonl`` as permanently-live ``dispatched``
+    rows. Four of them accumulated there and refused the real T4 wall-clock
+    dispatch on the submission critical path — a unit test blocking a paid row.
+    The interception point is ``register_dispatched_call_id`` in the LEDGER
+    module, not the ``_fail_closed`` wrapper: ``experiments/modal_auth_eval.py``
+    binds the wrapper into its own namespace at import, but the wrapper resolves
+    the inner function in its own module at call time, so patching here works no
+    matter how the caller imported it.
     """
     del request
+    import tac.deploy.modal.call_id_ledger as ledger
     import tac.deploy.modal.single_flight as sf
 
     calls: list[dict] = []
@@ -144,6 +160,14 @@ def _hermetic_single_flight(monkeypatch, request):
         "assert_modal_single_flight",
         lambda **kwargs: (calls.append(kwargs), [])[1],
     )
+
+    ledger_writes: list[dict] = []
+
+    def _record_only(**kwargs: object) -> dict:
+        ledger_writes.append(dict(kwargs))
+        return dict(kwargs)
+
+    monkeypatch.setattr(ledger, "register_dispatched_call_id", _record_only)
     yield calls
 
 
