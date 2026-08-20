@@ -1,0 +1,379 @@
+{
+  "batch": 2,
+  "reviewer": "REVIEW-BATCH-2",
+  "date_utc": "2026-08-20",
+  "environment_notes": [
+    "First import sweep of the 4 source modules returned rc=1 with 'RuntimeError: conflicting in-process LawRef evaluator for realization_breakeven_bytes_v1'. Root-caused as TRANSIENT: a sister agent was editing the committed shared dependency src/tac/optimization/predict_project_receiver.py mid-run (traceback line numbers moved 287->301 between two runs in the same minute). Re-run after the edit settled: all 4 modules import rc=0. Recorded import_rc reflects the SETTLED re-run.",
+    "Broken-reference sweep resolved every `from tac.X import Y` in all 7 files against the live interpreter. One apparent hit -- test_taskspace_monolithic_pga_receiver.py:22 `from tac.witness_dsl import taskspace_monolithic_pga_receiver as pga` -- is a submodule import that hasattr() cannot see before load; verified importable directly. Counted as 0 real broken refs."
+  ],
+  "files": [
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/bounded_target_g_encoder.py",
+      "lines": 661,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": false,
+        "reason": "source module; exercised by tests/test_bounded_target_g_encoder.py which was run separately",
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": null
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 95,
+          "what": "_array_sha256 digests only the raw contiguous buffer (memoryview(...).cast('B')) and does not bind dtype or shape into the domain. Two arrays with different shapes but identical bytes produce the same digest. This digest is used as target_labels_sha256, a custody-binding value compared at line 493.",
+          "fix": "Hash a domain-separated preamble: digest.update(f'{value.dtype}|{value.shape}|'.encode('ascii')) before the buffer, matching the _evidence_sha256 schema-prefix pattern already used elsewhere in this file."
+        },
+        {
+          "severity": "minor",
+          "line": 351,
+          "what": "_row_runs allocates a fresh `padded` int8 array inside the per-row loop. The function is called up to 25x per pair (5 birth classes + up to 20 source/target death combinations) over 384 rows, so ~9,600 allocations per pair.",
+          "fix": "Hoist `padded = np.empty(W+2, dtype=np.int8)` above the row loop and reuse it; the ends are already re-zeroed each iteration."
+        },
+        {
+          "severity": "minor",
+          "line": 433,
+          "what": "The MAX_TOPOLOGY_EVENTS refusal in _event_plan is checked once per pair, after the whole pair has been expanded into `events`. A pathological pair builds its full event list before the refusal fires.",
+          "fix": "Check `len(events) > MAX_TOPOLOGY_EVENTS` inside the birth and death append loops so the refusal is immediate."
+        }
+      ],
+      "positive_notes": [
+        "The compile path proves its own claim rather than asserting it: lines 571-579 re-hash the decoded labels and require np.array_equal(compiled.decoded.labels, target) plus debt_after_cells == 0. The function name's claim (exact semantic reconstruction) is actually verified.",
+        "_row_runs half-open (x0, x1) derivation from the zero-padded diff is correct; edges.reshape(-1,2) is safe because zero padding guarantees an even edge count.",
+        "The compositing-precedence death rule (line 415) emits a clearing event only when the source role paints strictly later than the target role, which is the minimal correct set; verified by the round-trip check and by an explicit test."
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_ep725_label_local_g_stream.py",
+      "lines": 1073,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": false,
+        "reason": "source module; exercised by tests/test_taskspace_ep725_label_local_g_stream.py (5 passed)",
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": null
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 846,
+          "what": "_parse_execution_receipt converts wire values with `tuple(value.get('chronological_pair_order', ()))` and `tuple(value.get('pair_checkpoint_sha256s', ()))` at lines 846-847, OUTSIDE the try block that begins at line 848. A receipt whose field is an int or null makes tuple() raise a bare TypeError, escaping the module's documented Ep725LabelLocalGStreamError fail-closed contract. Its sibling _parse_pair_checkpoint wraps construction in a try, and the sibling module's receiver-receipt parser pre-validates list-ness before converting.",
+          "fix": "Move both tuple() conversions inside the existing try at line 848 (add TypeError to the caught set), or pre-validate `type(value.get(k)) is list` and raise Ep725LabelLocalGStreamError first."
+        },
+        {
+          "severity": "minor",
+          "line": 954,
+          "what": "`os.statvfs(root).f_bavail * os.statvfs(root).f_frsize` calls statvfs twice for one free-space figure; the two calls can observe different filesystem states.",
+          "fix": "stats = os.statvfs(root); free_bytes = stats.f_bavail * stats.f_frsize"
+        },
+        {
+          "severity": "minor",
+          "line": 864,
+          "what": "_preallocate uses os.ftruncate, which creates a SPARSE file. The free-space preflight at line 955 therefore does not actually reserve the bytes it checked for; a later _pwrite_exact can still hit ENOSPC after the preflight passed.",
+          "fix": "Either document that the preflight is advisory, or use os.posix_fallocate where available and fall back to ftruncate."
+        },
+        {
+          "severity": "minor",
+          "line": 224,
+          "what": "_write_once names its temp `.{name}.partial.{os.getpid()}` and opens it O_EXCL. A stale same-pid temp left by an earlier crash makes the open raise a bare FileExistsError (OSError), not the module error. Separately, if os.write fails mid-way the finally only closes the descriptor -- the temp file is never unlinked, so failed writes leave litter in the checkpoint directory.",
+          "fix": "Wrap the O_EXCL open and the write loop so failures unlink the temp and re-raise as Ep725LabelLocalGStreamError."
+        },
+        {
+          "severity": "minor",
+          "line": 651,
+          "what": "_capture_base_pair sets runtime._G['dst'] and never restores it, while the sibling monkeypatch of runtime._outputs_from_h0 IS restored in a finally at line 655. Asymmetric state handling; the dst value leaks to every later pair in the same runtime module.",
+          "fix": "Save and restore _G['dst'] in the same try/finally that restores _outputs_from_h0, or document that dst is intentionally sticky for the run."
+        },
+        {
+          "severity": "minor",
+          "line": 759,
+          "what": "`_sha256(memoryview(decoded.labels).cast('B'))` requires decoded.labels to be C-contiguous; a non-contiguous seam output raises a bare TypeError from memoryview.cast rather than the module error.",
+          "fix": "Wrap with np.ascontiguousarray(decoded.labels) as done for y0/y1 at lines 731-732."
+        }
+      ],
+      "positive_notes": [
+        "The resume path is self-healing, not self-poisoning. If the process dies between the Y1 pwrite (line 718) and the checkpoint write (line 774), resume finds no checkpoint for that pair and re-runs _capture_base_pair, whose runtime._render_pair rewrites the FULL pair at pair_index*PAIR_BYTES -- overwriting the half-applied Y1 with base before re-applying the overlay. Verified by reading the write ordering and confirmed by the file's own crash-resume test.",
+        "_stable_read and _file_size_sha256 both verify (st_dev, st_ino, st_size, st_mtime_ns) before open, from the fd after read, and from the path after close, and open with O_NOFOLLOW -- a genuine TOCTOU-resistant read, not a token check.",
+        "Durable-intent ordering at lines 1046-1053 is correct: the content-addressed promotion receipt is written BEFORE os.replace, so a crash after rename is recoverable without re-rendering; the recovery branch at 921-925 consumes it."
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_lvpg2_public_inverse.py",
+      "lines": 596,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": false,
+        "reason": "no test file exists for this module anywhere in the repo; see the first finding",
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": null
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 1,
+          "what": "NO test file. The module carries real reversible wire logic (_read_four_blocks, _decode_base, _decode_population, _unpredict_axis, _pack_lvls1) and a security-relevant audit-hook policy, none of it directly unit tested. Repo-wide grep finds only ONE consumer, src/tac/witness_dsl/taskspace_public_auth_eval_closure.py, which does have tests/test_taskspace_public_auth_eval_closure.py -- so coverage is indirect and partial at best. There is no encode-side counterpart in-tree either, so no encode->decode round-trip identity test exists for the LVPG2 grammar.",
+          "fix": "Add tests/test_taskspace_lvpg2_public_inverse.py covering at minimum: a synthetic LVPG2 member round-tripping through lvpg2_to_lvls1 to a known LVLS1; truncation/trailing-byte refusals per block; each _INNER_CODECS branch; each of the 6 _PERMUTATIONS; both predictor families and the reset_interval path; and the zigzag on/off paths."
+        },
+        {
+          "severity": "important",
+          "line": 309,
+          "what": "On the layout_wire == 1 (joint) path, `population_size = int(np.prod(code_shape, dtype=np.int64))` runs while code_shape has only been checked for `type is list and len == 2` at line 307 -- element types are NOT checked here (they are only checked later, inside _decode_population at line 220, which this path reaches afterwards). A wire manifest with a non-integer element makes numpy raise a bare TypeError/ValueError, escaping the module's PublicInverseError fail-closed contract. This is wire-controlled input in a decoder.",
+          "fix": "At line 307 also require `all(type(dim) is int and dim >= 1 for dim in code_shape)` and raise PublicInverseError otherwise -- mirroring the base_shapes validation immediately above it at line 303."
+        },
+        {
+          "severity": "important",
+          "line": 361,
+          "what": "_require_authority_environment does `int(os.environ.get('INFLATE_MAX_PAIRS', '0')) != 0`. A non-numeric value in that environment variable raises a bare ValueError from int(), not PublicInverseError, so the failure message does not identify the authority-environment gate that refused. (PublicInverseError subclasses ValueError, so callers catching ValueError still catch it -- this is a diagnosability defect, not an escape.)",
+          "fix": "Parse defensively: `raw = os.environ.get('INFLATE_MAX_PAIRS', '0');` then `if raw != '0': raise PublicInverseError(...)`, which is also stricter (rejects '00' and ' 0')."
+        },
+        {
+          "severity": "minor",
+          "line": 279,
+          "what": "The pg2 descriptor is required to have exactly the fields {'b','l','o','t','z'} but 'o' is never read by any decode path in the file (only 'b', 'l', 't', 'z' are consumed at lines 284-323). A required wire field with no consumer is either dead ABI or a dropped transform; if an encoder applies an 'o' transform, this inverse silently ignores it.",
+          "fix": "Either consume 'o' in the inverse, or document at line 279 what it holds and why the inverse does not need it."
+        },
+        {
+          "severity": "minor",
+          "line": 467,
+          "what": "sys.addaudithook installs a hook that CANNOT be removed for the lifetime of the interpreter. Correct for the one-shot inflate.py process this file is compiled into, but any in-process or repeated call to inflate() permanently constrains the interpreter (and stacks a second hook), which would break a test harness that called it twice.",
+          "fix": "Add an explicit warning to the inflate() docstring, and guard against double-install with a module-level sentinel."
+        },
+        {
+          "severity": "minor",
+          "line": 574,
+          "what": "_write_trace records `argv=list(sys.argv)`, but sys.argv was restored to the caller's argv in the finally at line 558 BEFORE this call at line 567. The trace field therefore holds the outer process argv, not the [runtime, logical, destination] argv the renderer actually ran under. The field name does not disambiguate which is intended.",
+          "fix": "Capture the renderer argv into a local inside the try block and pass that, or rename the trace field to caller_argv."
+        },
+        {
+          "severity": "minor",
+          "line": 546,
+          "what": "inflate() calls _read_four_blocks(source_bytes) at line 546 and then lvpg2_to_lvls1(source_bytes) at line 547, which parses the same four blocks a second time. Duplicate parse of the counted member on every decode.",
+          "fix": "Have lvpg2_to_lvls1 accept a pre-parsed (manifest, blocks) tuple, or drop the line 546 call and read the manifest from a value returned by lvpg2_to_lvls1."
+        }
+      ],
+      "positive_notes": [
+        "The LVPG2 framing is bounds-safe: _take refuses negative sizes and out-of-range ends, each of the four length prefixes is checked for room before struct.unpack_from, and line 95 requires exact EOF with no trailing bytes.",
+        "The manifest is required to be byte-canonical (line 101 re-serializes and compares), which closes JSON malleability on the slicing authority.",
+        "The permutation inverse at line 243 (np.argsort of the forward permutation) and the sequential prefix-sum in _unpredict_axis (reads residual from `encoded`, accumulator from `out`) are both correct inverses.",
+        "The audit hook installs BEFORE the counted source member is first read (line 537 precedes line 545), which is what the docstring claims."
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_monolithic_pga_receiver.py",
+      "lines": 3378,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": false,
+        "reason": "source module; exercised by tests/test_taskspace_monolithic_pga_receiver.py (run separately; timed out)",
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": null
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 460,
+          "what": "build_taskspace_monolithic_pga_archive accepts max_member_bytes and forwards it to the outer codec, but encode_taskspace_monolithic_pga_member (called first, line 464) hardcodes the module default: it refuses at line 386 with `len(member) > _MAX_MEMBER_BYTES` and re-parses at line 388 with parse_taskspace_monolithic_pga_member(member) using the DEFAULT bound. A caller who raises max_member_bytes above the default is still refused by encode. The parameter is partly inert.",
+          "fix": "Thread max_member_bytes through encode_taskspace_monolithic_pga_member and into its parse-back call."
+        },
+        {
+          "severity": "minor",
+          "line": 2960,
+          "what": "receive_ep725_taskspace_monolithic_pga_archive never checks len(member.sections) == 4 before calling _decode_ep725_surface. A 4-section (terminal-quotient-bearing) member therefore pays a full real ep725 decode -- up to timeout_seconds, default 180s, with two reference decodes and two shipped-runtime decodes -- before the TERMINAL_QUOTIENT_CONSUMER_OWED blocker finally fires downstream at line 2851. The audit entrypoint has the same ordering (line 2511 decodes before the blocker at line 1970).",
+          "fix": "Add the `if len(structural_member.sections) == 4: raise TaskspaceMonolithicPGAReceiverBlocker(...)` check next to line 2911, where the structural member is already in hand."
+        },
+        {
+          "severity": "minor",
+          "line": 3033,
+          "what": "parse_taskspace_monolithic_pga_blocker_receipt converts wire arrays with bare tuple(value[...]) at lines 3033-3041 and relies on __post_init__ for element typing, while its sibling parse_taskspace_monolithic_pga_receiver_receipt pre-validates list-ness AND element types at lines 3121-3127 before constructing. Both remain fail-closed (the conversions sit inside a try that maps TypeError/ValueError to the module error, and __post_init__ re-checks), but the two sibling parsers give different guarantees for the same shape of input.",
+          "fix": "Lift the receiver-receipt pre-validation block into a shared helper and use it in both parsers."
+        }
+      ],
+      "positive_notes": [
+        "I looked specifically for byte-framing and offset bugs and found none. _SECTION_DESCRIPTOR is '>B3xQQI32s' (56 bytes, big-endian so no implicit alignment padding); struct's 3x pad is NOT verified by unpack, and the parser closes that malleability hole explicitly at line 421 by requiring member[off+1:off+4] == b'\\x00\\x00\\x00'.",
+        "Directory slicing is genuinely the sole authority: each offset must equal a running cursor seeded from directory EOF (line 437), stop must not exceed the member (440), BOTH SHA-256 (443) and CRC-32 (445) are recomputed per section, and exact EOF is required (449). Nested ZIP payloads are refused in every role (294, 367).",
+        "encode_taskspace_monolithic_pga_member strict-parses its own output and compares payload tuples (line 389) rather than trusting the encoder.",
+        "Every decode path runs twice and compares a deterministic_fingerprint plus np.array_equal on the dense arrays before emitting a receipt (lines 2731-2743, 2766-2781, 2807-2822), and every success receipt is parse-back-equality checked before return.",
+        "Crossed G/A packet domains are enumerated and refused individually with distinct messages (lines 2864-2880 and 2935-2958) rather than falling through to a permissive default."
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_bounded_target_g_encoder.py",
+      "lines": 329,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 6,
+        "failed": 1,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "FAILED src/tac/witness_dsl/tests/test_bounded_target_g_encoder.py::test_real_ep725_n2_v2_control_exactly_reconstructs_frozen_target_without_transport - tac.witness_dsl.ep725_levelset_predictor_adapter.Ep725LevelsetPredictorAdapterError: bounded receipt renderer differs from frozen NumPy oracle  (raised at src/tac/witness_dsl/ep725_levelset_predictor_adapter.py:845)  ::  1 failed, 6 passed in 210.80s (0:03:30)"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "critical",
+          "line": 148,
+          "what": "test_real_ep725_n2_v2_control_exactly_reconstructs_frozen_target_without_transport FAILS DETERMINISTICALLY, not intermittently. Measured root cause, external to this file: ep725_levelset_predictor_adapter.py:55 pins EP725_CANONICAL_RENDERER_SHA256 = '1cecaa3ee9873d1378eaeb66b04cee56b621bccabe3fcecc01f60d3a0e692ddc', but the file that pin covers -- tools/levelset_byte_close_and_eval.py, loaded by _load_canonical_decoder_module at ep725_levelset_predictor_adapter.py:537 -- hashes to 00106018a420ff7f160d5895aab09d00a7b6859705dd17e9283a8488e6b8d003. I verified that file is COMMITTED and UNMODIFIED (git status clean) and that `git show HEAD:tools/levelset_byte_close_and_eval.py` hashes to the same 00106018..., so this is a stale pin against the repo's own committed renderer, NOT local uncommitted drift and NOT an SSD artifact problem. Every consumer of decode_ep725_prefix_ephemeral_surface / decode_ep725_counted_member_ephemeral_surface on a machine with the SSD mounted fails the same way.",
+          "fix": "Owned by ep725_levelset_predictor_adapter.py (a different reviewer's file), not by this test. Re-derive EP725_CANONICAL_RENDERER_SHA256 from the committed tools/levelset_byte_close_and_eval.py and land it with a provenance note, or determine that the renderer regressed and revert it. Until then this test cannot pass. Flagging here because the failure surfaces in MY file and blocks its clean review."
+        },
+        {
+          "severity": "important",
+          "line": 144,
+          "what": "The skipif predicate guards only on `EP725_SOURCE_DIRECTORY.is_dir()` and `_GT_CACHE.is_file()`. It does not guard on the canonical-renderer pin the test transitively depends on. A pin drift therefore converts what should be an honest skip into a hard failure on every machine that has the SSD mounted -- which is exactly what is happening today. The test is not hermetic and its skip predicate does not cover its real preconditions.",
+          "fix": "Extend the skipif to include a renderer-pin check (hash tools/levelset_byte_close_and_eval.py against EP725_CANONICAL_RENDERER_SHA256), or convert the pin mismatch into an explicit pytest.skip with a message naming the drifted file, so a pin refresh is a visible skip rather than a red test."
+        },
+        {
+          "severity": "minor",
+          "line": 186,
+          "what": "The test reads _REAL_N2_RECEIPT (.omx/research/original_taskspace_inverse_witness_codec_20260725/ep725_n2_bounded_target_g_v2_receipt.json) unconditionally, but the skipif at line 144 does not check that path. On a machine with the SSD and the GT cache but without that research artifact, the test raises FileNotFoundError instead of skipping. (The file does exist on this machine, 2435 bytes.)",
+          "fix": "Add `or not _REAL_N2_RECEIPT.is_file()` to the skipif predicate."
+        },
+        {
+          "severity": "minor",
+          "line": 137,
+          "what": "_GT_CACHE_SHA256 is used only as the DECLARED cache_sha256 custody value passed to FrozenTargetSliceCustodyV1 at line 163. The test never hashes the actual gt_n600.npz to confirm the declaration, so the custody field is asserted rather than measured. (The semantic result is still safe: the target CONTENT hash is independently recomputed at line 155 and pinned at line 180.)",
+          "fix": "Either hash the npz and assert it equals _GT_CACHE_SHA256, or rename the constant to make clear it is a declared custody label, not a verified file hash."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_ep725_label_local_g_stream.py",
+      "lines": 393,
+      "verdict": "COMMIT_CLEAN",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 5,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "..... [100%]  5 passed in 2.05s"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 179,
+          "what": "_transport_packet reaches into a private cross-module function, _g._encode_packet (tac.witness_dsl.generative_taskspace_correction). There is an explanatory comment justifying it -- the test needs a well-formed page whose live program is transport-dependent but whose binding names NONE, which the public compiler will not produce -- so this is deliberate, but it couples the test to a private API that can be renamed without notice.",
+          "fix": "Acceptable as-is given the rationale comment. If it breaks, expose a test-only builder from the owning module rather than re-reaching into the private name."
+        },
+        {
+          "severity": "minor",
+          "line": 197,
+          "what": "_valid_pages is annotated `-> tuple[GPageRefV1, GPageRefV1]` but returns `tuple(... for pair_index in range(2))`, whose static type is an unbounded tuple[GPageRefV1, ...]. The annotation is a claim the body does not establish.",
+          "fix": "Return an explicit 2-tuple literal, or widen the annotation to tuple[GPageRefV1, ...]."
+        }
+      ],
+      "positive_notes": [
+        "This is a genuinely strong behavior suite. It builds a real fixture runtime, a real ZIP, real page files on disk, executes the real stream, and then asserts Y0 is byte-exact against the fixture renderer output (line 246) while Y1 differs (line 247).",
+        "It exercises the crash-resume path for real: an exception mid-run leaves pair_0000.json present and pair_0001.json absent (lines 280-281), and the resume is proven to reuse the verified prefix BYTE-IDENTICALLY (line 294).",
+        "It proves the drift refusals by actually corrupting state: it seeks into the partial output and writes a byte (lines 318-320) to force 'output range drifted', and appends a byte to a page file (line 332) to force 'bytes/hash drifted'.",
+        "It corrupts the fixture RUNTIME source to emit phi twice (lines 345-349) and asserts the 'exactly one actual frame-1 phi' refusal -- a real negative control on the capture mechanism.",
+        "It exercises the durable-intent promotion recovery by deleting the canonical receipt and re-running (lines 377-393)."
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_monolithic_pga_receiver.py",
+      "lines": 1411,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 16,
+        "failed": 13,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": true,
+        "tail": "................FFFFFFFFFFFFF  --  process killed by `timeout 900` (rc=124, secs=900) BEFORE pytest printed its summary line, so per-test failure NAMES were not captured in that run. The 16 passed / 13 failed counts are read directly off the emitted progress characters, which are authoritative for counts but not for names. Cause CONFIRMED separately by isolating one failing test: `FAILED ...::test_real_ep725_n2_p_g_camera_closes_then_a_blocks_with_exact_receipt - Ep725LevelsetPredictorAdapterError: bounded receipt renderer differs from frozen NumPy oracle` (1 failed in 412.00s)."
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 1,
+          "what": "MEASURED: the file cannot complete within 900 seconds. It was killed at exactly 900s (rc=124) with 29 of its ~30 tests started. The first 16 tests (the structural member/directory/CRC/EOF/nested-ZIP/parametrized ones, lines 98-189) complete fast; the real-ep725 tests dominate the wall clock because _real_causal_surface_n2() runs decode_ep725_counted_member_ephemeral_surface at timeout_seconds=180.0 and most tests then perform double replays on top.",
+          "fix": "Give the file an explicit budget the harness honors -- a pytest.ini timeout, or split the real-SSD tests into a separately-marked module -- so a CI run cannot silently truncate at an arbitrary boundary and report partial results."
+        },
+        {
+          "severity": "important",
+          "line": 635,
+          "what": "MEASURED: 13 tests fail, and the cause is CONFIRMED by isolating one of them. I ran `pytest ...::test_real_ep725_n2_p_g_camera_closes_then_a_blocks_with_exact_receipt` alone: 1 failed in 412.00s with `tac.witness_dsl.ep725_levelset_predictor_adapter.Ep725LevelsetPredictorAdapterError: bounded receipt renderer differs from frozen NumPy oracle` raised at ep725_levelset_predictor_adapter.py:845 -- byte-for-byte the same failure as the CRITICAL finding on test_bounded_target_g_encoder.py, i.e. the stale EP725_CANONICAL_RENDERER_SHA256 pin. MEASURED for this one test. INFERRED for the other 12: they all route through decode_ep725_counted_member_ephemeral_surface via _real_causal_surface_n2 (line 284) and all failing positions fall after the fast structural block, but I did not individually capture their tracebacks.",
+          "fix": "Fix the renderer pin (see the CRITICAL finding on test_bounded_target_g_encoder.py); that is expected to clear all 13. Re-run this file with a >=3000s budget and -rf afterwards to confirm the remaining 12 rather than assuming them."
+        },
+        {
+          "severity": "minor",
+          "line": 277,
+          "what": "_real_source_bytes() calls pytest.skip() from inside a @cache-decorated function. functools.cache memoizes RETURN values, not raised exceptions, so the Skipped exception is re-raised freshly on each call rather than cached -- which happens to be the behaviour you want, but it depends on an implementation detail of cache-plus-exception interaction rather than on an explicit contract.",
+          "fix": "Prefer a module-level skipif marker (the pattern already used at line 950) or a plain module-level boolean, so the skip decision does not ride on @cache semantics."
+        }
+      ],
+      "positive_notes": [
+        "The 16 tests that DID pass are real structural behavior tests, not constant checks: per-role section corruption is parametrized across all three roles (line 142), directory order/range/CRC/EOF mutations are parametrized (line 153), nested ZIP is refused per role (line 181), and empty/partial member construction is proven impossible (line 189).",
+        "The receipt tests forge real JSON bodies -- flipping a truth label to False and coercing an integer count to float -- and assert the specific refusal messages (lines 788-805). A constants-returning stub would not survive these.",
+        "Corruption tests mutate real bytes (changed_p[-1] ^= 0x01 at line 717; corrupted[len//2] ^= 0x01 at line 757) rather than passing hand-built invalid objects."
+      ],
+      "test_quality": "behavior"
+    }
+  ],
+  "summary": {
+    "commit_clean": 1,
+    "commit_with_debt": 6,
+    "attic": 0,
+    "critical": 1,
+    "important": 7
+  }
+}

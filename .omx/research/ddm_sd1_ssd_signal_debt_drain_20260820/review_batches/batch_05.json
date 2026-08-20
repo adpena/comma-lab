@@ -1,0 +1,365 @@
+{
+  "batch": 5,
+  "reviewer": "REVIEW-BATCH-5",
+  "date_utc": "2026-08-20",
+  "environment_note": "Machine was saturated by sister agents (63-79 concurrent python processes) for the whole review window. Per-module `python -c import` probes launched one-process-per-module blocked in uninterruptible I/O wait and two batches were reaper-killed. A single-interpreter probe importing all five modules in one process then completed with rc=0: every module returned IMPORT_OK with its __all__ export count. Importability is therefore DIRECTLY measured, and independently corroborated by pytest collection (all 5 test files import their module at module scope and all collected green).",
+  "files": [
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_counted_xip2_chronological_a3.py",
+      "lines": 1113,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "import_probe_method": "direct `importlib.import_module('tac.witness_dsl.taskspace_counted_xip2_chronological_a3')` -> rc=0, IMPORT_OK, 25 __all__ exports; corroborated by pytest collection of its test file",
+      "pytest": {
+        "ran": true,
+        "passed": 15,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "...............                                                          [100%]\n15 passed in 66.37s (0:01:06)\nPYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 818,
+          "what": "`_realize_y0` uses a bare `assert parsed.transport is not None` to narrow the type before reading `parsed.transport.xi` at :819. Under `python -O` the assert is stripped, so a None transport would raise AttributeError instead of the module's typed CountedXIP2ChronologicalA3Error. The condition cannot currently be reached (ParsedCountedXIP2ChronologicalA3PacketV1.__post_init__ :339-341 already refuses a XIP2_WARP packet with transport=None), so this is a contract gap, not a live bug.",
+          "fix": "Replace with `if parsed.transport is None: raise CountedXIP2ChronologicalA3Error(\"active packet omitted exact XIP2 transport\")` so the fail-closed typed-error contract holds under -O."
+        },
+        {
+          "severity": "minor",
+          "line": 938,
+          "what": "`decode_counted_xip2_chronological_a3_packet` always calls `_decode_once` twice and compares, with no opt-out. For XIP2_WARP_V1 that doubles a per-pair ground-homography warp (plus a resize in SCORER_THEN_FACTOR2), and every G16 search neighbour goes through `compile_...` -> `decode_...`. This is a real constant-factor cost on the search hot path (the 19-test inverse-solver file spends 20.7s largely here). The double decode is deliberate and is asserted by tests, so it should stay the default.",
+          "fix": "Keep double-decode as the default but expose an explicit parameter (e.g. `verify_determinism: bool = True`) so a bounded inner search loop can verify once per arm instead of once per candidate."
+        },
+        {
+          "severity": "minor",
+          "line": 207,
+          "what": "`_resize_operator()` is `@lru_cache(maxsize=1)` and hands the same DisjointResizeOperator instance to every decode with no defensive copy. Correct today because the operator is used read-only (`apply` / `realize_factor2_uint8`), but any future mutating method on that class would cross-contaminate independent decodes through the shared cache and defeat the deterministic-double-decode check, which would also see the same mutated object twice.",
+          "fix": "Document the read-only requirement on the cached accessor, or have DisjointResizeOperator expose immutability (frozen dataclass / read-only arrays) so the sharing is enforced rather than assumed."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_ep725_bridge_eval.py",
+      "lines": 407,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "import_probe_method": "direct `importlib.import_module('tac.witness_dsl.taskspace_ep725_bridge_eval')` -> rc=0, IMPORT_OK, 14 __all__ exports; corroborated by pytest collection of its test file",
+      "pytest": {
+        "ran": true,
+        "passed": 4,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "....                                                                     [100%]\n4 passed in 0.19s\nPYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 323,
+          "what": "SUBSTITUTED-ARCHIVE SOUNDNESS HOLE (MEASURED). `build_bridge_receipt` accepts an optional `scored_archive` and, at :323-327, validates it only with `_require_file_row` - which checks that the caller's declared path/bytes/sha256 match the file on disk. Nothing binds that file to the G22 witness. The rate term is then priced on those bytes (:327 `archive_bytes = int(scored_archive_row[\"bytes\"])`) while d_seg/d_pose are inherited from the G22 object, and the verdict at :344-348 still reads MEASURED_FULL_N600_SAME_OBJECT_BRIDGE_INSIDE_ADVISORY_TARGET with `scored_output_matches_g22_reference: True` hardcoded at :358. I reproduced this: passing an unrelated 11-byte file (b'X'*11, no relation to the 16-byte G22 selected archive) produced verdict=MEASURED_FULL_N600_SAME_OBJECT_BRIDGE_INSIDE_ADVISORY_TARGET, priced_bytes=11, score=0.030007324448484342, inside_target_sublevel=True. The one honest signal, `scored_archive_matches_g22_selected: False` (:356), is recorded in artifact_identity but is never consulted by the verdict or by the score row. The module docstring claims the row is 'a scorer row measured on *that exact object*'; on this path it is not. Blast radius is bounded because the receipt is stamped research_only/score_claim False/promotion_eligible False/pointer_moved False, so it cannot move the pointer - but it can emit a plausible 'inside advisory target' row for an archive that was never scored.",
+          "fix": "ROOT CAUSE: the membership check is currently IMPOSSIBLE to write, because `validate_terminal_g22` only reads `archive_artifact.selected` (:135-136) and never captures the identity of the SOURCE spelling, even though the G22 receipt's whole point is that source and selected decode identically (it asserts `source_raw_sha256 == selected_raw_sha256` at :170-171). So `build_bridge_receipt` has no proven-equivalent set to test membership against. Two-part fix: (1) extend `validate_terminal_g22` to also capture `archive_artifact.source`'s file row when present, and return the set of proven-equivalent archive identities; (2) in `build_bridge_receipt`, require `scored_archive_row` to be a member of that set - `if scored_archive_row not in g22_closure['equivalent_archives']: raise TaskspaceBridgeEvalError('scored archive is not a G22-proven-equivalent spelling')`. Interim one-liner if (1) is deferred: refuse any `scored_archive` that differs from the G22 selected archive, or downgrade the verdict token to `..._SUBSTITUTED_RATE_ARCHIVE_...` and set `scored_output_matches_g22_reference` to False."
+        },
+        {
+          "severity": "minor",
+          "line": 314,
+          "what": "Thin coverage: 4 tests for 407 lines. Untested refusal branches include the scorer-row gates at :314-320 (pair_count != 600, device != 'cpu', deterministic_algorithms not True, raw_sha256 differing from the G22 witness), `file_identity`'s symlink/non-regular-file refusal at :86, and the cached-vs-recomputed pointer disagreement at :234-235. Those are the fail-closed paths that carry the module's authority claims, so they are exactly the ones worth pinning.",
+          "fix": "Add one parametrized test per scorer-row gate and one for the pointer cached/derived mismatch; they are cheap (pure dict inputs, no file I/O except the symlink case)."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_predictor_state_v2.py",
+      "lines": 504,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "import_probe_method": "direct `importlib.import_module('tac.witness_dsl.taskspace_predictor_state_v2')` -> rc=0, IMPORT_OK, 12 __all__ exports; corroborated by pytest collection of its test file",
+      "pytest": {
+        "ran": true,
+        "passed": 11,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "...........                                                              [100%]\n11 passed in 1.32s\nPYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 204,
+          "what": "`_parse_xip2_exact` reaches into another module's private API: `xi_pose_coder._channel_delta_decode(payload, offset, pair_count)`. The symbol exists (src/tac/boundary_math/xi_pose_coder.py:217) so this works today, but it is an attribute access on an imported module rather than a `from ... import`, so a rename or removal upstream produces no import-time signal - it fails at first SE3_XI decode, which is a counted-transport path.",
+          "fix": "Either promote `_channel_delta_decode` to a public name in xi_pose_coder, or import it explicitly (`from tac.boundary_math.xi_pose_coder import _channel_delta_decode`) so a rename breaks at import rather than at decode."
+        },
+        {
+          "severity": "minor",
+          "line": 184,
+          "what": "`_parse_xip2_exact` re-implements the per-coder XIP2 body dispatch (coder ids 0-3, :196-216) that `xi_pose_coder.parse_xi_payload` already implements, then cross-checks the two decoders agree (:224-228). The duplication is deliberate defence-in-depth and the docstring says so ('Use the canonical XIP2 decoders while independently enforcing EOF'), but it means a new coder id must be added in two places; add it only upstream and SE3_XI transport silently refuses every payload using it with 'unknown XIP2 coder id'.",
+          "fix": "No code change required - add a comment at :215 pointing at xi_pose_coder's coder table so the two-place edit is discoverable, or derive the accepted id set from a shared constant in xi_pose_coder."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_quantized_xip2_inverse_solver.py",
+      "lines": 2114,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "import_probe_method": "direct `importlib.import_module('tac.witness_dsl.taskspace_quantized_xip2_inverse_solver')` -> rc=0, IMPORT_OK, 20 __all__ exports; corroborated by pytest collection of its test file",
+      "pytest": {
+        "ran": true,
+        "passed": 19,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "...................                                                      [100%]\n19 passed in 20.72s\nPYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 1,
+          "what": "NO-FAKE #6 CHECK (search-masquerading-as-solver): I checked this hard, and the mechanism IS a search, not a solve. `run_quantized_xip2_inverse_search` (:1803) does bounded coordinate descent over the int16 XIP2 lattice: for each arm it walks a seeded coordinate order (:1961), proposes +/- step neighbours bounded by q_level (:1972-1977), evaluates each through the real G13 receiver plus an external scoring callback, and takes the argmin by (complete_score, packet_sha256) (:2024). There is no closed-form, variational, KKT, or preimage solve anywhere in the file. HOWEVER, NO-FAKE #6's escape conditions (a) honest labelling and (b) documented real mechanism are both substantially MET inside the module: the docstring calls it 'an encoder-side, research-only bounded search' (:4-5); FORMULATION_SCOPE is literally 'FIXED_SCALE_DIRECT_INT16_COORDINATE_SEARCH_V1' (:58); every public class and the entry point are named ...Search...; the receipt carries `direct_quantized_receiver_search: True` and `affine_xi_pose_model_used: False` (:803-804); and the docstring explicitly disclaims an analytic path ('no affine pose model, Jacobian surrogate, dense target, scorer, or archive builder lives here'). The ONLY misleading surface left is the filename `..._inverse_solver.py` (inherited from .omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g16_quantized_xip2_inverse_solver_20260726.md) and the error class name QuantizedXIP2InverseError. A future grep for 'solver' lands here and reads as a solve. Rename is cheap: the only code importer is its own test file.",
+          "fix": "Rename the module to `taskspace_quantized_xip2_inverse_search.py` (only importer is src/tac/witness_dsl/tests/test_taskspace_quantized_xip2_inverse_solver.py), or - if the SPEC filename must be preserved for lineage - add one docstring line: 'FILENAME NOTE: \"solver\" is historical from SPEC_g16; the mechanism is a bounded coordinate SEARCH over the int16 lattice, not a closed-form solve.'"
+        },
+        {
+          "severity": "minor",
+          "line": 1075,
+          "what": "SELF-POISONING RESUME (fail-closed, deliberate, but undocumented recovery). `_atomic_publish` writes `.<name>.tmp`, fsyncs, then hardlinks. A crash in the window between :1085 (fsync) and :1089 (os.link) leaves the temp file behind. On the next resume, `_load_stage_store` :1189-1191 refuses any run-directory entry that does not match `stage-\\d{8}-(evaluation|terminal)\\.json`, so the whole run directory becomes permanently unresumable with the message 'unexpected temporary/partial/run file: .stage-00000005-evaluation.json.tmp'. This is intentional and is pinned by test_resume_rejects_foreign_config_source_chain_partial_and_duplicate (test file :499-509), and it never corrupts data - but the error text gives the operator no recovery instruction, which conflicts with the repo's resumability-is-P0 discipline.",
+          "fix": "Keep the refusal, improve the message: include 'delete this temp file to resume; its contents were never chained' in the raise at :1191. Optionally, accept a temp file whose bytes equal the pending payload and re-link it."
+        },
+        {
+          "severity": "minor",
+          "line": 1108,
+          "what": "The only silent-exception site in the module: `_atomic_publish`'s `finally` block swallows both OSError and QuantizedXIP2InverseError with a bare `pass` (:1108-1109) while cleaning up the temp file. It is narrowly scoped to cleanup, is commented, and cannot mask a failed publish (the publish path itself raises), but a leaked temp file here is exactly what triggers the permanent-refusal case above, so the swallow and the refusal compound.",
+          "fix": "Leave the swallow (raising in `finally` would mask the real error) but record the leaked path - e.g. re-raise nothing and instead let the message in the sister fix above name the file."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_same_class_realization_encoder.py",
+      "lines": 1560,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "import_probe_method": "direct `importlib.import_module('tac.witness_dsl.taskspace_same_class_realization_encoder')` -> rc=0, IMPORT_OK, 21 __all__ exports; corroborated by pytest collection of its test file",
+      "pytest": {
+        "ran": true,
+        "passed": 11,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "...........                                                              [100%]\n11 passed in 1.43s\nPYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 1449,
+          "what": "SCALABILITY WALL in `acquire_same_class_realization_repair_programs`. The function emits one proposal per (family x prefix_order x prefix_count): with the test plan that is 4 families x 2 orders x 5 prefixes = 40 proposals, and each one runs `_build_program` (:1220, a Python loop over every selected cell) followed by `validate_same_class_realization_program_against_evidence` (:1281, a second Python loop over every expanded cell). Because `prefix_cell_counts` is geometric, the summed cell work is roughly 2x debt_count per (family, order), i.e. O(4 x families x debt_count) Python-level iterations. The rest of the module is properly vectorized, so this is the one hot spot; at n600-scale realization debt it dominates. Encoder-only, so it never runs in the receiver, and the only bound is whatever plan the caller passes.",
+          "fix": "Vectorize the RLE in `_build_program` (np.diff over the sorted (pair,row,col) address array to find run boundaries) and vectorize `validate_...` (build the expanded address array once and index the debt mask/label arrays in bulk instead of per-cell). Both preserve exact output ordering."
+        },
+        {
+          "severity": "minor",
+          "line": 47,
+          "what": "`N2_STAGE_ABLATION_PRIORITY_RECEIPT_SHA256` is a hardcoded 64-hex literal that gates evidence admission at :381 and receipt admission at :685. I verified it is NOT an orphan constant: the same digest appears in five .omx/research documents (SPEC_g12_same_class_realization_encoder_20260726.md, SPEC_g10, SPEC_g14, SPEC_g17, and codex_findings_taskspace_semantic_realization_decoupling_20260726_codex.md), so the provenance exists. But the module carries no pointer to any of them, so a reader hitting the gate has no path from the code to the receipt it enforces.",
+          "fix": "Add a comment at :47 citing `.omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g12_same_class_realization_encoder_20260726.md` as the source of the digest, so the value-provenance chain is reachable from the code."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_counted_xip2_chronological_a3.py",
+      "lines": 456,
+      "verdict": "COMMIT_CLEAN",
+      "import_rc": 0,
+      "import_error": null,
+      "import_probe_method": "pytest collected and ran the file (rc=0)",
+      "pytest": {
+        "ran": true,
+        "passed": 15,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "...............                                                          [100%]\n15 passed in 66.37s (0:01:06)\nPYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [],
+      "test_quality": "behavior",
+      "test_quality_evidence": "Would NOT survive a constants-returning stub. :268-287 mutates five distinct byte positions (truncation, CRC flip, header flip, trailing bytes) and requires each to raise. :188-193 asserts decoded uint8 arrays equal the surface arrays. :237 asserts the two interpretations produce DIFFERENT Y0 from identical XIP2 bytes. :394-396 asserts numpy writeable flags are False. :405-430 mutates receipt truth labels, injects a duplicate JSON key, and appends a newline, requiring refusal each time. :447-455 unpacks the real header struct and checks the footer CRC against the receipt field."
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_ep725_bridge_eval.py",
+      "lines": 190,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "import_probe_method": "pytest collected and ran the file (rc=0)",
+      "pytest": {
+        "ran": true,
+        "passed": 4,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "....                                                                     [100%]\n4 passed in 0.19s\nPYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 152,
+          "what": "`test_bridge_receipt_binds_scored_archive_and_reference_output` is the test that exercises the substituted-archive path (it passes an unrelated 14-byte `recode.zip`). It asserts `scored_archive_matches_g22_selected is False` and `scored_output_matches_g22_reference is True` but never asserts the resulting `verdict` string - which is what let the SAME_OBJECT verdict on a foreign archive (important finding on the source module) go unnoticed. The test name says 'binds scored archive' while the code under test performs no binding.",
+          "fix": "Add `assert 'SAME_OBJECT' not in receipt['verdict']` (after the source fix) or assert the exact expected verdict token, so the verdict is pinned rather than only the two boolean flags."
+        },
+        {
+          "severity": "minor",
+          "line": 1,
+          "what": "Missing `# SPDX-License-Identifier: MIT` header. The other nine files in this batch all carry it on line 1; this file starts at `from __future__ import annotations`.",
+          "fix": "Prepend `# SPDX-License-Identifier: MIT`."
+        }
+      ],
+      "test_quality": "behavior",
+      "test_quality_evidence": "Would NOT survive a constants stub: :126-130 rewrites the G22 JSON to 599 pair ids and requires a raise; :133-149 asserts the envelope's conditional budgets CHANGE between low-pose and high-pose inputs (max_archive_bytes goes not-None -> None); :186-190 writes literal duplicate-key JSON bytes and requires refusal. Coverage is thin (see the source-module finding) but what is there tests behavior."
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_predictor_state_v2.py",
+      "lines": 256,
+      "verdict": "COMMIT_CLEAN",
+      "import_rc": 0,
+      "import_error": null,
+      "import_probe_method": "pytest collected and ran the file (rc=0)",
+      "pytest": {
+        "ran": true,
+        "passed": 11,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "...........                                                              [100%]\n11 passed in 1.32s\nPYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [],
+      "test_quality": "behavior",
+      "test_quality_evidence": "Would NOT survive a constants stub: :110-114 mutates the caller's label array after construction and asserts the stored copy is unchanged AND non-writeable AND raises on write; :118-126 builds six independent mutations and asserts every binding_sha256 differs from baseline while :127 asserts the semantic binding is transport-INVARIANT (a real discrimination, not a constant); :194-215 parametrizes three real XIP2 coders through quantize/serialize/decode and then appends bytes to require a 'trailing' refusal; :249-256 asserts the V9 transport is accepted and SE3_XI refused for the same G program."
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_quantized_xip2_inverse_solver.py",
+      "lines": 646,
+      "verdict": "COMMIT_CLEAN",
+      "import_rc": 0,
+      "import_error": null,
+      "import_probe_method": "pytest collected and ran the file (rc=0)",
+      "pytest": {
+        "ran": true,
+        "passed": 19,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "...................                                                      [100%]\n19 passed in 20.72s\nPYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [],
+      "test_quality": "behavior",
+      "test_quality_evidence": "The strongest suite in the batch; would NOT survive a constants stub. :197-200 defines a deliberately ZERO-LOCAL-SLOPE objective f(q)=(q^2-1)^2 whose optimum is q=+/-1, then :284 asserts the search actually FINDS |q|==1 - a constant-returning implementation cannot satisfy this, and neither can a gradient/affine surrogate. :404-415 flips one real packet byte and requires a CRC refusal. :441-457 crashes the callback, resumes from disk, and asserts the resumed result is BYTE-IDENTICAL to the first run AND that the second objective was never called (`never.calls == []`). :460-473 injects a mid-run crash and asserts the completed callbacks are cached and not re-evaluated. :476-553 corrupts the stage chain four different ways (foreign config, foreign surface, stray .tmp, rewritten previous_stage_sha256, duplicated stage) and requires a distinct refusal for each. :582-588 greps the durable JSON for dense-payload leakage."
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_same_class_realization_encoder.py",
+      "lines": 443,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "import_probe_method": "pytest collected and ran the file (rc=0)",
+      "pytest": {
+        "ran": true,
+        "passed": 11,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "...........                                                              [100%]\n11 passed in 1.43s\nPYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 1,
+          "what": "Missing `# SPDX-License-Identifier: MIT` header (same as the ep725 test file); the other files in the batch carry it on line 1.",
+          "fix": "Prepend `# SPDX-License-Identifier: MIT`."
+        }
+      ],
+      "test_quality": "behavior",
+      "test_quality_evidence": "Would NOT survive a constants stub, and I independently re-derived its arithmetic. The fixture at :41-83 plants 4 road realization-debt cells, 2 lane debt cells, 1 topology-debt cell, 1 closed cell and 1 fortunate-mismatch cell; the assertions at :154-168 then require debt_count==6, by-class (4,2,0,0,0), closed==H*W-8, closed-by-class==(H*W-9,0,1,0,0), topology==1, fortunate==1. I recomputed all six from the fixture by hand and they are exact. :183 requires prefix_cell_counts==(1,2,3,4,6), which is exactly the geometric closure of ratios (2,3) over debt 6. :271-275 asserts the four contiguous road cells RLE-merge into a single run spanning cols 10..14 while the two non-adjacent lane cells stay separate. :292-293 asserts emitted palette colours are exactly the OBSERVED target colours. :356-359 asserts the two prefix orders pick different first cells (address picks col 10, SSE-descending picks col 12 or 13)."
+    }
+  ],
+  "summary": {
+    "commit_clean": 3,
+    "commit_with_debt": 7,
+    "attic": 0,
+    "critical": 0,
+    "important": 1
+  },
+  "totals": {
+    "files_reviewed": 10,
+    "lines_reviewed": 7689,
+    "tests_run": 60,
+    "tests_passed": 60,
+    "tests_failed": 0,
+    "ruff_violations": 0,
+    "secrets_hits": 0,
+    "broken_refs": 0,
+    "hardcoded_paths": 0,
+    "tmp_or_volumes_paths": 0,
+    "minor_findings": 14
+  },
+  "commands_run": [
+    "python -m ruff check <all 10 files>  -> 'All checks passed!'",
+    "python -m pytest src/tac/witness_dsl/tests/test_taskspace_counted_xip2_chronological_a3.py -q --no-header -p no:randomly -> 15 passed in 66.37s",
+    "python -m pytest src/tac/witness_dsl/tests/test_taskspace_ep725_bridge_eval.py -q --no-header -p no:randomly -> 4 passed in 0.19s",
+    "python -m pytest src/tac/witness_dsl/tests/test_taskspace_predictor_state_v2.py -q --no-header -p no:randomly -> 11 passed in 1.32s",
+    "python -m pytest src/tac/witness_dsl/tests/test_taskspace_quantized_xip2_inverse_solver.py -q --no-header -p no:randomly -> 19 passed in 20.72s",
+    "python -m pytest src/tac/witness_dsl/tests/test_taskspace_same_class_realization_encoder.py -q --no-header -p no:randomly -> 11 passed in 1.43s",
+    "grep -rniE 'api[_-]?key|secret|password|token|BEGIN .*PRIVATE KEY|100\\.6[4-9]\\.' over all 10 files -> only local variable names containing 'token'; 0 secrets",
+    "grep -nE \"'/|\\\"/|/tmp|/Volumes|/Users\" over all 10 files -> 0 hits",
+    "AST walk of every `from tac.X import Y` in all 10 files, resolving X to its source file and Y to a top-level binding -> 1 hit, manually confirmed a FALSE POSITIVE (`from tac.boundary_math import xi_pose_coder` is a submodule import; src/tac/boundary_math/xi_pose_coder.py exists, 19307 bytes)",
+    "grep for referenced symbols: xi_pose_coder.dequantize_xi:112, _channel_delta_decode:217, parse_xi_payload:337; xi_spline_residual_coder.decode_spline_residual_body:445, decode_delta_res_body:504 -> all present",
+    "grep -rl for N2_STAGE_ABLATION_PRIORITY_RECEIPT_SHA256 digest -> 5 .omx/research docs + the module (provenance exists)",
+    "grep -rl for taskspace_quantized_xip2_inverse_solver -> 1 SPEC md, 1 owed-review md, 1 test file (no code importers besides its own test)",
+    "scripted reproduction probe of build_bridge_receipt with a foreign 11-byte scored_archive -> verdict MEASURED_FULL_N600_SAME_OBJECT_BRIDGE_INSIDE_ADVISORY_TARGET, priced_bytes 11, score 0.030007324448484342, inside_target True (rc=0)"
+  ]
+}

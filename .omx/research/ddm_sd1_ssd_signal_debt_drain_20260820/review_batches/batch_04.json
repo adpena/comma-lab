@@ -1,0 +1,275 @@
+{
+  "batch": 4,
+  "reviewer": "REVIEW-BATCH-4",
+  "date_utc": "2026-08-20",
+  "method_note": "Every number below came from a command actually run: ruff --output-format=concise, .venv/bin/python -c 'import <mod>', .venv/bin/python -m pytest <file> -q --no-header -p no:randomly (timeout 300). Total 55 tests collected, 55 passed, 0 failed, 0 errors, 0 SKIPPED across all six suites. Two purpose-written probes ran to completion and both findings they back are MEASURED, not reasoned: (1) the window_steps_from_beta2 float-ceil off-by-one, and (2) the PASS_P0 receipt-forgery acceptance. A first heavy-fixture version of probe 2 timed out twice (EXIT=124) under sister-agent load average ~7; it was rewritten to build the typed receipt directly with no camera arrays and then completed with EXIT=0. Probe sources and verbatim output are retained at scratchpad/rb4_probe2.py and scratchpad/rb4_probe2_out.txt.",
+  "files": [
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/optimization/stage_transition_soft_velocity_blend.py",
+      "lines": 246,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": false, "reason": "non-test source; covered by src/tac/optimization/tests/test_stage_transition_soft_velocity_blend.py"},
+      "ruff": ["23:11 RUF022 __all__ is not sorted", "86:10 UP037 remove quotes from type annotation", "115:12 RUF046 value cast to int is already an integer", "124:5 SIM108 use ternary operator"],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 115,
+          "what": "MEASURED off-by-one in window_steps_from_beta2. `int(math.ceil(c / (1.0 - beta2)))` inherits binary-float error in `1.0 - beta2`. Probe over c=2.0: beta2=0.9 -> 21 (exact intent 20); beta2=0.9995 -> 4001 (4000); beta2=0.9999 -> 20001 (20000); beta2=0.99999 -> 200001 (200000). beta2 in {0.95, 0.98, 0.99, 0.995, 0.999} round correctly, which is exactly why the existing test (which only checks 0.999) passes. Impact is one extra optimizer step in a blend window, so it is not score-affecting; but the module is described as pure exact algebra and this constant feeds the value-provenance ladder.",
+          "fix": "Compute the quotient exactly, e.g. `math.ceil(Fraction(str(c)) / (1 - Fraction(str(beta2))))`, or snap first: `math.ceil(round(c / (1.0 - beta2), 9))`. Then add beta2=0.9 (expect 20) as a regression case."
+        }
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/optimization/tests/test_stage_transition_soft_velocity_blend.py",
+      "lines": 79,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 6, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "......                                                                   [100%]\n6 passed in 0.19s"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 20,
+          "what": "The only window_steps_from_beta2 inputs asserted are beta2=0.999 with c=2.0 and c=1.0 -- the two values that happen to round correctly under binary float. The off-by-one at beta2 in {0.9, 0.9995, 0.9999, 0.99999} (see source finding) is invisible to this suite, so the assertion pair reads as coverage it does not have.",
+          "fix": "Add `assert window_steps_from_beta2(0.9, c=2.0) == 20` after fixing the source; it fails today (returns 21)."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/tests/test_measurement_integrity.py",
+      "lines": 68,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 4, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "....                                                                     [100%]\n4 passed in 0.79s"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "vacuity_audit": "NON-VACUOUS. 4 tests, 0 skips, 0 conditional-skip guards (grep for skip/xfail returns nothing in this file). Every assertion has a live denominator: (1) test_git_log_wc_count_consumers_are_refused asserts an exact 1-element hit list AND that the assert-helper raises with 'git rev-list --count' in the message -- a detector that returned [] would fail it; (2) test_git_rev_list_count_is_allowed is the paired negative control; (3)/(4) exercise real score arithmetic. The load-bearing one is (4): it asserts parsed['score'] == 0.1 + sqrt(0.004) + 0.1 = 0.26325 while the report file literally prints 'Final score: ... = 0.21', so a parser that trusted the printed final_score FAILS. That is a real discriminator, not a constant check.",
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 33,
+          "what": "test_report_metrics_best_score_prefers_recomputed_components exercises exactly one component triple (0.0004/0.001/0.004). A ReportMetrics.computed_score hardcoded to `0.2 + math.sqrt(0.004)` would pass it. The suite is saved from vacuity by its sibling at line 45, which uses a value that discriminates recomputed-vs-printed, but this test alone does not.",
+          "fix": "Add a second triple with different magnitudes (e.g. 0.0009/0.002/0.006) so a constant return cannot satisfy both."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/predictor_preserving_coupled_preimage.py",
+      "lines": 1448,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": false, "reason": "non-test source; covered by src/tac/witness_dsl/tests/test_predictor_preserving_coupled_preimage.py"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 1278,
+          "what": "The emitted receipt sets constant_rgb_target_numerators_exact and corrected_y1_support_numerators_exact from `program.mode`, not from the measured `reconstruction.constant_rgb_target_numerators_exact` / `.copy_source_target_numerators_exact` proof flags computed at lines 858-874. Today the two agree because lines 1228 and 1231 raise when the measured flag is False, so this is name-vs-mechanism drift risk, not a live falsehood. A field whose name asserts a numerator proof should carry the proof value.",
+          "fix": "Pass reconstruction.constant_rgb_target_numerators_exact / reconstruction.copy_source_target_numerators_exact straight through, and keep the mode consistency check in __post_init__ (line 1084) as the cross-check."
+        },
+        {
+          "severity": "minor",
+          "line": 1343,
+          "what": "parse_predictor_preserving_a3_receipt calls json.loads without the `parse_constant=` guard its sister uses (taskspace_pass_conditional_a.py:739). A receipt carrying NaN/Infinity still fails closed one step later at line 1351 via _canonical_json(allow_nan=False), so this is asymmetry rather than a hole -- but the error message becomes 'not canonical JSON' instead of naming the non-finite constant.",
+          "fix": "Add the same parse_constant thunk so the two parsers report the same failure class."
+        }
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_pass_conditional_a.py",
+      "lines": 834,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": false, "reason": "non-test source; covered by src/tac/witness_dsl/tests/test_taskspace_pass_conditional_a.py"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 542,
+          "evidence": "MEASURED by executed forgery probe (scratchpad/rb4_probe2.py, EXIT=0). Verbatim result -- on a PASS_P0_V1 receipt with control_row_count=0 and actually_changed_camera_values=0, all four of these forgeries were ACCEPTED by both PassConditionalAReceiptV1.__post_init__ AND parse_pass_conditional_a_receipt: owned_scorer_cells=999 -> ACCEPTED (rows=0 owned_cells=999); owned_camera_values=4096 -> ACCEPTED (rows=0 owned_vals=4096); output_camera_y0_sha256='d'*64 -> ACCEPTED (y0=dddddddd while p0=88888888); output_y0_scorer_numerators_sha256 != predictor_p0_scorer_numerators_sha256 -> ACCEPTED. Controls behaved correctly and were REFUSED: actually_changed_camera_values=1 -> 'conditional PASS_P0 receipt contains a mutation'; output_camera_y1_sha256 != conditional Y1 -> 'accounting or Y1 custody changed'; research_only=False -> 'truth labels became permissive'. Same probe confirmed by grep that the A3 sister carries all four missing guards.",
+          "what": "PASS_P0_V1 receipt invariants are strictly weaker than the A3 sister's, so a hand-written receipt can carry internally inconsistent ownership/output claims and still survive parse_pass_conditional_a_receipt. Concretely: (a) __post_init__ checks only `control_row_count != 0 or actually_changed_camera_values != 0` for PASS mode, and the `owned_scorer_cells != control_row_count` check sits in the `elif` at line 545 so it is never evaluated for PASS -- owned_scorer_cells is then bounded only by the `< 0` test at line 523; (b) owned_camera_values is likewise bounded only by `< 0` at line 524; (c) nothing in the file ties output_camera_y0_sha256 to source.predictor_camera_p0_sha256, nor predictor_p0_scorer_numerators_sha256 to output_y0_scorer_numerators_sha256 -- line 527 constrains only the Y1 hash; (d) parse_pass_conditional_a_receipt (:723-773) adds no accounting checks beyond schema/canonical-JSON/typed reconstruction, so it cannot catch any of these. The A3 sister enforces all of them (predictor_preserving_coupled_preimage.py:1047 unconditional row/ownership equality, :1118 'PASS_P0_V1 receipt changed exact P0 bytes', :1120 P0 numerator equality, :1122 owned_camera_values and actually_changed both zero). Receipts produced by _decode_once are always honest; the exposure is the public parse function, which another module may trust.",
+          "fix": "Move the ownership equality out of the elif (`owned_scorer_cells == control_row_count` holds in all three modes), add `owned_camera_values == 0` to the PASS branch, and add `output_camera_y0_sha256 == source.predictor_camera_p0_sha256` for PASS mode -- mirroring predictor_preserving_coupled_preimage.py:1047/1118/1122."
+        },
+        {
+          "severity": "minor",
+          "line": 653,
+          "what": "The PASS_P0 zero-mutation assertion checks `np.any(reconstruction.owned_scorer_mask)` but omits the camera mask; the A3 sister checks both (predictor_preserving_coupled_preimage.py:1225 `np.any(scorer_owned) or np.any(camera_owned)`). Unreachable today because camera_owned is only written inside the row loop and PASS mode has zero rows.",
+          "fix": "Add `or np.any(reconstruction.owned_camera_mask)` for parity with the sister."
+        },
+        {
+          "severity": "minor",
+          "line": 320,
+          "what": "_encode_packet omits the A3 sister's version-1 integer ABI guard (`control_row_count > 0xFFFFFFFF or len(body) > 0xFFFFFFFF`, predictor_preserving_coupled_preimage.py:496). An overflow would escape as a bare struct.error rather than PassConditionalAError, breaking the module's documented fail-closed error contract. Latent only: MAX_BOUNDED_PAIRS x 384 x 512 = 786,432 rows is far under 2^32.",
+          "fix": "Copy the guard from the sister so every failure in this module raises PassConditionalAError."
+        }
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_selective_topology_acquisition.py",
+      "lines": 2154,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": false, "reason": "non-test source; covered by src/tac/witness_dsl/tests/test_taskspace_selective_topology_acquisition.py"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "no_fake_class_6_audit": "PASSES. The module is named an 'acquisition' and never claims to solve. It emits the full cross product of (resolved prefix x 3 orders x 3 grammar families), labels the orders 'Closed bounded-prefix ordering priors; none is an admission rule' (line 137), sets arbitrary_component_or_byte_thresholds_applied=False, and carries production_envelope_status=PRODUCTION_SELECTIVE_TOPOLOGY_ENVELOPE_OWED on every receipt. It is honest enumeration, not a search wearing a solver's name.",
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 1082,
+          "what": "_manhattan_clearance_from_fortunate validates dtype and `ndim != 3` but never that dims 1 and 2 equal (SCORER_HEIGHT, SCORER_WIDTH). It then indexes `distance[row, column]` over range(SCORER_HEIGHT)/range(SCORER_WIDTH), so a wrong-shaped-but-3D mask raises a bare IndexError instead of the module's typed SelectiveTopologyAcquisitionError blocker. Every in-tree caller passes a validated mask, so this is latent.",
+          "fix": "Tighten to `fortunate.shape[1:] != (SCORER_HEIGHT, SCORER_WIDTH)` alongside the existing ndim check."
+        },
+        {
+          "severity": "minor",
+          "line": 1092,
+          "what": "The two-pass L1 chamfer transform runs as a pure-Python double loop: 384 x 512 = 196,608 iterations per pass per pair, x2 passes x up to MAX_BOUNDED_PAIRS=4 = ~1.6M Python-level iterations. Correct (standard forward/backward chamfer) and correctly hoisted -- line 1480 computes the ordering once per acquisition rather than per prefix size or family -- but it dominates wall-clock for the FORTUNATE_CLEARANCE_DESCENDING_V1 order.",
+          "fix": "Vectorize the sweeps with np.minimum.accumulate over rows/columns, or use scipy.ndimage.distance_transform_cdt if the dependency is acceptable. Not a correctness issue; do not change behavior without re-running the ordering assertions at test line 385-387."
+        }
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_whole_archive_allocator.py",
+      "lines": 881,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": false, "reason": "non-test source; covered by src/tac/witness_dsl/tests/test_taskspace_whole_archive_allocator.py"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "no_fake_class_6_audit": "PASSES. Named 'allocator', documents itself as 'an order-dependent acquisition trace, not an optimum' (line 722) and 'deliberately not a global-selection result' (line 392), and the truth dataclass hardcodes global_optimality_claim=False, sign_reversal_safe=False, caller_order_is_search_prior=True, endpoint_proposal_generator_only=True. The greedy mechanism is stated, not disguised.",
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 61,
+          "what": "_require_positive_int and _require_finite_distance use `type(value) is not int` / `is not float`, which MEASURED-reject numpy scalars: `type(np.float64(0.1)) is float` -> False and `type(np.int64(3)) is int` -> False. The intended producer of TaskspaceRealizedMeasurementReceiptV1 is a realized SegNet/PoseNet harness, whose d_seg/d_pose are numpy scalars by default; such a callback fails with 'd_seg must be a finite nonnegative float', which reads like a value complaint rather than a type complaint. It fails CLOSED, so this is an integration trap, not a correctness bug.",
+          "fix": "Accept numbers.Real / numbers.Integral and coerce (`value = float(value)` / `int(value)`) while still rejecting bool, or document in the callback TypeAlias docstring that callers must float()/int() their outputs."
+        },
+        {
+          "severity": "minor",
+          "line": 770,
+          "what": "The in-place-mutation guard `if before.bundle.bundle_sha256 != before_bundle_identity` can never fire: TaskspaceSectionBundleV1 is a frozen slots dataclass whose fields are all bytes, so a transform cannot mutate it. Harmless, but a future reader may mistake it for live protection against a real aliasing bug class.",
+          "fix": "Keep it but add a one-line comment saying it is a defence-in-depth invariant that the frozen/bytes ABI already makes unreachable -- or move it behind the type check so it documents intent without implying coverage."
+        }
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_predictor_preserving_coupled_preimage.py",
+      "lines": 427,
+      "verdict": "COMMIT_CLEAN",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 9, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": ".........                                                                [100%]\n9 passed in 88.50s (0:01:28)"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [],
+      "test_quality": "behavior",
+      "test_quality_evidence": "Constants-only substitution would FAIL. The suite rebuilds a DisjointResizeOperator independently and asserts y0_num[RGB_A_CELL] == (101,102,103)*denominator (line 190), asserts numerator preservation on the complement mask (line 191), flips a CRC byte and requires the CRC error (line 317), appends a trailing byte and requires the length error (line 319), flips one source camera byte and requires 'source binding differs' (line 328), and forges six receipt fields (bool-as-int, float-as-int, wrong sha, score_claim=True, trailing newline) each requiring a distinct refusal (lines 391-402). Exact byte lengths 62 / 62+9 / 62+6 are asserted against real packets. Note: 88.5s runtime is real work -- every case allocates 874x1164x3 uint8 pairs and runs the camera-to-scorer numerator stack several times."
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_pass_conditional_a.py",
+      "lines": 245,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 9, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": ".........                                                                [100%]\n9 passed in 7.82s"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 221,
+          "what": "test_receipt_rejects_truth_numeric_duplicate_and_noncanonical_smuggling forges research_only, packet_bytes-as-float, a duplicate key, and a trailing newline -- but never forges an ACCOUNTING field. That is exactly the gap that lets the important PASS_P0 finding in taskspace_pass_conditional_a.py:542 go unnoticed: forging owned_scorer_cells or output_camera_y0_sha256 on a PASS receipt is not covered.",
+          "fix": "After fixing the source, add forgery cases for owned_scorer_cells, owned_camera_values, and output_camera_y0_sha256 on a PASS_P0_V1 receipt; each must raise PassConditionalAError."
+        }
+      ],
+      "test_quality": "behavior",
+      "test_quality_evidence": "Constants-only substitution would FAIL. Parametrized over all 3 A modes x {no-G8, then-G8} = 6 real compile/decode/parse round trips, plus a foreign-fixture source-binding refusal (line 199), a CRC bit flip (line 207), a trailing byte (line 213), and three receipt forgeries (lines 231/237/242). It also asserts the honest no-G8 control keeps repair_packet_sha256 is None and pre_repair == conditional Y1 (lines 182-184), which is the anti-fake-repair check the module docstring promises."
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_selective_topology_acquisition.py",
+      "lines": 765,
+      "verdict": "COMMIT_CLEAN",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 8, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "........                                                                 [100%]\n8 passed in 3.69s"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [],
+      "test_quality": "behavior",
+      "test_quality_evidence": "Constants-only substitution would FAIL. The fixture builds an exhaustive four-way partition by hand and asserts the exact census (closed 384*512-11, realization 1, topology 8, fortunate 2, line 220-227). It asserts family-specific event counts that only a real coalescing plan produces (singleton births 8, source-target runs 6, target runs 4, deaths 3, lines 353-356) and that the three orders pick three DIFFERENT first cells ((0,20,20) / (0,20,23) / (0,22,40), lines 385-387). It monkeypatches apply_generative_taskspace_correction_v2 to mutate one cell outside the selection and requires the DECODED_MUTATION_OUTSIDE_SELECTED_ROW3 blocker (line 484-492). It drives the MAX_SINGLETON_PREFIX_CELLS+1 cardinality overflow (line 495-531). Anti-smuggling is checked directly: len(packet) < target_labels.nbytes AND target_labels.tobytes() not in packet (lines 291-292)."
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_whole_archive_allocator.py",
+      "lines": 559,
+      "verdict": "COMMIT_CLEAN",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 19, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "...................                                                      [100%]\n19 passed in 1.17s"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [],
+      "test_quality": "behavior",
+      "test_quality_evidence": "Constants-only substitution would FAIL. It writes a real synthetic frontier pointer into tmp_path (never the repo), builds real STORE and DEFLATE archives, and proves the rank REVERSES between raw section bytes and post-deflate archive bytes (lines 267-269) -- an assertion no stubbed allocator satisfies. It exercises pointer swap mid-measurement (line 334), stale-snapshot refusal with receiver.calls == [] proving fail-before-callback (line 312), non-deterministic double decode (line 394), STORE/DEFLATE decoded-identity divergence (line 399), accepted-prefix re-measurement drift (line 456), and the seg-wins-but-total-worsens rejection (line 469). The one constants-shaped test (line 528, truth labels) is a deliberate authority-label assertion and the other 18 carry the behavior."
+    }
+  ],
+  "summary": {
+    "commit_clean": 3,
+    "commit_with_debt": 8,
+    "attic": 0,
+    "critical": 0,
+    "important": 1
+  },
+  "aggregate_checks": {
+    "total_lines_reviewed": 7706,
+    "tests_collected": 55,
+    "tests_passed": 55,
+    "tests_failed": 0,
+    "tests_errored": 0,
+    "tests_skipped": 0,
+    "tests_timed_out": 0,
+    "skip_or_xfail_markers_found": 0,
+    "ruff_findings_total": 4,
+    "ruff_F_rule_findings": 0,
+    "secrets_hits_total": 0,
+    "tmp_or_volumes_or_home_paths_in_assigned_files": 0,
+    "broken_references_total": 0,
+    "imports_ok": 4,
+    "imports_failed": 0,
+    "probes_executed": 2,
+    "probe_artifacts": [
+      "/private/tmp/claude-501/-Users-adpena-Projects-pact/89ff112f-013d-43b5-b949-2a6d43b650c3/scratchpad/rb4_probe2.py",
+      "/private/tmp/claude-501/-Users-adpena-Projects-pact/89ff112f-013d-43b5-b949-2a6d43b650c3/scratchpad/rb4_probe2_out.txt"
+    ],
+    "probe_note": "Probe artifacts live in session scratchpad, which is ephemeral. The verbatim probe output is reproduced inline in the taskspace_pass_conditional_a.py:542 finding's 'evidence' field so the measurement survives scratchpad loss."
+  }
+}

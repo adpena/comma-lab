@@ -1,0 +1,441 @@
+{
+  "batch": 6,
+  "reviewer": "REVIEW-BATCH-6",
+  "date_utc": "2026-08-20",
+  "method_notes": {
+    "imports": "python -c 'import tac.<dotted>' run for all 5 non-test source modules; all rc=0. Test modules verified importable via successful pytest collection+run, not a separate -c import.",
+    "pytest": "Each file run separately: .venv/bin/python -m pytest <path> -q --no-header -p no:cacheprovider. First attempt at timeout 300 hit rc=124 on file 1 (slow torch import, NOT a hang); re-run at 900s gave rc=0 / 4 passed in 32.95s (3m26s total wall incl. interpreter+import). Remaining 4 run via tools/launch_detached_process.py after the session reaper killed a plain background job with rc=144.",
+    "ruff": ".venv/bin/python -m ruff check over all 10 files -> 'All checks passed!' (zero findings, all files).",
+    "secrets": "grep for api key/token/secret/password/BEGIN PRIVATE KEY/100.64-127.x.x/adpena/bat00/molt/-Users- over all 10 files. Zero hits. ('token' matches are argv tokens.) The /Users/adpena hits in src/tac/witness_control/tests/ live in test_costate_live_ingest.py, which is NOT in this batch.",
+    "broken_refs": "AST-walked every non-relative `from tac.*/tools.* import ...` in all 10 files and importlib-resolved module+symbol; plus regex scan for '/tmp/', '/Volumes/', '/Users/' string literals. Zero hardcoded path literals in all 10 files."
+  },
+  "files": [
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_control/taskspace_candidate_batch_replay_v1.py",
+      "lines": 611,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 4,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "(via tests/test_taskspace_candidate_batch_replay_v1.py) '....  [100%]  4 passed in 32.95s' RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 247,
+          "what": "Declared error contract is not honored: CandidateBatchReplayError (L60) is documented as the module's failure type, but every custody helper imported from taskspace_fresh_teacher_materializer_v1 raises FreshTeacherMaterializationError, which is NOT a subclass of CandidateBatchReplayError (verified: both subclass ValueError only, issubclass(F, C) == False). Leaking call sites: file_identity at L90/L101/L143/L150/L247, require_ssd_output_root L153/L272/L554, storage_preflight L157/L276, verify_sealed_payload L230/L311/L539/L553/L578, load_json_mapping L405/L550/L555/L580. So a missing source video, a full disk, or a broken seal escapes build_candidate_replay_preflight / reverify_candidate_replay_preflight / replay_candidate_batches / load_and_reverify_candidate_replay_receipt as a foreign type. A caller writing `except CandidateBatchReplayError` silently misses exactly the custody class the module exists to enforce. The 4 tests all exercise paths that happen to raise the right type, so this is uncovered.",
+          "fix": "Either make CandidateBatchReplayError subclass FreshTeacherMaterializationError (or a shared base), or wrap the helper calls: `try: ... except FreshTeacherMaterializationError as exc: raise CandidateBatchReplayError(...) from exc`. Add one test that deletes candidate_raw between preflight and reverify and asserts CandidateBatchReplayError."
+        },
+        {
+          "severity": "minor",
+          "line": 582,
+          "what": "load_and_reverify_candidate_replay_receipt does `pair_count = int(receipt.get(\"pair_count\", 0))` and passes it straight into _f32_upstream_mean, which computes `np.float32(total / np.float32(pair_count))`. A receipt missing pair_count yields a numpy divide-by-zero RuntimeWarning and a nan/inf d_pose before the fail-closed comparison at L586 rejects it. The verdict is still correct; the path is just noisy and relies on nan != nan.",
+          "fix": "Validate pair_count with an explicit `if pair_count < 1: raise CandidateBatchReplayError(...)` before L583."
+        },
+        {
+          "severity": "minor",
+          "line": 420,
+          "what": "If the caller's paired_batches stream yields more batches than pair_count needs, `expected_count = min(batch_size, pair_count - pair_start)` goes to 0 (then negative), producing an expected_shape with a 0/negative dimension. It still fails closed, but via the misleading message 'batch N changed exact scorer geometry' instead of naming the real cause (stream longer than pair_count).",
+          "fix": "Raise an explicit 'paired stream is longer than pair_count' error when `pair_start >= pair_count` at the top of the loop body."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_control/taskspace_feedback_costate_materializer_v1.py",
+      "lines": 318,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 9,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "(via tests/test_taskspace_feedback_costate_materializer_v1.py) '.........  [100%]  9 passed in 2.64s' PYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [
+        "L72 `from tools.run_taskspace_g8_a3_n2_allocator import parse_final_receipt` — the `tools` package has NO __init__.py and is not part of the installed tac distribution. It resolves ONLY when the process cwd is the repo root (sys.path[0] == ''). MEASURED: from the repo root the import succeeds and parse_final_receipt exists; from any other cwd it raises ModuleNotFoundError: No module named 'tools'."
+      ],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 75,
+          "what": "The broad `except Exception` at L75 converts the L72 ModuleNotFoundError into the caller-facing message 'G14 input is not a parser-accepted terminal final_receipt'. MEASURED, reproduced from a non-repo cwd: ERROR-MESSAGE = 'G14 input is not a parser-accepted terminal final_receipt', __cause__ = ModuleNotFoundError('No module named \\'tools\\''). A packaging/environment failure is therefore reported as an INPUT-CUSTODY verdict by the one function whose job is adjudicating input custody. Fail-closed direction, but the blocker it names is false — the caller will go re-derive their G14 receipt when the real fix is cwd/sys.path.",
+          "fix": "Move the import outside the try, or narrow it: catch ImportError separately and raise a distinct message ('G14 terminal parser is unavailable in this environment: tools/ not importable'), keeping the broad except only around the parse_final_receipt(payload) call itself."
+        },
+        {
+          "severity": "minor",
+          "line": 151,
+          "what": "`_strict_final_receipt(g14_final_receipt)` return value is discarded, then build_taskspace_g8_a3_interaction_feedback(g14_final_receipt) re-parses the same bytes and the tools parser parsed them a third time. Three full parses of the same payload per call.",
+          "fix": "Bind the validated dict and pass it forward, or document that the triple parse is a deliberate independent-path cross-check."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_control/taskspace_single_stage_score_attempt_v1.py",
+      "lines": 2271,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 4,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "(via tests/test_taskspace_single_stage_score_attempt_v1.py) '....  [100%]  4 passed in 0.45s' PYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "critical",
+          "line": 1721,
+          "what": "PERMANENTLY SELF-POISONING RESUME PATH. _run_decode writes stdout/stderr with _write_once (L1721-1722) BEFORE checking returncode (L1723). _write_once (L209-215) raises 'immutable output differs' whenever the path exists with different bytes. So: decode 1 fails transiently (bad env, OOM, missing dep) -> decode1.stdout.txt is written with the FAILURE output -> no decode1_receipt.json is written, so the resume path at L1667 does not short-circuit -> operator fixes the transient cause and resumes -> the decode now SUCCEEDS and produces different stdout -> _write_once raises. The run_root can never complete; only manual deletion of the stdout/stderr files recovers it, and nothing in the module or its docstring says so. Identical defect in _run_upstream_eval at L1857-1858 (written before the L1859 returncode check). This bites at exactly the worst moment — after the transient cause is fixed — and the run_root here holds a full n600 spine (38 pose batch forwards + two public decodes + one upstream evaluate.py, i.e. hours of compute). Note write_blocker_receipt (L2244) degrades gracefully because its _write_once failure is swallowed at L2246; these two are not.",
+          "fix": "Move both _write_once(stdout/stderr) calls to AFTER the returncode check, or name the failure logs per attempt (e.g. decode{N}.attempt{M}.stdout.txt), or write them with a plain overwrite instead of _write_once since they are diagnostics, not sealed receipts. Add a regression test that fails a decode, then succeeds, and asserts the second attempt completes."
+        },
+        {
+          "severity": "important",
+          "line": 1701,
+          "what": "The 'two clean public decodes' contract (module docstring L15-17) is not clean on the inflated side. _run_decode rmtree+recreates archive_dir via _safe_extract_archive (L1580-1586) but NEVER clears inflated_dir before invoking inflate.sh (L1709-1720). Decode 2 therefore runs into a directory already populated by decode 1. The determinism proof at L1964/L2125 (decode1['raw_tree'] != decode2['raw_tree']) only holds if inflate.sh truncates every output file; any receiver that opens r+b, seeks, or skips an existing path would let decode 2 silently observe decode 1's bytes and report a false bit-identical result.",
+          "fix": "shutil.rmtree(inflated_dir) (with the same symlink/regular-dir guards used for archive_dir) before each decode, so 'clean' means clean on both sides."
+        },
+        {
+          "severity": "minor",
+          "line": 1850,
+          "what": "The evaluator seed is hardcoded to '1234' (L1850-1851) while SingleStageScoreAttemptConfigV1.seed exists and is threaded through the pose baseline, the resume state, and the config document. Pinning the upstream default (evaluate.py L15 default=1234) is defensible, but the divergence is undocumented, so a reader cannot tell whether it is deliberate or a copy-paste.",
+          "fix": "Add a one-line comment stating the evaluator seed is deliberately pinned to the contest default and is independent of config.seed, or thread config.seed and let the caller pin it."
+        },
+        {
+          "severity": "minor",
+          "line": 1066,
+          "what": "Glob asymmetry. _run_pose_baseline collects state_bindings with the loose glob 'pairs*_baseline.npz' (L1066) while _load_baseline_state uses the strict 'pairs[0-9][0-9][0-9][0-9]_baseline.npz' (L768-770). A stray file matching only the loose pattern inflates len(state_bindings) and trips the L1071-1078 '38 per-batch checkpoints' check with a misleading message.",
+          "fix": "Use the strict 4-digit glob in both places."
+        },
+        {
+          "severity": "minor",
+          "line": 217,
+          "what": "_write_once names its temp `.{path.name}.{os.getpid()}.tmp`. A run killed between the open and the os.replace leaves that temp behind; if a later run on the same host gets the same recycled pid, `temporary.open('xb')` raises FileExistsError. It self-heals (the finally block at L229-230 unlinks it, so the retry succeeds) but costs one spurious failure with a confusing message.",
+          "fix": "Use tempfile.mkstemp(dir=path.parent) like generative_taskspace_receiver._atomic_write already does in this same batch."
+        },
+        {
+          "severity": "minor",
+          "line": 0,
+          "what": "NO-FAKE AUDIT RESULT (not a defect — recorded because the charter asked): this module PASSES classes 1 and 8. The score is produced by subprocess-invoking the real frozen upstream/evaluate.py (L1834-1856), never a surrogate. All 7 CLI flags emitted (--batch-size, --submission-dir, --uncompressed-dir, --report, --video-names-file, --device, --seed) were verified to exist in upstream/evaluate.py argparse (L10-18) — no invented flags. The _REPORT_RESULTS regex (L85-93) was verified against upstream/evaluate.py L94-104 including the trailing newline the report writer appends. score_claim is True only when authority_axis is contest-CPU/contest-CUDA (L2025-2027, L2188-2190), and _validate_config gates those axes on platform.system() == 'Linux' (L368-374). The reported score is recomputed from the 8-dp components per CLAUDE.md rather than trusting the 2-dp rounded field, and is honestly named score_recomputed_from_reported_8dp_components.",
+          "fix": "none"
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_control/tests/test_taskspace_candidate_batch_replay_v1.py",
+      "lines": 181,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": "verified via successful pytest collection+run, not a separate python -c import",
+      "pytest": {
+        "ran": true,
+        "passed": 4,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "....                                                                     [100%]\n4 passed in 32.95s\nRC=0  (first attempt at timeout 300 returned rc=124 on slow torch import; re-run at 900s: total wall 3m25.87s, session 32.95s)"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 1,
+          "what": "This file is NEVER RUN by the repo's default test command. pyproject.toml L285 sets testpaths = [\"tests\", \"src/tac/tests\", \"src/tac/pr130_lift/tests\"]; src/tac/witness_control/tests is not among them. MEASURED: `pytest --collect-only -q` matches this file 0 times. The pyproject comment immediately above that line names this exact bug class for pr130_lift ('A cure whose guard never runs is not guarded') — the same hole is open here. Applies identically to all 5 test files in this batch.",
+          "fix": "Add \"src/tac/witness_control/tests\" and \"src/tac/witness_dsl/tests\" to testpaths, or move these suites under an already-collected path. Note the cost: file 1 alone is ~3.5 min wall (torch import dominated), so consider a marker + separate CI job rather than the default run."
+        },
+        {
+          "severity": "minor",
+          "line": 102,
+          "what": "The float32-aggregation assertions use pytest.approx(8/3) and pytest.approx(2/3). The module's whole claim is bit-exact float32 upstream mirroring (receipt aggregation_dag = 'torch_float32_batch_sum_then_sequential_float32_sum_divide_pair_count'), so approx() is weaker than the contract under test. The values here are exactly representable enough that == would hold.",
+          "fix": "Assert the exact float(np.float32(...)) value so a change in the aggregation order is caught."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_control/tests/test_taskspace_feedback_costate_materializer_v1.py",
+      "lines": 324,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": "verified via successful pytest collection+run",
+      "pytest": {
+        "ran": true,
+        "passed": 9,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": ".........                                                                [100%]\n9 passed in 2.64s\nPYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [
+        "L24/L25/L26-50: 7 filesystem paths into src/tac/*/tests/ and .omx/research/original_taskspace_inverse_witness_codec_20260725/. ALL 7 VERIFIED PRESENT and git-tracked. No broken reference today."
+      ],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 62,
+          "what": "IMPORT-TIME side effect with a hard cross-file path dependency. L62-63 call _load_fixture() at module scope, which importlib exec_module()s two OTHER test files (test_taskspace_g8_a3_interaction_feedback.py, test_taskspace_interaction_costate_bridge_v1.py) and registers them in sys.modules under synthetic names 'g26_g18_fixture'/'g26_g19_fixture'. Consequences: (a) renaming or moving either sibling test file breaks COLLECTION of this file, not just one test, with an obscure error; (b) the sibling modules execute their own module-level code twice per session (once under their real name, once under the synthetic one); (c) sys.modules is polluted globally under names no import statement will ever reference. This file is also the only one in the batch whose green depends on 7 external research artifacts staying byte-present.",
+          "fix": "Promote _receipt / _predictions into a shared conftest.py fixture or a small non-test helper module under src/tac/witness_control/ (or witness_dsl/), and import that normally. That removes the exec_module hop, the sys.modules pollution, and the collection-time coupling."
+        },
+        {
+          "severity": "important",
+          "line": 1,
+          "what": "Not collected by the repo's default pytest run — same testpaths gap as the rest of the batch (MEASURED: 0 matches in `pytest --collect-only -q`). Worse here than elsewhere because this suite is the only guard on the G20/G22/G25/G28 custody-refusal ladder.",
+          "fix": "See the testpaths fix on test_taskspace_candidate_batch_replay_v1.py."
+        },
+        {
+          "severity": "minor",
+          "line": 179,
+          "what": "pytest.raises(Exception, match=...) at L179 and L262 catches the base class. The assertion passes on ANY exception whose message happens to match, including an unrelated TypeError or a ModuleNotFoundError text collision. Every other raises() in the file correctly names TaskspaceFeedbackCostateMaterializerError.",
+          "fix": "Name the concrete exception type raised by FullN600ReceiverEqualityClosureV1.from_receipts and the G28 path."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_control/tests/test_taskspace_single_stage_score_attempt_v1.py",
+      "lines": 224,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": "verified via successful pytest collection+run",
+      "pytest": {
+        "ran": true,
+        "passed": 4,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "....                                                                     [100%]\n4 passed in 0.45s\nPYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 1,
+          "what": "Coverage is 4 tests for a 2,271-line module, and none of them touch the run spine: run_single_stage_score_attempt, run_rank_zero_score_attempt, _run_decode, _run_upstream_eval, _run_pose_baseline, _load_baseline_state, and _write_once are all untested. That is why the critical stdout/stderr _write_once resume-poisoning defect (taskspace_single_stage_score_attempt_v1.py:1721) is un-caught. Compounded by the testpaths gap: MEASURED 0 matches in `pytest --collect-only -q`, so even these 4 never run by default.",
+          "fix": "Add the testpaths entry, plus at least a _write_once idempotence/differing-payload test and a _run_decode fail-then-succeed resume test with a stub inflate.sh."
+        },
+        {
+          "severity": "minor",
+          "line": 216,
+          "what": "The _parse_report fixture writes 'Final score: 100*segnet_dist + sqrt = 0.18', substituting 'sqrt' for the real upstream literal '√' (upstream/evaluate.py:100 emits '100*segnet_dist + √(10*posenet_dist) + 25*rate'). The parser reads the report with read_text('utf-8'), so the non-ASCII path is the one that runs in production and the one the test never exercises.",
+          "fix": "Use the exact upstream line, √ included, in the fixture."
+        },
+        {
+          "severity": "minor",
+          "line": 77,
+          "what": "test_rank_zero_config_seals_no_pose_or_population_claims is mostly canonical-constant assertions (attempt_mode, pose_refit_run is False, gauss_newton_stages == 0, three *_claim is False). If _rank_zero_config_document were replaced by a hardcoded dict plus a correct seal, only the L85 seal re-derivation would still be doing work. The seal check saves it from being constants-only, but the field assertions carry no independent signal.",
+          "fix": "Assert that the document's run_id/resume_from/sha fields round-trip the config values passed in, so the body is proven derived rather than literal."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/generative_taskspace_receiver.py",
+      "lines": 1424,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 20,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "(via tests/test_generative_taskspace_receiver.py) '....................  [100%]  20 passed in 3.15s' PYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 843,
+          "what": "_exclusive_output_lock creates <output>.lock and never removes it. After a successful decode the lock file remains beside the raw output forever. Harmless (the next run reuses it) but it leaves an artifact the cleanup discipline does not account for, and _lstat_optional at L1092 now has to guard a file the module itself created.",
+          "fix": "Either document the lock file as an intentional persistent artifact, or unlink it under the same identity guard used by _cleanup_owned_temporary."
+        },
+        {
+          "severity": "minor",
+          "line": 326,
+          "what": "_atomic_write's `finally: if not installed: _cleanup_owned_temporary(...)` can itself raise GenerativeTaskspaceReceiverError('atomic-write temporary changed identity before cleanup') from inside the finally block, which REPLACES the original in-flight exception. The real cause of the write failure is then lost. Narrow window (needs a concurrent tamper) and fail-closed, but it discards the primary diagnostic.",
+          "fix": "Wrap the cleanup call so a cleanup failure chains from, rather than replaces, the in-flight exception (or suppress it when an exception is already propagating)."
+        },
+        {
+          "severity": "minor",
+          "line": 0,
+          "what": "NO-FAKE AUDIT RESULT (not a defect — recorded because the charter asked): PASSES class 1. GReceiverConsumptionProofV1 is constructed at L1319-1331 with nine literal `True` legs, which is the shape of a canonical-marker fake — but every one of the nine is immediately preceded by a real guard that raises on failure (L1274-1279 for target_g_section_only_changed/unchanged_non_g_sections, L1296-1299 for baseline_replay_identical, L1307-1318 for the remaining six). All nine were traced. The literal-in-code scan at L1004-1013 is honestly scoped: the receipt field is named literal_counted_sections_ge_32_absent_from_runtime_sources, the threshold is published as literal_scan_min_section_bytes, and complete_data_in_code_lineage_audit is False. Struct offsets verified: _COUNTED_PREFIX '>8sBBH' = 12 B and _SECTION_DESCRIPTOR '>BQI32s' = 45 B, pack/unpack field order matches at L617-626 vs L654.",
+          "fix": "none"
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_g107_g94v2_conditional_y0_final_semanticroot_y1_v1.py",
+      "lines": 1301,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 19,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "(via tests/test_taskspace_g107_g94v2_conditional_y0_final_semanticroot_y1_v1.py) '...................  [100%]  19 passed in 3.23s' PYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 844,
+          "what": "The basis perturbation in audit_conditional_operand_effects is a silent NO-OP for a legal int8 value. `basis[0,0,0,0] = np.int8(-int(basis[0,0,0,0]) or 1)`: when the value is -128, -int(-128) == 128, and MEASURED on this repo's numpy 1.26.4 `np.int8(128)` emits a DeprecationWarning and WRAPS BACK TO -128 ('NumPy will stop allowing conversion of out-of-bound Python integers... The conversion of 128 to int8 will fail in the future'). The 'perturbed' basis is then byte-identical to the original, render() returns the baseline, changed[0] is False, and G107OperandEffectAuditV1.__post_init__ (L806-812) raises 'not every conditional operand changed realized Y0' — a FALSE NEGATIVE on a perfectly valid packet. On a future numpy this becomes an OverflowError instead. Note the coefficient path at L849-851 does clamp with max(-32768, min(32767, ...)); the basis path does not, which is what makes this look like an oversight rather than intent.",
+          "fix": "Clamp the same way, e.g. `basis[0, 0, 0, 0] = np.int8(max(-127, min(127, -int(basis[0, 0, 0, 0]) or 1)))`, and add a regression case with basis[0,0,0,0] == -128."
+        },
+        {
+          "severity": "important",
+          "line": 614,
+          "what": "Encode/render contract asymmetry: a packet that encodes successfully can fail to render. The encoder's _validate_conditional_operands only requires the GRID residual to be nonzero per row (L283: `np.any(np.all(decoded_grid == 0, axis=(1,2,3)))`). The renderer _render_y0_given_operands requires the REALIZED plane to differ (L614: `if not np.any(y0 != y1): raise 'conditional owner did not affect realized Y0'`), which is evaluated after bilinear resize + np.rint + np.clip(0,255). A small-magnitude residual (|r| < 0.5 everywhere) rounds away, and a residual pushing an already-saturated Y1 (0 or 255) clips away. Either case gives y0 == y1 for some pair, so encode_g107_conditional_y0_v1 accepts the operands and G107ConditionalY0ReceiverV1.render_scorer_pair then raises on that pair. The fixture in the test suite uses large coefficients, so no test covers it.",
+          "fix": "Move the realized check into the encoder — validate `np.any(y0 != y1)` per pair over all 600 rows at encode time — so the encode-side and render-side liveness predicates are the same predicate."
+        },
+        {
+          "severity": "minor",
+          "line": 711,
+          "what": "_custody() compares id(self.parsed) against self._parsed_identity, but the receiver holds a strong reference to that same object for its whole lifetime, so the object can never be collected and its id can never be reused. The guard cannot fire under any input — a dead check that reads as protection.",
+          "fix": "Compare something that can actually drift (e.g. parsed.packet_sha256 recomputed from parsed.packet_bytes), or delete the guard and say in the docstring that the frozen dataclass plus write=False arrays are the custody mechanism."
+        },
+        {
+          "severity": "minor",
+          "line": 184,
+          "what": "_reject_foreign_payload applies its magic-prefix test to the raw numeric sections too (called for all five sections at L379 and L531). conditional_basis_q is an arbitrary int8 array, so a legitimate basis whose first bytes happen to spell b'PVSA' (4 bytes) is falsely refused. Probability is ~2^-32 per packet and the failure is in the safe direction, but it makes a small class of valid operands unencodable with a misleading 'denied historical/raster payload magic' message.",
+          "fix": "Restrict the magic-prefix check to the container-shaped sections (semantic_root_y1), and keep the whole-payload SHA-256 denylist for all five."
+        },
+        {
+          "severity": "minor",
+          "line": 0,
+          "what": "NO-FAKE AUDIT RESULT (not a defect — recorded because the charter asked): PASSES class 8. model_g107_joint_feasibility names its output modeled_score (not 'score'), and G107JointFeasibilityV1 pins authority: Literal[False], score_claim: Literal[False], research_only: Literal[True]. EXACT_AUTHORITY_BLOCKER ('G107_SAME_ARCHIVE_UPSTREAM_EVALUATE_PY_N600_CPU_CUDA_OWED') is in OPEN_BLOCKERS, so the owed exact evaluation is declared rather than implied. account_g107_candidate_bytes prices real bytes via build_taskspace_outer_archive on the actual packet, not an estimate. _HEADER struct '>8sBBHHHBBHHIIIII32s' = 74 B verified; pack (L380-393) and unpack (L477-494) field orders match exactly; rank fits its B field given MAX_RANK=64.",
+          "fix": "none"
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_generative_taskspace_receiver.py",
+      "lines": 593,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": "verified via successful pytest collection+run",
+      "pytest": {
+        "ran": true,
+        "passed": 20,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "....................                                                     [100%]\n20 passed in 3.15s\nPYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 1,
+          "what": "Not collected by the repo's default pytest run (MEASURED: 0 matches in `pytest --collect-only -q`; pyproject.toml L285 testpaths omits src/tac/witness_dsl/tests). This is the strongest anti-fake suite in the batch — it covers the inert-apply forgery (L310), caller-constructed proof forgery (L522), tampered-envelope forgery (L558), symlink attacks on all four output surfaces (L385), non-regular output surfaces (L409), and resume-after-fsync-fault (L340) — and none of it runs by default. Runtime is only 3.15 s, so there is no cost argument for leaving it out.",
+          "fix": "Add \"src/tac/witness_dsl/tests\" to testpaths in pyproject.toml."
+        },
+        {
+          "severity": "minor",
+          "line": 0,
+          "what": "TEST-QUALITY AUDIT RESULT (not a defect): this suite would NOT pass against a constants-returning stub. test_noop_apply_mutation_cannot_fabricate_receiver_consumption monkeypatches an inert apply and requires the refusal; test_public_proof_writer_refuses_caller_constructed_forgery hand-builds an all-True proof object and requires it to be rejected by fresh replay; test_resume_recovers_raw_fsync_before_first_checkpoint injects a fault and asserts the partial's exact byte size and the post-resume sha256. Genuine behavior coverage.",
+          "fix": "none"
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_g107_g94v2_conditional_y0_final_semanticroot_y1_v1.py",
+      "lines": 463,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": "verified via successful pytest collection+run",
+      "pytest": {
+        "ran": true,
+        "passed": 19,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "...................                                                      [100%]\n19 passed in 3.23s\nPYTEST_RC=0"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 1,
+          "what": "Not collected by the repo's default pytest run (MEASURED: 0 matches in `pytest --collect-only -q`; pyproject.toml L285 testpaths omits src/tac/witness_dsl/tests). Runtime is 3.23 s.",
+          "fix": "Add \"src/tac/witness_dsl/tests\" to testpaths in pyproject.toml."
+        },
+        {
+          "severity": "minor",
+          "line": 51,
+          "what": "Imports three private helpers (_owners, _population, _root) from a sibling test module, src/tac/witness_dsl/tests/test_taskspace_pfree_semantic_root_v1.py. Renaming that file or any of the three underscore-prefixed helpers breaks collection of this file. Same fragility class as the exec_module coupling in test_taskspace_feedback_costate_materializer_v1.py, in a milder form.",
+          "fix": "Move the three helpers into a conftest.py fixture or a shared non-test helper module."
+        },
+        {
+          "severity": "minor",
+          "line": 105,
+          "what": "The fixture monkeypatches both semantic_root_y1_population_sha256 and render_semantic_root_y1_scorer with synthetic stand-ins (_behavior_y1 returns a flat constant frame), so the REAL SemanticRoot renderer is never exercised by this suite and the operand magnitudes are always large. That masks the encode/render asymmetry reported at taskspace_g107_...py:614. The module docstring (L2-7) does disclose the synthetic fixture and disclaims any score/scorer measurement, so this is honest scoping (not NO-FAKE class 3), just a coverage gap.",
+          "fix": "Add one case with a small-magnitude residual and one with a saturated (0/255) Y1 to pin the realized-liveness behavior."
+        }
+      ],
+      "test_quality": "behavior"
+    }
+  ],
+  "summary": {
+    "commit_clean": 0,
+    "commit_with_debt": 10,
+    "attic": 0,
+    "critical": 1,
+    "important": 11,
+    "total_tests_passed": 56,
+    "total_tests_failed": 0,
+    "total_ruff_findings": 0,
+    "total_secrets_hits": 0
+  }
+}

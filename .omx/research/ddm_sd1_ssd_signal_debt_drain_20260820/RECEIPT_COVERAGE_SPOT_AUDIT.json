@@ -1,0 +1,557 @@
+{
+ "arm": "ddm_sd1",
+ "date_utc": "2026-08-20T12:13:28+00:00",
+ "question": "Do memo-cited SSD paths still resolve, and is anything recording why they may be deleted?",
+ "scope": {
+  "memos_scanned": 2505,
+  "window_days": 30,
+  "raw_citations": 3416,
+  "distinct_cited_paths_POPULATION": 1912,
+  "sampled": 50,
+  "seed": 20260820,
+  "tiers_mounted": [
+   "/Volumes/APDataStore/pact",
+   "/Volumes/VertigoDataTier/pact"
+  ],
+  "tiers_unmounted_UNJUDGEABLE": []
+ },
+ "result": {
+  "judgeable": 50,
+  "resolves": 44,
+  "resolve_fraction": 0.88,
+  "covered_by_manifest_or_cert": 3,
+  "coverage_fraction_of_resolved": 0.0682,
+  "weak_retained_dir_only": 2,
+  "uncovered": 39,
+  "resolved_whose_arm_dir_has_any_manifest": 1,
+  "arm_dirs_on_tiers": {
+   "total": 1029,
+   "with_retention_manifest": 19,
+   "fraction": 0.0185
+  }
+ },
+ "coverage_ladder": {
+  "manifest_lists_path": "an arm *_RETENTION_MANIFEST.json names this path or basename",
+  "certified_blob": "bytes appear in the certify-in-place ledger",
+  "under_retained_dir": "sits under retained/ but no manifest names it \u2014 convention, not a receipt",
+  "uncovered": "nothing records it"
+ },
+ "rows": [
+  {
+   "path": "/Volumes/APDataStore/pact/ddm_jc1/retained/",
+   "cited_by": [
+    "sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md",
+    "ddm_jc1_carrier_jacobian_posemetric_refit_20260816.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "manifest_lists_path",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/APDataStore/pact/ddm_lr1/",
+   "cited_by": [
+    "ddm_av3_fresh_eyes_review_against_all_charter_20260816.md",
+    "ddm_rg1b_band_objective_build_20260816.md",
+    "ddm_jr1_band_objective_judge_repair_charter_20260817.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/APDataStore/pact/ddm_ma1/MA1_RETENTION_MANIFEST.json",
+   "cited_by": [
+    "ddm_to1_tail_override_twelfth_move_20260819.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": true
+  },
+  {
+   "path": "/Volumes/APDataStore/pact/ddm_wc1_hpac_throughput_port_20260814/profile_cpu_reference/live_before.json",
+   "cited_by": [
+    "ddm_wc1_hpac_throughput_port_20260814.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_b2p_20260731/qa80_margin_budget/qa80_conservative_budget_n600.npy",
+   "cited_by": [
+    "ddm_bs1_margin_density_preflight_20260801.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_cx2_20260809/composed/archive.zip",
+   "cited_by": [
+    "ddm_lc2_lossless_coder_stack.md",
+    "ddm_cx2_20260810T001519Z.md",
+    "CX2_FINDINGS.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "manifest_lists_path",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_dw1_20260730/distill_field_cache/distill_logits.f16.npy",
+   "cited_by": [
+    "ddm_lr1_lattice_solve_rebase_refuted_20260802.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_ec2/queue/main_metal_fire_order.json",
+   "cited_by": [
+    "ddm_ec2_sparse_event_hpac_20260812.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/fz1_ext_b_coefs.npz",
+   "cited_by": [
+    "ddm_fz5_pose_carrying_base_unlock_20260804.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_fz1_20260804/rowB/sub_final/archive.zip",
+   "cited_by": [
+    "ddm_qo1_repair_stream_optimal_form_20260804.md",
+    "ddm_ed1_per_edge_carrier_20260804.md",
+    "LH1_RECEIPT_20260805.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "manifest_lists_path",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_gv2_20260812/",
+   "cited_by": [
+    "ddm_gv2_lane_road_grammar_v2_20260812.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/checkpoints/gt/",
+   "cited_by": [
+    "RECALL_AUDIT.md",
+    "ddm_rr1_v7v18_recall_20260809T193949Z.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/inputs/",
+   "cited_by": [
+    "CHARTER.md",
+    "NEXT_IF_RESUMED.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_hy1_capstone_hybrid_20260811/",
+   "cited_by": [
+    "ddm_hy1_capstone_hybrid_20260811.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_hy1_capstone_hybrid_20260811/HY1_PROBE_RESULT.json",
+   "cited_by": [
+    "ddm_hy1_capstone_hybrid_20260811T125643Z.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_hy1_capstone_hybrid_20260811/retained/c1_solved_tokens_n600.f26_hpac.rc64",
+   "cited_by": [
+    "ddm_hy1_capstone_hybrid_20260811.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "under_retained_dir",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_js2_20260812/",
+   "cited_by": [
+    "ddm_js2_implicit_edge_conditioning_20260812.md",
+    "ddm_js2_implicit_edge_conditioning_20260812T082202Z.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_js6_seg_representation_join_20260813/proposal_bank",
+   "cited_by": [
+    "ddm_js6_seg_representation_join_20260813.md",
+    "ddm_js6_seg_representation_join_20260813T184936Z.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_mc35_successor_drop532_pair105/dispatch/ddm_mc36_dual_axis_t4_r1/",
+   "cited_by": [
+    "ddm_mc36_dual_axis_t4_verdict_20260814.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_mx1_20260806/launch/parity_metal",
+   "cited_by": [
+    "NEXT_IF_RESUMED.md"
+   ],
+   "tier_mounted": true,
+   "resolves": false,
+   "coverage": "not_resolved",
+   "arm_dir_has_any_manifest": null
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_mx1_20260806/torch_smoke_n2/result.json",
+   "cited_by": [
+    "PARITY.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_mx2_20260806/main_full_pose_carrier/result.json",
+   "cited_by": [
+    "LAUNCH_TICKET.md"
+   ],
+   "tier_mounted": true,
+   "resolves": false,
+   "coverage": "not_resolved",
+   "arm_dir_has_any_manifest": null
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_od8_20260805/run_20260805T_od8_codex_r4/packets/od8_native_dof_deterministic_noise_proxy.od5.raw_packet",
+   "cited_by": [
+    "OD8_NATIVE_DOF_RECEIPT.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/reproducer_state_v3/state.json",
+   "cited_by": [
+    "REPRODUCER_SPEC.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/*/report.txt",
+   "cited_by": [
+    "ddm_op3_canonical_operating_point_20260803.md",
+    "ddm_qd2_rebaseline_against_cx1_20260803.md"
+   ],
+   "tier_mounted": true,
+   "resolves": false,
+   "coverage": "not_resolved",
+   "arm_dir_has_any_manifest": null
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_ph5o_20260803/",
+   "cited_by": [
+    "ddm_ph5o_blind_subspace_pose_aim_o1_20260803.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_pj1_20260730/warm_l2/gate/p1_receiver_realized_verdict.json",
+   "cited_by": [
+    "ddm_ba30_negative_response_surfaces_20260730.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_pk1_20260807/pk1_candidate_B_terminal_gn_ep854_n120_outer.zip",
+   "cited_by": [
+    "PK1_FINDINGS.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_pk2_20260809",
+   "cited_by": [
+    "ddm_pk2r_impl_20260809T222616Z.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_po1_20260813/dispatch/round2b_poll_launch/",
+   "cited_by": [
+    "ddm_hv1_fresh_eyes_hybrid_review_20260813.md",
+    "ddm_hv1_fresh_eyes_hybrid_corpus_pass_20260813T151539Z.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/submission_dir",
+   "cited_by": [
+    "COMPLIANCE_RUNBOOK.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_pu2_20260803/argmax_cache/cx1_directed_flip_receipt.json",
+   "cited_by": [
+    "ddm_cg3_counted_gt_recovery_20260804.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_qs2_20260813/PER_PAIR_POSTMORTEM_BLOCKER.json",
+   "cited_by": [
+    "ddm_qs2_compensation_rate_rung_20260813.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_qs3_20260813/retained/survival_engineered_recipes.jsonl",
+   "cited_by": [
+    "ddm_qs3_saturation_compose_20260813.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "under_retained_dir",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_qs4_20260813",
+   "cited_by": [
+    "ddm_qs4_collateral_suppression_20260813.md",
+    "ddm_qs4_20260814T003807Z.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_rx1_rate_attack_20260814/FINAL_RESULT.json:1",
+   "cited_by": [
+    "ddm_rx1_rate_representation_attack_20260814T202043Z.md"
+   ],
+   "tier_mounted": true,
+   "resolves": false,
+   "coverage": "not_resolved",
+   "arm_dir_has_any_manifest": null
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_rx1_rate_attack_20260814/RETENTION_INVENTORY.json",
+   "cited_by": [
+    "ddm_rx1_rate_representation_attack_20260814.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_se3_20260804/",
+   "cited_by": [
+    "se3_receipt.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_sm3_20260810/final_v3/receiver/",
+   "cited_by": [
+    "SM3_FINDINGS.md",
+    "ddm_sm3_20260810T022830Z.md"
+   ],
+   "tier_mounted": true,
+   "resolves": false,
+   "coverage": "not_resolved",
+   "arm_dir_has_any_manifest": null
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_sr1_20260809/runtime_under_test/src/tac/pr130_runtime/dv1_cpu_runtime",
+   "cited_by": [
+    "SR1_FINDINGS.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_t1r1_dispatch/adapted_runtime",
+   "cited_by": [
+    "ddm_js1_reseal_skeleton_20260811.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_tp1_20260805/smoke_birth_off",
+   "cited_by": [
+    "TP1_PACKET.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_tq1_20260805/optimal_form/tq1_phase_a_candidate_prices.jsonl",
+   "cited_by": [
+    "RECEIPT.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/ddm_xo1_20260805/xo1_control_head.xo1pkt",
+   "cited_by": [
+    "XO1_RECEIPT.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/evidence/advected_base_20260721/superseded_whole_plane_20260721T151700Z/",
+   "cited_by": [
+    "advected_motion_base_20260721_codex.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/experiments/results/ddm_j8f_counted_application_20260724T181414Z",
+   "cited_by": [
+    "codex_findings_ddm_j8f_counted_application_20260725T023547Z_codex.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/pr135_joint_successor_20260810/",
+   "cited_by": [
+    "ddm_pi135_pr135_intake_20260810.md",
+    "ddm_pi135_pr135_intake_20260810T171208Z.md"
+   ],
+   "tier_mounted": true,
+   "resolves": false,
+   "coverage": "not_resolved",
+   "arm_dir_has_any_manifest": null
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/public_models/comma10k_segnet/model.safetensors",
+   "cited_by": [
+    "cq1_receipt.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_scorer_planes_n600_20260726/00_preflight_receipt.json",
+   "cited_by": [
+    "SPEC_g51_fresh_scorer_plane_operand_materializer_20260726.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  },
+  {
+   "path": "/Volumes/VertigoDataTier/pact/taskspace_fresh_teacher_batch16_20260726/materialize_batch16.log",
+   "cited_by": [
+    "codex_findings_g44_fresh_teacher_source_custody_20260726_codex.md"
+   ],
+   "tier_mounted": true,
+   "resolves": true,
+   "coverage": "uncovered",
+   "arm_dir_has_any_manifest": false
+  }
+ ]
+}

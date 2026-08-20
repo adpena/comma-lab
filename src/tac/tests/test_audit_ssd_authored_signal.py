@@ -305,6 +305,24 @@ def test_certification_refuses_non_sha(tmp_path):
                                  "ddm_sd1", ledger=tmp_path / "c.jsonl")
 
 
+def test_certified_ledger_lives_somewhere_git_actually_tracks():
+    """A certification is a durable decision. Storing it under a gitignored path would strand it
+    on one machine — precisely the failure this module detects."""
+    import subprocess
+
+    rel = mod.CERTIFIED.relative_to(mod.REPO)
+    ignored = subprocess.run(
+        ["git", "check-ignore", "-q", str(rel)], cwd=mod.REPO, capture_output=True
+    ).returncode == 0
+    assert not ignored, f"{rel} is gitignored — certifications would never leave this machine"
+    # The regenerable sweep cache is the opposite case and SHOULD stay ignored.
+    cache_ignored = subprocess.run(
+        ["git", "check-ignore", "-q", str(mod.CACHE.relative_to(mod.REPO))],
+        cwd=mod.REPO, capture_output=True,
+    ).returncode == 0
+    assert cache_ignored, "the sweep cache is live state and should not be tracked"
+
+
 def test_certification_ledger_is_append_only_and_latest_wins(tmp_path):
     ledger = tmp_path / "c.jsonl"
     sha = "b" * 40

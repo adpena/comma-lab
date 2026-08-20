@@ -1,0 +1,498 @@
+{
+  "batch": 7,
+  "reviewer": "REVIEW-BATCH-7",
+  "date_utc": "2026-08-20",
+  "method_notes": [
+    "Every number below came from a command actually run on this host on 2026-08-20.",
+    "import_rc came from `.venv/bin/python -c \"import <dotted>\"` per module. A clean module-level import also proves every module-level `from tac.X import Y` resolved, so broken_refs for source modules is a measured empty set, not an assumption.",
+    "ruff: `.venv/bin/python -m ruff check <all 10 files>` -> 'All checks passed!'. Repo ruff config (pyproject.toml:222-246) selects E,W,F,I,B,C4,UP,SIM,TCH,RUF at line-length 120, so this is a broad clean, not a narrow one.",
+    "BATCH-WIDE: pyproject.toml:285 `testpaths = [\"tests\", \"src/tac/tests\", \"src/tac/pr130_lift/tests\"]`. None of the 4 test files in this batch live under those roots, so a default `pytest` run collects ZERO of them. Every pass below required naming the file explicitly.",
+    "BATCH-WIDE: pyproject.toml:286 `timeout = 60` (pytest-timeout). The ep725 real-decode tests request 120s and 180s subprocess budgets, so they cannot pass under the repo's own configured timeout.",
+    "MEASURED-AND-DISCARDED: I suspected `zlib.Decompress.flush(max_member_bytes - len(member) + 1)` in taskspace_outer_archive_codec.py:223 would eagerly allocate the 64 MiB default limit. Measured peak-RSS delta with resource.getrusage: 0.0 MiB at both the 64 MiB and 8 KiB limits. NOT a finding; recording the negative so nobody re-derives it.",
+    "broken_refs: an AST pass over all 10 files resolved every `from tac.X import Y` symbol. It reported exactly one MISSING -- `test_taskspace_outer_archive_codec.py:12 -> tac.witness_dsl.taskspace_outer_archive_codec` -- which is a FALSE POSITIVE of my own checker (a submodule is not an attribute of its package until imported) and is disproved by that file's 16/16 pass. Real broken references across the batch: 0."
+  ],
+  "files": [
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_control/taskspace_g23_g29_g33_endpoint_adapter.py",
+      "lines": 514,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": false,
+        "reason": "source module; exercised by its sibling test file, reported there",
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": null
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 1,
+          "what": "Name drift across three surfaces. The file is `taskspace_g23_g29_g33_endpoint_adapter.py`, the docstring (line 2) says 'G17/G29/G33', and every single symbol in the file is `G36*` (G36EndpointAdapterError, G36EvidenceRoleV1, G36BlockerCodeV1, G36G29PreflightEvidenceBytesV1, audit_g36_endpoint_adapter_readiness). SCHEMA on line 52 is `tac.taskspace_g23_g29_g33_endpoint_adapter_readiness.v1`, so the wire schema carries the g23 name while the code carries G36. Nothing is broken, but a reader looking for 'the G36 adapter' will not find this file by name.",
+          "fix": "Pick one generation label. Either rename the module to match the G36 symbols, or rename the symbols to match the g23_g29_g33 filename and schema. Do not change SCHEMA without a supersession row -- it is the serialized wire identity."
+        },
+        {
+          "severity": "minor",
+          "line": 186,
+          "what": "`_sha256_bytes()` (line 117) is invoked purely for its exception side effect at lines 186, 190 and 192 -- the returned digest is discarded. A function named for hashing is being used as a validator.",
+          "fix": "Extract a `_require_nonempty_bytes(payload, label)` validator and have `_sha256_bytes` call it, so the call sites read as what they do."
+        },
+        {
+          "severity": "minor",
+          "line": 446,
+          "what": "The `blockers` set (lines 446-452) and the `satisfied` set (lines 426-434) are compile-time constants. Apart from the one optional `G29_PUBLIC_EVALUATOR_EXECUTION` branch, `audit_g36_endpoint_adapter_readiness` returns the same partition for every input; only the raise-vs-return distinction carries information. This IS honest -- the module docstring (lines 5-12) says the missing schemas have no parsers yet -- and the function does real work (it parses 7 receipt types and joins 11 cross-identity equalities at lines 410-423). But a downstream consumer that treats `blockers` as data-driven evidence will read a constant as a measurement.",
+          "fix": "No code change required. Add one line to the receipt or docstring stating that the blocker partition is structurally fixed at this schema version so consumers price it correctly."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_control/tests/test_taskspace_g23_g29_g33_endpoint_adapter.py",
+      "lines": 91,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 4,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "....                                                                     [100%]\n4 passed in 0.33s"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [
+        {
+          "line": 24,
+          "ref": "/Volumes/VertigoDataTier/pact/g29_public_auth_closure_20260726_codex.pc0fLk/receipts",
+          "status": "EXISTS on this host (measured with `ls -d`); absent on any host without that SSD mounted. Not /tmp, so it does not violate the transient-evidence rule, but the `.pc0fLk` suffix is an mkdtemp-style random token that cannot be reconstructed."
+        },
+        {
+          "line": 21,
+          "ref": ".omx/research/original_taskspace_inverse_witness_codec_20260725/g36_endpoint_adapter_readiness_g29_preflight_20260726.json",
+          "status": "EXISTS, 3.0K, in-repo. Fine."
+        }
+      ],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 24,
+          "what": "The module's ONLY public function, `audit_g36_endpoint_adapter_readiness`, is exercised by exactly one test (`test_real_g29_preflight_emits_exact_fail_closed_partition`, line 65), and that test calls `_real_evidence()` which `pytest.skip`s (line 38) unless seven files exist under a machine-specific SSD path with a random `.pc0fLk` suffix. On this host the SSD is mounted so all 4 tests really ran and passed. On a fresh checkout the file reports 3 passed / 1 skipped and the function has ZERO coverage -- while still looking green. Confirmed by grep: the only other caller anywhere in src/tools/experiments is `tools/audit_taskspace_g23_g29_g33_endpoint_adapter.py:69`, which is a CLI, not a test.",
+          "fix": "Add a hermetic test that builds the seven G29 receipts in `tmp_path` from the typed constructors in `tac.witness_dsl.taskspace_public_auth_eval_closure` and drives `audit_g36_endpoint_adapter_readiness` end to end. Keep the SSD test as the real-artifact confirmation, but do not let it be the only exercise of the entry point."
+        },
+        {
+          "severity": "important",
+          "line": 1,
+          "what": "This file is not under `pyproject.toml:285 testpaths`, so `pytest` with no arguments never collects it. The 4 passes above only happened because I named the path explicitly.",
+          "fix": "Either add `src/tac/witness_control/tests` to testpaths (measure the cost first, per the existing comment at pyproject.toml:275-284) or accept it and say so in a comment here, so the next reader does not assume CI covers it."
+        },
+        {
+          "severity": "minor",
+          "line": 71,
+          "what": "`assert receipt.archive_nbytes == 80_238` is a bare magic number with no provenance comment. If the SSD receipts are ever regenerated this fails with no hint of what 80,238 was.",
+          "fix": "Name it: `# 80,238 B = the G29 compile receipt's archive_nbytes for archive <sha prefix>`."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/coupled_preimage_pair_adapter.py",
+      "lines": 927,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": false,
+        "reason": "source module; exercised by its sibling test file, reported there",
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": null
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 405,
+          "what": "Self-hash tripwire with no regeneration path. `CoupledPreimageDirectRuntimeBindingV1.reopen()` reads the live `tac/witness_dsl/coupled_preimage_program.py` off disk and refuses unless its SHA-256 equals `DECODER_DIRECT_SOURCE_SHA256`, a constant stored INSIDE that same file. MEASURED today: live sha `4ed3ccc50f71be35577e69796cff89564151d6a4674772728b5f3c86d1f59b11` == the constant, so it passes right now. But `reopen()` is called unconditionally on the hot path at line 703 inside `consume_counted_coupled_preimage`, which means every consumption path in this module dies on ANY edit to `coupled_preimage_program.py` -- including a whitespace-only ruff reformat. Nothing in this file documents how to regenerate the constant. This is not hypothetical: the sister module `ep725_levelset_predictor_adapter.py` uses the same pattern and its pin is ALREADY STALE (see that file's critical finding).",
+          "fix": "Add a one-line comment at the DECODER_DIRECT_SOURCE_SHA256 definition naming the exact command that regenerates it, and add a repo check (or a preflight gate) that recomputes it, so the pin cannot silently rot the way ep725's did."
+        },
+        {
+          "severity": "minor",
+          "line": 872,
+          "what": "`build_target_only_a_counterfactual` builds `baseline_payloads` and `counterfactual_payloads` as dicts keyed by `section.role` (lines 872-877). If a manifest ever carried two sections with the same role, the later one silently overwrites the earlier, and the 'non-target bytes unchanged' proof at lines 878-880 would skip a section without reporting it. Currently unreachable through the public entry points -- `_a_section` (line 633) and `_g_section` (line 640) both enforce exactly-one -- but this function accepts an arbitrary `baseline_sections` tuple and does not re-assert it.",
+          "fix": "Assert `len(baseline_payloads) == len(baseline_sections)` right after the dict comprehension, so a duplicate role becomes a typed error instead of a silently weakened proof."
+        },
+        {
+          "severity": "minor",
+          "line": 575,
+          "what": "`AdaptedCoupledPreimagePairProgramV1.__post_init__` indexes `self.section_manifest[-1]` with no non-empty guard. An empty tuple raises bare `IndexError`, breaking the module's otherwise uniform `CoupledPreimagePairAdapterError` fail-closed contract. `validate_reverse_causal_counted_program_sections` runs first on line 572 and would likely reject an empty manifest, so this is defence-in-depth, not a live defect.",
+          "fix": "Add `if not self.section_manifest: raise CoupledPreimagePairAdapterError(...)` before line 575."
+        },
+        {
+          "severity": "minor",
+          "line": 528,
+          "what": "Adapter naming check (NO-FAKE class 1) came back CLEAN and I am recording the positive result. The three `*_adapter.py` files in this batch were checked for pass-through-while-claiming-conversion. This one genuinely transforms: `consume_counted_coupled_preimage` slices sections out of the counted program bytes (line 672, 692), strictly re-applies the counted G (line 674), cross-checks the caller's decoded_g against that strict re-apply (lines 682-688), and only then decodes A. `build_target_only_a_counterfactual` performs a real byte substitution and a real behavioural assertion that Y0 changed and Y1 did not (lines 867-870). No finding.",
+          "fix": "None."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/ep725_levelset_predictor_adapter.py",
+      "lines": 1601,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": false,
+        "reason": "source module; exercised by its sibling test file, reported there",
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": null
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [
+        {
+          "line": 37,
+          "ref": "/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/full_n600_packet",
+          "status": "EXISTS on this host (measured; contains archive.zip, inflate.py, inflate.sh). It is the DEFAULT argument of three public functions (inspect_ep725_source line 507, decode_ep725_prefix line 1533, decode_ep725_prefix_ephemeral_surface line 1549), so on a host without the SSD those three functions fail on their default call."
+        },
+        {
+          "line": 537,
+          "ref": "tools/levelset_byte_close_and_eval.py",
+          "status": "EXISTS. Its SHA-256 does NOT match the pin -- see the critical finding."
+        }
+      ],
+      "findings": [
+        {
+          "severity": "critical",
+          "line": 55,
+          "what": "STALE HASH PIN -- CONFIRMED BY EXECUTION, not inferred. `EP725_CANONICAL_RENDERER_SHA256 = \"1cecaa3ee9873d1378eaeb66b04cee56b621bccabe3fcecc01f60d3a0e692ddc\"`. MEASURED live SHA-256 of `tools/levelset_byte_close_and_eval.py` on this host: `00106018a420ff7f160d5895aab09d00a7b6859705dd17e9283a8488e6b8d003`. They differ. `_load_canonical_decoder_module` (line 563) returns the LIVE digest, it flows into `TaskspacePredictorStateV2(predictor_renderer_sha256=...)` (line 1318) and `Ep725BoundedDecodeV2.canonical_renderer_sha256` (line 1337), and `Ep725BoundedDecodeReceiptV2.__post_init__` refuses it at line 844. CONFIRMING RUN (`pytest src/tac/witness_dsl/tests/test_ep725_levelset_predictor_adapter.py -k real_ --timeout=0`, 140.98 s): both real-decode tests fail with, verbatim, `tac.witness_dsl.ep725_levelset_predictor_adapter.Ep725LevelsetPredictorAdapterError: bounded receipt renderer differs from frozen NumPy oracle` raised at `ep725_levelset_predictor_adapter.py:845`; result line `2 failed, 8 deselected in 140.98s`. Consequence: all three public decode entry points -- `decode_ep725_prefix`, `decode_ep725_prefix_ephemeral_surface`, `decode_ep725_counted_member_ephemeral_surface` -- are dead on the current working tree. Blast radius measured by grep: 1 production module (`src/tac/witness_dsl/taskspace_monolithic_pga_receiver.py:2418`), 4 tools (`tools/run_taskspace_g8_a3_n2_allocator.py:2042`, `tools/run_taskspace_a3_n2_allocator.py:247`, `tools/materialize_taskspace_pga_n2_receipt.py:271`, `tools/measure_taskspace_n2_stage_ablation.py:264`) and 4 test files depend on these entry points.",
+          "fix": "Decide which side is authoritative. If `tools/levelset_byte_close_and_eval.py` legitimately changed, re-run the frozen bounded decode and refresh EP725_CANONICAL_RENDERER_SHA256 together with the five entries in `_FROZEN_BOUNDED_OUTPUTS` (lines 57-82), plus the duplicate literal at test line 426. If the renderer changed by accident, restore it. Do NOT commit this module claiming a working decode path until one of those two holds -- the pin failing is the module correctly refusing, but the refusal is currently permanent."
+        },
+        {
+          "severity": "important",
+          "line": 844,
+          "what": "The stale-pin refusal fires LAST, after all the expensive work. `_decode_executable_source_materialized` (line 1280) runs two full in-process NumPy decodes (lines 1297-1298) and two subprocess decodes of 874x1164x3 frames (lines 1304-1305) BEFORE constructing the receipt whose `__post_init__` compares the renderer pin. The pin is already known at line 1296 where `_load_canonical_decoder_module()` returns it. Measured cost of finding out the late way: the two SSD-gated tests burned 228.97 s of the 3m49s pytest run before failing.",
+          "fix": "Compare `canonical_renderer_sha256` against `EP725_CANONICAL_RENDERER_SHA256` immediately after line 1296 and raise `Ep725PredictorDecodeBlocker(\"CANONICAL_RENDERER_PIN_STALE\", ...)` there. Fail closed at the cheapest point, not the last one."
+        },
+        {
+          "severity": "important",
+          "line": 1351,
+          "what": "Timeout contract collides with the repo's own pytest config. The decode functions default to `timeout_seconds=60.0` (lines 1351, 1474, 1536, 1552) and callers pass 90-180 s, but `pyproject.toml:286` sets a global pytest-timeout of 60 s. MEASURED: both SSD-gated tests failed with `Failed: Timeout (>60.0s) from pytest-timeout` -- the harness killed them mid-`subprocess.communicate`, so pytest-timeout, not the decode logic, is what the run actually reported.",
+          "fix": "Mark the two real-decode tests `@pytest.mark.timeout(300)` (pytest-timeout is already installed) so the failure they report is the one they are testing for."
+        },
+        {
+          "severity": "minor",
+          "line": 544,
+          "what": "`exec(code, module.__dict__)` builds a synthetic module `_tac_ep725_descriptor_bound_levelset_decoder` that is deliberately never registered in `sys.modules` (this is the point -- test line 294 proves it defeats a stale sys.modules entry). Side effect: anything inside `tools/levelset_byte_close_and_eval.py` that resolves `sys.modules[__name__]` -- pickling, multiprocessing spawn, some dataclass paths -- breaks. `module.__package__` is set to \"tools\" (line 543) but `tools` itself is not imported, so a relative import inside that file would also fail.",
+          "fix": "No change if the current callee never needs it. Add a comment naming the constraint so a future edit to the renderer does not introduce a pickle/multiprocessing path that silently fails here."
+        },
+        {
+          "severity": "minor",
+          "line": 1276,
+          "what": "`type(timeout_seconds) not in {int, float}` rejects numpy scalars (np.float64) that would otherwise be perfectly valid, and correctly rejects bool. Deliberate strictness, but callers passing a computed numpy value get a confusing 'must be a finite positive scalar'.",
+          "fix": "Either widen to `isinstance(timeout_seconds, numbers.Real) and not isinstance(timeout_seconds, bool)` or say 'exact Python int/float' in the message."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_outer_archive_codec.py",
+      "lines": 548,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": false,
+        "reason": "source module; exercised by its sibling test file, reported there",
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": null
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 499,
+          "what": "Vacuous custody check. `build_taskspace_outer_archive` calls `parse_taskspace_outer_archive(stored_bytes, expected_archive_sha256=_sha256(stored_bytes), ...)` at lines 499 and 506 -- it hands the parser the digest of the very object it is passing in. The `hmac.compare_digest` at line 428 can never fail for this call. It reads as verification and proves nothing. (The sibling `expected_member_sha256=member_sha256` on the same calls IS meaningful -- it binds the decoded member back to the caller's input.)",
+          "fix": "Drop `expected_archive_sha256` from these two internal calls, or replace it with a value derived independently (e.g. re-read from the emitted artifact) if archive-side binding is actually wanted here."
+        },
+        {
+          "severity": "minor",
+          "line": 128,
+          "what": "`field` is imported from `dataclasses` (line 26) and then shadowed by a keyword-only parameter named `field: str` in `_require_sha256` (line 128) and `_as_encoding` (line 133). Neither body uses `dataclasses.field`, so nothing breaks, but a future edit that adds one inside those functions would get a confusing str-not-callable error.",
+          "fix": "Rename the parameter to `field_name`, matching the convention already used in the sister modules in this batch."
+        },
+        {
+          "severity": "minor",
+          "line": 39,
+          "what": "`MAX_ARCHIVE_OVERHEAD_BYTES = 1024 * 1024` guards `len(archive) > max_member_bytes + MAX_ARCHIVE_OVERHEAD_BYTES` at line 422. The real canonical overhead is 116 B (30 B local header + 5 B name + 46 B central header + 5 B name + 22 B EOCD, both names being '0.bin'), so the gate is ~9,000x looser than the format allows. With a small `max_member_bytes` the pre-parse size gate is effectively inert -- the real rejection happens later at line 328. Not a defect (deflate on incompressible data can expand, so some slack is required) but the constant is unexplained.",
+          "fix": "Either tighten to a derived bound (`116 + ceil(max_member_bytes * 0.001) + 64`) or add a comment stating that 1 MiB is deliberate slack and that line 328 is the real gate."
+        },
+        {
+          "severity": "minor",
+          "line": 152,
+          "what": "ZIP framing audit came back CLEAN and I am recording the positive result, because this was the highest-cost bug class in the batch. Verified by hand against PKZIP APPNOTE: `_LOCAL_FILE_HEADER` '<IHHHHHIIIHH' = 30 B in exact field order; `_CENTRAL_DIRECTORY_HEADER` '<IHHHHHHIIIHHHHHII' = 46 B in exact field order; `_END_OF_CENTRAL_DIRECTORY` '<IHHHHIIH' = 22 B. `_build_exact_archive` pack order matches both headers field for field. Offset arithmetic closes exactly: central-directory start = 35 + compressed (line 174), central-directory size = 51 (line 194), archive length = 108 + compressed, and every one of those is independently re-derived and cross-checked by the parser at lines 265, 295-303, 357-359. Local-vs-central metadata is compared as a 9-tuple (lines 364-387). CRC-32 and decoded length are both re-verified (lines 394-397). Encode->decode byte-identity is measured by the test suite (16/16 pass) including a repeat-build determinism test. No section can be dropped or reordered: the archive is single-member by construction and the parser refuses `entries != 1` at line 263.",
+          "fix": "None."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_same_class_realization_repair.py",
+      "lines": 1773,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": false,
+        "reason": "source module; exercised by its sibling test file, reported there",
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": null
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 792,
+          "what": "`ParsedSameClassRealizationRepairPacketV1` is the only dataclass in this 1,773-line module without a `__post_init__` validator. Every sibling (ParsedSameClassCompositeGSectionV1, CountedTaskspaceSectionIdentityV1, SameClassRealizationRepairSurfaceV1, ...SourceBindingV1, ...RunV1, ...ProgramV1, ...ReceiptV1, DecodedSameClassRealizationRepairV1, ...AdmissionReceiptV1, CompiledSameClassRealizationRepairV1, ...PGAProposalV1) validates itself. It is populated only from the validated parse path at line 926, so no live defect -- but it is a hole in an otherwise uniform fail-closed contract, and it is the one type a future caller could hand-construct with garbage.",
+          "fix": "Add a `__post_init__` mirroring the parse invariants (packet_bytes == len(packet), packet_bytes == header + body, body == run_count * RUN_ROW.size)."
+        },
+        {
+          "severity": "minor",
+          "line": 1129,
+          "what": "A repair program whose shared RGB happens to already equal the existing camera values is a hard error, not a clean no-op. `SameClassRealizationRepairReceiptV1.__post_init__` raises at line 1123 (`1 <= actually_changed_camera_values`) and again at line 1129 (`output_camera_y1_sha256 == corrected_y1_camera_sha256` -> 'claims a camera no-op'). This is intentional (the test at line 518 pins it as 'no-op alias'), but it pushes the burden onto every caller to pre-screen, and the error text reads as an integrity failure rather than a design refusal.",
+          "fix": "None required. If callers start hitting it, consider a typed `SameClassRealizationRepairNoOp` subclass so the two cases are distinguishable at the catch site."
+        },
+        {
+          "severity": "minor",
+          "line": 715,
+          "what": "Overlap detection audit came back CLEAN and I am recording the positive result. `SameClassRealizationRepairProgramV1.__post_init__` compares each run only against its immediate predecessor (lines 713-728), which looks like it could miss a non-adjacent overlap. It cannot. Runs are forced into `(pair_id, row, col_start, col_stop)` sorted order at line 711. For start-sorted intervals, if no consecutive pair overlaps then start_j >= stop_{j-1} for all j, which makes stop strictly increasing, which makes start_k >= stop_i for every k > i. So a consecutive-only check is sufficient. Wire ABI also verified: PACKET_HEADER '>8sBBHH32s32s32s32s32s32sIIII' = 222 B, RUN_ROW '>HHHHBBBBB' = 13 B, COMPOSITE_G_SECTION_HEADER '>8sBBHII32s32sII' = 92 B; CRC is computed over the header-with-crc-zeroed plus body on both encode (line 788) and parse (line 883), and the parse re-encodes and compares (line 924). Length accounting closes exactly at lines 862-865 and 302-306.",
+          "fix": "None."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_coupled_preimage_pair_adapter.py",
+      "lines": 718,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 16,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "................................                                         [100%]\n32 passed in 4.44s  (combined run with test_taskspace_same_class_realization_repair.py; 16 tests come from this file: 3 functions x 2 CoupledPreimageMode parametrisations + 10 unparametrised)"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 259,
+          "what": "Test asserts `.resolve()` semantics against an implementation that deliberately uses lexical `os.path.abspath`. `assert adapted.source_custody.artifact.path == str(artifact_path.resolve())`, but `coupled_preimage_pair_adapter.py:186-188` explicitly does NOT resolve, with a comment explaining why ('resolving here would reopen and follow a leaf that may have been replaced after the descriptor-bound snapshot'). The assertion holds only while the pytest tmp root contains no symlinked component. On macOS `/tmp` is a symlink to `/private/tmp`; pytest's tmp_path normally lands under `/private/var/folders/...` so it passes here, but a host with `TMPDIR=/tmp` would fail this test while the implementation is correct.",
+          "fix": "Assert against `str(Path(os.path.abspath(artifact_path)))` to match the documented lexical contract."
+        },
+        {
+          "severity": "important",
+          "line": 1,
+          "what": "Not under `pyproject.toml:285 testpaths`. A default `pytest` run collects none of these 16 tests. They are strong tests -- monkeypatched leaf-replacement races (line 599), a no-O_NOFOLLOW portability fallback (line 627), symlink refusal, source mutation, forged-packet rejection -- and none of that guards anything in CI today.",
+          "fix": "Same as the other test files in this batch: add the directory to testpaths after measuring the collection cost, or record the deliberate exclusion."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_ep725_levelset_predictor_adapter.py",
+      "lines": 550,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 8,
+        "failed": 2,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": true,
+        "tail": "src/tac/witness_dsl/ep725_levelset_predictor_adapter.py:1304: in _decode_executable_source_materialized\n    shipped_raw_1 = _shipped_decode_once(source, pair_count, timeout_seconds=float(timeout_seconds))\nsrc/tac/witness_dsl/ep725_levelset_predictor_adapter.py:672: in _shipped_decode_once\n    process = subprocess.run(\nE           Failed: Timeout (>60.0s) from pytest-timeout\n2 failed, 8 passed in 228.97s (0:03:48)",
+        "note": "Both failures are the two SSD-gated real-decode tests (line 363 and line 415). They did NOT skip -- the SSD is mounted on this host -- they ran and were killed by the repo's global pytest-timeout of 60 s (pyproject.toml:286) while their own decode budgets are 180 s and 120 s.",
+        "second_run_with_timeout_disabled": {
+          "command": "pytest src/tac/witness_dsl/tests/test_ep725_levelset_predictor_adapter.py -q --no-header -p no:randomly --timeout=0 -k real_",
+          "tail": "src/tac/witness_dsl/ep725_levelset_predictor_adapter.py:845: Ep725LevelsetPredictorAdapterError\nFAILED ...::test_real_explicit_member_runtime_decode_is_source_independent_and_causally_bound\nFAILED ...::test_real_ep725_n2_double_decode_is_hash_bound_bit_exact_and_label_owned\n2 failed, 8 deselected in 140.98s (0:02:20)",
+          "verbatim_error": "tac.witness_dsl.ep725_levelset_predictor_adapter.Ep725LevelsetPredictorAdapterError: bounded receipt renderer differs from frozen NumPy oracle",
+          "conclusion": "With the harness timeout removed, both tests still fail -- on the stale renderer pin. The 60 s pytest-timeout was masking a real defect, not causing it. This is the confirming measurement for the critical finding on the source module."
+        }
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [
+        {
+          "line": 362,
+          "ref": "EP725_SOURCE_DIRECTORY (=/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare/full_n600_packet)",
+          "status": "EXISTS on this host; the two `@pytest.mark.skipif(not EP725_SOURCE_DIRECTORY.is_dir())` tests therefore run rather than skip."
+        }
+      ],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 426,
+          "what": "The stale renderer digest is DUPLICATED as a bare literal here: `assert result.canonical_renderer_sha256 == \"1cecaa3ee9873d1378eaeb66b04cee56b621bccabe3fcecc01f60d3a0e692ddc\"`. So the pin now has to be refreshed in two places, and this copy does not even reference the constant it is pinning (`EP725_CANONICAL_RENDERER_SHA256` is imported on line 29 and used at line 142, but not here).",
+          "fix": "Replace the literal with `EP725_CANONICAL_RENDERER_SHA256`, so refreshing the pin is a one-line change."
+        },
+        {
+          "severity": "important",
+          "line": 363,
+          "what": "The two tests that request 180 s and 120 s decode budgets carry no `@pytest.mark.timeout` override, so the repo's global 60 s pytest-timeout kills them. MEASURED: both failed with `Failed: Timeout (>60.0s) from pytest-timeout` after 228.97 s of wall clock. The failure the suite reports is therefore the harness, not the code under test -- which is exactly how a real defect (the stale pin) can hide behind a harness failure.",
+          "fix": "Add `@pytest.mark.timeout(300)` to both tests so the assertion that fires is the one being tested."
+        },
+        {
+          "severity": "minor",
+          "line": 362,
+          "what": "Same testpaths gap as the rest of the batch: this file is not collected by a bare `pytest`. Combined with the skipif gate, a machine without the SSD would report 8 passed / 2 skipped and look fully green while the module's entire decode surface is untested.",
+          "fix": "Same as the other test files: add to testpaths or record the exclusion."
+        },
+        {
+          "severity": "minor",
+          "line": 141,
+          "what": "`_synthetic_receipt()` hardcodes six digests (labels_sha256 line 141, four frame hashes lines 183-186, the raw-prefix hash line 188) that must stay byte-identical to `_FROZEN_BOUNDED_OUTPUTS[(0,1)]` in the source module. They are a third copy of the same frozen table.",
+          "fix": "Build the synthetic receipt from `ep725._FROZEN_BOUNDED_OUTPUTS[(0, 1)]` so there is one table, not three."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_outer_archive_codec.py",
+      "lines": 239,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 16,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "................                                                         [100%]\n16 passed in 0.14s"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 1,
+          "what": "Not under `pyproject.toml:285 testpaths`; a bare `pytest` collects none of these 16 tests. This is the archive codec -- the highest-cost bug class in the batch -- and its byte-identity, CRC-tamper, trailing-byte, unsafe-path, DEFLATE-EOF and no-recompression guards are all outside the default run.",
+          "fix": "Add `src/tac/witness_dsl/tests` to testpaths, or record the exclusion deliberately."
+        },
+        {
+          "severity": "minor",
+          "line": 45,
+          "what": "The mutation helpers reach into module privates: `codec._LOCAL_FILE_HEADER` (line 45), `codec._CENTRAL_DIRECTORY_HEADER` (line 47), `codec._END_OF_CENTRAL_DIRECTORY` (line 72), `codec._build_exact_archive` (line 141), and `vars(codec)[\"OuterArchiveTruthLabels\"]` (line 143). For a wire-ABI test this is the right call -- byte offsets ARE the contract -- but it means a private rename silently breaks the suite.",
+          "fix": "None required. If the privates are stable enough to test against, consider exporting the three struct objects so the coupling is explicit."
+        },
+        {
+          "severity": "minor",
+          "line": 81,
+          "what": "Test quality audit came back STRONG and I am recording it. Replacing the codec body with canonical constants would fail these tests immediately: `test_parser_rejects_member_tamper_via_crc_custody` flips one payload bit and demands a CRC error (line 146); `_append_inside_deflate_stream` rewrites three separate length fields and demands 'after stream EOF' (line 68, 165); `test_deflated_parse_does_not_recompress_received_archive` monkeypatches `zlib.compressobj` to raise and proves the receiver never re-deflates (line 225); `test_repeat_build_is_byte_identical_for_both_encodings` measures determinism (line 123); `test_exact_size_tie_prefers_stored_deterministically` measures a real 5-byte tie (line 114). Byte offsets in the mutation helpers verified by hand against the struct layouts and all correct (offset 10 = local mod_time, central+12 = central mod_time, central+38 = external_attr, offset 18 = local compressed size, central+20 = central compressed size, EOCD+16 = central-directory offset).",
+          "fix": "None."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_same_class_realization_repair.py",
+      "lines": 718,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 16,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "................................                                         [100%]\n32 passed in 4.44s  (combined run with test_coupled_preimage_pair_adapter.py; 16 unparametrised tests come from this file)"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 1,
+          "what": "Not under `pyproject.toml:285 testpaths`; a bare `pytest` collects none of these 16 tests.",
+          "fix": "Add `src/tac/witness_dsl/tests` to testpaths, or record the exclusion deliberately."
+        },
+        {
+          "severity": "minor",
+          "line": 85,
+          "what": "Three `scope=\"module\"` fixtures (`source_surface`, `target_custody`, `compiled`) are shared across 16 tests, several of which call `dataclasses.replace(...)` on them. This is safe here -- every dataclass is `frozen=True, slots=True` and every ndarray is copied and `setflags(write=False)` in `__post_init__` -- but the safety is load-bearing and undocumented. A future non-frozen field would leak state between tests.",
+          "fix": "One comment at the fixture noting that module scope is safe only because the surface is deeply immutable."
+        },
+        {
+          "severity": "minor",
+          "line": 261,
+          "what": "Test quality audit came back STRONG and I am recording it. This suite would NOT survive replacing the implementation with canonical constants: `test_exact_falsifier...` (line 160) independently rebuilds the resize operator via `DisjointResizeOperator.build` and checks that post-repair scorer numerators equal `RGB * denominator` inside the owned mask and are bit-identical outside it (lines 214-226); `test_direct_decode_rejects_canonical_packet_with_wrong_live_g_class` (line 481) forges a CRC-valid packet through the module's own `_encode_packet` and proves the decoder still refuses on live-label disagreement; `test_deletion_body_mutation_and_trailing_bytes_fail_closed` (line 551) covers empty, truncated, bit-flipped and trailing-byte packets; `test_receipt_parser_rejects_numeric_and_truth_smuggling` (line 633) proves bool-as-int, float-as-int and truth-flag smuggling are all refused. The ABI assertions at lines 261-272 (222/13/62/9 bytes) are constants, but they pin the wire format, which is the correct thing to pin.",
+          "fix": "None."
+        }
+      ],
+      "test_quality": "behavior"
+    }
+  ],
+  "summary": {
+    "commit_clean": 0,
+    "commit_with_debt": 10,
+    "attic": 0,
+    "critical": 1,
+    "important": 10,
+    "minor": 23,
+    "minor_note": "4 of the 23 'minor' rows are recorded CLEAN audit results, not defects (coupled_preimage_pair_adapter.py:528 adapter-is-really-an-adapter; taskspace_outer_archive_codec.py:152 ZIP framing; taskspace_same_class_realization_repair.py:715 overlap detection + wire ABI; test_taskspace_outer_archive_codec.py:81 and test_taskspace_same_class_realization_repair.py:261 test-quality). They are kept in the findings array so the next reviewer does not re-derive them. Real minor defects: 19.",
+    "lines_reviewed": 7679,
+    "tests_run": 46,
+    "tests_passed": 44,
+    "tests_failed": 2,
+    "tests_skipped": 0,
+    "ruff_violations": 0,
+    "secrets_hits": 0,
+    "real_broken_refs": 0,
+    "headline": "Nine of ten files are commit-ready with recorded debt. One real defect: ep725_levelset_predictor_adapter.py pins a stale SHA-256 for tools/levelset_byte_close_and_eval.py, which kills all three of its decode entry points and the 5 downstream consumers that call them. Confirmed by execution, not inference."
+  }
+}

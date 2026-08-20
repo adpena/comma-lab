@@ -1,0 +1,424 @@
+{
+  "batch": 8,
+  "reviewer": "REVIEW-BATCH-8",
+  "date_utc": "2026-08-20",
+  "notes_for_main": [
+    "All 10 assigned files are ruff-clean (per-file `ruff check` = 0 errors each, verified individually).",
+    "HEADS-UP FOR SIBLING BATCHES, NOT MY FILES: `ruff check src/tac/witness_control/` reports 153 errors, all of which land in OTHER files in that package (src/tac/witness_control/__init__.py I001, costate_estimator.py, ...). None of my 10 files contribute.",
+    "Live frontier pointer at review time: effective_frontier.score = 0.14839100138338618 (contest-CUDA), cpu = 0.1880443979880752, cuda = 0.14839100138338618, upstream = 0.162. This is what falsifies the hardcoded 0.172 in test_v15_ms1_coordinate_compatibility.py.",
+    "verified_continuation_certificate_v1.py was given the hardest scrutiny per charter. It is NOT a vacuous gate: 20+ refusal paths in its passing suite are driven by real byte tampering (resealed body, opaque dependency, drifted manifest bytes, forged Python object, production authority mode, primitive-interval family), and the happy path also succeeds. It performs real work on real inputs: canonical re-emit equality, envelope self-hash, manifest SHA vs binding, two Merkle recomputations, per-dependency SHA reopen, binary64-hex-vs-scalar bit equality, and hard-constraint satisfaction."
+  ],
+  "files": [
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_control/taskspace_receding_horizon_controller_v1.py",
+      "lines": 1507,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": false,
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "source module, not a test file; its dedicated suite (test_taskspace_receding_horizon_controller_v1.py) reports 30 passed in 0.33s"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 63,
+          "what": "CoverageStatus Literal (L63-68) advertises \"CERTIFIED_DOMINATED\", but ActionFamilyScaleCoverageV1.__post_init__ (L583-592) raises unconditionally whenever that value is supplied. The type surface therefore names a state the code can never produce.",
+          "fix": "Drop CERTIFIED_DOMINATED from the Literal, or annotate the alias as reserved-and-currently-refused so a reader does not build against an unreachable state."
+        },
+        {
+          "severity": "minor",
+          "line": 847,
+          "what": "`cross_scale_scan_complete` is a property whose body is `return True` with no runtime check. The vocabulary invariant it names is actually enforced in __post_init__ (L726). The name reads as a check being performed at call time.",
+          "fix": "Rename to family_scale_vocabulary_declared, or re-assert `set(coverage_by_cell) == expected_cells` inside the property."
+        },
+        {
+          "severity": "minor",
+          "line": 840,
+          "what": "`enumeration_complete` docstring claims \"Every manifest leaf is measured or covered by reverified proof bytes\", but the body only re-runs certificate byte reverification. The partition check that actually establishes the claim (L743, `measured_ids | certificate_ids != set(manifest_by_id)`) is not re-run.",
+          "fix": "Re-assert the measured-plus-certified partition inside the property so its docstring and its body agree."
+        },
+        {
+          "severity": "minor",
+          "line": 1071,
+          "what": "`_functional_quotient` representatives are computed but never consumed by the value computation: L1080 iterates `hard_admissible`, not `quotient_rows`. Only `representative_count` reaches the output (L1405). The numeric result is identical (min over a class equals min over its members), but a reader can reasonably assume the quotient prunes the decision.",
+          "fix": "State in the docstring that the quotient is telemetry-only, or feed representatives into the value loop so the code matches the framing."
+        },
+        {
+          "severity": "minor",
+          "line": 824,
+          "what": "`reverified_continuation_certificates` re-runs full proof-byte reverification on every property access; it is read at least four times per decision (L723 __post_init__, L844 enumeration_complete, L880 identity_sha256, L1053 select_receding_horizon_action_v1). Deliberate (\"Python objects are not cryptographic capabilities\") but the cost is O(bundles x accesses).",
+          "fix": "No correctness change needed. Consider an explicit single reverify call site whose result is threaded, with the property retained as the durable boundary."
+        },
+        {
+          "severity": "minor",
+          "line": 991,
+          "what": "`cell_measurements[cell] != measurement` compares a tuple of measured floats with exact !=. The semantic here is identity consistency (equal evaluator-cell identity must imply identical measurements), so exact comparison is correct, but -0.0 and 0.0 compare equal and would not be caught.",
+          "fix": "If bit-identity is the intent, compare float(...).hex() pairs instead of the raw floats."
+        }
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_control/tests/test_taskspace_receding_horizon_controller_v1.py",
+      "lines": 901,
+      "verdict": "COMMIT_CLEAN",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 30,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": ".............................. [100%]\n30 passed in 0.33s"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_control/tests/test_verified_continuation_certificate_v1.py",
+      "lines": 845,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 30,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": ".............................. [100%]\n30 passed in 0.31s"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 819,
+          "what": "test_duplicate_key_nan_and_huge_integer_proofs_fail_closed feeds `{\"schema\": 999...}` at the envelope top level. That payload is refused by the envelope FIELD-SET check (_require_exact_fields, L1195 of the module), never by the _MAX_PROOF_INTEGER bound the test name implies. The test asserts only the exception class, so the signed-64-bit integer guard is never actually exercised.",
+          "fix": "Put the oversized integer in `subtree_cardinality` inside a resealed proof body and add `match=\"signed-64-bit\"` so the bound is the thing under test."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_control/verified_continuation_certificate_v1.py",
+      "lines": 1516,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": false,
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "source module, not a test file; its dedicated suite (test_verified_continuation_certificate_v1.py) reports 30 passed in 0.31s"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 1250,
+          "what": "The verifier proves the covered leaf set is a SUBSET of the reopened manifest (L1251) and that every covered leaf shares the bound first_action_id and support hyperedge (L1254-1261). It does NOT prove the covered set is EXHAUSTIVE for that branch. An omitted worse leaf would raise the claimed `terminal_lower_bound` (which is min over the covered leaves, L1326-1335) without any refusal. Exhaustiveness is delegated entirely to the caller-supplied context.expected_covered_terminal_leaf_ids. The composed system IS sound today because CompleteActionUniverseV1.__post_init__ enforces the partition (controller L743, `measured_ids | certificate_ids != set(manifest_by_id)`), but the verifier is exported in __all__ and any other consumer gets a bound only as strong as its own context.",
+          "fix": "Inside verify_continuation_proof_bytes, derive the branch leaf set from the already-reopened manifest -- all manifest leaves whose first_action_id and support_hyperedge_sha256 equal the binding's -- and refuse if covered_leaf_ids is a proper subset. Failing that, add an explicit caller-obligation note to the module docstring and to the public function's docstring."
+        },
+        {
+          "severity": "minor",
+          "line": 370,
+          "what": "_require_authority_axis records at the site that the hardware_substrate leg is OWED for PRODUCTION_CONTEST_CPU/CUDA (Catalog #127). Currently unreachable because L1213 hard-refuses any non-RESEARCH_ADVISORY binding, so there is no live exposure. Flagging so the debt is not lost when the production receipt adapter lands.",
+          "fix": "No change now. Whoever lands the production receipt adapter must add the substrate leg (or route through validate_exact_eval_evidence) in the SAME landing, exactly as the docstring instructs."
+        },
+        {
+          "severity": "minor",
+          "line": 611,
+          "what": "ConservativePrimitiveIntervalLeafEvidenceV1.conservative_score_lower_bound is a @property that unconditionally raises. Fail-closed and intentional, but a raising property is surprising to introspection consumers. (dataclasses.asdict does not touch properties, so nothing breaks today.)",
+          "fix": "Convert to a method named e.g. require_conservative_score_lower_bound() so the raise is visible at the call site."
+        },
+        {
+          "severity": "minor",
+          "line": 1034,
+          "what": "For an empty manifest, expected_id_root is None and L1037 then compares manifest[\"generated_terminal_leaf_id_root_sha256\"] against None -- so an empty manifest must carry JSON null there. The dual sha256-or-null type is easy to misread. Correct and covered (the base-stop test uses an empty manifest), just subtle.",
+          "fix": "Add a one-line comment at L1034 naming the empty-manifest null contract."
+        }
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_chronological_a3_encoder.py",
+      "lines": 1152,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": false,
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "source module, not a test file; its dedicated suite (test_taskspace_chronological_a3_encoder.py) reports 6 passed in 79.17s"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 663,
+          "what": "numerator_sse_after and numerator_sse_reduction (produced in _rank_rows L684-686, surfaced in the receipt as selected_numerator_sse_after / selected_numerator_sse_reduction) are PREDICTED from candidate_numerators -- `constant_rgb.astype(int64) * denominator` for TARGET_CONSTANT_RGB_V1 (L679) or corrected_y1_numerators for CORRECTED_Y1_SUPPORT_COPY_V1 (L681). They are never checked against the actually-decoded output. _strict_verify_compiled_a3 already computes y0_numerators (L813) but uses it ONLY for the non-selected complement (L814-818). The prediction is exact under today's receiver semantics, so no number is wrong right now; the risk is silent drift -- a receiver change would make the receipt's SSE fields wrong while every gate still passes.",
+          "fix": "In _strict_verify_compiled_a3, also assert equality on the OWNED cells: pass the ranked prefix (or candidate_numerators) in and check y0_numerators[owned_scorer_mask] equals the predicted numerators, raising ChronologicalA3EncoderError on mismatch. The needed array is already materialized, so the added cost is one comparison."
+        },
+        {
+          "severity": "minor",
+          "line": 600,
+          "what": "EncoderOnlyXIP2GuidanceV1 is exported in __all__ and directly constructible. Its truth labels payload_round_trip_exact and domains_share_identical_xip2_bytes are only checked `is True` in __post_init__ (L637-648) -- never re-derived. The real round-trip verification lives in build_xip2_guidance_targets (L1055-1059). A direct construction therefore asserts a round-trip that was never performed.",
+          "fix": "Remove the two self-asserting flags from the public dataclass, or re-run the q/scales round-trip inside __post_init__ so the label is earned wherever the object is built."
+        },
+        {
+          "severity": "minor",
+          "line": 1110,
+          "what": "`np.stack(camera, axis=0) if isinstance(camera, list) else camera` -- the list branch is dead. Both call sites (L1117, L1121) pass an already-stacked ndarray.",
+          "fix": "Delete the isinstance branch."
+        },
+        {
+          "severity": "minor",
+          "line": 470,
+          "what": "`any(getattr(self, field) is not expected for field, expected in fixed_truth.items())` compares small ints and bools with identity. It works only because CPython interns small ints, and it errs toward refusing (0.0 is not 0 -> raise), so the direction is safe. Still an implementation-detail dependency in a fail-closed truth gate.",
+          "fix": "Use `getattr(self, field) != expected or type(getattr(self, field)) is not type(expected)` so the intent (exact value AND exact type) is explicit."
+        }
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_predictor_v2_consumer_seam.py",
+      "lines": 419,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": false,
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "source module, not a test file; its dedicated suite (test_taskspace_predictor_v2_consumer_seam.py) reports 8 passed in 1.28s"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 27,
+          "what": "The seam reaches into coupled_preimage_program's private surface at eight symbols: _array_content_sha256 (L285, L309, L315), _realization_profile_sha256 (L289), _materialize_y0 (L313), _materialize_y0_from_controls (L356), _derive_source_binding (L365), _build_lineage (L372), _sha256 (L393), DECODER_DIRECT_SOURCE_SHA256 (L395). All eight verified present in the owner module. A rename in the owner breaks this seam at runtime with no static signal (ruff will not flag cross-module private access).",
+          "fix": "Promote the helpers the seam genuinely needs to the owner module's public API and import them by public name."
+        },
+        {
+          "severity": "minor",
+          "line": 195,
+          "what": "`assert profile is not None` in correction_rgb_by_role is a bare assert, stripped under `python -O`; under -O the next line would raise AttributeError instead of the module error. __post_init__ L164 already guarantees non-None, so there is no live break.",
+          "fix": "Raise TaskspacePredictorV2ConsumerSeamError instead of asserting."
+        },
+        {
+          "severity": "minor",
+          "line": 134,
+          "what": "The module docstring (L16-17) declares that candidate composition must pass require_signal_preserving_ep725_a_surface, but compile_coupled_preimage_program_v2 (L333) never calls it -- enforcement is by documentation only. The compile function's own docstring does honestly say \"this is not ep725 signal-preserving\", so this is structure-vs-doc debt, not a false claim.",
+          "fix": "Either call the gate from the compile path behind an explicit research_only escape, or reword the module docstring to say the gate is a caller obligation."
+        },
+        {
+          "severity": "minor",
+          "line": 237,
+          "what": "apply_generative_taskspace_correction_v2 parses the packet (L237) and then _g.apply_generative_taskspace_correction re-parses it internally (L238). Redundant work; no correctness issue.",
+          "fix": "None required; note only."
+        }
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_chronological_a3_encoder.py",
+      "lines": 413,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 6,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "...... [100%]\n6 passed in 79.17s (0:01:19)"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 213,
+          "what": "`assert sources.target.target_camera_y0.nbytes > len(proposal.compiled_a3.packet)` is trivially true (about 3 MB versus about 30 bytes) and is a weak stand-in for a real \"dense target is not serialized\" check. The adjacent L212 (`binding_sha256 not in packet`) is the load-bearing one.",
+          "fix": "Replace with a bound tied to the receipt accounting, e.g. assert len(packet) == PACKET_HEADER.size + serialized_coordinate_bytes + serialized_rgb_value_bytes."
+        },
+        {
+          "severity": "minor",
+          "line": 390,
+          "what": "Six assertions (L390-396) read hardcoded Literal truth fields on EncoderOnlyXIP2GuidanceV1. They would still pass if build_xip2_guidance_targets returned canned constants. The surrounding numeric assertions (L378 array_equal on the camera-then-R target, L385-389 factor-2 numerator identity) are what actually verify behavior.",
+          "fix": "Keep the numeric assertions; drop or re-derive the label assertions once the dataclass stops self-asserting them (see the encoder module finding at its L600)."
+        },
+        {
+          "severity": "minor",
+          "line": 60,
+          "what": "Suite runtime is 79 s for 6 tests. _paint_cell_support rebuilds a full DisjointResizeOperator on every call (L66-71) and the module fixture materializes full 874x1164 camera stacks. Not a bug; a slow-suite note for anyone adding cases.",
+          "fix": "Hoist the operator into a module-scoped fixture (the encoder itself already lru_caches its own)."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_predictor_v2_consumer_seam.py",
+      "lines": 285,
+      "verdict": "COMMIT_CLEAN",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 8,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "........ [100%]\n8 passed in 1.28s"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_v15_ms1_coordinate_compatibility.py",
+      "lines": 51,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": true,
+        "passed": 2,
+        "failed": 1,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "..F [100%]\n=================================== FAILURES ===================================\n___ test_canonical_receipt_audit_falsifies_native_cast_without_heavy_render ____\n\n    def test_canonical_receipt_audit_falsifies_native_cast_without_heavy_render() -> None:\n        if not Path(\"/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719/prepare_receipt.json\").is_file():\n            return\n        receipt = audit_coordinate_compatibility(AuditPaths.canonical(REPO_ROOT), strict_v15_parse=False)\n>       assert receipt[\"frontier\"][\"effective_score_to_beat\"] == 0.172\nE       assert 0.14839100138338618 == 0.172\n\nsrc/tac/witness_dsl/tests/test_v15_ms1_coordinate_compatibility.py:45: AssertionError\n=========================== short test summary info ============================\nFAILED src/tac/witness_dsl/tests/test_v15_ms1_coordinate_compatibility.py::test_canonical_receipt_audit_falsifies_native_cast_without_heavy_render\n1 failed, 2 passed in 3.07s"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "critical",
+          "line": 45,
+          "what": "`assert receipt[\"frontier\"][\"effective_score_to_beat\"] == 0.172` hardcodes a frontier score literal. The live .omx/state/canonical_frontier_pointer.json now reads effective_frontier.score = 0.14839100138338618 (contest-CUDA; sub-0.15 landed 2026-08-20), so the test FAILS today -- this is the observed failure, not a hypothesis. It is the CLAUDE.md \"Frontier scores are pointer-only -- FORBIDDEN: hardcoded score literals\" class reproduced at the test surface: the test breaks on every legitimate frontier move, and its red will be read as a code regression.",
+          "fix": "Read the expectation from the pointer, exactly as the module under test already does (v15_ms1_coordinate_compatibility.py L370-374): load .omx/state/canonical_frontier_pointer.json and assert receipt[\"frontier\"][\"effective_score_to_beat\"] == pointer[\"effective_frontier\"][\"score\"], or assert the selection-rule invariant (score == min(cpu, cuda, upstream)) instead of any number."
+        },
+        {
+          "severity": "critical",
+          "line": 50,
+          "what": "`assert receipt[\"economics\"][\"max_archive_bytes_at_effective_frontier\"] == 187_562` is the same staleness one level down: 187_562 is the byte ceiling AT 0.172 (confirmed by the independent pure-function test at L24). At the live 0.14839 frontier the ceiling is smaller, so this assertion is also wrong -- it simply never executes because L45 aborts first. Fixing L45 alone will surface this one.",
+          "fix": "Derive it: expected = byte_ceiling_for_score(pointer_score, receipt[\"economics\"][\"d_seg\"], receipt[\"economics\"][\"d_pose\"]) and assert against that."
+        },
+        {
+          "severity": "important",
+          "line": 42,
+          "what": "`if not Path(\"/Volumes/VertigoDataTier/...\").is_file(): return` -- a bare return instead of pytest.skip(). On any host without the VertigoDataTier SSD mounted, this test reports PASS while executing nothing. That is the vacuity==pass class: green is indistinguishable from not-run, and the suite would look clean on CI or a fresh checkout while the entire audit went unexercised.",
+          "fix": "`pytest.skip(\"C1 evidence tier not mounted\")` so the skip is visible in the report, and record the denominator (skipped vs run) rather than silently passing."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/v15_ms1_coordinate_compatibility.py",
+      "lines": 594,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {
+        "ran": false,
+        "passed": 0,
+        "failed": 0,
+        "errors": 0,
+        "skipped": 0,
+        "timeout": false,
+        "tail": "source module, not a test file; its dedicated suite (test_v15_ms1_coordinate_compatibility.py) reports 1 failed, 2 passed in 3.07s -- the failure is a stale literal in the TEST, not in this module"
+      },
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [
+        {
+          "line": 62,
+          "ref": "/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719",
+          "status": "present on this host; SSD-tier path, allowed under the CLAUDE.md disk rules; no /tmp paths anywhere in the file"
+        }
+      ],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 82,
+          "what": "SelectedPreimagePair.__post_init__ calls np.shares_memory(frame0, frame1) at L82, but L80-81 already ran _validate_plane on both, which does np.ascontiguousarray(...).copy() (L102). Two fresh copies can never share memory, so the refusal branch at L83 is unreachable dead code. The invariant is still enforced -- by the copy, not by the guard. The test at L37-38 confirms it: passing the SAME source array twice succeeds.",
+          "fix": "Either move the shares_memory check BEFORE the copies (so an aliased caller is genuinely refused), or delete the dead guard and document that independence is repaired rather than validated."
+        },
+        {
+          "severity": "minor",
+          "line": 363,
+          "what": "_artifact is called with live_hash=False for the 409,526,925-byte C1 archive: size is checked, SHA-256 is NOT. The returned dict still carries \"sha256\": expected_sha256 -- the CLAIMED value, presented in the same field name as verified hashes elsewhere in the receipt. The adjacent \"live_sha256_verified\": False keeps it honest, so this is naming debt rather than a false claim.",
+          "fix": "Emit the key as \"claimed_sha256\" when live_hash is False, so a downstream reader cannot mistake it for a verified digest."
+        },
+        {
+          "severity": "minor",
+          "line": 518,
+          "what": "\"current_base_archive_bytes\": 339_094 is a hardcoded artifact size with no provenance line and no verification against the actual C0B archive, sitting inside a receipt whose other artifact rows are all size-and-SHA checked.",
+          "fix": "Derive it from the archive (or from a named receipt), or annotate it with the receipt path it came from."
+        },
+        {
+          "severity": "minor",
+          "line": 244,
+          "what": "byte_ceiling_for_score doubles `high` without an iteration bound. It terminates for every finite target because the rate term grows without bound, but a pathological target costs on the order of a thousand iterations before the binary search starts.",
+          "fix": "None required; optionally seed `high` from a closed-form estimate: ceil((target - distortion) * N / 25)."
+        },
+        {
+          "severity": "minor",
+          "line": 62,
+          "what": "AuditPaths.canonical hardcodes the /Volumes/VertigoDataTier evidence root, so audit_coordinate_compatibility is unrunnable on any host without that SSD. It fails closed (CompatibilityAuditError from _read_json), which is the right direction, but the module is machine-bound by construction.",
+          "fix": "None required. Note only, so that a future CI wiring does not treat the resulting error as a code defect."
+        }
+      ],
+      "test_quality": "n/a"
+    }
+  ],
+  "summary": {
+    "commit_clean": 2,
+    "commit_with_debt": 8,
+    "attic": 0,
+    "critical": 2,
+    "important": 3
+  }
+}

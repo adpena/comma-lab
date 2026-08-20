@@ -1,0 +1,281 @@
+{
+  "batch": 1,
+  "reviewer": "REVIEW-BATCH-1",
+  "date_utc": "2026-08-20",
+  "method_note": "Every number below came from a command actually run in /Users/adpena/Projects/pact. Imports: `.venv/bin/python -c 'import <mod>'` with rc captured directly (not through a pipe). Tests: `timeout 1200 .venv/bin/python -m pytest <path> -q --no-header -p no:cacheprovider`. Lint: `.venv/bin/python -m ruff check <9 paths>`. broken_refs provenance: all 4 source modules imported rc=0 AND all 5 test modules collected+passed, so every `from tac.X import Y` / `from tools.X import Y` statement in all 9 files executed successfully; an unresolvable module or symbol would have raised at import/collection.",
+  "instrument_defect_disclosed": "An AST sweep I wrote as a third cross-check (walk every ImportFrom, import_module(n.module), then hasattr(module, name)) reported exactly one MISSING SYMBOL: test_taskspace_interaction_costate_bridge_v1.py:14 `from tac.witness_control import telemetry_binding`. That was a FALSE POSITIVE caused by a defect in my own checking script, not a defect in the reviewed code. `telemetry_binding` is a SUBMODULE, and a submodule only becomes an attribute of its package after it has itself been imported; my script imported only the package, so hasattr returned False. Reproduced the script defect directly: hasattr(tac.witness_control, 'telemetry_binding') is False before importing the submodule and True after. Verified the real statement independently: `from tac.witness_control import telemetry_binding` executes rc=0, the file exists at src/tac/witness_control/telemetry_binding.py (23819 bytes), and parse_log_lines is present (the test calls it at lines 287 and 861). broken_refs therefore remains 0, now confirmed three independent ways: module imports rc=0, 64 passing tests that would raise at collection, and direct execution of the one flagged statement. Recorded here so MAIN is not misled by a re-run of a similar naive sweep.",
+  "environment_note": "An unrelated, already-tracked-and-modified file, src/tac/optimization/predict_project_receiver.py, initially made 3 of the 4 source modules unimportable (RuntimeError: conflicting in-process LawRef evaluator for realization_breakeven_bytes_v1, raised at module scope line 287). A sister agent patched it mid-review (_register_lawref_adapter now defers to the canonical builtin instead of refusing). After that patch all 4 modules import rc=0. That file is NOT in this batch; flagging so MAIN knows the fix is uncommitted and load-bearing for these 3 modules.",
+  "files": [
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/boundary_math/dense_raster_lzma_baseline.py",
+      "lines": 90,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": false, "passed": 0, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "not a test file; no dedicated test module assigned to this batch"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 63,
+          "what": "MEASURED silent data corruption that breaks the module's own explicit NO-FAKE claim. Line 18 of the docstring states 'NO FAKE: encode_partition -> decode_partition is bit-exact identity'. The range guard at line 61 accepts any n_classes, but line 63 does `a.astype(np.uint8)`, which truncates mod 256. Reproduced: encode_partition(np.array([[0,300],[4,260]], dtype=np.int64), n_classes=1000) round-trips through decode_partition to [[0,44],[4,4]]; np.array_equal(a, back) is False, with no error raised. The unsafe domain is reachable by construction because live callers pass n_classes as a variable, not the literal 5: src/tac/v2_compose/archive_grammar.py:296 (`encode_partition(kf[i], n_classes=n_classes)`) and src/tac/boundary_math/seg_core.py:152 (`encode_partition(lstar, n_classes)`). No current caller exceeds 256, so this is latent, not live.",
+          "fix": "In encode_partition, before the astype, add `if type(n_classes) is not int or not 1 <= n_classes <= 256: raise ValueError(f'dense-raster uint8 baseline supports 1..256 classes; got {n_classes}')`. Mirror the same bound in DenseRasterLzmaCode.__post_init__ so a hand-built code object cannot smuggle it in either. Alternatively widen the payload dtype and record it in the code, but the bound is the smaller honest fix."
+        },
+        {
+          "severity": "minor",
+          "line": 61,
+          "what": "MEASURED untyped-error escape. encode_partition(np.zeros((0,5), dtype=np.uint8)) raises numpy's `ValueError: zero-size array to reduction operation minimum which has no identity` from a.min(), not the module's own shape message. The function's other rejections are typed with explicit text; this one leaks an internal numpy message.",
+          "fix": "Add `if a.size == 0: raise ValueError(f'argmax must be nonempty (H, W); got {a.shape}')` immediately after the ndim check on line 60."
+        },
+        {
+          "severity": "minor",
+          "line": 33,
+          "what": "_LZMA_FILTERS is a mutable module-level list containing a mutable dict, and it is exported in __all__ (line 84). Both encode_partition and decode_partition read it at call time, so any consumer that mutates it silently makes previously-encoded payloads undecodable. The comment calls the chain 'deterministic', which the mutability contradicts.",
+          "fix": "Freeze it: `_LZMA_FILTERS: Final = (MappingProxyType({...}),)` and pass `list(_LZMA_FILTERS)` at the two call sites, or drop it from __all__ so it is not part of the public surface."
+        }
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/tests/test_ddm_vh2_vehicle_routing_ledger.py",
+      "lines": 163,
+      "verdict": "COMMIT_CLEAN",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 8, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "........                                                                 [100%]\n8 passed in 0.20s"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/tests/test_materialize_g2_a2_composition_receipt.py",
+      "lines": 73,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 2, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "..                                                                       [100%]\n2 passed in 23.40s"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 42,
+          "what": "The test monkeypatches materializer.verify_dynamic_frontier_target_snapshot to the identity function for the whole test, so the materializer's real frontier verification never runs in this suite. That is a legitimate technique for a synthetic fixture (the fake snapshot at line 16-36 would correctly fail real verification), but in a repo whose discipline is fail-closed it is worth surfacing: the verification path this module depends on has no coverage here.",
+          "fix": "None required. Optionally add a second test that feeds a deliberately invalid snapshot through the UNPATCHED verifier and asserts it refuses, so the patched path is not the only path exercised."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_control/taskspace_interaction_costate_bridge_v1.py",
+      "lines": 3901,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": false, "passed": 0, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "not a test file; its test module is reported separately below (26 passed)"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 688,
+          "what": "MEASURED untyped exception escaping a documented typed fail-closed contract. FullN600ReceiverEqualityClosureV1.from_receipts is a strict parser whose entire job is rejecting malformed receipts with TaskspaceInteractionCostateBridgeError. Line 685-690 reads `not ('--pair-count' in argv and argv[argv.index('--pair-count') + 1] == '600')`. When '--pair-count' is the LAST element of exact_resume_argv the index+1 is out of range. Reproduced on the verbatim expression: ['--confirm-full-n600','--pair-count','600'] -> OK; [...,'599'] -> typed refusal; ['--confirm-full-n600','--pair-count'] -> IndexError: list index out of range. A caller catching TaskspaceInteractionCostateBridgeError does not catch this.",
+          "fix": "Replace with an index-bounded form: `pos = argv.index('--pair-count') if type(argv) is list and '--pair-count' in argv else -1` then test `pos < 0 or pos + 1 >= len(argv) or argv[pos + 1] != '600'`."
+        },
+        {
+          "severity": "important",
+          "line": 3038,
+          "what": "MEASURED hash-convention mismatch that makes a documented input form unusable. The builder keys receiver equalities by `_sha256(row if type(row) is bytes else _canonical_json(row))` (line 3038), i.e. NO trailing newline for the dict form. But FullN600ReceiverEqualityClosureV1.g20_receipt_sha256 is produced by _canonical_receipt_payload (line 380) as `_sha256(_canonical_json(value) + b'\\n')`. Measured against the real committed receipt .omx/research/original_taskspace_inverse_witness_codec_20260725/ep725_lossless_xcodec_recode_20260726/receipt.json (whose bytes do end with a newline): bytes-input key 02ccb8a6209c79651b64fa93b15aa1ed6155b03d9709f5f18b4ff98edfe25c8c == equality key (True); dict-input key 560f96cbec67294f1ac70a77f330028570e928929ebaa99ead20e04e44d829d1 != equality key (False). Measured twice by independent means that produced byte-identical digests: once with a verbatim stdlib reproduction of _canonical_json (bridge_v1.py:209-219), and once importing and calling the real tac.witness_control.taskspace_interaction_costate_bridge_v1._canonical_json. Consequence: passing a G20 placement receipt as a dict together with its receiver equality ALWAYS raises 'receiver equality closure has no exact matching G20 placement receipt' at line 3054, even when both describe identical content. _lossless_xcodec_placement_payload explicitly accepts 'exact bytes or dict' (line 1788) and the test suite exercises the dict form at line 872, so both forms are intended. This fails CLOSED, so it cannot corrupt a result; it silently forecloses a supported path.",
+          "fix": "Make the two sites share one convention. Simplest: at line 3038 use `raw = row if type(row) is bytes else _canonical_json(row) + b'\\n'`, matching _canonical_receipt_payload. Add a regression test that pairs a dict-form placement receipt with its equality closure."
+        },
+        {
+          "severity": "important",
+          "line": 429,
+          "what": "MEASURED zero test coverage on the largest and most intricate validators in the file. `grep -cE 'receiver_equalit|admission_control|same_object_bridge_score_receipts|from_receipts|FullN600'` over src/tac/witness_control/tests/test_taskspace_interaction_costate_bridge_v1.py returns 0. Untested: FullN600ReceiverEqualityClosureV1 and its ~230-line from_receipts classmethod (lines 429-735), ReceiverEqualityAdmissionControlV1 (lines 398-426), and _same_object_bridge_score_payload (lines 2269-2620, ~350 lines) — plus the three public keyword parameters representation_placement_receiver_equalities, representation_placement_admission_controls, and same_object_bridge_score_receipts. Roughly 600 of 3901 lines. Two of those types are exported in __all__ (lines 3896-3897). This is also exactly where both bugs above live, which is why they survived: no test ever calls the code.",
+          "fix": "Add at least a happy-path test that builds a FullN600ReceiverEqualityClosureV1.from_receipts from synthetic G20/G22/PairPopulation bytes and threads it through build_taskspace_interaction_costate_bridge_v1, plus tamper tests for the argv custody block and the G28 score arithmetic — mirroring the pattern the existing tests already use for the G20/G25 receipts."
+        },
+        {
+          "severity": "minor",
+          "line": 3625,
+          "what": "A `bool and str` idiom in a load-bearing axis-label field: `\"axis\": placement[\"truth\"][\"research_only\"] and \"[macOS-CPU frozen receiver structural proof]\"`. Today research_only can only be True (expected_truth at line 1858-1868 is compared with `truth != expected_truth` at 1869), so the expression always yields the string. If that invariant is ever relaxed the telemetry row emits `axis: false` — a bool in a string-typed field that CLAUDE.md's apples-to-apples discipline makes authoritative. Every sibling telemetry row uses a plain string.",
+          "fix": "Use the literal: `\"axis\": G22_STRUCTURAL_AXIS` (the constant already exists at line 59 with exactly this value)."
+        },
+        {
+          "severity": "minor",
+          "line": 1265,
+          "what": "Fragile absolute float tolerance. `_close(row['finite_byte_ceiling_real'], ceiling, ..., atol=1e-9)` compares a quantity of magnitude ~1e3-1e6 (ceiling = -distortion_term * 37545489 / 25.0) with rel_tol=0.0 and abs_tol=1e-9. At 1e6 that is about 4 float64 ulps, so any producer computing the ceiling with a different operation order fails the check. It passes today only because the producer uses the identical expression.",
+          "fix": "Use a relative tolerance for this one comparison, e.g. rel_tol=1e-12 with a small abs_tol floor, rather than pure abs_tol at large magnitude."
+        },
+        {
+          "severity": "minor",
+          "line": 3216,
+          "what": "Dead-by-design code plus a duplicated scan. Lines 3216-3235 compute `base`, then `realized_after = base['realized']`, then `del realized_after` purely as executable documentation that no realized component is substituted into the prediction. Separately, lines 3219-3223 and 3224-3228 run two near-identical `next(...)` scans over feedback_value['row_inventory']['occurrences'] to read two fields (d_seg, d_pose) off the same row.",
+          "fix": "Keep the intent as a comment and delete the assign/del pair; hoist the row lookup into one `before_row = next(...)` and read both fields from it."
+        }
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_control/tests/test_taskspace_interaction_costate_bridge_v1.py",
+      "lines": 931,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 26, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "..........................                                               [100%]\n26 passed in 2.75s"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 35,
+          "what": "MEASURED cross-batch commit-ordering hazard. This file loads its G18 fixture at module scope by path: G18_TEST = REPO / 'src/tac/witness_dsl/tests/test_taskspace_g8_a3_interaction_feedback.py', then spec_from_file_location + `assert SPEC is not None and SPEC.loader is not None` (line 47) + exec_module (line 50). `git status --porcelain` on that fixture path returns `??` — it is UNTRACKED (present locally, 8516 bytes, part of the same 77-file uncommitted set, but not in this batch). If MAIN commits this test file without that fixture module in the same landing, collection fails immediately with an AssertionError for every one of the 26 tests. Verified separately that the two .omx/research receipt fixtures it also reads (XCODEC_RECEIPT line 36, POPULATION_GLOBAL_RECEIPT line 41) ARE tracked in git, so those survive a fresh checkout.",
+          "fix": "MAIN: land src/tac/witness_dsl/tests/test_taskspace_g8_a3_interaction_feedback.py in the same commit as this file, or before it. Longer term, move the shared _receipt() fixture into a real importable module (e.g. a conftest.py or src/tac/witness_dsl/tests/_g18_fixture.py) so the dependency is an ordinary import rather than a path-based exec_module."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_pair_fragment_receiver.py",
+      "lines": 743,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": false, "passed": 0, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "not a test file; its test module is reported separately below (20 passed)"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 583,
+          "what": "Incomplete fail-closed envelope. TaskspacePairFragmentReceiverError is documented (line 71) as covering 'Malformed G2 bytes, failed G/A causality, or non-exact realization', and _decode_once maps four named error types onto it (lines 583-592). Any other exception raised inside parse_generative_taskspace_receiver_fragment_archive / parse_coupled_preimage_program / decode_coupled_preimage_program — zipfile.BadZipFile, struct.error, KeyError, IndexError — escapes untyped. The corruption test at line 265-269 only exercises the already-wrapped GenerativeTaskspaceReceiverError path, so the gap is untested.",
+          "fix": "Add a terminal `except Exception as exc: raise TaskspacePairFragmentReceiverError('strict G2 decode refused malformed counted bytes') from exc` after the four typed handlers, keeping the existing `except TaskspacePairFragmentReceiverError: raise` first so typed errors pass through unchanged."
+        },
+        {
+          "severity": "minor",
+          "line": 714,
+          "what": "build_a_only_counterfactual_fragment_archive performs six full decodes for one counterfactual: receive_taskspace_pair_fragment (line 714, 2 decodes via the internal double-decode), build_taskspace_pair_fragment_archive (line 719, which itself calls receive = 2 more), and receive again (line 724, 2 more). Each decode realizes and factor-2-verifies the full camera plane — 874*1164*3 = 3,052,008 bytes per frame, 8 frames at the 4-pair cap. Correct, but this is the dominant cost in the suite.",
+          "fix": "Reuse the already-computed `received` from the inner build instead of re-receiving at line 724, or have build_taskspace_pair_fragment_archive return its decode alongside the archive."
+        },
+        {
+          "severity": "minor",
+          "line": 471,
+          "what": "Partial immutability. TaskspacePairFragmentDecodeV1.__post_init__ freezes only scorer_chronological_frames via _immutable_u8. The array it was copied from, self.decoded_a.chronological_frames, remains writeable and is still reachable through the returned decode object, so a caller can mutate the underlying scorer frames while the receipt's hashes claim they are fixed.",
+          "fix": "Either document that only the top-level field is frozen, or freeze decoded_a's arrays at their own construction site in coupled_preimage_program."
+        }
+      ],
+      "test_quality": "n/a"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_post_g8_conditional_a.py",
+      "lines": 922,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": false, "passed": 0, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "not a test file; its test module is reported separately below (8 passed)"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "important",
+          "line": 595,
+          "what": "MEASURED type-strictness hole in a parser that advertises exact-type rejection. parse_post_g8_conditional_a_receipt's docstring (line 807) says 'Strict canonical JSON parser with duplicate-key and exact-type rejection'. The integer fields ARE strictly typed (line 570, `type(...) is not int`) and the Literal truth fields ARE identity-checked (line 620, `is not expected`), but the three mode-proof booleans — p0_pass_through_zero_mutation, constant_rgb_target_numerators_exact, post_g8_y1_support_numerators_exact — are only compared as a tuple at line 595 (`actual_mode_truth != expected_mode_truth`), and in Python 1 == True. Reproduced end to end on a real compiled receipt: setting \"constant_rgb_target_numerators_exact\": 1, \"p0_pass_through_zero_mutation\": 0, \"post_g8_y1_support_numerators_exact\": 0 in the JSON body is ACCEPTED, and the returned receipt carries the int 1. The canonical round-trip guard at line 845 does not catch it because json.dumps(1) reproduces the same bytes. Any consumer written as `if receipt.constant_rgb_target_numerators_exact is True` then reads False on an accepted receipt. Note the sister test at line 330 does test float-for-int smuggling on packet_bytes, so the discipline exists — these three fields were simply missed.",
+          "fix": "Add a bool check next to the exact_ints check, e.g. `if any(type(getattr(self, f)) is not bool for f in ('p0_pass_through_zero_mutation','constant_rgb_target_numerators_exact','post_g8_y1_support_numerators_exact')): raise PostG8ConditionalAError('post-G8 A receipt mode-proof flags must be exact booleans')`, and extend test_receipt_rejects_truth_numeric_and_canonical_smuggling to cover it."
+        }
+      ],
+      "test_quality": "n/a",
+      "audit_note": "Binary header audited specifically for offset/off-by-one defects and found CORRECT: PACKET_HEADER '>8sBBHH32sIIII' is 62 bytes (test asserts this at line 360); the 9-element `fixed` tuple plus crc matches the 10 format fields; unpack_from names at line 364-375 are in pack order; pair_start fits H because _validate_pair_ids bounds ids to [0,600); the CRC is recomputed by repacking the UNPACKED values with crc=0 (line 401-412) so it cannot disagree with the wire bytes; and line 447 does a full re-encode equality closure against the original packet."
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_pair_fragment_receiver.py",
+      "lines": 453,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 20, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "....................                                                     [100%]\n20 passed in 4.06s"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 258,
+          "what": "_corrupt_exact_section reaches into another module's private surface: `g2_module._canonical_zip(bytes(member))`. Acceptable in a test, but it couples this suite to an underscore-prefixed symbol in tac.witness_dsl.generative_taskspace_receiver that carries no stability contract.",
+          "fix": "Either promote _canonical_zip to a public test-support helper, or rebuild the archive through the public build_generative_taskspace_receiver_fragment_archive path where possible."
+        },
+        {
+          "severity": "minor",
+          "line": 185,
+          "what": "@cache on _fixture(mode) holds the built archives and decoded numpy arrays for the whole session and shares the SAME array objects across every test that requests a given mode. No current test mutates them, so there is no live contamination, but a future in-place mutation in one test would silently change another test's inputs.",
+          "fix": "None required now. If a mutating test is ever added, have it operate on .copy() of the fixture arrays."
+        }
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_post_g8_conditional_a.py",
+      "lines": 366,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 8, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "........                                                                 [100%]\n8 passed in 5.28s"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {
+          "severity": "minor",
+          "line": 330,
+          "what": "Coverage gap that is the test-side of the important finding on taskspace_post_g8_conditional_a.py:595. test_receipt_rejects_truth_numeric_and_canonical_smuggling covers forged Literal truth (line 338), float-for-int on packet_bytes (line 344), and trailing-byte non-canonicality (line 350) — but not int-for-bool on the three mode-proof flags, which is the one type substitution the parser actually accepts.",
+          "fix": "Add a third case to the same test that sets constant_rgb_target_numerators_exact to 1 and asserts PostG8ConditionalAError, landing it together with the parser fix."
+        },
+        {
+          "severity": "minor",
+          "line": 88,
+          "what": "@cache on _fixture(repair_rgb=(90,100,110)) retains ~6 MB of numpy camera frames plus derived state for the session and shares them across tests. The default argument is a tuple so it is not the mutable-default bug; the exposure is shared mutable numpy state behind an immutable-looking frozen dataclass.",
+          "fix": "None required now; same guidance as the sister fixture — copy before any future mutation."
+        }
+      ],
+      "test_quality": "behavior",
+      "test_quality_note": "Strongest anti-fake signal in this batch: test_decoder_calls_canonical_reconstruction_and_preserves_outside_owned_support (line 241) monkeypatches apply_disjoint_camera_cell_reconstruction_v1 with a call counter and asserts calls == {'canonical': 2}, proving the named canonical reconstruction is genuinely invoked rather than reimplemented or skipped. Combined with the CRC-mutation, trailing-byte, foreign-source-binding, and changed-control-row causality assertions, a constants-returning stub would fail these tests."
+    }
+  ],
+  "summary": {
+    "commit_clean": 1,
+    "commit_with_debt": 8,
+    "attic": 0,
+    "critical": 0,
+    "important": 6
+  },
+  "batch_totals": {
+    "files_reviewed": 9,
+    "lines_reviewed": 7642,
+    "imports_attempted": 4,
+    "imports_rc_zero": 4,
+    "test_files_run": 5,
+    "tests_passed": 64,
+    "tests_failed": 0,
+    "tests_errored": 0,
+    "tests_skipped": 0,
+    "tests_timed_out": 0,
+    "ruff_violations": 0,
+    "secrets_hits": 0,
+    "broken_refs": 0,
+    "constants_only_test_files": 0
+  },
+  "for_main": [
+    "COMMIT-ORDERING (blocking): src/tac/witness_control/tests/test_taskspace_interaction_costate_bridge_v1.py exec_modules the UNTRACKED file src/tac/witness_dsl/tests/test_taskspace_g8_a3_interaction_feedback.py at import time and hard-asserts on it. Land that fixture in the same commit or earlier, or all 26 of its tests fail at collection.",
+    "OUT-OF-BATCH DEPENDENCY: src/tac/optimization/predict_project_receiver.py (tracked, currently modified-uncommitted) is what makes 3 of the 4 source modules in this batch importable. Before the patch landed mid-review they all failed with RuntimeError: conflicting in-process LawRef evaluator for realization_breakeven_bytes_v1. Whoever owns that file must land it too.",
+    "No file in this batch is ATTIC. All 9 are live, coherent, and exercised; 64/64 assigned tests pass and ruff is clean across all 7,642 lines.",
+    "Zero secrets, zero Tailscale IPs, zero personal hostnames, zero /tmp evidence paths, and zero hardcoded /Users or /Volumes paths across all 9 files.",
+    "No test file in this batch is constants-only. Four of five actively prove behavior (byte-identical no-write after refusal, tampered real receipts rejected, counterfactual causality, and a monkeypatched call-counter proving the canonical reconstruction actually runs)."
+  ]
+}

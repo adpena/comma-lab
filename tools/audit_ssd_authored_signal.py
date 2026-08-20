@@ -71,8 +71,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+# The sweep CACHE is live state: regenerable in one command, correctly gitignored under
+# `.omx/state/**/*.json`. A fresh clone has none, and the monitor says `no_cache` rather than
+# reporting a clean zero.
 CACHE = REPO / ".omx" / "state" / "ssd_authored_signal_debt.json"
-CERTIFIED = REPO / ".omx" / "state" / "ssd_authored_signal_certified.jsonl"
+# The CERTIFIED ledger is the opposite: a durable record of decisions an owner made, which must
+# survive a clone. `.omx/state/*.jsonl` is gitignored, so keeping it there would strand every
+# certification on one machine — the exact failure this whole module exists to detect. CLAUDE.md
+# tracks small durable `.omx/research` ledgers, so it lives there.
+CERTIFIED = REPO / ".omx" / "research" / "ssd_authored_signal_certified.jsonl"
 
 DEFAULT_ROOTS = (
     Path("/Volumes/APDataStore/pact"),

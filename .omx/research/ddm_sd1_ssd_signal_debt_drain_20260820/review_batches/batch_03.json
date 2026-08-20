@@ -1,0 +1,183 @@
+{
+  "batch": 3,
+  "reviewer": "REVIEW-BATCH-3",
+  "date_utc": "2026-08-20",
+  "environment_notes": [
+    "First import sweep at 12:08Z returned transient failures (RuntimeError 'conflicting in-process LawRef evaluator for realization_breakeven_bytes_v1', then NameError LAWREF_BUILTIN_EVALUATORS, then rc=124) for predictor_preserving_taskspace_overlay and taskspace_pass_semantic_g. Cause was a SISTER AGENT live-editing the shared uncommitted dependency src/tac/optimization/predict_project_receiver.py (git ' M', mtime 2026-08-20T07:02:19). Re-run at 12:10Z after the edit settled: all 5 modules rc=0 in <1.4s. The import_rc values below are the settled re-run. NOT attributable to my batch's files.",
+    "My AST reference checker initially reported 5 broken refs. All 5 were checker artifacts, disproven: (a) 'No module named tools' came from running the checker as /tmp/refcheck.py so repo root was not on sys.path -- verified 'import tools.run_taskspace_g8_a3_n2_allocator' succeeds from repo root and exports all 5 consumed names; (b) 2 MISSING_ATTR hits were unloaded submodule attributes -- verified all 20 relay names and the fitter module resolve. broken_refs is 0 everywhere."
+  ],
+  "files": [
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/predictor_preserving_taskspace_overlay.py",
+      "lines": 411,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 6, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "......                                                                   [100%]\n6 passed in 1.62s", "note": "counts are from tests/test_predictor_preserving_taskspace_overlay.py"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {"severity": "minor", "line": 107, "what": "_paint_corrected_labels duplicates DecodedGenerativeCorrectionV1.paint_rgb (src/tac/witness_dsl/generative_taskspace_correction.py:431-439) line for line -- same np.empty, same loop over REALIZATION_PAINT_ORDER, same colour_for; only the class-id map name differs (ROLE_CLASS_IDS vs _CLASS_ID_BY_ROLE). Two copies of the same palette law can drift.", "fix": "Call decoded_g.paint_rgb() and delete the local copy. (Checked and CLEARED the adjacent np.empty concern: REALIZATION_PAINT_ORDER covers class ids [0,1,2,3,4] exhaustively, so every pixel is written -- no uninitialized memory.)"},
+        {"severity": "minor", "line": 288, "what": "'int(labels.min()) < 0' is dead code. labels is proven uint8 four lines earlier (line 282), so min() can never be negative. Reads as a real bound check but constrains nothing.", "fix": "Drop the < 0 half, keep the > 4 upper-class check."},
+        {"severity": "minor", "line": 300, "what": "Quadruple-nested pure-Python loop (pairs x changed cells x row_support.indices x col_support.indices) with per-element numpy indexing. Fine at the 2 changed cells the test exercises; a realistic G touching many cells makes this O(10^6) Python iterations at 874x1164.", "fix": "Vectorize with np.add.at / precomputed tap index arrays before this is used at realistic G density."},
+        {"severity": "minor", "line": 246, "what": "PredictorPreservingOverlayResultV1.__post_init__ verifies camera_y1 and changed_label_mask against receipt sha256 fields, but owned_camera_mask has no receipt sha and is never checked. A corrupted owned mask passes validation.", "fix": "Add owned_camera_mask_sha256 to the receipt and verify it alongside the other two."}
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_g8_a3_interaction_feedback.py",
+      "lines": 912,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 9, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": ".........                                                                [100%]\n9 passed in 1.26s", "note": "counts are from tests/test_taskspace_g8_a3_interaction_feedback.py"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {"severity": "important", "line": 81, "what": "'except Exception' wraps BOTH the 'from tools.run_taskspace_g8_a3_n2_allocator import parse_final_receipt' AND the call, then re-raises everything as 'frozen G14 final-receipt validation failed'. An ImportError (module moved/renamed, or tac imported from outside the repo root) or an internal TypeError/AttributeError in the parser is reported to the operator as a BAD-INPUT verdict. Same pattern at line 217 ('exact pairwise transition failed') and line 303. This misattributes an infrastructure failure as a data failure -- exactly the diagnosis-poisoning class.", "fix": "Split the import out of the try, or catch ImportError separately and re-raise with a distinct 'G14 runner module unavailable' message; narrow the remaining catch to the parser's declared exception types."},
+        {"severity": "important", "line": 82, "what": "A src/tac/ library module imports from the repo-root tools/ script directory. tools/ has no __init__.py; it resolves only as an implicit namespace package when cwd is the repo root. VERIFIED: 'import tools.run_taskspace_g8_a3_n2_allocator' succeeds from /Users/adpena/Projects/pact and fails elsewhere. If tac ships as a wheel or runs from any other cwd, this module raises -- and per the finding above the failure is mislabeled as receipt validation. This inverts the CLAUDE.md 'tac stays clean' layering (thin CLIs delegate to tac, not tac to tools). Also at lines 219 and 304.", "fix": "Move parse_final_receipt / PairwiseTransitionV1 / G8BranchV1 / nondominated_g8_indices / retained_g8_branch_ids into a tac module and have tools/run_taskspace_g8_a3_n2_allocator.py import them from there."}
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_pass_semantic_g.py",
+      "lines": 1044,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 8, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "........                                                                 [100%]\n8 passed in 2.80s", "note": "counts are from tests/test_taskspace_pass_semantic_g.py"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {"severity": "minor", "line": 822, "what": "Bare 'assert parsed.repair_packet is not None' inside _decode_envelope_once. Bare asserts are stripped under python -O, which would pass None into decode_same_class_realization_repair_packet. Unreachable today (parse_pass_semantic_g_envelope line 513 refuses repair_bytes < 1 in PASS_THEN_G8), but the module's stated contract is fail-closed with PassSemanticGError.", "fix": "Replace with an explicit 'if ... is None: raise PassSemanticGError(...)'."},
+        {"severity": "minor", "line": 122, "what": "In _validate_pair_ids the guard '0 <= expected[0] < expected[-1] + 1 <= 600' contains a vacuous middle term: expected[0] < expected[-1] + 1 is true for every nonempty contiguous tuple. It reads as a range check but only the outer two comparisons bind.", "fix": "Write '0 <= expected[0] and expected[-1] < 600' so the intent is what the code enforces."}
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_r10_feature_texture_relay.py",
+      "lines": 1645,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 4, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "....                                                                     [100%]\n4 passed in 0.37s", "note": "counts are from tests/test_taskspace_r10_feature_texture_relay.py"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {"severity": "important", "line": 1262, "what": "r10_runtime_source_closure() puts absolute machine-local paths into its emitted 'files' rows ('source_path': str(source_path)), and that dict is returned as build_r10_selected_solution_adapter(...).public_inflate_receiver_abi (line 1408). VERIFIED empirically: the adapter emits '/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_r10_feature_texture_relay.py'. Any caller that serializes the adapter writes the operator's home directory into the artifact, and the artifact stops being host-portable. The author already treated paths as non-identity -- closure_sha256 at line 1272-1274 deliberately hashes only (module, source_bytes, source_sha256) -- so only the emission is inconsistent.", "fix": "Emit the path relative to the repo/package root (e.g. Path(spec.origin).relative_to(package_root)), or drop source_path from the emitted rows and keep module + source_bytes + source_sha256, which is already the identity basis."},
+        {"severity": "minor", "line": 846, "what": "'raise AssertionError(\"unreachable shooting interval\")' (also line 1204 'unreachable constraint mutation') for internal invariants, in a module whose documented contract is to fail closed with R10RelayError. A caller wrapping the relay in 'except R10RelayError' will not catch these. (Both are genuinely unreachable given the sorted-unique knot invariant and the closed constraint set -- this is a contract-consistency point, not a live crash.)", "fix": "Raise R10RelayError so every escape from this module is one catchable type."},
+        {"severity": "minor", "line": 1237, "what": "r10_runtime_source_closure() re-reads and re-SHA256s 9 source files from disk on every call, and build_r10_selected_solution_adapter calls it unconditionally (line 1408). The fitter calls the adapter twice per compile (_build_g23_adapter line 1128 plus line 2288), so a compile pays ~18 file reads for a value that is constant per process.", "fix": "Memoize on module identity (functools.lru_cache) or hoist the closure out of the adapter builder."}
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/taskspace_r10_n600_maximum_inverse_fitter.py",
+      "lines": 2567,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 16, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "................                                                         [100%]\n16 passed in 0.77s", "note": "counts are from tests/test_taskspace_r10_n600_maximum_inverse_fitter.py; 0.77s is honest -- the fixture is pair_count=2 at 16x20, and n600 execution is refused without execute_reviewed + a governance callback"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {"severity": "important", "line": 759, "what": "Inverted clip bounds silently produce a negative-start slice and a wrong recorded statistic. _source_residual_support_labels does np.clip(row, radius + 1, height - radius - 2); when height < 2*radius + 3 the lower bound exceeds the upper bound and np.clip returns the upper bound, after which r0 = row - radius goes NEGATIVE and 'labels[pair, r0:r1, c0:c1] = 1' becomes a wrap-around slice. This is reachable with a config the dataclass ACCEPTS, because the only guard is 'support_radius_px <= min(height,width)//2' (line 191). VERIFIED by running it: height=width=16, support_radius_px=8 is accepted; clip lower=9 > upper=6; center clipped to (6,6); r0=-2; only 1 pixel is actually labelled while the emitted row records support_pixels=289 -- a 289x wrong sufficient statistic, with no error raised. The polygon that _polygon_from_support (line 843) then derives clamps with max(0,...) and describes a 17x17 box that does not match the 1-pixel mask, so the counted PULLBACK_POLYGON operand and the encoder-side support disagree. Default/realistic geometry (874x1164, radius 8) is safe -- this bites small-geometry smokes, which is precisely where wrong numbers are least likely to be noticed.", "fix": "Two changes, both needed: (1) tighten the config guard at line 191 to 'support_radius_px <= (min(height,width) - 3) // 2' so the clip range can never invert; (2) record the MEASURED count, int(np.count_nonzero(labels[pair_index])), instead of the intended box area (r1-r0)*(c1-c0) at line 769, so the receipt reports what happened rather than what was intended."},
+        {"severity": "minor", "line": 1, "what": "Filename over-claims relative to every artifact the module emits. The file is taskspace_r10_n600_MAXIMUM_inverse_fitter.py, but G32_SCHEMA is 'taskspace_r10_n600_bounded_inverse_fitter.v2', the residual inventory hardcodes bounded_action_family_exhausted=False with a non-empty unenumerated_action_families tuple (lines 2442-2449), and _scope_receiver_receipt_to_bounded_family (lines 1120-1123) actively REFUSES any receipt that still contains the substring 'maximum_inverse'. The module is internally honest; the filename is the last surviving aspirational label.", "fix": "Rename to taskspace_r10_n600_bounded_inverse_fitter.py to match the schema and the receipt guard."},
+        {"severity": "minor", "line": 2529, "what": "result_receipt_dict emits 'scratch_paths' as absolute filesystem paths (produced by _allocate_intermediate line 410) into a receipt intended to be persisted. Same host-portability/leak class as the relay finding above.", "fix": "Emit the scratch paths relative to the declared scratch_directory root, or emit only the basenames plus the root's identity."},
+        {"severity": "minor", "line": 1453, "what": "Buffer aliasing trap. All three _source_residual_support_labels calls (lines 1453, 1934, 2065) pass the same 'label_output' buffer, so support_labels from line 1934 and _polygon_labels from line 2065 are the SAME ndarray object. Correct today only because line 1934's labels are consumed at line 1940 before the line 2065 overwrite; any reordering or added read of support_labels after line 2065 silently gets the polygon-pass labels instead.", "fix": "Either allocate a distinct buffer for the polygon pass, or add a comment plus an assertion that support_labels is dead after line 1940."},
+        {"severity": "minor", "line": 818, "what": "_fit_texture_record hardcodes texture_gain_q8=256 in every candidate (lines 818 and 830) and never fits it, so the counted TEXTURE gain operand is a constant 2 bytes per pair -- 1,200 bytes at n600 -- carrying zero fitted information. solver_by_section honestly says 'finite frequency-phase plus analytic amplitude inverse' (line 2380), so this is not a false claim, but it is pure rate cost in a module whose purpose is minimizing counted bytes.", "fix": "Either fit texture_gain_q8 (it is already a reachable operand -- mutate_r10_constraint('TEXTURE') moves it), or hoist it to a single packet-level constant instead of one per pair."},
+        {"severity": "minor", "line": 573, "what": "The full-resolution XIP2 acceptance control loops 'for _control_pass in range(config.pair_count + 1)' and each pass performs 2 full-resolution warps for every pair. Worst case is O(P^2) full-resolution warps -- up to ~720,000 at P=600. Termination is correct (each pass zeroes at least one previously-nonzero row and a zeroed row can never re-enter 'worsening'), so the loop is sound; the concern is only the worst-case cost at the module's own n600 target.", "fix": "Cap the pass count with an explicit budget and record the cap in the trace, or zero all worsening rows for the pass in one shot and re-check once."}
+      ],
+      "no_fake_notes": [
+        "n600 naming is NOT a prefix fake. pair_count is an explicit config field validated to [1,600] (line 163); pair_count==600 is refused unless execute_reviewed=True (line 201) AND a live governance callback returns required/verified (lines 1221-1230, re-checked before every stage and range publish at lines 1262 and 1272). Every scientific-authority field is structurally forced to None -- R10SectionFitV1.__post_init__ (lines 236-240) RAISES if d_seg, d_pose, complete_candidate_zip_bytes or score_units_per_byte is populated -- and full_n600_receiver_measured_exhaustion is False (line 2450). The tests run at pair_count=2, which is legal SCOPE reduction with honest labels, not a measurement claim on a prefix.",
+        "'fitter' is NOT a search mislabelled as a solver (NO-FAKE class 6). _fit_base_feature_record performs a genuine np.linalg.lstsq normal-equation solve plus an SVD rank-one projection (lines 684-685) before coordinate refinement, and _fit_pitch_and_xi is coordinate descent with a full-resolution acceptance control. The parts that ARE enumerative (pitch lattice, texture frequency/phase grid, flow translation grid) are labelled 'finite ... lattice' in solver_by_section (lines 2376-2386) and their candidate lists are emitted in the trace, so the search is disclosed rather than dressed up."
+      ],
+      "test_quality": "behavior"
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_predictor_preserving_taskspace_overlay.py",
+      "lines": 136,
+      "verdict": "COMMIT_CLEAN",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 6, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "......                                                                   [100%]\n6 passed in 1.62s"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [],
+      "test_quality": "behavior",
+      "test_quality_evidence": "Would FAIL against a constants-only stub. test_overlay_preserves_every_unowned_camera_value_and_scorer_numerator independently rebuilds DisjointResizeOperator, recomputes numerators on the real 874x1164 frame, and asserts exact array equality on both the changed set (== target*denominator) and the unchanged set (== base). It cross-checks the module's private _paint_corrected_labels against the independent DecodedGenerativeCorrectionV1.paint_rgb. test_overlay_changes_only_four_disjoint_camera_taps asserts the structural count 8 = 2 changed cells x 4 taps. Four negative tests cover ABI, no-change, non-canonical JSON and int/float truth-field smuggling."
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_g8_a3_interaction_feedback.py",
+      "lines": 210,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 9, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": ".........                                                                [100%]\n9 passed in 1.26s"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {"severity": "minor", "line": 20, "what": "Module-scope side-effecting import of ANOTHER test file: REPO = Path(__file__).resolve().parents[4] then importlib exec of tools/tests/test_run_taskspace_g8_a3_n2_allocator.py, registered into sys.modules. Two fragilities: parents[4] hardcodes the src/tac/witness_dsl/tests depth, so the module breaks if tac is installed outside the repo tree; and line 23 uses a bare module-scope 'assert SPEC is not None and SPEC.loader is not None', which is stripped under python -O and would then fail with a confusing AttributeError on None. (Verified the target file exists: tools/tests/test_run_taskspace_g8_a3_n2_allocator.py, 37.1K.)", "fix": "Locate the repo root by walking up to a marker (pyproject.toml) instead of a fixed parents[N], and replace the bare assert with an explicit raise. Better: promote the shared fixture builder out of tools/tests into a real importable helper, which also resolves the source-module layering finding."}
+      ],
+      "test_quality": "behavior",
+      "test_quality_evidence": "Would FAIL against a constants-only stub. It builds a real G14 receipt through the frozen runner, then asserts recomputed relations rather than literals: the four-way partition counts must sum to 2*384*512, occurrence_count must equal a separately recomputed row total, and every transition's improves_score must equal (exact_score_delta < 0.0). Six parameterized mutations (dropped measurement, tampered count, target-relative field, forged truth flag, perturbed interaction_I, perturbed per_pair_d_seg) each must fail closed with a specific message, plus an orphaned-interaction case."
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_pass_semantic_g.py",
+      "lines": 296,
+      "verdict": "COMMIT_CLEAN",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 8, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "........                                                                 [100%]\n8 passed in 2.80s"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [],
+      "test_quality": "behavior",
+      "test_quality_evidence": "Would FAIL against a constants-only stub. It asserts real array identity (decoded labels/camera equal the predictor surface, and the arrays are non-writeable), real byte-level behaviour (CRC bit-flip, trailing byte, forged mode field unpacked and repacked through ENVELOPE_HEADER), cross-fixture rejection (a foreign surface differing by one frame1 luma value must be refused), and that PASS_THEN_G8 actually CHANGES the camera while leaving semantic labels equal. Receipt tests forge an int-to-float and a truth flip and require refusal."
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_r10_feature_texture_relay.py",
+      "lines": 213,
+      "verdict": "COMMIT_CLEAN",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 4, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "....                                                                     [100%]\n4 passed in 0.37s"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [],
+      "test_quality": "behavior",
+      "test_quality_evidence": "Would FAIL against a constants-only stub. It executes the real receiver twice and asserts determinism AND that the output actually differs from base (not np.array_equal(output_a, base)). The controls test proves each control is PHYSICAL: relay-only, phase permutation and channel shuffle must each change the output, the shuffle must preserve exact integer channel energy, and deletion/merge must shrink the packet by measured byte counts (knot_merged is exactly len - 14). Corruption tests cover source identity, one XORed base byte, trailing byte, and a CRC bit-flip."
+    },
+    {
+      "path": "/Users/adpena/Projects/pact/src/tac/witness_dsl/tests/test_taskspace_r10_n600_maximum_inverse_fitter.py",
+      "lines": 400,
+      "verdict": "COMMIT_WITH_DEBT",
+      "import_rc": 0,
+      "import_error": null,
+      "pytest": {"ran": true, "passed": 16, "failed": 0, "errors": 0, "skipped": 0, "timeout": false, "tail": "................                                                         [100%]\n16 passed in 0.77s"},
+      "ruff": [],
+      "secrets_hits": 0,
+      "broken_refs": [],
+      "findings": [
+        {"severity": "minor", "line": 48, "what": "Coverage gap that let the important support-radius bug survive. Every fixture picks a support_radius_px well inside the safe region (3 on 16x20, 2 on 8x10), so no test ever exercises the height < 2*radius + 3 regime where the np.clip bounds invert -- even though that regime is reachable with a config R10BoundedInverseConfigV1 accepts. test_config_and_strict_json_gates covers the n600 and repair-budget guards but not the geometry/radius relation.", "fix": "Add a case asserting that support_radius_px=8 with height=width=16 is REFUSED by the config (after the guard is tightened), and a case asserting rows[i]['support_pixels'] == int(np.count_nonzero(labels[i])) for every pair."}
+      ],
+      "test_quality": "behavior",
+      "test_quality_evidence": "Would FAIL against a constants-only stub. It runs the real fitter, then replays the emitted packet through the FROZEN receiver decode_r10_packet and asserts np.array_equal(replay, result.bounded_output) plus np.count_nonzero(replay != base) > 0. The resume tests monkeypatch all four _fit_* functions to pytest.fail if re-entered and then require byte-identical packet and wrapper zip. test_xip2_uses_native_geometry substitutes a fake geometry/warp and asserts the homography is built on the NATIVE (h,w) and that the full-resolution control actually rejected the pair. Five parameterized hidden-code-as-data attacks must each fail closed."
+    }
+  ],
+  "summary": {
+    "commit_clean": 3,
+    "commit_with_debt": 7,
+    "attic": 0,
+    "critical": 0,
+    "important": 4
+  }
+}
