@@ -181,7 +181,7 @@ unattributed mechanism under deadline.
 
 | Candidate | Mechanism | Class if it ships | Attribution owed |
 |---|---|---|---|
-| `fx1` | fixed-point integer log-odds mixer | `mechanism-adopt-with-attribution` | The **device-exact fixed-point formulation is ours** (radicals rather than lookup tables, because IEEE requires correctly-rounded `sqrt` but not `log`/`exp`). The **log-odds / context-mixing idea is not**: it is the PAQ lineage (Matt Mahoney), and in this contest it appears in PR #138 (§3) and, in weaker form, PR #136. Claim the formulation, cite the lineage. |
+| `fx1` | fixed-point integer log-odds mixer | `mechanism-adopt-with-attribution` | The **device-exact fixed-point formulation is ours** (radicals rather than lookup tables, because IEEE requires correctly-rounded `sqrt` but not `log`/`exp`). The **log-odds / context-mixing idea is not**: it is the PAQ lineage (Matt Mahoney), and in this contest it appears in PR #138 (§3) and PR #136. Claim the formulation, cite the lineage. |
 | `t1h` | zero-added-byte pose-coefficient re-solve | `mechanism-adopt-with-attribution` | **Traces directly to PR #133** (`cpr1_cbq_matched8`, `JasonMo123`), whose author published an effort-matched control showing 89.5% of his −0.0057 came from re-solving already-transmitted integer coefficients against the exact forward PoseNet at zero added bytes (`ddm_hx1_pr_wave_harvest_20260817.md:18-24`). If t1h ships, PR #133 must be cited in the body, not only here. |
 
 ---
@@ -236,7 +236,7 @@ The §4 conditional row for the fixed-point integer log-odds mixer shipped, in i
 integer-only arithmetic, zero archive bytes. Classification exactly as pre-written:
 **`mechanism-adopt-with-attribution`** — the device-exact fixed-point formulation and the
 context design are ours; the log-odds / context-mixing idea is the PAQ lineage (Matt Mahoney),
-published in this contest first by PR #138 and, in weaker form, PR #136. Token stream
+published in this contest first by PR #138 and also by PR #136. Token stream
 110,512 → 109,801 bytes; decoded field unchanged (`9ba2e52b3096…`). The §3 concurrency
 disclosure applies to this mechanism unchanged.
 
