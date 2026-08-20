@@ -172,8 +172,18 @@ is the only stage this port touches.
 | `0.raw` bytes | 3,662,409,600 | 3,662,409,600 | **MATCH** |
 
 `evaluate.py` reads only `0.raw` and `archive.zip`. The archive is untouched and the raw is
-bit-identical, so **the score cannot move** — it is forced, not measured, and it is recorded
-here as the arithmetic consequence it is rather than as second evidence.
+bit-identical, so **the score cannot move**. It was run anyway, and it came back exact:
+
+| | jg5 python baseline (`ddm_rr6` §1.2) | rr8 native corrector | verdict |
+|---|---|---|---|
+| `canonical_score` | 0.19335265651220337 | **0.19335265651220337** | **EXACT** |
+| `avg_posenet_dist` | 0.00014701 | 0.00014701 | EXACT |
+| `avg_segnet_dist` | 0.0003474 | 0.0003474 | EXACT |
+
+rc=0, `evaluate_elapsed_seconds` 441.262. That is the `[macOS-CPU advisory]` score for this
+body; the `[contest-CUDA T4]` score is 0.14839100138338618 and the axis gap is the known
+GT-lineage/CUDA difference, not this arm's subject. **The score agreement is FORCED by the byte
+identity and is recorded as the arithmetic check it is, not as second evidence.**
 
 ### 3.6 The local wall clock, MEASURED end to end
 
@@ -182,7 +192,7 @@ Same host, same threads (`torch_num_threads 4`, interop 1), same archive.
 | stage | jg5 python (`ddm_rr6` §2) | rr8 native corrector | ratio |
 |---|---:|---:|---:|
 | token stage | 589.456 s | **417.988 s** | **1.410×** |
-| whole inflate | 978.873 s | **682.8 s** | **1.434×** |
+| whole inflate | 978.873 s | **682.811 s** | **1.434×** |
 
 Sub-stages of this run: `token_decode_or_checkpoint_load` 417.988 s ·
 `neural_render_and_resize` 215.824 s · `frame0_selector_and_io` 47.009 s.
@@ -197,6 +207,24 @@ composed tree (§10) replaces both with a measurement.
 The trace bench covered only the first 8 frames, where the tables are cold and the within-miss
 sector is nearly empty; the full-field run covers the warm regime the trace cannot reach, which
 is the likeliest reason the full-run implication runs higher.
+
+### 3.7 Identity is INVARIANT ACROSS OPTIMISATION LEVELS — measured, not assumed
+
+The contest runner's toolchain is unknown, and `-ffp-contract=off -fno-fast-math` is supposed to
+make the arithmetic independent of what the optimiser does. That is a claim, so it was tested:
+the same trace parity was re-run against builds at three optimisation levels.
+
+| build | parity verdict |
+|---|---|
+| `-O0` | **IDENTICAL** |
+| `-O2` | **IDENTICAL** |
+| `-O3` (shipped) | **IDENTICAL** |
+
+The source also compiles with **zero warnings** under
+`-std=c11 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Wstrict-prototypes`, and builds at
+`-O0/-O1/-O2/-O3`. This does not close the x86 gap in §9.3 — no x86 host was available — but it
+does remove "the optimiser reassociated something" from the list of ways the T4 build could
+diverge, which was the largest remaining unmeasured risk in the identity argument.
 
 ## 4. The two refusals, and why they are different classes
 
