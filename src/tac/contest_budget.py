@@ -149,6 +149,12 @@ DECODE_PATH_UNREPORTED = "unreported"
 DECODE_PATH_OTHER = "other"
 
 _PYTHON_FALLBACK_TOKENS = ("python", "scalar-python", "pure-python", "fallback")
+#: ``scalar`` is the intrinsic-free C rung of the ladder, NOT a fallback.  ``ddm_rr6`` pins
+#: ``-DF26_FORCE_SCALAR=1`` so the shipped binary carries no hand-written intrinsic, and
+#: ``ddm_rr7`` MEASURED that build decoding on the contest's own x86 T4 host -- where it
+#: classified as ``other`` and silently dropped the native caution.  Tested AFTER the python
+#: tokens so ``scalar-python`` keeps reading as the fallback it names.
+_NATIVE_SCALAR_TOKENS = ("scalar",)
 
 
 class ContestBudgetError(RuntimeError):
@@ -542,6 +548,11 @@ def classify_decode_path(decode_path: str | None) -> str:
     The fail-closed dispatch ladder (AVX-512 -> AVX2 -> scalar-C -> NEON -> Python) is *silent
     by design*, so which path actually ran is not observable from the seconds alone.  It has to
     travel with the receipt or it is lost.
+
+    Every rung the ladder names now has a bucket.  ``scalar-C`` did not until ``ddm_rr7`` fired
+    a ``-DF26_FORCE_SCALAR=1`` build on a T4 and its receipt's ``decode_path: scalar`` landed in
+    ``other`` -- which reads as "unknown rung" and, worse, carries no native-fast-path caution.
+    A rung the docstring names must not be a rung the function cannot see.
     """
     if decode_path is None:
         return DECODE_PATH_UNREPORTED
@@ -555,6 +566,13 @@ def classify_decode_path(decode_path: str | None) -> str:
         return DECODE_PATH_NATIVE_DISPATCHED
     if any(tok in label for tok in _PYTHON_FALLBACK_TOKENS):
         return DECODE_PATH_PYTHON_FALLBACK
+    # The scalar rung is the ONE native token tested AFTER python, and the exception is
+    # deliberate rather than a lapse in the caution rule above: "scalar-python" and
+    # "scalar fallback" NAME the fallback, so reading them as native would invent a native
+    # decode that the label denies. Native tokens proper claim a native decode; "scalar"
+    # only qualifies one, so it yields whenever python is also named.
+    if any(tok in label for tok in _NATIVE_SCALAR_TOKENS):
+        return DECODE_PATH_NATIVE_DISPATCHED
     return DECODE_PATH_OTHER
 
 

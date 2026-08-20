@@ -314,6 +314,50 @@ def test_decode_path_is_classified_without_guessing():
     assert classify_decode_path("native-hpac with python glue") == DECODE_PATH_NATIVE_DISPATCHED
 
 
+def test_scalar_c_rung_is_native_not_other():
+    """``scalar`` is the intrinsic-free C rung the docstring names -- ddm_rr7 shipped it.
+
+    Before the fix it fell through to ``other``, which reads as "unknown rung" AND drops the
+    native-fast-path caution.  The ordering against ``scalar-python`` is the whole subtlety:
+    a label that NAMES python must stay a fallback.
+    """
+    assert classify_decode_path("scalar") == DECODE_PATH_NATIVE_DISPATCHED
+    assert classify_decode_path("SCALAR") == DECODE_PATH_NATIVE_DISPATCHED
+    assert classify_decode_path(" scalar ") == DECODE_PATH_NATIVE_DISPATCHED
+    assert classify_decode_path("scalar-c") == DECODE_PATH_NATIVE_DISPATCHED
+    # The x86 twin was the SECOND silent drop: f26_hpac_native.c:732-752 can emit exactly
+    # {scalar, neon, avx2, x86-scalar}, and TWO of those four fell through to ``other``.
+    assert classify_decode_path("x86-scalar") == DECODE_PATH_NATIVE_DISPATCHED
+    # ... but python wins whenever the label says python, in either order.
+    assert classify_decode_path("scalar-python") == DECODE_PATH_PYTHON_FALLBACK
+    assert classify_decode_path("python-scalar") == DECODE_PATH_PYTHON_FALLBACK
+    assert classify_decode_path("scalar fallback") == DECODE_PATH_PYTHON_FALLBACK
+
+
+def test_scalar_c_rung_carries_the_native_caution_in_the_verdict():
+    """The consumer, not just the classifier: ``other`` silently dropped this warning."""
+    verdict = evaluate_budget(
+        CONTEST_CUDA, BR1_INFLATE_S, BR1_EVALUATE_S, decode_path="scalar"
+    )
+    joined = " ".join(verdict.notes)
+    assert verdict.decode_path_class == DECODE_PATH_NATIVE_DISPATCHED
+    assert "DISPATCHED NATIVE" in joined
+    assert "did not match a known dispatch rung" not in joined
+    # The load-bearing consequence, not just the prose: BR1 charges 1290.109 s, inside the
+    # wide end, so the verdict is WARN and the margin now DECLARES its fast-path dependence.
+    # Under ``other`` this flag stayed False and the dependence was invisible.
+    assert verdict.verdict == WARN
+    assert verdict.margin_depends_on_unverified_fast_path is True
+    assert (
+        evaluate_budget(
+            CONTEST_CUDA, BR1_INFLATE_S, BR1_EVALUATE_S, decode_path="python"
+        ).margin_depends_on_unverified_fast_path
+        is False
+    )
+    # The label still never overrides the measurement.
+    assert verdict.verdict == evaluate_budget(CONTEST_CUDA, BR1_INFLATE_S, BR1_EVALUATE_S).verdict
+
+
 def test_python_fallback_decode_is_visible_in_the_verdict_rationale():
     """A Python-fallback decode is the case this predicate exists to surface."""
     verdict = evaluate_budget(
