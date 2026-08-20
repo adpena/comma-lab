@@ -5,10 +5,17 @@
 # hashes MORE than these rows: it additionally binds the root directory name,
 # the repo-local tac import manifest, and upstream/evaluate.py, so it is NOT
 # reproducible from these 36 files alone (rv17 R2-F2). The digest a reviewer
-# CAN reproduce from exactly these files is the environment-decoupled
-# runtime_content_tree_sha256
-# ccd9f7aba9b5f7837e749e856f178586ad496d51d1011306422a5740c56c915c
-# (equal on both axes; see PACKET_TARGET.json cross_axis_tree_note). Neither
+# CAN reproduce is runtime_files_sha256
+# e8dcbc6542d6f4752559726a6b88bd645f5974a2d941a0bbaef6f9932dc8cb8f
+# (rv17 R3-F1, MAIN re-derived independently 2026-08-20): sha256 of the JSON
+# payload {"files": [(relative_path, bytes, sha256) for these 36 rows, sorted
+# by path], "upstream_evaluate_py": (relative_path, bytes, sha256)} with
+# sort_keys=True and separators=(",",":") — inputs are exactly these files
+# plus the public upstream evaluate.py; construction:
+# experiments/contest_auth_eval.py ("Environment-free custody digest"). It is
+# equal on both axes. (runtime_content_tree_sha256 ccd9f7ab… is also
+# axis-equal but folds in a repo-local import scan, so it is NOT files-only
+# reproducible; see PACKET_TARGET.json.) Neither
 # pin derives from a recursive walk of this directory. The packet also ships
 # non-runtime documents (this file,
 # README.md, report.txt, LICENSE, THIRD_PARTY_NOTICES.md, compress.py,

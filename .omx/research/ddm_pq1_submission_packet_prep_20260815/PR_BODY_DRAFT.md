@@ -485,8 +485,9 @@ is written to refuse rather than to resolve against the superseded archive.
 # 1. Runtime integrity. 36 per-file rows (the authority tree hash fdd57749...
 # additionally binds the root directory name, the tac import manifest, and
 # upstream/evaluate.py, so it is not reproducible from these rows alone; the
-# reviewer-reproducible content digest is runtime_content_tree_sha256
-# ccd9f7ab..., see MANIFEST.sha256 header + PACKET_TARGET.json).
+# reviewer-reproducible digest is runtime_files_sha256 e8dcbc65... —
+# derivable from exactly these 36 files plus the public upstream
+# evaluate.py; recipe in the MANIFEST.sha256 header + PACKET_TARGET.json).
 shasum -a 256 -c MANIFEST.sha256
 # expect 36 lines ending in: OK
 
