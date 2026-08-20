@@ -550,6 +550,52 @@ budget predicate (§7.1) must read **which decode path actually ran** from the r
 accordingly — a Python-fallback decode on the contest box is precisely the WARN/REFUSE case the
 predicate exists to surface. `decode_path` joins the et4 instrument tuple.
 
+### PORT DESIGN NOTE — the corrector is FLOAT, and that dictates the SIMD axis
+
+**Correction to a premise in the arch-gating amendment.** The amendment states *"the token decode is
+integer arithmetic — SIMD lanes are naturally exact."* True of the RC64 coder; **false of the rr2
+corrector**, which is the part being ported. `free_corrector.py` runs **float64** on the decision
+path (`:229, 269, 274-275, 283`). Its own docstring pins the discipline:
+
+> *"No `log`, `exp`, `pow`, `**` or table anywhere on the decision path — only `+ - * /` and
+> comparisons, all IEEE correctly rounded, so the receiver is bit-identical on every conforming
+> platform. This is the `ddm_rr2` refusal class (S = 27.83, a libm ULP desynchronising the decoder)."*
+
+Bit-identity therefore rests on IEEE-correctly-rounded `+ - * /` — **not** on integer exactness. FP
+addition is not associative, so **any SIMD reduction that changes summation order breaks the
+decoder**, and it breaks it the way rr2 already measured: **S = 27.83**, a catastrophic
+desynchronisation, not a rounding wobble. This is precisely how a naive port ships a *wrong-fast*
+decoder — the class the amendment forbids.
+
+**The cure is already in the Python and is deliberate** (`free_corrector.py:266-279`):
+
+```python
+# Sums are taken lane by lane in a fixed order so the reduction is unambiguous
+# rather than dependent on a library's pairwise blocking.
+big_w = np.zeros(arg.size, dtype=np.float64)
+for lane in range(NUM_CLASSES):
+    big_w += weighted[:, lane]
+```
+
+The author hit this hazard and fixed the order by hand, refusing `sum(axis=1)` and its pairwise
+blocking. Note the sister discipline named in the docstring: `e` was made **fixed point** *"so the
+sum is order-independent"* — the same hazard, cured the other way, where changing bytes was allowed.
+
+**Consequence — the port has exactly one safe vectorization axis.**
+
+| axis | safe? | why |
+|---|---|---|
+| across **positions** (`arg.size`) | **YES — exact** | each of the 5 accumulation steps adds `weighted[pos, lane]` for a block of positions; per-position order is untouched |
+| across **lanes** (`NUM_CLASSES=5`, horizontal reduction) | **NO — breaks identity** | reorders the very summation the Python fixes by hand |
+
+So the C port keeps the 5 sequential lane steps and SIMDs each one across positions — which is also
+the *wider* axis and therefore the better vectorization anyway. Correctness and speed agree here;
+the naive choice (horizontally reducing 5 lanes) would have been both wrong and narrower.
+
+**Binding rule for the port:** float64 throughout the corrector, `-ffp-contract=off`, no
+`-ffast-math`, no FMA substitution (FMA changes rounding), no reassociation, no horizontal
+reductions on the decision path. The decode-start identity check exists to catch exactly this.
+
 **HOLD CONTINUES until the jg5 row confirms.** Fire condition for P1–P5: MAIN's GO carrying the
 jg5 `token_decode` + `inflate_elapsed` numbers. Those numbers also settle §2.1 — if jg5's token
 decode is at or above br1's 1,186.93 s, the RR2-corrector attribution for the 3.42x regression
