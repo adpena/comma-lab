@@ -52,6 +52,17 @@ Like generation 4 and unlike generation 3, this candidate does NOT hold decoded
 state constant: both distortion legs move, and here they move in our favour while
 the rate leg is paid.
 
+=== Why the admission has to be joint ===
+Segmentation token edits are a pose actuator, and the size is measured: the full
+edit set bought -0.012847 score units on segmentation and cost +0.172 on pose, a
+13.4x loss, with 571 of 573 edited pairs worse on pose and 2 better. Both scorers
+read through the SAME resize, so an edit cannot be made cheap for pose by hiding
+it from segmentation. The repair runs after the fact: re-solve the carrier against
+the edited renders, then admit jointly by sweeping a Lagrange multiplier on pose
+damage and scoring every candidate subset through the exact contest formula.
+455 of 573 edits are admitted, net -8.7110e-03 against the prior row, at zero
+counted archive bytes for the admission itself.
+
 === Runtime tree pin ===
 These archive bytes have been evaluated on contest-CUDA T4 exactly ONCE, under
 runtime tree 2103073d..., which is the tree shipped here. No superseded row
@@ -75,31 +86,61 @@ CI job carries that limit as timeout-minutes: 30 on the WHOLE job
 (upstream/.github/workflows/eval.yml:30) -- not on inflation alone.
 
 Measured on the authority run: inflation 1419.9 s plus evaluation 51.4 s =
-1471.3 s of the 1800 s job wall, leaving 328.7 s for checkout, dependency
-installation and archive download. Against the internally derived residual window
-for those remaining steps on the CUDA path, [890.6, 1430.6] s, this candidate
-fits only at the most optimistic end, by about 10.7 s. Our own wall-clock
-assessment therefore grades this WARN, not PASS: a margin of 10.7 s on a
-warm-cache assumption is not a margin.
+1471.3 s of the 1800 s job wall.
+
+We grade that measurement in THREE FRAMES, and publish all three. They are one
+measurement seen three ways, not three results:
+
+  A. Charged total (inflation + evaluation) against our canonical residual window
+     for the remaining CI steps on the CUDA path, [822, 1302] s. 1471.3 s is
+     169.3 s OVER the ceiling. Verdict REFUSE.
+  B. Inflation alone against that same window re-derived with the MEASURED
+     evaluation time in place of the estimated one, [890.6, 1430.6] s. 1419.9 s
+     fits, by 10.7 s. Verdict WARN.
+  C. Absolute job wall. 1471.3 s of 1800 s leaves 328.7 s of headroom for
+     checkout, dependency installation and archive download.
+
+Frames A and B are related exactly by
+  [890.6, 1430.6] = [822, 1302] + (evaluate_est 120...180 - evaluate_measured 51.4)
+so they do NOT disagree: B is A corrected for evaluation coming in about 2.5x
+under its own estimate. An earlier draft of this packet described them as two
+windows that disagree and were unreconciled. That was wrong, and it is withdrawn:
+there is one derivation and two framings of it. Quoting either one alone hides
+the evaluation correction, so both are stated. Only the 1471.3 s is measured; the
+residual window for the non-inflation steps is our own projection in both frames.
 
 Where the time goes: token decode is 1341.5 s of the 1419.9 s inflation, 94.5%
 (95.72% against the 1401.58 s instrumented-stage sum). One hot stage, not diffuse
-overhead. A native port of that stage's integer half reproduces this candidate's
-decode bit-for-bit on the full 600-frame field at 1.77-1.83x on local hardware.
-That range straddles the 1.804x our own bar requires, so the port is not shown to
-close the budget. It is not in the tree evaluated here; folding it would move the
-runtime-tree hash and require a new exact evaluation.
+overhead.
 
-Two residual windows for the non-inflation steps on the CUDA path disagree in
-verdict: [822, 1302] s grades this candidate REFUSE, and [890.6, 1430.6] s -- that
-same window re-derived with a larger evaluation-time allowance -- grades it WARN.
-Both are our own projections, not measurements, and they are not reconciled.
+We built the obvious cure, measured it on the contest axis, and it lost. A native
+port of that stage's integer half reproduces this candidate's decode BIT-FOR-BIT:
+the same 3,662,409,600-byte raw output by SHA-256, the same distortion components,
+the same score. On local hardware it runs 1.77-1.83x faster -- a range that
+straddles the 1.804x our own bar requires, and our own receipt declines to call it
+a PASS because run-to-run variance exceeds the distance to the bar. On a contest
+T4 the sign INVERTS: the ported tree inflated in 1612.6 s against 1419.9 s for the
+tree shipped here, 15.3% SLOWER. The split moves the decode off the GPU onto host
+vCPUs far weaker than the laptop cores the local number came from. So the port
+does NOT ship, and lowering this stage to native CPU is closed as a wall-clock
+lever on this hardware. That measurement cost no score: the row is byte-identical
+to the one claimed above.
+
+A second port -- lowering the decode-time corrector as well -- moves still more of
+the same work onto the same host vCPUs that just lost by 205 s, so it inherits
+that result rather than escaping it. It is UNMEASURED on the contest axis: the
+shipping report emits no native-versus-Python sub-stage split, so this row cannot
+be decomposed to say how much of the token stage is still Python. Pricing that
+split on the contest axis is the next measurement. No build claim is made here
+before it exists.
 
 On the CPU path the same assessment projects 1414-1913 s of inflation against a
 residual of [1044, 1332] s, which is over budget in every corner. The prior
-lineage MEASURED contest-CPU inflation at 3422.711146813 s against the 1800 s
-budget. This candidate ships the same token decoder, so the CPU path is expected
-to remain infeasible -- that expectation is INHERITED, not measured on these bytes.
+lineage recorded contest-CPU inflation at 3422.711146813 s against the 1800 s
+budget; that figure is INHERITED from an earlier body and is NOT measured on these
+bytes. No contest-CPU row exists on this archive at all. This candidate ships the
+same token decoder, so the CPU path is expected to remain infeasible, and that
+expectation is inherited too.
 
 This is the single largest risk on this submission. It is a runtime risk, not a
 correctness or score risk: the score above is measured on the exact submitted

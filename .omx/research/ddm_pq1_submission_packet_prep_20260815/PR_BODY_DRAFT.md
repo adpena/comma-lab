@@ -4,6 +4,21 @@
 > archive has been hosted, no pull request has been opened, and the score below is
 > not published anywhere. Hosting the archive and opening the PR are the
 > repository owner's to do.
+>
+> **THIS FILE IS SOURCE MATERIAL, NOT THE BODY TO PASTE.** The contest's
+> coding-agents-and-LLMs policy names "write full PR description and public facing
+> comments" as a banned use, and four PRs were closed under it on 2026-08-07. This
+> draft was produced with agent assistance, so **the repository owner writes the
+> final description**, using this file as verified source for the numbers, the
+> receipts and the boundaries. Two things the owner also owes and no draft can
+> supply: an honest answer to the "most of the code" test, and a disclosure of the
+> LLM setup — the policy's own optional bullet invites it, and disclosing is the
+> difference between compliance and concealment.
+>
+> Structure the final body the way PR #135 was asked to: **this** is the baseline
+> submission and its score, **this** was changed and it achieved **this** score,
+> and **this** is what did not work better. Precise, not verbose. The
+> "Baseline, change, score" block below is written to be lifted in that shape.
 
 # upload zipped archive.zip
 
@@ -78,6 +93,17 @@ Like generation 4 and unlike generation 3, this candidate does NOT hold decoded
 state constant: both distortion legs move, and here they move in our favour while
 the rate leg is paid.
 
+=== Why the admission has to be joint ===
+Segmentation token edits are a pose actuator, and the size is measured: the full
+edit set bought -0.012847 score units on segmentation and cost +0.172 on pose, a
+13.4x loss, with 571 of 573 edited pairs worse on pose and 2 better. Both scorers
+read through the SAME resize, so an edit cannot be made cheap for pose by hiding
+it from segmentation. The repair runs after the fact: re-solve the carrier against
+the edited renders, then admit jointly by sweeping a Lagrange multiplier on pose
+damage and scoring every candidate subset through the exact contest formula.
+455 of 573 edits are admitted, net -8.7110e-03 against the prior row, at zero
+counted archive bytes for the admission itself.
+
 === Runtime tree pin ===
 These archive bytes have been evaluated on contest-CUDA T4 exactly ONCE, under
 runtime tree 2103073d..., which is the tree shipped here. No superseded row
@@ -101,31 +127,61 @@ CI job carries that limit as timeout-minutes: 30 on the WHOLE job
 (upstream/.github/workflows/eval.yml:30) -- not on inflation alone.
 
 Measured on the authority run: inflation 1419.9 s plus evaluation 51.4 s =
-1471.3 s of the 1800 s job wall, leaving 328.7 s for checkout, dependency
-installation and archive download. Against the internally derived residual window
-for those remaining steps on the CUDA path, [890.6, 1430.6] s, this candidate
-fits only at the most optimistic end, by about 10.7 s. Our own wall-clock
-assessment therefore grades this WARN, not PASS: a margin of 10.7 s on a
-warm-cache assumption is not a margin.
+1471.3 s of the 1800 s job wall.
+
+We grade that measurement in THREE FRAMES, and publish all three. They are one
+measurement seen three ways, not three results:
+
+  A. Charged total (inflation + evaluation) against our canonical residual window
+     for the remaining CI steps on the CUDA path, [822, 1302] s. 1471.3 s is
+     169.3 s OVER the ceiling. Verdict REFUSE.
+  B. Inflation alone against that same window re-derived with the MEASURED
+     evaluation time in place of the estimated one, [890.6, 1430.6] s. 1419.9 s
+     fits, by 10.7 s. Verdict WARN.
+  C. Absolute job wall. 1471.3 s of 1800 s leaves 328.7 s of headroom for
+     checkout, dependency installation and archive download.
+
+Frames A and B are related exactly by
+  [890.6, 1430.6] = [822, 1302] + (evaluate_est 120...180 - evaluate_measured 51.4)
+so they do NOT disagree: B is A corrected for evaluation coming in about 2.5x
+under its own estimate. An earlier draft of this packet described them as two
+windows that disagree and were unreconciled. That was wrong, and it is withdrawn:
+there is one derivation and two framings of it. Quoting either one alone hides
+the evaluation correction, so both are stated. Only the 1471.3 s is measured; the
+residual window for the non-inflation steps is our own projection in both frames.
 
 Where the time goes: token decode is 1341.5 s of the 1419.9 s inflation, 94.5%
 (95.72% against the 1401.58 s instrumented-stage sum). One hot stage, not diffuse
-overhead. A native port of that stage's integer half reproduces this candidate's
-decode bit-for-bit on the full 600-frame field at 1.77-1.83x on local hardware.
-That range straddles the 1.804x our own bar requires, so the port is not shown to
-close the budget. It is not in the tree evaluated here; folding it would move the
-runtime-tree hash and require a new exact evaluation.
+overhead.
 
-Two residual windows for the non-inflation steps on the CUDA path disagree in
-verdict: [822, 1302] s grades this candidate REFUSE, and [890.6, 1430.6] s -- that
-same window re-derived with a larger evaluation-time allowance -- grades it WARN.
-Both are our own projections, not measurements, and they are not reconciled.
+We built the obvious cure, measured it on the contest axis, and it lost. A native
+port of that stage's integer half reproduces this candidate's decode BIT-FOR-BIT:
+the same 3,662,409,600-byte raw output by SHA-256, the same distortion components,
+the same score. On local hardware it runs 1.77-1.83x faster -- a range that
+straddles the 1.804x our own bar requires, and our own receipt declines to call it
+a PASS because run-to-run variance exceeds the distance to the bar. On a contest
+T4 the sign INVERTS: the ported tree inflated in 1612.6 s against 1419.9 s for the
+tree shipped here, 15.3% SLOWER. The split moves the decode off the GPU onto host
+vCPUs far weaker than the laptop cores the local number came from. So the port
+does NOT ship, and lowering this stage to native CPU is closed as a wall-clock
+lever on this hardware. That measurement cost no score: the row is byte-identical
+to the one claimed above.
+
+A second port -- lowering the decode-time corrector as well -- moves still more of
+the same work onto the same host vCPUs that just lost by 205 s, so it inherits
+that result rather than escaping it. It is UNMEASURED on the contest axis: the
+shipping report emits no native-versus-Python sub-stage split, so this row cannot
+be decomposed to say how much of the token stage is still Python. Pricing that
+split on the contest axis is the next measurement. No build claim is made here
+before it exists.
 
 On the CPU path the same assessment projects 1414-1913 s of inflation against a
 residual of [1044, 1332] s, which is over budget in every corner. The prior
-lineage MEASURED contest-CPU inflation at 3422.711146813 s against the 1800 s
-budget. This candidate ships the same token decoder, so the CPU path is expected
-to remain infeasible -- that expectation is INHERITED, not measured on these bytes.
+lineage recorded contest-CPU inflation at 3422.711146813 s against the 1800 s
+budget; that figure is INHERITED from an earlier body and is NOT measured on these
+bytes. No contest-CPU row exists on this archive at all. This candidate ships the
+same token decoder, so the CPU path is expected to remain infeasible, and that
+expectation is inherited too.
 
 This is the single largest risk on this submission. It is a runtime risk, not a
 correctness or score risk: the score above is measured on the exact submitted
@@ -165,43 +221,72 @@ exact-evaluation row is a single T4 run of about 25 minutes.
 so please read this before scheduling the run.
 
 `inflate.py` performs a neural render, so this submission is GPU-routed. On the
-authority run, inflation took 1,419.9 s and evaluation 51.4 s: 1,471.3 s of the
-30-minute job wall, leaving about 328.7 s for checkout, dependency install and
-archive download. We grade our own submission WARN, not PASS, on this axis.
+authority run, inflation took 1,419.9 s and evaluation 51.4 s = 1,471.3 s of the
+1,800 s job wall.
 
-Token decode is 1,341.5 s of that 1,419.9 s, 94.5% — one hot stage. We have a
-native port of its integer half that reproduces this candidate's evaluated decode
-bit-for-bit on the full 600-frame field at 1.77–1.83× locally. That range straddles
-the 1.804× our own bar requires, so it is **not** shown to close the budget, and it
-is not in the tree evaluated here.
+We grade that in three frames and publish all three, because publishing only the
+friendliest one is exactly the thing we would not want done to us:
 
-Two of our own residual windows for the non-inflation CI steps disagree:
-`[822, 1302] s` grades this REFUSE, `[890.6, 1430.6] s` (same window, larger
-evaluation allowance) grades it WARN. Both are projections, not measurements, and
-they are not reconciled.
+| Frame | Reading | Verdict |
+|---|---|---|
+| **A** | charged total 1,471.3 s vs our residual window `[822, 1302] s` | **REFUSE**, over by 169.3 s |
+| **B** | inflation 1,419.9 s vs `[890.6, 1430.6] s` (same window, measured evaluation time) | **WARN**, fits by 10.7 s |
+| **C** | 1,471.3 s of the absolute 1,800 s wall | 328.7 s headroom |
+
+A and B are one derivation, not two: `[890.6, 1430.6] = [822, 1302] + (evaluate_est
+120…180 − evaluate_measured 51.4)`. Only the 1,471.3 s is measured; the residual
+window is our projection in both frames.
+
+Token decode is 1,341.5 s of that 1,419.9 s, **94.5%** — one hot stage. We built
+the port, and on the axis that matters it lost. It reproduces this candidate's
+decode **bit-for-bit** (identical 3.66 GB raw output by SHA-256, identical score),
+runs 1.77–1.83× faster locally — a range that straddles the 1.804× our own bar
+requires, and our receipt declines to call it a PASS because run variance exceeds
+the distance to the bar — and on a **contest T4 it is 15.3% SLOWER**: 1,612.6 s
+against 1,419.9 s. The split moves decode onto host vCPUs much weaker than the
+laptop cores. **It does not ship**, and that measurement cost no score because the
+row is byte-identical to the one claimed here.
+
+Porting the decode-time corrector as well would move more of the same work onto
+those same vCPUs, so it inherits that result. It is unmeasured on the contest
+axis and we make no claim for it.
 
 **These exact bytes have not been measured on a contest CPU** and no CPU score is
-claimed. The prior lineage measured contest-CPU inflation at 3,422.7 s against the
-1,800 s budget; this candidate ships the same token decoder, so we expect the CPU
-path to remain over budget. That expectation is inherited, not measured here.
+claimed. The 3,422.7 s contest-CPU inflation sometimes quoted for this lineage is
+**inherited from an earlier body, not measured on these bytes**; this candidate
+ships the same token decoder, so we expect the CPU path to remain over budget, and
+that expectation is inherited too.
 
 Full numbers are in the report above under "Evaluation-time budget".
 
 # did you include the compression script? and want it to be merged?
 
-No. The repository contains an end-to-end rebuild entry point that reconstructs an
-archive from pinned inputs and refuses to exit 0 unless the rebuilt bytes hash to
-the pinned SHA-256. **It has not been re-run for this candidate, and it cannot
-rebuild it.**
+**Included — `compress.py`, with `COMPRESS.md` beside it. Merging is your call, and
+you should read the boundary first, because it does not rebuild these bytes.**
 
-That entry point rebuilds the token stream (optionally plus a declared container
-repack) and carries the other seven sections through verbatim. This candidate's
-chain also re-decides content in sections it copies: the seg token edit solve, the
-edit splice, the admission waterfill and the pose-carrier re-solve. No
-configuration closes that gap, so the script refuses this archive by name and
-cites the builders that do produce it.
+`compress.py` reconstructs an archive from pinned inputs and refuses to exit 0
+unless the rebuilt bytes hash to the pinned SHA-256. Run it against **this**
+archive and it refuses **by name, before doing any work**, and prints the four
+build stages it does not express plus the script that performs each one. That
+refusal is deliberate: a script that runs, produces different bytes and reports
+success is worse than no script.
 
-We claim no verified end-to-end rebuild for these bytes.
+What it does express: it rebuilds the **token stream** — replaying the shipped
+decode order, re-encoding the token field under the free decode-time corrector,
+splicing the new stream in and repacking — and carries the other seven sections
+through byte-identically by construction. For a candidate inside that grammar the
+byte-close is genuine and end-to-end.
+
+What it does not express is this candidate's own chain, which re-decides content
+in sections the script only copies: the segmentation token edit solve, the edit
+splice, the admission waterfill and the pose-carrier re-solve. Those are missing
+**stages**, not missing options, so no configuration closes the gap and the script
+says so rather than offering a flag that cannot help. `COMPRESS.md` names the four
+builders that do produce them.
+
+**We claim no verified end-to-end rebuild for these bytes.** Training the
+checkpoint is upstream of all of this and is documented rather than re-run:
+`compress.py provenance` emits the lineage with a SHA-256 for every input.
 
 # changes from upstream
 
@@ -209,6 +294,14 @@ None. The pinned upstream snapshot
 (`cdad563c2a3eee39c027d531a8c276ec7970ace47741e937d18d32938bfe7008`,
 `evaluate.py` `7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b`)
 is unmodified. The scorer was not touched.
+
+What changed is on our side. Every mechanism that moved this score sits under one
+rule: a proposal is accepted only if the **realized** joint score improves after a
+real decode. The token mixer is a weighted geometric mean in log-odds reached by
+repeated square roots rather than `log`/`exp`, so it stays bit-identical across
+platforms. The resize, the `uint8` round and the colour conversion are enforced
+**in loop, independently**, and the pipeline order is derived from measured axis
+interactions rather than chosen.
 
 # competitive or innovative?
 
@@ -237,6 +330,14 @@ Four qualifications:
    bytes. `[contest-CPU]` is not, and we grade the GPU-path evaluation-time
    budget WARN ourselves.
 
+Where the headroom is, measured: rate is **81.05%** of this score, and **37.7%** of
+the archive is three compressed models. The token stream's residual calibration is
+measured as nearly spent; the model half has no design against it. The reason a
+joint solve is needed at all:
+segmentation edits cost **13.4× more pose than they buy segmentation**, so the
+result is admissible only because of the compensation and joint admission, not
+because the edits are cheap.
+
 # additional comments
 
 ## Baseline, change, score
@@ -246,12 +347,22 @@ Four qualifications:
 then re-solved the pose carrier. Those edits bought −0.012847 S on seg and cost
 +0.172 S on pose — a 13.4× loss.
 
-**Change.** Edit admission and the pose carrier are now solved **jointly**.
-Admission is swept over a Lagrange multiplier on pose damage, so an edit is kept
-only if it pays for the pose it costs (**455 of 573 admitted**), and the carrier is
-re-solved against the edited renders this archive actually decodes to, under a
-derived materiality stop rule (**600 of 600 pairs stopped on `no_improving_step`,
-zero budget hits**).
+**Change.** Edit admission and the pose carrier are now solved **jointly**, in the
+compile stage rather than one after the other.
+
+- *Admission* is swept over a Lagrange multiplier on pose damage and every
+  candidate subset is scored through the exact contest formula, so an edit is kept
+  only if it pays for the pose it costs — **455 of 573 admitted**. A greedy
+  benefit-per-damage rule cannot do this: the pose leg enters as `√(10·d_pose)`
+  over the mean, so per-pair pose costs do not add in score units and a ratio
+  computed at one operating point is wrong at every other one.
+- *The carrier* is re-solved against **the edited renders this archive actually
+  decodes to**, not against the base renders, so the compensation is fitted to the
+  state that ships. The descent uses a derived materiality stop rule instead of a
+  fixed iteration count: **600 of 600 pairs stopped on `no_improving_step`, zero
+  budget hits**, so the stop was never the binding constraint.
+- Both run inside the same solve, before the tail is re-encoded, because an edit's
+  rate cost depends on which edits survived.
 
 **Score.** **S 0.14839100138338618 at 180,625 bytes**, same axis: **+3,443 bytes**
 for a net **−8.7110e-03**. It spends rate and buys both distortion legs, the
@@ -259,9 +370,16 @@ reverse of every earlier candidate here. Leg split and error bounds are in the
 report above.
 
 **What did not work better.** The three-way `{edit, drop, keep}` solve shipped only
-two branches — `drop` needs a receiver change this body has no path for. And a
+two branches — `drop` needs a receiver change this body has no path for. A
 12-dimensional pose-basis re-orientation is a measured null: re-mixing the basis
-leaves the reachable correction invariant to 1.9e-08, so it ships nothing.
+leaves the reachable correction invariant to 1.9e-08, so it ships nothing. And the
+native token-decode port, which is byte-identical and 1.8× faster locally, came
+back **15.3% slower on a contest T4**, so it does not ship either.
+
+**Priced and unbuilt.** A third admission branch that drops the token outright is
+worth `−0.002929` score units and is blocked on a receiver path this body lacks;
+a reopened token-drop rung is worth `−3.243e-3` on a 3-pair aggregate whose
+carrier re-coding cost is unmeasured.
 
 ## Borrowed-substrate accounting
 
@@ -309,9 +427,16 @@ archive byte** and none changes a classification above.
   over all 600 pairs at zero added bytes, and the un-interleave finding that turned
   two byte-close blockers into one missing transform.
 - **A decode-time probability corrector on the miss class**, online and
-  decode-identical; the shipped `runtime/free_corrector.py` is that corrector. The
-  mechanism class was published first by PR #138 (credited below); ours is an
-  independent implementation on this vehicle, not a priority claim.
+  decode-identical. The shipped `runtime/free_corrector.py` is the tip of an
+  `rr2→rr4→fx1→fx2→ma1` lineage. PR #138 `opal_v1` published this mechanism class
+  first, on 2026-08-17 at 08:31Z; our first measured result is the same day at
+  14:41Z and we first read that PR at 19:32Z, so the base corrector is concurrent
+  independent work and **we claim no priority**. The mechanisms also differ:
+  PR #138's correction stops at the rank-one split and preserves the complement's
+  relative law exactly, while ours models that complement — which is where our
+  −105 B comes from. One later refinement in that lineage **did** read our harvest
+  of PR #138 and used its `exp()` state-sync warning as a design check, then solved
+  it by exact rounding rather than by their quantisation.
 - **Custody apparatus, so the numbers above are checkable**: a seal contract that
   re-derives every pin from disk and refuses a paid evaluation on drift, one
   canonical score arithmetic byte-identical to `upstream/evaluate.py:92`, a
@@ -357,21 +482,35 @@ a T4; see the runtime risk below before scheduling.
 ## Known limits
 
 1. **Evaluation-time budget.** 1,471.3 s of the 1,800 s job wall is measured;
-   token decode alone is 1,341.5 s. We grade this WARN, and one of our own residual
-   windows grades it REFUSE. This is the largest open risk.
+   token decode alone is 1,341.5 s. Read in one frame this is WARN (fits by
+   10.7 s); read in the more conservative frame it is REFUSE (over by 169.3 s).
+   Both frames are above; this is the largest open risk on the submission.
 2. **`inflate.sh` is not fully self-contained.** It requires `Brotli==1.2.0`
    exactly and calls `uv pip install` — **network at decode time** — if that
    version is absent, exiting 69 if `uv` is missing. It also invokes a C compiler
    at decode time. This follows the declared-dependency precedent of earlier
    accepted submissions here, but "no network at decode time" is a reasonable
    expectation and this submission does not meet it.
-3. **No end-to-end rebuild for these bytes**, and the rebuild entry point cannot
-   produce them (see the compression-script answer above).
+3. **No end-to-end rebuild for these bytes**, and the included `compress.py`
+   cannot produce them (see the compression-script answer above).
 4. **No `[contest-CPU]` row exists on these bytes.** GPU-required.
+5. **One published mechanism is a measured null.** Re-mixing the 12 stored pose
+   basis dimensions leaves the reachable correction invariant to `1.9e-08`
+   (machine precision). It ships nothing, and we report it because it corrected
+   our own attribution of why the earlier search failed.
+6. **The mixer was tuned on the scored clip.** Its member set, context and
+   learning rate were chosen by racing on the video that is scored. We do not
+   claim the configuration is optimal on any other clip.
 
 ## Public source
 
-- Public source repository: https://github.com/adpena/comma-lab
+- Public source repository: **https://github.com/adpena/comma-lab** — the research
+  repository itself, public.
+- **All 34 files of the evaluated runtime tree are in version control**, at
+  `submissions/robust_current/jg5_sub015_runtime/runtime/`, and each is
+  byte-identical by SHA-256 to the tree the score was measured on. An earlier
+  draft of this packet disclosed that 24 of those 34 had no source in version
+  control; that was true when written and is no longer true.
 - Source commit pinned into the evaluation container:
   `56e239829091e56ced913b464f3a6d4e9d5127c5`
 - The submitted bytes are bound to their receiver by hash: archive SHA-256
