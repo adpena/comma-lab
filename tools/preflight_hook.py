@@ -454,6 +454,26 @@ def _select_ci_blind_tests(staged: list[str]) -> list[str]:
     blind = _ci_blind_test_modules()
     if not blind or not staged:
         return []
+    # Seal-pinned custody trees (candidate_seal.v1) are byte-frozen copies of
+    # SHIPPED runtime code. Their basenames (inflate, hpac_inference, ...) are
+    # not modules any local test covers — there is no change to cover — and
+    # token-matching them pulls unrelated heavy MLX modules into this step
+    # (the #936 selector over-pull class; jg5 custody commit, 2026-08-20).
+    # Custody coverage lives in the T4 identity receipt + the seal itself.
+    # Function-local import: the hook path stays free of module-scope weight
+    # (Catalog #184). Failure falls toward scanning MORE, never less.
+    try:
+        from tac.subset_selection_gate import (
+            _under_custody_dir,
+            seal_pinned_custody_dirs,
+        )
+        _custody = seal_pinned_custody_dirs(REPO_ROOT)
+        if _custody:
+            staged = [s for s in staged if not _under_custody_dir(s, _custody)]
+    except Exception:
+        pass
+    if not staged:
+        return []
     staged_set = {str(REPO_ROOT / s) for s in staged}
     tokens: set[str] = set()
     for rel in staged:
