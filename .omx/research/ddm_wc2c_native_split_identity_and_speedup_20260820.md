@@ -1,4 +1,4 @@
-# ddm_wc2c — `native-hpac` re-enabled behind a full-field identity proof: 1.834x on the token stage
+# ddm_wc2c — `native-hpac` re-enabled behind a full-field identity proof: ~1.8x on the token stage
 
 Date: 2026-08-20 · Owner: ddm_wc2c (Opus build arm) · Status: **BUILT + IDENTITY-PROVEN
 (full n600), speedup MEASURED `[macOS-CPU advisory]`, shipping-axis UNMEASURED**
@@ -16,9 +16,11 @@ that would fix this was hard-refused at `runtime/f26_inflate.py:435-441`.
    jg5 `[contest-CUDA T4]` receipt **bit for bit on the full 600-frame field** — a local macOS-arm64
    decode reproducing a T4 receipt exactly, across all four anchors and the retained 117,964,800-byte
    token payload.
-2. **MEASURED 1.8336x** on the token stage, n600, `[macOS-CPU advisory]`: **578.716 s → 315.614 s**.
-   That clears the charter's derived PASS bar of **1.804x** — by 1.6%, which is a margin worth naming
-   rather than rounding away.
+2. **MEASURED 1.774x–1.834x** on the token stage, n600, `[macOS-CPU advisory]`: **578.716 s →
+   326.160 s / 315.614 s** across two dispatched runs of identical work. The charter's derived PASS bar
+   is **1.804x**. **The measurement STRADDLES it.** I will not quote the favourable run: two runs of
+   the same binary on the same host differ by 3.3%, which is larger than the distance to the bar, so
+   the local proxy cannot decide PASS-vs-WARN. Only a shipping-axis row can.
 3. **The charter's port target was wrong, and measurement is what found it.** The charter says "port the
    ddm_rr2 `FreeCorrector`". The module the shipping tree actually loads as
    `runtime/free_corrector.py` is **`ddm_ma1`'s `Ma1WithinMissCorrector`**, the tip of a four-level
@@ -27,7 +29,7 @@ that would fix this was hard-refused at `runtime/f26_inflate.py:435-441`.
 4. **So the split is on the axis with no FP hazard.** MEASURED per-step, the loop is 63.8% integer model
    and 33.4% float64 corrector. Lowering the integer half needs no reduction-order reasoning at all;
    lowering the float half puts 2,121 lines under the hazard whose measured failure is `S = 27.83`.
-   The integer half alone clears the bar.
+   The integer half alone clears WARN outright and reaches the PASS boundary.
 5. **CUSTODY FINDING, unprompted and material: the shipping decoder is not in version control.** A
    34-file census of the jg5 candidate tree found **24 files with no repo source of any kind**,
    including `runtime/f26_inflate.py`, `runtime/residual_archive.py`, `runtime/free_corrector.py`, all
@@ -114,14 +116,27 @@ than trusting a prior PASS marker, and reports a missing receipt as a failure ra
 
 ## 4. The speedup, and what it is NOT
 
-| row | n600 seconds | axis |
-|---|---:|---|
-| pure-Python shipping loop | **578.716** | `[macOS-CPU advisory]` |
-| split native, 4 threads | **315.614** | `[macOS-CPU advisory]` |
-| **ratio** | **1.8336x** | |
+| row | build | threads | n600 seconds | ratio vs Python |
+|---|---|---:|---:|---:|
+| pure-Python shipping loop | — | 4 | **578.716** | 1.000x |
+| split native, dispatched (NEON) | pre-review `5d74dfa1` | 4 | 315.614 | **1.834x** |
+| split native, dispatched (NEON) | **final `93ab636d`** | 4 | 326.160 | **1.774x** |
+| split native, scalar twin | final `97c25602` | 4 | 324.779 | 1.782x |
 
-Inside the split run: native 117.376 s (37.2%), Python side 198.238 s (62.8%). The integer model alone
-went **369.292 s → 117.376 s = 3.146x**.
+All `[macOS-CPU advisory]`. Inside the final dispatched run: native 122.513 s (37.6%), Python side
+203.6 s (62.4%). The integer model alone went **369.292 s → 109.372 s = 3.376x**.
+
+**Read the spread honestly.** The two dispatched rows differ by 3.3% on work that is byte-identical;
+the only source-level difference between the builds is 190 integer comparisons per frame and a removed
+clamp with no effect at `patch_count = 48`. That spread is host noise, and it is **wider than the
+distance to the 1.804x bar**. So the local proxy places the split path somewhere around the bar and
+cannot say which side. Anyone who quotes 1.834x as "PASS" has picked a run.
+
+The scalar twin at 4 threads (324.779 s) lands within 0.4% of the dispatched NEON build (326.160 s),
+which confirms at n600 what the n12 prefix already showed: **the hand-written NEON kernels buy
+essentially nothing against clang's auto-vectoriser on this host.** They are retained for the runtime
+x86 dispatch and as a floor where auto-vectorisation is unavailable — not because they were measured
+faster.
 
 **This is NOT a shipping-axis number and must not be quoted as one.** The T4 baseline evaluates the
 sparse model on CUDA with two host↔device round trips per group; my baseline evaluates it on CPU torch.
@@ -131,8 +146,9 @@ needs one T4 row.** A directional hypothesis worth testing, not asserting: the T
 iteration is 2.3x my local 5.08 ms for the same work, consistent with the charter's latency-bound
 reading, and the split path removes the device round trips entirely because it never touches the GPU.
 
-Against the charter's derived bars — **WARN ≥ 1.096x, PASS ≥ 1.804x** — the local measurement clears
-PASS by 1.6%. On a wall this tight, "clears by 1.6% on a proxy axis" is the finding, not "PASS".
+Against the charter's derived bars — **WARN ≥ 1.096x, PASS ≥ 1.804x** — the local proxy clears WARN
+comfortably and sits at the PASS boundary inside its own noise. The honest verdict is: **WARN is
+secured, PASS is unresolved, and one T4 row resolves it.**
 
 ## 5. Headroom, priced
 
@@ -140,7 +156,7 @@ The corrector is now **62.8%** of the split run. Porting it is the only remainin
 
 | scenario | token seconds | ratio vs Python |
 |---|---:|---:|
-| today (integer model lowered) | 315.6 | 1.834x |
+| today (integer model lowered) | 326.2 | 1.774x |
 | + corrector at 5x | ~157 | ~3.7x |
 | + corrector at 10x | ~137 | ~4.2x |
 
