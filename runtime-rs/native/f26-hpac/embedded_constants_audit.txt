@@ -1,6 +1,7 @@
 audit=PASS
 scope=ddm_wc2c C source and both locally built receiver binaries (dispatched + F26_FORCE_SCALAR twin)
 date_utc=2026-08-20
+c_source_sha256=30b0541844578a7bf0164d5ef114fc3194d55d98485f585430432138d029bcb0
 host=Apple M5 Max, macOS 26.4 arm64, Apple clang 21.0.0
 
 command_1=strings <each-built-binary> | grep -Eo 'cc10a7b0|8269fe1a|370a5e2a|6bf8acf8|f3bce5d2|9ba2e52b'
@@ -13,8 +14,8 @@ command_2_matches=0
 command_3=otool -L <each-built-binary>
 command_3_result=/usr/lib/libSystem.B.dylib only; no libomp, no third-party runtime
 
-dispatched_binary_sha256=5d74dfa118e7474608ecef63f7615f9886f2ab8c083d190d905de85c8fe65019
-scalar_twin_binary_sha256=7e771d4cc86c5cca21c2939f898279de5e33b01585d6b5d32d86ef6cfd77104c
+dispatched_binary_sha256=93ab636d8c1dd4b91bc18f1ea28970c4153dafbe4572ac51d3134a0575d2a6df
+scalar_twin_binary_sha256=97c25602a6bfb0f33f4ba7d7881e3c60a86d2fd94a8a8b9a0590e7a851c95017
 
 generic_shape_constants=alphabet 5; channels 64; patch 64; RC64 total 2^31; RC64 interval constants; F26_MAX_THREADS 32; default thread width 4
 archive_derived_inputs=all weights; biases; exponents; residual table; group plans; frame codes; frame context codes; conv-A deltas; RC64 stream
