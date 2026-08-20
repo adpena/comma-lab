@@ -1413,6 +1413,10 @@ def main(
                 **pairing,
             },
         )
+        # POST-spawn transition: guard-free by construction. The pre-spawn
+        # single-flight guard already ran above; re-running it here would see
+        # the call_id THIS process just registered and refuse (ddm_cpu1,
+        # 2026-08-20 — this is the traceback the cpu1 fire emitted).
         claim_modal_auth_eval_dispatch(
             repo_root=Path.cwd(),
             spec=ClaimSpec(
@@ -1426,6 +1430,7 @@ def main(
                 ),
             ),
             status="active_modal_cpu_auth_eval_spawned",
+            pre_spawn_guard=False,
         )
         print("=" * 60)
         print(f"MODAL CPU AUTH EVAL DISPATCHED DETACHED call_id={call_id}")

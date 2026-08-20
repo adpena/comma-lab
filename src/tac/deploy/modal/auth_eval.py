@@ -475,6 +475,7 @@ def claim_modal_auth_eval_dispatch(
     repo_root: Path,
     spec: ClaimSpec,
     status: str,
+    pre_spawn_guard: bool = True,
 ) -> None:
     """Guard, then record the required claim before provider submission.
 
@@ -482,20 +483,41 @@ def claim_modal_auth_eval_dispatch(
     lane, agent, and job identity is refused before the claim write, which
     prevents the repeated preclaim/self-claim collision without adopting an
     ambiguous reservation as permission to spend.
+
+    ``pre_spawn_guard=False`` records a POST-spawn status transition and skips
+    the guard. It is not a single-flight bypass: it is only legal AFTER a
+    ``.spawn()`` that the guard already cleared, because no further spawn
+    follows and there is nothing left to prevent.
+
+    Why the parameter exists (measured 2026-08-20 by ``ddm_cpu1``; reproduced in
+    ``ddm_rr7``'s own CUDA fire log, where it went unnoticed):
+    :func:`~tac.deploy.modal.single_flight.assert_modal_single_flight`'s LEDGER
+    leg deliberately excludes nothing — *"Live LEDGER rows are never excluded: a
+    non-terminal call_id on the same lane is exactly the un-harvested
+    duplicate-breeder this guard exists for."* That policy is right before a
+    spawn and fatal after one: by the time a detached dispatcher advances its
+    claim to ``..._spawned`` it has already registered its OWN call_id as
+    ``dispatched``, so the guard sees the dispatcher's own row and raises. The
+    transition was therefore structurally unreachable on EVERY detached
+    auth-eval dispatch, on both the CUDA and CPU paths, stranding the claim at
+    ``..._spawning`` and suppressing the operator-facing ``DISPATCHED DETACHED``
+    / ``Recover:`` banner. The dispatch itself always survived, which is why the
+    defect stayed silent.
     """
 
     if not spec.lane_id or not spec.instance_job_id:
         raise SystemExit(
             "FATAL: Modal auth eval dispatch requires --lane-id and --instance-job-id before provider work starts"
         )
-    from tac.deploy.modal.single_flight import assert_modal_single_flight
+    if pre_spawn_guard:
+        from tac.deploy.modal.single_flight import assert_modal_single_flight
 
-    assert_modal_single_flight(
-        label=spec.instance_job_id,
-        lane_id=spec.lane_id,
-        claim_agent=spec.agent,
-        repo_root=repo_root,
-    )
+        assert_modal_single_flight(
+            label=spec.instance_job_id,
+            lane_id=spec.lane_id,
+            claim_agent=spec.agent,
+            repo_root=repo_root,
+        )
     record_dispatch_claim(
         repo_root=repo_root,
         spec=spec,
