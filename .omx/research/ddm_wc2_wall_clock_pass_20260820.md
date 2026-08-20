@@ -596,7 +596,54 @@ the naive choice (horizontally reducing 5 lanes) would have been both wrong and 
 `-ffast-math`, no FMA substitution (FMA changes rounding), no reassociation, no horizontal
 reductions on the decision path. The decode-start identity check exists to catch exactly this.
 
-**HOLD CONTINUES until the jg5 row confirms.** Fire condition for P1–P5: MAIN's GO carrying the
+### GO — jg5 P0b harvested. The sub-0.15 pointer body does NOT fit the CI wall.
+
+Pointer moved: **S 0.14839100138338618 @ 180,625 B [contest-CUDA T4, n600]**. Shipping stage split
+for that body (`/Volumes/APDataStore/pact/ddm_jg5/t4_row_r1/harvested_artifacts/`):
+
+| stage | jg5 s | share of 1401.58 | br1 s (prior) |
+|---|---:|---:|---:|
+| **token decode** | **1341.540** | **95.72%** | 1186.930 |
+| neural render | 54.536 | 3.89% | 41.926 |
+| frame0/selector I/O | 5.145 | 0.37% | 3.418 |
+| archive setup | 0.358 | 0.03% | 0.274 |
+| non-token remainder (raw sha + prelude) | 18.360 | — | 14.380 |
+| **inflate elapsed** | **1419.900** | | 1246.928 |
+| evaluate (upstream, CUDA) | 51.400 | | 43.181 |
+
+`decoder_bit_position 910,837`, `token_codec rc64`. Identity anchors for the port proof:
+`decoded_token_sha256 cc10a7b0…`, `corrected_quantized_logit_sha256 8269fe1a…`,
+`corrected_cdf_input_sha256 370a5e2a…`, `raw_sha256 6bf8acf8…`.
+
+**Three reads, all confirming the $0 analysis:**
+
+1. **RR2 attribution — second point CONFIRMED.** Token decode along the corrector lineage:
+   hv1 (pre-RR2, *total* inflate) 364.76 s → br1 1186.93 s → **jg5 1341.54 s**. Monotone, and jg5 is
+   1.130x br1. §2.1's DERIVED attribution now has two independent points.
+2. **Budget verdict on the NEW POINTER BODY: REFUSE.** 1419.90 s against the CUDA residual
+   `[822, 1302] s` — over by **117.9 s even at the widest (warm-cache) end**. br1 was WARN; jg5 is
+   worse. **The sub-0.15 archive is not CI-shippable as it stands**, and the corrector port is
+   formally the submission critical path, not an optimization.
+3. **The axis-scoped split holds on jg5**: render 3.89%. wc1's "render is 86%" remains an
+   advisory-axis artifact.
+
+#### DERIVED — how much speedup the port actually needs (a modest target)
+
+Non-token inflate is fixed at `1419.900 − 1341.540 = 78.360 s`. So the token stage must fall to:
+
+| goal | token budget | required speedup |
+|---|---:|---:|
+| exit REFUSE → **WARN** (≤ 1302 s, warm cache) | 1223.640 s | **≥ 1.096x** |
+| reach **PASS** (≤ 822 s, fits cold cache) | 743.640 s | **≥ 1.804x** |
+| if wc1's 4.38x transfers | 306.3 s | → inflate **384.7 s**, 2.14x–3.38x margin |
+
+**The port does not need to be heroic — 1.81x makes the sub-0.15 archive shippable on a cold
+cache.** wc1 measured 4.38x on the pre-RR2 token stage; even a large haircut for the corrector work
+clears the bar. All four figures are PROJECTIONS until the port is measured.
+
+**GO IS LIVE. Sequencing per the coordinator: (1) corrector port + sha-identity proof against the
+jg5 body — critical path; (2) budget predicate; (3) C1-folded Surface-A single landing; (4) harness
+lineage/tuple hardening; then recursive-fractal + arch-gating depth.** Fire condition for P1–P5: MAIN's GO carrying the
 jg5 `token_decode` + `inflate_elapsed` numbers. Those numbers also settle §2.1 — if jg5's token
 decode is at or above br1's 1,186.93 s, the RR2-corrector attribution for the 3.42x regression
 gains a second point and the item-1 port becomes the critical path for the submission, not just the
