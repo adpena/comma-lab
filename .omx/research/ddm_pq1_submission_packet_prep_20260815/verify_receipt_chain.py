@@ -53,6 +53,40 @@ def _latest_receipt(receipts_dir: Path) -> Path | None:
     return best[1] if best else None
 
 
+def _derived_coverage(prep: Path, frozen: Path, tracked: set[str], failures: list[str]) -> int:
+    """Refuse when a two-copy document is not tracked by the latest receipt.
+
+    Coverage is DERIVED from the filesystem (rv17 R9-F1 cure): every top-level
+    file present in BOTH trees must appear in the receipt's tracked set.
+    Names are casefolded on both sides because both local filesystems resolve
+    names case-insensitively -- a prep ARCHIVE_MANIFEST.json and a frozen
+    archive_manifest.json are one coupled pair here and two distinct files on
+    the contest's case-sensitive Linux, so a case mismatch is itself reported.
+    AppleDouble ._* sidecars are excluded (environmental, #1122).
+    """
+    prep_names = {p.name.casefold(): p.name for p in prep.iterdir() if p.is_file()}
+    frozen_names = {
+        p.name.casefold(): p.name
+        for p in frozen.iterdir()
+        if p.is_file() and not p.name.startswith("._")
+    }
+    pairs = sorted(set(prep_names) & set(frozen_names))
+    tracked_folded = {name.casefold() for name in tracked}
+    for key in pairs:
+        if key not in tracked_folded:
+            failures.append(
+                f"{frozen_names[key]}: TWO-COPY DOCUMENT UNTRACKED by the latest receipt\n"
+                f"  (prep {prep_names[key]} / frozen {frozen_names[key]} -- derived\n"
+                f"  coverage: every prep-and-frozen pair must be receipt-tracked)"
+            )
+        elif prep_names[key] != frozen_names[key]:
+            print(
+                f"note: case mismatch prep={prep_names[key]} frozen={frozen_names[key]}"
+                f" (one pair here; two files on case-sensitive filesystems)"
+            )
+    return len(pairs)
+
+
 def _check(label: str, path: Path, expected: str, failures: list[str]) -> None:
     if not path.exists():
         failures.append(f"{label}: MISSING on disk ({path})")
@@ -97,6 +131,11 @@ def main(argv: list[str] | None = None) -> int:
             _check(f"{name} (repo)", args.prep / name, entry["repo_final_sha256"], failures)
             checked += 1
 
+    tracked_names = set(receipt.get("diverged_files", {})) | set(
+        receipt.get("repo_only_docs", {})
+    )
+    pair_count = _derived_coverage(args.prep, args.frozen, tracked_names, failures)
+
     if checked == 0:
         print(f"FAIL: latest receipt {latest.name} tracks zero documents", file=sys.stderr)
         return 1
@@ -111,7 +150,10 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 1
-    print(f"PASS: {checked} tracked document shas match the latest receipt ({latest.name})")
+    print(
+        f"PASS: {checked} tracked document shas match the latest receipt "
+        f"({latest.name}); all {pair_count} derived two-copy pairs covered"
+    )
     return 0
 
 
