@@ -641,6 +641,44 @@ Non-token inflate is fixed at `1419.900 − 1341.540 = 78.360 s`. So the token s
 cache.** wc1 measured 4.38x on the pre-RR2 token stage; even a large haircut for the corrector work
 clears the bar. All four figures are PROJECTIONS until the port is measured.
 
+#### SELF-CORRECTION — my flat "REFUSE" overstates it. The honest verdict is a range, and the action is unchanged.
+
+Surface B's landing surfaced an algebra point I had not chased, and it lands on my own number.
+ua2's `T_residual` **already nets out an ESTIMATED `evaluate.py`** (ua2 step 12: CPU 300–400 s
+DERIVED from 176.3 s measured @ 8-core; CUDA 120–180 s). We now hold a **MEASURED** evaluate for the
+jg5 body: **51.4 s** on T4. Substituting a measurement for an estimate is strictly better
+information, and it *widens* the inflate residual:
+
+```
+T_residual_corrected(CUDA) = [822, 1302] + (evaluate_est − evaluate_measured)
+                           = [822, 1302] + (120…180 − 51.4)
+                           = [890.6, 1430.6] s
+```
+
+jg5 inflate **1419.900 s** then sits **inside the wide end by 10.7 s**.
+
+| treatment | jg5 verdict |
+|---|---|
+| inflate alone vs ua2's published residual (**what §GO claimed**) | REFUSE, over by 117.9 s |
+| Surface B's conservative rule (charges inflate+evaluate, double-counting evaluate) | REFUSE |
+| **measured-evaluate substitution (most accurate)** | **WARN — fits by 10.7 s, warm cache only** |
+
+**So the strongest defensible claim is WARN, not REFUSE.** I stated REFUSE flatly; that overstated
+the danger. This is the same genus I caught in the "2.17x headroom" figure — *the floor you divide
+by decides the answer* — now applied to my own arithmetic. NO-FAKE cuts both ways: overstating a
+risk is as much a false claim as understating one.
+
+**The action does not change.** 10.7 s of margin, available only on a warm uv cache, on a path whose
+fallback is a silent Python decode, is not shippable margin — it is noise against a 1800 s wall. The
+corrector port remains the submission critical path, and the derived targets (≥1.096x / ≥1.804x)
+are unaffected because they were computed against the published window, which is the conservative
+one. br1 is WARN under every treatment.
+
+**Two follow-ons this opens** (neither chased yet): (a) the same substitution is owed on the CPU
+axis; (b) three nominally-8-core `evaluate.py` measurements disagree — **176.3 s** and **174.9 s**
+corroborate each other, but ft1's MC36 row measured **113.9 s**. That outlier is unexplained and
+should not be averaged into anything until it is.
+
 **GO IS LIVE. Sequencing per the coordinator: (1) corrector port + sha-identity proof against the
 jg5 body — critical path; (2) budget predicate; (3) C1-folded Surface-A single landing; (4) harness
 lineage/tuple hardening; then recursive-fractal + arch-gating depth.** Fire condition for P1–P5: MAIN's GO carrying the
