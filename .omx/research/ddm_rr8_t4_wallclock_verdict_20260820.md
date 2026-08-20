@@ -26,22 +26,40 @@ is a **control that passed**, not a result. The result is the wall-clock.
 "NativeFreeCorrector"` on this row vs `None` on jg5. A silent fallback to the Python path would
 have shown `None` and the timing would not have moved. It did both.
 
-## THE DECISION — stated on the ABSOLUTE number, ratio-free
+## THE DECISION — against the MEASURED job wall, not the projected band
 
-| | seconds |
-|---|---|
-| measured inflate | **464.6** |
-| CI residual window for inflate (wc2) | **[822, 1302]** |
-| margin vs the TIGHT (worst-case) end | **357.4 s (43.5%)** |
-| pessimistic re-scale (next host as slow as jg5's, ×1.2855) | 597.2 |
-| margin vs the TIGHT end, pessimistic | **224.8 s (27.4%)** |
+**CORRECTION (self-audit, same day).** The first version of this section decided against wc2's
+`[822, 1302] s` "CI residual window" as though it were a measured budget. **It is not.** wc2 labels
+it at source: *"`T_residual(CUDA)` for inflate | [822, 1302] s | ua2:189 (PROJECTION; step seconds
+estimated)"* (`ddm_wc2_wall_clock_pass_20260820.md:273`, and again at :86 — *"ua2's per-step seconds
+are ESTIMATED"*). Its payload sizes are measured; its seconds are not. Deciding a shipping question
+on a projected threshold while calling it measured is the [[measured object vs named object]] genus
+in my own verdict. The arithmetic below is re-stated against the one quantity that IS measured at
+source — the **1,800 s whole-job wall** (`upstream/.github/workflows/eval.yml:30`,
+`timeout-minutes: 30`, per #835's "budget surface, not a wall").
 
-jg5 REFUSED at 1,419.9 s — over even the *loose* 1,302 s end. rr8 passes the *tight* 822 s end with
-27.4% headroom even under the pessimistic host assumption. **The port ships.**
+| | seconds | class |
+|---|---:|---|
+| measured inflate | **464.559** | MEASURED (this row) |
+| measured evaluate | **39.685** | MEASURED (this row) |
+| **our measured total** | **504.24** | **MEASURED** |
+| job wall | **1,800** | MEASURED (`eval.yml:30`) |
+| **left for checkout/deps/download** | **1,295.8** | derived from measured |
+| what those terms are projected to cost | 498 – 978 | **PROJECTION** (wc2/ua2) |
+| projected whole job | **1,002.2 – 1,482.2** | mixed |
+| **slack vs the 1,800 s wall** | **317.8 – 797.8 s** | fits at BOTH ends |
 
-Total decode+evaluate is 504.24 s against the 1,800 s job wall, leaving **1,295.8 s** for
-checkout/deps/download vs jg5's 328.7 s — **3.94× more schedule slack**, which also de-risks the
-cold-start corner the packet has been carrying as an unpriced risk.
+Under the pessimistic host assumption (next container as slow as jg5's, ×1.2855 — itself a
+one-sample estimator, see the decomposition below) our measured total re-scales to 648.2 s, and the
+projected whole job to 1,146.2 – 1,626.2 s: **still inside 1,800 s at both ends.**
+
+**jg5 for contrast: 1,471.33 s measured + 498–978 projected = 1,969.3 – 2,449.3 s — over the job
+wall at BOTH ends of the projection, not merely the loose one.** That is a stronger statement than
+the version this corrects, and it does not depend on the projected band being right: jg5 exceeds
+1,800 s the moment the other terms cost anything at all above 328.7 s.
+
+**The port ships** — and the residual uncertainty now sits explicitly in the PROJECTED terms
+(checkout/deps/download), not in our measurement.
 
 ## HONEST DECOMPOSITION — ~13.7 s of the saving is NOT the port
 
