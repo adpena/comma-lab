@@ -335,3 +335,23 @@ Nothing was measured and discarded.
    arm, not inherited from this one's momentum.
 4. **Per-frame resume still does not exist** (`rc64_backend.c` exports no state save/restore).
    Resume granularity is the whole token stage — unchanged from the Python path.
+
+---
+
+## APPEND-ONLY HEADLINE CORRECTION — 2026-08-20 (`ddm_pq8`, from the rv15 review, F4)
+
+**The commit headline `a886ddb340` — "the native token decoder must actually fire in the contest —
+default it on" — overstates what that diff does to the SHIPPED tree, and is corrected here rather
+than amended (the message is pushed and immutable).**
+
+The default flip was scoped to `ddm_rr6`'s own experimental runtime tree, where it was needed so a
+bare invocation would exercise the native path. **The shipped `jg5` tree does the opposite, and that
+is correct and intended:** `inflate.sh:36` sets `F26_TOKEN_DECODER="${F26_TOKEN_DECODER:-python}"`,
+and `runtime/f26_inflate.py:435-441` hard-refuses `native-hpac` outright. Measured on-disk in the
+committed custody tree at `submissions/robust_current/jg5_sub015_runtime/runtime/`.
+
+`ddm_rr7` then measured the port on a contest T4 and it was **slower on both denominators** —
+15.3% on the token stage it replaces (1,546.6 s vs 1,341.5 s) and 13.6% on whole inflate
+(1,612.6 s vs 1,419.9 s) — so the shipped default is not merely a leftover, it is the right call.
+Nothing in the body above is retracted: the identity proof, the fail-closed build and the receipt
+fields all stand. Only the headline's scope was wrong.

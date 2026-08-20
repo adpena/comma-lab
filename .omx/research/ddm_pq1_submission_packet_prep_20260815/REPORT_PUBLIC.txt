@@ -102,8 +102,9 @@ measurement seen three ways, not three results:
 
 Frames A and B are related exactly by
   [890.6, 1430.6] = [822, 1302] + (evaluate_est 120...180 - evaluate_measured 51.4)
-so they do NOT disagree: B is A corrected for evaluation coming in about 2.5x
-under its own estimate. An earlier draft of this packet described them as two
+so they do NOT disagree: B is A corrected for evaluation coming in well under its
+own estimate -- 51.4 s measured against a 120-180 s allowance, i.e. 2.3x to 3.5x
+under. An earlier draft of this packet described them as two
 windows that disagree and were unreconciled. That was wrong, and it is withdrawn:
 there is one derivation and two framings of it. Quoting either one alone hides
 the evaluation correction, so both are stated. Only the 1471.3 s is measured; the
@@ -119,8 +120,12 @@ the same 3,662,409,600-byte raw output by SHA-256, the same distortion component
 the same score. On local hardware it runs 1.77-1.83x faster -- a range that
 straddles the 1.804x our own bar requires, and our own receipt declines to call it
 a PASS because run-to-run variance exceeds the distance to the bar. On a contest
-T4 the sign INVERTS: the ported tree inflated in 1612.6 s against 1419.9 s for the
-tree shipped here, 15.3% SLOWER. The split moves the decode off the GPU onto host
+T4 the sign INVERTS, and both denominators are worth stating because they differ:
+on the TOKEN STAGE the port took 1546.6 s against 1341.5 s for the stage it
+replaces, 15.3% slower (1546.6/1341.5); on WHOLE INFLATE the ported tree took
+1612.6 s against 1419.9 s for the tree shipped here, 13.6% slower (1612.6/1419.9),
+because the rest of inflate is unchanged and dilutes the stage ratio. Either way
+the sign is negative. The split moves the decode off the GPU onto host
 vCPUs far weaker than the laptop cores the local number came from. So the port
 does NOT ship, and lowering this stage to native CPU is closed as a wall-clock
 lever on this hardware. That measurement cost no score: the row is byte-identical

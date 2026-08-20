@@ -143,8 +143,9 @@ measurement seen three ways, not three results:
 
 Frames A and B are related exactly by
   [890.6, 1430.6] = [822, 1302] + (evaluate_est 120...180 - evaluate_measured 51.4)
-so they do NOT disagree: B is A corrected for evaluation coming in about 2.5x
-under its own estimate. An earlier draft of this packet described them as two
+so they do NOT disagree: B is A corrected for evaluation coming in well under its
+own estimate -- 51.4 s measured against a 120-180 s allowance, i.e. 2.3x to 3.5x
+under. An earlier draft of this packet described them as two
 windows that disagree and were unreconciled. That was wrong, and it is withdrawn:
 there is one derivation and two framings of it. Quoting either one alone hides
 the evaluation correction, so both are stated. Only the 1471.3 s is measured; the
@@ -160,8 +161,12 @@ the same 3,662,409,600-byte raw output by SHA-256, the same distortion component
 the same score. On local hardware it runs 1.77-1.83x faster -- a range that
 straddles the 1.804x our own bar requires, and our own receipt declines to call it
 a PASS because run-to-run variance exceeds the distance to the bar. On a contest
-T4 the sign INVERTS: the ported tree inflated in 1612.6 s against 1419.9 s for the
-tree shipped here, 15.3% SLOWER. The split moves the decode off the GPU onto host
+T4 the sign INVERTS, and both denominators are worth stating because they differ:
+on the TOKEN STAGE the port took 1546.6 s against 1341.5 s for the stage it
+replaces, 15.3% slower (1546.6/1341.5); on WHOLE INFLATE the ported tree took
+1612.6 s against 1419.9 s for the tree shipped here, 13.6% slower (1612.6/1419.9),
+because the rest of inflate is unchanged and dilutes the stage ratio. Either way
+the sign is negative. The split moves the decode off the GPU onto host
 vCPUs far weaker than the laptop cores the local number came from. So the port
 does NOT ship, and lowering this stage to native CPU is closed as a wall-clock
 lever on this hardware. That measurement cost no score: the row is byte-identical
@@ -242,10 +247,13 @@ the port, and on the axis that matters it lost. It reproduces this candidate's
 decode **bit-for-bit** (identical 3.66 GB raw output by SHA-256, identical score),
 runs 1.77–1.83× faster locally — a range that straddles the 1.804× our own bar
 requires, and our receipt declines to call it a PASS because run variance exceeds
-the distance to the bar — and on a **contest T4 it is 15.3% SLOWER**: 1,612.6 s
-against 1,419.9 s. The split moves decode onto host vCPUs much weaker than the
-laptop cores. **It does not ship**, and that measurement cost no score because the
-row is byte-identical to the one claimed here.
+the distance to the bar — and on a **contest T4 it is slower on both
+denominators**: **15.3% slower on the token stage it replaces** (1,546.6 s against
+1,341.5 s) and **13.6% slower on whole inflate** (1,612.6 s against 1,419.9 s), the
+smaller figure because the rest of inflate is unchanged and dilutes the stage
+ratio. The split moves decode onto host vCPUs much weaker than the laptop cores.
+**It does not ship**, and that measurement cost no score because the row is
+byte-identical to the one claimed here.
 
 Porting the decode-time corrector as well would move more of the same work onto
 those same vCPUs, so it inherits that result. It is unmeasured on the contest
@@ -373,8 +381,9 @@ report above.
 two branches — `drop` needs a receiver change this body has no path for. A
 12-dimensional pose-basis re-orientation is a measured null: re-mixing the basis
 leaves the reachable correction invariant to 1.9e-08, so it ships nothing. And the
-native token-decode port, which is byte-identical and 1.8× faster locally, came
-back **15.3% slower on a contest T4**, so it does not ship either.
+native token-decode port, which is byte-identical and 1.77–1.83× faster locally, came
+back **15.3% slower on a contest T4** on the token stage it replaces (1,546.6 s
+against 1,341.5 s), so it does not ship either.
 
 **Priced and unbuilt.** A third admission branch that drops the token outright is
 worth `−0.002929` score units and is blocked on a receiver path this body lacks;

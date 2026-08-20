@@ -33,9 +33,12 @@ measured `[contest-CUDA]` 600-sample score is **0.14839100138338618**.
   straddles the 1.804× our own bar requires, so it is not shown to close the
   budget, and **it is not in the tree evaluated here.** That last clause is now
   policy rather than caution: we measured the port on a contest T4 and it came
-  back **15.3% slower** (1612.6 s against 1419.9 s), because the split moves the
-  decode off the GPU onto much weaker host vCPUs. Putting it in the tree would
-  cost 193 s. Full numbers are in `report.txt` under "Evaluation-time budget",
+  back slower on both denominators — **15.3% slower on the token stage it
+  replaces** (1546.6 s against 1341.5 s) and **13.6% slower on whole inflate**
+  (1612.6 s against 1419.9 s), the smaller figure because the rest of inflate is
+  unchanged and dilutes the stage ratio. The split moves the decode off the GPU
+  onto much weaker host vCPUs. Putting it in the tree would cost 193 s of
+  inflate. Full numbers are in `report.txt` under "Evaluation-time budget",
   where the budget is graded in all three frames.
 - **What is not authority.** Any local macOS number, any advisory row, and any
   projection appearing in our own research notes is not a score and is not used
@@ -253,12 +256,13 @@ the final body.
 **Search quality on the token codebook.** Both pathologies we suspected are present
 and both are priced out: under-convergence is worth `3.238e-04` score units and
 basin-trapping `6.104e-05`, so the token solver's total search headroom is about
-0.06% of the gap it was measured against. A segmentation lever on that actuator has
-to clear roughly 1000× to matter.
+0.06% of the gap it was measured against. A segmentation lever on that actuator
+therefore has to clear that 0.06% headroom by roughly three orders of magnitude to
+matter.
 
 **Deep structured pruning.** Rate credit is measured and real — keep25 at −2,051 B,
-`−1.3657e-3` score units. The projected pose leg is `+0.0264`, 2.8× the gap in the
-wrong direction. That pose leg is unmeasured and the slope comes from n=2, so this
+`−1.3657e-3` score units. The projected pose leg is `+0.0264`, which is 2.8× the
+gap it was measured against, in the wrong direction. That pose leg is unmeasured and the slope comes from n=2, so this
 is closed pending a pose-sensitivity probe, not refuted.
 
 **Finishing-stage distillation.** A 12-epoch mini-race selected an attack-weighted
@@ -495,7 +499,7 @@ binding limit, predicts at most 27% recovery here. It is a near-floor constant a
 does not transfer to this amplitude.
 
 **Repair 3 — admit jointly.** After the re-solve, keeping all 573 edits still
-leaves `d_pose` at 58× the incumbent and `S` at 0.2023. The carrier cannot rescue
+leaves `d_pose` at 58× the incumbent carrier's `d_pose` and `S` at 0.2023. The carrier cannot rescue
 the full edit set, so the remaining work is selection: decide which edits to keep.
 
 Each edited pair has exactly two states, and both legs of both states are measured.
