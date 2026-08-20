@@ -289,6 +289,79 @@ class CorruptCheckpointError(RuntimeError):
 
 
 # ── Public API ───────────────────────────────────────────────────────────
+def infer_current_subagent_id(
+    files: list[str],
+    *,
+    current_session_id: str | None = None,
+    lookback_minutes: int = DEFAULT_LOOKBACK_MINUTES,
+    checkpoint_path: Path | None = None,
+    codex_queue_path: Path | None = None,
+    now_utc: _dt.datetime | None = None,
+) -> str | None:
+    """Infer the caller only when one active checkpoint covers every file.
+
+    The serializer historically defaulted its label to ``anonymous``.  A
+    correctly checkpointed caller that omitted ``--label`` then collided
+    with its own checkpoint and could not commit (rv15 F19).  This inference
+    is deliberately narrow: the checkpoint must carry the same agent-session
+    identity as the serializer, and zero or multiple covering checkpoints
+    return ``None``. A lone sister is therefore never inferred as self.
+    """
+    if not isinstance(files, list) or not all(isinstance(f, str) for f in files):
+        raise TypeError("files must be a list of strings")
+    caller_files = {f for f in files if f and f not in EXEMPT_FILES}
+    if not caller_files:
+        return None
+    session_id = current_session_id or (
+        os.environ.get("CODEX_THREAD_ID")
+        or os.environ.get("CLAUDE_CODE_SESSION_ID")
+        or os.environ.get("CLAUDE_CODE_BRIDGE_SESSION_ID")
+    )
+    if not session_id:
+        return None
+
+    path = Path(checkpoint_path) if checkpoint_path is not None else CHECKPOINT_JSONL_PATH
+    queue_path = (
+        Path(codex_queue_path)
+        if codex_queue_path is not None
+        else CODEX_ARM_QUEUE_JSONL_PATH
+    )
+    now = now_utc if now_utc is not None else _dt.datetime.now(_dt.UTC)
+    lookback_seconds = lookback_minutes * 60
+    terminal_queue_ids = _load_terminal_queue_subagent_ids(queue_path)
+
+    latest_per_subagent: dict[str, dict] = {}
+    for row in _load_checkpoints_strict(path):
+        sid = row.get("subagent_id")
+        if isinstance(sid, str) and sid:
+            latest_per_subagent[sid] = row
+
+    candidates: list[str] = []
+    for sid, row in latest_per_subagent.items():
+        if row.get("parent_id_or_session") != session_id:
+            continue
+        if sid in terminal_queue_ids or row.get("status") != "in_progress":
+            continue
+        ts = _parse_iso_utc(row.get("written_at_utc"))
+        if ts is None:
+            continue
+        try:
+            age_seconds = (now - ts).total_seconds()
+        except (TypeError, ValueError):
+            continue
+        if age_seconds < 0 or age_seconds > lookback_seconds:
+            continue
+        declared = {
+            f
+            for f in _normalize_files_touched(row.get("files_touched"))
+            if f and f not in EXEMPT_FILES
+        }
+        if caller_files <= declared:
+            candidates.append(sid)
+
+    return candidates[0] if len(candidates) == 1 else None
+
+
 def check_files_against_sister_checkpoints(
     files: list[str],
     *,

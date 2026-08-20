@@ -1738,12 +1738,40 @@ def _lint_bare_task_ids(text: str) -> list[str]:
     ids = set(re.findall(r"#\d{3,4}\b", text))
     if not ids:
         return []
-    if re.search(r"\b[\w./-]+\.md\b", text):
+    # Adjudicate every cited id at its own line.  The old whole-charter check
+    # let one unrelated memo filename launder arbitrarily many bare harness
+    # ids elsewhere in the charter (rv15 F11).  Mere co-location is not enough
+    # either: require language that explicitly associates THIS id with THIS
+    # memo (``#1074 per foo.md`` / ``foo.md owns #1074``).  That keeps this
+    # advisory lexical and cheap while preventing an unrelated ``Read x.md``
+    # clause on the same physical line from clearing the id.
+    unanchored: set[str] = set()
+    for line in text.splitlines():
+        line_ids = set(re.findall(r"#\d{3,4}\b", line))
+        memo_matches = tuple(re.finditer(r"\b[\w./-]+\.md\b", line))
+        for task_id in line_ids:
+            id_match = re.search(re.escape(task_id) + r"\b", line)
+            assert id_match is not None
+            associated = False
+            for memo_match in memo_matches:
+                left = min(id_match.end(), memo_match.end())
+                right = max(id_match.start(), memo_match.start())
+                bridge = line[left:right].lower()
+                if re.search(
+                    r"\b(per|see|source|memo|own|owns|owned|owning|route|routes|for)\b",
+                    bridge,
+                ):
+                    associated = True
+                    break
+            if not associated:
+                unanchored.add(task_id)
+    if not unanchored:
         return []
     return [
-        f"RECALL: charter cites bare task ids {sorted(ids)[:5]} and NO memo filename — "
-        "arms cannot resolve harness ids against the repo ledger. Cite memo "
-        "filenames (and shas) instead."
+        f"RECALL: charter cites bare task ids {sorted(unanchored)[:5]} without a memo "
+        "source-associated memo filename on the same line — arms cannot resolve harness "
+        "ids against the repo ledger. Route by work content and explicitly associate the "
+        "owning memo filename (and sha) with each id."
     ]
 
 

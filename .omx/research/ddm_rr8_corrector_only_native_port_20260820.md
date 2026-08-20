@@ -1,30 +1,35 @@
-# ddm_rr8 — the corrector-only native port: bit-identical, and 4.45× on its own scope
+# ddm_rr8 — the corrector-only native port: bit-identical, 6.007× scope-isolated / 4.450× conservative
 
 Date: 2026-08-20 · Owner: ddm_rr8 (Opus build arm) · Archive `f3bce5d2…` (180,625 B) **UNTOUCHED**
 Status: **BUILT. Identity PROVEN at n600 on BOTH candidate trees — 0.raw byte-identical, score exact. Speedup MEASURED
-4.450× median / 4.646× best `[macOS-CPU advisory]` against a pre-registered bar of 2.03× / 2.77×.**
-Shipping axis UNMEASURED — one T4 row owed, and this arm does not touch the paid axis.
+6.007× full-run scope-isolated / 4.450× conservative `[macOS-CPU advisory]` against a
+break-even band of 2.03–2.22× (frame B) / 2.77–3.08× (frame A).**
+Shipping axis **subsequently measured by MAIN**: 464.558564563 s inflate, n600, Tesla T4,
+rc=0, exact 180,625-byte archive, score unchanged. Canonical receipt and superseding fire order:
+`ddm_rr8_t4_wallclock_verdict_20260820.md`. rvf1 did not dispatch or mutate its artifacts.
 
 ---
 
 ## THE ANSWER, FIRST
 
 `ddm_cd1` measured the corrector at **917.929 s = 71.7%** of the shipped jg5 token stage on a
-contest T4 and pre-registered what a port must clear: **2.03×** for frame B, **2.77×** for
-frame A. This arm built it.
+contest T4 and pre-registered what a port must clear. Corrected for the second live anchor,
+the bar is **2.03–2.22×** for frame B and **2.77–3.08×** for frame A: original cd1 anchor
+through the jg5/noise re-anchor. This arm built it.
 
 * **Identity holds.** The C reproduces the shipped Python corrector **byte-for-byte** across
   1,520 groups / 1,572,864 positions / 7,864,320 float32 slots of the REAL decoder trace, and
   all 44 live tables agree exactly at every frame boundary.
-* **The speedup is 4.450× median (4.646× best) on the port's own scope** — 2.19× above the
-  frame-B bar and 1.61× above frame A's.
+* **The speedup is 6.007× full-run scope-isolated; 4.450× is the conservative cold-trace
+  floor.** Even the floor is 2.00× the conservative frame-B endpoint and 1.44× the
+  conservative frame-A endpoint.
 * **It is the LANGUAGE that changed, not the processor.** `ddm_rr7` lost because it moved the
   sparse model OFF the T4's GPU onto its vCPUs. The corrector was already on those vCPUs in
   numpy, so rr7's mechanism is absent from this port by construction.
 
-**The single number that decides shipping is still owed: a `[contest-CUDA T4]` row.** Every
-projection below is DERIVED and labelled as such, because `ddm_cd1` §9.4's closing instruction
-was "do not price the port on a local host" and that binds this arm too.
+**The single number that decides shipping was owed when this memo landed and is now measured:**
+464.558564563 s `[contest-CUDA T4, n600]`. Every projection below remains labelled DERIVED and
+historical; the direct row supersedes it. See `ddm_rr8_t4_wallclock_verdict_20260820.md`.
 
 ---
 
@@ -261,7 +266,8 @@ arm to port first — is down **9.4×**, which is where the win concentrates.
 | cross-run subtraction, plain tree | 5.313× | full 600 frames; two runs, so carries both runs' noise |
 | cd1's instrument, scope-isolated | **6.007×** | full 600 frames AND scope-isolated; two runs |
 
-The spread is not noise, it is the **cold-vs-warm table regime**: over the first 8 frames the
+The spread is not treated as noise; the supported mechanism is the **cold-vs-warm table regime**:
+over the first 8 frames the
 within-miss sector holds ~3,187 records against a lifetime ~223,694, so numpy does far less of
 the work the C is best at. **4.450× is therefore the CONSERVATIVE floor and remains the number
 this memo prices against**; the full-run numbers say the real local figure is nearer 6×.
@@ -344,7 +350,7 @@ Scope is `group_state` + `coding_row` + `observe` — the three calls `ddm_cd1` 
 917.929 s. `begin_frame`/`end_frame` are inside the timed loop because both implementations pay
 them; they are 0.827 s of the 1,280 s stage and cannot move the ratio.
 
-## 7. The projection — DERIVED, with its falsifier
+## 7. The projection — DERIVED, now superseded by the direct T4 row
 
 From `ddm_cd1` §6.2's measured T4 decomposition: token stage 1,280.093 s, non-token inflate
 79.757 s, evaluate 48.685 s, port scope P = 917.929 s.
@@ -357,26 +363,31 @@ charged(k) = inflate(k) + 48.685
 
 | k | token s | inflate s | charged s | frame A [822, 1302] | frame B narrow |
 |---:|---:|---:|---:|---|---|
-| 2.03 (bar) | 814.3 | 894.1 | 942.8 | WARN | PASS at the narrow edge |
-| 2.77 (bar) | 693.5 | 773.3 | 822.0 | PASS at the narrow edge | PASS |
+| 2.03 (original B endpoint) | 814.3 | 894.1 | 942.8 | WARN | PASS on cd1 anchor |
+| 2.22 (re-anchored B endpoint) | 775.6 | 855.4 | 904.1 | WARN | PASS |
+| 2.77 (original A endpoint) | 693.5 | 773.3 | 822.0 | PASS on cd1 anchor | PASS |
+| 3.08 (re-anchored A endpoint) | 660.2 | 739.9 | 788.6 | PASS | PASS |
 | **4.450 (measured median)** | **568.4** | **648.2** | **696.8** | **PASS** | **PASS** |
 | 4.646 (measured best) | 559.7 | 639.5 | 688.1 | PASS | PASS |
 | ∞ (ceiling) | 362.2 | 441.9 | 490.6 | PASS | PASS |
 
-The 2.03 and 2.77 rows reproduce `ddm_cd1` §6.4's own table (893.3 / 942.0 and 773.3 / 822.0)
-to within its rounding, which is the arithmetic check that this table is the same model and not
-a second one. Frame B's narrow end is **890.572 s** against jg5's measured evaluate (51.428 s)
+The 2.03 and 2.77 rows reproduce `ddm_cd1` §6.4's original-anchor table (893.3 / 942.0 and
+773.3 / 822.0) to within its rounding; 2.22 and 3.08 carry the promised jg5/noise re-anchor.
+That is the arithmetic check that this table is the same model and not a second one. At k=2,
+the original frame-B calculation misses by 7.6 s; removing d2h sync first moves that bar to
+1.75×. Frame B's narrow end is **890.572 s** against jg5's measured evaluate (51.428 s)
 or **893.315 s** against cd1's (48.685 s); the projections clear both by ~245 s, so the choice
 does not change a verdict here — it is stated because quoting one window as "the" window is how
 two frames get mixed.
 
-**These are PROJECTIONS. One T4 row replaces the whole table.**
+**These are PROJECTIONS. MAIN's 464.558564563 s T4 row replaced this whole table.**
 
 The transfer is the open question, and it has a crisp falsifier rather than a hope. `ddm_cd1`
-§6.3 MEASURED the T4 container vCPU at **4.350× slower than an M5 Max core on this same numpy**.
-For the port to miss the frame-B bar, C's T4/local slowdown would have to exceed numpy's by
-4.450/2.03 = **2.19×** — i.e. C would need to run **9.53× slower on T4 than locally** while
-numpy runs 4.35× slower. The directional argument runs the other way (C is cache-resident where
+§6.3 observed a **4.350× T4/local numpy ratio under unmatched thread instruments**; it is an
+upper bound, not a per-core measurement. Even using it, for the port to miss the conservative
+frame-B endpoint C's T4/local slowdown would have to exceed numpy's by 4.450/2.22 = **2.00×** —
+i.e. C would need to run **8.72× slower on T4 than locally** while numpy shows the observed
+4.35× ratio. The directional argument runs the other way (C is cache-resident where
 numpy streams a hundred temporaries, and weak vCPUs with small caches penalise the streaming
 path harder), but that is an ARGUMENT and it is not offered as evidence.
 
@@ -401,7 +412,7 @@ hand-typed approximation of it. Pointing `--base` at cd1's tree yields a tree th
 ported AND self-decomposing, which is what prices the port's own scope on the shipping axis
 instead of inferring it by subtraction.
 
-## 9. Owed, named with its cure
+## 9. Owed at original landing, now superseded by the direct T4 row
 
 1. **A `[contest-CUDA T4]` row.** The only number that decides the CI wall. This arm does not
    touch the paid axis. Fire order in §10.
@@ -420,10 +431,13 @@ instead of inferring it by subtraction.
    refused in favour of the measurement.
 5. **Threading is untaken.** `coding_row` is a pure map over positions with read-only tables, so
    it parallelises without touching identity. Left out because the single-threaded win already
-   clears the bar by 2.19× and a thread pool would make the win depend on the runner's core
+   clears the conservative frame-B endpoint by 2.00× and a thread pool would make the win depend on the runner's core
    count — the dependency `ddm_rr6` §2.1 had to report as a caveat.
 
-## 10. Fire order for MAIN
+## 10. Historical fire order — FIRED and superseded
+
+MAIN fired this order and landed `ddm_rr8_t4_wallclock_verdict_20260820.md`; do not re-fire it.
+The body below is retained as pre-dispatch provenance, not a live instruction.
 
 **Ask:** one `[contest-CUDA T4]` row, same archive. **Two trees are staged; prefer the second.**
 

@@ -35,7 +35,7 @@ EVAL_W = 512
 
 SSD_ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_mx2_20260806")
 SOURCE_REPO_ROOT = Path("/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo")
-DEFAULT_OFFICIAL_CACHE_XZ = SOURCE_REPO_ROOT / "artifacts/caches/gt_cache_600_official_ada.pt.xz"
+DEFAULT_OFFICIAL_CACHE_XZ = SOURCE_REPO_ROOT / "artifacts/caches/gt_cache_600_official_ada.pt.xz"  # GT_LINEAGE_OK: decompressed bytes are registry-classified DALI_NVDEC sha256 382d7dfe38b37c0c
 DEFAULT_GT_REFERENCE_NPZ = Path("experiments/results/mlx_fleet_gt_cache/gt_n600.npz")
 DEFAULT_TARGET_OUT = SSD_ROOT / "inputs/gt_pose_cache_600.pt"
 DEFAULT_PARENT_RAW = (

@@ -22,12 +22,15 @@ from tac.preflight import (
     _check_351_gt_lineage_objective_custody,
     _gt_artifact_hits_outside_comment,
     _gt_lineage_waiver_rationale,
+    _python_imports_gt_lineage_registry,
+    _python_docstring_line_numbers,
     _scan_library_for_env_sensitive_zip_metadata,
     _scan_python_for_env_sensitive_zip_metadata,
     _write_mode_zipfile_call_lines,
     _zip_metadata_waiver_rationale,
     check_archive_builders_use_deterministic_zip,
     check_evidence_authority_claims_are_custodied,
+    check_gt_lineage_objective_custody,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -400,6 +403,55 @@ def test_comment_only_mention_is_not_a_consumption(tmp_path):
     assert _check_351_gt_lineage_objective_custody(tmp_path) == []
 
 
+def test_docstring_artifact_mention_is_not_a_consumption(tmp_path):
+    """The ddm_cpu1 false positive: prose describes the basename collision."""
+    path = _write(
+        tmp_path,
+        "experiments/a.py",
+        '"""The name gt_first6_n600.npy exists under opposite lineages."""\nVALUE = 1\n',
+    )
+    assert _python_docstring_line_numbers(path.read_text()) == frozenset({1})
+    assert _check_351_gt_lineage_objective_custody(tmp_path) == []
+
+
+def test_executable_read_after_same_line_docstring_is_still_flagged(tmp_path):
+    """rv16 red control: docstring masking must not discard later code."""
+    _write(
+        tmp_path,
+        "experiments/a.py",
+        'def load(): """gt_first6_n600.npy is prose"""; P = "gt_first6_n600.npy"; return P\n',
+    )
+    found = _check_351_gt_lineage_objective_custody(tmp_path)
+    assert len(found) == 1 and "experiments/a.py:1" in found[0]
+
+
+def test_canonical_route_named_only_in_docstring_does_not_clear_read(tmp_path):
+    _write(
+        tmp_path,
+        "tools/a.py",
+        '"""Future work may route through tac.gt_lineage."""\nP = "gt_first6_n600.npy"\n',
+    )
+    found = _check_351_gt_lineage_objective_custody(tmp_path)
+    assert len(found) == 1 and "tools/a.py:2" in found[0]
+
+
+def test_canonical_route_named_only_in_comment_does_not_clear_read(tmp_path):
+    _write(
+        tmp_path,
+        "tools/a.py",
+        '# future: from tac import gt_lineage\nP = "gt_first6_n600.npy"\n',
+    )
+    found = _check_351_gt_lineage_objective_custody(tmp_path)
+    assert len(found) == 1 and "tools/a.py:2" in found[0]
+
+
+def test_registry_import_detection_is_ast_owned_not_substring_owned():
+    assert _python_imports_gt_lineage_registry("from tac import gt_lineage\n")
+    assert _python_imports_gt_lineage_registry("from tac.gt_lineage import assert_gt_lineage\n")
+    assert not _python_imports_gt_lineage_registry("# from tac import gt_lineage\n")
+    assert not _python_imports_gt_lineage_registry('NOTE = "tac.gt_lineage"\n')
+
+
 def test_artifact_before_a_trailing_comment_is_still_a_consumption():
     hits = _gt_artifact_hits_outside_comment('P = "gt_first6_n600.npy"  # note')
     assert hits == ["gt_first6_n600.npy"]
@@ -472,31 +524,30 @@ def test_qs1_pose_objective_is_the_dali_table():
     assert 'GT_POSE: Final = CP135_BASE_POSE.with_name("gt_first6_dali_n600.npy")' in text
 
 
-def test_gt_lineage_extension_is_warn_only_not_raising():
-    """The extension must never raise, even though the host gate runs strict.
+def test_gt_lineage_extension_host_is_warn_only_but_standalone_refuses(tmp_path):
+    """The aggregate host warns while the explicit strict surface refuses.
 
     The host gate carries OTHER strict surfaces (#344 anchor roundtrip, #351
     producer identity) that may legitimately be red for unrelated reasons. The
-    claim under test is narrower and stronger: no GT-lineage finding may ever be
-    the CAUSE of a raise, while every one of them must still reach the caller.
+    two-landing contract keeps GT findings out of that raise path, while exposing
+    a strict standalone path for an executed red positive control.
     """
-    findings = _check_351_gt_lineage_objective_custody(REPO_ROOT)
-    assert len(findings) >= 1, "warn-only population is expected to be non-empty"
+    _write(tmp_path, "tools/undeclared.py", 'P = "gt_first6_n600.npy"\n')
+    findings = _check_351_gt_lineage_objective_custody(tmp_path)
+    assert len(findings) == 1
+
+    returned = check_evidence_authority_claims_are_custodied(
+        repo_root=tmp_path, strict=True, verbose=False
+    )
+    for item in findings:
+        assert item in returned, "warn-only extension findings must reach the host caller"
 
     try:
-        returned = check_evidence_authority_claims_are_custodied(strict=True, verbose=False)
+        check_gt_lineage_objective_custody(tmp_path, strict=True, verbose=False)
     except PreflightError as exc:
-        for item in findings:
-            assert item not in str(exc), (
-                "a GT-lineage warning escalated into the strict raise path"
-            )
+        assert "tools/undeclared.py:1" in str(exc)
     else:
-        for item in findings:
-            assert item in returned
-
-    warn_returned = check_evidence_authority_claims_are_custodied(strict=False, verbose=False)
-    for item in findings:
-        assert item in warn_returned, "extension findings must reach the caller"
+        raise AssertionError("standalone strict GT-lineage gate accepted its red control")
 
 
 # ═══════════════════════════════════════════════════════════════════════════

@@ -2,8 +2,9 @@
 """ddm_rr8 - stage a candidate runtime tree whose free corrector is the C port.
 
 WHY.  ``ddm_cd1`` MEASURED the corrector at **917.929 s = 71.7%** of the shipped jg5 token
-stage on a contest T4, and pre-registered the break-even a port must clear: **2.03x** for
-frame B, **2.77x** for frame A.  ``ddm_rr7`` had already ported the OTHER 21% -- the integer
+stage on a contest T4, and pre-registered a break-even band a port must clear:
+**2.03--2.22x** for frame B, **2.77--3.08x** for frame A (original cd1 anchor through the
+jg5/noise re-anchor).  ``ddm_rr7`` had already ported the OTHER 21% -- the integer
 HPAC model -- and MEASURED a 15.3% regression, because that port moved work off the T4's GPU
 onto its weak container vCPUs.  The corrector is ALREADY on those vCPUs in numpy, so this
 port changes the language and not the processor.
@@ -302,8 +303,18 @@ def stage(base: Path, output: Path, *, force: bool = False) -> dict[str, Any]:
         "port": {
             "scope": "group_state + coding_row + observe (ddm_cd1 port_scope_seconds)",
             "measured_scope_seconds_t4": 917.929,
+            # Legacy scalar keys stay additive-compatible for existing manifest
+            # readers; the adjacent band is the decision surface (rvf1 F2/F3).
             "break_even_frame_b": 2.03,
+            "break_even_frame_b_band": {
+                "original_cd1": 2.03,
+                "jg5_noise_reanchor": 2.22,
+            },
             "break_even_frame_a": 2.77,
+            "break_even_frame_a_band": {
+                "original_cd1": 2.77,
+                "jg5_noise_reanchor": 3.08,
+            },
             "fallback": "F26_CORRECTOR_NATIVE_LIBRARY unset -> shipped Python corrector",
             "cannot_move_a_byte_because": (
                 "the C reproduces the same IEEE-754 correctly rounded operations in the "

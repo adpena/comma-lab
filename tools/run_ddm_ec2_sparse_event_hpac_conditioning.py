@@ -63,7 +63,7 @@ JS5_STORE = Path(
 )
 JS5_STATE = JS5_STORE / "state.json"
 JS5_INDEX = JS5_STORE / "proposal_index.jsonl"
-CACHE = Path("/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/authority_cache/gt_cache_600_official_ada.pt")
+CACHE = Path("/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/authority_cache/gt_cache_600_official_ada.pt")  # GT_LINEAGE_OK: bytes are registry-classified DALI_NVDEC sha256 382d7dfe38b37c0c
 INITIALIZER = Path("/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/checkpoints/gt/hpac_p64_exact_from_archive.pt")
 CONTROL_ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_cl1_capacity_20260809/lambda_1p0_uninterrupted_twin/training")
 CONTROL_RANGE = CONTROL_ROOT / "serialized/terminal.range.bin"

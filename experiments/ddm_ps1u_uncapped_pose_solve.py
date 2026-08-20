@@ -124,7 +124,13 @@ def _atomic_write_npy(path: Path, value: np.ndarray) -> dict[str, Any]:
 
 def _qs1_paths() -> dict[str, Any]:
     from experiments import ddm_qs1_frame0_schur_coupled_solve as qs1
+    from tac.gt_lineage import AUTHORITY_LINEAGE, assert_gt_lineage
 
+    assert_gt_lineage(
+        qs1.GT_POSE,
+        required=AUTHORITY_LINEAGE,
+        instrument="ddm_ps1u.top_mass_pairs",
+    )
     return {"base_pose": qs1.CP135_BASE_POSE, "gt_pose": qs1.GT_POSE}
 
 

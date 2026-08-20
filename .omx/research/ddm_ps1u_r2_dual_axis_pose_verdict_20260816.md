@@ -5,6 +5,13 @@
 on the hv1 ep0634 base) · axis `[contest-CUDA T4 n600, COMPONENT-ONLY]`
 · call `fc-01M05JNY5VWA152YF1MBKS37HE`, 735.1 s, rc=0, ~$0.16.
 
+**Historical selection-lineage note (ddm_gt2, 2026-08-20):** this candidate's
+60-pair fleet was materially selected by the then-live **PyAV-GT** top-mass
+ranking. It is not silently re-ranked here. A complete n600 source re-derivation
+finds only 1/30 overlap between the PyAV and DALI top-30 rankings; the live
+selector now consumes the SHA-registered DALI table, but that does not alter
+this historical row or its instance-scoped verdict.
+
 ## The arithmetic, same-instrument where the instrument allows
 
 Base = **hv1 ep0634**, sha `80d9c8c6…`, 182,759 B, S 0.15959729295498598.

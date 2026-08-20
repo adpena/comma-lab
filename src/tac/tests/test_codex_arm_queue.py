@@ -584,8 +584,10 @@ def _recall_prompt(tmp_path, body: str):
     return str(prompt)
 
 
-def test_recall_lint_silent_on_conforming_charter(q, tmp_path):
-    """NEGATIVE CONTROL: a charter with no stale-premise shape emits nothing."""
+def test_recall_lint_silent_on_conforming_charter(q, tmp_path, monkeypatch):
+    """NEGATIVE CONTROL: charter-dependent legs emit no stale-premise warning."""
+    # Index-health advisories are corpus state, not a property of this fixture.
+    monkeypatch.setattr(q, "_lint_corrections_index_freshness", lambda: [])
     path = _recall_prompt(
         tmp_path,
         "Build the carrier refit per ddm_rfo2_route_20260815.md.\n"
@@ -609,6 +611,38 @@ def test_recall_lint_accepts_task_ids_when_a_memo_is_cited(q, tmp_path):
     )
     out = q.lint_charter_recall_advisories(path)
     assert not any("bare task ids" in w for w in out)
+
+
+def test_recall_lint_does_not_let_unrelated_memo_launder_bare_task_id(q, tmp_path):
+    """rv15 F11: anchoring one line cannot waive a different bare-id line."""
+    path = _recall_prompt(
+        tmp_path,
+        "Read ddm_td1_token_drop_schur_arithmetic_20260816.md.\n"
+        "Then execute #1162 by its harness label.\n",
+    )
+    out = q.lint_charter_recall_advisories(path)
+    assert any("#1162" in w and "bare task ids" in w for w in out)
+
+
+def test_recall_lint_does_not_let_same_line_unrelated_memo_launder_id(q, tmp_path):
+    """rv16 red control: physical-line co-location is not content ownership."""
+    path = _recall_prompt(
+        tmp_path,
+        "Read unrelated_review.md and execute #1162 by its harness label.\n",
+    )
+    out = q.lint_charter_recall_advisories(path)
+    assert any("#1162" in w and "bare task ids" in w for w in out)
+
+
+def test_recall_lint_adjudicates_each_task_id_line_independently(q, tmp_path):
+    path = _recall_prompt(
+        tmp_path,
+        "Execute #1074 per ddm_td1_token_drop_schur_arithmetic_20260816.md.\n"
+        "Execute #1163 with no repo citation.\n",
+    )
+    out = q.lint_charter_recall_advisories(path)
+    assert any("#1163" in w for w in out)
+    assert all("#1074" not in w for w in out if "bare task ids" in w)
 
 
 def test_recall_lint_flags_stale_frontier_literal(q, tmp_path, monkeypatch):
@@ -682,6 +716,7 @@ def test_recall_lint_never_raises_on_unreadable_stores(q, tmp_path, monkeypatch)
     monkeypatch.setattr(q, "CORRECTIONS_INDEX", tmp_path / "absent.jsonl")
     monkeypatch.setattr(q, "FRONTIER_POINTER", tmp_path / "absent.json")
     monkeypatch.setattr(q, "RESEARCH_DIR", tmp_path / "absent_dir")
+    monkeypatch.setattr(q, "_lint_corrections_index_freshness", lambda: [])
     path = _recall_prompt(tmp_path, "This has never been run and is un-owned.\n")
     assert q.lint_charter_recall_advisories(path) == []
 

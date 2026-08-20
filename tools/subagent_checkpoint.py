@@ -104,6 +104,20 @@ LOCK_TIMEOUT_SECONDS = 30
 VALID_STATUSES = ("in_progress", "blocked", "complete")
 
 
+def default_session_anchor(env: dict[str, str] | None = None) -> str | None:
+    """Return the strongest local agent-session identity available."""
+    source = os.environ if env is None else env
+    for key in (
+        "CODEX_THREAD_ID",
+        "CLAUDE_CODE_SESSION_ID",
+        "CLAUDE_CODE_BRIDGE_SESSION_ID",
+    ):
+        value = source.get(key, "").strip()
+        if value:
+            return value
+    return None
+
+
 def _now_iso() -> str:
     return _dt.datetime.now(tz=_dt.UTC).isoformat()
 
@@ -559,8 +573,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--parent-id-or-session",
-        default=None,
-        help="Optional parent subagent id or session anchor.",
+        default=default_session_anchor(),
+        help="Parent/session anchor (default: CODEX_THREAD_ID, then Claude session id).",
     )
     parser.add_argument(
         "--lane-id",

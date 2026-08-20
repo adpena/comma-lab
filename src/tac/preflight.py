@@ -2465,12 +2465,6 @@ _GT_LINEAGE_ARTIFACT_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"gt_first6[\w.\-]*\.npy"),
     re.compile(r"gt_cache_[\w.\-]*\.pt"),
 )
-#: Module-exact. A bare ``gt_lineage`` substring would clear up2's local
-#: filename-substring resolver -- see the block comment above.
-_GT_LINEAGE_CANONICAL_ROUTES = (
-    "tac.gt_lineage",
-    "from tac import gt_lineage",
-)
 #: An artifact literal naming the authority lineage declares itself.
 _GT_LINEAGE_DALI_MARKER = "dali"
 _GT_LINEAGE_SCAN_DIRS = ("src", "tools", "experiments", "scripts")
@@ -2526,6 +2520,108 @@ def _gt_artifact_hits_outside_comment(line: str) -> list[str]:
     return [m.group(0) for m in hits if m.start() < comment_idx]
 
 
+def _python_docstring_line_numbers(text: str) -> frozenset[int]:
+    """Return lines occupied by real module/class/function docstrings.
+
+    A docstring that explains a basename collision is evidence ABOUT a GT
+    artifact, not a load of that artifact.  The old line-regex scanner counted
+    ``ddm_cpu1``'s explanatory docstring as a twelfth consumer.  AST ownership
+    distinguishes those documentation strings from path literals used by code
+    without weakening the fail-closed behavior for invalid Python.
+    """
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return frozenset()
+    lines: set[int] = set()
+    owners = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+    for owner in ast.walk(tree):
+        if not isinstance(owner, owners) or not owner.body:
+            continue
+        first = owner.body[0]
+        if not (
+            isinstance(first, ast.Expr)
+            and isinstance(first.value, ast.Constant)
+            and isinstance(first.value.value, str)
+        ):
+            continue
+        start = int(first.lineno)
+        end = int(getattr(first, "end_lineno", start) or start)
+        lines.update(range(start, end + 1))
+    return frozenset(lines)
+
+
+def _python_without_docstrings(text: str) -> str:
+    """Blank only docstring source spans while preserving line/column shape.
+
+    Skipping every line touched by a docstring is unsafe: Python permits an
+    executable statement after a one-line docstring's semicolon.  Masking the
+    AST-owned string span keeps that statement visible to the lineage scanner.
+    Invalid Python is returned unchanged so syntax damage cannot clear a read.
+    """
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return text
+    lines = text.splitlines(keepends=True)
+
+    def _char_col(line: str, byte_col: int) -> int:
+        return len(line.encode("utf-8")[:byte_col].decode("utf-8", errors="ignore"))
+
+    owners = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+    spans: list[tuple[int, int, int, int]] = []
+    for owner in ast.walk(tree):
+        if not isinstance(owner, owners) or not owner.body:
+            continue
+        first = owner.body[0]
+        if not (
+            isinstance(first, ast.Expr)
+            and isinstance(first.value, ast.Constant)
+            and isinstance(first.value.value, str)
+        ):
+            continue
+        value = first.value
+        spans.append(
+            (
+                int(value.lineno) - 1,
+                int(value.col_offset),
+                int(getattr(value, "end_lineno", value.lineno) or value.lineno) - 1,
+                int(getattr(value, "end_col_offset", value.col_offset) or value.col_offset),
+            )
+        )
+
+    mutable = [list(line) for line in lines]
+    for start_line, start_byte, end_line, end_byte in spans:
+        for line_no in range(start_line, end_line + 1):
+            original = lines[line_no]
+            start = _char_col(original, start_byte) if line_no == start_line else 0
+            end = _char_col(original, end_byte) if line_no == end_line else len(original)
+            for col in range(start, end):
+                if mutable[line_no][col] not in "\r\n":
+                    mutable[line_no][col] = " "
+    return "".join("".join(line) for line in mutable)
+
+
+def _python_imports_gt_lineage_registry(text: str) -> bool:
+    """Return true only for an executable import of the canonical registry."""
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return False
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            if any(alias.name == "tac.gt_lineage" for alias in node.names):
+                return True
+        elif isinstance(node, ast.ImportFrom):
+            if node.module == "tac.gt_lineage":
+                return True
+            if node.module == "tac" and any(
+                alias.name == "gt_lineage" for alias in node.names
+            ):
+                return True
+    return False
+
+
 def _check_351_gt_lineage_objective_custody(repo_root: Path) -> list[str]:
     """Scope extension of Catalog #351: GT DECODE-LINEAGE objective custody.
 
@@ -2569,8 +2665,12 @@ def _check_351_gt_lineage_objective_custody(repo_root: Path) -> list[str]:
             continue
         if "/tests/" in rel_posix or path.name.startswith("test_"):
             continue
-        # The registry module and this scanner DEFINE the vocabulary.
+        # The registry module and this scanner DEFINE the vocabulary.  gl1 is
+        # the exact census/producer that builds both lineage rulers; it does
+        # not consume either as a solve objective.
         if rel_posix == "src/tac/gt_lineage.py" or rel_posix.startswith("src/tac/preflight"):
+            continue
+        if rel_posix == "experiments/ddm_gl1_gt_lineage_census.py":
             continue
         if _is_oss_export_mirror_path(path):
             continue
@@ -2580,9 +2680,10 @@ def _check_351_gt_lineage_objective_custody(repo_root: Path) -> list[str]:
             continue
         if not any(pat.search(text) for pat in _GT_LINEAGE_ARTIFACT_PATTERNS):
             continue
-        if any(route in text for route in _GT_LINEAGE_CANONICAL_ROUTES):
+        executable_text = _python_without_docstrings(text)
+        if _python_imports_gt_lineage_registry(executable_text):
             continue
-        for lineno, line in enumerate(text.splitlines(), 1):
+        for lineno, line in enumerate(executable_text.splitlines(), 1):
             hits = _gt_artifact_hits_outside_comment(line)
             if not hits:
                 continue
@@ -2595,6 +2696,37 @@ def _check_351_gt_lineage_objective_custody(repo_root: Path) -> list[str]:
                 "with UNDECLARED decode lineage."
             )
     return violations
+
+
+def check_gt_lineage_objective_custody(
+    repo_root: Path | None = None, *, strict: bool = False, verbose: bool = True
+) -> list[str]:
+    """Report undeclared GT reads and optionally refuse them.
+
+    The normal aggregate preflight deliberately calls this with ``strict=False``
+    during the two-landing adoption window.  The standalone strict surface is
+    the executable positive-control/refusal path: a newly introduced undeclared
+    consumption must exit nonzero before the host flips to strict.
+    """
+    root = Path(repo_root or Path(__file__).resolve().parents[2])
+    findings = _check_351_gt_lineage_objective_custody(root)
+    if verbose:
+        status = f"WARN {len(findings)} finding(s)" if findings else "OK"
+        print(f"  [gt-lineage-objective-custody] {status} (host WARN-ONLY; standalone strict available)")
+        if findings:
+            print(f"    {_GT_LINEAGE_RULE_CHAIN}")
+            for item in findings[:_GT_LINEAGE_MAX_PRINTED]:
+                print(f"    - {item}")
+            remaining = len(findings) - _GT_LINEAGE_MAX_PRINTED
+            if remaining > 0:
+                print(f"    - ... and {remaining} more (full list in return value)")
+    if findings and strict:
+        raise PreflightError(
+            "check_gt_lineage_objective_custody refused "
+            f"{len(findings)} undeclared GT consumption(s):\n  "
+            + "\n  ".join(findings[:_GT_LINEAGE_MAX_PRINTED])
+        )
+    return findings
 
 
 def _check_351_canonical_producer_identity(repo_root: Path) -> list[str]:
@@ -2726,21 +2858,9 @@ def check_evidence_authority_claims_are_custodied(
     # WARN-ONLY scope extension (ddm_sp2 2026-08-19): GT decode-lineage objective
     # custody. Reported and returned, deliberately NOT raised, so this gate's
     # existing strict contract is unchanged by the extension.
-    gt_lineage_warnings = _check_351_gt_lineage_objective_custody(root)
-    if verbose:
-        status = (
-            f"WARN {len(gt_lineage_warnings)} finding(s)"
-            if gt_lineage_warnings
-            else "OK"
-        )
-        print(f"  [gt-lineage-objective-custody] {status} (WARN-ONLY; ddm_sp2)")
-        if gt_lineage_warnings:
-            print(f"    {_GT_LINEAGE_RULE_CHAIN}")
-            for item in gt_lineage_warnings[:_GT_LINEAGE_MAX_PRINTED]:
-                print(f"    - {item}")
-            remaining = len(gt_lineage_warnings) - _GT_LINEAGE_MAX_PRINTED
-            if remaining > 0:
-                print(f"    - ... and {remaining} more (full list in return value)")
+    gt_lineage_warnings = check_gt_lineage_objective_custody(
+        root, strict=False, verbose=verbose
+    )
     return [*violations, *custody_extensions, *gt_lineage_warnings]
 
 

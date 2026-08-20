@@ -26,6 +26,7 @@ Why these two surfaces are worth a regression guard:
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -114,6 +115,73 @@ def test_passthrough_refuses_a_duplicate_key(firer):
     """Order-dependent effective values are a confound, not a convenience."""
     with pytest.raises(ValueError, match="twice"):
         firer.parse_passthrough_env(["A=1", "A=2"])
+
+
+def test_dry_run_leaves_absent_attempt_dir_absent(firer, tmp_path, monkeypatch, capsys):
+    """rv15 F14: planning must not materialize an attempt, shim, or manifest."""
+    runtime = tmp_path / "runtime"
+    upstream = tmp_path / "upstream"
+    runtime.mkdir()
+    upstream.mkdir()
+    (runtime / "archive.zip").write_bytes(b"archive")
+    (runtime / "inflate.sh").write_text("#!/bin/sh\n", encoding="utf-8")
+    (upstream / "public_test_video_names.txt").write_text("x.mp4\n", encoding="utf-8")
+    attempt = tmp_path / "attempt"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "fire_local_advisory.py",
+            "--runtime-dir", str(runtime),
+            "--attempt-dir", str(attempt),
+            "--upstream-dir", str(upstream),
+            "--label", "dry-f14",
+            "--dry-run",
+        ],
+    )
+
+    assert firer.main() == 0
+    assert not attempt.exists()
+    plan = json.loads(capsys.readouterr().out)
+    assert plan["dry_run"] is True
+    assert plan["pyshim"] == str(attempt.resolve() / "pyshim" / "python")
+
+
+def test_dry_run_keeps_existing_empty_attempt_byte_identical(
+    firer, tmp_path, monkeypatch, capsys
+):
+    runtime = tmp_path / "runtime"
+    upstream = tmp_path / "upstream"
+    attempt = tmp_path / "attempt"
+    runtime.mkdir()
+    upstream.mkdir()
+    attempt.mkdir()
+    (runtime / "archive.zip").write_bytes(b"archive")
+    (runtime / "inflate.sh").write_text("#!/bin/sh\n", encoding="utf-8")
+    (upstream / "public_test_video_names.txt").write_text("x.mp4\n", encoding="utf-8")
+    before = attempt.stat()
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "fire_local_advisory.py",
+            "--runtime-dir", str(runtime),
+            "--attempt-dir", str(attempt),
+            "--upstream-dir", str(upstream),
+            "--label", "dry-f14-existing",
+            "--dry-run",
+        ],
+    )
+
+    assert firer.main() == 0
+    capsys.readouterr()
+    after = attempt.stat()
+    assert list(attempt.iterdir()) == []
+    assert (after.st_ino, after.st_size, after.st_mtime_ns) == (
+        before.st_ino,
+        before.st_size,
+        before.st_mtime_ns,
+    )
 
 
 # --------------------------------------------------------------------------

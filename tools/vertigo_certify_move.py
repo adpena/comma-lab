@@ -37,6 +37,7 @@ import hashlib
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -46,6 +47,10 @@ from pathlib import Path
 APPLEDOUBLE_PREFIX = "._"
 DS_STORE = ".DS_Store"
 SCHEMA = "vertigo_certify_move_cert.v1"
+
+
+class CensusError(RuntimeError):
+    """A census could not observe every candidate data file."""
 
 
 def utcnow() -> str:
@@ -87,19 +92,34 @@ class Census:
 
 def take_census(root: Path) -> Census:
     c = Census(root=root)
-    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
-        c.n_dirs += len(dirnames)
+    def refuse_walk_error(exc: OSError) -> None:
+        raise CensusError(f"unreadable directory during census: {exc}") from exc
+
+    for dirpath, dirnames, filenames in os.walk(
+        root, followlinks=False, onerror=refuse_walk_error
+    ):
+        for dn in list(dirnames):
+            p = Path(dirpath) / dn
+            try:
+                st = p.lstat()
+            except OSError as exc:
+                raise CensusError(f"unreadable during census: {p}: {exc}") from exc
+            if stat.S_ISLNK(st.st_mode):
+                c.n_symlinks += 1
+                dirnames.remove(dn)
+            else:
+                c.n_dirs += 1
         for fn in filenames:
             p = Path(dirpath) / fn
-            if p.is_symlink():
+            try:
+                st = p.lstat()
+            except OSError as exc:
+                raise CensusError(f"unreadable during census: {p}: {exc}") from exc
+            if stat.S_ISLNK(st.st_mode):
                 c.n_symlinks += 1
                 continue
             if is_metadata_sidecar(fn):
                 c.n_sidecars += 1
-                continue
-            try:
-                st = p.stat()
-            except OSError:
                 continue
             rel = str(p.relative_to(root))
             c.files.append((rel, st.st_size))
@@ -243,6 +263,12 @@ def main() -> int:
         default="",
         help="Comma-separated manifests/receipts that cite this path (recorded, not ignored).",
     )
+    ap.add_argument(
+        "--no-known-references-rationale",
+        default="",
+        help="Substantive reason no citing manifest/receipt is known; required for --apply "
+        "when --referenced-by is empty.",
+    )
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument(
         "--min-dest-avail-gib",
@@ -257,6 +283,14 @@ def main() -> int:
         help="After verified equality, remove source and install a symlink.",
     )
     args = ap.parse_args()
+
+    referenced_by = [s.strip() for s in args.referenced_by.split(",") if s.strip()]
+    no_refs_rationale = args.no_known_references_rationale.strip()
+    if args.apply and not referenced_by and len(no_refs_rationale) < 12:
+        return _block(
+            "--apply requires --referenced-by, or a substantive "
+            "--no-known-references-rationale (>=12 chars)"
+        )
 
     src = Path(args.source).resolve()
     if not src.is_dir():
@@ -275,7 +309,10 @@ def main() -> int:
     manifest_dir = Path(args.dest_root) / "_manifests" / str(rel_from_vol).replace("/", "__")
 
     print(f"[{utcnow()}] census: {src}", file=sys.stderr, flush=True)
-    census = take_census(src)
+    try:
+        census = take_census(src)
+    except CensusError as exc:
+        return _block(str(exc))
     src_du = int(
         subprocess.run(["du", "-x", "-s", "-k", str(src)], capture_output=True, text=True, check=True)
         .stdout.split()[0]
@@ -295,7 +332,8 @@ def main() -> int:
         "destination": str(dest),
         "category": args.category,
         "reason": args.reason,
-        "referenced_by": [s for s in args.referenced_by.split(",") if s],
+        "referenced_by": referenced_by,
+        "no_known_references_rationale": no_refs_rationale or None,
         "census": census.as_dict(),
         "source_allocated_kib": src_du,
         "dest_df_before": dest_df,
@@ -343,7 +381,19 @@ def main() -> int:
     )
 
     print(f"[{utcnow()}] destination manifest", file=sys.stderr, flush=True)
-    dest_census = take_census(dest)
+    try:
+        dest_census = take_census(dest)
+    except CensusError as exc:
+        append_ledger(
+            ledger,
+            {
+                "phase": "BLOCKED_DEST_CENSUS_UNREADABLE",
+                "source": str(src),
+                "destination": str(dest),
+                "error": str(exc),
+            },
+        )
+        return _block(f"destination census incomplete; source untouched: {exc}")
     dest_rels = [r for r, _ in dest_census.files]
     if dest_rels != rels:
         missing = sorted(set(rels) - set(dest_rels))[:10]

@@ -31,6 +31,7 @@ from tac.commit_safety.sister_checkpoint_guard import (  # noqa: E402
     SisterCheckpointVerdict,
     bare_override_attempted,
     check_files_against_sister_checkpoints,
+    infer_current_subagent_id,
     parse_override_env,
 )
 
@@ -44,13 +45,14 @@ def _write_checkpoint(
     status: str = "in_progress",
     written_at_utc: str | None = None,
     notes: str = "",
+    parent_id_or_session: str | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if written_at_utc is None:
         written_at_utc = _dt.datetime.now(_dt.UTC).isoformat()
     record = {
         "subagent_id": subagent_id,
-        "parent_id_or_session": None,
+        "parent_id_or_session": parent_id_or_session,
         "lane_id": None,
         "step": 1,
         "status": status,
@@ -101,6 +103,60 @@ class TestHelperUnit:
         assert verdict.conflicts == ()
         assert verdict.in_flight_subagent_ids == ()
         assert verdict.has_conflict() is False
+
+    def test_inference_refuses_lone_checkpoint_from_different_session(
+        self, empty_checkpoint, now_utc, tmp_path
+    ):
+        _write_checkpoint(
+            empty_checkpoint,
+            subagent_id="SISTER-A",
+            files_touched=["src/tac/foo.py"],
+            written_at_utc=(now_utc - _dt.timedelta(minutes=5)).isoformat(),
+            parent_id_or_session="different-session",
+        )
+        assert infer_current_subagent_id(
+            ["src/tac/foo.py"],
+            current_session_id="caller-session",
+            checkpoint_path=empty_checkpoint,
+            codex_queue_path=tmp_path / "absent-queue.jsonl",
+            now_utc=now_utc,
+        ) is None
+
+    def test_inference_refuses_stale_checkpoint_from_same_session(
+        self, empty_checkpoint, now_utc, tmp_path
+    ):
+        _write_checkpoint(
+            empty_checkpoint,
+            subagent_id="OLD-SELF",
+            files_touched=["src/tac/foo.py"],
+            written_at_utc=(now_utc - _dt.timedelta(minutes=61)).isoformat(),
+            parent_id_or_session="caller-session",
+        )
+        assert infer_current_subagent_id(
+            ["src/tac/foo.py"],
+            current_session_id="caller-session",
+            checkpoint_path=empty_checkpoint,
+            codex_queue_path=tmp_path / "absent-queue.jsonl",
+            now_utc=now_utc,
+        ) is None
+
+    def test_inference_accepts_unique_fresh_checkpoint_from_same_session(
+        self, empty_checkpoint, now_utc, tmp_path
+    ):
+        _write_checkpoint(
+            empty_checkpoint,
+            subagent_id="CURRENT-SELF",
+            files_touched=["src/tac/foo.py", "src/tac/other.py"],
+            written_at_utc=(now_utc - _dt.timedelta(minutes=5)).isoformat(),
+            parent_id_or_session="caller-session",
+        )
+        assert infer_current_subagent_id(
+            ["src/tac/foo.py"],
+            current_session_id="caller-session",
+            checkpoint_path=empty_checkpoint,
+            codex_queue_path=tmp_path / "absent-queue.jsonl",
+            now_utc=now_utc,
+        ) == "CURRENT-SELF"
 
     def test_single_conflict_abort(self, empty_checkpoint, now_utc):
         sister_ts = (now_utc - _dt.timedelta(minutes=5)).isoformat()
@@ -571,6 +627,25 @@ class TestSerializerWireIn:
             f"got rc={result.returncode}, stderr={result.stderr}"
         )
 
+    def test_serializer_without_label_excludes_its_unique_own_checkpoint(self, tmp_path):
+        """rv15 F19 reproduction: default anonymous used to collide with self."""
+        repo, env = _make_test_repo(tmp_path)
+        env.pop("SUBAGENT_LABEL", None)
+        env["CODEX_THREAD_ID"] = "rvf1-test-session"
+        _write_checkpoint(
+            repo / ".omx" / "state" / "subagent_progress.jsonl",
+            subagent_id="ddm_rvf1",
+            files_touched=["foo.py"],
+            parent_id_or_session="rvf1-test-session",
+        )
+        (repo / "foo.py").write_text("# own checkpoint\n")
+
+        result = _run_serializer(repo, env, ["foo.py"], message="own checkpoint")
+
+        assert result.returncode == 0, result.stderr
+        log = (repo / ".omx" / "state" / "commit-serializer.log").read_text()
+        assert '"label": "ddm_rvf1"' in log
+
     def test_serializer_aborts_on_fresh_sister_conflict(self, tmp_path):
         repo, env = _make_test_repo(tmp_path)
         now = _dt.datetime.now(_dt.UTC)
@@ -962,8 +1037,9 @@ class TestCatalog340PreflightGate:
         )
         (tmp_path / "tools").mkdir()
         (tmp_path / "tools" / "subagent_commit_serializer.py").write_text(
-            "from tac.commit_safety import check_files_against_sister_checkpoints\n"
+            "from tac.commit_safety import check_files_against_sister_checkpoints, infer_current_subagent_id\n"
             "check_files_against_sister_checkpoints(['x'])\n"
+            "infer_current_subagent_id(['x'])\n"
         )
         # Should not raise.
         v = check_subagent_commit_serializer_invokes_sister_checkpoint_guard(

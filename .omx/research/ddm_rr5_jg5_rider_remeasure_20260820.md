@@ -32,15 +32,17 @@ All three controls executed and PASSED on these bytes:
 - **C2 carrier-body identity** — the decoder's `restore_carrier_body` returns the shipped body
   BYTE-FOR-BYTE, so every stage downstream of the carrier section is bit-identical *by
   construction*.
-- **C3 receiver decode identity** — the REAL receiver
-  (`runtime.residual_archive.read_residual_archive`) was run on BOTH archives and all **10** parsed
-  parts compared byte-for-byte. Proof sha `b435877fd9ff59f4644544e8d2ab5e5502e9fd86b1ec3534275314d665bc3c40`.
+- **C3 receiver parse semantics** — the REAL receiver
+  (`runtime.residual_archive.read_residual_archive`) was run on BOTH archives: **9 of 10** parsed
+  parts match byte-for-byte; the tenth, raw `compressed_models`, is the intended −169 B container
+  delta. The restored semantic object, `carrier_blob`, matches byte-for-byte. Proof sha
+  `b435877fd9ff59f4644544e8d2ab5e5502e9fd86b1ec3534275314d665bc3c40`.
 
-Because the decoded stream is byte-identical, the scorers see identical inputs: d_seg and d_pose
-are unchanged EXACTLY, and only the rate term moves. The S arithmetic above is therefore exact
-given the controls, **not a projection**. It is still NOT an admitted pointer move: per the
-authority rules a pointer move requires the exact `upstream/evaluate.py` row on the shipped bytes.
-That row is owed and queued (single-flight — the rr8 wall-clock row is in flight).
+Because the restored semantic carrier is byte-identical, all downstream rider semantics are
+unchanged by construction: d_seg and d_pose are unchanged for the standalone rider receiver, and
+only the rate term moves. The S arithmetic above is therefore exact for that standalone object,
+**not a projection**. It is still NOT an admitted pointer move, and it does not prove the later
+port+rider composition: each requires execution on its own exact tree.
 
 ## THE CROSS-REGIME CORRECTION THIS UNIT PAID
 

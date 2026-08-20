@@ -76,6 +76,19 @@ def test_append_minimal_record(isolated_state_dir):
     assert len(rows) == 1
 
 
+def test_default_session_anchor_prefers_codex_thread(isolated_state_dir):
+    assert isolated_state_dir.default_session_anchor(
+        {
+            "CODEX_THREAD_ID": "codex-thread",
+            "CLAUDE_CODE_SESSION_ID": "claude-session",
+        }
+    ) == "codex-thread"
+
+
+def test_default_session_anchor_is_absent_without_agent_session(isolated_state_dir):
+    assert isolated_state_dir.default_session_anchor({}) is None
+
+
 def test_append_with_all_fields(isolated_state_dir):
     mod = isolated_state_dir
     rec = mod.append_checkpoint(

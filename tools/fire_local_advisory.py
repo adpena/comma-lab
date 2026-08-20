@@ -53,6 +53,7 @@ import os
 import stat
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -165,10 +166,18 @@ def main() -> int:
             return _refuse(f"{what} missing: {path}")
     if attempt.exists() and any(attempt.iterdir()):
         return _refuse(f"attempt dir not empty (mint a fresh one): {attempt}")
-    attempt.mkdir(parents=True, exist_ok=True)
-
     interpreter = Path(sys.executable)  # UNRESOLVED: preserve the venv (see generate_pyshim)
-    shim = generate_pyshim(attempt / "pyshim", interpreter)
+    if args.dry_run:
+        # A dry run is an observation, not an attempt.  Exercise the shim
+        # self-test in success-only scratch, but point the printed plan at the
+        # path a real launch would create.  In particular, do not create the
+        # attempt dir, pyshim, or launch manifest (rv15 F14).
+        with tempfile.TemporaryDirectory(prefix="fire_local_advisory_dryrun_") as scratch:
+            generate_pyshim(Path(scratch) / "pyshim", interpreter)
+        shim = attempt / "pyshim" / "python"
+    else:
+        attempt.mkdir(parents=True, exist_ok=True)
+        shim = generate_pyshim(attempt / "pyshim", interpreter)
 
     env_pairs = {
         "PYTHONDONTWRITEBYTECODE": "1",
@@ -224,10 +233,10 @@ def main() -> int:
         "argv": launcher,
         "dry_run": bool(args.dry_run),
     }
-    (attempt / "ADVISORY_LAUNCH.json").write_text(json.dumps(manifest, indent=1))
     if args.dry_run:
         print(json.dumps(manifest, indent=1))
         return 0
+    (attempt / "ADVISORY_LAUNCH.json").write_text(json.dumps(manifest, indent=1))
 
     proc = subprocess.run(launcher, cwd=REPO_ROOT, env={**os.environ, **env_pairs})
     if proc.returncode != 0:

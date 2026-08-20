@@ -450,7 +450,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         type=Path,
         default=Path(
             "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/authority_cache/"
-            "gt_cache_600_official_ada.pt"
+            "gt_cache_600_official_ada.pt"  # GT_LINEAGE_OK: default bytes are registry-classified DALI_NVDEC sha256 382d7dfe38b37c0c
         ),
     )
     parser.add_argument(

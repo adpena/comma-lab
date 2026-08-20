@@ -60,7 +60,7 @@ EXPECTED_RECEIVER_COMMIT = "5de03569ad"
 DEFAULT_RUNTIME = Path("src/tac/pr130_runtime/fx1_runtime_tree")
 DEFAULT_ARCHIVE = Path("/Volumes/VertigoDataTier/pact/ddm_pr130_reproduce_20260809/reproduction/archive.zip")
 DEFAULT_CACHE = Path(
-    "/Volumes/VertigoDataTier/pact/ddm_pr130_encode_tokens_metal_20260809/caches/gt_cache_600_official_ada.pt"
+    "/Volumes/VertigoDataTier/pact/ddm_pr130_encode_tokens_metal_20260809/caches/gt_cache_600_official_ada.pt"  # GT_LINEAGE_OK: symlink target bytes are registry-classified DALI_NVDEC sha256 382d7dfe38b37c0c
 )
 DEFAULT_MANIFEST = Path("/Volumes/VertigoDataTier/pact/ddm_pr130_encode_tokens_metal_20260809/run/launch_manifest.json")
 DEFAULT_RECORDED_RANGE = Path(

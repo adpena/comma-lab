@@ -317,6 +317,9 @@ including both refusal branches.
 
 **Fleet 60/60.** Top-mass selection (48.19% of advisory pose mass), solved with the retargeted
 uncapped exact int12 carrier solve, realized acceptance throughout (0 pairs worse than base).
+Historical-lineage rider (ddm_gt2, 2026-08-20): this was the then-live **PyAV-GT** ranking,
+not the later DALI shipping-object ranking. The retained result is not re-ranked; its selection
+provenance remains part of the instance.
 
 | quantity | value |
 |---|---|

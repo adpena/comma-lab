@@ -347,6 +347,71 @@ def test_certification_ledger_is_append_only_and_latest_wins(tmp_path):
     assert mod.load_certified(ledger)[sha]["owner"] == "ddm_b"
 
 
+def test_certification_invalidates_matching_cache_after_durable_append(tmp_path):
+    ledger = tmp_path / "c.jsonl"
+    cache = tmp_path / "cache.json"
+    cache.write_text('{"owed_authored_blobs": 5}', encoding="utf-8")
+
+    mod.append_certification(
+        "d" * 40,
+        "rebuildable fixture with committed generator",
+        "ddm_rvf1",
+        ledger=ledger,
+        cache=cache,
+    )
+
+    assert ledger.read_text(encoding="utf-8").strip()
+    assert not cache.exists()
+
+
+def test_cache_invalidation_failure_does_not_partially_append_certification(tmp_path):
+    ledger = tmp_path / "c.jsonl"
+    cache = tmp_path / "cache-dir"
+    cache.mkdir()
+
+    with pytest.raises(mod.AuditError, match="not appended"):
+        mod.append_certification(
+            "f" * 40,
+            "rebuildable fixture with committed generator",
+            "ddm_rv16",
+            ledger=ledger,
+            cache=cache,
+        )
+
+    assert not ledger.exists(), "a refused call must not commit a hidden ledger row"
+    assert cache.is_dir(), "the failed invalidation target must remain visible"
+
+
+def test_certification_refuses_ledger_as_its_own_cache(tmp_path):
+    ledger = tmp_path / "c.jsonl"
+    with pytest.raises(mod.AuditError, match="distinct paths"):
+        mod.append_certification(
+            "f" * 40,
+            "rebuildable fixture with committed generator",
+            "ddm_rv16",
+            ledger=ledger,
+            cache=ledger,
+        )
+    assert not ledger.exists()
+
+
+def test_alternate_certification_ledger_does_not_invalidate_live_cache(
+    tmp_path, monkeypatch
+):
+    live_cache = tmp_path / "live-cache.json"
+    live_cache.write_text("still valid for the unrelated ledger", encoding="utf-8")
+    monkeypatch.setattr(mod, "CACHE", live_cache)
+
+    mod.append_certification(
+        "e" * 40,
+        "rebuildable fixture with committed generator",
+        "ddm_rvf1",
+        ledger=tmp_path / "alternate.jsonl",
+    )
+
+    assert live_cache.read_text(encoding="utf-8") == "still valid for the unrelated ledger"
+
+
 def test_load_certified_tolerates_malformed_rows(tmp_path):
     ledger = tmp_path / "c.jsonl"
     ledger.write_text('{"blob_sha1": "c' + "c" * 38 + '"}\nnot json at all\n\n')

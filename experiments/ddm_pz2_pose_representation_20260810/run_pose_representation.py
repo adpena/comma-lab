@@ -346,7 +346,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dali-cache",
         type=Path,
-        default=Path("/Volumes/VertigoDataTier/pact/ddm_pr130_train_20260809/caches/gt_cache_600_official_ada.pt"),
+        default=Path("/Volumes/VertigoDataTier/pact/ddm_pr130_train_20260809/caches/gt_cache_600_official_ada.pt"),  # GT_LINEAGE_OK: default bytes are registry-classified DALI_NVDEC sha256 382d7dfe38b37c0c
     )
     parser.add_argument(
         "--base-archive",

@@ -69,7 +69,7 @@ CODEC_CAUSAL_SOURCES = (
 )
 PYTHON_PATH = REPO_ROOT / ".venv/bin/python"
 CANONICAL_CACHE_PATH = Path(
-    "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/authority_cache/gt_cache_600_official_ada.pt"
+    "/Volumes/VertigoDataTier/pact/ddm_op1r_20260809/authority_cache/gt_cache_600_official_ada.pt"  # GT_LINEAGE_OK: canonical bytes are registry-classified DALI_NVDEC sha256 382d7dfe38b37c0c
 )
 CANONICAL_INIT_PATH = Path(
     "/Volumes/VertigoDataTier/pact/ddm_hb1_20260806/checkpoints/gt/hpac_p64_exact_from_archive.pt"

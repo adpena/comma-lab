@@ -291,11 +291,18 @@ def load_certified(path: Path | None = None) -> dict[str, dict]:
     return rows
 
 
-def append_certification(sha: str, rationale: str, owner: str, path: str = "",
-                         ledger: Path | None = None) -> dict:
+def append_certification(
+    sha: str,
+    rationale: str,
+    owner: str,
+    path: str = "",
+    ledger: Path | None = None,
+    cache: Path | None = None,
+) -> dict:
     """Append one certify-in-place row. Narrow by design: scratch, third-party, or a rebuildable
     whose GENERATOR is committed. A placeholder rationale is refused — an uncertified blob is a
     more honest state than a fake certificate."""
+    canonical_ledger = ledger is None
     ledger = ledger or CERTIFIED
     rationale = (rationale or "").strip()
     if len(rationale) < 12 or rationale.lower() in {"<rationale>", "<reason>", "tbd", "placeholder"}:
@@ -311,9 +318,31 @@ def append_certification(sha: str, rationale: str, owner: str, path: str = "",
         "path": path,
         "certified_at_utc": datetime.now(UTC).isoformat(timespec="seconds"),
     }
+    # A certification changes the denominator.  The old cache must never
+    # survive as a fresh-looking answer for another 72 hours (rv15 F15).
+    # Alternate ledgers used by tests/tools do not invalidate live state
+    # unless the caller explicitly supplies their matching cache.
+    cache_to_invalidate = cache if cache is not None else (CACHE if canonical_ledger else None)
+    if cache_to_invalidate is not None:
+        if cache_to_invalidate.resolve() == ledger.resolve():
+            raise AuditError("certification ledger and cache must be distinct paths")
+        try:
+            cache_to_invalidate.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            raise AuditError(
+                f"certification not appended because stale cache could not be invalidated: "
+                f"{cache_to_invalidate}: {exc}"
+            ) from exc
+    # Invalidate before append: a failed invalidation must not return an error
+    # after silently committing the denominator-changing row.  Losing a cache
+    # is safe (it is rebuildable); committing beside a stale cache is not.
     ledger.parent.mkdir(parents=True, exist_ok=True)
     with ledger.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(row, sort_keys=True) + "\n")
+        fh.flush()
+        os.fsync(fh.fileno())
     return row
 
 

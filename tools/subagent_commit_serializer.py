@@ -163,12 +163,16 @@ try:
         check_files_against_sister_checkpoints,
         parse_override_env,
     )
-    from tac.commit_safety.sister_checkpoint_guard import CorruptCheckpointError
+    from tac.commit_safety.sister_checkpoint_guard import (
+        CorruptCheckpointError,
+        infer_current_subagent_id,
+    )
     _CATALOG_340_HELPER_AVAILABLE = True
 except ImportError:
     # Test fixtures may stand up a minimal repo without the package.
     _CATALOG_340_HELPER_AVAILABLE = False
     check_files_against_sister_checkpoints = None  # type: ignore[assignment]
+    infer_current_subagent_id = None  # type: ignore[assignment]
     bare_override_attempted = None  # type: ignore[assignment]
     parse_override_env = None  # type: ignore[assignment]
     CorruptCheckpointError = RuntimeError  # type: ignore[misc, assignment]
@@ -1446,9 +1450,9 @@ def main(rebind_root: bool = False) -> int:
              f"Default {DEFAULT_TIMEOUT_SECONDS}.",
     )
     parser.add_argument(
-        "--label", default=os.environ.get("SUBAGENT_LABEL", "anonymous"),
-        help="Subagent label for log forensics (default: $SUBAGENT_LABEL or "
-             "'anonymous').",
+        "--label", default=os.environ.get("SUBAGENT_LABEL"),
+        help="Subagent label for log forensics (default: $SUBAGENT_LABEL, then "
+             "the unique active checkpoint covering every staged file, then 'anonymous').",
     )
     parser.add_argument(
         "--repo-root", default=None,
@@ -1663,6 +1667,17 @@ def main(rebind_root: bool = False) -> int:
             "must pass --files or --stdin-files (or --no-stage if files are "
             "already staged, or --patch-file for intent-manifest staging)"
         )
+
+    if not args.label:
+        inferred_label = None
+        if infer_current_subagent_id is not None and files:
+            try:
+                inferred_label = infer_current_subagent_id(list(files))
+            except CorruptCheckpointError:
+                # The canonical guard below owns the fail-closed rc=11 path.
+                # Do not turn corrupt state into an inferred self-exclusion.
+                inferred_label = None
+        args.label = inferred_label or "anonymous"
 
     # SHIFT-LEFT triality-leg advisory (ddm_hw1, task #785): the Stop-hook legs
     # (missing_legs + consumer_leg in triality_drift_detector) fire AFTER the commit

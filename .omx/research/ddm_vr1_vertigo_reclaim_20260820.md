@@ -4,6 +4,10 @@
 **Axis:** `[byte/custody apparatus, scorer-free]`
 **Frontier effect:** none. No scorer, archive mutation, Modal dispatch, or exact evaluation ran.
 
+**2026-08-20 rvf1 correction:** the byte move remains verified, but five descriptions below
+were corrected against the landed tool, the phase ledger, and a fresh bounded `git grep`.
+`verdict_scope: documentation and future-move apparatus; the completed byte-equality verdict is unchanged.`
+
 ## Result
 
 | Measure | Before | After |
@@ -25,9 +29,17 @@ Both manifest digests are the value computed **twice**: once from the source str
 once from an independent re-read of the destination. Both original paths are now absolute symlinks
 and both resolve. An independent spot-check read `d1/eval_root/submissions/pfs1/archive.zip` through
 the symlink and got `624ffe57000c6fe4a6802a6d8b9a5d6002617f29b0bbb9e186d1273fa996600c`, matching its
-manifest row exactly — so the 728 citations of pfs1 still resolve to byte-identical content.
+manifest row exactly. A bounded tracked-corpus census (excluding the rvf1 execution memo that
+reports it) finds **112 files / 157 occurrences** of `ddm_pfs1_20260729` at this worktree;
+those path references still resolve to byte-identical content.
 
-Ledger: `.omx/research/ddm_vr1_move_cert_ledger.jsonl`. Per-tree manifests, both `source.sha256` and
+Ledger: `.omx/research/ddm_vr1_move_cert_ledger.jsonl`. Its 10 records are **phase-transition
+rows across two artifacts**, not ten independent or complete certificates: pfs1 has six rows
+(`PLAN`, `ABORTED_RESTART`, restarted `PLAN`, `COPIED`, `VERIFIED`, `MOVED_SYMLINKED`) and dqs1
+has four (`PLAN`, `COPIED`, `VERIFIED`, `MOVED_SYMLINKED`). The two original `PLAN` rows recorded
+`referenced_by: []`; that omission is now stated rather than backfilled. Future `--apply` calls
+fail closed unless they provide `--referenced-by` or a substantive no-known-references rationale.
+Per-tree manifests, both `source.sha256` and
 `destination.sha256`, live under `/Volumes/APDataStore/pact/vertigo_coldstore/_manifests/`.
 
 ## Why this pass exists
@@ -48,8 +60,10 @@ Certify-or-block, never delete. For each selected tree:
 1. Census the source excluding AppleDouble `._*` and `.DS_Store` sidecars (ExFAT destination
    materialises those; the ai1/sr2 precedent established data-fork-only comparison as the valid
    cross-filesystem test).
-2. Full per-file SHA-256 source manifest; the manifest file itself is digested.
-3. `rsync -a` to `/Volumes/APDataStore/pact/vertigo_coldstore/<original-relative-path>`.
+2. Stream each source file once through `copy_and_hash_one`: hash it while writing its
+   destination copy, then materialize and digest the source manifest from those results.
+3. Destination copy at `/Volumes/APDataStore/pact/vertigo_coldstore/<original-relative-path>`;
+   the landed tool does not invoke `rsync`.
 4. Destination path-set equality, then full per-file SHA-256 destination manifest.
 5. Manifest digests must be equal. Unequal, missing, or extra paths = BLOCK, source untouched.
 6. Cert row appended and `fsync`ed to the JSONL ledger **before** any source byte is retired.
@@ -60,8 +74,9 @@ The single permitted deletion class is step 7: a source whose destination copy i
 equal, whose cert row is already durable, and whose original path still resolves through a symlink.
 
 Tool: `tools/vertigo_certify_move.py`. Ledger: `.omx/research/ddm_vr1_move_cert_ledger.jsonl`.
-Ledger rows are appended at every phase transition (`PLAN` → `SOURCE_MANIFEST` → `COPIED` →
-`VERIFIED` → `MOVED_SYMLINKED`), so the ledger is truthful at any interruption point.
+Ledger rows are appended at the phases the tool actually emits (`PLAN` → `COPIED` → `VERIFIED`
+→ `MOVED_SYMLINKED`, plus the recorded `ABORTED_RESTART` from the superseded first attempt), so
+the ledger is truthful at any interruption point. There is no `SOURCE_MANIFEST` phase.
 
 ## What was selected, and why
 
@@ -81,14 +96,15 @@ Quiescence and custody, measured before any byte moved:
 
 | Tree | Allocated | Files newer than 14 d | Symlinks | Active lane claims | In hot state / current focus | Corpus refs |
 |---|---:|---:|---:|---:|---|---:|
-| `pact/ddm_pfs1_20260729` | 47.89 GiB | 0 | 0 | 0 | no | 728 |
-| `pact/experiments/results/dqs1_local_first` | 27.30 GiB | 0 | 0 | 0 | no | many |
+| `pact/ddm_pfs1_20260729` | 47.89 GiB | 0 | 0 | 0 | no | 112 tracked files / 157 occurrences |
+| `pact/experiments/results/dqs1_local_first` | 27.30 GiB | 0 | 0 | 0 | no | 561 tracked files / 22,274 occurrences |
 
 Zero symlinks in both means the SHA-256 manifest equality is a **complete** proof for these two
-moves — `rsync -a` copies symlinks, but symlinks are excluded from the data-fork manifest, so a
-nonzero count would have left a gap. It did not arise here; it is recorded as a hardening item
-below. High corpus reference counts are exactly why the original path is preserved as a symlink
-rather than removed.
+moves. The landed copy loop handles regular files only and the manifest excludes symlinks, so a
+nonzero symlink count would have left a gap. It did not arise here; it is recorded as a hardening
+item below. The bounded current occurrence ratio is about **141.9×** larger for dqs1 than pfs1;
+the old `728`/`many` labels were both unsourced and magnitude-inverting. High corpus reference
+counts are exactly why the original path is preserved as a symlink rather than removed.
 
 ## Deliberately left in place
 
@@ -110,8 +126,9 @@ move projected to leave it below **25 GiB**. That caps this pass at roughly 104 
 
 ## Operating conditions, and one design correction made mid-pass
 
-The first implementation used the sr2-style ordering: hash the source, then `rsync`, then hash the
-destination. That reads the source **twice**. After 85 minutes it had hashed roughly 41% of one
+The superseded, aborted first implementation used the sr2-style ordering: hash the source, then
+`rsync`, then hash the destination. The landed tool does not. That old design reads the source
+**twice**. After 85 minutes it had hashed roughly 41% of one
 tree, so I measured the volume directly instead of assuming:
 
 | Measurement | Result |
@@ -175,12 +192,14 @@ directory, and rsync completion is not deletion authority. The oc2 consolidation
   `census_ge5gib.tsv` — the ≥5 GiB rows; `vertigo_du_d2.txt` — the full depth-2 walk) and mirrored to
   `/Volumes/APDataStore/pact/vertigo_coldstore/_manifests/_vr1_census_20260820/`. It is committed
   rather than left in `.omx/tmp/`, which is ephemeral scratch and not a durable evidence path.
-- **HARDENING OWED** — `tools/vertigo_certify_move.py` (landed at `ef46ed13a4`): (a) write and
+- **HARDENING OWED** — `tools/vertigo_certify_move.py` (base landed at `ef46ed13a4`): (a) write and
   compare a `symlinks.tsv` of link targets so a tree containing symlinks still gets a complete
   equality proof — both trees here had zero symlinks, so the gap did not bite, but the next tree may
   not be so clean; (b) record a ledger row when `shutil.rmtree` of the retired original partially
-  fails, so a `.RETIRING` remnant is never silent. The third item — removing the wasted second
-  source read — was **fixed during this pass**, not deferred: the copy now carries the source hash.
+  fails, so a `.RETIRING` remnant is never silent. rvf1 additionally fixed the census omission:
+  any `stat` error now blocks instead of silently deleting a file from the proof denominator, and
+  future apply plans must account for their reference surface. The wasted second source read was
+  **fixed during vr1**, not deferred: the copy now carries the source hash.
 
 ## LIVE-HYPOTHESES
 

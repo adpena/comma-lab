@@ -86,7 +86,7 @@ DEFAULT_GT_DALI = Path(
     "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_dali.pt"
 )
 DEFAULT_GT_AV = Path(
-    "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_av.pt"
+    "/Volumes/VertigoDataTier/pact/ddm_chroma_dali_av_20260809/gt_cache_av.pt"  # GT_LINEAGE_OK: deliberate PYAV_YUV420_TO_RGB ruler sha256 837b5852dc71 consumed beside the DALI ruler for same-instrument differencing
 )
 
 #: The T4 receipt's seg leg for the shipped body -- the number the instrument must

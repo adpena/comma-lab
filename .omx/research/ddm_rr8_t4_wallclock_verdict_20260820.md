@@ -1,4 +1,4 @@
-# ddm_rr8 T4 wall-clock row — THE DECODE WALL IS CLEARED (464.6 s vs 1,419.9 s), score bit-identical
+# ddm_rr8 T4 wall-clock row — one instrumented instance passes (464.6 s vs 1,419.9 s), score bit-identical
 
 `date_utc: 2026-08-20` · `owner: MAIN` · `axis: [contest-CUDA T4, n600]` · `call_id:
 fc-01M0FZKTSY9ZRH2TEX27TZACKP` · `score_claim: true (identity)` · `frontier_moved: false (by
@@ -6,9 +6,10 @@ construction — archive bytes unchanged)` · cost ≈ $0.16
 
 ## THE ANSWER, FIRST
 
-The FreeCorrector native port **clears the shipping decode wall with margin at every corner.**
-Measured inflate on the shipping axis: **464.558564563 s**, against jg5's 1,419.9042126240001 s —
-a **3.056× end-to-end speedup, saving 955.3 s** — and the score is **bit-identical**.
+One instrumented FreeCorrector native-port instance **passed the measured 1,800 s whole-job wall**.
+Measured inflate on that `[contest-CUDA T4, n600]` instance: **464.558564563 s**, against jg5's
+1,419.9042126240001 s — a **3.056× end-to-end speedup, saving 955.3 s** — and the score is
+**bit-identical**. Stability across repeats and the clean shipping object remain unmeasured.
 
 | Quantity | jg5 (Python corrector) | rr8 (NativeFreeCorrector) | verdict |
 |---|---|---|---|
@@ -22,9 +23,11 @@ a **3.056× end-to-end speedup, saving 955.3 s** — and the score is **bit-iden
 Score identity is FORCED here (identical archive bytes, decode proven bit-identical by rr6), so it
 is a **control that passed**, not a result. The result is the wall-clock.
 
-**Port activation is proven in the receipt, not asserted:** `token_decoder.free_corrector =
-"NativeFreeCorrector"` on this row vs `None` on jg5. A silent fallback to the Python path would
-have shown `None` and the timing would not have moved. It did both.
+**Port activation is proven by the receipt plus the hashed runtime source, not by the field alone.**
+The receipt reports `token_decoder.free_corrector = "NativeFreeCorrector"`; the selector is called
+once, and that selected object is used unconditionally by the 600-frame and 190-group decode loops.
+On this ported tree a silent Python fallback would report `"FreeCorrector"`, **not `None`**. The
+reported native class plus the loop wiring proves the native object serviced every pair on this row.
 
 ## THE DECISION — against the MEASURED job wall, not the projected band
 
@@ -49,17 +52,19 @@ source — the **1,800 s whole-job wall** (`upstream/.github/workflows/eval.yml:
 | projected whole job | **1,002.2 – 1,482.2** | mixed |
 | **slack vs the 1,800 s wall** | **317.8 – 797.8 s** | fits at BOTH ends |
 
-Under the pessimistic host assumption (next container as slow as jg5's, ×1.2855 — itself a
-one-sample estimator, see the decomposition below) our measured total re-scales to 648.2 s, and the
-projected whole job to 1,146.2 – 1,626.2 s: **still inside 1,800 s at both ends.**
+Under a **one-sample host-factor hypothesis** (next container as slow as jg5's, ×1.2855; see the
+decomposition below), our measured total re-scales to 648.2 s, and the projected whole job to
+1,146.2 – 1,626.2 s. This sensitivity calculation is inside 1,800 s at both projected ends; it is
+not a variance bound and cannot establish repeat stability.
 
 **jg5 for contrast: 1,471.33 s measured + 498–978 projected = 1,969.3 – 2,449.3 s — over the job
 wall at BOTH ends of the projection, not merely the loose one.** That is a stronger statement than
 the version this corrects, and it does not depend on the projected band being right: jg5 exceeds
 1,800 s the moment the other terms cost anything at all above 328.7 s.
 
-**The port ships** — and the residual uncertainty now sits explicitly in the PROJECTED terms
-(checkout/deps/download), not in our measurement.
+**The instrumented port instance passes.** Shipping still requires the clean composed object to run;
+the residual uncertainty includes PROJECTED checkout/deps/download terms, unmeasured repeat variance,
+and clean-tree behaviour.
 
 ## HONEST DECOMPOSITION — ~13.7 s of the saving is NOT the port
 
@@ -72,14 +77,14 @@ The non-token stages also got faster, and the port does not touch them:
 | frame0_selector_and_io | 5.145 | 3.668 | **1.403×** |
 | archive_setup | 0.358 | 0.280 | **1.279×** |
 
-`neural_render_and_resize` is a stage the FreeCorrector cannot influence, so its 1.285× is a
-**host-variance estimator**: this container was ~1.29× faster than jg5's. Consequences, stated
-plainly:
+`neural_render_and_resize` is a stage the FreeCorrector cannot influence, so its 1.285× ratio is a
+**single matched-stage point estimate of host/run variation**, not a bound or variance estimator.
+Consequences, stated plainly:
 
 - **~13.7 s** of the 955.3 s saving is a faster container, not the port.
 - **Port-isolated effect** = the token stage: −937.8 s, **3.323× raw**, **2.585× host-adjusted**.
-- The decision above does not depend on either ratio — it applies the host factor as a *risk
-  multiplier on the absolute number* and still passes.
+- The sensitivity calculation above applies the point estimate as a multiplier; it does not convert
+  one sample into a risk bound.
 
 ## cd1's LOCAL SPLIT DOES NOT TRANSFER — rv15's F4 confirmed by receipt, not argument
 
@@ -96,9 +101,9 @@ the end-to-end row supersedes them. Another instance of the [[cross-regime const
 genus, caught before it priced a decision.
 
 **rv15 F2/F3 (the `2.03×/2.77×` bar published without its ±61 s band, and the k=2 corner missing by
-−7.6 s) is now MOOT for the shipping decision.** A direct end-to-end measurement replaces a modeled
-threshold. F2/F3's *publication* cure still stands wherever the bar is quoted historically; it is no
-longer load-bearing for whether the port ships.
+−7.6 s) is now MOOT for this measured instance.** A direct end-to-end measurement replaces that
+modeled threshold. F2/F3's *publication* cure still stands wherever the bar is quoted historically;
+the clean shipping-object verdict remains owed.
 
 ## RUNTIME MANIFEST — 36 vs 35 files reconciled, not a discrepancy
 
@@ -121,14 +126,16 @@ candidate must be the **clean** port (instrumentation removed or proven byte-neu
 
 Two transforms are now proven and BOTH move the runtime tree:
 
-1. **rr8 native corrector** — archive byte-identical, runtime tree changes, decode 3.056× faster.
+1. **rr8 native corrector** — archive byte-identical, runtime tree changes, one instrumented T4
+   instance decoded 3.056× faster.
 2. **rr5 CPR1 rider** — archive `df7fd266…` @ 180,456 B (−169 B, ΔS −1.125302e-04), runtime tree
    changes (its `inflate.py` carries the adaptive-arithmetic restore path).
 
-They are orthogonal in mechanism and compose. Firing them separately buys a T4 row for a tree we do
-not intend to ship. **The shipping candidate is ONE object: {rider archive `df7fd266…` × ported
-+ rider runtime}**, sealed and fired as ONE row. Expected: S **0.14827847122030854** (exact rate
-arithmetic, decode identity proven for the rider leg) at an inflate wall near 464 s.
+They are orthogonal in mechanism, but composition must be executed rather than inferred. Firing them
+separately buys a T4 row for a tree we do not intend to ship. **The intended candidate is ONE object:
+{rider archive `df7fd266…` × ported + rider runtime}**, sealed and fired as ONE row. Conditional
+rate arithmetic gives S **0.14827847122030854** if composed semantic identity holds; an inflate wall
+near 464 s is a hypothesis until the clean composed tree runs.
 
 Fire order, now that rr8 is adjudicated:
 1. Compose the clean (non-instrumented) port with the rider runtime; prove decode identity on the
@@ -136,12 +143,12 @@ Fire order, now that rr8 is adjudicated:
 2. Seal ONE candidate (`make_candidate_seal.py`; single-flight).
 3. ONE T4 row → if it lands, that is the sixteenth pointer move AND the decode wall closed together.
 4. The packet's declared runtime + the 4,369.6 s contest-CPU figure both need re-derivation against
-   the composed tree — the CPU wall should fall by a similar factor, which may reopen the CPU-axis
-   question the packet currently answers as MEASURED-INFEASIBLE.
+   the composed tree. A similar CPU-axis reduction is a live hypothesis, not a transferred factor.
 
 ## Own-vehicle frontier
 
 **S 0.14839100138338618 @ 180,625 B [contest-CUDA T4 n600] — UNMOVED by this unit, by
-construction.** This row bought a wall-clock, not a score: the archive bytes were deliberately held
-identical so the port's decode-identity would be measured against a forced score control. The
-control passed and the wall cleared.
+construction.** This row bought one instrumented wall-clock observation, not a score: the archive
+bytes were deliberately held identical so decode identity was tested against a forced score control.
+That control and the observed-instance wall pass; repeat stability and the clean composed row remain
+owed.
