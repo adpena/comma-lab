@@ -8,9 +8,11 @@
 # CAN reproduce is runtime_files_sha256
 # e8dcbc6542d6f4752559726a6b88bd645f5974a2d941a0bbaef6f9932dc8cb8f
 # (rv17 R3-F1, MAIN re-derived independently 2026-08-20): sha256 of the JSON
-# payload {"files": [(relative_path, bytes, sha256) for these 36 rows, sorted
-# by path], "upstream_evaluate_py": (relative_path, bytes, sha256)} with
-# sort_keys=True and separators=(",",":") — inputs are exactly these files
+# payload {"files": [...], "upstream_evaluate_py": {...}} where every entry is
+# a JSON OBJECT with exactly the keys "relative_path", "bytes", "sha256" —
+# never an array/tuple, which hashes to a different value (rv17 R4-F1) —
+# "files" sorted by relative_path, serialized with sort_keys=True and
+# separators=(",",":") — inputs are exactly these files
 # plus the public upstream evaluate.py; construction:
 # experiments/contest_auth_eval.py ("Environment-free custody digest"). It is
 # equal on both axes. (runtime_content_tree_sha256 ccd9f7ab… is also
@@ -27,6 +29,8 @@
 # its identity is pinned separately in archive_manifest.json and report.txt.
 #
 # Verify:  sha256sum -c MANIFEST.sha256
+#          (run from the runtime tree root — the directory containing
+#          inflate.py — since the rows are relative to it; rv17 RV17-F7)
 #
 9824bd3f8913e756b1b2d76d50e7b439187e2ce16b5014b6418bda059b2eb4b3  cpr1/carrier_codec.py
 1d1caf5aa562324b3d86812ed505282c180c687220f34db4be2f748db377f5ea  cpr1/ddm_mp2_semantic_receiver.py
