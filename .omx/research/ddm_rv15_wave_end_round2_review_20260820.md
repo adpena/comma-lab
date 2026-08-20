@@ -22,7 +22,7 @@ surfaces that still publish the superseded 3,422.7 s. **Zero of the four were up
 corrected figure appears **nowhere** in the packet directory. `ddm_pq8` committed five minutes
 after cpu1 landed the handoff and did not apply it.
 
-Eleven further findings follow. None overturns the BUILD verdict for the corrector port — the
+Eighteen further findings follow. None overturns the BUILD verdict for the corrector port — the
 port scope `P = 917.929 s` is measured on T4 alone and does not depend on any comparison I broke.
 What is damaged is the **bar**: `2.03× / 2.77×` is quoted as "a MEASURED bar, not a hope" while
 carrying neither the arm's own ±61 s noise band nor a matched instrument.
@@ -30,6 +30,19 @@ carrying neither the arm's own ±61 s noise band nor a matched instrument.
 ---
 
 ## 1. Findings, severity-ranked
+
+> **`verdict_scope: instance`** (default for every REFUTED row below). These are review
+> refutations: each one refutes a **specific claim in a specific document or receipt**, not a
+> mechanism family. F1 is a PROCESS-instance — one handoff, dropped once, between two named
+> commits; it does not refute the packet-assembly process as a formulation. F10 and F11 are
+> document-instances. **Two rows reach `verdict_scope: formulation`, and I name them because they
+> are wider than one run:** **F16** refutes a stated algorithmic invariant of
+> `reclassify.py`'s single-representative-path replay (demonstrated 6 of 201, reproducible by
+> construction, not a one-off), and **F17** refutes the *coverage* claim of the sd1 guard's rule
+> set as formulated (`CODE_EXT` + bucket A/B rules), measured against all 1,207 absent blobs.
+> **Neither reaches FAMILY or PARADIGM.** Blob-identity detection of SSD-only authored signal is
+> demonstrably sound — the arm proved it catches planted authored files — and the corrector-port
+> paradigm is untouched: every cd1 finding narrows a *bar* or a *narrative*, never the mechanism.
 
 | # | Sev | Finding | Receipt |
 |---|---|---|---|
@@ -46,6 +59,11 @@ carrying neither the arm's own ±61 s noise band nor a matched instrument.
 | **F11** | LOW | **Bare task ids do not resolve in the repo.** `#1157`, `#1158`, `#1162`, `#1163` are **absent** from `.omx/state/canonical_task_status.jsonl` (max id **1029**, 216 distinct). This is the memorialized task-ledger-split genus; the recorded cure — *cite CONTENT, never bare ids* — was not applied. cd1's routing line partially mitigates by naming "sync-elimination". | Parsed all 565 rows. |
 | **F12** | LOW | **Contradictory poller markers coexist.** `t4_row_r1/` holds **both** `poller.done` = `"ok"` **and** `poller.failed` = `"PollDeadlineExceeded: deadline 2400s exceeded"`. cd1 §6.5 explains the history honestly, but the two files remain side by side as a trap for any consumer that reads one and not the other. | Both files read. |
 | **F14** | MED | **cd1's owed item 1 is real, still live, and no longer blocked — I reproduced it by reading the code.** `tools/fire_local_advisory.py` refuses a non-empty attempt dir at `:166-167`, then `mkdir`s at `:168`, writes the pyshim at `:171` and `ADVISORY_LAUNCH.json` at `:227` — **all before** the dry-run early return at `:228`. So `--dry-run` poisons the very directory it previews, and the next real fire hits its own refusal. This is the **canonical and only sanctioned** local-advisory firer, so it taxes every arm that prudently dry-runs first. cd1 honestly declined to fix it because a sister (`ddm_cpu1`) was live on the same file — **that blocker expired at 08:15**. | Line numbers read directly; write sites `:168`, `:171`, `:227` all precede `:228`. |
+| **F15** | MED | **sd1's own monitor now broadcasts a SUPERSEDED number as a fresh measurement, for up to 72 hours.** The arm wired the guard into the SessionStart consolidation-debt cadence, then never refreshed the cache that cadence reads. `.omx/state/ssd_authored_signal_debt.json` was written at **13:21:58**; the certification landed **13:30:04** and the closing commit `cd94a2bcfd` at **13:30:55** — the cache is **8 m 57 s older than its own close**. `SSD_CACHE_MAX_AGE_H = 72` (`tools/consolidation_debt.py:54`), so the hook keeps presenting `△ ssd_only_code: 9 … measured 1.0h ago` for three days. The 9 does **not** refute the zero — it is stale — but the close left the instrument contradicting the claim. **One `--write-cache` run closes it.** | Cache mtime `13:21:58.932044`; `ssd_authored_signal_certified.jsonl` 13:30:04; `cd94a2bcfd` 13:30:55. Producer `consolidation_debt.py:164-206`. |
+| **F16** | MED | **`reclassify.py`'s docstring claims a safety property the code does not have.** `scan()` assigns each blob the **strictest** bucket over all its instances and only then rewrites `representative_path`; `reclassify.py` re-buckets by replaying `classify()` on that **single** path, for blobs with 2–820 instances. The docstring asserts the shortcut "can only UNDER-count bucket A … the safe direction". True of the skipped clone check, **false** of the single-path replay — which errs **unsafe** and demonstrably did: **all 6 non-`cpu1` members of the final 9** were in the 814, were dropped by the replay, and were put back in C by the live re-sweep. Net arithmetic survives (the re-sweep caught all 6 — "should is not did" working); the method claim does not. | Replayed at both guard revisions; e.g. blob `c3bac7fdb7` (820 instances) moved `…/vertigo_coldstore_20260811/…/submission/inflate.sh` (→B) → `…/hi_nerv_local_tiny_1pairs/submission/inflate.sh` (→C). |
+| **F17** | LOW-MED | **The zero is scoped narrower than "no authored signal lives on the SSD alone."** Measured residue a reasonable reader would call authored-and-one-disk-only: **~80 blobs**. (a) **75** in unscanned extensions — `.patch` 20, `.fish` 16, `.cfg` 14, `.bat` 12, `.diff` 6, `.ps1` 4, `.js` 3. The `.patch` class is exactly where the BLOCKED-GIT-arm handoff law says a patch may be the **only** carrier. (b) **5** `.py` from a clone of **pact itself** (`ddm_vh2_20260810/commit_clone/src/tac/probe_outcomes_ledger.py`, its test, `tools/costate_digest.py`, …) labelled bucket A "third-party". Reassuring by measurement: `.cu`/`.mojo`/`.metal`/`.zig` are **all** already in git, so the `cuda/**` and `mojo/**` surfaces are safe today despite not being in `CODE_EXT`; and `build`/`dist`/`target` pruning hides exactly **1** blob, a generated `inflate.py`. | Full rule attribution of all 1,207 absent blobs; 489 of 494 nested-`.git` exclusions carry genuinely third-party remotes (Cool-Chic, HiNeRV, SNeRV, nncodec, …). |
+| **F18** | LOW | **"814 → 9 → 0" spans two instrument widenings and reads as pure drainage.** Of 823 items dispositioned, **616 (74.8%)** were preserved into git and **206 (25.0%)** were reclassified out of scope by rule changes landed mid-drain (`249bd5d891`, `08daa1a564`). The memo body discloses this at `SD1_SIGNAL_DEBT_DRAIN.md:142-146, 181-184, 200-212` — so it is not hidden — but the one-line headline does not carry it. Sister note, disclosed by the arm: all 476 recovered `.py`/`.sh` carry a trailing `.txt`, so they sit outside ruff, preflight and review_tracker. "Recovered into git" means **archived**, not maintained. | Counts from the drain receipts. |
+| **F19** | LOW | **The serializer's sister-checkpoint guard self-collides, and it punishes the mandated behaviour.** `--label` defaults to `anonymous`, which can never match the committer's own `subagent_id`, so the guard reads the agent's **own** in-flight checkpoint as a sister and ABORTs. I hit this on my own memo: `sister='ddm_rv15_wave_end_round2' (checkpoint 0.7 min ago)` — that is me. Any agent that follows the checkpoint discipline (declare `files_touched`) and then commits without hand-passing a matching `--label` is refused by itself. Fail-closed, so the direction is safe, but it pushes agents toward `--no-sister-checkpoint-check`, which is the unsafe escape. **Cure:** default `--label` from the active checkpoint's `subagent_id`, or exclude self by id. | Reproduced: ABORT with default label; `OK head=1d3acc9b7e` with `--label ddm_rv15_wave_end_round2`. |
 | **F13** | INFO | **Token stage ≠ loop + prelude, unnamed both times.** T4: 1,280.093 vs 1,277.869 + 1.240 = 1,279.109 (**0.984 s** unnamed). Local: 676.556 vs 673.293 + 0.324 = 673.617 (**2.939 s**). Small (0.08% on T4) and almost certainly teardown, but the decomposition is presented as complete. | Arithmetic on §1.2 / §6.2. |
 
 ---
@@ -188,19 +206,34 @@ raw (exact match) and independent recomputation of both manifest digests.
   video — free artifacts, not lab payload.
 * **REFUTED / gaps:** **F7** (silent `OSError` data-loss path) and **F10** (a–e).
 
-### 2.5 `ddm_sd1` — **INDETERMINATE, unresolved in this round**
+### 2.5 `ddm_sd1` — the zero is REAL and independently reproduced; three sub-claims broken
 
-I dispatched a dedicated verification arm against the five sd1 questions — re-run the guard, settle
-whether the `ssd_only_code=9` snapshot is stale or live, and test whether the "0" is **vacuous**
-because the exclusion buckets refined in `249bd5d891` stopped the detector from looking. That arm
-had not returned when this memo was written.
+A dedicated verification arm re-ran the guard from scratch (**174.1 s**, `rc=0`, dispatched through
+the canonical detached launcher because the launch guard blocks hand-rolled `nohup`):
 
-**Resolving measurement, named:** run `cf3bb0b561`'s guard from a clean shell; compare its live
-count against the SessionStart `ssd_only_code`; and quote the exclusion patterns, then re-run the
-guard **with the exclusions removed** to establish what the gauge reads if the cure had not been
-applied. Per the project's own detector law, a zero is only trustworthy once the detector is shown
-to be capable of reading non-zero. **The 814 → 9 → 0 claim is NOT confirmed by this round** and
-must not be cited as verified until that measurement lands.
+```
+ssd_code_like_files_scanned      : 148,065
+roots_absent_from_this_machine   : []        <- both SSDs mounted; NOT a partial scan
+files_unreadable                 : 0
+absent DISTINCT blobs            : 1,207
+  bucket_A_third_party_or_clone  : 934
+  bucket_B_run_output_or_coldstore:  272
+  bucket_C_authored_OWED         : 0         <- reproduces
+  bucket_D_certified_in_place    : 1
+```
+
+`62 passed` across both test files. Stronger than claimed: all **613** drained blobs are reachable
+from **`origin/main`**, not merely a local ref — they are pushed, not just committed.
+
+**The vacuity attack failed, and it was tested live rather than argued.** The arm planted 10
+authored files across the guard's exclusion surfaces and ran the real tool: a plain authored `.py`
+in an arm workspace **is** caught, and so is a non-`inflate` `.py` inside `archive/`. The detector
+did not stop looking. Ledger arithmetic **CONFIRMED exactly** — every memo number matches its
+receipt, including the 814 = 105 A + 96 B + 613 C split and the 9 → 5 + 3 + 1 close.
+
+Three sub-claims break: **F15** (the arm's own monitor now broadcasts a superseded 9),
+**F16** (`reclassify.py` claims a safety property it does not have), **F17** (~80 authored blobs
+outside the guard by construction), **F18** (a quarter of "814 → 9 → 0" is rule change, not drainage).
 
 ### 2.6 Cross-cutting — MERGE_HEAD CONFIRMED, ledger routings REFUTED
 
@@ -265,7 +298,11 @@ than a refutation, because the resolving measurement is cheap and has not been r
 F1 alone forces it: a landed measurement from this same wave supersedes a figure that four
 packet surfaces — including the public PR body and report — still publish, and the replacement
 text was written and routed and then dropped. That is a defect on the submission path, not a
-presentational preference. F2, F3, F4, F5, F6 and F7 are independently sufficient.
+presentational preference. F2, F3, F4, F5, F6, F7, F14, F15 and F16 are independently sufficient.
+
+**Nineteen findings, three of them on live instruments** (F14 the local firer, F15 the SSD monitor,
+F19 the commit serializer) — all three of which tax the arms that follow the rules. That pattern is
+worth naming on its own: this wave's apparatus friction lands hardest on correct behaviour.
 
 Two rounds of clean passes are now required after the fix batch lands. Per the protocol, this round
 also discharged the assumption-challenge axis (§3), so it counts as a complete round.
@@ -277,7 +314,9 @@ also discharged the assumption-challenge axis (§3), so it counts as a complete 
 | Rank | Item | Why now | Cost |
 |---|---|---|---|
 | **1** | **Apply cpu1 §5's verbatim replacement text** to `README_PUBLIC.md`, `FREEZE_CHECKLIST.md`, `ddm_pq3:150-153` and close the `nv1` claim-10 caveat; sweep the other 8 stale surfaces (`PACKET_TARGET.json:59,137,304`, `PR_BODY_DRAFT.md:185,263`, `REPORT_PUBLIC.txt:144`, `COMPLIANCE_RUNBOOK.md`, `CONTRIBUTION_ETIQUETTE.md:21`, `SWAP_PROCEDURE.md`, `GPU_ROUTING_VARIANTS.md`, `CPU_AXIS_SEALED_FIRE_ORDER.json`). **Leave the `REVIEW_PASS*_FRESH_EYES.md` files alone** — they are APPEND-ONLY historical provenance and correctly frozen. | F1. Public-facing, understates a disclosed cost by 27.7%, and the text is already written. | $0 |
-| **2** | **Resolve sd1.** Re-run the guard; settle stale-vs-live on `ssd_only_code=9`; quote the exclusion patterns and re-run with exclusions removed to prove the detector can read non-zero. | The 814 → 9 → 0 closure is unverified. A vacuous zero is worse than a known debt. | $0 |
+| **2** | **Run `audit_ssd_authored_signal.py --write-cache`.** One command. It stops the SessionStart hook broadcasting a superseded `ssd_only_code: 9` as a fresh measurement for the next three days. | F15. The arm's own monitor currently contradicts the arm's own closing claim, and every session sees the 9. | $0 |
+| **2b** | **Correct `reclassify.py`'s docstring** (it errs unsafe, not safe) and either replay over **all** instance paths or state the single-path shortcut as a known unsafe approximation. | F16. A stated safety invariant that the code does not hold, demonstrated 6 of 201. | $0 |
+| **2c** | **Decide the sd1 tail explicitly:** add `.patch`/`.diff` to `CODE_EXT` (the BLOCKED-GIT handoff law makes a patch a legitimate sole carrier), and stop labelling pact-origin clone files "third-party" — 5 of our own `src/tac`/`tools` sources are excused that way. | F17. ~80 authored one-disk blobs the guard cannot see. | $0 |
 | **3** | **Re-state the port bar with its band.** Publish `2.03–2.22× (frame B)` and `2.77–3.08× (frame A)`, or re-anchor both on one inflate and say which. Honour §6.1's own promise in §6.4 and §9.3. | F2. The next arm is instructed to gate a multi-day build on a bare number. | $0 |
 | **4** | **Fix `take_census`'s silent `OSError`** in `tools/vertigo_certify_move.py:100-103` — fail closed, and add it to the HARDENING OWED list. | F7. A silent data-loss path inside a tool that deletes. | $0 |
 | **5** | **Re-route #1162** from "optional polish" to "measure before choosing k". Record that `d2h_sync` removal alone moves the break-even 2.03× → 1.75×. | F3. It decides the k=2 marginal case. | $0 |
@@ -286,7 +325,8 @@ also discharged the assumption-challenge axis (§3), so it counts as a complete 
 | **8** | **Publish a tree-sha crosswalk.** One table: which convention produced `67dc3e32…`, `1728c2a9…`, `2103073d…`, `4c08d20d…`, `a5d23cee…`, over which file set. Stop reusing the field name `runtime_tree_sha256` for three different conventions. | F5. Currently reads as a custody mismatch. | $0 |
 | **9** | **Correct the vr1 memo** (F10 a–e) and record `referenced_by` on future moves. | Unsourced "728" in an evidence table. | $0 |
 | **5b** | **Fix `fire_local_advisory.py --dry-run`** — choose the shim root (`tempfile` scratch under `--dry-run`, `attempt` otherwise) inside a `try/finally`, and move the `ADVISORY_LAUNCH.json` write below the `:228` return. cd1 wrote the cure; only its blocker stopped it, and that blocker has expired. | F14. Taxes every arm on the only sanctioned local-advisory path. | $0 |
-| **10** | **Soften "the round trips were never the problem" to "~10% of the gap"** (F8); band the headline `S` (F9); cite routing content rather than bare ids (F11); reconcile the double poller markers (F12); name the 0.98/2.94 s residual (F13). | Honesty polish; each is one sentence. | $0 |
+| **9b** | **Default the serializer's `--label` from the active checkpoint's `subagent_id`** (or exclude self by id), so the sister guard stops refusing agents on their own checkpoints. | F19. It currently taxes the mandated checkpoint discipline and steers agents toward the unsafe `--no-sister-checkpoint-check` escape. | $0 |
+| **10** | **Soften "the round trips were never the problem" to "~10% of the gap"** (F8); band the headline `S` (F9); cite routing content rather than bare ids (F11); reconcile the double poller markers (F12); name the 0.98/2.94 s residual (F13); carry the 74.8%/25.0% split into the sd1 headline (F18). | Honesty polish; each is one sentence. | $0 |
 
 ---
 
@@ -304,6 +344,9 @@ Stated plainly, because a review that only lists defects misrepresents the wave.
   full size; the vr1 reclaim moved 75.18 GiB with a 308 KiB residual and deleted nothing.
 * The **MERGE_HEAD positive control** demonstrates its hazard before testing its cure — the shape
   every guard in this repo should copy.
+* **sd1's zero is real**, independently reproduced (`rc=0`, 148,065 files, bucket C = 0), and its
+  detector was proved capable of reading non-zero by planting authored files rather than by
+  argument. All 613 drained blobs are reachable from `origin/main` — pushed, not just committed.
 * `cpu1`'s **label discipline is exemplary**: a derived number, stated twice, tagged both times,
   quarantined to one file, with an explicit prohibition on ever wearing a contest axis tag.
 
