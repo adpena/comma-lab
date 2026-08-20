@@ -7,13 +7,11 @@
 # reproducible from these 36 files alone (rv17 R2-F2). The digest a reviewer
 # CAN reproduce is runtime_files_sha256
 # e8dcbc6542d6f4752559726a6b88bd645f5974a2d941a0bbaef6f9932dc8cb8f
-# (rv17 R3-F1, MAIN re-derived independently 2026-08-20): sha256 of the JSON
-# payload {"files": [...], "upstream_evaluate_py": {...}} where every entry is
-# a JSON OBJECT with exactly the keys "relative_path", "bytes", "sha256" —
-# never an array/tuple, which hashes to a different value (rv17 R4-F1) —
-# "files" sorted by relative_path, serialized with sort_keys=True and
-# separators=(",",":") — inputs are exactly these files
-# plus the public upstream evaluate.py; construction:
+# — reproduce it by running the shipped verify_files_digest.py from this
+# directory (the script IS the recipe: executable, self-checking, exits
+# non-zero on any mismatch; rv17 R5-F1 retired the prose recipe after three
+# rounds each found a different under-specified corner). Inputs are exactly
+# these 36 files plus the public upstream evaluate.py; construction source:
 # experiments/contest_auth_eval.py ("Environment-free custody digest"). It is
 # equal on both axes. (runtime_content_tree_sha256 ccd9f7ab… is also
 # axis-equal but folds in a repo-local import scan, so it is NOT files-only

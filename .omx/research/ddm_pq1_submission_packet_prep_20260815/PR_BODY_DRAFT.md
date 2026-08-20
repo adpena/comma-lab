@@ -485,11 +485,12 @@ is written to refuse rather than to resolve against the superseded archive.
 # 1. Runtime integrity. 36 per-file rows (the authority tree hash fdd57749...
 # additionally binds the root directory name, the tac import manifest, and
 # upstream/evaluate.py, so it is not reproducible from these rows alone; the
-# reviewer-reproducible digest is runtime_files_sha256 e8dcbc65... —
-# derivable from exactly these 36 files plus the public upstream
-# evaluate.py; recipe in the MANIFEST.sha256 header + PACKET_TARGET.json).
+# reviewer-reproducible digest is runtime_files_sha256 e8dcbc65...).
 shasum -a 256 -c MANIFEST.sha256
 # expect 36 lines ending in: OK
+python3 verify_files_digest.py
+# executable digest recipe, shipped alongside; expect:
+#   PASS: matches the packet's pinned runtime_files_sha256 (36 rows verified)
 
 # 2. Archive identity, from the bytes in the directory.
 shasum -a 256 archive.zip
