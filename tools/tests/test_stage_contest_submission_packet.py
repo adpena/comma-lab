@@ -94,7 +94,8 @@ def test_stage_proves_tree_identity_and_rehashes_every_row(tmp_path):
     assert record["verdict"] == "STAGED_TREE_PROVED_IDENTICAL_TO_EVALUATED_TREE"
     assert record["runtime_files_verified"] == record["runtime_files_declared"] == 2
     assert (
-        record["runtime_tree_sha256_rederived_from_staged"] == record["runtime_tree_sha256"]
+        record["runtime_tree_sha256_rederived_from_measured_staged_bytes"]
+        == record["runtime_tree_sha256"]
     )
     assert (tmp_path / "out" / "runtime" / "mod.py").read_bytes() == b"X = 2\n"
 
@@ -112,16 +113,60 @@ def test_receipt_carries_the_enumerated_rows_scope_rule(tmp_path):
     assert "NOT over a fresh recursive walk" in scope
 
 
-def test_content_drift_refuses_and_leaves_no_directory(tmp_path):
+def test_content_drift_is_caught_by_the_tree_hash_itself(tmp_path):
+    """The tree check must be the thing that fails, not a separate per-file guard.
+
+    Deriving the tree hash from the manifest's own rows would re-hash the tool's
+    input and could never fail. This asserts the derivation consumes the MEASURED
+    bytes: one changed byte must move the derived tree hash away from the pinned
+    one, and the message must name the offending file as the diagnostic.
+    """
     contents = {"inflate.py": b"a\n"}
     receipt = _receipt(tmp_path, contents)
     src = _source_tree(tmp_path, {"inflate.py": b"DIFFERENT\n"})
 
-    with pytest.raises(stager.StagingError, match="differs from the evaluated manifest"):
+    with pytest.raises(stager.StagingError) as exc:
         stager.stage(
             auth_eval_json=receipt, source_runtime_dir=src, out_dir=tmp_path / "out"
         )
+    msg = str(exc.value)
+    assert "derived from the MEASURED staged bytes" in msg
+    assert "inflate.py" in msg, "the per-file diagnostic must name the drifted file"
     assert not (tmp_path / "out").exists()
+
+
+def test_tree_derivation_is_not_a_tautology(tmp_path):
+    """Substituting a measured digest must change the derived hash.
+
+    Guards the mechanism directly: if a future edit reverts the derivation to
+    consuming manifest rows, this fails even if `stage()` still passes.
+    """
+    contents = {"inflate.py": b"a\n", "runtime/mod.py": b"b\n"}
+    receipt_path = _receipt(tmp_path, contents)
+    man = json.loads(receipt_path.read_text())["provenance"]["inflate_runtime_manifest"]
+    rows = man["files"]
+
+    honest = stager.rederive_tree_sha256(man, rows)
+    assert honest == man["runtime_tree_sha256"]
+
+    drifted = [dict(r) for r in rows]
+    drifted[0]["sha256"] = _sha(b"tampered\n")
+    assert stager.rederive_tree_sha256(man, drifted) != honest
+
+    resized = [dict(r) for r in rows]
+    resized[0]["bytes"] = resized[0]["bytes"] + 1
+    assert stager.rederive_tree_sha256(man, resized) != honest
+
+
+def test_receipt_names_its_derivation_input(tmp_path):
+    contents = {"inflate.py": b"a\n"}
+    record = stager.stage(
+        auth_eval_json=_receipt(tmp_path, contents),
+        source_runtime_dir=_source_tree(tmp_path, contents),
+        out_dir=tmp_path / "out",
+    )
+    assert "runtime_tree_sha256_rederived_from_measured_staged_bytes" in record
+    assert "tautology" in record["runtime_tree_sha256_rederivation_input"]
 
 
 def test_missing_manifest_row_refuses(tmp_path):

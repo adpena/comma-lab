@@ -24,11 +24,15 @@ is provably the tree the score was measured on. Consequences wired in here:
 1. Files are selected BY THE MANIFEST, never by globbing the source directory.
    A glob would sweep up ``__pycache__``, AppleDouble sidecars and stale
    receipts; a manifest-driven copy cannot, by construction.
-2. Every copied file is re-hashed AFTER the copy and compared to the manifest.
-   Content is identity, never filename.
-3. The manifest-derived ``runtime_tree_sha256`` is RE-DERIVED from the staged
-   rows and compared to the receipt's. This is the check that proves the staged
-   tree is the evaluated tree rather than merely resembling it.
+2. Every copied file is re-hashed AFTER the copy. Content is identity, never
+   filename.
+3. ``runtime_tree_sha256`` is re-derived from those FRESHLY MEASURED digests --
+   not from the manifest's own claimed digests -- and compared to the receipt's.
+   That distinction is the entire proof. Deriving from the manifest rows would
+   re-hash the tool's own input and could never fail: a tautology wearing a
+   proof's name. Deriving from measured bytes makes the value a function of what
+   is on disk, so content drift moves it and the comparison catches it. The
+   per-file digest diffs are the diagnostic that explains a failure.
 4. The source tree is censused for undeclared files and the result is REPORTED
    with its denominator -- including the file classes we exclude from the copy.
    A count that silently drops a class is the generation-4 defect.
@@ -190,7 +194,13 @@ def extract_runtime_manifest(receipt: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def rederive_tree_sha256(manifest: Mapping[str, Any], rows: list[dict[str, Any]]) -> str:
-    """Re-derive the manifest-derived runtime tree hash from staged rows."""
+    """Derive the runtime tree hash from ``rows``.
+
+    Callers MUST pass rows carrying the FRESHLY MEASURED sha/bytes of the staged
+    copies. Passing the manifest's own rows makes this a tautology: it would
+    re-hash its own input and could never fail, which is exactly the defect this
+    docstring exists to stop being re-introduced.
+    """
     repo_local_tac = dict(manifest.get("repo_local_tac_import_manifest") or {})
     tree_payload = {
         "runtime_root_name": repo_local_tac.get("runtime_root_name", "submission_dir"),
@@ -322,7 +332,14 @@ def stage(
             "Staging never overwrites: remove it deliberately or pick a new generation dir."
         )
 
+    # ``staged_rows`` carries the FRESHLY MEASURED sha/bytes of each staged copy,
+    # never the manifest's own claim about them. That distinction is the whole
+    # proof: deriving the tree hash from the manifest's rows would re-hash the
+    # input and could not fail, which is a tautology wearing a proof's name.
+    # Substituting measured values makes the derived hash a function of the bytes
+    # actually on disk, so content drift moves it.
     staged_rows: list[dict[str, Any]] = []
+    measured_diffs: list[str] = []
     verified = 0
     try:
         out_dir.mkdir(parents=True)
@@ -334,17 +351,20 @@ def stage(
             dst = out_dir / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)
-            # Re-hash the COPY, not the source: this is what proves the staged
-            # byte sequence is the evaluated one.
+            # Measure the COPY, not the source: this is what ties the derived tree
+            # hash to the byte sequence a judge would actually run.
             payload = dst.read_bytes()
-            actual = sha256_bytes(payload)
-            if actual != row["sha256"] or len(payload) != row["bytes"]:
-                raise StagingError(
-                    f"{rel}: staged content differs from the evaluated manifest "
-                    f"(sha {actual} vs {row['sha256']}, {len(payload)} B vs {row['bytes']} B)"
+            measured_row = dict(row)
+            measured_row["sha256"] = sha256_bytes(payload)
+            measured_row["bytes"] = len(payload)
+            if measured_row["sha256"] != row["sha256"] or measured_row["bytes"] != row["bytes"]:
+                measured_diffs.append(
+                    f"{rel}: sha {measured_row['sha256']} vs {row['sha256']}, "
+                    f"{measured_row['bytes']} B vs {row['bytes']} B"
                 )
-            verified += 1
-            staged_rows.append(row)
+            else:
+                verified += 1
+            staged_rows.append(measured_row)
 
         # The archive is not a runtime manifest row; it is the scored payload.
         archive_src = source_runtime_dir / archive_name
@@ -361,12 +381,25 @@ def stage(
                 f"archive size mismatch: staged {len(archive_payload)} B vs expected {expected_archive_size_bytes} B"
             )
 
+        # THE identity proof: derive the tree hash from the MEASURED rows above.
+        # Because those rows carry the digests of the bytes on disk, any content
+        # drift changes this value, so the comparison can genuinely fail. The
+        # per-file diffs are the DIAGNOSTIC that explains a failure, not the proof.
         rederived = rederive_tree_sha256(manifest, staged_rows)
         declared_tree = str(manifest.get("runtime_tree_sha256"))
         if rederived != declared_tree:
+            detail = "; ".join(measured_diffs) if measured_diffs else "no per-file digest differs"
             raise StagingError(
-                "re-derived runtime_tree_sha256 does not match the receipt "
-                f"({rederived} vs {declared_tree}); the staged tree is NOT the evaluated tree"
+                "runtime_tree_sha256 derived from the MEASURED staged bytes does not "
+                f"match the receipt ({rederived} vs {declared_tree}); the staged tree "
+                f"is NOT the evaluated tree. Per-file diffs: {detail}"
+            )
+        if measured_diffs:
+            # Unreachable through the manifest's own derivation, kept because a
+            # future change to the tree payload could decouple the two.
+            raise StagingError(
+                "staged content differs from the evaluated manifest while the tree "
+                f"hash still matched: {'; '.join(measured_diffs)}"
             )
 
         # Documents are copied AFTER the tree identity is proved, so a document
@@ -401,7 +434,11 @@ def stage(
         "runtime_files_verified": verified,
         "runtime_files_declared": len(rows),
         "runtime_tree_sha256": declared_tree,
-        "runtime_tree_sha256_rederived_from_staged": rederived,
+        "runtime_tree_sha256_rederived_from_measured_staged_bytes": rederived,
+        "runtime_tree_sha256_rederivation_input": (
+            "freshly measured sha256/bytes of every staged copy, NOT the manifest's "
+            "own claimed digests; deriving from the manifest rows would be a tautology"
+        ),
         "runtime_tree_sha256_scope": RUNTIME_TREE_SHA256_SCOPE,
         "runtime_content_tree_sha256": manifest.get("runtime_content_tree_sha256"),
         "staged_documents": staged_docs,
@@ -467,7 +504,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"{record['verdict']}")
     print(f"  runtime files verified : {record['runtime_files_verified']}/{record['runtime_files_declared']}")
     print(f"  runtime_tree_sha256    : {record['runtime_tree_sha256']}")
-    print(f"  re-derived from staged : {record['runtime_tree_sha256_rederived_from_staged']}")
+    print(f"  re-derived (measured)  : {record['runtime_tree_sha256_rederived_from_measured_staged_bytes']}")
     print(f"  archive                : {record['archive']['sha256']} ({record['archive']['bytes']} B)")
     for doc in record["staged_documents"]:
         print(f"  document               : {doc['relative_path']} ({doc['bytes']} B, {doc['sha256'][:12]})")
