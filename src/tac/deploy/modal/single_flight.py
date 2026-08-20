@@ -256,6 +256,30 @@ def active_modal_claims(
     return active
 
 
+def _resolve_modal_bin() -> str | None:
+    """Locate the modal CLI the way the rest of this repo does: venv FIRST, then PATH.
+
+    MEASURED 2026-08-20 (``ddm_rr7``): ``shutil.which("modal")`` alone returned None on the
+    operator's machine because ``modal`` lives at ``<repo>/.venv/bin/modal`` and ``.venv/bin``
+    is not on PATH. The cloud cross-check therefore SKIPPED on every dispatch from this repo,
+    degrading single-flight to local-ledgers-only — and it announced that with one stderr line
+    that scrolls past inside Modal's own image-build output, so the degradation was invisible
+    in practice.
+
+    That mattered on the same day: the local leg was simultaneously poisoned by unit-test
+    fixtures writing phantom-live ``fc-test-*`` rows into the production call-id ledger. Both
+    legs of the guard were compromised at once, in opposite directions — one inert, one lying.
+    ``tools/fire_modal_auth_eval.py`` already resolves ``REPO/.venv/bin/modal`` explicitly;
+    this makes the guard agree with the tool that actually dispatches.
+
+    Still fail-OPEN when genuinely absent: dispatch must not brick on CLI availability.
+    """
+    venv_modal = Path(__file__).resolve().parents[4] / ".venv" / "bin" / "modal"
+    if venv_modal.is_file():
+        return str(venv_modal)
+    return shutil.which("modal")
+
+
 def cloud_live_modal_apps(*, timeout_seconds: float = _CLOUD_TIMEOUT_SECONDS) -> list[str] | None:
     """Live cross-check: ``modal app list --json`` apps with running tasks.
 
@@ -265,7 +289,8 @@ def cloud_live_modal_apps(*, timeout_seconds: float = _CLOUD_TIMEOUT_SECONDS) ->
     when the CLI is unavailable, errors, or times out — the caller records the
     skipped surface but does not brick dispatch on network health.
     """
-    if shutil.which("modal") is None:
+    modal_bin = _resolve_modal_bin()
+    if modal_bin is None:
         print(
             "[modal-single-flight] WARNING: `modal` CLI not found — cloud cross-check SKIPPED (local ledgers only).",
             file=sys.stderr,
@@ -273,7 +298,7 @@ def cloud_live_modal_apps(*, timeout_seconds: float = _CLOUD_TIMEOUT_SECONDS) ->
         return None
     try:
         proc = subprocess.run(
-            ["modal", "app", "list", "--json"],
+            [modal_bin, "app", "list", "--json"],
             capture_output=True,
             text=True,
             timeout=timeout_seconds,
