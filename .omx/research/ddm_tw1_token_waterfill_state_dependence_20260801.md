@@ -17,7 +17,7 @@ right-but-incomplete. This is the whole reason the re-derivation clause exists, 
 
 | # | seed claim | re-derived verdict |
 |---|---|---|
-| 1 | "QA07's 4-rung ladder has ZERO code in `src/`, `experiments/`, `tools/` — VERIFY, then BUILD it" | **FALSE.** Fully built and already measured: `experiments/ddm_gr1_granularity_rerace.py::coarsen_alloc` takes `step_map ∈ {1,2,4,0}` = exactly `{L16, L8, L4, drop-to-mode}`, and `build_allocations` emits `tok_rung_{a,b,c}` and `cell_rung_{a,b,c}` at both granularities, wired to the real SMEVR encode path. gr1 (2026-07-30) measured it and returned **DOMINATED at both granularities**. Building it again would have been the named `built_new_machinery_instead_of_paying_identified_debt` poison. **I did not build it.** |
+| 1 | "QA07's 4-rung ladder has ZERO code in `src/`, `experiments/`, `tools/` — VERIFY, then BUILD it" | **FALSE.** Fully built and already measured: `experiments/ddm_gr1_granularity_rerace.py::coarsen_alloc` (l.84–95) takes `step_map ∈ {1,2,4,0}` = exactly `{L16, L8, L4, drop-to-mode}`, and `build_allocations` (l.206) emits `tok_rung_{a,b,c}` and `cell_rung_{a,b,c}` at both granularities, wired to the real SMEVR encode path. gr1 (2026-07-30) measured it and returned **DOMINATED at both granularities** — carrying gr1's own scope label, that verdict "rests on **n48** with large margins + strict domination" (gr1 l.185); only the cell-drop winner was n600-confirmed. Building it again would have been the named `built_new_machinery_instead_of_paying_identified_debt` poison. **I did not build it.** |
 | 2 | "the wr1 staged gate has NOT fired; DO NOT fire it" | **The gate ALREADY FIRED and was REJECTED.** `kneeA_gate_run.log` on SSD holds a real `evaluate.py` n600 run: d_seg 0.00553676, d_pose 0.28002128, 274,333 B, **S = 2.41 vs ref 2.2566 = +0.153 net → REJECT at INSTANCE scope.** The ledger already carries this row. (I did not re-fire it.) |
 | 3 | "QA08 has never been run at ANY drop level; wr1 says it can only improve the byte column" | **Half true, and the wr1 claim is now FALSIFIED as stated.** QA08's named coder *is* implemented — it is r7 codec id 8, `kt_o8_prev5_backoff` — and had been raced only at the undropped field. I raced it (and 7 others) at the dropped streams: see §3. It does not improve the byte column at any drop level; it is **9.7% → 21.4% worse** and gets worse as you drop. |
 | 4 | "waterfill is over 768 cells (24×32), 1:1 with argmax blocks; anchors k=0→569,996 B, Knee-A k=486→274,333 B, Knee-B k=600→174,578 B, k=768→14,303 B; wr1 never sums, it re-encodes per tranche" | **CONFIRMED**, and independently re-derived: `cell == row*32 + col` holds for all 768 records, 486 zero-flip cells, bands 288 sky / 288 road / 192 hood, and my own harness reproduces wr1's published `tokens_bytes` at k=486 (261,590) and k=600 (161,835) **exactly**. |
@@ -74,8 +74,12 @@ out by construction and the harness refuses if a sampled cell is already dropped
 
 ### Run A — 29 cells held out of Knee-B, priced from 5 states (seed 869)
 
-Only road (20) and hood (9) cells survive to k=600 — wr1 has dropped all 288 sky by then — so run A is
-naturally concentrated on the road midband, which is exactly the razor zone.
+168 cells survive to k=600 — **159 road + 9 hood, and zero sky** (wr1 has dropped all 288 sky by then).
+The sampler's `per_band` cap is 20, so run A takes **20 of the 159 available road cells (12.6%) and all
+9 hood**, not a census of the survivors. Run A is therefore naturally concentrated on the road midband,
+which is exactly the razor zone, but its road coverage is a sample and is labelled as one. (The harness
+now prints and records `available_after_exclusion` per band, so this denominator can no longer be
+inferred wrongly from the row count — see §8.)
 
 | state | baseline tokens B | mean marginal B/cell | median | min | max |
 |---|---:|---:|---:|---:|---:|
@@ -93,7 +97,10 @@ cells. Zero exceptions.**
 Run A cannot see the sky band. Run B closes that hole with an independent seed and a shallower state
 triple, so sky cells are still held out.
 
-| band | n | k0 | k100 | k300 | k300/k0 | rose |
+The `k300/k0` column is the **mean of the per-cell ratios**, not the ratio of the displayed means (the
+two differ slightly; run A's ratios are the same statistic and are labelled explicitly there).
+
+| band | n | k0 | k100 | k300 | mean per-cell k300/k0 | rose |
 |---|---:|---:|---:|---:|---:|---:|
 | `mycar_hood_bottom` | 8 | 252 | 270 | 284 | 1.108 | 7/8 |
 | `road_lane_midband` | 8 | 791 | 874 | 882 | 1.119 | 8/8 |
@@ -123,10 +130,20 @@ signed, sized per-unit quantity.
 
 ## 3. MEASURED — the additivity defect is SUPERadditive, and it shrinks with depth
 
-**Pre-registered.** `tw1_prereg_additivity_sign.md` was written to SSD at 2026-08-02T00:55:17Z, while the
-log still read `marginal 30/145` — before any additivity row existed. It predicted `defect < 0`
-(superadditive) at every state, **and** that `|defect|` would grow with depth, with an explicit kill
-criterion.
+**Pre-registered, with a disclosure.** `tw1_prereg_additivity_sign.md` was written to SSD at
+2026-08-02T00:55:17Z, **before any additivity row for the 29-cell sample existed** (that receipt was
+written 2 m 18 s later, at 00:57:35Z — both timestamps independently checkable on disk). It predicted
+`defect < 0` (superadditive) at every state, **and** that `|defect|` would grow with depth, with an
+explicit kill criterion.
+
+**Disclosure (found by my own fresh-context verifier, not by me).** The 2-cell controls-first smoke
+receipt the prereg cites by path was written 3 minutes *earlier* and already contained additivity rows:
+k0 `0`, kneeA `0`, kneeB `+1`. The prereg quoted that receipt's *marginal* numbers and did not mention
+its additivity rows. At n=2 those values sit on the byte-quantization floor and carry essentially no
+information — but `+1` is nominally the sign my own kill criterion names, so reporting only half of a
+cited receipt is a real pre-registration defect. The prediction is therefore **pre-registered with
+respect to the 29-cell result and NOT blind with respect to a 2-cell prior**. I record it rather than
+let the stronger phrasing stand.
 
 `defect = Σ(singleton marginals from state S) − (joint measured saving of the same set from S)`.
 
@@ -189,12 +206,23 @@ Three readings:
    coder race must be re-run at the intended operating point, not inherited from k0.
 3. **QA08 is measured DEAD on the dropped streams, and worsening**: +9.7% → +16.0% → +21.4%.
 
-> **TW1-3 (MEASURED) — a wr1 claim falsified.** wr1 §6 states a QA08 re-race on the Knee-A/B streams
-> *"can only improve the byte column."* **It does not.** No available r7 codec improves on SMEVR at any
-> drop level; the best alternative is 9–15% worse, and QA08's own coder is 10–21% worse and degrades with
-> depth. wr1's statement was about an *ideal* mixing bound (≤1,617 B ≈ 0.3%, from xi1/ba29), not an
-> available coder, and it does not survive as written. Scope: **INSTANCE/FORMULATION** — this codec menu.
-> An unbuilt mixer could still close the ≈0.3% ideal gap; nothing here bounds that.
+> **TW1-3 (MEASURED) — a wr1 claim falsified on its own terms.** wr1 §6 frames QA08 as *"a LOSSLESS coder
+> swap"* that *"lowers bytes for the SAME surviving token values at EVERY drop level (shifts the whole
+> curve down) at zero seg cost,"* and calls for *"a QA08 re-race on the Knee-A/B dropped streams"* that
+> *"can only improve the byte column."* That is exactly the experiment run here, and **it does not.** No
+> available r7 codec improves on SMEVR at any drop level; the best alternative is 9–15% worse, and QA08's
+> own coder is 10–21% worse and degrades with depth.
+>
+> I originally softened this by saying wr1 "meant" the ideal ≤1,617 B mixing bound. That was my
+> misattribution, caught by my own verifier: wr1 §6 never mentions 1,617 B, xi1, or ba29 (zero grep hits
+> in that file), and it names a coder swap and a re-race, not a bound. **wr1 §6 was wrong on its own
+> terms** and I should not have handed it an escape hatch it did not write.
+>
+> Scope: **INSTANCE/FORMULATION** — this codec menu, these states. An unbuilt mixer could still close some
+> of the ideal gap; nothing here bounds that. But note that the ≈0.3% figure is itself a **k0-measured**
+> quantity (1,617 B against SMEVR's *undropped* 555,836 B delta stream), and by TW1-1 and by bullet 2
+> above, k0-measured quantities do not transfer to the dropped states. **The ideal headroom at Knee-A/B is
+> UNMEASURED**, not ≈0.3%.
 
 ---
 
@@ -202,7 +230,9 @@ Three readings:
 
 Task constraint (a) required my curve to carry `S_ref_flipfree` **and** `S_ref_ceiling`, because wr1
 published its descent without its own ceiling column. Reconstructed from wr1's receipt (`d_pose` held at
-the reference 0.22144216, which is what both wr1 columns assume):
+the reference 0.22144216, which is what both wr1 columns assume). Rows k=200 and k=400 are omitted here
+for width only — they carry `dropped_flip_mass = 0` and identical columns, and the "identical for all
+k ≤ 486" statement below was checked over **all** 11 published rows, not this subset:
 
 | k | archive B | rate | d_seg flipfree | d_seg ceiling | **S_flipfree** | **S_ceiling** | dropped flip mass |
 |---:|---:|---:|---:|---:|---:|---:|---:|
@@ -235,10 +265,16 @@ Decomposed against the reference row: seg **+0.1647**, pose **+0.1853**, rate **
 not.
 
 > **TW1-4 (MEASURED, n=1).** wr1's `S_ceiling` is **not a bound**. It can only price flips that already
-> exist inside the dropped cells; it is structurally blind to flips *created* by dropping. At Knee-A it
-> was pierced by **+0.3499 S**. This is the same class gr1 measured independently at token granularity —
-> "the exact-zero-GRADIENT tokens are NOT flip-free under a finite drop". Zero *current* flips and zero
-> *created* flips are different predicates, and only the second is the one the score charges.
+> exist inside the dropped cells; it is structurally blind to flips *created* by dropping. Zero *current*
+> flips and zero *created* flips are different predicates, and only the second is the one the score
+> charges. This is the same class gr1 measured independently at token granularity — "the exact-zero-
+> GRADIENT tokens are NOT flip-free under a finite drop".
+>
+> **Sizing, decomposed — the pierce is not all one mechanism.** The total miss is +0.3499 S, but only
+> **+0.1647 (47%) is the d_seg term** that flip-blindness explains; the larger **+0.1853 (53%) is d_pose**,
+> which the ceiling never modelled at all and which §6 attributes separately. Quoting +0.3499 against the
+> flip-blindness mechanism over-attributes it by ~2.1×. The honest statement is: *the ceiling is not a
+> bound on d_seg (missed by +42.3%), and it is not a bound on S at all because it prices no pose term.*
 
 So constraint (a) is satisfied, but the honest deliverable is stronger than the constraint asked for: **a
 finer-granularity curve must not carry these two columns as its error bars.** It needs a third,
@@ -253,17 +289,28 @@ numbers on both halves of the razor, and must be explicit that only one half is 
   drop. Within run A (k0→Knee-B, matched states): road 828→928 B/cell versus hood 647→746. Within run B
   (k0→k300, matched states, the only run that can see sky): road 791→882 versus hood 252→284 and sky
   394→456. Road leads every band at every state measured; the two runs are not directly comparable to each
-  other because their state ranges differ. Crossing to the sub-0.15 byte budget needs ~100 more road-plane
-  drops (28→129), and at the measured ~900 B/cell those drops are worth ≈90 KB — consistent with wr1's own
-  k=486→600 tranche, which saved 99,755 B over 114 cells (875 B/cell). By TW1-2 that estimate is a slight
-  *under*-count, since the joint saving exceeds the singleton sum. The byte case for touching the road
-  plane is real and is now priced per unit.
+  other because their state ranges differ.
+- **The ~100 road drops, priced state-matched.** wr1's k=486→600 tranche is **114 cells = 101 road + 13
+  hood**, and it saved 99,755 B. Predicting that from my per-unit marginals requires choosing *which
+  state's* marginals to use, and the choice decides the sign: at Knee-A marginals
+  `101×891.75 + 13×709.11 = 99,285` ⇒ defect **−470 B (−0.47%, superadditive, consistent with TW1-2)`;
+  at Knee-B marginals `101×927.5 + 13×746.0 = 103,376` ⇒ **+3,620 B (+3.63%, subadditive)**. An earlier
+  draft of this memo quoted "≈90 KB" by counting road only and then credited the entire ~9.7 KB gap to
+  superadditivity; that was wrong twice over — most of the gap is simply the 13 uncounted hood cells, and
+  the residual's sign depends on a state the sentence never named. **Corrected reading: the tranche is
+  worth ~100 KB, and the superadditive residual over it is small (≲0.5%) when priced at the tranche's own
+  base state.**
 - **Distortion (NOT MEASURED HERE, and the razor got sharper).** The Knee-A gate is the calibration:
-  freezing 288 sky + 170 hood cells — the cells wr1 typed as *pose-free* — moved d_pose from 0.22144 to
-  0.28002, **+26.5%**. The typed pose-safety model was not merely imprecise, it had the wrong sign for the
-  far field. At the solved-pose operating point the seed's razor arithmetic (`d(term)/d(d_pose) ≈ 327`,
-  so a 2e-5 leak ≈ +0.0153 S ≈ 57 KB of rate) therefore stands **but cannot be applied through wr1's
-  band typing**, which is measured wrong on the only band it was ever checked against.
+  it froze **288 sky + 170 hood + 28 road** cells (486 total) and moved d_pose from 0.22144 to 0.28002,
+  **+26.5%**. wr1 typed the sky and hood drops as pose-free and the 28 road cells as "stable interior".
+  **The gate cannot separate these**: with 28 road-plane cells in the same drop set, the +26.5% is not
+  cleanly attributable to the far field, and an earlier draft of this memo asserted a far-field sign
+  reversal that the experiment does not support. What is measured is only that **the composite typed
+  prediction was wrong in direction** — Knee-A was predicted pose-favorable and came back +26.5%. Which
+  band carries it is **UNRESOLVED** and needs a band-split gate (drop sky+hood only, then sky+hood+road)
+  to separate. At the solved-pose operating point the seed's razor arithmetic
+  (`d(term)/d(d_pose) ≈ 327`, so a 2e-5 leak ≈ +0.0153 S ≈ 57 KB of rate) therefore stands, **but wr1's
+  per-band pose typing cannot be used to steer around it** — it has never been checked band-by-band.
 
 **I did not fire the gate and did not run any scorer job.** Every distortion number above is quoted from
 runs that already exist.
@@ -315,6 +362,34 @@ Run against my own output before handing over. Findings I acted on are marked.
 **Unresolved after round 1:** the greedy-remeasure driver (row 1 of §7) is the direct consequence of
 TW1-1 and I did not run it — it is ~4 h CPU and would have exceeded this unit's scope. It is named with
 its exact form rather than left implicit.
+
+## 8b. Round 2 — fresh-context verifier (the round that actually found things)
+
+Self-critique caught none of the following. A fresh-context verifier re-derived every load-bearing number
+from the primary artifacts and returned **13 defects**. Every *number* in the memo passed — all 20 cells
+of the run-A table, all 8 additivity rows, all 27 race rows, all 11 S-column rows, all 6 gate figures were
+recomputed exact. **Every defect was an attribution or scope error, which is precisely the class
+self-review is worst at.** Fixed in this revision:
+
+| # | defect | fix |
+|---|---|---|
+| D1 | §3 claimed the prereg predated "any additivity row"; a 2-cell smoke receipt 3 min earlier already held rows (0/0/**+1**) and the prereg quoted only its marginals | scope restated + the 2-cell rows disclosed, incl. that `+1` is nominally my own kill-criterion sign |
+| D2 | "only road (20) and hood (9) survive to k=600" — 159 road survive; 20 was the sampler cap | corrected to 20-of-159 (12.6%); harness now records the denominator |
+| D3 | §6 omitted the **28 road cells** Knee-A also freezes, then blamed the far field | composition corrected to 288 sky + 170 hood + 28 road; far-field attribution **withdrawn as UNRESOLVED**, band-split gate named |
+| D4 | TW1-4 sized flip-blindness at the full +0.3499 S | decomposed: only +0.1647 is d_seg; +0.1853 is pose. Over-attribution was ~2.1× |
+| D5, D6 | TW1-3 handed wr1 an "ideal bound" escape hatch wr1 never wrote, while §4 bullet 2 forbids inheriting k0 quantities | escape hatch withdrawn; wr1 §6 quoted verbatim and falsified **on its own terms**; ideal headroom at the knees relabelled **UNMEASURED** |
+| D7 | §6's "≈90 KB" counted road only and credited a 9.7 KB gap to superadditivity; the residual's sign flips with the state chosen | recomputed state-matched both ways (−0.47% at Knee-A, +3.63% at Knee-B) and the ambiguity stated |
+| D8 | harness: a missing wr1 receipt row silently `continue`d, shrinking the control set with `all(passed)` still True — the repo's **vacuity-reads-as-pass** class | unrunnable control now emits `passed=False`; canary added and run (verified it returns `all_passed=False`) |
+| D9 | receipts carried no seed / `per_band` / argv / git head | `invocation` block added |
+| D10 | hold-out used `max(states, key=len)`, correct only because these states nest | now the explicit union |
+| D11 | gr1's token-DOMINATED reported without its n48 scope label | label restored |
+| D12, D13 | run-B ratio statistic unlabelled; §5 silently showed 9 of 11 rows | both labelled |
+
+**The fixes are unreviewed new code and reset the clean-pass counter to 0.** What they were regression-
+checked against: the repaired harness reproduces the 2-cell smoke byte-for-byte (additivity 1,639/1,639,
+1,795/1,795, 1,880/1,879 — identical to the pre-fix run), all four controls still PASS, and the new
+fail-closed path was positive-controlled with a stripped receipt. **No measured byte in §2–§4 changed**;
+the D1–D7 fixes are corrections to claims *about* those bytes, not to the bytes.
 
 ---
 

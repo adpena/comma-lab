@@ -11,6 +11,6 @@
   "score_claim": false,
   "status": "failed",
   "ticket_path": ".omx/research/ddm_mx1d_20260807/launch_ticket_v3_fire_guarded.json",
-  "timestamp_utc": "2026-08-07T12:41:30.282188Z",
+  "timestamp_utc": "2026-08-07T13:15:53.183583Z",
   "verdict_path": ".omx/research/ddm_mx1d_20260807/row1_v2_two_arm/launch_arm_cap/n32_metal/fire_guard_verdict.json"
 }

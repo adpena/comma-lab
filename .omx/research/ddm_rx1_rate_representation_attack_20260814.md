@@ -1,5 +1,22 @@
 # DDM RX1 rate-representation attack: frozen tq1c prior does not transfer to MC36
 
+> ⚠ **FIRE-ORDER BAR SUPERSEDED 2026-08-17 (MAIN).** The `QUEUED-WITH-A-FIRE-ORDER` row below
+> (and any sibling citing `below 186,269 B`) latched the MC36-era frontier. The live own-vehicle
+> frontier is **hv1 ep0634, 182,759 B @ S 0.15959729295498598 `[contest-CUDA T4 n600]`**, so a
+> candidate satisfying the stale bar is **3,510 B / +2.337e-3 S WORSE than what we already ship**
+> — 24% of the entire remaining gap to 0.15. Independently found twice (`sc3` 08-16 §"pure rate
+> bar", `hv2r` 08-17) and never amended at the fire-order itself: the correction landed in a
+> DIFFERENT document while the binding row kept the stale number.
+>
+> **Binding replacement:** derive the bar at FIRE time from
+> `.omx/state/canonical_frontier_pointer.json`, never from a latched literal. Pure-rate admission
+> at the live frontier is **archive ≤ 168,345.6 B** (a −14,413.4 B save = the whole gap on the
+> rate axis alone). Lines 9 and 121 are HISTORICAL ("at the time of writing") and stand unchanged.
+> Genus: cross-regime constant transfer — a latched bar is a constant carried across a regime
+> boundary whose denominator moved. Owner of the structural cure: MAIN (two-landing).
+
+
+
 **Status:** COMPLETE; no exact fire
 
 **Axis:** `[macOS-CPU advisory, scorer-free lossless composition]`

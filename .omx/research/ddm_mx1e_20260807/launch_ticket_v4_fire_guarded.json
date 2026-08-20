@@ -42,11 +42,11 @@
     "--init",
     "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
     "--run-dir",
-    ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n120_metal",
+    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n120_metal",
     "--out",
-    ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n120_metal/result.json",
+    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n120_metal/result.json",
     "--fire-guard-verdict",
-    ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n120_metal/fire_guard_verdict.json",
+    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n120_metal/fire_guard_verdict.json",
     "--launch-ticket-path",
     ".omx/research/ddm_mx1e_20260807/launch_ticket_v4_fire_guarded.json",
     "--fire-argv-key",
@@ -95,11 +95,11 @@
     "--init",
     "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
     "--run-dir",
-    ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n120_metal",
+    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n120_metal",
     "--out",
-    ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n120_metal/result.json",
+    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n120_metal/result.json",
     "--fire-guard-verdict",
-    ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n120_metal/fire_guard_verdict.json",
+    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n120_metal/fire_guard_verdict.json",
     "--launch-ticket-path",
     ".omx/research/ddm_mx1e_20260807/launch_ticket_v4_fire_guarded.json",
     "--fire-argv-key",
@@ -148,11 +148,11 @@
     "--init",
     "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
     "--run-dir",
-    ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal",
+    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal",
     "--out",
-    ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/result.json",
+    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/result.json",
     "--fire-guard-verdict",
-    ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/fire_guard_verdict.json",
+    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/fire_guard_verdict.json",
     "--launch-ticket-path",
     ".omx/research/ddm_mx1e_20260807/launch_ticket_v4_fire_guarded.json",
     "--fire-argv-key",
@@ -201,11 +201,11 @@
     "--init",
     "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
     "--run-dir",
-    ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n32_metal",
+    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal",
     "--out",
-    ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n32_metal/result.json",
+    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/result.json",
     "--fire-guard-verdict",
-    ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n32_metal/fire_guard_verdict.json",
+    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/fire_guard_verdict.json",
     "--launch-ticket-path",
     ".omx/research/ddm_mx1e_20260807/launch_ticket_v4_fire_guarded.json",
     "--fire-argv-key",
@@ -221,7 +221,7 @@
       "--argv-key",
       "argv_n120_arm_cap",
       "--out",
-      ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n120_metal/fire_guard_verdict.json"
+      ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n120_metal/fire_guard_verdict.json"
     ],
     "argv_n120_arm_veh": [
       ".venv/bin/python",
@@ -231,7 +231,7 @@
       "--argv-key",
       "argv_n120_arm_veh",
       "--out",
-      ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n120_metal/fire_guard_verdict.json"
+      ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n120_metal/fire_guard_verdict.json"
     ],
     "argv_n32_arm_cap": [
       ".venv/bin/python",
@@ -241,7 +241,7 @@
       "--argv-key",
       "argv_n32_arm_cap",
       "--out",
-      ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/fire_guard_verdict.json"
+      ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/fire_guard_verdict.json"
     ],
     "argv_n32_arm_veh": [
       ".venv/bin/python",
@@ -251,16 +251,16 @@
       "--argv-key",
       "argv_n32_arm_veh",
       "--out",
-      ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n32_metal/fire_guard_verdict.json"
+      ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/fire_guard_verdict.json"
     ]
   },
   "fire_guard_required": true,
   "fire_guard_tool": "tools/mx1_fire_guard.py",
   "fire_guard_verdict_paths": {
-    "argv_n120_arm_cap": ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n120_metal/fire_guard_verdict.json",
-    "argv_n120_arm_veh": ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n120_metal/fire_guard_verdict.json",
-    "argv_n32_arm_cap": ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/fire_guard_verdict.json",
-    "argv_n32_arm_veh": ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n32_metal/fire_guard_verdict.json"
+    "argv_n120_arm_cap": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n120_metal/fire_guard_verdict.json",
+    "argv_n120_arm_veh": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n120_metal/fire_guard_verdict.json",
+    "argv_n32_arm_cap": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/fire_guard_verdict.json",
+    "argv_n32_arm_veh": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/fire_guard_verdict.json"
   },
   "fire_guard_verdict_schema": "ddm_mx1_fire_guard_verdict.v1",
   "fire_protocol": {
@@ -287,7 +287,7 @@
         "--argv-key",
         "argv_n32_arm_cap",
         "--out",
-        ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/fire_guard_verdict.json"
+        ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/fire_guard_verdict.json"
       ],
       "expected": "REFUSE until the matching mem_probe_receipt exists and passes",
       "step": "guard_precheck"
@@ -325,9 +325,9 @@
         "--init",
         "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
         "--run-dir",
-        ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/mem_probe",
+        ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mem_probe",
         "--out",
-        ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/mem_probe/mem_probe_result.json",
+        ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mem_probe/mem_probe_result.json",
         "--launch-ticket-path",
         ".omx/research/ddm_mx1e_20260807/launch_ticket_v4_fire_guarded.json"
       ],
@@ -343,7 +343,7 @@
         "--argv-key",
         "argv_n32_arm_cap",
         "--out",
-        ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/fire_guard_verdict.json"
+        ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/fire_guard_verdict.json"
       ],
       "expected": "writes fire_guard_verdict.json with status=passed",
       "step": "gate"
@@ -392,11 +392,11 @@
         "--init",
         "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
         "--run-dir",
-        ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal",
+        ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal",
         "--out",
-        ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/result.json",
+        ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/result.json",
         "--fire-guard-verdict",
-        ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/fire_guard_verdict.json",
+        ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/fire_guard_verdict.json",
         "--launch-ticket-path",
         ".omx/research/ddm_mx1e_20260807/launch_ticket_v4_fire_guarded.json",
         "--fire-argv-key",
@@ -438,9 +438,9 @@
     "--init",
     "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
     "--run-dir",
-    ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/mem_probe",
+    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mem_probe",
     "--out",
-    ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/mem_probe/mem_probe_result.json",
+    ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mem_probe/mem_probe_result.json",
     "--launch-ticket-path",
     ".omx/research/ddm_mx1e_20260807/launch_ticket_v4_fire_guarded.json"
   ],
@@ -477,9 +477,9 @@
       "--init",
       "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
       "--run-dir",
-      ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n120_metal/mem_probe",
+      ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n120_metal/mem_probe",
       "--out",
-      ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n120_metal/mem_probe/mem_probe_result.json",
+      ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n120_metal/mem_probe/mem_probe_result.json",
       "--launch-ticket-path",
       ".omx/research/ddm_mx1e_20260807/launch_ticket_v4_fire_guarded.json"
     ],
@@ -515,9 +515,9 @@
       "--init",
       "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
       "--run-dir",
-      ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n120_metal/mem_probe",
+      ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n120_metal/mem_probe",
       "--out",
-      ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n120_metal/mem_probe/mem_probe_result.json",
+      ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n120_metal/mem_probe/mem_probe_result.json",
       "--launch-ticket-path",
       ".omx/research/ddm_mx1e_20260807/launch_ticket_v4_fire_guarded.json"
     ],
@@ -553,9 +553,9 @@
       "--init",
       "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
       "--run-dir",
-      ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/mem_probe",
+      ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mem_probe",
       "--out",
-      ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/mem_probe/mem_probe_result.json",
+      ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mem_probe/mem_probe_result.json",
       "--launch-ticket-path",
       ".omx/research/ddm_mx1e_20260807/launch_ticket_v4_fire_guarded.json"
     ],
@@ -591,19 +591,19 @@
       "--init",
       "/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_12k.pt",
       "--run-dir",
-      ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n32_metal/mem_probe",
+      ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mem_probe",
       "--out",
-      ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n32_metal/mem_probe/mem_probe_result.json",
+      ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mem_probe/mem_probe_result.json",
       "--launch-ticket-path",
       ".omx/research/ddm_mx1e_20260807/launch_ticket_v4_fire_guarded.json"
     ]
   },
-  "mem_probe_receipt_path": ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/mem_probe/mem_probe_receipt.json",
+  "mem_probe_receipt_path": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mem_probe/mem_probe_receipt.json",
   "mem_probe_receipt_paths": {
-    "argv_n120_arm_cap": ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n120_metal/mem_probe/mem_probe_receipt.json",
-    "argv_n120_arm_veh": ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n120_metal/mem_probe/mem_probe_receipt.json",
-    "argv_n32_arm_cap": ".omx/research/ddm_mx1e_20260807/regen/launch_arm_cap/n32_metal/mem_probe/mem_probe_receipt.json",
-    "argv_n32_arm_veh": ".omx/research/ddm_mx1e_20260807/regen/launch_arm_veh/n32_metal/mem_probe/mem_probe_receipt.json"
+    "argv_n120_arm_cap": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n120_metal/mem_probe/mem_probe_receipt.json",
+    "argv_n120_arm_veh": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n120_metal/mem_probe/mem_probe_receipt.json",
+    "argv_n32_arm_cap": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_cap/n32_metal/mem_probe/mem_probe_receipt.json",
+    "argv_n32_arm_veh": ".omx/research/ddm_mx1e_20260807/regen2/launch_arm_veh/n32_metal/mem_probe/mem_probe_receipt.json"
   },
   "mem_probe_receipt_required": true,
   "memory_projection": {
@@ -780,7 +780,7 @@
     577,
     591
   ],
-  "owned_run_root": ".omx/research/ddm_mx1e_20260807/regen",
+  "owned_run_root": ".omx/research/ddm_mx1e_20260807/regen2",
   "safe_run_projection": {
     "arithmetic": "1.268951 GiB measured CPU-side peak + 65.000000 GiB Metal/model/scorer/load-step unknown margin = 66.268951 GiB",
     "axis": "[load-phase memory telemetry projection; score_claim=false]",

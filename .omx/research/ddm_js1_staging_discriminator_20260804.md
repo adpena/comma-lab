@@ -458,11 +458,14 @@ successor does not have to re-derive it, not because it has been walked.
   pose at **zero** seg cost because frame_0 is outside SegNet's input. Q3 on this field would be
   measuring the price of something now obtainable free. et1's fire-order-3 (budget) is likewise
   folded: its coupling law is broken by the staging, not traded along.
-- **QUEUED, fire order 1 — re-score the k=4 repair THROUGH its own int16 quantiser.** The 96 B
-  price is counted but its *value* was measured on unquantised floats (§5b ⚠). Until the repair
-  survives its own carriage arithmetic the k=4 net is a projection, not a row. Cheapest owed
-  step, and it gates everything below. Fire condition: none — it is a re-score of receipts
-  already on disk.
+- **FIRED (was fire order 1) — the int16 quantiser gate, and a correction to how I described it.**
+  I wrote that this was "a re-score of receipts already on disk." **That was wrong**: the solver
+  returned only `int(coef.numel()*2)` and never persisted the coefficients, so nothing on disk
+  could be re-scored — the gate required re-solving. Rather than re-score, the solver was changed
+  so the gate holds **by construction**: the best-iterate is now selected on the **quantised**
+  synthesis (`round(coef)` clamped to int16) instead of the float one, so the reported d_pose *is*
+  the value of the payload that would actually ship, and `max_abs_int16_coefficient` /
+  `int16_range_ok` are recorded per pair. Results in §5c.
 - **QUEUED, fire order 2 — finish the k=4 ladder to honest n on the DAMAGE TAIL.** Running as
   `js1_k4_more.json` (8 pairs, resumable, checkpointed per pair). The pairs that decide this are
   the high-damage ones (et1's 123.8× class), because that is where a repair either holds or does

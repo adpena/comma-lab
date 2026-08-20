@@ -915,9 +915,9 @@ operator queue when they conflict with this section.
   `.omx/state/canonical_frontier_pointer.json`; this file is a mirror, not a
   frontier source of truth.
 - Canonical scanner-derived best CUDA anchor:
-  `0.15659459685822907`
+  `0.15652626435208142`
   `[contest-CUDA T4]`, archive
-  `50e561454b23026d3870f056747e848a49bd5f2b1e23930155d1281aeee91927`,
+  `7ce46fd7a845d5987903a0d85a56581961eb7716a55c38a7361e3b5ecae94b5f`,
   lane `<none>`.
 - A1 remains the Rule #6 control substrate, not the best current axis floor:
   `0.19284757743677347` `[contest-CPU; GHA Linux x86_64 1:1]` and

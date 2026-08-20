@@ -91,3 +91,38 @@ propose the largest scope that DOES fit — a decomposition on a stratified-rand
 prefix, per m88/m96; note seg prefix bias is the mild ≈0.96× axis) is a legitimate SCOPE reduction
 and still answers the operator's question. What is NOT acceptable is another run that measures the
 seg term and throws away the argmax.
+
+## RESPAWN NOTE (MAIN, 2026-08-10) — two blockers, both diagnosed at source
+
+**Blocker 1 CURED (was yours, not a capacity problem).** Your `PermissionError:
+[Errno 1] Operation not permitted` on `/Volumes/APDataStore` was the codex sandbox,
+not the disk — the keeper granted `--add-dir` for tier-1 ONLY. Fixed at the spawn
+site in `tools/codex_arm_queue.py` (commit `002208ddf6`): every MOUNTED tier is now
+granted, both-direction controls executed. You can write to APDataStore now.
+
+**Blocker 2 STILL OPEN — your runner asks the PR130 base receiver for a capability
+it does not have.** MAIN fired your exact command under `safe_run` and it failed
+closed in 2.57 s at the first real decode:
+
+```
+inflate.py:737  ValueError: periodic token progress checkpoints require the ANS stack
+```
+
+Guard: `if progress_cache_path is not None and token_codec != "ans": raise`.
+Your resumability design assumes ANS token checkpointing; the PR130 base ships the
+**Range** coder. This is a real coupling, not plumbing: Range is sequential with no
+cheap resumable state, ANS's stack discipline gives restartable positions. The ANS
+receiver is `ddm_ai1`'s live work and is not landed.
+
+FIX IT AT THE RIGHT LEVEL — make the checkpoint request CONDITIONAL on the decoded
+archive's actual `token_codec`, not unconditional. Range decodes lose intra-decode
+checkpointing (~1,011 s to redo, acceptable); your 60-pair CHUNK resume is
+unaffected and still gives crash-safety. Do NOT weaken the receiver guard — it is
+correct. Do NOT wait for ANS.
+
+Retained failure evidence (yours, already persisted correctly):
+`/Volumes/APDataStore/pact/ddm_sd2_20260810/matched_local_n600/retained/decode/pr130_q4_control/attempts/attempt_0001/decode.log`
+sha256 `8bb9bc56f4bd8ce86d99104b493dbeb5fa1f0bc2bd8bf7d4aa464dbd1d84e54f`.
+MAIN's plan-only receipt (admitted, 27.86 GB required / 997 GiB free):
+`SD2_RETENTION_PREFLIGHT.json` sha `583a15ff048122e554b002867fe089874e27b0ce257a73d27e5d2b561d136dbc`.
+Lane `lane_ddm_sd2_seg_decomposition_20260810` is CLAIMED by MAIN — reuse it.
