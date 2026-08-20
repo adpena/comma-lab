@@ -41,7 +41,7 @@ def main(argv=None) -> int:
     except TimeoutError:
         print("STILL_RUNNING")
         return 2
-    except Exception as e:  # noqa: BLE001 — report the remote failure verbatim
+    except Exception as e:  # report the remote failure verbatim
         print(f"REMOTE_FAILURE: {type(e).__name__}: {e}")
         return 1
 
@@ -60,6 +60,8 @@ def main(argv=None) -> int:
         assert cand_sha == r.get("candidate_sha256"), "candidate sha mismatch vs remote"
         assert len(candidate) == os.path.getsize(os.path.join(out_dir, "candidate_archive.zip"))
 
+    from tac.deploy.modal.result_json import dump_modal_result_json
+
     if r.get("ledger_text"):
         with open(os.path.join(out_dir, "accepted_clicks_ledger.jsonl"), "w") as f:
             f.write(r["ledger_text"])
@@ -67,8 +69,10 @@ def main(argv=None) -> int:
         with open(os.path.join(out_dir, "report_cpu.txt"), "w") as f:
             f.write(r["exact_eval"]["report_text"])
 
-    with open(os.path.join(out_dir, "harvest_result.json"), "w") as f:
-        json.dump(r, f, indent=2, default=str)
+    # Sister of the modal_harvest_poller defect: `default=str` turns any bytes
+    # value into a Python repr that json.load cannot read. Popping the one known
+    # bytes key above did not make the rest safe.
+    dump_modal_result_json(os.path.join(out_dir, "harvest_result.json"), r)
 
     from tac.deploy.modal.call_id_ledger import update_call_id_outcome
 

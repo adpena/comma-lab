@@ -51,6 +51,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -653,54 +654,87 @@ def run_ci_blind_tests(staged: list[str]) -> int:
             print("  Force anyway: PREFLIGHT_CI_BLIND_FORCE=1 git commit ...",
                   file=sys.stderr)
             return 0
-    timeout = _ci_blind_timeout_seconds()
-    try:
-        result = subprocess.run(
-            [".venv/bin/python", "-m", "pytest", *selected,
-             "-q", "--no-header", "-m", "not slow"],
-            cwd=REPO_ROOT, capture_output=True, text=True, timeout=timeout,
-        )
-    except FileNotFoundError:
-        print(f"{YELLOW}[preflight-hook] .venv missing, skipping CI-blind tests{RST}",
-              file=sys.stderr)
-        return 0
-    except subprocess.TimeoutExpired:
-        print(f"\n{RED}{BOLD}[preflight-hook] BLOCKED: CI-blind tests timed out{RST}",
-              file=sys.stderr)
-        print(f"  targets ({len(selected)}): {' '.join(selected[:12])}"
-              f"{' ...' if len(selected) > 12 else ''}", file=sys.stderr)
-        print(f"  timeout: {timeout}s (PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS overrides)",
-              file=sys.stderr)
-        return 1
-    if result.returncode == 5:
-        # pytest EXIT_NOTESTSCOLLECTED: everything in the selection was deselected by
-        # `-m "not slow"`. Nothing ran, so nothing is proven — say so instead of
-        # reporting the green tick that a bare `!= 0` check would have called a failure
-        # and a bare `== 0` check would have called a pass.
+    budget = _ci_blind_timeout_seconds()
+    # ONE pytest process for every selected target CO-LOADS their MLX modules, and
+    # that co-load is its own failure class (#1154): ddm_cu1 measured a
+    # `Fatal Python error: Bus error` across 36 co-selected targets where the
+    # 11th "passes standalone in 0.47s" — no individual test was at fault. A
+    # co-load crash reads as a red commit and forced a documented skip during the
+    # oc2 consolidation. Running each MODULE in its own subprocess extincts the
+    # class: a module that crashes ALONE is a real red, and a crash that only
+    # appears under co-load can no longer happen at all.
+    by_module: dict[str, list[str]] = {}
+    for target in selected:
+        by_module.setdefault(target.split("::", 1)[0], []).append(target)
+    modules = len(by_module)
+    node_ids = sum(1 for target in selected if "::" in target)
+
+    started = time.monotonic()
+    collected_any = False
+    per_module_rc: list[tuple[str, int]] = []
+    for module, targets in by_module.items():
+        remaining = budget - (time.monotonic() - started)
+        if remaining <= 0:
+            print(f"\n{RED}{BOLD}[preflight-hook] BLOCKED: CI-blind tests exhausted "
+                  f"the {budget}s aggregate budget{RST}", file=sys.stderr)
+            ran = len(per_module_rc)
+            print(f"  {ran}/{modules} module(s) completed; not run: "
+                  f"{' '.join(list(by_module)[ran:][:12])}", file=sys.stderr)
+            print("  timeout: PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS overrides",
+                  file=sys.stderr)
+            return 1
+        try:
+            result = subprocess.run(
+                [".venv/bin/python", "-m", "pytest", *targets,
+                 "-q", "--no-header", "-m", "not slow"],
+                cwd=REPO_ROOT, capture_output=True, text=True, timeout=remaining,
+            )
+        except FileNotFoundError:
+            print(f"{YELLOW}[preflight-hook] .venv missing, skipping CI-blind tests{RST}",
+                  file=sys.stderr)
+            return 0
+        except subprocess.TimeoutExpired:
+            print(f"\n{RED}{BOLD}[preflight-hook] BLOCKED: CI-blind module timed out{RST}",
+                  file=sys.stderr)
+            print(f"  module: {module} ({len(targets)} target(s))", file=sys.stderr)
+            print(f"  aggregate budget: {budget}s "
+                  f"(PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS overrides)", file=sys.stderr)
+            return 1
+        per_module_rc.append((module, result.returncode))
+        if result.returncode == 5:
+            # pytest EXIT_NOTESTSCOLLECTED for THIS module: everything in it was
+            # deselected by `-m "not slow"`. Nothing ran, so nothing is proven.
+            continue
+        if result.returncode != 0:
+            print(f"\n{RED}{BOLD}[preflight-hook] BLOCKED: CI-blind (MLX-gated) test "
+                  f"failed in {module}{RST}")
+            print(f"  rc={result.returncode} — this module ran ALONE, so the failure is "
+                  f"real and not the #1154 co-load class.", file=sys.stderr)
+            print(result.stdout[-6000:], file=sys.stderr)
+            if result.stderr:
+                print(result.stderr[-2000:], file=sys.stderr)
+            print(f"\n{RED}GitHub Actions CANNOT catch this: mlx has no Linux wheel, so CI "
+                  f"SKIPS these modules and reports green.{RST}", file=sys.stderr)
+            print("  This hook is the only automated surface that runs them. Fix, then commit.",
+                  file=sys.stderr)
+            print("  Skip (NOT recommended): PREFLIGHT_SKIP_CI_BLIND_TESTS=1 git commit ...",
+                  file=sys.stderr)
+            return 1
+        collected_any = True
+    if not collected_any:
         print(f"{YELLOW}[preflight-hook] CI-blind step: no tests collected in "
-              f"{len(selected)} selected module(s) (all `slow`?) — nothing verified{RST}",
+              f"{modules} selected module(s) (all `slow`?) — nothing verified{RST}",
               file=sys.stderr)
         return 0
-    if result.returncode != 0:
-        print(f"\n{RED}{BOLD}[preflight-hook] BLOCKED: CI-blind (MLX-gated) test failed{RST}")
-        print(result.stdout[-6000:], file=sys.stderr)
-        if result.stderr:
-            print(result.stderr[-2000:], file=sys.stderr)
-        print(f"\n{RED}GitHub Actions CANNOT catch this: mlx has no Linux wheel, so CI "
-              f"SKIPS these modules and reports green.{RST}", file=sys.stderr)
-        print("  This hook is the only automated surface that runs them. Fix, then commit.",
-              file=sys.stderr)
-        print("  Skip (NOT recommended): PREFLIGHT_SKIP_CI_BLIND_TESTS=1 git commit ...",
-              file=sys.stderr)
-        return 1
     # Report the DENOMINATOR, not just a green tick: "OK" over an empty or accidentally
     # narrowed selection is the vacuity failure this step exists to refuse.
-    modules = len({t.split("::", 1)[0] for t in selected})
-    node_ids = sum(1 for t in selected if "::" in t)
-    detail = f"{modules} module(s)"
+    empty = sum(1 for _module, rc in per_module_rc if rc == 5)
+    detail = f"{modules} module(s), isolated"
     if node_ids:
         detail += (f", {node_ids} gated node id(s) — the rest of those modules run in "
                    f"GitHub Actions")
+    if empty:
+        detail += f"; {empty} module(s) collected nothing"
     print(f"{GREEN}[preflight-hook] CI-blind tests OK ({detail}){RST}", file=sys.stderr)
     return 0
 

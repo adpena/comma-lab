@@ -492,7 +492,10 @@ def main() -> int:
     args = ap.parse_args()
 
     sys.path.insert(0, REPO_SRC)
+    if REPO_SRC not in sys.path:
+        sys.path.insert(0, REPO_SRC)
     from tac.deploy.modal.call_id_ledger import update_call_id_outcome
+    from tac.deploy.modal.result_json import dump_modal_result_json
 
     out = pathlib.Path(args.output_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -505,7 +508,13 @@ def main() -> int:
     )
     if outcome["kind"] == POLL_RESULT:
         r = outcome["result"]
-        result_path.write_text(json.dumps(r, indent=2, default=str))
+        # `json.dumps(r, ..., default=str)` wrote Python bytes-REPRS here: Modal
+        # returns `artifacts` as dict[str, bytes], and `str(b"...")` produced a
+        # receipt that raises JSONDecodeError for json.load. It damaged every
+        # arm's MODAL_REMOTE_RESULT.json, the frontier's (ddm_jg5) included.
+        # The canonical projection decodes UTF-8 bytes to text, base64s the
+        # rest, and RECORDS which transform each path received.
+        dump_modal_result_json(result_path, r)
         # The remote result carries the two facts the spend ledger needs and
         # this poller has always dropped: MEASURED billed wall-clock and the
         # hardware it ran on. Without them 49 of 63 cap-window calls carried

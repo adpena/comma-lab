@@ -578,6 +578,74 @@ def _append_log(record: dict) -> None:
               f"to log {LOG_PATH}: {record!r}", file=sys.stderr)
 
 
+def _git_common_dir() -> Path | None:
+    """The real .git directory (worktree-aware); None if git cannot answer."""
+
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "--git-dir"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        return None
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return None
+    git_dir = Path(proc.stdout.strip())
+    return git_dir if git_dir.is_absolute() else (REPO_ROOT / git_dir)
+
+
+def merge_in_progress() -> tuple[str, float] | None:
+    """(MERGE_HEAD sha, mtime epoch) when a merge is open, else None.
+
+    An open `git merge --no-commit` makes the NEXT commit in this repo a merge
+    commit whatever it stages: git reads .git/MERGE_HEAD and records it as a
+    second parent.  A serializer commit landing in that window therefore writes
+    history that CLAIMS the branch is merged while committing only its own
+    files.
+    """
+
+    git_dir = _git_common_dir()
+    if git_dir is None:
+        return None
+    merge_head = git_dir / "MERGE_HEAD"
+    try:
+        text = merge_head.read_text(encoding="utf-8", errors="replace").strip()
+        mtime = merge_head.stat().st_mtime
+    except OSError:
+        return None
+    first = text.splitlines()[0].strip() if text else ""
+    return (first, mtime) if first else None
+
+
+def _merge_branch_changed_files(merge_head_sha: str, env: dict) -> list[str] | None:
+    """Files the open merge's branch changed since the merge base.
+
+    Fail-open (None) on any git error: this guard must never wedge a commit
+    because git could not answer, only because it answered that content is
+    missing.
+    """
+
+    try:
+        base = subprocess.run(
+            ["git", "merge-base", "HEAD", merge_head_sha],
+            cwd=REPO_ROOT, env=env, capture_output=True, text=True, check=False,
+        )
+        if base.returncode != 0 or not base.stdout.strip():
+            return None
+        changed = subprocess.run(
+            ["git", "diff", "--name-only", base.stdout.strip(), merge_head_sha],
+            cwd=REPO_ROOT, env=env, capture_output=True, text=True, check=False,
+        )
+    except OSError:
+        return None
+    if changed.returncode != 0:
+        return None
+    return [ln.strip() for ln in changed.stdout.splitlines() if ln.strip()]
+
+
 def _acquire_lock(timeout_seconds: int):
     """Acquire LOCK_EX on .commit-lock with a soft timeout, reporting progress.
 
@@ -1404,6 +1472,16 @@ def main(rebind_root: bool = False) -> int:
              "sister subagent (rare); default: check enabled.",
     )
     parser.add_argument(
+        "--merge-commit", action="store_true",
+        help="Declare that THIS commit is the completion of an in-progress "
+             "`git merge --no-commit`. Without it the serializer REFUSES "
+             "(rc=16) whenever .git/MERGE_HEAD exists, because git would "
+             "attach the merge as a second parent while committing only your "
+             "own files (the ddm_oc2 false-second-parent incident). Even with "
+             "it, the staged set must cover every file the merge branch "
+             "changed, or the commit is still refused.",
+    )
+    parser.add_argument(
         "--expected-content-sha256",
         action="append",
         default=None,
@@ -1959,6 +2037,102 @@ def main(rebind_root: bool = False) -> int:
         print(f"[subagent-commit-serializer] FATAL: {e!s}", file=sys.stderr)
         return 2
     wait_seconds = round(time.monotonic() - t0, 3)
+
+    # FIX-MERGE-HEAD (2026-08-20, the ddm_oc2 incident): an open
+    # `git merge --no-commit` held across tool calls makes OUR commit a merge
+    # commit. Git attaches MERGE_HEAD as a second parent regardless of what we
+    # staged, so history claims the branch landed while only our own files were
+    # committed — 7,637 insertions were nearly lost that way, and `git merge`
+    # afterwards reports "Already up to date", so the loss is silent and
+    # permanent. Measured class population: 3 of 311 merge commits in this
+    # repo's history carry the signature (100% of branch-changed files absent
+    # from the merge tree). This is the FIRST post-lock check because an open
+    # merge invalidates every downstream guard's premise.
+    merge_state = merge_in_progress()
+    if merge_state is not None:
+        merge_head_sha, merge_head_mtime = merge_state
+        merge_age_seconds = round(time.time() - merge_head_mtime, 1)
+        # Read-only queries against the REAL index/HEAD: the temp index does not
+        # exist yet at this point, and a merge is completed from the real index.
+        merge_probe_env = dict(os.environ)
+        branch_files = _merge_branch_changed_files(merge_head_sha, merge_probe_env)
+        staged_now = _staged_touched_files(merge_probe_env)
+        unstaged_branch_files = (
+            sorted(set(branch_files) - set(staged_now)) if branch_files is not None else None
+        )
+        if not args.merge_commit:
+            _release_lock(lock_fh)
+            _append_log({
+                **base_record,
+                "outcome": "merge_head_open_refused",
+                "wait_seconds": wait_seconds,
+                "merge_head_sha": merge_head_sha,
+                "merge_head_age_seconds": merge_age_seconds,
+                "merge_branch_changed_file_count": (
+                    None if branch_files is None else len(branch_files)
+                ),
+                "merge_branch_files_not_staged": unstaged_branch_files,
+            })
+            print(
+                "[subagent-commit-serializer] REFUSED (rc=16): a merge is IN "
+                f"PROGRESS (.git/MERGE_HEAD -> {merge_head_sha}, opened "
+                f"{merge_age_seconds}s ago). Committing now would attach that "
+                "merge as a SECOND PARENT of your commit. The serializer stages "
+                "into a TEMP INDEX built from HEAD, so the merge's content is "
+                "dropped even when it is staged in the real index: history "
+                "would claim the branch is merged, `git merge` would then "
+                "report 'Already up to date', and the branch's content would be "
+                "silently lost (the ddm_oc2 incident, 2026-08-20, 7,637 "
+                "insertions). Either finish the merge (`git commit` it, or "
+                "`git merge --abort`), or — if this commit IS the merge — "
+                "re-run with --merge-commit --no-stage and declare every staged "
+                "path in --files. The merge branch changed "
+                f"{'?' if branch_files is None else len(branch_files)} file(s); "
+                f"not currently staged: {unstaged_branch_files!r}",
+                file=sys.stderr,
+            )
+            return 16
+        if not args.no_stage:
+            _release_lock(lock_fh)
+            _append_log({
+                **base_record,
+                "outcome": "merge_commit_without_no_stage",
+                "wait_seconds": wait_seconds,
+                "merge_head_sha": merge_head_sha,
+            })
+            print(
+                "[subagent-commit-serializer] REFUSED (rc=16): --merge-commit "
+                "requires --no-stage. The serializer stages --files into a "
+                "TEMP index built from HEAD, which would discard the merge "
+                "result and reproduce the very loss this guard exists to stop. "
+                "Resolve and `git add -A` into the real index yourself, then "
+                "re-run with --merge-commit --no-stage.",
+                file=sys.stderr,
+            )
+            return 16
+        if unstaged_branch_files:
+            _release_lock(lock_fh)
+            _append_log({
+                **base_record,
+                "outcome": "merge_commit_staged_set_incomplete",
+                "wait_seconds": wait_seconds,
+                "merge_head_sha": merge_head_sha,
+                "merge_head_age_seconds": merge_age_seconds,
+                "merge_branch_files_not_staged": unstaged_branch_files,
+            })
+            print(
+                "[subagent-commit-serializer] REFUSED (rc=16): --merge-commit "
+                "was declared, but the staged set does NOT cover the merge. "
+                f"{len(unstaged_branch_files)} file(s) the branch "
+                f"({merge_head_sha}) changed are not staged, so this commit "
+                "would record the merge while dropping its content. Stage the "
+                "full merge result (`git add -A` after resolving), then retry. "
+                f"Missing: {unstaged_branch_files[:20]!r}",
+                file=sys.stderr,
+            )
+            return 16
+        base_record["merge_commit_declared"] = True
+        base_record["merge_head_sha"] = merge_head_sha
 
     # FIX-1: re-hash under the lock and compare. If a sister subagent
     # modified our --files content during our lock-wait, refuse.

@@ -3259,6 +3259,27 @@ def recursive_carrier_byte_rows(archive: bytes) -> list[dict[str, Any]]:
     return rows
 
 
+def _sampled_member_payload_positions(archive: bytes) -> tuple[list[int], int]:
+    """Byte offset inside each non-empty member payload, plus the denominator.
+
+    Returned separately from the proof so the sample count can be checked
+    against the member census: an offset or member-walk regression that yields
+    zero positions must be a refusal, never a vacuous pass.
+    """
+
+    positions: list[int] = []
+    payload_members = 0
+    with zipfile.ZipFile(io.BytesIO(archive), "r") as reader:
+        infos = reader.infolist()
+        for info in infos:
+            if info.file_size:
+                payload_members += 1
+                positions.append(
+                    info.header_offset + 30 + len(info.filename.encode()) + len(info.extra) + info.file_size // 2
+                )
+    return positions, payload_members
+
+
 def prove_carrier_archive_fail_closed(archive: bytes) -> dict[str, Any]:
     """Sample every outer home: a mutation must refuse or alter decoded RGB."""
 
@@ -3267,14 +3288,17 @@ def prove_carrier_archive_fail_closed(archive: bytes) -> dict[str, Any]:
     render_probe = baseline.render_camera_pairs if baseline.realization_profile is not None else baseline.render_pairs
     digest = hashlib.sha256(render_probe(probe_ids).tobytes()).hexdigest()
     _members, homes = parse_carrier_compose_archive(archive)
-    positions: list[int] = []
-    with zipfile.ZipFile(io.BytesIO(archive), "r") as reader:
-        infos = reader.infolist()
-        for info in infos:
-            if info.file_size:
-                positions.append(
-                    info.header_offset + 30 + len(info.filename.encode()) + len(info.extra) + info.file_size // 2
-                )
+    positions, payload_members = _sampled_member_payload_positions(archive)
+    # `refused + changed == len(positions)` is `0 == 0` on an empty walk, so the
+    # whole proof would report True having mutated nothing.  Refuse instead: a
+    # carrier archive always has at least the manifest and the predictor, and
+    # this value is published as `fail_closed_mutation_proof` by 6 measurement
+    # tools.
+    if not positions or len(positions) != payload_members or payload_members < 2:
+        raise DirectDescriptionError(
+            "fail-closed mutation proof sampled no member payload homes: "
+            f"{len(positions)} positions over {payload_members} non-empty members"
+        )
     refused = changed = 0
     for position in positions:
         altered = bytearray(archive)
@@ -3293,6 +3317,7 @@ def prove_carrier_archive_fail_closed(archive: bytes) -> dict[str, Any]:
         changed += 1
     return {
         "sampled_member_payload_homes": len(positions),
+        "non_empty_member_payload_count": payload_members,
         "refused": refused,
         "changed_decode": changed,
         "all_samples_refused_or_changed_decode": refused + changed == len(positions),

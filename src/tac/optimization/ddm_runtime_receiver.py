@@ -18,7 +18,7 @@ import shutil
 import struct
 import sys
 import time
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -1685,10 +1685,15 @@ def _inflate_ws1(
         expected_bytes=expected_bytes,
         expected_sha256=str(manifest["output"]["sha256"]),
     )
+    ws1_coder, la1_component_coders = _ws1_receipt_coder(
+        manifest=manifest,
+        framed=members["state/ws1.ddj5"],
+        consumed_streams=consumed_streams,
+    )
     receipt = {
-        "coder": (
-            "brotli_q11" if BLOB_HEADER.unpack_from(members["state/ws1.ddj5"])[2] == 1 else "lzma1_raw_d1m_lc3_lp0_pb2"
-        ),
+        "coder": ws1_coder,
+        "final_output_binding": "COUNTED_MANIFEST_SHA256",
+        "la1_component_coders": la1_component_coders,
         "dependencies": manifest["dependencies"],
         "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
         "final": {
@@ -1736,6 +1741,47 @@ def _inflate_ws1(
     return receipt
 
 
+def _ws1_receipt_coder(
+    *,
+    manifest: Mapping[str, Any],
+    framed: bytes,
+    consumed_streams: Sequence[Mapping[str, Any]],
+) -> tuple[str, list[dict[str, Any]] | None]:
+    """Report the coder that actually framed this WS1 member.
+
+    An E5A packet's `state/ws1.ddj5` is an LA1 bundle framed by
+    `E5A_BUNDLE_PREFIX`, not a `DDE1B` blob: byte 6 there is `component_count`,
+    so reading it through `BLOB_HEADER[2]` produced `brotli_q11` iff the bundle
+    happened to carry exactly one component and `lzma1_raw_d1m_lc3_lp0_pb2`
+    otherwise.  Both were meaningless — E5A's real coders are the per-component
+    `E5A_CODECS`, already censused by `_reconstruct_e5a_la1_bundle`.
+    """
+
+    if manifest["schema"] == E5A_SCHEMA:
+        census = [
+            {
+                "bytes": int(row["bytes"]),
+                "codec": str(row["codec"]),
+                "component": str(row["component"]),
+                "frame_sha256": str(row["frame_sha256"]),
+            }
+            for row in consumed_streams
+            if "codec" in row and "component" in row
+        ]
+        if not census:
+            raise ReceiverError("E5A LA1 bundle produced no per-component codec census")
+        return "e5a_la1_per_component", census
+    # Only read the DDE1B layout when the member really is a DDE1B frame.
+    if len(framed) < BLOB_HEADER.size or framed[: len(BLOB_MAGIC)] != BLOB_MAGIC:
+        raise ReceiverError("WS1 state member is not a DDE1B frame")
+    codec = BLOB_HEADER.unpack_from(framed)[2]
+    if codec == 1:
+        return "brotli_q11", None
+    if codec == 2:
+        return "lzma1_raw_d1m_lc3_lp0_pb2", None
+    raise ReceiverError("WS1 packet coder contract changed")
+
+
 def _preserved_stage_sequence_identity(
     rows: list[dict[str, Any]],
     paths: list[Path],
@@ -1778,7 +1824,10 @@ def _inflate_cc3(
         import numpy as np
 
         from tac.optimization.ddm_cc3_mixed_coder_receiver import restore_extracted_composition
-        from tac.optimization.ddm_pc1_pose_stream import receive_pc1_camera_pairs
+        from tac.optimization.ddm_pc1_pose_stream import (
+            parse_counted_composition_archive,
+            receive_pc1_camera_pairs,
+        )
         from tac.optimization.ddm_ws1_warm_start import (
             parse_ws1_warm_start_archive,
             receive_ws1_warm_start_archive,
@@ -1881,14 +1930,30 @@ def _inflate_cc3(
     stage_bytes, stage_sha256 = _preserved_stage_sequence_identity(stage_rows, stage_paths)
     if stage_bytes != expected_bytes:
         raise ReceiverError("CC3 stage byte total differs from output geometry")
+    # The stage digest concatenates the SAME files `_assemble_final` concatenates,
+    # so passing it back as `expected_sha256` can only ever compare a value to
+    # itself on a fresh assembly: the "final raw identity mismatch" guard was dead
+    # code there, and the receipt still claimed verified custody.  Every other
+    # inflate route binds its final bytes to the COUNTED `manifest["output"]["sha256"]`.
+    # CC3's counted PC1 composition manifest has no output digest today, so bind to
+    # it when it appears and otherwise say plainly that the binding is absent.
+    counted_output_sha256 = parse_counted_composition_archive(source_archive)[2].get("output_sha256")
+    if counted_output_sha256 is not None and not _is_lower_sha256(str(counted_output_sha256)):
+        raise ReceiverError("CC3 counted output SHA-256 is malformed")
+    final_output_binding = (
+        "COUNTED_COMPOSITION_MANIFEST_SHA256"
+        if counted_output_sha256 is not None
+        else "DERIVED_FROM_PRESERVED_STAGES_NO_COUNTED_BINDING"
+    )
     final_bytes, final_sha256 = _assemble_final(
         final_path=final_path,
         stage_rows=stage_rows,
         stage_paths=stage_paths,
         expected_bytes=expected_bytes,
-        expected_sha256=stage_sha256,
+        expected_sha256=str(counted_output_sha256) if counted_output_sha256 is not None else stage_sha256,
     )
     receipt = {
+        "final_output_binding": final_output_binding,
         "composition": {
             "active": packet.active,
             "parent_archive_bytes": len(parent_archive),
@@ -2164,6 +2229,7 @@ def inflate(archive_dir: Path, output_dir: Path, video_names_file: Path) -> dict
         "coder": (
             "brotli_q11" if BLOB_HEADER.unpack_from(members["base/chart.ddb"])[2] == 1 else "lzma1_raw_d1m_lc3_lp0_pb2"
         ),
+        "final_output_binding": "COUNTED_MANIFEST_SHA256",
         "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
         "final": {
             "bytes": final_bytes,

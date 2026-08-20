@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tac.optimization import direct_description_carrier_compose as compose
 from tac.optimization.direct_description_carrier_compose import (
     ARCHIVE_SCHEMA_V2,
     ARCHIVE_SCHEMA_V3,
@@ -709,11 +710,23 @@ def test_v15_counted_row_band_templates_extend_v14_receiver_without_decode_score
     noop_receiver = receive_carrier_compose_archive(noop_archive)
     assert np.array_equal(v14_camera, noop_receiver.render_camera_pairs((0, 63)))
     lane_mask = noop_receiver.template_camera_masks((0, 63), noop_bank.templates[0])
+    # Without this the identity assertion below is vacuous: an all-False mask
+    # selects nothing, `patched` stays a plain copy, and an implementation
+    # replaced by `np.zeros((n, 874, 1164), dtype=bool)` passes.
+    assert lane_mask.any()
     patched = v14_camera.copy()
     for index, mask in enumerate(lane_mask):
         patched[index, 0, mask] = (51, 255, 204)
         patched[index, 1, mask] = (51, 255, 204)
     assert np.array_equal(v14_camera, patched)
+    # Positive control for the same mask: painting a colour that DIFFERS at every
+    # selected pixel must change the camera.  255 - x != x for every uint8, so this
+    # fails outright on an all-False mask.
+    probe = v14_camera.copy()
+    for index, mask in enumerate(lane_mask):
+        probe[index, 0, mask] = 255 - probe[index, 0, mask]
+        probe[index, 1, mask] = 255 - probe[index, 1, mask]
+    assert not np.array_equal(v14_camera, probe)
     archive, _homes = compile_carrier_compose_archive(
         _predictor(),
         worldsheet_g1_payload=payload,
@@ -736,7 +749,9 @@ def test_v15_counted_row_band_templates_extend_v14_receiver_without_decode_score
         receive_carrier_compose_archive(v14_archive).render_camera_pairs((0, 63)),
         receiver.render_camera_pairs((0, 63)),
     )
-    assert receiver.template_camera_masks((0,), bank.templates[1]).shape == (1, 874, 1164)
+    band_mask = receiver.template_camera_masks((0,), bank.templates[1])
+    assert band_mask.shape == (1, 874, 1164)
+    assert band_mask.any()
 
     with pytest.raises(DirectDescriptionError, match="overlap"):
         ScorerSolvedTemplateBankV1(
@@ -852,4 +867,37 @@ def test_v9_refuses_pixel_or_absent_chart_addresses_and_sampled_mutations() -> N
         )
     archive = compile_carrier_compose_archive(predictor)[0]
     proof = prove_carrier_archive_fail_closed(archive)
+    # `all_samples_refused_or_changed_decode` is `refused + changed == len(positions)`,
+    # which is `0 == 0` -> True on an empty member walk.  Pin the DENOMINATOR so a
+    # regression that mutates nothing cannot pass as a fail-closed proof.
+    with zipfile.ZipFile(io.BytesIO(archive), "r") as reader:
+        non_empty_members = sum(1 for info in reader.infolist() if info.file_size)
+    assert non_empty_members >= 2
+    assert proof["sampled_member_payload_homes"] == non_empty_members
+    assert proof["non_empty_member_payload_count"] == non_empty_members
+    assert proof["refused"] + proof["changed_decode"] == proof["sampled_member_payload_homes"]
+    assert proof["unique_home_coverage_bytes"] == len(archive)
     assert proof["all_samples_refused_or_changed_decode"] is True
+
+
+def test_v9_fail_closed_proof_refuses_a_vacuous_zero_sample_walk() -> None:
+    """Positive control: zero sampled homes must RAISE, not report True.
+
+    Without this the proof is NO-FAKE forbidden class 2 — a returned constant
+    rather than behaviour — and 6 measurement tools publish it as
+    `fail_closed_mutation_proof`.
+    """
+
+    archive = compile_carrier_compose_archive(_predictor())[0]
+    positions, payload_members = compose._sampled_member_payload_positions(archive)
+    assert positions and payload_members >= 2
+
+    original = compose._sampled_member_payload_positions
+    compose._sampled_member_payload_positions = lambda _archive: ([], 0)
+    try:
+        with pytest.raises(DirectDescriptionError, match="sampled no member payload homes"):
+            prove_carrier_archive_fail_closed(archive)
+    finally:
+        compose._sampled_member_payload_positions = original
+    # The guard must not have been a one-way trip.
+    assert prove_carrier_archive_fail_closed(archive)["all_samples_refused_or_changed_decode"] is True

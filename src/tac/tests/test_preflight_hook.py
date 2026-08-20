@@ -400,7 +400,11 @@ def test_run_ci_blind_tests_blocks_on_timeout_never_soft_passes(monkeypatch, cap
     monkeypatch.setattr(preflight_hook.subprocess, "run", fake_run)
     # a soft-pass here would re-create the exact silence the step exists to remove
     assert preflight_hook.run_ci_blind_tests(["x.py"]) == 1
-    assert "CI-blind tests timed out" in capsys.readouterr().err
+    # Per-module isolation (#1154) names the module that timed out; the rc=1
+    # never-soft-pass contract is unchanged.
+    err = capsys.readouterr().err
+    assert "CI-blind module timed out" in err
+    assert "test_ddm_tb1_tr1_renderer.py" in err
 
 
 def test_ci_blind_step_is_wired_into_main_not_orphaned() -> None:
@@ -742,3 +746,101 @@ def test_effective_hook_bound_composes_both_timeouts_and_follows_the_env(
     monkeypatch.setenv("PREFLIGHT_CI_BLIND_TIMEOUT_SECONDS", "1500")
     assert preflight_hook.effective_hook_wall_clock_bound_seconds() == base - \
         preflight_hook._CI_BLIND_TIMEOUT_DEFAULT_SECONDS + 1500
+
+
+def test_ci_blind_runs_each_module_in_its_own_subprocess(monkeypatch, tmp_path) -> None:
+    """#1154: co-loading MLX modules in ONE pytest process is its own failure class.
+
+    ddm_cu1 measured `Fatal Python error: Bus error` across 36 co-selected
+    targets where the 11th passes standalone in 0.47s — no individual test was
+    at fault, and the co-load red forced a documented skip. Isolation extincts
+    the class, so the invocation shape is the contract: one subprocess per
+    MODULE, never one process carrying every module's imports.
+    """
+    invocations: list[list[str]] = []
+
+    class _Result:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_run(cmd, **kwargs):
+        invocations.append(list(cmd))
+        return _Result()
+
+    targets = [
+        "src/tac/tests/test_alpha.py",
+        "src/tac/tests/test_beta.py::test_one",
+        "src/tac/tests/test_beta.py::test_two",
+    ]
+    monkeypatch.delenv("PREFLIGHT_SKIP_CI_BLIND_TESTS", raising=False)
+    monkeypatch.setenv("PREFLIGHT_CI_BLIND_FORCE", "1")
+    monkeypatch.setattr(preflight_hook, "_select_ci_blind_tests", lambda staged: targets)
+    monkeypatch.setattr(preflight_hook.subprocess, "run", fake_run)
+
+    assert preflight_hook.run_ci_blind_tests(["x.py"]) == 0
+    # Two distinct MODULES -> two subprocesses (not one, not three).
+    assert len(invocations) == 2, invocations
+    modules_per_call = [
+        {arg.split("::", 1)[0] for arg in cmd if arg.startswith("src/")}
+        for cmd in invocations
+    ]
+    assert all(len(mods) == 1 for mods in modules_per_call), modules_per_call
+    assert {next(iter(mods)) for mods in modules_per_call} == {
+        "src/tac/tests/test_alpha.py",
+        "src/tac/tests/test_beta.py",
+    }
+    # The two node ids of one module still share that module's single process.
+    beta = next(cmd for cmd in invocations if any("test_beta" in a for a in cmd))
+    assert sum(1 for a in beta if a.startswith("src/")) == 2
+
+
+def test_ci_blind_aggregate_budget_is_shared_across_isolated_modules(
+    monkeypatch,
+) -> None:
+    """Isolation must not multiply the wall-clock bound the serializer relies on."""
+    seen_timeouts: list[float] = []
+
+    class _Result:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def fake_run(cmd, **kwargs):
+        seen_timeouts.append(kwargs["timeout"])
+        return _Result()
+
+    monkeypatch.delenv("PREFLIGHT_SKIP_CI_BLIND_TESTS", raising=False)
+    monkeypatch.setenv("PREFLIGHT_CI_BLIND_FORCE", "1")
+    monkeypatch.setattr(
+        preflight_hook, "_select_ci_blind_tests",
+        lambda staged: ["src/tac/tests/test_a.py", "src/tac/tests/test_b.py"],
+    )
+    monkeypatch.setattr(preflight_hook.subprocess, "run", fake_run)
+    assert preflight_hook.run_ci_blind_tests(["x.py"]) == 0
+
+    budget = preflight_hook._ci_blind_timeout_seconds()
+    assert len(seen_timeouts) == 2
+    # Each module gets the REMAINING budget, never a fresh full one.
+    assert seen_timeouts[0] <= budget
+    assert seen_timeouts[1] <= seen_timeouts[0]
+
+
+def test_ci_blind_reports_nothing_verified_when_every_module_collects_nothing(
+    monkeypatch,
+) -> None:
+    """rc=5 from every module is not a green tick — vacuity must be said out loud."""
+
+    class _Result:
+        returncode = 5
+        stdout = ""
+        stderr = ""
+
+    monkeypatch.delenv("PREFLIGHT_SKIP_CI_BLIND_TESTS", raising=False)
+    monkeypatch.setenv("PREFLIGHT_CI_BLIND_FORCE", "1")
+    monkeypatch.setattr(
+        preflight_hook, "_select_ci_blind_tests",
+        lambda staged: ["src/tac/tests/test_a.py"],
+    )
+    monkeypatch.setattr(preflight_hook.subprocess, "run", lambda cmd, **kw: _Result())
+    assert preflight_hook.run_ci_blind_tests(["x.py"]) == 0

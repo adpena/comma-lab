@@ -5,8 +5,19 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
+import sys
+
+import pytest
 
 from tac.canonical_equations.day_consolidation_laws_20260720 import breakeven_bytes
+from tac.canonical_equations.evaluators import (
+    _EVALUATORS,
+    LAWREF_BUILTIN_EVALUATORS,
+    get_evaluator,
+    populate_lawref_evaluators,
+    register_evaluator,
+)
 from tac.canonical_equations.partition_temporal_transport_amortization_20260715 import (
     EQUATION_ID as TEMPORAL_JITTER_EQUATION_ID,
 )
@@ -39,6 +50,7 @@ from tac.optimization.predict_project_receiver import (
     REALIZATION_BREAKEVEN_EQUATION_ID,
     SEGNET_CENTERED_HEAD_RANK,
     TEMPORAL_JITTER_AMORTIZATION_RATIO,
+    _register_lawref_adapter,
 )
 from tac.optimization.predict_project_schema import canonical_json_bytes
 
@@ -251,3 +263,51 @@ def test_numeric_laws_are_canonical_lawref_resolutions_without_timestamp_or_fall
     assert "resolved_at" not in serialized
     assert hashlib.sha256(canonical_json_bytes(custody)).hexdigest() == CANONICAL_LAW_RESOLUTION_SHA256
     assert EQUATION_GLOBAL_WATERFILL_LAMBDA_STAR == GLOBAL_WATERFILL_LAMBDA_STAR
+
+
+def test_module_imports_when_a_local_adapter_id_graduates_into_the_builtin_registry() -> None:
+    """Regression: a graduated builtin must not make this module unimportable.
+
+    `realization_breakeven_bytes_v1` graduated into `LAWREF_BUILTIN_EVALUATORS`
+    in 81337cd93c.  `_register_lawref_adapter` then saw the builtin, found it was
+    not its own callable, and raised at module scope (the laws resolve during
+    import), so every `import tac.optimization.predict_project_receiver` — and
+    the whole predictor chain and its test modules — failed collection.
+    """
+
+    populate_lawref_evaluators()
+    # Positive control: if this id ever stops being builtin-owned the deferral
+    # branch below is never exercised and this test would pass vacuously.
+    assert REALIZATION_BREAKEVEN_EQUATION_ID in LAWREF_BUILTIN_EVALUATORS
+    builtin = LAWREF_BUILTIN_EVALUATORS[REALIZATION_BREAKEVEN_EQUATION_ID]
+    assert get_evaluator(REALIZATION_BREAKEVEN_EQUATION_ID) is builtin
+
+    # Both implementations must agree numerically, else deferring changes values.
+    for recovery in (0.0, 1.0, 0.15, 1234.5):
+        assert builtin({"realized_recovery_s": recovery}) == breakeven_bytes(recovery)
+
+    # A fresh interpreter must import the module cleanly.
+    proc = subprocess.run(
+        [sys.executable, "-c", "import tac.optimization.predict_project_receiver"],
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    assert proc.returncode == 0, proc.stderr[-2000:]
+
+    # A genuine conflict — two non-builtin adapters for one id — still refuses.
+    def _first(_inputs: object) -> float:
+        return 0.0
+
+    def _second(_inputs: object) -> float:
+        return 1.0
+
+    unique_id = "ddm_ad1_conflict_probe_v1"
+    register_evaluator(unique_id, _first)
+    try:
+        with pytest.raises(RuntimeError, match="conflicting in-process LawRef evaluator"):
+            _register_lawref_adapter(unique_id, _second)
+        # Re-registering the SAME callable stays a no-op.
+        _register_lawref_adapter(unique_id, _first)
+    finally:
+        _EVALUATORS.pop(unique_id, None)

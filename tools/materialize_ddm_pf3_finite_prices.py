@@ -18,7 +18,7 @@ import os
 import shutil
 import sys
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, Final, Literal
 
@@ -72,6 +72,7 @@ WIDTH: Final = 512
 PAIR_COUNT: Final = 600
 CHECKPOINT_SCHEMA: Final = "ddm_pf3_coordinate_measurement_checkpoint.v1"
 RECEIPT_SCHEMA: Final = "ddm_pf3_finite_price_materialization_receipt.v1"
+BASE_CODER_FRAME_MANIFEST_SCHEMA: Final = "ddm_pf3_base_coder_frame_manifest.v1"
 
 
 class PF3MeasurementError(ValueError):
@@ -257,6 +258,7 @@ def _load_inventory(
     dict[str, Any],
     dict[str, Any],
     dict[str, Any],
+    dict[str, Any],
 ]:
     rg3_receipt_path = _resolve(config.rg3_receipt_path)
     receipt = _read_bound_json(
@@ -436,7 +438,10 @@ def _load_inventory(
     }
     if selected_coverage != universe:
         raise PF3MeasurementError("selected PF3 coordinates do not preserve RG3 bucket reach")
-    return selected_inventory, receipt, assignment, direct, rd1
+    # The SHA-bound `table` is returned so callers reuse the verified bytes
+    # instead of re-reading the path unbound; unverified bytes must never reach
+    # a published custody record.
+    return selected_inventory, receipt, assignment, direct, rd1, table
 
 
 def _verify_scorer_config(
@@ -621,6 +626,150 @@ def _encode_settled_candidate_coder(raw: bytes) -> tuple[dict[str, Any], bytes]:
     )
 
 
+def _base_coder_frame_manifest(
+    *,
+    raw: bytes,
+    codecs: Sequence[str],
+    frames: Mapping[str, bytes],
+    race_rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Record exactly which base coders produced a frame on this host.
+
+    The optional coders (brotli / constriction / zstandard) legitimately produce
+    no frame when their dependency is absent, so "all seven files present" is the
+    wrong resume invariant: it turned a missing optional dependency into a
+    permanently poisoned bulk directory.  The manifest is the typed truth about
+    which codecs were raced, so a later process can tell a by-design partial set
+    apart from a truncated one.
+    """
+
+    reasons = {
+        str(row["codec"]): row.get("unavailable_reason")
+        for row in race_rows
+        if not row.get("available")
+    }
+    rows = []
+    for codec in codecs:
+        frame = frames.get(codec)
+        if frame is None:
+            rows.append(
+                {
+                    "codec": codec,
+                    "available": False,
+                    "framed_bytes": None,
+                    "frame_sha256": None,
+                    "unavailable_reason": (
+                        str(reasons[codec])
+                        if reasons.get(codec) is not None
+                        else "OPTIONAL_CODER_PRODUCED_NO_FRAME_ON_THIS_HOST"
+                    ),
+                }
+            )
+            continue
+        rows.append(
+            {
+                "codec": codec,
+                "available": True,
+                "framed_bytes": len(frame),
+                "frame_sha256": hashlib.sha256(frame).hexdigest(),
+                "unavailable_reason": None,
+            }
+        )
+    return {
+        "schema": BASE_CODER_FRAME_MANIFEST_SCHEMA,
+        "same_object_raw_bytes": len(raw),
+        "same_object_raw_sha256": hashlib.sha256(raw).hexdigest(),
+        "rows": rows,
+    }
+
+
+def _resume_base_coder_race(
+    *,
+    raw: bytes,
+    manifest: Mapping[str, Any],
+    paths: Mapping[str, Path],
+) -> tuple[dict[str, Any], dict[str, bytes]]:
+    """Rebuild the race from a manifest, verifying every resumed frame."""
+
+    if (
+        manifest.get("schema") != BASE_CODER_FRAME_MANIFEST_SCHEMA
+        or manifest.get("same_object_raw_sha256") != hashlib.sha256(raw).hexdigest()
+    ):
+        raise PF3MeasurementError("base coder-frame manifest is not bound to this raw object")
+    manifest_rows = manifest.get("rows")
+    if not isinstance(manifest_rows, list) or {
+        str(row["codec"]) for row in manifest_rows
+    } != set(paths):
+        raise PF3MeasurementError("base coder-frame manifest codec set differs")
+    frames: dict[str, bytes] = {}
+    rows: list[dict[str, Any]] = []
+    for entry in manifest_rows:
+        codec = str(entry["codec"])
+        path = paths[codec]
+        if not entry.get("available"):
+            if path.exists():
+                raise PF3MeasurementError(
+                    f"base coder-frame manifest marks {codec} unavailable but a frame exists"
+                )
+            rows.append(
+                {
+                    "codec": codec,
+                    "available": False,
+                    "framed_bytes": None,
+                    "frame_sha256": None,
+                    "parseback_exact": False,
+                    "implementation": None,
+                    "unavailable_reason": entry.get("unavailable_reason"),
+                }
+            )
+            continue
+        if not path.is_file() or path.is_symlink():
+            raise PF3MeasurementError(f"resumed {codec} base frame is missing from the bulk set")
+        frame = path.read_bytes()
+        if (
+            hashlib.sha256(frame).hexdigest() != entry.get("frame_sha256")
+            or len(frame) != entry.get("framed_bytes")
+        ):
+            raise PF3MeasurementError(f"resumed {codec} base frame custody differs")
+        parsed = frame if codec == "RAW_COMPACT" else decode_coded_receiver_object(frame)
+        if parsed != raw:
+            raise PF3MeasurementError(f"resumed {codec} base frame parse-back differs")
+        frames[codec] = frame
+        rows.append(
+            {
+                "codec": codec,
+                "available": True,
+                "framed_bytes": len(frame),
+                "frame_sha256": hashlib.sha256(frame).hexdigest(),
+                "parseback_exact": True,
+                "implementation": "resumed exact frame from the recorded PF3 base race",
+            }
+        )
+    eligible = [row for row in rows if row["available"]]
+    if not eligible:
+        raise PF3MeasurementError("resumed base coder-frame set has no available coder")
+    winner = min(eligible, key=lambda row: (int(row["framed_bytes"]), str(row["codec"])))
+    race = {
+        "schema": "ddm_ms7_same_object_coder_race.v1",
+        "same_object_raw_bytes": len(raw),
+        "same_object_raw_sha256": hashlib.sha256(raw).hexdigest(),
+        "coder_payload_owner": "DDM_MS7_SAME_OBJECT_RECEIVER_ARCHIVE_PAYLOAD",
+        "rows": rows,
+        "winner": {
+            "codec": winner["codec"],
+            "framed_bytes": winner["framed_bytes"],
+            "frame_sha256": winner["frame_sha256"],
+            "parseback_exact": True,
+        },
+        "resume_source": "PRESERVED_FIRST_PROCESS_EXACT_FRAMES",
+        "cross_process_custody_note": (
+            "a later full-race attempt produced different ZSTD trained-dictionary "
+            "bytes and was refused; preserved first-process frame remains exact"
+        ),
+    }
+    return race, frames
+
+
 def _load_or_race_base_coders(
     raw: bytes,
     bulk: Path,
@@ -636,55 +785,65 @@ def _load_or_race_base_coders(
         "CONSTRICTION_ORDER1_CONTEXT_ANS",
         "ZSTD19_TRAINED_DICTIONARY",
     )
-    paths = {codec: bulk / "coder_base_frames" / f"{codec}.bin" for codec in codecs}
+    frame_dir = bulk / "coder_base_frames"
+    paths = {codec: frame_dir / f"{codec}.bin" for codec in codecs}
+    manifest_path = frame_dir / "_manifest.json"
     existing = {codec: path.exists() for codec, path in paths.items()}
-    if any(existing.values()) and not all(existing.values()):
-        raise PF3MeasurementError("partial base coder-frame resume set is unsafe")
-    if all(existing.values()):
-        frames = {codec: paths[codec].read_bytes() for codec in codecs}
-        for codec, frame in frames.items():
-            parsed = frame if codec == "RAW_COMPACT" else decode_coded_receiver_object(frame)
-            if parsed != raw:
-                raise PF3MeasurementError(f"resumed {codec} base frame parse-back differs")
-        rows = [
-            {
-                "codec": codec,
-                "available": True,
-                "framed_bytes": len(frame),
-                "frame_sha256": hashlib.sha256(frame).hexdigest(),
-                "parseback_exact": True,
-                "implementation": "resumed exact frame from first complete PF3 base race",
-            }
-            for codec, frame in frames.items()
-        ]
-        winner = min(rows, key=lambda row: (int(row["framed_bytes"]), str(row["codec"])))
-        race = {
-            "schema": "ddm_ms7_same_object_coder_race.v1",
-            "same_object_raw_bytes": len(raw),
-            "same_object_raw_sha256": hashlib.sha256(raw).hexdigest(),
-            "coder_payload_owner": "DDM_MS7_SAME_OBJECT_RECEIVER_ARCHIVE_PAYLOAD",
-            "rows": rows,
-            "winner": {
-                "codec": winner["codec"],
-                "framed_bytes": winner["framed_bytes"],
-                "frame_sha256": winner["frame_sha256"],
-                "parseback_exact": True,
-            },
-            "resume_source": "PRESERVED_FIRST_PROCESS_EXACT_FRAMES",
-            "cross_process_custody_note": (
-                "a later full-race attempt produced different ZSTD trained-dictionary "
-                "bytes and was refused; preserved first-process frame remains exact"
+    if manifest_path.is_file():
+        race, frames = _resume_base_coder_race(
+            raw=raw,
+            manifest=json.loads(manifest_path.read_bytes()),
+            paths=paths,
+        )
+    elif all(existing.values()):
+        # Legacy bulk directories predate the manifest.  A complete seven-frame
+        # set is unambiguous, so accept it and write the manifest so the next
+        # process resumes through the typed path.
+        race, frames = _resume_base_coder_race(
+            raw=raw,
+            manifest=_base_coder_frame_manifest(
+                raw=raw,
+                codecs=codecs,
+                frames={codec: paths[codec].read_bytes() for codec in codecs},
+                race_rows=(),
             ),
-        }
+            paths=paths,
+        )
+        _publish(
+            manifest_path,
+            _base_coder_frame_manifest(
+                raw=raw,
+                codecs=codecs,
+                frames=frames,
+                race_rows=race["rows"],
+            ),
+        )
+    elif any(existing.values()):
+        present = sorted(codec for codec, ok in existing.items() if ok)
+        raise PF3MeasurementError(
+            "partial base coder-frame resume set is unsafe: no manifest at "
+            f"{manifest_path} and only {present} present; delete {frame_dir} to re-race"
+        )
     else:
         race, frames = race_same_receiver_object(raw)
+        frames = {codec: frames[codec] for codec in codecs if codec in frames}
         for codec, frame in sorted(frames.items()):
             _publish(paths[codec], frame)
+        _publish(
+            manifest_path,
+            _base_coder_frame_manifest(
+                raw=raw,
+                codecs=codecs,
+                frames=frames,
+                race_rows=race["rows"],
+            ),
+        )
         race["resume_source"] = "FRESH_COMPLETE_RACE"
         race["cross_process_custody_note"] = None
     artifacts = {
         codec: _artifact(paths[codec], f"V19C base exact parse-back {codec} frame")
         for codec in codecs
+        if codec in frames
     }
     return race, frames, artifacts
 
@@ -925,7 +1084,7 @@ def _measure_candidate(
 def materialize(config_path: Path = CONFIG) -> dict[str, Any]:
     config, config_sha256 = _read_config(config_path)
     storage = _storage_preflight(config)
-    inventory, rg3_receipt, assignment, direct, rd1 = _load_inventory(config)
+    inventory, rg3_receipt, assignment, direct, rd1, assignment_table = _load_inventory(config)
     bulk = Path(config.bulk_root)
     inventory_checkpoint = {
         "schema": "ddm_pf3_inventory_checkpoint.v1",
@@ -1008,9 +1167,10 @@ def materialize(config_path: Path = CONFIG) -> dict[str, Any]:
             )
         )
     bucket_report = materialized_bucket_report(occupied, candidate_rows)
-    table = json.loads(
-        _resolve(str(rg3_receipt["assignment_table"]["path"])).read_bytes()
-    )
+    # Reuse the SHA-bound table `_load_inventory` already verified.  A bare
+    # re-read here dropped both the SHA check and the symlink refusal, and its
+    # rows land in `_publish`ed immutable receipt fields.
+    table = assignment_table
     probe_rows = [
         row
         for row in table["probe_results"]

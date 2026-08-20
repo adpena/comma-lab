@@ -26,6 +26,7 @@ from tac.boundary_math.r1b4_section_receiver import (
 )
 from tac.canonical_equations.day_consolidation_laws_20260720 import breakeven_bytes
 from tac.canonical_equations.evaluators import (
+    LAWREF_BUILTIN_EVALUATORS,
     get_evaluator,
     has_evaluator,
     populate_lawref_evaluators,
@@ -123,13 +124,26 @@ def _evaluate_segnet_centered_rank(inputs: Mapping[str, Any]) -> int:
 
 
 def _register_lawref_adapter(equation_id: str, evaluator: Callable[[Mapping[str, Any]], Any]) -> None:
-    """Install one process-local adapter or refuse a conflicting implementation."""
+    """Install one process-local adapter, or defer to the canonical builtin.
+
+    `populate_lawref_evaluators()` installs the canonical registry first, so once
+    an id graduates into `LAWREF_BUILTIN_EVALUATORS` this module's local adapter
+    is a redundant duplicate rather than a conflict.  Refusing that case made the
+    whole module unimportable: `realization_breakeven_bytes_v1` graduated in
+    81337cd93c and every `import tac.optimization.predict_project_receiver`
+    afterwards raised at module scope (line 287 resolves the laws at import),
+    taking the predictor chain and its test modules down with it.  Both
+    implementations compute `realized_recovery_s / (25.0 / 37_545_489.0)`; the
+    builtin adds a finiteness guard, so it is the strictly stronger authority.
+    A genuine conflict — two non-builtin adapters for one id — still refuses.
+    """
 
     populate_lawref_evaluators()
     if has_evaluator(equation_id):
-        if get_evaluator(equation_id) is not evaluator:
-            raise RuntimeError(f"conflicting in-process LawRef evaluator for {equation_id}")
-        return
+        existing = get_evaluator(equation_id)
+        if existing is evaluator or existing is LAWREF_BUILTIN_EVALUATORS.get(equation_id):
+            return
+        raise RuntimeError(f"conflicting in-process LawRef evaluator for {equation_id}")
     register_evaluator(equation_id, evaluator)
 
 
