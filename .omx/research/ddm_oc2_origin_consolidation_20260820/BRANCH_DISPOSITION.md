@@ -21,9 +21,36 @@ Baseline hygiene state, measured on tracked content before this arm committed an
 
 The absolute-path exposure is a real standing gap against CLAUDE.md's Public Disclosure Hygiene
 rule ("local absolute paths ... out of GitHub/docs/site/public surfaces"). It is a **pre-existing
-condition at scale**, not something this consolidation introduced, and it is owed to MAIN as a
-separate decision. This arm did not widen the class knowingly: every file it committed was scanned
-for secrets and fleet IPs and came back clean.
+condition at scale** and it is owed to MAIN as a separate decision.
+
+### ⚠ CORRECTION — this arm DID widen the absolute-path class, and my first scan was vacuous
+
+An earlier draft of this section said "this arm did not widen the class knowingly." **That claim was
+produced by a broken instrument and is withdrawn.** The first hygiene sweep used
+`xargs -a <file> grep …`; **BSD `xargs` on macOS has no `-a` flag**, so it errored out and matched
+nothing. Every check returned a clean 0 because the scan never ran. A positive control — a file
+known to contain 1,073 `/Volumes/` occurrences, confirmed present in the scanned list — was reported
+as not matching, which is what exposed the fault.
+
+Re-run correctly (`xargs -0 … < list`, positive control passing), over the **891 distinct files**
+this consolidation touched:
+
+| Check | Real count | Verdict |
+|---|---:|---|
+| Credentials / tokens / private keys | **0** | clean |
+| Tailscale / fleet IPs | **0** real | the single regex hit is line 19 of *this file*, quoting the CIDR `100.64.0.0/10` as a check label — a self-match, not a leak |
+| Files containing `/Volumes/` | **365** | **real; published to a public repo** |
+| Files containing `/Users/adpena` | **399** | **real; published to a public repo** |
+
+These are arm research memos and receipts that cite their SSD workspace and repo paths inline. The
+exposure is the same *kind* already present in 4,226 / 5,242 tracked files, so it is a widening of a
+standing condition rather than a new class — but it is a widening, roughly +9% on the `/Users`
+axis, and the operator should be the one to decide whether to accept it, scrub it, or scrub the
+whole corpus.
+
+Nothing secret leaked: no credential, key, token, or fleet address is present. The lesson is the
+generic one — **a scan that reports zero is worthless until a positive control proves it can report
+one.**
 
 ## 1. Branch disposition
 
@@ -72,7 +99,7 @@ The one worktree that mattered is `agent-ae029aa6d20642139`, which holds
 wk2r counted 167 uncommitted entries in the main worktree on 2026-08-03. By this arm's pass that
 had grown to 280 porcelain entries / 1,049 files. **764 documents and 181 sources were committed**;
 the remainder is bulk that belongs on the SSD tier by the disk rules. See
-`WORKING_TREE_DISPOSITION.md` for the itemized split and the certify records.
+`WORKING_TREE_CERTIFY.json` for the itemized split and the per-file certify records (144 files, sha256 each).
 
 ## 4. The three sh1 files the review gate held back — BLOCKED, preserved losslessly
 
