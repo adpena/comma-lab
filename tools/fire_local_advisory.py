@@ -23,6 +23,20 @@ Env contract (composed, never hand-typed):
     (a symlink named `python` breaks venv detection; the shim law).
   * PYTHONDONTWRITEBYTECODE=1.
 
+Runtime-knob passthrough (`--env KEY=VALUE`, repeatable). Some candidate
+runtimes read their own decode-path knobs from the environment — e.g.
+`F26_TOKEN_DECODER=native-hpac` selects the ddm_wc2c split token decoder. Those
+have to reach the DETACHED child, and before 2026-08-20 this tool carried only
+the two keys above, so the only way to vary a knob was to hand-assemble the
+launcher argv — which is the error factory this tool exists to replace.
+
+The passthrough may NOT set a carried key. Letting `--env` overwrite PATH or
+PYTHONDONTWRITEBYTECODE would reopen exactly the two failure classes documented
+above, so a collision is a REFUSAL rather than a precedence rule: the detector
+zeroes on the cure. Passthrough keys are recorded separately in the launch
+manifest, because the env IS the instrument and a receipt that cannot say which
+decode path was requested cannot grade the row.
+
 The shipped runtime tree is NEVER modified — inflate.sh keeps its bare
 `python` (correct in the contest container); the shim is the host adaptation.
 
@@ -53,6 +67,33 @@ PATH_TAIL = (
 def _refuse(msg: str) -> int:
     print(f"FATAL: {msg}", file=sys.stderr)
     return 2
+
+
+# The keys this tool CARRIES. A passthrough may never set one of them; see the
+# module docstring for why that is a refusal and not a precedence rule.
+CARRIED_ENV_KEYS = frozenset({"PATH", "PYTHONDONTWRITEBYTECODE"})
+
+
+def parse_passthrough_env(pairs: list[str]) -> dict[str, str]:
+    """Parse repeatable ``KEY=VALUE`` runtime knobs, fail-closed.
+
+    Refuses a missing ``=``, an empty key, a duplicate key (which would make the
+    effective value depend on argv order), and any key this tool carries.
+    """
+    out: dict[str, str] = {}
+    for pair in pairs:
+        key, sep, value = pair.partition("=")
+        if not sep or not key:
+            raise ValueError(f"--env expects KEY=VALUE, got {pair!r}")
+        if key in CARRIED_ENV_KEYS:
+            raise ValueError(
+                f"--env may not set {key}: this tool carries it, and overriding it "
+                "reopens the ck1/V7 failure classes it exists to close"
+            )
+        if key in out:
+            raise ValueError(f"--env {key} given twice; the effective value would be argv-order dependent")
+        out[key] = value
+    return out
 
 
 def generate_pyshim(shim_dir: Path, interpreter: Path) -> Path:
@@ -96,11 +137,19 @@ def main() -> int:
     p.add_argument("--projected-gib", type=int, default=12)
     p.add_argument("--inflate-timeout", type=int, default=5400)
     p.add_argument("--evaluate-timeout", type=int, default=14400)
+    p.add_argument("--env", action="append", default=[], metavar="KEY=VALUE",
+                   help="runtime knob passed to the detached child (repeatable); "
+                        "may not set PATH or PYTHONDONTWRITEBYTECODE")
     p.add_argument("--receipt-supersede", action="store_true",
                    help="tombstone an unconsumed prior done-receipt of the same name")
     p.add_argument("--dry-run", action="store_true",
                    help="print the composed env + argv, launch nothing")
     args = p.parse_args()
+
+    try:
+        passthrough = parse_passthrough_env(args.env)
+    except ValueError as error:
+        return _refuse(str(error))
 
     runtime = Path(args.runtime_dir).resolve()
     archive = Path(args.archive).resolve() if args.archive else runtime / "archive.zip"
@@ -125,6 +174,9 @@ def main() -> int:
         "PYTHONDONTWRITEBYTECODE": "1",
         "PATH": f"{shim.parent}:{PATH_TAIL}",
     }
+    # Carried keys are written last so no ordering accident can let a
+    # passthrough shadow one; parse_passthrough_env has already refused any.
+    env_pairs = {**passthrough, **env_pairs}
     inner = [
         str(interpreter), "tools/safe_run.py",
         "--rss-mb", str(args.rss_mb), "--timeout", str(args.timeout),
@@ -166,6 +218,7 @@ def main() -> int:
         "attempt_dir": str(attempt),
         "label": args.label,
         "env": env_pairs,
+        "passthrough_env": passthrough,
         "pyshim": str(shim),
         "pyshim_interpreter": str(interpreter),
         "argv": launcher,

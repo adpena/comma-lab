@@ -12,7 +12,7 @@ change is expressed as a RECORDED TEXTUAL TRANSFORMATION with asserted match
 counts: if the base tree drifts, the assertion fires and the stage refuses,
 rather than silently applying a patch to text that no longer means what it did.
 
-WHAT IT CHANGES, exactly four things:
+WHAT IT CHANGES, exactly six things (items 5 and 6 added by ``ddm_rr6``):
 
 1. Copies ``experiments/ddm_wc2c_split_token_decoder.py`` in as
    ``runtime/f26_split_token_decoder.py``, BYTE-IDENTICALLY.  It already uses
@@ -24,6 +24,32 @@ WHAT IT CHANGES, exactly four things:
 3. Routes the ``native-hpac`` branch to ``decode_split_tokens``.
 4. Adds the split decoder and the C source to the token-decoder fingerprint, so
    a changed decoder cannot reuse a token checkpoint made by a different one.
+5. Flips the ``F26_TOKEN_DECODER`` DEFAULT from ``python`` to ``native-hpac``
+   (``ddm_rr6``).  Upstream runs ``bash inflate.sh <dir> <out> <list>`` with no
+   environment (``upstream/evaluate.sh``), so ``${F26_TOKEN_DECODER:-python}``
+   resolves to ``python`` on the contest runner and the accelerator NEVER FIRES
+   THERE.  Items 1-3 lift the refusal for anyone who sets the variable by hand;
+   they do not put the accelerator in the submission.  Without this flip the
+   port is stranded one level down from where it was stranded before.
+6. Makes the native build FAIL CLOSED TO PYTHON rather than aborting the
+   inflate, and pins the intrinsic-free build (``ddm_rr6``).  Two changes, one
+   rationale -- a wrong-fast or dead decode is worse than a slow correct one:
+
+   * ``set -euo pipefail`` means a compiler failure on unknown contest silicon
+     currently aborts inflate.sh outright, turning a wall-clock WARN into a
+     zero.  Both build attempts move into an ``if`` condition (exempt from
+     errexit) and failure degrades to the proven Python decoder with a stderr
+     note, which the receipt records as ``token_decoder``.
+   * ``-DF26_FORCE_SCALAR=1`` compiles out the hand-written AVX2/NEON kernels.
+     They are integer-only, so they carry no FP reordering hazard, but the AVX2
+     kernels have NEVER BEEN EXECUTED (no x86 host was reachable) and the
+     contest box is x86.  ``ddm_wc2c`` MEASURED the intrinsic-free twin at
+     324.779 s against the dispatched NEON build's 326.160 s (n600,
+     ``[macOS-CPU advisory]``) -- the twin was 0.4% FASTER, because the speed
+     comes from the compiler's auto-vectoriser and not from the hand kernels.
+     So pinning the twin costs nothing measured and removes every unexecuted
+     instruction from the shipped binary.  Re-enabling dispatch is deleting one
+     ``-D`` once someone runs the AVX2 kernels on an x86 host.
 
 WHAT IT DOES NOT DO.  It does not touch the jg5 tree in place, does not fire
 anything, and does not claim a score.  It emits a NEW tree plus a manifest of
@@ -136,17 +162,48 @@ BUILD_NEW = '''    case "$(uname -s)" in
       Darwin) NATIVE_ARCH_FLAG="-mcpu=native" ;;
       *)      NATIVE_ARCH_FLAG="-march=native" ;;
     esac
-    # The arch flag is a build-host optimisation, never the ISA gate: the gate is
-    # __builtin_cpu_supports at runtime.  So a compiler that rejects it falls back
-    # to the portable build rather than turning the accelerator off.
-    if ! "${CC:-cc}" -O3 $NATIVE_ARCH_FLAG -std=c11 -shared -fPIC \\
-        -ffp-contract=off -fno-fast-math \\
+    # The arch flag is a build-host optimisation, never an ISA gate: the speed
+    # comes from the compiler's auto-vectoriser.  -DF26_FORCE_SCALAR=1 compiles
+    # out the hand-written AVX2/NEON kernels, which are integer-only (no FP
+    # reordering hazard) but have never been executed on x86; the intrinsic-free
+    # twin MEASURED 0.4% FASTER at n600, so pinning it costs nothing and ships
+    # no unexecuted instruction.  Both attempts sit inside the `if` condition,
+    # which `set -e` does not apply to, so a compiler that rejects the arch flag
+    # falls back to the portable build and a compiler that fails both leaves the
+    # decoder unset for the caller below to degrade -- never an aborted inflate.
+    if "${CC:-cc}" -O3 $NATIVE_ARCH_FLAG -std=c11 -shared -fPIC \\
+        -ffp-contract=off -fno-fast-math -DF26_FORCE_SCALAR=1 \\
+        "$HERE/runtime/f26_hpac_native.c" -lm \\
+        -o "$BUILD_DIR/f26_hpac_native.so" 2>/dev/null \\
+      || "${CC:-cc}" -O3 -std=c11 -shared -fPIC \\
+        -ffp-contract=off -fno-fast-math -DF26_FORCE_SCALAR=1 \\
         "$HERE/runtime/f26_hpac_native.c" -lm \\
         -o "$BUILD_DIR/f26_hpac_native.so" 2>/dev/null
     then
-      "${CC:-cc}" -O3 -std=c11 -shared -fPIC -ffp-contract=off -fno-fast-math \\
-        "$HERE/runtime/f26_hpac_native.c" -lm -o "$BUILD_DIR/f26_hpac_native.so"
+      export F26_HPAC_NATIVE_LIBRARY="$BUILD_DIR/f26_hpac_native.so"
+    else
+      echo "f26 native build unavailable; using the python token decoder" >&2
+      export F26_TOKEN_DECODER=python
     fi
+'''
+
+# Upstream calls inflate.sh with no environment, so the inherited default keeps
+# the accelerator dark on the contest runner.  See docstring item 5.
+DEFAULT_OLD = '''export F26_TOKEN_DECODER="${F26_TOKEN_DECODER:-python}"
+'''
+
+DEFAULT_NEW = '''export F26_TOKEN_DECODER="${F26_TOKEN_DECODER:-native-hpac}"
+'''
+
+# The old text unconditionally exported the library path after the build, which
+# is wrong once the build may fail: the export now lives in the success branch.
+EXPORT_OLD = '''    export F26_HPAC_NATIVE_LIBRARY="$BUILD_DIR/f26_hpac_native.so"
+  fi
+fi
+'''
+
+EXPORT_NEW = '''  fi
+fi
 '''
 
 FINGERPRINT_NEW = '''        files.extend(
@@ -242,6 +299,8 @@ def stage(base: Path, output: Path, *, force: bool = False) -> dict[str, Any]:
     shell_path = output / "inflate.sh"
     shell = shell_path.read_text()
     shell = _apply(shell, BUILD_OLD, BUILD_NEW, "OpenMP-free native build line")
+    shell = _apply(shell, EXPORT_OLD, EXPORT_NEW, "library export moved into the success branch")
+    shell = _apply(shell, DEFAULT_OLD, DEFAULT_NEW, "native-hpac is the default decoder")
     shell_path.write_text(shell)
 
     manifest = {
@@ -271,6 +330,8 @@ def stage(base: Path, output: Path, *, force: bool = False) -> dict[str, Any]:
             "native-hpac decode route",
             "token decoder fingerprint",
             "OpenMP-free native build line",
+            "library export moved into the success branch",
+            "native-hpac is the default decoder",
         ],
         "owed_before_any_exact_eval": [
             "full-field identity run against this staged tree",
