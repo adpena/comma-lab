@@ -29,18 +29,27 @@ GPU `Tesla T4`, `gpu_t4_match: True`, n600, `evidence_grade: contest-CUDA`, rece
 Both distortion components are byte-for-byte equal to jg5's across all 600 pairs on the
 deterministic CUDA scorer. The rr2 (#1096) failure mode — CPU-prob encode vs CUDA-prob decode —
 produced S 27.83, not identity; the rider's adaptive arithmetic coder round-tripped correctly on
-CUDA. This receipt schema does not emit a raw sha or per-stage timing split, so: identity is
-proven at the COMPONENT level (the same forced-control form the rr8 row used), and the composed
-tree's T4 inflate-only wall is bounded above by 513.8 s minus evaluate but NOT separately
-measured. The 464.559 s instrumented figure remains one instance on a different tree — not
-transferred.
+CUDA.
+
+**CORRECTED 2026-08-20 (rv17 round-1 HIGH F1, memo ddm_rv17_wave_end_review_round1_20260820.md
+— MAIN re-verified all fields at source):** the original text here claimed the receipt "does not
+emit a raw sha or per-stage timing split" and that the inflate wall was "NOT separately
+measured." FALSE on every clause. The receipt carries `raw_sha256`, a full `stage_seconds`
+split, `decoded_token_sha256` (`cc10a7b0…`, byte-matching the CPU leg — the exact rr2-desync
+discriminator, so identity is proven at TOKEN level, stronger than the component-level form),
+`inflate_elapsed_seconds = 458.752594349`, and the harness's own adjudicated wall verdict:
+`Wall budget: PASS [contest-CUDA] … 498.476 s charged <= 822 s cold-cache ceiling`. The
+464.559 s figure from the instrumented run on a different tree remains not-transferred — this
+tree has its OWN measured inflate wall.
 
 ## THE DECODE WALL, CLOSED ON THE SHIPPING OBJECT
 
-jg5's whole job measured 1,491.6 s; this composed job measured 513.8 s on the same schema. With
-wc2's projected checkout/deps/download terms (498–978 s, PROJECTION), the composed whole CI job
-projects comfortably inside the measured 1,800 s wall at both ends — the term we control is now
-~1/3 of what jg5 shipped with.
+jg5's whole job measured 1,491.6 s; this composed job measured 513.8 s on the same schema.
+Sharper (per the rv17 correction above): the receipt's own harness adjudicated the ship-wall
+question directly — 498.476 s charged ≤ 822 s cold-cache ceiling, PASS — with the measured
+inflate term at 458.75 s. Only the GitHub-Actions setup terms (checkout/deps/download) remain
+wc2 PROJECTIONS (498–978 s); the decode term we control is measured, not projected, at ~1/3 of
+what jg5 shipped with.
 
 ## LINEAGE (all receipts SHA-pinned)
 

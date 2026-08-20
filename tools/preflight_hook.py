@@ -1592,10 +1592,12 @@ def run_staged_secrets_scan() -> int:
     default ruleset alone missed every one of those (the #1086 vacuous-control
     lesson: a control that cannot fail proves nothing).
 
-    Loud on every path: absent binary and tool errors WARN with the reason
-    (skip-as-green is the #875/#1050 vacuity class); findings REFUSE with
-    redacted output only. Waiver: TAC_SECRETS_WAIVE=1 for a deliberate,
-    operator-reviewed exception.
+    FAIL-CLOSED on every path (rv17 SEC-F1, 2026-08-20): findings REFUSE with
+    redacted output; absent binary, timeout, and tool error ALSO REFUSE — a
+    guard advertised BLOCKING that passes when its tool is missing commits the
+    very skip-as-green vacuity class (#875/#1050) it exists to prevent. The
+    ONE escape is TAC_SECRETS_WAIVE=1: a deliberate, loud, operator-reviewed
+    exception — never a silent default.
     """
 
     if os.environ.get("TAC_SECRETS_WAIVE") == "1":
@@ -1633,19 +1635,21 @@ def run_staged_secrets_scan() -> int:
         )
     except FileNotFoundError:
         print(
-            f"{YELLOW}[preflight-hook] staged secrets scan SKIPPED: gitleaks "
-            f"binary absent ({staged_count} staged file(s) UNSCANNED — install "
-            f"via `brew install gitleaks` to restore the guard){RST}",
+            f"{RED}[preflight-hook] staged secrets scan REFUSED: gitleaks "
+            f"binary absent ({staged_count} staged file(s) UNSCANNED). Install "
+            f"via `brew install gitleaks`, or deliberate exception: "
+            f"TAC_SECRETS_WAIVE=1{RST}",
             file=sys.stderr,
         )
-        return 0
+        return 1
     except subprocess.TimeoutExpired:
         print(
-            f"{YELLOW}[preflight-hook] staged secrets scan TIMED OUT at 120s "
-            f"({staged_count} staged file(s) UNSCANNED — not a pass){RST}",
+            f"{RED}[preflight-hook] staged secrets scan REFUSED: gitleaks "
+            f"TIMED OUT at 120s ({staged_count} staged file(s) UNSCANNED). "
+            f"Deliberate exception: TAC_SECRETS_WAIVE=1{RST}",
             file=sys.stderr,
         )
-        return 0
+        return 1
     if result.returncode == 0:
         print(
             f"{GREEN}[preflight-hook] staged secrets scan: "
@@ -1669,12 +1673,14 @@ def run_staged_secrets_scan() -> int:
         )
         return 1
     print(
-        f"{YELLOW}[preflight-hook] staged secrets scan: gitleaks error "
+        f"{RED}[preflight-hook] staged secrets scan REFUSED: gitleaks error "
         f"rc={result.returncode} ({staged_count} staged file(s) UNSCANNED — "
-        f"not a pass): {(result.stderr or '').strip()[:200]}{RST}",
+        f"if `protect` was dropped by a gitleaks upgrade, migrate this step "
+        f"to the supported staged-scan command). Deliberate exception: "
+        f"TAC_SECRETS_WAIVE=1: {(result.stderr or '').strip()[:200]}{RST}",
         file=sys.stderr,
     )
-    return 0
+    return 1
 
 
 def main() -> int:
