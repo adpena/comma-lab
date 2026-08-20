@@ -5,7 +5,10 @@ Date: 2026-08-20 · Owner: ddm_wc2c (Opus build arm) · Status: **BUILT + IDENTI
 
 Charter: `.omx/research/ddm_wc2_wall_clock_pass_20260820.md` GO section. The jg5 pointer body
 (S 0.14839100138338618 @ 180,625 B) does not fit the CI wall: inflate **1,419.900 s** against a CUDA
-residual of **[822, 1302] s** = REFUSE. Token decode is **1,341.540 s = 95.72%** of it. The accelerator
+residual of **[822, 1302] s** = REFUSE. Token decode is **1,341.540 s = 94.5% of it** (95.72% is the
+share of the 1,401.58 s instrumented-stage sum, a different denominator — corrected 2026-08-20 by
+`ddm_pq8` per `ddm_nv1`; this line was a fifth instance of the wrong-referent beyond the four the
+`ddm_pq8` charter named). The accelerator
 that would fix this was hard-refused at `runtime/f26_inflate.py:435-441`.
 
 ---

@@ -68,8 +68,14 @@ branches. **No classification above §9.5 moves, and §9.5 adds zero counted arc
 **`PR_BODY_DRAFT.md` — three edits.** (a) The compression-script answer now says the entry
 point *cannot* rebuild these bytes, not merely that it was not re-run. (b) A new
 "What else in this work is ours" section, placed before Credits so the borrow disclosure still
-reads first. (c) The budget section gains the cause — token decode is 95.72% of inflation —
-plus the two-band disagreement.
+reads first. (c) The budget section gains the cause — token decode is **94.5% of the 1,419.900 s
+inflate elapsed** (the 95.72% figure is its share of the **1,401.58 s instrumented-stage sum**, a
+different denominator) — plus the two-band disagreement.
+
+> **CORRECTION 2026-08-20 (`ddm_pq8`, from the `ddm_nv1` verification).** This line originally read
+> "95.72% of inflation". Wrong referent: 95.72% is the share of the instrumented-stage sum, not of
+> inflate elapsed. Both denominators are now named. The public surfaces were already fixed by
+> `ddm_pq5`; this internal line was not.
 
 **`README_PUBLIC.md` — two edits.** The runtime-risk bullet gains the same cause and the
 native-port disclosure; the Reproduction section gains the cannot-rebuild statement and the
@@ -79,12 +85,26 @@ version-control disclosure below.
 
 ## 4. Owed to MAIN — decisions I did not take
 
-1. **The residual-band disagreement is unreconciled and now disclosed.** pq3 and the report use
-   `[890.6, 1430.6] s` and grade WARN; wc2 uses `[822, 1302] s` and grades the same body
-   REFUSE. Both are ours. I disclosed both rather than quoting the kinder one, which is the
-   honest interim state but not a resolution. **One of these bands is wrong and MAIN should
-   decide which before the packet is published.**
-2. **24 of the 34 files in the jg5 candidate tree have no source in version control** —
+1. ~~**The residual-band disagreement is unreconciled and now disclosed.**~~ **WITHDRAWN
+   2026-08-20 (`ddm_pq8`).** The framing "one of these bands is wrong and MAIN should decide
+   which" is **withdrawn**: it was never two measurements. `ddm_nv1` traced both bands to the
+   same artifact — `[822, 1302] s` is the ua2-derived CUDA **residual** window, and
+   `[890.6, 1430.6] s` is its **evaluate-corrected derivative**, derived exactly as
+   `[822, 1302] + (evaluate_est 120…180 − evaluate_measured 51.4)`. One measurement, two frames.
+   The REFUSE-versus-WARN split is a framing difference, not an arithmetic error: the charged
+   total sits above the residual band's ceiling while inflate alone sits inside the
+   evaluate-corrected band. The packet now publishes **both frames with that derivation**, plus
+   the absolute 1,800 s job wall, rather than the friendlier one. Disclosing both was the right
+   interim call; "decide which is wrong" was the wrong question.
+2. ~~**24 of the 34 files in the jg5 candidate tree have no source in version control**~~ —
+   **CLOSED 2026-08-20 (`ddm_pq8`), MEASURED.** All **34 of 34** candidate-tree files are now
+   git-tracked at `submissions/robust_current/jg5_sub015_runtime/runtime/`, clean in
+   `git status`, and **byte-identical by sha256** to the evaluated tree — including every file
+   named below. Measured by walking the candidate tree and hashing both sides, not inherited.
+   The version-control gap was closed by the wc2 custody commit and the `ddm_oc2` consolidation
+   (origin is `github.com/adpena/comma-lab`, PUBLIC). The README's Reproduction disclosure has
+   been rewritten from a limit into the reproduction path it now is. Original finding, for the
+   record:
    including `runtime/f26_inflate.py`, `runtime/residual_archive.py`, `runtime/free_corrector.py`,
    all of `cpr1/`, and `inflate.py` / `inflate.sh`. Measured by wc2c's census, not by me. I
    added a conservative disclosure to the README's Reproduction section. **Whether that is the

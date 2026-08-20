@@ -92,8 +92,10 @@ constants, not from a memo summary.
 an identity check. The script is an orchestrator: its own runtime is dominated by the two
 subprocess stages it shells out to, so there is no hot path here to optimize, and any change
 touching the encode path would need a byte-identity re-run to be admissible. The measured
-wall-clock problem in this lineage is the **token decode inside inflate** (1,341.5 s = 95.72%
-of inflation), which lives in the receiver, not in this script. Optimizing this file would have
+wall-clock problem in this lineage is the **token decode inside inflate** (1,341.5 s = **94.5% of
+the 1,419.900 s inflate elapsed**; the 95.72% figure is its share of the 1,401.58 s
+instrumented-stage sum, a different denominator — corrected 2026-08-20 by `ddm_pq8` per `ddm_nv1`),
+which lives in the receiver, not in this script. Optimizing this file would have
 been visible work on the wrong object.
 
 ## Owed
