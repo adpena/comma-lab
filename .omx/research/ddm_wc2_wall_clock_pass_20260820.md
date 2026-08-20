@@ -452,6 +452,55 @@ guard on the gating instrument, not a change to the shipped packet.
 | ranked head (1) rr2 `FreeCorrector` C port behind the scalar-twin driver · (2) token model off CUDA on T4 with sha-provable identity · (3) harness budget predicate | **stands as filed** |
 | addition to (3): both residual windows as named constants with wc2's derivation as provenance | **specified in §7.1**, with the constants-are-poison refinement and a three-valued verdict |
 
+### Scope extension (operator, 2026-08-20): *"Harden and polish and optimize the harness and inflate.py as well."*
+
+Three verbs on two surfaces, same GO. **Surface A** = shipping runtime tree (`inflate.py` 69 LOC,
+`runtime/f26_inflate.py` 706, `cpr1/inflate.py` 358 = **1,133 LOC**, plus
+`f26_hpac_native.c` 40,911 B). **Surface B** = harness (`contest_auth_eval.py`,
+`fire_modal_auth_eval.py`, `fire_local_advisory.py`, poller/closer).
+
+**Favourable asymmetry — Surface A polish is free on the score axis.** The rate term charges
+`archive.zip` bytes only (`evaluate.py:63`); `inflate.py`/`inflate.sh`/`runtime/` are unsized
+(rule-118 boundary, and the LOC cap was deleted 2026-07-21). So L12 single-LOC-per-LOC
+reviewability over 1,133 LOC of judge-facing code costs **zero score**. Its only costs are the
+re-pin (C1) and the identity proof.
+
+#### Pre-GO reconnaissance — state of each named item ($0, this session)
+
+| item | surface | measured state | action at GO |
+|---|---|---|---|
+| `gt_lineage` in advisory JSONs (dg1 cure) | B | **ABSENT — 0 occurrences** across all three harness files | **extend**, not "verify wired" |
+| instrument tuple (et4) | B | **THIN** — only `torch_version` (`contest_auth_eval.py:1271`); no threads / batch / weights sha in harness provenance | extend |
+| bare-`python` emission (si1) | B | **CLEAN, no action** — `fire_local_advisory.py:67-69` writes an exec-wrapper shim with a `sys.prefix` self-test; that is the compliant form, not the defect |
+| budget predicate | B | **ABSENT** — `--inflate-timeout` 1800 + `--evaluate-timeout` 1800 (`:2730-2733`) permits **3,600 s, 2x the job wall** | build per §7.1 |
+| runtime sha pins | A→B | **PRESENT AND ENFORCED** — `_validate_expected_runtime_tree` :1554, `_validate_expected_runtime_files` :1566, `inflate_script_sha256` :1627 | see **C1** |
+| dep self-install bootstrap (e4/rr3) | A | not exercised this session | bare-venv smoke (r5: prove it, don't assume) |
+
+#### Three collisions to resolve before GO, not during
+
+**C1 — polish invalidates the pins, and the coordinator's ordering pays for it twice.**
+Every Surface A edit changes the runtime-tree sha; the three validators above will **REFUSE**, and
+stored fire manifests carrying expected shas refuse with them. The filed sequencing —
+(1) inflate optimize → (2) harness → (3) polish *both* — touches Surface A at step 1 **and** step 3,
+so it costs two re-pin cycles **and two full n600 identity-proof decodes** (each proof is a complete
+decode; that is the expensive unit here).
+**Proposal: fold Surface A polish into step 1.** One Surface A landing carrying optimize + harden +
+polish → one re-pin → one identity proof. Harness polish stays at step 3, where it is cheap and
+pin-free. Same work, half the decodes.
+
+**C2 — "HARDEN: hash assertions" collides head-on with ranked-head item 4.**
+`residual_archive.py:625-634` already runs two sha256 digests per group; item 4 proposed removing
+them, which the hardening verb forbids. **Both are satisfiable**: the cost is not the sha256 (the
+total bytes hashed are identical either way) — it is the **114,000 `np.ascontiguousarray(...)
+.tobytes()` temporary copies**. Keep the digests (hardening intact, final digest value unchanged by
+construction, hence self-verifying), kill the per-group copy. Item 4 is rewritten accordingly.
+
+**C3 — hardening asserts must not enter the hot loop.**
+Surface A sits on a knife edge (§5.1) and the loop runs 114,000 times, so *anything* per-group is a
+budget item. Rule for the hardening pass: fail-closed at **boundaries** — archive parse, section
+lengths, exact-consumption asserts, final byte count, final raw sha, atomic writes, storage
+preflight — **never per-group**.
+
 **HOLD CONTINUES until the jg5 row confirms.** Fire condition for P1–P5: MAIN's GO carrying the
 jg5 `token_decode` + `inflate_elapsed` numbers. Those numbers also settle §2.1 — if jg5's token
 decode is at or above br1's 1,186.93 s, the RR2-corrector attribution for the 3.42x regression
