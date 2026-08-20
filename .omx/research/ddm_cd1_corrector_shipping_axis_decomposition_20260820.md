@@ -1,11 +1,31 @@
 # ddm_cd1 — decomposing the shipped token stage, so the corrector port is priced and not guessed
 
 Date: 2026-08-20 · Owner: ddm_cd1 · Archive `f3bce5d2…` (180,625 B) **UNCHANGED**
-Status: **local identity PROVEN twice · T4 decomposition row IN FLIGHT** (see §6)
+Axis: **`[contest-CUDA]` Tesla T4, n600, rc=0** · call `fc-01M0FN6S7A7EXZEJYABW4TMHA8`
+Status: **MEASURED. Identity proven on both axes. Verdict: BUILD the corrector port.**
 
 ---
 
-## HEADLINE
+## THE ANSWER, FIRST
+
+**The corrector is 71.7% of the shipped T4 token stage — 917.929 s — and a 2.03× port clears
+the CI wall.** Not 59.2% (rr6's borrowed local fraction), not 31.4% (this arm's own local
+measurement). The T4 row inverts the local split, and the inversion is the finding: on T4 the
+GPU carries the model *faster than a laptop CPU does* (267.2 s vs 443.8 s) **including all
+114,000 host↔device round trips**, while the float64 corrector meets container vCPUs that are
+4.35× slower than an M5 Max core.
+
+Two consequences fall straight out. `ddm_rr6` §2.4's latency reading is **falsified** — the
+round trips were never the problem. And `ddm_rr7`'s 15.3% regression is **explained**: it
+lowered the 21% to C and moved it onto the weak silicon, leaving the 72% in numpy.
+
+**VERDICT: BUILD the corrector port.** Break-even is 2.03× (frame B) / 2.77× (frame A) — the
+*low* end of what a C port of vectorised numpy delivers. `#1162` sync-elimination (≈165 s) is
+optional post-port polish, not shipping-critical.
+
+---
+
+## HEADLINE (as written before the row landed)
 
 `ddm_rr7` retired the full native token-decode port on the shipping axis and left one
 candidate standing: the float64 `ddm_rr2` corrector. Its only price was `ddm_rr6` §6's
@@ -352,11 +372,150 @@ validated end-to-end.
 
 **Single-flight honoured.** `ddm_cpu1` held the lane until `fc-01M0FGBV7547NWJVJWQ8W3YX76`
 harvested at 13:09:52Z; this arm waited on a detached ledger-bound waiter and fired at
-13:19:15Z once the ledger showed zero live calls.
+13:19:15Z once the ledger showed zero live calls. Call
+**`fc-01M0FN6S7A7EXZEJYABW4TMHA8`**, lane
+`lane_ddm_cd1_corrector_shipping_axis_decomposition_t4_20260820`, harvested, claim closed by
+the poller.
 
-**DISPATCHED:** call `fc-01M0FN6S7A7EXZEJYABW4TMHA8`, lane
-`lane_ddm_cd1_corrector_shipping_axis_decomposition_t4_20260820`, poller armed.
-**This section is updated with the measured row and the verdict when it lands.**
+### 6.1 Every falsifier PASSES
+
+| gate | measured | verdict |
+|---|---|---|
+| `0.raw` sha256 (PRIMARY) | `6bf8acf8d4412e43f8ddf810bcf63feb6435b758196b708fd61e77fe61e79883`, 3,662,409,600 B | **MATCH** |
+| `canonical_score` (SECONDARY) | **0.14839100138338618** — and `score_recomputed_from_components` agrees | **EXACT, net dS = 0.0** |
+| `decoded_token_sha256` | `cc10a7b09353c0af…0992636efb` | MATCH |
+| `corrected_quantized_logit_sha256` | `8269fe1aad031620…55c4eec4dd` | MATCH |
+| `corrected_cdf_input_sha256` | `370a5e2a85ccbb1e…6b04e46000` | MATCH |
+| `decoder_bit_position` | 910837 | MATCH |
+| purpose gate: breakdown present | `family_seconds` + `port_scope_seconds` present | **PASS** |
+| evidence | `contest-CUDA`, Tesla T4, zero blockers | — |
+
+**The instrumentation is timing-only, now proven on the axis that matters.** And the overhead
+gate answers itself: the instrumented inflate came in at **1,359.850 s against jg5's
+1,419.904 s — 61.4 s FASTER**. A negative overhead is not a negative cost; it means the timing
+calls sit below the run-to-run noise floor, and it hands us that floor as a measured quantity:
+**≥61 s (4.6%) on this runner.** Every second quoted below carries that band.
+
+### 6.2 The decomposition `[contest-CUDA T4]`
+
+Token stage **1,280.093 s** of a **1,359.850 s** inflate; loop 1,277.869 s, prelude 1.240 s,
+unattributed 1.520 s (1.21 µs per timed region — the instrument bounding itself again).
+
+| family | seconds | share of loop |
+|---|---:|---:|
+| **corrector** (float64 `ddm_rr2`) | **918.755** | **71.9%** |
+| **model** (integer HPAC + device round trips) | **267.229** | 20.9% |
+| **orchestration** | 90.365 | 7.1% |
+
+| member | seconds |
+|---|---:|
+| `corrector_coding_row` | 526.325 |
+| `corrector_observe` | 271.842 |
+| `model_selected_logits` | 190.963 |
+| `corrector_group_state` | 119.762 |
+| `model_d2h_sync` | 74.140 |
+| `orch_probability_table` | 24.954 |
+| `orch_digests` | 18.506 |
+| `orch_h2d_scatter` | 17.853 |
+| `orch_rc64_decode` | 13.795 |
+| `orch_table_lookup` | 9.914 |
+| `orch_boundary_buckets` | 4.465 |
+| `model_prepare_context` | 2.126 |
+| `orch_token_writeback` / `corrector_end_frame` / `corrector_begin_frame` | 0.879 / 0.639 / 0.188 |
+
+**PORT SCOPE = 917.929 s = 71.7% of the token stage.**
+
+### 6.3 The inversion — and the two things it settles
+
+| family | local (M5 Max) | T4 | T4 / local |
+|---|---:|---:|---:|
+| model | 443.778 | **267.229** | **0.602×** |
+| corrector | 211.221 | **918.755** | **4.350×** |
+| orchestration | 18.021 | 90.365 | 5.014× |
+
+The T4 container vCPU is **4.4–5.0× slower than an M5 Max core** on numpy. The GPU, meanwhile,
+**wins its half by 1.66×** — carrying the model *including* all 114,000 host↔device round
+trips faster than a laptop CPU does without them.
+
+**This falsifies `ddm_rr6` §2.4's "For" argument.** rr6 reasoned that the T4 token stage being
+2.28× slower than a laptop CPU was "strong corroboration of the latency-bound reading —
+114,000 iterations, each two host↔device round trips around a tiny kernel." Measured: the
+round-trip-bearing half is the *fast* half on T4. The whole 2.28× gap is the corrector and the
+orchestration meeting weak container vCPUs. **The round trips were never the problem**, which
+also demotes `#1162`'s sync-elimination half (`model_d2h_sync` 74.140 + orchestration
+90.365 ≈ **165 s**) to optional polish: it is 5.6× smaller than the corrector and is not on
+the critical path.
+
+**And it explains `ddm_rr7`'s loss quantitatively.** rr7 moved the model OFF the GPU onto those
+vCPUs — the one half the GPU was doing well — and left the corrector in numpy. The corrector is
+the same code on the same box in both paths, so:
+
+```
+rr7 split-path token stage       1546.617
+  − the same numpy corrector      918.755
+  ⇒ rr7 native model + orch       627.862
+jg5 GPU-path model + orch         357.594
+  predicted rr7 − jg5 delta       +270.268
+  rr7 MEASURED delta              +205.077
+  residual                         +65.190   (run-to-run band measured above: 61.4 s)
+```
+
+The residual sits at the edge of the noise band, and the check assumes rr7's orchestration
+equals jg5's — so read it as a **consistency check, not a derivation**. But the direction and
+the magnitude both land: **rr7 spent ~2,100 lines of C lowering the 21% and left the 72%
+untouched.** That is the whole lesson of this arm in one sentence.
+
+### 6.4 The port verdict: BUILD
+
+Against the ladders pre-registered in §3 — **P = 917.929 s** clears the ceiling threshold
+(529.3 s) by 1.73× and the realistic-k threshold (794 s) by 1.16×.
+
+Ceiling: an infinitely fast corrector puts inflate at **441.921 s**, charged 490.606 s.
+
+| port speedup k | token s | inflate s | charged s | frame A | frame B narrow margin |
+|---:|---:|---:|---:|---|---:|
+| 2.0 | 821.1 | 900.9 | 949.6 | WARN | −7.6 |
+| **2.03** | — | 893.3 | 942.0 | WARN | **0.0 → frame B PASS** |
+| **2.77** | — | 773.3 | 822.0 | **frame A PASS** | +120.0 |
+| 3.0 | 668.1 | 747.9 | 796.6 | **PASS** | +145.4 |
+| 5.0 | 545.7 | 625.5 | 674.2 | PASS | +267.8 |
+| 10.0 | 454.0 | 533.7 | 582.4 | PASS | +359.6 |
+| ∞ | 362.2 | 441.9 | 490.6 | PASS | +451.4 |
+
+**The required speedup is 2.03× for frame B and 2.77× for frame A — the LOW end of the 2–4×
+band a C port of vectorised numpy plausibly delivers.** Not the high end, not a stretch. This
+is the first candidate in the whole decode-wall line whose break-even sits below what the
+mechanism is expected to give.
+
+**VERDICT: BUILD the corrector port. It alone clears the submission wall.**
+
+One frame correction, which strengthens rather than weakens it: 822 s is frame A's **charged**
+cold-cache ceiling, so comparing inflate *alone* against it mixes the frames. Done properly the
+port must also carry the 48.685 s evaluate — and it still clears, at 674 s (k=5), 582 s (k=10)
+and 537 s (k=20). **The verdict survives the stricter reading**, and frame B's own derived
+window `[893.315, 1433.315]` gives the earlier 2.03× break-even.
+
+**`#1162` routing, one line: corrector-port = shipping-critical; sync-elimination = optional
+post-port polish.**
+
+### 6.5 A censored cap ate the first harvest (ca1 genus)
+
+The first harvest died at `PollDeadlineExceeded: deadline 2400s exceeded`.
+`FIRE_MANIFEST.json:104` records `stage6_poller_deadline_s = 2400.0` — an **underived literal**
+that overrode the poller's own sane 3-hour default. The derived bound is not 2,400 s: the
+worker's own limits give **inflate 1,800 + evaluate 5,400 = 7,200 s** worst case, so the cap
+was 3× short of the thing it was capping. This is the censored-cap genus (`CapStopReceipt`
+family): a stop drawn at a number nobody derived, which then reads as a result.
+
+The row itself was never at risk — the Modal call completed and a repoll recovered it — but the
+cost is real: an automatic close-out became a manual one, and the "claims still ACTIVE" blocker
+in `run.log` was a **symptom of the early poller death, not a claims defect**, which is exactly
+how a censored cap manufactures a phantom second bug.
+
+**Owing surface: `tools/fire_modal_auth_eval.py` stage 6.** Its deadline should DERIVE from the
+worker's own bounds (inflate timeout + evaluate timeout, per axis) rather than carry a literal.
+The axis-derived defaults it already computes for the CPU worker (9,600 s to outlive a 9,000 s
+timeout) are the right pattern; the CUDA path did not get it.
 
 ---
 
@@ -403,12 +562,54 @@ harvested at 13:09:52Z; this arm waited on a detached ledger-bound waiter and fi
 
 ## 8. Custody
 
-`/Volumes/APDataStore/pact/ddm_cd1/retained/` — manifest written at §6 completion.
+`/Volumes/APDataStore/pact/ddm_cd1/retained/CD1_RETENTION_MANIFEST.json` — **15 files,
+240,596 B**, every sha256 measured from the bytes:
+
+| bytes | sha256 (16) | file |
+|---:|---|---|
+| 129,228 | `1714de329c2940e5` | `cd1_t4_MODAL_REMOTE_RESULT.json` — **THE ROW** |
+| 4,988 | `0e8a9bc7d0f3a639` | `cd1_t4_corrector_ceiling.json` — the priced verdict |
+| 4,919 | `7bd5fb9ac6a5d82e` | `cd1_t4_FIRE_MANIFEST.json` (`:104` carries the 2,400 s cap) |
+| 4,792 | `92bc357b6002df19` | `CANDIDATE_SEAL_cd1.json` |
+| 4,704 | `d4e3404b0cfa5ba6` | `cd1_t4_modal_auth_eval_spawn.json` |
+| 46 | `634920fdca9e68d9` | `cd1_t4_poller_failed.txt` — the ca1 receipt |
+| 578 | `bc404cad2f1cb25b` | `cd1_t4_fire_run.log` |
+| 5,339 | `13f2d6ae1f89fe1d` | `cd1_preregistered_decision_table.json` — written BEFORE the row |
+| 1,345 | `256e9b52abd959b3` | `cd1_runtime_reproducibility_receipt.json` |
+| 1,302 | `3d2ac6e2ce895e78` | `cd1_stage_manifest.json` |
+| 37,387 | `efc4bc39148850f3` | `cd1_local_run_advisory.log` |
+| 34,612 | `a4e58b1ffa71e9f5` | `cd1_local_contest_auth_eval_advisory.json` |
+| 4,506 | `419f7d8456979153` | `cd1_local_inflate_report_advisory.json` |
+| 4,159 | `0a6ee525b63faff6` | `cd1_local_launch_manifest.json` |
+| 2,691 | `7564a06d94e006b0` | `cd1_local_advisory_launch.json` |
+
 `/Volumes/VertigoDataTier` is 100% full (890 MiB), so everything went to APDataStore per the
 storage waterfall. The 3,662,409,600-byte local `0.raw` is retained in place at
 `advisory_instrumented_r1/work/inflated/` (the run kept its work dir) and is bound by path,
-bytes and sha in the manifest rather than copied. Nothing was measured and discarded.
+bytes and sha rather than copied. The fired runtime tree is not retained as bytes because it
+regenerates byte-identically from committed state, and that was proved this session. Nothing
+was measured and discarded.
 
 **Own-vehicle frontier: `S = 0.14839100138338618` @ 180,625 B `[contest-CUDA T4]`, UNMOVED.**
 This arm cannot move it — the archive is untouched and the decode is byte-identical by
-construction. What it buys is the number the corrector-port decision was missing.
+construction, which the row re-proved to the last ULP. What it buys is the number the
+corrector-port decision was missing, and the answer is unambiguous: **build it.**
+
+---
+
+## 9. What the next arm inherits
+
+1. **BUILD the corrector port.** Scope is exactly `group_state` + `coding_row` + `observe`
+   (917.929 s on T4). Within it, `coding_row` alone is **526.325 s = 41% of the whole token
+   stage** — port that first and measure before touching the other two, because a 2× on
+   `coding_row` alone already removes 263 s.
+2. **Do NOT re-derive the split.** The instrument is committed
+   (`experiments/ddm_cd1_stage_instrumented_runtime.py`), the tree regenerates from committed
+   state, and `experiments/ddm_cd1_corrector_ceiling.py` re-prices any future row from its own
+   receipt. Re-run the stager against the ported tree and the same three families come back.
+3. **The break-even is a MEASURED bar, not a hope.** 2.03× / 2.77×. A port that lands below
+   2.03× has not cleared anything, and the pre-registered table says so in advance.
+4. **Do not price the port on a local host.** This arm's own local number was 31.4% — off the
+   shipping answer by 2.3× in the *conservative* direction, and rr6's was off by 0.83× in the
+   optimistic one. Neither host tells you about the other. The corrector's cost is a property
+   of the vCPU it lands on.
