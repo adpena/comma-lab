@@ -667,3 +667,28 @@ local measurements.
 surface kept publishing the falsified split unwarned — the [[corrections land in bodies, headlines
 keep the stale number]] genus applied across documents rather than within one. Caught in the round-3
 adversarial pass and paid at the source surface.
+
+### Erratum on the commit that carries this supersession (`7f4ef2e9e4`)
+
+That commit's message says **"append-only"**. Its diff is **72 insertions / 18 deletions**. The
+message is materially false about its own diff, and I am the author.
+
+`cat >>` cannot delete. The 18 deletions were **pre-existing uncommitted revisions in the working
+tree that the commit absorbed** — specifically the rv15 F2/F3 band cure, which had rewritten this
+memo's headline from *"a 2.03× port clears the CI wall"* (as committed at `700d7c5ed4`) to *"the
+measured break-even band is 2.03–2.22× for frame B and 2.77–3.08× for frame A… the upper endpoint
+re-anchors on jg5 and its measured run-to-run band."* That work is **not mine**; it is now landed
+inside a commit whose message does not mention it. The absorbed content is CORRECT and better than
+what it replaced — the defect is the attribution, not the bytes.
+
+**Why the guard did not catch it.** I passed `--expected-content-sha256` derived from the file
+*after* my append — which already contained the sister's uncommitted revisions. The serializer
+hashes the working tree at lock-acquire and compares to the declared value; both sides included the
+absorbed work, so the check passed. **The sha guard protects against a CONCURRENT edit during the
+lock wait. It does not protect against PRE-EXISTING uncommitted state the committer did not
+author** — because the serializer commits whole FILES, not hunks. Filed as a live instance of the
+absorption class (task #911) with the coverage gap named.
+
+**The rule this yields:** before committing a file you intend to append to, diff it against HEAD
+first. `git diff HEAD -- <file>` costs nothing and would have shown the sister's revision before the
+append made it invisible inside a larger diff.
