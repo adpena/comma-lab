@@ -412,7 +412,7 @@ def curve_param_bytes(n_ctrl_points, n_classes=5, coord_bits=9, color_bits=8):
     - control points: n_ctrl_points * 2 coords * coord_bits (row in [0,384)->9b, col in
       [0,512)->9b). Stored as deltas + entropy-coded in a real codec; we use the raw
       quantized bit budget * 0.55 (a conservative brotli/LZMA factor measured on the
-      contour codec's label streams) as the advisory packed estimate.
+      dense-raster LZMA label streams) as the advisory packed estimate.
     - colours: n_classes * 3 * color_bits.
     These bytes are PER FRAME for the boundary; across 600 frames the geometry is quasi-
     static (geometric-solve probe: identity residual 0.33px) so the per-frame DELTA is tiny.
@@ -421,7 +421,7 @@ def curve_param_bytes(n_ctrl_points, n_classes=5, coord_bits=9, color_bits=8):
     """
     raw_coord_bits = n_ctrl_points * 2 * coord_bits
     raw_color_bits = n_classes * 3 * color_bits
-    packed_factor = 0.55  # advisory entropy-coding factor (contour-codec measured family)
+    packed_factor = 0.55  # advisory entropy-coding factor (dense-raster LZMA measured family)
     per_frame_bytes = (raw_coord_bits * packed_factor + raw_color_bits) / 8.0
     # quasi-static amortization: store gamma0 once (full) + per-frame delta ~ 0.10 of full
     # (the near-static contour; geometric-solve identity residual ~0.33px implies small).

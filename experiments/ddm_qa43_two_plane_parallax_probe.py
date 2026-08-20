@@ -50,7 +50,7 @@ OUT = Path("/Volumes/VertigoDataTier/pact/ddm_qa43_20260729")
 # (H_far=identity freezes the far field; pairs 82/71/72 stuck). v1 file kept.
 JL = OUT / "two_plane_probe_v2.partial.jsonl"
 
-K_PAIRS = 24
+K_PAIRS = 112
 RELINS = 4
 
 

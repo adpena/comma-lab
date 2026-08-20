@@ -240,7 +240,7 @@ def polynomial_param_bytes(total_coeffs, coeff_bits=12):
     ~0.33px); we report BOTH the per-frame full cost AND the quasi-static amortized cost
     (gamma0 once + small per-frame delta), matching the curve gate's byte model.
     """
-    packed_factor = 0.55  # advisory entropy-coding factor (contour-codec measured family)
+    packed_factor = 0.55  # advisory entropy-coding factor (dense-raster LZMA measured family)
     per_frame_bytes = total_coeffs * coeff_bits * packed_factor / 8.0
     delta_frac = 0.10  # quasi-static per-frame delta (near-static partition)
     # total over 600: gamma0 stored once (full) + 10% per-frame delta * 600

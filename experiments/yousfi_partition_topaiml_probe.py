@@ -4,7 +4,7 @@
 ANTI-SIGNAL-LOSS / janky-prototype -> top-AIML RE-OPEN (CLAUDE.md non-negotiable).
 The prior verdict (``experiments/yousfi_tolerance_partition_remeasure.py``) rested on
 a PROTOTYPE coder: per-frame LZMA over RAW uint8 labels
-(``tac.boundary_math.contour_codec.partition_description_bytes``), measured at
+(``tac.boundary_math.dense_raster_lzma_baseline.partition_description_bytes``), measured at
 669-873 B/frame -> rate term 0.27-0.35 alone -> DEAD on rate vs the ~0.191 frontier.
 
 This probe builds the SOTA codec for a 5-class smooth partition and re-measures:
@@ -42,7 +42,7 @@ from tac.boundary_math.context_partition_codec import (
     decode_partition_stack,
     encode_partition_stack,
 )
-from tac.boundary_math.contour_codec import partition_description_bytes
+from tac.boundary_math.dense_raster_lzma_baseline import partition_description_bytes
 from tac.boundary_math.seg_core import (
     decode_gt_frame1_pairs,
     load_real_segnet,

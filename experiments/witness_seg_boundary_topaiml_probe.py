@@ -28,7 +28,7 @@ The four TOP-AIML fixes:
      contour-clustered in the decoder-free low-margin band. We code them as
        (1) a boundary bitmask over the decoder-known band ``B = {p : m(p) < tau}`` —
            the positions are a SUBSET of B, coded as a bitmask LZMA-RAW'd (reusing the
-           contour_codec LZMA-RAW family; interior is free, boundary entropy is the cost);
+           dense-raster LZMA-RAW baseline family);
        (2) per-flip GT class via the REAL ChARM range coder over a margin-conditioned
            5-class PMF (``tac.codec.charm_range_coder``). A class flip is <= log2(5) bits
            and far less under the conditional PMF.
@@ -88,7 +88,7 @@ _POSE_TRAJ_BYTES = 1_557  # MEASURED pose-output entropy (information_theoretic_
 _BASIN_DECODER_BYTES = 89_136  # MEASURED byte-closed 0.bin (e2e_byte_close_eval_harness_20260616)
 _N_SEG_CLASSES = 5
 
-# Deterministic LZMA-RAW filter chain (same family as contour_codec.py; small-alphabet tuned).
+# Deterministic LZMA-RAW filter chain (same family as dense_raster_lzma_baseline.py).
 _LZMA_FILTERS = [{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME, "lc": 0, "lp": 0, "pb": 0}]
 _SIDECAR_MAGIC = b"WTA1"  # witness top-aiml residual v1
 

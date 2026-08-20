@@ -494,8 +494,15 @@ def main(argv: list[str] | None = None) -> int:
     print(f"== ARM A global-L (ix2 base {A['ix2_base_L16']} anchor-match={A['ix2_base_matches_anchor']}; "
           f"smevr base {A['smevr_base_L16']} match={A['smevr_base_matches_anchor']}) ==")
     for r in A["rows"]:
+        sm = A["smevr_provenance"].get(str(r["L"]))
+        if sm is None:
+            sm_summary = "smevr saved=    n/a (rt=n/a)"
+        else:
+            saved = sm.get("saved_vs_L16")
+            saved_summary = "n/a" if saved is None else f"{saved:7d}"
+            sm_summary = f"smevr saved={saved_summary} (rt={sm['roundtrip']})"
         print(f"  L={r['L']:2d} ix2 saved={r['ix2_saved_bytes']:7d} (rt={r['ix2_roundtrip']}) "
-              f"smevr saved={r['smevr_saved_bytes']:7d} (rt={r['smevr_roundtrip']}) "
+              f"{sm_summary} "
               f"coders={r['ix2_coder_winner']}")
     print("== ARM B adaptive per-cell L (#869 waterfill) ==")
     for lad in receipt["B_adaptive_per_cell"]["ladders"]:

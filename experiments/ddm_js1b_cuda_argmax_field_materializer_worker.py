@@ -15,6 +15,7 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -336,11 +337,15 @@ def load_posenet(device: Any) -> Any:
 def _dataset(source: str, raw_root: Path | None, device: Any) -> Any:
     sys.path.insert(0, str(UPSTREAM))
     try:
-        from frame_utils import DaliVideoDataset, TensorVideoDataset
+        from frame_utils import AVVideoDataset, DaliVideoDataset, TensorVideoDataset
     finally:
         sys.path.pop(0)
     names = (UPSTREAM / "public_test_video_names.txt").read_text().splitlines()
-    dataset_class = DaliVideoDataset if source == "gt" else TensorVideoDataset
+    dataset_class = (
+        (DaliVideoDataset if device.type == "cuda" else AVVideoDataset)
+        if source == "gt"
+        else TensorVideoDataset
+    )
     data_dir = UPSTREAM / "videos" if source == "gt" else raw_root
     dataset = dataset_class(
         names,
@@ -353,6 +358,18 @@ def _dataset(source: str, raw_root: Path | None, device: Any) -> Any:
     )
     dataset.prepare_data()
     return dataset
+
+
+def scorer_axis(device: Any, scorer_name: str) -> str:
+    """Label the actual scorer instrument instead of inheriting the T4 worker name."""
+    batch = f"n600, batch={BATCH_SIZE}"
+    if device.type == "cuda":
+        return f"[contest-CUDA T4 frozen-{scorer_name} {batch}] COMPONENT-ONLY"
+    if device.type == "cpu" and platform.system() == "Darwin":
+        return f"[macOS-CPU advisory frozen-{scorer_name} {batch}] NON-PROMOTABLE"
+    if device.type == "cpu":
+        return f"[CPU advisory frozen-{scorer_name} {batch}] NON-PROMOTABLE"
+    return f"[diagnostic-{device.type} frozen-{scorer_name} {batch}] NON-PROMOTABLE"
 
 
 def _progress(path: Path) -> dict[str, Any]:
@@ -500,7 +517,8 @@ def score_argmax_field(
             )
             del batch_device, tensor, seg_input, logits, argmax, argmax_cpu
 
-    torch.cuda.synchronize(device)
+    if device.type == "cuda":
+        torch.cuda.synchronize(device)
     if cursor != N_PAIRS or completed_pairs != N_PAIRS:
         raise WorkerError(
             f"scorer census differs for {source}: cursor={cursor}, progress={completed_pairs}"
@@ -513,7 +531,7 @@ def score_argmax_field(
     atomic_bytes(batches_path, b"".join(canonical_json_bytes(row) for row in batch_rows))
     result = {
         "schema": "ddm_js1b_scorer_result.v1",
-        "axis": AXIS,
+        "axis": scorer_axis(device, "SegNet argmax fields"),
         "source": source,
         "batch_size": BATCH_SIZE,
         "seed": SEED,
@@ -685,7 +703,7 @@ def score_pose_vectors(
     atomic_bytes(batches_path, b"".join(canonical_json_bytes(row) for row in batch_rows))
     result = {
         "schema": "ddm_js1b_pose_result.v1",
-        "axis": "[contest-CUDA T4 frozen-PoseNet first6 vectors, n600, batch=16] COMPONENT-ONLY",
+        "axis": scorer_axis(device, "PoseNet first6 vectors"),
         "source": source,
         "batch_size": BATCH_SIZE,
         "seed": SEED,

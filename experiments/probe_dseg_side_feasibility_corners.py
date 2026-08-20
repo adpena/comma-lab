@@ -73,7 +73,7 @@ FRONTIER_RATE_TERM = 0.11797  # 25*177169/B0
 SUB015_DSEG = 0.0006  # ~sub-0.15-grade d_seg
 HELD_POSE = 0.00034  # frontier trunk d_pose (held; these corners target d_seg only)
 GREEN_DSEG_THRESHOLD = 0.0012  # decisively past the frontier d_seg, heading sub-0.15
-CONTOUR_BYTES_PER_FRAME = 914  # measured contour-codec length of one L* (the boundary store)
+CONTOUR_BYTES_PER_FRAME = 914  # measured dense-raster LZMA length of one L* (not a boundary store)
 
 
 def _now() -> str:

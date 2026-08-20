@@ -20,7 +20,7 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO / "upstream"))
 
-from tac.boundary_math.contour_codec import partition_description_bytes  # noqa: E402
+from tac.boundary_math.dense_raster_lzma_baseline import partition_description_bytes  # noqa: E402
 from tac.boundary_math.seg_core import (  # noqa: E402
     decode_gt_frame1_pairs,
     load_real_segnet,

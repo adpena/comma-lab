@@ -35,11 +35,12 @@ is purely on the BINDING d_seg-representation rate, apples-to-apples with FEED-a
 
 Authority: ``[macOS-CPU advisory]`` (GT argmax = frozen CPU-torch SegNet, the d_seg
 reference). NON-PROMOTABLE. NOT byte-closed (render->RGB->SegNet realization is the
-separate FEED-y gate). NO score claim; pointer UNMOVED 0.19110.
+separate FEED-y gate). NO score claim; the current pointer is read dynamically.
 """
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import sys
 import time
@@ -50,12 +51,13 @@ import numpy as np
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
-from tac.boundary_math.bitmask_dseg import d_seg_reference, flip_count
+from tac.boundary_math.bitmask_dseg import flip_count
 from tac.boundary_math.context_partition_codec import (
     decode_partition_stack,
     encode_partition_stack,
 )
 from tac.boundary_math.partition import build_region_adjacency_graph
+from tac.witness_dsl.dynamic_frontier_target import load_dynamic_frontier_target
 
 N_CLASSES = 5
 H, W = 384, 512
@@ -63,8 +65,7 @@ N_PX_PER_FRAME = H * W
 N_CONTEST_PAIRS = 600
 TOTAL_VIDEO_BYTES = 37_545_489.0
 
-# Reference anchors (all advisory per the pointer / FEED-ad).
-POINTER = 0.19110
+# Reference anchors (all advisory per FEED-ad). Competitive routing is dynamic.
 D_POSE_REF = 3.4e-5
 POSE_TERM_REF = float(np.sqrt(10.0 * D_POSE_REF))  # ~0.01844
 # The pose half is a solved real carrier (targets_meta best_pose_carrier_bytes).
@@ -208,7 +209,7 @@ def _simplify_partition(argmax_hw: np.ndarray, min_region_px: int) -> np.ndarray
 
 
 def measure_lossy_symbolic_pareto(
-    partitions: list[np.ndarray], min_region_px_levels: list[int]
+    partitions: list[np.ndarray], min_region_px_levels: list[int], *, target_score: float
 ) -> list[dict]:
     """Trace the lossy symbolic d_seg-vs-rate Pareto by MDL region-drop + real coder.
 
@@ -238,7 +239,7 @@ def measure_lossy_symbolic_pareto(
             "bytes_per_frame": code.bytes_per_frame,
             "rate_term": rate_term(code.total_bytes),
             "implied_S_with_pose": implied_S(d_seg, code.total_bytes),
-            "beats_pointer": bool(implied_S(d_seg, code.total_bytes) < POINTER),
+            "beats_pointer": bool(implied_S(d_seg, code.total_bytes) < target_score),
             "seconds": round(time.time() - t0, 1),
         })
         print(json.dumps(rows[-1]), flush=True)
@@ -279,6 +280,8 @@ def main(argv=None) -> int:
     ap.add_argument("--min-region-px", type=str, default="0,8,32,128,512,2048",
                     help="lossy region-drop thresholds (px); 0 = exact (no drop)")
     args = ap.parse_args(argv)
+    dynamic_frontier = load_dynamic_frontier_target(repo_root=REPO)
+    target_score = dynamic_frontier.target_score
 
     t0 = time.time()
     stack = load_gt_argmax_stack(args.argmax_u8, args.n_pairs)
@@ -295,7 +298,7 @@ def main(argv=None) -> int:
 
     # REGIME 2: lossy symbolic Pareto.
     mrps = [int(x) for x in args.min_region_px.split(",")]
-    pareto = measure_lossy_symbolic_pareto(partitions, mrps)
+    pareto = measure_lossy_symbolic_pareto(partitions, mrps, target_score=target_score)
 
     # --- VERDICT: compare to witness+sidecar (FEED-ad) at matched regimes.
     exact_bytes = exact["best_total_bytes"]
@@ -312,8 +315,8 @@ def main(argv=None) -> int:
         "symbolic_dominates_at_dseg0": bool(exact_bytes < ws_dseg0_bytes),
         "byte_delta_symbolic_minus_ws": int(exact_bytes - ws_dseg0_bytes),
         "S_delta_symbolic_minus_ws": symbolic_dseg0_S - ws_dseg0_S,
-        "symbolic_beats_pointer_at_dseg0": bool(symbolic_dseg0_S < POINTER),
-        "pointer": POINTER,
+        "symbolic_beats_pointer_at_dseg0": bool(symbolic_dseg0_S < target_score),
+        "pointer": target_score,
         "interpretation": _interpret(exact_bytes, ws_dseg0_bytes, symbolic_dseg0_S, ws_dseg0_S),
     }
 
@@ -325,7 +328,8 @@ def main(argv=None) -> int:
         "promotable": False,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
-        "pointer_unmoved": POINTER,
+        "dynamic_frontier_target": dataclasses.asdict(dynamic_frontier),
+        "pointer_unmoved": target_score,
         "n_pairs": len(partitions),
         "gt_source": str(args.argmax_u8),
         "elapsed_seconds": round(time.time() - t0, 1),
@@ -350,7 +354,7 @@ def main(argv=None) -> int:
         "advisory_caveat": (
             "All d_seg is DIRECT partition (stored/simplified argmax vs frozen CPU-torch "
             "GT-SegNet argmax). The BYTE-CLOSED render->RGB->SegNet realization is the "
-            "SEPARATE FEED-y gate. No score claim; pointer UNMOVED 0.19110."
+            "SEPARATE FEED-y gate. No score claim; this tool does not move the reopened pointer."
         ),
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)

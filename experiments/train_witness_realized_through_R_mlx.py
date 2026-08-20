@@ -1456,6 +1456,8 @@ def make_loss_fn(
             signed = _live_signed()
             z = -signed / tau_use
             _pp = tau_use * mx.logaddexp(mx.zeros_like(z), z)
+            if apply_mw:
+                _pp = _pp * _live_margin_weight(seg_logits, margin_weight_fn, temp_use)
             seg_l = mx.mean(_pp if seg_pixel_w is None else _pp * seg_pixel_w)
         elif form == "l7_softplus":
             # PR95 stage-5 l7 (digest: hard-pixel refine; KEEP loss, DROP C1a). softplus * (1+mult

@@ -19,12 +19,12 @@ The candidate (the strongest CHEAP partition we can ACTUALLY realize determinist
     blend/factor to trade pose-survival vs seg-survival vs bytes (CHROMA lives here:
     the appearance carrier carries luma+chroma the palette frame discards).
 
-What this MEASURES (the key deliverable, even if S > 0.19110):
+What this MEASURES (the key deliverable, even if S misses the current target):
   * realized d_seg (real CPU SegNet) vs the DIRECT d_seg=0 of the store -> the
     REALIZATION GAP (how lossy partition->RGB->SegNet through R is).
   * realized d_pose (real CPU PoseNet on the rendered pair) -> whether ANY cheap
     task-space carrier gives a competitive pose (the binding wall).
-  * the FULL exact S vs the pointer 0.19110, with the honest byte-closed archive.
+  * the FULL exact S vs the dynamically reopened pointer, with honest bytes.
 
 Authority: real CPU-torch SegNet + PoseNet; GT decode via upstream yuv420_to_rgb
 ONLY; NEVER MPS. [contest-CPU advisory] NON-PROMOTABLE per CLAUDE.md (single video,
@@ -34,6 +34,7 @@ computation evaluate.py performs, on the same exact chain).
 """
 from __future__ import annotations
 
+import dataclasses
 import json
 import math
 import sys
@@ -48,12 +49,12 @@ sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO / "upstream"))
 
 from tac.boundary_math.seg_core import decode_gt_frame1_pairs, load_real_segnet
+from tac.witness_dsl.dynamic_frontier_target import load_dynamic_frontier_target
 
 N_CLASSES = 5
 CAMERA_H, CAMERA_W = 874, 1164
 SEG_H, SEG_W = 384, 512
 RATE_DENOM = 37_545_489.0
-FRONTIER = 0.19110
 SUB015 = 0.15
 
 
@@ -195,6 +196,8 @@ def _upsample_bilinear(lowres_hwc: np.ndarray, h: int, w: int) -> np.ndarray:
 
 
 def main() -> None:
+    dynamic_frontier = load_dynamic_frontier_target(repo_root=REPO)
+    target_score = dynamic_frontier.target_score
     n_pairs = int(sys.argv[1]) if len(sys.argv) > 1 else 24
     t0 = time.time()
     seg = load_real_segnet("cpu")
@@ -301,7 +304,7 @@ def main() -> None:
             "archive_bytes_600pair_est": archive_bytes,
             "rate_term": rate_term,
             "S_exact_realized": S,
-            "beats_frontier": S < FRONTIER,
+            "beats_frontier": S < target_score,
             "beats_sub015": S < SUB015,
         }
 
@@ -324,7 +327,8 @@ def main() -> None:
         ),
         "n_pairs_measured": n,
         "decode_plus_lstar_seconds": round(decode_s, 1),
-        "frontier_pointer": FRONTIER,
+        "dynamic_frontier_target": dataclasses.asdict(dynamic_frontier),
+        "frontier_pointer": target_score,
         "sub015_target": SUB015,
         "store_bytes_measured_subset": store_bytes_measured,
         "store_bytes_per_frame": store_bytes_per_frame,

@@ -9,7 +9,7 @@ boundary; ~97% of d_seg sits in a ~4.7%-area annulus of small-margin pixels). Th
 Morse-Smale complex generated FREE (rule-118) from the counted INR weights+code. DMTz (arXiv
 2409.17346) stores error-bounded EDITS that restore a scalar field's Morse-Smale complex; mapped
 here, that is a COUNTED sidecar coding ONLY the argmax-restoring DIFF between the free witness
-partition and GT -- not the whole partition (which ``tac.boundary_math.contour_codec`` already
+partition and GT -- not the whole partition (which ``tac.boundary_math.dense_raster_lzma_baseline`` already
 codes). The task-aware principle (arXiv 2404.04848) says: spend bits only on the flip-prone
 boundary; the GoP principle says: amortize the diff temporally across pairs.
 
@@ -27,10 +27,10 @@ small-|margin| annulus (our established flip locus), calibrated to a target oper
 measures bytes/flip for four honest coders:
   (F) sparse-residual FLOOR   -- log2 C(N,k) position + k*log2(K-1) class (no structure exploited).
   (E) edit-diff LZMA          -- DMTz-style raster edit map (0=no-edit, else target class), LZMA.
-                                 Exploits spatial clustering == what contour_codec does, but on the
+                                 Exploits spatial clustering == what dense-raster LZMA does, but on the
                                  DIFF not the whole partition.
   (T) edit-diff LZMA + temporal-delta (GoP proxy) -- consecutive-frame diff of the edit maps.
-  (P) full-partition reference -- contour_codec.partition_description_bytes(GT argmax) (the cost of
+  (P) full-partition reference -- dense_raster_lzma_baseline.partition_description_bytes(GT argmax) (the cost of
                                  coding the WHOLE boundary; the edit sidecar must beat THIS too or
                                  it is not buying anything the free witness base doesn't already give).
 
@@ -127,7 +127,7 @@ def edit_diff_map(gt_argmax_hw: np.ndarray, flip_mask_hw: np.ndarray) -> np.ndar
 
 def _lzma_bytes(arr: np.ndarray) -> int:
     """Reversible LZMA length of a uint8 array (the honest, decodeable byte cost -- matches the
-    contour_codec discipline: LZMA over a label/edit map exploits constant runs => ~boundary
+    Dense-raster LZMA discipline: LZMA over a label/edit map exploits constant runs.
     entropy). preset 9|EXTREME to match the byte-optimal deploy path."""
     return len(lzma.compress(np.ascontiguousarray(arr, dtype=np.uint8).tobytes(),
                              preset=9 | lzma.PRESET_EXTREME))
@@ -178,11 +178,11 @@ def temporal_delta_bytes(diff_maps: list[np.ndarray]) -> int:
 
 
 def full_partition_reference_bytes(gt_argmax_stack: np.ndarray) -> int | None:
-    """Reference: contour_codec cost of coding the WHOLE partition boundary for the same frames.
+    """Reference: dense-raster LZMA cost of coding the WHOLE partition for the same frames.
     The edit sidecar must beat this (else the free witness base bought nothing). Fail-open (None)
     if the codec import is unavailable."""
     try:
-        from tac.boundary_math.contour_codec import partition_description_bytes
+        from tac.boundary_math.dense_raster_lzma_baseline import partition_description_bytes
     except Exception:
         return None
     total = 0
@@ -266,7 +266,7 @@ def _print_report(r: dict[str, Any]) -> None:
           f"; must also beat existing #307 = {r['existing_contour_string_bytes_per_flip']:.3f} B/flip")
     fp = r.get("full_partition_ref_bytes_per_frame")
     if fp is not None:
-        print(f"full-partition (contour_codec) reference = {fp:.0f} bytes/frame "
+        print(f"full-partition (dense-raster LZMA) reference = {fp:.0f} bytes/frame "
               f"(the whole-boundary cost the free witness base already avoids)")
     print(f"{'density':>9} {'flips':>8} {'floor B/flip':>13} {'edit B/flip':>12} "
           f"{'edit+GoP B/flip':>16} {'area/perim':>11} {'verdict':>10}")

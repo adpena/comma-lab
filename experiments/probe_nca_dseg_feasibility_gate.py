@@ -103,7 +103,7 @@ def nca_param_bytes(rule_param_count, seed_grid_cells, n_classes=5, weight_bits=
     Kolmogorov-cheap part: a few-KB program, not a many-KB static description.
 
     - rule weights: rule_param_count * weight_bits, entropy-coded (0.55 factor, the same advisory
-      contour-codec family factor the curve gate used) -> apples-to-apples rate.
+      dense-raster LZMA-family factor the curve gate used) -> apples-to-apples rate.
     - seed: seed_grid_cells * ceil(log2(n_classes)) bits (a coarse class-init grid), entropy-coded.
     The rule is QUASI-STATIC across 600 frames (one rule for the whole clip); only the seed gets a tiny
     per-frame ego-motion delta (the contour barely moves: geometric-solve identity residual 0.33px).

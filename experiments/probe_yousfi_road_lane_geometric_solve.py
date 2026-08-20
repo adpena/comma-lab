@@ -24,8 +24,8 @@ it does NOT rebuild them:
       tac.score_aware_loop.targets.load_frozen_distortion_net
   * RAG / region structure of L*:
       tac.boundary_math.partition.build_region_adjacency_graph
-  * contour byte cost (lossless contour codec):
-      tac.boundary_math.contour_codec.encode_partition
+  * label-raster byte cost (lossless dense-raster LZMA baseline):
+      tac.boundary_math.dense_raster_lzma_baseline.encode_partition
   * resize-deconvolution preimage (#49, the bilinear preimage solver):
       tac.optimization.resize_null_preimage.ResizeProjector
   * margin-conditional KKT residual + waterfill (lever D, #72):
@@ -35,7 +35,7 @@ THE FIVE MEASUREMENTS (all $0 CPU, real scorer, NO FAKE):
 
  1. CONTOUR EXTRACT.  Isolate the road<->lane boundary in L* (the 4-neighbour
     edges between the two dominant ground classes).  Report bytes for the
-    contour-coded partition (the description length).
+    dense-raster-LZMA-coded partition (the description length).
  2. POSE-WARP COUPLING (the eureka test).  Fit, per pair t, the homography H_t
     that best maps the road<->lane edge pixels of pair 0 onto pair t's edge
     pixels, INITIALIZED from the GT relative pose (translation + yaw), then
@@ -190,7 +190,7 @@ def _all_boundary_mask(argmax_hw: np.ndarray) -> np.ndarray:
 
 def measure_contours(lstars: list[np.ndarray], margins: list[np.ndarray],
                      margin_tau: float = 0.5) -> list[ContourRow]:
-    from tac.boundary_math.contour_codec import encode_partition
+    from tac.boundary_math.dense_raster_lzma_baseline import encode_partition
 
     rows: list[ContourRow] = []
     for i, L in enumerate(lstars):

@@ -54,6 +54,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
 import sys
 import time
 import zipfile
@@ -96,6 +97,20 @@ def rate_term(archive_bytes: int) -> float:
 
 def _sha(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def _git_head() -> str:
+    """Best-effort git HEAD for receipt provenance; never fatal."""
+    try:
+        return subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=Path(__file__).resolve().parent,
+        ).stdout.strip()
+    except Exception:
+        return "unknown"
 
 
 # --------------------------------------------------------------- field loading
@@ -252,6 +267,20 @@ def run_controls(
     }
     for k in state_checks:
         if k not in published:
+            # A control that cannot run is NOT a control that passed.  Emitting
+            # `continue` here would silently shrink the control set and leave
+            # `all(passed)` True over the two weak controls above -- the
+            # vacuity-reads-as-pass failure class.  Fail closed instead.
+            out.append(
+                ControlResult(
+                    f"state_reconstruction_k{k}_matches_wr1",
+                    False,
+                    k,
+                    -1,
+                    f"REFUSED: wr1 receipt has no k={k} row, so the strong control "
+                    "could not run; an unrunnable control is a failure, not a skip",
+                )
+            )
             continue
         observed = state_bytes(lat, wr1_state(records, k))
         out.append(
@@ -303,25 +332,37 @@ def stratified_sample(
     exclude: frozenset[int],
     per_band: int,
     seed: int,
-) -> list[dict]:
-    """Pick ``per_band`` cells from each band, deterministically.
+) -> tuple[list[dict], dict[str, dict[str, int]]]:
+    """Pick up to ``per_band`` cells from each band, deterministically.
 
     Cells in ``exclude`` are skipped so the SAME cells remain pricable from every
     state under test — a cell already dropped in a later state has no marginal
     there, and comparing different cells across states would confound the
     state effect with a cell effect.
+
+    Returns ``(chosen, coverage)``.  ``coverage`` reports, per band, how many
+    cells were AVAILABLE after exclusion and how many were TAKEN, for every band
+    present in ``records`` — including bands that contributed zero.  Reporting
+    the denominator is the point: a band silently absent from the sample (which
+    is how a Knee-B-excluded sweep quietly becomes road+hood-only) must be
+    visible in the receipt rather than inferred from the row count.
     """
     rng = np.random.default_rng(seed)
     chosen: list[dict] = []
+    coverage: dict[str, dict[str, int]] = {}
     pool = [r for r in records if r["cell"] not in exclude]
-    for band in sorted({r["band"] for r in pool}):
+    for band in sorted({r["band"] for r in records}):
         band_cells = sorted((r for r in pool if r["band"] == band), key=lambda r: r["cell"])
-        if not band_cells:
-            continue
         take = min(per_band, len(band_cells))
-        idx = rng.choice(len(band_cells), size=take, replace=False)
-        chosen.extend(band_cells[int(i)] for i in sorted(idx))
-    return chosen
+        coverage[band] = {
+            "in_records": sum(1 for r in records if r["band"] == band),
+            "available_after_exclusion": len(band_cells),
+            "taken": take,
+        }
+        if take:
+            idx = rng.choice(len(band_cells), size=take, replace=False)
+            chosen.extend(band_cells[int(i)] for i in sorted(idx))
+    return chosen, coverage
 
 
 def marginal_price_by_state(
@@ -562,13 +603,34 @@ def main(argv: list[str] | None = None) -> int:
         "levels": LEVELS,
         "controls": [asdict(c) for c in controls],
         "states": {k: len(v) for k, v in state_spec.items()},
+        # provenance: a receipt that cannot regenerate its own rows is not a receipt
+        "invocation": {
+            "argv": list(sys.argv[1:]),
+            "seed": args.seed,
+            "per_band": args.per_band,
+            "states_spec": args.states,
+            "codecs": args.codecs,
+            "git_head": _git_head(),
+        },
     }
 
     if not args.skip_marginal:
-        widest = max(state_spec.values(), key=len)
-        sample = stratified_sample(
-            records, exclude=frozenset(widest), per_band=args.per_band, seed=args.seed
+        # The union, not the largest state: `max(..., key=len)` is the union only
+        # while the states happen to be nested (they are, under `drop_rank < k`).
+        # Taking the union makes the hold-out correct for any state spec instead
+        # of relying on an incidental property of this one.
+        excluded = frozenset().union(*state_spec.values()) if state_spec else frozenset()
+        sample, coverage = stratified_sample(
+            records, exclude=excluded, per_band=args.per_band, seed=args.seed
         )
+        payload["sample_coverage"] = coverage
+        for band, cov in coverage.items():
+            print(
+                f"  band {band}: {cov['taken']} taken of "
+                f"{cov['available_after_exclusion']} available "
+                f"({cov['in_records']} in records)",
+                flush=True,
+            )
         print(f"marginal price: {len(sample)} held-out cells x {len(state_spec)} states", flush=True)
         rows, baselines = marginal_price_by_state(lat, records, state_spec, sample)
         payload["state_baseline_token_bytes"] = baselines
