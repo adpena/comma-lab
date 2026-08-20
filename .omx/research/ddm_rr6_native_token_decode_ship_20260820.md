@@ -1,7 +1,8 @@
 # ddm_rr6 — the native token decoder, proven in the shipping runtime and actually switched on
 
 Date: 2026-08-20 · Owner: ddm_rr6 (Opus build arm) · Status: **IDENTITY PROVEN full n600 in the real
-runtime · 1.790x MEASURED `[macOS-CPU advisory]` · shipping-axis UNMEASURED, one T4 row owed**
+runtime, twice — once driven by hand (r1) and once on a BARE invocation of the submittable tree (r2)
+· 1.790x / 1.865x MEASURED `[macOS-CPU advisory]` · shipping-axis UNMEASURED, one T4 row owed**
 
 Charter: the native token-decode port on the submission critical path. `ddm_wc2` established the
 target (jg5 token decode **1,341.540 s = 94.5%** of a **1,419.900 s** inflate `[contest-CUDA T4]`,
@@ -24,9 +25,13 @@ only). `ddm_wc2c` built the split path and proved it on a bench driver.
    decoder. **Verified by execution**, with a compiler that fails only on the native translation
    unit: `f26 native build unavailable; using the python token decoder`, **rc=0**.
 3. **Identity holds on the full field, in the real runtime, not a bench driver.** A local
-   macOS-arm64 CPU decode of the jg5 archive reproduces every `[contest-CUDA T4]` token anchor.
-4. **MEASURED 1.790x on a matched instrument** — same host, same runtime, same archive, same thread
-   counts, the two runs differing only in the token decoder: **589.456 s → 329.370 s**.
+   macOS-arm64 CPU decode of the jg5 archive reproduces every `[contest-CUDA T4]` token anchor, and
+   the whole 3,662,409,600-byte scored output is byte-identical to the Python path. **The change
+   cannot move the score**, which is what makes the T4 fire a wall-clock row and not a re-pricing.
+4. **MEASURED 1.790x, and 1.865x for the configuration that would actually ship** — same host, same
+   runtime, same archive, same thread counts, differing only in the token decoder:
+   **589.456 s → 329.370 s** (r1, driven by hand, NEON) and **→ 316.165 s** (r2, bare invocation,
+   FORCE_SCALAR). Both are `[macOS-CPU advisory]`; neither decides the shipping wall.
 5. **The shipped binary now carries no unexecuted instruction.** `-DF26_FORCE_SCALAR=1` compiles out
    the hand-written AVX2/NEON kernels. They are integer-only and carry no FP hazard, but the AVX2
    kernels have **never been executed** and the contest box is x86 — and `ddm_wc2c` MEASURED the
@@ -107,6 +112,30 @@ it, which is the corroboration that its bench was representative.
 short of PASS.** That is the same straddle `ddm_wc2c` reported, now on the runtime rather than the
 bench, and I will not round it up: 1.790x is below 1.804x.
 
+### 2.0 The submittable configuration, proven on a BARE invocation (r2)
+
+r1 proves the mechanism but was launched with `F26_TOKEN_DECODER=native-hpac` set — i.e. it proves
+what a human can reach, which is precisely the thing that was already true and already useless.
+**r2 runs the ship tree the way `evaluate.sh` runs it: no environment at all.**
+
+| field | r2 value | reading |
+|---|---|---|
+| `binding.token_decoder` | **`native-hpac`** | the default flip works; the accelerator fires on a bare invocation |
+| `decode_path` | **`scalar`** | the `-DF26_FORCE_SCALAR=1` pin is live; no hand intrinsic shipped |
+| `decode_threads` | `4` | the hard-coded default |
+| `decode_runtime_seconds` | **316.165** | **1.865x** vs python 589.456 |
+| all four identity anchors | `cc10a7b0…` / `8269fe1a…` / `370a5e2a…` / `910837` | **MATCH** the `[contest-CUDA T4]` receipt |
+
+So the tree that would actually ship — bare invocation, intrinsic-free build — reproduces the T4
+token field exactly, and does it 4.0% faster than r1's NEON build (316.165 vs 329.370 s), which is
+the third independent corroboration that the hand kernels buy nothing.
+
+**1.865x is above the derived PASS bar of 1.804x. I am still not calling PASS.** `ddm_wc2c` measured
+a **3.3% run-to-run spread** on byte-identical work on this host; 1.790x and 1.865x are 4.2% apart,
+so a single run on either side of the bar decides nothing. The local proxy places the split path
+around the bar and cannot resolve which side. **Only a shipping-axis row resolves it**, and that is
+true of the favourable number exactly as it was of the unfavourable one.
+
 ### 2.1 NEW FINDING — the speedup is THREADS, not the lowering
 
 Reading `ddm_wc2c`'s own retained receipts rather than its table:
@@ -166,7 +195,8 @@ Non-token inflate on the jg5 T4 row is fixed at `1419.900 − 1341.540 = 78.360 
 |---|---:|---:|---|
 | 1.000x (today, python) | 1341.5 | 1419.9 | WARN — inside the wide end by 10.7 s |
 | 1.096x (the WARN bar) | 1223.6 | 1302.0 | WARN with 128.6 s of margin |
-| **1.790x (local measured)** | **749.5** | **827.8** | **PASS — inside the NARROW end by 62.8 s** |
+| 1.790x (r1, NEON) | 749.5 | 827.8 | PASS — inside the NARROW end by 62.8 s |
+| **1.865x (r2, the ship build)** | **719.3** | **797.7** | **PASS — inside the NARROW end by 92.9 s** |
 
 All four rows are PROJECTIONS. **One T4 row replaces the whole table.**
 
@@ -254,7 +284,20 @@ budget predicate must be able to see.
 manifest carrying jg5's expected SHAs will refuse until re-pinned. That refusal is the validator
 working.
 
-## 5. Owed — named, not buried
+## 5. Retention
+
+`/Volumes/VertigoDataTier` is at **100%** (890 Mi free), so retention went to `/Volumes/APDataStore`
+per the storage waterfall. That is a live blocker for any arm whose retention still defaults to
+Vertigo — including `ddm_dx1`, whose memo names `/Volumes/VertigoDataTier/pact/ddm_dx1/retained/`.
+
+`/Volumes/APDataStore/pact/ddm_rr6/retained/RR6_RETENTION_MANIFEST.json` binds both runs: the token
+stage receipts, the two 117,964,800-byte token fields, the 3,662,409,600-byte scored outputs, the
+staged trees and their stage manifests. Large payloads are bound by **the producing tool's own
+sha256** rather than a fresh read — the receipt digest is the authority the identity argument
+already rests on, so re-hashing 7.3 GB would add no information and would perturb a live decode.
+Nothing was measured and discarded.
+
+## 6. Owed — named, not buried
 
 1. **A T4 row on the staged tree.** The only number that decides the CI wall. **This arm does not
    touch `tools/fire_*` for the paid axis; the fire order is in §5.**
