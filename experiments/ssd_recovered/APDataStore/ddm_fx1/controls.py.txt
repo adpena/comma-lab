@@ -1,0 +1,21 @@
+import sys, time, json
+sys.path.insert(0, "/Users/adpena/Projects/pact")
+sys.path.insert(0, "/Volumes/APDataStore/pact/ddm_me1")
+import numpy as np
+from tac.micro_edit.coder_replay import replay_code_length, EXPECTED_UNCORRECTED_CROSS_ENTROPY_BYTES
+from assets import ASSETS
+
+t0=time.time()
+r0 = replay_code_length(ASSETS, label="uncorrected", corrector_factory=None)
+print(f"C1 uncorrected: {r0.code_bytes:.5f} B  target {EXPECTED_UNCORRECTED_CROSS_ENTROPY_BYTES:.5f}  delta {r0.code_bytes-EXPECTED_UNCORRECTED_CROSS_ENTROPY_BYTES:+.6f} B   [{time.time()-t0:.1f}s]")
+
+from experiments.ddm_rr4_free_corrector_v2 import FreeCorrector
+t1=time.time()
+r1 = replay_code_length(ASSETS, label="live_rr4", corrector_factory=lambda p: FreeCorrector(p))
+SHIPPED_BITS = 884090.2210952122
+print(f"C2 live rr4:    {r1.code_bits:.4f} bits  target {SHIPPED_BITS:.4f}  delta {r1.code_bits-SHIPPED_BITS:+.6f} bits   [{time.time()-t1:.1f}s]")
+print(f"   live token bytes = {r1.code_bytes:.2f}")
+np.save("/Volumes/APDataStore/pact/ddm_fx1/retained/bits_live_rr4_fx1.npy", r1.bits_per_frame)
+np.save("/Volumes/APDataStore/pact/ddm_fx1/retained/bits_uncorrected_fx1.npy", r0.bits_per_frame)
+json.dump({"uncorrected_bytes": r0.code_bytes, "live_bits": r1.code_bits, "live_bytes": r1.code_bytes},
+          open("/Volumes/APDataStore/pact/ddm_fx1/retained/controls_c1_c2.json","w"), indent=2)

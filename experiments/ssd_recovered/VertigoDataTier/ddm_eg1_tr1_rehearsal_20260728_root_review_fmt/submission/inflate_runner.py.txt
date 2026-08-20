@@ -1,0 +1,17 @@
+from __future__ import annotations
+import sys
+from pathlib import Path, PurePosixPath
+from ddm_tr1_runtime import parse_extracted_archive, render_pair_camera_uint8
+
+archive_dir, output_dir, names_file = map(Path, sys.argv[1:4])
+names = [row.strip() for row in names_file.read_text().splitlines() if row.strip()]
+if names != ["0.mkv"]:
+    raise SystemExit("bounded E1 inflate requires exactly the custodied 0.mkv")
+parsed = parse_extracted_archive(archive_dir)
+pair = render_pair_camera_uint8(parsed.packet, 0)
+name = PurePosixPath(names[0])
+if name.is_absolute() or ".." in name.parts:
+    raise SystemExit("unsafe video name")
+target = output_dir / name.with_suffix(".raw")
+target.parent.mkdir(parents=True, exist_ok=True)
+target.write_bytes(pair.tobytes())

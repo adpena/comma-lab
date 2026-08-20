@@ -1,0 +1,35 @@
+#!/bin/bash
+# et4 n600 driver v2: 3 parallel workers, each iterating <=120-pair sub-chunks (the runner's
+# common-contract guard), then the guard-exempt final stage (--build-archive --run-inflate
+# --run-evaluate). Per-pair NPZ checkpoints => all stages resumable; rerun this driver on crash.
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+PY=.venv/bin/python
+R=experiments/ddm_et4_solve_within_cvp_n600.py
+LOG=/Volumes/VertigoDataTier/pact/ddm_et4_20260806
+run_range () { # args: start stop logfile
+  local s=$1 e=$2 lg=$3 c0 c1
+  c0=$s
+  while [ $c0 -lt $e ]; do
+    c1=$(( c0 + 120 )); [ $c1 -gt $e ] && c1=$e
+    $PY $R --resume --pair-start $c0 --pair-stop $c1 --threads 4 >> "$lg" 2>&1 || return 1
+    c0=$c1
+  done
+}
+run_range 8   206 $LOG/shard_a.log & A=$!
+run_range 206 403 $LOG/shard_b.log & B=$!
+run_range 403 600 $LOG/shard_c.log & C=$!
+wait $A; RA=$?
+wait $B; RB=$?
+wait $C; RC=$?
+echo "shards rc: $RA $RB $RC" > $LOG/shards_rc.txt
+if [ $RA -ne 0 ] || [ $RB -ne 0 ] || [ $RC -ne 0 ]; then
+  echo "SHARD FAILURE — final stage skipped; rerun driver to resume" >> $LOG/shards_rc.txt
+  exit 7
+fi
+# threads=4 matches the shard + rebuilt-cache instrument (batch-1 @ threads=4); by this
+# stage all pairs are checkpointed so no pair-forwards run, but keep one instrument anyway.
+final_rc=0
+$PY $R --resume --threads 4 --build-archive --run-inflate --run-evaluate > "$LOG/final_stage.log" 2>&1 || final_rc=$?
+echo "final rc: $final_rc" >> "$LOG/shards_rc.txt"
+exit "$final_rc"

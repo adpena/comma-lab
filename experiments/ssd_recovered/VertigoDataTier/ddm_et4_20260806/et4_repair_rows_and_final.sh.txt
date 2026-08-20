@@ -1,0 +1,66 @@
+#!/bin/bash
+# RR3-F2 repair (round-3 review finding): the rows ledger holds v2-era duplicate rows for
+# 151 shard-B/C pairs (all verified CONTENT-IDENTICAL except elapsed_s — the batch-16-cache
+# concern is empty for them). build_archive requires exactly 600 rows and aggregate_rows
+# averages over raw rows (duplicates double-weight), so: dedupe by pair (keep-last), backup
+# the original ledger (certify-or-block: original bytes preserved + sha'd), then rerun the
+# guard-exempt final stage. RUN ONLY after all et4 shard processes have exited.
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+LOG=/Volumes/VertigoDataTier/pact/ddm_et4_20260806
+ROWS=$LOG/et4_solve_within_cvp_rows.jsonl
+
+# RR4 fix: pgrep rc semantics are 0=found, 1=no-match, >=2=ENUMERATION ERROR. Only rc=1 is
+# proof of absence; anything else (found OR error) must refuse — fail CLOSED, never open.
+# RR5 fix: bare pgrep rc=1 would kill the script under set -e BEFORE prc=$? — capture
+# errexit-safely so BOTH branches survive to the explicit rc discrimination below.
+prc=0
+pgrep -f "ddm_et4_solve_within_cvp_n600" > /dev/null || prc=$?
+if [ "$prc" -eq 0 ]; then
+  echo "REFUSE: et4 worker alive (pgrep rc=0)"; exit 4
+elif [ "$prc" -ge 2 ]; then
+  # RR7-F2: on managed/sandboxed hosts pgrep can fail enumeration (rc>=2). Fall back to a
+  # second independent enumerator; refuse unless IT proves absence (never livelock, never open).
+  live=$(ps axo command 2>/dev/null | grep -c "ddm_et4_solve_within_cvp_n600" || true)
+  if [ "${live:-1}" -ne 0 ]; then
+    echo "REFUSE: pgrep rc=$prc AND ps fallback saw $live candidate(s) — not proven quiescent"; exit 4
+  fi
+  echo "note: pgrep rc=$prc (enum error); ps fallback proved absence — proceeding"
+fi
+# Second independent guard: the ledger itself must be quiescent (no append in the last 120s).
+now=$(date +%s); mt=$(stat -f %m "$ROWS")
+if [ $((now - mt)) -lt 120 ]; then
+  echo "REFUSE: rows ledger modified $((now - mt))s ago — still advancing"; exit 4
+fi
+
+.venv/bin/python - "$ROWS" << 'EOF'
+import json, sys, hashlib, shutil, time
+p = sys.argv[1]
+rows = [json.loads(l) for l in open(p) if l.strip()]
+by_pair = {}
+for r in rows:            # keep-LAST occurrence (later append wins; dups are content-identical)
+    by_pair[r["pair"]] = r
+missing = sorted(set(range(600)) - set(by_pair))
+if missing:
+    print(f"REFUSE: {len(missing)} pairs still missing: {missing[:8]}..."); sys.exit(5)
+bak = p + f".pre_dedup_{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}.bak"
+shutil.copy2(p, bak)
+def sha(f): return hashlib.sha256(open(f,'rb').read()).hexdigest()
+sha_before = sha(bak)
+with open(p, "w") as f:
+    for pair in range(600):
+        f.write(json.dumps(by_pair[pair]) + "\n")
+print(f"deduped {len(rows)} -> 600 rows; backup {bak}")
+print(f"sha_before={sha_before}")
+print(f"sha_after={sha(p)}")
+EOF
+
+# RR6 fix: capture the final stage errexit-safely too, so the rc line + diagnostic tail
+# always emit even when the stage fails (same genus as the RR5 pgrep capture).
+rc=0
+.venv/bin/python experiments/ddm_et4_solve_within_cvp_n600.py \
+  --resume --threads 4 --build-archive --run-inflate --run-evaluate \
+  > $LOG/final_stage_repaired.log 2>&1 || rc=$?
+echo "final(repaired) rc=$rc"
+tail -20 $LOG/final_stage_repaired.log
+exit $rc

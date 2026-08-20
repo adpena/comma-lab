@@ -1,0 +1,81 @@
+import sys, zipfile, hashlib, subprocess, json, dataclasses
+from pathlib import Path
+import numpy as np
+RT="/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime"
+BOOK="/Volumes/VertigoDataTier/pact/pr135_intake_20260810/experiment_book/src"
+sys.path.insert(0, RT); sys.path.insert(0, BOOK); sys.path.insert(0,"/Users/adpena/Projects/pact/experiments")
+import runtime.residual_archive as ra
+import ddm_rx1_rate_representation_attack as rx1
+from cpr1_sub4.entropy.renderer_weight_codec import decode_wans1, encode_wans1, encode_f12_wans_body
+ORDER=(1, 15, 4, 0, 11, 5, 2, 9, 3, 6, 10, 12, 14, 7, 8, 13)
+BASE=181161
+P=Path(RT)/"archive.zip"
+outer=zipfile.ZipFile(P).read("p")
+H=rx1.RX1_HEADER
+magic,ver,codec,tmode,res,hb,sb,cb=H.unpack_from(outer)
+o=H.size; hpac_s=outer[o:o+hb]; o+=hb; sem_s=outer[o:o+sb]; o+=sb; car_s=outer[o:o+cb]; o+=cb; tail=outer[o:]
+
+def brotli11(v):
+    c=subprocess.run(["brotli","-q","11","-c"],input=v,capture_output=True,check=True).stdout
+    assert subprocess.run(["brotli","-d","-c"],input=c,capture_output=True,check=True).stdout==v
+    return c
+def build_from_records(recs):
+    blob,_=encode_wans1(recs,strategy="per_tensor")
+    body=encode_f12_wans_body(blob,ORDER)
+    s=brotli11(body)
+    model=rx1.pack_rx1_model(hpac_s,s,car_s,codec_id=codec,table_mode=tmode)
+    z=rx1.deterministic_zip(model+tail)
+    return z,len(s),len(body),blob
+
+parts=ra.read_residual_archive(P)
+recs=list(decode_wans1(parts.semantic_blob))
+names=[r.schema.name for r in recs]
+PRUNE=["blocks.1.film.weight","blocks.2.film.weight","blocks.3.film.weight"]
+ALLFILM=["blocks.0.film.weight"]+PRUNE
+
+# control
+z,ps,rb,_=build_from_records(tuple(recs))
+assert hashlib.sha256(z).hexdigest()=="35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956", "control not byte-identical"
+print(f"CONTROL re-encode: archive {len(z)} delta {len(z)-BASE:+d} packedSem {ps} BYTE-IDENTICAL OK\n")
+
+def prune(recs, targets, keep_pct):
+    out=[]; changed=0; mse_num=0.0; n=0; worst=0.0
+    for r in recs:
+        if r.schema.name in targets and r.codes is not None:
+            codes=np.array(r.codes,dtype=np.int8)
+            rows=codes.shape[0]
+            flat=codes.reshape(rows,-1).astype(np.float64)
+            sc=np.asarray(r.scales,dtype=np.float64).reshape(-1)
+            # rank by restored-row energy (codes*scale)
+            restored=flat*sc[:,None] if sc.size==rows else flat*sc.reshape(1,-1)[:, :flat.shape[1]]
+            norms=(restored**2).sum(axis=1)
+            keep=max(1,round(rows*keep_pct/100.0))
+            order=np.argsort(-norms, kind="stable")
+            drop=order[keep:]
+            newcodes=codes.copy().reshape(rows,-1); newcodes[drop]=0
+            newcodes=newcodes.reshape(codes.shape)
+            oldv=np.asarray(r.values,dtype=np.float32)
+            newv=(newcodes.astype(np.float32).reshape(rows,-1)*(sc[:,None] if sc.size==rows else 1.0)).reshape(oldv.shape).astype(np.float32)
+            d=np.abs(newv-oldv); worst=max(worst,float(d.max()))
+            mse_num+=float(((newv-oldv)**2).sum()); n+=oldv.size
+            changed+=int((newcodes!=codes).sum())
+            out.append(dataclasses.replace(r, codes=newcodes, values=newv))
+        else:
+            out.append(r); n+=np.asarray(r.values).size
+    return tuple(out), changed, (mse_num/n if n else 0.0), worst
+
+rows=[]
+for tag,targets in (("3film",PRUNE),("4film",ALLFILM)):
+    for pct in (87,75,62,50,37,25,12):
+        try:
+            newrecs,ch,mse,worst=prune(recs,targets,pct)
+            z,ps,rb,blob=build_from_records(newrecs)
+            rows.append(dict(id=f"W_{tag}_keep{pct}",archive=len(z),delta=len(z)-BASE,packed_sem=ps,raw_sem=rb,changed=ch,mse=mse,worst=worst,sha=hashlib.sha256(z).hexdigest()))
+        except Exception as e:
+            rows.append(dict(id=f"W_{tag}_keep{pct}",error=f"{type(e).__name__}: {e}"))
+
+print(f"{'id':22s} {'archive':>8} {'delta':>7} {'packedSem':>10} {'changed':>8} {'mse':>12} {'worst':>9}")
+for r in rows:
+    if "error" in r: print(f"{r['id']:22s} ERR {r['error'][:70]}"); continue
+    print(f"{r['id']:22s} {r['archive']:>8} {r['delta']:>+7} {r['packed_sem']:>10} {r['changed']:>8} {r['mse']:>12.4e} {r['worst']:>9.5f}")
+Path(sys.argv[1] if len(sys.argv)>1 else "/private/tmp/claude-501/-Users-adpena-Projects-pact/89ff112f-013d-43b5-b949-2a6d43b650c3/scratchpad/sa1/wans_rows.json").write_text(json.dumps(rows,indent=2))

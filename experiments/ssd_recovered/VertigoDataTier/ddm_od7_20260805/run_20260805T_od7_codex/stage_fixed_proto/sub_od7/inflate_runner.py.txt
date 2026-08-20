@@ -1,0 +1,1368 @@
+# SPDX-License-Identifier: MIT
+"""v4d inflate runner — v4c static two-plane + photometric, plus two v4d rungs:
+
+  QA65  dim0 OFFSET-CODED lattice.  dim0 (forward-speed pose, |value| ~ 31.5)
+        has an f16 storage quantum of ~0.02 at its own magnitude but ~0.001 at
+        the mean-subtracted residual (MEASURED 19.3x finer, pi2 f16-marginal
+        law).  When manifest carries `pose_dim0_offset`, the pose member's dim0
+        column stores the f16 RESIDUAL and the receiver reconstructs
+        pose[:,0] = offset + residual — a 19x-finer effective quantum the
+        encoder re-solved dim0 on (realized acceptance).  0 extra counted bytes
+        vs plain f16 (same column width); the offset is one manifest float.
+
+  QA66  per-pair rolling-shutter row-shear.  v4c shipped a GLOBAL beta (g*=0.0,
+        measured negative); the per-pair-best magnitude {0.0, 0.5, 1.0} buys a
+        measured -0.0135 S (v4c photo receipt, per-pair argmin over g).  The
+        magnitude index is stored per pair (entropy-coded, ~1.2 bits/pair); the
+        SIGN is derived free at decode from the pose yaw dim (5).
+
+Grammar v4d (rule-118 FREE generic code; NO scorers, NO GT masks, NO shipped
+mask).  frame_0 is reconstructed from decoded frame_1 by a per-pair choice of
+  selector 0  -> SINGLE-plane full homography H = K(R - t n^T/d)K^{-1}, s_r=1.0
+  selector 1  -> TWO-plane STATIC compose (rows<v far=H_inf, rows>=v ground=H)
+then per-pair PHOTOMETRIC auto-exposure f0 := a*warp(f1) + b (rung B), and a
+per-pair rolling-shutter row-shear (rung A: rotation scaled linearly across
+rows, magnitude from `state/pose_warp.stp` section 5, sign from the pose yaw
+dim).  The horizon row v is DERIVED at decode (v = round(cy) = 437) — pure code.
+
+Payload consumed (state/pose_warp.stp, MAGIC PFS1WPD1):
+  <8s magic><I n_pairs>
+    <I l1><l1 tp_member : kl1 byte-plane f16 (n,6) pose (dim0 = residual iff
+                          manifest.pose_dim0_offset present)>
+    <I l2><l2 st_coded  : r7 token codes -> s_t grid idx>
+    <I l3><l3 sel_coded : brotli packbits(n selector bits)>
+    <I l4><l4 ab_member : kl1 byte-plane f16 (n,2) exposure (a,b)>
+    <I l5><l5 beta_coded: brotli(n uint8 beta-magnitude indices in 0..len-1)>
+Every byte is consumed (parse asserts offset == len) — the counted-vs-inert
+receiver-consumption bijection (#417).
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import lzma
+import struct
+import sys
+from pathlib import Path, PurePosixPath
+
+import brotli
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).parent))
+from ddm_r7_token_coder import decode_token_codes
+from ddm_tr1_runtime import (
+    RENDERER_FRAME_MAGIC,
+    RENDERER_RAW_HEADER,
+    _encode_brotli_frame,
+    _encode_tokens,
+    build_packet,
+    parse_packet,
+    render_frame1_camera_uint8,
+)
+from pfs1_warp_receiver import (
+    ST_GRID,
+    _target_grid,
+    _to_uint8,
+    intrinsics_native,
+    pose_to_homography,
+    warp_rgb,
+)
+
+try:
+    # Decode-time layout: the container primitives are FREE generic code
+    # (rule-118) vendored into the runtime tree next to ddm_tr1_runtime.py, so
+    # the receiver never depends on the `tac` package being installed in the
+    # contest runtime.  ddm_cx1: the staging script copies this file straight
+    # from src/tac/optimization/, so the vendored copy cannot drift from the
+    # encoder's.
+    from ddm_ix2_archive_container import (
+        decode_renderer_frame,
+        decode_token_frame,
+        parse_payload,
+        unpack_config_section,
+    )
+except ModuleNotFoundError:  # repo/dev layout
+    from tac.optimization.ddm_ix2_archive_container import (
+        decode_renderer_frame,
+        decode_token_frame,
+        parse_payload,
+        unpack_config_section,
+    )
+
+MAGIC = b"PFS1WPD1"
+KL1_MAGIC = b"KL1PWF01"
+CAMERA_H, CAMERA_W = 874, 1164
+FRAME0_POLICY = "warp_two_plane_static_photo_beta_v4d"
+DEFAULT_BETA_MAGS = (0.0, 0.5, 1.0)  # rung-A magnitude table (sign from yaw)
+BD1_CLASS_FIELD_MAGIC = b"BD1CLF1!"
+BD1_CLASS_FIELD_HEADER = struct.Struct("<8sBHHHBBBBBII32s")
+BD1_CLASS_FIELD_HEADER_V2 = struct.Struct("<8sBHHHBBBBBBII32s")
+BD1_CLASS_FIELD_VERSION = 1
+BD1_CLASS_FIELD_VERSION_V2 = 2
+_BD1_RAW = 0
+_BD1_LZMA1_RAW = 1
+_BD1_BROTLI_Q11 = 2
+_BD1_SMEVR_R7_NIBBLE = 3
+_BD1_LZMA_FILTERS = [{"id": lzma.FILTER_LZMA1, "dict_size": 1 << 22,
+                       "lc": 0, "lp": 0, "pb": 0}]
+_BD1_PAINT_ROAD_LANE_RGB = 1
+_BD1_REPR_DENSE_BITMAP = 0
+_BD1_REPR_ROW_RUNS = 1
+_BD1_REPR_LANE_CROP = 2
+_BD1_ROAD_CLASS = 0
+_BD1_LANE_CLASS = 1
+_BD1_ROAD_RGB = np.array([30, 39, 72], dtype=np.uint8)
+_BD1_LANE_RGB = np.array([77, 87, 119], dtype=np.uint8)
+PE1_EDGE_MAGIC = b"PE1EDGE1"
+PE1_EDGE_HEADER = struct.Struct("<8sBHHHBBII32s")
+PE1_EDGE_VERSION = 1
+_PE1_CURVE = 1
+_PE1_GENERATOR = 2
+_PE1_GENERATOR_TRANSPORT = 3
+_PE1_KIND_NAMES = {
+    _PE1_CURVE: "explicit_curve_spline",
+    _PE1_GENERATOR: "generator_pair_bisector",
+    _PE1_GENERATOR_TRANSPORT: "generator_pair_xi_transport",
+}
+_PE1_GENERATOR_RECORD = struct.Struct("<BBHHHHhhhh")
+_PE1_CLASS_RGB = np.array(
+    [
+        [30, 39, 72],    # Road
+        [77, 87, 119],   # Lane
+        [95, 70, 45],    # Undriv
+        [126, 50, 68],   # Movable
+        [24, 24, 24],    # MyCar
+    ],
+    dtype=np.uint8,
+)
+PE3_EDGE_MAGIC = b"PE3EDGE1"
+PE3_EDGE_HEADER = struct.Struct("<8sBHHHBBII32s")
+PE3_EDGE_VERSION = 1
+
+# OD7_MARKER_RUNTIME_PATCH: sparse selected-set RGB realization.
+OD7_RGB_MAGIC = b'OD7RGB1\x00'
+OD5_PACKET_MAGIC = b"OD5GPK1\0"
+OD7_RGB_HEADER = struct.Struct("<8sBBBBHHIII32s32s")
+_OD7_FIXED_PROTO = 0
+_OD7_SPARSE_RGB = 1
+_OD7_HYBRID = 2
+_OD7_RAW = 0
+_OD7_LZMA1_RAW = 1
+_OD7_BROTLI_Q11 = 2
+_OD7_LZMA_FILTERS = [{"id": lzma.FILTER_LZMA1, "dict_size": 1 << 22, "lc": 0, "lp": 0, "pb": 0}]
+_OD7_CLASS_RGB = np.array([[30, 39, 72], [77, 87, 119], [168, 145, 96], [114, 59, 45], [43, 121, 93]], dtype=np.uint8)
+
+def _od7_read_varint(payload: bytes, offset: int):
+    value = 0
+    shift = 0
+    while True:
+        if offset >= len(payload):
+            raise SystemExit("OD7 varint is truncated")
+        byte = int(payload[offset])
+        offset += 1
+        value |= (byte & 0x7F) << shift
+        if (byte & 0x80) == 0:
+            return value, offset
+        shift += 7
+        if shift > 63:
+            raise SystemExit("OD7 varint is too long")
+
+def _od7_unpack_nibbles(payload: bytes, count: int):
+    raw = np.frombuffer(payload, dtype=np.uint8)
+    out = np.empty(raw.size * 2, dtype=np.uint8)
+    out[0::2] = raw & 15
+    out[1::2] = raw >> 4
+    if out.size < count:
+        raise SystemExit("OD7 labels are truncated")
+    return np.ascontiguousarray(out[:count])
+
+def _od7_decode_body(coder: int, payload: bytes):
+    if coder == _OD7_RAW:
+        return bytes(payload)
+    if coder == _OD7_LZMA1_RAW:
+        return lzma.decompress(payload, format=lzma.FORMAT_RAW, filters=_OD7_LZMA_FILTERS)
+    if coder == _OD7_BROTLI_Q11:
+        return brotli.decompress(payload)
+    raise SystemExit(f"unknown OD7 coder id {coder}")
+
+def _od7_parse_rgb_field(blob: bytes):
+    if len(blob) < OD7_RGB_HEADER.size:
+        raise SystemExit("OD7 sparse RGB section header truncated")
+    (magic, version, mode, coder, _reserved, seg_h, seg_w, record_count,
+     exception_count, raw_len, raw_sha, od6_sha) = OD7_RGB_HEADER.unpack_from(blob, 0)
+    if magic != OD7_RGB_MAGIC:
+        raise SystemExit("OD7 sparse RGB magic differs")
+    if version != 1:
+        raise SystemExit("OD7 sparse RGB version differs")
+    if int(seg_h) != 384 or int(seg_w) != 512:
+        raise SystemExit("OD7 sparse RGB geometry differs")
+    raw = _od7_decode_body(int(coder), blob[OD7_RGB_HEADER.size:])
+    if len(raw) != int(raw_len):
+        raise SystemExit("OD7 sparse RGB raw length differs")
+    if hashlib.sha256(raw).digest() != raw_sha:
+        raise SystemExit("OD7 sparse RGB raw SHA differs")
+    off = 0
+    pair_count, off = _od7_read_varint(raw, off)
+    records = {}
+    total = 0
+    total_exc = 0
+    for _ in range(int(pair_count)):
+        pair, off = _od7_read_varint(raw, off)
+        count, off = _od7_read_varint(raw, off)
+        flats = []
+        prev = -1
+        for _j in range(int(count)):
+            delta, off = _od7_read_varint(raw, off)
+            flat = prev + 1 + int(delta)
+            flats.append(flat)
+            prev = flat
+        label_bytes = (int(count) + 1) // 2
+        labels = _od7_unpack_nibbles(raw[off:off + label_bytes], int(count))
+        off += label_bytes
+        flats_arr = np.asarray(flats, dtype=np.int64)
+        if int(mode) == _OD7_FIXED_PROTO:
+            colors = _OD7_CLASS_RGB[labels].copy()
+        elif int(mode) == _OD7_SPARSE_RGB:
+            rgb = raw[off:off + 3 * int(count)]
+            if len(rgb) != 3 * int(count):
+                raise SystemExit("OD7 sparse RGB values truncated")
+            off += 3 * int(count)
+            colors = np.frombuffer(rgb, dtype=np.uint8).reshape(int(count), 3).copy()
+        elif int(mode) == _OD7_HYBRID:
+            colors = _OD7_CLASS_RGB[labels].copy()
+            exc_count, off = _od7_read_varint(raw, off)
+            exc_indices = []
+            prev_idx = -1
+            for _j in range(int(exc_count)):
+                delta, off = _od7_read_varint(raw, off)
+                idx = prev_idx + 1 + int(delta)
+                if idx < 0 or idx >= int(count):
+                    raise SystemExit("OD7 hybrid exception index outside record list")
+                exc_indices.append(idx)
+                prev_idx = idx
+            rgb = raw[off:off + 3 * int(exc_count)]
+            if len(rgb) != 3 * int(exc_count):
+                raise SystemExit("OD7 hybrid exception RGB truncated")
+            off += 3 * int(exc_count)
+            if exc_indices:
+                colors[np.asarray(exc_indices, dtype=np.int64)] = np.frombuffer(rgb, dtype=np.uint8).reshape(int(exc_count), 3)
+            total_exc += int(exc_count)
+        else:
+            raise SystemExit(f"unknown OD7 sparse RGB mode {int(mode)}")
+        records[int(pair)] = (flats_arr, colors)
+        total += int(count)
+    if off != len(raw):
+        raise SystemExit("OD7 sparse RGB raw has trailing bytes")
+    if total != int(record_count):
+        raise SystemExit("OD7 sparse RGB record count differs")
+    if total_exc != int(exception_count):
+        raise SystemExit("OD7 sparse RGB exception count differs")
+    return {"seg_h": int(seg_h), "seg_w": int(seg_w), "records": records, "source_od6_sha256": od6_sha.hex(), "mode": int(mode)}
+
+def _od7_parse_od5_guard(blob: bytes):
+    if len(blob) < 8 or blob[:8] != OD5_PACKET_MAGIC:
+        raise SystemExit("OD7 OD5 guard magic differs")
+    # This guard intentionally closes the counted OD6 packet bytes.  The selected
+    # RGB records carry the values; this guard prevents an OD7 realization from
+    # silently detaching from the OD6 packet row it claims to realize.
+    return {"sha256": hashlib.sha256(blob).hexdigest(), "bytes": len(blob)}
+
+def _od7_apply_rgb_field(u8: np.ndarray, field, pair_index: int) -> np.ndarray:
+    item = field["records"].get(int(pair_index))
+    if item is None:
+        return u8
+    flats, colors = item
+    if int(flats.size) == 0:
+        return u8
+    rows = flats // field["seg_w"]
+    cols = flats % field["seg_w"]
+    rlo, rhi, _rw = _f0pr_bilinear_axis(field["seg_h"], u8.shape[0])
+    clo, chi, _cw = _f0pr_bilinear_axis(field["seg_w"], u8.shape[1])
+    out = u8.copy()
+    for rr in (rlo[rows], rhi[rows]):
+        for cc in (clo[cols], chi[cols]):
+            out[rr, cc] = colors
+    return out
+
+_PE3_HYBRID = 1
+_PE3_MODE_CURVE = 1
+_PE3_MODE_GENERATOR = 2
+_PE3_MODE_NAMES = {
+    _PE3_MODE_CURVE: "depth_conditioned_curve",
+    _PE3_MODE_GENERATOR: "generator_pair_bisector",
+}
+
+
+def geometric_horizon_row(K: np.ndarray) -> int:
+    """Ground-plane vanishing row for pitch=0: n=[0,-1,0], v=-l2/l1 => 437."""
+    n = np.array([0.0, -1.0, 0.0], np.float64)
+    ln = np.linalg.inv(K).T @ n
+    return round(-ln[2] / ln[1])
+
+
+def decode_kl1_field(member: bytes) -> np.ndarray:
+    """Rule-118-free byte-plane f16 field decoder (inlined kl1 KL1PWF01)."""
+    if member[:8] != KL1_MAGIC:
+        raise SystemExit("kl1 field magic differs")
+    n, d, plen = struct.unpack("<HHI", member[8:16])
+    raw = brotli.decompress(member[16:16 + plen])
+    half = n * d
+    hi = np.frombuffer(raw[:half], dtype=np.uint8).astype(np.uint16)
+    lo = np.frombuffer(raw[half:2 * half], dtype=np.uint8).astype(np.uint16)
+    cm = ((hi << 8) | lo).reshape(d, n)  # (d,n) uint16
+    return np.ascontiguousarray(cm.T).view(np.float16)  # (n,d)
+
+
+# ---- frame_0 pose-repair stream (F0PR1; OPTIONAL 5th joint section, ddm_fz1) --------------
+# SegNet reads only the LAST frame (upstream/modules.py: ``x = x[:, -1, ...]``), so an additive
+# frame_0 correction is structurally seg-invisible; PoseNet reads both frames, so the repair
+# restores the pose readout the seg-only palette destroyed.  The DCT synthesis basis and the
+# bilinear resize D are DETERMINISTICALLY GENERATED here (rule-118-free generic code); only the
+# int16 coefficients in the counted section carry video-derived signal.
+F0PR_MAGIC = b"F0PR1!\x00\x00"
+_F0PR_LZMA_FILTERS = [{"id": lzma.FILTER_LZMA1, "dict_size": 1 << 22,
+                       "lc": 0, "lp": 0, "pb": 0}]
+_F0PR_RAW_INT16 = 0
+_F0PR_LZMA1_RAW = 1
+_F0PR_BROTLI_Q11 = 2
+_F0PR_PAIR_BITPACK = 3
+
+
+def _f0pr_unpack_pair_widths(payload: bytes, count: int):
+    width_bytes = (count + 1) // 2
+    if len(payload) < width_bytes:
+        raise SystemExit("F0PR pair-bitpack payload is truncated before widths")
+    widths = []
+    for byte in payload[:width_bytes]:
+        widths.append((byte >> 4) + 1)
+        if len(widths) < count:
+            widths.append((byte & 15) + 1)
+    return widths, payload[width_bytes:]
+
+
+def _f0pr_read_bits(payload: bytes, bitpos: int, width: int):
+    out = 0
+    for _ in range(width):
+        if bitpos >= len(payload) * 8:
+            raise SystemExit("F0PR pair-bitpack payload ended mid-value")
+        byte = payload[bitpos // 8]
+        out = (out << 1) | ((byte >> (7 - (bitpos % 8))) & 1)
+        bitpos += 1
+    return out, bitpos
+
+
+def _f0pr_decode_pair_bitpack(payload: bytes, count: int, k2: int) -> bytes:
+    widths, bits = _f0pr_unpack_pair_widths(payload, count)
+    expected_bits = sum(widths) * 3 * k2
+    expected_bytes = (expected_bits + 7) // 8
+    if len(bits) != expected_bytes:
+        raise SystemExit("F0PR pair-bitpack body length mismatch")
+    out = np.empty((count, 3, k2), dtype="<i2")
+    flat = out.reshape(count, -1)
+    bitpos = 0
+    for i, width in enumerate(widths):
+        sign = 1 << (width - 1)
+        full = 1 << width
+        for j in range(3 * k2):
+            code, bitpos = _f0pr_read_bits(bits, bitpos, width)
+            flat[i, j] = code - full if code & sign else code
+    if bitpos != expected_bits:
+        raise SystemExit("F0PR pair-bitpack bit cursor did not close")
+    if expected_bits % 8:
+        padding_mask = (1 << (8 - expected_bits % 8)) - 1
+        if bits[-1] & padding_mask:
+            raise SystemExit("F0PR pair-bitpack payload has nonzero padding")
+    return out.tobytes()
+
+
+def _f0pr_parse(blob: bytes):
+    """Parse the F0PR1 stream, closing exactly on the final byte (#417)."""
+    if blob[:8] != F0PR_MAGIC:
+        raise SystemExit("bad frame_0 pose repair magic")
+    k, seg_h, seg_w, count, coder = struct.unpack_from("<HHHHB", blob, 8)
+    off = 17
+    pairs = [struct.unpack_from("<I", blob, off + 4 * i)[0] for i in range(count)]
+    off += 4 * count
+    body = blob[off:]
+    if coder == _F0PR_LZMA1_RAW:
+        body = lzma.decompress(body, format=lzma.FORMAT_RAW, filters=_F0PR_LZMA_FILTERS)
+    elif coder == _F0PR_BROTLI_Q11:
+        body = brotli.decompress(body)
+    elif coder == _F0PR_PAIR_BITPACK:
+        body = _f0pr_decode_pair_bitpack(body, count, k * k)
+    elif coder != _F0PR_RAW_INT16:
+        raise SystemExit(f"unknown F0PR coder id {coder}")
+    k2 = k * k
+    if len(body) != count * k2 * 3 * 2:
+        raise SystemExit("F0PR body length mismatch")
+    arr = np.frombuffer(body, dtype="<i2").reshape(count, 3, k2)
+    return k, seg_h, seg_w, {int(p): arr[i] for i, p in enumerate(pairs)}
+
+
+def _f0pr_dct_atoms(k: int, h: int, w: int) -> np.ndarray:
+    """Generic separable 2-D DCT-III synthesis atoms (orthonormal), float64->float32."""
+    def basis(n: int, size: int) -> np.ndarray:
+        y = np.arange(size, dtype=np.float64)
+        v = np.cos(np.pi * (2.0 * y + 1.0) * n / (2.0 * size))
+        return v * np.sqrt((1.0 if n == 0 else 2.0) / size)
+    ath = np.stack([basis(a, h) for a in range(k)])
+    atw = np.stack([basis(b, w) for b in range(k)])
+    return np.einsum("ah,bw->abhw", ath, atw).reshape(k * k, h, w).astype(np.float32)
+
+
+def _f0pr_bilinear_axis(n_out: int, n_in: int):
+    src = (np.arange(n_out, dtype=np.float64) + 0.5) * (n_in / n_out) - 0.5
+    lo = np.clip(np.floor(src).astype(np.int64), 0, n_in - 1)
+    hi = np.clip(lo + 1, 0, n_in - 1)
+    w_hi = np.clip(src - np.floor(src), 0.0, 1.0)
+    return lo, hi, w_hi
+
+
+def _f0pr_apply(u8: np.ndarray, coef_i16: np.ndarray, atoms: np.ndarray,
+                seg_h: int, seg_w: int) -> np.ndarray:
+    """round(clamp(D(f0) + coef @ A)) written back through D's private 2x2 supports.
+
+    Deterministic and receiver-local; scale 874/384 = 2.276 > 2 makes every scorer
+    pixel's 4 support pixels PRIVATE, so D reproduces the paint exactly.
+    """
+    h, w = u8.shape[0], u8.shape[1]
+    rlo, rhi, rw = _f0pr_bilinear_axis(seg_h, h)
+    clo, chi, cw = _f0pr_bilinear_axis(seg_w, w)
+    x = u8.astype(np.float64)
+    rows = x[rlo] * (1.0 - rw)[:, None, None] + x[rhi] * rw[:, None, None]
+    base = rows[:, clo] * (1.0 - cw)[None, :, None] + rows[:, chi] * cw[None, :, None]
+    # macOS Accelerate raises a SPURIOUS FPE flag for this matmul shape even though inputs are
+    # finite and the output is verified against the float reference (bz1 precedent, asserted in
+    # the compose acceptance).  Silence the platform quirk locally, never globally.
+    with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+        delta = (coef_i16.astype(np.float64)
+                 @ atoms.reshape(atoms.shape[0], -1).astype(np.float64))
+    delta = delta.reshape(3, seg_h, seg_w).transpose(1, 2, 0)
+    paint = np.rint(np.clip(base + delta, 0.0, 255.0)).astype(np.uint8)
+    out = u8.copy()
+    for r_idx in (rlo, rhi):
+        for c_idx in (clo, chi):
+            out[r_idx[:, None], c_idx[None, :]] = paint
+    return out
+
+
+def _bd1_unpack_bits(payload: bytes, count: int) -> np.ndarray:
+    need = (count + 7) // 8
+    if len(payload) != need:
+        raise SystemExit("BD1 class-field bit payload length mismatch")
+    bits = np.unpackbits(np.frombuffer(payload, dtype=np.uint8), bitorder="big")
+    if np.any(bits[count:] != 0):
+        raise SystemExit("BD1 class-field bit payload has nonzero padding")
+    return np.ascontiguousarray(bits[:count].astype(bool))
+
+
+def _bd1_nibbles_to_bytes(nibbles: np.ndarray) -> np.ndarray:
+    if nibbles.ndim != 3 or nibbles.shape[2] != 2:
+        raise SystemExit("BD1 SMEVR nibble matrix shape mismatch")
+    return ((nibbles[:, :, 0].astype(np.uint16) << 4)
+            | nibbles[:, :, 1].astype(np.uint16)).astype(np.uint8)
+
+
+def _bd1_unsmevr_records(payload: bytes) -> list[bytes]:
+    if payload[:5] != b"CGSV1":
+        raise SystemExit("BD1 SMEVR class-field magic differs")
+    if len(payload) < 15:
+        raise SystemExit("BD1 SMEVR class-field header is truncated")
+    n, cols_total, chunk_count = struct.unpack("<IIH", payload[5:15])
+    off = 15
+    parts = []
+    for _ in range(chunk_count):
+        if len(payload) < off + 4:
+            raise SystemExit("BD1 SMEVR chunk length is truncated")
+        (length,) = struct.unpack_from("<I", payload, off)
+        off += 4
+        frame = payload[off:off + length]
+        off += length
+        if len(frame) != length:
+            raise SystemExit("BD1 SMEVR chunk is truncated")
+        decoded = np.asarray(decode_token_codes(frame), dtype=np.uint8)
+        if decoded.shape[0] != n or decoded.shape[2] != 2:
+            raise SystemExit("BD1 SMEVR decoded chunk shape differs")
+        parts.append(_bd1_nibbles_to_bytes(
+            decoded.reshape(decoded.shape[0], decoded.shape[1], 2)))
+    if off != len(payload):
+        raise SystemExit("BD1 SMEVR class-field has trailing bytes")
+    matrix = (
+        np.concatenate(parts, axis=1)[:, :cols_total]
+        if parts else np.zeros((n, 0), dtype=np.uint8)
+    )
+    records: list[bytes] = []
+    for row in matrix:
+        if row.size < 4:
+            raise SystemExit("BD1 SMEVR record lacks a length prefix")
+        (length,) = struct.unpack("<I", row[:4].tobytes())
+        if length > max(0, cols_total - 4):
+            raise SystemExit("BD1 SMEVR record length exceeds row width")
+        records.append(row[4:4 + length].tobytes())
+    return records
+
+
+def _bd1_decode_body(codec: int, payload: bytes) -> bytes:
+    if codec == _BD1_RAW:
+        return bytes(payload)
+    if codec == _BD1_LZMA1_RAW:
+        return lzma.decompress(payload, format=lzma.FORMAT_RAW, filters=_BD1_LZMA_FILTERS)
+    if codec == _BD1_BROTLI_Q11:
+        return brotli.decompress(payload)
+    if codec == _BD1_SMEVR_R7_NIBBLE:
+        return b"".join(_bd1_unsmevr_records(payload))
+    raise SystemExit(f"unknown BD1 class-field codec id {codec}")
+
+
+def _bd1_read_varint(payload: bytes, offset: int) -> tuple[int, int]:
+    shift = 0
+    value = 0
+    while True:
+        if offset >= len(payload):
+            raise SystemExit("BD1 varint is truncated")
+        byte = int(payload[offset])
+        offset += 1
+        value |= (byte & 0x7F) << shift
+        if (byte & 0x80) == 0:
+            return value, offset
+        shift += 7
+        if shift > 63:
+            raise SystemExit("BD1 varint is too long")
+
+
+def _bd1_field_from_pairs(seg_h: int, seg_w: int, pair_data):
+    bands = []
+    lane_bits = []
+    pair_counts = []
+    slots = int(seg_h) * int(seg_w)
+    for indices, lane in pair_data:
+        indices = np.asarray(indices, dtype=np.int64).reshape(-1)
+        lane = np.asarray(lane, dtype=bool).reshape(-1)
+        if indices.size != lane.size:
+            raise SystemExit("BD1 class-field index/side count differs")
+        if indices.size and (int(indices.min()) < 0 or int(indices.max()) >= slots):
+            raise SystemExit("BD1 class-field index outside scorer grid")
+        bands.append(indices.astype(np.int32))
+        lane_bits.append(lane)
+        pair_counts.append(int(indices.size))
+    return {
+        "seg_h": int(seg_h),
+        "seg_w": int(seg_w),
+        "bands": tuple(bands),
+        "lane_bits": tuple(lane_bits),
+        "pair_counts": tuple(pair_counts),
+    }
+
+
+def _bd1_decode_dense_bitmap(raw: bytes, seg_h: int, seg_w: int, n_pairs: int, band_bytes: int):
+    pair_data = []
+    off = 0
+    slots = int(seg_h) * int(seg_w)
+    for _ in range(int(n_pairs)):
+        band_payload = raw[off:off + int(band_bytes)]
+        off += int(band_bytes)
+        band = _bd1_unpack_bits(band_payload, slots)
+        indices = np.flatnonzero(band.reshape(-1))
+        count = int(indices.size)
+        side_bytes = (count + 7) // 8
+        side = _bd1_unpack_bits(raw[off:off + side_bytes], count)
+        off += side_bytes
+        pair_data.append((indices, side))
+    if off != len(raw):
+        raise SystemExit("BD1 dense class-field raw body has trailing bytes")
+    return _bd1_field_from_pairs(seg_h, seg_w, pair_data)
+
+
+def _bd1_decode_row_runs(raw: bytes, seg_h: int, seg_w: int, n_pairs: int):
+    pair_data = []
+    off = 0
+    slots = int(seg_h) * int(seg_w)
+    for _ in range(int(n_pairs)):
+        run_count, off = _bd1_read_varint(raw, off)
+        indices = []
+        prev_start = 0
+        prev_end = 0
+        total = 0
+        for run_index in range(run_count):
+            start_delta, off = _bd1_read_varint(raw, off)
+            length, off = _bd1_read_varint(raw, off)
+            if length == 0:
+                raise SystemExit("BD1 row-run length is zero")
+            start = start_delta if run_index == 0 else prev_start + start_delta
+            end = start + length
+            if start < 0 or end > slots:
+                raise SystemExit("BD1 row-run outside scorer grid")
+            if run_index and start < prev_end:
+                raise SystemExit("BD1 row-runs are not strictly ordered")
+            indices.extend(range(start, end))
+            prev_start = start
+            prev_end = end
+            total += length
+        side_bytes = (total + 7) // 8
+        side = _bd1_unpack_bits(raw[off:off + side_bytes], total)
+        off += side_bytes
+        pair_data.append((np.asarray(indices, dtype=np.int64), side))
+    if off != len(raw):
+        raise SystemExit("BD1 row-run raw body has trailing bytes")
+    return _bd1_field_from_pairs(seg_h, seg_w, pair_data)
+
+
+def _bd1_dilate_3x3(mask: np.ndarray) -> np.ndarray:
+    padded = np.pad(np.asarray(mask, dtype=bool), 1, mode="constant")
+    out = np.zeros(mask.shape, dtype=bool)
+    for dy in range(3):
+        for dx in range(3):
+            out |= padded[dy:dy + mask.shape[0], dx:dx + mask.shape[1]]
+    return out
+
+
+def _bd1_decode_lane_crop(raw: bytes, seg_h: int, seg_w: int, n_pairs: int):
+    pair_data = []
+    off = 0
+    for _ in range(int(n_pairs)):
+        if off + 8 > len(raw):
+            raise SystemExit("BD1 Lane-crop record header is truncated")
+        y0, x0, height, width = struct.unpack_from("<HHHH", raw, off)
+        off += 8
+        if y0 + height > seg_h or x0 + width > seg_w:
+            raise SystemExit("BD1 Lane crop exceeds scorer grid")
+        lane = np.zeros((int(seg_h), int(seg_w)), dtype=bool)
+        bit_count = int(height) * int(width)
+        payload_bytes = (bit_count + 7) // 8
+        if bit_count:
+            crop = _bd1_unpack_bits(raw[off:off + payload_bytes], bit_count).reshape(
+                int(height), int(width)
+            )
+            lane[int(y0):int(y0) + int(height), int(x0):int(x0) + int(width)] = crop
+        off += payload_bytes
+        band = _bd1_dilate_3x3(lane)
+        indices = np.flatnonzero(band.reshape(-1))
+        side = lane.reshape(-1)[indices]
+        pair_data.append((indices, side))
+    if off != len(raw):
+        raise SystemExit("BD1 Lane-crop raw body has trailing bytes")
+    return _bd1_field_from_pairs(seg_h, seg_w, pair_data)
+
+
+def _bd1_parse_class_field(blob: bytes):
+    """Parse a counted Road/Lane r1-band class field, closing on the final byte."""
+    if len(blob) < 9:
+        raise SystemExit("BD1 class-field section header truncated")
+    version = int(blob[8])
+    if version == BD1_CLASS_FIELD_VERSION:
+        if len(blob) < BD1_CLASS_FIELD_HEADER.size:
+            raise SystemExit("BD1 class-field section header truncated")
+        (magic, version, seg_h, seg_w, n_pairs, radius, road_cls, lane_cls, paint_mode,
+         codec, raw_len, band_bytes, raw_sha) = BD1_CLASS_FIELD_HEADER.unpack_from(blob, 0)
+        repr_kind = _BD1_REPR_DENSE_BITMAP
+        payload_offset = BD1_CLASS_FIELD_HEADER.size
+    elif version == BD1_CLASS_FIELD_VERSION_V2:
+        if len(blob) < BD1_CLASS_FIELD_HEADER_V2.size:
+            raise SystemExit("BD1 class-field v2 section header truncated")
+        (magic, version, seg_h, seg_w, n_pairs, radius, road_cls, lane_cls, paint_mode,
+         repr_kind, codec, raw_len, band_bytes, raw_sha) = BD1_CLASS_FIELD_HEADER_V2.unpack_from(blob, 0)
+        payload_offset = BD1_CLASS_FIELD_HEADER_V2.size
+    else:
+        raise SystemExit("BD1 class-field version differs")
+    if magic != BD1_CLASS_FIELD_MAGIC:
+        raise SystemExit("BD1 class-field magic differs")
+    if radius != 1:
+        raise SystemExit("BD1 class-field receiver currently serves only r1 bands")
+    if road_cls != _BD1_ROAD_CLASS or lane_cls != _BD1_LANE_CLASS:
+        raise SystemExit("BD1 class-field Road/Lane class ids differ")
+    if paint_mode != _BD1_PAINT_ROAD_LANE_RGB:
+        raise SystemExit("BD1 class-field paint mode differs")
+    if repr_kind == _BD1_REPR_DENSE_BITMAP and band_bytes != (int(seg_h) * int(seg_w) + 7) // 8:
+        raise SystemExit("BD1 class-field band bitmap width differs")
+    raw = _bd1_decode_body(int(codec), blob[payload_offset:])
+    if len(raw) != int(raw_len):
+        raise SystemExit("BD1 class-field raw length differs")
+    if hashlib.sha256(raw).digest() != raw_sha:
+        raise SystemExit("BD1 class-field raw SHA-256 differs")
+    if repr_kind == _BD1_REPR_DENSE_BITMAP:
+        return _bd1_decode_dense_bitmap(raw, int(seg_h), int(seg_w), int(n_pairs), int(band_bytes))
+    if repr_kind == _BD1_REPR_ROW_RUNS:
+        return _bd1_decode_row_runs(raw, int(seg_h), int(seg_w), int(n_pairs))
+    if repr_kind == _BD1_REPR_LANE_CROP:
+        return _bd1_decode_lane_crop(raw, int(seg_h), int(seg_w), int(n_pairs))
+    raise SystemExit(f"unknown BD1 class-field representation kind {int(repr_kind)}")
+
+
+
+def _bd1_apply_class_field(u8: np.ndarray, field, pair_index: int) -> np.ndarray:
+    band = field["bands"][pair_index]
+    if int(band.size) == 0:
+        return u8
+    lane = field["lane_bits"][pair_index]
+    rows = band // field["seg_w"]
+    cols = band % field["seg_w"]
+    rlo, rhi, _rw = _f0pr_bilinear_axis(field["seg_h"], u8.shape[0])
+    clo, chi, _cw = _f0pr_bilinear_axis(field["seg_w"], u8.shape[1])
+    colors = np.where(
+        lane[:, None], _BD1_LANE_RGB[None, :], _BD1_ROAD_RGB[None, :]
+    ).astype(np.uint8)
+    out = u8.copy()
+    for rr in (rlo[rows], rhi[rows]):
+        for cc in (clo[cols], chi[cols]):
+            out[rr, cc] = colors
+    return out
+
+
+def _pe1_decode_body(codec: int, payload: bytes) -> bytes:
+    if codec == _BD1_RAW:
+        return bytes(payload)
+    if codec == _BD1_LZMA1_RAW:
+        return lzma.decompress(payload, format=lzma.FORMAT_RAW, filters=_BD1_LZMA_FILTERS)
+    if codec == _BD1_BROTLI_Q11:
+        return brotli.decompress(payload)
+    if codec == _BD1_SMEVR_R7_NIBBLE:
+        return b"".join(_bd1_unsmevr_records(payload))
+    raise SystemExit(f"unknown PE1 edge-field codec id {codec}")
+
+
+def _pe1_read_varint(payload: bytes, offset: int) -> tuple[int, int]:
+    shift = 0
+    value = 0
+    while True:
+        if offset >= len(payload):
+            raise SystemExit("PE1 edge-field varint is truncated")
+        byte = int(payload[offset])
+        offset += 1
+        value |= (byte & 0x7F) << shift
+        if (byte & 0x80) == 0:
+            return value, offset
+        shift += 7
+        if shift > 63:
+            raise SystemExit("PE1 edge-field varint is too long")
+
+
+def _pe1_read_zigzag(payload: bytes, offset: int) -> tuple[int, int]:
+    value, offset = _pe1_read_varint(payload, offset)
+    return (int(value) >> 1) ^ -(int(value) & 1), offset
+
+
+def _pe1_validate_edge(a: int, b: int) -> None:
+    if a < 0 or b < 0 or a >= b or b >= int(_PE1_CLASS_RGB.shape[0]):
+        raise SystemExit("PE1 edge-field class ids are invalid")
+
+
+def _pe1_curve_indices(record: bytes, seg_h: int, seg_w: int) -> tuple[np.ndarray, np.ndarray]:
+    if len(record) < 3:
+        raise SystemExit("PE1 curve record truncated before class/axis")
+    a = int(record[0])
+    b = int(record[1])
+    axis = int(record[2])
+    _pe1_validate_edge(a, b)
+    offset = 3
+    half_width, offset = _pe1_read_varint(record, offset)
+    primary_start, offset = _pe1_read_varint(record, offset)
+    primary_count, offset = _pe1_read_varint(record, offset)
+    knot_stride, offset = _pe1_read_varint(record, offset)
+    knot_count, offset = _pe1_read_varint(record, offset)
+    if axis not in (0, 1) or primary_count < 1 or knot_stride < 1 or knot_count < 1:
+        raise SystemExit("PE1 curve record header invalid")
+    primary_limit = int(seg_h) if axis == 0 else int(seg_w)
+    secondary_limit = int(seg_w) if axis == 0 else int(seg_h)
+    if primary_start + primary_count > primary_limit:
+        raise SystemExit("PE1 curve record exceeds scorer grid")
+    knots: list[int] = []
+    prev = 0
+    for i in range(int(knot_count)):
+        value, offset = _pe1_read_zigzag(record, offset)
+        knot = value if i == 0 else prev + value
+        knots.append(int(knot))
+        prev = int(knot)
+    if offset != len(record):
+        raise SystemExit("PE1 curve record has trailing bytes")
+    knot_positions = list(range(0, int(primary_count), int(knot_stride)))
+    if not knot_positions or knot_positions[-1] != int(primary_count) - 1:
+        knot_positions.append(int(primary_count) - 1)
+    if len(knot_positions) != len(knots):
+        raise SystemExit("PE1 curve knot positions/count differ")
+    centers = np.interp(
+        np.arange(int(primary_count), dtype=np.float64),
+        np.asarray(knot_positions, dtype=np.float64),
+        np.asarray(knots, dtype=np.float64),
+    )
+    indices: list[int] = []
+    classes: list[int] = []
+    for i, center in enumerate(centers.tolist()):
+        primary = int(primary_start) + i
+        c = round(float(center))
+        lo = max(0, c - int(half_width))
+        hi = min(secondary_limit - 1, c + int(half_width))
+        if lo > hi:
+            continue
+        if axis == 0:
+            row = primary
+            for col in range(lo, hi + 1):
+                indices.append(row * int(seg_w) + col)
+                classes.append(a if col <= c else b)
+        else:
+            col = primary
+            for row in range(lo, hi + 1):
+                indices.append(row * int(seg_w) + col)
+                classes.append(a if row <= c else b)
+    return (
+        np.asarray(indices, dtype=np.int32),
+        np.asarray(classes, dtype=np.uint8),
+    )
+
+
+def _pe1_generator_indices_from_fields(
+    a: int,
+    b: int,
+    y0: int,
+    x0: int,
+    height: int,
+    width: int,
+    gen_a_y_q4: int,
+    gen_a_x_q4: int,
+    gen_b_y_q4: int,
+    gen_b_x_q4: int,
+    seg_h: int,
+    seg_w: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    _pe1_validate_edge(a, b)
+    if height < 1 or width < 1 or y0 + height > seg_h or x0 + width > seg_w:
+        raise SystemExit("PE1 generator record geometry invalid")
+    yy, xx = np.indices((int(height), int(width)), dtype=np.float64)
+    yy += int(y0)
+    xx += int(x0)
+    ay, ax = (float(gen_a_y_q4) / 4.0, float(gen_a_x_q4) / 4.0)
+    by, bx = (float(gen_b_y_q4) / 4.0, float(gen_b_x_q4) / 4.0)
+    da = (yy - ay) ** 2 + (xx - ax) ** 2
+    db = (yy - by) ** 2 + (xx - bx) ** 2
+    side = da <= db
+    local = np.zeros(side.shape, dtype=bool)
+    vert = side[:-1, :] != side[1:, :]
+    local[:-1, :] |= vert
+    local[1:, :] |= vert
+    horiz = side[:, :-1] != side[:, 1:]
+    local[:, :-1] |= horiz
+    local[:, 1:] |= horiz
+    local_flat = np.flatnonzero(local.reshape(-1))
+    rows = local_flat // int(width) + int(y0)
+    cols = local_flat % int(width) + int(x0)
+    indices = (rows * int(seg_w) + cols).astype(np.int32)
+    classes = np.where(side.reshape(-1)[local_flat], a, b).astype(np.uint8)
+    return indices, classes
+
+
+def _pe1_generator_indices(record: bytes, seg_h: int, seg_w: int) -> tuple[np.ndarray, np.ndarray]:
+    if len(record) != _PE1_GENERATOR_RECORD.size:
+        raise SystemExit("PE1 generator record length differs")
+    fields = _PE1_GENERATOR_RECORD.unpack(record)
+    return _pe1_generator_indices_from_fields(*map(int, fields), seg_h, seg_w)
+
+
+def _pe1_generator_transport_indices(
+    record: bytes,
+    previous_by_track: dict[int, tuple[int, ...]],
+    seg_h: int,
+    seg_w: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    if len(record) < 4:
+        raise SystemExit("PE1 generator-transport record truncated")
+    a = int(record[0])
+    b = int(record[1])
+    _pe1_validate_edge(a, b)
+    track_id, offset = _pe1_read_varint(record, 2)
+    if offset >= len(record):
+        raise SystemExit("PE1 generator-transport record missing mode")
+    mode = int(record[offset])
+    offset += 1
+    values: list[int] = []
+    for _ in range(8):
+        value, offset = _pe1_read_zigzag(record, offset)
+        values.append(int(value))
+    if offset != len(record):
+        raise SystemExit("PE1 generator-transport record has trailing bytes")
+    if mode == 0:
+        fields = tuple(values)
+    elif mode == 1:
+        previous = previous_by_track.get(int(track_id))
+        if previous is None:
+            raise SystemExit("PE1 generator-transport delta without prior track state")
+        fields = tuple(prev + delta for prev, delta in zip(previous, values, strict=True))
+    else:
+        raise SystemExit("PE1 generator-transport mode differs")
+    previous_by_track[int(track_id)] = fields
+    y0, x0, height, width, gay, gax, gby, gbx = fields
+    return _pe1_generator_indices_from_fields(
+        a, b, y0, x0, height, width, gay, gax, gby, gbx, seg_h, seg_w
+    )
+
+
+def _pe1_raster_sha256(field) -> str:
+    digest = hashlib.sha256()
+    digest.update(struct.pack("<HHH", field["seg_h"], field["seg_w"], len(field["bands"])))
+    for pair_index, (band, classes) in enumerate(zip(field["bands"], field["classes"], strict=True)):
+        digest.update(struct.pack("<II", pair_index, int(band.size)))
+        digest.update(np.asarray(band, dtype="<i4").tobytes())
+        digest.update(np.asarray(classes, dtype=np.uint8).tobytes())
+    return digest.hexdigest()
+
+
+def _pe1_parse_edge_field(blob: bytes):
+    """Parse a counted PE1 per-edge partition section into receiver-consumed bands."""
+    if len(blob) < PE1_EDGE_HEADER.size:
+        raise SystemExit("PE1 edge-field section header truncated")
+    (magic, version, seg_h, seg_w, n_pairs, kind, codec, raw_len,
+     frame_record_count, raw_sha) = PE1_EDGE_HEADER.unpack_from(blob, 0)
+    if magic != PE1_EDGE_MAGIC:
+        raise SystemExit("PE1 edge-field magic differs")
+    if version != PE1_EDGE_VERSION:
+        raise SystemExit("PE1 edge-field version differs")
+    if int(seg_h) < 1 or int(seg_w) < 1 or int(n_pairs) < 1:
+        raise SystemExit("PE1 edge-field geometry invalid")
+    if int(kind) not in _PE1_KIND_NAMES:
+        raise SystemExit(f"unknown PE1 edge-field representation kind {int(kind)}")
+    raw = _pe1_decode_body(int(codec), blob[PE1_EDGE_HEADER.size:])
+    if len(raw) != int(raw_len):
+        raise SystemExit("PE1 edge-field raw length differs")
+    if hashlib.sha256(raw).digest() != raw_sha:
+        raise SystemExit("PE1 edge-field raw SHA-256 differs")
+    if int(frame_record_count) != int(n_pairs):
+        raise SystemExit("PE1 edge-field frame record count differs")
+    slots = int(seg_h) * int(seg_w)
+    bands = []
+    classes = []
+    pair_counts = []
+    component_records = 0
+    offset = 0
+    previous_by_track: dict[int, tuple[int, ...]] = {}
+    for _pair in range(int(n_pairs)):
+        count, offset = _pe1_read_varint(raw, offset)
+        component_records += int(count)
+        class_by_index = np.full(slots, -1, dtype=np.int16)
+        for _ in range(int(count)):
+            length, offset = _pe1_read_varint(raw, offset)
+            record = raw[offset:offset + int(length)]
+            if len(record) != int(length):
+                raise SystemExit("PE1 edge-field component record truncated")
+            offset += int(length)
+            if int(kind) == _PE1_CURVE:
+                indices, cls = _pe1_curve_indices(record, int(seg_h), int(seg_w))
+            elif int(kind) == _PE1_GENERATOR:
+                indices, cls = _pe1_generator_indices(record, int(seg_h), int(seg_w))
+            else:
+                indices, cls = _pe1_generator_transport_indices(
+                    record, previous_by_track, int(seg_h), int(seg_w)
+                )
+            if int(indices.size) != int(cls.size):
+                raise SystemExit("PE1 edge-field index/class count differs")
+            if indices.size:
+                if int(indices.min()) < 0 or int(indices.max()) >= slots:
+                    raise SystemExit("PE1 edge-field index outside scorer grid")
+                class_by_index[indices.astype(np.int64)] = cls.astype(np.int16)
+        band = np.flatnonzero(class_by_index >= 0).astype(np.int32)
+        bands.append(band)
+        classes.append(class_by_index[band].astype(np.uint8))
+        pair_counts.append(int(band.size))
+    if offset != len(raw):
+        raise SystemExit("PE1 edge-field raw body has trailing bytes")
+    field = {
+        "seg_h": int(seg_h),
+        "seg_w": int(seg_w),
+        "kind": int(kind),
+        "kind_name": _PE1_KIND_NAMES[int(kind)],
+        "codec": int(codec),
+        "raw_bytes": int(raw_len),
+        "raw_sha256": hashlib.sha256(raw).hexdigest(),
+        "section_bytes": len(blob),
+        "section_sha256": hashlib.sha256(blob).hexdigest(),
+        "component_records": int(component_records),
+        "bands": tuple(bands),
+        "classes": tuple(classes),
+        "pair_counts": tuple(pair_counts),
+    }
+    field["raster_sha256"] = _pe1_raster_sha256(field)
+    return field
+
+
+def _pe1_apply_edge_field(u8: np.ndarray, field, pair_index: int) -> np.ndarray:
+    band = field["bands"][pair_index]
+    if int(band.size) == 0:
+        return u8
+    classes = field["classes"][pair_index]
+    rows = band // field["seg_w"]
+    cols = band % field["seg_w"]
+    rlo, rhi, _rw = _f0pr_bilinear_axis(field["seg_h"], u8.shape[0])
+    clo, chi, _cw = _f0pr_bilinear_axis(field["seg_w"], u8.shape[1])
+    colors = _PE1_CLASS_RGB[classes]
+    out = u8.copy()
+    for rr in (rlo[rows], rhi[rows]):
+        for cc in (clo[cols], chi[cols]):
+            out[rr, cc] = colors
+    return out
+
+
+def _pe3_parse_edge_field(blob: bytes):
+    """Parse a counted PE3 hybrid per-regime section into receiver-consumed bands."""
+    if len(blob) < PE3_EDGE_HEADER.size:
+        raise SystemExit("PE3 edge-field section header truncated")
+    (magic, version, seg_h, seg_w, n_pairs, kind, codec, raw_len,
+     frame_record_count, raw_sha) = PE3_EDGE_HEADER.unpack_from(blob, 0)
+    if magic != PE3_EDGE_MAGIC:
+        raise SystemExit("PE3 edge-field magic differs")
+    if version != PE3_EDGE_VERSION:
+        raise SystemExit("PE3 edge-field version differs")
+    if int(seg_h) < 1 or int(seg_w) < 1 or int(n_pairs) < 1:
+        raise SystemExit("PE3 edge-field geometry invalid")
+    if int(kind) != _PE3_HYBRID:
+        raise SystemExit(f"unknown PE3 edge-field representation kind {int(kind)}")
+    raw = _pe1_decode_body(int(codec), blob[PE3_EDGE_HEADER.size:])
+    if len(raw) != int(raw_len):
+        raise SystemExit("PE3 edge-field raw length differs")
+    if hashlib.sha256(raw).digest() != raw_sha:
+        raise SystemExit("PE3 edge-field raw SHA-256 differs")
+    if int(frame_record_count) != int(n_pairs):
+        raise SystemExit("PE3 edge-field frame record count differs")
+    slots = int(seg_h) * int(seg_w)
+    bands = []
+    classes = []
+    pair_counts = []
+    mode_counts = dict.fromkeys(_PE3_MODE_NAMES.values(), 0)
+    component_records = 0
+    offset = 0
+    for _pair in range(int(n_pairs)):
+        count, offset = _pe1_read_varint(raw, offset)
+        component_records += int(count)
+        class_by_index = np.full(slots, -1, dtype=np.int16)
+        for _ in range(int(count)):
+            length, offset = _pe1_read_varint(raw, offset)
+            record = raw[offset:offset + int(length)]
+            if len(record) != int(length):
+                raise SystemExit("PE3 edge-field component record truncated")
+            offset += int(length)
+            if not record:
+                raise SystemExit("PE3 edge-field empty component record")
+            mode = int(record[0])
+            payload = record[1:]
+            if mode == _PE3_MODE_CURVE:
+                indices, cls = _pe1_curve_indices(payload, int(seg_h), int(seg_w))
+            elif mode == _PE3_MODE_GENERATOR:
+                indices, cls = _pe1_generator_indices(payload, int(seg_h), int(seg_w))
+            else:
+                raise SystemExit(f"unknown PE3 edge-field component mode {mode}")
+            mode_counts[_PE3_MODE_NAMES[mode]] += 1
+            if int(indices.size) != int(cls.size):
+                raise SystemExit("PE3 edge-field index/class count differs")
+            if indices.size:
+                if int(indices.min()) < 0 or int(indices.max()) >= slots:
+                    raise SystemExit("PE3 edge-field index outside scorer grid")
+                class_by_index[indices.astype(np.int64)] = cls.astype(np.int16)
+        band = np.flatnonzero(class_by_index >= 0).astype(np.int32)
+        bands.append(band)
+        classes.append(class_by_index[band].astype(np.uint8))
+        pair_counts.append(int(band.size))
+    if offset != len(raw):
+        raise SystemExit("PE3 edge-field raw body has trailing bytes")
+    field = {
+        "seg_h": int(seg_h),
+        "seg_w": int(seg_w),
+        "kind": int(kind),
+        "kind_name": "hybrid_per_regime",
+        "codec": int(codec),
+        "raw_bytes": int(raw_len),
+        "raw_sha256": hashlib.sha256(raw).hexdigest(),
+        "section_bytes": len(blob),
+        "section_sha256": hashlib.sha256(blob).hexdigest(),
+        "component_records": int(component_records),
+        "mode_counts": dict(mode_counts),
+        "bands": tuple(bands),
+        "classes": tuple(classes),
+        "pair_counts": tuple(pair_counts),
+    }
+    field["raster_sha256"] = _pe1_raster_sha256(field)
+    return field
+
+
+def parse_pose_warp_v4d(payload: bytes):
+    if payload[:8] != MAGIC:
+        raise SystemExit("pose_warp magic differs (expected v4d PFS1WPD1)")
+    off = 8
+    (n_pairs,) = struct.unpack_from("<I", payload, off)
+    off += 4
+    secs = []
+    for _ in range(5):
+        (ln,) = struct.unpack_from("<I", payload, off)
+        off += 4
+        secs.append(payload[off:off + ln])
+        off += ln
+    if off != len(payload):
+        raise SystemExit(f"pose_warp has {len(payload) - off} unconsumed bytes")
+    tp_member, st_coded, sel_coded, ab_member, beta_coded = secs
+    tp = decode_kl1_field(tp_member).astype(np.float64).reshape(n_pairs, 6)
+    st_idx = np.asarray(decode_token_codes(st_coded),
+                        dtype=np.int64).reshape(-1)[:n_pairs]
+    sel = np.unpackbits(np.frombuffer(brotli.decompress(sel_coded),
+                                      dtype=np.uint8))[:n_pairs].astype(np.int64)
+    ab = decode_kl1_field(ab_member).astype(np.float64).reshape(n_pairs, 2)
+    beta_idx = np.frombuffer(brotli.decompress(beta_coded),
+                             dtype=np.uint8)[:n_pairs].astype(np.int64)
+    return n_pairs, tp, st_idx, sel, ab, beta_idx
+
+
+# ddm_ix2 container form.  The SECTION ORDER and the values below are the
+# receiver's compile-time knowledge — generic, so they cost zero counted bytes
+# (rule-118: generic ALGORITHM and generic TABLES are free in inflate.py; anything
+# fitted to the clip stays in the counted config section).  `st_grid` is migrated
+# here ONLY because the encoder PROVED the shipped table byte-equal to the vendored
+# ladder on this archive; a base whose `st_grid` is fitted ships it counted instead,
+# and `unpack_config_section` returns it.
+IX2_MEMBER = "0.bin"
+IX2_JOINT_ORDER = ("config", "renderer", "selector", "pose_warp")
+IX2_TR1_METADATA = {
+    "pointer_moved": False,
+    "pose_claim": False,
+    "research_only": True,
+    "schema": "ddm_tr1_four_section_packet.v1",
+    "score_claim": False,
+    "section_consumers": {
+        "lotto_renderer": "TR1Receiver.regenerate_bank_and_apply_mask_mods",
+        "pose_stub": "TR1Receiver.consume_inert_pose_declaration",
+        "selector": "TR1Receiver.select_decode_program",
+        "tokens": "TR1Receiver.decode_combined_tokens",
+    },
+    "section_order": ["tokens", "lotto_renderer", "selector", "pose_stub"],
+}
+IX2_POSE_STUB = json.dumps(
+    {
+        "inert": True,
+        "pose_claim": False,
+        "schema": "ddm_tr1_inert_pose_stub.v1",
+        "values": [],
+    },
+    sort_keys=True,
+    separators=(",", ":"),
+).encode()
+
+
+def _reframe_renderer(mask_bits: np.ndarray, floats_f16_be: bytes) -> bytes:
+    """Re-emit the TR1 renderer section from the ix2 field-split form.
+
+    Pure re-framing: ``parse_packet`` only needs a frame that DECODES to the same
+    mask and table, and the packet's own per-section digest is computed over
+    whatever bytes it is handed, so this need not reproduce the original frame byte
+    for byte — only its contents.
+    """
+
+    packed = np.packbits(np.asarray(mask_bits, dtype=np.uint8), bitorder="big")
+    raw = (
+        RENDERER_RAW_HEADER.pack(int(mask_bits.size), len(floats_f16_be) // 2)
+        + packed.tobytes()
+        + floats_f16_be
+    )
+    return _encode_brotli_frame(RENDERER_FRAME_MAGIC, raw)
+
+
+class Decoder:
+    """Factored per-pair decoder (reused by the verify tool)."""
+
+    def __init__(self, archive_dir: Path) -> None:
+        self._f0_repair = None          # (coefs, atoms, seg_h, seg_w) when F0PR1 ships
+        self._bd1_class_field = None    # Road/Lane r1-band class-field modulation
+        self._pe1_edge_field = None     # PE1 all-class edge partition modulation
+        self._pe3_edge_field = None     # PE3 hybrid per-regime edge modulation
+        self._od7_rgb_field = None      # OD7 selected-set sparse RGB realization
+        self._od7_od5_guard = None      # OD6 OD5 packet guard consumed by OD7
+        blob = archive_dir / IX2_MEMBER
+        if blob.exists():
+            codes, sections, pose_warp = self._read_ix2(blob)
+            manifest = None
+        else:
+            manifest = json.loads((archive_dir / "manifest.json").read_text())
+            if manifest["frame0_policy"] != FRAME0_POLICY:
+                raise SystemExit(
+                    f"v4d receiver requires frame0_policy={FRAME0_POLICY}")
+            self.dim0_offset = manifest.get("pose_dim0_offset", None)
+            self.beta_mags = tuple(manifest.get("rs_beta_mags", DEFAULT_BETA_MAGS))
+            self.st_vals = np.asarray(manifest.get("st_grid", ST_GRID), np.float64)
+            codes = decode_token_codes(
+                (archive_dir / "state/tokens.dr7t").read_bytes())
+            sections = {
+                "lotto_renderer": (archive_dir / "state/renderer.sec").read_bytes(),
+                "selector": (archive_dir / "state/selector.sec").read_bytes(),
+                "pose_stub": (archive_dir / "state/pose_stub.sec").read_bytes(),
+            }
+            pose_warp = (archive_dir / "state/pose_warp.stp").read_bytes()
+        token_payload = _encode_tokens(np.ascontiguousarray(codes, dtype=np.uint8))
+        metadata = IX2_TR1_METADATA if manifest is None else manifest["tr1_metadata"]
+        packet_bytes = build_packet(metadata, {
+            "tokens": token_payload,
+            "lotto_renderer": sections["lotto_renderer"],
+            "selector": sections["selector"],
+            "pose_stub": sections["pose_stub"],
+        })
+        self.packet = parse_packet(packet_bytes)
+        (self.n_pairs, self.p_best, self.st_idx, self.sel, self.ab,
+         self.beta_idx) = parse_pose_warp_v4d(pose_warp)
+        if self.dim0_offset is not None:
+            # dim0 column stored as f16 residual; reconstruct to full pose value.
+            self.p_best = self.p_best.copy()
+            self.p_best[:, 0] = float(self.dim0_offset) + self.p_best[:, 0]
+        if int(self.packet.selector["num_pairs"]) != self.n_pairs:
+            raise SystemExit("pose_warp n_pairs differs from selector")
+        # ddm_ms8: the s_t codebook is READ from the manifest, with the
+        # vendored generic ladder as the fallback for archives whose manifest
+        # predates the key.  MEASURED on the live pw1 archive: the manifest
+        # already ships ``st_grid`` EQUAL to the vendored table and this
+        # receiver never read it -- 34 counted deflated bytes that no decode
+        # step consumed (the #417 counted-but-inert class; the existing
+        # parse-back verifier's denominator is pose_warp.stp only, so the
+        # manifest was outside its scope).  Reading it is byte-identical on
+        # every existing archive AND lets a FITTED codebook ship in a field
+        # the archive is already paying for.  ddm_ix2: in container form the same
+        # table arrives from the counted config section (or is the vendored ladder
+        # when the encoder proved equality), so ``st_vals`` is already set above.
+        if self.st_vals.ndim != 1 or self.st_vals.size < 1:
+            raise SystemExit("manifest st_grid must be a non-empty 1-D table")
+        if int(self.st_idx.max()) >= self.st_vals.size:
+            raise SystemExit(
+                f"st_idx max {int(self.st_idx.max())} outside st_grid of "
+                f"{self.st_vals.size} entries")
+        self.K = intrinsics_native()
+        self.Kinv = np.linalg.inv(self.K)
+        self.grid = _target_grid(CAMERA_H, CAMERA_W)
+        self.v_row = geometric_horizon_row(self.K)
+        self._far = (np.arange(CAMERA_H)[:, None] < self.v_row) & np.ones(
+            (1, CAMERA_W), bool)
+        self._alpha = (np.arange(CAMERA_H) / (CAMERA_H - 1.0))[:, None, None]
+
+    def _read_ix2(self, blob: Path):
+        """Parse the ddm_ix2 single-member container.
+
+        Fail-closed by construction: ``parse_payload`` / ``unpack_container`` /
+        every frame decoder assert ``offset == len(payload)``, so a counted section
+        the receiver does not consume cannot survive the parse (#417).
+        """
+
+        bulk, sections = parse_payload(blob.read_bytes())
+        if len(sections) < len(IX2_JOINT_ORDER):
+            raise SystemExit(
+                f"ix2 container holds {len(sections)} sections, "
+                f"expected at least {len(IX2_JOINT_ORDER)}")
+        config, renderer, selector, pose_warp = sections[:len(IX2_JOINT_ORDER)]
+        for extra in sections[len(IX2_JOINT_ORDER):]:
+            if extra[:8] == F0PR_MAGIC:
+                if self._f0_repair is not None:
+                    raise SystemExit("ix2 container has duplicate F0PR1 optional sections")
+                k, seg_h, seg_w, coefs = _f0pr_parse(extra)
+                self._f0_repair = (coefs, _f0pr_dct_atoms(k, seg_h, seg_w), seg_h, seg_w)
+            elif extra[:8] == BD1_CLASS_FIELD_MAGIC:
+                if self._bd1_class_field is not None:
+                    raise SystemExit("ix2 container has duplicate BD1CLF1 optional sections")
+                self._bd1_class_field = _bd1_parse_class_field(extra)
+            elif extra[:8] == PE1_EDGE_MAGIC:
+                if self._pe1_edge_field is not None or self._pe3_edge_field is not None:
+                    raise SystemExit("ix2 container has duplicate edge optional sections")
+                self._pe1_edge_field = _pe1_parse_edge_field(extra)
+            elif extra[:8] == PE3_EDGE_MAGIC:
+                if self._pe1_edge_field is not None or self._pe3_edge_field is not None:
+                    raise SystemExit("ix2 container has duplicate edge optional sections")
+                self._pe3_edge_field = _pe3_parse_edge_field(extra)
+            elif extra[:8] == OD5_PACKET_MAGIC:
+                if self._od7_od5_guard is not None:
+                    raise SystemExit("ix2 container has duplicate OD7 OD5 guard sections")
+                self._od7_od5_guard = _od7_parse_od5_guard(extra)
+            elif extra[:8] == OD7_RGB_MAGIC:
+                if self._od7_rgb_field is not None:
+                    raise SystemExit("ix2 container has duplicate OD7 sparse RGB sections")
+                self._od7_rgb_field = _od7_parse_rgb_field(extra)
+            else:
+                raise SystemExit(
+                    "ix2 optional section magic is not F0PR1, BD1CLF1, PE1EDGE1, PE3EDGE1, OD5GPK1, or OD7RGB1"
+                )
+        offset, beta_mags, st_grid = unpack_config_section(config)
+        self.dim0_offset = offset
+        self.beta_mags = tuple(beta_mags)
+        self.st_vals = np.asarray(
+            ST_GRID if st_grid is None else st_grid, np.float64)
+        mask_bits, floats = decode_renderer_frame(renderer)
+        return (
+            decode_token_frame(bulk),
+            {
+                "lotto_renderer": _reframe_renderer(mask_bits, floats),
+                "selector": selector,
+                "pose_stub": IX2_POSE_STUB,
+            },
+            pose_warp,
+        )
+
+    def f1(self, i: int) -> np.ndarray:
+        frame = render_frame1_camera_uint8(self.packet, i)
+        if self._od7_rgb_field is not None:
+            if self._od7_od5_guard is None:
+                raise SystemExit("OD7 sparse RGB section requires the OD6 OD5 packet guard")
+            return _od7_apply_rgb_field(frame, self._od7_rgb_field, i)
+        if self._bd1_class_field is not None:
+            frame = _bd1_apply_class_field(frame, self._bd1_class_field, i)
+        if self._pe1_edge_field is not None:
+            frame = _pe1_apply_edge_field(frame, self._pe1_edge_field, i)
+        if self._pe3_edge_field is not None:
+            frame = _pe1_apply_edge_field(frame, self._pe3_edge_field, i)
+        return frame
+
+    def _warp_pair(self, f1_f: np.ndarray, pose: np.ndarray, s_t: float,
+                   sel: int, rot: float) -> np.ndarray:
+        """Static compose f0 (float, pre-photometric) at rotation scale rot."""
+        hg = pose_to_homography(pose, self.K, self.Kinv, s_t, rot, 0.0)
+        warp_g = warp_rgb(f1_f, hg, self.grid)
+        if sel == 0:
+            return warp_g
+        hf = pose_to_homography(pose, self.K, self.Kinv, 0.0, rot, 0.0)
+        warp_f = warp_rgb(f1_f, hf, self.grid)
+        return np.where(self._far[..., None], warp_f, warp_g)
+
+    def f0(self, i: int, f1_u8: np.ndarray | None = None) -> np.ndarray:
+        if f1_u8 is None:
+            f1_u8 = self.f1(i)
+        f1_f = f1_u8.astype(np.float64)
+        s_t = float(self.st_vals[self.st_idx[i]])
+        pose = self.p_best[i]
+        sel = int(self.sel[i])
+        a, b = float(self.ab[i][0]), float(self.ab[i][1])
+        beta_mag = float(self.beta_mags[int(self.beta_idx[i])])
+        if beta_mag != 0.0:
+            # rung A: rolling-shutter row-shear, sign from the pose yaw dim (5).
+            beta = beta_mag * (1.0 if pose[5] >= 0.0 else -1.0)
+            f0f = ((1.0 - self._alpha) * self._warp_pair(f1_f, pose, s_t, sel,
+                                                         1.0 - beta / 2.0)
+                   + self._alpha * self._warp_pair(f1_f, pose, s_t, sel,
+                                                   1.0 + beta / 2.0))
+        else:
+            f0f = self._warp_pair(f1_f, pose, s_t, sel, 1.0)
+        if a != 1.0 or b != 0.0:
+            f0f = a * f0f + b
+        u = _to_uint8(f0f)
+        if self._f0_repair is not None:
+            coefs, atoms, seg_h, seg_w = self._f0_repair
+            if i in coefs:
+                u = _f0pr_apply(u, coefs[i], atoms, seg_h, seg_w)
+        return u
+
+
+def main() -> None:
+    archive_dir, output_dir, names_file = map(Path, sys.argv[1:4])
+    names = [row.strip() for row in
+             names_file.read_text().splitlines() if row.strip()]
+    if names != ["0.mkv"]:
+        raise SystemExit("this receiver serves exactly the custodied 0.mkv")
+    dec = Decoder(archive_dir)
+    name = PurePosixPath(names[0])
+    if name.is_absolute() or ".." in name.parts:
+        raise SystemExit("unsafe video name")
+    target = output_dir / name.with_suffix(".raw")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with open(target, "wb") as sink:
+        for i in range(dec.n_pairs):
+            f1 = dec.f1(i)
+            f0 = dec.f0(i, f1)
+            sink.write(f0.tobytes())
+            sink.write(f1.tobytes())
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,10 @@
+from pathlib import Path
+import json
+
+
+def test_value_per_byte_schema_has_score_units():
+    schema = json.loads((Path(__file__).resolve().parents[1] / 'schemas' / 'value_per_byte_event.schema.json').read_text())
+    required = set(schema['required'])
+    assert 'delta_total_score' in required
+    assert 'value_per_byte_score_units' in required
+    assert 'authority_axis' in required

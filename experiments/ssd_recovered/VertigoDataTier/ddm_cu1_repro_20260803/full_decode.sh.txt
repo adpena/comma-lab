@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+OUT=/Volumes/VertigoDataTier/pact/ddm_cu1_repro_20260803
+T="$OUT/stage_cloneonly"
+mkdir -p "$T/inflated"
+echo "0.mkv" > "$T/names.txt"
+export PYTHONPATH=""
+cd "$T"
+/Users/adpena/Projects/pact/.venv/bin/python inflate_runner.py "$T/archive" "$T/inflated" "$T/names.txt"
+shasum -a 256 "$T/inflated/0.raw" > "$OUT/cloneonly_raw.sha256"
+stat -f%z "$T/inflated/0.raw" >> "$OUT/cloneonly_raw.sha256"
+echo DONE >> "$OUT/cloneonly_raw.sha256"

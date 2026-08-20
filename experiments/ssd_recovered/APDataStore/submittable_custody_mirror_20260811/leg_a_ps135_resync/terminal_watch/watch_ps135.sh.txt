@@ -1,0 +1,28 @@
+#!/bin/bash
+LOG="$1"
+SAFE=/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/gen3_resume/leg_a_resume.safe_run.json
+PASSES=/Volumes/VertigoDataTier/pact/ddm_ps135_20260810/leg_a/passes
+cd /Users/adpena/Projects/pact
+last_receipt=""
+echo "$(date -u +%H:%M:%SZ) watcher v2 start (announces NEWEST receipt, not newest dir)" >> "$LOG"
+while true; do
+  if ! kill -0 26406 2>/dev/null; then
+    st=$(.venv/bin/python -c "import json;print(json.load(open('$SAFE')).get('status','?'))" 2>/dev/null || echo unreadable)
+    echo "$(date -u +%H:%M:%SZ) TERMINAL: solve pid 26406 exited, safe_run status=$st — T0 chain due" >> "$LOG"
+    .venv/bin/python tools/codex_arm_queue.py add --name ddm_ps135t_terminal_alert \
+      --prompt .omx/research/charters/ddm_ps135t_terminal_alert_charter_20260811.md \
+      --effort low >> "$LOG" 2>&1
+    .venv/bin/python tools/codex_arm_queue.py saturate --spawn >> "$LOG" 2>&1
+    exit 0
+  fi
+  newest=$(ls -t "$PASSES"/pass_*/receipt.json 2>/dev/null | head -1)
+  if [ -n "$newest" ] && [ "$newest" != "$last_receipt" ]; then
+    .venv/bin/python -c "
+import json
+d=json.load(open('$newest'))
+print(f\"$(date -u +%H:%M:%SZ) PASS RECEIPT $newest: S={d.get('score')} d_pose={d.get('d_pose')} d_seg={d.get('d_seg')} bytes={d.get('archive_bytes')} dry={d.get('dry_streak')}\")" >> "$LOG" 2>/dev/null \
+      || echo "$(date -u +%H:%M:%SZ) PASS RECEIPT $newest (unparsed)" >> "$LOG"
+    last_receipt="$newest"
+  fi
+  sleep 60
+done

@@ -1,0 +1,164 @@
+#!/usr/bin/env python
+"""v3: PER-PAIR coarse-correction selection + optimal per-pair amplitude.
+
+v1/v2 aggregate result: low-freq grid drops collat/fix to ~2.2 (vs 97x per-pixel) but
+NEVER nets negative in aggregate. v3 asks the selectable-carrier question the prior verdict
+did not test in a coarse basis: for EACH pair, is there a (grid, amp) at which a coarse
+correction nets NEGATIVE d_seg for THAT pair? If a meaningful fraction of pairs net-improve,
+a per-pair-selectable coarse-grid carrier (apply only to net-improving pairs, code the coarse
+coeffs) could clear THE LAW even though the universal field cannot.
+
+For each pair we sweep coarse grids x amps (incl negative amp = opposite push), pick the
+per-pair argmin net_delta (best correction for that pair), and report:
+  - n_pairs with best_net < 0 (genuinely improvable by a coarse correction)
+  - total fixed / created at the per-pair-optimal selection
+  - d_pose delta at the selected correction (frame-1 G channel is pose-relevant)
+  - implied carrier bytes (coarse coeffs) + THE LAW value/cost.
+"""
+from __future__ import annotations
+
+import json
+import sys
+import time
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+
+sys.path.insert(0, ".omx/tmp/multiscale_seg_repair_20260611")
+import probe_lib as P
+
+OUT = ".omx/tmp/multiscale_seg_repair_20260611"
+SEG_H, SEG_W = P.SEG_H, P.SEG_W
+CAMERA_H, CAMERA_W = P.CAMERA_H, P.CAMERA_W
+N_TOTAL_PAIRS = 600
+
+
+def seg_argmax(scorer, frame1_camera_bchw):
+    return scorer.seg_logits(frame1_camera_bchw)[0].argmax(dim=0)
+
+
+def margin_grad(scorer, frame1_camera, gt_arg):
+    x = frame1_camera.clone().detach().unsqueeze(0).requires_grad_(True)
+    xs = F.interpolate(x, size=(SEG_H, SEG_W), mode="bilinear")
+    logits = scorer.segnet(xs)[0]
+    pred = logits.argmax(dim=0)
+    h, w = SEG_H, SEG_W
+    idx = torch.arange(h * w)
+    lf = logits.reshape(5, -1)
+    gt_logit = lf[gt_arg.reshape(-1), idx]
+    pred_logit = lf[pred.reshape(-1), idx]
+    signed_margin = (gt_logit - pred_logit).reshape(h, w)
+    flip_mask = pred != gt_arg
+    loss = -(signed_margin * flip_mask.float()).sum()
+    loss.backward()
+    return x.grad[0].detach()
+
+
+def grad_to_seg_grid(grad_camera):
+    return F.interpolate(grad_camera.unsqueeze(0), size=(SEG_H, SEG_W), mode="bilinear")[0]
+
+
+def coarse_dir(grad_seg, gh, gw):
+    """Sign field low-passed onto gh x gw, returned at camera res (unit-ish amplitude)."""
+    field = torch.sign(grad_seg)
+    coarse = F.adaptive_avg_pool2d(field.unsqueeze(0), (gh, gw))
+    up = F.interpolate(coarse, size=(CAMERA_H, CAMERA_W), mode="bicubic", align_corners=False)[0]
+    return up
+
+
+def run(pairs, grids, amps):
+    R = P.FrontierRenderer()
+    S = P.ExactScorer()
+    gt = P.decode_gt_pairs(pairs)
+    comp = R.render_baseline_pairs(pairs)
+
+    # cache base + gt + grad-derived coarse dirs per pair
+    per_pair = []
+    for pi in pairs:
+        gt_pair = gt[pi].float()
+        gt_f1 = gt_pair[1].permute(2, 0, 1).unsqueeze(0)
+        gt_arg = seg_argmax(S, gt_f1)
+        base_f1 = comp[pi][1].to(torch.uint8).float()
+        base_arg = seg_argmax(S, base_f1.unsqueeze(0))
+        was_bad = base_arg != gt_arg
+        grad = margin_grad(S, base_f1, gt_arg)
+        grad_seg = grad_to_seg_grid(grad)
+        dirs = {(gh, gw): coarse_dir(grad_seg, gh, gw) for (gh, gw) in grids}
+        # baseline d_pose for this pair
+        gt_b = gt_pair.unsqueeze(0)  # (1,2,H,W,3)
+        comp_b = P.comp_pair_to_bthwc(comp[pi])
+        pose0, _ = S.score_batch(gt_b, comp_b)
+        per_pair.append(dict(pi=pi, gt_arg=gt_arg, base_f1=base_f1, was_bad=was_bad,
+                             dirs=dirs, base_flips=int(was_bad.sum()),
+                             gt_pair=gt_pair, comp_pair=comp[pi], pose0=float(pose0[0])))
+
+    # per-pair optimal: minimize net_delta over (grid, amp)
+    summary = []
+    for pp in per_pair:
+        best = dict(net=10**9, grid=None, amp=0.0, fixed=0, created=0, pose_delta=0.0)
+        for (gh, gw) in grids:
+            d = pp["dirs"][(gh, gw)]
+            for amp in amps:
+                corr = amp * d
+                new_f1 = (pp["base_f1"] + corr).clamp(0, 255).round().to(torch.uint8).float()
+                new_arg = seg_argmax(S, new_f1.unsqueeze(0))
+                now_bad = new_arg != pp["gt_arg"]
+                fixed = int((pp["was_bad"] & ~now_bad).sum())
+                created = int((~pp["was_bad"] & now_bad).sum())
+                net = created - fixed
+                if net < best["net"]:
+                    best = dict(net=net, grid=[gh, gw], amp=amp, fixed=fixed,
+                                created=created, pose_delta=0.0)
+        # measure d_pose at the selected best correction (only if it improves)
+        if best["net"] < 0 and best["grid"] is not None:
+            gh, gw = best["grid"]
+            corr = best["amp"] * pp["dirs"][(gh, gw)]
+            new_f1 = (pp["base_f1"] + corr).clamp(0, 255).round().to(torch.uint8).float()
+            comp_pair = pp["comp_pair"].clone()
+            comp_pair[1] = new_f1
+            comp_b = P.comp_pair_to_bthwc(comp_pair)
+            pose1, _ = S.score_batch(pp["gt_pair"].unsqueeze(0), comp_b)
+            best["pose_delta"] = float(pose1[0]) - pp["pose0"]
+        summary.append(dict(pi=pp["pi"], base_flips=pp["base_flips"], **best))
+        f = "  net<0" if best["net"] < 0 else ""
+        print(f"pair {pp['pi']:>3} base={pp['base_flips']:>3} best_net={best['net']:+d} "
+              f"grid={best['grid']} amp={best['amp']:+} fixed={best['fixed']} "
+              f"created={best['created']} pose_d={best['pose_delta']:+.2e}{f}")
+
+    improvable = [s for s in summary if s["net"] < 0]
+    tot_fixed = sum(s["fixed"] for s in improvable)
+    tot_created = sum(s["created"] for s in improvable)
+    tot_net = sum(s["net"] for s in improvable)
+    tot_pose_d = sum(s["pose_delta"] for s in improvable)
+    base_total = sum(s["base_flips"] for s in summary)
+    print(f"\n=== per-pair-optimal coarse correction ({len(pairs)} pairs) ===")
+    print(f"improvable pairs (best_net<0): {len(improvable)}/{len(pairs)}")
+    print(f"on improvable pairs: fixed={tot_fixed} created={tot_created} net={tot_net:+d} "
+          f"sum_pose_delta={tot_pose_d:+.3e}")
+    print(f"base_total_flips={base_total}")
+    # extrapolate the seg-axis value if applied to full 600 at the same improvable rate
+    if len(pairs):
+        net_flips_per_pair = tot_net / len(pairs)  # negative = fewer flips
+        d_seg_delta = net_flips_per_pair / (SEG_H * SEG_W)  # mean over all pairs
+        s_seg_delta = 100 * d_seg_delta
+        print(f"implied mean d_seg delta (this sample, all pairs)= {d_seg_delta:+.3e} "
+              f"-> score delta {s_seg_delta:+.5f}")
+    return summary, base_total
+
+
+if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--n", type=int, default=16)
+    ap.add_argument("--start", type=int, default=0)
+    args = ap.parse_args()
+    pairs = list(range(args.start, args.start + args.n))
+    grids = [(6, 8), (12, 16), (24, 32)]
+    amps = [-16.0, -8.0, -4.0, 4.0, 8.0, 16.0]  # include opposite-direction push
+    t0 = time.time()
+    summary, base_total = run(pairs, grids, amps)
+    print(f"elapsed={time.time()-t0:.1f}s")
+    with open(f"{OUT}/multiscale_v3_results_n{args.n}.json", "w") as f:
+        json.dump(dict(pairs=pairs, base_total=base_total, summary=summary), f, indent=2)
+    print(f"saved {OUT}/multiscale_v3_results_n{args.n}.json")

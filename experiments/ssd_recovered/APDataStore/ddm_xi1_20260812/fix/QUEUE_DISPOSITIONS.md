@@ -1,0 +1,1 @@
+- ddm_xi1_leg_a_n600: QUEUED-WITH-A-FIRE-ORDER. Owner: MAIN. Consumer store: /Volumes/APDataStore/pact/ddm_xi1_20260812/fix/queue/leg_a_n600.json. Fire trigger: one n120 xi row is below 0.98 times its matched spatial control; run the winning lambda at full n600/60 epochs through the CL1 governed chain.

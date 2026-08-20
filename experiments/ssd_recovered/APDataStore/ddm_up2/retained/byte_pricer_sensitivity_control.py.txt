@@ -1,0 +1,16 @@
+import sys, json, numpy as np
+from pathlib import Path
+sys.path.insert(0,"/Users/adpena/Projects/pact/experiments"); sys.path.insert(0,"/Users/adpena/Projects/pact")
+import ddm_t1h_carrier_byte_pricer as pricer
+RT=Path("/Volumes/APDataStore/pact/ddm_to1/generations/to1_tail_override_r1")
+(cr,cap1,pred,blob,sel,info,model,base,comp)=pricer.load_shipped(RT/"archive.zip",RT)
+ks0,b0=pricer.rice_bits(base,model,cr,pred)
+print("base bits:",b0)
+rng=np.random.default_rng(0)
+for mag,ncoord in [(1,10),(1,100),(1,1000),(2,1000),(4,7200),(50,7200)]:
+    c=base.copy()
+    flat=rng.choice(7200,ncoord,replace=False)
+    p,d=np.unravel_index(flat,(600,12))
+    c[p,d]=np.clip(c[p,d]+rng.choice([-mag,mag],ncoord),-2048,2047)
+    _,b=pricer.rice_bits(c,model,cr,pred)
+    print(f" perturb mag={mag:3d} n={ncoord:5d}: bits {b0} -> {b}  dbits={b-b0:+7d}  dBytes={(b+7)//8-(b0+7)//8:+5d}")

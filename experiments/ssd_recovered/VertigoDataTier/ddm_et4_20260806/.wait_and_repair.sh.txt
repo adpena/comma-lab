@@ -1,0 +1,4 @@
+#!/bin/bash
+R=/Volumes/VertigoDataTier/pact/ddm_et4_20260806/et4_solve_within_cvp_rows.jsonl
+until [ $(( $(date +%s) - $(stat -f %m "$R") )) -ge 125 ]; do sleep 10; done
+exec bash /Volumes/VertigoDataTier/pact/ddm_et4_20260806/et4_repair_rows_and_final.sh

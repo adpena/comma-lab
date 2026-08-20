@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "$#" -ne 3 ]; then
+  echo "usage: inflate.sh ARCHIVE_DIR OUTPUT_DIR VIDEO_NAMES_FILE" >&2
+  exit 2
+fi
+ARCHIVE_DIR="$1"
+OUTPUT_DIR="$2"
+VIDEO_NAMES_FILE="$3"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PYTHON_EXE="${PYTHON:-python}"
+export PYTHONDONTWRITEBYTECODE=1
+mkdir -p "$OUTPUT_DIR"
+while IFS= read -r VIDEO_NAME || [ -n "$VIDEO_NAME" ]; do
+  [ -z "$VIDEO_NAME" ] && continue
+  case "$VIDEO_NAME" in
+    /*|*\\*|../*|*/../*|*/..|./*|*/./*)
+      echo "unsafe video name: $VIDEO_NAME" >&2
+      exit 3
+      ;;
+  esac
+  case "$VIDEO_NAME" in
+    *.mkv) BASE="${VIDEO_NAME%.mkv}" ;;
+    *) echo "video name must end in .mkv: $VIDEO_NAME" >&2; exit 3 ;;
+  esac
+  SOURCE="$ARCHIVE_DIR/${BASE}.bin"
+  DESTINATION="$OUTPUT_DIR/${BASE}.raw"
+  [ -f "$SOURCE" ] || { echo "missing counted member: $SOURCE" >&2; exit 4; }
+  mkdir -p "$(dirname "$DESTINATION")"
+  if [ -n "${PACT_AUTH_TRACE_DIR:-}" ]; then
+    mkdir -p "$PACT_AUTH_TRACE_DIR"
+    export PACT_AUTH_TRACE_PATH="$PACT_AUTH_TRACE_DIR/${BASE//\//_}.json"
+  else
+    unset PACT_AUTH_TRACE_PATH || true
+  fi
+  "$PYTHON_EXE" "$HERE/inflate.py" "$SOURCE" "$DESTINATION"
+done < "$VIDEO_NAMES_FILE"

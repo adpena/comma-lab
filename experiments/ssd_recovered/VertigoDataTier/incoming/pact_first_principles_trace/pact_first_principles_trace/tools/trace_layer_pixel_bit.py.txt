@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import importlib
+import json
+import sys
+import time
+from dataclasses import dataclass, asdict
+from pathlib import Path
+from typing import Any, Callable, Dict, Optional
+
+from score_terms import ScoreDelta, score
+
+
+def load_dotted(path: str) -> Any:
+    mod, name = path.rsplit(":", 1)
+    return getattr(importlib.import_module(mod), name)
+
+
+@dataclass
+class AuthorityScores:
+    authority: str
+    d_seg: float
+    d_pose: float
+    archive_bytes: int
+    score: float
+    present: bool
+    error: str = ""
+
+
+@dataclass
+class TraceRow:
+    run_id: str
+    step: int
+    timestamp: float
+    stack: str
+    candidate_id: str
+    dominant_axis: str
+    live: Dict[str, Any]
+    fake_quant: Dict[str, Any]
+    parseback: Dict[str, Any]
+    inflated_exact: Dict[str, Any]
+    deltas: Dict[str, Any]
+    layer_grads: Dict[str, float]
+    worst_seg_region: Dict[str, Any]
+    worst_pose_pair: Dict[str, Any]
+    section_bytes: Dict[str, int]
+    accepted: bool
+    rejection_reason: str
+
+
+def safe_call(label: str, fn: Optional[Callable], *args, **kwargs) -> AuthorityScores:
+    if fn is None:
+        return AuthorityScores(label, 0.0, 0.0, 0, 0.0, False, "missing_adapter")
+    try:
+        r = fn(*args, **kwargs)
+        d_seg = float(r["d_seg"])
+        d_pose = float(r["d_pose"])
+        archive_bytes = int(r.get("archive_bytes", 0))
+        s = float(r.get("score", score(d_seg, d_pose, archive_bytes)))
+        return AuthorityScores(label, d_seg, d_pose, archive_bytes, s, True)
+    except Exception as e:  # fail closed
+        return AuthorityScores(label, 0.0, 0.0, 0, 0.0, False, f"{type(e).__name__}: {e}")
+
+
+def require_authority(scores: AuthorityScores, required: str) -> None:
+    if scores.authority == required and not scores.present:
+        raise SystemExit(f"required authority {required} is missing: {scores.error}")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Layer/pixel/bit trace harness for Pact NeRV distortion burndown")
+    ap.add_argument("--config", required=True, help="JSON config with adapter dotted paths")
+    ap.add_argument("--output", default="trace_layer_pixel_bit.jsonl")
+    ap.add_argument("--required-authority", default="parseback", choices=["live", "fake_quant", "parseback", "inflated_exact"])
+    ap.add_argument("--max-steps", type=int, default=1)
+    args = ap.parse_args()
+
+    cfg = json.loads(Path(args.config).read_text())
+    sys.path.insert(0, str(Path(cfg.get("repo_root", ".")).resolve()))
+
+    adapters = {}
+    for key in [
+        "live_score", "fake_quant_score", "build_archive", "parseback_score", "inflated_exact_score",
+        "layer_grads", "worst_seg_region", "worst_pose_pair", "section_bytes", "candidate_step",
+    ]:
+        dotted = cfg.get("adapters", {}).get(key)
+        adapters[key] = load_dotted(dotted) if dotted else None
+
+    run_id = cfg.get("run_id", f"trace_{int(time.time())}")
+    stack = cfg.get("stack", "unknown")
+    candidate_id = cfg.get("candidate_id", "candidate")
+    out = Path(args.output)
+    with out.open("w") as f:
+        prev_parseback = None
+        for step in range(args.max_steps):
+            if adapters["candidate_step"]:
+                adapters["candidate_step"](step=step, config=cfg)
+
+            live = safe_call("live", adapters["live_score"], step=step, config=cfg)
+            fake = safe_call("fake_quant", adapters["fake_quant_score"], step=step, config=cfg)
+            parseback = safe_call("parseback", adapters["parseback_score"], step=step, config=cfg)
+            exact = safe_call("inflated_exact", adapters["inflated_exact_score"], step=step, config=cfg)
+
+            required_map = {
+                "live": live,
+                "fake_quant": fake,
+                "parseback": parseback,
+                "inflated_exact": exact,
+            }
+            require_authority(required_map[args.required_authority], args.required_authority)
+
+            layer_grads = adapters["layer_grads"](step=step, config=cfg) if adapters["layer_grads"] else {}
+            worst_seg_region = adapters["worst_seg_region"](step=step, config=cfg) if adapters["worst_seg_region"] else {}
+            worst_pose_pair = adapters["worst_pose_pair"](step=step, config=cfg) if adapters["worst_pose_pair"] else {}
+            section_bytes = adapters["section_bytes"](step=step, config=cfg) if adapters["section_bytes"] else {}
+
+            deltas = {}
+            accepted = False
+            reason = "first_parseback_no_delta"
+            if prev_parseback is not None and parseback.present:
+                sd = ScoreDelta(
+                    d_seg_before=prev_parseback.d_seg, d_pose_before=prev_parseback.d_pose, bytes_before=prev_parseback.archive_bytes,
+                    d_seg_after=parseback.d_seg, d_pose_after=parseback.d_pose, bytes_after=parseback.archive_bytes,
+                )
+                deltas = sd.terms()
+                accepted = deltas["delta_total_score"] <= cfg.get("accept_tolerance", 0.0)
+                reason = "accepted_parseback" if accepted else "reject_parseback_regression"
+            if parseback.present:
+                prev_parseback = parseback
+
+            row = TraceRow(
+                run_id=run_id, step=step, timestamp=time.time(), stack=stack, candidate_id=candidate_id,
+                dominant_axis=cfg.get("dominant_axis", "unknown"),
+                live=asdict(live), fake_quant=asdict(fake), parseback=asdict(parseback), inflated_exact=asdict(exact),
+                deltas=deltas, layer_grads=layer_grads, worst_seg_region=worst_seg_region,
+                worst_pose_pair=worst_pose_pair, section_bytes=section_bytes,
+                accepted=accepted, rejection_reason=reason,
+            )
+            f.write(json.dumps(asdict(row), sort_keys=True) + "\n")
+    print(f"wrote {out}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

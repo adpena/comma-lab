@@ -1,0 +1,2 @@
+- ddm_xi1_leg_b_runtime: FOLDED. Owner: ddm_xi1. Consumer store: /Volumes/APDataStore/pact/ddm_xi1_20260812/LEG_B_RESULT.json. Fire trigger: none; CAP1 is already the CP135 incumbent and counted geometric-xi conditioning did not beat direct storage.
+- ddm_xi1_leg_a_mps: QUEUED-WITH-A-FIRE-ORDER. Owner: MAIN Metal executor. Consumer store: /Volumes/APDataStore/pact/ddm_xi1_20260812/LEG_A_RESULT.json. Fire trigger: a governed process reports torch.backends.mps.is_available() == True; execute the pinned resume_command without CPU substitution.

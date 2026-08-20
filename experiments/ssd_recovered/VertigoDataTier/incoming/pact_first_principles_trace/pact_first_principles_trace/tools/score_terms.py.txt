@@ -1,0 +1,82 @@
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass, asdict
+from typing import Dict, Any
+
+DEFAULT_N_BYTES = 37_545_489
+
+
+def score(d_seg: float, d_pose: float, archive_bytes: int, n_bytes: int = DEFAULT_N_BYTES) -> float:
+    if d_pose < 0:
+        raise ValueError("d_pose must be nonnegative")
+    return 100.0 * d_seg + math.sqrt(10.0 * d_pose) + 25.0 * archive_bytes / n_bytes
+
+
+def pose_marginal(d_pose: float, eps: float = 1e-12) -> float:
+    """d/dd_pose sqrt(10*d_pose) = 5/sqrt(10*d_pose)."""
+    return 5.0 / math.sqrt(10.0 * max(d_pose, eps))
+
+
+def byte_marginal(n_bytes: int = DEFAULT_N_BYTES) -> float:
+    return 25.0 / n_bytes
+
+
+@dataclass
+class ScoreDelta:
+    d_seg_before: float
+    d_pose_before: float
+    bytes_before: int
+    d_seg_after: float
+    d_pose_after: float
+    bytes_after: int
+    n_bytes: int = DEFAULT_N_BYTES
+
+    def terms(self) -> Dict[str, float]:
+        before = score(self.d_seg_before, self.d_pose_before, self.bytes_before, self.n_bytes)
+        after = score(self.d_seg_after, self.d_pose_after, self.bytes_after, self.n_bytes)
+        delta_seg_score = 100.0 * (self.d_seg_after - self.d_seg_before)
+        delta_pose_score = math.sqrt(10.0 * self.d_pose_after) - math.sqrt(10.0 * self.d_pose_before)
+        delta_rate_score = 25.0 * (self.bytes_after - self.bytes_before) / self.n_bytes
+        delta_total = after - before
+        delta_bytes = self.bytes_after - self.bytes_before
+        if delta_bytes == 0:
+            value_per_byte = float("inf") if delta_total < 0 else 0.0
+        else:
+            value_per_byte = -delta_total / abs(delta_bytes)
+        return {
+            "score_before": before,
+            "score_after": after,
+            "delta_seg_score": delta_seg_score,
+            "delta_pose_score": delta_pose_score,
+            "delta_rate_score": delta_rate_score,
+            "delta_total_score": delta_total,
+            "delta_bytes": float(delta_bytes),
+            "value_per_byte_score_units": value_per_byte,
+            "pose_marginal_before": pose_marginal(self.d_pose_before),
+            "pose_marginal_after": pose_marginal(self.d_pose_after),
+            "byte_marginal": byte_marginal(self.n_bytes),
+        }
+
+
+def admit_exact(delta: ScoreDelta, tolerance: float = 0.0) -> Dict[str, Any]:
+    t = delta.terms()
+    t["admit"] = t["delta_total_score"] <= tolerance
+    t["reason"] = "nonlinear_total_score" if t["admit"] else "reject_total_score_regression"
+    return t
+
+
+def admit_trust_region(delta: ScoreDelta, max_pose_score_regression: float, max_seg_score_regression: float) -> Dict[str, Any]:
+    """Staged trust rule for early training when one axis is intentionally being explored.
+
+    This is still score-unit based. It does not compare raw proxy scales.
+    """
+    t = delta.terms()
+    exact = t["delta_total_score"] <= 0.0
+    bounded = (
+        t["delta_seg_score"] <= max_seg_score_regression
+        and t["delta_pose_score"] <= max_pose_score_regression
+    )
+    t["admit"] = exact or bounded
+    t["reason"] = "exact_improve" if exact else ("bounded_staged_tradeoff" if bounded else "reject_unbounded_tradeoff")
+    return t

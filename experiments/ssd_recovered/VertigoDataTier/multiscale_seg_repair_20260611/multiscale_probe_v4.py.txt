@@ -1,0 +1,159 @@
+#!/usr/bin/env python
+"""v4: SHARED coarse direction field (the cheapest carrier) + composed measurement.
+
+v3 oracle (per-pair coarse grid) fails THE LAW 8x because the 144-coeff/pair direction
+grid is too expensive vs the ~0.7 net-flips/pair gain. The cheapest carrier codes ONE
+coarse direction field, applied to ALL pairs (or a selected subset). The prior verdict
+found a shared SPARSE field monotonically WORSE; v4 tests whether a shared SMOOTH coarse
+field is different (the operator's lens: coherent low-freq nudge).
+
+We build the SHARED coarse direction by averaging the per-pair margin-gradient sign onto
+a coarse grid over the training sample, then measure the COMPOSED d_seg over the sample
+at a sweep of amps (incl negative). A shared field that nets negative composed d_seg at an
+amp, surviving d_pose, with a ~144-coeff carrier (~18-30 B total, amortized over 600), is
+the only carrier whose cost is NOT proportional to flip/pair count -> could clear THE LAW.
+
+Also tests SELECTED-pair shared field (apply shared field only to pairs where it helps),
+which needs a 1-bit/pair selector (~75 B) but still ONE coarse field.
+"""
+from __future__ import annotations
+
+import json
+import sys
+import time
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+
+sys.path.insert(0, ".omx/tmp/multiscale_seg_repair_20260611")
+import probe_lib as P
+
+OUT = ".omx/tmp/multiscale_seg_repair_20260611"
+SEG_H, SEG_W = P.SEG_H, P.SEG_W
+CAMERA_H, CAMERA_W = P.CAMERA_H, P.CAMERA_W
+
+
+def seg_argmax(scorer, frame1_camera_bchw):
+    return scorer.seg_logits(frame1_camera_bchw)[0].argmax(dim=0)
+
+
+def margin_grad(scorer, frame1_camera, gt_arg):
+    x = frame1_camera.clone().detach().unsqueeze(0).requires_grad_(True)
+    xs = F.interpolate(x, size=(SEG_H, SEG_W), mode="bilinear")
+    logits = scorer.segnet(xs)[0]
+    pred = logits.argmax(dim=0)
+    idx = torch.arange(SEG_H * SEG_W)
+    lf = logits.reshape(5, -1)
+    gt_logit = lf[gt_arg.reshape(-1), idx]
+    pred_logit = lf[pred.reshape(-1), idx]
+    signed_margin = (gt_logit - pred_logit).reshape(SEG_H, SEG_W)
+    flip_mask = pred != gt_arg
+    loss = -(signed_margin * flip_mask.float()).sum()
+    loss.backward()
+    return x.grad[0].detach(), flip_mask.detach()
+
+
+def grad_to_seg_grid(grad_camera):
+    return F.interpolate(grad_camera.unsqueeze(0), size=(SEG_H, SEG_W), mode="bilinear")[0]
+
+
+def upcam(field_seg_chw):
+    return F.interpolate(field_seg_chw.unsqueeze(0), size=(CAMERA_H, CAMERA_W),
+                         mode="bicubic", align_corners=False)[0]
+
+
+def run(pairs, grids, amps):
+    R = P.FrontierRenderer()
+    S = P.ExactScorer()
+    gt = P.decode_gt_pairs(pairs)
+    comp = R.render_baseline_pairs(pairs)
+
+    per_pair = []
+    for pi in pairs:
+        gt_pair = gt[pi].float()
+        gt_f1 = gt_pair[1].permute(2, 0, 1).unsqueeze(0)
+        gt_arg = seg_argmax(S, gt_f1)
+        base_f1 = comp[pi][1].to(torch.uint8).float()
+        base_arg = seg_argmax(S, base_f1.unsqueeze(0))
+        was_bad = base_arg != gt_arg
+        grad, flip_mask = margin_grad(S, base_f1, gt_arg)
+        grad_seg = grad_to_seg_grid(grad)
+        gt_b = gt_pair.unsqueeze(0)
+        comp_b = P.comp_pair_to_bthwc(comp[pi])
+        pose0, _ = S.score_batch(gt_b, comp_b)
+        per_pair.append(dict(pi=pi, gt_arg=gt_arg, base_f1=base_f1, was_bad=was_bad,
+                             grad_seg=grad_seg, gt_pair=gt_pair, comp_pair=comp[pi],
+                             pose0=float(pose0[0]), base_flips=int(was_bad.sum())))
+
+    base_total = sum(pp["base_flips"] for pp in per_pair)
+    results = []
+
+    for (gh, gw) in grids:
+        # SHARED coarse direction = mean of sign(grad) over sample, low-passed to gh x gw
+        acc = torch.zeros(3, SEG_H, SEG_W)
+        for pp in per_pair:
+            acc += torch.sign(pp["grad_seg"])
+        acc /= len(per_pair)
+        coarse = F.adaptive_avg_pool2d(acc.unsqueeze(0), (gh, gw))
+        shared_dir_cam = upcam(F.interpolate(coarse, size=(SEG_H, SEG_W),
+                               mode="bicubic", align_corners=False)[0])  # (3,CAMERA)
+
+        best_uni = dict(net=10**9)
+        for amp in amps:
+            corr = amp * shared_dir_cam
+            # UNIVERSAL: apply to all pairs, composed d_seg (NO pose in inner loop — lean)
+            fixed = created = 0
+            sel_fixed = sel_created = n_sel = 0  # SELECTED: only pairs where this helps
+            for pp in per_pair:
+                new_f1 = (pp["base_f1"] + corr).clamp(0, 255).round().to(torch.uint8).float()
+                new_arg = seg_argmax(S, new_f1.unsqueeze(0))
+                now_bad = new_arg != pp["gt_arg"]
+                f = int((pp["was_bad"] & ~now_bad).sum())
+                cr = int((~pp["was_bad"] & now_bad).sum())
+                fixed += f; created += cr
+                if (cr - f) < 0:
+                    sel_fixed += f; sel_created += cr; n_sel += 1
+            uni_net = created - fixed
+            sel_net = sel_created - sel_fixed
+            row = dict(grid=[gh, gw], amp=amp,
+                       universal=dict(fixed=fixed, created=created, net=uni_net),
+                       selected=dict(n_sel=n_sel, fixed=sel_fixed, created=sel_created, net=sel_net))
+            results.append(row)
+            if uni_net < best_uni["net"]:
+                best_uni = dict(net=uni_net, amp=amp, corr=corr)
+            uflag = " UNI<0" if uni_net < 0 else ""
+            sflag = " SEL<0" if sel_net < 0 else ""
+            print(f"[shared {gh}x{gw} amp={amp:+6}] UNI fixed={fixed} created={created} "
+                  f"net={uni_net:+d}{uflag} | SEL n={n_sel} fixed={sel_fixed} "
+                  f"created={sel_created} net={sel_net:+d}{sflag}", flush=True)
+        # pose only at the best-uni amp for this grid (cheap)
+        if best_uni["net"] < 10**9:
+            corr = best_uni["corr"]; pd = 0.0
+            for pp in per_pair:
+                new_f1 = (pp["base_f1"] + corr).clamp(0, 255).round().to(torch.uint8).float()
+                comp_pair = pp["comp_pair"].clone(); comp_pair[1] = new_f1
+                pose1, _ = S.score_batch(pp["gt_pair"].unsqueeze(0), P.comp_pair_to_bthwc(comp_pair))
+                pd += float(pose1[0]) - pp["pose0"]
+            print(f"  -> grid {gh}x{gw} best_uni amp={best_uni['amp']:+} net={best_uni['net']:+d} "
+                  f"universal d_pose_sum={pd:+.3e}", flush=True)
+
+    print(f"\nbase_total_flips={base_total} over {len(pairs)} pairs")
+    return results, base_total
+
+
+if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--n", type=int, default=24)
+    ap.add_argument("--start", type=int, default=0)
+    args = ap.parse_args()
+    pairs = list(range(args.start, args.start + args.n))
+    grids = [(3, 4), (6, 8), (12, 16)]
+    amps = [-8.0, -4.0, -2.0, 2.0, 4.0, 8.0]
+    t0 = time.time()
+    results, base_total = run(pairs, grids, amps)
+    print(f"elapsed={time.time()-t0:.1f}s")
+    with open(f"{OUT}/multiscale_v4_results_n{args.n}.json", "w") as f:
+        json.dump(dict(pairs=pairs, base_total=base_total, results=results), f, indent=2)
+    print(f"saved {OUT}/multiscale_v4_results_n{args.n}.json")

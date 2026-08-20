@@ -1,0 +1,207 @@
+#!/usr/bin/env python
+"""Multi-scale / low-frequency seg-repair probe against the CURRENT frontier.
+
+CURRENT frontier: sha b46897267d, 177,169 B, 0.19109982 [contest-CPU],
+lane pr110_payload_entropy_recode. Render path reproduces inflate.py EXACTLY:
+  decoder (384x512) -> bicubic up (874x1164) -> channel bias -> clamp/round/uint8
+SegNet sees frame-1 (x[:,-1]) bilinear-downsampled 874x1164 -> 384x512 -> argmax.
+
+This probe tests the "different lens": represent the frame-1 correction in a
+LOW-FREQUENCY / MULTI-SCALE basis (a coarse coefficient grid bicubic-upsampled to
+camera-res) and apply COHERENT smooth nudges, vs the prior per-pixel high-frequency
+repair (which failed THE LAW: scattered 1.1/4x4 block, 2.97 B/flip > 1.27 break-even,
+and the receptive field reads local patches as new boundaries -> MORE flips).
+
+[macOS-CPU advisory] NON-PROMOTABLE per Catalog #192/#341/#127/#323. $0, NO MPS, NO cloud.
+GT decode ONLY via frame_utils.yuv420_to_rgb (contest-exact). Authority = upstream/modules.py.
+"""
+from __future__ import annotations
+
+import io
+import sys
+import zipfile
+from pathlib import Path
+
+REPO = Path.cwd()
+SUB = REPO / "experiments/results/pr110_payload_entropy_recode_20260610/submission_dir"
+SRC = SUB / "src"
+UPSTREAM = REPO / "upstream"
+for p in (str(SUB), str(SRC), str(UPSTREAM)):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+import numpy as np  # noqa: E402
+import torch  # noqa: E402
+import torch.nn.functional as F  # noqa: E402
+
+torch.manual_seed(1234)
+np.random.seed(1234)
+DEVICE = torch.device("cpu")
+CAMERA_H, CAMERA_W = 874, 1164
+SEG_H, SEG_W = 384, 512  # SegNet input size (also EVAL_SIZE)
+ARCHIVE = SUB / "archive.zip"
+GT_VIDEO = UPSTREAM / "videos" / "0.mkv"
+
+import inflate as _inflate  # noqa: E402
+from model import HNeRVDecoder  # noqa: E402
+
+
+# ---------------------------------------------------------------------------
+# Parse the CURRENT frontier member-x.
+# ---------------------------------------------------------------------------
+def load_member_x() -> bytes:
+    with zipfile.ZipFile(io.BytesIO(ARCHIVE.read_bytes())) as zf:
+        return zf.read("x")
+
+
+def parse_frontier():
+    member_x = load_member_x()
+    (decoder_sd, latents, meta, raw_joined, selector_kind,
+     selector_codes, selector_specs, dqs1_packet) = _inflate.parse_member(member_x)
+    return dict(
+        member_x=member_x, decoder_sd=decoder_sd, latents=latents, meta=meta,
+        raw_joined=raw_joined, selector_kind=selector_kind,
+        selector_codes=selector_codes, selector_specs=selector_specs,
+        dqs1_packet=dqs1_packet,
+    )
+
+
+class FrontierRenderer:
+    """Render the receiver comp frames at camera res, faithfully reproducing inflate.py.
+
+    Returns per-pair (2,3,CAMERA_H,CAMERA_W) float (post channel-bias, clamp, round)
+    BUT pre-uint8 cast (we keep float for correction injection; final cast applied
+    at scoring time exactly as inflate writes uint8). Includes the frame-0 selector.
+    """
+
+    def __init__(self, parsed=None):
+        self.p = parsed or parse_frontier()
+        meta = self.p["meta"]
+        self.meta = meta
+        self.latents = self.p["latents"].to(DEVICE)
+        self.decoder = HNeRVDecoder(
+            latent_dim=meta["latent_dim"], base_channels=meta["base_channels"],
+            eval_size=tuple(meta["eval_size"]),
+        ).to(DEVICE)
+        self.decoder.load_state_dict(self.p["decoder_sd"])
+        self.decoder.eval()
+        self.eval_h, self.eval_w = meta["eval_size"]
+        self.n_pairs = int(meta["n_pairs"])
+
+        self.mutated_decoder = None
+        self.selected_pairs: set[int] = set()
+        self.frame_policy = "pair_all_frames"
+        dqs1 = self.p["dqs1_packet"]
+        if dqs1 is not None:
+            mutated_sd = _inflate.apply_dqs1_patch_to_decoder_state(
+                self.p["decoder_sd"], self.p["raw_joined"], dqs1, meta
+            )
+            self.mutated_decoder = HNeRVDecoder(
+                latent_dim=meta["latent_dim"], base_channels=meta["base_channels"],
+                eval_size=tuple(meta["eval_size"]),
+            ).to(DEVICE)
+            self.mutated_decoder.load_state_dict(mutated_sd)
+            self.mutated_decoder.eval()
+            self.selected_pairs = {int(v) for v in dqs1["pair_indices"]}
+            self.frame_policy = str(dqs1["frame_policy"])
+
+    @torch.inference_mode()
+    def render_baseline_pairs(self, pair_indices):
+        out = {}
+        for pi in pair_indices:
+            lat = self.latents[pi: pi + 1]
+            decoded = self.decoder(lat)
+            if self.mutated_decoder is not None and pi in self.selected_pairs:
+                mutated = self.mutated_decoder(lat)
+                decoded = decoded.clone()
+                if self.frame_policy == "pair_all_frames":
+                    decoded[0] = mutated[0]
+                elif self.frame_policy == "segnet_last_frame_only":
+                    decoded[0, 1] = mutated[0, 1]
+                else:
+                    raise ValueError(self.frame_policy)
+            flat = decoded.reshape(2, 3, self.eval_h, self.eval_w)
+            up = F.interpolate(flat, size=(CAMERA_H, CAMERA_W), mode="bicubic", align_corners=False)
+            up = up.reshape(1, 2, 3, CAMERA_H, CAMERA_W)
+            up[:, 0, 0].sub_(1.0)
+            up[:, 0, 2].sub_(1.0)
+            up[:, 1, 1].sub_(1.0)
+            rounded = up.reshape(2, 3, CAMERA_H, CAMERA_W).clamp(0, 255).round()
+            # frame-0 selector
+            rounded = _inflate.apply_pr101_selector_to_frames(
+                rounded, self.p["selector_kind"], self.p["selector_codes"],
+                self.p["selector_specs"], pair_start=pi,
+            )
+            out[pi] = rounded  # (2,3,H,W) float, rounded, in [0,255]
+        return out
+
+
+# ---------------------------------------------------------------------------
+# GT decode — contest-exact (frame_utils.yuv420_to_rgb), NEVER PyAV rgb24.
+# ---------------------------------------------------------------------------
+def decode_gt_pairs(pair_indices):
+    import av  # noqa: PLC0415
+    from frame_utils import yuv420_to_rgb  # noqa: PLC0415
+
+    want = set(int(p) for p in pair_indices)
+    max_pair = max(want)
+    out = {}
+    container = av.open(str(GT_VIDEO))
+    stream = container.streams.video[0]
+    seq_buf = []
+    pair_idx = 0
+    for frame in container.decode(stream):
+        arr = yuv420_to_rgb(frame)
+        seq_buf.append(arr if isinstance(arr, torch.Tensor) else torch.from_numpy(arr.copy()))
+        if len(seq_buf) == 2:
+            if pair_idx in want:
+                out[pair_idx] = torch.stack(seq_buf)  # (2,H,W,3) uint8
+            seq_buf = []
+            pair_idx += 1
+            if pair_idx > max_pair:
+                break
+    container.close()
+    missing = want - set(out)
+    if missing:
+        raise RuntimeError(f"GT decode missing pairs: {sorted(missing)[:10]}")
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Exact scorer — DistortionNet from upstream/modules.py.
+# ---------------------------------------------------------------------------
+class ExactScorer:
+    def __init__(self):
+        from modules import DistortionNet, segnet_sd_path, posenet_sd_path  # noqa: PLC0415
+
+        self.net = DistortionNet().eval().to(DEVICE)
+        self.net.load_state_dicts(posenet_sd_path, segnet_sd_path, DEVICE)
+        self.segnet = self.net.segnet
+        self.posenet = self.net.posenet
+
+    @torch.inference_mode()
+    def score_batch(self, gt_bthwc, comp_bthwc):
+        gt = gt_bthwc.to(DEVICE).float()
+        comp = comp_bthwc.to(DEVICE).float()
+        pose, seg = self.net.compute_distortion(gt, comp)
+        return pose.cpu().numpy(), seg.cpu().numpy()
+
+    @torch.inference_mode()
+    def seg_argmax(self, frame_bchw_camera):
+        """frame_bchw_camera: (B,3,CAMERA_H,CAMERA_W) float. Returns (B,SEG_H,SEG_W) argmax."""
+        x = F.interpolate(frame_bchw_camera.to(DEVICE).float(),
+                          size=(SEG_H, SEG_W), mode="bilinear")
+        logits = self.segnet(x)  # (B,5,SEG_H,SEG_W)
+        return logits.argmax(dim=1).cpu().numpy(), logits
+
+    @torch.inference_mode()
+    def seg_logits(self, frame_bchw_camera):
+        x = F.interpolate(frame_bchw_camera.to(DEVICE).float(),
+                          size=(SEG_H, SEG_W), mode="bilinear")
+        return self.segnet(x)  # (B,5,SEG_H,SEG_W)
+
+
+def comp_pair_to_bthwc(comp_chw_pair):
+    """(2,3,H,W) float -> (1,2,H,W,3) float (uint8-cast applied to match inflate write)."""
+    u8 = comp_chw_pair.to(torch.uint8).float()  # exact inflate uint8 quantization
+    return u8.permute(0, 2, 3, 1).unsqueeze(0)

@@ -1,0 +1,1226 @@
+#!/usr/bin/env python3
+"""Fixed custody-PoseNet-null projection for the JS3 learned conditioner.
+
+JS4 reuses the landed JS3 trainer and changes one mechanism only: every learned
+correction ``c_theta`` is projected through a fixed, per-pair orthogonal
+projector onto the kernel of the custody PoseNet Jacobian before the existing
+camera/uint8/SegNet chain sees it.  The Jacobian and its orthonormal row basis
+are computed once at the CP135 custody base, retained pair-by-pair on the SSD,
+and never updated by training.
+
+This is a bounded stratified-n32 advisory instrument.  It does not launch the
+long burn, build a contest archive, or claim an exact score.
+"""
+
+from __future__ import annotations
+
+import argparse
+import contextlib
+import dataclasses
+import hashlib
+import json
+import math
+import shutil
+import sys
+import time
+import types
+from collections.abc import Iterator
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+REPO = Path(__file__).resolve().parents[1]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+
+from experiments import ddm_js3_learned_implicit_conditioning as js3
+from tac.boundary_math.posenet_subspace_spectrum import (
+    _orthonormal_row_basis,
+    participation_ratio,
+)
+from tac.differentiable_eval_roundtrip import differentiable_rgb_to_yuv6
+
+DEFAULT_OUTPUT = Path("/Volumes/VertigoDataTier/pact/ddm_js4_20260812")
+AXIS = js3.AXIS
+SEED = js3.SEED
+SAMPLE_N = js3.SAMPLE_N
+BATCH = js3.BATCH
+THREADS = js3.THREADS
+H, W = js3.H, js3.W
+CAMERA_H, CAMERA_W = js3.CAMERA_H, js3.CAMERA_W
+POSE_GUARD = js3.POSE_GUARD
+T4_FLIP_GATE = js3.T4_FLIP_GATE
+T4_BYTE_GATE = js3.T4_BYTE_GATE
+PROJECTOR_ROWS = 6
+PROJECTOR_REL_TOL = 1e-4
+PROJECTOR_REQUIRED_FREE_BYTES = 3_000_000_000
+DEFAULT_STAGE_STEPS = (25,)
+_JS3_RUN_CONFIG = js3.run_config
+
+
+class JS4Error(RuntimeError):
+    """A projector, cache, resume, retention, or measurement invariant failed."""
+
+
+@dataclasses.dataclass(frozen=True)
+class ProjectorPairRecord:
+    pair_id: int
+    token_sha256: str
+    rank: int
+    effective_dim: float
+    singular_values: tuple[float, ...]
+    jacobian: dict[str, Any]
+    row_basis: dict[str, Any]
+    receipt: dict[str, Any]
+
+
+@dataclasses.dataclass(frozen=True)
+class ProjectorCache:
+    root: Path
+    manifest: dict[str, Any]
+    records: tuple[ProjectorPairRecord, ...]
+
+    @property
+    def manifest_path(self) -> Path:
+        return self.root / "MANIFEST.json"
+
+
+def token_sha256(tokens_hw: Any) -> str:
+    """Return the content identity used to route a pair to its fixed projector."""
+    if hasattr(tokens_hw, "detach"):
+        tokens_hw = tokens_hw.detach().cpu().numpy()
+    value = np.ascontiguousarray(tokens_hw, dtype=np.uint8)
+    if value.shape != (H, W):
+        raise JS4Error(f"token geometry differs: {value.shape}")
+    return hashlib.sha256(value.tobytes(order="C")).hexdigest()
+
+
+def differentiable_pose_preprocess(torch: Any, functional: Any, pair_btchw: Any) -> Any:
+    """Autograd-preserving numeric twin of ``PoseNet.preprocess_input``."""
+    if pair_btchw.ndim != 5 or tuple(pair_btchw.shape[1:3]) != (2, 3):
+        raise JS4Error(f"pose pair geometry differs: {tuple(pair_btchw.shape)}")
+    batch = int(pair_btchw.shape[0])
+    flat = pair_btchw.reshape(batch * 2, 3, pair_btchw.shape[-2], pair_btchw.shape[-1])
+    resized = functional.interpolate(flat, size=(H, W), mode="bilinear")
+    yuv6 = differentiable_rgb_to_yuv6(resized)
+    return yuv6.reshape(batch, 12, H // 2, W // 2)
+
+
+def project_with_row_basis(correction: Any, row_basis: Any) -> Any:
+    """Project ``(B,3,H,W)`` through a fixed padded orthonormal row basis.
+
+    ``row_basis`` is ``(B,6,3*H*W)``.  Rows beyond the measured rank are zero.
+    This is algebraically ``(I-J^T(JJ^T)^+J)c`` while avoiding the conditioning
+    loss of normal equations.
+    """
+    if correction.ndim != 4 or tuple(correction.shape[1:]) != (3, H, W):
+        raise JS4Error(f"correction geometry differs: {tuple(correction.shape)}")
+    expected = (int(correction.shape[0]), PROJECTOR_ROWS, 3 * H * W)
+    if tuple(row_basis.shape) != expected:
+        raise JS4Error(f"projector geometry differs: {tuple(row_basis.shape)} != {expected}")
+    basis = row_basis.to(device=correction.device, dtype=correction.dtype)
+    flat = correction.reshape(correction.shape[0], -1)
+    coefficients = (basis * flat[:, None, :]).sum(dim=2)
+    sensitive = (coefficients[:, :, None] * basis).sum(dim=1)
+    return (flat - sensitive).reshape_as(correction)
+
+
+def validate_padded_row_basis(basis: np.ndarray, rank: int, *, atol: float = 3e-5) -> None:
+    value = np.asarray(basis, dtype=np.float64)
+    if value.shape != (PROJECTOR_ROWS, 3 * H * W):
+        raise JS4Error(f"cached row-basis geometry differs: {value.shape}")
+    if not 1 <= int(rank) <= PROJECTOR_ROWS:
+        raise JS4Error(f"cached projector rank differs: {rank}")
+    active = value[:rank]
+    if not np.allclose(active @ active.T, np.eye(rank), atol=atol, rtol=0.0):
+        raise JS4Error("cached projector rows are not orthonormal")
+    if np.count_nonzero(value[rank:]) != 0:
+        raise JS4Error("cached padded projector rows are not zero")
+
+
+class ProjectionRouter:
+    """Content-addressed routing from JS3 token batches to fixed pair projectors."""
+
+    def __init__(self, cache: ProjectorCache, torch: Any) -> None:
+        self.torch = torch
+        self._records = {record.token_sha256: record for record in cache.records}
+        if len(self._records) != SAMPLE_N:
+            raise JS4Error("projector token identities are not unique")
+        self._batch_cache: dict[tuple[str, ...], Any] = {}
+        self.active_basis: Any | None = None
+        self.active_token_shas: tuple[str, ...] = ()
+
+    def activate(self, tokens: Any) -> None:
+        keys = tuple(token_sha256(tokens[index]) for index in range(int(tokens.shape[0])))
+        missing = [key for key in keys if key not in self._records]
+        if missing:
+            raise JS4Error(f"no fixed projector for token identities: {missing}")
+        if keys not in self._batch_cache:
+            rows = []
+            for key in keys:
+                record = self._records[key]
+                path = Path(record.row_basis["path"])
+                basis = np.load(path, mmap_mode="r", allow_pickle=False)
+                validate_padded_row_basis(basis, record.rank)
+                rows.append(np.array(basis, dtype=np.float32, copy=True))
+            self._batch_cache[keys] = self.torch.from_numpy(np.stack(rows))
+        self.active_basis = self._batch_cache[keys]
+        self.active_token_shas = keys
+
+    def project(self, correction: Any) -> Any:
+        if self.active_basis is None:
+            raise JS4Error("projector basis was not activated by fixed_context")
+        if int(correction.shape[0]) != int(self.active_basis.shape[0]):
+            raise JS4Error("active projector batch differs from correction batch")
+        return project_with_row_basis(correction, self.active_basis)
+
+
+def _pair_dir(cache_root: Path, pair_id: int) -> Path:
+    return cache_root / "retained" / f"pair_{pair_id:06d}"
+
+
+def _record_from_receipt(path: Path) -> ProjectorPairRecord:
+    row = json.loads(path.read_text())
+    if row.get("schema") != "ddm_js4_pose_projector_pair.v1":
+        raise JS4Error(f"projector receipt schema differs: {path}")
+    if row.get("seed") != SEED or row.get("base_archive_sha256") != js3.js2b.BASE_ARCHIVE_SHA256:
+        raise JS4Error(f"projector receipt custody differs: {path}")
+    for key in ("jacobian", "row_basis"):
+        record = row[key]
+        artifact = Path(record["path"])
+        if not artifact.is_file() or js3.file_record(artifact) != record:
+            raise JS4Error(f"projector {key} custody differs: {artifact}")
+    basis = np.load(row["row_basis"]["path"], mmap_mode="r", allow_pickle=False)
+    validate_padded_row_basis(basis, int(row["rank"]))
+    return ProjectorPairRecord(
+        pair_id=int(row["pair_id"]),
+        token_sha256=str(row["token_sha256"]),
+        rank=int(row["rank"]),
+        effective_dim=float(row["effective_dim"]),
+        singular_values=tuple(float(value) for value in row["singular_values"]),
+        jacobian=dict(row["jacobian"]),
+        row_basis=dict(row["row_basis"]),
+        receipt=js3.file_record(path),
+    )
+
+
+def _load_complete_cache(cache_root: Path, context: Any) -> ProjectorCache | None:
+    manifest_path = cache_root / "MANIFEST.json"
+    if not manifest_path.is_file():
+        return None
+    manifest = json.loads(manifest_path.read_text())
+    if (
+        manifest.get("schema") != "ddm_js4_pose_projector_cache.v1"
+        or manifest.get("sample") != context.sample.tolist()
+        or manifest.get("seed") != SEED
+        or manifest.get("base_archive_sha256") != js3.js2b.BASE_ARCHIVE_SHA256
+    ):
+        raise JS4Error("fixed projector manifest does not match JS4 custody")
+    records = tuple(_record_from_receipt(Path(row["receipt"]["path"])) for row in manifest["pairs"])
+    if len(records) != SAMPLE_N or [row.pair_id for row in records] != context.sample.tolist():
+        raise JS4Error("fixed projector cache population differs")
+    return ProjectorCache(cache_root, manifest, records)
+
+
+def compute_pair_jacobian(context: Any, pre_r: np.ndarray, sample_slot: int) -> tuple[np.ndarray, float]:
+    """Compute the exact six-row custody-PoseNet Jacobian for one JS3 correction."""
+    torch, functional = context.modules.torch, context.modules.functional
+    pair_id = int(context.sample[sample_slot])
+    pre = torch.from_numpy(np.asarray(pre_r, dtype=np.float32)[None].copy())
+    correction = torch.zeros_like(pre, requires_grad=True)
+    camera, _scorer = js3.camera_roundtrip(torch, functional, pre, correction)
+    frame0 = torch.from_numpy(np.asarray(context.base_pairs[sample_slot : sample_slot + 1, 0]).copy())
+    frame0 = frame0.permute(0, 3, 1, 2).float()
+    pair = torch.stack((frame0, camera), dim=1)
+    candidate_preprocessed = differentiable_pose_preprocess(torch, functional, pair)
+    numerical_base = context.base_pose_input[sample_slot : sample_slot + 1]
+    max_preprocess_delta = float((candidate_preprocessed.detach() - numerical_base).abs().max())
+    custody = torch.from_numpy(np.asarray(context.custody_pose[pair_id : pair_id + 1]).copy()).float()
+    transported = custody + (candidate_preprocessed - candidate_preprocessed.detach())
+    pose6 = context.posenet(transported)["pose"][..., :PROJECTOR_ROWS]
+    rows = []
+    for dim in range(PROJECTOR_ROWS):
+        gradient = torch.autograd.grad(
+            pose6[0, dim],
+            correction,
+            retain_graph=dim < PROJECTOR_ROWS - 1,
+            create_graph=False,
+        )[0]
+        rows.append(gradient.detach().reshape(-1).cpu().numpy().astype(np.float32))
+    jacobian = np.stack(rows)
+    if not np.any(np.abs(jacobian) > 0.0):
+        raise JS4Error(f"custody PoseNet Jacobian is zero for pair {pair_id}")
+    return jacobian, max_preprocess_delta
+
+
+def build_projector_cache(context: Any, pre_r_store: np.ndarray, cache_root: Path, output: Path) -> ProjectorCache:
+    cached = _load_complete_cache(cache_root, context)
+    if cached is not None:
+        return cached
+    cache_root.mkdir(parents=True, exist_ok=True)
+    records: list[ProjectorPairRecord] = []
+    started = time.perf_counter()
+    for slot, pair_id_raw in enumerate(context.sample.tolist()):
+        pair_id = int(pair_id_raw)
+        pair_root = _pair_dir(cache_root, pair_id)
+        receipt_path = pair_root / "PAIR.json"
+        if receipt_path.is_file():
+            record = _record_from_receipt(receipt_path)
+            expected_token = token_sha256(context.tokens[pair_id])
+            if record.pair_id != pair_id or record.token_sha256 != expected_token:
+                raise JS4Error(f"resumable projector pair receipt differs: {pair_id}")
+            records.append(record)
+            continue
+        pair_started = time.perf_counter()
+        jacobian, base_preprocess_max_abs_delta = compute_pair_jacobian(context, np.asarray(pre_r_store[slot]), slot)
+        singular_values, active_basis, rank = _orthonormal_row_basis(
+            jacobian.astype(np.float64), rel_tol=PROJECTOR_REL_TOL
+        )
+        if not 1 <= rank <= PROJECTOR_ROWS:
+            raise JS4Error(f"projector rank differs for pair {pair_id}: {rank}")
+        padded = np.zeros((PROJECTOR_ROWS, jacobian.shape[1]), dtype=np.float32)
+        padded[:rank] = active_basis.astype(np.float32)
+        validate_padded_row_basis(padded, rank)
+        jacobian_path = pair_root / "jacobian_6x589824.float32.npy"
+        basis_path = pair_root / "row_basis_6x589824.float32.npy"
+        js3.atomic_npy(jacobian_path, jacobian)
+        js3.atomic_npy(basis_path, padded)
+        receipt = {
+            "schema": "ddm_js4_pose_projector_pair.v1",
+            "axis": AXIS,
+            "score_claim": False,
+            "seed": SEED,
+            "base_archive_sha256": js3.js2b.BASE_ARCHIVE_SHA256,
+            "pair_id": pair_id,
+            "sample_slot": slot,
+            "token_sha256": token_sha256(context.tokens[pair_id]),
+            "rank": rank,
+            "effective_dim": participation_ratio(singular_values[:rank]),
+            "singular_values": [float(value) for value in singular_values],
+            "rel_tol": PROJECTOR_REL_TOL,
+            "coordinate": (
+                "c_theta@384x512 -> bilinear camera 874x1164 -> Uint8STE -> PoseNet bilinear+"
+                "differentiable yuv6 -> custody-plane delta -> frozen PoseNet pose[:6]"
+            ),
+            "fixed_during_training": True,
+            "base_rerender_preprocess_max_abs_delta": base_preprocess_max_abs_delta,
+            "jacobian": js3.file_record(jacobian_path),
+            "row_basis": js3.file_record(basis_path),
+            "wall_seconds": time.perf_counter() - pair_started,
+        }
+        js3.atomic_json(receipt_path, receipt)
+        records.append(_record_from_receipt(receipt_path))
+        js3.atomic_json(
+            cache_root / "PROGRESS.json",
+            {
+                "schema": "ddm_js4_projector_progress.v1",
+                "complete_pairs": len(records),
+                "required_pairs": SAMPLE_N,
+                "latest_pair": pair_id,
+                "resumable": True,
+                "elapsed_seconds": time.perf_counter() - started,
+            },
+        )
+    if [record.pair_id for record in records] != context.sample.tolist():
+        raise JS4Error("projector cache order differs from stratified sample")
+    manifest = {
+        "schema": "ddm_js4_pose_projector_cache.v1",
+        "axis": AXIS,
+        "score_claim": False,
+        "seed": SEED,
+        "sample": context.sample.tolist(),
+        "sample_weights": context.sample_weights.tolist(),
+        "base_archive_sha256": js3.js2b.BASE_ARCHIVE_SHA256,
+        "base_archive_bytes": js3.js2b.BASE_ARCHIVE_BYTES,
+        "projector_rows": PROJECTOR_ROWS,
+        "correction_dimension": 3 * H * W,
+        "rel_tol": PROJECTOR_REL_TOL,
+        "fixed_during_training": True,
+        "projector_source": js3.file_record(REPO / "src/tac/torch_vehicle/pose_null_projection_hook.py"),
+        "linear_algebra_source": js3.file_record(REPO / "src/tac/boundary_math/posenet_subspace_spectrum.py"),
+        "js3_source": js3.file_record(REPO / "experiments/ddm_js3_learned_implicit_conditioning.py"),
+        "js4_source": js3.file_record(REPO / "experiments/ddm_js4_pose_null_projected_conditioning.py"),
+        "pairs": [dataclasses.asdict(record) for record in records],
+        "wall_seconds": time.perf_counter() - started,
+    }
+    js3.atomic_json(cache_root / "MANIFEST.json", manifest)
+    return ProjectorCache(cache_root, manifest, tuple(records))
+
+
+def projector_preflight(output: Path) -> dict[str, Any]:
+    disk = shutil.disk_usage(output)
+    row = {
+        "schema": "ddm_js4_projector_preflight.v1",
+        "output": str(output.resolve()),
+        "disk_free_bytes": int(disk.free),
+        "required_free_bytes": PROJECTOR_REQUIRED_FREE_BYTES,
+        "pass": int(disk.free) >= PROJECTOR_REQUIRED_FREE_BYTES,
+        "expected_retained_jacobian_bytes": SAMPLE_N * PROJECTOR_ROWS * 3 * H * W * 4,
+        "expected_retained_basis_bytes": SAMPLE_N * PROJECTOR_ROWS * 3 * H * W * 4,
+        "retention_policy": "every per-pair Jacobian and row basis retained on Vertigo SSD",
+    }
+    js3.atomic_json(output / "preflight/PROJECTOR_PREFLIGHT.json", row)
+    if not row["pass"]:
+        raise JS4Error("projector storage preflight failed")
+    return row
+
+
+def js4_run_config(args: argparse.Namespace, projector_manifest: dict[str, Any]) -> dict[str, Any]:
+    config = _JS3_RUN_CONFIG(args)
+    config.update(
+        {
+            "schema": "ddm_js4_run_config.v1",
+            "projector_manifest_sha256": js3.sha256_file(args.projector_cache / "MANIFEST.json"),
+            "projector_rel_tol": PROJECTOR_REL_TOL,
+            "projector_fixed": True,
+            "projector_pair_receipt_anchor": projector_manifest["pairs"][0]["receipt"]["path"],
+            "stage_steps": list(args.stage_steps),
+            "checkpoint_every": int(args.checkpoint_every),
+            "max_wall_seconds": float(args.max_wall_seconds),
+            "resume_required": bool(args.resume),
+            "js4_source": js3.file_record(REPO / "experiments/ddm_js4_pose_null_projected_conditioning.py"),
+        }
+    )
+    return config
+
+
+def save_checkpoint(
+    model: Any,
+    optimizer: Any,
+    ema: dict[str, Any],
+    output: Path,
+    label: str,
+    step: int,
+    history: list[dict[str, Any]],
+    torch: Any,
+    run_config: dict[str, Any],
+) -> dict[str, Any]:
+    path = output / "checkpoints" / f"{label}.step_{step:06d}.pt"
+    payload = {
+        "schema": "ddm_js4_checkpoint.v1",
+        "step": step,
+        "stage": label,
+        "model": model.state_dict(),
+        "ema": ema,
+        "optimizer": optimizer.state_dict(),
+        "torch_rng": torch.get_rng_state(),
+        "numpy_rng": np.random.get_state(),
+        "history": history,
+        "config": run_config,
+    }
+    js3.atomic_torch_save(path, payload, torch)
+    record = {
+        "schema": "ddm_js4_checkpoint_record.v1",
+        "checkpoint": js3.file_record(path),
+        "step": step,
+        "stage": label,
+    }
+    if label.startswith("stage_"):
+        js3.atomic_json(
+            output / "checkpoints/PENDING_STAGE.json",
+            {**record, "status": "AWAITING_STAGE_RESULT"},
+        )
+    else:
+        js3.atomic_json(
+            output / "checkpoints/LATEST.json",
+            {**record, "schema": "ddm_js4_latest_checkpoint.v1"},
+        )
+    return record
+
+
+@contextlib.contextmanager
+def projected_js3_runtime(router: ProjectionRouter, args: argparse.Namespace, cache: ProjectorCache) -> Iterator[None]:
+    """Install the JS4 projection while preserving JS3's other behavior verbatim."""
+    original_build_model = js3.build_model
+    original_fixed_context = js3.fixed_context
+    original_run_config = js3.run_config
+    original_save_checkpoint = js3.save_checkpoint
+    original_atomic_json = js3.atomic_json
+
+    def build_model(torch: Any, functional: Any, hidden: int, max_delta: float, qat: bool = True) -> Any:
+        model = original_build_model(torch, functional, hidden, max_delta, qat=qat)
+        raw_forward = model.forward
+
+        def forward(this: Any, value: Any) -> Any:
+            return router.project(raw_forward(value))
+
+        object.__setattr__(model, "_js4_unprojected_forward", raw_forward)
+        object.__setattr__(model, "forward", types.MethodType(forward, model))
+        return model
+
+    def fixed_context(torch: Any, functional: Any, tokens: Any, pre_r: Any) -> Any:
+        router.activate(tokens)
+        return original_fixed_context(torch, functional, tokens, pre_r)
+
+    def run_config(_args: argparse.Namespace) -> dict[str, Any]:
+        return js4_run_config(_args, cache.manifest)
+
+    def atomic_json(path: Path, value: Any) -> None:
+        """Promote a stage checkpoint only after its retained result is durable."""
+        original_atomic_json(path, value)
+        try:
+            relative = path.resolve().relative_to(args.output.resolve())
+        except ValueError:
+            return
+        is_stage_result = (
+            len(relative.parts) == 3 and relative.parts[0] == "stages" and relative.parts[2] == "RESULT.json"
+        )
+        if not is_stage_result or not isinstance(value, dict) or "checkpoint" not in value:
+            return
+        checkpoint = value["checkpoint"]
+        latest = {
+            "schema": "ddm_js4_latest_checkpoint.v1",
+            "checkpoint": checkpoint["checkpoint"],
+            "step": int(checkpoint["step"]),
+            "stage": str(checkpoint["stage"]),
+        }
+        original_atomic_json(args.output / "checkpoints/LATEST.json", latest)
+        original_atomic_json(
+            args.output / "checkpoints/PENDING_STAGE.json",
+            {
+                **checkpoint,
+                "status": "PROMOTED_AFTER_STAGE_RESULT",
+                "stage_result": js3.file_record(path),
+            },
+        )
+
+    js3.build_model = build_model
+    js3.fixed_context = fixed_context
+    js3.run_config = run_config
+    js3.save_checkpoint = save_checkpoint
+    js3.atomic_json = atomic_json
+    try:
+        yield
+    finally:
+        js3.build_model = original_build_model
+        js3.fixed_context = original_fixed_context
+        js3.run_config = original_run_config
+        js3.save_checkpoint = original_save_checkpoint
+        js3.atomic_json = original_atomic_json
+
+
+def collect_completed_stage_results(args: argparse.Namespace, training: dict[str, Any]) -> dict[str, Any]:
+    """Merge durable earlier stage results into a resumed JS3 training return."""
+    rows: list[dict[str, Any]] = []
+    completed_step = int(training["steps_completed"])
+    for stage_index, stage_end in enumerate(args.stage_steps, start=1):
+        if stage_end > completed_step:
+            continue
+        label = f"stage_{stage_index:02d}_step_{stage_end:06d}"
+        result_path = args.output / "stages" / label / "RESULT.json"
+        if not result_path.is_file():
+            raise JS4Error(f"completed stage lacks a durable result: {result_path}")
+        rows.append(json.loads(result_path.read_text()))
+    if not rows:
+        raise JS4Error("no durable projected stage result is available")
+    return {**training, "stages": rows}
+
+
+def _evaluate_checkpoint_branch(
+    args: argparse.Namespace,
+    context: Any,
+    pre_r_store: np.ndarray,
+    model: Any,
+    label: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Recreate one JS3 float/coded branch from a retained checkpoint model."""
+    torch, functional = context.modules.torch, context.modules.functional
+    metrics = js3.evaluate_model(context, model, pre_r_store, args.output, label)
+    exported = js3.export_stage(model, args.output, label)
+    selected_export = next(item for item in exported["exports"] if item.mode == exported["selected"]["mode"])
+    coded_model = js3.build_model(torch, functional, args.hidden, args.max_delta, qat=True)
+    js3.load_decoded_state(coded_model, selected_export.decoded_state, torch)
+    coded_metrics = js3.evaluate_model(
+        context,
+        coded_model,
+        pre_r_store,
+        args.output,
+        label + "_coded",
+    )
+    branch = {
+        "float_qat_metrics": metrics,
+        "coded_metrics": coded_metrics,
+        "export": {key: value for key, value in exported.items() if key != "exports"},
+    }
+    return branch, exported
+
+
+def recover_pending_stage_result(
+    args: argparse.Namespace,
+    context: Any,
+    pre_r_store: np.ndarray,
+) -> dict[str, Any] | None:
+    """Finish post-stage measurement after a crash without repeating training."""
+    pending_path = args.output / "checkpoints/PENDING_STAGE.json"
+    if not pending_path.is_file():
+        return None
+    pending = json.loads(pending_path.read_text())
+    if pending.get("status") != "AWAITING_STAGE_RESULT":
+        return None
+    checkpoint_record = pending.get("checkpoint")
+    if not isinstance(checkpoint_record, dict):
+        raise JS4Error("pending stage lacks a checkpoint custody record")
+    checkpoint_path = Path(checkpoint_record["path"])
+    if not checkpoint_path.is_file() or js3.file_record(checkpoint_path) != checkpoint_record:
+        raise JS4Error("pending stage checkpoint custody differs")
+    label = str(pending["stage"])
+    result_path = args.output / "stages" / label / "RESULT.json"
+    if result_path.is_file():
+        row = json.loads(result_path.read_text())
+        js3.atomic_json(result_path, row)
+        return row
+    torch, functional = context.modules.torch, context.modules.functional
+    checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    if checkpoint.get("schema") != "ddm_js4_checkpoint.v1":
+        raise JS4Error("pending stage checkpoint schema differs")
+    if checkpoint.get("config") != js3.run_config(args):
+        raise JS4Error("pending stage checkpoint config differs")
+    live_model = js3.build_model(torch, functional, args.hidden, args.max_delta, qat=True)
+    live_model.load_state_dict(checkpoint["model"])
+    live_model.eval()
+    ema_model = js3.build_model(torch, functional, args.hidden, args.max_delta, qat=True)
+    ema_model.load_state_dict(checkpoint["ema"])
+    ema_model.eval()
+    live, live_export = _evaluate_checkpoint_branch(
+        args,
+        context,
+        pre_r_store,
+        live_model,
+        label,
+    )
+    ema_label = label + "_ema"
+    ema, ema_export = _evaluate_checkpoint_branch(
+        args,
+        context,
+        pre_r_store,
+        ema_model,
+        ema_label,
+    )
+    selected_kind, selected_metrics, selected_export = min(
+        (
+            ("live", live["coded_metrics"], live_export),
+            ("ema", ema["coded_metrics"], ema_export),
+        ),
+        key=lambda item: (
+            not bool(item[1]["pose_guard_pass"]),
+            int(item[1]["projected_n600_robust_delta_flips"]),
+            int(item[1]["projected_n600_delta_flips"]),
+            int(item[2]["selected"]["brotli_q11_bytes"]),
+            item[0],
+        ),
+    )
+    row = {
+        "stage": label,
+        "step": int(pending["step"]),
+        "checkpoint": {
+            "schema": "ddm_js4_checkpoint_record.v1",
+            "checkpoint": checkpoint_record,
+            "step": int(pending["step"]),
+            "stage": label,
+        },
+        "live": live,
+        "ema": ema,
+        "selected_kind": selected_kind,
+        "selected_metrics": selected_metrics,
+        "selected_export": {key: value for key, value in selected_export.items() if key != "exports"},
+        "recovered_post_stage_measurement": True,
+    }
+    js3.atomic_json(result_path, row)
+    return row
+
+
+def _pose_outputs(context: Any, preprocessed: Any) -> np.ndarray:
+    with context.modules.torch.inference_mode():
+        return context.posenet(preprocessed)["pose"][..., :PROJECTOR_ROWS].cpu().numpy().astype(np.float64)
+
+
+def _distribution(values: np.ndarray) -> dict[str, Any]:
+    array = np.asarray(values, dtype=np.float64).reshape(-1)
+    quantiles = np.quantile(array, [0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 1.0])
+    return {
+        "count": int(array.size),
+        "min": float(quantiles[0]),
+        "p10": float(quantiles[1]),
+        "p25": float(quantiles[2]),
+        "p50": float(quantiles[3]),
+        "p75": float(quantiles[4]),
+        "p90": float(quantiles[5]),
+        "p95": float(quantiles[6]),
+        "max": float(quantiles[7]),
+        "mean": float(array.mean()),
+    }
+
+
+def measure_selected_leakage(
+    args: argparse.Namespace,
+    context: Any,
+    pre_r_store: np.ndarray,
+    selected_stage: dict[str, Any],
+    cache: ProjectorCache,
+    router: ProjectionRouter,
+) -> dict[str, Any]:
+    """Measure tangent nullity, nonlinear float leakage, and post-uint8 leakage."""
+    torch, functional = context.modules.torch, context.modules.functional
+    kind = str(selected_stage["selected_kind"])
+    branch = selected_stage[kind]
+    coded_path = Path(branch["export"]["selected"]["coded"]["path"])
+    decoded = js3.parse_module(coded_path.read_bytes())
+    model = js3.build_model(torch, functional, args.hidden, args.max_delta, qat=True)
+    js3.load_decoded_state(model, decoded, torch)
+    model.eval()
+    raw_rows: list[np.ndarray] = []
+    projected_rows: list[np.ndarray] = []
+    camera_float_rows: list[np.ndarray] = []
+    camera_u8_rows: list[np.ndarray] = []
+    base_rerender_camera_rows: list[np.ndarray] = []
+    base_camera_mismatch_counts: list[np.ndarray] = []
+    base_camera_max_abs_delta: list[np.ndarray] = []
+    first_order_rows: list[np.ndarray] = []
+    base_actual_errors = np.asarray(context.base_pose_errors, dtype=np.float64)
+    rerender_base_errors: list[np.ndarray] = []
+    float_candidate_errors: list[np.ndarray] = []
+    actual_candidate_errors: list[np.ndarray] = []
+    projection_removed: list[np.ndarray] = []
+    with torch.inference_mode():
+        for start in range(0, SAMPLE_N, BATCH):
+            stop = start + BATCH
+            pre_r = torch.from_numpy(np.asarray(pre_r_store[start:stop], dtype=np.float32))
+            tokens = torch.from_numpy(
+                np.asarray(context.tokens[context.sample[start:stop]]).astype(np.int64, copy=True)
+            )
+            fixed = js3.fixed_context(torch, functional, tokens, pre_r)
+            raw = model._js4_unprojected_forward(fixed)
+            projected = router.project(raw)
+            camera_u8, _scorer = js3.camera_roundtrip(torch, functional, pre_r, projected)
+            base_u8, _base_scorer = js3.camera_roundtrip(torch, functional, pre_r, torch.zeros_like(projected))
+            lifted_correction = functional.interpolate(
+                projected,
+                size=(CAMERA_H, CAMERA_W),
+                mode="bilinear",
+                align_corners=False,
+            )
+            camera_float = (base_u8 + lifted_correction).clamp(0.0, 255.0)
+            retained_base = torch.from_numpy(np.asarray(context.base_pairs[start:stop, 1]).copy()).permute(0, 3, 1, 2)
+            base_u8_bytes = base_u8.to(torch.uint8)
+            base_difference = base_u8_bytes.to(torch.int16) - retained_base.to(torch.int16)
+            base_camera_mismatch_counts.append(torch.count_nonzero(base_difference, dim=(1, 2, 3)).cpu().numpy())
+            base_camera_max_abs_delta.append(base_difference.abs().amax(dim=(1, 2, 3)).cpu().numpy())
+            frame0 = torch.from_numpy(np.asarray(context.base_pairs[start:stop, 0]).copy())
+            frame0 = frame0.permute(0, 3, 1, 2).float()
+            pair_candidate_float = torch.stack((frame0, camera_float), dim=1)
+            pair_candidate_u8 = torch.stack((frame0, camera_u8), dim=1)
+            pair_rerender_base = torch.stack((frame0, base_u8), dim=1)
+            pre_candidate_float = differentiable_pose_preprocess(torch, functional, pair_candidate_float)
+            pre_candidate_u8 = differentiable_pose_preprocess(torch, functional, pair_candidate_u8)
+            pre_rerender_base = differentiable_pose_preprocess(torch, functional, pair_rerender_base)
+            numerical_base = context.base_pose_input[start:stop]
+            custody = torch.from_numpy(np.asarray(context.custody_pose[context.sample[start:stop]]).copy()).float()
+            candidate_float_transport = custody + (pre_candidate_float - numerical_base)
+            candidate_u8_transport = custody + (pre_candidate_u8 - numerical_base)
+            rerender_base_transport = custody + (pre_rerender_base - numerical_base)
+            target = np.asarray(context.gt_poses[context.sample[start:stop]], dtype=np.float64)
+            rerender_base_pose = _pose_outputs(context, rerender_base_transport)
+            float_candidate_pose = _pose_outputs(context, candidate_float_transport)
+            actual_candidate_pose = _pose_outputs(context, candidate_u8_transport)
+            rerender_base_errors.append(((rerender_base_pose - target) ** 2).mean(axis=1))
+            float_candidate_errors.append(((float_candidate_pose - target) ** 2).mean(axis=1))
+            actual_candidate_errors.append(((actual_candidate_pose - target) ** 2).mean(axis=1))
+            raw_np = raw.cpu().numpy().astype(np.float32)
+            projected_np = projected.cpu().numpy().astype(np.float32)
+            raw_rows.append(raw_np)
+            projected_rows.append(projected_np)
+            camera_float_rows.append(camera_float.half().cpu().numpy())
+            camera_u8_rows.append(camera_u8.to(torch.uint8).cpu().numpy())
+            base_rerender_camera_rows.append(base_u8_bytes.cpu().numpy())
+            raw_flat = raw_np.reshape(stop - start, -1).astype(np.float64)
+            projected_flat = projected_np.reshape(stop - start, -1).astype(np.float64)
+            projection_removed.append(
+                1.0
+                - np.sum(projected_flat * projected_flat, axis=1)
+                / np.maximum(np.sum(raw_flat * raw_flat, axis=1), 1e-30)
+            )
+            for local, record in enumerate(cache.records[start:stop]):
+                jacobian = np.load(record.jacobian["path"], mmap_mode="r", allow_pickle=False)
+                first_order_rows.append(np.asarray(jacobian, dtype=np.float64) @ projected_flat[local])
+    raw_all = np.concatenate(raw_rows)
+    projected_all = np.concatenate(projected_rows)
+    camera_float_all = np.concatenate(camera_float_rows)
+    camera_u8_all = np.concatenate(camera_u8_rows)
+    base_rerender_camera_all = np.concatenate(base_rerender_camera_rows)
+    base_mismatch_counts = np.concatenate(base_camera_mismatch_counts)
+    base_max_abs_delta = np.concatenate(base_camera_max_abs_delta)
+    rerender_base = np.concatenate(rerender_base_errors)
+    float_candidate = np.concatenate(float_candidate_errors)
+    actual_candidate = np.concatenate(actual_candidate_errors)
+    base_rerender_delta = rerender_base - base_actual_errors
+    continuous_correction_delta = float_candidate - rerender_base
+    actual_correction_delta = actual_candidate - rerender_base
+    continuous_total_delta = float_candidate - base_actual_errors
+    actual_total_delta = actual_candidate - base_actual_errors
+    quantum_increment = actual_correction_delta - continuous_correction_delta
+    first_order = np.stack(first_order_rows)
+    removed = np.concatenate(projection_removed)
+    root = args.output / "projector_measurement/retained"
+    js3.atomic_npy(root / "raw_c_theta_n32.float32.npy", raw_all)
+    js3.atomic_npy(root / "projected_c_n32.float32.npy", projected_all)
+    js3.atomic_npy(root / "camera_float_n32.float16.npy", camera_float_all)
+    js3.atomic_npy(root / "camera_uint8_n32.uint8.npy", camera_u8_all)
+    js3.atomic_npy(
+        root / "base_rerender_camera_uint8_n32.uint8.npy",
+        base_rerender_camera_all,
+    )
+    js3.atomic_npy(root / "first_order_pose_delta_n32.float64.npy", first_order)
+    js3.atomic_npy(root / "pose_base_actual_n32.float64.npy", base_actual_errors)
+    js3.atomic_npy(root / "pose_base_rerender_n32.float64.npy", rerender_base)
+    js3.atomic_npy(root / "pose_candidate_float_n32.float64.npy", float_candidate)
+    js3.atomic_npy(root / "pose_candidate_uint8_n32.float64.npy", actual_candidate)
+    js3.atomic_npy(root / "pose_delta_base_rerender_n32.float64.npy", base_rerender_delta)
+    js3.atomic_npy(
+        root / "pose_delta_continuous_correction_n32.float64.npy",
+        continuous_correction_delta,
+    )
+    js3.atomic_npy(root / "pose_delta_uint8_correction_n32.float64.npy", actual_correction_delta)
+    js3.atomic_npy(root / "pose_delta_continuous_total_n32.float64.npy", continuous_total_delta)
+    js3.atomic_npy(root / "pose_delta_uint8_total_n32.float64.npy", actual_total_delta)
+    js3.atomic_npy(root / "pose_delta_quantum_increment_n32.float64.npy", quantum_increment)
+    first_order_norm = np.linalg.norm(first_order, axis=1)
+    base_rerender_mean = js3.js2b.stratified_mean(base_rerender_delta, context.sample_weights)
+    continuous_correction_mean = js3.js2b.stratified_mean(continuous_correction_delta, context.sample_weights)
+    actual_correction_mean = js3.js2b.stratified_mean(actual_correction_delta, context.sample_weights)
+    continuous_total_mean = js3.js2b.stratified_mean(continuous_total_delta, context.sample_weights)
+    actual_total_mean = js3.js2b.stratified_mean(actual_total_delta, context.sample_weights)
+    quantum_mean = js3.js2b.stratified_mean(quantum_increment, context.sample_weights)
+    base_rerender_gate_pass = base_rerender_mean < POSE_GUARD
+    float_gate_pass = continuous_total_mean < POSE_GUARD
+    actual_gate_pass = actual_total_mean < POSE_GUARD
+    quantum_alone_fired = base_rerender_gate_pass and float_gate_pass and not actual_gate_pass
+    result = {
+        "schema": "ddm_js4_projector_measurement.v1",
+        "axis": AXIS,
+        "score_claim": False,
+        "selected_stage": selected_stage["stage"],
+        "selected_kind": kind,
+        "selected_coded_module": js3.file_record(coded_path),
+        "projection_removed_energy_fraction": _distribution(removed),
+        "base_camera_mismatch_pixels_per_pair": _distribution(base_mismatch_counts),
+        "base_camera_max_abs_delta_per_pair": _distribution(base_max_abs_delta),
+        "first_order_Jc_l2": _distribution(first_order_norm),
+        "base_rerender_pose_delta_per_pair": _distribution(base_rerender_delta),
+        "continuous_correction_pose_delta_per_pair": _distribution(continuous_correction_delta),
+        "uint8_correction_pose_delta_per_pair": _distribution(actual_correction_delta),
+        "continuous_total_pose_delta_per_pair": _distribution(continuous_total_delta),
+        "uint8_total_pose_delta_per_pair": _distribution(actual_total_delta),
+        "quantum_increment_per_pair": _distribution(quantum_increment),
+        "uint8_guard_exceedance_count": int(np.count_nonzero(actual_total_delta >= POSE_GUARD)),
+        "uint8_guard_exceedance_denominator": int(actual_total_delta.size),
+        "base_rerender_pose_delta_stratified_n32": base_rerender_mean,
+        "continuous_correction_pose_delta_stratified_n32": continuous_correction_mean,
+        "uint8_correction_pose_delta_stratified_n32": actual_correction_mean,
+        "continuous_pose_delta_stratified_n32": continuous_total_mean,
+        "uint8_pose_delta_stratified_n32": actual_total_mean,
+        "quantum_increment_stratified_n32": quantum_mean,
+        "base_rerender_gate_pass": base_rerender_gate_pass,
+        "continuous_gate_pass": float_gate_pass,
+        "uint8_gate_pass": actual_gate_pass,
+        "quantum_alone_f2_fired": quantum_alone_fired,
+        "attribution": (
+            "quantum-alone"
+            if quantum_alone_fired
+            else "base-rerender-already-exceeds-gate"
+            if not base_rerender_gate_pass
+            else "continuous-nonlinearity-already-exceeds-gate"
+            if not float_gate_pass
+            else "neither-continuous-nor-uint8-exceeds-gate"
+        ),
+        "continuous_counterfactual": (
+            "CP135 zero-correction rerender plus the lifted projected correction, clipped but not "
+            "rounded; the separate base-rerender term records its offset from custody"
+        ),
+        "payloads": {path.name: js3.file_record(path) for path in sorted(root.iterdir()) if path.is_file()},
+    }
+    js3.atomic_json(args.output / "projector_measurement/RESULT.json", result)
+    return result
+
+
+def sealed_recipe(
+    args: argparse.Namespace,
+    seconds_per_step: float,
+    selected_bytes: int,
+    projector_basis_bytes: int,
+    smoke_metrics: dict[str, Any],
+    leakage: dict[str, Any],
+    *,
+    receiver_integration_complete: bool = False,
+) -> dict[str, Any]:
+    robust_overlap = int(smoke_metrics["robust_beneficial_flips"]) > 0
+    pose_pass = bool(leakage["uint8_gate_pass"])
+    receiver_payload_lower_bound = selected_bytes + projector_basis_bytes
+    receiver_bytes_fit = receiver_payload_lower_bound <= T4_BYTE_GATE
+    disposition = (
+        "QUEUED-WITH-A-FIRE-ORDER"
+        if robust_overlap and pose_pass and receiver_bytes_fit and receiver_integration_complete
+        else "FOLDED"
+    )
+    if disposition == "QUEUED-WITH-A-FIRE-ORDER":
+        trigger = (
+            "MAIN verifies the js4 cache manifest and receiver-consumption plan, owns the training leg, "
+            "observes no conflicting long burn, and the target-host memory/storage preflight passes"
+        )
+    elif not robust_overlap:
+        trigger = "no fire: F1 overlap failed on the bounded n32 smoke"
+    elif not pose_pass:
+        trigger = "no fire: post-uint8 pose leakage failed 2e-6; route to leakage-aware rounding/CVP"
+    elif not receiver_integration_complete:
+        trigger = (
+            "no fire: the parse-backed conditioner has no complete contest receiver without the "
+            "per-pair basis payload; route to projector-free compilation"
+        )
+    else:
+        trigger = (
+            "no fire: the current receiver needs the retained per-pair projector bases and fails the "
+            "1,500-byte T4 cap; route to a projector-free compiled conditioner or rank-k relaxation"
+        )
+    command = [
+        ".venv/bin/python",
+        "experiments/ddm_js4_pose_null_projected_conditioning.py",
+        "--output",
+        str(args.output / "main_burn"),
+        "--projector-cache",
+        str(args.projector_cache),
+        "--hidden",
+        str(args.hidden),
+        "--max-delta",
+        str(args.max_delta),
+        "--lr",
+        str(args.lr),
+        "--stage-steps",
+        "25,100,300",
+        "--checkpoint-every",
+        "25",
+        "--pose-every",
+        "25",
+        "--pose-weight",
+        "0",
+        "--ema-decay",
+        str(args.ema_decay),
+        "--grad-clip",
+        str(args.grad_clip),
+        "--max-wall-seconds",
+        str(max(7200, math.ceil(seconds_per_step * 350))),
+        "--resume",
+    ]
+    recipe = {
+        "schema": "ddm_js4_sealed_main_recipe.v1",
+        "disposition": disposition,
+        "owner": "MAIN training-leg router",
+        "consumer_store": str(args.output / "main_burn"),
+        "fire_trigger": trigger,
+        "command": command,
+        "projector_cache": js3.file_record(args.projector_cache / "MANIFEST.json"),
+        "seed": SEED,
+        "sample_n": SAMPLE_N,
+        "sample_policy": "seeded stratified random, one draw per 600/32 stratum",
+        "batch": BATCH,
+        "threads": THREADS,
+        "delta": js3.DELTA,
+        "pose_weight_derivation": (
+            "lambda_pose=0: the fixed projector removes the first-order pose component; pose is measured "
+            "every 25 steps as verification, and JS3's upstream preprocess path is no-grad so a nonzero "
+            "scalar weight would misleadingly report a penalty without changing the gradient"
+        ),
+        "latest_selected_module_brotli_q11_bytes": selected_bytes,
+        "current_projector_basis_npy_bytes": projector_basis_bytes,
+        "current_receiver_payload_lower_bound_bytes": receiver_payload_lower_bound,
+        "receiver_integration_complete": receiver_integration_complete,
+        "projected_300_step_seconds_from_smoke": seconds_per_step * 300,
+        "t4_admission": {
+            "projected_n600_robust_delta_flips_lte": T4_FLIP_GATE,
+            "complete_receiver_archive_bytes_lte": T4_BYTE_GATE,
+            "pose_delta_lt": POSE_GUARD,
+            "complete_receiver_consumption_required": True,
+        },
+        "long_burn_launched_by_ddm_js4": False,
+    }
+    js3.atomic_json(args.output / "SEALED_MAIN_RECIPE.json", recipe)
+    return recipe
+
+
+def finalize(
+    args: argparse.Namespace,
+    training: dict[str, Any],
+    ladder: list[dict[str, Any]],
+    preflight: dict[str, Any],
+    projector_preflight_row: dict[str, Any],
+    cache: ProjectorCache,
+    context: Any,
+    pre_r_store: np.ndarray,
+    router: ProjectionRouter,
+) -> dict[str, Any]:
+    if not training["stages"]:
+        raise JS4Error("no new projected stage completed")
+    selected_stage = min(
+        training["stages"],
+        key=lambda row: (
+            not bool(row["selected_metrics"]["pose_guard_pass"]),
+            int(row["selected_metrics"]["projected_n600_robust_delta_flips"]),
+            int(row["selected_metrics"]["projected_n600_delta_flips"]),
+            int(row["selected_export"]["selected"]["brotli_q11_bytes"]),
+            int(row["step"]),
+        ),
+    )
+    metrics = selected_stage["selected_metrics"]
+    module_bytes = int(selected_stage["selected_export"]["selected"]["brotli_q11_bytes"])
+    leakage = measure_selected_leakage(args, context, pre_r_store, selected_stage, cache, router)
+    projected_robust = int(metrics["projected_n600_robust_delta_flips"])
+    robust_beneficial = int(metrics["robust_beneficial_flips"])
+    bytes_per_robust = module_bytes / -projected_robust if projected_robust < 0 else None
+    projector_basis_bytes = sum(int(record.row_basis["bytes"]) for record in cache.records)
+    current_receiver_payload_lower_bound = module_bytes + projector_basis_bytes
+    receiver_integration_complete = False
+    f1_fired = robust_beneficial == 0
+    f2_realized_gate_fired = not bool(leakage["uint8_gate_pass"])
+    f3_fired = current_receiver_payload_lower_bound > T4_BYTE_GATE or not receiver_integration_complete
+    recipe = sealed_recipe(
+        args,
+        float(training["seconds_per_step"]),
+        module_bytes,
+        projector_basis_bytes,
+        metrics,
+        leakage,
+        receiver_integration_complete=receiver_integration_complete,
+    )
+    smoke_gate = (
+        projected_robust <= T4_FLIP_GATE
+        and current_receiver_payload_lower_bound <= T4_BYTE_GATE
+        and bool(leakage["uint8_gate_pass"])
+        and receiver_integration_complete
+    )
+    result = {
+        "schema": "ddm_js4_final_result.v1",
+        "axis": AXIS,
+        "score_claim": False,
+        "sample": context.sample.tolist(),
+        "sample_weights": context.sample_weights.tolist(),
+        "run_config": js4_run_config(args, cache.manifest),
+        "steps_completed": training["steps_completed"],
+        "seconds_per_step": training["seconds_per_step"],
+        "selected_stage": selected_stage,
+        "capacity_ladder": ladder,
+        "memory_preflight": preflight,
+        "projector_preflight": projector_preflight_row,
+        "projector_cache": js3.file_record(cache.manifest_path),
+        "projector_measurement": leakage,
+        "t4_acceptance_gate": {
+            "pass": smoke_gate,
+            "projected_n600_robust_delta_flips": projected_robust,
+            "required_projected_n600_robust_delta_flips_lte": T4_FLIP_GATE,
+            "module_brotli_q11_bytes": module_bytes,
+            "projector_basis_npy_bytes": projector_basis_bytes,
+            "current_receiver_payload_lower_bound_bytes": current_receiver_payload_lower_bound,
+            "required_current_receiver_payload_lower_bound_bytes_lte": T4_BYTE_GATE,
+            "receiver_integration_complete": receiver_integration_complete,
+            "pose_delta": leakage["uint8_pose_delta_stratified_n32"],
+            "required_pose_delta_lt": POSE_GUARD,
+            "dispatched": False,
+        },
+        "falsifiers": {
+            "F1": {
+                "fired": f1_fired,
+                "scope": "INSTANCE: hidden-4, stratified-random n32, bounded projected smoke",
+                "robust_beneficial_flips": robust_beneficial,
+                "projected_n600_robust_delta_flips": projected_robust,
+            },
+            "F2": {
+                "realized_gate_fired": f2_realized_gate_fired,
+                "quantum_alone_fired": leakage["quantum_alone_f2_fired"],
+                "attribution": leakage["attribution"],
+                "base_rerender_pose_delta": leakage["base_rerender_pose_delta_stratified_n32"],
+                "continuous_correction_pose_delta": leakage["continuous_correction_pose_delta_stratified_n32"],
+                "uint8_correction_pose_delta": leakage["uint8_correction_pose_delta_stratified_n32"],
+                "continuous_pose_delta": leakage["continuous_pose_delta_stratified_n32"],
+                "uint8_pose_delta": leakage["uint8_pose_delta_stratified_n32"],
+                "quantum_increment": leakage["quantum_increment_stratified_n32"],
+                "scope": "INSTANCE: selected parse-backed module on stratified-random n32",
+            },
+            "F3": {
+                "fired": f3_fired,
+                "scope": (
+                    "INSTANCE current receiver serialization lower bound; not a lower bound on a future "
+                    "projector-free compilation"
+                ),
+                "module_brotli_q11_bytes": module_bytes,
+                "projector_basis_npy_bytes": projector_basis_bytes,
+                "current_receiver_payload_lower_bound_bytes": current_receiver_payload_lower_bound,
+                "required_total_bytes_lte": T4_BYTE_GATE,
+                "receiver_integration_complete": receiver_integration_complete,
+                "bytes_per_projected_robust_flip": bytes_per_robust,
+                "linearized_bytes_for_2000_robust_flips": (
+                    None if bytes_per_robust is None else 2000.0 * bytes_per_robust
+                ),
+            },
+        },
+        "sealed_recipe": js3.file_record(args.output / "SEALED_MAIN_RECIPE.json"),
+        "recipe_disposition": recipe["disposition"],
+        "boundaries": {
+            "absolute_local_dseg_progress_claim": False,
+            "exact_cuda_score_measured": False,
+            "long_burn_launched": False,
+            "candidate_archive_built": False,
+            "receiver_module_integration_complete": False,
+            "verdict_scope": "bounded n32 projector smoke; instance falsifiers only",
+        },
+    }
+    js3.atomic_json(args.output / "FINAL_RESULT.json", result)
+    actions: list[dict[str, str]] = []
+    if f1_fired:
+        actions.append(
+            {
+                "action": "rank-k partial pose projection screen",
+                "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+                "owner": "MAIN training-leg router",
+                "consumer_store": str(args.output / "follow_on/rank_k_partial_projection"),
+                "fire_trigger": (
+                    "MAIN claims an advisory n32 lane and sweeps fixed ranks 1 through 5 on the same "
+                    "JS3 checkpoint/sample after verifying the JS4 F1 receipt"
+                ),
+            }
+        )
+    if f2_realized_gate_fired:
+        actions.append(
+            {
+                "action": "leakage-aware CVP rounding screen",
+                "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+                "owner": "MAIN rounding-leg router",
+                "consumer_store": str(args.output / "follow_on/cvp_rounding"),
+                "fire_trigger": (
+                    "MAIN verifies that JS4's continuous gate passes or prices its nonlinear residue, "
+                    "then runs a retained n32 CVP rounding screen against the same 2e-6 guard"
+                ),
+            }
+        )
+    if f3_fired:
+        actions.append(
+            {
+                "action": "projector-free conditioner compilation",
+                "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+                "owner": "MAIN receiver-leg router",
+                "consumer_store": str(args.output / "follow_on/projector_free_compile"),
+                "fire_trigger": (
+                    "a projected or rank-k n32 state has robust beneficial movement, after which MAIN "
+                    "must distill the projected outputs into a parse-backed receiver needing no basis payload"
+                ),
+            }
+        )
+    follow_on = {
+        "schema": "ddm_js4_follow_on.v2",
+        "source_arm_disposition": recipe["disposition"],
+        "actions": actions,
+    }
+    js3.atomic_json(args.output / "FOLLOW_ON.json", follow_on)
+    return result
+
+
+def run(args: argparse.Namespace) -> dict[str, Any]:
+    args.output = args.output.resolve()
+    args.output.mkdir(parents=True, exist_ok=True)
+    state_path = args.output / "state.json"
+    if state_path.is_file():
+        prior_state = json.loads(state_path.read_text())
+        if prior_state.get("schema") == "ddm_js4_state.v1" and prior_state.get("complete") is True:
+            current_source = js3.file_record(REPO / "experiments/ddm_js4_pose_null_projected_conditioning.py")
+            if prior_state.get("js4_source") != current_source:
+                raise JS4Error("complete state was produced by different JS4 source bytes")
+            final_record = prior_state.get("final_result")
+            if not isinstance(final_record, dict):
+                raise JS4Error("complete state lacks a final-result custody record")
+            final_path = Path(final_record["path"])
+            if not final_path.is_file() or js3.file_record(final_path) != final_record:
+                raise JS4Error("complete state final-result custody differs")
+            return json.loads(final_path.read_text())
+    if args.projector_cache is None:
+        args.projector_cache = args.output / "projector"
+    args.projector_cache = args.projector_cache.resolve()
+    torch = __import__("torch")
+    torch.manual_seed(SEED)
+    np.random.seed(SEED)
+    torch.set_num_threads(THREADS)
+    torch.use_deterministic_algorithms(True)
+    state = {
+        "schema": "ddm_js4_state.v1",
+        "arm": "ddm_js4",
+        "status": "CUSTODY_PREFLIGHT",
+        "complete": False,
+        "resumable": True,
+        "seed": SEED,
+        "batch": BATCH,
+        "threads": THREADS,
+        "axis": AXIS,
+        "score_claim": False,
+        "long_burn_launched": False,
+        "argv": sys.argv,
+        "js4_source": js3.file_record(REPO / "experiments/ddm_js4_pose_null_projected_conditioning.py"),
+    }
+    js3.atomic_json(args.output / "state.json", state)
+    preflight = js3.memory_preflight(args.output, args.hidden)
+    projector_preflight_row = projector_preflight(args.output)
+    context = js3.js2b.build_context(args.output)
+    if not np.array_equal(context.sample, js3.stratified_sample()[0]):
+        raise JS4Error("sample differs from JS3's sealed relative gauge")
+    pre_r_store = js3.materialize_base_pre_r(context, args.output)
+    state.update(status="PROJECTOR_BUILD")
+    js3.atomic_json(args.output / "state.json", state)
+    cache = build_projector_cache(context, pre_r_store, args.projector_cache, args.output)
+    state.update(status="BOUNDED_PROJECTED_TRAINING", projector_cache=js3.file_record(cache.manifest_path))
+    js3.atomic_json(args.output / "state.json", state)
+    router = ProjectionRouter(cache, torch)
+    with projected_js3_runtime(router, args, cache):
+        ladder = js3.capacity_ladder(torch, context.modules.functional, args.output, args.max_delta)
+        recover_pending_stage_result(args, context, pre_r_store)
+        training = js3.train(args, context, pre_r_store)
+        training = collect_completed_stage_results(args, training)
+        result = finalize(
+            args,
+            training,
+            ladder,
+            preflight,
+            projector_preflight_row,
+            cache,
+            context,
+            pre_r_store,
+            router,
+        )
+    state.update(
+        status="COMPLETE",
+        complete=True,
+        steps_completed=training["steps_completed"],
+        final_result=js3.file_record(args.output / "FINAL_RESULT.json"),
+        t4_gate_pass=result["t4_acceptance_gate"]["pass"],
+    )
+    js3.atomic_json(args.output / "state.json", state)
+    return result
+
+
+def parser() -> argparse.ArgumentParser:
+    value = js3.parser()
+    value.description = __doc__
+    value.set_defaults(
+        output=DEFAULT_OUTPUT,
+        stage_steps=DEFAULT_STAGE_STEPS,
+        checkpoint_every=5,
+        pose_every=25,
+        pose_weight=0.0,
+        resume=True,
+    )
+    value.add_argument("--projector-cache", type=Path, default=None)
+    return value
+
+
+def main() -> None:
+    args = parser().parse_args()
+    result = run(args)
+    print(json.dumps(result, indent=2, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

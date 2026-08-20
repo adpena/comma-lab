@@ -1,0 +1,6 @@
+#!/bin/bash
+OUT=/Volumes/APDataStore/pact/ddm_gl2_gt_lineage_u8_coverage_20260816/scratch
+find /Volumes/APDataStore -name 'gt_segnet_argmax*' 2>/dev/null > "$OUT/ap_u8.txt"
+find /Volumes/APDataStore -name 'gt_argmax_n600.npy' 2>/dev/null > "$OUT/ap_npy.txt"
+find /Volumes/APDataStore -type d -name 'targets_n*' 2>/dev/null > "$OUT/ap_targets.txt"
+echo done

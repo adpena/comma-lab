@@ -1,0 +1,12 @@
+#!/bin/bash
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+export PYTHONDONTWRITEBYTECODE=1
+OUT=/Volumes/APDataStore/pact/ddm_ra2c_rank4_20260816
+.venv/bin/python experiments/ddm_ra2c_alpha_ladder.py \
+    --carrier-rank 4 \
+    --alpha 1.0 \
+    --returned-bytes 14662 \
+    --out-dir "$OUT" \
+    > "$OUT/run.log" 2>&1
+echo "rc=$?" > "$OUT/.done"

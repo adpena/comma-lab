@@ -1,0 +1,2060 @@
+#!/usr/bin/env python3
+"""Scorer-free, retained PK2R rate-aware gauge preflight for PR130 CPR1.
+
+This runner searches the full deployed 12-dimensional basis/coefficient
+population.  Every reported gauge is encoded by the pinned CPR1 Huffman and
+Rice implementations, inserted into the exact reproduced archive layout, and
+retained on the SSD before its byte count is used.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import importlib.util
+import json
+import math
+import os
+import platform
+import subprocess
+import sys
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+
+REPO = Path(__file__).resolve().parents[1]
+PK2_PATH = REPO / "experiments/ddm_pk2_pose_carrier_representation.py"
+CHARTER = REPO / ".omx/research/charters/ddm_pk3_rate_aware_gauge_preflight.md"
+COMMON_CONTRACT = REPO / ".omx/tmp/codex_runs/_common_contract.md"
+DEFAULT_ARCHIVE = Path("/Volumes/VertigoDataTier/pact/ddm_pr130_reproduce_20260809/reproduction/archive.zip")
+DEFAULT_OUT = Path("/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v6")
+RESEARCH_OUT = REPO / ".omx/research/ddm_pk3_rate_aware_gauge_preflight_20260809"
+EXPECTED_ARCHIVE_SHA256 = "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd"
+EXPECTED_INTAKE_COMMIT = "e34f31bc4969042c0051ac81aa3c56884419a231"
+EXPECTED_PK2_COMMIT = "cfddfc503a76e72ec7654ac9e69ff2acdba439b1"
+EXPECTED_CODEC_SHA256 = "d2f14402374b4e622b7f981d736389fb04f0ca0165180e4c75f3a32ffe996bed"
+EXPECTED_INFLATE_SHA256 = "335369c9b3b295707f1790feb0b5b7ae288338fae350056cc4bb03aaa18f0c9e"
+EXPECTED_PK2_RUNNER_SHA256 = "634ac0d899925c5c34df24bfc5efa68f99bd48bf74c2d7810e6d3152e55d9c7e"
+EXPECTED_RUNTIME_SHA256 = {
+    "carrier_codec.py": EXPECTED_CODEC_SHA256,
+    "inflate.py": EXPECTED_INFLATE_SHA256,
+    "hpac_integer.py": "6e6b4f4d0b293fb60cc1b751958756a4cd6c2ce7bcff68c6f03e20277856803f",
+    "hpac_integer_sparse.py": "2240ee32c53fe949b560d316d349e0bbdccc0ceb78787307cd4d530623d42a0c",
+    "integer_model_io.py": "6f91c91ed4785d203aa3570af362fbe9c6a64bb2249599f8554adb31174b80a5",
+}
+AXIS = "[macOS-CPU scorer-free byte/MSE projection]"
+SCORE_CLAIM = False
+MSE_BAR = 2.5e-6
+SAVING_BAR_BYTES = 2_000
+ANGLE_MAGNITUDES = (
+    1.0 / 512.0,
+    1.0 / 256.0,
+    1.0 / 128.0,
+    1.0 / 64.0,
+)
+ALGEBRAIC_RECEIVER_GAUGE_KINDS = frozenset(
+    {
+        "exact_sign",
+        "exact_permutation",
+        "exact_dc_shift",
+        "decoder_dead_radial_scale",
+    }
+)
+RECEIVER_METRIC_VERSION = "inflate_normalized_basis_fp32_explicit_every_candidate_v6_self_pinned"
+TRANSFORM_LAW_VERSION = "normalization_aware_H_D_v2"
+RUNNER_SOURCE_SHA256_AT_IMPORT = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+DEVELOPMENT_RUN_BLOCKED = False
+
+
+def load_pk2() -> Any:
+    actual_sha256 = hashlib.sha256(PK2_PATH.read_bytes()).hexdigest()
+    if actual_sha256 != EXPECTED_PK2_RUNNER_SHA256:
+        raise RuntimeError(f"unexpected PK2 runner SHA-256 before import: {actual_sha256}")
+    spec = importlib.util.spec_from_file_location("ddm_pk2_for_pk3", PK2_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load PK2 runner from {PK2_PATH}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+pk2 = load_pk2()
+
+
+def utcnow() -> str:
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
+def sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def array_sha256(value: np.ndarray) -> str:
+    return sha256_bytes(np.ascontiguousarray(value).tobytes())
+
+
+def canonical_json(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def atomic_write_bytes(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_bytes(payload)
+    os.replace(temporary, path)
+
+
+def atomic_write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(text, encoding="utf-8")
+    os.replace(temporary, path)
+
+
+def atomic_json(path: Path, value: Any) -> None:
+    atomic_write_text(path, json.dumps(value, indent=2, sort_keys=True) + "\n")
+
+
+def validate_out_dir(path: Path) -> Path:
+    resolved = path.resolve()
+    allowed = Path("/Volumes/VertigoDataTier/pact/ddm_pk3_20260809")
+    if resolved == allowed or allowed not in resolved.parents:
+        raise ValueError("PK3 evidence must use a versioned directory inside the PK3 SSD root")
+    if resolved == Path("/tmp") or Path("/tmp") in resolved.parents:
+        raise ValueError("PK3 persisted evidence may not use /tmp")
+    return resolved
+
+
+def validate_resume_path(out: Path, resume_from: Path) -> Path:
+    resolved_out = out.resolve()
+    resolved_resume = resume_from.resolve()
+    if resolved_resume == resolved_out or resolved_out not in resolved_resume.parents:
+        raise ValueError("resume-from must be a file inside the arm-specific output directory")
+    return resolved_resume
+
+
+def load_resume_progress_if_valid(
+    resume_path: Path,
+    out: Path,
+) -> dict[str, Any] | None:
+    if not resume_path.is_file():
+        return None
+    progress = json.loads(resume_path.read_text(encoding="utf-8"))
+    if progress.get("schema") != "ddm_pk3_rate_aware_gauge_progress.v4":
+        raise RuntimeError(f"refusing stale resume schema at {resume_path}")
+    if progress.get("runner_sha256") != RUNNER_SOURCE_SHA256_AT_IMPORT:
+        raise RuntimeError(f"resume runner identity drift at {resume_path}")
+    if Path(progress.get("out_dir", "")).resolve() != out.resolve():
+        raise RuntimeError(f"resume output identity drift at {resume_path}")
+    if progress.get("complete"):
+        for field in ("final_receipt", "results"):
+            path = Path(progress[field])
+            expected_sha256 = progress[f"{field}_sha256"]
+            if not path.is_file() or sha256_file(path) != expected_sha256:
+                raise RuntimeError(f"completed resume artifact drift at {path}")
+    return progress
+
+
+def storage_preflight(path: Path, required_free_bytes: int) -> dict[str, Any]:
+    path.mkdir(parents=True, exist_ok=True)
+    stats = os.statvfs(path)
+    free_bytes = int(stats.f_bavail * stats.f_frsize)
+    result = {
+        "path": str(path),
+        "free_bytes": free_bytes,
+        "required_free_bytes": int(required_free_bytes),
+        "passed": free_bytes >= required_free_bytes,
+        "measured_at_utc": utcnow(),
+    }
+    if not result["passed"]:
+        raise RuntimeError(f"storage preflight failed at {path}: {free_bytes} < {required_free_bytes}")
+    return result
+
+
+def copy_pinned_receiver_inputs(retained_root: Path, archive_path: Path) -> dict[str, dict[str, Any]]:
+    source_root = retained_root / "inputs" / f"pr130_runtime_{EXPECTED_INTAKE_COMMIT[:12]}"
+    copied: dict[str, dict[str, Any]] = {}
+    for name, expected_sha256 in EXPECTED_RUNTIME_SHA256.items():
+        source = pk2.PR130_CODE / name
+        payload = source.read_bytes()
+        actual_sha256 = sha256_bytes(payload)
+        if actual_sha256 != expected_sha256:
+            raise RuntimeError(f"unexpected pinned receiver source SHA-256 for {source}: {actual_sha256}")
+        destination = source_root / name
+        if destination.exists() and sha256_file(destination) != expected_sha256:
+            raise RuntimeError(f"refusing drifted existing receiver copy at {destination}")
+        if not destination.exists():
+            atomic_write_bytes(destination, payload)
+        if sha256_file(destination) != expected_sha256:
+            raise RuntimeError(f"copied receiver source drift at {destination}")
+        copied[name] = {
+            "intake_path": str(source),
+            "copied_path": str(destination),
+            "bytes": destination.stat().st_size,
+            "sha256": expected_sha256,
+        }
+    archive_payload = archive_path.read_bytes()
+    archive_sha256 = sha256_bytes(archive_payload)
+    if archive_sha256 != EXPECTED_ARCHIVE_SHA256:
+        raise RuntimeError(f"unexpected baseline archive SHA-256: {archive_sha256}")
+    archive_copy = retained_root / "inputs" / "archive.zip"
+    if archive_copy.exists() and sha256_file(archive_copy) != archive_sha256:
+        raise RuntimeError(f"refusing drifted existing archive copy at {archive_copy}")
+    if not archive_copy.exists():
+        atomic_write_bytes(archive_copy, archive_payload)
+    if archive_copy.stat().st_size != len(archive_payload) or sha256_file(archive_copy) != archive_sha256:
+        raise RuntimeError(f"copied archive failed verification at {archive_copy}")
+    copied["archive.zip"] = {
+        "intake_path": str(archive_path),
+        "copied_path": str(archive_copy),
+        "bytes": archive_copy.stat().st_size,
+        "sha256": archive_sha256,
+    }
+    runner_source = Path(__file__).resolve()
+    runner_payload = runner_source.read_bytes()
+    runner_sha256 = sha256_bytes(runner_payload)
+    if runner_sha256 != RUNNER_SOURCE_SHA256_AT_IMPORT:
+        raise RuntimeError("PK3 runner source changed after module import")
+    runner_copy = retained_root / "inputs" / "pk3_runner.py"
+    if runner_copy.exists() and sha256_file(runner_copy) != runner_sha256:
+        raise RuntimeError(f"refusing drifted existing PK3 runner copy at {runner_copy}")
+    if not runner_copy.exists():
+        atomic_write_bytes(runner_copy, runner_payload)
+    if runner_copy.stat().st_size != len(runner_payload) or sha256_file(runner_copy) != runner_sha256:
+        raise RuntimeError(f"copied PK3 runner failed verification at {runner_copy}")
+    copied["pk3_runner.py"] = {
+        "intake_path": str(runner_source),
+        "copied_path": str(runner_copy),
+        "bytes": runner_copy.stat().st_size,
+        "sha256": runner_sha256,
+    }
+    manifest = {
+        "schema": "ddm_pk3_copied_receiver_inputs.v2",
+        "intake_commit": EXPECTED_INTAKE_COMMIT,
+        "pk3_runner_sha256": runner_sha256,
+        "files": copied,
+    }
+    manifest_path = source_root / "MANIFEST.json"
+    if manifest_path.exists():
+        if json.loads(manifest_path.read_text(encoding="utf-8")) != manifest:
+            raise RuntimeError(f"refusing drifted copied-input manifest at {manifest_path}")
+    else:
+        atomic_json(manifest_path, manifest)
+    return copied
+
+
+def load_copied_receiver_sources(retained_root: Path) -> tuple[Any, Any]:
+    source_root = retained_root / "inputs" / f"pr130_runtime_{EXPECTED_INTAKE_COMMIT[:12]}"
+    if str(source_root) not in sys.path:
+        sys.path.insert(0, str(source_root))
+
+    codec_path = source_root / "carrier_codec.py"
+    codec_spec = importlib.util.spec_from_file_location("carrier_codec", codec_path)
+    if codec_spec is None or codec_spec.loader is None:
+        raise RuntimeError(f"cannot load copied carrier codec from {codec_path}")
+    codec = importlib.util.module_from_spec(codec_spec)
+    sys.modules[codec_spec.name] = codec
+    codec_spec.loader.exec_module(codec)
+
+    inflate_path = source_root / "inflate.py"
+    inflate_spec = importlib.util.spec_from_file_location("ddm_pk3_copied_inflate", inflate_path)
+    if inflate_spec is None or inflate_spec.loader is None:
+        raise RuntimeError(f"cannot load copied inflate runtime from {inflate_path}")
+    inflate = importlib.util.module_from_spec(inflate_spec)
+    sys.modules[inflate_spec.name] = inflate
+    inflate_spec.loader.exec_module(inflate)
+    loaded_paths = {
+        "carrier_codec.py": Path(codec.__file__).resolve(),
+        "inflate.py": Path(inflate.__file__).resolve(),
+    }
+    for module_name in ("hpac_integer", "hpac_integer_sparse", "integer_model_io"):
+        module = sys.modules.get(module_name)
+        if module is None or not getattr(module, "__file__", None):
+            raise RuntimeError(f"copied inflate did not load required module {module_name}")
+        loaded_paths[f"{module_name}.py"] = Path(module.__file__).resolve()
+    for name, loaded_path in loaded_paths.items():
+        expected_path = (source_root / name).resolve()
+        if loaded_path != expected_path:
+            raise RuntimeError(f"receiver module escaped copied runtime: {loaded_path} != {expected_path}")
+        if sha256_file(loaded_path) != EXPECTED_RUNTIME_SHA256[name]:
+            raise RuntimeError(f"loaded copied receiver source drift at {loaded_path}")
+    return codec, inflate
+
+
+@dataclass(frozen=True)
+class GaugeState:
+    candidate_id: str
+    sequence: tuple[dict[str, Any], ...]
+    basis_codes: np.ndarray
+    basis_scales: np.ndarray
+    coefficient_codes: np.ndarray
+    coefficient_scales: np.ndarray
+
+    @property
+    def basis(self) -> np.ndarray:
+        return self.basis_codes.astype(np.float32) * self.basis_scales[:, None, None, None]
+
+    @property
+    def coefficients(self) -> np.ndarray:
+        return self.coefficient_codes.astype(np.float32) * self.coefficient_scales[None]
+
+
+def normalized_basis_tensor(raw_basis: np.ndarray, inflate: Any) -> torch.Tensor:
+    if tuple(raw_basis.shape) != pk2.BASIS_SHAPE:
+        raise ValueError(f"raw basis shape must be {pk2.BASIS_SHAPE}")
+    with torch.inference_mode():
+        tensor = torch.from_numpy(np.ascontiguousarray(raw_basis, dtype=np.float32))
+        normalized = inflate.normalized_basis(tensor).detach().cpu().contiguous()
+    expected_shape = (pk2.DIM, 3, int(inflate.EVAL_H), int(inflate.EVAL_W))
+    if tuple(normalized.shape) != expected_shape or not torch.isfinite(normalized).all():
+        raise RuntimeError("pinned receiver produced an invalid normalized basis")
+    return normalized
+
+
+def centered_bicubic_rms(raw_basis: np.ndarray, inflate: Any) -> np.ndarray:
+    if tuple(raw_basis.shape) != pk2.BASIS_SHAPE:
+        raise ValueError(f"raw basis shape must be {pk2.BASIS_SHAPE}")
+    with torch.inference_mode():
+        tensor = torch.from_numpy(np.ascontiguousarray(raw_basis, dtype=np.float32))
+        upsampled = F.interpolate(
+            tensor,
+            size=(int(inflate.EVAL_H), int(inflate.EVAL_W)),
+            mode="bicubic",
+            align_corners=False,
+        )
+        centered = upsampled - upsampled.mean(dim=(1, 2, 3), keepdim=True)
+        rms = centered.square().mean(dim=(1, 2, 3)).sqrt().clamp_min(1e-5)
+    result = rms.detach().cpu().numpy().astype(np.float64)
+    if result.shape != (pk2.DIM,) or not np.isfinite(result).all():
+        raise RuntimeError("pinned receiver produced invalid basis RMS values")
+    return result
+
+
+def receiver_product_mse_contraction(
+    basis_a: np.ndarray,
+    coefficients_a: np.ndarray,
+    basis_b: np.ndarray,
+    coefficients_b: np.ndarray,
+    inflate: Any,
+    *,
+    normalized_basis_b: torch.Tensor | None = None,
+) -> float:
+    normalized_a = normalized_basis_tensor(basis_a, inflate)
+    normalized_b = normalized_basis_tensor(basis_b, inflate) if normalized_basis_b is None else normalized_basis_b
+    a_basis = np.ascontiguousarray(normalized_a.numpy().reshape(pk2.DIM, -1), dtype=np.float64)
+    b_basis = np.ascontiguousarray(normalized_b.numpy().reshape(pk2.DIM, -1), dtype=np.float64)
+    a_coeff = np.ascontiguousarray(coefficients_a, dtype=np.float64)
+    b_coeff = np.ascontiguousarray(coefficients_b, dtype=np.float64)
+    if a_coeff.shape != (pk2.N, pk2.DIM) or b_coeff.shape != (pk2.N, pk2.DIM):
+        raise ValueError("coefficient arrays must cover the full 600x12 population")
+    a_coeff_gram = np.einsum("ni,nj->ij", a_coeff, a_coeff, optimize=False)
+    b_coeff_gram = np.einsum("ni,nj->ij", b_coeff, b_coeff, optimize=False)
+    cross_coeff_gram = np.einsum("ni,nj->ij", b_coeff, a_coeff, optimize=False)
+    a_basis_gram = np.einsum("ip,jp->ij", a_basis, a_basis, optimize=False)
+    b_basis_gram = np.einsum("ip,jp->ij", b_basis, b_basis, optimize=False)
+    cross_basis_gram = np.einsum("ip,jp->ij", a_basis, b_basis, optimize=False)
+    a_self = np.einsum("ij,ji->", a_coeff_gram, a_basis_gram, optimize=False)
+    b_self = np.einsum("ij,ji->", b_coeff_gram, b_basis_gram, optimize=False)
+    cross = np.einsum("ij,ji->", cross_coeff_gram, cross_basis_gram, optimize=False)
+    if not np.isfinite([a_self, b_self, cross]).all():
+        raise RuntimeError("receiver-product contraction produced a non-finite term")
+    sse = float(a_self + b_self - 2.0 * cross) / pk2.DIM
+    scale = max(abs(float(a_self)), abs(float(b_self)), abs(float(cross)), 1.0) / pk2.DIM
+    tolerance = 1e-11 * scale
+    if sse < -tolerance:
+        raise RuntimeError(f"receiver-product contraction produced negative SSE {sse}")
+    sse = max(0.0, sse)
+    return sse / (pk2.N * a_basis.shape[1])
+
+
+def receiver_product_mse_explicit(
+    basis_a: np.ndarray,
+    coefficients_a: np.ndarray,
+    basis_b: np.ndarray,
+    coefficients_b: np.ndarray,
+    inflate: Any,
+    *,
+    batch_size: int = 8,
+    normalized_basis_b: torch.Tensor | None = None,
+) -> float:
+    if batch_size < 1:
+        raise ValueError("explicit MSE batch size must be positive")
+    normalized_a = normalized_basis_tensor(basis_a, inflate)
+    normalized_b = (
+        normalized_basis_tensor(basis_b, inflate)
+        if normalized_basis_b is None
+        else normalized_basis_b
+    )
+    coefficients_a_tensor = torch.from_numpy(np.ascontiguousarray(coefficients_a, dtype=np.float32))
+    coefficients_b_tensor = torch.from_numpy(np.ascontiguousarray(coefficients_b, dtype=np.float32))
+    sse = 0.0
+    count = 0
+    with torch.inference_mode():
+        for start in range(0, pk2.N, batch_size):
+            end = min(start + batch_size, pk2.N)
+            product_a = torch.einsum("bk,kchw->bchw", coefficients_a_tensor[start:end], normalized_a) / math.sqrt(
+                pk2.DIM
+            )
+            product_b = torch.einsum("bk,kchw->bchw", coefficients_b_tensor[start:end], normalized_b) / math.sqrt(
+                pk2.DIM
+            )
+            delta = product_a - product_b
+            sse += float(delta.double().square().sum().item())
+            count += int(delta.numel())
+    if count != pk2.N * 3 * int(inflate.EVAL_H) * int(inflate.EVAL_W):
+        raise RuntimeError("explicit receiver-product MSE did not cover the full population")
+    return sse / count
+
+
+def sequence_is_algebraic_receiver_gauge(sequence: tuple[dict[str, Any], ...]) -> bool:
+    return all(operation.get("kind") in ALGEBRAIC_RECEIVER_GAUGE_KINDS for operation in sequence)
+
+
+def baseline_state(bundle: Any, codec: Any) -> GaugeState:
+    decoded = codec.decode_compact_carrier(
+        bundle.carrier,
+        basis_count=math.prod(pk2.BASIS_SHAPE),
+        frames=pk2.N,
+        dimensions=pk2.DIM,
+    )
+    return GaugeState(
+        candidate_id="source_cpr1",
+        sequence=(),
+        basis_codes=decoded[1].reshape(pk2.BASIS_SHAPE).astype(np.int32),
+        basis_scales=decoded[0].astype("<f4"),
+        coefficient_codes=pk2.decode_absolute_codes(decoded[3]),
+        coefficient_scales=decoded[2].astype("<f4"),
+    )
+
+
+def state_from_carrier(
+    carrier_path: Path,
+    codec: Any,
+    candidate_id: str,
+    sequence: tuple[dict[str, Any], ...],
+) -> GaugeState:
+    decoded = codec.decode_compact_carrier(
+        carrier_path.read_bytes(),
+        basis_count=math.prod(pk2.BASIS_SHAPE),
+        frames=pk2.N,
+        dimensions=pk2.DIM,
+    )
+    return GaugeState(
+        candidate_id=candidate_id,
+        sequence=sequence,
+        basis_codes=decoded[1].reshape(pk2.BASIS_SHAPE).astype(np.int32),
+        basis_scales=decoded[0].astype("<f4"),
+        coefficient_codes=pk2.decode_absolute_codes(decoded[3]),
+        coefficient_scales=decoded[2].astype("<f4"),
+    )
+
+
+def signed_state(parent: GaugeState, signs: np.ndarray) -> GaugeState:
+    signs = np.asarray(signs, dtype=np.int32)
+    if signs.shape != (pk2.DIM,) or not np.isin(signs, (-1, 1)).all():
+        raise ValueError("sign gauge must contain exactly twelve +/-1 entries")
+    operation = {"kind": "exact_sign", "signs": signs.tolist()}
+    return GaugeState(
+        candidate_id=parent.candidate_id,
+        sequence=(*parent.sequence, operation),
+        basis_codes=parent.basis_codes * signs[:, None, None, None],
+        basis_scales=parent.basis_scales.copy(),
+        coefficient_codes=parent.coefficient_codes * signs[None],
+        coefficient_scales=parent.coefficient_scales.copy(),
+    )
+
+
+def permuted_state(parent: GaugeState, permutation: np.ndarray) -> GaugeState:
+    permutation = np.asarray(permutation, dtype=np.int32)
+    if permutation.shape != (pk2.DIM,) or sorted(permutation.tolist()) != list(range(pk2.DIM)):
+        raise ValueError("permutation gauge must be a bijection over twelve dimensions")
+    operation = {"kind": "exact_permutation", "permutation": permutation.tolist()}
+    return GaugeState(
+        candidate_id=parent.candidate_id,
+        sequence=(*parent.sequence, operation),
+        basis_codes=parent.basis_codes[permutation],
+        basis_scales=parent.basis_scales[permutation],
+        coefficient_codes=parent.coefficient_codes[:, permutation],
+        coefficient_scales=parent.coefficient_scales[permutation],
+    )
+
+
+def scale_state(parent: GaugeState, dimension: int, exponent: int) -> GaugeState:
+    if dimension not in range(pk2.DIM) or exponent == 0:
+        raise ValueError("invalid scale-gauge coordinate")
+    factors = np.ones(pk2.DIM, dtype=np.float64)
+    factors[dimension] = math.ldexp(1.0, exponent)
+    return radial_scale_state(parent, factors, label=f"dimension_{dimension}_exp_{exponent}")
+
+
+def radial_scale_state(
+    parent: GaugeState,
+    factors: np.ndarray,
+    *,
+    label: str,
+) -> GaugeState:
+    factors = np.asarray(factors, dtype=np.float64)
+    if factors.shape != (pk2.DIM,) or not np.isfinite(factors).all() or np.any(factors <= 0.0):
+        raise ValueError("receiver-null radial factors must be twelve finite positive values")
+    basis_scales = (parent.basis_scales.astype(np.float64) * factors).astype("<f4")
+    if not np.isfinite(basis_scales).all() or np.any(basis_scales <= 0.0):
+        raise ValueError("radial gauge produced an invalid basis scale")
+    operation = {
+        "kind": "decoder_dead_radial_scale",
+        "label": label,
+        "factors": factors.tolist(),
+    }
+    return GaugeState(
+        candidate_id=parent.candidate_id,
+        sequence=(*parent.sequence, operation),
+        basis_codes=parent.basis_codes.copy(),
+        basis_scales=basis_scales,
+        coefficient_codes=parent.coefficient_codes.copy(),
+        coefficient_scales=parent.coefficient_scales.copy(),
+    )
+
+
+def dc_shifted_state(parent: GaugeState, shifts: np.ndarray) -> GaugeState:
+    shifts = np.asarray(shifts, dtype=np.int32)
+    if shifts.shape != (pk2.DIM,) or not np.any(shifts):
+        raise ValueError("DC shift gauge must contain twelve integers and change at least one row")
+    basis_codes = parent.basis_codes + shifts[:, None, None, None]
+    if basis_codes.min() < -16 or basis_codes.max() > 15:
+        raise ValueError("DC shift gauge exceeds the signed-int5 code range")
+    operation = {"kind": "exact_dc_shift", "shifts": shifts.tolist()}
+    return GaugeState(
+        candidate_id=parent.candidate_id,
+        sequence=(*parent.sequence, operation),
+        basis_codes=basis_codes.astype(np.int32),
+        basis_scales=parent.basis_scales.copy(),
+        coefficient_codes=parent.coefficient_codes.copy(),
+        coefficient_scales=parent.coefficient_scales.copy(),
+    )
+
+
+def transformed_state(
+    parent: GaugeState,
+    matrix: np.ndarray,
+    operation: dict[str, Any],
+    inflate: Any,
+) -> GaugeState:
+    matrix = np.asarray(matrix, dtype=np.float64)
+    if matrix.shape != (pk2.DIM, pk2.DIM):
+        raise ValueError("gauge matrix must be 12x12")
+    condition = float(np.linalg.cond(matrix))
+    if not math.isfinite(condition) or condition > 4.0:
+        raise ValueError(f"gauge matrix is ill-conditioned: {condition}")
+    inverse = np.linalg.inv(matrix)
+    parent_rms = centered_bicubic_rms(parent.basis, inflate)
+    canonical_basis = parent.basis.astype(np.float64) / parent_rms[:, None, None, None]
+    basis = np.einsum("ij,jchw->ichw", matrix, canonical_basis, optimize=False)
+    mixed_rms = centered_bicubic_rms(basis.astype(np.float32), inflate)
+    if np.any(mixed_rms <= 1e-5):
+        raise ValueError("normalization-aware gauge produced a degenerate basis row")
+    coefficients = (
+        np.einsum(
+            "nd,dk->nk",
+            parent.coefficients.astype(np.float64),
+            inverse,
+            optimize=False,
+        )
+        * mixed_rms[None]
+    )
+    basis_restored, basis_codes, basis_scales = pk2.quantize_basis(basis, 5)
+    coeff_restored, coefficient_codes, coefficient_scales = pk2.quantize_coefficients(coefficients)
+    if basis_restored.shape != pk2.BASIS_SHAPE or coeff_restored.shape != (
+        pk2.N,
+        pk2.DIM,
+    ):
+        raise RuntimeError("quantized gauge produced the wrong full-population shape")
+    operation = {
+        **operation,
+        "condition_number": condition,
+        "matrix_sha256": array_sha256(matrix),
+        "gauge_law": "A'=H*diag(r(A)^-1)*A; C'=C*H^-1*diag(r(A'))",
+        "parent_centered_bicubic_rms": parent_rms.tolist(),
+        "prequant_mixed_centered_bicubic_rms": mixed_rms.tolist(),
+    }
+    return GaugeState(
+        candidate_id=parent.candidate_id,
+        sequence=(*parent.sequence, operation),
+        basis_codes=basis_codes,
+        basis_scales=basis_scales,
+        coefficient_codes=coefficient_codes,
+        coefficient_scales=coefficient_scales,
+    )
+
+
+def givens_matrix(first: int, second: int, angle: float) -> np.ndarray:
+    if not 0 <= first < second < pk2.DIM or angle == 0.0:
+        raise ValueError("invalid Givens coordinate")
+    matrix = np.eye(pk2.DIM, dtype=np.float64)
+    cosine = math.cos(angle)
+    sine = math.sin(angle)
+    matrix[first, first] = cosine
+    matrix[first, second] = -sine
+    matrix[second, first] = sine
+    matrix[second, second] = cosine
+    return matrix
+
+
+def shear_matrix(source: int, destination: int, amount: float) -> np.ndarray:
+    if source == destination or source not in range(pk2.DIM) or destination not in range(pk2.DIM):
+        raise ValueError("invalid shear coordinate")
+    if amount == 0.0:
+        raise ValueError("shear amount must be nonzero")
+    matrix = np.eye(pk2.DIM, dtype=np.float64)
+    matrix[source, destination] = amount
+    return matrix
+
+
+def candidate_identity(stage: str, parent: GaugeState, state: GaugeState) -> str:
+    payload = {
+        "receiver_metric_version": RECEIVER_METRIC_VERSION,
+        "transform_law_version": TRANSFORM_LAW_VERSION,
+        "baseline_archive_sha256": EXPECTED_ARCHIVE_SHA256,
+        "runtime_sha256": EXPECTED_RUNTIME_SHA256,
+        "pk2_runner_sha256": EXPECTED_PK2_RUNNER_SHA256,
+        "pk3_runner_sha256": RUNNER_SOURCE_SHA256_AT_IMPORT,
+        "stage": stage,
+        "parent_candidate_id": parent.candidate_id,
+        "basis_codes_sha256": array_sha256(state.basis_codes),
+        "basis_scales_sha256": array_sha256(state.basis_scales),
+        "coefficient_codes_sha256": array_sha256(state.coefficient_codes),
+        "coefficient_scales_sha256": array_sha256(state.coefficient_scales),
+        "last_operation": state.sequence[-1] if state.sequence else {"kind": "identity"},
+    }
+    return f"{stage}_{sha256_bytes(canonical_json(payload).encode())[:20]}"
+
+
+def verify_retained_candidate(
+    receipt_path: Path,
+    expected_identity: dict[str, Any],
+    candidate_dir: Path,
+) -> dict[str, Any] | None:
+    if not receipt_path.is_file():
+        return None
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    if receipt.get("schema") != "ddm_pk3_rate_aware_gauge_candidate.v3":
+        raise RuntimeError(f"refusing stale candidate receipt schema at {receipt_path}")
+    if receipt.get("identity") != expected_identity:
+        raise RuntimeError(f"candidate identity drift at {receipt_path}")
+    expected_paths = {
+        "carrier": candidate_dir / "carrier.cpr1",
+        "archive": candidate_dir / "archive.zip",
+    }
+    if receipt_path.resolve() != (candidate_dir / "candidate.json").resolve():
+        raise RuntimeError(f"candidate receipt escaped its directory: {receipt_path}")
+    for key, expected_path in expected_paths.items():
+        item = receipt["retained_payloads"][key]
+        path = Path(item["path"])
+        if path.resolve() != expected_path.resolve():
+            raise RuntimeError(f"retained {key} path escaped candidate directory: {path}")
+        if not path.is_file() or path.stat().st_size != item["bytes"] or sha256_file(path) != item["sha256"]:
+            raise RuntimeError(f"retained {key} drift at {path}")
+    return receipt
+
+
+def retain_or_verify_exact_payload(path: Path, payload: bytes, label: str) -> None:
+    expected_sha256 = sha256_bytes(payload)
+    if path.exists():
+        if (
+            not path.is_file()
+            or path.stat().st_size != len(payload)
+            or sha256_file(path) != expected_sha256
+        ):
+            raise RuntimeError(f"refusing drifted retained {label} at {path}")
+        return
+    atomic_write_bytes(path, payload)
+    if path.stat().st_size != len(payload) or sha256_file(path) != expected_sha256:
+        raise RuntimeError(f"newly retained {label} failed verification at {path}")
+
+
+def materialize_candidate(
+    *,
+    stage: str,
+    parent: GaugeState,
+    state: GaugeState,
+    bundle: Any,
+    codec: Any,
+    inflate: Any,
+    baseline: GaugeState,
+    baseline_normalized_basis: torch.Tensor,
+    retained_root: Path,
+) -> dict[str, Any]:
+    candidate_id = candidate_identity(stage, parent, state)
+    candidate_dir = retained_root / "candidates" / candidate_id
+    identity = {
+        "candidate_id": candidate_id,
+        "receiver_metric_version": RECEIVER_METRIC_VERSION,
+        "transform_law_version": TRANSFORM_LAW_VERSION,
+        "baseline_archive_sha256": EXPECTED_ARCHIVE_SHA256,
+        "runtime_sha256": EXPECTED_RUNTIME_SHA256,
+        "pk2_runner_sha256": EXPECTED_PK2_RUNNER_SHA256,
+        "pk3_runner_sha256": RUNNER_SOURCE_SHA256_AT_IMPORT,
+        "stage": stage,
+        "parent_candidate_id": parent.candidate_id,
+        "sequence": list(state.sequence),
+        "basis_codes_sha256": array_sha256(state.basis_codes),
+        "basis_scales_sha256": array_sha256(state.basis_scales),
+        "coefficient_codes_sha256": array_sha256(state.coefficient_codes),
+        "coefficient_scales_sha256": array_sha256(state.coefficient_scales),
+    }
+    receipt_path = candidate_dir / "candidate.json"
+    verify_retained_candidate(receipt_path, identity, candidate_dir)
+
+    carrier = codec.encode_compact_carrier(
+        state.basis_scales,
+        state.basis_codes.reshape(-1),
+        state.coefficient_scales,
+        pk2.encode_absolute_codes(state.coefficient_codes),
+    )
+    carrier_path = candidate_dir / "carrier.cpr1"
+    retain_or_verify_exact_payload(carrier_path, carrier, "carrier")
+    archive = pk2.replace_carrier(bundle, carrier)
+    archive_path = candidate_dir / "archive.zip"
+    retain_or_verify_exact_payload(archive_path, archive, "archive")
+
+    parsed = pk2.extract_bundle(archive_path)
+    if (
+        parsed.carrier != carrier
+        or parsed.semantic != bundle.semantic
+        or parsed.hpac != bundle.hpac
+        or parsed.tokens != bundle.tokens
+    ):
+        raise RuntimeError(f"{candidate_id}: full archive parse-back mismatch")
+    decoded = codec.decode_compact_carrier(
+        parsed.carrier,
+        basis_count=math.prod(pk2.BASIS_SHAPE),
+        frames=pk2.N,
+        dimensions=pk2.DIM,
+    )
+    decoded_basis_codes = decoded[1].reshape(pk2.BASIS_SHAPE).astype(np.int32)
+    decoded_coefficient_codes = pk2.decode_absolute_codes(decoded[3])
+    if not np.array_equal(decoded_basis_codes, state.basis_codes):
+        raise RuntimeError(f"{candidate_id}: Huffman parse-back changed basis codes")
+    if not np.array_equal(decoded_coefficient_codes, state.coefficient_codes):
+        raise RuntimeError(f"{candidate_id}: Rice parse-back changed coefficient codes")
+    if not np.array_equal(decoded[0], state.basis_scales):
+        raise RuntimeError(f"{candidate_id}: CPR1 parse-back changed basis scales")
+    if not np.array_equal(decoded[2], state.coefficient_scales):
+        raise RuntimeError(f"{candidate_id}: CPR1 parse-back changed coefficient scales")
+    semantic_pose = np.asarray([len(bundle.semantic), len(carrier)], dtype="<u4").tobytes() + bundle.semantic + carrier
+    _, inflate_basis, inflate_coefficients = inflate.unpack_semantic_pose(semantic_pose)
+    decoded_basis = decoded_basis_codes.astype(np.float32) * decoded[0][:, None, None, None]
+    decoded_coefficients = decoded_coefficient_codes.astype(np.float32) * decoded[2][None]
+    if not np.array_equal(inflate_basis.numpy(), decoded_basis):
+        raise RuntimeError(f"{candidate_id}: real inflate parser changed basis")
+    if not np.array_equal(inflate_coefficients.numpy(), decoded_coefficients):
+        raise RuntimeError(f"{candidate_id}: real inflate parser changed coefficients")
+    _, basis_bit_count, coefficient_bit_count = codec.HEADER.unpack_from(carrier)
+    raw_stored_factor_mse = pk2.carrier_product_mse(
+        decoded_basis,
+        decoded_coefficients,
+        baseline.basis,
+        baseline.coefficients,
+    )
+    explicit_mse = receiver_product_mse_explicit(
+        decoded_basis,
+        decoded_coefficients,
+        baseline.basis,
+        baseline.coefficients,
+        inflate,
+        normalized_basis_b=baseline_normalized_basis,
+    )
+    contraction_mse = None
+    if not sequence_is_algebraic_receiver_gauge(state.sequence):
+        contraction_mse = receiver_product_mse_contraction(
+            decoded_basis,
+            decoded_coefficients,
+            baseline.basis,
+            baseline.coefficients,
+            inflate,
+            normalized_basis_b=baseline_normalized_basis,
+        )
+        tolerance = max(5e-10, 2e-5 * max(explicit_mse, contraction_mse, 1e-12))
+        if abs(explicit_mse - contraction_mse) > tolerance:
+            raise RuntimeError(
+                f"{candidate_id}: direct and contraction receiver MSE disagree: "
+                f"{explicit_mse} vs {contraction_mse}"
+            )
+    receipt = {
+        "schema": "ddm_pk3_rate_aware_gauge_candidate.v3",
+        "created_at_utc": utcnow(),
+        "axis": AXIS,
+        "score_claim": SCORE_CLAIM,
+        "identity": identity,
+        "population": {
+            "basis_shape": list(pk2.BASIS_SHAPE),
+            "basis_values": int(math.prod(pk2.BASIS_SHAPE)),
+            "coefficient_shape": [pk2.N, pk2.DIM],
+            "coefficient_values": pk2.N * pk2.DIM,
+            "selection_mode": "full_population_no_slice",
+        },
+        "real_coder": {
+            "magic": carrier[:4].decode("ascii"),
+            "basis_coder": "pinned canonical Huffman",
+            "basis_bit_count": int(basis_bit_count),
+            "coefficient_coder": "pinned per-column optimal-k Rice",
+            "coefficient_bit_count": int(coefficient_bit_count),
+            "receiver_parse_back": True,
+            "real_inflate_unpack": True,
+        },
+        "receiver_carrier_product_mse": float(explicit_mse),
+        "receiver_carrier_product_mse_method": (
+            "chunked_direct_fp32_C_at_normalized_basis_div_sqrt12_float64_SSE"
+        ),
+        "receiver_carrier_product_mse_explicit": float(explicit_mse),
+        "receiver_carrier_product_mse_explicit_population_values": (
+            pk2.N * 3 * int(inflate.EVAL_H) * int(inflate.EVAL_W)
+        ),
+        "receiver_carrier_product_mse_gram_crosscheck": (
+            float(contraction_mse) if contraction_mse is not None else None
+        ),
+        "raw_stored_factor_product_mse_non_authority": float(raw_stored_factor_mse),
+        "mse_bar": MSE_BAR,
+        "mse_bar_strict_screen_pass": bool(explicit_mse < MSE_BAR),
+        "mse_bar_strict_explicit_pass": bool(explicit_mse < MSE_BAR),
+        "explicit_validation": {
+            "method": "chunked_direct_fp32_C_at_normalized_basis_div_sqrt12_float64_SSE",
+            "selection_mode": "full_population_no_slice",
+            "basis_shape_after_normalization": [
+                pk2.DIM,
+                3,
+                int(inflate.EVAL_H),
+                int(inflate.EVAL_W),
+            ],
+            "coefficient_shape": [pk2.N, pk2.DIM],
+            "validated_at_utc": utcnow(),
+        },
+        "retained_payloads": {
+            "carrier": {
+                "path": str(carrier_path),
+                "bytes": carrier_path.stat().st_size,
+                "sha256": sha256_file(carrier_path),
+            },
+            "archive": {
+                "path": str(archive_path),
+                "bytes": archive_path.stat().st_size,
+                "sha256": sha256_file(archive_path),
+            },
+        },
+        "decoded_arrays": {
+            "basis_sha256": array_sha256(decoded_basis),
+            "coefficients_sha256": array_sha256(decoded_coefficients),
+        },
+    }
+    atomic_json(receipt_path, receipt)
+    return receipt
+
+
+def explicitly_validate_candidate(
+    receipt: dict[str, Any],
+    codec: Any,
+    inflate: Any,
+    baseline: GaugeState,
+    *,
+    baseline_normalized_basis: torch.Tensor | None = None,
+) -> dict[str, Any]:
+    carrier_path = Path(receipt["retained_payloads"]["carrier"]["path"])
+    state = state_from_carrier(
+        carrier_path,
+        codec,
+        receipt["identity"]["candidate_id"],
+        tuple(receipt["identity"]["sequence"]),
+    )
+    explicit_mse = receiver_product_mse_explicit(
+        state.basis,
+        state.coefficients,
+        baseline.basis,
+        baseline.coefficients,
+        inflate,
+        normalized_basis_b=baseline_normalized_basis,
+    )
+    screen_mse = float(receipt["receiver_carrier_product_mse"])
+    if "gram_contraction" in receipt["receiver_carrier_product_mse_method"]:
+        tolerance = max(1e-12, 2e-6 * max(explicit_mse, screen_mse, 1e-12))
+        if abs(explicit_mse - screen_mse) > tolerance:
+            raise RuntimeError(
+                "explicit receiver-product MSE disagrees with full-population contraction: "
+                f"{explicit_mse} vs {screen_mse}"
+            )
+    receipt = {
+        **receipt,
+        "receiver_carrier_product_mse_explicit": float(explicit_mse),
+        "receiver_carrier_product_mse_explicit_population_values": (
+            pk2.N * 3 * int(inflate.EVAL_H) * int(inflate.EVAL_W)
+        ),
+        "mse_bar_strict_explicit_pass": bool(explicit_mse < MSE_BAR),
+        "explicit_validation": {
+            "method": "chunked_direct_fp32_C_at_normalized_basis_div_sqrt12_float64_SSE",
+            "selection_mode": "full_population_no_slice",
+            "basis_shape_after_normalization": [pk2.DIM, 3, int(inflate.EVAL_H), int(inflate.EVAL_W)],
+            "coefficient_shape": [pk2.N, pk2.DIM],
+            "validated_at_utc": utcnow(),
+        },
+    }
+    receipt_path = carrier_path.parent / "candidate.json"
+    atomic_json(receipt_path, receipt)
+    return receipt
+
+
+def receipt_row(receipt: dict[str, Any], baseline_archive_bytes: int) -> dict[str, Any]:
+    archive_bytes = int(receipt["retained_payloads"]["archive"]["bytes"])
+    explicit_mse = receipt.get("receiver_carrier_product_mse_explicit")
+    return {
+        "candidate_id": receipt["identity"]["candidate_id"],
+        "stage": receipt["identity"]["stage"],
+        "parent_candidate_id": receipt["identity"]["parent_candidate_id"],
+        "last_operation": receipt["identity"]["sequence"][-1]
+        if receipt["identity"]["sequence"]
+        else {"kind": "identity"},
+        "archive_bytes": archive_bytes,
+        "archive_bytes_saved": baseline_archive_bytes - archive_bytes,
+        "archive_sha256": receipt["retained_payloads"]["archive"]["sha256"],
+        "archive_path": receipt["retained_payloads"]["archive"]["path"],
+        "carrier_bytes": int(receipt["retained_payloads"]["carrier"]["bytes"]),
+        "carrier_sha256": receipt["retained_payloads"]["carrier"]["sha256"],
+        "carrier_path": receipt["retained_payloads"]["carrier"]["path"],
+        "basis_bit_count": int(receipt["real_coder"]["basis_bit_count"]),
+        "coefficient_bit_count": int(receipt["real_coder"]["coefficient_bit_count"]),
+        "receiver_carrier_product_mse": float(receipt["receiver_carrier_product_mse"]),
+        "receiver_carrier_product_mse_method": receipt["receiver_carrier_product_mse_method"],
+        "receiver_carrier_product_mse_explicit": (float(explicit_mse) if explicit_mse is not None else None),
+        "raw_stored_factor_product_mse_non_authority": float(receipt["raw_stored_factor_product_mse_non_authority"]),
+        "mse_bar_strict_screen_pass": bool(receipt["mse_bar_strict_screen_pass"]),
+        "mse_bar_strict_explicit_pass": receipt.get("mse_bar_strict_explicit_pass"),
+        "explicitly_validated": explicit_mse is not None,
+        "trigger_pass": bool(
+            baseline_archive_bytes - archive_bytes >= SAVING_BAR_BYTES
+            and explicit_mse is not None
+            and float(explicit_mse) < MSE_BAR
+        ),
+    }
+
+
+def select_best(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    admissible = [row for row in rows if row["mse_bar_strict_screen_pass"]]
+    if not admissible:
+        raise RuntimeError("gauge stage produced no MSE-admissible candidate")
+    return min(
+        admissible,
+        key=lambda row: (
+            row["archive_bytes"],
+            row["receiver_carrier_product_mse"],
+            row["candidate_id"],
+        ),
+    )
+
+
+def load_selected_state(
+    row: dict[str, Any],
+    codec: Any,
+    sequence: tuple[dict[str, Any], ...],
+) -> GaugeState:
+    return state_from_carrier(
+        Path(row["carrier_path"]),
+        codec,
+        row["candidate_id"],
+        sequence,
+    )
+
+
+def stage_checkpoint(
+    out: Path,
+    stage: str,
+    rows: list[dict[str, Any]],
+    selected: dict[str, Any],
+) -> None:
+    atomic_json(
+        out / "checkpoints" / f"stage_{stage}.json",
+        {
+            "schema": "ddm_pk3_rate_aware_gauge_stage.v1",
+            "stage": stage,
+            "completed_at_utc": utcnow(),
+            "candidate_count": len(rows),
+            "selected": selected,
+        },
+    )
+
+
+def run(args: argparse.Namespace) -> int:
+    out = validate_out_dir(args.out_dir)
+    resume_path = validate_resume_path(out, args.resume_from)
+    load_resume_progress_if_valid(resume_path, out)
+    retained = out / "retained"
+    preflight = storage_preflight(out, args.required_free_bytes)
+    archive_sha = sha256_file(args.archive)
+    if archive_sha != EXPECTED_ARCHIVE_SHA256:
+        raise RuntimeError(f"unexpected baseline archive SHA-256: {archive_sha}")
+    intake_commit = subprocess.check_output(["git", "-C", str(pk2.PR130), "rev-parse", "HEAD"], text=True).strip()
+    if intake_commit != EXPECTED_INTAKE_COMMIT:
+        raise RuntimeError(f"unexpected PR130 intake commit: {intake_commit}")
+    pk2_commit = subprocess.check_output(
+        ["git", "log", "-1", "--format=%H", "--", str(PK2_PATH.relative_to(REPO))],
+        cwd=REPO,
+        text=True,
+    ).strip()
+    if pk2_commit != EXPECTED_PK2_COMMIT:
+        raise RuntimeError(f"unexpected PK2 reuse commit: {pk2_commit}")
+    copied_inputs = copy_pinned_receiver_inputs(retained, args.archive)
+    atomic_json(
+        resume_path,
+        {
+            "schema": "ddm_pk3_rate_aware_gauge_progress.v4",
+            "complete": False,
+            "status": "RUNNING",
+            "out_dir": str(out),
+            "runner_sha256": RUNNER_SOURCE_SHA256_AT_IMPORT,
+            "updated_at_utc": utcnow(),
+        },
+    )
+    codec, inflate = load_copied_receiver_sources(retained)
+    copied_archive = Path(copied_inputs["archive.zip"]["copied_path"])
+    bundle = pk2.extract_bundle(copied_archive)
+    baseline = baseline_state(bundle, codec)
+    baseline_normalized_basis = normalized_basis_tensor(baseline.basis, inflate)
+    baseline_archive_bytes = len(bundle.archive_blob)
+    all_rows: list[dict[str, Any]] = []
+
+    control_receipt = materialize_candidate(
+        stage="control",
+        parent=baseline,
+        state=baseline,
+        bundle=bundle,
+        codec=codec,
+        inflate=inflate,
+        baseline=baseline,
+        baseline_normalized_basis=baseline_normalized_basis,
+        retained_root=retained,
+    )
+    control_receipt = explicitly_validate_candidate(
+        control_receipt,
+        codec,
+        inflate,
+        baseline,
+        baseline_normalized_basis=baseline_normalized_basis,
+    )
+    control_row = receipt_row(control_receipt, baseline_archive_bytes)
+    all_rows.append(control_row)
+    if control_row["archive_sha256"] != EXPECTED_ARCHIVE_SHA256:
+        raise RuntimeError("identity gauge did not reproduce the exact source archive")
+    if (
+        control_row["carrier_bytes"] != 23_054
+        or control_row["basis_bit_count"] != 104_135
+        or control_row["coefficient_bit_count"] != 79_076
+        or control_row["receiver_carrier_product_mse_explicit"] != 0.0
+    ):
+        raise RuntimeError("identity control failed frozen carrier anatomy or receiver-MSE sentinels")
+    current = GaugeState(
+        candidate_id=control_row["candidate_id"],
+        sequence=(),
+        basis_codes=baseline.basis_codes,
+        basis_scales=baseline.basis_scales,
+        coefficient_codes=baseline.coefficient_codes,
+        coefficient_scales=baseline.coefficient_scales,
+    )
+
+    def state_key(state: GaugeState) -> tuple[str, str, str, str]:
+        return (
+            array_sha256(state.basis_codes),
+            array_sha256(state.basis_scales),
+            array_sha256(state.coefficient_codes),
+            array_sha256(state.coefficient_scales),
+        )
+
+    seen_states = {state_key(baseline)}
+
+    def materialize_unique(stage: str, parent: GaugeState, state: GaugeState) -> dict[str, Any] | None:
+        key = state_key(state)
+        if key in seen_states:
+            return None
+        seen_states.add(key)
+        receipt = materialize_candidate(
+            stage=stage,
+            parent=parent,
+            state=state,
+            bundle=bundle,
+            codec=codec,
+            inflate=inflate,
+            baseline=baseline,
+            baseline_normalized_basis=baseline_normalized_basis,
+            retained_root=retained,
+        )
+        row = receipt_row(receipt, baseline_archive_bytes)
+        all_rows.append(row)
+        if len(all_rows) > args.max_candidates:
+            raise RuntimeError(f"declared candidate bank exceeded {args.max_candidates} rows")
+        return row
+
+    def advance_stage(
+        stage: str,
+        parent: GaugeState,
+        parent_row: dict[str, Any],
+        rows: list[dict[str, Any]],
+    ) -> tuple[GaugeState, dict[str, Any]]:
+        selected = select_best([parent_row, *rows])
+        stage_checkpoint(out, stage, rows, selected)
+        if selected["candidate_id"] == parent_row["candidate_id"]:
+            return parent, parent_row
+        selected_receipt = json.loads(
+            (Path(selected["carrier_path"]).parent / "candidate.json").read_text(encoding="utf-8")
+        )
+        return (
+            load_selected_state(
+                selected,
+                codec,
+                tuple(selected_receipt["identity"]["sequence"]),
+            ),
+            selected,
+        )
+
+    current_row = control_row
+
+    # E1: every sign coordinate, then the full interaction cube over the six
+    # strongest singleton dimensions plus two global adversarial anchors.
+    parent = current
+    sign_rows: list[dict[str, Any]] = []
+    singleton_sign_rows: list[tuple[int, dict[str, Any]]] = []
+    for dimension in range(pk2.DIM):
+        signs = np.ones(pk2.DIM, dtype=np.int32)
+        signs[dimension] = -1
+        row = materialize_unique("E1_exact_sign", parent, signed_state(parent, signs))
+        if row is not None:
+            sign_rows.append(row)
+            singleton_sign_rows.append((dimension, row))
+    top_sign_dimensions = [
+        dimension
+        for dimension, _ in sorted(
+            singleton_sign_rows,
+            key=lambda item: (
+                item[1]["archive_bytes"],
+                item[1]["candidate_id"],
+            ),
+        )[:6]
+    ]
+    for mask in range(1, 1 << len(top_sign_dimensions)):
+        signs = np.ones(pk2.DIM, dtype=np.int32)
+        for bit, dimension in enumerate(top_sign_dimensions):
+            if mask & (1 << bit):
+                signs[dimension] = -1
+        row = materialize_unique("E1_exact_sign", parent, signed_state(parent, signs))
+        if row is not None:
+            sign_rows.append(row)
+    for dimensions in (
+        tuple(range(pk2.DIM)),
+        tuple(dimension for dimension in range(pk2.DIM) if dimension not in top_sign_dimensions),
+    ):
+        signs = np.ones(pk2.DIM, dtype=np.int32)
+        signs[list(dimensions)] = -1
+        row = materialize_unique("E1_exact_sign", parent, signed_state(parent, signs))
+        if row is not None:
+            sign_rows.append(row)
+    current, current_row = advance_stage("E1_exact_sign", parent, current_row, sign_rows)
+
+    # E2: decoder-null rowwise DC shifts.  Each row is shifted by one constant
+    # across all channels and spatial positions, which the receiver mean removes.
+    parent = current
+    dc_rows: list[dict[str, Any]] = []
+    singleton_dc_rows: list[tuple[int, int, dict[str, Any]]] = []
+    for dimension in range(pk2.DIM):
+        lower = -16 - int(parent.basis_codes[dimension].min())
+        upper = 15 - int(parent.basis_codes[dimension].max())
+        for shift in sorted({-1, 1, lower, upper}):
+            if shift == 0 or shift < lower or shift > upper:
+                continue
+            shifts = np.zeros(pk2.DIM, dtype=np.int32)
+            shifts[dimension] = shift
+            row = materialize_unique("E2_exact_dc_shift", parent, dc_shifted_state(parent, shifts))
+            if row is not None:
+                dc_rows.append(row)
+                singleton_dc_rows.append((dimension, shift, row))
+    best_dc_by_dimension: list[tuple[int, int, dict[str, Any]]] = []
+    for dimension in range(pk2.DIM):
+        candidates = [item for item in singleton_dc_rows if item[0] == dimension]
+        if candidates:
+            best_dc_by_dimension.append(
+                min(candidates, key=lambda item: (item[2]["archive_bytes"], item[2]["candidate_id"]))
+            )
+    top_dc_operations = sorted(
+        best_dc_by_dimension,
+        key=lambda item: (item[2]["archive_bytes"], item[2]["candidate_id"]),
+    )[:4]
+    for mask in range(1, 1 << len(top_dc_operations)):
+        shifts = np.zeros(pk2.DIM, dtype=np.int32)
+        for bit, (dimension, shift, _) in enumerate(top_dc_operations):
+            if mask & (1 << bit):
+                shifts[dimension] = shift
+        row = materialize_unique("E2_exact_dc_shift", parent, dc_shifted_state(parent, shifts))
+        if row is not None:
+            dc_rows.append(row)
+    current, current_row = advance_stage("E2_exact_dc_shift", parent, current_row, dc_rows)
+
+    # E3: every pairwise transposition.  Inner coder totals are invariant; only
+    # the outer XZ/ZIP ordering may change.
+    parent = current
+    permutation_rows: list[dict[str, Any]] = []
+    for first in range(pk2.DIM):
+        for second in range(first + 1, pk2.DIM):
+            permutation = np.arange(pk2.DIM, dtype=np.int32)
+            permutation[first], permutation[second] = permutation[second], permutation[first]
+            row = materialize_unique("E3_exact_permutation", parent, permuted_state(parent, permutation))
+            if row is not None:
+                if (
+                    row["basis_bit_count"] != current_row["basis_bit_count"]
+                    or row["coefficient_bit_count"] != current_row["coefficient_bit_count"]
+                ):
+                    raise RuntimeError("dimension permutation changed an inner coder bit total")
+                permutation_rows.append(row)
+    current, current_row = advance_stage("E3_exact_permutation", parent, current_row, permutation_rows)
+
+    # E4: positive raw-basis radial gauges.  Coefficients are deliberately
+    # unchanged because receiver normalization eliminates basis magnitude.
+    parent = current
+    radial_rows: list[dict[str, Any]] = []
+    scales64 = parent.basis_scales.astype(np.float64)
+    radial_targets = (
+        ("unit_scales", np.ones(pk2.DIM, dtype=np.float64)),
+        ("nearest_power_of_two", np.exp2(np.rint(np.log2(scales64)))),
+        ("common_geometric_mean", np.full(pk2.DIM, np.exp(np.mean(np.log(scales64))))),
+    )
+    for label, target in radial_targets:
+        row = materialize_unique(
+            "E4_decoder_dead_radial",
+            parent,
+            radial_scale_state(parent, target / scales64, label=label),
+        )
+        if row is not None:
+            radial_rows.append(row)
+    current, current_row = advance_stage("E4_decoder_dead_radial", parent, current_row, radial_rows)
+
+    # L1: all pair supports at +/-1/128, followed by a focused refinement of
+    # the eight best supports.  All transforms use the normalization-aware law.
+    parent = current
+    givens_coarse_rows: list[dict[str, Any]] = []
+    rows_by_support: dict[tuple[int, int], list[dict[str, Any]]] = {}
+    for first in range(pk2.DIM):
+        for second in range(first + 1, pk2.DIM):
+            for angle in (-1.0 / 128.0, 1.0 / 128.0):
+                state = transformed_state(
+                    parent,
+                    givens_matrix(first, second, angle),
+                    {
+                        "kind": "normalization_aware_givens",
+                        "first": first,
+                        "second": second,
+                        "angle_radians": angle,
+                    },
+                    inflate,
+                )
+                row = materialize_unique("L1_givens_coarse", parent, state)
+                if row is not None:
+                    givens_coarse_rows.append(row)
+                    rows_by_support.setdefault((first, second), []).append(row)
+    support_representatives = {
+        support: min(
+            rows,
+            key=lambda row: (
+                not row["mse_bar_strict_screen_pass"],
+                row["archive_bytes"],
+                row["receiver_carrier_product_mse"],
+            ),
+        )
+        for support, rows in rows_by_support.items()
+    }
+    ranked_supports = sorted(
+        rows_by_support,
+        key=lambda support: (
+            not support_representatives[support]["mse_bar_strict_screen_pass"],
+            support_representatives[support]["archive_bytes"],
+            support_representatives[support]["receiver_carrier_product_mse"],
+            support,
+        ),
+    )[:8]
+    current, current_row = advance_stage("L1_givens_coarse", parent, current_row, givens_coarse_rows)
+    parent = current
+    givens_refine_rows: list[dict[str, Any]] = []
+    for first, second in ranked_supports:
+        for magnitude in (1.0 / 256.0, 1.0 / 64.0, 1.0 / 32.0):
+            for angle in (-magnitude, magnitude):
+                state = transformed_state(
+                    parent,
+                    givens_matrix(first, second, angle),
+                    {
+                        "kind": "normalization_aware_givens",
+                        "first": first,
+                        "second": second,
+                        "angle_radians": angle,
+                    },
+                    inflate,
+                )
+                row = materialize_unique("L1_givens_refine", parent, state)
+                if row is not None:
+                    givens_refine_rows.append(row)
+    current, current_row = advance_stage("L1_givens_refine", parent, current_row, givens_refine_rows)
+
+    # L2: rank all directed shear supports with a deterministic statistic, then
+    # materialize only the declared top eight directions at eight amplitudes.
+    parent = current
+    delta = np.diff(parent.coefficients.astype(np.float64), axis=0)
+    delta_std = np.maximum(delta.std(axis=0), 1e-12)
+    normalized_parent = normalized_basis_tensor(parent.basis, inflate).numpy().reshape(pk2.DIM, -1)
+    normalized_parent64 = normalized_parent.astype(np.float64)
+    basis_gram = np.einsum("ip,jp->ij", normalized_parent64, normalized_parent64, optimize=False)
+    basis_gram /= normalized_parent.shape[1]
+    shear_screen: list[dict[str, Any]] = []
+    for source in range(pk2.DIM):
+        for destination in range(pk2.DIM):
+            if source == destination:
+                continue
+            correlation = abs(
+                float(
+                    np.mean((delta[:, source] / delta_std[source]) * (delta[:, destination] / delta_std[destination]))
+                )
+            )
+            penalty = abs(float(basis_gram[source, destination]))
+            shear_screen.append(
+                {
+                    "source": source,
+                    "destination": destination,
+                    "coefficient_delta_abs_correlation": correlation,
+                    "basis_gram_abs_penalty": penalty,
+                    "screen_score": correlation - 0.25 * penalty,
+                }
+            )
+    top_shear_directions = sorted(
+        shear_screen,
+        key=lambda item: (-item["screen_score"], item["source"], item["destination"]),
+    )[:8]
+    atomic_json(
+        out / "checkpoints" / "L2_shear_direction_screen.json",
+        {
+            "schema": "ddm_pk3_shear_screen.v1",
+            "non_candidate_screen_only": True,
+            "directions_screened": len(shear_screen),
+            "selected": top_shear_directions,
+        },
+    )
+    shear_rows: list[dict[str, Any]] = []
+    for direction in top_shear_directions:
+        source = int(direction["source"])
+        destination = int(direction["destination"])
+        for magnitude in ANGLE_MAGNITUDES:
+            for amount in (-magnitude, magnitude):
+                state = transformed_state(
+                    parent,
+                    shear_matrix(source, destination, amount),
+                    {
+                        "kind": "normalization_aware_directed_shear",
+                        "source": source,
+                        "destination": destination,
+                        "amount": amount,
+                    },
+                    inflate,
+                )
+                row = materialize_unique("L2_directed_shear", parent, state)
+                if row is not None:
+                    shear_rows.append(row)
+    current, current_row = advance_stage("L2_directed_shear", parent, current_row, shear_rows)
+
+    # L3: two structured global anchors, each approached by a short homotopy.
+    parent = current
+    delta = np.diff(parent.coefficients.astype(np.float64), axis=0)
+    covariance = np.einsum("ni,nj->ij", delta, delta, optimize=False) / delta.shape[0]
+    _, eigenvectors = np.linalg.eigh(covariance)
+    klt = eigenvectors[:, ::-1].T
+    for dimension in range(pk2.DIM):
+        if klt[dimension, dimension] < 0.0:
+            klt[dimension] *= -1.0
+    normalized_parent = normalized_basis_tensor(parent.basis, inflate).numpy().reshape(pk2.DIM, -1)
+    normalized_parent64 = normalized_parent.astype(np.float64)
+    receiver_gram = (
+        np.einsum("ip,jp->ij", normalized_parent64, normalized_parent64, optimize=False) / normalized_parent.shape[1]
+    )
+    eigenvalues, eigenvectors_r = np.linalg.eigh(receiver_gram)
+    eigenvalues = np.maximum(eigenvalues, 1e-8)
+    root = np.einsum(
+        "ik,jk->ij",
+        eigenvectors_r * np.sqrt(eigenvalues)[None],
+        eigenvectors_r,
+        optimize=False,
+    )
+    inverse_root = np.einsum(
+        "ik,jk->ij",
+        eigenvectors_r * (1.0 / np.sqrt(eigenvalues))[None],
+        eigenvectors_r,
+        optimize=False,
+    )
+    r_orthogonal_klt = np.einsum("ij,jk,kl->il", root, klt, inverse_root, optimize=False)
+    if not np.isfinite(r_orthogonal_klt).all():
+        raise RuntimeError("structured receiver-orthogonal transform is non-finite")
+    global_rows: list[dict[str, Any]] = []
+    for family, target in (("delta_klt", klt), ("R_orthogonal_delta_klt", r_orthogonal_klt)):
+        for amount in (1.0 / 64.0, 1.0 / 32.0, 1.0 / 16.0, 1.0 / 8.0):
+            matrix = np.eye(pk2.DIM, dtype=np.float64) + amount * (target - np.eye(pk2.DIM, dtype=np.float64))
+            try:
+                state = transformed_state(
+                    parent,
+                    matrix,
+                    {
+                        "kind": "normalization_aware_global_homotopy",
+                        "family": family,
+                        "amount": amount,
+                    },
+                    inflate,
+                )
+            except ValueError:
+                continue
+            row = materialize_unique("L3_global_homotopy", parent, state)
+            if row is not None:
+                global_rows.append(row)
+    current, current_row = advance_stage("L3_global_homotopy", parent, current_row, global_rows)
+
+    if len(all_rows) > 452 or len(all_rows) != len(seen_states):
+        raise RuntimeError("candidate-bank uniqueness or <=452-row coverage invariant failed")
+
+    # The contraction is a full-population algebraic measurement, but the
+    # charter forbids an analytical estimate from carrying the trigger.  Direct
+    # chunked products therefore validate every possible trigger plus the best
+    # rows globally and per family on the exact parsed arrays.
+    validation_ids = {control_row["candidate_id"]}
+    screen_admissible = sorted(
+        (row for row in all_rows if row["mse_bar_strict_screen_pass"]),
+        key=lambda row: (
+            row["archive_bytes"],
+            row["receiver_carrier_product_mse"],
+            row["candidate_id"],
+        ),
+    )
+    validation_ids.update(row["candidate_id"] for row in screen_admissible[:12])
+    validation_ids.update(
+        row["candidate_id"]
+        for row in all_rows
+        if row["archive_bytes_saved"] >= SAVING_BAR_BYTES and row["mse_bar_strict_screen_pass"]
+    )
+    at_saving_bar = sorted(
+        (row for row in all_rows if row["archive_bytes_saved"] >= SAVING_BAR_BYTES),
+        key=lambda row: (row["receiver_carrier_product_mse"], row["candidate_id"]),
+    )
+    validation_ids.update(row["candidate_id"] for row in at_saving_bar[:3])
+    for stage in sorted({row["stage"] for row in all_rows}):
+        stage_rows = [row for row in all_rows if row["stage"] == stage]
+        representative = min(
+            stage_rows,
+            key=lambda row: (
+                not row["mse_bar_strict_screen_pass"],
+                row["archive_bytes"],
+                row["receiver_carrier_product_mse"],
+                row["candidate_id"],
+            ),
+        )
+        validation_ids.add(representative["candidate_id"])
+
+    validated_by_id: dict[str, dict[str, Any]] = {}
+    for row in all_rows:
+        if row["candidate_id"] not in validation_ids:
+            continue
+        receipt_path = Path(row["carrier_path"]).parent / "candidate.json"
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        receipt = explicitly_validate_candidate(
+            receipt,
+            codec,
+            inflate,
+            baseline,
+            baseline_normalized_basis=baseline_normalized_basis,
+        )
+        validated_by_id[row["candidate_id"]] = receipt_row(receipt, baseline_archive_bytes)
+    all_rows = [validated_by_id.get(row["candidate_id"], row) for row in all_rows]
+
+    explicit_admissible = sorted(
+        (row for row in all_rows if row["mse_bar_strict_explicit_pass"] is True),
+        key=lambda row: (
+            row["archive_bytes"],
+            row["receiver_carrier_product_mse_explicit"],
+            row["candidate_id"],
+        ),
+    )
+    if not explicit_admissible:
+        raise RuntimeError("no explicitly measured candidate satisfied the receiver-MSE bar")
+    best = explicit_admissible[0]
+    best_receipt_path = Path(best["carrier_path"]).parent / "candidate.json"
+    best_receipt = json.loads(best_receipt_path.read_text(encoding="utf-8"))
+    best_state = load_selected_state(
+        best,
+        codec,
+        tuple(best_receipt["identity"]["sequence"]),
+    )
+    repeat_dir = retained / "determinism_repeat" / best["candidate_id"]
+    repeat_carrier = codec.encode_compact_carrier(
+        best_state.basis_scales,
+        best_state.basis_codes.reshape(-1),
+        best_state.coefficient_scales,
+        pk2.encode_absolute_codes(best_state.coefficient_codes),
+    )
+    repeat_carrier_path = repeat_dir / "carrier.repeat.cpr1"
+    atomic_write_bytes(repeat_carrier_path, repeat_carrier)
+    repeat_archive = pk2.replace_carrier(bundle, repeat_carrier)
+    repeat_archive_path = repeat_dir / "archive.repeat.zip"
+    atomic_write_bytes(repeat_archive_path, repeat_archive)
+    if sha256_file(repeat_carrier_path) != best["carrier_sha256"]:
+        raise RuntimeError("selected carrier determinism repeat differs")
+    if sha256_file(repeat_archive_path) != best["archive_sha256"]:
+        raise RuntimeError("selected archive determinism repeat differs")
+
+    trigger_rows = [row for row in all_rows if row["trigger_pass"]]
+    status = "MET" if trigger_rows else "NOT_MET"
+    best_trigger = (
+        min(
+            trigger_rows,
+            key=lambda row: (
+                row["archive_bytes"],
+                row["receiver_carrier_product_mse_explicit"],
+                row["candidate_id"],
+            ),
+        )
+        if trigger_rows
+        else None
+    )
+    closest_saving = max(
+        (row for row in all_rows if row["mse_bar_strict_explicit_pass"] is True),
+        key=lambda row: (
+            row["archive_bytes_saved"],
+            -row["receiver_carrier_product_mse_explicit"],
+        ),
+    )
+    smallest_mse_at_or_above_saving_bar = min(
+        (row for row in all_rows if row["archive_bytes_saved"] >= SAVING_BAR_BYTES and row["explicitly_validated"]),
+        key=lambda row: row["receiver_carrier_product_mse_explicit"],
+        default=None,
+    )
+    rows_path = out / "PK3R_ROWS.jsonl"
+    rows_text = "".join(canonical_json(row) + "\n" for row in all_rows)
+    atomic_write_text(rows_path, rows_text)
+    payload_bytes = (
+        sum(row["archive_bytes"] + row["carrier_bytes"] for row in all_rows)
+        + repeat_archive_path.stat().st_size
+        + repeat_carrier_path.stat().st_size
+    )
+    if sha256_file(Path(__file__)) != RUNNER_SOURCE_SHA256_AT_IMPORT:
+        raise RuntimeError("PK3 runner source changed during the measured run")
+    qat_ticket = None
+    qat_ticket_ref = None
+    future_action = None
+    if status == "MET":
+        assert best_trigger is not None
+        trigger_receipt = json.loads(
+            (Path(best_trigger["carrier_path"]).parent / "candidate.json").read_text(encoding="utf-8")
+        )
+        qat_ticket = {
+            "schema": "ddm_pk3_rate_aware_gauge_qat_ticket.v1",
+            "sealed_at_utc": utcnow(),
+            "training_launched_by_pk3": False,
+            "stable_action": "ddm_pk2_rate_aware_gauge_qat",
+            "new_task_minted": False,
+            "existing_queue_provenance": [
+                {
+                    "line": 106,
+                    "row_id": "00e3384581d8e23b568e0b17544e82c51c3bd8acebb36c2af424f30f6bd64afa",
+                    "block_sha256": "f04289d9feaeb064c3b8d22a83175fc09ae98959e90ec3d2d727993e595429b3",
+                },
+                {
+                    "line": 107,
+                    "row_id": "f72d7b3dafb0365a40319c5081f9bb1c5aacef184b095ff2a06bf21be6a98d20",
+                    "block_sha256": "e10b3de351bad3ef0e92c8f0a5eec820329a05cad5fb8cc7bafb8c851ca9256d",
+                },
+                {
+                    "line": 108,
+                    "row_id": "9b5e901bde2b802e2a81c68465db6cfc45c82b70ac27fce702b9ab1255a3a5a5",
+                    "block_sha256": "f443ac0831ac06e62f69752d6150a15ccc0611f045c0e0e09d82cb78da947acd",
+                },
+            ],
+            "base": copied_inputs,
+            "selected_gauge": {
+                "candidate": best_trigger,
+                "operation_sequence_sha256": sha256_bytes(
+                    canonical_json(trigger_receipt["identity"]["sequence"]).encode()
+                ),
+            },
+            "objective": (
+                "continue from the pinned CPR1 arrays with exact receiver-normalized product "
+                "fidelity and periodic actual Huffman/Rice plus full-archive rate calibration"
+            ),
+            "determinism": {
+                "seed": 20260809,
+                "base_hash_drift": "fail_closed",
+                "resume_state_required": [
+                    "model_or_carrier_parameters",
+                    "optimizer",
+                    "scheduler",
+                    "all_RNG_states",
+                    "sample_order",
+                    "stage_and_step_cursor",
+                    "EMA_shadow_if_used",
+                ],
+                "checkpoints": (
+                    "atomic periodic saves plus distinct preserved stage-final checkpoints; "
+                    "resume must reproduce an uninterrupted byte-close trajectory"
+                ),
+            },
+            "retention": {
+                "root": "/Volumes/VertigoDataTier/pact/ddm_pk3_qat_20260809/retained",
+                "storage_preflight_required": True,
+                "keep_every_materialized_payload": True,
+            },
+            "lane_guard": "claim a non-colliding lane before any launch",
+            "scorer_fire": (
+                "first fire is seeded stratified n120; n600 remains gated on a non-control negative delta-S candidate"
+            ),
+        }
+        qat_ticket_path = retained / "tickets" / "SEALED_QAT_TICKET.json"
+        atomic_json(qat_ticket_path, qat_ticket)
+        qat_ticket_ref = {
+            "path": str(qat_ticket_path),
+            "bytes": qat_ticket_path.stat().st_size,
+            "sha256": sha256_file(qat_ticket_path),
+        }
+        future_action = {
+            "id": "ddm_pk2_rate_aware_gauge_qat",
+            "disposition": "QUEUED_WITH_FIRE_ORDER",
+            "owner": "future PR130 pose-carrier training owner",
+            "consumer_store": ".omx/state/codex_arm_queue.next_if_resumed.jsonl",
+            "fire_trigger": "PK3 MET and sealed QAT ticket base hashes still match",
+            "sealed_ticket": qat_ticket_ref,
+            "new_task_minted": False,
+        }
+    final = {
+        "schema": "ddm_pk3_rate_aware_gauge_preflight.v3",
+        "completed_at_utc": utcnow(),
+        "axis": AXIS,
+        "score_claim": SCORE_CLAIM,
+        "frontier_movement": False,
+        "trigger": {
+            "status": status,
+            "required_archive_bytes_saved": SAVING_BAR_BYTES,
+            "required_receiver_carrier_product_mse_strictly_below": MSE_BAR,
+            "metric_version": RECEIVER_METRIC_VERSION,
+            "same_row_join_required": True,
+            "passing_candidate_count": len(trigger_rows),
+            "best_passing_candidate": best_trigger,
+        },
+        "best_explicit_mse_admissible_candidate": best,
+        "near_bar": {
+            "best_saving_under_mse_bar": closest_saving,
+            "saving_shortfall_bytes": max(0, SAVING_BAR_BYTES - closest_saving["archive_bytes_saved"]),
+            "smallest_explicit_mse_at_or_above_saving_bar": smallest_mse_at_or_above_saving_bar,
+            "mse_excess_at_saving_bar": (
+                max(
+                    0.0,
+                    smallest_mse_at_or_above_saving_bar["receiver_carrier_product_mse_explicit"] - MSE_BAR,
+                )
+                if smallest_mse_at_or_above_saving_bar
+                else None
+            ),
+        },
+        "carrier_anatomy": {
+            "raw_serialized_cpr1_bytes": control_row["carrier_bytes"],
+            "measured_full_archive_leave_one_out_pose_marginal_bytes": 23_384,
+            "relationship": (
+                "23,054 B is the raw CPR1 section; 23,384 B is the distinct measured "
+                "full-archive leave-one-out marginal attributed to pose"
+            ),
+            "basis_bits": control_row["basis_bit_count"],
+            "basis_payload_bytes": math.ceil(control_row["basis_bit_count"] / 8),
+            "coefficient_bits": control_row["coefficient_bit_count"],
+            "coefficient_payload_bytes": math.ceil(control_row["coefficient_bit_count"] / 8),
+            "fixed_prefix_bytes": 152,
+            "saving_bar_fraction_of_carrier": SAVING_BAR_BYTES / control_row["carrier_bytes"],
+            "saving_bar_fraction_of_archive": SAVING_BAR_BYTES / baseline_archive_bytes,
+            "saving_bar_rate_score_units": 25.0 * SAVING_BAR_BYTES / 37_545_489,
+        },
+        "authority_boundary": {
+            "measured": (
+                "Scorer-free full-population CPR1 arrays, actual canonical Huffman and "
+                "per-column Rice serialization, actual full XZ+ZIP archive bytes, parser "
+                "parse-back, pinned receiver normalization, direct "
+                "C@normalized_basis(B)/sqrt(12) MSE for every materialized row, and "
+                "a byte-identical selected-payload repeat."
+            ),
+            "not_measured": (
+                "PoseNet d_pose, SegNet d_seg, exact contest CPU/CUDA score, QAT response, "
+                "rendered uint8 frames, or a retrained carrier."
+            ),
+            "relationship_to_realized_d_pose": {
+                "exact_product_equality": (
+                    "DERIVED only when the direct fp32 receiver products are elementwise equal: "
+                    "unchanged downstream deterministic rendering then preserves frames and d_pose."
+                ),
+                "nonzero_mse": (
+                    "UNMEASURED and unbounded: the 2.5e-6 product-MSE bar is the chartered "
+                    "scorer-free firing gate, not a d_pose estimate."
+                ),
+            },
+        },
+        "verdict_scope": {
+            "type": "INSTANCE_X_DECLARED_SEARCH_SURFACE",
+            "instance": "frozen PR130 archive 0491... and its parsed 12D CPR1 carrier",
+            "included": [
+                "all 600 frames, all 27,648 stored basis values, all 7,200 coefficients",
+                "bounded exact sign and legal global-DC interaction banks",
+                "all 66 pairwise permutations and three positive basis-radial canonicalizations",
+                "all 66 normalization-aware Givens supports at +/-1/128 plus top-eight refinement",
+                "top-eight of 132 deterministically screened directed shears at eight amplitudes",
+                "eight KLT and R-orthogonal KLT near-identity homotopy anchors",
+                "actual real-coder and actual full-archive measurement for every materialized row",
+            ],
+            "excluded": [
+                "exhaustive GL(12) or arbitrary higher-order/global transforms",
+                "QAT, retraining, new wire formats, scorer runs, n120, and n600 exact evaluation",
+            ],
+        },
+        "population": {
+            "basis_shape": list(pk2.BASIS_SHAPE),
+            "basis_values": int(math.prod(pk2.BASIS_SHAPE)),
+            "coefficient_shape": [pk2.N, pk2.DIM],
+            "coefficient_values": pk2.N * pk2.DIM,
+            "receiver_product_values_per_explicit_mse": (pk2.N * 3 * int(inflate.EVAL_H) * int(inflate.EVAL_W)),
+            "selection_mode": "full_population_no_slice",
+        },
+        "search": {
+            "materialized_candidate_count": len(all_rows),
+            "unique_quantized_state_count": len(seen_states),
+            "explicitly_validated_candidate_count": sum(row["explicitly_validated"] for row in all_rows),
+            "control_count": 1,
+            "maximum_preregistered_rows": args.max_candidates,
+            "stage_counts": {
+                stage: sum(row["stage"] == stage for row in all_rows)
+                for stage in sorted({row["stage"] for row in all_rows})
+            },
+            "shear_directions_screened_not_materialized": len(shear_screen),
+            "angle_magnitudes": list(ANGLE_MAGNITUDES),
+            "selection_objective": (
+                "minimum actual full archive bytes subject to receiver-product MSE strictly "
+                "below 2.5e-6; MSE then candidate ID tie-break"
+            ),
+        },
+        "retention": {
+            "rule": "all materialized carrier and archive payloads retained per candidate",
+            "root": str(retained),
+            "recorded_payload_bytes": payload_bytes,
+            "rows": {
+                "path": str(rows_path),
+                "bytes": rows_path.stat().st_size,
+                "sha256": sha256_file(rows_path),
+            },
+            "determinism_repeat": {
+                "carrier": {
+                    "path": str(repeat_carrier_path),
+                    "bytes": repeat_carrier_path.stat().st_size,
+                    "sha256": sha256_file(repeat_carrier_path),
+                },
+                "archive": {
+                    "path": str(repeat_archive_path),
+                    "bytes": repeat_archive_path.stat().st_size,
+                    "sha256": sha256_file(repeat_archive_path),
+                },
+                "byte_identical": True,
+            },
+            "excluded_legacy_raw_product_v1": {
+                "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/retained/candidates",
+                "disposition": "INVALID_FOR_TRIGGER_RAW_PRODUCT_V1_PRESERVED_NOT_COUNTED",
+                "reason": (
+                    "the concurrent pre-correction run used reciprocal coefficient scaling "
+                    "and raw 24x32 C@B MSE; its payloads cannot fire or close PK3"
+                ),
+            },
+            "excluded_warning_bearing_receiver_v2": {
+                "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v2",
+                "disposition": "SUPERSEDED_NUMPY_MATMUL_WARNINGS_PRESERVED_NOT_COUNTED",
+                "reason": (
+                    "the first receiver-aware pass emitted overflow/invalid warnings in "
+                    "NumPy matmul screens; its finite rows were not trusted for the verdict"
+                ),
+            },
+            "excluded_source_unpinned_receiver_v3": {
+                "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v3",
+                "disposition": "SUPERSEDED_SOURCE_IDENTITY_AND_PROSE_AUDIT_PRESERVED_NOT_COUNTED",
+                "reason": (
+                    "the warning-free measurement completed, but candidate cache identities "
+                    "did not bind the PK3 runner source and its RESULTS conflated raw CPR1 "
+                    "bytes with the distinct leave-one-out archive marginal"
+                ),
+            },
+            "excluded_source_drift_receiver_v4": {
+                "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v4",
+                "disposition": "ABORTED_SOURCE_DRIFT_PRESERVED_NOT_COUNTED",
+                "reason": (
+                    "the self-pinned run detected a runner edit before finalization and "
+                    "aborted without issuing a verdict receipt"
+                ),
+            },
+            "excluded_sparse_explicit_receiver_v5": {
+                "path": "/Volumes/VertigoDataTier/pact/ddm_pk3_20260809/receiver_v5",
+                "disposition": "SUPERSEDED_SPARSE_EXPLICIT_MSE_PRESERVED_NOT_COUNTED",
+                "reason": (
+                    "the self-pinned run explicitly measured only verdict-bearing rows; "
+                    "v6 directly measures every candidate as the charter requires"
+                ),
+            },
+            "cleanup": "none; all payloads kept",
+        },
+        "pins_and_reuse": {
+            "copied_inputs": copied_inputs,
+            "runtime_manifest": {
+                "path": str(retained / "inputs" / f"pr130_runtime_{EXPECTED_INTAKE_COMMIT[:12]}" / "MANIFEST.json"),
+                "sha256": sha256_file(
+                    retained / "inputs" / f"pr130_runtime_{EXPECTED_INTAKE_COMMIT[:12]}" / "MANIFEST.json"
+                ),
+            },
+            "intake_commit": intake_commit,
+            "pk2_runner": {
+                "path": str(PK2_PATH),
+                "sha256": sha256_file(PK2_PATH),
+                "commit": pk2_commit,
+                "reused_surfaces": (
+                    "archive extraction/replacement, CPR1 absolute-to-delta lattice coding, "
+                    "and deployment quantizers; PK2 raw-product MSE is diagnostic-only"
+                ),
+            },
+            "charter": {"path": str(CHARTER), "sha256": sha256_file(CHARTER)},
+            "common_contract": {
+                "path": str(COMMON_CONTRACT),
+                "sha256": sha256_file(COMMON_CONTRACT),
+            },
+            "workspace_head_before_pk3_landing": subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], cwd=REPO, text=True
+            ).strip(),
+            "runner_sha256": RUNNER_SOURCE_SHA256_AT_IMPORT,
+            "python": platform.python_version(),
+            "numpy": np.__version__,
+            "torch": torch.__version__,
+        },
+        "storage_preflight": preflight,
+        "recall_evidence": {
+            "bounded_research_query_file_counts": {
+                "ddm_pk2|ddm_pk3|PK2R": 19,
+                "rate-aware|coding-cost-aware": 6,
+                "carrier_codec|CPR1|compact_carrier": 274,
+                "word_boundary_Huffman": 364,
+                "word_boundary_Rice": 87,
+                "basis_scales|coefficient_scales": 3,
+                "gauge_QAT_terms": 8,
+            },
+            "stores_consulted": [
+                ".omx/state/main_hot_state.md",
+                ".omx/state/codex_arm_queue.next_if_resumed.jsonl",
+                ".omx/state/canonical_task_status.jsonl",
+                ".omx/state/harness_tasklist_bridge_20260803.jsonl",
+                ".omx/research/CANONICAL_RESEARCH_INDEX*",
+                ".omx/research/sub015_DAG_*",
+                "tools/list_canonical_equations.py --json",
+                ".omx/research/ddm_pk2_pose_carrier_representation_20260809/",
+                "PR130 carrier_codec.py, inflate.py, and train_pose_carrier_full.py",
+            ],
+            "findings": [
+                "No direct CPR1 rate-aware-gauge equation was found in the bounded canonical registry.",
+                "The DAG has the PR intake FEED-603 node but no bounded PK2/PK3 FEED hit.",
+                "Queue lines 106-108 are provenance duplicates of one stable PK2 future action.",
+                "G110 redundant-scale removal is a different wire/object and transfers no bytes.",
+                "QA70 v4d saved 0 B on a different-object hardest-120 local gauge; no number transferred.",
+                "The legacy-to-CPR1 -3,328 B repack is already spent in this baseline.",
+                "The PR130 trainer has fidelity QAT but no rate term and no bit-faithful optimizer/RNG/cursor resume.",
+                "Receiver normalization at inflate.py:601-607 and application at :640-641 changed the PK3 metric and transform law.",
+            ],
+            "initial_broad_search_disposition": (
+                "discarded; replaced by bounded word and identifier queries with explicit scopes"
+            ),
+            "protected_live_scopes": "ddm_cx2 and ddm_tm1 were not touched",
+        },
+        "commands": {
+            "run": " ".join(sys.argv),
+            "tests": ".venv/bin/python -m pytest -q experiments/tests/test_ddm_pk3_rate_aware_gauge_preflight.py",
+        },
+        "existing_qat_action_disposition": ("QUEUED_WITH_FIRE_ORDER" if status == "MET" else "FOLDED_TRIGGER_FAILED"),
+        "sealed_qat_ticket": qat_ticket_ref,
+        "future_action": future_action,
+        "live_frontier_unchanged": ("PR130 CPR1 S=0.172141297491896447 @191052 B [contest-CUDA, DALI GT, n600]"),
+    }
+    ssd_receipt = out / "FINAL_RECEIPT.json"
+    atomic_json(ssd_receipt, final)
+    durable_final = {
+        **final,
+        "ssd_final_receipt": {
+            "path": str(ssd_receipt),
+            "bytes": ssd_receipt.stat().st_size,
+            "sha256": sha256_file(ssd_receipt),
+        },
+    }
+    RESEARCH_OUT.mkdir(parents=True, exist_ok=True)
+    durable_receipt = RESEARCH_OUT / "FINAL_RECEIPT.json"
+    atomic_json(durable_receipt, durable_final)
+
+    rows_for_table = [control_row, best, closest_saving]
+    if smallest_mse_at_or_above_saving_bar is not None:
+        rows_for_table.append(smallest_mse_at_or_above_saving_bar)
+    for stage in sorted({row["stage"] for row in all_rows}):
+        stage_rows = [row for row in all_rows if row["stage"] == stage and row["explicitly_validated"]]
+        if stage_rows:
+            rows_for_table.append(
+                min(
+                    stage_rows,
+                    key=lambda row: (
+                        row["mse_bar_strict_explicit_pass"] is not True,
+                        row["archive_bytes"],
+                        row["receiver_carrier_product_mse_explicit"],
+                    ),
+                )
+            )
+    unique_rows = {row["candidate_id"]: row for row in rows_for_table if row is not None}
+    table = [
+        "| candidate | stage | carrier B | basis bits | coeff bits | archive B | saved B | receiver MSE | MSE pass | trigger |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---|---|",
+    ]
+    for row in sorted(unique_rows.values(), key=lambda item: (item["archive_bytes"], item["candidate_id"])):
+        table.append(
+            f"| `{row['candidate_id']}` | {row['stage']} | {row['carrier_bytes']} | "
+            f"{row['basis_bit_count']} | {row['coefficient_bit_count']} | "
+            f"{row['archive_bytes']} | {row['archive_bytes_saved']:+d} | "
+            f"{row['receiver_carrier_product_mse_explicit']:.12g} | "
+            f"{'PASS' if row['mse_bar_strict_explicit_pass'] else 'FAIL'} | "
+            f"{'MET' if row['trigger_pass'] else 'NOT MET'} |"
+        )
+    markdown_lines = [
+        "# DDM PK3 rate-aware gauge preflight",
+        "",
+        f"**Trigger: {status}.** All numbers are {AXIS}; `score_claim=false`.",
+        "",
+        *table,
+        "",
+        (
+            f"The best MSE-admissible gauge saved {best['archive_bytes_saved']} full-archive "
+            f"bytes at directly measured receiver-product MSE "
+            f"{best['receiver_carrier_product_mse_explicit']:.12g}. "
+            f"The byte bar was {SAVING_BAR_BYTES} and the strict MSE bar was {MSE_BAR:.12g}."
+        ),
+        (
+            f"All {len(all_rows)} unique materialized candidate rows are in `{rows_path}` "
+            f"(SHA-256 `{sha256_file(rows_path)}`); every row points to its retained CPR1 "
+            "carrier and full archive."
+        ),
+        "",
+        "## Authority boundary",
+        "",
+        (
+            "MEASURED: scorer-free full-population CPR1 arrays; actual Huffman/Rice streams; "
+            "actual full XZ+ZIP archive bytes; parser parse-back; and direct chunked "
+            "`C @ normalized_basis(B) / sqrt(12)` MSE over all "
+            f"{pk2.N * 3 * inflate.EVAL_H * inflate.EVAL_W:,} receiver-product values "
+            "for every materialized candidate row."
+        ),
+        "",
+        "NOT MEASURED: realized d_pose, d_seg, rendered uint8 frames, exact contest score, QAT response, or any retrained carrier. Exact receiver-product equality preserves downstream frames and d_pose by derivation; for nonzero MSE there is no measured or derived d_pose bound. The 2.5e-6 bar is only the chartered scorer-free fire gate.",
+        "",
+        "## RECALL EVIDENCE",
+        "",
+        "Bounded recall covered the canonical equations, canonical indexes, DAG, hot state, task ledgers, queue, PK2 receipts, intake codec/receiver/trainer, G110, QA70 v4d, and AA1/EH1. It found no direct CPR1 rate-aware-gauge equation. G110 is a different wire/object, QA70 is a different-object hardest-120 local 0 B result, and the legacy-to-CPR1 3,328 B saving is already spent; no number transferred. Queue lines 106-108 are provenance duplicates of one stable action, so PK3 did not mint another. The live cx2 and tm1 stores were not touched.",
+        "",
+        "The frozen raw CPR1 section is 23,054 B: 152 B fixed prefix, 104,135 Huffman bits (13,017 B), and 79,076 Rice bits (9,885 B). The charter's 23,384 B is a distinct measured full-archive leave-one-out marginal attributed to pose, not a raw-section size. The trigger remains an actual full-archive delta.",
+        "",
+        "## Boundaries and disposition",
+        "",
+        "The verdict is `INSTANCE × DECLARED_SEARCH_SURFACE`: the frozen PR130 CPR1 carrier and the bounded exact-affine, normalization-aware pairwise, and structured near-identity bank recorded in the receipt. It does not refute arbitrary GL(12), QAT, retraining, or new wires.",
+        (
+            "Because the trigger was NOT MET, the existing QAT action is `FOLDED_TRIGGER_FAILED`; no ticket was created, no scorer or training ran, and the pose-rate reopening is closed on this vehicle only for this pinned instance and declared search surface."
+            if status == "NOT_MET"
+            else "The trigger was MET. PK3 sealed the resumable rate-aware QAT ticket but launched neither training nor a scorer."
+        ),
+        "",
+        "The exact frontier is unchanged: PR130 CPR1 `S=0.172141297491896447 @ 191,052 B [contest-CUDA, DALI GT, n600]`.",
+        "",
+    ]
+    if status == "MET":
+        markdown_lines.extend(
+            [
+                "## NEXT_IF_RESUMED",
+                "",
+                "- `ddm_pk2_rate_aware_gauge_qat`; disposition=QUEUED_WITH_FIRE_ORDER; owner=future PR130 pose-carrier training owner; consumer store=.omx/state/codex_arm_queue.next_if_resumed.jsonl; fire trigger=PK3 MET, sealed ticket present, and all base hashes still match; then run only the resumable rate-aware QAT continuation and its seeded stratified n120 first scorer fire.",
+                "",
+            ]
+        )
+    markdown_lines.extend(
+        [
+            "## LIVE-HYPOTHESES",
+            "",
+            (
+                "- Rate-aware QAT may stabilize the measured passing gauge away from quantizer and code-length boundaries; it is plausible because PK3 supplied a same-row MET witness and a sealed exact-receiver ticket."
+                if status == "MET"
+                else "- A higher-order correctly receiver-normalized global mixing construction outside the declared bank could reshape joint code marginals; it remains plausible because PK2 tested uncorrected raw-space rotations, but it has no fire authority after this NOT-MET gate."
+            ),
+            "",
+            "## DEAD-ENDS",
+            "",
+            "- The preserved `RAW_PRODUCT_V1` run: invalid for the trigger because it used reciprocal coefficient scaling and raw 24x32 `C @ B` MSE.",
+            "- The preserved receiver-v2 run: not used because NumPy matmul emitted overflow/invalid warnings in its screen; v3 remeasured the bank with explicit finite-checked contractions.",
+            "- The preserved receiver-v5 run: superseded because it directly measured only verdict-bearing rows; v6 measures every candidate product explicitly.",
+            "- Reciprocal basis/coefficient scaling: receiver normalization cancels basis magnitude but leaves the coefficient rescaling active, so it is not a gauge.",
+            "- Generic-basis substitution and low-rank coefficient replacement: PK2 already measured them as destructive or larger; PK3 did not repeat them.",
+            "- Bare coder replacement on unchanged pose bytes: the prior real race was +4 B; PK3 changed the gauge and used the incumbent real coders instead.",
+            "- PK2's 64 raw-space random rotations: closed only as that uncorrected implementation; correctly normalized global mixing is not declared dead.",
+            "- The unchanged PR130 QAT runner: it is fidelity-only and lacks optimizer/scheduler/RNG/order/cursor resume state, so it cannot be fired as the required rate-aware resumable continuation.",
+        ]
+    )
+    results_path = RESEARCH_OUT / "RESULTS.md"
+    atomic_write_text(results_path, "\n".join(markdown_lines) + "\n")
+    progress = {
+        "schema": "ddm_pk3_rate_aware_gauge_progress.v4",
+        "complete": True,
+        "status": status,
+        "out_dir": str(out),
+        "runner_sha256": RUNNER_SOURCE_SHA256_AT_IMPORT,
+        "final_receipt": str(durable_receipt),
+        "final_receipt_sha256": sha256_file(durable_receipt),
+        "results": str(results_path),
+        "results_sha256": sha256_file(results_path),
+        "updated_at_utc": utcnow(),
+    }
+    atomic_json(resume_path, progress)
+    atomic_json(out / "checkpoints" / "stage_final.json", progress)
+    print(json.dumps(progress, indent=2, sort_keys=True))
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--archive", type=Path, default=DEFAULT_ARCHIVE)
+    parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT)
+    parser.add_argument(
+        "--resume-from",
+        type=Path,
+        default=DEFAULT_OUT / "progress.json",
+    )
+    parser.add_argument("--required-free-bytes", type=int, default=5_000_000_000)
+    parser.add_argument("--max-candidates", type=int, default=452)
+    parser.set_defaults(func=run)
+    return parser
+
+
+def main() -> int:
+    if DEVELOPMENT_RUN_BLOCKED:
+        raise RuntimeError("PK3 runner is under source review; execution is temporarily blocked")
+    args = build_parser().parse_args()
+    if args.max_candidates < 452:
+        raise ValueError("max-candidates must admit the preregistered <=452-row bank")
+    return int(args.func(args))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

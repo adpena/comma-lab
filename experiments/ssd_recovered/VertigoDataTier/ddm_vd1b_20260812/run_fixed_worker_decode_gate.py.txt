@@ -1,0 +1,140 @@
+from __future__ import annotations
+
+import json
+import os
+import platform
+import threading
+import time
+import traceback
+from datetime import datetime, timezone
+from pathlib import Path
+
+import numpy as np
+import torch
+
+from experiments import ddm_vd1_batch_event_validator_worker as worker
+
+ARCHIVE = Path("/Volumes/VertigoDataTier/pact/ddm_cp135_20260810/adapted_runtime/archive.zip")
+RUNTIME = Path("/Volumes/VertigoDataTier/pact/ddm_cp135_20260810/adapted_runtime")
+CANONICAL_TOKENS = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_cp135_20260810/retained/coders/hp3_step2/"
+    "decoded_spatial_tokens.fresh_rc64.bin"
+)
+ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_vd1b_20260812/fix_no_brotli_detached")
+RETAINED = ROOT / "retained"
+SITE = RETAINED / "runtime_dependencies/brotli/site"
+RECEIPT_PATH = ROOT / "FIXED_WORKER_LOAD_SUCCESS.json"
+FAILURE_PATH = ROOT / "FIXED_WORKER_LOAD_FAILURE.json"
+HEARTBEAT_PATH = ROOT / "ACTIVE_HEARTBEAT.json"
+
+
+def heartbeat(stop: threading.Event, started: float) -> None:
+    while not stop.wait(20.0):
+        payload = {
+            "schema": "ddm_vd1b_fixed_worker_gate_heartbeat.v1",
+            "status": "RUNNING",
+            "elapsed_seconds": time.time() - started,
+            "written_at_utc": datetime.now(timezone.utc).isoformat(),
+        }
+        worker.atomic_json(HEARTBEAT_PATH, payload)
+        print(json.dumps(payload, sort_keys=True), flush=True)
+
+
+def main() -> None:
+    (ROOT / "work").mkdir(parents=True, exist_ok=True)
+    rc64 = worker.compile_rc64(RUNTIME, ROOT / "work")
+    os.environ["CPR1_RC64_LIBRARY"] = str(rc64)
+    original_probe = worker._loaded_brotli_record
+    worker._loaded_brotli_record = (
+        lambda spec: None if str(SITE) not in worker.sys.path else original_probe(spec)
+    )
+    started = time.time()
+    stop_heartbeat = threading.Event()
+    heartbeat_thread = threading.Thread(
+        target=heartbeat, args=(stop_heartbeat, started), daemon=True
+    )
+    heartbeat_thread.start()
+    try:
+        state = worker.load_receiver_state(ARCHIVE, RUNTIME, RETAINED, torch.device("cpu"))
+        tokens = state[4]
+        report = state[-1]
+        expected = np.memmap(
+            CANONICAL_TOKENS,
+            mode="r",
+            dtype=np.uint8,
+            shape=(worker.N_PAIRS, worker.HEIGHT, worker.WIDTH),
+        )
+        byte_equal = np.array_equal(tokens.numpy(), expected)
+        receipt = {
+            "schema": "ddm_vd1b_fixed_worker_real_decode.v1",
+            "status": "PASS",
+            "axis": "[macOS-CPU scorer-free full-n600 adapted-runtime decode]",
+            "archive": worker.file_record(ARCHIVE),
+            "runtime_root": str(RUNTIME),
+            "worker_source": worker.file_record(Path(worker.__file__)),
+            "gate_source": worker.file_record(Path(__file__)),
+            "python": platform.python_version(),
+            "torch": torch.__version__,
+            "device": "cpu",
+            "locked_worker_brotli_initially_available": False,
+            "dependency_bootstrap_status": report["adapted_runtime_dependency"]["status"],
+            "rc64_library": worker.file_record(rc64),
+            "worker_token_payload": report["tokens"],
+            "worker_decoded_token_sha256": report["decoded_token_sha256"],
+            "adapted_runtime_golden_sha256": worker.CP135_DECODED_TOKEN_SHA256,
+            "retained_canonical_token_payload": worker.file_record(CANONICAL_TOKENS),
+            "n600_token_plane_shape": list(tokens.shape),
+            "n600_token_bytes": int(tokens.numel()),
+            "byte_equal_to_retained_canonical_plane": bool(byte_equal),
+            "worker_report": report,
+            "elapsed_seconds": time.time() - started,
+            "written_at_utc": datetime.now(timezone.utc).isoformat(),
+            "scorer_ran": False,
+            "modal_dispatched": False,
+        }
+        if not byte_equal:
+            raise RuntimeError(
+                "patched worker token plane differs from retained canonical CP135 plane"
+            )
+        worker.atomic_json(RECEIPT_PATH, receipt)
+        print(
+            json.dumps(
+                {
+                    "status": receipt["status"],
+                    "decoded_token_sha256": receipt["worker_decoded_token_sha256"],
+                    "byte_equal": byte_equal,
+                    "dependency_bootstrap_status": receipt["dependency_bootstrap_status"],
+                    "elapsed_seconds": receipt["elapsed_seconds"],
+                    "receipt": worker.file_record(RECEIPT_PATH),
+                },
+                indent=2,
+                sort_keys=True,
+            ),
+            flush=True,
+        )
+    except Exception as exc:
+        failure = {
+            "schema": "ddm_vd1b_fixed_worker_real_decode.v1",
+            "status": "FAIL",
+            "axis": "[macOS-CPU scorer-free full-n600 adapted-runtime decode]",
+            "archive": worker.file_record(ARCHIVE),
+            "worker_source": worker.file_record(Path(worker.__file__)),
+            "gate_source": worker.file_record(Path(__file__)),
+            "exception_type": type(exc).__name__,
+            "exception": str(exc),
+            "traceback": traceback.format_exc(),
+            "elapsed_seconds": time.time() - started,
+            "scorer_ran": False,
+            "modal_dispatched": False,
+        }
+        worker.atomic_json(FAILURE_PATH, failure)
+        print(json.dumps(failure, indent=2, sort_keys=True), flush=True)
+        raise
+    finally:
+        stop_heartbeat.set()
+        heartbeat_thread.join(timeout=5.0)
+        worker._loaded_brotli_record = original_probe
+
+
+if __name__ == "__main__":
+    main()

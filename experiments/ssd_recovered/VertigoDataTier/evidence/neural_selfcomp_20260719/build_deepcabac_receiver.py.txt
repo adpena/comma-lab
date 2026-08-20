@@ -1,0 +1,180 @@
+#!/usr/bin/env python3
+"""Build deterministic advisory LVLS1 packets with a DeepCABAC base section.
+
+The generic decoder extension and patched inflate.py live beside archive.zip and
+are Rule-118 FREE.  archive.zip contains only 0.bin, so every video-derived byte
+is measured by the normal deterministic ZIP construction.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import shutil
+import struct
+import zipfile
+from pathlib import Path
+
+
+ROOT = Path("/Volumes/VertigoDataTier/pact/evidence/neural_selfcomp_20260719")
+CANON = Path("/Volumes/VertigoDataTier/pact/yhat_rd_ladder_20260719/prepare")
+BASE_STREAM = ROOT / "deepcabac_donor/base_deepcabac.bin"
+EXTENSION = ROOT / "venv/lib/python3.13/site-packages/deepCABAC.cpython-313-darwin.so"
+OUT = ROOT / "deepcabac_receiver"
+MAGIC = b"LVLS1\x00"
+CODEC = "deepcabac_v1_base"
+
+
+def sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def unpack(raw: bytes) -> tuple[list[bytes], bytes]:
+    if not raw.startswith(MAGIC):
+        raise ValueError("bad LVLS1 magic")
+    off = len(MAGIC)
+    blocks: list[bytes] = []
+    for _ in range(4):
+        if off + 4 > len(raw):
+            raise ValueError("truncated LVLS1 length")
+        (n,) = struct.unpack_from("<I", raw, off)
+        off += 4
+        end = off + n
+        if end > len(raw):
+            raise ValueError("truncated LVLS1 block")
+        blocks.append(raw[off:end])
+        off = end
+    return blocks, raw[off:]
+
+
+def pack(blocks: list[bytes], tail: bytes) -> bytes:
+    out = bytearray(MAGIC)
+    for block in blocks:
+        out += struct.pack("<I", len(block))
+        out += block
+    out += tail
+    return bytes(out)
+
+
+DECODE_SOURCE = r'''
+
+def _decode_base_deepcabac(blob, manifest):
+    """Decode all base tensors; finish() proves exact CABAC consumption."""
+    if (manifest.get("xcodec") or {}).get("p"):
+        raise ValueError("deepcabac_v1_base does not support xcodec base permutation")
+    stream = np.frombuffer(blob, dtype=np.uint8).copy()
+    decoder = deepCABAC.Decoder()
+    decoder.getStream(stream)
+    out = {}
+    for name in manifest["base_param_order"]:
+        qf = np.asarray(decoder.decodeWeights(), dtype=np.float32)
+        expected = tuple(int(x) for x in manifest["base_shapes"][name])
+        if qf.shape != expected:
+            raise ValueError("DeepCABAC shape mismatch for %r: %r != %r" % (name, qf.shape, expected))
+        if not np.all(np.isfinite(qf)) or not np.all(qf == np.rint(qf)):
+            raise ValueError("DeepCABAC returned non-integral/non-finite values for %r" % name)
+        if qf.size and (float(qf.min()) < -128.0 or float(qf.max()) > 127.0):
+            raise ValueError("DeepCABAC int8 range violation for %r" % name)
+        q = qf.astype(np.int8)
+        out[name] = q.astype(np.float32) * float(manifest["base_scales"][name])
+    decoder.finish()
+    return out
+'''
+
+
+def patched_inflate(source: str) -> str:
+    import_anchor = "import torch\n"
+    if source.count(import_anchor) != 1:
+        raise ValueError("inflate import anchor is not unique")
+    source = source.replace(import_anchor, import_anchor + "import deepCABAC\n", 1)
+
+    function_anchor = "\ndef _coords(h, w):\n"
+    if source.count(function_anchor) != 1:
+        raise ValueError("inflate function anchor is not unique")
+    source = source.replace(function_anchor, DECODE_SOURCE + function_anchor, 1)
+
+    old = 'params = _dequant(brotli.decompress(base_b), m["base_param_order"], m["base_shapes"], m["base_scales"], m.get("xcodec"))'
+    new = '(params := _decode_base_deepcabac(base_b, m)) if m.get("payload_codec") == "deepcabac_v1_base" else (params := _dequant(brotli.decompress(base_b), m["base_param_order"], m["base_shapes"], m["base_scales"], m.get("xcodec")))'
+    if source.count(old) != 1:
+        raise ValueError("inflate setup anchor is not unique")
+    return source.replace(old, new, 1)
+
+
+def build_one(name: str, canonical_dir: Path) -> dict[str, object]:
+    out_dir = OUT / name
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    with zipfile.ZipFile(canonical_dir / "archive.zip") as zf:
+        canonical_blob = zf.read("0.bin")
+    blocks, tail = unpack(canonical_blob)
+    manifest = json.loads(blocks[0])
+    canonical_manifest = json.dumps(manifest, separators=(",", ":")).encode("utf-8")
+    if canonical_manifest != blocks[0]:
+        raise ValueError("canonical manifest does not round-trip byte-identically")
+    manifest["payload_codec"] = CODEC
+    blocks[0] = json.dumps(manifest, separators=(",", ":")).encode("utf-8")
+    blocks[1] = BASE_STREAM.read_bytes()
+    blob = pack(blocks, tail)
+    (out_dir / "0.bin").write_bytes(blob)
+
+    info = zipfile.ZipInfo(filename="0.bin", date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.external_attr = 0o644 << 16
+    with zipfile.ZipFile(out_dir / "archive.zip", "w") as zf:
+        zf.writestr(info, blob)
+
+    source = (canonical_dir / "inflate.py").read_text()
+    (out_dir / "inflate.py").write_text(patched_inflate(source))
+    shutil.copy2(EXTENSION, out_dir / EXTENSION.name)
+
+    return {
+        "name": name,
+        "canonical_archive": str(canonical_dir / "archive.zip"),
+        "canonical_archive_bytes": (canonical_dir / "archive.zip").stat().st_size,
+        "canonical_blob_bytes": len(canonical_blob),
+        "archive": str(out_dir / "archive.zip"),
+        "archive_bytes": (out_dir / "archive.zip").stat().st_size,
+        "archive_sha256": sha256(out_dir / "archive.zip"),
+        "blob_bytes": len(blob),
+        "blob_sha256": sha256(out_dir / "0.bin"),
+        "manifest_bytes": len(blocks[0]),
+        "base_deepcabac_bytes": len(blocks[1]),
+        "code_brotli_bytes": len(blocks[2]),
+        "pose_bytes": len(blocks[3]),
+        "trailing_bytes": len(tail),
+        "inflate_sha256": sha256(out_dir / "inflate.py"),
+        "decoder_binary": str(out_dir / EXTENSION.name),
+        "decoder_binary_bytes": (out_dir / EXTENSION.name).stat().st_size,
+        "decoder_binary_sha256": sha256(out_dir / EXTENSION.name),
+        "decoder_binary_rule118": "FREE generic decoder; outside archive.zip",
+    }
+
+
+def main() -> None:
+    if not BASE_STREAM.is_file() or not EXTENSION.is_file():
+        raise FileNotFoundError("DeepCABAC stream/extension missing")
+    OUT.mkdir(parents=True, exist_ok=True)
+    receipt = {
+        "schema": "neural_selfcomp.deepcabac_receiver_build.v1",
+        "codec": CODEC,
+        "source": {
+            "deepcabac_commit": "6a1346875abf1d8d0a45cbe7bcdedeac167cd3cd",
+            "base_stream_sha256": sha256(BASE_STREAM),
+            "builder_sha256": sha256(Path(__file__)),
+        },
+        "packets": [
+            build_one("full_n600", CANON / "full_n600_packet"),
+            build_one("selected_n24", CANON / "selected_n24_packet"),
+        ],
+    }
+    path = OUT / "build_receipt.json"
+    path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+    print(json.dumps(receipt, indent=2, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

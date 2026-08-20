@@ -1,0 +1,42 @@
+"""Staged-runtime-tree hygiene for DDM-CK1 generations.
+
+Shared by the builder, the parse-back verifier, and the fire-order writer so
+the cure lives in one place and every stage leaves the tree in the state the
+advisory row must consume.
+"""
+
+from __future__ import annotations
+
+import shutil
+from pathlib import Path
+
+
+def find_import_residue(root: Path) -> list[str]:
+    return sorted(
+        [str(p) for p in root.rglob("._*")] + [str(p) for p in root.rglob("__pycache__")]
+    )
+
+
+def strip_import_residue(root: Path) -> list[str]:
+    """Remove ExFAT AppleDouble twins and bytecode caches from a runtime tree.
+
+    Every copy2/write onto ExFAT materializes a ``._name`` sidecar.
+    ``contest_auth_eval.py`` walks the runtime tree and AST-parses what looks
+    like a Python file, so a ``._module.py`` twin kills the run seconds after
+    launch -- the sa3 incident, 36 files.  Stripping touches only the sidecars:
+    archive bytes and SHA-256 are unchanged.
+    """
+
+    removed: list[str] = []
+    for stray in sorted(root.rglob("._*")):
+        if stray.is_file():
+            stray.unlink()
+            removed.append(str(stray))
+    for cache in sorted(root.rglob("__pycache__")):
+        if cache.is_dir():
+            shutil.rmtree(cache)
+            removed.append(str(cache))
+    residue = find_import_residue(root)
+    if residue:
+        raise SystemExit(f"staged tree still carries import residue: {residue}")
+    return removed

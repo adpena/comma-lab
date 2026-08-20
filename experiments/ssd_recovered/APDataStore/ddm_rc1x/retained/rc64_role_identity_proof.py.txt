@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+"""Semantic-identity proof for the two rc64 ROLE bodies.
+
+The pq2 rebuild recipe pins ONE rc64 sha.  There are in fact TWO roles:
+
+  ENCODER role   12,222 B  sha 5c75e2c7...  encoder + decoder, extended at build
+                                            time with the checkpoint/resume block
+                                            into the 14,825 B rc64_backend_checkpoint.c
+  SHIPPED role    5,638 B  sha 05839d14...  decoder ONLY; the member the archive
+                                            actually carries at runtime/entropy/
+
+Leg 1  the ENCODER-role body is exactly recoverable from the pipeline's own retained
+       derived checkpoint file, and regenerating that file reproduces it byte-identically.
+Leg 2  the SHIPPED decoder recovers the ENCODER's payload symbol-for-symbol.
+Leg 2b positive control: the ENCODER body's own decoder over the identical path.
+Leg 3  negative control: one flipped payload bit must break the round-trip.
+"""
+from __future__ import annotations
+
+import ctypes
+import hashlib
+import importlib.util
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+import numpy as np
+
+REPO = Path("/Users/adpena/Projects/pact")
+CUSTODY = Path("/Volumes/APDataStore/pact/ddm_rc1x")
+WORK = CUSTODY / "work"
+WORK.mkdir(parents=True, exist_ok=True)
+
+ENC_SRC = CUSTODY / "retained" / "rc64_backend_encoder_role.c"
+SHIP_SRC = CUSTODY / "retained" / "rc64_backend_shipped_receiver_role.c"
+RETAINED_CHECKPOINT = Path(
+    "/Volumes/APDataStore/pact/ddm_pq2/e2e_smoke/work/rc64_backend_checkpoint.c"
+)
+
+spec = importlib.util.spec_from_file_location(
+    "route_b", REPO / "experiments/ddm_rc64p_native_cpu_decode/route_b_rc64.py"
+)
+route_b = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(route_b)
+
+U8P = ctypes.POINTER(ctypes.c_uint8)
+
+
+def sha(b: bytes) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+
+def cc(source: Path, out: Path) -> list[str]:
+    argv = [
+        "/usr/bin/cc", "-O3", "-std=c11", "-shared", "-fPIC",
+        "-ffp-contract=off", "-fno-fast-math", str(source), "-o", str(out),
+    ]
+    subprocess.run(argv, check=True)
+    return argv
+
+
+def decode_with(library_path: Path, raw: bytes, probs: np.ndarray) -> tuple[int, np.ndarray]:
+    """Decode `raw` under `library_path` -- the SAME path for every library."""
+    lib = ctypes.CDLL(str(Path(library_path).resolve()))
+    lib.rc64_decoder_create.argtypes = [U8P, ctypes.c_size_t]
+    lib.rc64_decoder_create.restype = ctypes.c_void_p
+    lib.rc64_decoder_destroy.argtypes = [ctypes.c_void_p]
+    lib.rc64_decoder_decode_probabilities.argtypes = [
+        ctypes.c_void_p, ctypes.POINTER(ctypes.c_float),
+        ctypes.c_size_t, ctypes.POINTER(ctypes.c_int32),
+    ]
+    lib.rc64_decoder_decode_probabilities.restype = ctypes.c_int
+    buffer = (ctypes.c_uint8 * len(raw)).from_buffer_copy(raw)
+    context = lib.rc64_decoder_create(ctypes.cast(buffer, U8P), ctypes.c_size_t(len(raw)))
+    if not context:
+        return -128, np.full(len(probs), -1, dtype=np.int32)
+    out = np.zeros(len(probs), dtype=np.int32)
+    status = lib.rc64_decoder_decode_probabilities(
+        ctypes.c_void_p(context),
+        probs.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
+        ctypes.c_size_t(len(probs)),
+        out.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)),
+    )
+    lib.rc64_decoder_destroy(ctypes.c_void_p(context))
+    return int(status), out
+
+
+def report(status: int, out: np.ndarray, truth: np.ndarray) -> dict[str, object]:
+    mismatch = out != truth
+    return {
+        "decode_status": int(status),
+        "symbols_recovered_exactly": bool(status == 0 and not mismatch.any()),
+        "mismatches": int(mismatch.sum()),
+        "first_mismatch_index": int(np.argmax(mismatch)) if mismatch.any() else None,
+    }
+
+
+result: dict[str, object] = {"schema": "pact.rc1x.rc64_role_identity.v1"}
+
+# ---- Leg 1 -----------------------------------------------------------------
+ext = ("\n" + route_b.RC64_CHECKPOINT_EXTENSION).encode()
+generated = ENC_SRC.read_bytes() + ext
+gen_path = WORK / "rc64_backend_checkpoint.regenerated.c"
+gen_path.write_bytes(generated)
+retained = RETAINED_CHECKPOINT.read_bytes()
+result["leg1_encoder_source_reconstruction"] = {
+    "encoder_role_source_sha256": sha(ENC_SRC.read_bytes()),
+    "encoder_role_source_bytes": ENC_SRC.stat().st_size,
+    "shipped_role_source_sha256": sha(SHIP_SRC.read_bytes()),
+    "shipped_role_source_bytes": SHIP_SRC.stat().st_size,
+    "checkpoint_extension_bytes": len(ext),
+    "regenerated_checkpoint_sha256": sha(generated),
+    "retained_checkpoint_sha256": sha(retained),
+    "retained_checkpoint_path": str(RETAINED_CHECKPOINT),
+    "byte_identical": generated == retained,
+}
+
+enc_lib = WORK / "librc64_encoder_role.dylib"
+ship_lib = WORK / "librc64_shipped_role.dylib"
+result["compile"] = {
+    "encoder_argv": cc(gen_path, enc_lib),
+    "shipped_argv": cc(SHIP_SRC, ship_lib),
+    "encoder_library_sha256": sha(enc_lib.read_bytes()),
+    "shipped_library_sha256": sha(ship_lib.read_bytes()),
+}
+
+# ---- the shared corpus -----------------------------------------------------
+rng = np.random.default_rng(1234)
+N = 20000
+logits = rng.normal(0.0, 3.0, size=(N, 5))
+logits -= logits.max(axis=1, keepdims=True)
+probabilities = np.exp(logits)
+probabilities /= probabilities.sum(axis=1, keepdims=True)
+probabilities = probabilities.astype(np.float32)
+probabilities = np.ascontiguousarray(
+    probabilities / probabilities.astype(np.float64).sum(axis=1, keepdims=True),
+    dtype=np.float32,
+)
+cum = probabilities.astype(np.float64).cumsum(axis=1)
+symbols = (rng.random(N)[:, None] > cum).sum(axis=1).clip(0, 4).astype(np.int32)
+
+encoder = route_b.NativeRc64Encoder(enc_lib)
+encoder.encode(symbols, probabilities)
+payload = encoder.finish()
+encoder.close()
+if not payload.startswith(route_b.TOKEN_MAGIC):
+    raise SystemExit("encoder payload lacks its TOKEN_MAGIC framing")
+raw = payload[len(route_b.TOKEN_MAGIC):]
+
+result["payload"] = {
+    "symbols": int(N),
+    "payload_bytes": len(payload),
+    "framed_magic_bytes": len(route_b.TOKEN_MAGIC),
+    "coded_bytes": len(raw),
+    "payload_sha256": sha(payload),
+    "bits_per_symbol": 8.0 * len(raw) / N,
+}
+
+# ---- Leg 2 / 2b / 3 --------------------------------------------------------
+result["leg2_shipped_decoder"] = report(*decode_with(ship_lib, raw, probabilities), symbols)
+result["leg2b_positive_control_encoder_own_decoder"] = report(
+    *decode_with(enc_lib, raw, probabilities), symbols
+)
+bad = bytearray(raw)
+bad[len(bad) // 2] ^= 0x01
+result["leg3_negative_control_one_flipped_bit"] = report(
+    *decode_with(ship_lib, bytes(bad), probabilities), symbols
+)
+
+result["verdict"] = {
+    "encoder_source_recoverable_exactly": result["leg1_encoder_source_reconstruction"]["byte_identical"],
+    "positive_control_passes": result["leg2b_positive_control_encoder_own_decoder"]["symbols_recovered_exactly"],
+    "shipped_decoder_decodes_encoder_output": result["leg2_shipped_decoder"]["symbols_recovered_exactly"],
+    "negative_control_refuses": not result["leg3_negative_control_one_flipped_bit"]["symbols_recovered_exactly"],
+}
+print(json.dumps(result, indent=2, sort_keys=True))
+(CUSTODY / "RC64_ROLE_IDENTITY_PROOF.json").write_text(
+    json.dumps(result, indent=2, sort_keys=True)
+)
+sys.exit(0 if all(result["verdict"].values()) else 1)

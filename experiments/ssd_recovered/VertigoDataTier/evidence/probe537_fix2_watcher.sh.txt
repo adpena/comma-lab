@@ -1,0 +1,16 @@
+#!/bin/bash
+R=/Volumes/VertigoDataTier/pact/evidence/probe537_metal_fix2_20260719_receipt.json
+W=/Volumes/VertigoDataTier/pact/evidence/probe537_fix2_watch.log
+PID=$(cat /Volumes/VertigoDataTier/pact/evidence/probe537_fix2_launch/run.pid 2>/dev/null)
+while true; do
+  if [ -f "$R" ]; then
+    AP=$(/usr/bin/python3 -c "import json;print(json.load(open('$R')).get('all_pass'))" 2>/dev/null || echo parse-failed)
+    echo "DONE fix2 receipt all_pass=$AP" >> "$W"; break
+  fi
+  if [ -n "$PID" ] && ! kill -0 "$PID" 2>/dev/null; then
+    sleep 5
+    AP=$([ -f "$R" ] && /usr/bin/python3 -c "import json;print(json.load(open('$R')).get('all_pass'))" 2>/dev/null || echo NONE)
+    echo "DONE fix2 exited all_pass=$AP logtail: $(tail -2 /Volumes/VertigoDataTier/pact/evidence/probe537_fix2_launch/run.log 2>/dev/null | tr '\n' ' ' | cut -c1-200)" >> "$W"; break
+  fi
+  sleep 20
+done

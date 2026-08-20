@@ -1,0 +1,67 @@
+import sys, json, zipfile
+from pathlib import Path
+from collections import OrderedDict
+import numpy as np, torch
+RT="/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime"
+sys.path.insert(0, RT); sys.path.insert(0, RT+"/cpr1"); sys.path.insert(0,"/Users/adpena/Projects/pact/experiments")
+torch.set_num_threads(4); torch.set_grad_enabled(False)
+import runtime.residual_archive as ra
+import ddm_sd1_semantic_rd_curve as sd1
+import ddm_sm3_semantic_representation as sm3
+import ddm_mp2_semantic_receiver as mp2
+import inflate as cpr1
+
+TOK=Path("/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/parseback/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8")
+toks=np.memmap(TOK,dtype=np.uint8,mode="r").reshape(600,384,512)
+rng=np.random.default_rng(20260817)
+SAMPLE=np.sort(rng.choice(600,size=24,replace=False))
+print("seeded RANDOM pair sample (n=24):", SAMPLE.tolist())
+
+parts=ra.read_residual_archive(Path(RT)/"archive.zip")
+recs=ra.decode_wans1(parts.semantic_blob)
+state=OrderedDict((r.schema.name, torch.from_numpy(np.ascontiguousarray(r.values,dtype=np.float32))) for r in recs)
+qn=sd1.quantized_names(state)
+
+def render(st):
+    m=cpr1.SemanticTokenRenderer(96); m.load_state_dict(st,strict=True); m.eval()
+    out=[]
+    for i in SAMPLE:
+        t=torch.from_numpy(np.ascontiguousarray(toks[i])).long().unsqueeze(0)
+        p=torch.tensor([int(i)],dtype=torch.long)
+        out.append(m(t,p)[0].numpy().astype(np.float32))
+    return np.stack(out)
+
+base=render(state)
+print(f"baseline render: shape {base.shape} range [{base.min():.2f},{base.max():.2f}] mean {base.mean():.2f}\n")
+
+DEAD_PW=["blocks.2.pw.weight","blocks.3.pw.weight"]; DEAD_FILM=["blocks.2.film.weight","blocks.3.film.weight"]
+LIVE_PW=["blocks.0.pw.weight","blocks.1.pw.weight"]; DW=[f"blocks.{i}.dw.weight" for i in range(4)]
+LIVE_FILM=["blocks.0.film.weight","blocks.1.film.weight"]
+ALLOC={
+ "V0_all_q4_control":{},
+ "V1_dead_pw_q2":{n:2 for n in DEAD_PW},
+ "V2_dead_pw_film_q2":{**{n:2 for n in DEAD_PW+DEAD_FILM}},
+ "V3_V2_plus_livepw_q3":{**{n:2 for n in DEAD_PW+DEAD_FILM},**{n:3 for n in LIVE_PW}},
+ "V4_V3_plus_coordmix_head_q3":{**{n:2 for n in DEAD_PW+DEAD_FILM},**{n:3 for n in LIVE_PW+["coord_mix.weight","head.weight"]}},
+ "V6_V5_plus_dw_q3":{**{n:2 for n in DEAD_PW+DEAD_FILM},**{n:3 for n in LIVE_PW+["coord_mix.weight","head.weight"]+LIVE_FILM+DW}},
+ "V7_V6_livepw_q2":{**{n:2 for n in DEAD_PW+DEAD_FILM+LIVE_PW},**{n:3 for n in ["coord_mix.weight","head.weight"]+LIVE_FILM+DW}},
+ "C1_mz2_mixed_q3q4":{n:3 for n in sm3.SELECTED_MIXED_Q3_NAMES},
+}
+rows=[]
+for cid,over in ALLOC.items():
+    a={n:int(over.get(n,4)) for n in qn}
+    _,exp=sd1.pack_semantic_state(state,a,legacy_int4=False)
+    r=render(OrderedDict((k,exp[k].float()) for k in state))
+    d=np.abs(r-base)
+    rows.append(dict(id=cid,fam="SD1M",rgb_max=float(d.max()),rgb_rms=float(np.sqrt((d**2).mean())),
+        rgb_p999=float(np.percentile(d,99.9)),frac_gt1=float((d>1.0).mean()),frac_gt4=float((d>4.0).mean())))
+for pct in (87,50,25,12,1):
+    _,exp,_=sm3.pack_prune_candidate(state,pct)
+    r=render(OrderedDict((k,exp[k].float()) for k in state))
+    d=np.abs(r-base)
+    rows.append(dict(id=f"sm3r_keep{pct:02d}",fam="SM3R",rgb_max=float(d.max()),rgb_rms=float(np.sqrt((d**2).mean())),
+        rgb_p999=float(np.percentile(d,99.9)),frac_gt1=float((d>1.0).mean()),frac_gt4=float((d>4.0).mean())))
+print(f"{'id':30s} {'fam':6s} {'RGBrms':>9} {'RGBp99.9':>9} {'RGBmax':>9} {'%>1':>8} {'%>4':>8}")
+for r in rows:
+    print(f"{r['id']:30s} {r['fam']:6s} {r['rgb_rms']:>9.4f} {r['rgb_p999']:>9.3f} {r['rgb_max']:>9.3f} {100*r['frac_gt1']:>7.3f}% {100*r['frac_gt4']:>7.4f}%")
+Path("/private/tmp/claude-501/-Users-adpena-Projects-pact/89ff112f-013d-43b5-b949-2a6d43b650c3/scratchpad/sa1/render_delta.json").write_text(json.dumps({"sample":SAMPLE.tolist(),"rows":rows},indent=2))

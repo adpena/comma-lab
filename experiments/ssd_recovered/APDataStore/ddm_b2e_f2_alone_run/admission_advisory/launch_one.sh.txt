@@ -1,0 +1,46 @@
+#!/bin/bash
+# One retained macOS-CPU advisory n600 row for a b2e admission candidate.
+# Axis: [macOS-CPU advisory].  Never a score.
+set -uo pipefail
+
+CID="${1:?candidate id required}"
+REPO=/Users/adpena/Projects/pact
+RUN=/Volumes/APDataStore/pact/ddm_b2e_f2_alone_run
+ATT="$RUN/admission_advisory/$CID/attempt_0000"
+STAGE="$ATT/wc1_advisory_generation"
+MIRROR=/Volumes/APDataStore/pact/upstream_eval_mirror_20260815
+WC1=/Volumes/APDataStore/pact/ddm_wc1_advisory_decode_wallclock_20260815
+SHIM=/Volumes/APDataStore/pact/ddm_wd2_width_distillation/python_shim_bin
+
+/usr/bin/find "$STAGE" -name '._*' -delete 2>/dev/null || true
+/usr/bin/find "$RUN/admission_archives/generations/$CID" -name '._*' -delete 2>/dev/null || true
+/usr/bin/find "$MIRROR" -name '._*' -delete 2>/dev/null || true
+mkdir -p "$ATT/work"
+
+export PATH="$SHIM:$PATH"
+export PYTHONDONTWRITEBYTECODE=1
+export F26_TOKEN_DECODER=native-hpac
+export F26_HPAC_NATIVE_LIBRARY="$WC1/retained/native/f26_hpac_native_optimized.so"
+export F26_ADVISORY_DECODE_CACHE_ROOT="$WC1/cache/tokens"
+export F26_ADVISORY_RENDER_WORKERS=auto
+export F26_ADVISORY_RENDER_RSS_BYTES=2473066496
+
+exec "$REPO/.venv/bin/python" "$REPO/tools/safe_run.py" \
+  --rss-mb 16384 \
+  --timeout 14400 \
+  --label "b2e_adv_${CID}" \
+  --status-receipt "$ATT/safe_run_status.json" \
+  --child-pidfile "$ATT/child.pid" \
+  -- \
+  "$REPO/.venv/bin/python" "$REPO/experiments/contest_auth_eval.py" \
+    --archive "$STAGE/archive.zip" \
+    --inflate-sh "$STAGE/inflate.sh" \
+    --upstream-dir "$MIRROR" \
+    --video-names-file "$MIRROR/public_test_video_names.txt" \
+    --device cpu \
+    --inflate-device cpu \
+    --work-dir "$ATT/work" \
+    --keep-work-dir \
+    --json-out "$ATT/contest_auth_eval.json" \
+    --inflate-timeout 5400 \
+    --evaluate-timeout 14400

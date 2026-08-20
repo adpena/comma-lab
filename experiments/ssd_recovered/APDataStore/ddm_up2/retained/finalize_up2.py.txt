@@ -1,0 +1,181 @@
+"""Finalize ddm_up2: realized re-measure, two-axis pricing, candidate selection.
+
+Glue only. Every number comes from a tested function in
+``experiments/ddm_up2_shipping_pose_solve.py``; this script sequences them and
+writes one receipt. Run with ``--partial`` to exercise the whole chain on an
+in-flight solve (labelled PARTIAL_PREFIX, never quotable as the n600 answer).
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, "/Users/adpena/Projects/pact/experiments")
+sys.path.insert(0, "/Users/adpena/Projects/pact/src")
+import ddm_up2_shipping_pose_solve as up2  # noqa: E402
+
+SOLVE_DIR = Path("/Volumes/APDataStore/pact/ddm_up2/solve_n600_dali")
+OUT_DIR = Path("/Volumes/APDataStore/pact/ddm_up2/retained")
+
+
+def _jsonable(value):
+    """numpy scalars are not JSON-serializable; fail loudly on anything else."""
+    if isinstance(value, np.generic):
+        return value.item()
+    raise TypeError(f"unexpected non-JSON type in receipt: {type(value).__name__}")
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--partial", action="store_true")
+    parser.add_argument("--out", type=Path, default=OUT_DIR / "FINALIZE.json")
+    args = parser.parse_args()
+
+    import torch
+
+    torch.set_num_threads(6 if args.partial else 16)
+
+    # Merge every shard plus the main run. Rows are keyed by pair and the solve is
+    # deterministic, so duplicates across sources must agree; disagreement is a bug
+    # and is refused rather than silently last-wins.
+    by_pair: dict[int, dict] = {}
+    sources = sorted(Path("/Volumes/APDataStore/pact/ddm_up2").glob("*/rows.jsonl"))
+    for source in sources:
+        for line in source.read_text().splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            pair = int(row["pair"])
+            prior = by_pair.get(pair)
+            if prior is not None and prior["final_d_pose"] != row["final_d_pose"]:
+                raise SystemExit(
+                    f"pair {pair} disagrees across sources: "
+                    f"{prior['final_d_pose']} vs {row['final_d_pose']}"
+                )
+            by_pair[pair] = row
+    rows = [by_pair[k] for k in sorted(by_pair)]
+    print(f"merged {len(rows)} pairs from {len(sources)} sources", flush=True)
+    complete = len(rows) == up2.N_PAIRS_TOTAL
+    if not complete and not args.partial:
+        raise SystemExit(f"solve has {len(rows)}/{up2.N_PAIRS_TOTAL} rows; pass --partial to dry-run")
+    label = "N600_COMPLETE" if complete else "PARTIAL_PREFIX_NOT_QUOTABLE"
+
+    patch = up2.enable_posenet_gradients()
+    state = up2.load_carrier_state(up2.DEFAULT_RUNTIME)
+    raw = up2.open_raw(up2.DEFAULT_RAW, verify_sha=False)
+    dali, dali_lin = up2.load_gt_poses(up2.DEFAULT_DALI_GT)
+    up2.verify_gt_lineage(axis="contest_cuda", declared_lineage=dali_lin)
+    av, av_lin = up2.load_gt_poses(up2.DEFAULT_AV_GT)
+    up2.verify_gt_lineage(axis="contest_cpu", declared_lineage=av_lin)
+    posenet = up2.load_posenet()
+
+    solved = state.codes.copy()
+    for row in rows:
+        solved[int(row["pair"])] = np.asarray(row["codes"], dtype=np.int32)
+    pairs = np.array(sorted(int(r["pair"]) for r in rows), dtype=np.int64)
+
+    byte_report, base_codes = up2.price_full_resolve_bytes(up2.DEFAULT_RUNTIME, solved)
+    if not np.array_equal(base_codes, state.codes):
+        raise SystemExit("pricer base lattice differs from the carrier state lattice")
+
+    started = time.time()
+    coeff_solved = up2.codes_to_coefficients(solved, state.coefficient_scales)
+    dpose_new, poses_new = up2.measure_pose(
+        posenet, state, coeff_solved, raw, dali, pairs, batch_size=8
+    )
+    dpose_old, poses_old = up2.measure_pose(
+        posenet, state, state.coefficients, raw, dali, pairs, batch_size=8
+    )
+    # Same frames, other objective: what this costs the public CPU leaderboard.
+    av_old = ((poses_old - av[pairs]) ** 2).mean(axis=1)
+    av_new = ((poses_new - av[pairs]) ** 2).mean(axis=1)
+
+    # Mean over the FULL field: unsolved pairs keep their shipped value.
+    scale = len(pairs) / up2.N_PAIRS_TOTAL
+    d_start_field = up2.POINTER_D_POSE_T4
+    d_final_field = float(d_start_field - (dpose_old - dpose_new).sum() / up2.N_PAIRS_TOTAL)
+
+    priced = up2.price_candidate(
+        d_pose_start=d_start_field,
+        d_pose_final=d_final_field,
+        delta_bytes=byte_report["delta_bytes"],
+        d_seg_delta=0.0,
+    )
+
+    realized = {int(p): float(o - n) for p, o, n in zip(pairs, dpose_old, dpose_new, strict=True)}
+    overlay = up2.select_overlay_candidate(rows, base_codes, realized_gains=realized)
+    overlay_codes = overlay["codes"]
+    if overlay["pairs"]:
+        opairs = np.array(overlay["pairs"], dtype=np.int64)
+        o_new, _ = up2.measure_pose(
+            posenet,
+            state,
+            up2.codes_to_coefficients(overlay_codes, state.coefficient_scales),
+            raw, dali, opairs, batch_size=8,
+        )
+        o_old, _ = up2.measure_pose(posenet, state, state.coefficients, raw, dali, opairs, batch_size=8)
+        o_final = float(d_start_field - (o_old - o_new).sum() / up2.N_PAIRS_TOTAL)
+        overlay_priced = up2.price_candidate(
+            d_pose_start=d_start_field,
+            d_pose_final=o_final,
+            delta_bytes=overlay["payload_bytes"],
+        )
+    else:
+        overlay_priced = None
+
+    report = {
+        "schema": "ddm_up2_finalize.v1",
+        "label": label,
+        "axis": "[macOS-CPU advisory, frozen CPU-torch PoseNet]",
+        "score_claim": False,
+        "promotable": False,
+        "pairs_measured": int(len(pairs)),
+        "field_fraction": scale,
+        "yuv6_patch": patch,
+        "gt_lineage": {"cuda_axis": dali_lin, "cpu_axis": av_lin},
+        "pointer": {
+            "score": up2.POINTER_SCORE,
+            "d_pose_t4": up2.POINTER_D_POSE_T4,
+            "d_seg_t4": up2.POINTER_D_SEG_T4,
+            "archive_bytes": up2.POINTER_ARCHIVE_BYTES,
+        },
+        "measured_on_solved_pairs": {
+            "d_pose_dali_before": float(dpose_old.mean()),
+            "d_pose_dali_after": float(dpose_new.mean()),
+            "dali_ratio": float(dpose_new.mean() / dpose_old.mean()),
+            "pairs_improved": int((dpose_new < dpose_old).sum()),
+            "pairs_worsened": int((dpose_new > dpose_old).sum()),
+        },
+        "cpu_axis_cross_price": {
+            "note": "SAME frames, PyAV GT. contest-CPU is a different objective (evaluate.py:31-42).",
+            "d_pose_av_before": float(av_old.mean()),
+            "d_pose_av_after": float(av_new.mean()),
+            "av_ratio": float(av_new.mean() / av_old.mean()),
+            "av_over_dali_before": float(av_old.mean() / dpose_old.mean()),
+            "helps_cpu_axis": bool(av_new.mean() < av_old.mean()),
+        },
+        "full_resolve_candidate": {"bytes": byte_report, "priced": priced},
+        "overlay_candidate": {
+            "pairs": overlay["pairs"],
+            "support_per_pair": overlay["support_per_pair"],
+            "payload_bytes": overlay["payload_bytes"],
+            "any_clipped": overlay["any_clipped"],
+            "priced": overlay_priced,
+        },
+        "elapsed_seconds": time.time() - started,
+    }
+    args.out.write_text(json.dumps(report, indent=2, default=_jsonable), encoding="utf-8")
+    np.save(OUT_DIR / "solved_codes.npy", solved)
+    np.save(OUT_DIR / "overlay_codes.npy", overlay_codes)
+    print(json.dumps(report, indent=2, default=_jsonable))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,37 @@
+"""Does the ~70% miss-bit share survive FIELD variation, not just prior variation?
+
+Split the 600-frame field into 10 disjoint 60-frame blocks (real scene-content variation --
+per [[prefix_bias]] the early blocks are the hardest), fit the causal prior ON EACH BLOCK, and
+report the miss-bit share per block.  Stability across blocks is field-variation evidence the
+prior-family test alone cannot give.
+"""
+import numpy as np, json
+H,W,F,K=384,512,600,5; PLANE=H*W
+TOK="/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8"
+tok=np.memmap(TOK,dtype=np.uint8,mode="r")
+def ctx(cur,prev):
+    g=cur.reshape(H,W).astype(np.int64)
+    l=np.zeros_like(g); l[:,1:]=g[:,:-1]
+    u=np.zeros_like(g); u[1:,:]=g[:-1,:]
+    return (prev.reshape(H,W).astype(np.int64)*25+l*5+u).reshape(-1)
+out=[]
+for blk in range(10):
+    lo,hi=blk*60,(blk+1)*60
+    counts=np.zeros((125,K),dtype=np.int64); prev=np.zeros(PLANE,dtype=np.uint8)
+    for f in range(lo,hi):
+        cur=np.asarray(tok[f*PLANE:(f+1)*PLANE]); np.add.at(counts,(ctx(cur,prev),cur.astype(np.int64)),1); prev=cur
+    p=(counts+0.5)/(counts.sum(1,keepdims=True)+0.5*K); lg=np.log2(p); arg=p.argmax(1)
+    hb=mb=0.0; hn=mn=0; prev=np.zeros(PLANE,dtype=np.uint8)
+    for f in range(lo,hi):
+        cur=np.asarray(tok[f*PLANE:(f+1)*PLANE]); c=cur.astype(np.int64); x=ctx(cur,prev)
+        bits=-lg[x,c]; miss=c!=arg[x]
+        hb+=float(bits[~miss].sum()); mb+=float(bits[miss].sum()); hn+=int((~miss).sum()); mn+=int(miss.sum()); prev=cur
+    tb=hb+mb
+    out.append({"block":blk,"frames":[lo,hi],"miss_pct":round(100*mn/(hn+mn),4),
+                "miss_bit_share_pct":round(100*mb/tb,2),"total_bytes":round(tb/8,1)})
+    print(out[-1],flush=True)
+s=[o["miss_bit_share_pct"] for o in out]
+print("\nSHARE min %.2f max %.2f mean %.2f spread %.2fpp"%(min(s),max(s),sum(s)/len(s),max(s)-min(s)))
+m=[o["miss_pct"] for o in out]
+print("MISS%% min %.4f max %.4f ratio %.2fx"%(min(m),max(m),max(m)/min(m)))
+json.dump(out,open("/Volumes/APDataStore/pact/ddm_pd1/census/field_block_stability.json","w"),indent=1)

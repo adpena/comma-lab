@@ -1,0 +1,348 @@
+"""Emit FIRE_ORDER_ck1.json -- the advisory n600 CPU launch order for ck1_composed.
+
+DDM-CK1 does not fire. MAIN fires. This file records the exact detached-launch
+argv (cloned from the V2 advisory launch manifest), the measured preconditions,
+and the pre-registered falsifier table.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ck1_tree_hygiene import find_import_residue, strip_import_residue  # noqa: E402
+
+REPO = Path("/Users/adpena/Projects/pact")
+OUT = Path("/Volumes/APDataStore/pact/ddm_ck1")
+GEN = OUT / "generations/ck1_composed"
+ATTEMPT = OUT / "advisory_n600_cpu/ck1_composed/attempt_0001"
+MIRROR = Path("/Volumes/APDataStore/pact/upstream_eval_mirror_20260815")
+VENV = str(REPO / ".venv/bin/python")
+
+ORIGINAL_BYTES = 37_545_489
+BYTE_S = 25 / ORIGINAL_BYTES
+
+KEEP01_POINTER_S = 0.1571619225142182
+KEEP01_POINTER_ARCHIVE_BYTES = 177_576
+KEEP01_POINTER_ARCHIVE_SHA256 = (
+    "316d17f84817d2b10f084a71b6ca706c69411d738cdb7d5921aec9afb8c37f00"
+)
+KEEP01_GENERATION_ARCHIVE_BYTES = 178_272
+KEEP01_ADVISORY_D_SEG = 0.00043191
+KEEP01_ADVISORY_D_POSE = 0.00387399
+KEEP01_T4_POSE_LEG_S = 4.917765e-04
+KEEP01_REPORT_8DP_BOUND = 3.345782e-06
+KEEP01_RETENTION = 0.3519
+SA3_RETENTION = 0.1047
+S2_T4_D_SEG_MARGINAL = 2.04e-06
+S2_CHARTER_D_SEG_MARGINAL = 1.72e-06
+
+
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def tree_digest(root: Path) -> dict:
+    files = sorted(
+        p
+        for p in root.rglob("*")
+        if p.is_file() and "__pycache__" not in p.parts and not p.name.startswith("._")
+    )
+    digest = hashlib.sha256()
+    for path in files:
+        digest.update(str(path.relative_to(root)).encode())
+        digest.update(sha256_file(path).encode())
+    return {
+        "path": str(root),
+        "file_count": len(files),
+        "total_bytes": sum(p.stat().st_size for p in files),
+        "sha256": digest.hexdigest(),
+    }
+
+
+receipt = json.loads((GEN / "GENERATION_RECEIPT.json").read_text())
+parseback = json.loads((GEN / "PARSEBACK.json").read_text())
+
+# The fire order is the last stage to touch the tree, so it owns the final
+# cleanliness gate: an AppleDouble twin here kills the advisory run at t=5s.
+strip_import_residue(GEN)
+staged_residue = find_import_residue(GEN)
+archive = GEN / "archive.zip"
+archive_bytes = archive.stat().st_size
+archive_sha = sha256_file(archive)
+
+delta_vs_keep01 = archive_bytes - KEEP01_GENERATION_ARCHIVE_BYTES
+rate_delta_s = delta_vs_keep01 * BYTE_S
+break_even_d_seg = -rate_delta_s / 100.0
+
+inner = [
+    VENV,
+    "experiments/contest_auth_eval.py",
+    "--archive",
+    str(archive),
+    "--inflate-sh",
+    str(GEN / "inflate.sh"),
+    "--upstream-dir",
+    str(MIRROR),
+    "--video-names-file",
+    str(MIRROR / "public_test_video_names.txt"),
+    "--device",
+    "cpu",
+    "--inflate-device",
+    "cpu",
+    "--work-dir",
+    str(ATTEMPT / "work"),
+    "--keep-work-dir",
+    "--json-out",
+    str(ATTEMPT / "contest_auth_eval.json"),
+    "--inflate-timeout",
+    "5400",
+    "--evaluate-timeout",
+    "14400",
+]
+guarded = [
+    VENV,
+    "tools/safe_run.py",
+    "--rss-mb",
+    "32768",
+    "--timeout",
+    "21600",
+    "--poll",
+    "5",
+    "--label",
+    "ck1_composed_adv_r1",
+    "--projected-gib",
+    "12",
+    "--child-pidfile",
+    str(ATTEMPT / "safe_child.pid"),
+    "--status-receipt",
+    str(ATTEMPT / "safe_run_status.json"),
+    "--",
+    *inner,
+]
+launcher = [
+    VENV,
+    "tools/launch_detached_process.py",
+    "--output-dir",
+    str(ATTEMPT),
+    "--cwd",
+    str(REPO),
+    "--purpose",
+    "ddm_ck1 ck1_composed advisory n600 CPU row (keep01 row-prune x S2 mixed-depth composition)",
+    "--env",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "--done-receipt",
+    "ck1_advisory_n600_20260818",
+    "--",
+    *guarded,
+]
+
+order = {
+    "schema": "ddm_advisory_fire_order.v1",
+    "written_at_utc": dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "written_by": "ddm_ck1",
+    "status": "NOT_FIRED -- DDM-CK1 does not launch scorer work; MAIN fires",
+    "candidate_id": "ck1_composed",
+    "axis": "[macOS-CPU advisory; env-mismatch advisory instrument, same as the keep01 comparator]",
+    "score_claim": False,
+    "mechanism": {
+        "summary": (
+            "SM3R MODE_ROW_PRUNE_MIXED (mode 6): keep01's exact row-prune geometry "
+            "plus an SD1M-style per-tensor bit-depth table"
+        ),
+        "row_prune": receipt["composition"]["row_prune"],
+        "mixed_depth": receipt["composition"]["mixed_depth"],
+        "not_composed": (
+            "S2's films-1/2/3 q2 legs: 99% of those rows are removed by the prune, "
+            "so re-quantizing the survivors buys ~nothing"
+        ),
+    },
+    "archive": {"path": str(archive), "bytes": archive_bytes, "sha256": archive_sha},
+    "runtime": tree_digest(GEN),
+    "receiver_pins": [
+        {
+            "relative_path": name,
+            "bytes": (GEN / name).stat().st_size,
+            "sha256": sha256_file(GEN / name),
+        }
+        for name in ("inflate.py", "inflate.sh", "cpr1/ddm_mp2_semantic_receiver.py")
+    ],
+    "preconditions_measured": {
+        "positive_control_mode5_reproduces_keep01_body": receipt["checks"][
+            "C1_mode5_reproduces_keep01_body"
+        ],
+        "positive_control_mode5_reproduces_keep01_archive": receipt["checks"][
+            "C2_mode5_reproduces_keep01_archive"
+        ],
+        "archive_deterministic_across_two_builds": receipt["checks"]["C3_archive_is_deterministic"],
+        "staged_receiver_parseback_exact": parseback["checks"]["staged_receiver_tensor_identical"],
+        "renderer_strict_state_dict_load": parseback["checks"]["renderer_strict_load"],
+        "non_semantic_sections_unchanged": parseback["checks"][
+            "non_semantic_sections_unchanged_vs_base"
+        ],
+        "inflate_py_pins_match_archive": parseback["checks"]["inflate_py_pins_match_archive"],
+        "eval_mirror_free_of_pycache_and_appledouble": True,
+        "eval_mirror_checked_utc": "2026-08-18T18:50:00Z",
+        "staged_tree_free_of_import_residue": not staged_residue,
+        "staged_tree_residue_stripped_by_builder": receipt["import_residue_stripped"]["count"],
+    },
+    "comparator": {
+        "id": "sm3r_keep01 advisory attempt_0006",
+        "path": (
+            "/Volumes/APDataStore/pact/ddm_sa1/advisory_n600_cpu/sm3r_keep01/"
+            "attempt_0006/contest_auth_eval.json"
+        ),
+        "d_seg": KEEP01_ADVISORY_D_SEG,
+        "d_pose": KEEP01_ADVISORY_D_POSE,
+        "archive_bytes": KEEP01_GENERATION_ARCHIVE_BYTES,
+        "note": "same generation-stage container, same advisory instrument",
+    },
+    "pricing": {
+        "MEASURED_archive_bytes": archive_bytes,
+        "MEASURED_delta_bytes_vs_keep01_generation": delta_vs_keep01,
+        "MEASURED_rate_delta_s_vs_keep01_generation": rate_delta_s,
+        "MEASURED_semantic_body_delta_bytes": receipt["bytes"]["semantic_body_delta_vs_keep01"],
+        "MEASURED_union_vs_sum_of_legs": {
+            "waterfall_leg_frame_embed_q3_dbytes": -570,
+            "waterfall_leg_blocks0_film_q3_dbytes": -243,
+            "sum_of_legs_dbytes": -813,
+            "measured_union_dbytes": delta_vs_keep01,
+            "union_over_sum": round(delta_vs_keep01 / -813, 4),
+            "note": (
+                "the waterfall legs were measured individually on the SD1M all-q4 container; "
+                "composed on the SM3R keep01 container the union delivers about half. "
+                "Never price a union as the sum of its legs."
+            ),
+        },
+        "DERIVED_break_even_d_seg_delta_if_pose_held": break_even_d_seg,
+        "DERIVED_projected_compiled_candidate_bytes": (
+            archive_bytes - (KEEP01_GENERATION_ARCHIVE_BYTES - KEEP01_POINTER_ARCHIVE_BYTES)
+        ),
+        "DERIVED_projected_net_s_two_models": {
+            "sa3_class_retention_10_47_pct": rate_delta_s * SA3_RETENTION,
+            "keep01_class_retention_35_19_pct": rate_delta_s * KEEP01_RETENTION,
+            "note": (
+                "both models shown per the standing both-models rule. The retention law "
+                "measured so far RISES with edit mass, and this rung's mass is roughly "
+                "0.24x keep01's semantic delta, so the LOW model is the honest default."
+            ),
+        },
+        "DERIVED_leg_by_leg_stress_test": {
+            "rate_credit_s": rate_delta_s,
+            "s2_measured_t4_seg_leg_s": 100 * S2_T4_D_SEG_MARGINAL,
+            "fraction_of_rate_credit_consumed_by_s2_class_seg": round(
+                100 * S2_T4_D_SEG_MARGINAL / -rate_delta_s, 4
+            ),
+            "remaining_s_for_the_pose_leg": -rate_delta_s - 100 * S2_T4_D_SEG_MARGINAL,
+            "keep01_measured_compensated_pose_leg_s": KEEP01_T4_POSE_LEG_S,
+            "verdict": (
+                "if this rung's compensated pose leg lands anywhere near keep01's absolute "
+                "+4.917765e-04 S it REFUSES outright. It only nets negative if the pose leg "
+                "scales down with the ~4x smaller edit mass. That is the open question the "
+                "advisory row plus the authority solve answer -- it is NOT settled here."
+            ),
+        },
+        "pointer_context": {
+            "live_pointer_s": KEEP01_POINTER_S,
+            "live_pointer_archive_bytes": KEEP01_POINTER_ARCHIVE_BYTES,
+            "live_pointer_archive_sha256": KEEP01_POINTER_ARCHIVE_SHA256,
+            "gap_to_0_15": round(KEEP01_POINTER_S - 0.15, 8),
+            "rung_class": (
+                "CONTRIBUTOR -- projected 0.4% to 1.3% of the remaining gap. "
+                "Do not narrate this as a step change."
+            ),
+        },
+    },
+    "falsifiers": [
+        {
+            "id": "F0",
+            "state": "PASSED (MEASURED)",
+            "rule": (
+                "composed archive must be smaller than keep01's 178,272 B generation "
+                "archive; no rate credit means the rung is dead before any scorer spend"
+            ),
+            "measured": f"{archive_bytes} B, {delta_vs_keep01:+d} B",
+        },
+        {
+            "id": "F1",
+            "state": "PENDING advisory",
+            "rule": (
+                "advisory d_seg minus the keep01 comparator's 0.00043191 exceeds "
+                f"2x S2's +{S2_CHARTER_D_SEG_MARGINAL:.2e} -> REFUSE"
+            ),
+            "bar_d_seg_delta": 2 * S2_CHARTER_D_SEG_MARGINAL,
+        },
+        {
+            "id": "F1b",
+            "state": "PENDING advisory",
+            "rule": (
+                "ECONOMIC bar, tighter than F1 and derived from the measured rate credit: "
+                "advisory d_seg delta >= the break-even consumes the whole rate credit "
+                "before pose is paid -> REFUSE at the arithmetic stage, before the "
+                "authority solve is scheduled"
+            ),
+            "bar_d_seg_delta": break_even_d_seg,
+        },
+        {
+            "id": "F2",
+            "state": "PENDING advisory",
+            "rule": (
+                "uncompensated advisory d_pose has NO bar -- it is the authority solve's "
+                "input, and the solve pays it. Record it and route it to the solve."
+            ),
+            "bar_d_pose": None,
+        },
+        {
+            "id": "F3",
+            "state": "PENDING T4",
+            "rule": (
+                "T4 net dS >= -3.5e-6 -> REFUSE. Additionally the net must be at least "
+                "3x report_8dp_score_worst_case_abs_error_bound for a sign-determinate "
+                "row: keep01's net was 164.9x its bound, this rung projects only "
+                "8x to 28x, so the margin must be stated explicitly (#1032 cure)."
+            ),
+            "net_ds_threshold": -3.5e-06,
+            "keep01_report_8dp_bound": KEEP01_REPORT_8DP_BOUND,
+            "min_bound_multiple": 3.0,
+        },
+    ],
+    "launch": {
+        "cwd": str(REPO),
+        "output_dir": str(ATTEMPT),
+        "env": {"PYTHONDONTWRITEBYTECODE": "1"},
+        "done_receipt_path": str(REPO / ".omx/tmp/codex_runs/ck1_advisory_n600_20260818.done"),
+        "expected_wall_seconds": 1200,
+        "expected_wall_note": "keep01 comparator ran 1,204 s; V2 ran 1,186 s on the same instrument",
+        "launcher_argv": launcher,
+        "guarded_argv": guarded,
+        "inner_argv": inner,
+    },
+    "downstream_chain_if_f1_passes": [
+        "authority solve on a free Metal slot (per-object Schur compensation, n=600)",
+        "rebase compile onto the live keep01 pointer base, not sz1 -- the baseline moved",
+        "candidate_seal.v1",
+        "T4 contest-CUDA row",
+    ],
+    "provenance": {
+        "generation_receipt": str(GEN / "GENERATION_RECEIPT.json"),
+        "parseback_receipt": str(GEN / "PARSEBACK.json"),
+        "builders": [
+            str(OUT / "builders/build_ck1_composed.py"),
+            str(OUT / "builders/verify_ck1_parseback.py"),
+            str(OUT / "builders/ck1_mode5_regression_control.py"),
+            str(OUT / "builders/write_ck1_fire_order.py"),
+        ],
+        "cloned_launch_shape_from": (
+            "/Volumes/APDataStore/pact/ddm_sa1/advisory_n600_cpu/"
+            "V2_dead_pw_film_q2/attempt_0001/launch_manifest.json"
+        ),
+    },
+}
+
+path = OUT / "FIRE_ORDER_ck1.json"
+path.write_text(json.dumps(order, indent=2, sort_keys=True) + "\n")
+print(json.dumps(order, indent=2, sort_keys=True))

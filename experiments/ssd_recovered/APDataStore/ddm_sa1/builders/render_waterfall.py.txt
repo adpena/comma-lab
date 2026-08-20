@@ -1,0 +1,37 @@
+import sys, json
+from pathlib import Path
+from collections import OrderedDict
+import numpy as np, torch
+RT="/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime"
+sys.path.insert(0, RT); sys.path.insert(0, RT+"/cpr1"); sys.path.insert(0,"/Users/adpena/Projects/pact/experiments")
+torch.set_num_threads(4); torch.set_grad_enabled(False)
+import runtime.residual_archive as ra
+import ddm_sd1_semantic_rd_curve as sd1
+import ddm_sm3_semantic_representation as sm3
+import inflate as cpr1
+TOK=Path("/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/parseback/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8")
+toks=np.memmap(TOK,dtype=np.uint8,mode="r").reshape(600,384,512)
+rng=np.random.default_rng(20260817); SAMPLE=np.sort(rng.choice(600,size=12,replace=False))
+parts=ra.read_residual_archive(Path(RT)/"archive.zip")
+recs=ra.decode_wans1(parts.semantic_blob)
+state=OrderedDict((r.schema.name, torch.from_numpy(np.ascontiguousarray(r.values,dtype=np.float32))) for r in recs)
+qn=sd1.quantized_names(state)
+WF=json.loads(Path("/private/tmp/claude-501/-Users-adpena-Projects-pact/89ff112f-013d-43b5-b949-2a6d43b650c3/scratchpad/sa1/waterfall.json").read_text())
+byname={r["name"]:r for r in WF["rows"]}
+def render(st):
+    m=cpr1.SemanticTokenRenderer(96); m.load_state_dict(st,strict=True); m.eval()
+    return np.stack([m(torch.from_numpy(np.array(toks[i])).long().unsqueeze(0),torch.tensor([int(i)]))[0].numpy() for i in SAMPLE])
+base=render(state)
+rows=[]
+for nm in qn:
+    a={n:4 for n in qn}; a[nm]=3
+    _,exp=sd1.pack_semantic_state(state,a,legacy_int4=False)
+    d=np.abs(render(OrderedDict((k,exp[k].float()) for k in state))-base)
+    db=byname[nm]["q3_dbytes"]
+    rows.append(dict(name=nm,q3_dbytes=db,rgb_rms=float(np.sqrt((d**2).mean())),rgb_max=float(d.max()),
+                     bytes_per_rms=(-db/max(1e-9,float(np.sqrt((d**2).mean()))))))
+rows.sort(key=lambda r:-r["bytes_per_rms"])
+print(f"{'tensor':26s} {'q3 dB':>7} {'RGBrms':>9} {'RGBmax':>9} {'B per rms':>11}")
+for r in rows:
+    print(f"{r['name']:26s} {r['q3_dbytes']:>+7} {r['rgb_rms']:>9.4f} {r['rgb_max']:>9.3f} {r['bytes_per_rms']:>11.1f}")
+Path("/private/tmp/claude-501/-Users-adpena-Projects-pact/89ff112f-013d-43b5-b949-2a6d43b650c3/scratchpad/sa1/render_waterfall.json").write_text(json.dumps({"sample":SAMPLE.tolist(),"rows":rows},indent=2))

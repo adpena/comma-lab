@@ -1,0 +1,87 @@
+#!/bin/bash
+# ddm_hb1 fire-order execution: PR130 integer HPAC trained on OUR label payloads (tq1c, gt).
+# Stages per .omx/research/ddm_hb1_20260806/NEXT_IF_RESUMED.md, --device cpu (host has no CUDA;
+# CPU = deterministic conservative choice; their exact rails disable TF32 anyway).
+# Resumable: trainer writes <save>.latest.pt every --eval-every; driver prefers it as --init.
+set -uo pipefail
+ROOT=/Volumes/VertigoDataTier/pact/ddm_hb1_20260806
+CODE=/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/code
+PY=/Users/adpena/Projects/pact/.venv/bin/python
+export PYTHONPATH="$CODE"
+export OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 VECLIB_MAXIMUM_THREADS=4
+LOG="$ROOT/driver.log"
+echo "[driver] start $(date -u +%FT%TZ)" >> "$LOG"
+overall_rc=0
+
+record_stage_rc () {
+  local rc=$1
+  if [ "$rc" -ne 0 ] && [ "$rc" -gt "$overall_rc" ]; then
+    overall_rc=$rc
+  fi
+}
+
+for payload in tq1c gt; do
+  CK="$ROOT/checkpoints/$payload"
+  ART="$ROOT/artifacts/$payload"
+  REP="$ROOT/reports"
+  mkdir -p "$CK" "$ART" "$REP"
+  SAVE="$CK/hpac_selfcompress_e60.pt"
+  INIT="$CK/hpac_p64_exact_from_archive.pt"
+  LATEST="$CK/hpac_selfcompress_e60.latest.pt"
+  [ -f "$LATEST" ] && INIT="$LATEST" && echo "[driver] $payload resume from latest" >> "$LOG"
+
+  if [ ! -f "$SAVE" ]; then
+    echo "[driver] $payload stage2 train start $(date -u +%FT%TZ)" >> "$LOG"
+    nice -n 10 "$PY" "$CODE/train_hpac_self_compress.py" \
+      --cache "$ROOT/inputs/${payload}_seg_cache.pt" \
+      --init "$INIT" \
+      --epochs 60 --batch-size 8 --eval-batch-size 4 --eval-every 2 \
+      --lr 0.003 --lr-exponent 0.0002 --lr-bits 0.01 --bit-eps 1e-6 \
+      --rate-lambda 1.0 --qat-fraction 0.5 --init-bits 8.0 \
+      --channels 64 --patch 64 --delta 2 --frame-dim 8 \
+      --norm-mode none --activation relu --frame-scale \
+      --weight-bound 127 --activation-bound 127 --weight-scales \
+      --weight-exponent-min -6 --spm --target-mode raw \
+      --seed 20260716 --device cpu \
+      --save "$SAVE" \
+      --out "$REP/${payload}_hpac_selfcompress_e60.json" >> "$LOG" 2>&1
+    rc=$?
+    echo "[driver] $payload stage2 rc=$rc $(date -u +%FT%TZ)" >> "$LOG"
+    record_stage_rc "$rc"
+    [ "$rc" -ne 0 ] && continue
+  fi
+
+  echo "[driver] $payload stage3 pack $(date -u +%FT%TZ)" >> "$LOG"
+  rc=0
+  "$PY" "$CODE/pack_hpac_self_compress.py" \
+    --checkpoint "$SAVE" \
+    --channels 64 --patch 64 --delta 2 --frame-dim 8 \
+    --weight-bound 127 --activation-bound 127 --weight-exponent-min -6 \
+    --device cpu \
+    --blob "$ART/hpac.bin.xz" \
+    --report "$REP/${payload}_hpac_pack.json" >> "$LOG" 2>&1 || rc=$?
+  echo "[driver] $payload stage3 rc=$rc $(date -u +%FT%TZ)" >> "$LOG"
+  record_stage_rc "$rc"
+  [ "$rc" -ne 0 ] && continue
+
+  for mode in encode decode; do
+    EXTRA="--tokens-out $ART/tokens.bin --report $REP/${payload}_tokens_encode.json"
+    [ "$mode" = decode ] && EXTRA="--decode-from $ART/tokens.bin --require-exact --report $REP/${payload}_tokens_decode.json"
+    echo "[driver] $payload stage4 $mode $(date -u +%FT%TZ)" >> "$LOG"
+    rc=0
+    "$PY" "$CODE/codec_hpac_integer.py" \
+      --checkpoint "$SAVE" \
+      --cache "$ROOT/inputs/${payload}_seg_cache.pt" \
+      --channels 64 --patch 64 --delta 2 --frame-dim 8 \
+      --norm-mode none --activation relu --frame-scale \
+      --weight-bound 127 --activation-bound 127 --weight-scales \
+      --weight-exponent-min -6 --spm --sparse --self-compress \
+      --target-mode raw --frames 600 --device cpu \
+      $EXTRA >> "$LOG" 2>&1 || rc=$?
+    echo "[driver] $payload stage4 $mode rc=$rc $(date -u +%FT%TZ)" >> "$LOG"
+    record_stage_rc "$rc"
+    [ "$mode" = encode ] && [ "$rc" -ne 0 ] && break
+  done
+done
+echo "[driver] all done rc=$overall_rc $(date -u +%FT%TZ)" >> "$LOG"
+exit "$overall_rc"

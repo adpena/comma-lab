@@ -1,0 +1,146 @@
+"""JS8 decoder-derived edge-state gate for the retained EC2 adapter.
+
+The receiver computes the spatial gate exclusively from already-decoded
+semantic tokens.  The counted payload contains only a 5x5 edge-family weight
+table and a scalar adapter multiplier; it never contains a pixel mask.
+"""
+
+from __future__ import annotations
+
+import json
+import struct
+from functools import lru_cache
+
+import brotli
+import numpy as np
+import torch
+from torch import nn
+
+from .ec1_latent_conditioner import (
+    NUM_CLASSES,
+    edge_context,
+    load_conditioner,
+    _shift,
+)
+
+MAGIC = b"JS8G\x01"
+SCHEMA = "ddm_js8_decoder_edge_gate.v1"
+HEADER = struct.Struct("<I")
+
+
+class JS8RuntimeError(RuntimeError):
+    """The counted JS8 gate or receiver-computable edge state is invalid."""
+
+
+def serialize_gate(weights: np.ndarray, adapter_scale: float) -> bytes:
+    """Serialize a counted edge-family table with deterministic Brotli coding."""
+    value = np.asarray(weights, dtype=np.float32)
+    if value.shape != (NUM_CLASSES, NUM_CLASSES):
+        raise JS8RuntimeError(f"edge table geometry differs: {value.shape}")
+    if not np.isfinite(value).all() or np.any(value < 0.0) or np.any(value > 1.0):
+        raise JS8RuntimeError("edge weights must be finite values in [0,1]")
+    if not np.array_equal(value, value.T) or np.any(np.diag(value)):
+        raise JS8RuntimeError("JS8 v1 requires a symmetric zero-diagonal edge table")
+    if not np.isfinite(adapter_scale) or adapter_scale < 0.0 or adapter_scale > 2.0:
+        raise JS8RuntimeError("adapter_scale must be finite and in [0,2]")
+    quantized = value.astype("<f2")
+    header = json.dumps(
+        {
+            "schema": SCHEMA,
+            "shape": [NUM_CLASSES, NUM_CLASSES],
+            "dtype": "float16",
+            "adapter_scale": float(np.float16(adapter_scale)),
+            "derivation": "decoded-token directed-neighbor boundaries; no explicit mask",
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode()
+    raw = MAGIC + HEADER.pack(len(header)) + header + quantized.tobytes(order="C")
+    return brotli.compress(raw, quality=11)
+
+
+@lru_cache(maxsize=8)
+def parse_gate(coded: bytes) -> tuple[np.ndarray, float, dict[str, object]]:
+    """Parse back one JS8 gate and reject any non-canonical/trailing content."""
+    try:
+        raw = brotli.decompress(coded)
+    except brotli.error as error:
+        raise JS8RuntimeError("invalid JS8 Brotli payload") from error
+    if not raw.startswith(MAGIC) or len(raw) < len(MAGIC) + HEADER.size:
+        raise JS8RuntimeError("invalid JS8 gate magic")
+    offset = len(MAGIC)
+    (header_bytes,) = HEADER.unpack(raw[offset : offset + HEADER.size])
+    offset += HEADER.size
+    end_header = offset + header_bytes
+    if end_header > len(raw):
+        raise JS8RuntimeError("truncated JS8 header")
+    header = json.loads(raw[offset:end_header])
+    offset = end_header
+    if (
+        header.get("schema") != SCHEMA
+        or header.get("shape") != [NUM_CLASSES, NUM_CLASSES]
+        or header.get("dtype") != "float16"
+    ):
+        raise JS8RuntimeError("unsupported JS8 gate schema")
+    expected = NUM_CLASSES * NUM_CLASSES * np.dtype("<f2").itemsize
+    if len(raw) - offset != expected:
+        raise JS8RuntimeError("JS8 gate table byte count differs")
+    weights = np.frombuffer(raw[offset:], dtype="<f2").astype(np.float32).reshape(NUM_CLASSES, NUM_CLASSES)
+    scale = float(header["adapter_scale"])
+    if (
+        not np.isfinite(weights).all()
+        or np.any(weights < 0.0)
+        or np.any(weights > 1.0)
+        or not np.array_equal(weights, weights.T)
+        or np.any(np.diag(weights))
+        or not np.isfinite(scale)
+        or scale < 0.0
+        or scale > 2.0
+    ):
+        raise JS8RuntimeError("decoded JS8 values violate the v1 domain")
+    return weights, scale, header
+
+
+def decoded_edge_state(tokens: torch.Tensor, weights: torch.Tensor) -> torch.Tensor:
+    """Derive a soft token-local Road-hub gate from four decoded neighbors."""
+    if tokens.ndim != 3:
+        raise JS8RuntimeError(f"token geometry differs: {tuple(tokens.shape)}")
+    if weights.shape != (NUM_CLASSES, NUM_CLASSES):
+        raise JS8RuntimeError(f"edge table geometry differs: {tuple(weights.shape)}")
+    center = tokens.long()
+    gate = torch.zeros_like(center, dtype=weights.dtype)
+    for direction in ("left", "right", "up", "down"):
+        neighbor = _shift(center, direction).long()
+        local = weights[center, neighbor]
+        gate = torch.maximum(gate, local)
+    return gate[:, None]
+
+
+def conditioned_semantic_forward(
+    semantic: nn.Module,
+    tokens: torch.Tensor,
+    pair_indices: torch.Tensor,
+    ec1_coded: bytes,
+    gate_coded: bytes,
+) -> torch.Tensor:
+    """Run EC2 at its real pre-TokenBlock site through a decoded edge gate."""
+    conditioner = load_conditioner(ec1_coded, tokens.device)
+    weights_np, adapter_scale, _ = parse_gate(gate_coded)
+    weights = torch.from_numpy(weights_np.copy()).to(device=tokens.device, dtype=torch.float32)
+    value = semantic.token_embed(tokens).permute(0, 3, 1, 2)
+    value = semantic.coord_mix(
+        torch.cat(
+            [
+                value,
+                semantic.coordinates(value.shape[0], value.device, value.dtype),
+            ],
+            dim=1,
+        )
+    )
+    delta = conditioner(edge_context(tokens, conditioner.family))
+    value = value + delta * decoded_edge_state(tokens, weights).to(delta.dtype) * adapter_scale
+    frame = semantic.frame_embed(pair_indices)
+    for block in semantic.blocks:
+        value = block(value, frame)
+    return torch.sigmoid(semantic.head(torch.nn.functional.gelu(value))) * 255.0

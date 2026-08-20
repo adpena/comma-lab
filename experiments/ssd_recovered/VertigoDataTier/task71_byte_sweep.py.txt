@@ -1,0 +1,71 @@
+"""Byte-authority sweep: measure EXACT decoder-blob brotli bytes under structural
+transforms (low-rank, pruning) WITHOUT rendering. The byte side is fast; the
+distortion side (exact scorer) is measured only at the chosen operating points."""
+import sys
+sys.path.insert(0,'experiments/results/pr110pp_r2_nonmps_candidate_20260609/analysis')
+sys.path.insert(0,'src')
+import render_and_score_lib as L
+import numpy as np
+from model import HNeRVDecoder
+from tac.optimization import structural_q_compression as SQ
+
+p = L.parse_frontier()
+sd = p['decoder_sd']
+probe = HNeRVDecoder(latent_dim=28, base_channels=36, eval_size=(384,512))
+order = [name for name,_ in probe.state_dict().items()]
+items = [(name, sd[name].numpy().astype(np.float64)) for name in order]
+base_codes = SQ.recover_all_codes(items)
+base_blob = SQ.encode_decoder_blob_bytes(base_codes)
+print(f'BASE blob = {base_blob}')
+
+# index of each 4D weight tensor
+W4D = {idx:tc for idx,tc in base_codes.items() if tc.codes_i8.ndim==4 and tc.codes_i8.size>1000}
+print('big 4D weight idx -> name shape:', {idx:(tc.name,tc.shape) for idx,tc in W4D.items()})
+
+import copy
+def blob_with_codes(modified):
+    codes2 = dict(base_codes)
+    for idx,c in modified.items():
+        codes2[idx] = c
+    return SQ.encode_decoder_blob_bytes(codes2)
+
+print('\\n=== LOW-RANK on dequantized weight then re-quantize -> blob bytes ===')
+print('(re-quantize: codes = round(lowrank_W / scale))')
+for idx,tc in sorted(W4D.items()):
+    O = tc.shape[0]; IKK = int(np.prod(tc.shape[1:]))
+    full = min(O, IKK)
+    name=tc.name
+    W = items[idx][1]
+    row=[]
+    for frac in [1.0, 0.9, 0.75, 0.6, 0.5, 0.4]:
+        r = max(1,int(round(full*frac)))
+        lr = SQ.low_rank_truncate_weight(W, r)
+        codes = np.clip(np.round(lr/tc.scale),-127,127).astype(np.int8)
+        nc = SQ.TensorCode(name, idx, tc.shape, codes, tc.scale)
+        b = blob_with_codes({idx:nc})
+        row.append((r, b-base_blob))
+    print(f'{name:16s} full={full:3d}: ' + ' '.join(f'r{r}:{db:+d}' for r,db in row))
+
+print('\\n=== ALL-BLOCKS joint low-rank (re-quant) at fraction f ===')
+for frac in [0.9, 0.75, 0.6, 0.5, 0.4, 0.3]:
+    mod={}
+    for idx,tc in W4D.items():
+        O=tc.shape[0]; IKK=int(np.prod(tc.shape[1:])); full=min(O,IKK)
+        r=max(1,int(round(full*frac)))
+        lr=SQ.low_rank_truncate_weight(items[idx][1], r)
+        codes=np.clip(np.round(lr/tc.scale),-127,127).astype(np.int8)
+        mod[idx]=SQ.TensorCode(tc.name,idx,tc.shape,codes,tc.scale)
+    b=blob_with_codes(mod)
+    print(f'frac={frac}: blob={b} delta={b-base_blob:+d} ({100*(b-base_blob)/base_blob:+.2f}%)')
+
+print('\\n=== MAGNITUDE PRUNING (zero smallest |code|) at keep fraction ===')
+for keep in [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3]:
+    mod={}
+    for idx,tc in W4D.items():
+        sens = SQ.magnitude_sensitivity(tc.codes_i8)
+        pc = SQ.score_aware_prune_codes(tc.codes_i8, sens, keep)
+        mod[idx]=SQ.TensorCode(tc.name,idx,tc.shape,pc,tc.scale)
+    b=blob_with_codes(mod)
+    nz = sum(int((mod[idx].codes_i8!=0).sum()) for idx in mod)
+    tot = sum(int(tc.codes_i8.size) for idx,tc in W4D.items())
+    print(f'keep={keep}: blob={b} delta={b-base_blob:+d} ({100*(b-base_blob)/base_blob:+.2f}%) nnz={nz}/{tot}')

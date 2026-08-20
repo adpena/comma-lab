@@ -1,0 +1,9 @@
+from pathlib import Path
+from tac.micro_edit.coder_replay import ReplayAssets
+ASSETS = ReplayAssets(
+    logits_i16=Path("/Volumes/APDataStore/pact/ddm_hm1_20260816/retained/base_logits_int16_n600.i16"),
+    tokens_u8=Path("/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8"),
+    boundary_u8=Path("/Volumes/APDataStore/pact/ddm_hm1_20260816/retained/boundary_bucket_n600.u8"),
+    group_index_u8=Path("/Volumes/APDataStore/pact/ddm_hm1_20260816/retained/group_index.u8"),
+    table_values_npy=Path("/Volumes/APDataStore/pact/ddm_me1/table_values.npy"),
+)

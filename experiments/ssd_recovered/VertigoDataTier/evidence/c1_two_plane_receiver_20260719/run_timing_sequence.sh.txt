@@ -1,0 +1,26 @@
+#!/bin/bash
+set -u
+ROOT=/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719
+cd /Users/adpena/Projects/pact
+PY=.venv/bin/python
+T=tools/measure_v10_two_plane_receiver_timing.py
+log() { echo "$(date -u +%H:%M:%SZ) $*" >> "$ROOT/timing_sequence.log"; }
+log "SEQ START"
+$PY $T inflate --prepare-receipt "$ROOT/prepare_receipt.json" \
+  --output-dir "$ROOT/out_serial" --receipt "$ROOT/inflate_serial_receipt.json" \
+  --workers 1 >> "$ROOT/timing_sequence.log" 2>&1
+log "serial rc=$?"
+$PY $T inflate --prepare-receipt "$ROOT/prepare_receipt.json" \
+  --output-dir "$ROOT/out_par1" --receipt "$ROOT/inflate_par1_receipt.json" \
+  --workers 4 >> "$ROOT/timing_sequence.log" 2>&1
+log "par1 rc=$?"
+$PY $T inflate --prepare-receipt "$ROOT/prepare_receipt.json" \
+  --output-dir "$ROOT/out_par2" --receipt "$ROOT/inflate_par2_receipt.json" \
+  --workers 4 >> "$ROOT/timing_sequence.log" 2>&1
+log "par2 rc=$?"
+$PY $T compose --prepare-receipt "$ROOT/prepare_receipt.json" \
+  --serial-receipt "$ROOT/inflate_serial_receipt.json" \
+  --parallel-receipt "$ROOT/inflate_par1_receipt.json" \
+  --parallel-receipt "$ROOT/inflate_par2_receipt.json" \
+  --output "$ROOT/c1_timing_composed.json" >> "$ROOT/timing_sequence.log" 2>&1
+log "compose rc=$? SEQ DONE"

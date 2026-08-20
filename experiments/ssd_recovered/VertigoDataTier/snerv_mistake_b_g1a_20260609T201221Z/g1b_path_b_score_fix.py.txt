@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""G1b path-B trained-packet scoring (shape-fixed rerun).
+
+Decodes the trained official-conv packet via the real scorer-free receiver path,
+reshapes frames -> pairs robustly, scores N>=48 pairs vs source through the REAL
+upstream SegNet/PoseNet compute_distortion, and writes
+``g1b_path_b_trained_packet_score.v1.json`` into the run dir.
+
+Authority: [macOS-CPU advisory] / exact_cpu_advisory — NON-PROMOTABLE.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import sys
+import time
+import zipfile
+from pathlib import Path
+
+REPO_ROOT = Path("/Users/adpena/Projects/pact")
+RUN_DIR = Path("/Volumes/VertigoDataTier/pact/snerv_mistake_b_g1a_20260609T201221Z")
+PACKET_PATH = (
+    RUN_DIR / "snerv_mlx_native_export/native_train_export/snerv_mlx_native_packet.snar"
+)
+OUT_PATH = RUN_DIR / "g1b_path_b_trained_packet_score.v1.json"
+G1B_DIR = RUN_DIR / "g1b_export_binding"
+
+sys.path.insert(0, str(REPO_ROOT / "src"))
+sys.path.insert(0, str(REPO_ROOT / "upstream"))
+
+import numpy as np  # noqa: E402
+import torch  # noqa: E402
+
+CONTEST_N = 37_545_489
+CONTEST_BYTE_PRICE = 25.0 / CONTEST_N
+
+
+def _sha(b: bytes) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+
+def main() -> int:
+    from tac.substrates.snerv_inverse_steg_carrier.archive import (
+        decode_snerv_archive_frames,
+        unpack_snerv_archive,
+    )
+    from tac.analysis.inverse_steganalysis_linf_vs_l2_gate import (
+        measure_pairs_d_seg_d_pose_batched,
+    )
+    from tac.analysis.score_exact_saliency import (
+        decode_real_pairs,
+        load_score_exact_scorers,
+    )
+
+    packet = PACKET_PATH.read_bytes()
+    decoded = unpack_snerv_archive(packet)
+    out: dict = {
+        "schema": "g1b_path_b_trained_packet_score.v1",
+        "subagent_id": "snerv_g1b_export_binding_20260609",
+        "authority_tier": "exact_cpu_advisory",
+        "axis_tag": "[macOS-CPU advisory]",
+        "promotable": False,
+        "promotion_eligible": False,
+        "score_claim": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "packet_path": str(PACKET_PATH),
+        "packet_bytes_total": len(packet),
+        "packet_sha256": _sha(packet),
+        "archive_schema": decoded.schema,
+        "section_bytes": {k: len(v) for k, v in decoded.sections.items()},
+        "n_pairs_metadata": decoded.metadata.get("n_pairs"),
+        "rate_term_packet": CONTEST_BYTE_PRICE * len(packet),
+    }
+
+    # Byte-closed archive.zip wrap (single member "x", STORED) — the contest
+    # rate numerator. STORED (not deflate) mirrors the carrier's payload-only
+    # archive contract; the packet bytes are already LZMA-compressed inside.
+    pkg_dir = G1B_DIR / "path_b_trained_archive"
+    pkg_dir.mkdir(parents=True, exist_ok=True)
+    archive_zip = pkg_dir / "archive.zip"
+    if not archive_zip.exists():
+        with zipfile.ZipFile(archive_zip, "w", zipfile.ZIP_STORED) as zf:
+            zf.writestr("x", packet)
+    out["archive_zip_path"] = str(archive_zip)
+    out["archive_zip_bytes"] = int(archive_zip.stat().st_size)
+    out["archive_zip_sha256"] = _sha(archive_zip.read_bytes())
+    out["rate_term_archive_zip"] = CONTEST_BYTE_PRICE * out["archive_zip_bytes"]
+    OUT_PATH.write_text(json.dumps(out, indent=2, sort_keys=True))
+
+    t0 = time.time()
+    frames = decode_snerv_archive_frames(packet)
+    out["decode_seconds"] = time.time() - t0
+    arr = np.asarray(frames, dtype=np.float32)
+    out["inflated_frames_shape_raw"] = list(arr.shape)
+
+    # Robust frames -> pairs reshape.
+    if arr.ndim == 5 and arr.shape[1] == 2:
+        pairs_arr = arr  # already (pairs, 2, C, H, W)
+    elif arr.ndim == 4 and arr.shape[0] % 2 == 0:
+        pairs_arr = arr.reshape(arr.shape[0] // 2, 2, *arr.shape[1:])
+    else:
+        raise RuntimeError(f"unexpected decoded frame shape {arr.shape}")
+    out["inflated_pairs_shape"] = list(pairs_arr.shape)
+    OUT_PATH.write_text(json.dumps(out, indent=2, sort_keys=True))
+
+    posenet, segnet = load_score_exact_scorers(
+        upstream_dir=str(REPO_ROOT / "upstream"), device="cpu"
+    )
+    n = min(48, int(pairs_arr.shape[0]))
+    source_pairs = decode_real_pairs(
+        str(REPO_ROOT / "upstream/videos/0.mkv"), n, pair_stride=1, start_pair=0
+    )
+    # Mirror the EXACT contest inflate semantics (inflate.py raw writer):
+    # carrier-res frames -> half-pixel bilinear to CAMERA_HW -> rint/clip ->
+    # uint8 roundtrip. This is what evaluate.py scores.
+    from tac.substrates.snerv_inverse_steg_carrier.inflate import (
+        _resize_nchw_bilinear,
+    )
+
+    cam_h, cam_w = int(source_pairs.shape[-2]), int(source_pairs.shape[-1])
+    out["camera_hw"] = [cam_h, cam_w]
+    sel = pairs_arr[:n]
+    flat = sel.reshape(-1, 3, sel.shape[-2], sel.shape[-1])
+    resized = _resize_nchw_bilinear(flat, out_hw=(cam_h, cam_w))
+    u8 = np.rint(np.clip(resized, 0.0, 255.0)).astype(np.uint8)
+    recon_np = u8.astype(np.float32).reshape(n, 2, 3, cam_h, cam_w)
+    out["inflate_semantics"] = (
+        "carrier_res_bilinear_half_pixel_to_camera_hw_then_rint_clip_uint8"
+    )
+    recon = torch.from_numpy(recon_np).to(source_pairs)
+    if tuple(recon.shape) != tuple(source_pairs.shape):
+        raise RuntimeError(
+            f"shape mismatch after camera-res inflate mirror: recon "
+            f"{tuple(recon.shape)} vs source {tuple(source_pairs.shape)}"
+        )
+    t1 = time.time()
+    dsegs, dposes = measure_pairs_d_seg_d_pose_batched(
+        posenet, segnet, source_pairs, recon, batch_pairs=8
+    )
+    d_seg = float(np.mean(dsegs))
+    d_pose = float(np.mean(dposes))
+    out.update(
+        {
+            "score_seconds": time.time() - t1,
+            "archive_surface_d_seg": d_seg,
+            "archive_surface_d_pose": d_pose,
+            "archive_surface_pose_score_term": float(np.sqrt(10.0 * max(d_pose, 0.0))),
+            "archive_surface_n_pairs_scored": n,
+            "archive_surface_scorer": "real_upstream_segnet_posenet_compute_distortion",
+            "per_pair_d_seg_first8": [float(v) for v in dsegs[:8]],
+            "per_pair_d_pose_first8": [float(v) for v in dposes[:8]],
+            "advisory_score_with_packet_rate": (
+                100.0 * d_seg
+                + float(np.sqrt(10.0 * max(d_pose, 0.0)))
+                + CONTEST_BYTE_PRICE * len(packet)
+            ),
+            "advisory_score_with_archive_zip_rate": (
+                100.0 * d_seg
+                + float(np.sqrt(10.0 * max(d_pose, 0.0)))
+                + CONTEST_BYTE_PRICE * out["archive_zip_bytes"]
+            ),
+        }
+    )
+    OUT_PATH.write_text(json.dumps(out, indent=2, sort_keys=True))
+    print("[g1b-pathb] d_seg =", d_seg, "d_pose =", d_pose, flush=True)
+    print("[g1b-pathb] WROTE", OUT_PATH, flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

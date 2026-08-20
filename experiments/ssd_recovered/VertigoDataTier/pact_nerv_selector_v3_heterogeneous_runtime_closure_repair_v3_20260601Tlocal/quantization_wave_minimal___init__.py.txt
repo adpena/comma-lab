@@ -1,0 +1,2 @@
+# SPDX-License-Identifier: MIT
+"""Minimal decode-time package init for repaired PSV3 runtime closure."""

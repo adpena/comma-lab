@@ -1,0 +1,86 @@
+"""ddm_pd1 Leg A step 1 — structural decomposition of every competitor archive on disk.
+
+Exact bytes through the real parser (zipfile), never an eyeballed table.
+For every archive.zip found: ZIP central-directory member split, per-member stored
+and uncompressed bytes, compression method, CRC, sha256 of the DECOMPRESSED member
+payload, and an order-0 entropy floor on the decompressed bytes.
+
+Order-0 entropy is reported as a FLOOR (a lower bound on what an order-0 coder
+would spend), never as "their coder's cost".  It is used only to rank how much
+structure a member still carries above the byte-histogram.
+
+Outputs JSONL typed rows to stdout; payload extraction is a separate step.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+import sys
+import zipfile
+from collections import Counter
+from pathlib import Path
+
+REPO = Path("/Users/adpena/Projects/pact")
+METHOD = {0: "stored", 8: "deflate", 12: "bzip2", 14: "lzma"}
+
+
+def order0_bits(buf: bytes) -> float:
+    """Shannon order-0 self-entropy of the byte string, in BITS (not bytes)."""
+    if not buf:
+        return 0.0
+    counts = Counter(buf)
+    n = len(buf)
+    return -sum(c * math.log2(c / n) for c in counts.values())
+
+
+def decompose(path: Path) -> dict | None:
+    try:
+        zf = zipfile.ZipFile(path)
+    except Exception as exc:  # not a zip / truncated
+        return {"archive": str(path), "error": repr(exc)}
+    members = []
+    with zf:
+        for info in zf.infolist():
+            row = {
+                "name": info.filename,
+                "stored_bytes": info.compress_size,
+                "raw_bytes": info.file_size,
+                "method": METHOD.get(info.compress_type, str(info.compress_type)),
+                "crc32": f"{info.CRC:08x}",
+            }
+            try:
+                buf = zf.read(info)
+            except Exception as exc:
+                row["read_error"] = repr(exc)
+                members.append(row)
+                continue
+            row["sha256"] = hashlib.sha256(buf).hexdigest()
+            h = order0_bits(buf)
+            row["order0_floor_bytes"] = round(h / 8.0, 2)
+            # How much of the stored size is explained by the byte histogram alone?
+            row["order0_over_stored"] = (
+                round((h / 8.0) / info.compress_size, 4) if info.compress_size else None
+            )
+            members.append(row)
+    total_stored = sum(m["stored_bytes"] for m in members)
+    return {
+        "archive": str(path),
+        "archive_bytes": path.stat().st_size,
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "n_members": len(members),
+        "member_stored_total": total_stored,
+        "zip_overhead_bytes": path.stat().st_size - total_stored,
+        "members": members,
+    }
+
+
+def main(paths: list[str]) -> None:
+    for p in paths:
+        out = decompose(Path(p))
+        if out is not None:
+            print(json.dumps(out))
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

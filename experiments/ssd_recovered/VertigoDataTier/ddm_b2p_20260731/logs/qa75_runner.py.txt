@@ -1,0 +1,27 @@
+import json, time, sys
+sys.path.insert(0, "/Users/adpena/Projects/pact/src")
+sys.path.insert(0, "/Users/adpena/Projects/pact")
+from tac.witness_dsl.qa75_solve_frame_targets import (
+    materialize_solve_frames, SolveFrameTargets, determinism_spotcheck)
+ARCH="/Volumes/VertigoDataTier/pact/ddm_ms2r_r3_box_tolerance_solve_20260725T030551Z/stage_checkpoints/04_candidate"
+OUT="/Volumes/VertigoDataTier/pact/ddm_b2p_20260731/qa75_solve_frames"
+t0=time.time()
+res=materialize_solve_frames(ARCH, OUT, limit=None)
+dt=time.time()-t0
+tg=SolveFrameTargets.load(OUT)
+# verify a spread of pairs
+vids=[0,150,300,450,599]
+verify={i: tg.verify_sha(i) for i in vids}
+sc=determinism_spotcheck(ARCH, [0,300,599])
+receipt={
+  "schema":"qa75_materialize_receipt.v1","score_claim":False,"axis":"[macOS-CPU advisory]",
+  "pair_count":res.pair_count,"frame_shape":list(res.frame_shape),
+  "frame0_described":res.frame0_described,
+  "source_archive_sha256":res.source_archive_sha256,"packet_sha256":res.packet_sha256,
+  "manifest_path":str(res.manifest_path),"wall_seconds":round(dt,1),
+  "verify_sha_sample":verify,"determinism_spotcheck":sc,
+  "finished_utc":time.strftime("%Y-%m-%dT%H:%M:%SZ",time.gmtime()),
+}
+with open(OUT+"/materialize_receipt.json","w") as f:
+    json.dump(receipt,f,indent=2,sort_keys=True)
+print("DONE",json.dumps({"pairs":res.pair_count,"wall_s":round(dt,1),"identical":sc["identical"],"verify":verify}))

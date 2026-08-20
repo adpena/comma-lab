@@ -1,0 +1,574 @@
+#!/usr/bin/env python3
+"""SNeRV Branch-B FIRST DERIVED rate attack — skip_high requantization ladder.
+
+Wires the carrier's LF-quantizer family + plain dtype ladders onto the
+``inputs.mfu.skip_high`` payload (99.9996% of the G1b archive) and re-measures
+EACH rung through the SAME exact inflate+scorer path G1b used (N>=48 pairs, real
+upstream SegNet/PoseNet ``compute_distortion``, carrier-res->camera-res bilinear
+half-pixel -> rint/clip uint8).
+
+Faithful re-pack mechanism (premise-verified 2026-06-09):
+  unpack_snerv_archive(packet) -> decode decoder_payload tensor manifest ->
+  mutate ONLY inputs.mfu.skip_high (dequantized float64) -> re-pack manifest +
+  re-LZMA + recompute the decoder header's internal sha/byte fields ->
+  pack_snerv_archive_snar2 with all other sections byte-identical -> re-measure.
+
+Rungs that store a dequantized float64 manifest let the EXISTING receiver decode
+unchanged (it only checks the header's own sha fields). The "carrier LF codec"
+rung measures the carrier's own lossless intN+brotli/lzma coder bytes on the
+quantized integer planes as the entropy-true storage estimate for that
+quantization (separately reported; it is NOT yet a receiver-decodable packet
+because the receiver expects float64 — flagged as a storage-floor measurement).
+
+Authority: [macOS-CPU advisory] / exact_cpu_advisory — NON-PROMOTABLE.
+Every row carries the false-authority contract; nothing here claims a contest
+score or is promotable. Contest-axis (Linux x86_64 / T4) replay is the promotion
+gate and is NOT claimed.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import lzma
+import sys
+import time
+import zipfile
+from pathlib import Path
+
+REPO_ROOT = Path("/Users/adpena/Projects/pact")
+G1B_RUN_DIR = Path("/Volumes/VertigoDataTier/pact/snerv_mistake_b_g1a_20260609T201221Z")
+G1B_PACKET = (
+    G1B_RUN_DIR
+    / "snerv_mlx_native_export/native_train_export/snerv_mlx_native_packet.snar"
+)
+RUN_DIR = Path(
+    "/Volumes/VertigoDataTier/pact/snerv_branch_b_rate_attack_20260609T230000Z"
+)
+
+sys.path.insert(0, str(REPO_ROOT / "src"))
+sys.path.insert(0, str(REPO_ROOT / "upstream"))
+
+import numpy as np  # noqa: E402
+
+CONTEST_N = 37_545_489
+CONTEST_BYTE_PRICE = 25.0 / CONTEST_N
+SKIP_HIGH_NAME = "inputs.mfu.skip_high"
+
+# G1b baseline (archive surface, N=48) — the fidelity-regression reference.
+G1B_BASE_D_SEG = 0.002468
+G1B_BASE_POSE_TERM = 0.142602  # sqrt(10 * d_pose)
+# Guards (per task): reject a rung whose archive d_seg > 0.01 OR pose term > 0.25
+# UNLESS its byte win passes the waterline -ΔS_dist > 25·Δbytes/N.
+GUARD_D_SEG_MAX = 0.01
+GUARD_POSE_TERM_MAX = 0.25
+
+FALSE_AUTHORITY = {
+    "authority_tier": "exact_cpu_advisory",
+    "axis_tag": "[macOS-CPU advisory]",
+    "score_claim": False,
+    "promotion_eligible": False,
+    "promotable": False,
+    "rank_or_kill_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+    "requires_exact_remeasure": False,  # these ARE exact (advisory) re-measures
+}
+
+
+def _sha(b: bytes) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+
+# --------------------------------------------------------------------------- #
+# Quantization ladder (each returns dequantized float64 + a storage-floor note)
+# --------------------------------------------------------------------------- #
+def quant_identity(arr: np.ndarray) -> np.ndarray:
+    return arr.astype(np.float64, copy=True)
+
+
+def quant_fp32(arr: np.ndarray) -> np.ndarray:
+    return arr.astype(np.float32).astype(np.float64)
+
+
+def quant_fp16(arr: np.ndarray) -> np.ndarray:
+    return arr.astype(np.float16).astype(np.float64)
+
+
+def _uint_levels(arr: np.ndarray, *, bits: int, per: str) -> np.ndarray:
+    """Quantize to 2**bits levels with min/max scale, dequantize to float64.
+
+    per: 'global' | 'frame' | 'frame_channel'  (scale granularity).
+    """
+    levels = (1 << bits) - 1
+    a = arr.astype(np.float64, copy=False)
+    if per == "global":
+        lo = float(a.min())
+        hi = float(a.max())
+        span = max(hi - lo, 1e-12)
+        codes = np.rint((a - lo) / span * levels)
+        return (codes / levels * span + lo).astype(np.float64)
+    if per == "frame":
+        # axis 0 is the frame index (N,3,H,W)
+        lo = a.min(axis=(1, 2, 3), keepdims=True)
+        hi = a.max(axis=(1, 2, 3), keepdims=True)
+    elif per == "frame_channel":
+        lo = a.min(axis=(2, 3), keepdims=True)
+        hi = a.max(axis=(2, 3), keepdims=True)
+    else:
+        raise ValueError(per)
+    span = np.maximum(hi - lo, 1e-12)
+    codes = np.rint((a - lo) / span * levels)
+    return (codes / levels * span + lo).astype(np.float64)
+
+
+def quant_uint8_frame(arr):
+    return _uint_levels(arr, bits=8, per="frame")
+
+
+def quant_uint8_frame_channel(arr):
+    return _uint_levels(arr, bits=8, per="frame_channel")
+
+
+def quant_uint8_global(arr):
+    return _uint_levels(arr, bits=8, per="global")
+
+
+def quant_uint6_frame(arr):
+    return _uint_levels(arr, bits=6, per="frame")
+
+
+def quant_uint4_frame(arr):
+    return _uint_levels(arr, bits=4, per="frame")
+
+
+# Ordered ladder (id, label, fn).
+LADDER = [
+    ("R0_baseline_full_float64_lzma6", "float64 (identity) — G1b baseline", quant_identity),
+    ("R1_fp32_lzma6", "float32 roundtrip", quant_fp32),
+    ("R2_fp16_lzma6", "fp16 roundtrip", quant_fp16),
+    ("R3_uint8_frame_lzma6", "uint8 per-frame min/max scale", quant_uint8_frame),
+    ("R4_uint8_frame_channel_lzma6", "uint8 per-frame-channel scale", quant_uint8_frame_channel),
+    ("R5_uint8_global_lzma6", "uint8 global min/max scale", quant_uint8_global),
+    ("R6_uint6_frame_lzma6", "uint6 per-frame scale", quant_uint6_frame),
+    ("R7_uint4_frame_lzma6", "uint4 per-frame scale", quant_uint4_frame),
+]
+
+
+# --------------------------------------------------------------------------- #
+# Re-encode the decoder_payload with a mutated skip_high (float64 manifest path)
+# --------------------------------------------------------------------------- #
+def reencode_decoder_payload(decoder_payload: bytes, new_skip_high: np.ndarray) -> bytes:
+    from tac.substrates.snerv_inverse_steg_carrier import archive as A
+
+    header, comp = A._unpack_subpacket(
+        decoder_payload,
+        magic=A.SNERV_DECODER_MAGIC,
+        schema=A.DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
+    )
+    raw = lzma.decompress(comp)
+    tensors = A._unpack_tensor_manifest(raw, header.get("tensor_manifest") or [])
+    tensors[SKIP_HIGH_NAME] = np.ascontiguousarray(new_skip_high, dtype=np.float64)
+    manifest, new_raw = A._pack_tensor_manifest(tensors)
+    new_comp = lzma.compress(
+        new_raw,
+        format=lzma.FORMAT_XZ,
+        preset=A.DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_LZMA_PRESET,
+    )
+    new_header = dict(header)
+    new_header["tensor_manifest"] = manifest
+    new_header["tensor_count"] = len(manifest)
+    new_header["raw_tensor_bytes"] = len(new_raw)
+    new_header["raw_tensor_sha256"] = A._sha256(new_raw)
+    new_header["compressed_bytes"] = len(new_comp)
+    new_header["compressed_sha256"] = A._sha256(new_comp)
+    return A._pack_subpacket(A.SNERV_DECODER_MAGIC, new_header, new_comp)
+
+
+def rebuild_packet(orig_packet: bytes, new_decoder_payload: bytes) -> bytes:
+    from tac.substrates.snerv_inverse_steg_carrier import archive as A
+
+    decoded = A.unpack_snerv_archive(orig_packet)
+    sections = dict(decoded.sections)
+    sections["decoder_payload"] = new_decoder_payload
+    return A.pack_snerv_archive_snar2(
+        metadata_payload=sections["metadata_payload"],
+        lf_payload=sections["lf_payload"],
+        decoder_payload=sections["decoder_payload"],
+        step_map_packet=sections["step_map_packet"],
+        metadata=decoded.metadata,
+    ).packet
+
+
+# --------------------------------------------------------------------------- #
+# Carrier LF-codec storage-floor (lossless intN + brotli/lzma on integer codes)
+# --------------------------------------------------------------------------- #
+def carrier_lf_codec_storage_bytes(arr: np.ndarray, *, bits: int, per: str):
+    """Quantize skip_high to int codes, encode via the carrier's lossless LF v2
+    codec, return (code_payload_bytes, scale_sidecar_bytes, dequant_float64).
+
+    This is the carrier's OWN bandwise quantizer + entropy coder (path-A
+    machinery the G1b verdict said is UNUSED on skip_high). It measures the true
+    entropy-coded storage of the quantization; the dequant_float64 is what the
+    receiver would reconstruct.
+    """
+    from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
+        encode_lf_quant_payload_v2_with_report,
+    )
+
+    levels = (1 << bits) - 1
+    a = arr.astype(np.float64, copy=False)
+    if per == "frame":
+        lo = a.min(axis=(1, 2, 3), keepdims=True)
+        hi = a.max(axis=(1, 2, 3), keepdims=True)
+    elif per == "frame_channel":
+        lo = a.min(axis=(2, 3), keepdims=True)
+        hi = a.max(axis=(2, 3), keepdims=True)
+    else:
+        raise ValueError(per)
+    span = np.maximum(hi - lo, 1e-12)
+    codes = np.rint((a - lo) / span * levels).astype(np.int64)
+    dequant = (codes.astype(np.float64) / levels * span + lo).astype(np.float64)
+    # One signed-int plane per frame. The carrier LF codec requires 2-D integer
+    # planes (_validate_lf_plane), so flatten each frame's (3,H,W) codes into a
+    # 2-D (3, H*W) plane (channel-major rows, spatial columns) — lossless re the
+    # stored byte count, which is order-invariant for the entropy coder.
+    planes = [
+        codes[i].reshape(codes.shape[1], -1) for i in range(codes.shape[0])
+    ]
+    packet, report = encode_lf_quant_payload_v2_with_report(
+        planes, mode="portfolio_auto", wrapper="portfolio_auto"
+    )
+    # Scale sidecar: lo+span as fp32, lzma-compressed.
+    scale_raw = np.concatenate(
+        [lo.astype(np.float32).reshape(-1), span.astype(np.float32).reshape(-1)]
+    ).tobytes()
+    scale_blob = lzma.compress(scale_raw, preset=6)
+    return len(packet), len(scale_blob), dequant
+
+
+# --------------------------------------------------------------------------- #
+# Scoring (exact inflate+scorer path mirror of g1b_path_b_score_fix.py)
+# --------------------------------------------------------------------------- #
+def score_packet(packet: bytes, n_pairs: int, source_pairs, posenet, segnet):
+    from tac.substrates.snerv_inverse_steg_carrier.archive import (
+        decode_snerv_archive_frames,
+    )
+    from tac.substrates.snerv_inverse_steg_carrier.inflate import _resize_nchw_bilinear
+    from tac.analysis.inverse_steganalysis_linf_vs_l2_gate import (
+        measure_pairs_d_seg_d_pose_batched,
+    )
+    import torch
+
+    t0 = time.time()
+    frames = decode_snerv_archive_frames(packet)
+    decode_s = time.time() - t0
+    arr = np.asarray(frames, dtype=np.float32)
+    if arr.ndim == 5 and arr.shape[1] == 2:
+        pairs_arr = arr
+    elif arr.ndim == 4 and arr.shape[0] % 2 == 0:
+        pairs_arr = arr.reshape(arr.shape[0] // 2, 2, *arr.shape[1:])
+    else:
+        raise RuntimeError(f"unexpected decoded frame shape {arr.shape}")
+    cam_h, cam_w = int(source_pairs.shape[-2]), int(source_pairs.shape[-1])
+    n = min(n_pairs, int(pairs_arr.shape[0]))
+    sel = pairs_arr[:n]
+    flat = sel.reshape(-1, 3, sel.shape[-2], sel.shape[-1])
+    resized = _resize_nchw_bilinear(flat, out_hw=(cam_h, cam_w))
+    u8 = np.rint(np.clip(resized, 0.0, 255.0)).astype(np.uint8)
+    recon_np = u8.astype(np.float32).reshape(n, 2, 3, cam_h, cam_w)
+    recon = torch.from_numpy(recon_np).to(source_pairs)
+    if tuple(recon.shape) != tuple(source_pairs[:n].shape):
+        raise RuntimeError(
+            f"shape mismatch: recon {tuple(recon.shape)} vs source {tuple(source_pairs[:n].shape)}"
+        )
+    t1 = time.time()
+    dsegs, dposes = measure_pairs_d_seg_d_pose_batched(
+        posenet, segnet, source_pairs[:n], recon, batch_pairs=8
+    )
+    d_seg = float(np.mean(dsegs))
+    d_pose = float(np.mean(dposes))
+    return {
+        "decode_seconds": decode_s,
+        "score_seconds": time.time() - t1,
+        "n_pairs_scored": n,
+        "d_seg": d_seg,
+        "d_pose": d_pose,
+        "pose_score_term": float(np.sqrt(10.0 * max(d_pose, 0.0))),
+        "per_pair_d_seg_first8": [float(v) for v in dsegs[:8]],
+        "per_pair_d_pose_first8": [float(v) for v in dposes[:8]],
+    }
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--n-pairs", type=int, default=48)
+    ap.add_argument(
+        "--rungs",
+        type=str,
+        default="all",
+        help="comma list of rung ids or 'all'",
+    )
+    ap.add_argument("--carrier-lf-floor", action="store_true",
+                    help="also measure carrier LF lossless-codec storage floor on uint8/frame + uint6/frame")
+    args = ap.parse_args()
+
+    RUN_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = RUN_DIR / "snerv_branch_b_rate_attack_ladder.v1.json"
+
+    from tac.substrates.snerv_inverse_steg_carrier import archive as A
+
+    orig_packet = G1B_PACKET.read_bytes()
+    decoded = A.unpack_snerv_archive(orig_packet)
+    dp = decoded.sections["decoder_payload"]
+    header, comp = A._unpack_subpacket(
+        dp, magic=A.SNERV_DECODER_MAGIC, schema=A.DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA
+    )
+    raw = lzma.decompress(comp)
+    tensors = A._unpack_tensor_manifest(raw, header.get("tensor_manifest") or [])
+    skip_high = tensors[SKIP_HIGH_NAME]
+
+    # Scorers + source pairs (load once).
+    from tac.analysis.score_exact_saliency import (
+        decode_real_pairs,
+        load_score_exact_scorers,
+    )
+
+    posenet, segnet = load_score_exact_scorers(
+        upstream_dir=str(REPO_ROOT / "upstream"), device="cpu"
+    )
+    source_pairs = decode_real_pairs(
+        str(REPO_ROOT / "upstream/videos/0.mkv"), args.n_pairs, pair_stride=1, start_pair=0
+    )
+
+    out = {
+        "schema": "snerv_branch_b_rate_attack_ladder.v1",
+        "subagent_id": "snerv_branch_b_rate_attack_20260609",
+        "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "g1b_packet_path": str(G1B_PACKET),
+        "g1b_packet_sha256": _sha(orig_packet),
+        "g1b_packet_bytes": len(orig_packet),
+        "g1b_base_d_seg": G1B_BASE_D_SEG,
+        "g1b_base_pose_term": G1B_BASE_POSE_TERM,
+        "skip_high_shape": list(skip_high.shape),
+        "skip_high_stats": {
+            "min": float(skip_high.min()),
+            "max": float(skip_high.max()),
+            "mean": float(skip_high.mean()),
+            "std": float(skip_high.std()),
+        },
+        "n_pairs_requested": args.n_pairs,
+        "contest_byte_price": CONTEST_BYTE_PRICE,
+        "guard_d_seg_max": GUARD_D_SEG_MAX,
+        "guard_pose_term_max": GUARD_POSE_TERM_MAX,
+        "waterline_law": "-dS_distortion > 25*dbytes/37545489",
+        "rungs": [],
+        **FALSE_AUTHORITY,
+    }
+
+    want = (
+        [r[0] for r in LADDER]
+        if args.rungs == "all"
+        else [s.strip() for s in args.rungs.split(",") if s.strip()]
+    )
+
+    baseline_bytes = None
+    baseline_total = None
+    for rid, label, fn in LADDER:
+        if rid not in want:
+            continue
+        t0 = time.time()
+        new_sh = fn(skip_high)
+        new_dp = reencode_decoder_payload(dp, new_sh)
+        new_pkt = rebuild_packet(orig_packet, new_dp)
+        pkt_bytes = len(new_pkt)
+        # archive.zip wrap (STORED single member 'x') — the contest rate numerator.
+        zbytes = _zip_stored_bytes(new_pkt)
+        sc = score_packet(new_pkt, args.n_pairs, source_pairs, posenet, segnet)
+        rate_pkt = CONTEST_BYTE_PRICE * pkt_bytes
+        rate_zip = CONTEST_BYTE_PRICE * zbytes
+        total_pkt = 100.0 * sc["d_seg"] + sc["pose_score_term"] + rate_pkt
+        total_zip = 100.0 * sc["d_seg"] + sc["pose_score_term"] + rate_zip
+        if rid == "R0_baseline_full_float64_lzma6":
+            baseline_bytes = pkt_bytes
+            baseline_total = total_pkt
+        # Fidelity-regression guard.
+        d_seg_ok = sc["d_seg"] <= GUARD_D_SEG_MAX
+        pose_ok = sc["pose_score_term"] <= GUARD_POSE_TERM_MAX
+        # Waterline rescue: even if a guard trips, accept if byte win pays for the
+        # distortion increase in exact score units.
+        dS_dist = (
+            100.0 * (sc["d_seg"] - G1B_BASE_D_SEG)
+            + (sc["pose_score_term"] - G1B_BASE_POSE_TERM)
+        )
+        dbytes = (pkt_bytes - (baseline_bytes if baseline_bytes else pkt_bytes))
+        dS_rate = CONTEST_BYTE_PRICE * dbytes
+        waterline_pass = (-dS_dist) > dS_rate if dbytes < 0 else False
+        guard_pass = (d_seg_ok and pose_ok) or waterline_pass
+        row = {
+            "rung_id": rid,
+            "label": label,
+            "packet_bytes": pkt_bytes,
+            "archive_zip_bytes": zbytes,
+            "packet_sha256": _sha(new_pkt),
+            "rate_term_packet": rate_pkt,
+            "rate_term_archive_zip": rate_zip,
+            "d_seg": sc["d_seg"],
+            "d_pose": sc["d_pose"],
+            "pose_score_term": sc["pose_score_term"],
+            "advisory_total_packet_rate": total_pkt,
+            "advisory_total_zip_rate": total_zip,
+            "delta_d_seg_vs_g1b": sc["d_seg"] - G1B_BASE_D_SEG,
+            "delta_pose_term_vs_g1b": sc["pose_score_term"] - G1B_BASE_POSE_TERM,
+            "dS_distortion_vs_g1b": dS_dist,
+            "delta_bytes_vs_baseline": dbytes,
+            "dS_rate_vs_baseline": dS_rate,
+            "guard_d_seg_ok": d_seg_ok,
+            "guard_pose_term_ok": pose_ok,
+            "waterline_pass": waterline_pass,
+            "guard_pass": guard_pass,
+            "byte_reduction_vs_baseline_pct": (
+                100.0 * (1.0 - pkt_bytes / baseline_bytes) if baseline_bytes else 0.0
+            ),
+            "value_per_byte": (
+                (-dS_dist) / abs(dbytes) if dbytes else 0.0
+            ),
+            "per_pair_d_seg_first8": sc["per_pair_d_seg_first8"],
+            "per_pair_d_pose_first8": sc["per_pair_d_pose_first8"],
+            "decode_seconds": sc["decode_seconds"],
+            "score_seconds": sc["score_seconds"],
+            "rung_wall_seconds": time.time() - t0,
+            **FALSE_AUTHORITY,
+        }
+        out["rungs"].append(row)
+        out_path.write_text(json.dumps(out, indent=2, sort_keys=True))
+        print(
+            f"[rate-attack] {rid:34s} bytes={pkt_bytes:>13,} "
+            f"({row['byte_reduction_vs_baseline_pct']:6.2f}% cut)  "
+            f"d_seg={sc['d_seg']:.6f} pose_term={sc['pose_score_term']:.4f} "
+            f"total(pkt)={total_pkt:9.3f} guard={'OK' if guard_pass else 'FAIL'}",
+            flush=True,
+        )
+
+    # Optional carrier LF lossless-codec storage floor (entropy-true bytes).
+    if args.carrier_lf_floor:
+        out["carrier_lf_codec_storage_floor"] = []
+        weights_lzma = _weights_lzma_bytes(tensors)
+        other_section_bytes = (
+            len(decoded.sections["metadata_payload"])
+            + len(decoded.sections["lf_payload"])
+            + len(decoded.sections["step_map_packet"])
+        )
+        for bits, per in [(8, "frame"), (6, "frame"), (4, "frame"), (8, "frame_channel")]:
+            t0 = time.time()
+            code_bytes, scale_bytes, dequant = carrier_lf_codec_storage_bytes(
+                skip_high, bits=bits, per=per
+            )
+            # Re-pack a float64 manifest of the DEQUANT to measure the receiver-
+            # decodable d_seg/d_pose at this quantization (so the floor row is
+            # apples-to-apples with the ladder fidelity).
+            new_dp = reencode_decoder_payload(dp, dequant)
+            new_pkt = rebuild_packet(orig_packet, new_dp)
+            sc = score_packet(new_pkt, args.n_pairs, source_pairs, posenet, segnet)
+            # Entropy-true storage estimate IF the receiver consumed intN codes:
+            est_skip_high_storage = code_bytes + scale_bytes
+            est_packet_floor = est_skip_high_storage + weights_lzma + other_section_bytes
+            rate_floor = CONTEST_BYTE_PRICE * est_packet_floor
+            total_floor = 100.0 * sc["d_seg"] + sc["pose_score_term"] + rate_floor
+            frow = {
+                "codec": "carrier_lf_quant_v2_lossless_intN_portfolio",
+                "bits": bits,
+                "scale_granularity": per,
+                "code_payload_bytes": code_bytes,
+                "scale_sidecar_bytes": scale_bytes,
+                "weights_lzma_bytes_est": weights_lzma,
+                "other_section_bytes": other_section_bytes,
+                "est_skip_high_storage_bytes": est_skip_high_storage,
+                "est_packet_floor_bytes": est_packet_floor,
+                "rate_term_floor": rate_floor,
+                "d_seg_at_this_quant": sc["d_seg"],
+                "d_pose_at_this_quant": sc["d_pose"],
+                "pose_term_at_this_quant": sc["pose_score_term"],
+                "advisory_total_floor": total_floor,
+                "note": (
+                    "STORAGE-FLOOR estimate: carrier lossless intN codec on the "
+                    "quantized integer planes; NOT a receiver-decodable packet "
+                    "yet (receiver expects float64). The d_seg/d_pose ARE the "
+                    "receiver-decodable fidelity at this quantization (measured "
+                    "on the dequant float64 packet)."
+                ),
+                "wall_seconds": time.time() - t0,
+                **FALSE_AUTHORITY,
+            }
+            out["carrier_lf_codec_storage_floor"].append(frow)
+            out_path.write_text(json.dumps(out, indent=2, sort_keys=True))
+            print(
+                f"[lf-floor] bits={bits} per={per:13s} "
+                f"skip_high_store={est_skip_high_storage:>13,}  "
+                f"packet_floor={est_packet_floor:>13,}  rate={rate_floor:7.4f}  "
+                f"d_seg={sc['d_seg']:.6f} total={total_floor:8.4f}",
+                flush=True,
+            )
+
+    out["best_rung"] = _best_rung(out["rungs"])
+    out["binding_next_gap"] = _binding_gap(out)
+    out_path.write_text(json.dumps(out, indent=2, sort_keys=True))
+    print("[rate-attack] WROTE", out_path, flush=True)
+    return 0
+
+
+def _zip_stored_bytes(packet: bytes) -> int:
+    import io
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as zf:
+        zf.writestr("x", packet)
+    return len(buf.getvalue())
+
+
+def _weights_lzma_bytes(tensors) -> int:
+    """LZMA-preset6 bytes of the float64 manifest of EVERYTHING except skip_high."""
+    from tac.substrates.snerv_inverse_steg_carrier import archive as A
+
+    sub = {k: v for k, v in tensors.items() if k != SKIP_HIGH_NAME}
+    _manifest, raw = A._pack_tensor_manifest(sub)
+    return len(lzma.compress(raw, format=lzma.FORMAT_XZ, preset=6))
+
+
+def _best_rung(rungs):
+    passing = [r for r in rungs if r["guard_pass"]]
+    if not passing:
+        return None
+    best = min(passing, key=lambda r: r["advisory_total_packet_rate"])
+    return {
+        "rung_id": best["rung_id"],
+        "advisory_total_packet_rate": best["advisory_total_packet_rate"],
+        "packet_bytes": best["packet_bytes"],
+        "d_seg": best["d_seg"],
+        "pose_score_term": best["pose_score_term"],
+    }
+
+
+def _binding_gap(out):
+    best = out.get("best_rung")
+    if not best:
+        return {"note": "no passing rung"}
+    nonrate = 100.0 * best["d_seg"] + best["pose_score_term"]
+    rate = CONTEST_BYTE_PRICE * best["packet_bytes"]
+    return {
+        "best_total": best["advisory_total_packet_rate"],
+        "best_nonrate_floor": nonrate,
+        "best_rate_term": rate,
+        "frontier_target": 0.19199,
+        "gap_vs_frontier": best["advisory_total_packet_rate"] - 0.19199,
+        "nonrate_floor_vs_frontier": nonrate - 0.19199,
+        "binding": "rate" if rate > nonrate else "nonrate",
+        "note": (
+            "non-rate floor 0.389 (seg 0.247 + pose 0.142) is ~2x PR101-class "
+            "0.193 even at rate->0; rate must drop AND seg/pose must descend."
+        ),
+    }
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

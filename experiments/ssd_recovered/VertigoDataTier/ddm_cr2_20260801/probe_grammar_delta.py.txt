@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""ddm_cr2 probe: token-grammar delta between the ep2 (monolithic tr1.ddt1)
+archive layout and the v4c/v4d (v3_warp exploded) layout.  No scorers."""
+import json, sys, zipfile
+from pathlib import Path
+PFS1 = "/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/pfs1"
+sys.path.insert(0, PFS1)
+import numpy as np
+import ddm_tr1_runtime as rt
+from ddm_r7_token_coder import decode_token_codes, encode_token_codes  # may fail
+
+EP = Path("/Volumes/VertigoDataTier/pact/ddm_ep2_20260731/archives/w03_ep854_representative/archive.zip")
+GR = Path("/Volumes/VertigoDataTier/pact/ddm_gr1_20260730/gr1_cell_drop50_archive.zip")
+
+def packet_sections(pk: bytes) -> dict[str, bytes]:
+    """Re-derive the raw section payloads from the packet byte layout."""
+    meta_len = rt.PACKET_HEADER.unpack_from(pk)[-1] if False else None
+    # generic: walk the section entry table using the runtime's own structs
+    hdr = rt.PACKET_HEADER
+    fields = hdr.unpack_from(pk, 0)
+    # metadata length is the last header field in this grammar
+    meta_len = int(fields[-1])
+    meta_end = hdr.size + meta_len
+    out = {}
+    cur = meta_end + len(rt.SECTION_NAMES) * rt.SECTION_ENTRY.size
+    for i, name in enumerate(rt.SECTION_NAMES):
+        raw_name, off, ln, sha = rt.SECTION_ENTRY.unpack_from(pk, meta_end + i * rt.SECTION_ENTRY.size)
+        out[name] = pk[off:off + ln]
+        cur = off + ln
+    return out
+
+with zipfile.ZipFile(EP) as z:
+    ep_pk = z.read("state/tr1.ddt1")
+    ep_manifest = json.loads(z.read("manifest.json"))
+ep_secs = packet_sections(ep_pk)
+print("EP854 packet sections:", {k: len(v) for k, v in ep_secs.items()})
+print("EP854 packet total  :", len(ep_pk), " archive:", EP.stat().st_size)
+
+with zipfile.ZipFile(GR) as z:
+    gr_dr7t = z.read("state/tokens.dr7t")
+    gr_members = {n: z.read(n) for n in z.namelist()}
+    gr_manifest = json.loads(gr_members["manifest.json"])
+gr_codes = decode_token_codes(gr_dr7t)
+gr_pkt_tokens = rt._encode_tokens(np.ascontiguousarray(gr_codes, dtype=np.uint8))
+print("GR1 dr7t bytes      :", len(gr_dr7t))
+print("GR1 packet-tokens   :", len(gr_pkt_tokens))
+print("GR1 codes shape     :", gr_codes.shape, gr_codes.dtype)
+
+# ep854 packet tokens -> codes (via the runtime decoder, needs the selector)
+ep_codes = rt._decode_tokens(ep_secs["tokens"], json.loads(ep_secs["selector"]) if ep_secs["selector"][:1] == b"{" else {})
+print("EP854 codes shape   :", ep_codes.shape, ep_codes.dtype)
+print("EP854 packet-tokens :", len(ep_secs["tokens"]))
+same = bool(np.array_equal(gr_codes.shape, ep_codes.shape))
+print("code-grid shapes match:", same)

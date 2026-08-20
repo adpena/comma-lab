@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$#" -ne 3 ]]; then
+  echo "usage: inflate.sh <archive-dir> <output-dir> <file-list>" >&2
+  exit 2
+fi
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DATA_DIR="$1"
+OUTPUT_DIR="$2"
+FILE_LIST="$3"
+BUILD_DIR="$(mktemp -d)"
+trap 'rm -rf "$BUILD_DIR"' EXIT
+
+if ! python - <<'PY' >/dev/null 2>&1
+import importlib.metadata
+import brotli
+raise SystemExit(importlib.metadata.version("Brotli") != "1.2.0")
+PY
+then
+  UVBIN="$(command -v uv || true)"
+  if [[ -z "$UVBIN" ]]; then
+    echo "CP135 requires Brotli==1.2.0, but uv is unavailable" >&2
+    exit 69
+  fi
+  "$UVBIN" pip install --python python --target "$BUILD_DIR/deps" \
+    --no-deps --only-binary :all: "Brotli==1.2.0"
+  export PYTHONPATH="$BUILD_DIR/deps${PYTHONPATH:+:$PYTHONPATH}"
+fi
+
+"${CC:-cc}" -O3 -std=c11 -shared -fPIC \
+  "$HERE/runtime/entropy/rc64_backend.c" \
+  -o "$BUILD_DIR/rc64_backend.so"
+export CPR1_RC64_LIBRARY="$BUILD_DIR/rc64_backend.so"
+export F26_TOKEN_DECODER="${F26_TOKEN_DECODER:-native-hpac}"
+if [[ "$F26_TOKEN_DECODER" == "native-hpac" ]]; then
+  if [[ -n "${F26_HPAC_NATIVE_LIBRARY:-}" ]]; then
+    [[ -f "$F26_HPAC_NATIVE_LIBRARY" ]] || { echo "missing F26 native library" >&2; exit 69; }
+  else
+    case "$(uname -s)" in
+      Darwin) NATIVE_ARCH_FLAG="-mcpu=native" ;;
+      *)      NATIVE_ARCH_FLAG="-march=native" ;;
+    esac
+    # The arch flag is a build-host optimisation, never an ISA gate: the speed
+    # comes from the compiler's auto-vectoriser.  -DF26_FORCE_SCALAR=1 compiles
+    # out the hand-written AVX2/NEON kernels, which are integer-only (no FP
+    # reordering hazard) but have never been executed on x86; the intrinsic-free
+    # twin MEASURED 0.4% FASTER at n600, so pinning it costs nothing and ships
+    # no unexecuted instruction.  Both attempts sit inside the `if` condition,
+    # which `set -e` does not apply to, so a compiler that rejects the arch flag
+    # falls back to the portable build and a compiler that fails both leaves the
+    # decoder unset for the caller below to degrade -- never an aborted inflate.
+    if "${CC:-cc}" -O3 $NATIVE_ARCH_FLAG -std=c11 -shared -fPIC \
+        -ffp-contract=off -fno-fast-math -DF26_FORCE_SCALAR=1 \
+        "$HERE/runtime/f26_hpac_native.c" -lm \
+        -o "$BUILD_DIR/f26_hpac_native.so" 2>/dev/null \
+      || "${CC:-cc}" -O3 -std=c11 -shared -fPIC \
+        -ffp-contract=off -fno-fast-math -DF26_FORCE_SCALAR=1 \
+        "$HERE/runtime/f26_hpac_native.c" -lm \
+        -o "$BUILD_DIR/f26_hpac_native.so" 2>/dev/null
+    then
+      export F26_HPAC_NATIVE_LIBRARY="$BUILD_DIR/f26_hpac_native.so"
+    else
+      echo "f26 native build unavailable; using the python token decoder" >&2
+      export F26_TOKEN_DECODER=python
+    fi
+  fi
+fi
+
+mkdir -p "$OUTPUT_DIR"
+while IFS= read -r line; do
+  [[ -z "$line" ]] && continue
+  base="${line%.*}"
+  if [[ "$base" != "0" ]]; then
+    echo "unsupported public video: $line" >&2
+    exit 2
+  fi
+  python "$HERE/inflate.py" "$DATA_DIR" "$base" "$OUTPUT_DIR/$base.raw"
+done < "$FILE_LIST"

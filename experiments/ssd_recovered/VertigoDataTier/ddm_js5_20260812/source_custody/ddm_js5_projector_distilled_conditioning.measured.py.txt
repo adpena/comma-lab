@@ -1,0 +1,1291 @@
+#!/usr/bin/env python3
+"""Projector-distilled conditioning for the CP135 learned Seg conditioner.
+
+The pose projector is a training-time proposal operator only.  Every proposal
+is checked after the real receiver/camera-uint8/custody-PoseNet chain and is
+accepted only while its realized pose delta remains inside a linearly allocated
+share of the endpoint ``2e-6`` guard.  Rejected proposals are rolled back and
+retried on a deterministic shrink ladder.  The receiver candidate is always a
+bare JS3 module: no projector basis and no scorer are needed at decode.
+
+This runner is a bounded stratified-n32 advisory instrument.  It retains every
+materialized candidate payload, is stage-resumable, and never launches the
+sealed MAIN burn or claims an exact contest score.
+"""
+
+from __future__ import annotations
+
+import argparse
+import copy
+import dataclasses
+import fcntl
+import itertools
+import json
+import math
+import os
+import platform
+import shutil
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+REPO = Path(__file__).resolve().parents[1]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+
+from experiments import ddm_js3_learned_implicit_conditioning as js3
+from experiments import ddm_js4_pose_null_projected_conditioning as js4
+from tac.boundary_math.posenet_subspace_spectrum import _orthonormal_row_basis, participation_ratio
+
+DEFAULT_OUTPUT = Path("/Volumes/VertigoDataTier/pact/ddm_js5_20260812")
+JS4_OUTPUT = Path("/Volumes/VertigoDataTier/pact/ddm_js4_20260812")
+JS4_MEASURED_SOURCE = JS4_OUTPUT / "source_custody/ddm_js4_pose_null_projected_conditioning.measured.py"
+ALPHAS = (1.0, 0.5, 0.25, 0.125, 0.0625)
+SHRINK_LADDER = (1.0, 0.5, 0.25, 0.125, 0.0625)
+DEFAULT_STAGE_STEPS = (4, 12)
+ECONOMICS_BAR_B_PER_ROBUST_FLIP = 1.28
+BREAK_EVEN_BYTES = 6_007
+BREAK_EVEN_ROBUST_FLIPS = 4_700
+MIN_ALPHA_CURVE_MOVEMENT = -1
+DEFAULT_REQUIRED_FREE_BYTES = 12_000_000_000
+JS3_SOURCE_SHA256 = "3f5f0ffd182aae71a29d619433967afdff234317293d441e402139d81534735a"
+JS4_MEASURED_SOURCE_SHA256 = "8989a846158c74107554523d70a3d45b1c600a42f292b7e0331eb48d631f87fb"
+
+
+class JS5Error(RuntimeError):
+    """A custody, retention, resume, acceptance, or bare-module invariant failed."""
+
+
+@dataclasses.dataclass(frozen=True)
+class Evaluation:
+    metrics: dict[str, Any]
+    payloads: dict[str, dict[str, Any]]
+
+
+@dataclasses.dataclass(frozen=True)
+class AlphaDecision:
+    alpha: float
+    relinearize_every_accepted: int
+    qualifying_alphas: tuple[float, ...]
+    reason: str
+
+
+def parse_float_tuple(value: str) -> tuple[float, ...]:
+    values = tuple(float(item) for item in value.split(",") if item.strip())
+    if not values or any(not math.isfinite(item) or item <= 0.0 for item in values):
+        raise argparse.ArgumentTypeError("values must be finite positive floats")
+    return values
+
+
+def endpoint_budget(
+    base_pose_delta: float,
+    accepted_after_proposal: int,
+    planned_accepted_steps: int,
+    endpoint_gate: float = js3.POSE_GUARD,
+) -> float:
+    """Allocate the endpoint guard monotonically across accepted steps."""
+    if planned_accepted_steps <= 0:
+        raise ValueError("planned_accepted_steps must be positive")
+    if not 1 <= accepted_after_proposal <= planned_accepted_steps:
+        raise ValueError("accepted_after_proposal must be inside the planned stage")
+    fraction = accepted_after_proposal / planned_accepted_steps
+    return float(base_pose_delta + fraction * (endpoint_gate - base_pose_delta))
+
+
+def accept_realized_pose(realized_pose_delta: float, budget: float) -> bool:
+    """The only proposal admission rule: strict realized pose budget."""
+    return math.isfinite(realized_pose_delta) and realized_pose_delta < budget
+
+
+def relinearization_cadence(alpha: float) -> int:
+    """Number of alpha-sized accepted moves that span one JS4 reference step."""
+    if not math.isfinite(alpha) or not 0.0 < alpha <= 1.0:
+        raise ValueError("alpha must be in (0, 1]")
+    return max(1, math.ceil(1.0 / alpha))
+
+
+def fit_log_slope(rows: list[dict[str, Any]], key: str) -> float | None:
+    points = [
+        (float(row["alpha"]), abs(float(row[key])))
+        for row in rows
+        if float(row["alpha"]) > 0.0 and math.isfinite(float(row[key])) and abs(float(row[key])) > 0.0
+    ]
+    if len(points) < 2:
+        return None
+    x = np.log(np.asarray([item[0] for item in points], dtype=np.float64))
+    y = np.log(np.asarray([item[1] for item in points], dtype=np.float64))
+    return float(np.polyfit(x, y, deg=1)[0])
+
+
+def choose_alpha(rows: list[dict[str, Any]]) -> AlphaDecision:
+    qualifying = tuple(
+        float(row["alpha"])
+        for row in rows
+        if bool(row["uint8_total_gate_pass"])
+        and int(row["metrics"]["projected_n600_robust_delta_flips"]) <= MIN_ALPHA_CURVE_MOVEMENT
+    )
+    if qualifying:
+        alpha = max(qualifying)
+        reason = "largest measured alpha passing the realized endpoint gate with robust movement"
+    else:
+        gate_passing = tuple(float(row["alpha"]) for row in rows if bool(row["uint8_total_gate_pass"]))
+        alpha = max(gate_passing) if gate_passing else min(float(row["alpha"]) for row in rows)
+        reason = (
+            "largest measured gate-passing alpha; alpha curve had no robust gate-passing point"
+            if gate_passing
+            else "smallest measured alpha; no alpha passed the realized endpoint gate"
+        )
+    return AlphaDecision(alpha, relinearization_cadence(alpha), qualifying, reason)
+
+
+def _payload_map(root: Path) -> dict[str, dict[str, Any]]:
+    return {str(path.relative_to(root)): js3.file_record(path) for path in sorted(root.rglob("*")) if path.is_file()}
+
+
+def _load_js4_final() -> dict[str, Any]:
+    path = JS4_OUTPUT / "FINAL_RESULT.json"
+    if not path.is_file():
+        raise JS5Error(f"missing JS4 final result: {path}")
+    row = json.loads(path.read_text())
+    if js3.sha256_file(path) != "21bb694d4e40ad50cf2873c19d0b7d58814f57bf3969cd7f6f724104a8ab04f2":
+        raise JS5Error("JS4 FINAL_RESULT.json differs from the charter pin")
+    return row
+
+
+def verify_inheritance() -> dict[str, dict[str, Any]]:
+    js3_source = REPO / "experiments/ddm_js3_learned_implicit_conditioning.py"
+    if js3.sha256_file(js3_source) != JS3_SOURCE_SHA256:
+        raise JS5Error("JS3 source differs from the charter pin")
+    if not JS4_MEASURED_SOURCE.is_file() or js3.sha256_file(JS4_MEASURED_SOURCE) != JS4_MEASURED_SOURCE_SHA256:
+        raise JS5Error("JS4 measured source differs from the charter pin")
+    return {
+        "js3": js3.file_record(js3_source),
+        "js4_measured": js3.file_record(JS4_MEASURED_SOURCE),
+        "js4_landed": js3.file_record(REPO / "experiments/ddm_js4_pose_null_projected_conditioning.py"),
+    }
+
+
+def _load_js4_selected_model(context: Any, final: dict[str, Any]) -> Any:
+    selected = final["selected_stage"]
+    branch = selected[str(selected["selected_kind"])]
+    coded_record = branch["export"]["selected"]["coded"]
+    coded_path = Path(coded_record["path"])
+    if not coded_path.is_file() or js3.file_record(coded_path) != coded_record:
+        raise JS5Error("JS4 selected module custody differs")
+    model = js3.build_model(context.modules.torch, context.modules.functional, 4, 6.0, qat=True)
+    js3.load_decoded_state(model, js3.parse_module(coded_path.read_bytes()), context.modules.torch)
+    model.eval()
+    return model
+
+
+def _pose_errors(context: Any, camera: Any, start: int, stop: int) -> np.ndarray:
+    torch = context.modules.torch
+    frame0 = torch.from_numpy(np.asarray(context.base_pairs[start:stop, 0]).copy()).permute(0, 3, 1, 2).float()
+    pair = torch.stack((frame0, camera), dim=1)
+    candidate_preprocessed = context.posenet.preprocess_input(pair)
+    custody = torch.from_numpy(np.asarray(context.custody_pose[context.sample[start:stop]]).copy()).float()
+    transported = custody + (candidate_preprocessed - context.base_pose_input[start:stop])
+    with torch.inference_mode():
+        pose = context.posenet(transported)["pose"][..., :6].cpu().numpy().astype(np.float64)
+    target = np.asarray(context.gt_poses[context.sample[start:stop]], dtype=np.float64)
+    return ((pose - target) ** 2).mean(axis=1)
+
+
+def evaluate_correction(
+    context: Any,
+    pre_r_store: np.ndarray,
+    model: Any,
+    router: js4.ProjectionRouter | None,
+    alpha: float,
+    root: Path,
+    *,
+    include_seg: bool,
+    continuous_pose: bool = False,
+) -> Evaluation:
+    """Evaluate and retain one projected or bare receiver candidate."""
+    torch, functional = context.modules.torch, context.modules.functional
+    correction_rows: list[np.ndarray] = []
+    camera_rows: list[np.ndarray] = []
+    pose_rows: list[np.ndarray] = []
+    continuous_camera_rows: list[np.ndarray] = []
+    continuous_pose_rows: list[np.ndarray] = []
+    logits_rows: list[np.ndarray] = []
+    model.eval()
+    with torch.inference_mode():
+        for start in range(0, js3.SAMPLE_N, js3.BATCH):
+            stop = start + js3.BATCH
+            pre_r = torch.from_numpy(np.asarray(pre_r_store[start:stop], dtype=np.float32))
+            tokens = torch.from_numpy(
+                np.asarray(context.tokens[context.sample[start:stop]]).astype(np.int64, copy=True)
+            )
+            fixed = js3.fixed_context(torch, functional, tokens, pre_r)
+            raw = model(fixed)
+            if router is not None:
+                router.activate(tokens)
+                correction = router.project(raw) * alpha
+            else:
+                correction = raw * alpha
+            camera, scorer = js3.camera_roundtrip(torch, functional, pre_r, correction)
+            _base_camera, base_scorer = js3.camera_roundtrip(torch, functional, pre_r, torch.zeros_like(correction))
+            correction_rows.append(correction.half().cpu().numpy())
+            camera_rows.append(camera.to(torch.uint8).cpu().numpy())
+            pose_rows.append(_pose_errors(context, camera, start, stop))
+            if continuous_pose:
+                base_camera, _ = js3.camera_roundtrip(torch, functional, pre_r, torch.zeros_like(correction))
+                lifted = functional.interpolate(
+                    correction,
+                    size=(js3.CAMERA_H, js3.CAMERA_W),
+                    mode="bilinear",
+                    align_corners=False,
+                )
+                camera_float = (base_camera + lifted).clamp(0.0, 255.0)
+                continuous_camera_rows.append(camera_float.half().cpu().numpy())
+                continuous_pose_rows.append(_pose_errors(context, camera_float, start, stop))
+            if include_seg:
+                custody = torch.from_numpy(np.asarray(context.custody_seg[context.sample[start:stop]]).copy()).float()
+                logits_rows.append(context.segnet(custody + (scorer - base_scorer)).cpu().numpy().astype(np.float32))
+    correction_np = np.concatenate(correction_rows)
+    camera_np = np.concatenate(camera_rows)
+    pose_np = np.concatenate(pose_rows)
+    js3.atomic_npy(root / "correction_n32.float16.npy", correction_np)
+    js3.atomic_npy(root / "camera_frame1_n32.uint8.npy", camera_np)
+    js3.atomic_npy(root / "pose_errors_n32.float64.npy", pose_np)
+    payloads: dict[str, dict[str, Any]] = {}
+    base_pose = js3.js2b.stratified_mean(context.base_pose_errors, context.sample_weights)
+    candidate_pose = js3.js2b.stratified_mean(pose_np, context.sample_weights)
+    metrics: dict[str, Any] = {
+        "pose_base_stratified_n32": base_pose,
+        "pose_candidate_stratified_n32": candidate_pose,
+        "pose_delta_stratified_n32": candidate_pose - base_pose,
+        "pose_guard_pass": candidate_pose - base_pose < js3.POSE_GUARD,
+    }
+    if continuous_pose:
+        camera_float_np = np.concatenate(continuous_camera_rows)
+        pose_float_np = np.concatenate(continuous_pose_rows)
+        js3.atomic_npy(root / "camera_continuous_n32.float16.npy", camera_float_np)
+        js3.atomic_npy(root / "pose_errors_continuous_n32.float64.npy", pose_float_np)
+        float_pose = js3.js2b.stratified_mean(pose_float_np, context.sample_weights)
+        metrics.update(
+            continuous_pose_candidate_stratified_n32=float_pose,
+            continuous_pose_delta_stratified_n32=float_pose - base_pose,
+        )
+    if include_seg:
+        logits = np.concatenate(logits_rows)
+        gt = np.asarray(context.gt_labels[context.sample])
+        baseline = np.asarray(context.custody_argmax[context.sample])
+        robust = js3.robust_metrics(logits, baseline, gt, context.sample_weights)
+        prediction = robust.pop("prediction")
+        js3.atomic_npy(root / "logits_n32.float32.npy", logits)
+        js3.atomic_npy(root / "argmax_n32.uint8.npy", prediction)
+        metrics.update(robust)
+    payloads.update(_payload_map(root))
+    metrics["payloads"] = payloads
+    js3.atomic_json(root.parent / "RESULT.json", {"axis": js3.AXIS, "score_claim": False, **metrics})
+    return Evaluation(metrics, payloads)
+
+
+def run_alpha_curve(
+    context: Any,
+    pre_r_store: np.ndarray,
+    cache: js4.ProjectorCache,
+    output: Path,
+    alphas: tuple[float, ...],
+) -> tuple[dict[str, Any], AlphaDecision]:
+    result_path = output / "alpha_curve/RESULT.json"
+    if result_path.is_file():
+        result = json.loads(result_path.read_text())
+        if result.get("alphas") != list(alphas):
+            raise JS5Error("retained alpha curve uses different amplitudes")
+        if result.get("source_js4_measured_python") != js3.file_record(JS4_MEASURED_SOURCE):
+            raise JS5Error("retained alpha curve uses different JS4 measured source")
+        decision = AlphaDecision(
+            float(result["decision"]["alpha"]),
+            int(result["decision"]["relinearize_every_accepted"]),
+            tuple(float(item) for item in result["decision"]["qualifying_alphas"]),
+            str(result["decision"]["reason"]),
+        )
+        return result, decision
+    final = _load_js4_final()
+    model = _load_js4_selected_model(context, final)
+    router = js4.ProjectionRouter(cache, context.modules.torch)
+    zero = evaluate_correction(
+        context,
+        pre_r_store,
+        model,
+        router,
+        0.0,
+        output / "alpha_curve/alpha_0/retained",
+        include_seg=True,
+        continuous_pose=True,
+    )
+    zero_u8 = float(zero.metrics["pose_candidate_stratified_n32"])
+    zero_float = float(zero.metrics["continuous_pose_candidate_stratified_n32"])
+    rows: list[dict[str, Any]] = []
+    for alpha in alphas:
+        label = str(alpha).replace(".", "p")
+        evaluated = evaluate_correction(
+            context,
+            pre_r_store,
+            model,
+            router,
+            alpha,
+            output / f"alpha_curve/alpha_{label}/retained",
+            include_seg=True,
+            continuous_pose=True,
+        )
+        metrics = evaluated.metrics
+        uint8_correction = float(metrics["pose_candidate_stratified_n32"]) - zero_u8
+        continuous_correction = float(metrics["continuous_pose_candidate_stratified_n32"]) - zero_float
+        row = {
+            "alpha": alpha,
+            "metrics": metrics,
+            "uint8_correction_pose_leakage": uint8_correction,
+            "continuous_correction_pose_leakage": continuous_correction,
+            "uint8_total_gate_pass": bool(metrics["pose_guard_pass"]),
+            "robust_movement": int(metrics["projected_n600_robust_delta_flips"]),
+        }
+        rows.append(row)
+    decision = choose_alpha(rows)
+    result = {
+        "schema": "ddm_js5_alpha_curve.v1",
+        "axis": js3.AXIS,
+        "score_claim": False,
+        "alphas": list(alphas),
+        "zero_reference": zero.metrics,
+        "rows": rows,
+        "continuous_leakage_log_slope": fit_log_slope(rows, "continuous_correction_pose_leakage"),
+        "uint8_leakage_log_slope": fit_log_slope(rows, "uint8_correction_pose_leakage"),
+        "preregistered_continuous_slope": 2.0,
+        "decision": dataclasses.asdict(decision),
+        "source_js4_final": js3.file_record(JS4_OUTPUT / "FINAL_RESULT.json"),
+        "source_js4_measured_python": js3.file_record(JS4_MEASURED_SOURCE),
+    }
+    js3.atomic_json(result_path, result)
+    return result, decision
+
+
+def _model_correction_n32(context: Any, pre_r_store: np.ndarray, model: Any, router: js4.ProjectionRouter, alpha: float) -> np.ndarray:
+    torch, functional = context.modules.torch, context.modules.functional
+    rows: list[np.ndarray] = []
+    model.eval()
+    with torch.inference_mode():
+        for start in range(0, js3.SAMPLE_N, js3.BATCH):
+            stop = start + js3.BATCH
+            pre_r = torch.from_numpy(np.asarray(pre_r_store[start:stop], dtype=np.float32))
+            tokens = torch.from_numpy(
+                np.asarray(context.tokens[context.sample[start:stop]]).astype(np.int64, copy=True)
+            )
+            router.activate(tokens)
+            raw = model(js3.fixed_context(torch, functional, tokens, pre_r))
+            rows.append((router.project(raw) * alpha).cpu().numpy().astype(np.float32))
+    return np.concatenate(rows)
+
+
+def compute_pair_jacobian_at_correction(
+    context: Any,
+    pre_r: np.ndarray,
+    correction_at_point: np.ndarray,
+    sample_slot: int,
+) -> np.ndarray:
+    """Differentiate custody PoseNet at the current accepted correction."""
+    torch, functional = context.modules.torch, context.modules.functional
+    pair_id = int(context.sample[sample_slot])
+    pre = torch.from_numpy(np.asarray(pre_r, dtype=np.float32)[None].copy())
+    base = torch.from_numpy(np.asarray(correction_at_point, dtype=np.float32)[None].copy())
+    tangent = torch.zeros_like(base, requires_grad=True)
+    camera, _ = js3.camera_roundtrip(torch, functional, pre, base + tangent)
+    frame0 = torch.from_numpy(np.asarray(context.base_pairs[sample_slot : sample_slot + 1, 0]).copy())
+    frame0 = frame0.permute(0, 3, 1, 2).float()
+    pair = torch.stack((frame0, camera), dim=1)
+    candidate_preprocessed = js4.differentiable_pose_preprocess(torch, functional, pair)
+    custody = torch.from_numpy(np.asarray(context.custody_pose[pair_id : pair_id + 1]).copy()).float()
+    transported = custody + (candidate_preprocessed - candidate_preprocessed.detach())
+    pose6 = context.posenet(transported)["pose"][..., : js4.PROJECTOR_ROWS]
+    rows = []
+    for dim in range(js4.PROJECTOR_ROWS):
+        gradient = torch.autograd.grad(
+            pose6[0, dim],
+            tangent,
+            retain_graph=dim < js4.PROJECTOR_ROWS - 1,
+            create_graph=False,
+        )[0]
+        rows.append(gradient.detach().reshape(-1).cpu().numpy().astype(np.float32))
+    jacobian = np.stack(rows)
+    if not np.any(np.abs(jacobian) > 0.0):
+        raise JS5Error(f"relinearized PoseNet Jacobian is zero for pair {pair_id}")
+    return jacobian
+
+
+def build_relinearized_cache(
+    context: Any,
+    pre_r_store: np.ndarray,
+    model: Any,
+    prior_cache: js4.ProjectorCache,
+    alpha: float,
+    root: Path,
+    generation: int,
+) -> js4.ProjectorCache:
+    """Persist a complete current-point projector generation and return it."""
+    manifest_path = root / "MANIFEST.json"
+    if manifest_path.is_file():
+        loaded = js4._load_complete_cache(root, context)
+        if loaded is None:
+            raise JS5Error("relinearized cache manifest could not be loaded")
+        return loaded
+    router = js4.ProjectionRouter(prior_cache, context.modules.torch)
+    operating = _model_correction_n32(context, pre_r_store, model, router, alpha)
+    js3.atomic_npy(root / "operating_correction_n32.float32.npy", operating)
+    records: list[js4.ProjectorPairRecord] = []
+    for slot, pair_id_raw in enumerate(context.sample.tolist()):
+        pair_id = int(pair_id_raw)
+        pair_root = root / "retained" / f"pair_{pair_id:06d}"
+        jacobian = compute_pair_jacobian_at_correction(
+            context,
+            np.asarray(pre_r_store[slot]),
+            operating[slot],
+            slot,
+        )
+        singular_values, active_basis, rank = _orthonormal_row_basis(
+            jacobian.astype(np.float64), rel_tol=js4.PROJECTOR_REL_TOL
+        )
+        padded = np.zeros((js4.PROJECTOR_ROWS, jacobian.shape[1]), dtype=np.float32)
+        padded[:rank] = active_basis.astype(np.float32)
+        js4.validate_padded_row_basis(padded, rank)
+        jacobian_path = pair_root / "jacobian_6x589824.float32.npy"
+        basis_path = pair_root / "row_basis_6x589824.float32.npy"
+        js3.atomic_npy(jacobian_path, jacobian)
+        js3.atomic_npy(basis_path, padded)
+        receipt_path = pair_root / "PAIR.json"
+        receipt = {
+            "schema": "ddm_js4_pose_projector_pair.v1",
+            "axis": js3.AXIS,
+            "score_claim": False,
+            "seed": js3.SEED,
+            "base_archive_sha256": js3.js2b.BASE_ARCHIVE_SHA256,
+            "pair_id": pair_id,
+            "sample_slot": slot,
+            "token_sha256": js4.token_sha256(context.tokens[pair_id]),
+            "rank": rank,
+            "effective_dim": participation_ratio(singular_values[:rank]),
+            "singular_values": [float(item) for item in singular_values],
+            "rel_tol": js4.PROJECTOR_REL_TOL,
+            "coordinate": "current accepted JS5 correction through receiver/R/uint8/custody PoseNet",
+            "fixed_during_training": True,
+            "generation": generation,
+            "jacobian": js3.file_record(jacobian_path),
+            "row_basis": js3.file_record(basis_path),
+        }
+        js3.atomic_json(receipt_path, receipt)
+        records.append(js4._record_from_receipt(receipt_path))
+    manifest = {
+        "schema": "ddm_js4_pose_projector_cache.v1",
+        "axis": js3.AXIS,
+        "score_claim": False,
+        "seed": js3.SEED,
+        "sample": context.sample.tolist(),
+        "sample_weights": context.sample_weights.tolist(),
+        "base_archive_sha256": js3.js2b.BASE_ARCHIVE_SHA256,
+        "base_archive_bytes": js3.js2b.BASE_ARCHIVE_BYTES,
+        "projector_rows": js4.PROJECTOR_ROWS,
+        "correction_dimension": 3 * js3.H * js3.W,
+        "rel_tol": js4.PROJECTOR_REL_TOL,
+        "fixed_during_training": True,
+        "generation": generation,
+        "operating_correction": js3.file_record(root / "operating_correction_n32.float32.npy"),
+        "projector_source": js3.file_record(JS4_MEASURED_SOURCE),
+        "linear_algebra_source": js3.file_record(
+            REPO / "src/tac/boundary_math/posenet_subspace_spectrum.py"
+        ),
+        "js3_source": js3.file_record(REPO / "experiments/ddm_js3_learned_implicit_conditioning.py"),
+        "js4_source": js3.file_record(REPO / "experiments/ddm_js4_pose_null_projected_conditioning.py"),
+        "pairs": [dataclasses.asdict(record) for record in records],
+    }
+    js3.atomic_json(manifest_path, manifest)
+    loaded = js4._load_complete_cache(root, context)
+    if loaded is None:
+        raise JS5Error("new relinearized projector cache did not close")
+    return loaded
+
+
+def _checkpoint(
+    root: Path,
+    label: str,
+    model: Any,
+    optimizer: Any,
+    ema: dict[str, Any],
+    torch: Any,
+    state: dict[str, Any],
+) -> dict[str, Any]:
+    path = root / "checkpoints" / f"{label}.accepted_{state['accepted_steps']:06d}.pt"
+    payload = {
+        "schema": "ddm_js5_checkpoint.v1",
+        "model": model.state_dict(),
+        "optimizer": optimizer.state_dict(),
+        "ema": ema,
+        "torch_rng": torch.get_rng_state(),
+        "numpy_rng": np.random.get_state(),
+        "state": state,
+    }
+    js3.atomic_torch_save(path, payload, torch)
+    record = {"schema": "ddm_js5_checkpoint_record.v1", "checkpoint": js3.file_record(path), **state}
+    js3.atomic_json(root / "checkpoints/LATEST.json", record)
+    return record
+
+
+def _restore_training_state(model: Any, optimizer: Any, snapshot: dict[str, Any], torch: Any) -> None:
+    model.load_state_dict(snapshot["model"])
+    optimizer.load_state_dict(snapshot["optimizer"])
+    torch.set_rng_state(snapshot["torch_rng"])
+    np.random.set_state(snapshot["numpy_rng"])
+
+
+def activate_training_projector(router: js4.ProjectionRouter, tokens: Any) -> None:
+    """Activate a normal tensor even when a prior inference read populated the cache."""
+    router.activate(tokens)
+    if router.active_basis is None:
+        raise JS5Error("training projector activation produced no basis")
+    router.active_basis = router.active_basis.clone()
+    if hasattr(router.active_basis, "is_inference") and router.active_basis.is_inference():
+        raise JS5Error("training projector basis remained an inference tensor after clone")
+
+
+def _baked_export_model(model: Any, alpha: float) -> Any:
+    exported = copy.deepcopy(model)
+    exported.max_delta = float(model.max_delta) * alpha
+    return exported
+
+
+def export_bare_module(model: Any, alpha: float, root: Path) -> dict[str, Any]:
+    """Serialize the amplitude inside counted module metadata; ship no basis."""
+    baked = _baked_export_model(model, alpha)
+    races = [js3.serialize_module(baked, mode, root) for mode in ("fp16", "int8")]
+    selected = min(races, key=lambda item: (len(item.coded), item.mode))
+    return {
+        "races": [item.report for item in races],
+        "selected": selected.report,
+        "selected_decoded_state": selected.decoded_state,
+        "baked_max_delta": float(baked.max_delta),
+        "projector_payload_bytes": 0,
+        "scorer_at_decode": False,
+    }
+
+
+def _stage_measurement(
+    context: Any,
+    pre_r_store: np.ndarray,
+    model: Any,
+    ema: dict[str, Any],
+    cache: js4.ProjectorCache,
+    alpha: float,
+    root: Path,
+    label: str,
+) -> dict[str, Any]:
+    torch, functional = context.modules.torch, context.modules.functional
+    rows: list[dict[str, Any]] = []
+    for kind, source_model in (
+        ("live", model),
+        ("ema", js3.build_model(torch, functional, model.hidden, model.max_delta, qat=True)),
+    ):
+        if kind == "ema":
+            source_model.load_state_dict(ema)
+        export = export_bare_module(source_model, alpha, root / kind / "retained")
+        decoded = js3.build_model(
+            torch,
+            functional,
+            source_model.hidden,
+            float(export["baked_max_delta"]),
+            qat=True,
+        )
+        js3.load_decoded_state(decoded, export.pop("selected_decoded_state"), torch)
+        bare = evaluate_correction(
+            context,
+            pre_r_store,
+            decoded,
+            None,
+            1.0,
+            root / kind / "bare/retained",
+            include_seg=True,
+        )
+        teacher_model = js3.build_model(
+            torch,
+            functional,
+            source_model.hidden,
+            source_model.max_delta,
+            qat=True,
+        )
+        selected_coded = Path(export["selected"]["coded"]["path"])
+        js3.load_decoded_state(teacher_model, js3.parse_module(selected_coded.read_bytes()), torch)
+        projected = evaluate_correction(
+            context,
+            pre_r_store,
+            teacher_model,
+            js4.ProjectionRouter(cache, torch),
+            alpha,
+            root / kind / "projected/retained",
+            include_seg=True,
+        )
+        robust = int(bare.metrics["projected_n600_robust_delta_flips"])
+        module_bytes = int(export["selected"]["brotli_q11_bytes"])
+        b_per_flip = module_bytes / -robust if robust < 0 else None
+        rows.append(
+            {
+                "kind": kind,
+                "bare": bare.metrics,
+                "projected": projected.metrics,
+                "export": export,
+                "module_brotli_q11_bytes": module_bytes,
+                "bytes_per_projected_robust_flip": b_per_flip,
+                "economics_bar_pass": b_per_flip is not None and b_per_flip <= ECONOMICS_BAR_B_PER_ROBUST_FLIP,
+                "bare_pose_gate_pass": bool(bare.metrics["pose_guard_pass"]),
+                "bare_robust_movement_pass": robust < 0,
+                "bare_admission_pass": bool(bare.metrics["pose_guard_pass"]) and robust < 0,
+            }
+        )
+    selected = min(
+        rows,
+        key=lambda row: (
+            not bool(row["bare_admission_pass"]),
+            int(row["bare"]["projected_n600_robust_delta_flips"]),
+            int(row["bare"]["projected_n600_delta_flips"]),
+            int(row["module_brotli_q11_bytes"]),
+            str(row["kind"]),
+        ),
+    )
+    result = {"schema": "ddm_js5_stage_measurement.v1", "stage": label, "rows": rows, "selected": selected}
+    js3.atomic_json(root / "RESULT.json", result)
+    return result
+
+
+def _normalize_stage_admission(stage: dict[str, Any]) -> dict[str, Any]:
+    """Keep cached pre-admission receipts honest after the usefulness gate was named."""
+    for row in stage["rows"]:
+        pose_pass = bool(row["bare"]["pose_guard_pass"])
+        robust_pass = int(row["bare"]["projected_n600_robust_delta_flips"]) < 0
+        row["bare_pose_gate_pass"] = pose_pass
+        row["bare_robust_movement_pass"] = robust_pass
+        row["bare_admission_pass"] = pose_pass and robust_pass
+    stage["selected"] = min(
+        stage["rows"],
+        key=lambda row: (
+            not bool(row["bare_admission_pass"]),
+            int(row["bare"]["projected_n600_robust_delta_flips"]),
+            int(row["bare"]["projected_n600_delta_flips"]),
+            int(row["module_brotli_q11_bytes"]),
+            str(row["kind"]),
+        ),
+    )
+    return stage
+
+
+def _normalize_cached_rung(rung: dict[str, Any]) -> dict[str, Any]:
+    rung["stages"] = [_normalize_stage_admission(stage) for stage in rung["stages"]]
+    rung["selected_stage"] = min(
+        rung["stages"],
+        key=lambda row: (
+            not bool(row["selected"]["bare_admission_pass"]),
+            int(row["selected"]["bare"]["projected_n600_robust_delta_flips"]),
+            int(row["selected"]["module_brotli_q11_bytes"]),
+            row["stage"],
+        ),
+    )
+    return rung
+
+
+def train_rung(
+    args: argparse.Namespace,
+    context: Any,
+    pre_r_store: np.ndarray,
+    initial_cache: js4.ProjectorCache,
+    decision: AlphaDecision,
+    hidden: int,
+    base_pose_delta: float,
+) -> dict[str, Any]:
+    torch, functional = context.modules.torch, context.modules.functional
+    root = args.output / f"capacity/hidden_{hidden}"
+    final_path = root / "FINAL.json"
+    if final_path.is_file():
+        final = _normalize_cached_rung(json.loads(final_path.read_text()))
+        js3.atomic_json(final_path, final)
+        return final
+    model = js3.build_model(torch, functional, hidden, args.max_delta, qat=True)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+    ema = {name: value.detach().clone() for name, value in model.state_dict().items()}
+    cache = initial_cache
+    router = js4.ProjectionRouter(cache, torch)
+    state: dict[str, Any] = {
+        "hidden": hidden,
+        "accepted_steps": 0,
+        "proposals": 0,
+        "rejected_proposals": 0,
+        "relinearizations": 0,
+        "projector_manifest": js3.file_record(cache.manifest_path),
+        "history": [],
+        "distillation_weight": 0.0,
+        "distillation_activated_at_stage": None,
+        "config": {
+            "alpha": decision.alpha,
+            "stage_steps": list(args.stage_steps),
+            "relinearize_every_accepted": decision.relinearize_every_accepted,
+            "shrink_ladder": list(args.shrink_ladder),
+            "lr": args.lr,
+            "max_delta": args.max_delta,
+            "ema_decay": args.ema_decay,
+            "grad_clip": args.grad_clip,
+        },
+    }
+    latest_path = root / "checkpoints/LATEST.json"
+    if args.resume and latest_path.is_file():
+        latest = json.loads(latest_path.read_text())
+        checkpoint_path = Path(latest["checkpoint"]["path"])
+        if not checkpoint_path.is_file() or js3.file_record(checkpoint_path) != latest["checkpoint"]:
+            raise JS5Error(f"hidden {hidden} resume checkpoint custody differs")
+        checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+        if checkpoint.get("schema") != "ddm_js5_checkpoint.v1":
+            raise JS5Error("JS5 checkpoint schema differs")
+        if checkpoint["state"]["config"] != state["config"]:
+            raise JS5Error("JS5 resume config differs")
+        model.load_state_dict(checkpoint["model"])
+        optimizer.load_state_dict(checkpoint["optimizer"])
+        ema = checkpoint["ema"]
+        torch.set_rng_state(checkpoint["torch_rng"])
+        np.random.set_state(checkpoint["numpy_rng"])
+        state = checkpoint["state"]
+        manifest_path = Path(state["projector_manifest"]["path"])
+        cache = js4._load_complete_cache(manifest_path.parent, context)
+        if cache is None:
+            raise JS5Error("resume projector generation is incomplete")
+        router = js4.ProjectionRouter(cache, torch)
+    gt_all = np.asarray(context.gt_labels[context.sample])
+    baseline_all = np.asarray(context.custody_argmax[context.sample])
+    stage_rows: list[dict[str, Any]] = []
+    started = time.perf_counter()
+    for stage_index, stage_end in enumerate(args.stage_steps, start=1):
+        label = f"stage_{stage_index:02d}_accepted_{stage_end:06d}"
+        stage_result_path = root / "stages" / label / "RESULT.json"
+        if stage_end <= int(state["accepted_steps"]):
+            if not stage_result_path.is_file():
+                raise JS5Error(f"completed JS5 stage lacks retained result: {stage_result_path}")
+            stage_rows.append(json.loads(stage_result_path.read_text()))
+            continue
+        while int(state["accepted_steps"]) < stage_end:
+            accepted_before = int(state["accepted_steps"])
+            batch_slot = accepted_before % (js3.SAMPLE_N // js3.BATCH)
+            start = batch_slot * js3.BATCH
+            stop = start + js3.BATCH
+            pre_r = torch.from_numpy(np.asarray(pre_r_store[start:stop], dtype=np.float32))
+            tokens = torch.from_numpy(
+                np.asarray(context.tokens[context.sample[start:stop]]).astype(np.int64, copy=True)
+            )
+            gt = torch.from_numpy(gt_all[start:stop].astype(np.int64, copy=True))
+            baseline = torch.from_numpy(baseline_all[start:stop].astype(np.int64, copy=True))
+            snapshot = {
+                "model": copy.deepcopy(model.state_dict()),
+                "optimizer": copy.deepcopy(optimizer.state_dict()),
+                "torch_rng": torch.get_rng_state().clone(),
+                "numpy_rng": np.random.get_state(),
+            }
+            accepted = False
+            for shrink in args.shrink_ladder:
+                _restore_training_state(model, optimizer, snapshot, torch)
+                activate_training_projector(router, tokens)
+                for group in optimizer.param_groups:
+                    group["lr"] = args.lr * shrink
+                model.train()
+                fixed = js3.fixed_context(torch, functional, tokens, pre_r)
+                raw = model(fixed)
+                projected = router.project(raw)
+                correction = projected * decision.alpha
+                camera, scorer = js3.camera_roundtrip(torch, functional, pre_r, correction)
+                with torch.no_grad():
+                    _, base_scorer = js3.camera_roundtrip(torch, functional, pre_r, torch.zeros_like(correction))
+                custody = torch.from_numpy(np.asarray(context.custody_seg[context.sample[start:stop]]).copy()).float()
+                logits = context.segnet(custody + (scorer - base_scorer))
+                seg_loss, terms = js3.delta_hinge_objective(torch, logits, gt, baseline)
+                raw_scaled = raw * decision.alpha
+                projected_scaled = projected * decision.alpha
+                denominator = projected_scaled.detach().square().mean().clamp_min(1e-12)
+                distillation_loss = (raw_scaled - projected_scaled).square().mean() / denominator
+                loss = seg_loss + float(state["distillation_weight"]) * distillation_loss
+                optimizer.zero_grad(set_to_none=True)
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
+                optimizer.step()
+                proposal_index = int(state["proposals"]) + 1
+                proposal_root = root / f"proposals/proposal_{proposal_index:06d}_shrink_{str(shrink).replace('.', 'p')}"
+                realized = evaluate_correction(
+                    context,
+                    pre_r_store,
+                    model,
+                    router,
+                    decision.alpha,
+                    proposal_root / "retained",
+                    include_seg=False,
+                )
+                budget = endpoint_budget(base_pose_delta, accepted_before + 1, args.stage_steps[-1])
+                pose_delta = float(realized.metrics["pose_delta_stratified_n32"])
+                accepted = accept_realized_pose(pose_delta, budget)
+                proposal_row = {
+                    "schema": "ddm_js5_proposal.v1",
+                    "proposal": proposal_index,
+                    "accepted_step_target": accepted_before + 1,
+                    "shrink": shrink,
+                    "loss": float(loss.detach()),
+                    "seg_loss": float(seg_loss.detach()),
+                    "repair_hinge": float(terms["repair_hinge"].detach()),
+                    "collateral_hinge": float(terms["collateral_hinge"].detach()),
+                    "distillation_loss": float(distillation_loss.detach()),
+                    "distillation_weight": float(state["distillation_weight"]),
+                    "realized_pose_delta": pose_delta,
+                    "realized_pose_budget": budget,
+                    "accepted": accepted,
+                    "payloads": realized.payloads,
+                }
+                js3.atomic_json(proposal_root / "PROPOSAL.json", proposal_row)
+                state["proposals"] = proposal_index
+                state["history"].append(proposal_row)
+                if accepted:
+                    state["accepted_steps"] = accepted_before + 1
+                    js3.update_ema(ema, model, args.ema_decay)
+                    _checkpoint(root, "accepted", model, optimizer, ema, torch, state)
+                    if int(state["accepted_steps"]) % decision.relinearize_every_accepted == 0:
+                        generation = int(state["relinearizations"]) + 1
+                        cache = build_relinearized_cache(
+                            context,
+                            pre_r_store,
+                            model,
+                            cache,
+                            decision.alpha,
+                            root / f"projectors/generation_{generation:03d}",
+                            generation,
+                        )
+                        router = js4.ProjectionRouter(cache, torch)
+                        state["relinearizations"] = generation
+                        state["projector_manifest"] = js3.file_record(cache.manifest_path)
+                        _checkpoint(root, "relinearized", model, optimizer, ema, torch, state)
+                    break
+                state["rejected_proposals"] = int(state["rejected_proposals"]) + 1
+            if not accepted:
+                _restore_training_state(model, optimizer, snapshot, torch)
+                _checkpoint(root, "all_shrinks_rejected", model, optimizer, ema, torch, state)
+                break
+            if time.perf_counter() - started > args.max_wall_seconds:
+                _checkpoint(root, "wall_stop", model, optimizer, ema, torch, state)
+                raise JS5Error(f"hidden {hidden} bounded wall cap reached; checkpoint retained")
+        stage = _stage_measurement(
+            context,
+            pre_r_store,
+            model,
+            ema,
+            cache,
+            decision.alpha,
+            root / "stages" / label,
+            label,
+        )
+        stage_rows.append(stage)
+        _checkpoint(root, label, model, optimizer, ema, torch, state)
+        selected = stage["selected"]
+        if (
+            not bool(selected["bare_pose_gate_pass"])
+            and bool(selected["projected"]["pose_guard_pass"])
+            and float(state["distillation_weight"]) == 0.0
+        ):
+            leakage = max(float(selected["bare"]["pose_delta_stratified_n32"]), js3.POSE_GUARD)
+            state["distillation_weight"] = float(max(1.0, leakage / js3.POSE_GUARD))
+            state["distillation_activated_at_stage"] = label
+            _checkpoint(root, "distillation_activated", model, optimizer, ema, torch, state)
+        if int(state["accepted_steps"]) < stage_end:
+            break
+    acceptance_rate = int(state["accepted_steps"]) / max(1, int(state["proposals"]))
+    selected_stage = min(
+        stage_rows,
+        key=lambda row: (
+            not bool(row["selected"]["bare_admission_pass"]),
+            int(row["selected"]["bare"]["projected_n600_robust_delta_flips"]),
+            int(row["selected"]["module_brotli_q11_bytes"]),
+            row["stage"],
+        ),
+    )
+    final = {
+        "schema": "ddm_js5_capacity_rung.v1",
+        "axis": js3.AXIS,
+        "score_claim": False,
+        "hidden": hidden,
+        "accepted_steps": int(state["accepted_steps"]),
+        "proposals": int(state["proposals"]),
+        "rejected_proposals": int(state["rejected_proposals"]),
+        "acceptance_rate": acceptance_rate,
+        "relinearizations": int(state["relinearizations"]),
+        "distillation_weight": float(state["distillation_weight"]),
+        "distillation_activated_at_stage": state["distillation_activated_at_stage"],
+        "stages": stage_rows,
+        "selected_stage": selected_stage,
+        "projector_payload_shipped_bytes": 0,
+        "scorer_at_decode": False,
+        "wall_seconds": time.perf_counter() - started,
+    }
+    js3.atomic_json(final_path, final)
+    return final
+
+
+def storage_preflight(output: Path, required_free_bytes: int) -> dict[str, Any]:
+    usage = shutil.disk_usage(output)
+    row = {
+        "schema": "ddm_js5_storage_preflight.v1",
+        "platform": platform.platform(),
+        "output": str(output.resolve()),
+        "free_bytes": int(usage.free),
+        "required_free_bytes": int(required_free_bytes),
+        "pass": int(usage.free) >= int(required_free_bytes),
+        "reason": "candidate camera/correction payloads and each relinearized projector generation are retained",
+    }
+    js3.atomic_json(output / "preflight/STORAGE.json", row)
+    if not row["pass"]:
+        raise JS5Error("JS5 storage preflight failed")
+    return row
+
+
+def sealed_main_recipe(
+    args: argparse.Namespace,
+    decision: AlphaDecision,
+    capacity: list[dict[str, Any]],
+    selected: dict[str, Any],
+) -> dict[str, Any]:
+    selected_row = selected["selected_stage"]["selected"]
+    recipe = {
+        "schema": "ddm_js5_sealed_main_recipe.v1",
+        "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+        "owner": "MAIN training-leg router",
+        "consumer_store": str(args.output / "main_burn"),
+        "fire_trigger": (
+            "MAIN first obtains a nonzero bare pose-gated robust-improving checkpoint from a content-distinct "
+            "proposal extension, seeds it into the consumer store, verifies that the >=200-proposal F1 gate has "
+            "not fired, owns the training leg, observes the sole n600 scorer slot free, and passes storage/memory "
+            "preflights"
+        ),
+        "command": [
+            ".venv/bin/python",
+            "experiments/ddm_js5_projector_distilled_conditioning.py",
+            "--output",
+            str(args.output / "main_burn"),
+            "--hidden-ladder",
+            str(selected["hidden"]),
+            "--alphas",
+            ",".join(str(item) for item in args.alphas),
+            "--stage-steps",
+            "25,100,300",
+            "--checkpoint-every",
+            "25",
+            "--max-wall-seconds",
+            str(max(14_400, math.ceil(sum(float(row["wall_seconds"]) for row in capacity) * 30.0))),
+            "--resume",
+        ],
+        "alpha": decision.alpha,
+        "relinearize_every_accepted": decision.relinearize_every_accepted,
+        "selected_hidden": selected["hidden"],
+        "latest_module_brotli_q11_bytes": selected_row["module_brotli_q11_bytes"],
+        "latest_bytes_per_projected_robust_flip": selected_row["bytes_per_projected_robust_flip"],
+        "economics_bar_bytes_per_robust_flip_lte": ECONOMICS_BAR_B_PER_ROBUST_FLIP,
+        "bare_module_pose_gate": js3.POSE_GUARD,
+        "projector_payload_shipped_bytes": 0,
+        "scorer_at_decode": False,
+        "long_burn_launched_by_ddm_js5": False,
+        "fire_allowed_now": False,
+        "current_blocker": "bounded ladder admitted no nonzero correction; firing this recipe now would repeat a rejected first step",
+    }
+    js3.atomic_json(args.output / "SEALED_MAIN_RECIPE.json", recipe)
+    return recipe
+
+
+def queue_annex(args: argparse.Namespace, recipe: dict[str, Any], selected: dict[str, Any]) -> list[dict[str, str]]:
+    actions = [
+        {
+            "action": "content-distinct realized-acceptance proposal extension",
+            "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+            "owner": "MAIN training-leg router",
+            "consumer_store": str(args.output / "follow_on/realized_acceptance_200"),
+            "fire_trigger": (
+                "MAIN provides a representation-level conditioning proposal source that is not another replay "
+                "of this five-shrink first-step ladder; retain every realized payload and stop at the first "
+                "nonzero useful bare admission or after 200 unique proposals for the F1 decision"
+            ),
+        },
+        {
+            "action": "projector-distilled conditioning MAIN burn",
+            "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+            "owner": str(recipe["owner"]),
+            "consumer_store": str(recipe["consumer_store"]),
+            "fire_trigger": str(recipe["fire_trigger"]),
+        },
+    ]
+    text = (
+        "# ddm_js5 queue annex\n\n"
+        + "\n".join(
+            f"- **Action:** {action['action']}. **Disposition:** {action['disposition']}. "
+            f"**Owner:** {action['owner']}. **Consumer store:** `{action['consumer_store']}`. "
+            f"**Fire trigger:** {action['fire_trigger']}."
+            for action in actions
+        )
+        + "\n"
+        f"  Selected bounded rung: hidden={selected['hidden']}; no long burn fired by ddm_js5.\n"
+    )
+    js3.atomic_bytes(args.output / "QUEUE_ANNEX.md", text.encode())
+    return actions
+
+
+def finalize(
+    args: argparse.Namespace,
+    alpha_curve: dict[str, Any],
+    decision: AlphaDecision,
+    capacity: list[dict[str, Any]],
+    preflight: dict[str, Any],
+) -> dict[str, Any]:
+    selected = min(
+        capacity,
+        key=lambda row: (
+            not bool(row["selected_stage"]["selected"]["bare_admission_pass"]),
+            int(row["selected_stage"]["selected"]["bare"]["projected_n600_robust_delta_flips"]),
+            float("inf")
+            if row["selected_stage"]["selected"]["bytes_per_projected_robust_flip"] is None
+            else float(row["selected_stage"]["selected"]["bytes_per_projected_robust_flip"]),
+            int(row["hidden"]),
+        ),
+    )
+    selected_measurement = selected["selected_stage"]["selected"]
+    recipe = sealed_main_recipe(args, decision, capacity, selected)
+    actions = queue_annex(args, recipe, selected)
+    all_proposals = sum(int(row["proposals"]) for row in capacity)
+    all_accepted = sum(int(row["accepted_steps"]) for row in capacity)
+    alpha_usable = bool(decision.qualifying_alphas)
+    f1_eligible = not alpha_usable and all_proposals >= 200
+    f1_fired = f1_eligible and all_accepted / max(1, all_proposals) < 0.05
+    bare_pass = bool(selected_measurement["bare_admission_pass"])
+    bpf = selected_measurement["bytes_per_projected_robust_flip"]
+    trends = []
+    for row in capacity:
+        for stage in row["stages"]:
+            trends.append(
+                {
+                    "hidden": row["hidden"],
+                    "step": int(stage["stage"].rsplit("_", 1)[-1]),
+                    "bytes_per_projected_robust_flip": stage["selected"]["bytes_per_projected_robust_flip"],
+                }
+            )
+    finite_bpf = [float(row["bytes_per_projected_robust_flip"]) for row in trends if row["bytes_per_projected_robust_flip"] is not None]
+    f3_eligible = len(finite_bpf) >= 2
+    f3_fired = f3_eligible and all(
+        later >= earlier for earlier, later in itertools.pairwise(finite_bpf)
+    )
+    projected_passing_stages = [
+        stage["selected"]
+        for rung in capacity
+        for stage in rung["stages"]
+        if bool(stage["selected"]["projected"]["pose_guard_pass"])
+        and int(stage["selected"]["projected"]["projected_n600_robust_delta_flips"]) < 0
+    ]
+    f2_eligible = bool(projected_passing_stages) and len(capacity) == len(args.hidden_ladder)
+    f2_fired = f2_eligible and not any(bool(row["bare_admission_pass"]) for row in projected_passing_stages)
+    result = {
+        "schema": "ddm_js5_final_result.v1",
+        "axis": js3.AXIS,
+        "score_claim": False,
+        "alpha_curve": alpha_curve,
+        "alpha_decision": dataclasses.asdict(decision),
+        "capacity_ladder": capacity,
+        "selected_rung": selected,
+        "acceptance": {
+            "accepted": all_accepted,
+            "proposals": all_proposals,
+            "acceptance_rate": all_accepted / max(1, all_proposals),
+        },
+        "bare_module_admission": {
+            "pass": bare_pass,
+            "pose_gate_pass": bool(selected_measurement["bare_pose_gate_pass"]),
+            "robust_movement_pass": bool(selected_measurement["bare_robust_movement_pass"]),
+            "reason": None if bare_pass else "zero-output module passed pose but moved no robust flips",
+            "pose_delta_stratified_n32": selected_measurement["bare"]["pose_delta_stratified_n32"],
+            "required_pose_delta_lt": js3.POSE_GUARD,
+            "module_brotli_q11_bytes": selected_measurement["module_brotli_q11_bytes"],
+            "projector_payload_shipped_bytes": 0,
+            "scorer_at_decode": False,
+        },
+        "economics": {
+            "bar_bytes_per_robust_flip_lte": ECONOMICS_BAR_B_PER_ROBUST_FLIP,
+            "selected_bytes_per_projected_robust_flip": bpf,
+            "break_even_bytes": BREAK_EVEN_BYTES,
+            "break_even_robust_flips": BREAK_EVEN_ROBUST_FLIPS,
+            "trend_rows": trends,
+        },
+        "falsifiers": {
+            "F1": {
+                "eligible": f1_eligible,
+                "fired": f1_fired,
+                "scope": "FAMILY only if alpha has no useful point and at least 200 realized proposals accept below 5%",
+                "reason": (
+                    None
+                    if f1_eligible
+                    else f"measured {all_proposals}/200 required proposals; alpha qualifying points={len(decision.qualifying_alphas)}"
+                ),
+            },
+            "F2": {
+                "eligible": f2_eligible,
+                "fired": f2_fired,
+                "scope": "INSTANCE across bounded hidden ladder; projected-passing stages admit no bare rung",
+                "reason": None if f2_eligible else "no nonzero projected pose-gated robust-improving stage existed",
+            },
+            "F3": {
+                "eligible": f3_eligible,
+                "fired": f3_fired,
+                "scope": "bounded capacity/step ladder trend only",
+                "reason": None if f3_eligible else f"only {len(finite_bpf)} finite B/robust-flip observations",
+            },
+        },
+        "storage_preflight": preflight,
+        "sealed_recipe": js3.file_record(args.output / "SEALED_MAIN_RECIPE.json"),
+        "queue_annex": js3.file_record(args.output / "QUEUE_ANNEX.md"),
+        "queued_actions": actions,
+        "boundaries": {
+            "long_burn_launched": False,
+            "full_n600_scorer_job_run": False,
+            "candidate_archive_built": False,
+            "exact_contest_score_measured": False,
+            "projected_n600_fields_are_stratified_n32_weighted_projections": True,
+            "verdict_scope": "bounded stratified-random n32 build-to-admission",
+        },
+    }
+    js3.atomic_json(args.output / "FINAL_RESULT.json", result)
+    return result
+
+
+class SingleWriter:
+    def __init__(self, output: Path) -> None:
+        self.output = output
+        self.stream: Any | None = None
+
+    def __enter__(self) -> None:
+        path = self.output / "RUN.lock"
+        self.stream = path.open("a+b")
+        try:
+            fcntl.flock(self.stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            self.stream.close()
+            raise JS5Error(f"another JS5 writer holds {path}") from exc
+        js3.atomic_json(
+            self.output / "RUN_LOCK.json",
+            {"schema": "ddm_js5_single_writer.v1", "status": "ACTIVE", "pid": os.getpid()},
+        )
+
+    def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+        assert self.stream is not None
+        js3.atomic_json(
+            self.output / "RUN_LOCK.json",
+            {"schema": "ddm_js5_single_writer.v1", "status": "RELEASED", "pid": os.getpid()},
+        )
+        fcntl.flock(self.stream.fileno(), fcntl.LOCK_UN)
+        self.stream.close()
+
+
+def run(args: argparse.Namespace) -> dict[str, Any]:
+    args.output = args.output.resolve()
+    args.output.mkdir(parents=True, exist_ok=True)
+    with SingleWriter(args.output):
+        state_path = args.output / "state.json"
+        state = {
+            "schema": "ddm_js5_state.v1",
+            "status": "PREFLIGHT",
+            "complete": False,
+            "resumable": True,
+            "axis": js3.AXIS,
+            "score_claim": False,
+            "long_burn_launched": False,
+            "seed": js3.SEED,
+            "batch": js3.BATCH,
+            "threads": js3.THREADS,
+            "argv": sys.argv,
+            "source": js3.file_record(REPO / "experiments/ddm_js5_projector_distilled_conditioning.py"),
+        }
+        js3.atomic_json(state_path, state)
+        torch = __import__("torch")
+        torch.manual_seed(js3.SEED)
+        np.random.seed(js3.SEED)
+        torch.set_num_threads(js3.THREADS)
+        torch.use_deterministic_algorithms(True)
+        inheritance = verify_inheritance()
+        source = REPO / "experiments/ddm_js5_projector_distilled_conditioning.py"
+        retained_source = args.output / "source_custody/ddm_js5_projector_distilled_conditioning.measured.py"
+        js3.atomic_bytes(retained_source, source.read_bytes())
+        state["inheritance"] = inheritance
+        state["retained_source"] = js3.file_record(retained_source)
+        js3.atomic_json(state_path, state)
+        preflight = storage_preflight(args.output, args.required_free_bytes)
+        js3.memory_preflight(args.output, max(args.hidden_ladder))
+        context = js3.js2b.build_context(args.output)
+        if not np.array_equal(context.sample, js3.stratified_sample()[0]):
+            raise JS5Error("sample differs from the sealed JS3/JS4 relative gauge")
+        pre_r_store = js3.materialize_base_pre_r(context, args.output)
+        cache = js4._load_complete_cache(JS4_OUTPUT / "projector", context)
+        if cache is None:
+            raise JS5Error("JS4 fixed projector cache is incomplete")
+        state.update(status="ALPHA_CURVE", projector=js3.file_record(cache.manifest_path))
+        js3.atomic_json(state_path, state)
+        alpha_curve, decision = run_alpha_curve(context, pre_r_store, cache, args.output, args.alphas)
+        if args.alpha_only:
+            state.update(status="ALPHA_CURVE_COMPLETE", alpha_decision=dataclasses.asdict(decision))
+            js3.atomic_json(state_path, state)
+            return {
+                "schema": "ddm_js5_alpha_only.v1",
+                "axis": js3.AXIS,
+                "score_claim": False,
+                "alpha_curve": alpha_curve,
+                "decision": dataclasses.asdict(decision),
+                "future_action": "resume the bounded capacity ladder only after adjudicating this curve",
+            }
+        base_pose_delta = float(alpha_curve["zero_reference"]["pose_delta_stratified_n32"])
+        state.update(status="REALIZED_ACCEPTANCE", alpha_decision=dataclasses.asdict(decision))
+        js3.atomic_json(state_path, state)
+        capacity = [
+            train_rung(args, context, pre_r_store, cache, decision, hidden, base_pose_delta)
+            for hidden in args.hidden_ladder
+        ]
+        result = finalize(args, alpha_curve, decision, capacity, preflight)
+        state.update(
+            status="COMPLETE",
+            complete=True,
+            final_result=js3.file_record(args.output / "FINAL_RESULT.json"),
+            bare_module_pass=result["bare_module_admission"]["pass"],
+        )
+        js3.atomic_json(state_path, state)
+        return result
+
+
+def parser() -> argparse.ArgumentParser:
+    value = argparse.ArgumentParser(description=__doc__)
+    value.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    value.add_argument("--hidden-ladder", type=lambda text: tuple(int(item) for item in text.split(",")), default=js3.CAPACITY_LADDER)
+    value.add_argument("--alphas", type=parse_float_tuple, default=ALPHAS)
+    value.add_argument("--stage-steps", type=js3.parse_stage_steps, default=DEFAULT_STAGE_STEPS)
+    value.add_argument("--shrink-ladder", type=parse_float_tuple, default=SHRINK_LADDER)
+    value.add_argument("--max-delta", type=float, default=6.0)
+    value.add_argument("--lr", type=float, default=0.02)
+    value.add_argument("--ema-decay", type=float, default=0.99)
+    value.add_argument("--grad-clip", type=float, default=5.0)
+    value.add_argument("--checkpoint-every", type=int, default=4)
+    value.add_argument("--max-wall-seconds", type=float, default=2_400.0)
+    value.add_argument("--required-free-bytes", type=int, default=DEFAULT_REQUIRED_FREE_BYTES)
+    value.add_argument("--resume", action="store_true")
+    value.add_argument("--alpha-only", action="store_true")
+    return value
+
+
+def main() -> None:
+    args = parser().parse_args()
+    if any(hidden not in js3.CAPACITY_LADDER for hidden in args.hidden_ladder):
+        raise SystemExit(f"--hidden-ladder must be a subset of {js3.CAPACITY_LADDER}")
+    result = run(args)
+    print(json.dumps(result, indent=2, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

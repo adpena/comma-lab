@@ -1,0 +1,26 @@
+import json
+import sys
+import time
+from pathlib import Path
+
+import modal
+
+OUT = Path("/Volumes/VertigoDataTier/pact/ddm_qs1_20260813/dispatch/ddm_qs1_dual_axis_20260813_r3")
+CALL = "fc-01KZYKRGDZVRRQHPYQCBVFNMWE"
+deadline = time.time() + 3 * 3600
+while time.time() < deadline:
+    try:
+        r = modal.functions.FunctionCall.from_id(CALL).get(timeout=5)
+        (OUT / "QS1_T4_REMOTE_RESULT.json").write_text(json.dumps(r, indent=2, default=str))
+        (OUT / "QS1_HARVEST.done").write_text("ok")
+        print("QS1_HARVEST_COMPLETE")
+        sys.exit(0)
+    except TimeoutError:
+        time.sleep(60)
+    except Exception as e:  # remote failure surfaces here — persist it, never lose it
+        (OUT / "QS1_HARVEST.failed").write_text(f"{type(e).__name__}: {e}")
+        print(f"QS1_HARVEST_FAILED {type(e).__name__}")
+        sys.exit(1)
+(OUT / "QS1_HARVEST.failed").write_text("poll deadline exceeded 3h")
+print("QS1_HARVEST_DEADLINE")
+sys.exit(2)

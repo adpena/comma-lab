@@ -1,0 +1,131 @@
+"""DDM-CK1 parse-back verification through the STAGED generation tree.
+
+Runs the real consumption path the advisory row will run:
+  archive.zip -> residual_archive -> staged mp2 receiver -> SemanticTokenRenderer
+with strict state-dict loading, and re-asserts byte identity against the
+retained packer state.  Emits PARSEBACK.json next to the generation.
+
+No score claim; no d_seg or d_pose is produced here.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import hashlib
+import json
+import os
+import sys
+from collections import OrderedDict
+from pathlib import Path
+
+import numpy as np
+import torch
+
+REPO = Path("/Users/adpena/Projects/pact")
+RT = Path("/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime")
+GEN = Path("/Volumes/APDataStore/pact/ddm_ck1/generations/ck1_composed")
+RETAINED = Path("/Volumes/APDataStore/pact/ddm_ck1/retained/ck1_composed")
+
+# Later inserts win, so the STAGED tree must be inserted last: this file must
+# exercise the receiver that actually ships inside the generation, never the
+# repo development copy.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(REPO / "experiments"))
+sys.path.insert(0, str(RT))
+sys.path.insert(0, str(GEN))
+sys.path.insert(0, str(GEN / "cpr1"))
+
+from ck1_tree_hygiene import strip_import_residue  # noqa: E402
+
+import ddm_mp2_semantic_receiver as mp2  # noqa: E402
+import inflate as cpr1  # noqa: E402
+import runtime.residual_archive as ra  # noqa: E402
+
+torch.set_num_threads(4)
+torch.set_grad_enabled(False)
+
+
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+for module, expected_root in ((mp2, GEN), (cpr1, GEN)):
+    if not str(Path(module.__file__).resolve()).startswith(str(expected_root)):
+        raise SystemExit(f"{module.__name__} resolved outside the staged tree: {module.__file__}")
+
+base_parts = ra.read_residual_archive(RT / "archive.zip")
+records = ra.decode_wans1(base_parts.semantic_blob)
+template: OrderedDict[str, torch.Tensor] = OrderedDict(
+    (r.schema.name, torch.from_numpy(np.ascontiguousarray(r.values, dtype=np.float32)))
+    for r in records
+)
+
+archive_path = GEN / "archive.zip"
+parts = ra.read_residual_archive(archive_path)
+body = (RETAINED / "semantic.sm3r_mixed.bin").read_bytes()
+decoded = mp2.unpack_variant_semantic_or_none(parts.semantic_blob, template)
+if decoded is None:
+    raise SystemExit("staged receiver refused the composed body")
+
+with np.load(RETAINED / "expected_state.npz") as bundle:
+    expected = OrderedDict((name, torch.from_numpy(bundle[name])) for name in bundle.files)
+
+max_dev = max(float((decoded[name] - expected[name]).abs().max()) for name in expected)
+identical = all(torch.equal(decoded[name], expected[name]) for name in expected)
+
+renderer = cpr1.SemanticTokenRenderer(96)
+renderer.load_state_dict(decoded, strict=True)
+renderer.eval()
+renderer_param_sha = hashlib.sha256(
+    b"".join(
+        p.detach().numpy().astype("<f4", copy=False).tobytes(order="C")
+        for _, p in sorted(renderer.state_dict().items())
+    )
+).hexdigest()
+
+inflate_source = (GEN / "inflate.py").read_text()
+archive_sha = sha256_file(archive_path)
+pins_ok = archive_sha in inflate_source and f"{archive_path.stat().st_size:_}" in inflate_source
+
+report = {
+    "schema": "ddm_ck1_parseback.v1",
+    "written_at_utc": dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "score_claim": False,
+    "d_seg_measured": False,
+    "d_pose_measured": False,
+    "axis": "[scorer-free staged-runtime parse-back]",
+    "archive": {"path": str(archive_path), "bytes": archive_path.stat().st_size, "sha256": archive_sha},
+    "checks": {
+        "semantic_parseback_byte_equal": parts.semantic_blob == body,
+        "staged_receiver_tensor_identical": identical,
+        "renderer_strict_load": True,
+        "non_semantic_sections_unchanged_vs_base": all(
+            getattr(parts, name) == getattr(base_parts, name)
+            for name in ("hpac_blob", "carrier_blob", "token_stream", "residual_payload")
+        ),
+        "inflate_py_pins_match_archive": pins_ok,
+    },
+    "max_abs_deviation_vs_packer_state": max_dev,
+    "tensor_denominator": len(expected),
+    "renderer_parameter_sha256": renderer_param_sha,
+    "staged_modules": {
+        "receiver": str(Path(mp2.__file__).resolve()),
+        "renderer_inflate": str(Path(cpr1.__file__).resolve()),
+        "residual_archive": str(Path(ra.__file__).resolve()),
+    },
+    "provenance": {"argv": sys.argv, "pid": os.getpid()},
+}
+failed = sorted(key for key, value in report["checks"].items() if value is not True)
+report["all_checks_passed"] = not failed
+report["failed_checks"] = failed
+
+path = GEN / "PARSEBACK.json"
+path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+
+# Writing into an ExFAT tree materializes AppleDouble twins; contest_auth_eval
+# AST-parses the runtime tree and dies on ._*.py.  Leave the tree clean.
+strip_import_residue(GEN)
+
+print(json.dumps(report, indent=2, sort_keys=True))
+if failed:
+    raise SystemExit(f"parse-back checks failed: {failed}")

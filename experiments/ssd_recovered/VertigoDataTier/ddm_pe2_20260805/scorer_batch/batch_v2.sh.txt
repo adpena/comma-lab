@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# MAIN-corrected v2 (2026-08-05): evaluate.py:68 reads <submission_dir>/inflated — the pe2-staged
+# v1 pointed --inflate-out at a side dir and failed prepare_data (never smoke-tested; m71 class).
+# Inflated trees are deterministic rebuildable scratch (regenerable from archive.zip, base sha
+# 3ce7d269a708...) — deleted after each eval per the disk-hygiene rule.
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+OUT=/Volumes/VertigoDataTier/pact/ddm_pe2_20260805/scorer_batch
+BASE=/Volumes/VertigoDataTier/pact/ddm_pe2_20260805
+for C in pe1_full_explicit_curve_k8 pe1_surgical_generator_pair_waterfill_75kb bf1_lane_crop_r3; do
+  SUB="$BASE/sub_auto_pairbit_pe2_${C}_receiver"
+  echo "[pe2-v2] scoring $C" >&2
+  .venv/bin/python experiments/ddm_fz2_byteclose_and_eval.py \
+    --sub-dir "$SUB" --out "$OUT/${C}_n600_cpu.json" \
+    --inflate-out "$SUB/inflated" --device cpu --batch-size 16 --num-threads 4
+  rm -rf "$SUB/inflated"
+done

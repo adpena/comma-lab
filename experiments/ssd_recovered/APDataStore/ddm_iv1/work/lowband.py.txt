@@ -1,0 +1,195 @@
+"""Tighten the T4-transfer-relevant number: the solve ratio at SMALL base error.
+
+The whole T4 projection rests on the realized/base ratio in the band where the
+T4 instrument's own errors live (mean d_pose 6.88e-6).  The main 48-pair solve
+supplied that ratio from only 11 pairs.  This scans a large seeded-random pair
+set for base d_pose (cheap -- base frame_1 is bit-identical to the retained
+0.raw, so no render is needed), selects the low-error band, and runs the SAME
+realized solve on it.
+
+Axis: [macOS-CPU advisory frozen CPU-torch PoseNet] score_claim=false.
+"""
+
+import itertools
+import json
+import sys
+import time
+
+import numpy as np
+import torch
+
+sys.path.insert(0, "/Users/adpena/Projects/pact/experiments")
+from ddm_iv1_pose_actuator import (  # noqa: E402
+    BASE_RAW,
+    CAMERA_H,
+    CAMERA_W,
+    CODE_MAX,
+    CODE_MIN,
+    FRAME_DIM,
+    PAIR_COUNT,
+    POSE_DIMENSIONS,
+    SemanticBlock,
+    configure_torch,
+    decode_gt_pairs,
+    load_posenet,
+    load_tokens,
+    pose_vectors,
+    render_variant,
+)
+
+OUT = "/Volumes/APDataStore/pact/ddm_iv1"
+SCAN = 260
+BAND = 1e-5
+MAX_SOLVE = 30
+SEED = 20260819  # distinct from the main solve seed -> a fresh pair draw
+
+configure_torch()
+started = time.time()
+block = SemanticBlock.load()
+tokens = load_tokens()
+network = block.renderer()
+posenet = load_posenet()
+raw = np.memmap(
+    BASE_RAW, dtype=np.uint8, mode="r", shape=(PAIR_COUNT * 2, CAMERA_H, CAMERA_W, 3)
+)
+rng = np.random.default_rng(SEED)
+pairs = np.sort(rng.choice(PAIR_COUNT, size=SCAN, replace=False))
+gt = decode_gt_pairs([int(p) for p in pairs])
+print(f"GT decoded for {len(pairs)} pairs in {time.time() - started:.0f}s", flush=True)
+
+
+def pose_many(stack):
+    out = []
+    for start in range(0, len(stack), 8):
+        out.append(pose_vectors(posenet, torch.stack(stack[start : start + 8])))
+    return np.concatenate(out, axis=0)
+
+
+base_err = np.zeros(len(pairs))
+residuals = np.zeros((len(pairs), POSE_DIMENSIONS))
+for start in range(0, len(pairs), 8):
+    chunk = pairs[start : start + 8]
+    stack = []
+    for slot, p in enumerate(chunk, start=start):
+        stack.append(
+            torch.stack(
+                [
+                    torch.from_numpy(np.ascontiguousarray(raw[2 * int(p)])),
+                    torch.from_numpy(np.ascontiguousarray(raw[2 * int(p) + 1])),
+                ]
+            )
+        )
+        stack.append(torch.from_numpy(np.ascontiguousarray(gt[slot])))
+    vectors = pose_many(stack)
+    for offset in range(len(chunk)):
+        residual = vectors[2 * offset] - vectors[2 * offset + 1]
+        residuals[start + offset] = residual
+        base_err[start + offset] = float(np.mean(np.square(residual)))
+print(
+    f"scanned {len(pairs)} pairs in {time.time() - started:.0f}s  "
+    f"mean base d_pose {base_err.mean():.4e}  "
+    f"below {BAND:g}: {(base_err < BAND).sum()}",
+    flush=True,
+)
+
+low = [int(pairs[i]) for i in np.argsort(base_err) if base_err[i] < BAND]
+sel = low[:MAX_SOLVE]
+slot_of = {int(p): i for i, p in enumerate(pairs)}
+combos = np.array(list(itertools.product([0, 1, -1], repeat=FRAME_DIM)))
+
+rows = []
+for pair in sel:
+    slot = slot_of[pair]
+    frame0 = torch.from_numpy(np.ascontiguousarray(raw[2 * pair]))
+    gt_vector = pose_many([torch.from_numpy(np.ascontiguousarray(gt[slot]))])[0]
+    base_codes = block.frame_codes[pair].astype(np.int32)
+    residual = residuals[slot]
+    base_error = base_err[slot]
+
+    stack, probes = [], []
+    for dim in range(FRAME_DIM):
+        for delta in (1, -1):
+            codes = np.clip(
+                base_codes + np.eye(FRAME_DIM, dtype=np.int32)[dim] * delta,
+                CODE_MIN,
+                CODE_MAX,
+            )
+            frame1 = render_variant(
+                network, tokens, pair, codes.astype(np.float32) * block.frame_scales
+            )
+            stack.append(torch.stack([frame0, frame1]))
+            probes.append((dim, delta))
+    vectors = pose_many(stack)
+    base_vector = residual + gt_vector
+
+    plus = np.zeros((FRAME_DIM, POSE_DIMENSIONS))
+    minus = np.zeros((FRAME_DIM, POSE_DIMENSIONS))
+    for index, (dim, delta) in enumerate(probes):
+        (plus if delta == 1 else minus)[dim] = vectors[index] - base_vector
+
+    disp = np.zeros((len(combos), POSE_DIMENSIONS))
+    for dim in range(FRAME_DIM):
+        column = combos[:, dim]
+        disp += (column == 1)[:, None] * plus[dim][None, :]
+        disp += (column == -1)[:, None] * minus[dim][None, :]
+    predicted = np.mean(np.square(residual[None, :] + disp), axis=1)
+    order = np.argsort(predicted)[:8]
+    proposals = [combos[i] for i in order]
+    single = np.mean(
+        np.square(residual[None, :] + np.concatenate([plus, minus], axis=0)), axis=1
+    )
+    best_single = int(single.argmin())
+    fb = np.zeros(FRAME_DIM, dtype=int)
+    fb[best_single % FRAME_DIM] = 1 if best_single < FRAME_DIM else -1
+    proposals.append(fb)
+
+    verify = []
+    for combo in proposals:
+        codes = np.clip(base_codes + np.asarray(combo, np.int32), CODE_MIN, CODE_MAX)
+        frame1 = render_variant(
+            network, tokens, pair, codes.astype(np.float32) * block.frame_scales
+        )
+        verify.append(torch.stack([frame0, frame1]))
+    realized_vectors = pose_many(verify)
+    realized = np.mean(np.square(realized_vectors - gt_vector[None, :]), axis=1)
+    winner = int(realized.argmin())
+    accepted = bool(realized[winner] < base_error)
+    rows.append(
+        {
+            "pair": pair,
+            "base_d_pose": float(base_error),
+            "realized_d_pose": float(realized[winner]) if accepted else float(base_error),
+            "accepted": accepted,
+            "winner_was_fallback": winner == len(proposals) - 1,
+        }
+    )
+    print(
+        f"pair {pair:3d} {base_error:.4e} -> {rows[-1]['realized_d_pose']:.4e} "
+        f"({rows[-1]['realized_d_pose'] / base_error:.4f})",
+        flush=True,
+    )
+
+b = np.array([r["base_d_pose"] for r in rows])
+a = np.array([r["realized_d_pose"] for r in rows])
+receipt = {
+    "schema": "ddm_iv1_lowband.v1",
+    "axis": "[macOS-CPU advisory frozen CPU-torch PoseNet] score_claim=false",
+    "seed": SEED,
+    "scanned_pairs": len(pairs),
+    "scan_mean_base_d_pose": float(base_err.mean()),
+    "scan_median_base_d_pose": float(np.median(base_err)),
+    "pairs_below_band": int((base_err < BAND).sum()),
+    "band": BAND,
+    "solved_pairs": len(rows),
+    "mean_base_d_pose": float(b.mean()),
+    "mean_realized_d_pose": float(a.mean()),
+    "band_ratio_realized_over_base": float(a.sum() / b.sum()),
+    "accepted": int(sum(r["accepted"] for r in rows)),
+    "fallback_winners": int(sum(r["winner_was_fallback"] for r in rows)),
+    "rows": rows,
+    "elapsed_seconds": round(time.time() - started, 1),
+}
+open(f"{OUT}/receipts/lowband.json", "w").write(json.dumps(receipt, indent=2))
+np.save(f"{OUT}/retained/lowband_scan_base_d_pose.npy", base_err)
+np.save(f"{OUT}/retained/lowband_scan_pairs.npy", pairs)
+print(json.dumps({k: receipt[k] for k in list(receipt)[:14]}, indent=2), flush=True)

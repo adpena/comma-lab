@@ -1,0 +1,71 @@
+"""Measure EXACT d_seg/d_pose on the frozen CPU scorer for magnitude-pruned
+decoders at several keep fractions. This is the Q*-membership test for the
+pruning rate lever (the byte side already showed -12.8% to -42%)."""
+import sys, time
+sys.path.insert(0,'experiments/results/pr110pp_r2_nonmps_candidate_20260609/analysis')
+sys.path.insert(0,'src')
+import render_and_score_lib as L
+import numpy as np, torch, copy
+from model import HNeRVDecoder
+from tac.optimization import structural_q_compression as SQ
+
+N_EVAL = int(sys.argv[1]) if len(sys.argv)>1 else 16
+KEEPS = [float(x) for x in sys.argv[2].split(',')] if len(sys.argv)>2 else [1.0,0.8,0.7,0.6,0.5]
+pairs = list(range(N_EVAL))
+scorer = L.ExactScorer()
+p = L.parse_frontier()
+sd = p['decoder_sd']
+probe = HNeRVDecoder(latent_dim=28, base_channels=36, eval_size=(384,512))
+order = [name for name,_ in probe.state_dict().items()]
+items = [(name, sd[name].numpy().astype(np.float64)) for name in order]
+base_codes = SQ.recover_all_codes(items)
+W4D = {idx:tc for idx,tc in base_codes.items() if tc.codes_i8.ndim==4 and tc.codes_i8.size>1000}
+
+gt = L.decode_gt_pairs(pairs)
+gt_bthwc = {pi: L.comp_pair_to_bthwc(gt[pi].float().permute(0,3,1,2)) for pi in pairs}
+
+def score_sd(decoder_sd):
+    parsed = copy.copy(p); parsed['decoder_sd'] = decoder_sd
+    r = L.FrontierRenderer(parsed=parsed)
+    comp = r.render_baseline_pairs(pairs)
+    segs=[]; poses=[]
+    for pi in pairs:
+        po,se = scorer.score_batch(gt_bthwc[pi], L.comp_pair_to_bthwc(comp[pi]))
+        segs.append(float(se[0])); poses.append(float(po[0]))
+    return float(np.mean(segs)), float(np.mean(poses))
+
+def pruned_sd(keep, sens_kind='magnitude'):
+    sd2 = {k:v.clone() for k,v in sd.items()}
+    for idx,tc in W4D.items():
+        if sens_kind=='magnitude':
+            sens = SQ.magnitude_sensitivity(tc.codes_i8)
+        pc = SQ.score_aware_prune_codes(tc.codes_i8, sens, keep)
+        sd2[tc.name] = torch.from_numpy((pc.astype(np.float32))*tc.scale)
+    return sd2
+
+base_seg, base_pose = score_sd(sd)
+base_blob = SQ.encode_decoder_blob_bytes(base_codes)
+print(f'BASELINE ({N_EVAL} pairs): d_seg={base_seg:.6f} d_pose={base_pose:.6e} blob={base_blob}')
+print(f'  frontier full-600 ref: d_seg=0.00055978 d_pose=2.942e-05 blob=162127')
+print()
+RATE_DENOM=37545489
+ARCHIVE=177169
+for keep in KEEPS:
+    if keep>=1.0:
+        continue
+    t0=time.time()
+    sd2 = pruned_sd(keep,'magnitude')
+    s,po = score_sd(sd2)
+    # blob bytes
+    mod={}
+    for idx,tc in W4D.items():
+        sens=SQ.magnitude_sensitivity(tc.codes_i8)
+        pc=SQ.score_aware_prune_codes(tc.codes_i8,sens,keep)
+        mod[idx]=SQ.TensorCode(tc.name,idx,tc.shape,pc,tc.scale)
+    codes2=dict(base_codes); codes2.update(mod)
+    blob=SQ.encode_decoder_blob_bytes(codes2)
+    new_archive = ARCHIVE + (blob-base_blob)
+    # rate-only dS uses the actual measured subset d_seg/d_pose for full score recompute
+    S_new = 100*s + np.sqrt(10*po) + 25*new_archive/RATE_DENOM
+    S_base = 100*base_seg + np.sqrt(10*base_pose) + 25*ARCHIVE/RATE_DENOM
+    print(f'keep={keep}: d_seg={s:.6f}({s-base_seg:+.6f}) d_pose={po:.3e}({po-base_pose:+.2e}) blob={blob}({blob-base_blob:+d}) | S_subset={S_new:.5f} vs base_subset={S_base:.5f} dS={S_new-S_base:+.5f} [{time.time()-t0:.0f}s]', flush=True)

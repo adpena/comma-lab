@@ -1,0 +1,229 @@
+#!/usr/bin/env python
+"""ddm_ps135t boundary stop — operator-approved pass-6 tranche stop.
+
+Policy provenance (2026-08-11): operator "Is it resumable? If so then your rec
+is approved." Resumability VERIFIED from source before arming:
+  - experiments/ddm_ps135_pose_resolve.py:3642-3643 (--resume contract, bindings
+    verified against state.json)
+  - :3976-3986 (--max-passes tranche semantics: stop-and-resume is a designed
+    path, not a crash)
+Therefore the pass-6 stop is a TRANCHE stop: state stays resumable via
+`run --output ... --resume` at any later time (passes 7+ available forever).
+
+Mechanics:
+  1. Poll leg_a/state.json for passes_completed >= 6 (the runner writes the
+     pass receipt, THEN increments passes_completed, THEN persists state — so
+     6-in-state guarantees pass_06 receipt + chunks are on disk).
+  2. killpg the solve process group (26406) — SIGTERM, then SIGKILL fallback.
+  3. Run the standalone sensitivity/stage-C emission on the stopped state
+     (rehearsed 2026-08-11 on a scratch copy of the pass-4 state: EMIT OK,
+     600 pairs consolidated, map sha d0a7a7d9da1c92ec on the rehearsal copy).
+  4. Write TERMINAL_BY_POLICY.json; the run watcher's TERMINAL branch fires
+     the ddm_ps135t_terminal_alert arm on solve exit.
+
+Sensitivity-map honesty adjudication (recorded here so the T0 binder cannot
+mistake it): at an improving pass-6 boundary the emitted map's chunks
+differentiate pass 6's INPUT archive (= the pass-5 selected archive), NOT the
+pass-6 selected archive. That is the m37 stale-parent case — by ONE generation.
+The map's demanding terminal consumer (the A10/T7 active-dim variable-precision
+pose recode) was REFUTED by ddm_pz4a on 2026-08-11 (net -2,232 B vs its own
+coded baseline), so no live terminal stage requires final-parent equality.
+The map binds as PLANNING-BAND with consumer_status=RETIRED_PER_PZ4A; the m37
+gate must record that label rather than silently bind or silently drop.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import os
+import signal
+import sys
+import time
+from pathlib import Path
+
+SOLVE_PID = 26406
+OUTPUT = Path("/Volumes/VertigoDataTier/pact/ddm_ps135_20260810")
+STATE_PATH = OUTPUT / "leg_a" / "state.json"
+STOP_AT_PASSES = 6
+POLL_SECONDS = 60
+RUNNER = Path("/Users/adpena/Projects/pact/experiments/ddm_ps135_pose_resolve.py")
+LOG = OUTPUT / "terminal_watch" / "boundary_stop.log"
+RECEIPT = OUTPUT / "leg_a" / "TERMINAL_BY_POLICY.json"
+
+
+def utc_now() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def log(message: str) -> None:
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    with open(LOG, "a", encoding="utf-8") as handle:
+        handle.write(f"{utc_now()} {message}\n")
+
+
+SOLVE_CMD_TOKEN = "ddm_ps135_pose_resolve"
+
+
+def alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def solve_identity_holds(pid: int) -> bool:
+    """Adversarial-review F1 cure (2026-08-11): never trust a bare PID across
+    hours — macOS recycles them. True only if the pid is alive AND its command
+    line still names the solve runner; a recycled pid returns False."""
+    import subprocess
+
+    if not alive(pid):
+        return False
+    try:
+        out = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "command="],
+            capture_output=True, text=True, timeout=10,
+        ).stdout
+    except Exception as exc:
+        log(f"identity probe failed (treating as MISMATCH, no signal sent): {exc!r}")
+        return False
+    return SOLVE_CMD_TOKEN in out
+
+
+def read_passes_completed() -> int:
+    try:
+        state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
+        return int(state.get("passes_completed", 0))
+    except (OSError, ValueError, TypeError) as exc:
+        log(f"state read failed (transient, retrying): {exc!r}")
+        return -1
+
+
+def stop_solve_group() -> None:
+    for sig, grace in ((signal.SIGTERM, 90), (signal.SIGKILL, 30)):
+        if not alive(SOLVE_PID):
+            return
+        if not solve_identity_holds(SOLVE_PID):
+            log(
+                f"REFUSING to signal pid {SOLVE_PID}: command line no longer "
+                f"matches '{SOLVE_CMD_TOKEN}' (recycled pid?) — no kill sent"
+            )
+            return
+        try:
+            os.killpg(SOLVE_PID, sig)
+            log(f"sent {sig!r} to process group {SOLVE_PID}")
+        except ProcessLookupError:
+            return
+        except PermissionError:
+            os.kill(SOLVE_PID, sig)
+            log(f"killpg refused; sent {sig!r} to pid {SOLVE_PID} directly")
+        deadline = time.time() + grace
+        while alive(SOLVE_PID) and time.time() < deadline:
+            time.sleep(2)
+
+
+def atomic_json_write(path: Path, payload: dict) -> None:
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    os.replace(tmp, path)
+
+
+def main() -> int:
+    log(
+        f"boundary-stop ARMED: stop at passes_completed>={STOP_AT_PASSES}, "
+        f"solve pid/pgid {SOLVE_PID}, poll {POLL_SECONDS}s"
+    )
+    solve_self_exited = False
+    while True:
+        if not solve_identity_holds(SOLVE_PID):
+            solve_self_exited = True
+            log(
+                "solve exited (or pid recycled) before the boundary; "
+                "skipping kill, proceeding to emission on last completed pass"
+            )
+            break
+        done = read_passes_completed()
+        if done >= STOP_AT_PASSES:
+            log(f"passes_completed={done}: boundary reached, stopping solve group")
+            stop_solve_group()
+            log(f"solve stopped; alive={alive(SOLVE_PID)}")
+            break
+        time.sleep(POLL_SECONDS)
+
+    state = json.loads(STATE_PATH.read_text(encoding="utf-8"))
+    emission = {"status": "NOT_RUN"}
+    try:
+        spec = importlib.util.spec_from_file_location("ps135_resolve", RUNNER)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules["ps135_resolve"] = module
+        spec.loader.exec_module(module)
+        disposition = module.emit_sensitivity_and_stage_c_disposition(OUTPUT, state)
+        emission = {
+            "status": "OK",
+            "pass": disposition["measured_map"]["pass"],
+            "map_path": disposition["measured_map"]["payload"]["path"],
+            "map_sha256": disposition["measured_map"]["payload"]["sha256"],
+        }
+        log(f"standalone emission OK: pass={emission['pass']} map={emission['map_path']}")
+    except Exception as exc:  # non-fatal: the chunks stay on disk regardless
+        emission = {"status": "FAILED_NONFATAL", "error": repr(exc)}
+        log(f"standalone emission FAILED (non-fatal, chunks retained): {exc!r}")
+
+    history = state.get("history", [])
+    receipt = {
+        "schema": "ddm_ps135_terminal_by_policy.v1",
+        "written_at_utc": utc_now(),
+        "score_claim": False,
+        "policy": {
+            "kind": "operator_approved_pass_tranche_stop",
+            "stop_at_passes": STOP_AT_PASSES,
+            "operator_verbatim_2026_08_11": (
+                "Is it resumable? If so then your rec is approved"
+            ),
+            "resumability_verified": (
+                "ddm_ps135_pose_resolve.py:3642-3643 --resume contract + "
+                ":3976-3986 tranche semantics; state resumable at any later time"
+            ),
+            "rationale": (
+                "diminishing per-pass pose gains (-50%/-27%/-10% passes 2-4) "
+                "against 6.25h/pass; T8 compositor arithmetic shows the "
+                "cp135-base composition dominates the lc2-terminal base, so the "
+                "solve's terminal role is the own-vehicle row + warm-startable "
+                "refit machinery, not the sole bar-crosser"
+            ),
+        },
+        "solve_self_exited_before_boundary": solve_self_exited,
+        "passes_completed": state.get("passes_completed"),
+        "dry_streak": state.get("dry_streak"),
+        "history_tail": history[-3:] if history else [],
+        "resumable": True,
+        "resume_command_shape": (
+            ".venv/bin/python experiments/ddm_ps135_pose_resolve.py run "
+            "--output /Volumes/VertigoDataTier/pact/ddm_ps135_20260810 "
+            "--bulk /Volumes/APDataStore/pact/ddm_ps135_20260810 "
+            "--threads 8 --batch-size 16 --min-passes 8 --dry-passes 3 "
+            "--max-passes 24 --resume"
+        ),
+        "sensitivity_emission": emission,
+        "sensitivity_map_adjudication": {
+            "parent": "pass-6 INPUT archive (= pass-5 selected) — stale by ONE generation",
+            "band": "PLANNING_BAND",
+            "consumer_status": "RETIRED_PER_PZ4A_20260811",
+            "m37_instruction": (
+                "binder must record stale-parent + planning-band + retired "
+                "consumer; never silently bind as terminal, never silently drop"
+            ),
+        },
+        "payloads_retained": True,
+    }
+    atomic_json_write(RECEIPT, receipt)
+    log(f"terminal_by_policy receipt written: {RECEIPT}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

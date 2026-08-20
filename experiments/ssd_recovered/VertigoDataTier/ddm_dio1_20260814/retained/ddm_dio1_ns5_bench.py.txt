@@ -1,0 +1,118 @@
+import hashlib
+import json
+import platform
+import shutil
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+import torch
+
+
+SEED = 20260814
+WARMUPS = 25
+REPETITIONS = 400
+OUT = Path("/Volumes/VertigoDataTier/pact/ddm_dio1_20260814/retained")
+SHAPES = {
+    "old_v9": [(96, 80), (768, 19), (96, 96), (96, 96), (96, 96), (96, 96)],
+    "tr1_lotto": [(24, 108), (3, 216), (24, 216), (24, 216), (24, 216), (24, 216)],
+}
+
+
+def sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def ns5(matrix: torch.Tensor) -> torch.Tensor:
+    x = matrix
+    if x.shape[0] > x.shape[1]:
+        x = x.T
+    x = x / (torch.linalg.norm(x) + 1e-7)
+    for _ in range(5):
+        a = x @ x.T
+        b = -4.775 * a + 2.0315 * (a @ a)
+        x = 3.4445 * x + b @ x
+    if matrix.shape[0] > matrix.shape[1]:
+        x = x.T
+    return x
+
+
+def save_npz(path: Path, matrices: list[torch.Tensor]) -> None:
+    np.savez(path, **{f"matrix_{i:02d}": value.detach().cpu().numpy() for i, value in enumerate(matrices)})
+
+
+def run_surface(name: str, shapes: list[tuple[int, int]]) -> dict:
+    generator = torch.Generator(device="cpu")
+    generator.manual_seed(SEED)
+    inputs = [torch.randn(shape, generator=generator, dtype=torch.float32) for shape in shapes]
+    outputs = [ns5(value) for value in inputs]
+    repeats = [ns5(value) for value in inputs]
+    if not all(torch.equal(a, b) for a, b in zip(outputs, repeats)):
+        raise RuntimeError(f"non-bit-identical repeat for {name}")
+
+    for _ in range(WARMUPS):
+        for value in inputs:
+            ns5(value)
+
+    timings_ms = []
+    for _ in range(REPETITIONS):
+        start = time.perf_counter_ns()
+        for value in inputs:
+            ns5(value)
+        timings_ms.append((time.perf_counter_ns() - start) / 1_000_000.0)
+
+    input_path = OUT / f"{name}_inputs_seed{SEED}.npz"
+    output_path = OUT / f"{name}_ns5_outputs_seed{SEED}.npz"
+    repeat_path = OUT / f"{name}_ns5_outputs_repeat_seed{SEED}.npz"
+    timings_path = OUT / f"{name}_ns5_timings_seed{SEED}.npy"
+    save_npz(input_path, inputs)
+    save_npz(output_path, outputs)
+    save_npz(repeat_path, repeats)
+    np.save(timings_path, np.asarray(timings_ms, dtype=np.float64), allow_pickle=False)
+
+    return {
+        "name": name,
+        "shapes": shapes,
+        "q05_q50_q95_ms": np.quantile(timings_ms, [0.05, 0.5, 0.95]).tolist(),
+        "artifacts": {
+            path.name: {"bytes": path.stat().st_size, "sha256": sha256(path)}
+            for path in (input_path, output_path, repeat_path, timings_path)
+        },
+        "repeat_bit_identical": True,
+    }
+
+
+def main() -> None:
+    torch.set_num_threads(1)
+    torch.set_num_interop_threads(1)
+    OUT.mkdir(parents=True, exist_ok=True)
+    script_copy = OUT / "ddm_dio1_ns5_bench.py"
+    shutil.copy2(Path(__file__), script_copy)
+    receipt = {
+        "schema": "pact.ddm_dio1.ns5_toy_bracket.v1",
+        "axis": "macOS-CPU advisory; TOY-BRACKET for MLX/Metal; torch-fp32",
+        "seed": SEED,
+        "warmups": WARMUPS,
+        "repetitions": REPETITIONS,
+        "threads": 1,
+        "command": [sys.executable, str(Path(__file__).resolve())],
+        "python": sys.version,
+        "torch": torch.__version__,
+        "numpy": np.__version__,
+        "platform": platform.platform(),
+        "machine": platform.machine(),
+        "surfaces": [run_surface(name, shapes) for name, shapes in SHAPES.items()],
+    }
+    receipt["script"] = {"path": str(script_copy), "bytes": script_copy.stat().st_size, "sha256": sha256(script_copy)}
+    receipt_path = OUT / "ns5_toy_bracket_receipt.json"
+    receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+    print(json.dumps(receipt, indent=2, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

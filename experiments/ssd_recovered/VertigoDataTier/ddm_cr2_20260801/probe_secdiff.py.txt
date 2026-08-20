@@ -1,0 +1,20 @@
+import json,sys,zipfile,hashlib
+from pathlib import Path
+PFS1="/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/pfs1"
+sys.path.insert(0,PFS1)
+import ddm_tr1_runtime as rt
+def packet_sections(pk):
+    hdr=rt.PACKET_HEADER; ml=int(hdr.unpack_from(pk,0)[-1]); me=hdr.size+ml; out={}
+    for i,n in enumerate(rt.SECTION_NAMES):
+        _,off,ln,_=rt.SECTION_ENTRY.unpack_from(pk, me+i*rt.SECTION_ENTRY.size)
+        out[n]=pk[off:off+ln]
+    return out
+EP=Path("/Volumes/VertigoDataTier/pact/ddm_ep2_20260731/archives/w03_ep854_representative/archive.zip")
+LIVE=Path("/Volumes/VertigoDataTier/pact/ddm_v4d_20260731/v4d_composed_pw1_archive.zip")
+with zipfile.ZipFile(EP) as z: ep=packet_sections(z.read('state/tr1.ddt1'))
+with zipfile.ZipFile(LIVE) as z: live={i.filename:z.read(i.filename) for i in z.infolist()}
+h=lambda b: hashlib.sha256(b).hexdigest()[:12]
+pairs=[('lotto_renderer','state/renderer.sec'),('selector','state/selector.sec'),('pose_stub','state/pose_stub.sec')]
+for a,b in pairs:
+    print(f'{a:15s} ep={len(ep[a]):6d} {h(ep[a])}   live={len(live[b]):6d} {h(live[b])}   SAME={ep[a]==live[b]}')
+print('live manifest tr1_metadata present:', 'tr1_metadata' in json.loads(live['manifest.json']))

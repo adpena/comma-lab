@@ -1,0 +1,24 @@
+"""Control: the FROZEN drop-in must reproduce the RACED row at delta 0.000000.
+
+The encoder builds `FreeCorrector(plane)` with no arguments, so the shipped
+surface is a different object from the parameterised one the race drove.  If they
+disagree, the raced number does not describe what would ship.
+"""
+import json, sys, time
+sys.path.insert(0, "/Users/adpena/Projects/pact")
+sys.path.insert(0, "/Volumes/APDataStore/pact/ddm_me1")
+from assets import ASSETS
+from tac.micro_edit.coder_replay import replay_code_length
+from experiments.ddm_fx2_model_axis_corrector import FreeCorrector
+
+RACED = json.load(open("/Volumes/APDataStore/pact/ddm_fx2/race/D1_ctx_bnd_agree_homog.json"))
+t = time.time()
+r = replay_code_length(ASSETS, label="frozen_dropin", corrector_factory=FreeCorrector, frames=600)
+d = r.code_bits - RACED["code_bits"]
+print(f"raced  D1_ctx_bnd_agree_homog : {RACED['code_bits']!r} bits")
+print(f"frozen FreeCorrector(plane)   : {r.code_bits!r} bits")
+print(f"delta                         : {d:+.6f} bits   [{time.time()-t:.0f}s]")
+print("VERDICT:", "PASS - the frozen surface IS the raced row" if d == 0.0 else "FAIL")
+json.dump({"raced_bits": RACED["code_bits"], "frozen_bits": r.code_bits, "delta_bits": d,
+           "verdict": "PASS" if d == 0.0 else "FAIL"},
+          open("/Volumes/APDataStore/pact/ddm_fx2/probe/frozen_dropin_control.json", "w"), indent=2)

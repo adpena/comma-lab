@@ -1,0 +1,80 @@
+import sys, zipfile, hashlib, subprocess, json
+from pathlib import Path
+from collections import OrderedDict
+import numpy as np, torch
+RT="/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime"
+sys.path.insert(0, RT); sys.path.insert(0,"/Users/adpena/Projects/pact/experiments")
+import runtime.residual_archive as ra
+import ddm_rx1_rate_representation_attack as rx1
+import ddm_sd1_semantic_rd_curve as sd1
+import ddm_sm3_semantic_representation as sm3
+
+P=Path(RT)/"archive.zip"
+outer=zipfile.ZipFile(P).read("p")
+H=rx1.RX1_HEADER
+magic,ver,codec,tmode,res,hb,sb,cb = H.unpack_from(outer)
+o=H.size
+hpac_s=outer[o:o+hb]; o+=hb
+sem_s =outer[o:o+sb]; o+=sb
+car_s =outer[o:o+cb]; o+=cb
+tail  =outer[o:]
+BASE_BYTES=181161
+
+def brotli11(v):
+    c=subprocess.run(["brotli","-q","11","-c"],input=v,capture_output=True,check=True).stdout
+    back=subprocess.run(["brotli","-d","-c"],input=c,capture_output=True,check=True).stdout
+    assert back==v, "brotli parse-back differs"
+    return c
+
+def build(sem_body):
+    s=brotli11(sem_body)
+    model=rx1.pack_rx1_model(hpac_s, s, car_s, codec_id=codec, table_mode=tmode)
+    member=model+tail
+    z=rx1.deterministic_zip(member)
+    return z, len(s), len(sem_body)
+
+# rr4 decoded state
+parts=ra.read_residual_archive(P)
+recs=ra.decode_wans1(parts.semantic_blob)
+state=OrderedDict((r.schema.name, torch.from_numpy(np.ascontiguousarray(r.values,dtype=np.float32))) for r in recs)
+print("state tensors:",len(state))
+
+def err(expected):
+    tot=0.0; n=0; worst=("",0.0)
+    for k,v in state.items():
+        e=expected[k].float()
+        d=float((e-v).abs().max())
+        mse=float(((e-v)**2).mean())
+        tot+=mse*v.numel(); n+=v.numel()
+        if d>worst[1]: worst=(k,d)
+    return tot/n, worst
+
+rows=[]
+qn=sd1.quantized_names(state)
+print("quantized names:",len(qn))
+
+# C0 all-q4 SD1M control
+alloc={n:4 for n in qn}
+body,exp = sd1.pack_semantic_state(state, alloc, legacy_int4=False)
+z,ps,rb = build(body)
+m,w = err(exp)
+rows.append(dict(id="C0_sd1m_all_q4", archive=len(z), delta=len(z)-BASE_BYTES, packed_sem=ps, raw_sem=rb, mse=m, worst_name=w[0], worst_abs=w[1], sha=hashlib.sha256(z).hexdigest()))
+
+# C1 mixed q3/q4 (mz2 selected set)
+alloc={n:(3 if n in sm3.SELECTED_MIXED_Q3_NAMES else 4) for n in qn}
+body,exp = sd1.pack_semantic_state(state, alloc, legacy_int4=False)
+z,ps,rb = build(body)
+m,w = err(exp)
+rows.append(dict(id="C1_sd1m_mixed_q3q4", archive=len(z), delta=len(z)-BASE_BYTES, packed_sem=ps, raw_sem=rb, mse=m, worst_name=w[0], worst_abs=w[1], sha=hashlib.sha256(z).hexdigest()))
+
+# C2..C7 SM3R prune ladder
+for pct in (87,75,62,50,37,25):
+    body,exp,meta = sm3.pack_prune_candidate(state, pct)
+    z,ps,rb = build(body)
+    m,w = err(exp)
+    rows.append(dict(id=f"C_sm3r_keep{pct}", archive=len(z), delta=len(z)-BASE_BYTES, packed_sem=ps, raw_sem=rb, mse=m, worst_name=w[0], worst_abs=w[1], sha=hashlib.sha256(z).hexdigest()))
+
+print(f"\n{'id':24s} {'archive':>8} {'delta':>7} {'packedSem':>10} {'rawSem':>8} {'mse':>12} {'worst|d|':>10}  worst")
+for r in rows:
+    print(f"{r['id']:24s} {r['archive']:>8} {r['delta']:>+7} {r['packed_sem']:>10} {r['raw_sem']:>8} {r['mse']:>12.4e} {r['worst_abs']:>10.5f}  {r['worst_name']}")
+Path("/private/tmp/claude-501/-Users-adpena-Projects-pact/89ff112f-013d-43b5-b949-2a6d43b650c3/scratchpad/sa1/rows.json").write_text(json.dumps(rows,indent=2))

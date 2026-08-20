@@ -1,0 +1,25 @@
+#!/bin/bash
+# Serial chain for the three b2e edit rows, one retained macOS-CPU advisory n600 each.
+# Fail-closed: a row that does not produce a result JSON stops the chain.
+set -uo pipefail
+
+RUN=/Volumes/APDataStore/pact/ddm_b2e_f2_alone_run
+
+for CID in mixed_q3q4 film_row_prune_keep87 film_row_prune_keep75_minus_keep87; do
+  ATT="$RUN/admission_advisory/$CID/attempt_0000"
+  mkdir -p "$ATT"
+  if [ -f "$ATT/contest_auth_eval.json" ]; then
+    echo "=== SKIP $CID (result already present) $(date -u +%FT%TZ)"
+    continue
+  fi
+  echo "=== START $CID $(date -u +%FT%TZ)"
+  bash "$RUN/admission_advisory/launch_one.sh" "$CID"
+  rc=$?
+  echo "=== END $CID rc=$rc $(date -u +%FT%TZ)"
+  if [ "$rc" -ne 0 ] || [ ! -f "$ATT/contest_auth_eval.json" ]; then
+    echo "=== CHAIN STOP: $CID produced no result (rc=$rc)"
+    exit 1
+  fi
+done
+
+echo "=== CHAIN COMPLETE $(date -u +%FT%TZ)"

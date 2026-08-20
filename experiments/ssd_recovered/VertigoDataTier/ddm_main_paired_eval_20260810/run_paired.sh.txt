@@ -1,0 +1,17 @@
+#!/bin/bash
+# Paired local exact eval: PR130 base vs cp2 rank-1 composed, SAME device/GT/host.
+# Axis: [macOS-CPU advisory; AV GT] -- NOT contest-CUDA/DALI. The DELTA is the finding.
+set -uo pipefail
+OUT=/Volumes/VertigoDataTier/pact/ddm_main_paired_eval_20260810
+REPO=/Users/adpena/Projects/pact
+cd "$REPO/upstream" || exit 2
+for ARM in base cand; do
+  echo "=== $ARM start $(date -u +%FT%TZ) ==="
+  "$REPO/.venv/bin/python" evaluate.py \
+      --submission-dir "$OUT/$ARM" \
+      --uncompressed-dir "$REPO/upstream/videos" \
+      --video-names-file "$REPO/upstream/public_test_video_names.txt" \
+      --device cpu \
+      --report "$OUT/$ARM/report.txt" 2>&1 | tee "$OUT/logs/$ARM.log"
+  echo "=== $ARM rc=${PIPESTATUS[0]} end $(date -u +%FT%TZ) ==="
+done

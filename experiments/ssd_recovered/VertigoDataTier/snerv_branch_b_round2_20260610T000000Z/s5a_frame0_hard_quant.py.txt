@@ -1,0 +1,457 @@
+#!/usr/bin/env python3
+"""SNeRV Branch-B ROUND-2 · S5a FRAME0-HARD-QUANT (the frame-role asymmetry).
+
+Operator amendment (binding rung-1): frame0 vs frame1 ASYMMETRY.
+  - frame0 (EVEN skip_high planes, role 0): SegNet-BLIND by construction
+    (SegNet slices x[:,-1,...] == frame1; verified exact d_seg=0 for frame0
+    perturbations, R2 mode-table receipt + the evaluator-invisibility corollary
+    "ALL of frame0 is SegNet-invisible"). frame0's ONLY constraint is the POSE
+    half-cone -> quantize frame0 LL planes MUCH harder than frame1.
+  - frame1 (ODD skip_high planes, role 1): the JOINT surface (seg ∧ pose).
+
+ADVERSARIAL CORRECTION #1 (binding): frame0 is SegNet-FREE, NOT pose-free.
+PoseNet reads BOTH frames. So d_pose prices the EXACT frame0 floor; we sweep
+frame0 precision (uint4/uint3) against d_pose while frame1 stays at the round-1
+free point (uint8-global, the d_seg-safe operating point).
+
+The frame-role index law (premise-verified: archive is pair-major/frame-major,
+(n_pairs,2,3,H,W) -> flat f = 2*pair + role): EVEN f = frame0, ODD f = frame1.
+
+Each rung sets frame0 planes to one precision, frame1 planes to another, dequant
+to float64 (receiver-compatible manifest), re-pack, EXACT re-measure N>=48. The
+honest measurement: how much harder can frame0 be quantized at d_seg-unchanged,
+and what does d_pose pay? (the exact frame0 pose floor).
+
+Authority: [macOS-CPU advisory] / exact_cpu_advisory — NON-PROMOTABLE.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import lzma
+import sys
+import time
+import zipfile
+from pathlib import Path
+
+REPO_ROOT = Path("/Users/adpena/Projects/pact")
+G1B_PACKET = Path(
+    "/Volumes/VertigoDataTier/pact/snerv_mistake_b_g1a_20260609T201221Z"
+    "/snerv_mlx_native_export/native_train_export/snerv_mlx_native_packet.snar"
+)
+RUN_DIR = Path("/Volumes/VertigoDataTier/pact/snerv_branch_b_round2_20260610T000000Z")
+
+sys.path.insert(0, str(REPO_ROOT / "src"))
+sys.path.insert(0, str(REPO_ROOT / "upstream"))
+
+import numpy as np  # noqa: E402
+
+CONTEST_N = 37_545_489
+CONTEST_BYTE_PRICE = 25.0 / CONTEST_N
+SKIP_HIGH_NAME = "inputs.mfu.skip_high"
+
+G1B_BASE_D_SEG = 0.002468
+G1B_BASE_POSE_TERM = 0.142602
+GUARD_D_SEG_MAX = 0.01
+GUARD_POSE_TERM_MAX = 0.25
+
+FALSE_AUTHORITY = {
+    "authority_tier": "exact_cpu_advisory",
+    "axis_tag": "[macOS-CPU advisory]",
+    "score_claim": False,
+    "promotion_eligible": False,
+    "promotable": False,
+    "rank_or_kill_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+    "requires_exact_remeasure": False,
+}
+
+
+def _sha(b: bytes) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+
+# --------------------------------------------------------------------------- #
+# Per-frame-role quantization: frame0 (EVEN) vs frame1 (ODD)
+# --------------------------------------------------------------------------- #
+def _quant_planes(planes: np.ndarray, *, bits: int, per: str) -> np.ndarray:
+    """Quantize a (K,3,H,W) block to 2**bits levels, dequant float64."""
+    if bits >= 53:  # identity float64
+        return planes.astype(np.float64, copy=True)
+    if bits == 16:  # fp16 passthrough
+        return planes.astype(np.float16).astype(np.float64)
+    levels = (1 << bits) - 1
+    a = planes.astype(np.float64, copy=False)
+    if per == "global":
+        lo = float(a.min()); hi = float(a.max())
+        span = max(hi - lo, 1e-12)
+        codes = np.rint((a - lo) / span * levels)
+        return (codes / levels * span + lo).astype(np.float64)
+    if per == "frame":
+        lo = a.min(axis=(1, 2, 3), keepdims=True)
+        hi = a.max(axis=(1, 2, 3), keepdims=True)
+    else:
+        raise ValueError(per)
+    span = np.maximum(hi - lo, 1e-12)
+    codes = np.rint((a - lo) / span * levels)
+    return (codes / levels * span + lo).astype(np.float64)
+
+
+def frame_role_quant(skip_high, *, frame0_bits, frame0_per, frame1_bits, frame1_per):
+    """skip_high (1200,3,192,256); EVEN=frame0 ODD=frame1. Returns dequant float64."""
+    out = skip_high.astype(np.float64, copy=True)
+    even = np.arange(0, skip_high.shape[0], 2)  # frame0
+    odd = np.arange(1, skip_high.shape[0], 2)   # frame1
+    out[even] = _quant_planes(skip_high[even], bits=frame0_bits, per=frame0_per)
+    out[odd] = _quant_planes(skip_high[odd], bits=frame1_bits, per=frame1_per)
+    return out
+
+
+# (rung_id, label, frame0_bits, frame0_per, frame1_bits, frame1_per)
+LADDER = [
+    # Control: both uint8-global (the round-1 R5 free point) — d_seg/d_pose anchor.
+    ("S5a_ctrl_both_uint8_global", "ctrl: f0+f1 uint8 global", 8, "global", 8, "global"),
+    # frame0 hard, frame1 at the free uint8-global point.
+    ("S5a_f0_uint6_f1_uint8", "f0 uint6/frame | f1 uint8 global", 6, "frame", 8, "global"),
+    ("S5a_f0_uint5_f1_uint8", "f0 uint5/frame | f1 uint8 global", 5, "frame", 8, "global"),
+    ("S5a_f0_uint4_f1_uint8", "f0 uint4/frame | f1 uint8 global", 4, "frame", 8, "global"),
+    ("S5a_f0_uint3_f1_uint8", "f0 uint3/frame | f1 uint8 global", 3, "frame", 8, "global"),
+    ("S5a_f0_uint2_f1_uint8", "f0 uint2/frame | f1 uint8 global", 2, "frame", 8, "global"),
+    # frame0 hard + frame1 slightly coarser (uint6) — does the joint floor hold?
+    ("S5a_f0_uint4_f1_uint6", "f0 uint4/frame | f1 uint6/frame", 4, "frame", 6, "frame"),
+    ("S5a_f0_uint3_f1_uint6", "f0 uint3/frame | f1 uint6/frame", 3, "frame", 6, "frame"),
+]
+
+
+def reencode_decoder_payload(decoder_payload, new_skip_high):
+    from tac.substrates.snerv_inverse_steg_carrier import archive as A
+
+    header, comp = A._unpack_subpacket(
+        decoder_payload, magic=A.SNERV_DECODER_MAGIC,
+        schema=A.DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
+    )
+    raw = lzma.decompress(comp)
+    tensors = A._unpack_tensor_manifest(raw, header.get("tensor_manifest") or [])
+    tensors[SKIP_HIGH_NAME] = np.ascontiguousarray(new_skip_high, dtype=np.float64)
+    manifest, new_raw = A._pack_tensor_manifest(tensors)
+    new_comp = lzma.compress(
+        new_raw, format=lzma.FORMAT_XZ,
+        preset=A.DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_LZMA_PRESET,
+    )
+    new_header = dict(header)
+    new_header["tensor_manifest"] = manifest
+    new_header["tensor_count"] = len(manifest)
+    new_header["raw_tensor_bytes"] = len(new_raw)
+    new_header["raw_tensor_sha256"] = A._sha256(new_raw)
+    new_header["compressed_bytes"] = len(new_comp)
+    new_header["compressed_sha256"] = A._sha256(new_comp)
+    return A._pack_subpacket(A.SNERV_DECODER_MAGIC, new_header, new_comp)
+
+
+def rebuild_packet(orig_packet, new_decoder_payload):
+    from tac.substrates.snerv_inverse_steg_carrier import archive as A
+
+    decoded = A.unpack_snerv_archive(orig_packet)
+    sections = dict(decoded.sections)
+    sections["decoder_payload"] = new_decoder_payload
+    return A.pack_snerv_archive_snar2(
+        metadata_payload=sections["metadata_payload"],
+        lf_payload=sections["lf_payload"],
+        decoder_payload=sections["decoder_payload"],
+        step_map_packet=sections["step_map_packet"],
+        metadata=decoded.metadata,
+    ).packet
+
+
+# --------------------------------------------------------------------------- #
+# Per-role entropy-true storage floor (split streams by frame role)
+# --------------------------------------------------------------------------- #
+def carrier_lf_role_storage_bytes(skip_high, *, frame0_bits, frame0_per, frame1_bits, frame1_per):
+    """Carrier lossless intN codec on EACH role's integer codes, split streams.
+
+    Returns (frame0_code_bytes, frame1_code_bytes, scale_sidecar_bytes).
+    Split-by-role is the measured-axis storage (frame0 codes are far lower entropy
+    after hard quant). NOT receiver-decodable yet (receiver wants float64) — a
+    storage-floor estimate apples-to-apples with the fidelity rows.
+    """
+    from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
+        encode_lf_quant_payload_v2_with_report,
+    )
+
+    def _codes(planes, bits, per):
+        levels = (1 << bits) - 1
+        a = planes.astype(np.float64, copy=False)
+        if per == "global":
+            lo = np.array(a.min()).reshape(1, 1, 1, 1)
+            hi = np.array(a.max()).reshape(1, 1, 1, 1)
+        elif per == "frame":
+            lo = a.min(axis=(1, 2, 3), keepdims=True)
+            hi = a.max(axis=(1, 2, 3), keepdims=True)
+        else:
+            raise ValueError(per)
+        span = np.maximum(hi - lo, 1e-12)
+        codes = np.rint((a - lo) / span * levels).astype(np.int64)
+        return codes, lo, span
+
+    even = np.arange(0, skip_high.shape[0], 2)
+    odd = np.arange(1, skip_high.shape[0], 2)
+    c0, lo0, sp0 = _codes(skip_high[even], frame0_bits, frame0_per)
+    c1, lo1, sp1 = _codes(skip_high[odd], frame1_bits, frame1_per)
+
+    def _enc(codes):
+        planes = [codes[i].reshape(codes.shape[1], -1) for i in range(codes.shape[0])]
+        pkt, _rep = encode_lf_quant_payload_v2_with_report(
+            planes, mode="portfolio_auto", wrapper="portfolio_auto"
+        )
+        return len(pkt)
+
+    b0 = _enc(c0)
+    b1 = _enc(c1)
+    scale_raw = np.concatenate([
+        lo0.astype(np.float32).reshape(-1), sp0.astype(np.float32).reshape(-1),
+        lo1.astype(np.float32).reshape(-1), sp1.astype(np.float32).reshape(-1),
+    ]).tobytes()
+    scale_bytes = len(lzma.compress(scale_raw, preset=6))
+    return b0, b1, scale_bytes
+
+
+def _weights_lzma_bytes(tensors):
+    from tac.substrates.snerv_inverse_steg_carrier import archive as A
+
+    sub = {k: v for k, v in tensors.items() if k != SKIP_HIGH_NAME}
+    _manifest, raw = A._pack_tensor_manifest(sub)
+    return len(lzma.compress(raw, format=lzma.FORMAT_XZ, preset=6))
+
+
+def _zip_stored_bytes(packet):
+    import io
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as zf:
+        zf.writestr("x", packet)
+    return len(buf.getvalue())
+
+
+def score_packet(packet, n_pairs, source_pairs, posenet, segnet):
+    from tac.substrates.snerv_inverse_steg_carrier.archive import decode_snerv_archive_frames
+    from tac.substrates.snerv_inverse_steg_carrier.inflate import _resize_nchw_bilinear
+    from tac.analysis.inverse_steganalysis_linf_vs_l2_gate import measure_pairs_d_seg_d_pose_batched
+    import torch
+
+    t0 = time.time()
+    frames = decode_snerv_archive_frames(packet)
+    decode_s = time.time() - t0
+    arr = np.asarray(frames, dtype=np.float32)
+    if arr.ndim == 5 and arr.shape[1] == 2:
+        pairs_arr = arr
+    elif arr.ndim == 4 and arr.shape[0] % 2 == 0:
+        pairs_arr = arr.reshape(arr.shape[0] // 2, 2, *arr.shape[1:])
+    else:
+        raise RuntimeError(f"unexpected decoded frame shape {arr.shape}")
+    cam_h, cam_w = int(source_pairs.shape[-2]), int(source_pairs.shape[-1])
+    n = min(n_pairs, int(pairs_arr.shape[0]))
+    sel = pairs_arr[:n]
+    flat = sel.reshape(-1, 3, sel.shape[-2], sel.shape[-1])
+    resized = _resize_nchw_bilinear(flat, out_hw=(cam_h, cam_w))
+    u8 = np.rint(np.clip(resized, 0.0, 255.0)).astype(np.uint8)
+    recon_np = u8.astype(np.float32).reshape(n, 2, 3, cam_h, cam_w)
+    recon = torch.from_numpy(recon_np).to(source_pairs)
+    t1 = time.time()
+    dsegs, dposes = measure_pairs_d_seg_d_pose_batched(
+        posenet, segnet, source_pairs[:n], recon, batch_pairs=8
+    )
+    d_seg = float(np.mean(dsegs))
+    d_pose = float(np.mean(dposes))
+    return {
+        "decode_seconds": decode_s,
+        "score_seconds": time.time() - t1,
+        "n_pairs_scored": n,
+        "d_seg": d_seg,
+        "d_pose": d_pose,
+        "pose_score_term": float(np.sqrt(10.0 * max(d_pose, 0.0))),
+        "per_pair_d_seg_first8": [float(v) for v in dsegs[:8]],
+        "per_pair_d_pose_first8": [float(v) for v in dposes[:8]],
+    }
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--n-pairs", type=int, default=48)
+    ap.add_argument("--rungs", type=str, default="all")
+    ap.add_argument("--role-floor", action="store_true",
+                    help="also measure split-by-role carrier LF storage floor")
+    args = ap.parse_args()
+
+    RUN_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = RUN_DIR / "s5a_frame0_hard_quant.v1.json"
+
+    from tac.substrates.snerv_inverse_steg_carrier import archive as A
+
+    orig_packet = G1B_PACKET.read_bytes()
+    decoded = A.unpack_snerv_archive(orig_packet)
+    dp = decoded.sections["decoder_payload"]
+    header, comp = A._unpack_subpacket(
+        dp, magic=A.SNERV_DECODER_MAGIC, schema=A.DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA
+    )
+    raw = lzma.decompress(comp)
+    tensors = A._unpack_tensor_manifest(raw, header.get("tensor_manifest") or [])
+    skip_high = tensors[SKIP_HIGH_NAME]
+
+    from tac.analysis.score_exact_saliency import decode_real_pairs, load_score_exact_scorers
+
+    posenet, segnet = load_score_exact_scorers(
+        upstream_dir=str(REPO_ROOT / "upstream"), device="cpu"
+    )
+    source_pairs = decode_real_pairs(
+        str(REPO_ROOT / "upstream/videos/0.mkv"), args.n_pairs, pair_stride=1, start_pair=0
+    )
+
+    other_section_bytes = (
+        len(decoded.sections["metadata_payload"])
+        + len(decoded.sections["lf_payload"])
+        + len(decoded.sections["step_map_packet"])
+    )
+    weights_lzma = _weights_lzma_bytes(tensors)
+
+    out = {
+        "schema": "snerv_branch_b_round2_s5a_frame0_hard_quant.v1",
+        "subagent_id": "snerv_branch_b_round2_20260610",
+        "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "g1b_packet_path": str(G1B_PACKET),
+        "g1b_packet_sha256": _sha(orig_packet),
+        "g1b_base_d_seg": G1B_BASE_D_SEG,
+        "g1b_base_pose_term": G1B_BASE_POSE_TERM,
+        "frame_role_law": "skip_high f=2*pair+role; EVEN=frame0(SegNet-blind) ODD=frame1(joint)",
+        "skip_high_shape": list(skip_high.shape),
+        "weights_lzma_bytes_est": weights_lzma,
+        "other_section_bytes": other_section_bytes,
+        "n_pairs_requested": args.n_pairs,
+        "contest_byte_price": CONTEST_BYTE_PRICE,
+        "guard_d_seg_max": GUARD_D_SEG_MAX,
+        "guard_pose_term_max": GUARD_POSE_TERM_MAX,
+        "frontier_target": 0.19199,
+        "rungs": [],
+        **FALSE_AUTHORITY,
+    }
+
+    want = (
+        [r[0] for r in LADDER] if args.rungs == "all"
+        else [s.strip() for s in args.rungs.split(",") if s.strip()]
+    )
+
+    ctrl_d_seg = None
+    for (rid, label, f0b, f0p, f1b, f1p) in LADDER:
+        if rid not in want:
+            continue
+        t0 = time.time()
+        new_sh = frame_role_quant(skip_high, frame0_bits=f0b, frame0_per=f0p,
+                                  frame1_bits=f1b, frame1_per=f1p)
+        new_dp = reencode_decoder_payload(dp, new_sh)
+        new_pkt = rebuild_packet(orig_packet, new_dp)
+        pkt_bytes = len(new_pkt)
+        zbytes = _zip_stored_bytes(new_pkt)
+        sc = score_packet(new_pkt, args.n_pairs, source_pairs, posenet, segnet)
+
+        # Entropy-true split-by-role storage floor (this rung's quant).
+        b0, b1, scale_b = carrier_lf_role_storage_bytes(
+            skip_high, frame0_bits=f0b, frame0_per=f0p, frame1_bits=f1b, frame1_per=f1p
+        )
+        est_skip_high_storage = b0 + b1 + scale_b
+        est_packet_floor = est_skip_high_storage + weights_lzma + other_section_bytes
+        rate_floor = CONTEST_BYTE_PRICE * est_packet_floor
+
+        rate_pkt = CONTEST_BYTE_PRICE * pkt_bytes
+        nonrate = 100.0 * sc["d_seg"] + sc["pose_score_term"]
+        total_pkt = nonrate + rate_pkt
+        total_floor = nonrate + rate_floor
+        if rid == "S5a_ctrl_both_uint8_global":
+            ctrl_d_seg = sc["d_seg"]
+        d_seg_ok = sc["d_seg"] <= GUARD_D_SEG_MAX
+        pose_ok = sc["pose_score_term"] <= GUARD_POSE_TERM_MAX
+        row = {
+            "rung_id": rid,
+            "label": label,
+            "frame0_bits": f0b, "frame0_per": f0p,
+            "frame1_bits": f1b, "frame1_per": f1p,
+            "packet_bytes": pkt_bytes,
+            "archive_zip_bytes": zbytes,
+            "packet_sha256": _sha(new_pkt),
+            "frame0_code_bytes": b0,
+            "frame1_code_bytes": b1,
+            "scale_sidecar_bytes": scale_b,
+            "est_skip_high_storage_bytes": est_skip_high_storage,
+            "est_packet_floor_bytes": est_packet_floor,
+            "rate_term_packet": rate_pkt,
+            "rate_term_floor": rate_floor,
+            "d_seg": sc["d_seg"],
+            "d_pose": sc["d_pose"],
+            "pose_score_term": sc["pose_score_term"],
+            "nonrate_floor": nonrate,
+            "advisory_total_packet_rate": total_pkt,
+            "advisory_total_storage_floor": total_floor,
+            "delta_d_seg_vs_g1b": sc["d_seg"] - G1B_BASE_D_SEG,
+            "delta_d_seg_vs_ctrl": (sc["d_seg"] - ctrl_d_seg) if ctrl_d_seg is not None else None,
+            "delta_pose_term_vs_g1b": sc["pose_score_term"] - G1B_BASE_POSE_TERM,
+            "gap_to_0.19199_at_floor": total_floor - 0.19199,
+            "bytes_vs_178KB_ratio": est_packet_floor / 178493,
+            "guard_d_seg_ok": d_seg_ok,
+            "guard_pose_term_ok": pose_ok,
+            "guard_pass": d_seg_ok and pose_ok,
+            "per_pair_d_seg_first8": sc["per_pair_d_seg_first8"],
+            "per_pair_d_pose_first8": sc["per_pair_d_pose_first8"],
+            "decode_seconds": sc["decode_seconds"],
+            "score_seconds": sc["score_seconds"],
+            "rung_wall_seconds": time.time() - t0,
+            **FALSE_AUTHORITY,
+        }
+        out["rungs"].append(row)
+        out_path.write_text(json.dumps(out, indent=2, sort_keys=True))
+        d_seg_delta_ctrl = row["delta_d_seg_vs_ctrl"]
+        dctrl_str = (
+            f"(Δctrl={d_seg_delta_ctrl:+.2e})" if d_seg_delta_ctrl is not None else "(ctrl)"
+        )
+        print(
+            f"[s5a] {rid:28s} f0={f0b}b/{f0p[:3]} f1={f1b}b/{f1p[:3]}  "
+            f"d_seg={sc['d_seg']:.6f}{dctrl_str}  "
+            f"pose_term={sc['pose_score_term']:.4f}(Δg1b={row['delta_pose_term_vs_g1b']:+.4f}) "
+            f"floor_bytes={est_packet_floor:>11,}({est_packet_floor/178493:.1f}x178KB) "
+            f"total_floor={total_floor:.4f} cone={'OK' if row['guard_pass'] else 'FAIL'}",
+            flush=True,
+        )
+
+    out["verdict"] = _verdict(out)
+    out_path.write_text(json.dumps(out, indent=2, sort_keys=True))
+    print("[s5a] WROTE", out_path, flush=True)
+    return 0
+
+
+def _verdict(out):
+    rungs = out["rungs"]
+    if not rungs:
+        return {"note": "no rungs"}
+    ctrl = next((r for r in rungs if r["rung_id"] == "S5a_ctrl_both_uint8_global"), None)
+    # The frame0 floor: the hardest frame0 quant whose d_seg ~ ctrl AND pose guard holds.
+    f0_rungs = [r for r in rungs if r["frame0_bits"] < 8 and r["guard_pass"]]
+    best_floor = min(rungs, key=lambda r: r["advisory_total_storage_floor"]) if rungs else None
+    return {
+        "ctrl_d_seg": ctrl["d_seg"] if ctrl else None,
+        "frame0_segnet_blind_confirmed": (
+            all(abs(r.get("delta_d_seg_vs_ctrl") or 0.0) < 5e-4 for r in f0_rungs)
+            if f0_rungs else None
+        ),
+        "best_floor_total": best_floor["advisory_total_storage_floor"] if best_floor else None,
+        "best_floor_rung": best_floor["rung_id"] if best_floor else None,
+        "best_floor_bytes": best_floor["est_packet_floor_bytes"] if best_floor else None,
+        "note": (
+            "frame0 is SegNet-blind: harder frame0 quant should leave d_seg ~ ctrl "
+            "(delta_d_seg_vs_ctrl ~ 0) while d_pose prices the frame0 pose floor. "
+            "The frame0-asymmetry win = the byte saving from quantizing 50% of the "
+            "planes harder at near-zero d_seg cost."
+        ),
+    }
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

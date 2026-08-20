@@ -1,0 +1,181 @@
+#!/usr/bin/env python
+"""Core experiment: multi-scale (low-frequency) vs per-pixel seg-repair COLLATERAL.
+
+The repair DIRECTION (per Finding B of the prior verdict) is the SegNet logit-space
+margin-normal: to flip a pixel's argmax from pred_class -> gt_class, move frame-1 along
++grad of (gt_class_logit - pred_class_logit) w.r.t. the camera-res frame-1.
+
+THE LENS: instead of applying that dense gradient sparsely at flip pixels (high-freq),
+LOW-PASS it onto a coarse G_h x G_w coefficient grid (per RGB channel), bicubic-upsample
+to camera-res, and apply a COHERENT smooth nudge. We measure, at matched fix-counts:
+  - flips FIXED (pred!=gt -> pred==gt)
+  - flips CREATED (collateral: was correct, now wrong)
+  - net d_seg delta
+  - d_pose delta (frame-0 unaffected; frame-1 G-channel is pose-relevant too)
+across a sweep of grid scales (coarse=band-limited ... fine=approaching per-pixel) and
+amplitudes. The collateral-per-unit-fix ratio is the headline.
+
+[macOS-CPU advisory] NON-PROMOTABLE. $0, NO MPS. GT = frame_utils.yuv420_to_rgb.
+"""
+from __future__ import annotations
+
+import json
+import sys
+import time
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+
+sys.path.insert(0, ".omx/tmp/multiscale_seg_repair_20260611")
+import probe_lib as P
+
+OUT = ".omx/tmp/multiscale_seg_repair_20260611"
+DEVICE = P.DEVICE
+SEG_H, SEG_W = P.SEG_H, P.SEG_W
+CAMERA_H, CAMERA_W = P.CAMERA_H, P.CAMERA_W
+
+
+def seg_argmax_from_camera(scorer, frame1_camera_bchw):
+    """frame1_camera_bchw: (1,3,CAMERA_H,CAMERA_W) float [0,255]. Return argmax (SEG_H,SEG_W) + logits."""
+    logits = scorer.seg_logits(frame1_camera_bchw)  # (1,5,SEG_H,SEG_W)
+    return logits.argmax(dim=1)[0], logits[0]
+
+
+def compute_margin_gradient(scorer, frame1_camera, gt_arg):
+    """Gradient of (gt_class_logit - pred_class_logit) summed over flip pixels, w.r.t. frame1.
+
+    Returns dense gradient field at camera res (3,CAMERA_H,CAMERA_W) and the current
+    pred argmax (SEG_H,SEG_W). Only flip pixels contribute to the loss.
+    frame1_camera: (3,CAMERA_H,CAMERA_W) float (no grad). gt_arg: (SEG_H,SEG_W) long.
+    """
+    x = frame1_camera.clone().detach().unsqueeze(0).requires_grad_(True)  # (1,3,H,W)
+    xs = F.interpolate(x, size=(SEG_H, SEG_W), mode="bilinear")
+    logits = scorer.segnet(xs)[0]  # (5,SEG_H,SEG_W)
+    pred = logits.argmax(dim=0)  # (SEG_H,SEG_W)
+    flip_mask = pred != gt_arg
+    if flip_mask.sum() == 0:
+        return torch.zeros_like(frame1_camera), pred.detach()
+    # gather gt-class logit and pred(top)-class logit per pixel
+    h, w = SEG_H, SEG_W
+    idx = torch.arange(h * w)
+    gt_flat = gt_arg.reshape(-1)
+    pred_flat = pred.reshape(-1)
+    logits_flat = logits.reshape(5, -1)  # (5, HW)
+    gt_logit = logits_flat[gt_flat, idx]
+    pred_logit = logits_flat[pred_flat, idx]
+    margin = (gt_logit - pred_logit).reshape(h, w)
+    # maximize margin at flip pixels => loss = -sum(margin * flip_mask)
+    loss = -(margin * flip_mask.float()).sum()
+    loss.backward()
+    grad = x.grad[0].detach()  # (3,CAMERA_H,CAMERA_W)
+    return grad, pred.detach()
+
+
+def lowpass_to_grid(field_chw, grid_h, grid_w):
+    """Project a camera-res field onto a coarse grid (area-avg down) then bicubic up.
+
+    This is the band-limiting operator: the correction lives in a grid_h x grid_w basis.
+    Returns the smoothed camera-res field (3,CAMERA_H,CAMERA_W)."""
+    x = field_chw.unsqueeze(0)  # (1,3,H,W)
+    coarse = F.adaptive_avg_pool2d(x, (grid_h, grid_w))  # (1,3,gh,gw)
+    up = F.interpolate(coarse, size=(CAMERA_H, CAMERA_W), mode="bicubic", align_corners=False)
+    return up[0]
+
+
+def count_flips(scorer, frame1_camera_bchw, gt_arg):
+    arg, _ = seg_argmax_from_camera(scorer, frame1_camera_bchw)
+    return int((arg != gt_arg).sum()), arg
+
+
+def apply_correction(base_frame1_camera, correction_camera):
+    """base + correction, clamp [0,255], round, uint8-quantize (exact inflate write)."""
+    out = (base_frame1_camera + correction_camera).clamp(0, 255).round()
+    return out.to(torch.uint8).float()
+
+
+def run(pairs, grids, amps, max_pairs_grad=None):
+    R = P.FrontierRenderer()
+    S = P.ExactScorer()
+    gt = P.decode_gt_pairs(pairs)
+    comp = R.render_baseline_pairs(pairs)
+
+    results = []
+    # precompute per-pair: gt_arg, base frame1 camera (uint8-quantized to match write),
+    # base flips, dense margin gradient.
+    cache = {}
+    for pi in pairs:
+        gt_pair = gt[pi].float()  # (2,H,W,3)
+        # GT argmax at scorer grid: GT frame-1 (last) -> camera bchw
+        gt_f1 = gt_pair[1].permute(2, 0, 1).unsqueeze(0)  # (1,3,H,W)
+        gt_arg, _ = seg_argmax_from_camera(S, gt_f1)
+        # base comp frame-1 (uint8-quantized), camera res
+        base_f1 = comp[pi][1].to(torch.uint8).float()  # (3,H,W)
+        base_flips, base_arg = count_flips(S, base_f1.unsqueeze(0), gt_arg)
+        grad, _ = compute_margin_gradient(S, base_f1, gt_arg)
+        was_bad = base_arg != gt_arg  # cache base flip mask once
+        cache[pi] = dict(gt_arg=gt_arg, base_f1=base_f1, base_flips=base_flips, grad=grad,
+                         gt_pair=gt_pair, was_bad=was_bad)
+
+    base_total = sum(cache[pi]["base_flips"] for pi in pairs)
+
+    # === per-pixel (full-resolution gradient-sign) reference ===
+    for amp in amps:
+        fixed = created = 0
+        for pi in pairs:
+            c = cache[pi]
+            corr = amp * torch.sign(c["grad"])  # dense high-freq correction
+            new_f1 = apply_correction(c["base_f1"], corr)
+            new_arg = seg_argmax_from_camera(S, new_f1.unsqueeze(0))[0]
+            was_bad = c["was_bad"]
+            now_bad = new_arg != c["gt_arg"]
+            fixed += int((was_bad & ~now_bad).sum())
+            created += int((~was_bad & now_bad).sum())
+        net = (created - fixed)
+        results.append(dict(scale="per_pixel", grid=None, amp=amp,
+                            base_flips=base_total, fixed=fixed, created=created,
+                            net_delta=net,
+                            collateral_per_fix=(created / fixed) if fixed else float("inf")))
+        print(f"[per_pixel amp={amp:>5}] fixed={fixed} created={created} "
+              f"net={net:+d} collat/fix={results[-1]['collateral_per_fix']:.3f}")
+
+    # === multi-scale (low-frequency grid) ===
+    for (gh, gw) in grids:
+        for amp in amps:
+            fixed = created = 0
+            for pi in pairs:
+                c = cache[pi]
+                # band-limit the gradient SIGN field onto the coarse grid, then apply
+                smooth_dir = lowpass_to_grid(torch.sign(c["grad"]), gh, gw)
+                corr = amp * smooth_dir
+                new_f1 = apply_correction(c["base_f1"], corr)
+                new_arg = seg_argmax_from_camera(S, new_f1.unsqueeze(0))[0]
+                was_bad = c["was_bad"]
+                now_bad = new_arg != c["gt_arg"]
+                fixed += int((was_bad & ~now_bad).sum())
+                created += int((~was_bad & now_bad).sum())
+            net = (created - fixed)
+            results.append(dict(scale=f"grid_{gh}x{gw}", grid=[gh, gw], amp=amp,
+                                base_flips=base_total, fixed=fixed, created=created,
+                                net_delta=net,
+                                collateral_per_fix=(created / fixed) if fixed else float("inf")))
+            print(f"[grid {gh}x{gw} amp={amp:>5}] fixed={fixed} created={created} "
+                  f"net={net:+d} collat/fix={results[-1]['collateral_per_fix']:.3f}")
+    return results, base_total
+
+
+if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--n", type=int, default=12)
+    ap.add_argument("--start", type=int, default=0)
+    args = ap.parse_args()
+    pairs = list(range(args.start, args.start + args.n))
+    grids = [(6, 8), (12, 16), (24, 32), (48, 64), (96, 128)]
+    amps = [2.0, 4.0, 8.0, 16.0]
+    t0 = time.time()
+    results, base_total = run(pairs, grids, amps)
+    print(f"\nbase_total_flips={base_total} over {len(pairs)} pairs  elapsed={time.time()-t0:.1f}s")
+    with open(f"{OUT}/multiscale_results_n{args.n}.json", "w") as f:
+        json.dump(dict(pairs=pairs, base_total=base_total, results=results), f, indent=2)
+    print(f"saved {OUT}/multiscale_results_n{args.n}.json")

@@ -1,0 +1,14 @@
+#!/bin/bash
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+OUT=/Volumes/APDataStore/pact/ddm_sf1_semantic_film_pose_map_20260817
+# wait for the primary 26-group map to land its summary
+while [ ! -f "$OUT/SF1_MAP.json" ]; do sleep 15; done
+echo "primary map landed; resuming with the attribution + global-reselection groups"
+export OMP_NUM_THREADS=8
+.venv/bin/python experiments/ddm_sf1_semantic_film_pose_map.py --stage map --pairs 120 --pair-seed 20260817
+rc=$?
+echo "second map pass rc=$rc"
+[ $rc -ne 0 ] && exit $rc
+.venv/bin/python experiments/ddm_sf1_semantic_film_pose_map.py --stage verdict
+echo "verdict rc=$?"

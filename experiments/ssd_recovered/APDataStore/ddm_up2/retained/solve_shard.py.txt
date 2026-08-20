@@ -1,0 +1,89 @@
+"""Solve a contiguous pair range into its own rows file, for parallel sharding.
+
+The single-process driver measured at ~245% of an 1800% machine, so the field was
+being solved at ~2 pairs/min with 15 cores idle. Pairs are fully independent
+(``cpr1/inflate.py:338`` is per-pair), so the field shards cleanly. Each shard
+writes its OWN ``rows.jsonl`` and resumes from it; nothing is shared, so there is
+no interleaved-append risk. Merge by pair id afterwards -- the rows are keyed.
+
+Identical per-pair math to ``run_solve``: same ``solve_pair_realized``, same GT,
+same lineage gate. This only changes WHICH pairs a process walks.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import time
+from pathlib import Path
+
+import numpy as np
+import sys
+
+sys.path.insert(0, "/Users/adpena/Projects/pact/experiments")
+sys.path.insert(0, "/Users/adpena/Projects/pact/src")
+import ddm_up2_shipping_pose_solve as up2  # noqa: E402
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--start", type=int, required=True)
+    parser.add_argument("--end", type=int, required=True)
+    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--threads", type=int, default=4)
+    args = parser.parse_args()
+
+    import torch
+
+    torch.set_num_threads(args.threads)
+
+    args.out.mkdir(parents=True, exist_ok=True)
+    rows_path = args.out / "rows.jsonl"
+    done = set()
+    if rows_path.is_file():
+        for line in rows_path.read_text().splitlines():
+            if line.strip():
+                done.add(int(json.loads(line)["pair"]))
+
+    up2.enable_posenet_gradients()
+    state = up2.load_carrier_state(up2.DEFAULT_RUNTIME, verify_archive=True)
+    raw = up2.open_raw(up2.DEFAULT_RAW, verify_sha=False)
+    targets, lineage = up2.load_gt_poses(up2.DEFAULT_DALI_GT)
+    up2.verify_gt_lineage(axis="contest_cuda", declared_lineage=lineage)
+    posenet = up2.load_posenet()
+
+    pairs = [p for p in range(args.start, args.end) if p not in done]
+    started = time.time()
+    with rows_path.open("a", encoding="utf-8") as stream:
+        for index, pair in enumerate(pairs):
+            row = up2.solve_pair_realized(
+                posenet, state, raw, targets[pair], pair, state.codes[pair]
+            )
+            stream.write(json.dumps(row) + "\n")
+            stream.flush()
+            if index % 5 == 0 or index == len(pairs) - 1:
+                elapsed = time.time() - started
+                rate = (index + 1) / max(elapsed / 60.0, 1e-9)
+                print(
+                    f"[{index + 1}/{len(pairs)}] pair={pair} ratio={row['ratio']:.4f} "
+                    f"rate={rate:.2f}/min eta={(len(pairs) - index - 1) / max(rate, 1e-9):.1f}m",
+                    flush=True,
+                )
+    (args.out / "SHARD_DONE.json").write_text(
+        json.dumps(
+            {
+                "start": args.start,
+                "end": args.end,
+                "solved_now": len(pairs),
+                "elapsed_seconds": time.time() - started,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    print("SHARD COMPLETE", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,13 @@
+from tac.substrates._shared.mlx_score_aware.joint_trust_region import verdict
+
+def test_joint_trust_region_rejects_seg_gain_pose_catastrophe():
+    pre = {"seg": 0.50, "pose_direct_live_raw_mse": 0.01, "pose_direct_live_score_marginal_wrt_raw_mse": 50.0}
+    post = {"seg": 0.49, "pose_direct_live_raw_mse": 0.10}
+    out = verdict(pre, post)
+    assert out["dynamics_update_admitted_by_joint_score"] is False
+
+def test_joint_trust_region_accepts_score_unit_improvement():
+    pre = {"seg": 0.50, "pose_direct_live_raw_mse": 0.01, "pose_direct_live_score_marginal_wrt_raw_mse": 1.0}
+    post = {"seg": 0.48, "pose_direct_live_raw_mse": 0.011}
+    out = verdict(pre, post)
+    assert out["dynamics_update_admitted_by_joint_score"] is True

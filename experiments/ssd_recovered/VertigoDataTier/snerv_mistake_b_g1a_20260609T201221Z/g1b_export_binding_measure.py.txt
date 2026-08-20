@@ -1,0 +1,448 @@
+#!/usr/bin/env python3
+"""G1b export-binding measurement for the SNeRV-B mistake-B G1a run.
+
+Subagent: snerv_g1b_export_binding_20260609 (task #45).
+Authority: [macOS-CPU advisory] / exact_cpu_advisory — NON-PROMOTABLE.
+
+What this does (the decisive G1b measurement, honest + fail-closed):
+
+1. PATH-B EXPORT PROBE: instantiate the run's official-conv carrier model-size
+   config (adapter snerv_official_mfu_hfr_tub_numeric_primitives_v1) and read its
+   ``official_mfu_hfr_tub_export_blockers``. This is the structural blocker that
+   refuses binding the trained official-conv MLX weights into the official decoder
+   payload. We do NOT hack around it; we characterize EXACTLY what proof it demands.
+
+2. PATH-A ADVISORY ARCHIVE (the surface that byte-closes): run the carrier's own
+   byte-closed advisory (LF-store + linear-HF + L-inf step maps) at the run's
+   exact config (haar/lv1/600 pairs/int8_symmetric/oms0.285). This produces:
+     - TOTAL archive bytes + per-section decomposition (LF / step-maps / decoder /
+       metadata / header) = the RATE term decomposition.
+     - archive-surface (receiver) d_seg/d_pose via the REAL upstream SegNet/PoseNet
+       compute_distortion (apples-to-apples vs the live 0.0023/0.0018).
+     - the advisory score 100*d_seg + sqrt(10*d_pose) + 25*bytes/37,545,489.
+
+3. INDEPENDENT INFLATE CONFIRM: build the byte-closed archive.zip via the carrier
+   archive-bound exporter, then decode it again through ``decode_snerv_archive_frames``
+   (the real inflate path, scorer-free) and re-score the inflated frames vs source
+   through the SAME real DistortionNet, to confirm the archive-surface d_seg/d_pose
+   independently of the advisory's internal mirror.
+
+Everything writes to the durable run dir; NEVER /tmp.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import sys
+import time
+import zipfile
+from dataclasses import asdict
+from pathlib import Path
+
+REPO_ROOT = Path("/Users/adpena/Projects/pact")
+RUN_DIR = Path("/Volumes/VertigoDataTier/pact/snerv_mistake_b_g1a_20260609T201221Z")
+G1B_DIR = RUN_DIR / "g1b_export_binding"
+G1B_DIR.mkdir(parents=True, exist_ok=True)
+
+sys.path.insert(0, str(REPO_ROOT / "src"))
+sys.path.insert(0, str(REPO_ROOT / "upstream"))
+sys.path.insert(0, str(REPO_ROOT))
+
+import numpy as np  # noqa: E402
+import torch  # noqa: E402
+
+CONTEST_N = 37_545_489
+CONTEST_BYTE_PRICE = 25.0 / CONTEST_N
+
+OUT: dict = {
+    "schema": "snerv_g1b_export_binding_verdict.v1",
+    "subagent_id": "snerv_g1b_export_binding_20260609",
+    "task": 45,
+    "authority_tier": "exact_cpu_advisory",
+    "axis_tag": "[macOS-CPU advisory]",
+    "promotable": False,
+    "promotion_eligible": False,
+    "score_claim": False,
+    "rank_or_kill_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+    "run_dir": str(RUN_DIR),
+    "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    "config": {
+        "wavelet": "haar",
+        "levels": 1,
+        "num_pairs": 600,
+        "decoder_payload_codec": "int8_symmetric",
+        "snerv_official_modelsize_mparams": 0.285,
+        "official_skip_high_mode": "full",
+        "snerv_mfu_scales": [1, 2, 4],
+        "snerv_hfr_gain": 0.0,
+        "snerv_model_size_adapter": "snerv_official_mfu_hfr_tub_numeric_primitives_v1",
+    },
+}
+
+
+def _sha(b: bytes) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# 1. PATH-B EXPORT PROBE — read the structural blocker (do NOT hack around it).
+# ---------------------------------------------------------------------------
+def probe_path_b_export_blocker() -> dict:
+    from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+        SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        SnervModelSizeConfig,
+    )
+
+    cfg = SnervModelSizeConfig(adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER)
+    blockers = list(cfg.official_mfu_hfr_tub_export_blockers)
+    requested = bool(cfg.official_mfu_hfr_tub_numeric_primitives_requested)
+    # The source-forward replay contract this run already emitted (the demand list).
+    contract_path = (
+        RUN_DIR
+        / "snerv_mlx_native_export/native_train_export/snerv_score_aware_long_training"
+        / "snerv_official_mfu_hfr_tub_source_forward_replay_contract.json"
+    )
+    contract = json.loads(contract_path.read_text()) if contract_path.exists() else {}
+    return {
+        "adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        "official_mfu_hfr_tub_numeric_primitives_requested": requested,
+        "export_bound": False,
+        "export_blockers": blockers,
+        "export_blocker_semantics": (
+            "Structural fail-closed gate in carrier.py "
+            "SnervModelSizeConfig.official_mfu_hfr_tub_export_blockers: ALWAYS returns "
+            "these 3 blockers when the adapter is the official MFU/HFR/TUB primitives "
+            "adapter. The trained official-conv MLX weights cannot be bound to a "
+            "byte-closed official decoder payload until (a) an upstream-torch state-dict "
+            "weight mapping exists AND (b) a numerical source-forward replay proves the "
+            "official conv path matches the upstream SNeRV_T forward. Honest blocker; not "
+            "hacked around."
+        ),
+        "source_forward_replay_contract_blockers": contract.get("blockers", []),
+        "source_forward_replay_contract_path": str(contract_path),
+        "source_forward_replay_contract_sha256": contract.get("artifact_sha256"),
+        "official_trained_checkpoint_loaded": contract.get(
+            "official_trained_checkpoint_loaded"
+        ),
+        "official_tub_fixture_source_forward_replay_proven": contract.get(
+            "official_tub_fixture_source_forward_replay_proven"
+        ),
+        "proof_demanded_can_be_produced_from_this_run": False,
+        "proof_demand_characterization": (
+            "The blocker demands the UPSTREAM official torch SNeRV_T state-dict + a "
+            "numerical source-forward parity replay (qwertja/SNeRV head "
+            "0844a08f9591eea9625f8b961ed91d08030e06d1). This run trained an MLX-native "
+            "official-conv renderer, NOT the upstream torch model; there is no upstream "
+            "torch trained checkpoint to map from. The contract explicitly REFUSES the "
+            "source-fixture config as a stand-in "
+            "(snerv_official_trained_checkpoint_source_config_fixture_forbidden). "
+            "Producing the demanded proof would require either training the upstream torch "
+            "SNeRV_T model itself, or landing an MLX->upstream-torch weight-mapping export "
+            "with a numerical parity replay — neither is a $0-local artifact derivable from "
+            "this run's MLX checkpoints."
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# 2. PATH-A ADVISORY — byte-closed archive bytes + archive-surface d_seg/d_pose.
+# ---------------------------------------------------------------------------
+def run_path_a_advisory() -> tuple[dict, bytes]:
+    from tac.substrates.snerv_inverse_steg_carrier.advisory import run_snerv_advisory
+
+    t0 = time.time()
+    advisory = run_snerv_advisory(
+        n_pairs=600,
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=1.0,
+        video_path=str(REPO_ROOT / "upstream/videos/0.mkv"),
+        upstream_dir=str(REPO_ROOT / "upstream"),
+        device="cpu",
+        decoder_payload_codec="int8_symmetric",
+        snerv_model_size_adapter="snerv_official_mfu_hfr_tub_numeric_primitives_v1",
+        snerv_mfu_scales=(1, 2, 4),
+        snerv_hfr_gain=0.0,
+        snerv_temporal_context=0,
+        snerv_temporal_mode="delta",
+        snerv_official_modelsize_mparams=0.285,
+    )
+    payload = advisory.as_jsonable()
+    # asdict carries the raw packet bytes; pull them out before json-serializing.
+    packet = advisory.receiver_archive_packet
+    payload["wall_seconds_measured"] = time.time() - t0
+    # The per-section byte decomposition (the rate term decomposition).
+    decomp = {
+        "archive_bytes_total_linf": int(advisory.archive_bytes_total),
+        "rate_term_linf": float(advisory.rate_term),
+        "lf_payload_bytes": int(advisory.lf_payload_bytes),
+        "linf_steps_payload_bytes": int(advisory.linf_steps_payload_bytes),
+        "decoder_bytes": int(payload.get("decoder_bytes", 0)),
+        "metadata_bytes": int(payload.get("metadata_bytes", 0)),
+        "receiver_archive_header_bytes": int(
+            payload.get("receiver_archive_header_bytes", 0)
+        ),
+        "archive_bytes_total_l2": int(advisory.archive_bytes_total_l2),
+        "rate_term_l2": float(advisory.rate_term_l2),
+        "lf_payload_codec_selected": advisory.lf_payload_codec_selected,
+        "z8_disease_detail_store_frac": float(advisory.z8_disease_detail_store_frac),
+        "z8_falsification_verdict": advisory.z8_falsification_verdict,
+        "pr101_frontier_bytes": int(advisory.pr101_frontier_bytes),
+        "pr101_frontier_rate": float(advisory.pr101_frontier_rate),
+        "beats_frontier_rate": bool(advisory.beats_frontier_rate),
+    }
+    surface = {
+        "d_seg_mean_linf": float(advisory.d_seg_mean_linf),
+        "d_pose_mean_linf": float(advisory.d_pose_mean_linf),
+        "score_linf": float(advisory.score_linf),
+        "d_seg_mean_l2": float(advisory.d_seg_mean_l2),
+        "d_pose_mean_l2": float(advisory.d_pose_mean_l2),
+        "score_l2": float(advisory.score_l2),
+        "receiver_archive_replay_verified": bool(
+            advisory.receiver_archive_replay_verified
+        ),
+        "receiver_archive_replay_error": advisory.receiver_archive_replay_error,
+        "receiver_archive_sha256": advisory.receiver_archive_sha256,
+        "lf_seg_mass_mean": float(advisory.lf_seg_mass_mean),
+        "lf_pose_mass_mean": float(advisory.lf_pose_mass_mean),
+        "adjoint_rel_residual": float(advisory.adjoint_rel_residual),
+    }
+    # Strip the (redacted) packet field that as_jsonable already redacts; keep the rest.
+    payload.pop("receiver_archive_packet", None)
+    return {
+        "byte_decomposition": decomp,
+        "archive_surface_distortion": surface,
+        "advisory_payload": payload,
+    }, packet
+
+
+# ---------------------------------------------------------------------------
+# 3. INDEPENDENT INFLATE CONFIRM — build archive.zip, decode it, re-score.
+# ---------------------------------------------------------------------------
+def independent_inflate_confirm(packet: bytes) -> dict:
+    from tac.substrates.snerv_inverse_steg_carrier.archive import (
+        decode_snerv_archive_frames,
+    )
+    from tac.analysis.inverse_steganalysis_linf_vs_l2_gate import (
+        measure_pairs_d_seg_d_pose_batched,
+    )
+
+    # Build the byte-closed archive.zip exactly as the contest member-name expects.
+    pkg_dir = G1B_DIR / "snerv_archive_bound_package"
+    pkg_dir.mkdir(parents=True, exist_ok=True)
+    bin_path = pkg_dir / "0.bin"
+    bin_path.write_bytes(packet)
+    archive_zip = pkg_dir / "archive.zip"
+    with zipfile.ZipFile(archive_zip, "w", zipfile.ZIP_STORED) as zf:
+        # The carrier uses member name "x" (the byte-save). Mirror that.
+        zf.writestr("x", packet)
+    archive_bytes = archive_zip.stat().st_size
+    archive_sha = _sha(archive_zip.read_bytes())
+
+    # Decode the archive packet via the real (scorer-free) inflate path.
+    t0 = time.time()
+    frames = decode_snerv_archive_frames(packet)  # numpy receiver path
+    decode_seconds = time.time() - t0
+
+    # Re-score the inflated frames vs the SAME source pairs through real DistortionNet.
+    # Real upstream scorers + real pair decode (the same source the advisory used).
+    from tac.analysis.score_exact_saliency import (
+        decode_real_pairs,
+        load_score_exact_scorers,
+    )
+
+    confirm: dict = {
+        "archive_zip_path": str(archive_zip),
+        "archive_zip_bytes": int(archive_bytes),
+        "archive_zip_sha256": archive_sha,
+        "archive_member_name": "x",
+        "decode_seconds": decode_seconds,
+        "inflated_frames_shape": list(np.asarray(frames).shape),
+    }
+    try:
+        posenet, segnet = load_score_exact_scorers(
+            upstream_dir=str(REPO_ROOT / "upstream"), device="cpu"
+        )
+        n_total = int(np.asarray(frames).shape[0])
+        # N>=48 subset per the task spec; the advisory's internal 600-pair
+        # measurement is the primary archive-surface number — this is the
+        # independent belt-and-suspenders confirm through the inflate path.
+        n = min(48, n_total)
+        source_pairs = decode_real_pairs(
+            str(REPO_ROOT / "upstream/videos/0.mkv"), n, pair_stride=1, start_pair=0
+        )
+        recon = torch.from_numpy(np.asarray(frames)[:n]).to(source_pairs)
+        dsegs, dposes = measure_pairs_d_seg_d_pose_batched(
+            posenet, segnet, source_pairs, recon, batch_pairs=8
+        )
+        d_seg = float(np.mean(dsegs))
+        d_pose = float(np.mean(dposes))
+        score = 100.0 * d_seg + float(np.sqrt(10.0 * max(d_pose, 0.0))) + (
+            CONTEST_BYTE_PRICE * archive_bytes
+        )
+        confirm.update(
+            {
+                "independent_inflate_d_seg": d_seg,
+                "independent_inflate_d_pose": d_pose,
+                "independent_inflate_score_advisory": score,
+                "independent_inflate_n_pairs_scored": n,
+                "independent_inflate_scorer": "real_upstream_segnet_posenet_compute_distortion",
+            }
+        )
+    except Exception as exc:  # noqa: BLE001
+        confirm["independent_inflate_rescore_error"] = f"{type(exc).__name__}: {exc}"
+    return confirm
+
+
+# ---------------------------------------------------------------------------
+# 2b. PATH-B TRAINED PACKET (if the run's export tail landed it): the trained
+#     official-conv MLX receiver state bound into a SNAR packet
+#     (allocation_mode=official_mfu_hfr_tub_trained_mlx_receiver_payload,
+#     mlx_native_train_export.py:8107-8144). Mechanically byte-closed; the
+#     official-source-forward AUTHORITY claim remains honestly blocked.
+# ---------------------------------------------------------------------------
+def measure_path_b_trained_packet() -> dict | None:
+    from tac.substrates.snerv_inverse_steg_carrier.archive import (
+        decode_snerv_archive_frames,
+        unpack_snerv_archive,
+    )
+    from tac.analysis.inverse_steganalysis_linf_vs_l2_gate import (
+        measure_pairs_d_seg_d_pose_batched,
+    )
+    from tac.analysis.score_exact_saliency import (
+        decode_real_pairs,
+        load_score_exact_scorers,
+    )
+
+    candidates = sorted(
+        RUN_DIR.rglob("*.snar"), key=lambda p: p.stat().st_mtime, reverse=True
+    )
+    if not candidates:
+        return None
+    packet_path = candidates[0]
+    packet = packet_path.read_bytes()
+    decoded = unpack_snerv_archive(packet)
+    meta = dict(decoded.metadata)
+    section_bytes = {
+        name: len(blob) for name, blob in decoded.sections.items()
+    }
+    out: dict = {
+        "packet_path": str(packet_path),
+        "packet_bytes_total": len(packet),
+        "packet_sha256": _sha(packet),
+        "archive_schema": decoded.schema,
+        "allocation_mode": meta.get("allocation_mode"),
+        "hf_decoder_fit_mode": meta.get("hf_decoder_fit_mode"),
+        "n_pairs": meta.get("n_pairs"),
+        "official_skip_high_mode": (meta.get("model_size") or {}).get(
+            "official_skip_high_mode"
+        )
+        if isinstance(meta.get("model_size"), dict)
+        else meta.get("official_skip_high_mode"),
+        "section_bytes": section_bytes,
+        "rate_term": CONTEST_BYTE_PRICE * len(packet),
+        "trained_state_packet": (
+            meta.get("allocation_mode")
+            == "official_mfu_hfr_tub_trained_mlx_receiver_payload"
+        ),
+    }
+    # Byte-closed archive.zip wrap (single member "x", STORED) for the rate term.
+    pkg_dir = G1B_DIR / "path_b_trained_archive"
+    pkg_dir.mkdir(parents=True, exist_ok=True)
+    archive_zip = pkg_dir / "archive.zip"
+    with zipfile.ZipFile(archive_zip, "w", zipfile.ZIP_STORED) as zf:
+        zf.writestr("x", packet)
+    out["archive_zip_path"] = str(archive_zip)
+    out["archive_zip_bytes"] = int(archive_zip.stat().st_size)
+    out["archive_zip_sha256"] = _sha(archive_zip.read_bytes())
+    out["rate_term_archive_zip"] = CONTEST_BYTE_PRICE * out["archive_zip_bytes"]
+
+    # Inflate (real scorer-free receiver path) + score N>=48 pairs vs source.
+    t0 = time.time()
+    frames = decode_snerv_archive_frames(packet)
+    out["decode_seconds"] = time.time() - t0
+    arr = np.asarray(frames)
+    out["inflated_frames_shape"] = list(arr.shape)
+    posenet, segnet = load_score_exact_scorers(
+        upstream_dir=str(REPO_ROOT / "upstream"), device="cpu"
+    )
+    n = min(48, int(arr.shape[0]))
+    source_pairs = decode_real_pairs(
+        str(REPO_ROOT / "upstream/videos/0.mkv"), n, pair_stride=1, start_pair=0
+    )
+    recon = torch.from_numpy(arr[:n]).to(source_pairs)
+    dsegs, dposes = measure_pairs_d_seg_d_pose_batched(
+        posenet, segnet, source_pairs, recon, batch_pairs=8
+    )
+    d_seg = float(np.mean(dsegs))
+    d_pose = float(np.mean(dposes))
+    out.update(
+        {
+            "archive_surface_d_seg": d_seg,
+            "archive_surface_d_pose": d_pose,
+            "archive_surface_n_pairs_scored": n,
+            "archive_surface_scorer": "real_upstream_segnet_posenet_compute_distortion",
+            "advisory_score_with_packet_rate": (
+                100.0 * d_seg
+                + float(np.sqrt(10.0 * max(d_pose, 0.0)))
+                + CONTEST_BYTE_PRICE * len(packet)
+            ),
+        }
+    )
+    return out
+
+
+OUT_PATH = RUN_DIR / "snerv_g1b_export_binding_verdict.v1.json"
+
+
+def _flush() -> None:
+    OUT["utc_last_flush"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    OUT_PATH.write_text(json.dumps(OUT, indent=2, sort_keys=True, default=str))
+
+
+def main() -> int:
+    OUT["path_b_export_probe"] = probe_path_b_export_blocker()
+    print("[g1b] path-B export probe done; blocked =", not OUT["path_b_export_probe"]["export_bound"], flush=True)
+    _flush()
+
+    try:
+        trained_packet = measure_path_b_trained_packet()
+    except Exception as exc:  # noqa: BLE001
+        trained_packet = {"error": f"{type(exc).__name__}: {exc}"}
+    OUT["path_b_trained_packet"] = trained_packet
+    print("[g1b] path-B trained packet:", (trained_packet or {}).get("packet_bytes_total", "NOT FOUND"), flush=True)
+    _flush()
+
+    try:
+        adv, packet = run_path_a_advisory()
+        OUT["path_a_advisory"] = adv
+        OUT["path_a_advisory"]["receiver_archive_packet_bytes"] = len(packet)
+        OUT["path_a_advisory"]["receiver_archive_packet_sha256"] = _sha(packet)
+        print(
+            "[g1b] path-A advisory done; archive_bytes_total_linf =",
+            adv["byte_decomposition"]["archive_bytes_total_linf"],
+            "d_seg =",
+            adv["archive_surface_distortion"]["d_seg_mean_linf"],
+            flush=True,
+        )
+        _flush()
+
+        OUT["independent_inflate_confirm"] = independent_inflate_confirm(packet)
+        print(
+            "[g1b] independent inflate confirm done; d_seg =",
+            OUT["independent_inflate_confirm"].get("independent_inflate_d_seg"),
+            flush=True,
+        )
+    except Exception as exc:  # noqa: BLE001
+        OUT["path_a_advisory_error"] = f"{type(exc).__name__}: {exc}"
+        print("[g1b] path-A advisory FAILED:", OUT["path_a_advisory_error"], flush=True)
+
+    _flush()
+    print("[g1b] WROTE", OUT_PATH, flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

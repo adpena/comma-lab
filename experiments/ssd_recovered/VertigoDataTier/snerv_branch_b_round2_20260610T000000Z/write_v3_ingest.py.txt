@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+"""Emit the directive-mandated V3 rows for the Branch-B ROUND-2 rungs.
+
+Per the operator directive "Hard requirements per rung (c)": every rung emits the
+full V3 row {schema, base_archive_sha256, payload_section, mutation,
+bytes_before/after, d_seg, d_pose, score, delta_score_total, authority_tier,
+metric_family, first_failed_surface, keep_or_reject}.
+
+Mirrors the existing G1b candidate_action_evaluation.v1 schema (extended with the
+round-2-specific payload_section / mutation / first_failed_surface fields). One
+row per rung from s8_compose_frontier.v1.json + s5a_frame0_hard_quant.v1.json.
+
+Authority: [macOS-CPU advisory] / exact_cpu_advisory — NON-PROMOTABLE.
+"""
+
+from __future__ import annotations
+
+import json
+import time
+from pathlib import Path
+
+RUN_DIR = Path("/Volumes/VertigoDataTier/pact/snerv_branch_b_round2_20260610T000000Z")
+FRONTIER_SHA = "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
+FRONTIER_SCORE = 0.19198533626623068
+G1B_BASE_TOTAL = 387.6417769184414  # G1b archive-zip advisory total (the SNeRV base)
+CONTEST_N = 37_545_489
+
+FALSE_AUTHORITY = {
+    "authority": "[macOS-CPU advisory]",
+    "authority_tier": "exact_cpu_advisory",
+    "metric_family": "exact_pair_scorer",
+    "score_claim": False,
+    "promotion_eligible": False,
+    "promotable": False,
+}
+
+
+def _row_total(row):
+    """Effective total: entropy-true storage floor when present, else packet rate."""
+    if "advisory_total_storage_floor" in row:
+        return row["advisory_total_storage_floor"]
+    return row.get("advisory_total_packet_rate")
+
+
+def _first_failed_surface(row):
+    """The directive's per-rung first_failed_surface: which guard/bar trips first."""
+    if not row.get("guard_d_seg_ok", True):
+        return "d_seg_guard"
+    if not row.get("guard_pose_term_ok", True):
+        return "pose_term_guard"
+    # rate bar: even guard-passing rungs fail the frontier bar if total > frontier
+    total = _row_total(row)
+    if total is not None and total > FRONTIER_SCORE:
+        return "rate_bar_vs_0.19199"
+    return "none"
+
+
+def _keep_or_reject(row):
+    total = _row_total(row)
+    if not (row.get("guard_d_seg_ok", True) and row.get("guard_pose_term_ok", True)):
+        return "reject_cone_violation"
+    # keep = improves over the SNeRV G1b base AND fidelity guards hold
+    if total is not None and total < G1B_BASE_TOTAL:
+        return "keep_improves_snerv_base"
+    return "reject_no_improvement_over_base"
+
+
+def emit_rows(json_path, payload_section, mutation_kind):
+    if not json_path.exists():
+        return []
+    d = json.loads(json_path.read_text())
+    rows = []
+    base_bytes = None
+    # For S5a/S2 the achievable byte cost is the entropy-true STORAGE FLOOR
+    # (intN codes), not the float64-manifest packet bytes. S8 has no floor (its
+    # bytes ARE the receiver-decodable float64 manifest), so use packet rate.
+    floor_based = any("est_packet_floor_bytes" in r for r in d.get("rungs", []))
+    for r in d.get("rungs", []):
+        if floor_based and "advisory_total_storage_floor" in r:
+            total = r["advisory_total_storage_floor"]
+            eff_bytes = r.get("est_packet_floor_bytes", r["packet_bytes"])
+        else:
+            total = r.get("advisory_total_packet_rate")
+            eff_bytes = r["packet_bytes"]
+        if base_bytes is None:
+            base_bytes = eff_bytes
+        row = {
+            "schema": "snerv_branch_b_round2_candidate_action_evaluation.v1",
+            "vehicle": "snerv",
+            "base_archive_sha256": FRONTIER_SHA,
+            "base_score": FRONTIER_SCORE,
+            "snerv_base_total": G1B_BASE_TOTAL,
+            "rung_id": r["rung_id"],
+            "payload_section": payload_section,
+            "mutation": mutation_kind + ": " + r.get("label", ""),
+            "candidate_archive_sha256": r["packet_sha256"],
+            "bytes_before": base_bytes,
+            "bytes_after": eff_bytes,
+            "bytes_after_kind": "entropy_true_storage_floor" if floor_based else "float64_manifest_packet",
+            "packet_bytes_float64_manifest": r["packet_bytes"],
+            "payload_section_bytes": r.get("est_skip_high_storage_bytes", r["packet_bytes"]),
+            "candidate_bytes": eff_bytes,
+            "d_seg": r["d_seg"],
+            "d_pose": r["d_pose"],
+            "pose_score_term": r["pose_score_term"],
+            "live_nonrate": r.get("nonrate_floor", 100.0 * r["d_seg"] + r["pose_score_term"]),
+            "archive_nonrate": 100.0 * r["d_seg"] + r["pose_score_term"],
+            "rate_term": r.get("rate_term_packet"),
+            "rate_term_floor": r.get("rate_term_floor"),
+            "score": total,
+            "delta_score_total": (total - FRONTIER_SCORE) if total is not None else None,
+            "gap_to_0.19199": (total - FRONTIER_SCORE) if total is not None else None,
+            "bytes_vs_178KB_ratio": r.get("bytes_vs_178KB_ratio"),
+            "first_failed_surface": _first_failed_surface(r),
+            "keep_or_reject": _keep_or_reject(r),
+            "measurement_scope": "n48_uniform_first48_pairs_macos_cpu_advisory",
+            "has_archive_bytes": True,
+            "has_d_seg": True,
+            "has_d_pose": True,
+            "pays_rent": (total is not None and total < G1B_BASE_TOTAL),
+            "score_formula": "100*d_seg + sqrt(10*d_pose) + 25*bytes/37545489",
+            **FALSE_AUTHORITY,
+        }
+        rows.append(row)
+    return rows
+
+
+def main():
+    all_rows = []
+    all_rows += emit_rows(
+        RUN_DIR / "s8_compose_frontier.v1.json",
+        payload_section="decoder_payload.inputs.mfu.skip_high",
+        mutation_kind="S8_compose_frontier_LL_as_skip_high",
+    )
+    all_rows += emit_rows(
+        RUN_DIR / "s5a_frame0_hard_quant.v1.json",
+        payload_section="decoder_payload.inputs.mfu.skip_high(per_frame_role)",
+        mutation_kind="S5a_frame0_hard_quant_role_split",
+    )
+    out = {
+        "schema": "snerv_branch_b_round2_v3_ingest.v1",
+        "subagent_id": "snerv_branch_b_round2_20260610",
+        "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "n_rows": len(all_rows),
+        "rows": all_rows,
+        **FALSE_AUTHORITY,
+    }
+    out_path = RUN_DIR / "snerv_branch_b_round2_v3_ingest.v1.json"
+    out_path.write_text(json.dumps(out, indent=2, sort_keys=True))
+    print(f"wrote {len(all_rows)} V3 rows -> {out_path}")
+    for r in all_rows:
+        print(f"  {r['rung_id']:30s} score={r['score']:.4f} "
+              f"gap={r['gap_to_0.19199']:+.4f} {r['keep_or_reject']}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

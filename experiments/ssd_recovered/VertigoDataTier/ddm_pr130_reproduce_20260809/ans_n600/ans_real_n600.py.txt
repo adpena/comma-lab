@@ -1,0 +1,50 @@
+import json, sys, time, numpy as np, torch, constriction
+sys.path.insert(0,'/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/code')
+import codec_hpac_integer as C
+FRAMES=600
+D='/Volumes/VertigoDataTier/pact/ddm_pr130_reproduce_20260809/ans_n600'
+argv=json.load(open('/Volumes/VertigoDataTier/pact/ddm_pr130_encode_tokens_metal_20260809/run/launch_manifest.json'))['argv'][2:]
+out=[];skip=0
+for a in argv:
+    if skip: skip=0; continue
+    if a in ('--frames','--device','--tokens-out','--report'): skip=1; continue
+    out.append(a)
+sys.argv=['codec']+out+['--frames',str(FRAMES),'--device','mps',
+          '--tokens-out',D+'/t.bin','--report',D+'/r.json']
+
+@torch.no_grad()
+def patched(model, raw_tokens, targets, masks, device, sparse=None):
+    import hashlib
+    digest=hashlib.sha256(); prev=torch.zeros((1,C.H,C.W),dtype=torch.long,device=device)
+    rows=[]; ideal=0.0; t0=time.time()
+    for f in range(len(raw_tokens)):
+        idx=torch.tensor([f],dtype=torch.long,device=device)
+        cur=torch.zeros_like(prev); ctx=model.prepare_frame_context(idx,prev); tgt=targets[f]
+        for g,mask in enumerate(masks):
+            if sparse is None:
+                lg=model.cached_context_logits(cur,ctx); sel=lg[0][:,mask].permute(1,0).contiguous()
+            else: sel=sparse.selected_logits(cur,ctx,g)
+            tbl=C.probability_table(sel,digest)
+            sym=tgt[mask].cpu().numpy().astype(np.int32)
+            ideal+=float(-np.log2(tbl[np.arange(len(sym)),sym].astype(np.float64)).sum())
+            rows.append((sym,np.ascontiguousarray(tbl))); cur[0,mask]=tgt[mask]
+        prev=raw_tokens[f].view(1,C.H,C.W)
+        if f==0 or (f+1)%25==0: print(f"  frame {f+1}/{len(raw_tokens)} {time.time()-t0:.0f}s",flush=True)
+    print("  encoding range...",flush=True)
+    fam=constriction.stream.model.Categorical(perfect=False)
+    enc=constriction.stream.queue.RangeEncoder()
+    for sym,tbl in rows: enc.encode(sym,fam,tbl)
+    rng=len(enc.get_compressed().tobytes()); del enc
+    print(f"  range={rng} B; encoding ANS...",flush=True)
+    ans=constriction.stream.stack.AnsCoder()
+    for sym,tbl in reversed(rows): ans.encode_reverse(sym,fam,tbl)
+    an=len(ans.get_compressed().tobytes())
+    ib=ideal/8
+    res={"frames":len(raw_tokens),"ideal_B":round(ib,1),"range_B":rng,"ans_B":an,
+         "range_over":f"{rng/ib-1:+.4%}","ans_over":f"{an/ib-1:+.4%}",
+         "delta_B":rng-an,"shipped_token_B":116980}
+    print(json.dumps(res,indent=2),flush=True)
+    open(D+'/ans_vs_range_n600_result.json','w').write(json.dumps(res,indent=2))
+    raise SystemExit(0)
+C.encode=patched
+C.main()

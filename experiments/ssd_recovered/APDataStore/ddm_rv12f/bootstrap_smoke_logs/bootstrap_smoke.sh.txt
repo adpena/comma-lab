@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# ddm_rv12f F2 — exercise the inflate.sh Brotli bootstrap branch on a BARE venv.
+# The T4 authority run never took this branch (its image already carried Brotli),
+# so the branch shipped unexercised. This reproduces EXACTLY the bootstrap lines
+# from gen4_ck1_composed/inflate.sh (lines 17-31) against a venv proven to lack
+# Brotli. It does NOT run the 941 s decode -- the bootstrap branch is the object.
+set -uo pipefail
+
+WORK="${1:?usage: bootstrap_smoke.sh <workdir> <out-json>}"
+OUT="${2:?usage: bootstrap_smoke.sh <workdir> <out-json>}"
+PYSPEC="${3:-}"
+INFLATE_SH="/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen4_ck1_composed/inflate.sh"
+
+rm -rf "$WORK"; mkdir -p "$WORK"
+VENV="$WORK/bare_venv"
+BUILD_DIR="$WORK/build"
+mkdir -p "$BUILD_DIR"
+
+T0=$(date -u +%s)
+STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+# --- 1. bare venv, no Brotli -------------------------------------------------
+uv venv ${PYSPEC:+--python "$PYSPEC"} "$VENV" >"$WORK/venv_create.log" 2>&1
+VENV_RC=$?
+export PATH="$VENV/bin:$PATH"
+unset PYTHONPATH || true
+
+PY_WHICH="$(command -v python || echo NONE)"
+PY_VER="$(python -c 'import sys;print(sys.version.split()[0])' 2>/dev/null || echo NONE)"
+
+# proof of absence, independent of the probe below
+python - >"$WORK/brotli_absent_proof.txt" 2>&1 <<'PY'
+import importlib.util, sys
+spec = importlib.util.find_spec("brotli")
+print("find_spec(brotli):", spec)
+try:
+    import importlib.metadata as md
+    print("metadata.version(Brotli):", md.version("Brotli"))
+except Exception as exc:
+    print("metadata.version(Brotli) raised:", type(exc).__name__, exc)
+sys.exit(0 if spec is None else 1)
+PY
+ABSENT_RC=$?
+
+# --- 2. the SHIPPED probe, verbatim from inflate.sh --------------------------
+if ! python - <<'PY' >/dev/null 2>&1
+import importlib.metadata
+import brotli
+raise SystemExit(importlib.metadata.version("Brotli") != "1.2.0")
+PY
+then
+  PROBE_TOOK_FALLBACK=True
+else
+  PROBE_TOOK_FALLBACK=False
+fi
+
+# --- 3. the SHIPPED fallback, verbatim from inflate.sh -----------------------
+FALLBACK_RC=""
+UVBIN="$(command -v uv || true)"
+if [[ -z "$UVBIN" ]]; then
+  echo "CP135 requires Brotli==1.2.0, but uv is unavailable" >&2
+  FALLBACK_RC=69
+else
+  T_INSTALL_0=$(date -u +%s)
+  "$UVBIN" pip install --python python --target "$BUILD_DIR/deps" \
+    --no-deps --only-binary :all: "Brotli==1.2.0" >"$WORK/uv_install.log" 2>&1
+  FALLBACK_RC=$?
+  T_INSTALL_1=$(date -u +%s)
+  export PYTHONPATH="$BUILD_DIR/deps${PYTHONPATH:+:$PYTHONPATH}"
+fi
+
+# --- 4. proof the import now works at the pinned version ---------------------
+python - >"$WORK/brotli_present_proof.txt" 2>&1 <<'PY'
+import importlib.metadata as md, brotli, sys
+v = md.version("Brotli")
+print("import brotli:", brotli.__file__)
+print("metadata.version(Brotli):", v)
+raw = b"ddm_rv12f bootstrap smoke" * 64
+rt = brotli.decompress(brotli.compress(raw))
+print("roundtrip_ok:", rt == raw)
+sys.exit(0 if (v == "1.2.0" and rt == raw) else 1)
+PY
+IMPORT_RC=$?
+
+T1=$(date -u +%s)
+WHEEL_LIST="$(ls "$BUILD_DIR/deps" 2>/dev/null | tr '\n' ' ')"
+INFLATE_SHA="$(shasum -a 256 "$INFLATE_SH" | awk '{print $1}')"
+
+python - "$OUT" <<PY
+import json, sys, pathlib
+payload = {
+  "schema": "ddm_rv12f_bootstrap_bare_venv_smoke.v1",
+  "why": "gen4 inflate.sh carries a conditional Brotli==1.2.0 bootstrap that needs a uv binary and network egress. The T4 authority run never took that branch (its image already provided Brotli), so the branch shipped unexercised. Round-12 F2.",
+  "scope": "bootstrap branch ONLY (inflate.sh lines 17-31 reproduced verbatim). The 941 s decode was NOT run.",
+  "started_at_utc": "$STARTED_AT",
+  "wall_seconds_total": $((T1 - T0)),
+  "wall_seconds_uv_install": $(( ${T_INSTALL_1:-0} - ${T_INSTALL_0:-0} )),
+  "inflate_sh_path": "$INFLATE_SH",
+  "inflate_sh_sha256": "$INFLATE_SHA",
+  "bare_venv": {
+    "path": "$VENV",
+    "create_rc": $VENV_RC,
+    "python_resolved": "$PY_WHICH",
+    "python_version": "$PY_VER",
+    "brotli_absent_rc": $ABSENT_RC,
+    "brotli_absent_proof": pathlib.Path("$WORK/brotli_absent_proof.txt").read_text().strip(),
+  },
+  "shipped_probe": {
+    "source": "inflate.sh:17-22 verbatim",
+    "took_fallback_branch": $PROBE_TOOK_FALLBACK,
+  },
+  "shipped_fallback": {
+    "source": "inflate.sh:23-31 verbatim",
+    "uv_binary": "$UVBIN",
+    "uv_version": "$(uv --version 2>/dev/null)",
+    "command": "uv pip install --python python --target <BUILD_DIR>/deps --no-deps --only-binary :all: Brotli==1.2.0",
+    "rc": ${FALLBACK_RC:-None},
+    "network_required": True,
+    "installed_into_deps": "$WHEEL_LIST".split(),
+  },
+  "post_bootstrap_import": {
+    "rc": $IMPORT_RC,
+    "proof": pathlib.Path("$WORK/brotli_present_proof.txt").read_text().strip(),
+  },
+  "verdict": "BOOTSTRAP_BRANCH_EXERCISED_PASS" if ($ABSENT_RC == 0 and $PROBE_TOOK_FALLBACK and ${FALLBACK_RC:-1} == 0 and $IMPORT_RC == 0) else "BOOTSTRAP_BRANCH_FAILED",
+}
+pathlib.Path(sys.argv[1]).write_text(json.dumps(payload, indent=2, sort_keys=False))
+print(payload["verdict"])
+PY

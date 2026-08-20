@@ -1,0 +1,52 @@
+"""Per-tensor low-rank truncation sensitivity on the EXACT scorer.
+For each big tensor, replace W with rank-r SVD reconstruction, render, measure exact d_seg/d_pose."""
+import sys, time, copy
+sys.path.insert(0,'experiments/results/pr110pp_r2_nonmps_candidate_20260609/analysis')
+import render_and_score_lib as L
+import torch, numpy as np
+
+N_EVAL = 8
+pairs = list(range(N_EVAL))
+scorer = L.ExactScorer()
+p = L.parse_frontier()
+gt = L.decode_gt_pairs(pairs)
+gt_bthwc = {pi: L.comp_pair_to_bthwc(gt[pi].float().permute(0,3,1,2)) for pi in pairs}
+
+def score_sd(decoder_sd):
+    # build a renderer with a given decoder_sd
+    parsed = copy.copy(p); parsed['decoder_sd'] = decoder_sd
+    r = L.FrontierRenderer(parsed=parsed)
+    comp = r.render_baseline_pairs(pairs)
+    segs=[]; poses=[]
+    for pi in pairs:
+        pose,seg = scorer.score_batch(gt_bthwc[pi], L.comp_pair_to_bthwc(comp[pi]))
+        segs.append(float(seg[0])); poses.append(float(pose[0]))
+    return float(np.mean(segs)), float(np.mean(poses))
+
+def lowrank(W, r):
+    a = W.detach().cpu().numpy().astype(np.float64)
+    sh = a.shape
+    if a.ndim==4:
+        O,I,kh,kw = sh; M = a.reshape(O, I*kh*kw)
+    else: M = a
+    U,S,Vt = np.linalg.svd(M, full_matrices=False)
+    r = min(r, len(S))
+    Mr = (U[:,:r]*S[:r])@Vt[:r]
+    return torch.from_numpy(Mr.reshape(sh).astype(np.float32))
+
+base_seg, base_pose = score_sd(p['decoder_sd'])
+print(f'BASELINE (8 pairs): d_seg={base_seg:.6f} d_pose={base_pose:.6e}')
+
+# big tensors and their full rank
+targets = {'stem.weight':28, 'blocks.0.weight':144, 'blocks.1.weight':144,
+           'blocks.2.weight':108, 'blocks.3.weight':80, 'blocks.4.weight':72, 'blocks.5.weight':72}
+for name, full in targets.items():
+    for frac in [0.9, 0.75, 0.5]:
+        r = max(1,int(full*frac))
+        sd2 = {k:v.clone() for k,v in p['decoder_sd'].items()}
+        sd2[name] = lowrank(sd2[name], r)
+        s,po = score_sd(sd2)
+        # factored bytes vs dense (rough, in params): dense O*I*K, factored r*(O+IKK)
+        W = p['decoder_sd'][name]; O = W.shape[0]; IKK = W.numel()//O
+        dense_p = O*IKK; fact_p = r*(O+IKK)
+        print(f'{name:18s} r={r:3d}/{full:3d} d_seg={s:.6f}({s-base_seg:+.6f}) d_pose={po:.3e}({po-base_pose:+.2e}) factored_p={fact_p} vs dense_p={dense_p} ({"SAVES" if fact_p<dense_p else "COSTS"})', flush=True)

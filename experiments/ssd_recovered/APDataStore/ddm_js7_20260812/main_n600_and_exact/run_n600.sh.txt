@@ -1,0 +1,19 @@
+#!/bin/bash
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+export PATH="/Users/adpena/Projects/pact/.venv/bin:/opt/homebrew/bin:/usr/bin:/bin"
+export PYTHONHASHSEED=0
+RT=/Volumes/APDataStore/pact/ddm_js7_20260812/container/retained/adapted_runtime
+ST=/Volumes/APDataStore/pact/ddm_js7_20260812/main_n600_and_exact/staged_submission
+echo "[chain] SHA check"
+echo "465d3c584c54c55d161c6411cfbd34c4bf3c4c546c189ddcbfbb1a2a941e9af4  $RT/archive.zip" | shasum -a 256 -c -
+echo "[chain] inflate"
+cd "$ST" && unzip -o archive.zip >/dev/null && cd /Users/adpena/Projects/pact && bash "$RT/inflate.sh" "$ST" "$ST/inflated" upstream/public_test_video_names.txt
+ls -la "$ST/inflated/"
+echo "[chain] evaluate n600 cpu"
+.venv/bin/python upstream/evaluate.py --device cpu \
+  --submission-dir "$ST" \
+  --uncompressed-dir upstream/videos \
+  --video-names-file upstream/public_test_video_names.txt \
+  --report /Volumes/APDataStore/pact/ddm_js7_20260812/main_n600_and_exact/report.txt
+echo "[chain] DONE"

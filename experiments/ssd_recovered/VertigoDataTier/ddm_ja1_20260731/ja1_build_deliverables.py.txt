@@ -1,0 +1,298 @@
+# SPDX-License-Identifier: MIT
+"""ddm_ja1 — build the three committed deliverables from the measured numbers:
+  (1) the JOINT SENSITIVITY ATLAS re-anchored at the live v4c base (freshness stamps)
+  (2) the ARCHIVE-LEVEL JOINT WATERFILL TABLE (ranked, realized exchange rates + coupling)
+  (3) the ORDER-OF-OPERATIONS DAG (physical order + invalidation edges + re-solve costs)
+
+Every number carries a label {REALIZED-live-base / REALIZED-stale-base / DERIVED / PROXY / TRANSFER}.
+Sources are the committed producer receipts/memos (cited per row). NO re-decode was run;
+the pose-pool rows are read from the v4c build's own realized-through-PoseNet receipt
+(ja1_pose_pool_anchor.json). [macOS-CPU advisory]; score_claim=false; pointer 0.1910828242 UNMOVED.
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+SSD = Path("/Volumes/VertigoDataTier/pact/ddm_ja1_20260731")
+REPO = Path("/Users/adpena/Projects/pact/.omx/research")
+N_EVAL = 37_545_489
+
+pose = json.loads((SSD / "ja1_pose_pool_anchor.json").read_text())
+
+BASE = {
+    "archive_sha256_prefix": "b6365270",
+    "archive_bytes": 359750,
+    "S_measured": 0.992972,
+    "seg_contribution": 0.431179,
+    "d_seg": 0.00431179,
+    "pose_contribution": 0.322250,
+    "d_pose": 0.01038450,
+    "rate_contribution": 0.239543,
+    "eval": "n600 evaluate.py CPU (QA64 FIRED); [macOS-CPU advisory]; pointer 0.1910828242 UNMOVED",
+    "byte_breakdown": {
+        "tokens.dr7t": 346478, "pose_warp.stp": 8175, "renderer.sec": 3341,
+        "manifest.json": 1303, "selector.sec": 535, "pose_stub.sec": 83,
+        "pose_warp_internal": {"tp_member": 6059, "ab_member": 1820, "st_coded": 189, "sel_coded": 79},
+    },
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# (1) ATLAS — every scorer-internal / base-dependent sensitivity surface, freshness-stamped
+# freshness label vocabulary:
+#   TRANSFER-BY-CONSTRUCTION  = frozen-scorer weight fact; base-independent; fresh forever
+#   REALIZED-LIVE-BASE        = re-measured / read at the v4c base this arm
+#   TRANSFER-STRUCTURE/STALE-OCCUPANCY = geometry transfers; which-pixels/pairs is base-dependent & stale
+#   STALE-DEAD-BASE           = measured at a superseded base; occupancy not re-anchored
+atlas = {
+    "schema": "ddm_ja1_joint_sensitivity_atlas.v1",
+    "axis": "[macOS-CPU advisory]", "score_claim": False,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED", "base": BASE,
+    "surfaces": [
+        {
+            "surface": "segnet_head_rank4_hyperplanes",
+            "content": "head is EXACTLY rank-4 linear; flip distance d=|margin|/‖w_c−w_c'‖ exact; "
+                       "all 4 Lane-pair normals largest (3.75-4.01 vs 2.60-2.95); well-cond σ1/σ4=1.74",
+            "freshness": "TRANSFER-BY-CONSTRUCTION",
+            "transfers": True,
+            "source": "segnet_recursive_fractal_factorization_20260715 §2-3 (frozen segnet.safetensors)",
+            "note": "STRUCTURE base-independent. OCCUPANCY (which pixels sit at small margin) is "
+                    "base-dependent; at v4c the seg error is the cell_drop50 token field (gr1).",
+        },
+        {
+            "surface": "segnet_stride2_skip_lane_bottleneck",
+            "content": "Lane boundary precision rides the ONE 16-ch stride-2 skip = 77% of skip-detail flips; "
+                       "final decoder block skipless; SE shallow gates frozen (stabilizer, 3.3e-4 flip)",
+            "freshness": "TRANSFER-BY-CONSTRUCTION", "transfers": True,
+            "source": "segnet_recursive_fractal_factorization_20260715 §4-5",
+        },
+        {
+            "surface": "posenet_head_rank6_p0_dominance",
+            "content": "head rank-6 ill-cond σ1/σ6=24.8 one-dominant-axis; ∂pose/∂input p0 (fwd trans) "
+                       "dominates ~50×; rotations p3-5 INPUT+VALUE near-null; 99.3% LUMA (chroma-blind); "
+                       "~52% Jacobian energy on seg-free frame_0; realization-limited (tangent over 3-10×)",
+            "freshness": "TRANSFER-BY-CONSTRUCTION",
+            "transfers": True,
+            "source": "ddm_pi2_posenet_inversion_20260730 §1-2 (frozen posenet.safetensors, 53 gt_n96 pairs)",
+            "note": "STRUCTURE transfers (frozen net + video-general). Per-pair OCCUPANCY re-anchored "
+                    "at v4c this arm (see pose_per_pair_occupancy).",
+        },
+        {
+            "surface": "pose_per_pair_occupancy_v4c",
+            "content": f"per-pair d_pose spread at v4c: p10 {pose['per_pair_spread']['p10']:.2e} / "
+                       f"p50 {pose['per_pair_spread']['p50']:.2e} / p90 {pose['per_pair_spread']['p90']:.2e} / "
+                       f"max {pose['per_pair_spread']['max']:.2e}; max/median "
+                       f"{pose['per_pair_spread']['max_over_median']:.0f}×; "
+                       f"90% of pose MASS in {pose['per_pair_spread']['pairs_for_90pct_mass']} pairs "
+                       f"({pose['per_pair_spread']['pairs_for_90pct_mass_frac']*100:.1f}%)",
+            "freshness": "REALIZED-LIVE-BASE",
+            "transfers": "N/A (this IS the live-base re-anchor)",
+            "source": "ja1 read of v4c photo_celldrop50_resolve.partial.jsonl (realized-through-frozen-PoseNet)",
+            "implication": "pose is CONTENT-TAIL-limited (88 hard pairs), NOT storage/precision-limited "
+                           "— DERIVED stage-attribution; re-aims QA65↓ and QA68↑",
+        },
+        {
+            "surface": "resize_null_ker_A_shared",
+            "content": "bilinear downsample (874,1164)→(384,512) ker dim = 820,728 DOF/ch/frame = 80.7% of "
+                       "camera DOF EXACTLY invisible to BOTH scorers (A_seg ≡ A_pose); pose adds chroma-HF null",
+            "freshness": "TRANSFER-BY-CONSTRUCTION", "transfers": True,
+            "source": "ddm_pi2 §1b + frozen_scorer_exact_factorization_20260715 B1/B4 (#580)",
+        },
+        {
+            "surface": "photometric_response_rungB",
+            "content": "PoseNet reads inter-frame camerad auto-exposure: a·warp(f1)+b improves 112/112 tail; "
+                       "rung-A rolling-shutter improves 96/112. rung-B CONSUMED in v4c (1820 B).",
+            "freshness": "REALIZED-LIVE-BASE",
+            "transfers": "consumed",
+            "source": "ddm_pm1_physical_prior_mine_20260730 §1 (full-tail-112) + v4c photo receipt "
+                      f"(realized rung-B ΔS {pose['photometric_rungB_realized_dS']:.4f} @ v4c)",
+        },
+        {
+            "surface": "margin_fisher_gram_and_composite_R_hessian",
+            "content": "margin-Fisher head geometry (Gram of rank-4 normals) + pose output quadratic + "
+                       "composite-R Hessian (uint8 through-R coupling)",
+            "freshness": "TRANSFER-STRUCTURE/STALE-OCCUPANCY",
+            "transfers": "geometry yes; occupancy STALE (measured 07-24, pre-v4 base)",
+            "source": "ddm_ms3/ms4/ms4d metric custody bundle (07-24)",
+            "note": "NOT the binding surface at v4c: it prices the seg-CORRECTION levers, which gr1 + "
+                    "co9 white-jitter proved SATURATED/BREAK-EVEN at the base. Re-anchoring OCCUPANCY "
+                    "is low-value upkeep (the pool it serves is closed). Structure transfers.",
+        },
+        {
+            "surface": "bn_channel_capacity_structure",
+            "content": "0 dead channels / 33,368 (fully live); BN per-channel affine; error-source-tensor "
+                       "telemetry asymmetry (sn1)",
+            "freshness": "TRANSFER-BY-CONSTRUCTION", "transfers": True,
+            "source": "ddm_sn1_five_type_derivation_20260724 + segnet fractal §7 (BN fold)",
+        },
+        {
+            "surface": "token_cell_RD_curve_gr1",
+            "content": "cell_drop RD at the v4c base (cell_drop50 IS the base): drop35 439,836B@d_seg0.003882 · "
+                       "drop50(base) 359,221B@0.003947(n48)/0.004310(n600) · drop63 277,815B@0.005013; "
+                       "token-granular & nested-rung DOMINATED; cell-drop is the efficient unit",
+            "freshness": "REALIZED-LIVE-BASE", "transfers": "N/A (this IS the base)",
+            "source": "ddm_gr1_granularity_rerace_20260730 (realized render+SegNet, real SMEVR bytes)",
+        },
+    ],
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# (2) WATERFILL TABLE — pools ranked by realized joint value; NON-ADDITIVE (same-pool compete)
+qa66 = pose["QA66_rungA_perpair_best"]
+tok = {"drop50_seg_rate_n48": 0.6339, "drop35_seg_rate_n48": 0.6811, "drop63_seg_rate_n48": 0.6863,
+       "restore_dS": 0.6811 - 0.6339, "drop_more_dS": 0.6863 - 0.6339,
+       "restore_dbytes": 439836 - 359221, "drop_dbytes": 277815 - 359221}
+
+table = {
+    "schema": "ddm_ja1_joint_waterfill_table.v1",
+    "axis": "[macOS-CPU advisory]", "score_claim": False,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "base": {"S": 0.992972, "seg": 0.431179, "pose": 0.322250, "rate": 0.239543,
+             "note": "OWN-VEHICLE ADVISORY row; NOT the 0.19108 submittable — this ranks own-vehicle "
+                     "DESCENT moves, still MEANS until the line crosses the pointer AND gets contest-CPU"},
+    "standing_law": "no rung fires on axis identity; every rung fires on its JOINT realized exchange "
+                    "rate read from THIS table. Pools are NON-ADDITIVE (same-pool levers COMPETE, never "
+                    "sum); the KKT waterfill is the composition instrument.",
+    "rate_break_even": {"tokens_B_per_flip": 1.273, "note": "25·ΔB/N = 100·Δd_seg at the seg water"},
+    "ranked_rungs": [
+        {
+            "rank": 1, "id": "QA66", "pool": "photometric", "lever": "per-pair rung-A rolling-shutter beta",
+            "dS": qa66["net_dS_perpair"], "dbytes": qa66["perpair_selector_bytes_est"],
+            "dS_per_kB": qa66["net_dS_perpair"] / (qa66["perpair_selector_bytes_est"] / 1000.0),
+            "label": "REALIZED-live-base",
+            "anchor": "v4c photo receipt rungA_by_g per-pair-best (re-derived by ja1)",
+            "coupling": {"pose": "self (photometric)", "seg": "none",
+                         "invalidates": "photometric fit already at rung-A g=0; per-pair g is additive on top"},
+            "state": "READY (data measured; v4d build)", "consumer": "v4d QA66",
+        },
+        {
+            "rank": 2, "id": "QA72a+QA54", "pool": "information/pose-precision",
+            "lever": "$0 stage-attribution (storage-vs-content) + luma-only exposure probe",
+            "dS": None, "dbytes": 0, "dS_per_kB": None, "label": "DERIVED (ja1) → REALIZED (owed)",
+            "anchor": "ja1 receipt analysis DERIVES content-tail-limited (88 pairs = 90% mass); "
+                      "QA72a re-quantize secant CONFIRMS; QA54 may FREE rung-B bytes at equal d_pose",
+            "coupling": {"pose": "aims QA65/QA68 priority", "seg": "none"},
+            "state": "DECISIVE $0 — run BEFORE building QA65/QA68", "consumer": "QA72/QA54/QA65 priority",
+        },
+        {
+            "rank": 3, "id": "QA68", "pool": "pose-content (expert menu)",
+            "lever": "per-pair expert menu {single,two-plane,+Movable-depth,+shear,+steering} best-of",
+            "dS": None, "dbytes": "~1-3 KB (per-pair expert params + entropy-coded selector)",
+            "dS_per_kB": None, "label": "DERIVED headroom (UNBUILT)",
+            "anchor": "the 88-pair content tail (90% of pose mass) is exactly what a per-pair expert "
+                      "targets; v4c 188/250 two-plane split + rung-C 10/17 mixed = measured expert signature",
+            "coupling": {"pose": "self", "seg": "none", "invalidates": "photometric re-fit per changed pair"},
+            "state": "UNANCHORED — the biggest live pose headroom; needs the build", "consumer": "v4d QA68",
+        },
+        {
+            "rank": 4, "id": "QA65", "pool": "pose-precision (storage)",
+            "lever": "dim0 offset-coded finer lattice + re-solve dim0",
+            "dS": "bounded ≤ ~one p0-ULP; DERIVED-SMALL (pose is content-tail-limited, not storage-limited)",
+            "dbytes": "few hundred B", "dS_per_kB": None, "label": "DERIVED-bounded-small",
+            "anchor": f"pi2 one-ULP 0.040S is the CEILING; but p0 median ULP is {pose['QA65_p0_f16_marginal']['p0_f16_ulp_median']} "
+                      "and d_pose is 784× content-spread → storage is NOT binding. The axis-reflex "
+                      "over-weights this row; the ja1 stage-attribution demotes it below QA68.",
+            "coupling": {"pose": "self", "seg": "none", "invalidates": "pose refinement curve on new lattice"},
+            "state": "DERIVED-SMALL (was DERIVED ~0.03S optimistic; ja1 demotes)", "consumer": "v4d QA65",
+        },
+        {
+            "rank": 5, "id": "QA24", "pool": "seg-CAPACITY (re-burn, different pool)",
+            "lever": "from-birth COARSER solve-init burn (all levers from birth)",
+            "dS": "≤ −0.098 seg+rate (gr1 post-hoc LOWER BOUND; from-birth can only exceed)",
+            "dbytes": "re-allocates token base (capacity, not byte-add)", "dS_per_kB": None,
+            "label": "DERIVED lower-bound (HEAVY, operator-GO)",
+            "anchor": "gr1: post-hoc cell_drop50 = −0.098 seg+rate; a coarser from-birth burn exceeds it",
+            "coupling": {"pose": "INVALIDATES pose solve + photo + selector (full re-do)",
+                         "seg": "self", "invalidates": "EVERYTHING downstream"},
+            "state": "the ONLY seg-axis headroom; runs PARALLEL (operator-GO), not vs the byte pools",
+            "consumer": "v10 burn / QA24",
+        },
+    ],
+    "saturated_do_not_spend": [
+        {"pool": "token-cell bytes (gr1)", "why": f"cell_drop50 is the seg+rate KNEE: restore +{tok['restore_dS']:.3f}S "
+         f"@+{tok['restore_dbytes']}B · drop-more +{tok['drop_more_dS']:.3f}S @{tok['drop_dbytes']}B — both DOMINATED",
+         "label": "REALIZED-live-base (gr1)"},
+        {"pool": "rate/lossless container", "why": "kl1 pose reformat + manifest/selector deflate CONSUMED in v4c; "
+         "token stream at SMEVR entropy floor (QA08 ceiling-closed ≤1.6KB). ~0 cheap slack.",
+         "label": "REALIZED-live-base (QA08/QA55)"},
+        {"pool": "seg corrections", "why": "co9 white-jitter: full-pop GN + attack-search are BREAK-EVEN at the "
+         "in-band base (1.45 B/flip ≈ water 1.27). Corrections do not descend seg here.",
+         "label": "REALIZED-live-base (QA03/QA04)"},
+    ],
+    "allocation_surprise": (
+        "The axis-reflex reads v4c (seg 0.431 = LARGEST axis) and says 'attack seg with bytes'. "
+        "MEASURED: the seg BYTE pool is SATURATED at its knee (gr1: any move +0.05 S) AND seg corrections "
+        "are break-even (co9). There is NO cheap seg byte lever. Every cheap LIVE byte lever is on the "
+        "POSE axis (QA66 MEASURED −0.013; QA68/QA54 DERIVED). Seg only moves via a HEAVY re-burn (QA24, "
+        "a CAPACITY pool, not byte-allocation) that runs in PARALLEL. Biggest-axis-first is exactly wrong here."
+    ),
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# (3) ORDER-OF-OPERATIONS DAG — physical order + invalidation edges + re-solve costs
+order_dag = {
+    "schema": "ddm_ja1_order_of_operations_dag.v1",
+    "axis": "[macOS-CPU advisory]", "score_claim": False,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "physical_order": ["motion (xi GN solve)", "per-depth projection (two-plane warp)",
+                       "photometric (a,b + rolling-shutter)", "uint8 (through-R)",
+                       "coder (SMEVR token field)"],
+    "nodes": [
+        {"id": "token_base", "stage": "coder", "controls": "cell_drop level / token field",
+         "pool": "token-cell / seg-capacity"},
+        {"id": "pose_solve", "stage": "motion+projection", "controls": "per-pair warp params (6-dof)",
+         "pool": "pose-content"},
+        {"id": "photo_fit", "stage": "photometric", "controls": "(a,b) + rung-A beta",
+         "pool": "photometric"},
+        {"id": "selector", "stage": "projection", "controls": "single/two-plane + expert id",
+         "pool": "expert-menu"},
+        {"id": "quantum", "stage": "storage", "controls": "f16 / offset lattice for shipped params",
+         "pool": "pose-precision"},
+    ],
+    "invalidation_edges": [
+        {"from": "token_base", "invalidates": ["pose_solve", "photo_fit", "selector"],
+         "reason": "changing the cell-drop level changes the decoded frame_1 the warp reads (Knee-A law: "
+                   "far-field freezes cost pose; recoverable via re-solve, parity 0.98)",
+         "resolve_cost": "pose re-solve ~1h PoseNet (ck1/v4c path) + photo re-fit ~30min + selector re-solve"},
+        {"from": "pose_solve", "invalidates": ["photo_fit"],
+         "reason": "(a,b) is GN-solved at FIXED pose; changing the warp changes warp(f1) the exposure fits",
+         "resolve_cost": "photo re-fit ~30min PoseNet (2-param GN/pair)"},
+        {"from": "quantum", "invalidates": ["pose_solve"],
+         "reason": "re-solving dim0 on a finer lattice (QA65) needs a re-solve on the new lattice",
+         "resolve_cost": "bounded re-solve on new lattice"},
+        {"from": "photo_fit", "invalidates": [],
+         "reason": "photometric is the last param stage before uint8; nothing downstream but the render",
+         "resolve_cost": "~0 (re-render only)"},
+    ],
+    "ordered_next_3_builds": [
+        {"build": "v4d-cheap (NO token-base change)",
+         "rungs": ["QA72a stage-attribution ($0, FIRST — decides QA65 vs QA68)",
+                   "QA54 luma-only exposure ($0)",
+                   "QA66 per-pair rung-A (+150B, MEASURED −0.0134S)",
+                   "QA65 dim0 offset-finer (ONLY if QA72a says storage-limited — ja1 predicts NO)"],
+         "invalidates": "photo_fit only (cheap re-fit); token_base UNTOUCHED",
+         "gate": "compose + n600 evaluate.py; expected small net −S at ~+150B"},
+        {"build": "v4d-menu (expert menu, NO token-base change)",
+         "rungs": ["QA68 per-pair expert menu best-of (targets the 88-pair content tail)"],
+         "invalidates": "selector + per-pair photo re-fit; token_base UNTOUCHED",
+         "gate": "compose + n600; DERIVED headroom −0.05..−0.15S in the tail (UNANCHORED, needs build)"},
+        {"build": "v5-reburn (QA24 seg re-burn — HEAVY, operator-GO, PARALLEL)",
+         "rungs": ["QA24 from-birth coarser solve-init burn"],
+         "invalidates": "EVERYTHING (token_base change → full pose+photo+selector re-do)",
+         "gate": "the ONLY seg-axis descent; runs in PARALLEL with v4d, not competing for the byte budget"},
+    ],
+    "order_law": "oc1 'ORDER is important' lifted from build-time to campaign-time: the allocator emits "
+                 "the ORDER (which rungs compose in which build + what re-solves when), not just amounts. "
+                 "Cheap pose rungs (v4d) come FIRST because they don't touch token_base (cheapest invalidation); "
+                 "the seg re-burn (v5) comes LAST/PARALLEL because it invalidates everything.",
+}
+
+for name, obj in [("ddm_ja1_joint_sensitivity_atlas_20260731.json", atlas),
+                  ("ddm_ja1_joint_waterfill_table_20260731.json", table),
+                  ("ddm_ja1_order_of_operations_dag_20260731.json", order_dag)]:
+    (REPO / name).write_text(json.dumps(obj, indent=1))
+    (SSD / name).write_text(json.dumps(obj, indent=1))
+    print(f"wrote {name} ({len(json.dumps(obj))} B)")
+print("\nTOP OF TABLE:")
+for r in table["ranked_rungs"]:
+    print(f"  #{r['rank']} {r['id']} [{r['pool']}] {r['label']}: dS={r['dS']}")

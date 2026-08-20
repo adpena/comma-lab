@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""Recover exact small EC2 receipts embedded in the retained Modal return."""
+
+from __future__ import annotations
+
+import ast
+import hashlib
+import json
+import os
+from pathlib import Path
+
+
+SOURCE = Path(
+    "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/edge_conditioned/"
+    "ddm_ec1_20260814/main_cuda/poller_run/EC2_T4_REMOTE_RESULT.json"
+)
+DESTINATION = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_bg1_20260814/retained/ec2_oriented"
+)
+EXPECTED_FINAL_SHA256 = "b9df6af2175b2003e8a236e67e3315b60a065c7913792fcd93464c203c321a1b"
+
+
+def digest(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def atomic_write(path: Path, value: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_bytes(value)
+    os.replace(temporary, path)
+
+
+def record(path: Path) -> dict[str, object]:
+    value = path.read_bytes()
+    return {"path": str(path), "bytes": len(value), "sha256": digest(value)}
+
+
+def main() -> None:
+    returned = json.loads(SOURCE.read_text())
+    mapping = {
+        "oriented.FINAL_RESULT.json": "FINAL_RESULT.json",
+        "oriented.SELECTED_RESULT.json": "SELECTED_RESULT.json",
+    }
+    recovered = {}
+    for source_name, destination_name in mapping.items():
+        value = ast.literal_eval(returned["artifacts"][source_name])
+        if not isinstance(value, bytes):
+            raise RuntimeError(f"embedded artifact is not bytes: {source_name}")
+        path = DESTINATION / destination_name
+        atomic_write(path, value)
+        recovered[destination_name] = record(path)
+    if recovered["FINAL_RESULT.json"]["sha256"] != EXPECTED_FINAL_SHA256:
+        raise RuntimeError("recovered FINAL_RESULT.json SHA-256 differs")
+    manifest = {
+        "schema": "ddm_bg1_embedded_ec2_receipt_recovery.v1",
+        "source": record(SOURCE),
+        "recovered": recovered,
+        "method": "ast.literal_eval of the two byte-literal artifacts in the retained Modal return",
+        "reproducibility": {
+            "argv": [str(Path(__file__).resolve())],
+            "script": record(Path(__file__).resolve()),
+            "idempotent": True,
+        },
+        "large_endpoint_payloads_recovered": False,
+        "destructive_action_taken": False,
+    }
+    atomic_write(
+        DESTINATION / "EMBEDDED_RECEIPT_RECOVERY.json",
+        (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode(),
+    )
+    print(json.dumps(manifest, indent=2, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

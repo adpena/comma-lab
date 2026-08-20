@@ -1,0 +1,1031 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# LEVEL-SET witness inflate -- numpy fwd + torch R, self-contained. Emits the FULL
+# (2*n_pairs, camera_h, camera_w, 3) uint8 .raw (frame0+frame1 per pair). The curvelet bank +
+# (when used) the self-orient directional feats are REGENERATED for FREE (rule 118); only the
+# learned int8+brotli payload comes from the archive.
+# FEED-eg bit-identical decode speedups (inflate.py code only -> FREE, archive bytes UNCHANGED):
+#   (1) self-orient EARLY-STOP at the argmax fixed point (consecutive-equal argmax => dirf frozen
+#       => remaining iters are no-ops; bit-identical, the big lever on a converged decoder);
+#   (2) self-orient forwards compute ONLY phi (argmax needs no rgb head -- out_tex/palette/softmax/
+#       sigmoid skipped, they do not feed phi);
+#   (3) the in_proj activation h0 is computed ONCE per pair and shared by the pair's 2 final frames
+#       (identical feats => identical h0). All three preserve the EXACT float64/float32 op order of
+#       levelset_rgb_forward_numpy -> bit-identical .raw (proven by sha256 parity).
+# FEED-eh PARALLEL decode speedup (inflate.py code only -> FREE, archive bytes UNCHANGED, BIT-IDENTICAL):
+#   the n_pairs are INDEPENDENT -> render them across a process Pool (1-thread BLAS per worker so N
+#   workers scale cleanly instead of oversubscribing the already-threaded GEMM), each worker writing its
+#   2 frames to DISJOINT offsets of the preallocated .raw. Proven 10.8x on M5 Max (15w),
+#   max_abs_uint8_diff=0 vs the serial output. Contest: Linux fork (workers inherit setup); keeps the
+#   inflate.py cost well inside the 30-min upstream/evaluate.py budget (inflate + scoring).
+# FEED-ei bit-identical _act fusion (inflate.py code only -> FREE, archive bytes UNCHANGED): the hosc
+#   activation tanh(beta*sin(omega*u)) is the #1 hot path (~66% of decode; ~29 acts/pair on the (H*W,
+#   hidden) float64 grid = ~151MB/array). (1) SKIP the identity full-array multiplies when omega==1 /
+#   beta==1 (1.0*x === x in IEEE754, but numpy still executes the whole ~151MB DRAM round-trip); (2)
+#   compute sin -> (beta) -> tanh IN-PLACE in one buffer (the 'pre' input is dead after _act) -> fewer
+#   151MB allocs. In-place ufunc == out-of-place ufunc elementwise, so the exact float64 op values are
+#   preserved -> BIT-IDENTICAL .raw (proven: cmp -s == identical vs the pre-fusion forward, n40/4w). The
+#   DRAM-traffic cut helps MOST under the parallel Pool (workers share memory bandwidth): measured 1.24x
+#   4-worker wall-clock (contest-4-core full-600 inflate ~20 min -> ~16 min).
+# FEED-ej bit-identical self-orient CONVERGED-h0 reuse (inflate.py code only -> FREE, archive UNCHANGED):
+#   the self-orient fixed point (task #281) EARLY-STOPS when the decoder's argmax stops changing (FEED-eg);
+#   on the converging iteration the loop's `feats` are already the FINAL feats, so its in_proj activation
+#   h0 IS the post-loop h0 -> cache + reuse it instead of recomputing _in_proj_h0 once more. BIT-EXACT: the
+#   reuse only fires on the early-break (feats frozen); when the loop runs to completion (no convergence)
+#   h0 is recomputed exactly as before. Proven byte-identical vs baseline on the #205 config (n24) AND by a
+#   determinism micro-proof on the real weights (dir_feats/in_proj_h0 are pure functions of their inputs).
+#   Like the early-stop it is a NO-OP on a mid-training archive (the argmax does not converge even at
+#   so_iters=12) and pays only on a well-trained archive whose argmax stabilizes within so_iters.
+# FEED-ek OPT-IN fp32 forward (task #281; INFLATE_FP32=1, DEFAULT OFF -> the shipped path stays fp64, the
+#   bit-exact cross-host authority). fp32 runs the INR forward in float32: ~1.7-1.9x faster (sin/tanh 3.7x,
+#   GEMM 4.3x). It is LOCAL FAST-DECODE ONLY and MUST NOT ship in a contest archive: fp32 last-bit rounding
+#   can move an argmax-boundary pixel by up to ~22 uint8 levels, and a different BLAS/SIMD/FMA host produces
+#   DIFFERENT boundary flips -> it BREAKS cross-host bit-identity (the deterministic-reproducibility hard
+#   limit: same archive.zip -> bit-identical inflate output on EVERY host). Measured score-preservation is
+#   only WITHIN ~1e-4 on OUR host (#205 mid-train n24: 100*Δd_seg=-8.5e-5, Δsqrt(10*d_pose)=+1.6e-7); that
+#   is same-host-deterministic (run1==run2 byte-identical) but NOT contest-portable. fp64 already meets the
+#   30-min budget via the parallel Pool, so the default never needs fp32; the flag exists for dev-loop speed.
+import os
+for _tv in ("VECLIB_MAXIMUM_THREADS", "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
+    os.environ.setdefault(_tv, "1")  # 1-thread BLAS/worker (set BEFORE numpy import); user-overridable
+import sys, json, struct, math, multiprocessing as mp
+from bisect import bisect_right as _bisect_right  # #257 ξ arithmetic decoder (pure stdlib)
+import numpy as np
+import brotli
+import torch
+import deepCABAC
+
+# FEED-ek OPT-IN fp32 forward flag (default OFF). Read ONCE at process start (deterministic within a run).
+# _FDT is the forward's working dtype: float64 (default, bit-exact authority) or float32 (local fast mode).
+_FP32 = os.environ.get("INFLATE_FP32", "0") == "1"
+_FDT = np.float32 if _FP32 else np.float64
+
+MAGIC = b"LVLS1\x00"
+PCAR_MAGIC = b"PCAR1\x00"  # #205 warp-real-luma pose carrier (stored keyframe luma + per-pair homography)
+XIP_MAGIC = b"XIP2"        # #257 store-nothing ξ payload (quantized + coded ego twist)
+
+
+def _take(raw, off, n):
+    # #402 fail-closed exact slice: a short buffer RAISES (never silently returns fewer bytes than
+    # declared -> a downstream reshape can't quietly consume a truncated stream). advisory PR128 §8.2.
+    end = off + n
+    if n < 0 or end > len(raw):
+        raise ValueError("LVLS1 truncated: section needs %d B at off=%d but blob is %d B" % (n, off, len(raw)))
+    return raw[off:end], end
+
+
+def _read_blob(path):
+    raw = open(path, "rb").read()
+    assert raw[:len(MAGIC)] == MAGIC, "bad level-set magic"
+    off = len(MAGIC); out = []
+    for _ in range(4):
+        (n,) = struct.unpack_from("<I", raw, off); off += 4
+        blk, off = _take(raw, off, n); out.append(blk)
+    m = json.loads(out[0].decode("utf-8"))
+    # Optional trailing blocks are gated by the MANIFEST flags (NOT bare off<len): 5th = lane band
+    # (#224 Wave E), 6th = pose carrier (#205). A lone pose-carrier block must NOT be misread as lane.
+    lane_b = pcar_b = None
+    if m.get("lane_render_band") is not None:
+        (n,) = struct.unpack_from("<I", raw, off); off += 4
+        lane_b, off = _take(raw, off, n)
+    if m.get("pose_carrier") is not None:
+        (n,) = struct.unpack_from("<I", raw, off); off += 4
+        pcar_b, off = _take(raw, off, n)
+    # #402 EXACT CONSUMPTION: the LVLS1 grammar must consume the WHOLE blob. Trailing bytes are a
+    # truncation/format-mismatch/tamper signal -- fail closed, never silently ignore (advisory PR128
+    # §8.2: "Section range streams are not required to be consumed exactly. Trailing words can be ignored.").
+    if off != len(raw):
+        raise ValueError("LVLS1 blob has %d unconsumed trailing byte(s) (off=%d len=%d) -- refusing to "
+                         "decode a non-exact stream (NO-FAKE fail-closed)." % (len(raw) - off, off, len(raw)))
+    return m, out[1], out[2], out[3], lane_b, pcar_b
+
+
+def _dequant(blob, order, shapes, scales, xcodec=None):
+    out, off = {}, 0
+    flat = np.frombuffer(blob, dtype=np.int8)
+    perm_indices = set(int(i) for i in (xcodec or {}).get("p", []))
+    if any(i < 0 or i >= len(order) for i in perm_indices):
+        raise ValueError("LVLS1 xcodec has invalid base permutation index")
+    for index, name in enumerate(order):
+        shp = tuple(shapes[name]); n = int(np.prod(shp))
+        chunk = flat[off:off + n]
+        if chunk.size != n:  # #402: base blob short for this tensor -> fail closed, never partial-decode.
+            raise ValueError("LVLS1 base blob short for %r: need %d int8 got %d" % (name, n, int(chunk.size)))
+        if index in perm_indices:
+            if len(shp) != 2:
+                raise ValueError("LVLS1 xcodec transpose targets non-2-D tensor %r" % name)
+            q = chunk.reshape(shp[1], shp[0]).T
+        else:
+            q = chunk.reshape(shp)
+        out[name] = q.astype(np.float32) * float(scales[name]); off += n
+    if off != flat.size:  # #402 EXACT CONSUMPTION: trailing int8 in the base blob = format mismatch.
+        raise ValueError("LVLS1 base blob has %d unconsumed int8 byte(s) (off=%d size=%d) -- fail closed."
+                         % (int(flat.size) - off, off, int(flat.size)))
+    return out
+
+
+def _decode_code_q(blob, shape, xcodec=None):
+    rows, dims = int(shape[0]), int(shape[1])
+    raw = np.frombuffer(blob, dtype=np.uint8)
+    if raw.size != rows * dims:
+        raise ValueError("LVLS1 code stream has %d B, expected %d B" % (raw.size, rows * dims))
+    mode = int((xcodec or {}).get("c", 0))
+    if mode == 0:
+        return raw.view(np.int8).reshape(rows, dims).copy()
+    if mode != 1 or rows % 2:
+        raise ValueError("LVLS1 xcodec has invalid code transform id/shape")
+    pairs = rows // 2; half = pairs * dims
+    d0 = raw[:half].reshape(pairs, dims); d1 = raw[half:].reshape(pairs, dims)
+    q0 = (np.cumsum(d0.astype(np.uint64), axis=0) & 255).astype(np.uint8)
+    q1 = (np.cumsum(d1.astype(np.uint64), axis=0) & 255).astype(np.uint8)
+    return np.stack([q0, q1], axis=1).reshape(rows, dims).view(np.int8).copy()
+
+
+
+def _decode_base_deepcabac(blob, manifest):
+    """Decode all base tensors; finish() proves exact CABAC consumption."""
+    if (manifest.get("xcodec") or {}).get("p"):
+        raise ValueError("deepcabac_v1_base does not support xcodec base permutation")
+    stream = np.frombuffer(blob, dtype=np.uint8).copy()
+    decoder = deepCABAC.Decoder()
+    decoder.getStream(stream)
+    out = {}
+    for name in manifest["base_param_order"]:
+        qf = np.asarray(decoder.decodeWeights(), dtype=np.float32)
+        expected = tuple(int(x) for x in manifest["base_shapes"][name])
+        if qf.shape != expected:
+            raise ValueError("DeepCABAC shape mismatch for %r: %r != %r" % (name, qf.shape, expected))
+        if not np.all(np.isfinite(qf)) or not np.all(qf == np.rint(qf)):
+            raise ValueError("DeepCABAC returned non-integral/non-finite values for %r" % name)
+        if qf.size and (float(qf.min()) < -128.0 or float(qf.max()) > 127.0):
+            raise ValueError("DeepCABAC int8 range violation for %r" % name)
+        q = qf.astype(np.int8)
+        out[name] = q.astype(np.float32) * float(manifest["base_scales"][name])
+    decoder.finish()
+    return out
+
+def _coords(h, w):
+    ys = np.linspace(-1.0, 1.0, h, dtype=np.float32); xs = np.linspace(-1.0, 1.0, w, dtype=np.float32)
+    gy, gx = np.meshgrid(ys, xs, indexing="ij")
+    return np.stack([gx.ravel(), gy.ravel()], axis=-1).astype(np.float32)
+
+
+def _curvelet_B(ns, no0, f0, base, niso, max_freq):
+    cols = []
+    for j in range(int(ns)):
+        f_j = float(f0) * (float(base) ** j); l_j = int(no0) * (2 ** (j // 2))
+        for l in range(l_j):
+            th = np.pi * l / l_j; cols.append([f_j * np.cos(th), f_j * np.sin(th)])
+    for i in range(int(niso)):
+        th = np.pi * i / max(int(niso), 1); fl = float(f0) * 0.5; cols.append([fl * np.cos(th), fl * np.sin(th)])
+    B = np.asarray(cols, np.float32).T  # (2, n)
+    if max_freq is not None:
+        nrm = np.sqrt((B.astype(np.float64) ** 2).sum(0)); keep = nrm <= float(max_freq) + 1e-6
+        if not keep.any(): keep = nrm <= float(nrm.min()) + 1e-6
+        B = B[:, keep]
+    return B
+
+
+def _curvelet_feats(coords, B):
+    # _FDT = float64 (default, bit-exact) or float32 (FEED-ek opt-in fast mode). Default path unchanged.
+    proj = (2.0 * np.pi) * (np.asarray(coords, _FDT) @ np.asarray(B, _FDT))
+    return np.concatenate([np.sin(proj), np.cos(proj)], axis=-1).astype(np.float32)
+
+
+def _windowed_curvelet_feats(coords, cfg):
+    # Op-for-op compiler twin of
+    # tac.boundary_math.windowed_curvelet_frame.windowed_curvelet_feats.  The config is generic,
+    # seed-free receiver program state; learned/video-derived coefficients remain counted in P.
+    required = {
+        "n_scales", "n_orient0", "f0", "base", "w0", "width_ratio", "n_trans",
+        "coord_margin", "min_sigma", "aniso",
+    }
+    if set(cfg) != required:
+        raise ValueError("windowed_curvelet_config keys do not match the sealed receiver schema")
+    ns, no0, nt = int(cfg["n_scales"]), int(cfg["n_orient0"]), int(cfg["n_trans"])
+    if min(ns, no0, nt) <= 0:
+        raise ValueError("windowed curvelet integer config must be positive")
+    f0, base = float(cfg["f0"]), float(cfg["base"])
+    w0, ratio = float(cfg["w0"]), float(cfg["width_ratio"])
+    margin, min_sigma, aniso = (
+        float(cfg["coord_margin"]), float(cfg["min_sigma"]), float(cfg["aniso"])
+    )
+    if not all(math.isfinite(v) for v in (f0, base, w0, ratio, margin, min_sigma, aniso)):
+        raise ValueError("windowed curvelet float config must be finite")
+    if min(f0, w0, min_sigma, aniso) <= 0.0 or base <= 1.0 or ratio <= 1.0:
+        raise ValueError("invalid windowed curvelet scale/frequency config")
+    if margin < 0.0 or aniso < 1.0:
+        raise ValueError("invalid windowed curvelet margin/anisotropy config")
+    if nt == 1:
+        centers = [0.0]
+    else:
+        centers = list(np.linspace(-1.0 + margin, 1.0 - margin, nt))
+    x = np.asarray(coords)[:, 0]
+    y = np.asarray(coords)[:, 1]
+    real_cols, imag_cols = [], []
+    for j in range(ns):
+        freq = f0 * (base ** j)
+        n_orient = no0 * (2 ** (j // 2))
+        sigma_n = max(w0 * ratio ** (-j), min_sigma)
+        sigma_t = max(aniso * w0 * ratio ** (-0.5 * j), min_sigma)
+        for orient in range(n_orient):
+            theta = math.pi * orient / n_orient
+            ct, st = math.cos(theta), math.sin(theta)
+            for cy in centers:
+                for cx in centers:
+                    dx, dy = x - float(cx), y - float(cy)
+                    u_n = dx * ct + dy * st
+                    u_t = -dx * st + dy * ct
+                    env = np.exp(-0.5 * ((u_n / sigma_n) ** 2 + (u_t / sigma_t) ** 2))
+                    phase = (2.0 * math.pi) * freq * u_n
+                    real_cols.append(env * np.cos(phase))
+                    imag_cols.append(env * np.sin(phase))
+    return np.concatenate(
+        [np.stack(real_cols, axis=-1), np.stack(imag_cols, axis=-1)], axis=-1
+    ).astype(np.float32)
+
+
+def _compact_shearlet_feats(coords, cfg):
+    # Op-for-op compiler twin of
+    # tac.boundary_math.compact_shearlet_frame.compact_shearlet_feats.  The atom table is
+    # deterministic, video-free rule-118 program state; learned coefficients stay counted.
+    required = {
+        "n_scales", "n_shear", "two_cones", "shear_step", "f0", "base", "w0",
+        "width_ratio", "n_trans", "coord_margin", "min_sigma", "aniso",
+    }
+    if set(cfg) != required:
+        raise ValueError("compact_shearlet_config keys do not match the sealed receiver schema")
+    ns, nsh, nt = int(cfg["n_scales"]), int(cfg["n_shear"]), int(cfg["n_trans"])
+    if ns <= 0 or nsh < 0 or nt <= 0 or not isinstance(cfg["two_cones"], bool):
+        raise ValueError("invalid compact shearlet integer/bool config")
+    shear_step, f0, base = float(cfg["shear_step"]), float(cfg["f0"]), float(cfg["base"])
+    w0, ratio = float(cfg["w0"]), float(cfg["width_ratio"])
+    margin, min_sigma, aniso = (
+        float(cfg["coord_margin"]), float(cfg["min_sigma"]), float(cfg["aniso"])
+    )
+    vals = (shear_step, f0, base, w0, ratio, margin, min_sigma, aniso)
+    if not all(math.isfinite(v) for v in vals):
+        raise ValueError("compact shearlet float config must be finite")
+    if min(shear_step, f0, w0, min_sigma, aniso) <= 0.0 or base <= 1.0 or ratio <= 1.0:
+        raise ValueError("invalid compact shearlet scale/frequency config")
+    if margin < 0.0 or aniso < 1.0:
+        raise ValueError("invalid compact shearlet margin/anisotropy config")
+    centers = [0.0] if nt == 1 else list(np.linspace(-1.0 + margin, 1.0 - margin, nt))
+    shears = [shear_step * s for s in range(-nsh, nsh + 1)]
+    x = np.asarray(coords)[:, 0]
+    y = np.asarray(coords)[:, 1]
+    real_cols, imag_cols = [], []
+    for cone in range(2 if cfg["two_cones"] else 1):
+        for j in range(ns):
+            freq = f0 * (base ** j)
+            sigma_n = max(w0 * ratio ** (-j), min_sigma)
+            sigma_t = max(aniso * w0 * ratio ** (-0.5 * j), min_sigma)
+            for shear_k in shears:
+                for cy in centers:
+                    for cx in centers:
+                        dx, dy = x - float(cx), y - float(cy)
+                        if cone == 0:
+                            xi, eta = dx + shear_k * dy, dy
+                        else:
+                            xi, eta = dy + shear_k * dx, dx
+                        env = np.exp(-0.5 * ((xi / sigma_n) ** 2 + (eta / sigma_t) ** 2))
+                        phase = (2.0 * math.pi) * freq * xi
+                        real_cols.append(env * np.cos(phase))
+                        imag_cols.append(env * np.sin(phase))
+    return np.concatenate(
+        [np.stack(real_cols, axis=-1), np.stack(imag_cols, axis=-1)], axis=-1
+    ).astype(np.float32)
+
+
+def _basis_feats(coords, m):
+    family = m.get("basis_family", "polar_fourier")
+    if family == "polar_fourier":
+        B = _curvelet_B(
+            m["bank_n_scales"], m["bank_n_orient0"], m["bank_f0"], m["bank_base"],
+            m["bank_n_iso"], m["max_bank_freq"],
+        )
+        return _curvelet_feats(coords, B)
+    if family == "windowed_curvelet":
+        return _windowed_curvelet_feats(coords, m["windowed_curvelet_config"])
+    if family == "compact_shearlet":
+        return _compact_shearlet_feats(coords, m["compact_shearlet_config"])
+    if family == "literal_polar_curvelet":
+        program = BasisProgramConfig.from_dict(m["basis_program"])
+        if program.canonical_sha256() != m.get("basis_program_sha256"):
+            raise ValueError("literal basis-program manifest SHA-256 mismatch")
+        return basis_features_numpy(coords)
+    raise ValueError("unknown basis_family %r" % (family,))
+
+
+def _act(u, kind, w0, s0, beta, omega):
+    u = np.asarray(u, _FDT)  # _FDT = float64 (default, bit-exact) or float32 (FEED-ek opt-in fast mode)
+    if kind == "hosc":
+        # tanh(beta*sin(omega*u)). BIT-IDENTICAL fused form: (1) omega==1 / beta==1 skip the identity
+        # full-array float64 multiply (1.0*x === x in IEEE754 -- these are ~151MB DRAM round-trips per
+        # act, ~29x/pair); (2) in-place np.multiply/np.tanh reuse the sin buffer (u='pre' is not reused
+        # after _act) -> fewer 151MB allocs. In-place ufunc == out-of-place ufunc elementwise -> the
+        # exact float64 op values are preserved (proven by sha256 .raw parity vs the pre-fusion forward).
+        t = np.sin(u) if omega == 1.0 else np.sin(omega * u)
+        if beta != 1.0: np.multiply(t, beta, out=t)
+        np.tanh(t, out=t)
+        return t.astype(np.float32)
+    if kind == "wire": return (np.cos(w0 * u) * np.exp(-((s0 * u) ** 2))).astype(np.float32)
+    return np.maximum(u, 0.0).astype(np.float32)
+
+
+def _in_proj_h0(P, feats, m):
+    # h0 = act(feats @ in_proj.weight.T + b) -- depends ONLY on feats (NOT code) -> shared by a
+    # pair's two final frames (identical feats). Returns float32 (== _act), exactly as the monolithic
+    # forward's first layer. P is the float64 param dict (converted once in main).
+    kw = (m["activation"], m["wire_w0"], m["wire_s0"], m["hosc_beta"], m["hosc_omega"])
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        return _act(np.asarray(feats, np.float64) @ P["in_proj.weight"].T + P["in_proj.bias"], *kw)
+
+
+# --- #417 receiver-consumption bijection: v7.5.3 tex_trunk / out_tex_h + v8 decoupled_head. --------
+# AUTO-DETECTED OPTIONAL branches (the film_pl/concat_pl idiom): each fires ONLY when the group's param
+# keys are present in P. A shared-head witness (none present) => the forward is BYTE-IDENTICAL (the new
+# branches are skipped). Each mirrors the trainer's MLX submodule OP-FOR-OP (parity-gated in
+# tools/tests/test_receiver_bijection_v753_v8_parity.py): out_tex_h = the #395 A2 widened texture head
+# (hidden->N->3 ReLU MLP); tex_trunk = the #395 band-designed Gabor texture trunk (bank REGENERATED
+# free at decode, rule 118; only w_tex/bias are counted); decoupled_head = the v8 B1 K independent
+# per-class DECOUPLED partition fields (replace the shared out_sdf phi). Without these branches those
+# COUNTED groups paid rate but were INERT through R (a FAKE lever verdict, NO-FAKE #8) -- #417 fix half.
+_TEX_BANK = {}  # cache the FREE Gabor bank per (render_h, render_w) -- regenerated, never stored.
+
+
+def _tex_trunk_bank(rh, rw):
+    # op-for-op mirror of tac.boundary_math.texture_trunk.build_gabor_bank_numpy with the DEFAULT
+    # TextureBandSpec: periods {4,6,8} render-px x orientations {0,45,90,135}deg x cos/sin quadrature
+    # => F=24. band_hi does NOT change bank content (periods are the fixed dataclass default), so ONLY
+    # (H,W) parametrize the bank -> regenerable free (rule 118). Pixel coords row-major (x fastest),
+    # matching _coords -> the same per-pixel ordering the softmax masks use.
+    periods = (4.0, 6.0, 8.0); orients = (0.0, 45.0, 90.0, 135.0); phases = (0.0, 0.5 * np.pi)
+    yy, xx = np.mgrid[0:int(rh), 0:int(rw)]
+    xf = xx.astype(np.float64).ravel(); yf = yy.astype(np.float64).ravel()
+    cols = []
+    for p in periods:
+        for o in orients:
+            th = np.radians(o); proj = xf * np.cos(th) + yf * np.sin(th)
+            base = 2.0 * np.pi * proj / p
+            for ph in phases:
+                cols.append(np.cos(base - ph))
+    return np.stack(cols, axis=-1).astype(np.float32)  # (P, F=24)
+
+
+def _tex_trunk_forward(bank, w_tex, bias, soft, n_classes, annulus_power):
+    # op-for-op mirror of texture_trunk_numpy_forward: per-class band texture PLACED by the softmax
+    # masks. bank (P,F); w_tex (F,K,3); bias (K,3); soft (P,K) -> (P,3) additive PRE-sigmoid term.
+    bank = np.asarray(bank, np.float64); w_tex = np.asarray(w_tex, np.float64)
+    soft64 = np.asarray(soft, np.float64)
+    class_tex = np.einsum("pf,fkc->pkc", bank, w_tex) + np.asarray(bias, np.float64)[None]  # (P,K,3)
+    tex = np.einsum("pk,pkc->pc", soft64, class_tex)  # (P,3) placement-aware by construction
+    if annulus_power > 0.0:
+        peak = soft64.max(axis=-1); frac = 1.0 / float(n_classes)
+        g = np.clip((peak - frac) / (1.0 - frac), 0.0, 1.0) ** float(annulus_power)
+        tex = tex * g[..., None]
+    return tex
+
+
+def _decoupled_phi(P, feats, code_row):
+    # op-for-op mirror of tac.boundary_math.decoupled_field.decoupled_field_numpy_forward (single-pair)
+    # = the v8 B1 K INDEPENDENT per-class fields (relu; the trainer hardcodes activation="relu").
+    # Replaces the shared out_sdf(h) partition phi; reads the SAME coord feats the trunk in_proj reads
+    # (spec in_feat == in_proj in-dim). Shapes (K,I,H / K,M,2LH / K,L,H,H / ...) come from the loaded P.
+    w_in = P["decoupled_head.w_in"]; b_in = P["decoupled_head.b_in"]          # (K,I,H),(K,H)
+    w_film = P["decoupled_head.w_film"]; w_hid = P["decoupled_head.w_hid"]    # (K,M,2LH),(K,L,H,H)
+    b_hid = P["decoupled_head.b_hid"]; w_out = P["decoupled_head.w_out"]; b_out = P["decoupled_head.b_out"]
+    kk = int(w_hid.shape[0]); _ell = int(w_hid.shape[1]); hh = int(w_hid.shape[2])
+    coord = np.asarray(feats, np.float64); code = np.asarray(code_row, np.float64)
+    h0 = np.maximum(np.einsum("pi,kih->pkh", coord, w_in) + b_in[None], 0.0)  # (P,K,H) relu
+    film = np.einsum("m,kmf->kf", code, np.asarray(w_film, np.float64)).reshape(kk, _ell, 2, hh)
+    hcur = h0  # (P,K,H)
+    for li in range(_ell):
+        pre = np.einsum("pkh,khj->pkj", hcur, w_hid[:, li]) + b_hid[:, li][None]
+        scale = 1.0 + film[None, :, li, 0, :]; shift = film[None, :, li, 1, :]
+        hcur = np.maximum(pre * scale + shift, 0.0)  # relu
+    return np.einsum("pkh,kh->pk", hcur, w_out) + b_out[None]  # (P,K)
+
+
+def _outputs_from_h0(P, h0, code_row, m, want_rgb, want_lane=False, feats=None):
+    # op-for-op mirror of levelset_rgb_forward_numpy AFTER in_proj. h0 = the float32 in_proj act.
+    # want_rgb=False -> return (phi, None) skipping the rgb head (out_tex/palette/softmax/sigmoid do
+    # NOT feed phi, so argmax(phi) is identical) -- used by the self-orient fixed point.
+    # want_lane=True (#224 Wave E) -> ALSO return the witness's OWN lane color sigmoid(palette[lane]+
+    # tex)*255 + the softmax decision margin (top1-top2) for the decode-consistent render-band; mirror
+    # of tac.boundary_math.lever_b_levelset_generator.levelset_band_forward_numpy. want_lane=False (all
+    # non-band callers) -> BYTE-IDENTICAL 2-tuple return as before (default-off guarantee).
+    kw = (m["activation"], m["wire_w0"], m["wire_s0"], m["hosc_beta"], m["hosc_omega"])
+    cr = np.asarray(code_row, np.float64)
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        film = (cr @ P["film.weight"].T + P["film.bias"]).reshape(m["n_hidden"], 2, m["hidden_dim"])
+        # LEVER-A (FiLM-rank-fix) byte-close forward: AUTO-DETECT the OPTIONAL per-layer residual FiLM
+        # (film_pl.*) + additive code-concat (concat_pl.*) routes from the loaded param keys so the
+        # byte-close render reflects the ACTUAL trained witness (NO-FAKE). ABSENT keys (default-off
+        # witness) => both branches skipped => BYTE-IDENTICAL to the pre-LEVER-A byte-close forward.
+        _has_film_pl = any(str(k).startswith("film_pl.") for k in P)
+        _has_concat = any(str(k).startswith("concat_pl.") for k in P)
+        # #417 AUTO-DETECT (absent => shared-head byte-identical): the widened texture head, the band
+        # texture trunk, the v8 decoupled partition fields. Each key is a LITERAL P[...] read below, so
+        # the receiver-consumption bijection gate sees them as CONSUMED (zero orphans for those groups).
+        _has_out_tex_h = "out_tex_h.weight" in P
+        _has_tex_trunk = "tex_trunk.w_tex" in P
+        _has_decoupled = ("decoupled_head.w_in" in P) and feats is not None
+        h = h0
+        for li in range(m["n_hidden"]):
+            scale = 1.0 + film[li, 0]
+            shift = film[li, 1]
+            if _has_film_pl:
+                pl = (cr @ P["film_pl.%d.weight" % li].T + P["film_pl.%d.bias" % li]).reshape(2, m["hidden_dim"])
+                scale = scale + pl[0]
+                shift = shift + pl[1]
+            pre = (h @ P["hidden.%d.weight" % li].T + P["hidden.%d.bias" % li]) * scale + shift
+            if _has_concat:
+                pre = pre + (cr @ P["concat_pl.%d.weight" % li].T + P["concat_pl.%d.bias" % li])
+            h = _act(pre, *kw)
+        # PARTITION phi: v8 decoupled per-class fields when present (+ feats supplied), else the shared
+        # out_sdf(h). The shared trunk h is STILL computed above (out_tex reads it) -- only phi changes.
+        if _has_decoupled:
+            phi = _decoupled_phi(P, feats, code_row)
+        else:
+            phi = h @ P["out_sdf.weight"].T + P["out_sdf.bias"]
+        if not want_rgb:
+            return phi.astype(np.float32), None
+        # TEXTURE head: #395 A2 widened (hidden->N->3 ReLU MLP) when out_tex_h present, else the linear
+        # out_tex. Mirror of the trainer's single _tex(h) site (both rgb + lane color route through it).
+        if _has_out_tex_h:
+            _th = np.maximum(h @ P["out_tex_h.weight"].T + P["out_tex_h.bias"], 0.0)  # relu
+            tex = _th @ P["out_tex.weight"].T + P["out_tex.bias"]
+        else:
+            tex = h @ P["out_tex.weight"].T + P["out_tex.bias"]
+        z = phi / float(m["softmax_temp"]); z = z - z.max(-1, keepdims=True)
+        soft = np.exp(z); soft = soft / soft.sum(-1, keepdims=True)
+        # TEXTURE TRUNK (#395): ADD the band texture PLACED by the SAME softmax masks, into the SAME
+        # pre-sigmoid term as out_tex (trainer _compose_rgb). Bank regenerated FREE (rule 118). Guarded
+        # so the shared-head pre-sigmoid stays EXACTLY `soft@palette + tex` (no `+0.0`) => byte-identical.
+        _pre = soft @ P["palette"] + tex
+        if _has_tex_trunk:
+            _rh, _rw = int(m["render_h"]), int(m["render_w"])
+            _bank = _TEX_BANK.get((_rh, _rw))
+            if _bank is None:
+                _bank = _tex_trunk_bank(_rh, _rw); _TEX_BANK[(_rh, _rw)] = _bank
+            _pre = _pre + _tex_trunk_forward(
+                _bank, P["tex_trunk.w_tex"], P["tex_trunk.bias"], soft, int(soft.shape[-1]),
+                float(m.get("texture_trunk_annulus_power", 0.0)))
+        rgb = (1.0 / (1.0 + np.exp(-_pre))) * 255.0
+        lane_rgb = margin = None
+        if want_lane:
+            lc = int(m.get("lane_render_band", {}).get("lane_cls", 1))
+            lane_rgb = (1.0 / (1.0 + np.exp(-(P["palette"][lc][None, :] + tex)))) * 255.0
+            ss = np.sort(soft, axis=-1); margin = (ss[:, -1] - ss[:, -2])
+        if not m["chroma"]:
+            luma = 0.299 * rgb[:, 0:1] + 0.587 * rgb[:, 1:2] + 0.114 * rgb[:, 2:3]
+            rgb = np.concatenate([luma, luma, luma], axis=-1)
+            if want_lane:
+                ll = 0.299 * lane_rgb[:, 0:1] + 0.587 * lane_rgb[:, 1:2] + 0.114 * lane_rgb[:, 2:3]
+                lane_rgb = np.concatenate([ll, ll, ll], axis=-1)
+    if want_lane:
+        return (phi.astype(np.float32), rgb.astype(np.float32),
+                lane_rgb.astype(np.float32), margin.astype(np.float32))
+    return phi.astype(np.float32), rgb.astype(np.float32)
+
+
+def _dir_feats(coords, argmax_hw, n_freqs, fa, fc, tau):
+    # self-orient: tangent of the decoder's OWN all-class argmax boundary -> oriented Fourier feats.
+    from scipy import ndimage
+    a = np.asarray(argmax_hw); h, w = a.shape
+    b = np.zeros(a.shape, bool)
+    b[:-1, :] |= a[:-1, :] != a[1:, :]; b[1:, :] |= a[:-1, :] != a[1:, :]
+    b[:, :-1] |= a[:, :-1] != a[:, 1:]; b[:, 1:] |= a[:, :-1] != a[:, 1:]
+    if not b.any():
+        tx = np.ones(h * w, np.float32); ty = np.zeros(h * w, np.float32)
+    else:
+        dist = ndimage.distance_transform_edt(~b).astype(np.float32)
+        gy = np.zeros_like(dist); gx = np.zeros_like(dist)
+        gy[1:-1, :] = (dist[2:, :] - dist[:-2, :]) * 0.5; gx[:, 1:-1] = (dist[:, 2:] - dist[:, :-2]) * 0.5
+        tx = -gy.ravel(); ty = gx.ravel(); nrm = np.sqrt(tx * tx + ty * ty)
+        flat = nrm < 1e-6; nrm = np.maximum(nrm, 1e-8); tx = tx / nrm; ty = ty / nrm
+        tx[flat] = 1.0; ty[flat] = 0.0
+    cx = coords[:, 0]; cy = coords[:, 1]; nx = ty; ny = -tx
+    u_t = cx * tx + cy * ty; u_n = cx * nx + cy * ny; tp = 2.0 * np.pi
+    feats = []
+    for k in range(int(n_freqs)):
+        a_f = float(fa) * (2.0 ** k); c_f = float(fc) * (2.0 ** k)
+        feats += [np.sin(tp * a_f * u_t), np.cos(tp * a_f * u_t), np.sin(tp * c_f * u_n), np.cos(tp * c_f * u_n)]
+    return np.stack(feats, axis=-1).astype(np.float32)
+
+
+# --- #224 Wave E: decode-consistent analytic-lane RENDER-BAND (FREE rasterizer, rule 118) ------------
+# The lane MANIFOLD COORDS (per-pair LaneLine coeffs) are the COUNTED 5th block; these fns REGENERATE
+# the (H,W) coverage + composite the band over the witness render for FREE (0 archive bytes) -- op-for-
+# op mirrors of tac.boundary_math.{lane_sdf_component,analytic_lane_render_band} + composite_band_on_render.
+LANE_MAGIC = b"LBND1\x00"
+
+
+def _lane_parse(blob):
+    # bit-exact inverse of analytic_lane_render_band.serialize_lane_band. Returns (pairs_lines, header);
+    # each line = (centerline f64[], halfwidth f64[], dash_period, dash_phase, dash_duty, fwd0, fwd1).
+    assert blob[:len(LANE_MAGIC)] == LANE_MAGIC, "bad lane-band magic"
+    off = len(LANE_MAGIC); (hlen,) = struct.unpack_from("<I", blob, off); off += 4
+    hdr = json.loads(blob[off:off + hlen].decode("utf-8")); off += hlen
+    vals = np.frombuffer(blob[off:], dtype=np.float64)
+    pairs = []; vi = 0
+    for line_metas in hdr["pairs"]:
+        lines = []
+        for meta in line_metas:
+            nc = int(meta["nc"]); nh = int(meta["nh"]); hd = bool(meta["has_dash"])
+            cc = np.asarray(vals[vi:vi + nc], np.float64); vi += nc
+            hc = np.asarray(vals[vi:vi + nh], np.float64); vi += nh
+            dp = dph = 0.0; dd = 0.5
+            if hd:
+                dp = float(vals[vi]); dph = float(vals[vi + 1]); dd = float(vals[vi + 2]); vi += 3
+            fr0 = float(vals[vi]); fr1 = float(vals[vi + 1]); vi += 2
+            lines.append((cc, hc, dp, dph, dd, fr0, fr1))
+        pairs.append(lines)
+    if vi != len(vals):  # #402 EXACT CONSUMPTION: trailing lane-coeff float64 words = format mismatch.
+        raise ValueError("LBND1 lane block has %d unconsumed float64 word(s)" % (len(vals) - vi))
+    return pairs, hdr
+
+
+# Wave-F: LBND2 optimal RD parse -- bit-exact inverse of analytic_lane_render_band.
+# serialize_lane_band_rd. PURE numpy/struct/json (NO constriction/mlx dep): quantize ->
+# temporal-delta -> zigzag-uint32 stream + brotli (outer) is the entropy backend. Returns
+# the SAME (cc, hc, dp, dph, dd, fr0, fr1) tuple format _lane_coverage consumes.
+LANE_MAGIC_RD = b"LBND2\x00"
+_D_SLOT_RD = 11
+
+
+def _lane_parse_rd(blob):
+    assert blob[:len(LANE_MAGIC_RD)] == LANE_MAGIC_RD, "bad LBND2 magic"
+    off = len(LANE_MAGIC_RD); (hlen,) = struct.unpack_from("<I", blob, off); off += 4
+    hdr = json.loads(blob[off:off + hlen].decode("utf-8")); off += hlen
+    (plen,) = struct.unpack_from("<I", blob, off); off += 4
+    pbytes = blob[off:off + plen]; off += plen
+    rd = hdr["rd"]; K = int(rd["K"]); P = int(rd["n_pairs"]); ds = int(rd["d_slot"])
+    steps = np.asarray(rd["base_steps"], np.float64); D = K * ds
+    pairs = []
+    if K:
+        presence = np.unpackbits(np.frombuffer(pbytes, dtype=np.uint8))[:P * K].reshape(P, K).astype(bool)
+        zz = np.frombuffer(blob[off:], dtype=np.uint32).reshape(P, D).astype(np.int64)
+        dq = (zz >> 1) ^ -(zz & 1)                     # zigzag -> signed int64
+        Q = np.cumsum(dq, axis=0)                      # undo temporal delta (row0=seed)
+        M = Q.astype(np.float64) * np.tile(steps, K)   # dequant (float64, bit-exact vs module)
+        for p in range(P):
+            lines = []
+            for slot in range(K):
+                if presence[p, slot]:
+                    v = M[p, slot * ds:(slot + 1) * ds]
+                    lines.append((np.asarray(v[0:4], np.float64), np.asarray(v[4:6], np.float64),
+                                  float(v[6]), float(v[7]), float(v[8]), float(v[9]), float(v[10])))
+            pairs.append(lines)
+    else:
+        pairs = [[] for _ in range(P)]
+    return pairs, hdr
+
+
+def _lane_parse_any(blob):
+    # magic dispatch: LBND2 (Wave-F RD) else LBND1 (Wave-E naive).
+    if blob[:len(LANE_MAGIC_RD)] == LANE_MAGIC_RD:
+        return _lane_parse_rd(blob)
+    return _lane_parse(blob)
+
+
+def _lane_coverage(lines, rh, rw, hdr):
+    # AA-SDF range-dependent coverage raster (float64 -> float32), mirror of
+    # rasterize_lane_coverage_range_dependent + _line_row_params + _forward_of_rows. Returns (rh,rw).
+    g = hdr["geom"]; cam_h = float(g["cam_h"]); fx = float(g["fx"]); fy = float(g["fy"])
+    v_h = float(hdr["v_h"]); soft = max(float(hdr["softness"]), 1e-6)
+    dash_gate = bool(hdr["dash_gate"]); dfm = float(hdr["dash_forward_max_m"])
+    cxx = float(rw / 2.0) if hdr.get("cx") is None else float(hdr["cx"])
+    cov = np.zeros((rh, rw), np.float32)
+    if not lines:
+        return cov
+    rows = np.arange(rh, dtype=np.float64); below = rows > (v_h + 1.0)
+    if not below.any():
+        return cov
+    vr = rows[below]; col = np.arange(rw, dtype=np.float64)[None, :]
+    forward = cam_h * fy / np.maximum(vr - v_h, 1e-3)
+    acc = np.zeros((int(below.sum()), rw), np.float64)
+    for (cc, hc, dp, dph, dd, fr0, fr1) in lines:
+        lateral = np.polyval(cc, forward)
+        u_c = cxx - lateral * fx / forward
+        hw = np.maximum(np.polyval(hc, vr), 0.5)
+        in_range = (forward >= fr0 - 1.0) & (forward <= fr1 + 5.0)
+        on = np.ones_like(vr, bool)
+        if dash_gate and dp > 0.0:
+            near = forward < dfm
+            phase = np.mod(forward - dph, dp) / dp
+            on = np.where(near, phase < dd, True)
+        gate = (on & in_range).astype(np.float64)
+        s = hw[:, None] - np.abs(col - u_c[:, None])
+        acc = np.maximum(acc, np.clip(s / soft + 0.5, 0.0, 1.0) * gate[:, None])
+    cov[below] = acc.astype(np.float32)
+    return cov
+
+
+def _lane_uncert(margin, tau, eps):
+    # mirror of analytic_lane_render_band.witness_uncertainty_mask.
+    return np.clip((float(tau) - np.asarray(margin, np.float32)) / max(float(eps), 1e-6) + 0.5, 0.0, 1.0).astype(np.float32)
+
+
+def _lane_composite(rgb, lane_rgb, cov_flat, margin, hdr):
+    # comp = rgb*(1-a) + lane_rgb*a ; a = (cov*weight)*u_mask  (mirror composite_band_on_render/band_alpha).
+    a = np.asarray(cov_flat, np.float32) * np.float32(hdr["weight"])
+    um = hdr.get("u_mask")
+    if um is not None and margin is not None:
+        a = a * _lane_uncert(margin, um["tau"], um["eps"])
+    a = a[:, None]
+    return (np.asarray(rgb, np.float32) * (1.0 - a) + np.asarray(lane_rgb, np.float32) * a).astype(np.float32)
+
+
+def _R(rgb, rh, rw, ch, cw):
+    x = torch.from_numpy(np.ascontiguousarray(rgb.reshape(rh, rw, 3))).permute(2, 0, 1)[None].float()
+    with torch.inference_mode():
+        up = torch.nn.functional.interpolate(x, size=(ch, cw), mode="bicubic", align_corners=False)
+        up = torch.clamp(torch.round(up), 0.0, 255.0)
+    return up[0].permute(1, 2, 0).contiguous().numpy().astype(np.uint8)
+
+
+# --- #205 warp-real-luma pose carrier (FREE inverse-warp; the keyframe luma + H are COUNTED) --------
+# frame0 = warp(stored keyframe, stored per-pair homography H) at native res (seg-free: SegNet reads
+# only frame1). VERBATIM op-for-op mirror of the tool-side _pcar_warp_frame0_from_H / pose_carrier_frame0
+# (== tac.boundary_math.warp_real_luma_frame0.warp_frame0_uint8_numpy when H=homography_from_xi_numpy(xi)),
+# so the shipped inflate == the numpy oracle bit-for-bit (proven by the bit-exact gate on frame0 too).
+# --- #257 store-nothing ξ arithmetic decoder + DERIVE-H (rule-118 FREE: 0 archive bytes). VERBATIM
+# op-for-op copies of tac.lossless.range_coder.decode_static_symbols + tac.boundary_math.xi_pose_coder
+# (parse_xi_payload + homographies_from_xi) -> the shipped inflate derives the SAME H the tool oracle
+# derives, bit-for-bit (bit-exact-gate proven). The 43,200 B redundant stored fp64 H is GONE.
+_ST_BITS = 32; _FULL = 1 << _ST_BITS; _HALF = _FULL >> 1; _QTR = _HALF >> 1; _TQTR = _QTR * 3
+_XI_FX = 910.0; _XI_CX = 582.0; _XI_CY = 437.0; _XI_D = 1.22; _XI_EPS = 1e-6
+
+
+def _ar_decode(encoded, count, freqs):
+    # op-for-op range_coder.decode_static_symbols (static-frequency arithmetic decode, pure stdlib).
+    if count <= 0:
+        return []
+    cum = [0]
+    for f in freqs:
+        cum.append(cum[-1] + int(f))
+    total = cum[-1]
+    nby = len(encoded); pos = [0, 0]  # [byte_index, bit_index]
+    def _bit():
+        if pos[0] >= nby:
+            return 0
+        b = (encoded[pos[0]] >> (7 - pos[1])) & 1
+        pos[1] += 1
+        if pos[1] == 8:
+            pos[1] = 0; pos[0] += 1
+        return b
+    low = 0; high = _FULL - 1; code = 0
+    for _ in range(_ST_BITS):
+        code = (code << 1) | _bit()
+    out = []
+    for _ in range(count):
+        rng = high - low + 1
+        scaled = ((code - low + 1) * total - 1) // rng
+        sym = _bisect_right(cum, scaled) - 1
+        out.append(sym)
+        high = low + (rng * cum[sym + 1] // total) - 1
+        low = low + (rng * cum[sym] // total)
+        while True:
+            if high < _HALF:
+                pass
+            elif low >= _HALF:
+                low -= _HALF; high -= _HALF; code -= _HALF
+            elif low >= _QTR and high < _TQTR:
+                low -= _QTR; high -= _QTR; code -= _QTR
+            else:
+                break
+            low <<= 1; high = (high << 1) | 1; code = (code << 1) | _bit()
+    return out
+
+
+def _xip_parse(blob):
+    # op-for-op xi_pose_coder.parse_xi_payload -> (q int16 (P,D), scales fp32 (D,)).
+    assert blob[:4] == XIP_MAGIC, "bad xi-payload magic"
+    off = 4
+    cid, P, D = struct.unpack_from("<BHB", blob, off); off += 4
+    scales = np.frombuffer(blob[off:off + D * 4], dtype=np.float32).copy(); off += D * 4
+    if cid == 0:
+        q = np.frombuffer(blob[off:off + P * D * 2], dtype=np.int16).reshape(P, D).copy()
+        return q, scales
+    cols = []
+    for _k in range(D):
+        seed, lo, hi = struct.unpack_from("<iii", blob, off); off += 12
+        (mlen,) = struct.unpack_from("<I", blob, off); off += 4
+        counts = np.frombuffer(brotli.decompress(blob[off:off + mlen]), dtype=np.uint32) if mlen else None
+        off += mlen
+        (slen,) = struct.unpack_from("<I", blob, off); off += 4
+        stream = blob[off:off + slen]
+        if len(stream) != slen:  # #402: xi arithmetic stream short -> fail closed.
+            raise ValueError("XIP2 stream short: need %d B got %d" % (slen, len(stream)))
+        off += slen
+        col = np.empty(P, dtype=np.int64)
+        if P:
+            col[0] = seed
+        if P > 1:
+            if hi > lo and counts is not None:
+                d = np.asarray(_ar_decode(stream, P - 1, counts.tolist()), dtype=np.int64) + lo
+            else:
+                d = np.full(P - 1, lo, dtype=np.int64)
+            col[1:] = seed + np.cumsum(d)
+        cols.append(col)
+    if off != len(blob):  # #402 EXACT CONSUMPTION of the xi payload block.
+        raise ValueError("XIP2 payload has %d unconsumed trailing byte(s)" % (len(blob) - off))
+    return np.stack(cols, axis=1).astype(np.int16), scales
+
+
+def _xip_H_from_xi(xi, pitch):
+    # op-for-op xi_pose_coder.homographies_from_xi (exp_se3 -> plane-induced homography, batched).
+    xi = np.asarray(xi, np.float64); rho = xi[:, :3]; om = xi[:, 3:]
+    a, b, c = om[:, 0], om[:, 1], om[:, 2]; z = np.zeros_like(a)
+    Ks = np.stack([np.stack([z, -c, b], -1), np.stack([c, z, -a], -1), np.stack([-b, a, z], -1)], -2)
+    Ks2 = Ks @ Ks
+    th2 = (om * om).sum(-1); th = np.sqrt(np.maximum(th2, 0.0))
+    sm = th < _XI_EPS
+    ths = np.maximum(th, _XI_EPS); th2s = np.maximum(th2, _XI_EPS * _XI_EPS); th3s = np.maximum(th ** 3, _XI_EPS ** 3)
+    A = np.where(sm, 1.0 - th2 / 6.0 + th2 * th2 / 120.0, np.sin(th) / ths)
+    B = np.where(sm, 0.5 - th2 / 24.0 + th2 * th2 / 720.0, (1.0 - np.cos(th)) / th2s)
+    C = np.where(sm, 1.0 / 6.0 - th2 / 120.0 + th2 * th2 / 5040.0, (th - np.sin(th)) / th3s)
+    eye = np.broadcast_to(np.eye(3, dtype=np.float64), Ks.shape).copy()
+    R = eye + A[..., None, None] * Ks + B[..., None, None] * Ks2
+    V = eye + B[..., None, None] * Ks + C[..., None, None] * Ks2
+    t = (V @ rho[..., None])[..., 0]
+    K = np.array([[_XI_FX, 0.0, _XI_CX], [0.0, _XI_FX, _XI_CY], [0.0, 0.0, 1.0]], np.float64)
+    Kinv = np.linalg.inv(K)
+    n = np.array([0.0, -np.cos(float(pitch)), -np.sin(float(pitch))], np.float64)
+    M = R - (t[..., :, None] * n[None, None, :]) / _XI_D
+    return K[None] @ M @ Kinv[None]
+
+
+def _pcar_parse(blob):
+    assert blob[:len(PCAR_MAGIC)] == PCAR_MAGIC, "bad pose-carrier magic"
+    off = len(PCAR_MAGIC)
+    (hlen,) = struct.unpack_from("<I", blob, off); off += 4
+    hdr = json.loads(blob[off:off + hlen].decode("utf-8")); off += hlen
+    P = int(hdr["n_pairs"])
+    if int(hdr.get("pcar_store_nothing_v", 0)) == 2:
+        # #257 store-nothing v2: decode ξ -> DERIVE H FREE (rule-118). No stored H, no kf_of_pair.
+        (xlen,) = struct.unpack_from("<I", blob, off); off += 4
+        q, scales = _xip_parse(blob[off:off + xlen]); off += xlen
+        # #402: the v2 serializer writes a trailing u32 n_kf(=0). CONSUME + validate it (the tool-side
+        # parse_pose_carrier already did; the shipped inflate previously ignored these 4 trailing bytes).
+        (n_kf,) = struct.unpack_from("<I", blob, off); off += 4
+        if n_kf != 0:
+            raise ValueError("PCAR store-nothing v2 must have n_kf=0; got %d (NO-FAKE)" % n_kf)
+        xi = q.astype(np.float64) * scales.astype(np.float64)
+        H = _xip_H_from_xi(xi, float(hdr["pitch"]))
+        if off != len(blob):  # #402 EXACT CONSUMPTION of the pose-carrier block.
+            raise ValueError("PCAR v2 block has %d unconsumed trailing byte(s)" % (len(blob) - off))
+        return {"hdr": hdr, "H": H, "keyframes": [], "kf_of_pair": [0] * P}
+    H = np.frombuffer(blob[off:off + P * 9 * 8], dtype=np.float64).reshape(P, 3, 3).copy(); off += P * 9 * 8
+    off += P * 6 * 2  # xi (fp16, provenance-only; the legacy decode uses the stored H)
+    (n_kf,) = struct.unpack_from("<I", blob, off); off += 4
+    kh, kw = int(hdr["kf_store_h"]), int(hdr["kf_store_w"])
+    kfs = []
+    for _ in range(n_kf):
+        (blen,) = struct.unpack_from("<I", blob, off); off += 4
+        raw = brotli.decompress(blob[off:off + blen]); off += blen
+        kfs.append(np.frombuffer(raw, dtype=np.uint8).reshape(kh, kw, 3).copy())
+    if off != len(blob):  # #402 EXACT CONSUMPTION of the legacy warp-real-luma pose-carrier block.
+        raise ValueError("PCAR legacy block has %d unconsumed trailing byte(s)" % (len(blob) - off))
+    return {"hdr": hdr, "H": H, "keyframes": kfs, "kf_of_pair": hdr["kf_of_pair"]}
+
+
+def _pcar_upsample(kf, ch, cw):
+    if kf.shape[0] == ch and kf.shape[1] == cw:
+        return np.asarray(kf, dtype=np.float64)
+    x = torch.from_numpy(np.ascontiguousarray(kf)).permute(2, 0, 1)[None].float()
+    with torch.inference_mode():
+        up = torch.nn.functional.interpolate(x, size=(ch, cw), mode="bilinear", align_corners=False)
+    return up[0].permute(1, 2, 0).contiguous().numpy().astype(np.float64)
+
+
+def _pcar_warp_f0(src, H, ch, cw):
+    src = np.asarray(src, dtype=np.float64)
+    Hh, Ww, C = int(ch), int(cw), src.shape[2]
+    flat = src.reshape(-1, C)
+    us, vs = np.meshgrid(np.arange(Ww), np.arange(Hh))
+    grid = np.stack([us.ravel(), vs.ravel(), np.ones(Hh * Ww)], 0).astype(np.float64)
+    with np.errstate(divide="ignore", invalid="ignore", over="ignore"):
+        Hinv = np.linalg.inv(np.asarray(H, np.float64))
+        src_h = Hinv @ grid
+        z = src_h[2]; su = src_h[0] / z; sv = src_h[1] / z
+    valid = (np.isfinite(su) & np.isfinite(sv) & (z > 0)
+             & (su >= 0) & (su <= Ww - 1) & (sv >= 0) & (sv <= Hh - 1))
+    su_c = np.clip(su, 0.0, Ww - 1); sv_c = np.clip(sv, 0.0, Hh - 1)
+    x0 = np.floor(su_c).astype(np.int64); y0 = np.floor(sv_c).astype(np.int64)
+    x1 = np.minimum(x0 + 1, Ww - 1); y1 = np.minimum(y0 + 1, Hh - 1)
+    wx = (su_c - x0)[:, None]; wy = (sv_c - y0)[:, None]
+    Ia = flat[y0 * Ww + x0]; Ib = flat[y0 * Ww + x1]
+    Ic = flat[y1 * Ww + x0]; Id = flat[y1 * Ww + x1]
+    top = Ia * (1.0 - wx) + Ib * wx; bot = Ic * (1.0 - wx) + Id * wx
+    sampled = top * (1.0 - wy) + bot * wy
+    out = np.where(valid[:, None], sampled, flat).reshape(Hh, Ww, C)
+    return np.clip(np.round(out), 0.0, 255.0).astype(np.uint8)
+
+
+def _pcar_frame0(pc, pi, ch, cw):
+    kf = pc["keyframes"][int(pc["kf_of_pair"][pi])]
+    src = _pcar_upsample(kf, ch, cw)
+    return _pcar_warp_f0(src, pc["H"][pi], ch, cw)
+
+
+def _blind_retained_axis(n_in, n_out):
+    # Exact align_corners=False bilinear support geometry.  This derives only which input
+    # coordinates are read; no video-derived values are embedded in receiver code.
+    used = np.zeros(int(n_in), dtype=bool)
+    for oi in range(int(n_out)):
+        source = (oi + 0.5) * float(n_in) / float(n_out) - 0.5
+        lo = max(0, min(int(n_in) - 1, int(np.floor(source))))
+        hi = max(0, min(int(n_in) - 1, lo + 1))
+        used[lo] = True
+        used[hi] = True
+    return np.where(used)[0]
+
+
+def _blind_coordinate_fill(frame):
+    # Op twin of tac.through_r.blind_coordinate.apply_blind_fill(..., fill=None): retain the
+    # scorer-visible 768x1024 product grid and fill the blind complement by separable interpolation.
+    a = np.asarray(frame)
+    ch, cw = a.shape[:2]
+    rr = _blind_retained_axis(ch, 384)
+    cc = _blind_retained_axis(cw, 512)
+    sub = a[np.ix_(rr, cc)].astype(np.float64)
+    full_w = np.empty((len(rr), cw, 3), dtype=np.float64)
+    all_cols = np.arange(cw)
+    for k in range(3):
+        for ri in range(len(rr)):
+            full_w[ri, :, k] = np.interp(all_cols, cc, sub[ri, :, k])
+    out = np.empty((ch, cw, 3), dtype=np.float64)
+    all_rows = np.arange(ch)
+    for k in range(3):
+        for ci in range(cw):
+            out[:, ci, k] = np.interp(all_rows, rr, full_w[:, ci, k])
+    return np.clip(np.round(out), 0, 255).astype(np.uint8)
+
+
+def _maybe_blind_coordinate_fill(frame, manifest):
+    if manifest.get("blind_coordinate_fill") is None:
+        return np.asarray(frame)
+    return _blind_coordinate_fill(frame)
+
+
+_G = {}
+
+
+def _setup(src):
+    # per-worker (spawn) / inherited-then-reset (fork) setup: dequant params + regen the FREE curvelet
+    # bank + coords. Deterministic + identical across workers -> bit-exact. ~150ms, amortized over the
+    # worker's pairs. Same op order as the serial main -> identical output.
+    m, base_b, code_b, _pose, lane_b, pcar_b = _read_blob(src)
+    (params := _decode_base_deepcabac(base_b, m)) if m.get("payload_codec") == "deepcabac_v1_base" else (params := _dequant(brotli.decompress(base_b), m["base_param_order"], m["base_shapes"], m["base_scales"], m.get("xcodec")))
+    code = _decode_code_q(brotli.decompress(code_b), m["code_shape"], m.get("xcodec")).astype(np.float32) * float(m["code_scale"])
+    rh, rw, ch, cw = int(m["render_h"]), int(m["render_w"]), int(m["camera_h"]), int(m["camera_w"])
+    coords = _coords(rh, rw)
+    curv = _basis_feats(coords, m)
+    P = {k: np.asarray(v, _FDT) for k, v in params.items()}  # convert once; _FDT=float64 default (bit-identical), float32 = FEED-ek opt-in fast mode
+    # #224 Wave E: parse the OPTIONAL lane render-band (per-pair coords + hdr) -> per-pair coverage
+    # rasters (FREE regen; computed ONCE per pair, cached). Absent -> lane_pairs=None -> band skipped.
+    lane_pairs = lane_hdr = None
+    if m.get("lane_render_band") is not None and lane_b is not None:
+        lane_pairs, lane_hdr = _lane_parse_any(brotli.decompress(lane_b))  # Wave-F: LBND1/LBND2 dispatch
+    # #205 warp-real-luma pose carrier: parse the OPTIONAL keyframe luma + per-pair H (frame0 warp).
+    pcar = None
+    if m.get("pose_carrier") is not None and pcar_b is not None:
+        pcar = _pcar_parse(pcar_b)
+    _G.update(m=m, code=code, coords=coords, curv=curv, P=P, rh=rh, rw=rw, ch=ch, cw=cw,
+              framebytes=ch * cw * 3, dst=None, lane_pairs=lane_pairs, lane_hdr=lane_hdr, pcar=pcar)
+
+
+def _render_pair(pi):
+    # op-for-op the serial per-pair body; each pair is INDEPENDENT so parallel == serial (bit-identical).
+    # Writes the pair's 2 frames to disjoint offsets of the preallocated .raw (POSIX-safe concurrent write).
+    m, code, coords, curv, P = _G["m"], _G["code"], _G["coords"], _G["curv"], _G["P"]
+    rh, rw, ch, cw = _G["rh"], _G["rw"], _G["ch"], _G["cw"]
+    _literal_program = None
+    if m.get("basis_family") == "literal_polar_curvelet":
+        _literal_program = BasisProgramConfig.from_dict(m["basis_program"])
+    if _literal_program is not None and _literal_program.native_orientation_enabled:
+        _scale_ids, _angles = orientation_metadata_from_atom_specs(ATOM_SPECS)
+
+        def _decode_native(_features):
+            _h0_native = _in_proj_h0(P, _features, m)
+            _phi_native, _ = _outputs_from_h0(
+                P, _h0_native, code[2 * pi + 1], m, False, feats=_features
+            )
+            return _phi_native.argmax(-1).reshape(rh, rw).astype(np.int64)
+
+        feats, _native_gates, _native_receipt = native_orientation_fixed_point_numpy(
+            curv,
+            _decode_native,
+            _scale_ids,
+            _angles,
+            kappa=_literal_program.native_orientation_kappa,
+            iteration_cap=_literal_program.fixed_point_iteration_cap,
+        )
+        h0 = _in_proj_h0(P, feats, m)
+    elif m["self_orient"]:
+        # fixed-point: dir feats from the decoder's OWN frame1 argmax (GT-free, 0 bytes).
+        dirf = np.zeros((curv.shape[0], 4 * int(m["n_dir_freqs"])), np.float32)
+        prev_am = None; _h0_conv = None  # FEED-ej: cache the converged iter's h0 (== the post-loop h0)
+        for _ in range(int(m["so_iters"])):
+            feats = np.concatenate([curv, dirf], axis=-1)
+            _h0_it = _in_proj_h0(P, feats, m)
+            phi, _ = _outputs_from_h0(P, _h0_it, code[2 * pi + 1], m, False, feats=feats)
+            am = phi.argmax(-1).reshape(rh, rw).astype(np.int64)
+            if prev_am is not None and np.array_equal(am, prev_am):
+                _h0_conv = _h0_it  # converged: feats frozen from here -> this h0 IS the final h0 (bit-exact reuse)
+                break  # argmax fixed point: dirf would not change -> remaining iters are no-ops
+            dirf = _dir_feats(coords, am, m["n_dir_freqs"], m["so_freq_along"], m["so_freq_across"], m["so_tau"])
+            prev_am = am
+        feats = np.concatenate([curv, dirf], axis=-1)
+        # FEED-ej: on the early-break `feats` is unchanged from the converged iter -> reuse its h0
+        # (bit-exact: identical feats -> identical _in_proj_h0). No convergence -> recompute (as before).
+        h0 = _h0_conv if _h0_conv is not None else _in_proj_h0(P, feats, m)
+    else:
+        feats = curv
+        h0 = _in_proj_h0(P, feats, m)  # shared across the pair's 2 frames (identical feats)
+    lane_pairs, lane_hdr = _G.get("lane_pairs"), _G.get("lane_hdr")
+    band = lane_pairs is not None and pi < len(lane_pairs)
+    pcar = _G.get("pcar")
+    cov_flat = None
+    if band:
+        # coverage depends ONLY on the pair's lines (per-pair) -> rasterize ONCE, share across f0/f1.
+        cov_flat = _lane_coverage(lane_pairs[pi], rh, rw, lane_hdr).reshape(-1)
+    frames = []
+    for fk in range(2):
+        # #205: frame0 (fk==0) is the pose carrier (seg-free: SegNet reads only frame1). frame1
+        # (fk==1) stays the witness render (d_seg). Absent pose carrier -> frame0 is the INR render.
+        #  * warp_real_luma: frame0 = warp(stored keyframe, stored per-pair H).
+        #  * store_nothing:  frame0 = warp(the witness's OWN frame0 INR render, stored per-pair H)
+        #                    -- NO stored keyframe (rule-118: the render is FREE, only xi/H COUNTED).
+        if fk == 0 and pcar is not None and pi < int(pcar["hdr"]["n_pairs"]):
+            if pcar["hdr"].get("pose_carrier_mode") == "store_nothing":
+                _phi0, rgb0 = _outputs_from_h0(P, h0, code[2 * pi + 0], m, True, feats=feats)
+                src0 = _R(rgb0, rh, rw, ch, cw).astype(np.float64)  # witness frame0 render, camera-native
+                frame = _pcar_warp_f0(src0, pcar["H"][pi], ch, cw)
+            else:
+                frame = _pcar_frame0(pcar, pi, ch, cw)
+            frames.append(_maybe_blind_coordinate_fill(frame, m).tobytes())
+            continue
+        if band:
+            _phi, rgb, lane_rgb, margin = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True, True, feats=feats)
+            rgb = _lane_composite(rgb, lane_rgb, cov_flat, margin, lane_hdr)
+        else:
+            _phi, rgb = _outputs_from_h0(P, h0, code[2 * pi + fk], m, True, feats=feats)
+        frame = _R(rgb, rh, rw, ch, cw)
+        frames.append(_maybe_blind_coordinate_fill(frame, m).tobytes())
+    fb = _G["framebytes"]
+    with open(_G["dst"], "r+b") as f:
+        f.seek(pi * 2 * fb); f.write(b"".join(frames))
+    return pi
+
+
+def _init_worker(src, dst):
+    _setup(src); _G["dst"] = dst
+
+
+def main():
+    src, dst = sys.argv[1], sys.argv[2]
+    _setup(src)  # main process: get n_pairs + dims (workers re-setup via _init_worker)
+    m = _G["m"]; n_pairs = int(m["n_pairs"]); ch, cw = _G["ch"], _G["cw"]
+    _cap = int(os.environ.get("INFLATE_MAX_PAIRS", "0"))  # 0 => all pairs (contest default); >0 = debug/CI bounded inflate
+    if _cap > 0:
+        n_pairs = min(n_pairs, _cap)
+    # #402 ATOMIC WRITE: workers write to a ``.partial`` sibling; only after the FULL expected byte
+    # count is verified do we os.replace() it onto ``dst``. A crash/OOM before the rename leaves the
+    # ``.partial`` (never a full-size, scoreable-LOOKING ``dst``) -> the evaluator cannot score a
+    # truncated output (advisory PR128 §8.2: "output writes are non-atomic and non-resumable").
+    tmp = dst + ".partial"
+    expected_raw = 2 * n_pairs * _G["framebytes"]
+    with open(tmp, "wb") as f:  # preallocate the full .raw so workers write disjoint offsets
+        f.truncate(expected_raw)
+    nworkers = max(1, min(n_pairs, int(os.environ.get("INFLATE_WORKERS", "0")) or (os.cpu_count() or 1)))
+    if nworkers == 1:  # serial fallback (bit-identical) -- e.g. INFLATE_WORKERS=1 for debugging
+        _G["dst"] = tmp
+        for pi in range(n_pairs):
+            _render_pair(pi)
+    else:
+        methods = mp.get_all_start_methods()
+        ctx = mp.get_context("fork" if "fork" in methods else "spawn")  # Linux fork / macOS spawn
+        with ctx.Pool(nworkers, initializer=_init_worker, initargs=(src, tmp)) as pool:
+            for _ in pool.imap_unordered(_render_pair, range(n_pairs), chunksize=1):
+                pass
+    # #402 FINAL RAW ASSERTION: the output MUST be exactly the expected byte count BEFORE it is
+    # promoted to ``dst`` (== before scoring). A short raw = evaluator truncation = NO-FAKE failure.
+    actual_raw = os.path.getsize(tmp)
+    if actual_raw != expected_raw:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise SystemExit("inflate output SHORT: %d B != expected %d B (%d frames @ %dx%dx3) -- refusing "
+                         "to promote a truncated .raw to a scoreable path (NO-FAKE)."
+                         % (actual_raw, expected_raw, 2 * n_pairs, ch, cw))
+    os.replace(tmp, dst)  # atomic rename onto the scoreable path (POSIX same-filesystem guarantee).
+    print("inflated %d frames (%d pairs) -> %s [%dx%dx%dx3 uint8] (%d workers)" % (2 * n_pairs, n_pairs, dst, 2 * n_pairs, ch, cw, nworkers), flush=True)
+
+
+if __name__ == "__main__":
+    main()

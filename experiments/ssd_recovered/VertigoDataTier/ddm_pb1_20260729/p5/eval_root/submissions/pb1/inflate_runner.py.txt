@@ -1,0 +1,90 @@
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path, PurePosixPath
+
+import brotli
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).parent))
+from ddm_r7_token_coder import decode_token_codes
+from ddm_tr1_runtime import (
+    _encode_tokens,
+    build_packet,
+    parse_packet,
+    render_frame1_camera_uint8,
+)
+from terminal_pose_gn import (
+    parse_terminal_pose_packet,
+    realize_terminal_pose_pair,
+)
+
+RANK = 6
+
+
+def render_basis(shape):
+    height, width, channels = shape
+    x = np.cos(2.0 * np.pi * (np.arange(width, dtype=np.float64) + 0.5) / width)
+    y = np.cos(2.0 * np.pi * (np.arange(height, dtype=np.float64) + 0.5) / height)
+    fields = np.zeros((RANK, height, width, channels), dtype=np.float32)
+    for channel in range(3):
+        fields[channel, :, :, channel] = x[None, :]
+        fields[channel + 3, :, :, channel] = y[:, None]
+    return fields
+
+
+def main() -> None:
+    archive_dir, output_dir, names_file = map(Path, sys.argv[1:4])
+    names = [row.strip() for row in
+             names_file.read_text().splitlines() if row.strip()]
+    if names != ["0.mkv"]:
+        raise SystemExit("this receiver serves exactly the custodied 0.mkv")
+    manifest = json.loads((archive_dir / "manifest.json").read_text())
+
+    codes = decode_token_codes(
+        (archive_dir / "state/tokens.dr7t").read_bytes())
+    token_payload = _encode_tokens(np.ascontiguousarray(codes, dtype=np.uint8))
+    packet_bytes = build_packet(manifest["tr1_metadata"], {
+        "tokens": token_payload,
+        "lotto_renderer": (archive_dir / "state/renderer.sec").read_bytes(),
+        "selector": (archive_dir / "state/selector.sec").read_bytes(),
+        "pose_stub": (archive_dir / "state/pose_stub.sec").read_bytes(),
+    })
+    packet = parse_packet(packet_bytes)
+
+    pose_raw = (archive_dir / "state/pose.tpgn").read_bytes()
+    if manifest.get("pose_coding") == "brotli":
+        pose_raw = brotli.decompress(pose_raw)
+    pose = parse_terminal_pose_packet(pose_raw)
+    policy = manifest["frame0_policy"]
+    if policy not in ("zeros", "copy"):
+        raise SystemExit("unknown frame0 policy")
+    n_pairs = int(packet.selector["num_pairs"])
+    if pose.coefficients.shape != (n_pairs, RANK):
+        raise SystemExit("pose coefficient shape differs")
+
+    name = PurePosixPath(names[0])
+    if name.is_absolute() or ".." in name.parts:
+        raise SystemExit("unsafe video name")
+    target = output_dir / name.with_suffix(".raw")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    basis = None
+    with open(target, "wb") as sink:
+        for i in range(n_pairs):
+            f1 = render_frame1_camera_uint8(packet, i)
+            if basis is None:
+                basis = render_basis(f1.shape)
+            f0_base = np.zeros_like(f1) if policy == "zeros" else f1.copy()
+            pair = realize_terminal_pose_pair(
+                np.stack([f0_base, f1], axis=0),
+                basis,
+                pose.coefficients[i],
+                amplitude_q8=pose.amplitude_q8,
+            )
+            sink.write(pair[0].tobytes())
+            sink.write(pair[1].tobytes())
+
+
+if __name__ == "__main__":
+    main()

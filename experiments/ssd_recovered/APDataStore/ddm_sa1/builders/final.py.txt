@@ -1,0 +1,80 @@
+import sys, json, zipfile, hashlib, subprocess
+from pathlib import Path
+from collections import OrderedDict
+import numpy as np, torch
+RT="/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime"
+sys.path.insert(0, RT); sys.path.insert(0, RT+"/cpr1"); sys.path.insert(0,"/Users/adpena/Projects/pact/experiments")
+torch.set_num_threads(4); torch.set_grad_enabled(False)
+import runtime.residual_archive as ra
+import ddm_rx1_rate_representation_attack as rx1
+import ddm_sd1_semantic_rd_curve as sd1
+import ddm_sm3_semantic_representation as sm3
+import ddm_mp2_semantic_receiver as mp2
+import inflate as cpr1
+BASE=181161; BASE_S=0.15853325034789678; BYTE_S=25/37545489
+P=Path(RT)/"archive.zip"; outer=zipfile.ZipFile(P).read("p")
+H=rx1.RX1_HEADER; magic,ver,codec,tmode,res,hb,sb,cb=H.unpack_from(outer)
+o=H.size; hpac_s=outer[o:o+hb]; o+=hb; sem_s=outer[o:o+sb]; o+=sb; car_s=outer[o:o+cb]; o+=cb; tail=outer[o:]
+def br(v):
+    c=subprocess.run(["brotli","-q","11","-c"],input=v,capture_output=True,check=True).stdout
+    assert subprocess.run(["brotli","-d","-c"],input=c,capture_output=True,check=True).stdout==v
+    return c
+def build(body):
+    s=br(body); return rx1.deterministic_zip(rx1.pack_rx1_model(hpac_s,s,car_s,codec_id=codec,table_mode=tmode)+tail), len(s)
+TOK=Path("/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/parseback/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8")
+toks=np.memmap(TOK,dtype=np.uint8,mode="r").reshape(600,384,512)
+rng=np.random.default_rng(20260817); SAMPLE=np.sort(rng.choice(600,size=24,replace=False))
+parts=ra.read_residual_archive(P); recs=ra.decode_wans1(parts.semantic_blob)
+state=OrderedDict((r.schema.name, torch.from_numpy(np.ascontiguousarray(r.values,dtype=np.float32))) for r in recs)
+qn=sd1.quantized_names(state)
+def render(st):
+    m=cpr1.SemanticTokenRenderer(96); m.load_state_dict(st,strict=True); m.eval()
+    return np.stack([m(torch.from_numpy(np.array(toks[i])).long().unsqueeze(0),torch.tensor([int(i)]))[0].numpy() for i in SAMPLE])
+base=render(state)
+FILM=[f"blocks.{i}.film.weight" for i in range(4)]
+SETS={
+ "S1_top5_q3":            {**{n:3 for n in FILM+["frame_embed.weight"]}},
+ "S2_film23_q2_top3_q3":  {**{n:2 for n in ["blocks.2.film.weight","blocks.3.film.weight"]},**{n:3 for n in ["blocks.0.film.weight","blocks.1.film.weight","frame_embed.weight"]}},
+ "S3_mz2set_plus_film0":  {**{n:3 for n in sorted(sm3.SELECTED_MIXED_Q3_NAMES)+["blocks.0.film.weight"]}},
+ "C1_mz2_mixed_q3q4":     {n:3 for n in sm3.SELECTED_MIXED_Q3_NAMES},
+ "V0_all_q4_control":     {},
+}
+OUT=Path("/Volumes/APDataStore/pact/ddm_sa1/retained"); OUT.mkdir(parents=True,exist_ok=True)
+rows=[]
+for cid,over in SETS.items():
+    a={n:int(over.get(n,4)) for n in qn}
+    body,exp=sd1.pack_semantic_state(state,a,legacy_int4=False)
+    z,ps=build(body); d=OUT/cid; d.mkdir(exist_ok=True)
+    (d/"archive.zip").write_bytes(z); (d/"semantic.sd1m.bin").write_bytes(body)
+    rb=ra.read_residual_archive(d/"archive.zip"); assert rb.semantic_blob==body
+    for nm in ("hpac_blob","carrier_blob","token_stream","residual_payload"): assert getattr(rb,nm)==getattr(parts,nm)
+    rest=mp2.unpack_variant_semantic_or_none(rb.semantic_blob,state); assert rest is not None
+    dev=max(float((rest[k].float()-exp[k].float()).abs().max()) for k in state)
+    dd=np.abs(render(OrderedDict((k,exp[k].float()) for k in state))-base)
+    rows.append(dict(id=cid,family="SD1M",archive_bytes=len(z),delta_bytes=len(z)-BASE,packed_semantic=ps,
+      delta_S_rate=(len(z)-BASE)*BYTE_S,rgb_rms=float(np.sqrt((dd**2).mean())),rgb_max=float(dd.max()),
+      receiver_parseback="PASS",receiver_dev=dev,allocation={k:v for k,v in a.items() if v!=4},
+      archive_sha256=hashlib.sha256(z).hexdigest(),semantic_sha256=hashlib.sha256(body).hexdigest(),path=str(d)))
+for pct in (87,75,62,50,37,25,20,15,12,9,6,3,1):
+    body,exp,_=sm3.pack_prune_candidate(state,pct)
+    z,ps=build(body); cid=f"sm3r_keep{pct:02d}"; d=OUT/cid; d.mkdir(exist_ok=True)
+    (d/"archive.zip").write_bytes(z); (d/"semantic.sm3r.bin").write_bytes(body)
+    rb=ra.read_residual_archive(d/"archive.zip"); assert rb.semantic_blob==body
+    for nm in ("hpac_blob","carrier_blob","token_stream","residual_payload"): assert getattr(rb,nm)==getattr(parts,nm)
+    rest=mp2.unpack_variant_semantic_or_none(rb.semantic_blob,state); assert rest is not None
+    dev=max(float((rest[k].float()-exp[k].float()).abs().max()) for k in state)
+    dd=np.abs(render(OrderedDict((k,exp[k].float()) for k in state))-base)
+    rows.append(dict(id=cid,family="SM3R",archive_bytes=len(z),delta_bytes=len(z)-BASE,packed_semantic=ps,
+      delta_S_rate=(len(z)-BASE)*BYTE_S,rgb_rms=float(np.sqrt((dd**2).mean())),rgb_max=float(dd.max()),
+      receiver_parseback="PASS",receiver_dev=dev,keep_percent=pct,
+      archive_sha256=hashlib.sha256(z).hexdigest(),semantic_sha256=hashlib.sha256(body).hexdigest(),path=str(d)))
+rows.sort(key=lambda r:r["delta_bytes"])
+print(f"{'id':26s} {'fam':5s} {'archive':>8} {'dBytes':>7} {'dS_rate':>12} {'RGBrms':>8} {'RGBmax':>8} {'B/rms':>8} {'pb':>5}")
+for r in rows:
+    bpr = -r["delta_bytes"]/r["rgb_rms"] if r["rgb_rms"]>1e-9 else float('inf')
+    print(f"{r['id']:26s} {r['family']:5s} {r['archive_bytes']:>8} {r['delta_bytes']:>+7} {r['delta_S_rate']:>+12.5e} {r['rgb_rms']:>8.4f} {r['rgb_max']:>8.2f} {bpr:>8.0f} {r['receiver_parseback']:>5}")
+Path("/Volumes/APDataStore/pact/ddm_sa1/CANDIDATES.json").write_text(json.dumps(
+  {"base":{"archive_bytes":BASE,"archive_sha256":"35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956","S":BASE_S},
+   "render_probe":{"pairs":SAMPLE.tolist(),"n":24,"selection":"seeded RANDOM (rng 20260817), never a prefix","axis":"[macOS-CPU advisory renderer-field delta; NOT a scorer run]"},
+   "rows":rows},indent=2))
+print("\nwrote /Volumes/APDataStore/pact/ddm_sa1/CANDIDATES.json")

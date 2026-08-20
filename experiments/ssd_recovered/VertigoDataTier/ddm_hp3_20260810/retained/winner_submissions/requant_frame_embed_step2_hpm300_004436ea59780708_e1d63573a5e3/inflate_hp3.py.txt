@@ -1,0 +1,341 @@
+#!/usr/bin/env python3
+"""Resumable real receiver overlay for DDM HP3 candidate archives.
+
+The staged submission directory supplies the unchanged FX1 receiver as
+``inflate_base.py`` plus its unchanged helper modules.  This overlay changes
+only the two HP3 wire surfaces: exact HP31-to-IHS1 restoration and independent
+HPT1 Range stages.  Rendering checkpoints every completed batch.
+"""
+
+from __future__ import annotations
+
+import json
+import lzma
+import math
+import os
+import struct
+import sys
+from pathlib import Path
+
+import constriction
+import inflate_base as base
+import numpy as np
+import torch
+import torch.nn.functional as F
+from hp3_codec import (
+    MONOLITHIC_MAGIC,
+    restore_ihs1,
+    unpack_monolithic_checkpoint,
+    unpack_token_chunks,
+)
+
+
+def _atomic_json(path: Path, value: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    with temporary.open("w", encoding="utf-8") as handle:
+        json.dump(value, handle, indent=2, sort_keys=True)
+        handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
+def _immutable_json(path: Path, value: dict[str, object]) -> None:
+    """Write a preserved stage receipt once; reject divergent resume history."""
+
+    encoded = (json.dumps(value, indent=2, sort_keys=True) + "\n").encode()
+    if path.exists():
+        if path.read_bytes() != encoded:
+            raise RuntimeError(f"preserved stage checkpoint changed: {path}")
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    with temporary.open("wb") as handle:
+        handle.write(encoded)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
+def _load_state(path: Path, schema: str) -> dict[str, object]:
+    if not path.exists():
+        return {"schema": schema, "complete": False}
+    state = json.loads(path.read_text(encoding="utf-8"))
+    if state.get("schema") != schema:
+        raise RuntimeError(f"resume schema mismatch at {path}")
+    return state
+
+
+@torch.no_grad()
+def decode_hpt1_resumable(
+    model: base.IntegerHPAC,
+    blob: bytes,
+    device: torch.device,
+    state_dir: Path,
+) -> torch.Tensor:
+    envelope = unpack_token_chunks(blob)
+    state_path = state_dir / "decode_state.json"
+    token_path = state_dir / "tokens.u8"
+    state = _load_state(state_path, "ddm_hp3_decode_resume.v1")
+    completed_chunks = int(state.get("completed_chunks", 0))
+    if completed_chunks < 0 or completed_chunks > len(envelope.chunks):
+        raise RuntimeError("invalid HP3 decode checkpoint")
+    mode = "r+" if token_path.exists() else "w+"
+    tokens = np.memmap(
+        token_path,
+        mode=mode,
+        dtype=np.uint8,
+        shape=(envelope.frame_count, base.EVAL_H, base.EVAL_W),
+    )
+    family = constriction.stream.model.Categorical(perfect=base.HPAC_CODER_PERFECT)
+    masks = base.group_masks(device)
+    sparse = base.SparseIntegerHPAC(model, base.EVAL_H, base.EVAL_W)
+    for chunk_index in range(completed_chunks, len(envelope.chunks)):
+        start = chunk_index * envelope.chunk_frames
+        end = min(start + envelope.chunk_frames, envelope.frame_count)
+        decoder = base.new_token_decoder(envelope.chunks[chunk_index], "range")
+        previous_raw = (
+            torch.zeros((1, base.EVAL_H, base.EVAL_W), dtype=torch.long, device=device)
+            if start == 0
+            else torch.from_numpy(np.asarray(tokens[start - 1 : start]).copy()).long().to(device)
+        )
+        for frame in range(start, end):
+            idx = torch.tensor([frame], dtype=torch.long, device=device)
+            current = torch.zeros_like(previous_raw)
+            context = model.prepare_frame_context(idx, previous_raw)
+            for group, mask in enumerate(masks):
+                selected = sparse.selected_logits(current, context, group)
+                table = base.probability_table(selected)
+                symbols = decoder.decode(family, table)
+                current[0, mask] = torch.from_numpy(symbols.astype(np.int64)).to(device)
+            previous_raw = current.clone()
+            tokens[frame] = previous_raw[0].to(torch.uint8).cpu().numpy()
+        tokens.flush()
+        state = {
+            "schema": "ddm_hp3_decode_resume.v1",
+            "complete": chunk_index + 1 == len(envelope.chunks),
+            "completed_chunks": chunk_index + 1,
+            "chunk_count": len(envelope.chunks),
+            "completed_frames": end,
+            "token_path": str(token_path),
+            "token_bytes": token_path.stat().st_size,
+        }
+        _immutable_json(state_dir / f"decode_stage_{chunk_index + 1:02d}.json", state)
+        _atomic_json(state_path, state)
+    tensor = torch.from_numpy(np.asarray(tokens).copy())
+    del tokens
+    return tensor
+
+
+@torch.no_grad()
+def decode_hpm1_resumable(
+    model: base.IntegerHPAC,
+    blob: bytes,
+    device: torch.device,
+    state_dir: Path,
+) -> torch.Tensor:
+    """Decode one Range stream with a counted seek checkpoint at frame 300."""
+
+    envelope = unpack_monolithic_checkpoint(blob)
+    state_path = state_dir / "decode_state.json"
+    token_path = state_dir / "tokens.u8"
+    state = _load_state(state_path, "ddm_hp3_monolithic_decode_resume.v1")
+    completed_frames = int(state.get("completed_frames", 0))
+    if completed_frames not in (0, 300, 600):
+        raise RuntimeError("invalid HPM1 decode checkpoint")
+    tokens = np.memmap(
+        token_path,
+        mode="r+" if token_path.exists() else "w+",
+        dtype=np.uint8,
+        shape=(base.N, base.EVAL_H, base.EVAL_W),
+    )
+    if completed_frames == base.N:
+        tensor = torch.from_numpy(np.asarray(tokens).copy())
+        del tokens
+        return tensor
+    decoder = base.new_token_decoder(envelope.range_payload, "range")
+    if completed_frames == 300:
+        decoder.seek(envelope.position, envelope.state)
+    previous_raw = (
+        torch.zeros((1, base.EVAL_H, base.EVAL_W), dtype=torch.long, device=device)
+        if completed_frames == 0
+        else torch.from_numpy(np.asarray(tokens[completed_frames - 1 : completed_frames]).copy()).long().to(device)
+    )
+    family = constriction.stream.model.Categorical(perfect=base.HPAC_CODER_PERFECT)
+    masks = base.group_masks(device)
+    sparse = base.SparseIntegerHPAC(model, base.EVAL_H, base.EVAL_W)
+    for stage_end in (300, 600):
+        if stage_end <= completed_frames:
+            continue
+        for frame in range(completed_frames, stage_end):
+            idx = torch.tensor([frame], dtype=torch.long, device=device)
+            current = torch.zeros_like(previous_raw)
+            context = model.prepare_frame_context(idx, previous_raw)
+            for group, mask in enumerate(masks):
+                selected = sparse.selected_logits(current, context, group)
+                table = base.probability_table(selected)
+                symbols = decoder.decode(family, table)
+                current[0, mask] = torch.from_numpy(symbols.astype(np.int64)).to(device)
+            previous_raw = current.clone()
+            tokens[frame] = previous_raw[0].to(torch.uint8).cpu().numpy()
+        tokens.flush()
+        completed_frames = stage_end
+        stage = {
+            "schema": "ddm_hp3_monolithic_decode_resume.v1",
+            "complete": completed_frames == base.N,
+            "completed_frames": completed_frames,
+            "checkpoint_frames": 300,
+            "token_path": str(token_path),
+            "token_bytes": token_path.stat().st_size,
+        }
+        _immutable_json(state_dir / f"decode_stage_{completed_frames:03d}.json", stage)
+        _atomic_json(state_path, stage)
+    tensor = torch.from_numpy(np.asarray(tokens).copy())
+    del tokens
+    return tensor
+
+
+@torch.no_grad()
+def render_resumable(
+    semantic: torch.nn.Module,
+    basis: torch.Tensor,
+    coeff: torch.Tensor,
+    tokens: torch.Tensor,
+    destination: Path,
+    device: torch.device,
+    state_dir: Path,
+) -> None:
+    semantic = semantic.eval().to(device)
+    basis = base.normalized_basis(basis.to(device))
+    coeff = coeff.to(device)
+    state_path = state_dir / "render_state.json"
+    state = _load_state(state_path, "ddm_hp3_render_resume.v1")
+    masters = int(state.get("masters_completed", 0))
+    carriers = int(state.get("carriers_completed", 0))
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shape = (base.N * 2, base.CAMERA_H, base.CAMERA_W, 3)
+    output = np.memmap(
+        destination,
+        mode="r+" if destination.exists() else "w+",
+        dtype=np.uint8,
+        shape=shape,
+    )
+    semantic_batch = 8 if device.type == "cuda" else 1
+    for start in range(masters, base.N, semantic_batch):
+        end = min(start + semantic_batch, base.N)
+        idx = torch.arange(start, end, device=device)
+        current_tokens = tokens[start:end].long().to(device)
+        master_eval = semantic(current_tokens, idx)
+        master = (
+            F.interpolate(
+                master_eval,
+                size=(base.CAMERA_H, base.CAMERA_W),
+                mode="bilinear",
+                align_corners=False,
+            )
+            .clamp(0.0, 255.0)
+            .round()
+            .to(torch.uint8)
+            .permute(0, 2, 3, 1)
+            .cpu()
+            .numpy()
+        )
+        for offset in range(end - start):
+            output[2 * (start + offset) + 1] = master[offset]
+        output.flush()
+        if end % 24 == 0 or end == base.N:
+            masters = end
+            stage = {
+                "schema": "ddm_hp3_render_resume.v1",
+                "complete": False,
+                "masters_completed": masters,
+                "carriers_completed": carriers,
+                "output_path": str(destination),
+                "output_bytes": destination.stat().st_size,
+            }
+            _immutable_json(state_dir / f"render_master_stage_{end:03d}.json", stage)
+            _atomic_json(state_path, stage)
+    pose_batch = 64 if device.type == "cuda" else 1
+    for start in range(carriers, base.N, pose_batch):
+        end = min(start + pose_batch, base.N)
+        carrier = torch.einsum("bk,kchw->bchw", coeff[start:end], basis)
+        carrier = carrier / math.sqrt(base.CARRIER_DIM)
+        slave = (
+            F.interpolate(
+                (127.5 + base.CARRIER_AMPLITUDE * carrier).clamp(0.0, 255.0).round(),
+                size=(base.CAMERA_H, base.CAMERA_W),
+                mode="bicubic",
+                align_corners=False,
+            )
+            .clamp(0.0, 255.0)
+            .round()
+            .to(torch.uint8)
+            .permute(0, 2, 3, 1)
+            .cpu()
+            .numpy()
+        )
+        for offset in range(end - start):
+            output[2 * (start + offset)] = slave[offset]
+        output.flush()
+        if end % 24 == 0 or end == base.N:
+            carriers = end
+            stage = {
+                "schema": "ddm_hp3_render_resume.v1",
+                "complete": masters == base.N and carriers == base.N,
+                "masters_completed": masters,
+                "carriers_completed": carriers,
+                "output_path": str(destination),
+                "output_bytes": destination.stat().st_size,
+            }
+            _immutable_json(state_dir / f"render_carrier_stage_{end:03d}.json", stage)
+            _atomic_json(state_path, stage)
+    del output
+
+
+def _device() -> torch.device:
+    requested = os.environ.get("DDM_HP3_DEVICE", "auto")
+    if requested == "auto":
+        requested = "cuda" if torch.cuda.is_available() else "cpu"
+    device = torch.device(requested)
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("DDM HP3 requested CUDA but CUDA is unavailable")
+    return device
+
+
+def main() -> None:
+    if len(sys.argv) != 4:
+        raise SystemExit("usage: inflate_hp3.py <archive-dir> <base> <destination.raw>")
+    data_dir = Path(sys.argv[1])
+    video_base = sys.argv[2]
+    destination = Path(sys.argv[3])
+    if video_base != "0":
+        raise ValueError(f"unsupported public video: {video_base}")
+    device = _device()
+    payload = (data_dir / "p").read_bytes()
+    if len(payload) < 4:
+        raise ValueError("combined payload is truncated before the model length")
+    models_bytes = struct.unpack_from("<I", payload)[0]
+    models = lzma.decompress(payload[4 : 4 + models_bytes])
+    semantic_bytes, carrier_bytes = struct.unpack_from("<II", models)
+    semantic_pose_end = 8 + semantic_bytes + carrier_bytes
+    if semantic_pose_end >= len(models):
+        raise ValueError("combined model payload has no HPAC section")
+    semantic, basis, coeff = base.unpack_semantic_pose(models[:semantic_pose_end])
+    hpac = base.load_hpac(restore_ihs1(models[semantic_pose_end:]), device)
+    state_dir = destination.with_name(destination.name + ".hp3_state")
+    token_payload = payload[4 + models_bytes :]
+    tokens = (
+        decode_hpm1_resumable(hpac, token_payload, device, state_dir)
+        if token_payload.startswith(MONOLITHIC_MAGIC)
+        else decode_hpt1_resumable(hpac, token_payload, device, state_dir)
+    )
+    del hpac
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
+    render_resumable(semantic, basis, coeff, tokens, destination, device, state_dir)
+    print(f"wrote {destination} ({destination.stat().st_size} bytes)", flush=True)
+
+
+if __name__ == "__main__":
+    main()

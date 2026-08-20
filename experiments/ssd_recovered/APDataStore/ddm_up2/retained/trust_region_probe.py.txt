@@ -1,0 +1,33 @@
+import sys, time, numpy as np, torch
+torch.set_num_threads(8)
+sys.path.insert(0,"/Users/adpena/Projects/pact/experiments"); sys.path.insert(0,"/Users/adpena/Projects/pact/src")
+import ddm_up2_shipping_pose_solve as up2
+up2.enable_posenet_gradients()
+st=up2.load_carrier_state(up2.DEFAULT_RUNTIME); raw=up2.open_raw(up2.DEFAULT_RAW,verify_sha=False)
+tgt,lin=up2.load_gt_poses(up2.DEFAULT_DALI_GT); posenet=up2.load_posenet()
+pairs=np.arange(8,dtype=np.int64)
+dp0,_=up2.measure_pose(posenet,st,st.coefficients,raw,tgt,pairs,batch_size=4)
+c0=st.coefficients[pairs].clone(); f1=up2.frames_to_bchw(raw[2*pairs+1]); tb=torch.from_numpy(tgt[pairs]).float()
+J,r,_=up2.jacobian_and_residual(posenet,st,c0,f1,tb,pairs)
+Jd=J.double(); rd=r.double(); JT=Jd.transpose(1,2); JTJ=JT@Jd; g=JT@rd.unsqueeze(-1)
+sc = st.coefficient_scales.double()
+# reachability: undamped least squares
+lstsq = torch.linalg.lstsq(Jd, rd.unsqueeze(-1)).solution.squeeze(-1)
+resid_min = rd + (Jd@(-lstsq).unsqueeze(-1)).squeeze(-1)
+print("undamped: ||r_after||/||r|| per pair:", (resid_min.norm(dim=1)/rd.norm(dim=1)).numpy())
+print("undamped step |code units| max:", (lstsq.abs()/sc[None]).max(dim=1).values.numpy())
+print()
+print(f"{'alpha':>8} {'pred_mse':>12} {'actual_mse':>12} {'ratio_vs_base':>14} {'max|dcode|':>11}")
+base=dp0.mean()
+trace=torch.diagonal(JTJ,dim1=1,dim2=2).mean(dim=1).clamp_min(1e-12)
+for lam in [1e-1,1e-2,1e-3]:
+    H=JTJ+lam*torch.eye(12,dtype=torch.float64)[None]*trace[:,None,None]
+    step=-torch.linalg.solve(H,g).squeeze(-1)
+    for alpha in [1.0,0.3,0.1,0.03]:
+        s=step*alpha
+        pred=(((rd+(Jd@s.unsqueeze(-1)).squeeze(-1))**2).mean(dim=1)).mean().item()
+        c1=(c0.double()+s).float()
+        dp1,_=up2.measure_pose(posenet,st,c1,raw,tgt,pairs,batch_size=4,coefficients_are_full=False)
+        mdc=(s.abs()/sc[None]).max().item()
+        print(f"lam{lam:.0e} a{alpha:<4} {pred:12.4e} {dp1.mean():12.4e} {dp1.mean()/base:14.3f} {mdc:11.2f}")
+print("base:", base)

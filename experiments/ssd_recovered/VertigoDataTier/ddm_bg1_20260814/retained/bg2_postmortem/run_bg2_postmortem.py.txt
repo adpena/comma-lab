@@ -1,0 +1,1061 @@
+#!/usr/bin/env python3
+"""Execute the pre-registered BG2 EC2 collateral postmortem without a scorer.
+
+This runner is intentionally self-contained and writes only to its own SSD store.
+It verifies every primary input before loading arrays, persists every derived field,
+uses nested held-out prediction, and retains the complete shuffled-frame null.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import io
+import json
+import math
+import os
+import platform
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+ROOT = Path(
+    os.environ.get(
+        "DDM_BG2_OUTPUT_ROOT",
+        "/Volumes/VertigoDataTier/pact/ddm_bg1_20260814/retained/bg2_postmortem",
+    )
+)
+SEED = 20260814
+N_PERMUTATIONS = 10_000
+ALPHAS = np.asarray(
+    [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1.0, 10.0, 100.0, 1000.0, 10000.0],
+    dtype=np.float64,
+)
+EDGE_PAIRS = [(a, b) for a in range(5) for b in range(5) if a != b]
+
+INPUTS = {
+    "ec2": {
+        "path": Path(
+            "/Volumes/VertigoDataTier/pact/ddm_bg1_20260814/retained/"
+            "ec2_oriented/argmax_n600.npy"
+        ),
+        "sha256": "803a1d8755cafcf31b03d8ad1494d49f89f6e4fb2115341423308e0db20b3a1a",
+    },
+    "batch_receipts": {
+        "path": Path(
+            "/Volumes/VertigoDataTier/pact/ddm_bg1_20260814/retained/"
+            "ec2_oriented/BATCH_RECEIPTS.jsonl"
+        ),
+        "sha256": "ffa88ae4478727edb9df89a35f023407ddc1f6cdc8c029530448fdb601087b55",
+    },
+    "adapter": {
+        "path": Path(
+            "/Volumes/VertigoDataTier/pact/ddm_bg1_20260814/retained/"
+            "ec2_oriented/ec1_latent.int8.br"
+        ),
+        "sha256": "9559c2ab5128f193c8b0c754c5d61851b7784070fa049e04cf48cfd157eead82",
+    },
+    "gt": {
+        "path": Path(
+            "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/"
+            "contest_cuda/ddm_js1c_20260814/retained/fields/gt_argmax_n600.npy"
+        ),
+        "sha256": "91d3ff11a904c476b56a8be8af2225fb4a390d02fac9d3b09ef4704ad6e77248",
+    },
+    "base": {
+        "path": Path(
+            "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/"
+            "contest_cuda/ddm_js1c_20260814/retained/fields/cp135_base_argmax_n600.npy"
+        ),
+        "sha256": "7648ad42e9f21942f86e81b97cabf46b710af747bba0909f7837ef3891232727",
+    },
+    "frame_state": {
+        "path": Path(
+            "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/"
+            "candidates/cp135_base/receiver_state/semantic/"
+            "01_frame_embed.weight.float32.npy"
+        ),
+        "sha256": "1c46c81b2529d6608d879b1f1084c0cf0a2fe79b1beaa8e4a9e45a9fd6977135",
+    },
+}
+
+
+class BG2Error(RuntimeError):
+    pass
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(8 * 1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def record(path: Path) -> dict[str, Any]:
+    return {
+        "path": str(path),
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+    }
+
+
+def json_bytes(payload: Any) -> bytes:
+    return (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+
+
+def write_bytes_once(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        if path.read_bytes() != payload:
+            raise BG2Error(f"refusing to overwrite non-identical artifact: {path}")
+        return
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    with tmp.open("xb") as handle:
+        handle.write(payload)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(tmp, path)
+
+
+def write_json_once(path: Path, payload: Any) -> None:
+    write_bytes_once(path, json_bytes(payload))
+
+
+def npy_bytes(array: np.ndarray) -> bytes:
+    output = io.BytesIO()
+    np.save(output, np.ascontiguousarray(array), allow_pickle=False)
+    return output.getvalue()
+
+
+def write_npy_once(path: Path, array: np.ndarray) -> None:
+    write_bytes_once(path, npy_bytes(array))
+
+
+def stage_receipt(path: Path, stage: str, outputs: list[Path], extra: dict[str, Any]) -> None:
+    payload = {
+        "schema": "ddm_bg2_stage_receipt.v1",
+        "stage": stage,
+        "outputs": [record(output) for output in outputs],
+        **extra,
+    }
+    write_json_once(path, payload)
+
+
+def verify_stage(path: Path) -> bool:
+    if not path.exists():
+        return False
+    payload = json.loads(path.read_text())
+    for item in payload["outputs"]:
+        target = Path(item["path"])
+        if not target.is_file():
+            raise BG2Error(f"completed stage output missing: {target}")
+        if target.stat().st_size != item["bytes"] or sha256_file(target) != item["sha256"]:
+            raise BG2Error(f"completed stage output drift: {target}")
+    return True
+
+
+def verify_final_manifest() -> bool:
+    path = ROOT / "ARTIFACT_MANIFEST.json"
+    if not path.exists():
+        return False
+    payload = json.loads(path.read_text())
+    expected = {item["relative_path"]: item for item in payload["artifacts"]}
+    actual = {
+        str(item.relative_to(ROOT)): item
+        for item in ROOT.rglob("*")
+        if item.is_file() and item != path
+    }
+    if set(expected) != set(actual):
+        missing = sorted(set(expected) - set(actual))
+        extra = sorted(set(actual) - set(expected))
+        raise BG2Error(f"manifest file-set drift; missing={missing}, extra={extra}")
+    for relative, item in expected.items():
+        target = actual[relative]
+        if target.stat().st_size != item["bytes"] or sha256_file(target) != item["sha256"]:
+            raise BG2Error(f"manifest artifact drift: {target}")
+    print("BG2_RESUMED_VERIFIED_COMPLETE")
+    return True
+
+
+def stratified_folds(labels: np.ndarray, folds: int, seed: int) -> np.ndarray:
+    result = np.full(labels.shape[0], -1, dtype=np.int8)
+    rng = np.random.Generator(np.random.PCG64(seed))
+    for label in sorted(np.unique(labels).tolist()):
+        indices = np.flatnonzero(labels == label).copy()
+        rng.shuffle(indices)
+        for offset, index in enumerate(indices.tolist()):
+            result[index] = offset % folds
+    if np.any(result < 0):
+        raise BG2Error("fold assignment incomplete")
+    return result
+
+
+def quantile_strata(values: np.ndarray, groups: int = 4) -> np.ndarray:
+    order = np.argsort(values, kind="mergesort")
+    labels = np.empty(values.shape[0], dtype=np.int8)
+    for rank, index in enumerate(order.tolist()):
+        labels[index] = min(groups - 1, rank * groups // values.shape[0])
+    return labels
+
+
+def standardizer(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    if not np.all(np.isfinite(x)):
+        raise BG2Error("standardizer received non-finite inputs")
+    mean = x.mean(axis=0, dtype=np.float64)
+    scale = x.std(axis=0, dtype=np.float64)
+    scale[scale == 0.0] = 1.0
+    if not np.all(np.isfinite(mean)) or not np.all(np.isfinite(scale)):
+        raise BG2Error("standardizer produced non-finite parameters")
+    return mean, scale
+
+
+def ridge_fit_scaled(
+    x: np.ndarray, y: np.ndarray, alpha: float
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Fit centered ridge with an unpenalized intercept.
+
+    x is standardized using training-only mean/scale. y is centered per output.
+    beta = (Xs.T Xs + alpha I)^-1 Xs.T (y - mean(y)).
+    """
+    mean, scale = standardizer(x)
+    xs = (x - mean) / scale
+    y2 = y[:, None] if y.ndim == 1 else y
+    y_mean = y2.mean(axis=0, dtype=np.float64)
+    yc = y2 - y_mean
+    # Accelerate can leave stale IEEE exception flags around finite BLAS calls on
+    # this host. Suppress those warnings only after explicit input bounds, then
+    # fail closed on every resulting array.
+    if not np.all(np.isfinite(xs)) or not np.all(np.isfinite(yc)):
+        raise BG2Error("ridge fit received non-finite standardized inputs")
+    with np.errstate(all="ignore"):
+        gram = xs.T @ xs
+        rhs = xs.T @ yc
+        beta = np.linalg.solve(gram + float(alpha) * np.eye(gram.shape[0]), rhs)
+    if not all(np.all(np.isfinite(item)) for item in (gram, rhs, beta)):
+        raise BG2Error("ridge fit produced non-finite parameters")
+    return beta, y_mean, mean, scale
+
+
+def ridge_predict(
+    x: np.ndarray,
+    beta: np.ndarray,
+    y_mean: np.ndarray,
+    mean: np.ndarray,
+    scale: np.ndarray,
+) -> np.ndarray:
+    standardized = (x - mean) / scale
+    if not np.all(np.isfinite(standardized)):
+        raise BG2Error("prediction received non-finite standardized inputs")
+    with np.errstate(all="ignore"):
+        prediction = standardized @ beta + y_mean
+    if not np.all(np.isfinite(prediction)):
+        raise BG2Error("prediction produced non-finite values")
+    return prediction
+
+
+def ols_fit_scaled(
+    x: np.ndarray, y: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    mean, scale = standardizer(x)
+    xs = (x - mean) / scale
+    y2 = y[:, None] if y.ndim == 1 else y
+    y_mean = y2.mean(axis=0, dtype=np.float64)
+    yc = y2 - y_mean
+    if not np.all(np.isfinite(xs)) or not np.all(np.isfinite(yc)):
+        raise BG2Error("OLS fit received non-finite standardized inputs")
+    with np.errstate(all="ignore"):
+        beta = np.linalg.pinv(xs, rcond=1e-12) @ yc
+    if not np.all(np.isfinite(beta)):
+        raise BG2Error("OLS fit produced non-finite parameters")
+    return beta, y_mean, mean, scale
+
+
+def r2(y: np.ndarray, prediction: np.ndarray) -> float:
+    denominator = float(np.sum((y - y.mean()) ** 2, dtype=np.float64))
+    if denominator == 0.0:
+        return float("nan")
+    numerator = float(np.sum((y - prediction) ** 2, dtype=np.float64))
+    return 1.0 - numerator / denominator
+
+
+def gini(values: np.ndarray) -> float:
+    x = np.sort(np.asarray(values, dtype=np.float64))
+    total = float(x.sum())
+    if total == 0.0:
+        return 0.0
+    n = x.size
+    return float((2.0 * np.dot(np.arange(1, n + 1), x) / (n * total)) - (n + 1) / n)
+
+
+def describe(values: np.ndarray, *, count_mode: bool) -> dict[str, Any]:
+    x = np.asarray(values, dtype=np.float64)
+    mean = float(x.mean())
+    std = float(x.std())
+    top_count = max(1, math.ceil(0.10 * x.size))
+    top_share = float(np.sort(x)[-top_count:].sum() / x.sum()) if x.sum() else 0.0
+    result: dict[str, Any] = {
+        "mean": mean,
+        "std": std,
+        "min": float(x.min()),
+        "max": float(x.max()),
+        "coefficient_of_variation": std / mean if mean else None,
+        "gini": gini(x),
+        "top_10_percent_frame_share": top_share,
+        "quantiles": {
+            str(q): float(np.quantile(x, q))
+            for q in (0.0, 0.01, 0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.99, 1.0)
+        },
+    }
+    if count_mode:
+        result["variance_to_mean"] = float(x.var() / mean) if mean else None
+    return result
+
+
+def input_verification() -> None:
+    receipt = ROOT / "01_input_verification.json"
+    if verify_stage(receipt):
+        return
+    verified: dict[str, Any] = {}
+    for name, pin in INPUTS.items():
+        path = pin["path"]
+        if not path.is_file():
+            raise BG2Error(f"missing pinned input: {path}")
+        actual = sha256_file(path)
+        if actual != pin["sha256"]:
+            raise BG2Error(f"input hash mismatch for {name}: {actual}")
+        verified[name] = record(path)
+
+    for name in ("gt", "base", "ec2"):
+        array = np.load(INPUTS[name]["path"], mmap_mode="r")
+        if array.shape != (600, 384, 512) or array.dtype != np.uint8:
+            raise BG2Error(f"invalid {name} field shape/dtype: {array.shape} {array.dtype}")
+        if int(array.min()) < 0 or int(array.max()) > 4:
+            raise BG2Error(f"invalid {name} class range")
+    frame = np.load(INPUTS["frame_state"]["path"], mmap_mode="r")
+    if frame.shape != (600, 8) or frame.dtype != np.float32:
+        raise BG2Error(f"invalid frame-state shape/dtype: {frame.shape} {frame.dtype}")
+
+    output = ROOT / "inputs_verified.json"
+    write_json_once(
+        output,
+        {
+            "schema": "ddm_bg2_inputs_verified.v1",
+            "inputs": verified,
+            "cp135_archive_sha256": "6eb1a3b79cb167e03372339e07e93cae13b6ba3114a9eb917288bb038622edb6",
+            "axis": "[contest-CUDA T4 retained-field component postmortem; macOS-CPU scorer-free analysis]",
+            "score_claim": False,
+            "scorer_forwards_executed": 0,
+        },
+    )
+    stage_receipt(receipt, "01_input_verification", [output], {"verified": True})
+
+
+def decomposition() -> None:
+    receipt = ROOT / "02_decomposition.json"
+    if verify_stage(receipt):
+        return
+    gt = np.load(INPUTS["gt"]["path"], mmap_mode="r")
+    base = np.load(INPUTS["base"]["path"], mmap_mode="r")
+    ec2 = np.load(INPUTS["ec2"]["path"], mmap_mode="r")
+
+    base_error = np.asarray(base != gt)
+    base_correct = ~base_error
+    fixed = base_error & (ec2 == gt)
+    introduced = base_correct & (ec2 != gt)
+    endpoint_error = np.asarray(ec2 != gt)
+    totals = {
+        "base_errors": int(base_error.sum()),
+        "base_correct_opportunities": int(base_correct.sum()),
+        "fixed": int(fixed.sum()),
+        "introduced": int(introduced.sum()),
+        "endpoint_errors": int(endpoint_error.sum()),
+        "net_flip_reduction": int(base_error.sum()) - int(endpoint_error.sum()),
+    }
+    expected = {
+        "base_errors": 34_970,
+        "fixed": 12_075,
+        "introduced": 52_854,
+        "endpoint_errors": 75_749,
+    }
+    for key, value in expected.items():
+        if totals[key] != value:
+            raise BG2Error(f"pre-registered total mismatch: {key}={totals[key]} expected={value}")
+
+    arrays_dir = ROOT / "decomposition"
+    base_error_path = arrays_dir / "base_error_n600.bool.npy"
+    fixed_path = arrays_dir / "fixed_n600.bool.npy"
+    introduced_path = arrays_dir / "introduced_n600.bool.npy"
+    endpoint_error_path = arrays_dir / "endpoint_error_n600.bool.npy"
+    write_npy_once(base_error_path, base_error)
+    write_npy_once(fixed_path, fixed)
+    write_npy_once(introduced_path, introduced)
+    write_npy_once(endpoint_error_path, endpoint_error)
+
+    flat_size = 384 * 512
+    base_error_count = base_error.reshape(600, flat_size).sum(axis=1, dtype=np.int64)
+    base_correct_count = base_correct.reshape(600, flat_size).sum(axis=1, dtype=np.int64)
+    fixed_count = fixed.reshape(600, flat_size).sum(axis=1, dtype=np.int64)
+    introduced_count = introduced.reshape(600, flat_size).sum(axis=1, dtype=np.int64)
+    endpoint_error_count = endpoint_error.reshape(600, flat_size).sum(axis=1, dtype=np.int64)
+
+    class_exposure = np.zeros((600, 5), dtype=np.int64)
+    introduced_by_gt = np.zeros((600, 5), dtype=np.int64)
+    introduced_by_ec2 = np.zeros((600, 5), dtype=np.int64)
+    introduced_edges = np.zeros((600, 20), dtype=np.int64)
+    fixed_edges = np.zeros((600, 20), dtype=np.int64)
+    unordered_edges = np.zeros((600, 10), dtype=np.int64)
+    boundary_exposure = np.zeros((600, 20), dtype=np.int64)
+    coordinate_frequency = introduced.sum(axis=0, dtype=np.uint16)
+
+    unordered_pairs = [(a, b) for a in range(5) for b in range(a + 1, 5)]
+    for pair in range(600):
+        g = np.asarray(gt[pair])
+        b = np.asarray(base[pair])
+        e = np.asarray(ec2[pair])
+        correct = base_correct[pair]
+        intro = introduced[pair]
+        fix = fixed[pair]
+        class_exposure[pair] = np.bincount(g[correct], minlength=5)
+        introduced_by_gt[pair] = np.bincount(g[intro], minlength=5)
+        introduced_by_ec2[pair] = np.bincount(e[intro], minlength=5)
+        intro_codes = np.bincount((g[intro] * 5 + e[intro]), minlength=25)
+        fixed_codes = np.bincount((b[fix] * 5 + g[fix]), minlength=25)
+        for edge_index, (a, c) in enumerate(EDGE_PAIRS):
+            introduced_edges[pair, edge_index] = intro_codes[a * 5 + c]
+            fixed_edges[pair, edge_index] = fixed_codes[a * 5 + c]
+        for edge_index, (a, c) in enumerate(unordered_pairs):
+            unordered_edges[pair, edge_index] = (
+                intro_codes[a * 5 + c] + intro_codes[c * 5 + a]
+            )
+
+        adjacency = np.zeros((5, 384, 512), dtype=bool)
+        for neighbor_class in range(5):
+            mask = g == neighbor_class
+            adjacency[neighbor_class, 1:, :] |= mask[:-1, :]
+            adjacency[neighbor_class, :-1, :] |= mask[1:, :]
+            adjacency[neighbor_class, :, 1:] |= mask[:, :-1]
+            adjacency[neighbor_class, :, :-1] |= mask[:, 1:]
+        for edge_index, (a, c) in enumerate(EDGE_PAIRS):
+            boundary_exposure[pair, edge_index] = int(
+                np.count_nonzero(correct & (g == a) & adjacency[c])
+            )
+
+    spatial_exposure = base_correct.reshape(600, 12, 32, 16, 32).sum(
+        axis=(2, 4), dtype=np.int64
+    )
+    spatial_introduced = introduced.reshape(600, 12, 32, 16, 32).sum(
+        axis=(2, 4), dtype=np.int64
+    )
+    spatial_fixed = fixed.reshape(600, 12, 32, 16, 32).sum(axis=(2, 4), dtype=np.int64)
+    introduced_rate = introduced_count / base_correct_count
+    fixed_rate = fixed_count / base_error_count
+
+    edge_denominator = np.empty((600, 20), dtype=np.int64)
+    for edge_index, (a, _b) in enumerate(EDGE_PAIRS):
+        edge_denominator[:, edge_index] = class_exposure[:, a]
+    edge_rates = np.divide(
+        introduced_edges,
+        edge_denominator,
+        out=np.zeros_like(introduced_edges, dtype=np.float64),
+        where=edge_denominator != 0,
+    )
+
+    per_frame = np.column_stack(
+        [
+            np.arange(600, dtype=np.int64),
+            base_error_count,
+            base_correct_count,
+            fixed_count,
+            introduced_count,
+            endpoint_error_count,
+        ]
+    )
+    exposure_features = np.concatenate(
+        [class_exposure, boundary_exposure, spatial_exposure.reshape(600, -1)], axis=1
+    ).astype(np.float64)
+    exposure_names = (
+        [f"base_correct_gt_class_{a}" for a in range(5)]
+        + [f"base_correct_gt_{a}_adjacent_gt_{b}" for a, b in EDGE_PAIRS]
+        + [f"base_correct_grid_r{row:02d}_c{col:02d}" for row in range(12) for col in range(16)]
+    )
+    if exposure_features.shape != (600, 217):
+        raise BG2Error(f"unexpected exposure feature shape: {exposure_features.shape}")
+
+    array_outputs: dict[str, np.ndarray] = {
+        "per_frame_counts.int64.npy": per_frame,
+        "introduced_rate.float64.npy": introduced_rate,
+        "fixed_rate.float64.npy": fixed_rate,
+        "class_exposure.int64.npy": class_exposure,
+        "introduced_by_gt.int64.npy": introduced_by_gt,
+        "introduced_by_ec2.int64.npy": introduced_by_ec2,
+        "introduced_directed_edges.int64.npy": introduced_edges,
+        "fixed_directed_edges.int64.npy": fixed_edges,
+        "introduced_unordered_edges.int64.npy": unordered_edges,
+        "directed_edge_denominators.int64.npy": edge_denominator,
+        "directed_edge_rates.float64.npy": edge_rates,
+        "boundary_exposure.int64.npy": boundary_exposure,
+        "spatial_exposure.int64.npy": spatial_exposure,
+        "spatial_introduced.int64.npy": spatial_introduced,
+        "spatial_fixed.int64.npy": spatial_fixed,
+        "introduced_coordinate_frequency.uint16.npy": coordinate_frequency,
+        "exposure_features.float64.npy": exposure_features,
+    }
+    output_paths = [base_error_path, fixed_path, introduced_path, endpoint_error_path]
+    for name, array in array_outputs.items():
+        path = arrays_dir / name
+        write_npy_once(path, array)
+        output_paths.append(path)
+
+    frame_table_path = arrays_dir / "per_frame.jsonl"
+    frame_lines = []
+    for pair in range(600):
+        frame_lines.append(
+            json.dumps(
+                {
+                    "pair_id": pair,
+                    "base_error_count": int(base_error_count[pair]),
+                    "base_correct_opportunities": int(base_correct_count[pair]),
+                    "fixed_count": int(fixed_count[pair]),
+                    "fixed_rate_per_base_error": float(fixed_rate[pair]),
+                    "introduced_count": int(introduced_count[pair]),
+                    "introduced_rate_per_base_correct": float(introduced_rate[pair]),
+                    "endpoint_error_count": int(endpoint_error_count[pair]),
+                },
+                sort_keys=True,
+            )
+        )
+    write_bytes_once(frame_table_path, ("\n".join(frame_lines) + "\n").encode())
+    output_paths.append(frame_table_path)
+
+    tables_path = arrays_dir / "decomposition_tables.json"
+    write_json_once(
+        tables_path,
+        {
+            "schema": "ddm_bg2_decomposition.v1",
+            "totals": totals,
+            "class_names": ["Road", "Lane", "Undrivable", "Movable", "MyCar"],
+            "introduced_by_gt_total": introduced_by_gt.sum(axis=0).tolist(),
+            "introduced_by_ec2_total": introduced_by_ec2.sum(axis=0).tolist(),
+            "directed_edges": [
+                {
+                    "gt": a,
+                    "ec2": b,
+                    "introduced": int(introduced_edges[:, i].sum()),
+                    "opportunities": int(edge_denominator[:, i].sum()),
+                    "rate": float(introduced_edges[:, i].sum() / edge_denominator[:, i].sum()),
+                }
+                for i, (a, b) in enumerate(EDGE_PAIRS)
+            ],
+            "unordered_edges": [
+                {
+                    "classes": [a, b],
+                    "introduced": int(unordered_edges[:, i].sum()),
+                    "opportunities": int(class_exposure[:, [a, b]].sum()),
+                    "rate": float(
+                        unordered_edges[:, i].sum() / class_exposure[:, [a, b]].sum()
+                    ),
+                }
+                for i, (a, b) in enumerate(unordered_pairs)
+            ],
+            "spatial_grid": {
+                "rows": 12,
+                "columns": 16,
+                "cell_height": 32,
+                "cell_width": 32,
+                "introduced_total": spatial_introduced.sum(axis=0).tolist(),
+                "opportunity_total": spatial_exposure.sum(axis=0).tolist(),
+                "rate": np.divide(
+                    spatial_introduced.sum(axis=0),
+                    spatial_exposure.sum(axis=0),
+                    out=np.zeros((12, 16), dtype=np.float64),
+                    where=spatial_exposure.sum(axis=0) != 0,
+                ).tolist(),
+            },
+            "exposure_feature_names": exposure_names,
+            "descriptive_only": {
+                "introduced_counts": describe(introduced_count, count_mode=True),
+                "introduced_rates": describe(introduced_rate, count_mode=False),
+                "fixed_counts": describe(fixed_count, count_mode=True),
+                "fixed_rates": describe(fixed_rate, count_mode=False),
+                "mechanism_gate_eligible": False,
+            },
+        },
+    )
+    output_paths.append(tables_path)
+
+    receipt_rows = [json.loads(line) for line in INPUTS["batch_receipts"]["path"].read_text().splitlines()]
+    if len(receipt_rows) != 38:
+        raise BG2Error(f"expected 38 batch receipts, found {len(receipt_rows)}")
+    batch_validation = []
+    cursor = 0
+    for batch_index, row in enumerate(receipt_rows):
+        start = int(row["pair_start"])
+        end = int(row["pair_end"])
+        if start != cursor or end <= start or end - start != int(row["batch_size"]):
+            raise BG2Error(f"non-contiguous batch receipt at {batch_index}: {start}:{end}")
+        batch_dir = ROOT / "batch_recreations" / f"batch_{batch_index:04d}"
+        payload_arrays = {
+            "argmax.npy": np.asarray(ec2[start:end]),
+            "target.npy": np.asarray(gt[start:end]),
+            "base_error.npy": np.asarray(base_error[start:end]),
+        }
+        checked: dict[str, Any] = {}
+        for name, array in payload_arrays.items():
+            path = batch_dir / name
+            write_npy_once(path, array)
+            output_paths.append(path)
+            actual = sha256_file(path)
+            expected_sha = row["payloads"][name]["sha256"]
+            if actual != expected_sha:
+                raise BG2Error(
+                    f"recreated batch hash mismatch for {batch_index} {name}: {actual} != {expected_sha}"
+                )
+            checked[name] = record(path)
+        batch_validation.append(
+            {
+                "batch_index": batch_index,
+                "pair_start": start,
+                "pair_end": end,
+                "payloads": checked,
+            }
+        )
+        cursor = end
+    if cursor != 600:
+        raise BG2Error(f"batch receipts ended at {cursor}, not 600")
+    batch_validation_path = ROOT / "batch_recreations" / "BATCH_VALIDATION.json"
+    write_json_once(
+        batch_validation_path,
+        {
+            "schema": "ddm_bg2_batch_validation.v1",
+            "batches": batch_validation,
+            "all_argmax_target_base_error_hashes_match": True,
+        },
+    )
+    output_paths.append(batch_validation_path)
+
+    stage_receipt(
+        receipt,
+        "02_decomposition",
+        output_paths,
+        {"totals": totals, "batch_receipts_verified": 38},
+    )
+
+
+def heldout_model() -> None:
+    receipt = ROOT / "03_heldout_model.json"
+    if verify_stage(receipt):
+        return
+    data_dir = ROOT / "decomposition"
+    per_frame = np.load(data_dir / "per_frame_counts.int64.npy")
+    y_primary = np.load(data_dir / "introduced_rate.float64.npy")
+    edge_rates = np.load(data_dir / "directed_edge_rates.float64.npy")
+    y_all = np.column_stack([y_primary, edge_rates]).astype(np.float64)
+    x = np.load(data_dir / "exposure_features.float64.npy")
+    z = np.asarray(np.load(INPUTS["frame_state"]["path"]), dtype=np.float64)
+    error_exposure_ratio = per_frame[:, 1] / per_frame[:, 2]
+    strata = quantile_strata(error_exposure_ratio)
+    outer_fold = stratified_folds(strata, folds=5, seed=SEED)
+    if any(int(np.sum(outer_fold == fold)) == 0 for fold in range(5)):
+        raise BG2Error("empty outer fold")
+
+    outputs = y_all.shape[1]
+    features = x.shape[1]
+    outer_prediction = np.zeros_like(y_all)
+    augmented_prediction = np.zeros_like(y_all)
+    latent_prediction = np.zeros_like(y_all)
+    inner_oof_by_outer = np.full((5, 600, outputs), np.nan, dtype=np.float64)
+    selected_alpha_index = np.zeros((5, outputs), dtype=np.int16)
+    alpha_cv_mse = np.full((5, ALPHAS.size, 4, outputs), np.nan, dtype=np.float64)
+    alpha_cv_beta = np.full(
+        (5, ALPHAS.size, 4, features, outputs), np.nan, dtype=np.float64
+    )
+    alpha_cv_intercept = np.full((5, ALPHAS.size, 4, outputs), np.nan, dtype=np.float64)
+    inner_x_mean = np.full((5, 4, features), np.nan, dtype=np.float64)
+    inner_x_scale = np.full((5, 4, features), np.nan, dtype=np.float64)
+    outer_beta = np.full((5, features, outputs), np.nan, dtype=np.float64)
+    outer_intercept = np.full((5, outputs), np.nan, dtype=np.float64)
+    outer_x_mean = np.full((5, features), np.nan, dtype=np.float64)
+    outer_x_scale = np.full((5, features), np.nan, dtype=np.float64)
+    latent_beta = np.full((5, 8, outputs), np.nan, dtype=np.float64)
+    latent_intercept = np.full((5, outputs), np.nan, dtype=np.float64)
+    latent_z_mean = np.full((5, 8), np.nan, dtype=np.float64)
+    latent_z_scale = np.full((5, 8), np.nan, dtype=np.float64)
+    inner_fold_global = np.full((5, 600), -1, dtype=np.int8)
+
+    for fold in range(5):
+        train = np.flatnonzero(outer_fold != fold)
+        test = np.flatnonzero(outer_fold == fold)
+        inner_local = stratified_folds(strata[train], folds=4, seed=SEED + 101 + fold)
+        inner_fold_global[fold, train] = inner_local
+
+        for inner in range(4):
+            inner_train = train[inner_local != inner]
+            inner_test = train[inner_local == inner]
+            mean, scale = standardizer(x[inner_train])
+            inner_x_mean[fold, inner] = mean
+            inner_x_scale[fold, inner] = scale
+            xs_train = (x[inner_train] - mean) / scale
+            xs_test = (x[inner_test] - mean) / scale
+            y_train = y_all[inner_train]
+            y_mean = y_train.mean(axis=0, dtype=np.float64)
+            yc = y_train - y_mean
+            if not np.all(np.isfinite(xs_train)) or not np.all(np.isfinite(yc)):
+                raise BG2Error("inner ridge received non-finite inputs")
+            with np.errstate(all="ignore"):
+                gram = xs_train.T @ xs_train
+                rhs = xs_train.T @ yc
+            if not np.all(np.isfinite(gram)) or not np.all(np.isfinite(rhs)):
+                raise BG2Error("inner ridge produced non-finite sufficient statistics")
+            for alpha_index, alpha in enumerate(ALPHAS.tolist()):
+                with np.errstate(all="ignore"):
+                    beta = np.linalg.solve(gram + alpha * np.eye(features), rhs)
+                    prediction = xs_test @ beta + y_mean
+                if not np.all(np.isfinite(beta)) or not np.all(np.isfinite(prediction)):
+                    raise BG2Error("inner ridge produced non-finite fit or prediction")
+                alpha_cv_beta[fold, alpha_index, inner] = beta
+                alpha_cv_intercept[fold, alpha_index, inner] = y_mean
+                alpha_cv_mse[fold, alpha_index, inner] = np.mean(
+                    (y_all[inner_test] - prediction) ** 2, axis=0
+                )
+
+        selected = np.argmin(np.nanmean(alpha_cv_mse[fold], axis=1), axis=0)
+        selected_alpha_index[fold] = selected
+        inner_oof = np.zeros((train.size, outputs), dtype=np.float64)
+        for inner in range(4):
+            validation_local = np.flatnonzero(inner_local == inner)
+            validation_global = train[validation_local]
+            for output_index in range(outputs):
+                alpha_index = int(selected[output_index])
+                beta = alpha_cv_beta[fold, alpha_index, inner, :, output_index]
+                y_mean = alpha_cv_intercept[fold, alpha_index, inner, output_index]
+                prediction = ridge_predict(
+                    x[validation_global],
+                    beta[:, None],
+                    np.asarray([y_mean]),
+                    inner_x_mean[fold, inner],
+                    inner_x_scale[fold, inner],
+                )[:, 0]
+                inner_oof[validation_local, output_index] = prediction
+        inner_oof_by_outer[fold, train] = inner_oof
+
+        for output_index in range(outputs):
+            alpha = float(ALPHAS[int(selected[output_index])])
+            beta, y_mean, mean, scale = ridge_fit_scaled(
+                x[train], y_all[train, output_index], alpha
+            )
+            outer_beta[fold, :, output_index] = beta[:, 0]
+            outer_intercept[fold, output_index] = y_mean[0]
+            outer_x_mean[fold] = mean
+            outer_x_scale[fold] = scale
+            outer_prediction[test, output_index] = ridge_predict(
+                x[test], beta, y_mean, mean, scale
+            )[:, 0]
+
+        residual_train = y_all[train] - inner_oof
+        beta, y_mean, mean, scale = ols_fit_scaled(z[train], residual_train)
+        latent_beta[fold] = beta
+        latent_intercept[fold] = y_mean
+        latent_z_mean[fold] = mean
+        latent_z_scale[fold] = scale
+        latent_prediction[test] = ridge_predict(z[test], beta, y_mean, mean, scale)
+        augmented_prediction[test] = outer_prediction[test] + latent_prediction[test]
+
+    exposure_r2 = np.asarray(
+        [r2(y_all[:, index], outer_prediction[:, index]) for index in range(outputs)]
+    )
+    augmented_r2 = np.asarray(
+        [r2(y_all[:, index], augmented_prediction[:, index]) for index in range(outputs)]
+    )
+    delta_r2 = augmented_r2 - exposure_r2
+    if not all(
+        np.all(np.isfinite(item))
+        for item in (
+            outer_prediction[:, 0],
+            latent_prediction[:, 0],
+            augmented_prediction[:, 0],
+            exposure_r2[:1],
+            augmented_r2[:1],
+            delta_r2[:1],
+        )
+    ):
+        raise BG2Error("primary held-out model produced non-finite verdict values")
+    model_dir = ROOT / "model"
+    arrays: dict[str, np.ndarray] = {
+        "response_all.float64.npy": y_all,
+        "strata.int8.npy": strata,
+        "outer_fold.int8.npy": outer_fold,
+        "inner_fold_global.int8.npy": inner_fold_global,
+        "alpha_grid.float64.npy": ALPHAS,
+        "selected_alpha_index.int16.npy": selected_alpha_index,
+        "alpha_cv_mse.float64.npy": alpha_cv_mse,
+        "alpha_cv_beta.float64.npy": alpha_cv_beta,
+        "alpha_cv_intercept.float64.npy": alpha_cv_intercept,
+        "inner_x_mean.float64.npy": inner_x_mean,
+        "inner_x_scale.float64.npy": inner_x_scale,
+        "inner_oof_by_outer.float64.npy": inner_oof_by_outer,
+        "outer_exposure_beta.float64.npy": outer_beta,
+        "outer_exposure_intercept.float64.npy": outer_intercept,
+        "outer_x_mean.float64.npy": outer_x_mean,
+        "outer_x_scale.float64.npy": outer_x_scale,
+        "exposure_oof_prediction.float64.npy": outer_prediction,
+        "latent_beta.float64.npy": latent_beta,
+        "latent_intercept.float64.npy": latent_intercept,
+        "latent_z_mean.float64.npy": latent_z_mean,
+        "latent_z_scale.float64.npy": latent_z_scale,
+        "latent_oof_prediction.float64.npy": latent_prediction,
+        "augmented_oof_prediction.float64.npy": augmented_prediction,
+        "exposure_oof_residual.float64.npy": y_all - outer_prediction,
+        "augmented_oof_residual.float64.npy": y_all - augmented_prediction,
+        "exposure_r2.float64.npy": exposure_r2,
+        "augmented_r2.float64.npy": augmented_r2,
+        "delta_r2.float64.npy": delta_r2,
+    }
+    output_paths = []
+    for name, array in arrays.items():
+        path = model_dir / name
+        write_npy_once(path, array)
+        output_paths.append(path)
+
+    summary_path = model_dir / "HELDOUT_MODEL_RESULT.json"
+    edge_diagnostics = []
+    for edge_index, (a, b) in enumerate(EDGE_PAIRS):
+        output_index = edge_index + 1
+        edge_diagnostics.append(
+            {
+                "gt": a,
+                "ec2": b,
+                "exposure_oof_r2": float(exposure_r2[output_index]),
+                "augmented_oof_r2": float(augmented_r2[output_index]),
+                "delta_oof_r2": float(delta_r2[output_index]),
+                "diagnostic_only": True,
+            }
+        )
+    write_json_once(
+        summary_path,
+        {
+            "schema": "ddm_bg2_heldout_frame_state.v1",
+            "seed": SEED,
+            "folds": 5,
+            "fold_mode": "seeded shuffled non-prefix; stratified by quartile of baseline_error_count/base_correct_count",
+            "response": "introduced_count / baseline_correct_opportunities",
+            "exposure_feature_count": int(features),
+            "exposure_feature_groups": {"class": 5, "directed_gt_boundary": 20, "spatial_12x16": 192},
+            "ridge_alpha_grid": ALPHAS.tolist(),
+            "ridge_equation": "beta=(Xs.T@Xs+alpha*I)^-1@Xs.T@(y-y_mean); intercept unpenalized",
+            "latent_equation": "8-D OLS on outer-train inner-OOF exposure residual; training-only state standardization",
+            "primary": {
+                "exposure_oof_r2": float(exposure_r2[0]),
+                "augmented_oof_r2": float(augmented_r2[0]),
+                "delta_oof_r2": float(delta_r2[0]),
+                "augmented_r2_positive": bool(augmented_r2[0] > 0.0),
+                "incremental_r2_positive": bool(delta_r2[0] > 0.0),
+            },
+            "per_directed_edge": edge_diagnostics,
+            "per_edge_models_control_fork": False,
+            "score_claim": False,
+            "scorer_forwards_executed": 0,
+        },
+    )
+    output_paths.append(summary_path)
+    stage_receipt(
+        receipt,
+        "03_heldout_model",
+        output_paths,
+        {
+            "primary_augmented_oof_r2": float(augmented_r2[0]),
+            "primary_delta_oof_r2": float(delta_r2[0]),
+        },
+    )
+
+
+def permutation_control() -> None:
+    receipt = ROOT / "04_permutation_control.json"
+    if verify_stage(receipt):
+        return
+    model_dir = ROOT / "model"
+    y = np.load(model_dir / "response_all.float64.npy")[:, 0]
+    outer_fold = np.load(model_dir / "outer_fold.int8.npy")
+    inner_oof_by_outer = np.load(model_dir / "inner_oof_by_outer.float64.npy")[:, :, 0]
+    exposure_prediction = np.load(model_dir / "exposure_oof_prediction.float64.npy")[:, 0]
+    observed_augmented = np.load(model_dir / "augmented_oof_prediction.float64.npy")[:, 0]
+    exposure_r2 = r2(y, exposure_prediction)
+    observed_augmented_r2 = r2(y, observed_augmented)
+    observed_delta = observed_augmented_r2 - exposure_r2
+    z = np.asarray(np.load(INPUTS["frame_state"]["path"]), dtype=np.float64)
+
+    permutations = np.empty((N_PERMUTATIONS, 600), dtype=np.uint16)
+    null_prediction = np.empty((N_PERMUTATIONS, 600), dtype=np.float64)
+    null_beta = np.empty((N_PERMUTATIONS, 5, 8), dtype=np.float64)
+    null_intercept = np.empty((N_PERMUTATIONS, 5), dtype=np.float64)
+    null_z_mean = np.empty((N_PERMUTATIONS, 5, 8), dtype=np.float64)
+    null_z_scale = np.empty((N_PERMUTATIONS, 5, 8), dtype=np.float64)
+    null_augmented_r2 = np.empty(N_PERMUTATIONS, dtype=np.float64)
+    null_delta_r2 = np.empty(N_PERMUTATIONS, dtype=np.float64)
+    rng = np.random.Generator(np.random.PCG64(SEED))
+
+    for permutation_index in range(N_PERMUTATIONS):
+        permutation = rng.permutation(600).astype(np.uint16)
+        permutations[permutation_index] = permutation
+        z_permuted = z[permutation]
+        latent_prediction = np.empty(600, dtype=np.float64)
+        for fold in range(5):
+            train = np.flatnonzero(outer_fold != fold)
+            test = np.flatnonzero(outer_fold == fold)
+            residual_train = y[train] - inner_oof_by_outer[fold, train]
+            beta, y_mean, mean, scale = ols_fit_scaled(z_permuted[train], residual_train)
+            null_beta[permutation_index, fold] = beta[:, 0]
+            null_intercept[permutation_index, fold] = y_mean[0]
+            null_z_mean[permutation_index, fold] = mean
+            null_z_scale[permutation_index, fold] = scale
+            latent_prediction[test] = ridge_predict(
+                z_permuted[test], beta, y_mean, mean, scale
+            )[:, 0]
+        null_prediction[permutation_index] = latent_prediction
+        augmented = exposure_prediction + latent_prediction
+        null_augmented_r2[permutation_index] = r2(y, augmented)
+        null_delta_r2[permutation_index] = null_augmented_r2[permutation_index] - exposure_r2
+
+    exceedances = int(np.count_nonzero(null_delta_r2 >= observed_delta))
+    if not all(
+        np.all(np.isfinite(item))
+        for item in (null_prediction, null_beta, null_augmented_r2, null_delta_r2)
+    ):
+        raise BG2Error("permutation control produced non-finite values")
+    p_value = (1 + exceedances) / (N_PERMUTATIONS + 1)
+    control_dir = ROOT / "permutation_control"
+    arrays: dict[str, np.ndarray] = {
+        "frame_state_row_permutations.uint16.npy": permutations,
+        "latent_oof_predictions.float64.npy": null_prediction,
+        "latent_beta.float64.npy": null_beta,
+        "latent_intercept.float64.npy": null_intercept,
+        "latent_z_mean.float64.npy": null_z_mean,
+        "latent_z_scale.float64.npy": null_z_scale,
+        "augmented_r2.float64.npy": null_augmented_r2,
+        "delta_r2.float64.npy": null_delta_r2,
+    }
+    output_paths = []
+    for name, array in arrays.items():
+        path = control_dir / name
+        write_npy_once(path, array)
+        output_paths.append(path)
+
+    summary_path = control_dir / "PERMUTATION_RESULT.json"
+    write_json_once(
+        summary_path,
+        {
+            "schema": "ddm_bg2_frame_label_permutation.v1",
+            "seed": SEED,
+            "rng": "numpy.random.Generator(PCG64)",
+            "permutations": N_PERMUTATIONS,
+            "observed_exposure_oof_r2": exposure_r2,
+            "observed_augmented_oof_r2": observed_augmented_r2,
+            "observed_delta_oof_r2": observed_delta,
+            "null_delta_r2": describe(null_delta_r2, count_mode=False),
+            "null_augmented_r2": describe(null_augmented_r2, count_mode=False),
+            "null_exceedances_ge_observed": exceedances,
+            "one_sided_p_value": p_value,
+            "p_value_equation": "(1 + count(null_delta_r2 >= observed_delta_r2)) / 10001",
+            "significance_gate_p_le_0_01": bool(p_value <= 0.01),
+            "score_claim": False,
+            "scorer_forwards_executed": 0,
+        },
+    )
+    output_paths.append(summary_path)
+    stage_receipt(
+        receipt,
+        "04_permutation_control",
+        output_paths,
+        {
+            "observed_delta_oof_r2": observed_delta,
+            "one_sided_p_value": p_value,
+            "null_exceedances": exceedances,
+        },
+    )
+
+
+def final_manifest() -> None:
+    stage_path = ROOT / "05_manifest_stage.json"
+    if not stage_path.exists():
+        write_json_once(
+            stage_path,
+            {
+                "schema": "ddm_bg2_stage_receipt.v1",
+                "stage": "05_manifest",
+                "status": "READY_TO_MANIFEST",
+                "prior_stage_receipts": [
+                    record(ROOT / f"0{stage}_{name}.json")
+                    for stage, name in (
+                        (1, "input_verification"),
+                        (2, "decomposition"),
+                        (3, "heldout_model"),
+                        (4, "permutation_control"),
+                    )
+                ],
+            },
+        )
+    script_path = Path(__file__).resolve()
+    try:
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd="/Users/adpena/Projects/pact",
+            text=True,
+        ).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        commit = "UNKNOWN"
+    artifacts = []
+    manifest_path = ROOT / "ARTIFACT_MANIFEST.json"
+    for path in sorted(ROOT.rglob("*")):
+        if not path.is_file() or path == manifest_path:
+            continue
+        item = record(path)
+        item["relative_path"] = str(path.relative_to(ROOT))
+        item.pop("path")
+        artifacts.append(item)
+    manifest = {
+        "schema": "ddm_bg2_artifact_manifest.v1",
+        "axis": "[contest-CUDA T4 retained-field component postmortem; macOS-CPU scorer-free analysis]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "scorer_forwards_executed": 0,
+        "evaluate_py_run": False,
+        "seed": SEED,
+        "permutations": N_PERMUTATIONS,
+        "command_argv": [str(script_path)],
+        "output_root": str(ROOT),
+        "source": {"path": str(script_path), "sha256": sha256_file(script_path)},
+        "source_git_commit": commit,
+        "python": sys.version,
+        "platform": platform.platform(),
+        "numpy": np.__version__,
+        "cp135_archive_sha256": "6eb1a3b79cb167e03372339e07e93cae13b6ba3114a9eb917288bb038622edb6",
+        "input_pins": {
+            name: {"path": str(pin["path"]), "sha256": pin["sha256"]}
+            for name, pin in INPUTS.items()
+        },
+        "artifacts": artifacts,
+    }
+    write_json_once(manifest_path, manifest)
+    print("BG2_COMPLETE")
+
+
+def main() -> int:
+    ROOT.mkdir(parents=True, exist_ok=True)
+    if verify_final_manifest():
+        return 0
+    input_verification()
+    decomposition()
+    heldout_model()
+    permutation_control()
+    final_manifest()
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except BG2Error as exc:
+        print(f"BG2_REFUSED: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None

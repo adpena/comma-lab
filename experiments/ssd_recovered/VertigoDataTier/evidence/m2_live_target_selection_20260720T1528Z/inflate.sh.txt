@@ -1,0 +1,2 @@
+#!/bin/sh
+exec "${M2_PYTHON:-python3}" "$(dirname "$0")/inflate.py" "$@"

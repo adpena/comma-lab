@@ -1,0 +1,443 @@
+# SPDX-License-Identifier: MIT
+"""SNeRV carrier — store LF coefficients, GENERATE HF detail (super-small rate).
+
+The SNeRV (Scalable NeRV, arXiv 2501.01681) carrier represents a frame as a
+multi-level orthonormal 2D wavelet pyramid and:
+
+  * **STORES** only the coarsest LF (LL approximation) subband — ~``H*W / 4^L``
+    coefficients at level ``L``, quantized to a small bit budget. This is the
+    dominant archive content but is itself tiny (a 384x512 frame at level 3 has
+    only 48x64 = 3072 LF coefficients per channel).
+  * **GENERATES** the HF detail subbands with a small per-level decoder. The
+    decoder is a learned linear upsampling map (one small kernel per level) whose
+    weights ARE in the archive but are byte-cheap (shared across all frames).
+
+This is the **super-small-rate-by-design** carrier the operator asked for: the
+byte-heavy detail is generated, not stored (curing the Z8 disease where the raw
+wavelet detail blob was ~99.5% of the archive). Distortion is "solved" because
+the LF approximation already captures the low-frequency structure SegNet's
+stride-2 stem actually sees, and the L-inf pose-Fisher allocation (``allocation.py``)
+spends the LF bit budget exactly where the detector is sensitive.
+
+Decoder generation model (faithful, not toy): at each pyramid level the HF detail
+tuple ``(LH, HL, HH)`` is GENERATED from the current approximation ``LL`` via a
+learned 3x3 separable linear predictor per subband. This is the minimal SNeRV
+"generate-HF-from-LF" decoder that is (a) numpy-portable for the inflate path
+(no torch/scorer at the receiver per ``tac.contest_eval_contract``), (b)
+deterministic CPU-or-CUDA-agnostic, (c) byte-cheap (9 weights x 3 subbands x L
+levels x 3 channels). The decoder is trained ($0 MLX/MPS local) to minimize the
+SCORE-AWARE reconstruction objective on real ``upstream/videos/0.mkv`` frames.
+
+[verified-against: SNeRV arXiv 2501.01681 store-LF/generate-HF; the DWT adjoint
+exactness in ``dwt.py`` (rel-residual 0.0); the bit-exact CPU scorer mirror
+``tac.analysis.score_exact_saliency.load_score_exact_scorers``.]
+
+Catalog #290 (canonical-vs-unique): the DWT is ADOPTED canonical (``dwt.py`` uses
+pywt). The HF-generation decoder is FORK_PRINCIPLED — SNeRV's distinguishing
+feature is the generate-HF-from-LF map, which no existing substrate provides; it
+must be unique to this carrier. The score-aware loss ADOPTS the canonical
+bit-exact mirror (``load_score_exact_scorers``) because measurement authority must
+be canonical.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Final
+
+import numpy as np
+
+from tac.substrates.snerv_inverse_steg_carrier.dwt import (
+    DEFAULT_WAVELET,
+    WaveletPyramid,
+    dwt2_multilevel,
+    idwt2_multilevel,
+)
+
+__all__ = [
+    "HfGenerationDecoder",
+    "SnervCarrierError",
+    "SnervFrameCode",
+    "decode_frame",
+    "dequantize_lf",
+    "encode_frame_lf",
+    "fit_hf_decoder_least_squares",
+    "fit_hf_decoder_weighted_least_squares",
+    "generate_hf_from_lf",
+    "quantize_lf",
+]
+
+# A 3x3 separable linear HF predictor per detail subband (LH, HL, HH).
+_DETAIL_KEYS: Final[tuple[str, str, str]] = ("LH", "HL", "HH")
+_PREDICTOR_TAPS: Final[int] = 9  # 3x3 kernel
+
+
+class SnervCarrierError(ValueError):
+    """Raised when the SNeRV carrier contract is violated."""
+
+
+@dataclass(frozen=True)
+class HfGenerationDecoder:
+    """The small SNeRV decoder that GENERATES HF detail from the LF approximation.
+
+    ``kernels[level][subband]`` is a (3, 3) linear predictor that maps a local
+    3x3 patch of the (upsampled) approximation to the predicted detail coefficient
+    at that position. Byte cost = ``levels * 3 subbands * 9 taps * 4 bytes`` per
+    channel (fp32) — shared across ALL frames, so amortized to ~0 per frame.
+
+    The decoder is GENERATIVE: at inflate time the receiver has only the stored LF
+    + these kernels and reconstructs HF deterministically (no scorer, no torch).
+    """
+
+    kernels: dict  # {level_idx: {subband: (3,3) np.ndarray}}
+    levels: int
+    output_scale: float = 1.0
+    output_bias: float = 0.0
+    output_channel_scales: tuple[float, ...] = ()
+    output_channel_biases: tuple[float, ...] = ()
+
+    def byte_cost(self) -> int:
+        n = 0
+        for lvl in self.kernels.values():
+            for k in lvl.values():
+                n += int(np.asarray(k).size) * 4  # fp32
+        channel_count = max(
+            len(tuple(self.output_channel_scales)),
+            len(tuple(self.output_channel_biases)),
+        )
+        affine_count = channel_count if channel_count else 1
+        n += affine_count * 2 * 4  # post-synthesis affine, scalar or per-channel
+        return n
+
+    @staticmethod
+    def zeros(levels: int) -> HfGenerationDecoder:
+        kernels = {
+            i: {sb: np.zeros((3, 3), dtype=np.float64) for sb in _DETAIL_KEYS}
+            for i in range(levels)
+        }
+        return HfGenerationDecoder(kernels=kernels, levels=int(levels))
+
+
+@dataclass(frozen=True)
+class SnervFrameCode:
+    """The per-frame stored code: quantized LF + the dequant scale/zero-point.
+
+    The HF detail is NOT stored — it is regenerated from ``lf_quant`` + the shared
+    decoder at decode time. This is the entire per-frame rate.
+    """
+
+    lf_quant: np.ndarray  # (h_lf, w_lf) int (quantized LF coefficients)
+    lf_scale: float  # per-coefficient dequant step (or per-element via steps)
+    lf_zero: float  # zero-point (subtracted before quant)
+    lf_shape: tuple[int, int]
+    levels: int
+    wavelet: str
+    orig_hw: tuple[int, int]
+    per_element_steps: np.ndarray | None = None  # L-inf allocation steps (or None)
+    affine_channel_index: int | None = None  # receiver plane channel for per-channel affine
+
+    def stored_coeff_count(self) -> int:
+        return int(self.lf_quant.size)
+
+
+def _upsample_nn(approx: np.ndarray, target_hw: tuple[int, int]) -> np.ndarray:
+    """Nearest-neighbour upsample the approximation to a detail subband's shape.
+
+    The detail subband at a level has the SAME shape as that level's
+    approximation. ``pywt`` keeps LH/HL/HH the same shape as the LL produced at
+    the same decomposition step, so we upsample the *coarser* approximation to it.
+    """
+    th, tw = target_hw
+    ah, aw = approx.shape
+    ri = (np.arange(th) * ah // th).clip(0, ah - 1)
+    ci = (np.arange(tw) * aw // tw).clip(0, aw - 1)
+    return approx[np.ix_(ri, ci)]
+
+
+def _patch_features(field: np.ndarray) -> np.ndarray:
+    """Stack the 9 shifted copies of ``field`` (3x3 neighbourhood) -> (H, W, 9).
+
+    Edge-padded (reflect) so every position has a full 3x3 context. This is the
+    feature matrix the linear HF predictor consumes.
+    """
+    padded = np.pad(field, 1, mode="reflect")
+    h, w = field.shape
+    feats = np.empty((h, w, _PREDICTOR_TAPS), dtype=np.float64)
+    idx = 0
+    for di in (-1, 0, 1):
+        for dj in (-1, 0, 1):
+            feats[:, :, idx] = padded[1 + di : 1 + di + h, 1 + dj : 1 + dj + w]
+            idx += 1
+    return feats
+
+
+def generate_hf_from_lf(
+    lf: np.ndarray,
+    decoder: HfGenerationDecoder,
+    pyramid_template: WaveletPyramid,
+) -> list:
+    """Generate the HF detail tuples from the LF approximation + decoder.
+
+    Returns a ``pywt`` coefficient list ``[lf, (LH, HL, HH), ...]`` reconstructing
+    the pyramid with GENERATED detail. The detail shapes are taken from
+    ``pyramid_template`` (the analysis of the original frame) so the synthesis is
+    well-formed; only their VALUES are generated.
+
+    Generation runs coarsest-first: each level's detail is predicted from the
+    running approximation, then synthesis lifts to the next finer approximation.
+    """
+    coeffs: list = [np.asarray(lf, dtype=np.float64)]
+    approx = coeffs[0]
+    detail_templates = pyramid_template.details  # coarsest-first
+    if len(detail_templates) != decoder.levels:
+        raise SnervCarrierError(
+            f"decoder levels {decoder.levels} != template detail levels "
+            f"{len(detail_templates)}"
+        )
+    for lvl, (lh_t, _hl_t, _hh_t) in enumerate(detail_templates):
+        target_hw = (int(lh_t.shape[0]), int(lh_t.shape[1]))
+        up = _upsample_nn(approx, target_hw)
+        feats = _patch_features(up)  # (h, w, 9)
+        kern = decoder.kernels[lvl]
+        lh = feats @ kern["LH"].reshape(-1)
+        hl = feats @ kern["HL"].reshape(-1)
+        hh = feats @ kern["HH"].reshape(-1)
+        coeffs.append((lh, hl, hh))
+        # Lift approx one level for the next (finer) detail prediction.
+        approx = idwt2_multilevel(
+            WaveletPyramid(
+                coeffs=[approx, (lh, hl, hh)],
+                levels=1,
+                wavelet=pyramid_template.wavelet,
+                orig_hw=(target_hw[0] * 2, target_hw[1] * 2),
+            )
+        )
+    return coeffs
+
+
+def fit_hf_decoder_least_squares(
+    pyramids: list[WaveletPyramid],
+    levels: int,
+) -> HfGenerationDecoder:
+    """Fit the HF-generation decoder by per-level ridge least squares (the "train").
+
+    For each level and subband we solve ``min_k ||F k - d||^2 + 1e-6||k||^2`` where
+    ``F`` are the 3x3 patch features of the upsampled approximation and ``d`` are
+    the TRUE detail coefficients (from the analysis of real frames). This is the
+    closed-form, deterministic, $0-CPU fit of the generative decoder — the
+    faithful (not toy) training: it learns to predict real HF detail from real LF
+    on real video frames. Ridge is the canonical least-squares regularizer.
+    """
+    return fit_hf_decoder_weighted_least_squares(
+        pyramids,
+        levels=levels,
+        detail_weight_pyramids=None,
+    )
+
+
+def fit_hf_decoder_weighted_least_squares(
+    pyramids: list[WaveletPyramid],
+    levels: int,
+    *,
+    detail_weight_pyramids: list[WaveletPyramid] | None = None,
+    weight_floor: float = 1e-3,
+    saliency_gain: float = 1.0,
+) -> HfGenerationDecoder:
+    """Fit the HF decoder with optional score/saliency weights.
+
+    ``detail_weight_pyramids`` carries one DWT-domain cotangent pyramid per
+    training pyramid. Its detail subbands weight the HF prediction residuals, so
+    detector-sensitive coefficients pull harder on the shared decoder weights.
+    With ``detail_weight_pyramids=None`` this exactly reduces to ordinary ridge
+    least squares.
+    """
+
+    if not pyramids:
+        raise SnervCarrierError("need >=1 training pyramid")
+    if detail_weight_pyramids is not None and len(detail_weight_pyramids) != len(pyramids):
+        raise SnervCarrierError("detail_weight_pyramids length must match pyramids")
+    if weight_floor <= 0:
+        raise SnervCarrierError("weight_floor must be positive")
+    if saliency_gain < 0:
+        raise SnervCarrierError("saliency_gain must be non-negative")
+    # Accumulate normal equations per (level, subband).
+    accum: dict = {
+        lvl: {sb: (np.zeros((_PREDICTOR_TAPS, _PREDICTOR_TAPS)), np.zeros(_PREDICTOR_TAPS)) for sb in _DETAIL_KEYS}
+        for lvl in range(levels)
+    }
+    for pyr_idx, pyr in enumerate(pyramids):
+        approx = pyr.lf
+        for lvl, (lh, hl, hh) in enumerate(pyr.details):
+            target_hw = (int(lh.shape[0]), int(lh.shape[1]))
+            up = _upsample_nn(approx, target_hw)
+            feats = _patch_features(up).reshape(-1, _PREDICTOR_TAPS)
+            for sb, d in (("LH", lh), ("HL", hl), ("HH", hh)):
+                ata, atb = accum[lvl][sb]
+                weights = _detail_weights_for_subband(
+                    detail_weight_pyramids,
+                    pyramid_index=pyr_idx,
+                    level=lvl,
+                    subband=sb,
+                    expected_shape=d.shape,
+                    floor=weight_floor,
+                    saliency_gain=saliency_gain,
+                ).reshape(-1)
+                weighted_feats = feats * weights[:, None]
+                ata += feats.T @ weighted_feats
+                atb += feats.T @ (weights * d.reshape(-1))
+            # Lift approx for next level (TRUE detail, the encoder path).
+            approx = idwt2_multilevel(
+                WaveletPyramid(
+                    coeffs=[approx, (lh, hl, hh)],
+                    levels=1,
+                    wavelet=pyr.wavelet,
+                    orig_hw=(target_hw[0] * 2, target_hw[1] * 2),
+                )
+            )
+    kernels: dict = {}
+    ridge = 1e-6
+    for lvl in range(levels):
+        kernels[lvl] = {}
+        for sb in _DETAIL_KEYS:
+            ata, atb = accum[lvl][sb]
+            k = np.linalg.solve(ata + ridge * np.eye(_PREDICTOR_TAPS), atb)
+            kernels[lvl][sb] = k.reshape(3, 3)
+    return HfGenerationDecoder(kernels=kernels, levels=int(levels))
+
+
+def _detail_weights_for_subband(
+    detail_weight_pyramids: list[WaveletPyramid] | None,
+    *,
+    pyramid_index: int,
+    level: int,
+    subband: str,
+    expected_shape: tuple[int, ...],
+    floor: float,
+    saliency_gain: float,
+) -> np.ndarray:
+    if detail_weight_pyramids is None:
+        return np.ones(expected_shape, dtype=np.float64)
+    subband_idx = _DETAIL_KEYS.index(subband)
+    try:
+        raw = np.asarray(
+            detail_weight_pyramids[pyramid_index].details[level][subband_idx],
+            dtype=np.float64,
+        )
+    except IndexError as exc:
+        raise SnervCarrierError("detail weight pyramid shape/level mismatch") from exc
+    if raw.shape != expected_shape:
+        raise SnervCarrierError(
+            f"detail weight shape {raw.shape} != expected {expected_shape}"
+        )
+    raw = np.abs(raw)
+    finite = np.isfinite(raw)
+    if not np.all(finite):
+        raise SnervCarrierError("detail weights must be finite")
+    positive = raw[raw > 0]
+    if positive.size == 0 or saliency_gain == 0:
+        return np.ones(expected_shape, dtype=np.float64)
+    scale = float(np.mean(positive))
+    if scale <= 0:
+        return np.ones(expected_shape, dtype=np.float64)
+    return floor + saliency_gain * (raw / scale)
+
+
+def encode_frame_lf(
+    frame_gray: np.ndarray,
+    *,
+    levels: int = 3,
+    wavelet: str = DEFAULT_WAVELET,
+) -> WaveletPyramid:
+    """Analyze a single-channel frame into a wavelet pyramid (the carrier encoder)."""
+    return dwt2_multilevel(frame_gray, levels=levels, wavelet=wavelet)
+
+
+def quantize_lf(
+    lf: np.ndarray,
+    *,
+    n_levels: int = 256,
+    per_element_steps: np.ndarray | None = None,
+) -> tuple[np.ndarray, float, float]:
+    """Quantize the LF subband to integers (the stored rate).
+
+    Two modes:
+      * uniform: a single step solved from ``n_levels`` over the LF range.
+      * per-element: ``per_element_steps`` (the L-inf allocation step map, one step
+        per LF coefficient) — the inverse-steganalysis allocation pushed into the
+        LF domain. Each coefficient is quantized at its OWN step.
+
+    Returns ``(lf_quant_int, scale, zero)``. For per-element steps, ``scale`` is
+    returned as 1.0 and the steps travel with the code (the dequant uses them).
+    """
+    lf = np.asarray(lf, dtype=np.float64)
+    zero = float(lf.min())
+    if per_element_steps is not None:
+        steps = np.asarray(per_element_steps, dtype=np.float64).reshape(lf.shape)
+        if np.any(steps <= 0):
+            raise SnervCarrierError("per_element_steps must be strictly positive")
+        q = np.round((lf - zero) / steps).astype(np.int64)
+        return q, 1.0, zero
+    rng = float(lf.max() - lf.min())
+    scale = max(rng / max(n_levels - 1, 1), 1e-9)
+    q = np.round((lf - zero) / scale).astype(np.int64)
+    return q, scale, zero
+
+
+def dequantize_lf(
+    lf_quant: np.ndarray,
+    scale: float,
+    zero: float,
+    *,
+    per_element_steps: np.ndarray | None = None,
+) -> np.ndarray:
+    """Inverse of :func:`quantize_lf`."""
+    q = np.asarray(lf_quant, dtype=np.float64)
+    if per_element_steps is not None:
+        steps = np.asarray(per_element_steps, dtype=np.float64).reshape(q.shape)
+        return q * steps + zero
+    return q * scale + zero
+
+
+def decode_frame(code: SnervFrameCode, decoder: HfGenerationDecoder) -> np.ndarray:
+    """Decode one frame: dequantize LF, GENERATE HF, synthesize (the inflate path).
+
+    This is the receiver-side reconstruction: numpy-only, no scorer, no torch.
+    The HF detail is generated from the stored LF by the decoder; the orthonormal
+    synthesis lifts back to the pixel frame.
+    """
+    lf = dequantize_lf(
+        code.lf_quant, code.lf_scale, code.lf_zero, per_element_steps=code.per_element_steps
+    )
+    # Build a template pyramid (shapes only) by analyzing a zero frame of orig size.
+    template = dwt2_multilevel(
+        np.zeros(code.orig_hw, dtype=np.float64), levels=code.levels, wavelet=code.wavelet
+    )
+    if lf.shape != template.lf.shape:
+        raise SnervCarrierError(
+            f"decoded LF shape {lf.shape} != template LF shape {template.lf.shape}"
+        )
+    coeffs = generate_hf_from_lf(lf, decoder, template)
+    pyr = WaveletPyramid(
+        coeffs=coeffs, levels=code.levels, wavelet=code.wavelet, orig_hw=code.orig_hw
+    )
+    out = idwt2_multilevel(pyr)
+    scale = float(getattr(decoder, "output_scale", 1.0))
+    bias = float(getattr(decoder, "output_bias", 0.0))
+    channel_scales = tuple(float(v) for v in getattr(decoder, "output_channel_scales", ()))
+    channel_biases = tuple(float(v) for v in getattr(decoder, "output_channel_biases", ()))
+    if channel_scales or channel_biases:
+        if len(channel_scales) != len(channel_biases):
+            raise SnervCarrierError("decoder per-channel affine scale/bias count mismatch")
+        if code.affine_channel_index is None:
+            raise SnervCarrierError("per-channel decoder affine requires affine_channel_index")
+        idx = int(code.affine_channel_index)
+        if idx < 0 or idx >= len(channel_scales):
+            raise SnervCarrierError(
+                f"affine_channel_index {idx} out of range for "
+                f"{len(channel_scales)} channel affine values"
+            )
+        scale = channel_scales[idx]
+        bias = channel_biases[idx]
+    if scale != 1.0 or bias != 0.0:
+        out = out * scale + bias
+    return out

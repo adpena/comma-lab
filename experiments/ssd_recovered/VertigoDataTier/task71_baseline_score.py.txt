@@ -1,0 +1,29 @@
+import sys, time
+sys.path.insert(0,'experiments/results/pr110pp_r2_nonmps_candidate_20260609/analysis')
+import render_and_score_lib as L
+import torch, numpy as np
+
+# Score on a subset of pairs (full 600 is slow). Use a representative slice.
+N_EVAL = int(sys.argv[1]) if len(sys.argv)>1 else 24
+pairs = list(range(N_EVAL))
+
+t0=time.time()
+scorer = L.ExactScorer()
+renderer = L.FrontierRenderer()
+gt = L.decode_gt_pairs(pairs)
+print(f'load+gt: {time.time()-t0:.1f}s')
+
+t0=time.time()
+comp = renderer.render_baseline_pairs(pairs)
+poses=[]; segs=[]
+for pi in pairs:
+    g = L.comp_pair_to_bthwc(gt[pi].float().permute(0,3,1,2))  # (1,2,H,W,3)
+    c = L.comp_pair_to_bthwc(comp[pi])
+    pose,seg = scorer.score_batch(g, c)
+    poses.append(float(pose[0])); segs.append(float(seg[0]))
+print(f'render+score {N_EVAL} pairs: {time.time()-t0:.1f}s')
+d_seg = float(np.mean(segs)); d_pose = float(np.mean(poses))
+print(f'BASELINE on {N_EVAL} pairs: d_seg={d_seg:.6f} d_pose={d_pose:.6e}')
+print(f'  (frontier full-600 reference: d_seg=0.00055978 d_pose=2.942e-05)')
+np.save('/Volumes/VertigoDataTier/pact/task71_baseline_segs.npy', np.array(segs))
+np.save('/Volumes/VertigoDataTier/pact/task71_baseline_poses.npy', np.array(poses))

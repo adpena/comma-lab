@@ -1,0 +1,424 @@
+#!/usr/bin/env python3
+"""SNeRV Branch-B ROUND-2 · S2 YUV/CHANNEL SPLIT (the channel-sensitivity axis).
+
+Operator amendment (binding rung-2): Y protected; U/V coarser; frame0-chroma the
+coarsest payload in the entire archive (seg-blind ∧ chroma-subsampled ∧
+pose-weakest). The directive's per-channel factor of the unified law.
+
+skip_high is RGB (1200,3,192,256). We:
+  RGB -> YUV (BT.601, the same basis rgb_to_yuv6 uses for the PoseNet input)
+  quantize Y at one precision, U/V at a coarser precision, and (composed with the
+  frame-role axis) frame0-chroma coarsest of all
+  YUV -> RGB (the receiver expects RGB skip_high; the transform is lossless modulo
+  the quantization we apply IN the YUV domain)
+  dequant float64 -> re-pack -> EXACT re-measure N>=48.
+
+The measured-axis justification (NOT a new uniform knob): pose is luma-dominant
+(PoseNet reads YUV6 with chroma subsampled) and SegNet sees frame1 only. So Y
+carries the joint signal; chroma is the null-ward direction; frame0-chroma is the
+cheapest (seg-blind frame0 ∧ pose-weak chroma). Each rung varies precision ALONG
+the channel axis (and composes the frame-role axis), never uniformly.
+
+Authority: [macOS-CPU advisory] / exact_cpu_advisory — NON-PROMOTABLE.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import lzma
+import sys
+import time
+import zipfile
+from pathlib import Path
+
+REPO_ROOT = Path("/Users/adpena/Projects/pact")
+G1B_PACKET = Path(
+    "/Volumes/VertigoDataTier/pact/snerv_mistake_b_g1a_20260609T201221Z"
+    "/snerv_mlx_native_export/native_train_export/snerv_mlx_native_packet.snar"
+)
+RUN_DIR = Path("/Volumes/VertigoDataTier/pact/snerv_branch_b_round2_20260610T000000Z")
+
+sys.path.insert(0, str(REPO_ROOT / "src"))
+sys.path.insert(0, str(REPO_ROOT / "upstream"))
+
+import numpy as np  # noqa: E402
+
+CONTEST_N = 37_545_489
+CONTEST_BYTE_PRICE = 25.0 / CONTEST_N
+SKIP_HIGH_NAME = "inputs.mfu.skip_high"
+
+G1B_BASE_D_SEG = 0.002468
+G1B_BASE_POSE_TERM = 0.142602
+GUARD_D_SEG_MAX = 0.01
+GUARD_POSE_TERM_MAX = 0.25
+
+FALSE_AUTHORITY = {
+    "authority_tier": "exact_cpu_advisory",
+    "axis_tag": "[macOS-CPU advisory]",
+    "score_claim": False,
+    "promotion_eligible": False,
+    "promotable": False,
+    "rank_or_kill_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+    "requires_exact_remeasure": False,
+}
+
+
+def _sha(b: bytes) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+
+# BT.601 RGB<->YUV (full-range; the skip_high values are LL coefficients, not
+# clamped pixels, so we keep the float transform exact and reversible).
+_M_RGB2YUV = np.array([
+    [0.299, 0.587, 0.114],
+    [-0.168736, -0.331264, 0.5],
+    [0.5, -0.418688, -0.081312],
+], dtype=np.float64)
+_M_YUV2RGB = np.linalg.inv(_M_RGB2YUV)
+
+
+def rgb_to_yuv(arr):
+    """(N,3,H,W) RGB -> YUV (channel axis 1). Reversible float transform."""
+    n, c, h, w = arr.shape
+    flat = arr.transpose(0, 2, 3, 1).reshape(-1, 3)  # (NHW,3)
+    yuv = flat @ _M_RGB2YUV.T
+    return yuv.reshape(n, h, w, 3).transpose(0, 3, 1, 2)
+
+
+def yuv_to_rgb(arr):
+    n, c, h, w = arr.shape
+    flat = arr.transpose(0, 2, 3, 1).reshape(-1, 3)
+    rgb = flat @ _M_YUV2RGB.T
+    return rgb.reshape(n, h, w, 3).transpose(0, 3, 1, 2)
+
+
+def _quant_channel(plane, *, bits):
+    """Quantize a single (N,1,H,W) channel block to 2**bits levels, per-frame scale."""
+    if bits >= 53:
+        return plane.astype(np.float64, copy=True)
+    levels = (1 << bits) - 1
+    a = plane.astype(np.float64, copy=False)
+    lo = a.min(axis=(1, 2, 3), keepdims=True)
+    hi = a.max(axis=(1, 2, 3), keepdims=True)
+    span = np.maximum(hi - lo, 1e-12)
+    codes = np.rint((a - lo) / span * levels)
+    return (codes / levels * span + lo).astype(np.float64)
+
+
+def channel_role_quant(skip_high, *, y_bits, uv_bits, f0_y_bits, f0_uv_bits):
+    """Quantize in YUV domain per (channel, frame-role); return RGB float64.
+
+    frame1 (ODD): Y at y_bits, U/V at uv_bits.
+    frame0 (EVEN): Y at f0_y_bits, U/V at f0_uv_bits (the cheapest payload).
+    """
+    yuv = rgb_to_yuv(skip_high.astype(np.float64))
+    out = yuv.copy()
+    even = np.arange(0, skip_high.shape[0], 2)  # frame0
+    odd = np.arange(1, skip_high.shape[0], 2)   # frame1
+    # frame1
+    out[odd, 0:1] = _quant_channel(yuv[odd, 0:1], bits=y_bits)
+    out[odd, 1:2] = _quant_channel(yuv[odd, 1:2], bits=uv_bits)
+    out[odd, 2:3] = _quant_channel(yuv[odd, 2:3], bits=uv_bits)
+    # frame0
+    out[even, 0:1] = _quant_channel(yuv[even, 0:1], bits=f0_y_bits)
+    out[even, 1:2] = _quant_channel(yuv[even, 1:2], bits=f0_uv_bits)
+    out[even, 2:3] = _quant_channel(yuv[even, 2:3], bits=f0_uv_bits)
+    return yuv_to_rgb(out).astype(np.float64)
+
+
+# (rung_id, label, y_bits, uv_bits, f0_y_bits, f0_uv_bits)
+LADDER = [
+    # control: all channels uint8, both roles (anchor vs S5a ctrl)
+    ("S2_ctrl_all_uint8", "ctrl: all YUV ch uint8 both roles", 8, 8, 8, 8),
+    # Y protected (uint8), chroma coarser (uint6) — frame1
+    ("S2_y8_uv6", "f1 Y8 UV6 | f0 Y8 UV6", 8, 6, 8, 6),
+    ("S2_y8_uv4", "f1 Y8 UV4 | f0 Y8 UV4", 8, 4, 8, 4),
+    # + frame0 chroma coarsest (the cheapest payload)
+    ("S2_y8_uv6_f0uv3", "f1 Y8 UV6 | f0 Y8 UV3", 8, 6, 8, 3),
+    ("S2_y8_uv4_f0uv2", "f1 Y8 UV4 | f0 Y8 UV2", 8, 4, 8, 2),
+    # + frame0 Y coarser too (frame0 seg-blind)
+    ("S2_y8_uv4_f0y5_f0uv2", "f1 Y8 UV4 | f0 Y5 UV2", 8, 4, 5, 2),
+    ("S2_y8_uv4_f0y4_f0uv2", "f1 Y8 UV4 | f0 Y4 UV2", 8, 4, 4, 2),
+]
+
+
+def reencode_decoder_payload(decoder_payload, new_skip_high):
+    from tac.substrates.snerv_inverse_steg_carrier import archive as A
+
+    header, comp = A._unpack_subpacket(
+        decoder_payload, magic=A.SNERV_DECODER_MAGIC,
+        schema=A.DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
+    )
+    raw = lzma.decompress(comp)
+    tensors = A._unpack_tensor_manifest(raw, header.get("tensor_manifest") or [])
+    tensors[SKIP_HIGH_NAME] = np.ascontiguousarray(new_skip_high, dtype=np.float64)
+    manifest, new_raw = A._pack_tensor_manifest(tensors)
+    new_comp = lzma.compress(
+        new_raw, format=lzma.FORMAT_XZ,
+        preset=A.DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_LZMA_PRESET,
+    )
+    new_header = dict(header)
+    new_header["tensor_manifest"] = manifest
+    new_header["tensor_count"] = len(manifest)
+    new_header["raw_tensor_bytes"] = len(new_raw)
+    new_header["raw_tensor_sha256"] = A._sha256(new_raw)
+    new_header["compressed_bytes"] = len(new_comp)
+    new_header["compressed_sha256"] = A._sha256(new_comp)
+    return A._pack_subpacket(A.SNERV_DECODER_MAGIC, new_header, new_comp)
+
+
+def rebuild_packet(orig_packet, new_decoder_payload):
+    from tac.substrates.snerv_inverse_steg_carrier import archive as A
+
+    decoded = A.unpack_snerv_archive(orig_packet)
+    sections = dict(decoded.sections)
+    sections["decoder_payload"] = new_decoder_payload
+    return A.pack_snerv_archive_snar2(
+        metadata_payload=sections["metadata_payload"],
+        lf_payload=sections["lf_payload"],
+        decoder_payload=sections["decoder_payload"],
+        step_map_packet=sections["step_map_packet"],
+        metadata=decoded.metadata,
+    ).packet
+
+
+def carrier_lf_channel_storage_bytes(skip_high, *, y_bits, uv_bits, f0_y_bits, f0_uv_bits):
+    """Entropy-true storage: quantize in YUV per (channel,role), encode the integer
+    code planes via the carrier lossless intN codec, split streams by (channel,role).
+    Returns (total_code_bytes, scale_sidecar_bytes). Storage-floor estimate.
+    """
+    from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
+        encode_lf_quant_payload_v2_with_report,
+    )
+
+    yuv = rgb_to_yuv(skip_high.astype(np.float64))
+    even = np.arange(0, skip_high.shape[0], 2)
+    odd = np.arange(1, skip_high.shape[0], 2)
+
+    def _codes(block, bits):
+        levels = (1 << bits) - 1
+        a = block.astype(np.float64, copy=False)
+        lo = a.min(axis=(1, 2, 3), keepdims=True)
+        hi = a.max(axis=(1, 2, 3), keepdims=True)
+        span = np.maximum(hi - lo, 1e-12)
+        codes = np.rint((a - lo) / span * levels).astype(np.int64)
+        return codes, lo, span
+
+    streams = []
+    scales = []
+    for idxs, (yb, ub) in [(odd, (y_bits, uv_bits)), (even, (f0_y_bits, f0_uv_bits))]:
+        for ch, bits in [(0, yb), (1, ub), (2, ub)]:
+            codes, lo, span = _codes(yuv[idxs, ch:ch + 1], bits)
+            # one 2-D plane per frame: (1, H*W) -> stack as (n_frames, H*W) via list
+            planes = [codes[i].reshape(1, -1) for i in range(codes.shape[0])]
+            pkt, _r = encode_lf_quant_payload_v2_with_report(
+                planes, mode="portfolio_auto", wrapper="portfolio_auto"
+            )
+            streams.append(len(pkt))
+            scales.append(lo.astype(np.float32).reshape(-1))
+            scales.append(span.astype(np.float32).reshape(-1))
+    scale_raw = np.concatenate(scales).tobytes()
+    scale_bytes = len(lzma.compress(scale_raw, preset=6))
+    return sum(streams), scale_bytes
+
+
+def _weights_lzma_bytes(tensors):
+    from tac.substrates.snerv_inverse_steg_carrier import archive as A
+
+    sub = {k: v for k, v in tensors.items() if k != SKIP_HIGH_NAME}
+    _manifest, raw = A._pack_tensor_manifest(sub)
+    return len(lzma.compress(raw, format=lzma.FORMAT_XZ, preset=6))
+
+
+def _zip_stored_bytes(packet):
+    import io
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as zf:
+        zf.writestr("x", packet)
+    return len(buf.getvalue())
+
+
+def score_packet(packet, n_pairs, source_pairs, posenet, segnet):
+    from tac.substrates.snerv_inverse_steg_carrier.archive import decode_snerv_archive_frames
+    from tac.substrates.snerv_inverse_steg_carrier.inflate import _resize_nchw_bilinear
+    from tac.analysis.inverse_steganalysis_linf_vs_l2_gate import measure_pairs_d_seg_d_pose_batched
+    import torch
+
+    t0 = time.time()
+    frames = decode_snerv_archive_frames(packet)
+    decode_s = time.time() - t0
+    arr = np.asarray(frames, dtype=np.float32)
+    if arr.ndim == 5 and arr.shape[1] == 2:
+        pairs_arr = arr
+    elif arr.ndim == 4 and arr.shape[0] % 2 == 0:
+        pairs_arr = arr.reshape(arr.shape[0] // 2, 2, *arr.shape[1:])
+    else:
+        raise RuntimeError(f"unexpected decoded frame shape {arr.shape}")
+    cam_h, cam_w = int(source_pairs.shape[-2]), int(source_pairs.shape[-1])
+    n = min(n_pairs, int(pairs_arr.shape[0]))
+    sel = pairs_arr[:n]
+    flat = sel.reshape(-1, 3, sel.shape[-2], sel.shape[-1])
+    resized = _resize_nchw_bilinear(flat, out_hw=(cam_h, cam_w))
+    u8 = np.rint(np.clip(resized, 0.0, 255.0)).astype(np.uint8)
+    recon_np = u8.astype(np.float32).reshape(n, 2, 3, cam_h, cam_w)
+    recon = torch.from_numpy(recon_np).to(source_pairs)
+    t1 = time.time()
+    dsegs, dposes = measure_pairs_d_seg_d_pose_batched(
+        posenet, segnet, source_pairs[:n], recon, batch_pairs=8
+    )
+    d_seg = float(np.mean(dsegs))
+    d_pose = float(np.mean(dposes))
+    return {
+        "decode_seconds": decode_s,
+        "score_seconds": time.time() - t1,
+        "n_pairs_scored": n,
+        "d_seg": d_seg,
+        "d_pose": d_pose,
+        "pose_score_term": float(np.sqrt(10.0 * max(d_pose, 0.0))),
+        "per_pair_d_seg_first8": [float(v) for v in dsegs[:8]],
+        "per_pair_d_pose_first8": [float(v) for v in dposes[:8]],
+    }
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--n-pairs", type=int, default=48)
+    ap.add_argument("--rungs", type=str, default="all")
+    args = ap.parse_args()
+
+    RUN_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = RUN_DIR / "s2_yuv_channel_split.v1.json"
+
+    from tac.substrates.snerv_inverse_steg_carrier import archive as A
+
+    orig_packet = G1B_PACKET.read_bytes()
+    decoded = A.unpack_snerv_archive(orig_packet)
+    dp = decoded.sections["decoder_payload"]
+    header, comp = A._unpack_subpacket(
+        dp, magic=A.SNERV_DECODER_MAGIC, schema=A.DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA
+    )
+    raw = lzma.decompress(comp)
+    tensors = A._unpack_tensor_manifest(raw, header.get("tensor_manifest") or [])
+    skip_high = tensors[SKIP_HIGH_NAME]
+
+    # Verify YUV roundtrip is lossless (sanity) before any quant.
+    rt = yuv_to_rgb(rgb_to_yuv(skip_high.astype(np.float64)))
+    yuv_rt_mse = float(np.mean((rt - skip_high) ** 2))
+
+    from tac.analysis.score_exact_saliency import decode_real_pairs, load_score_exact_scorers
+
+    posenet, segnet = load_score_exact_scorers(
+        upstream_dir=str(REPO_ROOT / "upstream"), device="cpu"
+    )
+    source_pairs = decode_real_pairs(
+        str(REPO_ROOT / "upstream/videos/0.mkv"), args.n_pairs, pair_stride=1, start_pair=0
+    )
+    other_section_bytes = (
+        len(decoded.sections["metadata_payload"])
+        + len(decoded.sections["lf_payload"])
+        + len(decoded.sections["step_map_packet"])
+    )
+    weights_lzma = _weights_lzma_bytes(tensors)
+
+    out = {
+        "schema": "snerv_branch_b_round2_s2_yuv_channel_split.v1",
+        "subagent_id": "snerv_branch_b_round2_20260610",
+        "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "g1b_packet_path": str(G1B_PACKET),
+        "g1b_packet_sha256": _sha(orig_packet),
+        "g1b_base_d_seg": G1B_BASE_D_SEG,
+        "g1b_base_pose_term": G1B_BASE_POSE_TERM,
+        "yuv_basis": "BT.601 full-range RGB<->YUV (matches rgb_to_yuv6 luma basis)",
+        "yuv_roundtrip_mse": yuv_rt_mse,
+        "skip_high_shape": list(skip_high.shape),
+        "weights_lzma_bytes_est": weights_lzma,
+        "other_section_bytes": other_section_bytes,
+        "n_pairs_requested": args.n_pairs,
+        "contest_byte_price": CONTEST_BYTE_PRICE,
+        "guard_d_seg_max": GUARD_D_SEG_MAX,
+        "guard_pose_term_max": GUARD_POSE_TERM_MAX,
+        "frontier_target": 0.19199,
+        "rungs": [],
+        **FALSE_AUTHORITY,
+    }
+
+    want = (
+        [r[0] for r in LADDER] if args.rungs == "all"
+        else [s.strip() for s in args.rungs.split(",") if s.strip()]
+    )
+
+    for (rid, label, yb, ub, f0y, f0uv) in LADDER:
+        if rid not in want:
+            continue
+        t0 = time.time()
+        new_sh = channel_role_quant(skip_high, y_bits=yb, uv_bits=ub,
+                                    f0_y_bits=f0y, f0_uv_bits=f0uv)
+        new_dp = reencode_decoder_payload(dp, new_sh)
+        new_pkt = rebuild_packet(orig_packet, new_dp)
+        pkt_bytes = len(new_pkt)
+        zbytes = _zip_stored_bytes(new_pkt)
+        sc = score_packet(new_pkt, args.n_pairs, source_pairs, posenet, segnet)
+        code_b, scale_b = carrier_lf_channel_storage_bytes(
+            skip_high, y_bits=yb, uv_bits=ub, f0_y_bits=f0y, f0_uv_bits=f0uv
+        )
+        est_skip_high_storage = code_b + scale_b
+        est_packet_floor = est_skip_high_storage + weights_lzma + other_section_bytes
+        rate_floor = CONTEST_BYTE_PRICE * est_packet_floor
+        rate_pkt = CONTEST_BYTE_PRICE * pkt_bytes
+        nonrate = 100.0 * sc["d_seg"] + sc["pose_score_term"]
+        total_pkt = nonrate + rate_pkt
+        total_floor = nonrate + rate_floor
+        d_seg_ok = sc["d_seg"] <= GUARD_D_SEG_MAX
+        pose_ok = sc["pose_score_term"] <= GUARD_POSE_TERM_MAX
+        row = {
+            "rung_id": rid, "label": label,
+            "y_bits": yb, "uv_bits": ub, "f0_y_bits": f0y, "f0_uv_bits": f0uv,
+            "packet_bytes": pkt_bytes, "archive_zip_bytes": zbytes,
+            "packet_sha256": _sha(new_pkt),
+            "skip_high_code_bytes": code_b, "scale_sidecar_bytes": scale_b,
+            "est_skip_high_storage_bytes": est_skip_high_storage,
+            "est_packet_floor_bytes": est_packet_floor,
+            "rate_term_packet": rate_pkt, "rate_term_floor": rate_floor,
+            "d_seg": sc["d_seg"], "d_pose": sc["d_pose"],
+            "pose_score_term": sc["pose_score_term"],
+            "nonrate_floor": nonrate,
+            "advisory_total_packet_rate": total_pkt,
+            "advisory_total_storage_floor": total_floor,
+            "delta_d_seg_vs_g1b": sc["d_seg"] - G1B_BASE_D_SEG,
+            "delta_pose_term_vs_g1b": sc["pose_score_term"] - G1B_BASE_POSE_TERM,
+            "gap_to_0.19199_at_floor": total_floor - 0.19199,
+            "bytes_vs_178KB_ratio": est_packet_floor / 178493,
+            "guard_d_seg_ok": d_seg_ok, "guard_pose_term_ok": pose_ok,
+            "guard_pass": d_seg_ok and pose_ok,
+            "per_pair_d_seg_first8": sc["per_pair_d_seg_first8"],
+            "per_pair_d_pose_first8": sc["per_pair_d_pose_first8"],
+            "decode_seconds": sc["decode_seconds"], "score_seconds": sc["score_seconds"],
+            "rung_wall_seconds": time.time() - t0,
+            **FALSE_AUTHORITY,
+        }
+        out["rungs"].append(row)
+        out_path.write_text(json.dumps(out, indent=2, sort_keys=True))
+        print(
+            f"[s2] {rid:24s} Y{yb}/UV{ub} f0Y{f0y}/UV{f0uv}  "
+            f"d_seg={sc['d_seg']:.6f}(Δ{row['delta_d_seg_vs_g1b']:+.2e}) "
+            f"pose_t={sc['pose_score_term']:.4f}(Δ{row['delta_pose_term_vs_g1b']:+.4f}) "
+            f"floor={est_packet_floor:>11,}({est_packet_floor/178493:.0f}x) "
+            f"total={total_floor:.4f} cone={'OK' if row['guard_pass'] else 'FAIL'}",
+            flush=True,
+        )
+
+    out["verdict"] = {
+        "best_floor": min((r["advisory_total_storage_floor"] for r in out["rungs"]), default=None),
+        "note": "Y-protect + chroma-coarsen + frame0-chroma-coarsest channel axis; storage-floor.",
+    }
+    out_path.write_text(json.dumps(out, indent=2, sort_keys=True))
+    print("[s2] WROTE", out_path, flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

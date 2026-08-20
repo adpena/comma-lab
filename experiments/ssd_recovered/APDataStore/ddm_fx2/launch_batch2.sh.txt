@@ -1,0 +1,27 @@
+#!/bin/bash
+# ddm_fx2 race batch 2 -- member-pool extension (R4), R3's predicted contexts, SSE rescue (R2).
+cd /Users/adpena/Projects/pact || exit 1
+P=.venv/bin/python
+RACE=/Volumes/APDataStore/pact/ddm_fx2/race.py
+L=/Volumes/APDataStore/pact/ddm_fx2/race
+F13="shipped_joint,temporal_spatial,surprise_only,spatial_surprise,spatial_boundary,run_surprise,boundary_surprise,temporal_surprise,shipped_fast256,shipped_fast4096,surprise_fast256,spatial4_surprise,homog_surprise"
+run() { local id="$1"; shift; $P "$RACE" --id "$id" --module fx2 "$@" > "$L/$id.log" 2>&1; }
+
+# R4 continued -- how far does the member pool actually go?
+run C1_mem14_homogbnd   --mixer-context cls_boundary_agree_ubin8 --sse-context off --families "$F13,homog_boundary_surprise" &
+run C2_mem15_sp4bnd_hsp --mixer-context cls_boundary_agree_ubin8 --sse-context off --families "$F13,spatial4_boundary,homog_spatial4" &
+run C3_mem15_fast256    --mixer-context cls_boundary_agree_ubin8 --sse-context off --families "$F13,homog_surprise_fast256,spatial4_surprise_fast256" &
+run C4_mem17_all        --mixer-context cls_boundary_agree_ubin8 --sse-context off --families "$F13,homog_boundary_surprise,spatial4_boundary,homog_spatial4,spatial4_temporal" &
+run C5_mem19_everything --mixer-context cls_boundary_agree_ubin8 --sse-context off --families "$F13,homog_boundary_surprise,spatial4_boundary,homog_spatial4,spatial4_temporal,homog_surprise_fast256,spatial4_surprise_fast256" &
+
+# R3's PRE-REGISTERED PREDICTION: the held-out ranking says every homog context
+# beats the fx1 winner cls_boundary_agree_ubin8 (66.1 B).  D1 175.0, D2 168.4, D3 148.6.
+run D1_ctx_bnd_agree_homog --mixer-context cls_boundary_agree_homog_ubin8 --sse-context off --families "$F13" &
+run D2_ctx_bnd_homog       --mixer-context cls_boundary_homog_ubin8       --sse-context off --families "$F13" &
+run D3_ctx_cls_homog       --mixer-context cls_homog_ubin8                --sse-context off --families "$F13" &
+
+# R2 rescue: can a LEARNED exponent shrink the SSE stage out of the trouble it measured?
+run D4_sse_qbin_learnw     --mixer-context cls_boundary_agree_ubin8 --sse-context qbin --sse-learn-weight --families "$F13" &
+
+wait
+echo BATCH2_COMPLETE

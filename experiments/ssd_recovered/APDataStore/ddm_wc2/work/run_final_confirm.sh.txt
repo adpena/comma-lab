@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# ddm_wc2c FINAL confirmation.  The first n600 identity row was produced by a
+# build that PREDATES two review fixes (stale cached geometry; a pool counter
+# that could be polluted by a short job).  Neither is reachable in this flow, so
+# the field is EXPECTED to be unchanged -- which is exactly why it must be
+# re-run rather than assumed.  Two rows, chosen to maximise what they prove per
+# minute: dispatched/NEON at 4 threads, and the intrinsic-free scalar twin at 1
+# thread, which is simultaneously the portable-oracle check and the widest
+# possible thread-count delta.
+set -euo pipefail
+REPO=/Users/adpena/Projects/pact
+RETAIN=/Volumes/APDataStore/pact/ddm_wc2/retained
+BUILD=/Volumes/APDataStore/pact/ddm_wc2/work/build
+export CPR1_RC64_LIBRARY=$BUILD/rc64_backend.so
+cd "$REPO"
+
+echo "[$(date -u +%FT%TZ)] dispatched (neon), 4 threads"
+F26_HPAC_THREADS=4 "$REPO/.venv/bin/python" experiments/ddm_wc2c_native_split_decode.py \
+    --frames 600 --library "$BUILD/f26_hpac_native_simd.so" \
+    --token-output "$RETAIN/tokens_split_native_n600.u8" \
+    --output "$RETAIN/wc2c_split_native_n600_t4.json"
+cp "$RETAIN/wc2c_split_native_n600_t4.json" "$RETAIN/wc2c_thread_independence_t4.json"
+
+echo "[$(date -u +%FT%TZ)] scalar twin (no intrinsics), 1 thread"
+F26_HPAC_THREADS=1 "$REPO/.venv/bin/python" experiments/ddm_wc2c_native_split_decode.py \
+    --frames 600 --library "$BUILD/f26_hpac_native_scalar.so" \
+    --token-output "$RETAIN/tokens_scalar_twin_n600.u8" \
+    --output "$RETAIN/wc2c_scalar_twin_n600_t4.json"
+cp "$RETAIN/wc2c_scalar_twin_n600_t4.json" "$RETAIN/wc2c_thread_independence_t1.json"
+
+echo "[$(date -u +%FT%TZ)] equivalence test"
+"$REPO/.venv/bin/python" experiments/ddm_wc2c_python_reference_equivalence_test.py \
+    --output "$RETAIN/wc2c_equivalence_test.json" || true
+echo "[$(date -u +%FT%TZ)] done"

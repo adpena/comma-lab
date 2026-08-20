@@ -1,0 +1,354 @@
+"""DDM-CK1: build the composed keep01 x S2 candidate body, archive, generation tree.
+
+Composition (both legs ADMITTED upstream, measured on separate rows):
+  * keep01  -- SM3R MODE_ROW_PRUNE keep_percent=1 over {blocks.1/2/3.film.weight}
+  * S2      -- the two SD1M legs that do NOT overlap the prune:
+               frame_embed.weight q4->q3, blocks.0.film.weight q4->q3
+
+Realized as SM3R MODE_ROW_PRUNE_MIXED (mode 6): keep01's exact row geometry
+plus an SD1M-style per-tensor depth table.
+
+Controls run before the composed body is trusted:
+  C1  mode 5 @ keep_percent=1 reproduces keep01's retained semantic body bytes
+  C2  the mode-5 body rebuilds keep01's exact archive (bytes + sha256)
+  C3  the composed archive is deterministic (two independent builds agree)
+  C4  parse-back through the STAGED shipping runtime returns the packer state
+  C5  every non-semantic archive section is byte-unchanged vs keep01
+
+No score claim.  d_seg / d_pose are UNMEASURED here; this run produces bytes
+and a decode proof only.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import difflib
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+import zipfile
+from collections import OrderedDict
+from pathlib import Path
+
+import numpy as np
+import torch
+
+REPO = Path("/Users/adpena/Projects/pact")
+RT = Path("/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime")
+KEEP01_GEN = Path("/Volumes/APDataStore/pact/ddm_sa1/generations/sm3r_keep01")
+KEEP01_RETAINED = Path("/Volumes/APDataStore/pact/ddm_sa1/retained/sm3r_keep01")
+OUT = Path("/Volumes/APDataStore/pact/ddm_ck1")
+GEN = OUT / "generations/ck1_composed"
+
+KEEP01_ARCHIVE_SHA256 = "67422cf0d49b7af0e241780f5935b4d735f565f13fa365bc36ac9c0f0ff95953"
+KEEP01_ARCHIVE_BYTES = 178_272
+KEEP01_BODY_SHA256 = "3f6ed3e69f0aedf0c9e99e0e358caf4c5796b9e4dae787aa542da3dd52ef550b"
+SZ1_COMPILE_BASE_BYTES = 179_930
+RR4_BASE_BYTES = 181_161
+ORIGINAL_BYTES = 37_545_489
+KEEP_PERCENT = 1
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(RT))
+sys.path.insert(0, str(RT / "cpr1"))
+sys.path.insert(0, str(REPO / "experiments"))
+
+from ck1_tree_hygiene import strip_import_residue  # noqa: E402
+
+import ddm_rx1_rate_representation_attack as rx1  # noqa: E402
+import ddm_sd1_semantic_rd_curve as sd1  # noqa: E402
+import ddm_sm3_semantic_representation as sm3  # noqa: E402
+import runtime.residual_archive as ra  # noqa: E402
+
+torch.set_num_threads(4)
+torch.set_grad_enabled(False)
+
+
+def sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    return sha256_bytes(path.read_bytes())
+
+
+def utc_now() -> str:
+    return dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def atomic_write_bytes(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    with tmp.open("wb") as handle:
+        handle.write(payload)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(tmp, path)
+
+
+def artifact(path: Path) -> dict:
+    return {"path": str(path), "bytes": path.stat().st_size, "sha256": sha256_file(path)}
+
+
+def brotli11(value: bytes) -> bytes:
+    compressed = subprocess.run(
+        ["brotli", "-q", "11", "-c"], input=value, capture_output=True, check=True
+    ).stdout
+    restored = subprocess.run(
+        ["brotli", "-d", "-c"], input=compressed, capture_output=True, check=True
+    ).stdout
+    if restored != value:
+        raise ValueError("brotli round trip differs")
+    return compressed
+
+
+# --------------------------------------------------------------------------
+# Base archive sections (identical to the sa1 builders' container path)
+# --------------------------------------------------------------------------
+base_archive = RT / "archive.zip"
+outer = zipfile.ZipFile(base_archive).read("p")
+header = rx1.RX1_HEADER
+magic, version, codec, table_mode, reserved, hb, sb, cb = header.unpack_from(outer)
+offset = header.size
+hpac_stream = outer[offset : offset + hb]
+offset += hb
+offset += sb
+carrier_stream = outer[offset : offset + cb]
+offset += cb
+tail = outer[offset:]
+
+
+def build_archive(body: bytes) -> tuple[bytes, int]:
+    stream = brotli11(body)
+    packed = rx1.pack_rx1_model(
+        hpac_stream, stream, carrier_stream, codec_id=codec, table_mode=table_mode
+    )
+    return rx1.deterministic_zip(packed + tail), len(stream)
+
+
+# --------------------------------------------------------------------------
+# The semantic state keep01 was built from
+# --------------------------------------------------------------------------
+base_parts = ra.read_residual_archive(base_archive)
+records = ra.decode_wans1(base_parts.semantic_blob)
+state: OrderedDict[str, torch.Tensor] = OrderedDict(
+    (r.schema.name, torch.from_numpy(np.ascontiguousarray(r.values, dtype=np.float32)))
+    for r in records
+)
+qnames = sd1.quantized_names(state)
+
+checks: dict[str, object] = {}
+
+# C1 -- mode 5 positive control on the real state
+keep01_body, keep01_expected, keep01_details = sm3.pack_prune_candidate(state, KEEP_PERCENT)
+retained_body = (KEEP01_RETAINED / "semantic.sm3r.bin").read_bytes()
+checks["C1_mode5_reproduces_keep01_body"] = (
+    keep01_body == retained_body and sha256_bytes(keep01_body) == KEEP01_BODY_SHA256
+)
+
+# C2 -- and rebuilds keep01's exact archive
+keep01_archive, keep01_stream = build_archive(keep01_body)
+checks["C2_mode5_reproduces_keep01_archive"] = (
+    len(keep01_archive) == KEEP01_ARCHIVE_BYTES
+    and sha256_bytes(keep01_archive) == KEEP01_ARCHIVE_SHA256
+)
+
+if not (checks["C1_mode5_reproduces_keep01_body"] and checks["C2_mode5_reproduces_keep01_archive"]):
+    raise SystemExit(f"positive controls failed: {json.dumps(checks, indent=2)}")
+
+# --------------------------------------------------------------------------
+# The composed body
+# --------------------------------------------------------------------------
+depths = {name: 3 for name in sorted(sm3.PRUNE_MIXED_Q3_NAMES)}
+body, expected, details = sm3.pack_prune_mixed_candidate(state, KEEP_PERCENT, depths)
+archive, stream_bytes = build_archive(body)
+repeat_archive, repeat_stream = build_archive(body)
+checks["C3_archive_is_deterministic"] = archive == repeat_archive and stream_bytes == repeat_stream
+
+# Packer-side round trip before anything is staged.
+sm3.assert_state_equal(expected, sm3.unpack_candidate(body, state))
+checks["C_packer_roundtrip_exact"] = True
+
+# Row geometry must be identical to keep01's.
+checks["C_row_geometry_matches_keep01"] = details["kept_rows"] == keep01_details["kept_rows"]
+
+# --------------------------------------------------------------------------
+# Stage the generation tree
+# --------------------------------------------------------------------------
+if GEN.exists():
+    shutil.rmtree(GEN)
+GEN.mkdir(parents=True)
+
+
+def ignore(_directory, names):
+    return {n for n in names if n == "__pycache__" or n.startswith("._")}
+
+
+for name in ("runtime", "cpr1"):
+    shutil.copytree(KEEP01_GEN / name, GEN / name, ignore=ignore)
+shutil.copy2(KEEP01_GEN / "inflate.sh", GEN / "inflate.sh")
+
+# The receiver: the repo module, which now decodes mode 6.  Its only non-mode-6
+# delta against keep01's shipped copy is the module docstring (recorded below).
+shipped_receiver = (KEEP01_GEN / "cpr1/ddm_mp2_semantic_receiver.py").read_bytes()
+repo_receiver = (REPO / "experiments/ddm_mp2_semantic_receiver.py").read_bytes()
+atomic_write_bytes(GEN / "cpr1/ddm_mp2_semantic_receiver.py", repo_receiver)
+receiver_diff = "".join(
+    difflib.unified_diff(
+        shipped_receiver.decode().splitlines(keepends=True),
+        repo_receiver.decode().splitlines(keepends=True),
+        fromfile="keep01/cpr1/ddm_mp2_semantic_receiver.py",
+        tofile="ck1_composed/cpr1/ddm_mp2_semantic_receiver.py",
+    )
+)
+
+# inflate.py: re-pin to the composed archive.
+inflate_source = (KEEP01_GEN / "inflate.py").read_text()
+if (
+    KEEP01_ARCHIVE_SHA256 not in inflate_source
+    or f"{KEEP01_ARCHIVE_BYTES:_}" not in inflate_source
+):
+    raise SystemExit("keep01 inflate.py does not carry the expected pins")
+inflate_source = inflate_source.replace(KEEP01_ARCHIVE_SHA256, sha256_bytes(archive))
+inflate_source = inflate_source.replace(f"{KEEP01_ARCHIVE_BYTES:_}", f"{len(archive):_}")
+atomic_write_bytes(GEN / "inflate.py", inflate_source.encode())
+atomic_write_bytes(GEN / "archive.zip", archive)
+
+stripped = strip_import_residue(GEN)
+checks["C6_staged_tree_free_of_import_residue"] = True
+if sha256_bytes((GEN / "archive.zip").read_bytes()) != sha256_bytes(archive):
+    raise SystemExit("stripping import residue disturbed the archive bytes")
+
+# --------------------------------------------------------------------------
+# C4/C5 -- parse-back through the STAGED tree
+# --------------------------------------------------------------------------
+staged = {}
+sys.path.insert(0, str(GEN / "cpr1"))
+for module in [m for m in list(sys.modules) if m.startswith("ddm_mp2_semantic_receiver")]:
+    del sys.modules[module]
+import ddm_mp2_semantic_receiver as staged_mp2  # noqa: E402
+
+if not str(staged_mp2.__file__).startswith(str(GEN)):
+    raise SystemExit(f"staged receiver import resolved elsewhere: {staged_mp2.__file__}")
+staged["receiver_module"] = staged_mp2.__file__
+
+parts = ra.read_residual_archive(GEN / "archive.zip")
+checks["C4a_semantic_parseback_byte_equal"] = parts.semantic_blob == body
+checks["C5_non_semantic_sections_unchanged"] = all(
+    getattr(parts, name) == getattr(base_parts, name)
+    for name in ("hpac_blob", "carrier_blob", "token_stream", "residual_payload")
+)
+decoded = staged_mp2.unpack_variant_semantic_or_none(parts.semantic_blob, state)
+if decoded is None:
+    raise SystemExit("staged receiver refused the composed semantic body")
+max_dev = max(float((decoded[name] - expected[name]).abs().max()) for name in state)
+checks["C4b_staged_receiver_matches_packer_exactly"] = max_dev == 0.0 and list(decoded) == list(
+    expected
+)
+
+failed = sorted(key for key, value in checks.items() if value is not True)
+if failed:
+    raise SystemExit(f"checks failed: {failed}\n{json.dumps(checks, indent=2, default=str)}")
+
+# --------------------------------------------------------------------------
+# Persist every payload (P0)
+# --------------------------------------------------------------------------
+retained_dir = OUT / "retained/ck1_composed"
+atomic_write_bytes(retained_dir / "semantic.sm3r_mixed.bin", body)
+atomic_write_bytes(retained_dir / "archive.zip", archive)
+atomic_write_bytes(retained_dir / "archive.repeat.zip", repeat_archive)
+atomic_write_bytes(retained_dir / "keep01_control.semantic.sm3r.bin", keep01_body)
+atomic_write_bytes(retained_dir / "keep01_control.archive.zip", keep01_archive)
+npz_path = retained_dir / "expected_state.npz"
+npz_tmp = retained_dir / f".expected_state.{os.getpid()}.tmp.npz"
+np.savez(npz_tmp, **{name: value.numpy() for name, value in expected.items()})
+os.replace(npz_tmp, npz_path)
+atomic_write_bytes(retained_dir / "receiver_vs_keep01.diff", receiver_diff.encode())
+
+delta_vs_keep01 = len(archive) - KEEP01_ARCHIVE_BYTES
+receipt = {
+    "schema": "ddm_ck1_generation_receipt.v1",
+    "written_at_utc": utc_now(),
+    "candidate_id": "ck1_composed",
+    "score_claim": False,
+    "d_seg_measured": False,
+    "d_pose_measured": False,
+    "axis": "[scorer-free exact archive bytes and staged-receiver parse-back]",
+    "composition": {
+        "row_prune": {
+            "mode": sm3.MODE_ROW_PRUNE_MIXED,
+            "keep_percent": KEEP_PERCENT,
+            "tensors": details["selected_tensor_names"],
+            "kept_rows": details["kept_rows"],
+        },
+        "mixed_depth": details["non_default_bit_allocation"],
+        "bit_allocation": details["bit_allocation"],
+        "overlap_note": (
+            "S2's films-1/2/3 q2 legs are voided by the 99% row prune and are "
+            "deliberately not composed; only the two non-overlapping legs are"
+        ),
+    },
+    "bytes": {
+        "semantic_body": len(body),
+        "brotli_semantic_stream": stream_bytes,
+        "archive": len(archive),
+        "keep01_archive": KEEP01_ARCHIVE_BYTES,
+        "delta_vs_keep01_generation_archive": delta_vs_keep01,
+        "delta_vs_sz1_compile_base": len(archive) - SZ1_COMPILE_BASE_BYTES,
+        "delta_vs_rr4_base": len(archive) - RR4_BASE_BYTES,
+        "mode5_body": len(keep01_body),
+        "semantic_body_delta_vs_keep01": len(body) - len(keep01_body),
+    },
+    "rate_only_delta_s_vs_keep01_generation": 25 * delta_vs_keep01 / ORIGINAL_BYTES,
+    "checks": checks,
+    "staged_receiver_max_abs_deviation": max_dev,
+    "staged": staged,
+    "import_residue_stripped": {
+        "count": len(stripped),
+        "paths": stripped,
+        "why": (
+            "ExFAT materializes AppleDouble twins on every copy2/write; "
+            "contest_auth_eval.py AST-parses the runtime tree and dies on ._*.py"
+        ),
+    },
+    "provenance": {
+        "argv": sys.argv,
+        "rr4_base_archive": artifact(base_archive),
+        "keep01_generation_archive": {
+            "path": str(KEEP01_GEN / "archive.zip"),
+            "bytes": KEEP01_ARCHIVE_BYTES,
+            "sha256": KEEP01_ARCHIVE_SHA256,
+        },
+        "sm3_source": artifact(REPO / "experiments/ddm_sm3_semantic_representation.py"),
+        "sd1_source": artifact(REPO / "experiments/ddm_sd1_semantic_rd_curve.py"),
+        "rx1_source": artifact(REPO / "experiments/ddm_rx1_rate_representation_attack.py"),
+        "receiver_source": artifact(REPO / "experiments/ddm_mp2_semantic_receiver.py"),
+        "builder_source": artifact(Path(__file__).resolve()),
+        "brotli_cli": subprocess.run(
+            ["brotli", "--version"], capture_output=True, text=True, check=True
+        ).stdout.strip(),
+        "quantized_names": qnames,
+    },
+    "retained": {
+        "semantic": artifact(retained_dir / "semantic.sm3r_mixed.bin"),
+        "archive": artifact(retained_dir / "archive.zip"),
+        "archive_repeat": artifact(retained_dir / "archive.repeat.zip"),
+        "expected_state_npz": artifact(npz_path),
+        "keep01_control_semantic": artifact(retained_dir / "keep01_control.semantic.sm3r.bin"),
+        "keep01_control_archive": artifact(retained_dir / "keep01_control.archive.zip"),
+        "receiver_diff": artifact(retained_dir / "receiver_vs_keep01.diff"),
+        "generation_archive": artifact(GEN / "archive.zip"),
+        "generation_inflate": artifact(GEN / "inflate.py"),
+        "generation_receiver": artifact(GEN / "cpr1/ddm_mp2_semantic_receiver.py"),
+    },
+}
+receipt_path = GEN / "GENERATION_RECEIPT.json"
+atomic_write_bytes(receipt_path, (json.dumps(receipt, indent=2, sort_keys=True) + "\n").encode())
+shutil.copy2(receipt_path, OUT / "GENERATION_RECEIPT.json")
+# Writing the receipt itself materializes a twin on ExFAT; strip again so the
+# staged tree the advisory row consumes is clean at exit.
+strip_import_residue(GEN)
+print(json.dumps(receipt, indent=2, sort_keys=True))

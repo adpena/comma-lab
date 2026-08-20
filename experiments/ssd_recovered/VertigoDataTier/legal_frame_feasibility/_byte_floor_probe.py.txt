@@ -1,0 +1,50 @@
+"""Byte-floor probe: how cheap can a LEGAL frame1 be? Project the comp frame1 (relative to a cheap
+anchor = the comp frame0, which the archive already pays for) onto progressively cheaper subspaces;
+measure where d_seg/d_pose breaks feasibility. The cheapest still-feasible representation IS the
+legal-frame byte floor (the sharp answer the score-native carrier needed)."""
+import sys, json
+from pathlib import Path
+root = Path("/Users/adpena/Projects/pact")
+harness = root / "experiments/results/pr110pp_r2_nonmps_candidate_20260609/analysis"
+for p in (root, root/"src", root/"upstream", harness):
+    if str(p) not in sys.path: sys.path.insert(0, str(p))
+import numpy as np, torch
+import torch.nn.functional as Fn
+import render_and_score_lib as L
+from modules import PoseNet, SegNet, posenet_sd_path, segnet_sd_path
+from safetensors.torch import load_file
+from tac.boundary_math.dykstra_legal_frame import (SEG_H, SEG_W, FrozenScorerProjector,
+    project_onto_cheap, delta_coded_bytes)
+from tac.differentiable_eval_roundtrip import patch_upstream_yuv6_globally, unpatch_upstream_yuv6
+
+pose = PoseNet().eval(); pose.load_state_dict(load_file(posenet_sd_path, device="cpu"))
+seg = SegNet().eval(); seg.load_state_dict(load_file(segnet_sd_path, device="cpu"))
+for net in (seg,pose):
+    for pp in net.parameters(): pp.requires_grad_(False)
+PAIRS=[0,1,2]
+gt = L.decode_gt_pairs(PAIRS); comp = L.FrontierRenderer().render_baseline_pairs(PAIRS)
+def rz(c): return Fn.interpolate(c.unsqueeze(0), size=(SEG_H,SEG_W), mode="bilinear")[0]
+tok = patch_upstream_yuv6_globally()
+z=np.zeros((3,SEG_H,SEG_W))
+print("rank sparse | mean_d_seg mean_d_pose mean_delta_bytes  feasible(seg<=.01 & pose<=2.5e-4)")
+try:
+  for rank,kf in [(0,1.0),(64,0.5),(32,0.25),(24,0.10),(16,0.05),(8,0.02),(4,0.01)]:
+    dsegs=[];dposes=[];byts=[]
+    for pi in PAIRS:
+      c0=rz(comp[pi][0].float()); c1=rz(comp[pi][1].float())
+      g0=rz(gt[pi][0].float().permute(2,0,1)); g1=rz(gt[pi][1].float().permute(2,0,1))
+      pj_t=FrozenScorerProjector(seg,pose,g1,g0); tgt_a=pj_t.seg_argmax(z); tgt_p=pj_t.pose6(z)
+      # anchor = comp frame0 (already in archive). delta = comp1 - anchor. project delta cheap.
+      anchor = c0.numpy().astype(np.float64)
+      delta = (c1.numpy().astype(np.float64) - anchor)
+      dcheap = project_onto_cheap(delta, rank=rank, sparse_keep_frac=kf)
+      # reconstructed cheap legal frame1 = anchor + cheap delta
+      recon_f1 = anchor + dcheap
+      pj=FrozenScorerProjector(seg,pose,recon_f1,c0)  # comp pair with cheap-recon frame1
+      dsegs.append(pj.d_seg(z,tgt_a)); dposes.append(pj.d_pose(z,tgt_p))
+      byts.append(delta_coded_bytes(dcheap, quant_step=1.0))
+    ms=float(np.mean(dsegs)); mp=float(np.mean(dposes)); mb=float(np.mean(byts))
+    feas = ms<=0.01 and mp<=2.5e-4
+    print("%4d %5.2f | %.5f %.4e %8.0f  %s"%(rank,kf,ms,mp,mb,feas))
+finally:
+  unpatch_upstream_yuv6(tok)

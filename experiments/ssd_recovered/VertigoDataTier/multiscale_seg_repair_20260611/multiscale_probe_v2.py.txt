@@ -1,0 +1,191 @@
+#!/usr/bin/env python
+"""v2: smarter low-frequency corrections to push collat/fix below 1.0.
+
+v1 showed: low-freq grid drops collat/fix from 97x (per-pixel) to 2.2x (6x8 grid),
+but still >1 (net d_seg WORSE). The residual collateral comes from the coarse field
+nudging CORRECT pixels (esp. fragile small-margin ones) that share a coarse cell with
+flips. v2 tests correction variants designed to suppress that:
+
+  A. SIGN_FLIPMASK : gradient sign, but ZERO outside flip pixels BEFORE low-pass
+                     (correction energy only where flips are; avoids pushing far-from-flip
+                     regions). Low-pass spreads it into a smooth bump centered on flips.
+  B. MARGIN_WEIGHTED: gradient * relu(-margin) (magnitude prop to how-deep-the-flip),
+                     zeroed outside flips, then low-pass. Bigger push where the flip is
+                     more confident; ~0 near correct boundaries.
+  C. FRAGILITY_GUARD: like A, but additionally DOWN-WEIGHT coarse cells that contain
+                     many fragile correct pixels (|margin| small AND correct), since those
+                     are the collateral source. (cell weight = fixable / (fixable+fragile)).
+
+We sweep coarse grids and amps and report fixed / created / collat/fix / net.
+A variant that crosses collat/fix < 1 at net<0 (and survives d_pose) is a candidate.
+"""
+from __future__ import annotations
+
+import json
+import sys
+import time
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+
+sys.path.insert(0, ".omx/tmp/multiscale_seg_repair_20260611")
+import probe_lib as P
+
+OUT = ".omx/tmp/multiscale_seg_repair_20260611"
+SEG_H, SEG_W = P.SEG_H, P.SEG_W
+CAMERA_H, CAMERA_W = P.CAMERA_H, P.CAMERA_W
+
+
+def seg_logits_argmax_margin(scorer, frame1_camera_bchw):
+    logits = scorer.seg_logits(frame1_camera_bchw)[0]  # (5,SEG_H,SEG_W)
+    arg = logits.argmax(dim=0)
+    top2 = logits.topk(2, dim=0).values
+    margin = (top2[0] - top2[1])  # >=0 confidence of the top class
+    return arg, logits, margin
+
+
+def margin_grad(scorer, frame1_camera, gt_arg):
+    """Dense grad of sum over flip pixels of (gt_logit - pred_logit), + per-pixel margin field.
+
+    Returns grad(3,H,W), pred_arg(SEG_H,SEG_W), signed_margin(SEG_H,SEG_W)=gt_logit-pred_logit.
+    """
+    x = frame1_camera.clone().detach().unsqueeze(0).requires_grad_(True)
+    xs = F.interpolate(x, size=(SEG_H, SEG_W), mode="bilinear")
+    logits = scorer.segnet(xs)[0]
+    pred = logits.argmax(dim=0)
+    h, w = SEG_H, SEG_W
+    idx = torch.arange(h * w)
+    gt_flat = gt_arg.reshape(-1)
+    pred_flat = pred.reshape(-1)
+    lf = logits.reshape(5, -1)
+    gt_logit = lf[gt_flat, idx]
+    pred_logit = lf[pred_flat, idx]
+    signed_margin = (gt_logit - pred_logit).reshape(h, w)  # <0 at flips (gt below pred)
+    flip_mask = pred != gt_arg
+    loss = -(signed_margin * flip_mask.float()).sum()
+    loss.backward()
+    return x.grad[0].detach(), pred.detach(), signed_margin.detach(), flip_mask.detach()
+
+
+def upsample_camera(field_seg_chw):
+    """(3,SEG_H,SEG_W) -> bicubic -> (3,CAMERA_H,CAMERA_W)."""
+    return F.interpolate(field_seg_chw.unsqueeze(0), size=(CAMERA_H, CAMERA_W),
+                         mode="bicubic", align_corners=False)[0]
+
+
+def coarse_then_up_seg(field_seg_chw, gh, gw):
+    """Low-pass at scorer grid: area-avg to gh x gw, then bicubic back to SEG_H x SEG_W."""
+    x = field_seg_chw.unsqueeze(0)
+    coarse = F.adaptive_avg_pool2d(x, (gh, gw))
+    up = F.interpolate(coarse, size=(SEG_H, SEG_W), mode="bicubic", align_corners=False)
+    return up[0]
+
+
+def grad_to_seg_grid(grad_camera):
+    """Downsample the camera-res grad to scorer grid (3,SEG_H,SEG_W) so low-pass + apply
+    happen consistently at the grid SegNet actually reads. We then upsample correction to camera."""
+    return F.interpolate(grad_camera.unsqueeze(0), size=(SEG_H, SEG_W), mode="bilinear")[0]
+
+
+def evaluate_correction(scorer, base_f1_camera, gt_arg, was_bad, corr_camera):
+    new_f1 = (base_f1_camera + corr_camera).clamp(0, 255).round().to(torch.uint8).float()
+    new_arg, _, _ = seg_logits_argmax_margin(scorer, new_f1.unsqueeze(0))
+    now_bad = new_arg != gt_arg
+    fixed = int((was_bad & ~now_bad).sum())
+    created = int((~was_bad & now_bad).sum())
+    return fixed, created, new_f1
+
+
+def build_cache(R, S, gt, comp, pairs):
+    cache = {}
+    for pi in pairs:
+        gt_pair = gt[pi].float()
+        gt_f1 = gt_pair[1].permute(2, 0, 1).unsqueeze(0)
+        gt_arg, _, _ = seg_logits_argmax_margin(S, gt_f1)
+        base_f1 = comp[pi][1].to(torch.uint8).float()
+        base_arg, _, base_margin = seg_logits_argmax_margin(S, base_f1.unsqueeze(0))
+        grad, _, signed_margin, flip_mask = margin_grad(S, base_f1, gt_arg)
+        was_bad = base_arg != gt_arg
+        cache[pi] = dict(gt_arg=gt_arg, base_f1=base_f1, base_arg=base_arg,
+                         base_margin=base_margin, grad=grad, signed_margin=signed_margin,
+                         flip_mask=flip_mask, was_bad=was_bad)
+    return cache
+
+
+def variant_correction(c, variant, gh, gw, amp):
+    """Build a camera-res correction (3,CAMERA_H,CAMERA_W) for the given variant."""
+    grad_seg = grad_to_seg_grid(c["grad"])  # (3,SEG_H,SEG_W)
+    flip = c["flip_mask"].float()  # (SEG_H,SEG_W)
+    if variant == "A_sign_flipmask":
+        field = torch.sign(grad_seg) * flip.unsqueeze(0)  # zero outside flips
+        smooth = coarse_then_up_seg(field, gh, gw)
+        corr_seg = amp * smooth
+    elif variant == "B_margin_weighted":
+        # magnitude prop to flip depth relu(-signed_margin); direction = grad sign
+        depth = torch.relu(-c["signed_margin"]).unsqueeze(0)  # (1,H,W) >=0 at flips
+        field = torch.sign(grad_seg) * depth * flip.unsqueeze(0)
+        smooth = coarse_then_up_seg(field, gh, gw)
+        corr_seg = amp * smooth
+    elif variant == "C_fragility_guard":
+        # per coarse cell weight = fixable/(fixable+fragile); fragile = correct & small margin
+        fragile = ((~c["was_bad"]) & (c["base_margin"] < 1.0)).float()  # (H,W)
+        fixable = flip
+        # pool to coarse, build weight, upsample
+        f_pool = F.adaptive_avg_pool2d(fixable.unsqueeze(0).unsqueeze(0), (gh, gw))
+        g_pool = F.adaptive_avg_pool2d(fragile.unsqueeze(0).unsqueeze(0), (gh, gw))
+        w = f_pool / (f_pool + g_pool + 1e-6)  # (1,1,gh,gw) in [0,1]
+        w_up = F.interpolate(w, size=(SEG_H, SEG_W), mode="bicubic", align_corners=False)[0]  # (1,H,W)
+        field = torch.sign(grad_seg) * flip.unsqueeze(0)
+        smooth = coarse_then_up_seg(field, gh, gw) * w_up
+        corr_seg = amp * smooth
+    else:
+        raise ValueError(variant)
+    return upsample_camera(corr_seg)
+
+
+def run(pairs, variants, grids, amps):
+    R = P.FrontierRenderer()
+    S = P.ExactScorer()
+    gt = P.decode_gt_pairs(pairs)
+    comp = R.render_baseline_pairs(pairs)
+    cache = build_cache(R, S, gt, comp, pairs)
+    base_total = sum(int(cache[pi]["was_bad"].sum()) for pi in pairs)
+
+    results = []
+    for variant in variants:
+        for (gh, gw) in grids:
+            for amp in amps:
+                fixed = created = 0
+                for pi in pairs:
+                    c = cache[pi]
+                    corr = variant_correction(c, variant, gh, gw, amp)
+                    f, cr, _ = evaluate_correction(S, c["base_f1"], c["gt_arg"], c["was_bad"], corr)
+                    fixed += f; created += cr
+                net = created - fixed
+                collat = (created / fixed) if fixed else float("inf")
+                results.append(dict(variant=variant, grid=[gh, gw], amp=amp,
+                                    base_flips=base_total, fixed=fixed, created=created,
+                                    net_delta=net, collat_per_fix=collat))
+                flag = "  <-- net BETTER" if net < 0 else ""
+                print(f"[{variant} {gh}x{gw} amp={amp:>5}] fixed={fixed} created={created} "
+                      f"net={net:+d} collat/fix={collat:.3f}{flag}")
+    return results, base_total
+
+
+if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--n", type=int, default=8)
+    ap.add_argument("--start", type=int, default=0)
+    args = ap.parse_args()
+    pairs = list(range(args.start, args.start + args.n))
+    variants = ["A_sign_flipmask", "B_margin_weighted", "C_fragility_guard"]
+    grids = [(6, 8), (12, 16), (24, 32)]
+    amps = [4.0, 8.0, 16.0, 32.0]
+    t0 = time.time()
+    results, base_total = run(pairs, variants, grids, amps)
+    print(f"\nbase_total_flips={base_total} over {len(pairs)} pairs elapsed={time.time()-t0:.1f}s")
+    with open(f"{OUT}/multiscale_v2_results_n{args.n}.json", "w") as f:
+        json.dump(dict(pairs=pairs, base_total=base_total, results=results), f, indent=2)
+    print(f"saved {OUT}/multiscale_v2_results_n{args.n}.json")

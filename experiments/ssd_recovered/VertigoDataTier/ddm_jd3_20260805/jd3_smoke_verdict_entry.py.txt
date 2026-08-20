@@ -1,0 +1,160 @@
+#!/usr/bin/env python3
+"""ddm_jd1 endpoint verdict — the gc19 P1-vs-P2 discriminator (task #958).
+
+The jd1 v2 #366 window exited at ep1354 via ``a1_realization_gap_refuse`` with NO
+realized d_pose anywhere in its record (the A1 gate is seg-only). The gc19 predicate
+table cannot be applied without the pose axis MEASURED on the real render path, so
+this probe measures BOTH axes on the three preserved EMA checkpoints:
+
+    entry  (ep1336, pose had not yet stepped — the pre-pose baseline)
+    ep1344 (the COUPLED_DESCENT interior min, seg 0.0038478 in the chain band)
+    final  (ep1354, the refuse endpoint, seg 0.0041397)
+
+Physics mirrored EXACTLY from the jd1 training objective (trainer ``pair_loss`` +
+base ``make_loss_fn``): pose pair = (render(max(idx-1,0)), render(idx)) each through
+``_apply_R`` (contest-exact MLX R incl. uint8-STE @ camera) -> yuv6 -> frozen MLX
+PoseNet -> first-6 MSE vs ``gt_poses[idx][:6]``. Seg = argmax(adapter.segnet(f1))
+vs lstar — the SAME basis as the run's a1 gate rows, so the seg column here must
+reproduce the gate trajectory (a built-in positive control).
+
+Pairs: the gate's own 36-id gd1 block+SRS designed sample (bias-safer than any
+prefix, m88/m96). Axis: [macOS-CPU frozen-scorer advisory], score_claim=false.
+#855 caveat: MLX conv adapter ~76px argmax drift vs CPU-torch — all three ckpts
+share the adapter, so DELTAS (the discriminator) cancel the drift to first order.
+Scoping: this measures the WINDOW'S OWN objective (training-vehicle pair semantics),
+not the shipped-archive pair semantics — the byte-close measures those.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+
+REPO = Path("/Users/adpena/Projects/pact")
+for p in (str(REPO), str(REPO / "src")):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+RUN_DIR = Path("/Volumes/VertigoDataTier/pact/ddm_jd1_20260805/"
+               "tr1_joint_pose_finish_from_full_birth_lane_on_w4m")
+# The run's own a1-gate designed sample (gd1 block + SRS; HT estimator design).
+GATE_PAIR_IDS = [447, 448, 449, 450, 550, 360, 162, 42, 9, 367, 326, 153, 566, 507,
+                 350, 23, 457, 232, 316, 175, 529, 1, 509, 482, 19, 393, 433, 470,
+                 373, 290, 100, 104, 423, 484, 327, 289]
+CKPTS = {
+    "smoke_start_ep1336": "stage_joint_pose_finish_entry.npz",
+    "gate_ep1339": "intra_joint_pose_finish_ep01339.npz",
+    "gate_ep1344": "intra_joint_pose_finish_ep01344.npz",
+    "smoke_final": "stage_joint_pose_finish_final.npz",
+}
+
+
+def build_argparser() -> argparse.ArgumentParser:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--run-dir", type=Path, default=RUN_DIR)
+    ap.add_argument("--gt-cache", type=Path,
+                    default=Path("/Users/adpena/Projects/pact/experiments/results/"
+                                 "mlx_fleet_gt_cache/gt_n600.npz"))
+    ap.add_argument("--out", type=Path,
+                    default=Path("/Volumes/VertigoDataTier/pact/ddm_jd1_20260805/"
+                                 "jd1_endpoint_verdict_3ckpt.json"))
+    return ap
+
+
+def main() -> int:
+    args = build_argparser().parse_args()
+    import dataclasses
+
+    import mlx.core as mx
+
+    mx.set_default_device(mx.cpu)  # dt1: CPU is run-to-run bit-identical
+
+    from experiments.train_tr1_partition_renderer_mlx import (
+        TR1Config, build_module, ema_snapshot_swap, load_checkpoint,
+    )
+    from experiments.train_witness_realized_through_R_mlx import _apply_R
+    from tac.boundary_math.power_diagram_witness import open_stored_npy_memmap
+    from tac.local_acceleration.mlx_scorer_adapters import (
+        load_mlx_distortion_scorer_adapter_from_upstream,
+    )
+    from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+
+    cfg_json = json.loads((args.run_dir / "tr1_config.json").read_text())
+    field_names = {f.name for f in dataclasses.fields(TR1Config)}
+    cfg = TR1Config(**{k: v for k, v in cfg_json.items() if k in field_names})
+
+    adapter = load_mlx_distortion_scorer_adapter_from_upstream(
+        str(REPO / "upstream"), device="cpu")
+    lstars = open_stored_npy_memmap(args.gt_cache, "lstars")
+    gt_poses = open_stored_npy_memmap(args.gt_cache, "gt_poses")
+
+    def yuv12(f0, f1):
+        # mirrors make_loss_fn._yuv6_pair_nhwc exactly
+        pair = mx.stack([f0[0], f1[0]], axis=0)[None]        # (1,2,H,W,3)
+        yuv = rgb_to_yuv6_mlx(pair)                          # (1,2,h2,w2,6)
+        b, t, h2, w2, c6 = yuv.shape
+        return mx.reshape(mx.transpose(yuv, (0, 2, 3, 1, 4)), (b, h2, w2, t * c6))
+
+    receipt: dict = {
+        "schema": "ddm_jd1_endpoint_verdict.v1",
+        "axis": "[macOS-CPU frozen-scorer advisory] 36 gd1-designed gate pairs, NON-PROMOTABLE",
+        "score_claim": False,
+        "task": 958,
+        "pose_semantics": "training-vehicle window objective: pair=(render(max(idx-1,0)),render(idx)) "
+                          "through _apply_R -> yuv6 -> MLX PoseNet[:6] MSE vs gt_poses[idx][:6]; "
+                          "NOT shipped-archive pair semantics (byte-close owns those)",
+        "adapter_caveat_855": "MLX conv adapter ~76px argmax drift vs CPU-torch; deltas across "
+                              "ckpts share the adapter and cancel to first order",
+        "pairs": GATE_PAIR_IDS,
+        "ckpts": {},
+        "status": "running",
+    }
+    t0 = time.time()
+    for tag, fname in CKPTS.items():
+        model = build_module(cfg)
+        ck = load_checkpoint(args.run_dir / "checkpoints" / fname, model)
+        if ck["ema"]:
+            ema_snapshot_swap(model, ck["ema"])  # gate basis = ema_shadow
+        d_segs, d_poses = [], []
+        for idx in GATE_PAIR_IDS:
+            f1 = _apply_R(model.render_frame(int(idx)))
+            f0 = _apply_R(model.render_frame(max(int(idx) - 1, 0)))
+            logits = adapter.segnet(f1)
+            mx.eval(logits)
+            realized = np.asarray(mx.argmax(logits[0], axis=-1), dtype=np.int64)
+            lstar = np.asarray(lstars[idx], dtype=np.int64)
+            d_segs.append(float(np.count_nonzero(realized != lstar)) / lstar.size)
+            pose_out = adapter.posenet(yuv12(f0, f1))
+            pose = pose_out["pose"] if isinstance(pose_out, dict) else pose_out
+            mx.eval(pose)
+            p6 = np.asarray(pose, dtype=np.float64).ravel()[:6]
+            tgt = np.asarray(gt_poses[idx], dtype=np.float64).ravel()[:6]
+            d_poses.append(float(np.mean((p6 - tgt) ** 2)))
+        row = {
+            "ckpt": fname,
+            "ema_basis": bool(ck["ema"]),
+            "d_seg_mean": float(np.mean(d_segs)),
+            "d_pose_mean": float(np.mean(d_poses)),
+            "d_pose_median": float(np.median(d_poses)),
+            "pose_term_sqrt10": float(np.sqrt(10.0 * float(np.mean(d_poses)))),
+            "d_seg_per_pair": d_segs,
+            "d_pose_per_pair": d_poses,
+        }
+        receipt["ckpts"][tag] = row
+        receipt["elapsed_s"] = round(time.time() - t0, 1)
+        args.out.write_text(json.dumps(receipt, indent=1))
+        print(f"{tag}: d_seg {row['d_seg_mean']:.7f}  d_pose {row['d_pose_mean']:.6f}  "
+              f"pose_term {row['pose_term_sqrt10']:.4f}  ({receipt['elapsed_s']}s)")
+
+    receipt["status"] = "complete"
+    args.out.write_text(json.dumps(receipt, indent=1))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

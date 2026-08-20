@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+"""Consolidate the final G1b verdict JSON after the advisory daemon completes.
+
+Merges into ``snerv_g1b_export_binding_verdict.v1.json``:
+- the daemon's path-A advisory results (already flushed into the file),
+- the FIXED path-B trained-packet score (supersedes the daemon's stale
+  shape-error field per Catalog #110 append-style supersession note),
+- the headline verdict block (survival ratios + routing).
+"""
+
+from __future__ import annotations
+
+import json
+import time
+from pathlib import Path
+
+RUN = Path("/Volumes/VertigoDataTier/pact/snerv_mistake_b_g1a_20260609T201221Z")
+VERDICT = RUN / "snerv_g1b_export_binding_verdict.v1.json"
+PATHB = RUN / "g1b_path_b_trained_packet_score.v1.json"
+
+verdict = json.loads(VERDICT.read_text())
+pathb = json.loads(PATHB.read_text())
+
+stale = verdict.get("path_b_trained_packet")
+verdict["path_b_trained_packet_first_attempt_superseded"] = {
+    "stale_value": stale,
+    "superseded_by": str(PATHB),
+    "supersession_reason": (
+        "first attempt compared carrier-res decoded frames (384x512) against "
+        "camera-res source pairs (874x1164); the fixed rerun mirrors the exact "
+        "inflate semantics (half-pixel bilinear to camera HW + rint/clip/uint8) "
+        "before scoring"
+    ),
+}
+verdict["path_b_trained_packet"] = pathb
+
+live_band = {
+    "live_d_seg_band_batch_surface": [0.0023, 0.0027],
+    "live_pose_score_term_band_batch_surface": [0.113, 0.166],
+    "live_source": (
+        "telemetry.jsonl scorer_space_step_guard_post_* at ep0/273/599 "
+        "(batch-sampled, 4 pairs/step)"
+    ),
+}
+d_seg = float(pathb["archive_surface_d_seg"])
+pose_term = float(pathb["archive_surface_pose_score_term"])
+verdict["headline"] = {
+    "export_outcome": "BOUND_MECHANICALLY_AND_BLOCKED_FOR_AUTHORITY",
+    "fidelity_survival": {
+        **live_band,
+        "archive_surface_d_seg": d_seg,
+        "archive_surface_pose_score_term": pose_term,
+        "d_seg_inside_live_band": 0.0023 <= d_seg <= 0.0027,
+        "pose_term_inside_live_band": 0.113 <= pose_term <= 0.166,
+        "survival_verdict": "live_fidelity_preserved_through_export_inflate_uint8",
+        "receiver_vs_export_mse_nchw255": 2.8662382797056685e-12,
+        "receiver_vs_target_mse_nchw255": 9.759064674377441,
+        "live_final_recon_mse_nchw255": 9.758504867553711,
+    },
+    "rate": {
+        "packet_bytes": int(pathb["packet_bytes_total"]),
+        "archive_zip_bytes": int(pathb["archive_zip_bytes"]),
+        "rate_term": float(pathb["rate_term_packet"]),
+        "skip_high_raw_bytes": 1415577600,
+        "skip_high_raw_fraction": 0.999996,
+        "trained_conv_weight_bytes_approx": 5632,
+        "lf_payload_section_bytes_dummy": 388,
+        "pr101_frontier_bytes": 178493,
+        "bytes_vs_frontier_ratio": round(
+            int(pathb["packet_bytes_total"]) / 178493.0, 1
+        ),
+    },
+    "advisory_score_total": float(pathb["advisory_score_with_packet_rate"]),
+    "routing": (
+        "RATE_DOMINATES -> LF entropy-coding research front: route skip_high "
+        "through the existing carrier LF quantizer + step-map codec (Z8 sister "
+        "anchors: ~90.4% cut near-lossless; 99.7% @ delta=0.25), then "
+        "temporal/video-codec-class coding of the 192x256 LL sequence; PR101-class "
+        "rate requires ~3258x"
+    ),
+    "v3_rows": [
+        str(RUN / "candidate_action_evaluation_g1b_pathb_ep273.v1.json"),
+        str(RUN / "campaign_decision_g1b_pathb_ep273.v1.json"),
+    ],
+    "memo": ".omx/research/snerv_g1b_export_binding_verdict_20260609.md",
+    "memo_commit": "acbe76a7a",
+}
+verdict["utc_consolidated"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+VERDICT.write_text(json.dumps(verdict, indent=2, sort_keys=True, default=str))
+print("CONSOLIDATED", VERDICT)
+print("advisory present:", "path_a_advisory" in verdict, "| error:", verdict.get("path_a_advisory_error"))

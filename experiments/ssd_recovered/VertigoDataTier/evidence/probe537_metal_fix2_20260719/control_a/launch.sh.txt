@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# tac-config-family: proven_base
+# dsl_compile_hash: ec87e65c470514d47945efb7e5c9c13c304e6d476924e9ebfea55b558d5b63f7
+# tac-run-purpose: Task 537 local n24 durability proof; no score authority
+cd /Users/adpena/Projects/pact/.omx/tmp/codex_worktrees/resumability_537_fix_20260719_20260719T082320Z
+export TAC_MEM_PROBE=1
+export TAC_GOVERNED_ADMISSION=1
+export TAC_DSL_COMPILE_HASH=ec87e65c470514d47945efb7e5c9c13c304e6d476924e9ebfea55b558d5b63f7
+export TAC_DSL_PROVENANCE_PATH=/Volumes/VertigoDataTier/pact/evidence/probe537_metal_fix2_20260719/control_a/dsl_provenance.json
+export TAC_DSL_LAUNCH_SH_PATH=/Volumes/VertigoDataTier/pact/evidence/probe537_metal_fix2_20260719/control_a/launch.sh
+TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 TAC_MLX_CUSTOM_PERSISTENCE_POOL=1 \
+  .venv/bin/python experiments/train_levelset_witness_realized_through_R_mlx.py \
+  --verdict-device cpu \
+  --verdict-anchor-every 0 \
+  --num-pairs 24 \
+  --epochs 4 \
+  --gt-cache /Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz \
+  --out-dir /Volumes/VertigoDataTier/pact/evidence/probe537_metal_fix2_20260719/control_a \
+  --mlx-device gpu \
+  --softmax-temp-start 1.0 \
+  --softmax-temp-end 1.0 \
+  --ckpt-every 1 \
+  --stage-checkpoints \
+  --seed 537 \
+  --eval-every 4 \
+  --verdict-pairs 2 \
+  --no-async-verdict \
+  --render-h 96 \
+  --render-w 128 \
+  --render-aa none \
+  --hidden-dim 32 \
+  --n-hidden 2 \
+  --no-self-orient \
+  --w-pose 0.0 \
+  --eikonal-weight 0.0 \
+  --length-weight 0.0 \
+  --w-seg 100.0 \
+  --score-domain-loss \
+  --seg-form-unify-tau \
+  --ckpt-retain-per-stage 1 \
+  --no-mod-dim-dynamics \
+  --no-mod-dim-ablation \
+  --no-jacobian-basin-telemetry \
+  --no-jacobian-basin-t0 \
+  --no-jacobian-basin-stratify-t \
+  --no-annulus-telemetry

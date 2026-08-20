@@ -1,0 +1,12 @@
+#!/bin/bash
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+OUT=/Volumes/APDataStore/pact/ddm_sf1_semantic_film_pose_map_20260817
+while [ ! -f "$OUT/SF1_VERDICT.json" ]; do sleep 20; done
+echo "verdict landed; firing the second-seed subset repeat"
+export OMP_NUM_THREADS=8
+.venv/bin/python experiments/ddm_sf1_semantic_film_pose_map.py --stage map \
+  --pairs 120 --pair-seed 20260818 --tag seed2 \
+  --only-groups null_zero_perturbation_control sel_mp2_keep87_lowest_norm \
+                glob_lowest_norm_keep87count b1_scale_hi b2_scale_lo
+echo "seed2 rc=$?"

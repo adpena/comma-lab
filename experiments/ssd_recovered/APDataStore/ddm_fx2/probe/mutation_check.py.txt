@@ -1,0 +1,72 @@
+"""Prove the fx2 test suite is not vacuous: inject three real defects, require each to be CAUGHT.
+
+A suite that only asserts nesting would pass on a module that does nothing at
+all, so each mutation below removes exactly one load-bearing property and the
+run FAILS if pytest stays green.  The file is restored in a finally block
+whatever happens, and the restoration is verified by sha256.
+"""
+import hashlib
+import subprocess
+import sys
+from pathlib import Path
+
+MODULE = Path("/Users/adpena/Projects/pact/experiments/ddm_fx2_model_axis_corrector.py")
+TESTS = "src/tac/micro_edit/tests/test_fx2_model_axis.py"
+REPO = "/Users/adpena/Projects/pact"
+
+MUTATIONS = [
+    (
+        "reintroduce a transcendental on the decision path (the ddm_rr2 refusal)",
+        "        one_minus_q = np.maximum(1.0 - q_mix, PROB_EPS)",
+        "        one_minus_q = np.exp(np.log(np.maximum(1.0 - q_mix, PROB_EPS)))",
+    ),
+    (
+        "make the SSE stage inert (it returns the mixture untouched)",
+        "        blended = multiplier * correction",
+        "        blended = multiplier * 1.0",
+    ),
+    (
+        "narrow the causal template back to fx1's left+up",
+        'CAUSAL_OFFSETS: tuple[tuple[int, int], ...] = ((-1, 0), (0, -1), (1, -1), (-1, -1))',
+        'CAUSAL_OFFSETS: tuple[tuple[int, int], ...] = ((-1, 0), (0, -1))',
+    ),
+]
+
+
+def main() -> int:
+    original = MODULE.read_text()
+    original_sha = hashlib.sha256(original.encode()).hexdigest()
+    failures = []
+    try:
+        for label, before, after in MUTATIONS:
+            if before not in original:
+                failures.append(f"MUTATION NOT APPLICABLE (anchor missing): {label}")
+                continue
+            MODULE.write_text(original.replace(before, after, 1))
+            proc = subprocess.run(
+                [".venv/bin/python", "-m", "pytest", TESTS, "-q", "-x", "--no-header"],
+                cwd=REPO, capture_output=True, text=True, timeout=900,
+            )
+            caught = proc.returncode != 0
+            print(f"{'CAUGHT ' if caught else 'MISSED '} :: {label}")
+            if caught:
+                for line in proc.stdout.splitlines():
+                    if line.startswith("FAILED") or " failed" in line:
+                        print(f"           {line.strip()}")
+            else:
+                failures.append(f"NOT CAUGHT: {label}")
+    finally:
+        MODULE.write_text(original)
+        restored = hashlib.sha256(MODULE.read_text().encode()).hexdigest()
+        assert restored == original_sha, "FAILED TO RESTORE THE MODULE"
+        print(f"\nmodule restored, sha256 {restored[:16]}...")
+
+    if failures:
+        print("\n".join(failures))
+        return 1
+    print("all mutations caught: the suite is not vacuous")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,32 @@
+#!/bin/bash
+# SERIAL marginal-cost measurement -- the number that PICKS the candidate.
+#
+# ddm_fx1 section 6 measured only 160.2 s (8.9%) of margin against the 1,800 s
+# contest decode budget at 11 members.  Every member this arm adds spends into
+# that margin, so a candidate that cannot be afforded is not a candidate.  The
+# race elapsed times are contended (8-9 jobs at once) and therefore NOT a decode
+# cost; these runs are strictly one at a time with nothing else running.
+#
+# The baseline is the shipped rr4 law through the SAME harness, so the delta is
+# the corrector's marginal cost and nothing else.
+cd /Users/adpena/Projects/pact || exit 1
+P=.venv/bin/python
+RACE=/Volumes/APDataStore/pact/ddm_fx2/race.py
+L=/Volumes/APDataStore/pact/ddm_fx2/race
+F11="shipped_joint,temporal_spatial,surprise_only,spatial_surprise,spatial_boundary,run_surprise,boundary_surprise,temporal_surprise,shipped_fast256,shipped_fast4096,surprise_fast256"
+F13="$F11,spatial4_surprise,homog_surprise"
+F19="$F13,homog_boundary_surprise,spatial4_boundary,homog_spatial4,spatial4_temporal,homog_surprise_fast256,spatial4_surprise_fast256"
+BEST=cls_boundary_agree_homog_ubin8
+t() { local id="$1"; shift; $P "$RACE" --id "$id" --module fx2 --sse-context off "$@" > "$L/$id.log" 2>&1; cat "$L/$id.log"; }
+
+# T0: the incumbent law through this harness -- the marginal-cost baseline.
+t T0_serial_shipped_rr4  --mixer-context none --families "shipped_joint" --static
+# T1: fx1's shipped winner, re-timed serially so the fx1 receipt is comparable.
+t T1_serial_fx1_11x      --mixer-context cls_boundary_agree_ubin8 --families "$F11"
+# T2: the cheap candidate -- fx1's members, context changed only.
+t T2_serial_11x_homogctx --mixer-context $BEST --families "$F11"
+# T3: the mid candidate.
+t T3_serial_13x_homogctx --mixer-context $BEST --families "$F13"
+# T4: the max candidate.
+t T4_serial_19x_homogctx --mixer-context $BEST --families "$F19"
+echo TIMING_COMPLETE

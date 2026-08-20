@@ -1,0 +1,93 @@
+"""Per-pair d_seg decomposition: jg4 composed candidate vs br1/up3 base.
+
+Reuses jg1's VALIDATED scoring path (argmax_from_camera_frames + d_seg_per_pair —
+the instrument measured at 0.99995x of T4) on frames already decoded to disk by the
+two advisory runs.  Attributes candidate-vs-base seg damage to edited vs unedited
+pairs to name the cascade mechanism.
+[macOS-CPU advisory / frozen-scorer, same instrument both legs]
+"""
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+
+REPO = Path("/Users/adpena/Projects/pact")
+sys.path.insert(0, str(REPO / "experiments"))
+
+from ddm_jg1_seg_solve import (  # noqa: E402
+    argmax_from_camera_frames,
+    d_seg_per_pair,
+    load_gt_seg_labels,
+    load_segnet,
+)
+
+CAND_RAW = Path("/Volumes/APDataStore/pact/ddm_jg4/advisory_complete_r2/work/inflated/0.raw")
+BASE_RAW = Path("/Volumes/APDataStore/pact/ddm_to1/advisory/attempt_0002/work/inflated/0.raw")
+EDITS = Path("/Volumes/APDataStore/pact/ddm_jg3/retained/seg_edits_n600_complete.npz")
+OUT = Path("/Volumes/APDataStore/pact/ddm_jg4/retained/perpair_dseg_decomposition.json")
+
+H, W, C = 874, 1164, 3
+FS = H * W * C
+CHUNK = 24
+
+
+def per_pair_dseg(raw_path, net, gt_labels):
+    mm = np.memmap(raw_path, dtype=np.uint8, mode="r")
+    out = np.zeros(600, dtype=np.float64)
+    for start in range(0, 600, CHUNK):
+        pairs = range(start, min(start + CHUNK, 600))
+        frames = np.stack(
+            [np.asarray(mm[(2 * p + 1) * FS : (2 * p + 2) * FS]).reshape(H, W, C) for p in pairs]
+        )
+        am = argmax_from_camera_frames(net, frames)
+        out[start : start + len(am)] = d_seg_per_pair(am, gt_labels[start : start + len(am)])
+        print(f"  pairs {start}-{start + len(am) - 1} done", flush=True)
+    return out
+
+
+def main():
+    gt_labels = load_gt_seg_labels("dali")
+    ed = np.load(EDITS, allow_pickle=True)
+    edited = sorted(int(k) for k in ed.keys())
+    net = load_segnet()
+    print("scoring CANDIDATE decode", flush=True)
+    cand = per_pair_dseg(CAND_RAW, net, gt_labels)
+    print("scoring BASE decode", flush=True)
+    base = per_pair_dseg(BASE_RAW, net, gt_labels)
+    delta = cand - base
+    edited_mask = np.zeros(600, dtype=bool)
+    edited_mask[edited] = True
+    res = {
+        "axis": "[macOS-CPU advisory / frozen-scorer per-pair decomposition, DALI GT]",
+        "cand_mean": float(cand.mean()),
+        "base_mean": float(base.mean()),
+        "delta_mean": float(delta.mean()),
+        "edited_pairs": int(edited_mask.sum()),
+        "delta_sum_edited": float(delta[edited_mask].sum()),
+        "delta_sum_unedited": float(delta[~edited_mask].sum()),
+        "edited_improved": int((delta[edited_mask] < 0).sum()),
+        "edited_worsened": int((delta[edited_mask] > 0).sum()),
+        "edited_zero": int((delta[edited_mask] == 0).sum()),
+        "unedited_worsened": int((delta[~edited_mask] > 0).sum()),
+        "worst_10": [
+            {"pair": int(i), "delta": float(delta[i]), "edited": bool(edited_mask[i])}
+            for i in np.argsort(delta)[::-1][:10]
+        ],
+        "best_10": [
+            {"pair": int(i), "delta": float(delta[i]), "edited": bool(edited_mask[i])}
+            for i in np.argsort(delta)[:10]
+        ],
+        "per_pair_delta_nonzero": {
+            str(i): float(delta[i]) for i in range(600) if delta[i] != 0.0
+        },
+        "per_pair_cand": {str(i): float(cand[i]) for i in range(600)},
+        "per_pair_base": {str(i): float(base[i]) for i in range(600)},
+    }
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(json.dumps(res, indent=2))
+    print(json.dumps({k: v for k, v in res.items() if not k.startswith("per_pair")}, indent=2))
+
+
+if __name__ == "__main__":
+    main()

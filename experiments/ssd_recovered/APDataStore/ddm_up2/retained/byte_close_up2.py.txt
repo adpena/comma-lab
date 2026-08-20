@@ -1,0 +1,212 @@
+"""Byte-close a ddm_up2 carrier solve into a real archive.zip.
+
+Why this exists rather than reusing ``ddm_t1h_build_candidate_archive.py``:
+that tool reads ``k_base`` from a HARDCODED offset ``packed[139]``, which is
+body-specific. On the to1 body that byte is 177, so the tool refuses every
+candidate -- including the shipped codes themselves (identity control fails).
+See ``IDENTITY_CONTROL.json``.
+
+This path is narrower and needs no such offset. ``ddm_up2``'s candidate has
+Rice parameters IDENTICAL to shipped ([9,9,9,8,8,9,9,9,9,9,9,9]) and an
+IDENTICAL bit count, so the packed Rice-parameter field and both header fields
+are unchanged by construction. Exactly one thing moves: the Rice residual
+payload bytes, in place, at the same length. That is asserted, not assumed --
+if the candidate's ks or bit count ever differ, this refuses rather than
+silently mis-splicing.
+
+d_seg is invariant by construction: SegNet reads only the odd frame
+(``upstream/modules.py:108``) and no odd frame is touched.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import sys
+import zipfile
+from pathlib import Path
+
+import numpy as np
+
+REPO = Path("/Users/adpena/Projects/pact")
+sys.path.insert(0, str(REPO / "experiments"))
+sys.path.insert(0, str(REPO))
+import ddm_t1h_carrier_byte_pricer as pricer  # noqa: E402
+
+SHIPPED_ARCHIVE_SHA256 = "50e561454b23026d3870f056747e848a49bd5f2b1e23930155d1281aeee91927"
+SHIPPED_ARCHIVE_BYTES = 176_420
+
+
+def _sha(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def build_member(runtime: Path, archive: Path, candidate_codes: np.ndarray) -> dict:
+    import brotli
+
+    if str(runtime) not in sys.path:
+        sys.path.insert(0, str(runtime))
+    from runtime import residual_archive as ra
+
+    (carrier_repack, _cap1, predictor, _blob, _sel, info, model, base_codes, _comp) = (
+        pricer.load_shipped(archive, runtime)
+    )
+
+    # Control: the pricer must reproduce the shipped payload from the shipped codes.
+    ks_ship, bits_ship = pricer.rice_bits(base_codes, model, carrier_repack, predictor)
+    if bits_ship != int(info["rice_payload_bits"]):
+        raise SystemExit("pricer does not reproduce the shipped Rice bit count")
+    if not np.array_equal(ks_ship.astype(np.uint8), np.asarray(info["rice_ks"], np.uint8)):
+        raise SystemExit("pricer does not reproduce the shipped Rice parameters")
+
+    ks_cand, bits_cand = pricer.rice_bits(
+        np.asarray(candidate_codes, np.int32), model, carrier_repack, predictor
+    )
+    if not np.array_equal(ks_cand.astype(np.uint8), ks_ship.astype(np.uint8)):
+        raise SystemExit(
+            f"candidate Rice parameters {ks_cand.tolist()} differ from shipped "
+            f"{ks_ship.tolist()}; the packed k field would have to change and this "
+            "narrow splice does not model that"
+        )
+    if bits_cand != bits_ship:
+        raise SystemExit(
+            f"candidate Rice bit count {bits_cand} differs from shipped {bits_ship}; "
+            "the header bit fields would have to change and this splice does not model that"
+        )
+
+    # Re-derive both payloads through the receiver's own encoder.
+    def payload(codes: np.ndarray) -> bytes:
+        residuals = pricer.forward_ar1(np.asarray(codes, np.int32), model, predictor)
+        _ks, blob, _bits = carrier_repack._rice_encode(carrier_repack._zigzag(residuals), 1)
+        return bytes(blob)
+
+    shipped_payload = payload(base_codes)
+    candidate_payload = payload(candidate_codes)
+    if len(shipped_payload) != len(candidate_payload):
+        raise SystemExit("payload lengths differ despite equal bit counts")
+
+    member = zipfile.ZipFile(archive).read("p")
+    header = ra.RX1_MODEL_HEADER
+    fields = header.unpack_from(member)
+    hpac_b, sem_b, car_b = fields[5], fields[6], fields[7]
+    offset = header.size + hpac_b + sem_b
+    stream = member[offset : offset + car_b]
+    body = brotli.decompress(stream)
+    if brotli.compress(body, quality=11, lgwin=24) != stream:
+        raise SystemExit("brotli(q=11,lgwin=24) does not reproduce the shipped carrier stream")
+
+    # Locate the payload by CONTENT, never by a hardcoded offset (the t1h bug).
+    where = body.find(shipped_payload)
+    if where < 0 or body.find(shipped_payload, where + 1) >= 0:
+        raise SystemExit("shipped Rice payload is not uniquely locatable inside the body")
+
+    new_body = body[:where] + candidate_payload + body[where + len(shipped_payload) :]
+    if len(new_body) != len(body):
+        raise SystemExit("spliced body changed length")
+    new_stream = brotli.compress(new_body, quality=11, lgwin=24)
+    new_member = (
+        header.pack(fields[0], fields[1], fields[2], fields[3], fields[4],
+                    hpac_b, sem_b, len(new_stream))
+        + member[header.size : offset]
+        + new_stream
+        + member[offset + car_b :]
+    )
+    return {
+        "member": new_member,
+        "payload_offset_in_body": int(where),
+        "payload_bytes": len(shipped_payload),
+        "carrier_stream_bytes_shipped": int(car_b),
+        "carrier_stream_bytes_candidate": int(len(new_stream)),
+        "rice_ks": ks_cand.astype(int).tolist(),
+        "rice_bits": int(bits_cand),
+        "base_codes": base_codes,
+        "changed_coordinates": int((np.asarray(candidate_codes) != base_codes).sum()),
+    }
+
+
+def write_archive(member: bytes, destination: Path) -> dict:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_STORED) as archive:
+        archive.writestr("p", member)
+    raw = destination.read_bytes()
+    return {"bytes": len(raw), "sha256": _sha(raw)}
+
+
+def parse_back(destination: Path, runtime: Path, expected_codes: np.ndarray) -> dict:
+    """Re-read with the SHIPPED receiver and require the lattice to equal intent."""
+    sys.path.insert(0, str(runtime))
+    sys.path.insert(0, str(runtime / "cpr1"))
+    try:
+        from runtime.carrier_repack import materialize_cpr1, split_frame0_selector_carrier
+        from runtime.residual_archive import read_residual_archive
+        import inflate as renderer
+    finally:
+        sys.path.pop(0)
+        sys.path.pop(0)
+    import struct
+
+    parts = read_residual_archive(destination)
+    carrier_blob, _selector = split_frame0_selector_carrier(parts.carrier_blob)
+    canonical = materialize_cpr1(carrier_blob, renderer)
+    basis_count = renderer.CARRIER_DIM * 3 * renderer.CARRIER_H * renderer.CARRIER_W
+    _, _, _scales, encoded = renderer.decode_compact_carrier(
+        canonical, basis_count=basis_count, frames=600, dimensions=renderer.CARRIER_DIM
+    )
+    delta = (encoded.astype(np.int64) >> 1) ^ -(encoded.astype(np.int64) & 1)
+    codes = np.cumsum(delta, axis=0) & 0xFFF
+    codes = np.where(codes >= 0x800, codes - 0x1000, codes).astype(np.int32)
+    del struct
+    return {
+        "parse_back_matches_intent": bool(np.array_equal(codes, np.asarray(expected_codes))),
+        "differing_coordinates": int((codes != np.asarray(expected_codes)).sum()),
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--runtime", type=Path, required=True)
+    parser.add_argument("--codes", type=Path, help="candidate codes .npy; omit for identity control")
+    parser.add_argument("--out", type=Path, required=True)
+    args = parser.parse_args()
+
+    archive = args.runtime / "archive.zip"
+    if _sha(archive.read_bytes()) != SHIPPED_ARCHIVE_SHA256:
+        raise SystemExit("runtime archive.zip is not the pointer body")
+
+    identity = args.codes is None
+    built = build_member(
+        args.runtime,
+        archive,
+        np.load(args.codes) if not identity else None,
+    ) if not identity else None
+    if identity:
+        (_cr, _c1, _pr, _b, _s, _i, _m, base, _cmp) = pricer.load_shipped(archive, args.runtime)
+        built = build_member(args.runtime, archive, base)
+    codes = built.pop("base_codes") if identity else np.load(args.codes)
+
+    args.out.mkdir(parents=True, exist_ok=True)
+    first = write_archive(built["member"], args.out / "archive.zip")
+    second = write_archive(built["member"], args.out / "archive.repeat.zip")
+    checks = parse_back(args.out / "archive.zip", args.runtime, codes)
+
+    report = {
+        "schema": "ddm_up2_byte_close.v1",
+        "mode": "IDENTITY_CONTROL" if identity else "CANDIDATE",
+        "shipped": {"sha256": SHIPPED_ARCHIVE_SHA256, "bytes": SHIPPED_ARCHIVE_BYTES},
+        "built": first,
+        "deterministic_double_compile": second["sha256"] == first["sha256"],
+        "archive_delta_bytes": first["bytes"] - SHIPPED_ARCHIVE_BYTES,
+        "byte_identical_to_shipped": first["sha256"] == SHIPPED_ARCHIVE_SHA256,
+        **{k: v for k, v in built.items() if k != "member"},
+        **checks,
+    }
+    if identity and not report["byte_identical_to_shipped"]:
+        report["IDENTITY_CONTROL_FAILED"] = True
+    (args.out / "BYTE_CLOSE.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    print(json.dumps(report, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,145 @@
+"""Re-measure the pose gain through the ACTUAL SD1M-reconstructed receiver state.
+
+SD1M q4 preserves frame_embed exactly but perturbs one GLOBAL tensor
+(blocks.3.film.weight, max|dv| 2.76e-4), which changes frame_1 for every pair.
+The solve was measured on the WANS1 state, so the gain must be re-measured on
+the state the SD1M candidate actually decodes to -- never carried across the
+object it was solved against (the qs4 lesson).
+
+Clean 2x2 on the same solve pairs:
+  (base codes,   WANS1 state) -- the bought base leg
+  (solved codes, WANS1 state) -- the solve as measured
+  (base codes,   SD1M state)  -- the SD1M format penalty on pose, alone
+  (solved codes, SD1M state)  -- THE SHIPPABLE CANDIDATE
+"""
+
+import json
+import sys
+import time
+
+import numpy as np
+import torch
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, "/Users/adpena/Projects/pact/experiments")
+import ddm_iv1_pose_actuator as iv1  # noqa: E402
+from ddm_iv1_pose_actuator import (  # noqa: E402
+    BASE_RAW,
+    CAMERA_H,
+    CAMERA_W,
+    PAIR_COUNT,
+    SemanticBlock,
+    configure_torch,
+    decode_gt_pairs,
+    load_posenet,
+    load_segnet,
+    load_tokens,
+    pose_vectors,
+    render_master,
+    seg_argmax,
+)
+
+OUT = "/Volumes/APDataStore/pact/ddm_iv1"
+configure_torch()
+iv1._runtime_paths()
+import ddm_sd1_semantic_rd_curve as sd1  # noqa: E402
+
+started = time.time()
+block = SemanticBlock.load()
+tokens = load_tokens()
+posenet = load_posenet()
+segnet = load_segnet()
+solved = np.load(f"{OUT}/retained/final_frame_codes.npy").astype(np.int32)
+solve = json.loads(open(f"{OUT}/receipts/actuator_solve.json").read())
+final = json.loads(open(f"{OUT}/receipts/finalize.json").read())
+rows = {int(r["pair"]): dict(r) for r in solve["rows"]}
+for r in final["repaired_pairs"]:
+    rows[r["pair"]]["realized_d_pose"] = r["repaired_realized_d_pose"]
+pairs = sorted(rows)
+
+
+def sd1m_state(frame_codes):
+    state = {k: v.clone() for k, v in block.state.items()}
+    state["frame_embed.weight"] = torch.from_numpy(
+        frame_codes.astype(np.float32) * block.frame_scales[None, :]
+    )
+    alloc = {n: 4 for n in sd1.quantized_names(state)}
+    _, exp = sd1.pack_semantic_state(state, alloc, legacy_int4=False)
+    return exp
+
+
+def renderer_from(state):
+    net = block.renderer()
+    net.load_state_dict({k: v.float() for k, v in state.items()})
+    net.eval()
+    for p in net.parameters():
+        p.requires_grad_(False)
+    return net
+
+
+nets = {
+    "wans1_base": block.renderer(np.asarray(block.frame_codes)),
+    "wans1_solved": block.renderer(solved),
+    "sd1m_base": renderer_from(sd1m_state(np.asarray(block.frame_codes))),
+    "sd1m_solved": renderer_from(sd1m_state(solved)),
+}
+print(f"built 4 receiver states in {time.time() - started:.0f}s", flush=True)
+
+gt = decode_gt_pairs(pairs)
+raw = np.memmap(
+    BASE_RAW, dtype=np.uint8, mode="r", shape=(PAIR_COUNT * 2, CAMERA_H, CAMERA_W, 3)
+)
+
+cells = {k: np.zeros(len(pairs)) for k in nets}
+seg_flip = {k: 0 for k in nets}
+seg_px = 0
+for slot, pair in enumerate(pairs):
+    frame0 = torch.from_numpy(np.ascontiguousarray(raw[2 * pair]))
+    gt_pair = torch.from_numpy(np.ascontiguousarray(gt[slot]))
+    stack, keys = [gt_pair], []
+    with torch.inference_mode():
+        for key, net in nets.items():
+            frame1 = render_master(net, tokens, [pair])[0]
+            stack.append(torch.stack([frame0, frame1]))
+            keys.append(key)
+    vecs = []
+    for start in range(0, len(stack), 8):
+        vecs.append(pose_vectors(posenet, torch.stack(stack[start : start + 8])))
+    vecs = np.concatenate(vecs, axis=0)
+    gt_vec = vecs[0]
+    for index, key in enumerate(keys):
+        cells[key][slot] = float(np.mean(np.square(vecs[1 + index] - gt_vec)))
+    if slot < 12:  # seg leg on the same 12 pairs as the finalize receipt
+        masks = seg_argmax(segnet, torch.stack(stack))
+        for index, key in enumerate(keys):
+            seg_flip[key] += int((masks[1 + index] != masks[0]).sum())
+        seg_px += int(masks[0].numel())
+    if slot % 8 == 0:
+        print(f"  pair {pair} ({slot + 1}/{len(pairs)})", flush=True)
+
+receipt = {
+    "schema": "ddm_iv1_sd1m_verify.v1",
+    "axis": "[macOS-CPU advisory frozen CPU-torch PoseNet] score_claim=false promotable=false",
+    "pairs": len(pairs),
+    "cells_mean_d_pose": {k: float(v.mean()) for k, v in cells.items()},
+    "seg_pairs": 12,
+    "cells_d_seg_sample": {k: seg_flip[k] / seg_px for k in nets},
+    "cells_seg_flipped_pixels": {k: seg_flip[k] for k in nets},
+    "relative_change_wans1": float(
+        cells["wans1_solved"].mean() / cells["wans1_base"].mean() - 1.0
+    ),
+    "relative_change_sd1m": float(
+        cells["sd1m_solved"].mean() / cells["wans1_base"].mean() - 1.0
+    ),
+    "sd1m_format_penalty_on_pose": float(
+        cells["sd1m_base"].mean() / cells["wans1_base"].mean() - 1.0
+    ),
+    "elapsed_seconds": round(time.time() - started, 1),
+}
+open(f"{OUT}/receipts/sd1m_verify.json", "w").write(json.dumps(receipt, indent=2))
+np.savez(
+    f"{OUT}/retained/sd1m_verify_cells.npz",
+    pairs=np.array(pairs),
+    **{k: v for k, v in cells.items()},
+)
+print(json.dumps(receipt, indent=2), flush=True)

@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# ddm_wc2c n600 identity + wall-clock proof.
+#
+# Runs SEQUENTIALLY on purpose: the two rows are a timing comparison, and running
+# them concurrently on one host would make each row's seconds a function of the
+# other's memory and core pressure rather than of the code under test.
+set -euo pipefail
+
+REPO=/Users/adpena/Projects/pact
+WORK=/Volumes/APDataStore/pact/ddm_wc2/work
+RETAIN=/Volumes/APDataStore/pact/ddm_wc2/retained
+BUILD=$WORK/build
+export CPR1_RC64_LIBRARY=$BUILD/rc64_backend.so
+
+mkdir -p "$RETAIN"
+cd "$REPO"
+
+echo "[$(date -u +%FT%TZ)] === split-native n600, 4 threads (the contest CPU width) ==="
+F26_HPAC_THREADS=4 "$REPO/.venv/bin/python" experiments/ddm_wc2c_native_split_decode.py \
+    --frames 600 \
+    --library "$BUILD/f26_hpac_native_simd.so" \
+    --token-output "$RETAIN/tokens_split_native_n600.u8" \
+    --output "$RETAIN/wc2c_split_native_n600_t4.json"
+
+echo "[$(date -u +%FT%TZ)] === pure-python baseline n600 (the shipping decoder) ==="
+OMP_NUM_THREADS=4 "$REPO/.venv/bin/python" experiments/ddm_wc2c_token_stage_profile.py \
+    --frames 600 --device cpu --threads 4 \
+    --output "$RETAIN/wc2c_python_baseline_n600.json"
+
+echo "[$(date -u +%FT%TZ)] === scalar twin n600, 4 threads (the identity oracle) ==="
+F26_HPAC_THREADS=4 "$REPO/.venv/bin/python" experiments/ddm_wc2c_native_split_decode.py \
+    --frames 600 \
+    --library "$BUILD/f26_hpac_native_scalar.so" \
+    --token-output "$RETAIN/tokens_scalar_twin_n600.u8" \
+    --output "$RETAIN/wc2c_scalar_twin_n600_t4.json"
+
+echo "[$(date -u +%FT%TZ)] === done ==="

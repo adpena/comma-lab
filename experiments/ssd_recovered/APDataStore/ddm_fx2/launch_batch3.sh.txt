@@ -1,0 +1,31 @@
+#!/bin/bash
+# ddm_fx2 race batch 3 -- COMPOSE the two winning axes, plus a decode-cost menu.
+#
+# Measured so far (all n600, decode-identical, vs the live rr4 law):
+#   fx1 winner, 11 members, cls_boundary_agree_ubin8      -560.07
+#   C5, 19 members, cls_boundary_agree_ubin8              -708.11   (member axis)
+#   D1, 13 members, cls_boundary_agree_homog_ubin8        -710.84   (context axis)
+# The two axes are nearly orthogonal, so E1 is the compose.  The smaller rows are
+# the decode-budget menu: fx1 measured only 160 s of T4 margin at 11 members, so a
+# candidate that cannot be afforded is not a candidate.
+cd /Users/adpena/Projects/pact || exit 1
+P=.venv/bin/python
+RACE=/Volumes/APDataStore/pact/ddm_fx2/race.py
+L=/Volumes/APDataStore/pact/ddm_fx2/race
+F11="shipped_joint,temporal_spatial,surprise_only,spatial_surprise,spatial_boundary,run_surprise,boundary_surprise,temporal_surprise,shipped_fast256,shipped_fast4096,surprise_fast256"
+F13="$F11,spatial4_surprise,homog_surprise"
+F15="$F13,homog_surprise_fast256,spatial4_surprise_fast256"
+F19="$F13,homog_boundary_surprise,spatial4_boundary,homog_spatial4,spatial4_temporal,homog_surprise_fast256,spatial4_surprise_fast256"
+BEST=cls_boundary_agree_homog_ubin8
+run() { local id="$1"; shift; $P "$RACE" --id "$id" --module fx2 --sse-context off "$@" > "$L/$id.log" 2>&1; }
+
+run E1_compose_19x_homogctx --mixer-context $BEST --families "$F19" &
+run E2_compose_19x_cb8      --mixer-context $BEST --count-buckets 8 --families "$F19" &
+run E3_compose_15x_homogctx --mixer-context $BEST --families "$F15" &
+run E4_cheap_12x_homogctx   --mixer-context $BEST --families "$F11,homog_surprise" &
+run E5_cheap_11x_homogctx   --mixer-context $BEST --families "$F11" &
+run E6_compose_19x_sp4ctx   --mixer-context cls_boundary_agree_spatial4_ubin8 --families "$F19" &
+run E7_compose_19x_ubin16   --mixer-context cls_boundary_agree_ubin16 --families "$F19" &
+run E8_compose_19x_lr2      --mixer-context $BEST --lr-exp 2 --families "$F19" &
+wait
+echo BATCH3_COMPLETE

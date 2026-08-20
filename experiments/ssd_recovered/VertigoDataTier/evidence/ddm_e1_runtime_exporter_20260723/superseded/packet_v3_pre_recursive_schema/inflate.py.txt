@@ -1,0 +1,610 @@
+# SPDX-License-Identifier: MIT
+"""Standalone deterministic receiver emitted by the DDM E1 exporter.
+
+This file is copied byte-for-byte to ``inflate.py``.  It intentionally imports
+only the Python standard library plus Torch and Brotli.  All instance-derived
+bytes live in the extracted archive directory and are covered by the manifest.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import shutil
+import struct
+import sys
+import time
+from pathlib import Path, PurePosixPath
+from typing import Any
+
+import brotli
+import torch
+import torch.nn.functional as F
+
+SCHEMA = "ddm_e1_runtime_archive.v1"
+BLOB_MAGIC = b"DDE1B"
+BLOB_HEADER = struct.Struct(">5sBBBBQQ32s")
+EXPECTED_MEMBERS = ("manifest.json", "base/chart.ddb", "semantic/composed.dds")
+PAIR_H = 384
+PAIR_W = 512
+CAMERA_H = 874
+CAMERA_W = 1164
+CHANNELS = 3
+FRAMES_PER_PAIR = 2
+SAFETY_BYTES = 256 * 1024 * 1024
+
+
+class ReceiverError(ValueError):
+    """The counted state or runtime lifecycle failed closed."""
+
+
+def _sha256(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _sha256_file(path: Path) -> tuple[int, str]:
+    digest = hashlib.sha256()
+    total = 0
+    with path.open("rb") as handle:
+        while True:
+            chunk = handle.read(8 * 1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+            total += len(chunk)
+    return total, digest.hexdigest()
+
+
+def _duplicate_refusing_json(payload: bytes, *, label: str) -> Any:
+    def object_pairs(rows: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in rows:
+            if key in result:
+                raise ReceiverError(f"{label} has duplicate JSON key {key!r}")
+            result[key] = value
+        return result
+
+    try:
+        value = json.loads(
+            payload.decode("utf-8", "strict"),
+            object_pairs_hook=object_pairs,
+            parse_constant=lambda token: (_ for _ in ()).throw(
+                ReceiverError(f"{label} has non-finite JSON number {token!r}")
+            ),
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ReceiverError(f"{label} is malformed JSON") from exc
+    canonical = json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    if canonical != payload:
+        raise ReceiverError(f"{label} is not canonical JSON")
+    return value
+
+
+def _safe_relative_name(value: str) -> PurePosixPath:
+    if not isinstance(value, str) or not value or "\\" in value:
+        raise ReceiverError("video name must be a nonempty POSIX path")
+    path = PurePosixPath(value)
+    if path.is_absolute() or any(part in ("", ".", "..") for part in path.parts):
+        raise ReceiverError("video name escaped the output root")
+    return path
+
+
+def _read_exact_members(archive_dir: Path) -> dict[str, bytes]:
+    observed = tuple(
+        sorted(
+            path.relative_to(archive_dir).as_posix()
+            for path in archive_dir.rglob("*")
+            if path.is_file()
+        )
+    )
+    if observed != tuple(sorted(EXPECTED_MEMBERS)):
+        raise ReceiverError(
+            f"extracted archive members differ: {observed!r} != {EXPECTED_MEMBERS!r}"
+        )
+    result: dict[str, bytes] = {}
+    for name in EXPECTED_MEMBERS:
+        path = archive_dir / name
+        if path.is_symlink() or not path.is_file():
+            raise ReceiverError(f"archive member is not one regular file: {name}")
+        result[name] = path.read_bytes()
+    return result
+
+
+def _parse_blob(payload: bytes, *, expected_kind: int, label: str) -> tuple[bytes, tuple[int, ...]]:
+    if len(payload) < BLOB_HEADER.size:
+        raise ReceiverError(f"{label} frame is truncated")
+    magic, version, codec, kind, rank, raw_bytes, coded_bytes, raw_digest = BLOB_HEADER.unpack_from(
+        payload
+    )
+    if magic != BLOB_MAGIC or version != 1 or codec != 1 or kind != expected_kind or rank > 8:
+        raise ReceiverError(f"{label} frame identity mismatch")
+    dimension_bytes = rank * 4
+    coded_offset = BLOB_HEADER.size + dimension_bytes
+    if coded_offset > len(payload) or len(payload) != coded_offset + coded_bytes:
+        raise ReceiverError(f"{label} frame length is noncanonical")
+    dimensions = (
+        struct.unpack_from(f">{rank}I", payload, BLOB_HEADER.size) if rank else ()
+    )
+    product = 1
+    for dimension in dimensions:
+        if dimension <= 0:
+            raise ReceiverError(f"{label} has a zero dimension")
+        product *= dimension
+    if kind == 1 and product != raw_bytes:
+        raise ReceiverError(f"{label} uint8 shape disagrees with raw length")
+    try:
+        raw = brotli.decompress(payload[coded_offset:])
+    except brotli.error as exc:
+        raise ReceiverError(f"{label} Brotli decode failed") from exc
+    if len(raw) != raw_bytes or hashlib.sha256(raw).digest() != raw_digest:
+        raise ReceiverError(f"{label} decoded custody mismatch")
+    return raw, tuple(int(value) for value in dimensions)
+
+
+def _validate_manifest(manifest: Any, members: dict[str, bytes]) -> dict[str, Any]:
+    if not isinstance(manifest, dict) or set(manifest) != {
+        "archive",
+        "chart",
+        "dependencies",
+        "false_authority",
+        "geometry",
+        "output",
+        "schema",
+        "sections",
+        "state",
+    }:
+        raise ReceiverError("manifest keys differ from the sealed schema")
+    if manifest["schema"] != SCHEMA:
+        raise ReceiverError("manifest schema mismatch")
+    if manifest["dependencies"] != ["torch", "brotli"]:
+        raise ReceiverError("runtime dependency contract changed")
+    geometry = manifest["geometry"]
+    if geometry != {
+        "camera_hw": [CAMERA_H, CAMERA_W],
+        "chart_grid_hw": [12, 16],
+        "chart_hw": [32, 32],
+        "channels": CHANNELS,
+        "frames_per_pair": FRAMES_PER_PAIR,
+        "pair_count": 600,
+        "scorer_hw": [PAIR_H, PAIR_W],
+    }:
+        raise ReceiverError("manifest geometry mismatch")
+    if manifest["false_authority"] != {
+        "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+        "research_only": True,
+        "score_claim": False,
+    }:
+        raise ReceiverError("manifest false-authority contract changed")
+    sections = manifest["sections"]
+    if not isinstance(sections, list) or [row.get("member") for row in sections] != list(
+        EXPECTED_MEMBERS[1:]
+    ):
+        raise ReceiverError("manifest section order mismatch")
+    for row in sections:
+        if set(row) != {"bytes", "member", "sha256"}:
+            raise ReceiverError("manifest section keys differ")
+        payload = members[row["member"]]
+        if row["bytes"] != len(payload) or row["sha256"] != _sha256(payload):
+            raise ReceiverError(f"manifest section custody mismatch: {row['member']}")
+    return manifest
+
+
+def _chart_views(raw: bytes, chart: dict[str, Any]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    expected = {
+        "byteorder": "little",
+        "dtype": "int16",
+        "streams": [
+            {"name": "anchors", "offset": 0, "shape": [600, 2, 3]},
+            {"name": "gradients", "offset": 7200, "shape": [600, 2, 2, 3]},
+            {"name": "residuals", "offset": 21600, "shape": [600, 2, 12, 16, 3]},
+        ],
+    }
+    if chart != expected or sys.byteorder != "little":
+        raise ReceiverError("chart layout or host byte order mismatch")
+    if len(raw) != 1_404_000:
+        raise ReceiverError("chart raw byte length mismatch")
+    storage = torch.frombuffer(bytearray(raw), dtype=torch.int16)
+    anchors = storage[0:3600].reshape(600, 2, 3)
+    gradients = storage[3600:10800].reshape(600, 2, 2, 3)
+    residuals = storage[10800:].reshape(600, 2, 12, 16, 3)
+    return anchors, gradients, residuals
+
+
+def _round_div_signed(value: torch.Tensor, denominator: int) -> torch.Tensor:
+    half = denominator // 2
+    return torch.where(
+        value >= 0,
+        torch.div(value + half, denominator, rounding_mode="floor"),
+        -torch.div(-value + half, denominator, rounding_mode="floor"),
+    )
+
+
+def _render_batch(
+    *,
+    start: int,
+    stop: int,
+    anchors: torch.Tensor,
+    gradients: torch.Tensor,
+    residuals: torch.Tensor,
+    labels: torch.Tensor,
+    palette: torch.Tensor,
+    camera_rows: torch.Tensor,
+    camera_columns: torch.Tensor,
+) -> torch.Tensor:
+    batch_anchors = anchors[start:stop].to(torch.int64)
+    batch_gradients = gradients[start:stop].to(torch.int64)
+    batch_residuals = residuals[start:stop].to(torch.int64)
+    rows = torch.arange(12, dtype=torch.int64).reshape(1, 1, 12, 1, 1)
+    columns = torch.arange(16, dtype=torch.int64).reshape(1, 1, 1, 16, 1)
+    row_term = _round_div_signed(
+        batch_gradients[:, :, 0, :].reshape(stop - start, 2, 1, 1, 3)
+        * (2 * rows - 11),
+        22,
+    )
+    column_term = _round_div_signed(
+        batch_gradients[:, :, 1, :].reshape(stop - start, 2, 1, 1, 3)
+        * (2 * columns - 15),
+        30,
+    )
+    charts = (
+        batch_anchors.reshape(stop - start, 2, 1, 1, 3)
+        + row_term
+        + column_term
+        + batch_residuals
+    )
+    if bool(torch.any((charts < 0) | (charts > 255))):
+        raise ReceiverError("chart reconstruction escaped uint8")
+    grid = charts.to(torch.uint8).repeat_interleave(32, dim=2).repeat_interleave(32, dim=3)
+    flat = grid.reshape((stop - start) * 2, PAIR_H, PAIR_W, 3).permute(0, 3, 1, 2).float()
+    with torch.inference_mode():
+        camera = F.interpolate(
+            flat, size=(CAMERA_H, CAMERA_W), mode="bicubic", align_corners=False
+        )
+        camera = torch.clamp(torch.round(camera), 0.0, 255.0).to(torch.uint8)
+    camera = camera.permute(0, 2, 3, 1).reshape(
+        stop - start, 2, CAMERA_H, CAMERA_W, CHANNELS
+    )
+    overlay = (
+        labels[start:stop]
+        .index_select(1, camera_rows)
+        .index_select(2, camera_columns)
+    )
+    for code in range(1, palette.shape[0]):
+        mask = (overlay == code).reshape(stop - start, 1, CAMERA_H, CAMERA_W, 1)
+        colour = palette[code].reshape(1, 1, 1, 1, CHANNELS)
+        camera = torch.where(mask, colour, camera)
+    contiguous = camera.contiguous()
+    if contiguous.numel() != (
+        (stop - start) * FRAMES_PER_PAIR * CAMERA_H * CAMERA_W * CHANNELS
+    ):
+        raise ReceiverError("rendered batch size mismatch")
+    return contiguous
+
+
+def _atomic_json(path: Path, value: dict[str, Any]) -> None:
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    temporary = path.with_name(path.name + f".partial.{os.getpid()}")
+    if temporary.exists():
+        raise ReceiverError(f"stale temporary metadata path exists: {temporary}")
+    with temporary.open("xb") as handle:
+        handle.write(payload)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
+def _load_preserved_stage(
+    *,
+    stage_path: Path,
+    state_path: Path,
+    manifest_sha256: str,
+    start: int,
+    stop: int,
+    expected_bytes: int,
+) -> dict[str, Any] | None:
+    if not state_path.exists():
+        return None
+    if not stage_path.is_file():
+        raise ReceiverError("stage metadata exists without stage bytes")
+    state = _duplicate_refusing_json(state_path.read_bytes(), label=state_path.name)
+    if (
+        not isinstance(state, dict)
+        or set(state) != {
+            "bytes",
+            "manifest_sha256",
+            "pair_start",
+            "pair_stop",
+            "sha256",
+        }
+        or state["bytes"] != expected_bytes
+        or state["manifest_sha256"] != manifest_sha256
+        or state["pair_start"] != start
+        or state["pair_stop"] != stop
+        or _sha256_file(stage_path) != (state["bytes"], state["sha256"])
+    ):
+        raise ReceiverError("preserved stage custody mismatch")
+    return state
+
+
+def _write_or_adopt_rendered_stage(
+    *,
+    stage_path: Path,
+    state_path: Path,
+    rendered: torch.Tensor,
+    manifest_sha256: str,
+    start: int,
+    stop: int,
+) -> dict[str, Any]:
+    expected_bytes = int(rendered.numel())
+    temporary = stage_path.with_name(stage_path.name + f".partial.{os.getpid()}")
+    if temporary.exists():
+        raise ReceiverError(f"stale stage temporary exists: {temporary}")
+    with temporary.open("xb") as handle:
+        rendered.untyped_storage()._write_file(handle, False, False, 1)
+        handle.flush()
+        os.fsync(handle.fileno())
+    observed_bytes, digest = _sha256_file(temporary)
+    if observed_bytes != expected_bytes:
+        raise ReceiverError("rendered stage file length mismatch")
+    expected = {
+        "bytes": observed_bytes,
+        "manifest_sha256": manifest_sha256,
+        "pair_start": start,
+        "pair_stop": stop,
+        "sha256": digest,
+    }
+    if stage_path.exists():
+        if _sha256_file(stage_path) != (observed_bytes, digest):
+            raise ReceiverError("orphaned stage bytes differ from deterministic replay")
+        temporary.unlink()
+    else:
+        os.replace(temporary, stage_path)
+    _atomic_json(state_path, expected)
+    return expected
+
+
+def _assemble_final(
+    *,
+    final_path: Path,
+    stage_rows: list[dict[str, Any]],
+    stage_paths: list[Path],
+    expected_bytes: int,
+    expected_sha256: str,
+) -> tuple[int, str]:
+    if final_path.exists():
+        observed = _sha256_file(final_path)
+        if observed != (expected_bytes, expected_sha256):
+            raise ReceiverError("existing final raw custody mismatch")
+        return observed
+    temporary = final_path.with_name(final_path.name + f".partial.{os.getpid()}")
+    digest = hashlib.sha256()
+    total = 0
+    with temporary.open("xb") as output:
+        for row, stage_path in zip(stage_rows, stage_paths, strict=True):
+            stage_bytes, stage_sha256 = _sha256_file(stage_path)
+            if (stage_bytes, stage_sha256) != (row["bytes"], row["sha256"]):
+                raise ReceiverError("stage changed before final assembly")
+            with stage_path.open("rb") as source:
+                while True:
+                    chunk = source.read(8 * 1024 * 1024)
+                    if not chunk:
+                        break
+                    output.write(chunk)
+                    digest.update(chunk)
+                    total += len(chunk)
+        output.flush()
+        os.fsync(output.fileno())
+    observed = (total, digest.hexdigest())
+    if observed != (expected_bytes, expected_sha256):
+        raise ReceiverError(
+            f"final raw identity mismatch: {observed!r} != "
+            f"{(expected_bytes, expected_sha256)!r}"
+        )
+    os.replace(temporary, final_path)
+    return observed
+
+
+def inflate(archive_dir: Path, output_dir: Path, video_names_file: Path) -> dict[str, Any]:
+    started = time.monotonic()
+    torch.set_num_threads(1)
+    try:
+        torch.set_num_interop_threads(1)
+    except RuntimeError:
+        pass
+    torch.use_deterministic_algorithms(True)
+
+    names = [
+        row.strip()
+        for row in video_names_file.read_text(encoding="utf-8").splitlines()
+        if row.strip()
+    ]
+    if len(names) != 1:
+        raise ReceiverError("DDM E1 packet describes exactly one video")
+    relative = _safe_relative_name(names[0]).with_suffix(".raw")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    final_path = output_dir.joinpath(*relative.parts)
+    final_path.parent.mkdir(parents=True, exist_ok=True)
+
+    members = _read_exact_members(archive_dir)
+    manifest_payload = members["manifest.json"]
+    manifest_sha256 = _sha256(manifest_payload)
+    manifest = _validate_manifest(
+        _duplicate_refusing_json(manifest_payload, label="manifest.json"), members
+    )
+    chart_raw, chart_shape = _parse_blob(
+        members["base/chart.ddb"], expected_kind=0, label="base/chart.ddb"
+    )
+    if chart_shape:
+        raise ReceiverError("chart blob must be an opaque rank-zero container")
+    semantic_raw, semantic_shape = _parse_blob(
+        members["semantic/composed.dds"],
+        expected_kind=1,
+        label="semantic/composed.dds",
+    )
+    if semantic_shape != (600, PAIR_H, PAIR_W):
+        raise ReceiverError("semantic shape mismatch")
+    anchors, gradients, residuals = _chart_views(chart_raw, manifest["chart"])
+    labels = torch.frombuffer(bytearray(semantic_raw), dtype=torch.uint8).reshape(
+        600, PAIR_H, PAIR_W
+    )
+    output = manifest["output"]
+    if set(output) != {"bytes", "palette_rgb_u8", "sha256"}:
+        raise ReceiverError("output manifest keys differ")
+    palette_value = output["palette_rgb_u8"]
+    if (
+        not isinstance(palette_value, list)
+        or not 2 <= len(palette_value) <= 16
+        or any(
+            not isinstance(row, list)
+            or len(row) != 3
+            or any(isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 255 for value in row)
+            for row in palette_value
+        )
+    ):
+        raise ReceiverError("output palette is invalid")
+    palette = torch.tensor(palette_value, dtype=torch.uint8)
+    if int(labels.max()) >= len(palette):
+        raise ReceiverError("semantic code escaped the counted palette")
+    expected_bytes = 600 * FRAMES_PER_PAIR * CAMERA_H * CAMERA_W * CHANNELS
+    if output["bytes"] != expected_bytes:
+        raise ReceiverError("output byte count differs from geometry")
+    expected_sha256 = output["sha256"]
+    if (
+        not isinstance(expected_sha256, str)
+        or len(expected_sha256) != 64
+        or any(character not in "0123456789abcdef" for character in expected_sha256)
+    ):
+        raise ReceiverError("output SHA-256 is invalid")
+
+    checkpoint_root = (
+        output_dir.parent
+        / ".ddm_runtime_checkpoints"
+        / manifest_sha256
+        / relative.with_suffix("").as_posix().replace("/", "__")
+    )
+    checkpoint_root.mkdir(parents=True, exist_ok=True)
+    free_bytes = shutil.disk_usage(checkpoint_root).free
+    required_free_bytes = expected_bytes * 2 + SAFETY_BYTES
+    if free_bytes < required_free_bytes:
+        raise ReceiverError(
+            f"storage preflight failed: {free_bytes} < {required_free_bytes}"
+        )
+
+    batch_pairs = int(manifest["state"]["batch_pairs"])
+    if batch_pairs != 16:
+        raise ReceiverError("stage checkpoint interval changed")
+    camera_rows = torch.div(
+        torch.arange(CAMERA_H, dtype=torch.int64) * PAIR_H,
+        CAMERA_H,
+        rounding_mode="floor",
+    )
+    camera_columns = torch.div(
+        torch.arange(CAMERA_W, dtype=torch.int64) * PAIR_W,
+        CAMERA_W,
+        rounding_mode="floor",
+    )
+    stage_rows: list[dict[str, Any]] = []
+    stage_paths: list[Path] = []
+    render_seconds = 0.0
+    for start in range(0, 600, batch_pairs):
+        stop = min(start + batch_pairs, 600)
+        stage_path = checkpoint_root / f"pairs_{start:04d}_{stop:04d}.raw"
+        state_path = checkpoint_root / f"pairs_{start:04d}_{stop:04d}.json"
+        expected_stage_bytes = (
+            (stop - start) * FRAMES_PER_PAIR * CAMERA_H * CAMERA_W * CHANNELS
+        )
+        preserved = _load_preserved_stage(
+            stage_path=stage_path,
+            state_path=state_path,
+            manifest_sha256=manifest_sha256,
+            start=start,
+            stop=stop,
+            expected_bytes=expected_stage_bytes,
+        )
+        if preserved is not None:
+            stage_rows.append(preserved)
+            stage_paths.append(stage_path)
+            continue
+        stage_started = time.monotonic()
+        rendered = _render_batch(
+            start=start,
+            stop=stop,
+            anchors=anchors,
+            gradients=gradients,
+            residuals=residuals,
+            labels=labels,
+            palette=palette,
+            camera_rows=camera_rows,
+            camera_columns=camera_columns,
+        )
+        render_seconds += time.monotonic() - stage_started
+        row = _write_or_adopt_rendered_stage(
+            stage_path=stage_path,
+            state_path=state_path,
+            rendered=rendered,
+            manifest_sha256=manifest_sha256,
+            start=start,
+            stop=stop,
+        )
+        stage_rows.append(row)
+        stage_paths.append(stage_path)
+    final_bytes, final_sha256 = _assemble_final(
+        final_path=final_path,
+        stage_rows=stage_rows,
+        stage_paths=stage_paths,
+        expected_bytes=expected_bytes,
+        expected_sha256=expected_sha256,
+    )
+    receipt = {
+        "archive_manifest_sha256": manifest_sha256,
+        "dependencies": ["torch", "brotli"],
+        "evidence_axis": "[macOS-CPU frozen-scorer advisory]",
+        "final": {
+            "bytes": final_bytes,
+            "path": str(final_path),
+            "sha256": final_sha256,
+        },
+        "member_consumption": [
+            {
+                "bytes": len(members[name]),
+                "member": name,
+                "sha256": _sha256(members[name]),
+            }
+            for name in EXPECTED_MEMBERS
+        ],
+        "pair_count": 600,
+        "render_seconds": format(render_seconds, ".6f"),
+        "research_only": True,
+        "resume": {
+            "all_stage_checkpoints_preserved": True,
+            "checkpoint_root": str(checkpoint_root),
+            "stage_count": len(stage_rows),
+        },
+        "schema": "ddm_e1_runtime_inflate_receipt.v1",
+        "score_claim": False,
+        "single_thread_cpu": True,
+        "total_seconds": format(time.monotonic() - started, ".6f"),
+    }
+    _atomic_json(checkpoint_root / "inflate_receipt.json", receipt)
+    return receipt
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) != 4:
+        raise SystemExit(
+            "Usage: inflate.py <archive_dir> <output_dir> <video_names_file>"
+        )
+    receipt = inflate(
+        Path(argv[1]).resolve(),
+        Path(argv[2]).resolve(),
+        Path(argv[3]).resolve(),
+    )
+    print(json.dumps(receipt, sort_keys=True, separators=(",", ":")))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

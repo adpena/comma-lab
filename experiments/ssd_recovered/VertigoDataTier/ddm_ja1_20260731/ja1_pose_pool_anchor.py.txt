@@ -1,0 +1,146 @@
+# SPDX-License-Identifier: MIT
+"""ddm_ja1 leg-1: re-anchor the POSE pool at the LIVE v4c base from the measured
+photo-resolve receipt (per-pair d_rungB, rungA_by_g, shipped params p).
+
+NO re-decode: every number below is READ from the v4c build's own per-pair
+realized-through-PoseNet receipt (photo_celldrop50_resolve.partial.jsonl). This
+converts the pose-pool rows from DERIVED to REALIZED-live-base where the receipt
+already measured them, and derives the storage-vs-content stage attribution.
+
+[macOS-CPU advisory]; score_claim=false; pointer 0.1910828242 [contest-CPU] UNMOVED.
+"""
+from __future__ import annotations
+
+import json
+import math
+from pathlib import Path
+
+V4C = Path("/Volumes/VertigoDataTier/pact/ddm_v4c_20260730")
+OUT = Path("/Volumes/VertigoDataTier/pact/ddm_ja1_20260731")
+PHOTO = V4C / "photo_celldrop50_resolve.partial.jsonl"
+
+N_EVAL = 37_545_489  # rate normalizer (evaluate.py:63)
+
+
+def s_pose(d_pose: float) -> float:
+    return math.sqrt(10.0 * d_pose)
+
+
+def f16_ulp(x: float) -> float:
+    """f16 spacing near |x| (11-bit mantissa incl implicit)."""
+    ax = abs(x)
+    if ax == 0.0:
+        return 2.0 ** -24
+    e = math.floor(math.log2(ax))
+    return 2.0 ** (e - 10)
+
+
+rows = [json.loads(ln) for ln in PHOTO.read_text().splitlines() if ln.strip()]
+n = len(rows)
+assert n == 600, n
+
+# --- per-pair shipped d_pose (rung-B is what v4c ships; g=0 in rungA_by_g) ---
+d_ship = [r["d_rungB"] for r in rows]
+d_ctrl = [r["d_ctrl"] for r in rows]  # pre-photometric warp control
+dbar_ship = sum(d_ship) / n
+dbar_ctrl = sum(d_ctrl) / n
+sr = sorted(d_ship)
+
+
+def q(sorted_list, frac):
+    i = min(len(sorted_list) - 1, int(frac * len(sorted_list)))
+    return sorted_list[i]
+
+
+# --- QA66 rung-A per-pair-best realized gain (re-derive the -0.0134 S claim) ---
+# rungA_by_g maps global-shear g -> realized per-pair d_pose. Per-pair best picks
+# the argmin g per pair (needs ~2 bits/pair selector). Global-best picks one g.
+gset = sorted({k for r in rows for k in r["rungA_by_g"]}, key=float)
+d_perpair_best = []
+for r in rows:
+    vals = r["rungA_by_g"]
+    d_perpair_best.append(min(vals.values()))
+dbar_perpair_best = sum(d_perpair_best) / n
+# global-best g (single shipped constant)
+glob = {}
+for g in gset:
+    glob[g] = sum(r["rungA_by_g"].get(g, r["d_rungB"]) for r in rows) / n
+g_star = min(glob, key=lambda k: glob[k])
+dbar_global_best = glob[g_star]
+
+# --- p0 magnitude distribution (f16-marginal check for QA65) ---
+p0 = [abs(r["p"][0]) for r in rows]
+p0_sorted = sorted(p0)
+ulp_p0 = [f16_ulp(x) for x in p0]
+ulp_med = sorted(ulp_p0)[n // 2]
+
+# --- stage attribution (DERIVED): how many f16-ULPs of p0 is the residual? ---
+# pi2: one p0 f16-ULP ~ 0.040 S at |p0|~35 (that is the STORAGE floor for p0).
+# The shipped pose S-contribution is s_pose(dbar_ship). Content share = the part
+# above the storage floor.
+s_ship = s_pose(dbar_ship)
+s_ctrl = s_pose(dbar_ctrl)
+# per-pair: express each pair's d_pose as a multiple of a nominal f16-storage floor.
+# Nominal per-pair f16 floor of the 6-param warp is unknown analytically (needs the
+# PoseNet forward = QA72a). We bound it below by pi2's measured single-ULP p0 cost
+# expressed as a per-pair d_pose: 0.040 S single-pair => d ~ (0.040/... ) — instead
+# report the honest observable: fraction of pose MASS in the hard tail (content sig).
+mass = sum(d_ship)
+cum = 0.0
+tail_pairs_for_90 = 0
+for d in sorted(d_ship, reverse=True):
+    cum += d
+    tail_pairs_for_90 += 1
+    if cum >= 0.90 * mass:
+        break
+
+result = {
+    "schema": "ddm_ja1_pose_pool_anchor.v1",
+    "axis": "[macOS-CPU advisory — read from v4c photo-resolve receipt, realized-through-frozen-PoseNet]",
+    "score_claim": False,
+    "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+    "base": "v4c b6365270 (cell_drop50 tokens + static two-plane + rung-B photometric)",
+    "n_pairs": n,
+    "shipped_dbar_pose": dbar_ship,
+    "shipped_S_pose": s_ship,
+    "prephoto_ctrl_dbar_pose": dbar_ctrl,
+    "prephoto_ctrl_S_pose": s_ctrl,
+    "photometric_rungB_realized_dS": s_ship - s_ctrl,  # rung-B already consumed in v4c
+    "per_pair_spread": {
+        "min": sr[0],
+        "p10": q(sr, 0.10),
+        "p50": sr[n // 2],
+        "p90": q(sr, 0.90),
+        "p99": q(sr, 0.99),
+        "max": sr[-1],
+        "max_over_median": sr[-1] / sr[n // 2] if sr[n // 2] > 0 else None,
+        "p90_over_p10": q(sr, 0.90) / q(sr, 0.10) if q(sr, 0.10) > 0 else None,
+        "pairs_for_90pct_mass": tail_pairs_for_90,
+        "pairs_for_90pct_mass_frac": tail_pairs_for_90 / n,
+    },
+    "QA66_rungA_perpair_best": {
+        "g_set": gset,
+        "global_best_g": g_star,
+        "global_best_dbar": dbar_global_best,
+        "global_best_S": s_pose(dbar_global_best),
+        "global_best_dS_vs_ship": s_pose(dbar_global_best) - s_ship,
+        "perpair_best_dbar": dbar_perpair_best,
+        "perpair_best_S": s_pose(dbar_perpair_best),
+        "perpair_best_dS_vs_ship": s_pose(dbar_perpair_best) - s_ship,
+        "perpair_selector_bytes_est": 150,  # ~2 bits/pair
+        "perpair_rate_dS": 25.0 * 150 / N_EVAL,
+        "net_dS_perpair": (s_pose(dbar_perpair_best) - s_ship) + 25.0 * 150 / N_EVAL,
+    },
+    "QA65_p0_f16_marginal": {
+        "p0_abs_min": p0_sorted[0],
+        "p0_abs_p50": p0_sorted[n // 2],
+        "p0_abs_max": p0_sorted[-1],
+        "p0_f16_ulp_median": ulp_med,
+        "pi2_one_ulp_S": 0.0403,
+        "note": "storage penalty is bounded above by one p0-ULP ~0.040 S; the DEFINITIVE "
+        "storage-vs-content split is QA72a (re-quantize secant, live arm)",
+    },
+}
+
+(OUT / "ja1_pose_pool_anchor.json").write_text(json.dumps(result, indent=1))
+print(json.dumps(result, indent=1))

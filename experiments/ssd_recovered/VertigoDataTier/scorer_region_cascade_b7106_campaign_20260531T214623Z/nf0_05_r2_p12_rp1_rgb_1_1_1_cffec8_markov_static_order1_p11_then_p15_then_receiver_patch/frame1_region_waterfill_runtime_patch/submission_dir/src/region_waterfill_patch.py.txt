@@ -1,0 +1,30 @@
+# SPDX-License-Identifier: MIT
+"""Archive-bound frame-1 region waterfill receiver patch."""
+
+from __future__ import annotations
+
+REGION_WATERFILL_ROWS = [(0, [(0.1875, 0.5, 0.25, 0.5625, (1, 1, 1), 0)]), (5, [(0.1875, 0.5, 0.25, 0.5625, (1, 1, 1), 0)]), (23, [(0.4375, 0.4375, 0.5, 0.5, (1, 1, 1), 0)]), (29, [(0.4375, 0.4375, 0.5, 0.5, (1, 1, 1), 0)]), (32, [(0.1875, 0.5, 0.25, 0.5625, (1, 1, 1), 0)]), (38, [(0.1875, 0.5, 0.25, 0.5625, (1, 1, 1), 0)]), (60, [(0.125, 0.5, 0.1875, 0.5625, (1, 1, 1), 0)]), (63, [(0.125, 0.5, 0.1875, 0.5625, (1, 1, 1), 0)]), (66, [(0.9375, 0.5, 1.0, 0.5625, (1, 1, 1), 2)]), (71, [(0.875, 0.5, 0.9375, 0.5625, (1, 1, 1), 0)]), (72, [(0.875, 0.5, 0.9375, 0.5625, (1, 1, 1), 2)]), (75, [(0.5625, 0.4375, 0.625, 0.5, (1, 1, 1), 2)])]
+def apply_region_waterfill(frames_bchw, *, pair_start: int):
+    if frames_bchw.shape[0] % 2 != 0:
+        raise ValueError('region waterfill expects complete frame pairs')
+    out = frames_bchw.clone()
+    n_pairs = int(frames_bchw.shape[0] // 2)
+    _b, _c, height, width = out.shape
+    for pair_id, boxes in REGION_WATERFILL_ROWS:
+        local = int(pair_id) - int(pair_start)
+        if local < 0 or local >= n_pairs:
+            continue
+        frame_offset = local * 2 + 1
+        for x0, y0, x1, y1, rgb_delta, _class_id in boxes:
+            xx0 = max(0, min(width, round(float(x0) * width)))
+            yy0 = max(0, min(height, round(float(y0) * height)))
+            xx1 = max(0, min(width, round(float(x1) * width)))
+            yy1 = max(0, min(height, round(float(y1) * height)))
+            if xx1 <= xx0 or yy1 <= yy0:
+                continue
+            out[frame_offset, 0, yy0:yy1, xx0:xx1].add_(int(rgb_delta[0]))
+            out[frame_offset, 1, yy0:yy1, xx0:xx1].add_(int(rgb_delta[1]))
+            out[frame_offset, 2, yy0:yy1, xx0:xx1].add_(int(rgb_delta[2]))
+    return out.clamp_(0.0, 255.0).round_()
+
+__all__ = ['apply_region_waterfill']

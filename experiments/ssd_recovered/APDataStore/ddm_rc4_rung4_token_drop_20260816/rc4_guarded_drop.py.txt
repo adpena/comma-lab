@@ -1,0 +1,252 @@
+"""ddm_rc4 Stage 2 (READY, unfired) - does a DECODER-COMPUTABLE guard lower A?
+
+The 1-D p_max ladder is the free-to-signal optimum only if p_max is the best
+decoder-computable predictor of score damage.  It is not obviously so: the
+damage a token flip does depends on whether SegNet's margin at that pixel is
+large, and the decoder ALREADY computes a proxy for that - the boundary-distance
+bucket of the previous token frame (residual_archive._boundary_buckets), which
+is free.
+
+This measures A separately for INTERIOR drops (bucket == 4, far from any edge)
+and NEAR-BOUNDARY drops (bucket < 4) at a fixed threshold.  If the two A values
+differ materially, the 1-D ladder is dominated by a 2-D (p_max, bucket)
+waterfill that is still free to signal, and the rung-4 optimum moves.
+
+Falsifier: if A_interior and A_boundary agree within the sample's own spread,
+the guard buys nothing and the 1-D ladder stands as the family optimum.
+
+ALWAYS KEEP THE PAYLOAD: per-pair counts persisted with sha256 + byte count.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import importlib.util
+import json
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+
+GEN = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/generations/"
+    "hv1_ep0634_s1p25_c1p0_brotli_q10"
+)
+STORE = Path("/Volumes/APDataStore/pact/ddm_rc4_rung4_token_drop_20260816")
+TOKENS_U8 = Path(
+    "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/"
+    ".f26_decode_checkpoints/tokens_cpu_stage_complete.u8"
+)
+MT1 = Path(
+    "/Volumes/APDataStore/pact/ddm_mt1_t4_sign_gate_20260814_custody/"
+    "ddm_mt1_t4_sign_gate_20260814/inputs"
+)
+UPSTREAM = Path("/Users/adpena/Projects/pact/upstream")
+ARCHIVE_SHA = "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e"
+NUM_CLASSES = 5
+
+
+def sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--u", type=float, default=6.0)
+    ap.add_argument("--pairs", type=int, default=64)
+    ap.add_argument("--seed", type=int, default=20260816)
+    ap.add_argument("--threads", type=int, default=8)
+    args = ap.parse_args()
+
+    retained = STORE / "retained" / "guarded_drop"
+    retained.mkdir(parents=True, exist_ok=True)
+    sys.path.insert(0, str(GEN))
+    sys.path.insert(0, str(GEN / "cpr1"))
+    sys.path.insert(0, str(UPSTREAM))
+
+    import torch
+
+    torch.set_num_threads(args.threads)
+    torch.set_num_interop_threads(1)
+
+    from runtime.entropy.renderer_weight_codec import decode_wans1
+    from runtime.hpac_inference import optimize_sparse_evaluator  # noqa: F401
+    from runtime.ihs2 import materialize_ihs1
+    from runtime.residual_archive import (
+        _boundary_buckets,
+        _probability_table,
+        _sparse_class,
+        read_residual_archive,
+    )
+
+    spec = importlib.util.spec_from_file_location("_rc4_renderer", GEN / "cpr1" / "inflate.py")
+    runtime = importlib.util.module_from_spec(spec)
+    sys.modules["_rc4_renderer"] = runtime
+    spec.loader.exec_module(runtime)
+
+    if sha256_bytes((GEN / "archive.zip").read_bytes()) != ARCHIVE_SHA:
+        raise SystemExit("archive sha mismatch")
+    parts = read_residual_archive(GEN / "archive.zip")
+    tokens = np.fromfile(TOKENS_U8, dtype=np.uint8).reshape(
+        runtime.N, runtime.EVAL_H, runtime.EVAL_W
+    )
+    gt_argmax = np.load(MT1 / "gt_argmax.npy", mmap_mode="r")
+
+    device = torch.device("cpu")
+    model = runtime.load_hpac(materialize_ihs1(parts.hpac_blob, runtime), device)
+    sparse = _sparse_class(GEN / "cpr1")(model, runtime.EVAL_H, runtime.EVAL_W)
+    group_plans = []
+    for mask in runtime.group_masks(device):
+        flat = np.flatnonzero(mask.detach().cpu().numpy().reshape(-1))
+        group_plans.append((torch.from_numpy(flat).to(device), flat))
+
+    semantic = runtime.SemanticTokenRenderer(96)
+    semantic.load_state_dict(
+        {
+            r.schema.name: torch.from_numpy(np.ascontiguousarray(r.values, dtype=np.float32))
+            for r in decode_wans1(parts.semantic_blob)
+        },
+        strict=True,
+    )
+    semantic = semantic.eval().to(device)
+
+    import modules
+
+    dnet = modules.DistortionNet().eval().to(device)
+    dnet.load_state_dicts(modules.posenet_sd_path, modules.segnet_sd_path, device)
+    segnet = dnet.segnet
+
+    def frame_stats(frame: int):
+        index = torch.tensor([frame], dtype=torch.long, device=device)
+        prev_np = tokens[frame - 1] if frame else np.zeros_like(tokens[0])
+        previous = torch.from_numpy(prev_np.astype(np.int64))[None]
+        context = model.prepare_frame_context(index, previous)
+        bucket = (
+            _boundary_buckets(prev_np)
+            if frame
+            else np.full((runtime.EVAL_H, runtime.EVAL_W), 4, dtype=np.uint8)
+        )
+        boundary = bucket.reshape(-1)
+        truth_flat = tokens[frame].reshape(-1).astype(np.int64)
+        current = torch.zeros((1, runtime.EVAL_H, runtime.EVAL_W), dtype=torch.long)
+        p_max = np.zeros(truth_flat.size)
+        arg = np.zeros(truth_flat.size, dtype=np.int64)
+        bits = np.zeros(truth_flat.size)
+        for g, (dev_pos, flat_pos) in enumerate(group_plans):
+            base_logits = sparse.selected_logits(current, context, g).cpu().numpy()
+            pred = base_logits.argmax(axis=1).astype(np.int64)
+            feat = boundary[flat_pos].astype(np.int64) * NUM_CLASSES + pred
+            prob = _probability_table(
+                base_logits + parts.table.values[feat], runtime.HPAC_LOGIT_PRECISION
+            ).astype(np.float64)
+            a = prob.argmax(axis=1)
+            n = np.arange(a.size)
+            p_max[flat_pos] = prob[n, a]
+            arg[flat_pos] = a
+            act = truth_flat[flat_pos]
+            bits[flat_pos] = -np.log2(np.maximum(prob[n, act], 1e-300))
+            current.reshape(-1)[dev_pos] = torch.from_numpy(act).to(device)
+        shape = (runtime.EVAL_H, runtime.EVAL_W)
+        return p_max.reshape(shape), arg.reshape(shape), bits.reshape(shape), bucket
+
+    def seg_argmax(tok: np.ndarray, pair: int) -> np.ndarray:
+        with torch.inference_mode():
+            out = semantic(torch.from_numpy(tok.astype(np.int64))[None],
+                           torch.tensor([pair], dtype=torch.long))
+            cam = (
+                torch.nn.functional.interpolate(
+                    out, size=(runtime.CAMERA_H, runtime.CAMERA_W),
+                    mode="bilinear", align_corners=False,
+                ).clamp(0.0, 255.0).round().to(torch.uint8).float()
+            )
+            x = torch.nn.functional.interpolate(
+                cam,
+                size=(modules.segnet_model_input_size[1], modules.segnet_model_input_size[0]),
+                mode="bilinear",
+            )
+            return segnet(x).argmax(dim=1)[0].cpu().numpy().astype(np.uint8)
+
+    rng = np.random.default_rng(args.seed)
+    edges = np.linspace(0, runtime.N, args.pairs + 1).astype(int)
+    sample = np.unique(
+        np.clip([rng.integers(edges[i], max(edges[i] + 1, edges[i + 1]))
+                 for i in range(args.pairs)], 0, runtime.N - 1)
+    )
+
+    tau = 1.0 - 2.0**-args.u
+    arms = {"interior": lambda b: b >= 4, "boundary": lambda b: b < 4}
+    acc = {k: {"tf": 0, "bits": 0.0, "net": 0, "B": 0, "H": 0, "W": 0} for k in arms}
+    rows = []
+    started = time.time()
+    for k, pair in enumerate(sample):
+        pair = int(pair)
+        p_max, arg, bits, bucket = frame_stats(pair)
+        gt = np.asarray(gt_argmax[pair])
+        a_base = seg_argmax(tokens[pair], pair)
+        wb = a_base != gt
+        for name, sel in arms.items():
+            drop = (p_max >= tau) & sel(bucket)
+            new_tok = np.where(drop, arg, tokens[pair]).astype(np.uint8)
+            tf = int((new_tok != tokens[pair]).sum())
+            if not tf:
+                continue
+            a_drop = seg_argmax(new_tok, pair)
+            wd = a_drop != gt
+            ch = a_base != a_drop
+            acc[name]["tf"] += tf
+            acc[name]["bits"] += float(bits[drop].sum())
+            acc[name]["net"] += int(wd.sum()) - int(wb.sum())
+            acc[name]["B"] += int((ch & wb & ~wd).sum())
+            acc[name]["H"] += int((ch & ~wb & wd).sum())
+            acc[name]["W"] += int((ch & wb & wd).sum())
+        rows.append({"pair": pair, **{k2: dict(v) for k2, v in acc.items()}})
+        if k % 10 == 0:
+            print(f"pair {k+1}/{len(sample)} "
+                  + " ".join(f"{n}:A={acc[n]['net']/max(1,acc[n]['tf']):.3f}" for n in arms)
+                  + f" {time.time()-started:.0f}s", flush=True)
+
+    S_B = 25.0 / 37_545_489
+    S_F = 100.0 / (600 * 384 * 512)
+    results = {}
+    for name, a in acc.items():
+        A = a["net"] / a["tf"] if a["tf"] else 0.0
+        by = a["bits"] / 8.0
+        results[name] = {
+            **a,
+            "A_net_seg_flips_per_token_flip": A,
+            "bytes_saved_sample": by,
+            "bytes_per_net_seg_flip": by / a["net"] if a["net"] else float("inf"),
+            "sample_delta_S": -by * S_B + a["net"] * S_F,
+        }
+    path = retained / f"guard_u{args.u}_rows.json"
+    path.write_text(json.dumps(rows) + "\n")
+    out = {
+        "arm": "ddm_rc4",
+        "stage": "2_guarded_drop",
+        "archive_sha256": ARCHIVE_SHA,
+        "axis": "[macOS-CPU advisory, stratified-random pair sample] COMPONENT-ONLY NON-PROMOTABLE",
+        "score_claim": False,
+        "promotable": False,
+        "u": args.u,
+        "p_max_threshold": tau,
+        "sample_size": int(len(sample)),
+        "sample_seed": args.seed,
+        "results": results,
+        "retained_rows": {
+            "path": str(path),
+            "bytes": path.stat().st_size,
+            "sha256": sha256_bytes(path.read_bytes()),
+        },
+        "elapsed_seconds": time.time() - started,
+    }
+    (STORE / f"GUARDED_DROP_u{args.u}.json").write_text(
+        json.dumps(out, indent=2, sort_keys=True) + "\n"
+    )
+    print(json.dumps(results, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

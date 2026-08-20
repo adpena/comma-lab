@@ -1,0 +1,7 @@
+"""Failing test sketch for PR95-source-faithful archive selection."""
+
+def test_archive_selection_prefers_parseback_replay_over_live_proxy(tmp_path):
+    # Build fake adapter with two candidate exports.
+    # Current code: selected by local proxy -> live.
+    # Patched code: selected by parseback proxy -> ema.
+    assert False, "land fake adapter test in src/tac/tests/test_long_training_archive_selection.py"

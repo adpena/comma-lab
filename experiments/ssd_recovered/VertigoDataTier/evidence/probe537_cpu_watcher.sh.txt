@@ -1,0 +1,10 @@
+#!/bin/bash
+R=/Volumes/VertigoDataTier/pact/evidence/probe537_cpu_20260719_receipt.json
+W=/Volumes/VertigoDataTier/pact/evidence/probe537_cpu_watch.log
+PID=$(cat /Volumes/VertigoDataTier/pact/evidence/probe537_cpu_launch/run.pid 2>/dev/null)
+while true; do
+  if [ -f "$R" ]; then echo "DONE cpu537 all_pass=$(/usr/bin/python3 -c "import json;print(json.load(open('$R')).get('all_pass'))" 2>/dev/null)" >> "$W"; break; fi
+  if [ -n "$PID" ] && ! kill -0 "$PID" 2>/dev/null; then sleep 5
+    echo "DONE cpu537 exited all_pass=$([ -f "$R" ] && /usr/bin/python3 -c "import json;print(json.load(open('$R')).get('all_pass'))" || echo NONE) logtail: $(tail -2 /Volumes/VertigoDataTier/pact/evidence/probe537_cpu_launch/run.log 2>/dev/null | tr '\n' ' ' | cut -c1-200)" >> "$W"; break; fi
+  sleep 20
+done

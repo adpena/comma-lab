@@ -1,0 +1,286 @@
+# SPDX-License-Identifier: MIT
+"""Lossless JPEG-XL two-plane payload for the V10 receiver (RATE-CRUSH rung R3-jxl).
+
+Stores each frozen scorer plane (uint8 [H,W,3]) as one JPEG-XL lossless
+codestream (`cjxl -d 0`). Decode expands every stream through `djxl` and
+fail-closes unless each reconstructed plane's SHA-256 equals the custody hash
+recorded at encode time — byte identity is proven, never assumed.
+
+The JXL encoder/decoder are generic external CODE (rule-118 FREE); the payload
+bytes here are the counted video-derived content. Contest-runtime dependency
+closure for libjxl is a separate owed item recorded by the campaign memo; this
+module is the measurement + custody surface.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import shutil
+import struct
+import subprocess
+import tempfile
+from dataclasses import dataclass
+from itertools import pairwise
+from pathlib import Path
+
+import numpy as np
+
+MAGIC = b"TACV10JX"
+VERSION = 1
+CODEC_ID = "jxl-lossless-plane.v1"
+CONTENT_CODEC_TAG = 2  # 1 = brotli-q11 (predictor-residual-u8.v1); 2 = jxl-d0
+
+# magic, version, content tag, pair_count, height, width, channels
+PREFIX = struct.Struct("<8sHB3xIIIH")
+# pair_id, y0_len, y1_len, y0_plane_sha, y1_plane_sha
+PAIR_PREFIX = struct.Struct("<III32s32s")
+
+MAX_PAIRS = 10_000
+MAX_HEIGHT = 2048
+MAX_WIDTH = 2048
+MAX_PAYLOAD_BYTES = 1 << 30
+DEFAULT_EFFORT = 10
+
+_CJXL = "cjxl"
+_DJXL = "djxl"
+
+
+class JxlPlaneCodecError(ValueError):
+    """Fail-closed malformed payload, tool failure, or custody mismatch."""
+
+
+def jxl_tool_versions() -> dict[str, str]:
+    versions: dict[str, str] = {}
+    for name in (_CJXL, _DJXL):
+        binary = shutil.which(name)
+        if binary is None:
+            raise JxlPlaneCodecError(f"{name} is not available on PATH")
+        proc = subprocess.run([binary, "--version"], capture_output=True, text=True, check=False)
+        versions[name] = (proc.stdout or proc.stderr).splitlines()[0].strip() if (proc.stdout or proc.stderr) else ""
+    return versions
+
+
+def _exact_uint8_planes(value: np.ndarray, label: str) -> np.ndarray:
+    planes = np.asarray(value)
+    if planes.dtype != np.uint8 or planes.ndim != 4 or planes.shape[-1] != 3:
+        raise JxlPlaneCodecError(f"{label} must be exact uint8 [pairs,H,W,3]")
+    pair_count, height, width, channels = map(int, planes.shape)
+    if (
+        not 1 <= pair_count <= MAX_PAIRS
+        or not 1 <= height <= MAX_HEIGHT
+        or not 1 <= width <= MAX_WIDTH
+        or channels != 3
+    ):
+        raise JxlPlaneCodecError(f"{label} geometry is outside the admitted bounds")
+    return np.ascontiguousarray(planes)
+
+
+def _write_ppm(path: Path, plane: np.ndarray) -> None:
+    height, width, _ = plane.shape
+    path.write_bytes(f"P6\n{width} {height}\n255\n".encode() + plane.tobytes(order="C"))
+
+
+def _parse_ppm(payload: bytes, *, height: int, width: int) -> np.ndarray:
+    tokens: list[bytes] = []
+    cursor = 0
+    while len(tokens) < 4 and cursor < len(payload):
+        while cursor < len(payload) and payload[cursor : cursor + 1].isspace():
+            cursor += 1
+        if payload[cursor : cursor + 1] == b"#":
+            while cursor < len(payload) and payload[cursor : cursor + 1] != b"\n":
+                cursor += 1
+            continue
+        start = cursor
+        while cursor < len(payload) and not payload[cursor : cursor + 1].isspace():
+            cursor += 1
+        tokens.append(payload[start:cursor])
+    if len(tokens) != 4 or tokens[0] != b"P6" or tokens[3] != b"255":
+        raise JxlPlaneCodecError("decoded PPM header is not the exact P6/255 contract")
+    if int(tokens[1]) != width or int(tokens[2]) != height:
+        raise JxlPlaneCodecError("decoded PPM geometry drift")
+    cursor += 1  # exactly one whitespace byte after maxval
+    body = payload[cursor:]
+    expected = height * width * 3
+    if len(body) != expected:
+        raise JxlPlaneCodecError("decoded PPM body length drift")
+    return np.frombuffer(body, dtype=np.uint8).reshape(height, width, 3).copy()
+
+
+def encode_plane_jxl(plane: np.ndarray, *, effort: int = DEFAULT_EFFORT, work_dir: Path | None = None) -> bytes:
+    """Encode one uint8 [H,W,3] plane to a lossless JXL codestream."""
+
+    if plane.dtype != np.uint8 or plane.ndim != 3 or plane.shape[-1] != 3:
+        raise JxlPlaneCodecError("plane must be exact uint8 [H,W,3]")
+    with tempfile.TemporaryDirectory(dir=str(work_dir) if work_dir else None) as tmp:
+        src = Path(tmp) / "plane.ppm"
+        out = Path(tmp) / "plane.jxl"
+        _write_ppm(src, np.ascontiguousarray(plane))
+        argv = [_CJXL, str(src), str(out), "-d", "0", "-e", str(int(effort)), "--quiet"]
+        if int(effort) >= 10:
+            argv.insert(-1, "--allow_expert_options")
+        proc = subprocess.run(argv, capture_output=True, check=False)
+        if proc.returncode != 0 or not out.is_file():
+            raise JxlPlaneCodecError(f"cjxl lossless encode failed rc={proc.returncode}")
+        return out.read_bytes()
+
+
+def decode_plane_jxl(stream: bytes, *, height: int, width: int, work_dir: Path | None = None) -> np.ndarray:
+    """Decode one JXL codestream back to the exact uint8 [H,W,3] plane."""
+
+    with tempfile.TemporaryDirectory(dir=str(work_dir) if work_dir else None) as tmp:
+        src = Path(tmp) / "plane.jxl"
+        out = Path(tmp) / "plane.ppm"
+        src.write_bytes(stream)
+        proc = subprocess.run([_DJXL, str(src), str(out), "--quiet"], capture_output=True, check=False)
+        if proc.returncode != 0 or not out.is_file():
+            raise JxlPlaneCodecError(f"djxl decode failed rc={proc.returncode}")
+        return _parse_ppm(out.read_bytes(), height=height, width=width)
+
+
+@dataclass(frozen=True)
+class JxlPairRecord:
+    pair_id: int
+    y0_stream: bytes
+    y1_stream: bytes
+    y0_plane_sha: bytes
+    y1_plane_sha: bytes
+
+
+def build_payload(records: list[JxlPairRecord], *, height: int, width: int) -> bytes:
+    if not records:
+        raise JxlPlaneCodecError("payload requires at least one pair record")
+    if any(right.pair_id <= left.pair_id for left, right in pairwise(records)):
+        raise JxlPlaneCodecError("pair ids must be unique and strictly increasing")
+    payload = bytearray(PREFIX.pack(MAGIC, VERSION, CONTENT_CODEC_TAG, len(records), height, width, 3))
+    for record in records:
+        payload.extend(
+            PAIR_PREFIX.pack(
+                record.pair_id,
+                len(record.y0_stream),
+                len(record.y1_stream),
+                record.y0_plane_sha,
+                record.y1_plane_sha,
+            )
+        )
+        payload.extend(record.y0_stream)
+        payload.extend(record.y1_stream)
+        if len(payload) > MAX_PAYLOAD_BYTES:
+            raise JxlPlaneCodecError("payload exceeds its byte cap")
+    return bytes(payload)
+
+
+def encode_pairs(
+    frame0: np.ndarray,
+    frame1: np.ndarray,
+    *,
+    pair_ids: list[int] | None = None,
+    effort: int = DEFAULT_EFFORT,
+    work_dir: Path | None = None,
+) -> bytes:
+    """Encode exact uint8 [pairs,H,W,3] plane arrays into one payload."""
+
+    y0 = _exact_uint8_planes(frame0, "frame0")
+    y1 = _exact_uint8_planes(frame1, "frame1")
+    if y0.shape != y1.shape:
+        raise JxlPlaneCodecError("frame0 and frame1 arrays must have identical geometry")
+    pair_count, height, width, _ = map(int, y0.shape)
+    ids = list(range(pair_count)) if pair_ids is None else [int(p) for p in pair_ids]
+    if len(ids) != pair_count:
+        raise JxlPlaneCodecError("pair id count must equal pair count")
+    records: list[JxlPairRecord] = []
+    for index, pair_id in enumerate(ids):
+        records.append(
+            JxlPairRecord(
+                pair_id=pair_id,
+                y0_stream=encode_plane_jxl(y0[index], effort=effort, work_dir=work_dir),
+                y1_stream=encode_plane_jxl(y1[index], effort=effort, work_dir=work_dir),
+                y0_plane_sha=hashlib.sha256(y0[index].tobytes(order="C")).digest(),
+                y1_plane_sha=hashlib.sha256(y1[index].tobytes(order="C")).digest(),
+            )
+        )
+    return build_payload(records, height=height, width=width)
+
+
+@dataclass(frozen=True)
+class DecodedJxlPlanes:
+    frame0: np.ndarray
+    frame1: np.ndarray
+    pair_ids: tuple[int, ...]
+    payload_bytes: int
+    framing_bytes: int
+    stream_bytes: int
+
+
+def decode_payload(payload: bytes, *, work_dir: Path | None = None) -> DecodedJxlPlanes:
+    """Parse a payload exactly; decode + sha-verify every plane (fail-closed)."""
+
+    if not isinstance(payload, bytes):
+        raise JxlPlaneCodecError("payload must be immutable bytes")
+    if len(payload) < PREFIX.size or len(payload) > MAX_PAYLOAD_BYTES:
+        raise JxlPlaneCodecError("payload is truncated or exceeds its byte cap")
+    magic, version, tag, pair_count, height, width, channels = PREFIX.unpack_from(payload)
+    if magic != MAGIC or version != VERSION or tag != CONTENT_CODEC_TAG:
+        raise JxlPlaneCodecError("payload magic/version/content-codec mismatch")
+    if not 1 <= pair_count <= MAX_PAIRS or not 1 <= height <= MAX_HEIGHT or not 1 <= width <= MAX_WIDTH or channels != 3:
+        raise JxlPlaneCodecError("payload geometry is outside admitted bounds")
+    cursor = PREFIX.size
+    frame0_rows: list[np.ndarray] = []
+    frame1_rows: list[np.ndarray] = []
+    pair_ids: list[int] = []
+    stream_total = 0
+    previous = -1
+    for _ in range(pair_count):
+        if cursor + PAIR_PREFIX.size > len(payload):
+            raise JxlPlaneCodecError("payload has a truncated pair header")
+        pair_id, y0_len, y1_len, y0_sha, y1_sha = PAIR_PREFIX.unpack_from(payload, cursor)
+        cursor += PAIR_PREFIX.size
+        if pair_id <= previous:
+            raise JxlPlaneCodecError("pair ids are not strictly increasing")
+        previous = pair_id
+        if y0_len < 1 or y1_len < 1 or cursor + y0_len + y1_len > len(payload):
+            raise JxlPlaneCodecError("payload has a truncated pair body")
+        y0_stream = payload[cursor : cursor + y0_len]
+        cursor += y0_len
+        y1_stream = payload[cursor : cursor + y1_len]
+        cursor += y1_len
+        y0 = decode_plane_jxl(y0_stream, height=height, width=width, work_dir=work_dir)
+        y1 = decode_plane_jxl(y1_stream, height=height, width=width, work_dir=work_dir)
+        if hashlib.sha256(y0.tobytes(order="C")).digest() != y0_sha:
+            raise JxlPlaneCodecError(f"pair {pair_id}: decoded y0 plane sha custody failure")
+        if hashlib.sha256(y1.tobytes(order="C")).digest() != y1_sha:
+            raise JxlPlaneCodecError(f"pair {pair_id}: decoded y1 plane sha custody failure")
+        frame0_rows.append(y0)
+        frame1_rows.append(y1)
+        pair_ids.append(pair_id)
+        stream_total += y0_len + y1_len
+    if cursor != len(payload):
+        raise JxlPlaneCodecError("payload has trailing data")
+    framing = PREFIX.size + pair_count * PAIR_PREFIX.size
+    return DecodedJxlPlanes(
+        frame0=np.stack(frame0_rows),
+        frame1=np.stack(frame1_rows),
+        pair_ids=tuple(pair_ids),
+        payload_bytes=len(payload),
+        framing_bytes=framing,
+        stream_bytes=stream_total,
+    )
+
+
+__all__ = [
+    "CODEC_ID",
+    "CONTENT_CODEC_TAG",
+    "DEFAULT_EFFORT",
+    "MAGIC",
+    "PAIR_PREFIX",
+    "PREFIX",
+    "VERSION",
+    "DecodedJxlPlanes",
+    "JxlPairRecord",
+    "JxlPlaneCodecError",
+    "build_payload",
+    "decode_payload",
+    "decode_plane_jxl",
+    "encode_pairs",
+    "encode_plane_jxl",
+    "jxl_tool_versions",
+]

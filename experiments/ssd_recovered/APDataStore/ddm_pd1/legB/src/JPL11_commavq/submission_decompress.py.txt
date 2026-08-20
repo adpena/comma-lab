@@ -1,0 +1,264 @@
+#!/usr/bin/env python3
+"""commaVQ lossless decompressor: gpt2m + range coding.
+
+Reads payload.bin + manifest.npz (alongside this script), regenerates each
+token's probability distribution with commaai/commavq-gpt2m (downloaded from
+HuggingFace, as in commavq/utils/gpt.py), and range-decodes the exact original
+token arrays into OUTPUT_DIR.
+
+Decoding runs the identical batched GPU op sequence the encoder ran, so the
+probability tables match bit-for-bit. Requires a CUDA GPU and the pinned
+package versions in the accompanying README.
+"""
+import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
+
+import numpy as np
+import torch
+import torch.nn as nn
+from torch.nn import functional as F
+from torch import Tensor
+import constriction
+
+HERE = Path(__file__).resolve().parent
+OUTPUT_DIR = Path(os.environ.get('OUTPUT_DIR', HERE))
+
+TOKENS_PER_FRAME = 129
+FRAMES_PER_WINDOW = 20
+WINDOW = FRAMES_PER_WINDOW * TOKENS_PER_FRAME
+FRAMES = 1200
+CONTENT = 128
+BOS = 1024
+VOCAB = 1024
+WEIGHTS_URL = 'https://huggingface.co/commaai/commavq-gpt2m/resolve/main/pytorch_model.bin'
+
+
+# --- model (verbatim architecture of commavq/utils/gpt.py) -------------------
+
+def find_multiple(n, k):
+  return n if n % k == 0 else n + k - (n % k)
+
+
+@dataclass
+class GPTConfig:
+  block_size: int = WINDOW
+  vocab_size: int = 1025
+  n_layer: int = 24
+  n_head: int = 16
+  dim: int = 1024
+  intermediate_size: int = 4 * 1024
+
+  @property
+  def head_dim(self):
+    return self.dim // self.n_head
+
+
+class KVCache(nn.Module):
+  def __init__(self, max_batch_size, max_seq_length, n_heads, head_dim, dtype):
+    super().__init__()
+    shape = (max_batch_size, n_heads, max_seq_length, head_dim)
+    self.register_buffer('k_cache', torch.zeros(shape, dtype=dtype))
+    self.register_buffer('v_cache', torch.zeros(shape, dtype=dtype))
+
+  def update(self, input_pos, k_val, v_val):
+    self.k_cache[:, :, input_pos] = k_val
+    self.v_cache[:, :, input_pos] = v_val
+    return self.k_cache, self.v_cache
+
+
+class Attention(nn.Module):
+  def __init__(self, config):
+    super().__init__()
+    self.config = config
+    self.c_attn = nn.Linear(config.dim, 3 * config.dim, bias=True)
+    self.c_proj = nn.Linear(config.dim, config.dim, bias=True)
+    self.kv_cache = None
+
+  def forward(self, x, mask, input_pos=None):
+    bsz, seqlen, _ = x.shape
+    q, k, v = self.c_attn(x).split([self.config.dim] * 3, dim=-1)
+    q = q.view(bsz, seqlen, self.config.n_head, self.config.head_dim).transpose(1, 2)
+    k = k.view(bsz, seqlen, self.config.n_head, self.config.head_dim).transpose(1, 2)
+    v = v.view(bsz, seqlen, self.config.n_head, self.config.head_dim).transpose(1, 2)
+    k, v = self.kv_cache.update(input_pos, k, v)
+    y = F.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0)
+    y = y.transpose(1, 2).contiguous().view(bsz, seqlen, self.config.dim)
+    return self.c_proj(y)
+
+
+class FeedForward(nn.Module):
+  def __init__(self, config):
+    super().__init__()
+    self.c_fc = nn.Linear(config.dim, config.intermediate_size, bias=True)
+    self.c_proj = nn.Linear(config.intermediate_size, config.dim, bias=True)
+
+  def forward(self, x):
+    return self.c_proj(F.gelu(self.c_fc(x), approximate='tanh'))
+
+
+class TransformerBlock(nn.Module):
+  def __init__(self, config):
+    super().__init__()
+    self.attn = Attention(config)
+    self.mlp = FeedForward(config)
+    self.ln_1 = nn.LayerNorm(config.dim)
+    self.ln_2 = nn.LayerNorm(config.dim)
+
+  def forward(self, x, input_pos, mask):
+    h = x + self.attn(self.ln_1(x), mask, input_pos)
+    return h + self.mlp(self.ln_2(h))
+
+
+class GPT(nn.Module):
+  def __init__(self, config=GPTConfig()):
+    super().__init__()
+    self.config = config
+    self.transformer = nn.ModuleDict({
+        'wte': nn.Embedding(config.vocab_size, config.dim),
+        'wpe': nn.Embedding(config.block_size, config.dim),
+        'h': nn.ModuleList(TransformerBlock(config) for _ in range(config.n_layer)),
+        'ln_f': nn.LayerNorm(config.dim),
+    })
+    self.lm_head = nn.Linear(config.dim, config.vocab_size, bias=False)
+    self.register_buffer('causal_mask', torch.tril(
+        torch.ones(config.block_size, config.block_size, dtype=torch.bool)
+    ).view(1, 1, config.block_size, config.block_size))
+
+  def setup_caches(self, max_batch_size, max_seq_length, dtype):
+    max_seq_length = find_multiple(max_seq_length, 8)
+    for b in self.transformer.h:
+      b.attn.kv_cache = KVCache(max_batch_size, max_seq_length,
+                                self.config.n_head, self.config.head_dim, dtype)
+    self.causal_mask = torch.tril(
+        torch.ones(max_seq_length, max_seq_length, dtype=torch.bool)
+    ).view(1, 1, max_seq_length, max_seq_length)
+
+  def forward(self, idx, input_pos):
+    mask = self.causal_mask[:, :, input_pos]
+    x = self.transformer.wte(idx) + self.transformer.wpe(input_pos)
+    for layer in self.transformer.h:
+      x = layer(x, input_pos, mask)
+    return self.lm_head(self.transformer.ln_f(x))
+
+
+def load_model(device='cuda', dtype=torch.float16):
+  sd = torch.hub.load_state_dict_from_url(WEIGHTS_URL, map_location='cpu',
+                                          weights_only=True)
+  sd = {k: v for k, v in sd.items()
+        if not (k.endswith('.attn.masked_bias') or k.endswith('.attn.bias'))}
+  transposed = ['attn.c_attn.weight', 'attn.c_proj.weight',
+                'mlp.c_fc.weight', 'mlp.c_proj.weight']
+  for k in list(sd.keys()):
+    if any(k.endswith(w) for w in transposed):
+      sd[k] = sd[k].transpose(1, 0)
+  model = GPT()
+  sd['causal_mask'] = model.causal_mask
+  model.load_state_dict(sd)
+  return model.to(device=device, dtype=dtype).eval()
+
+
+# --- lockstep decode (mirror of the encoder) ---------------------------------
+
+def softmax_probs(logits_f32):
+  l = logits_f32[:, :VOCAB].astype(np.float64)
+  l -= l.max(axis=1, keepdims=True)
+  p = np.exp(l)
+  p /= p.sum(axis=1, keepdims=True)
+  p = p * (1.0 - 2.0**-16) + 2.0**-16 / VOCAB
+  return p / p.sum(axis=1, keepdims=True)
+
+
+def window_starts(stride):
+  starts = list(range(0, FRAMES - FRAMES_PER_WINDOW + 1, stride))
+  if starts[-1] != FRAMES - FRAMES_PER_WINDOW:
+    starts.append(FRAMES - FRAMES_PER_WINDOW)
+  return starts
+
+
+@torch.no_grad()
+def decode_batch(model, step_fwd, payloads, stride, device='cuda'):
+  B = len(payloads)
+  seqs = np.zeros((B, FRAMES * TOKENS_PER_FRAME), dtype=np.int64)
+  seqs[:, ::TOKENS_PER_FRAME] = BOS
+  coders = [constriction.stream.queue.RangeDecoder(p) for p in payloads]
+  seqs_t = torch.from_numpy(seqs).to(device)
+
+  starts = window_starts(stride)
+  for wi, s in enumerate(starts):
+    base = s * TOKENS_PER_FRAME
+    n_ctx = 0 if wi == 0 else (FRAMES_PER_WINDOW - (s - starts[wi - 1])) * TOKENS_PER_FRAME
+    prefill_len = n_ctx + 1
+    input_pos = torch.arange(0, prefill_len, device=device)
+    logits = model(seqs_t[:, base:base + prefill_len], input_pos)[:, -1].float()
+    pos = prefill_len - 1
+
+    while pos + 1 < WINDOW:
+      tgt = pos + 1
+      if tgt % TOKENS_PER_FRAME == 0:
+        ip = torch.tensor([tgt], device=device, dtype=torch.long)
+        logits = step_fwd(seqs_t[:, base + tgt:base + tgt + 1], ip)[:, -1].float()
+        pos = tgt
+        continue
+      probs = softmax_probs(logits.cpu().numpy())
+      for b in range(B):
+        m = constriction.stream.model.Categorical(probs[b], perfect=False)
+        seqs[b, base + tgt] = int(coders[b].decode(m, 1)[0])
+      seqs_t[:, base + tgt] = torch.from_numpy(seqs[:, base + tgt]).to(device)
+      if tgt + 1 < WINDOW:
+        ip = torch.tensor([tgt], device=device, dtype=torch.long)
+        logits = step_fwd(seqs_t[:, base + tgt:base + tgt + 1], ip)[:, -1].float()
+      pos = tgt
+  content = seqs.reshape(B, FRAMES, TOKENS_PER_FRAME)[:, :, 1:]
+  return content.reshape(B, FRAMES, 8, 16).astype(np.int16)
+
+
+def main():
+  man = np.load(HERE / 'manifest.npz', allow_pickle=False)
+  # File names come from the dataset itself, exactly as comma's baseline
+  # decompress.py does (repo + PyPI are assumed available). Only names are
+  # used — token data is never read.
+  from datasets import load_dataset
+  ds = load_dataset('commaai/commavq', num_proc=4,
+                    data_files={'train': ['data-0000.tar.gz', 'data-0001.tar.gz']})['train']
+  all_names = np.array([ds[i]['json']['file_name'] for i in range(len(ds))])
+  names = [str(n) for n in all_names[np.argsort(all_names)]]
+  lens = man['lens']
+  batch = int(man['batch'])
+  stride = int(man['stride'])
+  compiled = bool(man['compiled'])
+  words = np.fromfile(HERE / 'payload.bin', dtype=np.uint32)
+
+  offsets = np.zeros(len(lens) + 1, dtype=np.int64)
+  np.cumsum(lens, out=offsets[1:])
+  payloads = [words[offsets[i]:offsets[i + 1]] for i in range(len(lens))]
+
+  device = 'cuda'
+  model = load_model(device)
+  os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+  done = 0
+  lock_size = 0
+  step_fwd = None
+  for start in range(0, len(names), batch):
+    if all((OUTPUT_DIR / n).exists() for n in names[start:start + batch]):
+      done += len(names[start:start + batch])
+      continue  # resumable: this batch was already decoded
+    chunk = payloads[start:start + batch]
+    if step_fwd is None or lock_size != len(chunk):
+      model.setup_caches(len(chunk), WINDOW, torch.float16)
+      model.to(device)
+      step_fwd = (torch.compile(model.forward, mode='reduce-overhead', fullgraph=True)
+                  if compiled else model.forward)
+      lock_size = len(chunk)
+    decoded = decode_batch(model, step_fwd, chunk, stride, device)
+    for j in range(len(chunk)):
+      with open(OUTPUT_DIR / names[start + j], 'wb') as f:
+        np.save(f, decoded[j])
+    done += len(chunk)
+    print(f'{done}/{len(names)} segments decoded', flush=True)
+
+
+if __name__ == '__main__':
+  main()

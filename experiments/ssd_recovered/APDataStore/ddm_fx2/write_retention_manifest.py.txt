@@ -1,0 +1,42 @@
+"""Retention manifest: every payload this arm materialised, with its sha256.
+
+ALWAYS KEEP THE PAYLOAD.  The race harness persists a per-frame bit vector for
+every architecture it measures, not just the winner, so the next arm reads the
+family shape at $0 instead of re-encoding to rediscover it.
+"""
+import hashlib, json, glob, os
+from pathlib import Path
+
+ROOT = Path("/Volumes/APDataStore/pact/ddm_fx2")
+
+def sha(p):
+    h = hashlib.sha256()
+    with open(p, "rb") as f:
+        for c in iter(lambda: f.read(1 << 20), b""):
+            h.update(c)
+    return h.hexdigest()
+
+entries = []
+for pattern in ("retained/*.npy", "race/*.json", "probe/*.json", "probe/*.py", "*.py", "*.sh"):
+    for p in sorted(glob.glob(str(ROOT / pattern))):
+        if os.path.basename(p).startswith("._"):
+            continue
+        entries.append({
+            "path": os.path.relpath(p, ROOT),
+            "bytes": os.path.getsize(p),
+            "sha256": sha(p),
+        })
+
+doc = {
+    "arm": "ddm_fx2_probability_model_axis_all_sections_20260818",
+    "ssd_root": "APDataStore/pact/ddm_fx2",
+    "retention_rule": "ALWAYS KEEP THE PAYLOAD -- per-variant bit vectors for EVERY raced "
+                      "architecture, not only the winner, so the family shape is readable at $0.",
+    "authority": "[macOS-CPU advisory] exact decode-identical code-length measurement; "
+                 "score_claim=false; promotable=false",
+    "file_count": len(entries),
+    "total_bytes": sum(e["bytes"] for e in entries),
+    "files": entries,
+}
+(ROOT / "RETENTION_MANIFEST.json").write_text(json.dumps(doc, indent=2))
+print(f"{len(entries)} files, {doc['total_bytes']:,} B -> RETENTION_MANIFEST.json")

@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+"""Encode all 5,000 eval segments with the lockstep codec, resumably.
+
+Segments are processed in file_name-sorted order in fixed batches of --batch
+(a smaller final batch runs at its actual size; encode and decode agree on
+every batch's size, which is all determinism requires). Each batch writes
+out/batch_XXXX.npz (payload words + names). package.py later assembles the
+submission zip. The batch composition is implicit: sorted names + batch size
+reproduce it exactly at decode time.
+"""
+import argparse
+import os
+import time
+from pathlib import Path
+
+import numpy as np
+
+import codec
+
+
+def main():
+  ap = argparse.ArgumentParser()
+  ap.add_argument('--batch', type=int, default=40)
+  ap.add_argument('--stride', type=int, default=10)
+  ap.add_argument('--out', default='encoded')
+  ap.add_argument('--limit-batches', type=int, default=0, help='0 = all')
+  ap.add_argument('--compile', action='store_true')
+  args = ap.parse_args()
+
+  out = Path(args.out)
+  out.mkdir(exist_ok=True)
+
+  from datasets import load_dataset
+  ds = load_dataset('commaai/commavq', num_proc=4,
+                    data_files={'train': ['data-0000.tar.gz', 'data-0001.tar.gz']})['train']
+  names = [ds[i]['json']['file_name'] for i in range(len(ds))]
+  order = np.argsort(names)  # deterministic processing order
+
+  model = codec.load_model()
+
+  n_batches = (len(order) + args.batch - 1) // args.batch
+  if args.limit_batches:
+    n_batches = min(n_batches, args.limit_batches)
+
+  lock = None
+  lock_size = 0
+  for bi in range(n_batches):
+    path = out / f'batch_{bi:04d}.npz'
+    if path.exists():
+      continue
+    t0 = time.time()
+    idx = order[bi * args.batch:(bi + 1) * args.batch]
+    if lock is None or lock_size != len(idx):
+      lock = codec.LockstepModel(model, len(idx), compile_step=args.compile)
+      lock_size = len(idx)
+    segs = [np.array(ds[int(i)]['token.npy']) for i in idx]
+    payloads = codec.encode_batch(lock, segs, args.stride)
+    np.savez(path,
+             names=np.array([names[int(i)] for i in idx]),
+             lens=np.array([len(p) for p in payloads], dtype=np.int64),
+             words=np.concatenate(payloads).astype(np.uint32))
+    comp_bits = sum(len(p) for p in payloads) * 32
+    tok = len(idx) * codec.FRAMES * codec.CONTENT
+    print(f'batch {bi + 1}/{n_batches}: {comp_bits / tok:.4f} bits/tok, '
+          f'{time.time() - t0:.0f}s', flush=True)
+
+  done = sorted(out.glob('batch_*.npz'))
+  total_bits = 0
+  total_tok = 0
+  for p in done:
+    z = np.load(p, allow_pickle=False)
+    total_bits += len(z['words']) * 32
+    total_tok += len(z['lens']) * codec.FRAMES * codec.CONTENT
+  if total_tok:
+    print(f'\n{len(done)} batches: {total_bits / total_tok:.4f} bits/tok '
+          f'-> data-only score {10 / (total_bits / total_tok):.3f}')
+
+
+if __name__ == '__main__':
+  main()

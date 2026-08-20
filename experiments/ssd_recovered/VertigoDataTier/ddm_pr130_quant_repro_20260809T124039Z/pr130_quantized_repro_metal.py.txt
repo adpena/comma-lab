@@ -1,0 +1,164 @@
+"""PR130 semantic-leg QUANTIZED reproduction on Metal, against BOTH GT caches.
+
+WHY THIS EXISTS (sg2, 2026-08-09): MAIN's earlier "3.87x seg gap" was a protocol
+error -- a QAT checkpoint evaluated through `train_semantic_full.evaluate_all`,
+which renders the FLOATING master and never reads `quant_bits`. The deployed
+archive runs the SAME renderer after int4 pack/dequant. This harness calls the
+QUANTIZED evaluator (`train_semantic_quantized.evaluate_all`, which routes
+`render_quantized(..., bits, exact_path=True)`) so the measured object is the
+DEPLOYED object.
+
+Reference rows to beat/match (pre-existing evidence, NOT measured here):
+  stage-07 recorded quantized exact_seg  0.0002972496880425347
+  stage-08 recorded quantized exact_seg  0.0002763705783420139   <- final ckpt
+  published Ada official d_seg           0.00028609   [contest-CUDA]
+
+AXIS: we hold two GT caches from the same host (AV and DALI). upstream/evaluate.py
+:31-46 selects DALI iff device.type=="cuda" else AV, so the GT decoder -- not our
+forward device -- defines the contest axis. Running both makes the decoder effect
+on THIS object measurable rather than assumed.
+
+Authority: [macOS-MLX/Metal advisory] -- MPS is NEVER a score authority. This is a
+reproduction check of a deployment-shaped metric, not a contest score.
+Intake repo is READ-ONLY; this file imports it and never writes to it.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import platform
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+
+INTAKE = Path("/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo")
+CODE = INTAKE / "code"
+REPO = Path("/Users/adpena/Projects/pact")
+
+REFERENCE = {
+    "stage07_recorded_quantized_exact_seg": 0.0002972496880425347,
+    "stage08_recorded_quantized_exact_seg": 0.0002763705783420139,
+    "published_ada_official_d_seg_contest_cuda": 0.00028609,
+    "published_a4500_official_d_seg_contest_cuda": 0.00029607,
+}
+
+
+def _sha256(path: Path) -> str:
+    import hashlib
+
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 22), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--checkpoint", type=Path, required=True)
+    ap.add_argument("--gt-cache", type=Path, action="append", required=True,
+                    help="repeat per cache; label inferred from filename stem")
+    ap.add_argument("--device", default="mps")
+    ap.add_argument("--eval-batch-size", type=int, default=8)
+    ap.add_argument("--out", type=Path, required=True)
+    args = ap.parse_args()
+
+    for p in (str(CODE), str(REPO / "upstream"), str(REPO / "src")):
+        if p not in sys.path:
+            sys.path.insert(0, p)
+
+    import torch  # noqa: E402
+    import modules  # noqa: E402  (upstream, READ-ONLY)
+    from safetensors.torch import load_file  # noqa: E402
+    import train_semantic_quantized as tsq  # noqa: E402  (intake, READ-ONLY)
+    from semantic_renderer_oracle import SemanticTokenRenderer  # noqa: E402
+
+    device = torch.device(args.device)
+    ckpt = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
+    config = ckpt["config"]
+    bits = ckpt.get("quant_bits")
+    if bits is None:
+        raise SystemExit(
+            "REFUSED: checkpoint carries no `quant_bits`. This harness measures the "
+            "QUANTIZED deployment path; a float checkpoint would silently be measured "
+            "through the wrong forward -- exactly the defect this harness exists to avoid."
+        )
+
+    model = SemanticTokenRenderer(
+        width=int(config["width"]),
+        blocks=int(config["blocks"]),
+        frame_dim=int(config["frame_dim"]),
+        num_pairs=tsq.N,
+        phase_y=int(config.get("phase_y", 1)),
+        phase_x=int(config.get("phase_x", 1)),
+        temporal_radius=int(config.get("temporal_radius", 0)),
+    ).to(device)
+    model.load_state_dict(ckpt["state_dict"])
+    model.eval()
+    n_params = sum(p.numel() for p in model.parameters())
+
+    segnet = modules.SegNet().eval().to(device)
+    segnet.load_state_dict(load_file(modules.segnet_sd_path, device=str(device)))
+    for p in segnet.parameters():
+        p.requires_grad_(False)
+
+    rows = []
+    for cache_path in args.gt_cache:
+        label = cache_path.stem.replace("gt_cache_", "")
+        blob = torch.load(cache_path, map_location="cpu", weights_only=False)
+        tokens = blob["seg"].long()
+        t0 = time.time()
+        exact_seg = tsq.evaluate_all(
+            model, segnet, tokens, tokens, bits, args.eval_batch_size, device
+        )
+        elapsed = time.time() - t0
+        rows.append({
+            "gt_decoder": label,
+            "gt_cache_path": str(cache_path),
+            "gt_cache_sha256": _sha256(cache_path),
+            "gt_cache_bytes": cache_path.stat().st_size,
+            "quantized_exact_seg": exact_seg,
+            "pairs_evaluated": int(tsq.N),
+            "elapsed_seconds": elapsed,
+            "ratio_vs_stage08_recorded":
+                exact_seg / REFERENCE["stage08_recorded_quantized_exact_seg"],
+            "ratio_vs_published_ada":
+                exact_seg / REFERENCE["published_ada_official_d_seg_contest_cuda"],
+            "seg_term_S_units": 100.0 * exact_seg,
+        })
+        print(f"[{label}] quantized exact_seg = {exact_seg!r}  ({elapsed:.1f}s)")
+        del blob, tokens
+
+    receipt = {
+        "measurement": "pr130_semantic_quantized_reproduction_on_metal",
+        "utc": datetime.now(timezone.utc).isoformat(),
+        "authority": "macOS-Metal advisory; MPS is NEVER a score authority",
+        "score_claim": False,
+        "promotable": False,
+        "checkpoint_path": str(args.checkpoint),
+        "checkpoint_sha256": _sha256(args.checkpoint),
+        "quant_bits": int(bits),
+        "renderer_params": int(n_params),
+        "forward_path": "train_semantic_quantized.evaluate_all -> render_quantized(exact_path=True)",
+        "device": str(device),
+        "eval_batch_size": args.eval_batch_size,
+        "torch_version": torch.__version__,
+        "platform": f"{platform.system()} {platform.machine()}",
+        "git_head": subprocess.run(
+            ["git", "-C", str(REPO), "rev-parse", "HEAD"],
+            capture_output=True, text=True,
+        ).stdout.strip(),
+        "reference_rows_preexisting_not_measured_here": REFERENCE,
+        "rows": rows,
+    }
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps(receipt, indent=2), encoding="utf-8")
+    print(f"\nreceipt -> {args.out}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

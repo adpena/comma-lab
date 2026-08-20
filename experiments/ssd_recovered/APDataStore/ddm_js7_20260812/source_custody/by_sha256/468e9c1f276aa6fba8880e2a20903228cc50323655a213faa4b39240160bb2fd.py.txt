@@ -1,0 +1,1064 @@
+#!/usr/bin/env python3
+"""Sweep retained EC1 proposals, joint-compose admissions, and byte-close CP135.
+
+This runner reuses JS6's sealed CPU scorer path for all singleton measurements.
+It never invokes the EC1 producer, MPS, Metal, Modal, or a full-n600 scorer.
+Every scorer output, real-coder packet, composed token plane, and archive is
+retained below the JS7 APDataStore run root.
+"""
+
+from __future__ import annotations
+
+import argparse
+import copy
+import fcntl
+import hashlib
+import importlib
+import importlib.util
+import io
+import json
+import math
+import os
+import platform
+import shutil
+import stat
+import subprocess
+import sys
+import time
+import zipfile
+from collections import Counter
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+REPO = Path(__file__).resolve().parents[1]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+
+from experiments import ddm_ec1_event_coordinate_producer as ec1
+from experiments import ddm_js2b_edge_conditioning_relative_gauge as js2b
+from experiments import ddm_js3_learned_implicit_conditioning as js3
+from experiments import ddm_js6_event_proposal_acceptance as js6
+from experiments import ddm_js7_ec1_overlay_runtime as overlay
+
+OUTPUT = Path("/Volumes/APDataStore/pact/ddm_js7_20260812")
+JS6_OUTPUT = Path("/Volumes/APDataStore/pact/ddm_js6_20260812")
+JS6_TABLE_SHA256 = "6e2fa0fa5e72e05c9e4ca45cfdc11bdab38e5c196ca4a4a19b79570ea362cfa1"
+CP135_RUNTIME = Path("/Volumes/VertigoDataTier/pact/ddm_cp135_20260810/adapted_runtime")
+BASE_ARCHIVE = js2b.BASE_ARCHIVE
+BASE_ARCHIVE_BYTES = js2b.BASE_ARCHIVE_BYTES
+BASE_ARCHIVE_SHA256 = js2b.BASE_ARCHIVE_SHA256
+RATE_DENOMINATOR = 37_545_489
+EXPECTED_SEED_ROWS = 2
+EXPECTED_ROWS = 200
+AXIS = "[macOS-CPU advisory, stratified-random n32, instrument floor 0.0131 S]"
+DEFAULT_REQUIRED_FREE_BYTES = 2_000_000_000
+
+
+class JS7Error(RuntimeError):
+    """A custody, resume, receiver, scorer, coder, or byte-close invariant failed."""
+
+
+def _sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _git_head() -> str:
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=REPO, check=True, capture_output=True, text=True
+    ).stdout.strip()
+
+
+def _source_record(output: Path) -> dict[str, Any]:
+    source = Path(__file__).resolve()
+    record = js3.file_record(source)
+    retained = output / "source_custody/by_sha256" / f"{record['sha256']}.py"
+    if not retained.is_file():
+        js3.atomic_bytes(retained, source.read_bytes())
+    if js3.file_record(retained)["sha256"] != record["sha256"]:
+        raise JS7Error("versioned JS7 source custody differs")
+    return js3.file_record(retained)
+
+
+def _runtime_source_record(output: Path) -> dict[str, Any]:
+    source = Path(overlay.__file__).resolve()
+    record = js3.file_record(source)
+    retained = output / "source_custody/by_sha256" / f"{record['sha256']}.overlay_runtime.py"
+    if not retained.is_file():
+        js3.atomic_bytes(retained, source.read_bytes())
+    if js3.file_record(retained)["sha256"] != record["sha256"]:
+        raise JS7Error("versioned overlay-runtime source custody differs")
+    return js3.file_record(retained)
+
+
+def _payload_map(root: Path) -> dict[str, dict[str, Any]]:
+    return {
+        str(path.relative_to(root)): js3.file_record(path)
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    }
+
+
+def _verify_js6_seed(store: js6.Store, output: Path) -> list[dict[str, Any]]:
+    table_path = JS6_OUTPUT / "ACCEPTANCE_TABLE.json"
+    if not table_path.is_file() or js3.sha256_file(table_path) != JS6_TABLE_SHA256:
+        raise JS7Error("JS6 seed acceptance table differs from the charter pin")
+    table = json.loads(table_path.read_text())
+    if len(table.get("rows", ())) != EXPECTED_SEED_ROWS:
+        raise JS7Error("JS6 seed row count differs")
+    rows: list[dict[str, Any]] = []
+    retained_records: list[dict[str, Any]] = []
+    for ordinal in range(EXPECTED_SEED_ROWS):
+        proposal = store.rows[ordinal]
+        path = js6._proposal_result_path(JS6_OUTPUT, ordinal, str(proposal["proposal_id"]))
+        if not path.is_file():
+            raise JS7Error(f"JS6 seed result is missing at ordinal {ordinal}")
+        row = json.loads(path.read_text())
+        if row.get("proposal_id") != proposal["proposal_id"] or int(row.get("ordinal", -1)) != ordinal:
+            raise JS7Error(f"JS6 seed result identity differs at ordinal {ordinal}")
+        for record in row.get("retained_outputs", {}).values():
+            js6.require_record(record)
+        rows.append(row)
+        retained_records.append(js3.file_record(path))
+    custody = {
+        "schema": "ddm_js7_js6_seed_custody.v1",
+        "reuse_not_rerun": True,
+        "acceptance_table": js3.file_record(table_path),
+        "proposal_results": retained_records,
+        "row_count": len(rows),
+    }
+    js3.atomic_json(output / "inputs/JS6_SEED_CUSTODY.json", custody)
+    return rows
+
+
+def preflight(output: Path, required_free_bytes: int) -> tuple[js6.Store, list[dict[str, Any]], dict[str, Any]]:
+    output.mkdir(parents=True, exist_ok=True)
+    usage = shutil.disk_usage(output)
+    if usage.free < required_free_bytes:
+        raise JS7Error("APDataStore free-space preflight failed")
+    if js3.sha256_file(BASE_ARCHIVE) != BASE_ARCHIVE_SHA256 or BASE_ARCHIVE.stat().st_size != BASE_ARCHIVE_BYTES:
+        raise JS7Error("CP135 base archive differs from the charter pin")
+    store = js6.load_store(js6.DEFAULT_PROPOSAL_ROOT)
+    seed = _verify_js6_seed(store, output)
+    row = {
+        "schema": "ddm_js7_preflight.v1",
+        "axis": AXIS,
+        "score_claim": False,
+        "cpu_only": True,
+        "mps_touched": False,
+        "full_n600_scorer_run": False,
+        "payload_regeneration": False,
+        "platform": platform.platform(),
+        "git_head": _git_head(),
+        "free_bytes": usage.free,
+        "required_free_bytes": required_free_bytes,
+        "runner_source": _source_record(output),
+        "overlay_runtime_source": _runtime_source_record(output),
+        "js6_source": js3.file_record(Path(js6.__file__).resolve()),
+        "proposal_store": store.custody,
+        "base_archive": js3.file_record(BASE_ARCHIVE),
+    }
+    js3.atomic_json(output / "preflight/PREFLIGHT.json", row)
+    return store, seed, row
+
+
+def _config(args: argparse.Namespace, store: js6.Store, preflight_row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": "ddm_js7_config.v1",
+        "proposal_index_sha256": store.custody["proposal_index"]["sha256"],
+        "source_archive_sha256": BASE_ARCHIVE_SHA256,
+        "js6_seed_table_sha256": JS6_TABLE_SHA256,
+        "runner_source_sha256": preflight_row["runner_source"]["sha256"],
+        "overlay_runtime_source_sha256": preflight_row["overlay_runtime_source"]["sha256"],
+        "sample": store.state["sample"],
+        "pose_gate_delta_lt": js6.POSE_GATE,
+        "exact_bar_bytes_per_robust_flip": js6.EXACT_ECONOMICS_BAR,
+        "max_wall_seconds": args.max_wall_seconds,
+        "required_free_bytes": args.required_free_bytes,
+        "cpu_only": True,
+        "payload_regeneration": False,
+    }
+
+
+def _load_state(output: Path, config: dict[str, Any]) -> dict[str, Any]:
+    path = output / "state.json"
+    if path.is_file():
+        state = json.loads(path.read_text())
+        if state.get("config") != config:
+            raise JS7Error("resume configuration differs from retained JS7 state")
+        return state
+    state = {
+        "schema": "ddm_js7_state.v1",
+        "status": "READY",
+        "active_stage": "sweep",
+        "complete": False,
+        "config": config,
+        "resumable": True,
+        "score_claim": False,
+    }
+    js3.atomic_json(path, state)
+    return state
+
+
+def _recover_sweep_rows(
+    output: Path, store: js6.Store, seed: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    rows = list(seed)
+    for ordinal in range(EXPECTED_SEED_ROWS, len(store.rows)):
+        proposal = store.rows[ordinal]
+        path = js6._proposal_result_path(output, ordinal, str(proposal["proposal_id"]))
+        if not path.is_file():
+            break
+        row = json.loads(path.read_text())
+        if int(row.get("ordinal", -1)) != ordinal or row.get("proposal_id") != proposal["proposal_id"]:
+            raise JS7Error(f"retained sweep result order differs at ordinal {ordinal}")
+        for record in row.get("retained_outputs", {}).values():
+            js6.require_record(record)
+        rows.append(row)
+    return rows
+
+
+def _full_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    summary = js6.summarize(rows, EXPECTED_ROWS)
+    complete = len(rows) == EXPECTED_ROWS
+    bare = [row for row in rows if bool(row["bare_admission"])]
+    finite = [
+        float(row["bytes_per_projected_robust_flip"])
+        for row in rows
+        if row["bytes_per_projected_robust_flip"] is not None
+    ]
+    summary.update(
+        schema="ddm_js7_acceptance_summary.v1",
+        stop_reason="ALL_200_MEASURED" if complete else "TIME_BOUND",
+        complete=complete,
+        bare_admissions=len(bare),
+        first_bare_admission=None if not bare else bare[0]["proposal_id"],
+    )
+    summary["economics"].update(
+        finite_rows=len(finite),
+        best_bytes_per_projected_robust_flip=None if not finite else min(finite),
+        selected_bare_bytes_per_projected_robust_flip=None,
+        trend_verdict="FULL_POPULATION_AVAILABLE" if complete else "PARTIAL_POPULATION",
+    )
+    summary["falsifiers"] = {
+        "F1": {
+            "eligible": complete,
+            "fired": complete and not bare and float(summary["pose_acceptance_rate"]) < 0.05,
+            "scope": "FAMILY at the EC1 representation-level event-coordinate endpoint only",
+            "criterion": "all 200 measured, no useful bare admission, and pose acceptance below 5%",
+        },
+        "F2": {
+            "eligible": complete and float(summary["pose_acceptance_rate"]) >= 0.05,
+            "fired": False,
+            "scope": "full singleton population; composition remains separately joint-remeasured",
+            "criterion": "the full singleton table fails to produce any point below the exact marginal bar",
+        },
+    }
+    if summary["falsifiers"]["F2"]["eligible"]:
+        passing = [
+            row
+            for row in bare
+            if row["bytes_per_projected_robust_flip"] is not None
+            and float(row["bytes_per_projected_robust_flip"]) <= js6.EXACT_ECONOMICS_BAR
+        ]
+        summary["falsifiers"]["F2"]["fired"] = not passing
+    return summary
+
+
+def _write_acceptance_table(output: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
+    summary = _full_summary(rows)
+    table_rows = [
+        {
+            "ordinal": row["ordinal"],
+            "proposal_id": row["proposal_id"],
+            "family": row["family"],
+            "event_type": row["event_type"],
+            "pair": row["pair"],
+            "site_count": row["site_count"],
+            "pose_delta": row["realized_pose_delta_stratified_n32"],
+            "pose_gate_pass": row["pose_gate_pass"],
+            "projected_robust_delta_flips": row["projected_n600_robust_delta_flips"],
+            "bare_brotli_q11_bytes": row["bare_event_brotli_q11_bytes"],
+            "bytes_per_projected_robust_flip": row["bytes_per_projected_robust_flip"],
+            "bare_admission": row["bare_admission"],
+        }
+        for row in rows
+    ]
+    json_path = output / "ACCEPTANCE_TABLE.json"
+    js3.atomic_json(json_path, {"schema": "ddm_js7_acceptance_table.v1", "rows": table_rows, "summary": summary})
+    lines = [
+        "# ddm_js7 full acceptance table",
+        "",
+        "| ord | proposal | family | pair | sites | pose delta | pose pass | robust delta flips | B | B/robust flip | admission |",
+        "|---:|---|---|---:|---:|---:|:---:|---:|---:|---:|:---:|",
+    ]
+    for row in table_rows:
+        ratio = "undefined" if row["bytes_per_projected_robust_flip"] is None else f"{row['bytes_per_projected_robust_flip']:.9g}"
+        lines.append(
+            f"| {row['ordinal']} | `{row['proposal_id']}` | {row['family']} | {row['pair']} | "
+            f"{row['site_count']} | {row['pose_delta']:.9g} | {'yes' if row['pose_gate_pass'] else 'no'} | "
+            f"{row['projected_robust_delta_flips']} | {row['bare_brotli_q11_bytes']} | {ratio} | "
+            f"{'yes' if row['bare_admission'] else 'no'} |"
+        )
+    lines.extend(["", "## Per-family yield", ""])
+    for family in summary["per_family"]:
+        lines.append(
+            f"- {family['family']}: measured {family['measured']}; pose accepted {family['pose_accepted']}; "
+            f"admitted {family['bare_admissions']}; yield {family['bare_yield']}."
+        )
+    md_path = output / "ACCEPTANCE_TABLE.md"
+    js3.atomic_bytes(md_path, ("\n".join(lines) + "\n").encode())
+    return {"summary": summary, "json": js3.file_record(json_path), "markdown": js3.file_record(md_path)}
+
+
+def run_sweep(
+    args: argparse.Namespace,
+    store: js6.Store,
+    seed: list[dict[str, Any]],
+    state: dict[str, Any],
+    started: float,
+) -> dict[str, Any]:
+    rows = _recover_sweep_rows(args.output, store, seed)
+    if len(rows) < len(store.rows):
+        state.update(status="SCORING", active_stage="sweep", sweep_rows=len(rows), complete=False)
+        js3.atomic_json(args.output / "state.json", state)
+        context = js2b.build_context(args.output / "sweep_context")
+        js6._assert_cpu_context(context)
+        if tuple(context.sample.tolist()) != tuple(store.state["sample"]):
+            raise JS7Error("live scorer context sample differs from the EC1 store")
+        for scored_this_run, ordinal in enumerate(range(len(rows), len(store.rows))):
+            if scored_this_run and time.monotonic() - started >= args.max_wall_seconds:
+                break
+            row = js6.score_proposal(context, store, store.rows[ordinal], ordinal, args.output)
+            rows.append(row)
+            state.update(sweep_rows=len(rows), sweep_pose_accepted=sum(bool(item["pose_gate_pass"]) for item in rows))
+            js3.atomic_json(args.output / "state.json", state)
+            print(
+                json.dumps(
+                    {
+                        "stage": "sweep",
+                        "ordinal": ordinal,
+                        "proposal_id": row["proposal_id"],
+                        "family": row["family"],
+                        "pose_pass": row["pose_gate_pass"],
+                        "robust_delta": row["projected_n600_robust_delta_flips"],
+                        "admission": row["bare_admission"],
+                    },
+                    sort_keys=True,
+                ),
+                flush=True,
+            )
+    table = _write_acceptance_table(args.output, rows)
+    if len(rows) != len(store.rows):
+        state.update(status="TIME_BOUNDED", active_stage="sweep", complete=False)
+        js3.atomic_json(args.output / "state.json", state)
+        return {"complete": False, "stage": "sweep", "acceptance_table": table}
+    state.update(status="SWEEP_COMPLETE", active_stage="compose", sweep_rows=len(rows))
+    js3.atomic_json(args.output / "state.json", state)
+    return {"complete": True, "stage": "sweep", "rows": rows, "acceptance_table": table}
+
+
+def _load_semantic(context: Any) -> Any:
+    torch = context.modules.torch
+    semantic = context.modules.renderer_runtime.SemanticTokenRenderer(96).eval().cpu()
+    semantic.load_state_dict(
+        {
+            record.schema.name: torch.from_numpy(np.ascontiguousarray(record.values, dtype=np.float32))
+            for record in context.records
+        },
+        strict=True,
+    )
+    return semantic
+
+
+def _event_payload(store: js6.Store, proposal: dict[str, Any]) -> bytes:
+    return js6.require_record(proposal["consumer_payloads"]["event.ec1p"], beneath=store.root).read_bytes()
+
+
+def _compose_tokens_for_pair(context: Any, store: js6.Store, proposals: list[dict[str, Any]], pair: int) -> np.ndarray:
+    tokens = np.asarray(context.tokens[pair]).copy()
+    seen: set[int] = set()
+    for proposal in proposals:
+        if int(proposal["pair"]) != pair:
+            continue
+        frame, source_class, target_class, _event_type, indices = ec1.decode_proposal(_event_payload(store, proposal))
+        if frame != pair:
+            raise JS7Error("proposal frame differs during joint composition")
+        if any(int(index) in seen for index in indices.tolist()):
+            raise JS7Error("two accepted proposals address the same semantic site")
+        seen.update(int(index) for index in indices.tolist())
+        flat = tokens.reshape(-1)
+        if np.any(flat[indices] != source_class):
+            raise JS7Error("joint proposal source-class precondition differs")
+        flat[indices] = target_class
+    return tokens
+
+
+def _score_stack_pair(
+    context: Any,
+    semantic: Any,
+    store: js6.Store,
+    proposals: list[dict[str, Any]],
+    pair_id: int,
+    root: Path,
+) -> dict[str, Any]:
+    matches = np.flatnonzero(context.sample == pair_id)
+    if len(matches) != 1:
+        raise JS7Error("composed proposal pair is not unique in the sealed sample")
+    slot = int(matches[0])
+    weight = int(context.sample_weights[slot])
+    tokens = _compose_tokens_for_pair(context, store, proposals, pair_id)
+    camera, retained_scorer = ec1.render_master(semantic, tokens, pair_id)
+    candidate_seg_input = js2b.preprocess_seg(context.modules.functional, camera[None])
+    if not np.array_equal(candidate_seg_input.half().cpu().numpy()[0], retained_scorer):
+        raise JS7Error("joint camera-to-scorer rederivation differs")
+    custody_seg = context.modules.torch.from_numpy(np.asarray(context.custody_seg[pair_id : pair_id + 1]).copy()).float()
+    transported_seg = custody_seg + (candidate_seg_input - context.base_seg_input[slot : slot + 1])
+    logits = js2b.score_seg(context.segnet, transported_seg, batch=1)
+    robust = js3.robust_metrics(
+        logits,
+        np.asarray(context.custody_argmax[pair_id : pair_id + 1]),
+        np.asarray(context.gt_labels[pair_id : pair_id + 1]),
+        np.asarray([weight]),
+    )
+    prediction = robust.pop("prediction")
+    pair = np.stack((np.asarray(context.base_pairs[slot, 0]), camera), axis=0)[None]
+    candidate_pose_input = js2b.preprocess_pairs(context.posenet, pair, batch=1)
+    custody_pose = context.modules.torch.from_numpy(np.asarray(context.custody_pose[pair_id : pair_id + 1]).copy()).float()
+    transported_pose = custody_pose + (candidate_pose_input - context.base_pose_input[slot : slot + 1])
+    pose_output = js2b.score_pose(context.posenet, transported_pose, batch=1)[0]
+    target_pose = np.asarray(context.gt_poses[pair_id], dtype=np.float64)
+    candidate_pose_error = float(np.mean((pose_output.astype(np.float64) - target_pose) ** 2))
+    base_pose_error = float(context.base_pose_errors[slot])
+    pose_delta = js6.projected_pose_delta(candidate_pose_error, base_pose_error, weight)
+    js3.atomic_npy(root / "retained/tokens.uint8.npy", tokens)
+    js3.atomic_npy(root / "retained/camera.uint8.npy", camera)
+    js3.atomic_npy(root / "retained/scorer_input.float16.npy", retained_scorer)
+    js3.atomic_npy(root / "retained/seg_logits.float32.npy", logits)
+    js3.atomic_npy(root / "retained/seg_argmax.uint8.npy", prediction)
+    js3.atomic_npy(root / "retained/pose_output6.float32.npy", pose_output)
+    js3.atomic_npy(root / "retained/pose_error.float64.npy", np.asarray([candidate_pose_error], dtype=np.float64))
+    return {
+        "pair": pair_id,
+        "weight": weight,
+        "pose_base_pair_error": base_pose_error,
+        "pose_candidate_pair_error": candidate_pose_error,
+        "pose_delta_stratified_n32": pose_delta,
+        **robust,
+        "payloads": _payload_map(root / "retained"),
+    }
+
+
+def _persist_packet_candidates(root: Path, proposals: list[dict[str, Any]], store: js6.Store) -> dict[str, Any]:
+    payloads = [_event_payload(store, proposal) for proposal in proposals]
+    raw, candidates = overlay.build_packet_candidates(payloads)
+    js3.atomic_bytes(root / "stack.events.raw", raw)
+    rows = []
+    for coder, packet in candidates.items():
+        packet_path = root / f"stack.{coder}.ec1overlay"
+        coded_path = root / f"stack.{coder}.coded"
+        js3.atomic_bytes(packet_path, packet)
+        js3.atomic_bytes(coded_path, packet[overlay.PACKET_HEADER.size :])
+        events, report = overlay.decode_packet(packet)
+        if len(events) != len(proposals):
+            raise JS7Error("packet candidate event count differs")
+        rows.append(
+            {
+                "coder": coder,
+                "coded_stream": js3.file_record(coded_path),
+                "packet": js3.file_record(packet_path),
+                "decode": report,
+            }
+        )
+    selected = min(rows, key=lambda row: (int(row["coded_stream"]["bytes"]), int(row["packet"]["bytes"]), row["coder"]))
+    return {
+        "raw": js3.file_record(root / "stack.events.raw"),
+        "candidates": rows,
+        "selected": selected,
+    }
+
+
+def _aggregate_pair_metrics(pair_metrics: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    values = list(pair_metrics.values())
+    return {
+        "projected_n600_delta_flips": sum(int(row["projected_n600_delta_flips"]) for row in values),
+        "projected_n600_robust_delta_flips": sum(int(row["projected_n600_robust_delta_flips"]) for row in values),
+        "sample_delta_flips": sum(int(row["sample_delta_flips"]) for row in values),
+        "sample_robust_delta_flips": sum(int(row["sample_robust_delta_flips"]) for row in values),
+        "realized_pose_delta_stratified_n32": sum(float(row["pose_delta_stratified_n32"]) for row in values),
+    }
+
+
+def _compose_ranking(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    admitted = [row for row in rows if bool(row["bare_admission"])]
+    return sorted(
+        admitted,
+        key=lambda row: (
+            math.inf if row["bytes_per_projected_robust_flip"] is None else float(row["bytes_per_projected_robust_flip"]),
+            int(row["projected_n600_robust_delta_flips"]),
+            abs(float(row["realized_pose_delta_stratified_n32"])),
+            int(row["ordinal"]),
+        ),
+    )
+
+
+def run_compose(
+    args: argparse.Namespace,
+    store: js6.Store,
+    rows: list[dict[str, Any]],
+    state: dict[str, Any],
+    started: float,
+) -> dict[str, Any]:
+    result_path = args.output / "compose/COMPOSE_RESULT.json"
+    if result_path.is_file():
+        return json.loads(result_path.read_text())
+    ranking_rows = _compose_ranking(rows)
+    proposal_by_id = {str(row["proposal_id"]): row for row in store.rows}
+    ranking = [str(row["proposal_id"]) for row in ranking_rows]
+    compose_state_path = args.output / "compose/STATE.json"
+    if compose_state_path.is_file():
+        compose_state = json.loads(compose_state_path.read_text())
+        if compose_state.get("ranking") != ranking:
+            raise JS7Error("compose ranking differs from retained state")
+    else:
+        compose_state = {
+            "schema": "ddm_js7_compose_state.v1",
+            "ranking": ranking,
+            "next_rank": 0,
+            "selected_ids": [],
+            "pair_metrics": {},
+            "current_coded_stream_bytes": 0,
+            "stop_reason": None,
+            "resumable": True,
+        }
+        js3.atomic_json(compose_state_path, compose_state)
+    context = js2b.build_context(args.output / "compose_context")
+    js6._assert_cpu_context(context)
+    semantic = _load_semantic(context)
+    selected_ids = [str(value) for value in compose_state["selected_ids"]]
+    pair_metrics = copy.deepcopy(compose_state["pair_metrics"])
+    current_coded = int(compose_state["current_coded_stream_bytes"])
+    trial_rows = []
+    for index in range(int(compose_state["next_rank"])):
+        path = args.output / "compose/trials" / f"{index:04d}_{ranking[index]}" / "RESULT.json"
+        if not path.is_file():
+            raise JS7Error("compose state points beyond retained trial rows")
+        trial_rows.append(json.loads(path.read_text()))
+    for rank_index in range(int(compose_state["next_rank"]), len(ranking)):
+        if trial_rows and time.monotonic() - started >= args.max_wall_seconds:
+            break
+        proposal_id = ranking[rank_index]
+        proposal = proposal_by_id[proposal_id]
+        trial_ids = [*selected_ids, proposal_id]
+        trial_proposals = [proposal_by_id[value] for value in trial_ids]
+        trial_root = args.output / "compose/trials" / f"{rank_index:04d}_{proposal_id}"
+        packets = _persist_packet_candidates(trial_root / "retained/coders", trial_proposals, store)
+        pair_id = int(proposal["pair"])
+        pair_row = _score_stack_pair(context, semantic, store, trial_proposals, pair_id, trial_root)
+        trial_pair_metrics = copy.deepcopy(pair_metrics)
+        trial_pair_metrics[str(pair_id)] = pair_row
+        aggregate = _aggregate_pair_metrics(trial_pair_metrics)
+        before = _aggregate_pair_metrics(pair_metrics)
+        robust_gain = -(
+            int(aggregate["projected_n600_robust_delta_flips"])
+            - int(before["projected_n600_robust_delta_flips"])
+        )
+        selected_coded = int(packets["selected"]["coded_stream"]["bytes"])
+        marginal_bytes = selected_coded - current_coded
+        ratio = None if robust_gain <= 0 else marginal_bytes / robust_gain
+        pose_pass = float(aggregate["realized_pose_delta_stratified_n32"]) < js6.POSE_GATE
+        economics_pass = ratio is not None and ratio <= js6.EXACT_ECONOMICS_BAR
+        stopped_on_bar = robust_gain > 0 and ratio is not None and not economics_pass
+        accepted = pose_pass and robust_gain > 0 and economics_pass
+        reason = (
+            "ACCEPTED"
+            if accepted
+            else "POSE_GATE"
+            if not pose_pass
+            else "NO_MARGINAL_ROBUST_GAIN"
+            if robust_gain <= 0
+            else "EXACT_MARGINAL_BAR"
+        )
+        trial = {
+            "schema": "ddm_js7_joint_compose_trial.v1",
+            "rank_index": rank_index,
+            "proposal_id": proposal_id,
+            "singleton_ordinal": int(ranking_rows[rank_index]["ordinal"]),
+            "family": ranking_rows[rank_index]["family"],
+            "trial_ids": trial_ids,
+            "selected_before": list(selected_ids),
+            "accepted": accepted,
+            "reason": reason,
+            "stopped_on_exact_marginal_bar": stopped_on_bar,
+            "joint": aggregate,
+            "before": before,
+            "marginal_projected_robust_flip_gain": robust_gain,
+            "marginal_coded_stream_bytes": marginal_bytes,
+            "marginal_bytes_per_projected_robust_flip": ratio,
+            "exact_bar": js6.EXACT_ECONOMICS_BAR,
+            "joint_pose_gate_pass": pose_pass,
+            "packets": packets,
+            "pair_measurement": pair_row,
+            "axis": AXIS,
+            "score_claim": False,
+        }
+        js3.atomic_json(trial_root / "RESULT.json", trial)
+        trial_rows.append(trial)
+        if accepted:
+            selected_ids = trial_ids
+            pair_metrics = trial_pair_metrics
+            current_coded = selected_coded
+        compose_state.update(
+            next_rank=rank_index + 1,
+            selected_ids=selected_ids,
+            pair_metrics=pair_metrics,
+            current_coded_stream_bytes=current_coded,
+            stop_reason="EXACT_MARGINAL_BAR" if stopped_on_bar else None,
+        )
+        js3.atomic_json(compose_state_path, compose_state)
+        print(
+            json.dumps(
+                {
+                    "stage": "compose",
+                    "rank": rank_index,
+                    "proposal_id": proposal_id,
+                    "accepted": accepted,
+                    "reason": reason,
+                    "marginal_bytes": marginal_bytes,
+                    "marginal_robust_gain": robust_gain,
+                    "marginal_bpf": ratio,
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
+        if stopped_on_bar:
+            break
+    complete = bool(compose_state.get("stop_reason")) or int(compose_state["next_rank"]) == len(ranking)
+    if not complete:
+        state.update(status="TIME_BOUNDED", active_stage="compose", complete=False)
+        js3.atomic_json(args.output / "state.json", state)
+        return {"schema": "ddm_js7_compose_partial.v1", "complete": False, **compose_state}
+    if not selected_ids:
+        raise JS7Error("joint compose selected no proposal; no container can be built")
+    selected_proposals = [proposal_by_id[value] for value in selected_ids]
+    selected_packets = _persist_packet_candidates(args.output / "compose/selected/retained/coders", selected_proposals, store)
+    selected_packet = Path(selected_packets["selected"]["packet"]["path"])
+    aggregate = _aggregate_pair_metrics(pair_metrics)
+    result = {
+        "schema": "ddm_js7_compose_result.v1",
+        "complete": True,
+        "axis": AXIS,
+        "score_claim": False,
+        "greedy_policy": "singleton B/robust-flip order; each trial remeasured against the current accepted stack; pose/no-gain rejects continue; first exact-bar crossing stops",
+        "singleton_admission_count": len(ranking),
+        "trial_count": len(trial_rows),
+        "selected_ids": selected_ids,
+        "selected_count": len(selected_ids),
+        "selected_families": dict(Counter(str(proposal_by_id[value]["event_type"]) for value in selected_ids)),
+        "joint": aggregate,
+        "selected_packets": selected_packets,
+        "selected_packet": js3.file_record(selected_packet),
+        "stop_reason": compose_state.get("stop_reason") or "RANKING_EXHAUSTED",
+        "trial_results": [
+            js3.file_record(args.output / "compose/trials" / f"{row['rank_index']:04d}_{row['proposal_id']}" / "RESULT.json")
+            for row in trial_rows
+        ],
+    }
+    js3.atomic_json(result_path, result)
+    state.update(status="COMPOSE_COMPLETE", active_stage="container")
+    js3.atomic_json(args.output / "state.json", state)
+    return result
+
+
+def _deterministic_zip(member: bytes) -> bytes:
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w", allowZip64=False) as archive:
+        info = zipfile.ZipInfo("p", date_time=(1980, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_STORED
+        info.create_system = 3
+        info.external_attr = 0o100644 << 16
+        archive.writestr(info, member)
+    return output.getvalue()
+
+
+def _atomic_token_plane(path: Path, source: np.ndarray) -> np.memmap:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    output = np.lib.format.open_memmap(temporary, mode="w+", dtype=np.uint8, shape=(ec1.N, ec1.H, ec1.W))
+    for start in range(0, ec1.N, 24):
+        output[start : start + 24] = np.asarray(source[start : start + 24])
+        output.flush()
+    del output
+    os.replace(temporary, path)
+    return np.load(path, mmap_mode="r+", allow_pickle=False)
+
+
+def _expected_tokens(context: Any, store: js6.Store, proposals: list[dict[str, Any]], path: Path) -> dict[str, Any]:
+    output = _atomic_token_plane(path, context.tokens)
+    seen: set[tuple[int, int]] = set()
+    for proposal in proposals:
+        pair = int(proposal["pair"])
+        candidate_path = js6.require_record(proposal["consumer_payloads"]["candidate_tokens.uint8.npy"], beneath=store.root)
+        candidate = np.load(candidate_path, allow_pickle=False)
+        base = np.asarray(context.tokens[pair])
+        changed = np.flatnonzero(candidate.reshape(-1) != base.reshape(-1))
+        for index in changed.tolist():
+            key = (pair, int(index))
+            if key in seen:
+                raise JS7Error("expected-token path found overlapping proposal sites")
+            seen.add(key)
+        output[pair].reshape(-1)[changed] = candidate.reshape(-1)[changed]
+    output.flush()
+    del output
+    return {"payload": js3.file_record(path), "site_count": len(seen)}
+
+
+def _patch_runtime_source(source: str, *, kind: str) -> str:
+    if kind == "residual":
+        source = source.replace(
+            "import numpy as np\n",
+            "import numpy as np\n\nfrom .ec1_overlay import split_overlay_member\n",
+            1,
+        )
+        source = source.replace(
+            '        outer = archive.read("p")\n',
+            '        outer = archive.read("p")\n    outer, overlay_packet = split_overlay_member(outer)\n    if overlay_packet is None:\n        raise ResidualArchiveError("F26 EC1 overlay packet is missing")\n',
+            1,
+        )
+        if "overlay_packet = split_overlay_member" not in source:
+            raise JS7Error("residual runtime patch marker did not fire")
+    elif kind == "f26":
+        source = source.replace(
+            "from .frame0_selector import apply_pixel_mode, decode_selector\n",
+            "from .frame0_selector import apply_pixel_mode, decode_selector\nfrom .ec1_overlay import apply_packet_inplace, read_overlay_archive\n",
+            1,
+        )
+        source = source.replace(
+            "    parts = read_residual_archive(archive_path)\n",
+            "    parts = read_residual_archive(archive_path)\n    _base_member, overlay_packet = read_overlay_archive(archive_path)\n    if overlay_packet is None:\n        raise InflationError(\"F26 EC1 overlay packet is missing\")\n",
+            1,
+        )
+        source = source.replace(
+            "    tokens, token_report = decode_production_tokens(\n        parts, renderer, renderer_dir, device\n    )\n",
+            "    tokens, token_report = decode_production_tokens(\n        parts, renderer, renderer_dir, device\n    )\n    overlay_report = apply_packet_inplace(tokens, overlay_packet)\n",
+            1,
+        )
+        source = source.replace(
+            '        "token_decoder": token_report,\n',
+            '        "token_decoder": token_report,\n        "ec1_overlay": overlay_report,\n',
+            1,
+        )
+        if "overlay_report = apply_packet_inplace" not in source:
+            raise JS7Error("F26 runtime patch marker did not fire")
+    else:
+        raise ValueError(kind)
+    compile(source, f"ddm_js7_{kind}_runtime.py", "exec")
+    return source
+
+
+def _copy_runtime(destination: Path, archive: bytes) -> dict[str, Any]:
+    shutil.copytree(CP135_RUNTIME, destination, dirs_exist_ok=True)
+    js3.atomic_bytes(destination / "runtime/ec1_overlay.py", Path(overlay.__file__).read_bytes())
+    residual = _patch_runtime_source((CP135_RUNTIME / "runtime/residual_archive.py").read_text(), kind="residual")
+    f26 = _patch_runtime_source((CP135_RUNTIME / "runtime/f26_inflate.py").read_text(), kind="f26")
+    js3.atomic_bytes(destination / "runtime/residual_archive.py", residual.encode())
+    js3.atomic_bytes(destination / "runtime/f26_inflate.py", f26.encode())
+    archive_path = destination / "archive.zip"
+    js3.atomic_bytes(archive_path, archive)
+    inflate = (CP135_RUNTIME / "inflate.py").read_text()
+    inflate = inflate.replace(BASE_ARCHIVE_SHA256, _sha256_bytes(archive)).replace(
+        f"ARCHIVE_BYTES = {BASE_ARCHIVE_BYTES:_}", f"ARCHIVE_BYTES = {len(archive):_}"
+    )
+    if BASE_ARCHIVE_SHA256 in inflate or f"ARCHIVE_BYTES = {BASE_ARCHIVE_BYTES:_}" in inflate:
+        raise JS7Error("inflate entrypoint pin adaptation failed")
+    js3.atomic_bytes(destination / "inflate.py", inflate.encode())
+    os.chmod(destination / "inflate.py", stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | stat.S_IROTH)
+    return {
+        "archive": js3.file_record(archive_path),
+        "inflate": js3.file_record(destination / "inflate.py"),
+        "overlay_runtime": js3.file_record(destination / "runtime/ec1_overlay.py"),
+        "residual_runtime": js3.file_record(destination / "runtime/residual_archive.py"),
+        "f26_runtime": js3.file_record(destination / "runtime/f26_inflate.py"),
+    }
+
+
+def _clear_runtime_modules() -> None:
+    for name in tuple(sys.modules):
+        if name == "runtime" or name.startswith("runtime."):
+            del sys.modules[name]
+
+
+def _import_from_path(name: str, path: Path) -> Any:
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise JS7Error(f"cannot import retained runtime entrypoint: {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _projected_delta_score(
+    *, robust_delta_flips: int, base_pose: float, pose_delta: float, archive_delta_bytes: int
+) -> dict[str, float]:
+    candidate_pose = base_pose + pose_delta
+    if base_pose < 0.0 or candidate_pose < 0.0:
+        raise JS7Error("projected pose distortion became negative")
+    seg = 100.0 * robust_delta_flips / (ec1.N * ec1.H * ec1.W)
+    pose = math.sqrt(10.0 * candidate_pose) - math.sqrt(10.0 * base_pose)
+    rate = 25.0 * archive_delta_bytes / RATE_DENOMINATOR
+    return {"seg_robust_projection": seg, "pose": pose, "rate": rate, "total": seg + pose + rate}
+
+
+def run_container(
+    args: argparse.Namespace,
+    store: js6.Store,
+    compose: dict[str, Any],
+    state: dict[str, Any],
+) -> dict[str, Any]:
+    result_path = args.output / "container/CONTAINER_RESULT.json"
+    if result_path.is_file():
+        return json.loads(result_path.read_text())
+    context = js2b.build_context(args.output / "container_context")
+    proposal_by_id = {str(row["proposal_id"]): row for row in store.rows}
+    proposals = [proposal_by_id[value] for value in compose["selected_ids"]]
+    packet_path = Path(compose["selected_packet"]["path"])
+    if js3.file_record(packet_path) != compose["selected_packet"]:
+        raise JS7Error("selected compose packet differs before container build")
+    packet = packet_path.read_bytes()
+    with zipfile.ZipFile(BASE_ARCHIVE) as base_zip:
+        if base_zip.namelist() != ["p"]:
+            raise JS7Error("CP135 base archive member list differs")
+        base_member = base_zip.read("p")
+    member = overlay.append_overlay_member(base_member, packet)
+    archive = _deterministic_zip(member)
+    repeat = _deterministic_zip(member)
+    if archive != repeat:
+        raise JS7Error("composed archive repeat is not byte-identical")
+    retained = args.output / "container/retained"
+    js3.atomic_bytes(retained / "base_member.p", base_member)
+    js3.atomic_bytes(retained / "composed_member.p", member)
+    js3.atomic_bytes(retained / "archive.zip", archive)
+    js3.atomic_bytes(retained / "archive.repeat.zip", repeat)
+    runtime = _copy_runtime(retained / "adapted_runtime", archive)
+    js3.atomic_bytes(retained / "adapted_runtime_input/p", member)
+
+    expected = _expected_tokens(
+        context, store, proposals, retained / "parseback/expected_composed_tokens.uint8.npy"
+    )
+    decoded_path = retained / "parseback/decoded_composed_tokens.uint8.npy"
+    decoded = _atomic_token_plane(decoded_path, context.tokens)
+    base_parts = context.parts
+    _clear_runtime_modules()
+    sys.path.insert(0, str(retained / "adapted_runtime"))
+    try:
+        residual_runtime = importlib.import_module("runtime.residual_archive")
+        overlay_runtime = importlib.import_module("runtime.ec1_overlay")
+        parsed = residual_runtime.read_residual_archive(retained / "archive.zip")
+        parsed_base_member, parsed_packet = overlay_runtime.read_overlay_archive(retained / "archive.zip")
+        if parsed_packet is None:
+            raise JS7Error("adapted runtime did not find the counted EC1 packet")
+        overlay_report = overlay_runtime.apply_packet_inplace(decoded, parsed_packet)
+    finally:
+        sys.path.pop(0)
+    decoded.flush()
+    expected_array = np.load(Path(expected["payload"]["path"]), mmap_mode="r", allow_pickle=False)
+    equal = True
+    for start in range(0, ec1.N, 24):
+        equal = equal and np.array_equal(decoded[start : start + 24], expected_array[start : start + 24])
+    del decoded
+    if not equal:
+        raise JS7Error("independent composed-token parse-back differs from retained expected plane")
+    if parsed_base_member != base_member:
+        raise JS7Error("overlay runtime did not preserve the CP135 member prefix")
+    if (
+        parsed.semantic_blob != base_parts.semantic_blob
+        or parsed.carrier_blob != base_parts.carrier_blob
+        or parsed.hpac_blob != base_parts.hpac_blob
+        or parsed.residual_payload != base_parts.residual_payload
+        or parsed.token_stream != base_parts.token_stream
+    ):
+        raise JS7Error("adapted residual parser changed a CP135 base section")
+    inflate = _import_from_path("ddm_js7_retained_inflate", retained / "adapted_runtime/inflate.py")
+    inflate._verify_input(retained / "adapted_runtime_input", retained / "archive.zip")
+    decoded_record = js3.file_record(decoded_path)
+    if decoded_record["sha256"] != expected["payload"]["sha256"]:
+        raise JS7Error("independent decoded-token file SHA differs")
+    base_pose = js2b.stratified_mean(context.base_pose_errors, context.sample_weights)
+    archive_delta = len(archive) - BASE_ARCHIVE_BYTES
+    score_projection = _projected_delta_score(
+        robust_delta_flips=int(compose["joint"]["projected_n600_robust_delta_flips"]),
+        base_pose=base_pose,
+        pose_delta=float(compose["joint"]["realized_pose_delta_stratified_n32"]),
+        archive_delta_bytes=archive_delta,
+    )
+    result = {
+        "schema": "ddm_js7_container_result.v1",
+        "complete": True,
+        "axis": AXIS,
+        "score_claim": False,
+        "base_archive": js3.file_record(BASE_ARCHIVE),
+        "archive": js3.file_record(retained / "archive.zip"),
+        "repeat_archive": js3.file_record(retained / "archive.repeat.zip"),
+        "repeat_byte_identical": archive == repeat,
+        "delta_bytes_vs_cp135": archive_delta,
+        "base_member": js3.file_record(retained / "base_member.p"),
+        "composed_member": js3.file_record(retained / "composed_member.p"),
+        "selected_packet": js3.file_record(packet_path),
+        "runtime": runtime,
+        "runtime_consumes_counted_overlay": True,
+        "independent_decode": {
+            "base_sections_byte_identical": True,
+            "base_member_prefix_byte_identical": True,
+            "expected_tokens": expected,
+            "decoded_tokens": decoded_record,
+            "composed_token_byte_identity": True,
+            "overlay_report": overlay_report,
+        },
+        "joint_measurement": compose["joint"],
+        "base_pose_stratified_n32": base_pose,
+        "candidate_pose_stratified_n32": base_pose
+        + float(compose["joint"]["realized_pose_delta_stratified_n32"]),
+        "projected_delta_score": score_projection,
+        "projection_boundary": "robust n32 weighted flip projection plus stratified n32 pose and exact complete-container bytes; not n600 scorer authority",
+        "upstream_evaluate_ran": False,
+        "full_n600_scorer_run": False,
+        "all_payloads_retained": True,
+    }
+    js3.atomic_json(result_path, result)
+    state.update(status="CONTAINER_COMPLETE", active_stage="finalize")
+    js3.atomic_json(args.output / "state.json", state)
+    return result
+
+
+def _write_queue(output: Path, rows: list[dict[str, str]]) -> dict[str, Any]:
+    md = "# ddm_js7 queue annex\n\n" + "\n".join(
+        f"- **Action:** {row['action']}. **Disposition:** {row['disposition']}. **Owner:** {row['owner']}. "
+        f"**Consumer store:** `{row['consumer_store']}`. **Fire trigger:** {row['fire_trigger']}."
+        for row in rows
+    ) + "\n"
+    js3.atomic_bytes(output / "QUEUE_ANNEX.md", md.encode())
+    js3.atomic_json(output / "QUEUE_ANNEX.json", {"schema": "ddm_js7_queue_annex.v1", "rows": rows})
+    return {"markdown": js3.file_record(output / "QUEUE_ANNEX.md"), "json": js3.file_record(output / "QUEUE_ANNEX.json")}
+
+
+def finalize(
+    args: argparse.Namespace,
+    preflight_row: dict[str, Any],
+    table: dict[str, Any],
+    compose: dict[str, Any],
+    container: dict[str, Any],
+    state: dict[str, Any],
+) -> dict[str, Any]:
+    projection_negative = float(container["projected_delta_score"]["total"]) < 0.0
+    queued: list[dict[str, str]] = []
+    recipe = None
+    if projection_negative:
+        queued = [
+            {
+                "action": "measure the retained JS7 composed EC1 overlay on the full n600 scorer and exact contest-CUDA chain",
+                "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+                "owner": "MAIN scorer-lane router",
+                "consumer_store": str(args.output / "main_n600_and_exact"),
+                "fire_trigger": "MAIN owns the sole n600 scorer lane, confirms it is idle, revalidates the retained archive/runtime SHA records, then runs n600 in chunks no larger than 120 before any exact dispatch",
+            }
+        ]
+        recipe = {
+            "schema": "ddm_js7_main_n600_recipe.v1",
+            **queued[0],
+            "archive": container["archive"],
+            "runtime_root": str(args.output / "container/retained/adapted_runtime"),
+            "source_archive_sha256": BASE_ARCHIVE_SHA256,
+            "selected_proposal_ids": compose["selected_ids"],
+            "required_sequence": [
+                "claim the sole n600 scorer lane",
+                "verify archive, adapted runtime, expected token plane, and decoded token plane SHA-256 records",
+                "run one local n600 scorer pass in deterministic chunks no larger than 120 and retain RGB, logits, argmax, pose, and component receipts",
+                "only if the n600 row remains negative, claim the exact contest-CUDA lane and evaluate these exact archive/runtime bytes",
+                "recompute S from d_seg, d_pose, and stat(archive.zip); never use the evaluator rounded Final score",
+            ],
+            "js7_dispatched": False,
+        }
+        js3.atomic_json(args.output / "SEALED_MAIN_N600_RECIPE.json", recipe)
+    annex = _write_queue(args.output, queued)
+    result = {
+        "schema": "ddm_js7_final_result.v1",
+        "complete": True,
+        "axis": AXIS,
+        "score_claim": False,
+        "pointer_moved": False,
+        "preflight": preflight_row,
+        "acceptance_table": table,
+        "compose": compose,
+        "container": container,
+        "sealed_recipe": None if recipe is None else js3.file_record(args.output / "SEALED_MAIN_N600_RECIPE.json"),
+        "queued_actions": queued,
+        "queue_annex": annex,
+        "boundaries": {
+            "singleton_and_joint_sample": "sealed seeded-stratified n32 relative gauge",
+            "projected_n600_flips_are_not_n600_scorer_measurement": True,
+            "complete_container_bytes_measured": True,
+            "runtime_overlay_consumption_wired": True,
+            "independent_token_decode_byte_identity": True,
+            "upstream_evaluate_ran": False,
+            "contest_score_measured": False,
+            "mps_touched": False,
+            "modal_touched": False,
+        },
+    }
+    js3.atomic_json(args.output / "FINAL_RESULT.json", result)
+    state.update(
+        status="COMPLETE",
+        active_stage=None,
+        complete=True,
+        final_result=js3.file_record(args.output / "FINAL_RESULT.json"),
+    )
+    js3.atomic_json(args.output / "state.json", state)
+    return result
+
+
+def run(args: argparse.Namespace) -> dict[str, Any]:
+    args.output = args.output.resolve()
+    args.output.mkdir(parents=True, exist_ok=True)
+    with (args.output / ".run.lock").open("a+b") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        started = time.monotonic()
+        store, seed, preflight_row = preflight(args.output, args.required_free_bytes)
+        state = _load_state(args.output, _config(args, store, preflight_row))
+        if state.get("complete"):
+            return json.loads((args.output / "FINAL_RESULT.json").read_text())
+        sweep = run_sweep(args, store, seed, state, started)
+        if not sweep["complete"]:
+            return sweep
+        compose = run_compose(args, store, sweep["rows"], state, started)
+        if not compose["complete"]:
+            return compose
+        if time.monotonic() - started >= args.max_wall_seconds:
+            state.update(status="TIME_BOUNDED", active_stage="container", complete=False)
+            js3.atomic_json(args.output / "state.json", state)
+            return {"schema": "ddm_js7_partial.v1", "complete": False, "stage": "container"}
+        container = run_container(args, store, compose, state)
+        return finalize(args, preflight_row, sweep["acceptance_table"], compose, container, state)
+
+
+def parser() -> argparse.ArgumentParser:
+    value = argparse.ArgumentParser(description=__doc__)
+    value.add_argument("--output", type=Path, default=OUTPUT)
+    value.add_argument("--max-wall-seconds", type=float, default=2_400.0)
+    value.add_argument("--required-free-bytes", type=int, default=DEFAULT_REQUIRED_FREE_BYTES)
+    return value
+
+
+def main() -> None:
+    args = parser().parse_args()
+    if args.max_wall_seconds <= 0.0 or args.max_wall_seconds > 2_400.0:
+        raise SystemExit("--max-wall-seconds must be in (0, 2400]")
+    if args.required_free_bytes < 0:
+        raise SystemExit("--required-free-bytes must be non-negative")
+    print(json.dumps(run(args), indent=2, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

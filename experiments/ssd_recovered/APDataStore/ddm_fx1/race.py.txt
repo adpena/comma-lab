@@ -1,0 +1,96 @@
+"""ddm_fx1 race harness: one architecture per invocation, full n600, exact bytes."""
+import argparse, json, sys, time
+from pathlib import Path
+
+sys.path.insert(0, "/Users/adpena/Projects/pact")
+sys.path.insert(0, "/Volumes/APDataStore/pact/ddm_me1")
+
+import numpy as np
+from assets import ASSETS
+from tac.micro_edit.coder_replay import replay_code_length
+
+from experiments.ddm_fx1_logistic_mixer_corrector import FixedPointLogisticMixer, LR_BASE_SHIFT
+
+OUT = Path("/Volumes/APDataStore/pact/ddm_fx1/race")
+RET = Path("/Volumes/APDataStore/pact/ddm_fx1/retained")
+LIVE_BITS = 884090.2210952122          # shipped rr4, reproduced by this arm at 0.000000
+LIVE_BYTES = LIVE_BITS / 8.0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--id", required=True)
+    ap.add_argument("--families", required=True, help="comma separated")
+    ap.add_argument("--mixer-context", default="none")
+    ap.add_argument("--power-bits", type=int, default=6)
+    ap.add_argument("--count-buckets", type=int, default=1)
+    ap.add_argument("--lr-exp", type=int, default=4, help="learning rate 2**-lr_exp")
+    ap.add_argument("--static", action="store_true")
+    ap.add_argument("--no-normalize", action="store_true")
+    ap.add_argument("--initial-weights", default="")
+    ap.add_argument("--frames", type=int, default=600)
+    args = ap.parse_args()
+
+    families = tuple(name for name in args.families.split(",") if name)
+    initial = None
+    if args.initial_weights:
+        initial = tuple(float(v) for v in args.initial_weights.split(","))
+
+    def factory(plane):
+        return FixedPointLogisticMixer(
+            plane,
+            families=families,
+            mixer_context=args.mixer_context,
+            count_buckets=args.count_buckets,
+            power_bits=args.power_bits,
+            learn=not args.static,
+            lr_shift=LR_BASE_SHIFT + args.lr_exp,
+            normalize=not args.no_normalize,
+            initial_weights=initial,
+        )
+
+    # Keep a handle so the learned weights can be reported after the pass.
+    holder = {}
+
+    def capturing(plane):
+        holder["mixer"] = factory(plane)
+        return holder["mixer"]
+
+    start = time.time()
+    result = replay_code_length(ASSETS, label=args.id, corrector_factory=capturing, frames=args.frames)
+    elapsed = time.time() - start
+
+    delta = result.code_bytes - LIVE_BYTES
+    payload = RET / f"bits_{args.id}.npy"
+    np.save(payload, result.bits_per_frame)
+    import hashlib
+    sha = hashlib.sha256(payload.read_bytes()).hexdigest()
+
+    row = {
+        "id": args.id,
+        "families": list(families),
+        "mixer_context": args.mixer_context,
+        "count_buckets": args.count_buckets,
+        "power_bits": args.power_bits,
+        "lr_exp": args.lr_exp,
+        "lr_shift": LR_BASE_SHIFT + args.lr_exp,
+        "static": bool(args.static),
+        "normalize": not args.no_normalize,
+        "initial_weights": list(initial) if initial else None,
+        "frames": args.frames,
+        "code_bits": result.code_bits,
+        "code_bytes": result.code_bytes,
+        "delta_bytes_vs_live": delta,
+        "elapsed_s": elapsed,
+        "payload": str(payload),
+        "payload_sha256": sha,
+        "final_weights": holder["mixer"].weight_report(),
+    }
+    OUT.mkdir(parents=True, exist_ok=True)
+    (OUT / f"{args.id}.json").write_text(json.dumps(row, indent=2))
+    print(f"{args.id:44s} {result.code_bytes:12.2f} B   delta {delta:+10.2f} B   [{elapsed:.0f}s]")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

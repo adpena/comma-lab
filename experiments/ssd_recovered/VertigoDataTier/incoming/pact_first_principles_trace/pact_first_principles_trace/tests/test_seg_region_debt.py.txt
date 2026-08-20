@@ -1,0 +1,38 @@
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
+import numpy as np
+from seg_region_debt import compute_region_debt
+
+
+def test_class_coverage_can_hide_zero_region_minratio():
+    target = np.array([
+        [1,1,1,0],
+        [1,1,1,0],
+        [0,0,2,2],
+        [0,0,2,2],
+    ])
+    cand = np.array([
+        [0,0,0,0],
+        [0,0,0,0],
+        [0,0,2,2],
+        [0,0,2,2],
+    ])
+    debts = compute_region_debt(target, cand)
+    worst = debts[0]
+    assert worst.class_id == 1
+    assert worst.unsolved_fraction == 1.0
+    assert worst.raw_score_debt > 0
+
+
+def test_margin_priority_uses_margins_not_human_weights():
+    target = np.array([[1,1]])
+    cand = np.array([[0,1]])
+    logits = np.array([
+        [[2.0, 0.0]],
+        [[1.0, 3.0]],
+    ])
+    debts = compute_region_debt(target, cand, cand_logits=logits)
+    assert debts[0].raw_score_debt == 50.0
+    assert debts[0].margin_p50 == 1.0
+    assert debts[0].crossing_priority == 100.0

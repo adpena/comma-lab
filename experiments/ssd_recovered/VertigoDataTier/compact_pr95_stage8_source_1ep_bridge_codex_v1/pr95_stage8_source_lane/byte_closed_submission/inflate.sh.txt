@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# PR95 MLX-trained byte-closed contest archive: canonical inflate.sh.
+# Mirrors the canonical PR 95 hnerv_muon inflate.sh signature
+# ($1 archive_dir, $2 output_dir, $3 file_list) per Catalog #146.
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+DATA_DIR="$1"
+OUTPUT_DIR="$2"
+FILE_LIST="$3"
+
+mkdir -p "$OUTPUT_DIR"
+
+while IFS= read -r line; do
+  [ -z "$line" ] && continue
+  BASE="${line%.*}"
+  SRC="${DATA_DIR}/${BASE}.bin"
+  DST="${OUTPUT_DIR}/${BASE}.raw"
+
+  [ ! -f "$SRC" ] && echo "ERROR: ${SRC} not found" >&2 && exit 1
+
+  printf "Inflating %s ... " "$line"
+  "${PYTHON:-python3}" "$HERE/inflate.py" "$SRC" "$DST"
+done < "$FILE_LIST"

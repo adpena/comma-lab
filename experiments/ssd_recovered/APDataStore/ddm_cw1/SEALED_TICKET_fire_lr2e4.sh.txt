@@ -1,0 +1,28 @@
+#!/bin/bash
+# ddm_cw1 SEALED TICKET -- RUNG 2. MAIN fires. Sealed 2026-08-17, dry-run validated.
+# PRECONDITION: no other Metal fire is live (ONE at a time). Check first:
+#   ps aux | grep -E 'train_semantic|train_ddm_cl1' | grep -v grep
+# Predicted wall clock 1030.9 s (F=126.198 + 3000*0.19429 + 13*24.758), eval cadence 250.
+# Falsifier is pre-registered in .omx/research/ddm_cw1_corrected_window_20260817.md -- read it BEFORE reading the result.
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+.venv/bin/python tools/launch_detached_process.py \
+  --output-dir /Volumes/APDataStore/pact/ddm_cw1/LR2E4 \
+  --purpose "CW1 aligned-objective lr ladder rung 3 of 3 (EF3000 is rung 1, already measured, -2286 endpoint). 10x the integrated LR of EF3000 at IDENTICAL steps/seed/curriculum/init, so tau(progress) is matched and lr is the ONLY variable. Tests whether the aligned regime depth is limited by the OBJECTIVE (a real floor) or by the SCHEDULE: both prior aligned windows spent over 99 pct of their integrated LR before their best step, so 'found a floor' and 'anneal ran out' are not separable. Metric is the ENDPOINT (cadence-invariant); 'best' must never be quoted without its eval count." \
+  --authority "local detached execution; [macOS-MPS training-signal] advisory, NEVER a score" \
+  --done-receipt cw1_lr2e4 \
+  -- .venv/bin/python tools/safe_run.py --rss-mb 118784 --projected-gib 3.1 \
+     --timeout 1740.0 \
+     --status-receipt /Volumes/APDataStore/pact/ddm_cw1/LR2E4/resource_safe_run_status.json \
+     --child-pidfile /Volumes/APDataStore/pact/ddm_cw1/LR2E4/resource_safe_run_child.pid --quiet \
+     -- .venv/bin/python -m tac.pr130_lift.train_semantic_quantized_resumable \
+     --challenge-root upstream \
+     --cache /Volumes/VertigoDataTier/pact/ddm_op1r_20260809/authority_cache/gt_cache_600_official_ada.pt \
+     --init /Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/artifacts/checkpoints/semantic_renderer_w96_b4_qat4_fixedtau05_tail6k_lr2e7.pt \
+     --bits 4 --weight-qat-q3q4 \
+     --steps 3000 --lr 2.0e-4 --float-warmup-steps 0 \
+     --ce-fraction 0.0 --softplus-fraction 0.0 \
+     --eval-every 250 --checkpoint-every 200 \
+     --device mps --seed 20260715 --band-objective-weight 0.0 \
+     --out /Volumes/APDataStore/pact/ddm_cw1/LR2E4/result.json \
+     --save /Volumes/APDataStore/pact/ddm_cw1/LR2E4/ckpt

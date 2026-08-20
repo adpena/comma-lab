@@ -1,0 +1,175 @@
+"""TRUE per-section marginal bytes of PR130's shipped archive (leave-one-out).
+
+WHY: sg2 established that 40,252 B is the packed semantic section = 21.0686% of the
+191,052 B archive, but that this is a DESCRIPTIVE ratio, NOT a marginal -- semantic,
+carrier (pose) and HPAC are JOINTLY LZMA'd at build_submission_archive.py:92-105, so
+the real cost of any one section is only knowable by a counterfactual. cb2 flagged it
+as unpriced. This prices it exactly, by parsing the SHIPPED archive.
+
+STRUCTURE (build_submission_archive.py:33-63, 87-105) -- read at source, not assumed:
+    semantic_pose_raw = u32(len(sem)) u32(len(car)) + sem_blob + car_blob
+    combined_models   = lzma(semantic_pose_raw + hpac_raw, FORMAT_XZ, LZMA_FILTERS)
+    payload           = u32(len(combined_models)) + combined_models + tokens
+    archive.zip       = deterministic ZIP_STORED, single member "p"
+
+Two POSITIVE CONTROLS gate every number:
+  C1 the decompressed tail must equal hpac_raw BYTE-FOR-BYTE (proves the split point)
+  C2 8 + len(sem) + len(car) must equal len(semantic_pose_raw) (proves the header)
+If either fails the tool REFUSES rather than reporting a marginal computed on a guess.
+
+Authority: pure byte arithmetic on the shipped archive. No scorer, no model, no device.
+Intake is READ-ONLY: this reads and never writes there.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import lzma
+import zipfile
+from datetime import datetime, timezone
+from pathlib import Path
+
+RATE_DENOMINATOR = 37_545_489  # upstream/evaluate.py score: 25 * archive_bytes / this
+RATE_COEFF = 25.0
+
+# build_submission_archive.py LZMA_FILTERS -- must match or the counterfactual is invalid.
+LZMA_FILTERS = [{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}]
+
+
+def _c(payload: bytes) -> int:
+    return len(lzma.compress(payload, format=lzma.FORMAT_XZ, filters=LZMA_FILTERS))
+
+
+def _s_units(delta_bytes: int) -> float:
+    return RATE_COEFF * delta_bytes / RATE_DENOMINATOR
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--archive", type=Path, required=True)
+    ap.add_argument("--hpac-xz", type=Path, required=True)
+    ap.add_argument("--out", type=Path, required=True)
+    args = ap.parse_args()
+
+    archive_bytes = args.archive.stat().st_size
+    with zipfile.ZipFile(args.archive) as zf:
+        names = zf.namelist()
+        if names != ["p"]:
+            raise SystemExit(f"REFUSED: expected single member ['p'], got {names}")
+        payload = zf.read("p")
+
+    n_combined = int.from_bytes(payload[:4], "little")
+    combined = payload[4:4 + n_combined]
+    tokens = payload[4 + n_combined:]
+    blob = lzma.decompress(combined)
+
+    hpac_raw = lzma.decompress(args.hpac_xz.read_bytes())
+
+    # C1: the tail of the joint blob must BE hpac_raw.
+    if blob[-len(hpac_raw):] != hpac_raw:
+        raise SystemExit(
+            "REFUSED (control C1 failed): joint-blob tail != hpac_raw byte-for-byte. "
+            "The section split point is not what the builder source says; every marginal "
+            "below would be computed on a guess."
+        )
+    sp_raw = blob[: len(blob) - len(hpac_raw)]
+
+    len_sem = int.from_bytes(sp_raw[0:4], "little")
+    len_car = int.from_bytes(sp_raw[4:8], "little")
+    # C2: the header must account for the whole semantic_pose block.
+    if 8 + len_sem + len_car != len(sp_raw):
+        raise SystemExit(
+            f"REFUSED (control C2 failed): header says 8+{len_sem}+{len_car}="
+            f"{8 + len_sem + len_car} but semantic_pose_raw is {len(sp_raw)} B."
+        )
+    header = sp_raw[0:8]
+    sem = sp_raw[8:8 + len_sem]
+    car = sp_raw[8 + len_sem:]
+
+    full = _c(sp_raw + hpac_raw)
+    # Counterfactuals: drop ONE section, keep the others and the header shape.
+    drop_sem = _c(header + car + hpac_raw)
+    drop_car = _c(header + sem + hpac_raw)
+    drop_hpac = _c(sp_raw)
+    only_sem = _c(header + sem)
+    only_car = _c(header + car)
+    only_hpac = _c(hpac_raw)
+
+    sections = {
+        "semantic": {
+            "raw_bytes": len_sem,
+            "marginal_bytes": full - drop_sem,
+            "alone_lzma_bytes": only_sem,
+        },
+        "carrier_pose": {
+            "raw_bytes": len_car,
+            "marginal_bytes": full - drop_car,
+            "alone_lzma_bytes": only_car,
+        },
+        "hpac": {
+            "raw_bytes": len(hpac_raw),
+            "marginal_bytes": full - drop_hpac,
+            "alone_lzma_bytes": only_hpac,
+        },
+    }
+    for name, row in sections.items():
+        row["marginal_S_units"] = _s_units(row["marginal_bytes"])
+        row["descriptive_share_of_archive"] = row["raw_bytes"] / archive_bytes
+        row["marginal_share_of_archive"] = row["marginal_bytes"] / archive_bytes
+        row["marginal_over_raw"] = (
+            row["marginal_bytes"] / row["raw_bytes"] if row["raw_bytes"] else None
+        )
+
+    sum_alone = only_sem + only_car + only_hpac
+    sum_marginals = sum(r["marginal_bytes"] for r in sections.values())
+
+    receipt = {
+        "measurement": "pr130_archive_true_section_marginals_leave_one_out",
+        "utc": datetime.now(timezone.utc).isoformat(),
+        "authority": "exact byte arithmetic on the shipped archive; no scorer, no device",
+        "score_claim": False,
+        "archive_path": str(args.archive),
+        "archive_sha256": hashlib.sha256(args.archive.read_bytes()).hexdigest(),
+        "archive_bytes": archive_bytes,
+        "controls": {"C1_hpac_tail_byte_identical": True, "C2_header_accounts_block": True},
+        "parsed": {
+            "combined_models_bytes": n_combined,
+            "tokens_bytes": len(tokens),
+            "tokens_share_of_archive": len(tokens) / archive_bytes,
+            "joint_blob_raw_bytes": len(blob),
+            "semantic_pose_raw_bytes": len(sp_raw),
+        },
+        "joint_full_lzma_bytes": full,
+        "sections": sections,
+        "sum_of_alone_lzma_bytes": sum_alone,
+        "sum_of_marginals_bytes": sum_marginals,
+        "joint_coding_gain_bytes": sum_alone - full,
+        "superadditivity_gap_bytes": full - sum_marginals,
+        "rate_denominator": RATE_DENOMINATOR,
+        "note": (
+            "marginal = full_joint - joint_without_that_section. Marginals do NOT sum to "
+            "the joint total: the difference is shared/jointly-coded mass that no single "
+            "section can be charged for. Budget with marginals, never with raw shares."
+        ),
+    }
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    args.out.write_text(json.dumps(receipt, indent=2), encoding="utf-8")
+
+    print(f"archive {archive_bytes} B  sha {receipt['archive_sha256'][:16]}")
+    print(f"  joint combined_models {n_combined} B | tokens {len(tokens)} B "
+          f"({len(tokens)/archive_bytes:.4%} of archive)")
+    print(f"  joint full lzma       {full} B\n")
+    for name, r in sections.items():
+        print(f"  {name:13s} raw {r['raw_bytes']:>8,} B ({r['descriptive_share_of_archive']:6.2%})"
+              f"  MARGINAL {r['marginal_bytes']:>8,} B ({r['marginal_share_of_archive']:6.2%})"
+              f"  = {r['marginal_S_units']:.7f} S")
+    print(f"\n  sum(alone)={sum_alone:,}  sum(marginals)={sum_marginals:,}  "
+          f"joint gain={sum_alone-full:,} B  unattributable={full-sum_marginals:,} B")
+    print(f"receipt -> {args.out}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

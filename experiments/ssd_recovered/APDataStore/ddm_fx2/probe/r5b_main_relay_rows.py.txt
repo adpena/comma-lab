@@ -1,0 +1,132 @@
+"""R5b: MAIN's relay rows 1 and 2, measured on OUR payloads through the REAL codecs.
+
+Row 1 (pd1): "LZMA lc=0 lp=1 pb=0 dict=64KiB is worth -1,092 B on LZMA'd array sections."
+Row 2 (pd1): "weight SERIALIZATION is the open axis -- nobody entropy-codes a scale array."
+
+Two things were checked at source before measuring, and both change what is worth running:
+
+* Our runtime ALREADY defines exactly those LZMA parameters
+  (residual_archive.py:57-68: FILTER_LZMA2, dict_size 1<<16, lc 0, lp 1, pb 0).
+  The tuning is not an available delta here; it is already ours.
+* Our shipped archive declares RX1M codec=2, which is BROTLI. None of the three
+  model sections is LZMA'd at all, so a tuning delta on "LZMA'd array sections"
+  has no section to land on.
+
+So the question that IS open, and the one measured below, is different: on OUR
+three inner bodies, would the LZMA path beat the Brotli the container actually
+chose?  And is the un-entropy-coded fixed metadata inside the semantic blob
+(scales + fp16 tensors) worth restructuring?
+
+Exact bytes through the real codecs.  No entropy estimates -- pd1's own control
+showed order-1 "headroom" on competitor payloads was estimator bias.
+"""
+
+import json
+import lzma
+import struct
+import sys
+from pathlib import Path
+
+RUNTIME = Path("/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime")
+ARCHIVE = Path("/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/retained/archive.zip")
+OUT = Path("/Volumes/APDataStore/pact/ddm_fx2/probe/r5b_main_relay_rows.json")
+sys.path.insert(0, str(RUNTIME))
+
+import brotli  # noqa: E402
+import numpy as np  # noqa: E402
+
+from runtime.residual_archive import LZMA_FILTERS  # noqa: E402
+from runtime.residual_archive import _decompress_brotli, read_residual_archive  # noqa: E402
+
+
+def lzma_bytes(payload: bytes) -> int:
+    return len(lzma.compress(payload, format=lzma.FORMAT_RAW, filters=LZMA_FILTERS))
+
+
+def brotli_bytes(payload: bytes, quality: int = 11, lgwin: int = 24) -> int:
+    return len(brotli.compress(payload, quality=quality, lgwin=lgwin))
+
+
+def main() -> int:
+    parts = read_residual_archive(ARCHIVE)
+    cm = bytes(parts.compressed_models)
+    header = struct.unpack("<4sBBBBHHH", cm[:14])
+    codec, hpac_n, sem_n, car_n = header[2], header[5], header[6], header[7]
+    body = cm[14:]
+    coded = {
+        "hpac_blob": body[:hpac_n],
+        "semantic_blob": body[hpac_n : hpac_n + sem_n],
+        "carrier_blob": body[hpac_n + sem_n : hpac_n + sem_n + car_n],
+    }
+    print(f"RX1M codec={codec} (2 = Brotli).  shipped section bytes: "
+          f"hpac {hpac_n}, semantic {sem_n}, carrier {car_n}")
+
+    rows = []
+    for name, stream in coded.items():
+        raw = _decompress_brotli(stream)
+        b = brotli_bytes(raw)
+        z = lzma_bytes(raw)
+        rows.append({
+            "section": name, "shipped_coded_bytes": len(stream), "raw_bytes": len(raw),
+            "brotli_q11_lgwin24_bytes": b, "lzma_pd1_params_bytes": z,
+            "lzma_minus_shipped": z - len(stream), "brotli_reproduces_shipped": b == len(stream),
+        })
+        print(f"  {name:16s} raw {len(raw):7d}  shipped {len(stream):7d}  "
+              f"brotli {b:7d}  lzma(pd1 params) {z:7d}   lzma-shipped {z-len(stream):+7d}")
+
+    # Row 2: the semantic blob's fixed metadata is NOT entropy coded at all.
+    from runtime.entropy.renderer_weight_codec import (  # noqa: E402
+        _HEADER_BYTES, _fixed_metadata_bytes, inspect_wans1,
+    )
+    # The SHIPPED body is F12 stream-reordered; the parser restores it, so the
+    # canonical WANS1 form is parts.semantic_blob, not the raw brotli output.
+    sem_raw = bytes(parts.semantic_blob)
+    info = inspect_wans1(sem_raw)
+    meta_n = _fixed_metadata_bytes()
+    meta = sem_raw[_HEADER_BYTES : _HEADER_BYTES + meta_n]
+    streams = sem_raw[_HEADER_BYTES + meta_n :]
+
+    # The metadata is a concatenation of fp16 arrays (scales and fp16 tensors).
+    # A byte-interleaved fp16 array brotli-compresses poorly; splitting the high
+    # and low bytes is the standard serialization fix and costs zero model work.
+    values = np.frombuffer(meta[: (len(meta) // 2) * 2], dtype="<u2")
+    split = np.concatenate([(values >> 8).astype(np.uint8), (values & 0xFF).astype(np.uint8)])
+    tail = meta[(len(meta) // 2) * 2 :]
+
+    whole = brotli_bytes(sem_raw)
+    reordered = brotli_bytes(bytes(_HEADER_BYTES and sem_raw[:_HEADER_BYTES]) + split.tobytes() + tail + streams)
+    meta_alone = brotli_bytes(meta)
+    meta_split_alone = brotli_bytes(split.tobytes() + tail)
+
+    print(f"\n  semantic fixed metadata: {meta_n} B of scales + fp16 tensors, NOT entropy coded")
+    print(f"    metadata alone, brotli            {meta_alone:7d} B")
+    print(f"    metadata byte-split, brotli       {meta_split_alone:7d} B   "
+          f"delta {meta_split_alone - meta_alone:+d}")
+    print(f"    whole semantic body, brotli       {whole:7d} B  (shipped {len(coded['semantic_blob'])})")
+    print(f"    byte-split body, brotli           {reordered:7d} B   delta {reordered - whole:+d}")
+
+    doc = {
+        "rx1m_codec": int(codec),
+        "codec_note": "2 = Brotli. NO section in our shipped archive is LZMA'd, so pd1 row 1's "
+                      "tuning delta has no section to land on here.",
+        "lzma_params_already_ours": "runtime/residual_archive.py:57-68 already declares "
+                                    "FILTER_LZMA2 dict_size=1<<16 lc=0 lp=1 pb=0 -- pd1's exact tuning.",
+        "sections": rows,
+        "semantic_serialization": {
+            "fixed_metadata_bytes_uncoded": meta_n,
+            "metadata_alone_brotli": meta_alone,
+            "metadata_byte_split_brotli": meta_split_alone,
+            "metadata_split_delta": meta_split_alone - meta_alone,
+            "whole_body_brotli": whole,
+            "byte_split_body_brotli": reordered,
+            "body_split_delta": reordered - whole,
+        },
+        "authority": "exact bytes through the real codecs; no entropy estimates. "
+                     "A win here would still need a container round-trip before it is an archive byte.",
+    }
+    OUT.write_text(json.dumps(doc, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

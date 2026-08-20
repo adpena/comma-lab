@@ -1,0 +1,49 @@
+#!/bin/bash
+# ddm_rc1x: ma1 within-miss byte-close over the rr4/D1 token field.
+#
+# Mirrors the PROVEN ddm_fx2 byteclose_a driver exactly; only TAC_RR2_CORRECTOR_MODULE
+# changes (ddm_fx2_model_axis_corrector -> ddm_ma1_within_miss_corrector).  ma1's
+# Ma1WithinMissCorrector SUBCLASSES fx2's Fx2ModelAxisMixer and inherits its frozen
+# SHIPPED_CONFIG verbatim, so this run differs from fx2's landed 180,450 B row by the
+# within-miss sector alone.
+#
+# TAC_PQ2_RC64_SOURCE names the ENCODER-ROLE rc64 body (12,222 B, 5c75e2c7...), which is
+# encoder+decoder.  It is NOT the shipped runtime/entropy member (5,638 B, 05839d14...,
+# decoder only).  ddm_fx2 and ddm_ma1 each read the pin as the shipped member, failed to
+# find a 12,222 B rc64_backend.c, and reported the pin unclearable; the file has been at
+# this path since 2026-08-10 and fx2's own chain used it successfully on 2026-08-17.
+#
+# Pre-registered expectation (ddm_ma1 memo, -104.584 B measured n600):
+#   token stream ~109,696 B  ·  archive ~180,345 B (fx2 D1's 180,450 B minus ~105 B)
+# Fail-closed at every stage.
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+
+export TAC_PQ2_PREPARED_DIR=/Volumes/APDataStore/pact/ddm_wc1_advisory_decode_wallclock_20260815/prepared/hv1_base_control
+export TAC_PQ2_TOKENS_FILE=/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8
+export TAC_PQ2_HM1_DIR=/Volumes/APDataStore/pact/ddm_hm1_20260816/retained
+export TAC_PQ2_RC64_SOURCE=/Volumes/VertigoDataTier/pact/pr135_intake_20260810/experiment_book/src/cpr1_sub4/entropy/rc64_backend.c
+export TAC_RR2_CORRECTOR_MODULE=ddm_ma1_within_miss_corrector
+export PYTHONDONTWRITEBYTECODE=1
+# ma1 imports `from experiments.ddm_fx2_model_axis_corrector import ...`; the encoder script
+# only puts experiments/ on sys.path, so the repo root must be added here.
+export PYTHONPATH=/Users/adpena/Projects/pact${PYTHONPATH:+:$PYTHONPATH}
+
+STORE=/Volumes/APDataStore/pact/ddm_rc1x/byteclose_ma1
+mkdir -p "$STORE"
+
+echo "=== stage 0: input custody ==="
+for f in "$TAC_PQ2_PREPARED_DIR/archive.zip" "$TAC_PQ2_TOKENS_FILE" \
+         "$TAC_PQ2_HM1_DIR/group_index.u8" "$TAC_PQ2_RC64_SOURCE"; do
+  printf '%s  %s  %s\n' "$(shasum -a 256 "$f" | cut -c1-16)" "$(stat -f %z "$f")" "$f"
+done
+
+echo "=== stage 1: encode ==="
+.venv/bin/python experiments/ddm_rr2_encoder_byteclose.py --stage encode --store "$STORE"
+echo "=== stage 2: build ==="
+.venv/bin/python experiments/ddm_rr2_encoder_byteclose.py --stage build --store "$STORE"
+echo "=== stage 3: receiver build ==="
+.venv/bin/python experiments/ddm_rr2_receiver_close.py --stage build --store "$STORE"
+echo "=== stage 4: parseback (decoded-field falsifier) ==="
+.venv/bin/python experiments/ddm_rr2_receiver_close.py --stage parseback --store "$STORE"
+echo "=== MA1_BYTECLOSE_CHAIN_COMPLETE rc=0 ==="

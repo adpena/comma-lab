@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+"""RC1 dirty-tree evidence survey (read-only).
+
+Enumerates every meaningful untracked/modified item in a set of git worktrees,
+records size + sha256, and classifies duplicate-of-main by byte identity against
+the reference repo HEAD. READ-ONLY: never writes to, or deletes from, the trees
+it surveys.
+
+Certify-or-block discipline (CLAUDE.md "Local Disk, SSD Spill, Auto-Cleanup, And
+Provenance"): a bulk artifact may only be cold-stored once origin path, bytes,
+and sha256 are captured here.
+
+Usage:
+    python tools/rc1_survey_dirty_trees.py --out survey.json
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path("/Users/adpena/Projects/pact")
+CODEX_WT = REPO / ".omx/tmp/codex_worktrees"
+CLAUDE_WT = REPO / ".claude/worktrees"
+
+# Noise that carries no signal: byte-identical rebuildable caches / build
+# products. A virtualenv is explicitly a rebuildable build product per CLAUDE.md
+# ("temporary virtualenvs" in the large-artifact list); nothing is deleted here,
+# it is only excluded from the evidence manifest.
+JUNK_SUFFIXES = {".pyc", ".pyo"}
+JUNK_DIR_PARTS = {
+    "__pycache__",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".mypy_cache",
+    "node_modules",
+    ".venv",
+    "venv",
+    ".DS_Store",
+}
+
+CODEX_TREES = [
+    "ddm_v7_solved_plane_tolerance_waterfill_20260722T083215Z",
+    "ddm_v8_margin_gated_correction_20260722T104341Z",
+    "einstein_kolmogorov_crux_20260719T212159Z",
+    "ddm_v13_worldsheet_event_predictor_20260722T181444Z",
+    "ddm_v15_grammar_parametrized_scorer_solve_20260722T230509Z",
+    "ddm_v18b_common_master_rebaseline_and_pricing_20260723T033945Z",
+    "mdl_member_solve_v3_entropy_20260722T042323Z",
+    "ddm_v5_route_fix_compose_20260722T061529Z",
+    "ddm_v4_stratum_structured_members_20260722T051732Z",
+    "ddm_target_receipt_pose_rung0_20260722T010130Z",
+    "ddm_measurement_ladder_rungs123_20260722T015737Z",
+    "pose_attach_audit_prep_20260721T141540Z",
+]
+CLAUDE_TREES = ["agent-a4ba21155753780e9", "agent-a1f080a4426f446f9"]
+
+
+def is_junk(rel: str) -> bool:
+    p = Path(rel)
+    if any(part in JUNK_DIR_PARTS for part in p.parts):
+        return True
+    return p.suffix in JUNK_SUFFIXES
+
+
+def sha256_of(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def git(tree: Path, *args: str) -> str:
+    res = subprocess.run(
+        ["git", "-C", str(tree), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return res.stdout
+
+
+def main_blob_sha(rel: str) -> str | None:
+    """sha256 of the file at `rel` as it exists in reference repo HEAD, or None."""
+    res = subprocess.run(
+        ["git", "-C", str(REPO), "show", f"HEAD:{rel}"],
+        capture_output=True,
+        check=False,
+    )
+    if res.returncode != 0:
+        return None
+    return hashlib.sha256(res.stdout).hexdigest()
+
+
+def main_worktree_sha(rel: str) -> str | None:
+    """sha256 of the file at `rel` in the reference repo working tree, or None."""
+    p = REPO / rel
+    if not p.is_file():
+        return None
+    return sha256_of(p)
+
+
+def survey_tree(name: str, tree: Path) -> dict:
+    # `--ignored=matching` is REQUIRED: plain `git status` hides .gitignore'd
+    # files, and in this repo the large rebuildable payloads (rung_checkpoints/
+    # *.bin, reports/raw, .omx/state/*.json) are exactly the ignored class. A
+    # PRUNE-SAFE verdict drawn from un-ignored status alone would be false.
+    status = git(tree, "status", "--porcelain", "-uall", "--ignored=matching")
+    items: list[dict] = []
+    junk_count = 0
+    for line in status.splitlines():
+        if not line.strip():
+            continue
+        code = line[:2]
+        rel = line[3:].strip()
+        # handle rename "old -> new"
+        if " -> " in rel:
+            rel = rel.split(" -> ", 1)[1]
+        rel = rel.strip('"')
+        if is_junk(rel):
+            junk_count += 1
+            continue
+        abs_p = tree / rel
+        if not abs_p.is_file():
+            # symlink or vanished
+            items.append(
+                {"rel": rel, "status": code, "bytes": None, "sha256": None, "note": "not_a_regular_file"}
+            )
+            continue
+        size = abs_p.stat().st_size
+        sha = sha256_of(abs_p)
+        head_sha = main_blob_sha(rel)
+        wt_sha = main_worktree_sha(rel)
+        items.append(
+            {
+                "rel": rel,
+                "status": code,
+                "bytes": size,
+                "sha256": sha,
+                "main_head_sha256": head_sha,
+                "main_worktree_sha256": wt_sha,
+                "dup_of_main_head": head_sha == sha,
+                "dup_of_main_worktree": wt_sha == sha,
+                "gitignored": code == "!!",
+            }
+        )
+    total = sum(i["bytes"] or 0 for i in items)
+    return {
+        "tree": name,
+        "path": str(tree),
+        "branch": git(tree, "rev-parse", "--abbrev-ref", "HEAD").strip(),
+        "head": git(tree, "rev-parse", "HEAD").strip(),
+        "item_count": len(items),
+        "junk_skipped": junk_count,
+        "total_bytes": total,
+        "items": items,
+    }
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", required=True)
+    args = ap.parse_args()
+
+    trees: list[tuple[str, Path]] = []
+    for t in CODEX_TREES:
+        trees.append((t, CODEX_WT / t))
+    for t in CLAUDE_TREES:
+        trees.append((t, CLAUDE_WT / t))
+
+    out = {"reference_repo": str(REPO), "trees": []}
+    for name, path in trees:
+        if not path.is_dir():
+            out["trees"].append({"tree": name, "path": str(path), "error": "MISSING"})
+            print(f"MISSING {name}", file=sys.stderr)
+            continue
+        print(f"surveying {name} ...", file=sys.stderr, flush=True)
+        out["trees"].append(survey_tree(name, path))
+
+    Path(args.out).write_text(json.dumps(out, indent=2), encoding="utf-8")
+    for t in out["trees"]:
+        if "error" in t:
+            continue
+        print(
+            f"{t['tree']:<62} items={t['item_count']:<5} "
+            f"bytes={t['total_bytes']:>12,} junk={t['junk_skipped']}"
+        )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

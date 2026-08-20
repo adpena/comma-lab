@@ -1,0 +1,422 @@
+#!/usr/bin/env python3
+"""SNeRV Branch-B ROUND-2 · S8 COMPOSE-THE-FRONTIER (the 178KB LL generator).
+
+The directive's cheapest decisive test (S8-first). The 0.19199 frontier archive
+(HNeRV+selector, sha b7106c9b…, 178,493 B) renders the full video
+evaluator-close for 178 KB TOTAL. Receiver-side compose:
+
+  run frontier inflate -> camera-res frames (1200, 874, 1164, 3) uint8
+  -> downsample to SNeRV carrier-res 384x512
+  -> build skip_high = 2.0024 * downsample_to_192x256(carrier)  [empirical band law]
+  -> write that skip_high into the G1b SNeRV packet (MFU/HFR machinery unchanged)
+  -> decode_snerv_archive_frames -> camera-res -> uint8 -> EXACT re-measure (N>=48)
+
+THE STRUCTURAL FACT (premise-verified this run): skip_high ~= 2.0024 *
+(2x-downsample of the rendered output) - 0.056, corr == 1.0. So skip_high is the
+half-res frame band scaled by ~2; substituting the frontier's half-res band makes
+SNeRV render the frontier (modulo HFR refinement). This is dimensionally exact.
+
+THE HONEST BAR (directive amendment #2): residuals must pay rent vs the frontier
+ALONE. The frontier already scores 0.19199 for 178,493 B. SNeRV-on-frontier-LL is
+only interesting if it lands inside the cone budget AT BYTES that beat composing
+the frontier directly. We measure:
+  (A) frontier-LL as skip_high, stored at the SAME ladder precisions (fp16, uint8,
+      uint6) -> bytes + d_seg/d_pose. The question: does the frontier LL satisfy
+      the cone (guards) and at what byte cost?
+  (B) the bytes-vs-178KB ratio per rung -> stored-state-vs-learned-synthesis verdict.
+
+Authority: [macOS-CPU advisory] / exact_cpu_advisory — NON-PROMOTABLE.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import lzma
+import sys
+import time
+import zipfile
+from pathlib import Path
+
+REPO_ROOT = Path("/Users/adpena/Projects/pact")
+G1B_PACKET = Path(
+    "/Volumes/VertigoDataTier/pact/snerv_mistake_b_g1a_20260609T201221Z"
+    "/snerv_mlx_native_export/native_train_export/snerv_mlx_native_packet.snar"
+)
+RUN_DIR = Path("/Volumes/VertigoDataTier/pact/snerv_branch_b_round2_20260610T000000Z")
+FRONTIER_RAW = RUN_DIR / "frontier_inflate/0.raw"
+FRONTIER_ARCHIVE = Path(
+    "/Volumes/VertigoDataTier/pact/scorer_region_cascade_b7106_campaign_20260531T214623Z"
+    "/nf0_05_r2_p12_rp1_rgb_1_1_1_cffec10_adaptive_blend_p11_then_p15_then_receiver_patch"
+    "/p15_archive_zip_repack/archive.zip"
+)
+FRONTIER_SHA = "b7106c9bdbb8a2df18af622636ca79a11fa0c771a09c75219474d980b8997c8c"
+FRONTIER_BYTES = 178493
+FRONTIER_SCORE_CONTEST_CPU = 0.19198533626623068
+
+CAMERA_H, CAMERA_W = 874, 1164
+CARRIER_H, CARRIER_W = 384, 512
+SKIP_HIGH_H, SKIP_HIGH_W = 192, 256
+N_FRAMES = 1200
+
+sys.path.insert(0, str(REPO_ROOT / "src"))
+sys.path.insert(0, str(REPO_ROOT / "upstream"))
+
+import numpy as np  # noqa: E402
+
+CONTEST_N = 37_545_489
+CONTEST_BYTE_PRICE = 25.0 / CONTEST_N
+SKIP_HIGH_NAME = "inputs.mfu.skip_high"
+
+G1B_BASE_D_SEG = 0.002468
+G1B_BASE_POSE_TERM = 0.142602
+GUARD_D_SEG_MAX = 0.01
+GUARD_POSE_TERM_MAX = 0.25
+
+# Empirical band law (corr 1.0): skip_high ~= BAND_SCALE * downsample(output) + BAND_BIAS
+BAND_SCALE = 2.0024
+BAND_BIAS = -0.0560
+
+FALSE_AUTHORITY = {
+    "authority_tier": "exact_cpu_advisory",
+    "axis_tag": "[macOS-CPU advisory]",
+    "score_claim": False,
+    "promotion_eligible": False,
+    "promotable": False,
+    "rank_or_kill_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+    "requires_exact_remeasure": False,
+}
+
+
+def _sha(b: bytes) -> str:
+    return hashlib.sha256(b).hexdigest()
+
+
+# --------------------------------------------------------------------------- #
+# Build the frontier-derived skip_high band
+# --------------------------------------------------------------------------- #
+def frontier_skip_high() -> np.ndarray:
+    """Load frontier camera-res raw frames -> build the 192x256 skip_high band.
+
+    The frontier writes (1200, 874, 1164, 3) uint8. We:
+      reshape -> NCHW (1200,3,874,1164) -> bilinear downsample to 192x256
+      -> scale by the empirical band law (skip_high ~= 2*downsample(output)).
+    """
+    from tac.substrates.snerv_inverse_steg_carrier.inflate import _resize_nchw_bilinear
+
+    raw = np.fromfile(FRONTIER_RAW, dtype=np.uint8)
+    expected = N_FRAMES * CAMERA_H * CAMERA_W * 3
+    if raw.size != expected:
+        raise RuntimeError(
+            f"frontier raw size {raw.size} != expected {expected} "
+            f"({N_FRAMES}x{CAMERA_H}x{CAMERA_W}x3)"
+        )
+    frames = raw.reshape(N_FRAMES, CAMERA_H, CAMERA_W, 3).astype(np.float32)
+    nchw = np.ascontiguousarray(frames.transpose(0, 3, 1, 2))  # (1200,3,874,1164)
+    # Downsample camera-res directly to the skip_high grid (192x256). This IS the
+    # "DWT the frontier's rendered frames -> take ITS LL" (LL == lowpass downsample).
+    ll = _resize_nchw_bilinear(nchw, out_hw=(SKIP_HIGH_H, SKIP_HIGH_W))
+    skip_high = (BAND_SCALE * ll + BAND_BIAS).astype(np.float64)
+    return skip_high
+
+
+# --------------------------------------------------------------------------- #
+# Quantization ladder (reuse round-1 family on the frontier-LL band)
+# --------------------------------------------------------------------------- #
+def quant_identity(arr):
+    return arr.astype(np.float64, copy=True)
+
+
+def quant_fp16(arr):
+    return arr.astype(np.float16).astype(np.float64)
+
+
+def _uint_levels(arr, *, bits, per):
+    levels = (1 << bits) - 1
+    a = arr.astype(np.float64, copy=False)
+    if per == "global":
+        lo = float(a.min()); hi = float(a.max())
+        span = max(hi - lo, 1e-12)
+        codes = np.rint((a - lo) / span * levels)
+        return (codes / levels * span + lo).astype(np.float64)
+    if per == "frame":
+        lo = a.min(axis=(1, 2, 3), keepdims=True)
+        hi = a.max(axis=(1, 2, 3), keepdims=True)
+    else:
+        raise ValueError(per)
+    span = np.maximum(hi - lo, 1e-12)
+    codes = np.rint((a - lo) / span * levels)
+    return (codes / levels * span + lo).astype(np.float64)
+
+
+def quant_uint8_global(arr):
+    return _uint_levels(arr, bits=8, per="global")
+
+
+def quant_uint6_frame(arr):
+    return _uint_levels(arr, bits=6, per="frame")
+
+
+def quant_uint4_frame(arr):
+    return _uint_levels(arr, bits=4, per="frame")
+
+
+LADDER = [
+    ("S8_frontier_ll_float64", "frontier-LL skip_high, float64", quant_identity),
+    ("S8_frontier_ll_fp16", "frontier-LL skip_high, fp16", quant_fp16),
+    ("S8_frontier_ll_uint8_global", "frontier-LL skip_high, uint8 global", quant_uint8_global),
+    ("S8_frontier_ll_uint6_frame", "frontier-LL skip_high, uint6/frame", quant_uint6_frame),
+    ("S8_frontier_ll_uint4_frame", "frontier-LL skip_high, uint4/frame", quant_uint4_frame),
+]
+
+
+def reencode_decoder_payload(decoder_payload, new_skip_high):
+    from tac.substrates.snerv_inverse_steg_carrier import archive as A
+
+    header, comp = A._unpack_subpacket(
+        decoder_payload, magic=A.SNERV_DECODER_MAGIC,
+        schema=A.DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
+    )
+    raw = lzma.decompress(comp)
+    tensors = A._unpack_tensor_manifest(raw, header.get("tensor_manifest") or [])
+    tensors[SKIP_HIGH_NAME] = np.ascontiguousarray(new_skip_high, dtype=np.float64)
+    manifest, new_raw = A._pack_tensor_manifest(tensors)
+    new_comp = lzma.compress(
+        new_raw, format=lzma.FORMAT_XZ,
+        preset=A.DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_LZMA_PRESET,
+    )
+    new_header = dict(header)
+    new_header["tensor_manifest"] = manifest
+    new_header["tensor_count"] = len(manifest)
+    new_header["raw_tensor_bytes"] = len(new_raw)
+    new_header["raw_tensor_sha256"] = A._sha256(new_raw)
+    new_header["compressed_bytes"] = len(new_comp)
+    new_header["compressed_sha256"] = A._sha256(new_comp)
+    return A._pack_subpacket(A.SNERV_DECODER_MAGIC, new_header, new_comp)
+
+
+def rebuild_packet(orig_packet, new_decoder_payload):
+    from tac.substrates.snerv_inverse_steg_carrier import archive as A
+
+    decoded = A.unpack_snerv_archive(orig_packet)
+    sections = dict(decoded.sections)
+    sections["decoder_payload"] = new_decoder_payload
+    return A.pack_snerv_archive_snar2(
+        metadata_payload=sections["metadata_payload"],
+        lf_payload=sections["lf_payload"],
+        decoder_payload=sections["decoder_payload"],
+        step_map_packet=sections["step_map_packet"],
+        metadata=decoded.metadata,
+    ).packet
+
+
+def _zip_stored_bytes(packet):
+    import io
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as zf:
+        zf.writestr("x", packet)
+    return len(buf.getvalue())
+
+
+def score_packet(packet, n_pairs, source_pairs, posenet, segnet):
+    from tac.substrates.snerv_inverse_steg_carrier.archive import decode_snerv_archive_frames
+    from tac.substrates.snerv_inverse_steg_carrier.inflate import _resize_nchw_bilinear
+    from tac.analysis.inverse_steganalysis_linf_vs_l2_gate import measure_pairs_d_seg_d_pose_batched
+    import torch
+
+    t0 = time.time()
+    frames = decode_snerv_archive_frames(packet)
+    decode_s = time.time() - t0
+    arr = np.asarray(frames, dtype=np.float32)
+    if arr.ndim == 5 and arr.shape[1] == 2:
+        pairs_arr = arr
+    elif arr.ndim == 4 and arr.shape[0] % 2 == 0:
+        pairs_arr = arr.reshape(arr.shape[0] // 2, 2, *arr.shape[1:])
+    else:
+        raise RuntimeError(f"unexpected decoded frame shape {arr.shape}")
+    cam_h, cam_w = int(source_pairs.shape[-2]), int(source_pairs.shape[-1])
+    n = min(n_pairs, int(pairs_arr.shape[0]))
+    sel = pairs_arr[:n]
+    flat = sel.reshape(-1, 3, sel.shape[-2], sel.shape[-1])
+    resized = _resize_nchw_bilinear(flat, out_hw=(cam_h, cam_w))
+    u8 = np.rint(np.clip(resized, 0.0, 255.0)).astype(np.uint8)
+    recon_np = u8.astype(np.float32).reshape(n, 2, 3, cam_h, cam_w)
+    recon = torch.from_numpy(recon_np).to(source_pairs)
+    t1 = time.time()
+    dsegs, dposes = measure_pairs_d_seg_d_pose_batched(
+        posenet, segnet, source_pairs[:n], recon, batch_pairs=8
+    )
+    d_seg = float(np.mean(dsegs))
+    d_pose = float(np.mean(dposes))
+    return {
+        "decode_seconds": decode_s,
+        "score_seconds": time.time() - t1,
+        "n_pairs_scored": n,
+        "d_seg": d_seg,
+        "d_pose": d_pose,
+        "pose_score_term": float(np.sqrt(10.0 * max(d_pose, 0.0))),
+        "per_pair_d_seg_first8": [float(v) for v in dsegs[:8]],
+        "per_pair_d_pose_first8": [float(v) for v in dposes[:8]],
+    }
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--n-pairs", type=int, default=48)
+    ap.add_argument("--rungs", type=str, default="all")
+    args = ap.parse_args()
+
+    RUN_DIR.mkdir(parents=True, exist_ok=True)
+    out_path = RUN_DIR / "s8_compose_frontier.v1.json"
+
+    from tac.substrates.snerv_inverse_steg_carrier import archive as A
+
+    orig_packet = G1B_PACKET.read_bytes()
+    decoded = A.unpack_snerv_archive(orig_packet)
+    dp = decoded.sections["decoder_payload"]
+
+    # Build the frontier-LL skip_high band.
+    t_build = time.time()
+    sh_frontier = frontier_skip_high()
+    build_s = time.time() - t_build
+
+    from tac.analysis.score_exact_saliency import decode_real_pairs, load_score_exact_scorers
+
+    posenet, segnet = load_score_exact_scorers(
+        upstream_dir=str(REPO_ROOT / "upstream"), device="cpu"
+    )
+    source_pairs = decode_real_pairs(
+        str(REPO_ROOT / "upstream/videos/0.mkv"), args.n_pairs, pair_stride=1, start_pair=0
+    )
+
+    out = {
+        "schema": "snerv_branch_b_round2_s8_compose_frontier.v1",
+        "subagent_id": "snerv_branch_b_round2_20260610",
+        "utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "frontier_archive_path": str(FRONTIER_ARCHIVE),
+        "frontier_archive_sha256": FRONTIER_SHA,
+        "frontier_archive_bytes": FRONTIER_BYTES,
+        "frontier_score_contest_cpu": FRONTIER_SCORE_CONTEST_CPU,
+        "frontier_raw_path": str(FRONTIER_RAW),
+        "g1b_packet_path": str(G1B_PACKET),
+        "g1b_packet_sha256": _sha(orig_packet),
+        "g1b_packet_bytes": len(orig_packet),
+        "g1b_base_d_seg": G1B_BASE_D_SEG,
+        "g1b_base_pose_term": G1B_BASE_POSE_TERM,
+        "band_law": f"skip_high ~= {BAND_SCALE}*downsample(output) + {BAND_BIAS} (corr 1.0)",
+        "frontier_ll_skip_high_shape": list(sh_frontier.shape),
+        "frontier_ll_skip_high_stats": {
+            "min": float(sh_frontier.min()), "max": float(sh_frontier.max()),
+            "mean": float(sh_frontier.mean()), "std": float(sh_frontier.std()),
+        },
+        "build_skip_high_seconds": build_s,
+        "n_pairs_requested": args.n_pairs,
+        "contest_byte_price": CONTEST_BYTE_PRICE,
+        "guard_d_seg_max": GUARD_D_SEG_MAX,
+        "guard_pose_term_max": GUARD_POSE_TERM_MAX,
+        "frontier_target": 0.19199,
+        "rungs": [],
+        **FALSE_AUTHORITY,
+    }
+
+    want = (
+        [r[0] for r in LADDER] if args.rungs == "all"
+        else [s.strip() for s in args.rungs.split(",") if s.strip()]
+    )
+
+    for rid, label, fn in LADDER:
+        if rid not in want:
+            continue
+        t0 = time.time()
+        new_sh = fn(sh_frontier)
+        new_dp = reencode_decoder_payload(dp, new_sh)
+        new_pkt = rebuild_packet(orig_packet, new_dp)
+        pkt_bytes = len(new_pkt)
+        zbytes = _zip_stored_bytes(new_pkt)
+        sc = score_packet(new_pkt, args.n_pairs, source_pairs, posenet, segnet)
+        rate_pkt = CONTEST_BYTE_PRICE * pkt_bytes
+        rate_zip = CONTEST_BYTE_PRICE * zbytes
+        nonrate = 100.0 * sc["d_seg"] + sc["pose_score_term"]
+        total_pkt = nonrate + rate_pkt
+        d_seg_ok = sc["d_seg"] <= GUARD_D_SEG_MAX
+        pose_ok = sc["pose_score_term"] <= GUARD_POSE_TERM_MAX
+        row = {
+            "rung_id": rid,
+            "label": label,
+            "packet_bytes": pkt_bytes,
+            "archive_zip_bytes": zbytes,
+            "packet_sha256": _sha(new_pkt),
+            "rate_term_packet": rate_pkt,
+            "rate_term_archive_zip": rate_zip,
+            "d_seg": sc["d_seg"],
+            "d_pose": sc["d_pose"],
+            "pose_score_term": sc["pose_score_term"],
+            "nonrate_floor": nonrate,
+            "advisory_total_packet_rate": total_pkt,
+            "advisory_total_zip_rate": nonrate + rate_zip,
+            "delta_d_seg_vs_g1b": sc["d_seg"] - G1B_BASE_D_SEG,
+            "delta_pose_term_vs_g1b": sc["pose_score_term"] - G1B_BASE_POSE_TERM,
+            "gap_to_0.19199": total_pkt - 0.19199,
+            "nonrate_gap_to_0.19199": nonrate - 0.19199,
+            "bytes_vs_178KB_ratio": pkt_bytes / FRONTIER_BYTES,
+            "guard_d_seg_ok": d_seg_ok,
+            "guard_pose_term_ok": pose_ok,
+            "guard_pass": d_seg_ok and pose_ok,
+            "frontier_ll_satisfies_cone": d_seg_ok and pose_ok,
+            "per_pair_d_seg_first8": sc["per_pair_d_seg_first8"],
+            "per_pair_d_pose_first8": sc["per_pair_d_pose_first8"],
+            "decode_seconds": sc["decode_seconds"],
+            "score_seconds": sc["score_seconds"],
+            "rung_wall_seconds": time.time() - t0,
+            **FALSE_AUTHORITY,
+        }
+        out["rungs"].append(row)
+        out_path.write_text(json.dumps(out, indent=2, sort_keys=True))
+        print(
+            f"[s8] {rid:30s} bytes={pkt_bytes:>13,} ({pkt_bytes/FRONTIER_BYTES:7.1f}x 178KB)  "
+            f"d_seg={sc['d_seg']:.6f} pose_term={sc['pose_score_term']:.4f} "
+            f"nonrate={nonrate:.4f} total={total_pkt:9.3f} "
+            f"cone={'OK' if (d_seg_ok and pose_ok) else 'FAIL'}",
+            flush=True,
+        )
+
+    out["verdict"] = _verdict(out)
+    out_path.write_text(json.dumps(out, indent=2, sort_keys=True))
+    print("[s8] WROTE", out_path, flush=True)
+    return 0
+
+
+def _verdict(out):
+    rungs = out["rungs"]
+    if not rungs:
+        return {"note": "no rungs"}
+    cone_ok = [r for r in rungs if r["frontier_ll_satisfies_cone"]]
+    best = min(rungs, key=lambda r: r["advisory_total_packet_rate"])
+    return {
+        "frontier_ll_satisfies_cone": bool(cone_ok),
+        "best_total": best["advisory_total_packet_rate"],
+        "best_rung": best["rung_id"],
+        "best_nonrate_floor": best["nonrate_floor"],
+        "best_d_seg": best["d_seg"],
+        "best_pose_term": best["pose_score_term"],
+        "best_bytes": best["packet_bytes"],
+        "best_bytes_vs_178KB_ratio": best["packet_bytes"] / FRONTIER_BYTES,
+        "honest_comparison": (
+            "SNeRV-on-frontier-LL bytes must beat composing the frontier directly "
+            f"(178,493 B for 0.19199). best={best['packet_bytes']:,} B = "
+            f"{best['packet_bytes']/178493:.1f}x the frontier archive."
+        ),
+        "note": (
+            "If the SNeRV-on-frontier-LL nonrate floor approaches the frontier's "
+            "0.19199 AND bytes drop near 178KB, the 581MB problem collapses. If "
+            "bytes stay >>178KB (skip_high entropy dominates), the frontier should "
+            "be composed DIRECTLY (S8 is dominated by the frontier alone)."
+        ),
+    }
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,65 @@
+"""Where does the token stream's code length actually go? Hit sector vs miss sector.
+
+The shipped transport is rank-one: it learns the HIT probability q and leaves the
+relative law INSIDE the miss sector exactly as the neural prior wrote it.  So the
+miss sector is entirely un-adapted.  If a large share of the bits is spent there,
+that is untouched headroom; if it is small, the mixer axis is the whole game.
+"""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, "/Users/adpena/Projects/pact")
+sys.path.insert(0, "/Volumes/APDataStore/pact/ddm_me1")
+
+import numpy as np
+from assets import ASSETS
+from tac.micro_edit.coder_replay import (
+    HPAC_LOGIT_PRECISION, NUM_CLASSES, PLANE, _frame_probabilities, _group_positions,
+)
+
+table = np.load(ASSETS.table_values_npy).astype(np.float32)
+group_index = np.fromfile(ASSETS.group_index_u8, dtype=np.uint8).astype(np.int64)
+_group_positions(group_index)
+logits = np.memmap(ASSETS.logits_i16, dtype=np.int16, mode="r")
+tokens = np.memmap(ASSETS.tokens_u8, dtype=np.uint8, mode="r")
+boundary_all = np.memmap(ASSETS.boundary_u8, dtype=np.uint8, mode="r")
+
+hit_bits = miss_bits = 0.0
+hit_n = miss_n = 0
+# Of the miss bits, how many are spent choosing WHICH wrong class (the un-adapted part)?
+within_miss_bits = 0.0
+
+for frame in range(600):
+    base = (
+        np.asarray(logits[frame * PLANE * NUM_CLASSES : (frame + 1) * PLANE * NUM_CLASSES])
+        .reshape(PLANE, NUM_CLASSES).astype(np.float32) / HPAC_LOGIT_PRECISION
+    )
+    boundary = np.asarray(boundary_all[frame * PLANE : (frame + 1) * PLANE])
+    token = np.asarray(tokens[frame * PLANE : (frame + 1) * PLANE]).astype(np.int64)
+    p = _frame_probabilities(base, boundary, table).astype(np.float64)
+    arg = p.argmax(axis=1)
+    idx = np.arange(PLANE)
+    chosen = np.maximum(p[idx, token], 1e-300)
+    bits = -np.log2(chosen)
+    hit = token == arg
+    hit_bits += float(bits[hit].sum()); hit_n += int(hit.sum())
+    miss_bits += float(bits[~hit].sum()); miss_n += int((~hit).sum())
+    # split a miss into  -log2(P(miss))  +  -log2(P(c) / P(miss))
+    p_max = p[idx, arg]
+    one_minus = np.maximum(1.0 - p_max, 1e-300)
+    within_miss_bits += float((-np.log2(np.maximum(chosen[~hit] / one_minus[~hit], 1e-300))).sum())
+
+total = hit_bits + miss_bits
+print(f"positions        {hit_n + miss_n:,}")
+print(f"hit  positions   {hit_n:12,}  ({100*hit_n/(hit_n+miss_n):6.3f}%)")
+print(f"miss positions   {miss_n:12,}  ({100*miss_n/(hit_n+miss_n):6.3f}%)")
+print()
+print(f"total bits       {total:15.2f}  = {total/8:12.2f} B")
+print(f"hit  bits        {hit_bits:15.2f}  = {hit_bits/8:12.2f} B   ({100*hit_bits/total:6.3f}%)")
+print(f"miss bits        {miss_bits:15.2f}  = {miss_bits/8:12.2f} B   ({100*miss_bits/total:6.3f}%)")
+print()
+print("miss bits split:")
+print(f"  cost of BEING a miss (adapted by the transport)   {miss_bits - within_miss_bits:12.2f} bits"
+      f" = {(miss_bits-within_miss_bits)/8:10.2f} B")
+print(f"  cost of WHICH class, given a miss (UN-adapted)    {within_miss_bits:12.2f} bits"
+      f" = {within_miss_bits/8:10.2f} B  <-- untouched headroom")

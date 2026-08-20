@@ -1,0 +1,65 @@
+"""R1: which spatial neighbours are ALREADY DECODED under the 190-group wavefront?
+
+fx1's `_spatial_level` uses left+up only, guarded at runtime by `self.known[]`.
+hx1's finding is that a group-index wavefront can make below/right causal too.
+This measures it directly: neighbour n of position p is causal iff
+group_index[n] < group_index[p].  Exact, no assumption.
+"""
+import sys
+sys.path.insert(0, "/Users/adpena/Projects/pact")
+sys.path.insert(0, "/Volumes/APDataStore/pact/ddm_me1")
+import json
+import numpy as np
+from assets import ASSETS
+
+H, W = 384, 512
+gi = np.fromfile(ASSETS.group_index_u8, dtype=np.uint8).astype(np.int64).reshape(H, W)
+print(f"group index: {gi.min()}..{gi.max()}  ({gi.max()-gi.min()+1} groups)  plane {H}x{W}")
+# group membership sizes
+sizes = np.bincount(gi.reshape(-1))
+print(f"group sizes: min {sizes[sizes>0].min()} max {sizes.max()} mean {sizes[sizes>0].mean():.1f} nonzero {int((sizes>0).sum())}")
+
+# What is the group rule?  Probe hx1's hypothesis g = (x&63) + 2*(y&63) style forms.
+x = np.tile(np.arange(W), (H, 1))
+y = np.tile(np.arange(H).reshape(-1, 1), (1, W))
+for name, cand in [
+    ("(x%8)+8*(y%8)", (x % 8) + 8 * (y % 8)),
+    ("(x%16)+16*(y%16)", (x % 16) + 16 * (y % 16)),
+    ("(x+2y)%190", (x + 2 * y) % 190),
+    ("(x&63)+2*(y&63)", (x & 63) + 2 * (y & 63)),
+    ("x%190", x % 190),
+    ("(x+y)%190", (x + y) % 190),
+]:
+    # is gi a bijective function of cand?
+    ok = True
+    pairs = {}
+    flat_c = cand.reshape(-1); flat_g = gi.reshape(-1)
+    for c, g in zip(flat_c[::997], flat_g[::997]):
+        if c in pairs and pairs[c] != g:
+            ok = False; break
+        pairs[c] = g
+    print(f"  candidate {name:22s} consistent-with-group-index={ok}")
+
+rows = []
+for dy in range(-3, 4):
+    for dx in range(-3, 4):
+        if dx == 0 and dy == 0:
+            continue
+        ny, nx = y + dy, x + dx
+        inside = (ny >= 0) & (ny < H) & (nx >= 0) & (nx < W)
+        nyc = np.clip(ny, 0, H - 1); nxc = np.clip(nx, 0, W - 1)
+        causal = inside & (gi[nyc, nxc] < gi)
+        frac_all = float(causal.mean())
+        frac_inside = float(causal.sum()) / float(inside.sum())
+        rows.append({"dx": int(dx), "dy": int(dy),
+                     "causal_frac_of_plane": frac_all,
+                     "causal_frac_of_in_bounds": frac_inside})
+
+rows.sort(key=lambda r: -r["causal_frac_of_in_bounds"])
+print("\n dx  dy   causal(in-bounds)   causal(plane)")
+for r in rows:
+    mark = " <-- fx1 uses" if (r["dx"], r["dy"]) in [(-1, 0), (0, -1)] else ""
+    print(f"{r['dx']:+3d} {r['dy']:+3d}   {r['causal_frac_of_in_bounds']*100:9.4f}%   {r['causal_frac_of_plane']*100:9.4f}%{mark}")
+
+out = {"n_groups": int(gi.max() - gi.min() + 1), "offsets": rows}
+open("/Volumes/APDataStore/pact/ddm_fx2/probe/r1_scan_order.json", "w").write(json.dumps(out, indent=2))

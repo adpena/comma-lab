@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""Break down per-step cost: GPU forward vs logits transfer vs CPU coding."""
+import time
+
+import numpy as np
+import torch
+import constriction
+
+import codec
+
+B = 40
+model = codec.load_model()
+lock = codec.LockstepModel(model, B, compile_step=True)
+
+tok = torch.full((B, 1), 5, device='cuda', dtype=torch.long)
+
+# mimic the real loop: a prefill (eager) followed by compiled steps, twice,
+# to expose cudagraph invalidation from interleaved eager prefills
+ctx = codec.segments_to_seqs([np.zeros((1200, 8, 16), dtype=np.int64)])[:, :1936]
+ctx_t = torch.from_numpy(np.repeat(ctx, B, axis=0)).cuda()
+
+for round_ in range(2):
+  lock.prefill(ctx_t, 0)
+  # warmup steps after prefill
+  for i in range(30):
+    logits = lock.step(tok, 1936 + i)
+  torch.cuda.synchronize()
+
+  n = 100
+  t0 = time.time()
+  for i in range(n):
+    logits = lock.step(tok, 1966 + i)
+  torch.cuda.synchronize()
+  gpu_ms = (time.time() - t0) / n * 1000
+
+  t0 = time.time()
+  for i in range(n):
+    logits = lock.step(tok, 1966 + i)
+    lf = logits.cpu().numpy()
+  torch.cuda.synchronize()
+  gpu_xfer_ms = (time.time() - t0) / n * 1000
+
+  probs = codec.softmax_probs(lf)
+  t0 = time.time()
+  for i in range(n):
+    p = codec.softmax_probs(lf)
+  sm_ms = (time.time() - t0) / n * 1000
+
+  enc = [constriction.stream.queue.RangeEncoder() for _ in range(B)]
+  t0 = time.time()
+  for i in range(n):
+    for b in range(B):
+      m = constriction.stream.model.Categorical(probs[b], perfect=False)
+      enc[b].encode(np.array([7], dtype=np.int32), m)
+  cat_ms = (time.time() - t0) / n * 1000
+
+  print(f'round {round_}: gpu {gpu_ms:.2f}ms  +xfer {gpu_xfer_ms:.2f}ms  '
+        f'softmax {sm_ms:.2f}ms  categorical+encode {cat_ms:.2f}ms  '
+        f'total {gpu_xfer_ms + sm_ms + cat_ms:.2f}ms', flush=True)

@@ -1,0 +1,209 @@
+#!/usr/bin/env python3
+"""Independently audit DDM HP4 retained artifacts and split the predictor verdict."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import zipfile
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_hp4/retained")
+RESULT = ROOT / "FINAL_RESULT.json"
+BASE_BYTES = 186_252
+RATE_DENOMINATOR = 37_545_489
+
+
+def sha256_file(path: Path) -> str:
+    with path.open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def record(path: Path) -> dict[str, Any]:
+    return {
+        "path": str(path.resolve()),
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+    }
+
+
+def atomic_json(path: Path, value: Any) -> None:
+    payload = (json.dumps(value, indent=2, sort_keys=True) + "\n").encode()
+    if path.exists():
+        if path.read_bytes() != payload:
+            raise RuntimeError(f"existing audit artifact differs: {path}")
+        return
+    temporary = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    with temporary.open("xb") as stream:
+        stream.write(payload)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, path)
+
+
+def verify_zip(archive_path: Path, member_path: Path) -> None:
+    with zipfile.ZipFile(archive_path) as archive:
+        infos = archive.infolist()
+        if len(infos) != 1 or infos[0].filename != "p":
+            raise RuntimeError(f"invalid archive members: {archive_path}")
+        if archive.read("p") != member_path.read_bytes() or archive.testzip() is not None:
+            raise RuntimeError(f"archive member/CRC differs: {archive_path}")
+
+
+def main() -> None:
+    result = json.loads(RESULT.read_text())
+    rows = result["candidate_rows"]
+    if len(rows) != 36:
+        raise RuntimeError("candidate denominator differs")
+    verified_artifact_records = 0
+    for row in rows:
+        artifacts = row["artifacts"]
+        for expected in artifacts.values():
+            actual = record(Path(expected["path"]))
+            if actual != expected:
+                raise RuntimeError(f"artifact pin differs: {expected['path']}")
+            verified_artifact_records += 1
+        if Path(artifacts["archive"]["path"]).read_bytes() != Path(artifacts["archive_repeat"]["path"]).read_bytes():
+            raise RuntimeError(f"archive repeat differs: {row['candidate']}")
+        if Path(artifacts["payload"]["path"]).read_bytes() != Path(artifacts["payload_repeat"]["path"]).read_bytes():
+            raise RuntimeError(f"coder repeat differs: {row['candidate']}")
+        if Path(artifacts["model"]["path"]).read_bytes() != Path(artifacts["model_repeat"]["path"]).read_bytes():
+            raise RuntimeError(f"model repeat differs: {row['candidate']}")
+        verify_zip(Path(artifacts["archive"]["path"]), Path(artifacts["member"]["path"]))
+        if row["delta_bytes_vs_cp135"] != artifacts["archive"]["bytes"] - BASE_BYTES:
+            raise RuntimeError(f"complete-container delta differs: {row['candidate']}")
+
+    def by_archive(row: dict[str, Any]) -> tuple[int, str]:
+        return row["artifacts"]["archive"]["bytes"], row["candidate"]
+
+    best_overall = min(rows, key=by_archive)
+    best_predictive = min((row for row in rows if row["predictor"] != "order0"), key=by_archive)
+    best_state = min((row for row in rows if row["predictor"].startswith("state_")), key=by_archive)
+    best_ar1 = min((row for row in rows if row["predictor"] == "ar1"), key=by_archive)
+    best_ar2 = min((row for row in rows if row["predictor"] == "ar2"), key=by_archive)
+
+    parameter_nonzeros = {}
+    for predictor in ("state_pose", "state_partition", "state_joint"):
+        path = ROOT / "predictors" / predictor / "parameters.bin"
+        parameters = np.frombuffer(path.read_bytes(), dtype=np.int8)
+        parameter_nonzeros[predictor] = {
+            "parameters": record(path),
+            "nonzero": int(np.count_nonzero(parameters)),
+            "denominator": int(parameters.size),
+        }
+
+    old_manifest = json.loads((ROOT / "ARTIFACT_MANIFEST.json").read_text())
+    old_manifest_mismatches = []
+    for item in old_manifest["files"]:
+        path = Path(item["path"])
+        actual = record(path)
+        if actual != {key: item[key] for key in ("path", "bytes", "sha256")}:
+            old_manifest_mismatches.append(
+                {
+                    "relative_path": item["relative_path"],
+                    "recorded": {key: item[key] for key in ("bytes", "sha256")},
+                    "actual": {key: actual[key] for key in ("bytes", "sha256")},
+                }
+            )
+    if [row["relative_path"] for row in old_manifest_mismatches] != ["run/main.safe_run.json"]:
+        raise RuntimeError(f"unexpected first-manifest mismatch: {old_manifest_mismatches}")
+
+    def summary(row: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "candidate": row["candidate"],
+            "predictor": row["predictor"],
+            "codec": row["codec"],
+            "archive": row["artifacts"]["archive"],
+            "delta_bytes_vs_cp135": row["delta_bytes_vs_cp135"],
+            "derived_rate_score_delta": 25.0 * row["delta_bytes_vs_cp135"] / RATE_DENOMINATOR,
+            "embedding_payload_bytes": row["artifacts"]["payload"]["bytes"],
+            "charged_predictor_parameter_bytes": row["artifacts"]["parameters"]["bytes"],
+        }
+
+    audit = {
+        "schema": "ddm_hp4_final_custody_receipt.v1",
+        "axis": result["axis"],
+        "score_claim": False,
+        "candidate_denominator": len(rows),
+        "verified_artifact_record_denominator": verified_artifact_records,
+        "all_candidate_records_match": True,
+        "all_archive_repeats_byte_identical": True,
+        "all_coder_repeats_byte_identical": True,
+        "all_model_repeats_byte_identical": True,
+        "all_zip_members_match_retained_p": True,
+        "current_coded_size": result["current_coded_size"],
+        "best_overall": summary(best_overall),
+        "best_predictive": summary(best_predictive),
+        "best_state": summary(best_state),
+        "best_ar1": summary(best_ar1),
+        "best_ar2": summary(best_ar2),
+        "parameter_nonzeros": parameter_nonzeros,
+        "corrected_adjudication": {
+            "state_predictability_hypothesis": "CLOSED_COMPLETE_CONTAINER_DELTA_POSITIVE",
+            "state_predictability_verdict_scope": (
+                "FORMULATION: AR1, AR2, counted-carrier integer features, previous decoded-partition "
+                "histogram features, and their fitted joint int4 form on the pinned CP135 HP3-step2 embedding"
+            ),
+            "best_predictive_delta_bytes": best_predictive["delta_bytes_vs_cp135"],
+            "order0_repack": "SURVIVES_COMPLETE_CONTAINER_BYTE_WIN",
+            "order0_repack_is_evidence_of_state_predictability": False,
+            "order0_delta_bytes": best_overall["delta_bytes_vs_cp135"],
+            "reason": (
+                "The aggregate runner includes order0 in its broad formulation verdict. The only negative "
+                "delta is order0 Brotli-q11, which uses no decoded state. Every causal state predictor grows "
+                "the complete archive, so the charter hypothesis is not supported."
+            ),
+        },
+        "first_manifest_disposition": {
+            "status": "SUPERSEDED_ONLY_FOR_MUTABLE_SAFE_RUN_RECEIPT",
+            "path": str((ROOT / "ARTIFACT_MANIFEST.json").resolve()),
+            "mismatches": old_manifest_mismatches,
+            "reason": (
+                "safe_run finalized its status receipt after the child generated the first manifest; no "
+                "candidate or measurement artifact changed"
+            ),
+        },
+        "boundaries": result["boundaries"],
+    }
+    receipt_path = ROOT / "FINAL_CUSTODY_RECEIPT.json"
+    atomic_json(receipt_path, audit)
+
+    excluded_names = {"ARTIFACT_MANIFEST.json", "FINAL_IMMUTABLE_MANIFEST.json"}
+    files = []
+    for path in sorted(candidate for candidate in ROOT.rglob("*") if candidate.is_file()):
+        relative = path.relative_to(ROOT)
+        if relative.parts[0] == "run" or path.name in excluded_names:
+            continue
+        files.append({"relative_path": relative.as_posix(), **record(path)})
+    manifest = {
+        "schema": "ddm_hp4_final_immutable_manifest.v1",
+        "root": str(ROOT.resolve()),
+        "exclusions": [
+            "run/** mutable safe_run telemetry",
+            "ARTIFACT_MANIFEST.json superseded first manifest",
+            "FINAL_IMMUTABLE_MANIFEST.json self",
+        ],
+        "file_denominator": len(files),
+        "files": files,
+    }
+    manifest_path = ROOT / "FINAL_IMMUTABLE_MANIFEST.json"
+    atomic_json(manifest_path, manifest)
+    print(
+        json.dumps(
+            {
+                "receipt": record(receipt_path),
+                "manifest": record(manifest_path),
+                "best_overall": summary(best_overall),
+                "best_predictive": summary(best_predictive),
+            },
+            sort_keys=True,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()

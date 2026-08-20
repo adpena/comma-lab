@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+"""Assemble the submission zip from encoded/batch_*.npz.
+
+Zip contents: decompress.py (deflated), manifest.npz, payload.bin (stored —
+range-coded data is incompressible). Prints the official score:
+raw_bytes / zip_bytes with raw = N * 1200 * 128 * 10 / 8.
+"""
+import argparse
+import zipfile
+from pathlib import Path
+
+import numpy as np
+
+
+def main():
+  ap = argparse.ArgumentParser()
+  ap.add_argument('--encoded', default='encoded')
+  ap.add_argument('--batch', type=int, default=40)
+  ap.add_argument('--stride', type=int, default=10)
+  ap.add_argument('--compiled', type=int, default=0)
+  ap.add_argument('--out', default='compression_challenge_submission.zip')
+  args = ap.parse_args()
+
+  here = Path(__file__).resolve().parent
+  batches = sorted((here / args.encoded).glob('batch_*.npz'))
+  names, lens, words = [], [], []
+  for p in batches:
+    z = np.load(p, allow_pickle=False)
+    names.extend([str(n) for n in z['names']])
+    lens.extend(z['lens'].tolist())
+    words.append(z['words'])
+  assert names == sorted(names), 'batches must cover names in sorted order'
+  words = np.concatenate(words).astype(np.uint32)
+
+  man_path = here / 'manifest.npz'
+  # names are recovered from the dataset at decode time (baseline precedent);
+  # storing them here would cost ~95KB deflated (-0.0016 score)
+  np.savez(man_path, lens=np.array(lens, dtype=np.uint32),
+           batch=args.batch, stride=args.stride, compiled=args.compiled)
+  payload_path = here / 'payload.bin'
+  words.tofile(payload_path)
+
+  out = here / args.out
+  with zipfile.ZipFile(out, 'w') as zf:
+    zf.write(here / 'submission_decompress.py', 'decompress.py',
+             compress_type=zipfile.ZIP_DEFLATED)
+    zf.write(man_path, 'manifest.npz', compress_type=zipfile.ZIP_DEFLATED)
+    zf.write(payload_path, 'payload.bin', compress_type=zipfile.ZIP_STORED)
+
+  raw = len(names) * 1200 * 128 * 10 / 8
+  size = out.stat().st_size
+  print(f'{len(names)} segments, zip {size/1e6:.1f} MB')
+  print(f'score: {raw / size:.4f}  (bits/tok {size * 8 / (len(names)*1200*128):.4f})')
+
+
+if __name__ == '__main__':
+  main()

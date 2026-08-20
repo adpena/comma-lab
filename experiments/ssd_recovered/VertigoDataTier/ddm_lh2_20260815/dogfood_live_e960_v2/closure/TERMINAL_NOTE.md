@@ -1,0 +1,1 @@
+PUSH NOTIFICATION: local HPAC endpoint closer status=SOURCE_FAILED for /Volumes/APDataStore/pact/ddm_rx2_current_mc36_label_hpac/gpu_race/full_e480b_e960. No downstream chain was emitted. The closer launched no paid or scorer work.

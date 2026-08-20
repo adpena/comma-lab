@@ -1,0 +1,35 @@
+#!/usr/bin/env zsh
+set -u
+cd /Volumes/VertigoDataTier/pact/worktrees/pact-main-guardrails-20260602
+LOG_DIR="/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/tmux_logs_20260602T0148Z"
+RUN_DIR="/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/run_20260602T0148Z"
+echo "START_UTC=$(date -u +%Y%m%dT%H%M%SZ)" > "$LOG_DIR/runner.lifecycle"
+PYTHONPATH="$PWD/src:$PWD" TAC_UPSTREAM_DIR="/Users/adpena/Projects/pact/upstream" PYTHONHASHSEED=0 /Users/adpena/Projects/pact/.venv/bin/python tools/run_compact_renderer_mlx_spine_runner.py \
+  --execute-family pact_nerv_vq \
+  --output-dir "$RUN_DIR" \
+  --repo-root "$PWD" \
+  --upstream-dir /Users/adpena/Projects/pact/upstream \
+  --num-pairs 600 \
+  --epochs 2000 \
+  --batch-pairs 4 \
+  --compact-latent-dim 8 \
+  --compact-embed-dim 16 \
+  --compact-codebook-size 32 \
+  --compact-decoder-channel 32 \
+  --compact-decoder-codec int2_scale_bundled \
+  --segnet-distillation-weight 0.05 \
+  --pose-distillation-weight 0.0005 \
+  --segnet-distillation-objective boundary_argmax_hinge \
+  --segnet-hinge-margin 1.0 \
+  --coder-aware-qat \
+  --coder-qat-quant-bits 4 \
+  --hard-byte-ceiling 178000 \
+  --hard-byte-ceiling 216000 \
+  --hard-byte-ceiling 285000 \
+  --skip-local-cpu-replay \
+  > "$LOG_DIR/runner.stdout.log" 2> "$LOG_DIR/runner.stderr.log"
+RC=$?
+echo "$RC" > "$LOG_DIR/runner.exit_code"
+echo "END_UTC=$(date -u +%Y%m%dT%H%M%SZ)" >> "$LOG_DIR/runner.lifecycle"
+echo "RC=$RC" >> "$LOG_DIR/runner.lifecycle"
+exit "$RC"

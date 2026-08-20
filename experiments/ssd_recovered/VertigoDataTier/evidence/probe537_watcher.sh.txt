@@ -1,0 +1,21 @@
+#!/bin/bash
+R=/Volumes/VertigoDataTier/pact/evidence/probe537_metal_20260719_receipt.json
+L=/Volumes/VertigoDataTier/pact/evidence/probe537_metal_20260719_launch
+W=/Volumes/VertigoDataTier/pact/evidence/probe537_watch.log
+while true; do
+  if [ -f "$R" ]; then
+    AP=$(/usr/bin/python3 -c "import json;print(json.load(open('$R')).get('all_pass'))" 2>/dev/null || echo parse-failed)
+    echo "DONE probe537 receipt all_pass=$AP $(date -u +%H:%M:%S)" >> "$W"; break
+  fi
+  if ! kill -0 92681 2>/dev/null; then
+    sleep 5
+    if [ -f "$R" ]; then
+      AP=$(/usr/bin/python3 -c "import json;print(json.load(open('$R')).get('all_pass'))" 2>/dev/null)
+      echo "DONE probe537 receipt-post-exit all_pass=$AP $(date -u +%H:%M:%S)" >> "$W"
+    else
+      echo "DONE probe537 DIED-no-receipt logtail: $(tail -3 "$L/run.log" 2>/dev/null | tr '\n' ' ' | cut -c1-250)" >> "$W"
+    fi
+    break
+  fi
+  sleep 20
+done

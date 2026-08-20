@@ -1,0 +1,12 @@
+#!/bin/bash
+ROOT=/Volumes/VertigoDataTier/pact/evidence/c1_two_plane_receiver_20260719
+cd /Users/adpena/Projects/pact
+for i in $(seq 1 60); do
+  [ -f "$ROOT/prepare_receipt.json" ] && break
+  .venv/bin/python tools/measure_v10_two_plane_receiver_timing.py prepare \
+    --receipt "$ROOT/prepare_receipt.json" --resume >> "$ROOT/prepare_loop.log" 2>&1
+  rc=$?
+  echo "$(date -u +%H:%M:%SZ) pass $i rc=$rc chunks=$(ls "$ROOT"/prepare_chunks/*.manifest.json 2>/dev/null | wc -l | tr -d ' ')" >> "$ROOT/prepare_loop.log"
+  [ $rc -eq 0 ] && break
+done
+echo "PREPARE_LOOP_DONE rc=$rc $(date -u +%H:%M:%SZ)" >> "$ROOT/prepare_loop.log"

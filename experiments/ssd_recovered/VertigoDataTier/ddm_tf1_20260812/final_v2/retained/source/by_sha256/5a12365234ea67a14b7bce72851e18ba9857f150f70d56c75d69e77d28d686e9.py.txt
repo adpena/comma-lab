@@ -1,0 +1,736 @@
+#!/usr/bin/env python
+# SPDX-License-Identifier: MIT
+"""TF1 n600 partition-worldsheet innovation floor with retained real-coder payloads.
+
+This is a scorer-free description measurement over the cached frozen-SegNet
+``lstars``.  It compares an exact per-frame partition description with exact
+conditional descriptions under identity transport and the existing stratified
+pose-conditioned screw predictor.  Every raw field and every Brotli-q11,
+LZMA1-raw, and SMEVR payload is retained.  The tool never reports these coder
+lengths as contest scores: they are class- and representation-scoped achievable
+code lengths for the semantic partition.
+
+The physical input is the receiver-carried 600x6 float16 PoseNet target stream
+from ``pose_warp.stp``.  The cp135/lc2 12-D photometric carrier coefficients are
+recorded as current-vehicle custody but are deliberately not renamed as SE(3)
+twists.  Three previously measured global calibration scalars map the learned
+six-vector to the existing label-space ground homography.
+
+P0 retention and resume contract:
+
+* materialization checkpoints after each predictor field;
+* coder checkpoints after every retained payload;
+* deterministic, atomic ``state.json`` writes;
+* no cleanup or payload deletion;
+* restart validates SHA-256 before reusing any stage artifact.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+import os
+import shutil
+import struct
+import sys
+import time
+from pathlib import Path
+from typing import Any, Final
+
+import brotli
+import numpy as np
+
+REPO: Final = Path(__file__).resolve().parents[1]
+for _path in (REPO, REPO / "src", REPO / "experiments", REPO / "tools"):
+    if str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
+
+import ddm_bd1_class_field_receiver as bd1
+import temporal_advection_stratified_measure as temporal
+
+CLASS_NAMES: Final = ("Road", "Lane", "Undrivable", "Movable", "MyCar")
+PREDICTORS: Final = ("intra", "persist", "xi_screw")
+CODERS: Final = ("brotli-q11", "lzma1-raw", "smevr-r7-nibble")
+HYBRID_CODER: Final = "per-class-best"
+FULL_CODERS: Final = (*CODERS, HYBRID_CODER)
+PREDICTOR_IDS: Final = {name: index for index, name in enumerate(PREDICTORS)}
+CODER_IDS: Final = {name: index for index, name in enumerate(CODERS)}
+HYBRID_CODER_ID: Final = 255
+PARTITION_MAGIC: Final = b"TF1PART1"
+PARTITION_HEADER: Final = struct.Struct("<8sBBBBHHI")
+PARTITION_ENTRY: Final = struct.Struct("<BI")
+PARTITION_ENTRY_V2: Final = struct.Struct("<BBI")
+POSE_MAGIC: Final = b"PFS1WPB1"
+RECORD_BITS: Final = 384 * 512
+RECORD_BYTES: Final = RECORD_BITS // 8
+MIN_FREE_BYTES: Final = 3 * 1024**3
+DEFAULT_RUN_DIR: Final = Path("/Volumes/VertigoDataTier/pact/ddm_tf1_20260812")
+DEFAULT_GT_CACHE: Final = REPO / "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
+DEFAULT_CALIBRATION: Final = (
+    REPO / "experiments/results/temporal_advection_stratified_n600_20260715/results.json"
+)
+DEFAULT_POSE_STREAM: Final = (
+    Path("/Volumes/VertigoDataTier/pact/ddm_ep2_20260731/gr1_eval/smoke/arch/state/pose_warp.stp")
+)
+DEFAULT_CP135_ARCHIVE: Final = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_cp135_20260810/retained/candidates/"
+    "hp3_step2/split_brotli_per_section_opt_cap1_metadata__rc64/archive.zip"
+)
+DEFAULT_LC2_CARRIER: Final = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_lc2_20260810/retained/inputs/carrier.raw"
+)
+
+
+class TF1Error(RuntimeError):
+    """Fail-closed TF1 contract violation."""
+
+
+def sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(8 * 1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def artifact(path: Path) -> dict[str, Any]:
+    return {"path": str(path), "bytes": path.stat().st_size, "sha256": sha256_file(path)}
+
+
+def atomic_json(path: Path, value: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    partial = path.with_name(path.name + ".partial")
+    partial.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+    os.replace(partial, path)
+
+
+def atomic_bytes(path: Path, payload: bytes) -> dict[str, Any]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    partial = path.with_name(path.name + ".partial")
+    partial.write_bytes(payload)
+    os.replace(partial, path)
+    return artifact(path)
+
+
+def verify_artifact(row: dict[str, Any]) -> Path:
+    path = Path(row["path"])
+    if not path.is_file():
+        raise TF1Error(f"missing resumable artifact: {path}")
+    current = artifact(path)
+    if current["bytes"] != row["bytes"] or current["sha256"] != row["sha256"]:
+        raise TF1Error(f"resumable artifact drifted: {path}")
+    return path
+
+
+def load_state(path: Path) -> dict[str, Any]:
+    if path.exists():
+        state = json.loads(path.read_text())
+        if state.get("schema") != "ddm_tf1_state.v1":
+            raise TF1Error("state schema differs")
+        return state
+    return {
+        "schema": "ddm_tf1_state.v1",
+        "created_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "completed_stages": [],
+        "inputs": {},
+        "streams": {},
+        "full_vehicle": {},
+    }
+
+
+def save_state(path: Path, state: dict[str, Any], stage: str | None = None) -> None:
+    if stage is not None and stage not in state["completed_stages"]:
+        state["completed_stages"].append(stage)
+    state["updated_at_utc"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    atomic_json(path, state)
+
+
+def parse_pose_stream(path: Path) -> tuple[np.ndarray, dict[str, Any]]:
+    payload = path.read_bytes()
+    if payload[:8] != POSE_MAGIC:
+        raise TF1Error("pose_warp.stp magic differs")
+    off = 8
+    (n_pairs,) = struct.unpack_from("<I", payload, off)
+    off += 4
+    (pose_length,) = struct.unpack_from("<I", payload, off)
+    off += 4
+    pose_coded = payload[off : off + pose_length]
+    off += pose_length
+    (selector_length,) = struct.unpack_from("<I", payload, off)
+    off += 4
+    selector_coded = payload[off : off + selector_length]
+    off += selector_length
+    if off != len(payload):
+        raise TF1Error("pose_warp.stp has trailing or truncated bytes")
+    pose_raw = brotli.decompress(pose_coded)
+    expected = int(n_pairs) * 6 * np.dtype(np.float16).itemsize
+    if len(pose_raw) != expected:
+        raise TF1Error("pose target stream length differs")
+    pose = np.frombuffer(pose_raw, dtype=np.float16).reshape(int(n_pairs), 6).astype(np.float64)
+    return pose, {
+        "container": artifact(path),
+        "n_pairs": int(n_pairs),
+        "pose_coded_bytes": len(pose_coded),
+        "pose_coded_sha256": sha256_bytes(pose_coded),
+        "pose_raw_bytes": len(pose_raw),
+        "pose_raw_sha256": sha256_bytes(pose_raw),
+        "selector_coded_bytes": len(selector_coded),
+        "selector_coded_sha256": sha256_bytes(selector_coded),
+    }
+
+
+def predictor_labels(
+    predictor: str,
+    previous: np.ndarray,
+    pose: np.ndarray,
+    *,
+    K: np.ndarray,
+    Kinv: np.ndarray,
+    target_grid: np.ndarray,
+    params: tuple[float, float, float],
+) -> np.ndarray:
+    if predictor == "intra":
+        return np.full(previous.shape, 255, dtype=np.uint8)
+    if predictor == "persist":
+        return previous
+    if predictor == "xi_screw":
+        return temporal.predict_screw(previous, pose, K, Kinv, target_grid, params)
+    raise TF1Error(f"unknown predictor {predictor!r}")
+
+
+def pack_mask(mask: np.ndarray) -> bytes:
+    if mask.shape != (384, 512):
+        raise TF1Error(f"mask geometry differs: {mask.shape}")
+    return np.packbits(np.asarray(mask, dtype=np.uint8), bitorder="big").tobytes()
+
+
+def unpack_mask(record: bytes) -> np.ndarray:
+    if len(record) != RECORD_BYTES:
+        raise TF1Error(f"record has {len(record)} bytes, expected {RECORD_BYTES}")
+    bits = np.unpackbits(np.frombuffer(record, dtype=np.uint8), bitorder="big")
+    return bits.reshape(384, 512).astype(bool)
+
+
+def records_from_raw(raw: bytes, n_pairs: int) -> list[bytes]:
+    if len(raw) != n_pairs * RECORD_BYTES:
+        raise TF1Error("raw field length differs")
+    return [raw[index * RECORD_BYTES : (index + 1) * RECORD_BYTES] for index in range(n_pairs)]
+
+
+def materialize_predictor_fields(
+    *,
+    predictor: str,
+    labels: np.ndarray,
+    poses: np.ndarray,
+    params: tuple[float, float, float],
+    out_dir: Path,
+) -> dict[str, dict[str, Any]]:
+    n_pairs, height, width = labels.shape
+    K = temporal.MW.intrinsics_at(width, height)
+    Kinv = np.linalg.inv(K)
+    target_grid = temporal.MW._target_grid(height, width)
+    class_paths = [out_dir / predictor / f"{index}_{name}.packbits.bin" for index, name in enumerate(CLASS_NAMES)]
+    partials = [path.with_name(path.name + ".partial") for path in class_paths]
+    for path in partials:
+        path.parent.mkdir(parents=True, exist_ok=True)
+    handles = [path.open("wb") for path in partials]
+    ones = [0] * len(CLASS_NAMES)
+    try:
+        for pair in range(n_pairs):
+            if pair == 0 or predictor == "intra":
+                predicted = np.full((height, width), 255, dtype=np.uint8)
+            else:
+                predicted = predictor_labels(
+                    predictor,
+                    labels[pair - 1],
+                    poses[pair],
+                    K=K,
+                    Kinv=Kinv,
+                    target_grid=target_grid,
+                    params=params,
+                )
+            target = labels[pair]
+            for class_id, handle in enumerate(handles):
+                predicted_mask = predicted == class_id
+                residual = np.logical_xor(target == class_id, predicted_mask)
+                handle.write(pack_mask(residual))
+                ones[class_id] += int(residual.sum())
+    finally:
+        for handle in handles:
+            handle.close()
+    rows: dict[str, dict[str, Any]] = {}
+    slots = n_pairs * height * width
+    for class_id, (path, partial) in enumerate(zip(class_paths, partials, strict=True)):
+        os.replace(partial, path)
+        probability = ones[class_id] / slots
+        entropy_bits = 0.0
+        if 0.0 < probability < 1.0:
+            entropy_bits = slots * (
+                -probability * math.log2(probability)
+                - (1.0 - probability) * math.log2(1.0 - probability)
+            )
+        rows[str(class_id)] = {
+            "class": CLASS_NAMES[class_id],
+            "ones": ones[class_id],
+            "slots": slots,
+            "one_fraction": probability,
+            "iid_binary_entropy_bits": entropy_bits,
+            "raw": artifact(path),
+            "coders": {},
+        }
+    return rows
+
+
+def encode_payload(coder: str, raw: bytes, records: list[bytes]) -> bytes:
+    if coder == "brotli-q11":
+        return brotli.compress(raw, quality=11)
+    if coder == "lzma1-raw":
+        return bd1.lzma1_raw(raw)
+    if coder == "smevr-r7-nibble":
+        return bd1.smevr_records(records)
+    raise TF1Error(f"unknown coder {coder!r}")
+
+
+def decode_payload(coder: str, payload: bytes, raw_bytes: int) -> bytes:
+    if coder == "brotli-q11":
+        raw = brotli.decompress(payload)
+    elif coder == "lzma1-raw":
+        raw = bd1.unlzma1_raw(payload, raw_bytes)
+    elif coder == "smevr-r7-nibble":
+        raw = b"".join(bd1.unsmevr_records(payload))
+    else:
+        raise TF1Error(f"unknown coder {coder!r}")
+    if len(raw) != raw_bytes:
+        raise TF1Error(f"{coder} decoded raw length differs")
+    return raw
+
+
+def build_partition_container(
+    *,
+    predictor: str,
+    coder: str,
+    omitted_class: int,
+    n_pairs: int,
+    payloads: dict[int, bytes],
+    entry_coders: dict[int, str] | None = None,
+) -> bytes:
+    stored = [class_id for class_id in range(len(CLASS_NAMES)) if class_id != omitted_class]
+    if set(payloads) != set(stored):
+        raise TF1Error("partition container class set differs")
+    hybrid = coder == HYBRID_CODER
+    if hybrid:
+        if entry_coders is None or set(entry_coders) != set(stored):
+            raise TF1Error("hybrid partition container coder set differs")
+        if any(value not in CODER_IDS for value in entry_coders.values()):
+            raise TF1Error("hybrid partition container has unknown coder")
+    elif entry_coders is not None:
+        raise TF1Error("single-coder partition container received entry coders")
+    out = bytearray(
+        PARTITION_HEADER.pack(
+            PARTITION_MAGIC,
+            2 if hybrid else 1,
+            PREDICTOR_IDS[predictor],
+            HYBRID_CODER_ID if hybrid else CODER_IDS[coder],
+            omitted_class,
+            384,
+            512,
+            n_pairs,
+        )
+    )
+    for class_id in stored:
+        payload = payloads[class_id]
+        if hybrid:
+            assert entry_coders is not None
+            out += PARTITION_ENTRY_V2.pack(class_id, CODER_IDS[entry_coders[class_id]], len(payload))
+        else:
+            out += PARTITION_ENTRY.pack(class_id, len(payload))
+        out += payload
+    return bytes(out)
+
+
+def parse_partition_container(payload: bytes) -> dict[str, Any]:
+    if len(payload) < PARTITION_HEADER.size:
+        raise TF1Error("partition container header truncated")
+    magic, version, predictor_id, coder_id, omitted, height, width, n_pairs = PARTITION_HEADER.unpack_from(payload)
+    if magic != PARTITION_MAGIC or version not in (1, 2) or (height, width) != (384, 512):
+        raise TF1Error("partition container contract differs")
+    predictors_by_id = {value: key for key, value in PREDICTOR_IDS.items()}
+    coders_by_id = {value: key for key, value in CODER_IDS.items()}
+    if predictor_id not in predictors_by_id or omitted >= len(CLASS_NAMES):
+        raise TF1Error("partition container enum differs")
+    if version == 1 and coder_id not in coders_by_id:
+        raise TF1Error("partition container coder differs")
+    if version == 2 and coder_id != HYBRID_CODER_ID:
+        raise TF1Error("hybrid partition container marker differs")
+    off = PARTITION_HEADER.size
+    entries: dict[int, bytes] = {}
+    entry_coders: dict[int, str] = {}
+    for _ in range(len(CLASS_NAMES) - 1):
+        entry_struct = PARTITION_ENTRY if version == 1 else PARTITION_ENTRY_V2
+        if len(payload) < off + entry_struct.size:
+            raise TF1Error("partition entry header truncated")
+        if version == 1:
+            class_id, length = PARTITION_ENTRY.unpack_from(payload, off)
+            entry_coder_id = coder_id
+        else:
+            class_id, entry_coder_id, length = PARTITION_ENTRY_V2.unpack_from(payload, off)
+        off += entry_struct.size
+        if entry_coder_id not in coders_by_id:
+            raise TF1Error("partition entry coder differs")
+        body = payload[off : off + length]
+        off += length
+        if len(body) != length or class_id in entries or class_id == omitted:
+            raise TF1Error("partition entry differs")
+        entries[int(class_id)] = body
+        entry_coders[int(class_id)] = coders_by_id[int(entry_coder_id)]
+    if off != len(payload) or set(entries) != set(range(len(CLASS_NAMES))) - {int(omitted)}:
+        raise TF1Error("partition entries incomplete or trailing")
+    return {
+        "predictor": predictors_by_id[int(predictor_id)],
+        "coder": coders_by_id[int(coder_id)] if version == 1 else HYBRID_CODER,
+        "omitted_class": int(omitted),
+        "n_pairs": int(n_pairs),
+        "entries": entries,
+        "entry_coders": entry_coders,
+    }
+
+
+def validate_full_reconstruction(
+    *,
+    predictor: str,
+    omitted_class: int,
+    raw_by_class: dict[int, bytes],
+    labels: np.ndarray,
+    poses: np.ndarray,
+    params: tuple[float, float, float],
+) -> None:
+    n_pairs, height, width = labels.shape
+    records = {class_id: records_from_raw(raw, n_pairs) for class_id, raw in raw_by_class.items()}
+    K = temporal.MW.intrinsics_at(width, height)
+    Kinv = np.linalg.inv(K)
+    target_grid = temporal.MW._target_grid(height, width)
+    previous = np.zeros((height, width), dtype=np.uint8)
+    for pair in range(n_pairs):
+        if pair == 0 or predictor == "intra":
+            predicted = np.full((height, width), 255, dtype=np.uint8)
+        else:
+            predicted = predictor_labels(
+                predictor,
+                previous,
+                poses[pair],
+                K=K,
+                Kinv=Kinv,
+                target_grid=target_grid,
+                params=params,
+            )
+        decoded_masks: dict[int, np.ndarray] = {}
+        occupancy = np.zeros((height, width), dtype=np.uint8)
+        for class_id, class_records in records.items():
+            residual = unpack_mask(class_records[pair])
+            mask = np.logical_xor(predicted == class_id, residual)
+            decoded_masks[class_id] = mask
+            occupancy += mask.astype(np.uint8)
+        if np.any(occupancy > 1):
+            raise TF1Error(f"{predictor}/omit{omitted_class}: class masks overlap at pair {pair}")
+        decoded_masks[omitted_class] = occupancy == 0
+        reconstructed = np.full((height, width), 255, dtype=np.uint8)
+        for class_id, mask in decoded_masks.items():
+            reconstructed[mask] = class_id
+        if not np.array_equal(reconstructed, labels[pair]):
+            mismatches = int(np.count_nonzero(reconstructed != labels[pair]))
+            raise TF1Error(
+                f"{predictor}/omit{omitted_class}: reconstruction differs at pair {pair} ({mismatches})"
+            )
+        previous = reconstructed
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--run-dir", type=Path, default=DEFAULT_RUN_DIR)
+    parser.add_argument("--gt-cache", type=Path, default=DEFAULT_GT_CACHE)
+    parser.add_argument("--calibration", type=Path, default=DEFAULT_CALIBRATION)
+    parser.add_argument("--pose-stream", type=Path, default=DEFAULT_POSE_STREAM)
+    parser.add_argument("--cp135-archive", type=Path, default=DEFAULT_CP135_ARCHIVE)
+    parser.add_argument("--lc2-carrier", type=Path, default=DEFAULT_LC2_CARRIER)
+    args = parser.parse_args(argv)
+
+    run_dir = args.run_dir.resolve()
+    if not str(run_dir).startswith(("/Volumes/VertigoDataTier/pact/", "/Volumes/APDataStore/pact/")):
+        raise TF1Error("run-dir must use an approved SSD tier")
+    run_dir.mkdir(parents=True, exist_ok=True)
+    free_bytes = shutil.disk_usage(run_dir).free
+    if free_bytes < MIN_FREE_BYTES:
+        raise TF1Error(f"storage preflight failed: only {free_bytes} bytes free")
+    state_path = run_dir / "state.json"
+    state = load_state(state_path)
+
+    required_inputs = (args.gt_cache, args.calibration, args.pose_stream, args.cp135_archive, args.lc2_carrier)
+    for path in required_inputs:
+        if not path.is_file():
+            raise TF1Error(f"required input missing: {path}")
+    git_head = os.popen(f"git -C {REPO} rev-parse HEAD").read().strip()
+    tool_source = Path(__file__).resolve()
+    tool_source_row = artifact(tool_source)
+    retained_source_path = (
+        run_dir / "retained/source/by_sha256" / f"{tool_source_row['sha256']}.py"
+    )
+    retained_source_row = atomic_bytes(retained_source_path, tool_source.read_bytes())
+    execution_source = {
+        "git_head": git_head,
+        "tool_source": tool_source_row,
+        "retained_tool_source": retained_source_row,
+    }
+    state.setdefault("execution_sources", [])
+    if not any(row == execution_source for row in state["execution_sources"]):
+        state["execution_sources"].append(execution_source)
+    current_inputs = {
+        "gt_cache": artifact(args.gt_cache),
+        "calibration": artifact(args.calibration),
+        "pose_stream": artifact(args.pose_stream),
+        "cp135_archive_current_vehicle_not_geometric_xi": artifact(args.cp135_archive),
+        "lc2_photometric_carrier_not_geometric_xi": artifact(args.lc2_carrier),
+    }
+    if state["inputs"]:
+        prior_stable = {
+            key: value
+            for key, value in state["inputs"].items()
+            if not key.startswith("storage_free_bytes_")
+            and key not in {"git_head", "launch_git_head_initial", "latest_git_head"}
+        }
+        if prior_stable != current_inputs:
+            raise TF1Error("resume input custody differs")
+    initial_free = state["inputs"].get("storage_free_bytes_at_initial_preflight", free_bytes)
+    initial_git_head = state["inputs"].get(
+        "launch_git_head_initial", state["inputs"].get("git_head", git_head)
+    )
+    state["inputs"] = {
+        **current_inputs,
+        "launch_git_head_initial": initial_git_head,
+        "latest_git_head": git_head,
+        "storage_free_bytes_at_initial_preflight": initial_free,
+        "storage_free_bytes_at_latest_resume": free_bytes,
+    }
+    save_state(state_path, state, "preflight")
+
+    calibration = json.loads(args.calibration.read_text())["calibration"]
+    params = tuple(float(calibration[key]) for key in ("s_t", "s_r", "pitch"))
+    poses, pose_meta = parse_pose_stream(args.pose_stream)
+    with np.load(args.gt_cache) as cache:
+        labels = np.asarray(cache["lstars"], dtype=np.uint8)
+        cached_poses = np.asarray(cache["gt_poses"], dtype=np.float64)
+    if labels.shape != (600, 384, 512) or poses.shape != (600, 6):
+        raise TF1Error(f"n600 geometry differs: labels={labels.shape}, poses={poses.shape}")
+    cached_poses_f16 = cached_poses.astype(np.float16).astype(np.float64)
+    pose_delta = poses - cached_poses_f16
+    pose_f16_equal = np.array_equal(poses, cached_poses_f16)
+    input_dir = run_dir / "retained/inputs"
+    pose_raw = np.ascontiguousarray(poses.astype(np.float16)).tobytes()
+    pose_raw_row = atomic_bytes(input_dir / "pose_targets_n600_f16.bin", pose_raw)
+    calibration_row = atomic_bytes(
+        input_dir / "warp_calibration_f64.bin", np.asarray(params, dtype="<f8").tobytes()
+    )
+    state["pose_consumption"] = {
+        **pose_meta,
+        "retained_pose_targets": pose_raw_row,
+        "retained_calibration": calibration_row,
+        "equals_gt_cache_pose_at_float16": pose_f16_equal,
+        "different_scalar_count_vs_direct_gt_cache_float16": int(np.count_nonzero(pose_delta)),
+        "max_abs_delta_vs_direct_gt_cache_float16": float(np.max(np.abs(pose_delta))),
+        "mean_abs_delta_vs_direct_gt_cache_float16": float(np.mean(np.abs(pose_delta))),
+        "lineage_note": (
+            "The carried stream came from the scored pose-target center bundle; it is measured exactly. "
+            "It is numerically near but not byte-identical to direct gt_poses float16 rounding."
+        ),
+        "assumption": (
+            "PoseNet six-vector is a geometric twist only up to the three measured global calibration scalars; "
+            "the claim is formulation-scoped, not physical-SE3 authority."
+        ),
+    }
+    save_state(state_path, state, "inputs_consumed")
+
+    fields_root = run_dir / "retained/fields"
+    for predictor in PREDICTORS:
+        if predictor not in state["streams"]:
+            state["streams"][predictor] = materialize_predictor_fields(
+                predictor=predictor,
+                labels=labels,
+                poses=poses,
+                params=params,
+                out_dir=fields_root,
+            )
+            save_state(state_path, state, f"fields_{predictor}")
+        else:
+            for class_row in state["streams"][predictor].values():
+                verify_artifact(class_row["raw"])
+
+    coders_root = run_dir / "retained/coders"
+    for predictor in PREDICTORS:
+        for class_id in range(len(CLASS_NAMES)):
+            row = state["streams"][predictor][str(class_id)]
+            raw_path = verify_artifact(row["raw"])
+            raw = raw_path.read_bytes()
+            records = records_from_raw(raw, labels.shape[0])
+            for coder in CODERS:
+                if coder in row["coders"]:
+                    verify_artifact(row["coders"][coder])
+                    continue
+                payload = encode_payload(coder, raw, records)
+                decoded = decode_payload(coder, payload, len(raw))
+                if decoded != raw:
+                    raise TF1Error(f"{predictor}/{class_id}/{coder} roundtrip differs")
+                suffix = {"brotli-q11": "br", "lzma1-raw": "lzma1", "smevr-r7-nibble": "smevr"}[coder]
+                payload_path = coders_root / predictor / f"{class_id}_{CLASS_NAMES[class_id]}.{suffix}"
+                row["coders"][coder] = atomic_bytes(payload_path, payload)
+                save_state(state_path, state, f"coder_{predictor}_{class_id}_{coder}")
+
+    full_root = run_dir / "retained/full_vehicle"
+    for predictor in PREDICTORS:
+        state["full_vehicle"].setdefault(predictor, {})
+        for coder in FULL_CODERS:
+            state["full_vehicle"][predictor].setdefault(coder, {})
+            for omitted in range(len(CLASS_NAMES)):
+                omit_key = str(omitted)
+                if omit_key in state["full_vehicle"][predictor][coder]:
+                    verify_artifact(state["full_vehicle"][predictor][coder][omit_key])
+                    continue
+                payloads: dict[int, bytes] = {}
+                raw_by_class: dict[int, bytes] = {}
+                entry_coders: dict[int, str] | None = {} if coder == HYBRID_CODER else None
+                for class_id in range(len(CLASS_NAMES)):
+                    if class_id == omitted:
+                        continue
+                    class_row = state["streams"][predictor][str(class_id)]
+                    selected_coder = coder
+                    if coder == HYBRID_CODER:
+                        selected_coder = min(
+                            CODERS,
+                            key=lambda name: (class_row["coders"][name]["bytes"], CODER_IDS[name]),
+                        )
+                        assert entry_coders is not None
+                        entry_coders[class_id] = selected_coder
+                    payloads[class_id] = verify_artifact(
+                        class_row["coders"][selected_coder]
+                    ).read_bytes()
+                    raw_by_class[class_id] = verify_artifact(class_row["raw"]).read_bytes()
+                container = build_partition_container(
+                    predictor=predictor,
+                    coder=coder,
+                    omitted_class=omitted,
+                    n_pairs=labels.shape[0],
+                    payloads=payloads,
+                    entry_coders=entry_coders,
+                )
+                parsed = parse_partition_container(container)
+                if (
+                    parsed["predictor"] != predictor
+                    or parsed["coder"] != coder
+                    or parsed["entries"] != payloads
+                    or (entry_coders is not None and parsed["entry_coders"] != entry_coders)
+                ):
+                    raise TF1Error("full-vehicle container parse-back differs")
+                for class_id, encoded in parsed["entries"].items():
+                    decoded = decode_payload(
+                        parsed["entry_coders"][class_id], encoded, len(raw_by_class[class_id])
+                    )
+                    if decoded != raw_by_class[class_id]:
+                        raise TF1Error("full-vehicle container decoded field differs")
+                path = full_root / predictor / coder / f"omit_{omitted}_{CLASS_NAMES[omitted]}.tf1p"
+                state["full_vehicle"][predictor][coder][omit_key] = atomic_bytes(path, container)
+                save_state(state_path, state, f"container_{predictor}_{coder}_omit{omitted}")
+
+    for predictor in PREDICTORS:
+        for omitted in range(len(CLASS_NAMES)):
+            raw_by_class = {
+                class_id: verify_artifact(state["streams"][predictor][str(class_id)]["raw"]).read_bytes()
+                for class_id in range(len(CLASS_NAMES))
+                if class_id != omitted
+            }
+            validate_full_reconstruction(
+                predictor=predictor,
+                omitted_class=omitted,
+                raw_by_class=raw_by_class,
+                labels=labels,
+                poses=poses,
+                params=params,
+            )
+    save_state(state_path, state, "decoder_equality_all_predictors_all_omissions")
+
+    winners: dict[str, dict[str, Any]] = {}
+    for predictor in PREDICTORS:
+        candidates = []
+        for coder in FULL_CODERS:
+            for omitted in range(len(CLASS_NAMES)):
+                row = state["full_vehicle"][predictor][coder][str(omitted)]
+                candidates.append(
+                    {
+                        "predictor": predictor,
+                        "coder": coder,
+                        "omitted_class_id": omitted,
+                        "omitted_class": CLASS_NAMES[omitted],
+                        **row,
+                    }
+                )
+        winners[predictor] = min(candidates, key=lambda row: (row["bytes"], row["coder"], row["omitted_class_id"]))
+    ratio = winners["xi_screw"]["bytes"] / winners["intra"]["bytes"]
+    state_snapshot_path = run_dir / "state.receipt_snapshot.json"
+    atomic_json(state_snapshot_path, state)
+    receipt = {
+        "schema": "ddm_tf1_partition_innovation_floor.v1",
+        "generated_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "authority": "[scorer-free cached-GT semantic description measurement; real coder payloads]",
+        "research_only": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "n_pairs": 600,
+        "n_transitions": 599,
+        "grid_hw": [384, 512],
+        "classes": list(CLASS_NAMES),
+        "inputs": state["inputs"],
+        "execution_sources": state["execution_sources"],
+        "pose_consumption": state["pose_consumption"],
+        "calibration": {"s_t": params[0], "s_r": params[1], "pitch": params[2]},
+        "representation": (
+            "five one-hot binary class fields; an exact full vehicle stores the best four and infers the fifth; "
+            "conditional frame 0 is intra and frames 1..599 are XOR innovations against the stated predictor"
+        ),
+        "selection_mode": (
+            "minimum over {Brotli-q11,LZMA1-raw,SMEVR,per-class-best mixture} "
+            "and the five omitted-class choices"
+        ),
+        "class_streams": state["streams"],
+        "full_vehicle": state["full_vehicle"],
+        "winners": winners,
+        "xi_over_intra_ratio": ratio,
+        "f1_temporal_dead_triggered": bool(ratio >= 0.9),
+        "f1_rule": "xi_screw_best_full_vehicle_bytes / intra_best_full_vehicle_bytes >= 0.9",
+        "decoder_equality": {
+            "all_predictors": list(PREDICTORS),
+            "all_omitted_class_choices": list(CLASS_NAMES),
+            "all_600_partition_maps_exact": True,
+            "all_coder_stream_roundtrips_exact": True,
+        },
+        "scope_limits": [
+            "The measured values are achievable real-coder lengths, not Shannon lower bounds and not archive.zip scores.",
+            "The predictor uses scored-frame stride-2 transitions because lstars has one map per non-overlapping pair.",
+            "The three global warp scalars were fitted previously on the first 100 Road/Lane transitions.",
+            "The cp135/lc2 coefficients are photometric carrier controls and are excluded from geometric-xi claims.",
+            "No RGB realization, SegNet/PoseNet forward, R roundtrip, archive receiver, or exact evaluator was run.",
+        ],
+        "state_snapshot": artifact(state_snapshot_path),
+    }
+    receipt_path = run_dir / "TF1_PARTITION_INNOVATION_RECEIPT.json"
+    atomic_json(receipt_path, receipt)
+    state["receipt"] = artifact(receipt_path)
+    save_state(state_path, state, "receipt_complete")
+    print(json.dumps({"receipt": artifact(receipt_path), "winners": winners, "ratio": ratio}, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

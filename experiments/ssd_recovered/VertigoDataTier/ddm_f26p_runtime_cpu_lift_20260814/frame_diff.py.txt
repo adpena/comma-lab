@@ -1,0 +1,18 @@
+import numpy as np, json, hashlib
+FRAME = 874*1164*3
+cpu = np.memmap('/Volumes/VertigoDataTier/pact/ddm_f26p_runtime_cpu_lift_20260814/output/0.raw', dtype=np.uint8, mode='r')
+t4  = np.memmap('/Volumes/VertigoDataTier/pact/ddm_f26p_runtime_cpu_lift_20260814/t4_raw_download/t4_0.raw', dtype=np.uint8, mode='r')
+assert cpu.shape == t4.shape == (1200*FRAME,)
+div_frames, changed, maxd = 0, 0, 0
+for f in range(1200):
+    a = cpu[f*FRAME:(f+1)*FRAME]; b = t4[f*FRAME:(f+1)*FRAME]
+    d = np.abs(a.astype(np.int16) - b.astype(np.int16))
+    n = int((d > 0).sum())
+    if n: div_frames += 1; changed += n; maxd = max(maxd, int(d.max()))
+out = {"schema": "f26p_cpu_t4_frame_diff.v1", "divergent_frames": div_frames,
+       "changed_bytes": changed, "max_abs_u8_delta": maxd, "total_bytes": 1200*FRAME,
+       "cpu_raw_sha_prefix": "e5539653", "t4_volume_raw_sha_prefix": "e8d6b424",
+       "charter_pin_unmatched": "a41ca69d (provenance question OPEN: matches NEITHER byte object; per-frame-manifest aggregate hypothesis unresolved)"}
+p = '/Volumes/VertigoDataTier/pact/ddm_f26p_runtime_cpu_lift_20260814/receipts/cpu_t4_frame_diff.json'
+open(p, 'w').write(json.dumps(out, indent=2))
+print(json.dumps(out))

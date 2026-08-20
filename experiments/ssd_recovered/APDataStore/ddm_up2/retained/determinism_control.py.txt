@@ -1,0 +1,52 @@
+"""Cross-process determinism control: re-solve solved pairs in a FRESH process.
+
+The merge refuses on disagreement, but with disjoint shard ranges that guard never
+fires. This deliberately re-solves an already-solved sample in a new process and
+requires bit-identical final_d_pose and identical codes.
+"""
+from __future__ import annotations
+import json, sys
+from pathlib import Path
+import numpy as np
+sys.path.insert(0, "/Users/adpena/Projects/pact/experiments")
+sys.path.insert(0, "/Users/adpena/Projects/pact/src")
+import ddm_up2_shipping_pose_solve as up2
+
+import torch
+torch.set_num_threads(2)
+B = Path("/Volumes/APDataStore/pact/ddm_up2")
+prior = {}
+for src in sorted(B.glob("*/rows.jsonl")):
+    for line in src.read_text().splitlines():
+        if line.strip():
+            r = json.loads(line); prior[int(r["pair"])] = (r, src.parent.name)
+rng = np.random.default_rng(20260819)
+sample = sorted(rng.choice(sorted(prior), size=10, replace=False).tolist())
+up2.enable_posenet_gradients()
+st = up2.load_carrier_state(up2.DEFAULT_RUNTIME)
+raw = up2.open_raw(up2.DEFAULT_RAW, verify_sha=False)
+tgt, lin = up2.load_gt_poses(up2.DEFAULT_DALI_GT)
+up2.verify_gt_lineage(axis="contest_cuda", declared_lineage=lin)
+pn = up2.load_posenet()
+rows = []
+for p in sample:
+    got = up2.solve_pair_realized(pn, st, raw, tgt[int(p)], int(p), st.codes[int(p)])
+    ref, origin = prior[int(p)]
+    rows.append({
+        "pair": int(p), "origin_process": origin,
+        "final_d_pose_ref": ref["final_d_pose"], "final_d_pose_rerun": got["final_d_pose"],
+        "d_pose_bit_identical": got["final_d_pose"] == ref["final_d_pose"],
+        "codes_identical": got["codes"] == ref["codes"],
+        "passes_identical": got["passes"] == ref["passes"],
+    })
+    print(rows[-1], flush=True)
+report = {
+    "schema": "ddm_up2_determinism_control.v1",
+    "sampled_pairs": sample,
+    "all_d_pose_bit_identical": all(r["d_pose_bit_identical"] for r in rows),
+    "all_codes_identical": all(r["codes_identical"] for r in rows),
+    "all_passes_identical": all(r["passes_identical"] for r in rows),
+    "rows": rows,
+}
+(B / "retained" / "determinism_control.json").write_text(json.dumps(report, indent=2))
+print(json.dumps({k: v for k, v in report.items() if k != "rows"}, indent=2))

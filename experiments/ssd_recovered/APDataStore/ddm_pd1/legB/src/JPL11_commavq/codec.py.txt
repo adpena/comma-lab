@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+"""Lossless commaVQ codec: gpt2m + range coding, batched lockstep encode/decode.
+
+Determinism contract: encoder and decoder run the *identical* sequence of GPU
+ops (same batch shapes, same kernels: batch prefill + one-token steps with a
+static KV cache), so the float32 logits — and therefore the quantized integer
+frequency tables — are bit-identical on both sides on the same machine/stack.
+
+Window scheme: 20-frame windows starting every STRIDE frames. Each window is a
+fresh context (positions 0..2579). The first (20-STRIDE) frames of a window are
+already-known context (prefilled in one batched forward); the remaining STRIDE
+frames are coded token-by-token. BOS tokens (every 129th position) are
+deterministic and never coded.
+
+Probabilities: logits float32 -> float64 numpy softmax over the 1024 content
+symbols, mixed with a 2^-16 uniform floor (guarantees every symbol codable),
+fed directly to constriction's Categorical (its internal quantization measures
++0.0005 bits/sym overhead vs entropy; a 16-bit pre-quantization measured
++0.013). Pure numpy float64 => deterministic for a fixed numpy build.
+"""
+import glob
+import math
+import os
+import sys
+from pathlib import Path
+
+import numpy as np
+import torch
+
+COMMAVQ = Path(__file__).resolve().parent.parent / 'commavq'
+sys.path.insert(0, str(COMMAVQ))
+from utils.gpt import GPT, GPTConfig  # noqa: E402
+
+TOKENS_PER_FRAME = 129
+FRAMES_PER_WINDOW = 20
+WINDOW = FRAMES_PER_WINDOW * TOKENS_PER_FRAME
+FRAMES = 1200
+CONTENT = 128
+BOS = 1024
+VOCAB = 1024
+
+
+def load_model(device='cuda', dtype=torch.float16, weights_path=None):
+  if weights_path is None:
+    weights_path = glob.glob(os.path.expanduser(
+        '~/.cache/huggingface/hub/models--commaai--commavq-gpt2m/snapshots/*/pytorch_model.bin'))[0]
+  state_dict = torch.load(weights_path, map_location='cpu', weights_only=True)
+  state_dict = {k: v for k, v in state_dict.items()
+                if not (k.endswith('.attn.masked_bias') or k.endswith('.attn.bias'))}
+  transposed = ['attn.c_attn.weight', 'attn.c_proj.weight', 'mlp.c_fc.weight', 'mlp.c_proj.weight']
+  for k in list(state_dict.keys()):
+    if any(k.endswith(w) for w in transposed):
+      state_dict[k] = state_dict[k].transpose(1, 0)
+  model = GPT(GPTConfig())
+  state_dict['causal_mask'] = model.causal_mask
+  model.load_state_dict(state_dict)
+  return model.to(device=device, dtype=dtype).eval()
+
+
+def softmax_probs(logits_f32):
+  """(B, 1025) float32 logits -> (B, 1024) float64 probs with uniform floor."""
+  l = logits_f32[:, :VOCAB].astype(np.float64)
+  l -= l.max(axis=1, keepdims=True)
+  p = np.exp(l)
+  p /= p.sum(axis=1, keepdims=True)
+  p = p * (1.0 - 2.0**-16) + 2.0**-16 / VOCAB
+  return p / p.sum(axis=1, keepdims=True)
+
+
+class LockstepModel:
+  """Fixed-batch gpt2m runner with static KV cache; identical op sequence for
+  encode and decode."""
+
+  def __init__(self, model, batch, device='cuda', compile_step=False):
+    self.model = model
+    self.batch = batch
+    self.device = device
+    # One-token steps dominate wall clock; CUDA-graph them. Prefill stays eager
+    # (only two shapes, negligible cost). Encode and decode must use the same
+    # setting so both sides run identical kernels.
+    self._step_fwd = (torch.compile(model.forward, mode='reduce-overhead', fullgraph=True)
+                      if compile_step else model.forward)
+    with torch.device(device):
+      model.setup_caches(max_batch_size=batch, max_seq_length=WINDOW)
+    # comma's KVCache hardcodes bfloat16; rebuild in the model's dtype
+    from utils.gpt import KVCache, find_multiple
+    dtype = next(model.parameters()).dtype
+    cfg = model.config
+    with torch.device(device):
+      for blk in model.transformer.h:
+        blk.attn.kv_cache = KVCache(batch, find_multiple(WINDOW, 8),
+                                    cfg.n_head, cfg.head_dim, dtype=dtype)
+
+  def reset_window(self):
+    # KV entries beyond current input_pos are never attended (causal mask), so
+    # no explicit cache clear is needed between windows.
+    pass
+
+  @torch.no_grad()
+  def prefill(self, tokens, start_pos):
+    """tokens: (B, L) int64 on device. Returns float32 logits (B, 1025) at the
+    last position."""
+    input_pos = torch.arange(start_pos, start_pos + tokens.shape[1], device=self.device)
+    logits = self.model(tokens, input_pos)
+    return logits[:, -1].float()
+
+  @torch.no_grad()
+  def step(self, token, pos):
+    """token: (B, 1) int64. Returns float32 logits (B, 1025)."""
+    input_pos = torch.tensor([pos], device=self.device, dtype=torch.long)
+    logits = self._step_fwd(token, input_pos)
+    return logits[:, -1].float()
+
+
+def window_starts(stride, n_frames=FRAMES):
+  starts = list(range(0, n_frames - FRAMES_PER_WINDOW + 1, stride))
+  if starts[-1] != n_frames - FRAMES_PER_WINDOW:
+    starts.append(n_frames - FRAMES_PER_WINDOW)
+  return starts
+
+
+def segments_to_seqs(segments, n_frames=FRAMES):
+  """list of (n,8,16) int arrays -> (B, n*129) int64 with BOS per frame."""
+  out = []
+  for tokens in segments:
+    frames = np.asarray(tokens).reshape(-1, CONTENT)[:n_frames].astype(np.int64)
+    seq = np.concatenate([np.full((n_frames, 1), BOS, dtype=np.int64), frames], axis=1)
+    out.append(seq.reshape(-1))
+  return np.stack(out)
+
+
+def _run_batch(lock, seqs, stride, coders, mode, n_frames=FRAMES, progress=None):
+  """Shared lockstep loop. mode='encode': seqs is (B, T) ground truth and
+  coders encode. mode='decode': seqs is (B, T) int64 buffer with only BOS
+  positions prefilled; coders decode into it. Returns seqs."""
+  import constriction
+  B, device = len(seqs), lock.device
+  starts = window_starts(stride, n_frames)
+  seqs_t = torch.from_numpy(seqs).to(device)
+
+  for wi, s in enumerate(starts):
+    base = s * TOKENS_PER_FRAME
+    n_ctx = 0 if wi == 0 else (FRAMES_PER_WINDOW - (starts[wi] - starts[wi - 1])) * TOKENS_PER_FRAME
+    # prefill: context tokens plus the BOS opening the first coded frame
+    prefill_len = n_ctx + 1
+    logits = lock.prefill(seqs_t[:, base:base + prefill_len], 0)
+    pos = prefill_len - 1
+    total = WINDOW
+
+    while pos + 1 < total:
+      tgt = pos + 1  # position to code/emit next
+      if tgt % TOKENS_PER_FRAME == 0:
+        # BOS: deterministic, feed without coding
+        logits = lock.step(seqs_t[:, base + tgt:base + tgt + 1], tgt)
+        pos = tgt
+        continue
+      probs = softmax_probs(logits.cpu().numpy())
+      if mode == 'encode':
+        for b in range(B):
+          m = constriction.stream.model.Categorical(probs[b], perfect=False)
+          coders[b].encode(np.array([seqs[b, base + tgt]], dtype=np.int32), m)
+      else:
+        for b in range(B):
+          m = constriction.stream.model.Categorical(probs[b], perfect=False)
+          sym = int(coders[b].decode(m, 1)[0])
+          seqs[b, base + tgt] = sym
+        seqs_t[:, base + tgt] = torch.from_numpy(seqs[:, base + tgt]).to(device)
+      if tgt + 1 < total:
+        logits = lock.step(seqs_t[:, base + tgt:base + tgt + 1], tgt)
+      pos = tgt
+    if progress:
+      progress(wi + 1, len(starts))
+  return seqs
+
+
+def encode_batch(lock, segments, stride, n_frames=FRAMES, progress=None):
+  """segments: list of B (1200,8,16) arrays. Returns list of compressed bytes."""
+  import constriction
+  seqs = segments_to_seqs(segments, n_frames)
+  coders = [constriction.stream.queue.RangeEncoder() for _ in segments]
+  _run_batch(lock, seqs, stride, coders, 'encode', n_frames, progress)
+  return [c.get_compressed() for c in coders]
+
+
+def decode_batch(lock, payloads, stride, n_frames=FRAMES, progress=None):
+  """payloads: list of B compressed uint32 arrays. Returns (B,1200,8,16) int16."""
+  import constriction
+  B = len(payloads)
+  seqs = np.zeros((B, n_frames * TOKENS_PER_FRAME), dtype=np.int64)
+  seqs[:, ::TOKENS_PER_FRAME] = BOS
+  coders = [constriction.stream.queue.RangeDecoder(p) for p in payloads]
+  _run_batch(lock, seqs, stride, coders, 'decode', n_frames, progress)
+  content = seqs.reshape(B, n_frames, TOKENS_PER_FRAME)[:, :, 1:]
+  return content.reshape(B, n_frames, 8, 16).astype(np.int16)
+
+
+def selftest(n_segments=2, stride=10, batch=None, n_frames=FRAMES, compile_step=False):
+  """Round-trip on real segments; prints ratio and verifies bit-exactness."""
+  from datasets import load_dataset
+  import time
+  batch = batch or n_segments
+  ds = load_dataset('commaai/commavq', num_proc=4,
+                    data_files={'train': ['data-0000.tar.gz']})['train']
+  segs = [np.array(ds[i]['token.npy']) for i in range(n_segments)]
+
+  model = load_model()
+  lock = LockstepModel(model, batch, compile_step=compile_step)
+  t0 = time.time()
+  payloads = encode_batch(lock, segs, stride, n_frames,
+                          progress=lambda w, n: print(f'  encode window {w}/{n}', flush=True)
+                          if w % 20 == 0 else None)
+  t_enc = time.time() - t0
+  comp_bytes = sum(len(p) * 4 for p in payloads)
+  raw_bits = n_segments * n_frames * CONTENT * 10
+  print(f'encoded {n_segments} segs in {t_enc:.0f}s: {comp_bytes} bytes, '
+        f'ratio {raw_bits / 8 / comp_bytes:.3f}, '
+        f'{comp_bytes * 8 / (n_segments * n_frames * CONTENT):.3f} bits/tok', flush=True)
+
+  t0 = time.time()
+  decoded = decode_batch(lock, payloads, stride, n_frames,
+                         progress=lambda w, n: print(f'  decode window {w}/{n}', flush=True)
+                         if w % 20 == 0 else None)
+  t_dec = time.time() - t0
+  ok = all(np.array_equal(decoded[i],
+                          np.array(segs[i], dtype=np.int16).reshape(-1, 8, 16)[:n_frames])
+           for i in range(n_segments))
+  print(f'decoded in {t_dec:.0f}s: lossless={"PASS" if ok else "FAIL"}', flush=True)
+  return ok
+
+
+if __name__ == '__main__':
+  import argparse
+  ap = argparse.ArgumentParser()
+  ap.add_argument('--selftest', action='store_true')
+  ap.add_argument('--segments', type=int, default=2)
+  ap.add_argument('--stride', type=int, default=10)
+  ap.add_argument('--frames', type=int, default=FRAMES)
+  ap.add_argument('--compile', action='store_true')
+  args = ap.parse_args()
+  if args.selftest:
+    ok = selftest(args.segments, args.stride, n_frames=args.frames,
+                  compile_step=args.compile)
+    sys.exit(0 if ok else 1)

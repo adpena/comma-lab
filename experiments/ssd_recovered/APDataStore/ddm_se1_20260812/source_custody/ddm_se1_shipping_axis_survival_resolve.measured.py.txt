@@ -1,0 +1,845 @@
+#!/usr/bin/env python3
+"""Resolve C1 shipping-axis survival with a tiny parse-backed conditioner.
+
+C1 is used only as an encoder-side event teacher.  The shipped receiver stays
+CP135: it decodes the existing semantic tokens, runs the retained hidden-4
+conditioner, applies five class magnitudes, and then follows the real
+camera/uint8/scorer chain.  The retained JS4 PoseNet-null projector is used
+while adapting the conditioner but is never included in a candidate packet.
+
+This is a bounded stratified-n32 macOS-CPU relative-gauge experiment.  It does
+not run n600, dispatch Modal, mutate an archive, or claim an exact score.
+"""
+
+from __future__ import annotations
+
+import argparse
+import dataclasses
+import fcntl
+import io
+import json
+import math
+import os
+import platform
+import shutil
+import struct
+import sys
+import time
+from pathlib import Path
+from typing import Any
+
+import brotli
+import numpy as np
+
+REPO = Path(__file__).resolve().parents[1]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+
+from experiments import ddm_js3_learned_implicit_conditioning as js3
+from experiments import ddm_js4_pose_null_projected_conditioning as js4
+
+OUTPUT = Path("/Volumes/APDataStore/pact/ddm_se1_20260812")
+HC1_ARCHIVE = Path("/Volumes/APDataStore/pact/ddm_hc1_20260812/retained/hy1_terminal_c1_hp3_pass4.archive.zip")
+C1_TOKENS = Path("/Volumes/VertigoDataTier/pact/ddm_hy1_capstone_hybrid_20260811/retained/c1_solved_tokens_n600.u8")
+JS4_ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_js4_20260812")
+JS4_FINAL = JS4_ROOT / "FINAL_RESULT.json"
+JS4_PROJECTOR = JS4_ROOT / "projector"
+JS4_SELECTED = JS4_ROOT / "stages/stage_01_step_000025/retained/conditioner.int8.br"
+JS4_MEASURED_SOURCE = JS4_ROOT / "source_custody/ddm_js4_pose_null_projected_conditioning.measured.py"
+EC1_STATE = Path("/Volumes/VertigoDataTier/pact/ddm_ec1_20260812/state.json")
+
+HC1_ARCHIVE_SHA256 = "12a5b181fef4e15ad8a752161c744347beca0b5a1224c5d3d542ab148f6ece80"
+C1_TOKENS_SHA256 = "2b0bdfc38a131ab1ebc3a2c2153a79b1ba23be0037adda66d01ab56f29f4fed5"
+JS4_FINAL_SHA256 = "21bb694d4e40ad50cf2873c19d0b7d58814f57bf3969cd7f6f724104a8ab04f2"
+JS4_SELECTED_SHA256 = "f534867089b49880cd86352f0472d8ebe5415288da5b063ab73b06a202a7770f"
+JS4_MEASURED_SOURCE_SHA256 = "8989a846158c74107554523d70a3d45b1c600a42f292b7e0331eb48d631f87fb"
+JS3_SOURCE_SHA256 = "3f5f0ffd182aae71a29d619433967afdff234317293d441e402139d81534735a"
+
+AXIS = "[macOS-CPU advisory, stratified-random n32, instrument floor 0.0131 S]"
+CLASS_NAMES = ("road", "lane", "undrivable", "movable", "my_car")
+ALPHAS = (1.0, 0.5, 0.25, 0.125, 0.0625)
+COMPOSE_SHRINKS = (1.0, 0.5, 0.25, 0.125, 0.0625)
+PACKET_MAGIC = b"SE1C1\x01"
+RATE_DENOMINATOR = 37_545_489
+POSE_GATE = 2e-6
+DELTA = js3.DELTA
+N, H, W = 600, js3.H, js3.W
+DEFAULT_REQUIRED_FREE_BYTES = 16_000_000_000
+DEFAULT_STEPS = 4
+DEFAULT_LR = 1e-3
+EMA_DECAY = 0.99
+
+
+class SE1Error(RuntimeError):
+    """A custody, retention, receiver, resume, or admission invariant failed."""
+
+
+@dataclasses.dataclass(frozen=True)
+class Packet:
+    module: bytes
+    scales: np.ndarray
+
+
+def require_record(path: Path, sha256: str) -> dict[str, Any]:
+    if not path.is_file():
+        raise SE1Error(f"required custody object is missing: {path}")
+    record = js3.file_record(path)
+    if record["sha256"] != sha256:
+        raise SE1Error(f"required custody object differs: {path}")
+    return record
+
+
+def build_packet(module: bytes, scales: np.ndarray) -> bytes:
+    values = np.asarray(scales, dtype="<f2")
+    if values.shape != (5,) or not np.isfinite(values).all() or np.any(values < 0.0):
+        raise ValueError("packet scales must be five finite nonnegative values")
+    raw = PACKET_MAGIC + struct.pack("<I", len(module)) + module + values.tobytes(order="C")
+    return brotli.compress(raw, quality=11)
+
+
+def parse_packet(coded: bytes) -> Packet:
+    raw = brotli.decompress(coded)
+    if not raw.startswith(PACKET_MAGIC) or len(raw) < len(PACKET_MAGIC) + 4 + 10:
+        raise SE1Error("invalid SE1 packet")
+    offset = len(PACKET_MAGIC)
+    module_bytes = struct.unpack("<I", raw[offset : offset + 4])[0]
+    offset += 4
+    end = offset + module_bytes
+    if end + 10 != len(raw):
+        raise SE1Error("SE1 packet has invalid section lengths")
+    scales = np.frombuffer(raw[end:], dtype="<f2").astype(np.float32)
+    if scales.shape != (5,) or not np.isfinite(scales).all() or np.any(scales < 0.0):
+        raise SE1Error("SE1 packet has invalid scales")
+    return Packet(raw[offset:end], scales)
+
+
+def score_delta(
+    baseline_dseg: float,
+    candidate_dseg: float,
+    baseline_pose: float,
+    candidate_pose: float,
+    packet_bytes: int,
+) -> dict[str, float]:
+    if min(baseline_dseg, candidate_dseg, baseline_pose, candidate_pose) < 0.0:
+        raise ValueError("distortions must be nonnegative")
+    seg = 100.0 * (candidate_dseg - baseline_dseg)
+    pose = math.sqrt(10.0 * candidate_pose) - math.sqrt(10.0 * baseline_pose)
+    rate = 25.0 * packet_bytes / RATE_DENOMINATOR
+    return {"seg": seg, "pose": pose, "rate": rate, "total": seg + pose + rate}
+
+
+def admission(metrics: dict[str, Any]) -> bool:
+    return (
+        math.isfinite(float(metrics["realized_joint_delta_section_additive"]))
+        and float(metrics["realized_joint_delta_section_additive"]) < 0.0
+        and float(metrics["pose_delta_stratified_n32"]) < POSE_GATE
+        and int(metrics["robust_beneficial_flips"]) > 0
+    )
+
+
+def c1_delta_hinge_objective(
+    torch: Any,
+    logits: Any,
+    labels: Any,
+    baseline: Any,
+    c1_events: Any,
+) -> tuple[Any, dict[str, Any]]:
+    """Use C1 only to identify repair debt; all labels remain evaluator GT."""
+    margin = js3.signed_gt_margin(torch, logits, labels)
+    hinge = torch.relu(DELTA - margin)
+    wrong = baseline != labels
+    event_wrong = c1_events & wrong
+    other_wrong = (~c1_events) & wrong
+    correct = ~wrong
+
+    def mean_or_zero(mask: Any) -> Any:
+        return hinge[mask].mean() if bool(mask.any()) else hinge.sum() * 0.0
+
+    event_repair = mean_or_zero(event_wrong)
+    other_repair = mean_or_zero(other_wrong)
+    collateral = mean_or_zero(correct)
+    return event_repair + other_repair + collateral, {
+        "event_repair_hinge": event_repair,
+        "other_repair_hinge": other_repair,
+        "collateral_hinge": collateral,
+        "event_wrong_pixels": int(event_wrong.sum()),
+    }
+
+
+def _weighted_sum(values: np.ndarray, weights: np.ndarray) -> float:
+    return float(np.dot(np.asarray(values, dtype=np.float64), np.asarray(weights, dtype=np.float64)))
+
+
+def class_survival_metrics(
+    logits: np.ndarray,
+    baseline: np.ndarray,
+    gt: np.ndarray,
+    c1_events: np.ndarray,
+    weights: np.ndarray,
+) -> tuple[dict[str, Any], np.ndarray]:
+    prediction = logits.argmax(axis=1).astype(np.uint8)
+    rows = np.arange(logits.shape[2])[None, :, None]
+    columns = np.arange(logits.shape[3])[None, None, :]
+    batch = np.arange(logits.shape[0])[:, None, None]
+    target = logits[batch, gt, rows, columns]
+    masked = logits.copy()
+    masked[batch, gt, rows, columns] = -np.inf
+    margin = target - masked.max(axis=1)
+    base_correct = baseline == gt
+    candidate_correct = prediction == gt
+    beneficial = ~base_correct & candidate_correct
+    harmful = base_correct & ~candidate_correct
+    robust_beneficial = beneficial & (margin >= DELTA)
+    robust_harmful = harmful & (margin <= -DELTA)
+    rows_by_class = []
+    for class_id, name in enumerate(CLASS_NAMES):
+        class_mask = gt == class_id
+        beneficial_count = int((beneficial & class_mask).sum())
+        robust_count = int((robust_beneficial & class_mask).sum())
+        rows_by_class.append(
+            {
+                "class_id": class_id,
+                "class_name": name,
+                "beneficial_flips": beneficial_count,
+                "harmful_flips": int((harmful & class_mask).sum()),
+                "robust_beneficial_flips": robust_count,
+                "robust_harmful_flips": int((robust_harmful & class_mask).sum()),
+                "delta_margin_mass": robust_count / max(1, beneficial_count),
+                "c1_event_robust_beneficial_flips": int((robust_beneficial & class_mask & c1_events).sum()),
+            }
+        )
+    pair_delta = (~candidate_correct).sum(axis=(1, 2)) - (~base_correct).sum(axis=(1, 2))
+    pair_robust = robust_harmful.sum(axis=(1, 2)) - robust_beneficial.sum(axis=(1, 2))
+    beneficial_count = int(beneficial.sum())
+    robust_count = int(robust_beneficial.sum())
+    return {
+        "sample_delta_flips": int(pair_delta.sum()),
+        "projected_n600_delta_flips": int(round(_weighted_sum(pair_delta, weights))),
+        "sample_robust_delta_flips": int(pair_robust.sum()),
+        "projected_n600_robust_delta_flips": int(round(_weighted_sum(pair_robust, weights))),
+        "beneficial_flips": beneficial_count,
+        "harmful_flips": int(harmful.sum()),
+        "robust_beneficial_flips": robust_count,
+        "robust_harmful_flips": int(robust_harmful.sum()),
+        "delta_margin_mass": robust_count / max(1, beneficial_count),
+        "c1_event_beneficial_flips": int((beneficial & c1_events).sum()),
+        "c1_event_robust_beneficial_flips": int((robust_beneficial & c1_events).sum()),
+        "per_class": rows_by_class,
+    }, prediction
+
+
+def _payload_map(root: Path) -> dict[str, dict[str, Any]]:
+    return {
+        str(path.relative_to(root)): js3.file_record(path)
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    }
+
+
+class SingleWriter:
+    def __init__(self, output: Path) -> None:
+        self.output = output
+        self.stream: Any | None = None
+
+    def __enter__(self) -> None:
+        self.stream = (self.output / "RUN.lock").open("a+b")
+        try:
+            fcntl.flock(self.stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            self.stream.close()
+            raise SE1Error("another SE1 writer holds the run directory") from exc
+        js3.atomic_json(self.output / "RUN_LOCK.json", {"status": "ACTIVE", "pid": os.getpid()})
+
+    def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+        assert self.stream is not None
+        js3.atomic_json(self.output / "RUN_LOCK.json", {"status": "RELEASED", "pid": os.getpid()})
+        fcntl.flock(self.stream.fileno(), fcntl.LOCK_UN)
+        self.stream.close()
+
+
+def verify_inputs(output: Path) -> dict[str, Any]:
+    js3_source = REPO / "experiments/ddm_js3_learned_implicit_conditioning.py"
+    records = {
+        "hc1_archive": require_record(HC1_ARCHIVE, HC1_ARCHIVE_SHA256),
+        "c1_tokens": require_record(C1_TOKENS, C1_TOKENS_SHA256),
+        "js3_source": require_record(js3_source, JS3_SOURCE_SHA256),
+        "js4_final": require_record(JS4_FINAL, JS4_FINAL_SHA256),
+        "js4_selected_module": require_record(JS4_SELECTED, JS4_SELECTED_SHA256),
+        "js4_measured_source": require_record(JS4_MEASURED_SOURCE, JS4_MEASURED_SOURCE_SHA256),
+        "js4_projector": js3.file_record(JS4_PROJECTOR / "MANIFEST.json"),
+    }
+    if EC1_STATE.is_file():
+        records["ec1_state"] = js3.file_record(EC1_STATE)
+    js3.atomic_json(output / "inputs/CUSTODY.json", {"axis": AXIS, "score_claim": False, **records})
+    return records
+
+
+def storage_preflight(output: Path, required_free_bytes: int) -> dict[str, Any]:
+    usage = shutil.disk_usage(output)
+    row = {
+        "schema": "ddm_se1_storage_preflight.v1",
+        "axis": AXIS,
+        "platform": platform.platform(),
+        "output": str(output.resolve()),
+        "free_bytes": int(usage.free),
+        "required_free_bytes": int(required_free_bytes),
+        "pass": int(usage.free) >= required_free_bytes,
+        "retention": "all candidate packets, corrections, camera bytes, logits, argmax, pose errors, and pair receipts",
+    }
+    js3.atomic_json(output / "preflight/STORAGE.json", row)
+    if not row["pass"]:
+        raise SE1Error("SE1 storage preflight failed")
+    return row
+
+
+def retain_source(output: Path) -> dict[str, Any]:
+    source = Path(__file__).resolve()
+    record = js3.file_record(source)
+    retained = output / f"source_custody/by_sha256/{record['sha256']}.py"
+    if retained.is_file() and js3.sha256_file(retained) != record["sha256"]:
+        raise SE1Error("versioned source custody differs")
+    if not retained.is_file():
+        js3.atomic_bytes(retained, source.read_bytes())
+    alias = output / "source_custody/ddm_se1_shipping_axis_survival_resolve.measured.py"
+    if not alias.is_file():
+        js3.atomic_bytes(alias, source.read_bytes())
+    elif js3.sha256_file(alias) != record["sha256"]:
+        raise SE1Error("measured source alias differs")
+    return js3.file_record(retained)
+
+
+def c1_teacher(context: Any, output: Path) -> tuple[np.memmap, np.ndarray]:
+    tokens = np.memmap(C1_TOKENS, mode="r", dtype=np.uint8, shape=(N, H, W))
+    sampled = np.asarray(tokens[context.sample]).copy()
+    base = np.asarray(context.tokens[context.sample])
+    events = sampled != base
+    js3.atomic_npy(output / "inputs/retained/c1_tokens_n32.uint8.npy", sampled)
+    js3.atomic_npy(output / "inputs/retained/c1_event_mask_n32.uint8.npy", events.astype(np.uint8))
+    per_pair = events.sum(axis=(1, 2)).astype(np.int64)
+    receipt = {
+        "schema": "ddm_se1_c1_teacher.v1",
+        "teacher_only": True,
+        "shipped_in_packet": False,
+        "event_pixels_n32": int(events.sum()),
+        "projected_event_pixels_n600": int(round(_weighted_sum(per_pair, context.sample_weights))),
+        "per_pair_event_pixels": per_pair.tolist(),
+        "c1_tokens": js3.file_record(output / "inputs/retained/c1_tokens_n32.uint8.npy"),
+        "event_mask": js3.file_record(output / "inputs/retained/c1_event_mask_n32.uint8.npy"),
+    }
+    js3.atomic_json(output / "inputs/C1_TEACHER.json", receipt)
+    return tokens, events
+
+
+def _training_config(args: argparse.Namespace, source: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": "ddm_se1_training_config.v1",
+        "seed": js3.SEED,
+        "threads": js3.THREADS,
+        "batch": js3.BATCH,
+        "steps": args.steps,
+        "lr": args.lr,
+        "ema_decay": EMA_DECAY,
+        "delta": DELTA,
+        "hidden": 4,
+        "max_delta": 6.0,
+        "source_sha256": source["sha256"],
+        "c1_tokens_sha256": C1_TOKENS_SHA256,
+        "initial_module_sha256": JS4_SELECTED_SHA256,
+        "projector_manifest_sha256": js3.sha256_file(JS4_PROJECTOR / "MANIFEST.json"),
+        "projector_shipped": False,
+    }
+
+
+def _checkpoint(
+    output: Path,
+    model: Any,
+    optimizer: Any,
+    ema: dict[str, Any],
+    step: int,
+    history: list[dict[str, Any]],
+    config: dict[str, Any],
+    torch: Any,
+) -> dict[str, Any]:
+    label = f"stage_{step:02d}_step_{step:06d}"
+    stage_root = output / "training" / label / "retained"
+    exported = js3.serialize_module(model, "int8", stage_root)
+    ema_model = js3.build_model(torch, torch.nn.functional, 4, 6.0, qat=True)
+    ema_model.load_state_dict(ema)
+    ema_exported = js3.serialize_module(ema_model, "int8", stage_root / "ema")
+    checkpoint_path = output / "checkpoints" / f"{label}.pt"
+    payload = {
+        "schema": "ddm_se1_checkpoint.v1",
+        "step": step,
+        "model": model.state_dict(),
+        "ema": ema,
+        "optimizer": optimizer.state_dict(),
+        "torch_rng": torch.get_rng_state(),
+        "numpy_rng": np.random.get_state(),
+        "history": history,
+        "config": config,
+    }
+    js3.atomic_torch_save(checkpoint_path, payload, torch)
+    receipt = {
+        "schema": "ddm_se1_stage_receipt.v1",
+        "stage": label,
+        "step": step,
+        "checkpoint": js3.file_record(checkpoint_path),
+        "live_module": exported.report,
+        "ema_module": ema_exported.report,
+        "history_tail": history[-1],
+        "byte_close_loadable": True,
+    }
+    js3.atomic_json(output / "training" / label / "RESULT.json", receipt)
+    latest = {"schema": "ddm_se1_latest.v1", "step": step, "stage": label, "checkpoint": receipt["checkpoint"]}
+    js3.atomic_json(output / "checkpoints/LATEST.json", latest)
+    return receipt
+
+
+def train_c1_conditioner(
+    args: argparse.Namespace,
+    context: Any,
+    pre_r_store: np.ndarray,
+    c1_events: np.ndarray,
+    router: js4.ProjectionRouter,
+    source: dict[str, Any],
+) -> dict[str, Any]:
+    torch, functional = context.modules.torch, context.modules.functional
+    config = _training_config(args, source)
+    model = js3.build_model(torch, functional, 4, 6.0, qat=True)
+    js3.load_decoded_state(model, js3.parse_module(JS4_SELECTED.read_bytes()), torch)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr)
+    ema = {name: value.detach().clone() for name, value in model.state_dict().items()}
+    history: list[dict[str, Any]] = []
+    start_step = 0
+    latest_path = args.output / "checkpoints/LATEST.json"
+    if latest_path.is_file():
+        latest = json.loads(latest_path.read_text())
+        checkpoint_record = latest["checkpoint"]
+        checkpoint_path = Path(checkpoint_record["path"])
+        if js3.file_record(checkpoint_path) != checkpoint_record:
+            raise SE1Error("resume checkpoint custody differs")
+        checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+        if checkpoint.get("schema") != "ddm_se1_checkpoint.v1" or checkpoint.get("config") != config:
+            raise SE1Error("resume checkpoint configuration differs")
+        model.load_state_dict(checkpoint["model"])
+        optimizer.load_state_dict(checkpoint["optimizer"])
+        ema = checkpoint["ema"]
+        torch.set_rng_state(checkpoint["torch_rng"])
+        np.random.set_state(checkpoint["numpy_rng"])
+        history = list(checkpoint["history"])
+        start_step = int(checkpoint["step"])
+    gt_all = np.asarray(context.gt_labels[context.sample])
+    baseline_all = np.asarray(context.custody_argmax[context.sample])
+    model.train()
+    for step in range(start_step + 1, args.steps + 1):
+        start = ((step - 1) % (js3.SAMPLE_N // js3.BATCH)) * js3.BATCH
+        stop = start + js3.BATCH
+        pre_r = torch.from_numpy(np.asarray(pre_r_store[start:stop], dtype=np.float32))
+        tokens = torch.from_numpy(np.asarray(context.tokens[context.sample[start:stop]]).astype(np.int64, copy=True))
+        gt = torch.from_numpy(gt_all[start:stop].astype(np.int64, copy=True))
+        baseline = torch.from_numpy(baseline_all[start:stop].astype(np.int64, copy=True))
+        event_mask = torch.from_numpy(c1_events[start:stop].copy())
+        router.activate(tokens)
+        raw = model(js3.fixed_context(torch, functional, tokens, pre_r))
+        projected = router.project(raw)
+        _camera, scorer = js3.camera_roundtrip(torch, functional, pre_r, projected)
+        with torch.no_grad():
+            _base_camera, base_scorer = js3.camera_roundtrip(torch, functional, pre_r, torch.zeros_like(projected))
+        custody = torch.from_numpy(np.asarray(context.custody_seg[context.sample[start:stop]]).copy()).float()
+        logits = context.segnet(custody + (scorer - base_scorer))
+        hinge, terms = c1_delta_hinge_objective(torch, logits, gt, baseline, event_mask)
+        distillation = (raw - projected).square().mean()
+        loss = hinge + distillation
+        optimizer.zero_grad(set_to_none=True)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        optimizer.step()
+        js3.update_ema(ema, model, EMA_DECAY)
+        history.append(
+            {
+                "step": step,
+                "loss": float(loss.detach()),
+                "hinge": float(hinge.detach()),
+                "distillation": float(distillation.detach()),
+                "event_repair_hinge": float(terms["event_repair_hinge"].detach()),
+                "other_repair_hinge": float(terms["other_repair_hinge"].detach()),
+                "collateral_hinge": float(terms["collateral_hinge"].detach()),
+                "event_wrong_pixels": terms["event_wrong_pixels"],
+                "batch_start": start,
+            }
+        )
+        _checkpoint(args.output, model, optimizer, ema, step, history, config, torch)
+    final_root = args.output / "training/final/retained"
+    final_export = js3.serialize_module(model, "int8", final_root)
+    result = {
+        "schema": "ddm_se1_training_result.v1",
+        "steps_completed": args.steps,
+        "history": history,
+        "selected_branch": "live_preregistered",
+        "selected_module": final_export.report,
+        "projector_payload_shipped_bytes": 0,
+        "c1_teacher_payload_shipped_bytes": 0,
+    }
+    js3.atomic_json(args.output / "training/FINAL.json", result)
+    return result
+
+
+def _pair_receipts(
+    prediction: np.ndarray,
+    baseline: np.ndarray,
+    gt: np.ndarray,
+    logits: np.ndarray,
+    pose_errors: np.ndarray,
+    context: Any,
+) -> bytes:
+    lines = []
+    for slot, pair_id in enumerate(context.sample.tolist()):
+        target = logits[slot, gt[slot], np.arange(H)[:, None], np.arange(W)[None, :]]
+        masked = logits[slot].copy()
+        masked[gt[slot], np.arange(H)[:, None], np.arange(W)[None, :]] = -np.inf
+        margin = target - masked.max(axis=0)
+        beneficial = (baseline[slot] != gt[slot]) & (prediction[slot] == gt[slot])
+        harmful = (baseline[slot] == gt[slot]) & (prediction[slot] != gt[slot])
+        row = {
+            "pair_id": int(pair_id),
+            "weight": int(context.sample_weights[slot]),
+            "candidate_error_pixels": int(np.count_nonzero(prediction[slot] != gt[slot])),
+            "baseline_error_pixels": int(np.count_nonzero(baseline[slot] != gt[slot])),
+            "beneficial_flips": int(beneficial.sum()),
+            "harmful_flips": int(harmful.sum()),
+            "robust_beneficial_flips": int((beneficial & (margin >= DELTA)).sum()),
+            "robust_harmful_flips": int((harmful & (margin <= -DELTA)).sum()),
+            "pose_mse": float(pose_errors[slot]),
+        }
+        lines.append(json.dumps(row, sort_keys=True, separators=(",", ":")))
+    return ("\n".join(lines) + "\n").encode()
+
+
+def evaluate_packet(
+    context: Any,
+    pre_r_store: np.ndarray,
+    c1_events: np.ndarray,
+    coded_packet: bytes,
+    root: Path,
+) -> dict[str, Any]:
+    result_path = root / "RESULT.json"
+    packet_path = root / "retained/candidate.se1.br"
+    repeat_path = root / "retained/candidate.repeat.se1.br"
+    if result_path.is_file():
+        result = json.loads(result_path.read_text())
+        if result.get("packet") != js3.file_record(packet_path):
+            raise SE1Error(f"resumed candidate packet differs: {root.name}")
+        return result
+    js3.atomic_bytes(packet_path, coded_packet)
+    js3.atomic_bytes(repeat_path, build_packet(parse_packet(coded_packet).module, parse_packet(coded_packet).scales))
+    if packet_path.read_bytes() != repeat_path.read_bytes():
+        raise SE1Error("candidate packet repeat differs")
+    parsed = parse_packet(packet_path.read_bytes())
+    torch, functional = context.modules.torch, context.modules.functional
+    model = js3.build_model(torch, functional, 4, 6.0, qat=True)
+    js3.load_decoded_state(model, js3.parse_module(parsed.module), torch)
+    model.eval()
+    corrections: list[np.ndarray] = []
+    cameras: list[np.ndarray] = []
+    logits_rows: list[np.ndarray] = []
+    pose_rows: list[np.ndarray] = []
+    with torch.inference_mode():
+        for start in range(0, js3.SAMPLE_N, js3.BATCH):
+            stop = start + js3.BATCH
+            pre_r = torch.from_numpy(np.asarray(pre_r_store[start:stop], dtype=np.float32))
+            token_np = np.asarray(context.tokens[context.sample[start:stop]]).astype(np.int64, copy=True)
+            tokens = torch.from_numpy(token_np)
+            raw = model(js3.fixed_context(torch, functional, tokens, pre_r))
+            scale_table = torch.from_numpy(parsed.scales.copy()).to(dtype=raw.dtype)
+            correction = raw * scale_table[tokens][:, None]
+            camera, scorer = js3.camera_roundtrip(torch, functional, pre_r, correction)
+            _base_camera, base_scorer = js3.camera_roundtrip(torch, functional, pre_r, torch.zeros_like(correction))
+            custody = torch.from_numpy(np.asarray(context.custody_seg[context.sample[start:stop]]).copy()).float()
+            logits_rows.append(context.segnet(custody + (scorer - base_scorer)).cpu().numpy().astype(np.float32))
+            corrections.append(correction.half().cpu().numpy())
+            cameras.append(camera.to(torch.uint8).permute(0, 2, 3, 1).cpu().numpy())
+            frame0 = torch.from_numpy(np.asarray(context.base_pairs[start:stop, 0]).copy()).permute(0, 3, 1, 2).float()
+            pose_input = context.posenet.preprocess_input(torch.stack((frame0, camera), dim=1))
+            custody_pose = torch.from_numpy(np.asarray(context.custody_pose[context.sample[start:stop]]).copy()).float()
+            transported = custody_pose + (pose_input - context.base_pose_input[start:stop])
+            pose = context.posenet(transported)["pose"][..., :6].cpu().numpy().astype(np.float64)
+            target_pose = np.asarray(context.gt_poses[context.sample[start:stop]], dtype=np.float64)
+            pose_rows.append(((pose - target_pose) ** 2).mean(axis=1))
+    logits = np.concatenate(logits_rows)
+    correction = np.concatenate(corrections)
+    camera = np.concatenate(cameras)
+    pose_errors = np.concatenate(pose_rows)
+    gt = np.asarray(context.gt_labels[context.sample])
+    baseline = np.asarray(context.custody_argmax[context.sample])
+    survival, prediction = class_survival_metrics(logits, baseline, gt, c1_events, context.sample_weights)
+    base_errors = (baseline != gt).sum(axis=(1, 2))
+    candidate_errors = (prediction != gt).sum(axis=(1, 2))
+    baseline_dseg = _weighted_sum(base_errors, context.sample_weights) / (N * H * W)
+    candidate_dseg = _weighted_sum(candidate_errors, context.sample_weights) / (N * H * W)
+    baseline_pose = js3.js2b.stratified_mean(context.base_pose_errors, context.sample_weights)
+    candidate_pose = js3.js2b.stratified_mean(pose_errors, context.sample_weights)
+    delta = score_delta(baseline_dseg, candidate_dseg, baseline_pose, candidate_pose, len(coded_packet))
+    retained = root / "retained"
+    js3.atomic_npy(retained / "correction_n32.float16.npy", correction)
+    js3.atomic_npy(retained / "camera_frame1_n32.uint8.npy", camera)
+    js3.atomic_npy(retained / "logits_n32.float32.npy", logits)
+    js3.atomic_npy(retained / "argmax_n32.uint8.npy", prediction)
+    js3.atomic_npy(retained / "pose_errors_n32.float64.npy", pose_errors)
+    js3.atomic_bytes(retained / "PAIR_RECEIPTS.jsonl", _pair_receipts(prediction, baseline, gt, logits, pose_errors, context))
+    result = {
+        "schema": "ddm_se1_candidate_result.v1",
+        "axis": AXIS,
+        "score_claim": False,
+        "scales": parsed.scales.tolist(),
+        "packet": js3.file_record(packet_path),
+        "packet_repeat": js3.file_record(repeat_path),
+        "packet_parseback_exact": True,
+        "projector_payload_shipped_bytes": 0,
+        "c1_teacher_payload_shipped_bytes": 0,
+        "baseline_dseg_stratified_n32": baseline_dseg,
+        "candidate_dseg_stratified_n32": candidate_dseg,
+        "baseline_pose_stratified_n32": baseline_pose,
+        "candidate_pose_stratified_n32": candidate_pose,
+        "pose_delta_stratified_n32": candidate_pose - baseline_pose,
+        "pose_gate_pass": candidate_pose - baseline_pose < POSE_GATE,
+        "score_delta_terms": delta,
+        "realized_joint_delta_section_additive": delta["total"],
+        **survival,
+    }
+    result["admission_pass"] = admission(result)
+    result["payloads"] = _payload_map(retained)
+    js3.atomic_json(result_path, result)
+    return result
+
+
+def candidate_label(prefix: str, value: float) -> str:
+    return f"{prefix}_{str(value).replace('.', 'p')}"
+
+
+def run_curve(
+    args: argparse.Namespace,
+    context: Any,
+    pre_r_store: np.ndarray,
+    c1_events: np.ndarray,
+    module_bytes: bytes,
+    started: float,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    rows: list[dict[str, Any]] = []
+    for class_id, class_name in enumerate(CLASS_NAMES):
+        for alpha in ALPHAS:
+            scales = np.zeros(5, dtype=np.float32)
+            scales[class_id] = alpha
+            label = candidate_label(f"class_{class_id}_{class_name}", alpha)
+            packet = build_packet(module_bytes, scales)
+            result = evaluate_packet(context, pre_r_store, c1_events, packet, args.output / "curve" / label)
+            rows.append({"kind": "single_class", "class_id": class_id, "class_name": class_name, "alpha": alpha, **result})
+            if time.perf_counter() - started > args.max_wall_seconds:
+                raise SE1Error("bounded wall cap reached after a retained curve row; resume is safe")
+    for alpha in ALPHAS:
+        scales = np.full(5, alpha, dtype=np.float32)
+        label = candidate_label("all_classes", alpha)
+        packet = build_packet(module_bytes, scales)
+        result = evaluate_packet(context, pre_r_store, c1_events, packet, args.output / "curve" / label)
+        rows.append({"kind": "all_classes", "class_id": None, "class_name": "all", "alpha": alpha, **result})
+    chosen = np.zeros(5, dtype=np.float32)
+    for class_id in range(5):
+        options = [row for row in rows if row["kind"] == "single_class" and row["class_id"] == class_id]
+        best = min(options, key=lambda row: (float(row["realized_joint_delta_section_additive"]), -float(row["alpha"])))
+        chosen[class_id] = float(best["alpha"])
+    composed: list[dict[str, Any]] = []
+    for shrink in COMPOSE_SHRINKS:
+        scales = chosen * shrink
+        label = candidate_label("composed_shrink", shrink)
+        packet = build_packet(module_bytes, scales)
+        result = evaluate_packet(context, pre_r_store, c1_events, packet, args.output / "composed" / label)
+        composed.append({"kind": "composed", "shrink": shrink, "source_scales": chosen.tolist(), **result})
+        if admission(result):
+            break
+    return rows, composed
+
+
+def queue_rows(output: Path, admitted: bool, best: dict[str, Any]) -> list[dict[str, str]]:
+    if admitted:
+        actions = [
+            {
+                "action": "n600 local advisory and sole exact contest-CUDA verification row",
+                "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+                "owner": "MAIN scorer-lane router",
+                "consumer_store": str(output / "main_n600_and_exact"),
+                "fire_trigger": "MAIN owns the sole n600 scorer lane, confirms it is idle, and validates the selected packet plus cp135 archive assembly recipe",
+            }
+        ]
+    else:
+        actions = [
+            {
+                "action": "EC1 event-coordinate realized acceptance screen",
+                "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+                "owner": "MAIN training-leg router",
+                "consumer_store": "/Volumes/VertigoDataTier/pact/ddm_ec1_20260812/realized_acceptance",
+                "fire_trigger": "MAIN confirms the completed EC1 200-proposal bank is content-distinct, owns the scorer lane, and runs parse-backed realized acceptance through the same camera/uint8 and pose endpoint gates",
+            }
+        ]
+    text = "# ddm_se1 queue annex\n\n" + "\n".join(
+        f"- **Action:** {row['action']}. **Disposition:** {row['disposition']}. **Owner:** {row['owner']}. "
+        f"**Consumer store:** `{row['consumer_store']}`. **Fire trigger:** {row['fire_trigger']}."
+        for row in actions
+    ) + f"\n\nBest measured n32 joint delta: {best['realized_joint_delta_section_additive']:.12g}.\n"
+    js3.atomic_bytes(output / "QUEUE_ANNEX.md", text.encode())
+    return actions
+
+
+def seal_recipe(output: Path, best: dict[str, Any]) -> dict[str, Any] | None:
+    if not bool(best["admission_pass"]):
+        return None
+    recipe = {
+        "schema": "ddm_se1_main_exact_recipe.v1",
+        "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+        "owner": "MAIN scorer-lane router",
+        "consumer_store": str(output / "main_n600_and_exact"),
+        "fire_trigger": "sole n600 scorer lane is idle and MAIN has independently reviewed the additive packet assembly",
+        "base_archive": js3.file_record(js3.js2b.BASE_ARCHIVE),
+        "packet": best["packet"],
+        "scales": best["scales"],
+        "required_sequence": [
+            "extend the exact selected packet to local stratified n600 in chunks no larger than 120",
+            "build one complete cp135-plus-SE1 archive and deterministic repeat",
+            "parse back the complete archive and prove packet/module/scales byte identity",
+            "run upstream/evaluate.py once on contest-CUDA under the #381 envelope",
+            "recompute S from d_seg, d_pose, and archive stat bytes",
+        ],
+        "ddm_se1_dispatched": False,
+    }
+    js3.atomic_json(output / "SEALED_MAIN_RECIPE.json", recipe)
+    return recipe
+
+
+def run(args: argparse.Namespace) -> dict[str, Any]:
+    args.output = args.output.resolve()
+    args.output.mkdir(parents=True, exist_ok=True)
+    with SingleWriter(args.output):
+        started = time.perf_counter()
+        torch = __import__("torch")
+        torch.manual_seed(js3.SEED)
+        np.random.seed(js3.SEED)
+        torch.set_num_threads(js3.THREADS)
+        torch.use_deterministic_algorithms(True)
+        source = retain_source(args.output)
+        state = {
+            "schema": "ddm_se1_state.v1",
+            "status": "PREFLIGHT",
+            "complete": False,
+            "resumable": True,
+            "axis": AXIS,
+            "score_claim": False,
+            "seed": js3.SEED,
+            "threads": js3.THREADS,
+            "batch": js3.BATCH,
+            "argv": sys.argv,
+            "source": source,
+            "full_n600_scorer_job_run": False,
+            "modal_dispatched": False,
+        }
+        js3.atomic_json(args.output / "state.json", state)
+        inputs = verify_inputs(args.output)
+        preflight = storage_preflight(args.output, args.required_free_bytes)
+        context = js3.js2b.build_context(args.output)
+        if not np.array_equal(context.sample, js3.stratified_sample()[0]):
+            raise SE1Error("stratified n32 sample differs from the sealed JS3 sample")
+        pre_r_store = js3.materialize_base_pre_r(context, args.output)
+        _c1_tokens, c1_events = c1_teacher(context, args.output)
+        cache = js4._load_complete_cache(JS4_PROJECTOR, context)
+        if cache is None:
+            raise SE1Error("retained JS4 projector cache is incomplete")
+        router = js4.ProjectionRouter(cache, torch)
+        state.update(status="C1_EVENT_TEACHER_ADAPTATION", projector_manifest=js3.file_record(cache.manifest_path))
+        js3.atomic_json(args.output / "state.json", state)
+        training = train_c1_conditioner(args, context, pre_r_store, c1_events, router, source)
+        module_record = training["selected_module"]["coded"]
+        module_path = Path(module_record["path"])
+        if js3.file_record(module_path) != module_record:
+            raise SE1Error("final trained module custody differs")
+        state.update(status="SURVIVAL_CURVE")
+        js3.atomic_json(args.output / "state.json", state)
+        curve, composed = run_curve(args, context, pre_r_store, c1_events, module_path.read_bytes(), started)
+        all_rows = curve + composed
+        best = min(all_rows, key=lambda row: (not bool(row["admission_pass"]), float(row["realized_joint_delta_section_additive"])))
+        admitted = bool(best["admission_pass"])
+        robust_mass = float(best["delta_margin_mass"])
+        seg_survives = int(best["robust_beneficial_flips"]) > int(best["robust_harmful_flips"])
+        f1 = not admitted
+        f2 = seg_survives and robust_mass < 0.20
+        recipe = seal_recipe(args.output, best)
+        queued = queue_rows(args.output, admitted, best)
+        final = {
+            "schema": "ddm_se1_final_result.v1",
+            "axis": AXIS,
+            "score_claim": False,
+            "inputs": inputs,
+            "storage_preflight": preflight,
+            "training": training,
+            "curve": curve,
+            "composed": composed,
+            "best": best,
+            "delta_margin_mass": robust_mass,
+            "falsifiers": {
+                "F1": {
+                    "fired": f1,
+                    "scope": "FORMULATION: hidden-4 C1-event-teacher conditioner with JS4 projected adaptation and five parse-backed decoded-class magnitudes on stratified-random n32",
+                    "reason": "no measured packet passed strict realized joint delta, pose endpoint, and delta-margin admission" if f1 else None,
+                },
+                "F2": {
+                    "fired": f2,
+                    "scope": "same bounded formulation and n32 population",
+                    "reason": "Seg robust movement survived but less than 20% of beneficial flips cleared the delta margin" if f2 else None,
+                },
+            },
+            "sealed_recipe": None if recipe is None else js3.file_record(args.output / "SEALED_MAIN_RECIPE.json"),
+            "queued_actions": queued,
+            "boundaries": {
+                "literal_c1_plane_shipped": False,
+                "c1_teacher_only": True,
+                "projector_shipped": False,
+                "scorer_at_decode": False,
+                "full_n600_scorer_job_run": False,
+                "candidate_archive_built": False,
+                "exact_contest_score_measured": False,
+                "modal_dispatched": False,
+                "projected_n600_fields_are_stratified_n32_weighted_projections": True,
+                "rate_is_section_additive_packet_pricing_not_complete_archive_stat": True,
+            },
+            "wall_seconds": time.perf_counter() - started,
+            "source": source,
+            "queue_annex": js3.file_record(args.output / "QUEUE_ANNEX.md"),
+        }
+        js3.atomic_json(args.output / "FINAL_RESULT.json", final)
+        state.update(
+            status="COMPLETE",
+            complete=True,
+            final_result=js3.file_record(args.output / "FINAL_RESULT.json"),
+            admission_pass=admitted,
+            f1_fired=f1,
+            f2_fired=f2,
+        )
+        js3.atomic_json(args.output / "state.json", state)
+        return final
+
+
+def parser() -> argparse.ArgumentParser:
+    value = argparse.ArgumentParser(description=__doc__)
+    value.add_argument("--output", type=Path, default=OUTPUT)
+    value.add_argument("--steps", type=int, default=DEFAULT_STEPS)
+    value.add_argument("--lr", type=float, default=DEFAULT_LR)
+    value.add_argument("--required-free-bytes", type=int, default=DEFAULT_REQUIRED_FREE_BYTES)
+    value.add_argument("--max-wall-seconds", type=float, default=2_300.0)
+    return value
+
+
+def main() -> None:
+    args = parser().parse_args()
+    if args.steps <= 0 or args.lr <= 0.0 or args.max_wall_seconds <= 0.0:
+        raise SystemExit("steps, lr, and max-wall-seconds must be positive")
+    print(json.dumps(run(args), indent=2, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

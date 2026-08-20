@@ -1,0 +1,112 @@
+"""ddm_pd1 — is the "tiny miss fraction carries most of the bits" structure a property of
+STRONG priors on an argmax token field, or is it specific to our neural prior?
+
+The charter pre-registered: the 0.19%-miss / 70%-bits structure will reproduce on >=3 other
+semantic-family PRs.  MEASURED (see memo): the semantic family does NOT contain 3 independent
+token streams (PR132 and PR133 ship a byte-identical stream; PR138 recodes the same field), so
+the pre-registered test is untestable on the available corpus.
+
+This is the SUBSTITUTE test that addresses the falsifier's actual content ("if it does not
+reproduce, the structure is OUR-vehicle-specific"): hold the FIELD fixed and vary the PRIOR
+FAMILY.  If the structure survives a completely different, vehicle-neutral strong prior, it is a
+property of argmax fields vs strong priors.  If it only appears under our neural prior, it is
+vehicle-specific and fx2's ceiling arithmetic is not transferable.
+
+Models (all on the same 600x384x512 = 117,964,800 token field):
+  P_B  causal spatio-temporal context  (prev-frame same position, left, up) -> 125 contexts
+  P_B2 richer causal context           (prev, left, up, upleft)             -> 625 contexts
+  P_C  order-0 class marginal          (the WEAK-prior control)             -> 1 context
+
+Code length is SEMI-STATIC: the conditional table is fitted on the whole field, then the field is
+coded under it.  That understates a real adaptive coder by the parameter cost, which is bounded by
+(k/2)*log2(N) bits -- reported explicitly below and negligible at N = 1.18e8.  Labelled as a
+LOWER BOUND on each model's achievable code length; the miss FRACTION is exact either way.
+"""
+from __future__ import annotations
+
+import json
+import numpy as np
+
+H, W, F, K = 384, 512, 600, 5
+PLANE = H * W
+TOK = "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8"
+
+tokens = np.memmap(TOK, dtype=np.uint8, mode="r")
+assert tokens.size == F * PLANE, tokens.size
+
+
+def contexts_for_frame(cur: np.ndarray, prev: np.ndarray, kind: str) -> np.ndarray:
+    """Causal context ids for every position of one frame, as int64."""
+    g = cur.reshape(H, W).astype(np.int64)
+    left = np.zeros_like(g)
+    left[:, 1:] = g[:, :-1]
+    up = np.zeros_like(g)
+    up[1:, :] = g[:-1, :]
+    upleft = np.zeros_like(g)
+    upleft[1:, 1:] = g[:-1, :-1]
+    p = prev.reshape(H, W).astype(np.int64)
+    if kind == "P_C":
+        return np.zeros(PLANE, dtype=np.int64)
+    if kind == "P_B":
+        return (p * 25 + left * 5 + up).reshape(-1)
+    if kind == "P_B2":
+        return (p * 125 + left * 25 + up * 5 + upleft).reshape(-1)
+    raise ValueError(kind)
+
+
+NCTX = {"P_C": 1, "P_B": 125, "P_B2": 625}
+results = {}
+
+for kind in ("P_C", "P_B", "P_B2"):
+    n_ctx = NCTX[kind]
+    counts = np.zeros((n_ctx, K), dtype=np.int64)
+    # pass 1 - fit the conditional table
+    prev = np.zeros(PLANE, dtype=np.uint8)
+    for f in range(F):
+        cur = np.asarray(tokens[f * PLANE : (f + 1) * PLANE])
+        ctx = contexts_for_frame(cur, prev, kind)
+        np.add.at(counts, (ctx, cur.astype(np.int64)), 1)
+        prev = cur
+    probs = (counts + 0.5) / (counts.sum(axis=1, keepdims=True) + 0.5 * K)
+    logp = np.log2(probs)
+    arg = probs.argmax(axis=1)
+
+    # pass 2 - code the field under it, split hit vs miss
+    hit_bits = miss_bits = 0.0
+    hit_n = miss_n = 0
+    within_miss_bits = 0.0
+    prev = np.zeros(PLANE, dtype=np.uint8)
+    for f in range(F):
+        cur = np.asarray(tokens[f * PLANE : (f + 1) * PLANE])
+        c = cur.astype(np.int64)
+        ctx = contexts_for_frame(cur, prev, kind)
+        bits = -logp[ctx, c]
+        pred = arg[ctx]
+        miss = c != pred
+        hit_bits += float(bits[~miss].sum())
+        miss_bits += float(bits[miss].sum())
+        hit_n += int((~miss).sum())
+        miss_n += int(miss.sum())
+        # -log2( p(c) / (1 - p(argmax)) ) = cost of WHICH class given a miss
+        pmax = probs[ctx, pred]
+        rel = probs[ctx, c] / np.maximum(1.0 - pmax, 1e-300)
+        within_miss_bits += float((-np.log2(np.maximum(rel[miss], 1e-300))).sum())
+        prev = cur
+
+    total_bits = hit_bits + miss_bits
+    n = hit_n + miss_n
+    param_bits = (n_ctx * (K - 1) / 2.0) * np.log2(n)
+    results[kind] = {
+        "contexts": n_ctx,
+        "positions": n,
+        "miss_positions": miss_n,
+        "miss_fraction_pct": round(100.0 * miss_n / n, 4),
+        "total_bytes_lower_bound": round(total_bits / 8.0, 2),
+        "miss_bytes": round(miss_bits / 8.0, 2),
+        "miss_bit_share_pct": round(100.0 * miss_bits / total_bits, 2),
+        "within_miss_bytes": round(within_miss_bits / 8.0, 2),
+        "table_param_cost_bytes": round(param_bits / 8.0, 1),
+    }
+    print(kind, json.dumps(results[kind]), flush=True)
+
+print("\nRESULTS_JSON " + json.dumps(results))

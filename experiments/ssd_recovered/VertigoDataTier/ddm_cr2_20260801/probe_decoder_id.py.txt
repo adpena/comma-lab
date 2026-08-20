@@ -1,0 +1,23 @@
+import json,sys,zipfile
+from pathlib import Path
+PFS1="/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/pfs1"
+sys.path.insert(0,PFS1)
+import numpy as np, ddm_tr1_runtime as rt, ddm_r7_token_coder as r7
+def packet_sections(pk):
+    hdr=rt.PACKET_HEADER; ml=int(hdr.unpack_from(pk,0)[-1]); me=hdr.size+ml; out={}
+    for i,n in enumerate(rt.SECTION_NAMES):
+        _,off,ln,_=rt.SECTION_ENTRY.unpack_from(pk, me+i*rt.SECTION_ENTRY.size)
+        out[n]=pk[off:off+ln]
+    return out
+EP=Path("/Volumes/VertigoDataTier/pact/ddm_ep2_20260731/archives/w03_ep854_representative/archive.zip")
+with zipfile.ZipFile(EP) as z: ep=packet_sections(z.read('state/tr1.ddt1'))
+sel=json.loads(ep['selector'])
+print('selector keys:', sorted(sel)[:14])
+print('selector:', json.dumps(sel)[:500])
+# A) which decoder claims ep854 tokens?
+for nm,fn in (('r7.decode_token_codes', lambda b: r7.decode_token_codes(b)),
+              ('rt._decode_tokens', lambda b: rt._decode_tokens(b, sel))):
+    try:
+        c=fn(ep['tokens']); print(f'  {nm}: OK shape={c.shape} min={c.min()} max={c.max()}')
+    except Exception as e:
+        print(f'  {nm}: RAISED {type(e).__name__}: {str(e)[:120]}')

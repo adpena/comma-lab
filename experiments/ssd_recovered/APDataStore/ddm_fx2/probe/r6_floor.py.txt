@@ -1,0 +1,148 @@
+"""R6: the CONDITIONAL-ENTROPY FLOOR of the hit event, under contexts of rising richness.
+
+WHAT THIS BOUNDS, AND WHY IT IS STRICTLY STRONGER THAN R3.  R3 asks "what is the
+best EXPONENT on the shipped multiplier, per cell" -- a bound on one family.  This
+asks "what is the best HIT PROBABILITY, per cell", which bounds EVERY model that
+sees only that context: mixing, SSE, a neural head, anything.  If the achieved
+code length is already near this number, the token stream's hit-event axis is
+finished and further model work on it is dominated.
+
+The estimate per cell is Krichevsky-Trofimov smoothed, matching the shipped
+estimator, so a one-observation cell cannot claim zero entropy.
+
+HELD-OUT IS THE HONEST COLUMN.  A partition with 500,000 cells drives in-sample
+entropy to zero by memorising, which is not a floor, it is overfitting.  So the
+probability is fitted on frames [0, 300) and SCORED on [300, 600).  The held-out
+number is what an online learner could actually approach; the in-sample number is
+reported beside it only to show the size of the gap between them.
+
+Offline analysis; never ships, so logs are free here.
+"""
+import json, sys, time
+from pathlib import Path
+
+sys.path.insert(0, "/Users/adpena/Projects/pact")
+sys.path.insert(0, "/Volumes/APDataStore/pact/ddm_me1")
+
+import numpy as np
+from assets import ASSETS
+from tac.micro_edit.coder_replay import (
+    HPAC_LOGIT_PRECISION, NUM_CLASSES, PLANE, _frame_probabilities, _group_positions,
+)
+from experiments.ddm_fx2_model_axis_corrector import Fx2ModelAxisMixer
+from experiments.ddm_rr4_free_corrector_v2 import (
+    BOUNDARY_LEVELS, KT_ALPHA, RUN_LEVELS, U_BINS,
+)
+
+N_FRAMES, SPLIT = 600, 300
+LN2 = float(np.log(2.0))
+SP4, HOM = 6, 5
+
+# Contexts of rising richness.  The last is the shipped 51,200-bin joint context
+# CROSSED with both new geometric features -- the richest thing this arm can build.
+DEFS = {
+    "cls_only": (NUM_CLASSES, lambda f: f["cls"]),
+    "shipped_joint_51200": (
+        NUM_CLASSES * U_BINS * 2 * 2 * RUN_LEVELS * BOUNDARY_LEVELS,
+        lambda f: ((((f["cls"] * U_BINS + f["ubin"]) * 2 + f["agree1"]) * 2 + f["agree2"])
+                   * RUN_LEVELS + f["run"]) * BOUNDARY_LEVELS + f["boundary"],
+    ),
+    "shipped_x_homog": (
+        NUM_CLASSES * U_BINS * 2 * 2 * RUN_LEVELS * BOUNDARY_LEVELS * HOM,
+        lambda f: (((((f["cls"] * U_BINS + f["ubin"]) * 2 + f["agree1"]) * 2 + f["agree2"])
+                    * RUN_LEVELS + f["run"]) * BOUNDARY_LEVELS + f["boundary"]) * HOM + f["homog"],
+    ),
+    "shipped_x_homog_x_spatial4": (
+        NUM_CLASSES * U_BINS * 2 * 2 * RUN_LEVELS * BOUNDARY_LEVELS * HOM * SP4,
+        lambda f: ((((((f["cls"] * U_BINS + f["ubin"]) * 2 + f["agree1"]) * 2 + f["agree2"])
+                     * RUN_LEVELS + f["run"]) * BOUNDARY_LEVELS + f["boundary"]) * HOM
+                   + f["homog"]) * SP4 + f["spatial4"],
+    ),
+}
+
+
+def main() -> int:
+    counts = {n: [np.zeros(s), np.zeros(s)] for n, (s, _) in DEFS.items()}
+    hits = {n: [np.zeros(s), np.zeros(s)] for n, (s, _) in DEFS.items()}
+    rules = {n: r for n, (_, r) in DEFS.items()}
+
+    table = np.load(ASSETS.table_values_npy).astype(np.float32)
+    gi = np.fromfile(ASSETS.group_index_u8, dtype=np.uint8).astype(np.int64)
+    groups = _group_positions(gi)
+    logits = np.memmap(ASSETS.logits_i16, dtype=np.int16, mode="r")
+    tokens = np.memmap(ASSETS.tokens_u8, dtype=np.uint8, mode="r")
+    boundary_all = np.memmap(ASSETS.boundary_u8, dtype=np.uint8, mode="r")
+
+    mixer = Fx2ModelAxisMixer(PLANE, families=("shipped_joint",), mixer_context="none",
+                              learn=False, sse_context="off")
+    achieved_shipped_bits = 0.0     # the live rr4 law's hit-event code length
+    uncorrected_bits = 0.0          # HPAC's own, for scale
+    start = time.time()
+    for frame in range(N_FRAMES):
+        base = (np.asarray(logits[frame*PLANE*NUM_CLASSES:(frame+1)*PLANE*NUM_CLASSES])
+                .reshape(PLANE, NUM_CLASSES).astype(np.float32) / HPAC_LOGIT_PRECISION)
+        boundary = np.asarray(boundary_all[frame*PLANE:(frame+1)*PLANE])
+        token = np.asarray(tokens[frame*PLANE:(frame+1)*PLANE]).astype(np.int64)
+        prob = _frame_probabilities(base, boundary, table)
+        predicted = base.argmax(axis=1).astype(np.int64)
+        mixer.begin_frame(boundary)
+        half = 0 if frame < SPLIT else 1
+        for flat in groups:
+            state = mixer.group_state(prob[flat], predicted[flat], flat)
+            m = mixer.odds_multiplier(state)
+            f = mixer._pending["features"]
+            y = (token[flat] == state.arg).astype(np.float64)
+            shifted = state.p_max * m
+            q = np.clip(shifted / (shifted + state.one_minus), 1e-12, 1 - 1e-12)
+            achieved_shipped_bits += float(-(y*np.log(q) + (1-y)*np.log1p(-q)).sum() / LN2)
+            p0 = np.clip(state.p_max, 1e-12, 1 - 1e-12)
+            uncorrected_bits += float(-(y*np.log(p0) + (1-y)*np.log1p(-p0)).sum() / LN2)
+            for n in DEFS:
+                idx = np.asarray(rules[n](f), dtype=np.int64).reshape(-1)
+                size = DEFS[n][0]
+                counts[n][half] += np.bincount(idx, minlength=size)
+                hits[n][half] += np.bincount(idx, weights=y, minlength=size)
+            mixer.observe(state, token[flat])
+        mixer.end_frame(token.astype(np.uint8))
+        if (frame + 1) % 100 == 0:
+            print(f"  frame {frame+1}/{N_FRAMES} [{time.time()-start:.0f}s]", flush=True)
+
+    rows = []
+    for n, (size, _) in DEFS.items():
+        c0, c1 = counts[n]; h0, h1 = hits[n]
+        # in-sample: KT-smoothed empirical entropy over the whole field
+        ct, ht = c0 + c1, h0 + h1
+        p = (ht + KT_ALPHA) / (ct + 2 * KT_ALPHA)
+        ent = -(ht * np.log(p) + (ct - ht) * np.log1p(-p)) / LN2
+        in_sample = float(np.where(ct > 0, ent, 0.0).sum())
+        # held-out: fit on the first half, pay for the second half
+        pf = (h0 + KT_ALPHA) / (c0 + 2 * KT_ALPHA)
+        pf = np.clip(pf, 1e-9, 1 - 1e-9)
+        held = -(h1 * np.log(pf) + (c1 - h1) * np.log1p(-pf)) / LN2
+        held_out = float(np.where(c1 > 0, held, 0.0).sum())
+        rows.append({
+            "context": n, "cells": int(size), "cells_used": int((ct > 0).sum()),
+            "mean_obs_per_used_cell": float(ct.sum() / max((ct > 0).sum(), 1)),
+            "in_sample_floor_bytes": in_sample / 8.0,
+            "heldout_floor_bytes_second_half": held_out / 8.0,
+            "heldout_floor_bytes_scaled_to_n600": held_out / 8.0 * 2.0,
+        })
+
+    out = {
+        "uncorrected_hpac_hit_event_bytes": uncorrected_bits / 8.0,
+        "shipped_rr4_hit_event_bytes": achieved_shipped_bits / 8.0,
+        "split_frame": SPLIT, "frames": N_FRAMES, "rows": rows,
+    }
+    Path("/Volumes/APDataStore/pact/ddm_fx2/probe/r6_floor.json").write_text(json.dumps(out, indent=2))
+    print(f"\nHPAC uncorrected hit-event : {uncorrected_bits/8.0:12.2f} B")
+    print(f"shipped rr4 hit-event      : {achieved_shipped_bits/8.0:12.2f} B")
+    print(f"\n{'context':32s} {'cells':>9s} {'used':>8s} {'obs/cell':>9s} {'in-samp B':>11s} {'held-out B':>11s}")
+    for r in rows:
+        print(f"{r['context']:32s} {r['cells']:9d} {r['cells_used']:8d} "
+              f"{r['mean_obs_per_used_cell']:9.0f} {r['in_sample_floor_bytes']:11.1f} "
+              f"{r['heldout_floor_bytes_scaled_to_n600']:11.1f}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

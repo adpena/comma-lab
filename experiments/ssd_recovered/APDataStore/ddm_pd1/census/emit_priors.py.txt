@@ -1,0 +1,122 @@
+"""ddm_pd1 — emit the typed prior JSONL store from the MEASURED census.
+
+Every row is generated from parsed bytes, never hand-typed, so the store cannot drift from the
+artifacts.  Schema (superset of the charter's two shapes):
+
+  {pr, source, kind, section, stat, value, unit, evidence, sha256, grade, consumer}
+
+grade: MEASURED (computed here from bytes) | RECEIPT (quoted from their published source) |
+       DERIVED (arithmetic on measured inputs) | INFERRED | ASSUMED
+"""
+from __future__ import annotations
+
+import json
+import re
+import sys
+
+CENSUS = "/Volumes/APDataStore/pact/ddm_pd1/census/census_raw.jsonl"
+OUT = sys.argv[1] if len(sys.argv) > 1 else "/dev/stdout"
+
+RATE_DENOM = 37_545_489  # upstream/evaluate.py rate term denominator
+CONTAINER_FLOOR = 100  # measured minimum single-member ZIP overhead in the corpus
+
+
+def prnum(p: str):
+    m = re.search(r"public_pr(\d+)", p) or re.search(r"/pr(\d+)/", p)
+    return int(m.group(1)) if m else None
+
+
+def ds(delta_bytes: float) -> float:
+    """Score units for a byte delta, per the contest rate term."""
+    return 25.0 * delta_bytes / RATE_DENOM
+
+
+rows: list[dict] = []
+
+
+def add(**kw):
+    kw.setdefault("grade", "MEASURED")
+    kw.setdefault("consumer", None)
+    rows.append(kw)
+
+
+census = [json.loads(l) for l in open(CENSUS)]
+seen: dict[int, dict] = {}
+for r in census:
+    n = prnum(r["archive"])
+    if n and n not in seen and "error" not in r:
+        seen[n] = r
+
+# ---- per-PR container + member structure -------------------------------------------------
+for n, r in sorted(seen.items()):
+    add(pr=n, source=f"pr{n}", kind="archive", section="container",
+        stat="archive_bytes", value=r["archive_bytes"], unit="bytes",
+        evidence=r["archive"], sha256=r["sha256"])
+    add(pr=n, source=f"pr{n}", kind="archive", section="container",
+        stat="zip_overhead_bytes", value=r["zip_overhead_bytes"], unit="bytes",
+        evidence=r["archive"], sha256=r["sha256"])
+    add(pr=n, source=f"pr{n}", kind="archive", section="container",
+        stat="n_members", value=r["n_members"], unit="count",
+        evidence=r["archive"], sha256=r["sha256"])
+    # overhead above the measured corpus floor is FREE rate the author did not take
+    excess = r["zip_overhead_bytes"] - CONTAINER_FLOOR
+    if excess > 0:
+        add(pr=n, source=f"pr{n}", kind="archive", section="container",
+            stat="container_overhead_above_floor_bytes", value=excess, unit="bytes",
+            evidence=f"{r['archive']} (floor={CONTAINER_FLOOR}B, 1-char member name, stored)",
+            sha256=r["sha256"], grade="DERIVED", consumer="packet")
+        add(pr=n, source=f"pr{n}", kind="archive", section="container",
+            stat="container_overhead_above_floor_dS", value=round(ds(excess), 9), unit="score",
+            evidence="25*B/37545489", sha256=r["sha256"], grade="DERIVED", consumer="packet")
+    for m in r["members"]:
+        if m["raw_bytes"] == 0:
+            continue
+        add(pr=n, source=f"pr{n}", kind="archive", section=m["name"],
+            stat="member_stored_bytes", value=m["stored_bytes"], unit="bytes",
+            evidence=r["archive"], sha256=m.get("sha256"))
+        add(pr=n, source=f"pr{n}", kind="archive", section=m["name"],
+            stat="member_method", value=m["method"], unit="enum",
+            evidence=r["archive"], sha256=m.get("sha256"))
+        o0 = m.get("order0_floor_bytes")
+        if o0 is None:
+            continue
+        add(pr=n, source=f"pr{n}", kind="archive", section=m["name"],
+            stat="order0_entropy_floor_bytes", value=o0, unit="bytes",
+            evidence="Shannon order-0 on decompressed member bytes",
+            sha256=m.get("sha256"))
+        # residual order-0 structure the author left in a STORED (already-coded) member
+        if m["method"] == "stored" and m["stored_bytes"] > 0:
+            left = m["stored_bytes"] - o0
+            if left > 0.5:
+                add(pr=n, source=f"pr{n}", kind="archive", section=m["name"],
+                    stat="residual_order0_bytes_left", value=round(left, 1), unit="bytes",
+                    evidence="stored_bytes - order0_floor on a stored member",
+                    sha256=m.get("sha256"), grade="DERIVED", consumer="fx2")
+
+# ---- cross-corpus laws -------------------------------------------------------------------
+stored_members = [
+    (n, m) for n, r in seen.items() for m in r["members"]
+    if m["method"] == "stored" and m["raw_bytes"] > 50_000 and m.get("order0_floor_bytes")
+]
+ratios = [m["order0_floor_bytes"] / m["stored_bytes"] for _, m in stored_members]
+add(pr=None, source="corpus", kind="law", section="coder_axis",
+    stat="order0_floor_over_stored_min", value=round(min(ratios), 5), unit="ratio",
+    evidence=f"n={len(ratios)} stored members >50KB across {len(seen)} PR archives",
+    sha256=None, grade="MEASURED", consumer="fx2")
+add(pr=None, source="corpus", kind="law", section="coder_axis",
+    stat="order0_floor_over_stored_median", value=round(sorted(ratios)[len(ratios) // 2], 5),
+    unit="ratio", evidence=f"n={len(ratios)}", sha256=None, consumer="fx2")
+add(pr=None, source="corpus", kind="law", section="container",
+    stat="zip_overhead_floor_bytes", value=CONTAINER_FLOOR, unit="bytes",
+    evidence="min over corpus: single stored member, 1-character name",
+    sha256=None, consumer="packet")
+add(pr=None, source="corpus", kind="law", section="container",
+    stat="zip_overhead_max_bytes", value=max(r["zip_overhead_bytes"] for r in seen.values()),
+    unit="bytes", evidence="max over corpus (9-member tree with directory entry)",
+    sha256=None, consumer="packet")
+
+json_out = open(OUT, "w")
+for row in rows:
+    json_out.write(json.dumps(row, sort_keys=True) + "\n")
+json_out.close()
+print(f"emitted {len(rows)} typed prior rows -> {OUT}", file=sys.stderr)

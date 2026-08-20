@@ -1,0 +1,8 @@
+"""Failing test sketch for HiNeRV hard target-region class birth."""
+
+def test_target_region_birth_lifts_frontier_margin_under_scoped_param_update():
+    # Build tiny HiNeRV + mock real SegNet adapter.
+    # target class k exists in region R; candidate argmax has zero k in R.
+    # Run fit_target_region_birth_from_segnet(max_steps=4).
+    # Assert frontier margin decreases and only allowed param groups update.
+    assert False, "land in src/tac/substrates/hi_nerv/tests/test_target_region_birth.py"

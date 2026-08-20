@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+# SPDX-License-Identifier: MIT
+"""ddm_r1c rung-1 window ticket builder (DSL-defined, gc12 §5 seal).
+
+Reconstruct the control_tail (parent) sealed program from its ticket via the
+committed tr1 DSL, then swap ONLY the window lever (--epochs, --max-wall-minutes)
+and the out-dir/resume-from program fields. Emits a sealed ticket whose argv
+differs from the parent's EXACTLY in {--epochs, --max-wall-minutes, --out-dir,
+--resume-from} (the gc12 §5 sanctioned four). Prints the argv-diff for audit.
+
+score_claim=False; apparatus (ticket generation), not a score mover.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+REPO = Path("/Users/adpena/Projects/pact")
+sys.path.insert(0, str(REPO / "src"))
+
+from tac.witness_dsl.curriculum_dsl import Lever  # noqa: E402
+from tac.witness_dsl.spec_tr1_renderer_20260728 import (  # noqa: E402
+    TR1RendererProgramV1,
+    lever_window,
+)
+
+PARENT_TICKET = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_pa1r_20260730/tickets/control_tail_ticket.json"
+)
+GT_CACHE = "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
+
+
+def build(epochs: int, max_wall_minutes: float, out_dir: str, resume_from: str,
+          out_ticket: Path) -> dict:
+    parent = json.loads(PARENT_TICKET.read_text())
+    parent_argv = list(parent["argv"])
+
+    levers: list[Lever] = []
+    for d in parent["levers"]:
+        if "--epochs" in d["overrides"]:  # the window lever -> swap
+            levers.append(lever_window(epochs, max_wall_minutes, batch_pairs=8, lr=2e-3))
+        else:
+            levers.append(Lever(name=d["name"], overrides=dict(d["overrides"]),
+                                notes=d.get("notes", "")))
+
+    prog = TR1RendererProgramV1(
+        levers=tuple(levers), num_pairs=600, out_dir=out_dir, seed=0,
+        gt_cache=GT_CACHE, resume_from=resume_from, full_confirm=True)
+    ticket = prog.sealed_ticket()  # compiles argv + validates (never-invent-flags) + ticket_hash
+    blob = json.dumps({k: ticket[k] for k in sorted(ticket) if k != "sealed_sha256"},
+                      sort_keys=True, separators=(",", ":")).encode()
+    ticket["sealed_sha256"] = hashlib.sha256(blob).hexdigest()
+
+    out_ticket.parent.mkdir(parents=True, exist_ok=True)
+    out_ticket.write_text(json.dumps(ticket, indent=2, sort_keys=True) + "\n")
+
+    # argv-diff vs parent (positional flag->value maps; report added/removed/changed).
+    def to_map(argv: list[str]) -> dict[str, str]:
+        m, i = {}, 0
+        while i < len(argv):
+            a = argv[i]
+            if a.startswith("--"):
+                if i + 1 < len(argv) and not argv[i + 1].startswith("--"):
+                    m[a] = argv[i + 1]; i += 2
+                else:
+                    m[a] = ""; i += 1
+            else:
+                i += 1
+        return m
+
+    pm, cm = to_map(parent_argv), to_map(ticket["argv"])
+    diff = {}
+    for k in set(pm) | set(cm):
+        if pm.get(k) != cm.get(k):
+            diff[k] = {"parent": pm.get(k), "window": cm.get(k)}
+    return {"ticket_hash": ticket["ticket_hash"], "sealed_sha256": ticket["sealed_sha256"],
+            "argv_diff": diff, "out_ticket": str(out_ticket)}
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--epochs", type=int, required=True)
+    ap.add_argument("--max-wall-minutes", type=float, required=True)
+    ap.add_argument("--out-dir", required=True)
+    ap.add_argument("--resume-from", required=True)
+    ap.add_argument("--out-ticket", type=Path, required=True)
+    a = ap.parse_args()
+    r = build(a.epochs, a.max_wall_minutes, a.out_dir, a.resume_from, a.out_ticket)
+    print(json.dumps(r, indent=2, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

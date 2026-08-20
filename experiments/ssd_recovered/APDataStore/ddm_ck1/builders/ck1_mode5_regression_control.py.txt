@@ -1,0 +1,58 @@
+"""Pre-edit regression baseline for ddm_ck1.
+
+Reproduces keep01's SM3R mode-5 semantic body from the real rr4 semantic state
+using the CURRENT (unmodified) experiments/ddm_sm3_semantic_representation.py.
+The recorded sha256 becomes the byte-identity baseline the mode-6 landing must
+not disturb.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import sys
+from collections import OrderedDict
+from pathlib import Path
+
+import numpy as np
+import torch
+
+RT = "/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime"
+sys.path.insert(0, RT)
+sys.path.insert(0, RT + "/cpr1")
+sys.path.insert(0, "/Users/adpena/Projects/pact/experiments")
+
+import ddm_sd1_semantic_rd_curve as sd1  # noqa: E402
+import ddm_sm3_semantic_representation as sm3  # noqa: E402
+import runtime.residual_archive as ra  # noqa: E402
+
+torch.set_num_threads(4)
+torch.set_grad_enabled(False)
+
+P = Path(RT) / "archive.zip"
+parts = ra.read_residual_archive(P)
+recs = ra.decode_wans1(parts.semantic_blob)
+state = OrderedDict(
+    (r.schema.name, torch.from_numpy(np.ascontiguousarray(r.values, dtype=np.float32)))
+    for r in recs
+)
+
+body, expected, details = sm3.pack_prune_candidate(state, 1)
+retained = Path("/Volumes/APDataStore/pact/ddm_sa1/retained/sm3r_keep01/semantic.sm3r.bin")
+retained_bytes = retained.read_bytes()
+
+out = {
+    "quantized_names": sd1.quantized_names(state),
+    "state_names": list(state),
+    "mode5_keep01_body_bytes": len(body),
+    "mode5_keep01_body_sha256": hashlib.sha256(body).hexdigest(),
+    "retained_keep01_body_bytes": len(retained_bytes),
+    "retained_keep01_body_sha256": hashlib.sha256(retained_bytes).hexdigest(),
+    "byte_identical_to_retained_keep01": body == retained_bytes,
+    "details": details,
+    "sm3_source_sha256": hashlib.sha256(
+        Path("/Users/adpena/Projects/pact/experiments/ddm_sm3_semantic_representation.py").read_bytes()
+    ).hexdigest(),
+}
+print(json.dumps(out, indent=2, sort_keys=True))
+Path(sys.argv[1]).write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")

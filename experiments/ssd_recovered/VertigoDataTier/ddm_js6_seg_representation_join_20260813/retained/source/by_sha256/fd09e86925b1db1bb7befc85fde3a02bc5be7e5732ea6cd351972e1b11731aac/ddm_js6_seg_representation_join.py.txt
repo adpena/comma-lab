@@ -1,0 +1,1145 @@
+#!/usr/bin/env python3
+"""Build the scorer-free JS6 CP135 boundary/grammar proposal join.
+
+The encoder consumes the retained n600 CP135 and GT SegNet argmax fields.  It
+finds directed-edge error components, maps every component pixel to its nearest
+same-class CP135 semantic token, and keeps only genuinely coupled (at least two
+token) proposals.  Each proposal carries two executable, losslessly parsed
+sections:
+
+* the landed G1 worldsheet encoding derived from the exact boundary-innovation component;
+* the landed EC1 coordinate event that the real CP135 semantic receiver consumes.
+
+Every rendered candidate tensor and every coded proposal byte string is kept on
+the SSD.  This program does not import a scorer, invoke Modal, or claim a score.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import lzma
+import math
+import os
+import platform
+import shutil
+import struct
+import sys
+import time
+import zipfile
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any, Final
+
+import brotli
+import numpy as np
+import scipy
+from scipy import ndimage
+
+REPO: Final = Path(__file__).resolve().parents[1]
+for _entry in (REPO, REPO / "src", REPO / "experiments"):
+    if str(_entry) not in sys.path:
+        sys.path.insert(0, str(_entry))
+
+from experiments import ddm_ec1_event_coordinate_producer as ec1
+from experiments import ddm_js1_stage0_per_edge as js1
+from tac.optimization.direct_description_g1_worldsheet import (
+    decode_g1_movable_worldsheet,
+    encode_g1_movable_worldsheet,
+)
+
+RUN_ROOT: Final = Path("/Volumes/VertigoDataTier/pact/ddm_js6_seg_representation_join_20260813")
+PROPOSAL_STORE: Final = RUN_ROOT / "proposal_bank"
+FIELD_ROOT: Final = Path(
+    "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/stage0_per_edge/"
+    "contest_cuda/ddm_js1b_20260813b/retained/fields"
+)
+BASE_ARGMAX: Final = FIELD_ROOT / "cp135_base_argmax_n600.npy"
+GT_ARGMAX: Final = FIELD_ROOT / "gt_argmax_n600.npy"
+STAGE0_RESULT: Final = FIELD_ROOT.parents[2] / "stage0_from_js1b/STAGE0_RESULT.json"
+TF1_MEMO: Final = REPO / ".omx/research/ddm_tf1_theoretical_floor_and_beyond_20260812.md"
+TF1_RECEIPT: Final = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_tf1_20260812/final_v2/"
+    "TF1_PARTITION_INNOVATION_RECEIPT.json"
+)
+HV1_MEMO: Final = REPO / ".omx/research/ddm_hv1_fresh_eyes_hybrid_review_20260813.md"
+PO1_MEMO: Final = REPO / ".omx/research/ddm_po1_t4_error_feedback_pose_compensation_20260813.md"
+EC3_MEMO: Final = REPO / ".omx/research/ddm_ec3_t4_targeted_events_20260813.md"
+V19_STAGE: Final = REPO / (
+    ".omx/research/ddm_v19_pure_priced_objective_20260723T041500Z/"
+    "stage_checkpoints/03_grammar_native.json"
+)
+V19_CONFIG: Final = REPO / ".omx/research/configs/ddm_v19_pure_priced_objective_20260723.json"
+G1_SOURCE: Final = REPO / "src/tac/optimization/direct_description_g1_worldsheet.py"
+RE1_QUEUE: Final = Path(
+    "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/"
+    "probability_object_race/ddm_re1_20260813/SCORER_QUEUE.json"
+)
+
+N: Final = 600
+H: Final = 384
+W: Final = 512
+CAM_H: Final = 874
+CAM_W: Final = 1164
+PIXELS: Final = N * H * W
+UNCOMPRESSED_BYTES: Final = 37_545_489
+PROPOSAL_LIMIT: Final = 200
+POSE_MARGINAL: Final = 603.0
+HV1_POSE_BUDGET: Final = 1.29e-6
+PO1_FORWARD_MISMATCH_RMS: Final = 9.36e-6
+MIN_FREE_BYTES: Final = 8 * 1024**3
+AXIS: Final = (
+    "[contest-CUDA T4 retained CP135/GT argmax targeting, n600 full census; "
+    "macOS-CPU scorer-free exact CP135 receiver replay] COMPONENT-ONLY"
+)
+
+CLASSES: Final = ec1.CLASSES
+JOIN_MAGIC: Final = b"JS6JOIN1"
+JOIN_HEADER: Final = struct.Struct("<8sHBBBBII")
+FAMILY_WORLDSHEET: Final = 1
+
+PINNED: Final = {
+    BASE_ARGMAX: "7648ad42e9f21942f86e81b97cabf46b710af747bba0909f7837ef3891232727",
+    GT_ARGMAX: "91d3ff11a904c476b56a8be8af2225fb4a390d02fac9d3b09ef4704ad6e77248",
+    STAGE0_RESULT: "afef51d0863f8ba48ebdb9e5ca41b9fc5e2ca2ebe6aec2ebff316e046720c027",
+    TF1_MEMO: "662f71cffbdaa0567951c042fe642ed0912728d86823674e7bcf86b893ab85c6",
+    TF1_RECEIPT: "6e8d338f13a25e0bcd7b8db54784f04298539dc2896c401fb050a5f76f9d13ea",
+    HV1_MEMO: "f896753583378d1af2f2658392d9589f97d233ded2aa1856f1b0059bd6c7a6b3",
+    PO1_MEMO: "e31ad59d8d5a3b73ded971ffd7aaff58a36af802a87b5cb454b03c5846715358",
+    EC3_MEMO: "afd3c95eb055847817ac9b3d9287c6ed6dacd50c46fcf74e0d605e33f6b760d1",
+    V19_STAGE: "7d1e971ca387b788db3d4e92e824f8c8f027028ef17554ddd783ba3bc9cf8d25",
+    V19_CONFIG: "61138fa71ce2adb388e619a5773ad49df9f5d83c7637241e5f7b9ee6eed9abed",
+    Path(ec1.__file__).resolve(): "c927106ef695cd7f162be8ee692e54b2178ff08ee0e8a3d55c9ea6bbbba85a78",
+    Path(js1.__file__).resolve(): "c282943724cd64ef4c9bcee5c17559d79399a5cd20d34e4fcff771964742aff0",
+    G1_SOURCE: "abd4982b2cbec0be99aa22dae470e3ea8f33c0e0b0e02a7e8c2ba0739500dd9d",
+    ec1.BASE_TOKENS: ec1.BASE_TOKEN_SHA,
+    ec1.BASE_RAW: ec1.BASE_RAW_SHA,
+    ec1.CP135_ARCHIVE: ec1.CP135_ARCHIVE_SHA,
+}
+
+
+class JS6Error(RuntimeError):
+    """A pin, representation, receiver, retention, or admission invariant failed."""
+
+
+@dataclass(frozen=True, slots=True)
+class ComponentSpec:
+    pair: int
+    source_class: int
+    target_class: int
+    component_id: int
+    component_pixels: int
+    token_sites: tuple[int, ...]
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while block := stream.read(8 * 1024 * 1024):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def file_record(path: Path) -> dict[str, Any]:
+    return {
+        "path": str(path.resolve()),
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+    }
+
+
+def atomic_bytes(path: Path, payload: bytes) -> dict[str, Any]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    partial = path.with_name(f".{path.name}.{os.getpid()}.partial")
+    try:
+        with partial.open("wb") as stream:
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(partial, path)
+    finally:
+        partial.unlink(missing_ok=True)
+    return file_record(path)
+
+
+def retain_bytes(path: Path, payload: bytes) -> dict[str, Any]:
+    """Write once, or verify that the already-retained bytes are identical."""
+
+    if path.is_file():
+        record = file_record(path)
+        if record["bytes"] != len(payload) or record["sha256"] != hashlib.sha256(payload).hexdigest():
+            raise JS6Error(f"refusing to overwrite a different retained payload: {path}")
+        return record
+    return atomic_bytes(path, payload)
+
+
+def atomic_json(path: Path, value: Any) -> dict[str, Any]:
+    payload = (json.dumps(value, indent=2, sort_keys=True, allow_nan=False) + "\n").encode()
+    return atomic_bytes(path, payload)
+
+
+def atomic_npy(path: Path, value: np.ndarray) -> dict[str, Any]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    partial = path.with_name(f".{path.name}.{os.getpid()}.partial")
+    try:
+        with partial.open("wb") as stream:
+            np.save(stream, np.asarray(value), allow_pickle=False)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(partial, path)
+    finally:
+        partial.unlink(missing_ok=True)
+    return file_record(path)
+
+
+def retain_npy(path: Path, value: np.ndarray) -> dict[str, Any]:
+    """Persist an array without ever replacing different retained signal."""
+
+    expected = np.asarray(value)
+    if path.is_file():
+        retained = np.load(path, mmap_mode="r", allow_pickle=False)
+        if (
+            retained.shape != expected.shape
+            or retained.dtype != expected.dtype
+            or not np.array_equal(retained, expected, equal_nan=True)
+        ):
+            raise JS6Error(f"refusing to overwrite a different retained array: {path}")
+        return file_record(path)
+    return atomic_npy(path, expected)
+
+
+def require_record(record: dict[str, Any], *, beneath: Path | None = None) -> Path:
+    path = Path(str(record.get("path", ""))).resolve()
+    if beneath is not None:
+        try:
+            path.relative_to(beneath.resolve())
+        except ValueError as exc:
+            raise JS6Error(f"retained path escapes {beneath}: {path}") from exc
+    if not path.is_file() or file_record(path) != record:
+        raise JS6Error(f"retained artifact differs: {path}")
+    return path
+
+
+def event_type(source: int, target: int) -> int:
+    if (source, target) in ((0, 1), (1, 0)):
+        return ec1.EVENT_TYPE["lane_program_delta"]
+    if target == 3:
+        return ec1.EVENT_TYPE["island_birth"]
+    if source == 3:
+        return ec1.EVENT_TYPE["island_death"]
+    return ec1.EVENT_TYPE["boundary_offset"]
+
+
+def encode_join_payload(spec: ComponentSpec, component: np.ndarray) -> tuple[bytes, dict[str, Any]]:
+    labels = np.zeros((1, H, W), dtype=np.uint8)
+    labels[0, component] = 3
+    worldsheet, metadata = encode_g1_movable_worldsheet(labels)
+    decoded, decoded_metadata = decode_g1_movable_worldsheet(worldsheet, expected_pairs=1)
+    if decoded_metadata.payload_sha256 != metadata.payload_sha256:
+        raise JS6Error("G1 byte-canonical parse-back differs")
+    indices = np.asarray(spec.token_sites, dtype=np.int64)
+    event = ec1.proposal_payload(
+        spec.pair,
+        spec.source_class,
+        spec.target_class,
+        indices,
+        event_type(spec.source_class, spec.target_class),
+    )
+    header = JOIN_HEADER.pack(
+        JOIN_MAGIC,
+        spec.pair,
+        spec.source_class,
+        spec.target_class,
+        FAMILY_WORLDSHEET,
+        event_type(spec.source_class, spec.target_class),
+        len(worldsheet),
+        len(event),
+    )
+    payload = header + worldsheet + event
+    parsed = decode_join_payload(payload)
+    if parsed["worldsheet"] != worldsheet or parsed["event"] != event:
+        raise JS6Error("joined proposal parse-back differs")
+    return payload, {
+        "worldsheet_bytes": len(worldsheet),
+        "worldsheet_sha256": hashlib.sha256(worldsheet).hexdigest(),
+        "worldsheet_metadata": asdict(metadata),
+        "worldsheet_component_symmetric_difference_pixels": int(
+            np.count_nonzero(decoded[0] != component)
+        ),
+        "event_bytes": len(event),
+        "event_sha256": hashlib.sha256(event).hexdigest(),
+    }
+
+
+def decode_join_payload(payload: bytes) -> dict[str, Any]:
+    if len(payload) < JOIN_HEADER.size:
+        raise JS6Error("joined proposal is truncated")
+    magic, pair, source, target, family, encoded_event_type, g1_bytes, event_bytes = JOIN_HEADER.unpack_from(payload)
+    if magic != JOIN_MAGIC or family != FAMILY_WORLDSHEET:
+        raise JS6Error("joined proposal header differs")
+    expected = JOIN_HEADER.size + g1_bytes + event_bytes
+    if expected != len(payload):
+        raise JS6Error("joined proposal length/trailing bytes differ")
+    worldsheet = payload[JOIN_HEADER.size : JOIN_HEADER.size + g1_bytes]
+    event = payload[JOIN_HEADER.size + g1_bytes :]
+    decoded_mask, _ = decode_g1_movable_worldsheet(worldsheet, expected_pairs=1)
+    event_row = ec1.decode_proposal(event)
+    if event_row[:4] != (pair, source, target, encoded_event_type):
+        raise JS6Error("joined EC1 address differs from its outer header")
+    if int(np.count_nonzero(decoded_mask)) == 0 or len(event_row[4]) < 2:
+        raise JS6Error("joined proposal is not a nonempty coupled object")
+    return {
+        "pair": pair,
+        "source_class": source,
+        "target_class": target,
+        "family": "g1_worldsheet_event_edit",
+        "event_type": ec1.EVENT_NAME[encoded_event_type],
+        "worldsheet": worldsheet,
+        "event": event,
+        "component": decoded_mask[0],
+        "token_sites": event_row[4],
+    }
+
+
+def edge_census(base: np.ndarray, gt: np.ndarray) -> dict[tuple[int, int], int]:
+    if base.shape != (N, H, W) or gt.shape != base.shape:
+        raise JS6Error("argmax field geometry differs")
+    matrix = np.zeros((len(CLASSES), len(CLASSES)), dtype=np.int64)
+    for source in range(len(CLASSES)):
+        for target in range(len(CLASSES)):
+            if source != target:
+                matrix[source, target] = np.count_nonzero((base == source) & (gt == target))
+    return {
+        (source, target): int(matrix[source, target])
+        for source in range(len(CLASSES))
+        for target in range(len(CLASSES))
+        if source != target and matrix[source, target]
+    }
+
+
+def component_specs(
+    base: np.ndarray,
+    gt: np.ndarray,
+    tokens: np.ndarray,
+) -> list[ComponentSpec]:
+    """Derive coupled components without a radius, template, or sample constant.
+
+    Each target pixel selects the nearest current-base token of the directed
+    source class.  Ties follow SciPy's deterministic EDT index order.  This is
+    the current receiver lattice itself, not an inherited spatial basis.
+    """
+
+    rows: list[ComponentSpec] = []
+    structure = np.ones((3, 3), dtype=np.uint8)
+    for pair in range(N):
+        base_pair = np.asarray(base[pair])
+        gt_pair = np.asarray(gt[pair])
+        token_pair = np.asarray(tokens[pair])
+        mismatch = base_pair != gt_pair
+        if not np.any(mismatch):
+            continue
+        nearest: dict[int, np.ndarray] = {}
+        for source in np.unique(base_pair[mismatch]).tolist():
+            source = int(source)
+            if np.any(token_pair == source):
+                nearest[source] = ndimage.distance_transform_edt(
+                    token_pair != source,
+                    return_distances=False,
+                    return_indices=True,
+                )
+        codes = np.unique(base_pair[mismatch].astype(np.int16) * len(CLASSES) + gt_pair[mismatch])
+        for code in codes.tolist():
+            source, target = divmod(int(code), len(CLASSES))
+            if source not in nearest:
+                continue
+            component_labels, count = ndimage.label(
+                (base_pair == source) & (gt_pair == target),
+                structure=structure,
+            )
+            component_sizes = np.bincount(component_labels.reshape(-1), minlength=count + 1)
+            nearest_y, nearest_x = nearest[source]
+            for component_id in range(1, count + 1):
+                ys, xs = np.nonzero(component_labels == component_id)
+                token_sites = np.unique(nearest_y[ys, xs] * W + nearest_x[ys, xs])
+                if token_sites.size < 2:
+                    continue
+                rows.append(
+                    ComponentSpec(
+                        pair=pair,
+                        source_class=source,
+                        target_class=target,
+                        component_id=component_id,
+                        component_pixels=int(component_sizes[component_id]),
+                        token_sites=tuple(int(value) for value in token_sites.tolist()),
+                    )
+                )
+    rows.sort(
+        key=lambda row: (
+            -row.component_pixels,
+            -len(row.token_sites),
+            row.pair,
+            row.source_class,
+            row.target_class,
+            row.component_id,
+        )
+    )
+    return rows
+
+
+def reconstruct_component(spec: ComponentSpec, base: np.ndarray, gt: np.ndarray) -> np.ndarray:
+    mask = (np.asarray(base[spec.pair]) == spec.source_class) & (
+        np.asarray(gt[spec.pair]) == spec.target_class
+    )
+    labels, count = ndimage.label(mask, structure=np.ones((3, 3), dtype=np.uint8))
+    if not 1 <= spec.component_id <= count:
+        raise JS6Error("component ID escaped its re-derived edge field")
+    component = labels == spec.component_id
+    if int(np.count_nonzero(component)) != spec.component_pixels:
+        raise JS6Error("component mass differs on re-derivation")
+    return component
+
+
+def render_candidate(semantic: Any, tokens: np.ndarray, pair: int) -> tuple[np.ndarray, ...]:
+    import torch
+    from torch.nn import functional
+
+    with torch.inference_mode():
+        pre_r = semantic(
+            torch.from_numpy(np.asarray(tokens).copy())[None].long(),
+            torch.tensor([pair], dtype=torch.long),
+        )
+        camera = (
+            functional.interpolate(pre_r, size=(CAM_H, CAM_W), mode="bilinear", align_corners=False)
+            .clamp(0.0, 255.0)
+            .round()
+            .to(torch.uint8)
+        )
+        scorer = functional.interpolate(
+            camera.float(), size=(H, W), mode="bilinear", align_corners=False
+        )
+    return (
+        pre_r[0].cpu().numpy().astype(np.float32, copy=False),
+        camera[0].permute(1, 2, 0).cpu().numpy(),
+        scorer[0].cpu().numpy().astype(np.float32, copy=False),
+    )
+
+
+def base_scorer_input(base_camera: np.ndarray) -> np.ndarray:
+    import torch
+    from torch.nn import functional
+
+    with torch.inference_mode():
+        camera = torch.from_numpy(np.asarray(base_camera).copy()).permute(2, 0, 1)[None].float()
+        scorer = functional.interpolate(camera, size=(H, W), mode="bilinear", align_corners=False)
+    return scorer[0].cpu().numpy().astype(np.float32, copy=False)
+
+
+def preflight(run_root: Path, store: Path) -> dict[str, Any]:
+    import torch
+
+    run_root.mkdir(parents=True, exist_ok=True)
+    store.mkdir(parents=True, exist_ok=True)
+    usage = shutil.disk_usage(run_root)
+    if usage.free < MIN_FREE_BYTES:
+        raise JS6Error(f"storage preflight failed: {usage.free} < {MIN_FREE_BYTES}")
+    inputs = {}
+    for path, digest in PINNED.items():
+        if not path.is_file() or sha256_file(path) != digest:
+            raise JS6Error(f"pinned input differs: {path}")
+        inputs[str(path.resolve())] = file_record(path)
+    for path in (BASE_ARGMAX, GT_ARGMAX):
+        field = np.load(path, mmap_mode="r", allow_pickle=False)
+        if field.shape != (N, H, W) or field.dtype != np.uint8:
+            raise JS6Error(f"argmax field geometry differs: {path}")
+    with zipfile.ZipFile(ec1.CP135_ARCHIVE) as archive:
+        cp135_members = archive.namelist()
+    if cp135_members != ["p"]:
+        raise JS6Error("CP135 archive member surface differs")
+    result = {
+        "schema": "ddm_js6_seg_representation_join_preflight.v1",
+        "axis": AXIS,
+        "score_claim": False,
+        "scorer_invoked": False,
+        "modal_invoked": False,
+        "mps_invoked": False,
+        "selection_mode": "full n600 census; no sample",
+        "proposal_limit": PROPOSAL_LIMIT,
+        "storage": {"free_bytes": usage.free, "required_bytes": MIN_FREE_BYTES},
+        "runtime": {
+            "platform": platform.platform(),
+            "python": sys.version,
+            "numpy": np.__version__,
+            "scipy": scipy.__version__,
+            "torch": torch.__version__,
+            "rng": "none; deterministic full-population enumeration",
+        },
+        "inputs": inputs,
+        "cp135_archive_members": cp135_members,
+        "current_receiver_grammar_compatibility": {
+            "g1_worldsheet_member": False,
+            "shared_template_member": False,
+            "lane_program_member": False,
+            "meaning": (
+                "v19 grammar objects are proposal-source objects only; the CP135 public receiver "
+                "cannot consume them until a byte-closed adapter is built"
+            ),
+        },
+    }
+    atomic_json(run_root / "00_PREFLIGHT.json", result)
+    source_payload = Path(__file__).read_bytes()
+    source_sha = hashlib.sha256(source_payload).hexdigest()
+    retain_bytes(
+        run_root / f"retained/source/by_sha256/{source_sha}/ddm_js6_seg_representation_join.py",
+        source_payload,
+    )
+    return result
+
+
+def load_prior(
+    receipt_path: Path,
+    store: Path,
+    *,
+    expected_payload_sha256: str,
+    producer_source_sha256: str,
+) -> dict[str, Any] | None:
+    if not receipt_path.is_file():
+        return None
+    row = json.loads(receipt_path.read_text())
+    if (
+        row.get("schema") != "ddm_js6_seg_representation_proposal.v3"
+        or row.get("producer_source_sha256") != producer_source_sha256
+    ):
+        return None
+    retained_payloads = row.get("retained_payloads")
+    if not isinstance(retained_payloads, dict):
+        raise JS6Error("current-source proposal receipt lacks its retained payload map")
+    for record in retained_payloads.values():
+        require_record(record, beneath=store)
+    raw_record = retained_payloads.get("proposal.js6p")
+    if not isinstance(raw_record, dict) or raw_record.get("sha256") != expected_payload_sha256:
+        raise JS6Error("retained proposal payload differs from its freshly derived address")
+    return row
+
+
+def process_proposal(
+    ordinal: int,
+    spec: ComponentSpec,
+    *,
+    store: Path,
+    semantic: Any,
+    tokens: np.ndarray,
+    base_raw: np.ndarray,
+    base: np.ndarray,
+    gt: np.ndarray,
+    producer_source_sha256: str,
+) -> dict[str, Any]:
+    component = reconstruct_component(spec, base, gt)
+    payload, representation = encode_join_payload(spec, component)
+    proposal_id = f"js6_{ordinal:04d}_{hashlib.sha256(payload).hexdigest()[:12]}"
+    root = store / "proposals" / proposal_id
+    receipt_path = root / "proposal.json"
+    prior = load_prior(
+        receipt_path,
+        store,
+        expected_payload_sha256=hashlib.sha256(payload).hexdigest(),
+        producer_source_sha256=producer_source_sha256,
+    )
+    if prior is not None:
+        return prior
+    parsed = decode_join_payload(payload)
+    base_tokens = np.asarray(tokens[spec.pair])
+    indices = np.asarray(parsed["token_sites"], dtype=np.int64)
+    if not np.all(base_tokens.reshape(-1)[indices] == spec.source_class):
+        raise JS6Error("proposal token source precondition differs")
+    candidate_tokens = base_tokens.copy()
+    candidate_tokens.reshape(-1)[indices] = spec.target_class
+    candidate_pre_r, candidate_camera, candidate_scorer = render_candidate(
+        semantic, candidate_tokens, spec.pair
+    )
+    expected_base_camera = np.asarray(base_raw[2 * spec.pair + 1])
+    base_scorer = base_scorer_input(expected_base_camera)
+    scorer_delta = candidate_scorer - base_scorer
+    strong_support = np.max(np.abs(scorer_delta), axis=0) >= 1.0
+    if not np.any(strong_support) or np.array_equal(candidate_camera, expected_base_camera):
+        raise JS6Error("coupled proposal is not receiver-effective through R and uint8")
+    exact_edge = (np.asarray(base[spec.pair]) == spec.source_class) & (
+        np.asarray(gt[spec.pair]) == spec.target_class
+    )
+    all_errors = np.asarray(base[spec.pair]) != np.asarray(gt[spec.pair])
+    target_mass = int(np.count_nonzero(strong_support & exact_edge))
+    other_error_mass = int(np.count_nonzero(strong_support & all_errors & ~exact_edge))
+    correct_field_mass = int(np.count_nonzero(strong_support & ~all_errors))
+    raw = payload
+    br = brotli.compress(payload, quality=11)
+    xz = lzma.compress(payload, preset=9 | lzma.PRESET_EXTREME)
+    coded_name, coded = min(
+        (("raw", raw), ("brotli_q11", br), ("lzma9_extreme", xz)),
+        key=lambda item: (len(item[1]), item[0]),
+    )
+    retained = {
+        "proposal.js6p": retain_bytes(root / "proposal.js6p", raw),
+        "proposal.js6p.br": retain_bytes(root / "proposal.js6p.br", br),
+        "proposal.js6p.xz": retain_bytes(root / "proposal.js6p.xz", xz),
+        "target_component.bool.npy": retain_npy(root / "target_component.bool.npy", component),
+        "g1_decoded_component.bool.npy": retain_npy(
+            root / "g1_decoded_component.bool.npy", parsed["component"]
+        ),
+        "candidate_tokens.uint8.npy": retain_npy(root / "candidate_tokens.uint8.npy", candidate_tokens),
+        "candidate_pre_r.float32.npy": retain_npy(
+            root / "candidate_pre_r.float32.npy", candidate_pre_r
+        ),
+        "candidate_pre_r.float16.npy": retain_npy(
+            root / "candidate_pre_r.float16.npy", candidate_pre_r.astype(np.float16)
+        ),
+        "base_camera.uint8.npy": retain_npy(root / "base_camera.uint8.npy", expected_base_camera),
+        "candidate_camera.uint8.npy": retain_npy(root / "candidate_camera.uint8.npy", candidate_camera),
+        "base_scorer_input.float32.npy": retain_npy(
+            root / "base_scorer_input.float32.npy", base_scorer
+        ),
+        "base_scorer_input.float16.npy": retain_npy(
+            root / "base_scorer_input.float16.npy", base_scorer.astype(np.float16)
+        ),
+        "candidate_scorer_input.float32.npy": retain_npy(
+            root / "candidate_scorer_input.float32.npy", candidate_scorer
+        ),
+        "candidate_scorer_input.float16.npy": retain_npy(
+            root / "candidate_scorer_input.float16.npy", candidate_scorer.astype(np.float16)
+        ),
+        "scorer_delta.float32.npy": retain_npy(root / "scorer_delta.float32.npy", scorer_delta),
+        "scorer_delta.float16.npy": retain_npy(
+            root / "scorer_delta.float16.npy", scorer_delta.astype(np.float16)
+        ),
+        "strong_support.bool.npy": retain_npy(root / "strong_support.bool.npy", strong_support),
+    }
+    section_rate_delta_s = 25.0 * len(coded) / UNCOMPRESSED_BYTES
+    optimistic_seg_delta_s = -100.0 * target_mass / PIXELS
+    row = {
+        "schema": "ddm_js6_seg_representation_proposal.v3",
+        "axis": AXIS,
+        "score_claim": False,
+        "acceptance_tested": False,
+        "proposal_id": proposal_id,
+        "producer_source_sha256": producer_source_sha256,
+        "ordinal": ordinal,
+        "family": "g1_worldsheet_event_edit",
+        "event_type": ec1.EVENT_NAME[event_type(spec.source_class, spec.target_class)],
+        "pair": spec.pair,
+        "source_class": CLASSES[spec.source_class],
+        "target_class": CLASSES[spec.target_class],
+        "source_class_id": spec.source_class,
+        "target_class_id": spec.target_class,
+        "directed_edge": f"{CLASSES[spec.source_class]}->{CLASSES[spec.target_class]}",
+        "component_pixels": spec.component_pixels,
+        "token_site_count": len(spec.token_sites),
+        "representation": representation,
+        "parse_back_exact": True,
+        "g1_target_component_exact": representation[
+            "worldsheet_component_symmetric_difference_pixels"
+        ]
+        == 0,
+        "receiver_effective_through_r_uint8": True,
+        "receiver_surface": {
+            "camera_changed_values": int(np.count_nonzero(candidate_camera != expected_base_camera)),
+            "scorer_changed_values": int(np.count_nonzero(scorer_delta)),
+            "strong_support_pixels_at_uint8_quantum": int(np.count_nonzero(strong_support)),
+            "exact_field_target_edge_mass_on_support": target_mass,
+            "exact_field_other_error_mass_on_support": other_error_mass,
+            "exact_field_currently_correct_mass_on_support": correct_field_mass,
+        },
+        "complete_s": {
+            "delta_flips": {
+                "status": "UNMEASURED_FROZEN_SEGNET_REQUIRED",
+                "exact_current_field_target_mass_upper_bound": target_mass,
+                "candidate_argmax_path": None,
+            },
+            "delta_d_pose": {
+                "status": "UNMEASURED_RETAINED_POSENET_VECTORS_REQUIRED",
+                "candidate_vector_path": None,
+                "hv1_corrected_candidate_budget": HV1_POSE_BUDGET,
+                "marginal_s_per_unit": POSE_MARGINAL,
+            },
+            "delta_bytes": {
+                "status": "UNMEASURED_BYTE_CLOSED_CONSUMED_ARCHIVE_REQUIRED",
+                "actual_selected_section_codec": coded_name,
+                "actual_selected_section_bytes": len(coded),
+                "candidate_archive_bytes": None,
+            },
+            "recomputed_score": None,
+        },
+        "scorer_free_ordering_only": {
+            "optimistic_seg_delta_s_if_every_target_mass_flipped": optimistic_seg_delta_s,
+            "actual_section_only_rate_delta_s_not_archive_delta": section_rate_delta_s,
+            "hv1_budget_pose_delta_s_at_603": HV1_POSE_BUDGET * POSE_MARGINAL,
+            "po1_forward_mismatch_rms_gate": PO1_FORWARD_MISMATCH_RMS,
+            "admission_authority": False,
+        },
+        "retained_payloads": retained,
+    }
+    if receipt_path.is_file():
+        old_payload = receipt_path.read_bytes()
+        old_row = json.loads(old_payload)
+        old_identity = str(old_row.get("producer_source_sha256") or old_row.get("schema") or "unknown")
+        retain_bytes(root / f"receipt_history/{old_identity}/proposal.json", old_payload)
+    atomic_json(receipt_path, row)
+    return row
+
+
+def build_edge_table(
+    census: dict[tuple[int, int], int], rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    table = []
+    for (source, target), mass in sorted(census.items(), key=lambda item: (-item[1], item[0])):
+        edge_rows = [
+            row
+            for row in rows
+            if row["source_class_id"] == source and row["target_class_id"] == target
+        ]
+        coded = [
+            int(row["complete_s"]["delta_bytes"]["actual_selected_section_bytes"])
+            for row in edge_rows
+        ]
+        median_coded = float(np.median(coded)) if coded else None
+        table.append(
+            {
+                "source_class": CLASSES[source],
+                "target_class": CLASSES[target],
+                "directed_edge": f"{CLASSES[source]}->{CLASSES[target]}",
+                "measured_flip_mass": mass,
+                "measured_flip_mass_share": mass / sum(census.values()),
+                "retained_proposals": len(edge_rows),
+                "measured_total_selected_section_bytes": sum(coded),
+                "measured_median_selected_section_bytes": median_coded,
+                "derived_edge_priority_flip_mass_times_inverse_median_byte_price": (
+                    mass / median_coded if median_coded else None
+                ),
+                "score_claim": False,
+            }
+        )
+    table.sort(
+        key=lambda row: (
+            -(
+                row["derived_edge_priority_flip_mass_times_inverse_median_byte_price"]
+                or -1.0
+            ),
+            -row["measured_flip_mass"],
+            row["directed_edge"],
+        )
+    )
+    return table
+
+
+def zero_pose_break_even_max_integer_bytes(target_mass: int) -> int:
+    if isinstance(target_mass, bool) or not isinstance(target_mass, int) or target_mass < 0:
+        raise JS6Error("target mass must be a nonnegative integer")
+    return max(
+        -1,
+        math.ceil(4.0 * UNCOMPRESSED_BYTES * target_mass / PIXELS) - 1,
+    )
+
+
+def audit_store(
+    store: Path,
+    rows: list[dict[str, Any]],
+    *,
+    producer_source_sha256: str,
+) -> dict[str, Any]:
+    if len(rows) != PROPOSAL_LIMIT or len({row["proposal_id"] for row in rows}) != len(rows):
+        raise JS6Error("proposal audit cardinality/uniqueness differs")
+    exact_g1 = 0
+    nonzero_target = 0
+    for row in rows:
+        if row.get("score_claim") is not False or row["complete_s"]["recomputed_score"] is not None:
+            raise JS6Error("proposal audit found a score claim")
+        if row.get("producer_source_sha256") != producer_source_sha256:
+            raise JS6Error("proposal audit found a stale producer source")
+        root = store / "proposals" / row["proposal_id"]
+        for record in row["retained_payloads"].values():
+            require_record(record, beneath=store)
+        decoded = decode_join_payload((root / "proposal.js6p").read_bytes())
+        if decoded["pair"] != row["pair"] or len(decoded["token_sites"]) != row["token_site_count"]:
+            raise JS6Error("proposal audit decoded address differs")
+        expected_arrays = {
+            "target_component.bool.npy": ((H, W), np.dtype(np.bool_)),
+            "g1_decoded_component.bool.npy": ((H, W), np.dtype(np.bool_)),
+            "candidate_tokens.uint8.npy": ((H, W), np.dtype(np.uint8)),
+            "candidate_pre_r.float32.npy": ((3, H, W), np.dtype(np.float32)),
+            "candidate_pre_r.float16.npy": ((3, H, W), np.dtype(np.float16)),
+            "base_camera.uint8.npy": ((CAM_H, CAM_W, 3), np.dtype(np.uint8)),
+            "candidate_camera.uint8.npy": ((CAM_H, CAM_W, 3), np.dtype(np.uint8)),
+            "base_scorer_input.float32.npy": ((3, H, W), np.dtype(np.float32)),
+            "base_scorer_input.float16.npy": ((3, H, W), np.dtype(np.float16)),
+            "candidate_scorer_input.float32.npy": ((3, H, W), np.dtype(np.float32)),
+            "candidate_scorer_input.float16.npy": ((3, H, W), np.dtype(np.float16)),
+            "scorer_delta.float32.npy": ((3, H, W), np.dtype(np.float32)),
+            "scorer_delta.float16.npy": ((3, H, W), np.dtype(np.float16)),
+            "strong_support.bool.npy": ((H, W), np.dtype(np.bool_)),
+        }
+        for name, (shape, dtype) in expected_arrays.items():
+            value = np.load(root / name, mmap_mode="r", allow_pickle=False)
+            if value.shape != shape or value.dtype != dtype:
+                raise JS6Error(f"proposal audit array geometry differs: {root / name}")
+        for stem in (
+            "candidate_pre_r",
+            "base_scorer_input",
+            "candidate_scorer_input",
+            "scorer_delta",
+        ):
+            exact = np.load(root / f"{stem}.float32.npy", mmap_mode="r", allow_pickle=False)
+            compact = np.load(root / f"{stem}.float16.npy", mmap_mode="r", allow_pickle=False)
+            if not np.array_equal(np.asarray(exact).astype(np.float16), compact):
+                raise JS6Error(f"proposal audit float32/float16 parity differs: {root / stem}")
+        base_scorer = np.load(root / "base_scorer_input.float32.npy", mmap_mode="r", allow_pickle=False)
+        candidate_scorer = np.load(
+            root / "candidate_scorer_input.float32.npy", mmap_mode="r", allow_pickle=False
+        )
+        delta = np.load(root / "scorer_delta.float32.npy", mmap_mode="r", allow_pickle=False)
+        support = np.load(root / "strong_support.bool.npy", mmap_mode="r", allow_pickle=False)
+        if not np.array_equal(np.asarray(candidate_scorer) - np.asarray(base_scorer), delta):
+            raise JS6Error(f"proposal audit scorer delta differs: {root}")
+        if not np.array_equal(np.max(np.abs(delta), axis=0) >= 1.0, support):
+            raise JS6Error(f"proposal audit strong support differs: {root}")
+        exact_g1 += int(row["g1_target_component_exact"])
+        nonzero_target += int(
+            row["receiver_surface"]["exact_field_target_edge_mass_on_support"] > 0
+        )
+    files = [path for path in store.rglob("*") if path.is_file()]
+    return {
+        "schema": "ddm_js6_seg_representation_join_store_audit.v1",
+        "axis": "[local byte/hash/shape/parse-back audit; scorer-free]",
+        "score_claim": False,
+        "proposal_count": len(rows),
+        "unique_proposal_count": len({row["proposal_id"] for row in rows}),
+        "all_retained_payload_records_verified": True,
+        "all_join_payloads_parse_back": True,
+        "all_array_shapes_and_dtypes_verified": True,
+        "all_float32_to_float16_parity_verified": True,
+        "all_scorer_deltas_and_supports_recomputed": True,
+        "all_score_claims_false": True,
+        "all_producer_source_pins_current": True,
+        "producer_source_sha256": producer_source_sha256,
+        "g1_exact_target_components": exact_g1,
+        "g1_approximate_target_components": len(rows) - exact_g1,
+        "nonzero_exact_field_target_support_proposals": nonzero_target,
+        "store_files": len(files),
+        "store_bytes": sum(path.stat().st_size for path in files),
+    }
+
+
+def sealed_fire_order(run_root: Path, store: Path, ranked: list[dict[str, Any]]) -> dict[str, Any]:
+    candidates = [
+        {
+            "rank": index + 1,
+            "proposal_id": row["proposal_id"],
+            "proposal_receipt": file_record(
+                store / "proposals" / row["proposal_id"] / "proposal.json"
+            ),
+            "consumer_payload": row["retained_payloads"]["proposal.js6p"],
+            "exact_field_target_mass_upper_bound": row["receiver_surface"][
+                "exact_field_target_edge_mass_on_support"
+            ],
+            "current_join_section_bytes": row["complete_s"]["delta_bytes"][
+                "actual_selected_section_bytes"
+            ],
+            "inferred_typed_target_local_support_zero_pose_break_even_max_integer_bytes": zero_pose_break_even_max_integer_bytes(
+                int(row["receiver_surface"]["exact_field_target_edge_mass_on_support"])
+            ),
+        }
+        for index, row in enumerate(ranked)
+    ]
+    queue_snapshot = file_record(RE1_QUEUE) if RE1_QUEUE.is_file() else None
+    order = {
+        "schema": "ddm_js6_seg_representation_join_fire_order.v1",
+        "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+        "owner": "MAIN",
+        "consumer_store": str(store.resolve()),
+        "fire_trigger": (
+            "re1 releases the sole full-n600 scorer slot; MAIN verifies all pins and claims a unique "
+            "JS6 lane; and a public-receiver adapter compiles one proposal into a consumed, "
+            "byte-closed CP135 archive"
+        ),
+        "current_re1_queue_snapshot": queue_snapshot,
+        "candidate_order": candidates,
+        "per_candidate_required_outputs": [
+            "exact candidate archive bytes and SHA-256",
+            "public receiver parse-back and full n600 raw SHA-256",
+            "frozen SegNet candidate argmax field",
+            "GT, CP135-base, candidate, and repeat PoseNet first-six vectors",
+            "candidate-repeat vector equality and PO1 forward-floor comparison",
+            "complete recomputed S from d_seg, d_pose, and exact archive bytes",
+        ],
+        "chunk_size_max": 120,
+        "inferred_local_support_rate_screen": {
+            "formula": (
+                "B_max_integer = ceil(4 * 37,545,489 * exact_field_target_mass / "
+                "117,964,800) - 1; assumes zero pose cost and every targeted current error flips"
+            ),
+            "pass_count": sum(
+                candidate["current_join_section_bytes"]
+                <= candidate[
+                    "inferred_typed_target_local_support_zero_pose_break_even_max_integer_bytes"
+                ]
+                for candidate in candidates
+            ),
+            "candidate_count": len(candidates),
+            "admission_authority": False,
+            "scope": (
+                "INFERRED acquisition ordering on the typed target edge within receiver-input support; "
+                "not a SegNet flip upper bound because SE/global receptive coupling is nonlocal"
+            ),
+        },
+        "retain_every_materialized_payload": True,
+        "stop_rule": (
+            "stop on the first candidate with negative exact complete delta S; otherwise close only "
+            "the measured instances after all queued candidates complete"
+        ),
+        "score_claim": False,
+        "scorer_invoked": False,
+    }
+    atomic_json(run_root / "SEALED_SCORER_FIRE_ORDER.json", order)
+    return order
+
+
+def run(run_root: Path, store: Path, limit: int) -> dict[str, Any]:
+    if limit != PROPOSAL_LIMIT:
+        raise JS6Error(f"proposal limit is sealed at {PROPOSAL_LIMIT}")
+    started = time.perf_counter()
+    preflight(run_root, store)
+    producer_source_sha256 = sha256_file(Path(__file__))
+    base = np.load(BASE_ARGMAX, mmap_mode="r", allow_pickle=False)
+    gt = np.load(GT_ARGMAX, mmap_mode="r", allow_pickle=False)
+    tokens = np.memmap(ec1.BASE_TOKENS, mode="r", dtype=np.uint8, shape=(N, H, W))
+    census = edge_census(base, gt)
+    specs = component_specs(base, gt, tokens)
+    selected = specs[:limit]
+    if len(selected) != limit:
+        raise JS6Error(f"only {len(selected)} coupled proposals exist; expected {limit}")
+    atomic_json(
+        run_root / "10_DERIVATION.json",
+        {
+            "schema": "ddm_js6_seg_representation_derivation.v1",
+            "axis": AXIS,
+            "score_claim": False,
+            "producer_source_sha256": producer_source_sha256,
+            "selection_mode": "full n600 directed-edge census; top 200 by exact component mass",
+            "eligible_coupled_components": len(specs),
+            "selected": [asdict(row) for row in selected],
+            "directed_edge_census": [
+                {
+                    "source_class": CLASSES[source],
+                    "target_class": CLASSES[target],
+                    "flip_mass": mass,
+                }
+                for (source, target), mass in sorted(census.items(), key=lambda item: (-item[1], item[0]))
+            ],
+            "total_flips": sum(census.values()),
+            "coordinate_rule": (
+                "8-connected exact directed-error components; every error pixel maps to the nearest "
+                "same-source CP135 token; no radius, generic template, inherited budget, or sample"
+            ),
+        },
+    )
+    base_raw = np.memmap(
+        ec1.BASE_RAW, mode="r", dtype=np.uint8, shape=(N * 2, CAM_H, CAM_W, 3)
+    )
+    proof_root = run_root / "retained/receiver_state"
+    try:
+        *_, semantic, _basis, _coefficients = js1.parse_receiver_state(
+            js1.CANDIDATES["cp135_base"], proof_root
+        )
+        semantic = semantic.eval().cpu()
+        rows = []
+        for ordinal, spec in enumerate(selected):
+            rows.append(
+                process_proposal(
+                    ordinal,
+                    spec,
+                    store=store,
+                    semantic=semantic,
+                    tokens=tokens,
+                    base_raw=base_raw,
+                    base=base,
+                    gt=gt,
+                    producer_source_sha256=producer_source_sha256,
+                )
+            )
+            atomic_json(
+                run_root / "RUN_STATE.json",
+                {
+                    "schema": "ddm_js6_seg_representation_join_state.v1",
+                    "status": "RUNNING",
+                    "resumable": True,
+                    "completed_proposals": len(rows),
+                    "required_proposals": limit,
+                    "latest_proposal_id": rows[-1]["proposal_id"],
+                    "score_claim": False,
+                    "producer_source_sha256": producer_source_sha256,
+                },
+            )
+    finally:
+        js1.release_runtime()
+    ranked = sorted(
+        rows,
+        key=lambda row: (
+            -row["receiver_surface"]["exact_field_target_edge_mass_on_support"]
+            / row["complete_s"]["delta_bytes"]["actual_selected_section_bytes"],
+            -row["receiver_surface"]["exact_field_target_edge_mass_on_support"],
+            row["proposal_id"],
+        ),
+    )
+    index_payload = b"".join(
+        (json.dumps(row, sort_keys=True, allow_nan=False) + "\n").encode() for row in ranked
+    )
+    index_record = atomic_bytes(store / "proposal_index.jsonl", index_payload)
+    store_audit = audit_store(
+        store,
+        rows,
+        producer_source_sha256=producer_source_sha256,
+    )
+    store_audit_record = atomic_json(run_root / "30_STORE_AUDIT.json", store_audit)
+    edge_table = build_edge_table(census, rows)
+    edge_table_record = atomic_json(run_root / "20_EDGE_RANKING.json", edge_table)
+    order = sealed_fire_order(run_root, store, ranked)
+    useful_nonzero = sum(
+        row["receiver_surface"]["exact_field_target_edge_mass_on_support"] > 0 for row in rows
+    )
+    rate_screen_rows = order["candidate_order"]
+    current_rate_passes = sum(
+        row["current_join_section_bytes"]
+        <= row[
+            "inferred_typed_target_local_support_zero_pose_break_even_max_integer_bytes"
+        ]
+        for row in rate_screen_rows
+    )
+    result = {
+        "schema": "ddm_js6_seg_representation_join_final.v1",
+        "status": "PROPOSAL_SOURCE_BUILT_SCORER_RUNG_QUEUED",
+        "axis": AXIS,
+        "score_claim": False,
+        "producer_source_sha256": producer_source_sha256,
+        "pointer_moved": False,
+        "scorer_invoked": False,
+        "modal_invoked": False,
+        "measured": {
+            "full_n600_exact_directed_edge_census": True,
+            "cp135_flips_vs_gt": sum(census.values()),
+            "eligible_coupled_components": len(specs),
+            "retained_unique_proposals": len(rows),
+            "receiver_effective_proposals": sum(
+                bool(row["receiver_effective_through_r_uint8"]) for row in rows
+            ),
+            "nonzero_exact_field_target_support_proposals": useful_nonzero,
+            "inferred_typed_target_local_support_rate_passes": current_rate_passes,
+            "proposal_index": index_record,
+            "edge_ranking": edge_table_record,
+            "store_audit": store_audit_record,
+        },
+        "not_measured": [
+            "candidate frozen-SegNet argmax or actual delta flips",
+            "candidate PoseNet first-six vectors or delta d_pose",
+            "receiver-consumed candidate archive delta bytes",
+            "complete candidate S",
+            "contest-CPU or contest-CUDA evaluation",
+        ],
+        "scorer_free_prescreen": {
+            "falsifier_fired": False,
+            "result": (
+                "0/200 current JS6JOIN1 rows beat the inferred typed-target local-support, "
+                "zero-pose break-even byte line"
+            ),
+            "why_not_a_falsifier": (
+                "receiver-input support is not an upper bound on frozen SegNet output flips because "
+                "SE/global receptive coupling is nonlocal; exact scorer measurement remains required"
+            ),
+            "admission_authority": False,
+        },
+        "proposal_contract": {
+            "tf1_boundary_innovation": "exact CP135->GT directed-error component",
+            "v19_grammar_object": "landed G1 EVENT/CENTROID/SHAPE worldsheet payload",
+            "cp135_execution_object": "landed multi-site EC1 coordinate event",
+            "real_receiver_r_uint8_replay": True,
+            "template_swap_disposition": (
+                "FOLDED: v19 exact payload swap was a receiver no-op and CP135 has no template member"
+            ),
+            "lane_coefficient_disposition": (
+                "FOLDED: v19 all-coefficient rows regressed and CP135 has no lane-program member; "
+                "Road<->Lane remains represented as typed worldsheet coordinate events"
+            ),
+        },
+        "js5_follow_on": {
+            "disposition": "FIRED",
+            "contract_satisfied": True,
+            "join_row": {
+                "producer": "ddm_js6_seg_representation_join",
+                "consumer": "js5 representation-level follow-on / MAIN scorer adapter",
+                "consumer_store": str(store.resolve()),
+                "payload_index": index_record,
+            },
+            "boundary": (
+                "proposal-source trigger fired; no acceptance or score is implied until the sealed "
+                "complete-S fire-order runs"
+            ),
+        },
+        "scorer_fire_order": {
+            "disposition": order["disposition"],
+            "owner": order["owner"],
+            "consumer_store": order["consumer_store"],
+            "fire_trigger": order["fire_trigger"],
+            "receipt": file_record(run_root / "SEALED_SCORER_FIRE_ORDER.json"),
+        },
+        "disk_hygiene": {
+            "disposition": "KEEP_P0_CONSUMER_BANK_ON_PRIMARY_SSD",
+            "delete_allowed": False,
+            "local_bulk_created": False,
+            "certification": store_audit_record,
+            "reason": (
+                "the retained payload bank is the queued scorer adapter's consumer input; moving or "
+                "deleting it before disposition would violate ALWAYS KEEP THE PAYLOAD"
+            ),
+        },
+        "preflight": file_record(run_root / "00_PREFLIGHT.json"),
+        "epistemic_labels": {
+            "MEASURED": (
+                "exact retained-field census, actual proposal/coder bytes, real receiver tensors, "
+                "R/uint8 support, paths, sizes, hashes"
+            ),
+            "DERIVED": (
+                "nearest-current-token coordinates, edge priority, score marginal arithmetic, "
+                "HV1 candidate budget"
+            ),
+            "INFERRED": "exact-field target mass is only an optimistic candidate flip upper bound",
+            "ASSUMED": "none",
+        },
+        "wall_seconds": time.perf_counter() - started,
+    }
+    atomic_json(run_root / "FINAL_RESULT.json", result)
+    atomic_json(
+        run_root / "RUN_STATE.json",
+        {
+            "schema": "ddm_js6_seg_representation_join_state.v1",
+            "status": "COMPLETE",
+            "resumable": True,
+            "completed_proposals": len(rows),
+            "required_proposals": limit,
+            "final_result": file_record(run_root / "FINAL_RESULT.json"),
+            "proposal_index": index_record,
+            "score_claim": False,
+            "producer_source_sha256": producer_source_sha256,
+        },
+    )
+    return result
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--run-root", type=Path, default=RUN_ROOT)
+    parser.add_argument("--proposal-store", type=Path, default=PROPOSAL_STORE)
+    parser.add_argument("--limit", type=int, default=PROPOSAL_LIMIT)
+    args = parser.parse_args(argv)
+    result = run(args.run_root.resolve(), args.proposal_store.resolve(), args.limit)
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

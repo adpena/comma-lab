@@ -1,0 +1,29 @@
+#!/bin/bash
+# Operator-directed n600 lattice replay (2026-07-19 "we need to scale it up"),
+# executed WITHIN the reviewed tool's per-invocation cap (MAX_SUBSET=12):
+# 50 chunks x 12 explicit pairs = complete 0..599 coverage, one receipt each.
+# Tool unmodified; each chunk fail-closed + resumable. Aggregate manifest at end.
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+EV=/Volumes/VertigoDataTier/pact/evidence/v10_uint8_lattice_n600_20260719
+mkdir -p "$EV/chunks"
+for ((c=0; c<50; c++)); do
+  lo=$((c*12))
+  pairs=""
+  for ((i=0; i<12; i++)); do pairs="$pairs $((lo+i))"; done
+  out="$EV/chunks/receipt_chunk_$(printf '%02d' $c).json"
+  if [ -f "$out" ]; then echo "[chunk $c] receipt exists, skip"; continue; fi
+  echo "[chunk $c] pairs $lo..$((lo+11)) $(date -u +%H:%M:%SZ)"
+  st="$EV/chunks/chunk_$(printf '%02d' $c).state.json"
+  resume_flag=""
+  [ -f "$st" ] && resume_flag="--resume"
+  .venv/bin/python tools/measure_uint8_lattice_feasibility.py \
+    --pair-indices $pairs \
+    --output "$out" \
+    --sidecar "$EV/chunks/chunk_$(printf '%02d' $c).u8lfs" \
+    --state "$st" \
+    --stage-dir "$EV/chunks/chunk_$(printf '%02d' $c).stages" \
+    --cpu-threads 1 --max-nodes-per-block 4096 $resume_flag \
+    || { echo "[chunk $c] FAILED rc=$?"; exit 1; }
+done
+echo "ALL 50 CHUNKS DONE $(date -u +%H:%M:%SZ)"

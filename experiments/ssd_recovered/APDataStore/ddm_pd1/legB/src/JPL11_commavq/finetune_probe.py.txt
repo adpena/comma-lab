@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+"""Probe the last unfalsified lever: full fine-tune of gpt2m on PUBLIC non-eval
+splits (2+), then measure CE delta on the eval sample.
+
+This is NOT the falsified test-time-training (ykstorm/meetr trained on the eval
+data itself). Rationale: gpt2m was trained on comma's 3M-minute internal mix;
+adapting to the commavq public release's specific distribution could transfer
+to eval splits 0-1. Gate: ship only if eval-sample CE improves >= 2%.
+
+Loss on content tokens only (the compression objective). Saves
+finetuned_model.bin in utils/gpt.py state_dict layout (pre-transpose), so
+measure_ce.py --weights can load it unchanged.
+"""
+import argparse
+import math
+import time
+from pathlib import Path
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+
+import codec
+
+TPF = codec.TOKENS_PER_FRAME
+WINDOW = codec.WINDOW
+BOS = codec.BOS
+
+
+def windows_from_segment(tokens, rng):
+  """(1200,8,16) -> a few random 20-frame windows as (2580,) int64."""
+  seq = codec.segments_to_seqs([tokens])[0]
+  starts = rng.choice(1200 - 20, size=4, replace=False)
+  return [seq[s * TPF:(s + 20) * TPF] for s in starts]
+
+
+def main():
+  ap = argparse.ArgumentParser()
+  ap.add_argument('--segments', type=int, default=600)
+  ap.add_argument('--batch', type=int, default=4)
+  ap.add_argument('--lr', type=float, default=1e-5)
+  ap.add_argument('--out', default='finetuned_model.bin')
+  ap.add_argument('--eval-every', type=int, default=200)
+  args = ap.parse_args()
+
+  from datasets import load_dataset
+  ds = load_dataset('commaai/commavq', num_proc=4,
+                    data_files={'train': ['data-0002.tar.gz', 'data-0003.tar.gz']})['train']
+  rng = np.random.default_rng(42)
+  seg_idx = rng.choice(len(ds), size=min(args.segments, len(ds)), replace=False)
+
+  device = 'cuda'
+  model = codec.load_model(device=device, dtype=torch.float32)
+  model.train()
+  opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.0)
+  scaler = torch.amp.GradScaler()
+
+  content_mask = (torch.arange(1, WINDOW) % TPF != 0).to(device)
+
+  print(f'fine-tuning on {len(seg_idx)} segments from splits 2-3', flush=True)
+  buf = []
+  step = 0
+  loss_ema = None
+  t0 = time.time()
+  for si, idx in enumerate(seg_idx):
+    tokens = np.array(ds[int(idx)]['token.npy'])
+    buf.extend(windows_from_segment(tokens, rng))
+    while len(buf) >= args.batch:
+      x = torch.from_numpy(np.stack(buf[:args.batch])).to(device)
+      buf = buf[args.batch:]
+      with torch.autocast('cuda', dtype=torch.bfloat16):
+        logits = model(x)
+        lp = logits[:, :-1].reshape(-1, 1025)[content_mask.repeat(len(x))]
+        tgt = x[:, 1:].reshape(-1)[content_mask.repeat(len(x))]
+        loss = F.cross_entropy(lp, tgt)
+      opt.zero_grad(set_to_none=True)
+      scaler.scale(loss).backward()
+      scaler.step(opt)
+      scaler.update()
+      step += 1
+      bits = loss.item() / math.log(2)
+      loss_ema = bits if loss_ema is None else 0.98 * loss_ema + 0.02 * bits
+      if step % 50 == 0:
+        print(f'step {step} (seg {si+1}/{len(seg_idx)}): '
+              f'{loss_ema:.4f} bits/tok EMA, {time.time()-t0:.0f}s', flush=True)
+      if step % args.eval_every == 0:
+        save(model, args.out)
+        print(f'  checkpoint saved at step {step}', flush=True)
+  save(model, args.out)
+  print(f'done: {step} steps, final EMA {loss_ema:.4f} bits/tok', flush=True)
+
+
+def save(model, path):
+  """Save in the original (pre-transpose) layout so loaders work unchanged."""
+  sd = {k: v.detach().cpu() for k, v in model.state_dict().items()
+        if k != 'causal_mask'}
+  transposed = ['attn.c_attn.weight', 'attn.c_proj.weight',
+                'mlp.c_fc.weight', 'mlp.c_proj.weight']
+  for k in list(sd.keys()):
+    if any(k.endswith(w) for w in transposed):
+      sd[k] = sd[k].transpose(1, 0).contiguous()
+  torch.save(sd, path)
+
+
+if __name__ == '__main__':
+  main()

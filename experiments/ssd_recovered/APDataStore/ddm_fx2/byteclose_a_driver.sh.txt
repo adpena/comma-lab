@@ -1,0 +1,35 @@
+#!/bin/bash
+# ddm_fx2 candidate A (fx2_d1_13x_homog_context) byte-close chain — MAIN-fired 2026-08-18.
+# Mirrors the proven fx1 byteclose_r2 invocation (same canonical stage scripts, same four
+# input roots; corrector module swapped by env).  Fail-closed at every stage.
+# Pre-registered targets (fire order ddm_fx2_t4_sealed_fire_order_20260818.json):
+#   archive 180,450 B (+-1) · token stream 109,801 B (+-1) · 7 sections byte-identical ·
+#   archive repeat byte-identical · decoded field sha 9ba2e52b... (parseback)
+set -euo pipefail
+cd /Users/adpena/Projects/pact
+
+export TAC_PQ2_PREPARED_DIR=/Volumes/APDataStore/pact/ddm_wc1_advisory_decode_wallclock_20260815/prepared/hv1_base_control
+export TAC_PQ2_TOKENS_FILE=/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8
+export TAC_PQ2_HM1_DIR=/Volumes/APDataStore/pact/ddm_hm1_20260816/retained
+export TAC_PQ2_RC64_SOURCE=/Volumes/VertigoDataTier/pact/pr135_intake_20260810/experiment_book/src/cpr1_sub4/entropy/rc64_backend.c
+export TAC_RR2_CORRECTOR_MODULE=ddm_fx2_model_axis_corrector
+export PYTHONDONTWRITEBYTECODE=1
+# The fx2 corrector imports `from experiments.ddm_fx1_logistic_mixer_corrector import ...`,
+# which needs the REPO ROOT on sys.path; the encoder script only puts experiments/ there.
+export PYTHONPATH=/Users/adpena/Projects/pact${PYTHONPATH:+:$PYTHONPATH}
+STORE=/Volumes/APDataStore/pact/ddm_fx2/byteclose_a
+
+echo "=== stage 0: frozen drop-in re-verification (freshness at consumption) ==="
+.venv/bin/python /Volumes/APDataStore/pact/ddm_fx2/verify_frozen_dropin.py
+grep -q '"verdict": "PASS"' /Volumes/APDataStore/pact/ddm_fx2/probe/frozen_dropin_control.json \
+  || { echo "FROZEN DROP-IN CONTROL FAILED - refusing byte-close"; exit 4; }
+
+echo "=== stage 1: encode ==="
+.venv/bin/python experiments/ddm_rr2_encoder_byteclose.py --stage encode --store "$STORE"
+echo "=== stage 2: build ==="
+.venv/bin/python experiments/ddm_rr2_encoder_byteclose.py --stage build --store "$STORE"
+echo "=== stage 3: receiver build (stage runtime tree) ==="
+.venv/bin/python experiments/ddm_rr2_receiver_close.py --stage build --store "$STORE"
+echo "=== stage 4: parseback (decoded-field falsifier) ==="
+.venv/bin/python experiments/ddm_rr2_receiver_close.py --stage parseback --store "$STORE"
+echo "=== FX2_BYTECLOSE_CHAIN_COMPLETE rc=0 ==="

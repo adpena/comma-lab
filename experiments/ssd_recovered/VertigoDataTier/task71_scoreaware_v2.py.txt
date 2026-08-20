@@ -1,0 +1,120 @@
+"""Score-aware Taylor sensitivity (v2): differentiable scorer surrogate.
+
+Patches differentiable rgb_to_yuv6 so PoseNet pose-MSE carries grad, and uses
+the SegNet U-Net LOGITS (KL of comp logits to GT logits, differentiable before
+argmax) as the d_seg flip-boundary surrogate. Per-weight Taylor saliency
+|grad * weight| accumulated over pairs. Then prune LOWEST-saliency weights
+(score-irrelevant) and measure EXACT d_seg/d_pose vs magnitude pruning at matched
+keep — does score-aware hold distortion where magnitude can't?
+"""
+import sys, time
+sys.path.insert(0,'experiments/results/pr110pp_r2_nonmps_candidate_20260609/analysis')
+sys.path.insert(0,'src')
+import render_and_score_lib as L
+import numpy as np, torch, torch.nn.functional as F, copy
+from model import HNeRVDecoder
+from tac.optimization import structural_q_compression as SQ
+from tac.differentiable_eval_roundtrip import patch_upstream_yuv6_globally
+
+N_SENS = int(sys.argv[1]) if len(sys.argv)>1 else 16
+KEEP = float(sys.argv[2]) if len(sys.argv)>2 else 0.6
+N_EVAL = int(sys.argv[3]) if len(sys.argv)>3 else 8
+DEVICE = torch.device('cpu')
+CAMERA_H, CAMERA_W = 874, 1164
+
+p = L.parse_frontier(); sd = p['decoder_sd']; meta = p['meta']
+probe = HNeRVDecoder(latent_dim=28, base_channels=36, eval_size=(384,512))
+order = [n for n,_ in probe.state_dict().items()]
+items = [(n, sd[n].numpy().astype(np.float64)) for n in order]
+base_codes = SQ.recover_all_codes(items)
+base_blob = SQ.encode_decoder_blob_bytes(base_codes)
+BIG = {idx:tc for idx,tc in base_codes.items() if tc.codes_i8.size>1000 and tc.codes_i8.ndim>=2}
+eval_h, eval_w = meta['eval_size']
+latents = p['latents'].to(DEVICE)
+
+# patch differentiable yuv6 BEFORE building scorer
+tok = patch_upstream_yuv6_globally()
+from modules import DistortionNet, segnet_sd_path, posenet_sd_path
+net = DistortionNet().eval().to(DEVICE)
+net.load_state_dicts(posenet_sd_path, segnet_sd_path, DEVICE)
+for prm in net.parameters(): prm.requires_grad_(False)
+
+dec = HNeRVDecoder(latent_dim=meta['latent_dim'], base_channels=meta['base_channels'], eval_size=tuple(meta['eval_size'])).to(DEVICE)
+dec.load_state_dict(sd); dec.train()
+named = dict(dec.named_parameters())
+weight_names = [n for n in order if dec.state_dict()[n].ndim>=2]
+accum = {n: torch.zeros_like(named[n]) for n in weight_names}
+
+gt = L.decode_gt_pairs(list(range(max(N_SENS,N_EVAL))))
+
+def render_grad(pi):
+    lat = latents[pi:pi+1]
+    decoded = dec(lat).reshape(2,3,eval_h,eval_w)
+    up = F.interpolate(decoded, size=(CAMERA_H,CAMERA_W), mode='bicubic', align_corners=False).reshape(1,2,3,CAMERA_H,CAMERA_W).clone()
+    up[:,0,0]=up[:,0,0]-1.0; up[:,0,2]=up[:,0,2]-1.0; up[:,1,1]=up[:,1,1]-1.0
+    return up.clamp(0,255)
+
+t0=time.time()
+for k in range(N_SENS):
+    pi=k
+    dec.zero_grad(set_to_none=True)
+    comp = render_grad(pi)               # (1,2,3,H,W) grad
+    g = gt[pi].float().permute(0,3,1,2).unsqueeze(0).to(DEVICE)  # (1,2,3,H,W)
+    comp_b = comp.permute(0,1,3,4,2); g_b = g.permute(0,1,3,4,2)  # (1,2,H,W,3)
+    # forward both through scorer (NOT compute_distortion -> avoid inference_mode)
+    pose_c, seg_c = net(comp_b)
+    with torch.no_grad():
+        pose_g, seg_g = net(g_b)
+    # pose MSE on first out//2 dims (matches compute_distortion)
+    pose_loss = 0.0
+    for h in net.posenet.hydra.heads:
+        if h.name=='pose':
+            half=h.out//2
+            pose_loss = (pose_c[h.name][...,:half]-pose_g[h.name][...,:half]).pow(2).mean()
+    # seg surrogate: KL(softmax(seg_c)||softmax(seg_g)) per pixel (diff boundary signal)
+    lp_c = F.log_softmax(seg_c, dim=1); p_g = F.softmax(seg_g, dim=1)
+    seg_loss = F.kl_div(lp_c, p_g, reduction='batchmean')
+    loss = pose_loss + 100.0*seg_loss   # weight seg like the score (100*d_seg)
+    loss.backward()
+    for n in weight_names:
+        if named[n].grad is not None:
+            accum[n] += (named[n].grad.detach()*named[n].detach()).abs()  # Taylor |g*w|
+    if (k+1)%4==0: print(f'  sens {k+1}/{N_SENS} loss={float(loss):.4g} [{time.time()-t0:.0f}s]', flush=True)
+
+sens = {n: accum[n].cpu().numpy() for n in weight_names}
+print('seg_c.requires_grad', seg_c.requires_grad, 'pose grad ok', named[weight_names[0]].grad is not None)
+
+# Now prune by score-aware saliency vs magnitude, measure EXACT distortion.
+scorer = L.ExactScorer()  # fresh (inference_mode path) for exact measurement
+gt_bthwc = {pi: L.comp_pair_to_bthwc(gt[pi].float().permute(0,3,1,2)) for pi in range(N_EVAL)}
+pairs=list(range(N_EVAL))
+def score_sd(decoder_sd):
+    parsed=copy.copy(p); parsed['decoder_sd']=decoder_sd
+    r=L.FrontierRenderer(parsed=parsed); comp=r.render_baseline_pairs(pairs)
+    segs=[];poses=[]
+    for pi in pairs:
+        po,se=scorer.score_batch(gt_bthwc[pi], L.comp_pair_to_bthwc(comp[pi]))
+        segs.append(float(se[0]));poses.append(float(po[0]))
+    return float(np.mean(segs)), float(np.mean(poses))
+
+bs,bp = score_sd(sd)
+RATE_DENOM=37545489; ARCHIVE=177169
+print(f'BASELINE ({N_EVAL}): d_seg={bs:.6f} d_pose={bp:.3e} blob={base_blob}')
+for kind in ['scoreaware','magnitude']:
+    sd2={k:v.clone() for k,v in sd.items()}; mod={}
+    for idx,tc in BIG.items():
+        if kind=='scoreaware':
+            s_map = sens[tc.name]
+            if s_map.shape != tc.codes_i8.shape:  # align (grad on float W shape == codes shape)
+                s_map = s_map.reshape(tc.codes_i8.shape)
+        else:
+            s_map = SQ.magnitude_sensitivity(tc.codes_i8)
+        pc = SQ.score_aware_prune_codes(tc.codes_i8, s_map.astype(np.float64), KEEP)
+        sd2[tc.name]=torch.from_numpy(pc.astype(np.float32)*tc.scale)
+        mod[idx]=SQ.TensorCode(tc.name,idx,tc.shape,pc,tc.scale)
+    s,po=score_sd(sd2)
+    codes2=dict(base_codes); codes2.update(mod); blob=SQ.encode_decoder_blob_bytes(codes2)
+    new_arch=ARCHIVE+(blob-base_blob)
+    Snew=100*s+np.sqrt(10*po)+25*new_arch/RATE_DENOM
+    Sbase=100*bs+np.sqrt(10*bp)+25*ARCHIVE/RATE_DENOM
+    print(f'{kind:11s} keep={KEEP}: d_seg={s:.6f}({s-bs:+.6f}) d_pose={po:.3e}({po-bp:+.2e}) blob={blob}({blob-base_blob:+d}) S={Snew:.5f} dS={Snew-Sbase:+.5f}', flush=True)

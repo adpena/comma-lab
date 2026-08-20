@@ -1,0 +1,6 @@
+import json
+
+rng = len(enc.get_compressed().tobytes()); del enc
+an = len(ans.get_compressed().tobytes())
+res = {"range_B": rng, "ans_B": an}
+open(D + "/ans_vs_range_n600_result.json", "w").write(json.dumps(res, indent=2))

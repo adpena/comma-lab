@@ -1,0 +1,15 @@
+"""Decode N pairs with the runtime tree given on argv[1]; print per-pair sha256."""
+import hashlib, sys
+from pathlib import Path
+tree = Path(sys.argv[1]).resolve()
+n = int(sys.argv[2])
+sys.path.insert(0, str(tree))
+import importlib.util
+spec = importlib.util.spec_from_file_location("inflate_runner", tree / "inflate_runner.py")
+mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+dec = mod.Decoder(tree / "archive")
+h = hashlib.sha256()
+for i in range(min(n, dec.n_pairs)):
+    f1 = dec.f1(i); f0 = dec.f0(i, f1)
+    h.update(f0.tobytes()); h.update(f1.tobytes())
+print(f"n_pairs={dec.n_pairs} probed={min(n,dec.n_pairs)} sha256={h.hexdigest()}")

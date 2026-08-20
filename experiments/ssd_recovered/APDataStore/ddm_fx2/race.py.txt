@@ -1,0 +1,92 @@
+"""ddm_fx2 race harness: one architecture per invocation, full n600, exact bytes.
+
+Same instrument as ddm_fx1's race.py (same ASSETS, same replay_code_length, same
+LIVE_BITS control constant) so every fx2 delta is directly comparable to the 33
+inherited fx1 rows without re-measuring them.
+"""
+import argparse, hashlib, json, sys, time
+from pathlib import Path
+
+sys.path.insert(0, "/Users/adpena/Projects/pact")
+sys.path.insert(0, "/Volumes/APDataStore/pact/ddm_me1")
+
+import numpy as np
+from assets import ASSETS
+from tac.micro_edit.coder_replay import replay_code_length
+
+OUT = Path("/Volumes/APDataStore/pact/ddm_fx2/race")
+RET = Path("/Volumes/APDataStore/pact/ddm_fx2/retained")
+LIVE_BITS = 884090.2210952122          # shipped rr4; fx1 reproduced it at 0.000000
+LIVE_BYTES = LIVE_BITS / 8.0
+FX1_WINNER_BYTES = LIVE_BYTES - 560.07  # the inherited frontier code length
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--id", required=True)
+    ap.add_argument("--module", default="fx2", choices=("fx1", "fx2"))
+    ap.add_argument("--families", required=True)
+    ap.add_argument("--mixer-context", default="none")
+    ap.add_argument("--power-bits", type=int, default=6)
+    ap.add_argument("--count-buckets", type=int, default=1)
+    ap.add_argument("--lr-exp", type=int, default=4)
+    ap.add_argument("--static", action="store_true")
+    ap.add_argument("--no-normalize", action="store_true")
+    ap.add_argument("--sse-context", default="off")
+    ap.add_argument("--sse-learn-weight", action="store_true")
+    ap.add_argument("--frames", type=int, default=600)
+    args = ap.parse_args()
+
+    families = tuple(n for n in args.families.split(",") if n)
+
+    if args.module == "fx1":
+        from experiments.ddm_fx1_logistic_mixer_corrector import (
+            FixedPointLogisticMixer as Mixer, LR_BASE_SHIFT)
+        extra = {}
+    else:
+        from experiments.ddm_fx2_model_axis_corrector import (
+            Fx2ModelAxisMixer as Mixer)
+        from experiments.ddm_fx1_logistic_mixer_corrector import LR_BASE_SHIFT
+        extra = {"sse_context": args.sse_context,
+                 "sse_learn_weight": args.sse_learn_weight}
+
+    holder = {}
+
+    def factory(plane):
+        holder["m"] = Mixer(
+            plane, families=families, mixer_context=args.mixer_context,
+            count_buckets=args.count_buckets, power_bits=args.power_bits,
+            learn=not args.static, lr_shift=LR_BASE_SHIFT + args.lr_exp,
+            normalize=not args.no_normalize, **extra)
+        return holder["m"]
+
+    start = time.time()
+    r = replay_code_length(ASSETS, label=args.id, corrector_factory=factory, frames=args.frames)
+    elapsed = time.time() - start
+
+    RET.mkdir(parents=True, exist_ok=True)
+    payload = RET / f"bits_{args.id}.npy"
+    np.save(payload, r.bits_per_frame)          # ALWAYS KEEP THE PAYLOAD
+    sha = hashlib.sha256(payload.read_bytes()).hexdigest()
+
+    row = {
+        "id": args.id, "module": args.module, "families": list(families),
+        "mixer_context": args.mixer_context, "count_buckets": args.count_buckets,
+        "power_bits": args.power_bits, "lr_exp": args.lr_exp,
+        "static": bool(args.static), "normalize": not args.no_normalize,
+        "sse_context": args.sse_context, "sse_learn_weight": bool(args.sse_learn_weight),
+        "frames": args.frames, "code_bits": r.code_bits, "code_bytes": r.code_bytes,
+        "delta_bytes_vs_live": r.code_bytes - LIVE_BYTES,
+        "delta_bytes_vs_fx1_winner": r.code_bytes - FX1_WINNER_BYTES,
+        "elapsed_s": elapsed, "payload": str(payload), "payload_sha256": sha,
+        "final_weights": holder["m"].weight_report(),
+    }
+    OUT.mkdir(parents=True, exist_ok=True)
+    (OUT / f"{args.id}.json").write_text(json.dumps(row, indent=2))
+    print(f"{args.id:40s} {r.code_bytes:11.2f} B  vs_live {row['delta_bytes_vs_live']:+9.2f}  "
+          f"vs_fx1 {row['delta_bytes_vs_fx1_winner']:+8.2f}  [{elapsed:.0f}s]")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

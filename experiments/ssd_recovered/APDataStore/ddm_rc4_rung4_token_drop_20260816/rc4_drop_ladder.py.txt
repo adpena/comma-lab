@@ -1,0 +1,198 @@
+"""ddm_rc4 Stage 1 - the token-drop ladder and its joint-S arithmetic on hv1.
+
+Consumes the exact replay histograms and prices every confidence threshold tau
+against the LIVE frontier pointer, in full three-component S arithmetic (the
+charter's pure-rate byte equivalence does NOT apply: token drop moves the
+decoded field, so seg and pose both move).
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import numpy as np
+
+STORE = Path("/Volumes/APDataStore/pact/ddm_rc4_rung4_token_drop_20260816")
+RETAINED = STORE / "retained" / "token_rd"
+
+# LIVE frontier, MEASURED [contest-CUDA T4, n600], receipt
+# experiments/results/ddm_hv1_ep0634_exact_contest_cuda_20260815_r2/MODAL_REMOTE_RESULT.json
+S_BASE = 0.15959729295498598
+ARCHIVE_BYTES = 182_759
+SEG_TERM = 0.029611
+POSE_TERM = 0.0082945765
+D_POSE = POSE_TERM**2 / 10.0
+RATE_DEN = 37_545_489
+S_PER_BYTE = 25.0 / RATE_DEN
+SEG_GRID = 600 * 384 * 512
+S_PER_SEG_FLIP = 100.0 / SEG_GRID
+POSE_MARGINAL = 5.0 / POSE_TERM  # dS / d(d_pose)
+TARGET = 0.15
+
+
+def _log2_binom(n: int, k: int) -> float:
+    """log2 C(n, k) via lgamma - the exception-set signalling floor."""
+    from math import lgamma, log
+
+    if k <= 0 or k >= n:
+        return 0.0
+    return (lgamma(n + 1) - lgamma(k + 1) - lgamma(n - k + 1)) / log(2.0)
+
+
+def main() -> int:
+    hist_n = np.load(RETAINED / "hist_n.npy")
+    hist_bits = np.load(RETAINED / "hist_bits.npy")
+    hist_n_dis = np.load(RETAINED / "hist_n_disagree.npy")
+    hist_bits_dis = np.load(RETAINED / "hist_bits_disagree.npy")
+    replay = json.loads((STORE / "TOKEN_RD_REPLAY.json").read_text())
+    if not replay["positive_control"]["instrument_valid"]:
+        raise SystemExit("replay positive control FAILED - no verdict admissible")
+
+    u_step = replay["u_step"]
+    # Drop rule: drop position i iff p_max_i >= tau, i.e. u_i >= u(tau).
+    # Sweep the threshold from the top bin downward (suffix sums).
+    n_drop = np.cumsum(hist_n[::-1])[::-1]
+    bits_drop = np.cumsum(hist_bits[::-1])[::-1]
+    flips = np.cumsum(hist_n_dis[::-1])[::-1]
+    bits_flip = np.cumsum(hist_bits_dis[::-1])[::-1]
+
+    bytes_saved = bits_drop / 8.0
+    rows = []
+    for b in range(len(hist_n)):
+        if n_drop[b] == 0:
+            continue
+        u = b * u_step
+        p_max_floor = 1.0 - 2.0**-u if u < 60 else 1.0
+        by = bytes_saved[b]
+        fl = int(flips[b])
+        d_rate = -by * S_PER_BYTE
+        d_seg = fl * S_PER_SEG_FLIP  # A = 1 token flip -> 1 seg flip (see note)
+        rows.append(
+            {
+                "u": u,
+                "p_max_threshold": p_max_floor,
+                "dropped_positions": int(n_drop[b]),
+                "dropped_fraction": float(n_drop[b]) / replay["positions"],
+                "bytes_saved": float(by),
+                "token_flips": fl,
+                "bits_per_token_flip": float(bits_drop[b] / fl) if fl else float("inf"),
+                "bytes_per_token_flip": float(by / fl) if fl else float("inf"),
+                "delta_S_rate": d_rate,
+                "delta_S_seg_at_A1": d_seg,
+                "net_S_at_A1_pose_free": d_rate + d_seg,
+            }
+        )
+
+    # Breakeven: bytes_saved * S_PER_BYTE > A * flips * S_PER_SEG_FLIP
+    # => bytes per token flip > A * S_PER_SEG_FLIP / S_PER_BYTE
+    bar_bytes_per_flip = S_PER_SEG_FLIP / S_PER_BYTE  # at A = 1
+    bar_bits_per_flip = 8.0 * bar_bytes_per_flip
+
+    best = min(rows, key=lambda r: r["net_S_at_A1_pose_free"]) if rows else None
+    # Max A that any rung could tolerate (best observed bytes/flip).
+    max_bpf = max((r["bytes_per_token_flip"] for r in rows if r["token_flips"] > 0), default=0.0)
+
+    # Pure-rate reference (NOT applicable to this rung; recorded for contrast).
+    pure_rate_bytes_for_target = (S_BASE - TARGET) / S_PER_BYTE
+
+    out = {
+        "arm": "ddm_rc4",
+        "stage": "1_drop_ladder",
+        "baseline": {
+            "S": S_BASE,
+            "archive_bytes": ARCHIVE_BYTES,
+            "seg_term": SEG_TERM,
+            "pose_term": POSE_TERM,
+            "d_pose": D_POSE,
+            "seg_flips_equivalent": SEG_TERM / S_PER_SEG_FLIP,
+        },
+        "exchange_rates": {
+            "S_per_byte": S_PER_BYTE,
+            "S_per_seg_flip": S_PER_SEG_FLIP,
+            "seg_flips_per_byte": S_PER_BYTE / S_PER_SEG_FLIP,
+            "pose_marginal_S_per_d_pose": POSE_MARGINAL,
+            "d_pose_budget_per_byte": S_PER_BYTE / POSE_MARGINAL,
+        },
+        "breakeven": {
+            "bytes_per_token_flip_bar_at_A1": bar_bytes_per_flip,
+            "bits_per_token_flip_bar_at_A1": bar_bits_per_flip,
+            "best_observed_bytes_per_token_flip": max_bpf,
+            "max_tolerable_seg_amplification_A": max_bpf / bar_bytes_per_flip
+            if bar_bytes_per_flip
+            else 0.0,
+        },
+        "pure_rate_reference_not_applicable": {
+            "bytes_for_sub_0_15_if_pure_rate": pure_rate_bytes_for_target,
+            "why_not_applicable": (
+                "token drop moves the decoded frame_1 field, so seg and pose both move; "
+                "the charter's 168,345.5977 B equivalence is pure-rate only"
+            ),
+        },
+        "best_rung_at_A1_pose_free": best,
+        "ladder": rows,
+        "totals": {
+            "positions": replay["positions"],
+            "ideal_code_bits": replay["ideal_code_bits"],
+            "shipped_token_bits": replay["token_stream_bits"],
+            "coder_efficiency": replay["ideal_vs_shipped_bits_ratio"],
+            "disagree_positions": replay["disagree_positions"],
+            "top1_error": replay["top1_error"],
+            "bits_in_disagreeing_positions": float(hist_bits_dis.sum()),
+            "share_of_bits_in_disagreeing_positions": float(
+                hist_bits_dis.sum() / hist_bits.sum()
+            ),
+            "mean_bits_per_disagreement": float(hist_bits_dis.sum() / max(1, hist_n_dis.sum())),
+        },
+        "zero_distortion_oracle": {
+            "agreeing_bits": float(hist_bits.sum() - hist_bits_dis.sum()),
+            "agreeing_bytes": float((hist_bits.sum() - hist_bits_dis.sum()) / 8.0),
+            "note": (
+                "Upper bound on any ZERO-distortion drop: the bits currently spent on "
+                "positions the model already predicts correctly.  Unreachable in practice: "
+                "identifying the exception set costs at least log2(C(n,k)) bits, and any "
+                "drop-plus-exception scheme is just an alternative code for the same source, "
+                "so by the source coding theorem it cannot beat the arithmetic coder already "
+                "in use.  Recorded as an envelope, never as a candidate."
+            ),
+            "exception_set_signalling_bits_lower_bound": float(
+                _log2_binom(replay["positions"], replay["disagree_positions"])
+            ),
+        },
+    }
+    (STORE / "DROP_LADDER.json").write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
+
+    t = out["totals"]
+    print("=== hv1 token stream, exact ===")
+    print(f"positions              {t['positions']:,}")
+    print(f"ideal code bits        {t['ideal_code_bits']:,.0f}")
+    print(f"shipped token bits     {t['shipped_token_bits']:,}  "
+          f"(coder efficiency {t['coder_efficiency']:.5f})")
+    print(f"model top1 error       {t['top1_error']:.7f}  "
+          f"({t['disagree_positions']:,} disagreements)")
+    print(f"bits in disagreements  {t['bits_in_disagreeing_positions']:,.0f}  "
+          f"= {100*t['share_of_bits_in_disagreeing_positions']:.3f}% of all token bits")
+    print(f"mean bits/disagreement {t['mean_bits_per_disagreement']:.3f}")
+    print()
+    print(f"breakeven bar: need > {bar_bytes_per_flip:.4f} bytes "
+          f"({bar_bits_per_flip:.3f} bits) saved per seg flip created")
+    print(f"best observed: {max_bpf:.4f} bytes/token flip  "
+          f"=> tolerable seg amplification A <= {out['breakeven']['max_tolerable_seg_amplification_A']:.4f}")
+    print()
+    print(f"{'p_max>=':>12}{'dropped%':>10}{'bytes':>11}{'flips':>12}{'B/flip':>9}"
+          f"{'dS_rate':>12}{'dS_seg(A=1)':>13}{'net(A=1)':>12}")
+    seen = set()
+    for r in rows:
+        key = round(r["bytes_saved"] / 250.0)
+        if key in seen and r["u"] not in (0.0,):
+            continue
+        seen.add(key)
+        print(f"{r['p_max_threshold']:>12.9f}{100*r['dropped_fraction']:>9.3f}%"
+              f"{r['bytes_saved']:>11.0f}{r['token_flips']:>12,}"
+              f"{r['bytes_per_token_flip']:>9.3f}{r['delta_S_rate']:>12.2e}"
+              f"{r['delta_S_seg_at_A1']:>13.2e}{r['net_S_at_A1_pose_free']:>12.2e}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

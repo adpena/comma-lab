@@ -1,0 +1,100 @@
+#!/bin/sh
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+PYBIN=${PYTHON:-python3}
+DEPS_DIR=${PR130_RUNTIME_DEPS_DIR:-"$SCRIPT_DIR/.runtime-deps"}
+NATIVE_DIR=${LC2_NATIVE_BUILD_DIR:-"$DEPS_DIR.lc2-native-ans"}
+NATIVE_LIBRARY="$NATIVE_DIR/liblc2_ans.dylib"
+NATIVE_TMP="$NATIVE_DIR/.liblc2_ans.$$.tmp"
+RC64_LIBRARY="$NATIVE_DIR/liblc2_rc64.dylib"
+RC64_TMP="$NATIVE_DIR/.liblc2_rc64.$$.tmp"
+NATIVE_MODE=${LC2_NATIVE_ANS_MODE:-auto}
+CCBIN=${CC:-}
+if [ -z "$CCBIN" ]; then
+    CCBIN=$(command -v cc || true)
+fi
+LINK_DETERMINISM=
+RC64_LINK_DETERMINISM=
+if [ "$(uname -s)" = Darwin ]; then
+    LINK_DETERMINISM='-Wl,-install_name,@rpath/liblc2_ans.dylib'
+    RC64_LINK_DETERMINISM='-Wl,-install_name,@rpath/liblc2_rc64.dylib'
+fi
+
+if [ "$NATIVE_MODE" != off ]; then
+    if [ -z "$CCBIN" ] || [ ! -x "$CCBIN" ]; then
+        if [ "$NATIVE_MODE" = required ]; then
+            echo "LC2 required native ANS compiler cc is unavailable" >&2
+            exit 72
+        fi
+        echo "LC2_NATIVE_ANS_FALLBACK reason=cc_unavailable" >&2
+    fi
+    mkdir -p -- "$NATIVE_DIR"
+    if [ ! -f "$NATIVE_LIBRARY" ] && [ -n "$CCBIN" ] && [ -x "$CCBIN" ]; then
+        if "$CCBIN" -O3 -std=c11 -shared -fPIC             -ffp-contract=off -fno-fast-math             $LINK_DETERMINISM             "$SCRIPT_DIR/ans_backend.c" -o "$NATIVE_TMP"; then
+            mv -- "$NATIVE_TMP" "$NATIVE_LIBRARY"
+        else
+            rm -f -- "$NATIVE_TMP"
+            if [ "$NATIVE_MODE" = required ]; then
+                echo "LC2 required native ANS compile failed" >&2
+                exit 71
+            fi
+            echo "LC2_NATIVE_ANS_FALLBACK reason=compile_failed" >&2
+        fi
+    fi
+    if [ -f "$NATIVE_LIBRARY" ]; then
+        export LC2_NATIVE_ANS_LIBRARY="$NATIVE_LIBRARY"
+    fi
+fi
+
+if [ "${LC2_RC64_MODE:-auto}" != off ]; then
+    if [ -z "$CCBIN" ] || [ ! -x "$CCBIN" ]; then
+        if [ "${LC2_RC64_MODE:-auto}" = required ]; then
+            echo "LC2 required RC64 compiler cc is unavailable" >&2
+            exit 75
+        fi
+    else
+        mkdir -p -- "$NATIVE_DIR"
+        if [ ! -f "$RC64_LIBRARY" ]; then
+            if "$CCBIN" -O3 -std=c11 -shared -fPIC                 -ffp-contract=off -fno-fast-math                 $RC64_LINK_DETERMINISM                 "$SCRIPT_DIR/rc64_backend.c" -o "$RC64_TMP"; then
+                mv -- "$RC64_TMP" "$RC64_LIBRARY"
+            else
+                rm -f -- "$RC64_TMP"
+                if [ "${LC2_RC64_MODE:-auto}" = required ]; then
+                    echo "LC2 required RC64 compile failed" >&2
+                    exit 74
+                fi
+            fi
+        fi
+        if [ -f "$RC64_LIBRARY" ]; then
+            export LC2_RC64_LIBRARY="$RC64_LIBRARY"
+        fi
+    fi
+fi
+
+if [ "${LC2_NATIVE_COMPILE_SMOKE_ONLY:-0}" = 1 ]; then
+    if [ ! -f "$NATIVE_LIBRARY" ]; then
+        echo "LC2 native compile smoke lacks a loadable library" >&2
+        exit 73
+    fi
+    export PYTHONNOUSERSITE=1
+    export PYTHONDONTWRITEBYTECODE=1
+    export PYTHONPATH="$SCRIPT_DIR${PYTHONPATH:+:$PYTHONPATH}"
+    exec "$PYBIN" - "$NATIVE_LIBRARY" "$RC64_LIBRARY" <<'PY'
+import ctypes
+import sys
+
+library = ctypes.CDLL(sys.argv[1])
+library.lc2_ans_precision.restype = ctypes.c_uint32
+library.lc2_ans_alphabet.restype = ctypes.c_uint32
+if library.lc2_ans_precision() != 24 or library.lc2_ans_alphabet() != 5:
+    raise SystemExit("LC2 native compile smoke resolved the wrong decoder grammar")
+rc64 = ctypes.CDLL(sys.argv[2])
+rc64.rc64_total_frequency.restype = ctypes.c_uint64
+if rc64.rc64_total_frequency() != 1 << 31:
+    raise SystemExit("LC2 RC64 compile smoke resolved the wrong frequency lattice")
+print("LC2_NATIVE_COMPILE_READY ans_precision=24 alphabet=5 rc64_total=2147483648")
+PY
+fi
+
+exec "$SCRIPT_DIR/inflate_lc2.sh" "$@"

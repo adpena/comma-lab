@@ -1,0 +1,7 @@
+#!/bin/bash
+DONE=/Users/adpena/Projects/pact/.omx/state/codex_arms/ddm_js2b_edge_conditioning_relative_gauge.done
+LAST=/Users/adpena/Projects/pact/.omx/state/codex_arms/ddm_js2b_edge_conditioning_relative_gauge.last.txt
+while [ ! -f "$DONE" ]; do sleep 30; done
+RC=$(cat "$DONE" 2>/dev/null || echo "?")
+TAIL=$(tail -c 300 "$LAST" 2>/dev/null | tr "\n" " ")
+echo "ARM ddm_js2b FINISHED rc=$RC | last: $TAIL" >> /Volumes/VertigoDataTier/pact/ddm_js2b_20260812/alerts.log

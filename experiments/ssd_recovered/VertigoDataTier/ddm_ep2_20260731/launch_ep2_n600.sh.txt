@@ -1,0 +1,13 @@
+#!/bin/bash
+set -uo pipefail
+cd "/Users/adpena/projects/pact"
+export PYTHONPATH="/Users/adpena/projects/pact/src:/Users/adpena/projects/pact:/Users/adpena/projects/pact/upstream"
+exec .venv/bin/python -u tools/safe_run.py --rss-mb 60000 --projected-gib 24 --timeout 9000 --label ddm_ep2_endpoint_n600 -- \
+ .venv/bin/python -u experiments/ddm_ep2_endpoint_select.py \
+ --candidate "w02_final_rollback_target=/Volumes/VertigoDataTier/pact/ddm_b4s_20260731/window_02/checkpoints/stage_seg_trunk_tau_final.npz" \
+ --candidate "w03_ep809_boundary=/Volumes/VertigoDataTier/pact/ddm_b4s_20260731/window_03/checkpoints/intra_seg_trunk_tau_ep00809.npz" \
+ --candidate "w03_ep854_representative=/Volumes/VertigoDataTier/pact/ddm_b4s_20260731/window_03/checkpoints/intra_seg_trunk_tau_ep00854.npz" \
+ --candidate "w03_ep934_tail=/Volumes/VertigoDataTier/pact/ddm_b4s_20260731/window_03/checkpoints/intra_seg_trunk_tau_ep00934.npz" \
+ --control-label w02_final_rollback_target --control-expected-d-seg 0.004067128499348959 \
+ --chunk 64 --pairs 600 \
+ --output-json /Volumes/VertigoDataTier/pact/ddm_ep2_20260731/ddm_ep2_endpoint_selection_n600.json

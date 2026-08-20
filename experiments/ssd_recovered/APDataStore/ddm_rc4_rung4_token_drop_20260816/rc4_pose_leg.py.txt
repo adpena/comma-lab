@@ -1,0 +1,338 @@
+"""ddm_rc4 Stage 1c - the POSE leg of a token drop on hv1.
+
+Token drop changes frame_1 only (cpr1/inflate.py:289-320: master = tokens,
+slave = carrier).  PoseNet reads BOTH frames, so the drop reaches pose through
+its frame_1 half.  This measures d_pose base vs dropped on the SAME
+stratified-random pair sample used for the seg leg.
+
+INSTRUMENT HONESTY (BINDING, ddm_pi2 2026-08-16 - supersedes the earlier
+"~18x multiplicative offset" reading).  The advisory pose instrument is NOT
+multiplicatively biased.  It carries a FIXED ADDITIVE FLOOR
+d_pose_floor = 1.4061e-04, ~100% of which is GT-decode-path drift
+(PyAV/yuv420_to_rgb vs DALI/nvdec); scorer-forward CPU/CUDA drift is 3.57e-12,
+nine orders down.  Closure: 6.88e-06 + 1.4061e-04 = 1.474932e-04 predicted vs
+1.4747e-04 measured, error 0.016%.
+
+Therefore this script quotes the ABSOLUTE delta only - the floor cancels in a
+difference - and converts it at the AUTHORITY baseline:
+
+    dS_pose = sqrt(10*(D_POSE_AUTH + delta_d_pose_abs)) - sqrt(10*D_POSE_AUTH)
+
+RATIOS ARE FORBIDDEN: the floor does not cancel in a ratio, and evaluating the
+sqrt marginal at the inflated baseline understates pose cost by 4.63x
+(602.8 per unit d_pose at authority vs 130.2 at the floor-inflated point).
+Also: the floor is 20.4x the authority baseline, so this instrument measures
+pose DAMAGE well and can barely see pose GAIN (a true improvement moves it by
+at most 4.7%).  Never read a small advisory pose win as a win.
+
+ALWAYS KEEP THE PAYLOAD: per-pair pose vectors are persisted with sha256+bytes.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import importlib.util
+import json
+import math
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+
+GEN = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/generations/"
+    "hv1_ep0634_s1p25_c1p0_brotli_q10"
+)
+STORE = Path("/Volumes/APDataStore/pact/ddm_rc4_rung4_token_drop_20260816")
+TOKENS_U8 = Path(
+    "/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/"
+    ".f26_decode_checkpoints/tokens_cpu_stage_complete.u8"
+)
+MT1 = Path(
+    "/Volumes/APDataStore/pact/ddm_mt1_t4_sign_gate_20260814_custody/"
+    "ddm_mt1_t4_sign_gate_20260814/inputs"
+)
+UPSTREAM = Path("/Users/adpena/Projects/pact/upstream")
+ARCHIVE_SHA = "80d9c8c6fdc72caaa3e180a8abb2a859e7f316a484b38f33fe90d5701420178e"
+NUM_CLASSES = 5
+
+# hv1 authority pose, [contest-CUDA T4, n600]: pose term 0.0082945765 -> d_pose.
+D_POSE_AUTH = 0.0082945765**2 / 10.0
+# ddm_pi2 measured additive floor of the local advisory pose instrument.
+ADVISORY_POSE_FLOOR = 1.4061e-04
+
+
+def ds_pose_from_absolute_delta(delta_abs: float) -> float:
+    """Price an ABSOLUTE advisory delta_d_pose at the AUTHORITY baseline."""
+    return math.sqrt(10.0 * (D_POSE_AUTH + delta_abs)) - math.sqrt(10.0 * D_POSE_AUTH)
+
+
+def sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--u", type=float, nargs="+", required=True)
+    ap.add_argument("--pairs", type=int, default=120)
+    ap.add_argument("--seed", type=int, default=20260816)
+    args = ap.parse_args()
+
+    retained = STORE / "retained" / "pose_leg"
+    retained.mkdir(parents=True, exist_ok=True)
+    sys.path.insert(0, str(GEN))
+    sys.path.insert(0, str(GEN / "cpr1"))
+    sys.path.insert(0, str(UPSTREAM))
+
+    import torch
+
+    torch.set_num_threads(8)
+    torch.set_num_interop_threads(1)
+
+    from runtime.carrier_repack import materialize_cpr1, split_frame0_selector_carrier
+    from runtime.compensation_overlay import apply_compensation_overlay
+    from runtime.entropy.renderer_weight_codec import decode_wans1
+    from runtime.hpac_inference import optimize_sparse_evaluator
+    from runtime.ihs2 import materialize_ihs1
+    from runtime.residual_archive import (
+        _boundary_buckets,
+        _probability_table,
+        _sparse_class,
+        read_residual_archive,
+    )
+
+    spec = importlib.util.spec_from_file_location("_rc4_renderer", GEN / "cpr1" / "inflate.py")
+    runtime = importlib.util.module_from_spec(spec)
+    sys.modules["_rc4_renderer"] = runtime
+    spec.loader.exec_module(runtime)
+
+    archive = GEN / "archive.zip"
+    if sha256_bytes(archive.read_bytes()) != ARCHIVE_SHA:
+        raise SystemExit("archive sha mismatch")
+    parts = read_residual_archive(archive)
+    tokens = np.fromfile(TOKENS_U8, dtype=np.uint8).reshape(
+        runtime.N, runtime.EVAL_H, runtime.EVAL_W
+    )
+    gt_pose = np.load(MT1 / "gt_pose.npy")
+
+    device = torch.device("cpu")
+
+    # --- frame_0 (slave) path: carrier only, byte-identical to f26_inflate ---
+    import struct
+
+    carrier_blob, _selector_blob = split_frame0_selector_carrier(parts.carrier_blob)
+    canonical_carrier = materialize_cpr1(carrier_blob, runtime)
+    marker = bytes(40_252)
+    semantic_pose = (
+        struct.pack("<II", len(marker), len(canonical_carrier)) + marker + canonical_carrier
+    )
+    _, basis, coefficients = runtime.unpack_semantic_pose(semantic_pose)
+    if parts.compensation_blob is not None:
+        basis_count = runtime.CARRIER_DIM * 3 * runtime.CARRIER_H * runtime.CARRIER_W
+        _, _, coeff_scales, encoded = runtime.decode_compact_carrier(
+            canonical_carrier, basis_count=basis_count,
+            frames=runtime.N, dimensions=runtime.CARRIER_DIM,
+        )
+        delta = (encoded.astype(np.int64) >> 1) ^ -(encoded.astype(np.int64) & 1)
+        base_codes = np.cumsum(delta, axis=0) & 0xFFF
+        base_codes = np.where(base_codes >= 0x800, base_codes - 0x1000, base_codes).astype(np.int32)
+        cand = apply_compensation_overlay(base_codes, parts.compensation_blob)
+        coefficients = torch.from_numpy(cand).float() * torch.from_numpy(coeff_scales)[None]
+    basis_n = runtime.normalized_basis(basis.to(device))
+    coefficients = coefficients.to(device)
+
+    # --- frame_1 (master) path ---
+    semantic = runtime.SemanticTokenRenderer(96)
+    semantic.load_state_dict(
+        {
+            r.schema.name: torch.from_numpy(np.ascontiguousarray(r.values, dtype=np.float32))
+            for r in decode_wans1(parts.semantic_blob)
+        },
+        strict=True,
+    )
+    semantic = semantic.eval().to(device)
+
+    # --- HPAC replay for the drop rule ---
+    base_hpac = materialize_ihs1(parts.hpac_blob, runtime)
+    model = runtime.load_hpac(base_hpac, device)
+    masks = runtime.group_masks(device)
+    sparse = _sparse_class(GEN / "cpr1")(model, runtime.EVAL_H, runtime.EVAL_W)
+    group_plans = []
+    for mask in masks:
+        flat = np.flatnonzero(mask.detach().cpu().numpy().reshape(-1))
+        group_plans.append((torch.from_numpy(flat).to(device), flat))
+
+    import modules  # upstream
+
+    dnet = modules.DistortionNet().eval().to(device)
+    dnet.load_state_dicts(modules.posenet_sd_path, modules.segnet_sd_path, device)
+    posenet = dnet.posenet
+
+    def frame_stats(frame: int):
+        index = torch.tensor([frame], dtype=torch.long, device=device)
+        prev_np = tokens[frame - 1] if frame else np.zeros_like(tokens[0])
+        previous = torch.from_numpy(prev_np.astype(np.int64))[None]
+        context = model.prepare_frame_context(index, previous)
+        boundary = (
+            _boundary_buckets(prev_np).reshape(-1)
+            if frame
+            else np.full(runtime.EVAL_H * runtime.EVAL_W, 4, dtype=np.uint8)
+        )
+        truth_flat = tokens[frame].reshape(-1).astype(np.int64)
+        current = torch.zeros((1, runtime.EVAL_H, runtime.EVAL_W), dtype=torch.long)
+        p_max = np.zeros(truth_flat.size)
+        arg = np.zeros(truth_flat.size, dtype=np.int64)
+        for g, (dev_pos, flat_pos) in enumerate(group_plans):
+            base_logits = sparse.selected_logits(current, context, g).cpu().numpy()
+            predicted = base_logits.argmax(axis=1).astype(np.int64)
+            feat = boundary[flat_pos].astype(np.int64) * NUM_CLASSES + predicted
+            prob = _probability_table(
+                base_logits + parts.table.values[feat], runtime.HPAC_LOGIT_PRECISION
+            ).astype(np.float64)
+            a = prob.argmax(axis=1)
+            p_max[flat_pos] = prob[np.arange(a.size), a]
+            arg[flat_pos] = a
+            current.reshape(-1)[dev_pos] = torch.from_numpy(truth_flat[flat_pos]).to(device)
+        return p_max.reshape(runtime.EVAL_H, runtime.EVAL_W), arg.reshape(
+            runtime.EVAL_H, runtime.EVAL_W
+        )
+
+    def slave_frame(pair: int) -> torch.Tensor:
+        with torch.inference_mode():
+            c = torch.einsum("bk,kchw->bchw", coefficients[pair : pair + 1], basis_n)
+            c = c / math.sqrt(runtime.CARRIER_DIM)
+            return (
+                torch.nn.functional.interpolate(
+                    (127.5 + runtime.CARRIER_AMPLITUDE * c).clamp(0.0, 255.0).round(),
+                    size=(runtime.CAMERA_H, runtime.CAMERA_W),
+                    mode="bicubic", align_corners=False,
+                )
+                .clamp(0.0, 255.0)
+                .round()
+                .to(torch.uint8)
+            )
+
+    def master_frame(tok: np.ndarray, pair: int) -> torch.Tensor:
+        with torch.inference_mode():
+            out = semantic(torch.from_numpy(tok.astype(np.int64))[None],
+                           torch.tensor([pair], dtype=torch.long))
+            return (
+                torch.nn.functional.interpolate(
+                    out, size=(runtime.CAMERA_H, runtime.CAMERA_W),
+                    mode="bilinear", align_corners=False,
+                )
+                .clamp(0.0, 255.0)
+                .round()
+                .to(torch.uint8)
+            )
+
+    def pose_of(slave: torch.Tensor, master: torch.Tensor) -> np.ndarray:
+        with torch.inference_mode():
+            x = torch.stack([slave[0].float(), master[0].float()], dim=0)[None]  # (1,2,3,H,W)
+            out = posenet(posenet.preprocess_input(x))
+            head = [h for h in posenet.hydra.heads if h.name == "pose"][0]
+            return out["pose"][0, : head.out // 2].cpu().numpy()
+
+    rng = np.random.default_rng(args.seed)
+    edges = np.linspace(0, runtime.N, args.pairs + 1).astype(int)
+    sample = np.unique(
+        np.clip(
+            [rng.integers(edges[i], max(edges[i] + 1, edges[i + 1])) for i in range(args.pairs)],
+            0, runtime.N - 1,
+        )
+    )
+
+    started = time.time()
+    cache: dict[int, tuple] = {}
+    slave_cache: dict[int, torch.Tensor] = {}
+    base_pose: dict[int, np.ndarray] = {}
+    results = []
+    for u in args.u:
+        tau = 1.0 - 2.0**-u
+        se_base = []
+        se_drop = []
+        pose_rows = []
+        for k, pair in enumerate(sample):
+            pair = int(pair)
+            if pair not in cache:
+                cache[pair] = frame_stats(pair)
+            p_max, arg = cache[pair]
+            if pair not in slave_cache:
+                slave_cache[pair] = slave_frame(pair)
+            if pair not in base_pose:
+                base_pose[pair] = pose_of(slave_cache[pair], master_frame(tokens[pair], pair))
+            new_tok = np.where(p_max >= tau, arg, tokens[pair]).astype(np.uint8)
+            pd = (
+                pose_of(slave_cache[pair], master_frame(new_tok, pair))
+                if (new_tok != tokens[pair]).any()
+                else base_pose[pair]
+            )
+            g = gt_pose[pair].astype(np.float64)
+            se_base.append(float(((base_pose[pair].astype(np.float64) - g) ** 2).mean()))
+            se_drop.append(float(((pd.astype(np.float64) - g) ** 2).mean()))
+            pose_rows.append(
+                {"pair": pair, "base": base_pose[pair].tolist(), "drop": pd.tolist()}
+            )
+            if k % 20 == 0:
+                print(f"u={u} pair {k+1}/{len(sample)} "
+                      f"delta_d_pose_abs={np.mean(se_drop)-np.mean(se_base):.6e} "
+                      f"{time.time()-started:.0f}s", flush=True)
+        db = float(np.mean(se_base))
+        dd = float(np.mean(se_drop))
+        delta_abs = dd - db
+        path = retained / f"pose_u{u}.json"
+        path.write_text(json.dumps(pose_rows) + "\n")
+        results.append(
+            {
+                "u": u,
+                "p_max_threshold": tau,
+                "d_pose_base_advisory_floor_inflated": db,
+                "d_pose_drop_advisory_floor_inflated": dd,
+                "measured_floor_check_vs_pi2": db - D_POSE_AUTH,
+                "delta_d_pose_absolute": delta_abs,
+                "delta_S_pose_at_authority_baseline": ds_pose_from_absolute_delta(delta_abs),
+                "RATIO_DELIBERATELY_NOT_EMITTED": (
+                    "ddm_pi2: the additive floor does not cancel in a ratio; "
+                    "absolute delta priced at the authority baseline is the only legal form"
+                ),
+                "retained_pose_rows": {
+                    "path": str(path),
+                    "bytes": path.stat().st_size,
+                    "sha256": sha256_bytes(path.read_bytes()),
+                },
+            }
+        )
+        print(json.dumps(results[-1], indent=2), flush=True)
+
+    out = {
+        "arm": "ddm_rc4",
+        "stage": "1c_pose_leg",
+        "archive_sha256": ARCHIVE_SHA,
+        "axis": "[macOS-CPU advisory, stratified-random pair sample] COMPONENT-ONLY NON-PROMOTABLE",
+        "instrument_caveat": (
+            "ddm_pi2 2026-08-16: the advisory pose instrument carries a FIXED ADDITIVE FLOOR "
+            "d_pose=1.4061e-04 (GT-decode-path drift, ~100%; scorer-forward CPU/CUDA drift "
+            "3.57e-12). Quote the ABSOLUTE delta only and price it at the AUTHORITY baseline "
+            "via sqrt(10*(6.88e-06+delta)) - sqrt(10*6.88e-06). Ratios and rescaled dS_pose "
+            "are FORBIDDEN: evaluating the sqrt marginal at the inflated baseline understates "
+            "pose cost 4.63x. The instrument sees pose DAMAGE well and pose GAIN barely "
+            "(<=4.7% movement)."
+        ),
+        "advisory_pose_floor_pi2": ADVISORY_POSE_FLOOR,
+        "d_pose_authority_baseline": D_POSE_AUTH,
+        "score_claim": False,
+        "promotable": False,
+        "sample_seed": args.seed,
+        "sample_size": int(len(sample)),
+        "results": results,
+        "elapsed_seconds": time.time() - started,
+    }
+    (STORE / "POSE_LEG.json").write_text(json.dumps(out, indent=2, sort_keys=True) + "\n")
+    print("wrote", STORE / "POSE_LEG.json")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

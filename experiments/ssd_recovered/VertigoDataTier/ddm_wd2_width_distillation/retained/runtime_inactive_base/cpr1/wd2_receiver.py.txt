@@ -1,0 +1,564 @@
+#!/usr/bin/env python3
+"""Receiver and byte codec for the DDM WD2 semantic-renderer student.
+
+The packet is a counted, tagged replacement for the frozen WANS1 semantic
+section.  Learned tensors remain inside ``archive.zip``.  The runtime patch is
+strictly additive: an untagged e480b semantic body follows the original WANS1
+branch without being rewritten.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import json
+import math
+import os
+import shutil
+import struct
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from types import ModuleType
+from typing import Any, Mapping
+
+import numpy as np
+import torch
+from torch import nn
+from torch.nn import functional as F
+
+N = 600
+NUM_CLASSES = 5
+EVAL_H, EVAL_W = 384, 512
+CAMERA_H, CAMERA_W = 874, 1164
+FRAME_DIM = 8
+DILATIONS = (1, 1, 2, 4)
+
+MAGIC = b"WD2S"
+VERSION = 1
+FORM_TO_ID = {"dense": 0, "factorized": 1, "flattened": 2}
+ID_TO_FORM = {value: key for key, value in FORM_TO_ID.items()}
+HEADER = struct.Struct("<4sBBBBBI")
+
+
+class WD2ReceiverError(RuntimeError):
+    """A student packet or runtime integration failed closed."""
+
+
+@dataclass(frozen=True)
+class StudentSpec:
+    """A fully specified receiver topology."""
+
+    candidate_id: str
+    form: str
+    width: int
+    depth: int
+    rank: int = 0
+
+    def __post_init__(self) -> None:
+        if self.form not in FORM_TO_ID:
+            raise ValueError(f"unknown student form: {self.form}")
+        if not 1 <= self.width <= 255:
+            raise ValueError("student width must fit the packet header")
+        if self.width % max(1, self.width // 8):
+            raise ValueError("student width is incompatible with the inherited GroupNorm law")
+        if not 1 <= self.depth <= len(DILATIONS):
+            raise ValueError("student depth is outside the receiver dilation bank")
+        if self.form == "factorized":
+            if not 1 <= self.rank <= min(255, self.width):
+                raise ValueError("factorized rank must be in [1,width]")
+        elif self.rank != 0:
+            raise ValueError("rank is only legal for factorized students")
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "candidate_id": self.candidate_id,
+            "form": self.form,
+            "width": self.width,
+            "depth": self.depth,
+            "rank": self.rank,
+        }
+
+
+class DenseTokenBlock(nn.Module):
+    def __init__(self, width: int, dilation: int) -> None:
+        super().__init__()
+        self.dw = nn.Conv2d(
+            width, width, 3, padding=dilation, dilation=dilation, groups=width
+        )
+        self.pw = nn.Conv2d(width, width, 1)
+        self.norm = nn.GroupNorm(max(1, width // 8), width)
+        self.film = nn.Linear(FRAME_DIM, 2 * width)
+
+    def forward(self, value: torch.Tensor, frame: torch.Tensor) -> torch.Tensor:
+        residual = self.norm(self.pw(self.dw(value)))
+        scale, shift = self.film(frame).chunk(2, dim=1)
+        residual = residual * (1.0 + scale[:, :, None, None])
+        residual = residual + shift[:, :, None, None]
+        return value + F.gelu(residual)
+
+
+class FactorizedTokenBlock(nn.Module):
+    def __init__(self, width: int, rank: int, dilation: int) -> None:
+        super().__init__()
+        self.dw = nn.Conv2d(
+            width, width, 3, padding=dilation, dilation=dilation, groups=width
+        )
+        self.down = nn.Conv2d(width, rank, 1)
+        self.up = nn.Conv2d(rank, width, 1)
+        self.norm = nn.GroupNorm(max(1, width // 8), width)
+        self.film = nn.Linear(FRAME_DIM, 2 * width)
+
+    def forward(self, value: torch.Tensor, frame: torch.Tensor) -> torch.Tensor:
+        residual = self.norm(self.up(self.down(self.dw(value))))
+        scale, shift = self.film(frame).chunk(2, dim=1)
+        residual = residual * (1.0 + scale[:, :, None, None])
+        residual = residual + shift[:, :, None, None]
+        return value + F.gelu(residual)
+
+
+class FlatTokenBlock(nn.Module):
+    def __init__(self, width: int, dilation: int) -> None:
+        super().__init__()
+        self.dw = nn.Conv2d(
+            width, width, 3, padding=dilation, dilation=dilation, groups=width
+        )
+        self.pw = nn.Conv2d(width, width, 1)
+        self.norm = nn.GroupNorm(max(1, width // 8), width)
+
+    def forward(self, value: torch.Tensor) -> torch.Tensor:
+        return value + F.gelu(self.norm(self.pw(self.dw(value))))
+
+
+class StudentSemanticRenderer(nn.Module):
+    """Topology-compatible student that emits the receiver's RGB master frame."""
+
+    def __init__(self, spec: StudentSpec) -> None:
+        super().__init__()
+        self.spec = spec
+        width = spec.width
+        self.token_embed = nn.Embedding(NUM_CLASSES, width)
+        self.frame_embed = nn.Embedding(N, FRAME_DIM)
+        self.coord_mix = nn.Conv2d(width + 4, width, 1)
+        if spec.form == "dense":
+            self.blocks = nn.ModuleList(
+                DenseTokenBlock(width, dilation) for dilation in DILATIONS[: spec.depth]
+            )
+        elif spec.form == "factorized":
+            self.blocks = nn.ModuleList(
+                FactorizedTokenBlock(width, spec.rank, dilation)
+                for dilation in DILATIONS[: spec.depth]
+            )
+        else:
+            self.flat_film = nn.Linear(FRAME_DIM, 2 * width)
+            self.blocks = nn.ModuleList(
+                FlatTokenBlock(width, dilation) for dilation in DILATIONS[: spec.depth]
+            )
+        self.head = nn.Conv2d(width, 3, 3, padding=1)
+
+    @staticmethod
+    def coordinates(
+        batch: int, device: torch.device, dtype: torch.dtype
+    ) -> torch.Tensor:
+        yy, xx = torch.meshgrid(
+            torch.linspace(-1.0, 1.0, EVAL_H, device=device, dtype=dtype),
+            torch.linspace(-1.0, 1.0, EVAL_W, device=device, dtype=dtype),
+            indexing="ij",
+        )
+        coordinates = torch.stack((xx, yy, xx.square(), yy.square()), dim=0)
+        return coordinates.unsqueeze(0).expand(batch, -1, -1, -1)
+
+    def forward(self, tokens: torch.Tensor, pair_indices: torch.Tensor) -> torch.Tensor:
+        value = self.token_embed(tokens).permute(0, 3, 1, 2)
+        value = self.coord_mix(
+            torch.cat(
+                (
+                    value,
+                    self.coordinates(value.shape[0], value.device, value.dtype),
+                ),
+                dim=1,
+            )
+        )
+        frame = self.frame_embed(pair_indices)
+        if self.spec.form == "flattened":
+            scale, shift = self.flat_film(frame).chunk(2, dim=1)
+            value = value * (1.0 + scale[:, :, None, None])
+            value = value + shift[:, :, None, None]
+            for block in self.blocks:
+                value = block(value)
+        else:
+            for block in self.blocks:
+                value = block(value, frame)
+        return torch.sigmoid(self.head(F.gelu(value))) * 255.0
+
+
+def camera_uint8(
+    model: nn.Module, tokens: torch.Tensor, pair_indices: torch.Tensor
+) -> torch.Tensor:
+    """Run the actual semantic receiver resize and uint8 realization."""
+
+    master = F.interpolate(
+        model(tokens.long(), pair_indices),
+        size=(CAMERA_H, CAMERA_W),
+        mode="bilinear",
+        align_corners=False,
+    )
+    return master.clamp(0.0, 255.0).round().to(torch.uint8)
+
+
+def camera_uint8_ste(
+    model: nn.Module, tokens: torch.Tensor, pair_indices: torch.Tensor
+) -> torch.Tensor:
+    """Differentiable forward whose values equal receiver uint8 exactly."""
+
+    master = F.interpolate(
+        model(tokens.long(), pair_indices),
+        size=(CAMERA_H, CAMERA_W),
+        mode="bilinear",
+        align_corners=False,
+    ).clamp(0.0, 255.0)
+    rounded = master.round().clamp(0.0, 255.0)
+    return master + (rounded - master).detach()
+
+
+def _pack_signed_int4(values: np.ndarray) -> bytes:
+    flat = np.asarray(values, dtype=np.int8).reshape(-1)
+    if np.any(flat < -7) or np.any(flat > 7):
+        raise WD2ReceiverError("WD2 int4 values must be in [-7,7]")
+    unsigned = flat.astype(np.int16) & 0xF
+    if unsigned.size & 1:
+        unsigned = np.pad(unsigned, (0, 1))
+    return (unsigned[0::2] | (unsigned[1::2] << 4)).astype(np.uint8).tobytes()
+
+
+def _unpack_signed_int4(blob: memoryview, count: int) -> tuple[np.ndarray, memoryview]:
+    byte_count = (count + 1) // 2
+    if len(blob) < byte_count:
+        raise WD2ReceiverError("truncated WD2 int4 tensor")
+    packed = np.frombuffer(blob[:byte_count], dtype=np.uint8)
+    values = np.empty(byte_count * 2, dtype=np.int8)
+    values[0::2] = packed & 0xF
+    values[1::2] = packed >> 4
+    values[values >= 8] -= 16
+    if np.any(values[:count] == -8):
+        raise WD2ReceiverError("reserved WD2 int4 code -8")
+    return values[:count].copy(), blob[byte_count:]
+
+
+def quantize_tensor(value: torch.Tensor, *, embedding: bool) -> torch.Tensor:
+    """Return the exact fp16/int4 deployment tensor in float32."""
+
+    source = value.detach().to(device="cpu", dtype=torch.float32)
+    if source.ndim < 2:
+        return source.to(torch.float16).to(torch.float32)
+    axis = source.ndim - 1 if embedding else 0
+    reduce_dims = tuple(index for index in range(source.ndim) if index != axis)
+    maxima = source.abs().amax(dim=reduce_dims)
+    scales = torch.where(maxima > 0, maxima / 7.0, torch.ones_like(maxima))
+    scales = scales.to(torch.float16).to(torch.float32)
+    scale_shape = [1] * source.ndim
+    scale_shape[axis] = source.shape[axis]
+    codes = torch.round(source / scales.reshape(scale_shape)).clamp(-7, 7)
+    return codes * scales.reshape(scale_shape)
+
+
+def fake_quantize_state(model: nn.Module) -> dict[str, torch.Tensor]:
+    """Build STE parameters whose forward values match packet parse-back."""
+
+    result: dict[str, torch.Tensor] = {}
+    for name, value in model.named_parameters():
+        quantized = quantize_tensor(value, embedding=name.endswith("embed.weight")).to(
+            device=value.device, dtype=value.dtype
+        )
+        result[name] = value + (quantized - value).detach()
+    for name, value in model.named_buffers():
+        result[name] = value
+    return result
+
+
+def pack_student(model: StudentSemanticRenderer) -> bytes:
+    """Serialize the actual deployment state; no estimated-byte proxy."""
+
+    body = bytearray()
+    for name, value in model.state_dict().items():
+        array = value.detach().cpu().float()
+        if array.ndim < 2:
+            body.extend(array.numpy().astype("<f2", copy=False).tobytes())
+            continue
+        embedding = name.endswith("embed.weight")
+        axis = array.ndim - 1 if embedding else 0
+        reduce_dims = tuple(index for index in range(array.ndim) if index != axis)
+        maxima = array.abs().amax(dim=reduce_dims)
+        scales = torch.where(maxima > 0, maxima / 7.0, torch.ones_like(maxima))
+        scales16 = scales.numpy().astype("<f2", copy=False)
+        restored_scales = torch.from_numpy(scales16.astype(np.float32))
+        shape = [1] * array.ndim
+        shape[axis] = array.shape[axis]
+        codes = torch.round(array / restored_scales.reshape(shape)).clamp(-7, 7)
+        body.extend(scales16.tobytes())
+        body.extend(_pack_signed_int4(codes.to(torch.int8).numpy()))
+    spec = model.spec
+    return HEADER.pack(
+        MAGIC,
+        VERSION,
+        FORM_TO_ID[spec.form],
+        spec.width,
+        spec.depth,
+        spec.rank,
+        len(body),
+    ) + bytes(body)
+
+
+def packet_spec(blob: bytes) -> StudentSpec:
+    if len(blob) < HEADER.size:
+        raise WD2ReceiverError("truncated WD2 student header")
+    magic, version, form_id, width, depth, rank, body_bytes = HEADER.unpack_from(blob)
+    if magic != MAGIC or version != VERSION or form_id not in ID_TO_FORM:
+        raise WD2ReceiverError("unsupported WD2 student header")
+    if len(blob) != HEADER.size + body_bytes:
+        raise WD2ReceiverError("WD2 student body length differs")
+    form = ID_TO_FORM[form_id]
+    return StudentSpec(
+        candidate_id=f"packet_{form}_w{width}_d{depth}_r{rank}",
+        form=form,
+        width=width,
+        depth=depth,
+        rank=rank,
+    )
+
+
+def unpack_student(blob: bytes) -> StudentSemanticRenderer:
+    spec = packet_spec(blob)
+    model = StudentSemanticRenderer(spec)
+    remaining = memoryview(blob)[HEADER.size :]
+    restored: dict[str, torch.Tensor] = {}
+    for name, value in model.state_dict().items():
+        shape = tuple(value.shape)
+        count = value.numel()
+        if value.ndim < 2:
+            byte_count = count * 2
+            if len(remaining) < byte_count:
+                raise WD2ReceiverError(f"truncated WD2 fp16 tensor {name}")
+            array = np.frombuffer(remaining[:byte_count], dtype="<f2").copy()
+            restored[name] = torch.from_numpy(array).reshape(shape).float()
+            remaining = remaining[byte_count:]
+            continue
+        embedding = name.endswith("embed.weight")
+        scale_count = shape[-1] if embedding else shape[0]
+        scale_bytes = scale_count * 2
+        if len(remaining) < scale_bytes:
+            raise WD2ReceiverError(f"truncated WD2 scales {name}")
+        scales = torch.from_numpy(
+            np.frombuffer(remaining[:scale_bytes], dtype="<f2").copy()
+        ).float()
+        remaining = remaining[scale_bytes:]
+        codes, remaining = _unpack_signed_int4(remaining, count)
+        scale_shape = [1] * len(shape)
+        scale_shape[-1 if embedding else 0] = scale_count
+        restored[name] = torch.from_numpy(codes).reshape(shape).float() * scales.reshape(
+            scale_shape
+        )
+    if remaining:
+        raise WD2ReceiverError(f"WD2 student packet has {len(remaining)} trailing bytes")
+    model.load_state_dict(restored, strict=True)
+    return model
+
+
+def serialized_bytes_for_spec(spec: StudentSpec) -> int:
+    """Exact packet bytes, independent of trained values."""
+
+    model = StudentSemanticRenderer(spec)
+    total = HEADER.size
+    for name, value in model.state_dict().items():
+        count = value.numel()
+        if value.ndim < 2:
+            total += count * 2
+        else:
+            scale_count = value.shape[-1] if name.endswith("embed.weight") else value.shape[0]
+            total += scale_count * 2 + (count + 1) // 2
+    return total
+
+
+def sha256_file(path: Path) -> str:
+    with path.open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def _replace_once(source: str, old: str, new: str, label: str) -> str:
+    if source.count(old) != 1:
+        raise WD2ReceiverError(f"runtime patch point differs: {label}")
+    return source.replace(old, new)
+
+
+def patch_runtime_tree(source_tree: Path, destination: Path) -> dict[str, Any]:
+    """Copy e480b runtime and add the fail-closed WD2 tagged branch."""
+
+    source_tree = source_tree.resolve(strict=True)
+    if destination.exists():
+        raise WD2ReceiverError(f"runtime destination already exists: {destination}")
+    shutil.copytree(source_tree, destination, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    residual_path = destination / "runtime/residual_archive.py"
+    residual = residual_path.read_text(encoding="utf-8")
+    old_residual = '''    if len(semantic_body) != WANS_BODY_BYTES:
+        raise ResidualArchiveError("RX1 semantic section length differs")
+    try:
+        semantic = decode_f12_wans_body(semantic_body, WANS_STREAM_ORDER)
+        decode_wans1(semantic)
+    except RendererWeightCodecError as error:
+        raise ResidualArchiveError("invalid RX1 renderer weights") from error
+'''
+    new_residual = '''    # DDM_WD2_STUDENT_SEMANTIC_V1: learned bytes remain in archive.zip.
+    if semantic_body.startswith(b"WD2S"):
+        semantic = semantic_body
+    else:
+        if len(semantic_body) != WANS_BODY_BYTES:
+            raise ResidualArchiveError("RX1 semantic section length differs")
+        try:
+            semantic = decode_f12_wans_body(semantic_body, WANS_STREAM_ORDER)
+            decode_wans1(semantic)
+        except RendererWeightCodecError as error:
+            raise ResidualArchiveError("invalid RX1 renderer weights") from error
+'''
+    residual_path.write_text(
+        _replace_once(residual, old_residual, new_residual, "RX1 semantic dispatch"),
+        encoding="utf-8",
+    )
+
+    f26_path = destination / "runtime/f26_inflate.py"
+    f26 = f26_path.read_text(encoding="utf-8")
+    old_guard = '''    if not parts.semantic_blob.startswith(WANS1_MAGIC):
+        raise InflationError("F26 requires WANS1 semantic weights")
+'''
+    new_guard = '''    wd2_student = parts.semantic_blob.startswith(b"WD2S")
+    if not wd2_student and not parts.semantic_blob.startswith(WANS1_MAGIC):
+        raise InflationError("F26 requires WANS1 or WD2S semantic weights")
+'''
+    f26 = _replace_once(f26, old_guard, new_guard, "F26 semantic guard")
+    old_load = '''    semantic = renderer.SemanticTokenRenderer(96)
+    records = decode_wans1(parts.semantic_blob)
+    state = {
+        record.schema.name: torch.from_numpy(np.ascontiguousarray(record.values, dtype=np.float32))
+        for record in records
+    }
+    semantic.load_state_dict(state, strict=True)
+'''
+    new_load = '''    if wd2_student:
+        receiver_path = renderer_dir / "wd2_receiver.py"
+        spec = importlib.util.spec_from_file_location("_f26_wd2_receiver", receiver_path)
+        if spec is None or spec.loader is None:
+            raise InflationError("could not load the counted WD2 receiver")
+        receiver = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = receiver
+        spec.loader.exec_module(receiver)
+        semantic = receiver.unpack_student(parts.semantic_blob)
+    else:
+        semantic = renderer.SemanticTokenRenderer(96)
+        records = decode_wans1(parts.semantic_blob)
+        state = {
+            record.schema.name: torch.from_numpy(np.ascontiguousarray(record.values)).float()
+            for record in records
+        }
+        semantic.load_state_dict(state, strict=True)
+'''
+    f26_path.write_text(
+        _replace_once(f26, old_load, new_load, "F26 student construction"),
+        encoding="utf-8",
+    )
+
+    receiver_copy = destination / "cpr1/wd2_receiver.py"
+    shutil.copy2(Path(__file__).resolve(), receiver_copy)
+    files = []
+    for path in sorted(destination.rglob("*")):
+        if path.is_file():
+            files.append(
+                {
+                    "path": str(path.relative_to(destination)),
+                    "bytes": path.stat().st_size,
+                    "sha256": sha256_file(path),
+                }
+            )
+    return {
+        "schema": "ddm_wd2_runtime_patch.v1",
+        "source_tree": str(source_tree),
+        "destination": str(destination.resolve()),
+        "student_magic": MAGIC.decode("ascii"),
+        "inactive_branch": "original WANS1 parser and renderer source retained",
+        "files": files,
+    }
+
+
+def bind_archive(runtime_tree: Path, archive_path: Path) -> dict[str, Any]:
+    """Copy one exact archive and bind the public inflate entrypoint to it."""
+
+    archive_destination = runtime_tree / "archive.zip"
+    shutil.copy2(archive_path, archive_destination)
+    inflate_path = runtime_tree / "inflate.py"
+    source = inflate_path.read_text(encoding="utf-8")
+    digest = sha256_file(archive_destination)
+    size = archive_destination.stat().st_size
+    import re
+
+    source, sha_count = re.subn(
+        r'^ARCHIVE_SHA256 = "[0-9a-f]{64}"$',
+        f'ARCHIVE_SHA256 = "{digest}"',
+        source,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    source, size_count = re.subn(
+        r"^ARCHIVE_BYTES = [0-9_]+$",
+        f"ARCHIVE_BYTES = {size:_}",
+        source,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    if (sha_count, size_count) != (1, 1):
+        raise WD2ReceiverError("public inflate archive binding point differs")
+    inflate_path.write_text(source, encoding="utf-8")
+    return {
+        "archive_path": str(archive_destination.resolve()),
+        "archive_bytes": size,
+        "archive_sha256": digest,
+        "inflate_path": str(inflate_path.resolve()),
+        "inflate_sha256": sha256_file(inflate_path),
+    }
+
+
+def load_runtime_module(path: Path, name: str) -> ModuleType:
+    """Load one retained runtime module without contaminating another tree."""
+
+    spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise WD2ReceiverError(f"could not load runtime module: {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def canonical_json_sha256(value: Mapping[str, Any]) -> str:
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(payload).hexdigest()
+
+
+__all__ = [
+    "CAMERA_H",
+    "CAMERA_W",
+    "EVAL_H",
+    "EVAL_W",
+    "HEADER",
+    "MAGIC",
+    "N",
+    "StudentSemanticRenderer",
+    "StudentSpec",
+    "WD2ReceiverError",
+    "bind_archive",
+    "camera_uint8",
+    "camera_uint8_ste",
+    "fake_quantize_state",
+    "pack_student",
+    "packet_spec",
+    "patch_runtime_tree",
+    "serialized_bytes_for_spec",
+    "unpack_student",
+]

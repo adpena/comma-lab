@@ -1,0 +1,803 @@
+# SPDX-License-Identifier: MIT
+"""Task #578 compression-side xi/prior predictor and measurement helpers.
+
+This module never performs PROJECT realization.  It predicts scorer-grid cell
+IDs from a caller-owned decoded predecessor, counted n64-trained static charts,
+and adjacent-pair relative PoseNet-to-xi motion.  Target fields are accepted by
+the measurement functions only and are never part of the predictor payload.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import struct
+import zlib
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Final
+
+import brotli
+import numpy as np
+
+from tac.boundary_math.analytic_lane_render_band import (
+    deserialize_lane_band_any,
+    rasterize_lane_coverage_range_dependent,
+    render_config_from_header,
+)
+from tac.boundary_math.ego_xi_trajectory import PoseTargetEgoEstimator
+from tac.lie import _se3_numpy as se3
+from tac.optimization.predict_project_receiver import _interpolate_track_knot, component_byte_accounting
+from tac.optimization.predict_project_schema import (
+    attach_generic_predictor_policy,
+    canonical_json_bytes,
+    parse_constraint_seed,
+    serialize_constraint_seed,
+)
+from tac.optimization.seed_compose_b2 import GT_CACHE_SHA256, _lawref_g1_calibration, sha256_file
+
+CLASS_NAMES: Final = ("Road", "Lane", "Undrivable", "Movable", "MyCar")
+STRATA: Final = ("cell_interior", "boundary_codim1", "movable_track", "critical_event")
+MISS_CAUSES: Final = (
+    "advection_residual",
+    "static_chart_miss",
+    "adjacency_or_tie_miss",
+    "movable_track_miss",
+    "critical_event_exception",
+)
+POLICY_ID: Final = "xi_advected_prior_per_class_charts.v1"
+LANE_CHART_SHA256: Final = "d2b2a62eeb6ebe45cbf908dafa7e081eabddaca0f424faac970b41eea650d810"
+LANE_CHART_RAW_BYTES: Final = 159386
+LANE_CHART_BROTLI_BYTES: Final = 41303
+LANE_CHART_STATUS: Final = "executed_in_task578_measurement_external_counted_custody"
+G1_RECEIPT_SHA256: Final = "38b1f5d5475037e360ce13f5aed7ae114d9e3c4834e7bffe388f0fb748fc5089"
+_MAGIC: Final = b"PXCH1"
+_HEADER: Final = struct.Struct(">5sHHH")
+
+
+class PredictorUpgradeError(ValueError):
+    """Fail-closed predictor, payload, or custody violation."""
+
+
+@dataclass(frozen=True)
+class StaticCharts:
+    road_undrivable: np.ndarray
+    hood: np.ndarray
+    adjacency: tuple[tuple[int, int], ...]
+
+    def __post_init__(self) -> None:
+        ru = np.asarray(self.road_undrivable)
+        hood = np.asarray(self.hood)
+        if ru.ndim != 2 or hood.shape != ru.shape or ru.dtype != np.uint8 or hood.dtype != np.bool_:
+            raise PredictorUpgradeError("static chart geometry/dtype mismatch")
+        if not np.all(np.isin(ru, (0, 1, 2))):
+            raise PredictorUpgradeError("road/undrivable chart has unknown symbols")
+        if tuple(sorted(set(self.adjacency))) != self.adjacency:
+            raise PredictorUpgradeError("adjacency edges must be sorted and unique")
+
+
+def _detected_class_order(labels: np.ndarray) -> tuple[int, ...]:
+    values = tuple(int(value) for value in np.unique(labels))
+    if values != tuple(range(5)):
+        raise PredictorUpgradeError(f"cache scorer labels are not canonical class IDs: {values}")
+    return values
+
+
+def train_static_charts(development_labels: np.ndarray) -> StaticCharts:
+    """Fit only Road/Undrivable and static-hood slices on the n64 prefix."""
+
+    labels = np.asarray(development_labels)
+    if labels.ndim != 3 or labels.shape[0] != 64 or labels.dtype != np.uint8:
+        raise PredictorUpgradeError("static charts require the exact uint8 n64 development prefix")
+    _detected_class_order(labels)
+    counts = np.stack([(labels == class_id).sum(axis=0) for class_id in range(5)], axis=0)
+    winner = np.argmax(counts, axis=0).astype(np.uint8)
+    ru = np.zeros(winner.shape, dtype=np.uint8)
+    ru[winner == 0] = 1
+    ru[winner == 2] = 2
+    hood = counts[4] * 2 >= labels.shape[0]
+    edges: set[tuple[int, int]] = set()
+    for plane in labels:
+        for a, b in ((plane[:, :-1], plane[:, 1:]), (plane[:-1, :], plane[1:, :])):
+            different = a != b
+            pairs = np.stack((a[different], b[different]), axis=1)
+            for left, right in np.unique(pairs, axis=0):
+                edges.add((min(int(left), int(right)), max(int(left), int(right))))
+    return StaticCharts(ru, hood.astype(np.bool_), tuple(sorted(edges)))
+
+
+def serialize_static_charts(charts: StaticCharts) -> bytes:
+    """Serialize actual counted chart bytes; no target raster or scorer state."""
+
+    h, w = charts.road_undrivable.shape
+    edge_mask = 0
+    for left, right in charts.adjacency:
+        if not (0 <= left < right < 5):
+            raise PredictorUpgradeError("adjacency edge is outside canonical class IDs")
+        bit = sum(1 for a in range(5) for b in range(a + 1, 5) if (a, b) < (left, right))
+        edge_mask |= 1 << bit
+    return (
+        _HEADER.pack(_MAGIC, h, w, edge_mask)
+        + charts.road_undrivable.tobytes(order="C")
+        + np.packbits(charts.hood, bitorder="little").tobytes()
+    )
+
+
+def parse_static_charts(payload: bytes) -> StaticCharts:
+    if len(payload) < _HEADER.size:
+        raise PredictorUpgradeError("static chart payload is truncated")
+    magic, h, w, edge_mask = _HEADER.unpack_from(payload)
+    if magic != _MAGIC or h <= 0 or w <= 0:
+        raise PredictorUpgradeError("static chart header mismatch")
+    count = h * w
+    packed = (count + 7) // 8
+    if len(payload) != _HEADER.size + count + packed:
+        raise PredictorUpgradeError("static chart payload length mismatch")
+    ru = np.frombuffer(payload, dtype=np.uint8, count=count, offset=_HEADER.size).reshape(h, w).copy()
+    hood = np.unpackbits(
+        np.frombuffer(payload, dtype=np.uint8, count=packed, offset=_HEADER.size + count), bitorder="little"
+    )[:count].reshape(h, w).astype(np.bool_)
+    edges = []
+    bit = 0
+    for left in range(5):
+        for right in range(left + 1, 5):
+            if edge_mask & (1 << bit):
+                edges.append((left, right))
+            bit += 1
+    charts = StaticCharts(ru, hood, tuple(edges))
+    if serialize_static_charts(charts) != payload:
+        raise PredictorUpgradeError("static chart parse-back is noncanonical")
+    return charts
+
+
+def relative_adjacent_xi(
+    gt_poses: np.ndarray, *, s_t: float, s_r: float
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """Resolve adjacent-pair relative twists through PoseTargetEgoEstimator+tac.lie."""
+
+    estimator = PoseTargetEgoEstimator(fwd_ch=0, lat_ch=2, yaw_ch=4, s_t=s_t, s_r=s_r, calib="geometry")
+    absolute = estimator.estimate(np.asarray(gt_poses, dtype=np.float64)).dense_xi
+    transforms = se3.exp_se3(absolute)
+    relative = np.zeros_like(absolute)
+    for pair in range(1, len(relative)):
+        relative[pair] = se3.log_se3(se3.compose(se3.inverse(transforms[pair - 1]), transforms[pair]))
+    return relative, {
+        "estimator": "tac.boundary_math.ego_xi_trajectory.PoseTargetEgoEstimator",
+        "lie_operator": "tac.lie.inverse_compose_log_adjacent_pairs.v1",
+        "lawref_equation_ids": ["dsl_custodied_scalar_identity_v1:s_r", "dsl_custodied_scalar_identity_v1:s_t"],
+        "g1_receipt_sha256": G1_RECEIPT_SHA256,
+        "g1_median_bulk_transport_error_px": 0.279,
+        "g1_event_tail_fraction": 0.084,
+        "measurement_label": "MEASURED external G1 custody",
+    }
+
+
+def _shift_u8(field: np.ndarray, dy: int, dx: int) -> np.ndarray:
+    out = np.zeros_like(field)
+    h, w = field.shape
+    sy0, sy1 = max(0, -dy), min(h, h - dy)
+    sx0, sx1 = max(0, -dx), min(w, w - dx)
+    if sy0 < sy1 and sx0 < sx1:
+        out[sy0 + dy : sy1 + dy, sx0 + dx : sx1 + dx] = field[sy0:sy1, sx0:sx1]
+    return out
+
+
+def _admitted_chart_mask(
+    proposed: np.ndarray, current: np.ndarray, target_class: int, adjacency: tuple[tuple[int, int], ...]
+) -> np.ndarray:
+    """Admit a chart update only across a measured class-adjacency edge."""
+
+    admitted = proposed & (current == target_class)
+    for class_id in range(5):
+        edge = (min(target_class, class_id), max(target_class, class_id))
+        if class_id != target_class and edge in adjacency:
+            admitted |= proposed & (current == class_id)
+    return admitted
+
+
+def predict_cell_field(
+    *, pair_index: int, prior_decoded_field: np.ndarray | None, charts: StaticCharts, relative_xi: np.ndarray,
+    lane_mask: np.ndarray, movable_tracks: Sequence[Mapping[str, Any]] = (), return_trace: bool = False,
+) -> np.ndarray | tuple[np.ndarray, dict[str, np.ndarray]]:
+    """Deterministic doctrine predictor.  The caller owns prior-field custody."""
+
+    h, w = charts.road_undrivable.shape
+    if relative_xi.shape != (6,):
+        raise PredictorUpgradeError("relative xi must be one translation-first twist")
+    lane = np.asarray(lane_mask)
+    if lane.shape != (h, w) or lane.dtype != np.bool_:
+        raise PredictorUpgradeError("executed Lane chart mask geometry/dtype mismatch")
+    if pair_index == 0:
+        out = np.zeros((h, w), dtype=np.uint8)
+        out[charts.road_undrivable == 2] = 2
+    else:
+        prior = np.asarray(prior_decoded_field)
+        if prior.shape != (h, w) or prior.dtype != np.uint8:
+            raise PredictorUpgradeError("t>0 requires caller-supplied uint8 prior decoded field")
+        # G1-calibrated twists are in scorer-pixel custody after the LawRef scale.
+        dx = int(np.rint(relative_xi[0] * 256.0))
+        dy = int(np.rint(relative_xi[2] * 256.0))
+        out = _shift_u8(prior, dy, dx)
+    trace = {"advected": out.copy()}
+    # Conservative static reconciliation: only break the Road/Undrivable tie
+    # inside that measured adjacency edge. Lane remains external chart custody.
+    ru = charts.road_undrivable
+    ru_edge = (0, 2) in charts.adjacency
+    if ru_edge:
+        mask = np.isin(out, (0, 2)) & (ru != 0)
+        out[mask] = np.where(ru[mask] == 1, 0, 2).astype(np.uint8)
+    trace["road_undrivable"] = out.copy()
+    lane_admitted = _admitted_chart_mask(lane, out, 1, charts.adjacency)
+    out[lane_admitted] = 1
+    trace["lane"] = out.copy()
+    # MyCar has priority over its measured adjacent cells; Movable remains the
+    # advected prior bulk, then receives the already-counted #234 Hungarian
+    # track updates. This is reuse of predecessor knots, not a new box coder.
+    hood_admitted = _admitted_chart_mask(charts.hood, out, 4, charts.adjacency)
+    out[hood_admitted] = 4
+    trace["mycar"] = out.copy()
+    for track in movable_tracks:
+        if track.get("cell_id") != 3:
+            raise PredictorUpgradeError("movable track update has non-Movable class custody")
+        knots = track.get("knots")
+        if not isinstance(knots, list) or not knots:
+            raise PredictorUpgradeError("movable track update has no canonical knots")
+        if pair_index < knots[0]["time"] or pair_index > knots[-1]["time"]:
+            continue
+        center_y = _interpolate_track_knot(knots, pair_index, "y_q") / 256.0
+        center_x = _interpolate_track_knot(knots, pair_index, "x_q") / 256.0
+        height = max(1, round(_interpolate_track_knot(knots, pair_index, "height_q") / 256.0))
+        width = max(1, round(_interpolate_track_knot(knots, pair_index, "width_q") / 256.0))
+        y0 = max(0, round(center_y - height / 2))
+        y1 = min(h, y0 + height)
+        x0 = max(0, round(center_x - width / 2))
+        x1 = min(w, x0 + width)
+        track_mask = np.zeros((h, w), dtype=np.bool_)
+        track_mask[y0:y1, x0:x1] = True
+        track_admitted = _admitted_chart_mask(track_mask, out, 3, charts.adjacency)
+        out[track_admitted] = 3
+    trace["movable"] = out.copy()
+    return (out, trace) if return_trace else out
+
+
+def predictor_policy(section: Mapping[str, Any], lane_custody: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "policy_id": POLICY_ID,
+        "prior_decoded_field": "caller_supplied_previous_decoded_cell_field",
+        "initialization": "pair0_counted_chart_only",
+        "motion_custody": {
+            "estimator": "tac.boundary_math.ego_xi_trajectory.PoseTargetEgoEstimator",
+            "relative_motion": "tac.lie.inverse_compose_log_adjacent_pairs.v1",
+            "lawref_equation_ids": ["dsl_custodied_scalar_identity_v1:s_r", "dsl_custodied_scalar_identity_v1:s_t"],
+            "g1_receipt_sha256": G1_RECEIPT_SHA256,
+        },
+        "class_order": [0, 1, 2, 3, 4],
+        "reconciliation_order": [0, 2, 1, 4, 3],
+        "adjacency_policy": "measured_edges_only.v1",
+        "tie_policy": "priority_then_min_class_id.v1",
+        "counted_sections": [dict(section)],
+        "external_counted_custody": dict(lane_custody),
+    }
+
+
+def load_lane_chart(path: Path) -> tuple[list[list[Any]], Any, dict[str, Any]]:
+    payload = path.read_bytes() if path.is_file() else b""
+    observed_sha = hashlib.sha256(payload).hexdigest()
+    compressed = brotli.compress(payload, quality=11)
+    if (len(payload), len(compressed), observed_sha) != (
+        LANE_CHART_RAW_BYTES, LANE_CHART_BROTLI_BYTES, LANE_CHART_SHA256
+    ):
+        raise PredictorUpgradeError("Lane chart raw/brotli/SHA custody mismatch")
+    pairs, header = deserialize_lane_band_any(payload)
+    if len(pairs) != 600 or int(header.get("lane_cls", -1)) != 1:
+        raise PredictorUpgradeError("Lane chart decoded geometry/class mismatch")
+    return pairs, render_config_from_header(header), {
+        "lane_chart_raw_bytes": len(payload), "lane_chart_brotli_bytes": len(compressed),
+        "lane_chart_sha256": observed_sha,
+        "lane_chart_status": LANE_CHART_STATUS,
+        "executed": True,
+        "execution_scope": "task578_measurement_only",
+        "receiver_closed": False,
+    }
+
+
+def render_lane_mask(lines: Sequence[Any], config: Any, *, h: int, w: int) -> np.ndarray:
+    coverage = rasterize_lane_coverage_range_dependent(
+        list(lines), h=h, w=w, softness=config.softness, dash_gate=config.dash_gate,
+        dash_forward_max_m=config.dash_forward_max_m, v_h=config.v_h, cx=config.cx,
+    )
+    return np.asarray(coverage >= 0.5, dtype=np.bool_)
+
+
+def chart_section_receipt(payload: bytes) -> dict[str, Any]:
+    parse_static_charts(payload)
+    return {
+        "name": "n64_road_undrivable_hood_static_charts",
+        "raw_bytes": len(payload),
+        "zlib9_bytes": len(zlib.compress(payload, 9)),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+    }
+
+
+def boundary_mask(labels: np.ndarray) -> np.ndarray:
+    mask = np.zeros(labels.shape, dtype=np.bool_)
+    diff = labels[:, 1:] != labels[:, :-1]
+    mask[:, 1:] |= diff
+    mask[:, :-1] |= diff
+    diff = labels[1:, :] != labels[:-1, :]
+    mask[1:, :] |= diff
+    mask[:-1, :] |= diff
+    return mask
+
+
+def classify_strata(target: np.ndarray, critical_sites: Sequence[tuple[int, int]]) -> np.ndarray:
+    strata = np.zeros(target.shape, dtype=np.uint8)
+    strata[boundary_mask(target)] = 1
+    strata[target == 3] = 2
+    for y, x in critical_sites:
+        strata[y, x] = 3
+    return strata
+
+
+def miss_cause(target: np.ndarray, predicted: np.ndarray, strata: np.ndarray, charts: StaticCharts,
+               lane_mask: np.ndarray, trace: Mapping[str, np.ndarray]) -> np.ndarray:
+    causes = np.zeros(target.shape, dtype=np.uint8)
+    causes[strata == 3] = 4
+    causes[(strata == 2) & (strata != 3)] = 3
+    noncritical = strata != 3
+    causes[(target == 1) & ~lane_mask & noncritical] = 1
+    causes[(target == 1) & lane_mask & (predicted != 1) & noncritical] = 2
+    for class_id, chart_present, stage in (
+        (0, charts.road_undrivable == 1, "road_undrivable"),
+        (2, charts.road_undrivable == 2, "road_undrivable"),
+        (4, charts.hood, "mycar"),
+    ):
+        selected = (target == class_id) & noncritical
+        causes[selected & ~chart_present] = 1
+        causes[selected & chart_present & (trace[stage] != class_id)] = 2
+        causes[selected & chart_present & (trace[stage] == class_id) & (predicted != class_id)] = 2
+    return causes
+
+
+def empty_counts() -> dict[str, np.ndarray]:
+    return {
+        "correct": np.zeros((5, 4), dtype=np.int64),
+        "total": np.zeros((5, 4), dtype=np.int64),
+        "miss_causes": np.zeros((5, 4, 5), dtype=np.int64),
+    }
+
+
+def update_counts(
+    counts: dict[str, np.ndarray], target: np.ndarray, predicted: np.ndarray, strata: np.ndarray, causes: np.ndarray
+) -> None:
+    for class_id in range(5):
+        for stratum_id in range(4):
+            selected = (target == class_id) & (strata == stratum_id)
+            counts["total"][class_id, stratum_id] += int(np.count_nonzero(selected))
+            correct = selected & (predicted == target)
+            counts["correct"][class_id, stratum_id] += int(np.count_nonzero(correct))
+            missed = selected & ~correct
+            for cause_id in range(5):
+                counts["miss_causes"][class_id, stratum_id, cause_id] += int(
+                    np.count_nonzero(missed & (causes == cause_id))
+                )
+
+
+def counts_receipt(counts: Mapping[str, np.ndarray]) -> dict[str, Any]:
+    rows = []
+    correct = counts["correct"]
+    total = counts["total"]
+    causes = counts["miss_causes"]
+    for class_id, class_name in enumerate(CLASS_NAMES):
+        strata = []
+        for stratum_id, stratum in enumerate(STRATA):
+            c, t = int(correct[class_id, stratum_id]), int(total[class_id, stratum_id])
+            strata.append({
+                "stratum": stratum,
+                "correct": c,
+                "total": t,
+                "satisfaction_fraction": c / t if t else None,
+                "miss_causes": {MISS_CAUSES[i]: int(causes[class_id, stratum_id, i]) for i in range(5)},
+            })
+        c, t = int(correct[class_id].sum()), int(total[class_id].sum())
+        rows.append({"class_id": class_id, "class_name": class_name, "correct": c, "total": t,
+                     "satisfaction_fraction": c / t if t else None, "strata": strata})
+    c, t = int(correct.sum()), int(total.sum())
+    return {"per_class": rows, "overall": {"correct": c, "total": t, "satisfaction_fraction": c / t}}
+
+
+def canonical_json(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("ascii")
+
+
+def _atomic_write(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        with temporary.open("wb") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _atomic_json(path: Path, value: Any) -> None:
+    _atomic_write(path, json.dumps(value, sort_keys=True, indent=2, allow_nan=False).encode() + b"\n")
+
+
+def _source_config_hash(*, cache: Path, n_pairs: int, chunk_size: int, predecessor_seeds: Mapping[str, Path],
+                        lane_chart: Path, lane_custody: Mapping[str, Any]) -> str:
+    source = Path(__file__)
+    value = {
+        "schema": "predictor_upgrade_xi_chart_run_config.v1",
+        "cache": str(cache),
+        "cache_sha256": GT_CACHE_SHA256,
+        "module_sha256": sha256_file(source),
+        "canonical_lane_renderer_sha256": sha256_file(
+            Path(rasterize_lane_coverage_range_dependent.__code__.co_filename)
+        ),
+        "n_pairs": n_pairs,
+        "chunk_size": chunk_size,
+        "predecessor_seeds": {name: {"path": str(path), "sha256": sha256_file(path)} for name, path in predecessor_seeds.items()},
+        "lane_chart": {"path": str(lane_chart), **dict(lane_custody)},
+        "policy_id": POLICY_ID,
+        "prior_field": "lstars[t-1] oracle stand-in; never serialized or counted free",
+    }
+    return hashlib.sha256(canonical_json(value)).hexdigest()
+
+
+def validate_resume_config(manifest: Mapping[str, Any], expected_config_sha256: str) -> None:
+    if manifest.get("config_sha256") != expected_config_sha256:
+        raise PredictorUpgradeError("resume refused source/config drift")
+
+
+def _load_counts(value: Mapping[str, Any]) -> dict[str, np.ndarray]:
+    return {key: np.asarray(value[key], dtype=np.int64) for key in ("correct", "total", "miss_causes")}
+
+
+def _merge_counts(target: dict[str, np.ndarray], source: Mapping[str, np.ndarray]) -> None:
+    for key in target:
+        target[key] += source[key]
+
+
+def _normal_at(target: np.ndarray, y: int, x: int) -> tuple[int, int]:
+    left = int(target[y, max(0, x - 1)] != target[y, min(target.shape[1] - 1, x + 1)])
+    up = int(target[max(0, y - 1), x] != target[min(target.shape[0] - 1, y + 1), x])
+    return up, left
+
+
+def _measure_chunk(
+    *, labels: np.ndarray, relative: np.ndarray, charts: StaticCharts, start: int, stop: int,
+    critical_by_pair: Mapping[int, Sequence[tuple[int, int]]], predecessor_rows: Mapping[str, Mapping[int, list[dict[str, Any]]]],
+    movable_tracks: Sequence[Mapping[str, Any]], lane_pairs: Sequence[Sequence[Any]], lane_config: Any,
+) -> tuple[dict[str, Any], bytes]:
+    counts = empty_counts()
+    prediction_hashes = []
+    violations: dict[str, list[dict[str, Any]]] = {name: [] for name in predecessor_rows}
+    boundary_stream = bytearray()
+    for pair in range(start, stop):
+        prior = None if pair == 0 else np.asarray(labels[pair - 1], dtype=np.uint8)
+        lane_mask = render_lane_mask(lane_pairs[pair], lane_config, h=charts.hood.shape[0], w=charts.hood.shape[1])
+        predicted, trace = predict_cell_field(
+            pair_index=pair, prior_decoded_field=prior, charts=charts, relative_xi=relative[pair],
+            lane_mask=lane_mask, movable_tracks=movable_tracks, return_trace=True,
+        )
+        repeated = predict_cell_field(
+            pair_index=pair, prior_decoded_field=prior, charts=charts, relative_xi=relative[pair],
+            lane_mask=lane_mask, movable_tracks=movable_tracks,
+        )
+        if predicted.tobytes() != repeated.tobytes():
+            raise PredictorUpgradeError("double execution was not byte-identical")
+        target = np.asarray(labels[pair], dtype=np.uint8)
+        strata = classify_strata(target, critical_by_pair.get(pair, ()))
+        causes = miss_cause(target, predicted, strata, charts, lane_mask, trace)
+        update_counts(counts, target, predicted, strata, causes)
+        prediction_hashes.append(hashlib.sha256(predicted.tobytes()).hexdigest())
+        boundary_miss = (strata == 1) & (predicted != target)
+        for y, x in np.argwhere(boundary_miss):
+            ny, nx = _normal_at(target, int(y), int(x))
+            boundary_stream.extend(struct.pack(">HHHBBBB", pair, int(y), int(x), int(target[y, x]), int(predicted[y, x]), ny, nx))
+        for name, rows_by_pair in predecessor_rows.items():
+            for row in rows_by_pair.get(pair, []):
+                if int(predicted[row["y"], row["x"]]) != int(row["cell_id"]):
+                    violations[name].append(row)
+    return {
+        "schema": "predictor_upgrade_xi_chart_chunk.v1",
+        "pair_range": [start, stop],
+        "counts": {key: value.tolist() for key, value in counts.items()},
+        "prediction_tree_sha256": hashlib.sha256(canonical_json(prediction_hashes)).hexdigest(),
+        "violations": violations,
+        "double_execution_byte_identical": True,
+        "measurement_label": "MEASURED_DEVELOPMENT_PREFIX" if stop <= 64 else "MEASURED [macOS-CPU advisory]",
+    }, bytes(boundary_stream)
+
+
+def run_measurement_stage(
+    *, repository_root: Path, cache: Path, work_dir: Path, n_pairs: int, chunk_size: int,
+    predecessor_seeds: Mapping[str, Path], lane_chart: Path, resume: bool = True,
+) -> dict[str, Any]:
+    """Run one atomic resumable n64 or n600 stage and preserve every chunk."""
+
+    if n_pairs not in (64, 600):
+        raise PredictorUpgradeError("only preregistered n64 then n600 stages are admitted")
+    if sha256_file(cache) != GT_CACHE_SHA256:
+        raise PredictorUpgradeError("frozen n600 cache SHA-256 mismatch")
+    for path in predecessor_seeds.values():
+        if not path.is_file():
+            raise PredictorUpgradeError(f"predecessor seed is missing: {path}")
+    lane_pairs, lane_config, lane_custody = load_lane_chart(lane_chart)
+    stage_dir = work_dir / f"n{n_pairs}"
+    manifest_path = stage_dir / "manifest.json"
+    config_hash = _source_config_hash(cache=cache, n_pairs=n_pairs, chunk_size=chunk_size,
+                                      predecessor_seeds=predecessor_seeds, lane_chart=lane_chart,
+                                      lane_custody=lane_custody)
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text())
+        validate_resume_config(manifest, config_hash)
+        if not resume:
+            raise PredictorUpgradeError("stage already exists and resume was not enabled")
+    else:
+        manifest = {
+            "schema": "predictor_upgrade_xi_chart_stage_manifest.v1", "config_sha256": config_hash,
+            "cache": {"path": str(cache), "sha256": GT_CACHE_SHA256, "bytes": cache.stat().st_size},
+            "n_pairs": n_pairs, "chunk_size": chunk_size, "score_claim": False, "promotion_eligible": False,
+            "lane_chart": {"path": str(lane_chart), **lane_custody},
+            "pointer": "0.1910828242 [contest-CPU] UNMOVED", "main_review_required": True,
+        }
+        _atomic_json(manifest_path, manifest)
+    with np.load(cache, allow_pickle=False) as archive:
+        labels = archive["lstars"]
+        _detected_class_order(np.asarray(labels[:64]))
+        charts = train_static_charts(np.asarray(labels[:64], dtype=np.uint8))
+        chart_payload = serialize_static_charts(charts)
+        _atomic_write(work_dir / "charts" / "static_charts_n64.pxch", chart_payload)
+        parsed_charts = parse_static_charts(chart_payload)
+        s_t, s_r, lawrefs = _lawref_g1_calibration(repository_root)
+        relative, motion_custody = relative_adjacent_xi(np.asarray(archive["gt_poses"]), s_t=s_t, s_r=s_r)
+        predecessor_objects = {name: parse_constraint_seed(path.read_bytes()) for name, path in predecessor_seeds.items()}
+        predecessor_rows: dict[str, dict[int, list[dict[str, Any]]]] = {}
+        critical_by_pair: dict[int, list[tuple[int, int]]] = {}
+        for name, seed in predecessor_objects.items():
+            by_pair: dict[int, list[dict[str, Any]]] = {}
+            for row in seed["constraint_seeds"]:
+                if row["time"] >= n_pairs:
+                    continue
+                by_pair.setdefault(int(row["time"]), []).append(row)
+                if row["stratum"] == "critical_event":
+                    critical_by_pair.setdefault(int(row["time"]), []).append((int(row["y"]), int(row["x"])))
+            predecessor_rows[name] = by_pair
+        movable_tracks = predecessor_objects["loose"]["movable_tracks"]
+        if any(seed["movable_tracks"] != movable_tracks for seed in predecessor_objects.values()):
+            raise PredictorUpgradeError("predecessor curve changed #234 movable-track custody")
+        for start in range(0, n_pairs, chunk_size):
+            stop = min(n_pairs, start + chunk_size)
+            path = stage_dir / "chunks" / f"chunk_{start:04d}_{stop:04d}.json"
+            stream_path = stage_dir / "boundary_streams" / f"chunk_{start:04d}_{stop:04d}.bin"
+            if path.exists() and stream_path.exists():
+                continue
+            chunk, boundary = _measure_chunk(
+                labels=labels, relative=relative, charts=parsed_charts, start=start, stop=stop,
+                critical_by_pair=critical_by_pair, predecessor_rows=predecessor_rows,
+                movable_tracks=movable_tracks, lane_pairs=lane_pairs, lane_config=lane_config,
+            )
+            chunk["config_sha256"] = config_hash
+            chunk["boundary_stream"] = {
+                "path": str(stream_path), "raw_bytes": len(boundary), "zlib9_bytes": len(zlib.compress(boundary, 9)),
+                "sha256": hashlib.sha256(boundary).hexdigest(), "record_bytes": 10,
+            }
+            _atomic_write(stream_path, boundary)
+            _atomic_json(path, chunk)
+    counts = empty_counts()
+    violations: dict[str, list[dict[str, Any]]] = {name: [] for name in predecessor_seeds}
+    chunk_rows = []
+    boundary_raw = boundary_zlib = 0
+    for path in sorted((stage_dir / "chunks").glob("chunk_*.json")):
+        row = json.loads(path.read_text())
+        if row["config_sha256"] != config_hash:
+            raise PredictorUpgradeError("resume refused chunk config drift")
+        _merge_counts(counts, _load_counts(row["counts"]))
+        for name in violations:
+            violations[name].extend(row["violations"][name])
+        boundary_raw += int(row["boundary_stream"]["raw_bytes"])
+        boundary_zlib += int(row["boundary_stream"]["zlib9_bytes"])
+        chunk_rows.append({"path": str(path), "sha256": sha256_file(path), "pair_range": row["pair_range"]})
+    if not chunk_rows or chunk_rows[-1]["pair_range"][1] != n_pairs:
+        raise PredictorUpgradeError("stage is incomplete")
+    receipt = {
+        "schema": "predictor_upgrade_xi_chart_stage.v1", "n_pairs": n_pairs,
+        "measurement_label": "MEASURED_DEVELOPMENT_PREFIX" if n_pairs == 64 else "MEASURED [macOS-CPU advisory]",
+        "prior_field_custody": "lstars[t-1] oracle stand-in for future caller-supplied decoded field; not serialized; receiver closure not claimed",
+        "class_order": {"detected_ids": [0, 1, 2, 3, 4], "names": list(CLASS_NAMES), "method": "np.unique frozen scorer labels; no luminance sorting"},
+        "satisfaction": counts_receipt(counts), "violations": violations,
+        "chart_section": chart_section_receipt(chart_payload), "motion_custody": {**motion_custody, "lawref_resolutions": lawrefs},
+        "external_lane_chart": {"path": str(lane_chart), **lane_custody, "counted": True, "duplicated": False},
+        "hood_custody": {"source": "#139 static hood/clamp", "external_iou": 0.994, "actual_satisfaction_in_this_stage": counts_receipt(counts)["per_class"][4]["satisfaction_fraction"]},
+        "movable_custody": {"source": "#234 Hungarian correspondence", "policy": "retain prior-advected bulk; no replacement box coder"},
+        "boundary_stream": {"raw_bytes": boundary_raw, "sum_independent_chunk_zlib9_bytes": boundary_zlib, "mask_only": True},
+        "chunks": chunk_rows, "config_sha256": config_hash,
+        "score_claim": False, "promotion_eligible": False, "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+        "main_review_required": True,
+    }
+    fractions = [row["satisfaction_fraction"] for row in receipt["satisfaction"]["per_class"]]
+    receipt["verdict"] = "PREDICTOR_TARGET_MET" if all(value is not None and value >= 0.99 for value in fractions) else "PREDICTOR_TARGET_MISSED"
+    receipt["verdict_scope"] = "oracle-prior cell-description predictor satisfaction on this measured prefix only"
+    _atomic_json(stage_dir / "receipt.json", receipt)
+    return receipt
+
+
+def build_final_receipt(
+    *, work_dir: Path, output_path: Path, predecessor_seeds: Mapping[str, Path]
+) -> dict[str, Any]:
+    n64 = json.loads((work_dir / "n64" / "receipt.json").read_text())
+    n600 = json.loads((work_dir / "n600" / "receipt.json").read_text())
+    chart_payload = (work_dir / "charts" / "static_charts_n64.pxch").read_bytes()
+    section = chart_section_receipt(chart_payload)
+    lane_row = n600["external_lane_chart"]
+    lane_custody = {key: lane_row[key] for key in (
+        "lane_chart_raw_bytes", "lane_chart_brotli_bytes", "lane_chart_sha256", "lane_chart_status", "executed",
+        "execution_scope", "receiver_closed",
+    )}
+    policy = predictor_policy(section, lane_custody)
+    curve = []
+    total_cells = int(n600["satisfaction"]["overall"]["total"])
+    correct_before = int(n600["satisfaction"]["overall"]["correct"])
+    previous_sites: set[tuple[int, int, int]] = set()
+    predecessor_objectives = {
+        "loose": 34.938972078984,
+        "knee": 35.356193042678,
+        "tight": 36.212622964416,
+    }
+    for name in ("loose", "knee", "tight"):
+        predecessor_bytes = predecessor_seeds[name].read_bytes()
+        predecessor = parse_constraint_seed(predecessor_bytes)
+        violations = n600["violations"][name]
+        sites = {(int(row["time"]), int(row["y"]), int(row["x"])) for row in violations}
+        if previous_sites and not previous_sites.issubset(sites):
+            # Preserve nesting by unioning the predecessor-ordered violation prefix.
+            by_site = {(int(row["time"]), int(row["y"]), int(row["x"])): row for row in violations}
+            for site in sorted(previous_sites):
+                if site not in by_site:
+                    raise PredictorUpgradeError("doctrine violation curve cannot preserve predecessor nesting")
+        previous_sites = sites
+        seed = attach_generic_predictor_policy(predecessor, policy)
+        seed["constraint_seeds"] = violations
+        seed["boundary_jitter"]["equal_fidelity_custody"]["represented_constraints_sha256"] = hashlib.sha256(
+            canonical_json_bytes(violations)
+        ).hexdigest()
+        encoded = serialize_constraint_seed(seed)
+        if serialize_constraint_seed(parse_constraint_seed(encoded)) != encoded:
+            raise PredictorUpgradeError("doctrine PPCS parse-back changed bytes")
+        seed_path = work_dir / "seeds" / f"predictor_upgrade_{name}.ppcs"
+        _atomic_write(seed_path, encoded)
+        corrected = len(violations)
+        d_before = (total_cells - correct_before) / total_cells
+        d_after = max(0.0, (total_cells - correct_before - corrected) / total_cells)
+        exceptions_raw = canonical_json(violations)
+        raw = len(encoded)
+        total_counted = raw + section["raw_bytes"] + LANE_CHART_BROTLI_BYTES
+        rate_term = 25.0 * total_counted / 37_545_489
+        curve.append({
+            "name": name, "measurement_label": "MEASURED [macOS-CPU advisory]", "ppcs_path": str(seed_path),
+            "ppcs_bytes": raw, "ppcs_sha256": hashlib.sha256(encoded).hexdigest(), "ppcs_zlib9_bytes": len(zlib.compress(encoded, 9)),
+            "exception_count": corrected, "exception_raw_bytes": len(exceptions_raw), "exception_zlib9_bytes": len(zlib.compress(exceptions_raw, 9)),
+            "exception_counts_by_class_and_stratum": _exception_factorization(violations),
+            "cell_description_d_seg_before": d_before, "cell_description_d_seg_after": d_after,
+            "rate_term_all_counted_sections": rate_term,
+            "advisory_non_score_objective": 100.0 * d_after + rate_term,
+            "chart_sections": [
+                {
+                    "name": section["name"],
+                    "raw_bytes": section["raw_bytes"],
+                    "sha256": section["sha256"],
+                    "counted_bytes": section["raw_bytes"],
+                    "counting_basis": "raw PXCH bytes",
+                },
+                {
+                    "name": "task595_coherent_slot_none_dash_lane_chart",
+                    "raw_bytes": LANE_CHART_RAW_BYTES,
+                    "brotli_bytes": LANE_CHART_BROTLI_BYTES,
+                    "sha256": LANE_CHART_SHA256,
+                    "counted_bytes": LANE_CHART_BROTLI_BYTES,
+                    "counting_basis": "binding brotli-11 Lane-chart bytes",
+                    "executed": True,
+                    "execution_scope": "task578_measurement_only",
+                    "receiver_closed": False,
+                },
+            ],
+            "total_counted_bytes": total_counted,
+            "byte_custody": {"ppcs_raw_bytes": raw, "static_pxch_raw_bytes": section["raw_bytes"],
+                             "static_pxch_zlib9_bytes_diagnostic_only": section["zlib9_bytes"],
+                             "lane_chart_raw_bytes": LANE_CHART_RAW_BYTES,
+                             "lane_chart_brotli_counted_bytes": LANE_CHART_BROTLI_BYTES,
+                             "lane_chart_sha256": LANE_CHART_SHA256, "lane_chart_executed": True,
+                             "exception_raw_bytes_within_ppcs": len(exceptions_raw),
+                             "total_counted_bytes": total_counted},
+            "ppcs_component_raw_bytes": component_byte_accounting(seed),
+            "predecessor": {"ppcs_bytes": len(predecessor_bytes), "ppcs_sha256": hashlib.sha256(predecessor_bytes).hexdigest(),
+                            "advisory_non_score_objective": predecessor_objectives[name]},
+            "comparators": {"predecessor_loose_advisory": predecessor_objectives["loose"], "box_bytes": 216222,
+                            "total_counted_bytes_exceeds_box": total_counted > 216222},
+            "score_claim": False,
+        })
+    jitter = {
+        "measurement_label": "MEASURED [macOS-CPU advisory]", "inventory": "doctrine boundary misses",
+        "r0_boundary_normal": n600["boundary_stream"],
+        "r1_phase_conditioned": {"same_inventory": True, "raw_bytes": None, "compressed_bytes": None,
+                                 "corrected_cells": None, "remaining_errors": None,
+                                 "measurement_label": "SPECULATIVE interface only",
+                                 "custody": "existing schema R1 rung; no equal-fidelity through-R execution in Task #578"},
+        "corrected_cells": 0, "remaining_errors": sum(
+            row["total"] - row["correct"] for row in n600["satisfaction"]["per_class"]
+        ), "comparison_surface": "mask-only",
+        "verdict": "FORMALIZATION_PENDING_THROUGH_R_REALIZED_SCORE_RECOVERY",
+        "verdict_scope": "equal-fidelity through-R comparison only; predictor and R1 families remain open",
+    }
+    receipt = {
+        "schema": "predictor_upgrade_xi_chart_task578.v1", "task": 578,
+        "lane_id": "lane_predictor_upgrade_xi_chart_578_20260721", "research_only": True,
+        "D1_D2": {"n64": n64, "n600": n600}, "D3_seed_curve": curve, "D4_causal_jitter": jitter,
+        "chart_and_interpreter_custody": {
+            "counted_chart": section,
+            "executed_external_lane_chart": {key: lane_row[key] for key in (
+                "path", "lane_chart_raw_bytes", "lane_chart_brotli_bytes", "lane_chart_sha256",
+                "lane_chart_status", "executed", "execution_scope", "receiver_closed", "counted", "duplicated",
+            )},
+            "generic_interpreter": {
+                "raw_bytes": 0, "zlib9_bytes": 0, "counted": False, "source": "this module",
+                "measurement_execution_only": True, "receiver_closed": False,
+            },
+        },
+        "authority": {"axis": "[macOS-CPU advisory]", "score_claim": False, "promotion_eligible": False,
+                      "pointer": "0.1910828242 [contest-CPU] UNMOVED", "main_review_required": True},
+        "verdict": n600["verdict"], "verdict_scope": n600["verdict_scope"],
+        "storage_preflight": {"tier": "/Volumes/VertigoDataTier", "status": "PASS_RECORDED_BEFORE_RUN"},
+        "automatic_disk_hygiene": {"durable_stage_root": str(work_dir), "scratch": "none; per-chunk streams preserved", "cleanup": "certify or block"},
+    }
+    _atomic_json(output_path, receipt)
+    _atomic_json(work_dir / "receipt.json", receipt)
+    return receipt
+
+
+def _exception_factorization(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    result = []
+    for class_id in range(5):
+        for stratum in STRATA:
+            result.append({"class_id": class_id, "stratum": stratum,
+                           "count": sum(int(row["cell_id"]) == class_id and row["stratum"] == stratum for row in rows)})
+    return result
+
+
+__all__ = [
+    "CLASS_NAMES",
+    "LANE_CHART_BROTLI_BYTES",
+    "LANE_CHART_RAW_BYTES",
+    "LANE_CHART_SHA256",
+    "LANE_CHART_STATUS",
+    "MISS_CAUSES",
+    "POLICY_ID",
+    "STRATA",
+    "PredictorUpgradeError",
+    "StaticCharts",
+    "build_final_receipt",
+    "canonical_json",
+    "chart_section_receipt",
+    "classify_strata",
+    "counts_receipt",
+    "empty_counts",
+    "load_lane_chart",
+    "miss_cause",
+    "parse_static_charts",
+    "predict_cell_field",
+    "predictor_policy",
+    "relative_adjacent_xi",
+    "render_lane_mask",
+    "run_measurement_stage",
+    "serialize_static_charts",
+    "train_static_charts",
+    "update_counts",
+    "validate_resume_config",
+]

@@ -1,0 +1,29 @@
+import json, sys, zipfile, inspect
+from pathlib import Path
+PFS1="/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/pfs1"
+sys.path.insert(0,PFS1)
+import numpy as np, ddm_tr1_runtime as rt, ddm_r7_token_coder as r7
+print('r7 encoders:',[n for n in dir(r7) if 'encode' in n and not n.startswith('_')])
+print(inspect.signature(r7.encode_token_codes))
+EP=Path("/Volumes/VertigoDataTier/pact/ddm_ep2_20260731/archives/w03_ep854_representative/archive.zip")
+GR=Path("/Volumes/VertigoDataTier/pact/ddm_gr1_20260730/gr1_cell_drop50_archive.zip")
+def packet_sections(pk):
+    hdr=rt.PACKET_HEADER; f=hdr.unpack_from(pk,0); ml=int(f[-1]); me=hdr.size+ml; out={}
+    for i,name in enumerate(rt.SECTION_NAMES):
+        _,off,ln,_=rt.SECTION_ENTRY.unpack_from(pk, me+i*rt.SECTION_ENTRY.size)
+        out[name]=pk[off:off+ln]
+    return out
+with zipfile.ZipFile(EP) as z: ep=packet_sections(z.read('state/tr1.ddt1'))
+with zipfile.ZipFile(GR) as z:
+    gr_dr7t=z.read('state/tokens.dr7t'); gr_sel=z.read('state/selector.sec')
+sel = json.loads(ep['selector']) if ep['selector'][:1]==b'{' else {}
+ep_codes = rt._decode_tokens(ep['tokens'], sel)
+gr_codes = r7.decode_token_codes(gr_dr7t)
+# round-trip control on GR1 first (must reproduce the shipped dr7t bytes)
+gr_re = r7.encode_token_codes(gr_codes)
+print('CONTROL gr1 r7 re-encode:', len(gr_re), 'shipped', len(gr_dr7t), 'IDENTICAL' if gr_re==gr_dr7t else 'DIFFERS')
+ep_dr7t = r7.encode_token_codes(ep_codes)
+print('EP854 r7 dr7t bytes     :', len(ep_dr7t), ' (packet-native was', len(ep['tokens']),')')
+print('EP854 selector == GR1 selector:', ep['selector']==gr_sel)
+np.save('ep854_codes.npy', ep_codes)
+open('ep854_tokens.dr7t','wb').write(ep_dr7t)

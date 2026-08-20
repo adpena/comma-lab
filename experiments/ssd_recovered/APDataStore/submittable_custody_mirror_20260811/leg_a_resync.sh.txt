@@ -1,0 +1,4 @@
+#!/bin/bash
+rsync -a --delete /Volumes/VertigoDataTier/pact/ddm_ps135_20260810/ /Volumes/APDataStore/pact/submittable_custody_mirror_20260811/leg_a_ps135_resync/ \
+  && echo "leg_a resync OK $(date -u +%FT%TZ)" >> /Volumes/APDataStore/pact/submittable_custody_mirror_20260811/leg_a_resync.log \
+  || echo "leg_a resync FAILED rc=$? $(date -u +%FT%TZ)" >> /Volumes/APDataStore/pact/submittable_custody_mirror_20260811/leg_a_resync.log

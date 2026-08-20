@@ -1,0 +1,641 @@
+# SPDX-License-Identifier: MIT
+"""Compact receiver-visible SNeRV L-infinity step-map coder.
+
+SNeRV's current blocker is that per-coefficient L-infinity step maps are real
+receiver state. If they are stored as fp32 and LZMA-compressed, they can eat the
+rate win. This module provides a deterministic, self-contained packet grammar
+for those maps:
+
+* shared log-domain quantizer across every map in the packet;
+* uint8 codes compressed with LZMA;
+* header carries shapes and quantizer parameters;
+* decode reconstructs positive step maps without scorer access.
+
+This is a packet coder, not a score claim. It is meant to replace the current
+conservative fp32 step-map accounting once wired into the SNeRV advisory/runtime.
+"""
+
+from __future__ import annotations
+
+import json
+import lzma
+import math
+import struct
+from dataclasses import asdict, dataclass
+from typing import Any
+
+import numpy as np
+
+SCHEMA = "snerv_step_map_coder.v1"
+ADAPTIVE_SCHEMA = "snerv_step_map_coder.adaptive.v1"
+MAGIC = b"SNSM1"
+ADAPTIVE_MAGIC = b"SNSA1"
+HEADER_LEN_FMT = "<I"
+
+
+class SnervStepMapCoderError(ValueError):
+    """Raised when step-map packet invariants fail."""
+
+
+@dataclass(frozen=True)
+class StepMapPacket:
+    """Encoded step-map packet with enough metadata for receiver decode."""
+
+    packet: bytes
+    schema: str
+    map_count: int
+    bins: int
+    bits_per_code: int
+    code_storage: str
+    code_count: int
+    packed_code_bytes: int
+    payload_bytes: int
+    header_bytes: int
+    total_bytes: int
+    per_map_packet_baseline_bytes: int
+    bundle_savings_bytes: int
+    bundle_savings_ratio: float
+    unique_code_count: int
+    code_entropy_bits_per_symbol: float
+    code_entropy_ideal_bytes: int
+    fp32_lzma_baseline_bytes: int
+    max_relative_error: float
+    mean_relative_error: float
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+
+    def as_jsonable(self) -> dict[str, Any]:
+        d = asdict(self)
+        d["packet"] = {
+            "bytes": len(self.packet),
+            "sha256_uncomputed": True,
+        }
+        return d
+
+
+@dataclass(frozen=True)
+class AdaptiveStepMapPacket:
+    """Receiver-visible packet with per-map precision groups."""
+
+    packet: bytes
+    schema: str
+    map_count: int
+    groups: tuple[dict[str, Any], ...]
+    payload_bytes: int
+    header_bytes: int
+    total_bytes: int
+    fp32_lzma_baseline_bytes: int
+    max_relative_error: float
+    mean_relative_error: float
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+
+    def as_jsonable(self) -> dict[str, Any]:
+        d = asdict(self)
+        d["packet"] = {
+            "bytes": len(self.packet),
+            "sha256_uncomputed": True,
+        }
+        return d
+
+
+def encode_step_maps(
+    step_maps: list[np.ndarray],
+    *,
+    bins: int = 128,
+) -> StepMapPacket:
+    """Encode positive step maps into a compact receiver-visible packet."""
+
+    arrays = [_validate_step_map(a) for a in step_maps]
+    if not arrays:
+        raise SnervStepMapCoderError("at least one step map is required")
+    if bins < 2 or bins > 256:
+        raise SnervStepMapCoderError("bins must be in [2, 256]")
+    flat = np.concatenate([a.reshape(-1) for a in arrays]).astype(np.float64)
+    logs = np.log2(flat)
+    log_min = float(logs.min())
+    log_max = float(logs.max())
+    if log_max <= log_min:
+        log_step = 1.0
+        codes_flat = np.zeros_like(logs, dtype=np.uint8)
+    else:
+        log_step = (log_max - log_min) / float(bins - 1)
+        q = np.rint((logs - log_min) / log_step).clip(0, bins - 1)
+        codes_flat = q.astype(np.uint8)
+
+    bits_per_code = _bits_per_code(bins)
+    packed_codes, code_storage = _pack_codes(codes_flat, bits_per_code)
+    compressed_codes = lzma.compress(
+        packed_codes,
+        format=lzma.FORMAT_XZ,
+        preset=9 | lzma.PRESET_EXTREME,
+    )
+    header = {
+        "schema": SCHEMA,
+        "bins": bins,
+        "bits_per_code": bits_per_code,
+        "code_storage": code_storage,
+        "log_min": log_min,
+        "log_step": log_step,
+        "dtype": "uint8_codes_log2_steps",
+        "shapes": [list(a.shape) for a in arrays],
+        "code_count": int(codes_flat.size),
+    }
+    header_bytes = json.dumps(header, separators=(",", ":"), sort_keys=True).encode(
+        "utf-8"
+    )
+    packet = (
+        MAGIC
+        + struct.pack(HEADER_LEN_FMT, len(header_bytes))
+        + header_bytes
+        + compressed_codes
+    )
+    decoded = decode_step_maps(packet)
+    rel_errors = []
+    for ref, got in zip(arrays, decoded, strict=True):
+        rel_errors.append(np.abs(got - ref) / np.maximum(np.abs(ref), 1e-12))
+    rel = np.concatenate([e.reshape(-1) for e in rel_errors])
+    baseline = _fp32_lzma_baseline(arrays)
+    per_map_baseline = sum(
+        _standard_packet_total_bytes([a], bins=bins) for a in arrays
+    )
+    bundle_savings = per_map_baseline - len(packet)
+    unique_codes, counts = np.unique(codes_flat, return_counts=True)
+    probs = counts.astype(np.float64) / float(counts.sum())
+    entropy_bits = float(-(probs * np.log2(probs)).sum())
+    ideal_entropy_bytes = math.ceil(entropy_bits * int(codes_flat.size) / 8.0)
+    return StepMapPacket(
+        packet=packet,
+        schema=SCHEMA,
+        map_count=len(arrays),
+        bins=bins,
+        bits_per_code=bits_per_code,
+        code_storage=code_storage,
+        code_count=int(codes_flat.size),
+        packed_code_bytes=len(packed_codes),
+        payload_bytes=len(compressed_codes),
+        header_bytes=len(header_bytes) + len(MAGIC) + struct.calcsize(HEADER_LEN_FMT),
+        total_bytes=len(packet),
+        per_map_packet_baseline_bytes=per_map_baseline,
+        bundle_savings_bytes=bundle_savings,
+        bundle_savings_ratio=(
+            float(bundle_savings) / float(per_map_baseline)
+            if per_map_baseline
+            else 0.0
+        ),
+        unique_code_count=int(unique_codes.size),
+        code_entropy_bits_per_symbol=entropy_bits,
+        code_entropy_ideal_bytes=ideal_entropy_bytes,
+        fp32_lzma_baseline_bytes=baseline,
+        max_relative_error=float(rel.max()),
+        mean_relative_error=float(rel.mean()),
+    )
+
+
+def encode_step_maps_adaptive(
+    step_maps: list[np.ndarray],
+    *,
+    map_importance: list[float] | np.ndarray,
+    bin_choices: tuple[int, ...] = (128, 16, 4),
+    high_quantile: float = 0.75,
+    low_quantile: float = 0.25,
+    constant_importance_quantile: float | None = None,
+) -> AdaptiveStepMapPacket:
+    """Encode maps with per-map precision selected by saliency importance.
+
+    This is a receiver-visible mixed int8/int4/int2 grammar. The scorer/saliency
+    may choose the precision during compression, but the archive packet carries
+    the selected groups and the receiver only decodes codes. When
+    ``constant_importance_quantile`` is supplied, the least-important maps are
+    encoded as header-only constant log2 fills: a receiver-visible run-length
+    group with zero per-coefficient code bits.
+    """
+
+    arrays = [_validate_step_map(a) for a in step_maps]
+    if not arrays:
+        raise SnervStepMapCoderError("at least one step map is required")
+    importance = np.asarray(map_importance, dtype=np.float64).reshape(-1)
+    if importance.size != len(arrays):
+        raise SnervStepMapCoderError(
+            f"map_importance has {importance.size} entries for {len(arrays)} maps"
+        )
+    if not np.all(np.isfinite(importance)):
+        raise SnervStepMapCoderError("map_importance must be finite")
+    choices = tuple(sorted({int(v) for v in bin_choices}, reverse=True))
+    if not choices or any(v < 2 or v > 256 for v in choices):
+        raise SnervStepMapCoderError("bin choices must be in [2, 256]")
+    if len(choices) == 1:
+        assigned = np.full(len(arrays), choices[0], dtype=np.int64)
+    else:
+        hi = float(np.quantile(importance, high_quantile))
+        lo = float(np.quantile(importance, low_quantile))
+        high_bins = choices[0]
+        low_bins = choices[-1]
+        mid_bins = choices[min(1, len(choices) - 1)]
+        assigned = np.full(len(arrays), mid_bins, dtype=np.int64)
+        assigned[importance >= hi] = high_bins
+        assigned[importance <= lo] = low_bins
+    constant_indices: set[int] = set()
+    if constant_importance_quantile is not None:
+        if not 0.0 <= constant_importance_quantile <= 1.0:
+            raise SnervStepMapCoderError("constant_importance_quantile must be in [0, 1]")
+        constant_count = math.ceil(float(importance.size) * constant_importance_quantile)
+        constant_count = max(0, min(int(importance.size), constant_count))
+        ranked = sorted(
+            range(int(importance.size)),
+            key=lambda idx: (float(importance[idx]), int(idx)),
+        )
+        constant_indices = {
+            int(idx) for idx in ranked[:constant_count]
+        }
+
+    groups: list[dict[str, Any]] = []
+    payload = bytearray()
+    if constant_indices:
+        indices = sorted(constant_indices)
+        groups.append(
+            {
+                "kind": "constant_log2_fill",
+                "bins": 0,
+                "bits_per_code": 0,
+                "code_storage": "run_length_constant_log2_f32",
+                "map_indices": indices,
+                "payload_offset": 0,
+                "payload_bytes": 0,
+                "packed_code_bytes": 0,
+                "log2_values": [
+                    float(np.mean(np.log2(arrays[idx].astype(np.float64))))
+                    for idx in indices
+                ],
+                "shapes": [list(arrays[idx].shape) for idx in indices],
+                "code_count": 0,
+            }
+        )
+    for bins in choices:
+        indices = [
+            idx
+            for idx, value in enumerate(assigned.tolist())
+            if value == bins and idx not in constant_indices
+        ]
+        if not indices:
+            continue
+        group_arrays = [arrays[idx] for idx in indices]
+        group_meta, compressed_codes = _encode_group_payload(group_arrays, bins=bins)
+        offset = len(payload)
+        payload.extend(compressed_codes)
+        groups.append(
+            {
+                "bins": bins,
+                "bits_per_code": group_meta["bits_per_code"],
+                "code_storage": group_meta["code_storage"],
+                "map_indices": indices,
+                "payload_offset": offset,
+                "payload_bytes": len(compressed_codes),
+                "packed_code_bytes": group_meta["packed_code_bytes"],
+                "log_min": group_meta["log_min"],
+                "log_step": group_meta["log_step"],
+                "shapes": group_meta["shapes"],
+                "code_count": group_meta["code_count"],
+            }
+        )
+
+    header = {
+        "schema": ADAPTIVE_SCHEMA,
+        "map_count": len(arrays),
+        "groups": groups,
+    }
+    header_bytes = json.dumps(header, separators=(",", ":"), sort_keys=True).encode(
+        "utf-8"
+    )
+    packet_bytes = (
+        ADAPTIVE_MAGIC
+        + struct.pack(HEADER_LEN_FMT, len(header_bytes))
+        + header_bytes
+        + bytes(payload)
+    )
+    decoded = decode_step_maps(packet_bytes)
+    rel_errors = []
+    for ref, got in zip(arrays, decoded, strict=True):
+        rel_errors.append(np.abs(got - ref) / np.maximum(np.abs(ref), 1e-12))
+    rel = np.concatenate([e.reshape(-1) for e in rel_errors])
+    return AdaptiveStepMapPacket(
+        packet=packet_bytes,
+        schema=ADAPTIVE_SCHEMA,
+        map_count=len(arrays),
+        groups=tuple(groups),
+        payload_bytes=len(payload),
+        header_bytes=len(header_bytes)
+        + len(ADAPTIVE_MAGIC)
+        + struct.calcsize(HEADER_LEN_FMT),
+        total_bytes=len(packet_bytes),
+        fp32_lzma_baseline_bytes=_fp32_lzma_baseline(arrays),
+        max_relative_error=float(rel.max()),
+        mean_relative_error=float(rel.mean()),
+    )
+
+
+def encode_step_maps_waterfill(
+    step_maps: list[np.ndarray],
+    *,
+    map_importance: list[float] | np.ndarray,
+    target_bits_per_coeff: float = 4.0,
+    precision_ladder: tuple[Any, ...] = ("constant", 4, 16, 256, "fp16"),
+) -> AdaptiveStepMapPacket:
+    """Encode maps with a score-aware reverse-waterfill precision policy.
+
+    The archive carries the chosen precision groups. Compression-time scorer
+    saliency may decide which maps deserve fp16/int8/int4/int2/constant
+    treatment, but the receiver only consumes bytes in this packet.
+    """
+
+    arrays = [_validate_step_map(a) for a in step_maps]
+    if not arrays:
+        raise SnervStepMapCoderError("at least one step map is required")
+    importance = np.asarray(map_importance, dtype=np.float64).reshape(-1)
+    if importance.size != len(arrays):
+        raise SnervStepMapCoderError(
+            f"map_importance has {importance.size} entries for {len(arrays)} maps"
+        )
+    if not np.all(np.isfinite(importance)):
+        raise SnervStepMapCoderError("map_importance must be finite")
+    if target_bits_per_coeff < 0:
+        raise SnervStepMapCoderError("target_bits_per_coeff must be non-negative")
+    levels = _precision_levels(precision_ladder)
+    assignments = _waterfill_assignments(
+        importance=importance,
+        coeff_counts=np.asarray([a.size for a in arrays], dtype=np.float64),
+        target_bits_per_coeff=float(target_bits_per_coeff),
+        levels=levels,
+    )
+    packet_bytes, groups, payload_bytes = _pack_adaptive_groups(
+        arrays,
+        assignments=assignments,
+        policy={
+            "name": "score_aware_reverse_waterfill",
+            "target_bits_per_coeff": float(target_bits_per_coeff),
+            "precision_ladder": [level["label"] for level in levels],
+        },
+    )
+    decoded = decode_step_maps(packet_bytes)
+    rel_errors = []
+    for ref, got in zip(arrays, decoded, strict=True):
+        rel_errors.append(np.abs(got - ref) / np.maximum(np.abs(ref), 1e-12))
+    rel = np.concatenate([e.reshape(-1) for e in rel_errors])
+    return AdaptiveStepMapPacket(
+        packet=packet_bytes,
+        schema=ADAPTIVE_SCHEMA,
+        map_count=len(arrays),
+        groups=tuple(groups),
+        payload_bytes=payload_bytes,
+        header_bytes=len(packet_bytes) - payload_bytes,
+        total_bytes=len(packet_bytes),
+        fp32_lzma_baseline_bytes=_fp32_lzma_baseline(arrays),
+        max_relative_error=float(rel.max()),
+        mean_relative_error=float(rel.mean()),
+    )
+
+
+def decode_step_maps(packet: bytes) -> list[np.ndarray]:
+    """Decode a packet produced by :func:`encode_step_maps`."""
+
+    if packet.startswith(ADAPTIVE_MAGIC):
+        return _decode_adaptive_step_maps(packet)
+    if not packet.startswith(MAGIC):
+        raise SnervStepMapCoderError("bad SNeRV step-map packet magic")
+    offset = len(MAGIC)
+    if len(packet) < offset + struct.calcsize(HEADER_LEN_FMT):
+        raise SnervStepMapCoderError("truncated SNeRV step-map packet header")
+    (header_len,) = struct.unpack(
+        HEADER_LEN_FMT, packet[offset : offset + struct.calcsize(HEADER_LEN_FMT)]
+    )
+    offset += struct.calcsize(HEADER_LEN_FMT)
+    header_end = offset + header_len
+    if header_end > len(packet):
+        raise SnervStepMapCoderError("declared header length exceeds packet size")
+    header = json.loads(packet[offset:header_end].decode("utf-8"))
+    if header.get("schema") != SCHEMA:
+        raise SnervStepMapCoderError(f"unsupported schema: {header.get('schema')!r}")
+    bins = int(header["bins"])
+    if bins < 2 or bins > 256:
+        raise SnervStepMapCoderError("invalid bins in packet")
+    bits_per_code = int(header.get("bits_per_code", 8))
+    if bits_per_code < 1 or bits_per_code > 8:
+        raise SnervStepMapCoderError("invalid bits_per_code in packet")
+    shapes = [tuple(int(v) for v in shape) for shape in header["shapes"]]
+    code_count = int(header["code_count"])
+    raw_codes = lzma.decompress(packet[header_end:])
+    codes = _unpack_codes(raw_codes, code_count, bits_per_code)
+    if codes.size != code_count:
+        raise SnervStepMapCoderError(
+            f"code count {codes.size} != packet header {code_count}"
+        )
+    values = np.exp2(float(header["log_min"]) + codes.astype(np.float64) * float(header["log_step"]))
+    out = []
+    cursor = 0
+    for shape in shapes:
+        n = int(np.prod(shape))
+        out.append(values[cursor : cursor + n].reshape(shape).astype(np.float32))
+        cursor += n
+    if cursor != values.size:
+        raise SnervStepMapCoderError("unused codes after decoding step maps")
+    return out
+
+
+def _validate_step_map(step_map: np.ndarray) -> np.ndarray:
+    arr = np.asarray(step_map, dtype=np.float32)
+    if arr.size == 0:
+        raise SnervStepMapCoderError("step maps must be non-empty")
+    if not np.all(np.isfinite(arr)):
+        raise SnervStepMapCoderError("step maps must be finite")
+    if not np.all(arr > 0):
+        raise SnervStepMapCoderError("step maps must be strictly positive")
+    return arr
+
+
+def _fp32_lzma_baseline(arrays: list[np.ndarray]) -> int:
+    raw = b"".join(np.asarray(a, dtype=np.float32).astype("<f4").tobytes() for a in arrays)
+    return len(
+        lzma.compress(raw, format=lzma.FORMAT_XZ, preset=9 | lzma.PRESET_EXTREME)
+    )
+
+
+def _decode_adaptive_step_maps(packet: bytes) -> list[np.ndarray]:
+    offset = len(ADAPTIVE_MAGIC)
+    if len(packet) < offset + struct.calcsize(HEADER_LEN_FMT):
+        raise SnervStepMapCoderError("truncated adaptive SNeRV step-map header")
+    (header_len,) = struct.unpack(
+        HEADER_LEN_FMT, packet[offset : offset + struct.calcsize(HEADER_LEN_FMT)]
+    )
+    offset += struct.calcsize(HEADER_LEN_FMT)
+    header_end = offset + header_len
+    if header_end > len(packet):
+        raise SnervStepMapCoderError("declared adaptive header exceeds packet size")
+    header = json.loads(packet[offset:header_end].decode("utf-8"))
+    if header.get("schema") != ADAPTIVE_SCHEMA:
+        raise SnervStepMapCoderError(
+            f"unsupported adaptive schema: {header.get('schema')!r}"
+        )
+    out: list[np.ndarray | None] = [None] * int(header["map_count"])
+    payload = packet[header_end:]
+    for group in header["groups"]:
+        indices = [int(idx) for idx in group["map_indices"]]
+        if group.get("kind") == "constant_log2_fill":
+            shapes = [tuple(int(v) for v in shape) for shape in group["shapes"]]
+            log2_values = [float(v) for v in group["log2_values"]]
+            if len(shapes) != len(indices) or len(log2_values) != len(indices):
+                raise SnervStepMapCoderError("adaptive constant group map count mismatch")
+            for idx, shape, log2_value in zip(
+                indices,
+                shapes,
+                log2_values,
+                strict=True,
+            ):
+                out[idx] = np.full(shape, np.exp2(log2_value), dtype=np.float32)
+            continue
+        start = int(group["payload_offset"])
+        end = start + int(group["payload_bytes"])
+        raw_codes = lzma.decompress(payload[start:end])
+        codes = _unpack_codes(
+            raw_codes,
+            int(group["code_count"]),
+            int(group["bits_per_code"]),
+        )
+        values = np.exp2(
+            float(group["log_min"])
+            + codes.astype(np.float64) * float(group["log_step"])
+        )
+        decoded = []
+        cursor = 0
+        for shape in group["shapes"]:
+            out_shape = tuple(int(v) for v in shape)
+            n = int(np.prod(out_shape))
+            decoded.append(
+                values[cursor : cursor + n].reshape(out_shape).astype(np.float32)
+            )
+            cursor += n
+        if cursor != values.size:
+            raise SnervStepMapCoderError("unused adaptive codes after group decode")
+        if len(decoded) != len(indices):
+            raise SnervStepMapCoderError("adaptive group map count mismatch")
+        for idx, arr in zip(indices, decoded, strict=True):
+            out[idx] = arr
+    if any(arr is None for arr in out):
+        raise SnervStepMapCoderError("adaptive packet left maps undecoded")
+    return [arr for arr in out if arr is not None]
+
+
+def _bits_per_code(bins: int) -> int:
+    return max(1, int(bins - 1).bit_length())
+
+
+def _encode_group_payload(
+    arrays: list[np.ndarray],
+    *,
+    bins: int,
+) -> tuple[dict[str, Any], bytes]:
+    flat = np.concatenate([a.reshape(-1) for a in arrays]).astype(np.float64)
+    logs = np.log2(flat)
+    log_min = float(logs.min())
+    log_max = float(logs.max())
+    if log_max <= log_min:
+        log_step = 1.0
+        codes_flat = np.zeros_like(logs, dtype=np.uint8)
+    else:
+        log_step = (log_max - log_min) / float(bins - 1)
+        q = np.rint((logs - log_min) / log_step).clip(0, bins - 1)
+        codes_flat = q.astype(np.uint8)
+    bits_per_code = _bits_per_code(bins)
+    packed_codes, code_storage = _pack_codes(codes_flat, bits_per_code)
+    compressed_codes = lzma.compress(
+        packed_codes,
+        format=lzma.FORMAT_XZ,
+        preset=9 | lzma.PRESET_EXTREME,
+    )
+    return (
+        {
+            "bits_per_code": bits_per_code,
+            "code_storage": code_storage,
+            "code_count": int(codes_flat.size),
+            "packed_code_bytes": len(packed_codes),
+            "log_min": log_min,
+            "log_step": log_step,
+            "shapes": [list(a.shape) for a in arrays],
+        },
+        compressed_codes,
+    )
+
+
+def _standard_packet_total_bytes(
+    arrays: list[np.ndarray],
+    *,
+    bins: int,
+) -> int:
+    group_meta, compressed_codes = _encode_group_payload(arrays, bins=bins)
+    header = {
+        "schema": SCHEMA,
+        "bins": bins,
+        "bits_per_code": group_meta["bits_per_code"],
+        "code_storage": group_meta["code_storage"],
+        "log_min": group_meta["log_min"],
+        "log_step": group_meta["log_step"],
+        "dtype": "uint8_codes_log2_steps",
+        "shapes": group_meta["shapes"],
+        "code_count": group_meta["code_count"],
+    }
+    header_bytes = json.dumps(header, separators=(",", ":"), sort_keys=True).encode(
+        "utf-8"
+    )
+    return (
+        len(MAGIC)
+        + struct.calcsize(HEADER_LEN_FMT)
+        + len(header_bytes)
+        + len(compressed_codes)
+    )
+
+
+def _pack_codes(codes: np.ndarray, bits_per_code: int) -> tuple[bytes, str]:
+    """Pack fixed-width integer codes, least-significant bits first."""
+
+    if bits_per_code >= 8:
+        return np.asarray(codes, dtype=np.uint8).tobytes(), "uint8"
+    acc = 0
+    nbits = 0
+    out = bytearray()
+    mask = (1 << bits_per_code) - 1
+    for value in np.asarray(codes, dtype=np.uint8).reshape(-1):
+        acc |= (int(value) & mask) << nbits
+        nbits += bits_per_code
+        while nbits >= 8:
+            out.append(acc & 0xFF)
+            acc >>= 8
+            nbits -= 8
+    if nbits:
+        out.append(acc & 0xFF)
+    return bytes(out), "packed_bits_lsb"
+
+
+def _unpack_codes(raw: bytes, code_count: int, bits_per_code: int) -> np.ndarray:
+    """Unpack fixed-width integer codes produced by :func:`_pack_codes`."""
+
+    if bits_per_code >= 8:
+        return np.frombuffer(raw, dtype=np.uint8)[:code_count]
+    out = np.empty(code_count, dtype=np.uint8)
+    mask = (1 << bits_per_code) - 1
+    acc = 0
+    nbits = 0
+    cursor = 0
+    for byte in raw:
+        acc |= int(byte) << nbits
+        nbits += 8
+        while nbits >= bits_per_code and cursor < code_count:
+            out[cursor] = acc & mask
+            cursor += 1
+            acc >>= bits_per_code
+            nbits -= bits_per_code
+    if cursor != code_count:
+        raise SnervStepMapCoderError(
+            f"unpacked {cursor} codes, expected {code_count}"
+        )
+    return out

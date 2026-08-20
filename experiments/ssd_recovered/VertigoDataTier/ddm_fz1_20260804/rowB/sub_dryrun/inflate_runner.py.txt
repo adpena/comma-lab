@@ -1,0 +1,437 @@
+# SPDX-License-Identifier: MIT
+"""v4d inflate runner — v4c static two-plane + photometric, plus two v4d rungs:
+
+  QA65  dim0 OFFSET-CODED lattice.  dim0 (forward-speed pose, |value| ~ 31.5)
+        has an f16 storage quantum of ~0.02 at its own magnitude but ~0.001 at
+        the mean-subtracted residual (MEASURED 19.3x finer, pi2 f16-marginal
+        law).  When manifest carries `pose_dim0_offset`, the pose member's dim0
+        column stores the f16 RESIDUAL and the receiver reconstructs
+        pose[:,0] = offset + residual — a 19x-finer effective quantum the
+        encoder re-solved dim0 on (realized acceptance).  0 extra counted bytes
+        vs plain f16 (same column width); the offset is one manifest float.
+
+  QA66  per-pair rolling-shutter row-shear.  v4c shipped a GLOBAL beta (g*=0.0,
+        measured negative); the per-pair-best magnitude {0.0, 0.5, 1.0} buys a
+        measured -0.0135 S (v4c photo receipt, per-pair argmin over g).  The
+        magnitude index is stored per pair (entropy-coded, ~1.2 bits/pair); the
+        SIGN is derived free at decode from the pose yaw dim (5).
+
+Grammar v4d (rule-118 FREE generic code; NO scorers, NO GT masks, NO shipped
+mask).  frame_0 is reconstructed from decoded frame_1 by a per-pair choice of
+  selector 0  -> SINGLE-plane full homography H = K(R - t n^T/d)K^{-1}, s_r=1.0
+  selector 1  -> TWO-plane STATIC compose (rows<v far=H_inf, rows>=v ground=H)
+then per-pair PHOTOMETRIC auto-exposure f0 := a*warp(f1) + b (rung B), and a
+per-pair rolling-shutter row-shear (rung A: rotation scaled linearly across
+rows, magnitude from `state/pose_warp.stp` section 5, sign from the pose yaw
+dim).  The horizon row v is DERIVED at decode (v = round(cy) = 437) — pure code.
+
+Payload consumed (state/pose_warp.stp, MAGIC PFS1WPD1):
+  <8s magic><I n_pairs>
+    <I l1><l1 tp_member : kl1 byte-plane f16 (n,6) pose (dim0 = residual iff
+                          manifest.pose_dim0_offset present)>
+    <I l2><l2 st_coded  : r7 token codes -> s_t grid idx>
+    <I l3><l3 sel_coded : brotli packbits(n selector bits)>
+    <I l4><l4 ab_member : kl1 byte-plane f16 (n,2) exposure (a,b)>
+    <I l5><l5 beta_coded: brotli(n uint8 beta-magnitude indices in 0..len-1)>
+Every byte is consumed (parse asserts offset == len) — the counted-vs-inert
+receiver-consumption bijection (#417).
+"""
+from __future__ import annotations
+
+import json
+import lzma
+import struct
+import sys
+from pathlib import Path, PurePosixPath
+
+import brotli
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).parent))
+from ddm_r7_token_coder import decode_token_codes
+from ddm_tr1_runtime import (
+    RENDERER_FRAME_MAGIC,
+    RENDERER_RAW_HEADER,
+    _encode_brotli_frame,
+    _encode_tokens,
+    build_packet,
+    parse_packet,
+    render_frame1_camera_uint8,
+)
+from pfs1_warp_receiver import (
+    ST_GRID,
+    _target_grid,
+    _to_uint8,
+    intrinsics_native,
+    pose_to_homography,
+    warp_rgb,
+)
+
+try:
+    # Decode-time layout: the container primitives are FREE generic code
+    # (rule-118) vendored into the runtime tree next to ddm_tr1_runtime.py, so
+    # the receiver never depends on the `tac` package being installed in the
+    # contest runtime.  ddm_cx1: the staging script copies this file straight
+    # from src/tac/optimization/, so the vendored copy cannot drift from the
+    # encoder's.
+    from ddm_ix2_archive_container import (
+        decode_renderer_frame,
+        decode_token_frame,
+        parse_payload,
+        unpack_config_section,
+    )
+except ModuleNotFoundError:  # repo/dev layout
+    from tac.optimization.ddm_ix2_archive_container import (
+        decode_renderer_frame,
+        decode_token_frame,
+        parse_payload,
+        unpack_config_section,
+    )
+
+MAGIC = b"PFS1WPD1"
+KL1_MAGIC = b"KL1PWF01"
+CAMERA_H, CAMERA_W = 874, 1164
+FRAME0_POLICY = "warp_two_plane_static_photo_beta_v4d"
+DEFAULT_BETA_MAGS = (0.0, 0.5, 1.0)  # rung-A magnitude table (sign from yaw)
+
+
+def geometric_horizon_row(K: np.ndarray) -> int:
+    """Ground-plane vanishing row for pitch=0: n=[0,-1,0], v=-l2/l1 => 437."""
+    n = np.array([0.0, -1.0, 0.0], np.float64)
+    ln = np.linalg.inv(K).T @ n
+    return round(-ln[2] / ln[1])
+
+
+def decode_kl1_field(member: bytes) -> np.ndarray:
+    """Rule-118-free byte-plane f16 field decoder (inlined kl1 KL1PWF01)."""
+    if member[:8] != KL1_MAGIC:
+        raise SystemExit("kl1 field magic differs")
+    n, d, plen = struct.unpack("<HHI", member[8:16])
+    raw = brotli.decompress(member[16:16 + plen])
+    half = n * d
+    hi = np.frombuffer(raw[:half], dtype=np.uint8).astype(np.uint16)
+    lo = np.frombuffer(raw[half:2 * half], dtype=np.uint8).astype(np.uint16)
+    cm = ((hi << 8) | lo).reshape(d, n)  # (d,n) uint16
+    return np.ascontiguousarray(cm.T).view(np.float16)  # (n,d)
+
+
+# ---- frame_0 pose-repair stream (F0PR1; OPTIONAL 5th joint section, ddm_fz1) --------------
+# SegNet reads only the LAST frame (upstream/modules.py: ``x = x[:, -1, ...]``), so an additive
+# frame_0 correction is structurally seg-invisible; PoseNet reads both frames, so the repair
+# restores the pose readout the seg-only palette destroyed.  The DCT synthesis basis and the
+# bilinear resize D are DETERMINISTICALLY GENERATED here (rule-118-free generic code); only the
+# int16 coefficients in the counted section carry video-derived signal.
+F0PR_MAGIC = b"F0PR1!\x00\x00"
+_F0PR_LZMA_FILTERS = [{"id": lzma.FILTER_LZMA1, "dict_size": 1 << 22,
+                       "lc": 0, "lp": 0, "pb": 0}]
+
+
+def _f0pr_parse(blob: bytes):
+    """Parse the F0PR1 stream, closing exactly on the final byte (#417)."""
+    if blob[:8] != F0PR_MAGIC:
+        raise SystemExit("bad frame_0 pose repair magic")
+    k, seg_h, seg_w, count, coder = struct.unpack_from("<HHHHB", blob, 8)
+    off = 17
+    pairs = [struct.unpack_from("<I", blob, off + 4 * i)[0] for i in range(count)]
+    off += 4 * count
+    body = blob[off:]
+    if coder == 1:
+        body = lzma.decompress(body, format=lzma.FORMAT_RAW, filters=_F0PR_LZMA_FILTERS)
+    elif coder != 0:
+        raise SystemExit(f"unknown F0PR coder id {coder}")
+    k2 = k * k
+    if len(body) != count * k2 * 3 * 2:
+        raise SystemExit("F0PR body length mismatch")
+    arr = np.frombuffer(body, dtype="<i2").reshape(count, 3, k2)
+    return k, seg_h, seg_w, {int(p): arr[i] for i, p in enumerate(pairs)}
+
+
+def _f0pr_dct_atoms(k: int, h: int, w: int) -> np.ndarray:
+    """Generic separable 2-D DCT-III synthesis atoms (orthonormal), float64->float32."""
+    def basis(n: int, size: int) -> np.ndarray:
+        y = np.arange(size, dtype=np.float64)
+        v = np.cos(np.pi * (2.0 * y + 1.0) * n / (2.0 * size))
+        return v * np.sqrt((1.0 if n == 0 else 2.0) / size)
+    ath = np.stack([basis(a, h) for a in range(k)])
+    atw = np.stack([basis(b, w) for b in range(k)])
+    return np.einsum("ah,bw->abhw", ath, atw).reshape(k * k, h, w).astype(np.float32)
+
+
+def _f0pr_bilinear_axis(n_out: int, n_in: int):
+    src = (np.arange(n_out, dtype=np.float64) + 0.5) * (n_in / n_out) - 0.5
+    lo = np.clip(np.floor(src).astype(np.int64), 0, n_in - 1)
+    hi = np.clip(lo + 1, 0, n_in - 1)
+    w_hi = np.clip(src - np.floor(src), 0.0, 1.0)
+    return lo, hi, w_hi
+
+
+def _f0pr_apply(u8: np.ndarray, coef_i16: np.ndarray, atoms: np.ndarray,
+                seg_h: int, seg_w: int) -> np.ndarray:
+    """round(clamp(D(f0) + coef @ A)) written back through D's private 2x2 supports.
+
+    Deterministic and receiver-local; scale 874/384 = 2.276 > 2 makes every scorer
+    pixel's 4 support pixels PRIVATE, so D reproduces the paint exactly.
+    """
+    h, w = u8.shape[0], u8.shape[1]
+    rlo, rhi, rw = _f0pr_bilinear_axis(seg_h, h)
+    clo, chi, cw = _f0pr_bilinear_axis(seg_w, w)
+    x = u8.astype(np.float64)
+    rows = x[rlo] * (1.0 - rw)[:, None, None] + x[rhi] * rw[:, None, None]
+    base = rows[:, clo] * (1.0 - cw)[None, :, None] + rows[:, chi] * cw[None, :, None]
+    delta = (coef_i16.astype(np.float64) @ atoms.reshape(atoms.shape[0], -1).astype(np.float64))
+    delta = delta.reshape(3, seg_h, seg_w).transpose(1, 2, 0)
+    paint = np.rint(np.clip(base + delta, 0.0, 255.0)).astype(np.uint8)
+    out = u8.copy()
+    for r_idx in (rlo, rhi):
+        for c_idx in (clo, chi):
+            out[r_idx[:, None], c_idx[None, :]] = paint
+    return out
+
+
+def parse_pose_warp_v4d(payload: bytes):
+    if payload[:8] != MAGIC:
+        raise SystemExit("pose_warp magic differs (expected v4d PFS1WPD1)")
+    off = 8
+    (n_pairs,) = struct.unpack_from("<I", payload, off)
+    off += 4
+    secs = []
+    for _ in range(5):
+        (ln,) = struct.unpack_from("<I", payload, off)
+        off += 4
+        secs.append(payload[off:off + ln])
+        off += ln
+    if off != len(payload):
+        raise SystemExit(f"pose_warp has {len(payload) - off} unconsumed bytes")
+    tp_member, st_coded, sel_coded, ab_member, beta_coded = secs
+    tp = decode_kl1_field(tp_member).astype(np.float64).reshape(n_pairs, 6)
+    st_idx = np.asarray(decode_token_codes(st_coded),
+                        dtype=np.int64).reshape(-1)[:n_pairs]
+    sel = np.unpackbits(np.frombuffer(brotli.decompress(sel_coded),
+                                      dtype=np.uint8))[:n_pairs].astype(np.int64)
+    ab = decode_kl1_field(ab_member).astype(np.float64).reshape(n_pairs, 2)
+    beta_idx = np.frombuffer(brotli.decompress(beta_coded),
+                             dtype=np.uint8)[:n_pairs].astype(np.int64)
+    return n_pairs, tp, st_idx, sel, ab, beta_idx
+
+
+# ddm_ix2 container form.  The SECTION ORDER and the values below are the
+# receiver's compile-time knowledge — generic, so they cost zero counted bytes
+# (rule-118: generic ALGORITHM and generic TABLES are free in inflate.py; anything
+# fitted to the clip stays in the counted config section).  `st_grid` is migrated
+# here ONLY because the encoder PROVED the shipped table byte-equal to the vendored
+# ladder on this archive; a base whose `st_grid` is fitted ships it counted instead,
+# and `unpack_config_section` returns it.
+IX2_MEMBER = "0.bin"
+IX2_JOINT_ORDER = ("config", "renderer", "selector", "pose_warp")
+IX2_TR1_METADATA = {
+    "pointer_moved": False,
+    "pose_claim": False,
+    "research_only": True,
+    "schema": "ddm_tr1_four_section_packet.v1",
+    "score_claim": False,
+    "section_consumers": {
+        "lotto_renderer": "TR1Receiver.regenerate_bank_and_apply_mask_mods",
+        "pose_stub": "TR1Receiver.consume_inert_pose_declaration",
+        "selector": "TR1Receiver.select_decode_program",
+        "tokens": "TR1Receiver.decode_combined_tokens",
+    },
+    "section_order": ["tokens", "lotto_renderer", "selector", "pose_stub"],
+}
+IX2_POSE_STUB = json.dumps(
+    {
+        "inert": True,
+        "pose_claim": False,
+        "schema": "ddm_tr1_inert_pose_stub.v1",
+        "values": [],
+    },
+    sort_keys=True,
+    separators=(",", ":"),
+).encode()
+
+
+def _reframe_renderer(mask_bits: np.ndarray, floats_f16_be: bytes) -> bytes:
+    """Re-emit the TR1 renderer section from the ix2 field-split form.
+
+    Pure re-framing: ``parse_packet`` only needs a frame that DECODES to the same
+    mask and table, and the packet's own per-section digest is computed over
+    whatever bytes it is handed, so this need not reproduce the original frame byte
+    for byte — only its contents.
+    """
+
+    packed = np.packbits(np.asarray(mask_bits, dtype=np.uint8), bitorder="big")
+    raw = (
+        RENDERER_RAW_HEADER.pack(int(mask_bits.size), len(floats_f16_be) // 2)
+        + packed.tobytes()
+        + floats_f16_be
+    )
+    return _encode_brotli_frame(RENDERER_FRAME_MAGIC, raw)
+
+
+class Decoder:
+    """Factored per-pair decoder (reused by the verify tool)."""
+
+    def __init__(self, archive_dir: Path) -> None:
+        self._f0_repair = None          # (coefs, atoms, seg_h, seg_w) when F0PR1 ships
+        blob = archive_dir / IX2_MEMBER
+        if blob.exists():
+            codes, sections, pose_warp = self._read_ix2(blob)
+            manifest = None
+        else:
+            manifest = json.loads((archive_dir / "manifest.json").read_text())
+            if manifest["frame0_policy"] != FRAME0_POLICY:
+                raise SystemExit(
+                    f"v4d receiver requires frame0_policy={FRAME0_POLICY}")
+            self.dim0_offset = manifest.get("pose_dim0_offset", None)
+            self.beta_mags = tuple(manifest.get("rs_beta_mags", DEFAULT_BETA_MAGS))
+            self.st_vals = np.asarray(manifest.get("st_grid", ST_GRID), np.float64)
+            codes = decode_token_codes(
+                (archive_dir / "state/tokens.dr7t").read_bytes())
+            sections = {
+                "lotto_renderer": (archive_dir / "state/renderer.sec").read_bytes(),
+                "selector": (archive_dir / "state/selector.sec").read_bytes(),
+                "pose_stub": (archive_dir / "state/pose_stub.sec").read_bytes(),
+            }
+            pose_warp = (archive_dir / "state/pose_warp.stp").read_bytes()
+        token_payload = _encode_tokens(np.ascontiguousarray(codes, dtype=np.uint8))
+        metadata = IX2_TR1_METADATA if manifest is None else manifest["tr1_metadata"]
+        packet_bytes = build_packet(metadata, {
+            "tokens": token_payload,
+            "lotto_renderer": sections["lotto_renderer"],
+            "selector": sections["selector"],
+            "pose_stub": sections["pose_stub"],
+        })
+        self.packet = parse_packet(packet_bytes)
+        (self.n_pairs, self.p_best, self.st_idx, self.sel, self.ab,
+         self.beta_idx) = parse_pose_warp_v4d(pose_warp)
+        if self.dim0_offset is not None:
+            # dim0 column stored as f16 residual; reconstruct to full pose value.
+            self.p_best = self.p_best.copy()
+            self.p_best[:, 0] = float(self.dim0_offset) + self.p_best[:, 0]
+        if int(self.packet.selector["num_pairs"]) != self.n_pairs:
+            raise SystemExit("pose_warp n_pairs differs from selector")
+        # ddm_ms8: the s_t codebook is READ from the manifest, with the
+        # vendored generic ladder as the fallback for archives whose manifest
+        # predates the key.  MEASURED on the live pw1 archive: the manifest
+        # already ships ``st_grid`` EQUAL to the vendored table and this
+        # receiver never read it -- 34 counted deflated bytes that no decode
+        # step consumed (the #417 counted-but-inert class; the existing
+        # parse-back verifier's denominator is pose_warp.stp only, so the
+        # manifest was outside its scope).  Reading it is byte-identical on
+        # every existing archive AND lets a FITTED codebook ship in a field
+        # the archive is already paying for.  ddm_ix2: in container form the same
+        # table arrives from the counted config section (or is the vendored ladder
+        # when the encoder proved equality), so ``st_vals`` is already set above.
+        if self.st_vals.ndim != 1 or self.st_vals.size < 1:
+            raise SystemExit("manifest st_grid must be a non-empty 1-D table")
+        if int(self.st_idx.max()) >= self.st_vals.size:
+            raise SystemExit(
+                f"st_idx max {int(self.st_idx.max())} outside st_grid of "
+                f"{self.st_vals.size} entries")
+        self.K = intrinsics_native()
+        self.Kinv = np.linalg.inv(self.K)
+        self.grid = _target_grid(CAMERA_H, CAMERA_W)
+        self.v_row = geometric_horizon_row(self.K)
+        self._far = (np.arange(CAMERA_H)[:, None] < self.v_row) & np.ones(
+            (1, CAMERA_W), bool)
+        self._alpha = (np.arange(CAMERA_H) / (CAMERA_H - 1.0))[:, None, None]
+
+    def _read_ix2(self, blob: Path):
+        """Parse the ddm_ix2 single-member container.
+
+        Fail-closed by construction: ``parse_payload`` / ``unpack_container`` /
+        every frame decoder assert ``offset == len(payload)``, so a counted section
+        the receiver does not consume cannot survive the parse (#417).
+        """
+
+        bulk, sections = parse_payload(blob.read_bytes())
+        if len(sections) == len(IX2_JOINT_ORDER) + 1:
+            # v5 joint group: the 5th section is the F0PR1 frame_0 pose-repair stream.
+            config, renderer, selector, pose_warp, f0pr = sections
+            k, seg_h, seg_w, coefs = _f0pr_parse(f0pr)
+            self._f0_repair = (coefs, _f0pr_dct_atoms(k, seg_h, seg_w), seg_h, seg_w)
+        elif len(sections) == len(IX2_JOINT_ORDER):
+            config, renderer, selector, pose_warp = sections
+        else:
+            raise SystemExit(
+                f"ix2 container holds {len(sections)} sections, "
+                f"expected {len(IX2_JOINT_ORDER)} or {len(IX2_JOINT_ORDER) + 1}")
+        offset, beta_mags, st_grid = unpack_config_section(config)
+        self.dim0_offset = offset
+        self.beta_mags = tuple(beta_mags)
+        self.st_vals = np.asarray(
+            ST_GRID if st_grid is None else st_grid, np.float64)
+        mask_bits, floats = decode_renderer_frame(renderer)
+        return (
+            decode_token_frame(bulk),
+            {
+                "lotto_renderer": _reframe_renderer(mask_bits, floats),
+                "selector": selector,
+                "pose_stub": IX2_POSE_STUB,
+            },
+            pose_warp,
+        )
+
+    def f1(self, i: int) -> np.ndarray:
+        return render_frame1_camera_uint8(self.packet, i)
+
+    def _warp_pair(self, f1_f: np.ndarray, pose: np.ndarray, s_t: float,
+                   sel: int, rot: float) -> np.ndarray:
+        """Static compose f0 (float, pre-photometric) at rotation scale rot."""
+        hg = pose_to_homography(pose, self.K, self.Kinv, s_t, rot, 0.0)
+        warp_g = warp_rgb(f1_f, hg, self.grid)
+        if sel == 0:
+            return warp_g
+        hf = pose_to_homography(pose, self.K, self.Kinv, 0.0, rot, 0.0)
+        warp_f = warp_rgb(f1_f, hf, self.grid)
+        return np.where(self._far[..., None], warp_f, warp_g)
+
+    def f0(self, i: int, f1_u8: np.ndarray | None = None) -> np.ndarray:
+        if f1_u8 is None:
+            f1_u8 = self.f1(i)
+        f1_f = f1_u8.astype(np.float64)
+        s_t = float(self.st_vals[self.st_idx[i]])
+        pose = self.p_best[i]
+        sel = int(self.sel[i])
+        a, b = float(self.ab[i][0]), float(self.ab[i][1])
+        beta_mag = float(self.beta_mags[int(self.beta_idx[i])])
+        if beta_mag != 0.0:
+            # rung A: rolling-shutter row-shear, sign from the pose yaw dim (5).
+            beta = beta_mag * (1.0 if pose[5] >= 0.0 else -1.0)
+            f0f = ((1.0 - self._alpha) * self._warp_pair(f1_f, pose, s_t, sel,
+                                                         1.0 - beta / 2.0)
+                   + self._alpha * self._warp_pair(f1_f, pose, s_t, sel,
+                                                   1.0 + beta / 2.0))
+        else:
+            f0f = self._warp_pair(f1_f, pose, s_t, sel, 1.0)
+        if a != 1.0 or b != 0.0:
+            f0f = a * f0f + b
+        u = _to_uint8(f0f)
+        if self._f0_repair is not None:
+            coefs, atoms, seg_h, seg_w = self._f0_repair
+            if i in coefs:
+                u = _f0pr_apply(u, coefs[i], atoms, seg_h, seg_w)
+        return u
+
+
+def main() -> None:
+    archive_dir, output_dir, names_file = map(Path, sys.argv[1:4])
+    names = [row.strip() for row in
+             names_file.read_text().splitlines() if row.strip()]
+    if names != ["0.mkv"]:
+        raise SystemExit("this receiver serves exactly the custodied 0.mkv")
+    dec = Decoder(archive_dir)
+    name = PurePosixPath(names[0])
+    if name.is_absolute() or ".." in name.parts:
+        raise SystemExit("unsafe video name")
+    target = output_dir / name.with_suffix(".raw")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with open(target, "wb") as sink:
+        for i in range(dec.n_pairs):
+            f1 = dec.f1(i)
+            f0 = dec.f0(i, f1)
+            sink.write(f0.tobytes())
+            sink.write(f1.tobytes())
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,239 @@
+#!/usr/bin/env python3
+"""Residual-free PGQ1-conditioned receiver for the LC2 spatial basis.
+
+All video-derived state is carried in the PZ4R section: the exact counted LC2
+basis component, the exact PGQ1 gauge, and a counted fixed-point predictor.
+The receiver contains no scorer, ground truth, coefficient residual, or hidden
+per-frame table.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import struct
+
+import numpy as np
+import pose_target_receiver as predictor_codec
+
+MAGIC = b"PZ4R"
+VERSION = 1
+N = 600
+POSE_DIMS = 6
+CARRIER_DIMS = 12
+
+PGQ1_MAGIC = b"PGQ1"
+PGQ1_VERSION = 1
+PGQ1_DEPTH = 12
+PGQ1_RANK = 6
+PGQ1_MODE_GLOBAL = 0
+PGQ1_BLOCK_ROWS = N
+PGQ1_SCALE_COLUMNS = 1
+PGQ1_HEADER = struct.Struct("<4sBBBBHHHH")
+
+# magic, version, feature mode, shift, pose-object fractional bits, section sizes,
+# predicted hash
+HEADER = struct.Struct("<4sBBBBIII32s")
+DEFAULT_TARGET_FRACTION_BITS = 16
+
+
+def _sha256_array(value: np.ndarray) -> bytes:
+    return hashlib.sha256(np.ascontiguousarray(value).tobytes()).digest()
+
+
+def _bit_unpack_unsigned(payload: bytes, count: int, depth: int) -> np.ndarray:
+    expected = (count * depth + 7) // 8
+    if len(payload) != expected:
+        raise ValueError("PGQ1 packed-code length mismatch")
+    output = np.empty(count, dtype=np.uint32)
+    bit_index = 0
+    for index in range(count):
+        remaining = depth
+        shift = 0
+        value = 0
+        while remaining:
+            byte_index = bit_index >> 3
+            offset = bit_index & 7
+            take = min(8 - offset, remaining)
+            mask = (1 << take) - 1
+            value |= ((payload[byte_index] >> offset) & mask) << shift
+            bit_index += take
+            shift += take
+            remaining -= take
+        output[index] = value
+    return output
+
+
+def decode_pgq1(payload: bytes | memoryview) -> tuple[np.ndarray, np.ndarray]:
+    """Decode the pinned global rank-6/12-bit PGQ1 codes and pose object."""
+
+    payload = bytes(payload)
+    if len(payload) < PGQ1_HEADER.size:
+        raise ValueError("truncated PGQ1 header")
+    (
+        magic,
+        version,
+        depth,
+        rank,
+        mode,
+        count,
+        dimensions,
+        block_rows,
+        scale_columns,
+    ) = PGQ1_HEADER.unpack_from(payload)
+    if (
+        magic != PGQ1_MAGIC
+        or version != PGQ1_VERSION
+        or depth != PGQ1_DEPTH
+        or rank != PGQ1_RANK
+        or mode != PGQ1_MODE_GLOBAL
+        or count != N
+        or dimensions != POSE_DIMS
+        or block_rows != PGQ1_BLOCK_ROWS
+        or scale_columns != PGQ1_SCALE_COLUMNS
+    ):
+        raise ValueError("unsupported PGQ1 geometry")
+    scale_bytes = 4
+    weight_bytes = (rank + 1) * dimensions * 4
+    code_bytes = (count * rank * depth + 7) // 8
+    expected = PGQ1_HEADER.size + scale_bytes + weight_bytes + code_bytes
+    if len(payload) != expected:
+        raise ValueError("PGQ1 payload length mismatch")
+    cursor = PGQ1_HEADER.size
+    scale = np.frombuffer(payload[cursor : cursor + scale_bytes], dtype="<f4").copy()
+    cursor += scale_bytes
+    weights = np.frombuffer(
+        payload[cursor : cursor + weight_bytes], dtype="<f4"
+    ).copy().reshape(rank + 1, dimensions)
+    cursor += weight_bytes
+    if (
+        not np.all(np.isfinite(scale))
+        or np.any(scale <= 0)
+        or not np.all(np.isfinite(weights))
+    ):
+        raise ValueError("PGQ1 contains invalid scale or compensation state")
+    qmax = (1 << (depth - 1)) - 1
+    unsigned = _bit_unpack_unsigned(payload[cursor:], count * rank, depth)
+    codes = unsigned.astype(np.int64).reshape(count, rank) - qmax
+    dequantized = codes.astype(np.float32) * scale.astype(np.float32)
+    design = np.concatenate(
+        (np.ones((N, 1), dtype=np.float32), dequantized), axis=1
+    )
+    outputs = np.einsum(
+        "ij,jk->ik", design, weights.astype(np.float32), optimize=False
+    ).astype(np.float32)
+    return codes.astype(np.int32), outputs
+
+
+def quantize_pose_object(outputs: np.ndarray, fraction_bits: int) -> np.ndarray:
+    """Convert the literal decoded 600x6 PGQ1 object to fixed-point features."""
+
+    outputs = np.asarray(outputs, dtype=np.float32)
+    if outputs.shape != (N, POSE_DIMS) or not 1 <= fraction_bits <= 24:
+        raise ValueError("invalid PGQ1 pose-object fixed-point declaration")
+    scaled = np.rint(outputs.astype(np.float64) * float(1 << fraction_bits))
+    if np.any(scaled < np.iinfo(np.int32).min) or np.any(
+        scaled > np.iinfo(np.int32).max
+    ):
+        raise ValueError("PGQ1 pose-object fixed-point features exceed int32")
+    return scaled.astype(np.int32)
+
+
+def _predict_codes(
+    target_codes: np.ndarray,
+    predictor: predictor_codec.Predictor,
+) -> np.ndarray:
+    if predictor.feature_mode in (
+        predictor_codec.FEATURE_TARGET_PREVIOUS,
+        predictor_codec.FEATURE_TARGET_QUADRATIC_PREVIOUS,
+    ):
+        absolute = np.zeros((N, CARRIER_DIMS), dtype=np.int32)
+        for frame in range(N):
+            absolute[frame] = predictor_codec.predict_coefficients(
+                target_codes, predictor, absolute
+            )[frame]
+        return absolute
+    return predictor_codec.predict_coefficients(target_codes, predictor)
+
+
+def encode_pose_gauge_carrier(
+    *,
+    basis_component: bytes,
+    gauge: bytes,
+    predictor: predictor_codec.Predictor,
+    coefficient_scales: np.ndarray,
+    target_fraction_bits: int = DEFAULT_TARGET_FRACTION_BITS,
+) -> bytes:
+    """Encode a residual-free counted PZ4R carrier."""
+
+    _, outputs = decode_pgq1(gauge)
+    target_features = quantize_pose_object(outputs, target_fraction_bits)
+    predicted = _predict_codes(target_features, predictor).astype("<i4")
+    model = predictor_codec.serialize_predictor(predictor, coefficient_scales)
+    return b"".join(
+        (
+            HEADER.pack(
+                MAGIC,
+                VERSION,
+                predictor.feature_mode,
+                predictor.shift,
+                target_fraction_bits,
+                len(basis_component),
+                len(gauge),
+                len(model),
+                _sha256_array(predicted),
+            ),
+            basis_component,
+            gauge,
+            model,
+        )
+    )
+
+
+def decode_pose_gauge_carrier(
+    blob: bytes | memoryview,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Decode PZ4R to LC2 basis and residual-free predicted coefficients."""
+
+    blob = memoryview(blob)
+    if len(blob) < HEADER.size:
+        raise ValueError("truncated PZ4R carrier")
+    (
+        magic,
+        version,
+        feature_mode,
+        shift,
+        target_fraction_bits,
+        basis_bytes,
+        gauge_bytes,
+        model_bytes,
+        expected_prediction_sha256,
+    ) = HEADER.unpack(blob[: HEADER.size])
+    if (
+        magic != MAGIC
+        or version != VERSION
+        or not 1 <= target_fraction_bits <= 24
+        or predictor_codec.FEATURE_COUNTS.get(feature_mode) is None
+        or not 1 <= shift <= 30
+    ):
+        raise ValueError("unsupported PZ4R header")
+    expected = HEADER.size + basis_bytes + gauge_bytes + model_bytes
+    if len(blob) != expected:
+        raise ValueError("PZ4R carrier length mismatch")
+    cursor = HEADER.size
+    basis_component = blob[cursor : cursor + basis_bytes]
+    cursor += basis_bytes
+    gauge = blob[cursor : cursor + gauge_bytes]
+    cursor += gauge_bytes
+    model = blob[cursor : cursor + model_bytes]
+
+    basis, _ = predictor_codec._decode_basis_component(basis_component)
+    _, outputs = decode_pgq1(gauge)
+    target_features = quantize_pose_object(outputs, target_fraction_bits)
+    predictor, coefficient_scales = predictor_codec.deserialize_predictor(model)
+    if predictor.feature_mode != feature_mode or predictor.shift != shift:
+        raise ValueError("PZ4R header/predictor mismatch")
+    predicted = _predict_codes(target_features, predictor).astype("<i4")
+    if _sha256_array(predicted) != expected_prediction_sha256:
+        raise ValueError("PZ4R predicted coefficient hash mismatch")
+    coefficients = predicted.astype(np.float32) * coefficient_scales[None]
+    return basis.astype(np.float32), coefficients.astype(np.float32)

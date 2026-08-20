@@ -1,0 +1,24 @@
+#!/usr/bin/env zsh
+set -u
+cd "/Volumes/VertigoDataTier/pact/worktrees/pact-main-guardrails-20260602"
+LOG_DIR="/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/profile_logs_20260602T0148Z"
+echo "START_UTC=$(date -u +%Y%m%dT%H%M%SZ)" > "$LOG_DIR/profile.lifecycle"
+PYTHONPATH="/Volumes/VertigoDataTier/pact/worktrees/pact-main-guardrails-20260602/src:/Volumes/VertigoDataTier/pact/worktrees/pact-main-guardrails-20260602" TAC_UPSTREAM_DIR="/Users/adpena/Projects/pact/upstream" PYTHONHASHSEED=0 /Users/adpena/Projects/pact/.venv/bin/python tools/profile_pact_nerv_vq_mlx_section_value.py \
+  --archive "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/run_20260602T0148Z/pact_nerv_vq_mlx_training/archive.zip" \
+  --projection-manifest "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/run_20260602T0148Z/pact_nerv_vq_mlx_training/hprc_representation_spine_pact_nerv_vq_manifest.json" \
+  --output-dir "/Volumes/VertigoDataTier/pact/hprc_projection_gap_repairs/pact_nerv_vq_pact_nerv_vq_pvq_projection_gap_80a85ebb5adb1cb3/capacity_l8_e16_k32_ch32/full_video_section_value_profile_20260602T0148Z" \
+  --repo-root "/Volumes/VertigoDataTier/pact/worktrees/pact-main-guardrails-20260602" \
+  --upstream-dir /Users/adpena/Projects/pact/upstream \
+  --reference-cache-dir "/Volumes/VertigoDataTier/pact/compact_pact_vq_ch48_qat4_int2_mixed_full600_section_value_codex_20260602T002500Z/mlx_caches" \
+  --max-pairs 600 \
+  --window-pairs 600 \
+  --scorer-batch-pairs 1 \
+  --device gpu \
+  --progress-every 50 \
+  --force \
+  > "$LOG_DIR/profile.stdout.log" 2> "$LOG_DIR/profile.stderr.log"
+RC=$?
+echo "$RC" > "$LOG_DIR/profile.exit_code"
+echo "END_UTC=$(date -u +%Y%m%dT%H%M%SZ)" >> "$LOG_DIR/profile.lifecycle"
+echo "RC=$RC" >> "$LOG_DIR/profile.lifecycle"
+exit "$RC"

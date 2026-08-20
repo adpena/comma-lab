@@ -1,0 +1,37 @@
+# Shell Inflate Parity Proof
+
+- Generated UTC: 2026-06-01T18:57:17Z
+- File list entries: 1
+- File list SHA-256: `7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8`
+- Full-frame file-list source: `upstream/public_test_video_names.txt`
+- Expected full-frame file-list SHA-256: `7ff99d08c8351dd8167ec09213b758da5bbb705dedabe361ba881217374029a8`
+- Expected full-frame entry count: 1
+- Full-frame file-list SHA-256 match: true
+- Full-frame entry count match: true
+- Parity scope kind: `contest_full_sample`
+- Contest full-sample claim: true
+- Contest full-sample parity claim: true
+- Full-frame file-list claim: true
+- Full-frame inflate parity claim: true
+- Output count: 1
+- Single output raw basename: `0.raw`
+- Python bin: `.venv/bin/python`
+- Left archive: `experiments/results/public_pr_archive_release_view/public_pr101_intake_20260505_auto/archive.zip`
+- Right archive: `/Volumes/VertigoDataTier/pact/pr101_optimal_grammar_storage_order_20260601T185043Z/archive.zip`
+- Left archive SHA-256: `b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e`
+- Right archive SHA-256: `47217085a97d19f3b783106f3f4ba5390658ef5f7558d93769116b6d78ab1801`
+- Left output bytes: 3662409600
+- Right output bytes: 3662409600
+- Left output manifest SHA-256: `4592aa9e62f154b3240b80ba5f12d03f0c9755afc5e67ea0e5faa3a7c5c48350`
+- Right output manifest SHA-256: `4592aa9e62f154b3240b80ba5f12d03f0c9755afc5e67ea0e5faa3a7c5c48350`
+- Output bytes match: true
+- Output SHA-256 match: true
+- Output manifest SHA-256 match: true
+- cmp equal: true
+- Blockers: none
+- Scratch retained: false
+- Score claim: false
+- Promotion eligible: false
+- Rank/kill eligible: false
+- Ready for exact eval dispatch: false
+- Promotable: false

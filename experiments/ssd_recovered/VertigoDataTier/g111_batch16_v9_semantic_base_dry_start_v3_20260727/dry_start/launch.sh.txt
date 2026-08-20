@@ -1,0 +1,243 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# tac-config-family: g111_batch16_v9_semantic_base
+# dsl_compile_hash: 0ad99a61d09184c4b9e4e2496e390892aa44edf55181c3b1c2f16ad05e9f0c62
+# tac-run-purpose: First real full-n600 scorer-native semantic-base producer: settled V9 mod-32 geometry on a recursively verified G109 batch-16 target capsule, cold own-lineage checkpoint, G105-compatible semantic gauge plus a final-Y1-conditioned pose carrier whose xi is refit after semantic packet quantization.
+cd /Users/adpena/Projects/pact
+export TAC_MEM_PROBE=1
+export TAC_GOVERNED_ADMISSION=1
+export TAC_DSL_COMPILE_HASH=0ad99a61d09184c4b9e4e2496e390892aa44edf55181c3b1c2f16ad05e9f0c62
+export TAC_DSL_PROVENANCE_PATH=/Volumes/VertigoDataTier/pact/g111_batch16_v9_semantic_base_dry_start_v3_20260727/dry_start/dsl_provenance.json
+export TAC_DSL_LAUNCH_SH_PATH=/Volumes/VertigoDataTier/pact/g111_batch16_v9_semantic_base_dry_start_v3_20260727/dry_start/launch.sh
+TAC_MLX_CUSTOM_GROUPED_BACKWARD=1 TAC_MLX_CUSTOM_PERSISTENCE_POOL=1 \
+  .venv/bin/python experiments/train_levelset_witness_realized_through_R_mlx.py \
+  --seed 0 \
+  --eval-every 25 \
+  --verdict-pairs 0 \
+  --async-verdict \
+  --verdict-batch 16 \
+  --curriculum \
+  --tau-softplus-tau 0.3 \
+  --muon-lr 0.002 \
+  --muon-momentum 0.95 \
+  --muon-ns-steps 5 \
+  --stage-transition-rewarmup-epochs 14 \
+  --stage-transition-rewarmup-floor 0.1 \
+  --stage-transition-rewarmup-shape cosine \
+  --stage-transition-reset-moments \
+  --w-seg 100 \
+  --w-pose 1.0 \
+  --score-domain-loss \
+  --pose-carrier \
+  --pose-carrier-residual-mode table \
+  --pose-carrier-source generated_y1 \
+  --mod-dim 32 \
+  --hidden-dim 96 \
+  --n-hidden 4 \
+  --activation hosc \
+  --hosc-beta 1.0 \
+  --hosc-beta-end 3.177 \
+  --hosc-beta-anneal linear \
+  --hosc-omega 1.0 \
+  --siren-init \
+  --tau-anneal-shape geometric \
+  --max-bank-freq 64 \
+  --chroma \
+  --palette-anchor \
+  --render-h 384 \
+  --render-w 512 \
+  --render-aa none \
+  --lane-render-band \
+  --lane-band-start-epoch 500 \
+  --lane-band-uncertainty-source witness \
+  --lane-band-tau 0.85 \
+  --lane-band-eps 0.35 \
+  --lane-band-softness 1.0 \
+  --lane-band-dash-forward-max-m 55.0 \
+  --lane-band-weight 1.0 \
+  --persistence-loss-weight 1.0 \
+  --persistence-recall-weight 1.0 \
+  --cldice-iters 5 \
+  --persistence-warmup-epochs 275 \
+  --persistence-classes 3 \
+  --amplify-weight 1.0 \
+  --amplify-form hinge \
+  --amplify-margin-target 1.0 \
+  --amplify-persist inverse_thickness \
+  --island-dilate-px 1 \
+  --structured-init \
+  --lane-prior-phi1 \
+  --lane-prior-phi1-mode paint \
+  --lane-prior-phi1-dash-gate \
+  --accum-pairs 8 \
+  --grad-clip 0.5 \
+  --ema-decay 0.997 \
+  --lr 1e-3 \
+  --lr-end 1e-4 \
+  --weight-decay 1e-4 \
+  --adam-beta2 0.999 \
+  --anneal-epochs 3000 \
+  --lr-anneal-epochs 1000 \
+  --lr-hold-frac 1.0 \
+  --fused-r-kernel \
+  --curriculum-reanchor-levers \
+  --curriculum-min-stage-epochs 250 \
+  --seg-chroma-boundary-weight 0.1 \
+  --seg-chroma-boundary-margin-band 1.0 \
+  --seg-chroma-boundary-start-epoch 450 \
+  --seed-islands \
+  --witness-alone-island-loss \
+  --seed-island-eased \
+  --curriculum-event-triggered \
+  --curriculum-nucleus-guard \
+  --logit-adjust-loss-tau 1.0 \
+  --cache-gt-skeleton \
+  --muon-warm-start-momentum \
+  --muon-lr-final-frac 0.1 \
+  --weight-entropy-penalty-lambda 15.0 \
+  --muon-start-event powerlaw_meat \
+  --lane-band-start-event lane_nucleus \
+  --seg-chroma-boundary-start-event annulus_plateau \
+  --tau-advance-mode event \
+  --logit-adjust-classes 3 \
+  --per-group-grad-clip \
+  --safe-compile-regions hosc_activation \
+  --seg-phase-advect-weight 0.4 \
+  --seg-phase-advect-start-epoch 726 \
+  --structured-init-include-lane \
+  --structured-init-thresh 0.5 \
+  --structured-init-steps 600 \
+  --structured-init-lr 0.005 \
+  --structured-init-subsample 8192 \
+  --structured-init-sdf-clip 20.0 \
+  --pose-carrier-residual-scale 1.0 \
+  --pose-carrier-s-t 0.044 \
+  --pose-carrier-s-r 0.0 \
+  --pose-carrier-pitch 0.0 \
+  --annulus-telemetry \
+  --annulus-band 2.0 \
+  --annulus-bottom-k 0.05 \
+  --annulus-plateau-rel-eps 0.0001 \
+  --annulus-plateau-dwell-windows 7 \
+  --annulus-plateau-min-epochs 150 \
+  --curriculum-nucleus-within-flip 0.5 \
+  --curriculum-nucleus-min-part-frac 0.0 \
+  --jacobian-basin-telemetry \
+  --jacobian-basin-t0 \
+  --jacobian-basin-k-pairs 32 \
+  --jacobian-basin-every 4 \
+  --jacobian-basin-stratify-t \
+  --jacobian-basin-sigma-floor 0.0001 \
+  --jacobian-basin-f-basin 1.0 \
+  --jacobian-basin-quorum-q 0.8 \
+  --basis legacy_fourier_ab_control \
+  --no-self-orient \
+  --seed-anneal-epochs 0 \
+  --seed-anneal-shape linear \
+  --seed-blend 1.0 \
+  --seed-lr 0.02 \
+  --containment-mode shield \
+  --containment-damp 0.1 \
+  --muon-adamw-lr 0.0001 \
+  --no-tail-live-mq \
+  --pose-grad-coeff-max 25.0 \
+  --grad-normalize per-param \
+  --micro-batch-pairs 1 \
+  --out-dir /Volumes/VertigoDataTier/pact/g111_batch16_v9_semantic_base_dry_start_v3_20260727/dry_start \
+  --verdict-device cpu \
+  --verdict-anchor-every 0 \
+  --num-pairs 600 \
+  --epochs 3000 \
+  --gt-cache experiments/results/mlx_fleet_gt_cache/gt_n600.npz \
+  --mlx-device gpu \
+  --softmax-temp-start 1.0 \
+  --softmax-temp-end 0.31 \
+  --muon-start-epoch 726 \
+  --pose-finish-start-epoch 726 \
+  --eikonal-weight 0.01 \
+  --length-weight 0.001 \
+  --ckpt-every 1 \
+  --stage-checkpoints \
+  --seg-form-unify-tau \
+  --tail-cycles-max 2 \
+  --tail-start-epoch 0 \
+  --tail-cycle-floor-epochs 387.09 \
+  --tail-dwell-min 237 \
+  --tail-tau-halving 0.5 \
+  --tail-lr-prop-tau 1.0 \
+  --tail-stop-marginal-s 0.0001 \
+  --ladder-island-homotopy \
+  --ladder-movable-r0 0.22519481385666232 \
+  --ladder-movable-birth-epochs 60 \
+  --ladder-movable-hold-epochs 0 \
+  --ladder-movable-anneal-epochs 200 \
+  --ladder-movable-lambda-gate 0.0 \
+  --ladder-lane-r0 2.0 \
+  --ladder-lane-birth-epochs 80 \
+  --ladder-lane-hold-epochs 0 \
+  --ladder-lane-anneal-epochs 260 \
+  --ladder-lane-lambda-gate 0.0 \
+  --ladder-gate-softness 0.5 \
+  --ladder-release-coeff 0.95 \
+  --ladder-sigma-eff 1.5 \
+  --ladder-lane-dash-gate \
+  --ladder-max-step-px 1.0 \
+  --ladder-refresh-every 25 \
+  --polyak-finisher-arm \
+  --polyak-finisher-start-epoch 2546 \
+  --area-constraint-birth \
+  --area-constraint-birth-force 1.0 \
+  --area-constraint-tolerance 0.25 \
+  --area-constraint-classes 1,3 \
+  --birth-completion-event \
+  --birth-completion-tau-persist 0.8 \
+  --birth-completion-area-band 0.25 \
+  --birth-completion-ramp-epochs 50 \
+  --birth-completion-post-level 0.2 \
+  --birth-completion-classes 1,3 \
+  --birth-completion-ramp \
+  --lane-band-dash-comb \
+  --lane-band-comb-softness-m 0.3 \
+  --seg-temporal-screw-weight 0.1 \
+  --seg-temporal-screw-start-epoch 450 \
+  --seg-temporal-screw-xi-source ground_gt \
+  --seg-temporal-screw-classes 0,1,2 \
+  --seg-temporal-screw-band 2.0 \
+  --seg-temporal-screw-start-event annulus_plateau \
+  --pose-finish-engage-on sigma_min_plateau \
+  --seg-phase-advect-classes 0,1,2 \
+  --seg-phase-advect-band 2.0 \
+  --seg-phase-advect-gap-xi interp \
+  --seg-phase-advect-ref gt_advected \
+  --dseg-aware-taper \
+  --dseg-aware-taper-strength 1.0 \
+  --dseg-aware-taper-scale 0.0 \
+  --dseg-aware-taper-floor 0.05 \
+  --eikonal-weight-end 0.05 \
+  --closed-loop-control \
+  --closed-loop-eikonal-bump 0.05 \
+  --closed-loop-eikonal-max 0.2 \
+  --closed-loop-max-bumps 2 \
+  --closed-loop-stop-after-windows 3 \
+  --closed-loop-min-sustained-windows 3 \
+  --length-sigma-matrix fitted-20260707 \
+  --seg-subpix-boundary-weight 0.3 \
+  --seg-subpix-boundary-start-epoch 0 \
+  --seg-subpix-boundary-v-band 1.0 \
+  --seg-subpix-edge-weight-source pa_flipmass \
+  --seg-subpix-edge-weight-path reports/pa_edge_weights.json \
+  --seg-subpix-ref-domain seg384 \
+  --seg-margin-satisfice-weight 0.2 \
+  --seg-margin-satisfice-msafe 0.039180326461791926 \
+  --seg-margin-satisfice-delta-r 0.019590163230895963 \
+  --seg-margin-satisfice-headroom 2.0 \
+  --seg-margin-satisfice-start-epoch 0 \
+  --seg-margin-satisfice-band 2.0 \
+  --margin-saliency-weight 1.0 \
+  --margin-saliency-start-epoch 0 \
+  --margin-saliency-tau 0.5 \
+  --margin-saliency-target 0.5 \
+  --training-target-capsule /Volumes/VertigoDataTier/pact/taskspace_v9_training_target_capsule_n600_20260727/21_v9_training_target_capsule_receipt.json \
+  --training-target-capsule-sha256 1fd651c9a668360c161f6aa5acc721086843cd12c2c362141d7dc21a1e9bdb01 \
+  --fresh-producer \
+  --no-mod-dim-ablation

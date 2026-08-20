@@ -1,0 +1,102 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, asdict
+from typing import Dict, Iterable, List, Optional, Tuple
+
+try:
+    import numpy as np
+except Exception:  # pragma: no cover
+    np = None
+
+
+@dataclass
+class RegionDebt:
+    class_id: int
+    region_id: int
+    target_pixels: int
+    total_pixels: int
+    target_pixel_mass: float
+    unsolved_pixels: int
+    unsolved_fraction: float
+    raw_score_debt: float
+    margin_mean: float
+    margin_p50: float
+    margin_p90: float
+    crossing_priority: float
+
+    def to_dict(self) -> Dict[str, float]:
+        return asdict(self)
+
+
+def _components(mask):
+    """Tiny 4-connected component labeling with numpy only."""
+    H, W = mask.shape
+    labels = np.full((H, W), -1, dtype=np.int32)
+    rid = 0
+    for y in range(H):
+        for x in range(W):
+            if not mask[y, x] or labels[y, x] >= 0:
+                continue
+            stack = [(y, x)]
+            labels[y, x] = rid
+            while stack:
+                cy, cx = stack.pop()
+                for ny, nx in ((cy-1, cx), (cy+1, cx), (cy, cx-1), (cy, cx+1)):
+                    if 0 <= ny < H and 0 <= nx < W and mask[ny, nx] and labels[ny, nx] < 0:
+                        labels[ny, nx] = rid
+                        stack.append((ny, nx))
+            rid += 1
+    return labels, rid
+
+
+def compute_region_debt(target_argmax, cand_argmax, cand_logits=None, classes: Optional[Iterable[int]] = None) -> List[RegionDebt]:
+    """Compute class/connected-region SegNet debt.
+
+    target_argmax, cand_argmax: HxW integer arrays.
+    cand_logits: optional CxHxW array. If present, margin = max_other - target_logit.
+    """
+    if np is None:
+        raise RuntimeError("numpy is required")
+    target = np.asarray(target_argmax)
+    cand = np.asarray(cand_argmax)
+    if target.shape != cand.shape:
+        raise ValueError(f"shape mismatch target={target.shape} cand={cand.shape}")
+    H, W = target.shape
+    total = H * W
+    if classes is None:
+        classes = np.unique(target).tolist()
+    out: List[RegionDebt] = []
+    for c in classes:
+        class_mask = (target == c)
+        labels, n = _components(class_mask)
+        for rid in range(n):
+            region_mask = labels == rid
+            target_pixels = int(region_mask.sum())
+            if target_pixels == 0:
+                continue
+            unsolved_mask = region_mask & (cand != c)
+            unsolved_pixels = int(unsolved_mask.sum())
+            unsolved_fraction = unsolved_pixels / target_pixels
+            raw_score_debt = 100.0 * (target_pixels / total) * unsolved_fraction
+            if cand_logits is not None and unsolved_pixels > 0:
+                logits = np.asarray(cand_logits)
+                target_logit = logits[c][unsolved_mask]
+                tmp = logits[:, unsolved_mask].copy()
+                tmp[c, :] = -1e30
+                max_other = tmp.max(axis=0)
+                margins = max_other - target_logit
+                margin_mean = float(margins.mean())
+                margin_p50 = float(np.percentile(margins, 50))
+                margin_p90 = float(np.percentile(margins, 90))
+            else:
+                margin_mean = margin_p50 = margin_p90 = 0.0
+            crossing_priority = raw_score_debt * max(0.0, 1.0 + margin_p50)
+            out.append(RegionDebt(
+                class_id=int(c), region_id=int(rid), target_pixels=target_pixels, total_pixels=total,
+                target_pixel_mass=target_pixels/total, unsolved_pixels=unsolved_pixels,
+                unsolved_fraction=unsolved_fraction, raw_score_debt=raw_score_debt,
+                margin_mean=margin_mean, margin_p50=margin_p50, margin_p90=margin_p90,
+                crossing_priority=crossing_priority,
+            ))
+    out.sort(key=lambda r: (r.raw_score_debt, r.crossing_priority), reverse=True)
+    return out

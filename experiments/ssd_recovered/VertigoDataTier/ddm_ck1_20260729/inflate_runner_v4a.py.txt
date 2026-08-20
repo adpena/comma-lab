@@ -1,0 +1,92 @@
+from __future__ import annotations
+
+import json
+import struct
+import sys
+from pathlib import Path, PurePosixPath
+
+import brotli
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).parent))
+from ddm_r7_token_coder import decode_token_codes
+from ddm_tr1_runtime import (
+    _encode_tokens,
+    build_packet,
+    parse_packet,
+    render_frame1_camera_uint8,
+)
+from pfs1_warp_receiver import (
+    ST_GRID,
+    _target_grid,
+    _to_uint8,
+    intrinsics_native,
+    pose_to_homography,
+    warp_rgb,
+)
+
+MAGIC = b"PFS1WPB1"
+CAMERA_H, CAMERA_W = 874, 1164
+
+
+def parse_pose_warp(payload: bytes):
+    if payload[:8] != MAGIC:
+        raise SystemExit("pose_warp magic differs")
+    off = 8
+    (n_pairs,) = struct.unpack_from("<I", payload, off); off += 4
+    (l1,) = struct.unpack_from("<I", payload, off); off += 4
+    tp_coded = payload[off:off + l1]; off += l1
+    (l2,) = struct.unpack_from("<I", payload, off); off += 4
+    st_coded = payload[off:off + l2]; off += l2
+    tp = np.frombuffer(brotli.decompress(tp_coded),
+                       dtype=np.float16).astype(np.float64).reshape(n_pairs, 6)
+    st_idx = np.asarray(decode_token_codes(st_coded), dtype=np.int64).reshape(-1)[:n_pairs]
+    return n_pairs, tp, st_idx
+
+
+def main() -> None:
+    archive_dir, output_dir, names_file = map(Path, sys.argv[1:4])
+    names = [row.strip() for row in
+             names_file.read_text().splitlines() if row.strip()]
+    if names != ["0.mkv"]:
+        raise SystemExit("this receiver serves exactly the custodied 0.mkv")
+    manifest = json.loads((archive_dir / "manifest.json").read_text())
+
+    codes = decode_token_codes((archive_dir / "state/tokens.dr7t").read_bytes())
+    token_payload = _encode_tokens(np.ascontiguousarray(codes, dtype=np.uint8))
+    packet_bytes = build_packet(manifest["tr1_metadata"], {
+        "tokens": token_payload,
+        "lotto_renderer": (archive_dir / "state/renderer.sec").read_bytes(),
+        "selector": (archive_dir / "state/selector.sec").read_bytes(),
+        "pose_stub": (archive_dir / "state/pose_stub.sec").read_bytes(),
+    })
+    packet = parse_packet(packet_bytes)
+
+    if manifest["frame0_policy"] != "warp_base_solved_sr1":
+        raise SystemExit("v4a receiver requires frame0_policy=warp_base_solved_sr1")
+    n_pairs, p_solved, st_idx = parse_pose_warp(
+        (archive_dir / "state/pose_warp.stp").read_bytes())
+    if int(packet.selector["num_pairs"]) != n_pairs:
+        raise SystemExit("pose_warp n_pairs differs from selector")
+    st_vals = np.asarray(ST_GRID, np.float64)
+    K = intrinsics_native()
+    Kinv = np.linalg.inv(K)
+    grid = _target_grid(CAMERA_H, CAMERA_W)
+
+    name = PurePosixPath(names[0])
+    if name.is_absolute() or ".." in name.parts:
+        raise SystemExit("unsafe video name")
+    target = output_dir / name.with_suffix(".raw")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with open(target, "wb") as sink:
+        for i in range(n_pairs):
+            f1 = render_frame1_camera_uint8(packet, i)
+            H = pose_to_homography(p_solved[i], K, Kinv,
+                                   float(st_vals[st_idx[i]]), 1.0, 0.0)
+            f0 = _to_uint8(warp_rgb(f1.astype(np.float64), H, grid))
+            sink.write(f0.tobytes())
+            sink.write(f1.tobytes())
+
+
+if __name__ == "__main__":
+    main()

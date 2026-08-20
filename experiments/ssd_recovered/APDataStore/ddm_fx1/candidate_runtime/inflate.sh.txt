@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$#" -ne 3 ]]; then
+  echo "usage: inflate.sh <archive-dir> <output-dir> <file-list>" >&2
+  exit 2
+fi
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DATA_DIR="$1"
+OUTPUT_DIR="$2"
+FILE_LIST="$3"
+BUILD_DIR="$(mktemp -d)"
+trap 'rm -rf "$BUILD_DIR"' EXIT
+
+if ! python - <<'PY' >/dev/null 2>&1
+import importlib.metadata
+import brotli
+raise SystemExit(importlib.metadata.version("Brotli") != "1.2.0")
+PY
+then
+  UVBIN="$(command -v uv || true)"
+  if [[ -z "$UVBIN" ]]; then
+    echo "CP135 requires Brotli==1.2.0, but uv is unavailable" >&2
+    exit 69
+  fi
+  "$UVBIN" pip install --python python --target "$BUILD_DIR/deps" \
+    --no-deps --only-binary :all: "Brotli==1.2.0"
+  export PYTHONPATH="$BUILD_DIR/deps${PYTHONPATH:+:$PYTHONPATH}"
+fi
+
+# --- fail-closed C toolchain guard (ddm_fx1) --------------------------------
+# The RC64 backend is compiled from source at decode time, which makes a working
+# C compiler a HARD runtime dependency of this receiver.  The inherited script
+# compiled it unconditionally: on a host without a toolchain the failure surfaced
+# as a raw compiler error from inside `set -e`, not as a named missing
+# dependency.  Brotli already fails closed by name here; the compiler gets the
+# same honesty.  Existence is not enough -- a stub or broken `cc` passes
+# `command -v` -- so the guard PROBES a real compile before trusting it.
+CC_BIN="${CC:-cc}"
+if ! command -v "$CC_BIN" >/dev/null 2>&1; then
+  echo "F26 decode requires a C compiler to build the RC64 backend." >&2
+  echo "  missing: ${CC_BIN} (set CC=<compiler> or install build tools)" >&2
+  exit 69
+fi
+printf 'int main(void){return 0;}\n' > "$BUILD_DIR/cc_probe.c"
+if ! "$CC_BIN" -O0 -std=c11 "$BUILD_DIR/cc_probe.c" -o "$BUILD_DIR/cc_probe" 2>"$BUILD_DIR/cc_probe.log"; then
+  echo "F26 decode requires a WORKING C compiler; ${CC_BIN} failed a trivial compile:" >&2
+  sed -n '1,20p' "$BUILD_DIR/cc_probe.log" >&2
+  exit 69
+fi
+
+"${CC:-cc}" -O3 -std=c11 -shared -fPIC \
+  "$HERE/runtime/entropy/rc64_backend.c" \
+  -o "$BUILD_DIR/rc64_backend.so"
+export CPR1_RC64_LIBRARY="$BUILD_DIR/rc64_backend.so"
+export F26_TOKEN_DECODER="${F26_TOKEN_DECODER:-python}"
+if [[ "$F26_TOKEN_DECODER" == "native-hpac" ]]; then
+  if [[ -n "${F26_HPAC_NATIVE_LIBRARY:-}" ]]; then
+    [[ -f "$F26_HPAC_NATIVE_LIBRARY" ]] || { echo "missing F26 native library" >&2; exit 69; }
+  else
+    case "$(uname -s)" in
+      Darwin)
+        LIBOMP_PREFIX="$(brew --prefix libomp)"
+        "${CC:-cc}" -O3 -mcpu=native -std=c11 -shared -fPIC -ffp-contract=off -fno-fast-math \
+          -Xpreprocessor -fopenmp -I"$LIBOMP_PREFIX/include" \
+          "$HERE/runtime/f26_hpac_native.c" -L"$LIBOMP_PREFIX/lib" -lomp \
+          -Wl,-rpath,"$LIBOMP_PREFIX/lib" -lm -o "$BUILD_DIR/f26_hpac_native.so" ;;
+      *)
+        "${CC:-cc}" -O3 -march=native -std=c11 -shared -fPIC -ffp-contract=off -fno-fast-math \
+          -fopenmp "$HERE/runtime/f26_hpac_native.c" -lm -o "$BUILD_DIR/f26_hpac_native.so" ;;
+    esac
+    export F26_HPAC_NATIVE_LIBRARY="$BUILD_DIR/f26_hpac_native.so"
+  fi
+fi
+
+mkdir -p "$OUTPUT_DIR"
+while IFS= read -r line; do
+  [[ -z "$line" ]] && continue
+  base="${line%.*}"
+  if [[ "$base" != "0" ]]; then
+    echo "unsupported public video: $line" >&2
+    exit 2
+  fi
+  python "$HERE/inflate.py" "$DATA_DIR" "$base" "$OUTPUT_DIR/$base.raw"
+done < "$FILE_LIST"

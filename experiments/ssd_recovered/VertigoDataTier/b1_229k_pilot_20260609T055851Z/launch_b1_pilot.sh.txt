@@ -1,0 +1,53 @@
+#!/bin/bash
+# B1 229K PR95-faithful reduced pilot launch driver (detached).
+# [macOS-MLX research-signal] — NOT a contest score. Score = B2 bridge exact eval.
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+RUN_ID="b1_229k_pilot_20260609T055851Z"
+SSD_RUN="/Volumes/VertigoDataTier/pact/b1_229k_pilot_20260609T055851Z"
+HEARTBEAT=".omx/tmp/heartbeat_b1_b1_229k_pilot_20260609T055851Z.log"
+# Background heartbeat writer (every 60s) so a watchdog can detect stalls.
+(
+  while true; do
+    printf '%s pid=%s run=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$" "${RUN_ID}" >> "${HEARTBEAT}"
+    sleep 60
+  done
+) &
+HB_PID=$!
+trap "kill ${HB_PID} 2>/dev/null" EXIT
+.venv/bin/python experiments/train_substrate_hi_nerv_mlx_local.py \
+  --full \
+  --allow-direct-research-full-launch \
+  --research-curriculum-total-epochs 3000 \
+  --pr95-faithful-curriculum \
+  --pr95-muon-policy faithful_stage8_only \
+  --pr95-stage-source-weight-amplification \
+  --decoder-channels 36,30,23,17,14,11,8 \
+  --latent-dim-coarse 16 --latent-dim-mid 20 --latent-dim-fine 24 --embed-dim 64 \
+  --num-pairs 600 --batch-pairs 16 \
+  --ema-decay 0.997 --ema-archive-selection \
+  --diagnostics-every-n-steps 50 \
+  --distillation-weight 1.0 \
+  --segnet-distillation-objective boundary_argmax_hinge \
+  --segnet-direct-live-distillation-weight 1.0 \
+  --segnet-direct-live-class-histogram-weight 1.0 \
+  --pose-distillation-weight 1.0 \
+  --pose-direct-live-distillation-weight 1.0 \
+  --eval-roundtrip-ste \
+  --coder-qat --coder-qat-c1a-entropy-weight 1.0e-4 \
+  --hard-byte-ceiling 300000 \
+  --scorer-space-step-guard \
+  --scorer-input-distribution-guard-weight 1.0 \
+  --scorer-input-contrast-floor-weight 1.0 \
+  --scorer-input-shape-tether-weight 1.0 \
+  --posenet-yuv6-geometry-tether-weight 1.0 \
+  --posenet-temporal-signal-floor-weight 1.0 \
+  --checkpoint-selection-metric-key total --checkpoint-selection-metric-required \
+  --post-export-receiver-cache-quality-gate \
+  --upstream-dir upstream \
+  --checkpoint-dir "${SSD_RUN}/checkpoints" \
+  --checkpoint-interval-epochs 250 \
+  --output-dir "${SSD_RUN}"
+RC=$?
+printf '%s TRAIN_EXIT rc=%s run=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${RC}" "${RUN_ID}" >> "${HEARTBEAT}"
+exit ${RC}

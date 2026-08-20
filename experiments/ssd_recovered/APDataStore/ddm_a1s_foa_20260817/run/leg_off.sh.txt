@@ -1,0 +1,9 @@
+#!/bin/bash
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+FOA=/Volumes/APDataStore/pact/ddm_sr1_manufactured_seg_recovery_20260816/foa
+RUN=/Volumes/APDataStore/pact/ddm_a1s_foa_20260817/run
+.venv/bin/python experiments/ddm_sr1_manufactured_seg_recovery.py --stage a1pose \
+  --work "$FOA" --frames 600 --threads 8 --delta-mask off > "$RUN/leg_off.log" 2>&1
+echo "rc=$?" >> "$RUN/leg_off.log"
+touch "$RUN/leg_off.done"

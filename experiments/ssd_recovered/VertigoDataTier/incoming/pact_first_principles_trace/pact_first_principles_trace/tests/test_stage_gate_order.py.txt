@@ -1,0 +1,25 @@
+"""
+Expected pre-patch failure in Pact after adaptation:
+  A long-run config that enables QAT/byte-hard controls before birth and margin gates should be rejected.
+"""
+
+def validate_stage_order(stages):
+    seen_birth = False
+    seen_margin = False
+    for s in stages:
+        if s.get('gate') == 'class_birth':
+            seen_birth = True
+        if s.get('gate') == 'worst_region_margin_crossing':
+            seen_margin = True
+        if s.get('use_qat') or s.get('hard_byte_cap'):
+            if not (seen_birth and seen_margin):
+                raise AssertionError('QAT/byte-hard stage before birth+margin gates')
+
+
+def test_qat_before_birth_margin_rejected():
+    stages = [{'name': 'qat_now', 'use_qat': True}]
+    try:
+        validate_stage_order(stages)
+    except AssertionError:
+        return
+    raise AssertionError('invalid stage order accepted')

@@ -1,0 +1,51 @@
+import sys, zipfile, hashlib, subprocess, json
+from pathlib import Path
+from collections import OrderedDict
+import numpy as np, torch
+RT="/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime"
+sys.path.insert(0, RT); sys.path.insert(0, RT+"/cpr1"); sys.path.insert(0,"/Users/adpena/Projects/pact/experiments")
+import runtime.residual_archive as ra
+import ddm_rx1_rate_representation_attack as rx1
+import ddm_sd1_semantic_rd_curve as sd1
+BASE=181161
+P=Path(RT)/"archive.zip"
+outer=zipfile.ZipFile(P).read("p")
+H=rx1.RX1_HEADER
+magic,ver,codec,tmode,res,hb,sb,cb=H.unpack_from(outer)
+o=H.size; hpac_s=outer[o:o+hb]; o+=hb; sem_s=outer[o:o+sb]; o+=sb; car_s=outer[o:o+cb]; o+=cb; tail=outer[o:]
+def brotli11(v):
+    return subprocess.run(["brotli","-q","11","-c"],input=v,capture_output=True,check=True).stdout
+def build(body):
+    s=brotli11(body)
+    return len(rx1.deterministic_zip(rx1.pack_rx1_model(hpac_s,s,car_s,codec_id=codec,table_mode=tmode)+tail))
+parts=ra.read_residual_archive(P)
+recs=ra.decode_wans1(parts.semantic_blob)
+state=OrderedDict((r.schema.name, torch.from_numpy(np.ascontiguousarray(r.values,dtype=np.float32))) for r in recs)
+qn=sd1.quantized_names(state)
+def mse_of(exp):
+    se=0.0;n=0
+    for k,v in state.items():
+        d=(exp[k].float()-v); se+=float((d**2).sum()); n+=d.numel()
+    return se/n
+# all-q4 reference
+base_alloc={n:4 for n in qn}
+body,exp=sd1.pack_semantic_state(state,base_alloc,legacy_int4=False)
+A0=build(body); M0=mse_of(exp)
+print(f"SD1M all-q4 reference: archive {A0} (delta {A0-BASE:+d})  mse {M0:.3e}\n")
+rows=[]
+for nm in qn:
+    cnt=int(np.prod(state[nm].shape))
+    rec={"name":nm,"params":cnt}
+    for bits in (3,2):
+        a=dict(base_alloc); a[nm]=bits
+        b,e=sd1.pack_semantic_state(state,a,legacy_int4=False)
+        rec[f"q{bits}_archive"]=build(b)
+        rec[f"q{bits}_dbytes"]=build(b)-A0
+        rec[f"q{bits}_mse"]=mse_of(e)-M0
+    rows.append(rec)
+rows.sort(key=lambda r:r["q3_dbytes"])
+print(f"{'tensor':26s} {'params':>6} | {'q3 dB':>7} {'q3 dMSE':>11} {'MSE/B':>11} | {'q2 dB':>7} {'q2 dMSE':>11}")
+for r in rows:
+    eff3=r["q3_mse"]/max(1,-r["q3_dbytes"])
+    print(f"{r['name']:26s} {r['params']:>6} | {r['q3_dbytes']:>+7} {r['q3_mse']:>11.3e} {eff3:>11.3e} | {r['q2_dbytes']:>+7} {r['q2_mse']:>11.3e}")
+Path("/private/tmp/claude-501/-Users-adpena-Projects-pact/89ff112f-013d-43b5-b949-2a6d43b650c3/scratchpad/sa1/waterfall.json").write_text(json.dumps({"all_q4_archive":A0,"all_q4_mse":M0,"rows":rows},indent=2))

@@ -1,0 +1,30 @@
+import json,sys,zipfile
+from pathlib import Path
+PFS1="/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/pfs1"
+sys.path.insert(0,PFS1)
+import numpy as np, ddm_tr1_runtime as rt, ddm_r7_token_coder as r7
+def packet_sections(pk):
+    hdr=rt.PACKET_HEADER; ml=int(hdr.unpack_from(pk,0)[-1]); me=hdr.size+ml; out={}
+    for i,n in enumerate(rt.SECTION_NAMES):
+        _,off,ln,_=rt.SECTION_ENTRY.unpack_from(pk, me+i*rt.SECTION_ENTRY.size)
+        out[n]=pk[off:off+ln]
+    return out
+EP=Path("/Volumes/VertigoDataTier/pact/ddm_ep2_20260731/archives/w03_ep854_representative/archive.zip")
+GR=Path("/Volumes/VertigoDataTier/pact/ddm_gr1_20260730/gr1_cell_drop50_archive.zip")
+with zipfile.ZipFile(EP) as z: ep=packet_sections(z.read('state/tr1.ddt1'))
+sel=json.loads(ep['selector'])
+codes=rt._decode_tokens(ep['tokens'],sel)
+dr7t=r7.encode_token_codes(codes)
+back=r7.decode_token_codes(dr7t)
+print('EP854 r7 ROUND-TRIP array_equal:', bool(np.array_equal(codes,back)), 'bytes',len(dr7t))
+# receiver-path equivalence: v4c/v4d rebuild the packet from dr7t via rt._encode_tokens
+rebuilt = rt._encode_tokens(np.ascontiguousarray(back,dtype=np.uint8))
+codes2 = rt._decode_tokens(rebuilt, sel)
+print('packet re-encode -> decode array_equal:', bool(np.array_equal(codes,codes2)),
+      ' rebuilt_tokens_bytes',len(rebuilt),' shipped',len(ep['tokens']))
+# gr1 comparison of the SAME quantity
+with zipfile.ZipFile(GR) as z: gr_codes=r7.decode_token_codes(z.read('state/tokens.dr7t'))
+print('GR1  codes nonzero frac %.4f  entropy-proxy uniq %d' % ((gr_codes!=0).mean(), len(np.unique(gr_codes))))
+print('EP854 codes nonzero frac %.4f  entropy-proxy uniq %d' % ((codes!=0).mean(), len(np.unique(codes))))
+h=lambda a:(lambda p:-(p[p>0]*np.log2(p[p>0])).sum())(np.bincount(a.ravel(),minlength=16)/a.size)
+print('GR1 H0=%.4f bits/code  EP854 H0=%.4f bits/code' % (h(gr_codes),h(codes)))

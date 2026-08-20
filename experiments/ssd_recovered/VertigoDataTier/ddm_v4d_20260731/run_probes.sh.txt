@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+export PATH="/Users/adpena/Projects/pact/.venv/bin:$PATH"
+export PYTHONPATH="$PWD/src:$PWD/upstream:$PWD/experiments"
+echo "[probes] QA72a start $(date -u +%H:%M:%S)"
+python experiments/ddm_v4d_resolve.py --mode qa72a --k 80 --max-seconds 2400
+echo "[probes] QA70 start $(date -u +%H:%M:%S)"
+python experiments/ddm_v4d_resolve.py --mode qa70 --k 120 --max-seconds 2400
+echo "[probes] ALL DONE $(date -u +%H:%M:%S)"

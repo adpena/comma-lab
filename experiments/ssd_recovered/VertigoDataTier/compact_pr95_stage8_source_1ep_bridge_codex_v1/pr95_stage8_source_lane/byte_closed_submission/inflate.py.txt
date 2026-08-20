@@ -1,0 +1,106 @@
+#!/usr/bin/env python
+"""PR95 MLX-trained byte-closed contest archive inflate.py.
+
+Reads archive bytes (single member layout: meta_blob | decoder_blob |
+latents_blob per the canonical PR 95 `build_archive` grammar), runs the
+HNeRVDecoder forward, bicubic-upsamples to camera resolution, rounds to uint8,
+and writes the contiguous (N, H, W, 3) RGB frame stream to <dst>.
+
+Per Catalog #205 self-protection: honors `PACT_INFLATE_DEVICE`
+(auto/cpu/cuda); refuses `mps`. Mirrors canonical
+`tac.substrates._shared.inflate_runtime.select_inflate_device` body byte-for-
+byte (modulo the `torch.device` return type wrap).
+
+Per Catalog #295 + HNeRV parity discipline lesson 9: the runtime tree is
+fully self-contained; `src/model.py` + `src/codec.py` are vendored alongside
+this file and imported through a PYTHONPATH-shim that points at the submission-
+local `src/` directory.
+"""
+import os
+import sys
+from pathlib import Path
+
+import torch
+import torch.nn.functional as F
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE / "src"))
+
+from codec import parse_archive  # type: ignore  # noqa: E402
+from model import HNeRVDecoder  # type: ignore  # noqa: E402
+
+CAMERA_H, CAMERA_W = 874, 1164
+
+
+def select_inflate_device() -> torch.device:
+    """Honor PACT_INFLATE_DEVICE (auto/cpu/cuda); MPS is forbidden.
+
+    Per Catalog #205 self-protection. Mirrors canonical
+    `tac.substrates._shared.inflate_runtime.select_inflate_device` body
+    byte-for-byte (modulo the `torch.device` return-type wrap).
+    """
+    value = (os.environ.get("PACT_INFLATE_DEVICE") or "auto").strip().lower()
+    if value == "auto":
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if value == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError(
+                "PACT_INFLATE_DEVICE=cuda but torch.cuda is not available"
+            )
+        return torch.device("cuda")
+    if value == "cpu":
+        return torch.device("cpu")
+    raise RuntimeError(
+        f"unsupported PACT_INFLATE_DEVICE={value!r}; expected auto/cpu/cuda"
+    )
+
+
+def inflate(src_bin: str, dst_raw: str) -> int:
+    with open(src_bin, "rb") as fin:
+        archive_bytes = fin.read()
+    decoder_sd, latents, meta = parse_archive(archive_bytes)
+
+    device = select_inflate_device()
+    decoder = HNeRVDecoder(
+        latent_dim=int(meta["latent_dim"]),
+        base_channels=int(meta["base_channels"]),
+        eval_size=tuple(meta["eval_size"]),
+    ).to(device)
+    decoder.load_state_dict(decoder_sd)
+    decoder.eval()
+
+    latents = latents.to(device)
+    n_pairs = int(meta["n_pairs"])
+    eval_h, eval_w = tuple(meta["eval_size"])
+
+    n = 0
+    with torch.inference_mode(), open(dst_raw, "wb") as fout:
+        for i in range(0, n_pairs, 16):
+            j = min(i + 16, n_pairs)
+            batch = j - i
+            decoded = decoder(latents[i:j])
+            flat = decoded.reshape(batch * 2, 3, eval_h, eval_w)
+            up = F.interpolate(
+                flat,
+                size=(CAMERA_H, CAMERA_W),
+                mode="bicubic",
+                align_corners=False,
+            )
+            frames = (
+                up.clamp(0, 255)
+                .permute(0, 2, 3, 1)
+                .round()
+                .to(torch.uint8)
+                .cpu()
+                .numpy()
+            )
+            fout.write(frames.tobytes())
+            n += batch * 2
+    print(f"saved {n} frames")
+    return n
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        sys.exit("Usage: python inflate.py <src.bin> <dst.raw>")
+    inflate(sys.argv[1], sys.argv[2])

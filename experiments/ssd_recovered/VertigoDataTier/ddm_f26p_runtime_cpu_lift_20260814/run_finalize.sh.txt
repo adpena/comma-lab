@@ -1,0 +1,11 @@
+#!/bin/bash
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+D=/Volumes/VertigoDataTier/pact/ddm_f26p_runtime_cpu_lift_20260814/t4_raw_download
+echo "[$(date -u +%H:%M:%SZ)] downloading T4 raw from Modal volume..."
+.venv/bin/modal volume get comma-ddm-js1b-argmax-retained /ddm_mc36_dual_axis_t4_r1/retained/raw/candidate/0.raw "$D/t4_0.raw" --force
+rc=$?
+echo "[$(date -u +%H:%M:%SZ)] download rc=$rc"
+[ $rc -ne 0 ] && exit $rc
+echo "[$(date -u +%H:%M:%SZ)] running finalize (sha-gate + per-frame comparison)..."
+PYTHONPATH=src:upstream:$PWD .venv/bin/python experiments/ddm_f26p_f26_cpu_lift.py finalize --t4-raw "$D/t4_0.raw"

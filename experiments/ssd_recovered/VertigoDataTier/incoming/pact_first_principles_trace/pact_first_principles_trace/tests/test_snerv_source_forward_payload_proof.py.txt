@@ -1,0 +1,30 @@
+"""
+Expected pre-patch failure in Pact:
+  Metadata-only proof objects should be rejected. A real proof must include hashes or numeric deltas for official, MLX, NumPy/receiver, and parse-back paths.
+"""
+
+REQUIRED = {
+    'official_torch_frame_hash',
+    'mlx_frame_hash',
+    'numpy_receiver_frame_hash',
+    'parseback_frame_hash',
+    'max_abs_frame_delta_official_mlx',
+    'max_abs_yuv6_delta_official_numpy',
+    'seg_logit_linf_official_parseback',
+    'pose_linf_official_parseback',
+}
+
+
+def validate_proof(proof):
+    missing = sorted(REQUIRED - set(proof))
+    if missing:
+        raise AssertionError(f'metadata-only or incomplete proof; missing {missing}')
+
+
+def test_metadata_only_proof_rejected():
+    proof = {'section_names': ['MFU', 'HFR', 'TUB'], 'shapes_match': True}
+    try:
+        validate_proof(proof)
+    except AssertionError:
+        return
+    raise AssertionError('metadata-only proof was accepted')

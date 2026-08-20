@@ -1,0 +1,9 @@
+#!/bin/bash
+set -uo pipefail
+cd /Users/adpena/Projects/pact
+RT=/Volumes/APDataStore/pact/ddm_br1/candidate_runtime_r1
+ST=/Volumes/APDataStore/pact/ddm_jg3/harvest_r1
+.venv/bin/python experiments/ddm_jg2_tail_reencode.py --stage control --store "$ST" --runtime-root "$RT" --pointer-archive "$RT/archive.zip" --tag harvest_ctl --resume || { echo CONTROL_FAILED; exit 3; }
+echo CONTROL_OK
+.venv/bin/python experiments/ddm_jg2_tail_reencode.py --stage encode --store "$ST" --runtime-root "$RT" --pointer-archive "$RT/archive.zip" --edits /Volumes/APDataStore/pact/ddm_jg3/retained/seg_edits_n600_merged.npz --tag harvest_merged --resume || { echo ENCODE_FAILED; exit 4; }
+echo ENCODE_OK

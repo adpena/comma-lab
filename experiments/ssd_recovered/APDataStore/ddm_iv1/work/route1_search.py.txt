@@ -1,0 +1,174 @@
+"""Route 1: a LENGTH-CONSTRAINED actuator solve for the native WANS1 container.
+
+The shipping receiver parses the untagged WANS1 semantic body at a FIXED offset,
+so the body must be exactly 36,040 B -- i.e. the frame_embed W4 stream must be
+exactly its base 1,915 B.  The unconstrained solve overshoots by +3 B, and a
+naive revert-cheapest trim walks 43 of 44 rows back to base.
+
+This does the real thing instead: every pair carries a list of ALREADY-VERIFIED
+candidates (each with a realized d_pose measured through the true decode), so
+the shippable assignment is a constrained choice over them.  Because rANS makes
+the stream length non-separable, the search measures the true length of every
+proposal and verifies the final assignment exactly.
+
+Nothing is modelled: costs are realized measurements and lengths are real
+encodes.
+"""
+
+import json
+import sys
+import time
+
+import numpy as np
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, "/Users/adpena/Projects/pact/experiments")
+from ddm_iv1_pose_actuator import (  # noqa: E402
+    BASE_ARCHIVE_BYTES,
+    RATE_S_PER_BYTE,
+    SemanticBlock,
+    frame_embed_stream_bytes,
+    rebuild_archive,
+    sha256_bytes,
+    wans_body_bytes_fast,
+)
+
+OUT = "/Volumes/APDataStore/pact/ddm_iv1"
+block = SemanticBlock.load()
+base_codes = block.frame_codes.astype(np.int32)
+TARGET = frame_embed_stream_bytes(base_codes)
+print(f"target frame_embed stream bytes = {TARGET}", flush=True)
+
+solve = json.loads(open(f"{OUT}/receipts/actuator_solve.json").read())
+rows = [r for r in solve["rows"] if r.get("candidates")]
+if not rows:
+    print("FATAL: solve receipt carries no per-pair candidates", flush=True)
+    raise SystemExit(3)
+print(f"pairs with candidate lists: {len(rows)}", flush=True)
+
+
+def assemble(choice):
+    codes = base_codes.copy()
+    for pair, k in choice.items():
+        codes[pair] = base_codes[pair] + np.asarray(k, dtype=np.int32)
+    return codes
+
+
+# de-duplicate candidates per pair and keep only non-worsening ones
+options = {}
+for row in rows:
+    pair = int(row["pair"])
+    base_error = float(row["base_d_pose"])
+    seen, keep = set(), []
+    for cand in row["candidates"]:
+        key = tuple(int(v) for v in cand["k"])
+        if key in seen:
+            continue
+        seen.add(key)
+        codes = base_codes[pair] + np.asarray(key, dtype=np.int32)
+        if codes.min() < -7 or codes.max() > 7:
+            continue  # -8 is a reserved WANS1 symbol
+        if float(cand["realized_d_pose"]) <= base_error:
+            keep.append((key, float(cand["realized_d_pose"])))
+    keep.sort(key=lambda t: t[1])
+    options[pair] = keep
+
+best = {p: options[p][0][0] for p in options if options[p]}
+codes = assemble(best)
+length = frame_embed_stream_bytes(codes)
+cost0 = sum(options[p][0][1] for p in options if options[p])
+print(f"unconstrained best: stream {length} B (target {TARGET}, delta {length - TARGET:+d})", flush=True)
+
+if length != TARGET:
+    # measure dL and dcost for every single-pair swap to an alternate
+    started = time.time()
+    swaps = []
+    for pair in sorted(options):
+        if len(options[pair]) < 2:
+            continue
+        current_k, current_cost = options[pair][0]
+        for alt_k, alt_cost in options[pair][1:]:
+            trial = dict(best)
+            trial[pair] = alt_k
+            dl = frame_embed_stream_bytes(assemble(trial)) - length
+            swaps.append(
+                {
+                    "pair": pair,
+                    "k": alt_k,
+                    "dL": int(dl),
+                    "dcost": alt_cost - current_cost,
+                }
+            )
+    print(
+        f"measured {len(swaps)} single-pair swaps in {time.time() - started:.0f}s; "
+        f"dL range {min(s['dL'] for s in swaps)}..{max(s['dL'] for s in swaps)}",
+        flush=True,
+    )
+
+    need = TARGET - length
+    # greedy: repeatedly take the cheapest swap that moves length toward target
+    chosen, used = [], set()
+    while need != 0:
+        pool = [
+            s
+            for s in swaps
+            if s["pair"] not in used
+            and s["dL"] != 0
+            and (s["dL"] > 0) == (need > 0)
+            and abs(s["dL"]) <= abs(need)
+        ]
+        if not pool:
+            break
+        pick = min(pool, key=lambda s: s["dcost"] / max(abs(s["dL"]), 1))
+        chosen.append(pick)
+        used.add(pick["pair"])
+        best[pick["pair"]] = pick["k"]
+        need -= pick["dL"]
+    codes = assemble(best)
+    length = frame_embed_stream_bytes(codes)
+    print(
+        f"after {len(chosen)} swaps: stream {length} B "
+        f"(residual need {TARGET - length:+d})",
+        flush=True,
+    )
+
+body = wans_body_bytes_fast(block, codes)
+ok = length == TARGET
+receipt = {
+    "schema": "ddm_iv1_route1_length_constrained.v1",
+    "axis": "[macOS-CPU advisory] score_claim=false promotable=false",
+    "target_stream_bytes": TARGET,
+    "achieved_stream_bytes": int(length),
+    "wans_body_bytes": int(body),
+    "constraint_met": bool(ok),
+    "rows_changed": int((codes != base_codes).any(axis=1).sum()),
+}
+if ok:
+    archive, archive_bytes = rebuild_archive(block, codes)
+    path = f"{OUT}/retained/candidate_wans1_archive.zip"
+    open(path, "wb").write(archive)
+    np.save(f"{OUT}/retained/route1_frame_codes.npy", codes)
+    realized = {}
+    for row in rows:
+        pair = int(row["pair"])
+        k = tuple(int(v) for v in best.get(pair, (0,) * 8))
+        match = [c for c in row["candidates"] if tuple(int(v) for v in c["k"]) == k]
+        realized[pair] = (
+            float(match[0]["realized_d_pose"]) if match else float(row["base_d_pose"])
+        )
+    base_mean = float(np.mean([r["base_d_pose"] for r in rows]))
+    real_mean = float(np.mean([realized[int(r["pair"])] for r in rows]))
+    receipt.update(
+        {
+            "archive_bytes": archive_bytes,
+            "archive_delta_bytes": archive_bytes - BASE_ARCHIVE_BYTES,
+            "archive_delta_S_rate": (archive_bytes - BASE_ARCHIVE_BYTES)
+            * RATE_S_PER_BYTE,
+            "archive_sha256": sha256_bytes(archive),
+            "solve_subset_mean_base_d_pose": base_mean,
+            "solve_subset_mean_realized_d_pose": real_mean,
+            "solve_subset_relative_change": real_mean / base_mean - 1.0,
+        }
+    )
+open(f"{OUT}/receipts/route1.json", "w").write(json.dumps(receipt, indent=2))
+print(json.dumps(receipt, indent=2), flush=True)

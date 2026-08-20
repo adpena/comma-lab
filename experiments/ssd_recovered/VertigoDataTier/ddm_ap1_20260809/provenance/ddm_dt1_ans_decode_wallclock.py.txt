@@ -1,0 +1,1063 @@
+#!/usr/bin/env python3
+"""Measure PR130 Range-versus-ANS decode wall clock on the real receiver.
+
+This is a scorer-free ``[macOS-CPU advisory]`` instrument.  It never emits a
+score claim.  The benchmark has three explicit stages:
+
+``probe``
+    Decode Range, reverse-encode ANS from the exact recorded target tokens,
+    and decode ANS at the requested prefix sizes.  No probability-table or
+    n600 ANS payload is retained by this stage.
+``range-e2e``
+    Measure the current Range decode and the exact PR130 render operations on
+    CPU.  The literal shipping ``inflate.sh`` remains CUDA-required; this mode
+    calls the same owned receiver functions with an explicit CPU device.
+``retain``
+    Materialize exact int16 logit-code chunks atomically on SSD, resume at
+    chunk boundaries, re-encode both coders, require byte-identical Range
+    reproduction, retain the ANS words, and measure both decoders at n600.
+
+The retained stage is intentionally separate so the prefix timing gate can be
+adjudicated before paying the n600 materialization cost.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import importlib
+import importlib.metadata
+import itertools
+import json
+import math
+import os
+import platform
+import shutil
+import subprocess
+import sys
+import time
+import zipfile
+from collections.abc import Iterable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import torch
+
+AXIS = "[macOS-CPU advisory, scorer-free]"
+SCORE_CLAIM = False
+FRAME_COUNT = 600
+EVAL_H = 384
+EVAL_W = 512
+NUM_CLASSES = 5
+EXPECTED_ARCHIVE_BYTES = 191_052
+EXPECTED_ARCHIVE_SHA256 = "0491d5df84fc70b62b3f7ccf8894f5e1b81c616de46a052e4423fc1e18fdc7cd"
+EXPECTED_RANGE_BYTES = 116_980
+EXPECTED_ANS_BYTES = 114_860
+EXPECTED_N2_ANS_BYTES = 588
+EXPECTED_RECEIVER_COMMIT = "5de03569ad"
+DEFAULT_RUNTIME = Path("src/tac/pr130_runtime/fx1_runtime_tree")
+DEFAULT_ARCHIVE = Path("/Volumes/VertigoDataTier/pact/ddm_pr130_reproduce_20260809/reproduction/archive.zip")
+DEFAULT_CACHE = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_pr130_encode_tokens_metal_20260809/caches/gt_cache_600_official_ada.pt"
+)
+DEFAULT_MANIFEST = Path("/Volumes/VertigoDataTier/pact/ddm_pr130_encode_tokens_metal_20260809/run/launch_manifest.json")
+DEFAULT_RECORDED_RANGE = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_pr130_encode_tokens_metal_20260809/artifacts/tokens.bin"
+)
+DEFAULT_OUTPUT = Path("/Volumes/VertigoDataTier/pact/ddm_dt1_20260809")
+
+
+def sha256_file(path: Path, chunk_bytes: int = 8 << 20) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(chunk_bytes):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def atomic_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    with temporary.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, sort_keys=True)
+        handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
+def atomic_bytes(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    with temporary.open("wb") as handle:
+        handle.write(payload)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
+def git_output(*args: str) -> str:
+    return subprocess.check_output(["git", *args], text=True, stderr=subprocess.STDOUT).strip()
+
+
+def git_is_ancestor(ancestor: str, descendant: str) -> bool:
+    return (
+        subprocess.run(
+            ["git", "merge-base", "--is-ancestor", ancestor, descendant],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ).returncode
+        == 0
+    )
+
+
+def host_facts(torch_threads: int) -> dict[str, Any]:
+    return {
+        "axis": AXIS,
+        "score_claim": SCORE_CLAIM,
+        "hostname": platform.node(),
+        "platform": platform.platform(),
+        "machine": platform.machine(),
+        "python": platform.python_version(),
+        "torch": torch.__version__,
+        "constriction": importlib.metadata.version("constriction"),
+        "numpy": np.__version__,
+        "torch_threads": torch_threads,
+        "torch_interop_threads": torch.get_num_interop_threads(),
+    }
+
+
+def storage_preflight(output: Path, required_free_bytes: int) -> dict[str, int]:
+    output.mkdir(parents=True, exist_ok=True)
+    usage = shutil.disk_usage(output)
+    if usage.free < required_free_bytes:
+        raise RuntimeError(
+            f"storage preflight requires {required_free_bytes} free bytes, found {usage.free} at {output}"
+        )
+    return {
+        "total_bytes": usage.total,
+        "used_bytes": usage.used,
+        "free_bytes": usage.free,
+        "required_free_bytes": required_free_bytes,
+    }
+
+
+def fit_scaling(points: Iterable[tuple[int, float]]) -> dict[str, Any]:
+    """Fit predeclared linear and power laws and report every residual.
+
+    The linear form is selected unless the power-law RMSE is at least 10%
+    lower.  This rule is fixed before inspecting the benchmark results.
+    """
+
+    rows = sorted((int(n), float(seconds)) for n, seconds in points)
+    if len(rows) < 3:
+        raise ValueError("scaling fit requires at least three points")
+    x = np.asarray([row[0] for row in rows], dtype=np.float64)
+    y = np.asarray([row[1] for row in rows], dtype=np.float64)
+    linear_coeff = np.polyfit(x, y, deg=1)
+    linear_pred = np.polyval(linear_coeff, x)
+    linear_residual = y - linear_pred
+    linear_rmse = float(np.sqrt(np.mean(linear_residual**2)))
+    power: dict[str, Any] | None = None
+    selected = "linear"
+    if np.all(y > 0):
+        power_coeff = np.polyfit(np.log(x), np.log(y), deg=1)
+        power_exponent = float(power_coeff[0])
+        power_scale = float(np.exp(power_coeff[1]))
+        power_pred = power_scale * x**power_exponent
+        power_residual = y - power_pred
+        power_rmse = float(np.sqrt(np.mean(power_residual**2)))
+        selected = "power" if power_rmse <= 0.9 * linear_rmse else "linear"
+        power = {
+            "form": "seconds = scale * frames ** exponent",
+            "scale": power_scale,
+            "exponent": power_exponent,
+            "rmse_s": power_rmse,
+            "residuals_s": {str(int(n)): float(value) for n, value in zip(x, power_residual, strict=True)},
+        }
+    prediction_600 = (
+        float(power["scale"] * 600 ** power["exponent"])
+        if selected == "power" and power is not None
+        else float(np.polyval(linear_coeff, 600))
+    )
+    return {
+        "selection_rule": "power only if power_rmse <= 0.9 * linear_rmse",
+        "selected_form": selected,
+        "selected_prediction_n600_s": float(prediction_600),
+        "linear": {
+            "form": "seconds = intercept + slope * frames",
+            "intercept_s": float(linear_coeff[1]),
+            "slope_s_per_frame": float(linear_coeff[0]),
+            "rmse_s": linear_rmse,
+            "residuals_s": {str(int(n)): float(value) for n, value in zip(x, linear_residual, strict=True)},
+        },
+        "power": power,
+    }
+
+
+def retention_boundaries(frame_count: int = FRAME_COUNT) -> list[int]:
+    boundaries = {0, 2, 8, 32, 120, frame_count}
+    boundaries.update(range(24, frame_count, 24))
+    return sorted(value for value in boundaries if 0 <= value <= frame_count)
+
+
+@dataclass
+class RuntimeBundle:
+    inflate: Any
+    receiver: Any
+    archive_payload: bytes
+    parts: Any
+    models_raw: bytes
+    hpac: Any
+    raw_tokens: torch.Tensor
+    semantic: Any | None
+    basis: Any | None
+    coeff: Any | None
+    provenance: dict[str, Any]
+
+
+def configure_runtime(runtime: Path, torch_threads: int) -> tuple[Any, Any]:
+    if importlib.metadata.version("constriction") != "0.5.0":
+        raise RuntimeError("ddm_dt1 requires pinned constriction==0.5.0")
+    torch.set_num_threads(torch_threads)
+    try:
+        torch.set_num_interop_threads(1)
+    except RuntimeError:
+        if torch.get_num_interop_threads() != 1:
+            raise
+    resolved = runtime.resolve()
+    if str(resolved) not in sys.path:
+        sys.path.insert(0, str(resolved))
+    inflate = importlib.import_module("inflate")
+    receiver = importlib.import_module("receiver")
+    return inflate, receiver
+
+
+def load_bundle(args: argparse.Namespace, *, need_render: bool = False) -> RuntimeBundle:
+    archive = args.archive.resolve()
+    runtime = args.runtime.resolve()
+    cache = args.cache.resolve()
+    manifest = args.encode_manifest.resolve()
+    recorded_range = args.recorded_range.resolve()
+    if archive.stat().st_size != EXPECTED_ARCHIVE_BYTES:
+        raise RuntimeError("PR130 archive size pin failed")
+    archive_sha = sha256_file(archive)
+    if archive_sha != EXPECTED_ARCHIVE_SHA256:
+        raise RuntimeError("PR130 archive SHA-256 pin failed")
+    if not git_is_ancestor(EXPECTED_RECEIVER_COMMIT, "HEAD"):
+        raise RuntimeError("receiver commit pin is not an ancestor of HEAD")
+    inflate, receiver = configure_runtime(runtime, args.torch_threads)
+    with zipfile.ZipFile(archive) as archive_zip:
+        if archive_zip.namelist() != ["p"]:
+            raise RuntimeError("PR130 archive member grammar changed")
+        payload = archive_zip.read("p")
+    parts = receiver.split_payload(payload)
+    if parts.token_codec != "range" or len(parts.tokens) != EXPECTED_RANGE_BYTES:
+        raise RuntimeError("shipped PR130 Range token field pin failed")
+    recorded = recorded_range.read_bytes()
+    if recorded != parts.tokens:
+        raise RuntimeError("recorded n600 Range encode is not byte-identical to archive")
+    decoded_models = receiver.decode_models(parts.models, model_codec=parts.model_codec)
+    models_raw = decoded_models.raw
+    semantic_bytes = int.from_bytes(models_raw[:4], byteorder="little")
+    carrier_bytes = int.from_bytes(models_raw[4:8], byteorder="little")
+    semantic_pose_end = 8 + semantic_bytes + carrier_bytes
+    if semantic_pose_end > len(models_raw):
+        raise RuntimeError("decoded model sections are truncated")
+    hpac = inflate.load_hpac(models_raw[semantic_pose_end:], torch.device("cpu"))
+    cache_payload = torch.load(cache, map_location="cpu", weights_only=False)
+    raw_tokens = cache_payload["seg"][:FRAME_COUNT].to(torch.uint8).contiguous()
+    if tuple(raw_tokens.shape) != (FRAME_COUNT, EVAL_H, EVAL_W):
+        raise RuntimeError(f"unexpected target-token geometry: {tuple(raw_tokens.shape)}")
+    semantic = basis = coeff = None
+    if need_render:
+        semantic, basis, coeff = inflate.unpack_semantic_pose(models_raw[:semantic_pose_end])
+    manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
+    provenance = {
+        "repo_head": git_output("rev-parse", "HEAD"),
+        "receiver_commit_pin": EXPECTED_RECEIVER_COMMIT,
+        "receiver_sha256": sha256_file(runtime / "receiver.py"),
+        "inflate_sha256": sha256_file(runtime / "inflate.py"),
+        "archive": str(archive),
+        "archive_bytes": archive.stat().st_size,
+        "archive_sha256": archive_sha,
+        "cache": str(cache),
+        "cache_bytes": cache.stat().st_size,
+        "cache_sha256": sha256_file(cache),
+        "recorded_range": str(recorded_range),
+        "recorded_range_bytes": len(recorded),
+        "recorded_range_sha256": sha256_bytes(recorded),
+        "recorded_range_equals_archive": True,
+        "encode_manifest": str(manifest),
+        "encode_manifest_sha256": sha256_file(manifest),
+        "encode_argv": manifest_payload["argv"],
+        "models_raw_sha256": sha256_bytes(models_raw),
+        "host": host_facts(args.torch_threads),
+    }
+    return RuntimeBundle(
+        inflate=inflate,
+        receiver=receiver,
+        archive_payload=payload,
+        parts=parts,
+        models_raw=models_raw,
+        hpac=hpac,
+        raw_tokens=raw_tokens,
+        semantic=semantic,
+        basis=basis,
+        coeff=coeff,
+        provenance=provenance,
+    )
+
+
+def _empty_components() -> dict[str, float]:
+    return {
+        "prepare_frame_context_s": 0.0,
+        "selected_logits_s": 0.0,
+        "probability_table_s": 0.0,
+        "coder_s": 0.0,
+        "state_update_s": 0.0,
+    }
+
+
+@torch.no_grad()
+def decode_profile(
+    bundle: RuntimeBundle,
+    blob: bytes,
+    token_codec: str,
+    frame_count: int,
+    *,
+    progress_path: Path | None = None,
+) -> tuple[torch.Tensor, dict[str, Any]]:
+    inflate = bundle.inflate
+    receiver = bundle.receiver
+    device = torch.device("cpu")
+    decoder = receiver.new_token_decoder(blob, token_codec)
+    family = importlib.import_module("constriction").stream.model.Categorical(perfect=inflate.HPAC_CODER_PERFECT)
+    masks = inflate.group_masks(device)
+    sparse = inflate.SparseIntegerHPAC(bundle.hpac, EVAL_H, EVAL_W)
+    output = torch.empty((frame_count, EVAL_H, EVAL_W), dtype=torch.uint8)
+    previous_raw = torch.zeros((1, EVAL_H, EVAL_W), dtype=torch.long)
+    components = _empty_components()
+    started = time.perf_counter()
+    for frame in range(frame_count):
+        idx = torch.tensor([frame], dtype=torch.long)
+        current = torch.zeros_like(previous_raw)
+        mark = time.perf_counter()
+        context = bundle.hpac.prepare_frame_context(idx, previous_raw)
+        components["prepare_frame_context_s"] += time.perf_counter() - mark
+        for group, mask in enumerate(masks):
+            mark = time.perf_counter()
+            selected = sparse.selected_logits(current, context, group)
+            components["selected_logits_s"] += time.perf_counter() - mark
+            mark = time.perf_counter()
+            table = inflate.probability_table(selected)
+            components["probability_table_s"] += time.perf_counter() - mark
+            mark = time.perf_counter()
+            symbols = decoder.decode(family, table)
+            components["coder_s"] += time.perf_counter() - mark
+            mark = time.perf_counter()
+            current[0, mask] = torch.from_numpy(symbols.astype(np.int64))
+            components["state_update_s"] += time.perf_counter() - mark
+        previous_raw = current.clone()
+        output[frame].copy_(previous_raw[0].to(torch.uint8))
+        if progress_path is not None and (frame == 0 or (frame + 1) % 24 == 0 or frame + 1 == frame_count):
+            atomic_json(
+                progress_path,
+                {
+                    "schema": "ddm_dt1_decode_progress.v1",
+                    "axis": AXIS,
+                    "score_claim": SCORE_CLAIM,
+                    "token_codec": token_codec,
+                    "completed_frames": frame + 1,
+                    "requested_frames": frame_count,
+                    "elapsed_s": time.perf_counter() - started,
+                    "components_s": components,
+                },
+            )
+    receiver.finish_token_decode(decoder, token_codec)
+    total = time.perf_counter() - started
+    exact = torch.equal(output, bundle.raw_tokens[:frame_count])
+    if not exact:
+        raise RuntimeError(f"{token_codec} decode differs from recorded target tokens")
+    accounted = sum(components.values())
+    result = {
+        "axis": AXIS,
+        "score_claim": SCORE_CLAIM,
+        "token_codec": token_codec,
+        "frames": frame_count,
+        "tokens": int(output.numel()),
+        "all_tokens_reconstructed": True,
+        "exact_target_equality": exact,
+        "decoded_sha256": sha256_bytes(output.numpy().tobytes(order="C")),
+        "wall_s": total,
+        "components_s": components,
+        "accounted_s": accounted,
+        "unattributed_s": total - accounted,
+        "coder_fraction": components["coder_s"] / total,
+        "shared_nn_fraction": (components["prepare_frame_context_s"] + components["selected_logits_s"]) / total,
+        "probability_table_fraction": components["probability_table_s"] / total,
+    }
+    return output, result
+
+
+@torch.no_grad()
+def encode_ans_reverse_prefix(bundle: RuntimeBundle, frame_count: int) -> tuple[bytes, dict[str, Any]]:
+    inflate = bundle.inflate
+    constriction = importlib.import_module("constriction")
+    family = constriction.stream.model.Categorical(perfect=inflate.HPAC_CODER_PERFECT)
+    coder = constriction.stream.stack.AnsCoder()
+    masks = inflate.group_masks(torch.device("cpu"))
+    sparse = inflate.SparseIntegerHPAC(bundle.hpac, EVAL_H, EVAL_W)
+    components = _empty_components()
+    started = time.perf_counter()
+    for frame in range(frame_count - 1, -1, -1):
+        idx = torch.tensor([frame], dtype=torch.long)
+        previous_raw = (
+            torch.zeros((1, EVAL_H, EVAL_W), dtype=torch.long)
+            if frame == 0
+            else bundle.raw_tokens[frame - 1 : frame].long()
+        )
+        current = bundle.raw_tokens[frame : frame + 1].long().clone()
+        mark = time.perf_counter()
+        context = bundle.hpac.prepare_frame_context(idx, previous_raw)
+        components["prepare_frame_context_s"] += time.perf_counter() - mark
+        for group in range(len(masks) - 1, -1, -1):
+            mask = masks[group]
+            current[0, mask] = 0
+            mark = time.perf_counter()
+            selected = sparse.selected_logits(current, context, group)
+            components["selected_logits_s"] += time.perf_counter() - mark
+            mark = time.perf_counter()
+            table = inflate.probability_table(selected)
+            components["probability_table_s"] += time.perf_counter() - mark
+            symbols = bundle.raw_tokens[frame][mask].numpy().astype(np.int32)
+            mark = time.perf_counter()
+            coder.encode_reverse(symbols, family, table)
+            components["coder_s"] += time.perf_counter() - mark
+    compressed = coder.get_compressed().astype("<u4", copy=False).tobytes(order="C")
+    total = time.perf_counter() - started
+    return compressed, {
+        "axis": AXIS,
+        "score_claim": SCORE_CLAIM,
+        "frames": frame_count,
+        "bytes": len(compressed),
+        "sha256": sha256_bytes(compressed),
+        "wall_s": total,
+        "components_s": components,
+    }
+
+
+def run_probe(args: argparse.Namespace) -> dict[str, Any]:
+    bundle = load_bundle(args)
+    points = sorted(set(args.points))
+    if len(points) < 3:
+        raise RuntimeError("probe requires at least three distinct scale points")
+    if points[-1] >= FRAME_COUNT:
+        raise RuntimeError("probe must gate retention before n600; use points below 600")
+    point_dir = args.output / "probe_points"
+    point_dir.mkdir(parents=True, exist_ok=True)
+    results = []
+    for frame_count in points:
+        result_path = point_dir / f"n{frame_count}.json"
+        if result_path.exists():
+            prior = json.loads(result_path.read_text(encoding="utf-8"))
+            if prior.get("complete") is True:
+                results.append(prior)
+                continue
+        range_tokens, range_result = decode_profile(
+            bundle,
+            bundle.parts.tokens,
+            "range",
+            frame_count,
+            progress_path=point_dir / f"n{frame_count}_range_progress.json",
+        )
+        ans_blob, ans_encode = encode_ans_reverse_prefix(bundle, frame_count)
+        if frame_count == 2 and len(ans_blob) != EXPECTED_N2_ANS_BYTES:
+            raise RuntimeError("n2 ANS length no longer reproduces 588 bytes")
+        ans_tokens, ans_result = decode_profile(
+            bundle,
+            ans_blob,
+            "ans",
+            frame_count,
+            progress_path=point_dir / f"n{frame_count}_ans_progress.json",
+        )
+        if not torch.equal(range_tokens, ans_tokens):
+            raise RuntimeError("Range and ANS decoded-token outputs differ")
+        point = {
+            "schema": "ddm_dt1_probe_point.v1",
+            "complete": True,
+            "axis": AXIS,
+            "score_claim": SCORE_CLAIM,
+            "frames": frame_count,
+            "range": range_result,
+            "ans_encode": ans_encode,
+            "ans": ans_result,
+            "whole_decode_delta_s": ans_result["wall_s"] - range_result["wall_s"],
+            "whole_decode_ratio": ans_result["wall_s"] / range_result["wall_s"],
+            "coder_only_delta_s": (ans_result["components_s"]["coder_s"] - range_result["components_s"]["coder_s"]),
+            "same_object_sha256": range_result["decoded_sha256"],
+        }
+        atomic_json(result_path, point)
+        results.append(point)
+    range_fit = fit_scaling((row["frames"], row["range"]["wall_s"]) for row in results)
+    ans_fit = fit_scaling((row["frames"], row["ans"]["wall_s"]) for row in results)
+    delta_fit = fit_scaling((row["frames"], row["whole_decode_delta_s"]) for row in results)
+    result = {
+        "schema": "ddm_dt1_probe.v1",
+        "complete": True,
+        "axis": AXIS,
+        "score_claim": SCORE_CLAIM,
+        "invocation": sys.argv,
+        "storage_preflight": args.storage_preflight,
+        "provenance": bundle.provenance,
+        "points": results,
+        "fits": {"range": range_fit, "ans": ans_fit, "delta": delta_fit},
+        "retained_n600_ans_payload": False,
+        "rungs_not_run": [
+            "n600 ANS payload retention",
+            "n600 ANS decode",
+            "literal CUDA-required inflate.sh",
+            "Linux x86_64 / T4 contest-host timing",
+            "upstream/evaluate.py scorer timing",
+        ],
+    }
+    atomic_json(args.output / "probe_result.json", result)
+    return result
+
+
+def _render_state_path(output: Path) -> Path:
+    return output / "range_e2e" / "render_state.json"
+
+
+def _recover_completed_range_decode(bundle: RuntimeBundle, run_dir: Path) -> dict[str, Any] | None:
+    """Return a durable completed decode stage, including interrupted legacy runs.
+
+    Older runs wrote the full progress counters before performing the terminal
+    coder/exactness checks.  They are recoverable only when a render checkpoint
+    exists, because entering render proves that ``decode_profile`` returned
+    after both terminal checks passed.
+    """
+
+    result_path = run_dir / "range_decode_result.json"
+    if result_path.exists():
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        if result.get("complete") is True and result.get("exact_target_equality") is True:
+            return result
+    progress_path = run_dir / "range_decode_progress.json"
+    render_path = run_dir / "render_state.json"
+    if not progress_path.exists() or not render_path.exists():
+        return None
+    progress = json.loads(progress_path.read_text(encoding="utf-8"))
+    render = json.loads(render_path.read_text(encoding="utf-8"))
+    if progress.get("completed_frames") != FRAME_COUNT:
+        return None
+    if max(int(render.get("master_completed", 0)), int(render.get("carrier_completed", 0))) <= 0:
+        return None
+    components = {key: float(value) for key, value in progress["components_s"].items()}
+    total = float(progress["elapsed_s"])
+    accounted = sum(components.values())
+    result = {
+        "complete": True,
+        "recovered_from_prior_completed_stage": True,
+        "recovery_proof": "render checkpoint exists after decode_profile terminal checks",
+        "axis": AXIS,
+        "score_claim": SCORE_CLAIM,
+        "token_codec": "range",
+        "frames": FRAME_COUNT,
+        "tokens": int(bundle.raw_tokens.numel()),
+        "all_tokens_reconstructed": True,
+        "exact_target_equality": True,
+        "decoded_sha256": sha256_bytes(bundle.raw_tokens.numpy().tobytes(order="C")),
+        "wall_s": total,
+        "components_s": components,
+        "accounted_s": accounted,
+        "unattributed_s": total - accounted,
+        "coder_fraction": components["coder_s"] / total,
+        "shared_nn_fraction": (
+            components["prepare_frame_context_s"] + components["selected_logits_s"]
+        )
+        / total,
+        "probability_table_fraction": components["probability_table_s"] / total,
+    }
+    atomic_json(result_path, result)
+    return result
+
+
+@torch.no_grad()
+def render_video_cpu_resumable(bundle: RuntimeBundle, destination: Path, state_path: Path) -> dict[str, Any]:
+    if bundle.semantic is None or bundle.basis is None or bundle.coeff is None:
+        raise RuntimeError("render bundle was not loaded")
+    inflate = bundle.inflate
+    semantic = bundle.semantic.eval().to(torch.device("cpu"))
+    basis = inflate.normalized_basis(bundle.basis.to(torch.device("cpu")))
+    coeff = bundle.coeff.to(torch.device("cpu"))
+    state = {
+        "schema": "ddm_dt1_render_resume.v1",
+        "master_completed": 0,
+        "carrier_completed": 0,
+        "compute_wall_s": 0.0,
+        "complete": False,
+    }
+    if state_path.exists():
+        state.update(json.loads(state_path.read_text(encoding="utf-8")))
+    if state.get("complete") is True and not destination.exists():
+        state = {
+            "schema": "ddm_dt1_render_resume.v1",
+            "master_completed": 0,
+            "carrier_completed": 0,
+            "compute_wall_s": 0.0,
+            "complete": False,
+        }
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shape = (FRAME_COUNT * 2, inflate.CAMERA_H, inflate.CAMERA_W, 3)
+    mode = "r+" if destination.exists() else "w+"
+    output = np.memmap(destination, mode=mode, dtype=np.uint8, shape=shape)
+    stage_started = time.perf_counter()
+    for pair_id in range(int(state["master_completed"]), FRAME_COUNT):
+        idx = torch.tensor([pair_id], dtype=torch.long)
+        current_tokens = bundle.raw_tokens[pair_id : pair_id + 1].long()
+        master_eval = semantic(current_tokens, idx)
+        master = (
+            torch.nn.functional.interpolate(
+                master_eval,
+                size=(inflate.CAMERA_H, inflate.CAMERA_W),
+                mode="bilinear",
+                align_corners=False,
+            )
+            .clamp(0.0, 255.0)
+            .round()
+        )
+        output[2 * pair_id + 1] = master.to(torch.uint8).permute(0, 2, 3, 1).numpy()[0]
+        if (pair_id + 1) % 24 == 0 or pair_id + 1 == FRAME_COUNT:
+            output.flush()
+            state["master_completed"] = pair_id + 1
+            state["compute_wall_s"] += time.perf_counter() - stage_started
+            atomic_json(state_path, state)
+            stage_started = time.perf_counter()
+    for pair_id in range(int(state["carrier_completed"]), FRAME_COUNT):
+        carrier = torch.einsum("bk,kchw->bchw", coeff[pair_id : pair_id + 1], basis)
+        carrier = carrier / math.sqrt(inflate.CARRIER_DIM)
+        slave_eval = (127.5 + inflate.CARRIER_AMPLITUDE * carrier).clamp(0.0, 255.0).round()
+        slave = (
+            torch.nn.functional.interpolate(
+                slave_eval,
+                size=(inflate.CAMERA_H, inflate.CAMERA_W),
+                mode="bicubic",
+                align_corners=False,
+            )
+            .clamp(0.0, 255.0)
+            .round()
+        )
+        output[2 * pair_id] = slave.to(torch.uint8).permute(0, 2, 3, 1).numpy()[0]
+        if (pair_id + 1) % 24 == 0 or pair_id + 1 == FRAME_COUNT:
+            output.flush()
+            state["carrier_completed"] = pair_id + 1
+            state["compute_wall_s"] += time.perf_counter() - stage_started
+            atomic_json(state_path, state)
+            stage_started = time.perf_counter()
+    output.flush()
+    del output
+    state["complete"] = True
+    state["output_path"] = str(destination)
+    state["output_bytes"] = destination.stat().st_size
+    state["output_sha256"] = sha256_file(destination)
+    atomic_json(state_path, state)
+    return state
+
+
+def run_range_e2e(args: argparse.Namespace) -> dict[str, Any]:
+    wall_started = time.perf_counter()
+    bundle = load_bundle(args, need_render=True)
+    setup_s = time.perf_counter() - wall_started
+    run_dir = args.output / "range_e2e"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    completed_path = run_dir / "range_e2e_result.json"
+    render_output = run_dir / "inflate_cpu_scratch.raw"
+    if completed_path.exists():
+        completed = json.loads(completed_path.read_text(encoding="utf-8"))
+        if completed.get("complete") is True:
+            if render_output.exists():
+                cleanup_path = run_dir / "interrupted_restart_cleanup.json"
+                cleanup = {
+                    "schema": "ddm_dt1_cleanup.v1",
+                    "axis": AXIS,
+                    "score_claim": SCORE_CLAIM,
+                    "path": str(render_output),
+                    "bytes": render_output.stat().st_size,
+                    "sha256": sha256_file(render_output),
+                    "invocation": sys.argv,
+                    "reason": "certified rebuildable interrupted-restart render scratch",
+                    "rebuild_source": str(completed_path),
+                    "removed": False,
+                }
+                atomic_json(cleanup_path, cleanup)
+                render_output.unlink()
+                cleanup["removed"] = True
+                atomic_json(cleanup_path, cleanup)
+                completed["interrupted_restart_cleanup"] = cleanup
+                atomic_json(completed_path, completed)
+            return completed
+    range_result = _recover_completed_range_decode(bundle, run_dir)
+    if range_result is None:
+        _, range_result = decode_profile(
+            bundle,
+            bundle.parts.tokens,
+            "range",
+            FRAME_COUNT,
+            progress_path=run_dir / "range_decode_progress.json",
+        )
+        range_result["complete"] = True
+        range_result["recovered_from_prior_completed_stage"] = False
+        atomic_json(run_dir / "range_decode_result.json", range_result)
+    render_result = render_video_cpu_resumable(bundle, render_output, _render_state_path(args.output))
+    wall_total = time.perf_counter() - wall_started
+    decode_render_wall = range_result["wall_s"] + render_result["compute_wall_s"]
+    result = {
+        "schema": "ddm_dt1_range_e2e.v1",
+        "complete": True,
+        "axis": AXIS,
+        "score_claim": SCORE_CLAIM,
+        "invocation": sys.argv,
+        "storage_preflight": args.storage_preflight,
+        "literal_inflate_sh_executed": False,
+        "literal_inflate_sh_blocker": ("shipping main requires torch.cuda.is_available(); this Mac has no CUDA"),
+        "same_owned_functions": [
+            "receiver.split_payload",
+            "receiver.decode_models",
+            "inflate.load_hpac",
+            "SparseIntegerHPAC.selected_logits",
+            "inflate.probability_table",
+            "receiver.new_token_decoder",
+            "semantic renderer forward",
+            "carrier renderer forward",
+        ],
+        "provenance": bundle.provenance,
+        "setup_s": setup_s,
+        "range_decode": range_result,
+        "render": render_result,
+        "decode_render_wall_s": decode_render_wall,
+        "measured_process_wall_s": wall_total,
+        "inflate_only_headroom_vs_1800_s": 1800.0 - decode_render_wall,
+        "headroom_boundary": ("excludes checkout, LFS, dependency fetch, evaluator data loading, and scorer pass"),
+    }
+    atomic_json(run_dir / "range_e2e_result.json", result)
+    if args.cleanup_render_output:
+        render_output.unlink()
+        result["render"]["cleanup"] = {
+            "removed": True,
+            "reason": "certified rebuildable success-only SSD scratch",
+            "recoverable": False,
+        }
+        atomic_json(run_dir / "range_e2e_result.json", result)
+    return result
+
+
+def _chunk_paths(output: Path, start: int, end: int) -> tuple[Path, Path]:
+    root = output / "retained" / "chunks"
+    return root / f"symbols_{start:04d}_{end:04d}.npy", root / f"codes_{start:04d}_{end:04d}.npy"
+
+
+@torch.no_grad()
+def materialize_code_chunks(bundle: RuntimeBundle, output: Path) -> list[dict[str, Any]]:
+    inflate = bundle.inflate
+    boundaries = retention_boundaries()
+    masks = inflate.group_masks(torch.device("cpu"))
+    sparse = inflate.SparseIntegerHPAC(bundle.hpac, EVAL_H, EVAL_W)
+    manifest_path = output / "retained" / "chunk_manifest.json"
+    prior: dict[str, Any] = {}
+    if manifest_path.exists():
+        prior = json.loads(manifest_path.read_text(encoding="utf-8"))
+    prior_rows = {(int(row["start_frame"]), int(row["end_frame"])): row for row in prior.get("chunks", [])}
+    rows: list[dict[str, Any]] = []
+    for start, end in itertools.pairwise(boundaries):
+        symbols_path, codes_path = _chunk_paths(output, start, end)
+        old = prior_rows.get((start, end))
+        if (
+            old
+            and symbols_path.exists()
+            and codes_path.exists()
+            and sha256_file(symbols_path) == old["symbols_sha256"]
+            and sha256_file(codes_path) == old["codes_sha256"]
+        ):
+            rows.append(old)
+            continue
+        symbols_path.parent.mkdir(parents=True, exist_ok=True)
+        symbols_tmp = symbols_path.with_name(f".{symbols_path.name}.{os.getpid()}.tmp")
+        codes_tmp = codes_path.with_name(f".{codes_path.name}.{os.getpid()}.tmp")
+        count = (end - start) * EVAL_H * EVAL_W
+        symbols_mm = np.lib.format.open_memmap(symbols_tmp, mode="w+", dtype=np.uint8, shape=(count,))
+        codes_mm = np.lib.format.open_memmap(codes_tmp, mode="w+", dtype=np.int16, shape=(count, NUM_CLASSES))
+        offset = 0
+        started = time.perf_counter()
+        for frame in range(start, end):
+            previous_raw = (
+                torch.zeros((1, EVAL_H, EVAL_W), dtype=torch.long)
+                if frame == 0
+                else bundle.raw_tokens[frame - 1 : frame].long()
+            )
+            current = torch.zeros_like(previous_raw)
+            context = bundle.hpac.prepare_frame_context(torch.tensor([frame], dtype=torch.long), previous_raw)
+            target = bundle.raw_tokens[frame]
+            for group, mask in enumerate(masks):
+                selected = sparse.selected_logits(current, context, group)
+                codes = selected.mul(8).round().clamp(-32768, 32767).to(torch.int16)
+                symbols = target[mask].numpy().astype(np.uint8, copy=False)
+                length = len(symbols)
+                symbols_mm[offset : offset + length] = symbols
+                codes_mm[offset : offset + length] = codes.numpy()
+                current[0, mask] = target[mask].long()
+                offset += length
+        if offset != count:
+            raise RuntimeError("chunk materializer did not cover every token")
+        symbols_mm.flush()
+        codes_mm.flush()
+        del symbols_mm, codes_mm
+        os.replace(symbols_tmp, symbols_path)
+        os.replace(codes_tmp, codes_path)
+        row = {
+            "start_frame": start,
+            "end_frame": end,
+            "tokens": count,
+            "symbols_path": str(symbols_path),
+            "symbols_bytes": symbols_path.stat().st_size,
+            "symbols_sha256": sha256_file(symbols_path),
+            "codes_path": str(codes_path),
+            "codes_bytes": codes_path.stat().st_size,
+            "codes_sha256": sha256_file(codes_path),
+            "materialize_wall_s": time.perf_counter() - started,
+        }
+        rows.append(row)
+        atomic_json(
+            manifest_path,
+            {
+                "schema": "ddm_dt1_int16_chunk_manifest.v1",
+                "axis": AXIS,
+                "score_claim": SCORE_CLAIM,
+                "complete": False,
+                "chunks": rows,
+            },
+        )
+    atomic_json(
+        manifest_path,
+        {
+            "schema": "ddm_dt1_int16_chunk_manifest.v1",
+            "axis": AXIS,
+            "score_claim": SCORE_CLAIM,
+            "complete": True,
+            "chunks": rows,
+        },
+    )
+    return rows
+
+
+def _iter_prob_batches(
+    bundle: RuntimeBundle,
+    row: dict[str, Any],
+    *,
+    reverse_batches: bool,
+    batch_tokens: int = 262_144,
+) -> Iterable[tuple[np.ndarray, np.ndarray]]:
+    symbols = np.load(row["symbols_path"], mmap_mode="r", allow_pickle=False)
+    codes = np.load(row["codes_path"], mmap_mode="r", allow_pickle=False)
+    starts = list(range(0, len(symbols), batch_tokens))
+    if reverse_batches:
+        starts.reverse()
+    for start in starts:
+        end = min(start + batch_tokens, len(symbols))
+        yield (
+            np.asarray(symbols[start:end], dtype=np.int32),
+            bundle.receiver.probability_tables_from_codes(codes[start:end], logit_precision=8),
+        )
+
+
+def encode_retained_streams(bundle: RuntimeBundle, rows: list[dict[str, Any]], output: Path) -> dict[str, Any]:
+    constriction = importlib.import_module("constriction")
+    family = constriction.stream.model.Categorical(perfect=bundle.inflate.HPAC_CODER_PERFECT)
+    range_encoder = constriction.stream.queue.RangeEncoder()
+    range_checkpoints: dict[str, Any] = {"0": None}
+    range_started = time.perf_counter()
+    for row in rows:
+        for symbols, tables in _iter_prob_batches(bundle, row, reverse_batches=False):
+            range_encoder.encode(symbols, family, tables)
+        position, state = range_encoder.pos()
+        range_checkpoints[str(row["end_frame"])] = [int(position), [int(x) for x in state]]
+    range_blob = range_encoder.get_compressed().astype("<u4", copy=False).tobytes(order="C")
+    range_wall = time.perf_counter() - range_started
+    if range_blob != bundle.parts.tokens:
+        raise RuntimeError("retained int16 chunks failed byte-identical Range control")
+    ans_encoder = constriction.stream.stack.AnsCoder()
+    ans_checkpoints: dict[str, Any] = {str(FRAME_COUNT): None}
+    ans_started = time.perf_counter()
+    for row in reversed(rows):
+        for symbols, tables in _iter_prob_batches(bundle, row, reverse_batches=True):
+            ans_encoder.encode_reverse(symbols, family, tables)
+        position, state = ans_encoder.pos()
+        ans_checkpoints[str(row["start_frame"])] = [int(position), int(state)]
+    ans_blob = ans_encoder.get_compressed().astype("<u4", copy=False).tobytes(order="C")
+    ans_wall = time.perf_counter() - ans_started
+    if len(ans_blob) != EXPECTED_ANS_BYTES:
+        raise RuntimeError("retained n600 ANS payload did not reproduce 114,860 bytes")
+    ans_path = output / "retained" / "ans_n600.bin"
+    atomic_bytes(ans_path, ans_blob)
+    checkpoints = {
+        "schema": "ddm_dt1_coder_checkpoints.v1",
+        "range": range_checkpoints,
+        "ans": ans_checkpoints,
+    }
+    atomic_json(output / "retained" / "coder_checkpoints.json", checkpoints)
+    return {
+        "range": {
+            "bytes": len(range_blob),
+            "sha256": sha256_bytes(range_blob),
+            "byte_identical_to_shipped": True,
+            "encode_wall_s": range_wall,
+        },
+        "ans": {
+            "path": str(ans_path),
+            "bytes": len(ans_blob),
+            "sha256": sha256_bytes(ans_blob),
+            "encode_wall_s": ans_wall,
+        },
+        "checkpoints": checkpoints,
+    }
+
+
+def run_retain(args: argparse.Namespace) -> dict[str, Any]:
+    probe = json.loads((args.output / "probe_result.json").read_text(encoding="utf-8"))
+    e2e = json.loads((args.output / "range_e2e" / "range_e2e_result.json").read_text(encoding="utf-8"))
+    projected_delta = (
+        probe["fits"]["ans"]["selected_prediction_n600_s"] - probe["fits"]["range"]["selected_prediction_n600_s"]
+    )
+    headroom = e2e["inflate_only_headroom_vs_1800_s"]
+    if headroom <= 0 or projected_delta >= headroom:
+        raise RuntimeError("pre-retention timing gate is not affordable on the measured Mac surface")
+    bundle = load_bundle(args)
+    rows = materialize_code_chunks(bundle, args.output)
+    streams = encode_retained_streams(bundle, rows, args.output)
+    ans_blob = Path(streams["ans"]["path"]).read_bytes()
+    _, range_result = decode_profile(
+        bundle,
+        bundle.parts.tokens,
+        "range",
+        FRAME_COUNT,
+        progress_path=args.output / "retained" / "range_n600_progress.json",
+    )
+    _, ans_result = decode_profile(
+        bundle,
+        ans_blob,
+        "ans",
+        FRAME_COUNT,
+        progress_path=args.output / "retained" / "ans_n600_progress.json",
+    )
+    delta = ans_result["wall_s"] - range_result["wall_s"]
+    combined_points = [
+        {
+            "frames": int(row["frames"]),
+            "range_wall_s": float(row["range"]["wall_s"]),
+            "ans_wall_s": float(row["ans"]["wall_s"]),
+            "delta_s": float(row["whole_decode_delta_s"]),
+        }
+        for row in probe["points"]
+    ]
+    combined_points.append(
+        {
+            "frames": FRAME_COUNT,
+            "range_wall_s": float(range_result["wall_s"]),
+            "ans_wall_s": float(ans_result["wall_s"]),
+            "delta_s": float(delta),
+        }
+    )
+    combined_fits = {
+        "range": fit_scaling((row["frames"], row["range_wall_s"]) for row in combined_points),
+        "ans": fit_scaling((row["frames"], row["ans_wall_s"]) for row in combined_points),
+        "delta": fit_scaling((row["frames"], row["delta_s"]) for row in combined_points),
+    }
+    result = {
+        "schema": "ddm_dt1_retained_n600.v1",
+        "complete": True,
+        "axis": AXIS,
+        "score_claim": SCORE_CLAIM,
+        "invocation": sys.argv,
+        "storage_preflight": args.storage_preflight,
+        "pre_retention_gate": {
+            "projected_n600_delta_s": projected_delta,
+            "measured_inflate_only_headroom_s": headroom,
+            "verdict": "AFFORDABLE_ON_MACOS_CPU_INFLATE_ONLY_SURFACE",
+        },
+        "provenance": bundle.provenance,
+        "chunk_manifest": str(args.output / "retained" / "chunk_manifest.json"),
+        "streams": streams,
+        "range_decode": range_result,
+        "ans_decode": ans_result,
+        "combined_curve": combined_points,
+        "combined_fits": combined_fits,
+        "measured_n600_delta_s": delta,
+        "measured_n600_ratio": ans_result["wall_s"] / range_result["wall_s"],
+        "measured_coder_only_delta_s": (
+            ans_result["components_s"]["coder_s"] - range_result["components_s"]["coder_s"]
+        ),
+        "affordable_vs_measured_inflate_only_headroom": delta < headroom,
+        "contest_host_transfer": ("ratio is more portable than absolute time; Linux x86_64/T4 remains unmeasured"),
+        "rungs_not_run": [
+            "interleaved multi-state rANS stream",
+            "Rust/native coder port",
+            "literal CUDA-required inflate.sh on macOS",
+            "Linux x86_64 / T4 contest-host timing",
+            "whole-CI timing including checkout, LFS, dependency fetch, and scorer",
+            "upstream/evaluate.py score",
+        ],
+    }
+    atomic_json(args.output / "retained" / "retained_n600_result.json", result)
+    return result
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", choices=("probe", "range-e2e", "retain"), required=True)
+    parser.add_argument("--runtime", type=Path, default=DEFAULT_RUNTIME)
+    parser.add_argument("--archive", type=Path, default=DEFAULT_ARCHIVE)
+    parser.add_argument("--cache", type=Path, default=DEFAULT_CACHE)
+    parser.add_argument("--encode-manifest", type=Path, default=DEFAULT_MANIFEST)
+    parser.add_argument("--recorded-range", type=Path, default=DEFAULT_RECORDED_RANGE)
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--torch-threads", type=int, default=2)
+    parser.add_argument("--points", type=int, nargs="+", default=[2, 8, 32, 120])
+    parser.add_argument(
+        "--cleanup-render-output",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
+    args = parser.parse_args()
+    if args.torch_threads <= 0:
+        parser.error("--torch-threads must be positive")
+    if not all(1 <= value <= FRAME_COUNT for value in args.points):
+        parser.error("--points must be in [1, 600]")
+    return args
+
+
+def main() -> None:
+    args = parse_args()
+    required_free = {
+        "probe": 2 << 30,
+        "range-e2e": 8 << 30,
+        "retain": 8 << 30,
+    }[args.mode]
+    args.storage_preflight = storage_preflight(args.output, required_free)
+    if args.mode == "probe":
+        result = run_probe(args)
+    elif args.mode == "range-e2e":
+        result = run_range_e2e(args)
+    else:
+        result = run_retain(args)
+    print(json.dumps(result, indent=2, sort_keys=True), flush=True)
+
+
+if __name__ == "__main__":
+    main()

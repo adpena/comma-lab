@@ -1,0 +1,204 @@
+"""R5: price the SEMANTIC blob's probability model -- the archive's #2 coded region.
+
+WHY THIS SECTION.  The member map says the archive has three disjoint regions:
+token_stream 110,512 B (where ddm_fx1 and ddm_fx2 work), compressed_models
+70,453 B, and a 96 B residual table.  Inside compressed_models the semantic blob
+is 34,763 B coded / 36,051 B raw, and it is coded by an ADAPTIVE rANS whose model
+is ORDER ZERO: `_update` in runtime/entropy/adaptive_ans.py increments a count
+and does nothing else.  There is no context of any kind.  That is the same shape
+of opportunity ddm_fx1 found on the token stream.
+
+WHAT IS MEASURED.  The exact code length of the real symbol sequences under:
+
+  * order0_adaptive    -- the SHIPPED model, replayed symbol for symbol.  This is
+                          the positive control: it must land on the shipped
+                          stream bytes, or the instrument is not measuring the
+                          shipped coder.
+  * order1_adaptive    -- context = the previous symbol.
+  * order1_mixed       -- the ddm_fx2 mechanism: a weighted GEOMETRIC blend of
+                          the order-0 and order-1 frequency vectors.
+  * order2_adaptive    -- context = the previous two symbols.
+
+WHY THE MIXED ROW IS THE POINT.  `ddm_ra2` measured that enriching the CARRIER
+blob's context DILUTED it: `ctx_dim x activity` cost +82 B where `ctx_dim` alone
+saved 259.8 B.  That is estimation noise from splitting finite evidence, and it
+is exactly the failure a mixture is built to hedge.  So the honest question for
+this section is not "does a richer context help" but "does a MIXTURE of a rich
+and a poor context help where the rich one alone does not".
+
+THIS IS A PRICED CEILING, NOT A BYTE CLAIM.  Three deductions stand between any
+number here and an archive byte:
+  1. the outer Brotli discounts inner savings by about 13% (ddm_ra2, measured);
+  2. a real candidate must round-trip through the exact container;
+  3. the decoder must reproduce the model bit-exactly, which the order-0 coder
+     achieves with integer counts and a mixture would have to re-establish.
+So the output is a bound on the target's size, in the spirit of ddm_fx1's
+1,247 B miss-sector ceiling: it tells the next arm what it is playing for.
+
+Offline analysis; never ships.
+"""
+
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+
+RUNTIME = Path("/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime")
+ARCHIVE = Path("/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/retained/archive.zip")
+OUT = Path("/Volumes/APDataStore/pact/ddm_fx2/probe/r5_semantic_headroom.json")
+sys.path.insert(0, str(RUNTIME))
+
+from runtime.entropy.adaptive_ans import (  # noqa: E402
+    ALPHABET,
+    PRECISION,
+    TOTAL,
+    _normalise,
+    _prior,
+    _update,
+    decode_adaptive,
+)
+from runtime.entropy.renderer_weight_codec import inspect_wans1  # noqa: E402
+from runtime.residual_archive import read_residual_archive  # noqa: E402
+
+LN2 = float(np.log(2.0))
+
+
+def code_bits(symbols: np.ndarray, contexts: np.ndarray | None, prior_index: int) -> float:
+    """Exact adaptive code length, replaying the SHIPPED normalise/update rules.
+
+    ``contexts is None`` reproduces the shipped order-0 coder exactly.  Otherwise
+    one independent count vector per context value, each seeded from the same
+    prior, so the only difference between rows is the CONDITIONING.
+    """
+    prior = _prior(prior_index, ALPHABET).astype(np.uint32)
+    if contexts is None:
+        tables = {0: prior.copy()}
+        contexts = np.zeros(symbols.size, dtype=np.int64)
+    else:
+        tables = {}
+    total_bits = 0.0
+    for position in range(symbols.size):
+        key = int(contexts[position])
+        counts = tables.get(key)
+        if counts is None:
+            counts = prior.copy()
+            tables[key] = counts
+        frequencies = _normalise(counts)
+        symbol = int(symbols[position])
+        total_bits += PRECISION - float(np.log2(float(frequencies[symbol])))
+        _update(counts, symbol)
+    return total_bits
+
+
+def code_bits_mixed(symbols: np.ndarray, contexts: np.ndarray, prior_index: int) -> float:
+    """The ddm_fx2 mechanism on this section: a weighted GEOMETRIC blend.
+
+    ``p ~ p0**(1-w) * p1**w`` renormalised.  A geometric blend can leave the
+    convex hull of its members, which is the property that made the token-stream
+    mixer beat every arithmetic mean ddm_me1 raced.  The weight is a single fixed
+    dyadic value here -- this is a PRICE, not a tuned candidate.
+    """
+    prior = _prior(prior_index, ALPHABET).astype(np.uint32)
+    global_counts = prior.copy()
+    tables: dict[int, np.ndarray] = {}
+    weight = 0.5
+    total_bits = 0.0
+    for position in range(symbols.size):
+        key = int(contexts[position])
+        counts = tables.get(key)
+        if counts is None:
+            counts = prior.copy()
+            tables[key] = counts
+        p0 = _normalise(global_counts).astype(np.float64) / TOTAL
+        p1 = _normalise(counts).astype(np.float64) / TOTAL
+        blended = np.exp((1.0 - weight) * np.log(p0) + weight * np.log(p1))
+        blended /= blended.sum()
+        symbol = int(symbols[position])
+        total_bits += -float(np.log2(max(blended[symbol], 1e-300)))
+        _update(global_counts, symbol)
+        _update(counts, symbol)
+    return total_bits
+
+
+def main() -> int:
+    parts = read_residual_archive(ARCHIVE)
+    blob = bytes(parts.semantic_blob)
+    info = inspect_wans1(blob)
+    print(f"semantic blob {len(blob):,} B  streams={info['ans_stream_count']} ANS "
+          f"+ {info['raw_stream_count']} RAW  stream_area={info['stream_bytes']:,} B")
+
+    from runtime.entropy.renderer_weight_codec import (
+        _HEADER_BYTES, SEMANTIC_SCHEMA, _fixed_metadata_bytes,
+    )
+    streams = blob[_HEADER_BYTES + _fixed_metadata_bytes():]
+    modes = list(info["modes"])
+    priors = list(info["priors"])
+    lengths = list(info["stream_lengths"])
+
+    rows = []
+    offset = 0
+    w4 = 0
+    totals = {k: 0.0 for k in ("shipped_bytes", "order0", "order1", "order1_mixed", "order2")}
+    for schema in SEMANTIC_SCHEMA:
+        if schema.is_fp16:
+            continue
+        stream = streams[offset : offset + lengths[w4]]
+        offset += lengths[w4]
+        if not modes[w4]:
+            rows.append({"tensor": schema.name, "coded": "RAW_4BIT",
+                         "count": int(schema.count), "stream_bytes": int(lengths[w4])})
+            totals["shipped_bytes"] += lengths[w4]
+            w4 += 1
+            continue
+        symbols = decode_adaptive(stream, schema.count, prior_index=priors[w4]).astype(np.int64)
+        previous = np.concatenate([[0], symbols[:-1]])
+        previous2 = np.concatenate([[0, 0], symbols[:-2]])
+        b0 = code_bits(symbols, None, priors[w4])
+        b1 = code_bits(symbols, previous, priors[w4])
+        bm = code_bits_mixed(symbols, previous, priors[w4])
+        b2 = code_bits(symbols, previous * ALPHABET + previous2, priors[w4])
+        rows.append({
+            "tensor": schema.name, "coded": "ADAPTIVE_RANS", "count": int(schema.count),
+            "stream_bytes": int(lengths[w4]), "prior": int(priors[w4]),
+            "order0_bytes": b0 / 8.0, "order1_bytes": b1 / 8.0,
+            "order1_mixed_bytes": bm / 8.0, "order2_bytes": b2 / 8.0,
+            "control_order0_vs_shipped_bytes": b0 / 8.0 - lengths[w4],
+        })
+        totals["shipped_bytes"] += lengths[w4]
+        totals["order0"] += b0 / 8.0
+        totals["order1"] += b1 / 8.0
+        totals["order1_mixed"] += bm / 8.0
+        totals["order2"] += b2 / 8.0
+        print(f"  {schema.name:28s} n={schema.count:7d} shipped={lengths[w4]:7d} B  "
+              f"o0={b0/8:9.1f}  o1={b1/8:9.1f}  mix={bm/8:9.1f}  o2={b2/8:9.1f}")
+        w4 += 1
+
+    ans_shipped = sum(r["stream_bytes"] for r in rows if r["coded"] == "ADAPTIVE_RANS")
+    out = {
+        "semantic_blob_raw_bytes": len(blob),
+        "semantic_blob_coded_bytes_in_archive": 34763,
+        "ans_stream_bytes_shipped": ans_shipped,
+        "control_order0_replay_bytes": totals["order0"],
+        "control_delta_vs_shipped_bytes": totals["order0"] - ans_shipped,
+        "order1_bytes": totals["order1"],
+        "order1_mixed_bytes": totals["order1_mixed"],
+        "order2_bytes": totals["order2"],
+        "raw_gain_order1_bytes": totals["order0"] - totals["order1"],
+        "raw_gain_order1_mixed_bytes": totals["order0"] - totals["order1_mixed"],
+        "raw_gain_order2_bytes": totals["order0"] - totals["order2"],
+        "brotli_discount_note": "ddm_ra2 measured inner savings realise at ~87% through the outer Brotli",
+        "authority": "PRICED CEILING, not a byte claim: no container round-trip, no exact-decoder proof",
+        "rows": rows,
+    }
+    OUT.write_text(json.dumps(out, indent=2))
+    print(f"\nCONTROL order-0 replay vs shipped ANS bytes : {totals['order0']:.1f} vs "
+          f"{ans_shipped} -> {totals['order0'] - ans_shipped:+.1f} B")
+    for key, label in (("order1", "order-1"), ("order1_mixed", "order-1 MIXED"), ("order2", "order-2")):
+        raw = totals["order0"] - totals[key]
+        print(f"{label:14s} raw gain {raw:8.1f} B   at 87% realised ~ {raw*0.87:8.1f} B")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

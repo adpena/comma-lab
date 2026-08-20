@@ -1,0 +1,62 @@
+# SPDX-License-Identifier: MIT
+"""Generated PR101 u32 decoder-length receiver adapter.
+
+This adapter parses a PR101-family inner archive payload with layout:
+
+    uint32_le decoder_section_total_bytes
+    decoder_blob[4:decoder_section_total_bytes]
+    latent_blob[decoder_section_total_bytes:decoder_section_total_bytes + 15387]
+    sidecar_blob[decoder_section_total_bytes + 15387:]
+
+It intentionally expects the caller to supply the codec functions from the
+submission runtime so this generated file does not duplicate decoder code.
+"""
+
+LATENT_BLOB_LEN = 15387
+N_PAIRS = 600
+LATENT_DIM = 28
+BASE_CHANNELS = 36
+EVAL_SIZE = (384, 512)
+ADAPTER_PARAMS_JSON = '{"derived_conv4_perms":{"10":[3,0,2,1],"12":[3,0,1,2],"14":[1,0,2,3],"16":[3,0,2,1],"18":[1,0,2,3],"2":[3,0,2,1],"20":[0,3,2,1],"22":[0,3,2,1],"24":[0,2,3,1],"26":[0,1,3,2],"4":[3,0,2,1],"6":[0,1,2,3],"8":[3,0,1,2]},"derived_storage_order":[14,22,7,6,19,10,25,4,20,9,12,15,5,11,18,1,21,3,27,13,2,26,24,17,16,23,8,0],"derived_stream_ends":[1,2,22,23,26,27,28],"effective_byte_maps":{"0":"zig","1":"zig","10":"zig","11":"zig","12":"zig","13":"zig","14":"negzig","15":"zig","16":"zig","17":"zig","18":"zig","19":"zig","2":"zig","20":"twos","21":"zig","22":"zig","23":"zig","24":"zig","25":"zig","26":"zig","27":"off","3":"zig","4":"zig","5":"zig","6":"zig","7":"zig","8":"zig","9":"negzig"}}'
+
+
+def _adapter_params():
+    import json
+
+    params = json.loads(ADAPTER_PARAMS_JSON)
+    return {
+        "effective_byte_maps": {int(k): v for k, v in params["effective_byte_maps"].items()},
+        "derived_storage_order": tuple(params["derived_storage_order"]),
+        "derived_stream_ends": tuple(params["derived_stream_ends"]),
+        "derived_conv4_perms": {
+            int(k): tuple(v) for k, v in params["derived_conv4_perms"].items()
+        },
+    }
+
+
+def parse_archive_u32_decoder_len(
+    archive_bytes,
+    *,
+    decode_decoder_compact,
+    decode_latents_compact,
+    apply_latent_sidecar,
+):
+    if len(archive_bytes) < 4:
+        raise ValueError("archive too short for u32 decoder section header")
+    section_total = int.from_bytes(archive_bytes[:4], "little")
+    if section_total < 4 or section_total > len(archive_bytes):
+        raise ValueError(f"bad decoder_section_total {section_total}")
+    decoder_blob = archive_bytes[4:section_total]
+    latent_blob = archive_bytes[section_total:section_total + LATENT_BLOB_LEN]
+    sidecar_blob = archive_bytes[section_total + LATENT_BLOB_LEN:]
+    if not decoder_blob or len(latent_blob) != LATENT_BLOB_LEN:
+        raise ValueError("bad PR101 u32 decoder-length archive layout")
+    decoder_sd = decode_decoder_compact(decoder_blob, **_adapter_params())
+    latents = apply_latent_sidecar(decode_latents_compact(latent_blob), sidecar_blob)
+    meta = {
+        "n_pairs": N_PAIRS,
+        "latent_dim": LATENT_DIM,
+        "base_channels": BASE_CHANNELS,
+        "eval_size": list(EVAL_SIZE),
+    }
+    return decoder_sd, latents, meta

@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+"""Smoke: reproduce baseline d_seg / d_pose on a sample; validate apparatus."""
+import sys
+import numpy as np
+import torch
+
+sys.path.insert(0, ".omx/tmp/multiscale_seg_repair_20260611")
+import probe_lib as P
+
+PAIRS = list(range(0, 40))  # representative leading sample
+
+print("Building renderer ...")
+R = P.FrontierRenderer()
+print(f"n_pairs={R.n_pairs} eval_size={R.meta['eval_size']} dqs1_selected={len(R.selected_pairs)} policy={R.frame_policy}")
+
+print("Decoding GT (contest-exact) ...")
+gt = P.decode_gt_pairs(PAIRS)
+print("Rendering baseline comp ...")
+comp = R.render_baseline_pairs(PAIRS)
+
+print("Building scorer ...")
+S = P.ExactScorer()
+
+pose_all, seg_all = [], []
+for pi in PAIRS:
+    gt_b = gt[pi].unsqueeze(0).float()              # (1,2,H,W,3)
+    comp_b = P.comp_pair_to_bthwc(comp[pi])         # (1,2,H,W,3)
+    pose, seg = S.score_batch(gt_b, comp_b)
+    pose_all.append(float(pose[0])); seg_all.append(float(seg[0]))
+
+pose_all = np.array(pose_all); seg_all = np.array(seg_all)
+print(f"\nSample n={len(PAIRS)}")
+print(f"  mean d_seg  = {seg_all.mean():.8e}  (frontier full-600 = 5.5978e-04)")
+print(f"  mean d_pose = {pose_all.mean():.8e}  (frontier full-600 = 2.942e-05)")
+print(f"  flips/pair (d_seg * {P.SEG_H*P.SEG_W}) = {seg_all.mean()*P.SEG_H*P.SEG_W:.1f}")
+# Save baseline argmax + GT argmax + logits for the correction probe
+np.save(".omx/tmp/multiscale_seg_repair_20260611/sample_seg.npy", seg_all)
+np.save(".omx/tmp/multiscale_seg_repair_20260611/sample_pose.npy", pose_all)
+print("saved sample_seg.npy / sample_pose.npy")

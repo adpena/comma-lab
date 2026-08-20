@@ -1,0 +1,34 @@
+import sys
+sys.path.insert(0,'experiments/results/pr110pp_r2_nonmps_candidate_20260609/analysis')
+import render_and_score_lib as L
+import torch, numpy as np
+
+p = L.parse_frontier()
+sd = p['decoder_sd']
+
+# For conv (O,I,kh,kw) -> matrix (O, I*kh*kw); for stem (1728,28) already 2D; biases skip.
+print('tensor | shape | params | sv_decay(95%energy_rank/full_rank) | nuc/fro')
+big = []
+for name,t in sd.items():
+    a = t.detach().cpu().numpy().astype(np.float64)
+    if a.ndim == 1:
+        continue
+    if a.ndim == 4:
+        O,I,kh,kw = a.shape
+        M = a.reshape(O, I*kh*kw)
+    else:
+        M = a
+    U,S,Vt = np.linalg.svd(M, full_matrices=False)
+    energy = np.cumsum(S**2)/np.sum(S**2)
+    r95 = int(np.searchsorted(energy, 0.95))+1
+    r99 = int(np.searchsorted(energy, 0.99))+1
+    full = min(M.shape)
+    nuc = S.sum(); fro = np.sqrt((S**2).sum())
+    params = t.numel()
+    big.append((params,name))
+    print(f'{name:22s} {str(M.shape):14s} p={params:6d} fullrank={full:3d} r95={r95:3d} r99={r99:3d} nuc/fro={nuc/fro:.2f}')
+
+print()
+print('Top tensors by params:')
+for params,name in sorted(big, reverse=True)[:10]:
+    print(f'  {name:22s} {params}')

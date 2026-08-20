@@ -1,0 +1,150 @@
+"""R3: STATISTICAL CONTEXT DISCOVERY -- rank a partition without racing it.
+
+THE INSTRUMENT.  A mixer context selects WEIGHT SETS.  What it must separate is
+not "where is the token hard" but "where is the shipped correction MIS-SCALED":
+the cells where the optimal exponent on the odds multiplier differs.  So the
+right score for a candidate partition C is the code length achievable if every
+cell were handed its own best exponent.
+
+That bound is EXACT rather than approximate for the single-member case, and the
+reason matters: the multiplier ``m`` comes from KT counts of (hit, p_max), and
+neither of those depends on the coding probability.  So the whole ``m`` sequence
+is INVARIANT to the weights.  Sweeping the exponent therefore cannot perturb the
+data the sweep is measured on, and the per-cell minimum is a true upper bound on
+what ANY online learner can extract from that partition.
+
+Only the HIT-EVENT code length is scored, because the within-miss relative law is
+untouched by an exponent (ddm_fx1 section 5 priced that separately at a 1,247 B
+ceiling).
+
+OVERFITTING IS MEASURED, NOT ASSUMED.  A 4,800-cell partition can always fit
+better in hindsight than an 800-cell one, so in-sample minimisation would rank
+partitions by size.  Every context therefore gets a HELD-OUT number too: the
+exponent is fitted on frames [0, 300) and scored on [300, 600).  The held-out
+column is the honest predictor; the in-sample column is the ceiling.
+
+POSITIVE CONTROL.  The ranking must reproduce the ORDER of ddm_fx1's measured
+k1 rows (none -38.57, ubin8 -200.96, cls_boundary -227.24, cls_run_ubin8 -201.89,
+cls_boundary_ubin8 -278.94, cls_agree_ubin8 -267.73, cls_boundary_agree_ubin8
+-340.82).  If it does not, the instrument is broken and its verdicts on the NEW
+partitions are inadmissible.
+
+This file never ships: it is offline analysis, so it may use logs and powers
+freely.  The corrector it drives is the exact shipped law.
+"""
+import json, sys, time
+from pathlib import Path
+
+sys.path.insert(0, "/Users/adpena/Projects/pact")
+sys.path.insert(0, "/Volumes/APDataStore/pact/ddm_me1")
+
+import numpy as np
+from assets import ASSETS
+from tac.micro_edit.coder_replay import (
+    HPAC_LOGIT_PRECISION, NUM_CLASSES, PLANE, _frame_probabilities, _group_positions,
+)
+from experiments.ddm_fx2_model_axis_corrector import Fx2ModelAxisMixer, fx2_mixer_contexts
+
+N_FRAMES = 600
+SPLIT = 300                      # fit on [0, SPLIT), score on [SPLIT, N_FRAMES)
+W_NUM = np.arange(0, 41, dtype=np.float64)
+W_GRID = W_NUM / 16.0            # exponents 0.0 .. 2.5 ; 1.0 is the shipped law
+W_ONE = int(np.argmin(np.abs(W_GRID - 1.0)))
+LN2 = float(np.log(2.0))
+
+CANDIDATES = [
+    # ddm_fx1's own contexts -- the positive control
+    "none", "ubin8", "cls_boundary", "cls_run_ubin8", "cls_agree_ubin8",
+    "cls_boundary_ubin8", "cls_boundary_agree_ubin8",
+    # the widened-template partitions this arm is discovering
+    "cls_homog_ubin8", "cls_spatial4_ubin8", "cls_boundary_homog_ubin8",
+    "cls_boundary_agree_ubin16", "cls_boundary_agree_homog_ubin8",
+    "cls_boundary_agree_spatial4_ubin8",
+]
+
+def main() -> int:
+    contexts = fx2_mixer_contexts()
+    sizes = {name: contexts[name][0] for name in CANDIDATES}
+    rules = {name: contexts[name][1] for name in CANDIDATES}
+    # accumulators[name][half] : [cells, weights] of hit-event code BITS
+    acc = {n: [np.zeros((sizes[n], W_GRID.size)) for _ in range(2)] for n in CANDIDATES}
+
+    table = np.load(ASSETS.table_values_npy).astype(np.float32)
+    gi = np.fromfile(ASSETS.group_index_u8, dtype=np.uint8).astype(np.int64)
+    groups = _group_positions(gi)
+    logits = np.memmap(ASSETS.logits_i16, dtype=np.int16, mode="r")
+    tokens = np.memmap(ASSETS.tokens_u8, dtype=np.uint8, mode="r")
+    boundary_all = np.memmap(ASSETS.boundary_u8, dtype=np.uint8, mode="r")
+
+    mixer = Fx2ModelAxisMixer(PLANE, families=("shipped_joint",), mixer_context="none",
+                              learn=False, sse_context="off")
+    start = time.time()
+    for frame in range(N_FRAMES):
+        base = (np.asarray(logits[frame*PLANE*NUM_CLASSES:(frame+1)*PLANE*NUM_CLASSES])
+                .reshape(PLANE, NUM_CLASSES).astype(np.float32) / HPAC_LOGIT_PRECISION)
+        boundary = np.asarray(boundary_all[frame*PLANE:(frame+1)*PLANE])
+        token = np.asarray(tokens[frame*PLANE:(frame+1)*PLANE]).astype(np.int64)
+        prob = _frame_probabilities(base, boundary, table)
+        predicted = base.argmax(axis=1).astype(np.int64)
+
+        mixer.begin_frame(boundary)
+        ln_odds, ln_m, hits = [], [], []
+        feat_cols = {n: [] for n in CANDIDATES}
+        for flat in groups:
+            state = mixer.group_state(prob[flat], predicted[flat], flat)
+            m = mixer.odds_multiplier(state)
+            f = mixer._pending["features"]
+            for n in CANDIDATES:
+                feat_cols[n].append(np.asarray(rules[n](f), dtype=np.int64).reshape(-1))
+            ln_odds.append(np.log(state.p_max / state.one_minus))
+            ln_m.append(np.log(m))
+            hits.append((token[flat] == state.arg).astype(np.float64))
+            mixer.observe(state, token[flat])
+        mixer.end_frame(token.astype(np.uint8))
+
+        lo = np.concatenate(ln_odds); lm = np.concatenate(ln_m)
+        y = np.concatenate(hits)
+        half = 0 if frame < SPLIT else 1
+        # cost(w) = -log2 q_w if hit else -log2 (1 - q_w),  q_w = sigmoid(lo + w*lm)
+        for wi, w in enumerate(W_GRID):
+            L = lo + w * lm
+            # log1p(exp(-|L|)) + max(0, -sign*L)  -- the stable logistic loss
+            sign = np.where(y > 0.5, 1.0, -1.0)
+            z = sign * L
+            cost = (np.log1p(np.exp(-np.abs(z))) + np.maximum(0.0, -z)) / LN2
+            for n in CANDIDATES:
+                idx = np.concatenate(feat_cols[n])
+                acc[n][half][:, wi] += np.bincount(idx, weights=cost, minlength=sizes[n])
+        if (frame + 1) % 50 == 0:
+            print(f"  frame {frame+1}/{N_FRAMES}  [{time.time()-start:.0f}s]", flush=True)
+
+    rows = []
+    for n in CANDIDATES:
+        fit, held = acc[n]
+        both = fit + held
+        base_bits = float(both[:, W_ONE].sum())          # the shipped law, w = 1
+        in_sample = float(both.min(axis=1).sum())        # hindsight ceiling
+        pick = fit.argmin(axis=1)                        # exponent chosen on the fit half
+        held_out = float(held[np.arange(held.shape[0]), pick].sum())
+        held_base = float(held[:, W_ONE].sum())
+        rows.append({
+            "context": n, "cells": int(sizes[n]),
+            "cells_used": int((both.sum(axis=1) > 0).sum()),
+            "base_bits_w1": base_bits,
+            "in_sample_gain_bytes": (base_bits - in_sample) / 8.0,
+            "heldout_gain_bytes_half": (held_base - held_out) / 8.0,
+            "heldout_gain_bytes_scaled": (held_base - held_out) / 8.0 * 2.0,
+        })
+    rows.sort(key=lambda r: -r["heldout_gain_bytes_scaled"])
+    out = {"weight_grid": W_GRID.tolist(), "split_frame": SPLIT, "frames": N_FRAMES, "rows": rows}
+    Path("/Volumes/APDataStore/pact/ddm_fx2/probe/r3_context_rank.json").write_text(json.dumps(out, indent=2))
+
+    print(f"\n{'context':38s} {'cells':>6s} {'used':>6s} {'in-sample B':>12s} {'held-out B':>11s}")
+    for r in rows:
+        print(f"{r['context']:38s} {r['cells']:6d} {r['cells_used']:6d} "
+              f"{r['in_sample_gain_bytes']:12.1f} {r['heldout_gain_bytes_scaled']:11.1f}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+"""Measure gpt2m teacher-forced cross-entropy (bits/token) on random eval segments.
+
+Establishes the compression ceiling before building the codec:
+  score = 10 / (bits/token), so 2.5 bits/tok = 4.0x.
+
+One restart-window run also yields CE as a function of frame position within the
+20-frame window (the context-saturation curve), replicating meetr1912's finding
+from the same forward passes.
+
+Usage: python measure_ce.py [--segments 30] [--stride 20] [--batch 20] [--seed 0]
+"""
+import argparse
+import glob
+import math
+import os
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+import torch
+
+COMMAVQ = Path(__file__).resolve().parent.parent / 'commavq'
+sys.path.insert(0, str(COMMAVQ))
+from utils.gpt import GPT, GPTConfig  # noqa: E402
+
+TOKENS_PER_FRAME = 129  # BOS + 128
+FRAMES_PER_WINDOW = 20
+WINDOW = FRAMES_PER_WINDOW * TOKENS_PER_FRAME  # 2580
+BOS = 1024
+
+
+def load_model(device, dtype, weights_path=None):
+  snap = weights_path or glob.glob(os.path.expanduser(
+      '~/.cache/huggingface/hub/models--commaai--commavq-gpt2m/snapshots/*/pytorch_model.bin'))[0]
+  state_dict = torch.load(snap, map_location='cpu', weights_only=True)
+  state_dict = {k: v for k, v in state_dict.items()
+                if not (k.endswith('.attn.masked_bias') or k.endswith('.attn.bias'))}
+  transposed = ['attn.c_attn.weight', 'attn.c_proj.weight', 'mlp.c_fc.weight', 'mlp.c_proj.weight']
+  for k in list(state_dict.keys()):
+    if any(k.endswith(w) for w in transposed):
+      state_dict[k] = state_dict[k].transpose(1, 0)
+  model = GPT(GPTConfig())
+  state_dict['causal_mask'] = model.causal_mask
+  model.load_state_dict(state_dict)
+  return model.to(device=device, dtype=dtype).eval()
+
+
+def segment_to_seq(tokens):
+  """(1200, 8, 16) int -> (1200*129,) int64 with BOS prefixed per frame."""
+  frames = tokens.reshape(1200, 128).astype(np.int64)
+  seq = np.concatenate([np.full((1200, 1), BOS, dtype=np.int64), frames], axis=1)
+  return seq.reshape(-1)
+
+
+@torch.no_grad()
+def segment_bits(model, seq, stride_frames, batch, device):
+  """Total bits + per-window-frame-position bit sums for one segment.
+
+  Windows of 20 frames starting every `stride_frames` frames; each window is a
+  fresh forward (positions 0..2579). Only frames >= (20 - stride) into the
+  window are *coded* from that window (the earlier frames were coded by the
+  previous window), except the first window which codes all its frames.
+  """
+  n_frames = 1200
+  starts = list(range(0, n_frames - FRAMES_PER_WINDOW + 1, stride_frames))
+  if starts[-1] != n_frames - FRAMES_PER_WINDOW:
+    starts.append(n_frames - FRAMES_PER_WINDOW)
+
+  total_bits = 0.0
+  pos_bits = np.zeros(FRAMES_PER_WINDOW)   # bits by frame-position-in-window (first window only)
+  pos_count = np.zeros(FRAMES_PER_WINDOW)
+
+  for i in range(0, len(starts), batch):
+    chunk = starts[i:i + batch]
+    windows = np.stack([seq[s * TOKENS_PER_FRAME:(s + FRAMES_PER_WINDOW) * TOKENS_PER_FRAME]
+                        for s in chunk])
+    x = torch.from_numpy(windows).to(device)
+    logits = model(x)  # (B, 2580, 1025)
+    logprobs = torch.log_softmax(logits.float(), dim=-1)
+    # position p logits predict token p+1
+    tgt = x[:, 1:]
+    lp = torch.gather(logprobs[:, :-1], 2, tgt.unsqueeze(-1)).squeeze(-1)  # (B, 2579)
+    is_content = (torch.arange(1, WINDOW, device=device) % TOKENS_PER_FRAME) != 0
+    bits = -(lp[:, is_content] / math.log(2)).reshape(len(chunk), FRAMES_PER_WINDOW, 128)
+    bits = bits.cpu().numpy()  # (B, 20, 128)
+
+    for j, s in enumerate(chunk):
+      if s == 0:
+        coded = bits[j]                       # first window codes all 20 frames
+        pos_bits += bits[j].sum(axis=1)
+        pos_count += 128
+      else:
+        n_new = stride_frames if s != starts[-1] else n_frames - FRAMES_PER_WINDOW - starts[-2]
+        coded = bits[j, FRAMES_PER_WINDOW - n_new:]  # only the new frames
+      total_bits += coded.sum()
+  return total_bits, pos_bits, pos_count
+
+
+def main():
+  ap = argparse.ArgumentParser()
+  ap.add_argument('--segments', type=int, default=30)
+  ap.add_argument('--stride', type=int, default=20, help='frames between window starts; 20=restart')
+  ap.add_argument('--batch', type=int, default=20)
+  ap.add_argument('--seed', type=int, default=0)
+  ap.add_argument('--dtype', default='bf16', choices=['bf16', 'fp16', 'fp32'])
+  ap.add_argument('--weights', default=None, help='alternate pytorch_model.bin')
+  args = ap.parse_args()
+
+  device = 'cuda'
+  dtype = {'bf16': torch.bfloat16, 'fp16': torch.float16, 'fp32': torch.float32}[args.dtype]
+  torch.manual_seed(0)
+
+  print(f'Loading gpt2m ({args.dtype}, {args.weights or "base"})...', flush=True)
+  model = load_model(device, dtype, args.weights)
+
+  from datasets import load_dataset
+  ds = load_dataset('commaai/commavq', num_proc=4,
+                    data_files={'train': ['data-0000.tar.gz', 'data-0001.tar.gz']})['train']
+  if args.segments >= len(ds):
+    idxs = np.arange(len(ds))
+  else:
+    rng = np.random.default_rng(args.seed)
+    idxs = rng.choice(len(ds), size=args.segments, replace=False)
+
+  grand_bits = 0.0
+  grand_tokens = 0
+  all_pos_bits = np.zeros(FRAMES_PER_WINDOW)
+  all_pos_count = np.zeros(FRAMES_PER_WINDOW)
+  per_seg = []
+  t0 = time.time()
+  for n, idx in enumerate(idxs):
+    tokens = np.array(ds[int(idx)]['token.npy'], dtype=np.int64)
+    seq = segment_to_seq(tokens)
+    bits, pos_bits, pos_count = segment_bits(model, seq, args.stride, args.batch, device)
+    n_tok = 1200 * 128
+    per_seg.append(bits / n_tok)
+    grand_bits += bits
+    grand_tokens += n_tok
+    all_pos_bits += pos_bits
+    all_pos_count += pos_count
+    print(f'[{n+1}/{args.segments}] seg {idx}: {bits/n_tok:.3f} bits/tok '
+          f'(cum {grand_bits/grand_tokens:.3f}, {time.time()-t0:.0f}s)', flush=True)
+
+  bpt = grand_bits / grand_tokens
+  print(f'\n=== stride={args.stride} dtype={args.dtype} segments={args.segments} seed={args.seed}')
+  print(f'bits/token (token-weighted): {bpt:.4f}   -> score {10/bpt:.3f}')
+  ps = np.array(per_seg)
+  print(f'per-segment: mean {ps.mean():.3f}  std {ps.std():.3f}  p50 {np.median(ps):.3f}  '
+        f'min {ps.min():.3f}  max {ps.max():.3f}')
+  print('\ncontext-saturation curve (CE by frame position in first window):')
+  curve = all_pos_bits / np.maximum(all_pos_count, 1)
+  for f in range(FRAMES_PER_WINDOW):
+    print(f'  frame {f:2d}: {curve[f]:.3f} bits/tok')
+  np.savez(f'ce_s{args.stride}_{args.dtype}_n{args.segments}_seed{args.seed}.npz',
+           idxs=idxs, per_seg=ps, curve=curve, bpt=bpt)
+
+
+if __name__ == '__main__':
+  main()

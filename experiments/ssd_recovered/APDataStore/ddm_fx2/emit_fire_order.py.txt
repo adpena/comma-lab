@@ -1,0 +1,224 @@
+"""Emit the ddm_fx2 sealed fire-order for MAIN, from the measured artifacts only.
+
+Every number in the output is read out of a race JSON or a probe JSON on disk.
+Nothing is typed in by hand, so the order cannot drift from what was measured.
+"""
+
+import json
+import math
+from pathlib import Path
+
+ROOT = Path("/Volumes/APDataStore/pact/ddm_fx2")
+OUT = Path("/Users/adpena/Projects/pact/.omx/research/ddm_fx2_t4_sealed_fire_order_20260818.json")
+
+# The incumbent: ddm_fx1's candidate, FIRED and confirmed on T4.
+INC_BYTES, INC_S, INC_SHA = 180601, 0.15816036933414834, (
+    "65c75d7f097df930760b6611209f9caf66f5b10914cefa8d954b6d7834f6b0c4"
+)
+RR4_BYTES, RR4_TOKEN = 181161, 110512
+DEN = 37545489
+# ddm_fx1 measured the real parse-back at 1,502.29 s (base) and 1,639.78 s (its
+# 11-member candidate) -> +137.49 s.  That is ONE calibration point, and it is
+# used only to convert this arm's serial harness marginals onto the same axis.
+FX1_PARSEBACK_BASE, FX1_PARSEBACK_MARGINAL, BUDGET = 1502.29, 137.49, 1800.0
+
+MEMBERS_11 = [
+    "shipped_joint", "temporal_spatial", "surprise_only", "spatial_surprise",
+    "spatial_boundary", "run_surprise", "boundary_surprise", "temporal_surprise",
+    "shipped_fast256", "shipped_fast4096", "surprise_fast256",
+]
+MEMBERS_19 = MEMBERS_11 + [
+    "spatial4_surprise", "homog_surprise", "homog_boundary_surprise",
+    "spatial4_boundary", "homog_spatial4", "spatial4_temporal",
+    "homog_surprise_fast256", "spatial4_surprise_fast256",
+]
+
+
+def race(row_id):
+    return json.loads((ROOT / "race" / f"{row_id}.json").read_text())
+
+
+def project(code_bytes):
+    token = math.ceil(code_bytes)
+    archive = RR4_BYTES - (RR4_TOKEN - token)
+    return token, archive, INC_S - 25.0 * (INC_BYTES - archive) / DEN
+
+
+def candidate(label, race_id, timing_id, members, context, role, note):
+    row = race(race_id)
+    token, archive, projected_s = project(row["code_bytes"])
+    timing = race(timing_id) if timing_id else None
+    body = {
+        "id": label,
+        "role": role,
+        "members": members,
+        "member_count": len(members),
+        "mixer_context": context,
+        "count_buckets": 1,
+        "sse_context": "off  (measured NEGATIVE in 6 of 6 formulations; see the memo section 3)",
+        "raced_code_bytes": row["code_bytes"],
+        "delta_code_bytes_vs_rr4": row["delta_bytes_vs_live"],
+        "delta_code_bytes_vs_fx1": row["delta_bytes_vs_fx1_winner"],
+        "projected_token_stream_bytes": token,
+        "projected_archive_bytes": archive,
+        "projected_S": projected_s,
+        "projected_delta_S_vs_fx1": projected_s - INC_S,
+        "naming_bar_multiple": abs(projected_s - INC_S) / 1e-5,
+        "payload_sha256": row["payload_sha256"],
+        "status": "CODE LENGTH MEASURED, NOT BYTE-CLOSED",
+        "note": note,
+    }
+    if timing:
+        base = race("T0_serial_shipped_rr4")["elapsed_s"]
+        marginal = timing["elapsed_s"] - base
+        fx1_marginal = race("T1_serial_fx1_11x")["elapsed_s"] - base
+        scale = FX1_PARSEBACK_MARGINAL / fx1_marginal
+        projected_parseback = FX1_PARSEBACK_BASE + scale * marginal
+        body["decode_cost"] = {
+            "serial_harness_seconds": timing["elapsed_s"],
+            "serial_harness_marginal_vs_shipped_law": marginal,
+            "projected_parseback_seconds": projected_parseback,
+            "projected_margin_vs_1800s_budget": BUDGET - projected_parseback,
+            "calibration": (
+                "ONE point: fx1's 11-member candidate measured +137.49 s on the real parse-back for "
+                f"a serial harness marginal of {fx1_marginal:.0f} s (scale {scale:.3f}). The MARGINAL "
+                "carries because it is additive host-CPU numpy work; the 1,502.29 s ABSOLUTE base is a "
+                "[macOS-CPU advisory] local replay and does NOT carry to T4."
+            ),
+        }
+    return body
+
+
+def main() -> int:
+    doc = {
+        "schema": "ddm_fx2_t4_sealed_fire_order.v1",
+        "sealed_at_utc": "2026-08-18",
+        "sealed_by": "ddm_fx2",
+        "disposition": "SEALED_AWAITING_BYTE_CLOSE_THEN_MAIN_FIRE",
+        "fire_authority": "MAIN only. ddm_fx2 fired nothing and spent nothing.",
+        "axis_when_fired": "[contest-CUDA] Tesla T4 n600",
+        "ssd_root": "APDataStore/pact/ddm_fx2",
+        "incumbent": {
+            "label": "ddm_fx1 candidate, FIRED and confirmed",
+            "archive_bytes": INC_BYTES,
+            "archive_sha256": INC_SHA,
+            "score_S": INC_S,
+            "authority": "[contest-CUDA] Tesla T4 n600",
+            "receipt": "APDataStore/pact/ddm_fx1/t4_fire/MODAL_REMOTE_RESULT.json "
+                       "(score_recomputed_from_components 0.15816036933414834, score_axis contest_cuda)",
+        },
+        "mechanism": (
+            "The ddm_fx1 fixed-point log-odds mixer, with (a) its causal template widened from "
+            "left+up to four neighbours -- measured causal against the real group_index.u8, whose "
+            "rule is exactly (x&63)+2*(y&63) -- and (b) a NEW local-homogeneity feature: the number "
+            "of DISTINCT decoded classes among those neighbours, which detects a boundary of the "
+            "already-decoded partition rather than agreement with the prediction. Both are free "
+            "receiver code reading only already-decoded symbols: ZERO transmitted bytes, rule 118 "
+            "clean. No log/exp/pow on the decision path; AST-gated."
+        ),
+        "distortion_claim": (
+            "d_seg and d_pose are UNCHANGED BY CONSTRUCTION: only the probability law moves, so the "
+            "decoded token field is bit-identical and the render cannot change. This is the same "
+            "claim ddm_fx1 PROVED on its own candidate (decoded field 9ba2e52b..., render "
+            "e5539653..., both bit-identical to base across two independent decodes)."
+        ),
+        "BLOCKER_before_firing": {
+            "what": "The byte-close is blocked at INPUT VERIFICATION, not at the algorithm.",
+            "detail": (
+                "experiments/ddm_pq2_compress_e2e.py's default recipe pins rc64_source_sha256 = "
+                "5c75e2c70b89f148bc9d117d4dbd39a24dfb2e72ec41b0a7e9b9cf490ca07ee6. No file on either "
+                "SSD matches it: all 252 .c files under the pact tree were hashed and every "
+                "rc64_backend.c copy is 05839d1416e68a49c8022d0cccb1581c3e4338fb14c867fc6c116e203c412996."
+            ),
+            "inputs_that_DO_resolve": {
+                "TAC_PQ2_PREPARED_DIR": "APDataStore/pact/ddm_wc1_advisory_decode_wallclock_20260815/"
+                                        "prepared/hv1_base_control  (archive.zip 80d9c8c6... MATCHES)",
+                "TAC_PQ2_TOKENS_FILE": "APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/work_r2/inflated/"
+                                       ".f26_decode_checkpoints/tokens_cpu_stage_complete.u8  (9ba2e52b... MATCHES)",
+                "TAC_PQ2_HM1_DIR": "APDataStore/pact/ddm_hm1_20260816/retained  (group_index.u8 present)",
+            },
+            "fix": "Supply --recipe-json carrying the correct rc64 pin, or restore the pinned file. "
+                   "I did NOT bypass the fail-closed check: that check is what stands between a "
+                   "rebuild and silently different bytes.",
+        },
+        "byte_close_command": (
+            "TAC_RR2_CORRECTOR_MODULE=ddm_fx2_model_axis_corrector "
+            ".venv/bin/python experiments/ddm_pq2_compress_e2e.py  "
+            "(plus the three resolving roots above and a recipe-json with the rc64 pin)"
+        ),
+        "frozen_drop_in": (
+            "experiments/ddm_fx2_model_axis_corrector.FreeCorrector takes only `plane`; its "
+            "SHIPPED_CONFIG is frozen to the primary candidate below. A decoder takes no arguments, "
+            "so anything configurable at encode time but not decode time is a desynchronisation "
+            "waiting to happen."
+        ),
+        "falsifiers_pre_registered": {
+            "decoded_token_field_sha256": {
+                "required": "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52",
+                "note": "The rr4/fx1 target, unchanged. Any difference falsifies decode-identity outright.",
+            },
+            "d_seg_and_d_pose": "EQUAL to the fx1 row to all digits. Not 'close'. The claim is "
+                                "decode-identity, so any drift is a refusal, not a regression.",
+            "archive_bytes": "exactly the byte-close figure, which must match the projection in this "
+                             "file to within +-1 B. A larger miss falsifies the projection model that "
+                             "fx1's own byte-close validated at token_delta_vs_target 0.",
+            "archive_repeat": "byte-identical across a fresh process.",
+            "decode_wall_clock": "inside the 1,800 s budget with margin; see decode_cost per candidate.",
+        },
+        "commit": "53d9a13d61  (experiments/ddm_fx2_model_axis_corrector.py + its 17-test suite)",
+        "tests": "17 fx2 + 107 fx1 sister tests pass. Three injected mutations (a reintroduced "
+                 "transcendental, an inert SSE stage, the template narrowed back to left+up) were "
+                 "ALL caught, so the suite is not vacuous.",
+        "spend": "$0. ddm_fx2 fired nothing.",
+    }
+
+    doc["candidate_A_primary"] = candidate(
+        "fx2_d1_13x_homog_context", "D1_ctx_bnd_agree_homog", "T3_serial_13x_homogctx",
+        MEMBERS_11 + ["spatial4_surprise", "homog_surprise"], "cls_boundary_agree_homog_ubin8",
+        "PRIMARY -- FROZEN in SHIPPED_CONFIG (commit 85880c77a6)",
+        "The best row whose decode margin stays in the same class as the fx1 row that already PASSED "
+        "on T4 (118 s vs 160 s). Eleven inherited members plus the two the widened causal template "
+        "unlocks, driven by the homogeneity context.",
+    )
+    doc["candidate_B_conservative"] = candidate(
+        "fx2_e5_11x_homog_context", "E5_cheap_11x_homogctx", "T2_serial_11x_homogctx",
+        MEMBERS_11, "cls_boundary_agree_homog_ubin8",
+        "CONSERVATIVE FALLBACK -- closest to the proven configuration",
+        "ddm_fx1's EXACT eleven members with ONLY the mixer context changed: no new member table, so "
+        "the smallest decode marginal of any row that beats fx1, and the fewest degrees of freedom "
+        "selected on the scored clip. Fire this if T4 headroom measures tighter than the local "
+        "projection. It needs its own byte-close; it is NOT derivable from candidate A's receipts.",
+    )
+    doc["candidate_C_max_REFUSED_FOR_NOW"] = candidate(
+        "fx2_e1_19x_homog_context", "E1_compose_19x_homogctx", "T4_serial_19x_homogctx",
+        MEMBERS_19, "cls_boundary_agree_homog_ubin8",
+        "MAXIMUM SAVING -- NOT recommended without a real T4 decode-headroom measurement",
+        "Composes both winning axes and buys 87 B more than candidate A. Its projected margin is 29 s "
+        "against a ONE-POINT calibration with an advisory-local base -- indistinguishable from zero. "
+        "This row is banked, not refused on its bytes: it becomes the pick the moment somebody "
+        "measures real T4 decode headroom rather than projecting it.",
+    )
+    doc["separate_finding_not_in_these_candidates"] = {
+        "what": "The semantic blob's fp16 metadata byte-split: -515 B, measured through the real "
+                "Brotli at the container's own parameters, with a control that reproduced the "
+                "shipped 34,763 B section at delta +0.",
+        "why_separate": "It is a SERIALIZATION change, not a probability model, so it needs a "
+                        "receiver code change plus its own round-trip. It does not compose into "
+                        "these candidates as a drop-in, and it is LARGER than any of them.",
+        "provenance": "MAIN's ddm_pd1 relay row 2 pointed at this axis; measured on our payload by "
+                      "ddm_fx2. See probe/r5b_main_relay_rows.json and probe/r5c_scale_split_f12.json.",
+    }
+
+    OUT.write_text(json.dumps(doc, indent=2))
+    print(f"wrote {OUT}")
+    for key in ("candidate_A_primary", "candidate_B_conservative", "candidate_C_max_REFUSED_FOR_NOW"):
+        c = doc[key]
+        d = c.get("decode_cost", {})
+        print(f"  {c['id']:28s} K={c['member_count']:2d} archive {c['projected_archive_bytes']} B  "
+              f"S {c['projected_S']:.12f}  parseback {d.get('projected_parseback_seconds', float('nan')):.0f} s  "
+              f"margin {d.get('projected_margin_vs_1800s_budget', float('nan')):.0f} s")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

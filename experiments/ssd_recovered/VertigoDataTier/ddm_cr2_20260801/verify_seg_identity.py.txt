@@ -1,0 +1,35 @@
+"""Prove the composed archive's TOKEN PACKET is byte-identical to ep854's own,
+so d_seg is EXACTLY ep854's measured value (not an estimate)."""
+import json,sys,zipfile,hashlib
+from pathlib import Path
+PFS1="/Volumes/VertigoDataTier/pact/ddm_pfs1_20260729/d1/eval_root/submissions/pfs1"
+sys.path.insert(0,PFS1)
+import numpy as np, ddm_tr1_runtime as rt, ddm_r7_token_coder as r7
+h=lambda b: hashlib.sha256(b).hexdigest()
+def packet_sections(pk):
+    hdr=rt.PACKET_HEADER; ml=int(hdr.unpack_from(pk,0)[-1]); me=hdr.size+ml; out={}
+    for i,n in enumerate(rt.SECTION_NAMES):
+        _,off,ln,_=rt.SECTION_ENTRY.unpack_from(pk, me+i*rt.SECTION_ENTRY.size)
+        out[n]=pk[off:off+ln]
+    return out
+EP=Path("/Volumes/VertigoDataTier/pact/ddm_ep2_20260731/archives/w03_ep854_representative/archive.zip")
+CR2=Path("/Volumes/VertigoDataTier/pact/ddm_v4d_20260731/v4d_composed_cr2_ep854_archive.zip")
+with zipfile.ZipFile(EP) as z: ep=packet_sections(z.read('state/tr1.ddt1'))
+with zipfile.ZipFile(CR2) as z:
+    cr2={i.filename:z.read(i.filename) for i in z.infolist()}
+mani=json.loads(cr2['manifest.json'])
+# EXACT receiver path, inflate_runner_v4d.py:128-136
+codes=r7.decode_token_codes(cr2['state/tokens.dr7t'])
+tok=rt._encode_tokens(np.ascontiguousarray(codes,dtype=np.uint8))
+pkt=rt.build_packet(mani['tr1_metadata'],{'tokens':tok,'lotto_renderer':cr2['state/renderer.sec'],
+        'selector':cr2['state/selector.sec'],'pose_stub':cr2['state/pose_stub.sec']})
+with zipfile.ZipFile(EP) as z: ep_pk=z.read('state/tr1.ddt1')
+print('tokens section  identical:', tok==ep['tokens'])
+print('renderer        identical:', cr2['state/renderer.sec']==ep['lotto_renderer'])
+print('selector        identical:', cr2['state/selector.sec']==ep['selector'])
+print('pose_stub       identical:', cr2['state/pose_stub.sec']==ep['pose_stub'])
+print('WHOLE PACKET    identical:', pkt==ep_pk, ' sha',h(pkt)[:16],'vs',h(ep_pk)[:16])
+p1=rt.parse_packet(pkt); p2=rt.parse_packet(ep_pk)
+print('parsed frame1 render arrays equal:', all(
+    np.array_equal(a,b) for a,b in zip(np.atleast_1d(p1.token_codes if hasattr(p1,"token_codes") else 0),
+                                        np.atleast_1d(p2.token_codes if hasattr(p2,"token_codes") else 0))) if hasattr(p1,'token_codes') else 'n/a')

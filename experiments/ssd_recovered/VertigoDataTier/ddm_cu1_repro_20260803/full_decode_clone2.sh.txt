@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+OUT=/Volumes/VertigoDataTier/pact/ddm_cu1_repro_20260803
+G="$OUT/stage_clone2"
+mkdir -p "$G/inflated"
+/Users/adpena/Projects/pact/.venv/bin/python - "$G" <<'PY'
+import hashlib, importlib.abc, importlib.util, sys
+from pathlib import Path
+class _BlockTac(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == "tac" or fullname.startswith("tac."):
+            raise ModuleNotFoundError(f"No module named {fullname!r} (simulated contest runtime)")
+        return None
+sys.meta_path.insert(0, _BlockTac())
+tree = Path(sys.argv[1]).resolve()
+sys.path.insert(0, str(tree))
+spec = importlib.util.spec_from_file_location("inflate_runner", tree / "inflate_runner.py")
+mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+dec = mod.Decoder(tree / "archive")
+h = hashlib.sha256(); n = 0
+with open(tree / "inflated" / "0.raw", "wb") as sink:
+    for i in range(dec.n_pairs):
+        f1 = dec.f1(i); f0 = dec.f0(i, f1)
+        for b in (f0.tobytes(), f1.tobytes()):
+            sink.write(b); h.update(b); n += len(b)
+print(f"CLONE2_ISOLATED_FULL sha256={h.hexdigest()} bytes={n} pairs={dec.n_pairs}")
+PY

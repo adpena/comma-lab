@@ -1,0 +1,187 @@
+#!/usr/bin/env python
+# SPDX-License-Identifier: MIT
+"""ddm_b4s burn-4 window ticket builder (DSL-defined; gc12 §5 seal, adapted; lg1-PROTECTED).
+
+Burn-4 is a bounded GOVERNED CONTINUATION from the r1c rung-1 ep641 endpoint (the
+warm-QA24 base that WON the from-birth-vs-warm race: r1c seg+rate 0.6082 beat the
+from-birth bc1 0.686). It reconstructs the r1c ep641 sealed program from its ticket
+via the committed TR1 DSL, then swaps EXACTLY:
+  - the seg-physics lever's --class-weight-lane (1.0 -> the raced burn-4 value; the
+    R6 LANE-BIRTH lever, fh1 #1 ranked, never-fired duty-to-measure row);
+  - adds lever_telemetry_v9_port("on") (tp1 #804; BYTE-IDENTICAL when off, the
+    F1-F4 guards need its #304/#321/#404 signals to EXIST);
+  - adds the lg1 (#808) CONSTRAIN-AND-PROTECT layer (MAIN amendment; xp1 Lane-erosion):
+    lever_lane_guard_lambda() (primal-dual Lane budget constraint; budget 0.0 sentinel
+    => 0.12589 = xp1 ep641 Lane S, LawRef-custodied; eta/step-cap 0.0 => derived
+    66.2252 / 0.1; lambda_max 5.0) + lever_lane_guard_born(W) +
+    lever_lane_guard_margin_floor(V). W=0.25 / V=0.5 = the LOW end of the lg1
+    engagement-spec race sets {0.25,0.5}/{0.5,1.0} — conservative first engagement
+    per the caps law (<=15% per new force); the higher-end race is a follow-up cell,
+    RECORDED raced-pending (never a silent optimum claim);
+  - optional --lane-guard-lambda-init (the supervisor's rollback+raise-lambda relaunch
+    path; lg1 amend c66acf4d79; clamped [0, lambda_max] trainer-side);
+  - the window lever (--epochs, --max-wall-minutes);
+  - out-dir / resume-from program fields.
+
+The argv-diff vs the r1c ep641 parent MUST be WITHIN
+  {--class-weight-lane, --telemetry-v9-port, --lane-guard, --lane-guard-budget-s,
+   --lane-guard-eta, --lane-guard-lambda-step-cap, --lane-guard-lambda-max,
+   --lane-guard-born-weight, --lane-guard-margin-floor-weight, --lane-guard-lambda-init,
+   --epochs, --max-wall-minutes, --out-dir, --resume-from}
+(the gc12 §5 sanctioned window fields + the burn-4 levers + the lg1 protection layer).
+The builder ASSERTS this and refuses on any drift. score_claim=False; apparatus.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+REPO = Path("/Users/adpena/Projects/pact")
+sys.path.insert(0, str(REPO / "src"))
+
+from tac.witness_dsl.curriculum_dsl import Lever  # noqa: E402
+from tac.witness_dsl.spec_tr1_renderer_20260728 import (  # noqa: E402
+    TR1RendererProgramV1,
+    lever_lane_guard_born,
+    lever_lane_guard_lambda,
+    lever_lane_guard_margin_floor,
+    lever_seg_physics,
+    lever_telemetry_v9_port,
+    lever_window,
+)
+
+# The r1c rung-1 ep641 endpoint ticket IS the burn-4 parent (the warm-QA24 winner).
+PARENT_TICKET = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_r1c_20260731/tickets/window_01_ticket.json")
+GT_CACHE = "/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
+
+# lg1 engagement-spec raced weights: LOW end of the suggested race sets (conservative
+# first engagement per the caps law); recorded raced-pending in the b4s charter.
+LANE_GUARD_BORN_W = 0.25
+LANE_GUARD_MARGIN_FLOOR_V = 0.5
+
+# The sanctioned diff set: gc12 §5 window fields + the burn-4 levers + lg1 protection.
+ALLOWED_DIFF_FLAGS = {
+    "--class-weight-lane", "--telemetry-v9-port",
+    "--lane-guard", "--lane-guard-budget-s", "--lane-guard-eta",
+    "--lane-guard-lambda-step-cap", "--lane-guard-lambda-max",
+    "--lane-guard-born-weight", "--lane-guard-margin-floor-weight",
+    "--lane-guard-lambda-init",
+    "--epochs", "--max-wall-minutes", "--out-dir", "--resume-from",
+}
+
+
+def _to_map(argv: list[str]) -> dict[str, str]:
+    m: dict[str, str] = {}
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a.startswith("--"):
+            if i + 1 < len(argv) and not argv[i + 1].startswith("--"):
+                m[a] = argv[i + 1]
+                i += 2
+            else:
+                m[a] = ""  # bare store_true flag (e.g. --lane-guard)
+                i += 1
+        else:
+            i += 1
+    return m
+
+
+def build(class_weight_lane: float, epochs: int, max_wall_minutes: float,
+          out_dir: str, resume_from: str, out_ticket: Path,
+          lambda_init: float = 0.0) -> dict:
+    parent = json.loads(PARENT_TICKET.read_text())
+    parent_argv = list(parent["argv"])
+
+    levers: list[Lever] = []
+    saw_telemetry = False
+    for d in parent["levers"]:
+        ov = d["overrides"]
+        if "--class-weight-lane" in ov:  # the seg-physics lever -> swap class_weight_lane
+            levers.append(lever_seg_physics(
+                form_start=ov.get("--seg-form-start", "ce"),
+                w_seg=float(ov.get("--w-seg", "100.0")),
+                class_weight_lane=class_weight_lane,
+                margin_target=float(ov.get("--margin-target", "1.0"))))
+        elif "--epochs" in ov:  # the window lever -> swap
+            levers.append(lever_window(epochs, max_wall_minutes, batch_pairs=8, lr=2e-3))
+        elif "--telemetry-v9-port" in ov:
+            levers.append(lever_telemetry_v9_port("on"))
+            saw_telemetry = True
+        elif "--lane-guard" in ov:
+            continue  # parent never carries lane-guard; re-added canonically below
+        else:
+            levers.append(Lever(name=d["name"], overrides=dict(ov),
+                                notes=d.get("notes", "")))
+    if not saw_telemetry:
+        levers.append(lever_telemetry_v9_port("on"))  # burn-4 turns the port ON
+    # lg1 (#808) CONSTRAIN-AND-PROTECT (MAIN amendment): all three pieces.
+    levers.append(lever_lane_guard_lambda())          # 0.0 sentinels => derived/custodied
+    levers.append(lever_lane_guard_born(LANE_GUARD_BORN_W))
+    levers.append(lever_lane_guard_margin_floor(LANE_GUARD_MARGIN_FLOOR_V))
+    if lambda_init > 0.0:  # the rollback+raise-lambda relaunch path (supervisor)
+        levers.append(Lever(
+            name="tr1_lane_guard_lambda_init",
+            overrides={"--lane-guard-lambda-init": str(lambda_init)},
+            notes="b4s rollback+raise-lambda relaunch (lg1 amend c66acf4d79): warm-start "
+                  "the dual at last lambda + one capped step; clamped [0, lambda_max] "
+                  "trainer-side"))
+
+    prog = TR1RendererProgramV1(
+        levers=tuple(levers), num_pairs=600, out_dir=out_dir, seed=0,
+        gt_cache=GT_CACHE, resume_from=resume_from, full_confirm=True)
+    ticket = prog.sealed_ticket()  # compiles argv + validates (never-invent-flags) + ticket_hash
+    blob = json.dumps({k: ticket[k] for k in sorted(ticket) if k != "sealed_sha256"},
+                      sort_keys=True, separators=(",", ":")).encode()
+    ticket["sealed_sha256"] = hashlib.sha256(blob).hexdigest()
+
+    # argv-diff vs the r1c ep641 parent; ASSERT only the allowed flags differ.
+    pm, cm = _to_map(parent_argv), _to_map(ticket["argv"])
+    diff = {k: {"parent": pm.get(k), "burn4": cm.get(k)}
+            for k in set(pm) | set(cm) if pm.get(k) != cm.get(k)}
+    unexpected = set(diff) - ALLOWED_DIFF_FLAGS
+    if unexpected:
+        raise SystemExit(
+            f"SEAL REFUSE: argv-diff vs parent has UNEXPECTED flags {sorted(unexpected)}\n"
+            f"  full diff: {json.dumps(diff, indent=2, sort_keys=True)}")
+    if "--class-weight-lane" not in diff and abs(class_weight_lane - 1.0) > 1e-12:
+        raise SystemExit("SEAL REFUSE: --class-weight-lane change requested but not in diff")
+    if cm.get("--telemetry-v9-port") != "on":
+        raise SystemExit("SEAL REFUSE: --telemetry-v9-port not 'on' in the burn-4 ticket")
+    if "--lane-guard" not in cm:
+        raise SystemExit("SEAL REFUSE: lg1 protection (--lane-guard) missing from the ticket")
+    if "True" in ticket["argv"] or "False" in ticket["argv"]:
+        raise SystemExit("SEAL REFUSE: stray store_true token in compiled argv")
+
+    out_ticket.parent.mkdir(parents=True, exist_ok=True)
+    out_ticket.write_text(json.dumps(ticket, indent=2, sort_keys=True) + "\n")
+    return {"ticket_hash": ticket["ticket_hash"], "sealed_sha256": ticket["sealed_sha256"],
+            "argv_diff": diff, "out_ticket": str(out_ticket),
+            "class_weight_lane": class_weight_lane, "epochs": epochs,
+            "lane_guard": {"born_weight": LANE_GUARD_BORN_W,
+                           "margin_floor_weight": LANE_GUARD_MARGIN_FLOOR_V,
+                           "lambda_init": lambda_init}}
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--class-weight-lane", type=float, required=True)
+    ap.add_argument("--epochs", type=int, required=True)
+    ap.add_argument("--max-wall-minutes", type=float, required=True)
+    ap.add_argument("--out-dir", required=True)
+    ap.add_argument("--resume-from", required=True)
+    ap.add_argument("--out-ticket", type=Path, required=True)
+    ap.add_argument("--lambda-init", type=float, default=0.0)
+    a = ap.parse_args()
+    r = build(a.class_weight_lane, a.epochs, a.max_wall_minutes, a.out_dir,
+              a.resume_from, a.out_ticket, lambda_init=a.lambda_init)
+    print(json.dumps(r, indent=2, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

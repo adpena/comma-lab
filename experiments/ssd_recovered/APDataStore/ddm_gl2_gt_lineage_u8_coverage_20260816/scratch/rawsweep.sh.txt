@@ -1,0 +1,7 @@
+#!/bin/bash
+OUT=/Volumes/APDataStore/pact/ddm_gl2_gt_lineage_u8_coverage_20260816/scratch
+{ find /Volumes/VertigoDataTier -type f \( -name '*.u8' -o -name '*.f16' -o -name '*.f32' -o -name '*.i8' \) 2>/dev/null;
+  find /Volumes/APDataStore -type f \( -name '*.u8' -o -name '*.f16' -o -name '*.f32' -o -name '*.i8' \) 2>/dev/null;
+  find /Users/adpena/Projects/pact -type f \( -name '*.u8' -o -name '*.f16' -o -name '*.f32' -o -name '*.i8' \) 2>/dev/null; } > "$OUT/raw_sweep_all.txt"
+grep -i 'gt' "$OUT/raw_sweep_all.txt" > "$OUT/raw_sweep_gt.txt"
+wc -l "$OUT/raw_sweep_all.txt" "$OUT/raw_sweep_gt.txt"

@@ -1,0 +1,12 @@
+import json, glob
+rows=[]
+for p in sorted(glob.glob('/Volumes/APDataStore/pact/ddm_fx2/race/*.json')):
+    d=json.load(open(p))
+    if d.get('frames',600)!=600: continue
+    rows.append(d)
+rows.sort(key=lambda r: r['delta_bytes_vs_live'])
+print(f"{'id':30s} {'K':>3s} {'mixer context':34s} {'sse':14s} {'cb':>3s} {'dB vs live':>11s} {'vs fx1':>9s} {'s':>5s}")
+for r in rows:
+    print(f"{r['id']:30s} {len(r['families']):3d} {r['mixer_context']:34s} "
+          f"{(r['sse_context']+('+w' if r.get('sse_learn_weight') else '')):14s} {r['count_buckets']:3d} "
+          f"{r['delta_bytes_vs_live']:11.2f} {r['delta_bytes_vs_fx1_winner']:9.2f} {r['elapsed_s']:5.0f}")

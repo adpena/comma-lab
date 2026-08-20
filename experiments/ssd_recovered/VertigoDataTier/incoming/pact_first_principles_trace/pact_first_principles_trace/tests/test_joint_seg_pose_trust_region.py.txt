@@ -1,0 +1,14 @@
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
+from score_terms import ScoreDelta, admit_trust_region
+
+
+def test_seg_gain_can_admit_bounded_pose_harm_but_not_unbounded():
+    bounded = ScoreDelta(0.020, 0.10, 1000, 0.019, 0.101, 1000)
+    out = admit_trust_region(bounded, max_pose_score_regression=0.01, max_seg_score_regression=0.0)
+    assert out['admit']
+
+    unbounded = ScoreDelta(0.020, 0.10, 1000, 0.019, 0.20, 1000)
+    out2 = admit_trust_region(unbounded, max_pose_score_regression=0.01, max_seg_score_regression=0.0)
+    assert not out2['admit']

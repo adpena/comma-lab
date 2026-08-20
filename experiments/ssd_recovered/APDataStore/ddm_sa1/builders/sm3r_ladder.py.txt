@@ -1,0 +1,74 @@
+import sys, zipfile, hashlib, subprocess, json
+from pathlib import Path
+from collections import OrderedDict
+import numpy as np, torch
+RT="/Volumes/APDataStore/pact/ddm_rr4_cuda_prob_reencode/candidate_runtime"
+sys.path.insert(0, RT); sys.path.insert(0, RT+"/cpr1"); sys.path.insert(0,"/Users/adpena/Projects/pact/experiments")
+import runtime.residual_archive as ra
+import ddm_rx1_rate_representation_attack as rx1
+import ddm_sm3_semantic_representation as sm3
+import ddm_sd1_semantic_rd_curve as sd1
+import ddm_mp2_semantic_receiver as mp2
+
+print("receiver ROW_PRUNE_NAMES:", sorted(mp2.ROW_PRUNE_NAMES))
+print("builder PRUNE_NAMES     :", sorted(sm3.PRUNE_NAMES))
+assert set(mp2.ROW_PRUNE_NAMES)==set(sm3.PRUNE_NAMES), "prune name sets differ"
+
+BASE=181161
+P=Path(RT)/"archive.zip"
+outer=zipfile.ZipFile(P).read("p")
+H=rx1.RX1_HEADER
+magic,ver,codec,tmode,res,hb,sb,cb=H.unpack_from(outer)
+o=H.size; hpac_s=outer[o:o+hb]; o+=hb; sem_s=outer[o:o+sb]; o+=sb; car_s=outer[o:o+cb]; o+=cb; tail=outer[o:]
+def brotli11(v):
+    c=subprocess.run(["brotli","-q","11","-c"],input=v,capture_output=True,check=True).stdout
+    assert subprocess.run(["brotli","-d","-c"],input=c,capture_output=True,check=True).stdout==v
+    return c
+def build(body):
+    s=brotli11(body)
+    model=rx1.pack_rx1_model(hpac_s,s,car_s,codec_id=codec,table_mode=tmode)
+    member=model+tail
+    return rx1.deterministic_zip(member), len(s), member
+
+parts=ra.read_residual_archive(P)
+recs=ra.decode_wans1(parts.semantic_blob)
+state=OrderedDict((r.schema.name, torch.from_numpy(np.ascontiguousarray(r.values,dtype=np.float32))) for r in recs)
+OUT=Path("/Volumes/APDataStore/pact/ddm_sa1/retained"); OUT.mkdir(parents=True, exist_ok=True)
+
+rows=[]
+for pct in (87,75,62,50,37,25,20,15,12,9,6,3,1):
+    try:
+        body,exp,meta = sm3.pack_prune_candidate(state, pct)
+        z,ps,member = build(body)
+        # ---- REAL receiver parse-back through the shipping rr4 module ----
+        d=OUT/f"sm3r_keep{pct:02d}"; d.mkdir(exist_ok=True)
+        (d/"archive.zip").write_bytes(z)
+        rb=ra.read_residual_archive(d/"archive.zip")
+        assert rb.semantic_blob==body, "round-tripped semantic blob differs"
+        for nm in ("hpac_blob","carrier_blob","token_stream","residual_payload"):
+            assert getattr(rb,nm)==getattr(parts,nm), f"{nm} not byte-identical"
+        restored = mp2.unpack_variant_semantic_or_none(rb.semantic_blob, state)
+        assert restored is not None, "receiver returned None"
+        assert set(restored)==set(state), "key set differs"
+        mx=0.0; se=0.0; n=0
+        for k in state:
+            a=restored[k].float(); b=exp[k].float()
+            assert a.shape==state[k].shape, f"shape differs {k}"
+            mx=max(mx,float((a-b).abs().max()))
+            d2=(a-state[k]).float(); se+=float((d2**2).sum()); n+=d2.numel()
+        (d/"semantic.sm3r.bin").write_bytes(body)
+        rows.append(dict(id=f"sm3r_keep{pct:02d}", keep_percent=pct, archive_bytes=len(z), delta_bytes=len(z)-BASE,
+            packed_semantic=ps, raw_semantic=len(body), mse_vs_shipped=se/n,
+            receiver_parseback="PASS", receiver_vs_builder_max_abs=mx,
+            archive_sha256=hashlib.sha256(z).hexdigest(),
+            semantic_sha256=hashlib.sha256(body).hexdigest(),
+            delta_S_rate=-(len(z)-BASE)*-25/37545489 if False else (len(z)-BASE)*25/37545489,
+            path=str(d)))
+    except Exception as e:
+        rows.append(dict(id=f"sm3r_keep{pct:02d}", error=f"{type(e).__name__}: {e}"))
+
+print(f"\n{'id':16s} {'archive':>8} {'delta':>7} {'dS_rate':>12} {'mse':>11} {'parseback':>10} {'rcv_dev':>8}")
+for r in rows:
+    if "error" in r: print(f"{r['id']:16s} ERR {r['error'][:66]}"); continue
+    print(f"{r['id']:16s} {r['archive_bytes']:>8} {r['delta_bytes']:>+7} {r['delta_S_rate']:>+12.6e} {r['mse_vs_shipped']:>11.3e} {r['receiver_parseback']:>10} {r['receiver_vs_builder_max_abs']:>8.1e}")
+Path("/private/tmp/claude-501/-Users-adpena-Projects-pact/89ff112f-013d-43b5-b949-2a6d43b650c3/scratchpad/sa1/sm3r_rows.json").write_text(json.dumps(rows,indent=2))

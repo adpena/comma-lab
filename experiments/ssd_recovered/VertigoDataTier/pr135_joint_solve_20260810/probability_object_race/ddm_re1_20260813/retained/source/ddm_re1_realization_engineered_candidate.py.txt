@@ -1,0 +1,652 @@
+#!/usr/bin/env python3
+"""Build two scorer-free RE1 semantic-preimage proposals through real CP135 closure.
+
+This runner does not call SegNet, PoseNet, Modal, or ``upstream/evaluate.py``.
+It consumes the retained VD1 full-n600 singleton measurements, starts from the
+strongest exact singleton, then adds the best negative complete-score event from
+each distinct affected pair.  Distinct-pair selection removes an unnecessary
+second pair-96 edit from the CP5V composition that exhibited adverse interaction.  Both proposal
+rounds are independently HP3/RC64 re-encoded, parsed, and decoded by the shipped
+RC64 receiver.  They remain proposals until the sole full-n600 scorer owner
+returns a whole-candidate receipt.
+"""
+
+from __future__ import annotations
+
+import argparse
+import fcntl
+import json
+import math
+import os
+import shutil
+import subprocess
+import sys
+from contextlib import contextmanager
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Final, Iterator
+
+import numpy as np
+
+REPO: Final = Path(__file__).resolve().parents[1]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+
+from experiments import ddm_jo1_joint_probability_object as jo1
+
+OUTPUT: Final = Path(
+    "/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/"
+    "probability_object_race/ddm_re1_20260813"
+)
+CENSUS_ROOT: Final = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_vd1_20260812/main_harvest/results"
+)
+CENSUS_FINAL: Final = CENSUS_ROOT / "FINAL_RESULT.json"
+CENSUS_EVENTS: Final = CENSUS_ROOT / "EVENT_RESULTS.jsonl"
+CENSUS_FINAL_SHA256: Final = "6c53628184f55722f87fcb7e3dadc8b6c9a70025a804e00cfcbecb6674004973"
+CENSUS_EVENTS_SHA256: Final = "a97400d32878318d8eb657a36e62f523e4db48e402b292c09e611d2104b500b3"
+JO1_SOURCE: Final = REPO / "experiments/ddm_jo1_joint_probability_object.py"
+JO1_SOURCE_SHA256: Final = "77990654e90f4c4cd0d2b068e0f039da171889d0ecc6ec418ac5900868d688a9"
+CP135_SOURCE: Final = REPO / "experiments/ddm_cp135_rate_compose.py"
+CP135_SOURCE_SHA256: Final = "c97bd5b45e62f2da86ffea9b0d7ce2bae99f62c417db099d6c125dcb399a5b39"
+
+CP5V_EXACT: Final = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_cp5v_20260812/main_t4/contest_auth_eval.json"
+)
+CP5V_EXACT_SHA256: Final = "492686694d32f297c3149152e43fb8cbdb7397124a253c42a47a8ffaa9b50019"
+CP5V_SCORE: Final = 0.16195716412468952
+CP5V_EVENT_IDS: Final = (
+    "ec1_0164_3a4e239de5b9",
+    "ec1_0168_818a3c77af51",
+    "ec1_0004_3bc2b69c706c",
+    "ec1_0104_f4e219067530",
+    "ec1_0003_fcb5ca3a4453",
+)
+
+BASE_SCORE: Final = 0.16195513827824176
+# PO1 reports the higher-precision CP135 pose anchor used by the charter amendment.
+BASE_D_POSE: Final = 6.885642960696714e-6
+BASE_SEG_ERRORS: Final = 34_970
+TOTAL_SEG_SITES: Final = 600 * 512 * 384
+RATE_DENOMINATOR: Final = 37_545_489
+MIN_FREE_BYTES: Final = 12 * 1024**3
+MAX_SCORER_CHUNK: Final = 120
+AXIS: Final = "[macOS-CPU scorer-free direct-token HP3/RC64 n600 reclose]"
+
+ROUND_NAMES: Final = ("round_01_singleton_best", "round_02_distinct_pair_stack")
+
+
+class RE1Error(RuntimeError):
+    """An RE1 custody, selection, resume, or receiver invariant failed."""
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def git_head() -> str:
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=REPO,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def _require_record(record: dict[str, Any]) -> None:
+    path = Path(record["path"])
+    if not path.is_file() or jo1.file_record(path) != record:
+        raise RE1Error(f"retained artifact failed custody: {path}")
+
+
+@contextmanager
+def exclusive_arm_lock(output: Path) -> Iterator[dict[str, Any]]:
+    """Hold one nonblocking lock over every write to the RE1 target store."""
+
+    output.mkdir(parents=True, exist_ok=True)
+    lock_path = output / ".ddm_re1.lock"
+    stream = lock_path.open("a+")
+    try:
+        try:
+            fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise RE1Error(f"RE1 target store is locked: {lock_path}") from exc
+        receipt = {
+            "schema": "ddm_re1_exclusive_lock_receipt.v1",
+            "lock_path": str(lock_path.resolve()),
+            "pid": os.getpid(),
+            "acquired_utc": utc_now(),
+            "scope": str(output.resolve()),
+            "exclusive_nonblocking_flock": True,
+        }
+        jo1.atomic_json(output / "00_LOCK_RECEIPT.json", receipt)
+        yield receipt
+    finally:
+        try:
+            fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+        finally:
+            stream.close()
+
+
+def singleton_complete_s_delta(row: dict[str, Any], *, base_d_pose: float = BASE_D_POSE) -> float:
+    """Exact singleton Seg+Pose delta at the current base; rate is added after closure."""
+
+    delta_flips = int(row["delta_flips_candidate_minus_base"])
+    delta_pose = float(row["delta_d_pose_global_n600"])
+    if base_d_pose <= 0.0 or base_d_pose + delta_pose < 0.0:
+        raise RE1Error("singleton pose delta leaves the score domain")
+    seg_term = 100.0 * delta_flips / TOTAL_SEG_SITES
+    pose_term = math.sqrt(10.0 * (base_d_pose + delta_pose)) - math.sqrt(10.0 * base_d_pose)
+    return seg_term + pose_term
+
+
+def combined_complete_s_delta(rows: list[dict[str, Any]]) -> dict[str, float | int]:
+    """Combine singleton components before applying the nonlinear Pose score."""
+
+    delta_flips = sum(int(row["delta_flips_candidate_minus_base"]) for row in rows)
+    delta_pose = sum(float(row["delta_d_pose_global_n600"]) for row in rows)
+    if BASE_D_POSE + delta_pose < 0.0:
+        raise RE1Error("combined pose delta leaves the score domain")
+    delta_s = 100.0 * delta_flips / TOTAL_SEG_SITES + (
+        math.sqrt(10.0 * (BASE_D_POSE + delta_pose)) - math.sqrt(10.0 * BASE_D_POSE)
+    )
+    errors = BASE_SEG_ERRORS + delta_flips
+    return {
+        "delta_flips_candidate_minus_base": delta_flips,
+        "candidate_seg_errors": errors,
+        "candidate_d_seg_exact_from_errors": errors / TOTAL_SEG_SITES,
+        "delta_d_pose_global_n600": delta_pose,
+        "candidate_d_pose": BASE_D_POSE + delta_pose,
+        "delta_s": delta_s,
+    }
+
+
+def load_census_rows() -> list[dict[str, Any]]:
+    jo1.require(CENSUS_FINAL, digest=CENSUS_FINAL_SHA256)
+    jo1.require(CENSUS_EVENTS, size=646_298, digest=CENSUS_EVENTS_SHA256)
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    with CENSUS_EVENTS.open(encoding="utf-8") as stream:
+        for line in stream:
+            row = json.loads(line)
+            proposal_id = str(row.get("proposal_id", ""))
+            if proposal_id in seen:
+                raise RE1Error(f"duplicate VD1 singleton row: {proposal_id}")
+            if (
+                row.get("schema") != "ddm_vd1_singleton_result.v1"
+                or row.get("n600_denominator_exact") is not True
+                or row.get("score_claim") is not False
+                or int(row.get("site_count", 0)) < 1
+            ):
+                raise RE1Error(f"inadmissible VD1 singleton row: {proposal_id}")
+            seen.add(proposal_id)
+            rows.append(row)
+    if len(rows) != 200:
+        raise RE1Error(f"VD1 singleton census is incomplete: {len(rows)}/200")
+    return rows
+
+
+def derive_round_plan(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Derive two deterministic proposal rounds from exact singleton and CP5V evidence."""
+
+    by_id = {str(row["proposal_id"]): row for row in rows}
+    if set(CP5V_EVENT_IDS) - set(by_id):
+        raise RE1Error("CP5V members are absent from the pinned VD1 census")
+    scored = []
+    for row in rows:
+        complete_delta = singleton_complete_s_delta(row)
+        scored.append(
+            {
+                "proposal_id": str(row["proposal_id"]),
+                "ordinal": int(row["ordinal"]),
+                "pair": int(row["pair"]),
+                "delta_flips_candidate_minus_base": int(row["delta_flips_candidate_minus_base"]),
+                "delta_d_pose_global_n600": float(row["delta_d_pose_global_n600"]),
+                "site_count": int(row["site_count"]),
+                "singleton_seg_pose_delta_s": complete_delta,
+                "downstream_selection_eligible": bool(row["downstream_selection_eligible"]),
+            }
+        )
+    negative_rows = sorted(
+        (
+            row
+            for row in scored
+            if row["site_count"] == 1
+            and row["singleton_seg_pose_delta_s"] < 0.0
+        ),
+        key=lambda row: (
+            row["singleton_seg_pose_delta_s"],
+            row["ordinal"],
+            row["proposal_id"],
+        ),
+    )
+    negative_ids = [str(row["proposal_id"]) for row in negative_rows]
+    expected_negative = [
+        CP5V_EVENT_IDS[0],
+        CP5V_EVENT_IDS[1],
+        CP5V_EVENT_IDS[2],
+        "ec1_0120_463b0cb756b2",
+    ]
+    if negative_ids != expected_negative:
+        raise RE1Error(f"current complete-S singleton set drifted: {negative_ids}")
+
+    cp5v_singleton_sum = sum(singleton_complete_s_delta(by_id[value]) for value in CP5V_EVENT_IDS)
+    cp5v_realized_delta = CP5V_SCORE - BASE_SCORE
+    interaction_slack = cp5v_realized_delta - cp5v_singleton_sum
+    round_1_rows = [negative_rows[0]]
+    best_by_pair: dict[int, dict[str, Any]] = {}
+    for row in negative_rows:
+        best_by_pair.setdefault(int(row["pair"]), row)
+    round_2_rows = sorted(
+        best_by_pair.values(),
+        key=lambda row: (
+            row["singleton_seg_pose_delta_s"],
+            row["ordinal"],
+            row["proposal_id"],
+        ),
+    )
+    round_1_ids = [str(row["proposal_id"]) for row in round_1_rows]
+    round_2_ids = [str(row["proposal_id"]) for row in round_2_rows]
+    if round_1_ids != [CP5V_EVENT_IDS[0]] or round_2_ids != [
+        CP5V_EVENT_IDS[0],
+        CP5V_EVENT_IDS[2],
+        "ec1_0120_463b0cb756b2",
+    ]:
+        raise RE1Error(f"distinct-pair round set drifted: {round_2_ids}")
+    round_1_components = combined_complete_s_delta(round_1_rows)
+    round_2_components = combined_complete_s_delta(round_2_rows)
+    round_1_projected_delta = float(round_1_components["delta_s"])
+    round_2_projected_delta = float(round_2_components["delta_s"])
+    if interaction_slack <= abs(round_2_projected_delta):
+        raise RE1Error("CP5V interaction calibration unexpectedly stopped being load-bearing")
+    if round_2_projected_delta >= round_1_projected_delta:
+        raise RE1Error("second proposal round does not improve the measured singleton objective")
+
+    def max_break_even_bytes(delta_s: float) -> int:
+        crossing = abs(delta_s) * RATE_DENOMINATOR / 25.0
+        return max(0, math.ceil(crossing) - 1)
+
+    return {
+        "schema": "ddm_re1_round_plan.v1",
+        "base_score": BASE_SCORE,
+        "base_d_pose_rederived": BASE_D_POSE,
+        "seg_denominator": TOTAL_SEG_SITES,
+        "incumbent": {
+            "name": "cp5v_validated_five",
+            "proposal_ids": list(CP5V_EVENT_IDS),
+            "exact_complete_s": CP5V_SCORE,
+            "delta_s_vs_cp135": cp5v_realized_delta,
+            "status": "MEASURED_WORSE_THAN_CP135",
+        },
+        "cp5v_interaction": {
+            "sum_of_exact_singleton_seg_pose_deltas": cp5v_singleton_sum,
+            "realized_whole_candidate_delta": cp5v_realized_delta,
+            "adverse_interaction_slack": interaction_slack,
+        },
+        "rounds": [
+            {
+                "name": ROUND_NAMES[0],
+                "proposal_ids": round_1_ids,
+                "selection": "strongest exact VD1 singleton complete-score delta",
+                "singleton_rows": round_1_rows,
+                "combined_exact_components": round_1_components,
+                "projected_seg_pose_delta_s": round_1_projected_delta,
+                "max_delta_bytes_for_negative_projection": max_break_even_bytes(
+                    round_1_projected_delta
+                ),
+                "acceptance_status": "UNACCEPTED_PENDING_WHOLE_CANDIDATE_SCORE",
+            },
+            {
+                "name": ROUND_NAMES[1],
+                "proposal_ids": round_2_ids,
+                "selection": (
+                    "best negative complete-score singleton per distinct affected pair; same-pair "
+                    "stacking excluded after CP5V adverse interaction"
+                ),
+                "singleton_rows": round_2_rows,
+                "combined_exact_components": round_2_components,
+                "projected_seg_pose_delta_s": round_2_projected_delta,
+                "max_delta_bytes_for_negative_projection": max_break_even_bytes(
+                    round_2_projected_delta
+                ),
+                "acceptance_status": "UNACCEPTED_PENDING_WHOLE_CANDIDATE_SCORE",
+            },
+        ],
+        "projection_is_not_acceptance": True,
+        "scorer_run": False,
+        "score_claim": False,
+    }
+
+
+def save_state(output: Path, active_stage: str, completed_stages: list[str]) -> None:
+    jo1.atomic_json(
+        output / "state.json",
+        {
+            "schema": "ddm_re1_state.v1",
+            "status": "SCORER_QUEUED" if active_stage == "complete" else "RUNNING",
+            "active_stage": active_stage,
+            "completed_stages": completed_stages,
+            "resumable_from": str(output.resolve()),
+            "immutable_round_checkpoints": list(ROUND_NAMES),
+            "scorer_run": False,
+            "score_claim": False,
+        },
+    )
+
+
+def preflight(output: Path) -> dict[str, Any]:
+    output.mkdir(parents=True, exist_ok=True)
+    if not output.resolve().is_relative_to(
+        Path("/Volumes/VertigoDataTier/pact/pr135_joint_solve_20260810/probability_object_race")
+    ):
+        raise RE1Error("RE1 output must stay inside the chartered Vertigo target store")
+    usage = shutil.disk_usage(output)
+    if usage.free < MIN_FREE_BYTES:
+        raise RE1Error("SSD storage preflight failed closed")
+    jo1.require(JO1_SOURCE, digest=JO1_SOURCE_SHA256)
+    jo1.require(CP135_SOURCE, digest=CP135_SOURCE_SHA256)
+    jo1.require(jo1.BASE_ARCHIVE, size=jo1.BASE_BYTES, digest=jo1.BASE_SHA256)
+    jo1.require(jo1.BASE_SPATIAL, size=jo1.TOTAL_EVENTS, digest=jo1.BASE_SPATIAL_SHA256)
+    jo1.require(CP5V_EXACT, digest=CP5V_EXACT_SHA256)
+    rows = load_census_rows()
+    plan = derive_round_plan(rows)
+    source_copy = output / "retained/source" / Path(__file__).name
+    jo1.atomic_bytes(source_copy, Path(__file__).read_bytes(), executable=True)
+    plan_record = jo1.atomic_json(output / "10_ROUND_PLAN.json", plan)
+    result = {
+        "schema": "ddm_re1_preflight.v1",
+        "axis": AXIS,
+        "git_head": git_head(),
+        "free_bytes": usage.free,
+        "required_free_bytes": MIN_FREE_BYTES,
+        "target_store": str(output.resolve()),
+        "base_archive": jo1.file_record(jo1.BASE_ARCHIVE),
+        "base_spatial_tokens": jo1.file_record(jo1.BASE_SPATIAL),
+        "jo1_source": jo1.file_record(JO1_SOURCE),
+        "cp135_source": jo1.file_record(CP135_SOURCE),
+        "vd1_final": jo1.file_record(CENSUS_FINAL),
+        "vd1_event_results": jo1.file_record(CENSUS_EVENTS),
+        "cp5v_exact_receipt": jo1.file_record(CP5V_EXACT),
+        "round_plan": plan_record,
+        "retained_runner_source": jo1.file_record(source_copy),
+        "scorer_slot_owned": False,
+        "scorer_run": False,
+        "score_claim": False,
+        "all_materialized_payloads_retained": True,
+    }
+    jo1.atomic_json(output / "05_PREFLIGHT.json", result)
+    return result
+
+
+def _retained_reclose(output: Path, name: str, *, repeat: bool) -> dict[str, Any] | None:
+    root = jo1.candidate_root(output, name, repeat=repeat)
+    path = root / "50_RECLOSE_RESULT.json"
+    if not path.is_file():
+        return None
+    result = json.loads(path.read_text())
+    for key in ("archive", "token", "member", "shipped_decoded_spatial_tokens"):
+        _require_record(result[key])
+    if result.get("receiver_closed") is not True or result.get("score_claim") is not False:
+        raise RE1Error(f"retained reclose receipt is inadmissible: {path}")
+    return result
+
+
+def _materialize_and_reclose(
+    output: Path,
+    name: str,
+    proposal_ids: list[str],
+    *,
+    repeat: bool,
+) -> dict[str, Any]:
+    retained = _retained_reclose(output, name, repeat=repeat)
+    if retained is not None:
+        prepared = json.loads(
+            (jo1.candidate_root(output, name, repeat=repeat) / "20_MATERIALIZE_RESULT.json").read_text()
+        )
+        if prepared.get("proposal_ids") != proposal_ids:
+            raise RE1Error(f"retained round proposal set drifted: {name}")
+        return retained
+    jo1.materialize_candidate(output, name, proposal_ids, repeat=repeat)
+    return jo1.reclose_candidate(output, name, repeat=repeat)
+
+
+def _actual_token_diffs(base: np.ndarray, candidate: np.ndarray) -> list[dict[str, int]]:
+    rows: list[dict[str, int]] = []
+    for frame in range(jo1.FRAMES):
+        before = np.asarray(base[frame]).reshape(-1)
+        after = np.asarray(candidate[frame]).reshape(-1)
+        for index in np.flatnonzero(before != after).tolist():
+            rows.append(
+                {
+                    "frame": frame,
+                    "index": int(index),
+                    "source_class": int(before[index]),
+                    "target_class": int(after[index]),
+                }
+            )
+    return rows
+
+
+def _expected_token_diffs(applications: list[dict[str, Any]]) -> list[dict[str, int]]:
+    rows: list[dict[str, int]] = []
+    for application in applications:
+        for index in application["indices"]:
+            rows.append(
+                {
+                    "frame": int(application["frame"]),
+                    "index": int(index),
+                    "source_class": int(application["source_class"]),
+                    "target_class": int(application["target_class"]),
+                }
+            )
+    return sorted(rows, key=lambda row: (row["frame"], row["index"]))
+
+
+def build_round(output: Path, round_spec: dict[str, Any]) -> dict[str, Any]:
+    name = str(round_spec["name"])
+    proposal_ids = [str(value) for value in round_spec["proposal_ids"]]
+    primary = _materialize_and_reclose(output, name, proposal_ids, repeat=False)
+    primary_root = jo1.candidate_root(output, name)
+    archive_path = Path(primary["archive"]["path"])
+    runtime = jo1.copy_runtime(primary_root / "adapted_runtime", archive_path.read_bytes())
+    repeated = _materialize_and_reclose(output, name, proposal_ids, repeat=True)
+    same_archive = primary["archive"] == {
+        **repeated["archive"],
+        "path": primary["archive"]["path"],
+    }
+    same_token = primary["token"]["sha256"] == repeated["token"]["sha256"]
+    same_spatial = (
+        primary["shipped_decoded_spatial_tokens"]["sha256"]
+        == repeated["shipped_decoded_spatial_tokens"]["sha256"]
+    )
+    applications = json.loads((primary_root / "EVENT_APPLICATIONS.json").read_text())["rows"]
+    expected = _expected_token_diffs(applications)
+    base = np.memmap(
+        jo1.BASE_SPATIAL,
+        mode="r",
+        dtype=np.uint8,
+        shape=(jo1.FRAMES, jo1.HEIGHT, jo1.WIDTH),
+    )
+    candidate = np.memmap(
+        Path(primary["shipped_decoded_spatial_tokens"]["path"]),
+        mode="r",
+        dtype=np.uint8,
+        shape=(jo1.FRAMES, jo1.HEIGHT, jo1.WIDTH),
+    )
+    actual = _actual_token_diffs(base, candidate)
+    exact_diff = actual == expected and len(actual) == len(expected)
+    delta_bytes = int(primary["delta_bytes_vs_cp135"])
+    projected_delta = float(round_spec["projected_seg_pose_delta_s"])
+    projection_with_rate = projected_delta + 25.0 * delta_bytes / RATE_DENOMINATOR
+    rate_gate = delta_bytes <= int(round_spec["max_delta_bytes_for_negative_projection"])
+    diff_result = {
+        "schema": "ddm_re1_exact_token_diff.v1",
+        "round": name,
+        "base": jo1.file_record(jo1.BASE_SPATIAL),
+        "candidate": primary["shipped_decoded_spatial_tokens"],
+        "expected": expected,
+        "actual": actual,
+        "exact_requested_cells_and_nowhere_else": exact_diff,
+    }
+    diff_record = jo1.atomic_json(primary_root / "60_EXACT_TOKEN_DIFF.json", diff_result)
+    result = {
+        "schema": "ddm_re1_round_result.v1",
+        "round": name,
+        "proposal_ids": proposal_ids,
+        "selection_evidence": round_spec,
+        "archive": primary["archive"],
+        "independent_repeat": repeated["archive"],
+        "archive_repeat_byte_identical": same_archive,
+        "rc64_repeat_byte_identical": same_token,
+        "spatial_repeat_byte_identical": same_spatial,
+        "runtime": str((primary_root / "adapted_runtime").resolve()),
+        "runtime_archive": runtime["archive"],
+        "entropy_receiver_closed": bool(primary["receiver_closed"] and repeated["receiver_closed"]),
+        "receiver_closed": False,
+        "full_public_runtime_receiver_closed": False,
+        "full_receiver_boundary": (
+            "the shipped RC64 receiver decoded every token exactly, but the CUDA-locked public "
+            "inflate.sh renderer has not produced 0.raw on this lane"
+        ),
+        "exact_token_diff": diff_record,
+        "delta_bytes_vs_cp135": delta_bytes,
+        "projected_delta_s_from_existing_singletons_plus_real_rate": projection_with_rate,
+        "max_delta_bytes_for_negative_projection": round_spec[
+            "max_delta_bytes_for_negative_projection"
+        ],
+        "rate_projection_gate_passed": rate_gate,
+        "projection_authority": (
+            "not a candidate verdict; existing exact singleton rows do not prove the composed "
+            "whole-candidate score"
+        ),
+        "complete_s_acceptance": False,
+        "acceptance_status": (
+            "UNACCEPTED_PENDING_WHOLE_CANDIDATE_SCORE"
+            if rate_gate
+            else "FOLDED_RATE_PROJECTION_NONNEGATIVE"
+        ),
+        "decoded_raw_video_retained": False,
+        "decoded_raw_video_boundary": (
+            "the F26 renderer is CUDA-locked and this charter owns no scorer slot; raw and scorer "
+            "fields are required returns of the queued one-job evaluation"
+        ),
+        "scorer_run": False,
+        "score_claim": False,
+        "all_materialized_payloads_retained": True,
+    }
+    jo1.atomic_json(output / f"{name}_RESULT.json", result)
+    if not all((same_archive, same_token, same_spatial, exact_diff, result["entropy_receiver_closed"])):
+        jo1.atomic_json(
+            output / f"{name}_FALSIFIER.json",
+            {"schema": "ddm_re1_round_falsifier.v1", "status": "FIRED", **result},
+        )
+        raise RE1Error(f"receiver/determinism falsifier fired for {name}")
+    return result
+
+
+def scorer_queue(round_2: dict[str, Any], output: Path) -> dict[str, Any]:
+    return {
+        "schema": "ddm_re1_scorer_queue.v1",
+        "disposition": "QUEUED",
+        "action": "one full-n600 whole-candidate render and complete-S evaluation",
+        "owner": "MAIN sole scorer-lane router",
+        "candidate_archive": round_2["archive"],
+        "candidate_runtime": round_2["runtime"],
+        "consumer_store": str((output / "full_n600_exact/round_02_distinct_pair_stack").resolve()),
+        "fire_trigger": (
+            "MAIN explicitly transfers the sole full-n600 scorer slot to this exact pinned "
+            "candidate, no other scorer job is active, archive/runtime pins still match, and "
+            "each scorer chunk is at most 120"
+        ),
+        "required_returns": [
+            "retained decoded 0.raw",
+            "full Seg logits and argmax fields",
+            "full PoseNet vectors",
+            "upstream evaluator receipt over the exact archive/runtime",
+            "complete S with Seg, nonlinear Pose, rate, and interaction",
+        ],
+        "max_chunk_size": MAX_SCORER_CHUNK,
+        "job_count": 1,
+        "no_modal_dispatch_by_ddm_re1": True,
+        "score_claim": False,
+    }
+
+
+def finalize(output: Path, rounds: list[dict[str, Any]]) -> dict[str, Any]:
+    queue = scorer_queue(rounds[-1], output)
+    if rounds[-1]["rate_projection_gate_passed"] is not True:
+        queue["disposition"] = "FOLDED"
+        queue["fire_trigger"] = "none; the byte-closed rate projection is nonnegative"
+    queue_record = jo1.atomic_json(output / "SCORER_QUEUE.json", queue)
+    final_status = (
+        "PARTIAL_BYTE_CLOSED_ENTROPY_RECEIVER_CLOSED_SCORER_QUEUED"
+        if queue["disposition"] == "QUEUED"
+        else "FOLDED_RATE_PROJECTION_NONNEGATIVE"
+    )
+    final = {
+        "schema": "ddm_re1_final_result.v1",
+        "status": final_status,
+        "axis": AXIS,
+        "target_store": str(output.resolve()),
+        "optimization_rounds_materialized": len(rounds),
+        "optimization_rounds_accepted": 0,
+        "rounds": rounds,
+        "best_unscored_proposal": rounds[-1]["archive"],
+        "best_unscored_runtime": rounds[-1]["runtime"],
+        "scorer_queue": queue_record,
+        "wall_verdict_emitted": False,
+        "frontier_pointer_moved": False,
+        "current_frontier": BASE_SCORE,
+        "charter_complete": False,
+        "charter_incomplete_reason": (
+            "the common contract grants no scorer slot, so complete-S acceptance and decoded raw/"
+            "scorer-field retention cannot be produced by this arm"
+        ),
+        "scorer_run": False,
+        "score_claim": False,
+        "all_materialized_payloads_retained": True,
+    }
+    jo1.atomic_json(output / "FINAL_RESULT.json", final)
+    save_state(output, "complete", ["preflight", *ROUND_NAMES, "finalize"])
+    return final
+
+
+def all_stages(output: Path) -> dict[str, Any]:
+    preflight(output)
+    plan = json.loads((output / "10_ROUND_PLAN.json").read_text())
+    rounds: list[dict[str, Any]] = []
+    completed = ["preflight"]
+    for round_spec in plan["rounds"]:
+        name = str(round_spec["name"])
+        save_state(output, name, completed)
+        rounds.append(build_round(output, round_spec))
+        completed.append(name)
+    save_state(output, "finalize", completed)
+    return finalize(output, rounds)
+
+
+def parser() -> argparse.ArgumentParser:
+    value = argparse.ArgumentParser(description=__doc__)
+    value.add_argument("stage", choices=("preflight", "all"))
+    value.add_argument("--output", type=Path, default=OUTPUT)
+    value.add_argument(
+        "--resume-from",
+        type=Path,
+        required=True,
+        help="must equal --output; the same path is used for first launch and resume",
+    )
+    return value
+
+
+def main() -> None:
+    args = parser().parse_args()
+    if args.resume_from.resolve() != args.output.resolve():
+        raise SystemExit("FATAL: --resume-from must equal --output")
+    with exclusive_arm_lock(args.output):
+        result = preflight(args.output) if args.stage == "preflight" else all_stages(args.output)
+    print(json.dumps(result, indent=2, sort_keys=True), flush=True)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,104 @@
+"""ddm_rr6 retention manifest.
+
+Big payloads are bound by the sha256 the producing tool already computed and
+recorded in its own receipt, not by a fresh read: re-hashing 7.3 GB adds no
+information (the receipt digest IS the authority the identity argument uses) and
+would perturb a live decode's I/O. Small files are hashed here.
+"""
+import hashlib, json, os
+from pathlib import Path
+
+ROOT = Path("/Volumes/APDataStore/pact/ddm_rr6")
+BASELINE_RAW = "7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7"
+
+
+def sha_small(p):
+    h = hashlib.sha256()
+    with p.open("rb") as f:
+        for c in iter(lambda: f.read(1 << 20), b""):
+            h.update(c)
+    return h.hexdigest()
+
+
+def token_receipt(run):
+    p = ROOT / run / "work/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.json"
+    return json.loads(p.read_text()) if p.is_file() else None
+
+
+def raw_manifest(run):
+    p = ROOT / run / "work/inflated_outputs_manifest.json"
+    return json.loads(p.read_text()) if p.is_file() else None
+
+
+runs = {}
+for run, what in (("advisory_native_r1", "driven by hand, NEON build"),
+                  ("advisory_ship_r2", "BARE invocation of the submittable tree, FORCE_SCALAR build")):
+    tok, raw = token_receipt(run), raw_manifest(run)
+    entry = {"what": what, "dir": str(ROOT / run)}
+    if tok:
+        t = tok["token_decoder"]
+        entry["token_decoder_selected"] = tok["binding"]["token_decoder"]
+        entry["token_stage"] = {
+            k: t.get(k) for k in
+            ("decode_path", "decode_threads", "decode_runtime_seconds",
+             "decoded_token_sha256", "corrected_quantized_logit_sha256",
+             "corrected_cdf_input_sha256", "decoder_bit_position")
+        }
+        f = ROOT / run / "work/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8"
+        if f.is_file():
+            entry["token_payload"] = {"path": str(f), "bytes": f.stat().st_size,
+                                      "sha256_from_receipt": tok["tokens"]["sha256"]}
+    else:
+        entry["token_stage"] = "NOT YET WRITTEN at manifest time"
+    if raw:
+        rf = raw["files"][0]
+        entry["raw_output"] = {"path": str(ROOT / run / "work/inflated" / rf["relative_path"]),
+                               "bytes": rf["bytes"], "sha256_from_manifest": rf["sha256"],
+                               "matches_python_baseline": rf["sha256"] == BASELINE_RAW}
+    else:
+        entry["raw_output"] = "NOT YET WRITTEN at manifest time"
+    runs[run] = entry
+
+small = []
+for rel in ("candidate_runtime_jg5_ship/inflate.sh",
+            "candidate_runtime_jg5_ship_stage_manifest.json",
+            "candidate_runtime_jg5_native_stage_manifest.json"):
+    p = ROOT / rel
+    if p.is_file():
+        small.append({"path": str(p), "bytes": p.stat().st_size, "sha256": sha_small(p)})
+
+manifest = {
+    "schema": "ddm_rr6_retention.v1",
+    "arm": "ddm_rr6",
+    "subject": "the ddm_wc2c split native token decoder, proven full-n600 in the shipping runtime and defaulted ON",
+    "axis": "[macOS-CPU advisory] — no score claim",
+    "base_archive": {"sha256": "f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e",
+                     "bytes": 180625, "note": "UNCHANGED from jg5; this arm moves no scored byte"},
+    "t4_token_anchors_to_reproduce": {
+        "decoded_token_sha256": "cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb",
+        "corrected_quantized_logit_sha256": "8269fe1aad031620b18051ad784d877bc9e6e9a4a71e775e78681955c4eec4dd",
+        "corrected_cdf_input_sha256": "370a5e2a85ccbb1e598c84333cc851f0a8c352091fde272160826b4b04e46000",
+        "decoder_bit_position": 910837,
+        "source": "/Volumes/APDataStore/pact/ddm_jg5/t4_row_r1/harvested_artifacts/",
+    },
+    "same_axis_python_oracle": {
+        "dir": "/Volumes/APDataStore/pact/ddm_jg5/advisory_final",
+        "token_stage_seconds": 589.4564070701599,
+        "inflate_elapsed_seconds": 978.8732694580685,
+        "raw_sha256": BASELINE_RAW,
+        "canonical_score": 0.19335265651220337,
+    },
+    "runs": runs,
+    "small_files": small,
+    "storage_note": (
+        "/Volumes/VertigoDataTier is at 100% (890Mi free), so retention is on /Volumes/APDataStore "
+        "per the storage waterfall. Payloads are kept in place on the SSD tier and bound here by the "
+        "producing tool's own sha256; nothing was measured and discarded."
+    ),
+}
+out = ROOT / "retained" / "RR6_RETENTION_MANIFEST.json"
+tmp = out.with_suffix(".tmp")
+tmp.write_text(json.dumps(manifest, indent=2))
+os.replace(tmp, out)
+print(json.dumps({"written": str(out), "r1_raw_match": runs["advisory_native_r1"].get("raw_output"),
+                  "r2_token": runs["advisory_ship_r2"].get("token_decoder_selected")}, indent=1)[:900])

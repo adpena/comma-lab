@@ -1,0 +1,28 @@
+"""Decode N pairs with tree=argv[1] while the `tac` package is UNIMPORTABLE.
+
+This simulates the contest runtime tree, where inflate.sh runs bare `python`
+against a flat directory of vendored modules and no `tac` install exists.
+"""
+import hashlib, importlib.abc, importlib.util, sys
+from pathlib import Path
+
+class _BlockTac(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == "tac" or fullname.startswith("tac."):
+            raise ModuleNotFoundError(
+                f"No module named {fullname!r} "
+                "(ddm_cu1: simulated contest runtime — no tac package)")
+        return None
+
+sys.meta_path.insert(0, _BlockTac())
+tree = Path(sys.argv[1]).resolve()
+n = int(sys.argv[2])
+sys.path.insert(0, str(tree))
+spec = importlib.util.spec_from_file_location("inflate_runner", tree / "inflate_runner.py")
+mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+dec = mod.Decoder(tree / "archive")
+h = hashlib.sha256()
+for i in range(min(n, dec.n_pairs)):
+    f1 = dec.f1(i); f0 = dec.f0(i, f1)
+    h.update(f0.tobytes()); h.update(f1.tobytes())
+print(f"n_pairs={dec.n_pairs} probed={min(n,dec.n_pairs)} sha256={h.hexdigest()}")

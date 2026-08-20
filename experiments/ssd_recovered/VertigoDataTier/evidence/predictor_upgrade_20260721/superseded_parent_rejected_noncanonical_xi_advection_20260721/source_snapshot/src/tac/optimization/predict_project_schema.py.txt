@@ -1,0 +1,1593 @@
+# SPDX-License-Identifier: MIT
+"""Canonical scorer-agnostic PREDICT-to-PROJECT constraint-seed schema v0.
+
+The wire format is a length-delimited canonical JSON payload followed by its
+SHA-256 digest.  All video-derived numeric state is integer/fixed-point.  The
+parser is intentionally strict: it rejects non-canonical JSON, unknown fields,
+trailing bytes, digest drift, bool-as-int values, and ambiguous ordering.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import struct
+from collections.abc import Mapping, Sequence
+from typing import Any, Final
+
+SCHEMA_ID: Final = "predict_project_constraint_seed.v0"
+CONTAINER_SCHEMA: Final = "predict_project_named_sections.v1"
+CONTAINER_VERSION: Final = 1
+MAGIC: Final = b"PPCS1\x00"
+PREFIX: Final = struct.Struct(">6sHH")
+SECTION_PREFIX: Final = struct.Struct(">HQ")
+DIGEST_BYTES: Final = 32
+PAIR_COUNT: Final = 600
+CLASS_COUNT: Final = 5
+EVENT_KINDS: Final = frozenset({"birth", "death", "split", "merge", "occlusion", "phase_reset"})
+STRATA: Final = frozenset({"cell_interior", "boundary_codim1", "movable_track", "critical_event"})
+CRITICAL_TYPES: Final = frozenset({"minimum", "saddle", "maximum"})
+CRITICAL_TYPE_ORDER: Final = {"minimum": 0, "saddle": 1, "maximum": 2}
+JITTER_RUNGS: Final = frozenset({"R0", "R1", "R2"})
+NATIVE_GRAMMAR_SCHEMA: Final = "predict_project_native_grammar.v0"
+GRAMMAR_NONTERMINALS: Final = (
+    "SceneChart",
+    "XiSpline",
+    "CriticalPoint",
+    "SeparatrixArc",
+    "VineyardSymbol",
+    "PoseBox",
+    "ExceptionRun",
+    "LadderEdit",
+    "LearnedTailGenerator",
+)
+GRAMMAR_PRODUCTIONS: Final = (
+    (
+        "p00_scene_chart",
+        "SceneChart",
+        (
+            "XiSpline",
+            "CriticalPoint",
+            "SeparatrixArc",
+            "VineyardSymbol",
+            "PoseBox",
+            "ExceptionRun",
+            "LadderEdit",
+            "LearnedTailGenerator",
+        ),
+        "s2.scene_chart.v1",
+    ),
+    ("p01_xi_spline", "XiSpline", (), "lie.se3_bspline.v1"),
+    ("p02_critical_point", "CriticalPoint", (), "aa_sdf.critical_point.v1"),
+    ("p03_separatrix_arc", "SeparatrixArc", (), "aa_sdf.separatrix_arc.v1"),
+    ("p04_vineyard_symbol", "VineyardSymbol", (), "s2.vineyard_symbol.v1"),
+    ("p05_pose_box", "PoseBox", (), "joint_seg_pose_rate.pose_box.v1"),
+    ("p06_exception_run", "ExceptionRun", (), "context557.exception_run.v1"),
+    ("p07_ladder_edit", "LadderEdit", (), "predict_project.ladder_edit.v1"),
+    ("p08_learned_tail", "LearnedTailGenerator", (), "s3.seed_conditioned_tail.v1"),
+)
+GRAMMAR_INTERPRETERS: Final = (
+    ("aa_sdf.critical_point.v1", "src/tac/boundary_math/aa_sdf_observation_render.py"),
+    ("aa_sdf.separatrix_arc.v1", "src/tac/boundary_math/aa_sdf_observation_render.py"),
+    ("context557.exception_run.v1", "src/tac/optimization/s2_partition_seed.py"),
+    ("joint_seg_pose_rate.pose_box.v1", "src/tac/optimization/joint_seg_pose_rate.py"),
+    ("lie.se3_bspline.v1", "src/tac/lie/se3_bspline.py"),
+    ("predict_project.ladder_edit.v1", "src/tac/optimization/predict_project_receiver.py"),
+    ("s2.scene_chart.v1", "src/tac/optimization/s2_partition_seed.py"),
+    ("s2.vineyard_symbol.v1", "src/tac/optimization/s2_partition_seed.py"),
+    ("s3.seed_conditioned_tail.v1", "src/tac/boundary_math/integer_plane_banded_trainer.py"),
+)
+SECTION_NAMES: Final = (
+    "manifest",
+    "native_grammar",
+    "units",
+    "ground_chart",
+    "trajectory",
+    "movable_tracks",
+    "causal_jitter",
+    "events",
+    "pose_tightening",
+    "constraint_seeds",
+    "receiver",
+    "authority",
+)
+
+TOP_FIELDS: Final = frozenset(
+    {
+        "schema",
+        "container",
+        "grammar",
+        "units",
+        "ground_chart",
+        "trajectory",
+        "movable_tracks",
+        "boundary_jitter",
+        "events",
+        "pose_tightening",
+        "constraint_seeds",
+        "receiver",
+        "authority",
+    }
+)
+
+
+class PredictProjectSchemaError(ValueError):
+    """Malformed, noncanonical, or authority-laundering seed schema."""
+
+
+def _exact_fields(value: Any, fields: set[str] | frozenset[str], label: str) -> Mapping[str, Any]:
+    if not isinstance(value, dict) or set(value) != set(fields):
+        raise PredictProjectSchemaError(f"{label} fields mismatch")
+    return value
+
+
+def _integer(value: Any, label: str, *, minimum: int | None = None, maximum: int | None = None) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise PredictProjectSchemaError(f"{label} must be an exact integer")
+    if minimum is not None and value < minimum:
+        raise PredictProjectSchemaError(f"{label} is below its minimum")
+    if maximum is not None and value > maximum:
+        raise PredictProjectSchemaError(f"{label} exceeds its maximum")
+    return value
+
+
+def _sha256(value: Any, label: str) -> str:
+    if (
+        not (
+            isinstance(value, str)
+            and len(value) == 64
+            and value == value.lower()
+            and all(character in "0123456789abcdef" for character in value)
+        )
+        or value == "0" * 64
+    ):
+        raise PredictProjectSchemaError(f"{label} must be a lowercase SHA-256")
+    return value
+
+
+def _nonempty_string(value: Any, label: str) -> str:
+    if (
+        not isinstance(value, str)
+        or not value
+        or value.strip() != value
+        or value.casefold() in {"unknown", "none", "null", "n/a", "na"}
+    ):
+        raise PredictProjectSchemaError(f"{label} must be a nonempty canonical string")
+    return value
+
+
+def _quantum(value: Any, label: str) -> tuple[int, int]:
+    row = _exact_fields(value, {"numerator", "denominator", "unit"}, label)
+    numerator = _integer(row["numerator"], f"{label}.numerator", minimum=1)
+    denominator = _integer(row["denominator"], f"{label}.denominator", minimum=1)
+    _nonempty_string(row["unit"], f"{label}.unit")
+    return numerator, denominator
+
+
+def canonical_json_bytes(value: Any) -> bytes:
+    try:
+        return json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("ascii")
+    except (TypeError, ValueError, UnicodeEncodeError) as exc:
+        raise PredictProjectSchemaError("value is not canonical-JSON encodable") from exc
+
+
+def _validate_container(value: Any) -> None:
+    row = _exact_fields(
+        value,
+        {
+            "schema",
+            "version",
+            "section_order",
+            "length_encoding",
+            "section_digest",
+            "outer_digest",
+            "unknown_sections",
+        },
+        "container",
+    )
+    if row != {
+        "schema": CONTAINER_SCHEMA,
+        "version": CONTAINER_VERSION,
+        "section_order": list(SECTION_NAMES),
+        "length_encoding": "u16be_name_u64be_payload",
+        "section_digest": "sha256",
+        "outer_digest": "sha256",
+        "unknown_sections": "reject",
+    }:
+        raise PredictProjectSchemaError("named-section container policy mismatch")
+
+
+def build_native_grammar() -> dict[str, Any]:
+    """Return the canonical, payload-free native decoder grammar.
+
+    Procedure identifiers name existing/free interpreter surfaces.  They are
+    references, not copied code or serialized model/video state.
+    """
+
+    productions = [
+        {
+            "production_id": production_id,
+            "lhs": lhs,
+            "rhs_nonterminals": list(rhs),
+            "interpreter_procedure_id": procedure_id,
+            "arithmetic_context_id": f"ctx:{index:03d}:{lhs}",
+        }
+        for index, (production_id, lhs, rhs, procedure_id) in enumerate(GRAMMAR_PRODUCTIONS)
+    ]
+    return {
+        "schema": NATIVE_GRAMMAR_SCHEMA,
+        "start_nonterminal": "SceneChart",
+        "nonterminal_order": list(GRAMMAR_NONTERMINALS),
+        "nonterminals": [
+            {
+                "name": name,
+                "presence": "OPTIONAL_DEFAULT_ABSENT" if name == "LearnedTailGenerator" else "REQUIRED",
+                "wire_payload": False,
+            }
+            for name in GRAMMAR_NONTERMINALS
+        ],
+        "productions": productions,
+        "interpreter_procedures": [
+            {
+                "procedure_id": procedure_id,
+                "source_path": source_path,
+                "execution_class": "free_generic_decoder_procedure",
+                "serialized": False,
+            }
+            for procedure_id, source_path in GRAMMAR_INTERPRETERS
+        ],
+        "arithmetic_contexts": [
+            {
+                "context_id": production["arithmetic_context_id"],
+                "grammar_position": f"{index}:{production['production_id']}:{production['lhs']}",
+                "model_id": "#557-grammar-position-context",
+            }
+            for index, production in enumerate(productions)
+        ],
+        "learned_tail": {
+            "status": "ABSENT_DEFAULT",
+            "race_receipt_sha256": None,
+            "admitted_stream_ids": [],
+            "counted_weights_required": True,
+        },
+        "invariants": {
+            "unknown_nonterminals": "reject",
+            "unknown_productions": "reject",
+            "unknown_procedures": "reject",
+            "production_order": "declared_canonical_order",
+            "context_coverage": "exact_one_per_production",
+            "exact_consumption": True,
+            "final_byte_required": True,
+            "final_sha256_required": True,
+            "atomic_decode": True,
+            "raster_payload_bytes_allowed": False,
+            "scorer_bytes_allowed": False,
+            "hidden_video_bytes_allowed": False,
+        },
+    }
+
+
+def _validate_native_grammar(value: Any) -> None:
+    row = _exact_fields(
+        value,
+        {
+            "schema",
+            "start_nonterminal",
+            "nonterminal_order",
+            "nonterminals",
+            "productions",
+            "interpreter_procedures",
+            "arithmetic_contexts",
+            "learned_tail",
+            "invariants",
+        },
+        "native grammar",
+    )
+    if row["schema"] != NATIVE_GRAMMAR_SCHEMA or row["start_nonterminal"] != "SceneChart":
+        raise PredictProjectSchemaError("native grammar schema/start mismatch")
+    if row["nonterminal_order"] != list(GRAMMAR_NONTERMINALS):
+        raise PredictProjectSchemaError("native grammar nonterminals are unknown, missing, or noncanonical")
+    nonterminals = row["nonterminals"]
+    if not isinstance(nonterminals, list) or len(nonterminals) != len(GRAMMAR_NONTERMINALS):
+        raise PredictProjectSchemaError("native grammar nonterminal declarations are incomplete")
+    for expected_name, declaration in zip(GRAMMAR_NONTERMINALS, nonterminals, strict=True):
+        declaration = _exact_fields(declaration, {"name", "presence", "wire_payload"}, "nonterminal")
+        expected_presence = "OPTIONAL_DEFAULT_ABSENT" if expected_name == "LearnedTailGenerator" else "REQUIRED"
+        if declaration != {"name": expected_name, "presence": expected_presence, "wire_payload": False}:
+            raise PredictProjectSchemaError("native grammar nonterminal declaration mismatch")
+
+    interpreters = row["interpreter_procedures"]
+    expected_interpreters = build_native_grammar()["interpreter_procedures"]
+    if interpreters != expected_interpreters:
+        raise PredictProjectSchemaError("native grammar interpreter procedure is unknown or noncanonical")
+    procedure_ids = {item["procedure_id"] for item in interpreters}
+
+    productions = row["productions"]
+    expected_productions = build_native_grammar()["productions"]
+    if not isinstance(productions, list) or len(productions) != len(expected_productions):
+        raise PredictProjectSchemaError("native grammar productions are incomplete")
+    declared_names = set(GRAMMAR_NONTERMINALS)
+    seen_ids: set[str] = set()
+    for actual, expected in zip(productions, expected_productions, strict=True):
+        actual = _exact_fields(
+            actual,
+            {"production_id", "lhs", "rhs_nonterminals", "interpreter_procedure_id", "arithmetic_context_id"},
+            "production",
+        )
+        if actual != expected or actual["production_id"] in seen_ids:
+            raise PredictProjectSchemaError("native grammar production is unknown, duplicate, or noncanonical")
+        if actual["lhs"] not in declared_names or any(
+            name not in declared_names for name in actual["rhs_nonterminals"]
+        ):
+            raise PredictProjectSchemaError("native grammar production references an unknown nonterminal")
+        if actual["interpreter_procedure_id"] not in procedure_ids:
+            raise PredictProjectSchemaError("native grammar production references an unknown procedure")
+        seen_ids.add(actual["production_id"])
+
+    contexts = row["arithmetic_contexts"]
+    expected_contexts = build_native_grammar()["arithmetic_contexts"]
+    if contexts != expected_contexts:
+        raise PredictProjectSchemaError("native grammar #557 arithmetic context coverage/order mismatch")
+    learned = _exact_fields(
+        row["learned_tail"],
+        {"status", "race_receipt_sha256", "admitted_stream_ids", "counted_weights_required"},
+        "native grammar learned tail",
+    )
+    if learned["counted_weights_required"] is not True:
+        raise PredictProjectSchemaError("learned tail weights must be Rule-118 counted")
+    if learned["status"] == "ABSENT_DEFAULT":
+        if learned["race_receipt_sha256"] is not None or learned["admitted_stream_ids"] != []:
+            raise PredictProjectSchemaError("absent learned tail cannot carry a receipt or admitted streams")
+    elif learned["status"] == "ADMITTED_BY_STRICT_THREE_WAY_RACE":
+        _sha256(learned["race_receipt_sha256"], "learned-tail race receipt")
+        streams = learned["admitted_stream_ids"]
+        if not isinstance(streams, list) or not streams or streams != sorted(set(streams)):
+            raise PredictProjectSchemaError("admitted learned-tail streams must be sorted and unique")
+        for stream in streams:
+            _nonempty_string(stream, "learned-tail stream")
+    else:
+        raise PredictProjectSchemaError("learned tail must fail closed when its race is absent")
+    if row["invariants"] != build_native_grammar()["invariants"]:
+        raise PredictProjectSchemaError("native grammar exact-consumption/atomic/no-hidden-payload invariants mismatch")
+
+
+def _validate_units(value: Any) -> Mapping[str, Any]:
+    row = _exact_fields(
+        value,
+        {
+            "time",
+            "chart_coordinate",
+            "trajectory_translation",
+            "trajectory_rotation",
+            "track_coordinate",
+            "normal_vector",
+            "boundary_offset",
+            "pose",
+        },
+        "units",
+    )
+    if row["time"] != "pair_index":
+        raise PredictProjectSchemaError("units must declare pair_index")
+    for key in (
+        "chart_coordinate",
+        "trajectory_translation",
+        "trajectory_rotation",
+        "track_coordinate",
+        "normal_vector",
+        "boundary_offset",
+        "pose",
+    ):
+        _quantum(row[key], f"units.{key}")
+    return row
+
+
+def derive_morse_smale_raster(chart: Mapping[str, Any]) -> bytes:
+    """Derive the non-authoritative compatibility raster from cell sites.
+
+    This is not an MS-native arc-to-cell rasterizer: critical points and
+    separatrix arcs do not yet determine bulk cell interiors.  Separatrix arcs
+    are consumed only by the receiver's causal boundary-offset stage.
+    """
+
+    geometry = chart["geometry"]
+    cells = chart["cells"]
+    height, width = geometry["scorer_height"], geometry["scorer_width"]
+    quantum = chart["coordinate_quantum"]
+    numerator, denominator = quantum["numerator"], quantum["denominator"]
+    payload = bytearray(height * width)
+    for y in range(height):
+        y_q = y * denominator // numerator
+        for x in range(width):
+            x_q = x * denominator // numerator
+            cell = min(
+                cells,
+                key=lambda item: (
+                    (item["site_y_q"] - y_q) ** 2 + (item["site_x_q"] - x_q) ** 2,
+                    item["cell_id"],
+                ),
+            )
+            payload[y * width + x] = cell["class_id"]
+    return bytes(payload)
+
+
+def _validate_chart(value: Any) -> tuple[int, int, int, int, set[int]]:
+    row = _exact_fields(
+        value,
+        {
+            "geometry",
+            "representation",
+            "coordinate_quantum",
+            "critical_points",
+            "separatrix_arcs",
+            "cells",
+            "canonical_traversal",
+            "vineyard_events",
+            "derived_raster_fixture",
+        },
+        "ground_chart",
+    )
+    geometry = _exact_fields(
+        row["geometry"],
+        {"scorer_height", "scorer_width", "camera_height", "camera_width", "class_count"},
+        "ground_chart.geometry",
+    )
+    scorer_h = _integer(geometry["scorer_height"], "scorer_height", minimum=1)
+    scorer_w = _integer(geometry["scorer_width"], "scorer_width", minimum=1)
+    camera_h = _integer(geometry["camera_height"], "camera_height", minimum=scorer_h)
+    camera_w = _integer(geometry["camera_width"], "camera_width", minimum=scorer_w)
+    if _integer(geometry["class_count"], "class_count") != CLASS_COUNT:
+        raise PredictProjectSchemaError("class_count must match the frozen five-cell alphabet")
+    if row["representation"] != "morse_smale_graph_vineyard.v1":
+        raise PredictProjectSchemaError("normative ground chart must be a Morse-Smale graph/vineyard")
+    q_num, q_den = _quantum(row["coordinate_quantum"], "ground_chart.coordinate_quantum")
+    max_y_q = (scorer_h - 1) * q_den // q_num
+    max_x_q = (scorer_w - 1) * q_den // q_num
+
+    critical_points = row["critical_points"]
+    if not isinstance(critical_points, list) or not critical_points:
+        raise PredictProjectSchemaError("Morse-Smale chart requires critical points")
+    critical_keys: list[tuple[int, int, int]] = []
+    critical_by_id: dict[int, Mapping[str, Any]] = {}
+    for point in critical_points:
+        item = _exact_fields(
+            point,
+            {"critical_id", "type", "persistence_q", "ground_y_q", "ground_x_q"},
+            "critical point",
+        )
+        critical_id = _integer(item["critical_id"], "critical_id", minimum=0)
+        if item["type"] not in CRITICAL_TYPES:
+            raise PredictProjectSchemaError("critical point type is invalid")
+        persistence = _integer(item["persistence_q"], "critical persistence_q", minimum=1)
+        _integer(item["ground_y_q"], "critical ground_y_q", minimum=0, maximum=max_y_q)
+        _integer(item["ground_x_q"], "critical ground_x_q", minimum=0, maximum=max_x_q)
+        if critical_id in critical_by_id:
+            raise PredictProjectSchemaError("critical point IDs must be unique")
+        critical_by_id[critical_id] = item
+        critical_keys.append((-persistence, CRITICAL_TYPE_ORDER[item["type"]], critical_id))
+    if critical_keys != sorted(critical_keys):
+        raise PredictProjectSchemaError("critical points must use canonical persistence/type/ID order")
+
+    cells = row["cells"]
+    if not isinstance(cells, list) or not cells:
+        raise PredictProjectSchemaError("Morse-Smale chart requires cells")
+    cell_ids: list[int] = []
+    cell_by_id: dict[int, Mapping[str, Any]] = {}
+    for cell in cells:
+        item = _exact_fields(
+            cell,
+            {"cell_id", "class_id", "site_y_q", "site_x_q", "adjacent_cell_ids"},
+            "Morse-Smale cell",
+        )
+        cell_id = _integer(item["cell_id"], "cell_id", minimum=0)
+        _integer(item["class_id"], "cell class_id", minimum=0, maximum=CLASS_COUNT - 1)
+        _integer(item["site_y_q"], "cell site_y_q", minimum=0, maximum=max_y_q)
+        _integer(item["site_x_q"], "cell site_x_q", minimum=0, maximum=max_x_q)
+        adjacent = item["adjacent_cell_ids"]
+        if not isinstance(adjacent, list):
+            raise PredictProjectSchemaError("cell adjacency must be a list")
+        adjacent_ids = [_integer(entry, "adjacent cell ID", minimum=0) for entry in adjacent]
+        if adjacent_ids != sorted(set(adjacent_ids)) or cell_id in adjacent_ids:
+            raise PredictProjectSchemaError("cell adjacency must be sorted, unique, and irreflexive")
+        cell_ids.append(cell_id)
+        cell_by_id[cell_id] = item
+    if cell_ids != sorted(set(cell_ids)):
+        raise PredictProjectSchemaError("cells must have sorted unique IDs")
+    for cell_id, cell in cell_by_id.items():
+        for adjacent_id in cell["adjacent_cell_ids"]:
+            if adjacent_id not in cell_by_id or cell_id not in cell_by_id[adjacent_id]["adjacent_cell_ids"]:
+                raise PredictProjectSchemaError("cell adjacency must be symmetric and reference known cells")
+
+    arcs = row["separatrix_arcs"]
+    if not isinstance(arcs, list):
+        raise PredictProjectSchemaError("separatrix_arcs must be a list")
+    arc_ids: set[int] = set()
+    arc_keys: list[tuple[int, int, int]] = []
+    adjacency_edges: set[tuple[int, int]] = set()
+    for arc in arcs:
+        item = _exact_fields(
+            arc,
+            {
+                "arc_id",
+                "source_critical_id",
+                "target_critical_id",
+                "left_cell_id",
+                "right_cell_id",
+                "samples",
+            },
+            "separatrix arc",
+        )
+        arc_id = _integer(item["arc_id"], "arc_id", minimum=0)
+        source = _integer(item["source_critical_id"], "source critical ID", minimum=0)
+        target = _integer(item["target_critical_id"], "target critical ID", minimum=0)
+        left = _integer(item["left_cell_id"], "left cell ID", minimum=0)
+        right = _integer(item["right_cell_id"], "right cell ID", minimum=0)
+        if arc_id in arc_ids or source >= target or source not in critical_by_id or target not in critical_by_id:
+            raise PredictProjectSchemaError("arc IDs/endpoints are duplicate, missing, or noncanonical")
+        if left >= right or left not in cell_by_id or right not in cell_by_id:
+            raise PredictProjectSchemaError("arc cell endpoints are missing or noncanonical")
+        if right not in cell_by_id[left]["adjacent_cell_ids"]:
+            raise PredictProjectSchemaError("separatrix arc does not match cell adjacency")
+        samples = item["samples"]
+        if not isinstance(samples, list) or len(samples) < 2:
+            raise PredictProjectSchemaError("separatrix arc requires at least two samples")
+        for index, sample in enumerate(samples):
+            sample_row = _exact_fields(
+                sample,
+                {"arc_index", "ground_y_q", "ground_x_q", "normal_y_q", "normal_x_q"},
+                "separatrix sample",
+            )
+            if _integer(sample_row["arc_index"], "arc_index", minimum=0) != index:
+                raise PredictProjectSchemaError("arc samples must use contiguous canonical indices")
+            _integer(sample_row["ground_y_q"], "sample ground_y_q", minimum=0, maximum=max_y_q)
+            _integer(sample_row["ground_x_q"], "sample ground_x_q", minimum=0, maximum=max_x_q)
+            _integer(sample_row["normal_y_q"], "sample normal_y_q")
+            _integer(sample_row["normal_x_q"], "sample normal_x_q")
+        if (samples[0]["ground_y_q"], samples[0]["ground_x_q"]) != (
+            critical_by_id[source]["ground_y_q"],
+            critical_by_id[source]["ground_x_q"],
+        ) or (samples[-1]["ground_y_q"], samples[-1]["ground_x_q"]) != (
+            critical_by_id[target]["ground_y_q"],
+            critical_by_id[target]["ground_x_q"],
+        ):
+            raise PredictProjectSchemaError("arc samples must be endpoint-complete")
+        arc_ids.add(arc_id)
+        arc_keys.append((source, target, arc_id))
+        adjacency_edges.add((left, right))
+    if arc_keys != sorted(arc_keys):
+        raise PredictProjectSchemaError("separatrix arcs must use canonical endpoint/ID order")
+    expected_edges = {
+        (min(cell_id, adjacent), max(cell_id, adjacent))
+        for cell_id, cell in cell_by_id.items()
+        for adjacent in cell["adjacent_cell_ids"]
+    }
+    if adjacency_edges != expected_edges:
+        raise PredictProjectSchemaError("separatrix arcs must cover cell adjacency exactly")
+
+    traversal = _exact_fields(
+        row["canonical_traversal"],
+        {"critical_order", "arc_order", "sample_order", "cell_order", "raster_tie_policy"},
+        "canonical traversal",
+    )
+    if traversal != {
+        "critical_order": "persistence_desc_type_id",
+        "arc_order": "source_target_arc_id",
+        "sample_order": "arc_index",
+        "cell_order": "cell_id",
+        "raster_tie_policy": "nearest_site_then_min_cell_id",
+    }:
+        raise PredictProjectSchemaError("canonical traversal/tie policy mismatch")
+
+    vineyard = row["vineyard_events"]
+    if not isinstance(vineyard, list):
+        raise PredictProjectSchemaError("vineyard_events must be a list")
+    vineyard_keys: list[tuple[int, str, int]] = []
+    for event in vineyard:
+        item = _exact_fields(
+            event,
+            {"time", "kind", "persistence_pair_id", "critical_ids", "cell_ids"},
+            "vineyard event",
+        )
+        time = _integer(item["time"], "vineyard time", minimum=0, maximum=PAIR_COUNT - 1)
+        if item["kind"] not in {"birth", "death", "split", "merge"}:
+            raise PredictProjectSchemaError("vineyard lifecycle kind is invalid")
+        pair_id = _integer(item["persistence_pair_id"], "persistence pair ID", minimum=0)
+        critical_ids = [_integer(entry, "vineyard critical ID", minimum=0) for entry in item["critical_ids"]]
+        event_cell_ids = [_integer(entry, "vineyard cell ID", minimum=0) for entry in item["cell_ids"]]
+        if (
+            not critical_ids
+            or critical_ids != sorted(set(critical_ids))
+            or not set(critical_ids).issubset(critical_by_id)
+            or not event_cell_ids
+            or event_cell_ids != sorted(set(event_cell_ids))
+            or not set(event_cell_ids).issubset(cell_by_id)
+        ):
+            raise PredictProjectSchemaError("vineyard lifecycle references are malformed")
+        vineyard_keys.append((time, item["kind"], pair_id))
+    if vineyard_keys != sorted(set(vineyard_keys)):
+        raise PredictProjectSchemaError("vineyard events must be sorted and unique")
+
+    fixture = _exact_fields(
+        row["derived_raster_fixture"],
+        {"derivation_id", "content_sha256"},
+        "derived raster fixture",
+    )
+    if fixture["derivation_id"] != "nearest_ground_cell_site_then_min_cell_id.v1":
+        raise PredictProjectSchemaError("derived raster fixture derivation ID mismatch")
+    derived = derive_morse_smale_raster(row)
+    if _sha256(fixture["content_sha256"], "fixture hash") != hashlib.sha256(derived).hexdigest():
+        raise PredictProjectSchemaError("derived raster fixture hash does not match the deterministic site derivation")
+    return scorer_h, scorer_w, camera_h, camera_w, arc_ids
+
+
+def _validate_trajectory(value: Any) -> None:
+    row = _exact_fields(value, {"representation", "step_count", "controls", "ar_residuals"}, "trajectory")
+    if row["representation"] != "cubic_catmull_rom_plus_ar_residual.v1":
+        raise PredictProjectSchemaError("trajectory representation is not the single-object spline/AR form")
+    if _integer(row["step_count"], "trajectory.step_count") != PAIR_COUNT:
+        raise PredictProjectSchemaError("trajectory must cover exactly 600 steps")
+    controls = row["controls"]
+    if not isinstance(controls, list) or not 2 <= len(controls) < PAIR_COUNT:
+        raise PredictProjectSchemaError("trajectory requires 2..599 spline controls")
+    times: list[int] = []
+    for control in controls:
+        control_row = _exact_fields(control, {"time", "tx_q", "ty_q", "yaw_q"}, "trajectory control")
+        times.append(_integer(control_row["time"], "control time", minimum=0, maximum=PAIR_COUNT - 1))
+        for key in ("tx_q", "ty_q", "yaw_q"):
+            _integer(control_row[key], f"control {key}")
+    if times != sorted(set(times)) or times[0] != 0 or times[-1] != PAIR_COUNT - 1:
+        raise PredictProjectSchemaError("trajectory controls must be sorted, unique, and endpoint-complete")
+    residuals = row["ar_residuals"]
+    if not isinstance(residuals, list):
+        raise PredictProjectSchemaError("trajectory AR residuals must be a list")
+    residual_times: list[int] = []
+    for residual in residuals:
+        residual_row = _exact_fields(residual, {"time", "dtx_q", "dty_q", "dyaw_q"}, "AR residual")
+        residual_times.append(_integer(residual_row["time"], "residual time", minimum=0, maximum=PAIR_COUNT - 1))
+        for key in ("dtx_q", "dty_q", "dyaw_q"):
+            _integer(residual_row[key], f"residual {key}")
+    if residual_times != sorted(set(residual_times)):
+        raise PredictProjectSchemaError("trajectory AR residuals must be sorted and unique")
+
+
+def _validate_tracks(
+    value: Any,
+    scorer_h: int,
+    scorer_w: int,
+    *,
+    quantum_numerator: int,
+    quantum_denominator: int,
+) -> None:
+    if not isinstance(value, list):
+        raise PredictProjectSchemaError("movable_tracks must be a list")
+    ids: list[int] = []
+    for track in value:
+        row = _exact_fields(track, {"track_id", "cell_id", "knots"}, "movable track")
+        ids.append(_integer(row["track_id"], "track_id", minimum=0))
+        _integer(row["cell_id"], "track cell_id", minimum=0, maximum=CLASS_COUNT - 1)
+        knots = row["knots"]
+        if not isinstance(knots, list) or not knots:
+            raise PredictProjectSchemaError("track knots must be nonempty")
+        times: list[int] = []
+        for knot in knots:
+            knot_row = _exact_fields(knot, {"time", "y_q", "x_q", "height_q", "width_q"}, "track knot")
+            times.append(_integer(knot_row["time"], "track knot time", minimum=0, maximum=PAIR_COUNT - 1))
+            _integer(
+                knot_row["y_q"],
+                "track y_q",
+                minimum=0,
+                maximum=(scorer_h - 1) * quantum_denominator // quantum_numerator,
+            )
+            _integer(
+                knot_row["x_q"],
+                "track x_q",
+                minimum=0,
+                maximum=(scorer_w - 1) * quantum_denominator // quantum_numerator,
+            )
+            _integer(
+                knot_row["height_q"],
+                "track height_q",
+                minimum=1,
+                maximum=scorer_h * quantum_denominator // quantum_numerator,
+            )
+            _integer(
+                knot_row["width_q"],
+                "track width_q",
+                minimum=1,
+                maximum=scorer_w * quantum_denominator // quantum_numerator,
+            )
+        if times != sorted(set(times)):
+            raise PredictProjectSchemaError("track knots must have sorted unique times")
+    if ids != sorted(set(ids)):
+        raise PredictProjectSchemaError("movable tracks must have sorted unique IDs")
+
+
+def _validate_offset_rows(value: Any, arc_ids: set[int], label: str, *, exceptions: bool = False) -> None:
+    offsets = value
+    if not isinstance(offsets, list):
+        raise PredictProjectSchemaError(f"{label} must be a list")
+    keys: list[tuple[int, int, int]] = []
+    for offset in offsets:
+        fields = {"arc_id", "time", "arc_index", "offset_q"}
+        if exceptions:
+            fields |= {"stratum", "cause_code"}
+        offset_row = _exact_fields(offset, fields, label[:-1] if label.endswith("s") else label)
+        key = (
+            _integer(offset_row["arc_id"], "offset arc_id", minimum=0),
+            _integer(offset_row["time"], "offset time", minimum=0, maximum=PAIR_COUNT - 1),
+            _integer(offset_row["arc_index"], "offset arc_index", minimum=0),
+        )
+        if key[0] not in arc_ids:
+            raise PredictProjectSchemaError("boundary offset references an unknown separatrix arc")
+        _integer(offset_row["offset_q"], "boundary offset_q")
+        if exceptions:
+            if offset_row["stratum"] not in STRATA:
+                raise PredictProjectSchemaError("causal exception stratum is invalid")
+            _nonempty_string(offset_row["cause_code"], "causal exception cause_code")
+        keys.append(key)
+    if keys != sorted(set(keys)):
+        raise PredictProjectSchemaError("boundary offsets must be sorted and unique")
+
+
+def _validate_parameter_rows(value: Any, label: str) -> None:
+    if not isinstance(value, list):
+        raise PredictProjectSchemaError(f"{label} must be a list")
+    ids: list[str] = []
+    for parameter in value:
+        row = _exact_fields(parameter, {"parameter_id", "value_q"}, label[:-1])
+        ids.append(_nonempty_string(row["parameter_id"], f"{label} parameter_id"))
+        _integer(row["value_q"], f"{label} value_q")
+    if ids != sorted(set(ids)):
+        raise PredictProjectSchemaError(f"{label} must have sorted unique IDs")
+
+
+def _validate_jitter(value: Any, arc_ids: set[int]) -> None:
+    row = _exact_fields(
+        value,
+        {"schema", "selected_rung", "equal_fidelity_custody", "r0", "r1", "r2"},
+        "boundary_jitter",
+    )
+    if row["schema"] != "predict_project_causal_jitter_ladder.v0" or row["selected_rung"] not in JITTER_RUNGS:
+        raise PredictProjectSchemaError("causal jitter ladder schema/rung is invalid")
+    custody = _exact_fields(
+        row["equal_fidelity_custody"],
+        {"schema", "evidence_status", "represented_constraints_sha256", "comparison_id"},
+        "jitter equal-fidelity custody",
+    )
+    if (
+        custody["schema"] != "predict_project_equal_fidelity_custody.v0"
+        or custody["evidence_status"] != "UNMEASURED_INTERFACE"
+    ):
+        raise PredictProjectSchemaError("jitter equal-fidelity measurement remains unproved in shipped schema")
+    _sha256(custody["represented_constraints_sha256"], "represented constraints hash")
+    _nonempty_string(custody["comparison_id"], "jitter comparison_id")
+
+    r0 = _exact_fields(row["r0"], {"offset_quantum", "offsets"}, "jitter R0")
+    _quantum(r0["offset_quantum"], "jitter R0 offset_quantum")
+    _validate_offset_rows(r0["offsets"], arc_ids, "R0 offsets")
+
+    r1 = _exact_fields(
+        row["r1"],
+        {"phase_carrier_id", "parameter_quantum", "phase_response_parameters", "residuals"},
+        "jitter R1",
+    )
+    if r1["phase_carrier_id"] is not None:
+        _nonempty_string(r1["phase_carrier_id"], "R1 phase_carrier_id")
+    if row["selected_rung"] == "R1" and r1["phase_carrier_id"] is None:
+        raise PredictProjectSchemaError("selected R1 requires the existing phase carrier ID")
+    _quantum(r1["parameter_quantum"], "jitter R1 parameter_quantum")
+    _validate_parameter_rows(r1["phase_response_parameters"], "R1 parameters")
+    _validate_offset_rows(r1["residuals"], arc_ids, "R1 residuals")
+
+    r2 = _exact_fields(row["r2"], {"appearance_phase_chart", "xi_response", "exceptions"}, "jitter R2")
+    appearance = _exact_fields(
+        r2["appearance_phase_chart"],
+        {"encoding", "samples_q", "content_sha256"},
+        "R2 appearance-phase chart",
+    )
+    if appearance["encoding"] != "canonical_i16_phase_samples.v1" or not isinstance(appearance["samples_q"], list):
+        raise PredictProjectSchemaError("R2 appearance-phase chart encoding is invalid")
+    samples = [
+        _integer(entry, "appearance phase sample", minimum=-32768, maximum=32767) for entry in appearance["samples_q"]
+    ]
+    if row["selected_rung"] == "R2" and not samples:
+        raise PredictProjectSchemaError("selected R2 requires a static appearance-phase chart")
+    if (
+        _sha256(appearance["content_sha256"], "appearance phase hash")
+        != hashlib.sha256(canonical_json_bytes(samples)).hexdigest()
+    ):
+        raise PredictProjectSchemaError("appearance-phase chart hash drift")
+    response = _exact_fields(
+        r2["xi_response"],
+        {"response_model_id", "parameter_quantum", "parameters"},
+        "R2 xi response",
+    )
+    if response["response_model_id"] is not None:
+        _nonempty_string(response["response_model_id"], "R2 response_model_id")
+    if row["selected_rung"] == "R2" and response["response_model_id"] is None:
+        raise PredictProjectSchemaError("selected R2 requires a generic response model ID")
+    _quantum(response["parameter_quantum"], "R2 response parameter_quantum")
+    _validate_parameter_rows(response["parameters"], "R2 parameters")
+    _validate_offset_rows(r2["exceptions"], arc_ids, "R2 exceptions", exceptions=True)
+
+
+def _validate_events(value: Any) -> None:
+    if not isinstance(value, list):
+        raise PredictProjectSchemaError("events must be a list")
+    keys: list[tuple[int, str, int]] = []
+    for event in value:
+        row = _exact_fields(event, {"time", "kind", "object_id", "related_ids"}, "event")
+        time = _integer(row["time"], "event time", minimum=0, maximum=PAIR_COUNT - 1)
+        if row["kind"] not in EVENT_KINDS:
+            raise PredictProjectSchemaError("event kind is outside the declared alphabet")
+        object_id = _integer(row["object_id"], "event object_id", minimum=0)
+        related = row["related_ids"]
+        if not isinstance(related, list):
+            raise PredictProjectSchemaError("event related_ids must be a list")
+        related_values = [_integer(item, "related object ID", minimum=0) for item in related]
+        if related_values != sorted(set(related_values)):
+            raise PredictProjectSchemaError("event related_ids must be sorted and unique")
+        keys.append((time, row["kind"], object_id))
+    if keys != sorted(set(keys)):
+        raise PredictProjectSchemaError("events must be sorted and unique")
+
+
+def _validate_proof_custody(value: Any) -> None:
+    row = _exact_fields(
+        value,
+        {"schema", "seed", "batch_size", "measurement_axis", "scorer", "inputs", "adapter"},
+        "hard-oracle proof custody",
+    )
+    if (
+        row["schema"] != "predict_project_hard_oracle_custody.v0"
+        or row["seed"] != 1234
+        or isinstance(row["seed"], bool)
+        or row["batch_size"] != 16
+        or isinstance(row["batch_size"], bool)
+        or row["measurement_axis"] != "[macOS-CPU advisory]"
+    ):
+        raise PredictProjectSchemaError("pose-tightening hard-oracle custody header mismatch")
+    scorer = _exact_fields(
+        row["scorer"],
+        {"implementation_id", "version", "source_sha256", "segnet_weights_sha256", "posenet_weights_sha256"},
+        "proof scorer custody",
+    )
+    _nonempty_string(scorer["implementation_id"], "proof scorer implementation_id")
+    _nonempty_string(scorer["version"], "proof scorer version")
+    for key in ("source_sha256", "segnet_weights_sha256", "posenet_weights_sha256"):
+        _sha256(scorer[key], f"proof scorer {key}")
+    inputs = _exact_fields(
+        row["inputs"],
+        {"source_sha256", "cache_sha256", "evaluated_input_sha256"},
+        "proof input custody",
+    )
+    for key in ("source_sha256", "cache_sha256", "evaluated_input_sha256"):
+        _sha256(inputs[key], f"proof inputs {key}")
+    adapter = _exact_fields(row["adapter"], {"identity", "source_sha256"}, "proof adapter custody")
+    _nonempty_string(adapter["identity"], "proof adapter identity")
+    _sha256(adapter["source_sha256"], "proof adapter source hash")
+
+
+def _pose_tightening_assertion(row: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        key: row[key]
+        for key in (
+            "tightening_id",
+            "time",
+            "frame_index",
+            "pixel_coordinates",
+            "lower_u8",
+            "upper_u8",
+            "linear_constraints",
+            "pose_tube",
+            "universal_within_box_and_constraints_implies_pose_tube",
+        )
+    }
+
+
+def _validate_pose_tightening(value: Any, camera_h: int, camera_w: int) -> set[int]:
+    if not isinstance(value, list):
+        raise PredictProjectSchemaError("pose_tightening must be a list")
+    ids: list[int] = []
+    for tightening in value:
+        row = _exact_fields(
+            tightening,
+            {
+                "schema",
+                "tightening_id",
+                "time",
+                "frame_index",
+                "pixel_coordinates",
+                "lower_u8",
+                "upper_u8",
+                "linear_constraints",
+                "pose_tube",
+                "universal_within_box_and_constraints_implies_pose_tube",
+                "proof",
+            },
+            "pose tightening",
+        )
+        if row["schema"] != "predict_project_pose_tightening.v0":
+            raise PredictProjectSchemaError("pose-tightening schema mismatch")
+        tightening_id = _integer(row["tightening_id"], "tightening_id", minimum=0)
+        ids.append(tightening_id)
+        _integer(row["time"], "pose-tightening time", minimum=0, maximum=PAIR_COUNT - 1)
+        _integer(row["frame_index"], "pose-tightening frame_index", minimum=0, maximum=1)
+        coordinates = row["pixel_coordinates"]
+        if not isinstance(coordinates, list) or not coordinates:
+            raise PredictProjectSchemaError("pose tightening requires pixel coordinates")
+        coordinate_keys: list[tuple[int, int, int]] = []
+        for coordinate in coordinates:
+            item = _exact_fields(coordinate, {"y", "x", "channel"}, "pose-tightening pixel coordinate")
+            coordinate_keys.append(
+                (
+                    _integer(item["y"], "pose pixel y", minimum=0, maximum=camera_h - 1),
+                    _integer(item["x"], "pose pixel x", minimum=0, maximum=camera_w - 1),
+                    _integer(item["channel"], "pose pixel channel", minimum=0, maximum=2),
+                )
+            )
+        if coordinate_keys != sorted(set(coordinate_keys)):
+            raise PredictProjectSchemaError("pose-tightening coordinates must be sorted and unique")
+        lower, upper = row["lower_u8"], row["upper_u8"]
+        if (
+            not isinstance(lower, list)
+            or not isinstance(upper, list)
+            or len(lower) != len(coordinates)
+            or len(upper) != len(coordinates)
+        ):
+            raise PredictProjectSchemaError("pose-tightening uint8 box geometry mismatch")
+        for lo, hi in zip(lower, upper, strict=True):
+            if _integer(lo, "pose pixel lower", minimum=0, maximum=255) > _integer(
+                hi, "pose pixel upper", minimum=0, maximum=255
+            ):
+                raise PredictProjectSchemaError("pose-tightening pixel lower exceeds upper")
+        constraints = row["linear_constraints"]
+        if not isinstance(constraints, list):
+            raise PredictProjectSchemaError("pose-tightening linear_constraints must be a list")
+        constraint_ids: list[str] = []
+        for constraint in constraints:
+            item = _exact_fields(constraint, {"constraint_id", "coefficients_q", "upper_q"}, "pose constraint")
+            constraint_ids.append(_nonempty_string(item["constraint_id"], "pose constraint_id"))
+            coefficients = item["coefficients_q"]
+            if not isinstance(coefficients, list) or len(coefficients) != len(coordinates):
+                raise PredictProjectSchemaError("pose linear coefficients must match pixel coordinates")
+            for coefficient in coefficients:
+                _integer(coefficient, "pose coefficient_q")
+            _integer(item["upper_q"], "pose constraint upper_q")
+        if constraint_ids != sorted(set(constraint_ids)):
+            raise PredictProjectSchemaError("pose constraints must have sorted unique IDs")
+        tube = _exact_fields(row["pose_tube"], {"lower_q", "upper_q"}, "pose-tightening tube")
+        if (
+            not isinstance(tube["lower_q"], list)
+            or not isinstance(tube["upper_q"], list)
+            or not tube["lower_q"]
+            or len(tube["lower_q"]) != len(tube["upper_q"])
+        ):
+            raise PredictProjectSchemaError("pose-tightening tube bounds are malformed")
+        for lo, hi in zip(tube["lower_q"], tube["upper_q"], strict=True):
+            if _integer(lo, "pose tube lower_q") > _integer(hi, "pose tube upper_q"):
+                raise PredictProjectSchemaError("pose-tightening tube lower exceeds upper")
+        if row["universal_within_box_and_constraints_implies_pose_tube"] is not True:
+            raise PredictProjectSchemaError("decoder must reject pose tightening without a universal tube assertion")
+        proof = _exact_fields(
+            row["proof"],
+            {"schema", "status", "method", "assertion_sha256", "custody"},
+            "pose-tightening proof",
+        )
+        if proof["schema"] != "predict_project_pose_tightening_proof.v0" or proof["status"] != "PROVED_BY_HARD_ORACLE":
+            raise PredictProjectSchemaError("pose tightening is unproved")
+        _nonempty_string(proof["method"], "pose-tightening proof method")
+        expected_hash = hashlib.sha256(canonical_json_bytes(_pose_tightening_assertion(row))).hexdigest()
+        if _sha256(proof["assertion_sha256"], "pose-tightening assertion hash") != expected_hash:
+            raise PredictProjectSchemaError("pose-tightening assertion proof hash drift")
+        _validate_proof_custody(proof["custody"])
+    if ids != sorted(set(ids)):
+        raise PredictProjectSchemaError("pose tightenings must have sorted unique IDs")
+    return set(ids)
+
+
+def _validate_seeds(value: Any, scorer_h: int, scorer_w: int, tightening_ids: set[int]) -> None:
+    if not isinstance(value, list):
+        raise PredictProjectSchemaError("constraint_seeds must be a list")
+    keys: list[tuple[int, int, int, int, int]] = []
+    for seed in value:
+        row = _exact_fields(
+            seed,
+            {
+                "time",
+                "frame_index",
+                "obligation",
+                "y",
+                "x",
+                "cell_id",
+                "predictor_status",
+                "stratum",
+                "pose_tube",
+                "pose_tightening_id",
+                "projector",
+            },
+            "constraint seed",
+        )
+        time = _integer(row["time"], "seed time", minimum=0, maximum=PAIR_COUNT - 1)
+        frame_index = _integer(row["frame_index"], "seed frame_index", minimum=0, maximum=1)
+        if frame_index == 0:
+            if row["obligation"] != "pose_only" or any(
+                row[field] is not None for field in ("y", "x", "cell_id", "predictor_status", "stratum")
+            ):
+                raise PredictProjectSchemaError("frame0 is pose-only and cannot carry a Seg obligation")
+            coordinate_key = (-1, -1, -1)
+        else:
+            if row["obligation"] != "seg_and_pose":
+                raise PredictProjectSchemaError("frame1 must declare the Seg+Pose obligation")
+            coordinate_key = (
+                _integer(row["y"], "seed y", minimum=0, maximum=scorer_h - 1),
+                _integer(row["x"], "seed x", minimum=0, maximum=scorer_w - 1),
+                _integer(row["cell_id"], "seed cell_id", minimum=0, maximum=CLASS_COUNT - 1),
+            )
+            if row["predictor_status"] != "violated" or row["stratum"] not in STRATA:
+                raise PredictProjectSchemaError("frame1 seeds require a violated Seg cell and declared stratum")
+        if row["pose_tube"] is not None:
+            tube = _exact_fields(row["pose_tube"], {"lower_q", "upper_q"}, "pose tube")
+            lower, upper = tube["lower_q"], tube["upper_q"]
+            if not isinstance(lower, list) or not isinstance(upper, list) or len(lower) != len(upper) or not lower:
+                raise PredictProjectSchemaError("pose tube bounds must be equal nonempty lists")
+            for lo, hi in zip(lower, upper, strict=True):
+                if _integer(lo, "pose lower_q") > _integer(hi, "pose upper_q"):
+                    raise PredictProjectSchemaError("pose tube lower bound exceeds upper bound")
+        if row["projector"] is not None:
+            projector = _exact_fields(row["projector"], {"projector_id", "metadata_sha256"}, "projector")
+            _nonempty_string(projector["projector_id"], "projector_id")
+            _sha256(projector["metadata_sha256"], "projector metadata hash")
+        tightening_id = row["pose_tightening_id"]
+        if tightening_id is not None:
+            tightening_id = _integer(tightening_id, "seed pose_tightening_id", minimum=0)
+            if tightening_id not in tightening_ids:
+                raise PredictProjectSchemaError("constraint references unknown pose tightening")
+        if frame_index == 0 and (row["pose_tube"] is None or tightening_id is None):
+            raise PredictProjectSchemaError("frame0 pose-only constraints require tube and proved tightening")
+        keys.append((time, frame_index, *coordinate_key))
+    if keys != sorted(set(keys)):
+        raise PredictProjectSchemaError("constraint seeds must be sorted and unique")
+
+
+def _validate_receiver(value: Any) -> None:
+    legacy_fields = {
+            "abi",
+            "tie_policy",
+            "projection_policy",
+            "frame_roles",
+            "realization_policy",
+            "section_container",
+            "seed",
+            "pair_count",
+            "no_scorer_weights",
+            "receiver_search_invocations",
+    }
+    if not isinstance(value, dict) or set(value) not in (legacy_fields, legacy_fields | {"generic_predictor_policy"}):
+        raise PredictProjectSchemaError("receiver fields mismatch")
+    row = value
+    _nonempty_string(row["abi"], "receiver ABI")
+    if row["tie_policy"] != "native-cpu-torch-f32-first-max-class-index.v1":
+        raise PredictProjectSchemaError("receiver tie policy must be first-max class index")
+    policy = _exact_fields(
+        row["projection_policy"], {"algorithm", "tolerance_q", "iteration_cap", "cycle_detection"}, "projection policy"
+    )
+    if policy["algorithm"] not in {"dykstra", "pocs"} or policy["cycle_detection"] != "sha256-state.v1":
+        raise PredictProjectSchemaError("projection algorithm or cycle policy is not admitted")
+    _integer(policy["tolerance_q"], "projection tolerance_q", minimum=0)
+    _integer(policy["iteration_cap"], "projection iteration_cap", minimum=1)
+    if row["frame_roles"] != {"frame0": "pose_only", "frame1": "seg_and_pose"}:
+        raise PredictProjectSchemaError("receiver frame roles must preserve evaluator asymmetry")
+    realization = _exact_fields(
+        row["realization_policy"],
+        {
+            "domain",
+            "inverse_r",
+            "uint8_lattice",
+            "cross_host_order",
+            "integer_arithmetic",
+            "full_kernel_policy",
+            "full_kernel_schema",
+            "pose_tightening_requires_proof",
+        },
+        "receiver realization policy",
+    )
+    if realization != {
+        "domain": "camera_resolution_rgb_uint8",
+        "inverse_r": "factor2_exact_integer_interval.v1",
+        "uint8_lattice": "nearest_feasible_lexicographic.v1",
+        "cross_host_order": "C_order_y_x_channel_u8.v1",
+        "integer_arithmetic": "fixed_order_integer_no_float_authority.v1",
+        "full_kernel_policy": "callable_nonserialized",
+        "full_kernel_schema": "resize_null_preimage_full_kernel.v1",
+        "pose_tightening_requires_proof": True,
+    }:
+        raise PredictProjectSchemaError("receiver inverse-R/cross-host realization policy mismatch")
+    if row["section_container"] != CONTAINER_SCHEMA:
+        raise PredictProjectSchemaError("receiver must consume the versioned named-section container")
+    _integer(row["seed"], "receiver seed", minimum=0)
+    if _integer(row["pair_count"], "receiver pair_count") != PAIR_COUNT:
+        raise PredictProjectSchemaError("receiver pair_count must be 600")
+    if row["no_scorer_weights"] is not True or row["receiver_search_invocations"] != 0:
+        raise PredictProjectSchemaError("receiver must assert no scorer weights and zero search")
+    if "generic_predictor_policy" in row:
+        _validate_generic_predictor_policy(row["generic_predictor_policy"])
+
+
+def _validate_generic_predictor_policy(value: Any) -> None:
+    row = _exact_fields(
+        value,
+        {
+            "policy_id",
+            "prior_decoded_field",
+            "initialization",
+            "motion_custody",
+            "class_order",
+            "reconciliation_order",
+            "adjacency_policy",
+            "tie_policy",
+            "counted_sections",
+            "external_counted_custody",
+        },
+        "generic predictor policy",
+    )
+    if row["policy_id"] != "xi_advected_prior_per_class_charts.v1":
+        raise PredictProjectSchemaError("generic predictor policy ID is not admitted")
+    if row["prior_decoded_field"] != "caller_supplied_previous_decoded_cell_field":
+        raise PredictProjectSchemaError("generic predictor prior-field custody mismatch")
+    if row["initialization"] != "pair0_counted_chart_only":
+        raise PredictProjectSchemaError("generic predictor initialization mismatch")
+    motion = _exact_fields(
+        row["motion_custody"],
+        {"estimator", "relative_motion", "lawref_equation_ids", "g1_receipt_sha256"},
+        "generic predictor motion custody",
+    )
+    if motion["estimator"] != "tac.boundary_math.ego_xi_trajectory.PoseTargetEgoEstimator":
+        raise PredictProjectSchemaError("generic predictor estimator mismatch")
+    if motion["relative_motion"] != "tac.lie.inverse_compose_log_adjacent_pairs.v1":
+        raise PredictProjectSchemaError("generic predictor must use adjacent relative motion")
+    equation_ids = motion["lawref_equation_ids"]
+    if equation_ids != ["dsl_custodied_scalar_identity_v1:s_r", "dsl_custodied_scalar_identity_v1:s_t"]:
+        raise PredictProjectSchemaError("generic predictor LawRef custody mismatch")
+    _sha256(motion["g1_receipt_sha256"], "generic predictor G1 receipt hash")
+    if row["class_order"] != [0, 1, 2, 3, 4] or row["reconciliation_order"] != [0, 2, 1, 4, 3]:
+        raise PredictProjectSchemaError("generic predictor class or priority order mismatch")
+    if row["adjacency_policy"] != "measured_edges_only.v1" or row["tie_policy"] != "priority_then_min_class_id.v1":
+        raise PredictProjectSchemaError("generic predictor adjacency/tie policy mismatch")
+    sections = row["counted_sections"]
+    if not isinstance(sections, list):
+        raise PredictProjectSchemaError("generic predictor counted sections must be a list")
+    keys: list[str] = []
+    for section in sections:
+        item = _exact_fields(section, {"name", "raw_bytes", "zlib9_bytes", "sha256"}, "predictor section")
+        keys.append(_nonempty_string(item["name"], "predictor section name"))
+        _integer(item["raw_bytes"], "predictor section raw_bytes", minimum=0)
+        _integer(item["zlib9_bytes"], "predictor section zlib9_bytes", minimum=0)
+        _sha256(item["sha256"], "predictor section SHA-256")
+    if keys != sorted(set(keys)):
+        raise PredictProjectSchemaError("generic predictor sections must be sorted and unique")
+    external = row["external_counted_custody"]
+    if external != {
+        "lane_chart_raw_bytes": 159386,
+        "lane_chart_brotli_bytes": 41303,
+        "lane_chart_sha256": "d2b2a62eeb6ebe45cbf908dafa7e081eabddaca0f424faac970b41eea650d810",
+        "lane_chart_status": "executed_in_task578_measurement_external_counted_custody",
+        "executed": True,
+        "execution_scope": "task578_measurement_only",
+        "receiver_closed": False,
+    }:
+        raise PredictProjectSchemaError("generic predictor external Lane-chart custody mismatch")
+
+
+def attach_generic_predictor_policy(seed: Mapping[str, Any], policy: Mapping[str, Any]) -> dict[str, Any]:
+    """Return a validated copy with the optional doctrine predictor policy.
+
+    The additive field keeps legacy v0 objects byte-identical while new objects
+    make the causal prior and counted-chart custody explicit.
+    """
+
+    copied = json.loads(canonical_json_bytes(seed))
+    copied["receiver"]["generic_predictor_policy"] = json.loads(canonical_json_bytes(policy))
+    return validate_constraint_seed(copied)
+
+
+def _validate_authority(value: Any) -> None:
+    row = _exact_fields(
+        value,
+        {"research_only", "measurement_axis", "score_claim", "promotion_eligible", "n600_claim"},
+        "authority",
+    )
+    if row != {
+        "research_only": True,
+        "measurement_axis": "[macOS-CPU advisory]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "n600_claim": False,
+    }:
+        raise PredictProjectSchemaError("authority flags must remain fail-closed")
+
+
+def validate_constraint_seed(value: Any) -> dict[str, Any]:
+    row = _exact_fields(value, TOP_FIELDS, "constraint seed object")
+    if row["schema"] != SCHEMA_ID:
+        raise PredictProjectSchemaError("schema ID mismatch")
+    _validate_container(row["container"])
+    _validate_native_grammar(row["grammar"])
+    units = _validate_units(row["units"])
+    scorer_h, scorer_w, camera_h, camera_w, arc_ids = _validate_chart(row["ground_chart"])
+    _validate_trajectory(row["trajectory"])
+    track_quantum = units["track_coordinate"]
+    _validate_tracks(
+        row["movable_tracks"],
+        scorer_h,
+        scorer_w,
+        quantum_numerator=track_quantum["numerator"],
+        quantum_denominator=track_quantum["denominator"],
+    )
+    normal_quantum = units["normal_vector"]
+    normal_limit = normal_quantum["denominator"] // normal_quantum["numerator"]
+    for arc in row["ground_chart"]["separatrix_arcs"]:
+        for point in arc["samples"]:
+            if abs(point["normal_y_q"]) > normal_limit or abs(point["normal_x_q"]) > normal_limit:
+                raise PredictProjectSchemaError("separatrix normal component is outside [-1,1]")
+    _validate_jitter(row["boundary_jitter"], arc_ids)
+    _validate_events(row["events"])
+    tightening_ids = _validate_pose_tightening(row["pose_tightening"], camera_h, camera_w)
+    _validate_seeds(row["constraint_seeds"], scorer_h, scorer_w, tightening_ids)
+    _validate_receiver(row["receiver"])
+    _validate_authority(row["authority"])
+    return dict(row)
+
+
+def _serialize_validated_constraint_seed(validated: Mapping[str, Any]) -> bytes:
+    section_values = {
+        "manifest": {"schema": validated["schema"], "container": validated["container"]},
+        "native_grammar": validated["grammar"],
+        "units": validated["units"],
+        "ground_chart": validated["ground_chart"],
+        "trajectory": validated["trajectory"],
+        "movable_tracks": validated["movable_tracks"],
+        "causal_jitter": validated["boundary_jitter"],
+        "events": validated["events"],
+        "pose_tightening": validated["pose_tightening"],
+        "constraint_seeds": validated["constraint_seeds"],
+        "receiver": validated["receiver"],
+        "authority": validated["authority"],
+    }
+    encoded = bytearray(PREFIX.pack(MAGIC, CONTAINER_VERSION, len(SECTION_NAMES)))
+    for name in SECTION_NAMES:
+        name_bytes = name.encode("ascii")
+        payload = canonical_json_bytes(section_values[name])
+        encoded.extend(SECTION_PREFIX.pack(len(name_bytes), len(payload)))
+        encoded.extend(name_bytes)
+        encoded.extend(payload)
+        encoded.extend(hashlib.sha256(payload).digest())
+    encoded.extend(hashlib.sha256(encoded).digest())
+    return bytes(encoded)
+
+
+def serialize_constraint_seed(value: Any) -> bytes:
+    return _serialize_validated_constraint_seed(validate_constraint_seed(value))
+
+
+def parse_constraint_seed(payload: bytes) -> dict[str, Any]:
+    if not isinstance(payload, bytes) or len(payload) < PREFIX.size + DIGEST_BYTES:
+        raise PredictProjectSchemaError("constraint-seed payload is truncated")
+    if hashlib.sha256(payload[:-DIGEST_BYTES]).digest() != payload[-DIGEST_BYTES:]:
+        raise PredictProjectSchemaError("constraint-seed outer envelope hash drift")
+    magic, version, section_count = PREFIX.unpack_from(payload)
+    if magic != MAGIC or version != CONTAINER_VERSION or section_count != len(SECTION_NAMES):
+        raise PredictProjectSchemaError("constraint-seed container header mismatch")
+    cursor = PREFIX.size
+    sections: dict[str, Any] = {}
+    names: list[str] = []
+    limit = len(payload) - DIGEST_BYTES
+    for _ in range(section_count):
+        if cursor + SECTION_PREFIX.size > limit:
+            raise PredictProjectSchemaError("constraint-seed section header is truncated")
+        name_length, payload_length = SECTION_PREFIX.unpack_from(payload, cursor)
+        cursor += SECTION_PREFIX.size
+        section_end = cursor + name_length + payload_length + DIGEST_BYTES
+        if name_length == 0 or section_end > limit:
+            raise PredictProjectSchemaError("constraint-seed section length is invalid")
+        name_bytes = payload[cursor : cursor + name_length]
+        cursor += name_length
+        canonical = payload[cursor : cursor + payload_length]
+        cursor += payload_length
+        digest = payload[cursor : cursor + DIGEST_BYTES]
+        cursor += DIGEST_BYTES
+        try:
+            name = name_bytes.decode("ascii")
+            value = json.loads(canonical.decode("ascii"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise PredictProjectSchemaError("constraint-seed section is malformed") from exc
+        if name.encode("ascii") != name_bytes or canonical_json_bytes(value) != canonical:
+            raise PredictProjectSchemaError("constraint-seed section is not canonical")
+        if hashlib.sha256(canonical).digest() != digest:
+            raise PredictProjectSchemaError("constraint-seed section hash drift")
+        if name in sections:
+            raise PredictProjectSchemaError("constraint-seed section names must be unique")
+        names.append(name)
+        sections[name] = value
+    if cursor != limit or names != list(SECTION_NAMES):
+        raise PredictProjectSchemaError("constraint-seed sections are missing, reordered, unknown, or trailing")
+    manifest = _exact_fields(sections["manifest"], {"schema", "container"}, "manifest")
+    value = {
+        "schema": manifest["schema"],
+        "container": manifest["container"],
+        "grammar": sections["native_grammar"],
+        "units": sections["units"],
+        "ground_chart": sections["ground_chart"],
+        "trajectory": sections["trajectory"],
+        "movable_tracks": sections["movable_tracks"],
+        "boundary_jitter": sections["causal_jitter"],
+        "events": sections["events"],
+        "pose_tightening": sections["pose_tightening"],
+        "constraint_seeds": sections["constraint_seeds"],
+        "receiver": sections["receiver"],
+        "authority": sections["authority"],
+    }
+    validated = validate_constraint_seed(value)
+    if _serialize_validated_constraint_seed(validated) != payload:
+        raise PredictProjectSchemaError("constraint-seed round-trip is not byte canonical")
+    return validated
+
+
+def _fixture_graph_from_raster(chart: bytes, height: int, width: int) -> dict[str, Any]:
+    """Lift a tiny raw-raster test fixture into a graph-schema fixture.
+
+    This compatibility helper is intentionally not a wire representation: the
+    serialized object contains no raster bytes.  It does not establish native
+    arc-to-cell rasterization semantics; its cells carry deterministic sites.
+    """
+
+    denominator = 256
+    cells: list[dict[str, Any]] = []
+    critical_points: list[dict[str, Any]] = []
+    for y in range(height):
+        for x in range(width):
+            cell_id = y * width + x
+            adjacent: list[int] = []
+            for dy, dx in ((-1, 0), (0, -1), (0, 1), (1, 0)):
+                yy, xx = y + dy, x + dx
+                if 0 <= yy < height and 0 <= xx < width:
+                    adjacent.append(yy * width + xx)
+            cells.append(
+                {
+                    "cell_id": cell_id,
+                    "class_id": chart[cell_id],
+                    "site_y_q": y * denominator,
+                    "site_x_q": x * denominator,
+                    "adjacent_cell_ids": sorted(adjacent),
+                }
+            )
+            critical_points.append(
+                {
+                    "critical_id": cell_id,
+                    "type": "minimum",
+                    "persistence_q": len(chart) - cell_id,
+                    "ground_y_q": y * denominator,
+                    "ground_x_q": x * denominator,
+                }
+            )
+    arcs: list[dict[str, Any]] = []
+    for cell in cells:
+        source = cell["cell_id"]
+        for target in cell["adjacent_cell_ids"]:
+            if source >= target:
+                continue
+            source_point = critical_points[source]
+            target_point = critical_points[target]
+            dy = target_point["ground_y_q"] - source_point["ground_y_q"]
+            dx = target_point["ground_x_q"] - source_point["ground_x_q"]
+            normal_y_q = 256 if dy else 0
+            normal_x_q = 256 if dx else 0
+            arcs.append(
+                {
+                    "arc_id": len(arcs),
+                    "source_critical_id": source,
+                    "target_critical_id": target,
+                    "left_cell_id": source,
+                    "right_cell_id": target,
+                    "samples": [
+                        {
+                            "arc_index": 0,
+                            "ground_y_q": source_point["ground_y_q"],
+                            "ground_x_q": source_point["ground_x_q"],
+                            "normal_y_q": normal_y_q,
+                            "normal_x_q": normal_x_q,
+                        },
+                        {
+                            "arc_index": 1,
+                            "ground_y_q": target_point["ground_y_q"],
+                            "ground_x_q": target_point["ground_x_q"],
+                            "normal_y_q": normal_y_q,
+                            "normal_x_q": normal_x_q,
+                        },
+                    ],
+                }
+            )
+    return {
+        "representation": "morse_smale_graph_vineyard.v1",
+        "coordinate_quantum": {"numerator": 1, "denominator": denominator, "unit": "scorer_pixel"},
+        "critical_points": critical_points,
+        "separatrix_arcs": arcs,
+        "cells": cells,
+        "canonical_traversal": {
+            "critical_order": "persistence_desc_type_id",
+            "arc_order": "source_target_arc_id",
+            "sample_order": "arc_index",
+            "cell_order": "cell_id",
+            "raster_tie_policy": "nearest_site_then_min_cell_id",
+        },
+        "vineyard_events": [],
+        "derived_raster_fixture": {
+            "derivation_id": "nearest_ground_cell_site_then_min_cell_id.v1",
+            "content_sha256": hashlib.sha256(chart).hexdigest(),
+        },
+    }
+
+
+def build_minimal_constraint_seed(
+    chart: bytes,
+    *,
+    scorer_height: int,
+    scorer_width: int,
+    camera_height: int,
+    camera_width: int,
+    constraint_seeds: Sequence[Mapping[str, Any]] = (),
+    seed: int = 1234,
+) -> dict[str, Any]:
+    """Build a minimal endpoint-complete worldsheet seed for tests/tools."""
+
+    normalized_seeds: list[dict[str, Any]] = []
+    for supplied in constraint_seeds:
+        item = dict(supplied)
+        item.setdefault("obligation", "pose_only" if item.get("frame_index") == 0 else "seg_and_pose")
+        item.setdefault("pose_tightening_id", None)
+        normalized_seeds.append(item)
+    graph = _fixture_graph_from_raster(chart, scorer_height, scorer_width)
+    represented_hash = hashlib.sha256(canonical_json_bytes(normalized_seeds)).hexdigest()
+    return validate_constraint_seed(
+        {
+            "schema": SCHEMA_ID,
+            "container": {
+                "schema": CONTAINER_SCHEMA,
+                "version": CONTAINER_VERSION,
+                "section_order": list(SECTION_NAMES),
+                "length_encoding": "u16be_name_u64be_payload",
+                "section_digest": "sha256",
+                "outer_digest": "sha256",
+                "unknown_sections": "reject",
+            },
+            "grammar": build_native_grammar(),
+            "units": {
+                "time": "pair_index",
+                "chart_coordinate": {"numerator": 1, "denominator": 256, "unit": "scorer_pixel"},
+                "trajectory_translation": {"numerator": 1, "denominator": 256, "unit": "scorer_pixel"},
+                "trajectory_rotation": {"numerator": 1, "denominator": 1_048_576, "unit": "radian"},
+                "track_coordinate": {"numerator": 1, "denominator": 256, "unit": "scorer_pixel"},
+                "normal_vector": {"numerator": 1, "denominator": 256, "unit": "unitless"},
+                "boundary_offset": {"numerator": 1, "denominator": 256, "unit": "scorer_pixel"},
+                "pose": {"numerator": 1, "denominator": 1_048_576, "unit": "pose_output"},
+            },
+            "ground_chart": {
+                "geometry": {
+                    "scorer_height": scorer_height,
+                    "scorer_width": scorer_width,
+                    "camera_height": camera_height,
+                    "camera_width": camera_width,
+                    "class_count": CLASS_COUNT,
+                },
+                **graph,
+            },
+            "trajectory": {
+                "representation": "cubic_catmull_rom_plus_ar_residual.v1",
+                "step_count": PAIR_COUNT,
+                "controls": [
+                    {"time": 0, "tx_q": 0, "ty_q": 0, "yaw_q": 0},
+                    {"time": PAIR_COUNT - 1, "tx_q": 0, "ty_q": 0, "yaw_q": 0},
+                ],
+                "ar_residuals": [],
+            },
+            "movable_tracks": [],
+            "boundary_jitter": {
+                "schema": "predict_project_causal_jitter_ladder.v0",
+                "selected_rung": "R0",
+                "equal_fidelity_custody": {
+                    "schema": "predict_project_equal_fidelity_custody.v0",
+                    "evidence_status": "UNMEASURED_INTERFACE",
+                    "represented_constraints_sha256": represented_hash,
+                    "comparison_id": "fixture-no-equal-fidelity-measurement",
+                },
+                "r0": {
+                    "offset_quantum": {"numerator": 1, "denominator": 256, "unit": "scorer_pixel"},
+                    "offsets": [],
+                },
+                "r1": {
+                    "phase_carrier_id": None,
+                    "parameter_quantum": {"numerator": 1, "denominator": 65536, "unit": "response"},
+                    "phase_response_parameters": [],
+                    "residuals": [],
+                },
+                "r2": {
+                    "appearance_phase_chart": {
+                        "encoding": "canonical_i16_phase_samples.v1",
+                        "samples_q": [],
+                        "content_sha256": hashlib.sha256(canonical_json_bytes([])).hexdigest(),
+                    },
+                    "xi_response": {
+                        "response_model_id": None,
+                        "parameter_quantum": {"numerator": 1, "denominator": 65536, "unit": "response"},
+                        "parameters": [],
+                    },
+                    "exceptions": [],
+                },
+            },
+            "events": [],
+            "pose_tightening": [],
+            "constraint_seeds": normalized_seeds,
+            "receiver": {
+                "abi": "r1b4-section-receiver.v1+v10-factor2.v1",
+                "tie_policy": "native-cpu-torch-f32-first-max-class-index.v1",
+                "projection_policy": {
+                    "algorithm": "dykstra",
+                    "tolerance_q": 1,
+                    "iteration_cap": 10_000,
+                    "cycle_detection": "sha256-state.v1",
+                },
+                "frame_roles": {"frame0": "pose_only", "frame1": "seg_and_pose"},
+                "realization_policy": {
+                    "domain": "camera_resolution_rgb_uint8",
+                    "inverse_r": "factor2_exact_integer_interval.v1",
+                    "uint8_lattice": "nearest_feasible_lexicographic.v1",
+                    "cross_host_order": "C_order_y_x_channel_u8.v1",
+                    "integer_arithmetic": "fixed_order_integer_no_float_authority.v1",
+                    "full_kernel_policy": "callable_nonserialized",
+                    "full_kernel_schema": "resize_null_preimage_full_kernel.v1",
+                    "pose_tightening_requires_proof": True,
+                },
+                "section_container": CONTAINER_SCHEMA,
+                "seed": seed,
+                "pair_count": PAIR_COUNT,
+                "no_scorer_weights": True,
+                "receiver_search_invocations": 0,
+            },
+            "authority": {
+                "research_only": True,
+                "measurement_axis": "[macOS-CPU advisory]",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "n600_claim": False,
+            },
+        }
+    )
+
+
+__all__ = [
+    "CLASS_COUNT",
+    "CONTAINER_SCHEMA",
+    "CONTAINER_VERSION",
+    "EVENT_KINDS",
+    "GRAMMAR_NONTERMINALS",
+    "NATIVE_GRAMMAR_SCHEMA",
+    "PAIR_COUNT",
+    "SCHEMA_ID",
+    "SECTION_NAMES",
+    "SECTION_PREFIX",
+    "STRATA",
+    "PredictProjectSchemaError",
+    "attach_generic_predictor_policy",
+    "build_minimal_constraint_seed",
+    "build_native_grammar",
+    "canonical_json_bytes",
+    "derive_morse_smale_raster",
+    "parse_constraint_seed",
+    "serialize_constraint_seed",
+    "validate_constraint_seed",
+]

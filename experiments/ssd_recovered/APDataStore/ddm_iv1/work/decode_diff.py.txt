@@ -1,0 +1,92 @@
+"""Compare the decoded candidate against the retained base decode, frame by frame.
+
+This is the check that makes a packet-level decode worth more than pass/fail: it
+proves the edit lands exactly where the mechanism says it should.
+
+Pre-registered predictions (written before reading the output):
+  P1  frame_0 (output[2p]) is BIT-IDENTICAL for all 600 pairs.
+      The carrier is untouched; only the semantic section moved.  Any frame_0
+      difference falsifies the claim that this edit is frame_1-only.
+  P2  frame_1 (output[2p+1]) differs for the 44 pairs whose frame_embed row was
+      re-solved, and the difference is LARGE relative to P3.
+  P3  frame_1 ALSO differs slightly for the remaining 556 pairs, because SD1M q4
+      perturbs one GLOBAL tensor (blocks.3.film.weight, max|dv| 2.76e-4), which
+      reaches every pair.  This quantifies a photometric footprint this arm has
+      so far measured only through pose and seg.
+"""
+
+import json
+import sys
+
+import numpy as np
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, "/Users/adpena/Projects/pact/experiments")
+from ddm_iv1_pose_actuator import (  # noqa: E402
+    BASE_RAW,
+    CAMERA_H,
+    CAMERA_W,
+    PAIR_COUNT,
+    SemanticBlock,
+)
+
+OUT = "/Volumes/APDataStore/pact/ddm_iv1"
+CAND = f"{OUT}/work/decode_proof/inflated/0.raw"
+SHAPE = (PAIR_COUNT * 2, CAMERA_H, CAMERA_W, 3)
+
+block = SemanticBlock.load()
+solved = np.load(f"{OUT}/retained/final_frame_codes.npy").astype(np.int32)
+edited = set(int(p) for p in np.where((solved != block.frame_codes).any(axis=1))[0])
+print(f"edited rows: {len(edited)}", flush=True)
+
+base = np.memmap(BASE_RAW, dtype=np.uint8, mode="r", shape=SHAPE)
+cand = np.memmap(CAND, dtype=np.uint8, mode="r", shape=SHAPE)
+
+f0_diff, f1_edit, f1_other = [], [], []
+for pair in range(PAIR_COUNT):
+    d0 = int(
+        np.abs(
+            base[2 * pair].astype(np.int16) - cand[2 * pair].astype(np.int16)
+        ).max()
+    )
+    d1 = int(
+        np.abs(
+            base[2 * pair + 1].astype(np.int16) - cand[2 * pair + 1].astype(np.int16)
+        ).max()
+    )
+    if d0:
+        f0_diff.append((pair, d0))
+    (f1_edit if pair in edited else f1_other).append((pair, d1))
+    if pair % 100 == 0:
+        print(f"  pair {pair}", flush=True)
+
+
+def stats(rows):
+    v = np.array([d for _, d in rows]) if rows else np.zeros(0)
+    return {
+        "pairs": len(rows),
+        "pairs_differing": int((v > 0).sum()) if v.size else 0,
+        "max_abs_deviation": int(v.max()) if v.size else 0,
+        "mean_abs_deviation": float(v.mean()) if v.size else 0.0,
+    }
+
+
+receipt = {
+    "schema": "ddm_iv1_decode_diff.v1",
+    "axis": "[macOS-CPU advisory] score_claim=false promotable=false",
+    "candidate_decode": CAND,
+    "base_decode": str(BASE_RAW),
+    "edited_row_count": len(edited),
+    "P1_frame0_bit_identical_all_pairs": len(f0_diff) == 0,
+    "P1_frame0_violations": f0_diff[:10],
+    "P2_frame1_edited_pairs": stats(f1_edit),
+    "P3_frame1_unedited_pairs": stats(f1_other),
+}
+receipt["verdict"] = (
+    "PASS"
+    if receipt["P1_frame0_bit_identical_all_pairs"]
+    and receipt["P2_frame1_edited_pairs"]["pairs_differing"] == len(edited)
+    else "INVESTIGATE"
+)
+open(f"{OUT}/receipts/decode_diff.json", "w").write(json.dumps(receipt, indent=2))
+print(json.dumps(receipt, indent=2), flush=True)

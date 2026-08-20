@@ -1,0 +1,19 @@
+"""
+Expected pre-patch failure in Pact:
+  If current long-run code selects by live score only, this test should fail after adapting imports.
+Post-patch target:
+  selector rejects a candidate whose live score improves but parse-back score regresses.
+"""
+from dataclasses import dataclass
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
+from score_terms import ScoreDelta, admit_exact
+
+
+def test_live_improve_parseback_regress_rejected():
+    # live would improve, but parse-back is authority and regresses
+    parseback_delta = ScoreDelta(0.010, 0.05, 100_000, 0.012, 0.05, 100_000)
+    out = admit_exact(parseback_delta)
+    assert out['admit'] is False
+    assert out['reason'] == 'reject_total_score_regression'

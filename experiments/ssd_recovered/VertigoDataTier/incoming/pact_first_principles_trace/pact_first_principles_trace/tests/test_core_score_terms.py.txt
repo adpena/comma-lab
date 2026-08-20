@@ -1,0 +1,29 @@
+import math
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
+
+from score_terms import score, pose_marginal, ScoreDelta, admit_exact
+
+
+def test_pose_marginal_increases_as_pose_decreases():
+    assert pose_marginal(0.01) > pose_marginal(0.1) > pose_marginal(1.0)
+
+
+def test_score_formula_matches_evaluate_py_geometry():
+    assert abs(score(0.01, 0.04, 37545489) - (1.0 + math.sqrt(0.4) + 25.0)) < 1e-12
+
+
+def test_exact_admission_rejects_parseback_regression():
+    delta = ScoreDelta(0.01, 0.04, 1000, 0.011, 0.04, 1000)
+    out = admit_exact(delta)
+    assert not out['admit']
+    assert out['delta_seg_score'] > 0
+
+
+def test_value_per_byte_in_score_units():
+    delta = ScoreDelta(0.01, 0.04, 1000, 0.009, 0.04, 2000)
+    out = delta.terms()
+    assert out['delta_seg_score'] < 0
+    assert out['delta_rate_score'] > 0
+    assert 'value_per_byte_score_units' in out

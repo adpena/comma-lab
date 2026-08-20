@@ -1,0 +1,240 @@
+# SPDX-License-Identifier: MIT
+"""Phase-1 v10 RATE-CRUSH stream ranking — lossless rung candidates, exact bytes.
+
+Measures per-stream compressed sizes for lossless re-descriptions of the frozen
+C1 scorer planes (y0/y1 uint8 [384,512,3] per pair). Every variant is exactly
+invertible by construction (mod-256 residuals; deterministic predictors), so
+distortion is FROZEN and only real coder output bytes are compared.
+
+Inputs: the C1 prepare chunks (raw y0/y1 bins + sha-custodied manifests).
+Output: a JSON receipt with exact per-pair per-stream byte counts.
+
+Axis: [macOS-CPU local rate measurement] NON-PROMOTABLE; score_claim=false.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import lzma
+import subprocess
+import sys
+from concurrent.futures import ProcessPoolExecutor
+from pathlib import Path
+
+import brotli  # type: ignore[import-not-found]
+import numpy as np
+
+H, W, C = 384, 512, 3
+PLANE_BYTES = H * W * C
+ZSTD_BIN = "/opt/homebrew/bin/zstd"
+_LZMA_FILTERS = [{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME}]
+
+
+def _load_chunk(chunks_dir: Path, index: int) -> tuple[np.ndarray, np.ndarray, list[int]]:
+    manifest = json.loads((chunks_dir / f"chunk-{index:04d}.manifest.json").read_text())
+    y0_raw = (chunks_dir / f"chunk-{index:04d}.y0.bin").read_bytes()
+    y1_raw = (chunks_dir / f"chunk-{index:04d}.y1.bin").read_bytes()
+    if hashlib.sha256(y0_raw).hexdigest() != manifest["y0_sha256"]:
+        raise SystemExit(f"chunk {index}: y0 sha custody failure")
+    if hashlib.sha256(y1_raw).hexdigest() != manifest["y1_sha256"]:
+        raise SystemExit(f"chunk {index}: y1 sha custody failure")
+    pair_ids = [int(p) for p in manifest["pair_ids"]]
+    n = len(pair_ids)
+    y0 = np.frombuffer(y0_raw, dtype=np.uint8).reshape(n, H, W, C)
+    y1 = np.frombuffer(y1_raw, dtype=np.uint8).reshape(n, H, W, C)
+    return y0, y1, pair_ids
+
+
+def _smooth_121(plane: np.ndarray) -> np.ndarray:
+    src = plane.astype(np.uint16)
+    px = np.pad(src, ((0, 0), (1, 1), (0, 0)), mode="edge")
+    horizontal = (px[:, :-2] + 2 * px[:, 1:-1] + px[:, 2:] + 2) // 4
+    py = np.pad(horizontal, ((1, 1), (0, 0), (0, 0)), mode="edge")
+    vertical = (py[:-2] + 2 * py[1:-1] + py[2:] + 2) // 4
+    return vertical.astype(np.uint8)
+
+
+def _mod256(a: np.ndarray, b: np.ndarray) -> bytes:
+    return ((a.astype(np.int16) - b.astype(np.int16)) % 256).astype(np.uint8).tobytes()
+
+
+def _up_residual(plane: np.ndarray) -> bytes:
+    # PNG-style Up filter: row r predicted by row r-1 (row 0 unchanged), mod 256.
+    pred = np.zeros_like(plane)
+    pred[1:] = plane[:-1]
+    return _mod256(plane, pred)
+
+
+def _up_array(plane: np.ndarray) -> np.ndarray:
+    pred = np.zeros_like(plane)
+    pred[1:] = plane[:-1]
+    return ((plane.astype(np.int16) - pred.astype(np.int16)) % 256).astype(np.uint8)
+
+
+def _left_array(plane: np.ndarray) -> np.ndarray:
+    pred = np.zeros_like(plane)
+    pred[:, 1:] = plane[:, :-1]
+    return ((plane.astype(np.int16) - pred.astype(np.int16)) % 256).astype(np.uint8)
+
+
+def _upleft_residual(plane: np.ndarray) -> bytes:
+    # Separable second difference: up filter then left filter (both mod 256).
+    # Decode is exact: cumsum mod 256 along columns then along rows.
+    return _left_array(_up_array(plane)).tobytes()
+
+
+def _avg_residual(plane: np.ndarray) -> bytes:
+    # PNG Average filter: floor((left + up)/2), mod-256 residual.
+    p = plane.astype(np.int16)
+    left = np.zeros_like(p)
+    left[:, 1:] = p[:, :-1]
+    up = np.zeros_like(p)
+    up[1:] = p[:-1]
+    pred = (left + up) // 2
+    return ((p - pred) % 256).astype(np.uint8).tobytes()
+
+
+def _med_residual(plane: np.ndarray) -> bytes:
+    # LOCO-I / JPEG-LS median edge detector predictor, mod-256 residual.
+    p = plane.astype(np.int32)
+    left = np.zeros_like(p)
+    left[:, 1:] = p[:, :-1]
+    up = np.zeros_like(p)
+    up[1:] = p[:-1]
+    upleft = np.zeros_like(p)
+    upleft[1:, 1:] = p[:-1, :-1]
+    pred = left + up - upleft
+    pred = np.maximum(pred, np.minimum(left, up))
+    pred = np.minimum(pred, np.maximum(left, up))
+    return ((p - pred) % 256).astype(np.uint8).tobytes()
+
+
+def _br(payload: bytes) -> int:
+    return len(brotli.compress(payload, quality=11))
+
+
+def _zs(payload: bytes) -> int:
+    proc = subprocess.run(
+        [ZSTD_BIN, "-19", "--stdout"],
+        input=payload,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=True,
+    )
+    return len(proc.stdout)
+
+
+def _lz(payload: bytes) -> int:
+    return len(lzma.compress(payload, format=lzma.FORMAT_RAW, filters=_LZMA_FILTERS))
+
+
+def _measure_pair(args: tuple[int, bytes, bytes, bytes | None]) -> dict[str, int | str]:
+    pair_id, y0_bytes, y1_bytes, prev_y1_bytes = args
+    y0 = np.frombuffer(y0_bytes, dtype=np.uint8).reshape(H, W, C)
+    y1 = np.frombuffer(y1_bytes, dtype=np.uint8).reshape(H, W, C)
+    smooth_pred = _smooth_121(y0)
+    residual_i16 = (y1.astype(np.int16) - smooth_pred.astype(np.int16)).astype("<i2").tobytes()
+    residual_u8 = _mod256(y1, smooth_pred)
+    residual_u8_planar = (
+        ((y1.astype(np.int16) - smooth_pred.astype(np.int16)) % 256)
+        .astype(np.uint8)
+        .transpose(2, 0, 1)
+        .tobytes()
+    )
+    row: dict[str, int | str] = {"pair_id": pair_id}
+    # Bootstrap y0 variants.
+    row["y0_direct_br"] = _br(y0_bytes)
+    row["y0_direct_zs"] = _zs(y0_bytes)
+    row["y0_direct_lz"] = _lz(y0_bytes)
+    row["y0_up_br"] = _br(_up_residual(y0))
+    if prev_y1_bytes is not None:
+        prev_y1 = np.frombuffer(prev_y1_bytes, dtype=np.uint8).reshape(H, W, C)
+        row["y0_temporal_br"] = _br(_mod256(y0, prev_y1))
+        row["y0_temporal_smooth_br"] = _br(_mod256(y0, _smooth_121(prev_y1)))
+    # Residual y1|y0 variants (smooth-121 predictor, measured-best within pair).
+    row["r_i16_br"] = _br(residual_i16)
+    row["r_u8_br"] = _br(residual_u8)
+    row["r_u8_zs"] = _zs(residual_u8)
+    row["r_u8_lz"] = _lz(residual_u8)
+    row["r_u8_planar_br"] = _br(residual_u8_planar)
+    # R3 alternative: direct y1 plane.
+    row["y1_direct_br"] = _br(y1_bytes)
+    # Pass-2 spatial predictors (all exactly invertible mod-256 transforms).
+    row["y0_left_br"] = _br(_left_array(y0).tobytes())
+    row["y0_upleft_br"] = _br(_upleft_residual(y0))
+    row["y0_avg_br"] = _br(_avg_residual(y0))
+    row["y0_med_br"] = _br(_med_residual(y0))
+    row["y0_up_planar_br"] = _br(_up_array(y0).transpose(2, 0, 1).tobytes())
+    row["y0_med_planar_br"] = _br(
+        _br_planar_helper(_med_residual(y0))
+    )
+    row["y1_up_br"] = _br(_up_residual(y1))
+    row["y1_med_br"] = _br(_med_residual(y1))
+    row["y1_up_planar_br"] = _br(_up_array(y1).transpose(2, 0, 1).tobytes())
+    # Up-filter stacked on the smooth-121 mod-256 residual.
+    residual_u8_array = np.frombuffer(residual_u8, dtype=np.uint8).reshape(H, W, C)
+    row["r_u8_up_br"] = _br(_up_array(residual_u8_array).tobytes())
+    row["r_u8_up_planar_br"] = _br(_up_array(residual_u8_array).transpose(2, 0, 1).tobytes())
+    return row
+
+
+def _br_planar_helper(residual_bytes: bytes) -> bytes:
+    return np.frombuffer(residual_bytes, dtype=np.uint8).reshape(H, W, C).transpose(2, 0, 1).tobytes()
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--chunks-dir", type=Path, required=True)
+    parser.add_argument("--chunk-indices", type=int, nargs="+", required=True)
+    parser.add_argument("--receipt", type=Path, required=True)
+    parser.add_argument("--workers", type=int, default=10)
+    args = parser.parse_args()
+
+    all_y0: list[np.ndarray] = []
+    all_y1: list[np.ndarray] = []
+    all_ids: list[int] = []
+    for index in args.chunk_indices:
+        y0, y1, pair_ids = _load_chunk(args.chunks_dir, index)
+        all_y0.append(y0)
+        all_y1.append(y1)
+        all_ids.extend(pair_ids)
+    y0 = np.concatenate(all_y0)
+    y1 = np.concatenate(all_y1)
+    if sorted(all_ids) != all_ids or len(set(all_ids)) != len(all_ids):
+        raise SystemExit("pair ids must be strictly increasing across chunks")
+
+    tasks = []
+    for i, pair_id in enumerate(all_ids):
+        prev = None
+        # Temporal chaining is only valid when the previous pair is contiguous.
+        if i > 0 and all_ids[i - 1] == pair_id - 1:
+            prev = y1[i - 1].tobytes()
+        tasks.append((pair_id, y0[i].tobytes(), y1[i].tobytes(), prev))
+
+    with ProcessPoolExecutor(max_workers=args.workers) as pool:
+        rows = list(pool.map(_measure_pair, tasks))
+
+    keys = sorted({key for row in rows for key in row if key != "pair_id"})
+    totals = {key: sum(int(row[key]) for row in rows if key in row) for key in keys}
+    receipt = {
+        "schema": "v10_ratecrush_rank_streams.v1",
+        "axis": "[macOS-CPU local rate measurement] NON-PROMOTABLE",
+        "score_claim": False,
+        "chunk_indices": args.chunk_indices,
+        "pair_ids": all_ids,
+        "pair_count": len(all_ids),
+        "plane_bytes_raw": PLANE_BYTES,
+        "rows": rows,
+        "totals": totals,
+        "totals_per_pair": {key: value / len(all_ids) for key, value in totals.items()},
+    }
+    args.receipt.parent.mkdir(parents=True, exist_ok=True)
+    args.receipt.write_text(json.dumps(receipt, indent=1, sort_keys=True))
+    print(json.dumps({"pair_count": len(all_ids), "totals_per_pair": receipt["totals_per_pair"]}, indent=1))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

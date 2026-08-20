@@ -1,0 +1,203 @@
+# SPDX-License-Identifier: MIT
+"""ddm_fl1 (#813) — per-class GT-flicker floor decomposition from cached lstars.
+
+$0, scorer-FREE. Reproduces the registered aggregate flicker floor
+`gt_scoredframe_spike_rate_equals_witness_flicker_floor_v1` (0.005318 = GT
+stride-2 single-frame spike rate) and decomposes it per SegNet class, charged
+by the scored-frame GT label lstars[t] (= xp1 _per_class_flip_counts convention;
+L67 cross-check 44% Lane).
+
+Authority: [macOS-CPU advisory] derived-from-cached-GT; score_claim=false.
+Custody: gt_n600.npz ch1-verified SHA cf8d83605d... (S8 CLEAN).
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import shutil
+import socket
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+
+GT = "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
+EXPECT_SHA = "cf8d83605d2198ef56786c6be23d3470033ad2763f59559f06a79cedfb7b8cd6"
+EXPECT_BYTES = 5_078_017_610
+CLASS_ORDER = ["Road", "Lane", "Undrivable", "Movable", "MyCar"]  # canonical, NEVER luma-derived
+OUT_DIR = Path("/Volumes/VertigoDataTier/pact/ddm_fl1_20260731")
+
+
+def stream_sha256(path: str, chunk: int = 64 * 1024 * 1024) -> tuple[str, int]:
+    h = hashlib.sha256()
+    n = 0
+    with open(path, "rb") as f:
+        while True:
+            b = f.read(chunk)
+            if not b:
+                break
+            h.update(b)
+            n += len(b)
+    return h.hexdigest(), n
+
+
+def main() -> None:
+    t0 = time.time()
+    # --- custody receipt (charter step 1) ---
+    sha, nbytes = stream_sha256(GT)
+    custody_ok = (sha == EXPECT_SHA) and (nbytes == EXPECT_BYTES)
+    print(f"[custody] gt_n600.npz bytes={nbytes} sha256={sha}")
+    print(f"[custody] expected sha={EXPECT_SHA} bytes={EXPECT_BYTES} -> MATCH={custody_ok}")
+    if not custody_ok:
+        raise SystemExit("CUSTODY FAIL: gt_n600.npz sha/bytes mismatch vs ch1 S8 verified lineage")
+
+    d = np.load(GT)
+    ls_raw = d["lstars"]
+    print(f"[shape] lstars {ls_raw.shape} dtype={ls_raw.dtype}")
+    npairs, H, W = ls_raw.shape
+    px_per_frame = H * W
+    assert (npairs, H, W) == (600, 384, 512), (npairs, H, W)
+    vmin, vmax = int(ls_raw.min()), int(ls_raw.max())
+    print(f"[values] lstars range [{vmin},{vmax}] (expect 0..4)")
+    assert vmin >= 0 and vmax <= 4
+    ls = ls_raw.astype(np.int8)  # 118 MB; values 0-4
+    del ls_raw
+
+    # --- spike floor over interior pairs (both stride-2 neighbors present) ---
+    prev = ls[:-2]   # pairs 0..597
+    cur = ls[1:-1]   # pairs 1..598  (the scored frame whose spike we test)
+    nxt = ls[2:]     # pairs 2..599
+    n_interior = cur.shape[0]  # 598
+    spike = (cur != prev) & (cur != nxt)  # bool (598,384,512)
+    total_spikes = int(spike.sum())
+
+    # denominators: /600 (charter ×100/(600·pixels); conservative over all scored pairs)
+    #               /598 (mean over measurable interior pairs)
+    denom_600 = 600 * px_per_frame
+    denom_598 = n_interior * px_per_frame
+    rate_600 = total_spikes / denom_600
+    rate_598 = total_spikes / denom_598
+    px_per_pair_598 = total_spikes / n_interior
+    print(f"[agg] total_spikes={total_spikes} interior_pairs={n_interior}")
+    print(f"[agg] rate /600={rate_600:.7f}  rate /598={rate_598:.7f}  px/pair(/598)={px_per_pair_598:.2f}")
+
+    # repairable fraction (both neighbors agree) among spikes — validate 0.977
+    agree = (prev == nxt)
+    repairable = int((spike & agree).sum())
+    repairable_frac = repairable / total_spikes if total_spikes else 0.0
+    print(f"[validate] repairable frac (neighbors agree) = {repairable_frac:.4f} (expect ~0.977)")
+
+    # --- per-class decomposition ---
+    # PRIMARY convention: charge spike to the scored-frame GT label lstars[t]=cur
+    #   (matches xp1 _per_class_flip_counts: a smooth-label witness outputs the
+    #    temporal-majority label at the spike pixel -> flip charged to GT=cur).
+    per_class_cur = {}
+    for c, name in enumerate(CLASS_ORDER):
+        cnt = int((spike & (cur == c)).sum())
+        per_class_cur[name] = cnt
+
+    # SECONDARY convention (robustness): charge to the temporal-majority/repaired
+    #   label. For the repairable subset both neighbors agree -> that label.
+    #   For the (small) non-repairable subset, split half to prev-label, half to
+    #   nxt-label (report both endpoints).
+    per_class_prevlbl = {}
+    per_class_nxtlbl = {}
+    for c, name in enumerate(CLASS_ORDER):
+        per_class_prevlbl[name] = int((spike & (prev == c)).sum())
+        per_class_nxtlbl[name] = int((spike & (nxt == c)).sum())
+
+    # convert to floors
+    def to_rows(counts: dict, denom: int) -> dict:
+        rows = {}
+        for name, cnt in counts.items():
+            dseg = cnt / denom
+            rows[name] = {"spike_px": cnt, "d_seg": dseg, "S": 100.0 * dseg,
+                          "share_of_spikes": cnt / total_spikes if total_spikes else 0.0}
+        return rows
+
+    rows_600 = to_rows(per_class_cur, denom_600)
+    rows_598 = to_rows(per_class_cur, denom_598)
+
+    print("\n[per-class flicker floor | PRIMARY charge=lstars[t] | denom /600]")
+    print(f"{'class':<12}{'spike_px':>10}{'share':>9}{'d_seg':>12}{'S':>10}")
+    ssum600 = 0.0
+    for name in CLASS_ORDER:
+        r = rows_600[name]
+        ssum600 += r["S"]
+        print(f"{name:<12}{r['spike_px']:>10}{r['share_of_spikes']*100:>8.2f}%{r['d_seg']:>12.6f}{r['S']:>10.5f}")
+    print(f"{'TOTAL':<12}{total_spikes:>10}{'100.00%':>9}{rate_600:>12.6f}{ssum600:>10.5f}")
+
+    # secondary shares (majority-label endpoints)
+    prev_shares = {n: per_class_prevlbl[n] / total_spikes for n in CLASS_ORDER}
+    nxt_shares = {n: per_class_nxtlbl[n] / total_spikes for n in CLASS_ORDER}
+
+    result = {
+        "schema": "ddm_fl1_perclass_flicker.v1",
+        "task": "813",
+        "arm": "ddm_fl1_perclass_flicker_floors",
+        "date_utc": "2026-07-31",
+        "evidence_axis": "[macOS-CPU advisory]",
+        "score_claim": False,
+        "research_only": True,
+        "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+        "gt_cache": GT,
+        "gt_cache_sha256": sha,
+        "gt_cache_bytes": nbytes,
+        "custody_verified_vs_ch1_S8": custody_ok,
+        "class_order": CLASS_ORDER,
+        "definition": "spike = scored-frame GT argmax lstars[t] differs from BOTH stride-2 "
+                      "neighbors lstars[t-1] and lstars[t+1]; interior pairs 1..598 (both "
+                      "neighbors present). Reproduces registered eq "
+                      "gt_scoredframe_spike_rate_equals_witness_flicker_floor_v1.",
+        "primary_convention": "charge spike to scored-frame GT label lstars[t] "
+                              "(= xp1 _per_class_flip_counts; L67 44% Lane cross-check)",
+        "n_pairs_total": npairs,
+        "n_interior_pairs": n_interior,
+        "px_per_frame": px_per_frame,
+        "total_spike_px": total_spikes,
+        "px_per_pair_over_598": px_per_pair_598,
+        "aggregate_rate_denom600": rate_600,
+        "aggregate_rate_denom598": rate_598,
+        "aggregate_S_denom600": 100.0 * rate_600,
+        "aggregate_S_denom598": 100.0 * rate_598,
+        "registered_aggregate": 0.005318,
+        "repairable_frac": repairable_frac,
+        "per_class_denom600": rows_600,
+        "per_class_denom598": rows_598,
+        "secondary_share_by_prev_neighbor_label": prev_shares,
+        "secondary_share_by_next_neighbor_label": nxt_shares,
+        "partD_reference_shares": {"Lane": 0.436, "Road": 0.355, "MyCar": 0.082,
+                                   "Undrivable": 0.074, "Movable": 0.054},
+        "xp1_ep641_per_class_S": {"Road": 0.18845, "Lane": 0.12589, "Undrivable": 0.05574,
+                                  "Movable": 0.03792, "MyCar": 0.0184},
+        "xp1_ep641_total_dseg": 0.004264052,
+        "wall_seconds": round(time.time() - t0, 1),
+        "host": socket.gethostname(),
+        "pid": os.getpid(),
+    }
+
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    (OUT_DIR / "ddm_fl1_verdict.json").write_text(json.dumps(result, indent=1), encoding="utf-8")
+    # copy the driver for deterministic-repro custody
+    shutil.copy2(__file__, OUT_DIR / "ddm_fl1_perclass_flicker.py")
+    driver_sha, _ = stream_sha256(str(OUT_DIR / "ddm_fl1_perclass_flicker.py"), chunk=1 << 20)
+    manifest = {
+        "schema": "ddm_fl1_custody.v1", "task": "813", "date_utc": "2026-07-31",
+        "evidence_axis": "[macOS-CPU advisory]", "score_claim": False, "research_only": True,
+        "pointer": "0.1910828242 [contest-CPU] UNMOVED",
+        "gt_cache": GT, "gt_cache_sha256": sha, "gt_cache_bytes": nbytes,
+        "driver_code_sha256": driver_sha,
+        "outputs": ["ddm_fl1_verdict.json", "ddm_fl1_perclass_flicker.py"],
+        "rebuildable": "deterministic (frozen gt cache, no RNG): "
+                       ".venv/bin/python ddm_fl1_perclass_flicker.py",
+        "seg_authority": "cached frozen CPU-torch SegNet argmax (lstars); NEVER MPS; NO scorer forward",
+    }
+    (OUT_DIR / "ddm_fl1_custody_manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
+    print(f"\n[custody] wrote {OUT_DIR}/ddm_fl1_verdict.json + manifest + driver copy")
+    print(f"[done] wall={result['wall_seconds']}s")
+
+
+if __name__ == "__main__":
+    main()

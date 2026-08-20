@@ -1,0 +1,8 @@
+#!/bin/bash
+for i in $(seq 1 90); do
+  sleep 60
+  out=$(.venv/bin/python /Users/adpena/Projects/pact/experiments/ddm_po1_modal_t4_pose_feedback.py recover --output-dir /Volumes/VertigoDataTier/pact/ddm_po1_20260813/dispatch/round2b_candidate 2>&1)
+  echo "poll $i: $(echo "$out" | tail -3 | head -1)"
+  if echo "$out" | grep -q "COMPLETE\|FAILED"; then echo "$out" | tail -20; exit 0; fi
+done
+echo "poll loop exhausted 90x60s"; exit 1

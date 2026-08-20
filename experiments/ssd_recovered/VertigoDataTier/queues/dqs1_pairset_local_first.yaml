@@ -1,0 +1,2576 @@
+{
+  "controls": {
+    "local_first": true,
+    "max_concurrency": {
+      "local_cpu": 4,
+      "local_io_heavy": 1,
+      "local_mlx": 1,
+      "modal_cpu": 0,
+      "modal_gpu": 0
+    },
+    "mode": "running"
+  },
+  "experiments": [
+    {
+      "id": "dqs1_scheduler_preflight",
+      "lane_id": "lane_dqs1_scheduler_preflight_20260523",
+      "metadata": {
+        "artifact_catalog_metadata": {
+          "artifact_paths": [
+            ".omx/research/dqs1_local_first_storage_plan_20260523.json",
+            ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json",
+            ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json.journal.jsonl"
+          ],
+          "cleanup_plan_path": ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json",
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "journal_path": ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json.journal.jsonl",
+          "lifecycle_kind": "HISTORICAL_PROVENANCE",
+          "policy_id": "operator_storage_waterfall.v1",
+          "policy_schema": "comma_lab.operator_storage_waterfall.v1",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "comma_lab.operator_storage_waterfall_artifact_catalog_metadata.v1",
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "storage_plan_path": ".omx/research/dqs1_local_first_storage_plan_20260523.json",
+          "tracked_local_boundary": {
+            ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json": {
+              "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+              "git_boundary": "gitignored_local_control_artifact",
+              "gitignore_pattern": ".omx/research/dqs1_local_first_proactive_cleanup_*.json",
+              "lifecycle_kind": "HISTORICAL_PROVENANCE",
+              "local_only": true
+            },
+            ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json.journal.jsonl": {
+              "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+              "git_boundary": "gitignored_local_control_artifact",
+              "gitignore_pattern": ".omx/research/dqs1_local_first_proactive_cleanup_*.json.journal.jsonl",
+              "lifecycle_kind": "HISTORICAL_PROVENANCE",
+              "local_only": true
+            },
+            ".omx/research/dqs1_local_first_storage_plan_20260523.json": {
+              "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+              "git_boundary": "gitignored_local_control_artifact",
+              "gitignore_pattern": ".omx/research/dqs1_local_first_storage_plan_*.json",
+              "lifecycle_kind": "HISTORICAL_PROVENANCE",
+              "local_only": true
+            }
+          }
+        },
+        "contest_cuda_auth_eval": false,
+        "dispatch_attempted": false,
+        "exact_cuda_auth_eval": false,
+        "field_selection_ready_for_exact_eval_dispatch": false,
+        "gpu_launched": false,
+        "operator_storage_policy": {
+          "cold_store_roots": [
+            "/Volumes/VertigoDataTier/pact/cold_store",
+            "/Volumes/APDataStore/pact/cold_store"
+          ],
+          "cold_store_subdir": "cold_store",
+          "contest_cuda_auth_eval": false,
+          "dispatch_attempted": false,
+          "exact_cuda_auth_eval": false,
+          "explicit_cold_store_override": true,
+          "explicit_storage_tier_override": true,
+          "field_selection_ready_for_exact_eval_dispatch": false,
+          "gpu_launched": false,
+          "local_disk_enabled": false,
+          "local_disk_enabled_by_default": false,
+          "local_disk_requires_explicit_opt_in": true,
+          "policy_id": "operator_storage_waterfall.v1",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "comma_lab.operator_storage_waterfall.v1",
+          "score_claim": false,
+          "score_claim_eligible": false,
+          "score_claim_valid": false,
+          "storage_tier_cli_specs": [
+            "vertigo=/Volumes/VertigoDataTier/pact",
+            "ap=/Volumes/APDataStore/pact"
+          ],
+          "work_tier_order": [
+            {
+              "allow_local_disk": false,
+              "name": "vertigo",
+              "priority": 0,
+              "root": "/Volumes/VertigoDataTier/pact",
+              "source": "explicit_override"
+            },
+            {
+              "allow_local_disk": false,
+              "name": "ap",
+              "priority": 1,
+              "root": "/Volumes/APDataStore/pact",
+              "source": "explicit_override"
+            }
+          ]
+        },
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "comma_lab.scheduler.storage_preflight_metadata.v1",
+        "score_claim": false,
+        "score_claim_eligible": false,
+        "score_claim_valid": false
+      },
+      "priority": 0,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_experiment_storage.py",
+            "--output",
+            ".omx/research/dqs1_local_first_storage_plan_20260523.json",
+            "--workload-subdir",
+            "experiments/results/dqs1_local_first",
+            "--reserve-free-gb",
+            "40.0",
+            "--requested-bytes",
+            "0",
+            "--create",
+            "--policy-id",
+            "operator_storage_waterfall.v1",
+            "--policy-schema",
+            "comma_lab.operator_storage_waterfall.v1",
+            "--storage-plan-path",
+            ".omx/research/dqs1_local_first_storage_plan_20260523.json",
+            "--cleanup-plan-path",
+            ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json",
+            "--journal-path",
+            ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json.journal.jsonl",
+            "--lifecycle-kind",
+            "HISTORICAL_PROVENANCE",
+            "--expected-workload-root",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first",
+            "--expected-output-sha256",
+            "e382be001c77d748039b349f2d085146f82d9793d25ac72a4c829322015bd1b4",
+            "--storage-tier",
+            "vertigo=/Volumes/VertigoDataTier/pact",
+            "--storage-tier",
+            "ap=/Volumes/APDataStore/pact"
+          ],
+          "id": "storage_tier_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "selected_workload_root_matches_expected",
+              "path": ".omx/research/dqs1_local_first_storage_plan_20260523.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": ".omx/research/dqs1_local_first_storage_plan_20260523.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_catalog_metadata": {
+              "artifact_paths": [
+                ".omx/research/dqs1_local_first_storage_plan_20260523.json",
+                ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json",
+                ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json.journal.jsonl"
+              ],
+              "cleanup_plan_path": ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json",
+              "contest_cuda_auth_eval": false,
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "journal_path": ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json.journal.jsonl",
+              "lifecycle_kind": "HISTORICAL_PROVENANCE",
+              "policy_id": "operator_storage_waterfall.v1",
+              "policy_schema": "comma_lab.operator_storage_waterfall.v1",
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "ready_for_exact_eval_dispatch": false,
+              "schema": "comma_lab.operator_storage_waterfall_artifact_catalog_metadata.v1",
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "storage_plan_path": ".omx/research/dqs1_local_first_storage_plan_20260523.json",
+              "tracked_local_boundary": {
+                ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json": {
+                  "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+                  "git_boundary": "gitignored_local_control_artifact",
+                  "gitignore_pattern": ".omx/research/dqs1_local_first_proactive_cleanup_*.json",
+                  "lifecycle_kind": "HISTORICAL_PROVENANCE",
+                  "local_only": true
+                },
+                ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json.journal.jsonl": {
+                  "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+                  "git_boundary": "gitignored_local_control_artifact",
+                  "gitignore_pattern": ".omx/research/dqs1_local_first_proactive_cleanup_*.json.journal.jsonl",
+                  "lifecycle_kind": "HISTORICAL_PROVENANCE",
+                  "local_only": true
+                },
+                ".omx/research/dqs1_local_first_storage_plan_20260523.json": {
+                  "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+                  "git_boundary": "gitignored_local_control_artifact",
+                  "gitignore_pattern": ".omx/research/dqs1_local_first_storage_plan_*.json",
+                  "lifecycle_kind": "HISTORICAL_PROVENANCE",
+                  "local_only": true
+                }
+              }
+            },
+            "artifact_paths": [
+              ".omx/research/dqs1_local_first_storage_plan_20260523.json"
+            ],
+            "artifact_role": "storage_plan",
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "lifecycle_kind": "HISTORICAL_PROVENANCE",
+            "max_recursive_entries": 256,
+            "operator_storage_policy": {
+              "cold_store_roots": [
+                "/Volumes/VertigoDataTier/pact/cold_store",
+                "/Volumes/APDataStore/pact/cold_store"
+              ],
+              "cold_store_subdir": "cold_store",
+              "contest_cuda_auth_eval": false,
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "explicit_cold_store_override": true,
+              "explicit_storage_tier_override": true,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "local_disk_enabled": false,
+              "local_disk_enabled_by_default": false,
+              "local_disk_requires_explicit_opt_in": true,
+              "policy_id": "operator_storage_waterfall.v1",
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "ready_for_exact_eval_dispatch": false,
+              "schema": "comma_lab.operator_storage_waterfall.v1",
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "storage_tier_cli_specs": [
+                "vertigo=/Volumes/VertigoDataTier/pact",
+                "ap=/Volumes/APDataStore/pact"
+              ],
+              "work_tier_order": [
+                {
+                  "allow_local_disk": false,
+                  "name": "vertigo",
+                  "priority": 0,
+                  "root": "/Volumes/VertigoDataTier/pact",
+                  "source": "explicit_override"
+                },
+                {
+                  "allow_local_disk": false,
+                  "name": "ap",
+                  "priority": 1,
+                  "root": "/Volumes/APDataStore/pact",
+                  "source": "explicit_override"
+                }
+              ]
+            },
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "experiments/results",
+            ".omx/tmp",
+            "submissions/robust_current/eval_runs",
+            "--min-bytes",
+            "1073741824",
+            "--json-output",
+            ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json",
+            "--journal-output",
+            ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json.journal.jsonl",
+            "--policy-id",
+            "operator_storage_waterfall.v1",
+            "--policy-schema",
+            "comma_lab.operator_storage_waterfall.v1",
+            "--storage-plan-path",
+            ".omx/research/dqs1_local_first_storage_plan_20260523.json",
+            "--cleanup-plan-path",
+            ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json",
+            "--lifecycle-kind",
+            "HISTORICAL_PROVENANCE",
+            "--execute",
+            "--action",
+            "move",
+            "--cold-store-reserve-gb",
+            "40.0",
+            "--cold-store-root",
+            "/Volumes/VertigoDataTier/pact/cold_store",
+            "--cold-store-root",
+            "/Volumes/APDataStore/pact/cold_store"
+          ],
+          "id": "proactive_cleanup",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "storage_tier_plan"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_catalog_metadata": {
+              "artifact_paths": [
+                ".omx/research/dqs1_local_first_storage_plan_20260523.json",
+                ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json",
+                ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json.journal.jsonl"
+              ],
+              "cleanup_plan_path": ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json",
+              "contest_cuda_auth_eval": false,
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "journal_path": ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json.journal.jsonl",
+              "lifecycle_kind": "HISTORICAL_PROVENANCE",
+              "policy_id": "operator_storage_waterfall.v1",
+              "policy_schema": "comma_lab.operator_storage_waterfall.v1",
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "ready_for_exact_eval_dispatch": false,
+              "schema": "comma_lab.operator_storage_waterfall_artifact_catalog_metadata.v1",
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "storage_plan_path": ".omx/research/dqs1_local_first_storage_plan_20260523.json",
+              "tracked_local_boundary": {
+                ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json": {
+                  "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+                  "git_boundary": "gitignored_local_control_artifact",
+                  "gitignore_pattern": ".omx/research/dqs1_local_first_proactive_cleanup_*.json",
+                  "lifecycle_kind": "HISTORICAL_PROVENANCE",
+                  "local_only": true
+                },
+                ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json.journal.jsonl": {
+                  "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+                  "git_boundary": "gitignored_local_control_artifact",
+                  "gitignore_pattern": ".omx/research/dqs1_local_first_proactive_cleanup_*.json.journal.jsonl",
+                  "lifecycle_kind": "HISTORICAL_PROVENANCE",
+                  "local_only": true
+                },
+                ".omx/research/dqs1_local_first_storage_plan_20260523.json": {
+                  "artifact_kind_registry_pattern": ".omx/research/**/*.json*",
+                  "git_boundary": "gitignored_local_control_artifact",
+                  "gitignore_pattern": ".omx/research/dqs1_local_first_storage_plan_*.json",
+                  "lifecycle_kind": "HISTORICAL_PROVENANCE",
+                  "local_only": true
+                }
+              }
+            },
+            "artifact_paths": [
+              ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json",
+              ".omx/research/dqs1_local_first_proactive_cleanup_20260523.json.journal.jsonl"
+            ],
+            "artifact_role": "cleanup_plan",
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "lifecycle_kind": "HISTORICAL_PROVENANCE",
+            "max_recursive_entries": 256,
+            "operator_storage_policy": {
+              "cold_store_roots": [
+                "/Volumes/VertigoDataTier/pact/cold_store",
+                "/Volumes/APDataStore/pact/cold_store"
+              ],
+              "cold_store_subdir": "cold_store",
+              "contest_cuda_auth_eval": false,
+              "dispatch_attempted": false,
+              "exact_cuda_auth_eval": false,
+              "explicit_cold_store_override": true,
+              "explicit_storage_tier_override": true,
+              "field_selection_ready_for_exact_eval_dispatch": false,
+              "gpu_launched": false,
+              "local_disk_enabled": false,
+              "local_disk_enabled_by_default": false,
+              "local_disk_requires_explicit_opt_in": true,
+              "policy_id": "operator_storage_waterfall.v1",
+              "promotable": false,
+              "promotion_eligible": false,
+              "rank_or_kill_eligible": false,
+              "ready_for_exact_eval_dispatch": false,
+              "schema": "comma_lab.operator_storage_waterfall.v1",
+              "score_claim": false,
+              "score_claim_eligible": false,
+              "score_claim_valid": false,
+              "storage_tier_cli_specs": [
+                "vertigo=/Volumes/VertigoDataTier/pact",
+                "ap=/Volumes/APDataStore/pact"
+              ],
+              "work_tier_order": [
+                {
+                  "allow_local_disk": false,
+                  "name": "vertigo",
+                  "priority": 0,
+                  "root": "/Volumes/VertigoDataTier/pact",
+                  "source": "explicit_override"
+                },
+                {
+                  "allow_local_disk": false,
+                  "name": "ap",
+                  "priority": 1,
+                  "root": "/Volumes/APDataStore/pact",
+                  "source": "explicit_override"
+                }
+              ]
+            },
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "scheduler-preflight",
+        "storage",
+        "cleanup",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "pairset_drop_two_r010_001_p0376_0501",
+      "lane_id": "lane_dqs1_pairset_drop_two_r010_001_p0376_0501_local_first_20260523",
+      "metadata": {
+        "action_summary_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/action_summary.json",
+        "portfolio_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/portfolio.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "dqs1_local_first_experiment_metadata.v1",
+        "score_claim": false,
+        "selected_pair_indices": [
+          26,
+          59,
+          68,
+          98,
+          109,
+          112,
+          134,
+          151,
+          167,
+          229,
+          242,
+          257,
+          259,
+          296,
+          320,
+          327,
+          371,
+          378,
+          412,
+          430,
+          440,
+          459,
+          467,
+          479,
+          492,
+          496,
+          520,
+          544,
+          555,
+          588
+        ],
+        "source_custody_preserved": true,
+        "source_metadata": {
+          "acquisition_operation": {
+            "dropped_pair_indices": [
+              376,
+              501
+            ],
+            "dropped_pair_ranks": [
+              1,
+              10
+            ],
+            "op": "drop_two"
+          },
+          "acquisition_score": -0.159338299577178,
+          "observation_response_model": {
+            "active": false,
+            "allowed_use": "planning_prior_only_no_score_or_dispatch_authority",
+            "available_selector_kinds": [
+              "diversity_spaced"
+            ],
+            "axis": "contest_cpu",
+            "axis_observation_counts": {
+              "contest_cpu": 16,
+              "contest_cuda": 1
+            },
+            "dispatch_attempted": false,
+            "gpu_launched": false,
+            "identity_counts": {
+              "candidate_id_match_count": 17,
+              "selected_pair_indices_mismatch_count": 0,
+              "selected_pair_indices_missing_candidate_count": 0,
+              "selected_pair_indices_missing_observation_count": 0,
+              "selected_pair_indices_verified_count": 17
+            },
+            "identity_policy": "candidate_id_and_selected_pair_indices_required_and_matched",
+            "inactive_reason": "no_exact_observations_for_selector_kind",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "pairset_observation_response_model.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "selector_kind": "drop_two_from_best",
+            "training_row_count": 16
+          },
+          "payload_bytes": 41,
+          "predicted_score_source": "source_selector_inherited_non_authoritative",
+          "rate_delta": 2.7300217078009024e-05,
+          "selected_pair_count": 30,
+          "selected_pair_indices": [
+            26,
+            59,
+            68,
+            98,
+            109,
+            112,
+            134,
+            151,
+            167,
+            229,
+            242,
+            257,
+            259,
+            296,
+            320,
+            327,
+            371,
+            378,
+            412,
+            430,
+            440,
+            459,
+            467,
+            479,
+            492,
+            496,
+            520,
+            544,
+            555,
+            588
+          ],
+          "selector_kind": "drop_two_from_best"
+        }
+      },
+      "priority": 27,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_drop_two_r010_001_p0376_0501_local_first_20260523",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "dqs1_scheduler_preflight.proactive_cleanup"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_selective_runtime_packet.py",
+            "--bridge-plan",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/decoder_q_selective_window_bridge_plan.json",
+            "--base-archive",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r010_001_p0376_0501.json",
+            "--md-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r010_001_p0376_0501.md",
+            "--frame-policy",
+            "pair_all_frames",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,378,412,430,440,459,467,479,492,496,520,544,555,588"
+          ],
+          "id": "plan_packet",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r010_001_p0376_0501.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_bridge_plan"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/materialize_decoder_q_selective_runtime_candidate.py",
+            "--plan",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r010_001_p0376_0501.json",
+            "--base-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--output-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/submission_dir",
+            "--frame-policy",
+            "pair_all_frames",
+            "--manifest-output",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/materialization_manifest.json"
+          ],
+          "id": "materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/materialization_manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "plan_packet"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_decoder_q_selective_runtime_locality_controls.py",
+            "--parent-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--global-mutated-archive",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
+            "--selective-submission-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/submission_dir",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,378,412,430,440,459,467,479,492,496,520,544,555,588",
+            "--frame-policy",
+            "pair_all_frames",
+            "--timeout-seconds",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
+            "--work-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/locality_work",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/locality_controls.json"
+          ],
+          "id": "locality_controls",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "locality_controls_passed",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/locality_controls.json",
+              "type": "json_equals"
+            },
+            {
+              "axis_equals": "[locality-control no-score]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/locality_controls.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "materialize"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 960
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/submission_dir/archive.zip",
+            "--inflate-sh",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/submission_dir/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/local_cpu_advisory_work",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "600",
+            "--evaluate-timeout",
+            "900",
+            "--keep-work-dir"
+          ],
+          "id": "local_cpu_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/local_cpu_advisory.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "locality_controls"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501",
+            "--min-bytes",
+            "1",
+            "--json-output",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/raw_artifact_retention_plan.json"
+          ],
+          "id": "plan_raw_artifact_retention",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": 0,
+              "key": "plan.blocked_candidate_count",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/raw_artifact_retention_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/raw_artifact_retention_plan.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/calibrate_local_cpu_contest_drift.py",
+            "--calibration-json",
+            ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
+            "--candidate-id",
+            "pairset_drop_two_r010_001_p0376_0501",
+            "--candidate-local-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r010_001_p0376_0501/local_cpu_advisory.json",
+            "--auth-frontier-score-from-pointer",
+            "--eureka-out",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_001_p0376_0501_20260524T052547Z.json",
+            "--min-margin",
+            "0.0"
+          ],
+          "id": "local_cpu_contest_drift_eureka",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "local_cpu_contest_drift_eureka_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_001_p0376_0501_20260524T052547Z.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r010_001_p0376_0501_20260524T052547Z.json",
+              "required_false": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "score_claim",
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "promotable",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "score_affecting_payload_changed",
+                "charged_bits_changed",
+                "gpu_launched"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "pairset",
+        "local-first",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "pairset_drop_two_r009_005_p0459_0467",
+      "lane_id": "lane_dqs1_pairset_drop_two_r009_005_p0459_0467_local_first_20260523",
+      "metadata": {
+        "action_summary_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/action_summary.json",
+        "portfolio_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/portfolio.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "dqs1_local_first_experiment_metadata.v1",
+        "score_claim": false,
+        "selected_pair_indices": [
+          26,
+          59,
+          68,
+          98,
+          109,
+          112,
+          134,
+          151,
+          167,
+          229,
+          242,
+          257,
+          259,
+          296,
+          320,
+          327,
+          371,
+          376,
+          378,
+          412,
+          430,
+          440,
+          479,
+          492,
+          496,
+          501,
+          520,
+          544,
+          555,
+          588
+        ],
+        "source_custody_preserved": true,
+        "source_metadata": {
+          "acquisition_operation": {
+            "dropped_pair_indices": [
+              459,
+              467
+            ],
+            "dropped_pair_ranks": [
+              5,
+              9
+            ],
+            "op": "drop_two"
+          },
+          "acquisition_score": -0.1594075241468631,
+          "observation_response_model": {
+            "active": false,
+            "allowed_use": "planning_prior_only_no_score_or_dispatch_authority",
+            "available_selector_kinds": [
+              "diversity_spaced"
+            ],
+            "axis": "contest_cpu",
+            "axis_observation_counts": {
+              "contest_cpu": 16,
+              "contest_cuda": 1
+            },
+            "dispatch_attempted": false,
+            "gpu_launched": false,
+            "identity_counts": {
+              "candidate_id_match_count": 17,
+              "selected_pair_indices_mismatch_count": 0,
+              "selected_pair_indices_missing_candidate_count": 0,
+              "selected_pair_indices_missing_observation_count": 0,
+              "selected_pair_indices_verified_count": 17
+            },
+            "identity_policy": "candidate_id_and_selected_pair_indices_required_and_matched",
+            "inactive_reason": "no_exact_observations_for_selector_kind",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "pairset_observation_response_model.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "selector_kind": "drop_two_from_best",
+            "training_row_count": 16
+          },
+          "payload_bytes": 41,
+          "predicted_score_source": "source_selector_inherited_non_authoritative",
+          "rate_delta": 2.7300217078009024e-05,
+          "selected_pair_count": 30,
+          "selected_pair_indices": [
+            26,
+            59,
+            68,
+            98,
+            109,
+            112,
+            134,
+            151,
+            167,
+            229,
+            242,
+            257,
+            259,
+            296,
+            320,
+            327,
+            371,
+            376,
+            378,
+            412,
+            430,
+            440,
+            479,
+            492,
+            496,
+            501,
+            520,
+            544,
+            555,
+            588
+          ],
+          "selector_kind": "drop_two_from_best"
+        }
+      },
+      "priority": 28,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_drop_two_r009_005_p0459_0467_local_first_20260523",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "dqs1_scheduler_preflight.proactive_cleanup"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_selective_runtime_packet.py",
+            "--bridge-plan",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/decoder_q_selective_window_bridge_plan.json",
+            "--base-archive",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r009_005_p0459_0467.json",
+            "--md-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r009_005_p0459_0467.md",
+            "--frame-policy",
+            "pair_all_frames",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,376,378,412,430,440,479,492,496,501,520,544,555,588"
+          ],
+          "id": "plan_packet",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r009_005_p0459_0467.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_bridge_plan"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/materialize_decoder_q_selective_runtime_candidate.py",
+            "--plan",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r009_005_p0459_0467.json",
+            "--base-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--output-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/submission_dir",
+            "--frame-policy",
+            "pair_all_frames",
+            "--manifest-output",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/materialization_manifest.json"
+          ],
+          "id": "materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/materialization_manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "plan_packet"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_decoder_q_selective_runtime_locality_controls.py",
+            "--parent-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--global-mutated-archive",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
+            "--selective-submission-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/submission_dir",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,376,378,412,430,440,479,492,496,501,520,544,555,588",
+            "--frame-policy",
+            "pair_all_frames",
+            "--timeout-seconds",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
+            "--work-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/locality_work",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/locality_controls.json"
+          ],
+          "id": "locality_controls",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "locality_controls_passed",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/locality_controls.json",
+              "type": "json_equals"
+            },
+            {
+              "axis_equals": "[locality-control no-score]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/locality_controls.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "materialize"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 960
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/submission_dir/archive.zip",
+            "--inflate-sh",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/submission_dir/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/local_cpu_advisory_work",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "600",
+            "--evaluate-timeout",
+            "900",
+            "--keep-work-dir"
+          ],
+          "id": "local_cpu_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/local_cpu_advisory.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "locality_controls"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467",
+            "--min-bytes",
+            "1",
+            "--json-output",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/raw_artifact_retention_plan.json"
+          ],
+          "id": "plan_raw_artifact_retention",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": 0,
+              "key": "plan.blocked_candidate_count",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/raw_artifact_retention_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/raw_artifact_retention_plan.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/calibrate_local_cpu_contest_drift.py",
+            "--calibration-json",
+            ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
+            "--candidate-id",
+            "pairset_drop_two_r009_005_p0459_0467",
+            "--candidate-local-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_005_p0459_0467/local_cpu_advisory.json",
+            "--auth-frontier-score-from-pointer",
+            "--eureka-out",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r009_005_p0459_0467_20260524T052547Z.json",
+            "--min-margin",
+            "0.0"
+          ],
+          "id": "local_cpu_contest_drift_eureka",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "local_cpu_contest_drift_eureka_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r009_005_p0459_0467_20260524T052547Z.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r009_005_p0459_0467_20260524T052547Z.json",
+              "required_false": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "score_claim",
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "promotable",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "score_affecting_payload_changed",
+                "charged_bits_changed",
+                "gpu_launched"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "pairset",
+        "local-first",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "pairset_drop_two_r009_003_p0459_0479",
+      "lane_id": "lane_dqs1_pairset_drop_two_r009_003_p0459_0479_local_first_20260523",
+      "metadata": {
+        "action_summary_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/action_summary.json",
+        "portfolio_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/portfolio.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "dqs1_local_first_experiment_metadata.v1",
+        "score_claim": false,
+        "selected_pair_indices": [
+          26,
+          59,
+          68,
+          98,
+          109,
+          112,
+          134,
+          151,
+          167,
+          229,
+          242,
+          257,
+          259,
+          296,
+          320,
+          327,
+          371,
+          376,
+          378,
+          412,
+          430,
+          440,
+          467,
+          492,
+          496,
+          501,
+          520,
+          544,
+          555,
+          588
+        ],
+        "source_custody_preserved": true,
+        "source_metadata": {
+          "acquisition_operation": {
+            "dropped_pair_indices": [
+              459,
+              479
+            ],
+            "dropped_pair_ranks": [
+              3,
+              9
+            ],
+            "op": "drop_two"
+          },
+          "acquisition_score": -0.1594748777822324,
+          "observation_response_model": {
+            "active": false,
+            "allowed_use": "planning_prior_only_no_score_or_dispatch_authority",
+            "available_selector_kinds": [
+              "diversity_spaced"
+            ],
+            "axis": "contest_cpu",
+            "axis_observation_counts": {
+              "contest_cpu": 16,
+              "contest_cuda": 1
+            },
+            "dispatch_attempted": false,
+            "gpu_launched": false,
+            "identity_counts": {
+              "candidate_id_match_count": 17,
+              "selected_pair_indices_mismatch_count": 0,
+              "selected_pair_indices_missing_candidate_count": 0,
+              "selected_pair_indices_missing_observation_count": 0,
+              "selected_pair_indices_verified_count": 17
+            },
+            "identity_policy": "candidate_id_and_selected_pair_indices_required_and_matched",
+            "inactive_reason": "no_exact_observations_for_selector_kind",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "pairset_observation_response_model.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "selector_kind": "drop_two_from_best",
+            "training_row_count": 16
+          },
+          "payload_bytes": 41,
+          "predicted_score_source": "source_selector_inherited_non_authoritative",
+          "rate_delta": 2.7300217078009024e-05,
+          "selected_pair_count": 30,
+          "selected_pair_indices": [
+            26,
+            59,
+            68,
+            98,
+            109,
+            112,
+            134,
+            151,
+            167,
+            229,
+            242,
+            257,
+            259,
+            296,
+            320,
+            327,
+            371,
+            376,
+            378,
+            412,
+            430,
+            440,
+            467,
+            492,
+            496,
+            501,
+            520,
+            544,
+            555,
+            588
+          ],
+          "selector_kind": "drop_two_from_best"
+        }
+      },
+      "priority": 29,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_drop_two_r009_003_p0459_0479_local_first_20260523",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "dqs1_scheduler_preflight.proactive_cleanup"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_selective_runtime_packet.py",
+            "--bridge-plan",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/decoder_q_selective_window_bridge_plan.json",
+            "--base-archive",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r009_003_p0459_0479.json",
+            "--md-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r009_003_p0459_0479.md",
+            "--frame-policy",
+            "pair_all_frames",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,376,378,412,430,440,467,492,496,501,520,544,555,588"
+          ],
+          "id": "plan_packet",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r009_003_p0459_0479.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_bridge_plan"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/materialize_decoder_q_selective_runtime_candidate.py",
+            "--plan",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r009_003_p0459_0479.json",
+            "--base-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--output-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/submission_dir",
+            "--frame-policy",
+            "pair_all_frames",
+            "--manifest-output",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/materialization_manifest.json"
+          ],
+          "id": "materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/materialization_manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "plan_packet"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_decoder_q_selective_runtime_locality_controls.py",
+            "--parent-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--global-mutated-archive",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
+            "--selective-submission-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/submission_dir",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,376,378,412,430,440,467,492,496,501,520,544,555,588",
+            "--frame-policy",
+            "pair_all_frames",
+            "--timeout-seconds",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
+            "--work-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/locality_work",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/locality_controls.json"
+          ],
+          "id": "locality_controls",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "locality_controls_passed",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/locality_controls.json",
+              "type": "json_equals"
+            },
+            {
+              "axis_equals": "[locality-control no-score]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/locality_controls.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "materialize"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 960
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/submission_dir/archive.zip",
+            "--inflate-sh",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/submission_dir/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/local_cpu_advisory_work",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "600",
+            "--evaluate-timeout",
+            "900",
+            "--keep-work-dir"
+          ],
+          "id": "local_cpu_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/local_cpu_advisory.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "locality_controls"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479",
+            "--min-bytes",
+            "1",
+            "--json-output",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/raw_artifact_retention_plan.json"
+          ],
+          "id": "plan_raw_artifact_retention",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": 0,
+              "key": "plan.blocked_candidate_count",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/raw_artifact_retention_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/raw_artifact_retention_plan.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/calibrate_local_cpu_contest_drift.py",
+            "--calibration-json",
+            ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
+            "--candidate-id",
+            "pairset_drop_two_r009_003_p0459_0479",
+            "--candidate-local-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r009_003_p0459_0479/local_cpu_advisory.json",
+            "--auth-frontier-score-from-pointer",
+            "--eureka-out",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r009_003_p0459_0479_20260524T052547Z.json",
+            "--min-margin",
+            "0.0"
+          ],
+          "id": "local_cpu_contest_drift_eureka",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "local_cpu_contest_drift_eureka_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r009_003_p0459_0479_20260524T052547Z.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r009_003_p0459_0479_20260524T052547Z.json",
+              "required_false": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "score_claim",
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "promotable",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "score_affecting_payload_changed",
+                "charged_bits_changed",
+                "gpu_launched"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "pairset",
+        "local-first",
+        "no-score-authority"
+      ]
+    },
+    {
+      "id": "pairset_drop_two_r005_003_p0467_0479",
+      "lane_id": "lane_dqs1_pairset_drop_two_r005_003_p0467_0479_local_first_20260523",
+      "metadata": {
+        "action_summary_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/action_summary.json",
+        "portfolio_path": "/Users/adpena/Projects/pact/experiments/results/cross_family_candidate_portfolio/20260523T134800Z_full_drop_two_local_harvest16/portfolio.json",
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "dqs1_local_first_experiment_metadata.v1",
+        "score_claim": false,
+        "selected_pair_indices": [
+          26,
+          59,
+          68,
+          98,
+          109,
+          112,
+          134,
+          151,
+          167,
+          229,
+          242,
+          257,
+          259,
+          296,
+          320,
+          327,
+          371,
+          376,
+          378,
+          412,
+          430,
+          440,
+          459,
+          492,
+          496,
+          501,
+          520,
+          544,
+          555,
+          588
+        ],
+        "source_custody_preserved": true,
+        "source_metadata": {
+          "acquisition_operation": {
+            "dropped_pair_indices": [
+              467,
+              479
+            ],
+            "dropped_pair_ranks": [
+              3,
+              5
+            ],
+            "op": "drop_two"
+          },
+          "acquisition_score": -0.15951978020581192,
+          "observation_response_model": {
+            "active": false,
+            "allowed_use": "planning_prior_only_no_score_or_dispatch_authority",
+            "available_selector_kinds": [
+              "diversity_spaced"
+            ],
+            "axis": "contest_cpu",
+            "axis_observation_counts": {
+              "contest_cpu": 16,
+              "contest_cuda": 1
+            },
+            "dispatch_attempted": false,
+            "gpu_launched": false,
+            "identity_counts": {
+              "candidate_id_match_count": 17,
+              "selected_pair_indices_mismatch_count": 0,
+              "selected_pair_indices_missing_candidate_count": 0,
+              "selected_pair_indices_missing_observation_count": 0,
+              "selected_pair_indices_verified_count": 17
+            },
+            "identity_policy": "candidate_id_and_selected_pair_indices_required_and_matched",
+            "inactive_reason": "no_exact_observations_for_selector_kind",
+            "promotable": false,
+            "promotion_eligible": false,
+            "rank_or_kill_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "pairset_observation_response_model.v1",
+            "score_claim": false,
+            "score_claim_valid": false,
+            "selector_kind": "drop_two_from_best",
+            "training_row_count": 16
+          },
+          "payload_bytes": 41,
+          "predicted_score_source": "source_selector_inherited_non_authoritative",
+          "rate_delta": 2.7300217078009024e-05,
+          "selected_pair_count": 30,
+          "selected_pair_indices": [
+            26,
+            59,
+            68,
+            98,
+            109,
+            112,
+            134,
+            151,
+            167,
+            229,
+            242,
+            257,
+            259,
+            296,
+            320,
+            327,
+            371,
+            376,
+            378,
+            412,
+            430,
+            440,
+            459,
+            492,
+            496,
+            501,
+            520,
+            544,
+            555,
+            588
+          ],
+          "selector_kind": "drop_two_from_best"
+        }
+      },
+      "priority": 30,
+      "status": "queued",
+      "steps": [
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/build_decoder_q_selective_window_bridge_plan.py",
+            "--selection",
+            "experiments/results/mlx_decoderq_parent_contract_closure_20260522T1132Z/mlx_effective_spend_triage_observed_window_selection_top32.json",
+            "--candidate-manifest",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/mutation_manifest.json",
+            "--lane-id",
+            "lane_dqs1_pairset_drop_two_r005_003_p0467_0479_local_first_20260523",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/decoder_q_selective_window_bridge_plan.json",
+            "--md-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/decoder_q_selective_window_bridge_plan.md"
+          ],
+          "id": "build_bridge_plan",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/decoder_q_selective_window_bridge_plan.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "dqs1_scheduler_preflight.proactive_cleanup"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/plan_decoder_q_selective_runtime_packet.py",
+            "--bridge-plan",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/decoder_q_selective_window_bridge_plan.json",
+            "--base-archive",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir/archive.zip",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r005_003_p0467_0479.json",
+            "--md-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r005_003_p0467_0479.md",
+            "--frame-policy",
+            "pair_all_frames",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,376,378,412,430,440,459,492,496,501,520,544,555,588"
+          ],
+          "id": "plan_packet",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r005_003_p0467_0479.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "build_bridge_plan"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/materialize_decoder_q_selective_runtime_candidate.py",
+            "--plan",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/selector_pareto/packet_plans/drop_two_r005_003_p0467_0479.json",
+            "--base-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--output-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/submission_dir",
+            "--frame-policy",
+            "pair_all_frames",
+            "--manifest-output",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/materialization_manifest.json"
+          ],
+          "id": "materialize",
+          "kind": "command",
+          "postconditions": [
+            {
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/materialization_manifest.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "plan_packet"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 0
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/run_decoder_q_selective_runtime_locality_controls.py",
+            "--parent-submission-dir",
+            "experiments/results/pr101_frame_exploit_selector_fec6_fixed_huffman_k16_clean_20260515_codex/submission_dir",
+            "--global-mutated-archive",
+            "experiments/results/pr110_provisional_hfv1_engineering_20260520_codex/contest_oracle_search/op3v3_decoder_q_selected_candidates_20260520_codex/d1f1e56e042692f2/archive.zip",
+            "--selective-submission-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/submission_dir",
+            "--selected-pairs",
+            "26,59,68,98,109,112,134,151,167,229,242,257,259,296,320,327,371,376,378,412,430,440,459,492,496,501,520,544,555,588",
+            "--frame-policy",
+            "pair_all_frames",
+            "--timeout-seconds",
+            "540",
+            "--global-timeout-seconds",
+            "840",
+            "--max-inflate-parallelism",
+            "3",
+            "--reuse-existing-inflates",
+            "--work-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/locality_work",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/locality_controls.json"
+          ],
+          "id": "locality_controls",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": true,
+              "key": "locality_controls_passed",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/locality_controls.json",
+              "type": "json_equals"
+            },
+            {
+              "axis_equals": "[locality-control no-score]",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/locality_controls.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "materialize"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 960
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "experiments/contest_auth_eval.py",
+            "--archive",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/submission_dir/archive.zip",
+            "--inflate-sh",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/submission_dir/inflate.sh",
+            "--upstream-dir",
+            "upstream",
+            "--video-names-file",
+            "upstream/public_test_video_names.txt",
+            "--device",
+            "cpu",
+            "--work-dir",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/local_cpu_advisory_work",
+            "--json-out",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/local_cpu_advisory.json",
+            "--inflate-timeout",
+            "600",
+            "--evaluate-timeout",
+            "900",
+            "--keep-work-dir"
+          ],
+          "id": "local_cpu_advisory",
+          "kind": "command",
+          "postconditions": [
+            {
+              "axis_equals": "cpu_advisory",
+              "axis_key": "score_axis",
+              "false_or_missing": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "gpu_launched"
+              ],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/local_cpu_advisory.json",
+              "required_false": [
+                "score_claim",
+                "promotion_eligible",
+                "rank_or_kill_eligible"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "locality_controls"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/compact_experiment_artifacts.py",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479",
+            "--min-bytes",
+            "1",
+            "--json-output",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/raw_artifact_retention_plan.json"
+          ],
+          "id": "plan_raw_artifact_retention",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": 0,
+              "key": "plan.blocked_candidate_count",
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/raw_artifact_retention_plan.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/raw_artifact_retention_plan.json",
+              "required_false": [
+                "plan.score_claim",
+                "plan.promotion_eligible",
+                "plan.ready_for_exact_eval_dispatch"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_io_heavy"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 1200
+        },
+        {
+          "artifact_mobility": {},
+          "command": [
+            ".venv/bin/python",
+            "tools/calibrate_local_cpu_contest_drift.py",
+            "--calibration-json",
+            ".omx/research/local_cpu_contest_drift_calibration_dqs1_fec6_20260522T194800Z.json",
+            "--candidate-id",
+            "pairset_drop_two_r005_003_p0467_0479",
+            "--candidate-local-json",
+            "/Volumes/VertigoDataTier/pact/experiments/results/dqs1_local_first/materialized/drop_two_r005_003_p0467_0479/local_cpu_advisory.json",
+            "--auth-frontier-score-from-pointer",
+            "--eureka-out",
+            ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r005_003_p0467_0479_20260524T052547Z.json",
+            "--min-margin",
+            "0.0"
+          ],
+          "id": "local_cpu_contest_drift_eureka",
+          "kind": "command",
+          "postconditions": [
+            {
+              "equals": "local_cpu_contest_drift_eureka_signal.v1",
+              "key": "schema",
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r005_003_p0467_0479_20260524T052547Z.json",
+              "type": "json_equals"
+            },
+            {
+              "false_or_missing": [],
+              "path": ".omx/research/local_cpu_contest_drift_eureka_pairset_drop_two_r005_003_p0467_0479_20260524T052547Z.json",
+              "required_false": [
+                "ready_for_exact_eval_dispatch",
+                "dispatch_attempted",
+                "score_claim",
+                "score_claim_valid",
+                "score_claim_eligible",
+                "promotion_eligible",
+                "rank_or_kill_eligible",
+                "promotable",
+                "field_selection_ready_for_exact_eval_dispatch",
+                "exact_cuda_auth_eval",
+                "contest_cuda_auth_eval",
+                "score_affecting_payload_changed",
+                "charged_bits_changed",
+                "gpu_launched"
+              ],
+              "type": "json_false_authority"
+            }
+          ],
+          "requires": [
+            "local_cpu_advisory"
+          ],
+          "resources": {
+            "kind": "local_cpu"
+          },
+          "telemetry": {
+            "artifact_paths": [],
+            "include_postcondition_paths": true,
+            "input_artifact_paths": [],
+            "max_recursive_entries": 256,
+            "recursive": false
+          },
+          "timeout_seconds": 120
+        }
+      ],
+      "tags": [
+        "dqs1",
+        "pairset",
+        "local-first",
+        "no-score-authority"
+      ]
+    }
+  ],
+  "queue_id": "dqs1_pairset_local_first_storage",
+  "schema": "experiment_queue.v1"
+}

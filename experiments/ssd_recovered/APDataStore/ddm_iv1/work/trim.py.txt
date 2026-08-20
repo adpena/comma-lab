@@ -1,0 +1,109 @@
+"""Trim the re-solved actuator so the WANS1 body lands on exactly 36,040 B.
+
+The shipping receiver (runtime/residual_archive.py) parses the untagged WANS1
+semantic section at a FIXED offset, so a body of any other length mis-parses.
+frame_embed's stream is rANS-coded, so its length moves with the codes.  This
+reverts the lowest-pose-gain pairs until the body length matches exactly, then
+builds and retains the real archive.
+"""
+
+import json
+import sys
+
+import numpy as np
+
+sys.path.insert(0, "/Users/adpena/Projects/pact/experiments")
+from ddm_iv1_pose_actuator import (  # noqa: E402
+    EXPERIMENT_BOOK,
+    RATE_S_PER_BYTE,
+    SemanticBlock,
+    encode_actuator_into_blob,
+    rebuild_archive,
+    sha256_bytes,
+)
+
+OUT = "/Volumes/APDataStore/pact/ddm_iv1"
+block = SemanticBlock.load()
+solved = np.load(f"{OUT}/retained/final_frame_codes.npy").astype(np.int32)
+solve = json.loads(open(f"{OUT}/receipts/actuator_solve.json").read())
+final = json.loads(open(f"{OUT}/receipts/finalize.json").read())
+rows = {int(r["pair"]): dict(r) for r in solve["rows"]}
+for r in final["repaired_pairs"]:
+    rows[r["pair"]]["realized_d_pose"] = r["repaired_realized_d_pose"]
+
+sys.path.insert(0, str(EXPERIMENT_BOOK / "src"))
+from cpr1_sub4.entropy.renderer_weight_codec import encode_f12_wans_body  # noqa: E402
+
+import runtime.residual_archive as ra  # noqa: E402
+
+TARGET = ra.WANS_BODY_BYTES
+
+
+def body_len(codes):
+    return len(
+        encode_f12_wans_body(
+            encode_actuator_into_blob(block, codes), ra.WANS_STREAM_ORDER
+        )
+    )
+
+
+changed = [int(p) for p in np.where((solved != block.frame_codes).any(axis=1))[0]]
+gain = {
+    p: rows[p]["base_d_pose"] - rows[p]["realized_d_pose"] for p in changed
+}
+print(f"changed rows {len(changed)}  all-applied body {body_len(solved)}  target {TARGET}", flush=True)
+
+order = sorted(changed, key=lambda p: gain[p])  # revert cheapest gain first
+best = None
+for p in order:  # try every single revert, keep the cheapest that lands exactly
+    trial = solved.copy()
+    trial[p] = block.frame_codes[p]
+    if body_len(trial) == TARGET:
+        best = ([p], trial, gain[p])
+        break
+if best is None:
+    trial = solved.copy()
+    reverted, lost = [], 0.0
+    for p in order:
+        trial[p] = block.frame_codes[p]
+        reverted.append(p)
+        lost += gain[p]
+        if body_len(trial) == TARGET:
+            best = (list(reverted), trial.copy(), lost)
+            break
+
+if best is None:
+    print("TRIM FAILED: no revert prefix lands on the fixed body length", flush=True)
+    raise SystemExit(3)
+
+reverted, codes, lost = best
+archive, archive_bytes = rebuild_archive(block, codes)
+path = f"{OUT}/retained/candidate_archive.zip"
+open(path, "wb").write(archive)
+np.save(f"{OUT}/retained/trimmed_frame_codes.npy", codes)
+
+kept = [p for p in changed if p not in set(reverted)]
+base_mean = float(np.mean([rows[p]["base_d_pose"] for p in rows]))
+realized = {
+    p: (rows[p]["realized_d_pose"] if p in set(kept) else rows[p]["base_d_pose"])
+    for p in rows
+}
+realized_mean = float(np.mean(list(realized.values())))
+receipt = {
+    "schema": "ddm_iv1_trim.v1",
+    "axis": "[macOS-CPU advisory] score_claim=false promotable=false",
+    "reverted_pairs": reverted,
+    "reverted_gain_lost_d_pose": lost,
+    "rows_changed_after_trim": int((codes != block.frame_codes).any(axis=1).sum()),
+    "wans_body_bytes": body_len(codes),
+    "wans_body_required": TARGET,
+    "archive_bytes": archive_bytes,
+    "archive_delta_bytes": archive_bytes - 181161,
+    "archive_delta_S_rate": (archive_bytes - 181161) * RATE_S_PER_BYTE,
+    "archive_sha256": sha256_bytes(archive),
+    "solve_subset_mean_base_d_pose": base_mean,
+    "solve_subset_mean_realized_d_pose_after_trim": realized_mean,
+    "solve_subset_relative_change_after_trim": realized_mean / base_mean - 1.0,
+}
+open(f"{OUT}/receipts/trim.json", "w").write(json.dumps(receipt, indent=2))
+print(json.dumps(receipt, indent=2), flush=True)
