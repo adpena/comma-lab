@@ -170,8 +170,11 @@ directory, and rsync completion is not deletion authority. The oc2 consolidation
 - **QUEUED-WITH-A-FIRE-ORDER** — owner: MAIN storage custody. Fire trigger: Vertigo falls below
   50 GiB free again. Action: partition `pact/evidence` (78.72 GiB of inflated bulk in 31 trees) and
   `pact/experiments` (68.22 GiB in 28 trees) by newest descendant and current consumer, then certify
-  and move whole subtrees. The `find`-derived tree list is at
-  `.omx/tmp/ddm_vr1/inflated_dirs.txt` with sizes at `.omx/tmp/ddm_vr1/inflated_sizes.tsv`.
+  and move whole subtrees. The census is committed at `.omx/research/ddm_vr1_census_20260820/`
+  (`inflated_dirs.txt` — the 257 `find`-derived trees; `inflated_sizes.tsv` — allocated KiB each;
+  `census_ge5gib.tsv` — the ≥5 GiB rows; `vertigo_du_d2.txt` — the full depth-2 walk) and mirrored to
+  `/Volumes/APDataStore/pact/vertigo_coldstore/_manifests/_vr1_census_20260820/`. It is committed
+  rather than left in `.omx/tmp/`, which is ephemeral scratch and not a durable evidence path.
 - **HARDENING OWED** — `tools/vertigo_certify_move.py` (landed at `ef46ed13a4`): (a) write and
   compare a `symlinks.tsv` of link targets so a tree containing symlinks still gets a complete
   equality proof — both trees here had zero symlinks, so the gap did not bite, but the next tree may
