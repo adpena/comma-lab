@@ -206,6 +206,44 @@ def test_cold_store_and_experiments_results_bucket_B(tmp_path):
     assert report["denominator"]["bucket_C_authored_OWED"] == 0
 
 
+def test_vendored_compression_library_source_buckets_A(tmp_path):
+    """`brotli110_source/c/**` unpacked for a repro is somebody else's code, not our debt."""
+    f = tmp_path / "ddm_arm" / "repro_before" / "brotli110_source" / "c" / "dec" / "decode.c"
+    f.parent.mkdir(parents=True)
+    f.write_text("int decode(void) { return 0; }\n")
+    report = mod.scan(roots=[tmp_path], reachable=set(), odb=set())
+    assert report["denominator"]["bucket_A_third_party_or_clone"] == 1
+    assert report["denominator"]["bucket_C_authored_OWED"] == 0
+
+
+def test_generated_packet_inflate_buckets_B(tmp_path):
+    """A packet's inflate.py carries an embedded payload — a build product, not an authored source."""
+    f = tmp_path / "ddm_arm" / "packet" / "inflate.py"
+    f.parent.mkdir(parents=True)
+    f.write_text("PAYLOAD = b'\\x00' * 16\n")
+    report = mod.scan(roots=[tmp_path], reachable=set(), odb=set())
+    assert report["denominator"]["bucket_B_run_output_or_coldstore"] == 1
+    assert report["denominator"]["bucket_C_authored_OWED"] == 0
+
+
+def test_an_authored_inflate_outside_a_packet_dir_stays_owed(tmp_path):
+    """Only `<packet-ish>/inflate.py` is a build product. A hand-written one elsewhere is debt."""
+    f = tmp_path / "ddm_arm" / "builders" / "inflate.py"
+    f.parent.mkdir(parents=True)
+    f.write_text("def build(): return 1\n")
+    report = mod.scan(roots=[tmp_path], reachable=set(), odb=set())
+    assert report["denominator"]["bucket_C_authored_OWED"] == 1
+
+
+def test_coldstore_named_directory_buckets_B(tmp_path):
+    """`vertigo_coldstore_20260811` is a cold store even though the segment is not exactly it."""
+    f = tmp_path / "vertigo_coldstore_20260811" / "arm" / "x.py"
+    f.parent.mkdir(parents=True)
+    f.write_text("x = 1\n")
+    report = mod.scan(roots=[tmp_path], reachable=set(), odb=set())
+    assert report["denominator"]["bucket_B_run_output_or_coldstore"] == 1
+
+
 def test_a_bare_results_dir_stays_owed(tmp_path):
     """`<arm>/results/builder.py` is commonly an authored script. Ambiguity must flag, not excuse."""
     f = tmp_path / "ddm_arm" / "results" / "builder.py"

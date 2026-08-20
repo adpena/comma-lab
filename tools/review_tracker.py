@@ -70,6 +70,14 @@ SCAN_EXCLUDE_GLOBS = (
     "experiments/tmp/**",
     "reports/**",
     "upstream/**",
+    # Verbatim snapshots of what an arm actually ran, recovered from the SSD tier by ddm_sd1
+    # because they existed on exactly one disk. They are ARCHIVED EVIDENCE, not maintained
+    # source: nothing imports them, and their value is that the bytes are unchanged. Scanning
+    # them would register ~600 files of unreviewed entities that then block every commit, and
+    # the only ways out would be to fake-review ~100k lines nobody read or to override the gate
+    # on `.py` — both forbidden. Excluding them keeps the gate's denominator honest: it counts
+    # code we maintain, and says nothing about code we merely preserved.
+    "experiments/ssd_recovered/**",
 )
 
 # Valid review statuses

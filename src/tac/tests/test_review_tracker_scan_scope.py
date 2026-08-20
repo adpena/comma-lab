@@ -28,6 +28,26 @@ def test_review_tracker_scan_scope_excludes_custody_mirrors() -> None:
     assert not review_tracker._is_reviewable_python_path("tools/__init__.py")
 
 
+def test_recovered_ssd_evidence_is_out_of_review_scope() -> None:
+    """Verbatim SSD-recovered snapshots are archived evidence, not maintained source.
+
+    ddm_sd1 landed ~600 of them so the bytes stop living on one disk. Scanning them would
+    register unreviewed entities that block every commit, and the only escapes would be to
+    fake-review code nobody read or to override the gate on `.py` — both forbidden. Excluding
+    them keeps the gate counting code we maintain.
+    """
+    assert not review_tracker._is_reviewable_python_path(
+        "experiments/ssd_recovered/APDataStore/ddm_sa1/builders/compose.py"
+    )
+    assert not review_tracker._is_reviewable_python_path(
+        "experiments/ssd_recovered/VertigoDataTier/evidence/x/runner.py"
+    )
+    # The exclusion is scoped to that one directory: a sibling under experiments/ still scans,
+    # so this cannot be widened by accident into "experiments is unreviewed".
+    assert review_tracker._is_reviewable_python_path("experiments/ssd_recovery_tool.py")
+    assert review_tracker._is_reviewable_python_path("experiments/pipeline.py")
+
+
 def test_review_tracker_required_source_roots_are_self_protected() -> None:
     assert review_tracker.REQUIRED_SOURCE_SCAN_PREFIXES == (
         "src/tac/",

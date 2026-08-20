@@ -63,6 +63,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -98,6 +99,12 @@ BUCKET_A_SEGMENTS = frozenset({
 })
 BUCKET_A_PREFIXES = ("public_pr", "comma-lab_latest", "codex_venvs")
 BUCKET_A_SUBSTRINGS = ("_intake_", "/intake/")
+# Vendored upstream compression libraries, unpacked into an arm workspace for a repro. Measured
+# 2026-08-20: 105 blobs / 2.1 MB of bucket C were `brotli110_source/c/**` — genuinely somebody
+# else's code, and committing it would put a third-party tree in our history for no signal.
+BUCKET_A_VENDORED_RE = re.compile(
+    r"/(brotli|zstd|zlib|lzma|xz|libdeflate|zopfli|lz4|snappy)[\w.\-]*_source/", re.IGNORECASE
+)
 
 # Bucket B markers — bulky rebuildable run output, untracked by long-standing repo convention.
 # A bare `results` segment is deliberately NOT here. Arm workspaces routinely put authored builder
@@ -105,6 +112,13 @@ BUCKET_A_SUBSTRINGS = ("_intake_", "/intake/")
 # instrument exists to FIND debt, so an ambiguous path is flagged (bucket C) rather than excused.
 BUCKET_B_SEGMENTS = frozenset({"cold_store", "coldstore", "harvested_artifacts"})
 BUCKET_B_SUBSTRINGS = ("/experiments/results/", "/cold_store", "/coldstore")
+# A cold store whose directory name merely CONTAINS the word, e.g. `vertigo_coldstore_20260811`.
+BUCKET_B_SEGMENT_SUBSTRINGS = ("coldstore", "cold_store")
+# A packet's `inflate.py` is a BUILD PRODUCT, not an authored source: the archive builder emits it
+# with the payload embedded, which is why the largest "owed" rows were 4-6 MB single files. Its
+# generator is committed, so it is rebuildable by definition. Measured 2026-08-20: 71 such blobs
+# accounted for 15.1 MB — 64% of the entire owed byte volume — while carrying no authored signal.
+BUCKET_B_GENERATED_RE = re.compile(r"/(packet|submission|runtime_tree|archive_dir)/inflate\.py$")
 
 
 class AuditError(RuntimeError):
@@ -221,11 +235,17 @@ def classify(path: Path, root: Path, clone_cache: dict[Path, bool]) -> str:
         return "A"
     if any(sub in text for sub in BUCKET_A_SUBSTRINGS):
         return "A"
+    if BUCKET_A_VENDORED_RE.search(text):
+        return "A"
     if _is_clone_dir(path.parent, clone_cache, root):
         return "A"
     if parts & BUCKET_B_SEGMENTS:
         return "B"
     if any(sub in text for sub in BUCKET_B_SUBSTRINGS):
+        return "B"
+    if any(sub in seg for seg in path.parts for sub in BUCKET_B_SEGMENT_SUBSTRINGS):
+        return "B"
+    if BUCKET_B_GENERATED_RE.search(text):
         return "B"
     return "C"
 
