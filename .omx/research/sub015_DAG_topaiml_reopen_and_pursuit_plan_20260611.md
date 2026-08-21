@@ -29387,3 +29387,35 @@ Baseline: rc2 S 0.14827847122030852 @ 180,456 B [contest-CUDA T4 n600], archive 
 - CROSS-INSTANCE LAW (with qs3 B=108/H=76): seg mechanisms clear targeting break-even and die on
   collateral — only objectives that price collateral INSIDE the solve (realized acceptance /
   joint remeasure) have ever produced admitted seg moves.
+
+## FEED-sr2f (2026-08-21) — de-blur sign row: FAMILY CONFIRMED CLOSED on rc2 + the already-fired discovery
+Source: ddm_sr2f (commit 34ed229453); retained /Volumes/APDataStore/pact/ddm_sr2f/retained/
+(full 600×5×6 pose array + SR2F_RC2_POSE_REPRICED.json, sha256+bytes). Baseline rc2
+S 0.14827847122030852 @ 180,456 B [contest-CUDA T4 n600].
+- ALREADY FIRED: sr1 FO-1 ran 2026-08-16/17 (ddm_a1s memos: alpha_sign_verdict CLOSED_NET_LOSS +
+  foa_band_masked_pose FAMILY_CLOSED; α=0 control bit-identical, argmax sha 2aeb1e6b…). The
+  ledger row qw1_sr1_fo1_… sat status:pending → pw2 ranked the SAME measurement #1 of the week
+  5 days later. Row now closed with both verdict paths (the m89 write-direction cure). a1s also
+  found a transcription slip in FO-1's own formula (α=0 puts A·x at the scorer — the ladder
+  never reaches the de-blur).
+- RE-PRICED ON rc2 (the one term that could reopen it): pose drift rms at best α=0.25 is
+  0.0219462773 = 8.70× incumbent = 1.967× the DERIVED break-even bar 0.0111552 (a bar that
+  already grants impossible 100% seg recovery). Net ≥ +0.053075 S (S ≥ 0.2013535, ~36% worse).
+  α=1.0: 50.53×. [n600, rc2 decode sha 7246a4ff… verified, retained-payload P0 honored.]
+- THE KEEPER LAW: rc2 drift within 0.33% of hv1's across bodies differing 32% in d_seg — the
+  de-blur's pose damage is a property of the OPERATOR × SCENE, not the vehicle. Pre-registered
+  reopening condition (≤50.66% of hv1 drift) missed 2×. FAMILY CLOSED on ceiling-granting
+  arithmetic; no rc2 seg ladder needed (no attainable seg number changes the sign).
+- CONVERGENCE (with FEED-ec2p): BOTH manufactured-seg attacks now resolve to ONE successor —
+  a render-side objective with pose AND collateral priced INSIDE (a1s §8 FO-C ≡ the ec1
+  collateral-constrained redesign ≡ the js8 joint family). Zero-byte post-hoc operators on the
+  render are dead ×2 (de-blur: pose; conditioning: collateral) — the M1 doctrine's joint-solve
+  clause is now the only live route into the 95.9% pool.
+- APPARATUS: (a) deterministic external SIGTERM at pair 140 ×2, source UNIDENTIFIED (safe_run
+  self-kill candidate unconfirmed; memory/timeout/governor exonerated by governed rerun) — open
+  instrument hazard; (b) sealed tool was loop-end-save-only (CLAUDE.md violation) — resumable
+  variant landed (experiments/ddm_sr2f_rc2_pose_resumable.py, imports sealed primitives,
+  atomic 40-pair checkpoints); (c) ExFAT mmap SIGBUS class confirmed + cured by local staging.
+- QUEUE RE-AIM: head = fx2 19-member rebuild (−86.58 B measured, 0 counted bytes, decode slack
+  323.5 s measured) COMPOSED with dx1's −18 B CABAC re-code ($0, blocking condition met by rc2)
+  → one candidate, one T4 fire. Then the contested rc2-pose-codes receipt comparison ($0).

@@ -137,3 +137,15 @@ The measurement was orphaned (poller crash, no memo), so eq1 ranked it #1 on a f
 The seg attack path sharpens M1: conditioning without collateral priced inside the objective
 joins additive correction in the dead column; the live route is collateral-constrained JOINT
 solves + the de-blur operator (sr2f sign still pending). See FEED-ec2p + ddm_ec2p memo.
+
+## 7. Errata 2 (2026-08-21, post-sr2f — append-only)
+
+Rank-1 is RESOLVED: the de-blur sign was measured 08-16 (a1s, CLOSED_NET_LOSS + FAMILY_CLOSED)
+— the row this memo ranked #1 was ALREADY FIRED, its ledger row stale at pending. sr2f re-priced
+the only reopening term on rc2: pose drift 8.70× incumbent = 1.967× break-even granting 100% seg
+recovery → family CONFIRMED CLOSED (operator×scene property, vehicle-independent to 0.33%).
+Combined with Errata 1: BOTH top-ranked cells were resolved-on-disk before this audit ranked
+them — M2 (plumbing-not-physics) was not just a pattern IN the queue, it WAS the queue's top-2.
+The manufactured-seg pool's only live route is now the render-side objective with pose AND
+collateral priced inside (a1s FO-C ≡ ec1 redesign ≡ js8 joint family). Actionable head: fx2
+rebuild × dx1 CABAC composed candidate; then the contested pose-codes receipt comparison.
