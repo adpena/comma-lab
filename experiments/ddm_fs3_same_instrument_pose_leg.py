@@ -111,6 +111,8 @@ def forward_fields(receipt: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+#: Relative paths -- matched EXACTLY, not by basename.  ``lib/inflate.py`` is not
+#: a payload file just because ``inflate.py`` is (rv17 wave-3 W3-F17).
 PAYLOAD_FILES = {"archive.zip", "inflate.py"}
 PIN_CONSTANTS = ("ARCHIVE_SHA256", "ARCHIVE_BYTES")
 
@@ -139,37 +141,111 @@ def _pin_free_ast(path: Path) -> str:
     ``\\s*$`` matched newlines under ``re.M``.  Refusing a delta over blank lines
     would be a false refusal; accepting a real code change would be a false pass.
     The AST is the object that decides which one a diff is.
+
+    The normaliser REFUSES unless the pin's right-hand side is a single literal
+    (rv17 wave-3 W3-F16).  It replaces ``node.value`` -- the WHOLE right-hand
+    expression -- so an arbitrary expression bound to a pin name would be erased
+    along with whatever it does.  ``ARCHIVE_SHA256 = (globals().__setitem__(
+    "DECODE_MODE", "ALT_RECEIVER"), "abc")[1]`` normalises to exactly the same
+    dump as a plain literal, and the comparator would report ``PAYLOAD_ONLY`` for
+    two files with different executed semantics.  A literal cannot do that, so
+    requiring a literal closes the hole at its root instead of blacklisting the
+    expression forms anyone has thought of so far.
     """
     import ast as _ast
 
     tree = _ast.parse(path.read_text())
     for node in _ast.walk(tree):
-        if isinstance(node, _ast.Assign):
-            for target in node.targets:
-                if isinstance(target, _ast.Name) and target.id in PIN_CONSTANTS:
-                    node.value = _ast.Constant(value="<PIN>")
+        if not isinstance(node, _ast.Assign):
+            continue
+        pinned = [
+            t.id
+            for t in node.targets
+            if isinstance(t, _ast.Name) and t.id in PIN_CONSTANTS
+        ]
+        if not pinned:
+            continue
+        value = node.value
+        # ``type(...) in`` and not isinstance: bool subclasses int, and a pin is
+        # never a bool.  The measured pins are ARCHIVE_SHA256 (str) and
+        # ARCHIVE_BYTES (int).
+        if not isinstance(value, _ast.Constant) or type(value.value) not in (str, int):
+            raise PoseLegError(
+                f"REFUSING to normalise {path}: pin {'/'.join(pinned)} is assigned "
+                f"a {type(value).__name__}, not a plain str/int literal. "
+                "Normalisation replaces the ENTIRE right-hand expression, so a "
+                "non-literal RHS would be erased together with any behaviour it "
+                "carries, and this comparator would then call two different "
+                "receivers identical."
+            )
+        node.value = _ast.Constant(value="<PIN>")
     return _ast.dump(tree)
 
 
 def runtime_trees_differ_only_by_payload(base: Path, cand: Path) -> dict[str, Any]:
-    """Prove the runtime_files_sha difference is PAYLOAD and not a receiver change."""
+    """Prove the runtime_files_sha difference is PAYLOAD and not a receiver change.
+
+    Three fail-opens closed after rv17 wave-3 (W3-F16/F17/F18).  Each returned
+    this module's STRONGEST verdict, ``PAYLOAD_ONLY``, on input that had not been
+    scrutinised at all:
+
+    * an empty or nonexistent tree made every set comparison vacuously true, so a
+      typo'd ``--base-runtime`` read as proof (F18);
+    * ``unexpected`` filtered on BASENAME while the AST check keyed on the exact
+      path ``"inflate.py"``, so a differing ``lib/inflate.py`` satisfied the
+      filter AND missed the AST check -- zero scrutiny, no adversary required, a
+      vendored or backup copy is enough (F17);
+    * the pin normaliser erased arbitrary right-hand expressions (F16, cured in
+      ``_pin_free_ast``).
+
+    Both path tests now key on the exact relative path, and EVERY differing file
+    whose basename is ``inflate.py`` is AST-checked, so "the check never ran"
+    can no longer coexist with "an inflate.py differs".
+    """
+    for label, root in (("--base-runtime", base), ("--candidate-runtime", cand)):
+        if not root.is_dir():
+            raise PoseLegError(
+                f"REFUSING: {label} is not a directory: {root}. A missing tree "
+                "compares equal to everything and would return PAYLOAD_ONLY."
+            )
+
     hb, hc = _file_hashes(base), _file_hashes(cand)
+    for label, root, hashes in (
+        ("--base-runtime", base, hb),
+        ("--candidate-runtime", cand, hc),
+    ):
+        if not hashes:
+            raise PoseLegError(
+                f"REFUSING: {label} contains no files: {root}. An empty file set "
+                "makes every comparison below vacuously true, so this module "
+                "would report PAYLOAD_ONLY -- its strongest verdict -- having "
+                "examined nothing."
+            )
+
     only_base = sorted(set(hb) - set(hc))
     only_cand = sorted(set(hc) - set(hb))
     differing = sorted(k for k in set(hb) & set(hc) if hb[k] != hc[k])
-    unexpected = [k for k in differing if Path(k).name not in PAYLOAD_FILES]
+    # EXACT relative path, not basename: a differing ``lib/inflate.py`` is NOT a
+    # payload file just because something called ``inflate.py`` is.
+    unexpected = [k for k in differing if k not in PAYLOAD_FILES]
 
-    inflate_body_identical = None
-    if "inflate.py" in differing:
-        inflate_body_identical = _pin_free_ast(base / "inflate.py") == _pin_free_ast(
-            cand / "inflate.py"
+    # Every differing inflate.py, wherever it sits -- keyed the same way the
+    # filter above is, so the two can no longer disagree about what a path is.
+    inflate_paths = [k for k in differing if Path(k).name == "inflate.py"]
+    inflate_body_identical: bool | None = None
+    if inflate_paths:
+        inflate_body_identical = all(
+            _pin_free_ast(base / rel) == _pin_free_ast(cand / rel)
+            for rel in inflate_paths
         )
 
     ok = (
         not only_base
         and not only_cand
         and not unexpected
-        and (inflate_body_identical is not False)
+        # `is True`, never `is not False`: None means the check did not run. It
+        # is only legitimate when nothing named inflate.py differs at all.
+        and (not inflate_paths or inflate_body_identical is True)
     )
     return {
         "files_only_in_base": only_base,
@@ -177,6 +253,12 @@ def runtime_trees_differ_only_by_payload(base: Path, cand: Path) -> dict[str, An
         "differing_files": differing,
         "unexpected_differing_files": unexpected,
         "inflate_py_AST_identical_once_pin_normalised": inflate_body_identical,
+        "inflate_py_paths_ast_checked": inflate_paths,
+        "files_compared": len(set(hb) & set(hc)),
+        # Observability, not a refusal: comparing a tree with ITSELF is honestly
+        # "identical", but it proves no treatment was applied. The caller owns
+        # that question; this flag stops the vacuity from being invisible.
+        "base_and_candidate_are_the_same_directory": base.resolve() == cand.resolve(),
         "verdict": "PAYLOAD_ONLY" if ok else "RECEIVER_CHANGED",
         "why_this_check_exists": (
             "runtime_files_sha256 differs between any base and candidate because each "
