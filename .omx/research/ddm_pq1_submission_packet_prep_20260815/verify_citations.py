@@ -54,28 +54,46 @@ def _tree_files(tree: Path) -> dict[str, list[str]]:
 # Header must LEAD with "Erratum" after optional numbering ("### 10.6 Erratum -- ..."
 # qualifies; "## This is NOT an erratum" does not).
 _ERRATUM_HEADER_RE = re.compile(r"^#+\s*[0-9.§()\s]*erratum\b", re.IGNORECASE)
-_DECLARE_RE = re.compile(r"^\s*covered-citation:\s*`([^`]+)`")
+# A declaration may be indented at most 3 spaces: at 4+ it is an INDENTED code
+# block in Markdown, i.e. illustration, and must not grant coverage (rv17
+# R13-F1 sibling, same ≤3 rule as fences).
+_DECLARE_RE = re.compile(r"^ {0,3}covered-citation:\s*`([^`]+)`")
+# A fence OPENS on a run of >=3 backticks or tildes indented at most 3 spaces
+# (CommonMark); it CLOSES only on a run of >= the opening length of the SAME
+# character with nothing but whitespace after. rv17 R13-F1: the one-boolean
+# lstrip/startswith tracker approximated this rule and was fail-OPEN two ways
+# (a ~~~ line inside a backtick fence, and an indented ``` inside a fence,
+# both "closed" the fence and resumed coverage-granting inside illustration).
+_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
 
 
 def _declared_coverage(doc_text: str) -> set[str]:
     """Exact tokens declared covered on `covered-citation:` lines in Erratum sections.
 
-    Code-fence aware (rv17 R12-F1): text inside ``` / ~~~ fences is
+    Code-fence aware (rv17 R12-F1 / R13-F1): text inside ``` / ~~~ fences is
     ILLUSTRATION, not declaration -- a fenced Erratum-header-plus-declaration
-    example must not silently open real coverage (the realistic path is
-    documentation showing the declaration syntax), and a fenced `# comment`
-    line must not silently CLOSE a live Erratum section (the same blindness
-    in the false-negative direction).
+    example must not silently open real coverage, and a fenced `# comment`
+    line must not silently CLOSE a live Erratum section. The fence state is a
+    (char, count) tuple, not a boolean: only a same-character run of at least
+    the opening length closes a block, and fence-looking lines of the OTHER
+    character or at 4+ spaces of indent are content.
     """
     covered: set[str] = set()
     in_erratum = False
-    in_fence = False
+    fence: tuple[str, int] | None = None
     for line in doc_text.splitlines():
-        stripped = line.lstrip()
-        if stripped.startswith("```") or stripped.startswith("~~~"):
-            in_fence = not in_fence
+        fenced = _FENCE_RE.match(line)
+        if fence is not None:
+            if (
+                fenced
+                and fenced.group(1)[0] == fence[0]
+                and len(fenced.group(1)) >= fence[1]
+                and not fenced.group(2).strip()
+            ):
+                fence = None
             continue
-        if in_fence:
+        if fenced:
+            fence = (fenced.group(1)[0], len(fenced.group(1)))
             continue
         if line.startswith("#"):
             in_erratum = bool(_ERRATUM_HEADER_RE.match(line))
