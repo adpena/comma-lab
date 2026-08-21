@@ -738,6 +738,38 @@ The greedy ratio allocation is the control that the sweep leaves nothing on the 
 
 The refused reopen is NOT re-opened; the only free variable is which tokens to drop.
 
+### T5b The rv17 wave-3 findings, folded BEFORE the verdict
+
+The wave-3 round-1 review verified round 2's refusal arithmetic exactly (12/12 steps, custody 86/86)
+and returned findings about **instruments and labels**. Several bear on this verdict, so they are
+folded here rather than after it.
+
+| finding | what it said | what I did |
+|---|---|---|
+| **W3-F2** (HIGH) | round 1's projection receipt carried `rate_source = jg2_prior_4.1379_bits_per_token` while its arithmetic used 2.6573 — the disarm rebinds the price but the LABEL was a frozen literal, sitting beside `clears_sub_015: True` | **Fixed the emitter** (`ddm_jg3_joint_solve.py:927`): `rate_source` now names the price the arithmetic used. The shipped receipt is NOT edited. **The drop-137 shards launched before the fix, so their `projection.rate_source` carries the stale label** — I did not restart a healthy 137-pair run for a label, because killing mid-pair risks a partial checkpoint line and a broken resume costs far more than the label. A corrected sidecar is emitted instead, per the same never-edit-a-shipped-receipt rule. |
+| **W3-F3+F8** (HIGH) | the CONTROL A/B/realized triad is **ONE** check — B and the realized totals are entailed by A. And a second reading exists that my controls cannot exclude. | Recorded as one reproducibility check with one verdict. **Round 2 passed this triad 38/38 and its row still died — that is the proof the triad is reproducibility, not correctness.** The second reading is now a pre-registered discriminator (§T7). |
+| **W3-F6** (MED, verdict-flipping) | `113_847` was an unreceipted CLI literal beside a receipt field named `token_stream_bytes_base = 109696`; a 0.08% baseline error flips refusal↔pass | **`FS3_RATE_BASELINE_RECEIPT.json`**, both artifacts hashed at read time — see §T5c. Wave-3 round-2 made this an **admissibility gate**. |
+| **W3-F7** (MED) | `carrier_MEASURED_leg2` is a linear extrapolation (45 B over 454 pairs re-multiplied) | Relabelled **`carrier_DERIVED_extrapolated`**. And the honest consequence is now visible: the ladder measured this price as NON-monotone in density with ±45 B of container-search spread, so the leg's **uncertainty band (±45 B = ±3.00e-05 S) is LARGER than its own point estimate (9.04e-06 S)**. |
+| **W3-F5** (MED) | CONTROL A passes VACUOUSLY for pairs absent from jg3's retained shards (27/600 zone) | Measured and reported as a **count**: **0 of the mirror's 137** and **0 of round 2's 38** fall in the vacuity zone — both sets are drawn from jg5's shipping 455 ⊂ jg3's 573 edited, so neither can contain one by construction. `FS3_CONTROL_A_VACUITY.json`. |
+| **W3-F4** (LOW) | the AST audit misfiles import-time binding forms as cured; the docstring overclaims "cannot slip past silently" | Audit now recognises **lambda defaults, class-body assignments and decorator arguments** in addition to function defaults, and the docstring now **NAMES the forms it still cannot see** (module-level containers, closures, `getattr`/string access). It is a strong check, not a total one, and says so. |
+
+### T5c The rate baseline, receipted with its sha (admissibility gate)
+
+Both artifacts hashed **at read time**, each agreeing with an independent published receipt:
+
+| quantity | bytes | sha256 | what it IS |
+|---|---:|---|---|
+| **the baseline the 651.6 B threshold derives from** | **113,847** | `b9243abd2e38f9ae…` | the **SHIPPED 455-edit** token stream of the live rc2 body — the object the drop removes tokens FROM. Source receipt: jg5's `S1_encode_jg5_subset455.json` (`stream`). Independently corroborated by fs2's re-encoder control (`byte_identical: true`). |
+| the near-identically-named other quantity | 109,696 | `15054e5da33640bc…` | the **ZERO-EDIT base** stream — the encoder's starting point with no edits at all. This is the field every encode receipt calls `token_stream_bytes_base`. **The threshold is NOT derived against it.** Source receipt: this arm's own `S1_control_600.json` (`byte_identical: true`). |
+
+**Why they differ, with two arithmetic controls:** 113,847 − 109,696 = **4,151 B**, which equals jg5's
+published `archive_delta_bytes` exactly; and 4,151 B over jg5's 8,654 tokens = **3.8373 b/tok**, which
+equals jg5's published `measured_bits_per_changed_token` exactly. The difference IS jg5's shipped edit
+cost.
+
+**Threshold restated against the receipted baseline:** the row dies unless the candidate token stream
+comes in at **≤ 113,195 B**.
+
 ### T6 Status and what remains
 
 The 137-pair re-screen is running (4 CPU shards, disarm proved in each: 4.1379 → 5.946667,
@@ -749,6 +781,33 @@ instrument, byte-close, advisory n600 via `tools/fire_local_advisory.py`, seal v
 **If the falsifier fires, the close is as clean as round 2's** — and a stopping rule vindicated in
 BOTH directions is itself the stronger law: jg3 stopped at the right place, and the flat prior's two
 errors point in opposite directions so that neither correction admits anything.
+
+### T7 TWO mechanisms, pre-registered — the mirror is a DISCRIMINATOR, not just a candidate
+
+`FS3_DROP_MECHANISM_DISCRIMINATION.json`, written before the encode. Round 2 measured two numbers that
+differ on **two axes at once**, and my round-2 reading attributed the whole gap to one of them:
+
+* **2.6573 b/tok** was an **AVERAGE** over a **569-token REMOVAL**;
+* **5.9467 b/tok** was a **MARGINAL** over a **300-token ADDITION**.
+
+I read the 2.24× gap as average-vs-marginal (rank dependence). W3-F8 supplies a reading my controls
+**cannot exclude**: removal and addition are different operations under a context-modelled coder, and
+the only MEASURED removal price on this lineage is ~2.66 — an average. **The mirror prices a REMOVAL
+with an addition-marginal**, so it crosses one axis while holding the other and separates them:
+
+| mechanism | predicted credit | predicted bytes | row outcome |
+|---|---:|---:|---|
+| **RANK-DEPENDENCE** — the marginal price transfers across direction | 5.9467 b/tok | **741.1 B** | **SURVIVES** |
+| **DIRECTION-ASYMMETRY** — a removal prices like the measured removal average | 2.6573 b/tok | **331.2 B** | **DIES** |
+| **SITE-QUALITY** (my own, §T3) — better sites cost less | < 5.9467 | < 741 | dies below 651.6 B |
+| both/all real | between | between | survives only above **651.6 B** |
+
+**Adjudication rule, fixed in advance:** near 331 B → direction-asymmetry; near 741 B → rank
+dependence; between → more than one is real. The row itself survives only above **651.6 B**.
+
+**Stated plainly: three of the four readings predict this row DIES.** I am firing it because the
+measurement is decisive about the MECHANISM either way, and a mechanism that explains round 2 is worth
+more than this row was.
 
 ---
 
