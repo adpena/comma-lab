@@ -35,6 +35,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.process_group_kill import run_in_process_group  # noqa: E402
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file, write_json  # noqa: E402
 
 TOOL_NAME = "tools/prove_pr101_kaggle_proxy_runtime_consumption.py"
@@ -336,7 +337,7 @@ def _verify_inflate_wrapper_routes_to_packet_inflate_py(
         env["PR101_INFLATE_ROUTE_SENTINEL"] = str(sentinel)
         env["PATH"] = f"{probe_bin}{os.pathsep}{env.get('PATH', '')}"
         try:
-            proc = subprocess.run(
+            proc = run_in_process_group(
                 [str(probe_wrapper), str(data_dir), str(output_dir), str(file_list)],
                 cwd=probe_packet,
                 env=env,

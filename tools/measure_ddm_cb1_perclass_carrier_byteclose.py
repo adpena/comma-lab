@@ -10,7 +10,6 @@ import io
 import json
 import os
 import shutil
-import subprocess
 import sys
 import zipfile
 from collections.abc import Mapping, Sequence
@@ -60,6 +59,7 @@ from tac.optimization.direct_description_carrier_compose import (  # noqa: E402
 from tac.optimization.direct_description_measurement_ladder import (  # noqa: E402
     rfc8785_canonicalize,
 )
+from tac.process_group_kill import run_in_process_group  # noqa: E402
 
 SCHEMA = "DDMCB1PerClassCarrierBytecloseConfigV1"
 RECEIPT_SCHEMA = "ddm_cb1_perclass_carrier_byteclose_measurement.v1"
@@ -637,7 +637,7 @@ def _byteclose_candidate(
     final_path = output_root / "0.raw"
     environment = dict(os.environ)
     environment["PYTHON"] = sys.executable
-    completed = subprocess.run(
+    completed = run_in_process_group(
         [
             str(script_path),
             str(extracted),

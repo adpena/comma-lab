@@ -30,6 +30,7 @@ for value in (str(REPO), str(REPO / "src")):
         sys.path.insert(0, value)
 
 from tac.optimization import ddm_tr1_runtime as runtime  # noqa: E402
+from tac.process_group_kill import run_in_process_group  # noqa: E402
 
 DEFAULT_CHECKPOINT = Path(
     "/Volumes/VertigoDataTier/pact/ddm_tb1_20260728/t2_n600_lotto/checkpoints/stage_seg_trunk_tau_final.npz"
@@ -458,7 +459,7 @@ def _run_bounded_upstream_smoke(
     # every scientific result is byte-identical. Suppress progress rendering
     # so preserved process custody can reproduce exactly.
     environment["TQDM_DISABLE"] = "1"
-    result = subprocess.run(
+    result = run_in_process_group(
         command,
         cwd=proof_root,
         env=environment,

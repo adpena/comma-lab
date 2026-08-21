@@ -17,7 +17,6 @@ import math
 import os
 import re
 import shutil
-import subprocess
 import sys
 import time
 import zipfile
@@ -31,6 +30,10 @@ except ModuleNotFoundError:  # pragma: no cover
 
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
+
+# Imported AFTER ensure_repo_imports so `tac` resolves under direct script
+# execution, not only under an editable-install interpreter.
+from tac.process_group_kill import run_in_process_group  # noqa: E402
 
 LFV1_HEADER = "<4sHHHH"
 LFV1_ROW = "<BHHHHHH"
@@ -463,7 +466,7 @@ def _run_inflate(
     env["PACT_PYTHON_BIN"] = python_bin
     cmd = ["bash", str(inflate_sh), str(data_dir), str(output_dir), str(file_list)]
     start = time.monotonic()
-    proc = subprocess.run(
+    proc = run_in_process_group(
         cmd,
         cwd=REPO_ROOT,
         env=env,

@@ -23,7 +23,6 @@ import hashlib
 import json
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 import zipfile
@@ -36,6 +35,7 @@ if str(REPO_ROOT / "src") not in sys.path:
 from tac.procedural_codebook_generator.authority import (  # noqa: E402
     build_procedural_seed_authority_packet,
 )
+from tac.process_group_kill import run_in_process_group  # noqa: E402
 
 SCHEMA = "procedural_seed_authority_disambiguator_v1"
 DEFAULT_CANDIDATE_ID = "procedural_seed_authority_disambiguator"
@@ -178,7 +178,7 @@ def _run_inflate_variant(
 
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
-    proc = subprocess.run(
+    proc = run_in_process_group(
         [str(inflate_sh), str(archive_dir), str(output_dir), str(file_list_path)],
         cwd=str(work_root),
         env=env,

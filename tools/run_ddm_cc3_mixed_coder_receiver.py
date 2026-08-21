@@ -50,6 +50,7 @@ from tac.optimization.ddm_ws1_warm_start import (  # noqa: E402
 from tac.optimization.direct_description_carrier_compose import (  # noqa: E402
     CLASS_ORDER,
 )
+from tac.process_group_kill import run_in_process_group  # noqa: E402
 from tools.measure_ddm_menu1_realized_flip_menu import (  # noqa: E402
     _config_and_inputs,
     _forward,
@@ -375,7 +376,7 @@ def _run_locked_inflate(
     environment["PATH"] = str(python_executable.parent) + os.pathsep + environment.get("PATH", "")
     started = time.monotonic()
     try:
-        completed = subprocess.run(
+        completed = run_in_process_group(
             argv,
             cwd=root,
             env=environment,

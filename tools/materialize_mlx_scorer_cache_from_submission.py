@@ -48,6 +48,7 @@ from tac.local_acceleration.mlx_preprocess import (  # noqa: E402
     write_scorer_input_cache_from_pair_batches,
     write_scorer_input_cache_from_raw_file,
 )
+from tac.process_group_kill import run_in_process_group  # noqa: E402
 from tac.repo_io import write_json  # noqa: E402
 
 SCHEMA = "mlx_scorer_cache_from_submission_inflate_only.v1"
@@ -1223,7 +1224,7 @@ def _run_inflate_png_frame_tree_permitted(
         env.update(extra_env)
     t0 = time.monotonic()
     try:
-        result = subprocess.run(cmd, timeout=timeout, check=False, env=env)
+        result = run_in_process_group(cmd, timeout=timeout, check=False, env=env)
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(
             f"[inflate/png-tree] TIMED OUT after {timeout}s while building an "

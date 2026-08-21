@@ -100,6 +100,8 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+from tac.process_group_kill import run_in_process_group
+
 SCHEMA_VERSION = 1
 DEFAULT_MUTATIONS_PER_SECTION = 4
 
@@ -331,7 +333,7 @@ def _run_inflate(
     env = os.environ.copy()
     env.setdefault("PYTHON", inflate_python or sys.executable)
     try:
-        result = subprocess.run(
+        result = run_in_process_group(
             cmd,
             check=False,
             capture_output=True,

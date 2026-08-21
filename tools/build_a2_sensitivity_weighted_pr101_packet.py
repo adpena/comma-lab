@@ -63,6 +63,7 @@ from tac.pr101_split_brotli_codec import (  # noqa: E402
     pack_brotli_stream,
 )
 from tac.codec.rel_err import REL_ERR_FORM_KEY, RelErrForm, compute_rel_err  # noqa: E402
+from tac.process_group_kill import run_in_process_group  # noqa: E402
 from tac.repo_io import json_text, read_json, repo_relative, sha256_file, write_json  # noqa: E402
 
 TOOL_NAME = "tools/build_a2_sensitivity_weighted_pr101_packet.py"
@@ -1536,7 +1537,7 @@ def verify_inflate_parity(
         env = os.environ.copy()
         python_dir = str(Path(sys.executable).parent)
         env["PATH"] = f"{python_dir}{os.pathsep}{env.get('PATH', '')}"
-        proc = subprocess.run(
+        proc = run_in_process_group(
             [
                 "bash",
                 str(inflate_sh.resolve()),

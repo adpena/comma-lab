@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import subprocess
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
@@ -27,6 +26,7 @@ from tac.local_acceleration.pr95_hnerv_mlx import (  # noqa: E402
 from tac.local_acceleration.pr95_hnerv_mlx_contract import (  # noqa: E402
     PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
 )
+from tac.process_group_kill import run_in_process_group  # noqa: E402
 from tac.repo_io import write_json_artifact  # noqa: E402
 
 DEFAULT_INFLATE_SH = (
@@ -148,7 +148,7 @@ def main(argv: list[str] | None = None) -> int:
     if venv_bin.is_dir():
         env["PATH"] = f"{venv_bin}{os.pathsep}{env.get('PATH', '')}"
     started = datetime.now(UTC)
-    proc = subprocess.run(
+    proc = run_in_process_group(
         ["bash", inflate_sh.as_posix(), data_dir.as_posix(), raw_dir.as_posix(), file_list.as_posix()],
         cwd=REPO_ROOT,
         env=env,

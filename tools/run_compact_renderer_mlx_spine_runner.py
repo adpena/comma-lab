@@ -790,6 +790,7 @@ from tac.local_acceleration.pr95_hnerv_mlx_contract import (  # noqa: E402
     PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
 )
 from tac.payload_retention import resolve_portable_path, storage_tiers  # noqa: E402
+from tac.process_group_kill import run_in_process_group  # noqa: E402
 from tac.score_geometry import (  # noqa: E402
     CONTEST_REFERENCE_BYTES,
     POSE_COEFFICIENT_INSIDE_SQRT,
@@ -9123,7 +9124,7 @@ def run_pr95_hnerv_receiver_proof(
     venv_bin = root / ".venv/bin"
     if venv_bin.is_dir():
         env["PATH"] = f"{venv_bin.as_posix()}:{env.get('PATH', '')}"
-    completed = subprocess.run(
+    completed = run_in_process_group(
         command,
         cwd=root,
         env=env,

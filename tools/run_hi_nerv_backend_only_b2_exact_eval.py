@@ -85,6 +85,10 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+# Imported AFTER ensure_repo_imports so `tac` resolves under direct script
+# execution, not only under an editable-install interpreter.
+from tac.process_group_kill import run_in_process_group  # noqa: E402
+
 CONTEST_ARCHIVE_RATE_DENOM = 37_545_489
 CONTEST_NUM_EVAL_SAMPLES = 600
 CONTEST_BUDGET_SECONDS = 1800  # 30 min on T4 (upstream/README budget)
@@ -490,7 +494,7 @@ def _inflate_only_validation(
     if inflate_python:
         env["PYTHON"] = inflate_python
     t0 = time.monotonic()
-    proc = subprocess.run(
+    proc = run_in_process_group(
         ["bash", inflate_sh.as_posix(), archive_dir.as_posix(), inflated_dir.as_posix(), video_names_file.as_posix()],
         capture_output=True,
         text=True,

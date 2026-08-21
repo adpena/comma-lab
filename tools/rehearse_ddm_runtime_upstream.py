@@ -29,6 +29,7 @@ from tac.optimization.ddm_runtime_exporter import (  # noqa: E402
 from tac.optimization.direct_description_measurement_ladder import (  # noqa: E402
     rfc8785_canonicalize,
 )
+from tac.process_group_kill import run_in_process_group  # noqa: E402
 
 
 class HarnessError(ValueError):
@@ -232,7 +233,7 @@ def rehearse(config_path: Path) -> tuple[dict, Path]:
     environment["PATH"] = str(python_executable.parent) + os.pathsep + environment.get("PATH", "")
     timeout_hit = False
     try:
-        completed = subprocess.run(
+        completed = run_in_process_group(
             argv,
             cwd=upstream_root,
             env=environment,

@@ -40,6 +40,7 @@ from tac.local_acceleration.pr95_hnerv_mlx_contract import (  # noqa: E402
     PR95_FULL_FRAME_INFLATE_PARITY_BLOCKER,
     PR95_FULL_FRAME_INFLATE_PARITY_FAILED_BLOCKER,
 )
+from tac.process_group_kill import run_in_process_group  # noqa: E402
 from tac.repo_io import write_json_artifact  # noqa: E402
 
 DEFAULT_INFLATE_SH = (
@@ -141,7 +142,7 @@ def _run_public_inflate(
     venv_bin = REPO_ROOT / ".venv/bin"
     if venv_bin.is_dir():
         env["PATH"] = f"{venv_bin}{os.pathsep}{env.get('PATH', '')}"
-    proc = subprocess.run(
+    proc = run_in_process_group(
         [
             "bash",
             inflate_sh.as_posix(),

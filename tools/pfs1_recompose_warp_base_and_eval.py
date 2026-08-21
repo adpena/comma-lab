@@ -47,12 +47,13 @@ import json
 import os
 import shutil
 import struct
-import subprocess
 import sys
 import time
 from pathlib import Path
 
 import numpy as np
+
+from tac.process_group_kill import run_in_process_group
 
 REPO = Path("/Users/adpena/projects/pact")
 SCHEMA = "ddm_pfs1_d1_receipt.v3_warp"
@@ -683,7 +684,7 @@ def run_eval(args: argparse.Namespace) -> None:
     env["PATH"] = f"{LOCKED_PY.parent}:{env['PATH']}"
     env["TQDM_DISABLE"] = "1"
     t0 = time.time()
-    proc = subprocess.run(
+    proc = run_in_process_group(
         ["bash", str(root / "evaluate.sh"),
          "--submission-dir", str(sub),
          "--video-names-file", str(root / "public_test_video_names.txt"),

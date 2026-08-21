@@ -304,6 +304,9 @@ def inspect_runtime_tree(packet_dir: Path) -> tuple[dict[str, Any], list[dict[st
 
     try:
         proc = subprocess.run(
+            # GROUP_KILL_OK: `bash -n` PARSES the script and exits; it never executes a
+            # command, so it forks no child and there is no grandchild for a group kill
+            # to reach. Catalog #408 matches the argv[0] shape, not the -n semantics.
             ["bash", "-n", str(inflate_sh)],
             capture_output=True,
             text=True,

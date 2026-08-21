@@ -76,6 +76,8 @@ from typing import Any
 
 import numpy as np
 
+from tac.process_group_kill import run_in_process_group
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 A1_SUBMISSION_DIR = (
@@ -1325,7 +1327,7 @@ def run_exact_inflate_sh_smoke(
     env["PYTHON"] = str(Path(sys.executable))
     started = dt.datetime.now(dt.UTC)
     try:
-        proc = subprocess.run(
+        proc = run_in_process_group(
             executed,
             cwd=REPO_ROOT,
             text=True,

@@ -29,6 +29,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.process_group_kill import run_in_process_group  # noqa: E402
 from tac.repo_io import json_text, repo_relative, sha256_file  # noqa: E402
 
 DEFAULT_RESULT_DIR = Path("experiments/results/pr101_codecop_lgwin18_candidate_20260507_codex")
@@ -378,7 +379,7 @@ def run_local_inflate_parity(
             str(output_dir),
             str(file_list),
         ]
-        proc = subprocess.run(
+        proc = run_in_process_group(
             cmd,
             capture_output=True,
             text=True,
