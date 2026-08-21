@@ -479,3 +479,19 @@ trust factor is therefore a per-instrument RANGE, not one number: **jg5 own 0.81
 The toward-argmax ~0.09× and the direction-dependence law itself are UNCHANGED. Receipts:
 `.omx/research/ddm_fs3_jg5_real_price_reopen_20260820.md` (03d39d67d9). verdict_scope: instance —
 this corrects quoted constants; no verdict in this memo moves.
+
+**ERRATUM ADDENDUM (2026-08-20, rv17 W2-F14 — the corrected range mixed denominators).** The
+range "0.77–0.92" published above combines three ratios whose denominator is the DISQUALIFIED
+4.718 ranker with one ratio whose denominator is the corrected actual price — four numbers
+presented as comparable that answer two different questions. Corrected, as two labeled series:
+
+- **Series A — vs jg3's LogitPrice RANKER (4.718; ordering signal only, NOT prices):**
+  jg5 0.813 · jg2 0.877 · jg3 0.773.
+- **Series B — vs the ACTUAL flat price (4.1379):** jg5 **0.927** (= the 8.50% overcharge; the
+  only pair where numerator and true price are same-object MEASURED). Rescaling series A by
+  4.718/4.1379 gives DERIVED values jg2 1.000 · jg3 0.881 (valid only under the assumption those
+  ratios share the 4.718 denominator; rv17 round-4 receipt) — so the honest price-based statement
+  is: the model overcharges away-from-argmax moves by **at most ~12% and as little as 0%**, not
+  "8–23%". Direction-dependence is UNCHANGED (~10× away-vs-toward). The consumer rule is also
+  unchanged and is the real law: price by REAL re-encode. verdict_scope: instance — corrected
+  constants only.
