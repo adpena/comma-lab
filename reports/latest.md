@@ -96,12 +96,12 @@ pointer because it is the actual ranked surface. This row does not imply local
 archive custody or our progress. The scanner-derived table below is retained
 for custody-specific local comparisons and must not be called the score to beat.
 
-### Current best - last rechecked 2026-08-19T08:19:05Z
+### Current best - last rechecked 2026-08-21T08:44:15Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
 | **`[contest-CPU Linux x86_64]`** | **0.1880443980** | `196acd18e4ca` | linux_x86_64_cpu | `lane_pr128_click_import_NONSUBMISSION_defensive_bank_20260712` |
-| **`[contest-CUDA T4]`** | **0.1565262644** | `7ce46fd7a845` | linux_x86_64_t4 | `<none>` |
+| **`[contest-CUDA T4]`** | **0.1482784712** | `df7fd266e1b7` | linux_x86_64_t4 | `lane_ddm_rc2_composed_cuda_20260820` |
 
 ### 2026-05-22 MLX portable-local-substrate refresh
 
