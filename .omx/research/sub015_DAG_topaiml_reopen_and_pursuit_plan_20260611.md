@@ -29315,3 +29315,18 @@ snapshots the directory and proves it byte-identical after. Registry-wide anchor
 audit **0 violations**; `check_evidence_authority_claims_are_custodied` PASS strict.
 Pointer UNMOVED **0.14827847122030852 @ 180,456 B [contest-CUDA T4 n600]** — this unit paid
 apparatus debt and moved no score, and says so.
+
+## FEED-ad1 (2026-08-21) — fire/harvest/kill chain hardened ahead of the mirror fire [apparatus]
+ddm_ad1 landed three two-landing cures (fe5aa2941b · 8c4e7abb2b · a11ff262e5), all controls EXECUTED both
+directions: (1) #1167 the fire tool no longer terminal-closes the pre-staged claim its own dispatch consumes
+(lane+job+freshness exemption; the --claim-policy open workaround is retired — binds the NEXT fire, i.e. the
+fs3 mirror's T4 if it survives measured legs). (2) #1153 the bytes-repr guard's defect was a HAND-NAMED
+DENOMINATOR — a third emitter (tools/harvest_modal_calls.py, 11 default=str dumps) was invisible to it; the
+new class rule DISCOVERS its own denominator (12→0). LAW (vacuity-law extension): a guard whose scope is a
+hand-typed file list is one stale emitter away from vacuous — guards must derive their population. (3) #1163
+canonical tac.process_group_kill (consolidates 7 disagreeing private killpg twins; sibling of
+tac.process_liveness), real-grandchild control pre/post True→False; controls caught 2 bugs pre-landing
+(zombie EPERM false-ALIVE · start_new_session Ctrl-C orphaning). Census: 310 timed subprocess.run / 29 true
+members / 3 migrated / 26 named backlog + missing STRICT gate shape → task #1177. Sister landing same turn:
+ddm_cf2 paid the wave-2 F1/F2 carried items (its own FEED appended by the arm at e8388550d0). Pointer
+UNMOVED S 0.14827847122030852 @ 180,456 B [contest-CUDA T4 n600].
