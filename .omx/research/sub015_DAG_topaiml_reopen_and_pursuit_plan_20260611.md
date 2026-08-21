@@ -29330,3 +29330,22 @@ tac.process_liveness), real-grandchild control pre/post True→False; controls c
 members / 3 migrated / 26 named backlog + missing STRICT gate shape → task #1177. Sister landing same turn:
 ddm_cf2 paid the wave-2 F1/F2 carried items (its own FEED appended by the arm at e8388550d0). Pointer
 UNMOVED S 0.14827847122030852 @ 180,456 B [contest-CUDA T4 n600].
+
+## FEED-fs3 (2026-08-21) — the mirror dies on the MEASURED pose leg; the measured-legs discipline pays
+Seventeenth-move candidate #2 (jg3 over-admission drop, 137 pairs / −997 tokens / −497 cells on the rc2
+body) REFUSED at the same-instrument differential: seg +3.330e-4 (reconciles 0.79× w/ compose stage) ·
+pose +3.590433e-2 · rate −4.421303e-4 → NET +3.579520e-2 = 10,227× the bar. MECHANISM (structural, not
+noise): the −664 B rate credit was bought by shipping a STALE pose carrier on the 137 changed pairs —
+pose cost 81× the credit. The carrier re-solve rescue is DERIVED-dead: needs 696× pose recovery, jg5's
+measured whole-set re-solve delivered 8× (87× short). This is [[edits_and_drops_are_one_waterfill_solve_jointly_20260819]]
+confirmed from the refusal direction: a drop that changes token configs UNPRICES its coupled carrier;
+edits+drops+carrier are ONE waterfill. Survived the falsifier by 1.9% on rate (5.3280 vs 5.2282 b/tok)
+yet died 10,227× on the leg the projection never measured — the not-yet-a-candidate discipline (two
+unmeasured legs each larger than the margin) was exactly right. BANKED: rank-dependence mechanism
+(round-2 average-vs-marginal confound resolved; direction-asymmetry REFUTED 2.0×) · constants
+5.3280/3.6432/0.7722 (cf2-registered canonical equations) · tools/assemble_candidate_runtime.py ·
+experiments/ddm_fs3_same_instrument_pose_leg.py (fail-closed comparator, harness-vs-payload AST split;
+caught its author's own assembler \s*$ regex bug). Both fs-family seventeenth-move candidates (fs2 rc4
+drop · fs3 mirror) now honestly dead on measured legs; the rate axis via toward-argmax moves is closed
+at FORMULATION scope on this body. Memo ddm_fs3_jg5_real_price_reopen_20260820.md (9f502ba4a2). Pointer
+UNMOVED S 0.14827847122030852 @ 180,456 B [contest-CUDA T4 n600].
