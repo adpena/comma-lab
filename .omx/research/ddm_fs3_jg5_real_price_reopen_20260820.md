@@ -7,7 +7,7 @@
 > The re-screen's controls were perfect (38/38 pairs landed on the exact configuration the census
 > predicted), so the census arithmetic was right and the PRICE TRANSFER was wrong — on the boundary
 > round 1 named in its own §5. jg3's stopping rule is vindicated by measurement. The refutation
-> opens a mirror worth more than the reopen was: **§R6, a −4.45e-05 tightening at 12.72× the bar.**
+> opens a mirror worth more than the reopen was: **§R6, a −4.45e-05 tightening at 12.72× the bar** (PROJECTION — price transferred across the admission cut; §R6's named caveat applies and the number is not quotable before a real re-encode).
 
 **Task #1173 (leg 1) + rv17 W2-F8 / E4 (leg 2)** · **date** 2026-08-20 · **arm** `ddm_fs3`
 (lane `ddm_fs3_jg5_real_price_reopen`)
@@ -55,7 +55,7 @@ measured reopen with a size, a measured price that settles an open erratum, and 
    attribution is right, 270 B if the population price is right. **MEASURED: 189 B — 2.6573
    bits/token.** The attribution was **2.9%** out; the population price was **30.1%** out.
    **The attribution is validated and the population price is refuted for these pairs.**
-6. **The row is LIVE.** Identifying the 38 at the population price and scoring them at their measured
+6. **The row is LIVE.** *(SUPERSEDED BY §R — the build ran and REFUSED this row at 16.36× the bar.)* Identifying the 38 at the population price and scoring them at their measured
    marginal: **seg+rate −3.198e-05 · pose +4.585e-06 (DERIVED) · carrier +2.508e-06 (MEASURED, leg 2)
    → net −2.489e-05 S = 7.11× the admission bar.** I did **not** byte-close it, and §5 says exactly
    why: jg3 did not retain the per-site candidate gains, so materialising the reopened configurations
@@ -251,7 +251,7 @@ Re-scoring the 38 (identified at the population price, so the cheap price is nev
 | seg + rate | **−3.198257e-05** | seg MEASURED (jg3 realized cells) · rate MEASURED (this encode) |
 | pose (+300 tokens) | **+4.584744e-06** | **DERIVED** cross-sectional OLS, §8 |
 | carrier (38 pairs × 0.0991 B) | **+2.507971e-06** | **MEASURED**, leg 2 §6 |
-| **net** | **−2.4889853e-05** | **7.11× the −3.5e-6 bar — CLEARS** |
+| **net** | **−2.4889853e-05** | **7.11× the −3.5e-6 bar — CLEARS** *(SUPERSEDED BY §R: not realized; REFUSED at 16.36×)* |
 
 ### The boundary this measurement does NOT cross
 
@@ -355,7 +355,7 @@ later.
 
 | row | number | what it needs next |
 |---|---|---|
-| **The jg3 configuration re-selection** | 38 shipping pairs, **net −2.489e-05 S = 7.11× the bar** at the measured marginal price | a **38-pair re-screen** — the build below |
+| **The jg3 configuration re-selection** | 38 shipping pairs, **net −2.489e-05 S = 7.11× the bar** at the measured marginal price *(SUPERSEDED BY §R: the re-screen RAN and REFUSED the row at 16.36× the bar — do NOT carry this forward)* | a **38-pair re-screen** — ran; see §R |
 | **The carrier compensation price** | **0.0991 B/pair, 0.0088 B/coefficient**, built and stat'd, two byte-identity controls | nothing. It is measured and reusable today |
 | **The attribution method** | validated to **2.9%** on the pairs that matter; population price 30.1% out | apply per-pair, never population, when the subpopulation is selected |
 
@@ -490,11 +490,13 @@ Control on the reading: reconstructing the pointer's mean `d_pose` from jg5's ar
 The measured prior — the compensated residual is amplitude-INDEPENDENT (Spearman(tokens, residual)
 **−0.0002**; fs2 §5 measured Spearman 0.100 over a 277× damage span) — puts the leg at **0**.
 **Policy: the conservative +4.5847e-06 stays the headline until the carrier re-solve MEASURES it.
-The row clears at both ends of the bracket (7.11× conservative, 8.42× measured).**
+The row clears at both ends of the bracket (7.11× conservative, 8.42× measured).** *(SUPERSEDED BY §R — the realized build refused the row; the bracket described the attribution-calibrated projection only.)*
 
 ### R3 The falsifier, registered before the encode
 
 `FS3_RATE_FALSIFIER.json`, written **before** the composed field was priced:
+
+*(Provenance honesty, rv17 W3 round 1c: the 31m57s precedence rests on file mtime, which is writable, and the JSON is not in git — a good case for pre-registration, not a proof. Future falsifiers should be committed before the encode.)*
 
 | leg | value |
 |---|---:|
@@ -552,6 +554,10 @@ exactly the sites it already ranked worst. Both terms degrade on the margin, in 
 
 That marginal yield of **0.3867** is essentially `ddm_jg1` S1e's measured exhaustion yield of
 **0.390**, which `ddm_jg3`'s own docstring already declared **below** its break-even of 0.406 —
+*(commensurability note, rv17 W3-F5: 0.3867 is a 38-pair MARGINAL, jg1's 0.390 a single-pair AVERAGE,
+jg3's 0.406 a THRESHOLD — same units, different objects; the identification is color, not load-bearing.
+The refusal rests on marginal-vs-threshold, which is the right comparison, and 0.3867 is the first
+properly marginal measurement of this quantity in the lineage.)* —
 *"the stopping rule is not a refinement; it is the whole result."* **The reopen was trying to buy
 precisely the sites jg3's stopping rule exists to refuse.** They looked admissible only because the
 measured 8.50% overcharge moved the break-even yield from 0.406 down to 0.261, and the marginal
