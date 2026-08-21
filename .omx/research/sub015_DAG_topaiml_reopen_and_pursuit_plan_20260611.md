@@ -29239,3 +29239,22 @@ item 1) is the SUBMISSION critical path before #1111. Equations-leg: the FEED-jg
 + waterfill-admission registration debt (owner MAIN) now also covers the T4-realization anchor
 (projection→realized residual +8.3e-6 at n600). Next: wc2 wall pass (FULL GO) · pose-aware
 joint seg solver charter (aimed by jg5 exchange rates) · #1111 packet on this row + rr5 rider.
+
+FEED-rv17w2r8 (2026-08-20, MAIN): wave-2 review rounds 7→9 on the fs1/fs2/em1 set. Round-7
+SEAL REFUSED (5 unterminated ledger rows) → all five given written terminal states
+(b5f1f0efbe: F7 wrong-object 86.6→88.2 cured at source; F4 law-row verdict_scope; F1
+carried-by-name w/ owner+trigger; F5/F6 adjudicated-no-change with reasoning written).
+Round-8 SEAL REFUSED on a claim the artifact refutes: the reviewer declared the fs2:373
+annotation absent, but it sits at line 375 (373 is the table header) in committed HEAD —
+its three instruments all failed on a 928-char table line (its own round-19 lesson: an
+empty read is not a measurement of absence unless the instrument is known to work).
+Cure anyway (2d96f65393): the law row now carries Series A/B AT SOURCE — 3.8373 =
+0.927× of the ACTUAL price 4.1379 (Series B, MEASURED, 8.50% overcharge); 4.718 named
+as jg3's LogitPrice RANKER (ordering-only), 0.877× demoted to Series A; reactivation
+cell ~0.88x → ~0.93×-vs-price away / ~0.09× toward. Last W2-F3 instance removed from
+main text. Round 9 fired: refute the false clause with disk evidence, verify the
+restatement, reviewer rules on its own counter. Wave law extended: a TERMINATION needs
+verifying against its artifact exactly as a cure does — and so does the VERIFIER.
+Equations-leg debt unchanged: direction-dependent rate law registration rides the next
+canonical-equations landing. Pointer UNMOVED 0.14827847122030852 @ 180,456 B
+[contest-CUDA T4 n600].
