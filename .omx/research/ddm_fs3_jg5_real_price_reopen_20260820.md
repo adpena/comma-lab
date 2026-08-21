@@ -1,4 +1,13 @@
-# ddm_fs3 — the reopen is real, and it is real because the pairs that reopen are the cheap ones
+# ddm_fs3 — the reopen was real on the average price and dies on the marginal one
+
+> **ROUND 2 VERDICT (§R), 2026-08-20.** The 38-pair reopen was built and priced for real:
+> **+223 archive bytes over 300 tokens = 5.9467 bits/token**, against a falsifier of 3.5139
+> registered before the encode. **NET +5.724484e-05 — a LOSS at 16.36× the bar. REFUSED on rate.**
+> Round 1's 7.11× is **WITHDRAWN as a realized claim**; it was attribution-calibrated and said so.
+> The re-screen's controls were perfect (38/38 pairs landed on the exact configuration the census
+> predicted), so the census arithmetic was right and the PRICE TRANSFER was wrong — on the boundary
+> round 1 named in its own §5. jg3's stopping rule is vindicated by measurement. The refutation
+> opens a mirror worth more than the reopen was: **§R6, a −4.45e-05 tightening at 12.72× the bar.**
 
 **Task #1173 (leg 1) + rv17 W2-F8 / E4 (leg 2)** · **date** 2026-08-20 · **arm** `ddm_fs3`
 (lane `ddm_fs3_jg5_real_price_reopen`)
@@ -367,7 +376,10 @@ later.
   the interesting set there is a *tightening* set, not a reopen.
 * **Every js6b row** (§7).
 
-### NEXT_IF_RESUMED — the build, costed
+### NEXT_IF_RESUMED — SUPERSEDED BY §R; see §R7 below
+
+*(Round 1's build order. It was executed in round 2 and the row it aimed at is refused. Retained so
+the costing stays inspectable — the 78-min estimate came in at ~70 min across 4 CPU shards.)*
 
 1. **Re-screen the 38 reopened pairs** with jg3's solver at a corrected token price so the argmin
    *is* the reopened configuration and its `accepted` coordinate list is emitted.
@@ -388,6 +400,257 @@ receipt carries that row for shape only and labels it unsupported. Do not cite f
 "4.718" as a price: the first is a transcription slip and the second is a ranker mean. Do not price a
 carrier move off any of the four numbers in §6's table — they are wrong by 8× to 363×; use 0.0991
 B/pair.
+
+---
+
+## §R REROUND — MATERIALISING THE REOPEN (leg 3)
+
+Round 1 ended with a row **projected** at 7.11× the bar and a named blocker: jg3 emits an
+`accepted` coordinate list only for the *winning* configuration, so the reopened configurations did
+not exist on disk. Round 2 executes the build. **The 7.11× was attribution-calibrated, not realized;
+this section is where that word changes or the row closes.**
+
+### R1 The trap, disarmed and PROVED
+
+`RATE_PRIOR_BITS_PER_TOKEN` is read in four places in **two different ways**:
+
+| site | how it reads the constant | reassignment cures it? |
+|---|---|---|
+| `:410` `LogitPrice.bits_for` fallback | module global, at call | yes |
+| `:807` the configuration sweep's cost | module global, at call | yes |
+| `:972` `break_even_yield` | module global, at call | yes |
+| **`:902`** `project(..., bits_per_token=X)` | **default argument, at import** | **NO — silent no-op** |
+
+So `jg3.RATE_PRIOR_BITS_PER_TOKEN = new` cures three of four and leaves the fourth quietly reporting
+a projection computed at the **old** price, in a run whose entire purpose is the new one. That is the
+same class `ddm_fs2_jg5_on_candidate.py` exists for.
+
+`experiments/ddm_fs3_jg3_repriced_rescreen.py` disarms **both** classes and then **proves** the
+disarm from the live module rather than assuming the writes took: it re-reads the global, re-reads
+`project.__kwdefaults__['bits_per_token']`, and re-evaluates `break_even_yield()` against
+`new_price / BITS_PER_SEG_CELL`. It also **AST-audits the module source** for any *other*
+default-argument binding of the constant and **REFUSES** on an unaccounted one — so a future jg3 edit
+that adds a fifth site cannot slip past this shim silently.
+
+Measured disarm, recorded per shard in `DISARM_PROOF_shard*.json`:
+**4.1379 → 2.657293497363796 bits/token · `break_even_yield` 0.406279 → 0.260906 · verdict
+`DISARMED_AND_PROVED`.**
+
+**What was deliberately NOT re-priced:** the per-site inner gate at `:695`, which prices each
+candidate move with the `LogitPrice` ranker. That gate builds the candidate **site pool**; re-pricing
+it would change every sweep entry and destroy the reproduction control below. Left alone, on purpose,
+and recorded in the proof as `left_alone`.
+
+### R2 The two controls — both PASS, and the census predicted every configuration exactly
+
+The re-screen changed exactly one thing: the price inside the sweep's `argmin`. So two things had to
+hold, and a pair failing either would have been EXCLUDED from the candidate rather than shipped on
+the hope that it was close enough.
+
+| control | what it proves | result |
+|---|---|---|
+| **A** — every `(separation, keep_fraction)` entry carries the same `(tokens, repaired)` as jg3's retained entry | the site pool is untouched and only the argmin moved; this is the same solver | **PASS, 0 of 38 failing** |
+| **B** — the winner is the configuration `FS3_RESCREEN_PREREG.json` registered *before* the run finished | the census predicted a specific object and it arrived | **PASS, 0 of 38 failing** |
+
+**38 of 38 pairs admitted.** And the agreement is not merely directional — the census predicted
+*which configuration each pair lands on*, and every pair hit its exact `(tokens, repaired)`:
+
+| | before (jg5 shipped) | after (reopened) | delta | **pre-registered** |
+|---|---:|---:|---:|---:|
+| tokens | 569 | 869 | **+300** | **+300** |
+| repaired cells | 876 | 992 | **+116** | **+116** |
+
+| shard | pairs | tokens | cells | yield (cells/token) |
+|---|---:|---:|---:|---:|
+| s0 | 10 | 254 | 267 | 1.0512 |
+| s1 | 10 | 205 | 228 | 1.1122 |
+| s2 | 9 | 214 | 263 | 1.2290 |
+| s3 | 9 | 196 | 234 | 1.1939 |
+| **total** | **38** | **869** | **992** | — |
+
+**Seg leg: −9.833442e-05 S**, MEASURED — 116 realized argmax cells through the receiver's own forward
+model and the frozen CPU SegNet, not a projection. Composed field
+`seg_edits_reopen_composed.npz`, 639,153 B, sha `f795fd92c598b333`.
+
+**A control on the compose path itself:** a zero-replacement round-trip reproduces jg5's shipped
+455-pair field with every plane identical and 8,654 tokens against base — jg5's own published count.
+
+### R2b A correction to round 1's pose leg, in the conservative direction
+
+Round 1 charged pose at **+4.5847e-06** from an OLS slope fitted over jg5's 455 kept pairs. That is a
+**population** slope applied to a **subpopulation selected for being pose-favourable** — all 38 sit in
+jg5's KEPT set, 76.3% of them already land at or below their base pose, and their compensated
+residuals **SUM to a credit of −2.32e-05**. That is the same population-transfer genus fs1 §4 refused
+and §4 of this memo caught in the rate leg. It erred **conservative** — it charged a cost where the
+pair-specific data shows none — but it is a transfer and it is labelled one here.
+
+Control on the reading: reconstructing the pointer's mean `d_pose` from jg5's arrays gives
+**6.365684192e-06**, matching jg5's published value exactly.
+
+The measured prior — the compensated residual is amplitude-INDEPENDENT (Spearman(tokens, residual)
+**−0.0002**; fs2 §5 measured Spearman 0.100 over a 277× damage span) — puts the leg at **0**.
+**Policy: the conservative +4.5847e-06 stays the headline until the carrier re-solve MEASURES it.
+The row clears at both ends of the bracket (7.11× conservative, 8.42× measured).**
+
+### R3 The falsifier, registered before the encode
+
+`FS3_RATE_FALSIFIER.json`, written **before** the composed field was priced:
+
+| leg | value |
+|---|---:|
+| seg (116 realized cells) | **−9.833442e-05** |
+| pose (conservative) | +4.584744e-06 |
+| carrier (MEASURED, leg 2) | +2.507971e-06 |
+| **rate budget to the bar** | **+8.774170e-05 = 131.8 B over 300 tokens** |
+
+**FALSIFIER: the row dies if the +300 marginal tokens price above 3.5139 bits/token.**
+Calibration 2.6573 (32.2% headroom); the population price 3.8138 and jg3's prior 4.1379 both kill it.
+
+### R4 The realized row — REFUSED on rate, on the boundary round 1 named
+
+I built the composed field and had the proven `ddm_jg2_tail_reencode` price it for real, against this
+arm's own control (`S1_control_600.json`, `byte_identical: true`, 109,696 B, sha `15054e5d…`, whose
+per-frame ledger is **bit-identical to `ddm_jg4`'s retained control**).
+
+| quantity | shipped (jg5 455) | composed (38 reopened) | delta |
+|---|---:|---:|---:|
+| token stream | 113,847 B | **114,070 B** | **+223 B** |
+| archive | 180,580 B | **180,803 B** | **+223 B — visibly LARGER** |
+| tokens | 8,654 | 8,954 | +300 |
+| **marginal price** | — | — | **5.9467 bits/token** |
+
+`delta_trustworthy: true`, 618 s. The candidate archive is **bigger than the body it came from**,
+which is the refusal in one number a reader can `stat` for themselves.
+
+| leg | value | authority |
+|---|---:|---|
+| seg (116 realized cells) | **−9.833442e-05** | MEASURED |
+| rate | **+1.484865e-04** | **MEASURED — exact archive delta** |
+| pose | +4.584744e-06 | conservative (R2b) |
+| carrier | +2.507971e-06 | MEASURED, leg 2 |
+| **NET** | **+5.724484e-05 — a LOSS, 16.36× the bar in the wrong direction** | |
+
+| pre-registered | value | realized | verdict |
+|---|---:|---:|---|
+| falsifier (row dies above) | 3.5139 b/tok | **5.9467** | **REFUTED by 1.69×** |
+| calibration (average price) | 2.6573 b/tok | **5.9467** | **the marginal price is 2.24× the average** |
+
+**The +300 marginal tokens do not price like the 569 they were added to.** Round 1's holdout measured
+the **average** price of those pairs' shipped edits at 2.6573 bits/token and validated it to 2.9% —
+and round 1 stated, in `§5`'s own words, that this "is **not** the price of the **+300 additional**
+tokens — those are different, lower-ranked tokens." That boundary was load-bearing and it is what
+broke the row.
+
+**Why, mechanically.** jg3's greedy orders candidate sites by **gain**, so a denser configuration adds
+exactly the sites it already ranked worst. Both terms degrade on the margin, in the same direction:
+
+| | tokens | cells | yield (cells/token) |
+|---|---:|---:|---:|
+| the 38 pairs' **shipped** edits | 569 | 876 | **1.5395** |
+| the **reopened** configurations | 869 | 992 | 1.1415 |
+| **the marginal sites they add** | **300** | **116** | **0.3867 — 3.98× worse** |
+
+That marginal yield of **0.3867** is essentially `ddm_jg1` S1e's measured exhaustion yield of
+**0.390**, which `ddm_jg3`'s own docstring already declared **below** its break-even of 0.406 —
+*"the stopping rule is not a refinement; it is the whole result."* **The reopen was trying to buy
+precisely the sites jg3's stopping rule exists to refuse.** They looked admissible only because the
+measured 8.50% overcharge moved the break-even yield from 0.406 down to 0.261, and the marginal
+sites sit between the two.
+
+**And no subset rescues it.** The marginal yield is flat across all 38 pairs (0.375–0.400, median
+0.400): admitting only the best five still needs ≤4.07 bits/token against all thirty-eight's ≤3.94.
+The row is all-or-nothing on the marginal price, so there is no selective candidate to fall back to.
+
+**The falsifier fired before the encode even finished.** At 208 of 300 tokens the reopen had already
+spent ~144.9 B against a total budget of 131.8 B — **over budget with 92 tokens still unpriced**, so
+that even at a price of **zero** for the remainder the net is **+5.23e-06, a loss**. The refusal does
+not depend on the final byte.
+
+### R5 Disposition
+
+**The row is REFUSED on rate. The 7.11× from round 1 is WITHDRAWN as a realized claim** — it was
+attribution-calibrated, said so, and the pre-registered falsifier caught it rather than a post-hoc
+rationalisation. No candidate was byte-closed, no advisory was fired, no seal was cut, and MAIN has
+no fire-order from this arm. The pointer is unmoved.
+
+`verdict_scope`: **INSTANCE** for this 38-pair composed candidate (refused at exact re-encode bytes).
+**FORMULATION** for the jg3 configuration-re-selection family under real marginal prices — warranted,
+not asserted, by three measurements: the marginal yield is flat across all 38 pairs so no subset
+selection exists; the marginal price is stable across 208 priced tokens; and the mechanism (greedy
+ordering makes marginal sites both dearer and less productive) is jg3's own measured decay.
+**It is not a family kill of the paradigm** — buying seg with bytes is exactly what the shipped
+pointer already does.
+
+**What this arm VINDICATED, which is worth as much as the refusal:** jg3's stopping rule is correct
+by measurement. Its flat 4.1379 prior over-charged the set by 8.50% (round 1) — but it
+**UNDER**-charged the marginal sites, which really cost ~5.6. Both errors point the same way: stop
+where jg3 stopped, or earlier.
+
+### R6 The mirror — the refutation opens a tightening worth more than the reopen was
+
+If the marginal sites cost ~5.57 and jg3 priced them at 4.1379, then **jg3 OVER-admitted at its own
+margin**, and those sites can be DROPPED for a byte credit. This is the same boundary from the other
+side, and the arithmetic supports it: a re-selection delta prices **only** the Δtokens — the tokens
+common to both configurations cancel exactly — so the marginal price is the correct price here too.
+
+`FS3_TIGHTENING_CENSUS.json`, $0, over jg3's retained sweep:
+
+| marginal price | shipping pairs | Δtokens | Δcells | ΔS (seg+rate) | × bar |
+|---:|---:|---:|---:|---:|---:|
+| 4.1379 (jg3's prior — control) | 0 | +0 | +0 | 0 | 0.00 |
+| 4.5 | 19 | −163 | −69 | −2.559e-06 | 0.73 |
+| 5.0 | 30 | −300 | −131 | −1.380e-05 | 3.94 |
+| **5.5722 (MEASURED marginal)** | **120** | **−818** | **−395** | **−4.453e-05** | **12.72** |
+| 6.0 | 138 | −1,014 | −507 | −7.660e-05 | 21.88 |
+
+**Named caveat, not buried:** the marginal price was measured just **below** the cut (sites a denser
+configuration adds) and is applied just **above** it (sites a sparser one drops). Those are adjacent
+in jg3's own greedy ranking so the transfer is short — but it **is** a transfer, of exactly the class
+this memo has now caught twice, and it must be closed by a real re-encode of a tightened field before
+any of it is quoted. The control at jg3's own prior returning **0 pairs** is the positive control that
+the census is not manufacturing rows.
+
+### R7 NEXT_IF_RESUMED (round 2)
+
+1. **QUEUED-WITH-A-FIRE-ORDER — the tightening (§R6).** Re-screen the ~120 tightening pairs at a price
+   ABOVE jg3's prior using this arm's proved disarm shim (`--census` pointed at
+   `FS3_TIGHTENING_CENSUS.json`), compose the sparser field, and price it with one real
+   `ddm_jg2_tail_reencode` against this arm's existing byte-identical control. Cost: ~120 pairs ×
+   ~150 s / 4 CPU shards ≈ **75 min**, plus a 10-min encode. **Register the falsifier first**, as
+   round 2 did — the tightening dies if the dropped sites price BELOW the yield they give up.
+   This row drops bytes AND cells, so unlike the reopen it is not all-or-nothing: a subset that
+   clears is a real candidate.
+2. **DO NOT re-run the reopen at another price.** Any price below jg3's 4.1379 selects configurations
+   whose marginal yield is ~0.39 — jg1's measured exhaustion yield — and the marginal price
+   measurement (5.9467) refuses all of them. The flat marginal yield across all 38 pairs means no
+   subset exists. This door is measured shut.
+3. **REUSABLE, no further work needed:** the carrier-compensation price **0.0991 B/pair** (leg 2,
+   built and stat'd, two byte-identity controls) and the disarm shim with its AST audit.
+4. **The law this arm adds to the fs2 direction-dependent family** — see §R8.
+
+### R8 The law, stated so the next arm can price without re-measuring
+
+`ddm_fs2` established that the `-log2 p` model prices token edits at ~0.88× moving AWAY from the
+model argmax and ~0.09× moving TOWARD it. This arm adds the axis fs2 could not see, because fs2 only
+ever priced whole sets:
+
+**Within the away-from-argmax direction, the price depends on WHERE IN THE GREEDY RANKING the token
+sits, and the AVERAGE price of a set is not the price of its marginal member.**
+
+| object | measured price | vs jg3's flat 4.1379 prior |
+|---|---:|---:|
+| a jg3-selected edit set, AVERAGE (n=10,900 tokens) | 3.8138 b/tok | prior **over**-charges by 8.50% |
+| the 38 reopened pairs' shipped edits, AVERAGE (n=569) | 2.6573 b/tok | prior over-charges by 56% |
+| **the MARGINAL sites a denser configuration adds (n=300)** | **5.9467 b/tok** | prior **UNDER**-charges by 44% |
+
+The two errors point in **opposite directions**, and that is the whole trap: a flat prior fitted to a
+set's average is simultaneously too dear for the set and too cheap for its margin. Correcting only
+the first — which is what round 1's census did, correctly and with a validated measurement — admits
+exactly the configurations the second error forbids.
+
+**Operational rule:** never price a token-field re-selection off a set average. A re-selection delta
+prices only its Δtokens, and those Δtokens are by construction the ranking's worst members. Price
+them at the MARGINAL rate or measure them.
 
 ---
 
@@ -446,6 +709,11 @@ priced** — eight archives plus their code arrays, so any reader can `stat` the
 | `reencode/retained/S1_control_600.json` (byte-identical control) | 2,086 | `04cfb87579185392` |
 | `reencode/retained/S1_encode_fs3_holdout38.json` (the decisive row) | 5,864 | `b757d4d9941e2527` |
 | `reencode/retained/candidate_fs3_holdout38.zip` (built, 180,391 B) | 180,391 | `94903d7daa7fc3f3` |
+| **round 2** `retained/fields/seg_edits_reopen_composed.npz` | 639,153 | `f795fd92c598b333` |
+| **round 2** `reencode/retained/S1_encode_fs3_reopen_composed.json` (the refusal) | 6,216 | `81735438782f4219` |
+| **round 2** `reencode/retained/candidate_fs3_reopen_composed.zip` (**LARGER than its body**) | **180,803** | `6dee4ac8260bd5b6` |
+| **round 2** `rescreen38/retained/seg_solve_fs3_reopen38_s{0..3}.json` + `seg_edits_*.npz` | — | 8 files, in the manifest |
+| **round 2** `FS3_RESCREEN_PREREG.json` · `FS3_RATE_FALSIFIER.json` · `FS3_REOPEN_COMPOSE.json` · `FS3_POSE_PRIOR.json` · `FS3_TIGHTENING_CENSUS.json` | — | pre-registrations + verdicts |
 | `carrier_ladder/retained/archive_identity.zip` | 180,625 | `f3bce5d259a08183` ← shipped jg5, reproduced |
 | `carrier_ladder/retained/archive_revert_0027.zip` | 180,626 | `c980ba441b73c78e` |
 | `carrier_ladder/retained/archive_revert_0454.zip` | 180,580 | `30d372aefdbc1ada` ← jg5's own body, reproduced |
