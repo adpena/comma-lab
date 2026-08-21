@@ -17,8 +17,14 @@
 > caveat wherever it travels.** Mechanism adjudicated by the same measurement: **rank-dependence
 > supported** (0.90× its point prediction), **direction-asymmetry refuted 2.0×**, and **my own
 > registered site-quality risk refuted IN SIGN** — better sites cost MORE, not less.
-> **NOT YET A CANDIDATE:** the pose leg is unmeasured and is the only thing between this row and a
-> fire-order. The carrier leg is now MEASURED-BY-CONSTRUCTION at **exactly zero** (§T9).
+> **TASK #1176 TERMINAL VERDICT (§T11–T13): REFUSED on the MEASURED pose leg.** A base advisory on
+> the 180,625 B body gives the same-instrument delta: seg **+3.330e-04** · pose **+3.590433e-02** ·
+> rate **−4.421303e-04** → **NET +3.579520e-02, a LOSS at 10,227× the bar.** The −664 B is bought by
+> shipping a **stale carrier** on the 137 changed pairs, and that pose costs **81× the rate credit**.
+> The carrier-re-solve rescue is **arithmetically dead**: it needs a **696×** pose recovery where
+> jg5's measured re-solve delivered **8×** — short by 87× (§T12, DERIVED, routed not fired).
+> **Banked regardless: the rank-dependence mechanism, the three constants, the runtime assembler, the
+> same-instrument comparator — and a bug that comparator caught in my own assembler.**
 
 **Task #1173 (leg 1) + rv17 W2-F8 / E4 (leg 2) + Task #1176 (the mirror)** · **date** 2026-08-20/21 ·
 **arm** `ddm_fs3` (lane `ddm_fs3_jg5_real_price_reopen`)
@@ -896,6 +902,100 @@ Note the family these join: fs2 measured **~0.09×** toward-argmax and **~0.88×
 (set averages); round 2 measured the **marginal ADDITION** at 5.9467; this row measures the
 **marginal REMOVAL** at 5.3280. The axis that organises all of them is **position in the greedy
 ranking**, not direction of travel.
+
+### §T11 THE POSE LEG, MEASURED SAME-INSTRUMENT — the mirror is REFUSED
+
+The candidate advisory returned `d_pose = 0.00055125`. **That is a LEVEL on one instrument, not a
+leg.** Differencing it against the compose-stage `8.20845e-06` would cross a full-inflate +
+`upstream/evaluate.py` + PyAV-GT boundary against a direct frozen-scorer forward, which the
+units × level × aggregation law forbids. So a BASE advisory was fired on the shipped 180,625 B body
+through the identical chain, and the leg is the same-instrument delta.
+
+`experiments/ddm_fs3_same_instrument_pose_leg.py` **refuses** unless it can prove comparability.
+Two fields differ on every honest delta this vehicle can produce, and each got its own proof:
+
+| field | status | how it was cleared |
+|---|---|---|
+| harness (upstream snapshot, `evaluate.py` sha, `inflate_script_sha256`, device, torch, GT lineage, n) | **IDENTICAL** | byte equality, no exceptions |
+| `runtime_files_sha256` (`706158aa` vs `aa3c731d`) | **differs BY CONSTRUCTION** | it is the TREATMENT — each tree embeds its own archive and derived pin. Proved **structurally**: the trees differ in **nothing but `archive.zip` and `inflate.py`**, and `inflate.py` is **AST-identical once the pin is normalised**. Verdict `PAYLOAD_ONLY`. |
+| `pact_commit` | differs | `--commit-delta-proof 81ab6bcb0a..HEAD`, **re-checked by the module itself** against the forward-path prefixes: **no forward file changed** |
+
+| | base (180,625 B) | candidate (179,961 B) | leg |
+|---|---:|---:|---:|
+| d_seg | 0.00034740 | 0.00035073 | **+3.330000e-04** |
+| d_pose | 0.00014701 | **0.00055125** | **+3.590433e-02** |
+| rate | — | −664 B | **−4.421303e-04** |
+| | | | **NET +3.579520e-02 — a LOSS at 10,227× the bar** |
+
+**The pose leg is 81× the entire rate credit.** The zero-byte variant buys its −664 B by shipping a
+**stale carrier** on the 137 changed pairs, and the pose that costs is three orders larger than the
+bytes it saves. **REFUSED.**
+
+**Seg cross-check (it reconciles).** The same-instrument seg leg is `+3.330e-04` against the
+compose-stage realized give-back of `+4.213e-04` — a ratio of **0.79×**, consistent with the known
+cross-lineage seg factor (~1.43× the other way) and far tighter than the pose axis, exactly as
+expected: seg is much less lineage-sensitive than pose.
+
+### §T12 THE CARRIER-RE-SOLVE VARIANT IS ARITHMETICALLY DEAD (routed, not fired)
+
+The obvious rescue is to spend bytes on a carrier re-solve and buy the pose back.
+`FS3_CARRIER_RESOLVE_ARITHMETIC.json`, **DERIVED arithmetic on measured receipts — not a measurement
+of a re-solve**:
+
+| quantity | value |
+|---|---:|
+| carrier re-solve cost (jg5's MEASURED +45 B splice) | +2.996365e-05 S |
+| allowed pose leg for the row to clear | +7.566669e-05 S |
+| → candidate `d_pose` would have to reach | ≤ 0.000147591 (residual ≤ **+5.81e-07**) |
+| stale residual to be recovered | +4.042400e-04 |
+| **required recovery** | **696×** |
+| jg5's MEASURED whole-set carrier re-solve | **8×** (3.268e-03 → 4.089e-04) |
+| **shortfall** | **87×** |
+
+jg5's 8× was measured on the DALI/direct-scorer instrument and this arithmetic is on the PyAV
+advisory instrument, so the transfer is uncontrolled — **but the shortfall is two orders of
+magnitude, and no plausible transfer factor closes it.** This is ROUTED, not fired: a follow-on
+would need its own falsifier and an actual measured re-solve, and on the evidence in hand it would
+be spending hours to confirm arithmetic.
+
+### §T13 TERMINAL VERDICT — TASK #1176 CLOSED, and what is BANKED
+
+**The mirror is REFUSED on the measured pose leg. The pointer does not move and this arm did not
+move it.** No seal was cut, no fire-order handed to MAIN, no Modal fired, frozen gen6 custody
+untouched.
+
+`verdict_scope` per claim:
+
+* **§T8 rate leg — MEASURED, INSTANCE-and-FORMULATION.** The drop credits **5.3280 b/dropped-token**
+  and clears its pre-registered falsifier by 1.9%. **That margin is a TREND EDGE** (7.19 → 6.12 →
+  5.95 → 5.56 → 5.328, monotone), and the caveat travels with the number.
+* **§T11 pose leg — MEASURED same-instrument, INSTANCE** (this candidate, this body, PyAV advisory
+  axis). Its transfer to contest-CUDA is a separate question (ddm_pi2: 1.4425× d_seg, +1.4061e-04
+  additive d_pose), and at 3.59e-02 no transfer factor rescues it.
+* **§T12 — DERIVED arithmetic**, explicitly not a measurement.
+* **The mechanism (§T7) — FORMULATION.** Rank-dependence supported at 0.90× its point prediction;
+  direction-asymmetry refuted 2.0×; **my own registered site-quality risk refuted IN SIGN**.
+
+**What is banked, and it outlives both rows:**
+
+1. **The mechanism.** Round 2's confound (an AVERAGE over a REMOVAL vs a MARGINAL over an ADDITION)
+   is resolved: **average-vs-marginal is the real axis**, and round 2's attribution was right.
+2. **The three constants** (§T10) with scopes: **5.3280** marginal-removal · **3.6432**
+   average-over-trimmed-set · **0.7722** realized/modelled.
+3. **`tools/assemble_candidate_runtime.py`** — the canonical runtime assembler whose receiver pin is
+   DERIVED and re-read, with no caller-supplied-digest path. It cures the inherited-stale-pin class
+   that failed this arm's first advisory at t≈10 s.
+4. **`experiments/ddm_fs3_same_instrument_pose_leg.py`** — the fail-closed comparator that made this
+   verdict possible, including the harness-vs-payload split that lets a legitimate delta through
+   while still refusing a disguised receiver change.
+5. **A bug the apparatus caught in its own author's tool**: the comparator refused my assembler's
+   output because the re-pin regex used `\s*$` under `re.M` — `\s` matches newlines — and ate two
+   blank lines. Fixed to `[ \t]*$` with a regression proving line count is preserved.
+
+**What a successor must NOT do.** Do not re-fire the drop at another price: the rate leg is real but
+the pose exposure is structural to shipping a stale carrier, and §T12 shows the re-solve cannot pay
+for itself. Do not quote the 1.9% rate margin without its trend-edge caveat. Do not difference the
+advisory's `d_pose` level against any figure from a different instrument.
 
 ---
 
