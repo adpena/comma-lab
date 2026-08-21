@@ -98,6 +98,7 @@ import zipfile
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterable, Literal
 
+from tac.process_group_kill import run_in_process_group
 from tac.repo_io import json_text, sha256_bytes, sha256_file
 
 SCHEMA_VERSION = "phase1_packet_compiler.v1"
@@ -623,6 +624,9 @@ def _bash_n_check(inflate_sh: Path) -> dict[str, Any]:
 
     try:
         proc = subprocess.run(
+            # GROUP_KILL_OK: `bash -n` PARSES the script and exits; it never executes a
+            # command, so it forks no child and there is no grandchild for a group kill
+            # to reach. Catalog #408 flags the argv[0] shape, not the -n semantics.
             ["bash", "-n", str(inflate_sh)],
             capture_output=True,
             text=True,
@@ -1208,7 +1212,7 @@ def _verify_runtime_consumes_payload_bytes_executable(
 
         def _run_inflate(archive_dir: Path, inflated_dir: Path) -> int:
             try:
-                proc = subprocess.run(
+                proc = run_in_process_group(
                     [
                         str(inflate_sh),
                         str(archive_dir),

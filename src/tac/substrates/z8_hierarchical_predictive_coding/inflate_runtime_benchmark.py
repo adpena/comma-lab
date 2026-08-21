@@ -24,6 +24,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from tac.process_group_kill import run_in_process_group
+
 NON_PROMOTABLE_MARKERS: dict[str, Any] = {
     "evidence_grade": "macOS-CPU-advisory",
     "axis_tag": "[macOS-CPU advisory]",
@@ -153,7 +155,7 @@ def benchmark_z8_submission_inflate_runtime(
         start = time.perf_counter()
         timed_out = False
         try:
-            proc = subprocess.run(
+            proc = run_in_process_group(
                 argv,
                 check=False,
                 capture_output=True,

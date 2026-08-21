@@ -24,6 +24,7 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.process_group_kill import run_in_process_group
 from tac.repo_io import read_json, repo_relative, sha256_file
 
 INFLATE_PARITY_PROBE_SCHEMA = "inverse_scorer_cell_inflate_parity_probe_v1"
@@ -672,7 +673,7 @@ def _run_inflate(
         env = os.environ.copy()
         python_dir = str(Path(sys.executable).parent)
         env["PATH"] = f"{python_dir}{os.pathsep}{env.get('PATH', '')}"
-        proc = subprocess.run(
+        proc = run_in_process_group(
             [
                 "bash",
                 str(inflate_sh.resolve()),

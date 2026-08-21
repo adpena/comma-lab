@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.process_group_kill import run_in_process_group
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 from tac.substrates.hprc.inflate import CAMERA_H, CAMERA_W, CHANNELS
 from tac.substrates.hprc.representation_spine import (
@@ -366,7 +367,7 @@ def _run_inflate(
     if venv_bin.is_dir():
         env["PATH"] = f"{venv_bin}{os.pathsep}{env.get('PATH', '')}"
     try:
-        proc = subprocess.run(
+        proc = run_in_process_group(
             [
                 "bash",
                 inflate_sh.as_posix(),

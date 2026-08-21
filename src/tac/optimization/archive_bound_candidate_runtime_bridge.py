@@ -23,6 +23,7 @@ from tac.optimization.archive_bound_candidate_adapter_spine import (
 )
 from tac.optimization.dqs1_materializer_feedback_bridge import FALSE_AUTHORITY
 from tac.optimization.proxy_candidate_contract import ordered_unique
+from tac.process_group_kill import run_in_process_group
 from tac.repo_io import sha256_file, tree_sha256, write_json
 
 ARCHIVE_BOUND_RUNTIME_ADAPTER_PACKAGE_SCHEMA = (
@@ -98,7 +99,7 @@ def run_generated_inflate_receiver_proof(
     stderr = ""
     timed_out = False
     try:
-        result = subprocess.run(
+        result = run_in_process_group(
             inflate_argv,
             check=False,
             capture_output=True,

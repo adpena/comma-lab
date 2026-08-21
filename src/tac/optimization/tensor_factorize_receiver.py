@@ -19,7 +19,6 @@ import io
 import math
 import os
 import shutil
-import subprocess
 import tempfile
 import zipfile
 from collections.abc import Mapping
@@ -38,6 +37,7 @@ from tac.optimization.proxy_candidate_contract import (
     ordered_unique,
     require_no_truthy_authority_fields,
 )
+from tac.process_group_kill import run_in_process_group
 from tac.repo_io import (
     artifact_dir_transaction,
     read_json,
@@ -410,7 +410,7 @@ def run_tensor_factorize_receiver_smoke(
             str(out_dir),
             file_list,
         ]
-        proc = subprocess.run(
+        proc = run_in_process_group(
             command,
             check=False,
             capture_output=True,

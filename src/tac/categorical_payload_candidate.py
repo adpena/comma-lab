@@ -58,6 +58,7 @@ from tac.pr91_hpm1_codec import (
     Pr91Hpm1Error,
     run_pr91_hpm1_semantic_decode_trench,
 )
+from tac.process_group_kill import run_in_process_group
 from tac.repo_io import json_text, repo_relative, sha256_bytes, sha256_file, write_json
 from tac.semantic_label_contract import CONTEST_SEGNET_CLASS_NAME_TUPLE, SELFCOMP_CLASS_TO_GRAY
 
@@ -245,7 +246,7 @@ def _write_runtime_execution_proof(
         env = dict(os.environ)
         env["PYTHON"] = sys.executable
         env["PYTHONPATH"] = ""
-        completed = subprocess.run(
+        completed = run_in_process_group(
             ["/bin/bash", "inflate.sh"],
             cwd=temp_dir,
             env=env,
