@@ -1,0 +1,111 @@
+{
+  "schema": "ddm_fc3_prereg_mtime_adjudication.v1",
+  "arm": "ddm_fc3",
+  "task": 1179,
+  "written_utc": "2026-08-21T08:02:39Z",
+  "kind": "APPEND-ONLY adjudication receipt. No subject file was edited by this arm.",
+  "subject": "the 3 prereg-like files that ddm_fc2's census flagged mtime > birthtime",
+  "timestamp_labelling_note": "Every time in this receipt is EXPLICIT UTC, converted from the epoch. macOS `stat -t` prints LOCAL time and this host is UTC-5 (CDT); the rv17 round-4 memo mislabelled local times with a Z suffix and ddm_fc2 corrected it. Epochs are carried so the conversion is checkable.",
+  "instrument_caveat": "mtime > birthtime is ONE instrument. It is indicative, never probative. Each verdict below names the SECOND, independent instrument that actually decided it.",
+  "filesystem_note": {
+    "/Volumes/APDataStore": "exfat",
+    "/Volumes/VertigoDataTier": "apfs",
+    "repo (/System/Volumes/Data)": "apfs",
+    "why_it_matters": "A copy without -p sets both times to now; `cp -p` preserves mtime and sets birthtime to the copy instant, which yields mtime < birthtime. A live instance of that signature was observed at /Volumes/APDataStore/pact/ddm_hm1_failed_source_repo_20260810/.omx/research/ddm_hg1_truncation_and_prediction.json (birth 2026-08-10T12:29Z, mtime 2026-08-10T12:23Z), confirming the instrument behaves as described on these volumes."
+  },
+  "adjudications": [
+    {
+      "id": "S1",
+      "path": "/Volumes/APDataStore/pact/ddm_fs3/FS3_DROP_FALSIFIER.json",
+      "verdict": "MUTATED-MATERIAL",
+      "already_adjudicated_by": "ddm_fc2 (rv17 W3-F14); this arm CONFIRMED it independently, it is not re-opened",
+      "instrument_1_filesystem": {
+        "birthtime_epoch": 1787283740,
+        "birthtime_utc": "2026-08-21T03:42:20Z",
+        "mtime_epoch": 1787285253,
+        "mtime_utc": "2026-08-21T04:07:33Z",
+        "mtime_minus_birthtime_seconds": 1513,
+        "size_bytes": 6357,
+        "sha256": "bd0b293c7441c074903263c731e170dd79618d91dc0a12b14dd028249bed2400"
+      },
+      "instrument_2_content": "The falsifier cites FS3_RATE_BASELINE_RECEIPT.json, which was born 1487 s AFTER the falsifier's own birth, and the falsifier was rewritten 26 s after that receipt appeared. The material field row_dies_if_token_stream_shrinks_by_less_than_bytes = 651.5704466342045 is therefore UNAUDITABLE: it cannot be shown to have moved, nor to have held.",
+      "independent_confirmation_by_this_arm": {
+        "original_sha256_unchanged": "bd0b293c7441c074903263c731e170dd79618d91dc0a12b14dd028249bed2400",
+        "disposition_receipt": "/Volumes/APDataStore/pact/ddm_fs3/FS3_DROP_FALSIFIER.DISPOSITION.json",
+        "disposition_sha256": "828124d9a453ac425394cd9fc6b205ae1ced9107074dc71f621604c62a883d4e",
+        "both_match_the_fc2_memo": true
+      },
+      "registration_decision": "NOT REGISTERED, DELIBERATELY. Registering an already-mutated file would enshrine its POST-mutation bytes in git as if they were birth bytes -- which is worse than not registering it. The disposition receipt is the correct instrument for this file."
+    },
+    {
+      "id": "S2",
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_hg1_truncation_and_prediction.json",
+      "verdict": "FALSE-POSITIVE",
+      "why_false_positive": "It is not a pre-registration at all. The census token matched the word PREDICTION inside the PROBE NAME 'hg1_probe3_truncation_and_prediction'. Its top-level keys are a measured truncation ledger plus p1 result rows -- a RESULTS artifact. It carries no registered_before_* / recorded_before_* claim key.",
+      "instrument_1_filesystem": {
+        "birthtime_epoch": 1785761578,
+        "birthtime_utc": "2026-08-03T12:52:58Z",
+        "mtime_epoch": 1785762272,
+        "mtime_utc": "2026-08-03T13:04:32Z",
+        "mtime_minus_birthtime_seconds": 694,
+        "size_bytes": 8466,
+        "sha256": "1032ea48ae39da87935a1ab1aa75bc2d269a9c2b1958cea8d18ca27483172930"
+      },
+      "instrument_2_git": {
+        "commits_touching_the_file": 1,
+        "commit": "77cb4a9223f05f8faa3b05d2d3d9d4d73f616e9f",
+        "commit_utc": "2026-08-03T13:07:14Z",
+        "live_sha256_equals_HEAD_blob": true,
+        "worktree_clean_for_this_path": true,
+        "reading": "The whole 694 s mtime-vs-birthtime window (12:52:58Z -> 13:04:32Z) closes 2m42s BEFORE the single commit at 13:07:14Z. It is an AUTHORING window, and git has held the bytes immutable ever since. There is no post-registration mutation to adjudicate."
+      },
+      "residual_caveat_stated_not_hidden": "The file does carry p1_verdict.registered_refutation_band = '|rs| < 0.5 for ALL four => P1 REFUTED' co-located with its own outcome, so I cannot prove the band was written before the spearman was computed. What bounds the risk is margin, not provenance: the measured best_abs_spearman is 0.8571428571428571 against a band edge of 0.5, i.e. 1.71x clear, so no small threshold move flips the verdict. Labelled DERIVED-bound, not MEASURED-provenance.",
+      "registration_decision": "NOT REGISTERED. Already immutable in git; a birth copy would duplicate git with no added guarantee."
+    },
+    {
+      "id": "S3",
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cx1_20260803/cx1_PREDICTION_prereg.json",
+      "verdict": "MUTATED-BENIGN",
+      "instrument_1_filesystem": {
+        "birthtime_epoch": 1785735245,
+        "birthtime_utc": "2026-08-03T05:34:05Z",
+        "mtime_epoch": 1785735654,
+        "mtime_utc": "2026-08-03T05:40:54Z",
+        "mtime_minus_birthtime_seconds": 409,
+        "size_bytes": 1150,
+        "sha256": "0e4d0a2b400077ede4152e8ebedf147507e267f01fb4a2da5c7972797e9c05c4"
+      },
+      "instrument_2_ordering_of_the_arm_artifacts_utc": {
+        "archive_and_build_receipt_born": "2026-08-03T05:33:42Z",
+        "prereg_born": "2026-08-03T05:34:05Z",
+        "prereg_last_write": "2026-08-03T05:40:54Z",
+        "frame_parity_receipt": "2026-08-03T05:41:26Z",
+        "gate_log_born": "2026-08-03T05:42:47Z",
+        "gate_receipt": "2026-08-03T05:59:56Z",
+        "corroborating_memo_committed": "2026-08-03T06:00:57Z",
+        "reading": "The 409 s mutation window CLOSES 1m53s before the first measured artifact of the arm (frame parity) and 1m53s before the gate log even opens, and 19m02s before the gate receipt. No measured input existed that a post-hoc edit could have been fitted to. This is the OPPOSITE of the S1 signature, where the rewrite landed 26 s AFTER the receipt it cites."
+      },
+      "instrument_3_rederivation": {
+        "claim": "every material predicted value is re-derivable from artifacts that existed BEFORE the prereg was born",
+        "predicted_rate_in_file": 0.2355862,
+        "rederived_25_times_bytes_over_37545489": 0.2355862244862492,
+        "archive_bytes_fixed_at": "2026-08-03T05:33:42Z (23 s before the prereg was born)",
+        "basis_field_says": "d_seg and d_pose invariant BY CONSTRUCTION (lossless container); only the rate term moves",
+        "reading": "The prediction required zero post-gate information, so there was nothing to fit."
+      },
+      "instrument_4_committed_corroboration": {
+        "memo": ".omx/research/ddm_cx1_pj2_container_compose_20260802.md",
+        "commit": "497189b36c0e0af016d06b790695738f17298cb6",
+        "commit_utc": "2026-08-03T06:00:57Z",
+        "memo_line_50": "S = 0.8264972 against a pre-registered prediction of 0.8264972",
+        "reading": "A committed artifact quotes the same predicted value the live file still carries, and the live file's mtime has not moved since 05:40:54Z. Bound, honestly stated: this pins the content from 06:00:57Z forward. It does NOT independently witness the 05:34:05->05:40:54 window -- instruments 2 and 3 do that."
+      },
+      "incidental_check_clean": {
+        "concern": "the cited archive.zip carries mtime 2026-08-03T06:00:16Z, AFTER its gate receipt",
+        "resolution": "content is unchanged: live sha256 = 1d3ab694c337f3f7374fa42034664b0494d0dfda1be479b1d367e964da78701f, byte-identical to the sha pinned by BOTH cx1_gate_receipt.json and cx1_build_receipt.json, and size 353808 matches. The mtime bump is metadata-only."
+      },
+      "registration_decision": "NOT REGISTERED. Post-verdict: cx1_gate_receipt.json records prediction_miss 1.25e-08 and the v4d/S~0.83 lineage is many frontier moves superseded. Historical, not forward-binding."
+    }
+  ],
+  "bearing_on_any_score": "NONE. This is apparatus. No verdict, archive, or score claim is touched."
+}
