@@ -162,7 +162,7 @@ directions. Replacing any function body with `return CONSTANT` fails at least on
 
 ## §2 F1 — the typed receipt writer
 
-`src/comma_lab/packet_receipts.py` (+ `tests/test_comma_lab_packet_receipts.py`, 22 tests).
+`src/comma_lab/packet_receipts.py` (+ `tests/test_comma_lab_packet_receipts.py`, 28 tests).
 
 ### The defect it makes unrepresentable
 
@@ -268,7 +268,7 @@ excluded from being a denominator at all.
 | F1 wire existing append path | **N/A — none existed** | repo-wide grep; that absence is the finding |
 | `verify_receipt_chain.py` shared derivation | **NOT DONE, deliberately** | receipt-tracked; owes an R17 append (MAIN) |
 | ruff / ty | **clean on all four new files** | 19 `__init__.py` F401 = unchanged baseline |
-| tests | **44 pass** (22 + 22) | plus 50 adjacent registry tests |
+| tests | **50 pass** (28 F1 + 22 F2) | plus 50 adjacent registry tests |
 | Exact pointer | **UNMOVED** | 0.14827847122030852 @ 180,456 B `[contest-CUDA T4 n600]` |
 
 ## Own-vehicle frontier
