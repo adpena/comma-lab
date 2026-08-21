@@ -29268,3 +29268,16 @@ convicted round 8 and acquitted rounds 5–6 on the same standard; the FEED's 92
 figure verified as an accurate historical snapshot (1,274 post-cure). Reviewer law
 (banked, memory three-checks-sharing-an-instrument-are-one-check): independence is a
 property of the instruments, not the count.
+
+FEED-rv17w2-SEAL (2026-08-20, MAIN): WAVE 2 SEALED 3/3 (reviewer chain a8a0ca9948 →
+feeb511fd6 → 96f61218f1; memo ddm_rv17_wave2_SEAL_20260820.md). Fourteen findings,
+fourteen terminal states: 11 cure-verified · 2 adjudicated-and-cited (F5 61-bit gap =
+decoder_bit_position − ideal_code_bits at 60.97; F6 manifest authority) · 2 carried by
+name (F1 typed receipt-writer, owner MAIN, trigger = packet-swap boundary; F2
+equations-leg RANGE registration, rides next canonical-equations landing). Six laws
+banked; depth-vs-independence complementarity recorded. Scope excludes fs3 (average-
+price≠marginal-price + withdrawn 7.11× route to WAVE 3). Substance never moved across
+11 rounds — no wrong score/pin/digest found; the rounds moved 14 conclusions onto the
+footing their measurements already had, and the loop corrected BOTH directions.
+Seal evidence re-derived from frozen bytes: 180,456 B df7fd266…, S 0.14827847122030852,
+36/36 rows, both guards rc=0.
