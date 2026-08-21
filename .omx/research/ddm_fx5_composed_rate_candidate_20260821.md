@@ -212,24 +212,72 @@ byte-identical decoded token field proves Python == C over 600 frames of real ac
 state — strictly stronger than §2's C2, which cannot reach a table state only 600 frames of
 accumulation produces.
 
-| anchor | required | measured |
-|---|---|---|
-| decoded token field sha256 | `cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb` | see receipt |
-| `0.raw` sha256 / bytes | `7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7` / 3,662,409,600 | see receipt |
-| corrector actually bound | `NativeFreeCorrector`, 19 members | see receipt |
+**The proof only works if the decoder really ran the C.** If it had silently fallen back to
+the Python corrector, an identical field would prove nothing about the C — encoder and decoder
+would both be Python. So the binding is verified DIRECTLY, not inferred from a silent stderr:
+the live decode process carries
+`F26_CORRECTOR_NATIVE_LIBRARY=/var/folders/…/tmp.9xuizc1lpL/f26_corrector_native.so`, the
+library `inflate.sh` compiled from **this tree's** 19-member `.c`, and
+`native_free_corrector` refuses to bind at all unless the live `SHIPPED_CONFIG` matches the
+19 families compiled into it.
 
-The token anchor is the same digest rc2's contest-CUDA T4 receipt records as
-`decoded_token_sha256`, so local CPU and contest CUDA agree on it for the base — which is what
-makes it usable as a candidate anchor here.
+| anchor | required | MEASURED | verdict |
+|---|---|---|---|
+| decoded token field sha256 | `cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb` | `cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb` | **IDENTICAL** |
+| corrector actually bound | native, 19 members | `F26_CORRECTOR_NATIVE_LIBRARY` exported, guard passed | **NATIVE** |
+| coded token stream sha256 | must DIFFER (it is the −70 B) | `b9243abd…` → `e2af55e641c4f2d3…` | **differs, as required** |
+| `hpac_blob` sha256 | unchanged | identical to rc2 | **carried verbatim** |
+| `residual_payload` sha256 | unchanged | identical to rc2 | **carried verbatim** |
+| `0.raw` sha256 / bytes | `7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7` / 3,662,409,600 | see receipt | render stage |
 
-**Receipt: `/Volumes/APDataStore/pact/ddm_fx5/retained/FX5_DECODE_IDENTITY.json`.**
+**Different bytes in, identical tokens out, everything else carried verbatim — which is the
+definition of a lossless rate win.** The token anchor is the same digest rc2's contest-CUDA T4
+receipt records as `decoded_token_sha256`, so local CPU and contest CUDA already agree on it
+for the base, which is what makes it usable as a candidate anchor here.
+
+**Consequence for the score: `d_seg` and `d_pose` cannot move.** The render is a deterministic
+function of the token field; the token field is byte-identical; so the two distortion legs are
+unchanged and the entire ΔS is the rate term. That is why falsifier 1 below is a REFUSAL and
+not a regression check.
+
+**State at seal time, stated exactly.** The token-field row is **MEASURED and PASSED** — that
+is the decisive gate, and it is the same discriminator rc2's own memo calls *"stronger than
+the component-level form"*. The `0.raw` row is **still landing**: the render reached the full
+3,662,409,600 B, then the host stalled in uninterruptible I/O flushing 3.4 GB to an SSD at 99%
+capacity (31 GiB free). That is a storage condition on this machine, not a property of the
+candidate, and it cannot change the raw bytes — the render is a deterministic function of a
+token field already proven identical. A detached writer
+(`ddm_fx5_decode_receipt`) is bound to the completion artifact and lands the raw sha into the
+receipt when the flush completes.
+
+**I sealed on the token gate and say so rather than implying both rows were closed.** If the
+raw sha comes back anything other than
+`7246a4ff8f79b03ab14b3a72f6a6e2fff18b567fcb61f12a7fe311d48f5f2de7`, falsifier 3 fires and the
+candidate is refused before any fire.
+
+**Receipt: `/Volumes/APDataStore/pact/ddm_fx5/retained/FX5_DECODE_IDENTITY.json`** (verdict
+field: `DECODE_IDENTICAL` when both rows close, `TOKEN_IDENTICAL_RAW_PENDING` in between,
+`REFUSED` if the token row ever fails).
 
 ---
 
 ## §7 THE SEAL AND THE FIRE ORDER
 
-Seal: `/Volumes/APDataStore/pact/ddm_fx5/CANDIDATE_SEAL_fx5_e1_19member.json`, written by
-`tools/make_candidate_seal.py` — every sha measured from disk, none hand-typed.
+**Status: SEALED · `SEAL_VALID` · READY_TO_FIRE.**
+
+| | |
+|---|---|
+| seal | `/Volumes/APDataStore/pact/ddm_fx5/CANDIDATE_SEAL_fx5_e1_19member.json` |
+| seal sha256 | `3dcef9b3c986b6cf747d0862ce7dfe6fbbe8414216bb48a6ecb45783ddb8fb5f` |
+| candidate id | `ddm_fx5_e1_19member_model_axis` `[contest_cuda]` |
+| archive | **180,386 B**, sha `4b54fccc25f100cb68030db317791ba5e58936bb9b491f9ee9a020e695b79841` |
+| runtime tree | 38 files, 672,500 B, digest `f1dcb517a332886b…` |
+| receivers pinned | 8, per-file: `inflate.py` `inflate.sh` `runtime/residual_archive.py` `runtime/f26_corrector_native.c` `runtime/native_free_corrector.py` `runtime/fx2_model_axis_corrector.py` `runtime/free_corrector.py` `runtime/rr5_arith_basis.py` |
+| admit bar | net ΔS < −3.5e-06 vs `contest_cuda` 0.14827847, tolerance 0 |
+
+Written by `tools/make_candidate_seal.py` — every sha MEASURED from disk, none hand-typed;
+the archive sha was passed as `--verify-archive-sha` (checked against the bytes, never stored
+as the value) and the report-8dp bound is COMPUTED from rc2's own T4 receipt.
 
 **MAIN fires with:**
 
@@ -292,10 +340,18 @@ the fact that saves the dx1 premise).
 
 ## RETENTION (P0)
 
-`/Volumes/APDataStore/pact/ddm_fx5/` — candidate archive, both re-encoded token streams
-(control and E1), the built `.so`, the full candidate runtime tree, every receipt. Manifest
-with sha256 + bytes for each: `RETENTION_MANIFEST.json`. No payload was measured and
-discarded.
+`/Volumes/APDataStore/pact/ddm_fx5/RETENTION_MANIFEST.json` — **20 payloads, 21,268,363 B,
+each with sha256 + bytes.** Both re-encoded token streams are kept, not only the winner's:
+`tail_e1_19member.bin` (113,777 B — the −70 B itself, not its length) and
+`tail_control_600.bin` (113,847 B — the byte-identity proof). Plus the candidate archive, both
+encoder + corrector checkpoints (resumable), both per-frame bit ledgers, the built `.so`, the
+three patched receiver sources, and every verdict JSON. **Nothing was measured and discarded.**
+
+The 3,662,409,600 B raw render and the 117,964,800 B decoded token field under
+`decode_r1/inflated/` are certified REBUILDABLE — the command, the runtime-tree digest and the
+archive sha are all in the launch manifest and `FX5_DECODE_IDENTITY.json`, so they regenerate
+deterministically. They may be cold-stored or deleted **after** that receipt lands, not before.
+APDataStore was at 31 GiB free at seal time; Vertigo is full and was used read-only.
 
 ---
 
