@@ -50,27 +50,22 @@ materializer_image = (
     .add_local_file(
         "experiments/__init__.py",
         remote_path="/workspace/pact/experiments/__init__.py",
-        copy=True,
     )
     .add_local_file(
         "experiments/modal_auth_eval.py",
         remote_path="/workspace/pact/experiments/modal_auth_eval.py",
-        copy=True,
     )
     .add_local_file(
         "experiments/ddm_jo1_joint_objective_design.py",
         remote_path="/workspace/pact/experiments/ddm_jo1_joint_objective_design.py",
-        copy=True,
     )
     .add_local_file(
         "experiments/ddm_jo1_joint_objective_worker.py",
         remote_path="/workspace/pact/experiments/ddm_jo1_joint_objective_worker.py",
-        copy=True,
     )
     .add_local_file(
         "experiments/ddm_jo1_payload_materializer_worker.py",
         remote_path="/workspace/pact/experiments/ddm_jo1_payload_materializer_worker.py",
-        copy=True,
     )
     .add_local_file(
         "experiments/ddm_js1b_cuda_argmax_field_materializer_worker.py",
@@ -78,7 +73,6 @@ materializer_image = (
             "/workspace/pact/experiments/"
             "ddm_js1b_cuda_argmax_field_materializer_worker.py"
         ),
-        copy=True,
     )
     .add_local_python_source("ddm_jo1_modal_joint_objective")
 )
