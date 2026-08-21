@@ -19,7 +19,9 @@ before it shipped.
    against a pair's own edited render is usually a pose *credit*. The obvious next move is to
    propose edits on the 145 pairs that never banked that credit. It does not pay: the median credit
    pair justifies an edit encoding of **1.429 B/pair**, and the cheapest encoding this vehicle has
-   ever measured is **5.667 B/pair** — **3.97× too expensive**. Applied to the 27 genuinely
+   ever measured is **5.667 B/pair** — **3.97× the MEDIAN budget, 1.95× the MEAN budget that
+   governs this blanket move** (W2-F9 cure: the blanket claim is priced at the mean; both lose).
+   Applied to the 27 genuinely
    unmeasured pairs the blanket move is a **net loss of +6.31e-05 S**.
 2. **`js6b`'s FORMULATION closure no longer holds.** Its 200/200 HELD verdict was measured against
    an *uncompensated* pose envelope. At the compensation this vehicle actually measures, rows clear
@@ -105,6 +107,9 @@ Re-deriving the slope at the live operating point (`d_pose = 6.365684e-06`) give
 | `jg5` live seg edits (180,580−176,429)/455 | 9.123 | 4.8% | 6.38× |
 | `jg1` re-solve midpoint | ~~10.500~~ MISREAD — see §E | — | — |
 | `rc4` rung-4 reference | 12.830 | 3.4% | 8.98× |
+
+Against the MEAN budget (2.909 B/pair — the one that governs the blanket move): qs2 **1.95×**,
+jg5 3.14×, rc4 4.41× — every measured edit encoding loses on the mean budget too (W2-F9 cure).
 
 Blanket application to the 27 genuinely unmeasured pairs, at the cheapest encoding:
 
@@ -214,7 +219,8 @@ one archive byte is 6.659e-07 S — so the −3.5e-6 admit bar is **5.26 bytes**
 
 That is the finding underneath both verdicts. At this operating point the distortion axes are small
 and the rate axis is everything, so *any* actuator that spends bytes to buy distortion must clear a
-brutal exchange rate. The pose actuator misses it by 3.97×. The js6b bank clears it only under a
+brutal exchange rate. The pose actuator misses it by 1.95× at the mean (blanket-governing)
+budget and 3.97× at the median. The js6b bank clears it only under a
 compensation factor borrowed across regimes. **The next pointer move is far more likely to come from
 the rate axis than from either.** `ddm_na10` row 1 — the `rc4` rung-4 token *drop*, refused on pose
 517× and never re-tried with a carrier re-solve — is the same composition law pointed at rate

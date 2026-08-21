@@ -464,3 +464,18 @@ candidate by rebinding the function rather than the constants — built for the 
 still the right tool for the next frame-1 lever that has a rate credit).
 
 Own-vehicle frontier: **S 0.14827847122030852 @ 180,456 B `[contest-CUDA T4, n600]` — UNMOVED by ddm_fs2.**
+
+---
+
+## ERRATUM (2026-08-20, from rv17 wave-2 W2-F3/W2-F13 + ddm_fs3's source verification)
+
+The recapture-law row prints **"0.877x"** beside `3.8373 / 4.718` — but that quotient is
+**0.8133**; the 0.877 is jg2's three-pair figure, a different instrument. Worse, the 4.718
+denominator is jg3's `LogitPrice` **ranker** — jg3's own docstring calls it "a RANKER, not a
+price." The price jg3 actually charged was a flat **4.1379 bits/token**, and against the measured
+3.813767 the true model overcharge is **8.50%** (ratio 0.9217), not 19%. The away-from-argmax
+trust factor is therefore a per-instrument RANGE, not one number: **jg5 own 0.813 · jg2 (n=3)
+0.877 · jg3 0.773 (flagged `delta_trustworthy: false`) · vs jg3's actual flat price 0.922**.
+The toward-argmax ~0.09× and the direction-dependence law itself are UNCHANGED. Receipts:
+`.omx/research/ddm_fs3_jg5_real_price_reopen_20260820.md` (03d39d67d9). verdict_scope: instance —
+this corrects quoted constants; no verdict in this memo moves.
