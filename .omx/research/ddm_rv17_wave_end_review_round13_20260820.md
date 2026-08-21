@@ -122,3 +122,13 @@ frozen archive's own bytes.
 ## Own-vehicle frontier
 
 **S 0.14827847122030852 @ 180,456 B [contest-CUDA T4 n600].**
+
+## Verdict scope (appended by MAIN per the verdict-scope gate)
+
+verdict_scope: formulation — the REFUTED verdict above applies to the ONE-BOOLEAN
+lstrip/startswith fence-tracking formulation in verify_citations.py (and specifically its
+"any-indent toggle is fail-closed" disclosed-residual argument, which holds only in the
+toggle-ON state). Measured by two executed probes (M_mixed, I_indent) against that
+implementation. NOT refuted: the declaration-coverage family itself, which was cured in the
+same wave by the (char, count) CommonMark-rule implementation (commit 1d15043423, receipt
+DOC_DIVERGENCE_RECEIPT_R11.json) — all nine post-cure controls pass.
