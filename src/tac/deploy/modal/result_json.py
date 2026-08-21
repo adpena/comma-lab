@@ -33,6 +33,8 @@ __all__ = [
     "BASE64_PATHS_KEY",
     "STRINGIFIED_PATHS_KEY",
     "TEXT_DECODED_PATHS_KEY",
+    "BytesInSummaryError",
+    "bytes_safe_json_default",
     "decode_possibly_bytes_repr",
     "dump_modal_result_json",
     "json_safe_modal_result",
@@ -110,6 +112,36 @@ def dump_modal_result_json(path: Path | str, result: Mapping[str, Any]) -> dict[
     # Fail closed: the receipt must be loadable by the next consumer.
     json.loads(target.read_text(encoding="utf-8"))
     return payload
+
+
+class BytesInSummaryError(TypeError):
+    """A summary/receipt writer was handed a raw payload it must never encode."""
+
+
+def bytes_safe_json_default(value: Any) -> str:
+    """`json.dump(..., default=...)` that REFUSES bytes instead of writing their repr.
+
+    `default=str` is the silencing mechanism, not the bytes themselves. Without any
+    `default`, `json.dumps` raises `TypeError: Object of type bytes is not JSON
+    serializable` — loud, and impossible to ship by accident. `default=str` converts
+    that refusal into `"b'{\\n  \\"final_score\\"...'"`, which reads as data and
+    raises `JSONDecodeError` only much later, in whoever loads it.
+
+    So the harvest SUMMARY writers keep the convenience `default=str` gave them for
+    `Path` / `datetime` / `Decimal`, and lose exactly the case that hurt: a payload
+    reaching a summary. A summary that legitimately needs to carry payload bytes is
+    a receipt, and receipts go through `dump_modal_result_json`, which decodes UTF-8,
+    base64s the rest, and RECORDS which transform each path received.
+    """
+
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        raise BytesInSummaryError(
+            f"refusing to encode {len(bytes(value))} raw bytes into a JSON summary: "
+            "`default=str` would have written a Python bytes-repr that looks like data "
+            "and fails json.load (the ddm_jg5 frontier receipt). Route payloads through "
+            "tac.deploy.modal.result_json.dump_modal_result_json instead."
+        )
+    return str(value)
 
 
 def decode_possibly_bytes_repr(text: str) -> bytes | None:

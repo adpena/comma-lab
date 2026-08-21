@@ -20,6 +20,15 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 
 
 DEFAULT_REPO = repo_root_from_tool(__file__)
+ensure_repo_imports(DEFAULT_REPO)
+
+# This tool holds a raw Modal FunctionCall result in memory (`fc.get()`), whose
+# `artifacts` value is `dict[str, bytes]`. Every summary below therefore encodes with
+# a default that REFUSES bytes rather than `default=str`, which silently wrote a Python
+# bytes-repr into the ddm_jg5 frontier receipt. The summaries are scalar-derived today;
+# the encoder is what keeps that true when a field is added.
+from tac.deploy.modal.result_json import bytes_safe_json_default  # noqa: E402
+
 GENERATED_HARVEST_FILENAMES = frozenset({"_harvest_summary.json", "_stdout_tail.txt"})
 CATHEDRAL_EVIDENCE_REL = Path("reports") / "cathedral_autopilot_evidence.jsonl"
 
@@ -115,7 +124,7 @@ def _summary_entry_key(row: dict[str, Any]) -> tuple[str, str]:
         return ("call_id", call_id)
     if label:
         return ("label", label)
-    return ("object", json.dumps(row, sort_keys=True, default=str))
+    return ("object", json.dumps(row, sort_keys=True, default=bytes_safe_json_default))
 
 
 def merge_modal_harvest_summary_rows(
@@ -621,7 +630,7 @@ def harvest_modal_calls(
                             source_summary=root_harvest_summary,
                         )
                         (artifacts_dir / "_harvest_summary.json").write_text(
-                            json.dumps(harvested, indent=2, default=str),
+                            json.dumps(harvested, indent=2, default=bytes_safe_json_default),
                             encoding="utf-8",
                         )
                     else:
@@ -631,7 +640,7 @@ def harvest_modal_calls(
                         artifacts_dir=artifacts_dir
                     )
                     (artifacts_dir / "_harvest_summary.json").write_text(
-                        json.dumps(harvested, indent=2, default=str),
+                        json.dumps(harvested, indent=2, default=bytes_safe_json_default),
                         encoding="utf-8",
                     )
             cost_marker = out_dir / "cost_band_anchor_appended.json"
@@ -708,7 +717,7 @@ def harvest_modal_calls(
                 if enriched_harvested != harvested:
                     harvested = enriched_harvested
                     (artifacts_dir / "_harvest_summary.json").write_text(
-                        json.dumps(harvested, indent=2, default=str),
+                        json.dumps(harvested, indent=2, default=bytes_safe_json_default),
                         encoding="utf-8",
                     )
             terminal_evidence = _append_terminal_claim_evidence(
@@ -860,7 +869,7 @@ def harvest_modal_calls(
             )
             harvest_summary["call_id_ledger"] = call_id_ledger
             (artifacts_dir / "_harvest_summary.json").write_text(
-                json.dumps(harvest_summary, indent=2, default=str),
+                json.dumps(harvest_summary, indent=2, default=bytes_safe_json_default),
                 encoding="utf-8",
             )
 
@@ -914,7 +923,7 @@ def harvest_modal_calls(
             )
             expired_summary["call_id_ledger"] = call_id_ledger
             (artifacts_dir / "_harvest_summary.json").write_text(
-                json.dumps(expired_summary, indent=2, default=str),
+                json.dumps(expired_summary, indent=2, default=bytes_safe_json_default),
                 encoding="utf-8",
             )
             entry = modal_training_summary_entry(
@@ -961,7 +970,7 @@ def harvest_modal_calls(
             )
             timeout_summary["call_id_ledger"] = call_id_ledger
             (artifacts_dir / "_harvest_summary.json").write_text(
-                json.dumps(timeout_summary, indent=2, default=str),
+                json.dumps(timeout_summary, indent=2, default=bytes_safe_json_default),
                 encoding="utf-8",
             )
             entry = modal_training_summary_entry(
@@ -1008,7 +1017,7 @@ def harvest_modal_calls(
             )
             unsafe_summary["call_id_ledger"] = call_id_ledger
             (artifacts_dir / "_harvest_summary.json").write_text(
-                json.dumps(unsafe_summary, indent=2, default=str),
+                json.dumps(unsafe_summary, indent=2, default=bytes_safe_json_default),
                 encoding="utf-8",
             )
             entry = modal_training_summary_entry(
@@ -1056,7 +1065,7 @@ def harvest_modal_calls(
             )
             write_error_summary["call_id_ledger"] = call_id_ledger
             (artifacts_dir / "_harvest_summary.json").write_text(
-                json.dumps(write_error_summary, indent=2, default=str),
+                json.dumps(write_error_summary, indent=2, default=bytes_safe_json_default),
                 encoding="utf-8",
             )
             entry = modal_training_summary_entry(
@@ -1107,7 +1116,7 @@ def harvest_modal_calls(
             )
             error_summary["call_id_ledger"] = call_id_ledger
             (artifacts_dir / "_harvest_summary.json").write_text(
-                json.dumps(error_summary, indent=2, default=str),
+                json.dumps(error_summary, indent=2, default=bytes_safe_json_default),
                 encoding="utf-8",
             )
             entry = modal_training_summary_entry(
@@ -1133,7 +1142,7 @@ def harvest_modal_calls(
     existing_summary = _read_json_list(summary_output)
     merged_summary = merge_modal_harvest_summary_rows(existing_summary, summary)
     summary_output.write_text(
-        json.dumps(merged_summary, indent=2, default=str),
+        json.dumps(merged_summary, indent=2, default=bytes_safe_json_default),
         encoding="utf-8",
     )
     print(f"\nSummary saved: {summary_output}")

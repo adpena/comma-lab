@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -22,6 +23,8 @@ from tac.deploy.modal.result_json import (
     BASE64_PATHS_KEY,
     STRINGIFIED_PATHS_KEY,
     TEXT_DECODED_PATHS_KEY,
+    BytesInSummaryError,
+    bytes_safe_json_default,
     decode_possibly_bytes_repr,
     dump_modal_result_json,
     json_safe_modal_result,
@@ -123,3 +126,101 @@ def test_emitters_no_longer_use_default_str() -> None:
             code = line.split("#", 1)[0]
             if "default=str" in code and "json.dump" in code:
                 pytest.fail(f"{relpath} reintroduced the bytes-repr writer: {line.strip()}")
+
+
+# ======================================================================================
+# CLASS PROTECTION.
+#
+# The test above names TWO files. A hand-typed denominator is instance protection, not
+# class protection: a THIRD emitter is invisible to it, and there already was one —
+# tools/harvest_modal_calls.py, the canonical harvester named in CLAUDE.md's "Modal
+# .spawn() HARVEST OR LOSE", held a raw result and carried ELEVEN `default=str` dumps
+# that no guard could see. The scan below DISCOVERS its own denominator instead.
+#
+# The rule: a production file that holds a raw Modal FunctionCall result in memory
+# may not hand `default=str` to a json dump. `default=str` is the SILENCING mechanism —
+# with no default, bytes raise TypeError, which is loud and unshippable; `default=str`
+# turns that refusal into a repr that reads as data. Files legitimately needing
+# Path/datetime coercion use `bytes_safe_json_default`, which keeps the coercion and
+# refuses only the payload case.
+# ======================================================================================
+
+# `fc.get()` on a FunctionCall, or the poller's wrapper around it, are the two ways a
+# raw Modal result (whose `artifacts` value is `dict[str, bytes]`) enters this repo.
+_HOLDS_RAW_RESULT = re.compile(r"FunctionCall\.from_id|poll_modal_call\s*\(")
+_SILENT_DUMP = re.compile(r"json\.dump")
+_WAIVER = "MODAL_BYTES_REPR_OK:"
+
+
+def _files_holding_a_raw_modal_result() -> list[Path]:
+    repo = Path(__file__).resolve().parents[3]
+    found: list[Path] = []
+    for root in ("tools", "src", "experiments"):
+        for path in sorted((repo / root).rglob("*.py")):
+            rel = path.relative_to(repo).as_posix()
+            # Vendored/exported snapshots are frozen third-party copies, and tests are
+            # allowed to construct the defect on purpose (this file does).
+            if "experiments/results/" in rel or "/tests/" in rel or path.name.startswith("test_"):
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+            if _HOLDS_RAW_RESULT.search(text):
+                found.append(path)
+    return found
+
+
+def test_the_class_scan_finds_a_real_population_not_an_empty_one() -> None:
+    """A guard whose denominator is zero passes vacuously. Report the denominator."""
+
+    holders = _files_holding_a_raw_modal_result()
+    # Measured 2026-08-21: 33 production files hold a raw Modal result. The floor is
+    # deliberately loose — it exists to catch the scan silently matching nothing (a
+    # renamed Modal API, a moved tree), not to pin an exact inventory.
+    assert len(holders) >= 20, f"scan matched only {len(holders)} files — it broke"
+    names = {p.name for p in holders}
+    for expected in ("harvest_modal_calls.py", "modal_harvest_poller.py"):
+        assert expected in names, f"{expected} fell out of the scan"
+
+
+def test_no_result_holder_silences_bytes_with_default_str() -> None:
+    """THE CLASS RULE, over a discovered denominator."""
+
+    repo = Path(__file__).resolve().parents[3]
+    offenders: list[str] = []
+    for path in _files_holding_a_raw_modal_result():
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            code = line.split("#", 1)[0]
+            if "default=str" in code and _SILENT_DUMP.search(code) and _WAIVER not in line:
+                offenders.append(f"{path.relative_to(repo).as_posix()}:{number}: {line.strip()}")
+    assert not offenders, (
+        "these files hold a raw Modal result (artifacts = dict[str, bytes]) and encode "
+        "with `default=str`, which writes a Python bytes-repr that reads as data and "
+        "fails json.load. Use tac.deploy.modal.result_json.bytes_safe_json_default for "
+        "summaries, or dump_modal_result_json for receipts:\n  " + "\n  ".join(offenders)
+    )
+
+
+def test_bytes_safe_default_refuses_payloads_and_still_coerces_paths() -> None:
+    """INVERSE CONTROL PAIR: refuses the case that hurt, keeps the case that helped."""
+
+    with pytest.raises(BytesInSummaryError):
+        json.dumps({"artifacts": {"report.txt": b"score 0.15"}}, default=bytes_safe_json_default)
+    # And the coercion `default=str` was actually there for still works.
+    coerced = json.loads(json.dumps({"p": Path("/x/y")}, default=bytes_safe_json_default))
+    assert coerced["p"].endswith("x/y")
+
+
+def test_the_refusal_names_the_canonical_route_not_just_the_error() -> None:
+    """A guard that only says 'no' teaches the next author nothing."""
+
+    with pytest.raises(BytesInSummaryError) as caught:
+        json.dumps(b"payload", default=bytes_safe_json_default)
+    assert "dump_modal_result_json" in str(caught.value)
+
+
+def test_default_str_would_have_written_the_repr_the_rule_forbids() -> None:
+    """POSITIVE CONTROL for the rule itself: the forbidden default really is unsafe."""
+
+    written = json.dumps({"artifacts": {"report.txt": b"score 0.15"}}, default=str)
+    assert "b'score 0.15'" in written
+    # And this is exactly what a downstream json.load then chokes on.
+    assert json.loads(written)["artifacts"]["report.txt"] == "b'score 0.15'"

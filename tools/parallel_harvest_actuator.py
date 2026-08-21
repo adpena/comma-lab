@@ -68,6 +68,14 @@ except ModuleNotFoundError:  # pragma: no cover - direct script execution
 
 
 DEFAULT_REPO = repo_root_from_tool(__file__)
+ensure_repo_imports(DEFAULT_REPO)
+
+# This actuator holds a raw Modal FunctionCall result (`fc.get()`), whose `artifacts`
+# value is `dict[str, bytes]`. Its report rows are scalar-derived today, and this
+# encoder is what keeps that true: `default=str` would silently write a Python
+# bytes-repr the next `json.load` cannot read (the ddm_jg5 frontier receipt).
+from tac.deploy.modal.result_json import bytes_safe_json_default  # noqa: E402
+
 DEFAULT_MAX_WORKERS = 4
 DEFAULT_PER_CALL_TIMEOUT_SECONDS = 5.0
 DEFAULT_OVERALL_TIMEOUT_SECONDS = 600.0
@@ -922,7 +930,9 @@ def main(argv: list[str] | None = None) -> int:
         if not output.is_absolute():
             output = repo_root / output
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
+    output.write_text(
+        json.dumps(report, indent=2, default=bytes_safe_json_default), encoding="utf-8"
+    )
     if not args.quiet:
         print(f"\n=== consolidated report written: {output} ===")
         counts = report["counts"]
