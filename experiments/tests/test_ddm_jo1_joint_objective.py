@@ -720,3 +720,119 @@ def test_materializer_validates_every_retained_batch_payload(
         materializer_worker._validate_scorer_batches(
             scorer, ("source_payload", "seg_input", "logits")
         )
+
+
+def test_dispatcher_uses_one_explicit_package_mount_topology() -> None:
+    source = Path(dispatcher.__file__).read_text(encoding="utf-8")
+    assert 'importlib.import_module("experiments.modal_auth_eval")' in source
+    assert '"experiments/__init__.py"' in source
+    assert '"experiments/modal_auth_eval.py"' in source
+    assert 'remote_path="/workspace/pact/experiments/modal_auth_eval.py"' in source
+    assert "from experiments import modal_auth_eval" not in source
+
+
+def test_remote_failure_recorder_retains_traceback_stage_inputs_and_reraises_builtin(
+    tmp_path: Path,
+) -> None:
+    commits: list[bool] = []
+
+    def fail(stage: dict[str, str]) -> dict[str, object]:
+        stage["name"] = "unit_test_worker_stage"
+        raise materializer_worker.JO1MaterializerError("unit-test custom remote error")
+
+    with pytest.raises(RuntimeError, match="unit_test_worker_stage") as captured:
+        dispatcher._execute_with_remote_failure_receipt(
+            run_root=tmp_path,
+            inputs_seen={"archive": {"bytes": 7, "sha256": "a" * 64}},
+            operation=fail,
+            commit=lambda: commits.append(True),
+        )
+    assert str(captured.value)
+    assert commits == [True, True, True]
+    start = json.loads((tmp_path / "REMOTE_START.json").read_text(encoding="utf-8"))
+    failure = json.loads((tmp_path / "REMOTE_FAILURE.json").read_text(encoding="utf-8"))
+    assert start["stage"] == "entrypoint_entered"
+    assert failure["stage"] == "unit_test_worker_stage"
+    assert failure["inputs_seen"]["archive"]["bytes"] == 7
+    assert failure["error_type"] == "JO1MaterializerError"
+    assert failure["error_message"] == "unit-test custom remote error"
+    assert "JO1MaterializerError" in failure["traceback"]
+    immutable = Path(failure["immutable_failure_receipt"]["path"])
+    assert immutable.is_file()
+    assert dispatcher._file_sha256(immutable) == failure["immutable_failure_receipt"]["sha256"]
+
+
+def test_materializer_entrypoint_records_failure_before_custom_exception_crosses_modal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class Volume:
+        def __init__(self) -> None:
+            self.commits = 0
+
+        def commit(self) -> None:
+            self.commits += 1
+
+    volume = Volume()
+    monkeypatch.setattr(dispatcher.auth_eval, "AUTH_CACHE_VOLUME_ROOT", tmp_path)
+    monkeypatch.setattr(dispatcher.auth_eval, "auth_cache_vol", volume)
+
+    def fail_stage(**_kwargs: object) -> dict[str, object]:
+        raise materializer_worker.JO1MaterializerError("staging failed before first payload")
+
+    monkeypatch.setattr(materializer_worker, "stage_uploaded_inputs", fail_stage)
+    archive = b"archive"
+    runtime = b"runtime"
+    request = {
+        "schema": materializer_worker.REQUEST_SCHEMA,
+        "remote_volume_run_id": "entrypoint_failure_test",
+        "resume_from": "b" * 64,
+    }
+    with pytest.raises(RuntimeError, match="stage_uploaded_inputs"):
+        dispatcher.run_payload_materializer.get_raw_f()(
+            request=request,
+            archive_bytes=archive,
+            runtime_zip_bytes=runtime,
+        )
+    failure = json.loads(
+        (tmp_path / "entrypoint_failure_test/REMOTE_FAILURE.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert failure["inputs_seen"]["archive"] == {
+        "bytes": len(archive),
+        "sha256": dispatcher.hashlib.sha256(archive).hexdigest(),
+    }
+    assert failure["inputs_seen"]["runtime_bundle"]["bytes"] == len(runtime)
+    assert failure["stage"] == "stage_uploaded_inputs"
+    assert volume.commits == 3
+
+
+def test_malformed_remote_request_still_gets_a_failure_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class Volume:
+        def commit(self) -> None:
+            return None
+
+    monkeypatch.setattr(dispatcher.auth_eval, "AUTH_CACHE_VOLUME_ROOT", tmp_path)
+    monkeypatch.setattr(dispatcher.auth_eval, "auth_cache_vol", Volume())
+    request = {"schema": materializer_worker.REQUEST_SCHEMA, "resume_from": "c" * 64}
+    with pytest.raises(RuntimeError, match="validate_remote_request"):
+        dispatcher.run_payload_materializer.get_raw_f()(
+            request=request,
+            archive_bytes=b"archive",
+            runtime_zip_bytes=b"runtime",
+        )
+    failure_paths = list(tmp_path.glob("invalid_jo1_remote_request_*/REMOTE_FAILURE.json"))
+    assert len(failure_paths) == 1
+    failure = json.loads(failure_paths[0].read_text(encoding="utf-8"))
+    assert failure["stage"] == "validate_remote_request"
+    assert "remote_volume_run_id is invalid" in failure["error_message"]
+
+
+def test_control_plane_probe_requires_explicit_diagnostic_authorization(tmp_path: Path) -> None:
+    with pytest.raises(dispatcher.JO1DispatchError, match="diagnostic authorization"):
+        dispatcher.probe_control_plane(
+            output_receipt=str(tmp_path / "probe.json"),
+            diagnostic_authorization=False,
+        )
