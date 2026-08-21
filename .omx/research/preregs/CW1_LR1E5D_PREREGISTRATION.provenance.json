@@ -1,0 +1,15 @@
+{
+  "schema": "pact_prereg_registration.v1",
+  "name": "CW1_LR1E5D_PREREGISTRATION",
+  "birth_copy": ".omx/research/preregs/CW1_LR1E5D_PREREGISTRATION.json",
+  "source_path_at_registration": "/Volumes/APDataStore/pact/ddm_cw1/LR1E5D/PREREGISTRATION.json",
+  "source_sha256": "603aebacced63832fb63b1dd49c1b7572be8f5144a52cb7f3b953830b988b1c3",
+  "source_size_bytes": 796,
+  "source_birthtime_utc": "2026-08-17T15:36:59+00:00",
+  "source_mtime_utc": "2026-08-17T15:36:59+00:00",
+  "registered_at_utc": "2026-08-21T08:01:09.897020+00:00",
+  "supersedes": null,
+  "what_this_proves": "the byte-exact content of the prereg AT REGISTRATION TIME, committed to git history. Any later in-place edit of the live file is diffable against this copy via `register_prereg.py verify`.",
+  "what_this_does_NOT_prove": "that registration happened before the build. A prereg registered late is still a late prereg; this records WHEN it was registered so that question is answerable rather than arguable.",
+  "already_mutated_at_registration": false
+}

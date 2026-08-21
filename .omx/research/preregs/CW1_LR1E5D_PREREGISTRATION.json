@@ -1,0 +1,13 @@
+{
+  "schema": "cw1_lr_down_rung_preregistration.v1",
+  "arm": "CW1-LR1E5D", "lr": 1.0e-5, "seed": 20260715,
+  "control_ensemble": {"seed1_endpoint_flips": -2286, "seed2_endpoint_flips": -1365, "mean": -1825.5, "sigma_measured": 651.2,
+    "law": "seed_ensemble_falsifier_band_v1 (bands vs ensemble mean, never a single control)"},
+  "bands_endpoint_flips_vs_init": {
+    "PROMISING_sweep_further_down": "<= -2477 (mean - sigma)",
+    "NULL_2e-5_is_plateau": "-2477 .. -1174 (within +/- sigma of mean)",
+    "WORSE_2e-5_at_local_optimum": ">= -1174"
+  },
+  "caveat": "single-seed rung read; interpret vs ensemble mean with measured sigma; no verdict stronger than formulation scope",
+  "source": ".omx/research/ddm_cw1_corrected_window_20260817.md sections 7.1-7.2 (un-swept direction is DOWN)"
+}
