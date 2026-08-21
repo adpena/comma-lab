@@ -589,7 +589,10 @@ def build_greedy_set_average_vs_marginal_price_v1() -> CanonicalEquation:
                 "realized_over_modelled 0.7721920938004125 is that against the 4.718 RANKER. "
                 "WARNING that travels with this number: the running credit fell monotonically "
                 "7.1862 -> 6.1227 -> 5.9451 -> 5.5617 -> 5.3280 and came to rest 1.9% above "
-                "its kill line -- a TREND EDGE, not a plateau"
+                "its kill line -- a TREND EDGE, not a plateau. Rate leg survived its "
+                "pre-registered falsifier; the ROW it came from (task #1176, the fs3 mirror) "
+                "was TERMINALLY REFUSED on the measured pose leg (+3.590433e-02 S, stale "
+                "carrier) -- the price stands, the candidate does not"
             ),
             provenance=provenance,
             empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
