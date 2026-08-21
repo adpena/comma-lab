@@ -23,7 +23,10 @@
 > **T_4 = sub-0.12 (THE target, operator 2026-08-21) · T_3 = sub-0.15 (ACHIEVED 2026-08-20, rc2) · T_1 = sub-0.19 (floor).** Above T_1 = failing.
 > BINDING ARITHMETIC (rc2 body, MEASURED): zeroing ALL distortion leaves S = rate 0.120158 > 0.12 —
 > **sub-0.12 is unreachable by distortion work alone; it REQUIRES rate-representation cuts** (archive
-> < 137,993 B at current distortion 0.028120; each −0.001 S of distortion buys +1,502 B of rate budget).
+> ≤ 137,986 B at current distortion 0.028120; each −0.001 S of distortion buys +1,502 B of rate budget).
+> MEASURED (r012, 2026-08-21): the rc2 BODY cannot reach sub-0.12 — composable measured rate ceiling
+> 88 B vs 238 B needed even at ZERO distortion → a NEW rate representation is REQUIRED (−12,225 B if
+> seg is fully won, −42,470 B at fixed distortion; joint table in ddm_r012_rate_representation_20260821.md).
 > **What is NOT goal progress (the failure mode this extincts):** tools, harnesses, solvers, codecs,
 > runtimes, Rust crates; floor derivations, research/design memos, paper inventions; located cruxes,
 > honest negatives, DEFER verdicts, deferral ledgers; holding the existing frontier; a measurement
