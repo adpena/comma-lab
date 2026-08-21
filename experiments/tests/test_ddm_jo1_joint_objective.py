@@ -9,6 +9,8 @@ import torch
 
 from experiments import ddm_jo1_joint_objective_design as design
 from experiments import ddm_jo1_joint_objective_worker as worker
+from experiments import ddm_jo1_modal_joint_objective as dispatcher
+from experiments import ddm_jo1_payload_materializer_worker as materializer_worker
 
 
 def _write(path: Path, payload: bytes) -> Path:
@@ -75,8 +77,10 @@ def _config(
     complete_inputs: bool = False,
     memory_receipt: design.ArtifactRef | None = None,
     action: str = "prepare",
+    include_materializer: bool = False,
 ) -> design.CompiledConfig:
     monkeypatch.setattr(design, "OUTPUT_ROOT", tmp_path)
+    monkeypatch.setattr(design, "MATERIALIZER_OUTPUT_ROOT", tmp_path)
     source = _write(tmp_path / "source.raw", b"source")
     source_sha = design._sha256_path(source)
     archive = _write(tmp_path / "archive.zip", b"rc2-test")
@@ -84,6 +88,12 @@ def _config(
     _write(runtime / "inflate.py", b"runtime")
     monkeypatch.setattr(design, "BASE_ARCHIVE_BYTES", archive.stat().st_size)
     monkeypatch.setattr(design, "RC2_ARCHIVE_SHA256", design._sha256_path(archive))
+    monkeypatch.setattr(design, "FX5_ARCHIVE_BYTES", archive.stat().st_size)
+    monkeypatch.setattr(design, "FX5_ARCHIVE_SHA256", design._sha256_path(archive))
+    monkeypatch.setattr(design, "FX5_RUNTIME_TREE_SHA256", "f" * 64)
+    monkeypatch.setattr(design, "MATERIALIZER_EXPECTED_RETAINED_PAYLOAD_BYTES", 1024)
+    monkeypatch.setattr(design, "MATERIALIZER_STORAGE_RESERVE_BYTES", 1024)
+    monkeypatch.setattr(design, "TRAINING_MIN_AP_FREE_BYTES", 1)
     files = {
         name: _write(tmp_path / f"{name}.bin", name.encode())
         for name in (
@@ -96,6 +106,7 @@ def _config(
             "compiler",
             "worker",
             "dispatcher",
+            "materializer_worker",
         )
     }
     optional = (
@@ -110,7 +121,7 @@ def _config(
                 files["base_field"], source=source_sha, shape=(600, 384, 512), dtype="uint8"
             ),
             "source_pose6_targets": _record(
-                files["pose6"], source=source_sha, shape=(600, 5, 6), dtype="float64"
+                files["pose6"], source=source_sha, shape=(600, 6), dtype="float32"
             ),
         }
         if complete_inputs
@@ -143,6 +154,11 @@ def _config(
                 "compiler_source": _record(files["compiler"], source=source_sha).model_dump(mode="json"),
                 "worker_source": _record(files["worker"], source=source_sha).model_dump(mode="json"),
                 "dispatcher_source": _record(files["dispatcher"], source=source_sha).model_dump(mode="json"),
+                "materializer_worker_source": (
+                    _record(files["materializer_worker"], source=source_sha).model_dump(mode="json")
+                    if include_materializer
+                    else None
+                ),
                 "memory_preflight_receipt": (
                     None if memory_receipt is None else memory_receipt.model_dump(mode="json")
                 ),
@@ -196,7 +212,11 @@ def _config(
                 "max_age_hours": 24,
             },
             "dispatch": {
-                "lane_id": "ddm_jo1_joint_objective",
+                "lane_id": (
+                    "ddm_jo1_payload_unblock"
+                    if include_materializer
+                    else "ddm_jo1_joint_objective"
+                ),
                 "claim_agent": "MAIN",
                 "platform": "modal",
                 "gpu": "T4",
@@ -206,6 +226,22 @@ def _config(
                 "durable_call_id": True,
                 "automatic_terminal_closure": True,
             },
+            "materializer": (
+                {
+                    "vehicle_id": "fx5_e1",
+                    "archive": _record(archive, source=source_sha).model_dump(mode="json"),
+                    "runtime": _record(runtime, source=source_sha).model_dump(mode="json"),
+                    "expected_runtime_tree_sha256": "f" * 64,
+                    "batch_pairs": 16,
+                    "chunk_pair_limit": 120,
+                    "remote_volume_name": "comma-auth-eval-cache-artifacts",
+                    "remote_volume_run_id": "ddm_jo1u_fx5_e1_n600_test",
+                    "harvest_root": str(tmp_path),
+                    "rc2_fallback_reason": None,
+                }
+                if include_materializer
+                else None
+            ),
             "workload_config_sha256": None,
         }
     )
@@ -487,3 +523,200 @@ def test_local_prepare_emits_blocked_ticket_without_dispatch(
     assert order["commands"][0]["argv"] is not None
     assert order["commands"][1]["argv"] is None
     assert order["commands"][2]["argv"] is None
+
+
+def test_materializer_readiness_is_independent_of_training_gates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = design.attach_workload_sha256(
+        _config(
+            tmp_path,
+            monkeypatch,
+            complete_inputs=True,
+            action="materialize_scorer_payloads",
+            include_materializer=True,
+        )
+    )
+    materializer = design.materializer_readiness(config)
+    assert materializer["status"] == "READY_TO_FIRE"
+    assert materializer["blockers"] == []
+    assert materializer["storage_probe"]["training_requirement_applied"] is False
+    assert materializer["storage_probe"]["required_free_bytes"] == (
+        materializer["storage_probe"]["remaining_payload_bytes"] + 1024
+    )
+
+    training = design.readiness(config)
+    assert training["status"] == "BLOCKED"
+    assert design.IMPLEMENTATION_BLOCKER in training["blockers"]
+    assert any(value.startswith("MEMORY_PREFLIGHT_BLOCKED") for value in training["blockers"])
+
+    prepared = design.prepare(config, destination=tmp_path / "materializer_seal")
+    assert prepared["status"] == "READY_TO_FIRE"
+    order = json.loads(Path(prepared["fire_order"]["path"]).read_text())
+    assert order["current_disposition"] == "READY"
+    assert order["current_blocker"] is None
+    assert order["commands"][0]["requires_reseal_after_harvest"] is True
+    assert order["commands"][1]["argv"] is not None
+    assert order["commands"][0]["argv"][2].endswith(
+        "ddm_jo1_modal_joint_objective.py::materialize_scorer_payloads"
+    )
+    assert "no active n600 scorer job" in order["commands"][0]["fire_trigger"]
+
+
+def test_materializer_dispatch_request_is_ready_but_other_entrypoints_stay_blocked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = _config(
+        tmp_path,
+        monkeypatch,
+        complete_inputs=True,
+        action="materialize_scorer_payloads",
+        include_materializer=True,
+    )
+    prepared = design.prepare(config, destination=tmp_path / "seal")
+    request = dispatcher.dispatch_request(
+        entrypoint="materialize_scorer_payloads",
+        compiled_config=Path(prepared["compiled_config"]["path"]),
+        expected_config_sha256=str(prepared["compiled_config"]["sha256"]),
+        main_owned_dispatch_authorization=True,
+        detach=True,
+        provider_detach_ack=True,
+    )
+    assert request["readiness"]["status"] == "READY_TO_FIRE"
+
+    umbrella = _config(
+        tmp_path / "umbrella",
+        monkeypatch,
+        complete_inputs=True,
+        action="prepare",
+        include_materializer=True,
+    )
+    umbrella_prepared = design.prepare(umbrella, destination=tmp_path / "umbrella_seal")
+    kwargs = {
+        "compiled_config": str(umbrella_prepared["compiled_config"]["path"]),
+        "expected_config_sha256": str(umbrella_prepared["compiled_config"]["sha256"]),
+        "main_owned_dispatch_authorization": True,
+        "detach": True,
+        "provider_detach_ack": True,
+    }
+    with pytest.raises(dispatcher.JO1DispatchError, match=design.IMPLEMENTATION_BLOCKER):
+        dispatcher.memory_preflight(**kwargs)
+    with pytest.raises(dispatcher.JO1DispatchError, match="training readiness is blocked"):
+        dispatcher.train(**kwargs)
+
+
+def test_uploaded_materializer_inputs_are_retained_and_resume_exact(
+    tmp_path: Path,
+) -> None:
+    archive = b"archive-payload"
+    runtime = b"runtime-transport-payload"
+    request = {
+        "schema": materializer_worker.REQUEST_SCHEMA,
+        "uploads": {
+            "archive.zip": {
+                "bytes": len(archive),
+                "sha256": materializer_worker._sha256_bytes(archive),
+            },
+            "submission_dir.zip": {
+                "bytes": len(runtime),
+                "sha256": materializer_worker._sha256_bytes(runtime),
+            },
+        },
+    }
+    first = materializer_worker.stage_uploaded_inputs(
+        run_root=tmp_path,
+        request=request,
+        archive_bytes=archive,
+        runtime_zip_bytes=runtime,
+    )
+    second = materializer_worker.stage_uploaded_inputs(
+        run_root=tmp_path,
+        request=request,
+        archive_bytes=archive,
+        runtime_zip_bytes=runtime,
+    )
+    assert first == second
+    assert (tmp_path / "inputs/archive.zip").read_bytes() == archive
+    assert (tmp_path / "inputs/submission_dir.zip").read_bytes() == runtime
+
+    changed = json.loads(json.dumps(request))
+    changed["new_field"] = True
+    with pytest.raises(materializer_worker.JO1MaterializerError, match="request differs"):
+        materializer_worker.stage_uploaded_inputs(
+            run_root=tmp_path,
+            request=changed,
+            archive_bytes=archive,
+            runtime_zip_bytes=runtime,
+        )
+
+
+def test_materializer_and_training_pins_fail_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = _config(
+        tmp_path,
+        monkeypatch,
+        complete_inputs=True,
+        action="materialize_scorer_payloads",
+        include_materializer=True,
+    )
+    body = config.model_dump(mode="json")
+    body["materializer"]["vehicle_id"] = "rc2"
+    with pytest.raises(ValueError, match="fallback requires a written reason"):
+        design.CompiledConfig.model_validate(body)
+    body["materializer"]["rc2_fallback_reason"] = "live fx5 custody unavailable"
+    assert design.CompiledConfig.model_validate(body).materializer is not None
+
+    body = config.model_dump(mode="json")
+    body["materializer"]["archive"]["sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="fx5_e1 materializer archive pin differs"):
+        design.CompiledConfig.model_validate(body)
+
+    monkeypatch.setattr(design, "TRAINING_MIN_AP_FREE_BYTES", 100)
+    body = config.model_dump(mode="json")
+    body["memory_preflight"]["minimum_ap_free_bytes"] = 99
+    with pytest.raises(ValueError, match="training storage bar"):
+        design.CompiledConfig.model_validate(body)
+
+
+def test_materializer_validates_every_retained_batch_payload(
+    tmp_path: Path,
+) -> None:
+    payload = _write(tmp_path / "payload.npy", b"retained-payload")
+    record = materializer_worker.retained.file_record(payload)
+    rows = []
+    cursor = 0
+    ordinal = 0
+    while cursor < materializer_worker.retained.N_PAIRS:
+        pair_end = min(
+            cursor + materializer_worker.retained.BATCH_SIZE,
+            materializer_worker.retained.N_PAIRS,
+        )
+        rows.append(
+            {
+                "ordinal": ordinal,
+                "pair_start": cursor,
+                "pair_end": pair_end,
+                "source_payload": record,
+                "seg_input": record,
+                "logits": record,
+            }
+        )
+        cursor = pair_end
+        ordinal += 1
+    receipt_path = tmp_path / "BATCH_RESULTS.jsonl"
+    receipt_path.write_bytes(
+        b"".join(materializer_worker.retained.canonical_json_bytes(row) for row in rows)
+    )
+    scorer = {
+        "batch_size": materializer_worker.retained.BATCH_SIZE,
+        "retained_batch_receipts": materializer_worker.retained.file_record(receipt_path),
+    }
+    materializer_worker._validate_scorer_batches(
+        scorer, ("source_payload", "seg_input", "logits")
+    )
+    payload.write_bytes(b"drifted")
+    with pytest.raises(materializer_worker.retained.WorkerError, match="retained payload"):
+        materializer_worker._validate_scorer_batches(
+            scorer, ("source_payload", "seg_input", "logits")
+        )

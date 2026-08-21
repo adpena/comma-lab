@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """MAIN-owned JO1 dispatch gate.
 
-Local preparation is pure and scorer-free.  The three named Modal entrypoints
-exist so the sealed fire order is stable, but this no-launch build refuses them
-before claiming a lane because the rc2 fresh-Schur receiver-close backend is
-not yet implemented.  That refusal is intentional: a dispatch surface that
-cannot perform its named work must not spawn a paid job.
+Local preparation is pure and scorer-free.  The materializer entrypoint is a
+real, retained T4 producer and is deliberately independent of JO1's training
+backend.  The memory-preflight and train entrypoints remain fail-closed until
+the rc2 fresh-Schur receiver-close backend exists.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import subprocess
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
@@ -20,10 +21,36 @@ import modal
 
 from experiments import ddm_jo1_joint_objective_design as design
 from experiments import ddm_jo1_joint_objective_worker as worker
+from experiments import ddm_jo1_payload_materializer_worker as materializer_worker
+from experiments import modal_auth_eval as auth_eval
+from tac.deploy.modal.auth_eval import prepare_modal_auth_eval_request
 
 APP_NAME = "comma-ddm-jo1-joint-objective"
 LANE_LABEL = "ddm_jo1_joint_objective"
-app = modal.App(APP_NAME)
+app = modal.App(APP_NAME, include_source=False)
+materializer_image = (
+    auth_eval.eval_image
+    .add_local_file(
+        "experiments/ddm_jo1_joint_objective_design.py",
+        remote_path="/workspace/pact/experiments/ddm_jo1_joint_objective_design.py",
+    )
+    .add_local_file(
+        "experiments/ddm_jo1_joint_objective_worker.py",
+        remote_path="/workspace/pact/experiments/ddm_jo1_joint_objective_worker.py",
+    )
+    .add_local_file(
+        "experiments/ddm_jo1_payload_materializer_worker.py",
+        remote_path="/workspace/pact/experiments/ddm_jo1_payload_materializer_worker.py",
+    )
+    .add_local_file(
+        "experiments/ddm_js1b_cuda_argmax_field_materializer_worker.py",
+        remote_path=(
+            "/workspace/pact/experiments/"
+            "ddm_js1b_cuda_argmax_field_materializer_worker.py"
+        ),
+    )
+    .add_local_python_source("ddm_jo1_modal_joint_objective")
+)
 
 
 class JO1DispatchError(RuntimeError):
@@ -66,7 +93,11 @@ def dispatch_request(
         raise JO1DispatchError(
             f"compiled action differs for {entrypoint}: {config.action} != {expected_action}"
         )
-    readiness = design.readiness(config)
+    readiness = (
+        design.materializer_readiness(config)
+        if entrypoint == "materialize_scorer_payloads"
+        else design.readiness(config)
+    )
     # Scorer materialization is the prerequisite that may run while readiness
     # is blocked on missing fields.  Memory and train require their predecessor.
     if entrypoint == "memory_preflight" and any(
@@ -76,6 +107,8 @@ def dispatch_request(
         raise JO1DispatchError("memory preflight is ordered after scorer payload harvest")
     if entrypoint == "train" and readiness["status"] != "READY_TO_FIRE":
         raise JO1DispatchError(f"training readiness is blocked: {readiness['blockers']}")
+    if entrypoint == "materialize_scorer_payloads" and readiness["status"] != "READY_TO_FIRE":
+        raise JO1DispatchError(f"materializer readiness is blocked: {readiness['blockers']}")
     return {
         "schema": "ddm_jo1_dispatch_request.v1",
         "entrypoint": entrypoint,
@@ -100,7 +133,7 @@ def governed_spawn(
     """Canonical claim/single-flight/call-id path for a closed remote backend.
 
     This function is real and deliberately separate from local preparation.
-    The current entrypoints never call it because their backend closure is
+    The retained materializer calls it; memory preflight and training remain
     named-blocked below.
     """
     from tac.deploy.modal.auth_eval import (
@@ -142,11 +175,11 @@ def governed_spawn(
         recipe="experiments/ddm_jo1_modal_joint_objective.py",
         max_seconds=10_800,
         agent="MAIN",
-        base_archive_sha256=design.RC2_ARCHIVE_SHA256,
-        composed_archive_sha256=design.RC2_ARCHIVE_SHA256,
+        base_archive_sha256=str(request["archive_sha256"]),
+        composed_archive_sha256=str(request["archive_sha256"]),
         archive_count=1,
-        volume_name="pact-jo1-artifacts",
-        volume_run_id=request["workload_config_sha256"],
+        volume_name=str(request["remote_volume_name"]),
+        volume_run_id=str(request["remote_volume_run_id"]),
     )
     write_spawn_metadata(
         out_dir=output,
@@ -160,6 +193,164 @@ def governed_spawn(
         extra={"lane_id": request["lane_id"], "entrypoint": request["entrypoint"]},
     )
     return call_id
+
+
+def _git_head() -> str:
+    return subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], text=True, timeout=10
+    ).strip()
+
+
+def _file_sha256(path: Path) -> str:
+    with path.open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def _spawn_materializer(config: design.CompiledConfig, request: dict[str, Any]) -> str:
+    materializer = config.materializer
+    if materializer is None:
+        raise JO1DispatchError("materializer config is absent after readiness")
+    prepared = prepare_modal_auth_eval_request(
+        archive=materializer.archive.path,
+        output_dir=Path(materializer.harvest_root) / "dispatch",
+        inflate_sh="inflate.sh",
+        submission_dir=materializer.runtime.path,
+        default_output_root=design.MATERIALIZER_OUTPUT_ROOT,
+    )
+    if (
+        prepared.archive_size_bytes != materializer.archive.bytes
+        or prepared.archive_sha256 != materializer.archive.sha256
+    ):
+        raise JO1DispatchError("prepared materializer archive differs from the seal")
+    if prepared.submission_dir_zip is None or prepared.submission_dir_zip_sha256 is None:
+        raise JO1DispatchError("materializer runtime transport bundle was not created")
+    observed_runtime_tree, runtime_content_tree = (
+        auth_eval._validate_uploaded_runtime_tree_expectation(
+            expected_runtime_tree_sha256=materializer.expected_runtime_tree_sha256,
+            submission_dir_path=prepared.submission_dir_path,
+            inflate_sh_rel=prepared.inflate_sh_rel,
+        )
+    )
+    source_pose = config.inputs.source_pose6_targets
+    gt_argmax = config.inputs.gt_argmax_field
+    worker_source = config.inputs.materializer_worker_source
+    if source_pose is None or gt_argmax is None or worker_source is None:
+        raise JO1DispatchError("materializer source bindings disappeared after readiness")
+    archive_upload = {
+        "bytes": len(prepared.archive_bytes),
+        "sha256": hashlib.sha256(prepared.archive_bytes).hexdigest(),
+    }
+    runtime_upload = {
+        "bytes": len(prepared.submission_dir_zip),
+        "sha256": prepared.submission_dir_zip_sha256,
+    }
+    retained_upload_root = prepared.output_dir / "retained_uploads"
+    local_archive_upload = design._atomic_bytes(
+        retained_upload_root / "archive.zip", prepared.archive_bytes
+    )
+    local_runtime_upload = design._atomic_bytes(
+        retained_upload_root / "submission_dir.zip", prepared.submission_dir_zip
+    )
+    if (
+        local_archive_upload["bytes"] != archive_upload["bytes"]
+        or local_archive_upload["sha256"] != archive_upload["sha256"]
+        or local_runtime_upload["bytes"] != runtime_upload["bytes"]
+        or local_runtime_upload["sha256"] != runtime_upload["sha256"]
+    ):
+        raise JO1DispatchError("locally retained upload payloads differ")
+    remote_request = {
+        "schema": materializer_worker.REQUEST_SCHEMA,
+        "resume_from": config.workload_config_sha256,
+        "vehicle_id": materializer.vehicle_id,
+        "workload_config_sha256": config.workload_config_sha256,
+        "remote_volume_name": materializer.remote_volume_name,
+        "remote_volume_run_id": materializer.remote_volume_run_id,
+        "expected_runtime_tree_sha256": observed_runtime_tree,
+        "runtime_content_tree_sha256": runtime_content_tree,
+        "batch_pairs": materializer.batch_pairs,
+        "chunk_pair_limit": materializer.chunk_pair_limit,
+        "uploads": {
+            "archive.zip": archive_upload,
+            "submission_dir.zip": runtime_upload,
+        },
+        "source_targets": {
+            "gt_argmax_field": gt_argmax.model_dump(mode="json"),
+            "source_pose6_targets": source_pose.model_dump(mode="json"),
+        },
+        "source_git_head": _git_head(),
+        "dispatcher_source_sha256": _file_sha256(Path(__file__).resolve()),
+        "worker_source_sha256": worker_source.sha256,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    request.update(
+        {
+            "archive_sha256": prepared.archive_sha256,
+            "archive_bytes": prepared.archive_size_bytes,
+            "runtime_tree_sha256": observed_runtime_tree,
+            "runtime_content_tree_sha256": runtime_content_tree,
+            "runtime_transport_sha256": prepared.submission_dir_zip_sha256,
+            "remote_volume_name": materializer.remote_volume_name,
+            "remote_volume_run_id": materializer.remote_volume_run_id,
+            "harvest_root": str(Path(materializer.harvest_root).resolve()),
+            "locally_retained_uploads": {
+                "archive": local_archive_upload,
+                "runtime_bundle": local_runtime_upload,
+            },
+        }
+    )
+    return governed_spawn(
+        request=request,
+        output=prepared.output_dir,
+        spawn=lambda: run_payload_materializer.spawn(
+            request=remote_request,
+            archive_bytes=prepared.archive_bytes,
+            runtime_zip_bytes=prepared.submission_dir_zip,
+        ),
+    )
+
+
+@app.function(
+    image=materializer_image,
+    gpu="T4",
+    timeout=4800,
+    volumes={str(auth_eval.AUTH_CACHE_VOLUME_ROOT): auth_eval.auth_cache_vol},
+)
+def run_payload_materializer(
+    *,
+    request: dict[str, Any],
+    archive_bytes: bytes,
+    runtime_zip_bytes: bytes,
+) -> dict[str, Any]:
+    run_root = auth_eval.AUTH_CACHE_VOLUME_ROOT / str(request["remote_volume_run_id"])
+    try:
+        materializer_worker.stage_uploaded_inputs(
+            run_root=run_root,
+            request=request,
+            archive_bytes=archive_bytes,
+            runtime_zip_bytes=runtime_zip_bytes,
+        )
+        result = materializer_worker.run(run_root, str(request["resume_from"]))
+    except Exception as error:
+        materializer_worker.retained.atomic_json(
+            run_root / "REMOTE_FAILURE.json",
+            {
+                "schema": "ddm_jo1_payload_materializer_failure.v1",
+                "error_type": type(error).__name__,
+                "error": str(error),
+                "retention_policy": (
+                    "no cleanup performed; every input or intermediate written "
+                    "before failure remains on the mounted volume"
+                ),
+                "complete_payload_set": False,
+                "score_claim": False,
+                "promotion_eligible": False,
+            },
+        )
+        auth_eval.auth_cache_vol.commit()
+        raise
+    auth_eval.auth_cache_vol.commit()
+    return result
 
 
 def _blocked_entrypoint(
@@ -193,13 +384,32 @@ def materialize_scorer_payloads(
     detach: bool = False,
     provider_detach_ack: bool = False,
 ) -> None:
-    _blocked_entrypoint(
+    request = dispatch_request(
         entrypoint="materialize_scorer_payloads",
-        compiled_config=compiled_config,
+        compiled_config=Path(compiled_config),
         expected_config_sha256=expected_config_sha256,
         main_owned_dispatch_authorization=main_owned_dispatch_authorization,
         detach=detach,
         provider_detach_ack=provider_detach_ack,
+    )
+    config = design.load_compiled_config(
+        Path(compiled_config), expected_config_sha256
+    )
+    call_id = _spawn_materializer(config, request)
+    print(
+        json.dumps(
+            {
+                "status": "DISPATCHED",
+                "entrypoint": "materialize_scorer_payloads",
+                "call_id": call_id,
+                "remote_volume_name": request["remote_volume_name"],
+                "remote_volume_run_id": request["remote_volume_run_id"],
+                "harvest_root": request["harvest_root"],
+                "score_claim": False,
+                "promotion_eligible": False,
+            },
+            sort_keys=True,
+        )
     )
 
 

@@ -31,6 +31,9 @@ MEMORY_RECEIPT_SCHEMA = "ddm_jo1_memory_preflight.v1"
 CHECKPOINT_SCHEMA = "ddm_jo1_checkpoint.v1"
 PAYLOAD_MANIFEST_SCHEMA = "ddm_jo1_retained_payload_manifest.v1"
 OUTPUT_ROOT = Path("/Volumes/APDataStore/pact/ddm_jo1_joint_objective_design")
+MATERIALIZER_OUTPUT_ROOT = Path(
+    "/Volumes/APDataStore/pact/ddm_gs3_unbridled_gestalt/jo1_payload_unblock"
+)
 
 N_PAIRS = 600
 SEG_H = 384
@@ -46,6 +49,27 @@ RATE_INCREMENT_BAND = (1_174, 1_191)
 STRICT_TEN_X_FLIPS = 966
 PREREGISTERED_LIVE_FLIPS = 965
 RC2_ARCHIVE_SHA256 = "df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080"
+FX5_ARCHIVE_BYTES = 180_386
+FX5_ARCHIVE_SHA256 = "4b54fccc25f100cb68030db317791ba5e58936bb9b491f9ee9a020e695b79841"
+FX5_RUNTIME_TREE_SHA256 = "8eff613ecec2c371a6fa4cc580b8af9df131f45dc33f5d3c9b829faac1a513a5"
+AUTH_CACHE_VOLUME_NAME = "comma-auth-eval-cache-artifacts"
+MATERIALIZER_BATCH_PAIRS = 16
+MATERIALIZER_MAX_CHUNK_PAIRS = 120
+MATERIALIZER_STORAGE_RESERVE_BYTES = 4 * 1024**3
+TRAINING_MIN_AP_FREE_BYTES = 44 * 1024**3
+# Two retained exact-receiver raws plus every tensor produced by one SegNet and
+# one PoseNet pass.  The scorer functions retain their per-batch inputs and
+# full outputs, not only the final field/vectors.  NPY headers and runtime/log
+# metadata are covered by the separate reserve.
+MATERIALIZER_EXPECTED_RETAINED_PAYLOAD_BYTES = (
+    2 * (N_PAIRS * 2 * 874 * 1164 * 3)
+    + N_PAIRS * 3 * SEG_H * SEG_W * 4
+    + N_PAIRS * 5 * SEG_H * SEG_W * 4
+    + N_PAIRS * SEG_H * SEG_W
+    + N_PAIRS * 12 * SEG_H * SEG_W * 4
+    + N_PAIRS * 12 * 4
+    + N_PAIRS * 6 * 4
+)
 IMPLEMENTATION_BLOCKER = "RC2_FRESH_SCHUR_RECEIVER_CLOSE_NOT_IMPLEMENTED"
 
 REQUIRED_STAGE_IDS = ("target_birth", "joint_balance", "collateral_finish")
@@ -193,6 +217,7 @@ class InputBindings(StrictModel):
     compiler_source: ArtifactRef
     worker_source: ArtifactRef
     dispatcher_source: ArtifactRef
+    materializer_worker_source: ArtifactRef | None = None
     memory_preflight_receipt: ArtifactRef | None = None
 
     @model_validator(mode="after")
@@ -216,6 +241,45 @@ class InputBindings(StrictModel):
             or pose.dtype not in {"float32", "float64"}
         ):
             raise ValueError("source_pose6_targets must declare n600 x ... x 6 float shape")
+        return self
+
+
+class MaterializerConfig(StrictModel):
+    vehicle_id: Literal["fx5_e1", "rc2"]
+    archive: ArtifactRef
+    runtime: ArtifactRef
+    expected_runtime_tree_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    batch_pairs: Literal[16]
+    chunk_pair_limit: Literal[120]
+    remote_volume_name: Literal["comma-auth-eval-cache-artifacts"]
+    remote_volume_run_id: str = Field(pattern=r"^[a-z0-9][a-z0-9_.-]+$")
+    harvest_root: str
+    rc2_fallback_reason: str | None = None
+
+    @model_validator(mode="after")
+    def exact_live_base_or_reasoned_fallback(self) -> MaterializerConfig:
+        if self.vehicle_id == "fx5_e1":
+            if (
+                self.archive.bytes != FX5_ARCHIVE_BYTES
+                or self.archive.sha256 != FX5_ARCHIVE_SHA256
+            ):
+                raise ValueError("fx5_e1 materializer archive pin differs")
+            if self.expected_runtime_tree_sha256 != FX5_RUNTIME_TREE_SHA256:
+                raise ValueError("fx5_e1 materializer runtime-tree pin differs")
+            if self.rc2_fallback_reason is not None:
+                raise ValueError("fx5_e1 must not carry an rc2 fallback reason")
+        else:
+            if (
+                self.archive.bytes != BASE_ARCHIVE_BYTES
+                or self.archive.sha256 != RC2_ARCHIVE_SHA256
+            ):
+                raise ValueError("rc2 fallback materializer archive pin differs")
+            if not (self.rc2_fallback_reason or "").strip():
+                raise ValueError("rc2 fallback requires a written reason")
+        harvest = Path(self.harvest_root).expanduser().resolve()
+        allowed = MATERIALIZER_OUTPUT_ROOT.resolve()
+        if allowed != harvest and allowed not in harvest.parents:
+            raise ValueError("materializer harvest root is outside the chartered AP store")
         return self
 
 
@@ -351,6 +415,7 @@ class CompiledConfig(StrictModel):
     checkpoint: CheckpointConfig
     memory_preflight: MemoryPreflightConfig
     dispatch: DispatchConfig
+    materializer: MaterializerConfig | None = None
     workload_config_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
     @model_validator(mode="after")
@@ -358,9 +423,17 @@ class CompiledConfig(StrictModel):
         if tuple(stage.stage_id for stage in self.stages) != REQUIRED_STAGE_IDS:
             raise ValueError("JO1 stages must be target_birth, joint_balance, collateral_finish")
         output = Path(self.output_root).expanduser().resolve()
-        allowed = OUTPUT_ROOT.resolve()
+        allowed = (
+            MATERIALIZER_OUTPUT_ROOT.resolve()
+            if self.action == "materialize_scorer_payloads"
+            else OUTPUT_ROOT.resolve()
+        )
         if allowed != output and allowed not in output.parents:
-            raise ValueError("JO1 output is outside APDataStore")
+            raise ValueError("JO1 output is outside its chartered APDataStore root")
+        if self.action == "materialize_scorer_payloads" and self.materializer is None:
+            raise ValueError("materialize_scorer_payloads requires a materializer config")
+        if self.memory_preflight.minimum_ap_free_bytes < TRAINING_MIN_AP_FREE_BYTES:
+            raise ValueError("JO1 training storage bar is below 44 GiB")
         final = self.stages[-1]
         if self.objective.pose_hard_cap != BASE_DPOSE or self.objective.collateral_rho != COLLATERAL_CAP:
             raise ValueError("final objective weakens the pose or collateral cap")
@@ -650,16 +723,118 @@ def readiness(config: CompiledConfig) -> dict[str, Any]:
     }
 
 
+def materializer_readiness(config: CompiledConfig) -> dict[str, Any]:
+    """Verify only the producer dependencies; training gates do not apply."""
+    blockers: list[str] = []
+    materializer = config.materializer
+    if materializer is None:
+        blockers.append("MATERIALIZER_CONFIG_MISSING")
+        return {
+            "schema": "ddm_jo1_materializer_readiness.v1",
+            "status": "BLOCKED",
+            "blockers": blockers,
+            "workload_config_sha256": config.workload_config_sha256,
+            "frontier_moved": False,
+            "frontier_line": (
+                "effective frontier pointer remains unchanged; "
+                "this is a component-only materializer"
+            ),
+            "storage_probe": None,
+        }
+
+    harvest_root = Path(materializer.harvest_root).expanduser().resolve()
+    storage_probe = harvest_root if harvest_root.exists() else harvest_root.parent
+    free_bytes: int | None = None
+    already_retained = 0
+    try:
+        free_bytes = shutil.disk_usage(storage_probe).free
+        if harvest_root.exists():
+            already_retained = sum(
+                child.stat().st_size
+                for child in harvest_root.rglob("*")
+                if child.is_file()
+            )
+    except OSError as error:
+        blockers.append(f"MATERIALIZER_STORAGE_PREFLIGHT_BLOCKED:{error}")
+    remaining_payload = max(
+        0, MATERIALIZER_EXPECTED_RETAINED_PAYLOAD_BYTES - already_retained
+    )
+    required_free = remaining_payload + MATERIALIZER_STORAGE_RESERVE_BYTES
+    if free_bytes is not None and free_bytes < required_free:
+        blockers.append(
+            "MATERIALIZER_STORAGE_PREFLIGHT_BLOCKED:"
+            f"free={free_bytes},required={required_free}"
+        )
+
+    required_inputs = {
+        "GT_ARGMAX_FIELD_MISSING": config.inputs.gt_argmax_field,
+        "SOURCE_POSE6_TARGETS_MISSING": config.inputs.source_pose6_targets,
+        "MATERIALIZER_WORKER_SOURCE_MISSING": config.inputs.materializer_worker_source,
+    }
+    for blocker, record in required_inputs.items():
+        if record is None:
+            blockers.append(blocker)
+        else:
+            try:
+                verify_artifact(record)
+            except JO1Error:
+                blockers.append(blocker.replace("_MISSING", "_DRIFT"))
+    for record in (
+        materializer.archive,
+        materializer.runtime,
+        config.inputs.source_object,
+        config.inputs.segnet_weights,
+        config.inputs.posenet_weights,
+        config.inputs.compiler_source,
+        config.inputs.worker_source,
+        config.inputs.dispatcher_source,
+    ):
+        try:
+            verify_artifact(record)
+        except JO1Error:
+            blockers.append(f"PIN_DRIFT:{Path(record.path).name}")
+    return {
+        "schema": "ddm_jo1_materializer_readiness.v1",
+        "status": "READY_TO_FIRE" if not blockers else "BLOCKED",
+        "blockers": blockers,
+        "workload_config_sha256": config.workload_config_sha256,
+        "frontier_moved": False,
+        "frontier_line": (
+            "effective frontier pointer remains unchanged; "
+            "this is a component-only materializer"
+        ),
+        "vehicle_id": materializer.vehicle_id,
+        "storage_probe": {
+            "path": str(storage_probe),
+            "free_bytes": free_bytes,
+            "already_retained_bytes": already_retained,
+            "expected_total_retained_payload_bytes": (
+                MATERIALIZER_EXPECTED_RETAINED_PAYLOAD_BYTES
+            ),
+            "remaining_payload_bytes": remaining_payload,
+            "reserve_bytes": MATERIALIZER_STORAGE_RESERVE_BYTES,
+            "required_free_bytes": required_free,
+            "training_requirement_bytes": config.memory_preflight.minimum_ap_free_bytes,
+            "training_requirement_applied": False,
+        },
+    }
+
+
+def readiness_for_action(config: CompiledConfig) -> dict[str, Any]:
+    if config.action == "materialize_scorer_payloads":
+        return materializer_readiness(config)
+    return readiness(config)
+
+
 def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) -> dict[str, Any]:
     common = [
         ".venv/bin/modal",
         "run",
-        "experiments/ddm_jo1_modal_joint_objective.py",
     ]
     def command(entrypoint: str) -> list[str]:
         return [
             *common,
-            f"::{entrypoint}",
+            f"experiments/ddm_jo1_modal_joint_objective.py::{entrypoint}",
             "--compiled-config",
             str(config_path.resolve()),
             "--expected-config-sha256",
@@ -668,19 +843,60 @@ def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) ->
             "--detach",
             "--provider-detach-ack",
         ]
+    materializer_readiness_value = (
+        materializer_readiness(config)
+        if config.action == "materialize_scorer_payloads"
+        else None
+    )
+    materializer_ready = bool(
+        materializer_readiness_value is not None
+        and materializer_readiness_value["status"] == "READY_TO_FIRE"
+    )
+    materializer = config.materializer
+    harvest_command = None
+    if materializer is not None:
+        harvest_command = [
+            ".venv/bin/modal",
+            "volume",
+            "get",
+            "--force",
+            materializer.remote_volume_name,
+            f"{materializer.remote_volume_run_id}/",
+            str(Path(materializer.harvest_root).resolve() / "harvest"),
+        ]
     return {
         "schema": "ddm_jo1_fire_order.v1",
         "owner": "MAIN",
         "lane_id": config.dispatch.lane_id,
-        "current_disposition": "BLOCKED",
-        "current_blocker": IMPLEMENTATION_BLOCKER,
+        "current_disposition": "READY" if materializer_ready else "BLOCKED",
+        "current_blocker": (
+            None
+            if materializer_ready
+            else (
+                ";".join(materializer_readiness_value["blockers"])
+                if materializer_readiness_value is not None
+                else IMPLEMENTATION_BLOCKER
+            )
+        ),
         "stop_after_each_async_fire": True,
         "commands": [
             {
                 "ordinal": 1,
                 "purpose": "materialize_scorer_payloads",
                 "argv": command("materialize_scorer_payloads"),
-                "fire_trigger": "receiver-close backend implemented and reviewed",
+                "fire_trigger": (
+                    "materializer storage preflight PASS; no active n600 scorer job; "
+                    "MAIN holds a unique lane claim"
+                    if materializer_ready
+                    else "materializer backend implemented and reviewed"
+                ),
+                "requires_reseal_after_harvest": True,
+            },
+            {
+                "ordinal": "1H",
+                "purpose": "harvest_materialized_payloads",
+                "argv": harvest_command,
+                "fire_trigger": "ordinal 1 call is terminal and the volume final receipt is COMPLETE",
                 "requires_reseal_after_harvest": True,
             },
             {
@@ -706,7 +922,7 @@ def prepare(config: CompiledConfig, *, destination: Path) -> dict[str, Any]:
     destination.mkdir(parents=True, exist_ok=True)
     config_path = destination / "compiled_config.json"
     config_record = _atomic_bytes(config_path, canonical_json_bytes(compiled.model_dump(mode="json")))
-    readiness_value = readiness(compiled)
+    readiness_value = readiness_for_action(compiled)
     readiness_record = atomic_json(destination / "READINESS.json", readiness_value)
     order = fire_order(config_path, config_record["sha256"], compiled)
     order_record = atomic_json(destination / "FIRE_ORDER.json", order)
