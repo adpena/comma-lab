@@ -101,7 +101,7 @@ def test_horizon_poly_xi_fits_synthetic_at_zero_residual():
     assert "DOMINANT-ARC" in out["scope_note"]
     # Identical frames -> the delta encoding is the cheaper branch (near-free 599/600).
     assert out["delta_coeff_bytes"] <= out["raw_coeff_bytes"]
-    assert out["score_rate_contribution_MEASURED"] >= 0.0
+    assert out["score_rate_contribution_DERIVED_extrapolated"] >= 0.0
 
 
 # ------------------------------- real n600 cache (gated) ----------------------
@@ -121,7 +121,7 @@ def test_real_horizon_fit_lands_in_measured_band():
     # DAG FEED-v8-realmachinery: ~1.46 px residual, ~425/512 cols, ~0.003 S dominant-arc.
     assert 0.5 < out["median_fit_residual_px"] < 3.0
     assert out["mean_horizon_columns_covered"] > 300
-    assert out["score_rate_contribution_MEASURED"] < 0.026  # below the generic chain-coder
+    assert out["score_rate_contribution_DERIVED_extrapolated"] < 0.026  # below the generic chain-coder
     assert out["residual_sidecar_owed"] is True
 
 
@@ -187,10 +187,10 @@ def test_lateral_byte_cost_no_overflow_and_flags_sidecar():
 @pytest.mark.skipif(not _CACHE.exists(), reason="n600 gt cache absent (portable skip)")
 def test_real_lateral_byte_cost_lands_in_derived_I1b_range():
     # Recess R8: the SPEC_v8.1 §I I1b DERIVED carrier_total_S range is [0.0040, 0.0083].
-    # MEASURED here confirms the range; the ~20px fit residual is the honest tell (jagged
+    # The real-coder anchor here confirms the range; the ~20px fit residual is the honest tell (jagged
     # leftmost/rightmost envelope does NOT fit a smooth low-order poly -> the analytic form hurts).
     L = np.asarray(np.load(_CACHE)["lstars"])
     out = R.lateral_extent_poly_byte_cost(L, road_cls=ROAD, degree=2, n_frames=600)
-    assert 0.003 < out["score_rate_contribution_MEASURED"] < 0.010
+    assert 0.003 < out["score_rate_contribution_DERIVED_extrapolated"] < 0.010
     assert out["median_fit_residual_px"] > 5.0  # the poor-fit tell (NOT the smooth horizon's ~1.5px)
     assert out["n_frames_fitted"] == 600

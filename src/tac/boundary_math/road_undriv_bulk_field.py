@@ -41,9 +41,11 @@ No stub returns canonical markers in place of the work its name claims.
 BYTE COST (draft §1, review-F). The 20-50 KB in the draft table is **CONJECTURED** (a GUESS,
 ~1 order-of-magnitude; NO RD curve ``d_bulk(B)`` fitted). ``bulk_boundary_byte_cost`` MEASURES the
 COUNTED cost of the full Road-vs-Undriv boundary representation (brotli over the temporal mask
-stack, the conservative FULL-boundary number) and labels it MEASURED; the coarse-grid + INR-annulus
-reduction (draft §2, #308 "interiors near-free") that would push it toward the low end is
-CONJECTURED here and is exactly what P-C must measure.
+stack, the conservative FULL-boundary number). The coder output over the coded frames is MEASURED;
+the ``*_at_n_frames_*`` figures re-multiply that per-frame price to ``n_frames`` and are therefore
+labelled DERIVED_extrapolated (ddm_fc3, task #1179). The coarse-grid + INR-annulus reduction
+(draft §2, #308 "interiors near-free") that would push it toward the low end is CONJECTURED here
+and is exactly what P-C must measure.
 
 DECOUPLING GUARD (draft §2 review-E). The per-class tie bias ``b_c`` (``compute_bulk_tie_bias``,
 riding ``laguerre_logit_offset.damped_newton_ot_offsets``) MUST be calibrated OUTSIDE the
@@ -334,8 +336,65 @@ def apply_bulk_tie_bias(
 
 
 # ---------------------------------------------------------------------------
-# Byte-close stub — MEASURED full-boundary representation cost (rule-118 boundary).
+# Byte-close stub — full-boundary representation cost (rule-118 boundary).
+#
+# LABEL DISCIPLINE (ddm_fc3, task #1179; the rv17 W3-F15 class).  Each byte cost
+# below is MEASURED on the frames actually coded, then re-multiplied to
+# ``n_frames`` WHENEVER those two counts differ.  A per-unit price measured on a
+# subset and re-multiplied to a different count is DERIVED, not MEASURED, so the
+# emitted keys say so.  The key NAME is stable in both cases (consumers should
+# not have to branch on a key name); the per-call truth is in ``is_extrapolated``
+# and ``extrapolation_factor``, and ``label_superseded`` states which case this
+# call actually is.  The genuinely measured quantities keep their ``*_measured``
+# names and are emitted alongside, so the real measurement is always recoverable.
 # ---------------------------------------------------------------------------
+
+#: Emitted beside every extrapolated byte-cost key so the caveat travels with the number.
+EXTRAPOLATION_LABEL_NOTE = (
+    "DERIVED by extrapolation, NOT measured: 'best_measured_bytes' is a real coder output over "
+    "the frames actually coded; it is divided by that frame count and re-multiplied by "
+    "'n_frames_amortized'. The extrapolation assumes the per-frame price is constant in the frame "
+    "count, which temporal coders violate: a longer stack shares more coder context, so a price "
+    "measured on few frames OVERSTATES the full-length cost. MEASURED magnitude (ddm_fc3, real "
+    "gt_n600 cache, extrapolating an n=150 prefix to 600 and comparing against the true n=600 "
+    "coding): horizon +193 B = 1.046x, lateral +362 B = 1.056x, bulk +9,934 B = 1.034x -- all three "
+    "OVERSTATE, and the bulk error alone is +0.0066 S. Consume 'best_measured_bytes' + "
+    "'extrapolation_factor' when you need the measured quantity. Superseded label: these two keys "
+    "were emitted as '*_MEASURED' until ddm_fc3 (task #1179); the VALUES are unchanged, only the "
+    "claim they make about their own provenance."
+)
+
+#: The honest sister of the above: this call did NOT extrapolate, so the value really is measured.
+NO_EXTRAPOLATION_LABEL_NOTE = (
+    "NOT extrapolated on this call: the coded frame count equals 'n_frames_amortized' "
+    "(extrapolation_factor 1.0), so the '*_at_n_frames_*' value IS the real coder output and is "
+    "MEASURED. The key keeps its 'DERIVED_extrapolated' name so consumers have ONE stable key name "
+    "in both cases; read 'is_extrapolated' for this call's actual provenance."
+)
+
+
+def _extrapolation_fields(coded_frames: int, n_frames: int, basis: str) -> dict:
+    """The provenance block that travels with every extrapolated byte-cost key.
+
+    ``coded_frames`` is the denominator the per-frame price was actually divided by -- which is
+    NOT always ``n_frames_measured``: the poly costs divide by the number of frames that FITTED,
+    so an unfittable frame is silently assumed to cost the same as a fitted one.  Naming the
+    basis makes that second, subtler extrapolation visible instead of implicit.
+    """
+
+    coded = int(coded_frames)
+    extrapolated = coded != int(n_frames)
+    return {
+        "extrapolation_basis": basis,
+        "extrapolation_coded_frames": coded,
+        "extrapolation_factor": (float(n_frames) / float(coded) if coded > 0 else float("nan")),
+        "is_extrapolated": extrapolated,
+        "label_superseded": (
+            EXTRAPOLATION_LABEL_NOTE if extrapolated else NO_EXTRAPOLATION_LABEL_NOTE
+        ),
+    }
+
+
 def _road_row_span_encode(road_mask: np.ndarray) -> bytes:
     """Encode a (multi-blob) Road mask as a per-row run-length span table.
 
@@ -395,7 +454,9 @@ def bulk_boundary_byte_cost(
       * per-row multi-run span RLE (multi-blob-aware), all frames concatenated -> brotli.
 
     Returns per-frame amortized bytes over ``n_frames`` + the score-rate contribution
-    (``25 * bytes / 37_545_489``). This is the conservative FULL-boundary number, labelled MEASURED.
+    (``25 * bytes / 37_545_489``). This is the conservative FULL-boundary number. Only
+    ``best_measured_bytes`` is MEASURED; the ``*_at_n_frames_*`` keys re-multiply its per-frame
+    price to ``n_frames`` and are labelled ``DERIVED_extrapolated`` with an ``extrapolation_factor``.
     The coarse-grid + INR-annulus reduction (draft §2, #308) that would push it lower is CONJECTURED
     and is exactly what probe P-C must measure — it is NOT applied here.
     """
@@ -434,12 +495,15 @@ def bulk_boundary_byte_cost(
         "row_span_brotli_bytes_measured": int(span_comp),
         "best_measured_bytes": best_measured,
         "measured_bytes_per_frame": per_frame,
-        "full_bytes_at_n_frames_MEASURED": full,
-        "score_rate_contribution_MEASURED": 25.0 * float(full) / 37_545_489.0,
+        "full_bytes_at_n_frames_DERIVED_extrapolated": full,
+        "score_rate_contribution_DERIVED_extrapolated": 25.0 * float(full) / 37_545_489.0,
         "n_frames_amortized": int(n_frames),
+        **_extrapolation_fields(n, n_frames, "n_frames_measured"),
         "conjectured_note": (
-            "FULL-boundary cost (MEASURED). The coarse-grid + INR-annulus 'interiors near-free' "
-            "reduction (draft §2 #308) is CONJECTURED, NOT applied here, and is what P-C measures."
+            "FULL-boundary cost. 'best_measured_bytes' is MEASURED over the coded frames; the "
+            "'*_at_n_frames_*' keys are DERIVED from it by extrapolation. The coarse-grid + "
+            "INR-annulus 'interiors near-free' reduction (draft §2 #308) is CONJECTURED, NOT "
+            "applied here, and is what P-C measures."
         ),
         "draft_conjectured_band_kb": (20, 50),
     }
@@ -543,14 +607,17 @@ def horizon_poly_xi_byte_cost(
         "delta_coeff_bytes": int(delta_bytes),
         "best_measured_bytes": best,
         "measured_bytes_per_frame": per_fit_frame,
-        "full_bytes_at_n_frames_MEASURED": full,
-        "score_rate_contribution_MEASURED": 25.0 * float(full) / 37_545_489.0,
+        "full_bytes_at_n_frames_DERIVED_extrapolated": full,
+        "score_rate_contribution_DERIVED_extrapolated": 25.0 * float(full) / 37_545_489.0,
         "n_frames_amortized": int(n_frames),
+        **_extrapolation_fields(n_fit, n_frames, "n_frames_fitted"),
         "residual_sidecar_owed": True,
         "scope_note": (
             "DOMINANT-ARC only (ego-rigid horizon). Real-coder + ξ-amortized. The poly-fit residual + "
             "secondary arcs (objects breaking the horizon) are a small sidecar NOT counted here — do "
-            "not quote as the complete Road↔Undriv rate. See DAG FEED-v8-realmachinery."
+            "not quote as the complete Road↔Undriv rate. See DAG FEED-v8-realmachinery. The "
+            "'*_at_n_frames_*' keys divide by n_frames_FITTED, so unfittable frames are assumed to "
+            "cost the same as fitted ones — a second extrapolation, named in extrapolation_basis."
         ),
     }
 
@@ -591,9 +658,9 @@ def lateral_extent_poly_byte_cost(
 
     The multi-branch complement of the single-valued top horizon arc: two per-ROW low-order
     polynomials ``x(y)`` whose ego-rigid high-order coefficients are frozen frame-to-frame while a
-    per-frame intercept drifts (ego lateral/yaw). This turns the SPEC_v8.1 §I I1b **DERIVED** range
-    ``carrier_total_S ∈ [0.0040, 0.0083]`` into a **MEASURED** anchor — the side-curve byte cost +
-    frozenness on gt_n600 (recess R8), by the SAME real-coder + ego-amortized machinery as
+    per-frame intercept drifts (ego lateral/yaw). This tightens the SPEC_v8.1 §I I1b **DERIVED**
+    range ``carrier_total_S ∈ [0.0040, 0.0083]`` with a REAL-CODER anchor — the side-curve byte cost
+    + frozenness on gt_n600 (recess R8), by the SAME real-coder + ego-amortized machinery as
     :func:`horizon_poly_xi_byte_cost` (raw vs delta-coded coeff stream, zlib, amortized over
     ``n_frames``). ``[macOS-CPU advisory · NON-PROMOTABLE]``.
 
@@ -641,8 +708,10 @@ def lateral_extent_poly_byte_cost(
             "degree": int(degree),
             "coder": "zlib",
             "best_measured_bytes": 0,
-            "full_bytes_at_n_frames_MEASURED": 0,
-            "score_rate_contribution_MEASURED": 0.0,
+            "full_bytes_at_n_frames_DERIVED_extrapolated": 0,
+            "score_rate_contribution_DERIVED_extrapolated": 0.0,
+            "n_frames_amortized": int(n_frames),
+            **_extrapolation_fields(0, n_frames, "n_frames_fitted"),
             "residual_sidecar_owed": True,
             "scope_note": "no fittable frames (no Road support)",
         }
@@ -675,14 +744,16 @@ def lateral_extent_poly_byte_cost(
         "delta_coeff_bytes": int(delta_bytes),
         "best_measured_bytes": best,
         "measured_bytes_per_frame": per_fit_frame,
-        "full_bytes_at_n_frames_MEASURED": full,
-        "score_rate_contribution_MEASURED": 25.0 * float(full) / 37_545_489.0,
+        "full_bytes_at_n_frames_DERIVED_extrapolated": full,
+        "score_rate_contribution_DERIVED_extrapolated": 25.0 * float(full) / 37_545_489.0,
         "n_frames_amortized": int(n_frames),
+        **_extrapolation_fields(n_fit, n_frames, "n_frames_fitted"),
         "residual_sidecar_owed": True,
         "scope_note": (
             "LATERAL-ENVELOPE coeff-stream (2 curves x_L(y),x_R(y)) only. Real-coder + ego-amortized. "
-            "Off-envelope side detail is a small sidecar NOT counted here. Recess R8: turns the "
-            "SPEC_v8.1 §I I1b DERIVED carrier_total_S range into a MEASURED anchor. "
+            "Off-envelope side detail is a small sidecar NOT counted here. Recess R8 tightens the "
+            "SPEC_v8.1 §I I1b DERIVED carrier_total_S range with a real-coder anchor whose "
+            "'*_at_n_frames_*' value is itself DERIVED by extrapolation (basis n_frames_FITTED). "
             "See DAG FEED-v8unlock."
         ),
     }

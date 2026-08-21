@@ -1,0 +1,53 @@
+{
+  "schema": "ddm_fc3_extrapolation_error.v1",
+  "arm": "ddm_fc3",
+  "task": 1179,
+  "written_utc": "2026-08-21T08:09:55Z",
+  "axis": "[macOS-CPU advisory - real coder over the real frozen SegNet-argmax cache] NON-PROMOTABLE score_claim=false",
+  "what_this_answers": "ddm_fc2 relabelled 6 (actually 8) extrapolated keys as DERIVED but explicitly did NOT measure whether the extrapolation is numerically wrong (its verdict_scope: INSTANCE-SET said so). This receipt measures it.",
+  "method": "For each emitter, extrapolate from an n=150 PREFIX of experiments/results/mlx_fleet_gt_cache/gt_n600.npz to n_frames=600, and compare against coding all 600 frames for real (where extrapolation_factor is 1.0 and the value is genuinely MEASURED).",
+  "gt_cache": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz  lstars (600, 384, 512)",
+  "rows": [
+    {
+      "emitter": "horizon_poly_xi_byte_cost",
+      "coder": "zlib",
+      "basis": "n_frames_fitted",
+      "extrapolated_from_n150_bytes": 4360,
+      "measured_at_n600_bytes": 4167,
+      "error_bytes": 193,
+      "ratio_est_over_truth": 1.046,
+      "score_rate_extrapolated": 0.002903,
+      "score_rate_measured": 0.002775,
+      "dS_error": 0.000129
+    },
+    {
+      "emitter": "lateral_extent_poly_byte_cost",
+      "coder": "zlib",
+      "basis": "n_frames_fitted",
+      "extrapolated_from_n150_bytes": 6788,
+      "measured_at_n600_bytes": 6426,
+      "error_bytes": 362,
+      "ratio_est_over_truth": 1.056,
+      "score_rate_extrapolated": 0.00452,
+      "score_rate_measured": 0.004279,
+      "dS_error": 0.000241
+    },
+    {
+      "emitter": "bulk_boundary_byte_cost",
+      "coder": "brotli q11",
+      "basis": "n_frames_measured",
+      "extrapolated_from_n150_bytes": 302984,
+      "measured_at_n600_bytes": 293050,
+      "error_bytes": 9934,
+      "ratio_est_over_truth": 1.034,
+      "score_rate_extrapolated": 0.201745,
+      "score_rate_measured": 0.19513,
+      "dS_error": 0.006615
+    }
+  ],
+  "finding": "All three OVERSTATE, 1.034x-1.056x, in the direction the temporal-context argument predicts. The sign is consistent across two different coders (zlib and brotli) and both bases. The largest absolute error is the bulk boundary at +9,934 B = +0.0066 S, which is NOT negligible against a 0.148 frontier.",
+  "correction_to_the_fc2_memo": "fc2 counted 6 keys (3 functions x 2). The true count is 8: lateral_extent_poly_byte_cost has a degenerate n_fit==0 early-return branch that also emitted both keys. All 8 are fixed.",
+  "committed_memo_check_CLEARED": ".omx/research/t5_crucible3/P4_recess_20260709.md quotes full_bytes_at_n_frames_MEASURED = 4167. Re-derived here: 4,167 is exactly the n=600 value, where extrapolation_factor is 1.0. That memo's NUMBER was genuinely measured and needs no supersession -- only the code's key name was overclaiming. Stated so the relabel is not misread as invalidating committed figures.",
+  "verdict_scope": "INSTANCE-SET, and PREFIX-BASED. Measured for these 3 emitters on this cache with an n=150 prefix. Per the prefix-bias law the first frames are a scene block, not a random sample, so the 1.034x-1.056x magnitudes are specific to this prefix and this factor of 4; the SIGN (overstatement) is what the mechanism predicts and what all three show. A seeded RANDOM-sample re-test would tighten the magnitude. Not run here.",
+  "bearing_on_any_score": "NONE. Advisory instrument numbers; no archive, verdict, or pointer is touched."
+}
