@@ -172,19 +172,28 @@ def disarm(jg3: Any, module_path: Path, new_price: float) -> dict[str, Any]:
 
 
 def run(args: argparse.Namespace) -> int:
-    census = json.loads(Path(args.census).read_text())
-    price = float(census["composition_at_the_measured_marginal_price"][
-        "pairs_scored_at_bits_per_token"
-    ])
-    identified_at = float(census["composition_at_the_measured_marginal_price"][
-        "pairs_identified_at_bits_per_token"
-    ])
-    rows = [
-        r
-        for r in census["census_by_price"]["MEASURED_real_full_set"]["rows"]
-        if r["ships"]
-    ]
-    pairs = sorted(r["pair"] for r in rows)
+    if args.falsifier:
+        # TIGHTENING direction: the drop set and its price come from the
+        # pre-registered falsifier, so the run cannot silently drift off the
+        # object the falsifier was registered against.
+        pre = json.loads(Path(args.falsifier).read_text())
+        price = float(pre["drop_set"]["identified_at_bits_per_token"])
+        identified_at = price
+        pairs = sorted(int(p) for p in pre["drop_set"]["pair_list"])
+    else:
+        census = json.loads(Path(args.census).read_text())
+        price = float(census["composition_at_the_measured_marginal_price"][
+            "pairs_scored_at_bits_per_token"
+        ])
+        identified_at = float(census["composition_at_the_measured_marginal_price"][
+            "pairs_identified_at_bits_per_token"
+        ])
+        rows = [
+            r
+            for r in census["census_by_price"]["MEASURED_real_full_set"]["rows"]
+            if r["ships"]
+        ]
+        pairs = sorted(r["pair"] for r in rows)
     if args.limit:
         pairs = pairs[: args.limit]
     if args.shard_count > 1:
@@ -238,6 +247,12 @@ def run(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--census", default=DEFAULT_CENSUS)
+    parser.add_argument(
+        "--falsifier",
+        default=None,
+        help="tightening direction: take the drop set and its price from a "
+        "pre-registered falsifier so the run cannot drift off the object",
+    )
     parser.add_argument("--store", required=True)
     parser.add_argument("--tag", default="fs3_reopen38")
     parser.add_argument("--shard", type=int, default=0)
