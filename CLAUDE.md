@@ -12,15 +12,18 @@
 > **`## NO FAKE IMPLEMENTATIONS`** section below. READ IT before writing, claiming, marking-done, or
 > submitting ANYTHING. A reuse/name/mechanism claim the code does not honor is a bug, not a shortcut.
 
-> # 🎯 THE GOAL — SUB-0.15 EXACT SCORE — NON-NEGOTIABLE, HIGHEST EMPHASIS 🎯
-> **The mission, second only to NO FAKE. The goal is to LOWER THE EXACT CONTEST SCORE below 0.15.**
+> # 🎯 THE GOAL — SUB-0.12 EXACT SCORE (operator 2026-08-21 verbatim "Our new goal to surpass is 0.12"; supersedes sub-0.15, which was ACHIEVED 2026-08-20: rc2 S 0.14827847122030852 [contest-CUDA T4 n600]) — NON-NEGOTIABLE, HIGHEST EMPHASIS 🎯
+> **The mission, second only to NO FAKE. The goal is to LOWER THE EXACT CONTEST SCORE below 0.12.**
 > The canonical frontier pointer's `effective_frontier` is ALWAYS the minimum of our qualifying exact
 > scores and the current official upstream leaderboard best. Success has EXACTLY ONE definition: an
 > `archive.zip` under our custody scores below that pre-evaluation competitive target (or below THE
 > target) through `upstream/evaluate.py` (600-sample, contest-CPU AND/OR contest-CUDA on 1:1 hardware)
 > and becomes `effective_frontier`. Refreshing to a better external row moves the target but is NOT our
 > progress. Custody-specific local anchors stay separate from the competitive score-to-beat. Ladder:
-> **T_3 = sub-0.15 (THE target, the default aim) · T_1 = sub-0.19 (floor of acceptable).** Above T_1 = failing.
+> **T_4 = sub-0.12 (THE target, operator 2026-08-21) · T_3 = sub-0.15 (ACHIEVED 2026-08-20, rc2) · T_1 = sub-0.19 (floor).** Above T_1 = failing.
+> BINDING ARITHMETIC (rc2 body, MEASURED): zeroing ALL distortion leaves S = rate 0.120158 > 0.12 —
+> **sub-0.12 is unreachable by distortion work alone; it REQUIRES rate-representation cuts** (archive
+> < 137,993 B at current distortion 0.028120; each −0.001 S of distortion buys +1,502 B of rate budget).
 > **What is NOT goal progress (the failure mode this extincts):** tools, harnesses, solvers, codecs,
 > runtimes, Rust crates; floor derivations, research/design memos, paper inventions; located cruxes,
 > honest negatives, DEFER verdicts, deferral ledgers; holding the existing frontier; a measurement
