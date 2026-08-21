@@ -29449,3 +29449,10 @@ rescue). "Warm lineage" REFUTED at this slice depth (INSTANCE scope): 126/128-ro
 slice = cold student. Distillation burn NOT fired; 13,921 B rate credit unclaimable at gate
 economics. Durable products: pruned-row freeze cure + derived-runtime pin apparatus. Lane
 closed terminal. Rate-representation door (#1182) routes back to jo1 (r8 LIVE) + dx1 rebuild.
+verdict_scope: instance — the salience_dense_d4_w64 slice config (126/128-row FiLM prune,
+depth 4, width 64, 32-step warm window) on the fx5_e1 body. NOT a family verdict: width
+distillation with milder prune / longer recovery stays FAMILY-OPEN (wd2/wd3 lineage rows
+carry that state); "warm-start slicing inherits distortion" is refuted only at THIS depth.
+STORES-CONSULTED: .omx/research/ddm_wd4_warm_lineage_width_20260821.md (bars + prep receipt) ·
+TRAIN_GATE_RESULT.json + contest_auth_eval.json (r3 receipt) · #1054 CPU-axis factors ·
+[[m88]] prefix/axis laws · wd2/wd3 rows (#1060/#1069 width-distillation difficulty).
