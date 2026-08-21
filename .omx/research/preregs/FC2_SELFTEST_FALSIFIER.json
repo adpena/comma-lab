@@ -1,0 +1,6 @@
+{
+  "schema": "ddm_fc2_selftest_falsifier.v1",
+  "purpose": "synthetic prereg used ONLY as an executed control for tools/register_prereg.py",
+  "registered_before_any_build": true,
+  "FALSIFIER": {"row_dies_if_delta_S_above": -1.0e-06}
+}

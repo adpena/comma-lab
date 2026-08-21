@@ -1,0 +1,15 @@
+{
+  "schema": "pact_prereg_registration.v1",
+  "name": "FC2_SELFTEST_FALSIFIER",
+  "birth_copy": ".omx/research/preregs/FC2_SELFTEST_FALSIFIER.json",
+  "source_path_at_registration": "/Volumes/APDataStore/pact/ddm_fc2/selftest/FC2_SELFTEST_FALSIFIER.json",
+  "source_sha256": "4f6dfc3c0e92d0b80628991187860743070fce353a18741e81136a13a3b9ccc9",
+  "source_size_bytes": 238,
+  "source_birthtime_utc": "2026-08-21T07:19:22+00:00",
+  "source_mtime_utc": "2026-08-21T07:19:22+00:00",
+  "registered_at_utc": "2026-08-21T07:19:30.699260+00:00",
+  "supersedes": null,
+  "what_this_proves": "the byte-exact content of the prereg AT REGISTRATION TIME, committed to git history. Any later in-place edit of the live file is diffable against this copy via `register_prereg.py verify`.",
+  "what_this_does_NOT_prove": "that registration happened before the build. A prereg registered late is still a late prereg; this records WHEN it was registered so that question is answerable rather than arguable.",
+  "already_mutated_at_registration": false
+}
