@@ -29343,6 +29343,13 @@ edits+drops+carrier are ONE waterfill. Survived the falsifier by 1.9% on rate (5
 yet died 10,227× on the leg the projection never measured — the not-yet-a-candidate discipline (two
 unmeasured legs each larger than the margin) was exactly right. BANKED: rank-dependence mechanism
 (round-2 average-vs-marginal confound resolved; direction-asymmetry REFUTED 2.0×) · constants
+verdict_scope: formulation — jg3-class edit-configuration drop shipped with an UNCOUPLED (stale) carrier on
+the rc2-lineage body; the direction-asymmetry refutation + rank-dependence support are INSTANCE on these
+137 pairs / this greedy ranking. NOT a family kill: a drop composed WITH a joint carrier re-solve is a
+different formulation (priced DERIVED-dead here, 696× vs 8×, but never measured as its own candidate).
+STORES-CONSULTED: memo ddm_fs3_jg5_real_price_reopen_20260820.md · S1_encode receipt (APDataStore) ·
+[[edits_and_drops_are_one_waterfill_solve_jointly_20260819]] · [[price-token-field-levers-by-real-reencode]] ·
+cf2 canonical equations e8388550d0 · pi2 lineage-gap measurement (+1.4061e-4 additive pose).
 5.3280/3.6432/0.7722 (cf2-registered canonical equations) · tools/assemble_candidate_runtime.py ·
 experiments/ddm_fs3_same_instrument_pose_leg.py (fail-closed comparator, harness-vs-payload AST split;
 caught its author's own assembler \s*$ regex bug). Both fs-family seventeenth-move candidates (fs2 rc4
