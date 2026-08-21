@@ -1,4 +1,4 @@
-# ddm_fs2 — rung 4 was refused against a probability table the coder does not use, and against a carrier that was never re-solved
+# ddm_fs2 — rung 4 dies on RATE, not on pose: the token drop's first-order credit is 91 % illusory
 
 **Task #1173** · **date** 2026-08-20 · **arm** `ddm_fs2` (seventeenth-move candidate, routed by `ddm_fs1` §7)
 **Axis** `[macOS-CPU advisory]` for every distortion figure; EXACT for every rate figure derived from
@@ -37,15 +37,29 @@ carrier re-solve, per the charter. Four things came out, and two of them change 
    residual is a **credit** (−1.28e-07) and **60.5 %** of pairs land at or below base. rc4's 517× was
    measured with the carrier held byte-identical — it priced the *uncompensated* damage, and the
    compensated distribution is bimodal at every amplitude, not just at small ones.
-4. **The ceiling is not vacuous — it is 459× the admission bar.** Path B's optimum on the live body
-   (`u = 7.75`, `p_max >= 0.9953547`) saves 11,716.7 B for 9,106 token flips: net **−1.6058e-03 S**
-   with pose free, against a −3.5e-6 bar. Even a waterfill that keeps only **20 %** of pairs clears the
-   bar by **92×**.
+4. **And then the rung died on the axis nobody was looking at.** The modelled ceiling was −1.6058e-03 S
+   (459× the bar) at Path B's optimum `u = 7.75`. I built the field and had the **proven jg2 re-encoder
+   price it for real**, against a control that reproduced the live token stream **byte-identically**.
+   The measured saving is **1,022 archive bytes, not 11,716.7 — 8.72 % of the first-order model.**
+   Realised **0.8979 bits per changed token** against a first-order 10.2928. The seg cost is unchanged,
+   so with **pose entirely free** the rung is
+   **+5.5153e-03 S — a LOSS, 1,576× the bar in the wrong direction.**
 
-**Status of the row: the rate and reach legs are measured and favourable; the joint seg+pose
-measurement on the live body is the part that decides it, and it is a mechanical run of the already
-proven `jg5` chain.** I did not produce a byte-closed exact row. The pointer is unmoved and this arm
-did not move it. §7 is the fire-order.
+**VERDICT: rung 4 is REFUSED on RATE on the live body, before pose is ever reached.** It needs
+9,305 B to break even against its own seg cost and it delivers 1,022. That is a **9.10×** shortfall,
+and it retires the rung far more cleanly than rc4's pose refusal did — rc4 left "one door left" (the
+Schur-compensated reach test). I opened that door: the reach is real (§5), the compensation would
+probably work, and **it does not matter, because there is no rate credit to compensate for.**
+
+The mechanism is measured, not guessed: **the model's misses are not payload, they are context.**
+Substituting the argmax at a confident disagreement erases the one place the image departs from the
+model's prior, and the autoregressive model then predicts the whole neighbourhood worse. The
+second-order term recaptures **91.3 %** of the first-order credit. rc4 labelled its ladder
+DERIVED-first-order and wrote that "the sign of the second-order term is not established." It is now
+established: adverse, and an order of magnitude.
+
+I did not produce a byte-closed exact row. The pointer is unmoved and this arm did not move it. §7 is
+what survives.
 
 ---
 
@@ -201,7 +215,87 @@ prior for rung 4; it does not substitute for measuring rung 4.
 
 ---
 
-## §6 THE ARITHMETIC, AND WHAT IT DEMANDS
+## §6 THE MEASUREMENT THAT KILLED IT
+
+I did not stop at the model. I materialised the substituted token field at `u = 7.75` and had
+`ddm_jg2_tail_reencode` — the re-encoder that priced the fifteenth pointer move — encode it for real
+against the live rc2 body.
+
+**The control first, because a delta against an unverified encoder is not a measurement.** The unedited
+re-encode emitted **113,847 B, sha `b9243abd2e38f9ae…` — byte-identical to the shipped rc2 token
+stream**, `byte_identical: true`, `prefix_bytes_matching: 113847`. Its `code_bits` of **910,775.917**
+also agrees with my own independent replay's **910,776.034** to **0.117 bits over the whole stream** —
+two instruments built from different code paths landing on the same number.
+
+**Then the candidate.**
+
+| quantity | first-order model | **MEASURED** | realised / modelled |
+|---|---:|---:|---:|
+| token stream | 113,847 → 102,130 B | 113,847 → **112,825 B** | |
+| **archive** | 180,456 → 168,739 B | 180,456 → **179,434 B** | |
+| **bytes saved** | **11,716.7** | **1,022** | **0.0872** |
+| bits per changed token | 10.2936 | **0.8979** | 0.0872 |
+| `dS_rate` | −7.8017e-03 | **−6.8051e-04** | |
+
+Both legs, at the model's own optimum, with **pose entirely free**:
+
+| leg | value |
+|---|---:|
+| rate (**MEASURED, exact archive `stat`**) | **−6.8051e-04** |
+| seg (9,106 flips × A 0.80265, rc4 prior) | **+6.1959e-03** |
+| **rate + seg** | **+5.5153e-03 — a LOSS, 1,576× the bar in the wrong direction** |
+
+The rung needs **9,305.1 B** to break even against its own seg cost — **8.1749 bits per changed
+token** — and delivers **0.8979**. A **9.10× shortfall**, with the pose leg not yet charged.
+
+### Why: the model's misses are context, not payload
+
+The positions a confidence drop targets are exactly the positions where the image departs from the
+model's prior. Writing the argmax there erases that departure, and the autoregressive model — which
+conditions on the decoded field within the frame and across frames — then predicts the whole
+neighbourhood worse. The second-order term recaptures **91.3 %** of the first-order credit.
+
+It is **not** merely the free corrector losing its adaptation: the corrector is worth 18,895 bits
+(2,362 B) in total on this body (§3), and the shortfall is 10,694.7 B — **4.5× larger than the
+corrector's entire contribution**. The recapture is in the HPAC model's own conditioning, and the
+corrector effect can only be a part of it.
+
+`ddm_rc4` labelled its ladder "DERIVED-first-order, not MEASURED-closed-loop" and wrote that "the sign
+of the second-order term is not established." **It is now established: adverse, and an order of
+magnitude.** That is the load-bearing correction this arm makes to the rung.
+
+### A second threshold — this is a FORMULATION verdict, not an instance
+
+One measured point refutes one row. I encoded a second, 6.3× sparser threshold to find out whether the
+realised/modelled ratio is a property of the ladder or of that row.
+
+| u | `p_max >=` | flips | modelled B | **MEASURED B** | realised/model | bits/token | ΔS_rate | ΔS_seg | **rate+seg** |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 7.75 | 0.9953547 | 9,106 | 11,716.7 | **1,022** | **0.0872** | 0.8979 | −6.805e-04 | +6.196e-03 | **+5.515e-03** |
+| 12.0 | 0.9997559 | 1,440 | 2,546.1 | **−37** | **−0.0145** | −0.2056 | +2.464e-05 | +9.849e-04 | **+1.010e-03** |
+
+**At `u = 12.0` the substitution does not merely under-deliver — it COSTS 37 bytes.** The recapture
+exceeds 100 %. And the direction is the one the mechanism predicts: the sparser and more confident the
+targeted miss, the more informative that departure is as context, so erasing it does more damage than
+the bit it was worth. There is no "safe confident tail" to harvest on the rate axis either — the same
+shape rc4 found on the seg axis, where A was flat at 0.785–0.807.
+
+Two thresholds spanning 6.3× in flip count, both refused, monotone in the adverse direction. That is
+enough to scope this at the FORMULATION level for the whole ladder rather than at one row.
+
+### PATH A inherits the same defect
+
+Skip-decode does not dodge it: the decoder writes the same argmax into the same field, so the
+downstream contexts move identically. On the live body at `u = 7.0`, Path A's 16,310.5 B splits into
+**14,378.3 B of disagreement bits** (exposed to the recapture) and **1,932.2 B of agreeing-position
+bits** (not obviously exposed). Realising the disagreement half at the measured 0.0872 and — generously
+— the agreeing half at 100 % gives **3,186.4 B** against the **12,111.6 B** its seg cost demands:
+**still 3.80× short.** DERIVED projection, stated with its optimistic assumption; it is a routing
+signal, not a measurement of Path A.
+
+---
+
+## §6b THE MODELLED ARITHMETIC (superseded by §6, retained for the audit trail)
 
 Path B at `u = 7.75` on the live body, with A from rc4's flat prior (0.80265 interpolated):
 
@@ -252,49 +346,68 @@ my model.
 
 ---
 
-## §7 WHAT IS OWED — the fire-order
+## §7 WHAT SURVIVES
 
-Every step below is a mechanical run of machinery that already exists and is already proven on this
-body. Nothing new has to be invented.
+Steps 2-8 of the chain I had queued (decode -> seg -> carrier re-solve -> waterfill -> close ->
+advisory -> seal) are **CANCELLED**. They were all downstream of a rate credit that does not exist.
+Running them would have measured a pose leg for a candidate that loses 5.5e-03 S before pose is
+charged - the means-as-ends failure in its purest form. The honest move is to stop, and to say why in
+numbers.
 
-| # | step | tool (reuse, unmodified) | state |
-|---|---|---|---|
-| 1 | jg2 control (byte-identity re-encode of the unedited body) + encode of `edits_u7p75.npz` → **MEASURED** Path-B rate and a candidate archive | `experiments/ddm_jg2_tail_reencode.py --stage control/encode --runtime-root <rc2> --expect-pointer-sha256 df7fd266…` | **FIRED**, running at time of writing |
-| 2 | decode the candidate archive (real `inflate.sh`) → raw frames; proves the receiver produces the field | rc2 candidate runtime, `F26_CORRECTOR_NATIVE_LIBRARY` set | queued behind 1 |
-| 3 | per-pair `d_seg` on the candidate raw, DALI lineage | `experiments/ddm_jg1_seg_solve.py validate` | queued behind 2 |
-| 4 | per-pair stale-carrier `d_pose` baseline, then the n600 carrier re-solve in 5 strided shards | `ddm_jg5 … baseline` / `refine` (`load_candidate_instrument` takes the runtime, archive sha and raw path as kwargs — import, do not edit) | queued behind 2 |
-| 5 | joint waterfill over KEEP/DROP per pair | `ddm_jg5 … waterfill` | queued behind 3+4 |
-| 6 | close: splice the mixed carrier, prove frame-1 section identity per candidate, price | `ddm_jg5 … close` (`ddm_up3_carrier_splice`) | queued behind 5 |
-| 7 | advisory n600 of the final archive | `tools/fire_local_advisory.py` **only** | queued behind 6 |
-| 8 | seal + fire-order; **MAIN fires the T4 row** | `tools/make_candidate_seal.py` | queued behind 7 |
+**What is CLOSED.**
 
-**Named reactivation numbers, so a successor does not have to re-derive them:**
+* **Rung 4, both realisations, on the live rc2 body.** `verdict_scope: FORMULATION` - the
+  confidence-threshold token drop, Path A and Path B, across the ladder on this vehicle's token
+  field. Refused on **rate**, before pose. This supersedes rc4's pose-based refusal with a stronger
+  and earlier one, and it closes the door rc4 explicitly left open ("the Schur-compensated reach
+  test"): the reach is real, and there is nothing to reach for.
+* **The compensator-as-gate framing, for this rung only.** rc4's NEXT_IF_RESUMED row 2 said every
+  remaining frame-1 lever inherits rung 4's 517x pose exposure and must first characterise the
+  compensator. Section 5 characterises it: the reach is amplitude-independent and bimodal, so it is a
+  real gate but a passable one. It is not what stopped rung 4.
 
-* The row clears the −3.5e-6 bar on rate+seg alone at any keep fraction above **0.44 %**.
-* It clears at the §5-measured keep fraction by **278×**.
-* PATH A is worth a further **+1.42e-03 S** at its own optimum (`u = 6.375`, −2.891e-03 vs Path B's
-  −1.606e-03) and needs only a skip-decode branch plus one header bit. It is the next rung once Path B
-  lands, and it is now the only remaining reason to touch the receiver.
-* A is an **hv1 prior**. If the live body's measured A exceeds **1.5348** the u = 7.75 row stops paying
-  on rate+seg; rc4 measured 0.785–0.807 and flat, so this is a wide margin, but it is the falsifier.
+**What is OPEN, with its number.**
 
----
+| row | why it survives | reactivation number |
+|---|---|---|
+| **The recapture law itself** | Any lever that edits the token field pays this second-order cost, and the SIGN of the error depends on the direction of the edit. `ddm_jg5`'s seg edits measured **3.8373** realised bits per changed token against a 4.718 model (**0.877x**, and the model was conservative). Rung 4 measures **0.0872x**, and **-0.0145x** at u = 12. jg5 moved tokens *away* from the model's argmax and paid nearly the modelled price; rung 4 moved them *toward* it and got almost nothing back. **That asymmetry is the reusable law and no equation we hold carries it.** | price any future token-field lever by a REAL re-encode, never by a `-log2 p` model: the model is trustworthy to ~0.88x moving away from the argmax and to ~0.09x moving toward it |
+| **Path A's agreeing-position bits** | The only part of the credit not obviously exposed to the recapture: 1,932.2 B at u = 7.0 on the live body, removable only by a skip-decode receiver | they need **12,111.6 B** to cover that threshold's seg cost, so they are **6.3x short on their own**. Dead unless a variant drops agreeing positions WITHOUT touching disagreeing ones - which is `p_max >= tau AND model-agrees`, i.e. exactly the zero-distortion oracle rc4 already proved costs more to signal than it saves (293,148 B identification floor) |
+| **Section 5's reach measurement** | A real, transferable, amplitude-independent property of the frame-0 carrier that outlives this rung | any future frame-1 lever that DOES have a rate credit may assume ~60% of pairs are pose-recoverable at any damage amplitude, and should waterfill per pair rather than compensate globally |
+
+**What a successor must NOT do.** Do not re-run rung 4 at another threshold hoping for a better ratio:
+two thresholds 6.3x apart both refuse and the trend is monotone adverse. Do not cite the -1.6058e-03
+modelled ceiling in Section 6b as a result; it is retained only so the 11.5x correction stays
+inspectable.
 
 ## §8 BOUNDARIES
 
 No `upstream/` or protected file changed. No Modal dispatch, no paid spend, no contest-CPU or
 contest-CUDA row produced, no frozen `#1111` packet custody touched. Every distortion number quoted
 here is either retained `ddm_jg5`/`ddm_rc4` measurement or advisory arithmetic over retained arrays.
-The rate numbers are exact code lengths against a coder proved bit-identical to the shipping one; the
-Path-B credit is DERIVED-first-order until jg2 prices it.
 
-`verdict_scope` per claim: §2 **FORMULATION** (the substitution realisation of the rung on this
-receiver) · §3 **INSTANCE** (my own superseded instrument) · §5 **FORMULATION** (the jg3 seg-edit
-family on the br1/rc2 body) · §6 rate+seg **DERIVED**, the keep-fraction row **PROJECTION, not a
-result**. No claim here is a family kill and none is a score.
+**The rate numbers are the strongest thing in this memo and the ones the verdict rests on.** They are
+exact archive `stat` deltas from a re-encoder whose unedited control reproduced the shipped token
+stream **byte-identically** (113,847 B, sha `b9243abd…`), on a coder whose bit total my independent
+replay reproduces to 0.117 bits. Nothing about the refusal depends on the advisory pose instrument,
+on a GT lineage, or on a sampled subset.
 
-**The pointer did not move and this arm did not move it.** What the arm produced is a candidate whose
-rate leg is measured, whose refusal premise is falsified, and whose remaining work is mechanical.
+**The seg leg is the one soft number in the refusal**, and it is soft in a way that cannot rescue it.
+`A = 0.80265` is an **hv1 prior** from rc4, not measured on the live body. But the refusal survives A
+falling to **zero**: at u = 12.0 the substitution *costs* 37 bytes, so `rate+seg > 0` for **any**
+non-negative A. At u = 7.75 the rung would need `A <= 0.0882` — a **9.1× drop** from a quantity rc4
+measured three times and found flat at 0.785–0.807. That is the falsifier, and it is nowhere near.
+
+`verdict_scope` per claim: §2 **FORMULATION** (the substitution realisation, on this receiver) ·
+§3 **INSTANCE** (my own superseded instrument) · §5 **FORMULATION** (the jg3 seg-edit family on the
+br1/rc2 body) · §6 **FORMULATION** (rung 4, both realisations, across the ladder on the live rc2
+token field) · §6's Path-A row **DERIVED projection**, stated with its optimistic assumption ·
+§6b **SUPERSEDED, retained for audit**. No claim here is a family kill — the *paradigm* (buy rate by
+spending seg flips) is untouched; what is refused is this rung's exchange rate on this body. None is
+a score.
+
+**The pointer did not move and this arm did not move it.** What the arm produced is a measured
+refusal one axis earlier and an order of magnitude harder than the one it inherited, plus a
+transferable law about which token-field edits the `-log2 p` model may be trusted to price.
 
 ---
 
@@ -323,15 +436,20 @@ Store root `/Volumes/APDataStore/pact/ddm_fs2/`.
 | `retained/token_rd/pair_hist_{bits,bits_disagree,n,n_disagree}.npy` | 1,852,928 ea | (recorded) |
 | `retained/fields/tokens_substituted_u7p75.u8` | 117,964,800 | `243076b9dc45646e` |
 | `retained/fields/edits_u7p75.npz` | 838,435 | `27ef5793053ebd07` |
+| `retained/fields/tokens_substituted_u12.u8` | 117,964,800 | `93cdf71daedd3950` |
+| `retained/fields/edits_u12.npz` | 216,175 | `c8064fda1d2cd431` |
 | `build/f26_corrector_native.so` | — | `3ce68dfd4056f424` |
 | `superseded_pre_corrector/` (the 2.07 % bug's own receipt) | — | with `WHY_SUPERSEDED.txt` |
+| `reencode/` (jg2 control + both encodes, incl. per-frame code-bit arrays) | — | control emitted sha `b9243abd2e38f9ae` = the shipped stream |
 
 Receipts: `FS2_TOKEN_RD_REPLAY.json` · `FS2_DROP_LADDER.json` · `FS2_FIELD_u7p75.json` ·
-`FS2_CARRIER_REACH.json`.
+`FS2_FIELD_u12.json` · `FS2_CARRIER_REACH.json` · the jg2 control/encode receipts under `reencode/`.
 
 Landed instruments: `experiments/ddm_fs2_rc2_token_replay.py` (per-pair replay, corrector in loop,
 four fail-closed controls) · `experiments/ddm_fs2_drop_ladder.py` (both ladders, per-pair credit, field
 + edits materialisation) · `experiments/ddm_fs2_carrier_reach.py` (the amplitude-dependence
-measurement).
+measurement) · `experiments/ddm_fs2_jg5_on_candidate.py` (repoints the whole jg5 toolchain at any
+candidate by rebinding the function rather than the constants — built for the cancelled steps 2–8, and
+still the right tool for the next frame-1 lever that has a rate credit).
 
 Own-vehicle frontier: **S 0.14827847122030852 @ 180,456 B `[contest-CUDA T4, n600]` — UNMOVED by ddm_fs2.**
