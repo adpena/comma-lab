@@ -426,12 +426,80 @@ def build(base: Path, out: Path, *, force: bool = False) -> dict:
     return manifest
 
 
+#: ``inflate.py`` pins the archive it was promoted with, so the receiver refuses
+#: to decode bytes it was not built for.  That guard is correct and it FIRED on
+#: the first candidate decode; the pin is therefore repinned deliberately, by
+#: this builder, against the archive actually on disk -- never hand-typed.
+INFLATE_PIN_TEMPLATE = 'ARCHIVE_SHA256 = "{sha}"\nARCHIVE_BYTES = {bytes_:_}'
+
+
+def repin_inflate(runtime: Path) -> dict:
+    """Rewrite ``inflate.py``'s archive pin to the archive sitting beside it.
+
+    The values are MEASURED from disk inside this function.  There is
+    deliberately no flag to pass a sha: a repin that accepts a typed digest can
+    be pointed at bytes nobody has, which is the whole failure the pin exists to
+    stop.
+    """
+    runtime = Path(runtime)
+    archive = runtime / "archive.zip"
+    if not archive.is_file():
+        raise Fx5BuildError(f"REFUSING: no archive.zip beside {runtime}/inflate.py")
+    sha = sha256_file(archive)
+    size = archive.stat().st_size
+
+    path = runtime / "inflate.py"
+    text = path.read_text()
+    old_sha = next(
+        (
+            line.split('"')[1]
+            for line in text.splitlines()
+            if line.startswith("ARCHIVE_SHA256 = ")
+        ),
+        None,
+    )
+    old_bytes = next(
+        (
+            line.split("= ")[1].strip()
+            for line in text.splitlines()
+            if line.startswith("ARCHIVE_BYTES = ")
+        ),
+        None,
+    )
+    if old_sha is None or old_bytes is None:
+        raise Fx5BuildError("REFUSING: inflate.py carries no ARCHIVE_SHA256/ARCHIVE_BYTES pin")
+    anchor = INFLATE_PIN_TEMPLATE.format(sha=old_sha, bytes_=int(old_bytes.replace("_", "")))
+    replacement = INFLATE_PIN_TEMPLATE.format(sha=sha, bytes_=size)
+    text = replace_once(text, anchor, replacement, "inflate.py archive pin")
+    path.write_text(text)
+    return {
+        "inflate_py": str(path),
+        "archive_sha256_before": old_sha,
+        "archive_sha256_after": sha,
+        "archive_bytes_before": int(old_bytes.replace("_", "")),
+        "archive_bytes_after": size,
+        "inflate_py_sha256_after": hashlib.sha256(text.encode()).hexdigest(),
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--base", default=str(DEFAULT_BASE))
-    parser.add_argument("--out", required=True)
+    parser.add_argument("--out")
     parser.add_argument("--force", action="store_true")
+    parser.add_argument(
+        "--repin",
+        help=(
+            "repin <RUNTIME>/inflate.py to <RUNTIME>/archive.zip and exit; run this "
+            "AFTER the candidate archive has been spliced into the tree"
+        ),
+    )
     args = parser.parse_args(argv)
+    if args.repin:
+        print(json.dumps(repin_inflate(Path(args.repin)), indent=2, sort_keys=True))
+        return 0
+    if not args.out:
+        parser.error("--out is required unless --repin is given")
     manifest = build(Path(args.base), Path(args.out), force=args.force)
     print(json.dumps(manifest, indent=2, sort_keys=True))
     return 0
