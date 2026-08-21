@@ -240,3 +240,27 @@ Lesson for the gate design: `_retain_training_candidate` should emit a per-check
 runtime tree (or the advisory firer should re-derive pins) — a sealed-pair receiver is
 correct for shipping custody but wrong as the measurement harness for TRAINED descendants
 of its own archive.
+
+## Advisory VERDICT — GATE-FAIL (measured, r3, 2026-08-21)
+
+n600 advisory on the trained stage_01 candidate (archive 166,459 B, sha 767e9977…),
+[macOS-CPU advisory, score_axis cpu_env_mismatch_advisory, score_claim=false]:
+d_seg **0.03182023** · d_pose **13.43292999** · S **14.8829** (recomputed from components).
+
+Against the gate bars (baseline fx5_e1: d_seg 0.00020139, d_pose 6.37e-6, S 0.148232):
+- seg degradation alone = +3.1619 S ≈ **1,792×** the early 1.5× bar (0.0017648).
+- pose contribution 11.59 vs ~0.008 baseline.
+- CPU-axis correction (seg 1.43×, pose ~21× per #1054) cannot rescue this — CUDA-equivalent
+  degradation is still ≥ ~2 S vs a 0.0018 bar. Verdict is axis-robust.
+
+**Mechanism:** the salience_dense_d4_w64 slice (126/128 FiLM rows pruned, depth 4, width 64)
+does NOT inherit the source's distortion function. "Warm lineage" is refuted at this slice
+depth: the candidate is a near-scratch student wearing warm clothes. The 32-step survival
+window was never going to move it (loss 0.1179 in /255-MSE units ≈ uniform-noise regime).
+
+**Routing per charter:** the full distillation burn does NOT fire on this candidate. The
+13,921 B rate credit is real but unclaimable without a full from-near-scratch distillation
+recovery of ~3 S seg — the wd2/wd3 width-distillation lineage already measured that family's
+difficulty (multi-KB recovery never landed). Lane wd4_train_gate_r1 closes terminal at this
+adjudication. verdict_scope: INSTANCE (this slice config: salience-prune + d4/w64); the
+NaN-freeze cure + pin-derivation apparatus are the durable products, both landed.
