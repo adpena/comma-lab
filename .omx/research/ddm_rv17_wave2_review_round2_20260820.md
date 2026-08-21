@@ -112,3 +112,13 @@ Whether fs2 owes an erratum is a wave-3 adjudication and I am not making it here
 ## Own-vehicle frontier
 
 **S 0.14827847122030852 @ 180,456 B [contest-CUDA T4 n600]** — gen6 frozen, #1111 operator-HELD.
+
+---
+
+verdict_scope: instance — the REFUTED token in this round targets (a) the reviewer's own
+round-1c W2-F8 impact-arithmetic claim (the compensation price substituted where it must be
+added) and (b) four specific quoted carrier-price constants (10.5 / 27–36 / 0.83 / 0.0083),
+each against fs3's measured 0.0991 B/pair. No technique family or formulation is closed by
+this round; it is a CLEAN cure-verification pass and the fs1 §3 verdict it upholds carries its
+own scope (FORMULATION) in the fs1 erratum. [Scope declaration appended by MAIN per the
+verdict-scope hook; findings text above unmodified.]
