@@ -19,8 +19,10 @@ carrier re-solve, per the charter. Four things came out, and two of them change 
    receiver stops decoding above `p_max >= tau`. That needs a new branch in
    `decode_production_tokens`. But the identical decoded field is reachable by having the **ENCODER**
    write the model argmax into the token field above tau and coding it with the receiver exactly as it
-   ships. Measured on the live body, this **argmax-substitution** form captures **86.6 % of the
-   skip-decode credit at u = 7.0** and is byte-closeable *today* with the proven
+   ships. On the LIVE rc2 body this **argmax-substitution** form captures **88.2 % of the
+   skip-decode credit at u = 7.0** (rv17 W2-F7 re-measurement, receipt 91aeea3653; the
+   originally-published 86.6 % mis-attributed its body — see the ledger addendum) and is
+   byte-closeable *today* with the proven
    `ddm_jg2_tail_reencode` machinery. Call them PATH A and PATH B; they differ only in rate.
 2. **My first instrument was wrong, and my own third control caught it.** The live rc2 decoder codes
    against `corrector.coding_row(state)` — a row the `NativeFreeCorrector` adapts **after** the two
@@ -370,7 +372,7 @@ numbers.
 
 | row | why it survives | reactivation number |
 |---|---|---|
-| **The recapture law itself** | Any lever that edits the token field pays this second-order cost, and the SIGN of the error depends on the direction of the edit. `ddm_jg5`'s seg edits measured **3.8373** realised bits per changed token against a 4.718 model (**0.877x**, and the model was conservative). Rung 4 measures **0.0872x**, and **-0.0145x** at u = 12. jg5 moved tokens *away* from the model's argmax and paid nearly the modelled price; rung 4 moved them *toward* it and got almost nothing back. **That asymmetry is the reusable law and no equation we hold carries it.** | price any future token-field lever by a REAL re-encode, never by a `-log2 p` model: the model is trustworthy to ~0.88x moving away from the argmax and to ~0.09x moving toward it |
+| **The recapture law itself** | Any lever that edits the token field pays this second-order cost, and the SIGN of the error depends on the direction of the edit. `ddm_jg5`'s seg edits measured **3.8373** realised bits per changed token against a 4.718 model (**0.877x**, and the model was conservative). Rung 4 measures **0.0872x**, and **-0.0145x** at u = 12. jg5 moved tokens *away* from the model's argmax and paid nearly the modelled price; rung 4 moved them *toward* it and got almost nothing back. **That asymmetry is the reusable law and no equation we hold carries it.** (verdict_scope: formulation — −log2p-model pricing of token-field levers on this vehicle; the constants in this row are superseded by the ERRATUM + ADDENDA below) | price any future token-field lever by a REAL re-encode, never by a `-log2 p` model: the model is trustworthy to ~0.88x moving away from the argmax and to ~0.09x moving toward it |
 | **Path A's agreeing-position bits** | The only part of the credit not obviously exposed to the recapture: 1,932.2 B at u = 7.0 on the live body, removable only by a skip-decode receiver | they need **12,111.6 B** to cover that threshold's seg cost, so they are **6.3x short on their own**. Dead unless a variant drops agreeing positions WITHOUT touching disagreeing ones - which is `p_max >= tau AND model-agrees`, i.e. exactly the zero-distortion oracle rc4 already proved costs more to signal than it saves (293,148 B identification floor) |
 | **Section 5's reach measurement** | A real, transferable, amplitude-independent property of the frame-0 carrier that outlives this rung | any future frame-1 lever that DOES have a rate credit may assume ~60% of pairs are pose-recoverable at any damage amplitude, and should waterfill per pair rather than compensate globally |
 
@@ -495,3 +497,28 @@ presented as comparable that answer two different questions. Corrected, as two l
   "8–23%". Direction-dependence is UNCHANGED (~10× away-vs-toward). The consumer rule is also
   unchanged and is the real law: price by REAL re-encode. verdict_scope: instance — corrected
   constants only.
+
+**LEDGER TERMINATION ADDENDUM (2026-08-20, rv17 W2 round-7 seal refusal — the five
+unterminated rows, each given a written ending):**
+
+- **W2-F1 (MED, no shared receipt writer) — CARRIED INTO WAVE 3 BY NAME.** Cure = a canonical
+  typed receipt-writer helper (schema-validated BEFORE write, the R15 trailing-comma class made
+  unrepresentable). Owner: MAIN. Trigger: before the next `DOC_DIVERGENCE_RECEIPT` append (the
+  packet-swap boundary). Interim guard: the R16 post-write schema check, live.
+- **W2-F4 (law row lacked verdict_scope) — CURED in place** (scope annotation added to the row,
+  this commit).
+- **W2-F5 (2,362 B vs 2,354 B) — ADJUDICATED-NO-CHANGE.** The two figures are two INSTRUMENTS:
+  18,895 bits (2,362 B) is the corrected replay's corrector worth; 18,834 bits (2,354 B) is the
+  superseded pre-corrector run's own reading, preserved in `WHY_SUPERSEDED.txt` as the receipt
+  for the bug it found. The 61-bit (0.32%) divergence IS the corrector-table effect that receipt
+  exists to document. The memo's 2,362 B is authoritative; both stay, now labeled.
+- **W2-F6 (superseded receipt points at live `retained/token_rd/`) — ADJUDICATED-NO-CHANGE.**
+  The pointer is a reference into the SHARED retained tree, whose per-file lineage is governed by
+  `FS3/FS2_RETENTION_MANIFEST.json`; a superseded receipt citing retained evidence is the
+  append-only form working, not a custody claim. Receipts are never edited.
+- **W2-F7 (86.6% attributed to the live body) — CURED in place** (line 22, this commit): the
+  live-rc2-body figure is **88.2%** (rv17 round-7 re-measurement, receipt 91aeea3653); the
+  original 86.6% was measured by this arm on its working state and mis-attributed — same
+  wrong-object-constant defect as W2-F3, in the same memo, cured the same way.
+
+verdict_scope: instance — ledger terminations and attribution corrections only; no verdict moves.
