@@ -737,6 +737,19 @@ def train_gate(
     np.random.seed(SEED)
     torch.use_deterministic_algorithms(True)
     model.to(device).train()
+    # The salience candidate ships structurally-pruned rows (exactly-zero leading-dim
+    # slices; 126/128 film.weight rows per block). They are part of the counted byte
+    # representation, so training must not resurrect them — and a resurrected row's
+    # ~lr-sized amplitude collapses the per-group fake-quantize scale to NaN (measured
+    # identically on CPU and MPS, probe v2 2026-08-21). Masks come from the packet
+    # bytes, before any resume state touches the model.
+    pruned_row_masks = {}
+    for name, param in model.named_parameters():
+        if param.dim() < 2:
+            continue
+        zero_rows = param.detach().abs().sum(dim=tuple(range(1, param.dim()))) == 0
+        if bool(zero_rows.any()):
+            pruned_row_masks[name] = zero_rows
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.0)
     ema = DeploymentEMA(model)
     pair_ids = stratified_pair_ids()
@@ -813,6 +826,10 @@ def train_gate(
         loss = ((student - teacher_native) / 255.0).square().mean()
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
+        for name, param in model.named_parameters():
+            mask = pruned_row_masks.get(name)
+            if mask is not None and param.grad is not None:
+                param.grad[mask] = 0.0
         optimizer.step()
         ema.update(model)
         last_loss = float(loss.detach().cpu())

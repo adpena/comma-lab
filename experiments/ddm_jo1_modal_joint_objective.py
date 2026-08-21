@@ -25,6 +25,12 @@ from typing import Any
 
 import modal
 
+# The extracted authority snapshot must stay bytecode-free: the compliance
+# validator refuses __pycache__/*.pyc inside the canonical upstream tree, and
+# this module's own imports of that tree would otherwise create them (r7
+# container failure receipt 1787351026553980267_2, #1122 instance 5).
+sys.dont_write_bytecode = True
+
 _SOURCE_REPO = Path(__file__).resolve().parents[1]
 REPO = (
     Path("/workspace/pact")
