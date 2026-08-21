@@ -216,3 +216,27 @@ transferring the older e480b width table or treating e960 as a semantic parent.
 **Pointer unchanged:** fx5 remains `S = 0.14823186109359 @ 180,386 B`
 `[contest-CUDA T4 n600]`. WD4 produced a 166,465-byte receiver-closed unscored candidate,
 not a lower exact row.
+
+## Advisory gate chain r1–r3 (2026-08-21, MAIN)
+
+The trained candidate (stage_01_warm_survival, archive 166,459 B, sha 767e9977c814d6f4…)
+needed three advisory fires:
+
+- **r1 (ExFAT attempt dir): REFUSED at inflate.py:39** — "extracted payload does not match
+  archive.zip". The extracted dir held an AppleDouble `._p` sidecar (#1122 genus), but that
+  was incidental.
+- **r2 (APFS attempt dir): REFUSED identically.** Mechanism isolated: the prep-stage runtime
+  tree (`retained/runtime_gate_candidate_group8_salience/`) is PIN-BOUND to the UNTRAINED
+  candidate — its inflate.py hardcodes ARCHIVE_SHA256/ARCHIVE_BYTES (29c26e42…, 166,465 B)
+  and `_verify_input` compares `extracted/p` against the runtime tree's OWN bundled
+  archive.zip. Any other archive fails the payload comparison. This is the #1123 genus in
+  mirror form: a receiver pinned to a different archive than the one under evaluation.
+- **r3 (LIVE): runtime derived programmatically** — copied the tree to
+  `retained/runtime_trained_stage01/`, swapped the bundled archive.zip for the trained one,
+  and recomputed both pin constants FROM THE FILE (regex substitution, asserted; never
+  hand-typed). Receiver verification passed; inflate running.
+
+Lesson for the gate design: `_retain_training_candidate` should emit a per-checkpoint
+runtime tree (or the advisory firer should re-derive pins) — a sealed-pair receiver is
+correct for shipping custody but wrong as the measurement harness for TRAINED descendants
+of its own archive.
