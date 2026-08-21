@@ -5,7 +5,8 @@
 > registered before the encode. **NET +5.724484e-05 — a LOSS at 16.36× the bar. REFUSED on rate.**
 > Round 1's 7.11× is **WITHDRAWN as a realized claim**; it was attribution-calibrated and said so.
 > The re-screen's controls were perfect (38/38 pairs landed on the exact configuration the census
-> predicted), so the census arithmetic was right and the PRICE TRANSFER was wrong — on the boundary
+> predicted — reproducibility, not correctness; see the W3-F3 disposition), and §T8's mirror
+> measurement then settled that the census arithmetic was right and the PRICE TRANSFER was wrong — on the boundary
 > round 1 named in its own §5. jg3's stopping rule is vindicated by measurement. The refutation
 > opens a mirror worth more than the reopen was: **§R6, a −4.45e-05 tightening at 12.72× the bar** (PROJECTION — price transferred across the admission cut; §R6's named caveat applies and the number is not quotable before a real re-encode).
 
