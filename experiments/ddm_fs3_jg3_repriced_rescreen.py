@@ -77,41 +77,81 @@ class Fs3RescreenError(RuntimeError):
 def audit_constant_sites(module_path: Path, name: str) -> dict[str, Any]:
     """Find every read of ``name`` in the module source, split by binding class.
 
-    A default-argument binding is evaluated at import and is IMMUNE to module
-    reassignment.  Every other read is a runtime global lookup.  The audit is done
-    on the AST rather than by grep so a rename or a new call site cannot hide.
+    A binding evaluated at IMPORT time is IMMUNE to module reassignment; a read
+    evaluated at CALL time is cured by it.  The audit is done on the AST rather
+    than by grep so a rename or a new call site cannot hide.
+
+    **Scope, stated honestly (rv17 wave-3 W3-F4).**  An earlier version walked only
+    ``FunctionDef``/``AsyncFunctionDef`` defaults and therefore silently FILED
+    other import-time binding forms into the "cured by reassignment" bucket, while
+    claiming nothing could slip past.  The import-time forms now recognised are
+    function defaults, ``lambda`` defaults, class-body assignments and decorator
+    arguments.  Forms still NOT recognised, and named so the claim stays true to
+    what the code does: values captured into module-level containers, values
+    already bound into a closure, and anything reached through ``getattr`` or a
+    string.  The audit REFUSES on any import-time form it recognises but cannot
+    disarm; it cannot refuse on one it does not recognise, so this is a strong
+    check and not a total one.
     """
     tree = ast.parse(module_path.read_text())
-    default_arg_sites: list[dict[str, Any]] = []
-    global_read_sites: list[dict[str, Any]] = []
+    import_time_sites: list[dict[str, Any]] = []
+    call_time_sites: list[dict[str, Any]] = []
 
     def is_target(node: ast.AST) -> bool:
         return isinstance(node, ast.Name) and node.id == name
 
-    default_nodes: set[int] = set()
+    import_time_nodes: set[int] = set()
+
+    def claim(expr: ast.AST, kind: str, owner: str) -> None:
+        for sub in ast.walk(expr):
+            if is_target(sub):
+                import_time_nodes.add(id(sub))
+                import_time_sites.append(
+                    {"kind": kind, "owner": owner, "line": sub.lineno}
+                )
+
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
             for default in list(node.args.defaults) + [
                 d for d in node.args.kw_defaults if d is not None
             ]:
-                for sub in ast.walk(default):
-                    if is_target(sub):
-                        default_nodes.add(id(sub))
-                        default_arg_sites.append(
-                            {"function": node.name, "line": sub.lineno}
-                        )
+                claim(default, "function_default", node.name)
+            for dec in node.decorator_list:
+                claim(dec, "decorator_argument", node.name)
+        elif isinstance(node, ast.Lambda):
+            for default in list(node.args.defaults) + [
+                d for d in node.args.kw_defaults if d is not None
+            ]:
+                claim(default, "lambda_default", "<lambda>")
+        elif isinstance(node, ast.ClassDef):
+            for stmt in node.body:
+                if isinstance(stmt, ast.Assign | ast.AnnAssign) and stmt.value:
+                    claim(stmt.value, "class_body_assignment", node.name)
+            for dec in node.decorator_list:
+                claim(dec, "decorator_argument", node.name)
 
     for node in ast.walk(tree):
-        if is_target(node) and id(node) not in default_nodes:
+        if is_target(node) and id(node) not in import_time_nodes:
             # The definition itself (`NAME = 4.1379`) is a Store, not a read.
             if isinstance(getattr(node, "ctx", None), ast.Store):
                 continue
-            global_read_sites.append({"line": node.lineno})
+            call_time_sites.append({"line": node.lineno})
 
     return {
         "constant": name,
-        "default_argument_bindings_immune_to_reassignment": default_arg_sites,
-        "module_global_reads_cured_by_reassignment": global_read_sites,
+        "import_time_bindings_immune_to_reassignment": import_time_sites,
+        "call_time_reads_cured_by_reassignment": call_time_sites,
+        "forms_recognised": [
+            "function_default",
+            "lambda_default",
+            "class_body_assignment",
+            "decorator_argument",
+        ],
+        "forms_NOT_recognised": [
+            "captured into a module-level container",
+            "already bound into a closure",
+            "reached via getattr or a string name",
+        ],
     }
 
 
@@ -123,12 +163,12 @@ def disarm(jg3: Any, module_path: Path, new_price: float) -> dict[str, Any]:
     known = {"project"}
     unaccounted = [
         site
-        for site in audit["default_argument_bindings_immune_to_reassignment"]
-        if site["function"] not in known
+        for site in audit["import_time_bindings_immune_to_reassignment"]
+        if site["owner"] not in known
     ]
     if unaccounted:
         raise Fs3RescreenError(
-            "REFUSING: jg3 has default-argument bindings of "
+            "REFUSING: jg3 has import-time bindings of "
             f"RATE_PRIOR_BITS_PER_TOKEN this shim does not know how to disarm: "
             f"{unaccounted}. A silently un-disarmed site is the whole reason this "
             "shim exists."
@@ -140,6 +180,10 @@ def disarm(jg3: Any, module_path: Path, new_price: float) -> dict[str, Any]:
     jg3.project.__kwdefaults__["bits_per_token"] = new_price
 
     # PROVE it, from the live module, rather than assuming the writes took.
+    # W3-F3: every field below is re-read from the LIVE module -- the global via
+    # attribute access, the keyword default via the function object's own
+    # ``__kwdefaults__``, and ``break_even_yield`` by CALLING it so the value is
+    # computed from the live global rather than echoed from the dict just written.
     proof = {
         "old_price": old,
         "new_price": new_price,

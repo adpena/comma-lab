@@ -924,7 +924,14 @@ def project(
         rate_source = "measured_reencoder_scaled_by_superposition"
     else:
         rate_bytes = full_tokens * bits_per_token / 8.0
-        rate_source = "jg2_prior_4.1379_bits_per_token"
+        # The label must name the price the ARITHMETIC used, not the price this
+        # module was born with.  It was a frozen literal, so a caller that
+        # legitimately re-prices (``ddm_fs3``'s disarm shim rebinds both the module
+        # global and this function's keyword default) got a receipt whose
+        # ``rate_source`` still said 4.1379 while its own numbers used another
+        # price -- and that mislabel sat beside ``clears_sub_015``.
+        # Caught by rv17 wave-3 W3-F2.
+        rate_source = f"prior_{bits_per_token:.6f}_bits_per_token"
 
     d_seg_after = BASE_D_SEG - full_repaired / (N_PAIRS * PLANE)
     d_pose_after = BASE_D_POSE * pose_ratio
