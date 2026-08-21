@@ -1076,4 +1076,20 @@ def auto_refresh_canonical_frontier_after_dispatch_outcome(
     except Exception:
         pass
 
+    # CITATION-SURFACE CO-REFRESH (rv17_w3_citation_surface_autorefresh,
+    # 2026-08-21). The pointer auto-refreshed on every harvest while the
+    # Markdown mirrors that tell OTHER READERS the score (reports/latest.md,
+    # .omx/state/current_focus.md) lagged THREE pointer moves (0.156526 cited
+    # vs canonical 0.148278) with their own catalog-316 detector RED and
+    # unread. Regenerating the mirrors here binds them to the pointer at the
+    # only moment the pointer can change. Fail-quiet per the same contract as
+    # the block above: the pointer refresh already succeeded; mirror refresh
+    # is downstream observability and must not raise from the dispatch path.
+    try:
+        from tac.frontier_scan import refresh_frontier_citation_surfaces
+
+        refresh_frontier_citation_surfaces(repo_root_path)
+    except Exception:
+        pass
+
     return refreshed

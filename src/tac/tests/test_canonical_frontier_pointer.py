@@ -614,6 +614,55 @@ def test_auto_refresh_respects_disabled_flag(tmp_path: Path) -> None:
     assert result is None
 
 
+def test_auto_refresh_co_refreshes_citation_surfaces(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The hook regenerates the Markdown citation mirrors on every pointer refresh.
+
+    rv17_w3_citation_surface_autorefresh (2026-08-21): the pointer refreshed on
+    harvest while reports/latest.md + current_focus.md lagged THREE pointer
+    moves. The cure binds the mirror regeneration to the hook — this test pins
+    the wiring (called once, with the hook's repo root).
+    """
+
+    import tac.frontier_scan as frontier_scan
+
+    calls: list[Path] = []
+    monkeypatch.setattr(
+        frontier_scan,
+        "refresh_frontier_citation_surfaces",
+        lambda repo_root, **kwargs: calls.append(Path(repo_root)),
+    )
+    result = auto_refresh_canonical_frontier_after_dispatch_outcome(
+        status="harvested",
+        score=0.193,
+        score_axis="contest_cuda",
+        repo_root=tmp_path,
+    )
+    assert result is not None
+    assert calls == [tmp_path]
+
+
+def test_auto_refresh_survives_citation_surface_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A raising citation-surface refresh must not break the dispatch path."""
+
+    import tac.frontier_scan as frontier_scan
+
+    def boom(repo_root: object, **kwargs: object) -> None:
+        raise RuntimeError("mirror refresh failure must stay downstream")
+
+    monkeypatch.setattr(frontier_scan, "refresh_frontier_citation_surfaces", boom)
+    result = auto_refresh_canonical_frontier_after_dispatch_outcome(
+        status="harvested",
+        score=0.193,
+        score_axis="contest_cuda",
+        repo_root=tmp_path,
+    )
+    assert result is not None
+
+
 # ─────────────────────────────────────────────────────────────────────────
 # Sister Catalog #131 sister discipline
 # ─────────────────────────────────────────────────────────────────────────
