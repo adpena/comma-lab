@@ -312,7 +312,7 @@ def test_review_gate_refuses_when_the_gate_file_is_absent(tmp_path, capsys) -> N
     assert "REFUSE" in capsys.readouterr().err
 
 
-def test_review_gate_refuses_when_the_interpreter_is_missing(capsys) -> None:
+def test_review_gate_refuses_when_the_interpreter_is_missing(capsys, monkeypatch) -> None:
     """Executed control: the ddm_ob1 shape -- interpreter absent, report success.
 
     ``subprocess.run`` raising FileNotFoundError used to return ``0``, i.e. the
@@ -323,7 +323,12 @@ def test_review_gate_refuses_when_the_interpreter_is_missing(capsys) -> None:
     def _boom(*_a, **_k):
         raise FileNotFoundError(".venv/bin/python")
 
-    hook.subprocess.run = _boom
+    # `hook.subprocess` IS the global subprocess module, so a bare attribute write here
+    # replaced `subprocess.run` for the WHOLE session and every later test that runs a
+    # real process died with this FileNotFoundError (measured 2026-08-21: it took out
+    # test_process_liveness::test_zombie_is_dead_not_alive and the process-group-kill
+    # grandchild control). monkeypatch restores it at teardown; the assertion is unchanged.
+    monkeypatch.setattr(hook.subprocess, "run", _boom)
     rc = hook.run_review_gate()
     assert rc == 1, "a review gate that could not launch reported a pass"
     assert "did not run" in capsys.readouterr().err

@@ -1219,7 +1219,7 @@ def _run_contest_compliant_auth_eval(
 
     print("\nStep 1: Unzipping archive.zip ...")
     unzip_cmd = ["unzip", "-o", archive_zip, "-d", archive_dir]
-    unzip_result = subprocess.run(unzip_cmd, capture_output=True, text=True, timeout=60)
+    unzip_result = subprocess.run(unzip_cmd, capture_output=True, text=True, timeout=60)  # GROUP_KILL_OK: `unzip` is a single leaf binary — no shell, no wrapper, no grandchild for a group kill to reach.
     if unzip_result.returncode != 0:
         raise RuntimeError(
             f"unzip failed (exit {unzip_result.returncode}):\n"
@@ -1256,8 +1256,14 @@ def _run_contest_compliant_auth_eval(
     ]
     print(f"  Command: {' '.join(inflate_cmd)}")
 
-    # Contest time limit is 30 minutes
-    inflate_result = subprocess.run(
+    # Contest time limit is 30 minutes — and the limit must bind the TREE. A bare
+    # `subprocess.run(timeout=)` kills only `bash`; the decoder underneath is a
+    # grandchild and keeps running, here on METERED GPU. Measured on the identical call
+    # shape in src/tac/submission_chain.py::run_inflate (ddm_cpu1, 2026-08-20): the
+    # decoder ran 2,570 s past the 1,800 s wall the caller believed it had enforced.
+    from tac.process_group_kill import run_in_process_group
+
+    inflate_result = run_in_process_group(
         inflate_cmd,
         capture_output=True,
         text=True,

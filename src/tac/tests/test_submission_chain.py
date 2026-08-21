@@ -463,8 +463,11 @@ def test_evaluate_does_not_clobber_an_existing_report(tmp_path, monkeypatch):
         "Compression Rate: 0.00942337\n"
         "Final score = 0.79\n"
     )
+    # Patch the seam run_upstream_evaluate ACTUALLY calls. It routes through
+    # tac.process_group_kill.run_in_process_group so the 30-min wall binds the whole
+    # tree (evaluate.py spawns DataLoader workers a child-scoped timeout would orphan).
     monkeypatch.setattr(
-        _sp, "run",
+        "tac.submission_chain.run_in_process_group",
         lambda cmd, **kw: _sp.CompletedProcess(cmd, 0, report_text, ""),
     )
     res = run_upstream_evaluate(
@@ -492,7 +495,7 @@ def test_evaluate_honours_an_explicit_report_path(tmp_path, monkeypatch):
     (tmp_path / "names.txt").write_text("0\n")
     want = tmp_path / "custom_report.txt"
     monkeypatch.setattr(
-        _sp, "run",
+        "tac.submission_chain.run_in_process_group",
         lambda cmd, **kw: _sp.CompletedProcess(
             cmd, 0,
             "Evaluation results over 600 samples\nAverage PoseNet Distortion: 1e-3\n"

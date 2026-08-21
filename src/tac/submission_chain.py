@@ -91,6 +91,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Final
 
+from tac.process_group_kill import run_in_process_group
+
 __all__ = [
     "CANONICAL_UNCOMPRESSED_SIZE",
     "ArchiveByteLedger",
@@ -165,7 +167,7 @@ def git_hash(repo_root: str | Path) -> str:
     """
 
     try:
-        out = subprocess.run(
+        out = subprocess.run(  # GROUP_KILL_OK: `git rev-parse` is a single leaf binary — it spawns nothing, so there is no grandchild for a group kill to reach.
             ["git", "rev-parse", "HEAD"],
             cwd=str(repo_root),
             capture_output=True,
@@ -845,7 +847,12 @@ def run_inflate(
     env["PATH"] = bin_dir + os.pathsep + env.get("PATH", "")
 
     started = time.time()
-    proc = subprocess.run(
+    # GROUP-scoped timeout, not child-scoped. `subprocess.run(..., timeout=)` kills only
+    # `bash`; the decoder underneath is a GRANDCHILD and survives. Measured here, on this
+    # exact call (ddm_cpu1, 2026-08-20): the timeout fired at 1799.99997045 s, and the
+    # decoder ran on to 4,369.600210089 s and wrote a complete 600-pair report for a run
+    # this function had already raised on. Now the whole tree goes down with the wall.
+    proc = run_in_process_group(
         ["bash", str(script), str(Path(archive_dir)), str(out), str(Path(video_names_file))],
         cwd=str(sub),
         env=env,
@@ -994,7 +1001,9 @@ def run_upstream_evaluate(
     if device == "cpu":
         env["CUDA_VISIBLE_DEVICES"] = ""
 
-    proc = subprocess.run(
+    # Sister of run_inflate above: `upstream/evaluate.py` spawns DataLoader workers, so a
+    # child-scoped timeout orphans them mid-scoring. Group-scoped so the wall is real.
+    proc = run_in_process_group(
         cmd, cwd=str(up), env=env, capture_output=True, text=True,
         timeout=timeout, check=False,
     )
