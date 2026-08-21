@@ -72,7 +72,15 @@ def _default_docs(prep: Path, frozen: Path, receipts_dir: Path) -> list[Path]:
     docs check the prep copy, frozen-only the frozen copy. Hand-naming the set
     was the round-14 finding -- the derived set immediately surfaced two ACTIVE
     stale citations (REVIEW_PASS6/9 manifest references) that three rounds of
-    named sets had missed."""
+    named sets had missed.
+
+    Two hand-named boundaries remain, both MEASURED empty at rv17 R15 (not
+    justified by the prep flatness invariant, which bounds an INTERSECTION
+    while this universe is a UNION containing frozen subdirectory files):
+    the 34 frozen subdirectory files and every non-.md/.txt top-level file
+    carry ZERO _CITE_RE matches -- the subdirectories are runtime code, not
+    prose. If either measurement ever changes, the derived-set print in
+    main() makes the narrowing visible rather than silent."""
     sources = _publish_sources(receipts_dir)
     prep_names = {p.name.casefold(): p for p in prep.iterdir()
                   if p.is_file() and p.suffix in _DOC_SUFFIXES}
