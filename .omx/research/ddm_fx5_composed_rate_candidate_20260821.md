@@ -320,6 +320,34 @@ Admission bar: net ΔS < −3.5e-6. Expected: **−4.661013e-05**, 13.3× over.
 
 ---
 
+## §8 CONVERGENCE WITH `ddm_r012`, AND A BLOCKER IT NAMED THAT IS NOW DISCHARGED
+
+`ddm_r012` (commit `60cc39c604`, landed 09:43 while this arm's decode was still running)
+independently priced the rc2 body's rate axis and reached the **same decomposition from the
+other direction**: its *"honest composable measured ceiling is 88 B"* is exactly
+**this arm's 70 B + dx1's 18 B**, and it independently agrees the two are **disjoint**
+(token stream vs carrier coefficient stream). Two arms, two routes, same numbers — that is a
+positive control on both.
+
+**Its row 1 marks the fx5 rung `BLOCKED (fx5 decode receipt and seal absent; sibling owns
+surface)`. Both blockers are discharged as of this memo:**
+
+* the seal exists and validates — `3dcef9b3c986b6cf747d0862ce7dfe6fbbe8414216bb48a6ecb45783ddb8fb5f`,
+  `SEAL_VALID`, 8 receiver pins, 7 falsifiers;
+* the decode receipt's decisive row has PASSED — decoded token field byte-identical, with the
+  native 19-member corrector binding proven from the live process.
+
+r012 also records the decode wall for this rung as *"MODELED +89 s … current local full decode
+was still running, not a T4 wall result"* — which matches §7 falsifier 4 exactly, and stays
+true: the local decode settles identity, never the wall.
+
+**The sharper thing r012 says, which this arm's result does not soften:** 88 B of composable
+rate against a **238 B floor needed even at ZERO distortion** means the rc2 body cannot reach
+sub-0.12, and a NEW rate representation is required. **This candidate is 79.5% of that entire
+88 B ceiling.** It is worth firing — it clears the bar 13.3× and costs $0.16 — but it should
+be read as *harvesting the last of a closed axis*, not as progress toward the goal. After this
+row and dx1's 18 B, the rate axis on this body is spent.
+
 ## STORES CONSULTED
 
 `.omx/research/ddm_fx2_model_axis_all_sections_20260818.md` §5 §8 §9 (the E1/D1 race table, the
