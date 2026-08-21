@@ -1,5 +1,5 @@
 # ddm_fs1 — pose-only-edit actuator rate-dead at MEASURED encodings; js6b's closure does not survive a compensated envelope  
-**[ERRATUM 2026-08-20, §E below — rv17 wave-2 W2-F8: the jg1 10.5 B/pair row was a UNITS MISREAD (coefficient count, not a price); §3 is CLOSED at qs2 pricing but OPEN-PENDING-ADJUDICATION for the jg1 re-solve encoding. "3.97×" is the MEDIAN statistic; the blanket move's mean break-even is 1.95×.]**
+**[ERRATUM 2026-08-20, §E below — rv17 wave-2 W2-F8: the jg1 10.5 B/pair row was a UNITS MISREAD (coefficient count, not a price); §3 STANDS IN FULL — E1 RESOLVED by ddm_fs3's measured price (see §E addendum): the jg1 re-solve is a COMPENSATION encoding, not an edit encoding. "3.97×" is the MEDIAN statistic; the blanket move's mean break-even is 1.95×.]**
 
 **Task #1142** · **axis** `[macOS-CPU advisory, scorer-free retained-array arithmetic]` ·
 `score_claim=false` · `promotion_eligible=false` · **no Modal dispatch, no scorer forward, no archive built.**
@@ -281,6 +281,21 @@ governing price is not decidable by citation — none of the three numbers is a 
 THIS move on THIS body. The adjudicating measurement (real Rice-stream re-encode of the blanket-27
 re-solved coefficients, per the fs2 direction-dependent pricing law) is assigned to **ddm_fs3
 leg 2**; its result settles whether the ≤1.429 B/pair reactivation trigger is already met.
+
+**E1 RESOLUTION (2026-08-20, ddm_fs3 leg 2 — MEASURED, adjudication closed).** The governing
+price is 0.0991 B/pair (0.0088 B/coefficient), measured by building an 8-rung density ladder
+over the actual carrier sections, with a byte-identity control: reverting all 454 moved pairs
+reproduces the jg5 body byte-for-byte. All four cited prices are refuted — fs1's 10.5 is 106×
+high, up3's 27–36 is 272–363× high, na10's 0.83 is 8.4× high, and na10's internal 0.0083 is
+11.9× low. Both fs1 break-evens clear (14.4× / 29.4×) AND YET the reactivation trigger is NOT
+met, for a reason this erratum did not reach: the jg1 re-solve is a **compensation** encoding
+scored in a column of **edit** encodings. Compensation ADDS to an edit price (5.667 + 0.099); it
+does not substitute for one. Priced correctly the blanket-27 still loses, and the "gain at 0.83
+B/pair" scenario is refuted. **§3's CLOSED verdict stands in full.** Durable law from the
+measurement: pose compensation on this body costs ~0.1 B/pair — essentially free — which is
+itself a live input to the jg3 re-selection row fs3 opened. Receipts:
+`.omx/research/ddm_fs3_jg5_real_price_reopen_20260820.md` (commit 03d39d67d9);
+`/Volumes/APDataStore/pact/ddm_fs3/FS3_RETENTION_MANIFEST.json`.
 
 **E2 (MED — median statistic on a blanket claim).** The title's "3.97×" is the MEDIAN-budget
 statistic (5.667 / 1.429). The blanket-27 move is additive, so its break-even is the MEAN budget:
