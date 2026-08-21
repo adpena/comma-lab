@@ -29,6 +29,7 @@ from tac.deploy.lightning.batch_jobs import (  # noqa: E402
     DALI_BOOTSTRAP_VERSION,
     DALI_BOOTSTRAP_WHEELS,
 )
+from tac.process_group_kill import run_in_process_group  # noqa: E402
 
 
 def _version_or_none(name: str) -> str | None:
@@ -118,7 +119,7 @@ def _ensure_uv(payload: dict[str, Any], *, timeout: int) -> str | None:
     cmd = ["bash", str(ensure_uv), "--symlink-system"]
     payload["ensure_remote_uv_available"] = True
     payload["ensure_remote_uv_command"] = cmd
-    install = subprocess.run(
+    install = run_in_process_group(
         cmd,
         cwd=REPO_ROOT,
         check=False,
@@ -155,7 +156,7 @@ def _ensure_pip(payload: dict[str, Any], *, timeout: int) -> None:
 
     cmd = [sys.executable, "-m", "ensurepip", "--upgrade"]
     payload["guarded_ensurepip_command"] = cmd
-    ensurepip = subprocess.run(
+    ensurepip = run_in_process_group(
         cmd,
         check=False,
         capture_output=True,

@@ -29,6 +29,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import TYPE_CHECKING, Any
 
+from tac.process_group_kill import run_in_process_group
+
 if TYPE_CHECKING:
     import torch
 
@@ -649,7 +651,7 @@ def inflate_candidate(
     started = dt.datetime.now(dt.UTC)
     try:
         with log_path.open("ab") as log:
-            process = subprocess.run(
+            process = run_in_process_group(
                 command,
                 cwd=submission,
                 env=env,

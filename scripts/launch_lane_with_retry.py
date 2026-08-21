@@ -34,6 +34,8 @@ import sys
 import time
 from pathlib import Path
 
+from tac.process_group_kill import run_in_process_group
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 LAUNCHER = REPO_ROOT / "scripts" / "launch_lane_on_vastai.py"
 PYBIN = ".venv/bin/python"
@@ -151,7 +153,7 @@ def destroy(instance_id: int) -> None:
     """Best-effort destroy. Does not raise."""
     try:
         # subprocess-no-check-OK: best-effort destroy; ignore failures
-        subprocess.run(
+        run_in_process_group(
             ["bash", "-c", f"echo y | .venv/bin/vastai destroy instance {instance_id}"],
             cwd=REPO_ROOT, capture_output=True, text=True, timeout=30,
             check=False,

@@ -46,6 +46,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from tac.process_group_kill import run_in_process_group
 
 
 # ---- Constants ---- #
@@ -188,7 +189,7 @@ def stage_inflate(
     inflated_dir.mkdir(parents=True, exist_ok=True)
 
     env = os.environ.copy()
-    result = subprocess.run(
+    result = run_in_process_group(
         ["bash", str(inflate_sh), str(archive_dir), str(inflated_dir),
          str(video_names_file)],
         capture_output=True, text=True, timeout=1500,

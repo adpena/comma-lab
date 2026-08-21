@@ -62,6 +62,7 @@ MASK_W = 512
 
 app = modal.App(APP_NAME)
 from tac.deploy.modal.harvest_outcomes import append_terminal_call_id_ledger_event  # noqa: E402
+from tac.process_group_kill import run_in_process_group
 
 base_image = (
     modal.Image.debian_slim(python_version="3.11")
@@ -401,7 +402,7 @@ def _run_logged(
     stderr_path = log_dir / f"{name}.stderr.log"
     started = time.monotonic()
     try:
-        proc = subprocess.run(
+        proc = run_in_process_group(
             cmd,
             cwd=str(cwd),
             env=env,
@@ -497,7 +498,7 @@ def _probe_cuda_environment(env: dict[str, str]) -> dict[str, Any]:
     probe = REMOTE_REPO / "scripts/probe_nvdec.sh"
     if probe.is_file():
         try:
-            proc = subprocess.run(
+            proc = run_in_process_group(
                 ["bash", str(probe)],
                 cwd=str(REMOTE_REPO),
                 env={**env, "PYBIN": sys.executable},

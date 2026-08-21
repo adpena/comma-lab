@@ -121,6 +121,11 @@ def _run_closure() -> dict:
 
     t0 = time.perf_counter()
     cold = subprocess.run(
+        # GROUP_KILL_OK: runs INSIDE the fx5 Modal container, whose image mounts only
+        # the fx1 runtime tree as data (`add_local_dir(LOCAL_TREE, REMOTE_TREE)`) plus this
+        # entrypoint module (`add_local_python_source`), with `include_source=False` and no
+        # tac wheel — `import tac` cannot resolve there. Mounting `src` to satisfy the gate
+        # would also weaken the measurement, whose premise is a provably-minimal container.
         ["/bin/sh", str(tree / "inflate.sh")],
         capture_output=True,
         text=True,
@@ -140,6 +145,11 @@ def _run_closure() -> dict:
     # (4) WARM repeat against the published target — the steady-state contest cost.
     t1 = time.perf_counter()
     warm = subprocess.run(
+        # GROUP_KILL_OK: runs INSIDE the fx5 Modal container, whose image mounts only
+        # the fx1 runtime tree as data (`add_local_dir(LOCAL_TREE, REMOTE_TREE)`) plus this
+        # entrypoint module (`add_local_python_source`), with `include_source=False` and no
+        # tac wheel — `import tac` cannot resolve there. Mounting `src` to satisfy the gate
+        # would also weaken the measurement, whose premise is a provably-minimal container.
         ["/bin/sh", str(tree / "inflate.sh")],
         capture_output=True,
         text=True,
@@ -179,6 +189,11 @@ def _run_closure() -> dict:
     ctl_env = dict(env)
     ctl_env["PR130_RUNTIME_DEPS_DIR"] = bad
     ctl = subprocess.run(
+        # GROUP_KILL_OK: runs INSIDE the fx5 Modal container, whose image mounts only
+        # the fx1 runtime tree as data (`add_local_dir(LOCAL_TREE, REMOTE_TREE)`) plus this
+        # entrypoint module (`add_local_python_source`), with `include_source=False` and no
+        # tac wheel — `import tac` cannot resolve there. Mounting `src` to satisfy the gate
+        # would also weaken the measurement, whose premise is a provably-minimal container.
         ["/bin/sh", str(tree / "inflate.sh")],
         capture_output=True,
         text=True,

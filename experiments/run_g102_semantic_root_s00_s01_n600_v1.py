@@ -37,6 +37,7 @@ from comma_lab.storage_tiers import (
     require_selected_storage,
 )
 from tac import score_geometry
+from tac.process_group_kill import run_in_process_group
 from tac.witness_control.taskspace_fresh_teacher_materializer_v1 import (
     load_compile_ready_materialization_receipt,
 )
@@ -1135,7 +1136,7 @@ class G102SemanticRootS00S01RunnerV1:
         started = time.monotonic()
         timed_out = False
         try:
-            completed = subprocess.run(
+            completed = run_in_process_group(
                 command,
                 cwd=case_root,
                 env=environment,
@@ -1244,7 +1245,7 @@ class G102SemanticRootS00S01RunnerV1:
             started = time.monotonic()
             timed_out = False
             try:
-                completed = subprocess.run(
+                completed = run_in_process_group(
                     command,
                     cwd=self.repo_root / "upstream",
                     capture_output=True,

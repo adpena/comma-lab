@@ -23,6 +23,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
+from tac.process_group_kill import run_in_process_group
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -663,7 +664,7 @@ def run_raw_parity(
         env = os.environ.copy()
         env.setdefault("PYTHON_INFLATE", "renderer")
         env.setdefault("UV_CACHE_DIR", "/tmp/uv-cache")
-        proc = subprocess.run(
+        proc = run_in_process_group(
             robust_cmd,
             cwd=str(REPO_ROOT),
             env=env,

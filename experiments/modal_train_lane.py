@@ -110,6 +110,7 @@ from tac.deploy.witness_cloud_launcher import (
 from tac.deploy.witness_cloud_launcher import (
     _validate_modal_custody_path as _validate_v9_modal_custody_path,
 )
+from tac.process_group_kill import run_in_process_group
 
 app = modal.App("comma-train-lane")
 RESULTS_VOL = "comma-train-lane-results"
@@ -1714,7 +1715,7 @@ def _run_lane_inner(
             )
         else:
             try:
-                proc = subprocess.run(
+                proc = run_in_process_group(
                     ["bash", str(lane_path)],
                     env=env, cwd=workspace,
                     stdout=logf, stderr=subprocess.STDOUT,

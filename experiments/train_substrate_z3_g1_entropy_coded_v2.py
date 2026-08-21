@@ -74,7 +74,6 @@ import hashlib
 import json
 import os
 import shutil
-import subprocess
 import sys
 import time
 import zipfile
@@ -86,6 +85,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 import torch
 
+from tac.process_group_kill import run_in_process_group
 from tac.substrates._shared.trainer_skeleton import (
     detect_hardware_substrate as _canon_detect_hardware_substrate,
 )
@@ -800,7 +800,7 @@ def _run_inflate_frame_hash(
     env["PYTHON"] = sys.executable
     env["PACT_INFLATE_DEVICE"] = "cpu"
     env["Z3G2_FRAME_PROOF_PAIRS"] = str(max_pairs)
-    proc = subprocess.run(
+    proc = run_in_process_group(
         [str(inflate_sh), str(data_dir), str(out_dir), str(file_list)],
         cwd=work_dir,
         env=env,

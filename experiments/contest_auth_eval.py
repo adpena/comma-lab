@@ -63,6 +63,7 @@ from tac.contest_budget import budget_verdict_for_receipt
 from tac.contest_compliance import compute_upstream_snapshot_sha256
 from tac.device_axis_eval import is_contest_cuda_equivalent_gpu
 from tac.gt_lineage import AUTHORITY_LINEAGE, GtLineageError, runtime_decode_lineage
+from tac.process_group_kill import run_in_process_group
 
 # Line-buffer stdout so progress flushes to log files immediately.
 try:
@@ -1217,6 +1218,13 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
     def _shell(cmd, *, timeout: int = 10) -> str | None:
         try:
             return subprocess.check_output(
+                # GROUP_KILL_OK: every caller passes a LEAF binary — nvidia-smi
+                # (:1269,:1270), ffmpeg -version/-encoders (:1288,:1290), git rev-parse
+                # (:1297,:1300). None forks a worker tree, so a group kill has no
+                # grandchild to reach. Catalog #408 flags this because `cmd` is a
+                # PARAMETER the argv[0] resolver cannot bind to a literal; the shape is
+                # a false positive, not an un-cured site. Also keeps stderr=STDOUT,
+                # which the capture_output-based helper cannot express.
                 cmd, text=True, stderr=subprocess.STDOUT, timeout=timeout,
             ).strip()
         except (subprocess.SubprocessError, FileNotFoundError) as exc:
@@ -2291,7 +2299,7 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
         env.update(extra_env)
         print(f"[inflate] diagnostic env override keys: {sorted(extra_env)}")
     try:
-        result = subprocess.run(cmd, timeout=timeout, check=False, env=env)
+        result = run_in_process_group(cmd, timeout=timeout, check=False, env=env)
     except subprocess.TimeoutExpired as exc:
         raise RuntimeError(
             f"[inflate] TIMED OUT after {timeout}s. Contest budget is "

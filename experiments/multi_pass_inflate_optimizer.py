@@ -63,6 +63,7 @@ for _p in (_REPO / "src",):
         sys.path.insert(0, str(_p))
 
 from tac.optimization.trajectory_stopping import build_cap_stop_receipt  # noqa: E402
+from tac.process_group_kill import run_in_process_group
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -167,7 +168,6 @@ def _score_archive(archive_path: Path, *, device: str = "cuda") -> tuple[float, 
         )
     # Defer the import so this module imports cleanly on CPU-only hosts
     # for static analysis / preflight.
-    import subprocess
     import re
 
     contest_eval = _REPO / "experiments" / "contest_auth_eval.py"
@@ -182,7 +182,7 @@ def _score_archive(archive_path: Path, *, device: str = "cuda") -> tuple[float, 
             "--device", device,
             "--work-dir", td,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+        result = run_in_process_group(cmd, capture_output=True, text=True, timeout=1800)
     if result.returncode != 0:
         raise RuntimeError(
             f"contest_auth_eval failed rc={result.returncode}: "
