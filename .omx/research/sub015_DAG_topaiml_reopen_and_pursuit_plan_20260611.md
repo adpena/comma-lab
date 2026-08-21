@@ -29258,3 +29258,13 @@ verifying against its artifact exactly as a cure does — and so does the VERIFI
 Equations-leg debt unchanged: direction-dependent rate law registration rides the next
 canonical-equations landing. Pointer UNMOVED 0.14827847122030852 @ 180,456 B
 [contest-CUDA T4 n600].
+
+FEED-rv17w2r8-addendum (2026-08-20, MAIN — the round-10 owed successor line): the round-9
+ruling reweighs the FEED above — the round-8 refusal was HALF-RIGHT (its absence claim
+withdrawn as false against a correct artifact; its Series-B-restatement demand legitimate),
+so the 2d96f65393 cure was OWED, not granted, and the round-8 reset stands on the true
+clause. Round 10 CLEAN (2/3): retroactive instrument audit under the one-check law
+convicted round 8 and acquitted rounds 5–6 on the same standard; the FEED's 928-char
+figure verified as an accurate historical snapshot (1,274 post-cure). Reviewer law
+(banked, memory three-checks-sharing-an-instrument-are-one-check): independence is a
+property of the instruments, not the count.
