@@ -50,6 +50,24 @@ S_PER_ARCHIVE_BYTE = 25.0 / SCORE_RATE_DENOMINATOR
 S_PER_SEG_CELL = 100.0 / (N_PAIRS * GRID_H * GRID_W)
 ADMISSION_BAR_S = 3.5e-6
 
+#: Why the emitted carrier key says DERIVED_extrapolated and not MEASURED.
+#: Withdrawn by rv17 wave-3 W3-F7; superseded by a terminal measurement.  Emitted
+#: beside the value so a future receipt carries the caveat without the reader
+#: having to find this memo -- W3-F15 was exactly this caveat failing to travel.
+CARRIER_LABEL_SUPERSEDED = (
+    "carrier_MEASURED_leg2 -- WITHDRAWN as overclaimed (rv17 wave-3 W3-F7). The "
+    "value is a LINEAR EXTRAPOLATION: 45 B measured over 454 pairs in ONE build, "
+    "re-multiplied by --carrier-bytes-per-pair. The ladder measured that price as "
+    "NON-MONOTONE in density with a +-45 B container-search spread, so the leg's "
+    "uncertainty band (+-3.00e-05 S) is LARGER than its own point estimate. "
+    "SUPERSEDED by measurement: .omx/research/"
+    "ddm_fs3_jg5_real_price_reopen_20260820.md:877 -- the real build (180,625 -> "
+    "179,961 = -664 B) puts the +45 B splice on BOTH sides, so leaving the carrier "
+    "unchanged makes the carrier BYTE leg EXACTLY ZERO. Caveat from the same memo: "
+    "zero bytes buys a STALE carrier on the changed pairs, so the COST does not "
+    "vanish even though the BYTES do."
+)
+
 DEFAULT_JG5_SUBSET = (
     "/Volumes/APDataStore/pact/ddm_jg5/work/waterfill_final/seg_edits_subset.npz"
 )
@@ -356,8 +374,11 @@ def run_price(args: argparse.Namespace) -> int:
             "seg_MEASURED": seg,
             "rate_MEASURED_real_reencode": rate,
             "pose_DERIVED": pose,
-            "carrier_MEASURED_leg2": carrier,
+            "carrier_DERIVED_extrapolated_leg2": carrier,
         },
+        # NOT inside ``legs``: every value there is printed with a numeric format,
+        # and the caveat is prose.  Keeping it adjacent is the point of W3-F15.
+        "carrier_label_superseded": CARRIER_LABEL_SUPERSEDED,
         "net_delta_S": net,
         "multiple_of_bar": abs(net) / ADMISSION_BAR_S,
         "clears_admission_bar": net < -ADMISSION_BAR_S,
@@ -372,9 +393,9 @@ def run_price(args: argparse.Namespace) -> int:
         f"{' FLAG' if report['drift_flag'] else ''})"
     )
     for name, value in report["legs"].items():
-        print(f"  {name:28s} {value:+.6e}")
+        print(f"  {name:34s} {value:+.6e}")
     print(
-        f"  NET                          {net:+.6e}  "
+        f"  {'NET':34s} {net:+.6e}  "
         f"({report['multiple_of_bar']:.2f}x bar) clears={report['clears_admission_bar']}"
     )
     print(f"wrote {out}")

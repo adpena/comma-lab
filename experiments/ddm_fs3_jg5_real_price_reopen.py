@@ -92,9 +92,27 @@ JG3_ACCEPT_BITS_PER_TOKEN = 4.1379
 #: of the additional lower-ranked tokens a re-selection would add.
 MEASURED_MARGINAL_BITS_PER_TOKEN = (113_847 - 113_658) * 8.0 / 569.0
 
-#: MEASURED by this arm's leg 2, by building and stat'ing: reverting all 454 moved
-#: pairs' carrier coefficients costs 45 archive bytes over 5,119 coefficients.
+#: Leg 2 built and stat'd ONE point: reverting all 454 moved pairs' carrier
+#: coefficients costs 45 archive bytes over 5,119 coefficients.  Applying it to a
+#: DIFFERENT pair count is a linear extrapolation, not that measurement.
 CARRIER_COMPENSATION_BYTES_PER_PAIR = 45.0 / 454.0
+
+#: Why the emitted carrier key says DERIVED_extrapolated and not MEASURED.
+#: Withdrawn by rv17 wave-3 W3-F7; superseded by a terminal measurement.  Emitted
+#: beside the value so a future receipt carries the caveat without the reader
+#: having to find this memo -- W3-F15 was exactly this caveat failing to travel.
+CARRIER_LABEL_SUPERSEDED = (
+    "carrier_MEASURED_leg2 -- WITHDRAWN as overclaimed (rv17 wave-3 W3-F7). The "
+    "value is a LINEAR EXTRAPOLATION: 45 B measured over 454 pairs in ONE build, "
+    "re-multiplied at 0.0991 B/pair. The ladder measured that price as NON-MONOTONE "
+    "in density with a +-45 B container-search spread, so the leg's uncertainty "
+    "band (+-3.00e-05 S) is LARGER than its own point estimate. SUPERSEDED by "
+    "measurement: .omx/research/ddm_fs3_jg5_real_price_reopen_20260820.md:877 -- "
+    "the real build (180,625 -> 179,961 = -664 B) puts the +45 B splice on BOTH "
+    "sides, so leaving the carrier unchanged makes the carrier BYTE leg EXACTLY "
+    "ZERO. Caveat from the same memo: zero bytes buys a STALE carrier on the "
+    "changed pairs, so the COST does not vanish even though the BYTES do."
+)
 
 #: fs1 sec.3, re-derived at the live operating point: d_pose mean shift per added
 #: token, OLS over jg5's 455 kept pairs.  DERIVED cross-sectional, not causal.
@@ -527,7 +545,11 @@ def compose_legs(
     * pose     -- DERIVED cross-sectional, an OLS slope over pairs with different
                   token counts, which is not the same object as adding tokens to a
                   GIVEN pair
-    * carrier  -- MEASURED by leg 2 (built and stat'd), at the dense endpoint
+    * carrier  -- DERIVED by extrapolating leg 2's single built-and-stat'd point
+                  (45 B / 454 pairs) to this pair count.  The MEASURED label was
+                  withdrawn (rv17 W3-F7) and the leg was later measured EXACTLY
+                  ZERO when the carrier is left unchanged; see
+                  ``CARRIER_LABEL_SUPERSEDED``.
     """
     identified = {
         row["pair"]
@@ -558,7 +580,8 @@ def compose_legs(
         "added_tokens": added_tokens,
         "leg_seg_plus_rate_MEASURED": seg_rate,
         "leg_pose_DERIVED_cross_sectional": pose,
-        "leg_carrier_MEASURED_leg2": carrier,
+        "leg_carrier_DERIVED_extrapolated_leg2": carrier,
+        "carrier_label_superseded": CARRIER_LABEL_SUPERSEDED,
         "net_delta_S": net,
         "multiple_of_bar": abs(net) / ADMISSION_BAR_S,
         "clears_admission_bar": net < -ADMISSION_BAR_S,
