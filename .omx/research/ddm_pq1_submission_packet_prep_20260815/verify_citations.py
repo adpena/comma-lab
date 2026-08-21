@@ -199,6 +199,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"derived doc set ({len(doc_paths)}): "
               + ", ".join(p.name for p in doc_paths))
     tree_map = _tree_files(args.tree)
+    sources = _publish_sources(args.receipts)
+    prep_top = {p.name.casefold(): p for p in args.prep.iterdir() if p.is_file()}
 
     failures: list[str] = []
     stats = {"packet_ok": 0, "external": 0, "erratum_covered": 0, "ambiguous": 0}
@@ -211,6 +213,37 @@ def main(argv: list[str] | None = None) -> int:
         for match in _CITE_RE.finditer(text):
             cited, line_no = match.group(1), int(match.group(2))
             token = f"{cited}:{match.group(2)}"
+            # rv17 R18-note cure (#1172, post-seal): publish_source governs
+            # RESOLUTION as well as selection. A two-copy name whose latest
+            # receipt declares publish_source=prep is PUBLISHED from the prep
+            # tree, so its citations resolve against the prep copy (existence,
+            # exact case, line count). Frozen-resolution for such names was
+            # measured strictly conservative (loud false failure, never a
+            # silent pass; zero live exposure at R19) but would flip fail-open
+            # the first time a prep-published copy became SHORTER than frozen.
+            if "/" not in cited and sources.get(cited.casefold()) == "prep":
+                prep_path = prep_top.get(cited.casefold())
+                if prep_path is not None:
+                    if token in covered:
+                        stats["erratum_covered"] += 1
+                        print(f"note: {doc.name} cites {token} -- erratum-covered, not failed")
+                        continue
+                    if prep_path.name != cited:
+                        failures.append(
+                            f"{doc.name}: `{token}` resolves only case-insensitively "
+                            f"(published prep copy is {prep_path.name}) -- distinct "
+                            f"files on contest Linux"
+                        )
+                        continue
+                    n_lines = len(prep_path.read_text(errors="replace").splitlines())
+                    if line_no > n_lines:
+                        failures.append(
+                            f"{doc.name}: `{token}` cites line {line_no} but the "
+                            f"published prep copy of {prep_path.name} has {n_lines} lines"
+                        )
+                    else:
+                        stats["packet_ok"] += 1
+                    continue
             # A cited path may be tree-relative (runtime/x.py) or bare (inflate.py).
             candidates = tree_map.get(cited.casefold(), [])
             if not candidates:
