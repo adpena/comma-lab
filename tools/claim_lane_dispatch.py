@@ -1048,10 +1048,23 @@ def _reconcile(args: argparse.Namespace) -> int:
             )
 
     if args.format == "json":
+        # timestamp_utc / age_hours are emitted so a machine consumer can tell a
+        # claim PRE-STAGED seconds ago (for the dispatch it is about to make) from
+        # a genuinely abandoned one. Without them the only structured signal was
+        # "active + no live call", which is true of both, and the fire tool's
+        # auto-closer therefore terminal-closed the very claim its own dispatch
+        # was about to consume (rc2 r1, FIRE_REFUSED rc=5). Read-only; additive.
+        now_utc = _utc_now()
         out = {
             "live_modal_call_ids": [_call_id(r) for r in live_calls],
             "active_modal_claims": [
-                {"lane_id": c.lane_id, "job": c.instance_job_id, "status": c.status}
+                {
+                    "lane_id": c.lane_id,
+                    "job": c.instance_job_id,
+                    "status": c.status,
+                    "timestamp_utc": c.timestamp_utc,
+                    "age_hours": _claim_age_hours(now_utc, c),
+                }
                 for c in active_modal
             ],
             "problems": problems,

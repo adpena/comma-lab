@@ -36,7 +36,11 @@ Stages (all local until DISPATCH):
                --require-archive-sha asserts against a sealed fire-order pin.
   4 CLAIMS     reconcile; auto-terminal-close ONLY the exact provable-phantom
                condition (active Modal claim while the call-id ledger has zero
-               live rows), recording the automation in the claim notes.
+               live rows), recording the automation in the claim notes. The claim
+               PRE-STAGED for this very dispatch (same lane_id + instance_job_id,
+               written within SELF_CLAIM_MAX_AGE_HOURS) is EXEMPT: it matches the
+               phantom trigger by construction, and closing it made the tool
+               self-defeat its own --claim-policy require_active (rc2 r1).
   5 DISPATCH   the proven `modal run --detach ...::main` invocation with a fixed
                flag template (never hand-typed), tree sha pinned 'auto'.
   6 ARM-POLLER read call_id from the spawn record (refuse-loud if absent) and
@@ -101,6 +105,13 @@ LITTER_PREFIXES = ("._",)
 # never started (fired 2026-08-18 on ddm_sa3; the call ran with no closer).
 # Bound to the launcher's own _RECEIPT_NAME by test, not by hope.
 _DONE_RECEIPT_ALLOWED = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
+
+# How recently a claim must have been written to count as "pre-staged for THIS fire"
+# and be exempted from the phantom auto-closer. Pre-staging is a step of the same
+# operator action as the fire, so the true gap is minutes; 6h is loose enough to
+# survive a slow compose/seal/validate pass and tight enough that a claim abandoned
+# yesterday under the same lane+job is still treated as the phantom it is.
+SELF_CLAIM_MAX_AGE_HOURS = 6.0
 
 
 def _done_receipt_name(instance_job_id: str) -> str:
@@ -353,29 +364,88 @@ def build_dispatch_argv(
     return cmd
 
 
-def reconcile_claims(auto_close_agent: str, dry_run: bool) -> dict:
-    """Reconcile; terminal-close the provable-phantom condition only."""
+def reconcile_claims(
+    auto_close_agent: str,
+    dry_run: bool,
+    *,
+    self_lane_id: str = "",
+    self_instance_job_id: str = "",
+    self_claim_max_age_hours: float = SELF_CLAIM_MAX_AGE_HOURS,
+    claims_path: Path | str | None = None,
+    modal_ledger: Path | str | None = None,
+) -> dict:
+    """Reconcile; terminal-close the provable-phantom condition ONLY, never our own claim.
 
-    proc = subprocess.run(
-        [VENV_PY, str(REPO / "tools" / "claim_lane_dispatch.py"), "reconcile"],
-        capture_output=True,
-        text=True,
-        cwd=REPO,
-    )
-    out = proc.stdout + proc.stderr
-    action: dict = {"reconcile_output_tail": out.strip().splitlines()[-4:], "closed": []}
-    # Provable phantom: "0 live ledger call_id(s)" alongside >=1 active claim row.
-    if "0 live ledger call_id" not in out:
+    The auto-closer exists for failure F4: an active Modal claim left behind by a call
+    that long since finished blocks the single-flight guard. Its trigger is "active claim
+    + ZERO live ledger call_ids".
+
+    A claim PRE-STAGED for the dispatch this very invocation is about to make satisfies
+    that trigger EXACTLY — it is active, and its call does not exist yet, so the ledger
+    has no live row for it. The closer therefore terminal-closed the claim the fire was
+    about to consume, and the worker's `--claim-policy require_active` then refused with
+    "newest matching claim is terminal: ... status=stale_superseded_reconciled_no_live_call".
+    Measured on the rc2 T4 fire, 2026-08-20:
+    /Volumes/APDataStore/pact/ddm_rc2/t4_row_r1/FIRE_REFUSED.json records
+    stage4_claims.closed = [lane_ddm_rc2_composed_cuda_20260820 / modal:ddm_rc2_composed_cuda_r1]
+    and refusal_rc 5 on that same lane+job. The tool self-defeated its own claim policy;
+    the standing workaround was `--claim-policy open`, i.e. disarming the guard.
+
+    The cure is an identity + freshness exemption. A claim is OURS when its lane_id AND
+    instance_job_id both equal the ones this invocation will dispatch with, and it was
+    written within `self_claim_max_age_hours`. Identity alone is not enough: the same
+    lane+job reused after an abandoned fire hours earlier IS a real phantom and must still
+    close, which is why the reconciler now reports each claim's timestamp.
+
+    Reads structured JSON rather than scraping the human table — the previous text scrape
+    could not see a timestamp at all, so the exemption was not expressible.
+    """
+
+    cmd = [VENV_PY, str(REPO / "tools" / "claim_lane_dispatch.py"), "reconcile", "--format", "json"]
+    if claims_path is not None:
+        cmd += ["--claims-path", str(claims_path)]
+    if modal_ledger is not None:
+        cmd += ["--modal-ledger", str(modal_ledger)]
+    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO)
+    action: dict = {"closed": [], "exempt": []}
+    try:
+        report = json.loads(proc.stdout)
+    except (json.JSONDecodeError, ValueError):
+        # Fail SAFE, never silent: an unparseable reconcile closes NOTHING (closing on a
+        # guess is how the rc2 refusal happened) and the raw output is preserved.
+        action["reconcile_unparseable"] = True
+        action["reconcile_output_tail"] = (proc.stdout + proc.stderr).strip().splitlines()[-4:]
         return action
-    for line in out.splitlines():
-        line = line.strip()
-        if not line.startswith("claim: lane="):
-            continue
-        fields = dict(
-            part.split("=", 1) for part in line.removeprefix("claim: ").split() if "=" in part
-        )
-        lane, job = fields.get("lane"), fields.get("job")
+
+    live = list(report.get("live_modal_call_ids") or [])
+    claims = list(report.get("active_modal_claims") or [])
+    action["live_modal_call_ids"] = live
+    action["reconcile_output_tail"] = [str(p) for p in (report.get("problems") or [])][-4:]
+    # Provable phantom requires ZERO live ledger call_ids alongside >=1 active claim.
+    if live:
+        return action
+
+    for row in claims:
+        lane = str(row.get("lane_id") or "")
+        job = str(row.get("job") or "")
         if not lane or not job:
+            continue
+        age = row.get("age_hours")
+        is_self = bool(self_lane_id) and bool(self_instance_job_id) and (
+            lane == self_lane_id and job == self_instance_job_id
+        )
+        fresh = isinstance(age, (int, float)) and float(age) <= float(self_claim_max_age_hours)
+        if is_self and fresh:
+            action["exempt"].append(
+                {
+                    "lane": lane,
+                    "job": job,
+                    "age_hours": age,
+                    "reason": "pre-staged for THIS dispatch (lane+job identity, within "
+                    f"{self_claim_max_age_hours}h) — closing it would self-defeat "
+                    "--claim-policy require_active",
+                }
+            )
             continue
         if dry_run:
             action["closed"].append({"lane": lane, "job": job, "dry_run": True})
@@ -396,7 +466,8 @@ def reconcile_claims(auto_close_agent: str, dry_run: bool) -> dict:
                 "reported an active Modal claim with ZERO live ledger call_ids "
                 "(the provable-phantom condition). Deterministic per operator "
                 "2026-08-17 no-manual binding.",
-            ],
+            ]
+            + (["--claims-path", str(claims_path)] if claims_path is not None else []),
             capture_output=True,
             text=True,
             cwd=REPO,
@@ -645,7 +716,12 @@ def main(argv: list[str] | None = None) -> int:
             "rr4 lineage's and the pin check is vacuous for this tree. Proceeding, loudly."
         )
 
-    manifest["stage4_claims"] = reconcile_claims(args.claim_agent, args.dry_run)
+    manifest["stage4_claims"] = reconcile_claims(
+        args.claim_agent,
+        args.dry_run,
+        self_lane_id=args.lane_id,
+        self_instance_job_id=args.instance_job_id,
+    )
 
     cmd = build_dispatch_argv(
         spec=spec,
