@@ -30,6 +30,13 @@ import re
 import sys
 from pathlib import Path
 
+# Shared derivation, not a duplicate (rv17 R16-F1): the citation-universe
+# coverage check below consumes verify_citations._default_docs directly, so
+# the two guards can never drift apart the way the hand-named repo_only_docs
+# list drifted from the derived doc set (12 derived vs 11 tracked at round 16).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import verify_citations as _vc
+
 DEFAULT_RECEIPTS = Path(
     "/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen6_receipts"
 )
@@ -97,6 +104,38 @@ def _derived_coverage(prep: Path, frozen: Path, tracked: set[str], failures: lis
     return len(pairs)
 
 
+def _citation_universe_coverage(
+    prep: Path, frozen: Path, receipts_dir: Path, tracked: set[str], failures: list[str]
+) -> int:
+    """Refuse when a citation-bearing doc is not tracked by the latest receipt.
+
+    rv17 R16-F1: repo_only_docs was the LAST hand-named input set in either
+    guard — at round 16 the citations checker derived 12 docs while the chain
+    receipt tracked 11, leaving 8 citation-universe docs where a stale
+    citation AND its covering `covered-citation:` declaration could land in
+    one edit with no tracked sha moving and no receipt owed (the operative
+    rule had been "track a doc once it earns an erratum", by hand, after the
+    fact). Cure: the universe is DERIVED here from the SAME function the
+    citations checker uses, so tracking coverage moves with the universe --
+    a doc that gains its first citation immediately becomes owed a receipt.
+    """
+    universe = _vc._default_docs(prep, frozen, receipts_dir)
+    tracked_folded = {name.casefold() for name in tracked}
+    missing = 0
+    for doc in universe:
+        if doc.name.casefold() not in tracked_folded:
+            missing += 1
+            failures.append(
+                f"{doc.name}: CITATION-UNIVERSE DOC UNTRACKED by the latest receipt "
+                f"(rv17 R16-F1)\n"
+                f"  (this doc carries FILE:LINE citations, so coverage declarations\n"
+                f"  in it are load-bearing; every citation-universe doc must be\n"
+                f"  receipt-tracked -- add it to repo_only_docs / frozen_only_docs\n"
+                f"  in the next appended receipt)"
+            )
+    return len(universe) - missing
+
+
 def _check(label: str, path: Path, expected: str, failures: list[str]) -> None:
     if not path.exists():
         failures.append(f"{label}: MISSING on disk ({path})")
@@ -152,11 +191,23 @@ def main(argv: list[str] | None = None) -> int:
         if "repo_final_sha256" in entry:
             _check(f"{name} (repo)", args.prep / name, entry["repo_final_sha256"], failures)
             checked += 1
+    # Frozen-only docs (rv17 R16-F1): citation-universe docs that exist only in
+    # the frozen tree (e.g. README.md). The frozen custody is append-only, so a
+    # tracked sha here doubles as a freeze-integrity check on that file.
+    for name, entry in receipt.get("frozen_only_docs", {}).items():
+        if "frozen_gen6_sha256" in entry:
+            _check(f"{name} (frozen)", args.frozen / name, entry["frozen_gen6_sha256"], failures)
+            checked += 1
 
-    tracked_names = set(receipt.get("diverged_files", {})) | set(
-        receipt.get("repo_only_docs", {})
+    tracked_names = (
+        set(receipt.get("diverged_files", {}))
+        | set(receipt.get("repo_only_docs", {}))
+        | set(receipt.get("frozen_only_docs", {}))
     )
     pair_count = _derived_coverage(args.prep, args.frozen, tracked_names, failures)
+    universe_count = _citation_universe_coverage(
+        args.prep, args.frozen, args.receipts, tracked_names, failures
+    )
 
     if checked == 0:
         print(f"FAIL: latest receipt {latest.name} tracks zero documents", file=sys.stderr)
@@ -174,7 +225,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     print(
         f"PASS: {checked} tracked document shas match the latest receipt "
-        f"({latest.name}); all {pair_count} derived two-copy pairs covered"
+        f"({latest.name}); all {pair_count} derived two-copy pairs covered; "
+        f"all {universe_count} citation-universe docs tracked"
     )
     return 0
 
