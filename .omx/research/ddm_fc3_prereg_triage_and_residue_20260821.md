@@ -256,6 +256,11 @@ fixture, **not evidence about any real row**, and must not be filed as an F14 in
 1. **The extrapolation-error magnitude is prefix-based.** A seeded **random-sample** n≥120 re-test
    would replace the 1.034×–1.056× figures with population estimates. The sign is safe; the
    magnitudes are not. Nothing consumes these numbers today, so this is a sharpening, not a blocker.
+   **ROUTED (2026-08-21, W3-F20 cure):** registered as task `1181` in the REPO canonical ledger
+   `.omx/state/canonical_task_status.jsonl` (status `pending`, owner `main`, fire condition = the
+   next Road↔Undrivable carrier pricing consumption). The prior routing existed only in the
+   harness task store, which arms cannot see — the m89 two-ledger split. A residue-routing claim
+   in an arm-visible artifact must cite a repo-visible store; this line is that citation.
 2. **`bulk_boundary_byte_cost`'s +0.0066 S overstatement** should be re-checked by whoever next
    prices the Road↔Undrivable carrier — the honest n600 figure is **293,050 B / 0.195130**, not the
    prefix-extrapolated 302,984 B / 0.201745.
