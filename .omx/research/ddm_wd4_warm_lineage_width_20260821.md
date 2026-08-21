@@ -147,7 +147,7 @@ WD4 scorer ownership, so no scorer was fired and no duplicate lane was created.
 
 The consumer store is
 `/Volumes/APDataStore/pact/ddm_wd4_warm_lineage_width/`. It currently contains 549
-files, 12,941,218 logical bytes (80 MiB allocated). The retained tree includes exact
+files, 12,941,268 logical bytes (80 MiB allocated). The retained tree includes exact
 source fields, all 16 width/subset candidates, deterministic repeats, the gate runtime,
 the Metal probe, and the prelaunch blocker. `RESULT.json` is the machine-readable
 authority. No materialized payload was discarded.
