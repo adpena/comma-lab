@@ -106,8 +106,11 @@ reuse its authority receipts for changed bytes.
    prep (carries the §10.6 citation erratum + its covered-citation
    declaration), `archive_manifest.json` → frozen (the shipped strict-subset
    manifest; the prep `ARCHIVE_MANIFEST.json` is a working superset with 23
-   repo-only keys and stays internal). Frozen custody stays untouched as
-   history in every case. After the copy, run `python3 verify_files_digest.py`
+   repo-only keys and stays internal — decisively, it carries 4 absolute
+   `/Volumes/…` local custody paths vs 0 in the frozen copy, so publishing
+   the prep copy would breach Public Disclosure Hygiene; rv17 round 12
+   measured this and vindicated frozen-side publication). Frozen custody
+   stays untouched as history in every case. After the copy, run `python3 verify_files_digest.py`
    AND `python3 verify_citations.py --tree <published root> <published
    BORROWED_SUBSTRATE_ACCOUNTING.md>` from the published tree root and require
    PASS on both before publication.

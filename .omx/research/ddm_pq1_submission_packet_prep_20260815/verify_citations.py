@@ -58,10 +58,25 @@ _DECLARE_RE = re.compile(r"^\s*covered-citation:\s*`([^`]+)`")
 
 
 def _declared_coverage(doc_text: str) -> set[str]:
-    """Exact tokens declared covered on `covered-citation:` lines in Erratum sections."""
+    """Exact tokens declared covered on `covered-citation:` lines in Erratum sections.
+
+    Code-fence aware (rv17 R12-F1): text inside ``` / ~~~ fences is
+    ILLUSTRATION, not declaration -- a fenced Erratum-header-plus-declaration
+    example must not silently open real coverage (the realistic path is
+    documentation showing the declaration syntax), and a fenced `# comment`
+    line must not silently CLOSE a live Erratum section (the same blindness
+    in the false-negative direction).
+    """
     covered: set[str] = set()
     in_erratum = False
+    in_fence = False
     for line in doc_text.splitlines():
+        stripped = line.lstrip()
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
         if line.startswith("#"):
             in_erratum = bool(_ERRATUM_HEADER_RE.match(line))
             continue
