@@ -1,0 +1,141 @@
+{
+  "frame_a_window": [
+    822,
+    1302
+  ],
+  "frame_b_window_derived": [
+    890.572,
+    1430.572
+  ],
+  "jg5_measured": {
+    "evaluate_elapsed_seconds": 51.428,
+    "inflate_elapsed_seconds": 1419.904,
+    "token_stage_seconds": 1341.5398272720001
+  },
+  "note": "Indexed by the T4 port_scope_seconds. Written BEFORE the row so the verdict cannot be fitted afterwards. k=3 is the realistic-port column: ddm_rr6 2.1 measured the native token win as thread-borne, and the corrector's per-group work sits behind a strict data dependence, so a C port buys temporaries and interpreter overhead, not a thread pool.",
+  "rows": [
+    {
+      "break_even_k_frame_a_wide": null,
+      "break_even_k_frame_b_narrow": null,
+      "ceiling_inflate_seconds": 1319.904,
+      "frame_a_verdict_at_k3": "REFUSE",
+      "frame_a_verdict_at_perfect_port": "REFUSE",
+      "frame_b_margin_narrow_at_perfect_seconds": -429.332,
+      "frame_b_margin_wide_at_k3_seconds": 77.335,
+      "inflate_at_k3_seconds": 1353.237,
+      "port_scope_seconds": 100.0,
+      "share_of_token_stage": 0.0745,
+      "verdict_rule": "CLOSE"
+    },
+    {
+      "break_even_k_frame_a_wide": 1489460023636525.0,
+      "break_even_k_frame_b_narrow": null,
+      "ceiling_inflate_seconds": 1250.572,
+      "frame_a_verdict_at_k3": "REFUSE",
+      "frame_a_verdict_at_perfect_port": "WARN",
+      "frame_b_margin_narrow_at_perfect_seconds": -360.0,
+      "frame_b_margin_wide_at_k3_seconds": 123.556,
+      "inflate_at_k3_seconds": 1307.016,
+      "port_scope_seconds": 169.332,
+      "share_of_token_stage": 0.1262,
+      "verdict_rule": "CONDITIONAL"
+    },
+    {
+      "break_even_k_frame_a_wide": 6.521455588887414,
+      "break_even_k_frame_b_narrow": null,
+      "ceiling_inflate_seconds": 1219.904,
+      "frame_a_verdict_at_k3": "REFUSE",
+      "frame_a_verdict_at_perfect_port": "WARN",
+      "frame_b_margin_narrow_at_perfect_seconds": -329.332,
+      "frame_b_margin_wide_at_k3_seconds": 144.001,
+      "inflate_at_k3_seconds": 1286.571,
+      "port_scope_seconds": 200.0,
+      "share_of_token_stage": 0.1491,
+      "verdict_rule": "CONDITIONAL"
+    },
+    {
+      "break_even_k_frame_a_wide": 2.2958949398475506,
+      "break_even_k_frame_b_narrow": null,
+      "ceiling_inflate_seconds": 1119.904,
+      "frame_a_verdict_at_k3": "WARN",
+      "frame_a_verdict_at_perfect_port": "WARN",
+      "frame_b_margin_narrow_at_perfect_seconds": -229.332,
+      "frame_b_margin_wide_at_k3_seconds": 210.668,
+      "inflate_at_k3_seconds": 1219.904,
+      "port_scope_seconds": 300.0,
+      "share_of_token_stage": 0.2236,
+      "verdict_rule": "CONDITIONAL"
+    },
+    {
+      "break_even_k_frame_a_wide": 1.7340940225779033,
+      "break_even_k_frame_b_narrow": null,
+      "ceiling_inflate_seconds": 1019.904,
+      "frame_a_verdict_at_k3": "WARN",
+      "frame_a_verdict_at_perfect_port": "WARN",
+      "frame_b_margin_narrow_at_perfect_seconds": -129.332,
+      "frame_b_margin_wide_at_k3_seconds": 277.335,
+      "inflate_at_k3_seconds": 1153.237,
+      "port_scope_seconds": 400.0,
+      "share_of_token_stage": 0.2982,
+      "verdict_rule": "CONDITIONAL"
+    },
+    {
+      "break_even_k_frame_a_wide": 1.545057746533276,
+      "break_even_k_frame_b_narrow": null,
+      "ceiling_inflate_seconds": 939.904,
+      "frame_a_verdict_at_k3": "WARN",
+      "frame_a_verdict_at_perfect_port": "WARN",
+      "frame_b_margin_narrow_at_perfect_seconds": -49.332,
+      "frame_b_margin_wide_at_k3_seconds": 330.668,
+      "inflate_at_k3_seconds": 1099.904,
+      "port_scope_seconds": 480.0,
+      "share_of_token_stage": 0.3578,
+      "verdict_rule": "CONDITIONAL"
+    },
+    {
+      "break_even_k_frame_a_wide": 1.4703666666666662,
+      "break_even_k_frame_b_narrow": null,
+      "ceiling_inflate_seconds": 890.572,
+      "frame_a_verdict_at_k3": "WARN",
+      "frame_a_verdict_at_perfect_port": "WARN",
+      "frame_b_margin_narrow_at_perfect_seconds": 0.0,
+      "frame_b_margin_wide_at_k3_seconds": 363.556,
+      "inflate_at_k3_seconds": 1067.016,
+      "port_scope_seconds": 529.332,
+      "share_of_token_stage": 0.3946,
+      "verdict_rule": "BUILD"
+    },
+    {
+      "break_even_k_frame_a_wide": 1.3931845412243302,
+      "break_even_k_frame_b_narrow": 8.490405841399218,
+      "ceiling_inflate_seconds": 819.904,
+      "frame_a_verdict_at_k3": "WARN",
+      "frame_a_verdict_at_perfect_port": "WARN",
+      "frame_b_margin_narrow_at_perfect_seconds": 70.668,
+      "frame_b_margin_wide_at_k3_seconds": 410.668,
+      "inflate_at_k3_seconds": 1019.904,
+      "port_scope_seconds": 600.0,
+      "share_of_token_stage": 0.4472,
+      "verdict_rule": "BUILD"
+    },
+    {
+      "break_even_k_frame_a_wide": 1.319092163085017,
+      "break_even_k_frame_b_narrow": 4.101530456793306,
+      "ceiling_inflate_seconds": 719.904,
+      "frame_a_verdict_at_k3": "WARN",
+      "frame_a_verdict_at_perfect_port": "PASS",
+      "frame_b_margin_narrow_at_perfect_seconds": 170.668,
+      "frame_b_margin_wide_at_k3_seconds": 477.335,
+      "inflate_at_k3_seconds": 953.237,
+      "port_scope_seconds": 700.0,
+      "share_of_token_stage": 0.5218,
+      "verdict_rule": "BUILD"
+    }
+  ],
+  "schema": "cd1_preregistered_decision_table.v1",
+  "thresholds": {
+    "build_at_or_above_seconds": 529.332,
+    "close_below_seconds": 169.332
+  },
+  "written_before_the_t4_row": true
+}

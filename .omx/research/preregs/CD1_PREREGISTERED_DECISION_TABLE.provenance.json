@@ -1,0 +1,15 @@
+{
+  "schema": "pact_prereg_registration.v1",
+  "name": "CD1_PREREGISTERED_DECISION_TABLE",
+  "birth_copy": ".omx/research/preregs/CD1_PREREGISTERED_DECISION_TABLE.json",
+  "source_path_at_registration": "/Volumes/APDataStore/pact/ddm_cd1/retained/cd1_preregistered_decision_table.json",
+  "source_sha256": "13f2d6ae1f89fe1db16e6295e8a773dc0aa800beed651abebbf9c43373f225c6",
+  "source_size_bytes": 5339,
+  "source_birthtime_utc": "2026-08-20T12:42:53+00:00",
+  "source_mtime_utc": "2026-08-20T12:42:53+00:00",
+  "registered_at_utc": "2026-08-21T08:00:49.292714+00:00",
+  "supersedes": null,
+  "what_this_proves": "the byte-exact content of the prereg AT REGISTRATION TIME, committed to git history. Any later in-place edit of the live file is diffable against this copy via `register_prereg.py verify`.",
+  "what_this_does_NOT_prove": "that registration happened before the build. A prereg registered late is still a late prereg; this records WHEN it was registered so that question is answerable rather than arguable.",
+  "already_mutated_at_registration": false
+}
