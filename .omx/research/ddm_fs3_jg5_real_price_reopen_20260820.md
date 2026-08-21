@@ -9,8 +9,19 @@
 > round 1 named in its own §5. jg3's stopping rule is vindicated by measurement. The refutation
 > opens a mirror worth more than the reopen was: **§R6, a −4.45e-05 tightening at 12.72× the bar** (PROJECTION — price transferred across the admission cut; §R6's named caveat applies and the number is not quotable before a real re-encode).
 
-**Task #1173 (leg 1) + rv17 W2-F8 / E4 (leg 2)** · **date** 2026-08-20 · **arm** `ddm_fs3`
-(lane `ddm_fs3_jg5_real_price_reopen`)
+> **TASK #1176 / MIRROR RATE RESULT (§T8).** The 137-pair over-admission drop was built and priced for
+> real: **credit 664 B over 997 dropped tokens = 5.3280 bits/token**, against a falsifier registered
+> BEFORE the encode at 5.2282 (651.6 B). **It SURVIVES its falsifier — but by 12.4 B, 1.9%, and that
+> margin is a TREND EDGE, not a plateau: the credit declined monotonically through the run
+> (7.19 → 6.12 → 5.95 → 5.56 → 5.328) and settled just above threshold. Quote the 1.9% with that
+> caveat wherever it travels.** Mechanism adjudicated by the same measurement: **rank-dependence
+> supported** (0.90× its point prediction), **direction-asymmetry refuted 2.0×**, and **my own
+> registered site-quality risk refuted IN SIGN** — better sites cost MORE, not less.
+> **NOT YET A CANDIDATE:** the pose leg is unmeasured and is the only thing between this row and a
+> fire-order. The carrier leg is now MEASURED-BY-CONSTRUCTION at **exactly zero** (§T9).
+
+**Task #1173 (leg 1) + rv17 W2-F8 / E4 (leg 2) + Task #1176 (the mirror)** · **date** 2026-08-20/21 ·
+**arm** `ddm_fs3` (lane `ddm_fs3_jg5_real_price_reopen`)
 **Axis** rate legs **EXACT** (archive `stat` / re-encoder code bits, byte-identical controls) ·
 pose leg `[macOS-CPU advisory, jg5 retained compensated arrays]` · seg leg **MEASURED** (jg3
 realized repaired-cell counts through the receiver forward + frozen CPU SegNet).
@@ -808,6 +819,83 @@ dependence; between → more than one is real. The row itself survives only abov
 **Stated plainly: three of the four readings predict this row DIES.** I am firing it because the
 measurement is decisive about the MECHANISM either way, and a mechanism that explains round 2 is worth
 more than this row was.
+
+### §T8 THE MIRROR'S RATE LEG — MEASURED, and it SURVIVES on a trend edge
+
+Composed field `seg_edits_fs3_drop137_composed.npz` (638,012 B, sha `6cc51bce1fd9e033`; the merge
+re-ran deterministically to the identical sha). Priced by real `ddm_jg2_tail_reencode` against the
+sha-receipted baseline of §T5c.
+
+| quantity | baseline (shipped 455-edit) | candidate (137 pairs tightened) | delta |
+|---|---:|---:|---:|
+| token stream | 113,847 B (`b9243abd…`) | **113,183 B** | **−664 B** |
+| kill line | — | 113,195 B | cleared by **12 B** |
+| tokens | 8,654 | 7,657 | −997 |
+| **credit** | — | — | **5.3280 bits/dropped-token** |
+
+`delta_trustworthy: true`, 613 s, control byte-identical both sides (`15054e5da3…`).
+
+| pre-registered | value | realized | verdict |
+|---|---:|---:|---|
+| **falsifier** (row dies below) | 5.2282 b/tok (651.6 B) | **5.3280 (664 B)** | **SURVIVES by 1.9%** |
+| rank-dependence predicted | 5.9467 (741.1 B) | | **supported**, 0.90× its point prediction |
+| direction-asymmetry predicted | 2.6573 (331.2 B) | | **REFUTED by 2.0×** |
+| my site-quality risk (§T3) | < 5.9467 | | **REFUTED IN SIGN** — better sites cost MORE |
+
+**⚠ The margin is a TREND EDGE, not a plateau.** The running credit fell monotonically as the encode
+progressed — **7.1862 → 6.1227 → 5.9451 → 5.5617 → 5.3280** — and came to rest 1.9% above the kill
+line rather than settling onto a stable value well clear of it. Anywhere this number travels, that
+sentence travels with it.
+
+**What the measurement settles about ROUND 2.** W3-F8 was right that round 2 confounded two axes
+(an AVERAGE over a REMOVAL vs a MARGINAL over an ADDITION) and right that my controls could not
+separate them. The mirror separates them, and the answer is that **average-vs-marginal is the real
+axis**: a removal of marginal tokens credits 5.3280, close to the 5.9467 an addition of marginal
+tokens cost, and nowhere near the 2.6573 a removal of a whole set credited. Round 2's attribution was
+correct; the alternative reading is measured false on this lineage.
+
+### §T9 THE CARRIER LEG — I over-charged it, and the correction favours the row
+
+I filed the carrier at **+9.041895e-06** (137 × 0.0991 B/pair, `carrier_DERIVED_extrapolated`). That
+priced a **re-solve I never committed to**. The arithmetic, built and stat'd rather than argued:
+
+| body | bytes |
+|---|---:|
+| br1 pointer | 176,429 |
+| + jg5's 455-edit tokens | 180,580 |
+| + jg5's mixed-carrier splice (+45 B) | **180,625** ← the shipped jg5 baseline |
+| my candidate on br1's carrier (jg2 receipt) | 179,916 |
+| **my candidate + the SAME mixed carrier, BUILT** | **179,961** (sha `c04f2385…`) |
+
+**180,625 → 179,961 = −664 B**, identical to the token-stream delta: the +45 B carrier splice appears
+on **both** sides and cancels. **Leaving the carrier unchanged makes the carrier byte leg EXACTLY
+ZERO** — measured by construction, with the splice tool's identity control passing (`12a4ae41…`
+rebuilt from its own codes byte-identically).
+
+| leg composition | net | × bar |
+|---|---:|---:|
+| as filed, with the over-charge | −1.177635e-05 | 3.36 |
+| **with carrier = 0 (unchanged)** | **−2.081824e-05** | **5.95** |
+
+**But zero bytes buys a STALE carrier on the 137 changed pairs**, so the cost does not vanish — it
+MOVES to the pose leg. That is the one remaining measurement, and it is why this is not yet a
+candidate.
+
+### §T10 THE THREE CONSTANTS (for the deferred F2 canonical-equations registration)
+
+Re-derived in code from `S1_encode_fs3_drop137.json`, never typed; each agrees with the receipt's own
+field where one exists.
+
+| # | constant | value | **SCOPE** |
+|---|---|---:|---|
+| 1 | **marginal-removal price** | **5.3280 b/tok** | the price of REMOVING tokens at the admission margin of a jg3-selected edit set, on the br1/rc2 token lineage, n=997 tokens over 137 pairs. **NOT** an average, **NOT** a whole-set removal, and **NOT** established off this lineage. |
+| 2 | **average over trimmed set** | **3.6432 b/tok** | the AVERAGE price of the surviving 7,657-token edit set after the margin is trimmed, against the zero-edit base 109,696 B. Compare to jg5's 3.8373 over the untrimmed 8,654 — trimming the margin LOWERS the set average, which is the same fact from the other end. |
+| 3 | **realized / modelled** | **0.7722** | constant 2 against jg1's `4.718` logit-ranker mean. It is a RANKER-relative ratio, so it inherits the ranker's cross-body caveat; it is NOT a realized/`-log2 p` ratio on this body. |
+
+Note the family these join: fs2 measured **~0.09×** toward-argmax and **~0.88×** away-from-argmax
+(set averages); round 2 measured the **marginal ADDITION** at 5.9467; this row measures the
+**marginal REMOVAL** at 5.3280. The axis that organises all of them is **position in the greedy
+ranking**, not direction of travel.
 
 ---
 
