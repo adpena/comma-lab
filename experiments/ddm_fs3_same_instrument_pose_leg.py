@@ -247,6 +247,19 @@ def runtime_trees_differ_only_by_payload(base: Path, cand: Path) -> dict[str, An
         # is only legitimate when nothing named inflate.py differs at all.
         and (not inflate_paths or inflate_body_identical is True)
     )
+
+    # OBSERVABILITY ONLY -- deliberately NOT a refusal here (ddm_fc3, task #1179).
+    # "Was a treatment applied at all?" is the CALLER's question, and refusing it
+    # here would break the pre-registered control that comparing a tree with
+    # itself must still PASS.  We surface the facts this function already
+    # computed so the caller can decide from the SAME hash pass rather than
+    # re-hashing and risking two instruments that disagree.
+    archive_paths = sorted(
+        k for k in set(hb) & set(hc) if Path(k).name == "archive.zip"
+    )
+    archive_differs: bool | None = (
+        any(hb[k] != hc[k] for k in archive_paths) if archive_paths else None
+    )
     return {
         "files_only_in_base": only_base,
         "files_only_in_candidate": only_cand,
@@ -259,12 +272,75 @@ def runtime_trees_differ_only_by_payload(base: Path, cand: Path) -> dict[str, An
         # "identical", but it proves no treatment was applied. The caller owns
         # that question; this flag stops the vacuity from being invisible.
         "base_and_candidate_are_the_same_directory": base.resolve() == cand.resolve(),
+        # Same boundary as the flag above: facts, not a verdict. ``None`` means no
+        # archive.zip exists at a path present in BOTH trees -- which the caller
+        # must treat as fail-closed, never as "nothing to check".
+        "archive_zip_relpaths_in_both": archive_paths,
+        "archive_zip_differs": archive_differs,
         "verdict": "PAYLOAD_ONLY" if ok else "RECEIVER_CHANGED",
         "why_this_check_exists": (
             "runtime_files_sha256 differs between any base and candidate because each "
             "tree embeds its own archive and the pin derived from it. That is the "
             "TREATMENT. This check proves nothing ELSE moved, so the hash difference "
             "cannot hide a receiver change."
+        ),
+    }
+
+
+def assert_treatment_was_applied(
+    tree_check: dict[str, Any], *, allow_identical_archive: bool = False
+) -> dict[str, Any]:
+    """CALLER-layer check: refuse a candidate-vs-base delta when no treatment exists.
+
+    The division of labour, made explicit because ddm_fc2 deliberately left this gap open
+    (rv17 W3-F18 note 1).  ``runtime_trees_differ_only_by_payload`` answers exactly one
+    question -- *do these two trees differ ONLY by their payload?* -- and comparing a tree
+    with itself is an honest ``PAYLOAD_ONLY`` for that question, which is why a
+    pre-registered control requires it to keep PASSING there.  It is NOT an answer to *was
+    a treatment applied at all?*, and that second question belongs here, at the layer that
+    consumes the verdict to compute a candidate-vs-base seg/pose/rate delta.
+
+    Two refusals, both fail-closed:
+
+    * **no ``archive.zip`` in both trees** -> refuse.  A missing payload file is the
+      ``VACUITY==PASS`` shape: the comparator would find nothing to disagree about and
+      report its strongest verdict having compared no payload.  ``None`` here means "not
+      found", never "nothing to check".
+    * **byte-identical ``archive.zip``** -> refuse unless the caller explicitly opted in.
+      Identical payload means the two receipts describe the SAME shipped bytes, so any
+      nonzero leg computed from them is an instrument artifact, not a treatment effect.
+
+    ``allow_identical_archive`` exists for the deliberate null control (running the pair
+    against itself to show the legs come out at zero).  It is off by default so the null
+    case must be *declared*, never stumbled into.
+    """
+
+    relpaths = tree_check.get("archive_zip_relpaths_in_both") or []
+    differs = tree_check.get("archive_zip_differs")
+    if not relpaths:
+        raise PoseLegError(
+            "REFUSING: no archive.zip exists at a path present in BOTH runtime trees "
+            f"(base_only={tree_check.get('files_only_in_base')}, "
+            f"candidate_only={tree_check.get('files_only_in_candidate')}). The payload is "
+            "the treatment; with no payload to compare, a PAYLOAD_ONLY verdict has "
+            "examined nothing that matters and the legs below measure nothing."
+        )
+    if differs is not True and not allow_identical_archive:
+        raise PoseLegError(
+            f"REFUSING: base and candidate archive.zip are BYTE-IDENTICAL at {relpaths} "
+            f"(same_directory={tree_check.get('base_and_candidate_are_the_same_directory')}). "
+            "The two receipts therefore describe the SAME shipped bytes, so any nonzero "
+            "seg/pose/rate leg is an instrument artifact rather than a treatment effect. "
+            "Pass --allow-identical-archive if this is a deliberate null control."
+        )
+    return {
+        "archive_zip_relpaths_in_both": relpaths,
+        "archive_zip_differs": differs,
+        "allow_identical_archive": bool(allow_identical_archive),
+        "why_this_check_exists": (
+            "The comparator answers 'do these trees differ ONLY by payload?' and must keep "
+            "passing when handed the same tree twice. 'Was a treatment applied at all?' is "
+            "this caller's question, and it is asked HERE (ddm_fc3, task #1179)."
         ),
     }
 
@@ -314,6 +390,10 @@ def run(args: argparse.Namespace) -> int:
                 f"{tree_check['inflate_py_AST_identical_once_pin_normalised']}. "
                 "A receiver change cannot ride in as payload."
             )
+        # The comparator proved nothing ELSE moved. Now prove the payload DID.
+        tree_check["treatment_check"] = assert_treatment_was_applied(
+            tree_check, allow_identical_archive=args.allow_identical_archive
+        )
     else:
         raise PoseLegError(
             "REFUSING: --base-runtime and --candidate-runtime are required. "
@@ -433,6 +513,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--commit-delta-proof",
         default=None,
         help="git range re-checked by this module against the forward path",
+    )
+    parser.add_argument(
+        "--allow-identical-archive",
+        action="store_true",
+        help=(
+            "declare a deliberate NULL control: permit base and candidate archive.zip to be "
+            "byte-identical. Off by default, so a run with no treatment must be declared "
+            "rather than stumbled into (ddm_fc3, task #1179)."
+        ),
     )
     parser.add_argument(
         "--out", default="/Volumes/APDataStore/pact/ddm_fs3/FS3_SAME_INSTRUMENT_LEGS.json"
