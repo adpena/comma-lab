@@ -29419,3 +29419,25 @@ S 0.14827847122030852 @ 180,456 B [contest-CUDA T4 n600].
 - QUEUE RE-AIM: head = fx2 19-member rebuild (−86.58 B measured, 0 counted bytes, decode slack
   323.5 s measured) COMPOSED with dx1's −18 B CABAC re-code ($0, blocking condition met by rc2)
   → one candidate, one T4 fire. Then the contested rc2-pose-codes receipt comparison ($0).
+
+## FEED-20260821-wd4-gate-cures (MAIN; commits d997f7d3cf + d2deb6a99d)
+Trajectory point on the sub-0.12 rate-representation axis (wd4 warm-lineage width gate):
+- **MEASURED (probe v2, CPU control + MPS, identical):** the salience candidate's
+  `blocks.{1,2,3}.film.weight` (128×8) carry 126/128 exactly-zero rows (structural prune =
+  counted byte representation). One AdamW step moves pruned rows to ±lr (2e-7); requantize
+  then NaNs 504 elements/tensor — tiny amax escapes the exact-zero guard, per-group scale
+  collapses (the #1094 fp16-below-clamp genus). Device-INDEPENDENT; the prior "MPS-specific"
+  framing was wrong (the CPU control had never taken an optimizer step).
+- **CURE (structural, d997f7d3cf):** freeze pruned rows — masks computed from PACKET bytes
+  before any resume state; grads zeroed each step pre-`optimizer.step()`. With wd=0 the rows
+  stay exactly zero → serialization byte-stable; the candidate's declared byte structure is
+  ENFORCED during training rather than patching the quantizer. Gate r4 PASSED: 32/32 steps,
+  loss 0.11790 finite, 5 checkpoints + per-checkpoint candidate payloads retained (P0).
+- **MEASURED (advisory chain r1–r3, memo d2deb6a99d):** the prep-stage runtime tree is
+  PIN-BOUND to the untrained archive (inflate.py hardcodes ARCHIVE_SHA256/BYTES + compares
+  extracted/p vs its OWN bundled archive.zip) — #1123 genus in mirror form; the r1 AppleDouble
+  was incidental (r2 APFS control refused identically). Cure: derived runtime
+  (`retained/runtime_trained_stage01/`, pins recomputed from file, asserted). r3 advisory LIVE.
+- **Next verdict point:** trained-candidate n600 vs gate bars (early 1.5× 0.0017648, final
+  0.0011766); rate credit 13,921 B banked @ 166,459 B archive. jo1 r8 materializer co-running
+  (call fc-01M0K81DA4ZEB2W3XXRQ18SKTG, past the r7 __pycache__ refusal).
