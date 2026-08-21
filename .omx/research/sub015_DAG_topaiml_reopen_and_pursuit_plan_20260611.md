@@ -29441,3 +29441,11 @@ Trajectory point on the sub-0.12 rate-representation axis (wd4 warm-lineage widt
 - **Next verdict point:** trained-candidate n600 vs gate bars (early 1.5× 0.0017648, final
   0.0011766); rate credit 13,921 B banked @ 166,459 B archive. jo1 r8 materializer co-running
   (call fc-01M0K81DA4ZEB2W3XXRQ18SKTG, past the r7 __pycache__ refusal).
+
+## FEED-20260821-wd4-verdict (MAIN — closes FEED-20260821-wd4-gate-cures)
+GATE-FAIL measured: trained salience d4/w64 candidate d_seg 0.03182 / d_pose 13.433 / S 14.88
+[macOS-CPU advisory] = 1,792× over the early bar; axis-robust (CPU inflation 1.43×/21× cannot
+rescue). "Warm lineage" REFUTED at this slice depth (INSTANCE scope): 126/128-row-pruned FiLM
+slice = cold student. Distillation burn NOT fired; 13,921 B rate credit unclaimable at gate
+economics. Durable products: pruned-row freeze cure + derived-runtime pin apparatus. Lane
+closed terminal. Rate-representation door (#1182) routes back to jo1 (r8 LIVE) + dx1 rebuild.
