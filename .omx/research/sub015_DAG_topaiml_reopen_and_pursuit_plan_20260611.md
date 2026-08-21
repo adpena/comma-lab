@@ -29356,3 +29356,34 @@ caught its author's own assembler \s*$ regex bug). Both fs-family seventeenth-mo
 drop · fs3 mirror) now honestly dead on measured legs; the rate axis via toward-argmax moves is closed
 at FORMULATION scope on this body. Memo ddm_fs3_jg5_real_price_reopen_20260820.md (9f502ba4a2). Pointer
 UNMOVED S 0.14827847122030852 @ 180,456 B [contest-CUDA T4 n600].
+
+## FEED-ec2p (2026-08-21) — ec1 conditioning re-pin on rc2 + ORPHAN-RECOVERED realized verdict
+Source: ddm_ec2p (commit f5a2479788, memo .omx/research/ddm_ec2p_conditioning_repin_20260821.md);
+retained /Volumes/APDataStore/pact/ddm_ec2p/retained/ (17 files, sha256 manifest).
+Baseline: rc2 S 0.14827847122030852 @ 180,456 B [contest-CUDA T4 n600], archive df7fd266….
+- PRICE RE-PINNED: 1,176 B MEASURED on rc2 (was 1,707 B on CP135, −31.1%) — real archive delta
+  through rc2's own coder (brotli q11/lgwin24, verified reproducing the shipped 30,856 B semantic
+  stream byte-for-byte; size-neutral writer control delta 0). Band 1,174–1,191 B across 3 trained
+  states. Structural: rc2 ships ONE ZIP member `p` (two receiver guards refuse more) — ec1 must
+  fold into `p`; 633 B of the 2,173 B module is generic JSON header → inflate.py free (rule-118).
+- BREAK-EVEN (DERIVED at re-pinned price): 923.7 flips = 3.888% of rc2's 23,757; admission
+  (−3.5e-6) = 3.906%; 10× bar = 4.062%. Ceiling −0.019355950 S = 105.9% of the gap to 0.13.
+- ORPHAN RECOVERED — the "realized Δd_seg NEVER measured" premise is REFUTED: the oriented
+  adapter trained on T4 2026-08-14 (543.6 s, ~$0.09) and its full-n600 endpoint returned
+  NET −40,779 flips WORSE (34,970 → 75,749) [contest-CUDA T4 frozen-SegNet, COMPONENT-ONLY,
+  CP135 body], byte-verified vs receipt SHAs. Decomposition: 12,075 base errors FIXED (34.53%
+  gross = 10.5× over break-even) vs 52,854 INTRODUCED (4.377× the fixes). TARGETING WORKS;
+  COLLATERAL KILLS. Collateral must fall 4.93× at constant gross to go live. INSTANCE scope:
+  one config, end-of-run-only field measurement (cannot separate harmful-mechanism from
+  wrong-stopping-point); pose entirely unmeasured for the mechanism.
+- ORPHAN MECHANISM (M2 measured at the queue head): poller pydantic crash + 4 dispatch claims
+  left ACTIVE + no memo → eq1 ranked ec1 the #1 un-cashed claim on a premise a retained payload
+  had already falsified.
+- FALSIFIER (pre-registered): LIVE net ≥965 · MARGINAL 924–964 · CLOSED-neutral 0–923 ·
+  CLOSED-harmful <0; pose gate d_pose ≤ 6.370359e-6 (rise ≤ 3.59e-10).
+- NEXT: collateral-constrained objective (MAIN design decision) + retain rc2's base argmax field
+  (T4 row is scalars-only) + stage-boundary field passes; the sealed CP135 fire order must NOT
+  be re-fired as-is. Ledger row gs2_ec1_conditioning_repin_and_slot → blocked, 5 named blockers.
+- CROSS-INSTANCE LAW (with qs3 B=108/H=76): seg mechanisms clear targeting break-even and die on
+  collateral — only objectives that price collateral INSIDE the solve (realized acceptance /
+  joint remeasure) have ever produced admitted seg moves.

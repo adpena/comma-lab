@@ -124,3 +124,16 @@ predicts exactly where the next structural leap lives: a JOINT solve that includ
 operator and/or conditioning as free decode-side structure, on the axis (seg) whose ceiling
 exceeds the remaining gap to the floor band. Rate representation is the 0.07-era campaign; the
 0.13-era campaign is seg-conditioning + the CPU-axis GT fork.
+
+## 6. Errata (2026-08-21, post-ec2p — append-only)
+
+Rank-2's premise is REFUTED by a recovered orphan: ec1's realized Δd_seg WAS measured (T4,
+2026-08-14, full n600) and came back NET-NEGATIVE — −40,779 flips (12,075 fixed = 10.5× over
+break-even; 52,854 collateral = 4.377× the fixes) [CP135 body, COMPONENT-ONLY, INSTANCE scope].
+The measurement was orphaned (poller crash, no memo), so eq1 ranked it #1 on a falsified premise
+— M2 (plumbing-not-physics) measured at the head of this memo's own queue. Price re-pinned
+1,707 → 1,176 B on rc2 (−31.1%). ec1 re-ranks from "largest un-cashed claim" to
+"collateral-suppression redesign" (collateral must fall 4.93× at constant gross; pose unmeasured).
+The seg attack path sharpens M1: conditioning without collateral priced inside the objective
+joins additive correction in the dead column; the live route is collateral-constrained JOINT
+solves + the de-blur operator (sr2f sign still pending). See FEED-ec2p + ddm_ec2p memo.
