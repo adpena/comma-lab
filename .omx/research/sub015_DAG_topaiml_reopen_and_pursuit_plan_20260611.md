@@ -29281,3 +29281,37 @@ price≠marginal-price + withdrawn 7.11× route to WAVE 3). Substance never move
 footing their measurements already had, and the loop corrected BOTH directions.
 Seal evidence re-derived from frozen bytes: 180,456 B df7fd266…, S 0.14827847122030852,
 36/36 rows, both guards rc=0.
+
+FEED-cf2 (2026-08-21, ddm_cf2 — the wave-2 carried items F1 + F2, both landed):
+**The equations leg is PAID.** Two laws registered through `register_canonical_equation`
+(never a bare JSONL write), both `verdict_scope: FORMULATION` on the jg3-class/rc2-lineage
+token field, both `[macOS-CPU advisory / scorer-free EXACT byte]`, `score_claim=false`:
+(a) `token_rate_model_direction_dependence_v1` — 4 anchors. AWAY from the model argmax the
+realized price is a two-object MEASURED band **0.9217–0.9274 of the ACTUAL flat price
+4.1379** (jg3's configuration 3.813767 b/tok = an 8.50% overcharge; jg5's shipped 455-edit
+set 3.837301 b/tok = 7.84%). TOWARD it the realized credit is **0.0872 of the MODELLED**
+credit at u=7.75 (recapture 91.3%) and **−0.0145 at u=12.0**, where the substitution COSTS
+37 B. The **4.718 is jg1's LogitPrice RANKER, ordering-only** — ratios against it are named
+`ranker_relative_ratio` in code so a ranker number can never be read as a trust factor
+(the W2-F3/F4/F14 cure, now structural). The u=12 anchor deliberately carries the largest
+residual (~1.44 b/tok): the toward factor does not transfer ACROSS thresholds, only its
+sign and order of magnitude do.
+(b) `greedy_set_average_vs_marginal_price_v1` — 2 anchors, and the split wave-3 round-1
+asked for: the ARITHMETIC clause (average ≠ marginal) is framing; the FORMULATION-scoped
+EMPIRICAL clause is the **degradation direction** — a gain-ordered greedy's margin is both
+dearer and lower-yielding. Measured ADD side **2.24× the set-average price at 3.98× less
+yield**; MIRROR-measured REMOVE side of the same admission cut **5.3280 b/dropped-token
+(664 B / 997 tokens)** against a trimmed-set average **3.6432 (3,487 B / 7,657 tokens)**,
+realized/ranker **0.7722**. The 5.3280 travels with its warning: a TREND EDGE (running
+credit 7.1862→6.1227→5.9451→5.5617→5.3280), resting 1.9% above its kill line.
+**F1 also landed:** `src/comma_lab/packet_receipts.py` — typed, schema-validated-BEFORE-write
+`DOC_DIVERGENCE_RECEIPT` writer. Honest finding: **there was no in-repo append path to
+rewire** (the grep finds memos + the two post-write verifiers, no writer) — this is the
+first sanctioned one, ready for MAIN's trigger at the #1111 packet-swap boundary. Schema
+DERIVED from the 14 real receipts, and the executed control says so: **13/14 parse, and the
+single refusal is R15's list-valued note — the exact defect R16 recorded**, caught with the
+message "drop the comma". Refusal ordering is tested, not asserted: every refusal test
+snapshots the directory and proves it byte-identical after. Registry-wide anchor round-trip
+audit **0 violations**; `check_evidence_authority_claims_are_custodied` PASS strict.
+Pointer UNMOVED **0.14827847122030852 @ 180,456 B [contest-CUDA T4 n600]** — this unit paid
+apparatus debt and moved no score, and says so.
