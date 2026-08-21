@@ -217,21 +217,37 @@ def run_in_process_group(
     capture_output: bool = False,
     text: bool = False,
     check: bool = False,
+    stdout: Any = None,
+    stderr: Any = None,
     term_grace_s: float = DEFAULT_TERM_GRACE_S,
 ) -> subprocess.CompletedProcess:
     """`subprocess.run` whose timeout reaches the whole tree.
 
     Drop-in for the `subprocess.run(cmd, cwd=, env=, capture_output=, text=, timeout=,
-    check=)` shape. The one behavioural difference is the one that matters: the child
-    leads its own session, so on timeout the SIGTERM/SIGKILL escalation lands on the
-    GROUP and takes every grandchild with it, instead of orphaning the real worker to
-    PID 1 (the ddm_cpu1 4,369 s decoder).
+    check=, stdout=, stderr=)` shape. The one behavioural difference is the one that
+    matters: the child leads its own session, so on timeout the SIGTERM/SIGKILL
+    escalation lands on the GROUP and takes every grandchild with it, instead of
+    orphaning the real worker to PID 1 (the ddm_cpu1 4,369 s decoder).
+
+    ``stdout``/``stderr`` accept the same values as `subprocess.run` — most usefully an
+    open file object, so a long run streams straight to a log fd instead of buffering in
+    the parent. That shape is NOT a nicety: `modal_train_lane` runs a trainer for up to
+    14 h under `stdout=logf`, and forcing it through `capture_output` would hold the
+    whole run in parent RSS and destroy log liveness under a crash. Passing either
+    together with ``capture_output=True`` raises `ValueError`, mirroring
+    `subprocess.run`.
 
     Raises `ProcessGroupTimeout` (a `TimeoutExpired`) carrying the kill receipt.
     """
 
-    stdout = subprocess.PIPE if capture_output else None
-    stderr = subprocess.PIPE if capture_output else None
+    if capture_output:
+        if stdout is not None or stderr is not None:
+            raise ValueError(
+                "capture_output=True is mutually exclusive with stdout/stderr "
+                "(same contract as subprocess.run)"
+            )
+        stdout = subprocess.PIPE
+        stderr = subprocess.PIPE
     # argv list, never shell=True — the group discipline below assumes an exec'd argv.
     proc = subprocess.Popen(
         cmd,

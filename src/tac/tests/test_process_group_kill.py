@@ -205,6 +205,74 @@ def test_a_nonzero_rc_is_returned_not_raised_unless_check(tmp_path: Path) -> Non
         run_in_process_group(["bash", "-c", "exit 7"], timeout=30, check=True)
 
 
+def test_stdout_stderr_stream_to_a_file_fd(tmp_path: Path) -> None:
+    """A long run must stream to a log fd, not buffer in parent RSS.
+
+    `modal_train_lane` runs a trainer for up to 14 h under `stdout=logf`; forcing
+    that through `capture_output` would hold the whole run in memory and lose the
+    partial log on a crash. Merged stderr matches its `stderr=subprocess.STDOUT`.
+    """
+    log = tmp_path / "run.log"
+    with log.open("wb") as fh:
+        done = run_in_process_group(
+            ["bash", "-c", "printf out; printf err >&2"],
+            timeout=30, stdout=fh, stderr=subprocess.STDOUT,
+        )
+    assert done.returncode == 0
+    assert done.stdout is None, "nothing should be buffered in the parent"
+    body = log.read_text()
+    assert "out" in body and "err" in body
+
+
+def test_partial_log_survives_a_timeout_on_a_file_fd(tmp_path: Path) -> None:
+    """The reason the fd shape matters: output written before the wall is kept."""
+    log = tmp_path / "partial.log"
+    with log.open("wb") as fh, pytest.raises(subprocess.TimeoutExpired):
+        run_in_process_group(
+            ["bash", "-c", "printf started; sleep 30"],
+            timeout=1.0, stdout=fh, stderr=subprocess.STDOUT, term_grace_s=0.3,
+        )
+    assert "started" in log.read_text()
+
+
+def test_capture_output_conflicts_with_explicit_stdout() -> None:
+    """Same contract as subprocess.run — refuse the ambiguous combination."""
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        run_in_process_group(
+            ["bash", "-c", "true"], timeout=5,
+            capture_output=True, stdout=subprocess.DEVNULL,
+        )
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        run_in_process_group(
+            ["bash", "-c", "true"], timeout=5,
+            capture_output=True, stderr=subprocess.DEVNULL,
+        )
+
+
+def test_group_kill_still_reaches_grandchild_with_a_file_fd(tmp_path: Path) -> None:
+    """The cure must hold on the fd path too, not only the PIPE path.
+
+    This is the shape `modal_train_lane` actually runs on paid Modal compute.
+    """
+    pidfile = tmp_path / "gc.pid"
+    log = tmp_path / "fd.log"
+    grandchild = -1
+    try:
+        with log.open("wb") as fh, pytest.raises(ProcessGroupTimeout) as caught:
+            run_in_process_group(
+                _script(pidfile), timeout=1.5,
+                stdout=fh, stderr=subprocess.STDOUT, term_grace_s=0.5,
+            )
+        grandchild = _await_pidfile(pidfile)
+        assert _await_death(grandchild), (
+            f"grandchild {grandchild} survived the group kill on the fd path"
+        )
+        assert caught.value.group_survivors_after_kill is False
+    finally:
+        if grandchild > 0:
+            _reap(grandchild)
+
+
 def test_cwd_and_env_are_honoured(tmp_path: Path) -> None:
     (tmp_path / "marker").write_text("x")
     done = run_in_process_group(

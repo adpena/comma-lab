@@ -49,6 +49,7 @@ import threading
 import time
 import tokenize
 import tomllib
+from collections.abc import Callable
 from collections.abc import Iterable
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import contextmanager
@@ -4420,6 +4421,25 @@ def preflight_all(
         # LOCAL daemon surface. Memory:
         # feedback_orphan_prone_daemon_launch_structural_extinction_landed_20260623.md.
         check_no_orphan_prone_daemon_launch(
+            strict=True, verbose=verbose,
+        )
+        # 2026-08-21 Catalog #408 - TIMED-SHELL-WRAPPER-KILL-ESCAPE. Sister of
+        # #389 at the SYNCHRONOUS-timeout surface: #389 covers the detached
+        # `nohup bash -c ... | tee &` daemon launch, #408 covers
+        # `subprocess.run(["bash", ...], timeout=N)` whose timeout kills only
+        # the direct child and orphans the grandchild worker. Anchor (MEASURED,
+        # ddm_cpu1 2026-08-20): submission_chain.run_inflate raised
+        # TimeoutExpired at 1799.99997045 s while the decoder underneath ran to
+        # 4,369.600210089 s and wrote a complete 600-pair report for a run the
+        # harness had already failed. Steer to
+        # `tac.process_group_kill.run_in_process_group`. Same-line/in-span
+        # waiver `# GROUP_KILL_OK:<rationale>` (placeholder rejected) for leaf
+        # binaries and for call sites that execute where `tac` is not
+        # importable. STRICT-from-byte-one per CLAUDE.md "Strict-flip atomicity rule"
+        # — ddm_kg1 re-derived the population at 48 un-migrated sites (the ddm_ad1
+        # memo had named 26), migrated 41, waived 7, and drove the live count to 0 in
+        # the same batch. Memo: .omx/research/ddm_kg1_killclass_backlog_20260821.md.
+        check_no_timed_shell_wrapper_without_group_kill(
             strict=True, verbose=verbose,
         )
         # BL1 / task #937 (2026-08-05): detached/background launcher rc is
@@ -26497,6 +26517,10 @@ def check_shell_scripts_syntax_clean(
             continue
         try:
             proc = subprocess.run(
+                # GROUP_KILL_OK: `bash -n` PARSES the script and exits; it never
+                # executes a command, so it forks no child and there is no
+                # grandchild for a group kill to reach. Catalog #408 matches the
+                # argv[0] shape, not the -n semantics.
                 [bash, "-n", str(sh)],
                 capture_output=True, text=True, timeout=10,
             )
@@ -82708,6 +82732,354 @@ def check_no_orphan_prone_daemon_launch(
         raise PreflightError(
             "check_no_orphan_prone_daemon_launch found "
             f"{len(violations)} violation(s) per Catalog #389.\n  "
+            + "\n  ".join(v[:600] for v in violations[:8])
+        )
+    return violations
+
+
+# ============================================================================
+# Catalog #408 — TIMED-SHELL-WRAPPER-KILL-ESCAPE (2026-08-21)
+# ============================================================================
+# Bug class anchor (MEASURED, ddm_cpu1 2026-08-20): `subprocess.run(cmd,
+# timeout=N)` kills the DIRECT CHILD only. When argv[0] is a shell or a shell
+# script, the real worker is a GRANDCHILD and SURVIVES the timeout.
+# `src/tac/submission_chain.py::run_inflate` ran `["bash", "inflate.sh", ...]`
+# under `timeout=1800`; `TimeoutExpired` fired at 1799.99997045 s and killed
+# `bash`; the decoder ran on to 4,369.600210089 s and wrote a complete 600-pair
+# report for a run the harness had already raised on — 2,570 s past a wall the
+# caller believed it enforced. `ddm_rv17` round 1 recorded the same fact
+# independently. The sister failure is the INFERENCE: `ddm_lc2` 2026-08-10 read
+# the resulting absence as "it never started" and wrote that into a custody
+# record.
+#
+# THE STEER: `tac.process_group_kill.run_in_process_group` — spawns with
+# `start_new_session=True` so the child leads its own group, and on timeout
+# escalates SIGTERM -> grace -> SIGKILL against the GROUP, so the grandchild
+# dies too. It raises `ProcessGroupTimeout`, a `TimeoutExpired` SUBCLASS, so
+# every existing `except subprocess.TimeoutExpired` keeps working.
+#
+# WHY THIS GATE AND NOT AN EXISTING ONE. Catalog #389 matches only the
+# `nohup + bash -c + | tee + &` detached-daemon launch signature;
+# `check_retry_without_descendant_check` matches only detach-spawning respawn
+# helpers. NEITHER sees `subprocess.run(["bash", ...], timeout=N)`, which is
+# where the whole population lives (48 sites at the ddm_kg1 re-derivation).
+#
+# Gate semantics: AST, not regex — a timed `subprocess.run/check_output/
+# check_call/call` whose argv[0] resolves (through function-scoped local
+# assignments) to a shell interpreter, a wrapper binary, or a `.sh`/`.bash`/
+# `.zsh` script. A LEAF binary (`git`, `unzip`, `ffprobe`) does NOT match: it
+# spawns nothing, so there is no grandchild for a group kill to reach.
+#
+# Waiver anywhere inside the call's own source span:
+# `# GROUP_KILL_OK:<rationale>` (placeholder `<rationale>`/`<reason>` literals
+# rejected per Catalog #287 sister discipline). The legitimate waiver classes
+# are (a) a leaf binary the resolver could not prove leaf, and (b) a call site
+# that executes inside a REMOTE container where `tac` is not importable.
+#
+# Sister of Catalog #389 (detached-daemon launch surface) and of
+# `tac.process_liveness` / `tac.process_group_kill` (the anti-twin
+# consolidation pattern — 7 private killpg twins, 11 private `_pid_alive`
+# twins). Memo: `.omx/research/ddm_kg1_killclass_backlog_20260821.md`.
+
+_CHECK_408_SCAN_DIRS = ("tools", "src", "scripts", "experiments")
+_CHECK_408_VENDORED_MARKERS = (
+    "_intake_",
+    "/site-packages/",
+    "/pr_heads/",
+    "/vendored/",
+    "/worktrees/",
+    "/leaderboard_intel_",
+    "/public_runtime_adapters_",
+    "/experiments/results/",
+)
+# argv[0] values whose process forks a worker tree (bash/sh/zsh) or execs into
+# one (env/nohup/timeout/stdbuf/setsid) — in both shapes the DIRECT child is not
+# the whole tree.
+_CHECK_408_SHELL_BINS = frozenset(
+    {
+        "bash",
+        "sh",
+        "zsh",
+        "dash",
+        "ksh",
+        "nohup",
+        "xargs",
+        "env",
+        "timeout",
+        "make",
+        "setsid",
+        "stdbuf",
+    }
+)
+_CHECK_408_TIMED_APIS = ("run", "check_output", "check_call", "call")
+_CHECK_408_SHELL_PATH_RE = re.compile(
+    r"(?:^|/)(bash|sh|zsh|dash|ksh|nohup|xargs|env|timeout|make|setsid|stdbuf)$"
+)
+_CHECK_408_SH_SUFFIX_RE = re.compile(r"\.(sh|bash|zsh)(['\"]|$)")
+_CHECK_408_STRING_LITERAL_RE = re.compile(r"""['"]([^'"]{1,120})['"]""")
+_CHECK_408_WAIVER_RE = re.compile(r"# GROUP_KILL_OK:(.+?)(?:$|#)")
+_CHECK_408_MAX_RESOLVE_DEPTH = 5
+
+
+def _check_408_rationale_is_placeholder(rationale: str) -> bool:
+    low = rationale.strip().rstrip(":").strip().lower()
+    return low in ("", "<rationale>", "<reason>", "todo", "tbd")
+
+
+def _check_408_unparse(node: ast.AST) -> str:
+    try:
+        return ast.unparse(node)
+    except Exception:  # pragma: no cover - defensive
+        return "<unparseable>"
+
+
+def _check_408_scope_assigns(
+    tree: ast.AST,
+) -> Callable[[ast.AST], dict[str, list[ast.AST]]]:
+    """Return a resolver mapping a call node to its enclosing-scope assignments.
+
+    Function-scoped on purpose. A module-wide pool of a common name like ``cmd``
+    resolves to whichever assignment happens to come first in walk order, which
+    both misses real shells and invents fake ones — measured during the ddm_kg1
+    re-derivation, where a module-wide pool lost two genuine ``["bash", ...]``
+    sites (`rehearse_ddm_tr1_runtime.py`, `run_compact_renderer_mlx_spine_runner.py`).
+    """
+
+    parents: dict[ast.AST, ast.AST] = {}
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            parents[child] = node
+
+    # Memoised per SCOPE, not per call site. Without this the gate re-walks every
+    # enclosing scope's full subtree once per candidate call, which on this repo's
+    # largest modules dominates the whole preflight (measured 10.3 s -> 0.6 s).
+    scope_cache: dict[int, dict[str, list[ast.AST]]] = {}
+
+    def _assigns_of(scope: ast.AST) -> dict[str, list[ast.AST]]:
+        cached = scope_cache.get(id(scope))
+        if cached is not None:
+            return cached
+        found: dict[str, list[ast.AST]] = {}
+        for inner in ast.walk(scope):
+            if isinstance(inner, ast.Assign):
+                for target in inner.targets:
+                    if isinstance(target, ast.Name):
+                        found.setdefault(target.id, []).append(inner.value)
+            elif (
+                isinstance(inner, ast.AnnAssign)
+                and isinstance(inner.target, ast.Name)
+                and inner.value is not None
+            ):
+                found.setdefault(inner.target.id, []).append(inner.value)
+        scope_cache[id(scope)] = found
+        return found
+
+    def resolve(node: ast.AST) -> dict[str, list[ast.AST]]:
+        assigns: dict[str, list[ast.AST]] = {}
+        cur: ast.AST = node
+        scopes: list[ast.AST] = []
+        while cur in parents:
+            cur = parents[cur]
+            if isinstance(cur, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Module)):
+                scopes.append(cur)
+        for scope in scopes:
+            for name, values in _assigns_of(scope).items():
+                assigns.setdefault(name, []).extend(values)
+        return assigns
+
+    return resolve
+
+
+def _check_408_argv0(
+    node: ast.AST, assigns: dict[str, list[ast.AST]], depth: int = 0
+) -> ast.AST | None:
+    """Resolve the expression standing for argv[0], following local names."""
+
+    if node is None or depth > _CHECK_408_MAX_RESOLVE_DEPTH:
+        return node
+    if isinstance(node, ast.List) and node.elts:
+        return node.elts[0]
+    if isinstance(node, ast.Tuple) and node.elts:
+        return node.elts[0]
+    if isinstance(node, ast.Constant):
+        return node
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        return _check_408_argv0(node.left, assigns, depth + 1)
+    if isinstance(node, ast.Name):
+        for value in assigns.get(node.id, []):
+            head = _check_408_argv0(value, assigns, depth + 1)
+            if head is None or (isinstance(head, ast.Name) and head.id == node.id):
+                continue
+            if isinstance(head, (ast.Constant, ast.Call, ast.BinOp, ast.JoinedStr)):
+                return head
+        return node
+    return node
+
+
+def _check_408_evidence(
+    node: ast.AST | None,
+    assigns: dict[str, list[ast.AST]],
+    depth: int = 0,
+    seen: frozenset[str] = frozenset(),
+) -> str:
+    """Transitively render argv[0] so a `Path(...) / 'inflate.sh'` is visible."""
+
+    if node is None or depth > _CHECK_408_MAX_RESOLVE_DEPTH:
+        return ""
+    text = _check_408_unparse(node)
+    if isinstance(node, ast.Name):
+        if node.id in seen:
+            return text
+        seen = seen | {node.id}
+        for value in assigns.get(node.id, []):
+            text += " || " + _check_408_evidence(value, assigns, depth + 1, seen)
+    elif isinstance(node, ast.Call):
+        for arg in node.args[:2]:
+            text += " || " + _check_408_evidence(arg, assigns, depth + 1, seen)
+    elif isinstance(node, (ast.BinOp, ast.Attribute, ast.Subscript, ast.Starred)):
+        for child in ast.iter_child_nodes(node):
+            if isinstance(
+                child, (ast.Name, ast.Constant, ast.BinOp, ast.Call, ast.Attribute)
+            ):
+                text += " || " + _check_408_evidence(child, assigns, depth + 1, seen)
+    return text
+
+
+def _check_408_is_shell_shaped(evidence: str) -> bool:
+    """True iff the rendered argv[0] evidence names a shell, wrapper, or script."""
+
+    if not evidence:
+        return False
+    if _CHECK_408_SH_SUFFIX_RE.search(evidence):
+        return True
+    for match in _CHECK_408_STRING_LITERAL_RE.finditer(evidence):
+        literal = match.group(1).strip()
+        if not literal:
+            continue
+        head = literal.split()[0]
+        if head in _CHECK_408_SHELL_BINS:
+            return True
+        if _CHECK_408_SHELL_PATH_RE.search(head):
+            return True
+        if _CHECK_408_SH_SUFFIX_RE.search(head):
+            return True
+    first = evidence.split("||")[0].strip().strip("'\"")
+    return first in _CHECK_408_SHELL_BINS
+
+
+def _check_408_call_has_waiver(span_lines: list[str]) -> bool:
+    for line in span_lines:
+        match = _CHECK_408_WAIVER_RE.search(line)
+        if match and not _check_408_rationale_is_placeholder(match.group(1)):
+            return True
+    return False
+
+
+def _check_408_scan_source(text: str) -> list[tuple[int, str]]:
+    """Return `(lineno, rendered_argv0)` for every un-waived shell-shaped site."""
+
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return []
+    lines = text.splitlines()
+    resolve = _check_408_scope_assigns(tree)
+    found: list[tuple[int, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr not in _CHECK_408_TIMED_APIS:
+            continue
+        if "subprocess" not in _check_408_unparse(node.func.value).lower():
+            continue
+        if not any(kw.arg == "timeout" for kw in node.keywords):
+            continue
+        if not node.args:
+            continue
+        assigns = resolve(node)
+        evidence = _check_408_evidence(_check_408_argv0(node.args[0], assigns), assigns)
+        if not _check_408_is_shell_shaped(evidence):
+            continue
+        end = node.end_lineno or node.lineno
+        span = lines[node.lineno - 1 : end]
+        if _check_408_call_has_waiver(span):
+            continue
+        found.append((node.lineno, _check_408_unparse(node.args[0])[:120]))
+    return found
+
+
+def check_no_timed_shell_wrapper_without_group_kill(
+    *,
+    strict: bool = False,
+    verbose: bool = False,
+    repo_root: Path | str | None = None,
+) -> list[str]:
+    """Catalog #408 — a timeout on a shell wrapper must reach the whole tree.
+
+    Refuses a timed ``subprocess.run``/``check_output``/``check_call``/``call``
+    whose argv[0] is a shell, a wrapper binary, or a ``.sh`` script, because
+    such a timeout kills the DIRECT CHILD only and orphans the real worker.
+    Steer to ``tac.process_group_kill.run_in_process_group``.
+
+    Anchor (MEASURED): ddm_cpu1 2026-08-20 — ``bash inflate.sh`` under
+    ``timeout=1800`` raised at 1799.99997045 s while the decoder underneath ran
+    to 4,369.600210089 s and wrote a complete report.
+
+    Waiver anywhere in the call's own source span:
+    ``# GROUP_KILL_OK:<rationale>`` (placeholder rejected).
+    """
+
+    root = Path(repo_root).resolve() if repo_root is not None else REPO_ROOT
+    violations: list[str] = []
+
+    for scan_dir in _CHECK_408_SCAN_DIRS:
+        base = root / scan_dir
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.py")):
+            rel = path.relative_to(root).as_posix()
+            rel_lc = "/" + rel.lower()
+            if any(marker in rel_lc for marker in _CHECK_408_VENDORED_MARKERS):
+                continue
+            # Tests legitimately drive both the cured and the un-cured shape as
+            # controls; the anti-twin test in test_process_group_kill.py is the
+            # class guard for the migrated files themselves.
+            if "/tests/" in rel_lc or path.name.startswith("test_"):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if "subprocess" not in text or "timeout" not in text:
+                continue  # cheap pre-filter
+            for lineno, argv0 in _check_408_scan_source(text):
+                violations.append(
+                    f"[Catalog #408] {rel}:{lineno}: timed subprocess call on a "
+                    f"shell/wrapper argv[0] ({argv0}) — the timeout kills only "
+                    "the direct child and ORPHANS the grandchild worker. Use "
+                    "`from tac.process_group_kill import run_in_process_group` "
+                    "(start_new_session + SIGTERM/SIGKILL against the GROUP; "
+                    "raises ProcessGroupTimeout, a TimeoutExpired subclass, so "
+                    "existing handlers keep working). OR carry a "
+                    "`# GROUP_KILL_OK:<rationale>` waiver inside the call span "
+                    "(placeholder rejected). Anchor: ddm_cpu1 2026-08-20 — "
+                    "timeout raised at 1799.99997045 s, decoder ran to "
+                    "4,369.600210089 s. Per CLAUDE.md 'Bugs must be permanently "
+                    "fixed AND self-protected against'."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                "  [check_no_timed_shell_wrapper_without_group_kill] "
+                f"{len(violations)} violation(s)"
+            )
+        else:
+            print("  [check_no_timed_shell_wrapper_without_group_kill] OK")
+    if violations and strict:
+        raise PreflightError(
+            "check_no_timed_shell_wrapper_without_group_kill found "
+            f"{len(violations)} violation(s) per Catalog #408.\n  "
             + "\n  ".join(v[:600] for v in violations[:8])
         )
     return violations
