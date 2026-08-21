@@ -12,9 +12,14 @@ PUBLISHED packet tree, this refuses (rc=1) when:
 
 Citations whose targets are NOT packet files (repo research memos, ledgers)
 are counted as external and never failed -- they are provenance breadcrumbs
-a contest reviewer is not expected to resolve. Citations named inside a
-section whose header contains "Erratum" are covered: reported as notes, not
-failures, so append-only history can be corrected without editing it.
+a contest reviewer is not expected to resolve. A citation is erratum-covered
+(reported as a note, not a failure, so append-only history can be corrected
+without editing it) ONLY when an explicit `covered-citation:` declaration
+line names its exact token inside a section whose header LEADS with the
+word "Erratum" (rv17 R11-F1: the previous substring test let an unrelated
+erratum mention -- or a header reading "This is NOT an erratum" -- launder a
+genuine failure; a declaration can still be false, but it is a deliberate,
+greppable, reviewable line rather than an accident of prose).
 
 Usage: python3 verify_citations.py [--tree DIR] [DOC ...]
 """
@@ -46,14 +51,25 @@ def _tree_files(tree: Path) -> dict[str, list[str]]:
     return out
 
 
-def _erratum_text(doc_text: str) -> str:
-    chunks, keep = [], False
+# Header must LEAD with "Erratum" after optional numbering ("### 10.6 Erratum -- ..."
+# qualifies; "## This is NOT an erratum" does not).
+_ERRATUM_HEADER_RE = re.compile(r"^#+\s*[0-9.§()\s]*erratum\b", re.IGNORECASE)
+_DECLARE_RE = re.compile(r"^\s*covered-citation:\s*`([^`]+)`")
+
+
+def _declared_coverage(doc_text: str) -> set[str]:
+    """Exact tokens declared covered on `covered-citation:` lines in Erratum sections."""
+    covered: set[str] = set()
+    in_erratum = False
     for line in doc_text.splitlines():
         if line.startswith("#"):
-            keep = "erratum" in line.casefold()
-        if keep:
-            chunks.append(line)
-    return "\n".join(chunks)
+            in_erratum = bool(_ERRATUM_HEADER_RE.match(line))
+            continue
+        if in_erratum:
+            declared = _DECLARE_RE.match(line)
+            if declared:
+                covered.add(declared.group(1))
+    return covered
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -77,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"FAIL: document not found: {doc}", file=sys.stderr)
             return 1
         text = doc.read_text()
-        covered = _erratum_text(text)
+        covered = _declared_coverage(text)
         for match in _CITE_RE.finditer(text):
             cited, line_no = match.group(1), int(match.group(2))
             token = f"{cited}:{match.group(2)}"
@@ -123,8 +139,9 @@ def main(argv: list[str] | None = None) -> int:
         for failure in failures:
             print(f"FAIL: {failure}", file=sys.stderr)
         print(
-            "Stale-citation class (rv17 R10-F1): fix the citation, or cover it\n"
-            "in an Erratum section if the citing text is append-only history.",
+            "Stale-citation class (rv17 R10-F1): fix the citation, or declare it\n"
+            "on a `covered-citation:` line inside an Erratum section (R11-F1) if\n"
+            "the citing text is append-only history.",
             file=sys.stderr,
         )
         return 1

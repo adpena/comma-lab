@@ -10,6 +10,11 @@ class (rv17 R8-F1 cure): it recomputes the live shas of every document the
 LATEST receipt tracks and exits non-zero on any disagreement, naming the file
 and the owed cure (append the next receipt; never edit an existing one).
 
+It also refuses (rv17 R11-F2 cure) any pair whose two copies DIFFER but whose
+receipt entry declares no `publish_source` ("prep" | "frozen") -- step 4A
+publishes the declared copy, so an undeclared diverged pair means the publish
+procedure would have to infer a source, which is the defect class itself.
+
 Usage (defaults fit the gen6 packet; all overridable for controls):
 
     python3 verify_receipt_chain.py \
@@ -131,6 +136,18 @@ def main(argv: list[str] | None = None) -> int:
         if "frozen_gen6_sha256" in entry:
             _check(f"{name} (frozen)", args.frozen / name, entry["frozen_gen6_sha256"], failures)
             checked += 1
+        if (
+            entry.get("repo_final_sha256")
+            and entry.get("frozen_gen6_sha256")
+            and entry["repo_final_sha256"] != entry["frozen_gen6_sha256"]
+            and entry.get("publish_source") not in ("prep", "frozen")
+        ):
+            failures.append(
+                f"{name}: DIVERGED PAIR WITHOUT DECLARED PUBLISH SOURCE (rv17 R11-F2)\n"
+                f"  (copies differ; the latest receipt must carry publish_source:\n"
+                f"  prep|frozen for this pair -- step 4A publishes the declared copy,\n"
+                f"  never an inferred one)"
+            )
     for name, entry in receipt.get("repo_only_docs", {}).items():
         if "repo_final_sha256" in entry:
             _check(f"{name} (repo)", args.prep / name, entry["repo_final_sha256"], failures)

@@ -87,17 +87,30 @@ reuse its authority receipts for changed bytes.
    time in the freeze receipt. A prior candidate's working URL is historical
    evidence only; it never transfers across a swap. If the push is not authorized
    or the downloaded bytes differ, HOLD publication rather than leaving the old
-   URL in place. **SHIP verify_files_digest.py (rv17 R6-F1) AND the corrected
-   BORROWED_SUBSTRATE_ACCOUNTING.md (rv17 R10-F1):** the published submission
-   directory MUST include `verify_files_digest.py` from the prep tree, and MUST
-   publish the PREP-TREE `BORROWED_SUBSTRATE_ACCOUNTING.md` (which carries the
-   §10.6 citation erratum) in place of the frozen copy, which predates it —
-   frozen custody stays untouched as history
-   — two published surfaces (the MANIFEST.sha256 header and the PR body's
-   verification appendix) instruct reviewers to run it, and it is NOT a manifest
-   row, so no integrity check catches its absence. After the copy, run
-   `python3 verify_files_digest.py` from the published tree root and require
-   PASS before publication.
+   URL in place. **PUBLISH SOURCES ARE DECLARED, NEVER INFERRED (rv17 R6-F1 →
+   R10-F1 → R11-F2):** the published submission directory MUST include
+   `verify_files_digest.py` from the prep tree (two published surfaces — the
+   MANIFEST.sha256 header and the PR body's verification appendix — instruct
+   reviewers to run it, and it is NOT a manifest row, so no integrity check
+   catches its absence). For EVERY non-runtime document pair that diverges
+   between the prep tree and frozen gen6 custody, the published copy is the one
+   the latest `DOC_DIVERGENCE_RECEIPT*.json` names in that pair's
+   `publish_source` field — `verify_receipt_chain.py` REFUSES a diverged pair
+   with no declared source, so the rule is machine-closed rather than a
+   per-file list in this paragraph (naming files here as they came up is how
+   three pairs diverged while only two had a stated source). As of receipt R9:
+   `MANIFEST.sha256` → prep (header carries the R2-F2 pin sentence, the
+   R3-F1/R4-F1 digest naming, the RV17-F7 working-directory line, and the
+   R6-F2 enumeration — five rounds of cures whose only copy is prep-side; 36
+   data rows byte-identical both copies), `BORROWED_SUBSTRATE_ACCOUNTING.md` →
+   prep (carries the §10.6 citation erratum + its covered-citation
+   declaration), `archive_manifest.json` → frozen (the shipped strict-subset
+   manifest; the prep `ARCHIVE_MANIFEST.json` is a working superset with 23
+   repo-only keys and stays internal). Frozen custody stays untouched as
+   history in every case. After the copy, run `python3 verify_files_digest.py`
+   AND `python3 verify_citations.py --tree <published root> <published
+   BORROWED_SUBSTRATE_ACCOUNTING.md>` from the published tree root and require
+   PASS on both before publication.
 5. `RERUN_STRICT_CHAIN` — owner `MAIN packet owner`; consumer `generation gap
    report and compliance JSON`; fire trigger `public packet refreshed`. Execute
    the exact strict checker with the new expected SHA and size. Record every red

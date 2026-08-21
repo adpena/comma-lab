@@ -609,3 +609,8 @@ supersession custody (see `PACKET_TARGET.json`, GEN-2 record). The defect was th
 not the figures. The LIVE chain is unaffected: §9.2 row 3 carries no manifest citation, and
 §10.2 carries §9.2 forward. Shipped citations are now machine-checked by
 `verify_citations.py` (erratum-covered citations are noted, not failed).
+
+covered-citation: `ARCHIVE_MANIFEST.json:21` — the §2 row 3 citation this erratum corrects.
+(Coverage is a declaration, not an inference, since rv17 R11-F1: `verify_citations.py`
+covers a citation only when an explicit line like this one names its exact token inside a
+section whose header leads with "Erratum" — a prose mention no longer covers anything.)

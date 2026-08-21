@@ -109,8 +109,12 @@ and require HTTP 200 plus SHA-256 and byte-count equality before publication.
 
 Step 4A ALSO ships `verify_files_digest.py` into the published submission
 directory (rv17 R6-F1: two published surfaces instruct reviewers to run it, and
-it is not a manifest row — nothing else checks its presence). Run it from the
-published tree root and require PASS before publication.
+it is not a manifest row — nothing else checks its presence), and publishes the
+DECLARED copy of every diverged non-runtime document pair — the `publish_source`
+field in the latest DOC_DIVERGENCE_RECEIPT, machine-enforced by
+`verify_receipt_chain.py` (rv17 R11-F2; step 4A holds the rule, this mirror
+defers to it). Run `verify_files_digest.py` and `verify_citations.py` from the
+published tree root and require PASS on both before publication.
 
 ## (e) Review counter — 0 of 5, NOT a blocker the arm can clear
 
