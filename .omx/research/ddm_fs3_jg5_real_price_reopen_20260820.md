@@ -654,6 +654,98 @@ them at the MARGINAL rate or measure them.
 
 ---
 
+## §T TASK #1176 — FIRING THE MIRROR (the over-admission drop)
+
+Round 2's refusal opened this row (§R6) and MAIN routed it as the seventeenth-move candidate. My own
+caveat is the first target: **nothing here is claimable until a real re-encode prices the actual drop
+set.** This section records everything registered BEFORE the measurement, so the verdict cannot be
+written after the fact.
+
+### T1 The drop set, re-derived from the live body
+
+Identified at the **MEASURED** marginal price — re-derived in code as `(114070−113847)×8/300`, never
+typed — through this arm's landed census:
+
+| | value |
+|---|---:|
+| identification price | **5.946667 bits/token** |
+| shipping pairs | **137** |
+| tokens dropped | **−997** |
+| cells given back | **−497** |
+| seg+rate at that price | **−7.215817e-05 (20.62× the bar)** |
+
+**Why 137 and not the ~120 of §R6:** §R6 used the *running* estimate 5.5722; the final measurement is
+5.9467, and the set is re-derived at the measurement. **Why the largest set:** subsets of these 137
+compose for FREE from the same re-screen, so a low realized credit degrades the row to a nested subset
+rather than wasting the run.
+
+### T2 The falsifier, registered before any build
+
+`FS3_DROP_FALSIFIER.json`. Legs charged conservatively going in — seg give-back **+4.213121e-04**,
+carrier **+9.041895e-06** (this arm's own measured 0.0991 B/pair), pose **0** (dropping edits reduces
+frame-1 damage, so the true leg should be a credit or neutral; it is charged at zero and will be
+MEASURED, never transferred).
+
+> **The row dies if the realized credit is below 5.2282 bits per dropped token** — equivalently if the
+> token stream shrinks by less than **651.6 B**, equivalently if net ΔS lands above **−3.5e-6**.
+
+### T3 The transfer risk, named BEFORE the measurement — and it is unfavourable
+
+`FS3_DROP_TRANSFER_RISK.json`. The falsifier applies round 2's ADD price, measured on sites just
+**BELOW** the admission cut, to sites just **ABOVE** it. Those are not the same object:
+
+| token population | yield (cells/token) |
+|---|---:|
+| the 137 pairs' RETAINED tokens | 1.7347 |
+| **the DROPPED tokens** | **0.4985** |
+| round 2's ADDED tokens (where the price was measured) | 0.3867 |
+
+The dropped sites are **better** than the ones the price was measured on. If price tracks rank the way
+yield does, better sites cost **less** — which would put the realized credit below 5.9467 and possibly
+below the falsifier. **The transfer direction is unfavourable, not neutral**, and this is precisely the
+genus that killed round 2. It is registered here rather than discovered later.
+
+### T4 The over-admission, in one line
+
+| break-even yield | value | verdict on these sites |
+|---|---:|---|
+| at jg3's flat 4.1379 prior | 0.4063 | 0.4985 > 0.4063 → jg3 **KEPT** them |
+| at the MEASURED marginal price | 0.5839 | 0.4985 < 0.5839 → they should be **DROPPED** |
+
+Same boundary as round 2, opposite side. jg3's flat prior over-charged the set by 8.50% and
+**under**-charged its margin by 44%; the reopen died on the second error, and this row is the first
+one's mirror.
+
+### T5 The bounded joint check — PASS (charter step 6)
+
+`FS3_JOINT_CHECK.json`. Both live legs are linear and separable per pair, so the per-pair argmin at a
+Lagrange multiplier IS the optimal allocation at the budget that multiplier induces (jg5's
+sqrt-concave pose caveat does not bind because this direction's pose leg is a credit or neutral).
+The greedy ratio allocation is the control that the sweep leaves nothing on the table:
+
+| dropped tokens | Lagrangian cells given back | greedy-ratio | winner |
+|---:|---:|---:|---|
+| 163 | 69.0 | 71.6 | Lagrangian |
+| 500 | 236.2 | 241.2 | Lagrangian |
+| **997 (operating point)** | **497.0** | **525.5** | **Lagrangian** |
+| 1,420 | 756.0 | 789.6 | Lagrangian |
+
+The refused reopen is NOT re-opened; the only free variable is which tokens to drop.
+
+### T6 Status and what remains
+
+The 137-pair re-screen is running (4 CPU shards, disarm proved in each: 4.1379 → 5.946667,
+`break_even_yield` 0.406279 → 0.583873). Remaining, in order: compose → **real jg2 re-encode against
+this arm's own byte-identical control** → falsifier check → if it survives, pose on the same
+instrument, byte-close, advisory n600 via `tools/fire_local_advisory.py`, seal via
+`tools/make_candidate_seal.py`, fire-order to MAIN. **This arm never fires Modal.**
+
+**If the falsifier fires, the close is as clean as round 2's** — and a stopping rule vindicated in
+BOTH directions is itself the stronger law: jg3 stopped at the right place, and the flat prior's two
+errors point in opposite directions so that neither correction admits anything.
+
+---
+
 ## §9 BOUNDARIES
 
 No `upstream/` or protected file changed. No Modal dispatch, no paid spend, no contest-CPU or
