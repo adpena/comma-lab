@@ -168,3 +168,13 @@ scaffold, the counter resets to `0/5` after the fixes land.
 **Nothing in this round licenses a push, a hosting action, or a PR opening.**
 The final refusal condition in `SWAP_PROCEDURE.md:80-81` is unchanged and
 binding: no such action without explicit operator authorization.
+
+## Erratum — the accounting cross-check's manifest citation is stale (rv17 round 14, R14-F1 derived-set find)
+
+The accounting cross-check cites `archive_manifest.json:36` as the carrier of the `5b09fd78…`
+token-stream sha. That citation was generation-correct against the then-live manifest and is
+stale against the SHIPPED gen-6 packet: the archive manifest is regenerated per candidate and
+the shipped copy is 20 lines. The sha itself remains carried by `CUSTODY_SUPERSEDED.json` as
+the same sentence records; only the manifest line reference dangles.
+
+covered-citation: `archive_manifest.json:36`

@@ -27,6 +27,7 @@ Usage: python3 verify_citations.py [--tree DIR] [DOC ...]
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -34,7 +35,61 @@ from pathlib import Path
 DEFAULT_TREE = Path(
     "/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen6_rc2_composed"
 )
-DEFAULT_DOCS = ("BORROWED_SUBSTRATE_ACCOUNTING.md",)
+DEFAULT_PREP = Path(__file__).resolve().parent
+DEFAULT_RECEIPTS = Path(
+    "/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/gen6_receipts"
+)
+_DOC_SUFFIXES = (".md", ".txt")
+_RECEIPT_RE = re.compile(r"^DOC_DIVERGENCE_RECEIPT(?:_R(\d+))?\.json$")
+
+
+def _publish_sources(receipts_dir: Path) -> dict[str, str]:
+    """Casefolded doc name -> declared publish_source from the LATEST receipt."""
+    best: tuple[int, Path] | None = None
+    if receipts_dir.is_dir():
+        for path in receipts_dir.iterdir():
+            match = _RECEIPT_RE.match(path.name)
+            if match is None:
+                continue
+            rank = int(match.group(1)) if match.group(1) else 3
+            if best is None or rank > best[0]:
+                best = (rank, path)
+    if best is None:
+        return {}
+    receipt = json.loads(best[1].read_text())
+    return {
+        name.casefold(): entry["publish_source"]
+        for name, entry in receipt.get("diverged_files", {}).items()
+        if entry.get("publish_source") in ("prep", "frozen")
+    }
+
+
+def _default_docs(prep: Path, frozen: Path, receipts_dir: Path) -> list[Path]:
+    """DERIVE the checked doc set (rv17 R14-F1): every top-level .md/.txt in the
+    prep/frozen UNION whose text carries a FILE:LINE citation. Two-copy names
+    resolve to the copy the latest receipt's publish_source declares (identical
+    or undeclared pairs default to frozen, the publish baseline); prep-only
+    docs check the prep copy, frozen-only the frozen copy. Hand-naming the set
+    was the round-14 finding -- the derived set immediately surfaced two ACTIVE
+    stale citations (REVIEW_PASS6/9 manifest references) that three rounds of
+    named sets had missed."""
+    sources = _publish_sources(receipts_dir)
+    prep_names = {p.name.casefold(): p for p in prep.iterdir()
+                  if p.is_file() and p.suffix in _DOC_SUFFIXES}
+    frozen_names = {p.name.casefold(): p for p in frozen.iterdir()
+                    if p.is_file() and p.suffix in _DOC_SUFFIXES
+                    and not p.name.startswith("._")}
+    docs: list[Path] = []
+    for key in sorted(set(prep_names) | set(frozen_names)):
+        if key in prep_names and key in frozen_names:
+            chosen = prep_names[key] if sources.get(key) == "prep" else frozen_names[key]
+        elif key in prep_names:
+            chosen = prep_names[key]
+        else:
+            chosen = frozen_names[key]
+        if _CITE_RE.search(chosen.read_text(errors="replace")):
+            docs.append(chosen)
+    return docs
 
 _CITE_RE = re.compile(
     r"`([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:py|json|md|sh|c|txt|yaml)):(\d+)"
@@ -108,20 +163,27 @@ def _declared_coverage(doc_text: str) -> set[str]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--tree", type=Path, default=DEFAULT_TREE)
-    parser.add_argument(
-        "docs", nargs="*",
-        default=[str(Path(__file__).resolve().parent / d) for d in DEFAULT_DOCS],
-    )
+    parser.add_argument("--prep", type=Path, default=DEFAULT_PREP)
+    parser.add_argument("--receipts", type=Path, default=DEFAULT_RECEIPTS)
+    parser.add_argument("docs", nargs="*")
     args = parser.parse_args(argv)
     if not args.tree.is_dir():
         print(f"FAIL: packet tree not found: {args.tree}", file=sys.stderr)
         return 1
+    if args.docs:
+        doc_paths = [Path(d) for d in args.docs]
+    else:
+        doc_paths = _default_docs(args.prep, args.tree, args.receipts)
+        if not doc_paths:
+            print("FAIL: derived doc set is EMPTY (vacuity guard)", file=sys.stderr)
+            return 1
+        print(f"derived doc set ({len(doc_paths)}): "
+              + ", ".join(p.name for p in doc_paths))
     tree_map = _tree_files(args.tree)
 
     failures: list[str] = []
     stats = {"packet_ok": 0, "external": 0, "erratum_covered": 0, "ambiguous": 0}
-    for doc_arg in args.docs:
-        doc = Path(doc_arg)
+    for doc in doc_paths:
         if not doc.exists():
             print(f"FAIL: document not found: {doc}", file=sys.stderr)
             return 1

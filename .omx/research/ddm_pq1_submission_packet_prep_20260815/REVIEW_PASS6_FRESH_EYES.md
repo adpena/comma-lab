@@ -264,3 +264,15 @@ the eight round-5 fixes are real.
 
 *Read-only review. No file in the packet, the receipts, or the repository was
 modified by this pass. MAIN records the scaffold row.*
+
+## Erratum — the F1 row's manifest citation is stale (rv17 round 14, R14-F1 derived-set find)
+
+The F1 row cites `ARCHIVE_MANIFEST.json:50-51` for the then-live `reproduction_verified: false`
+defect. That citation was generation-correct (the gen-5-era working manifest carried those
+fields at those lines) and is stale against the SHIPPED gen-6 packet three ways: the archive
+manifest is regenerated per candidate (the shipped lowercase `archive_manifest.json` is 20
+lines), the uppercase working name does not resolve on the contest's case-sensitive Linux, and
+the F1 defect itself was subsequently CURED (reproduction status VERIFIED). The finding and its
+resolution stand as history; only the citation dangles.
+
+covered-citation: `ARCHIVE_MANIFEST.json:50`
