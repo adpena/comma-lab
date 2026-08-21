@@ -21,19 +21,30 @@ receipts fired minutes apart in a live tree will differ there even when nothing 
 the forward path moved -- sister arms land commits continuously.  So a strict
 whole-tuple equality would refuse every delta this repo can actually produce.
 
-The cure is not to relax the check but to make it PRECISE: every hash that
-actually determines the forward must match ---
+The cure is not to relax the check but to make it PRECISE. **Two fields differ on
+every honest delta this vehicle can produce, and each gets its own proof.**
 
-* ``upstream_snapshot_sha256``   (the scorer + evaluate.py snapshot)
-* ``upstream_evaluate_py.sha256``(the scoring script itself)
-* ``runtime_files_sha256``       (the receiver tree that produces the frames)
-* ``inflate_script_sha256``      (the decode entry point)
+**HARNESS fields -- must be byte-identical, no exceptions:**
 
-plus device, torch version, thread counts and batch shape wherever the receipts
-carry them.  ``pact_commit`` may differ ONLY when the caller supplies
-``--commit-delta-proof``, a git range whose changed files this module re-checks
-against the forward-path prefixes itself.  A proof that touches ``upstream/``, the
-runtime, or the eval harness is REFUSED.
+* ``upstream_snapshot_sha256``    (the scorer + evaluate.py snapshot)
+* ``upstream_evaluate_py.sha256`` (the scoring script itself)
+* ``inflate_script_sha256``       (the decode entry point)
+* device, torch version, GT lineage, sample count
+
+**``runtime_files_sha256`` -- ALWAYS differs, and is TREATMENT not instrument.**
+A candidate runtime tree EMBEDS its own ``archive.zip`` and the receiver pin
+derived from it, so this hash cannot match between a base and a candidate.
+Refusing on it would refuse every real delta; waving it through would let a
+genuine receiver change ride in disguised as payload.  So it is proved
+STRUCTURALLY instead: ``runtime_trees_differ_only_by_payload`` requires the two
+trees to differ in NOTHING except ``archive.zip`` and ``inflate.py``, and requires
+``inflate.py`` to be AST-identical once its two pin constants are normalised.  Passing
+the trees is MANDATORY -- omitting them is a refusal, not a skip.
+
+**``pact_commit`` -- may differ ONLY with ``--commit-delta-proof``**, a git range
+whose changed files this module re-checks against the forward-path prefixes
+itself.  A range touching ``upstream/``, the runtime, or the eval harness is
+REFUSED.  The caller supplies evidence, never a conclusion.
 """
 
 from __future__ import annotations
@@ -72,6 +83,19 @@ def _dig(obj: Any, *path: str) -> Any:
 
 
 def forward_fields(receipt: dict[str, Any]) -> dict[str, Any]:
+    """The HARNESS fields -- the scorer forward, which must be identical.
+
+    ``runtime_files_sha256`` is deliberately NOT here.  A candidate runtime tree
+    EMBEDS its own ``archive.zip`` and the receiver pin derived from it, so that
+    hash differs between base and candidate BY CONSTRUCTION -- it is the TREATMENT,
+    not the instrument.  Refusing on it would refuse every delta this vehicle can
+    produce, and waving it through unexamined would let a genuine receiver change
+    ride in disguised as payload.
+
+    So it is checked SEPARATELY and STRUCTURALLY by ``runtime_trees_differ_only_by_payload``:
+    the two trees must differ in NOTHING except ``archive.zip`` and ``inflate.py``,
+    and ``inflate.py`` must differ ONLY in its two pin constants.
+    """
     tup = receipt.get("instrument_tuple") or {}
     prov = receipt.get("provenance") or {}
     return {
@@ -79,12 +103,87 @@ def forward_fields(receipt: dict[str, Any]) -> dict[str, Any]:
         "upstream_evaluate_py_sha256": _dig(
             tup, "code", "upstream_evaluate_py", "sha256"
         ),
-        "runtime_files_sha256": _dig(tup, "code", "runtime_files_sha256"),
         "inflate_script_sha256": _dig(tup, "code", "inflate_script_sha256"),
         "device": prov.get("device"),
         "torch_version": prov.get("torch_version"),
         "gt_lineage": _dig(receipt, "gt_lineage", "lineage"),
         "n_samples": receipt.get("n_samples"),
+    }
+
+
+PAYLOAD_FILES = {"archive.zip", "inflate.py"}
+PIN_CONSTANTS = ("ARCHIVE_SHA256", "ARCHIVE_BYTES")
+
+
+def _file_hashes(root: Path) -> dict[str, str]:
+    import hashlib
+
+    out: dict[str, str] = {}
+    for path in sorted(p for p in root.rglob("*") if p.is_file()):
+        if path.name.startswith("._"):
+            continue
+        digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1 << 22), b""):
+                digest.update(chunk)
+        out[str(path.relative_to(root))] = digest.hexdigest()
+    return out
+
+
+def _pin_free_ast(path: Path) -> str:
+    """``inflate.py``'s AST with the pin constants normalised.
+
+    Compared as an AST, not as text.  Text equality is the WRONG notion of "the
+    same receiver": it fails on whitespace that cannot change behaviour, and this
+    check found exactly that -- two blank lines eaten by a re-pin regex whose
+    ``\\s*$`` matched newlines under ``re.M``.  Refusing a delta over blank lines
+    would be a false refusal; accepting a real code change would be a false pass.
+    The AST is the object that decides which one a diff is.
+    """
+    import ast as _ast
+
+    tree = _ast.parse(path.read_text())
+    for node in _ast.walk(tree):
+        if isinstance(node, _ast.Assign):
+            for target in node.targets:
+                if isinstance(target, _ast.Name) and target.id in PIN_CONSTANTS:
+                    node.value = _ast.Constant(value="<PIN>")
+    return _ast.dump(tree)
+
+
+def runtime_trees_differ_only_by_payload(base: Path, cand: Path) -> dict[str, Any]:
+    """Prove the runtime_files_sha difference is PAYLOAD and not a receiver change."""
+    hb, hc = _file_hashes(base), _file_hashes(cand)
+    only_base = sorted(set(hb) - set(hc))
+    only_cand = sorted(set(hc) - set(hb))
+    differing = sorted(k for k in set(hb) & set(hc) if hb[k] != hc[k])
+    unexpected = [k for k in differing if Path(k).name not in PAYLOAD_FILES]
+
+    inflate_body_identical = None
+    if "inflate.py" in differing:
+        inflate_body_identical = _pin_free_ast(base / "inflate.py") == _pin_free_ast(
+            cand / "inflate.py"
+        )
+
+    ok = (
+        not only_base
+        and not only_cand
+        and not unexpected
+        and (inflate_body_identical is not False)
+    )
+    return {
+        "files_only_in_base": only_base,
+        "files_only_in_candidate": only_cand,
+        "differing_files": differing,
+        "unexpected_differing_files": unexpected,
+        "inflate_py_AST_identical_once_pin_normalised": inflate_body_identical,
+        "verdict": "PAYLOAD_ONLY" if ok else "RECEIVER_CHANGED",
+        "why_this_check_exists": (
+            "runtime_files_sha256 differs between any base and candidate because each "
+            "tree embeds its own archive and the pin derived from it. That is the "
+            "TREATMENT. This check proves nothing ELSE moved, so the hash difference "
+            "cannot hide a receiver change."
+        ),
     }
 
 
@@ -115,6 +214,30 @@ def run(args: argparse.Namespace) -> int:
             f"REFUSING: forward-determining fields differ between the two receipts: "
             f"{mismatched}. A delta across a mismatched tuple is an instrument "
             "artifact, not a finding."
+        )
+
+    tree_check: dict[str, Any] = {"checked": False}
+    if args.base_runtime and args.candidate_runtime:
+        tree_check = runtime_trees_differ_only_by_payload(
+            Path(args.base_runtime), Path(args.candidate_runtime)
+        )
+        tree_check["checked"] = True
+        if tree_check["verdict"] != "PAYLOAD_ONLY":
+            raise PoseLegError(
+                "REFUSING: the two runtime trees differ by more than their payload. "
+                f"unexpected differing files={tree_check['unexpected_differing_files']}, "
+                f"only_in_base={tree_check['files_only_in_base']}, "
+                f"only_in_candidate={tree_check['files_only_in_candidate']}, "
+                f"inflate_py_AST_identical_once_pin_normalised="
+                f"{tree_check['inflate_py_AST_identical_once_pin_normalised']}. "
+                "A receiver change cannot ride in as payload."
+            )
+    else:
+        raise PoseLegError(
+            "REFUSING: --base-runtime and --candidate-runtime are required. "
+            "runtime_files_sha256 ALWAYS differs between base and candidate (each "
+            "tree embeds its own archive and derived pin), so the only honest way "
+            "to clear it is to prove structurally that nothing ELSE moved."
         )
 
     commit_base = _dig(base, "instrument_tuple", "code", "pact_commit")
@@ -163,9 +286,10 @@ def run(args: argparse.Namespace) -> int:
         "score_claim": False,
         "promotion_eligible": False,
         "instrument_match": {
-            "forward_determining_fields": fc,
+            "harness_fields_identical": fc,
             "verdict": "IDENTICAL",
             "pact_commit": commit_note,
+            "runtime_tree_payload_vs_receiver": tree_check,
         },
         "base": {
             "receipt": str(args.base_receipt),
@@ -198,7 +322,12 @@ def run(args: argparse.Namespace) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2))
 
-    print("instrument match: IDENTICAL on every forward-determining field")
+    print("harness match: IDENTICAL on every forward-determining field")
+    print(
+        f"  runtime trees: {tree_check['verdict']} "
+        f"(differ only in {tree_check['differing_files']}; inflate.py identical once "
+        f"the pin is normalised: {tree_check['inflate_py_AST_identical_once_pin_normalised']})"
+    )
     if not commit_note["identical"]:
         print(f"  pact_commit differs; range {args.commit_delta_proof} touches no forward file")
     print(f"  base      {bytes_b:,} B  d_seg {d_seg_b:.8f}  d_pose {d_pose_b:.8f}")
@@ -216,6 +345,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--base-receipt", required=True)
     parser.add_argument("--candidate-receipt", required=True)
+    parser.add_argument("--base-runtime", default=None)
+    parser.add_argument("--candidate-runtime", default=None)
     parser.add_argument(
         "--commit-delta-proof",
         default=None,

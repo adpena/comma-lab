@@ -100,8 +100,14 @@ def read_pin(inflate_path: Path) -> tuple[str | None, int | None]:
 
 def repin(inflate_path: Path, archive_sha: str, archive_bytes: int) -> dict[str, Any]:
     source = inflate_path.read_text()
-    sha_pat = re.compile(rf'^{SHA_CONST}\s*=\s*"[0-9a-fA-F]*"\s*$', re.M)
-    bytes_pat = re.compile(rf"^{BYTES_CONST}\s*=\s*[0-9_]+\s*$", re.M)
+    # ``[ \t]*`` and NOT ``\s*`` at the line end: under re.M, ``\s`` matches
+    # newlines, so ``\s*$`` swallows the blank lines AFTER the constant and the
+    # re-pin silently reformats the file. Measured: the first version of this tool
+    # ate two blank lines, which ddm_fs3's own same-instrument comparator then
+    # (correctly) refused as "the receiver changed". A re-pin must touch the pin
+    # and nothing else.
+    sha_pat = re.compile(rf'^{SHA_CONST}[ \t]*=[ \t]*"[0-9a-fA-F]*"[ \t]*$', re.M)
+    bytes_pat = re.compile(rf"^{BYTES_CONST}[ \t]*=[ \t]*[0-9_]+[ \t]*$", re.M)
 
     n_sha = len(sha_pat.findall(source))
     n_bytes = len(bytes_pat.findall(source))
