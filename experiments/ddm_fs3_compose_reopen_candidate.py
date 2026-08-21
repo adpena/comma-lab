@@ -275,7 +275,9 @@ def run_merge(args: argparse.Namespace) -> int:
             "own byte-identical control, then carrier re-solve + splice + byte-close"
         ),
     }
-    out_json = out_dir / "FS3_REOPEN_COMPOSE.json"
+    # Same label discipline as the field filename: name the RUN, not the direction
+    # this module was born for (rv17 wave-3 W3-F2 class).
+    out_json = out_dir / f"FS3_COMPOSE_{args.tag}.json"
     out_json.write_text(json.dumps(report, indent=2))
 
     print(f"re-screen receipts: {len(receipts)}; pairs in prereg: {len(predicted)}")
