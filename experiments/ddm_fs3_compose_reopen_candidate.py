@@ -208,7 +208,10 @@ def run_merge(args: argparse.Namespace) -> int:
 
     out_dir = Path(args.out)
     (out_dir / "retained" / "fields").mkdir(parents=True, exist_ok=True)
-    npz_path = out_dir / "retained" / "fields" / "seg_edits_reopen_composed.npz"
+    # The filename names the RUN, not the direction this module was born for.
+    # A hardcoded "reopen" would have mislabelled the mirror's own field -- the
+    # same label-vs-arithmetic drift rv17 wave-3 W3-F2 caught in jg3's rate_source.
+    npz_path = out_dir / "retained" / "fields" / f"seg_edits_{args.tag}_composed.npz"
     np.savez_compressed(npz_path, **composed)
     npz_sha, npz_bytes = sha256_of(npz_path)
 
