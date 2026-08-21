@@ -99,8 +99,19 @@ def _default_docs(prep: Path, frozen: Path, receipts_dir: Path) -> list[Path]:
             docs.append(chosen)
     return docs
 
+# A citation is any filename-shaped backticked token followed by :N. The
+# extension is NOT enumerated (rv17 R17-F1: the old (py|json|md|sh|c|txt|yaml)
+# list was a hand-chosen membership test written in regex syntax, sitting
+# upstream of every derived set -- and it leaked exactly as DEFAULT_DOCS did:
+# `yml` unlisted made 4 live eval.yml tokens invisible, and a natural
+# `MANIFEST.sha256:N` citation would have been silently unchecked). Matching
+# the SHAPE and letting the three-way classification (in-tree checked /
+# erratum-covered / external) absorb non-file lookalikes is the same
+# classify-don't-prefilter move that cured the doc set; a false positive can
+# only land in the non-failing external bucket unless a real tree file bears
+# its name, in which case checking it is correct.
 _CITE_RE = re.compile(
-    r"`([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:py|json|md|sh|c|txt|yaml)):(\d+)"
+    r"`([A-Za-z0-9_][A-Za-z0-9_./-]*\.[A-Za-z0-9_]{1,12}):(\d+)"
 )
 
 
