@@ -427,7 +427,14 @@ threshold from retained arrays in seconds.
 
 ## §10 ARTIFACTS (ALWAYS KEEP THE PAYLOAD)
 
-Store root `/Volumes/APDataStore/pact/ddm_fs2/`.
+Store root `/Volumes/APDataStore/pact/ddm_fs2/` — **86 files, 0.991 GB**, every one with bytes +
+sha256 in `FS2_RETENTION_MANIFEST.json`. Both refused candidates were BUILT and retained, not merely
+priced: the u = 12.0 archive is **180,493 B against the base's 180,456 — visibly larger**, which is the
+refusal in a single number a reader can `stat` for themselves.
+
+(Building that manifest caught a transcription error in this memo's own artifact table — I had
+attributed `argmax_field.npy`'s sha to the u = 12 substituted field. Corrected above. The manifest is
+the authority; a hand-typed sha is not.)
 
 | artifact | bytes | sha256 (first 16) |
 |---|---:|---|
@@ -436,8 +443,12 @@ Store root `/Volumes/APDataStore/pact/ddm_fs2/`.
 | `retained/token_rd/pair_hist_{bits,bits_disagree,n,n_disagree}.npy` | 1,852,928 ea | (recorded) |
 | `retained/fields/tokens_substituted_u7p75.u8` | 117,964,800 | `243076b9dc45646e` |
 | `retained/fields/edits_u7p75.npz` | 838,435 | `27ef5793053ebd07` |
-| `retained/fields/tokens_substituted_u12.u8` | 117,964,800 | `93cdf71daedd3950` |
-| `retained/fields/edits_u12.npz` | 216,175 | `c8064fda1d2cd431` |
+| `retained/fields/tokens_substituted_u12.u8` | 117,964,800 | `22e04a44b822b386` |
+| `retained/fields/edits_u12.npz` | 698,803 | `c8064fda1d2cd431` |
+| `retained/token_rd/argmax_field.npy` (live) | 117,964,928 | `93cdf71daedd3950` |
+| `reencode/retained/candidate_fs2u7p75.zip` (the refused candidate, built not modelled) | **179,434** | `f2589101377199c7` |
+| `reencode/retained/candidate_fs2u12.zip` (the u=12 candidate, **larger than the base**) | **180,493** | `533e182d8c92de6a` |
+| `reencode/work/tail_control_600.bin` (byte-identity control) | 113,847 | `b9243abd2e38f9ae` |
 | `build/f26_corrector_native.so` | — | `3ce68dfd4056f424` |
 | `superseded_pre_corrector/` (the 2.07 % bug's own receipt) | — | with `WHY_SUPERSEDED.txt` |
 | `reencode/` (jg2 control + both encodes, incl. per-frame code-bit arrays) | — | control emitted sha `b9243abd2e38f9ae` = the shipped stream |
