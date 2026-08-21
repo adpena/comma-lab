@@ -1,4 +1,5 @@
-# ddm_fs1 — the pose-actuator family is rate-dead by 3.97×, and js6b's closure does not survive a compensated envelope
+# ddm_fs1 — pose-only-edit actuator rate-dead at MEASURED encodings; js6b's closure does not survive a compensated envelope  
+**[ERRATUM 2026-08-20, §E below — rv17 wave-2 W2-F8: the jg1 10.5 B/pair row was a UNITS MISREAD (coefficient count, not a price); §3 is CLOSED at qs2 pricing but OPEN-PENDING-ADJUDICATION for the jg1 re-solve encoding. "3.97×" is the MEDIAN statistic; the blanket move's mean break-even is 1.95×.]**
 
 **Task #1142** · **axis** `[macOS-CPU advisory, scorer-free retained-array arithmetic]` ·
 `score_claim=false` · `promotion_eligible=false` · **no Modal dispatch, no scorer forward, no archive built.**
@@ -80,7 +81,7 @@ survives — never to admit anything.
 
 ---
 
-## §3 THE POSE-ACTUATOR FAMILY IS RATE-DEAD — CLOSED
+## §3 THE POSE-ONLY-EDIT ACTUATOR (FORMULATION) — CLOSED AT qs2 PRICING; jg1 ENCODING UNADJUDICATED [see ERRATUM §E]
 
 An edit buying a per-pair pose credit `k` is worth `k · dS/dd_i` and costs `B · 25/37,545,489`.
 Re-deriving the slope at the live operating point (`d_pose = 6.365684e-06`) gives
@@ -102,7 +103,7 @@ Re-deriving the slope at the live operating point (`d_pose = 6.365684e-06`) give
 |---|---:|---:|---:|
 | `qs2` cheapest measured | 5.667 | 14.1% | **3.97×** |
 | `jg5` live seg edits (180,580−176,429)/455 | 9.123 | 4.8% | 6.38× |
-| `jg1` re-solve midpoint | 10.500 | 4.2% | 7.35× |
+| `jg1` re-solve midpoint | ~~10.500~~ MISREAD — see §E | — | — |
 | `rc4` rung-4 reference | 12.830 | 3.4% | 8.98× |
 
 Blanket application to the 27 genuinely unmeasured pairs, at the cheapest encoding:
@@ -259,3 +260,43 @@ screen; the compensation sweep re-runs at any factor).
   `receipt_delta` so that guard stops being an unwired cure itself.
 
 Own-vehicle frontier: **S 0.14827847122030852 @ 180,456 B [contest-CUDA T4, n600] — UNMOVED by ddm_fs1.**
+
+---
+
+## §E ERRATUM (2026-08-20, from rv17 wave-2 round-1 — findings adopted, cures applied)
+
+**E1 (W2-F8, HIGH — the jg1 price is a units misread; §3's universal quantifier fails).** The
+§3 table's `jg1 re-solve midpoint 10.500 B/pair` came from truncating `ddm_na10:562` at
+"moves 9–12" — but the source sentence reads "moves 9–12 already-shipped **coefficients**, which
+up2 measured the Rice stream absorbing at +5 B for all 7,200 ≈ 0.83 B/pair." 10.5 is a
+COEFFICIENT COUNT entered as a byte price, inside a table whose preamble claims every row is a
+measured encoding. The candidate prices for that same move are mutually inconsistent at source:
+na10's stated 0.83 B/pair (itself a 100× internal slip — 5 B / 7,200 over 600 pairs = 0.0083);
+up3 §5's correction (~0.08 B/pair absorbed as shipped, but +3 B per ISOLATED coefficient →
+~27–36 B/pair for isolated moves). At 0.83 B/pair the blanket-27 move nets **−2.384e-05 — a GAIN
+≈6.8× the admission bar**; at 27–36 it stays dead. **Consequence: §3's verdict is DOWNGRADED
+from "CLOSED at every edit encoding measured on this vehicle" to CLOSED AT qs2 PRICING (5.667
+B/pair leg unaffected) and OPEN-PENDING-ADJUDICATION for the jg1 re-solve encoding.** The
+governing price is not decidable by citation — none of the three numbers is a real re-encode of
+THIS move on THIS body. The adjudicating measurement (real Rice-stream re-encode of the blanket-27
+re-solved coefficients, per the fs2 direction-dependent pricing law) is assigned to **ddm_fs3
+leg 2**; its result settles whether the ≤1.429 B/pair reactivation trigger is already met.
+
+**E2 (MED — median statistic on a blanket claim).** The title's "3.97×" is the MEDIAN-budget
+statistic (5.667 / 1.429). The blanket-27 move is additive, so its break-even is the MEAN budget:
+5.667 / 2.909 = **1.95×**. The qs2-priced conclusion (loss at both mean and median, §3's own
+net table) survives; the published magnitude is corrected everywhere headline-visible.
+
+**E3 (MED — "family" over-label).** Title, §3 header, ANSWER-FIRST and the landing commit
+message said "family" while the typed verdict correctly says `verdict_scope: FORMULATION`
+(pose-only-edit actuator at measured encodings). Title and header corrected above; the commit
+message (fa1c61ac64) is immutable — this erratum is its correction of record.
+
+**E4 (MED — §5 population control not applied).** §4 refuses the pose actuator's prefix/
+population defect, but §5's js6b re-screen carries the same class: 18 of 200 rows sit on pairs
+never edited in jg5, and one of the two median-calibration admits is among them. §5's reopen
+stands but inherits an explicit population caveat; the re-screen re-runs under fs3's real prices
+before any js6b row is cited as an admit.
+
+Review provenance: `.omx/research/ddm_rv17_wave2_review_round1c_fs1_20260820.md` (reviewer
+commit 89de978499); receipt `/Volumes/APDataStore/pact/ddm_rv17/rv17_wave2_round1c_receipt.json`.
