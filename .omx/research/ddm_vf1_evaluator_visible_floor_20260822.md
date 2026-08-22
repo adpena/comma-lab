@@ -1,99 +1,207 @@
-# ddm_vf1 evaluator-visible floor — STOP: the strict byte demand is 42,382 B
+# DDM VF1 evaluator-visible floor census — 2026-08-22
 
-**Date:** 2026-08-22  
-**Disposition:** `STOPPED-CHARTER-ARITHMETIC-DISAGREEMENT`  
-**Verdict scope:** `INSTANCE` — the fixed-distortion, strict-sub-0.12 byte threshold in this charter only  
-**Authority:** exact arithmetic over the retained DX2 `[contest-CUDA T4, n600]` pointer receipt; this arm ran no scorer and created no score row
+**Lane:** `ddm_vf1_evaluator_visible_floor`
 
-## Conclusion
+**Disposition:** `INCONCLUSIVE — MEASUREMENT OWED, DO NOT FIRE HERE`
 
-The charter's mandatory independent check disagrees with its stated demand by one byte. At the retained DX2 distortion, the continuous boundary is
+**Authority:** scorer-free retained-receipt audit; no scorer, Metal, Modal, training, archive mutation, or JO-r9 read occurred
 
-\[
-B_{0.12}=\frac{(0.12-D_{\mathrm{DX2}})\,37{,}545{,}489}{25}
-=137{,}986.8387944436\ \mathrm{B}.
-\]
+**Vehicle:** current DX2 archive lineage only
 
-Because the target is the strict inequality `S < 0.12`, the largest admissible integer archive is **137,986 B**. Starting from 180,368 B therefore requires **42,382 B** of reduction. The charter's 42,381 B reduction lands at 137,987 B and scores **0.12000010734016302**, which fails the target. This is not a display-rounding issue.
+## Result first
 
-The charter says to stop and report any independent arithmetic disagreement. Accordingly, VF1 did not adjudicate the downstream load-bearing census, MDL floor, realization pricing, prior-law prediction, or an owed scorer run. Populating those fields after the failed precondition would falsely claim that the charter had been executed on its registered decision boundary.
+The current DX2 archive needs a strict cut of **42,382 B** to cross `S < 0.12` at fixed distortion. The retained corpus does **not** contain a qualifying current-DX2 per-token or per-cell evaluator-equivalence census from which any portion of that cut can be credited.
 
-## Mandatory arithmetic gate
+The complete classification-status census is therefore (`[scorer-free exact dimensional/accounting]`):
 
-The inputs below are retained measurements from the existing DX2 pointer; the calculations are `DERIVED` by this arm.
+| Classification | Token positions | Position denominator | Current coded mass | Byte denominator |
+|---|---:|---:|---:|---:|
+| `LOAD_BEARING` | 0 | 117,964,800 | 0 B | 113,777 B |
+| `INERT` | 0 | 117,964,800 | 0 B | 113,777 B |
+| `UNMEASURED` | **117,964,800** | **117,964,800** | **113,777 B** | **113,777 B** |
 
-| Quantity | Status | Value |
-|---|---|---:|
-| DX2 archive size | `MEASURED [contest-CUDA T4, n600]`, retained | 180,368 B |
-| DX2 archive SHA-256 | `MEASURED`, retained | `976f706d5af6070f9785e495d35f2bd1bf10159a154fa19b45aefbf8f6de6674` |
-| `d_seg` | `MEASURED [contest-CUDA T4, n600]`, retained | 0.00020139 |
-| `d_pose` | `MEASURED [contest-CUDA T4, n600]`, retained | 0.00000637 |
-| Seg contribution `100 d_seg` | `DERIVED` | 0.020139 |
-| Pose contribution `sqrt(10 d_pose)` | `DERIVED` | 0.007981227975693966 |
-| Rate contribution `25 B / 37,545,489` | `DERIVED` | 0.12009964765673980 |
-| Recomputed DX2 score | `DERIVED`, agrees with pointer | 0.14821987563243377 |
-| Fixed distortion contribution | `DERIVED` | 0.028120227975693966 |
-| Continuous byte boundary at `S = 0.12` | `DERIVED` | 137,986.8387944436 B |
-| `S(137,986 B)` | `DERIVED` | 0.11999944148120990 — PASS |
-| `S(137,987 B)` | `DERIVED` | 0.12000010734016302 — FAIL |
-| Largest integer archive with `S < 0.12` | `DERIVED` | **137,986 B** |
-| Required reduction from DX2 | `DERIVED` | **42,382 B** |
-| Bytes bought by 0.001 S of distortion | `DERIVED` | 1,501.81956 B |
+This says **all positions are unclassified**, not that none is load-bearing or inert. The measured-subset denominator for the required complete tuple—`Δbytes`, `Δd_seg`, `Δd_pose`, and registered repeat noise on the current DX2 field—is **0 / 117,964,800 positions** and **0 / 113,777 coded bytes**.
 
-The charter's prose `archive < 137,987 B` is compatible with a maximum of 137,986 B. Its subsequent **42,381 B** demand is not: subtracting 42,381 B from 180,368 B produces the excluded 137,987 B endpoint. The charter itself later names 42,382 B as unassigned prior negative signal, reinforcing that the discrepancy is internal to the registered demand rather than a changed pointer.
+Consequently, the measured evaluator-visible MDL credit is **0 B / 42,382 B required = 0%**. The prior “minority load-bearing, inert mass on the order of the required cut” prediction is **neither confirmed nor refuted**. It receives zero frontier credit.
 
-## Provenance and custody
+## Provenance and strict-byte boundary
 
-All five required seed pins matched before adjudication:
+All charter-pinned inputs matched before the audit:
 
-| Required source | Verified SHA-256 |
+| Receipt | SHA-256 |
 |---|---|
-| `.omx/research/ddm_rb1_rate_bound_decomposition_20260822.md` | `fa26a44444a57428910565956011e0bb26c6680174a71bfbb914002f9f564f09` |
-| `.omx/research/ddm_xt1_exact_solve_teacher_student_20260822.md` | `6437bc53d96e527049c3fd6cd60b91af220305881a7bcc68195fece15a728867` |
-| `.omx/research/ddm_tk1_20260806/RECEIPT.md` | `5519cce5a986ffd1536233c2f0865a1ce2f95996293f230cb8a0da0f30e09861` |
-| `.omx/research/ddm_fp1_class_field_projection_20260731.md` | `b594de4b53d58a1535466f8dc94f14b6fbb87c4d16d8be53b01089996aeef42d` |
-| `.omx/research/ddm_nl1_never_fired_levers_20260822.md` | `a11e56b228513c066b803cb6c03e7ce31d2af40d7271b812abaff5e16b5ced3a` |
+| RB1 base measurement | `fa26a44444a57428910565956011e0bb26c6680174a71bfbb914002f9f564f09` |
+| XT1 score algebra | `6437bc53d96e527049c3fd6cd60b91af220305881a7bcc68195fece15a728867` |
+| TK1 roofline | `5519cce5a986ffd1536233c2f0865a1ce2f95996293f230cb8a0da0f30e09861` |
+| FP1 carrier floor | `b594de4b53d58a1535466f8dc94f14b6fbb87c4d16d8be53b01089996aeef42d` |
+| NL1 nullspace ledger | `a11e56b228513c066b803cb6c03e7ce31d2af40d7271b812abaff5e16b5ced3a` |
 
-This arm made a `SCOPE` reduction to arithmetic-preflight disposition because the charter required it. It made no mechanism reduction and assigned no `UNMEASURED` token or cell to `INERT`.
+Current DX2 facts (`[contest-CUDA T4, n600]` for score components; `[scorer-free exact archive anatomy]` for bytes):
 
-No scorer, Metal, local advisory, or Modal job ran. The sacred JO r9 directory was not read. `upstream/`, NR1, RC1, DB1, their trees, and the staged index were not modified. No payload was materialized, so there is no payload-retention event or bulky receipt.
+- `B = 180,368 B`
+- `d_seg = 0.00020139`
+- `d_pose = 0.00000637`
+- `D = 100*d_seg + sqrt(10*d_pose) = 0.028120227975693966`
+- `S = 0.14821987563243377`
+- current token stream = `113,777 B / 180,368 B = 63.0805%` of the archive
 
-## Unexecuted deliverable fields
+At fixed distortion, the continuous boundary is `137,986.8387944436 B`; the largest integer archive satisfying strict `S < 0.12` is **137,986 B**. Thus the required cut is:
 
-| Field | Honest status | Boundary |
+`180,368 - 137,986 = 42,382 B`.
+
+Boundary check:
+
+- `B = 137,986 B` gives `S = 0.11999944148120990` — passes.
+- `B = 137,987 B` gives `S = 0.12000010734016302` — fails.
+- `0.001` score unit corresponds to `1,501.81956 B` at the contest denominator.
+
+## What a qualifying row requires
+
+A token or cell is `INERT` only when a concrete alternative survives the actual receiver and has all of the following on the current DX2 decoded field and current FX5 token coder:
+
+1. a real re-encode `Δbytes`, including arithmetic-context effects;
+2. realized-through-receiver `Δd_seg`;
+3. realized-through-receiver `Δd_pose`;
+4. a registered repeat-noise comparison for both scorer terms; and
+5. a joint-candidate check when multiple alternatives are composed.
+
+A position is `LOAD_BEARING` only when the same evidence shows every tested cheaper realization exceeds the registered scorer-equivalence tolerance. A grouped perturbation may prove that the **group configuration** affects a scorer term, but it does not prove that every member token is individually load-bearing. Arithmetic-coded byte deltas also do not partition additively by position: changing a token changes later contexts.
+
+## Typed retained-receipt census
+
+| Receipt family | Axis | Scope and denominator | `Δbytes` | `Δd_seg` | `Δd_pose` | Repeat noise | Admissible conclusion |
+|---|---|---|---|---|---|---|---|
+| JG3 S2 joint solve | `[macOS-CPU advisory]` | 573 / 573 retained pair rows; 11,654 separation configs; 10,900 accepted edits; 15,155 repaired cells | absent in 573 / 573 rows | group repair fields present | absent in 573 / 573 rows | absent in 573 / 573 rows | Pair-configuration Seg sensitivity only. The required DROP arm was not implemented. **0 individual tokens classified.** |
+| JG5 keep/drop waterfill | rate `[macOS-CPU scorer-free exact, pre-FX5]`; Pose `[macOS-CPU advisory, DALI GT, batch 8]`; Seg JG1-DALI projected to T4 | 573 edited pairs, 455 kept; one 8,654-token grouped field | real pre-FX5 grouped encode: `+4,151 B` vs zero-edit base | grouped T4 projection present | grouped fixed-batch advisory present | no per-token scorer repeat receipt | The chosen 455-pair configuration is scorer-sensitive and costs bytes on its coder. It does not classify the 8,654 members, and its byte delta is not current-FX5 attribution. |
+| FS2 threshold substitution | rate `[macOS-CPU scorer-free exact, pre-FX5]`; distortion `[macOS-CPU advisory]` | `u=7.75`: 9,106 substitutions; `u=12`: 1,440 substitutions | real pre-FX5 grouped deltas: `-1,022 B`, `+37 B` | transferred from RC4 n120 amplification, not measured on the FS2 field | absent | absent | Real grouped prices, incomplete evaluator tuple. **0 individual tokens classified.** |
+| FS3 reopen | rate `[macOS-CPU scorer-free exact, pre-FX5]`; Seg `[macOS-CPU advisory, jg3 DALI instrument]` | 300 marginal tokens | `+223 B` | `-116` Seg cells | unresolved | absent | Incomplete tuple; no individual classification. |
+| FS3 drop137 | rate `[macOS-CPU scorer-free exact, pre-FX5]`; distortion `[cpu_env_mismatch_advisory]` | 997 dropped edit tokens; one grouped field | `-664 B` vs the shipped 455-edit stream on the pre-FX5 coder | same-instrument `Δd_seg = +0.00000333` | same-instrument `Δd_pose = +0.00040424` | no receipt-owned repeat floor | The grouped drop is evaluator-visible and dominated: rate `-0.00044213 S`, distortion `+0.03623733 S`, net `+0.03579520 S`. It does not identify which of 997 tokens carry the loss. |
+| RC4 rung 4 | distortion `[macOS-CPU advisory]`; rate `[scorer-free exact first-order model, old HV1]` | old HV1; n120 Seg and n48 Pose; thresholds 5, 7, 8.5 | first-order model, not a real current re-encode | measured only on old vehicle/sample | measured at u=7 on n48 | no current-field repeat floor | Useful negative transfer warning, not a current census. |
+| TD1 Schur arithmetic | `[scorer-free derived, old HV1]` | old HV1 full field, 117,964,800 positions | exact first-order model only | scorer amplification unmeasured | unmeasured | absent | No current evaluator-equivalence classification. |
+| task 869 / HV2 “768×4” | `[scorer-free exact-key prep, old IX2/HV2]` | 384 live cells used to prepare four exact-keyed orders | old IX2/HV2 preparation only | scorer A/B explicitly pending | scorer A/B explicitly pending | absent | This is exact-key preparation, **not** a completed 768-cell × 4-rung scorer experiment. |
+| DX2/FX5 | score `[contest-CUDA T4, n600]`; bytes/decode `[scorer-free exact]` | full current archive | DX2 carrier fold `-18 B`; FX5 global token-coder/corrector `-70 B` | decode-identical to rc2/JG5 field | decode-identical to rc2/JG5 field | exact byte/decode identities recorded | Scorer fields transfer through decode identity; old coder byte attributions do not transfer to the current FX5 stream. |
+
+The FS3 same-instrument row is the strongest complete **group-level** evidence. It closes “drop those 997 edits as a cheap win,” but it cannot be expanded into 997 per-token LOAD_BEARING rows. Conversely, the absence of a per-token complete row cannot be expanded into inertness.
+
+Durable retained sources used for the row audit include:
+
+- JG3: `/Volumes/APDataStore/pact/ddm_jg3/checkpoints/seg_solve_n600_complete.jsonl` and `/Volumes/APDataStore/pact/ddm_jg3/retained/wc2_merged_n600_complete.json`;
+- JG5: `/Volumes/APDataStore/pact/ddm_jg5/retained/final/WATERFILL.json` and `/Volumes/APDataStore/pact/ddm_jg5/retained/final/S1_encode_jg5_subset455.json`;
+- FS2: `/Volumes/APDataStore/pact/ddm_fs2/reencode/retained/S1_encode_fs2u7p75.json` and `S1_encode_fs2u12.json` in the same retained directory;
+- FS3: `/Volumes/APDataStore/pact/ddm_fs3/FS3_SAME_INSTRUMENT_LEGS.json` and `/Volumes/APDataStore/pact/ddm_fs3/reencode/retained/S1_encode_fs3_drop137.json`; and
+- HV2/task 869: `/Volumes/VertigoDataTier/pact/ddm_hv2_20260803/ddm_hv2_exact_keyed_orders_receipt.json`.
+
+## Evaluator-visible MDL
+
+Let a current token position’s evaluator-equivalence class contain concrete token alternatives whose fully received render changes both scorer terms by no more than the registered repeat floor. Let its realization cost include the actual FX5 arithmetic context and every counted side section needed to select the alternative.
+
+The retained evidence yields:
+
+- observed, qualified equivalence-class alternatives: **0**;
+- qualified `INERT` positions: **0 / 117,964,800**;
+- qualified inert coded mass: **0 / 113,777 B**;
+- receiver-realized overpayment lower bound: **0 B**;
+- epistemically unclassified span: **113,777 B / 113,777 B**.
+
+The unclassified span is not an achievable upper bound. It is merely the mass whose scorer-visible quotient is unknown. No source in the retained corpus proves a receiver-closed alternative token field with lower current-FX5 codelength and unchanged Seg and Pose.
+
+The canonical equations agree with this stop:
+
+- `argmax_cell_identity_ideal_bytes_v1` is an ideal known-site bound; it excludes site transport, receiver realization, and other counted structure.
+- `ddm_score_quotient_functional_v1` remains incomplete and has no receiver-closed empirical anchor.
+- `token_rate_model_direction_dependence_v1` expressly forbids substituting its local/first-order price for real re-encoding and records arithmetic-context leakage.
+
+## Realization category audit
+
+No qualified inert class exists yet, so no category can receive byte credit.
+
+| Candidate realization | Category if it worked | Current disposition |
 |---|---|---|
-| Per-token/per-cell load-bearing census | `NOT ADJUDICATED` | No token/cell classification is emitted; the registered threshold failed its precondition. |
-| Measured-subset denominator | `NOT ADJUDICATED` | There is no VF1 census denominator. |
-| Evaluator-equivalence MDL floor | `NOT DERIVED` | No inert mass was promoted, so no bytes are credited. |
-| Inert-class realization price | `NOT DERIVED` | No zero-rate derivability or cheaper stand-in is asserted. |
-| Prior-law prediction | `UNTESTED` | Neither confirmed nor refuted. |
-| One owed scorer measurement | `NOT SELECTED` | The charter stopped before a census could be found inconclusive; inventing a scorer request here would bypass the arithmetic repair. |
+| Derive an evaluator-equivalent token choice entirely from generic receiver logic | (a) zero-rate derivable | **UNMEASURED.** No current receiver-closed equivalence rule is demonstrated. Video-derived choices may not be hidden in free code. |
+| Revert selected JG5 edits to a cheaper counted base or quotient representation | (b) cheaper counted stand-in | **UNREACHABLE on DX2 as presently specified.** FS3 shows one large revert is scorer-visible and dominated; no current stand-in is shipped. |
+| Substitute model argmax at FS2 thresholds | (a) logic may be free; token field remains counted | **NOT EQUIVALENT on retained evidence.** The real price at `u=7.75` is promising, but the scorer tuple is incomplete and its Seg transfer is adverse. |
+| task 869 exact-key map | (b) cheaper counted stand-in | **UNMEASURED and ancestor-bound.** The prepared orders are not current scorer-equivalent cells. |
+| NR1-style task-cell quotient | (b) cheaper counted stand-in | **UNMEASURED.** NR1 contains no measured quotient bytes and has its own current-field falsifier; VF1 does not reopen or build it. |
+| Delete tokens without a receiver replacement | (c) unreachable | **DEAD.** Tokens are required by the current decoder, and grouped drop evidence incurs scorer loss. |
 
-## RECALL EVIDENCE
+## Prior verdict
 
-The recall scope covered governing state plus content searches across `.omx/research/` memos and receipts, `CANONICAL_RESEARCH_INDEX*`, `sub015_DAG_*` FEED blocks, `harness_tasklist_bridge_20260803.jsonl`, and `canonical_task_status.jsonl`. Queries included `evaluator-equivalence`, `score quotient`, `token-by-token`, `768 cells`, `4 rungs`, `three-way edit drop keep`, `token drop`, `rung-4`, `jg3`, `fs2`, and `fs3`. The canonical registry was enumerated with `.venv/bin/python tools/list_canonical_equations.py --json`.
+The prior prediction was that measured load-bearing mass would be a minority and realizable inert mass would be on the order of `42,382 B`. Its pre-registered falsifiers—load-bearing mass at least 90%, or realizable inert mass below roughly 10 kB—presume a qualifying census.
 
-Beyond the charter seeds, recall found three boundaries that would matter after the arithmetic repair:
+Here the qualifying measured denominator is zero. Therefore:
 
-1. JG3's named three-way `{edit, drop, keep}` solve shipped `edit + keep`; its token-drop branch was explicitly not implemented because it required a receiver change. JG5 later measured pair-level KEEP/DROP admission over edited pairs, which is not a token-field omission census.
-2. Harness task 869 remains `pending`: the retained HV2 surface is exact-key preparation for four orders, not the claimed 768-cell × 4-rung joint scorer remeasurement. Those cells therefore cannot be counted as measured or inert from that task row.
-3. The canonical equations registry marks `argmax_cell_identity_ideal_bytes_v1` as a known-site ideal that excludes site locations, headers, receiver, and realization, and marks `ddm_score_quotient_functional_v1` incomplete. `token_rate_model_direction_dependence_v1` also forbids substituting its directional model for a real re-encode when making a decision.
+- the prediction is **INCONCLUSIVE**, not supported;
+- the prediction is **not falsified** by the `0 B` credited lower bound;
+- no “inert mass” number may be inferred from unmeasured positions; and
+- the canonical frontier remains unchanged.
 
-These findings would have changed a resumed census from a presumed full-field aggregation into a typed measured-subset audit with substantial `UNMEASURED` mass. They do not cure the earlier arithmetic failure, so they were not converted into classifications or byte credit. In the bounded index/DAG/task-ledger scope, no completed current-DX2 768×4 joint receipt or receiver-closed evaluator quotient was found.
+## The one owed scorer measurement — do not fire from VF1
+
+**Name:** `DX2_TOKEN_PPS_EQUIV_V1`
+
+**Disposition:** `OWED — MAIN-ONLY FIRE AFTER SCORER-LANE CLAIM`
+
+**Owner:** `MAIN`
+
+**Consumer store:** `/Volumes/APDataStore/pact/ddm_vf1_evaluator_visible_floor/pps_equiv_v1/`
+
+**Fire trigger:** MAIN has claimed a non-duplicated scorer lane; pinned the exact DX2 archive, decoded token field, FX5 coder, receiver, and scorer hashes; and approved a deterministic, crash-resumable, per-chunk-checkpointed harness after the storage-waterfall preflight.
+
+Exact configuration:
+
+1. On the current DX2 token field, compute exact sequential FX5 codelengths without scoring.
+2. Draw a deterministic PPS sample of 768 token positions with seed `20260822`, stratified by pair, current class, and codelength decile.
+3. At each sampled position, test the four non-current class values one at a time through the exact receiver, frozen SegNet, and frozen PoseNet at a fixed batch shape: **768 × 4 = 3,072 singleton variants**.
+4. Repeat the unchanged baseline twice for every pair to register the scorer noise surface: **2 × 600 = 1,200 pair evaluations**.
+5. Choose only alternatives whose two scorer deltas fall within their registered repeat floors, compose one joint alternative field, then evaluate all 600 pairs once to detect collateral: **600 pair evaluations**.
+6. Checkpoint atomically after each at-most-120-pair chunk so the experiment resumes from disk without repeating completed scorer work.
+7. Real-encode the control and joint field with the current FX5 coder, parse them back, and retain every materialized token payload, rendered payload, manifest, SHA-256, and byte count.
+
+Total planned scorer cost: **4,872 pair evaluations**, chunked at most 120 pairs at a time, plus **two** real FX5 re-encodes. Planned cash cost: **$0 local**. Wall time is unmeasured and is not guessed here.
+
+Use PPS design weights to report classified token mass and coded mass with confidence intervals. The quotient thesis is falsified for this sampled current-DX2 formulation if the design-weighted LOAD_BEARING share has a 95% confidence lower bound of at least 90%, or if the receiver-realized inert-credit 95% upper bound is below 10,000 B. It is supported only if the load-bearing point estimate is below 50%, the realizable inert lower bound approaches the 42,382 B demand, and the jointly composed candidate survives both scorers and real re-encoding.
+
+## Recall evidence and scope
+
+The bounded recall covered the research corpus, current DAG/task surfaces, task-status store, harness bridge, retained stores, and canonical-equation registry using `evaluator-equivalence`, `score quotient`, `token-by-token`, `768 cells`, `4 rungs`, `three-way edit drop keep`, `jg3`, `jg5`, `fs2`, `fs3`, `rc4`, `rung-4`, `repeat-noise`, and `sensitivity`.
+
+It found material evidence beyond the charter seeds:
+
+- task 869 is still pending; HV2 prepared four exact-keyed orders from 384 cells but did not run the scorer A/B;
+- JG3 implemented EDIT and KEEP but not DROP;
+- JG5 is a pair-level waterfill and grouped field, not per-token marginal evidence;
+- FS3 closes one grouped 997-token drop while leaving individual attribution unresolved;
+- DX2/FX5 preserve the decoded token field but change global coding, so ancestor byte deltas are not current token prices; and
+- the registered ideal-byte and quotient equations explicitly omit receiver-closed realization or remain incomplete.
+
+These findings changed the plan from aggregating an assumed three-way/768×4 census to this typed measured-subset audit. Within the stated scope, I did not find a current-DX2 qualifying per-token complete row.
+
+## Constraints and custody
+
+- No scorer or model forward was launched.
+- No Metal, MPS, CUDA, Modal, or paid dispatch was launched.
+- No training, archive mutation, or payload materialization was launched.
+- JO r9 was not read or used.
+- No unrelated working-tree or staged-index content was changed.
+- The current canonical frontier is unchanged: DX2 remains `S = 0.14821987563243377`, above the sub-0.12 goal.
 
 ## NEXT_IF_RESUMED
 
-- `QUEUED-WITH-A-FIRE-ORDER` — **owner:** MAIN / charter issuer; **consumer store:** `.omx/research/charters/ddm_vf1_evaluator_visible_floor_charter_20260822.md` and this VF1 memo; **fire trigger:** repin or explicitly ratify a strict maximum of 137,986 B and a 42,382 B demand, then refire the retained-receipt-only census from an empty classification table.
+- **Disposition:** `OWED — DO NOT FIRE WITHOUT MAIN`; **owner:** `MAIN`; **consumer store:** `/Volumes/APDataStore/pact/ddm_vf1_evaluator_visible_floor/pps_equiv_v1/`; **fire trigger:** a non-duplicated scorer lane is claimed, all exact DX2/FX5/receiver/scorer hashes are pinned, and a deterministic resumable harness passes the storage preflight; **action:** execute `DX2_TOKEN_PPS_EQUIV_V1` exactly as specified above, retaining every payload and the two real re-encodes.
 
 ## LIVE-HYPOTHESES
 
-- A from-birth evaluator quotient may still remove substantial exact-plane cost because the scorers observe fewer degrees of freedom than the shipped token field. It remains plausible from the objective geometry, but VF1 measured no quotient mass.
-- The measured subset may contain meaningful inert mass, but receiver realization could consume much of its ideal saving. The known-site ideal explicitly omits the costs that decide whether omission is legal and byte-positive.
+- A useful evaluator quotient may still exist because the 113,777-byte token field represents much more spatial state than the two frozen scorer outputs observe; the retained corpus simply has no current per-position experiment capable of measuring it.
+- Scorer-equivalent alternatives may be concentrated in high-predictability, non-boundary token contexts. That is plausible because JG3’s successful edits were sparse and scorer-directed, but only codelength-weighted current-DX2 sampling can determine whether those alternatives carry meaningful bytes.
+- Realization cost may be the binding wall even if many positions are evaluator-inert. FX5 arithmetic contexts couple later prices to each substitution, and FS2 already shows that changing many tokens can either save or add bytes.
 
 ## DEAD-ENDS
 
-- Treating 42,381 B as the strict fixed-distortion sub-0.12 demand is closed: it lands at 137,987 B, whose exact score is above 0.12.
-- Treating task 869's exact-key preparation as a completed 768×4 joint measurement is closed by the task ledger's `pending` status.
-- Treating JG3 as a completed token-level `{edit, drop, keep}` census is closed because its drop mechanism was not implemented; JG5's later DROP/KEEP states have a different pair-level denominator.
+- Treating task 869/HV2 preparation as a completed 768×4 scorer census is closed: the receipts explicitly say scorer A/B is pending.
+- Treating JG3 as a completed EDIT/DROP/KEEP experiment is closed: DROP was not implemented, and its rows contain no Pose or byte delta.
+- Assigning a grouped JG5, FS2, or FS3 result to every member token is closed: the retained receipts measure whole configurations, while individual necessity and arithmetic-context price are non-additive.
+- Summing JG5, FS2, and FS3 byte deltas into “inert mass” is closed: their changed sets overlap, their baselines differ, and their scorer tuples are incomplete or adverse.
+- Transferring old IX2/HV1 or pre-FX5 byte prices to current DX2 is closed: DX2/FX5 preserve decoded content but changed the global coder representation.
+- Re-encoding the fixed current token field as a path to the missing 42,382 B is closed by RB1: exact recoding has already been exhausted by the 70-byte FX5 improvement and cannot supply the remaining order of magnitude.
 
-Own-vehicle frontier: **DX2 S 0.14821987563243377 @ 180,368 B [contest-CUDA T4, n600], UNMOVED.**
+**VF1 frontier line:** exact strict-byte demand **42,382 B**; measured evaluator-inert credit **0 B**; qualifying current-token census **0 / 117,964,800 positions**; disposition **INCONCLUSIVE — one MAIN-owned scorer measurement owed**; own-vehicle frontier remains **S = 0.14821987563243377 @ 180,368 B `[contest-CUDA T4, n600]`**, pointer unmoved.
