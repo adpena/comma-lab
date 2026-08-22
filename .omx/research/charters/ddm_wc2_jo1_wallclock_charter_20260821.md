@@ -79,3 +79,21 @@ upstream/ READ-ONLY; live run untouched; serializer commits; .py = 2 genuine rev
 passes; memo .omx/research/ddm_wc2_jo1_wallclock_20260821.md; final message = live ETA
 band + step-cost table + per-lever verdict {READY/REFUTED/RIDE-R8} + the exact swap
 arithmetic + GESTALT-DELTA line.
+
+## AMENDMENT 1 (operator 2026-08-21: "Remember gpu, ane and cpu are all available for saturation")
+MEASURED at amendment time: 16 physical cores (6P+12E), total CPU in use ~470/1600%,
+jo1 worker ~288% — Metal IDLE, ANE IDLE, ~70% of CPU idle. The lever set widens to the
+FULL HETEROGENEOUS MATRIX, and the objective is MACHINE saturation, not single-substrate
+tuning:
+  d. ANE-OFFLOADED Pose6-bearing forwards — CoreML per the #482 correction ladder
+     (decompose → precision-split → calibrated corrector → W8A8) + the #477 precision-
+     format × backend assignment matrix (recall those receipts, do not re-derive).
+     Same determinism burden as (c): ANE inference is deterministic per model+input on
+     one device — verify the gate + cert regeneration tuples hold ON ANE, and treat any
+     numeric shift vs CPU-torch as a TRAJECTORY change (reseal + endpoint re-verified
+     through T4 authority, which is the only score authority anyway).
+  e. HETEROGENEOUS SPLIT — the composed form: CPU pair-workers (a) × ANE scorer forwards
+     (d) × ONE governed Metal slot for the carrier solve (c). Price the composition, not
+     just each engine alone; the swap economics in §4 compares the best COMPOSED lever.
+Local-jobs law (memory local_jobs_leverage_cpu_ane_gpu_fully_20260819) binds: a long
+local job that leaves two engines dark is under-form.
