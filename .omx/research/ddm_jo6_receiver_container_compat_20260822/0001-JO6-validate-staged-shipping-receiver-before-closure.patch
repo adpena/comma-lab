@@ -1,0 +1,289 @@
+From 0f018e8216ee9fc7d7049656d7c2d6303a6856ae Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Alejandro=20Pe=C3=B1a?= <adpena@gmail.com>
+Date: Fri, 21 Aug 2026 23:59:03 -0500
+Subject: [PATCH] JO6: validate staged shipping receiver before closure
+ [no-triality] [p0-ledger-ok]
+
+---
+ experiments/ddm_jo2_receiver_close.py         | 124 +++++++++++++++++-
+ .../tests/test_ddm_jo1_joint_objective.py     |  89 +++++++++++++
+ 2 files changed, 211 insertions(+), 2 deletions(-)
+
+diff --git a/experiments/ddm_jo2_receiver_close.py b/experiments/ddm_jo2_receiver_close.py
+index a4873e683..2025d37ab 100644
+--- a/experiments/ddm_jo2_receiver_close.py
++++ b/experiments/ddm_jo2_receiver_close.py
+@@ -24,6 +24,7 @@ import shutil
+ import struct
+ import subprocess
+ import sys
++import time
+ import zipfile
+ from collections.abc import Mapping, Sequence
+ from dataclasses import dataclass
+@@ -52,6 +53,7 @@ D: Final = 12
+ POSE_DIMS: Final = 6
+ CAMERA_H: Final = 874
+ CAMERA_W: Final = 1164
++RAW_BYTES: Final = N * 2 * CAMERA_H * CAMERA_W * 3
+ BASIS_H: Final = 24
+ BASIS_W: Final = 32
+ GN_DAMPING: Final = 0.01
+@@ -973,16 +975,24 @@ def stage_runtime(runtime_root: Path, archive_payload: bytes) -> dict[str, Any]:
+         "from .jo2_residual_runtime import ResidualWrappedRenderer, split_semantic_blob\n",
+         "JO2 runtime import",
+     )
++    _replace_once(
++        f26,
++        '    if not parts.semantic_blob.startswith((WANS1_MAGIC, b"SD1M", b"SM3R")):\n'
++        '        raise InflationError("F26 requires WANS1, SD1M, or SM3R semantic weights")\n',
++        "    base_semantic_blob, jo2_residual_payload = split_semantic_blob(parts.semantic_blob)\n"
++        '    if not base_semantic_blob.startswith((WANS1_MAGIC, b"SD1M", b"SM3R")):\n'
++        '        raise InflationError("F26 requires WANS1, SD1M, or SM3R semantic weights")\n',
++        "JO2 semantic unwrap before F26 validation",
++    )
+     _replace_once(
+         f26,
+         "    semantic = renderer.SemanticTokenRenderer(96)\n"
+         "    tagged_state = renderer.unpack_variant_semantic_or_none(\n"
+         "        parts.semantic_blob,\n",
+         "    semantic = renderer.SemanticTokenRenderer(96)\n"
+-        "    base_semantic_blob, jo2_residual_payload = split_semantic_blob(parts.semantic_blob)\n"
+         "    tagged_state = renderer.unpack_variant_semantic_or_none(\n"
+         "        base_semantic_blob,\n",
+-        "JO2 semantic split",
++        "JO2 base semantic load",
+     )
+     _replace_once(
+         f26,
+@@ -1021,6 +1031,111 @@ def stage_runtime(runtime_root: Path, archive_payload: bytes) -> dict[str, Any]:
+     }
+ 
+ 
++def validate_staged_receiver(runtime_root: Path, output: Path) -> dict[str, Any]:
++    """Decode through the exact staged shipping tree before receiver closure."""
++    root = output.resolve()
++    if root.exists():
++        raise JO2ReceiverCloseError(f"receiver validation already exists: {root}")
++    archive_path = runtime_root.resolve() / "archive.zip"
++    archive_record = file_record(archive_path)
++    archive_dir = root / "archive"
++    decoded_dir = root / "output"
++    raw_path = decoded_dir / "0.raw"
++    names = atomic_bytes(root / "video_names.txt", b"0.mp4\n")
++    with zipfile.ZipFile(archive_path) as archive:
++        infos = archive.infolist()
++        if (
++            len(infos) != 1
++            or infos[0].filename != "p"
++            or infos[0].compress_type != zipfile.ZIP_STORED
++        ):
++            raise JO2ReceiverCloseError(
++                "staged receiver validation requires one stored member p"
++            )
++        member = archive.read(infos[0])
++        if archive.testzip() is not None:
++            raise JO2ReceiverCloseError("staged receiver validation archive CRC failed")
++    extracted = atomic_bytes(archive_dir / "p", member)
++    inflate_sh = runtime_root.resolve() / "inflate.sh"
++    if not inflate_sh.is_file() or not os.access(inflate_sh, os.X_OK):
++        raise JO2ReceiverCloseError("staged shipping inflate.sh is absent or not executable")
++    command = [
++        str(inflate_sh),
++        str(archive_dir),
++        str(decoded_dir),
++        str(verify_record(names)),
++    ]
++    path = os.environ.get("PATH", "")
++    host_shims = REPO / "tools/host_shims"
++    environment = {
++        **os.environ,
++        "PATH": f"{host_shims}{os.pathsep}{path}",
++        "PYTHONDONTWRITEBYTECODE": "1",
++    }
++    started = time.monotonic()
++    try:
++        process = subprocess.run(
++            command,
++            cwd=runtime_root,
++            env=environment,
++            check=False,
++            capture_output=True,
++            text=True,
++            timeout=1800,
++        )
++    except subprocess.TimeoutExpired as error:
++        stdout = (
++            error.stdout.decode(errors="replace")
++            if isinstance(error.stdout, bytes)
++            else (error.stdout or "")
++        )
++        stderr = (
++            error.stderr.decode(errors="replace")
++            if isinstance(error.stderr, bytes)
++            else (error.stderr or "")
++        )
++        log = atomic_bytes(
++            root / "inflate.log",
++            (stdout + "\n--- STDERR ---\n" + stderr).encode(),
++        )
++        raise JO2ReceiverCloseError(
++            f"staged shipped receiver timed out; log={log['path']}"
++        ) from error
++    wall_seconds = time.monotonic() - started
++    log = atomic_bytes(
++        root / "inflate.log",
++        (process.stdout + "\n--- STDERR ---\n" + process.stderr).encode(),
++    )
++    if (
++        process.returncode != 0
++        or not raw_path.is_file()
++        or raw_path.stat().st_size != RAW_BYTES
++    ):
++        observed = raw_path.stat().st_size if raw_path.is_file() else None
++        raise JO2ReceiverCloseError(
++            "staged shipped receiver failed before closure: "
++            f"rc={process.returncode},raw_bytes={observed},expected={RAW_BYTES},log={log['path']}"
++        )
++    raw = file_record(raw_path)
++    receipt = {
++        "schema": "ddm_jo2_staged_receiver_validation.v1",
++        "status": "COMPLETE",
++        "command": command,
++        "returncode": process.returncode,
++        "wall_seconds": wall_seconds,
++        "archive": archive_record,
++        "extracted_member": extracted,
++        "raw": raw,
++        "expected_raw_bytes": RAW_BYTES,
++        "log": log,
++        "axis": "[macOS-CPU real staged shipped receiver; no score authority]",
++        "all_materialized_payloads_retained": True,
++        "score_claim": False,
++    }
++    receipt_record = atomic_json(root / "RECEIVER_EXECUTION.json", receipt)
++    return {**receipt, "receipt": receipt_record}
++
++
+ _PARSEBACK = r'''
+ import hashlib, json, sys
+ from pathlib import Path
+@@ -1191,6 +1306,9 @@ def compile_receiver_closed_stage(
+     if not parseback["codes_match"] or parseback["semantic_sha256"] != semantic_sha256:
+         raise JO2ReceiverCloseError("fresh receiver parse-back differs")
+     parseback_record = atomic_json(output / "RECEIVER_PARSEBACK.json", parseback)
++    receiver_validation = validate_staged_receiver(
++        generation, output / "receiver_validation"
++    )
+     result = {
+         "schema": "ddm_jo2_receiver_closed_stage.v1",
+         "status": "COMPLETE",
+@@ -1210,6 +1328,8 @@ def compile_receiver_closed_stage(
+         "fresh_same_object_compensation": True,
+         "receiver_parseback": parseback_record,
+         "receiver_parseback_identity": True,
++        "staged_receiver_validation": receiver_validation,
++        "staged_receiver_decoded_expected_raw_bytes": True,
+         "runtime": runtime_records,
+         "retained_payloads": retained,
+         "candidate_master": dict(candidate_master),
+diff --git a/experiments/tests/test_ddm_jo1_joint_objective.py b/experiments/tests/test_ddm_jo1_joint_objective.py
+index 37e4e4fbc..612728d25 100644
+--- a/experiments/tests/test_ddm_jo1_joint_objective.py
++++ b/experiments/tests/test_ddm_jo1_joint_objective.py
+@@ -737,6 +737,95 @@ def test_jo3_receiver_compile_retry_preserves_failed_attempt_and_resumes(
+     assert len(calls) == 2
+ 
+ 
++def test_jo2_stage_runtime_unwraps_j2r1_before_f26_semantic_guard(
++    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
++) -> None:
++    source = tmp_path / "source"
++    _write(
++        source / "runtime/residual_archive.py",
++        b'    tagged_semantic = semantic_body.startswith((b"SD1M", b"SM3R"))\n',
++    )
++    _write(
++        source / "runtime/f26_inflate.py",
++        b"from .compensation_overlay import apply_compensation_overlay\n"
++        b'    if not parts.semantic_blob.startswith((WANS1_MAGIC, b"SD1M", b"SM3R")):\n'
++        b'        raise InflationError("F26 requires WANS1, SD1M, or SM3R semantic weights")\n'
++        b"    semantic = renderer.SemanticTokenRenderer(96)\n"
++        b"    tagged_state = renderer.unpack_variant_semantic_or_none(\n"
++        b"        parts.semantic_blob,\n"
++        b"        semantic.state_dict(),\n"
++        b"    )\n"
++        b"        records = decode_wans1(parts.semantic_blob)\n"
++        b"    semantic.load_state_dict(tagged_state, strict=True)\n"
++        b"    setup_seconds = time.perf_counter() - setup_started\n",
++    )
++    _write(
++        source / "inflate.py",
++        b'ARCHIVE_SHA256 = "'
++        + receiver_close.FX5_ARCHIVE_SHA256.encode()
++        + b'"\nARCHIVE_BYTES = 180_386\n',
++    )
++    monkeypatch.setattr(receiver_close, "FX5_RUNTIME", source)
++    staged = tmp_path / "staged"
++    receiver_close.stage_runtime(staged, b"archive")
++    runtime = (staged / "runtime/f26_inflate.py").read_text()
++    split = runtime.index(
++        "base_semantic_blob, jo2_residual_payload = split_semantic_blob(parts.semantic_blob)"
++    )
++    guard = runtime.index("if not base_semantic_blob.startswith")
++    load = runtime.index("semantic = renderer.SemanticTokenRenderer(96)")
++    assert split < guard < load
++    assert runtime.count("split_semantic_blob(parts.semantic_blob)") == 1
++    assert "decode_wans1(base_semantic_blob)" in runtime
++    assert 'startswith((b"SD1M", b"SM3R", b"J2R1"))' in (
++        staged / "runtime/residual_archive.py"
++    ).read_text()
++
++
++def test_jo2_receiver_close_requires_full_staged_decode_before_receipt(
++    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
++) -> None:
++    monkeypatch.setattr(receiver_close, "RAW_BYTES", 4)
++
++    def _runtime(name: str, raw: bytes) -> Path:
++        runtime = tmp_path / name
++        _write(
++            runtime / "archive.zip",
++            design.deterministic_single_p_archive(b"member"),
++        )
++        inflate = _write(
++            runtime / "inflate.sh",
++            (
++                "#!/bin/sh\n"
++                "set -eu\n"
++                "mkdir -p \"$2\"\n"
++                f"printf '{raw.decode()}' > \"$2/0.raw\"\n"
++            ).encode(),
++        )
++        inflate.chmod(0o755)
++        return runtime
++
++    passed = receiver_close.validate_staged_receiver(
++        _runtime("passing", b"raw!"), tmp_path / "validation_pass"
++    )
++    assert passed["status"] == "COMPLETE"
++    assert passed["raw"]["bytes"] == 4
++    assert Path(passed["receipt"]["path"]).is_file()
++    assert passed["all_materialized_payloads_retained"] is True
++
++    failed_root = tmp_path / "validation_fail"
++    with pytest.raises(
++        receiver_close.JO2ReceiverCloseError,
++        match="failed before closure",
++    ):
++        receiver_close.validate_staged_receiver(
++            _runtime("failing", b"bad"), failed_root
++        )
++    assert (failed_root / "output/0.raw").read_bytes() == b"bad"
++    assert (failed_root / "inflate.log").is_file()
++    assert not (failed_root / "RECEIVER_EXECUTION.json").exists()
++
++
+ def test_endpoint_derivative_stencils_are_in_domain_and_match_unit_step() -> None:
+     assert receiver_close.jacobian_probe_offsets(-2048) == (
+         (0, 1),

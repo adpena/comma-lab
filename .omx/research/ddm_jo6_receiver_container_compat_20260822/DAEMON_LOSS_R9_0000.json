@@ -1,0 +1,17 @@
+{
+  "schema": "ddm_jo6_daemon_loss.v1",
+  "status": "DAEMON_LOST_WITHOUT_SAFE_RUN_RECEIPT",
+  "axis": "[macOS-CPU governed local execution; no score authority]",
+  "run_root": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo6_receiver_container_compat_20260822_r9_final",
+  "daemon_pid": 28505,
+  "last_complete_pair_count": 10,
+  "active_pair": 10,
+  "last_retained_stage": "stage_10_event",
+  "last_observed_rss_gib": 5.0,
+  "rss_cap_gib": 16.0,
+  "receiver_execution_pointer_written": false,
+  "completed_payloads_retained": true,
+  "safe_run_terminal_receipt_found": false,
+  "inference": "The process disappeared below its resource cap without a terminal receipt; cause was not established.",
+  "score_claim": false
+}

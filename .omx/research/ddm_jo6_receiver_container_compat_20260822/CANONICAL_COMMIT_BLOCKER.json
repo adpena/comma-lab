@@ -1,0 +1,18 @@
+{
+  "schema": "ddm_jo6_canonical_commit_blocker.v1",
+  "status": "CANONICAL_GIT_OBJECT_WRITE_BLOCKED",
+  "canonical_head": "948edf1a8817073866b2e01b24d54bf81a62542d",
+  "canonical_index_empty_after_failure": true,
+  "serializer_error": "git add failed (rc=128): error: unable to create temporary file: Operation not permitted; failed to insert into database; fatal: updating files failed",
+  "isolated_serialized_commit": "0f018e8216ee9fc7d7049656d7c2d6303a6856ae",
+  "bundle": {
+    "path": ".omx/research/ddm_jo6_receiver_container_compat_20260822/SOURCE_FIX_0f018e821.bundle",
+    "bytes": 3734,
+    "sha256": "8e8edf0a9b50e19157703f15dda1c3d081d23b8af5303dd5f6b8be420a5152a5"
+  },
+  "patch": {
+    "path": ".omx/research/ddm_jo6_receiver_container_compat_20260822/0001-JO6-validate-staged-shipping-receiver-before-closure.patch",
+    "bytes": 11847,
+    "sha256": "6b2519b7f150a4316e2d766dd37f04ce7c3b92039aa84664a460c6e400ed7fc9"
+  }
+}

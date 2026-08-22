@@ -1,0 +1,15 @@
+{
+  "schema": "ddm_jo6_daemon_loss.v1",
+  "status": "RETRACTED_INVALID_PID_LIVENESS_PROBE",
+  "axis": "[macOS-CPU governed local execution; no score authority]",
+  "run_root": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo6_receiver_container_compat_20260822_r9_final",
+  "daemon_pid": 37877,
+  "last_complete_pair_count_at_probe": 11,
+  "receiver_execution_pointer_written": false,
+  "completed_payloads_retained": true,
+  "safe_run_terminal_receipt_found_at_probe": false,
+  "prior_loss_receipt": ".omx/research/ddm_jo6_receiver_container_compat_20260822/DAEMON_LOSS_R9_0000.json",
+  "retraction_reason": "kill -0 was not a valid liveness test under the managed process-isolation boundary. The memory governor continued sampling PID 37877 and pair receipts continued to advance after this file was first written.",
+  "corrected_disposition": "ACTIVE_GOVERNED_DAEMON",
+  "score_claim": false
+}

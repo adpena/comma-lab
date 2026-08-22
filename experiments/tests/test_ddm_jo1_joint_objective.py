@@ -737,6 +737,95 @@ def test_jo3_receiver_compile_retry_preserves_failed_attempt_and_resumes(
     assert len(calls) == 2
 
 
+def test_jo2_stage_runtime_unwraps_j2r1_before_f26_semantic_guard(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "source"
+    _write(
+        source / "runtime/residual_archive.py",
+        b'    tagged_semantic = semantic_body.startswith((b"SD1M", b"SM3R"))\n',
+    )
+    _write(
+        source / "runtime/f26_inflate.py",
+        b"from .compensation_overlay import apply_compensation_overlay\n"
+        b'    if not parts.semantic_blob.startswith((WANS1_MAGIC, b"SD1M", b"SM3R")):\n'
+        b'        raise InflationError("F26 requires WANS1, SD1M, or SM3R semantic weights")\n'
+        b"    semantic = renderer.SemanticTokenRenderer(96)\n"
+        b"    tagged_state = renderer.unpack_variant_semantic_or_none(\n"
+        b"        parts.semantic_blob,\n"
+        b"        semantic.state_dict(),\n"
+        b"    )\n"
+        b"        records = decode_wans1(parts.semantic_blob)\n"
+        b"    semantic.load_state_dict(tagged_state, strict=True)\n"
+        b"    setup_seconds = time.perf_counter() - setup_started\n",
+    )
+    _write(
+        source / "inflate.py",
+        b'ARCHIVE_SHA256 = "'
+        + receiver_close.FX5_ARCHIVE_SHA256.encode()
+        + b'"\nARCHIVE_BYTES = 180_386\n',
+    )
+    monkeypatch.setattr(receiver_close, "FX5_RUNTIME", source)
+    staged = tmp_path / "staged"
+    receiver_close.stage_runtime(staged, b"archive")
+    runtime = (staged / "runtime/f26_inflate.py").read_text()
+    split = runtime.index(
+        "base_semantic_blob, jo2_residual_payload = split_semantic_blob(parts.semantic_blob)"
+    )
+    guard = runtime.index("if not base_semantic_blob.startswith")
+    load = runtime.index("semantic = renderer.SemanticTokenRenderer(96)")
+    assert split < guard < load
+    assert runtime.count("split_semantic_blob(parts.semantic_blob)") == 1
+    assert "decode_wans1(base_semantic_blob)" in runtime
+    assert 'startswith((b"SD1M", b"SM3R", b"J2R1"))' in (
+        staged / "runtime/residual_archive.py"
+    ).read_text()
+
+
+def test_jo2_receiver_close_requires_full_staged_decode_before_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(receiver_close, "RAW_BYTES", 4)
+
+    def _runtime(name: str, raw: bytes) -> Path:
+        runtime = tmp_path / name
+        _write(
+            runtime / "archive.zip",
+            design.deterministic_single_p_archive(b"member"),
+        )
+        inflate = _write(
+            runtime / "inflate.sh",
+            (
+                "#!/bin/sh\n"
+                "set -eu\n"
+                "mkdir -p \"$2\"\n"
+                f"printf '{raw.decode()}' > \"$2/0.raw\"\n"
+            ).encode(),
+        )
+        inflate.chmod(0o755)
+        return runtime
+
+    passed = receiver_close.validate_staged_receiver(
+        _runtime("passing", b"raw!"), tmp_path / "validation_pass"
+    )
+    assert passed["status"] == "COMPLETE"
+    assert passed["raw"]["bytes"] == 4
+    assert Path(passed["receipt"]["path"]).is_file()
+    assert passed["all_materialized_payloads_retained"] is True
+
+    failed_root = tmp_path / "validation_fail"
+    with pytest.raises(
+        receiver_close.JO2ReceiverCloseError,
+        match="failed before closure",
+    ):
+        receiver_close.validate_staged_receiver(
+            _runtime("failing", b"bad"), failed_root
+        )
+    assert (failed_root / "output/0.raw").read_bytes() == b"bad"
+    assert (failed_root / "inflate.log").is_file()
+    assert not (failed_root / "RECEIVER_EXECUTION.json").exists()
+
+
 def test_endpoint_derivative_stencils_are_in_domain_and_match_unit_step() -> None:
     assert receiver_close.jacobian_probe_offsets(-2048) == (
         (0, 1),
