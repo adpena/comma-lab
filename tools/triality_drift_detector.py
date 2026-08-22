@@ -494,12 +494,25 @@ def _has_valid_scope_waiver(line: str) -> bool:
     return len(rationale) >= 4 and not _WAIVER_PLACEHOLDER.match(rationale)
 
 
+# The subagent contract's own DEAD-ENDS section header (src/tac/subagent_contract.py:528
+# instructs every arm to emit it). A heading NAMES a section; the verdicts are the rows
+# beneath it, which carry their own scopes. MEASURED 2026-08-22: 198 of 372 arm finals
+# carry this header — one template counted 198 times (#821's genus), and the case-sensitive
+# heuristic above cannot save it because the header is legitimately uppercase. Deliberately
+# ANCHORED to the bare header line: "## DEAD-END: the X family" still fires, and so does
+# any prose use, because those ARE claims.
+_TEMPLATE_SECTION_HEADER = re.compile(r"^#{1,6}\s+DEAD[-_]ENDS\s*$")
+
+
 def _verdict_line_exempt(line: str) -> bool:
-    """Line-level exemptions: markdown quotes, rule-discussion lines (mention the
-    declaration key itself), negation/prior-verdict cues, and a valid same-line waiver."""
+    """Line-level exemptions: markdown quotes, the contract's own DEAD-ENDS template
+    header, rule-discussion lines (mention the declaration key itself), negation/
+    prior-verdict cues, and a valid same-line waiver."""
     s = str(line or "").strip()
     if s.startswith(">"):
         return True  # markdown quote — quoting a prior verdict, not issuing one
+    if _TEMPLATE_SECTION_HEADER.match(s):
+        return True  # a section label, not a verdict — the rows beneath carry the scopes
     if _SCOPE_WAIVER.search(s):
         # a waiver marker decides the line by its OWN validity — it must not fall
         # through to the rule-discussion exemption below ("VERDICT_SCOPE_OK" would
