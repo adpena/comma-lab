@@ -1,9 +1,9 @@
 # ddm_xt1 — the exact-solve teacher folds into the NR1 task-cell quotient
 
-Tags: `[no-triality] [p0-ledger-ok]`  
-Date: 2026-08-22  
-Status: `SCOPED-CLOSURE / FOLDED-INTO-NR1 / NO-STANDALONE-BODY`  
-Score claim: false  
+Tags: `[no-triality] [p0-ledger-ok]`
+Date: 2026-08-22
+Status: `SCOPED-CLOSURE / FOLDED-INTO-NR1 / NO-STANDALONE-BODY`
+Score claim: false
 Promotion eligible: false
 
 ## Verdict
