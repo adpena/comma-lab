@@ -472,6 +472,15 @@ def test_persist_final_message_copies_full_text_indexes_and_extracts_next(q, tmp
         "path": row["path"],
         "sha256": row["sha256"],
     }
+    assert index_rows[0]["git_custody_at_birth"] == "untracked"
+    assert index_rows[0]["custody_disposition"] == "BLOCKED_PENDING_SERIALIZER"
+    assert index_rows[0]["custody_owner"] == "MAIN"
+    assert index_rows[0]["custody_consumer_store"] == (
+        "git:main + tac.graph_memory research corpus"
+    )
+    assert index_rows[0]["custody_fire_trigger"] == (
+        "before next codex_arm_queue saturate"
+    )
     next_rows = [
         json.loads(line)
         for line in (tmp_path / "next_if_resumed.jsonl").read_text(encoding="utf-8").splitlines()
@@ -1042,3 +1051,166 @@ def test_scaffold_filled_template_passes_lint(tmp_path):
     charter.write_text(text, encoding="utf-8")
     problems = mod.lint_charter_optimal_form(str(charter))
     assert problems == [], f"filled template still refused: {problems}"
+
+
+# ---------------------------------------------------------------------------
+# Research-birth Git custody (ddm_os1, 2026-08-22).  Both directions matter:
+# the gate must catch untracked final/charter births without treating unrelated
+# research Markdown or an already-indexed charter as debt.
+# ---------------------------------------------------------------------------
+
+
+def _git_init(path: Path) -> None:
+    subprocess.run(["git", "init", "-q", str(path)], check=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(path),
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@example.invalid",
+            "commit",
+            "--allow-empty",
+            "-qm",
+            "seed",
+        ],
+        check=True,
+    )
+
+
+def _valid_charter_text() -> str:
+    return (
+        "# unique custody charter\n\n"
+        "## OPTIMAL FORM\n\n"
+        "Family reference receipt abcdef1234567890.\n\n"
+        "Prior negative: untracked research births were parked outside Git.\n"
+    )
+
+
+def test_uncustodied_research_births_has_both_direction_controls(q, tmp_path):
+    repo = tmp_path / "repo"
+    _git_init(repo)
+    final = repo / ".omx/research/arm_final_messages/x.md"
+    charter = repo / ".omx/research/charters/y.md"
+    nested = repo / ".omx/research/ddm_vp1/charters/z.md"
+    unrelated = repo / ".omx/research/unrelated.md"
+    ignored = repo / ".omx/research/charters/ignored.md"
+    external = tmp_path / "external.md"
+    linked = repo / ".omx/research/charters/linked.md"
+    staged = repo / ".omx/research/charters/staged.md"
+    committed = repo / ".omx/research/charters/committed.md"
+    for path in (final, charter, nested, unrelated, ignored, staged, committed):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("# record\n", encoding="utf-8")
+    external.write_text("# external charter\n", encoding="utf-8")
+    linked.symlink_to(external)
+    (repo / ".gitignore").write_text(".omx/research/charters/ignored.md\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", str(staged), str(committed)], check=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repo),
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@example.invalid",
+            "commit",
+            "-qm",
+            "seed committed control",
+            "--",
+            str(committed),
+        ],
+        check=True,
+    )
+
+    debt = q.uncustodied_research_births(repo)
+
+    assert debt == tuple(
+        sorted(
+            (
+                final.resolve(),
+                charter.resolve(),
+                nested.resolve(),
+                ignored.resolve(),
+                linked.absolute(),
+                staged.resolve(),
+            )
+        )
+    )
+    assert unrelated.resolve() not in debt
+    assert committed.resolve() not in debt
+    assert q._managed_charter_rel(linked, repo) == ".omx/research/charters/linked.md"
+
+
+def test_cmd_add_refuses_untracked_managed_charter(q, tmp_path, monkeypatch, capsys):
+    repo = tmp_path / "repo"
+    _git_init(repo)
+    charter = repo / ".omx/research/charters/x.md"
+    charter.parent.mkdir(parents=True, exist_ok=True)
+    charter.write_text(_valid_charter_text(), encoding="utf-8")
+    monkeypatch.setattr(q, "_REPO", repo)
+    monkeypatch.setattr(q, "append_row", lambda *_a, **_k: pytest.fail("queued untracked charter"))
+
+    rc = q.cmd_add(
+        Namespace(name="x", prompt=str(charter), rank=1, owns_scorer=False, note="")
+    )
+
+    assert rc == 4
+    assert "charter content is not committed" in capsys.readouterr().err
+
+
+def test_cmd_add_accepts_git_indexed_managed_charter(q, tmp_path, monkeypatch, capsys):
+    repo = tmp_path / "repo"
+    _git_init(repo)
+    charter = repo / ".omx/research/charters/x.md"
+    charter.parent.mkdir(parents=True, exist_ok=True)
+    charter.write_text(_valid_charter_text(), encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", str(charter)], check=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(repo),
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@example.invalid",
+            "commit",
+            "-qm",
+            "commit charter control",
+        ],
+        check=True,
+    )
+    rows = []
+    monkeypatch.setattr(q, "_REPO", repo)
+    monkeypatch.setattr(q, "append_row", rows.append)
+    monkeypatch.setattr(q, "lint_charter_capability_advisories", lambda *_a, **_k: [])
+    monkeypatch.setattr(q, "lint_charter_fm_advisories", lambda *_a, **_k: [])
+    monkeypatch.setattr(q, "lint_charter_recall_advisories", lambda *_a, **_k: [])
+
+    rc = q.cmd_add(
+        Namespace(name="x", prompt=str(charter), rank=1, owns_scorer=False, note="")
+    )
+
+    assert rc == 0
+    assert rows and rows[0]["status"] == "queued"
+    assert "queued x" in capsys.readouterr().out
+
+
+def test_saturate_refuses_untracked_research_birth(q, tmp_path, monkeypatch, capsys):
+    repo = tmp_path / "repo"
+    _git_init(repo)
+    charter = repo / ".omx/research/charters/x.md"
+    charter.parent.mkdir(parents=True, exist_ok=True)
+    charter.write_text("# record\n", encoding="utf-8")
+    monkeypatch.setattr(q, "_REPO", repo)
+    monkeypatch.delenv(q.KILL_SWITCH, raising=False)
+    monkeypatch.setattr(q, "load_rows", lambda: pytest.fail("read queue despite custody debt"))
+
+    rc = q.cmd_saturate(Namespace(spawn=True, cap=4))
+
+    assert rc == 4
+    assert "REFUSED custody debt: 1" in capsys.readouterr().out

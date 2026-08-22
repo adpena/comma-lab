@@ -239,6 +239,106 @@ def _sha256_file(path: Path) -> str:
     return _sha256_bytes(path.read_bytes())
 
 
+def uncustodied_research_births(repo: Path | None = None) -> tuple[Path, ...]:
+    """Return arm-lifecycle Markdown whose exact bytes are absent from ``HEAD``.
+
+    Final-message captures and charters are durable research records, not scratch.
+    An untracked file, a staged-only addition, and a tracked-but-modified file all
+    lack repository-history custody of their current content.  The two read-only
+    Git queries below collect that union.  Nested ``*/charters/`` directories are
+    deliberate: VP1 proved that the top-level default is not the only birth path.
+    """
+
+    root = (repo or _REPO).resolve()
+    pathspecs = (
+        ":(glob).omx/research/arm_final_messages/*.md",
+        ":(glob).omx/research/**/charters/**/*.md",
+    )
+    diff_proc = subprocess.run(
+        ["git", "-C", str(root), "diff", "--name-only", "HEAD", "--", *pathspecs],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    other_proc = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(root),
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "--",
+            *pathspecs,
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    ignored_proc = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(root),
+            "ls-files",
+            "--others",
+            "--ignored",
+            "--exclude-standard",
+            "--",
+            *pathspecs,
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if diff_proc.returncode != 0 or other_proc.returncode != 0 or ignored_proc.returncode != 0:
+        detail = (
+            diff_proc.stderr.strip()
+            or other_proc.stderr.strip()
+            or ignored_proc.stderr.strip()
+            or (
+                f"git diff rc={diff_proc.returncode}; git ls-files rc={other_proc.returncode}; "
+                f"git ignored rc={ignored_proc.returncode}"
+            )
+        )
+        raise RuntimeError(f"cannot determine research-birth custody: {detail}")
+    relpaths = {
+        line
+        for text in (diff_proc.stdout, other_proc.stdout, ignored_proc.stdout)
+        for line in text.splitlines()
+        if line.strip()
+    }
+    return tuple(root / line for line in sorted(relpaths))
+
+
+def _managed_charter_rel(path: Path, repo: Path | None = None) -> str | None:
+    """Lexical repo-relative charter path (do not let a symlink bypass custody)."""
+
+    root = (repo or _REPO).resolve()
+    try:
+        lexical = Path(os.path.abspath(path))
+        rel = lexical.relative_to(root)
+        parts = rel.relative_to(Path(".omx") / "research").parts
+    except ValueError:
+        return None
+    if "charters" not in parts[:-1] or path.suffix.lower() != ".md":
+        return None
+    return rel.as_posix()
+
+
+def _is_managed_charter(path: Path, repo: Path | None = None) -> bool:
+    return _managed_charter_rel(path, repo) is not None
+
+
+def _research_birth_custody_refusal() -> tuple[str, ...]:
+    """Fail closed when the Git-custody census itself cannot be read."""
+
+    try:
+        return tuple(_rel(path) for path in uncustodied_research_births())
+    except RuntimeError as exc:
+        return (f"CUSTODY_CHECK_FAILED:{exc}",)
+
+
 def _json_key(row: dict, key_fields: tuple[str, ...]) -> tuple:
     return tuple(row.get(k) for k in key_fields)
 
@@ -687,6 +787,14 @@ def persist_final_message(name: str, rc: int, elapsed: int, last_path: Path | No
         "source_path": _rel(source),
         "written_at_utc": datetime.now(UTC).isoformat(),
         "score_claim": False,
+        # A newly created path cannot already be in HEAD.  Record the debt at
+        # the typing moment; ``cmd_saturate`` below refuses another arm birth
+        # until the exact capture is committed through the serializer.
+        "git_custody_at_birth": "untracked",
+        "custody_disposition": "BLOCKED_PENDING_SERIALIZER",
+        "custody_owner": "MAIN",
+        "custody_consumer_store": "git:main + tac.graph_memory research corpus",
+        "custody_fire_trigger": "before next codex_arm_queue saturate",
     }
     row["row_id"] = _sha256_bytes(
         f"{_FINAL_SCHEMA}|{row['name']}|{row['path']}|{row['sha256']}".encode()
@@ -1131,6 +1239,16 @@ def _surface_line() -> str:
     )
 
 
+def _research_birth_custody_line() -> str:
+    debt = _research_birth_custody_refusal()
+    if not debt:
+        return "research-birth custody: CLEAN (final captures + charters match HEAD)"
+    return (
+        f"research-birth custody: BLOCKED ({len(debt)} absent/different from HEAD; "
+        "saturation will refuse)"
+    )
+
+
 def cmd_status(args) -> int:
     rows = load_rows()
     live = live_arm_names()
@@ -1161,6 +1279,7 @@ def cmd_status(args) -> int:
     print(f"scorer slot: {'TAKEN' if scorer_live else 'free'}")
     print(_watcher_line())
     print(_surface_line())
+    print(_research_birth_custody_line())
     print(f"spawnable charters: {len(spawnable)} of {len(latest)} tracked", end="")
     tail = []
     if n_finished:
@@ -1921,6 +2040,20 @@ def cmd_add(args) -> int:
         print(f"REFUSED {args.name}: {refusal}", file=sys.stderr)
         return 2
     assert prompt_file is not None
+    if _is_managed_charter(prompt_file):
+        custody_debt = _research_birth_custody_refusal()
+        prompt_rel = _managed_charter_rel(prompt_file)
+        assert prompt_rel is not None
+        if custody_debt and custody_debt[0].startswith("CUSTODY_CHECK_FAILED:"):
+            print(f"REFUSED {args.name}: {custody_debt[0]}", file=sys.stderr)
+            return 4
+        if prompt_rel in custody_debt:
+            print(
+                f"REFUSED {args.name}: charter content is not committed ({prompt_rel}); commit the "
+                "exact bytes through tools/subagent_commit_serializer.py before queueing",
+                file=sys.stderr,
+            )
+            return 4
     problems = lint_charter_optimal_form(str(prompt_file))
     advisories = [
         *lint_charter_capability_advisories(str(prompt_file)),
@@ -2050,6 +2183,11 @@ def cmd_scaffold(args) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(_CHARTER_TEMPLATE.format(name=args.name, date=date), encoding="utf-8")
     print(f"scaffolded {out}")
+    if _is_managed_charter(out):
+        print(
+            "custody=BLOCKED_PENDING_SERIALIZER owner=MAIN "
+            "fire_trigger=before codex_arm_queue add/saturate"
+        )
     problems = lint_charter_optimal_form(str(out))
     for problem in problems:
         print(f"charter-lint (expected on raw template) [{args.name}]: {problem}")
@@ -2079,6 +2217,17 @@ def cmd_saturate(args) -> int:
     if os.environ.get(KILL_SWITCH) == "1":
         print(f"saturation OFF ({KILL_SWITCH}=1)")
         return 0
+    custody_debt = _research_birth_custody_refusal()
+    if custody_debt:
+        print(
+            f"REFUSED custody debt: {len(custody_debt)} arm-lifecycle research birth(s) "
+            "absent/different from HEAD; commit exact bytes through the serializer"
+        )
+        for path in custody_debt[:20]:
+            print(f"  {path}")
+        if len(custody_debt) > 20:
+            print(f"  ... {len(custody_debt) - 20} more")
+        return 4
     rows = load_rows()
     live = live_arm_names()
     latest = latest_by_name(rows)
