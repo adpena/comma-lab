@@ -1,0 +1,6 @@
+#!/bin/sh
+# Exec-wrapper shim (never a symlink — memory: python-shim-must-be-exec-wrapper-never-symlink).
+# Purpose: custody-frozen shipped receivers invoke bare `python` (the #929/si1 bare-python
+# class; contest containers have it, python3-only hosts do not). Harnesses that execute a
+# SHIPPED inflate.sh prepend this dir to PATH instead of editing shipped bytes.
+exec "$(cd "$(dirname "$0")/../.." && pwd)/.venv/bin/python" "$@"
