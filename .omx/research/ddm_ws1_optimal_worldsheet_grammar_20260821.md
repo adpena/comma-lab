@@ -118,8 +118,8 @@ still wins its local byte race.
 | Selected lossless repeat | 918,904 | `046926e6f2ee7d8532d48a96d14b31aef30791007643296326c618ea5e55fc75` |
 | Selected q2 envelope | 885,750 | `2998625473f23674a432a62aa56a8d722a9e5869425f6fa2159dc1286b6d7243` |
 | Selected q2 repeat | 885,750 | `2998625473f23674a432a62aa56a8d722a9e5869425f6fa2159dc1286b6d7243` |
-| `FINAL_RESULT.json` | 73,256 | `5566f0cd4ecec8962050ae11cf13af8bb882dabebc9a9868397a202789553b74` |
-| Verified coder-cache checkpoint | 152,838 | `8345db33746447c24c4e8448152c17fc37075f35032069c0bd1d767e6777fe71` |
+| `FINAL_RESULT.json` | 73,256 | `7f0627285e58b44a699f421fd7d06e3515002bef804e9b32615b0ac1be3abd62` |
+| Verified coder-cache checkpoint | 152,838 | `aad8ec7acbeb730d4e902f4a94f0ee023c026f73e3a3d23ce8a40447dd80ff53` |
 
 Custody root:
 `/Volumes/VertigoDataTier/pact/ddm_ws1_optimal_worldsheet_grammar/retained/`
@@ -138,7 +138,7 @@ env PYTHONUNBUFFERED=1 VECLIB_MAXIMUM_THREADS=8 OMP_NUM_THREADS=8 \
 ```
 
 Script SHA-256:
-`901a5e0ecf37f62bf1dad3b5923623ea7b57935ec80cd3a287777b9f7645d236`.
+`df59321bc67935b37c5de10e271536282a257962cae198810f1cb90441ecebfa`.
 
 ## RECALL EVIDENCE
 

@@ -844,8 +844,6 @@ def lane_polynomial_model(labels: Sequence[np.ndarray]) -> tuple[bytes, tuple[np
         dash_forward_max_m=float(header["dash_forward_max_m"]),
         v_h=float(header["v_h"]),
         cx=None if header.get("cx") is None else float(header["cx"]),
-        weight=float(header["weight"]),
-        lane_cls=int(header["lane_cls"]),
     )
     predictions = []
     heldout_errors: list[float] = []
@@ -1116,7 +1114,6 @@ def decode_candidate(
                 softness=float(header["softness"]), dash_gate=bool(header["dash_gate"]),
                 dash_forward_max_m=float(header["dash_forward_max_m"]), v_h=float(header["v_h"]),
                 cx=None if header.get("cx") is None else float(header["cx"]),
-                weight=float(header["weight"]), lane_cls=int(header["lane_cls"]),
             )
             specialized_predictions[stratum] = tuple(
                 bool_mask_sites(rasterize_lane_coverage_range_dependent(
