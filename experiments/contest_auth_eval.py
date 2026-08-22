@@ -3085,6 +3085,18 @@ def main() -> int:
         ),
     )
     args = parser.parse_args()
+    retained_pair_env = os.environ.get("PACT_RETAIN_PER_PAIR_DISTORTION_DIR", "").strip()
+    if retained_pair_env:
+        retained_pair_path = Path(retained_pair_env).resolve()
+        if (
+            args.retain_per_pair_distortion_dir is not None
+            and args.retain_per_pair_distortion_dir.resolve() != retained_pair_path
+        ):
+            raise SystemExit(
+                "PACT_RETAIN_PER_PAIR_DISTORTION_DIR disagrees with "
+                "--retain-per-pair-distortion-dir"
+            )
+        args.retain_per_pair_distortion_dir = retained_pair_path
     if args.scorer_input_cache_hash_batch_pairs < 1:
         raise SystemExit("--scorer-input-cache-hash-batch-pairs must be >= 1")
     if args.scorer_input_cache_tensor_batch_pairs < 1:
