@@ -24,7 +24,7 @@ import numpy as np
 
 REPO = Path(__file__).resolve().parents[1]
 OUTPUT_DEFAULT = Path(
-    "/Volumes/APDataStore/pact/ddm_cb2_class_balanced_dictionary/measurement_v3"
+    "/Volumes/APDataStore/pact/ddm_cb2_class_balanced_dictionary/measurement_v5"
 )
 RC1_ROOT = Path("/Volumes/APDataStore/pact/ddm_rc1_rate_crush/measurement_v4")
 RC1_RETAINED = RC1_ROOT / "retained"
@@ -35,6 +35,10 @@ G4_ROOT = Path(
     "ddm_g4_spatial_stationarity_n600_20260722T212138Z"
 )
 G4_ARRAYS = G4_ROOT / "stage_checkpoints/01_recurrence_arrays.npz"
+RI1_RESULT = Path(
+    "/Volumes/APDataStore/pact/ddm_ri1_rc1_full_rgb_receiver/"
+    "advisory_r1/contest_auth_eval.json"
+)
 
 SHAPE = (600, 384, 512)
 CLASS_NAMES = ("Road", "Lane", "Undrivable", "Movable", "MyCar")
@@ -47,6 +51,7 @@ RC1_ASSIGNMENTS_SHA256 = "34c4eaf615d8030a0afd877cc3c2f5896e1e4ed56e0460a8a7932d
 RC1_SHADOW_SHA256 = "6756ae8f39116907828ee27b8f9686b9935eaae94c61f68c3eb02de16d45e87a"
 RC1_BASE256_CODEBOOK_SHA256 = "c8f1f7d7d2ba60a932e12af54b8d45a02d55c190dd04b09a9931bebe596c651c"
 G4_ARRAYS_SHA256 = "dbc85e7a4f593ab9b7a7f4ed017dbb63a064cb681df806d0bb93277ae8f42451"
+RI1_RESULT_SHA256 = "9d08795f9101a38c03f5b90e4081ced5fd112b15796af345a76789c168ed6425"
 
 DX2_SCORE = 0.14821987563243377
 DX2_BYTES = 180_368
@@ -96,6 +101,22 @@ def atomic_bytes(path: Path, payload: bytes) -> None:
 
 def atomic_json(path: Path, payload: Any) -> None:
     atomic_bytes(path, (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode())
+
+
+def matching_key_paths(value: Any, fragments: tuple[str, ...], prefix: tuple[str, ...] = ()) -> list[str]:
+    """Return nested JSON key paths containing any requested lowercase fragment."""
+    matches: list[str] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            path = (*prefix, str(key))
+            lowered = str(key).lower()
+            if any(fragment in lowered for fragment in fragments):
+                matches.append(".".join(path))
+            matches.extend(matching_key_paths(child, fragments, path))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            matches.extend(matching_key_paths(child, fragments, (*prefix, str(index))))
+    return matches
 
 
 def checkpoint(root: Path, step: int, name: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -393,11 +414,11 @@ def main() -> int:
         "source_position_denominator": int(confusion.sum()),
         "distribution_total_variation": total_variation,
         "distribution_pearson": pearson,
-        "lane_area_share": agreement_rows[1]["area_share"],
-        "lane_capacity_share": total_capacity[1]["codebook_slot_share"],
-        "lane_capacity_over_area": total_capacity[1]["capacity_share_over_area_share"],
-        "lane_added_capacity_share": added_capacity[1]["codebook_slot_share"],
-        "lane_share_of_k256_to_k2048_removed_mismatches": incremental_effect[1][
+        "class1_area_share": agreement_rows[1]["area_share"],
+        "class1_capacity_share": total_capacity[1]["codebook_slot_share"],
+        "class1_capacity_over_area": total_capacity[1]["capacity_share_over_area_share"],
+        "class1_added_capacity_share": added_capacity[1]["codebook_slot_share"],
+        "class1_share_of_k256_to_k2048_removed_mismatches": incremental_effect[1][
             "share_of_all_removed_mismatches"
         ],
         "stop_rule": (
@@ -461,11 +482,45 @@ def main() -> int:
             "the spatial join is exact but vehicle transfer is unmeasured"
         ),
     }
+    ri1_record = require_file(RI1_RESULT, sha256=RI1_RESULT_SHA256)
+    ri1_result = json.loads(RI1_RESULT.read_text())
+    breakout_key_paths = matching_key_paths(
+        ri1_result,
+        ("per_class", "confusion", "class_breakout", "breakout_by_class"),
+    )
+    ri1_calibration = {
+        "status": "TERMINAL_AGGREGATE_ONLY_NO_PER_CLASS_BREAKOUT",
+        "terminal_receipt": ri1_record,
+        "terminal_receipt_consumed": True,
+        "archive_sha256": ri1_result["provenance"]["archive_sha256"],
+        "archive_bytes": ri1_result["archive_size_bytes"],
+        "n_samples": ri1_result["n_samples"],
+        "score_axis": ri1_result["score_axis"],
+        "evidence_grade": ri1_result["evidence_grade"],
+        "aggregate_d_seg": ri1_result["avg_segnet_dist"],
+        "aggregate_d_pose": ri1_result["avg_posenet_dist"],
+        "rank_or_kill_eligible": ri1_result["rank_or_kill_eligible"],
+        "per_pair_distortion_retention": ri1_result["per_pair_distortion_retention"],
+        "per_class_breakout_key_paths": breakout_key_paths,
+        "per_class_breakout_present": bool(breakout_key_paths),
+        "per_class_breakout_consumed": False,
+        "why_no_per_class_calibration": (
+            "RI1's terminal receipt contains only aggregate Seg/Pose distortion; its per-pair "
+            "retention failed and no per-class or confusion key exists. The charter-required "
+            "per-class calibration therefore does not exist to consume."
+        ),
+        "consumed_for_refit": False,
+        "why_not_consumed_for_refit": "the mandatory step-2 stop fired before any weighting design",
+    }
     weighting_checkpoint = checkpoint(
         args.out_dir,
         3,
         "weighting_field_join_checked",
-        {"status": "complete", "weighting_field_provenance": weighting_field},
+        {
+            "status": "complete",
+            "weighting_field_provenance": weighting_field,
+            "ri1_terminal_calibration": ri1_calibration,
+        },
     )
 
     fire_order = {
@@ -477,8 +532,8 @@ def main() -> int:
         "dispatch_argv": None,
         "axis_to_run": "[macOS-CPU advisory n600] followed by [contest-CUDA T4 n600] only on pass",
         "fire_trigger": (
-            "A new arm, explicitly not justified by the refuted area-tracking premise, has consumed "
-            "a current-DX2 RI1 per-class scorer breakout, produced a fixed-K=2048 payload whose complete "
+            "A new arm, explicitly not justified by the refuted area-tracking premise, has a retained "
+            "current-DX2 per-class scorer breakout, produced a fixed-K=2048 payload whose complete "
             "receiver archive is <=113006 B, retained every candidate and repeat, and MAIN owns the "
             "non-duplicated n600 scorer lane."
         ),
@@ -489,6 +544,7 @@ def main() -> int:
         ),
         "blocked_by": [
             "CB2 produced no refitted candidate because its mandatory step-2 premise was refuted",
+            "RI1 is terminal but contains only aggregate distortion and no per-class breakout",
             "the only joined retained flip field is ancestor-v12 advisory rather than current-DX2 calibration",
             "the scorer lane is owned by MAIN and contended by RI1/NI1",
         ],
@@ -513,6 +569,7 @@ def main() -> int:
         "incremental_mismatch_reduction_k256_to_k2048": incremental_effect,
         "mechanism_test": mechanism,
         "weighting_field_provenance": weighting_field,
+        "ri1_terminal_calibration": ri1_calibration,
         "refit": {
             "attempted": False,
             "reason": "mandatory charter stop at step 2",
@@ -535,6 +592,7 @@ def main() -> int:
             "Raw codebook slots measure representational capacity; jointly compressed codebook bytes are not partitioned by class.",
             "No refitted codebook, assignment map, payload, or archive was materialized after the step-2 stop.",
             "The G4 spatial join is total, but its v12 scorer field is not current-DX2 calibration.",
+            "RI1 is terminal, but its retained result has no per-class breakout and is env-mismatch advisory.",
         ],
         "own_vehicle_frontier": {
             "score": DX2_SCORE,
