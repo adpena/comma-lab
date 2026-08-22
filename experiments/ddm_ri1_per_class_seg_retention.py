@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Retain n600 per-class SegNet outcomes for the integrated RI1 RGB output.
 
-This is a post-score diagnostic.  It reuses upstream's frozen SegNet and its
-own AV/Tensor datasets, persists both GT and candidate argmax fields for every
-batch before reducing them, and verifies that the aggregate disagreement
-reproduces the already-recorded advisory d_seg.
+This is a post-score diagnostic.  It reuses upstream's frozen DistortionNet
+and its own AV/Tensor datasets, persists both GT and candidate argmax fields,
+the per-pair Seg/Pose vectors, and both six-value PoseNet outputs for every
+batch before reducing them.  The retained vectors must reproduce the already-
+recorded advisory d_seg and d_pose.
 """
 
 from __future__ import annotations
@@ -66,8 +67,8 @@ def atomic_json(path: Path, value: object) -> None:
     os.replace(temporary, path)
 
 
-def atomic_array(path: Path, array: np.ndarray) -> dict[str, Any]:
-    contiguous = np.ascontiguousarray(array, dtype=np.uint8)
+def atomic_array(path: Path, array: np.ndarray, dtype: np.dtype[Any]) -> dict[str, Any]:
+    contiguous = np.ascontiguousarray(array, dtype=dtype)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     with temporary.open("wb") as stream:
@@ -75,7 +76,7 @@ def atomic_array(path: Path, array: np.ndarray) -> dict[str, Any]:
         stream.flush()
         os.fsync(stream.fileno())
     os.replace(temporary, path)
-    return file_fact(path)
+    return file_fact(path) | {"dtype": contiguous.dtype.str, "shape": list(contiguous.shape)}
 
 
 def chunk_statistics(gt: np.ndarray, candidate: np.ndarray) -> dict[str, Any]:
@@ -97,21 +98,49 @@ def chunk_statistics(gt: np.ndarray, candidate: np.ndarray) -> dict[str, Any]:
     }
 
 
-def validate_retained_chunk(receipt: dict[str, Any]) -> tuple[np.ndarray, np.ndarray]:
+def _load_retained_array(expected: dict[str, Any]) -> np.ndarray:
+    path = Path(expected.get("path", ""))
+    actual = file_fact(path)
+    if actual["bytes"] != expected.get("bytes") or actual["sha256"] != expected.get("sha256"):
+        raise RI1PerClassError(f"retained array payload drifted: {path}")
+    dtype = np.dtype(expected.get("dtype"))
+    shape = tuple(expected.get("shape", ()))
+    if not shape or actual["bytes"] != int(np.prod(shape)) * dtype.itemsize:
+        raise RI1PerClassError(f"retained array payload has the wrong geometry: {path}")
+    return np.fromfile(path, dtype=dtype).reshape(shape)
+
+
+def validate_retained_chunk(
+    receipt: dict[str, Any],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     shape = tuple(receipt.get("shape", ()))
     if len(shape) != 3:
         raise RI1PerClassError("retained chunk receipt has no three-dimensional shape")
-    arrays = []
+    arrays: list[np.ndarray] = []
     for key in ("gt_argmax", "candidate_argmax"):
         expected = receipt.get(key, {})
-        path = Path(expected.get("path", ""))
-        actual = file_fact(path)
-        if actual["bytes"] != expected.get("bytes") or actual["sha256"] != expected.get("sha256"):
-            raise RI1PerClassError(f"retained {key} payload drifted: {path}")
-        if actual["bytes"] != int(np.prod(shape)):
-            raise RI1PerClassError(f"retained {key} payload has the wrong byte count")
-        arrays.append(np.fromfile(path, dtype=np.uint8).reshape(shape))
-    return arrays[0], arrays[1]
+        array = _load_retained_array(expected)
+        if array.dtype != np.uint8 or array.shape != shape:
+            raise RI1PerClassError(f"retained {key} payload has the wrong type or shape")
+        arrays.append(array)
+    pair_count = shape[0]
+    diagnostic_arrays: dict[str, np.ndarray] = {}
+    for key, expected_shape in (
+        ("per_pair_pose_distortion", (pair_count,)),
+        ("per_pair_seg_distortion", (pair_count,)),
+        ("gt_pose_vectors", (pair_count, 6)),
+        ("candidate_pose_vectors", (pair_count, 6)),
+    ):
+        array = _load_retained_array(receipt.get(key, {}))
+        if array.dtype != np.float32 or array.shape != expected_shape:
+            raise RI1PerClassError(f"retained {key} payload has the wrong type or shape")
+        diagnostic_arrays[key] = array
+    return (
+        arrays[0],
+        arrays[1],
+        diagnostic_arrays["per_pair_pose_distortion"],
+        diagnostic_arrays["per_pair_seg_distortion"],
+    )
 
 
 def score_or_resume_chunk(
@@ -119,42 +148,74 @@ def score_or_resume_chunk(
     chunk_index: int,
     batch_gt: Any,
     batch_candidate: Any,
-    segnet: Any,
+    distortion_net: Any,
     out_dir: Path,
 ) -> dict[str, Any]:
     receipt_path = out_dir / "chunks" / f"chunk_{chunk_index:04d}.json"
     if receipt_path.is_file():
         receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
-        gt, candidate = validate_retained_chunk(receipt)
-        if chunk_statistics(gt, candidate) != receipt.get("statistics"):
+        gt, candidate, pose_values, seg_values = validate_retained_chunk(receipt)
+        statistics = chunk_statistics(gt, candidate)
+        statistics["pose_distortion_sum"] = float(np.sum(pose_values, dtype=np.float64))
+        statistics["seg_distortion_sum"] = float(np.sum(seg_values, dtype=np.float64))
+        if statistics != receipt.get("statistics"):
             raise RI1PerClassError(f"retained chunk {chunk_index} statistics drifted")
         return receipt
 
-    import einops
     import torch
 
     with torch.inference_mode():
-        def labels(batch: Any) -> np.ndarray:
-            value = batch.to("cpu")
-            value = einops.rearrange(value, "b t h w c -> b t c h w", c=3).float()
-            logits = segnet(segnet.preprocess_input(value))
-            return logits.argmax(dim=1).to(dtype=torch.uint8).cpu().numpy()
-
-        gt = labels(batch_gt)
-        candidate = labels(batch_candidate)
+        gt_pose_outputs, gt_seg_logits = distortion_net(batch_gt.to("cpu"))
+        candidate_pose_outputs, candidate_seg_logits = distortion_net(batch_candidate.to("cpu"))
+        pose_distortion = distortion_net.posenet.compute_distortion(gt_pose_outputs, candidate_pose_outputs)
+        gt_labels = gt_seg_logits.argmax(dim=1)
+        candidate_labels = candidate_seg_logits.argmax(dim=1)
+        seg_distortion = (gt_labels != candidate_labels).float().mean(dim=(1, 2))
+        gt = gt_labels.to(dtype=torch.uint8).cpu().numpy()
+        candidate = candidate_labels.to(dtype=torch.uint8).cpu().numpy()
+        pose_values = pose_distortion.to(dtype=torch.float32).cpu().numpy()
+        seg_values = seg_distortion.to(dtype=torch.float32).cpu().numpy()
+        gt_pose_values = gt_pose_outputs["pose"][..., :6].to(dtype=torch.float32).cpu().numpy()
+        candidate_pose_values = candidate_pose_outputs["pose"][..., :6].to(dtype=torch.float32).cpu().numpy()
 
     gt_path = out_dir / "chunks" / f"chunk_{chunk_index:04d}.gt_argmax.u8"
     candidate_path = out_dir / "chunks" / f"chunk_{chunk_index:04d}.candidate_argmax.u8"
     # Persist both semantic payloads before reducing them to counts.
-    gt_fact = atomic_array(gt_path, gt)
-    candidate_fact = atomic_array(candidate_path, candidate)
+    gt_fact = atomic_array(gt_path, gt, np.dtype(np.uint8))
+    candidate_fact = atomic_array(candidate_path, candidate, np.dtype(np.uint8))
+    pose_fact = atomic_array(
+        out_dir / "chunks" / f"chunk_{chunk_index:04d}.per_pair_pose.f32",
+        pose_values,
+        np.dtype("<f4"),
+    )
+    seg_fact = atomic_array(
+        out_dir / "chunks" / f"chunk_{chunk_index:04d}.per_pair_seg.f32",
+        seg_values,
+        np.dtype("<f4"),
+    )
+    gt_pose_fact = atomic_array(
+        out_dir / "chunks" / f"chunk_{chunk_index:04d}.gt_pose_vectors.f32",
+        gt_pose_values,
+        np.dtype("<f4"),
+    )
+    candidate_pose_fact = atomic_array(
+        out_dir / "chunks" / f"chunk_{chunk_index:04d}.candidate_pose_vectors.f32",
+        candidate_pose_values,
+        np.dtype("<f4"),
+    )
     statistics = chunk_statistics(gt, candidate)
+    statistics["pose_distortion_sum"] = float(np.sum(pose_values, dtype=np.float64))
+    statistics["seg_distortion_sum"] = float(np.sum(seg_values, dtype=np.float64))
     receipt = {
         "schema": "ddm_ri1_per_class_seg_chunk.v1",
         "chunk_index": chunk_index,
         "shape": list(gt.shape),
         "gt_argmax": gt_fact,
         "candidate_argmax": candidate_fact,
+        "per_pair_pose_distortion": pose_fact,
+        "per_pair_seg_distortion": seg_fact,
+        "gt_pose_vectors": gt_pose_fact,
+        "candidate_pose_vectors": candidate_pose_fact,
         "statistics": statistics,
         "complete": True,
     }
@@ -162,25 +223,37 @@ def score_or_resume_chunk(
     return receipt
 
 
-def aggregate(receipts: list[dict[str, Any]], reported_d_seg: float) -> dict[str, Any]:
+def aggregate(
+    receipts: list[dict[str, Any]],
+    reported_d_seg: float,
+    reported_d_pose: float,
+) -> dict[str, Any]:
     confusion = np.zeros((CLASS_COUNT, CLASS_COUNT), dtype=np.int64)
     pairs = 0
     pixels = 0
+    pose_sum = 0.0
+    seg_sum = 0.0
     for receipt in receipts:
         stats = receipt["statistics"]
         pairs += int(stats["pairs"])
         pixels += int(stats["pixels"])
-        confusion += np.asarray(
-            stats["confusion_gt_rows_candidate_columns"], dtype=np.int64
-        )
+        pose_sum += float(stats["pose_distortion_sum"])
+        seg_sum += float(stats["seg_distortion_sum"])
+        confusion += np.asarray(stats["confusion_gt_rows_candidate_columns"], dtype=np.int64)
     if pairs != PAIR_COUNT or pixels <= 0 or int(confusion.sum()) != pixels:
         raise RI1PerClassError("per-class scorer did not cover the complete n600 field")
     flips = int(pixels - np.trace(confusion))
     d_seg = flips / pixels
-    relative_error = abs(d_seg - reported_d_seg) / (abs(reported_d_seg) or 1.0)
-    if relative_error > 1e-6:
+    retained_d_seg = seg_sum / pairs
+    retained_d_pose = pose_sum / pairs
+    class_vs_vector_error = abs(d_seg - retained_d_seg) / (abs(d_seg) or 1.0)
+    seg_relative_error = abs(retained_d_seg - reported_d_seg) / (abs(reported_d_seg) or 1.0)
+    pose_relative_error = abs(retained_d_pose - reported_d_pose) / (abs(reported_d_pose) or 1.0)
+    if max(class_vs_vector_error, seg_relative_error, pose_relative_error) > 1e-6:
         raise RI1PerClassError(
-            f"per-class d_seg {d_seg} does not reproduce reported {reported_d_seg}"
+            "retained scorer payloads do not reproduce the reported components: "
+            f"class_vs_vector={class_vs_vector_error} seg={seg_relative_error} "
+            f"pose={pose_relative_error}"
         )
 
     rows = []
@@ -207,8 +280,13 @@ def aggregate(receipts: list[dict[str, Any]], reported_d_seg: float) -> dict[str
         "pixels": pixels,
         "flips": flips,
         "d_seg_recomputed": d_seg,
+        "d_seg_from_retained_per_pair": retained_d_seg,
         "d_seg_reported": reported_d_seg,
-        "d_seg_relative_error": relative_error,
+        "d_seg_relative_error": seg_relative_error,
+        "d_pose_from_retained_per_pair": retained_d_pose,
+        "d_pose_reported": reported_d_pose,
+        "d_pose_relative_error": pose_relative_error,
+        "class_vs_per_pair_seg_relative_error": class_vs_vector_error,
         "reduction_verified": True,
         "confusion_gt_rows_candidate_columns": confusion.tolist(),
         "per_class": rows,
@@ -222,6 +300,7 @@ def main() -> int:
     parser.add_argument("--upstream-dir", type=Path, default=DEFAULT_UPSTREAM)
     parser.add_argument("--video-names-file", type=Path, required=True)
     parser.add_argument("--reported-d-seg", type=float, required=True)
+    parser.add_argument("--reported-d-pose", type=float, required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--resume-from", type=Path, default=None)
     parser.add_argument("--batch-pairs", type=int, default=16)
@@ -236,7 +315,7 @@ def main() -> int:
         result = json.loads(result_path.read_text(encoding="utf-8"))
         if result.get("complete") is not True:
             raise RI1PerClassError("existing per-class result is not complete")
-        for key in ("video_names_file", "candidate_raw", "segnet_weights"):
+        for key in ("video_names_file", "candidate_raw", "segnet_weights", "posenet_weights"):
             validate_fact(result.get(key, {}))
         chunk_facts = result.get("chunk_receipts", [])
         receipts = []
@@ -245,7 +324,11 @@ def main() -> int:
             receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
             validate_retained_chunk(receipt)
             receipts.append(receipt)
-        if aggregate(receipts, result["summary"]["d_seg_reported"]) != result.get("summary"):
+        if aggregate(
+            receipts,
+            result["summary"]["d_seg_reported"],
+            result["summary"]["d_pose_reported"],
+        ) != result.get("summary"):
             raise RI1PerClassError("retained per-class aggregate drifted")
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
@@ -261,15 +344,14 @@ def main() -> int:
 
     import torch
     from frame_utils import AVVideoDataset, TensorVideoDataset
-    from modules import SegNet, segnet_sd_path
-    from safetensors.torch import load_file
+    from modules import DistortionNet, posenet_sd_path, segnet_sd_path
 
     torch.manual_seed(1234)
     torch.use_deterministic_algorithms(True)
     if args.torch_threads > 0:
         torch.set_num_threads(args.torch_threads)
-    segnet = SegNet().eval().to("cpu")
-    segnet.load_state_dict(load_file(segnet_sd_path, device="cpu"))
+    distortion_net = DistortionNet().eval().to("cpu")
+    distortion_net.load_state_dicts(posenet_sd_path, segnet_sd_path, torch.device("cpu"))
     names = [line.strip() for line in names_path.read_text().splitlines() if line.strip()]
     common = {
         "batch_size": args.batch_pairs,
@@ -282,9 +364,7 @@ def main() -> int:
     gt_dataset.prepare_data()
     candidate_dataset.prepare_data()
     gt_loader = torch.utils.data.DataLoader(gt_dataset, batch_size=None, num_workers=0)
-    candidate_loader = torch.utils.data.DataLoader(
-        candidate_dataset, batch_size=None, num_workers=0
-    )
+    candidate_loader = torch.utils.data.DataLoader(candidate_dataset, batch_size=None, num_workers=0)
     receipts = []
     for chunk_index, ((_, _, batch_gt), (_, _, batch_candidate)) in enumerate(
         zip(gt_loader, candidate_loader, strict=True)
@@ -294,11 +374,11 @@ def main() -> int:
                 chunk_index=chunk_index,
                 batch_gt=batch_gt,
                 batch_candidate=batch_candidate,
-                segnet=segnet,
+                distortion_net=distortion_net,
                 out_dir=out_dir,
             )
         )
-    summary = aggregate(receipts, args.reported_d_seg)
+    summary = aggregate(receipts, args.reported_d_seg, args.reported_d_pose)
     result = {
         "schema": "ddm_ri1_per_class_seg_retention.v1",
         "complete": True,
@@ -314,10 +394,8 @@ def main() -> int:
         "video_names_file": file_fact(names_path),
         "candidate_raw": file_fact(raw_path),
         "segnet_weights": file_fact(Path(segnet_sd_path)),
-        "chunk_receipts": [
-            file_fact(out_dir / "chunks" / f"chunk_{index:04d}.json")
-            for index in range(len(receipts))
-        ],
+        "posenet_weights": file_fact(Path(posenet_sd_path)),
+        "chunk_receipts": [file_fact(out_dir / "chunks" / f"chunk_{index:04d}.json") for index in range(len(receipts))],
         "summary": summary,
     }
     atomic_json(result_path, result)
