@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Typed, scorer-free preparation for the rc2 JO1 joint objective.
+"""Typed, scorer-free preparation for the fx5/rc2 JO2 joint objective.
 
 This module is deliberately incapable of dispatching work.  It validates and
 seals the complete workload description, verifies retained input custody, and
@@ -31,6 +31,10 @@ MEMORY_RECEIPT_SCHEMA = "ddm_jo1_memory_preflight.v1"
 CHECKPOINT_SCHEMA = "ddm_jo1_checkpoint.v1"
 PAYLOAD_MANIFEST_SCHEMA = "ddm_jo1_retained_payload_manifest.v1"
 OUTPUT_ROOT = Path("/Volumes/APDataStore/pact/ddm_jo1_joint_objective_design")
+LOCAL_SOLVE_OUTPUT_ROOT = (
+    Path(__file__).resolve().parents[1]
+    / "experiments/.scratch/ddm_jo2_joint_objective_solve"
+)
 MATERIALIZER_OUTPUT_ROOT = Path(
     "/Volumes/APDataStore/pact/ddm_gs3_unbridled_gestalt/jo1_payload_unblock"
 )
@@ -39,7 +43,8 @@ N_PAIRS = 600
 SEG_H = 384
 SEG_W = 512
 SEG_DENOMINATOR = N_PAIRS * SEG_H * SEG_W
-BASE_ARCHIVE_BYTES = 180_456
+RC2_ARCHIVE_BYTES = 180_456
+BASE_ARCHIVE_BYTES = 180_386
 BASE_FLIPS = 23_757
 BASE_DPOSE = 6.370359e-6
 SCORE_DENOMINATOR = 37_545_489
@@ -53,6 +58,14 @@ FX5_ARCHIVE_BYTES = 180_386
 FX5_ARCHIVE_SHA256 = "4b54fccc25f100cb68030db317791ba5e58936bb9b491f9ee9a020e695b79841"
 FX5_RUNTIME_TREE_SHA256 = "8eff613ecec2c371a6fa4cc580b8af9df131f45dc33f5d3c9b829faac1a513a5"
 AUTH_CACHE_VOLUME_NAME = "comma-auth-eval-cache-artifacts"
+FX5_MATERIALIZER_VOLUME_RUN_ID = "ddm_jo1u_fx5_e1_n600_r4"
+FX5_BASE_ARGMAX_REMOTE_PATH = (
+    f"{FX5_MATERIALIZER_VOLUME_RUN_ID}/retained/fields/fx5_e1_argmax_n600.npy"
+)
+FX5_BASE_POSE6_REMOTE_PATH = (
+    f"{FX5_MATERIALIZER_VOLUME_RUN_ID}/retained/pose_vectors/"
+    "fx5_e1_first6_n600.npy"
+)
 MATERIALIZER_BATCH_PAIRS = 16
 MATERIALIZER_MAX_CHUNK_PAIRS = 120
 MATERIALIZER_STORAGE_RESERVE_BYTES = 4 * 1024**3
@@ -70,7 +83,7 @@ MATERIALIZER_EXPECTED_RETAINED_PAYLOAD_BYTES = (
     + N_PAIRS * 12 * 4
     + N_PAIRS * 6 * 4
 )
-IMPLEMENTATION_BLOCKER = "RC2_FRESH_SCHUR_RECEIVER_CLOSE_NOT_IMPLEMENTED"
+REMOTE_TRAINER_BLOCKER = "JO2_REMOTE_TRAINER_ENTRYPOINT_NOT_IMPLEMENTED"
 
 REQUIRED_STAGE_IDS = ("target_birth", "joint_balance", "collateral_finish")
 REQUIRED_FIELD_OUTPUTS = frozenset(
@@ -210,6 +223,7 @@ class InputBindings(StrictModel):
     rc2_decoded_semantic_tokens: ArtifactRef | None = None
     gt_argmax_field: ArtifactRef | None = None
     rc2_base_argmax_field: ArtifactRef | None = None
+    fx5_base_pose6: ArtifactRef | None = None
     source_pose6_targets: ArtifactRef | None = None
     source_object: ArtifactRef
     segnet_weights: ArtifactRef
@@ -218,12 +232,21 @@ class InputBindings(StrictModel):
     worker_source: ArtifactRef
     dispatcher_source: ArtifactRef
     materializer_worker_source: ArtifactRef | None = None
+    receiver_close_source: ArtifactRef | None = None
+    residual_runtime_source: ArtifactRef | None = None
     memory_preflight_receipt: ArtifactRef | None = None
 
     @model_validator(mode="after")
     def rc2_anchor_is_exact(self) -> InputBindings:
-        if self.rc2_archive.bytes != BASE_ARCHIVE_BYTES or self.rc2_archive.sha256 != RC2_ARCHIVE_SHA256:
-            raise ValueError("rc2 archive authority pin differs")
+        # Field names remain schema-compatible with JO1, but JO2 solves on the
+        # live fx5 body.  fx5 is byte-decoded-identical to rc2 and 70 counted
+        # bytes smaller; using the older container here would price the wrong
+        # object.
+        if (
+            self.rc2_archive.bytes != FX5_ARCHIVE_BYTES
+            or self.rc2_archive.sha256 != FX5_ARCHIVE_SHA256
+        ):
+            raise ValueError("fx5 solve archive authority pin differs")
         expected_field = (N_PAIRS, SEG_H, SEG_W)
         for name, record in (
             ("rc2_decoded_semantic_tokens", self.rc2_decoded_semantic_tokens),
@@ -241,6 +264,12 @@ class InputBindings(StrictModel):
             or pose.dtype not in {"float32", "float64"}
         ):
             raise ValueError("source_pose6_targets must declare n600 x ... x 6 float shape")
+        base_pose = self.fx5_base_pose6
+        if base_pose is not None and (
+            base_pose.shape != (N_PAIRS, 6)
+            or base_pose.dtype not in {"float32", "float64"}
+        ):
+            raise ValueError("fx5_base_pose6 must declare shape=(600,6), float dtype")
         return self
 
 
@@ -269,13 +298,13 @@ class MaterializerConfig(StrictModel):
             if self.rc2_fallback_reason is not None:
                 raise ValueError("fx5_e1 must not carry an rc2 fallback reason")
         else:
+            if not (self.rc2_fallback_reason or "").strip():
+                raise ValueError("rc2 fallback requires a written reason")
             if (
-                self.archive.bytes != BASE_ARCHIVE_BYTES
+                self.archive.bytes != RC2_ARCHIVE_BYTES
                 or self.archive.sha256 != RC2_ARCHIVE_SHA256
             ):
                 raise ValueError("rc2 fallback materializer archive pin differs")
-            if not (self.rc2_fallback_reason or "").strip():
-                raise ValueError("rc2 fallback requires a written reason")
         harvest = Path(self.harvest_root).expanduser().resolve()
         allowed = MATERIALIZER_OUTPUT_ROOT.resolve()
         if allowed != harvest and allowed not in harvest.parents:
@@ -389,7 +418,7 @@ class MemoryPreflightConfig(StrictModel):
 
 
 class DispatchConfig(StrictModel):
-    lane_id: str = Field(pattern=r"^ddm_jo1_[a-z0-9_]+$")
+    lane_id: str = Field(pattern=r"^ddm_jo[12]_[a-z0-9_]+$")
     claim_agent: Literal["MAIN"]
     platform: Literal["modal"]
     gpu: Literal["T4"]
@@ -423,13 +452,13 @@ class CompiledConfig(StrictModel):
         if tuple(stage.stage_id for stage in self.stages) != REQUIRED_STAGE_IDS:
             raise ValueError("JO1 stages must be target_birth, joint_balance, collateral_finish")
         output = Path(self.output_root).expanduser().resolve()
-        allowed = (
-            MATERIALIZER_OUTPUT_ROOT.resolve()
+        allowed_roots = (
+            (MATERIALIZER_OUTPUT_ROOT.resolve(),)
             if self.action == "materialize_scorer_payloads"
-            else OUTPUT_ROOT.resolve()
+            else (OUTPUT_ROOT.resolve(), LOCAL_SOLVE_OUTPUT_ROOT.resolve())
         )
-        if allowed != output and allowed not in output.parents:
-            raise ValueError("JO1 output is outside its chartered APDataStore root")
+        if not any(root == output or root in output.parents for root in allowed_roots):
+            raise ValueError("JO2 output is outside its chartered solve roots")
         if self.action == "materialize_scorer_payloads" and self.materializer is None:
             raise ValueError("materialize_scorer_payloads requires a materializer config")
         if self.memory_preflight.minimum_ap_free_bytes < TRAINING_MIN_AP_FREE_BYTES:
@@ -470,8 +499,8 @@ def authority_constants() -> AuthorityConstants:
             rederivation_trigger=trigger,
         )
     return AuthorityConstants(
-        base_score=c(0.14827847122030852, "float", "score", "MEASURED", "new promoted exact rc2 row"),
-        base_archive_bytes=c(BASE_ARCHIVE_BYTES, "int", "bytes", "MEASURED", "rc2 archive changes"),
+        base_score=c(0.14823186109359, "float", "score", "MEASURED", "new promoted exact fx5 row"),
+        base_archive_bytes=c(BASE_ARCHIVE_BYTES, "int", "bytes", "MEASURED", "fx5 archive changes"),
         base_dseg=c(BASE_FLIPS / SEG_DENOMINATOR, "float", "fraction", "DERIVED", "base field changes"),
         base_flips=c(BASE_FLIPS, "int", "pixels", "MEASURED", "base field changes"),
         base_dpose=c(BASE_DPOSE, "float", "MSE", "MEASURED", "base pose6 receipt changes"),
@@ -659,10 +688,11 @@ def verify_memory_receipt(config: CompiledConfig) -> dict[str, Any]:
 
 
 def readiness(config: CompiledConfig) -> dict[str, Any]:
-    # This blocker is removed only when the remote worker performs the complete
-    # rc2 render -> exact R -> both scorers -> fresh same-object Schur -> real
-    # single-p package loop.  Validation primitives alone are not readiness.
-    blockers: list[str] = [IMPLEMENTATION_BLOCKER]
+    # Receiver-close is implemented in ddm_jo2_receiver_close.py and is pinned
+    # below.  The remaining remote trainer blocker is distinct: the current
+    # Modal entrypoint still refuses rather than pretending those primitives
+    # constitute a training loop.
+    blockers: list[str] = [REMOTE_TRAINER_BLOCKER]
     output_root = Path(config.output_root).resolve()
     storage_probe = output_root if output_root.exists() else output_root.parent
     free_bytes: int | None = None
@@ -680,7 +710,12 @@ def readiness(config: CompiledConfig) -> dict[str, Any]:
         "RC2_DECODED_SEMANTIC_TOKENS_MISSING": config.inputs.rc2_decoded_semantic_tokens,
         "GT_ARGMAX_FIELD_MISSING": config.inputs.gt_argmax_field,
         "RC2_BASE_ARGMAX_FIELD_MISSING": config.inputs.rc2_base_argmax_field,
+        "FX5_BASE_POSE6_MISSING": config.inputs.fx5_base_pose6,
         "SOURCE_POSE6_TARGETS_MISSING": config.inputs.source_pose6_targets,
+        "RC2_FRESH_SCHUR_RECEIVER_CLOSE_SOURCE_MISSING": (
+            config.inputs.receiver_close_source
+        ),
+        "JO2_RESIDUAL_RUNTIME_SOURCE_MISSING": config.inputs.residual_runtime_source,
     }
     for blocker, record in required_inputs.items():
         if record is None:
@@ -710,11 +745,11 @@ def readiness(config: CompiledConfig) -> dict[str, Any]:
         blockers.append(f"MEMORY_PREFLIGHT_BLOCKED:{error}")
     return {
         "schema": READINESS_SCHEMA,
-        "status": "READY_TO_FIRE" if not blockers else "BLOCKED",
+        "status": "READY_TO_FIRE_UNDER_STANDING_GO" if not blockers else "BLOCKED",
         "blockers": blockers,
         "workload_config_sha256": config.workload_config_sha256,
         "frontier_moved": False,
-        "frontier_line": "rc2 S=0.14827847122030852 remains unchanged",
+        "frontier_line": "fx5_e1 S=0.14823186109359 @ 180,386 B [contest-CUDA T4 n600] remains unchanged",
         "storage_probe": {
             "path": str(storage_probe),
             "free_bytes": free_bytes,
@@ -826,6 +861,44 @@ def readiness_for_action(config: CompiledConfig) -> dict[str, Any]:
     return readiness(config)
 
 
+def refresh_local_source_pins(config: CompiledConfig) -> CompiledConfig:
+    """Refresh only JO2 implementation-source triples before a new seal.
+
+    Scorer payloads, archive/runtime objects, weights, and source targets are
+    authority inputs and are intentionally excluded from this convenience
+    path.  This keeps the r8 partial-pin failure mode unrepresentable while
+    still requiring harvested authority artifacts to be rebound explicitly.
+    """
+    updates: dict[str, ArtifactRef] = {}
+    for field_name in (
+        "compiler_source",
+        "worker_source",
+        "dispatcher_source",
+        "receiver_close_source",
+        "residual_runtime_source",
+    ):
+        record = getattr(config.inputs, field_name)
+        if record is None:
+            raise JO1Error(f"local source binding is absent: {field_name}")
+        path = Path(record.path).resolve()
+        if not path.is_file():
+            raise JO1Error(f"local source binding path is absent: {path}")
+        digest = _sha256_path(path)
+        updates[field_name] = record.model_copy(
+            update={
+                "bytes": path.stat().st_size,
+                "sha256": digest,
+                "source_object_sha256": digest,
+            }
+        )
+    return config.model_copy(
+        update={
+            "inputs": config.inputs.model_copy(update=updates),
+            "workload_config_sha256": None,
+        }
+    )
+
+
 def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) -> dict[str, Any]:
     common = [
         ".venv/bin/modal",
@@ -843,43 +916,25 @@ def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) ->
             "--detach",
             "--provider-detach-ack",
         ]
-    materializer_readiness_value = (
-        materializer_readiness(config)
-        if config.action == "materialize_scorer_payloads"
-        else None
-    )
-    materializer_ready = bool(
-        materializer_readiness_value is not None
-        and materializer_readiness_value["status"] == "READY_TO_FIRE"
-    )
+    current_readiness = readiness_for_action(config)
+    current_ready = current_readiness["status"] in {
+        "READY_TO_FIRE",
+        "READY_TO_FIRE_UNDER_STANDING_GO",
+    }
     materializer = config.materializer
-    harvest_command = None
-    if materializer is not None:
-        harvest_command = [
-            ".venv/bin/modal",
-            "volume",
-            "get",
-            "--force",
-            materializer.remote_volume_name,
-            f"{materializer.remote_volume_run_id}/",
-            str(Path(materializer.harvest_root).resolve() / "harvest"),
-        ]
-    return {
-        "schema": "ddm_jo1_fire_order.v1",
-        "owner": "MAIN",
-        "lane_id": config.dispatch.lane_id,
-        "current_disposition": "READY" if materializer_ready else "BLOCKED",
-        "current_blocker": (
-            None
-            if materializer_ready
-            else (
-                ";".join(materializer_readiness_value["blockers"])
-                if materializer_readiness_value is not None
-                else IMPLEMENTATION_BLOCKER
-            )
-        ),
-        "stop_after_each_async_fire": True,
-        "commands": [
+    if config.action == "materialize_scorer_payloads":
+        harvest_command = None
+        if materializer is not None:
+            harvest_command = [
+                ".venv/bin/modal",
+                "volume",
+                "get",
+                "--force",
+                materializer.remote_volume_name,
+                f"{materializer.remote_volume_run_id}/",
+                str(Path(materializer.harvest_root).resolve() / "harvest"),
+            ]
+        commands = [
             {
                 "ordinal": 1,
                 "purpose": "materialize_scorer_payloads",
@@ -887,8 +942,8 @@ def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) ->
                 "fire_trigger": (
                     "materializer storage preflight PASS; no active n600 scorer job; "
                     "MAIN holds a unique lane claim"
-                    if materializer_ready
-                    else "materializer backend implemented and reviewed"
+                    if current_ready
+                    else "materializer readiness blockers clear after reseal"
                 ),
                 "requires_reseal_after_harvest": True,
             },
@@ -896,30 +951,116 @@ def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) ->
                 "ordinal": "1H",
                 "purpose": "harvest_materialized_payloads",
                 "argv": harvest_command,
-                "fire_trigger": "ordinal 1 call is terminal and the volume final receipt is COMPLETE",
+                "fire_trigger": (
+                    "ordinal 1 call is terminal and the volume final receipt is COMPLETE"
+                ),
                 "requires_reseal_after_harvest": True,
             },
-            {
-                "ordinal": 2,
-                "purpose": "real_scale_memory_preflight",
-                "argv": None,
-                "fire_trigger": "ordinal 1 payloads harvested into a newly sealed config",
-                "requires_reseal_after_harvest": True,
-            },
-            {
-                "ordinal": 3,
-                "purpose": "train",
-                "argv": None,
-                "fire_trigger": "ordinal 2 fresh matching memory receipt harvested into a newly sealed config",
-                "requires_reseal_after_harvest": False,
-            },
-        ],
+        ]
+    else:
+        recovery_root = LOCAL_SOLVE_OUTPUT_ROOT / "retained/materializer"
+        commands = []
+        for ordinal, purpose, record, remote_path, destination in (
+            (
+                "1A",
+                "recover_existing_fx5_base_argmax",
+                config.inputs.rc2_base_argmax_field,
+                FX5_BASE_ARGMAX_REMOTE_PATH,
+                recovery_root / "fx5_e1_argmax_n600.npy",
+            ),
+            (
+                "1B",
+                "recover_existing_fx5_base_pose6",
+                config.inputs.fx5_base_pose6,
+                FX5_BASE_POSE6_REMOTE_PATH,
+                recovery_root / "fx5_e1_first6_n600.npy",
+            ),
+        ):
+            commands.append(
+                {
+                    "ordinal": ordinal,
+                    "purpose": purpose,
+                    "argv": (
+                        None
+                        if record is not None
+                        else [
+                            ".venv/bin/modal",
+                            "volume",
+                            "get",
+                            "--force",
+                            AUTH_CACHE_VOLUME_NAME,
+                            remote_path,
+                            str(destination),
+                        ]
+                    ),
+                    "fire_trigger": (
+                        "Modal control plane reachable; consume the already COMPLETE "
+                        "component-only materializer run; do not fire a new scorer job"
+                    ),
+                    "expected_sha256": (
+                        "e89e1ac083e5964975a1b4121cd1bc8bd91236256d6922f66c650246d7783c34"
+                        if ordinal == "1A"
+                        else "71f7d2639eb624f4d0eb89e40ac5956a74b1f72951dc7f07424468769af8350f"
+                    ),
+                    "requires_reseal_after_harvest": True,
+                }
+            )
+        commands.extend(
+            (
+                {
+                    "ordinal": "1R",
+                    "purpose": "verify_triple_bindings_and_reseal",
+                    "argv": None,
+                    "fire_trigger": (
+                        "1A and 1B payload hashes and byte counts match their retained receipt"
+                    ),
+                    "requires_reseal_after_harvest": True,
+                },
+                {
+                    "ordinal": 2,
+                    "purpose": "real_scale_memory_preflight",
+                    "argv": None,
+                    "fire_trigger": (
+                        "remote trainer implementation is reviewed and a payload-complete "
+                        "seal emits the newly hash-bound memory command"
+                    ),
+                    "requires_reseal_after_harvest": True,
+                },
+                {
+                    "ordinal": 3,
+                    "purpose": "train",
+                    "argv": None,
+                    "fire_trigger": (
+                        "ordinal 2 fresh matching memory receipt is harvested and a new "
+                        "READY_TO_FIRE_UNDER_STANDING_GO seal emits the train command"
+                    ),
+                    "requires_reseal_after_harvest": False,
+                },
+            )
+        )
+    return {
+        "schema": "ddm_jo1_fire_order.v1",
+        "owner": "MAIN",
+        "lane_id": config.dispatch.lane_id,
+        "current_disposition": "READY" if current_ready else "BLOCKED",
+        "current_blocker": (
+            None
+            if current_ready
+            else ";".join(current_readiness["blockers"])
+        ),
+        "stop_after_each_async_fire": True,
+        "commands": commands,
     }
 
 
 def prepare(config: CompiledConfig, *, destination: Path) -> dict[str, Any]:
+    author = config.model_copy(update={"workload_config_sha256": None})
     compiled = attach_workload_sha256(config)
     destination.mkdir(parents=True, exist_ok=True)
+    author_record = _atomic_bytes(
+        destination / "author_config.json",
+        canonical_json_bytes(author.model_dump(mode="json")),
+    )
     config_path = destination / "compiled_config.json"
     config_record = _atomic_bytes(config_path, canonical_json_bytes(compiled.model_dump(mode="json")))
     readiness_value = readiness_for_action(compiled)
@@ -929,6 +1070,7 @@ def prepare(config: CompiledConfig, *, destination: Path) -> dict[str, Any]:
     return {
         "schema": "ddm_jo1_prepare.v1",
         "status": readiness_value["status"],
+        "author_config": author_record,
         "compiled_config": config_record,
         "readiness": readiness_record,
         "fire_order": order_record,
@@ -953,6 +1095,7 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--author-config", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--refresh-local-source-pins", action="store_true")
     return parser
 
 
@@ -960,12 +1103,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         config = CompiledConfig.model_validate_json(args.author_config.read_text(encoding="utf-8"))
+        if args.refresh_local_source_pins:
+            config = refresh_local_source_pins(config)
         result = prepare(config, destination=args.output.resolve())
     except (OSError, ValueError, JO1Error, json.JSONDecodeError) as error:
         print(json.dumps({"status": "BLOCKED", "reason": str(error)}, sort_keys=True))
         return 2
     print(json.dumps(result, sort_keys=True))
-    return 0 if result["status"] == "READY_TO_FIRE" else 2
+    return 0 if result["status"] in {
+        "READY_TO_FIRE",
+        "READY_TO_FIRE_UNDER_STANDING_GO",
+    } else 2
 
 
 if __name__ == "__main__":

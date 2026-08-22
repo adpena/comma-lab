@@ -11,6 +11,8 @@ from experiments import ddm_jo1_joint_objective_design as design
 from experiments import ddm_jo1_joint_objective_worker as worker
 from experiments import ddm_jo1_modal_joint_objective as dispatcher
 from experiments import ddm_jo1_payload_materializer_worker as materializer_worker
+from experiments import ddm_jo2_receiver_close as receiver_close
+from experiments import ddm_jo2_residual_runtime as residual_runtime
 
 
 def _write(path: Path, payload: bytes) -> Path:
@@ -87,6 +89,7 @@ def _config(
     runtime = tmp_path / "runtime"
     _write(runtime / "inflate.py", b"runtime")
     monkeypatch.setattr(design, "BASE_ARCHIVE_BYTES", archive.stat().st_size)
+    monkeypatch.setattr(design, "RC2_ARCHIVE_BYTES", archive.stat().st_size)
     monkeypatch.setattr(design, "RC2_ARCHIVE_SHA256", design._sha256_path(archive))
     monkeypatch.setattr(design, "FX5_ARCHIVE_BYTES", archive.stat().st_size)
     monkeypatch.setattr(design, "FX5_ARCHIVE_SHA256", design._sha256_path(archive))
@@ -101,12 +104,15 @@ def _config(
             "gt_field",
             "base_field",
             "pose6",
+            "base_pose6",
             "segnet",
             "posenet",
             "compiler",
             "worker",
             "dispatcher",
             "materializer_worker",
+            "receiver_close",
+            "residual_runtime",
         )
     }
     optional = (
@@ -123,6 +129,9 @@ def _config(
             "source_pose6_targets": _record(
                 files["pose6"], source=source_sha, shape=(600, 6), dtype="float32"
             ),
+            "fx5_base_pose6": _record(
+                files["base_pose6"], source=source_sha, shape=(600, 6), dtype="float32"
+            ),
         }
         if complete_inputs
         else {
@@ -130,6 +139,7 @@ def _config(
             "gt_argmax_field": None,
             "rc2_base_argmax_field": None,
             "source_pose6_targets": None,
+            "fx5_base_pose6": None,
         }
     )
     return design.CompiledConfig.model_validate(
@@ -159,6 +169,12 @@ def _config(
                     if include_materializer
                     else None
                 ),
+                "receiver_close_source": _record(
+                    files["receiver_close"], source=source_sha
+                ).model_dump(mode="json"),
+                "residual_runtime_source": _record(
+                    files["residual_runtime"], source=source_sha
+                ).model_dump(mode="json"),
                 "memory_preflight_receipt": (
                     None if memory_receipt is None else memory_receipt.model_dump(mode="json")
                 ),
@@ -349,7 +365,7 @@ def test_matching_real_memory_receipt_clears_payload_gates_but_not_implementatio
     assert complete.workload_config_sha256 == base.workload_config_sha256
     ready = design.readiness(complete)
     assert ready["status"] == "BLOCKED"
-    assert ready["blockers"] == [design.IMPLEMENTATION_BLOCKER]
+    assert ready["blockers"] == [design.REMOTE_TRAINER_BLOCKER]
     receipt_path.write_text(receipt_path.read_text().replace("NVIDIA T4", "fake"))
     assert design.readiness(complete)["status"] == "BLOCKED"
 
@@ -520,9 +536,25 @@ def test_local_prepare_emits_blocked_ticket_without_dispatch(
     assert Path(result["fire_order"]["path"]).is_file()
     order = json.loads(Path(result["fire_order"]["path"]).read_text())
     assert order["current_disposition"] == "BLOCKED"
+    assert order["commands"][0]["purpose"] == "recover_existing_fx5_base_argmax"
+    assert order["commands"][1]["purpose"] == "recover_existing_fx5_base_pose6"
     assert order["commands"][0]["argv"] is not None
-    assert order["commands"][1]["argv"] is None
-    assert order["commands"][2]["argv"] is None
+    assert order["commands"][1]["argv"] is not None
+    assert all(command["argv"] is None for command in order["commands"][2:])
+
+
+def test_refresh_local_source_pins_updates_all_three_fields(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = _config(tmp_path, monkeypatch)
+    source = Path(config.inputs.receiver_close_source.path)
+    source.write_bytes(b"changed receiver source")
+    refreshed = design.refresh_local_source_pins(config)
+    record = refreshed.inputs.receiver_close_source
+    assert record.bytes == source.stat().st_size
+    assert record.sha256 == design._sha256_path(source)
+    assert record.source_object_sha256 == record.sha256
+    assert refreshed.workload_config_sha256 is None
 
 
 def test_materializer_readiness_is_independent_of_training_gates(
@@ -547,7 +579,7 @@ def test_materializer_readiness_is_independent_of_training_gates(
 
     training = design.readiness(config)
     assert training["status"] == "BLOCKED"
-    assert design.IMPLEMENTATION_BLOCKER in training["blockers"]
+    assert design.REMOTE_TRAINER_BLOCKER in training["blockers"]
     assert any(value.startswith("MEMORY_PREFLIGHT_BLOCKED") for value in training["blockers"])
 
     prepared = design.prepare(config, destination=tmp_path / "materializer_seal")
@@ -599,10 +631,58 @@ def test_materializer_dispatch_request_is_ready_but_other_entrypoints_stay_block
         "detach": True,
         "provider_detach_ack": True,
     }
-    with pytest.raises(dispatcher.JO1DispatchError, match=design.IMPLEMENTATION_BLOCKER):
+    with pytest.raises(dispatcher.JO1DispatchError, match=design.REMOTE_TRAINER_BLOCKER):
         dispatcher.memory_preflight(**kwargs)
     with pytest.raises(dispatcher.JO1DispatchError, match="training readiness is blocked"):
         dispatcher.train(**kwargs)
+
+
+def test_jo2_counted_residual_roundtrip_and_fresh_object_binding() -> None:
+    model = residual_runtime.OutputResidual(hidden_channels=4, max_rgb_delta=2.0)
+    for parameter in model.parameters():
+        torch.nn.init.zeros_(parameter)
+    payload = residual_runtime.encode_residual_state(
+        model.state_dict(), hidden_channels=4, max_rgb_delta=2.0
+    )
+    semantic = residual_runtime.pack_semantic_blob(b"base-semantic", payload)
+    base, decoded = residual_runtime.split_semantic_blob(semantic)
+    assert base == b"base-semantic"
+    assert decoded == payload
+    restored = residual_runtime.residual_from_payload(payload)
+    tokens = torch.zeros((1, 3, 4), dtype=torch.long)
+    assert torch.count_nonzero(restored(tokens)) == 0
+    corrupted = bytearray(semantic)
+    corrupted[-1] ^= 1
+    with pytest.raises(residual_runtime.JO2ResidualError, match="digest"):
+        residual_runtime.split_semantic_blob(bytes(corrupted))
+
+    camera_a = {"path": "/retained/a.npy", "bytes": 10, "sha256": "a" * 64}
+    camera_b = {"path": "/retained/b.npy", "bytes": 10, "sha256": "b" * 64}
+    base_pose = {"path": "/retained/base.npy", "bytes": 20, "sha256": "d" * 64}
+    first = receiver_close.candidate_object_fingerprint(
+        pair=0,
+        semantic_object_sha256="c" * 64,
+        candidate_master=camera_a,
+        base_pose6=base_pose,
+    )
+    assert first != receiver_close.candidate_object_fingerprint(
+        pair=0,
+        semantic_object_sha256="c" * 64,
+        candidate_master=camera_b,
+        base_pose6=base_pose,
+    )
+    assert first != receiver_close.candidate_object_fingerprint(
+        pair=1,
+        semantic_object_sha256="c" * 64,
+        candidate_master=camera_a,
+        base_pose6=base_pose,
+    )
+    assert first != receiver_close.candidate_object_fingerprint(
+        pair=0,
+        semantic_object_sha256="c" * 64,
+        candidate_master=camera_a,
+        base_pose6={**base_pose, "sha256": "e" * 64},
+    )
 
 
 def test_uploaded_materializer_inputs_are_retained_and_resume_exact(

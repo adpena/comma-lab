@@ -1,0 +1,25 @@
+{
+  "axis": "[receiver-close component; no score authority]",
+  "exact_zero_residual_identity": true,
+  "max_abs_difference": 0.0,
+  "pair": 0,
+  "payloads": {
+    "base_renderer_pre_r": {
+      "bytes": 2359424,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo2_solve_reseal_20260821/receiver_control_r2/retained/forward_pair0/base_renderer.float32.npy",
+      "sha256": "c413a64fec79a809a6d47916c00271346dac512bbfda23617ddadf0ac90fb009"
+    },
+    "token_pair0": {
+      "bytes": 117964800,
+      "path": "/Volumes/APDataStore/pact/ddm_rc2/composed_decode_r2/inflated/.f26_decode_checkpoints/tokens_cpu_stage_complete.u8",
+      "sha256": "cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb"
+    },
+    "wrapped_renderer_pre_r": {
+      "bytes": 2359424,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo2_solve_reseal_20260821/receiver_control_r2/retained/forward_pair0/wrapped_renderer.float32.npy",
+      "sha256": "c413a64fec79a809a6d47916c00271346dac512bbfda23617ddadf0ac90fb009"
+    }
+  },
+  "schema": "ddm_jo2_real_fx5_forward_control.v1",
+  "score_claim": false
+}

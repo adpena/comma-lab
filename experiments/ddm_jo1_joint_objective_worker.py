@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Executable JO1 objective, checkpoint, and package-validation primitives.
+"""Executable JO2 objective, checkpoint, and package-validation primitives.
 
 The current no-launch build intentionally stops before scorer loading.  The
 functions below are the real hybrid actuator, joint loss, dual update,
 checkpoint bundle, and receiver-package validators that a remote trainer must
-use.  The CLI never reports training completion: until the exact rc2
-same-object Schur/package consumer is wired, it emits a durable named blocker.
+use.  The fresh same-object Schur/package consumer now lives in
+``ddm_jo2_receiver_close``; the CLI still refuses until the remote trainer calls
+that consumer at every stage boundary.
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ from torch.nn import functional
 from experiments import ddm_jo1_joint_objective_design as design
 
 AXIS = "[JO1 build-only hybrid objective; no scorer authority]"
-TRAINING_IMPLEMENTATION_BLOCKER = design.IMPLEMENTATION_BLOCKER
+TRAINING_IMPLEMENTATION_BLOCKER = design.REMOTE_TRAINER_BLOCKER
 
 
 class JO1WorkerError(RuntimeError):
@@ -390,7 +391,10 @@ def run(compiled_config: Path, expected_config_sha256: str) -> dict[str, Any]:
     blockers = list(ready["blockers"])
     # This build does not pretend that a package validator is the rc2 trainer.
     # The named closure is left explicit for the parent landing to route.
-    if config.action in {"memory_preflight", "train"}:
+    if (
+        config.action in {"memory_preflight", "train"}
+        and TRAINING_IMPLEMENTATION_BLOCKER not in blockers
+    ):
         blockers.append(TRAINING_IMPLEMENTATION_BLOCKER)
     return _write_blocker(output, config, blockers or ["NO_REMOTE_ACTION_IN_BUILD_ONLY_WORKER"])
 

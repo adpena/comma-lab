@@ -1,0 +1,89 @@
+{
+  "archive_repeat_identity": true,
+  "axis": "[receiver-close component; no score authority]",
+  "base_semantic_identity": true,
+  "carrier_code_lattice_identity": true,
+  "forward_control": {
+    "bytes": 1117,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo2_solve_reseal_20260821/receiver_control_r2/FORWARD_CONTROL.json",
+    "sha256": "ee71544e3b0bb7de5edbb6f153c2252dd09af5ed36e5bcee9b8750b429b281df"
+  },
+  "frontier_moved": false,
+  "payloads": {
+    "archive": {
+      "bytes": 181131,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo2_solve_reseal_20260821/receiver_control_r2/archive.zip",
+      "sha256": "2652a3e474dfd9cd4bad6ddb80c63c325af0f30fcbff02504b411752cf9afef4"
+    },
+    "carrier_body": {
+      "bytes": 22242,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo2_solve_reseal_20260821/receiver_control_r2/retained/carrier.raw",
+      "sha256": "8abbd525e44189f6dfcd09641f335b787f752f240112813ea1158ccd84719edf"
+    },
+    "carrier_stream": {
+      "bytes": 22194,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo2_solve_reseal_20260821/receiver_control_r2/retained/carrier.q11.br",
+      "sha256": "d35a8dc164f2ef67ddac9acc81f77964bd3ed6a546e3cbe782061cf6493ee8bb"
+    },
+    "member_p": {
+      "bytes": 181031,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo2_solve_reseal_20260821/receiver_control_r2/retained/p",
+      "sha256": "8c8d311ba3bd9c7c71bcd2b7145ae3bf81ca9854502ff83fcda57831cef63294"
+    },
+    "residual_payload": {
+      "bytes": 248,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo2_solve_reseal_20260821/receiver_control_r2/retained/residual.j2s1",
+      "sha256": "0b5939e2ae9e45984dcffa48eae97bb59ba8817ecec31df8d8da5c5c53d99375"
+    },
+    "semantic_body": {
+      "bytes": 36423,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo2_solve_reseal_20260821/receiver_control_r2/retained/semantic.j2r1",
+      "sha256": "d1335baf655e98458dcdae710f4cfd2679f3ce74aa24fed0afb9932662a5f734"
+    },
+    "semantic_stream": {
+      "bytes": 31435,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo2_solve_reseal_20260821/receiver_control_r2/retained/semantic.q11.br",
+      "sha256": "d1a5383126888bb0bde4ef94197e35422358f1a8647b8c8d84257e73beae9b46"
+    }
+  },
+  "rebuilt_reserved_flags": 0,
+  "residual_payload_identity": true,
+  "runtime": {
+    "archive": {
+      "bytes": 181131,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo2_solve_reseal_20260821/receiver_control_r2/submission/archive.zip",
+      "sha256": "2652a3e474dfd9cd4bad6ddb80c63c325af0f30fcbff02504b411752cf9afef4"
+    },
+    "f26_inflate": {
+      "bytes": 28074,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo2_solve_reseal_20260821/receiver_control_r2/submission/runtime/f26_inflate.py",
+      "sha256": "0e4ab54b1c5855be06bc55e723353ea4a8f408e5a894766898c26d5bbfff4503"
+    },
+    "inflate": {
+      "bytes": 2282,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo2_solve_reseal_20260821/receiver_control_r2/submission/inflate.py",
+      "sha256": "88be5f950945055c1cf7da5a2cd1a96a330536e4b68687e04697ea200debefe1"
+    },
+    "jo2_runtime": {
+      "bytes": 8625,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo2_solve_reseal_20260821/receiver_control_r2/submission/runtime/jo2_residual_runtime.py",
+      "sha256": "455b1b2ddce6ad1e9f3c5134f6d3bdb5e6f9c4d7cad582e76acce18b1ab32dea"
+    },
+    "residual_archive": {
+      "bytes": 30067,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo2_solve_reseal_20260821/receiver_control_r2/submission/runtime/residual_archive.py",
+      "sha256": "50a2e418a86b21bf4def46130401a6a873b17cc3787c2266c6f7f149e12d387e"
+    }
+  },
+  "schema": "ddm_jo2_real_fx5_receiver_control.v1",
+  "score_claim": false,
+  "single_p": true,
+  "source_archive": {
+    "bytes": 180386,
+    "path": "/Volumes/APDataStore/pact/ddm_fx5/candidate_runtime_fx5/archive.zip",
+    "sha256": "4b54fccc25f100cb68030db317791ba5e58936bb9b491f9ee9a020e695b79841"
+  },
+  "source_reserved_flags": 10,
+  "status": "PASS",
+  "zero_residual_real_fx5_forward_identity": true
+}

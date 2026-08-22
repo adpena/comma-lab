@@ -1,0 +1,19 @@
+{
+  "command_argv": [
+    ".venv/bin/modal",
+    "volume",
+    "ls",
+    "comma-auth-eval-cache-artifacts",
+    "ddm_jo1u_fx5_e1_n600_r4"
+  ],
+  "error": "Could not connect to the Modal server.",
+  "exit_code": 1,
+  "frontier_moved": false,
+  "memory_preflight_performed": false,
+  "observed_at_utc": "2026-08-21T23:52:44.353204+00:00",
+  "payload_harvest_performed": false,
+  "remote_run_id": "ddm_jo1u_fx5_e1_n600_r4",
+  "remote_volume": "comma-auth-eval-cache-artifacts",
+  "schema": "ddm_jo2_modal_connectivity_blocker.v1",
+  "score_claim": false
+}

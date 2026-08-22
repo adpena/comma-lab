@@ -136,7 +136,7 @@ def dispatch_request(
         for blocker in readiness["blockers"]
     ):
         raise JO1DispatchError("memory preflight is ordered after scorer payload harvest")
-    if entrypoint == "train" and readiness["status"] != "READY_TO_FIRE":
+    if entrypoint == "train" and readiness["status"] != "READY_TO_FIRE_UNDER_STANDING_GO":
         raise JO1DispatchError(f"training readiness is blocked: {readiness['blockers']}")
     if entrypoint == "materialize_scorer_payloads" and readiness["status"] != "READY_TO_FIRE":
         raise JO1DispatchError(f"materializer readiness is blocked: {readiness['blockers']}")
@@ -833,7 +833,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps({"status": "BLOCKED", "reason": str(error)}, sort_keys=True))
         return 2
     print(json.dumps(result, sort_keys=True))
-    return 0 if result["status"] == "READY_TO_FIRE" else 2
+    return 0 if result["status"] in {
+        "READY_TO_FIRE",
+        "READY_TO_FIRE_UNDER_STANDING_GO",
+    } else 2
 
 
 if __name__ == "__main__":
