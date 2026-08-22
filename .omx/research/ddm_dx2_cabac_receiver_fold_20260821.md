@@ -234,3 +234,37 @@ This arm produced an exact byte-closed candidate, not an authority row.
   integer-only and have no CPU/CUDA/MPS branch, avoiding the prior RR2 desynchronization class.
 - Sealing on parse-back alone or launching the heavy raw decode concurrently is closed: the charter
   requires fresh full raw identity and explicitly reserves the occupied local slot.
+
+## VERDICT (MAIN, 2026-08-21) — ADMITTED, NINETEENTH POINTER MOVE
+
+T4 row landed (call fc-01M0KJJRPRNSAW706FP6QMKX9V, modal_elapsed 576.0 s, ~$0.16):
+**S = 0.14821987563243377 @ 180,368 B [contest-CUDA T4, n600]** — recomputed from
+components per #877 (d_seg 0.00020139 · d_pose 6.37e-06 · rate 25×180,368/37,545,489).
+ΔS vs fx5_e1 = **−1.198546115621646e-05**, matching dx1's projection (−1.198546e-05) to
+7 significant figures — a pure-rate lossless fold realized exactly as priced.
+
+Falsifiers (all HELD):
+- Contest-CUDA raw sha 6bf8acf8d4412e43f8ddf810bcf63feb6435b758196b708fd61e77fe61e79883
+  present in MODAL_REMOTE_RESULT.json — decode byte-identity held on the T4 worker.
+- d_seg + d_pose IDENTICAL to fx5_e1 at report precision (decode-identity corollary).
+- Archive 180,368 B sha 976f706d5af6070f9785e495d35f2bd1bf10159a154fa19b45aefbf8f6de6674
+  (exactly −18 B vs fx5_e1's 180,386 B).
+- Admission: −1.198546e-05 clears the −3.5e-06 bar 3.4×.
+
+Local pre-proof (MAIN): fresh full n600 raw decode of the candidate matched the fx5_e1
+retained object byte-for-byte (0.raw 3,662,409,600 B sha 7246a4ff8f79b03ab14b3a72f6a6e2ff
+f18b567fcb61f12a7fe311d48f5f2de7) after two launch cures: PATH-provided `python` (#929
+class — the runtime is sealed custody, never edited) and evaluate-protocol extraction of
+member `p`. Fire-chain refusals (seal-owns-axis · pre-staged-claim single-flight · two
+zombie Modal apps stopped) all adjudicated CORRECT; zero live-task apps after cleanup.
+
+**The r012 rate ceiling on this body is now FULLY HARVESTED**: 88 B measured composable
+ceiling → fx5 took −70 B, dx2 took −18 B. Remaining rate progress on this representation
+is ZERO by the r012 theorem; every further rate byte requires the NEW-REPRESENTATION
+program (jo1 line, burning as r8).
+
+GESTALT-DELTA: CONFIRMS the whole-picture model twice — (a) "the rate axis on this body
+is complete" moves from projection to measured fact; (b) the lossless-fold move class
+(decode-identity → distortion carried over by construction → ΔS = pure rate) realized its
+price to 7 sig figs, reinforcing that decode-identical candidates need only ONE axis
+bought. No standing picture bent or broken.
