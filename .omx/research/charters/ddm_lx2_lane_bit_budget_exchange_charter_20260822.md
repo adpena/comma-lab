@@ -2,11 +2,16 @@
 
 ## MANDATE
 
-**Every arm on 08-22 priced candidates in ONE currency.** The rate arms held distortion fixed and
+**The exchange rate is DERIVED and BANKED — what is missing is its use on Lane.**
+`ddm_tx1_toolbox_crosswalk_20260819.md` §0 ("THE EXCHANGE RATES — what closing the gap actually costs")
+derived `25/37,545,489 = 6.658590e-07` S per byte and priced label/position families in B/flip
+(0.2627 · 0.9822 · 1.4610 B/flip at :190–:204). **Do NOT re-derive it — cite tx1 and use it.** What no
+arm has done is apply it to the CLASS that dominates both axes. Every arm on 08-22 priced candidates in
+ONE currency. The rate arms held distortion fixed and
 attacked bytes (RB1 0 B · AD2 already free · TO2 196–687% worse · CX3 0 B · EF1 3.21× worse). The
 distortion arms held bytes fixed (MS9 manufactured split · LQ1 representability · RI1/NI1 receiver
 distortion). The exchange between them is **6.658e-7 S/B**, or equivalently **1.2731082153 B per
-eliminated seg flip**, and it has never been used to price a single candidate on both sides.
+eliminated seg flip**. Applying it to Lane is the gap this arm fills.
 
 **Lane is where the two axes collide.** BL1 (`ddm_bl1_per_position_bit_allocation_20260822.md`, commit
 `873947c665`, reconciled to the physical stream) measured the shipped HPAC/RC64 per-position cost:
@@ -115,8 +120,8 @@ measurement, and it is the deliverable.**
   lie inside the top-1% expensive set, but seg errors are only 2.013906% of that population and carry
   **5.265498%** of stream bits (5,990.882 B). The seg×rate join is ASYMMETRIC; **the shared object is
   the Lane CLASS, not seg-error position identity.** That is precisely why this arm is class-scoped.
-- `#1202` self-audit (`ddm_ef1_token_entropy_floor_20260822.md`'s charter): I raced a weaker mechanism
-  class against a tuned incumbent. Do not repeat it — reallocate WITHIN the incumbent, never replace it.
+- The self-audit filed against `ddm_ef1_token_entropy_floor_20260822.md`: its charter raced a weaker
+  mechanism class against a tuned incumbent. Do not repeat it — reallocate WITHIN the incumbent, never replace it.
 
 ## OPTIMAL FORM
 
