@@ -1,0 +1,132 @@
+{
+  "all_materialized_payloads_retained": true,
+  "allowed_config_deltas": [
+    "run_id",
+    "workload_config_sha256",
+    "inputs.dispatcher_source",
+    "inputs.receiver_close_source",
+    "inputs.memory_preflight_receipt"
+  ],
+  "checkpoint_state_projection_sha256": "f6490c214ab470a03ca10e0d120f0284af3aa0997dbfe49e867cd861905fa291",
+  "cursor": {
+    "field_pass_cursor": 0,
+    "package_cursor": 0,
+    "stage_id": "target_birth",
+    "step": 600
+  },
+  "destination_checkpoint_manifest": {
+    "bytes": 2380,
+    "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo5_determinism_cure_reseal_20260821_r8_final/checkpoints/target_birth/step_000600_field_0000_package_0_migrated_r8/CHECKPOINT.json",
+    "sha256": "947495f1c28747f63ddb24f3ea5900ee2d585a2237c71a09923cbfd3ab389270"
+  },
+  "destination_compiled_config": {
+    "bytes": 16041,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo5_determinism_cure_reseal_20260821/seal_r8/compiled_config.json",
+    "sha256": "38d2f96dc755fd118eaccdac5985adaf6cff8e8beaea401669c8676600731b90"
+  },
+  "destination_resume_pointer": {
+    "bytes": 458,
+    "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo5_determinism_cure_reseal_20260821_r8_final/checkpoints/RESUME_LATEST.json",
+    "sha256": "dba64489b7d5e9f26129177dccbc6d8b9c5357cb6a4bd68a1f95d65a42792aa2"
+  },
+  "payload_byte_identity": {
+    "duals": {
+      "byte_identical": true,
+      "destination": {
+        "bytes": 74,
+        "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo5_determinism_cure_reseal_20260821_r8_final/checkpoints/target_birth/step_000600_field_0000_package_0_migrated_r8/duals.json",
+        "sha256": "3d045fbc4164099147167b59134eb8771dae1c64aac2b4bf5ff3f28df68a92bd"
+      },
+      "source": {
+        "bytes": 74,
+        "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo4_certified_retention_reseal_20260821_r7_final/checkpoints/target_birth/step_000600_field_0000_package_0/duals.json",
+        "sha256": "3d045fbc4164099147167b59134eb8771dae1c64aac2b4bf5ff3f28df68a92bd"
+      }
+    },
+    "ema": {
+      "byte_identical": true,
+      "destination": {
+        "bytes": 3669,
+        "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo5_determinism_cure_reseal_20260821_r8_final/checkpoints/target_birth/step_000600_field_0000_package_0_migrated_r8/ema.pt",
+        "sha256": "7b3fcab4e205935744263c0181afeeca532706facccdd3a696f2bb1be17e003e"
+      },
+      "source": {
+        "bytes": 3669,
+        "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo4_certified_retention_reseal_20260821_r7_final/checkpoints/target_birth/step_000600_field_0000_package_0/ema.pt",
+        "sha256": "7b3fcab4e205935744263c0181afeeca532706facccdd3a696f2bb1be17e003e"
+      }
+    },
+    "live": {
+      "byte_identical": true,
+      "destination": {
+        "bytes": 3669,
+        "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo5_determinism_cure_reseal_20260821_r8_final/checkpoints/target_birth/step_000600_field_0000_package_0_migrated_r8/live.pt",
+        "sha256": "fb2d0d024204a1e01b873aecc568b01f5ce9b787c689db5f14a42dc6e8b4a5a5"
+      },
+      "source": {
+        "bytes": 3669,
+        "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo4_certified_retention_reseal_20260821_r7_final/checkpoints/target_birth/step_000600_field_0000_package_0/live.pt",
+        "sha256": "fb2d0d024204a1e01b873aecc568b01f5ce9b787c689db5f14a42dc6e8b4a5a5"
+      }
+    },
+    "optimizer": {
+      "byte_identical": true,
+      "destination": {
+        "bytes": 7597,
+        "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo5_determinism_cure_reseal_20260821_r8_final/checkpoints/target_birth/step_000600_field_0000_package_0_migrated_r8/optimizer.pt",
+        "sha256": "26a9dfda27969034cda5eaba79f8d2d7a54efafd047b51815bd30e1f97b8d197"
+      },
+      "source": {
+        "bytes": 7597,
+        "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo4_certified_retention_reseal_20260821_r7_final/checkpoints/target_birth/step_000600_field_0000_package_0/optimizer.pt",
+        "sha256": "26a9dfda27969034cda5eaba79f8d2d7a54efafd047b51815bd30e1f97b8d197"
+      }
+    },
+    "resume_cursor": {
+      "byte_identical": true,
+      "destination": {
+        "bytes": 80,
+        "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo5_determinism_cure_reseal_20260821_r8_final/checkpoints/target_birth/step_000600_field_0000_package_0_migrated_r8/resume_cursor.json",
+        "sha256": "f534aba4f76541a96a29381f22feed53d75c86903a76add9e5eb936e11ad7819"
+      },
+      "source": {
+        "bytes": 80,
+        "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo4_certified_retention_reseal_20260821_r7_final/checkpoints/target_birth/step_000600_field_0000_package_0/resume_cursor.json",
+        "sha256": "f534aba4f76541a96a29381f22feed53d75c86903a76add9e5eb936e11ad7819"
+      }
+    },
+    "rng": {
+      "byte_identical": true,
+      "destination": {
+        "bytes": 14377,
+        "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo5_determinism_cure_reseal_20260821_r8_final/checkpoints/target_birth/step_000600_field_0000_package_0_migrated_r8/rng.pt",
+        "sha256": "76623a0616fe22b65392baa6bc6a4bcc4a2132138698e54ab0a140776e63adb9"
+      },
+      "source": {
+        "bytes": 14377,
+        "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo4_certified_retention_reseal_20260821_r7_final/checkpoints/target_birth/step_000600_field_0000_package_0/rng.pt",
+        "sha256": "76623a0616fe22b65392baa6bc6a4bcc4a2132138698e54ab0a140776e63adb9"
+      }
+    }
+  },
+  "schema": "ddm_jo5_checkpoint_migration.v1",
+  "score_claim": false,
+  "source_checkpoint_manifest": {
+    "bytes": 2080,
+    "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo4_certified_retention_reseal_20260821_r7_final/checkpoints/target_birth/step_000600_field_0000_package_0/CHECKPOINT.json",
+    "sha256": "fe7c0e947bc65ced1cab0d209ce5c48c36f7b2d0da8f3d5a7f6b0886d13344e2"
+  },
+  "source_compiled_config": {
+    "bytes": 16047,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo4_certified_retention_reseal_20260821/seal_r7/compiled_config.json",
+    "sha256": "5ba2a9b8f01d0295fc3a96e49256cf7b503c45d31d69fce958d3bb2d8881c69b"
+  },
+  "source_payloads_preserved": true,
+  "source_resume_pointer": {
+    "bytes": 449,
+    "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo4_certified_retention_reseal_20260821_r7_final/checkpoints/RESUME_LATEST.json",
+    "sha256": "6120161a097be480b71db9b691565767d7906c84ec0d10fa9894add5b1f1b728"
+  },
+  "status": "COMPLETE",
+  "training_restarted_from_scratch": false
+}

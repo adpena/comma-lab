@@ -1,0 +1,171 @@
+{
+  "all_materialized_payloads_retained": true,
+  "checkpoint_cursor": {
+    "field_pass_cursor": 0,
+    "package_cursor": 0,
+    "stage_id": "target_birth",
+    "step": 600
+  },
+  "checkpoint_migration": {
+    "bytes": 7211,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo5_determinism_cure_reseal_20260821/CHECKPOINT_MIGRATION.json",
+    "sha256": "e906df26feba1cf28cdb3108f95b8982da0ef3619060c2813e8ad910d8f80413"
+  },
+  "checkpoint_migration_status": "COMPLETE",
+  "checkpoint_payloads_all_byte_identical": true,
+  "determinism_proof_gates": {
+    "all_materialized_payloads_retained": true,
+    "all_nine_cure_camera_byte_identical": true,
+    "all_nine_cure_pose6_byte_identical": true,
+    "all_nine_cure_pose_input_byte_identical": true,
+    "all_nine_safe_runs_ok": true,
+    "all_nine_saved_vs_exact_batch_pose6_byte_identical": true,
+    "all_rng_states_unchanged": true,
+    "all_singleton_controls_still_diverge": true,
+    "all_three_pairs_repeat_shas_singleton": true
+  },
+  "determinism_reproof": {
+    "bytes": 22081,
+    "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo5_determinism_cure_reseal_20260821/DETERMINISM_REPROOF.json",
+    "sha256": "8fd86de4504a3d592a13944878f404c561c3795eeb9e6cb70bf94db12e017076"
+  },
+  "fire": {
+    "argv": [
+      ".venv/bin/python",
+      "tools/spawn_durable_daemon.py",
+      "--log",
+      "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo5_determinism_cure_reseal_20260821_r8_final/train.log",
+      "--label",
+      "ddm_jo2_joint_objective_fx5",
+      "--projected-gb",
+      "48",
+      "--min-free-gb",
+      "44",
+      "--rss-cap-mb",
+      "16384",
+      "--walltime-cap-s",
+      "259200",
+      "--projected-peak-gib",
+      "16.0",
+      "--",
+      "env",
+      "TAC_GOVERNED_ADMISSION=1",
+      ".venv/bin/python",
+      "-m",
+      "experiments.ddm_jo3_joint_objective_entrypoint",
+      "train",
+      "--compiled-config",
+      "/Users/adpena/Projects/pact/.omx/research/ddm_jo5_determinism_cure_reseal_20260821/seal_r8/compiled_config.json",
+      "--expected-config-sha256",
+      "38d2f96dc755fd118eaccdac5985adaf6cff8e8beaea401669c8676600731b90",
+      "--resume-from",
+      "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo5_determinism_cure_reseal_20260821_r8_final/checkpoints",
+      "--main-owned-dispatch-authorization"
+    ],
+    "consumer_store": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo5_determinism_cure_reseal_20260821_r8_final",
+    "disposition": "QUEUED-WITH-A-FIRE-ORDER",
+    "heavy_launch_performed_by_jo5": false,
+    "owner": "MAIN",
+    "trigger": "READINESS status is READY_TO_FIRE_UNDER_STANDING_GO with zero blockers; MAIN holds the unique local lane and launches this command outside the sandbox"
+  },
+  "frontier": {
+    "line": "fx5_e1 S 0.14823186109359 @ 180,386 B [contest-CUDA T4 n600]",
+    "moved": false
+  },
+  "memory_preflight": {
+    "axis": "[macOS-CPU real-config memory/wall-clock preflight; no score authority]",
+    "measured_peak_rss_bytes": 2855944192,
+    "passed": true,
+    "projected_n600_peak_rss_bytes": 5360564040,
+    "receipt": {
+      "bytes": 11190,
+      "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo5_determinism_cure_reseal_20260821_r8_final/memory_preflight/MEMORY_PREFLIGHT.json",
+      "sha256": "b6be6406dc0b381e1362264c43b69618806eef470e8986d574871b523b7e25cb"
+    },
+    "safe_run": {
+      "bytes": 1681,
+      "path": "/Users/adpena/Projects/pact/experiments/.scratch/ddm_jo2_joint_objective_solve/ddm_jo5_determinism_cure_reseal_20260821_r8_final/memory_preflight/SAFE_RUN.json",
+      "sha256": "5e39d1dff56b5353e770d5e31527b9d9399ceeab601b14d54b643188d7834b74"
+    },
+    "same_batch_repeat_added_mean_seconds": 2784.6035081427544,
+    "same_batch_repeat_added_measured_max_seconds": 2908.4661754779518,
+    "wall_clock_lower_seconds": 78072.404009616,
+    "wall_clock_upper_seconds": 130396.2666769512
+  },
+  "restore_smoke": {
+    "config_sha256": "38d2f96dc755fd118eaccdac5985adaf6cff8e8beaea401669c8676600731b90",
+    "cursor": {
+      "field_pass_cursor": 0,
+      "package_cursor": 0,
+      "stage_id": "target_birth",
+      "step": 600
+    },
+    "ema_key_denominator": 6,
+    "status": "PASS"
+  },
+  "review": {
+    "genuine_pass_denominator": 2,
+    "payload_discard_findings": 0,
+    "payload_discard_gate_scope_file_denominator": 4,
+    "py_compile": "PASS",
+    "review_tracker_final_status": "100_percent_reviewed_for_all_four_files",
+    "reviewed_python_file_denominator": 4,
+    "ruff": "PASS",
+    "tests": "35 passed; two pre-existing Pydantic schema-shadow warnings"
+  },
+  "schema": "ddm_jo5_reseal_receipt.v1",
+  "seal": {
+    "author_config": {
+      "bytes": 15979,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo5_determinism_cure_reseal_20260821/seal_r8/author_config.json",
+      "sha256": "4ea3935304b265b71117fd1afbbe4e2c8f3d33fa59332ef7714fe9e6cf852d23"
+    },
+    "blockers": [],
+    "compiled_config": {
+      "bytes": 16041,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo5_determinism_cure_reseal_20260821/seal_r8/compiled_config.json",
+      "sha256": "38d2f96dc755fd118eaccdac5985adaf6cff8e8beaea401669c8676600731b90"
+    },
+    "dispatcher_source_matches_committed_cure": true,
+    "fire_order": {
+      "bytes": 6352,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo5_determinism_cure_reseal_20260821/seal_r8/FIRE_ORDER.json",
+      "sha256": "10b981ea3ed1f582b456a2fb562e3610e170d9d42385d94e7c418b58cdcc72e6"
+    },
+    "readiness": {
+      "bytes": 469,
+      "path": "/Users/adpena/Projects/pact/.omx/research/ddm_jo5_determinism_cure_reseal_20260821/seal_r8/READINESS.json",
+      "sha256": "86452c40cc45090d30f060cb7db0811498bac81be103b409cc295a8289b98604"
+    },
+    "readiness_status": "READY_TO_FIRE_UNDER_STANDING_GO",
+    "receiver_close_source_matches_committed_cure": true,
+    "workload_config_sha256": "b8986b44602ce7e0d6f18d74522aff89bb087990dafb414e45228cf66adc83e4"
+  },
+  "source_checkpoint_preserved": true,
+  "source_commit": "4359aa5e855fae398177fb5d4cadd3622e8b81b7",
+  "source_records": {
+    "entrypoint": {
+      "bytes": 99581,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_jo3_joint_objective_entrypoint.py",
+      "sha256": "766d3494751b27343df8904db2b74fd21e3d7804274a7e3931316ae11736bcdd"
+    },
+    "probe": {
+      "bytes": 16074,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_jo5_determinism_probe.py",
+      "sha256": "023bfb253823756294fce0e693887e3ae6ad8b2529e6e1870b5429aa518a3c81"
+    },
+    "receiver_close": {
+      "bytes": 53277,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_jo2_receiver_close.py",
+      "sha256": "0ceba3210fdabe504d975d80ad4f480a7f4e53392cda9db07854713763870931"
+    },
+    "tests": {
+      "bytes": 60200,
+      "path": "/Users/adpena/Projects/pact/experiments/tests/test_ddm_jo1_joint_objective.py",
+      "sha256": "00aed97f5504541b42a4386a8f1be47eb8c4762c7aebc3a65ea2a08807649f74"
+    }
+  },
+  "status": "READY_TO_FIRE_UNDER_STANDING_GO",
+  "training_restarted_from_scratch": false,
+  "upstream_modified": false
+}
