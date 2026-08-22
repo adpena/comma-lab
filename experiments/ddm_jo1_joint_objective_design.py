@@ -699,8 +699,35 @@ def verify_memory_receipt(config: CompiledConfig) -> dict[str, Any]:
     scale = value["receiver_scale_preflight"]
     if scale.get("schema") != "ddm_jo3_receiver_scale_preflight.v1" or scale.get("passed") is not True:
         raise JO1Error("receiver scale preflight did not pass")
-    if scale.get("blockers") or int(scale.get("endpoint_pair_denominator", -1)) != 0:
-        raise JO1Error("receiver scale preflight carries blockers or int12 endpoints")
+    if scale.get("blockers") or int(scale.get("endpoint_blocked_coordinate_denominator", -1)) != 0:
+        raise JO1Error("receiver scale preflight carries blockers or unsafe derivative coordinates")
+    if int(scale.get("endpoint_one_sided_coordinate_denominator", -1)) != len(
+        scale.get("endpoint_coordinates", [])
+    ):
+        raise JO1Error("receiver scale preflight endpoint derivative census differs")
+    derivative_modes = scale.get("derivative_mode_denominators", {})
+    if sum(int(value) for value in derivative_modes.values()) != N_PAIRS * 12:
+        raise JO1Error("receiver scale preflight derivative denominator differs")
+    if int(scale.get("endpoint_one_sided_coordinate_denominator", -1)) != (
+        int(derivative_modes.get("forward_one_sided_first_order", -1))
+        + int(derivative_modes.get("backward_one_sided_first_order", -1))
+    ):
+        raise JO1Error("receiver scale preflight one-sided derivative count differs")
+    one_stage = int(scale.get("one_stage_projected_retained_bytes", -1))
+    all_stages = int(scale.get("all_stage_projected_retained_bytes", -1))
+    reserve = int(scale.get("non_solver_and_extra_pass_reserve_bytes", -1))
+    total = int(scale.get("all_stage_plus_reserve_projected_bytes", -1))
+    available = int(scale.get("available_free_bytes", -1))
+    if (
+        one_stage <= 0
+        or all_stages != one_stage * len(config.stages)
+        or reserve <= 0
+        or total != all_stages + reserve
+        or total > available
+        or int(scale.get("full_winner_bytes_per_stage", -1)) <= 0
+        or int(scale.get("certified_rebuild_bytes_per_stage", -1)) <= 0
+    ):
+        raise JO1Error("receiver scale preflight two-tier storage arithmetic differs")
     try:
         created = datetime.fromisoformat(str(value["created_at_utc"]).replace("Z", "+00:00"))
     except ValueError as error:
@@ -1066,6 +1093,38 @@ def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) ->
         str(run_root / "checkpoints"),
         "--main-owned-dispatch-authorization",
     ]
+    reseal_command: list[str] | None = None
+    if (
+        config.dispatch.platform == "local"
+        and config.inputs.rc2_base_argmax_field is not None
+        and config.inputs.fx5_base_pose6 is not None
+    ):
+        reseal_command = [
+            ".venv/bin/python",
+            "-m",
+            "experiments.ddm_jo1_joint_objective_design",
+            "--author-config",
+            str((config_path.parent / "author_config.json").resolve()),
+            "--output",
+            str(config_path.parent.resolve()),
+            "--refresh-local-source-pins",
+            "--bind-rc2-base-argmax-field",
+            config.inputs.rc2_base_argmax_field.path,
+            "--bind-fx5-base-pose6",
+            config.inputs.fx5_base_pose6.path,
+            "--bind-local-entrypoint-source",
+            config.inputs.dispatcher_source.path,
+            "--dispatch-local",
+            "--run-id",
+            config.run_id,
+        ]
+        if config.inputs.memory_preflight_receipt is not None:
+            reseal_command.extend(
+                (
+                    "--bind-memory-preflight-receipt",
+                    config.inputs.memory_preflight_receipt.path,
+                )
+            )
     current_readiness = readiness_for_action(config)
     current_ready = current_readiness["status"] in {
         "READY_TO_FIRE",
@@ -1123,23 +1182,22 @@ def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) ->
                 recovery_root / "fx5_e1_first6_n600.npy",
             ),
         ):
+            bound_destination = destination if record is None else Path(record.path).resolve()
             commands.append(
                 {
                     "ordinal": ordinal,
                     "purpose": purpose,
-                    "argv": (
-                        None
-                        if record is not None
-                        else [
-                            ".venv/bin/modal",
-                            "volume",
-                            "get",
-                            "--force",
-                            AUTH_CACHE_VOLUME_NAME,
-                            remote_path,
-                            str(destination),
-                        ]
-                    ),
+                    "argv": [
+                        ".venv/bin/modal",
+                        "volume",
+                        "get",
+                        "--force",
+                        AUTH_CACHE_VOLUME_NAME,
+                        remote_path,
+                        str(bound_destination),
+                    ],
+                    "already_satisfied": record is not None,
+                    "satisfied_by": None if record is None else record.model_dump(mode="json"),
                     "fire_trigger": (
                         "Modal control plane reachable; consume the already COMPLETE "
                         "component-only materializer run; do not fire a new scorer job"
@@ -1157,7 +1215,11 @@ def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) ->
                 {
                     "ordinal": "1R",
                     "purpose": "verify_triple_bindings_and_reseal",
-                    "argv": None,
+                    "argv": reseal_command,
+                    "already_satisfied": (
+                        config.inputs.rc2_base_argmax_field is not None
+                        and config.inputs.fx5_base_pose6 is not None
+                    ),
                     "fire_trigger": ("1A and 1B payload hashes and byte counts match their retained receipt"),
                     "requires_reseal_after_harvest": True,
                 },
@@ -1167,12 +1229,17 @@ def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) ->
                     "argv": (
                         None
                         if (
-                            config.inputs.memory_preflight_receipt is not None
-                            or LOCAL_TRAINER_BLOCKER in current_readiness["blockers"]
+                            LOCAL_TRAINER_BLOCKER in current_readiness["blockers"]
                             or config.inputs.rc2_base_argmax_field is None
                             or config.inputs.fx5_base_pose6 is None
                         )
                         else memory_command
+                    ),
+                    "already_satisfied": config.inputs.memory_preflight_receipt is not None,
+                    "satisfied_by": (
+                        None
+                        if config.inputs.memory_preflight_receipt is None
+                        else config.inputs.memory_preflight_receipt.model_dump(mode="json")
                     ),
                     "fire_trigger": (
                         "local trainer implementation is reviewed, both recovered payloads "

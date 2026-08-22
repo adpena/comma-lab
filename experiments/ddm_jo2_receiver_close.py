@@ -348,6 +348,34 @@ def pose_vectors(posenet: Any, pairs: np.ndarray) -> np.ndarray:
     return output.cpu().numpy().astype(np.float32, copy=False)
 
 
+def jacobian_probe_offsets(coordinate: int) -> tuple[tuple[int, int], float, str]:
+    """Return two in-domain finite-difference probes for one int12 coordinate.
+
+    Interior coordinates keep the second-order central difference at unit
+    step. An int12 endpoint cannot support that stencil, so it uses the
+    matched unit-step inward one-sided difference. That endpoint stencil is
+    first-order accurate (O(h)) rather than the central stencil's O(h**2).
+    Both returned probe coordinates are asserted in-domain before use.
+    """
+    value = int(coordinate)
+    if not -2048 <= value <= 2047:
+        raise JO2ReceiverCloseError(f"carrier coefficient is outside int12: {value}")
+    if value == -2048:
+        offsets, denominator, mode = (0, 1), 1.0, "forward_one_sided_first_order"
+    elif value == 2047:
+        offsets, denominator, mode = (-1, 0), 1.0, "backward_one_sided_first_order"
+    else:
+        offsets, denominator, mode = (-1, 1), 2.0, "central_second_order"
+    probes = tuple(value + offset for offset in offsets)
+    if len(probes) != 2 or not all(-2048 <= probe <= 2047 for probe in probes):
+        raise JO2ReceiverCloseError(
+            f"finite-difference probes leave int12 domain: value={value},probes={probes}"
+        )
+    if probes[0] == probes[1]:
+        raise JO2ReceiverCloseError("finite-difference probes are not distinct")
+    return (int(offsets[0]), int(offsets[1])), denominator, mode
+
+
 def evaluate_codes(
     *,
     surface: CarrierSurface,
@@ -357,6 +385,7 @@ def evaluate_codes(
     master: np.ndarray,
     pair: int,
     stage_root: Path,
+    retention: Any | None = None,
 ) -> np.ndarray:
     code_array = np.stack([np.asarray(value, dtype=np.int32) for value in codes])
     vectors: list[np.ndarray] = []
@@ -366,19 +395,33 @@ def evaluate_codes(
         result_path = root / "RESULT.json"
         if result_path.is_file():
             result = json.loads(result_path.read_text(encoding="utf-8"))
+            if retention is not None:
+                retention.verify_explored_result(result)
             vectors.append(np.load(verify_record(result["pose_vectors"]), allow_pickle=False))
             continue
         batch_codes = code_array[first:last]
         slaves = render_frame0(surface, modules, batch_codes, pair)
         masters = np.repeat(np.asarray(master, dtype=np.uint8)[None], len(batch_codes), axis=0)
         inputs = np.stack((slaves, masters), axis=1)
-        records = {
-            "codes": atomic_npy(root / "codes.int32.npy", batch_codes),
-            "slave_camera": atomic_npy(root / "slave_camera.uint8.npy", slaves),
-            "pose_input": atomic_npy(root / "pose_input.uint8.npy", inputs),
-        }
         output = pose_vectors(posenet, inputs)
-        records["pose_vectors"] = atomic_npy(root / "pose_vectors.float32.npy", output)
+        if retention is None:
+            records = {
+                "codes": atomic_npy(root / "codes.int32.npy", batch_codes),
+                "slave_camera": atomic_npy(root / "slave_camera.uint8.npy", slaves),
+                "pose_input": atomic_npy(root / "pose_input.uint8.npy", inputs),
+                "pose_vectors": atomic_npy(root / "pose_vectors.float32.npy", output),
+                "retention_mode": "FULL_BYTES",
+            }
+        else:
+            records = retention.retain_explored(
+                root=root,
+                pair=pair,
+                base_codes=np.asarray(surface.codes[pair], dtype=np.int32),
+                codes=batch_codes,
+                slave_camera=slaves,
+                pose_input=inputs,
+                pose_vectors=output,
+            )
         atomic_json(
             result_path,
             {
@@ -544,6 +587,7 @@ def solve_fresh_compensation(
     posenet: Any,
     archive: Path = FX5_ARCHIVE,
     runtime_root: Path = FX5_RUNTIME,
+    retention: Any | None = None,
 ) -> dict[str, Any]:
     """Solve every pair; a subset solve is deliberately not a final package."""
     master_path = verify_record(candidate_master)
@@ -577,6 +621,8 @@ def solve_fresh_compensation(
                 or np.any(resumed_codes > 2047)
             ):
                 raise JO2ReceiverCloseError(f"resumed carrier codes differ at pair {pair}")
+            if retention is not None:
+                retention.verify_winner(row.get("winner_retention"))
             solved_codes[pair] = resumed_codes
             rows.append(row)
             continue
@@ -590,15 +636,21 @@ def solve_fresh_compensation(
             master=master,
             pair=pair,
             stage_root=root / "stage_10_event",
+            retention=retention,
         )[0]
         leak = event.astype(np.float64) - baseline[pair].astype(np.float64)
         jacobian_codes = [base_codes.copy()]
+        jacobian_probe_modes: list[str] = []
         for dimension in range(D):
-            for delta in (-1, 1):
+            offsets, _denominator, mode = jacobian_probe_offsets(int(base_codes[dimension]))
+            jacobian_probe_modes.append(mode)
+            for delta in offsets:
                 candidate = base_codes.copy()
                 candidate[dimension] += delta
                 if not -2048 <= candidate[dimension] <= 2047:
-                    raise JO2ReceiverCloseError("carrier coefficient reached int12 endpoint")
+                    raise JO2ReceiverCloseError(
+                        "endpoint-safe finite-difference probe left the int12 domain"
+                    )
                 jacobian_codes.append(candidate)
         jacobian_vectors = evaluate_codes(
             surface=surface,
@@ -608,13 +660,17 @@ def solve_fresh_compensation(
             master=master,
             pair=pair,
             stage_root=root / "stage_20_jacobian",
+            retention=retention,
         )
         jacobian = np.empty((POSE_DIMS, D), dtype=np.float64)
         for dimension in range(D):
+            _offsets, denominator, _mode = jacobian_probe_offsets(
+                int(base_codes[dimension])
+            )
             jacobian[:, dimension] = (
                 jacobian_vectors[2 + 2 * dimension].astype(np.float64)
                 - jacobian_vectors[1 + 2 * dimension].astype(np.float64)
-            ) / 2.0
+            ) / denominator
         atomic_npy(root / "stage_20_jacobian/J_POSE0.float64.npy", jacobian)
         update, diagnostics = _damped_solve(jacobian, -leak)
         centre = np.rint(base_codes.astype(np.float64) + update).astype(np.int32)
@@ -628,6 +684,7 @@ def solve_fresh_compensation(
             master=master,
             pair=pair,
             stage_root=root / "stage_30_integer_cube",
+            retention=retention,
         )
         objectives = np.mean(
             np.square(vectors.astype(np.float64) - baseline[pair][None]), axis=1
@@ -653,6 +710,7 @@ def solve_fresh_compensation(
                 master=master,
                 pair=pair,
                 stage_root=root / f"stage_40_descent/pass_{passes:04d}",
+                retention=retention,
             )
             objectives = np.mean(
                 np.square(vectors.astype(np.float64) - baseline[pair][None]), axis=1
@@ -665,6 +723,25 @@ def solve_fresh_compensation(
                 break
             current = candidates[best]
             objective = value
+        winner_retention = None
+        if retention is not None:
+            winner_slave = render_frame0(surface, modules, current[None], pair)
+            winner_master = np.asarray(master, dtype=np.uint8)[None]
+            winner_input = np.stack((winner_slave, winner_master), axis=1)
+            winner_pose = pose_vectors(posenet, winner_input)
+            if not np.array_equal(winner_pose[0], final_vector):
+                raise JO2ReceiverCloseError(
+                    f"winner deterministic repeat differs from explored Pose6 at pair {pair}"
+                )
+            winner_retention = retention.retain_winner(
+                root=root / "stage_50_winner_full",
+                pair=pair,
+                base_codes=base_codes,
+                codes=current,
+                slave_camera=winner_slave[0],
+                pose_input=winner_input[0],
+                pose_vector=winner_pose[0],
+            )
         solved_codes[pair] = current
         row = {
             "schema": "ddm_jo2_fresh_schur_pair.v1",
@@ -682,6 +759,8 @@ def solve_fresh_compensation(
             "final_objective_mse_to_base_pose6": objective,
             "final_pose6": final_vector.tolist(),
             "jacobian": diagnostics,
+            "jacobian_probe_modes": jacobian_probe_modes,
+            "winner_retention": winner_retention,
             "all_materialized_payloads_retained": True,
             "score_claim": False,
         }
@@ -696,6 +775,7 @@ def solve_fresh_compensation(
         codes=solved_codes,
         output=output,
     )
+    retention_inventory = retention.finalize() if retention is not None else None
     result = {
         "schema": "ddm_jo2_fresh_schur_n600.v1",
         "status": "COMPLETE",
@@ -708,6 +788,7 @@ def solve_fresh_compensation(
         "changed_pairs": int(np.count_nonzero(np.any(solved_codes != surface.codes, axis=1))),
         "changed_coordinates": int(np.count_nonzero(solved_codes != surface.codes)),
         "fresh_per_candidate_asserted_in_code": True,
+        "retention_inventory": retention_inventory,
         "pair_results": rows,
         "score_claim": False,
     }

@@ -106,6 +106,281 @@ def atomic_npy(path: Path, value: np.ndarray) -> dict[str, Any]:
     return atomic_bytes(path, buffer.getvalue())
 
 
+def atomic_compact_json(path: Path, value: Any) -> dict[str, Any]:
+    """Atomically retain compact machine-readable rows without scalar-only loss."""
+    payload = (json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode()
+    return atomic_bytes(path, payload)
+
+
+def raw_array_record(value: np.ndarray) -> dict[str, Any]:
+    array = np.ascontiguousarray(value)
+    digest = hashlib.sha256(memoryview(array).cast("B")).hexdigest()
+    return {
+        "bytes": int(array.nbytes),
+        "sha256": digest,
+        "dtype": str(array.dtype),
+        "shape": list(array.shape),
+        "order": "C",
+    }
+
+
+class CertifiedCandidateRetention:
+    """Retain winner bytes and exact rebuild certificates for explored non-winners.
+
+    The receiver still materializes every real camera candidate. Before those
+    non-winner buffers are released, this layer atomically records their exact
+    raw-byte hashes plus the complete deterministic regeneration tuple. The
+    selected pair winner is regenerated once, checked against its exploration
+    certificate, and retained in full.
+    """
+
+    def __init__(
+        self,
+        *,
+        solve_root: Path,
+        stage_id: str,
+        workload_config_sha256: str,
+        base_archive_sha256: str,
+    ) -> None:
+        self.solve_root = solve_root.resolve()
+        self.stage_id = stage_id
+        self.workload_config_sha256 = workload_config_sha256
+        self.base_archive_sha256 = base_archive_sha256
+        self.entrypoint_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+        for name, value in (
+            ("entrypoint", self.entrypoint_sha256),
+            ("workload", workload_config_sha256),
+            ("base archive", base_archive_sha256),
+        ):
+            if len(value) != 64 or any(character not in "0123456789abcdef" for character in value):
+                raise JO3EntrypointError(f"certified retention {name} SHA-256 differs")
+        if not stage_id:
+            raise JO3EntrypointError("certified retention stage id is absent")
+        self._certificates: dict[tuple[int, tuple[int, ...]], dict[str, Any]] = {}
+
+    def _context(self, root: Path) -> dict[str, Any]:
+        resolved = root.resolve()
+        if self.solve_root != resolved and self.solve_root not in resolved.parents:
+            raise JO3EntrypointError("certified retention root escaped the fresh solve")
+        return {
+            "entrypoint_sha256": self.entrypoint_sha256,
+            "workload_identity_sha256": self.workload_config_sha256,
+            "base_archive_sha256": self.base_archive_sha256,
+            "stage_id": self.stage_id,
+            "solve_phase": str(resolved.relative_to(self.solve_root)),
+        }
+
+    @staticmethod
+    def _key(pair: int, coordinate_delta: Sequence[int]) -> tuple[int, tuple[int, ...]]:
+        return int(pair), tuple(int(value) for value in coordinate_delta)
+
+    def _remember(self, row: Mapping[str, Any]) -> None:
+        key = self._key(int(row["pair_id"]), row["candidate_coordinate_delta"])
+        payloads = {
+            "slave_camera_payload": dict(row["slave_camera_payload"]),
+            "pose_input_camera_payload": dict(row["pose_input_camera_payload"]),
+        }
+        prior = self._certificates.get(key)
+        if prior is not None and prior != payloads:
+            raise JO3EntrypointError("deterministic rebuild certificate drifted for one coordinate")
+        self._certificates[key] = payloads
+
+    def retain_explored(
+        self,
+        *,
+        root: Path,
+        pair: int,
+        base_codes: np.ndarray,
+        codes: np.ndarray,
+        slave_camera: np.ndarray,
+        pose_input: np.ndarray,
+        pose_vectors: np.ndarray,
+    ) -> dict[str, Any]:
+        count = len(codes)
+        if not (
+            np.asarray(codes).shape == (count, receiver_close.D)
+            and np.asarray(base_codes).shape == (receiver_close.D,)
+            and len(slave_camera) == count
+            and len(pose_input) == count
+            and np.asarray(pose_vectors).shape == (count, receiver_close.POSE_DIMS)
+        ):
+            raise JO3EntrypointError("certified retention candidate geometry differs")
+        rows = []
+        for index in range(count):
+            delta = np.asarray(codes[index], dtype=np.int32) - np.asarray(base_codes, dtype=np.int32)
+            row = {
+                "pair_id": int(pair),
+                "candidate_index_in_batch": int(index),
+                "candidate_coordinate_delta": delta.tolist(),
+                "slave_camera_payload": raw_array_record(slave_camera[index]),
+                "pose_input_camera_payload": raw_array_record(pose_input[index]),
+            }
+            self._remember(row)
+            rows.append(row)
+        manifest = {
+            "schema": "ddm_jo4_certified_rebuild_batch.v1",
+            "regeneration_context": self._context(root),
+            "tuple_join": (
+                "regeneration_context + rows[pair_id,candidate_coordinate_delta]"
+            ),
+            "candidate_denominator": count,
+            "rows": rows,
+            "all_camera_hashes_computed_while_materialized": True,
+            "nonwinner_buffer_release_allowed_only_after_this_manifest": True,
+        }
+        try:
+            certificate = atomic_compact_json(root / "CERTIFIED_REBUILD.json", manifest)
+            codes_record = atomic_npy(root / "codes.int32.npy", np.asarray(codes, dtype=np.int32))
+            vectors_record = atomic_npy(
+                root / "pose_vectors.float32.npy", np.asarray(pose_vectors, dtype=np.float32)
+            )
+        except OSError as error:
+            raise JO3EntrypointError(
+                f"refusing candidate because its rebuild certificate could not be retained: {error}"
+            ) from error
+        return {
+            "retention_mode": "CERTIFIED_REBUILDABLE_NONWINNER",
+            "certified_rebuild_manifest": certificate,
+            "codes": codes_record,
+            "pose_vectors": vectors_record,
+        }
+
+    def verify_explored_result(self, result: Mapping[str, Any]) -> None:
+        if result.get("retention_mode") != "CERTIFIED_REBUILDABLE_NONWINNER":
+            raise JO3EntrypointError("resumed explored candidate lacks certified retention")
+        for name in ("certified_rebuild_manifest", "codes", "pose_vectors"):
+            receiver_close.verify_record(result[name])
+        manifest_path = receiver_close.verify_record(result["certified_rebuild_manifest"])
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if (
+            manifest.get("schema") != "ddm_jo4_certified_rebuild_batch.v1"
+            or manifest.get("candidate_denominator") != len(manifest.get("rows", []))
+        ):
+            raise JO3EntrypointError("certified rebuild manifest census differs")
+        context = manifest.get("regeneration_context", {})
+        expected = self._context(manifest_path.parent)
+        if context != expected:
+            raise JO3EntrypointError("certified rebuild regeneration tuple drifted")
+        for row in manifest["rows"]:
+            self._remember(row)
+
+    def retain_winner(
+        self,
+        *,
+        root: Path,
+        pair: int,
+        base_codes: np.ndarray,
+        codes: np.ndarray,
+        slave_camera: np.ndarray,
+        pose_input: np.ndarray,
+        pose_vector: np.ndarray,
+    ) -> dict[str, Any]:
+        delta = np.asarray(codes, dtype=np.int32) - np.asarray(base_codes, dtype=np.int32)
+        key = self._key(pair, delta.tolist())
+        exploration = self._certificates.get(key)
+        if exploration is None:
+            raise JO3EntrypointError("selected winner has no exploration rebuild certificate")
+        repeated = {
+            "slave_camera_payload": raw_array_record(slave_camera),
+            "pose_input_camera_payload": raw_array_record(pose_input),
+        }
+        if repeated != exploration:
+            raise JO3EntrypointError("selected winner camera repeat differs from exploration hash")
+        payloads = {
+            "codes": atomic_npy(root / "codes.int32.npy", np.asarray(codes, dtype=np.int32)),
+            "slave_camera": atomic_npy(
+                root / "slave_camera.uint8.npy", np.asarray(slave_camera, dtype=np.uint8)
+            ),
+            "pose_input": atomic_npy(
+                root / "pose_input.uint8.npy", np.asarray(pose_input, dtype=np.uint8)
+            ),
+            "pose_vector": atomic_npy(
+                root / "pose_vector.float32.npy", np.asarray(pose_vector, dtype=np.float32)
+            ),
+        }
+        receipt = atomic_json(
+            root / "WINNER_RETENTION.json",
+            {
+                "schema": "ddm_jo4_full_winner_retention.v1",
+                "regeneration_context": self._context(root),
+                "pair_id": int(pair),
+                "candidate_coordinate_delta": delta.tolist(),
+                "exploration_camera_certificates": exploration,
+                "winner_repeat_camera_certificates": repeated,
+                "payloads": payloads,
+                "deterministic_repeat_byte_identical": True,
+                "retention_mode": "FULL_BYTES_STAGE_WINNER",
+            },
+        )
+        return {"schema": "ddm_jo4_winner_retention_pointer.v1", "receipt": receipt}
+
+    def verify_winner(self, pointer: Any) -> None:
+        if not isinstance(pointer, Mapping) or pointer.get("schema") != (
+            "ddm_jo4_winner_retention_pointer.v1"
+        ):
+            raise JO3EntrypointError("resumed pair has no full winner retention pointer")
+        path = receiver_close.verify_record(pointer["receipt"])
+        receipt = json.loads(path.read_text(encoding="utf-8"))
+        if (
+            receipt.get("schema") != "ddm_jo4_full_winner_retention.v1"
+            or receipt.get("deterministic_repeat_byte_identical") is not True
+            or receipt.get("retention_mode") != "FULL_BYTES_STAGE_WINNER"
+        ):
+            raise JO3EntrypointError("resumed winner retention receipt differs")
+        if receipt.get("regeneration_context") != self._context(path.parent):
+            raise JO3EntrypointError("resumed winner regeneration tuple drifted")
+        for record in receipt.get("payloads", {}).values():
+            receiver_close.verify_record(record)
+
+    def finalize(self) -> dict[str, Any]:
+        certificates = sorted(self.solve_root.rglob("CERTIFIED_REBUILD.json"))
+        winners = sorted(self.solve_root.rglob("WINNER_RETENTION.json"))
+        if len(winners) != design.N_PAIRS or not certificates:
+            raise JO3EntrypointError(
+                "fresh solve retention inventory is incomplete: "
+                f"winners={len(winners)},certificates={len(certificates)}"
+            )
+        inventory = atomic_json(
+            self.solve_root / "RETENTION_INVENTORY.json",
+            {
+                "schema": "ddm_jo4_two_tier_retention_inventory.v1",
+                "stage_id": self.stage_id,
+                "entrypoint_sha256": self.entrypoint_sha256,
+                "workload_identity_sha256": self.workload_config_sha256,
+                "base_archive_sha256": self.base_archive_sha256,
+                "winner_pair_denominator": len(winners),
+                "certified_rebuild_manifest_denominator": len(certificates),
+                "winner_receipts": [file_record(path) for path in winners],
+                "certified_rebuild_manifests": [file_record(path) for path in certificates],
+                "full_bytes_for_every_stage_pair_winner": True,
+                "nonwinners_have_fail_closed_rebuild_certificates": True,
+            },
+        )
+        return {"schema": "ddm_jo4_retention_inventory_pointer.v1", "receipt": inventory}
+
+    def verify_inventory(self, pointer: Any) -> None:
+        if not isinstance(pointer, Mapping) or pointer.get("schema") != (
+            "ddm_jo4_retention_inventory_pointer.v1"
+        ):
+            raise JO3EntrypointError("fresh solve has no two-tier retention inventory")
+        path = receiver_close.verify_record(pointer["receipt"])
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if (
+            value.get("schema") != "ddm_jo4_two_tier_retention_inventory.v1"
+            or value.get("winner_pair_denominator") != design.N_PAIRS
+            or value.get("full_bytes_for_every_stage_pair_winner") is not True
+            or value.get("nonwinners_have_fail_closed_rebuild_certificates") is not True
+            or value.get("stage_id") != self.stage_id
+            or value.get("entrypoint_sha256") != self.entrypoint_sha256
+            or value.get("workload_identity_sha256") != self.workload_config_sha256
+            or value.get("base_archive_sha256") != self.base_archive_sha256
+        ):
+            raise JO3EntrypointError("two-tier retention inventory census differs")
+        for name in ("winner_receipts", "certified_rebuild_manifests"):
+            for record in value.get(name, []):
+                receiver_close.verify_record(record)
+
+
 def object_fingerprint(value: Any) -> str:
     payload = json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
     return hashlib.sha256(payload).hexdigest()
@@ -130,7 +405,7 @@ def write_storage_policy(run_root: Path, config: design.CompiledConfig) -> dict[
     """Install the automatic certify-or-block policy before large materialization."""
     memory = design.verify_memory_receipt(config)
     projected_bytes = int(
-        memory["receiver_scale_preflight"]["all_stage_plus_reserve_minimum_bytes"]
+        memory["receiver_scale_preflight"]["all_stage_plus_reserve_projected_bytes"]
     )
     probe = run_root if run_root.exists() else run_root.parent
     free_bytes = shutil.disk_usage(probe).free
@@ -152,12 +427,17 @@ def write_storage_policy(run_root: Path, config: design.CompiledConfig) -> dict[
             "bulk_tier_exception": (
                 "charter explicitly re-rooted this solve to local APFS after measuring 603 GB free"
             ),
-            "automatic_cleanup_action": "BLOCK_DELETE_AND_KEEP_ALL_RETAINED_PAYLOADS",
-            "cleanup_blocker": (
-                "training, receiver, scorer, and checkpoint bytes are required evidence; no cold-store "
-                "move or destructive cleanup is authorized until a later manifest certifies it"
+            "automatic_cleanup_action": (
+                "FULL_BYTES_FOR_STAGE_WINNERS_CERTIFIED_REBUILDABLE_FOR_EXPLORED_NONWINNERS"
             ),
-            "payload_receipt_rule": "every materialized payload carries path, bytes, and sha256",
+            "cleanup_blocker": (
+                "winner, training, scorer, coder, and checkpoint bytes remain full evidence; "
+                "nonwinner camera buffers may be released only after their atomic rebuild certificate"
+            ),
+            "payload_receipt_rule": (
+                "every winner payload carries path, bytes, and sha256; every explored nonwinner "
+                "carries camera bytes, sha256, and the exact regeneration tuple"
+            ),
         },
     )
 
@@ -428,41 +708,131 @@ def peak_rss_bytes() -> int:
 def receiver_scale_preflight(
     *, surface: Any, free_bytes: int, stage_denominator: int
 ) -> dict[str, Any]:
-    """Price the landed solver's endpoint domain and mandatory retained cameras."""
+    """Price endpoint-safe probes and the governed two-tier retention projection."""
     codes = np.asarray(surface.codes, dtype=np.int32)
     endpoint = np.argwhere((codes == -2048) | (codes == 2047))
     endpoint_pairs = sorted({int(row) for row in endpoint[:, 0]}) if endpoint.size else []
+    derivative_modes = {
+        "central_second_order": 0,
+        "forward_one_sided_first_order": 0,
+        "backward_one_sided_first_order": 0,
+    }
+    endpoint_probes = []
+    blocked_coordinates = []
+    for pair in range(codes.shape[0]):
+        for dimension in range(codes.shape[1]):
+            coordinate = int(codes[pair, dimension])
+            try:
+                offsets, denominator, mode = receiver_close.jacobian_probe_offsets(coordinate)
+                probes = [coordinate + int(offset) for offset in offsets]
+                if not all(-2048 <= value <= 2047 for value in probes):
+                    raise JO3EntrypointError("preflight derivative probe left int12 domain")
+            except (receiver_close.JO2ReceiverCloseError, JO3EntrypointError) as error:
+                blocked_coordinates.append(
+                    {"pair_id": pair, "dimension": dimension, "coordinate": coordinate, "error": str(error)}
+                )
+                continue
+            derivative_modes[mode] += 1
+            if mode != "central_second_order":
+                endpoint_probes.append(
+                    {
+                        "pair_id": pair,
+                        "dimension": dimension,
+                        "coordinate": coordinate,
+                        "probe_coordinates": probes,
+                        "denominator": denominator,
+                        "mode": mode,
+                        "truncation_order": "O(h) first-order one-sided",
+                    }
+                )
     margin = np.minimum(codes + 2048, 2047 - codes)
     full_neighbourhood_rows = int(np.count_nonzero(np.all(margin >= 35, axis=1)))
     other_rows = design.N_PAIRS - full_neighbourhood_rows
     # For rows at least 35 codes from int12 endpoints, MAX_CODE_STEP=32 plus
     # radius=2 guarantees the full 5^3 cube.  One mandatory coordinate pass
     # then has all 1+2D candidates.  Other rows use only the universal lower
-    # bounds: event=1, one-sided Jacobian>=1+D, cube>=1, descent>=1+D.
+    # bounds: event=1, endpoint-safe Jacobian=1+2D (the base may be one of
+    # the two one-sided probes), cube>=1, descent>=1+D.
     full_row_candidates = 1 + (1 + 2 * receiver_close.D) + 5**receiver_close.NEIGHBOUR_DIMS + (
         1 + 2 * receiver_close.D
     )
-    other_row_candidates = 1 + (1 + receiver_close.D) + 1 + (1 + receiver_close.D)
+    other_row_candidates = 1 + (1 + 2 * receiver_close.D) + 1 + (1 + receiver_close.D)
     minimum_candidate_denominator = (
         full_neighbourhood_rows * full_row_candidates + other_rows * other_row_candidates
     )
     camera_bytes = CAMERA_H * CAMERA_W * 3
-    # evaluate_codes retains each slave camera once and the two-frame PoseNet
-    # input once, for three camera payloads per candidate.
-    one_stage_minimum = minimum_candidate_denominator * 3 * camera_bytes
-    all_stage_minimum = one_stage_minimum * stage_denominator
+    winner_bytes_per_pair = 3 * camera_bytes + 1024
+    winner_bytes_per_stage = design.N_PAIRS * winner_bytes_per_pair
+    row_model = {
+        "pair_id": design.N_PAIRS - 1,
+        "candidate_index_in_batch": receiver_close.POSE_BATCH - 1,
+        "candidate_coordinate_delta": [-4095] * receiver_close.D,
+        "slave_camera_payload": {
+            "bytes": camera_bytes,
+            "sha256": "f" * 64,
+            "dtype": "uint8",
+            "shape": [CAMERA_H, CAMERA_W, 3],
+            "order": "C",
+        },
+        "pose_input_camera_payload": {
+            "bytes": 2 * camera_bytes,
+            "sha256": "f" * 64,
+            "dtype": "uint8",
+            "shape": [2, CAMERA_H, CAMERA_W, 3],
+            "order": "C",
+        },
+    }
+    certified_row_bytes = len(
+        json.dumps(row_model, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    ) + 1
+    context_model = {
+        "schema": "ddm_jo4_certified_rebuild_batch.v1",
+        "regeneration_context": {
+            "entrypoint_sha256": "f" * 64,
+            "workload_identity_sha256": "f" * 64,
+            "base_archive_sha256": "f" * 64,
+            "stage_id": "collateral_finish",
+            "solve_phase": "x" * 96,
+        },
+        "tuple_join": "regeneration_context + rows[pair_id,candidate_coordinate_delta]",
+        "candidate_denominator": receiver_close.POSE_BATCH,
+        "rows": [],
+        "all_camera_hashes_computed_while_materialized": True,
+        "nonwinner_buffer_release_allowed_only_after_this_manifest": True,
+    }
+    manifest_context_bytes = len(
+        json.dumps(context_model, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    ) + 1
+    minimum_manifest_denominator = full_neighbourhood_rows * 7 + other_rows * 4
+    certified_rebuild_bytes_per_stage = (
+        minimum_candidate_denominator * certified_row_bytes
+        + minimum_manifest_denominator * manifest_context_bytes
+    )
+    # Codes and Pose6 are retained as small full-byte NPYs in addition to the
+    # camera rebuild certificate. This bound includes both batch and aggregate
+    # copies plus headers without charging camera bytes twice.
+    explored_small_state_bytes_per_candidate = 192
+    explored_small_state_bytes_per_stage = (
+        minimum_candidate_denominator * explored_small_state_bytes_per_candidate
+    )
+    one_stage_projected = (
+        winner_bytes_per_stage
+        + certified_rebuild_bytes_per_stage
+        + explored_small_state_bytes_per_stage
+    )
+    all_stage_projected = one_stage_projected * stage_denominator
     blockers = []
-    if endpoint.size:
+    if blocked_coordinates:
         blockers.append(
-            "FRESH_SCHUR_ENDPOINT_CENTRAL_DIFFERENCE_BLOCKED:"
-            f"endpoint_coordinates={len(endpoint)},endpoint_pairs={len(endpoint_pairs)}"
+            "FRESH_SCHUR_ENDPOINT_DERIVATIVE_BLOCKED:"
+            f"blocked_coordinates={len(blocked_coordinates)}"
         )
     non_solver_reserve = 48 * 1024**3
-    total_minimum = all_stage_minimum + non_solver_reserve
-    if total_minimum > free_bytes:
+    total_projected = all_stage_projected + non_solver_reserve
+    if total_projected > free_bytes:
         blockers.append(
             "RETAINED_FRESH_SCHUR_STORAGE_BLOCKED:"
-            f"all_stage_plus_reserve_minimum_bytes={total_minimum},free_bytes={free_bytes}"
+            f"all_stage_plus_reserve_projected_bytes={total_projected},free_bytes={free_bytes}"
         )
     return {
         "schema": "ddm_jo3_receiver_scale_preflight.v1",
@@ -470,19 +840,32 @@ def receiver_scale_preflight(
         "blockers": blockers,
         "endpoint_coordinates": endpoint.tolist(),
         "endpoint_pair_denominator": len(endpoint_pairs),
+        "endpoint_one_sided_coordinate_denominator": len(endpoint_probes),
+        "endpoint_blocked_coordinate_denominator": len(blocked_coordinates),
+        "endpoint_probe_census": endpoint_probes,
+        "blocked_coordinate_census": blocked_coordinates,
+        "derivative_mode_denominators": derivative_modes,
         "full_neighbourhood_row_denominator": full_neighbourhood_rows,
         "other_row_denominator": other_rows,
         "minimum_candidate_denominator_per_stage": minimum_candidate_denominator,
-        "retained_camera_bytes_per_candidate": 3 * camera_bytes,
-        "one_stage_minimum_retained_bytes": one_stage_minimum,
-        "all_stage_minimum_retained_bytes": all_stage_minimum,
-        "non_solver_retention_reserve_bytes": non_solver_reserve,
-        "all_stage_plus_reserve_minimum_bytes": total_minimum,
+        "full_winner_camera_bytes_per_pair": winner_bytes_per_pair,
+        "full_winner_bytes_per_stage": winner_bytes_per_stage,
+        "certified_rebuild_row_bytes_bound": certified_row_bytes,
+        "certified_rebuild_manifest_context_bytes_bound": manifest_context_bytes,
+        "certified_rebuild_manifest_denominator_per_stage": minimum_manifest_denominator,
+        "certified_rebuild_bytes_per_stage": certified_rebuild_bytes_per_stage,
+        "explored_small_state_bytes_per_candidate": explored_small_state_bytes_per_candidate,
+        "explored_small_state_bytes_per_stage": explored_small_state_bytes_per_stage,
+        "one_stage_projected_retained_bytes": one_stage_projected,
+        "all_stage_projected_retained_bytes": all_stage_projected,
+        "non_solver_and_extra_pass_reserve_bytes": non_solver_reserve,
+        "all_stage_plus_reserve_projected_bytes": total_projected,
         "available_free_bytes": free_bytes,
         "coordinate_descent_extra_passes_included": 0,
         "bound_scope": (
-            "lower bound for the landed uncompressed retention form; extra coordinate-descent "
-            "passes and non-camera payloads only increase it"
+            "two-tier baseline projection: full stage winners plus compact nonwinner camera "
+            "certificates and full small state; 48 GiB separately reserves extra descent, "
+            "fields, checkpoints, scorer surfaces, and coder artifacts; every write fails closed"
         ),
     }
 
@@ -913,6 +1296,16 @@ def solve_fresh_compensation_resumable(
                 raise JO3EntrypointError("retained fresh-Schur result is incomplete")
             receiver_close.verify_record(result["candidate_codes"])
             receiver_close.verify_record(result["candidate_frame0"])
+            output = Path(pointer["output"]).resolve()
+            allowed = stage_root.resolve()
+            if allowed != output and allowed not in output.parents:
+                raise JO3EntrypointError("retained fresh-Schur output escaped the stage root")
+            CertifiedCandidateRetention(
+                solve_root=output,
+                stage_id=stage_root.name,
+                workload_config_sha256=workload_config_sha256,
+                base_archive_sha256=file_record(archive)["sha256"],
+            ).verify_inventory(result.get("retention_inventory"))
             return result
     attempt_index = int(pointer["attempt_index"]) if pointer is not None else 0
     output = stage_root / f"fresh_schur_attempt_{attempt_index:04d}"
@@ -932,6 +1325,12 @@ def solve_fresh_compensation_resumable(
             },
         )
     try:
+        retention = CertifiedCandidateRetention(
+            solve_root=output,
+            stage_id=stage_root.name,
+            workload_config_sha256=workload_config_sha256,
+            base_archive_sha256=file_record(archive)["sha256"],
+        )
         result = receiver_close.solve_fresh_compensation(
             candidate_master=candidate_master,
             base_pose6=base_pose6,
@@ -940,6 +1339,7 @@ def solve_fresh_compensation_resumable(
             posenet=posenet,
             archive=archive,
             runtime_root=runtime_root,
+            retention=retention,
         )
     except receiver_close.JO2ReceiverCloseError as error:
         if "frame-0 partial exists without resume cursor" not in str(error):

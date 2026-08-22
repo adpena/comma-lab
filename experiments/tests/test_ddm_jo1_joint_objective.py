@@ -345,7 +345,22 @@ def test_matching_real_memory_receipt_clears_payload_gates_but_not_implementatio
                     "schema": "ddm_jo3_receiver_scale_preflight.v1",
                     "passed": True,
                     "blockers": [],
+                    "endpoint_coordinates": [],
                     "endpoint_pair_denominator": 0,
+                    "endpoint_one_sided_coordinate_denominator": 0,
+                    "endpoint_blocked_coordinate_denominator": 0,
+                    "derivative_mode_denominators": {
+                        "central_second_order": 7200,
+                        "forward_one_sided_first_order": 0,
+                        "backward_one_sided_first_order": 0,
+                    },
+                    "full_winner_bytes_per_stage": 1,
+                    "certified_rebuild_bytes_per_stage": 1,
+                    "one_stage_projected_retained_bytes": 10,
+                    "all_stage_projected_retained_bytes": 30,
+                    "non_solver_and_extra_pass_reserve_bytes": 10,
+                    "all_stage_plus_reserve_projected_bytes": 40,
+                    "available_free_bytes": 100,
                 },
                 "retained_payloads": {"real_pair": {"sha256": "a" * 64}},
                 "created_at_utc": datetime.now(UTC).isoformat(),
@@ -586,7 +601,23 @@ def test_jo3_receiver_compile_retry_preserves_failed_attempt_and_resumes(
     assert len(calls) == 2
 
 
-def test_jo3_receiver_scale_preflight_prices_endpoints_and_retained_cameras() -> None:
+def test_endpoint_derivative_stencils_are_in_domain_and_match_unit_step() -> None:
+    assert receiver_close.jacobian_probe_offsets(-2048) == (
+        (0, 1),
+        1.0,
+        "forward_one_sided_first_order",
+    )
+    assert receiver_close.jacobian_probe_offsets(2047) == (
+        (-1, 0),
+        1.0,
+        "backward_one_sided_first_order",
+    )
+    assert receiver_close.jacobian_probe_offsets(0) == ((-1, 1), 2.0, "central_second_order")
+    with pytest.raises(receiver_close.JO2ReceiverCloseError, match="outside int12"):
+        receiver_close.jacobian_probe_offsets(2048)
+
+
+def test_jo3_receiver_scale_preflight_clears_endpoints_and_prices_two_tier_retention() -> None:
     codes = np.zeros((600, 12), dtype=np.int32)
     for row, column in ((63, 10), (67, 10), (150, 0), (150, 7), (162, 6), (214, 8), (252, 11), (450, 9), (543, 4)):
         codes[row, column] = 2047
@@ -596,14 +627,102 @@ def test_jo3_receiver_scale_preflight_prices_endpoints_and_retained_cameras() ->
         free_bytes=603_356_557_312,
         stage_denominator=3,
     )
-    assert result["passed"] is False
+    assert result["passed"] is True
     assert result["endpoint_pair_denominator"] == 8
-    assert result["one_stage_minimum_retained_bytes"] > result["available_free_bytes"]
-    assert result["all_stage_minimum_retained_bytes"] == 3 * result["one_stage_minimum_retained_bytes"]
-    assert {value.split(":", 1)[0] for value in result["blockers"]} == {
-        "FRESH_SCHUR_ENDPOINT_CENTRAL_DIFFERENCE_BLOCKED",
-        "RETAINED_FRESH_SCHUR_STORAGE_BLOCKED",
+    assert result["endpoint_one_sided_coordinate_denominator"] == 9
+    assert result["endpoint_blocked_coordinate_denominator"] == 0
+    assert result["derivative_mode_denominators"] == {
+        "central_second_order": 7191,
+        "forward_one_sided_first_order": 0,
+        "backward_one_sided_first_order": 9,
     }
+    assert result["blockers"] == []
+    assert result["full_winner_bytes_per_stage"] > 5 * 1024**3
+    assert result["certified_rebuild_bytes_per_stage"] < 100 * 1024**2
+    assert result["all_stage_projected_retained_bytes"] == (
+        3 * result["one_stage_projected_retained_bytes"]
+    )
+    assert result["all_stage_plus_reserve_projected_bytes"] < result["available_free_bytes"]
+
+
+def test_certified_retention_keeps_rebuild_rows_and_full_winner_bytes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    solve_root = tmp_path / "solve"
+    retention = entrypoint.CertifiedCandidateRetention(
+        solve_root=solve_root,
+        stage_id="target_birth",
+        workload_config_sha256="a" * 64,
+        base_archive_sha256="b" * 64,
+    )
+    base = np.zeros(receiver_close.D, dtype=np.int32)
+    codes = np.stack((base, np.ones(receiver_close.D, dtype=np.int32)))
+    slaves = np.arange(2 * 2 * 3 * 3, dtype=np.uint8).reshape(2, 2, 3, 3)
+    pose_inputs = np.stack((np.stack((slaves[0], slaves[0])), np.stack((slaves[1], slaves[0]))))
+    pose_vectors = np.arange(2 * receiver_close.POSE_DIMS, dtype=np.float32).reshape(
+        2, receiver_close.POSE_DIMS
+    )
+    explored = retention.retain_explored(
+        root=solve_root / "pairs/pair_0000/stage_20_jacobian/batch_0000_0002",
+        pair=0,
+        base_codes=base,
+        codes=codes,
+        slave_camera=slaves,
+        pose_input=pose_inputs,
+        pose_vectors=pose_vectors,
+    )
+    retention.verify_explored_result(explored)
+    certificate = json.loads(Path(explored["certified_rebuild_manifest"]["path"]).read_text())
+    assert certificate["candidate_denominator"] == 2
+    assert certificate["regeneration_context"] == {
+        "entrypoint_sha256": design._sha256_path(Path(entrypoint.__file__)),
+        "workload_identity_sha256": "a" * 64,
+        "base_archive_sha256": "b" * 64,
+        "stage_id": "target_birth",
+        "solve_phase": "pairs/pair_0000/stage_20_jacobian/batch_0000_0002",
+    }
+    winner = retention.retain_winner(
+        root=solve_root / "pairs/pair_0000/stage_50_winner_full",
+        pair=0,
+        base_codes=base,
+        codes=codes[1],
+        slave_camera=slaves[1],
+        pose_input=pose_inputs[1],
+        pose_vector=pose_vectors[1],
+    )
+    retention.verify_winner(winner)
+    winner_receipt = json.loads(Path(winner["receipt"]["path"]).read_text())
+    assert winner_receipt["deterministic_repeat_byte_identical"] is True
+    assert Path(winner_receipt["payloads"]["pose_input"]["path"]).is_file()
+    monkeypatch.setattr(design, "N_PAIRS", 1)
+    inventory = retention.finalize()
+    retention.verify_inventory(inventory)
+
+
+def test_certified_retention_refuses_candidate_when_certificate_write_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    retention = entrypoint.CertifiedCandidateRetention(
+        solve_root=tmp_path,
+        stage_id="target_birth",
+        workload_config_sha256="a" * 64,
+        base_archive_sha256="b" * 64,
+    )
+    monkeypatch.setattr(
+        entrypoint,
+        "atomic_compact_json",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError("simulated full tier")),
+    )
+    with pytest.raises(entrypoint.JO3EntrypointError, match="refusing candidate"):
+        retention.retain_explored(
+            root=tmp_path / "phase/batch_0000_0001",
+            pair=0,
+            base_codes=np.zeros(receiver_close.D, dtype=np.int32),
+            codes=np.zeros((1, receiver_close.D), dtype=np.int32),
+            slave_camera=np.zeros((1, 2, 3, 3), dtype=np.uint8),
+            pose_input=np.zeros((1, 2, 2, 3, 3), dtype=np.uint8),
+            pose_vectors=np.zeros((1, receiver_close.POSE_DIMS), dtype=np.float32),
+        )
 
 
 def test_jo3_training_rechecks_scale_storage_before_materializing(
@@ -614,7 +733,7 @@ def test_jo3_training_rechecks_scale_storage_before_materializing(
         design,
         "verify_memory_receipt",
         lambda _config: {
-            "receiver_scale_preflight": {"all_stage_plus_reserve_minimum_bytes": 100}
+            "receiver_scale_preflight": {"all_stage_plus_reserve_projected_bytes": 100}
         },
     )
     disk_usage = type("DiskUsage", (), {"free": 99})()
