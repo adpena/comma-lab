@@ -1,0 +1,26 @@
+{
+  "schema": "ddm_dc1s_failed_run_custody.v1",
+  "source_path": "/Volumes/APDataStore/pact/ddm_dc1_decode_time_compute/full_frame_sparse_sweep",
+  "cold_store_destination": "/Volumes/APDataStore/pact/ddm_dc1_decode_time_compute/full_frame_sparse_sweep_failed_frame1_state_v1",
+  "bytes_allocated_before_move": 655360,
+  "retained_files": [
+    {
+      "path": "manifest.json",
+      "bytes": 495,
+      "sha256": "8ecaa21f72c6f8baf7d42a70b88ef59312d46b35882c9f4f46a8064a6d53541b"
+    },
+    {
+      "path": "preflight.json",
+      "bytes": 3164,
+      "sha256": "cebe3f5c04954cc6bf78ea9e7923c7591b841d06df715b02109b39b26ee7d843"
+    }
+  ],
+  "command": "experiments/ddm_dc1s_sparse_grid_sweep.py --store /Volumes/APDataStore/pact/ddm_dc1_decode_time_compute/full_frame_sparse_sweep --resume-from /Volumes/APDataStore/pact/ddm_dc1_decode_time_compute/full_frame_sparse_sweep/manifest.json --frame-start 0 --frame-end 600 --chunk-frames 20 --block-sizes 1,2,4,8 --repeat-per-group 4",
+  "implementation_sha256": "55de87d34d001d79a39a6427601d207b8690773c73aef8a288fd5d473eb302d9",
+  "source_archive_sha256": "4b54fccc25f100cb68030db317791ba5e58936bb9b491f9ee9a020e695b79841",
+  "token_field_sha256": "cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb",
+  "ledger_sha256": "0585b0d98ba2958be3e20021641dd0a74bc61714d1434cab16efb005320418df",
+  "disposition": "RETAINED_FAILED_COLD_STORE",
+  "reason": "The first n600 attempt failed closed on frame 1 because the prototype-derived implementation omitted the production corrector's cross-frame state transition. No result packet or checkpoint was claimed. The complete preflight and manifest are preserved while the canonical consumer path is released for a corrected run.",
+  "recoverability": "Lossless directory move on the same APDataStore volume; the destination retains all bytes and Finder metadata."
+}
