@@ -460,6 +460,33 @@ def _pty_wrap(cmd: list[str], platform: str | None = None) -> list[str]:
     return ["script", "-q", "-e", "-c", _shlex.join(cmd), "/dev/null"]
 
 
+REAPER_KEEPALIVE_TOKEN = "REAPER_KEEPALIVE"
+
+
+def _reaper_keepalive_wrap(cmd: list[str]) -> list[str]:
+    """Prefix ``cmd`` with the fleet reaper's own INTENTIONAL-DAEMON marker.
+
+    WHY (MEASURED 2026-08-22, three consecutive silent daemon deaths): the
+    reaper (``claude-code-reaper.sh``) drops from its ps snapshot any line
+    containing ``codex_runs/``, ``REAPER_KEEPALIVE``, or an /Applications
+    bundle path — its documented exclusion for "intentional detached work".
+    Everything else matching ``\\b(claude|codex)\\b`` with dead stdin dies at
+    GRACE=300s. A governed training daemon matches that pattern whenever ANY
+    argv element embeds a claude-bearing path (e.g. ``env PATH=...`` carrying
+    ``~/.claude/plugins/...``), so the jo1 r9 solve was SIGKILLed at ~5min
+    three times while the identical launch WITHOUT PATH-in-argv ran 2.37h.
+
+    The marker must land in ARGV (what ``ps`` shows), not merely in the env
+    dict — hence the ``env`` prefix, which both exports the variable and makes
+    it visible to the reaper. Idempotent: a cmd already carrying the token is
+    returned unchanged. Honest classification, not evasion — these daemons are
+    governed, registered, and liveness-tracked; sister of :func:`_pty_wrap`.
+    """
+    if any(REAPER_KEEPALIVE_TOKEN in part for part in cmd):
+        return cmd
+    return ["/usr/bin/env", f"{REAPER_KEEPALIVE_TOKEN}=1", *cmd]
+
+
 def spawn_detached_verified(
     cmd: list[str],
     log_path,
@@ -487,6 +514,7 @@ def spawn_detached_verified(
     run_cmd = [str(c) for c in cmd]
     if with_pty:
         run_cmd = _pty_wrap(run_cmd)
+    run_cmd = _reaper_keepalive_wrap(run_cmd)
     log = open(log_path, "ab", buffering=0)  # noqa: SIM115 — handed to the detached child
     devnull = open(os.devnull, "rb")  # noqa: SIM115
     try:
