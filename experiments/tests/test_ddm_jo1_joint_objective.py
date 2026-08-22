@@ -4,6 +4,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+import numpy as np
 import pytest
 import torch
 
@@ -13,6 +14,7 @@ from experiments import ddm_jo1_modal_joint_objective as dispatcher
 from experiments import ddm_jo1_payload_materializer_worker as materializer_worker
 from experiments import ddm_jo2_receiver_close as receiver_close
 from experiments import ddm_jo2_residual_runtime as residual_runtime
+from experiments import ddm_jo3_joint_objective_entrypoint as entrypoint
 
 
 def _write(path: Path, payload: bytes) -> Path:
@@ -120,18 +122,12 @@ def _config(
             "rc2_decoded_semantic_tokens": _record(
                 files["tokens"], source=source_sha, shape=(600, 384, 512), dtype="uint8"
             ),
-            "gt_argmax_field": _record(
-                files["gt_field"], source=source_sha, shape=(600, 384, 512), dtype="uint8"
-            ),
+            "gt_argmax_field": _record(files["gt_field"], source=source_sha, shape=(600, 384, 512), dtype="uint8"),
             "rc2_base_argmax_field": _record(
                 files["base_field"], source=source_sha, shape=(600, 384, 512), dtype="uint8"
             ),
-            "source_pose6_targets": _record(
-                files["pose6"], source=source_sha, shape=(600, 6), dtype="float32"
-            ),
-            "fx5_base_pose6": _record(
-                files["base_pose6"], source=source_sha, shape=(600, 6), dtype="float32"
-            ),
+            "source_pose6_targets": _record(files["pose6"], source=source_sha, shape=(600, 6), dtype="float32"),
+            "fx5_base_pose6": _record(files["base_pose6"], source=source_sha, shape=(600, 6), dtype="float32"),
         }
         if complete_inputs
         else {
@@ -169,12 +165,10 @@ def _config(
                     if include_materializer
                     else None
                 ),
-                "receiver_close_source": _record(
-                    files["receiver_close"], source=source_sha
-                ).model_dump(mode="json"),
-                "residual_runtime_source": _record(
-                    files["residual_runtime"], source=source_sha
-                ).model_dump(mode="json"),
+                "receiver_close_source": _record(files["receiver_close"], source=source_sha).model_dump(mode="json"),
+                "residual_runtime_source": _record(files["residual_runtime"], source=source_sha).model_dump(
+                    mode="json"
+                ),
                 "memory_preflight_receipt": (
                     None if memory_receipt is None else memory_receipt.model_dump(mode="json")
                 ),
@@ -228,11 +222,7 @@ def _config(
                 "max_age_hours": 24,
             },
             "dispatch": {
-                "lane_id": (
-                    "ddm_jo1_payload_unblock"
-                    if include_materializer
-                    else "ddm_jo1_joint_objective"
-                ),
+                "lane_id": ("ddm_jo1_payload_unblock" if include_materializer else "ddm_jo1_joint_objective"),
                 "claim_agent": "MAIN",
                 "platform": "modal",
                 "gpu": "T4",
@@ -319,9 +309,7 @@ def test_unknown_missing_config_fields_and_reduced_field_pass_are_refused(
         design.CompiledConfig.model_validate(body)
 
 
-def test_missing_fields_and_memory_receipt_block_readiness(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_missing_fields_and_memory_receipt_block_readiness(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     config = design.attach_workload_sha256(_config(tmp_path, monkeypatch))
     result = design.readiness(config)
     assert result["status"] == "BLOCKED"
@@ -343,23 +331,30 @@ def test_matching_real_memory_receipt_clears_payload_gates_but_not_implementatio
                 "training_batch_pairs": 1,
                 "field_batch_pairs": 16,
                 "geometry": [600, 384, 512],
-                "max_memory_allocated_bytes": 8 * 1024**3,
-                "max_memory_reserved_bytes": 10 * 1024**3,
+                "measured_peak_rss_bytes": 8 * 1024**3,
+                "projected_n600_peak_rss_bytes": 10 * 1024**3,
+                "projection_method": "measured real pair plus bounded chunk projection",
+                "chunk_pair_limit": 120,
+                "chunked_verdict": "PASS",
                 "requested_memory_bytes": 16 * 1024**3,
                 "headroom_bytes": 6 * 1024**3,
                 "workload_config_sha256": base.workload_config_sha256,
                 "producer_command": ["modal", "run", "memory_preflight"],
+                "wall_clock_projection": {"lower_seconds": 1, "upper_seconds": 2},
+                "receiver_scale_preflight": {
+                    "schema": "ddm_jo3_receiver_scale_preflight.v1",
+                    "passed": True,
+                    "blockers": [],
+                    "endpoint_pair_denominator": 0,
+                },
+                "retained_payloads": {"real_pair": {"sha256": "a" * 64}},
                 "created_at_utc": datetime.now(UTC).isoformat(),
             },
             sort_keys=True,
         )
     )
     complete = base.model_copy(
-        update={
-            "inputs": base.inputs.model_copy(
-                update={"memory_preflight_receipt": _record(receipt_path)}
-            )
-        }
+        update={"inputs": base.inputs.model_copy(update={"memory_preflight_receipt": _record(receipt_path)})}
     )
     complete = design.attach_workload_sha256(complete)
     assert complete.workload_config_sha256 == base.workload_config_sha256
@@ -440,6 +435,227 @@ def test_hybrid_objective_is_real_and_backpropagates() -> None:
         "pose_violation",
         "rate_proxy",
     }
+
+
+def test_jo3_quantized_training_forward_matches_counted_receiver() -> None:
+    torch.manual_seed(23)
+    model = worker.HybridOutputResidual(3, 2.5)
+    with torch.no_grad():
+        for parameter in model.parameters():
+            parameter.normal_(mean=0.0, std=0.1)
+    tokens = torch.randint(0, 5, (1, 7, 9))
+    trained = entrypoint.quantized_residual(model, tokens)
+    payload = residual_runtime.encode_residual_state(model.state_dict(), hidden_channels=3, max_rgb_delta=2.5)
+    received = residual_runtime.residual_from_payload(payload)(tokens)
+    assert torch.equal(trained, received)
+    trained.square().mean().backward()
+    assert all(parameter.grad is not None for parameter in model.parameters())
+    assert sum(int(torch.count_nonzero(parameter.grad)) for parameter in model.parameters()) > 0
+
+
+def test_jo3_checkpoint_pointer_restores_live_ema_optimizer_rng_and_cursor(
+    tmp_path: Path,
+) -> None:
+    torch.manual_seed(7)
+    model = worker.HybridOutputResidual(2, 1.0)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
+    loss = model(torch.randint(0, 5, (1, 6, 8))).square().mean()
+    loss.backward()
+    optimizer.step()
+    expected = {name: value.detach().clone() for name, value in model.state_dict().items()}
+    ema = {name: value.detach().clone() + 0.25 for name, value in model.state_dict().items()}
+    entrypoint.save_checkpoint(
+        checkpoint_root=tmp_path,
+        stage_id="joint_balance",
+        step=100,
+        field_cursor=0,
+        package_cursor=0,
+        model=model,
+        ema=ema,
+        optimizer=optimizer,
+        duals=worker.DualState(collateral=2.0, pose=3.0),
+        config_sha256="d" * 64,
+    )
+    with torch.no_grad():
+        for parameter in model.parameters():
+            parameter.zero_()
+    restored = entrypoint.restore_checkpoint(
+        tmp_path,
+        model=model,
+        optimizer=optimizer,
+        expected_config_sha256="d" * 64,
+    )
+    assert restored is not None
+    restored_ema, duals, cursor = restored
+    assert cursor == worker.ResumeCursor("joint_balance", 100, 0, 0)
+    assert duals == worker.DualState(collateral=2.0, pose=3.0)
+    assert all(torch.equal(model.state_dict()[name], value) for name, value in expected.items())
+    assert all(torch.equal(restored_ema[name], value) for name, value in ema.items())
+
+
+def test_jo3_stage_materialization_keeps_live_weights_and_binds_partial_object(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(design, "N_PAIRS", 1)
+
+    class _Semantic(torch.nn.Module):
+        def forward(self, tokens: torch.Tensor, pair: torch.Tensor) -> torch.Tensor:
+            del pair
+            return torch.zeros(
+                tokens.shape[0], 3, tokens.shape[1], tokens.shape[2]
+            )
+
+    torch.manual_seed(17)
+    model = worker.HybridOutputResidual(2, 1.5)
+    with torch.no_grad():
+        for parameter in model.parameters():
+            parameter.normal_(0.0, 0.1)
+    live = {name: value.detach().clone() for name, value in model.state_dict().items()}
+    ema = {name: value.detach().clone() + 0.125 for name, value in model.state_dict().items()}
+    entrypoint.materialize_candidate_master(
+        stage_root=tmp_path,
+        semantic=_Semantic(),
+        model=model,
+        ema=ema,
+        tokens=np.zeros((1, design.SEG_H, design.SEG_W), dtype=np.uint8),
+        workload_config_sha256="a" * 64,
+        stage_id="target_birth",
+    )
+    assert all(torch.equal(model.state_dict()[name], value) for name, value in live.items())
+    changed_ema = {name: value + 0.25 for name, value in ema.items()}
+    with pytest.raises(entrypoint.JO3EntrypointError, match="another object"):
+        entrypoint.materialize_candidate_master(
+            stage_root=tmp_path,
+            semantic=_Semantic(),
+            model=model,
+            ema=changed_ema,
+            tokens=np.zeros((1, design.SEG_H, design.SEG_W), dtype=np.uint8),
+            workload_config_sha256="a" * 64,
+            stage_id="target_birth",
+        )
+
+
+def test_jo3_receiver_compile_retry_preserves_failed_attempt_and_resumes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    residual_path = _write(tmp_path / "residual.j2s1", b"residual")
+    master_path = _write(tmp_path / "master.npy", b"master")
+    codes_path = _write(tmp_path / "codes.npy", b"codes")
+    calls: list[Path] = []
+
+    def _compile(**kwargs: object) -> dict[str, object]:
+        output = Path(kwargs["output"])
+        calls.append(output)
+        output.mkdir(parents=True)
+        if len(calls) == 1:
+            _write(output / "retained_partial.bin", b"keep")
+            raise receiver_close.JO2ReceiverCloseError("simulated crash")
+        archive = entrypoint.file_record(_write(output / "archive.zip", b"archive"))
+        repeat = entrypoint.file_record(_write(output / "archive.repeat.zip", b"archive"))
+        parseback = entrypoint.file_record(_write(output / "RECEIVER_PARSEBACK.json", b"{}"))
+        result: dict[str, object] = {
+            "status": "COMPLETE",
+            "archive": archive,
+            "archive_repeat": repeat,
+            "receiver_parseback": parseback,
+        }
+        entrypoint.atomic_json(output / "RECEIVER_CLOSE_RESULT.json", result)
+        return result
+
+    monkeypatch.setattr(receiver_close, "compile_receiver_closed_stage", _compile)
+    kwargs = {
+        "stage_root": tmp_path / "stage",
+        "residual": entrypoint.file_record(residual_path),
+        "solve": {
+            "semantic_object_sha256": "c" * 64,
+            "candidate_codes": entrypoint.file_record(codes_path),
+        },
+        "candidate_master": entrypoint.file_record(master_path),
+        "archive": tmp_path / "base.zip",
+        "runtime_root": tmp_path / "runtime",
+        "workload_config_sha256": "d" * 64,
+    }
+    with pytest.raises(receiver_close.JO2ReceiverCloseError, match="simulated crash"):
+        entrypoint.compile_receiver_closed_resumable(**kwargs)
+    assert (calls[0] / "retained_partial.bin").read_bytes() == b"keep"
+    completed = entrypoint.compile_receiver_closed_resumable(**kwargs)
+    assert completed["status"] == "COMPLETE"
+    assert calls[1].name == "receiver_close_attempt_0001"
+    resumed = entrypoint.compile_receiver_closed_resumable(**kwargs)
+    assert resumed == completed
+    assert len(calls) == 2
+
+
+def test_jo3_receiver_scale_preflight_prices_endpoints_and_retained_cameras() -> None:
+    codes = np.zeros((600, 12), dtype=np.int32)
+    for row, column in ((63, 10), (67, 10), (150, 0), (150, 7), (162, 6), (214, 8), (252, 11), (450, 9), (543, 4)):
+        codes[row, column] = 2047
+    surface = type("Surface", (), {"codes": codes})()
+    result = entrypoint.receiver_scale_preflight(
+        surface=surface,
+        free_bytes=603_356_557_312,
+        stage_denominator=3,
+    )
+    assert result["passed"] is False
+    assert result["endpoint_pair_denominator"] == 8
+    assert result["one_stage_minimum_retained_bytes"] > result["available_free_bytes"]
+    assert result["all_stage_minimum_retained_bytes"] == 3 * result["one_stage_minimum_retained_bytes"]
+    assert {value.split(":", 1)[0] for value in result["blockers"]} == {
+        "FRESH_SCHUR_ENDPOINT_CENTRAL_DIFFERENCE_BLOCKED",
+        "RETAINED_FRESH_SCHUR_STORAGE_BLOCKED",
+    }
+
+
+def test_jo3_training_rechecks_scale_storage_before_materializing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = design.attach_workload_sha256(_config(tmp_path, monkeypatch, complete_inputs=True))
+    monkeypatch.setattr(
+        design,
+        "verify_memory_receipt",
+        lambda _config: {
+            "receiver_scale_preflight": {"all_stage_plus_reserve_minimum_bytes": 100}
+        },
+    )
+    disk_usage = type("DiskUsage", (), {"free": 99})()
+    monkeypatch.setattr(entrypoint.shutil, "disk_usage", lambda _path: disk_usage)
+    with pytest.raises(entrypoint.JO3EntrypointError, match="storage changed after scale preflight"):
+        entrypoint.write_storage_policy(tmp_path / "run", config)
+    disk_usage.free = 101
+    record = entrypoint.write_storage_policy(tmp_path / "run", config)
+    policy = json.loads(Path(record["path"]).read_text())
+    assert policy["minimum_free_bytes"] == 100
+    assert policy["observed_free_bytes"] == 101
+
+
+def test_jo3_rebind_exposes_only_memory_gate_and_exact_local_commands(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    config = _config(tmp_path, monkeypatch, complete_inputs=True)
+    rebound = design.rebind_jo3_inputs(
+        config,
+        rc2_base_argmax_field=Path(config.inputs.rc2_base_argmax_field.path),
+        fx5_base_pose6=Path(config.inputs.fx5_base_pose6.path),
+        local_entrypoint_source=Path(entrypoint.__file__),
+        memory_preflight_receipt=None,
+        dispatch_local=True,
+        run_id="ddm_jo2_joint_objective_r6_test",
+    )
+    rebound = design.attach_workload_sha256(rebound)
+    readiness = design.readiness(rebound)
+    assert readiness["blockers"] == ["MEMORY_PREFLIGHT_BLOCKED:memory preflight receipt is absent"]
+    seal = tmp_path / "local_seal"
+    result = design.prepare(rebound, destination=seal)
+    order = json.loads(Path(result["fire_order"]["path"]).read_text())
+    memory = next(command for command in order["commands"] if command["ordinal"] == 2)
+    train = next(command for command in order["commands"] if command["ordinal"] == 3)
+    assert memory["argv"] is not None
+    assert "tools/safe_run.py" in memory["argv"]
+    assert "TAC_GOVERNED_ADMISSION=1" in memory["argv"]
+    assert "experiments.ddm_jo3_joint_objective_entrypoint" in memory["argv"]
+    assert train["argv"] is None
+    assert order["owner"] == "MAIN"
+    assert rebound.run_id == "ddm_jo2_joint_objective_r6_test"
 
 
 def test_joint_objective_prices_benefit_and_harm_on_one_field_denominator() -> None:
@@ -525,9 +741,7 @@ def test_single_p_package_and_retained_payload_completeness(tmp_path: Path) -> N
         )
 
 
-def test_local_prepare_emits_blocked_ticket_without_dispatch(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_local_prepare_emits_blocked_ticket_without_dispatch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     config = _config(tmp_path, monkeypatch)
     result = design.prepare(config, destination=tmp_path / "prepared")
     assert result["status"] == "BLOCKED"
@@ -543,9 +757,7 @@ def test_local_prepare_emits_blocked_ticket_without_dispatch(
     assert all(command["argv"] is None for command in order["commands"][2:])
 
 
-def test_refresh_local_source_pins_updates_all_three_fields(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_refresh_local_source_pins_updates_all_three_fields(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     config = _config(tmp_path, monkeypatch)
     source = Path(config.inputs.receiver_close_source.path)
     source.write_bytes(b"changed receiver source")
@@ -589,9 +801,7 @@ def test_materializer_readiness_is_independent_of_training_gates(
     assert order["current_blocker"] is None
     assert order["commands"][0]["requires_reseal_after_harvest"] is True
     assert order["commands"][1]["argv"] is not None
-    assert order["commands"][0]["argv"][2].endswith(
-        "ddm_jo1_modal_joint_objective.py::materialize_scorer_payloads"
-    )
+    assert order["commands"][0]["argv"][2].endswith("ddm_jo1_modal_joint_objective.py::materialize_scorer_payloads")
     assert "no active n600 scorer job" in order["commands"][0]["fire_trigger"]
 
 
@@ -641,9 +851,7 @@ def test_jo2_counted_residual_roundtrip_and_fresh_object_binding() -> None:
     model = residual_runtime.OutputResidual(hidden_channels=4, max_rgb_delta=2.0)
     for parameter in model.parameters():
         torch.nn.init.zeros_(parameter)
-    payload = residual_runtime.encode_residual_state(
-        model.state_dict(), hidden_channels=4, max_rgb_delta=2.0
-    )
+    payload = residual_runtime.encode_residual_state(model.state_dict(), hidden_channels=4, max_rgb_delta=2.0)
     semantic = residual_runtime.pack_semantic_blob(b"base-semantic", payload)
     base, decoded = residual_runtime.split_semantic_blob(semantic)
     assert base == b"base-semantic"
@@ -730,9 +938,7 @@ def test_uploaded_materializer_inputs_are_retained_and_resume_exact(
         )
 
 
-def test_materializer_and_training_pins_fail_closed(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_materializer_and_training_pins_fail_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     config = _config(
         tmp_path,
         monkeypatch,
@@ -785,21 +991,15 @@ def test_materializer_validates_every_retained_batch_payload(
         cursor = pair_end
         ordinal += 1
     receipt_path = tmp_path / "BATCH_RESULTS.jsonl"
-    receipt_path.write_bytes(
-        b"".join(materializer_worker.retained.canonical_json_bytes(row) for row in rows)
-    )
+    receipt_path.write_bytes(b"".join(materializer_worker.retained.canonical_json_bytes(row) for row in rows))
     scorer = {
         "batch_size": materializer_worker.retained.BATCH_SIZE,
         "retained_batch_receipts": materializer_worker.retained.file_record(receipt_path),
     }
-    materializer_worker._validate_scorer_batches(
-        scorer, ("source_payload", "seg_input", "logits")
-    )
+    materializer_worker._validate_scorer_batches(scorer, ("source_payload", "seg_input", "logits"))
     payload.write_bytes(b"drifted")
     with pytest.raises(materializer_worker.retained.WorkerError, match="retained payload"):
-        materializer_worker._validate_scorer_batches(
-            scorer, ("source_payload", "seg_input", "logits")
-        )
+        materializer_worker._validate_scorer_batches(scorer, ("source_payload", "seg_input", "logits"))
 
 
 def test_dispatcher_uses_one_explicit_package_mount_topology() -> None:
@@ -873,11 +1073,7 @@ def test_materializer_entrypoint_records_failure_before_custom_exception_crosses
             archive_bytes=archive,
             runtime_zip_bytes=runtime,
         )
-    failure = json.loads(
-        (tmp_path / "entrypoint_failure_test/REMOTE_FAILURE.json").read_text(
-            encoding="utf-8"
-        )
-    )
+    failure = json.loads((tmp_path / "entrypoint_failure_test/REMOTE_FAILURE.json").read_text(encoding="utf-8"))
     assert failure["inputs_seen"]["archive"] == {
         "bytes": len(archive),
         "sha256": dispatcher.hashlib.sha256(archive).hexdigest(),
@@ -887,9 +1083,7 @@ def test_materializer_entrypoint_records_failure_before_custom_exception_crosses
     assert volume.commits == 3
 
 
-def test_malformed_remote_request_still_gets_a_failure_receipt(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_malformed_remote_request_still_gets_a_failure_receipt(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     class Volume:
         def commit(self) -> None:
             return None

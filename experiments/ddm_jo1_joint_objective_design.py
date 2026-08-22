@@ -15,6 +15,7 @@ import io
 import json
 import math
 import os
+import re
 import shutil
 import struct
 import zipfile
@@ -27,17 +28,12 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 SCHEMA = "ddm_jo1_compiled_config.v1"
 READINESS_SCHEMA = "ddm_jo1_readiness.v1"
-MEMORY_RECEIPT_SCHEMA = "ddm_jo1_memory_preflight.v1"
+MEMORY_RECEIPT_SCHEMA = "ddm_jo3_local_memory_preflight.v1"
 CHECKPOINT_SCHEMA = "ddm_jo1_checkpoint.v1"
 PAYLOAD_MANIFEST_SCHEMA = "ddm_jo1_retained_payload_manifest.v1"
 OUTPUT_ROOT = Path("/Volumes/APDataStore/pact/ddm_jo1_joint_objective_design")
-LOCAL_SOLVE_OUTPUT_ROOT = (
-    Path(__file__).resolve().parents[1]
-    / "experiments/.scratch/ddm_jo2_joint_objective_solve"
-)
-MATERIALIZER_OUTPUT_ROOT = Path(
-    "/Volumes/APDataStore/pact/ddm_gs3_unbridled_gestalt/jo1_payload_unblock"
-)
+LOCAL_SOLVE_OUTPUT_ROOT = Path(__file__).resolve().parents[1] / "experiments/.scratch/ddm_jo2_joint_objective_solve"
+MATERIALIZER_OUTPUT_ROOT = Path("/Volumes/APDataStore/pact/ddm_gs3_unbridled_gestalt/jo1_payload_unblock")
 
 N_PAIRS = 600
 SEG_H = 384
@@ -59,13 +55,8 @@ FX5_ARCHIVE_SHA256 = "4b54fccc25f100cb68030db317791ba5e58936bb9b491f9ee9a020e695
 FX5_RUNTIME_TREE_SHA256 = "8eff613ecec2c371a6fa4cc580b8af9df131f45dc33f5d3c9b829faac1a513a5"
 AUTH_CACHE_VOLUME_NAME = "comma-auth-eval-cache-artifacts"
 FX5_MATERIALIZER_VOLUME_RUN_ID = "ddm_jo1u_fx5_e1_n600_r4"
-FX5_BASE_ARGMAX_REMOTE_PATH = (
-    f"{FX5_MATERIALIZER_VOLUME_RUN_ID}/retained/fields/fx5_e1_argmax_n600.npy"
-)
-FX5_BASE_POSE6_REMOTE_PATH = (
-    f"{FX5_MATERIALIZER_VOLUME_RUN_ID}/retained/pose_vectors/"
-    "fx5_e1_first6_n600.npy"
-)
+FX5_BASE_ARGMAX_REMOTE_PATH = f"{FX5_MATERIALIZER_VOLUME_RUN_ID}/retained/fields/fx5_e1_argmax_n600.npy"
+FX5_BASE_POSE6_REMOTE_PATH = f"{FX5_MATERIALIZER_VOLUME_RUN_ID}/retained/pose_vectors/fx5_e1_first6_n600.npy"
 MATERIALIZER_BATCH_PAIRS = 16
 MATERIALIZER_MAX_CHUNK_PAIRS = 120
 MATERIALIZER_STORAGE_RESERVE_BYTES = 4 * 1024**3
@@ -83,7 +74,11 @@ MATERIALIZER_EXPECTED_RETAINED_PAYLOAD_BYTES = (
     + N_PAIRS * 12 * 4
     + N_PAIRS * 6 * 4
 )
-REMOTE_TRAINER_BLOCKER = "JO2_REMOTE_TRAINER_ENTRYPOINT_NOT_IMPLEMENTED"
+LOCAL_TRAINER_SOURCE_NAME = "ddm_jo3_joint_objective_entrypoint.py"
+LOCAL_TRAINER_BLOCKER = "JO3_LOCAL_TRAINER_ENTRYPOINT_NOT_BOUND"
+# Compatibility alias for the intentionally blocked pre-JO3 worker/Modal
+# surfaces.  New readiness uses ``LOCAL_TRAINER_BLOCKER`` directly.
+REMOTE_TRAINER_BLOCKER = LOCAL_TRAINER_BLOCKER
 
 REQUIRED_STAGE_IDS = ("target_birth", "joint_balance", "collateral_finish")
 REQUIRED_FIELD_OUTPUTS = frozenset(
@@ -211,8 +206,7 @@ def verify_artifact(record: ArtifactRef) -> dict[str, Any]:
     observed_sha256 = _sha256_path(path)
     if observed_bytes != record.bytes or observed_sha256 != record.sha256:
         raise JO1Error(
-            f"artifact drift: {path}; bytes={observed_bytes}/{record.bytes}, "
-            f"sha256={observed_sha256}/{record.sha256}"
+            f"artifact drift: {path}; bytes={observed_bytes}/{record.bytes}, sha256={observed_sha256}/{record.sha256}"
         )
     return record.model_dump(mode="json")
 
@@ -242,10 +236,7 @@ class InputBindings(StrictModel):
         # live fx5 body.  fx5 is byte-decoded-identical to rc2 and 70 counted
         # bytes smaller; using the older container here would price the wrong
         # object.
-        if (
-            self.rc2_archive.bytes != FX5_ARCHIVE_BYTES
-            or self.rc2_archive.sha256 != FX5_ARCHIVE_SHA256
-        ):
+        if self.rc2_archive.bytes != FX5_ARCHIVE_BYTES or self.rc2_archive.sha256 != FX5_ARCHIVE_SHA256:
             raise ValueError("fx5 solve archive authority pin differs")
         expected_field = (N_PAIRS, SEG_H, SEG_W)
         for name, record in (
@@ -265,10 +256,7 @@ class InputBindings(StrictModel):
         ):
             raise ValueError("source_pose6_targets must declare n600 x ... x 6 float shape")
         base_pose = self.fx5_base_pose6
-        if base_pose is not None and (
-            base_pose.shape != (N_PAIRS, 6)
-            or base_pose.dtype not in {"float32", "float64"}
-        ):
+        if base_pose is not None and (base_pose.shape != (N_PAIRS, 6) or base_pose.dtype not in {"float32", "float64"}):
             raise ValueError("fx5_base_pose6 must declare shape=(600,6), float dtype")
         return self
 
@@ -288,10 +276,7 @@ class MaterializerConfig(StrictModel):
     @model_validator(mode="after")
     def exact_live_base_or_reasoned_fallback(self) -> MaterializerConfig:
         if self.vehicle_id == "fx5_e1":
-            if (
-                self.archive.bytes != FX5_ARCHIVE_BYTES
-                or self.archive.sha256 != FX5_ARCHIVE_SHA256
-            ):
+            if self.archive.bytes != FX5_ARCHIVE_BYTES or self.archive.sha256 != FX5_ARCHIVE_SHA256:
                 raise ValueError("fx5_e1 materializer archive pin differs")
             if self.expected_runtime_tree_sha256 != FX5_RUNTIME_TREE_SHA256:
                 raise ValueError("fx5_e1 materializer runtime-tree pin differs")
@@ -300,10 +285,7 @@ class MaterializerConfig(StrictModel):
         else:
             if not (self.rc2_fallback_reason or "").strip():
                 raise ValueError("rc2 fallback requires a written reason")
-            if (
-                self.archive.bytes != RC2_ARCHIVE_BYTES
-                or self.archive.sha256 != RC2_ARCHIVE_SHA256
-            ):
+            if self.archive.bytes != RC2_ARCHIVE_BYTES or self.archive.sha256 != RC2_ARCHIVE_SHA256:
                 raise ValueError("rc2 fallback materializer archive pin differs")
         harvest = Path(self.harvest_root).expanduser().resolve()
         allowed = MATERIALIZER_OUTPUT_ROOT.resolve()
@@ -409,7 +391,7 @@ class CheckpointConfig(StrictModel):
 
 class MemoryPreflightConfig(StrictModel):
     required: Literal[True]
-    device_class: Literal["NVIDIA T4"]
+    device_class: Literal["NVIDIA T4", "local CPU"]
     real_config: Literal[True]
     requested_memory_bytes: int = Field(gt=0)
     minimum_headroom_bytes: int = Field(gt=0)
@@ -420,13 +402,19 @@ class MemoryPreflightConfig(StrictModel):
 class DispatchConfig(StrictModel):
     lane_id: str = Field(pattern=r"^ddm_jo[12]_[a-z0-9_]+$")
     claim_agent: Literal["MAIN"]
-    platform: Literal["modal"]
-    gpu: Literal["T4"]
+    platform: Literal["modal", "local"]
+    gpu: Literal["T4", "CPU"]
     detach_required: Literal[True]
     provider_detach_ack_required: Literal[True]
     single_flight: Literal[True]
     durable_call_id: Literal[True]
     automatic_terminal_closure: Literal[True]
+
+    @model_validator(mode="after")
+    def coherent_execution_surface(self) -> DispatchConfig:
+        if (self.platform, self.gpu) not in {("modal", "T4"), ("local", "CPU")}:
+            raise ValueError("dispatch platform/device pairing differs")
+        return self
 
 
 class CompiledConfig(StrictModel):
@@ -489,6 +477,7 @@ def attach_workload_sha256(config: CompiledConfig) -> CompiledConfig:
 
 def authority_constants() -> AuthorityConstants:
     source = ".omx/tmp/jo1_charter.md and ddm_ec2p_conditioning_repin_20260821.md"
+
     def c(value: Any, value_type: str, unit: str, provenance: str, trigger: str) -> ConstantValue:
         return ConstantValue(
             value=value,
@@ -498,6 +487,7 @@ def authority_constants() -> AuthorityConstants:
             source_citation=source,
             rederivation_trigger=trigger,
         )
+
     return AuthorityConstants(
         base_score=c(0.14823186109359, "float", "score", "MEASURED", "new promoted exact fx5 row"),
         base_archive_bytes=c(BASE_ARCHIVE_BYTES, "int", "bytes", "MEASURED", "fx5 archive changes"),
@@ -508,15 +498,23 @@ def authority_constants() -> AuthorityConstants:
         repinned_increment_bytes=c(RATE_INCREMENT_ANCHOR, "int", "bytes", "MEASURED", "real coder or body changes"),
         repinned_increment_low_bytes=c(RATE_INCREMENT_BAND[0], "int", "bytes", "MEASURED", "real coder rerun"),
         repinned_increment_high_bytes=c(RATE_INCREMENT_BAND[1], "int", "bytes", "MEASURED", "real coder rerun"),
-        collateral_cap=c(COLLATERAL_CAP, "float", "introduced/fixed", "OPERATOR_REGISTERED", "operator changes preregistration"),
-        live_band_flips=c(PREREGISTERED_LIVE_FLIPS, "int", "net pixels", "OPERATOR_REGISTERED", "operator changes preregistration"),
+        collateral_cap=c(
+            COLLATERAL_CAP, "float", "introduced/fixed", "OPERATOR_REGISTERED", "operator changes preregistration"
+        ),
+        live_band_flips=c(
+            PREREGISTERED_LIVE_FLIPS, "int", "net pixels", "OPERATOR_REGISTERED", "operator changes preregistration"
+        ),
         strict_ten_x_flips=c(STRICT_TEN_X_FLIPS, "int", "net pixels", "DERIVED", "strict score threshold changes"),
         free_receiver_header_bytes=c(633, "int", "bytes", "CONTRACT", "receiver/code charging rule changes"),
     )
 
 
 def delta_score(*, fixed: int, introduced: int, d_pose_candidate: float, candidate_archive_bytes: int) -> float:
-    if min(fixed, introduced, candidate_archive_bytes) < 0 or not math.isfinite(d_pose_candidate) or d_pose_candidate < 0:
+    if (
+        min(fixed, introduced, candidate_archive_bytes) < 0
+        or not math.isfinite(d_pose_candidate)
+        or d_pose_candidate < 0
+    ):
         raise JO1Error("exact score inputs are outside their domains")
     return (
         100.0 * (introduced - fixed) / SEG_DENOMINATOR
@@ -655,12 +653,18 @@ def verify_memory_receipt(config: CompiledConfig) -> dict[str, Any]:
         "training_batch_pairs",
         "field_batch_pairs",
         "geometry",
-        "max_memory_allocated_bytes",
-        "max_memory_reserved_bytes",
+        "measured_peak_rss_bytes",
+        "projected_n600_peak_rss_bytes",
+        "projection_method",
+        "chunk_pair_limit",
+        "chunked_verdict",
         "requested_memory_bytes",
         "headroom_bytes",
         "workload_config_sha256",
         "producer_command",
+        "wall_clock_projection",
+        "receiver_scale_preflight",
+        "retained_payloads",
         "created_at_utc",
     }
     if set(value) != required:
@@ -671,12 +675,32 @@ def verify_memory_receipt(config: CompiledConfig) -> dict[str, Any]:
         raise JO1Error("memory preflight device differs")
     if value["geometry"] != [N_PAIRS, SEG_H, SEG_W]:
         raise JO1Error("memory preflight geometry differs")
+    if int(value["training_batch_pairs"]) != 1 or int(value["field_batch_pairs"]) != 16:
+        raise JO1Error("memory preflight batch geometry differs")
+    if int(value["chunk_pair_limit"]) != 120 or value["chunked_verdict"] != "PASS":
+        raise JO1Error("memory preflight violates the chunked n600 law")
     if value["workload_config_sha256"] != config.workload_config_sha256:
         raise JO1Error("memory receipt is bound to a different workload")
     if int(value["requested_memory_bytes"]) != config.memory_preflight.requested_memory_bytes:
         raise JO1Error("memory receipt requested capacity differs")
+    measured = int(value["measured_peak_rss_bytes"])
+    projected = int(value["projected_n600_peak_rss_bytes"])
+    requested = int(value["requested_memory_bytes"])
+    if measured <= 0 or projected < measured or projected > requested:
+        raise JO1Error("memory preflight projection exceeds the governed capacity")
+    if int(value["headroom_bytes"]) != requested - projected:
+        raise JO1Error("memory receipt headroom arithmetic differs")
     if int(value["headroom_bytes"]) < config.memory_preflight.minimum_headroom_bytes:
         raise JO1Error("memory receipt has insufficient headroom")
+    if not str(value["projection_method"]).strip() or not value["producer_command"]:
+        raise JO1Error("memory receipt has no measured projection provenance")
+    if not value["retained_payloads"] or not value["wall_clock_projection"]:
+        raise JO1Error("memory receipt omitted retained surfaces or wall projection")
+    scale = value["receiver_scale_preflight"]
+    if scale.get("schema") != "ddm_jo3_receiver_scale_preflight.v1" or scale.get("passed") is not True:
+        raise JO1Error("receiver scale preflight did not pass")
+    if scale.get("blockers") or int(scale.get("endpoint_pair_denominator", -1)) != 0:
+        raise JO1Error("receiver scale preflight carries blockers or int12 endpoints")
     try:
         created = datetime.fromisoformat(str(value["created_at_utc"]).replace("Z", "+00:00"))
     except ValueError as error:
@@ -688,11 +712,13 @@ def verify_memory_receipt(config: CompiledConfig) -> dict[str, Any]:
 
 
 def readiness(config: CompiledConfig) -> dict[str, Any]:
-    # Receiver-close is implemented in ddm_jo2_receiver_close.py and is pinned
-    # below.  The remaining remote trainer blocker is distinct: the current
-    # Modal entrypoint still refuses rather than pretending those primitives
-    # constitute a training loop.
-    blockers: list[str] = [REMOTE_TRAINER_BLOCKER]
+    blockers: list[str] = []
+    if (
+        config.dispatch.platform != "local"
+        or config.dispatch.gpu != "CPU"
+        or Path(config.inputs.dispatcher_source.path).name != LOCAL_TRAINER_SOURCE_NAME
+    ):
+        blockers.append(LOCAL_TRAINER_BLOCKER)
     output_root = Path(config.output_root).resolve()
     storage_probe = output_root if output_root.exists() else output_root.parent
     free_bytes: int | None = None
@@ -712,9 +738,7 @@ def readiness(config: CompiledConfig) -> dict[str, Any]:
         "RC2_BASE_ARGMAX_FIELD_MISSING": config.inputs.rc2_base_argmax_field,
         "FX5_BASE_POSE6_MISSING": config.inputs.fx5_base_pose6,
         "SOURCE_POSE6_TARGETS_MISSING": config.inputs.source_pose6_targets,
-        "RC2_FRESH_SCHUR_RECEIVER_CLOSE_SOURCE_MISSING": (
-            config.inputs.receiver_close_source
-        ),
+        "RC2_FRESH_SCHUR_RECEIVER_CLOSE_SOURCE_MISSING": (config.inputs.receiver_close_source),
         "JO2_RESIDUAL_RUNTIME_SOURCE_MISSING": config.inputs.residual_runtime_source,
     }
     for blocker, record in required_inputs.items():
@@ -739,6 +763,16 @@ def readiness(config: CompiledConfig) -> dict[str, Any]:
             verify_artifact(record)
         except JO1Error:
             blockers.append(f"PIN_DRIFT:{Path(record.path).name}")
+    if config.inputs.memory_preflight_receipt is not None:
+        try:
+            verify_artifact(config.inputs.memory_preflight_receipt)
+            memory_value = json.loads(
+                config.inputs.memory_preflight_receipt.resolved_path.read_text(encoding="utf-8")
+            )
+            scale = memory_value.get("receiver_scale_preflight", {})
+            blockers.extend(str(value) for value in scale.get("blockers", []))
+        except (JO1Error, OSError, json.JSONDecodeError):
+            pass
     try:
         verify_memory_receipt(config)
     except JO1Error as error:
@@ -770,10 +804,7 @@ def materializer_readiness(config: CompiledConfig) -> dict[str, Any]:
             "blockers": blockers,
             "workload_config_sha256": config.workload_config_sha256,
             "frontier_moved": False,
-            "frontier_line": (
-                "effective frontier pointer remains unchanged; "
-                "this is a component-only materializer"
-            ),
+            "frontier_line": ("effective frontier pointer remains unchanged; this is a component-only materializer"),
             "storage_probe": None,
         }
 
@@ -784,22 +815,13 @@ def materializer_readiness(config: CompiledConfig) -> dict[str, Any]:
     try:
         free_bytes = shutil.disk_usage(storage_probe).free
         if harvest_root.exists():
-            already_retained = sum(
-                child.stat().st_size
-                for child in harvest_root.rglob("*")
-                if child.is_file()
-            )
+            already_retained = sum(child.stat().st_size for child in harvest_root.rglob("*") if child.is_file())
     except OSError as error:
         blockers.append(f"MATERIALIZER_STORAGE_PREFLIGHT_BLOCKED:{error}")
-    remaining_payload = max(
-        0, MATERIALIZER_EXPECTED_RETAINED_PAYLOAD_BYTES - already_retained
-    )
+    remaining_payload = max(0, MATERIALIZER_EXPECTED_RETAINED_PAYLOAD_BYTES - already_retained)
     required_free = remaining_payload + MATERIALIZER_STORAGE_RESERVE_BYTES
     if free_bytes is not None and free_bytes < required_free:
-        blockers.append(
-            "MATERIALIZER_STORAGE_PREFLIGHT_BLOCKED:"
-            f"free={free_bytes},required={required_free}"
-        )
+        blockers.append(f"MATERIALIZER_STORAGE_PREFLIGHT_BLOCKED:free={free_bytes},required={required_free}")
 
     required_inputs = {
         "GT_ARGMAX_FIELD_MISSING": config.inputs.gt_argmax_field,
@@ -834,18 +856,13 @@ def materializer_readiness(config: CompiledConfig) -> dict[str, Any]:
         "blockers": blockers,
         "workload_config_sha256": config.workload_config_sha256,
         "frontier_moved": False,
-        "frontier_line": (
-            "effective frontier pointer remains unchanged; "
-            "this is a component-only materializer"
-        ),
+        "frontier_line": ("effective frontier pointer remains unchanged; this is a component-only materializer"),
         "vehicle_id": materializer.vehicle_id,
         "storage_probe": {
             "path": str(storage_probe),
             "free_bytes": free_bytes,
             "already_retained_bytes": already_retained,
-            "expected_total_retained_payload_bytes": (
-                MATERIALIZER_EXPECTED_RETAINED_PAYLOAD_BYTES
-            ),
+            "expected_total_retained_payload_bytes": (MATERIALIZER_EXPECTED_RETAINED_PAYLOAD_BYTES),
             "remaining_payload_bytes": remaining_payload,
             "reserve_bytes": MATERIALIZER_STORAGE_RESERVE_BYTES,
             "required_free_bytes": required_free,
@@ -899,14 +916,83 @@ def refresh_local_source_pins(config: CompiledConfig) -> CompiledConfig:
     )
 
 
+def rebind_jo3_inputs(
+    config: CompiledConfig,
+    *,
+    rc2_base_argmax_field: Path | None = None,
+    fx5_base_pose6: Path | None = None,
+    local_entrypoint_source: Path | None = None,
+    memory_preflight_receipt: Path | None = None,
+    dispatch_local: bool = False,
+    run_id: str | None = None,
+) -> CompiledConfig:
+    """Rebind JO3 authority objects by complete triples before resealing.
+
+    Every changed binding is reconstructed from the observed file in one
+    operation.  Callers cannot update only the digest, byte count, or source
+    object identity and recreate the r8 PIN_DRIFT failure mode.
+    """
+    updates: dict[str, ArtifactRef] = {}
+    if rc2_base_argmax_field is not None:
+        updates["rc2_base_argmax_field"] = artifact_ref(
+            rc2_base_argmax_field,
+            axis="[contest-CUDA T4 fx5_e1 retained argmax n600] COMPONENT-ONLY",
+            source_object_sha256=FX5_ARCHIVE_SHA256,
+            shape=(N_PAIRS, SEG_H, SEG_W),
+            dtype="uint8",
+        )
+    if fx5_base_pose6 is not None:
+        updates["fx5_base_pose6"] = artifact_ref(
+            fx5_base_pose6,
+            axis="[contest-CUDA T4 fx5_e1 retained PoseNet first6 n600] COMPONENT-ONLY",
+            source_object_sha256=FX5_ARCHIVE_SHA256,
+            shape=(N_PAIRS, 6),
+            dtype="float32",
+        )
+    if local_entrypoint_source is not None:
+        path = local_entrypoint_source.resolve()
+        if path.name != LOCAL_TRAINER_SOURCE_NAME:
+            raise JO1Error(f"JO3 local entrypoint must be named {LOCAL_TRAINER_SOURCE_NAME}: {path}")
+        digest = _sha256_path(path)
+        updates["dispatcher_source"] = artifact_ref(
+            path,
+            axis="[JO3 sealed local trainer source; no score claim]",
+            source_object_sha256=digest,
+        )
+    if memory_preflight_receipt is not None:
+        receipt_path = memory_preflight_receipt.resolve()
+        value = json.loads(receipt_path.read_text(encoding="utf-8"))
+        workload_sha256 = str(value.get("workload_config_sha256", ""))
+        if not re.fullmatch(r"[0-9a-f]{64}", workload_sha256):
+            raise JO1Error("memory preflight receipt has no workload SHA-256")
+        updates["memory_preflight_receipt"] = artifact_ref(
+            receipt_path,
+            axis="[macOS-CPU real-config memory preflight; no score claim]",
+            source_object_sha256=workload_sha256,
+        )
+    dispatch = config.dispatch
+    memory = config.memory_preflight
+    if dispatch_local:
+        dispatch = dispatch.model_copy(update={"platform": "local", "gpu": "CPU"})
+        memory = memory.model_copy(update={"device_class": "local CPU"})
+    if run_id is not None and re.fullmatch(r"[a-z0-9][a-z0-9_.-]+", run_id) is None:
+        raise JO1Error(f"JO3 run_id is invalid: {run_id!r}")
+    return config.model_copy(
+        update={
+            "run_id": config.run_id if run_id is None else run_id,
+            "inputs": config.inputs.model_copy(update=updates),
+            "dispatch": dispatch,
+            "memory_preflight": memory,
+            "workload_config_sha256": None,
+        }
+    )
+
+
 def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) -> dict[str, Any]:
-    common = [
-        ".venv/bin/modal",
-        "run",
-    ]
-    def command(entrypoint: str) -> list[str]:
+    def modal_command(entrypoint: str) -> list[str]:
         return [
-            *common,
+            ".venv/bin/modal",
+            "run",
             f"experiments/ddm_jo1_modal_joint_objective.py::{entrypoint}",
             "--compiled-config",
             str(config_path.resolve()),
@@ -916,6 +1002,70 @@ def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) ->
             "--detach",
             "--provider-detach-ack",
         ]
+
+    run_root = Path(config.output_root).resolve() / config.run_id
+    memory_receipt = run_root / "memory_preflight/MEMORY_PREFLIGHT.json"
+    memory_status = run_root / "memory_preflight/SAFE_RUN.json"
+    memory_command = [
+        ".venv/bin/python",
+        "tools/safe_run.py",
+        "--rss-mb",
+        str(config.memory_preflight.requested_memory_bytes // (1024 * 1024)),
+        "--timeout",
+        "3600",
+        "--projected-gib",
+        str(config.memory_preflight.requested_memory_bytes / 1024**3),
+        "--status-receipt",
+        str(memory_status),
+        "--label",
+        f"{config.dispatch.lane_id}_memory_preflight",
+        "--",
+        "env",
+        "TAC_GOVERNED_ADMISSION=1",
+        ".venv/bin/python",
+        "-m",
+        "experiments.ddm_jo3_joint_objective_entrypoint",
+        "memory-preflight",
+        "--compiled-config",
+        str(config_path.resolve()),
+        "--expected-config-sha256",
+        config_sha256,
+        "--output-receipt",
+        str(memory_receipt),
+        "--main-owned-dispatch-authorization",
+    ]
+    train_command = [
+        ".venv/bin/python",
+        "tools/spawn_durable_daemon.py",
+        "--log",
+        str(run_root / "train.log"),
+        "--label",
+        config.dispatch.lane_id,
+        "--projected-gb",
+        "48",
+        "--min-free-gb",
+        "44",
+        "--rss-cap-mb",
+        str(config.memory_preflight.requested_memory_bytes // (1024 * 1024)),
+        "--walltime-cap-s",
+        "259200",
+        "--projected-peak-gib",
+        str(config.memory_preflight.requested_memory_bytes / 1024**3),
+        "--",
+        "env",
+        "TAC_GOVERNED_ADMISSION=1",
+        ".venv/bin/python",
+        "-m",
+        "experiments.ddm_jo3_joint_objective_entrypoint",
+        "train",
+        "--compiled-config",
+        str(config_path.resolve()),
+        "--expected-config-sha256",
+        config_sha256,
+        "--resume-from",
+        str(run_root / "checkpoints"),
+        "--main-owned-dispatch-authorization",
+    ]
     current_readiness = readiness_for_action(config)
     current_ready = current_readiness["status"] in {
         "READY_TO_FIRE",
@@ -938,10 +1088,9 @@ def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) ->
             {
                 "ordinal": 1,
                 "purpose": "materialize_scorer_payloads",
-                "argv": command("materialize_scorer_payloads"),
+                "argv": modal_command("materialize_scorer_payloads"),
                 "fire_trigger": (
-                    "materializer storage preflight PASS; no active n600 scorer job; "
-                    "MAIN holds a unique lane claim"
+                    "materializer storage preflight PASS; no active n600 scorer job; MAIN holds a unique lane claim"
                     if current_ready
                     else "materializer readiness blockers clear after reseal"
                 ),
@@ -951,9 +1100,7 @@ def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) ->
                 "ordinal": "1H",
                 "purpose": "harvest_materialized_payloads",
                 "argv": harvest_command,
-                "fire_trigger": (
-                    "ordinal 1 call is terminal and the volume final receipt is COMPLETE"
-                ),
+                "fire_trigger": ("ordinal 1 call is terminal and the volume final receipt is COMPLETE"),
                 "requires_reseal_after_harvest": True,
             },
         ]
@@ -1011,28 +1158,35 @@ def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) ->
                     "ordinal": "1R",
                     "purpose": "verify_triple_bindings_and_reseal",
                     "argv": None,
-                    "fire_trigger": (
-                        "1A and 1B payload hashes and byte counts match their retained receipt"
-                    ),
+                    "fire_trigger": ("1A and 1B payload hashes and byte counts match their retained receipt"),
                     "requires_reseal_after_harvest": True,
                 },
                 {
                     "ordinal": 2,
                     "purpose": "real_scale_memory_preflight",
-                    "argv": None,
+                    "argv": (
+                        None
+                        if (
+                            config.inputs.memory_preflight_receipt is not None
+                            or LOCAL_TRAINER_BLOCKER in current_readiness["blockers"]
+                            or config.inputs.rc2_base_argmax_field is None
+                            or config.inputs.fx5_base_pose6 is None
+                        )
+                        else memory_command
+                    ),
                     "fire_trigger": (
-                        "remote trainer implementation is reviewed and a payload-complete "
-                        "seal emits the newly hash-bound memory command"
+                        "local trainer implementation is reviewed, both recovered payloads "
+                        "are triple-bound, and no conflicting governed memory probe is active"
                     ),
                     "requires_reseal_after_harvest": True,
                 },
                 {
                     "ordinal": 3,
                     "purpose": "train",
-                    "argv": None,
+                    "argv": train_command if current_ready else None,
                     "fire_trigger": (
-                        "ordinal 2 fresh matching memory receipt is harvested and a new "
-                        "READY_TO_FIRE_UNDER_STANDING_GO seal emits the train command"
+                        "READINESS status is READY_TO_FIRE_UNDER_STANDING_GO with zero blockers; "
+                        "MAIN holds the unique local lane and launches this command outside the sandbox"
                     ),
                     "requires_reseal_after_harvest": False,
                 },
@@ -1043,11 +1197,7 @@ def fire_order(config_path: Path, config_sha256: str, config: CompiledConfig) ->
         "owner": "MAIN",
         "lane_id": config.dispatch.lane_id,
         "current_disposition": "READY" if current_ready else "BLOCKED",
-        "current_blocker": (
-            None
-            if current_ready
-            else ";".join(current_readiness["blockers"])
-        ),
+        "current_blocker": (None if current_ready else ";".join(current_readiness["blockers"])),
         "stop_after_each_async_fire": True,
         "commands": commands,
     }
@@ -1096,6 +1246,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--author-config", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--refresh-local-source-pins", action="store_true")
+    parser.add_argument("--bind-rc2-base-argmax-field", type=Path)
+    parser.add_argument("--bind-fx5-base-pose6", type=Path)
+    parser.add_argument("--bind-local-entrypoint-source", type=Path)
+    parser.add_argument("--bind-memory-preflight-receipt", type=Path)
+    parser.add_argument("--dispatch-local", action="store_true")
+    parser.add_argument("--run-id")
     return parser
 
 
@@ -1103,6 +1259,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
         config = CompiledConfig.model_validate_json(args.author_config.read_text(encoding="utf-8"))
+        config = rebind_jo3_inputs(
+            config,
+            rc2_base_argmax_field=args.bind_rc2_base_argmax_field,
+            fx5_base_pose6=args.bind_fx5_base_pose6,
+            local_entrypoint_source=args.bind_local_entrypoint_source,
+            memory_preflight_receipt=args.bind_memory_preflight_receipt,
+            dispatch_local=args.dispatch_local,
+            run_id=args.run_id,
+        )
         if args.refresh_local_source_pins:
             config = refresh_local_source_pins(config)
         result = prepare(config, destination=args.output.resolve())
@@ -1110,10 +1275,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps({"status": "BLOCKED", "reason": str(error)}, sort_keys=True))
         return 2
     print(json.dumps(result, sort_keys=True))
-    return 0 if result["status"] in {
-        "READY_TO_FIRE",
-        "READY_TO_FIRE_UNDER_STANDING_GO",
-    } else 2
+    return (
+        0
+        if result["status"]
+        in {
+            "READY_TO_FIRE",
+            "READY_TO_FIRE_UNDER_STANDING_GO",
+        }
+        else 2
+    )
 
 
 if __name__ == "__main__":
