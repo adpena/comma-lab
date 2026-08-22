@@ -508,6 +508,142 @@ def test_jo3_checkpoint_pointer_restores_live_ema_optimizer_rng_and_cursor(
     assert all(torch.equal(restored_ema[name], value) for name, value in ema.items())
 
 
+def test_jo5_checkpoint_migration_preserves_payload_bytes_and_refuses_state_drift(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    base = _config(tmp_path, monkeypatch, complete_inputs=True)
+    rebound = design.rebind_jo3_inputs(
+        base,
+        rc2_base_argmax_field=Path(base.inputs.rc2_base_argmax_field.path),
+        fx5_base_pose6=Path(base.inputs.fx5_base_pose6.path),
+        local_entrypoint_source=Path(entrypoint.__file__),
+        memory_preflight_receipt=None,
+        dispatch_local=True,
+        run_id="jo5_source_r7",
+    )
+    source_config = design.attach_workload_sha256(rebound)
+    destination_config = design.attach_workload_sha256(
+        rebound.model_copy(
+            update={"run_id": "jo5_destination_r8", "workload_config_sha256": None}
+        )
+    )
+    source_config_path = _write(
+        tmp_path / "source_config.json",
+        design.canonical_json_bytes(source_config.model_dump(mode="json")),
+    )
+    destination_config_path = _write(
+        tmp_path / "destination_config.json",
+        design.canonical_json_bytes(destination_config.model_dump(mode="json")),
+    )
+    source_config_sha256 = design._sha256_path(source_config_path)
+    destination_config_sha256 = design._sha256_path(destination_config_path)
+
+    model = worker.HybridOutputResidual(8, 3.0)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    loss = model(torch.zeros((1, 4, 5), dtype=torch.long)).square().mean()
+    loss.backward()
+    optimizer.step()
+    ema = {name: value.detach().clone() for name, value in model.state_dict().items()}
+    source_resume = tmp_path / "source_checkpoints"
+    source_checkpoint = source_resume / "target_birth/source"
+    source_manifest = worker.save_checkpoint_bundle(
+        source_checkpoint,
+        model=model,
+        ema_state=ema,
+        optimizer=optimizer,
+        duals=worker.DualState(collateral=0.5, pose=0.25),
+        cursor=worker.ResumeCursor("target_birth", 600, 0, 0),
+        config_sha256=source_config_sha256,
+    )
+    entrypoint.save_resume_pointer(source_resume, source_checkpoint, source_manifest)
+
+    destination_resume = tmp_path / "jo5_destination_r8/checkpoints"
+    receipt_path = tmp_path / "migration.json"
+    result = entrypoint.migrate_checkpoint(
+        source_compiled_config=source_config_path,
+        source_config_sha256=source_config_sha256,
+        source_resume_from=source_resume,
+        destination_compiled_config=destination_config_path,
+        destination_config_sha256=destination_config_sha256,
+        destination_resume_from=destination_resume,
+        output_receipt=receipt_path,
+    )
+    assert result["training_restarted_from_scratch"] is False
+    assert result["cursor"] == {
+        "stage_id": "target_birth",
+        "step": 600,
+        "field_pass_cursor": 0,
+        "package_cursor": 0,
+    }
+    assert all(
+        row["byte_identical"]
+        and row["source"]["sha256"] == row["destination"]["sha256"]
+        for row in result["payload_byte_identity"].values()
+    )
+    destination_pointer = json.loads(
+        (destination_resume / "RESUME_LATEST.json").read_text()
+    )
+    worker.validate_checkpoint_bundle(
+        Path(destination_pointer["checkpoint"]), destination_config_sha256
+    )
+    worker.validate_checkpoint_bundle(source_checkpoint, source_config_sha256)
+
+    escaped_manifest = json.loads((source_checkpoint / "CHECKPOINT.json").read_text())
+    escaped_manifest["payloads"]["duals"] = entrypoint.atomic_json(
+        source_checkpoint.parent / "outside_duals.json",
+        {"collateral": 0.5, "pose": 0.25},
+    )
+    escaped_source = tmp_path / "escaped_checkpoints"
+    escaped_checkpoint = escaped_source / "target_birth/source"
+    escaped_checkpoint.mkdir(parents=True)
+    entrypoint.atomic_json(escaped_checkpoint / "CHECKPOINT.json", escaped_manifest)
+    entrypoint.save_resume_pointer(escaped_source, escaped_checkpoint, escaped_manifest)
+    escaped_destination = design.attach_workload_sha256(
+        destination_config.model_copy(
+            update={
+                "run_id": "jo5_escaped_destination",
+                "workload_config_sha256": None,
+            }
+        )
+    )
+    escaped_destination_path = _write(
+        tmp_path / "escaped_destination_config.json",
+        design.canonical_json_bytes(escaped_destination.model_dump(mode="json")),
+    )
+    with pytest.raises(entrypoint.JO3EntrypointError, match="canonical slot"):
+        entrypoint.migrate_checkpoint(
+            source_compiled_config=source_config_path,
+            source_config_sha256=source_config_sha256,
+            source_resume_from=escaped_source,
+            destination_compiled_config=escaped_destination_path,
+            destination_config_sha256=design._sha256_path(escaped_destination_path),
+            destination_resume_from=tmp_path / "jo5_escaped_destination/checkpoints",
+            output_receipt=tmp_path / "escaped.json",
+        )
+
+    drift_body = destination_config.model_dump(mode="json")
+    drift_body["stages"][0]["fail_safe_steps"] += 1
+    drift_body["stages"][0]["checkpoint_every_steps"] = 1
+    drift_body["workload_config_sha256"] = None
+    drift = design.attach_workload_sha256(
+        design.CompiledConfig.model_validate(drift_body)
+    )
+    drift_path = _write(
+        tmp_path / "drift_config.json",
+        design.canonical_json_bytes(drift.model_dump(mode="json")),
+    )
+    with pytest.raises(entrypoint.JO3EntrypointError, match="load-bearing"):
+        entrypoint.migrate_checkpoint(
+            source_compiled_config=source_config_path,
+            source_config_sha256=source_config_sha256,
+            source_resume_from=source_resume,
+            destination_compiled_config=drift_path,
+            destination_config_sha256=design._sha256_path(drift_path),
+            destination_resume_from=tmp_path / "drift/checkpoints",
+            output_receipt=tmp_path / "drift.json",
+        )
+
+
 def test_jo3_stage_materialization_keeps_live_weights_and_binds_partial_object(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -697,6 +833,76 @@ def test_certified_retention_keeps_rebuild_rows_and_full_winner_bytes(
     monkeypatch.setattr(design, "N_PAIRS", 1)
     inventory = retention.finalize()
     retention.verify_inventory(inventory)
+
+
+def test_winner_repeat_reuses_exact_exploration_batch_shape_and_retains_payloads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    solve_root = tmp_path / "solve"
+    retention = entrypoint.CertifiedCandidateRetention(
+        solve_root=solve_root,
+        stage_id="target_birth",
+        workload_config_sha256="a" * 64,
+        base_archive_sha256="b" * 64,
+    )
+    base = np.zeros(receiver_close.D, dtype=np.int32)
+    codes = np.stack((base, np.ones(receiver_close.D, dtype=np.int32)))
+    master = np.full((2, 3, 3), 17, dtype=np.uint8)
+    calls: list[int] = []
+
+    def _render(_surface: object, _modules: object, values: np.ndarray, _pair: int) -> np.ndarray:
+        calls.append(len(values))
+        return np.repeat(values[:, :1, None, None], 2 * 3 * 3, axis=1).reshape(
+            len(values), 2, 3, 3
+        ).astype(np.uint8)
+
+    def _pose(_posenet: object, inputs: np.ndarray) -> np.ndarray:
+        # Deliberately batch-shape-dependent: a singleton repeat would differ.
+        return np.full(
+            (len(inputs), receiver_close.POSE_DIMS), len(inputs), dtype=np.float32
+        )
+
+    monkeypatch.setattr(receiver_close, "render_frame0", _render)
+    monkeypatch.setattr(receiver_close, "pose_vectors", _pose)
+    explored_slaves = _render(None, None, codes, 0)
+    explored_inputs = np.stack(
+        (explored_slaves, np.repeat(master[None], len(codes), axis=0)), axis=1
+    )
+    retention.retain_explored(
+        root=solve_root / "pairs/pair_0000/stage_40_descent/pass_0000/batch_0000_0002",
+        pair=0,
+        base_codes=base,
+        codes=codes,
+        slave_camera=explored_slaves,
+        pose_input=explored_inputs,
+        pose_vectors=_pose(None, explored_inputs),
+    )
+    repeated = retention.recompute_selected_winner(
+        root=solve_root / "pairs/pair_0000/stage_50_winner_repeat_batch",
+        pair=0,
+        base_codes=base,
+        candidate_codes=tuple(codes),
+        selected_index=1,
+        master=master,
+        surface=None,
+        modules=None,
+        posenet=None,
+    )
+    assert calls == [2, 2]
+    assert np.array_equal(
+        repeated["pose_vector"], np.full(receiver_close.POSE_DIMS, 2, dtype=np.float32)
+    )
+    assert Path(repeated["repeat_receipt"]["path"]).is_file()
+    winner = retention.retain_winner(
+        root=solve_root / "pairs/pair_0000/stage_50_winner_full",
+        pair=0,
+        base_codes=base,
+        codes=repeated["codes"],
+        slave_camera=repeated["slave_camera"],
+        pose_input=repeated["pose_input"],
+        pose_vector=repeated["pose_vector"],
+    )
+    retention.verify_winner(winner)
 
 
 def test_certified_retention_refuses_candidate_when_certificate_write_fails(

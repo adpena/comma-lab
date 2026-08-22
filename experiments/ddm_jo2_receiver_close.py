@@ -725,11 +725,23 @@ def solve_fresh_compensation(
             objective = value
         winner_retention = None
         if retention is not None:
-            winner_slave = render_frame0(surface, modules, current[None], pair)
-            winner_master = np.asarray(master, dtype=np.uint8)[None]
-            winner_input = np.stack((winner_slave, winner_master), axis=1)
-            winner_pose = pose_vectors(posenet, winner_input)
-            if not np.array_equal(winner_pose[0], final_vector):
+            if not np.array_equal(np.asarray(candidates[best], dtype=np.int32), current):
+                raise JO2ReceiverCloseError(
+                    "converged winner code differs from the final explored Pose6 row"
+                )
+            winner_repeat = retention.recompute_selected_winner(
+                root=root / "stage_50_winner_repeat_batch",
+                pair=pair,
+                base_codes=base_codes,
+                candidate_codes=candidates,
+                selected_index=best,
+                master=master,
+                surface=surface,
+                modules=modules,
+                posenet=posenet,
+            )
+            winner_pose = np.asarray(winner_repeat["pose_vector"], dtype=np.float32)
+            if not np.array_equal(winner_pose, final_vector):
                 raise JO2ReceiverCloseError(
                     f"winner deterministic repeat differs from explored Pose6 at pair {pair}"
                 )
@@ -737,10 +749,10 @@ def solve_fresh_compensation(
                 root=root / "stage_50_winner_full",
                 pair=pair,
                 base_codes=base_codes,
-                codes=current,
-                slave_camera=winner_slave[0],
-                pose_input=winner_input[0],
-                pose_vector=winner_pose[0],
+                codes=np.asarray(winner_repeat["codes"], dtype=np.int32),
+                slave_camera=np.asarray(winner_repeat["slave_camera"], dtype=np.uint8),
+                pose_input=np.asarray(winner_repeat["pose_input"], dtype=np.uint8),
+                pose_vector=winner_pose,
             )
         solved_codes[pair] = current
         row = {

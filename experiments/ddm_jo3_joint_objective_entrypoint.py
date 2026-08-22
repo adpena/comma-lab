@@ -56,6 +56,12 @@ FIELD_BATCH_PAIRS: Final = 16
 CHUNK_PAIR_LIMIT: Final = 120
 EMA_DECAY: Final = 0.995
 RAW_BYTES: Final = design.N_PAIRS * 2 * CAMERA_H * CAMERA_W * 3
+WINNER_REPEAT_DELTA_MEAN_SECONDS: Final = 1.547001948968197
+WINNER_REPEAT_DELTA_MAX_SECONDS: Final = 1.6158145419321954
+WINNER_REPEAT_TIMING_RECEIPT: Final = (
+    ".omx/research/ddm_jo5_determinism_cure_reseal_20260821/"
+    "DETERMINISM_REPROOF.json"
+)
 
 
 class JO3EntrypointError(RuntimeError):
@@ -313,6 +319,78 @@ class CertifiedCandidateRetention:
             },
         )
         return {"schema": "ddm_jo4_winner_retention_pointer.v1", "receipt": receipt}
+
+    def recompute_selected_winner(
+        self,
+        *,
+        root: Path,
+        pair: int,
+        base_codes: np.ndarray,
+        candidate_codes: Sequence[np.ndarray],
+        selected_index: int,
+        master: np.ndarray,
+        surface: Any,
+        modules: Any,
+        posenet: nn.Module,
+    ) -> dict[str, Any]:
+        """Repeat the winner under its exact exploration batch conditions.
+
+        PoseNet's CPU floating accumulation depends on batch shape even when
+        deterministic algorithms and single-thread execution are enabled.
+        Replaying only the selected code as a singleton therefore does not
+        reproduce the explored Pose6.  This method reruns the complete final
+        candidate batch in the same order, certifies every materialized camera
+        before release, and returns the selected row for the full-byte winner
+        retention gate.
+        """
+        codes = np.stack(
+            [np.asarray(value, dtype=np.int32) for value in candidate_codes]
+        )
+        if (
+            codes.ndim != 2
+            or codes.shape[1] != receiver_close.D
+            or not 0 <= selected_index < len(codes)
+        ):
+            raise JO3EntrypointError("winner repeat candidate batch geometry differs")
+        slave_camera = receiver_close.render_frame0(surface, modules, codes, pair)
+        masters = np.repeat(
+            np.asarray(master, dtype=np.uint8)[None], len(codes), axis=0
+        )
+        pose_input = np.stack((slave_camera, masters), axis=1)
+        pose_vectors = receiver_close.pose_vectors(posenet, pose_input)
+        certified = self.retain_explored(
+            root=root / f"batch_0000_{len(codes):04d}",
+            pair=pair,
+            base_codes=base_codes,
+            codes=codes,
+            slave_camera=slave_camera,
+            pose_input=pose_input,
+            pose_vectors=pose_vectors,
+        )
+        receipt = atomic_json(
+            root / "RESULT.json",
+            {
+                "schema": "ddm_jo5_same_batch_winner_repeat.v1",
+                "pair": int(pair),
+                "candidate_denominator": len(codes),
+                "selected_index": int(selected_index),
+                "selected_coordinate_delta": (
+                    codes[selected_index] - np.asarray(base_codes, dtype=np.int32)
+                ).tolist(),
+                "certified_repeat_batch": certified,
+                "pose6_batch_shape": list(pose_vectors.shape),
+                "same_batch_shape_and_order_as_exploration": True,
+                "all_materialized_payloads_retained": True,
+                "score_claim": False,
+            },
+        )
+        return {
+            "codes": codes[selected_index],
+            "slave_camera": slave_camera[selected_index],
+            "pose_input": pose_input[selected_index],
+            "pose_vector": pose_vectors[selected_index],
+            "repeat_receipt": receipt,
+        }
 
     def verify_winner(self, pointer: Any) -> None:
         if not isinstance(pointer, Mapping) or pointer.get("schema") != (
@@ -920,12 +998,24 @@ def memory_preflight(
     field_scoring_seconds = elapsed * design.N_PAIRS * len(config.stages)
     carrier_low_seconds = 3 * 600 * 39.0
     carrier_high_seconds = 3 * 600 * 64.0
+    winner_repeat_low_seconds = (
+        len(config.stages) * design.N_PAIRS * WINNER_REPEAT_DELTA_MEAN_SECONDS
+    )
+    winner_repeat_high_seconds = (
+        len(config.stages) * design.N_PAIRS * WINNER_REPEAT_DELTA_MAX_SECONDS
+    )
     receiver_and_coder_upper_seconds = 3 * (1800.0 + 600.0)
-    wall_low = training_seconds + field_scoring_seconds + carrier_low_seconds
+    wall_low = (
+        training_seconds
+        + field_scoring_seconds
+        + carrier_low_seconds
+        + winner_repeat_low_seconds
+    )
     wall_high = (
         training_seconds
         + field_scoring_seconds
         + carrier_high_seconds
+        + winner_repeat_high_seconds
         + receiver_and_coder_upper_seconds
     )
     result = {
@@ -957,9 +1047,12 @@ def memory_preflight(
                 "full_field_scoring_conservative": field_scoring_seconds,
                 "carrier_resolve_lower": carrier_low_seconds,
                 "carrier_resolve_upper": carrier_high_seconds,
+                "same_batch_winner_repeat_delta_mean": winner_repeat_low_seconds,
+                "same_batch_winner_repeat_delta_measured_max": winner_repeat_high_seconds,
                 "receiver_and_real_coder_upper": receiver_and_coder_upper_seconds,
             },
             "carrier_resolve_anchor": ("JG1 measured 39-64 seconds per pair; three fresh n600 stage solves"),
+            "same_batch_winner_repeat_anchor": WINNER_REPEAT_TIMING_RECEIPT,
         },
         "receiver_scale_preflight": scale,
         "retained_payloads": {
@@ -1078,6 +1171,188 @@ def restore_checkpoint(
     if (cursor.stage_id, cursor.step) != (manifest["stage_id"], manifest["step"]):
         raise JO3EntrypointError("resume cursor differs from checkpoint manifest")
     return OrderedDict((name, value.detach().cpu()) for name, value in ema_raw.items()), duals, cursor
+
+
+def checkpoint_state_projection(config: design.CompiledConfig) -> dict[str, Any]:
+    """Return the config surface that must match for a state-only reseal.
+
+    A migrated checkpoint may change only custody/output identity and the two
+    source pins whose code runs after the retained training boundary.  Model,
+    optimizer, objective, stage, seed, scorer, semantic, and payload inputs
+    remain load-bearing and are compared exactly.
+    """
+    body = config.model_dump(mode="json")
+    body.pop("workload_config_sha256", None)
+    body.pop("run_id", None)
+    inputs = body["inputs"]
+    for name in (
+        "dispatcher_source",
+        "receiver_close_source",
+        "memory_preflight_receipt",
+    ):
+        inputs.pop(name, None)
+    return body
+
+
+def migrate_checkpoint(
+    *,
+    source_compiled_config: Path,
+    source_config_sha256: str,
+    source_resume_from: Path,
+    destination_compiled_config: Path,
+    destination_config_sha256: str,
+    destination_resume_from: Path,
+    output_receipt: Path,
+) -> dict[str, Any]:
+    """Copy a retained stage-boundary state into a compatible resealed run.
+
+    Source payloads are never edited.  Each destination payload is copied and
+    rehashed byte-for-byte, then a new manifest binds those exact bytes to the
+    new compiled config.  The migration refuses any change to the training
+    state projection.
+    """
+    source_config = design.load_compiled_config(
+        source_compiled_config, source_config_sha256
+    )
+    destination_config = load_config(
+        destination_compiled_config, destination_config_sha256
+    )
+    source_projection = checkpoint_state_projection(source_config)
+    destination_projection = checkpoint_state_projection(destination_config)
+    if source_projection != destination_projection:
+        raise JO3EntrypointError(
+            "checkpoint migration changed a load-bearing training-state config field"
+        )
+    expected_destination = (
+        Path(destination_config.output_root).resolve()
+        / destination_config.run_id
+        / "checkpoints"
+    )
+    if destination_resume_from.resolve() != expected_destination:
+        raise JO3EntrypointError(
+            "checkpoint migration destination differs from the resealed FIRE_ORDER root"
+        )
+    source_pointer_path = source_resume_from / "RESUME_LATEST.json"
+    if not source_pointer_path.is_file():
+        raise JO3EntrypointError("checkpoint migration source resume pointer is absent")
+    source_pointer = json.loads(source_pointer_path.read_text(encoding="utf-8"))
+    source_checkpoint = Path(source_pointer["checkpoint"]).resolve()
+    allowed_source = source_resume_from.resolve()
+    if allowed_source != source_checkpoint and allowed_source not in source_checkpoint.parents:
+        raise JO3EntrypointError("checkpoint migration source pointer escaped its root")
+    source_manifest = worker.validate_checkpoint_bundle(
+        source_checkpoint, source_config_sha256
+    )
+    source_manifest_record = file_record(source_checkpoint / "CHECKPOINT.json")
+    if source_manifest_record["sha256"] != source_pointer["checkpoint_manifest_sha256"]:
+        raise JO3EntrypointError("checkpoint migration source pointer binding differs")
+
+    cursor = worker.ResumeCursor(
+        stage_id=str(source_manifest["stage_id"]),
+        step=int(source_manifest["step"]),
+        field_pass_cursor=int(source_manifest["field_pass_cursor"]),
+        package_cursor=int(source_manifest["package_cursor"]),
+    )
+    destination_checkpoint = (
+        destination_resume_from
+        / cursor.stage_id
+        / (
+            f"step_{cursor.step:06d}_field_{cursor.field_pass_cursor:04d}_"
+            f"package_{cursor.package_cursor}_migrated_r8"
+        )
+    )
+    if destination_checkpoint.exists():
+        raise JO3EntrypointError(
+            f"refusing existing checkpoint migration destination: {destination_checkpoint}"
+        )
+    payloads: dict[str, dict[str, Any]] = {}
+    payload_identity: dict[str, dict[str, Any]] = {}
+    expected_payload_names = {
+        "live": "live.pt",
+        "ema": "ema.pt",
+        "optimizer": "optimizer.pt",
+        "rng": "rng.pt",
+        "duals": "duals.json",
+        "resume_cursor": "resume_cursor.json",
+    }
+    for name, source_record in source_manifest["payloads"].items():
+        source_path = receiver_close.verify_record(source_record)
+        if (
+            source_path.parent.resolve() != source_checkpoint
+            or source_path.name != expected_payload_names[name]
+        ):
+            raise JO3EntrypointError(
+                f"checkpoint migration payload escaped its canonical slot: {name}"
+            )
+        destination_record = atomic_bytes(
+            destination_checkpoint / source_path.name, source_path.read_bytes()
+        )
+        if (
+            destination_record["bytes"] != source_record["bytes"]
+            or destination_record["sha256"] != source_record["sha256"]
+        ):
+            raise JO3EntrypointError(
+                f"checkpoint migration payload differs after copy: {name}"
+            )
+        payloads[name] = destination_record
+        payload_identity[name] = {
+            "source": dict(source_record),
+            "destination": destination_record,
+            "byte_identical": True,
+        }
+    destination_manifest = {
+        "schema": design.CHECKPOINT_SCHEMA,
+        "config_sha256": destination_config_sha256,
+        "stage_id": cursor.stage_id,
+        "step": cursor.step,
+        "field_pass_cursor": cursor.field_pass_cursor,
+        "package_cursor": cursor.package_cursor,
+        "payloads": payloads,
+        "atomic": True,
+    }
+    atomic_json(destination_checkpoint / "CHECKPOINT.json", destination_manifest)
+    verified_destination = worker.validate_checkpoint_bundle(
+        destination_checkpoint, destination_config_sha256
+    )
+    save_resume_pointer(
+        destination_resume_from, destination_checkpoint, verified_destination
+    )
+    projection_sha256 = object_fingerprint(source_projection)
+    result = {
+        "schema": "ddm_jo5_checkpoint_migration.v1",
+        "status": "COMPLETE",
+        "source_compiled_config": file_record(source_compiled_config),
+        "destination_compiled_config": file_record(destination_compiled_config),
+        "source_resume_pointer": file_record(source_pointer_path),
+        "source_checkpoint_manifest": source_manifest_record,
+        "destination_resume_pointer": file_record(
+            destination_resume_from / "RESUME_LATEST.json"
+        ),
+        "destination_checkpoint_manifest": file_record(
+            destination_checkpoint / "CHECKPOINT.json"
+        ),
+        "checkpoint_state_projection_sha256": projection_sha256,
+        "allowed_config_deltas": [
+            "run_id",
+            "workload_config_sha256",
+            "inputs.dispatcher_source",
+            "inputs.receiver_close_source",
+            "inputs.memory_preflight_receipt",
+        ],
+        "cursor": {
+            "stage_id": cursor.stage_id,
+            "step": cursor.step,
+            "field_pass_cursor": cursor.field_pass_cursor,
+            "package_cursor": cursor.package_cursor,
+        },
+        "payload_byte_identity": payload_identity,
+        "source_payloads_preserved": True,
+        "training_restarted_from_scratch": False,
+        "all_materialized_payloads_retained": True,
+        "score_claim": False,
+    }
+    atomic_json(output_receipt, result)
+    return result
 
 
 def materialize_candidate_master(
@@ -1966,6 +2241,15 @@ def parser() -> argparse.ArgumentParser:
             command.add_argument("--output-receipt", required=True, type=Path)
         else:
             command.add_argument("--resume-from", required=True, type=Path)
+    migrate = sub.add_parser("migrate-checkpoint")
+    migrate.add_argument("--source-compiled-config", required=True, type=Path)
+    migrate.add_argument("--source-config-sha256", required=True)
+    migrate.add_argument("--source-resume-from", required=True, type=Path)
+    migrate.add_argument("--destination-compiled-config", required=True, type=Path)
+    migrate.add_argument("--destination-config-sha256", required=True)
+    migrate.add_argument("--destination-resume-from", required=True, type=Path)
+    migrate.add_argument("--output-receipt", required=True, type=Path)
+    migrate.add_argument("--main-owned-dispatch-authorization", action="store_true")
     return root
 
 
@@ -1973,14 +2257,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser().parse_args(argv)
     try:
         require_governed_admission(args.main_owned_dispatch_authorization)
-        config = load_config(args.compiled_config, args.expected_config_sha256)
+        if args.command == "migrate-checkpoint":
+            result = migrate_checkpoint(
+                source_compiled_config=args.source_compiled_config,
+                source_config_sha256=args.source_config_sha256,
+                source_resume_from=args.source_resume_from,
+                destination_compiled_config=args.destination_compiled_config,
+                destination_config_sha256=args.destination_config_sha256,
+                destination_resume_from=args.destination_resume_from,
+                output_receipt=args.output_receipt,
+            )
+        else:
+            config = load_config(args.compiled_config, args.expected_config_sha256)
         if args.command == "memory-preflight":
             result = memory_preflight(
                 config=config,
                 output_receipt=args.output_receipt.resolve(),
                 producer_command=sys.argv,
             )
-        else:
+        elif args.command == "train":
             result = train(
                 config=config,
                 expected_config_sha256=args.expected_config_sha256,

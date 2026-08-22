@@ -1,0 +1,478 @@
+{
+  "all_materialized_payloads_retained": true,
+  "axis": "[macOS-CPU bounded determinism proof; no contest score authority]",
+  "diagnostic_controls": {
+    "four_thread_reproduction": {
+      "bytes": 8823,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/pair0_reproduce_4thread/RESULT.json",
+      "sha256": "583b2a1d568419cc4db3552c53c8c03401b7b0c94a3d48ce82caecfc7cba2b2a"
+    },
+    "one_thread_control": {
+      "bytes": 8812,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/pair0_control_1thread/RESULT.json",
+      "sha256": "c5dfd88773649923c079daef1797aaf72b0ab69e2df729914e4db62a2c860aac"
+    }
+  },
+  "frontier_moved": false,
+  "independent_process_denominator": 9,
+  "mechanism": {
+    "cure": "Repeat the selected winner inside the complete final exploration batch with identical order and select the same row.",
+    "fault": "PoseNet CPU floating accumulation is batch-shape-dependent even for byte-identical camera and PoseNet-input bytes.",
+    "reason_thread_pinning_rejected": "The one-thread control preserved camera/input bytes but still changed Pose6 between batch and singleton.",
+    "thread_pinning_adopted": false
+  },
+  "pair_denominator": 3,
+  "per_pair_census": {
+    "0": {
+      "all_three_repeats_byte_identical": true,
+      "repeat_denominator": 3,
+      "singleton_divergence_nonvacuous": true,
+      "unique_camera_sha256": [
+        "22c691a9924a2bd08492b7e5d8e24c3602662bc3cbf060d6e70e3a13f26d4c31"
+      ],
+      "unique_pose6_sha256": [
+        "04bb0110cb40bd1a1c00f3ef167eab5ca0563d9ea7f191a9747bc4fe31420a95"
+      ],
+      "unique_pose_input_sha256": [
+        "e70a6a6c180cda9be85bdd41b8d5f355668d361700b213890bbe6d64c7906b37"
+      ]
+    },
+    "1": {
+      "all_three_repeats_byte_identical": true,
+      "repeat_denominator": 3,
+      "singleton_divergence_nonvacuous": true,
+      "unique_camera_sha256": [
+        "22c691a9924a2bd08492b7e5d8e24c3602662bc3cbf060d6e70e3a13f26d4c31"
+      ],
+      "unique_pose6_sha256": [
+        "e54354d08f6a0207b42f21f9db244ccb3913f9c022f32dadc5f487709633cb4f"
+      ],
+      "unique_pose_input_sha256": [
+        "21f65b259702f5b82f63dd642512e9c77dbebe899fe41384ce30c1344356fa9d"
+      ]
+    },
+    "2": {
+      "all_three_repeats_byte_identical": true,
+      "repeat_denominator": 3,
+      "singleton_divergence_nonvacuous": true,
+      "unique_camera_sha256": [
+        "22c691a9924a2bd08492b7e5d8e24c3602662bc3cbf060d6e70e3a13f26d4c31"
+      ],
+      "unique_pose6_sha256": [
+        "990da2d5ccd1ab50b13912b4b28749f165ff1fdd58cfd3dd367b183a337b6876"
+      ],
+      "unique_pose_input_sha256": [
+        "a261b3bb4c4c0b2113abde04c3cabc3652b8863f2b0e7ea00465966b208ecebe"
+      ]
+    }
+  },
+  "proof_gates": {
+    "all_materialized_payloads_retained": true,
+    "all_nine_cure_camera_byte_identical": true,
+    "all_nine_cure_pose6_byte_identical": true,
+    "all_nine_cure_pose_input_byte_identical": true,
+    "all_nine_safe_runs_ok": true,
+    "all_nine_saved_vs_exact_batch_pose6_byte_identical": true,
+    "all_rng_states_unchanged": true,
+    "all_singleton_controls_still_diverge": true,
+    "all_three_pairs_repeat_shas_singleton": true
+  },
+  "repeat_denominator_per_pair": 3,
+  "rows": [
+    {
+      "all_materialized_payloads_retained": true,
+      "camera_raw_sha256": "22c691a9924a2bd08492b7e5d8e24c3602662bc3cbf060d6e70e3a13f26d4c31",
+      "candidate_denominator": 25,
+      "exact_batch_vs_cure_camera_byte_identical": true,
+      "exact_batch_vs_cure_pose6_byte_identical": true,
+      "exact_batch_vs_cure_pose_input_byte_identical": true,
+      "independent_process_safe_run": {
+        "bytes": 2263,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/SAFE_RUN_finalproof_pair0_repeat1.json",
+        "sha256": "5fe6b526e60eb6bc33cdf23156f7d8195d10f2a6c87a08ddc972436951b88c0b"
+      },
+      "pair": 0,
+      "pose6_raw_sha256": "04bb0110cb40bd1a1c00f3ef167eab5ca0563d9ea7f191a9747bc4fe31420a95",
+      "pose_input_raw_sha256": "e70a6a6c180cda9be85bdd41b8d5f355668d361700b213890bbe6d64c7906b37",
+      "repeat": 1,
+      "result": {
+        "bytes": 10094,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/finalproof_pair0_repeat1/RESULT.json",
+        "sha256": "82aadd31806c56973d37c002645da7247ea37983f73aba54d29c9468f1288068"
+      },
+      "rng_state_unchanged": true,
+      "safe_run_exit": 0,
+      "safe_run_status": "ok",
+      "saved_vs_exact_batch_pose6_byte_identical": true,
+      "singleton_pose6_byte_identical": false,
+      "singleton_pose6_max_abs": 3.814697265625e-06
+    },
+    {
+      "all_materialized_payloads_retained": true,
+      "camera_raw_sha256": "22c691a9924a2bd08492b7e5d8e24c3602662bc3cbf060d6e70e3a13f26d4c31",
+      "candidate_denominator": 25,
+      "exact_batch_vs_cure_camera_byte_identical": true,
+      "exact_batch_vs_cure_pose6_byte_identical": true,
+      "exact_batch_vs_cure_pose_input_byte_identical": true,
+      "independent_process_safe_run": {
+        "bytes": 2264,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/SAFE_RUN_finalproof_pair0_repeat2.json",
+        "sha256": "2506b924dbe230e0bbea0e19a9c088115ed10328e2b2347a200edabc4542d3da"
+      },
+      "pair": 0,
+      "pose6_raw_sha256": "04bb0110cb40bd1a1c00f3ef167eab5ca0563d9ea7f191a9747bc4fe31420a95",
+      "pose_input_raw_sha256": "e70a6a6c180cda9be85bdd41b8d5f355668d361700b213890bbe6d64c7906b37",
+      "repeat": 2,
+      "result": {
+        "bytes": 10094,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/finalproof_pair0_repeat2/RESULT.json",
+        "sha256": "f5f85fa086bcb7b003a6fe5d6f2f7cbe4dd506340e2ce64d3387af15d662cdbf"
+      },
+      "rng_state_unchanged": true,
+      "safe_run_exit": 0,
+      "safe_run_status": "ok",
+      "saved_vs_exact_batch_pose6_byte_identical": true,
+      "singleton_pose6_byte_identical": false,
+      "singleton_pose6_max_abs": 3.814697265625e-06
+    },
+    {
+      "all_materialized_payloads_retained": true,
+      "camera_raw_sha256": "22c691a9924a2bd08492b7e5d8e24c3602662bc3cbf060d6e70e3a13f26d4c31",
+      "candidate_denominator": 25,
+      "exact_batch_vs_cure_camera_byte_identical": true,
+      "exact_batch_vs_cure_pose6_byte_identical": true,
+      "exact_batch_vs_cure_pose_input_byte_identical": true,
+      "independent_process_safe_run": {
+        "bytes": 2264,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/SAFE_RUN_finalproof_pair0_repeat3.json",
+        "sha256": "542c1345101a7274adfd152a22198421a4939b807f7b13b2601f06187f043946"
+      },
+      "pair": 0,
+      "pose6_raw_sha256": "04bb0110cb40bd1a1c00f3ef167eab5ca0563d9ea7f191a9747bc4fe31420a95",
+      "pose_input_raw_sha256": "e70a6a6c180cda9be85bdd41b8d5f355668d361700b213890bbe6d64c7906b37",
+      "repeat": 3,
+      "result": {
+        "bytes": 10092,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/finalproof_pair0_repeat3/RESULT.json",
+        "sha256": "a9e2c40b7e27aa875ac74b6783b583a9c74606bff8618df34f375db55a687dca"
+      },
+      "rng_state_unchanged": true,
+      "safe_run_exit": 0,
+      "safe_run_status": "ok",
+      "saved_vs_exact_batch_pose6_byte_identical": true,
+      "singleton_pose6_byte_identical": false,
+      "singleton_pose6_max_abs": 3.814697265625e-06
+    },
+    {
+      "all_materialized_payloads_retained": true,
+      "camera_raw_sha256": "22c691a9924a2bd08492b7e5d8e24c3602662bc3cbf060d6e70e3a13f26d4c31",
+      "candidate_denominator": 25,
+      "exact_batch_vs_cure_camera_byte_identical": true,
+      "exact_batch_vs_cure_pose6_byte_identical": true,
+      "exact_batch_vs_cure_pose_input_byte_identical": true,
+      "independent_process_safe_run": {
+        "bytes": 2086,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/SAFE_RUN_finalproof_pair1_repeat1.json",
+        "sha256": "69a2da0538d335284bf958e0f282b87f2c26820f70c6d9ee7355b2fe50cf52c0"
+      },
+      "pair": 1,
+      "pose6_raw_sha256": "e54354d08f6a0207b42f21f9db244ccb3913f9c022f32dadc5f487709633cb4f",
+      "pose_input_raw_sha256": "21f65b259702f5b82f63dd642512e9c77dbebe899fe41384ce30c1344356fa9d",
+      "repeat": 1,
+      "result": {
+        "bytes": 9867,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/finalproof_pair1_repeat1/RESULT.json",
+        "sha256": "5836c5d388211d291e82f3bef2219d7faea0088535a3e2ce33bbd303c09b7110"
+      },
+      "rng_state_unchanged": true,
+      "safe_run_exit": 0,
+      "safe_run_status": "ok",
+      "saved_vs_exact_batch_pose6_byte_identical": true,
+      "singleton_pose6_byte_identical": false,
+      "singleton_pose6_max_abs": 1.601874828338623e-07
+    },
+    {
+      "all_materialized_payloads_retained": true,
+      "camera_raw_sha256": "22c691a9924a2bd08492b7e5d8e24c3602662bc3cbf060d6e70e3a13f26d4c31",
+      "candidate_denominator": 25,
+      "exact_batch_vs_cure_camera_byte_identical": true,
+      "exact_batch_vs_cure_pose6_byte_identical": true,
+      "exact_batch_vs_cure_pose_input_byte_identical": true,
+      "independent_process_safe_run": {
+        "bytes": 2087,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/SAFE_RUN_finalproof_pair1_repeat2.json",
+        "sha256": "112119905d9ced12f842c17f6128ac0b960ff2451963df0a7df33d737e41efaf"
+      },
+      "pair": 1,
+      "pose6_raw_sha256": "e54354d08f6a0207b42f21f9db244ccb3913f9c022f32dadc5f487709633cb4f",
+      "pose_input_raw_sha256": "21f65b259702f5b82f63dd642512e9c77dbebe899fe41384ce30c1344356fa9d",
+      "repeat": 2,
+      "result": {
+        "bytes": 9867,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/finalproof_pair1_repeat2/RESULT.json",
+        "sha256": "cf06e391fb0152a31c05d0aac6a440c7f1598e9ed3604cd92055b89973c929a7"
+      },
+      "rng_state_unchanged": true,
+      "safe_run_exit": 0,
+      "safe_run_status": "ok",
+      "saved_vs_exact_batch_pose6_byte_identical": true,
+      "singleton_pose6_byte_identical": false,
+      "singleton_pose6_max_abs": 1.601874828338623e-07
+    },
+    {
+      "all_materialized_payloads_retained": true,
+      "camera_raw_sha256": "22c691a9924a2bd08492b7e5d8e24c3602662bc3cbf060d6e70e3a13f26d4c31",
+      "candidate_denominator": 25,
+      "exact_batch_vs_cure_camera_byte_identical": true,
+      "exact_batch_vs_cure_pose6_byte_identical": true,
+      "exact_batch_vs_cure_pose_input_byte_identical": true,
+      "independent_process_safe_run": {
+        "bytes": 2087,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/SAFE_RUN_finalproof_pair1_repeat3.json",
+        "sha256": "e318cd274b0086728625fb2e0d75f287b2d894e4f0cbe9e330a39a215f5268a2"
+      },
+      "pair": 1,
+      "pose6_raw_sha256": "e54354d08f6a0207b42f21f9db244ccb3913f9c022f32dadc5f487709633cb4f",
+      "pose_input_raw_sha256": "21f65b259702f5b82f63dd642512e9c77dbebe899fe41384ce30c1344356fa9d",
+      "repeat": 3,
+      "result": {
+        "bytes": 9866,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/finalproof_pair1_repeat3/RESULT.json",
+        "sha256": "0204b0630bc4b4efc43063998dafc88aca186f500746252f44caf6207cb99f09"
+      },
+      "rng_state_unchanged": true,
+      "safe_run_exit": 0,
+      "safe_run_status": "ok",
+      "saved_vs_exact_batch_pose6_byte_identical": true,
+      "singleton_pose6_byte_identical": false,
+      "singleton_pose6_max_abs": 1.601874828338623e-07
+    },
+    {
+      "all_materialized_payloads_retained": true,
+      "camera_raw_sha256": "22c691a9924a2bd08492b7e5d8e24c3602662bc3cbf060d6e70e3a13f26d4c31",
+      "candidate_denominator": 25,
+      "exact_batch_vs_cure_camera_byte_identical": true,
+      "exact_batch_vs_cure_pose6_byte_identical": true,
+      "exact_batch_vs_cure_pose_input_byte_identical": true,
+      "independent_process_safe_run": {
+        "bytes": 2086,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/SAFE_RUN_finalproof_pair2_repeat1.json",
+        "sha256": "42272474692130deb526b8db65d8a826457d37d5630d63ba0ca6df587c2c2041"
+      },
+      "pair": 2,
+      "pose6_raw_sha256": "990da2d5ccd1ab50b13912b4b28749f165ff1fdd58cfd3dd367b183a337b6876",
+      "pose_input_raw_sha256": "a261b3bb4c4c0b2113abde04c3cabc3652b8863f2b0e7ea00465966b208ecebe",
+      "repeat": 1,
+      "result": {
+        "bytes": 9861,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/finalproof_pair2_repeat1/RESULT.json",
+        "sha256": "21105bde2213d3ea7e0811997a95e288a4fd979d69eea2ab3df6182a71bedd9a"
+      },
+      "rng_state_unchanged": true,
+      "safe_run_exit": 0,
+      "safe_run_status": "ok",
+      "saved_vs_exact_batch_pose6_byte_identical": true,
+      "singleton_pose6_byte_identical": false,
+      "singleton_pose6_max_abs": 3.814697265625e-06
+    },
+    {
+      "all_materialized_payloads_retained": true,
+      "camera_raw_sha256": "22c691a9924a2bd08492b7e5d8e24c3602662bc3cbf060d6e70e3a13f26d4c31",
+      "candidate_denominator": 25,
+      "exact_batch_vs_cure_camera_byte_identical": true,
+      "exact_batch_vs_cure_pose6_byte_identical": true,
+      "exact_batch_vs_cure_pose_input_byte_identical": true,
+      "independent_process_safe_run": {
+        "bytes": 2087,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/SAFE_RUN_finalproof_pair2_repeat2.json",
+        "sha256": "3bacac22613a4261a38e67261594add1fac7c5c30ab79c5518f106b28b58b352"
+      },
+      "pair": 2,
+      "pose6_raw_sha256": "990da2d5ccd1ab50b13912b4b28749f165ff1fdd58cfd3dd367b183a337b6876",
+      "pose_input_raw_sha256": "a261b3bb4c4c0b2113abde04c3cabc3652b8863f2b0e7ea00465966b208ecebe",
+      "repeat": 2,
+      "result": {
+        "bytes": 9860,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/finalproof_pair2_repeat2/RESULT.json",
+        "sha256": "13f9fe45163b1de25e99d5eab4cfccefa8ec77e5db14865d0af95c8d433ed1c8"
+      },
+      "rng_state_unchanged": true,
+      "safe_run_exit": 0,
+      "safe_run_status": "ok",
+      "saved_vs_exact_batch_pose6_byte_identical": true,
+      "singleton_pose6_byte_identical": false,
+      "singleton_pose6_max_abs": 3.814697265625e-06
+    },
+    {
+      "all_materialized_payloads_retained": true,
+      "camera_raw_sha256": "22c691a9924a2bd08492b7e5d8e24c3602662bc3cbf060d6e70e3a13f26d4c31",
+      "candidate_denominator": 25,
+      "exact_batch_vs_cure_camera_byte_identical": true,
+      "exact_batch_vs_cure_pose6_byte_identical": true,
+      "exact_batch_vs_cure_pose_input_byte_identical": true,
+      "independent_process_safe_run": {
+        "bytes": 2087,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/SAFE_RUN_finalproof_pair2_repeat3.json",
+        "sha256": "da010d9f9ae542a7eb59d0c446b9fc66cdc7b81aec0126e3bd6074e0b551d268"
+      },
+      "pair": 2,
+      "pose6_raw_sha256": "990da2d5ccd1ab50b13912b4b28749f165ff1fdd58cfd3dd367b183a337b6876",
+      "pose_input_raw_sha256": "a261b3bb4c4c0b2113abde04c3cabc3652b8863f2b0e7ea00465966b208ecebe",
+      "repeat": 3,
+      "result": {
+        "bytes": 9861,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/finalproof_pair2_repeat3/RESULT.json",
+        "sha256": "6e23e93fb0a87f3f809883898e4b046993c43b736809295c0d7d6cd6aafbe670"
+      },
+      "rng_state_unchanged": true,
+      "safe_run_exit": 0,
+      "safe_run_status": "ok",
+      "saved_vs_exact_batch_pose6_byte_identical": true,
+      "singleton_pose6_byte_identical": false,
+      "singleton_pose6_max_abs": 3.814697265625e-06
+    }
+  ],
+  "schema": "ddm_jo5_determinism_reproof.v1",
+  "score_claim": false,
+  "source_records": {
+    "entrypoint": {
+      "bytes": 99581,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_jo3_joint_objective_entrypoint.py",
+      "sha256": "766d3494751b27343df8904db2b74fd21e3d7804274a7e3931316ae11736bcdd"
+    },
+    "probe": {
+      "bytes": 16074,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_jo5_determinism_probe.py",
+      "sha256": "023bfb253823756294fce0e693887e3ae6ad8b2529e6e1870b5429aa518a3c81"
+    },
+    "receiver_close": {
+      "bytes": 53277,
+      "path": "/Users/adpena/Projects/pact/experiments/ddm_jo2_receiver_close.py",
+      "sha256": "0ceba3210fdabe504d975d80ad4f480a7f4e53392cda9db07854713763870931"
+    },
+    "tests": {
+      "bytes": 60200,
+      "path": "/Users/adpena/Projects/pact/experiments/tests/test_ddm_jo1_joint_objective.py",
+      "sha256": "00aed97f5504541b42a4386a8f1be47eb8c4762c7aebc3a65ea2a08807649f74"
+    }
+  },
+  "status": "PASS",
+  "wall_clock_rederivation": {
+    "calibration_process_denominator": 9,
+    "calibration_rows": [
+      {
+        "exact_batch_elapsed_seconds": 1.7095854168292135,
+        "pair": 0,
+        "repeat": 1,
+        "result": {
+          "bytes": 10029,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/proof_pair0_repeat1/RESULT.json",
+          "sha256": "5b270725307c0b9a3ca4a9038e0f21143e22f7bf46d315c66a2682ce8e72a6b3"
+        },
+        "same_batch_minus_singleton_seconds": 1.6158145419321954,
+        "singleton_elapsed_seconds": 0.09377087489701807
+      },
+      {
+        "exact_batch_elapsed_seconds": 1.6236232500523329,
+        "pair": 0,
+        "repeat": 2,
+        "result": {
+          "bytes": 10029,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/proof_pair0_repeat2/RESULT.json",
+          "sha256": "241dbc45b4c6f11f65c0a4e6d4abb644c8e5b8064b02b1965de207ad976f2dc5"
+        },
+        "same_batch_minus_singleton_seconds": 1.530224750051275,
+        "singleton_elapsed_seconds": 0.09339850000105798
+      },
+      {
+        "exact_batch_elapsed_seconds": 1.6143637921195477,
+        "pair": 0,
+        "repeat": 3,
+        "result": {
+          "bytes": 10029,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/proof_pair0_repeat3/RESULT.json",
+          "sha256": "7171287637c7995c032a2b3f41283913480394e53513c41def1b54a8d701b5c0"
+        },
+        "same_batch_minus_singleton_seconds": 1.523117250064388,
+        "singleton_elapsed_seconds": 0.09124654205515981
+      },
+      {
+        "exact_batch_elapsed_seconds": 1.6953584160655737,
+        "pair": 1,
+        "repeat": 1,
+        "result": {
+          "bytes": 9918,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/proof_pair1_repeat1/RESULT.json",
+          "sha256": "0221064d136a5aa79710206e697e4f40be816433ceedc6ea21d064025a0b4b70"
+        },
+        "same_batch_minus_singleton_seconds": 1.6031956661026925,
+        "singleton_elapsed_seconds": 0.09216274996288121
+      },
+      {
+        "exact_batch_elapsed_seconds": 1.6132478748913854,
+        "pair": 1,
+        "repeat": 2,
+        "result": {
+          "bytes": 9918,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/proof_pair1_repeat2/RESULT.json",
+          "sha256": "910881f09100e7a104c04ac4158e80001c300f37dc6578aa35cda7c42857b3bc"
+        },
+        "same_batch_minus_singleton_seconds": 1.498794499784708,
+        "singleton_elapsed_seconds": 0.11445337510667741
+      },
+      {
+        "exact_batch_elapsed_seconds": 1.5943702501244843,
+        "pair": 1,
+        "repeat": 3,
+        "result": {
+          "bytes": 9918,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/proof_pair1_repeat3/RESULT.json",
+          "sha256": "3e97b461d8abb4f70389398cf968f1f6c68452106383a5bfe23c5077069d2231"
+        },
+        "same_batch_minus_singleton_seconds": 1.5010340420994908,
+        "singleton_elapsed_seconds": 0.09333620802499354
+      },
+      {
+        "exact_batch_elapsed_seconds": 1.6397974998690188,
+        "pair": 2,
+        "repeat": 1,
+        "result": {
+          "bytes": 9911,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/proof_pair2_repeat1/RESULT.json",
+          "sha256": "1342cdef68e51ec3b2207e837e1630755e826a5e38f6aec8a2b431b09ca6f493"
+        },
+        "same_batch_minus_singleton_seconds": 1.5318002908024937,
+        "singleton_elapsed_seconds": 0.1079972090665251
+      },
+      {
+        "exact_batch_elapsed_seconds": 1.677337208064273,
+        "pair": 2,
+        "repeat": 2,
+        "result": {
+          "bytes": 9911,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/proof_pair2_repeat2/RESULT.json",
+          "sha256": "5515011a2d37095e19e3688afbf1bb1ba66185108cbe9474f7610e0fa04186e6"
+        },
+        "same_batch_minus_singleton_seconds": 1.5840679579414427,
+        "singleton_elapsed_seconds": 0.09326925012283027
+      },
+      {
+        "exact_batch_elapsed_seconds": 1.6300735829863697,
+        "pair": 2,
+        "repeat": 3,
+        "result": {
+          "bytes": 9912,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_jo5_determinism_cure_reseal_20260821/retained/proof_pair2_repeat3/RESULT.json",
+          "sha256": "6d2bb995cbd4aaeef501a6b6352051bce9033bec6efe929594f574d0c4122f1c"
+        },
+        "same_batch_minus_singleton_seconds": 1.5349685419350863,
+        "singleton_elapsed_seconds": 0.09510504105128348
+      }
+    ],
+    "projected_max_added_seconds_n600_three_stages": 2908.4661754779518,
+    "projected_mean_added_seconds_n600_three_stages": 2784.6035081427544,
+    "same_batch_minus_singleton_max_seconds_per_pair_stage": 1.6158145419321954,
+    "same_batch_minus_singleton_mean_seconds_per_pair_stage": 1.547001948968197,
+    "training_thread_regime_changed": false
+  }
+}
