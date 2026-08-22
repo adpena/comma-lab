@@ -2,13 +2,18 @@
 
 ## Disposition
 
-**SPEC-READY; ARMED BUT NOT FIREABLE.** This prebuild fixes the quotient boundary, counted-byte law,
-receiver contract, teacher-manifest exclusions, and the single MAIN fire order. It does not claim an
-NR1 candidate, an implemented NR1 receiver, a score, or a moved frontier. Those claims would be fake:
-the r9 endpoint is still live, and there is no real NR1 fit/encode/decode implementation to execute.
+**EXECUTABLE PREBUILD MEASURED; RATE FALSIFIER SURVIVES; NOT RECEIVER-CLOSED OR SCORE-ADMITTED.** NR1 now
+has a real four-surface fit/encode/decode implementation, strict packet receiver, retained n600 coder
+race, and an actual DX2 semantic-renderer consumption smoke. The best retained row is **69,004 B** and
+beats the 113,777 B token stream by **44,773 B**. It also clears the stricter 71,395 B token-only ceiling
+by **2,391 B**. This is a rate result only: the best row changes 1,558,833 task tokens, the current
+primary r9 endpoint is not frozen, no scorer ran, no full 3,662,409,600 B raw was materialized, and no
+candidate is receiver-closed or score-admitted.
 
-This arm remained scorer-free. It did not launch Modal, touch the live r9 run directory, materialize a
-payload, or modify any shared coder, EC2, RB1, HT1, JO, or receiver source.
+This arm remained scorer-free and CPU-only. It did not launch Modal or touch/read/lock the live r9 run
+directory. It modified only its owned NR1 module, runner, test, and this memo; shared coder, EC2, RB1,
+HT1, JO, and production receiver sources remained untouched. All three materialized rows and their coder
+losers/repeats are retained below `/Volumes/APDataStore/pact/ddm_nr1_taskcell_quotient_prebuild/`.
 
 ## Result
 
@@ -24,6 +29,51 @@ must beat that lossless stream at matched realized distortion, and the whole arc
 cap after every other actual section is charged.
 
 The old 33.5 KB “model/context” number is retired. It is neither a budget nor a launch gate.
+
+## Executable prebuild measurement
+
+The implemented object is an 8x8 categorical task-cell quotient consumed at the existing semantic-token
+renderer boundary. `QPARAM` is the learned tile dictionary; `QCTX` is the learned per-tile default;
+`QPAIR` is the full n600 temporal/context choice stream; `QEVENT` is 8,192 low-margin live token
+corrections selected from the secondary C1 field. The teacher field is retained as training-only and is
+explicitly forbidden by the shipping allow-list. It is not the current primary endpoint.
+
+| Row | QPARAM | QCTX | QPAIR | QEVENT | Complete packet | Token agreement | Token-only ceiling |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| K32 / E8192 | 239 B | 152 B | 52,124 B | 16,489 B | **69,004 B** | 0.986785609 | **−2,391 B** |
+| K64 / E8192 | 327 B | 153 B | 62,900 B | 16,496 B | **79,876 B** | 0.987467312 | +8,481 B |
+| K128 / E8192 | 492 B | 159 B | 74,531 B | 16,448 B | **91,630 B** | 0.988848165 | +20,235 B |
+
+These are complete packet bytes, including the outer header and every per-section header; physical
+attribution covers every byte exactly once. Each logical surface was raced through raw, zlib-9,
+LZMA1-1MiB, and Brotli-q11, with all losers and deterministic repeats retained. Brotli-q11 won every
+surface for all three rows.
+
+K32 packet SHA-256 is
+`a68765dc683fa8302b560ef3db0d4a1507eeeccc695322fb8b69f684ed6dab28`. Its deterministic single-stored-
+member research ZIP is 69,104 B, SHA-256
+`7989c13a4e5eda3baadf87c37350470b3a5032c575aa2c622e62ed091b69ffa7`. The full decoded token output and
+independent repeat are each 117,964,800 B with identical SHA-256
+`d416895a250ce79be7f485188d4f7dfd1690a269a250063c2f6bc5f48cf8b8d8`. Exact-once consumption is
+`QPARAM=1, QCTX=1, QPAIR=1, QEVENT=1`. Pair-zero through the actual DX2 semantic weights changed 408,008
+of 589,824 retained uint8 renderer-output values.
+
+Holding every current non-token archive byte fixed, K32 mechanically projects an archive of
+**135,595 B** (`180,368 - 113,777 + 69,004`), 2,391 B below the current-distortion cap. This projection
+does not preserve current distortion: 1,558,833/117,964,800 tokens differ, so the primary-endpoint
+matched-distortion test remains the decisive unresolved gate.
+
+The retained result roots are:
+
+- `/Volumes/APDataStore/pact/ddm_nr1_taskcell_quotient_prebuild/vq8_k32_e8192_v1/`
+- `/Volumes/APDataStore/pact/ddm_nr1_taskcell_quotient_prebuild/vq8_k64_e8192_v1/`
+- `/Volumes/APDataStore/pact/ddm_nr1_taskcell_quotient_prebuild/vq8_k128_e8192_v1/`
+
+The executable sources are `src/tac/optimization/nr1_taskcell_quotient.py` and
+`experiments/ddm_nr1_taskcell_quotient_prebuild.py`; the adversarial suite is
+`experiments/ddm_nr1_taskcell_quotient_prebuild_test.py`. The retained K32 producer hashes are
+`66500b813eeafeaf264d57ecb47ef68360956ec1bdb040043456f3d6f101cbb6` (module) and
+`44e8ac10d20ca9c6325d572ac44cd3be9b553409ef0c408d41074f5ef9d7847c` (runner).
 
 ## RECALL EVIDENCE
 
@@ -186,16 +236,17 @@ Its exact archive SHA-256 is
 | Current stream or group | Bytes | Type | Relation to the 42,382 B cut |
 |---|---:|---|---|
 | Lossless semantic token field | 113,777 | MEASURED, current exact component | Primary NR1 replacement target |
-| dxi carrier | 22,008 | MEASURED, current exact component | Re-solved fresh; never assumed free |
+| dxi carrier | 22,010 | MEASURED, current exact component | Re-solved fresh; never assumed free |
 | compact residual | 96 | MEASURED, current exact component | Charged unless replaced |
-| all remaining archive bytes | 44,487 | DERIVED from exact archive minus the three measured rows | Includes HPAC, renderer, headers, and ZIP framing |
+| all remaining archive bytes | 44,485 | DERIVED from exact archive minus the three measured rows | Includes HPAC, renderer, headers, and ZIP framing |
 | of remainder: HPAC | 13,515 | MEASURED, current exact section | May be absorbed into `QCTX`/`QEVENT`; never double-counted |
-| of remainder: semantic renderer | approximately 30,856 | MEASURED section accounting reported by ES1, rounded in source | Charged at its new actual size |
-| of remainder: internal/ZIP framing | approximately 116 | DERIVED residual | Charged at final archive size |
+| of remainder: semantic renderer | 30,856 | MEASURED current exact section | Charged at its new actual size |
+| of remainder: internal/ZIP framing | 114 | DERIVED residual | 14 B member header plus 100 B ZIP framing |
 | **Exact current archive** | **180,368** | **MEASURED, contest-CUDA T4 n600** | **Must fall by 42,382 B at current D** |
 
-There are no measured NR1 stream bytes yet. `QPARAM`, `QCTX`, `QPAIR`, and `QEVENT` therefore remain
-**UNMEASURED**, not zero.
+The K32 row measures the complete quotient at 69,004 B: QPARAM 239 B, QCTX 152 B, QPAIR 52,124 B, and
+QEVENT 16,489 B, including exact physical framing attribution. It clears the 71,395 B token-only ceiling
+by 2,391 B, so the representation is not killed by rate. This does not establish matched distortion.
 
 For every parsed student candidate:
 
@@ -208,7 +259,7 @@ and
 At the current distortion, `B_max=137,986 B`. If the current non-token/non-HPAC accounting were held fixed
 only for a first-body comparison, the combined replacement for token+HPAC would have at most **84,910 B**:
 
-`137,986 - (22,008 + 96 + 30,856 + 116) = 84,910`.
+`137,986 - (22,010 + 96 + 30,856 + 114) = 84,910`.
 
 That is a **derived comparison ceiling**, not a reserved allocation. It implies the combined 127,292 B
 token+HPAC pool must shrink by the same 42,382 B. Every renderer, dxi, correction, framing, and distortion
@@ -269,8 +320,16 @@ constant-plane fixture, or length/CRC test without the actual task-cell render i
    only after closure, on the exact retained archive. macOS/MPS results are advisory; a frontier claim still
    requires the governed contest-CPU/CUDA lane and canonical pointer update.
 
+The prebuild satisfies the packet-level portion only: strict canonical parse/repack, bad magic/version/
+mode/section/coder/order/truncation/trailing refusal, absent and explicit-inactive base-payload identity,
+parse-valid semantic mutations for all four surfaces, inert-consumer refusal, exact physical ownership,
+an isolated staged-source process decode, deterministic coder/packet/ZIP repeats, full n600 token decode,
+and one actual-renderer pair counterfactual. It does **not** satisfy full inactive archive identity, a
+production `inflate.sh` active branch, minimal-environment full raw decode, two complete raw inflates, or
+fresh endpoint carrier integration. Therefore `receiver_closed=false` is binding.
+
 Every materialized NR1 payload and receipt goes under
-`/Volumes/APDataStore/pact/ddm_nr1_taskcell_quotient_prebuild/retained/<candidate_id>/`, with bytes, SHA-256,
+`/Volumes/APDataStore/pact/ddm_nr1_taskcell_quotient_prebuild/<candidate_id>/retained/`, with bytes, SHA-256,
 command/config/env, source hashes, seed, checkpoint lineage, coder version, parse-back result, decoded raw
 hash/bytes, and disposition. If space preflight fails, the job blocks before launch; it does not discard.
 
@@ -284,63 +343,67 @@ There is exactly one fire order: **`NR1_MAIN_FIRE_20260822_V1`**.
 | Owner | `MAIN` |
 | Consumer store | `/Volumes/APDataStore/pact/ddm_nr1_taskcell_quotient_prebuild/retained/` |
 | Fire trigger | r9 has stopped; MAIN has declared one terminal endpoint frozen; endpoint archive, full raw, logits, margins, argmax, Pose6, fresh dxi, receiver-closure, and provenance receipts all exist and verify; no competing NR1/scorer lane is active |
-| First dispatch | A narrow implementation/birth arm that builds the real inactive-identity plus active `QPARAM/QCTX/QPAIR/QEVENT` pack/decode/render path from this specification, with resume, per-stage checkpoints, storage preflight, payload retention, and two clean review passes |
-| First scorer fire | Only after the implementation arm proves inactive byte identity, active fresh-process parse-back, mutations, deterministic repeat, and full staged 3,662,409,600 B raw output; then MAIN grants one governed n600 scorer lane to the exact retained candidate set |
+| First dispatch | Bind the now-executable K32/K64/K128 quotient to the newly frozen primary endpoint, refit QEVENT against primary margins, build the active production-runtime branch, and integrate a fresh terminal carrier; retain all rows and repeats |
+| First scorer fire | Only after inactive full-archive byte identity, active fresh-process parse-back, mutations, deterministic repeat, rule-118 source closure, and full staged 3,662,409,600 B raw output; then MAIN grants one governed n600 scorer lane to the exact retained candidate set |
 | Selection | Lowest exact parsed-candidate score among the retained candidates, subject to `archive_bytes <= B_max(D_student)` and the 113,777 B quotient falsifier |
 | Stop | Stop the family if its optimal actual-coded quotient is >=113,777 B at matched distortion, if no candidate fits the dynamic whole-archive cap, or if receiver closure fails; retain all bytes and typed negatives |
 
-No executable command is sealed here because no NR1 implementation exists. Inventing a command or pointing
-the order at DC1's structural fixture would be a fake implementation. The first dispatch above is the exact
-action that fires when the r9 trigger becomes true; all scorer work remains gated on its real receiver proof.
+The scorer-free prebuild command now exists and has run, but no scorer command is sealed because the
+primary endpoint is not frozen and the current packets are not production-runtime closed. The existing
+`NR1_MAIN_FIRE_20260822_V1` queue row already owns the future action; this arm did not append a duplicate.
+All scorer work remains gated on the stronger full receiver proof above.
 
 ## Conclusions
 
-- The quotient target is the frozen endpoint's evaluator-cell behavior, not token identity and not RGB.
-- The exact same-distortion archive cut is 42,382 B; the dynamic cap replaces all static allocations.
-- The direct core falsifier is 113,777 B of actual-coded quotient description at matched distortion.
-- A first-body combined token+HPAC comparison ceiling is 84,910 B only while the other current sections and
-  distortion are held fixed; it is not a quota.
-- Full explicit worldsheet, photometric copying, flat palette, finishing KD, fresh width, width64 slicing,
-  and the explicit WS1 family are closed starting points.
-- DC1 supplies structural cautions only. It is not an NR1 implementation or empirical positive.
-- This prebuild is complete as a specification and fire-control artifact. Real implementation, receiver
-  closure, scorer measurement, exact evaluation, and frontier movement remain future work owned by MAIN.
+- NR1 now has a real fitted `QPARAM/QCTX/QPAIR/QEVENT` packet and task-token receiver. The K32 row survives
+  the actual-coder rate falsifier at 69,004 B and projects 135,595 B with all current non-token bytes held.
+- The result is not matched-distortion evidence. K32 differs from DX2 at 1,558,833 tokens, and the secondary
+  C1 margin field cannot stand in for the unfrozen primary r9 endpoint.
+- Packet mechanics are verified; full shipping closure is not. No production active branch, complete raw,
+  fresh terminal carrier, scorer row, exact score, or pointer move exists.
+- QPAIR dominates K32 at 52,124 B; QEVENT is next at 16,489 B. Further rate work should target temporal
+  assignment entropy or better task-weighted dictionary birth, not relabel framing or generic coder state.
+- The exact same-distortion archive cut is 42,382 B, not 42,381 B. The direct core falsifier remains
+  113,777 B at matched distortion; the current run resolves only the rate half.
+- The sealed future action remains single-owner MAIN. The already-harvested queue row is authoritative and
+  was not duplicated.
 
 ## NEXT_IF_RESUMED
 
 - **Disposition: QUEUED-WITH-A-FIRE-ORDER / ARMED-NOT-FIREABLE. Owner: MAIN. Consumer store:**
-  `/Volumes/APDataStore/pact/ddm_nr1_taskcell_quotient_prebuild/retained/`. **Fire trigger:** r9 is terminal
-  and MAIN has frozen and verified one endpoint receipt with archive/raw/logit/margin/argmax/Pose6/fresh-dxi
-  and receiver-closure custody, while no competing NR1/scorer lane is active. **Action:** execute
-  `NR1_MAIN_FIRE_20260822_V1`, beginning with the real NR1 body/receiver implementation arm and withholding
-  the n600 scorer lane until active receiver closure passes.
+  `/Volumes/APDataStore/pact/ddm_nr1_taskcell_quotient_prebuild/retained/`. **Fire trigger:** r9 is terminal,
+  MAIN has frozen and verified one endpoint archive/raw/logit/margin/argmax/Pose6/fresh-dxi receipt, and no
+  competing NR1/scorer lane is active. **Action:** execute `NR1_MAIN_FIRE_20260822_V1` by refitting the
+  executable K32/K64/K128 quotient against the frozen primary endpoint, integrating the production active
+  receiver plus fresh carrier, and withholding scoring until full receiver/rule-118 closure passes.
 
 ## LIVE-HYPOTHESES
 
-- A small implicit task-cell body can beat the 113,777 B lossless token stream because it need only preserve
-  the frozen scorer partition and Pose6 behavior, not reproduce the dense token field.
-- Joint coding of low-dimensional pair controls and sparse event corrections may beat separate streams
-  because their support is determined by the same endpoint margin geometry.
-- C1 hard positives plus EC1 collateral negatives may reduce exception entropy: both identify cells where
-  a compact implicit boundary can replace a larger literal correction list without spilling neighboring
-  endpoint cells.
-- Fresh terminal dxi may be cheaper after the quotient body is trained because pose/carrier degrees of
-  freedom can adapt to the final task-cell render instead of compensating for the old token renderer.
-- The hood-only explicit specialist may remain composable with an implicit main body because WS1 measured a
-  local win there while closing the full explicit worldsheet.
+- The K32 mismatches may be tolerable after primary-endpoint refit because a task-cell quotient need not
+  preserve token identity, and the 8,192 current events already target the smallest secondary margins.
+- A task-weighted dictionary can improve agreement without paying K64's full QPAIR entropy because K32's
+  dictionary was selected by raw pattern frequency, not evaluator-cell value.
+- QPAIR may fall materially below 52,124 B with a learned temporal state transition because its current
+  symbols use only previous/default/direct choices while the full sequence has structured pair motion.
+- K64 may remain viable as a token+HPAC joint replacement because its 79,876 B packet clears that combined
+  ceiling by 5,034 B and raises token agreement over K32.
+- Fresh terminal dxi may compose with the quotient because the actual semantic receiver consumes the new
+  token field and can expose a new carrier optimum rather than inheriting stale compensation.
 
 ## DEAD-ENDS
 
-- Reusing 33.5 KB as a model/context budget is closed: it was a conjectural old envelope and ignores the
-  student's realized distortion and all other actual bytes.
-- Shipping a full explicit worldsheet is closed by WS1 at 918,904 B lossless and 885,750 B at q2, far above
-  the entire archive cap.
-- Literal C1, PP1, SP1, and WS1 streams are closed as main-body shipping formats because their measured
-  actual-coded sizes exceed the available representation budget; they remain training/diagnostic evidence.
-- Photometric copying, flat-palette reconstruction, post-hoc finishing KD, fresh-width scaling, and width64
-  slicing are closed by prior receiver-realized negatives and must not be re-labeled NR1.
-- DC1's rank-one structural fixture is closed as an executable shortcut: it has no fitted receiver-closed
-  v14-or-better task result and does not perform NR1's claimed work.
-- This prebuild did not create or score an archive, so it did not move the own-vehicle frontier.
+- A specification-only NR1 is closed: this arm built and measured an executable packet, so successors must
+  advance primary-endpoint fit or full closure rather than rewrite the format memo.
+- The July quotient ABI is closed as a scientific shortcut: its rank-one renderer, no-op placement fixture,
+  absent QCTX, and hard-tail n24 scope do not perform this task-cell quotient.
+- K128 in the present frequency-born form is closed by rate: 91,630 B misses even the 84,910 B combined
+  token+HPAC ceiling by 6,720 B.
+- Reusing 33.5 KB as a model/context budget is closed because it ignores realized distortion and the actual
+  complete packet.
+- Full explicit worldsheet shipping is closed by WS1 at 918,904 B lossless and 885,750 B at q2.
+- Integrity-only mutation, four names sharing one inert handler, prefix-only evidence, and exact token
+  recoding are closed as receiver or science evidence.
+- The three current rows are closed as score claims: none used the frozen primary endpoint, materialized a
+  complete raw, integrated a fresh carrier, or ran the scorer.
 
 S = 0.14821987563243377 @ 180,368 B [contest-CUDA T4, n600]; archive SHA-256 976f706d5af6070f9785e495d35f2bd1bf10159a154fa19b45aefbf8f6de6674; frontier unmoved.
