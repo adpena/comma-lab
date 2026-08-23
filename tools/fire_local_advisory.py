@@ -50,6 +50,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import stat
 import subprocess
 import sys
@@ -68,6 +69,42 @@ PATH_TAIL = (
 def _refuse(msg: str) -> int:
     print(f"FATAL: {msg}", file=sys.stderr)
     return 2
+
+
+def sweep_upstream_bytecode(upstream: Path) -> tuple[int, int]:
+    """Remove ``__pycache__`` trees and AppleDouble ``._*.pyc`` sidecars.
+
+    PYTHONDONTWRITEBYTECODE=1 PREVENTS new bytecode; it cannot REPAIR a mirror
+    that acquired ``__pycache__`` before the flag landed.  On an ExFAT volume
+    each such ``.pyc`` grows an AppleDouble ``._*.pyc`` sidecar, and
+    ``contest_compliance._iter_upstream_files`` refuses the whole snapshot with
+    "canonical authority snapshot cannot contain executable bytecode" — a fast
+    rc=1 that reads like a config error but is stale state.  ddm_ap1's
+    semantic_l1 advisory died on exactly this at t=7s on 2026-08-22, with the
+    prevention flag correctly set in its own launch env.
+
+    Bytecode caches are rebuildable build products, so this is the one delete
+    the disk rules permit outright (no certify-or-block manifest owed).  Source
+    files are never touched: only ``__pycache__`` directories and ``._*.pyc``.
+
+    Returns ``(dirs_removed, sidecars_removed)`` so the caller can report a
+    non-zero sweep instead of silently repairing.
+    """
+    dirs_removed = 0
+    sidecars_removed = 0
+    for path in sorted(upstream.rglob("__pycache__"), key=lambda p: -len(p.parts)):
+        if not path.is_dir():
+            continue
+        shutil.rmtree(path, ignore_errors=True)
+        if not path.exists():
+            dirs_removed += 1
+    for path in upstream.rglob("._*.pyc"):
+        try:
+            path.unlink()
+        except OSError:
+            continue
+        sidecars_removed += 1
+    return dirs_removed, sidecars_removed
 
 
 # The keys this tool CARRIES. A passthrough may never set one of them; see the
@@ -164,6 +201,17 @@ def main() -> int:
                        ("video names file", video_names)):
         if not path.exists():
             return _refuse(f"{what} missing: {path}")
+    # Repair, do not merely prevent.  Swept in dry-run too: a dry run exists to
+    # predict the real launch, and one that reports a clean mirror while the
+    # real launch would hit stale bytecode is a lying dry-run.  Idempotent.
+    swept_dirs, swept_sidecars = sweep_upstream_bytecode(upstream)
+    if swept_dirs or swept_sidecars:
+        print(
+            f"[fire_local_advisory] swept stale bytecode from the upstream mirror: "
+            f"{swept_dirs} __pycache__ dir(s), {swept_sidecars} AppleDouble .pyc "
+            f"sidecar(s) -- these would have refused the compliance snapshot",
+            file=sys.stderr,
+        )
     if attempt.exists() and any(attempt.iterdir()):
         return _refuse(f"attempt dir not empty (mint a fresh one): {attempt}")
     interpreter = Path(sys.executable)  # UNRESOLVED: preserve the venv (see generate_pyshim)
