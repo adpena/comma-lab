@@ -7,6 +7,27 @@ reactivation against all including past."* This arm owns the **LIVE lineage half
 `ddm_ny2_deep_corpus_reprice_and_reactivation_audit` owns the deep past. Together they are a
 COMPLETE partition — neither may generalize a finding to the other's era.
 
+**STORES CONSULTED** (by MAIN, before writing this charter — honest list, including the gaps):
+- **memories** — `MEMORY.md` index plus: `m53` (negative-existence), `m89` (task-ledger split),
+  `m88`/`m96` (prefix bias, axis-dependent sign), `no_naive_or_toy_ever_structural_enforcement`,
+  `my_own_charters_fail_the_charter_time_optimal_form_law`,
+  `a-correct-charter-can-be-violated-at-verdict-time` (written today, the founding L3 instance),
+  `available-field-vs-authoritative-field`, `fractal_audit_standard_single_pass_audits_are_partial`.
+- **corpus filename sweep** — `.omx/research/` scanned for ALL prior audits, which is what
+  established the de-dup baseline: `ddm_na1_*` … `ddm_na11_negative_regrade_vs_rc2_20260821.md`
+  (the most recent, 08-21 — this is how the post-na11 unaudited window was identified),
+  `ddm_a1_naive_verdict_audit_20260723_codex.md`, `ddm_a2_strategy_verdict_provenance_*`.
+- **tasks (repo ledger)** — the closure rows seeding the population: #1199, #1202, #1203, #1206,
+  #1207, #1212, #1213, #1218, #1220, #1224, #1225.
+- **run-artifacts** — sha-verified this session: `ddm_gv1_*` `e253050b…` (the phase law this
+  charter's prediction rests on), `ddm_rj1_*` `88814e9f…` (positive control 1), `ddm_tx1_*`
+  `4bf730e5…`, `ddm_ar1b_*` `388185a6…`, `ddm_qs5_*` `f67595d4…`.
+- **state** — `.omx/state/main_hot_state.md`.
+- **NOT consulted, and this is a real gap you may exploit:** `tools/graph_memory_recall.py`
+  (flagged UNDER-USED at 0 recalls/24h) · `src/tac/canonical_equations/` · `tac.witness_dsl`
+  lever registry · the 63 FINISHED-unharvested arm `.done` captures. Any of those could hold a
+  closure this charter's population misses — if you find one, that IS a finding.
+
 **What is NOT new (recall, and this charter is de-duped against all of it):** eleven prior negative
 audits exist — `.omx/research/ddm_na1_*` … `ddm_na11_negative_regrade_vs_rc2_20260821.md`, plus
 `ddm_a1_naive_verdict_audit_20260723_codex.md`, `ddm_a2_strategy_verdict_provenance_*`,
@@ -46,7 +67,15 @@ in a WRONGLY-CLOSED family than in any new perturbation of the current body.** T
 reason to run this audit now rather than fire another single-axis arm. **If your census finds zero
 wrongly-closed rows, that prediction is REFUTED and you must say so plainly** — a null result here is
 a real finding (it would mean the closures are sound and the bytes are genuinely elsewhere), not a
-failed arm.
+failed arm. (`verdict_scope: formulation — the prior-law prediction above, i.e. "the remaining
+42,382 B is likelier in a wrongly-closed family than in a new perturbation," over the LIVE dx2
+lineage closure population 08-10 → 08-23 only. Refuting it says nothing about the deep-past half,
+which is the sister arm's population, and nothing about any individual family.)
+
+**Scope discipline on every row you emit:** the ladder is INSTANCE < FORMULATION < FAMILY <
+PARADIGM, and you declare the NARROWEST level your evidence supports. A verdict resting on
+mechanism-reduced rows can only ever be INSTANCE-level — that constraint is the entire subject of
+this audit, so violating it in your own output would be self-refuting.
 
 ## SCOPE
 

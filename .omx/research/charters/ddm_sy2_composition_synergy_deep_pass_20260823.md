@@ -6,6 +6,24 @@ Operator directive 2026-08-23, verbatim: *"Might need sol deep pass for gestalt 
 and composition and synergy and all."* Full research authority, full internal leverage, original
 derivation invited.
 
+**STORES CONSULTED** (by MAIN, before writing this charter — honest list, including the gaps):
+- **memories** — `MEMORY.md` index plus the surfaced files: `m88`/`m96` (prefix-of-skewed-population,
+  axis-dependent sign), `m53` (negative-existence), `m89` (task-ledger split),
+  `never-price-a-union-as-the-sum-of-its-legs`, `seg_mechanisms_die_on_collateral_not_targeting`,
+  `no_naive_or_toy_ever_structural_enforcement`, `my_own_charters_fail_the_charter_time_optimal_form_law`,
+  `available-field-vs-authoritative-field`, `all-signal-informs-evolving-gestalt`.
+- **tasks (repo ledger)** — the closed-family rows this charter enumerates: #1199, #1203, #1206,
+  #1213, #1218, #1220, #1222, #1223, #1224, #1225.
+- **run-artifacts / research memos** — sha-verified this session: `ddm_gv1_*` `e253050b…`,
+  `ddm_rj1_*` `88814e9f…`, `ddm_tx1_*` `4bf730e5…`, `ddm_ar1b_*` `388185a6…`, `ddm_qs5_*`
+  `f67595d4…`; plus `ddm_ap1_*` `3f739cf3…` and `ddm_ld1_*` `0df6fec5…`.
+- **state** — `.omx/state/main_hot_state.md` (pointer line + live-process map).
+- **arm captures** — the gv1 and rj1 final-message files (committed `ff7acc0bbf`).
+- **NOT consulted, and this is a real gap you may exploit:** `tools/graph_memory_recall.py`
+  (the costate digest flags it UNDER-USED at 0 recalls/24h) · `src/tac/canonical_equations/`
+  · `tac.witness_dsl` lever registry. If a composite you propose has a home in any of those three,
+  MAIN did not check it — say so and check it yourself.
+
 **The state you are entering, stated honestly.** The dx2 body is at
 **S 0.14821987563243377 @ 180,368 B [contest-CUDA T4, n600]**, sha `976f706d…`. Target is
 **sub-0.12**; gap **0.028220**. The demand reads two ways (#1203): shed **42,382 B** at fixed
@@ -23,7 +41,12 @@ ceilings) · uncompensated renderer re-representation (`rj1`: SVD r32 dead uncon
 a **negative** archive; W96 NOT closed, needing **−12,806 B** from a **22,010 B** carrier pool plus
 pose held at base).
 
-**And the gestalt that tried to unify them was REFUTED today.** MAIN asserted that jointness is a
+**And the gestalt that tried to unify them was REFUTED today**
+(`verdict_scope: formulation — the "jointness is a routing privilege" claim of
+`ddm_gestalt_the_three_laws_20260823.md` §4, over the DX2_LINEAGE_SUB012_CAMPAIGN move
+population; this is gv1's OWN declared scope, carried verbatim. It does NOT kill joint moves
+as a family — it removes their unearned routing PRIVILEGE. §1/§2/§3 of that memo survive
+MEASURED and are your substrate below.) MAIN asserted that jointness is a
 routing privilege. `gv1` classified **114 retained moves from code, not prose**: 13 of 18 pointer
 moves were SINGLE-axis; joint succeeded 8/49 (16.33%) vs single-axis 14/65 (21.54%), Fisher
 OR 0.7108, p=0.6326 — **no association.** The late window holds 33 joint and 33 single-axis failures,
