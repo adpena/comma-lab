@@ -79,7 +79,7 @@ alongside manufactured errors per stage; a stage's net is not its gross.**
 - ALWAYS KEEP THE PAYLOAD (P0): **every per-stage per-pixel field is a primary artifact** — persist with
   sha256 + bytes, not just the counts. A sister arm was rebuilt from scratch for keeping only scalars
   (`#898`); MS9's fields exist precisely because it complied.
-- **Receipts to `/Volumes/VertigoDataTier/pact/ddm_mst1_manufactured_stage_split/` — NOT APDataStore
+- **Receipts to `/Users/adpena/Projects/pact/.omx/tmp/arm_receipts_local/ddm_mst1_manufactured_stage_split/` — **BOTH SSD TIERS ARE AT 100% (measured 08-22; this killed the prior generation of this arm at rc=1 with zero artifacts). Local disk has ~500 GiB free and is the EXPLICIT-OPT-IN destination per the disk rule while the tiers are full.** Do NOT write to /Volumes/* — a write there will kill you.
   (~11 GiB free).** Say which tier you used.
 - File ownership: MS9 owns the representation-vs-downstream split and its fields (CITE, reuse, do not
   re-derive) · BL1 is concurrently instrumenting per-position CODE LENGTH and XS1 cross-section

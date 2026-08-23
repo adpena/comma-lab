@@ -67,7 +67,7 @@ budget absorbs ~60,700 added transmitted errors. Both numbers are large; the cur
 - Serializer commits w/ post-edit `--expected-content-sha256`; `.py` = 2 genuine review passes.
 - ALWAYS KEEP THE PAYLOAD; every rung's re-encoded stream, per-class mask, per-rung transmitted-error
   field and final-argmax field persist with sha256 + bytes. **Receipts to
-  `/Volumes/VertigoDataTier/pact/ddm_ld1_lane_lossy_drop_exchange/` — NOT APDataStore (~11 GiB free).**
+  `/Users/adpena/Projects/pact/.omx/tmp/arm_receipts_local/ddm_ld1_lane_lossy_drop_exchange/` — **BOTH SSD TIERS ARE AT 100% (measured 08-22; this killed the prior generation of this arm at rc=1 with zero artifacts). Local disk has ~500 GiB free and is the EXPLICIT-OPT-IN destination per the disk rule while the tiers are full.** Do NOT write to /Volumes/* — a write there will kill you.
   Say which tier you used.
 - Shipped receiver bytes are CUSTODY — never edit in place. The jo1 r9 run dir is SACRED
   (terminal by SELF-REFUSAL, `EXACT_DELTA_NONNEGATIVE`).
