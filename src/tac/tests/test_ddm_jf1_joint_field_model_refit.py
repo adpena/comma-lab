@@ -53,3 +53,11 @@ def test_candidate_runtime_pin_changes_only_the_exact_archive_literal(tmp_path: 
     assert digest in (runtime / "inflate.py").read_text(encoding="utf-8")
     assert jf1.DX2_ARCHIVE_SHA256 not in (runtime / "inflate.py").read_text(encoding="utf-8")
     assert record["sha256"] == jf1.sha256_file(runtime / "inflate.py")
+
+
+def test_scope_reduction_and_full_endpoint_use_disjoint_custody_roots() -> None:
+    jf1 = _load()
+    assert jf1.training_checkpoint("null", 2).name == "epoch_0002.pt"
+    assert jf1.training_checkpoint("null", 60).name == "qat_stage_end_epoch_0060.pt"
+    assert jf1.measurement_root("null", 2) != jf1.measurement_root("null", 60)
+    assert "scope_e0002" in str(jf1.measurement_root("null", 2))

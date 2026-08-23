@@ -145,14 +145,17 @@ def cache_path(tag: str) -> Path:
     return STORE / "inputs/caches" / f"tokens_{tag}.pt"
 
 
-def training_checkpoint(tag: str) -> Path:
-    return (
-        STORE
-        / "training"
-        / tag
-        / "model.checkpoints"
-        / "qat_stage_end_epoch_0060.pt"
-    )
+def training_checkpoint(tag: str, fitting_epoch: int) -> Path:
+    root = STORE / "training" / tag / "model.checkpoints"
+    if fitting_epoch == 60:
+        return root / "qat_stage_end_epoch_0060.pt"
+    return root / "periodic" / f"epoch_{fitting_epoch:04d}.pt"
+
+
+def measurement_root(tag: str, fitting_epoch: int) -> Path:
+    if fitting_epoch == 60:
+        return STORE / "rows" / tag
+    return STORE / f"scope_e{fitting_epoch:04d}" / "rows" / tag
 
 
 def _verify_dx2() -> dict[str, Any]:
@@ -278,17 +281,25 @@ def _replace_hpac(member: bytes, compressed_hpac: bytes) -> bytes:
     return header + compressed_hpac + sections["semantic"] + sections["carrier"] + sections["tail"]
 
 
-def _pack_model(tag: str, checkpoint_path: Path, retained: Path) -> dict[str, Any]:
+def _pack_model(
+    tag: str,
+    checkpoint_path: Path,
+    retained: Path,
+    fitting_epoch: int,
+) -> dict[str, Any]:
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    expected_phase = "discrete_qat" if fitting_epoch > 30 else "continuous"
     if (
         checkpoint.get("schema") != trainer.CHECKPOINT_SCHEMA
-        or checkpoint.get("epoch") != 60
-        or checkpoint.get("phase") != "discrete_qat"
+        or checkpoint.get("epoch") != fitting_epoch
+        or checkpoint.get("phase") != expected_phase
         or checkpoint.get("deployment_weights") != "ema_shadow"
         or checkpoint.get("run_identity", {}).get("training_config", {}).get("profile")
         != "jf1_joint_refit"
     ):
-        raise JF1Error(f"{tag}: terminal checkpoint is not JF1 EMA-QAT epoch 60")
+        raise JF1Error(
+            f"{tag}: checkpoint is not JF1 EMA {expected_phase} epoch {fitting_epoch}"
+        )
     if trainer._causal_state_sha256(checkpoint) != checkpoint.get("causal_state_sha256"):
         raise JF1Error(f"{tag}: terminal checkpoint causal-state hash failed")
     packed = rx2._pack_terminal_ihs1(checkpoint_path, retained / "model")
@@ -348,14 +359,17 @@ def _retain_decoded_masks(decoded: np.ndarray, retained: Path) -> list[dict[str,
     return records
 
 
-def measure(tag: str) -> dict[str, Any]:
+def measure(tag: str, fitting_epoch: int) -> dict[str, Any]:
     if tag not in FIELD_SHA256:
         raise JF1Error(f"unknown tag {tag}")
+    if fitting_epoch < 2 or fitting_epoch > 60 or fitting_epoch % 2:
+        raise JF1Error("--fitting-epoch must be an even evaluation checkpoint in 2..60")
     prepare_receipt = STORE / "PREPARE_RESULT.json"
     if not prepare_receipt.is_file():
         raise JF1Error("prepare stage is absent")
-    retained = STORE / "rows" / tag / "retained"
-    result_path = STORE / "rows" / tag / "MEASURE_RESULT.json"
+    root = measurement_root(tag, fitting_epoch)
+    retained = root / "retained"
+    result_path = root / "MEASURE_RESULT.json"
     if result_path.is_file():
         prior = json.loads(result_path.read_text(encoding="utf-8"))
         for key in ("candidate_archive", "refit_stream", "decoded_tokens"):
@@ -364,14 +378,14 @@ def measure(tag: str) -> dict[str, Any]:
             if not path.is_file() or file_record(path) != record:
                 raise JF1Error(f"{tag}: retained result artifact drifted: {key}")
         return prior
-    checkpoint = training_checkpoint(tag)
+    checkpoint = training_checkpoint(tag, fitting_epoch)
     if not checkpoint.is_file():
         raise JF1Error(f"{tag}: terminal training checkpoint is absent: {checkpoint}")
-    model = _pack_model(tag, checkpoint, retained)
+    model = _pack_model(tag, checkpoint, retained, fitting_epoch)
     model_payload = Path(model["winner"]["payload"]["path"]).read_bytes()
     staged, model_archive = _prepare_staged_runtime(tag, model_payload, retained)
-    args = SimpleNamespace(store=str(STORE / "rows" / tag), runtime_root=str(staged))
-    env = jg2._prepare(args, f"refit_{tag}")
+    args = SimpleNamespace(store=str(root), runtime_root=str(staged))
+    env = jg2._prepare(args, f"refit_e{fitting_epoch:04d}_{tag}")
     target = jg2.load_tokens(retained_field(tag))
     encoded = jg2.encode_tail(
         residual=env["residual"],
@@ -382,7 +396,7 @@ def measure(tag: str) -> dict[str, Any]:
         library=env["library"],
         route_b=env["route_b"],
         work=env["work"],
-        tag=f"refit_{tag}",
+        tag=f"refit_e{fitting_epoch:04d}_{tag}",
         frames=N,
         checkpoint_every=20,
         resume=True,
@@ -428,6 +442,12 @@ def measure(tag: str) -> dict[str, Any]:
         "schema": "ddm_jf1_measure.v1",
         "complete": True,
         "tag": tag,
+        "fitting_epoch": fitting_epoch,
+        "fitting_budget_scope": (
+            "FULL_REFERENCE_60_EPOCHS"
+            if fitting_epoch == 60
+            else f"SCOPE_REDUCTION_EPOCH_{fitting_epoch}_OF_60"
+        ),
         "axis": AXIS,
         "score_claim": False,
         "scorer_ran": False,
@@ -477,10 +497,10 @@ def measure(tag: str) -> dict[str, Any]:
     return result
 
 
-def finalize() -> dict[str, Any]:
+def finalize(fitting_epoch: int) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
     for tag in FIELD_SHA256:
-        path = STORE / "rows" / tag / "MEASURE_RESULT.json"
+        path = measurement_root(tag, fitting_epoch) / "MEASURE_RESULT.json"
         if path.is_file():
             rows.append(json.loads(path.read_text(encoding="utf-8")))
     rung_rows = [row for row in rows if row["tag"] != "null"]
@@ -493,6 +513,12 @@ def finalize() -> dict[str, Any]:
         "complete": True,
         "axis": AXIS,
         "score_claim": False,
+        "fitting_epoch": fitting_epoch,
+        "fitting_budget_scope": (
+            "FULL_REFERENCE_60_EPOCHS"
+            if fitting_epoch == 60
+            else f"SCOPE_REDUCTION_EPOCH_{fitting_epoch}_OF_60"
+        ),
         "rows": rows,
         "positive_control_stream_deficit_bytes": null["positive_control_stream_deficit_bytes"],
         "positive_control_passed": null["positive_control_stream_deficit_bytes"] <= 0,
@@ -511,7 +537,12 @@ def finalize() -> dict[str, Any]:
         "scorer_status": "QUEUED-WITH-A-FIRE-ORDER",
         "verdict_scope": "BYTE-LEG ONLY; full joint score verdict withheld pending exclusive n600 scorer",
     }
-    atomic_json(STORE / "BYTE_DIAGONAL.json", byte_verdict)
+    output = (
+        STORE / "BYTE_DIAGONAL.json"
+        if fitting_epoch == 60
+        else STORE / f"BYTE_DIAGONAL_SCOPE_E{fitting_epoch:04d}.json"
+    )
+    atomic_json(output, byte_verdict)
     return byte_verdict
 
 
@@ -519,6 +550,7 @@ def parser() -> argparse.ArgumentParser:
     value = argparse.ArgumentParser(description=__doc__)
     value.add_argument("stage", choices=("prepare", "measure", "finalize"))
     value.add_argument("--tag", choices=tuple(FIELD_SHA256))
+    value.add_argument("--fitting-epoch", type=int, default=60)
     return value
 
 
@@ -529,9 +561,9 @@ def main() -> None:
     elif args.stage == "measure":
         if args.tag is None:
             raise SystemExit("measure requires --tag")
-        result = measure(args.tag)
+        result = measure(args.tag, args.fitting_epoch)
     else:
-        result = finalize()
+        result = finalize(args.fitting_epoch)
     print(json.dumps(result, indent=2, sort_keys=True), flush=True)
 
 
