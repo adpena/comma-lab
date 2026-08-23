@@ -2,6 +2,41 @@ title = "pact campaign-specific token shapes (extends default)"
 [extend]
 useDefault = true
 
+# ---------------------------------------------------------------------------
+# ALLOWLIST: canonical SHA-256 content digests (2026-08-23)
+#
+# WHY: our domain says "token" for a CODEC SYMBOL on every other line
+# (token stream / token field / token drop). gitleaks' default `generic-api-key`
+# rule fires on a high-entropy value near a keyword like "token", so every
+# ledger row of the form `DX2_TOKEN_FIELD_SHA256 = "<64 hex>"` is flagged.
+# These are content digests we PUBLISH on purpose -- they are the custody
+# mechanism (ALWAYS KEEP THE PAYLOAD requires sha256 + bytes on every payload).
+# Measured population at landing: 4 tracked files (2 .py). Adjudicated as the
+# same false-positive class as task #1168 (38,869 generic history hits = ledger
+# hash fields).
+#
+# WHY THIS IS SAFE, MEASURED not asserted: 20,000 random pure-64-lowercase-hex
+# strings were tested against all five rules below -- 0 matched. Every shape we
+# actually carry (ak-/as-/tok- , hf_ , sk-ant- , tskey- , wandb+40hex) requires
+# a non-hex prefix or separator, so it can never BE a pure 64-hex secret. This
+# allowlist therefore cannot blind our own credential rules; it narrows only the
+# generic heuristic.
+#
+# STATED RESIDUAL RISK (honest, not hidden): a third-party credential that is
+# EXACTLY 64 lowercase hex characters would now pass `generic-api-key`. That is
+# a real gap. It is accepted because the alternative observed in practice is
+# waiving the whole gate per-commit (TAC_SECRETS_WAIVE=1), which is strictly
+# worse -- it disables all rules including the five precise ones. Narrow the
+# heuristic, keep the gate armed.
+#
+# Anchored ^...$ against the extracted SECRET so it matches a bare digest only,
+# never a digest embedded in a longer credential.
+# ---------------------------------------------------------------------------
+[allowlist]
+description = "canonical sha256 content digests (custody receipts), not credentials"
+regexTarget = "secret"
+regexes = ['''^[a-f0-9]{64}$''']
+
 [[rules]]
 id = "modal-token"
 description = "Modal token id/secret"
