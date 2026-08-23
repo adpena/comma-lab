@@ -193,8 +193,9 @@ artifact was written to either SSD tier. The retained tree contains every contro
 archive and deterministic repeat, every physical section payload, every receiver tree, every
 3,662,409,600-byte raw output, every 16-pair argmax/Pose6 chunk, every concatenated n600
 argmax/Pose6 array, scorer receipts, and SHA-256/byte facts. The queue held one full-n600 candidate
-at a time and checkpointed after every candidate. The final retained tree is 61 GiB and the local
-tier still has 403 GiB free. The shared decoded-token cache is bound by a
+at a time and checkpointed after every candidate. At finalization, `du -sh` reported the retained
+tree as `61G` and `df -h` reported `403Gi` free locally; these are rounded disk-usage displays, not
+an exact tree byte census. The shared decoded-token cache is bound by a
 full 117,964,800-byte token payload SHA-256
 `cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb`.
 
