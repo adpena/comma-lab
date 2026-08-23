@@ -1168,15 +1168,34 @@ def main() -> None:
     recall_missing: list[str] = []
     try:
         import re as _re
+        # `position_S` and `GROUNDING` are SEPARATOR-ANCHORED (2026-08-23 fix). Unanchored they
+        # matched mid-word and produced false decision-class hits: "compo(sition_s)ynergy" fired
+        # `position_s`, and "back(grounding)" fires `GROUNDING`. Both are ordinary research nouns
+        # in this corpus, so the bare alternation mislabels synthesis memos as council/seat docs.
+        # Sister of the substring-scan slot-holder class (task #829) and the verdict-scope
+        # detector false-positive cured at source (#1191). The other alternatives (council,
+        # crucible, symposium, convening, DRAFT_) do not occur as substrings of common words and
+        # are left unanchored deliberately.
+        # NOTE the prefix has NO trailing slash: the separator must stay AVAILABLE to the
+        # [/_]-anchored alternatives, otherwise a top-level `.omx/research/position_Shannon.md`
+        # silently stops matching (a false NEGATIVE — the direction that disables the gate).
         decision_pat = _re.compile(
-            r"\.omx/research/.*(council|crucible|symposium|GROUNDING|position_S|DRAFT_|convening)",
+            r"\.omx/research.*("
+            r"council|crucible|symposium|convening|DRAFT_"
+            r"|[/_]GROUNDING|[/_]position_S"
+            r")",
             _re.IGNORECASE)
         for f in files:
             if decision_pat.search(f) and f.endswith(".md"):
                 fp = os.path.join(root, f)
                 if os.path.exists(fp):
-                    head_txt = open(fp, errors="replace").read(6000)
-                    if ("STORES CONSULTED" not in head_txt.upper()
+                    # WHOLE file, not head(6000) (2026-08-23 fix): a compliant doc that places its
+                    # stores list in a closing section was flagged as missing it. Measured
+                    # instance: ddm_sy2's recall evidence sits at char 19,669 of 29,024 — far
+                    # outside the old window. These are .md research docs; reading them entire is
+                    # cheap and is the only way the EXISTENCE check can be honest.
+                    doc_txt = open(fp, errors="replace").read()
+                    if ("STORES CONSULTED" not in doc_txt.upper()
                             and "ORCHESTRATION_LEDGER" not in f):
                         recall_missing.append(f)
     except Exception:

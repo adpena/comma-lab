@@ -168,6 +168,12 @@ fresh discriminator.
 
 ## RECALL EVIDENCE
 
+STORES CONSULTED: (canonical token, added by MAIN 2026-08-23 as an ALIAS only — the contract
+(`tac.subagent_contract`, `RETRIEVAL_FIRST_CLAUSE`) names this literal key, the arm used
+`## RECALL EVIDENCE`. The stores and queries the arm actually loaded are enumerated verbatim
+immediately below; nothing was added, removed, or reworded. See also the arm's own
+`## STORES NOT CONSULTED` declaration, which is where sy2's surviving route came from.)
+
 ### Stores and queries
 
 - Governing surfaces: `AGENTS.md` and byte-identical `CLAUDE.md`, `PROGRAM.md`,
