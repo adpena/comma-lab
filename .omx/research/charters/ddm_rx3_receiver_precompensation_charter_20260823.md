@@ -110,7 +110,7 @@ the receiver source is the hide-data-in-code fake (NO-FAKE #6/#7) and must not b
   dx2 than on the ancestor it was killed on (0.008305 is 41× dx2's live 0.00020139).** Do NOT
   propose painting, compositing, or class-field substitution. This arm perturbs the rendered RGB
   by a generic function; it does not author content.
-- `#1127` SD1M (memo §5, commit `c30f92fbc9`) — the amplification lesson: render amplification
+- SD1M mass ladder (`ddm_mz2_frozen_section_representation_attack_20260815.md` lineage, memo §5, commit `c30f92fbc9`) — the amplification lesson: render amplification
   ~**38,700×**, damage ∝ mse^~0.4 falls SLOWER than credit at every depth, and pose went 0.286
   uncompensated. **A small-looking perturbation is not a small distortion; measure, never model.**
 - `ddm_ri1` + `ddm_ni1` — whole-body lossy re-representations DEAD (43.66× and 247.71× over
