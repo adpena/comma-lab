@@ -202,6 +202,36 @@ def test_rx2_cache_gate_refuses_noncanonical_shape() -> None:
         )
 
 
+def test_jf1_profile_preserves_reference_architecture_and_requires_exact_local_root(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    args = _minimum_args(
+        tool,
+        save=tool.JF1_LOCAL_ROOT / "training/null/model.pt",
+        out=tool.JF1_LOCAL_ROOT / "training/null/result.json",
+    )
+    args.profile = "jf1_joint_refit"
+    args.explicit_local_output_opt_in = True
+    for key, value in tool.JF1_PREREGISTERED_CONFIG.items():
+        setattr(args, key, value)
+    tool._assert_preregistered_config(args)
+    assert tool._storage_root_for_args(args.save, "--save", args) == tool.JF1_LOCAL_ROOT.resolve()
+    assert tool.JF1_PREREGISTERED_CONFIG == tool.RX2_PREREGISTERED_CONFIG
+    with pytest.raises(tool.CL1TrainingError, match="JF1 local receipt root"):
+        tool._storage_root_for_args(tmp_path / "outside.pt", "--save", args)
+
+
+def test_jf1_cache_gate_accepts_only_the_pinned_raw_field() -> None:
+    tool = _load_tool()
+    seg = torch.zeros((600, 384, 512), dtype=torch.uint8)
+    digest = tool.hashlib.sha256(seg.numpy().tobytes(order="C")).hexdigest()
+    payload = {"seg": seg, "spatial_token_sha256": digest}
+    assert tool._verify_jf1_cache_payload(payload, digest) == digest
+    with pytest.raises(tool.CL1TrainingError, match="token SHA differs"):
+        tool._verify_jf1_cache_payload(payload, "f" * 64)
+
+
 def test_stage_controls_do_not_add_selection_observations() -> None:
     tool = _load_tool()
     off_cadence = tool._epoch_controls(

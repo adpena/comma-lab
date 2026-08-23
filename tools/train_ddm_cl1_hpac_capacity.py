@@ -58,6 +58,10 @@ from tac.training import EMA  # noqa: E402
 PRIMARY_SSD_ROOT = Path("/Volumes/VertigoDataTier/pact")
 FALLBACK_SSD_ROOT = Path("/Volumes/APDataStore/pact")
 SSD_ROOTS = (PRIMARY_SSD_ROOT, FALLBACK_SSD_ROOT)
+JF1_LOCAL_ROOT = (
+    REPO_ROOT
+    / ".omx/tmp/arm_receipts_local/ddm_jf1_joint_field_model_refit"
+)
 DEFAULT_INTAKE_CODE = Path("/Volumes/VertigoDataTier/pact/pr130_eureka_intake_20260806/repro_repo/code")
 EXPECTED_INTAKE_SHA256 = {
     "hpac_integer.py": "6e6b4f4d0b293fb60cc1b751958756a4cd6c2ce7bcff68c6f03e20277856803f",
@@ -104,13 +108,16 @@ RX2_PREREGISTERED_CONFIG = {
     **PREREGISTERED_CONFIG,
     "device": "cpu",
 }
+JF1_PREREGISTERED_CONFIG = dict(RX2_PREREGISTERED_CONFIG)
 PREREGISTERED_CONFIG_BY_PROFILE = {
     "cl1": PREREGISTERED_CONFIG,
     "rx2_mc36": RX2_PREREGISTERED_CONFIG,
+    "jf1_joint_refit": JF1_PREREGISTERED_CONFIG,
 }
 PREREGISTERED_RATE_LAMBDAS_BY_PROFILE = {
     "cl1": frozenset({1.0, 0.5, 0.25}),
     "rx2_mc36": frozenset({1.0}),
+    "jf1_joint_refit": frozenset({1.0}),
 }
 EXPECTED_CACHE_SHA256 = "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195"
 EXPECTED_INIT_SHA256 = "0e6c30cef6b36c4e530779c92c56e9128c1d86c62e85e9fc5358a7e9f40ec985"
@@ -408,11 +415,31 @@ def _require_ssd_path(path: Path, label: str) -> Path:
     return path
 
 
-def _storage_preflight(save: Path, out: Path, *, min_free_bytes: int) -> dict[str, Any]:
-    save_root = _ssd_root_for_path(save, "--save")
-    out_root = _ssd_root_for_path(out, "--out")
+def _storage_root_for_args(path: Path, label: str, args: argparse.Namespace) -> Path:
+    if args.profile == "jf1_joint_refit" and args.explicit_local_output_opt_in:
+        resolved_parent = path.expanduser().resolve(strict=False).parent
+        resolved_root = JF1_LOCAL_ROOT.resolve()
+        try:
+            resolved_parent.relative_to(resolved_root)
+        except ValueError as exc:
+            raise CL1TrainingError(
+                f"{label} must live under the JF1 local receipt root {resolved_root}: {path}"
+            ) from exc
+        return resolved_root
+    return _ssd_root_for_path(path, label)
+
+
+def _storage_preflight(
+    save: Path,
+    out: Path,
+    *,
+    min_free_bytes: int,
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    save_root = _storage_root_for_args(save, "--save", args)
+    out_root = _storage_root_for_args(out, "--out", args)
     if save_root != out_root:
-        raise CL1TrainingError("--save and --out must use the same admitted SSD tier")
+        raise CL1TrainingError("--save and --out must use the same admitted storage tier")
     if min_free_bytes < 0:
         raise CL1TrainingError("--min-free-bytes must be nonnegative")
     free = shutil.disk_usage(save_root).free
@@ -426,9 +453,10 @@ def _storage_preflight(save: Path, out: Path, *, min_free_bytes: int) -> dict[st
         "required_free_bytes": min_free_bytes,
         "observed_free_bytes": free,
         "status": "PASS",
+        "explicit_local_output_opt_in": bool(args.explicit_local_output_opt_in),
         "cleanup_policy": (
             "atomic temporary files are removed automatically; periodic and "
-            "stage checkpoints are preserved as measurement evidence on SSD"
+            "stage checkpoints are preserved as measurement evidence on the admitted tier"
         ),
     }
 
@@ -839,6 +867,22 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--resume-from", type=Path)
     parser.add_argument(
+        "--explicit-local-output-opt-in",
+        action="store_true",
+        help=(
+            "JF1 only: admit output under the exact local arm receipt root while both SSD "
+            "tiers are full; all other local paths and profiles remain refused"
+        ),
+    )
+    parser.add_argument(
+        "--expected-cache-content-sha256",
+        help="JF1 only: required SHA-256 of the raw uint8 n600 field inside --cache",
+    )
+    parser.add_argument(
+        "--expected-init-sha256",
+        help="JF1 only: required SHA-256 of the exact warm-start file passed as --init",
+    )
+    parser.add_argument(
         "--resume-allow-trainer-drift",
         action="store_true",
         help=(
@@ -884,6 +928,28 @@ def _verify_rx2_cache_payload(cache_payload: Any) -> str:
     return digest
 
 
+def _verify_jf1_cache_payload(cache_payload: Any, expected_sha256: str | None) -> str:
+    if expected_sha256 is None:
+        raise CL1TrainingError("JF1 requires --expected-cache-content-sha256")
+    if not isinstance(cache_payload, dict) or "seg" not in cache_payload:
+        raise CL1TrainingError("JF1 cache must be a mapping containing seg")
+    seg = cache_payload["seg"]
+    if not isinstance(seg, torch.Tensor):
+        raise CL1TrainingError("JF1 cache seg must be a torch tensor")
+    if seg.device.type != "cpu" or seg.dtype != torch.uint8 or tuple(seg.shape) != (600, 384, 512):
+        raise CL1TrainingError("JF1 cache seg must be CPU uint8 with shape (600,384,512)")
+    if int(seg.min()) < 0 or int(seg.max()) > 4:
+        raise CL1TrainingError("JF1 cache seg values must be in [0,4]")
+    digest = hashlib.sha256(seg.contiguous().numpy().tobytes(order="C")).hexdigest()
+    if digest != expected_sha256:
+        raise CL1TrainingError(
+            f"JF1 cache token SHA differs: expected {expected_sha256}, observed {digest}"
+        )
+    if cache_payload.get("spatial_token_sha256") != digest:
+        raise CL1TrainingError("JF1 cache spatial_token_sha256 metadata is absent or differs")
+    return digest
+
+
 def main() -> None:
     assert_governed_admission("train_ddm_cl1_hpac_capacity")
     args = _build_parser().parse_args()
@@ -915,8 +981,16 @@ def main() -> None:
     if args.resume_from is not None and not args.resume_from.is_file():
         raise CL1TrainingError(f"--resume-from is not a file: {args.resume_from}")
     _validate_output_layout(args)
+    if args.profile != "jf1_joint_refit" and args.explicit_local_output_opt_in:
+        raise CL1TrainingError("--explicit-local-output-opt-in is admitted only for jf1_joint_refit")
+    if args.profile == "jf1_joint_refit" and not args.explicit_local_output_opt_in:
+        raise CL1TrainingError("jf1_joint_refit requires --explicit-local-output-opt-in")
+    if args.profile != "jf1_joint_refit" and (
+        args.expected_cache_content_sha256 is not None or args.expected_init_sha256 is not None
+    ):
+        raise CL1TrainingError("JF1 input pins are admitted only for jf1_joint_refit")
     if args.resume_from is not None:
-        _require_ssd_path(args.resume_from, "--resume-from")
+        _storage_root_for_args(args.resume_from, "--resume-from", args)
     if platform.system() != "Darwin":
         raise CL1TrainingError("CL1 local-Metal training requires macOS")
     if os.environ.get("PYTHONHASHSEED") != "0":
@@ -926,7 +1000,12 @@ def main() -> None:
     if args.device == "mps" and os.environ.get("PYTORCH_ENABLE_MPS_FALLBACK") != "0":
         raise CL1TrainingError("set PYTORCH_ENABLE_MPS_FALLBACK=0; CPU fallback is forbidden")
 
-    storage_preflight = _storage_preflight(args.save, args.out, min_free_bytes=args.min_free_bytes)
+    storage_preflight = _storage_preflight(
+        args.save,
+        args.out,
+        min_free_bytes=args.min_free_bytes,
+        args=args,
+    )
     source_sha256 = _verify_intake(args.intake_code)
     if not args.cache.is_file() or not args.init.is_file():
         raise CL1TrainingError("--cache and --init must be existing files")
@@ -937,8 +1016,15 @@ def main() -> None:
         raise CL1TrainingError(f"cache SHA differs: expected {EXPECTED_CACHE_SHA256}, observed {cache_sha256}")
     if args.profile == "rx2_mc36":
         _verify_rx2_cache_payload(cache_payload)
-    if init_sha256 != EXPECTED_INIT_SHA256:
-        raise CL1TrainingError(f"init SHA differs: expected {EXPECTED_INIT_SHA256}, observed {init_sha256}")
+    elif args.profile == "jf1_joint_refit":
+        _verify_jf1_cache_payload(cache_payload, args.expected_cache_content_sha256)
+    expected_init_sha256 = (
+        args.expected_init_sha256 if args.profile == "jf1_joint_refit" else EXPECTED_INIT_SHA256
+    )
+    if expected_init_sha256 is None:
+        raise CL1TrainingError("JF1 requires --expected-init-sha256")
+    if init_sha256 != expected_init_sha256:
+        raise CL1TrainingError(f"init SHA differs: expected {expected_init_sha256}, observed {init_sha256}")
 
     if args.device == "mps" and (not torch.backends.mps.is_built() or not torch.backends.mps.is_available()):
         raise CL1TrainingError("local Metal is unavailable in this process; CPU substitution is forbidden")
