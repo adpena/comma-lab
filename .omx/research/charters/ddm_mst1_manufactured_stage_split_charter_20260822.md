@@ -104,6 +104,7 @@ alongside manufactured errors per stage; a stage's net is not its gross.**
   LOCATION, not a licence; every reachability claim owes a collateral consideration.
 - `ddm_ri1_rc1_full_rgb_receiver_20260822.md` + `ddm_ni1_nr1_k32_receiver_distortion_20260822.md` —
   representation changes measured **43.66×** and **247.71×** over their d_seg ceilings, with a measured
+**[MAIN ERRATUM 2026-08-22: the `247.71×` NI1/NR1-K32 figure in this section is WITHDRAWN — fabricated, no receipt; NI1's d_seg is NOT MEASURED and its token-agreement proxy is 1.079× DX2, and at 122,250 B it is byte-feasible for sub-0.12. The RI1 `43.66×` is real and MEASURED. See `.omx/research/ddm_ni1_247x_erratum_20260822.md`.]**
   amplification exponent of **16.69**: seg responds violently and non-linearly to small representation
   changes. Do not linearize across regimes; a per-stage count is not a per-stage response curve.
 - The 08-22 rate stack (RB1 0 B · AD2 already-free · TO2 196–687% worse · CX3 0 B · EF1 generic

@@ -114,6 +114,7 @@ the receiver source is the hide-data-in-code fake (NO-FAKE #6/#7) and must not b
   ~**38,700×**, damage ∝ mse^~0.4 falls SLOWER than credit at every depth, and pose went 0.286
   uncompensated. **A small-looking perturbation is not a small distortion; measure, never model.**
 - `ddm_ri1` + `ddm_ni1` — whole-body lossy re-representations DEAD (43.66× and 247.71× over
+  **[MAIN ERRATUM 2026-08-22: the `247.71×` NI1/NR1-K32 figure in this section is WITHDRAWN — fabricated, no receipt; NI1's d_seg is NOT MEASURED and its token-agreement proxy is 1.079× DX2, and at 122,250 B it is byte-feasible for sub-0.12. The RI1 `43.66×` is real and MEASURED. See `.omx/research/ddm_ni1_247x_erratum_20260822.md`.]**
   ceiling), amplification exponent **16.69**. Seg responds violently and non-linearly.
 - `ddm_ld1_lane_lossy_drop_exchange_20260822.md` (`5e8d6011ba`) · `ddm_to2` · `ddm_ef1` ·
   `ddm_oe1` · `ddm_ad2` — the RATE axis on this body is at a sharp joint local optimum in every

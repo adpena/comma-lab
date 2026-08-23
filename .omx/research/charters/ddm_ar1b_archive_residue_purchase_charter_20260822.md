@@ -107,6 +107,7 @@ come from a section nobody has priced.
   share is advisory-lineage. Cite it at that strength, not stronger.
 - `ddm_ri1_rc1_full_rgb_receiver_20260822.md` + `ddm_ni1_nr1_k32_receiver_distortion_20260822.md` —
   whole-body lossy re-representations DEAD on distortion (43.66× and 247.71× over ceiling),
+**[MAIN ERRATUM 2026-08-22: the `247.71×` NI1/NR1-K32 figure in this section is WITHDRAWN — fabricated, no receipt; NI1's d_seg is NOT MEASURED and its token-agreement proxy is 1.079× DX2, and at 122,250 B it is byte-feasible for sub-0.12. The RI1 `43.66×` is real and MEASURED. See `.omx/research/ddm_ni1_247x_erratum_20260822.md`.]**
   amplification exponent **16.69**. **Do NOT interpolate distortion between perturbation levels —
   measure each.**
 

@@ -92,6 +92,7 @@ direction — redirects the campaign, and it costs no scorer, no GPU, and no byt
   model is RB1's axis and its answer is already 0 B.
 - `ddm_ri1_rc1_full_rgb_receiver_20260822.md` + `ddm_ni1_nr1_k32_receiver_distortion_20260822.md` —
   both byte-feasible LOSSY re-representations measured DEAD (d_seg 43.66× and 247.71× over ceiling).
+**[MAIN ERRATUM 2026-08-22: the `247.71×` NI1/NR1-K32 figure in this section is WITHDRAWN — fabricated, no receipt; NI1's d_seg is NOT MEASURED and its token-agreement proxy is 1.079× DX2, and at 122,250 B it is byte-feasible for sub-0.12. The RI1 `43.66×` is real and MEASURED. See `.omx/research/ddm_ni1_247x_erratum_20260822.md`.]**
   The measured amplification exponent between them is **16.69** (token disagreement ×1.0975 → d_seg
   ×4.7242): *which* tokens differ dominates *how many* by more than an order of magnitude. **Any lossy
   step in this arm inherits a 44×–248× prior against it — this arm is LOSSLESS ONLY.**

@@ -118,6 +118,7 @@ demand read two ways, and every byte this arm finds is interchangeable with dist
   time) was on a DIFFERENT candidate's Brotli stream and does not transfer here.
 - `ddm_ri1_rc1_full_rgb_receiver_20260822.md` + `ddm_ni1_nr1_k32_receiver_distortion_20260822.md` —
   both byte-feasible LOSSY re-representations measured DEAD (**43.66×** and **247.71×** over their
+**[MAIN ERRATUM 2026-08-22: the `247.71×` NI1/NR1-K32 figure in this section is WITHDRAWN — fabricated, no receipt; NI1's d_seg is NOT MEASURED and its token-agreement proxy is 1.079× DX2, and at 122,250 B it is byte-feasible for sub-0.12. The RI1 `43.66×` is real and MEASURED. See `.omx/research/ddm_ni1_247x_erratum_20260822.md`.]**
   d_seg ceilings). Measured amplification exponent **16.69**. **Any lossy step here inherits a 44–248×
   prior against it — this arm is LOSSLESS ONLY.**
 - `ddm_lq1_lane_quotient_representability_20260822.md` — a full-Hamming ORACLE assignment removes only
