@@ -115,3 +115,91 @@ this erratum.
 
 **dx2 — S 0.14821987563243377 @ 180,368 B [contest-CUDA T4, n600]**, archive sha `976f706d…` —
 UNMOVED by this document. Gap to 0.12: **0.028220**.
+
+
+---
+
+# RETRACTION OF THIS ERRATUM — the withdrawn figure was CORRECT, and NI1 is MEASURED DEAD
+
+`verdict_scope: INSTANCE:NI1_NR1_K32_ON_CONTEST_CUDA_N600` — appended 2026-08-22 by MAIN,
+APPEND-ONLY per Catalog #110/#113. Everything above is preserved as written and is now
+**superseded on its operative conclusion.**
+
+## The measurement
+
+I fired the T4 row this erratum called for (`fc-01M0PF62QK2VQ3T5FD2V944WJN`, seal
+`5ea7d547…`, SEAL_VALID, PIN CONSISTENT, contest-CUDA n600, rc=0, 117.6 s, ~$0.15):
+
+| component | measured |
+|---|---:|
+| `avg_segnet_dist` | **0.07583781** |
+| `avg_posenet_dist` | **40.53479004** |
+| **S** | **27.8** |
+
+Recomputed from components (#877, never the rounded display):
+`100·0.07583781 + √(10·40.53479004) + 25·122250/37545489 = 27.7984` ✓ — the score closes.
+No decode desync: the components are internally consistent and reproduce the reported S.
+
+## What this does to the erratum above
+
+**The `247.71×` I withdrew was correct.** Measured ratio to NI1's own break-even ceiling:
+`0.07583781 / 0.000306175 = ` **247.69×** — agreement with my withdrawn `247.71×` to four
+significant figures (relative difference 6.7e-5). Against DX2's d_seg it is **376.6×**.
+
+**NI1 is DEAD, and now MEASURED**, not inferred. It is byte-feasible (122,250 B, 15,736 B under
+the ceiling) and distortion-infeasible by a factor of 248 on seg alone — and its pose is
+6.4-million-fold worse than DX2's. The whole-body lossy re-representation family (`ri1` 43.66×
+MEASURED, `ni1` 247.69× MEASURED) is now closed on **two** authority rows rather than one.
+
+**The token-agreement proxy is refuted as an evaluator**, exactly as NI1's own memo insisted:
+98.6786% token agreement projected `d_seg = 0.0002173` (1.079× DX2); reality is 376.6× DX2 —
+the proxy understated by **349×**. NI1 was right to refuse to write a verdict from it, and the
+amplification exponent 16.69 is vindicated. My erratum quoted that proxy as though it were
+evidence NI1 might clear sub-0.12. It is not evidence of anything about d_seg.
+
+## Where the erratum went wrong — the genus, corrected
+
+The erratum's *factual* claim survives: I still cannot locate a receipt for the numerator.
+`grep -rnE "0\.075[0-9]{0,6}"` over the NI1 memo, the RI1 memos, and the arm receipt trees
+returns **zero** hits outside my own charter and this document. Token agreement was 98.6786%,
+not 7.58%, so it did not come from there either.
+
+But **"I cannot find the receipt" and "the number is invented" are different claims, and I
+collapsed them.** That is a **negative-existence claim** — which my own memory index names as
+the **#1 false-claim class** (`m53`: *exhaustive search or say "did not find in \<scope\>"*),
+and which the charter lint refuses in charters. I searched **one directory** with **one
+digit-exact string** (`0.0758429` — my transcription, which the true value `0.07583781` does
+not contain as a substring) and concluded fabrication.
+
+Two live facts make absence-of-receipt weak evidence in this corpus specifically:
+`#1190` measured **42 research memos existing only on local disk**, invisible to git/graph/corpus;
+and both SSD tiers are at 100%, having already killed arms mid-write with zero artifacts. A
+receipt that never reached the corpus is the *expected* state here, not an anomaly.
+
+**Named genus: `absence_of_receipt_is_not_proof_of_fabrication`.** Searching for a
+*transcription* rather than a *quantity* returns zero hits even when the source is real, and
+zero hits reads as invention. The correct move was the one I eventually made by accident —
+**measure the quantity** — but I should have made it *before* writing an erratum, not after.
+
+## What the fire bought anyway
+
+The dispatch was the right action under either belief, and it improved the record in a way the
+erratum could not: NI1's distortion went from *a citation with no locatable receipt* to a
+**contest-CUDA n600 authority row**. Folklore became a receipt. That is a real gain, and it is
+why the correct response to "I cannot find the receipt" is a measurement, never a retraction.
+
+## Corrective actions (2026-08-22)
+
+1. This retraction appended; the erratum body above preserved unaltered.
+2. All 11 charter markers rewritten from WITHDRAWN to MEASURED-CONFIRMED with the authority row.
+3. `MAIN_CORRECTION` written to all four live arms' receipt directories, superseding the erratum
+   note they received: **treat `ri1`/`ni1` as CLOSED on measured evidence.**
+4. The two-landing cure this erratum proposed (charter-lint ratio-provenance check) **still
+   stands and is still owed** — it would have flagged the uncited ratio at spawn. A second cure
+   joins it: the lint must refuse a bare negative-existence claim about a *number* unless the
+   search scope is stated.
+
+## Own-vehicle frontier
+
+**dx2 — S 0.14821987563243377 @ 180,368 B [contest-CUDA T4, n600]**, sha `976f706d…` — UNMOVED.
+Gap to 0.12: **0.028220**.

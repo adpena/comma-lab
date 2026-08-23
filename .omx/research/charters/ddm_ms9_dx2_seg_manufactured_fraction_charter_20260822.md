@@ -88,7 +88,7 @@ empty on this body, and the campaign must stop treating TD1's number as inherite
   do NOT reuse the fractions. Cross-vehicle constant transfer is a named poison class here.
 - `ddm_ri1_rc1_full_rgb_receiver_20260822.md` + `ddm_ni1_nr1_k32_receiver_distortion_20260822.md` — both
   byte-feasible lossy re-representations measured DEAD on distortion (**43.66×** and **247.71×** over
-**[MAIN ERRATUM 2026-08-22: the `247.71×` NI1/NR1-K32 figure in this section is WITHDRAWN — fabricated, no receipt; NI1's d_seg is NOT MEASURED and its token-agreement proxy is 1.079× DX2, and at 122,250 B it is byte-feasible for sub-0.12. The RI1 `43.66×` is real and MEASURED. See `.omx/research/ddm_ni1_247x_erratum_20260822.md`.]**
+> **[MAIN CORRECTION 2026-08-22, SUPERSEDES THE 08-22 ERRATUM: the `247.71x` figure is CONFIRMED, now MEASURED on contest-CUDA n600 (call fc-01M0PF62QK…, S 27.8, d_seg 0.07583781 = 247.69x NI1's own ceiling and 376.6x DX2, d_pose 40.53). NI1 is byte-feasible at 122,250 B and DISTORTION-DEAD. Its 98.6786% token agreement understated d_seg by 349x — do NOT use token agreement as an evaluator. RI1 43.66x also real+MEASURED. The whole-body lossy re-representation family is CLOSED on two authority rows. See `.omx/research/ddm_ni1_247x_erratum_20260822.md` (retraction section at the end).]**
   their d_seg ceilings), with a measured amplification exponent of **16.69** between them: *which*
   tokens differ dominates *how many* by more than an order of magnitude. Consequence for you: seg
   responds violently and non-linearly to small representation changes. Do not linearize across regimes.

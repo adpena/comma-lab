@@ -88,7 +88,7 @@ budget absorbs ~60,700 added transmitted errors. Both numbers are large; the cur
   discipline binds: every rung carries its per-class collateral or it is not a rung.
 - `ddm_ri1_rc1_full_rgb_receiver_20260822.md` + `ddm_ni1_nr1_k32_receiver_distortion_20260822.md` —
   whole-body lossy re-representations DEAD on distortion (**43.66×** and **247.71×** over their
-**[MAIN ERRATUM 2026-08-22: the `247.71×` NI1/NR1-K32 figure in this section is WITHDRAWN — fabricated, no receipt; NI1's d_seg is NOT MEASURED and its token-agreement proxy is 1.079× DX2, and at 122,250 B it is byte-feasible for sub-0.12. The RI1 `43.66×` is real and MEASURED. See `.omx/research/ddm_ni1_247x_erratum_20260822.md`.]**
+> **[MAIN CORRECTION 2026-08-22, SUPERSEDES THE 08-22 ERRATUM: the `247.71x` figure is CONFIRMED, now MEASURED on contest-CUDA n600 (call fc-01M0PF62QK…, S 27.8, d_seg 0.07583781 = 247.69x NI1's own ceiling and 376.6x DX2, d_pose 40.53). NI1 is byte-feasible at 122,250 B and DISTORTION-DEAD. Its 98.6786% token agreement understated d_seg by 349x — do NOT use token agreement as an evaluator. RI1 43.66x also real+MEASURED. The whole-body lossy re-representation family is CLOSED on two authority rows. See `.omx/research/ddm_ni1_247x_erratum_20260822.md` (retraction section at the end).]**
   ceilings), amplification exponent **16.69** (token disagreement ×1.0975 → d_seg ×4.7242). Seg responds
   violently and non-linearly. **Do NOT interpolate d_seg between rungs — measure each.** Note the
   distinction that justifies this arm: those changed 1.5M+ tokens body-wide; this is Lane-scoped with a
