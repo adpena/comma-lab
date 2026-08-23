@@ -114,3 +114,24 @@ Live state at ep24/60: the diagonal leads its own null on **both** axes — toke
 
 **dx2 — S 0.14821987563243377 @ 180,368 B [contest-CUDA T4, n600]**, sha `976f706d…` — UNMOVED.
 Gap to 0.12: **0.028220**.
+
+## APPEND-ONLY CORRECTION — GV1 full census (2026-08-23)
+
+**§4 and the “only winning move class” premise in §6 are retracted.** GV1 classified 114 retained
+shipping-lineage moves from code, not prose. Thirteen of 18 pointer moves were single-axis. Counting
+pointer moves plus admitted sub-band rows as successes, joint moves succeeded 8/49 (16.33%) and
+single-axis moves succeeded 14/65 (21.54%): Fisher OR 0.7108, two-sided p=0.6326, joint-minus-single
+risk difference -5.21 percentage points. The late 08-22/23 window contains 33 joint failures and 33
+single-axis failures.
+
+Campaign phase, not axis count, carries the signal: early success was 20/46 versus late success 2/68
+(late/early Fisher OR 0.03939, p=7.286e-08). Within the early and late strata, axis count has no
+association with success. Joint moves also spent more archive bytes in the eligible subset (median
++55.5 B versus -105 B; Mann-Whitney p=0.01186), so raw joint outcomes are byte-confounded.
+
+**Corrected verdict: `REFUTED`.** `verdict_scope: FORMULATION:DX2_LINEAGE_SUB012_CAMPAIGN`.
+Jointness is not a
+routing privilege and does not justify `ddm_rj1` or any other fire. A future joint move must name and
+measure its own causal interaction. Full table and tests:
+`.omx/research/ddm_gv1_gestalt_validation_20260823.{md,jsonl}`; JSONL SHA-256
+`483ca46dc3063a477e60a48886e6f0bcab753a51903cee94848f810e26d88ba5`.
