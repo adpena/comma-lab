@@ -352,13 +352,26 @@ only**, and `tv1`'s memo estimated ~5 GiB peak RSS against a measured 10.5 GiB. 
 that short *only* because the published token cache replaces the arithmetic decode
 (`token_decode_or_checkpoint_load` = 12.5 s).
 
-Rungs were run up to 4-wide, admitted by the host governor
-(`safe_run.py` SUM-over-RAM crash guard, adaptive ceiling 116.0 GiB). Under 4-way concurrency each
-evaluate ran at 190–325% CPU and 5.4–6.6 GiB RSS. The governor refused further launches while those
-were in flight — projecting 177.0 GiB against the 116.0 GiB ceiling
+**Per-rung wall-clock, MEASURED** (18-core host; the k=0 control ran alone, the rest 4-wide):
+
+| rung | concurrency | inflate | evaluate | total |
+|---|---:|---:|---:|---:|
+| `k0_control` | **1 (solo)** | 499.4 s | 523.3 s | **1024.3 s** |
+| `cond_cond` k=10,000 | 4 | 1364.2 s | 602.7 s | 1968.4 s |
+| `cond_cond` k=100,000 | 4 | 1221.9 s | 630.8 s | 1854.5 s |
+| `cond_cond` k=1,334,939 | 4 | 1263.4 s | 619.9 s | 1884.8 s |
+| `unif_unif` k=100,000 | 4 | 1214.3 s | 633.2 s | 1849.4 s |
+
+**The concurrency exchange, measured rather than assumed:** 4-wide makes each row **1.81–1.92×
+slower**, so throughput is **≈2.16× — not 4×**. The cost falls almost entirely on the *inflate* leg
+(2.4–2.7× slower; it is the CPU-bound neural render), while *evaluate* degrades only 1.15–1.21×. A
+plan that priced 4-wide as a 4× speedup would have been wrong by nearly half.
+
+The governor (`safe_run.py` SUM-over-RAM crash guard, adaptive ceiling 116.0 GiB) refused further
+launches while those four were in flight — projecting 177.0 GiB against 116.0 GiB
 (`53.8 used + 115.3 active-growth + 8.0 new`) — so **concurrency on this host is bounded by the
-in-flight set's growth budget, not by a policy number.** A refusal was treated as *wait*, never as
-*retry harder*.
+in-flight set's growth budget, not by a policy number.** Every refusal was treated as *wait*, never
+as *retry harder*.
 
 **Resolution floor.** The report carries 8 decimals, so `d_seg` resolves to **1e-8 = 1.18 argmax
 pixels**. Against the 1:1 prediction `8.477e-9·k`:
@@ -599,7 +612,7 @@ exactness; that exactness was real.
 
 ## STORES CONSULTED
 
-`.omx/research/ddm_tv1_evaluator_tolerance_curve_20260824.md` (predecessor instrument, now committed)
+STORES CONSULTED: `.omx/research/ddm_tv1_evaluator_tolerance_curve_20260824.md` (predecessor instrument, now committed)
 · `ddm_wq1_what_was_never_asked_20260824.md` (D3) · `ddm_tri1_triple_composition_and_pair_closure_20260824.md`
 (SPEC B) · `ddm_tb2_token_bit_attribution_20260823.md` (Gini 0.9951; cost field) ·
 `ddm_tx1_toolbox_crosswalk_20260819.md` §0 (exchange rate) ·
