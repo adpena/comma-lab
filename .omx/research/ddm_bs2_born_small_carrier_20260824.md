@@ -43,9 +43,10 @@ exactly this demand on **2026-08-23, the day before this charter**, and refused 
 not stranded. They are measured, and byte-dead by 240,428–397,775 B *before distortion is charged*.
 What survives is narrower than I predicted and I grade it as a partial refutation in §6.
 
-**And the charter contains one factual error I must return: `ddm_tv1` does not exist.** It has never
-been spawned, chartered, or run. It is `wq1` SPEC B, written yesterday, unclaimed. The gate I was
-told to name as a live dependency has no arm behind it (§1.4).
+**Two charter citations needed correcting, and a third correction of mine was itself WRONG** — I
+claimed `ddm_tv1` did not exist; **it exists and was running while I wrote this.** The charter was
+accurate and I was not. See **§9**, which is the most transferable finding in this memo: a
+negative-existence claim was made over a store that structurally cannot hold the object.
 
 ---
 
@@ -148,10 +149,13 @@ modes and **nothing has ever been built in the middle**:
 `arm_final_messages/`, `.omx/state/codex_arm_*`, `git log --all`. It exists only as sy2 rank-3 and
 wq1 SPEC C (`ddm_bs1`).
 
-**`ddm_tv1` does not exist.** Same scope, plus `grep -rn "ddm_tv1"` over the repo excluding `.git/`.
-One hit total, and it is the proposal: `ddm_wq1…:198` **SPEC B**, written yesterday, unclaimed. The
-charter's statement that a sister arm "is measuring right now" is **incorrect**. The question is
-open and unowned (§5.2).
+**`ddm_tv1` had no committed owner at the time I looked.** SEARCH SCOPE as above, plus
+`grep -rn "ddm_tv1"` over the repo excluding `.git/`. One hit total: the proposal `ddm_wq1…:198`
+**SPEC B**, written yesterday. **That is the whole of what this scope supports.** ⚠ An earlier
+version of this line concluded from it that tv1 "does not exist / has never been spawned" and that
+the charter was incorrect. **That conclusion was WRONG — `ddm_tv1` was live while I wrote this, and
+the charter was accurate.** The repo structurally cannot hold live-arm state; see **§9**. What
+survives, and is true: **SPEC B was uncommitted in the corpus when I searched.**
 
 **Charter citation correction.** The charter cites *"W96 was measured and refused (rf1, 478.7×)"*.
 At source, `ddm_rf1_renderer_film_rung_20260824.md:6` records the refusal at **2.7749× the matched
@@ -373,15 +377,19 @@ Born-small should fire **third**, and the reason is not a closed gate:
 1. **tri1 rank 2 / E2′** — add pose to the objective, retrain the existing representation, re-measure
    ap1 `carrier_l1`. Decides basis-vs-objective (§2.4) and could make this whole route unnecessary.
    Cost: one training run + one advisory row.
-2. **wq1 SPEC B (`ddm_tv1`, UNSPAWNED)** — reassign `k` random token positions, push through the real
+2. **wq1 SPEC B (`ddm_tv1`) — LIVE, running now** (corrected; §9) — reassign `k` random token positions, push through the real
    receiver, measure tolerance with **no addressing and no coding**. Fills `vf1`'s empty denominator
    and decides whether exact reproduction is over-strict. Cost: ~5 advisory rows, $0 local.
 3. **This route's §5.2 measurement.**
 
 **§5.2 does depend on the D3/tv1 question, and I name it as a gate.** But it depends on it *weakly*
 and in a useful direction: §5.2 **is** a tolerance measurement — a single, structured, already-built
-sample of it. If tv1 runs first it calibrates the prior; if §5.2 runs first it is one high-value
-point on tv1's curve. They are complementary, not sequential.
+sample of it. **tv1 is live and will report first, which is the good ordering:** it delivers the
+random-reassignment tolerance curve, and §5.2 then reads as one *structured, adversarially-placed*
+point on that curve — the miss is 23.38× boundary-enriched and 40.81× Lane-loaded, so it samples the
+hostile tail rather than the mean. If tv1's curve is flat at `k ≈ 1.3e6` random positions and §5.2
+still refuses, the difference isolates **placement** as the mechanism, which no random probe can
+show. They are complementary, not sequential.
 
 **Honest limit on the tolerance thesis.** Relaxing exactness has so far bought single-digit
 percentages: WS0 269,921 → 265,930 B (−1.5%), WS1 918,904 → 885,750 B (−3.6%), HG1's protected
@@ -466,6 +474,66 @@ memories `[[m88]]`, `[[m53]]`, `[[the-instruments-own-units-level-and-aggregatio
 **Receipts:** `/Volumes/APDataStore/pact/ddm_bs2_born_small/` — `bs2_generator_miss_structure.json`,
 `bs2_per_frame_miss_counts.i64`, `SHA256SUMS.txt`. APDataStore 197 GiB free; **Vertigo at 100% was
 neither read nor written.**
+
+---
+
+## 9. CORRECTION — append-only, and it is mine to own
+
+**What I claimed.** §0 and §1.4 stated that `ddm_tv1` "does not exist," had "never been spawned,
+chartered, or run," and that my charter's "measuring right now" was **incorrect**.
+
+**What is true.** `ddm_tv1` **exists and was running while I wrote this memo** — spawned in the same
+message that spawned me, and mapping token decode in `f26_inflate.py` at the time. **The charter was
+accurate. I was not.** MAIN caught it and routed the correction. §0, §1.4 and §5.3 carry the
+corrected form; the original claim is preserved here rather than erased.
+
+**Why this is worth more than the erratum.** My method was not sloppy. I searched
+`.omx/research/`, `charters/`, `arm_final_messages/`, `.omx/state/codex_arm_*`, `git log --all`, and
+`grep -rn "ddm_tv1"` across the repo. I found one hit and I **declared that scope**, as [[m53]]
+requires. The search was correct, the scope statement was correct, and the conclusion was still
+**false**.
+
+The defect is that I made a negative-existence claim over a store that **structurally cannot contain
+the object**. A live arm writes its memo at the END. Until then it exists only in the harness task
+list, which arms cannot read. Searching the repo for a running arm is not a weak search — it is a
+search whose null result carries **zero information**. I converted "absent from the only store I can
+see" into "absent from the world."
+
+**The general form, because it will bite the next arm:**
+
+> **"X was never spawned" is not derivable from the repo.** The harness task list and the repo are
+> different stores, and arms see only the repo. What IS derivable is a statement about the corpus:
+> *"X had no committed owner when I looked."*
+
+**This sharpens [[m53]], and that is the transferable finding.** [[m53]] says a negative-existence
+claim must either exhaustively search or state its scope. **Stating the scope is necessary and NOT
+sufficient.** A declared scope does not rescue the claim when the scope is structurally incapable of
+holding the object — it only makes the error legible after the fact. The missing test is one line
+longer:
+
+> Before any negative-existence claim: **(1)** state the scope, **(2)** ask whether the object, *if
+> it existed*, would necessarily appear in that scope. If the answer is no, the claim is not
+> available at any search depth — only the scope-local statement is.
+
+**This is a RECURRENCE, not a new genus, and that is the part I own hardest.** [[m89]] is in my
+always-loaded instructions: *"TASK-LEDGER SPLIT (RECURRED 08-21 W3-F20): harness TaskList ≠ repo
+ledger; arms see ONLY the repo."* I had the law loaded and did not apply it, because [[m89]] is
+written as a rule about **citing task ids** and I was making an **existence** claim — so I did not
+recognise the shape. The law is broader than its own statement: the store split governs every claim
+about arm state, not just id citations. `rr9` hit the same split from the other side today (citing a
+task id belonging to a different row, and unable to resolve two others) — **two arms, one split, one
+day, opposite directions.**
+
+**Scope of this correction.** It touches §0, §1.4, §5.3, and adds §9. **No measured number, no
+arithmetic, no verdict, and no routing conclusion in §2–§4 or §6 depended on tv1's status.** The
+born-small adjudication, the 101,128 B container, the 23.38× boundary enrichment, the 40.81× Lane
+over-representation, and the §5.2 measurement are all unaffected. The routing improves: tv1 is live
+and reports first, which is the better ordering (§5.3).
+
+**The other two charter corrections are unaffected and stand:** rf1's 478.7× is an exchange ratio
+and the refusal is 2.7749× (rf1 `:148`); and sy2's V9 DCB credit rests on `.pyc` bytecode with no
+source anywhere in the repo or its history, the writing session's commit having failed rc 128 with
+no SHA.
 
 ---
 
