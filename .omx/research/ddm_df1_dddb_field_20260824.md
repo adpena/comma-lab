@@ -364,15 +364,35 @@ measured at three perturbation scales on the same instrument:
 
 **Render amplification is not a constant and the campaign should stop treating it as one.** A
 handful of broken labels costs ~1.40 scored cells each; a hundred thousand costs ~1.04 each. The
-mechanism is saturation — once a neighbourhood is already wrong, breaking another token there
-cannot break it twice. The practical consequence cuts against targeting: **small, precisely-aimed
-token edits are amplified ~35% harder than bulk ones**, so the per-unit damage of a surgical edit
-is worse than a bulk average would predict.
+mechanism is plausibly saturation — once a neighbourhood is already wrong, breaking another token
+there cannot break it twice. The practical consequence cuts against targeting: **small,
+precisely-aimed token edits are amplified ~35% harder than bulk ones**, so the per-unit damage of a
+surgical edit is worse than a bulk average would predict.
 
-**The trap this section closes.** With MEASURED amplification and STATIC bytes, τ = 0.9999 prices
-at **0.873×** and τ = 0.999 at **0.899×** — both nominal adoptions. A campaign that priced this
-operator on a static field edit, even with a correctly measured render amplification, would have
-adopted a change that makes S **58% worse**. Only the closed loop separates them.
+**The confound I have NOT isolated, named explicitly.** The three rows differ in *how many*
+positions changed AND in *which* positions changed — the 773 are the model's most confidently
+wrong, the 106,711 are a broader and differently-distributed set. So the monotone fall from 1.4036
+to 1.0408 is a fact about these three fields, and "saturation in N" is the natural reading of it,
+but it is **not** separated from a composition effect. Isolating it needs a size sweep over
+random-equal-composition subsets of one changed set; that is a clean follow-on and **this arm did
+not run it**. The number that carries the verdict (11.567×) does not depend on the reading — it is
+measured directly on the field that would ship.
+
+**The trap this section closes.** The static τ sweep, scored on the REAL render and the REAL
+SegNet — so its `ΔS_seg` is fully measured, only its BYTES are static:
+
+| τ | labels broken | net amp | measured `ΔS_seg` | static credit | **damage ÷ credit** |
+|---|---:|---:|---:|---:|---:|
+| 1.0 | 0 | — | 0.000000 | 0.0000000 | **0** (null control) |
+| 0.9999 | 773 | 1.4036 | 0.000920 | 0.0010541 | **0.873 — a WIN** |
+| 0.999 | 3,702 | 1.1807 | 0.003705 | 0.0041199 | **0.899 — a WIN** |
+| 0.99 | 13,437 | 1.0686 | 0.012172 | 0.0119267 | **1.021 — marginal** |
+
+Two of those rows say ADOPT. The closed loop at the very same τ = 0.999 says **11.567× — refuse**,
+and the candidate it produces scores **0.23423** against 0.14822 shipped, i.e. S **58.0% worse**.
+**A campaign that priced this operator on a static field edit — even with a correctly measured
+render amplification, as here — would have shipped a 58% regression.** Only running the receiver
+separates them, because only the receiver's contexts diverge.
 
 ---
 
