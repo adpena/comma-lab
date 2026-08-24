@@ -1,6 +1,6 @@
 # ddm_ds1 — the cheap-to-shrink objective: recall, derivation, mechanism race, build
 
-**Date:** 2026-08-24 · **Arm:** ddm_ds1 · **Pointer:** UNMOVED · **No run fired.**
+**Date:** 2026-08-24 · **Arm:** ddm_ds1 · **Pointer:** UNMOVED · **R0 FIRED (§6b), zero new compute; R1 not fired.**
 **Vehicle:** dx2 / hv1 / wd3 renderer · **Axis label:** design + build; no score claim.
 
 ---
@@ -423,6 +423,77 @@ add a lever; it invalidates the price on every closed cell. That re-pricing, not
 
 ---
 
+## 6b. R0 — FIRED AND MEASURED (2026-08-24). Zero new compute.
+
+**Method:** R0 needed no scorer run at all. The trainer already retains, per arm, the full per-group
+`quantization_sensitivity` table **and** a 4-way `quantization_race` with each candidate's measured
+`hard_d_seg` / `d_pose`. R0 is a read of retained artifacts.
+**Axis:** `[Darwin-mps frozen-scorer advisory]` · `score_claim=false` · `promotion_eligible=false`.
+**Receipt:** `/Volumes/APDataStore/pact/ddm_ds1_cheap_to_shrink/R0/R0_RESULT.json`, 6,764 B,
+sha256 `2a1a6ee1821cb0a38882b69ad9ea425ed9c4e79d08e80f4b5464870667332122`.
+**Contention:** none consumed. `ddm_tv1` (282.8% CPU) and `ddm_df1` (204.8%) stayed untouched; I
+waited on nothing and took no advisory slot.
+
+**Dedupe first:** `W0_warm`'s four rows are **bit-identical** to `W0_reset`'s (same bytes, `d_seg`,
+`d_pose`). They are ONE measurement, not two. Distinct arms = **3**, not 4 — the
+"N negatives masquerading as convergence" genus, caught before counting.
+
+### Finding 1 — the proxy misses its own pre-registered bar
+
+| arm | stage | predicted order (worst→best) | TRUE order (worst→best) | ρ | τ |
+|---|---|---|---|---:|---:|
+| D56 | from_epoch_**0000** | u2 > u3 > u4 | u2 > **u4 > u3** | 0.50 | 0.33 |
+| F64 | from_epoch_**0000** | u2 > u3 > u4 | **u3 > u4 > u2** | **−0.50** | −0.33 |
+| W0 | from_epoch_**0060** | u2 > u3 > u4 | u2 > u3 > u4 | **1.00** | 1.00 |
+
+**Pooled (n=9, 3 arms): ρ = 0.783, τ = 0.667 — BELOW the pre-registered 0.90 bar.** F64 is a full
+**inversion**: the proxy calls uniform2 the worst allocation; truth calls it the **best**.
+
+### Finding 2 — the proxy-designed allocation has never won
+
+`adaptive` (built by `adaptive_allocation_from_sensitivity`) **fails the component gates in 3/3
+distinct arms**, while being 1,211–3,770 B cheaper than the winner. The selected policy is
+`uniform_int4_degenerate` in **4/4** arms. **The renderer's bytes are allocated by dumb uniform int4;
+the entire sensitivity machinery is live, computed every stage, and never selected.** It is an
+orphaned mechanism in production.
+
+**Honest nuance, against my own headline:** `adaptive` is not worse on *aggregate* D — in D56 it is
+better AND cheaper (D 61.381 vs 64.572 at 20,235 vs 21,778 B) and in F64 it ties (50.638 vs 50.616).
+It fails on **component** gates (`hard_cell`, `road_lane`), not on the composite. So the correct
+statement is *"the gates reject it"*, not *"it is worse."* That distinction matters, and it surfaces
+a separate live question for MAIN: the allocator is leaving **1,211–3,770 B** (0.0008–0.0025 S)
+unbought per arm on component gates while the composite score would have accepted them.
+
+### Finding 3 — my §3.0 hypothesis is CONTRADICTED, in the direction I predicted
+
+I hypothesized the first-order proxy goes **blind at convergence** (`g → 0`). The data points the
+**other way**: the two arms built at **birth** (`from_epoch_0000`) are the unreliable ones (ρ 0.50,
+−0.50); the one built at **epoch 60** ranks **perfectly** (ρ 1.00). **n=1 converged arm, 3 points —
+far too weak to assert the reverse law**, but it is enough that I must withdraw the hypothesis rather
+than carry it. §3.0's Goodhart argument against *training on* the proxy stands on its own derivation;
+its empirical prediction about *when* the proxy degrades does not.
+
+**And §3.0's premise was already too strong.** `choose_cheapest_passing_quantization` refuses any row
+with `measured is not True` (*"projected quantization row cannot select an allocation"*), so the proxy
+is a **candidate generator**, never the selection authority — real measurement is. My "the allocator
+may be systematically mis-ranking allocations today" was overstated: it is *overruled* every time and
+falls back to uniform. That is a different, and more actionable, defect than the one I posited.
+
+### What R0 changes for R1
+
+- The rung ladder must **not** be built from `adaptive_allocation_from_sensitivity` alone — it is
+  0-for-3. Build R1's `ceiling_multipliers` around the **uniform** ladder, which is what actually
+  ships, and carry `adaptive` only as a probe.
+- **Transfer to the basis route (bs2):** the surrogate is **not** faithful at the pooled level
+  (ρ 0.783 < 0.90) and inverts on one arm, so the born-small-basis route **cannot** assume a
+  first-order sensitivity surrogate will rank its candidate bases correctly either. That transfers
+  unchanged, as MAIN asked.
+- **Scope limit, stated plainly:** two of three arms were measured at **birth**, where `d_pose` is
+  27–77 and `d_seg` 0.19–0.53 — a catastrophically untrained regime. R0 characterizes the proxy
+  mostly *at birth*. A converged-state replication is owed and is the natural R0b.
+
+---
+
 ## 7. PREDICTION ADJUDICATED
 
 **FALSIFIED.** I predicted no `dD/dB`-shaped term had ever been measured on the dx2/hv1 lineage. The
@@ -458,8 +529,14 @@ if it does. §3.0's allocator-miscalibration claim is an explicit **hypothesis**
 
 ## 9. NOT CLAIMED
 
-- **No run fired.** No Modal, no Metal burn, no candidate archive, no scorer forward pass. **Pointer
-  UNMOVED.** No score claim of any kind, on any axis.
+- **R0 is a read of RETAINED artifacts, not a new measurement.** No Modal, no Metal burn, no scorer
+  forward pass, no candidate archive. **Pointer UNMOVED.** No score claim, on any axis; R0 is
+  `[Darwin-mps frozen-scorer advisory]` and inherits that axis from the artifacts it reads.
+- **R0's 3 arms are n=3 with 3 allocations each — 9 points.** ρ=0.783 is a small-sample statistic and
+  I do not claim a precise value for it, only that it sits below the pre-registered 0.90.
+- **Two of three R0 arms are BIRTH-state.** R0 does not characterize the proxy at convergence; the
+  one converged arm (n=1) points opposite my hypothesis and is too weak to establish the reverse.
+- **R1 is NOT fired.** No seed floor measured, so no KILL verdict is available from this arm.
 - **The lever is unfired and therefore has produced no evidence.** Binding-vs-inert is proven on
   closed-form tensors, not on the real model.
 - **Not wired into wd3.** The call site is specified, not landed.
