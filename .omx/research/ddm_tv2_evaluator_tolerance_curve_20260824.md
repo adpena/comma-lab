@@ -431,10 +431,42 @@ remaining gap**; the k = 1.33e6 rung costs **112.2× the gap**.
 **τ > 1 at k = 10³ means AMPLIFICATION: one moved token costs MORE than one argmax pixel.** §4.0
 predicted this was possible (the renderer paints regions; SegNet reads them through a stride-2 stem)
 and the smallest rung measures it. There is not merely *no* slack at the boundary — the object is
-**worse than 1:1 there**. Per §4.0 this is the representation behaving exactly as designed: the token
-field **is** the argmax partition. τ falls at larger k only because the conditional draw exhausts the
-boundary and reaches into the interior (§3.2) — the same mechanism that saturates the credit, so it
-buys nothing.
+**worse than 1:1 there**.
+
+### 5.1.2 LAW — damage per token is monotone DECREASING in k, and exceeds 1.0 at the small end
+
+> **The first token you move is the worst trade you will ever make, and every subsequent one is
+> cheaper — because selection is value-ranked over a Gini-0.9951 field, so the most bit-valuable
+> positions ARE the most damage-prone positions.**
+
+This **inverts the usual intuition** that small perturbations are cheap because damage is locally
+linear. Here damage per token is *maximal* at k → 0. It is the enrichment signature, and it is
+corroborated by two independent arms that measured the enrichment directly: `tb2` (Gini **0.9951**;
+top 1% of positions = **96.32%** of the bits) and `wj1` (cost and render-manufactured error
+**90.96× count / 257.48× bit** enriched over independence).
+
+**This closes the curve at BOTH ends, which is stronger than "every rung loses":**
+
+| end | what pins it | measured |
+|---|---|---:|
+| small k | **amplification** — τ > 1, and credit is tiny | 197.1× at k = 10³ (221.8 B released for **103.1%** of the entire gap, moving 0.00085% of the field) |
+| large k | **the credit ceiling** (§4.1) — saturation | 44.1× at k = 1.33e6; k = 10⁶ already holds 91.55% of the 113,776 B stream, marginal position 0.0893 bits |
+| interior | the ratio's measured **minimum** | **40.8×** at k = 10⁵ |
+
+`cost/credit` over k is **U-shaped — 197.1 → 95.7 → 40.8 → 44.1 — with a measured interior minimum
+of 40.8×**, and both ends rise away from it. So the strongest honest form is not "every rung we ran
+lost" but **"the best point of the whole family is measured, and it is 40.8× above break-even."** An
+unmeasured rung between the sampled ones would have to beat that minimum by 40×; the curve gives it
+nowhere to hide. (Stated as a bound on *this* family and this object — §9.)
+
+**The same wall, reached from the coder side.** `ddm_df1` derived that the address floor for the
+free-byte set is **3.1468× the prize it holds**, because the error is where the bits are, so naming
+the cheap positions costs more than they hold. This arm measured the *physical* form of the same
+fact: **the cheap positions are not cheap, because cheapness and damage are the same enrichment.**
+Two arms, two methods, one wall — which is what makes the result transferable past this arm.
+
+τ falls at larger k only because the conditional draw exhausts the boundary and reaches into the
+interior (§3.2) — the same mechanism that saturates the credit, so it buys nothing.
 
 **Where this sits on the campaign's exchange ladder.** 40.8× is *not* a catastrophic outlier; it is
 the **third-best exchange ratio the campaign has measured**:
