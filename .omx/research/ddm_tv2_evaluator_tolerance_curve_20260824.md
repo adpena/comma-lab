@@ -951,6 +951,24 @@ exactness; that exactness was real.
   position is expensive" is measured for 94.97% of the field, not for all of it.
 - **§6.3 is OPEN, not answered.** No claim is made about pose-null interior movement.
 
+### Method notes that transfer past this arm
+
+Both were load-bearing here, and neither required insight — they are habits, which is why they
+transfer.
+
+1. **Apply the vacuity law to your OWN instrument, not just to the object.** A positive control that
+   cannot distinguish *"it worked"* from *"it was silently ignored"* is vacuous, and it fails in the
+   direction that looks like a maximal result. The `k = 0` control proves identity to 3,662,409,600
+   bytes and **still cannot** tell those two apart, because at `k = 0` the injected field *is* the
+   base — a silently-ignored cache would have reported perfect tolerance. Closing it needed a
+   separate consumption proof (§1.1), not a stronger version of the same control.
+2. **When a number arrives ready-to-use, recompute it against the base YOU hold before consuming
+   it.** This is what surfaced the pose-share result (§5.2.1): a share computed on a different
+   object's base reads as invariant, while the same rows on the matched base decline monotonically
+   97.0% → 81.1%. The recomputation is mechanical and free, and it **tests an immunity claim that
+   would otherwise stop the reader from checking at all** — a claim asserted immune to a defect, in
+   the same breath as the defect, is worse than the defect.
+
 ### Instrument defects found and fixed during this arm
 
 Recorded because a silent instrument defect is the failure this campaign keeps paying for:
