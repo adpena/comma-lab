@@ -44,6 +44,12 @@ _SKIP_DIR_NAMES: frozenset[str] = frozenset(
 # validation; non-authority callers bind it into the digest.
 _EXECUTABLE_BYTECODE_SUFFIXES: frozenset[str] = frozenset({".pyc", ".pyo"})
 
+# macOS writes an AppleDouble sidecar ``._<name>`` beside each file when a tree
+# is copied onto a filesystem without native resource-fork support (ExFAT, the
+# external SSD tiers). ``._mod.pyc`` therefore has suffix ``.pyc`` while holding
+# no bytecode at all. Refusal is unchanged; only the diagnosis is.
+_APPLEDOUBLE_PREFIX = "._"
+
 
 def _iter_upstream_files(
     upstream_dir: Path,
@@ -75,9 +81,24 @@ def _iter_upstream_files(
         if not path.is_file():
             continue
         if reject_executable_artifacts and path.suffix in _EXECUTABLE_BYTECODE_SUFFIXES:
+            rel = path.relative_to(upstream_dir).as_posix()
+            # An AppleDouble sidecar (``._name``) carries the .pyc SUFFIX but is
+            # macOS resource-fork metadata, not bytecode. Refusing is still
+            # correct -- an authority tree must not carry filesystem litter --
+            # but the generic bytecode message sends the reader hunting for a
+            # compiled module that does not exist. Name the object and the cure.
+            if path.name.startswith(_APPLEDOUBLE_PREFIX):
+                raise ValueError(
+                    "canonical authority snapshot cannot contain an AppleDouble "
+                    f"sidecar: {rel} -- this is macOS resource-fork metadata "
+                    "(not executable bytecode), written when a tree is copied "
+                    "onto a non-HFS filesystem such as ExFAT. Remove it with "
+                    f"`find {upstream_dir} -name '._*' -delete` and re-run; if "
+                    "a real __pycache__ directory is also present, purge that "
+                    "too and export PYTHONDONTWRITEBYTECODE=1 for the producer."
+                )
             raise ValueError(
-                "canonical authority snapshot cannot contain executable bytecode: "
-                f"{path.relative_to(upstream_dir).as_posix()}"
+                f"canonical authority snapshot cannot contain executable bytecode: {rel}"
             )
         candidates.append(path)
     candidates.sort(key=lambda p: p.relative_to(upstream_dir).as_posix())
