@@ -329,12 +329,34 @@ sub-0.12 on its own.** Under sy2's object-change law this is what makes the arm 
 than weaker: a movable `r` **changes the object every closed cell was priced on**, and tri1's 28
 pairs, 56 triples and fb1's bound were all priced at untrained `r`.
 
-### R1a — measure the noise floor FIRST (prerequisite for any KILL)
+### R1a — measure the SEED-TO-SEED TRAINING floor (prerequisite for any KILL)
 
-Repeat the `r` measurement on the **same** configuration, same seed policy, N≥3 repeats, and report
-the spread as a number. Nothing in the campaign has ever done this, so no "within noise" claim about
-`r` is currently licensed — including the one I wrote. **The floor gates the KILL branch only; the
-WIN branch does not need it.**
+⚠ **CORRECTED 2026-08-24 — MAIN named the wrong noise first, and so did I by accepting it.** My
+initial R1a said "repeat the `r` measurement on the same configuration." **That is vacuous:** the
+instrument is deterministic — `pk4` measured repeat-noise **exactly 0.0** on the torch-CPU authority
+("the negatives are signal"). A floor of 0.0 makes *every* difference resolvable, which is the mirror
+of the 1.2× defect and just as wrong.
+
+**The floor that actually governs the A/B is seed-to-seed TRAINING variance in `r`.** Two runs at the
+same config with different seeds land on different weights and therefore different exchange ratios.
+That is unmeasured on this vehicle.
+
+**Design consequence, decided explicitly rather than inherited:** a two-arm ON/OFF A/B at one seed
+each **cannot distinguish "the term moved `r`" from "seeds differ"**, so it is not a valid KILL
+design. It remains valid for WIN (at ≥21.6× nobody cares about seed variance).
+
+**PRICED, and affordable — so I am NOT returning a WIN-only experiment.** wd3 costs **93.23 s/epoch**
+(median; mean 95.85, n=13 inter-checkpoint gaps; 101.8 min wall over 64 epochs) — **measured from the
+F64 arm's own checkpoint mtimes**, this trainer, not borrowed. A 65-epoch run is **~101 min**.
+
+| design | runs | est. wall |
+|---|---:|---:|
+| **2 OFF seeds (floor) + 1 ON arm** ← default | 3 | ~5.0 h (ON arm ~2× at k=2 ⇒ ~6.7 h) |
+| 2 seeds per arm | 4 | ~6.7 h (~8.4 h with the ON 2×) |
+
+MAIN's cheaper default is the right one: **establish the floor with two OFF seeds, then spend the
+third run on the treatment.** The ON arm costs ~2× per step because the base rung plus one sampled
+rung is two scorer passes (§6 cost note).
 
 **Arms:** control = wd3 as-is (`ds1` inert, byte-identity asserted) · treatment = `mode="sampled"`,
 `k=2`, uniform weights, `ceiling_multipliers` set from R0.
@@ -375,7 +397,7 @@ the word.
 
 | Verdict | Condition | Meaning |
 |---|---|---|
-| **KILL** | `r` treated is statistically indistinguishable from `r` baseline **against the MEASURED repeat-spread from R1a**, reported as a number | The mechanism did not resolve **on this instance**. `verdict_scope: INSTANCE` — one A/B, one vehicle, one ladder. **Never "the last route closes"** (Catalog #307). |
+| **KILL** | `r` treated is statistically indistinguishable from `r` baseline **against the MEASURED seed-to-seed training floor from R1a** (not the instrument's repeat-noise, which is 0.0), reported as a number | The mechanism did not resolve **on this instance**. `verdict_scope: INSTANCE` — one vehicle, one ladder. **Never "the last route closes"** (Catalog #307). Requires ≥2 OFF seeds; a single-seed A/B may NOT emit this verdict. |
 | **POSITIVE** | any improvement **resolvable above the measured floor**, including 1.2× | Mechanism existence is established. Whether it reaches the bar is a **trajectory** question — does it keep going under more weight, does it compose — not a magnitude question. A cap-limited first result is not a family verdict. |
 | **WIN** | `r < 1` at any rung | Break-even. Renderer bytes become purchasable. |
 
@@ -388,10 +410,11 @@ I withdraw the 46.3× framing.
 ends measured: shrinking a move *raises* its ratio. So no amount of taking smaller bites reaches
 break-even. That is this term's entire thesis, stated as a number.
 
-**Cost, honestly:** the base rung is always evaluated, so `sampled` with any `k` costs **2 scorer
-passes per step ≈ 2× step time.** I have **not** measured wd3's s/epoch and I am not borrowing
-nt1's 48.95 s/epoch, which is the *cl1* trainer on MPS — a different object. **MAIN should pin
-wd3's epoch cost before sizing the run.**
+**Cost, MEASURED:** the base rung is always evaluated, so `sampled` with any `k` costs **2 scorer
+passes per step ≈ 2× step time.** wd3 itself runs at **93.23 s/epoch** (median of 13 inter-checkpoint
+gaps on the F64 arm; mean 95.85; 101.8 min wall / 64 epochs) — derived from that arm's own checkpoint
+mtimes, so it is *this* trainer's number. I did not borrow nt1's 48.95 s/epoch, which is the **cl1**
+trainer on MPS: a different object. Full sizing in R1a.
 
 **Why ALIVE matters even though it does not reach sub-0.12:** tri1's 28 pairs and 56 triples, and
 fb1's single-axis bound, were **all priced at untrained `r`.** A confirmed-movable `r` does not just
@@ -449,7 +472,7 @@ if it does. §3.0's allocator-miscalibration claim is an explicit **hypothesis**
 - **No noise floor on `r` has been measured, by me or by anyone on this campaign.** Until R1a runs,
   no "within noise" claim about the exchange ratio is licensed from any arm.
 - **I did not re-run WD4** to test whether its 1,590× is an unconverged-training artifact. Flagged only.
-- **I did not measure wd3's epoch cost.** The 2× figure is an operation count, not a timing.
+- **The 2× ON-arm figure is an operation count, not a timing.** wd3's 93.23 s/epoch IS measured (checkpoint mtimes), but I did not time the ds1-enabled step itself.
 - **The 70,453 B HPAC model figure is nt1's**, from an `hv1_ep0634` parse-back — not dx2, and received
   not measured by me. The renderer's 30,856 B I did verify, by arithmetic against fb1.
 - **The token-field edit axis is named, not analysed.** It is D-coupled and no trainer owns it; I
