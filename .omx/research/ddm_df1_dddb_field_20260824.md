@@ -25,18 +25,29 @@ Measured over all **117,964,800** positions of the DX2 body:
 | **positive** (`argmax ≠ transmitted`) | **227,671** | **0.19300%** | **79,102.05** | **69.5243%** | > 0 |
 | total | 117,964,800 | | 113,776.16 | | |
 
-**The zero mode is 34,674.11 B = 81.81% of the 42,381.16 B demand.** It is the single
-largest zero-distortion byte mass the campaign has located.
+**The zero mode is 34,674.11 B = 81.81% of the 42,381.16 B demand.** Searching `.omx/research/*.md`
+as of 2026-08-24 I found no larger zero-distortion byte mass recorded on this vehicle; that is the
+scope of the search, not a claim that none exists.
 
 **And it is unreachable, twice over:**
 
 1. **No addressless rule isolates it.** A receiver-side rule can only be a function of the coding
    row, i.e. of `pmax`. The largest `pmax` among the positive mode is **0.9999997615814209** — so
    the only strictly-free threshold is `τ = 1.0`, and the float32-saturated cell it selects holds
-   **67,955,679 positions carrying 0.0486 bytes.** Forty-nine thousandths of one byte.
+   **67,955,679 positions carrying 0.0486 bytes** — a twentieth of one byte. *(Measured, not
+   inferred: the τ = 1.0 scorer row breaks 0 labels, changes 0 scored cells, and reproduces the
+   control `d_seg` to the last digit.)*
 2. **No address can afford it.** Isolating the zero mode requires a side channel carrying "is my
    argmax right?", whose floor under the shipped model is `Σᵢ H_b(pmax_i)` =
-   **872,907.97 bits = 109,113.50 B**, which is **3.1468×** what the zero mode yields.
+   **872,907.97 bits = 109,113.50 B**, which is **3.1468×** what the zero mode yields. The zero
+   mode is, exactly, the "yes" branch of that same indicator sub-code — already paid for (§4).
+
+**And the route that trades distortion for it loses by an order of magnitude once it is run for
+real.** Running `drop(τ = 0.999)` through the shipped encoder in closed loop, then scoring the
+receiver's own reconstructed field through the real render and the frozen SegNet, gives — with no
+modelled term anywhere — **12,224 real bytes saved, `d_seg` 0.00020135 → 0.00114282, damage ÷
+credit 11.567×, candidate S 0.23423 vs 0.14822 shipped.** Static `−log₂p` accounting had predicted
+**0.762× — a win** (§6.2, §6.3).
 
 The prediction registered in the charter is **CONFIRMED on both measurable legs** — Gini 0.995
 (> 0.8) and co-location AUC **0.999998753** — but **its stated implication is REFUTED.** The
@@ -161,6 +172,13 @@ set and the breakable set overlap almost perfectly by *membership*, and yet the 
 still more than a quarter zero-distortion by *mass*. That is the whole tension of this object in
 one row.
 
+Expressing the same column as an enrichment of zero-mode BYTE share against the global 30.476%:
+`top_10pct` **0.998×** (neutral), `top_1pct` **0.913×** (barely depleted), and WJ1's manufactured
+support **0.300× — depleted 3.34-fold.** So the positions where the *renderer* breaks a label are
+also positions where the *token model* is unsure. Two independent failure modes co-locate. That is
+a real refinement of WJ1's membership finding, and it cuts against the repair route: the render's
+manufactured errors sit precisely where transmitted bytes are already being spent hardest.
+
 ### 3.3 Per class (DALI GT, canonical comma10k order)
 
 | class | positions | bytes | flip rate | positive bytes | **zero-mode bytes** | flip enrichment |
@@ -192,7 +210,24 @@ zero-mode yield =                                        34,674.11 B
 ratio           =                                            3.1468×
 ```
 
-**Why this is not a coincidence.** For `p ∈ (0,1)`, `(1−p) > 0` and `log₂(1−p) < 0`, so
+**Why this is not a coincidence: the zero mode IS half of the address, already paid.** Arithmetic
+coding of the 5-way row factors exactly, with no loss:
+
+```
+code the indicator "is it the argmax?"      costs  −log₂(pmax)      if yes
+                                                   −log₂(1−pmax)    if no
+then, only if no, code which of the other 4 costs  −log₂(p_sel/(1−pmax))
+                                     total  =      −log₂(p_sel)     either way
+```
+
+**The zero mode's 34,674.11 B is precisely the realized "yes" branch of that indicator sub-code.**
+The address the campaign would need is the *whole* indicator — both branches, at every position —
+whose expected cost under the model is `Σᵢ H_b(pmax_i)`. So the question "can we name the free
+set?" is really "can we pay for the whole indicator out of the half of it we already spend?", and
+the answer is arithmetic. The measured **3.1468×** says naming the flips costs about 2.15× again
+what naming the frees costs.
+
+The inequality behind it: for `p ∈ (0,1)`, `(1−p) > 0` and `log₂(1−p) < 0`, so
 `−(1−p)log₂(1−p) > 0` and therefore `H_b(p) > −p·log₂ p` pointwise. Under the model a position is
 free with probability `pmax`, and *when* free its cost is exactly `−log₂(pmax)`. Hence
 
@@ -254,6 +289,11 @@ Every `Δd_seg` below is a difference taken on this one validated instrument ins
 numerator and denominator share a lineage. `ddm_rf1` §4 caught a published ratio that divided a
 macOS-CPU numerator by a contest-CUDA denominator; this is the structural cure for that class.
 
+*(The control was re-measured in a second, independently launched process after the module was
+refactored mid-run, and returned `0.00020134819878472223` / 23,752 cells — identical to the last
+digit. That is the proof that the refactor was behaviour-preserving and that the committed code is
+the code that produced every row below.)*
+
 **Encoder.** Re-encoding the unedited field through the shipped RC64 encoder along the receiver's
 own decode trajectory (`--tau 2.0`, nothing skipped) emitted **113,784 B**, decomposing exactly as
 
@@ -266,7 +306,73 @@ is reproduced byte for byte; the +7 is framing the archive does not store. Drop 
 therefore taken against the **control's emitted length**, where the framing cancels — never against
 the archive's stored length, which would charge the drop 7 bytes it did not cause.
 
-*(§6.2 — the τ rows — completes below.)*
+### 6.2 The closed-loop drop at τ = 0.999 — static accounting INVERTS the verdict
+
+The `reencode` stage runs the operator for real: it recomputes the coding row from the live
+trajectory, takes THAT row's argmax, encodes only the rows the rule still sends, and feeds the
+**reconstructed** symbol back into the corrector and the model context. Encoder and receiver stay
+in lockstep, so the emitted stream is a real archive section rather than an accounting estimate.
+
+| quantity at τ = 0.999 | static `−log₂p` accounting | **REAL closed loop** | factor |
+|---|---:|---:|---:|
+| bytes saved | 6,187.3 | **12,224** *(± ≤3 B)* | **1.976×** |
+| token labels broken | 3,702 | **106,711** | **28.83×** |
+| rows still sent | 4,642,833 | **3,059,209** | 0.659× |
+| **damage ÷ credit** (at 1× render amplification) | **0.762× — a WIN** | **11.114× — a refusal** | **14.59×** |
+
+*(The byte figure is the difference of two emitted payloads, so the 4-byte magic cancels exactly;
+only the range coder's terminal flush — whole bytes, `< 1` byte of real content — can differ
+between the two runs, hence `± ≤3 B`. Immaterial against an 11× ratio.)*
+
+**Static accounting on this object does not merely misprice the drop operator; it inverts the
+verdict.** `ddm_fs2` measured `−log₂p` mispricing token *value* moves by up to 11×; this is the
+same class on the *drop* operator, and it lands at 14.59× on the ratio that decides.
+
+**The mechanism, and it is a degenerate feedback loop.** Skipping a token feeds the model its own
+prediction. The field it then conditions on is *more* consistent with its own model than the true
+field was, so its confidence RISES — the true trajectory sent only **0.659×** as many rows as the
+static frontier expected, which is exactly why it saved **1.976×** the bytes. But that confidence
+is not accuracy: substitutions rose **28.83×**. **The drop operator decouples confidence from
+correctness in the direction that flatters the rate term and punishes the distortion term.** Both
+effects are large, they point opposite ways, and the damage wins by 14.59×.
+
+### 6.3 The verdict, end to end — and a render-amplification law nobody had
+
+Scoring the τ = 0.999 closed loop's **own reconstructed field** (sha `aebfb6a9…`, the bytes the
+receiver would actually hand SegNet) closes the measurement with no modelled term anywhere:
+
+| | value |
+|---|---:|
+| control `d_seg` | 0.00020134819878472223 (23,752 cells) |
+| **`d_seg` after `drop(τ = 0.999)`** | **0.001142823961046007** (134,813 cells) |
+| damage `ΔS_seg` | **0.094147576** |
+| credit (12,224 REAL bytes) | 0.008139460 |
+| **damage ÷ credit, fully measured** | **11.567×** |
+| S of the resulting candidate | **0.23423** vs 0.14822 shipped |
+
+**The addressless drop route is refused by an order of magnitude**, with every term measured: real
+encoder bytes, real receiver field, real render, real frozen SegNet, real DALI-lineage GT.
+
+**The render-amplification law: it SATURATES.** Net new scored errors per broken token label,
+measured at three perturbation scales on the same instrument:
+
+| labels broken | gross cells changed / label | **net new errors / label** |
+|---:|---:|---:|
+| 773 (τ = 0.9999, static) | 2.2730 | **1.4036** |
+| 3,702 (τ = 0.999, static) | 1.8258 | **1.1807** |
+| 106,711 (τ = 0.999, closed loop) | 1.1231 | **1.0408** |
+
+**Render amplification is not a constant and the campaign should stop treating it as one.** A
+handful of broken labels costs ~1.40 scored cells each; a hundred thousand costs ~1.04 each. The
+mechanism is saturation — once a neighbourhood is already wrong, breaking another token there
+cannot break it twice. The practical consequence cuts against targeting: **small, precisely-aimed
+token edits are amplified ~35% harder than bulk ones**, so the per-unit damage of a surgical edit
+is worse than a bulk average would predict.
+
+**The trap this section closes.** With MEASURED amplification and STATIC bytes, τ = 0.9999 prices
+at **0.873×** and τ = 0.999 at **0.899×** — both nominal adoptions. A campaign that priced this
+operator on a static field edit, even with a correctly measured render amplification, would have
+adopted a change that makes S **58% worse**. Only the closed loop separates them.
 
 ---
 
@@ -336,6 +442,15 @@ Three consequences for the objective `ds1` is designing:
    where the model is wrong often enough that better prediction, not better confidence, is the
    binding term. Road is the opposite: 17,773.4 B of zero-mode bytes, 51.3% of the whole
    confirmation prize, at a 0.33% flip rate.
+
+**A harness warning `ds1` should take before it builds.** Any objective that changes what the
+token field carries must be evaluated **through the closed-loop trajectory**, never through a
+static field edit scored afterwards. §6.2 measured that difference at **14.59× on the ratio that
+decides, in the direction that manufactures a false win** — static said 0.762× (adopt), the real
+receiver said 11.114× (refuse). An adaptive context model conditions on what it *decoded*, so any
+harness that edits the field and re-scores it is measuring a receiver that does not exist. This is
+the same genus as `ddm_fs2`'s "price token field levers by REAL re-encode", now measured on the
+drop operator and one order of magnitude larger.
 
 ---
 
@@ -423,6 +538,15 @@ partition), `analysis/REENCODE_*.json`, `analysis/SCORER*.json`, the 30 per-stag
 `analysis/reencode_work/`. The cost field is byte-identical to TB2's and is therefore cited rather
 than duplicated as a second copy; the three prediction fields are new payload and are retained in
 full.
+
+**Why the field is retained as `(partition, dB)` and not as a per-position `dD/dB` ratio.** `dD` is
+**exact** on the zero mode (it is 0, by the identity in §0) and **only aggregate** on the positive
+mode — resolving it per position would need one render + SegNet pass per flipped token, i.e.
+227,671 of them. A per-position ratio column would therefore have to spread a measured aggregate
+across positions by some assumption, and that column would be an assumption wearing a
+measurement's name. What is retained is every exact input — the mode flag and the exact `dB` at
+every one of the 117,964,800 positions — so any successor can impose its own `dD` model on the
+same field without inheriting mine.
 
 ---
 
