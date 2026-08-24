@@ -517,6 +517,11 @@ distinct arms**, while being 1,211–3,770 B cheaper than the winner. The select
 the entire sensitivity machinery is live, computed every stage, and never selected.** It is an
 orphaned mechanism in production.
 
+> ⚠ **CORRECTED by §6c.4 — do not read this row as evidence about allocation.** `uniform4` is the
+> gate's own baseline and passes by identity (`x ≤ x`), so it **cannot lose**. The 4/4 record and the
+> 0-for-3 record are both explained by the RULE. That the machinery is never selected is true as
+> description; that it is *bad* does **not** follow, and I overstated it here.
+
 **Honest nuance, against my own headline:** `adaptive` is not worse on *aggregate* D — in D56 it is
 better AND cheaper (D 61.381 vs 64.572 at 20,235 vs 21,778 B) and in F64 it ties (50.638 vs 50.616).
 It fails on **component** gates (`hard_cell`, `road_lane`), not on the composite. So the correct
@@ -611,24 +616,69 @@ measured when MyCar admitted while Lane rejected. In D56 — the one arm where t
 — the gate fires on **`road_lane`, 1.278× more Lane flips**, which is exactly the damage a composite
 launders. **The gate catching that is the gate working, not the gate malfunctioning.**
 
-### 4. What genuinely survives — a structural asymmetry, not buyable bytes
+### 4. FIRST-CLASS RESULT — the selection is structurally rigged: the reference cannot lose
 
-**`uniform4` passes its own gate by identity.** It *is* the baseline, so `x <= x` is True on all three
-components by construction. **The reference cannot lose the race it defines**, and
-`choose_cheapest_passing_quantization` then takes the cheapest passer — so `uniform4` wins unless a
-rival strictly Pareto-dominates it. That explains the 4/4 `uniform_int4_degenerate` record without any
-appeal to allocation quality.
+**This is the arm's most durable finding, and it outranks the byte figure it replaced.** Promoted from
+a residual at MAIN's direction, 2026-08-24.
 
-So the residual class-4 item is **not a threshold** — it is (a) the **choice of uniform-int4 as the
-reference** and (b) the **dominance rule itself** (Pareto on 3 components, rather than net score).
-That is a frozen *decision rule*, in the operator's named shape, and I flag it as such. **But it does
-not make the refused bytes buyable**, and I am not proposing to loosen it: §3 is why.
+**`uniform4` passes its own gate by identity.** `baseline = evaluations["uniform4"]` (`:2007`), and the
+gate row for `uniform4` evaluates `evaluation["hard_d_seg"] <= baseline["hard_d_seg"]` where
+`evaluation` **is** `baseline`. So all three components are `x <= x` — **True by construction, on every
+run, for all time.** `choose_cheapest_passing_quantization` then takes the cheapest passer, so
+`uniform4` wins unless a rival strictly Pareto-dominates it on all three components at once.
+
+> **The 4/4 `uniform_int4_degenerate` record is fully explained by the rule, with NO appeal to
+> allocation quality whatsoever.**
+
+**Consequence (a) — a whole class of future claim is uninformative by construction.** Any statement of
+the form *"we raced allocations on this trainer and uniform won"* carries **zero evidence about
+allocation** until the rule changes. The race has an entrant that cannot lose. **Nobody may re-derive
+the 4/4 record as an allocation fact** — including me: my own §6b Finding 2 said the sensitivity
+machinery is *"live, computed every stage, and never selected."* That remains true as a description of
+the machinery, but it is **not** evidence that the machinery is bad. **The 0-for-3 record is evidence
+about the RULE, not about allocation.** I overstated it and I correct it here.
+
+**Consequence (b) — the frozen item is a DECISION RULE, not a constant.** Nothing here sits at class 4
+as a *number*: there is no threshold to re-derive (§6c.1). What is frozen is (i) the **rule** —
+Pareto-dominance on 3 components rather than net score — and (ii) the **choice of uniform-int4 as the
+reference**. That is the operator's frozen-default class exactly: a choice made once, later read as a
+constraint, and never revisited because it never presents as a number.
+
+**I am not proposing to loosen it, and MAIN is not asking me to.** §6c.3 is why: the gate is doing real
+work, and on the only converged arm the refused bytes were emphatically not buyable. This is recorded
+so the record is not misread, not so the rule is relaxed.
 
 **Cheapest decisive next step, NAMED and NOT FIRED** (MAIN's item 4): re-score the already-retained
 `adaptive` candidate for **D56** — the only arm where the composite disagrees — **per class**, against
 a properly derived per-class bar rather than dominance-vs-uniform4. It is a read of retained payloads,
 zero new compute. **I do not recommend prioritizing it:** D56 is birth-state, the credit is 1,543 B
 (3.64% of demand), and the converged arm points the other way. Logged so it is not lost, ranked low.
+
+### R1a free-floor check — FIRED (minutes, zero compute). Answer: NOT free.
+
+MAIN asked whether R1a might be another retained-artifact read, as R0 turned out to be. **It is not.**
+
+**Method:** enumerated all **8** `COMPILED_CONFIG.json` and **11** `launch_manifest.json` under the
+wd3 root and hashed each run's config-identity **with the seed excluded**, so any same-config pair
+would collide.
+
+- **Config-identity groups containing more than one run: ZERO.** Every compiled config is unique even
+  ignoring the seed.
+- **Distinct seeds across every wd3 run ever: `{20260815}` — exactly one.**
+- `fire_rung2_w0warm` vs `..._v2` — the one genuine repeat-shaped pair — differ **only** in
+  `expected_builder_sha256`. That is a relaunch after a *code* change at the **same seed**, so their
+  spread would measure builder drift, not seed variance.
+- No `--seed` variation embedded in any launch manifest.
+- MAIN's warning was correct and I checked it: D56 / F64 / W0 are **different widths**, so their
+  spread confounds width with seed and is **not** the floor. It was never a candidate.
+
+**Verdict: the floor is NOT free. R1a fires as designed.** Receipt:
+`.../R0/R1a_FREE_FLOOR_CHECK.json`, 1,001 B, sha256 `29a6cebda0b53914…`.
+
+**And the stronger statement, which is the more useful one:** the seed has **never been varied on
+this trainer at all**. Seed-to-seed variance on wd3 has not merely gone unmeasured — it has never
+been *sampled once*. Every result this vehicle has produced sits at a single draw from a
+distribution whose width nobody knows.
 
 ---
 
@@ -649,13 +699,27 @@ zero new compute. **I do not recommend prioritizing it:** D56 is birth-state, th
 - **GATE: fire only if the Stage-1 floor can resolve the effect being tested.** Floor ≥1.2× ⇒
   **do not fire as designed**; escalate to seed-averaging or a paired design, which is a different
   and larger experiment.
-- WIN bar **`r < 1` = 21.62×** improvement (tba1 D3, seg-leg-only ⇒ a lower bound). The WIN branch is
-  resolvable at any plausible floor (ΔS 0.4237 = 15.0× gap).
+- WIN bar **`r < 1` = 21.62×** improvement (tba1 D3, seg-leg-only ⇒ a lower bound).
+- **THE ASYMMETRY IS THE DESIGN, and a reader must not mistake an underpowered run for a failed
+  one.** WIN moves ΔS by **0.4237 = 15.0× the gap** and is resolvable at *any* plausible floor.
+  **Only KILL needs power.** So R1b is INFORMATIVE even under a bad floor — it simply cannot emit
+  KILL. A large floor narrows which verdicts are available; it does not invalidate the run.
 
 **Binding on both stages:** `verdict_scope: INSTANCE` · KILL unavailable if underpowered · the
 **72.80% renderer cap** carried in every reading (a perfect objective on the only D-coupled block
 still cannot close the gap alone — it MUST compose) · improvement must come from **mechanism**, never
 magnitude (dg2: `ratio ∝ B^−0.2748`, so smaller bites are *worse*).
+
+### The trainer's STANDING POWER LAW (carry forward; not an R1 detail)
+
+For any A/B on wd3, the score effect a design **cannot** resolve at measured seed floor `f` is
+
+> `unresolvable ΔS = credit · r₀ · (1 − 1/f)`,  credit = 30,856 B × 6.658590e-07 = **0.0205457 S**
+
+so at `r₀ = 21.62` a floor of 1.05× already hides **0.75× the remaining gap**, and resolving an effect
+as small as R0's measured mis-rank cost (0.001027 S) requires the seeds to agree within **0.23%**.
+**This should have existed before any A/B on this trainer was ever designed.** It is a property of the
+trainer and the operating point, not of this arm — every future wd3 A/B is priced by it.
 
 **STILL OWED, and not to be dropped when R1 lands:**
 - **R0b — converged replication.** 2 of 3 R0 arms are birth-state (`d_pose` 27–77). R0 characterizes
@@ -707,6 +771,12 @@ if it does. §3.0's allocator-miscalibration claim is an explicit **hypothesis**
 - **Two of three R0 arms are BIRTH-state.** R0 does not characterize the proxy at convergence; the
   one converged arm (n=1) points opposite my hypothesis and is too weak to establish the reverse.
 - **R1 is NOT fired.** No seed floor measured, so no KILL verdict is available from this arm.
+- **The seed floor is NOT free and R1a must actually run.** Checked: 8 configs, 11 manifests, one
+  seed (20260815), zero same-config pairs.
+- **I do not claim the sensitivity machinery is BAD.** §6c.4: its 0-for-3 record is evidence about the
+  Pareto rule, not about allocation quality. My §6b Finding 2 overstated this and is corrected in place.
+- **I did not test whether a net-score rule would select differently** — that would require re-scoring
+  candidates under a different rule, which I named (§6c.4) and did not fire.
 - **The lever is unfired and therefore has produced no evidence.** Binding-vs-inert is proven on
   closed-form tensors, not on the real model.
 - **Not wired into wd3.** The call site is specified, not landed.
