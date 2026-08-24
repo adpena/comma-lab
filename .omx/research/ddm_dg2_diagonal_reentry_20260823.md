@@ -269,12 +269,32 @@ reproduce the section arithmetic exactly — the framing absorbs nothing:
 
 These are byte-closed archives on disk, not projections.
 
-**Receiver-identity status at the time of writing: IN FLIGHT.** Every row's final gate is
-`measure()`'s decode of its own candidate archive back to its exact target field under the refit
-model; a row that fails it raises and produces no `MEASURE_RESULT.json` at all, so no row can be
-reported as sealed without it. The stream, model and archive bytes above are final and independent
-of that gate — they are read from files on disk. This section is updated with the sealed identity
-flags when the decodes land.
+### 5d. Receiver identity — PROVEN on all seven rows
+
+Every row's final gate is `measure()`'s decode of its own candidate archive back to its exact target
+field, under its own refit model, through the shipping receiver. A row that fails it raises and
+produces no `MEASURE_RESULT.json`, so no row can be reported without it.
+
+**All seven rows sealed with `decoded_token_identity: true`**, each decoded sha256 equal to its
+target field's sha256 (~1,360 s decode per row):
+
+| tag | decoded token sha256 (prefix) | = target field sha | identity |
+|---|---|---|---|
+| null | `cc10a7b09353c0af…` | yes | true |
+| k002500 | `c45979acb7a87bda…` | yes | true |
+| k005000 | `6c210dd19eefb2b6…` | yes | true |
+| k010000 | `297cee64f3e1438b…` | yes | true |
+| k020000 | `7251367a078796a1…` | yes | true |
+| k040000 | `03ce7bd8a8498ea2…` | yes | true |
+| k060000 | `15018481bd8007dd…` | yes | true |
+
+The joint move is therefore **receiver-consistent**: the modified field is exactly reconstructible
+from the refit model plus the stream, with no side channel and no transmitted selector.
+
+Sealed verdict: `.omx/tmp/arm_receipts_local/ddm_dg2_diagonal_reentry/DIAGONAL_RESULT.json` —
+`control_passed_both_directions: true`, `fitting_budget_scope: FULL_REFERENCE_60_EPOCHS`,
+`rows_measured: [null, k002500, k005000, k010000, k020000, k040000, k060000]`,
+`any_diagonal_row_below_shipped_combined: true`.
 
 ---
 
