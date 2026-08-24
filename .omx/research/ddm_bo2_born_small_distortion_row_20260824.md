@@ -35,10 +35,33 @@ Four findings, in the order that matters:
    born-small "is a *different curve*, so it does not pay an exchange ratio at all." Measured in
    the campaign's own currency — damage ÷ rate-credit against the **live best**, break-even 1.0 —
    shipping this container instead of dx2 credits **79,240 B = 0.052763 S** and charges
-   **5.131079 S**. **Ratio 97.25×.** It lands on the same ladder as every other rung, **4.50×
-   worse than the best measured mechanism (21.62×, tba1-D3)**, worse than tolerance (33.7×) and
-   the W72 renderer (35.54×), and between those and ni1 (247.69×). The route does not escape the
-   framing `#1245` states; it joins it badly.
+   **5.131079 S**. **Ratio 97.25×.** The route does not escape the framing `#1245` states.
+
+   ⚠ **CORRECTED 2026-08-24 by `ddm_af1` (`a4acb886f4`), landed hours after this memo — and the
+   correction inverts my ordering.** I originally wrote that 97.25× is *"4.50× worse than the best
+   measured mechanism (21.62×, tba1-D3), worse than tolerance (33.7×) and the W72 renderer
+   (35.54×), and between those and ni1 (247.69×)."* **Three of those four comparators were not the
+   same quantity as mine.** af1 §2 measured that the circulating ladder holds **three conventions
+   under one column header**: (A) `ΔS_distortion ÷ (bytes_saved × λ_B)` — the actual exchange
+   ratio; (B) `S_treated ÷ S_base` — an S-ratio; (C) `Δd_seg ÷ d_seg` ceiling — seg-leg only.
+   **My 97.25× is convention A and is correct.** But W72's 35.54× is convention **B** (true
+   exchange ratio **922×**), ni1's 247.69× is convention **C** (true **714×**), and tba1-D3's
+   21.62× is convention **C**, *derived*, seg-only, and **on a mechanism that was never built** —
+   so it is neither "best" nor "measured." On one convention the ladder reads:
+
+   **tolerance 33.7× · bo2 97.2× · dg2 686× · ni1 714× · W72 922×.**
+
+   **Born-small is SECOND BEST of the five measured rungs, not fourth-worst.** It beats W72 by
+   **9.5×** and ni1 by **7.3×**. "It joins the ladder badly" was wrong and is withdrawn. The
+   correct reading is harder on the campaign than on this route: **the two best mechanisms ever
+   measured here sit at 33.7× and 97.2× over break-even, and nothing is within 33× of paying for
+   itself.**
+
+   **This does not move the verdict.** "209.07× over the sub-0.12 budget" is an absolute statement
+   against a budget, not a ranking, and is untouched. What changes is the *comparative* sentence —
+   and I committed, one section before warning the charter about it, exactly the genus I invoked:
+   [[the-instruments-own-units-level-and-aggregation-are-part-of-the-claim-20260816]]. I inherited
+   three numbers ready-to-use and did not recompute them against the base I held. §9.
 
    The credit is dx2-relative because the alternative to shipping born-small is shipping **dx2**,
    not shipping HG1-exact — HG1-exact was already refused at +322,422 B. Read *inside* the HG1
@@ -512,10 +535,20 @@ Four, in descending value.
    saving, because HG1 spends 385 B more on framing. `bs2`'s 101,128 B and 36,858 B are exact.
 
 4. **`bs2`'s central qualitative claim is now measured and false.** §0. "Born-small is a different
-   curve, so it does not pay an exchange ratio at all" — it pays **97.25×**, which places it on the
-   ladder between W72 (35.54×) and ni1 (247.69×) and **4.50× worse than the best measured rung**.
-   The framing `#1245` states is not escaped by changing basis; it is the currency every basis is
-   priced in.
+   curve, so it does not pay an exchange ratio at all" — it pays **97.25×**. The framing `#1245`
+   states is not escaped by changing basis; it is the currency every basis is priced in.
+   *(The ladder PLACEMENT I originally attached to this — "between W72 and ni1, 4.50× worse than
+   the best rung" — was itself convention-mixed and is corrected in §0: born-small is second best
+   of five, not fourth. `bs2`'s claim is still false; my ranking of how badly was the error.)*
+
+5. **I did to three inherited numbers exactly what I told the charter not to do.** §0's
+   correction. `ddm_ds1` §6 had *already flagged* these `r` values as unverified — *"I did not
+   verify the charter's `r` values … I used them as supplied"* — and I used them as supplied too,
+   in the same memo where I corrected the charter for a units/level substitution and cited the
+   genus by name. The habit that would have caught it is `ddm_tv2`'s, landed the same day:
+   **recompute an arriving number against the base you hold before consuming it.** A comparator is
+   an arriving number. I recomputed my own S from components to 17 digits and took the things I
+   compared it *to* on trust.
 
 **A method finding worth carrying: my own positive control fired, and its UNIT was the bug.**
 The first per-class pass refused with a delta of 8.719e-09 against a tolerance of 6e-09. That
