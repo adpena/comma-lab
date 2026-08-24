@@ -495,6 +495,25 @@ uncertainty mass — but it is **not measured to be guarded either**. Stating it
 expensive" would publish a clean 100% that this instrument did not earn. **If that 5.04% is
 genuinely free, then `vf1`'s census is the result needing explanation, not this one.**
 
+**The caveat is honest AND bounded.** That annulus holds 3.61% of 113,776.2 B = **4,107.3 B =
+2.735e-03 S**, which is **9.69% of the 42,382 B demand**. So **even if all 5.04% turns out to be
+entirely free, it cannot close the gap** — it is capped at under a tenth of it. The `vf1` question
+remains open as a matter of understanding; it is now proven unable to produce the win.
+
+### 6.0.2 The vise, in one sentence
+
+**Essentially all of the rate lives on exactly the positions with essentially no seg slack.**
+
+| region | share of positions | share of bits | bit enrichment | τ (seg slack) | guarded by |
+|---|---:|---:|---:|---:|---|
+| boundary d=0 | 2.17% | **94.53%** | **43.6× over** | **0.9043** (none) | seg |
+| interior d≥4 | 92.80% | **1.86%** | **49.9× under** | 0.5295 (real) | pose |
+
+The slack is in the interior, which is **50× under-enriched in bits** and pose-guarded. **This is why
+the 21–46× exchange band is so stable across unrelated mechanisms:** every one of them is either
+trying to buy bits from the one place that will not yield, or yield from the one place that has no
+bits.
+
 ### 6.1 What this re-reads (no new measurement required)
 
 - **`dg2`'s 93.3%-pose diagonal** — a joint field+model move rewrites region *interiors*, which is
