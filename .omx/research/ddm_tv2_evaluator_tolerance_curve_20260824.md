@@ -356,11 +356,19 @@ that short *only* because the published token cache replaces the arithmetic deco
 
 | rung | concurrency | inflate | evaluate | total |
 |---|---:|---:|---:|---:|
-| `k0_control` | **1 (solo)** | 499.4 s | 523.3 s | **1024.3 s** |
+| `k0_control` | **1 (solo)** | 499.4 s | **523.3 s** | **1024.3 s** |
+| `cond_cond` k=1,000 | 3 | 677.0 s | **501.1 s** | 1179.6 s |
+| `unif_marg` k=100,000 | 3 | 702.2 s | **499.0 s** | 1202.6 s |
+| `unif_cond` k=100,000 | 3 | 815.8 s | **500.3 s** | 1317.6 s |
 | `cond_cond` k=10,000 | 4 | 1364.2 s | 602.7 s | 1968.4 s |
 | `cond_cond` k=100,000 | 4 | 1221.9 s | 630.8 s | 1854.5 s |
 | `cond_cond` k=1,334,939 | 4 | 1263.4 s | 619.9 s | 1884.8 s |
 | `unif_unif` k=100,000 | 4 | 1214.3 s | 633.2 s | 1849.4 s |
+
+**The 3-wide rows isolate the cause beyond doubt: at 3-wide, evaluate runs 499.0–501.1 s against
+523.3 s solo — that is 0.96×, i.e. NO degradation at all** — while inflate rises to 677–816 s
+(1.36–1.63×). At 4-wide evaluate finally slips to 1.15–1.21× and inflate to 2.4–2.7×. **Evaluate
+scales cleanly; inflate is the entire tax, and within inflate it is the disk-bound finalize.**
 
 **The concurrency exchange, measured rather than assumed:** 4-wide makes each row **1.81–1.92×
 slower**, so throughput is **≈2.16× — not 4×**. A plan that priced 4-wide as a 4× speedup would have
@@ -416,12 +424,14 @@ components; no rounded display was read.
 | `cond_cond` | 1,000 | **499/600** | 0.00035619 | +0.00000879 | **1.0369** | 0.17422 | 6.0× | +0.00029610 | 0.0009 | **0.0282** | **+0.0291** | 1.477e-04 | **197.1×** |
 | `cond_cond` | 10,000 | 600/600 | 0.00042406 | +0.00007666 | **0.9043** | 0.17333 | 5.2× | +0.00278920 | 0.0077 | **0.1330** | **+0.1407** | 1.469e-03 | **95.7×** |
 | `cond_cond` | 100,000 | 600/600 | 0.00097857 | +0.00063117 | **0.7446** | 0.16619 | 4.5× | +0.03004845 | 0.0631 | **0.5112** | **+0.5743** | 1.409e-02 | **40.8×** |
+| `cond_cond` | 1,000,000 | 600/600 | 0.00485249 | +0.00450509 | **0.5314** | 0.08182 | 6.5× | +0.37066928 | 0.4505 | **1.8873** | **+2.3378** | 6.936e-02 | **33.7×** |
 | `cond_cond` | 1,334,939 | 600/600 | 0.00633976 | +0.00599236 | **0.5295** | 0.06349 | 8.3× | +0.67927745 | 0.5992 | **2.5682** | **+3.1675** | 7.185e-02 | **44.1×** |
 | `unif_cond` | 100,000 | 600/600 | 0.00049314 | +0.00014574 | **0.1719** | 0.00069 | 249× | +0.20613559 | 0.0146 | **1.3979** | **+1.4125** | 5.846e-05 | **24,161×** |
 | `unif_marg` | 100,000 | 600/600 | 0.00048485 | +0.00013745 | **0.1621** | 0.00073 | 222× | +0.14163509 | 0.0137 | **1.1524** | **+1.1661** | 6.159e-05 | **18,933×** |
 | `unif_unif` | 100,000 | 600/600 | 0.00049059 | +0.00014319 | **0.1689** | 0.00076 | 222× | +0.15258047 | 0.0143 | **1.1975** | **+1.2118** | 6.411e-05 | **18,898×** |
 
-**Tolerance loses at every rung** — 95.7× at k = 10⁴, 40.8× at k = 10⁵, 44.1× at `hg1`'s exact
+**Tolerance loses at every rung** — 197.0× at k = 10³, 95.7× at k = 10⁴, 40.8× at k = 10⁵,
+**33.7× at k = 10⁶ (the family's best point)**, 44.1× at `hg1`'s exact
 cardinality. The k = 10⁵ rung moves under **0.085%** of the field and costs **20.4× the entire
 remaining gap**; the k = 1.33e6 rung costs **112.2× the gap**.
 
@@ -449,13 +459,14 @@ top 1% of positions = **96.32%** of the bits) and `wj1` (cost and render-manufac
 
 | end | what pins it | measured |
 |---|---|---:|
-| small k | **amplification** — τ > 1, and credit is tiny | 197.1× at k = 10³ (221.8 B released for **103.1%** of the entire gap, moving 0.00085% of the field) |
+| small k | **amplification** — τ > 1, and credit is tiny | 197.0× at k = 10³ (221.8 B released for **103.1%** of the entire gap, moving 0.00085% of the field) |
 | large k | **the credit ceiling** (§4.1) — saturation | 44.1× at k = 1.33e6; k = 10⁶ already holds 91.55% of the 113,776 B stream, marginal position 0.0893 bits |
-| interior | the ratio's measured **minimum** | **40.8×** at k = 10⁵ |
+| interior | the ratio's measured **minimum** | **33.7×** at k = 10⁶ |
 
-`cost/credit` over k is **U-shaped — 197.1 → 95.7 → 40.8 → 44.1 — with a measured interior minimum
-of 40.8×**, and both ends rise away from it. So the strongest honest form is not "every rung we ran
-lost" but **"the best point of the whole family is measured, and it is 40.8× above break-even."**
+`cost/credit` over k is **U-shaped — 197.0 → 95.7 → 40.8 → 33.7 → 44.1 — with a measured interior
+minimum of 33.7× at k = 10⁶**, and both ends rise away from it. So the strongest honest form is not
+"every rung we ran lost" but **"the best point of the whole family is measured, and it is 33.7× above
+break-even."**
 
 ### 5.1.3 Why the interior cannot hide a winner — STRUCTURAL, not interpolative
 
@@ -492,6 +503,16 @@ holds on the realized draws; the structural argument is why it must.
 So the interior is bounded by the **construction of the selection**, not by the density of the
 sampling. (Scoped to this family and this object — §9.)
 
+**This claim was then TESTED, and it passed.** The `k = 10⁶` rung landed *after* the concavity
+argument was written, and it falls **between** two previously sampled points. It moved the measured
+minimum from 40.8× (k = 10⁵) to **33.7× (k = 10⁶)** — a **17.4%** improvement.
+
+That is the outcome concavity predicts and the outcome a smoothness *assumption* could not have
+promised: a new interior sample shifted the minimum by 17%, **not by the ~40× a winning dip would
+have required**. Had the interior been capable of hiding a winner, this was the rung to reveal it.
+The published minimum is revised down; the conclusion is unchanged and now rests on a prediction that
+survived a real test rather than on an untested premise.
+
 **The same wall, reached from the coder side.** `ddm_df1` derived that the address floor for the
 free-byte set is **3.1468× the prize it holds**, because the error is where the bits are, so naming
 the cheap positions costs more than they hold. This arm measured the *physical* form of the same
@@ -501,16 +522,23 @@ Two arms, two methods, one wall — which is what makes the result transferable 
 τ falls at larger k only because the conditional draw exhausts the boundary and reaches into the
 interior (§3.2) — the same mechanism that saturates the credit, so it buys nothing.
 
-**Where this sits on the campaign's exchange ladder.** 40.8× is *not* a catastrophic outlier; it is
-the **third-best exchange ratio the campaign has measured**:
+**Where this sits on the campaign's exchange ladder.** The family's best measured point is **33.7×**
+(k = 10⁶, §5.1.2) — *not* a catastrophic outlier, and on the corrected ladder the **second-best
+exchange ratio the campaign has measured**:
 
 | mechanism | damage ÷ credit |
 |---|---:|
 | `tba1`-D3 | **21.62×** |
+| **tolerance-cond (this arm, best point k = 10⁶)** | **33.7×** |
 | W72 renderer | **35.54×** (matched-lineage; the circulating 46.32× divided a macOS-CPU numerator by the contest-CUDA pointer — `#1034`, corrected by `ddm_df1`) |
-| **tolerance-cond (this arm)** | **40.8×** |
 | `ni1` | 247.69× |
 | `dg2` diagonal | 686–792× |
+
+**Ranking note, stated so it is not read as drift:** this memo first published 40.8× / third place
+from the k = 10⁵ rung, because k = 10⁶ had not yet landed. The family's best is 33.7×, which places
+it second. The *verdict* is untouched either way — 33.7× still loses by 33.7× — and the placement is
+recorded here only because a mechanism's ladder entry should be its best measured point, not the best
+point that happened to have finished.
 
 Tolerance therefore fails for the campaign's **general** reason, not a special one — which makes the
 verdict sturdier, not weaker: there is no cheap corner here that a better perturbation design would
@@ -536,7 +564,8 @@ re-encoded here, because this arm deliberately codes nothing (§0).
 
 **Direction of the error, and why the verdict survives it.** Static accounting **overstates**
 releasable bytes, so the true credit is *smaller* than published and every `cost/credit` ratio is
-therefore a **LOWER bound**. The real ratios are ≥ 40.8× / 44.1× / 95.7×, not ≤. The verdict is
+therefore a **LOWER bound**. The real ratios are ≥ 33.7× / 40.8× / 44.1× / 95.7× / 197.0×, not ≤.
+In particular the family's best point is **at least** 33.7×, never better. The verdict is
 conservative by construction, and the flag strengthens it — but the credit column should not be
 lifted out of this memo and reused as if it were a measured re-encode.
 
