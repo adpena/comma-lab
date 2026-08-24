@@ -345,6 +345,45 @@ That is unmeasured on this vehicle.
 each **cannot distinguish "the term moved `r`" from "seeds differ"**, so it is not a valid KILL
 design. It remains valid for WIN (at ≥21.6× nobody cares about seed variance).
 
+### ⚠ R1 RESTRUCTURED — the floor is the GATE on the treatment, not a preamble (MAIN, 2026-08-24)
+
+**The defect:** "statistically indistinguishable" says nothing about what indistinguishability
+*costs*. A measured floor is still a threshold, and a threshold whose price in score units is never
+stated is the magnitude-dismissal defect one level deeper. Reproduced independently
+(`unresolvable ΔS = credit·r₀·(1 − 1/f)`, credit 0.0205457 S, baseline damage `credit·r₀` = 0.4442 S):
+
+| measured seed floor `f` | ΔS the experiment CANNOT resolve | **× remaining gap** |
+|---:|---:|---:|
+| 1.02× | 0.0087 | 0.31× |
+| 1.05× | 0.0212 | **0.75×** |
+| 1.10× | 0.0404 | **1.43×** |
+| 1.20× | 0.0740 | **2.62×** |
+| 1.30× | 0.1025 | 3.63× |
+| 1.50× | 0.1481 | 5.25× |
+| 2.00× | 0.2221 | 7.87× |
+
+**A floor above ~1.05× already hides effects worth more than 0.7× the whole remaining gap.** And to
+resolve an effect as small as R0's own measured mis-rank cost (0.001027 S) the two OFF seeds would
+have to agree within **0.23%** — almost certainly unattainable.
+
+**But power depends on EFFECT SIZE, and the two branches are not symmetric:**
+- **WIN (`r < 1`, a 21.62× improvement) moves ΔS by 0.4237 = 15.0× the gap.** That is resolvable at
+  *any* plausible floor. **The WIN branch survives this correction intact.**
+- **KILL needs the floor.** A null result only means something if the design could have seen the
+  effect.
+
+**THE RESTRUCTURE, which makes R1 cheaper rather than more expensive:**
+
+1. **Fire the two OFF seeds FIRST and STOP. ~3.4 h.** Deliver the measured floor **and, in the same
+   sentence, the ΔS it renders unresolvable in gap units** from the table above. That is a complete,
+   publishable result on its own: **it prices every future A/B on this trainer.**
+2. **The floor GATES the ON arm.** If the floor is ≥1.2×, the third run cannot separate a 2.6×-of-gap
+   effect from noise and **must not be fired as designed** — that needs seed averaging or a paired
+   design, a different and larger experiment. Do not spend the 3.3 h to find out afterwards.
+3. **Never emit KILL from an underpowered design.** If the floor is large the honest deliverable is
+   **the floor itself** plus *"this design cannot answer the question at this power"*,
+   `verdict_scope: INSTANCE`. That is a real finding, not a family verdict, and not a failure.
+
 **PRICED, and affordable — so I am NOT returning a WIN-only experiment.** wd3 costs **93.23 s/epoch**
 (median; mean 95.85, n=13 inter-checkpoint gaps; 101.8 min wall over 64 epochs) — **measured from the
 F64 arm's own checkpoint mtimes**, this trainer, not borrowed. A 65-epoch run is **~101 min**.
@@ -397,7 +436,7 @@ the word.
 
 | Verdict | Condition | Meaning |
 |---|---|---|
-| **KILL** | `r` treated is statistically indistinguishable from `r` baseline **against the MEASURED seed-to-seed training floor from R1a** (not the instrument's repeat-noise, which is 0.0), reported as a number | The mechanism did not resolve **on this instance**. `verdict_scope: INSTANCE` — one vehicle, one ladder. **Never "the last route closes"** (Catalog #307). Requires ≥2 OFF seeds; a single-seed A/B may NOT emit this verdict. |
+| **KILL** | `r` treated indistinguishable from baseline against the MEASURED seed floor (R1a) **AND the design is POWERED — i.e. the floor's unresolvable ΔS is smaller than the effect being denied, stated in gap units** | The mechanism did not resolve **on this instance**. `verdict_scope: INSTANCE`. **Never "the last route closes"** (#307). Requires ≥2 OFF seeds. **If the design is underpowered, KILL is UNAVAILABLE** — the deliverable is the floor plus "cannot answer at this power." |
 | **POSITIVE** | any improvement **resolvable above the measured floor**, including 1.2× | Mechanism existence is established. Whether it reaches the bar is a **trajectory** question — does it keep going under more weight, does it compose — not a magnitude question. A cap-limited first result is not a family verdict. |
 | **WIN** | `r < 1` at any rung | Break-even. Renderer bytes become purchasable. |
 
@@ -446,8 +485,29 @@ waited on nothing and took no advisory slot.
 | F64 | from_epoch_**0000** | u2 > u3 > u4 | **u3 > u4 > u2** | **−0.50** | −0.33 |
 | W0 | from_epoch_**0060** | u2 > u3 > u4 | u2 > u3 > u4 | **1.00** | 1.00 |
 
-**Pooled (n=9, 3 arms): ρ = 0.783, τ = 0.667 — BELOW the pre-registered 0.90 bar.** F64 is a full
-**inversion**: the proxy calls uniform2 the worst allocation; truth calls it the **best**.
+**Pooled (n=9, 3 arms): ρ = 0.783, τ = 0.667.** F64 is a full **inversion**: the proxy calls uniform2
+the worst allocation; truth calls it the **best**.
+
+**⚠ The 0.90 bar is WITHDRAWN as inherited — MAIN's stop-hook, and MAIN is right.** "ρ ≥ 0.90" is the
+conventional "good correlation" value. It is a **guessed default of exactly the same class as the 1.2×
+I already withdrew**: a bar with no derivation and no cost attached. I inherited it in my own
+pre-registration and should have derived it.
+
+**The derived bar, from R0's own data.** The question a ranking bar must answer is *"what ranking
+fidelity keeps the expected S loss from mis-ranking below X?"* — not *"is ρ conventionally good?"*
+A mis-rank costs the **bytes it forgoes**. Measured, on the one arm where the mis-rank actually
+forgoes bytes:
+
+> **D56: `adaptive` 20,235 B vs `uniform4` 21,778 B ⇒ 1,543 B forgone = 0.001027 S = 3.64% of the
+> remaining gap** — and `adaptive` was *better* on aggregate D there, so it is a pure loss.
+> Across the n=3 arms only 1 of 3 forgoes bytes ⇒ **expected ≈ 514 B = 0.000342 S = 1.21% of gap per
+> stage** (n=3, weak).
+
+**The measurement is unchanged and still misses.** ρ = 0.783 with a full inversion on one of three
+arms is not a fidelity anyone would accept; what changes is that the miss now carries a **price in
+score units** rather than a convention. Report it as *"the proxy's unreliability costs ~1.21% of the
+remaining gap per stage on this sample, and inverts outright on 1 of 3 arms"* — never as
+*"ρ < 0.90."*
 
 ### Finding 2 — the proxy-designed allocation has never won
 
@@ -491,6 +551,116 @@ falls back to uniform. That is a different, and more actionable, defect than the
 - **Scope limit, stated plainly:** two of three arms were measured at **birth**, where `d_pose` is
   27–77 and `d_seg` 0.19–0.53 — a catastrophically untrained regime. R0 characterizes the proxy
   mostly *at birth*. A converged-state replication is owed and is the natural R0b.
+
+---
+
+## 6c. COMPONENT-GATE PROVENANCE — and a RETRACTION of my own nuance
+
+**Receipt:** `.../ddm_ds1_cheap_to_shrink/R0/R0c_COMPONENT_GATE_PROVENANCE.json`, 2,400 B, sha256
+`87ee5f84516f7d42…`. Retained artifacts only; zero new compute.
+
+### ⚠ RETRACTION FIRST — the "unbought bytes" claim was mine and it was wrong
+
+I wrote: *"the allocator is leaving 1,211–3,770 B unbought on component gates **while the composite
+score would have accepted them**."* **I did not check that last clause, and it is false in 2 of 3
+arms.** MAIN priced it at 8.90% of demand off my sentence. **The 8.90% is withdrawn — the number came
+from W0_reset's 3,770 B, and W0_reset is the arm where `adaptive` is *catastrophically* worse.**
+
+| arm | state | gate fires | composite net ΔS | composite verdict |
+|---|---|---|---:|---|
+| D56 | birth | `road_lane` only | **−3.191138** | would ACCEPT |
+| F64 | birth | `hard_cell` only | **+0.020587** | would REFUSE |
+| W0 | **converged** | **all three** | **+0.461468** | would REFUSE, emphatically |
+
+**In 2 of 3 arms the gate refuses bytes the composite refuses too. Those bytes were never buyable.**
+Only D56 shows the gate over-refusing, and its credit is **1,543 B = 0.001027 S = 3.64% of demand**,
+not 8.90% — and D56 is a **birth**-state arm where `d_seg ≈ 0.41` and `d_pose ≈ 55`, so its −3.19 S
+"improvement" is untrained-regime noise, not a shippable gain.
+
+**On the only CONVERGED arm, `adaptive` is 4.49× worse on `d_seg`, 2.58× on `road_lane`, 1.09× on
+`d_pose` — it loses on every axis simultaneously.** There is no reading of that as over-refusal.
+
+### 1. Provenance: the thresholds are DERIVED — MAIN's fork resolves, and it closes
+
+`ddm_wd3_scorer_aware_width_distillation.py:2014-2017`:
+
+```python
+"hard_cell_gate_pass": evaluation["hard_d_seg"]                 <= baseline["hard_d_seg"],
+"road_lane_gate_pass": evaluation["cell_edges"]["road_lane_flips"] <= baseline["cell_edges"]["road_lane_flips"],
+"pose_gate_pass":      evaluation["d_pose"]                     <= baseline["d_pose"],
+```
+
+with `baseline = evaluations["uniform4"]` (`:2007`). **There are no thresholds.** No hand-picked
+constant, no borrowed number, nothing to put at class 4 and nothing to re-derive. This is a
+**three-component Pareto-dominance test against an in-run measured reference** — value-provenance rung
+**DERIVED-relative-to-measured-reference**. MAIN's "guessed ⇒ re-derive ⇒ bytes may be buyable" branch
+is **FALSE**; the "derived ⇒ correctly refused ⇒ this closes" branch is the one that fires.
+
+### 2. Which component fires: DIFFUSE, not a consistent Lane death
+
+`road_lane` (D56) · `hard_cell` (F64) · all three (W0). **Not the same component each time**, so the
+more interesting hypothesis MAIN offered — "`adaptive` always dies on Lane" — is **not supported**.
+It is diffuse failure, which is the plainer and less exciting answer, and it is the true one.
+
+### 3. Adversarial, as demanded — the gate is doing real work
+
+I will not reach "too strict" by convenience, and the evidence does not support it. `road_lane_flips`
+guards Lane specifically: **0.59% of area but 33.56% of model bits and the worst distortion class
+(IoU 0.263)** per bl1. A composite is precisely the instrument that hides that, which is what `cb1`
+measured when MyCar admitted while Lane rejected. In D56 — the one arm where the composite disagrees
+— the gate fires on **`road_lane`, 1.278× more Lane flips**, which is exactly the damage a composite
+launders. **The gate catching that is the gate working, not the gate malfunctioning.**
+
+### 4. What genuinely survives — a structural asymmetry, not buyable bytes
+
+**`uniform4` passes its own gate by identity.** It *is* the baseline, so `x <= x` is True on all three
+components by construction. **The reference cannot lose the race it defines**, and
+`choose_cheapest_passing_quantization` then takes the cheapest passer — so `uniform4` wins unless a
+rival strictly Pareto-dominates it. That explains the 4/4 `uniform_int4_degenerate` record without any
+appeal to allocation quality.
+
+So the residual class-4 item is **not a threshold** — it is (a) the **choice of uniform-int4 as the
+reference** and (b) the **dominance rule itself** (Pareto on 3 components, rather than net score).
+That is a frozen *decision rule*, in the operator's named shape, and I flag it as such. **But it does
+not make the refused bytes buyable**, and I am not proposing to loosen it: §3 is why.
+
+**Cheapest decisive next step, NAMED and NOT FIRED** (MAIN's item 4): re-score the already-retained
+`adaptive` candidate for **D56** — the only arm where the composite disagrees — **per class**, against
+a properly derived per-class bar rather than dominance-vs-uniform4. It is a read of retained payloads,
+zero new compute. **I do not recommend prioritizing it:** D56 is birth-state, the credit is 1,543 B
+(3.64% of demand), and the converged arm points the other way. Logged so it is not lost, ranked low.
+
+---
+
+## 6d. R1 — SEALED, NOT FIRED. Launch order for MAIN.
+
+**I do not fire. This is the sealed order; the governed Metal slot is MAIN's.**
+
+**STAGE 1 (fire this alone): `R1a` — two OFF seeds. ~3.4 h.**
+- Arms: two control runs, `ds1` **inert** (`DEFAULT_CONFIG`), differing **only** in seed.
+- Byte-identity of the inert lever asserted before launch (`test_inert_returns_the_same_object`).
+- Ladder: built around the **uniform** allocation ladder, which is what actually ships.
+  **NOT `adaptive_allocation_from_sensitivity` — it is 0-for-3** (§6b/§6c); carry it as a probe only.
+- Deliverable: the measured seed floor `f` **and the ΔS it renders unresolvable, in gap units.**
+- **STOP THERE.** Do not chain the treatment.
+
+**STAGE 2 (fire only if Stage 1 licenses it): `R1b` — the ON arm. ~3.3 h.**
+- `mode="sampled"`, `k=2`, uniform weights, `base_weight=1.0`, seed pinned.
+- **GATE: fire only if the Stage-1 floor can resolve the effect being tested.** Floor ≥1.2× ⇒
+  **do not fire as designed**; escalate to seed-averaging or a paired design, which is a different
+  and larger experiment.
+- WIN bar **`r < 1` = 21.62×** improvement (tba1 D3, seg-leg-only ⇒ a lower bound). The WIN branch is
+  resolvable at any plausible floor (ΔS 0.4237 = 15.0× gap).
+
+**Binding on both stages:** `verdict_scope: INSTANCE` · KILL unavailable if underpowered · the
+**72.80% renderer cap** carried in every reading (a perfect objective on the only D-coupled block
+still cannot close the gap alone — it MUST compose) · improvement must come from **mechanism**, never
+magnitude (dg2: `ratio ∝ B^−0.2748`, so smaller bites are *worse*).
+
+**STILL OWED, and not to be dropped when R1 lands:**
+- **R0b — converged replication.** 2 of 3 R0 arms are birth-state (`d_pose` 27–77). R0 characterizes
+  the proxy mostly at birth; the one converged arm points *opposite* my withdrawn hypothesis.
+- **The D56 per-class re-score** (§6c item 4) — named, zero-compute, ranked LOW.
 
 ---
 
