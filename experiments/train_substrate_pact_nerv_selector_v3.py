@@ -187,7 +187,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "(WAVE-N+3 SLOT 1 PyTorch sister 2026-05-28 mirrors MLX-LOCAL "
             "--decoder-quant interface). Default 'fp16_brotli_q9' preserves "
             "V3 baseline (sha256 ef5a087ff6301dbf). 'int8_per_channel_brotli_q11' "
-            "emits the Slot 2 empirical -28.5% archive baseline. "
+            "emits the Slot 2 empirical -28.5%% archive baseline. "
             "'heterogeneous_per_tensor' emits the Compound C variant: top-K "
             "tensors FP4-QAT + mid int8-per-channel + tail int4-groupwise NF4 "
             "via canonical tac.substrates.pact_nerv_selector_v3."

@@ -651,7 +651,7 @@ def main(argv: list[str] | None = None) -> int:
         "--disk-sweep",
         type=Path,
         default=None,
-        help="output of a `find ... | xargs stat -f '%z %N'` sweep, one '<bytes> <path>' per line",
+        help="output of a `find ... | xargs stat -f '%%z %%N'` sweep, one '<bytes> <path>' per line",
     )
     ap.add_argument(
         "--out",

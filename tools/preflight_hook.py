@@ -1417,6 +1417,127 @@ def run_shell_driver_rc_receipt_scan(staged_shell: list[str]) -> int:
     return 0
 
 
+#: The dict argparse actually interpolates help text against at ``format_help()`` time.
+#: Mirrors ``src/tac/tests/test_cli_help_strings_render.py::ARGPARSE_PARAMS`` exactly so the
+#: commit-time guard and the repo-wide CI guard cannot disagree about what "renders" means.
+_ARGPARSE_HELP_PARAMS: dict[str, object] = {
+    "prog": "prog",
+    "default": 1,
+    "choices": "choices",
+    "type": "type",
+    "const": 1,
+    "metavar": "metavar",
+    "dest": "dest",
+}
+
+
+def _argparse_help_render_violations(path: Path) -> list[tuple[int, str, str]]:
+    """Return ``(lineno, help_text, error)`` for each literal ``help=`` that breaks ``--help``."""
+    try:
+        tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
+    except (SyntaxError, ValueError, OSError):
+        return []  # unparseable sources are another gate's problem
+    bad: list[tuple[int, str, str]] = []
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "add_argument"):
+            continue
+        for kw in node.keywords:
+            if kw.arg != "help":
+                continue
+            try:
+                value = ast.literal_eval(kw.value)
+            except (ValueError, TypeError, SyntaxError):
+                continue  # computed help string; not statically checkable
+            if not isinstance(value, str):
+                continue
+            try:
+                value % _ARGPARSE_HELP_PARAMS
+            except (TypeError, ValueError, KeyError) as exc:
+                bad.append((node.lineno, value, f"{type(exc).__name__}: {exc}"))
+    return bad
+
+
+def run_argparse_help_render_scan(staged: list[str]) -> int:
+    """`ddm_nt1` landing 2 — refuse a staged ``help=`` string that CRASHES ``--help``.
+
+    THE CLASS: argparse renders help as ``self._get_help_string(action) % params`` where
+    ``params`` is a dict. One unescaped ``%`` therefore raises at ``format_help()`` time and
+    ``--help`` crashes for the WHOLE parser — every flag, not just the offending one.
+
+    WHY A SECOND GUARD EXISTS. ``src/tac/tests/test_cli_help_strings_render.py`` already owns
+    this class repo-wide, with positive/negative controls and a denominator. It is a good
+    instrument. It did not fire, because nothing UNCONDITIONAL runs it at commit: this hook's
+    pytest step is SUBSET-SELECTED from the staged diff, and that selector links a test to a
+    source file by module-reference tokens — which a test that names its targets as *string
+    literal paths* does not produce. So the guard's protection was conditional on a selector
+    that could not see it.
+
+    MEASURED cost of the gap: ``06fa0ad37d`` (2026-08-03) landed that guard and escaped all 10
+    then-live sites; ``08a472aa29`` the SAME DAY reintroduced the class on
+    ``experiments/train_tr1_partition_renderer_mlx.py`` — the live TR1 trainer the guard names
+    by hand in its own parametrize list. It stayed broken for 3 weeks (to 2026-08-24), so every
+    agent told by CLAUDE.md "NEVER invent CLI flags — grep/read the target's argparse first" got
+    a ``TypeError`` instead of the 116-flag surface. A repo-wide sweep at repair found 3 further
+    live sites in 3 more files. Repo-wide live count after repair: 0 — hence BLOCKING here from
+    byte one, per the strict-flip atomicity rule.
+
+    SCOPE, stated so a green run is not over-read: STAGED ``.py`` files only, and within them
+    only *literal* help strings. A help value built at runtime (f-string, variable, ``.format()``)
+    is not statically evaluable and is SKIPPED, not passed. Staged scope is the point — it fires
+    at the moment of introduction, which is exactly when ``08a472aa29`` would have been caught,
+    and it keeps the cost at a few ms instead of the 25 s a repo-wide AST sweep costs. The
+    repo-wide denominator stays with the CI test; the two are complements, not duplicates.
+
+    Fail-OPEN and LOUD on a broken guard, matching the siblings above.
+    """
+    if os.environ.get("ARGPARSE_HELP_RENDER_SCAN_ENABLED", "1") == "0":
+        print(
+            "[preflight-hook] argparse help-render scan DISABLED by env — NOT a pass.",
+            file=sys.stderr,
+        )
+        return 0
+    targets = [p for p in staged if p.endswith(".py")]
+    if not targets:
+        return 0
+    findings: list[str] = []
+    scanned = 0
+    for rel in targets:
+        # `_staged_py_files()` yields repo-relative paths and git runs hooks from the repo
+        # root, but do not depend on the CWD: fall back to REPO_ROOT so the scan is correct
+        # under any caller (round-2 self-review — the first draft silently scanned NOTHING,
+        # i.e. returned a false PASS, if CWD was not the repo root).
+        path = Path(rel)
+        if not path.is_file():
+            path = REPO_ROOT / rel
+        if not path.is_file():
+            continue
+        scanned += 1
+        try:
+            for lineno, text, err in _argparse_help_render_violations(path):
+                findings.append(f"  {rel}:{lineno} {err} -- help={text[:110]!r}")
+        except Exception as exc:  # pragma: no cover - guard-broken path
+            print(
+                f"[preflight-hook] argparse help-render scan UNAVAILABLE on {rel} "
+                f"(failing OPEN): {exc}",
+                file=sys.stderr,
+            )
+            return 0
+    if findings:
+        print(
+            f"{RED}[preflight-hook] {len(findings)} staged argparse help string(s) CRASH "
+            f"`--help` (scanned {scanned} staged .py file(s)):{RST}\n"
+            + "\n".join(findings)
+            + "\n  argparse renders help as `text % params`; escape a literal percent as `%%`.\n"
+            "  A single bad string takes down `--help` for the ENTIRE parser, which is the\n"
+            "  surface CLAUDE.md requires you to read before wiring any flag.",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
 def run_guarded_constant_frozen_literal_scan(staged: list[str]) -> int:
     """`ddm_gk1` landing 2 — refuse a NEWLY-ADDED frozen output of a live derivation.
 
@@ -1740,6 +1861,15 @@ def main() -> int:
     # Step 1g: `ddm_gk1` guarded-constant frozen-derivation guard. Same placement
     # rationale as 1b/1c/1d/1e/1f — before run_preflight(), which early-returns on failure.
     rc = run_guarded_constant_frozen_literal_scan(staged)
+    if rc != 0:
+        return rc
+
+    # Step 1g2: `ddm_nt1` argparse help-render guard. Same placement rationale as 1b-1g —
+    # before run_preflight(), which early-returns on failure. This one closes a gap in an
+    # EXISTING repo-wide guard (test_cli_help_strings_render.py) that was never reached at
+    # commit because the pytest step is subset-selected and could not link a test that names
+    # its targets as string-literal paths. ~ms on staged .py only.
+    rc = run_argparse_help_render_scan(staged)
     if rc != 0:
         return rc
 

@@ -3461,7 +3461,7 @@ def build_argparser() -> argparse.ArgumentParser:
     ap.add_argument("--tau-softplus-tau", type=float, default=0.3,
                     help="ddm_pt2 PORT: tau of the tau_softplus seg form, mean(tau*softplus(-m/tau)). "
                          "This trainer previously took make_loss_fn's default with no way to set it, "
-                         "while the live burn lineage runs tau_softplus for ~100% of its epochs -- "
+                         "while the live burn lineage runs tau_softplus for ~100%% of its epochs -- "
                          "i.e. the ONE scalar shaping the live loss was unreachable. Default 0.3 == "
                          "that same default => byte-identical.")
     return ap

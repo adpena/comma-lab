@@ -154,7 +154,7 @@ def parse_args() -> argparse.Namespace:
                         "DO NOT raise without re-doing the rate-vs-distortion "
                         "tradeoff math — a 100KB delta wipes the score win. "
                         "M1 footgun guard: the underlying library defaults to "
-                        "~1% sparsity (~100KB) when target_bytes is unset; the "
+                        "~1%% sparsity (~100KB) when target_bytes is unset; the "
                         "CLI default of 5000 keeps us in the council range.")
     p.add_argument("--uniward-sigma", type=float, default=1e-4,
                    help="UNIWARD wavelet stabilizer (matches fridrich default).")
