@@ -144,6 +144,74 @@ streams are entropy-coded (CABAC/RC64) downstream of a bit-packed store — and 
 gradient has been optimizing an **upper bound**, not the shipped quantity. If that is right, more
 rate pressure is the wrong lever and pose (R1) is the whole game.
 
+### 3a. R0 PARTIAL — measured, and it cuts AGAINST my own prediction
+
+I found the lineage generation on disk and read its receiver parse-back rather than guess.
+`/Volumes/APDataStore/pact/ddm_pq1_submission_packet/generations/hv1_ep0634/RECEIVER_PARSEBACK.json`
+(**hv1_ep0634, archive 182,759 B — NOT dx2's 180,368 B; a different generation, labelled as such**):
+
+| quantity | bytes |
+|---|---:|
+| `state_payloads`, 38 tensors, fp32-width on disk | 270,220 |
+| shipped `outer_payloads.compressed_models` | 70,453 |
+| ratio | 0.2607 ⇒ **8.34 bits per fp32-weight-equivalent** |
+
+**This is NOT R0 and I will not present it as R0.** The ratio conflates QUANTIZATION — which
+`variable_weight_bits` *does* model, through the learned per-channel `bit_depth` — with ENTROPY
+CODING, which it does not. R0 needs `estimated_model_bits(model)/8` in the numerator, and that
+requires loading the model. What I have is a *bound*, and it points the other way from my prediction:
+the implied average width is **8.34 bits/weight against `--init-bits 8.0`**, so if the learned depths
+sit near their initialization then allocated ≈ shipped, the coder gain is **small**, and the surrogate
+is close to **faithful**. **My §3 prediction is now the less likely branch on my own evidence**, and I
+am recording that before anyone scores it for me.
+
+This converges independently with tri1's mechanism 1 (**rate slack exhausted by optimization**): a
+faithful surrogate under a mandatory penalty for hundreds of epochs is exactly what an exhausted rate
+axis looks like. Two different instruments, same conclusion — **rate is not the lever.**
+
+### 3b. Adopting POSE-ONLY as the first rung, and scoping the claim honestly
+
+I accept MAIN's routing of tri1's recommendation and make **POSE-ONLY the first rung**, ahead of my
+own R0. It is a one-term addition (rate is already there and mandatory), and ap1's `carrier_l1` is a
+genuinely clean single-variable test: **0.306332 S at EXACTLY ZERO seg cost, 100% pose-dominated**,
+with an existing measured baseline. No seg confound, one term, one number to beat.
+
+**Scoping the claim, because tri1 partially refutes the framing I was sent.** A pose term does
+**not** cover everything:
+
+| family | pose share | does a pose term address it? |
+|---|---:|---|
+| carrier | 100% | **yes — the clean test** |
+| semantic | 65.8–89.8% | **mostly** |
+| HPAC | 35.4–43.1% | **NO — seg-dominated (decode integrity)** |
+| residual | 48.3% | **NO — roughly balanced** |
+
+Four families are seg-dominated. **I claim pose in-loop for carrier and semantic only.** HPAC and
+residual are a decode-integrity problem, and adding a pose term will not touch them; anyone
+attributing a later HPAC improvement to the pose term will be wrong.
+
+### 3c. The reframe I accept, and what it changes in the objective
+
+tri1's accounting: summing every axis's movable bytes gives **1,089.17 B = 2.57% of the 42,382 B
+demand (38.91× short)**, but granting every measured rung its bytes **at zero distortion** gives
+**152.40% of demand**. **dx2 is distortion-starved, not byte-starved.** The bytes exist; the
+distortion they cost is what makes them unbuyable.
+
+I accept this, and it retires my own charter's title. **"Trained at target rate" is aimed at the
+wrong constraint.** Minimizing `B` is not the objective — the rate penalty already does that, and
+§3a suggests it has already won. The object we want is one that is **cheap to shrink**: one whose
+distortion does not explode when bytes are removed. That is a statement about the *derivative*, not
+the *level*:
+
+> minimize `dD/dB` at the operating point, not `B`.
+
+Concretely, that is a different penalty from the one in the loss today. Today's term penalizes the
+bit COUNT (`Σ bits × weights`). A cheap-to-shrink objective penalizes the **sensitivity of distortion
+to bit-depth reduction** — flatness in the bit-depth direction — so that the *next* byte removed is
+cheap. That is second-order where the current term is first-order, and it is a genuinely different
+experiment from anything in the recall table in §1. I flag it as the design successor to this
+charter rather than smuggling it in as a result: **it is unbuilt and unmeasured.**
+
 **Resumability: nothing to build.** `CHECKPOINT_SCHEMA = "ddm_cl1_hpac_capacity_checkpoint.v2"`, and
 the lineage audit reports optimizer + scheduler restore, step-encoded filenames, EMA shadow as the
 deployed weight, atomic writes, and full RNG capture/restore. The charter's P0 build requirement is
@@ -156,9 +224,11 @@ resume will silently restart it.
   "the first rate-in-objective trainer" — **already exists and is mandatory**, so building it would
   have rebuilt what is there. That is a redirect, not a completed build, and I am not calling it one.
 - **I published a wrong headline and it stood for ~2 hours.** §0 retracts it in full.
-- **I did not run R0**, the measurement I am recommending most strongly. It needs the dx2 checkpoint
-  loaded through the pr130 code root on the SSD; I specified the exact procedure instead of guessing
-  its answer.
+- **I did not run R0.** §3a is a PARTIAL: a parse-back ratio on hv1_ep0634 (not dx2), which bounds
+  the answer but conflates quantization with coder gain. The real R0 needs the model loaded through
+  the pr130 code root; I verified those imports resolve, so it is runnable, and I did not run it.
+- **I did not run the POSE-ONLY rung** I am now recommending first. It is specified, not measured.
+- **The "cheap to shrink" objective (§3c) is unbuilt and unmeasured.** It is a design proposal.
 - Measured cost on the real vehicle is **~48.95 s/epoch on MPS** (7,929 s over epochs 480→642) —
   **received from MAIN, not measured by me.**
 - No scorer ran. No Modal. No Metal burn. No candidate archive. Pointer UNMOVED.
@@ -188,7 +258,9 @@ the same vacuity signature I had cited to justify it; both fixed, both pinned by
 
 ## NOT CLAIMED
 
-No ΔS. No byte credit. No distortion measurement. No frontier movement. **R0 is unmeasured** — I
+No ΔS. No byte credit. No distortion measurement. No frontier movement. **R0 is unmeasured; §3a is
+a bound on a DIFFERENT generation (hv1_ep0634, 182,759 B) and is not a dx2 number.** The 8.34
+bits/weight figure is an implied average from a ratio, not a read of any `bit_depth`. I
 claim only that `variable_weight_bits` is an allocation accounting by inspection of its source, NOT
 that it diverges from shipped bytes; my §3 prediction that it does is a PREDICTION, recorded to be
 scored, not a result. The retracted `packed_size` finding is withdrawn as a claim about dx2 and is
@@ -203,6 +275,8 @@ vehicle and transfer as no number. The 48.95 s/epoch figure is MAIN's, not mine.
 · `ddm_rg5_rate_gradient_sign_20260801.md` + `ddm_rg5_rows_20260801.jsonl` (159 rows) ·
 `ddm_rsf1_rate_surrogate_fidelity_20260801.md` · `measured_lever_inventory_for_synergy_pass_20260701T001751Z.md`
 · `mallat_balle_deepmath_review_20260707.md` · `ddm_wq1` (`1cc670031c`, via MAIN; not duplicated) ·
+`ddm_tri1` (`da6255c46a`, via MAIN — three-mechanism split + the distortion-starved accounting) ·
+`hv1_ep0634/RECEIVER_PARSEBACK.json` (read directly) ·
 source: `tools/train_ddm_cl1_hpac_capacity{,_mps}.py`, `pr130_eureka_intake_20260806/repro_repo/code/hpac_self_compress.py`,
 `train_tr1_partition_renderer_mlx.py`, `train_semantic_quantized_resumable.py`,
 `lifted/train_semantic_quantized.py`, `boundary_math/weight_entropy_penalty_mlx.py`.
