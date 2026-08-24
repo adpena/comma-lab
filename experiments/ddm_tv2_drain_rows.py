@@ -45,7 +45,17 @@ DONE_DIR = REPO_ROOT / ".omx" / "tmp" / "codex_runs"
 # counting process matches over-reports capacity by 3x.  The row's work
 # directory appears exactly once per row in those command lines, so counting
 # DISTINCT work dirs is the artifact-immune measure of how many rows are live.
-INFLIGHT_WORKDIR_RE = re.compile(r"/rows/([A-Za-z0-9_]+)/work\b")
+#
+# The optional ``attempt_NNNN`` segment is REQUIRED, not cosmetic: rows fired by
+# this drainer live at ``rows/<label>/attempt_0001/work`` (the canonical firer
+# refuses a non-empty attempt dir, so every retry mints a fresh one), while rows
+# fired directly live at ``rows/<label>/work``.  A pattern matching only the
+# second form silently under-counts this drainer's OWN rows -- reporting zero
+# live while three are rendering -- which reads as free capacity.  Measured and
+# fixed 2026-08-24; the ``max_own_inflight`` ceiling and the host governor both
+# held while it was wrong, so no row was over-committed.
+INFLIGHT_WORKDIR_RE = re.compile(
+    r"/rows/([A-Za-z0-9_]+)/(?:attempt_[0-9]+/)?work\b")
 
 
 class DrainError(RuntimeError):
