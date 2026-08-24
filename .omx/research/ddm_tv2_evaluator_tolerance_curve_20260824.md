@@ -463,6 +463,38 @@ supports** — `d_seg` on the 2.17% of positions at the class boundary, `d_pose`
 interior. The campaign has been pricing distortion as a single scalar; that is only safe for a
 perturbation whose support is known.
 
+### 6.0 The sharper statement: seg SLACK and pose DAMAGE are CO-LOCATED
+
+Near-disjoint *damage* is the observation. The **complement** is the stronger claim, and it comes
+from reading τ's decrease with k as a fact about *place* rather than about *scale*:
+
+| where | **τ** | reading | pose cost |
+|---|---:|---|---:|
+| boundary-concentrated draws (90.1% on boundary) | **0.9043** | 90.4% of changes reach the argmax → **essentially ZERO seg slack** | cheap (+0.0300) |
+| interior-concentrated draws (92.7% interior) | **0.5295** | ~47% of changes never reach the argmax → **real seg slack EXISTS** | **catastrophic (1,039× base)** |
+
+**The only place the argmax tolerates movement is the place PoseNet is watching.** Seg slack is not
+absent from the object — it is *guarded*. Every position is expensive on at least one axis, and
+which axis is decided by the boundary/interior split.
+
+### 6.0.1 This gives `vf1`'s 0 / 117,964,800 census a MECHANISM — and an honest residual
+
+`vf1`'s census (zero free positions) has stood as a brute empirical fact with no explanation. The
+two scorers partition the field between them:
+
+| region | share of field | which scorer guards it |
+|---|---:|---|
+| boundary, d = 0 | **2.17%** | `d_seg` (94.53% of the bits also live here) |
+| interior, d ≥ 4 | **92.80%** | `d_pose` (photometry) |
+| **near-boundary annulus, d = 1–3** | **5.04%** | **NOT classified by this instrument** |
+
+**The two guarded regions account for 94.97% of the field, not 100%.** The remaining **5.04%** is the
+d = 1–3 annulus, which this arm's 2×2 does not assign to either axis: no arm was targeted at it. It
+is not measured to be free — it carries **3.61% of the stream's bits** and 5.92% of the model's
+uncertainty mass — but it is **not measured to be guarded either**. Stating it as "every position is
+expensive" would publish a clean 100% that this instrument did not earn. **If that 5.04% is
+genuinely free, then `vf1`'s census is the result needing explanation, not this one.**
+
 ### 6.1 What this re-reads (no new measurement required)
 
 - **`dg2`'s 93.3%-pose diagonal** — a joint field+model move rewrites region *interiors*, which is
@@ -483,6 +515,36 @@ and read as *nearly viable*. It is in fact the **18,901×** worst arm measured, 
 is 84× its seg cost and its positions hold 241× fewer bytes. **The uniform arm is cheap on the axis
 everyone was watching and ruinous on the axis nobody was.** Confounding position rule with value
 rule on a diagonal would have hidden this completely.
+
+**Generalised — this is not a precision miss, it is a SIGN-LEVEL inversion of the verdict:**
+
+> **A single perturbation family cannot measure tolerance, because the families rank-INVERT between
+> the two axes.** Whichever family you pick, it is cheap on one axis and ruinous on the other, so a
+> one-family study reports the axis it happens to be cheap on and reads as nearly viable.
+
+The requirement is therefore structural, not a matter of care: **any tolerance or perturbation study
+on this object must run at least two position families and score BOTH axes**, or its verdict can
+land on the wrong side of break-even. This transfers well past this arm and is the same shape as the
+campaign's closed-from-one-rung genus.
+
+### 6.3 OPEN — the question §6.0 raises and this arm does NOT answer
+
+The interior carries **real seg slack** (τ 0.5295 ⇒ ~47% of interior token changes never reach the
+argmax). That slack is forbidden **only by pose**. The obvious next thought is *"move interiors in a
+pose-null way"*.
+
+**This arm does not answer that, and no answer should be derived from memory.** The question lives in
+a neighbourhood with at least three prior results that must be RE-READ first, none of which were
+consulted here:
+
+- **`#837`** — is the exactly-pose-null `frame_1` subspace seg-reachable?
+- **`j11`** — its pose-null / seg-null proposal split.
+- **`#1029`** — the projected-vs-unprojected semantic-cell census.
+
+Recorded as **OPEN with named recall targets**, deliberately without a verdict. Deriving one from
+what anyone remembers is the exact move that has cost this campaign arms this week; and note that
+`ddm_pz1` already measured a closely related trap — a field built to be null in one frame's lattice
+is **resampled onto a different lattice** by the pose warp, where it is no longer null.
 
 ---
 
@@ -607,6 +669,23 @@ exactness; that exactness was real.
   ceiling is 113,776 B and k = 10⁶ already reaches 91.55% of it, so no larger-k or better-targeted
   variant of *this* mechanism has room to invert a 40× deficit.
 - **`et1` and `ws1` are not adjudicated** (§7.4).
+- **The d = 1–3 annulus (5.04% of the field) is NOT classified** by this instrument (§6.0.1). "Every
+  position is expensive" is measured for 94.97% of the field, not for all of it.
+- **§6.3 is OPEN, not answered.** No claim is made about pose-null interior movement.
+
+### Instrument defects found and fixed during this arm
+
+Recorded because a silent instrument defect is the failure this campaign keeps paying for:
+
+- **The drainer's in-flight counter under-counted its own rows.** It matched `rows/<label>/work`,
+  but rows it fires live at `rows/<label>/attempt_NNNN/work` (the canonical firer refuses a
+  non-empty attempt dir, so every retry mints a fresh one). It therefore reported **zero live while
+  three were rendering** — which reads as free capacity. Fixed, tested, and the reason written into
+  the code so it cannot return.
+- **What saved it is worth recording too: two INDEPENDENT ceilings held while the counter was
+  wrong** — the drainer's own `max_own_inflight` cap and the host governor's SUM-over-RAM admission
+  gate. Neither depended on the broken count, so no row was over-committed. Defence in depth doing
+  exactly its job.
 
 ---
 
