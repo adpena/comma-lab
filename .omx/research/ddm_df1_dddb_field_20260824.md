@@ -360,7 +360,16 @@ measured at three perturbation scales on the same instrument:
 |---:|---:|---:|
 | 773 (τ = 0.9999, static) | 2.2730 | **1.4036** |
 | 3,702 (τ = 0.999, static) | 1.8258 | **1.1807** |
-| 106,711 (τ = 0.999, closed loop) | 1.1231 | **1.0408** |
+| 13,437 (τ = 0.99, static) | 1.5204 | **1.0686** |
+| 33,719 (τ = 0.95, static) | 1.2796 | **0.9759** |
+| 106,711 (τ = 0.999, **closed loop**) | 1.1231 | **1.0408** |
+
+The four **static** rows fall monotonically — 1.4036 → 1.1807 → 1.0686 → 0.9759 — and **cross 1.0
+between 13,437 and 33,719 labels**: past that size, breaking a token label destroys slightly less
+than one scored cell on average, because some breaks land where the cell was already wrong or flip
+it back to correct. The closed-loop row at 106,711 sits at **1.0408, off that curve** — it is
+larger than the τ = 0.95 static point yet amplifies *more*. That non-monotonicity is direct
+evidence for the confound named below: **composition matters, not only size.**
 
 **Render amplification is not a constant and the campaign should stop treating it as one.** A
 handful of broken labels costs ~1.40 scored cells each; a hundred thousand costs ~1.04 each. The
@@ -369,14 +378,14 @@ there cannot break it twice. The practical consequence cuts against targeting: *
 precisely-aimed token edits are amplified ~35% harder than bulk ones**, so the per-unit damage of a
 surgical edit is worse than a bulk average would predict.
 
-**The confound I have NOT isolated, named explicitly.** The three rows differ in *how many*
-positions changed AND in *which* positions changed — the 773 are the model's most confidently
-wrong, the 106,711 are a broader and differently-distributed set. So the monotone fall from 1.4036
-to 1.0408 is a fact about these three fields, and "saturation in N" is the natural reading of it,
-but it is **not** separated from a composition effect. Isolating it needs a size sweep over
-random-equal-composition subsets of one changed set; that is a clean follow-on and **this arm did
-not run it**. The number that carries the verdict (11.567×) does not depend on the reading — it is
-measured directly on the field that would ship.
+**The confound I have NOT isolated, named explicitly.** The rows differ in *how many* positions
+changed AND in *which* positions changed — the 773 are the model's most confidently wrong, the
+33,719 and 106,711 are broader and differently-distributed sets. Within the static τ family the
+fall is clean and monotone, so "saturation in N" reads naturally there; but the closed-loop row
+breaking that monotonicity shows the two factors are **not** separated. Isolating them needs a size
+sweep over random equal-composition subsets of ONE changed set; that is a clean follow-on and
+**this arm did not run it**. The number that carries the verdict (11.567×) does not depend on the
+reading — it is measured directly on the field that would ship.
 
 **The trap this section closes.** The static τ sweep, scored on the REAL render and the REAL
 SegNet — so its `ΔS_seg` is fully measured, only its BYTES are static:
@@ -387,12 +396,40 @@ SegNet — so its `ΔS_seg` is fully measured, only its BYTES are static:
 | 0.9999 | 773 | 1.4036 | 0.000920 | 0.0010541 | **0.873 — a WIN** |
 | 0.999 | 3,702 | 1.1807 | 0.003705 | 0.0041199 | **0.899 — a WIN** |
 | 0.99 | 13,437 | 1.0686 | 0.012172 | 0.0119267 | **1.021 — marginal** |
+| 0.95 | 33,719 | 0.9759 | 0.027895 | 0.0233647 | **1.194 — refuse** |
 
 Two of those rows say ADOPT. The closed loop at the very same τ = 0.999 says **11.567× — refuse**,
 and the candidate it produces scores **0.23423** against 0.14822 shipped, i.e. S **58.0% worse**.
 **A campaign that priced this operator on a static field edit — even with a correctly measured
 render amplification, as here — would have shipped a 58% regression.** Only running the receiver
 separates them, because only the receiver's contexts diverge.
+
+### 6.4 The most favourable point, closed too — and the two divergence channels separate
+
+τ = 0.9999 is the best the static sweep offers (0.873×), so it was run in closed loop as well:
+
+| | τ = 0.9999 | τ = 0.999 |
+|---|---:|---:|
+| labels broken, static | 773 | 3,702 |
+| **labels broken, closed loop** | **11,959 (15.47×)** | **106,711 (28.83×)** |
+| bytes saved, static | 1,583.0 | 6,187.3 |
+| **bytes saved, REAL** | **1,612 (1.018×)** | **12,224 (1.976×)** |
+| **damage ÷ credit, at 1× amplification** | **≥ 9.445×** | ≥ 11.114× |
+| damage ÷ credit, fully measured | — | **11.567×** |
+
+**Both thresholds refuse by roughly an order of magnitude.** The 9.445× at τ = 0.9999 charges
+exactly 1.000 scored error per broken label. That is a *convention*, not a floor — §6.3's static
+family measures net amplification **falling through 1.0 between 13,437 and 33,719 labels**
+(0.9759 at τ = 0.95). At the ~11,959 labels this row actually breaks, the static family sits near
+**1.07**, which would put the true ratio near **10.1×**. Scoring that field directly was not run;
+the verdict does not turn on it, and I do not claim the 9.445× is a bound.
+
+**The two divergence channels separate cleanly across the pair.** At τ = 0.9999 the byte
+over-realization is **1.018× — essentially nil** — while labels still diverge **15.47×**. At
+τ = 0.999 bytes over-realize **1.976×** and labels diverge **28.83×**. So the confidence-inflation
+that flatters the rate term only switches on once enough of the field has been replaced by the
+model's own guesses; the accuracy collapse is present from the very mildest threshold. **The damage
+channel is the one that never turns off**, which is why no threshold in this family survives.
 
 ---
 
