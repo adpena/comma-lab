@@ -416,6 +416,18 @@ run — a declared SCOPE reduction, not an omission. The ladder therefore begins
 
 Matched base: `d_seg 0.00034740` · `d_pose 0.00014701` · `S 0.19318153` (the `k = 0` control, which
 is byte-identical to `mst1`'s base — so base and candidate share one instrument by construction).
+
+**Where each row lives on disk** (the ten rows span two arm trees, which is not obvious and has
+already caused one reconciliation error):
+
+| arm tree | rows |
+|---|---|
+| `/Volumes/APDataStore/pact/ddm_tv1_tolerance_curve/rows/<label>/` | `k0_control`, `cond_cond_k10000`, `cond_cond_k100000`, `cond_cond_k1334939`, `unif_unif_k100000` |
+| `/Volumes/APDataStore/pact/ddm_tv2_tolerance_curve/rows/<label>/attempt_NNNN/` | `cond_cond_k1000`, `cond_cond_k1000000`, `cond_unif_k100000`, `unif_cond_k100000`, `unif_marg_k100000` |
+
+**Every Δ below is against the matched base, never against dx2's contest-CUDA body.** Using the CUDA
+body inflates each seg delta by ~2.0× (`#1034`); §5.2.1 shows that error is large enough to invert
+the shape of the pose/seg table.
 All Δ are **archive-level 600-frame means** per §3.0. Every figure is recomputed from the 8dp report
 components; no rounded display was read.
 
@@ -426,6 +438,7 @@ components; no rounded display was read.
 | `cond_cond` | 100,000 | 600/600 | 0.00097857 | +0.00063117 | **0.7446** | 0.16619 | 4.5× | +0.03004845 | 0.0631 | **0.5112** | **+0.5743** | 1.409e-02 | **40.8×** |
 | `cond_cond` | 1,000,000 | 600/600 | 0.00485249 | +0.00450509 | **0.5314** | 0.08182 | 6.5× | +0.37066928 | 0.4505 | **1.8873** | **+2.3378** | 6.936e-02 | **33.7×** |
 | `cond_cond` | 1,334,939 | 600/600 | 0.00633976 | +0.00599236 | **0.5295** | 0.06349 | 8.3× | +0.67927745 | 0.5992 | **2.5682** | **+3.1675** | 7.185e-02 | **44.1×** |
+| `cond_unif` | 100,000 | 600/600 | 0.00084018 | +0.00049278 | **0.5813** | 0.16619 | 3.5× | +0.02911645 | 0.0493 | **0.5026** | **+0.5519** | 1.409e-02 | **39.2×** |
 | `unif_cond` | 100,000 | 600/600 | 0.00049314 | +0.00014574 | **0.1719** | 0.00069 | 249× | +0.20613559 | 0.0146 | **1.3979** | **+1.4125** | 5.846e-05 | **24,161×** |
 | `unif_marg` | 100,000 | 600/600 | 0.00048485 | +0.00013745 | **0.1621** | 0.00073 | 222× | +0.14163509 | 0.0137 | **1.1524** | **+1.1661** | 6.159e-05 | **18,933×** |
 | `unif_unif` | 100,000 | 600/600 | 0.00049059 | +0.00014319 | **0.1689** | 0.00076 | 222× | +0.15258047 | 0.0143 | **1.1975** | **+1.2118** | 6.411e-05 | **18,898×** |
@@ -584,6 +597,32 @@ Seg contributed **11%** of the damage at k = 10⁵ and **1.2%** in the uniform a
 the concavity of the pose term: `√(10·d_pose)` sits at 0.038342 at base, where its derivative is
 enormous, so even a modest absolute rise in `d_pose` converts into whole units of S.
 
+### 5.2.1 Pose share DECLINES monotonically with k — and the base you pick decides that
+
+Same `cond_cond` arm, pose's share of total distortion, computed on the matched base and (for
+contrast) on the contest-CUDA body:
+
+| rung | **matched base (correct)** | contest-CUDA base (`#1034`) |
+|---|---:|---:|
+| k = 10³ | **97.0%** | 79.1% |
+| k = 10⁴ | **94.6%** | 88.0% |
+| k = 10⁵ | **89.0%** | 87.4% |
+| k = 10⁶ | **80.7%** | 80.5% |
+| k = 1.33e6 | **81.1%** | 80.9% |
+
+**On the matched base the structure is a clean monotone decline, 97.0% → 81.1%.** On the CUDA base it
+is non-monotone and reads as roughly flat — an artifact, because that base subtracts a *different
+object's* seg floor and inflates every seg delta by ~2.0×.
+
+The decline has a mechanism, and it is the same square root as everywhere else in this memo: **`d_seg`
+enters S linearly while `d_pose` enters through `√`, so pose saturates and seg does not.** Over
+k = 10³ → 1.33e6 (1,334×), seg damage grows **682×** but pose damage only **91×**. Pose overwhelms at
+small k and slowly cedes share as k grows — which is also why the `cost/credit` minimum sits at large
+k where seg has finally caught up.
+
+**Anyone reading a pose/seg split off these rows must use the matched base**; a 2.0× seg error is
+large enough to invert the shape of this table.
+
 ---
 
 ## 6. THE τ-INVERSION — seg-support and pose-support are near-DISJOINT
@@ -671,22 +710,29 @@ bits.
 Arm names are `<position rule>_<value rule>`. The 2×2 exists precisely so the two factors can be
 varied one at a time. At k = 100,000:
 
-| arm | position | value | **ΔS_seg** | **ΔS_pose** |
-|---|---|---|---:|---:|
-| `cond_cond` | **boundary** | cond | **+0.0631** | **+0.5112** |
-| `unif_cond` | interior | cond | +0.0146 | +1.3979 |
-| `unif_marg` | interior | marg | +0.0137 | +1.1524 |
-| `unif_unif` | interior | unif | +0.0143 | +1.1975 |
+**The 2×2 is COMPLETE** (all four corners measured), plus the `marg` value level:
 
-**Vary POSITION with the value held at `cond`** (`cond_cond` → `unif_cond`):
-seg **4.32× down**, pose **2.73× up**. The inversion.
+| arm | position | value | **τ** | **ΔS_seg** | **ΔS_pose** |
+|---|---|---|---:|---:|---:|
+| `cond_cond` | **boundary** | cond | 0.7446 | **+0.0631** | **+0.5112** |
+| `cond_unif` | **boundary** | unif | 0.5813 | **+0.0493** | **+0.5026** |
+| `unif_cond` | interior | cond | 0.1719 | +0.0146 | +1.3979 |
+| `unif_marg` | interior | marg | 0.1621 | +0.0137 | +1.1524 |
+| `unif_unif` | interior | unif | 0.1689 | +0.0143 | +1.1975 |
 
-**Vary VALUE with the position held at `unif`** (three rows):
-seg spans 0.0137–0.0146 — a **6.6%** range. Pose spans 1.1524–1.3979 — a **21.3%** range.
+**Main effects, each measured at BOTH levels of the other factor — the test of a real main effect:**
 
-**So the τ-inversion is an isolated effect of WHERE, not an interpretation.** The orthogonal factor
-moves seg by 6.6% while position moves it by 432%; §6.0's attribution is now a controlled two-factor
-result rather than a reading of the diagonal.
+| factor | held at | seg effect | pose effect |
+|---|---|---:|---:|
+| **POSITION** | value = cond | **4.33×** | **2.73×** |
+| **POSITION** | value = unif | **3.44×** | **2.38×** |
+| VALUE | position = cond | 1.28× | 1.02× |
+| VALUE | position = unif | 1.02× | 1.17× |
+
+**The position effect holds its size at both value levels (4.33× / 3.44× on seg; 2.73× / 2.38× on
+pose), so the interaction is small and the main effect is real.** The value factor never exceeds
+1.28×. §6.0's attribution is therefore a **complete two-factor result with a consistent main
+effect**, not a reading of the diagonal.
 
 **One honest qualification: the value factor is inert on SEG, but NOT fully inert on POSE.**
 `unif_cond` — conditional values, which sit on the model's own prediction — is **21.3% worse on pose**
