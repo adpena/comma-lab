@@ -362,10 +362,11 @@ measured at three perturbation scales on the same instrument:
 | 3,702 (τ = 0.999, static) | 1.8258 | **1.1807** |
 | 13,437 (τ = 0.99, static) | 1.5204 | **1.0686** |
 | 33,719 (τ = 0.95, static) | 1.2796 | **0.9759** |
+| 53,853 (τ = 0.9, static) | 1.1667 | **0.9323** |
 | 106,711 (τ = 0.999, **closed loop**) | 1.1231 | **1.0408** |
 
-The four **static** rows fall monotonically — 1.4036 → 1.1807 → 1.0686 → 0.9759 — and **cross 1.0
-between 13,437 and 33,719 labels**: past that size, breaking a token label destroys slightly less
+The five **static** rows fall monotonically — 1.4036 → 1.1807 → 1.0686 → 0.9759 → 0.9323 — and
+**cross 1.0 between 13,437 and 33,719 labels**: past that size, breaking a token label destroys slightly less
 than one scored cell on average, because some breaks land where the cell was already wrong or flip
 it back to correct. The closed-loop row at 106,711 sits at **1.0408, off that curve** — it is
 larger than the τ = 0.95 static point yet amplifies *more*. That non-monotonicity is direct
@@ -397,8 +398,11 @@ SegNet — so its `ΔS_seg` is fully measured, only its BYTES are static:
 | 0.999 | 3,702 | 1.1807 | 0.003705 | 0.0041199 | **0.899 — a WIN** |
 | 0.99 | 13,437 | 1.0686 | 0.012172 | 0.0119267 | **1.021 — marginal** |
 | 0.95 | 33,719 | 0.9759 | 0.027895 | 0.0233647 | **1.194 — refuse** |
+| 0.9 | 53,853 | 0.9323 | 0.042563 | 0.0321259 | **1.325 — refuse** |
 
-Two of those rows say ADOPT. The closed loop at the very same τ = 0.999 says **11.567× — refuse**,
+The static curve is monotone in τ (0.873 → 0.899 → 1.021 → 1.194 → 1.325) and crosses break-even
+between τ = 0.999 and τ = 0.99. **Two of its rows say ADOPT.** The closed loop at the very same
+τ = 0.999 says **11.567× — refuse**,
 and the candidate it produces scores **0.23423** against 0.14822 shipped, i.e. S **58.0% worse**.
 **A campaign that priced this operator on a static field edit — even with a correctly measured
 render amplification, as here — would have shipped a 58% regression.** Only running the receiver
