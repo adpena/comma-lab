@@ -313,8 +313,11 @@ axes they probed.
 **On realized ΔS: NOT ESTABLISHED, and I will not claim it.** The charter's falsifier requires a
 *realized* ΔS < 0. These rungs are LOSSY by construction — they convert k Lane tokens to Road, and
 Lane is 19% of dx2's seg flips at IoU 0.263. The distortion leg is not owned by this arm, was not
-measured, and is not free. A −1,576 B rate credit is erased by a d_seg increase of 1.576e-05
-(0.0000158), which is 7.8% of dx2's total d_seg — a small change on an axis where every measured
+measured, and is not free. A −1,576 B rate credit is erased by a d_seg increase of **1.049394e-05**
+(0.0000105) — **CORRECTED 2026-08-24 by MAIN; this line originally read 1.576e-05, which is 1.5018×
+too permissive. See §CORRECTION-20260824 at the end of this memo for the exact derivation.** The
+corrected bar is TIGHTER, so it strengthens this paragraph's own conclusion: the burden on the seg
+leg is higher than stated, not lower. That is 5.2% of dx2's total d_seg — a small change on an axis where every measured
 lossy Lane rung has so far cost more than it bought. **The honest state is: the rate leg of the
 diagonal is negative and measured; the realized ΔS is unmeasured and the burden is on the seg leg.**
 
@@ -392,3 +395,48 @@ measured — not assumed — reason. That fire is MAIN's, not this arm's.
 dx2 — **S 0.14821987563243377 @ 180,368 B `[contest-CUDA T4, n600]`** — **UNMOVED by this arm.**
 No scorer ran, no pointer moved, no score claimed. Gap to 0.12 = 0.028220 ⇒ 42,382 B at fixed
 distortion, or 150 B at zero distortion.
+
+---
+
+## CORRECTION-20260824 (append-only; MAIN, before the seg leg was measured)
+
+**What changed.** §"On realized ΔS" stated the k060000 break-even as a d_seg increase of
+`1.576e-05`. The exact value is **`1.049394e-05`**. The stated bar was **1.5018× too permissive**.
+
+**Derivation (exact, Fraction-checked).** The seg term is `100·d_seg`; the rate term is
+`25·bytes/37,545,489`, so `d(rate)/d(byte) = 25/37,545,489 = 6.658590e-07 S/B` — the canonical
+exchange rate (`ddm_tx1_toolbox_crosswalk_20260819.md` §0, cited not re-derived).
+
+```
+rate credit @ 1,576 B = 1576 × 25/37,545,489      = 1.049394e-03 S   (matches this memo's ΔS(rate) −1.0494e-03 ✓)
+break-even Δd_seg     = 1.049394e-03 / 100         = 1.049394e-05
+stated bar            = 1576 × 1e-8                = 1.576000e-05     <- implies 1e-6 S/B, not 6.6586e-07
+```
+
+The memo's **rate leg is correct and internally consistent** — ΔS(rate) −1.0494e-03 uses the right
+constant. Only the *conversion to a d_seg bar* dropped it. **No byte number, no rate number, and no
+verdict in this memo is affected.** The tables stand.
+
+**Why it mattered.** DANGER BAND `[1.0494e-05, 1.5760e-05]`: a measured Δd_seg in that window
+would have been ADMITTED by the stated bar and REFUSED by the arithmetic.
+
+**A second frame this memo did not carry, added for the consumer.** This arm's axis is
+`[macOS-CPU advisory / scorer-free EXACT byte measurement]` — the byte leg never ran a scorer, so
+there is no d_seg baseline in it. dx2's `d_seg 0.00020139` is **contest-CUDA**. Differencing a
+macOS-CPU advisory d_seg against it is a cross-instrument delta (the `#1034` genus): the measured
+CPU-vs-CUDA seg gap is ~1.43× while the break-even is a 5.2% relative move, so the instrument gap
+is ~8× the signal.
+
+The MATCHED base already exists and needs no re-run:
+`/Volumes/VertigoDataTier/pact/ddm_mst1_manufactured_stage_split/advisory_r1/work/contest_auth_eval.json`
+— archive `976f706d…` (dx2 exact), `device=cpu`, `n_samples=600`, **`avg_segnet_dist 0.0003474`**,
+`avg_posenet_dist 0.00014701`, canonical_score `0.19318153076125097` (recomputed from components).
+
+Consumers of this memo's next-measurement order must therefore compare advisory d_seg against
+**0.0003474**, not 0.00020139 — and must NOT rescale by the 1.4425× lineage ratio to "convert"
+(that is a level ratio; applying it to a delta is its own wrong-object move). The advisory decides
+a **GATE**, not an admission: only a contest-CUDA row admits.
+
+Ledger: `#1238`. Sister: `#1237` (this arm's retained candidate runtimes carry a half-updated pin —
+sha leg correct, `ARCHIVE_BYTES` inherited from dx2 — which made both trees undecodable through
+`inflate.sh` until MAIN repaired copies; dg2's retained trees were left byte-identical).
