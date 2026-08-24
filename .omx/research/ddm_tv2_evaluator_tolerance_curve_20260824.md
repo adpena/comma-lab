@@ -864,8 +864,6 @@ Recorded because a silent instrument defect is the failure this campaign keeps p
 
 ---
 
-## STORES CONSULTED
-
 ## Reproducing and extending this table
 
 The curve is regenerable from retained receipts with one command; later rungs fold in by adding
