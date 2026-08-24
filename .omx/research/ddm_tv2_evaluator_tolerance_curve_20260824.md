@@ -363,9 +363,26 @@ that short *only* because the published token cache replaces the arithmetic deco
 | `unif_unif` k=100,000 | 4 | 1214.3 s | 633.2 s | 1849.4 s |
 
 **The concurrency exchange, measured rather than assumed:** 4-wide makes each row **1.81–1.92×
-slower**, so throughput is **≈2.16× — not 4×**. The cost falls almost entirely on the *inflate* leg
-(2.4–2.7× slower; it is the CPU-bound neural render), while *evaluate* degrades only 1.15–1.21×. A
-plan that priced 4-wide as a 4× speedup would have been wrong by nearly half.
+slower**, so throughput is **≈2.16× — not 4×**. A plan that priced 4-wide as a 4× speedup would have
+been wrong by nearly half.
+
+**And the tax is not spread evenly — it has a located cause.** The *inflate* leg degrades 2.4–2.7×
+while *evaluate* degrades only 1.15–1.21×, because inflate contains **two sub-phases with opposite
+scaling**:
+
+| sub-phase | bound by | scales with concurrency? |
+|---|---|---|
+| neural render + resize (~434 s solo) | **CPU** | yes, up to core count |
+| raw write + SHA-256 of 3,662,409,600 B (~50 s solo) | **disk** | **no — it contends** |
+
+The store sustains a **measured ~39.7 MB/s** (`/Volumes/APDataStore`, ExFAT via fskit, sampled over
+4 s while three rows finalized). Three rows finalizing together must move ~11 GB through that one
+pipe, so the finalize phase **serialises regardless of how many rows are running** — and during it
+the inflate processes sit at 0.0–2.4% CPU, which looks exactly like a hang and is not one.
+
+**Operational consequence:** concurrency helps the render and does nothing for the finalize. Past
+~3–4 rows the added rows buy CPU overlap and pay disk contention, which is why throughput saturates
+near 2.2× rather than tracking the 18 cores.
 
 The governor (`safe_run.py` SUM-over-RAM crash guard, adaptive ceiling 116.0 GiB) refused further
 launches while those four were in flight — projecting 177.0 GiB against 116.0 GiB
