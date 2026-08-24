@@ -412,10 +412,43 @@ no slack.** τ falls at larger k only because the conditional draw exhausts the 
 into the interior (§3.2) — the same mechanism that saturates the credit, so it buys nothing.
 
 **Where this sits on the campaign's exchange ladder.** 40.8× is *not* a catastrophic outlier; it is
-the **second-best exchange ratio the campaign has measured**: `tba1`-D3 21.62× (best) ·
-**tolerance-cond 40.8×** · W72 renderer 46.3× · `ni1` 247.69× · `dg2` diagonal 686–792×. Tolerance
-therefore fails for the campaign's **general** reason, not a special one — which makes the verdict
-sturdier, not weaker: there is no cheap corner here that a better perturbation design would find.
+the **third-best exchange ratio the campaign has measured**:
+
+| mechanism | damage ÷ credit |
+|---|---:|
+| `tba1`-D3 | **21.62×** |
+| W72 renderer | **35.54×** (matched-lineage; the circulating 46.32× divided a macOS-CPU numerator by the contest-CUDA pointer — `#1034`, corrected by `ddm_df1`) |
+| **tolerance-cond (this arm)** | **40.8×** |
+| `ni1` | 247.69× |
+| `dg2` diagonal | 686–792× |
+
+Tolerance therefore fails for the campaign's **general** reason, not a special one — which makes the
+verdict sturdier, not weaker: there is no cheap corner here that a better perturbation design would
+find. (`nr1`'s "349×" is deliberately absent: it is a proxy-**understatement** factor, a different
+category, and does not belong in an exchange-ratio ladder.)
+
+### 5.1.1 FLAGGED — the credit column is a STATIC accounting, and it OVERSTATES
+
+`ddm_ds1` measured that static `−log₂p` accounting on this exact token field **inverts verdicts**:
+static said 6,187 B / 0.762× ADOPT where the real closed-loop receiver said 12,224 B / 11.567×
+REFUSE — a **14.59× misprice, in the direction that manufactures false wins**, because skipping
+feeds the model its own guesses so confidence rises while accuracy collapses. This is `fs2`'s
+direction-dependence law (`[[price-token-field-levers-by-real-reencode]]`) measured an order of
+magnitude larger.
+
+**That bias applies to this memo's credit column, and it must be flagged rather than waved past.**
+The distortion side is safe — every Δ came from a real scorer row through the real receiver. But the
+**credit** side (`bytes held in the shipped stream`) is a *static* sum of per-position costs in the
+**unmodified** stream. The ratio-1.0000 agreement in §3 is between two *static* instruments
+(`tv1`'s conditional and `tb2`'s cost field) computing the same static quantity; **independent
+agreement on a static number does not make it a real re-encode.** No modified stream was ever
+re-encoded here, because this arm deliberately codes nothing (§0).
+
+**Direction of the error, and why the verdict survives it.** Static accounting **overstates**
+releasable bytes, so the true credit is *smaller* than published and every `cost/credit` ratio is
+therefore a **LOWER bound**. The real ratios are ≥ 40.8× / 44.1× / 95.7×, not ≤. The verdict is
+conservative by construction, and the flag strengthens it — but the credit column should not be
+lifted out of this memo and reused as if it were a measured re-encode.
 
 ### 5.2 The finding nobody predicted: POSE is the killer, not seg
 
