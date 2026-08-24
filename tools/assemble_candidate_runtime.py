@@ -139,7 +139,16 @@ def repin(inflate_path: Path, archive_sha: str, archive_bytes: int) -> dict[str,
         "inherited_pin_bytes": before_bytes,
         "derived_pin_sha256": after_sha,
         "derived_pin_bytes": after_bytes,
-        "pin_was_stale": before_sha != after_sha,
+        # BOTH legs, not just the sha. A pin can be HALF-updated: the sha leg
+        # re-pinned to the new archive while ARCHIVE_BYTES keeps the inherited
+        # value. The two constants then describe DIFFERENT archives, no archive
+        # satisfies both, and inflate.py raises "unexpected size" -- which reads
+        # as a payload defect rather than a packaging one. Measured 2026-08-24
+        # on both ddm_dg2 candidate runtimes (sha 59428f07/31d99f0b correct,
+        # ARCHIVE_BYTES both 180_368 = the dx2 pointer's size); the first
+        # advisory fire died rc=1 at t=10s on exactly that guard. Reporting
+        # staleness from the sha alone would have called that pin "unchanged".
+        "pin_was_stale": before_sha != after_sha or before_bytes != after_bytes,
     }
 
 
@@ -209,9 +218,18 @@ def run(args: argparse.Namespace) -> int:
     print(f"  base tree   {base_tree_sha[:16]}  ->  output tree {out_tree_sha[:16]}")
     print(f"  archive     {archive_bytes:,} B  sha {archive_sha[:16]}")
     if pin["pin_was_stale"]:
+        # ``inherited_pin_bytes`` is None when the AST could not read the
+        # constant (regex matched, ast.walk did not -- e.g. a nested scope), so
+        # format it defensively: the sha leg one line up already does. A receipt
+        # that CRASHES while reporting a repaired pin is the same class of
+        # damage as one that under-reports it.
+        inherited_bytes = pin["inherited_pin_bytes"]
+        inherited_bytes_str = (
+            f"{inherited_bytes:,}" if isinstance(inherited_bytes, int) else str(inherited_bytes)
+        )
         print(
             f"  pin RE-DERIVED: {str(pin['inherited_pin_sha256'])[:16]} "
-            f"({pin['inherited_pin_bytes']:,} B, INHERITED/STALE) -> "
+            f"({inherited_bytes_str} B, INHERITED/STALE) -> "
             f"{pin['derived_pin_sha256'][:16]} ({pin['derived_pin_bytes']:,} B)"
         )
     else:
