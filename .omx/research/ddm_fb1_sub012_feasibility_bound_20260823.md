@@ -44,7 +44,7 @@ every future charter — including rj2, which I have been calling "the ONE live 
 | block | bytes | % archive | **% of the 42,382 B demand** | measured status |
 |---|---:|---:|---:|---|
 | token stream | 113,777 | 63.08% | **268.5%** | SHARP local optimum, 5 concordant arms (#1212/#1214) |
-| renderer | 30,856 | 17.11% | 72.8% | W72 −10,879 B ⇒ seg ×116.8 (#1230); rj1 W64 refused 3.51× |
+| renderer | 30,856 | 17.11% | 72.8% | W72 −10,879 B ⇒ seg ×116.8 (#1230); rj1 = **NO-VERDICT, all rungs UNMEASURED** (see §9) |
 | carrier | 22,010 | 12.20% | 51.9% | refuted 1,356× wrong direction (#1222) |
 | HPAC model | 13,515 | 7.49% | 31.9% | part of the sharp optimum |
 | framing | 114 | 0.06% | 0.3% | — |
@@ -107,7 +107,9 @@ wrong. It clears, in a corner, by a razor.
 - it needs ≥48.7% of the renderer's bytes shed;
 - **W72 shed 35.3% of the renderer and multiplied seg by 116.8×** (#1230) — the wrong direction,
   at less than the required magnitude;
-- rj1's W64 rung, shedding more, refused 3.51× with d_pose 97.70% of the damage (#1224);
+- rj1's rungs are **UNMEASURED** — see §9. The only measured W64 object is WD4's warm-lineage
+  instance at `d_seg=0.03182023`, `d_pose=13.43292999`, `S≈14.8829`, which rj1 itself labels an
+  INSTANCE negative it did not rerun;
 - wd3's fresh-init scorer-aware distillation family is NEGATIVE at 65 ep, and its own WARM arm
   projected ~6× over its byte-derived bar.
 
@@ -149,3 +151,54 @@ That is a different objective than the rj2 charter states, and it is testable in
 dx2 — S 0.14821987563243377 @ 180,368 B `[contest-CUDA T4, n600]` — **UNMOVED by this memo**
 ($0, no measurement fired). Gap to 0.12 = 0.028220 ⇒ 42,382 B at fixed distortion, or 150 B at
 zero distortion.
+
+
+---
+
+## 9. CORRECTIONS (append-only, 2026-08-24) — two of my own claims, both refuted
+
+**9.1 — The "rj1 W64 refused 3.51×, d_pose 97.70%" figures HAVE NO SOURCE. Retracted.**
+`ddm_msr1` refused to repeat them; `ddm_mf1` (`b0c2869ce4` §202) had independently reached the same
+conclusion earlier and pointedly declined to restate them as an RJ1 fact. MAIN then verified at
+source: `ddm_rj1_renderer_joint_move_20260823.md` carries `Status: MECHANISM-INCOMPLETE-WITHHELD`,
+`verdict_scope: NO-VERDICT:DX2_PRECOMPENSATION_REPRESENTATION_RUNGS`, and all three rungs
+(`nested_group_dense_w72`, `pointwise_svd_w96_r32`, `film_amortized_flat_w96`) read **UNMEASURED in
+every column** — realized d_seg, realized d_pose, B, H, W, joint ΔS. Neither `3.51` nor `97.70`
+appears anywhere in it. The only measured W64 object rj1 cites is WD4's warm-lineage
+salience-pruned dense instance (`d_seg=0.03182023`, `d_pose=13.43292999`, `S≈14.8829`), explicitly
+"an instance negative, not a family result," which rj1 did NOT rerun. Neither figure reproduces
+from it (pose is 77.9% of that S, not 97.7%; the ratio to the pointer is ~100×, not 3.51×).
+
+SEARCH SCOPE for the negative-existence claim (m53): `.omx/research/*.md`. Within that scope the
+two figures appear ONLY in this memo, in the `ddm_tac1` charter that inherited them from this memo,
+and in the two arms flagging them. NOT searched: charters generally, `.json` receipts, `.py`
+sources, the task ledger, SSD-only artifacts. Sister row `#1224` carries the same unsupported
+headline and is corrected in the ledger.
+
+**9.2 — §6's re-aim of rj2 toward "the 21,537 B the native-render manufactured seg error is worth"
+is WITHDRAWN.** `ddm_msr1` (`7624816b02`) measured the manufactured mass and found it **90.12%
+BALANCED two-way flow**: 98.4% is bidirectional exchange across five near-symmetric class
+interfaces; 99.66% of manufactured pixels sit at Chebyshev distance 1 from a token boundary (38.4×
+enriched, ZERO in any interior); the median frozen-head deficit is 0.162 against a 5.763
+correct-margin mean (24.8× shallower); 63.4% had a 17×17 token window exactly equal to GT, which
+EXONERATES the token field; 0 of 600 pairs are clean. The mechanism is zero-mean one-pixel boundary
+jitter by the frozen head on a painted discontinuity.
+
+The consequence is actuator-INDEPENDENT: any actuator moving interface (a,b) one way in a cell
+fixes `a→b` and **one-for-one deepens `b→a`**, so balanced flow is unreachable by construction —
+learned weights, palette bias, and shipped mask alike. Charging real collateral, an oracle over 260
+searched (interface × direction × δ) combinations, choosing best direction and δ independently per
+interface, nets **+1 pixel = 1.27 B = 0.0047% of the manufactured mass**. Nineteen of twenty rows
+never net positive at any δ. The one open sub-family, boundary SHARPENING, has no address either:
+rendered cross-boundary contrast at manufactured pixels is 0.972× that at correct pixels.
+
+The 21,537 B remains a REAL ACCOUNTING IDENTITY and is an UNREACHABLE LEVER. §2's inputs are
+unaffected — msr1 reproduced the whole decomposition at source from the primary fields and its
+independent control recomputed `d_seg = 0.00020139058431`, equal to the dx2 authority row. What is
+withdrawn is §6's routing conclusion, not §2's arithmetic.
+
+**9.3 — What survives, and where the campaign now points.** §3, §4 and §5's arithmetic stand.
+Combined with `ddm_tac1` (1 OPEN pair of 28 = `tokens × HPAC model`) and `ddm_tba1` (four of six
+directions closed at $0; only "retrain the model on a reduced alphabet" survives), three arms with
+disjoint methods now converge on ONE cell. Reopening the manufactured-seg route requires an
+object-changing leg per sy2 (`#1227`), after which the bound must be RE-DERIVED, not transferred.
