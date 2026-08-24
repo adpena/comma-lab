@@ -684,7 +684,17 @@ distribution whose width nobody knows.
 
 ## 6d. R1 — SEALED, NOT FIRED. Launch order for MAIN.
 
-**I do not fire. This is the sealed order; the governed Metal slot is MAIN's.**
+**Status 2026-08-24: MAIN authorized R1a; it was NOT FIRED — see §6e, a pre-launch REFUSE. Stage 1 as
+specified is impossible (seed change dies at resume; RNG is restored from the checkpoint regardless).
+Stage 2 (R1b) remains SEALED and unfired.**
+
+> ### ⚠ READ THIS FIRST IF YOU ARRIVED AT R1 ALONE
+> **The allocator's 0-for-3 record is evidence about the RULE, not about allocation quality.**
+> `uniform4` is the gate's own baseline and passes by identity (`x ≤ x`), so it **cannot lose** the
+> race it defines (§6c.4). Any framing of the sensitivity machinery as an **"orphaned mechanism"** —
+> including my own §6b Finding 2, and the version filed upstream as #1246 — is **qualified by this**:
+> the thermometer is proven **UNCONSULTED**, not proven **BAD**. Nobody has measured whether a
+> net-score rule would select it. Do not inherit the stronger claim; it is mine and it was wrong.
 
 **STAGE 1 (fire this alone): `R1a` — two OFF seeds. ~3.4 h.**
 - Arms: two control runs, `ds1` **inert** (`DEFAULT_CONFIG`), differing **only** in seed.
@@ -722,9 +732,61 @@ as small as R0's measured mis-rank cost (0.001027 S) requires the seeds to agree
 trainer and the operating point, not of this arm — every future wd3 A/B is priced by it.
 
 **STILL OWED, and not to be dropped when R1 lands:**
-- **R0b — converged replication.** 2 of 3 R0 arms are birth-state (`d_pose` 27–77). R0 characterizes
+- **R0b — converged replication. STILL OWED; does NOT drop when R1a lands.** 2 of 3 R0 arms are birth-state (`d_pose` 27–77). R0 characterizes
   the proxy mostly at birth; the one converged arm points *opposite* my withdrawn hypothesis.
 - **The D56 per-class re-score** (§6c item 4) — named, zero-compute, ranked LOW.
+
+---
+
+## 6e. R1a — PRE-LAUNCH REFUSE. NOT FIRED. (2026-08-24)
+
+MAIN verified the Metal slot free and authorized R1a. **I did not fire it.** Source inspection before
+launch found R1a as specified is **doubly impossible**. Reported and stopped, not routed around.
+Receipt: `.../R0/R1a_PRELAUNCH_REFUSE.json`, 2,435 B, sha256 `c20dfae6ca3ee5a6…`. **Cost of the
+check: minutes. Cost avoided: 3.4 h.**
+
+**Blocker 1 — a seed change is REFUSED at resume.** `:1131-1132`:
+
+```python
+if payload.get("config") != dict(expected_config):
+    raise WD3Error("resume checkpoint config/source identity differs")
+```
+
+`expected_config=config` (`:2237`) is the **full compiled config, seed included**. Two configs
+differing only in seed therefore differ, and the second arm **dies immediately on resume.**
+
+**Blocker 2 — the seed would not have mattered anyway.** `:1139` `_restore_rng(payload["rng"],
+generator)` restores **all four** RNG streams — `python`, `numpy`, `torch_cpu`, `generator` — from the
+checkpoint. `seed_everything(config["seed"])` runs earlier and is then **overwritten**. Even with
+Blocker 1 removed, both arms would be **bit-identical**: R1a would consume 3.4 h to measure zero.
+
+### The deeper finding — the seed floor is the WRONG floor for this design
+
+**For any A/B resuming from a COMMON warm checkpoint, this trainer is DETERMINISTIC by construction:**
+both arms inherit identical randomness from the checkpoint, so the only difference between them is the
+treatment. **The seed floor for the R1 A/B is structurally ZERO, modulo platform non-determinism.**
+
+R1a was built to gate a confound that **the resume path already removes**. That is good news, not bad:
+it means R1b's ON/OFF comparison is *exactly* interpretable, and it makes R1b **more** powerful, not
+less. It also means my own §6d Stage-1 design was answering a question the design does not pose — a
+second instance of the genus MAIN and I have now hit three times: a threshold or a floor carried
+forward without checking whether it binds.
+
+**Genuinely different seeds would require re-running `prepare_arm_birth` per arm**, which varies
+**init** as well as trajectory — a *larger* floor than the A/B needs, since both A/B arms share a warm
+start. Measuring it would answer a different question than the one gating R1b.
+
+### Proposed substitute — NOT FIRED, needs MAIN's order
+
+**`R1a′` — platform-determinism probe.** Two **bit-identical** re-runs: same config, same seed, same
+checkpoint, **5 epochs** each. **~16 min total, versus 3.4 h.**
+- **Bit-identical ⇒ the floor is ZERO**, R1b is exactly interpretable, and **KILL becomes available at
+  full power** — the best available outcome.
+- **Any divergence ⇒ a real floor exists**; measure it, extend the probe, and re-price R1b with the
+  standing power law.
+
+MAIN's order specified *"two OFF seeds"*; `R1a′` is a **different experiment**, so firing it would be
+routing around the refuse. **It is proposed, not fired.**
 
 ---
 
@@ -770,7 +832,12 @@ if it does. §3.0's allocator-miscalibration claim is an explicit **hypothesis**
   I do not claim a precise value for it, only that it sits below the pre-registered 0.90.
 - **Two of three R0 arms are BIRTH-state.** R0 does not characterize the proxy at convergence; the
   one converged arm (n=1) points opposite my hypothesis and is too weak to establish the reverse.
-- **R1 is NOT fired.** No seed floor measured, so no KILL verdict is available from this arm.
+- **R1 is NOT fired, and R1a was REFUSED at pre-launch (§6e), not attempted and failed.** No floor
+  measured. No compute consumed. No KILL verdict available from this arm.
+- **I did NOT fire a substitute experiment.** `R1a′` is proposed and unauthorized.
+- **I did not measure platform non-determinism.** The claim that the trainer is deterministic given a
+  checkpoint is read from the resume code (`_restore_rng` restores all four streams), NOT measured
+  over 65 MPS epochs.
 - **The seed floor is NOT free and R1a must actually run.** Checked: 8 configs, 11 manifests, one
   seed (20260815), zero same-config pairs.
 - **I do not claim the sensitivity machinery is BAD.** §6c.4: its 0-for-3 record is evidence about the
