@@ -481,11 +481,39 @@ minimum of 33.7× at k = 10⁶**, and both ends rise away from it. So the strong
 "every rung we ran lost" but **"the best point of the whole family is measured, and it is 33.7× above
 break-even."**
 
-### 5.1.3 Why the interior cannot hide a winner — STRUCTURAL, not interpolative
+### 5.1.3 LAW — √-saturation puts the minimum where it is
 
-"No unmeasured rung can win" would otherwise rest on an unstated smoothness premise — *that the ratio
-has no ~40× dip between decade-spaced samples* — which four log-spaced points cannot establish. It
-does not need to, because **the selection rule makes both curves concave by construction**:
+> **`d_seg` enters S linearly; `d_pose` enters through `√`. So pose SATURATES and seg does not, and
+> the `cost/credit` minimum sits at the k where seg finally catches up to a saturated pose term.**
+
+This is derived from **the score's own functional form**, not from the shape of my samples, so it
+says *where* the minimum is and *why it is there* — a question the concavity argument below cannot
+answer. Measured, over k = 10³ → 1.33e6 (**1,334×** more tokens moved):
+
+| axis | how it enters S | growth over the ladder |
+|---|---|---:|
+| `d_seg` | `100 · d_seg` — **linear** | **682×** |
+| `d_pose` | `√(10 · d_pose)` — **concave** | **91×** |
+
+Pose dominates overwhelmingly at small k (97.0% of the damage at k = 10³) because `√` has enormous
+derivative near the base's 0.038342. As k grows, pose's contribution grows only 91× while seg's grows
+682×; the ratio's minimum lands at **k = 10⁶**, precisely where the linearly-growing term has closed
+on the saturated one. Beyond it the credit ceiling (§4.1) takes over and the ratio turns back up.
+
+**This law and the pose-share decline of §5.2.1 are ONE fact seen from two sides.** A √-saturating
+numerator over a linearly-growing denominator *must* shed share — 97.0% → 94.6% → 89.0% → 80.7% →
+81.1% is that requirement, measured. One mechanism, two independent visible consequences.
+
+**Transferability:** because the derivation uses only the score's functional form and the two growth
+exponents, it would **predict the minimum's location on a different object** given that object's
+growth rates. The concavity argument below would not — it only bounds.
+
+### 5.1.4 …and nothing hides between the samples — STRUCTURAL, not interpolative
+
+The law above says where the minimum is; this says no unmeasured rung beats it. That would otherwise
+rest on an unstated smoothness premise — *that the ratio has no ~40× dip between decade-spaced
+samples* — which five log-spaced points cannot establish. It does not need to, because **the
+selection rule makes both curves concave by construction**:
 
 > **A value-ranked draw over a sorted field yields concave cumulatives on BOTH axes, so the ratio's
 > measured minimum is the family's minimum.**
@@ -558,7 +586,7 @@ verdict sturdier, not weaker: there is no cheap corner here that a better pertur
 find. (`nr1`'s "349×" is deliberately absent: it is a proxy-**understatement** factor, a different
 category, and does not belong in an exchange-ratio ladder.)
 
-### 5.1.1 FLAGGED — the credit column is a STATIC accounting, and it OVERSTATES
+### 5.1.5 FLAGGED — the credit column is a STATIC accounting, and it OVERSTATES
 
 `ddm_ds1` measured that static `−log₂p` accounting on this exact token field **inverts verdicts**:
 static said 6,187 B / 0.762× ADOPT where the real closed-loop receiver said 12,224 B / 11.567×
