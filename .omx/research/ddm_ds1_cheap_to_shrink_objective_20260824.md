@@ -788,6 +788,38 @@ checkpoint, **5 epochs** each. **~16 min total, versus 3.4 h.**
 MAIN's order specified *"two OFF seeds"*; `R1a′` is a **different experiment**, so firing it would be
 routing around the refuse. **It is proposed, not fired.**
 
+### Determinism-by-construction is a POSITIVE property of the R1 design, not a caveat
+
+**Reframed at MAIN's direction, 2026-08-24 — and MAIN's reframe is the correct one.** I had presented
+the floor as a *tax on power*. On a warm-resume A/B it is the opposite:
+
+> **Both arms inherit identical randomness from the checkpoint (`_restore_rng`, `:1139`/`:2213`
+> restores all four streams), so THE ONLY DIFFERENCE BETWEEN THEM IS THE TREATMENT.**
+
+A reader arriving here should find *"this comparison is exactly interpretable"* — **not** *"power
+unknown."* There is no seed confound to subtract, because the resume path removes it by construction.
+Any residual floor is platform non-determinism alone, which `R1a′` is designed to measure and which
+is plausibly zero.
+
+### R1a′ — ORDERED, NOT FIRED. Blocked on an operator gate. (2026-08-24)
+
+MAIN ordered `R1a′` (two bit-identical 5-epoch re-runs). **It did not fire.** Two blockers, both
+found before launch:
+
+1. **`epochs` is inside `_birth_contract` (`:2098`)** and wd3 has **no** `stop-after-epoch`. A
+   5-epoch run therefore needs a **fresh `prepare_arm_birth`** — the existing F64 birth is pinned at
+   65. (Good news inside this: `output` is **not** in the birth contract, so two runs *can* share one
+   birth and write to different dirs. The re-run design is sound; it just needs its own birth.)
+2. **Minting that config requires `launch_authorized: true` plus two distinct claimed lanes**
+   (`:496-502`, `raise` if `launch_authorized is not True`). **These are operator-gate fields.** Per
+   my standing contract, a coordinating agent's order is not operator consent, so **I did not author
+   them.** Reported instead of forged.
+
+**To make `R1a′` fireable, MAIN supplies:** a compiled birth+train config pair at `epochs=5` carrying
+`launch_authorized` and the two lane claim ids, into a fresh arm root. Then it is two governed
+launches and a byte-compare — ~16 min, exactly as scoped. The experiment design is unchanged and
+still correct.
+
 ---
 
 ## 7. PREDICTION ADJUDICATED
@@ -834,7 +866,8 @@ if it does. §3.0's allocator-miscalibration claim is an explicit **hypothesis**
   one converged arm (n=1) points opposite my hypothesis and is too weak to establish the reverse.
 - **R1 is NOT fired, and R1a was REFUSED at pre-launch (§6e), not attempted and failed.** No floor
   measured. No compute consumed. No KILL verdict available from this arm.
-- **I did NOT fire a substitute experiment.** `R1a′` is proposed and unauthorized.
+- **`R1a′` was ORDERED and still did NOT fire** — blocked on `launch_authorized`/lane-claim operator
+  gate fields I must not author, plus a fresh birth (`epochs` ∈ birth contract). Nothing was run.
 - **I did not measure platform non-determinism.** The claim that the trainer is deterministic given a
   checkpoint is read from the resume code (`_restore_rng` restores all four streams), NOT measured
   over 65 MPS epochs.
