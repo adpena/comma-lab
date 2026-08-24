@@ -1535,6 +1535,15 @@ def run_argparse_help_render_scan(staged: list[str]) -> int:
             file=sys.stderr,
         )
         return 1
+    # Report the DENOMINATOR. A guard that is silent on success is indistinguishable from a
+    # guard that examined nothing -- which is precisely the failure mode this landing exists
+    # to close, so it must not be reproduced by the cure.
+    skipped = len(targets) - scanned
+    print(
+        f"{GREEN}[preflight-hook] argparse help-render: {scanned} staged .py examined "
+        f"({skipped} unresolved), 0 findings{RST}",
+        file=sys.stderr,
+    )
     return 0
 
 
