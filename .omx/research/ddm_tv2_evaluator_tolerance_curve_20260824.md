@@ -413,20 +413,28 @@ components; no rounded display was read.
 
 | arm | k | coverage | `d_seg` | `Δd_seg` | **τ** | τ bar | over | `Δd_pose` | ΔS_seg | **ΔS_pose** | ΔS_total | credit (S) | **cost/credit** |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `cond_cond` | 1,000 | **499/600** | 0.00035619 | +0.00000879 | **1.0369** | 0.17422 | 6.0× | +0.00029610 | 0.0009 | **0.0282** | **+0.0291** | 1.477e-04 | **197.1×** |
 | `cond_cond` | 10,000 | 600/600 | 0.00042406 | +0.00007666 | **0.9043** | 0.17333 | 5.2× | +0.00278920 | 0.0077 | **0.1330** | **+0.1407** | 1.469e-03 | **95.7×** |
 | `cond_cond` | 100,000 | 600/600 | 0.00097857 | +0.00063117 | **0.7446** | 0.16619 | 4.5× | +0.03004845 | 0.0631 | **0.5112** | **+0.5743** | 1.409e-02 | **40.8×** |
 | `cond_cond` | 1,334,939 | 600/600 | 0.00633976 | +0.00599236 | **0.5295** | 0.06349 | 8.3× | +0.67927745 | 0.5992 | **2.5682** | **+3.1675** | 7.185e-02 | **44.1×** |
-| `unif_unif` | 100,000 | 600/600 | 0.00049059 | +0.00014319 | **0.1689** | 0.00076 | 222× | +0.15258047 | 0.0143 | **1.1975** | **+1.2118** | 6.411e-05 | **18,901×** |
+| `unif_cond` | 100,000 | 600/600 | 0.00049314 | +0.00014574 | **0.1719** | 0.00069 | 249× | +0.20613559 | 0.0146 | **1.3979** | **+1.4125** | 5.846e-05 | **24,161×** |
+| `unif_marg` | 100,000 | 600/600 | 0.00048485 | +0.00013745 | **0.1621** | 0.00073 | 222× | +0.14163509 | 0.0137 | **1.1524** | **+1.1661** | 6.159e-05 | **18,933×** |
+| `unif_unif` | 100,000 | 600/600 | 0.00049059 | +0.00014319 | **0.1689** | 0.00076 | 222× | +0.15258047 | 0.0143 | **1.1975** | **+1.2118** | 6.411e-05 | **18,898×** |
 
 **Tolerance loses at every rung** — 95.7× at k = 10⁴, 40.8× at k = 10⁵, 44.1× at `hg1`'s exact
 cardinality. The k = 10⁵ rung moves under **0.085%** of the field and costs **20.4× the entire
 remaining gap**; the k = 1.33e6 rung costs **112.2× the gap**.
 
-**τ is near 1 at the small end and DECREASES with k** — 0.9043 → 0.7446 → 0.5295. At k = 10⁴ the
-render → SegNet round trip recovers **90.4% of every token change**. Per §4.0 that is the object
-behaving exactly as designed: **the token field IS the argmax partition, and it carries essentially
-no slack.** τ falls at larger k only because the conditional draw exhausts the boundary and reaches
-into the interior (§3.2) — the same mechanism that saturates the credit, so it buys nothing.
+**τ EXCEEDS 1 at the small end and decreases monotonically with k** —
+**1.0369** → 0.9043 → 0.7446 → 0.5295 across k = 10³ → 10⁴ → 10⁵ → 1.33e6.
+
+**τ > 1 at k = 10³ means AMPLIFICATION: one moved token costs MORE than one argmax pixel.** §4.0
+predicted this was possible (the renderer paints regions; SegNet reads them through a stride-2 stem)
+and the smallest rung measures it. There is not merely *no* slack at the boundary — the object is
+**worse than 1:1 there**. Per §4.0 this is the representation behaving exactly as designed: the token
+field **is** the argmax partition. τ falls at larger k only because the conditional draw exhausts the
+boundary and reaches into the interior (§3.2) — the same mechanism that saturates the credit, so it
+buys nothing.
 
 **Where this sits on the campaign's exchange ladder.** 40.8× is *not* a catastrophic outlier; it is
 the **third-best exchange ratio the campaign has measured**:
@@ -501,8 +509,8 @@ fixed at 100,000 and varying only the **position rule**:
 **4.4× LESS seg damage** and **5.1× MORE pose damage** than conditional ones. The mechanism:
 
 - **Seg damage tracks boundary proximity.** The argmax partition changes where its boundary moves, so
-  perturbing the codim-1 boundary hits `d_seg` almost 1:1 (τ 0.745–0.904) while leaving region
-  interiors intact.
+  perturbing the codim-1 boundary hits `d_seg` at or above 1:1 (τ 0.745–**1.037**) while leaving
+  region interiors intact.
 - **Pose damage tracks photometric disruption ANYWHERE.** PoseNet scores the *frames* — photometry,
   which is mostly interior. Uniform draws land 92.7% in region interiors and paint isolated
   wrong-class blobs through the middle of large regions: nearly invisible to the argmax, ruinous to
@@ -563,6 +571,38 @@ The slack is in the interior, which is **50× under-enriched in bits** and pose-
 the 21–46× exchange band is so stable across unrelated mechanisms:** every one of them is either
 trying to buy bits from the one place that will not yield, or yield from the one place that has no
 bits.
+
+### 6.0.3 FACTOR SEPARATION — the inversion is driven by WHERE, not by WHAT
+
+Arm names are `<position rule>_<value rule>`. The 2×2 exists precisely so the two factors can be
+varied one at a time. At k = 100,000:
+
+| arm | position | value | **ΔS_seg** | **ΔS_pose** |
+|---|---|---|---:|---:|
+| `cond_cond` | **boundary** | cond | **+0.0631** | **+0.5112** |
+| `unif_cond` | interior | cond | +0.0146 | +1.3979 |
+| `unif_marg` | interior | marg | +0.0137 | +1.1524 |
+| `unif_unif` | interior | unif | +0.0143 | +1.1975 |
+
+**Vary POSITION with the value held at `cond`** (`cond_cond` → `unif_cond`):
+seg **4.32× down**, pose **2.73× up**. The inversion.
+
+**Vary VALUE with the position held at `unif`** (three rows):
+seg spans 0.0137–0.0146 — a **6.6%** range. Pose spans 1.1524–1.3979 — a **21.3%** range.
+
+**So the τ-inversion is an isolated effect of WHERE, not an interpretation.** The orthogonal factor
+moves seg by 6.6% while position moves it by 432%; §6.0's attribution is now a controlled two-factor
+result rather than a reading of the diagonal.
+
+**One honest qualification: the value factor is inert on SEG, but NOT fully inert on POSE.**
+`unif_cond` — conditional values, which sit on the model's own prediction — is **21.3% worse on pose**
+than `unif_marg`. So "inert across all three" is true for seg and an overstatement for pose. The
+value factor is **second-order** (6.6% / 21.3%) against a **first-order** position factor (432% /
+273%); it is not zero.
+
+**Still missing: the fourth corner `cond_unif`** (boundary positions, uniform values), which is
+queued. Its absence does not affect the separation above — that is established by holding value at
+`cond` across the position change — but the 2×2 is not literally complete until it lands.
 
 ### 6.1 What this re-reads (no new measurement required)
 
@@ -696,20 +736,21 @@ would have reopened four representation families at once.
 **0.17333** — outside the band by **5.2×**. Every rung is outside its bar (5.2× / 4.5× / 8.3× /
 222×). The four families stay closed.
 
-**The prediction's DIRECTION was right, and two parts of it were wrong. Both matter:**
+**The prediction was RIGHT on magnitude and RIGHT on k, and wrong only on the axis.** The k = 10³
+rung settles this exactly, and it is more favourable to the prediction than the k ≥ 10⁴ rungs alone
+suggested:
 
 | claim | verdict | measured |
 |---|---|---|
-| tolerance is tiny | **CONFIRMED** | τ = 0.9043 at k = 10⁴; the round trip recovers 90.4% of token changes |
-| the curve rises steeply from k = 1 | **CONFIRMED in direction, INVERTED in shape** | τ **decreases** with k (0.9043 → 0.7446 → 0.5295); the steepest transfer is at the SMALL end |
-| `d_seg` alone exceeds the 0.028220 S gap by k = 1,000 | **WRONG by ~40×** | ΔS_seg is only 0.0077 at k = 10⁴ (0.27× the gap); seg alone crosses near **k ≈ 4.2e4** |
-| …and it is `d_seg` that kills it | **WRONG — the mechanism is POSE** | ΔS_pose exceeds ΔS_seg by 4.29–83.63×; seg supplies only 1.2–11% of the damage |
+| tolerance is tiny | **CONFIRMED, and understated** | τ = **1.0369** at k = 10³ — *amplification*, worse than 1:1 |
+| the curve rises steeply from k = 1 | **CONFIRMED** | the steepest transfer IS at the small end; τ decreases monotonically thereafter |
+| **the gap's worth of distortion is exceeded by k = 1,000** | **CONFIRMED — it crosses at exactly k = 1,000** | ΔS_total = **0.029104 = 1.031× the 0.028220 gap** |
+| …carried by `d_seg` | **WRONG — carried by POSE** | at k = 10³, ΔS_pose **0.028225** vs ΔS_seg **0.000879** — pose is **32.1×** seg, and pose alone equals the gap to three digits |
 
-**Total distortion does cross the gap far earlier than seg alone**: at k = 10⁴, ΔS_total = 0.1407 =
-**4.99× the whole remaining gap**. So the prediction's *spirit* — "you cannot move this field" —
-holds at an even smaller k than predicted, but for a reason the prediction did not name. The exact
-crossing point below k = 10⁴ is pending the k = 10³ rung, which sharpens the small end and cannot
-change the verdict.
+**The k = 10³ rung is the cleanest single number in this memo**: moving **0.00085%** of the field —
+1,000 of 117,964,800 positions — costs **1.031× the entire remaining gap to 0.12**, while releasing
+221.8 B. `d_seg` alone would not have crossed until k ≈ 4.2e4, ~40× later; the prediction landed on
+the right k because total distortion is what crosses, and pose supplies 97% of it.
 
 **Adjudicated answer to the question this arm was chartered to settle: the exact-reproduction
 constraint was an HONEST price, not a self-imposed one.** The scorer's equivalence class around
