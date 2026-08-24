@@ -760,6 +760,35 @@ Recorded because a silent instrument defect is the failure this campaign keeps p
 
 ## STORES CONSULTED
 
+## Reproducing and extending this table
+
+The curve is regenerable from retained receipts with one command; later rungs fold in by adding
+`--row` pairs. It **refuses** any row whose archive is not the shipped 180,368 B, so a mismatched
+row cannot silently enter the table:
+
+```bash
+TV=/Volumes/APDataStore/pact/ddm_tv1_tolerance_curve
+.venv/bin/python experiments/ddm_tv1_curve_table.py \
+  --base-eval $TV/rows/k0_control/contest_auth_eval.json \
+  --row $TV/retained/manifests/<label>.json:<attempt_dir>/contest_auth_eval.json \
+  --out <out.json>
+```
+
+Independent re-verification of any field (recount `k` from the bytes, re-price against `tb2`):
+
+```bash
+.venv/bin/python experiments/ddm_tv2_verify_fields.py \
+  --base-field $TV/retained/base_inputs/dx2_tokens_n600.u8 \
+  --perturbed-dir $TV/fields/perturbed --manifest-dir $TV/retained/manifests \
+  --cost-field <tb2 position_rc64_frequency_cost_bits.f64le.bin> \
+  --labels <label> --json-out <out.json>
+```
+
+Retained payloads (3,539,162,029 B, referenced not duplicated, every sha independently re-verified):
+`/Volumes/APDataStore/pact/ddm_tv2_tolerance_curve/retained/payload_retention_manifest.json`.
+
+---
+
 STORES CONSULTED: `.omx/research/ddm_tv1_evaluator_tolerance_curve_20260824.md` (predecessor instrument, now committed)
 · `ddm_wq1_what_was_never_asked_20260824.md` (D3) · `ddm_tri1_triple_composition_and_pair_closure_20260824.md`
 (SPEC B) · `ddm_tb2_token_bit_attribution_20260823.md` (Gini 0.9951; cost field) ·
