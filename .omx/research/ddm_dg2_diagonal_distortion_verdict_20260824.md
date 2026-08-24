@@ -113,3 +113,70 @@ family from a single rung is the exact defect `ny1` caught in my own work (`#122
 
 dx2 — **S 0.14821987563243377 @ 180,368 B `[contest-CUDA T4, n600]`** — **UNMOVED.**
 Gap to 0.12 = 0.028220 ⇒ shed 42,382 B at fixed distortion, or 150 B at zero distortion.
+
+---
+
+## 7. SECOND RUNG — k040000 REFUSED at 791×, and the family closes MONOTONICALLY
+
+Fired immediately after k060000 (pid 38282, rc=0, 1,022 s, $0). Same firer, same matched CPU base.
+
+| | base (dx2) | k040000 | k060000 |
+|---|---:|---:|---:|
+| bytes | 180,368 | **179,426** (−942) | 178,792 (−1,576) |
+| `avg_segnet_dist` | 0.0003474 | **0.0006754** | 0.00083204 |
+| `avg_posenet_dist` | 0.00014701 | **0.02521067** | 0.05056445 |
+| canonical S | 0.19318153076125097 | **0.6891146889399469** | 0.9133410981506166 |
+| ΔS(net) | — | **+0.495933** | +0.720160 |
+| **damage ÷ credit** | — | **791.7×** | 687.3× |
+| pose share of damage | — | **93.4%** | 93.3% |
+
+archive sha `31d99f0beab5d0d665b76cdde66e3e5fb795183b7ac729385af6acb2a1ee4122`.
+Against its own exact bars: Δd_seg **52.29×** over (needed <6.272391e-06); d_pose **166.01×** over
+(needed ≤1.518592e-04, i.e. +3.3%; delivered +17,049%).
+
+### THE CLOSURE — the SMALLER move is WORSE, and that is measured at both ends
+
+Two-point scaling over the bracket [942, 1576] B (byte ratio 0.597716):
+
+| quantity | exponent |
+|---|---:|
+| Δd_seg | **0.7586** |
+| Δd_pose | 1.3581 |
+| **damage in S units** | **0.7252** |
+| credit in S units | **1.0000** (exact — rate is linear in bytes by construction) |
+
+Damage falls **sub-linearly**; credit falls **exactly linearly**. Therefore
+`ratio(B) ∝ B^(0.7252−1) = B^−0.2748` — **shrinking the move RAISES the ratio.** Measured at both
+ends of the bracket: 1,576 B → 687×, 942 B → **792×**. Monotone. **No smaller rung in this family
+can win**, and the trend direction is MEASURED (two real rows), not extrapolated.
+
+Going the other way is worse still: reaching break-even from 687× at 1,576 B would need
+`686^(1/0.2748)` × the bytes — orders of magnitude beyond the entire archive.
+
+**verdict_scope upgraded: FORMULATION** — token-threshold field drop with HPAC model refit, on the
+dx2 body, is closed in BOTH directions by its own measured scaling. Not INSTANCE any more: two
+rungs bracket it and the exponent is measured, not assumed.
+
+### An honest correction to my own reasoning
+
+I invoked the **~16.7 amplification exponent** as the reason not to interpolate between rungs. That
+exponent is from a *different relation* (`#1199`: agreement → d_seg), not bytes → damage. This
+family's bytes→damage exponent is **0.7252**. The caution was still correct to apply — it is
+exactly why I measured the second rung instead of inferring it, and the measurement is what
+produced the family closure and the sub-linear law. But the number I cited governs a different pair
+of quantities, and saying otherwise would be a borrowed constant.
+
+### What survives
+
+The **structural** motivation is untouched and still the campaign's live shape: a joint move pays
+its addressing in model bits rather than address bits
+([[perfect-localization-is-worthless-the-address-is-the-tax]]), which is why these rungs SHRINK the
+archive where every explicit-addressing scheme measured BIGGER (mf1 +35,969 B address · ld1 every
+lossy Lane rung enlarges · residue purchase 148× the going rate). What is now measured dead is
+**this realization** of it — and the killer is named exactly: rewriting the rendered frames costs
+pose at 344×/171× the base, because PoseNet scores the frames (`#1222`).
+
+## 8. Own-vehicle frontier (unchanged)
+
+dx2 — **S 0.14821987563243377 @ 180,368 B `[contest-CUDA T4, n600]`** — **UNMOVED.**
+Gap to 0.12 = 0.028220 ⇒ shed 42,382 B at fixed distortion, or 150 B at zero distortion.
