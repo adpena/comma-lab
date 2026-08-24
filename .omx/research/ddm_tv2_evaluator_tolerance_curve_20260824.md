@@ -455,9 +455,42 @@ top 1% of positions = **96.32%** of the bits) and `wj1` (cost and render-manufac
 
 `cost/credit` over k is **U-shaped — 197.1 → 95.7 → 40.8 → 44.1 — with a measured interior minimum
 of 40.8×**, and both ends rise away from it. So the strongest honest form is not "every rung we ran
-lost" but **"the best point of the whole family is measured, and it is 40.8× above break-even."** An
-unmeasured rung between the sampled ones would have to beat that minimum by 40×; the curve gives it
-nowhere to hide. (Stated as a bound on *this* family and this object — §9.)
+lost" but **"the best point of the whole family is measured, and it is 40.8× above break-even."**
+
+### 5.1.3 Why the interior cannot hide a winner — STRUCTURAL, not interpolative
+
+"No unmeasured rung can win" would otherwise rest on an unstated smoothness premise — *that the ratio
+has no ~40× dip between decade-spaced samples* — which four log-spaced points cannot establish. It
+does not need to, because **the selection rule makes both curves concave by construction**:
+
+> **A value-ranked draw over a sorted field yields concave cumulatives on BOTH axes, so the ratio's
+> measured minimum is the family's minimum.**
+
+Positions are drawn weighted by model uncertainty, so higher-weight positions enter earlier *in
+expectation* and the marginal contribution of the j-th position decreases in j. `credit(k)` is
+therefore a concave increasing function; and §5.1.2's law — damage per token monotone decreasing in
+rank — makes `damage(k)` concave increasing too. **Two concave increasing functions cannot produce a
+40× interior dip in their ratio between decade samples**; that would require one of them to be
+violently non-monotone at sub-decade scale, contradicting the sorted-selection mechanism that
+generates both.
+
+**Measured, not just argued** — both marginals are strictly decreasing across every sampled interval:
+
+| interval | marginal credit (B/position) | marginal damage (S/position) |
+|---|---:|---:|
+| 10³ → 10⁴ | 0.220544 | 1.240e-05 |
+| 10⁴ → 10⁵ | 0.210571 | 4.818e-06 |
+| 10⁵ → 10⁶ | 0.092232 | — |
+| 10⁶ → 1.33e6 | **0.011164** | 2.10e-06 (10⁵ → 1.33e6) |
+
+**One honest caveat about the form of the concavity.** Each rung uses an independent seed
+(`sha256("ddm_tv1|<arm>|<k>|20260824")`), so the k = 10³ set is **not a subset** of the k = 10⁴ set —
+these are independent weighted draws, not a nested greedy path. The concavity is therefore a property
+**in expectation** over the draw, not a pathwise cumulative. The measured marginals above confirm it
+holds on the realized draws; the structural argument is why it must.
+
+So the interior is bounded by the **construction of the selection**, not by the density of the
+sampling. (Scoped to this family and this object — §9.)
 
 **The same wall, reached from the coder side.** `ddm_df1` derived that the address floor for the
 free-byte set is **3.1468× the prize it holds**, because the error is where the bits are, so naming
