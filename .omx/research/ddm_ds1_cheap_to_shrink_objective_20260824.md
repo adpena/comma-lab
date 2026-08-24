@@ -306,9 +306,35 @@ compare predicted `total_error()` against **true** `ΔD` measured through the re
 **Why first:** it is nearly free, it uses only existing artifacts, and it is decisive either way —
 if proxy and truth diverge, `choose_cheapest_passing_quantization` is mis-ranking allocations today
 and that is a byte-relevant bug **independent of this arm**. It also calibrates the rung ladder.
-**Falsifier:** rank correlation ≥ 0.9 and bounded scale error ⇒ proxy is sound, §3.0's hypothesis dies.
+**Report both:** Spearman/Kendall on the **ordering** (a predictor can be badly scaled and still rank
+perfectly, and **ranking is what the waterfill consumes** when it picks the next upgrade) *and* the
+scale calibration (which is what the fixed ceiling consumes when it decides to stop).
+**Falsifier:** rank correlation ≥ 0.9 and bounded scale error ⇒ the proxy is sound and §3.0's
+hypothesis dies. **If it ranks correctly, say so plainly — that is a clean result too.**
+
+**Transfer, per `ddm_bs2` (MAIN, 2026-08-24):** bs2 found that tri1's "property 2", read correctly,
+means *"rate moves should land in the scorers' low-sensitivity subspace"* — which is `dD/dB` exactly,
+so the born-small-basis route and this one are **bids on the identical quantity**, and R0's verdict on
+whether the first-order surrogate is faithful **transfers to the basis route unchanged**. This arm
+fires first only because its instrument is cheaper and already built.
 
 ### R1 — the A/B
+
+**⚠ CARRY THIS IN EVERY R1 READING (MAIN, 2026-08-24). The renderer is the ONLY block that can host
+this objective (§2.1), and it is 30,856 B = 72.80% of the 42,382 B demand. Therefore a PERFECT
+`dD/dB` objective, fully realized, still caps at 72.80% of the demand and CANNOT close the gap
+alone. It MUST compose.** Verified independently: `30,856 × 6.658590e-07 = 0.020546`;
+`0.14821987563 − 0.020546 = 0.127674`, reproducing fb1. **No successful R0 or R1 is a route to
+sub-0.12 on its own.** Under sy2's object-change law this is what makes the arm interesting rather
+than weaker: a movable `r` **changes the object every closed cell was priced on**, and tri1's 28
+pairs, 56 triples and fb1's bound were all priced at untrained `r`.
+
+### R1a — measure the noise floor FIRST (prerequisite for any KILL)
+
+Repeat the `r` measurement on the **same** configuration, same seed policy, N≥3 repeats, and report
+the spread as a number. Nothing in the campaign has ever done this, so no "within noise" claim about
+`r` is currently licensed — including the one I wrote. **The floor gates the KILL branch only; the
+WIN branch does not need it.**
 
 **Arms:** control = wd3 as-is (`ds1` inert, byte-identity asserted) · treatment = `mode="sampled"`,
 `k=2`, uniform weights, `ceiling_multipliers` set from R0.
@@ -317,19 +343,50 @@ and that is a byte-relevant bug **independent of this arm**. It also calibrates 
 and true `D` at that allocation through the frozen scorers.
 **Primary quantity:** `r` on the renderer axis, control vs treatment.
 
-### Bars — stated honestly
+### Bars — CORRECTED 2026-08-24 after a stop-hook catch
 
-The best measured renderer rung is **W72 at r ≈ 46.3×** (charter-supplied; `fb1:47` states the same
-rung as `−10,879 B ⇒ seg ×116.8` — **these are different framings and I did not reconcile them; do
-that at consumption**). Break-even needs `r < 1`. **So full success asks for a ~46× improvement from
-one regularizer. I do not predict that, and I will not pre-register a bar I expect to miss as if I
-expect to hit it.**
+⚠ **My first version of this table was defective and I withdraw it.** It read
+`KILL | r improves < 1.2× (within noise)`. That is a **magnitude dismissal**: a kill justified by a
+small ratio, with no relative-significance number and no measured noise floor. MAIN caught it. The
+correction below is not cosmetic — the original criterion would have manufactured a false family kill.
+
+**Why 1.2× is not small.** Net score change from a shed is
+`ΔS = ΔD − λ_B·ΔB = λ_B·ΔB·(r−1) = credit × (r−1)`. For the renderer block, `credit = 30,856 ×
+6.658590e-07 = 0.0205457 S`, against a remaining gap of `0.028220`. **Credit is 0.73× the whole
+gap**, so `r` is a violently high-leverage quantity. Recomputed independently from MAIN's table:
+
+| improvement in `r` | `r` treated | net ΔS | Δ vs baseline | **× remaining gap** |
+|---:|---:|---:|---:|---:|
+| 1.05× | 20.590 | +0.4025 | 0.0212 | **0.75×** |
+| **1.20×** | 18.017 | +0.3496 | **0.0740** | **2.62×** |
+| 1.50× | 14.413 | +0.2756 | 0.1481 | 5.25× |
+| 2.00× | 10.810 | +0.2016 | 0.2221 | 7.87× |
+| 21.62× | 1.000 | 0.0000 | 0.4237 | 15.01× |
+
+A 1.2× improvement moves net ΔS by **0.0740 — 2.62× the entire remaining gap.** Even 1.05× moves it
+0.75× the gap. "Within noise" was false in the only currency that matters.
+
+**And "within noise" was an unmeasured claim.** No one on this campaign has measured a noise floor on
+`r`. Every "within noise" statement about the exchange ratio — MAIN's and mine — is currently
+unfounded. **R1 therefore measures the floor first** (see R1a below); only a measured spread licenses
+the word.
+
+**The corrected bars. KILL and WIN are not two sides of one threshold — they are different questions.**
 
 | Verdict | Condition | Meaning |
 |---|---|---|
-| **KILL** | `r` improves < 1.2× (within noise) | `dD/dB` is not trainable on this vehicle. The last route closes. **Decisive for the campaign** — say it plainly. |
-| **ALIVE** | `r` improves ≥ 2× | The derivative moves. Measure `dr/d(rung weight)` to extrapolate the reachable ceiling. |
-| **WIN** | `r < 1` at any rung | Renderer bytes become purchasable. |
+| **KILL** | `r` treated is statistically indistinguishable from `r` baseline **against the MEASURED repeat-spread from R1a**, reported as a number | The mechanism did not resolve **on this instance**. `verdict_scope: INSTANCE` — one A/B, one vehicle, one ladder. **Never "the last route closes"** (Catalog #307). |
+| **POSITIVE** | any improvement **resolvable above the measured floor**, including 1.2× | Mechanism existence is established. Whether it reaches the bar is a **trajectory** question — does it keep going under more weight, does it compose — not a magnitude question. A cap-limited first result is not a family verdict. |
+| **WIN** | `r < 1` at any rung | Break-even. Renderer bytes become purchasable. |
+
+**The WIN bar is 21.62×, not 46.3×** (MAIN, 2026-08-24): the best exchange ratio ever measured on
+this object is **tba1 D3 at 21.62×**, and since that counts the **seg leg only** it is a *lower*
+bound on its own true ratio. W72's 46.3× is not the best — it is merely the one my charter handed me.
+I withdraw the 46.3× framing.
+
+**Improvement must come from MECHANISM, never magnitude.** dg2 measured `ratio ∝ B^−0.2748` with both
+ends measured: shrinking a move *raises* its ratio. So no amount of taking smaller bites reaches
+break-even. That is this term's entire thesis, stated as a number.
 
 **Cost, honestly:** the base rung is always evaluated, so `sampled` with any `k` costs **2 scorer
 passes per step ≈ 2× step time.** I have **not** measured wd3's s/epoch and I am not borrowing
@@ -362,6 +419,11 @@ proposed-only and on a retired vehicle. That is the gap this arm fills.
 
 ## 8. verdict_scope
 
+**R1 carries `verdict_scope: INSTANCE`, fixed 2026-08-24.** One A/B, one vehicle, one ladder, one
+seed policy. It cannot close a family and it cannot "close the last route" — that is the Catalog #307
+paradigm-vs-implementation line, and my withdrawn KILL criterion violated it. A KILL from R1 means
+*the mechanism did not resolve on this instance*, nothing wider.
+
 **Scope: FORMULATION-level design + build, not a family verdict.** Nothing here is a measured result
 about whether `dD/dB` is trainable. The build is unfired. §3's race is decided on *derivation* —
 that we own an exact operator, so surrogates are mechanism reductions — not on measurement; a
@@ -381,6 +443,11 @@ if it does. §3.0's allocator-miscalibration claim is an explicit **hypothesis**
 - **I did not measure `r`, `ΔD`, `ΔB`, or any allocation** on any real checkpoint.
 - **I did not verify the charter's `r` values** (21.62×/46.3×/247.69×/349×/478.7×/687×/792×). I used
   them as supplied and flagged the W72 discrepancy rather than resolving it.
+- **I published a defective KILL criterion and it stood until MAIN's stop-hook caught it.** §6 now
+  withdraws it in full. It was a magnitude dismissal with no relative-significance number and no
+  measured noise floor — the #404 class, in my own pre-registration.
+- **No noise floor on `r` has been measured, by me or by anyone on this campaign.** Until R1a runs,
+  no "within noise" claim about the exchange ratio is licensed from any arm.
 - **I did not re-run WD4** to test whether its 1,590× is an unconverged-training artifact. Flagged only.
 - **I did not measure wd3's epoch cost.** The 2× figure is an operation count, not a timing.
 - **The 70,453 B HPAC model figure is nt1's**, from an `hv1_ep0634` parse-back — not dx2, and received
