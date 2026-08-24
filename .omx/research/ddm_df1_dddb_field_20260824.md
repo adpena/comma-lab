@@ -589,10 +589,19 @@ instance's.
 | `retained/fields/position_coding_psecond.f32le.bin` | 471,859,200 | `72c544044ce735c6f1a3876ef138fba45684f62da1ef3e20bd38aaa316385ae5` |
 | `retained/fields/position_rc64_frequency_cost_bits.f64le.bin` | 943,718,400 | `99d7833d55a9aa128f67cfc125a10ba90cffaa714de0b88801aa43b8b16e2c86` |
 
+Every emitted RC64 stream and every reconstructed token field is kept, not reduced to a length:
+
+| artifact | bytes | sha256 (first 24) |
+|---|---:|---|
+| `reencode_work/tail_drop_2.bin` (control) | 113,784 | body reproduces the shipped stream exactly |
+| `reencode_work/tail_drop_0p999.bin` | 101,560 | `89030ddb5061313850d4fa0c…` |
+| `reencode_work/reconstructed_tokens_drop_0p999.u8` | 117,964,800 | `aebfb6a9639157eaf373d0d9…` |
+| `reencode_work/tail_drop_0p9999.bin` | 112,172 | `5695a626b93a55a974a78df1…` |
+| `reencode_work/reconstructed_tokens_drop_0p9999.u8` | 117,964,800 | `202e50473ad330b04a19bed4…` |
+
 Plus `analysis/FIELD.json`, `analysis/flip_flags.npy` (14,745,728 B, the packed zero/positive
-partition), `analysis/REENCODE_*.json`, `analysis/SCORER*.json`, the 30 per-stage receipts under
-`retained/stages/`, and every emitted RC64 stream and reconstructed token field under
-`analysis/reencode_work/`. The cost field is byte-identical to TB2's and is therefore cited rather
+partition — verified to unpack to exactly 227,671 positive-mode positions), `analysis/REENCODE_*.json`,
+`analysis/SCORER*.json`, and the 30 per-stage receipts under `retained/stages/`. The cost field is byte-identical to TB2's and is therefore cited rather
 than duplicated as a second copy; the three prediction fields are new payload and are retained in
 full.
 
