@@ -140,3 +140,5 @@ an additive claim.
 - `tac.uniward_delta.compute_uniward_cost_map` (the tractable primitive).
 - `scorer_sensitivity_map.yousfi_uniward_finite_difference_sensitivity_map`
   (the DEFERRED scorer-finite-difference; NOT this lever).
+
+<!-- # HIERARCHICAL_PREDICTIVE_CODING_QUADRUPLE_OK: retired pre-DDM-era design memo (Catalog #312 backfill 2026-08-25, preflight r26 adjudication) -- the hierarchical-predictive-coding vocabulary here is framing on a since-retired substrate line; the design never proceeded to dispatch and no hierarchical-predictive-coding mechanism is live. Retroactively authoring the Rao-Ballard + Mallat-CDF + DreamerV3 + Wyner-Ziv quadruple would be false; this waiver records the honest state. -->
