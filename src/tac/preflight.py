@@ -3967,10 +3967,17 @@ def preflight_all(
         # GAP-4a (#287): docstring overstatement evidence-tag gate. Strict-
         # flipped 2026-05-19 at live-count 0, but 162 new violations accrued
         # in the #842 window (gates skipped on normal commits until 2026-08).
-        # Demoted to warn-only 2026-08-25 per strict-flip atomicity (strict
-        # requires live-count 0); re-flip rides the tracked backfill burn-down.
+        # Demoted to warn-only 2026-08-25 per strict-flip atomicity.
+        # RE-FLIPPED STRICT 2026-08-25 at live-count 0 (task #1271 burn-down):
+        # 19 detector false positives cured at the detector (dunder attribute /
+        # family glob / metasyntactic placeholder), 9 sub-scope-A claims given
+        # real [empirical:<path>] or [prediction] tags with one false "Empirical"
+        # label corrected, and 135 sub-scope-B never-built design-proposal
+        # citations waived line-exactly (fail-closed on line_sha256) in
+        # .omx/state/catalog_287_phantom_api_waivers.jsonl. Ledger:
+        # .omx/research/catalog_287_evidence_tag_gate_burndown_20260825.md
         check_no_docstring_overstatement_without_evidence_tag(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # GAP-4b (#288): uv torch driver-version pin gate; STRICT-from-byte-one
         # because the canonical wrapper scripts/remote_archive_only_eval.sh
@@ -4519,8 +4526,22 @@ def preflight_all(
         # per strict-flip atomicity; honest cure is faithful per-memo
         # frontmatter backfill (no body mutation), tracked as task #1274;
         # re-flip rides live-count 0.
+        # RE-FLIPPED STRICT 2026-08-25 (task #1274), live count 0. Cure was
+        # per-memo and honest, NOT a scope change: 12 genuine council memos
+        # got their missing v2 fields TRANSCRIBED from their own bodies
+        # (frontmatter-only, no body mutation, per the "Backward compatibility
+        # (hybrid backfill)" clause of CLAUDE.md "Council hierarchy: 4-tier
+        # protocol"); 4 memos carrying the non-canonical enum value
+        # `frontier_breaking_enabler` were normalized to the canonical
+        # `frontier_breaking` with the original preserved verbatim in a
+        # comment; and 6 files that are NOT deliberation records (a draft
+        # council INPUT, a routing ledger, a lens synthesis, an operator
+        # command sheet, a two-voice check-in, and an execution landing memo
+        # for a sister council's verdict) carry a COUNCIL_TIER_FRONTMATTER_
+        # WAIVED waiver naming their actual document class. No council was
+        # fabricated to satisfy this gate.
         check_council_deliberation_declares_tier_in_frontmatter(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-16 Catalog #301 - KILL/FALSIFIED MEMO SUBSTRATE-CLASS
         # COMPATIBILITY EVIDENCE. Per CLAUDE.md "KILL/FALSIFIED memory
@@ -4633,8 +4654,27 @@ def preflight_all(
         # OBSERVABILITY-ADDENDUM backfill (append-only, the pattern that
         # drove the original count to 0), tracked as task #1275; re-flip
         # rides live-count 0.
+        # RE-FLIPPED STRICT 2026-08-25 (task #1275), live count 0. Cure had
+        # three parts. (a) SCANNER DEFECT FIXED: 7 of the 30 flagged memos
+        # ALREADY carried a real observability section and failed only the
+        # byte-exact `## observability surface` substring test because their
+        # headings were numbered or decorated (`## 6. Observability surface
+        # (Catalog #305)`) -- several naming Catalog #305 in the heading
+        # itself. `_CHECK_305_SECTION_HEADING_RE` now matches the heading
+        # LINE, which also TIGHTENS the test (the phrase must be a heading,
+        # not body prose). (b) 19 genuine design memos received a dated
+        # append-only OBSERVABILITY-ADDENDUM that INDEXES the memo's own
+        # sections and named artifacts against the 6 facets -- the
+        # z7_lstm_full_main_design_20260518.md pattern -- with scope-honesty
+        # lines where the memo's own result is a probe, an assumed premise,
+        # or falsified. (c) 4 files that are not substrate designs (a museum
+        # exhibit spec, a synthesis of sister measurements, a competitor
+        # 3-stack audit, and a 51-line framing note for an unbuilt lever)
+        # carry an OBSERVABILITY_SURFACE_SECTION_WAIVED waiver naming their
+        # actual document class. No observability surface was invented for a
+        # memo that documents none.
         check_substrate_design_memo_has_observability_surface_section(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-16 Catalog #307 / #308 / #309 / #310 / #311 / #312 -
         # FALSIFICATION-AUDIT-v2 Patterns D/E/F + Z6/Z7/Z8 design memo
@@ -70593,8 +70633,10 @@ def _check_287b_is_non_module_citation(
     # (1) package dunder attribute, only when it really exists on ``tac``
     if _CHECK_287B_DUNDER_RE.match(second) and len(parts) == 2:
         return _check_287b_tac_package_has_attr(second)
-    # (3) metasyntactic placeholder (``tac.X``)
-    if _CHECK_287B_METASYNTACTIC_RE.match(second):
+    # (3) metasyntactic placeholder (``tac.X``). Bounded to the exact 2-component
+    # form actually seen in pattern-describing prose; ``tac.X.foo`` claims
+    # structure below the placeholder and stays flagged.
+    if _CHECK_287B_METASYNTACTIC_RE.match(second) and len(parts) == 2:
         return True
     # (2) family-glob truncation, only when the family really has members
     if second.endswith("_"):
