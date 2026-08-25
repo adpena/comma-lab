@@ -60,6 +60,7 @@ non-empty. The cadence consumer is `tools/consolidation_debt.py`, which reads th
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -581,8 +582,17 @@ def main(argv: list[str] | None = None) -> int:
         args.manifest.parent.mkdir(parents=True, exist_ok=True)
         args.manifest.write_text(json.dumps(report, indent=1), encoding="utf-8")
     if args.write_cache:
+        # Check 131: the consolidation-debt SessionStart monitor reads this cache
+        # concurrently, and scans take minutes — a bare write_text exposes a
+        # partial file to that reader. fcntl.flock(LOCK_EX) serializes racing
+        # writers; the .tmp + os.replace makes each publish atomic for readers.
         CACHE.parent.mkdir(parents=True, exist_ok=True)
-        CACHE.write_text(json.dumps(summarize(report), indent=1), encoding="utf-8")
+        lock_path = CACHE.with_suffix(CACHE.suffix + ".lock")
+        with lock_path.open("w") as lk:
+            fcntl.flock(lk.fileno(), fcntl.LOCK_EX)
+            tmp = CACHE.with_suffix(CACHE.suffix + ".tmp")
+            tmp.write_text(json.dumps(summarize(report), indent=1), encoding="utf-8")
+            os.replace(tmp, CACHE)
 
     print(json.dumps(report, indent=1) if args.json else fmt(report))
     if args.strict and report["denominator"]["bucket_C_authored_OWED"]:
