@@ -1,3 +1,7 @@
+<!--
+generated_at: 2026-08-25T19:58:56Z
+from_state_hash: 6229ef19864df74d4ae070a7107c65a04e9941e7ad878c3b432b0fc2a56909c0 (.omx/state/canonical_frontier_pointer.json sha256; frontier citation block regenerated via tools/scan_best_anchor_per_axis.py --refresh-citation-surfaces)
+-->
 # Current Focus - 2026-07-31 (ENDPOINT WON: ep854, ALL FIVE CLASSES IMPROVE, positive control EXACT. The ALARM's Lane premise is REFUTED A THIRD TIME — the w03 rise is UNDRIVABLE/ROAD. Composition row −0.035996 S seg+rate byte-closed.)
 
 > **🏁 ENDPOINT WINNER — `window_03/checkpoints/intra_seg_trunk_tau_ep00854.npz`** (ddm_ep2, commit
