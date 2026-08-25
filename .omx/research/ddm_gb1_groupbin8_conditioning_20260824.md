@@ -1,4 +1,4 @@
-# ddm_gb1 — decode-scan conditioning, realized: the free win holds at **63 B**, and the two things that would have killed it were both in the fire order
+# ddm_gb1 — decode-scan conditioning, realized: **−153 B of real archive, 0 tokens changed**, and the two things that would have killed it were both in the fire order
 
 **Date:** 2026-08-24 · **Arm:** `ddm_gb1` · **Pointer:** UNMOVED · **No Modal job, no Metal job, no
 scorer, no training, no frame rendered. $0.**
@@ -33,16 +33,25 @@ changes no symbol. Priced in the coder's own 31-bit integer frequencies instead 
 difference (§5). The whole-stream chain is measured end to end: ledger **113,776.179 B** →
 integer-frequency cost **113,776.160 B** → physical stream **113,777 B**.
 
-**4. The real transfer loss is elsewhere, it is 200× larger, and it is measured.** `ddm_fx5`'s
-race predicted **−86.58 B** of code length for the 13→19 member move and the physical re-encode
-on this body returned **−70 B**: a realization ratio of **0.808**. That, not `fs2`, is the
-discount a code-length number owes.
+**4. The real transfer loss is elsewhere and it is ~200× larger — but the only number anyone has
+for it is confounded, and I caught myself quoting it.** `ddm_fx5`'s race predicted **−86.58 B**
+of code length for 13→19 members and the physical re-encode returned **−70 B**, a ratio of
+**0.808** — except the −86.58 was measured on the fx1-era body and the −70 on the DX2 body, so
+it folds realization loss together with a cross-body transfer (§5.3). **This arm's own §5.2 and
+§5.3 are both on the DX2 body, so their ratio is the first clean realization number on this
+stack.** That, not `fs2`'s edit-family factors, is the discount to carry forward.
 
-**5. PHYSICAL ROWS: PENDING** — three full-n600 re-encodes through the shipped RC64 encoder
-along the receiver's own decode trajectory are in flight (control + two members). §5 carries
-them. Until they land, **nothing here is a rate claim**, and the 63 B is a model ledger.
+**5. THE PHYSICAL ROWS LAND AT −100 B AND −153 B OF REAL ARCHIVE, AND THE BEST BEATS THE STATIC
+ESTIMATE BY 2.43×.** Re-encoded through the shipped RC64 encoder along the receiver's own decode
+trajectory, full n600, unedited field. The **control reproduces the shipped 113,777 B token
+section byte-identically** (sha `e2af55e6…`), so the deltas are real archive bytes and not an
+accounting estimate. `cls_groupbin8` (40 cells) → **180,268 B, −100 B**. `groupbin8_surprise`
+(2,560 cells) → **180,215 B, −153 B**. **Both at `tokens_changed = 0`.** The winner is
+**ΔS −1.018764e-04 = 10.19× the 1e-5 naming bar** and **1.46× the size of `ma1`'s adopted
+−104.58 B**. On both rows **the archive delta equals the token-stream delta exactly**, which is
+the measured proof that the member's stored cost is **0 B**.
 
-**6. Five corrections, and two of them would have wasted the build.** `mi1`'s fire order names
+**6. Six corrections, and two of them would have wasted the build.** `mi1`'s fire order names
 the wrong incumbent (13-member D1; the shipped body is the **19-member fx5 E1**) and the wrong
 harness (`fx2`'s race replays a **different token field** — digest `9ba2e52b…` against the DX2
 body's `cc10a7b0…`, MEASURED). Its decode-wall premise is stale by **8×** in the safe direction,
@@ -50,13 +59,14 @@ which changes the *reason* for its build order but not the order. My own charter
 rr4 context by a factor of 8" would have diluted the incumbent's counts 8× and is refused with
 its arithmetic. And nobody in this lineage has said that shipping this needs a **C port**. §1.
 
-**Scale, stated honestly:** 63 B is **0.15%** of the 42,381.16 B demand and **0.055%** of the
+**Scale, stated honestly:** 153 B is **0.36%** of the 42,381.16 B demand and **0.13%** of the
 token stream. It is worth banking because it is free — zero stored bytes, zero seg, zero pose,
-by construction and by digest — not because it is large.
+by construction and by digest — not because it is large. **The pointer has not moved:** no
+archive was promoted and no T4 row was fired.
 
 ---
 
-## 1. Corrections — five, and two of them would have cost the build
+## 1. Corrections — six, and two of them would have cost the build
 
 **(a) The decode wall is not 160.2 s. It is 1,294 s, and it was MEASURED on contest-CUDA.**
 `mi1` §7 justifies building `groupbin8` first because "the decode wall is the binding constraint
@@ -296,15 +306,61 @@ instrument agrees; the small residual is Newton schedule and fold assignment.
 Three full-n600 re-encodes through `experiments/ddm_jg2_tail_reencode.py` against the DX2 body,
 unedited token field, checkpointed every 25 frames:
 
-| row | runtime | members | emitted stream B | Δ vs control | archive B | tokens changed |
-|---|---|---:|---:|---:|---:|---:|
-| **control** | shipped DX2 r7 | 19 | PENDING | — | — | — |
-| `cls_groupbin8` | +1 member, 40 cells | 20 | PENDING | PENDING | PENDING | PENDING |
-| `groupbin8_surprise` | +1 member, 2,560 cells | 20 | PENDING | PENDING | PENDING | PENDING |
+| row | runtime | members | cells | emitted stream B | Δ stream | **archive B** | **Δ archive** | tokens changed | ΔS |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **control** | shipped DX2 r7 | 19 | — | **113,777** | **0 — byte-identical** | 180,368 | — | — | — |
+| `cls_groupbin8` | +1 member | 20 | 40 | 113,677 | −100 | 180,268 | **−100** | **0** | −6.658590e-05 |
+| **`groupbin8_surprise`** | +1 member | 20 | 2,560 | **113,624** | **−153** | **180,215** | **−153** | **0** | **−1.018764e-04** |
+
+**The winner is `groupbin8_surprise` at −153 B**, the member whose context is
+`class × groupbin8 × confidence-bin` — i.e. *"the calibration of each confidence bin depends on
+how far into the scan we are"*, which is the mechanism §4 measured, stated as a context. It is
+**10.19×** the 1e-5 naming bar, **29.11×** fx5's 3.5e-6 admit threshold, and **1.46×** the size
+of `ma1`'s adopted −104.58 B. Projected rate-only score if adopted: **S = 0.148118** against the
+shipped 0.14821987563243377 — *projected*, because a score is a T4 row and this is a byte
+measurement.
+
+**Three things about these rows are worth more than the byte counts.**
+
+**First: the archive delta equals the token-stream delta exactly on both rows** (−100 = −100,
+−153 = −153). No other archive section grew, so the member's stored cost is **0 B — measured,
+not asserted** (§6). That is the charter's "an uncounted table is a fake saving", answered with
+a `stat` rather than an argument.
+
+**Second: code length did not need a discount here.** Each candidate's own ideal code length
+tracks its physical stream to under half a byte — `cls_groupbin8` −99.212 B ledger against
+−100 B real (ratio **1.008**), `groupbin8_surprise` −153.472 B against −153 B (ratio **0.997**).
+**This is the clean, same-body realization ratio §0.4 said was missing: ~1.00, not 0.808.** The
+`fx5` 0.808 was a cross-body artifact, exactly as suspected.
+
+**Third: the online members beat the static offset by 1.59× and 2.43×** (100 B and 153 B against
+63.09 B). §7 left the sign of that gap explicitly unknown and it resolved upward. Two mechanisms
+account for it, neither surprising: the members condition on class and confidence as well as
+scan position (40 and 2,560 cells against 8), and they are mixed with the incumbent 19 by a
+learned weight, so they can take structure a single global offset cannot. **The static ladder
+under-states what a member can extract — which means `mi1`'s whole ladder is a floor, not a
+ceiling, and its other rungs deserve re-pricing as members rather than as offsets.**
+
+**THE CONTROL PASSES.** The re-encode emitted **113,777 B**, sha256
+**`e2af55e641c4f2d3c1f81d75af2ce0453dd44263ac3cbd84f129eadf7b8a4ac5`** — **byte-identical to the
+shipped DX2 token section**, all 113,777 bytes, full n600. Its own ideal code length is
+**113,776.179 B**, which closes the §5.1 chain end to end on this arm's own run: ledger
+113,776.179 → integer-frequency 113,776.160 → physical 113,777. **The encoder inverts the
+shipping decoder, so every candidate delta below is a real byte delta and not an accounting
+estimate.**
 
 The control is the proof the encoder inverts the shipping decoder: `stage_control` **refuses**
 unless the re-emitted stream is byte-identical to the shipped 113,777 B token section. No delta
 from this encoder is trustworthy until it passes.
+
+**Why §5.3 supersedes §5.2 rather than merely refining it, and why the oracle mirage cannot
+reach it.** §5.2 is a static cross-fit and needs a held-out fold to be honest. §5.3 is a
+**prequential** measurement: the online coder pays for every symbol *before* the data that would
+have informed it enters the tables, so **there is no in-sample/held-out distinction — every bit
+in the emitted stream is already held-out by construction.** That is what makes `mi1`'s
+overfitting signature (in-sample climbing to 969 B while held-out collapses to −2,120 B)
+structurally unreachable here, and it is why a 2,560-cell member can be raced without the caution
+a 12,288-cell offset table needed. The price is the warm-up, and the warm-up is inside the number.
 
 **The no-op detector.** Each candidate runtime differs from the shipped DX2 r7 tree in **exactly
 one file** (`runtime/fx2_model_axis_corrector.py`) and by exactly the intended patch — the
@@ -382,30 +438,39 @@ measurement, and the digest is what proves the identity was honoured.
 
 ## 8. Verdict
 
-**PENDING §5.3.** The verdict shape, declared before the rows land so it cannot be fitted to
-them:
+The verdict shape was declared before the rows landed so it could not be fitted to them: ADOPT at
+**+20 B of real emitted stream** with `tokens_changed = 0` (`mi1`'s own falsifier);
+DEFER-with-C-port-blocker if it clears the bar but the port is not built; HONEST NEGATIVE below
++20 B. The measured outcome:
 
-- `verdict_scope:` **INSTANCE** — the DX2 body, archive `976f706d…`, n600, 117,964,800
-  positions, shipped 19-member fx5 E1 corrector.
-- **ADOPT** if a member clears **+20 B of real emitted stream** at full n600 with
-  `tokens_changed = 0` — `mi1`'s own falsifier, set at under a third of the measured code-length
-  gain to allow for realization loss and for the mixer having already absorbed part of it.
-- **DEFER-with-C-port-blocker** if it clears the bar but the port is not built: the saving is
-  real and the vehicle cannot carry it yet.
-- **HONEST NEGATIVE** if it does not clear +20 B: the code-length gain did not survive the
-  mixer, and that is a finding about the realization gap, not about the mechanism.
+**ADOPT-PENDING-C-PORT.** `verdict_scope:` **INSTANCE** — the DX2 body, archive `976f706d…`,
+n600, 117,964,800 positions, shipped 19-member fx5 E1 corrector, `[macOS-CPU advisory /
+scorer-free EXACT byte measurement]`.
+
+`cls_groupbin8` clears the bar by **5×**: **−100 B of real archive** at `tokens_changed = 0`,
+proven against a control that reproduces the shipped token section byte-identically. It is a
+**free** saving — zero stored bytes (measured: archive delta = stream delta), zero `d_seg`, zero
+`d_pose`, all by construction and each proven by digest rather than asserted. **The blocker is
+the C port, not the evidence.**
+
+**What this is NOT.** It is not a pointer move: no archive was promoted, no T4 row was fired, and
+the decode wall for a 20-member native corrector has not been measured. It is not a route to
+sub-0.12 — 100 B is **0.24%** of the 42,381.16 B demand. It is a bankable free win of the same
+size as the one the campaign already adopted, and its value is that it costs nothing to hold.
 
 ---
 
 ## 9. Fire order for MAIN — queued, not fired
 
-1. **Read §5.3's control row first.** If the control is not byte-identical to the shipped
-   113,777 B stream, every other number in §5.3 is void and the encoder is the bug.
-2. **If a member clears +20 B:** port it to `runtime/f26_corrector_native.c` following
-   `ddm_fx5`'s 3-file precedent — one `case` in `family_rule_index`, one row each in
-   `FAMILY_RULE` / `FAMILY_SIZE` / `FAMILY_COUNT_LIMIT`, `N_FAMILIES` bumped, and
-   `EXPECTED_SHIPPED_CONFIG` extended. Prove Python/C parity on the emitted stream before
-   anything else.
+1. **The control passed** (113,777 B, sha `e2af55e6…`, byte-identical), so §5.3's deltas are real
+   archive bytes. Nothing downstream needs to re-prove the encoder.
+2. **Port the winning member to `runtime/f26_corrector_native.c`.** This is the only blocker
+   between a measured −100 B and a shippable one. Follow `ddm_fx5`'s 3-file precedent — one
+   `case` in `family_rule_index`, one row each in `FAMILY_RULE` / `FAMILY_SIZE` /
+   `FAMILY_COUNT_LIMIT`, `N_FAMILIES` bumped, and `EXPECTED_SHIPPED_CONFIG` extended — and
+   **hoist `groupbin8` to a scalar per group** (§2: it is constant across every one of the 190
+   groups, so it costs strictly less than any existing per-position member). Prove Python/C
+   parity on the emitted stream before anything else.
 3. **Then one T4 row** for the wall, not for the bytes: the bytes are already exact from the
    local encode. Budget **16.4 s** of additional decode against **1,294 s** of margin. A single
    row cannot resolve one member against **53 s** of run-to-run variance, so treat any inflate
