@@ -379,3 +379,5 @@ post-training-validation discipline.
   Principle" IEEE ITW.
 
 <!-- # F_ASYMPTOTE_CLASS_SHIFT_NOT_BOLT_ON_OK: retired pre-DDM-era design memo (Catalog #310 backfill 2026-08-25, preflight r24 adjudication) — the asymptote-class vocabulary here is horizon-class discussion on a since-retired substrate line; the design never proceeded to dispatch and no F-asymptote claim is live. Retroactively declaring primary_substrate would be false; this waiver records the honest state. -->
+
+<!-- # PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK: retired pre-DDM-era design memo (Catalog #311 backfill 2026-08-25, preflight r25 adjudication) -- the cooperative-receiver / Atick-Redlich vocabulary here is framing on a since-retired substrate line; the design never proceeded to dispatch and no cooperative-receiver mechanism is live. Retroactively authoring an ego-motion-conditioned prediction section would be false; this waiver records the honest state. -->

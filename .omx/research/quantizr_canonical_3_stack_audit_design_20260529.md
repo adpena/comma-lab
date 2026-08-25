@@ -242,3 +242,5 @@ $0 cost / NO `gh pr create` / ZERO Claude/Anthropic in PR-facing surfaces / APPE
 `lane_slot_ee_quantizr_catalog_325_audit_20260529` L1 (impl_complete + canonical_equation_candidate + canonical_anti_pattern_candidate + memory_entry)
 
 <!-- # HISTORICAL_SCORE_LITERAL_OK:quantizr_canonical_3_stack_audit_references_quantizr_0_33_anchor_+_council_d_ema_audit_2026_04_29_+_pr_95_canonical_per_catalog_343_canonical_pointer_dot_json_2026_05_29 -->
+
+<!-- # PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK: retired pre-DDM-era design memo (Catalog #311 backfill 2026-08-25, preflight r25 adjudication) -- the cooperative-receiver / Atick-Redlich vocabulary here is framing on a since-retired substrate line; the design never proceeded to dispatch and no cooperative-receiver mechanism is live. Retroactively authoring an ego-motion-conditioned prediction section would be false; this waiver records the honest state. -->

@@ -167,3 +167,5 @@ Per Catalog #309: predicted band `[-0.000160, +0.000080]` straddles the PR110 cl
 - CLAUDE.md "Fridrich inverse steganalysis" + "Exact scorer architectures" + "MPS auth eval is NOISE" + "Submission auth eval — BOTH CPU AND CUDA" + "NO FAKE IMPLEMENTATIONS" + "PR-or-greater parity" non-negotiables
 - CLAUDE.md inner council Fridrich + Yousfi + Quantizr permanently active per quintet pact + 11-voice expansion
 - Lane registry: `lane_pr110_opt7_fridrich_uniward_inverse_scorer_basis_l0_scaffold_20260530`
+
+<!-- # PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK: retired pre-DDM-era design memo (Catalog #311 backfill 2026-08-25, preflight r25 adjudication) -- the cooperative-receiver / Atick-Redlich vocabulary here is framing on a since-retired substrate line; the design never proceeded to dispatch and no cooperative-receiver mechanism is live. Retroactively authoring an ego-motion-conditioned prediction section would be false; this waiver records the honest state. -->

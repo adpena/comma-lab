@@ -478,3 +478,5 @@ Per the cargo-cult audit §3:
 ## Mission contribution per Catalog #300
 
 **frontier_breaking_enabler**: this SHARED substrate module is the foundation for Steps 4-7 of Slot L 8-step operator-routable cascade (Step 4: recipe YAMLs per substrate; Steps 5-7: paired-CUDA dispatches at $0.18 total envelope per Catalog #246; Step 8: canonical equation registration per Catalog #344 after 3 empirical anchors land). Without the SHARED helper, the 3 sister cells cannot dispatch coherently per UNIQUE-AND-COMPLETE-PER-METHOD operating mode. The 14-day Catalog #325 window (CLOSES 2026-06-12T06:15Z) is the canonical deadline for Steps 4-7 to land paid-dispatch empirical anchors.
+
+<!-- # PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK: retired pre-DDM-era design memo (Catalog #311 backfill 2026-08-25, preflight r25 adjudication) -- the cooperative-receiver / Atick-Redlich vocabulary here is framing on a since-retired substrate line; the design never proceeded to dispatch and no cooperative-receiver mechanism is live. Retroactively authoring an ego-motion-conditioned prediction section would be false; this waiver records the honest state. -->

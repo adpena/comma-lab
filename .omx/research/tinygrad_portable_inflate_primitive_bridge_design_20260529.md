@@ -190,3 +190,5 @@ notes: |
 - `src/tac/framework_agnostic/operations.py::_quantize_int8_tinygrad` (canonical tinygrad operations sister)
 - `src/tac/substrates/_shared/inflate_runtime.py::select_inflate_device` (Catalog #205 canonical inflate-time device-selection sister)
 - Catalog #146 / #205 / #220 / #270 / #272 / #287 / #290 / #294 / #295 / #303 / #305 / #309 / #310 / #323 / #335 / #341 / #344 / #356 / #357
+
+<!-- # PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK: retired pre-DDM-era design memo (Catalog #311 backfill 2026-08-25, preflight r25 adjudication) -- the cooperative-receiver / Atick-Redlich vocabulary here is framing on a since-retired substrate line; the design never proceeded to dispatch and no cooperative-receiver mechanism is live. Retroactively authoring an ego-motion-conditioned prediction section would be false; this waiver records the honest state. -->
