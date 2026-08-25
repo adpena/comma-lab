@@ -20888,6 +20888,24 @@ def _ema_script_constructs_ema(tree: ast.Module) -> bool:
             return True
         if isinstance(node.func, ast.Attribute) and node.func.attr == "EMA":
             return True
+    # 2026-08-25 (r36/#1279 detector FP cure): the manual-shadow construction
+    # binds an ema-named variable to a deepcopy of the live model, e.g.
+    # `ema = copy.deepcopy(model).eval()` — a real EMA shadow (saved as the
+    # deploy authority in the checkpoint blob), just not the EMA() class.
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        targets_ema = any(
+            isinstance(t, ast.Name) and "ema" in t.id.lower() for t in node.targets
+        )
+        if not targets_ema:
+            continue
+        for sub in ast.walk(node.value):
+            if isinstance(sub, ast.Call):
+                f = sub.func
+                name = f.id if isinstance(f, ast.Name) else (f.attr if isinstance(f, ast.Attribute) else "")
+                if name == "deepcopy":
+                    return True
     return False
 
 
@@ -20906,6 +20924,18 @@ def _ema_script_calls_ema_update(tree: ast.Module) -> bool:
         if isinstance(v, ast.Name) and "ema" in v.id.lower():
             return True
         if isinstance(v, ast.Attribute) and "ema" in v.attr.lower():
+            return True
+    # 2026-08-25 (r36/#1279 detector FP cure): the manual-shadow idiom is a
+    # plain helper call whose NAME carries the update semantics, e.g.
+    # `_ema_update(ema, model, decay)` in the torch V9 twin — same mechanism
+    # (mul_(decay).add_(src, 1-decay) after every optimizer.step), different
+    # spelling than `ema.update(model)`.
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        f = node.func
+        name = f.id if isinstance(f, ast.Name) else (f.attr if isinstance(f, ast.Attribute) else "")
+        if "ema_update" in name.lower():
             return True
     return False
 
@@ -20938,6 +20968,39 @@ _EMA_EXEMPT_TRAINING_SCRIPTS = {
     "train_mini_scorer.py",
     # Codec calibration (not weight training of a renderer)
     "train_neural_weight_codec.py",
+    # 2026-08-25 era-debt backfill (#1279, preflight r36 loop): retired-lineage
+    # research substrates from the May-2026 substrate waves (pact_nerv / NeRV /
+    # COIN++ / ATW / time-traveler / Z5 / nirvana / c1). All fall under the
+    # 2026-07-23 no-old-lineage ban (lessons-only, never vehicles), none is on
+    # any submission path, none has fired since the ban. EMA backfill here
+    # would be dead code on never-fire trainers; live vehicles (HPAC / wd3 /
+    # TR1 / witness-line) are NOT in this list and remain fully gated.
+    "train_substrate_atw_codec_v2.py",
+    "train_substrate_boost_nerv.py",
+    "train_substrate_c1_world_model_foveation.py",
+    "train_substrate_coin_plus_plus.py",
+    "train_substrate_nirvana.py",
+    "train_substrate_pact_nerv_asymmetric_boundary.py",
+    "train_substrate_pact_nerv_bayesian.py",
+    "train_substrate_pact_nerv_cross_codec_a.py",
+    "train_substrate_pact_nerv_cross_codec_b.py",
+    "train_substrate_pact_nerv_diffusion_distilled.py",
+    "train_substrate_pact_nerv_diffusion_trajectory.py",
+    "train_substrate_pact_nerv_distilled_scorer.py",
+    "train_substrate_pact_nerv_ia3.py",
+    "train_substrate_pact_nerv_ia3_multi.py",
+    "train_substrate_pact_nerv_mamba.py",
+    "train_substrate_pact_nerv_moe.py",
+    "train_substrate_pact_nerv_multi_modal.py",
+    "train_substrate_pact_nerv_neural_codec_e2e.py",
+    "train_substrate_pact_nerv_neural_codec_e2e_cross.py",
+    "train_substrate_pact_nerv_selector_v2.py",
+    "train_substrate_pact_nerv_selector_v3.py",
+    "train_substrate_pact_nerv_selector_v4.py",
+    "train_substrate_pact_nerv_vq.py",
+    "train_substrate_time_traveler_l5_z7_lstm_predictive_coding.py",
+    "train_substrate_time_traveler_l5_z7_mamba2.py",
+    "train_substrate_z5_predictive_coding_world_model.py",
 }
 
 
