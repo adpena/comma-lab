@@ -42281,6 +42281,14 @@ _WIRE_IN_LABEL_CONTINUATION_TOKENS: tuple[str, ...] = (
     "surface",
 )
 
+# Positive status words that may occupy a hook declaration's STATUS SLOT. Only
+# a match inside the first `_WIRE_IN_STATUS_SLOT_CHARS` of the post-marker
+# window counts, so a positive word that appears AFTER the line has already
+# stated an absence cannot rescue it. Word-boundary matching is required:
+# "reactivation criteria missing" must NOT read as a positive "active".
+_WIRE_IN_POSITIVE_STATUS_RE = re.compile(r"\b(active|wired|registered)\b")
+_WIRE_IN_STATUS_SLOT_CHARS = 40
+
 # Em-dash / en-dash: markdown declaration separators ("**Label** - ACTIVE: x").
 # ASCII hyphen is deliberately EXCLUDED - it would false-accept hyphenated
 # continuations such as "sensitivity-map-based saliency".
@@ -42460,9 +42468,29 @@ def _memo_declares_hook(text: str, hook_label: str, aliases: tuple[str, ...]) ->
                     "deferred",
                     "todo",
                 )
-                if not is_na_form and any(p in window for p in negative_phrases):
-                    # Acknowledging absence is not a wire-in declaration.
-                    continue
+                negative_hits = [p for p in negative_phrases if p in window]
+                if not is_na_form and negative_hits:
+                    # Acknowledging absence is not a wire-in declaration --
+                    # UNLESS the STATUS SLOT (the first ~40 chars, right after
+                    # the declaration marker) already says ACTIVE / WIRED /
+                    # REGISTERED and the negative token merely qualifies the
+                    # evidence downstream. 2026-08-25 detector cure (ddm_wb1):
+                    # "hook #2 Pareto constraint = ACTIVE via Dykstra check +
+                    # canonical equation candidate registration DEFERRED"
+                    # declares the hook; "hook #2 Pareto constraint = DEFERRED"
+                    # does not. Restricting the positive token to the status
+                    # slot keeps the distinction narrow: a positive word that
+                    # appears late, after the absence has been stated, does not
+                    # rescue the line.
+                    positive_status = _WIRE_IN_POSITIVE_STATUS_RE.search(
+                        window[:_WIRE_IN_STATUS_SLOT_CHARS]
+                    )
+                    first_negative = min(window.find(p) for p in negative_hits)
+                    if not (
+                        positive_status is not None
+                        and positive_status.start() < first_negative
+                    ):
+                        continue
                 if (
                     window.startswith(":")
                     or window.startswith("=")

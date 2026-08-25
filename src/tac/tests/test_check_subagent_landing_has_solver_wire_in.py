@@ -708,3 +708,70 @@ def test_cure_end_to_end_memo_without_declarations_still_fires(
     assert len(violations) == 1, f"got: {violations}"
     assert "sensitivity_map" in violations[0]
     assert "continual_learning" in violations[0]
+
+
+# ── Test 14: 2026-08-25 detector cure #2 (ddm_wb1) — status slot vs qualifier ──
+#
+# A negative token ("deferred" / "missing" / "todo") means "this hook is not
+# wired" only when it occupies the STATUS SLOT. When the status slot already
+# says ACTIVE and the negative token merely qualifies the evidence downstream,
+# the line IS a declaration. Three corpus lines were refused for this reason:
+#   "hook #2 Pareto constraint = ACTIVE via Dykstra-feasibility check +
+#    canonical equation candidate registration DEFERRED"
+
+
+@pytest.mark.parametrize(
+    ("hook", "line"),
+    [
+        (
+            "pareto",
+            "- hook #2 Pareto constraint = ACTIVE via Dykstra-feasibility "
+            "check + canonical equation candidate registration DEFERRED",
+        ),
+        (
+            "continual_learning",
+            "- Hook #5 continual-learning posterior = ACTIVE (empirical "
+            "anchor accumulates for D.1 deferred-registration)",
+        ),
+        (
+            "continual_learning",
+            "- Hook #5 continual-learning posterior = ACTIVE (deferred "
+            "canonical equation + anti-pattern candidates)",
+        ),
+    ],
+)
+def test_cure2_accepts_active_status_with_downstream_qualifier(
+    hook: str, line: str,
+) -> None:
+    """POSITIVE: ACTIVE in the status slot survives a downstream qualifier."""
+    aliases = dict(_UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS)[hook]
+    assert _memo_declares_hook(line + "\n", hook, aliases)
+
+
+@pytest.mark.parametrize(
+    ("hook", "line"),
+    [
+        # Negative token IS the status -> still refused.
+        ("pareto", "- hook #2 Pareto constraint = DEFERRED"),
+        ("pareto", "- hook #2 Pareto constraint: TODO"),
+        ("bit_allocator", "- hook #3 bit-allocator: not wired"),
+        ("bit_allocator", "- hook #3 bit-allocator = missing"),
+        ("continual_learning", "- hook #5 continual-learning posterior: unwired"),
+        # The 'reactivation' trap: 'active' must not match inside a longer
+        # word, or "reactivation criteria missing" would read as a positive.
+        (
+            "bit_allocator",
+            "- hook #3 bit-allocator: reactivation criteria missing",
+        ),
+        # Positive word appears only AFTER the absence has been stated.
+        (
+            "pareto",
+            "- hook #2 Pareto constraint: not wired here; a sister lane "
+            "registered one",
+        ),
+    ],
+)
+def test_cure2_still_refuses_absence_in_status_slot(hook: str, line: str) -> None:
+    """NEGATIVE: absence in the status slot is refused, cure notwithstanding."""
+    aliases = dict(_UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS)[hook]
+    assert not _memo_declares_hook(line + "\n", hook, aliases)
