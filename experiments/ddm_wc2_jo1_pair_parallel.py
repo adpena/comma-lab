@@ -247,7 +247,7 @@ def run_worker_shard(task: Mapping[str, Any]) -> dict[str, Any]:
     entrypoint.configure_determinism(config.seed)
     threads_per_worker = int(task["threads_per_worker"])
     torch.set_num_threads(threads_per_worker)
-    _segnet, posenet, _patch = entrypoint.load_scorers(config)
+    _segnet, posenet, _patch = entrypoint.load_scorers(config)  # SCORER_LOADER_ORDER_OK: jo3 entrypoint wrapper returns (segnet, posenet, receipt); unpack matches its verified order
     archive = Path(str(task["archive"]))
     runtime_root = Path(str(task["runtime_root"]))
     surface, modules = receiver_close.load_surface(archive, runtime_root)

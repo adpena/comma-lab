@@ -209,7 +209,7 @@ def main() -> int:
     active_frames = base_frames.copy()
     active_frames[:, 1] = active_master
 
-    segnet, posenet = load_scorers()
+    segnet, posenet = load_scorers()  # SCORER_LOADER_ORDER_OK: local wrapper (this file :152) returns (segnet, posenet); unpack matches its verified order
     scored = {
         "target": score_pairs(gt_frames, segnet, posenet),
         "base": score_pairs(base_frames, segnet, posenet),

@@ -454,7 +454,7 @@ def _parallel_task(task: Mapping[str, Any]) -> dict[str, Any]:
     config = entrypoint.load_config(config_path, str(task["config_sha256"]))
     entrypoint.configure_determinism(config.seed)
     torch.set_num_threads(int(task["threads"]))
-    _segnet, posenet, _patch = entrypoint.load_scorers(config)
+    _segnet, posenet, _patch = entrypoint.load_scorers(config)  # SCORER_LOADER_ORDER_OK: jo3 entrypoint wrapper returns (segnet, posenet, receipt); unpack matches its verified order
     surface, modules = receiver_close.load_surface(
         Path(config.inputs.rc2_archive.path), Path(config.inputs.rc2_runtime.path)
     )
@@ -478,7 +478,7 @@ def run_profile(args: argparse.Namespace) -> dict[str, Any]:
     config = entrypoint.load_config(config_path, args.expected_config_sha256)
     entrypoint.configure_determinism(config.seed)
     semantic, surface, modules = entrypoint.load_semantic(config)
-    segnet, posenet, patch = entrypoint.load_scorers(config)
+    segnet, posenet, patch = entrypoint.load_scorers(config)  # SCORER_LOADER_ORDER_OK: jo3 entrypoint wrapper returns (segnet, posenet, receipt); unpack matches its verified order
     patch_record = entrypoint.atomic_json(output / "YUV6_PATCH_RECEIPT.json", patch)
     pairs = sorted(set(args.pairs))
     if not 1 <= len(pairs) <= 3:

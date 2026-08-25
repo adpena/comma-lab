@@ -518,7 +518,7 @@ def main(argv: list[str] | None = None) -> int:
     # -- leg 4: frozen CPU-torch scorer through the real decode --------------------
     if not args.skip_score:
         lstars, gt_poses = load_gt_subset(Path(args.gt_cache), n_pairs)
-        seg_cpu, posenet_cpu = load_scorers()
+        seg_cpu, posenet_cpu = load_scorers()  # SCORER_LOADER_ORDER_OK: local wrapper (this file :379) returns (seg_cpu, posenet_cpu); unpack matches its verified order
         report["leg4_score"] = {}
         for name in variants:
             tS = time.time()

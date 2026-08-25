@@ -963,7 +963,7 @@ def memory_preflight(
         stage_denominator=len(config.stages),
     )
     arrays = open_inputs(config)
-    segnet, posenet, patch_receipt = load_scorers(config)
+    segnet, posenet, patch_receipt = load_scorers(config)  # SCORER_LOADER_ORDER_OK: local wrapper (this file :566) returns (segnet, posenet, receipt); unpack matches its verified order
     model = worker.HybridOutputResidual(config.actuation.hidden_channels, float(config.actuation.max_rgb_delta.value))
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.stages[0].learning_rate.value)
     frame0 = receiver_close.render_frame0(surface, modules, surface.codes[:1], 0)
@@ -2096,7 +2096,7 @@ def train(
     storage_policy = write_storage_policy(run_root, config)
     semantic, surface, modules = load_semantic(config)
     arrays = open_inputs(config)
-    segnet, posenet, patch_receipt = load_scorers(config)
+    segnet, posenet, patch_receipt = load_scorers(config)  # SCORER_LOADER_ORDER_OK: local wrapper (this file :566) returns (segnet, posenet, receipt); unpack matches its verified order
     atomic_json(run_root / "retained/YUV6_PATCH_RECEIPT.json", patch_receipt)
     model = worker.HybridOutputResidual(config.actuation.hidden_channels, float(config.actuation.max_rgb_delta.value))
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.stages[0].learning_rate.value)

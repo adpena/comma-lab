@@ -54,7 +54,7 @@ def main() -> int:
         allow_pickle=False,
     )
     ec1_blob = build.EC2_MODULE.read_bytes()
-    segnet, posenet = screen.load_scorers()
+    segnet, posenet = screen.load_scorers()  # SCORER_LOADER_ORDER_OK: screen-local wrapper (ddm_js8_stratified_advisory_screen:152) returns (segnet, posenet); unpack matches its verified order
     torch.set_num_threads(4)
     rows = []
     for scale in SCALES:

@@ -108,7 +108,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     # and workload identity without pretending its historical source record is
     # the current working tree.
     config = design.load_compiled_config(args.compiled_config, args.expected_config_sha256)
-    _segnet, posenet, patch_receipt = entrypoint.load_scorers(config)
+    _segnet, posenet, patch_receipt = entrypoint.load_scorers(config)  # SCORER_LOADER_ORDER_OK: jo3 entrypoint wrapper returns (segnet, posenet, receipt); unpack matches its verified order
     surface, modules = receiver_close.load_surface(
         Path(config.inputs.rc2_archive.path), Path(config.inputs.rc2_runtime.path)
     )
