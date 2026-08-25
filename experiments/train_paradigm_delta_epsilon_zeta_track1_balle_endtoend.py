@@ -2020,7 +2020,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "Explicit Phase 1 auth-eval opt-out. The Phase 1 runtime is "
             "contest-contract-shaped, but promotion still requires dispatch "
-            "claim custody plus exact CUDA/CPU evidence."
+            "claim custody plus exact CUDA/CPU evidence — the operator-gated "
+            "dispatch is the downstream consumer that owns auth_eval."
         ),
     )
     parser.add_argument("--smoke", action="store_true", help="1 epoch, 1 pair build verification")

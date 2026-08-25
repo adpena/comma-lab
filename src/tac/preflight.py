@@ -41676,13 +41676,19 @@ def check_no_auth_eval_optout_help_text_consumer_unverified(
         # itself + historical copies of training scripts)
         if "/results/" in rel_check or rel_check.startswith("experiments/results/"):
             continue
+        # Skip embedded virtualenv / third-party site-packages trees
+        # (e.g. experiments/manim_levelset/.venv/... — vendored code, not
+        # ours; a latin-1 byte in svgelements.py crashed the r29 full
+        # enumeration 2026-08-25).
+        if "/.venv/" in rel_check or "/site-packages/" in rel_check:
+            continue
         # Skip OSS-export mirror tree (avoids self-flagging preflight on
         # exported copies of training scripts in the public mirror).
         if _is_oss_export_mirror_path(path):
             continue
         try:
             text = path.read_text(encoding="utf-8")
-        except OSError:
+        except (OSError, UnicodeDecodeError):
             continue
         if "--no-auth-eval-on-best" not in text:
             continue
@@ -41759,7 +41765,7 @@ def check_no_auth_eval_optout_help_text_consumer_unverified(
                 continue
             try:
                 consumer_text = consumer_path.read_text(encoding="utf-8")
-            except OSError:
+            except (OSError, UnicodeDecodeError):
                 continue
             consumer_files.add(consumer_rel)
             if not any(

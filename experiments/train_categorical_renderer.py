@@ -155,11 +155,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         default=False,
         help=(
-            "Skip auth_eval at end of training. Defers to operator-gated "
-            "Phase B dispatch (CLAUDE.md operator-gate non-negotiable + II's "
-            "ANR/categorical landing memo). Default OFF; CI/dispatch wrappers "
-            "must pass this flag explicitly to acknowledge they own the "
-            "subsequent auth eval step."
+            "Skip auth_eval at end of training. Defers to the operator-gated "
+            "Phase B dispatch — the downstream consumer that owns auth_eval "
+            "(CLAUDE.md operator-gate non-negotiable + II's ANR/categorical "
+            "landing memo). Default OFF; CI/dispatch wrappers must pass this "
+            "flag explicitly to acknowledge they own the subsequent auth "
+            "eval step."
         ),
     )
     args = parser.parse_args(argv)
