@@ -89,6 +89,32 @@ C4  retired-era historical research prose, name never built or long superseded
 The manifest is exact to `(relpath, line, dotted)`. It cannot waive a file wholesale, so a
 future phantom citation added to any of these memos still fires.
 
+## Incident — sibling hunks absorbed into commit `10aba7dda7`
+
+Two concurrent agents were editing `src/tac/preflight.py` during this task. To avoid the
+absorption pattern, the strict flip was committed with the serializer's `--patch-file` intent
+manifest, which seeds a temp index from HEAD and ignores the working tree. The patch was built
+by filtering the working-tree diff for hunks containing the string `RE-FLIPPED STRICT`.
+
+**That key was not unique.** Both sibling agents used the identical phrase in their own
+wire-in comments, so the filter selected 4 hunks instead of 2, and the Catalog #300 (task
+#1274) and Catalog #305 (task #1275) strict flips landed under this task's commit message.
+
+- **No work was lost.** The siblings' substantive edits (memo frontmatter, waivers, the #305
+  scanner-heading fix) were committed by the siblings themselves; only their one-line
+  `strict=False -> strict=True` flips plus wire-in comments were mis-attributed.
+- **The build is intact.** All three gates were verified STRICT GREEN at live count 0 after
+  the commit: #287, `check_council_deliberation_declares_tier_in_frontmatter`, and
+  `check_substrate_design_memo_has_observability_surface_section`.
+- **Not reverted**, deliberately: the three flips are live and green, and reverting would have
+  destroyed sibling work that is correct, to fix an attribution error that this note repairs.
+
+Lesson, and it is the general one: `--patch-file` removes the working-tree leak but moves the
+whole risk onto the *discriminating power of the filter key*. A key drawn from shared
+vocabulary is not an identity. Filter on something only your own edit can contain — a task id,
+a symbol name you introduced — or select hunks by line range, and always diff the built patch
+against the intended change before committing.
+
 ## Honest limits
 
 - The manifest waives **citations**, it does not resurrect the designs. Nothing here claims any

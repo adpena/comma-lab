@@ -706,3 +706,11 @@ class TestNonModuleCitationEndToEnd:
             scan_research_memos=True,
         )
         assert any("tac.definitely_not_a_real_module" in v for v in violations)
+
+    def test_metasyntactic_with_trailing_component_is_not_excused(self):
+        # `tac.X.foo` claims structure below the placeholder; the cure is
+        # bounded to the bare 2-component form (round-2 review tightening).
+        line = "see `tac.X.foo` in the pattern"
+        dotted = "tac.X.foo"
+        end = line.index(dotted) + len(dotted)
+        assert _check_287b_is_non_module_citation(dotted, line, end) is False
