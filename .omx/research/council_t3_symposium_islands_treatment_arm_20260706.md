@@ -7,6 +7,29 @@ council_verdict: REVISE
 council_predicted_mission_contribution: frontier_breaking
 council_override_invoked: false
 axis_tag: "[macOS-MLX advisory] NON-PROMOTABLE — pointer 0.19110 UNMOVED (MEANS, not a score row)"
+# Catalog #300 v2-frontmatter backfill 2026-08-25: council_dissent +
+# council_assumption_adversary_verdict + council_decisions_recorded transcribed VERBATIM from
+# this memo's own sections "Lens A / Lens B", "Assumption-Adversary / recursive self-reflection
+# (#363)", "The GATE", "Reactivation / branch criteria", "#323 LADDER", "Warm-start verdict".
+# Frontmatter-only addition per the CLAUDE.md "Council hierarchy" backward-compatibility
+# clause (NO body mutation).
+council_dissent:
+  - member: loss-red-team-lens
+    verbatim: "took as given that #205 formed Lane(80%)+Movable(98.75%) islands via plain CE — this framed the 19% upside."
+  - member: schedule-curriculum-lens
+    verbatim: "COULD NOT verify the island-birth premise and found it CONTRADICTS the measured record: part_frac lane=0, movable=0 from ep0 under plain CE with no growth loss, in BOTH mod32cap and #205; the 80%/98.75% are likely within-flip of the BIG classes or a growth-loss-ON run."
+council_assumption_adversary_verdict:
+  - assumption: "#205 formed Lane(80%) + Movable(98.75%) islands via plain CE."
+    classification: CARGO-CULTED
+    rationale: "The two lenses DISAGREE on this load-bearing premise: the loss red-team took it as given, the schedule lens found it contradicts the measured part_frac record. Per Catalog #363 a verdict resting on an ASSUMED-class assumption is PROVISIONAL-PENDING-VERIFICATION — the REVISE verdict is provisional until the $0 checkpoint probe resolves it."
+    empirical_verification_status: ASSUMED_AWAITING_VERIFICATION
+council_decisions_recorded:
+  - "Neither arm launches today. The next action is a $0 checkpoint probe, NOT a GPU run."
+  - "THE GATE: run the trainer's own pure per-class functions (_evt_nucleus_counts L1599 -> _evt_nucleus_stats -> _evt_nucleus_satisfied) OFFLINE on the baseline EMA-shadow checkpoints — render -> argmax -> per-class part_frac + within-flip + big-3 d_seg vs gt_n600. NO training, NO flags, reads the BEST/stage npz not the live process. NOW at the ep225 ckpt, then across ep275/300/325/350."
+  - "Branch A — lane share >= ~10% (un-born) AND ep300 erosion signature present -> PROCEED-class: next arm = island-birth loss + `--curriculum-event-triggered --curriculum-nucleus-guard` (the PAIR), FRESH not warm-start, seg-only; prefer the analytic lane render-band #213; A/B vs the live baseline at matched epochs. This is a REVISE — the loss arm wasn't wrong, it was measured on the wrong (erosive) schedule."
+  - "Branch B — lane share <= ~2% (self-absorbing) OR no ep300 erosion -> DEFER-CORRECTED: islands are noise, the residual is ~98% BULK; redirect to bulk-CE deepening (tau nucleation #302) + Muon finishing (#270) + the analytic band. This DEFER is then MEASURED-reality, not conservatism."
+  - "#323 LADDER island-birth PURSUE (operator 2026-07-06), split by the transfer proof: Movable = SDF-dilation homotopy -> PROVEN transfer, GO independent of the probe; Lane = manifold-preserving along-tangent + ξ-phase, headroom sized by the probe's lane-share."
+  - "Warm-start verdict: FROM-SCRATCH. A CE-converged basin has ~0 gradient on islands; birth must happen during early plastic CE. Warm-start is reserved only for resuming a run that ALREADY has formed islands."
 ---
 
 # T3 SYMPOSIUM — islands-on treatment arm — VERDICT: REVISE (gated on one $0 probe)

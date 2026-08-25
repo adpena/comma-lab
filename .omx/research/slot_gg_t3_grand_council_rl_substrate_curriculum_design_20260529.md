@@ -8,6 +8,16 @@ council_verdict: PROCEED_WITH_REVISIONS
 council_predicted_mission_contribution: frontier_breaking
 council_override_invoked: true
 council_override_rationale: "Operator binding triple directive 2026-05-29 verbatim: (1) 'GG is approved' (2) 'don't forget that pr95 included an 8 step curriculum and since the . They've gotten even more complex' (3) 'Perhaps grand council should be involved with gg'. Per Catalog #300 Mission alignment Consequence 1 operator-frontier-override bypasses Slot CC STRATEGIC RESET #1 apparatus_maintenance cap=1-per-turn ONE WEEK constraint because GG = RL-on-substrate-AND-curriculum-design via PufferLib + 128 GB M5 Max IS canonical frontier_breaking enabler per Schmidhuber compression-as-intelligence + Daubechies wavelet multi-scale + Slot DD L14 PR95 8-stage curriculum HIGHEST FB-EV finding + Slot EE 1/100 substrate trainers honor canonical 3-stack finding. RL-policy auto-discovers substrate-AND-curriculum design space that hand-derived 8-stage PR95 + 10-15-stage PR100/101/102/103 winners reached canonically. Cap=2 in-flight burst per Slot CC operator-override (Slot FF complete + Slot GG newly spawned)."
+# Catalog #300 v2-frontmatter backfill 2026-08-25: council_dissent transcribed VERBATIM from
+# this memo's own §"Contrarian (sextet pact non-conservative-bias canonical)" (VETO + verdict)
+# and §"Quorum / Binding revisions" vote table. Frontmatter-only addition (NO body mutation).
+council_dissent:
+  - member: Contrarian
+    verbatim: "VETO: Any consensus that scope-locks Slot HH/II downstream implementation BEFORE running canonical MLX-LOCAL macOS-CPU advisory smoke on `tac.rl_substrate_iteration` baseline empirically demonstrating RL-policy CONVERGENCE within $0 envelope on Class A wavelet hyperparameter space. Contrarian verdict: PROCEED_WITH_REVISIONS — Phase 4 canonical SHARED helper DESIGN is acceptable; downstream Slot HH MUST land MLX-LOCAL macOS-CPU advisory smoke BEFORE any paid-GPU dispatch on RL-discovered substrate-AND-curriculum configurations. Per Catalog #325 14-day window discipline."
+  - member: Quantizr
+    verbatim: "PROCEED_WITH_REVISIONS (3-stack INVARIANT clamping per Slot EE Phase B framework)."
+  - member: grand-council seat (1 of 13 absent)
+    verbatim: "ABSENT — recorded in the tally (12-of-13 grand-council + 5-of-6 sextet = T3 quorum met per Catalog #346); no position submitted, no verbatim to transcribe."
 related_deliberation_ids:
   - t3_grand_council_strategic_reprioritization_symposium_rudin_daubechies_per_operator_4_message_cascade_directive_20260529
   - slot_dd_cross_pr_family_deep_research_l14_l70_20260529T080000Z

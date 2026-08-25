@@ -1,3 +1,56 @@
+---
+# Catalog #300 v2-frontmatter backfill 2026-08-25. Every field below is transcribed VERBATIM
+# from this symposium's own sections: the "Convening note (from the chair)" seating paragraph,
+# "PHASE 4 — VERBATIM DISSENT", "PHASE 5 — CONCRETE NEXT MOVES", and the "VOTE" table (which
+# itself states the tier: "per Catalog #325 + #300 this is a T2 deliberation by default").
+# Nothing is invented. Frontmatter-only addition per the CLAUDE.md "Council hierarchy"
+# backward-compatibility clause (NO body mutation).
+council_tier: T2   # VOTE section verbatim: "No tier elevation needed ... this is a T2 deliberation by default"
+council_topic: "discover the actual state from disk evidence; map the path forward; test whether the apparatus is serving or constraining the mission"
+council_attendees: [Carmack, Hotz, PR95Author, Fridrich, Selfcomp, TimeTraveler, Shannon, Contrarian, Assumption-Adversary, Yousfi, Daubechies]
+# Seating note (chair, verbatim): Yousfi was pulled in for one specific question and Daubechies
+# for another; Tao, Boyd, Mallat, MacKay, Hassabis, Tishby and Atick were deliberately NOT
+# seated ("we had no question that needed their specific blade").
+council_quorum_met: true   # VOTE section verbatim: "Quorum met." Recusals: none.
+council_verdict: PROCEED   # 5 moves: moves 1/2/5 unanimous 8-of-8; moves 3 and 4 carried 6-2 and 7-1
+council_predicted_mission_contribution: frontier_breaking
+# Per-move mission contributions differ and are recorded in the VOTE table: moves 1, 2, 4 =
+# frontier_breaking; moves 3, 5 = apparatus_maintenance. The single frontmatter value records
+# the dominant class (3 of 5 moves, and the two highest-leverage ones).
+council_override_invoked: false   # VOTE section verbatim: "Operator override not invoked."
+council_dissent:
+  - member: Contrarian
+    verbatim: "If this symposium adjourns and a PR has not been opened with the 0.19198 archive by end of day tomorrow, the symposium itself is apparatus-overhead. We have produced another memo. The CPU score is still unsubmitted."
+  - member: PR 95 author
+    verbatim: "I do not know if Claude can write 605 LOC of coherent score-aware codec the way one human can. I think the council should be honest that this is unproven. If Claude cannot, then sub-0.18 may not be reachable for this project regardless of apparatus quality. That is a real possibility the council should not paper over."
+  - member: Fridrich
+    verbatim: "Slots FF/RR/TT/X/YY/AAA/CCC and the in-flight Slot CCC HUGO are well-executed inverse-steganalysis primitives applied to a problem that does not have an unknown detector. They will not crack sub-0.18. Reroute to detector-aware coordinate descent on the actual SegNet+PoseNet gradient."
+  - member: Assumption-Adversary
+    verbatim: "If sub-0.18 has no exogenous value beyond 0.19198, the highest-EV move is submit at 0.19198 and stop. The apparatus has not asked the operator whether sub-0.18 is a research goal, a leaderboard goal, or a personal goal. The answer changes the next two weeks of work."
+  - member: Hotz
+    verbatim: "Pick. Both is the failure mode of this week. Codex's rate-attack has produced 74 real bytes. Every parallel-spawn audit subagent has produced zero. Choose."
+council_assumption_adversary_verdict:
+  - assumption: "sub-0.18 is the right target."
+    classification: CARGO-CULTED
+    rationale: "Assumption-Adversary (PHASE 4, verbatim above): the apparatus has never asked the operator whether sub-0.18 is a research goal, a leaderboard goal, or a personal goal. Move 5 (unanimous 8-of-8) is the resolution: confirm the two flagged assumptions with the operator."
+    empirical_verification_status: ASSUMED_AWAITING_VERIFICATION
+  - assumption: "The apparatus is serving the mission (the framing the operator's prompt asked the symposium to test)."
+    classification: CARGO-CULTED
+    rationale: "PHASE 3.3 finding, converged: the apparatus IS partially constraining the mission — the operator's prompt was correct to test this. PHASE 6 records the meta-finding; move 3 (pause the 15-item audit cascade after in-flight waves complete) is the routed response, carried 6-2 with Shannon and the Assumption-Adversary wanting only a partial pause."
+    empirical_verification_status: VERIFIED_VIA_SOURCE_INSPECTION
+  - assumption: "A PR-95-sister packet is feasible in this team's actual cadence."
+    classification: CARGO-CULTED
+    rationale: "PHASE 3 verbatim: 'The Contrarian and PR 95 author disagree on whether a PR-95-sister packet is feasible in the team's actual cadence.' Move 4 carried 7-1 (Contrarian wanted operator approval first) and is explicitly scope-locked to ONE focused subagent so the disagreement is resolved by measurement rather than by consensus."
+    empirical_verification_status: ASSUMED_AWAITING_VERIFICATION
+council_decisions_recorded:   # PHASE 5 moves + the VOTE tally on each
+  - "Move 1 — Submit the CPU frontier PR today or tomorrow. 8-of-8 unanimous (Contrarian: 'today, not tomorrow'). frontier_breaking."
+  - "Move 2 — Continue codex's rate-attack cascade. Do NOT add parallel work to it. 8-of-8 unanimous. frontier_breaking."
+  - "Move 3 — Pause the 15-item audit cascade after the currently-in-flight waves (9, 10) complete. 6 PROCEED / 2 DEFER (Shannon + Assumption-Adversary wanted a partial pause with full resume after Move 4). apparatus_maintenance."
+  - "Move 4 — Attempt exactly one (1) coherent PR-95-sister packet, scope-locked, one focused subagent. 7 PROCEED / 1 DEFER (Contrarian wanted operator approval first). frontier_breaking."
+  - "Move 5 — Confirm with the operator the two assumptions the Assumption-Adversary flagged. 8-of-8 unanimous. apparatus_maintenance."
+  - "ADDENDUM (deliberate non-actions, so the apparatus does not constrain the answer): no new canonical equation, no new canonical anti-pattern, no new catalog number, no per-substrate symposium memo, no retroactive sweep memo, no lane-registry update, no probe_outcomes row, no sister subagent. The symposium IS the deliverable; the five moves are the operator-routable output."
+---
+
 # GRAND COUNCIL SYMPOSIUM — DISCOVERS THE CONTEXT, MAPS THE WAY FORWARD
 
 **Convened**: 2026-05-29T23:29:45Z

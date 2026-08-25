@@ -3,9 +3,49 @@ council_tier: T3
 council_topic: clean-run config review (first non-confounded n600 witness measurement post-18-confound-cleanup)
 council_attendees: [Shannon, Dykstra, Ballé, Assumption-Adversary, Contrarian, PR95-author, Yousfi, Fridrich, Rudin, Daubechies]
 council_quorum_met: true
-council_verdict: PENDING_SYNTHESIS
+# Catalog #300 v2-frontmatter backfill 2026-08-25: `council_verdict` was authored as
+# PENDING_SYNTHESIS while the three benches were still out. This memo's own SYNTHESIS section
+# ("═══ SYNTHESIS — T3 VERDICT: PROCEED_WITH_REVISIONS (unanimous 3/3 benches) ═══") records the
+# COMPLETED verdict, so the frontmatter was stale relative to its own body. Corrected to the
+# body's verdict; the original authored value `PENDING_SYNTHESIS` is preserved verbatim in this
+# comment per Catalog #110/#113 HISTORICAL_PROVENANCE. Frontmatter-only; NO body mutation.
+council_verdict: PROCEED_WITH_REVISIONS
 council_predicted_mission_contribution: frontier_protecting
 council_override_invoked: false
+# council_dissent + council_assumption_adversary_verdict + council_decisions_recorded below are
+# transcribed VERBATIM from this memo's own BENCH 1 / BENCH 2 / SYNTHESIS / RECURSIVE
+# SELF-REFLECTION sections. Frontmatter-only addition (NO body mutation).
+council_dissent:
+  - member: Ballé
+    verbatim: "eik-OFF baseline risks reading 'won't descend' when the true cause is elsewhere — run eik-off baseline AND eik-0.01 same-seed A/B; the R-roundtrip d_seg gap arbitrates, no load-bearing eikonal verdict from one arm."
+  - member: Contrarian
+    verbatim: "FORK on the fixed-β=4 edit — is the argv check actually available? [RESOLVED in-memo: witness_autoconfig.py:549 shows annealed-hosc is a SEALED-205 delta, NOT part of proven_base; fixed-β=4 was never the descending config; the edit stands.]"
+council_assumption_adversary_verdict:
+  - assumption: "`proven_base` is a clean measurement surface after the 18-confound cleanup."
+    classification: CARGO-CULTED
+    rationale: "BENCH 2 meta-finding, all 3 benches converge: the cleanup fixed the CODE, but two confounds rode the explicit CONFIG FLAGS into proven_base — where the L2 gates (which check argparse DEFAULTS) cannot see them. proven_base is confound-cleaned on 16 axes and re-poisoned on 2. 'Clean of the session's 18 confounds' != 'clean measurement'."
+    empirical_verification_status: VERIFIED_VIA_SOURCE_INSPECTION
+  - assumption: "--verdict-pairs 96 is an acceptable cost control."
+    classification: CARGO-CULTED
+    rationale: "CHARGE 1 CONFIRMED VERIFIED-VIA-SOURCE (witness_autoconfig.py:336, :441). Gate #401 passed only because it checks the DEFAULT (0) while the config OVERRIDES to 96. Scoring best-ckpt on 96/600 is 2.5x noisier and induces the optimizer's curse."
+    empirical_verification_status: VERIFIED_VIA_SOURCE_INSPECTION
+  - assumption: "fixed hosc-β=4 is the config that produced the descending d_seg numbers."
+    classification: CARGO-CULTED
+    rationale: "CHARGE 2 CONFIRMED VERIFIED-VIA-SOURCE, highest-leverage: levelset `_hosc_beta_for_epoch` returns None without --hosc-beta-end (1982-1985), the loop only updates if non-None (5895) => constant β=4; witness_autoconfig.py:549 shows annealed-hosc is a SEALED-205 DELTA not part of proven_base. The runs that descended used the ANNEALED delta."
+    empirical_verification_status: VERIFIED_VIA_SOURCE_INSPECTION
+  - assumption: "eikonal-OFF is the optimal baseline."
+    classification: INFERRED_FROM_DOMAIN_LITERATURE
+    rationale: "Score-orthogonality is sound but the eik-off vs eik-0.01 arbitration is the pre-registered A/B, not yet measured => verdict edit #4 is PROVISIONAL-pending the A/B, correctly framed as baseline+arm, not a kill."
+    empirical_verification_status: INFERRED_FROM_DOMAIN_LITERATURE
+council_decisions_recorded:
+  - "MANDATORY edit 1 (all benches): --verdict-pairs 96 -> --verdict-pairs 0 (n600; kills 2.5x noise + optimizer's-curse selection bias). VERIFIED-VIA-SOURCE."
+  - "MANDATORY edit 2: --hosc-beta 4.0 (fixed) -> --hosc-beta 1.0 --hosc-beta-end 4.0 (annealed) OR --activation step_basis. VERIFIED-VIA-SOURCE that the levelset loop runs constant β=4 (CLAUDE.md-forbidden)."
+  - "MANDATORY edit 3: --l7-start-epoch 600 -> 1001 (disable the measured d_seg-decoupling defect)."
+  - "HIGH edit 4 (bench 1+3): --eikonal-weight 0.01 -> 0 for the BASELINE; Ballé DISSENT recorded — run the eik-off vs eik-0.01 same-seed A/B, the R-roundtrip d_seg gap arbitrates."
+  - "HIGH edit 5: --n-dir-freqs 2 -> 4 and --freq-along 4 -> 8 (the #1 measured lever; 3.2x along-tangent deficit; ~0 byte)."
+  - "HIGH edit 6: drop --lane-prior-phi1 --lane-prior-phi1-mode replace (measured no-op); keep --structured-init-include-lane and add a part_frac[lane]>0 assert."
+  - "KEEP (unanimous): FRESH-from-scratch NOT resume; rollback default; C3 eik-norm; per-group-clip; closed-loop liveness; chroma; w_pose=0 (label d_seg-COMPONENT, no pointer claim); mod-dim 26; softmax-temp anneal; muon@726; length-weight 0.001."
+  - "FOLLOW-UP BUG-CLASS FIX (PR95-author): new preflight gate refusing levelset `--activation hosc` without `--hosc-beta-end` or a `# FIXED_BETA_OK:` waiver — extinct the base-vs-levelset safety-default-divergence class permanently."
 ---
 
 # T3 Grand Council Symposium — clean-run config review (2026-07-05)

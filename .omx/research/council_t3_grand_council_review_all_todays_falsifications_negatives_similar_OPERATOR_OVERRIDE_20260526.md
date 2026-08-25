@@ -60,6 +60,49 @@ council_override_consequences_acknowledged:
   - "BYPASSES STAND-DOWN heuristic per Catalog #299 gate consolidation discipline"
   - "PRESERVES maximum-signal preservation (per-member assumption surfacing + dissent + assumption-adversary classification + Round 2 self-reflection per Catalog #363 + continual-learning anchor emission)"
   - "TRIGGERS 30-day score-impact retrospective per Catalog #300 Mission alignment Consequence 3 (deferred_substrate_retrospective_due_utc set below)"
+# Catalog #300 v2-frontmatter backfill 2026-08-25: council_dissent +
+# council_assumption_adversary_verdict + council_decisions_recorded are transcribed from THIS
+# memo's own body — §2 (per-member operating-within assumption surfacing, 15 seats, each with
+# an inline Assumption-Adversary verdict), §3 (Assumption-Adversary cross-deliberation verdict
+# table + the 4-value empirical_verification_status taxonomy), and §7 (operator-routable top-5).
+# The full per-seat record stays in the body; these fields are the machine-readable index the
+# continual-learning posterior / cadence-audit consumers need. Representative entries only,
+# each verbatim-sourced; see the cited sections for the complete set. Frontmatter-only
+# addition per the CLAUDE.md "Council hierarchy" backward-compatibility clause (NO body mutation).
+council_dissent:
+  - member: Contrarian
+    verbatim: "Today's 32-event corpus includes 5 PARADIGM-VALIDATED candidates (V10 + V14 + V15 + V31 + V32) marked PROMOTE-eligible. The cargo-cult risk: the apparatus may treat 'PARADIGM-VALIDATED at L1 MLX-local OR at single-axis rate-only measurement' as equivalent to 'PROMOTABLE'. Per CLAUDE.md 'Submission auth eval — BOTH CPU AND CUDA', NONE of the 5 have YET landed paired CPU+CUDA contest-axis empirical anchors on the actual stacked archive bytes. The PROMOTION gate is the paired-axis empirical anchor on the canonical fec6 frontier."
+  - member: Assumption-Adversary
+    verbatim: "Sister T3 #1347's 7-verdict scope OMITTED 25 of today's verdict-class events. The shared assumption operating across T3 #1347 was 'the 7 operator-named verdicts represent the complete adjudication scope for today.' That is HARD-EARNED-NARROWED-OPERATOR-SCOPE, and CARGO-CULTED at the implicit 'no further sister adjudication is needed for the residual corpus.'"
+council_assumption_adversary_verdict:
+  - assumption: "The 0-order entropy paradigm on the K=16 FEC6 selector stream IS saturated within 0.0284 bits/pair of the Shannon floor (3.2400 vs 3.2116); FEC8-static 1st-order Markov (-4B) AND FEC8 static 2nd-order true Markov VARIANT-A (+1.64e-5) extend the achievable region along the context axis only. (Shannon LEAD, §2.1)"
+    classification: HARD-EARNED
+    rationale: "HARD-EARNED-EMPIRICALLY-VERIFIED-AT-INFORMATION-THEORETIC-LEVEL — cite Variant C STEP-1 5-way triangulation in T3 #1347 V4 + commit 0a649bee9 FEC8 2nd-order anchor."
+    empirical_verification_status: VERIFIED_VIA_EMPIRICAL_ANCHOR
+  - assumption: "Sister T3 #1347's 7-verdict scope is the complete T3-adjudication-eligible scope for 2026-05-26. (Assumption-Adversary, §2.8 + §3)"
+    classification: CARGO-CULTED
+    rationale: "PARTIALLY-HARD-EARNED at the operator-named scope, PARTIALLY-CARGO-CULTED at 'no further sister adjudication is needed': V19-V22 Cascade C' recovery sequence, V25 DRIFT-VS-DEPTH alpha=0.47 sub-linear, V27 Hinton MLX-first saturation, V29-V30 Z7-Mamba-2 v2 L1+L2 stability, and V31-V32 FEC8 Markov family promotions are NOT adjudicated. The operator-frontier-override is the canonical disambiguator ratifying that fresh deliberation IS warranted."
+    empirical_verification_status: VERIFIED_VIA_SOURCE_INSPECTION
+  - assumption: "The 5 PARADIGM-VALIDATED candidates are PROMOTABLE. (Contrarian, §2.7)"
+    classification: CARGO-CULTED
+    rationale: "HARD-EARNED-AT-CUSTODY-LEVEL for the correction: the canonical PROMOTION discipline IS the paired-CPU+CUDA anchor on the actual stacked archive, NOT the L1 PARADIGM-VALIDATED tag. None of the 5 had completed the bind at deliberation time."
+    empirical_verification_status: VERIFIED_VIA_SOURCE_INSPECTION
+  - assumption: "Higher-order Markov on a 600-symbol stream diminishes returns linearly with context depth. (Daubechies CO-LEAD, §2.4 — the cargo-cult to refute)"
+    classification: CARGO-CULTED
+    rationale: "HARD-EARNED-AT-INFORMATION-THEORETIC-LEVEL for the refutation: FEC8 2nd-order (+1.64e-5) being WORSE than 1st-order (-4B) indicates integer-codeword boundary saturation, NOT a Markov-order ceiling. FEC8 2nd-order is THE empirical disambiguator."
+    empirical_verification_status: VERIFIED_VIA_EMPIRICAL_ANCHOR
+  - assumption: "Full §2 per-seat record — 15 seats (Shannon / Dykstra / Rudin / Daubechies / Yousfi / Fridrich / Contrarian / Assumption-Adversary / Carmack / Hassabis / PR95Author / Mallat / Hinton / TimeTraveler / Boyd), each stating its operating-within assumption with an inline Assumption-Adversary classification; plus the §3 cross-deliberation verdict table and the §3.2 PROVISIONAL-PENDING-VERIFICATION list."
+    classification: SEE_BODY
+    rationale: "Not condensable without signal loss; the body is authoritative. This entry exists so a machine consumer knows the complete record lives at §2 + §3 of this memo rather than being absent."
+    empirical_verification_status: VERIFIED_VIA_SOURCE_INSPECTION
+council_decisions_recorded:
+  - "op-routable #1 (HIGHEST): approve the V14 Cascade A FEC10 hybrid P11 paired CPU+CUDA empirical anchor on the stacked archive (39c76755b + canonical equation #344 promotion gate). $0.50-1.00, 30-60 min, frontier_pursuit."
+  - "op-routable #2 (HIGHEST): approve the V15 UNIWARD 7th-order paired CPU+CUDA empirical anchor on the stacked archive (87bd1c355). $0.50-1.00, 30-60 min, frontier_pursuit."
+  - "op-routable #3 (HIGH): approve the V31+V32 FEC8 Markov family canonical-equation registry PROMOTION (0a649bee9 + 6474afde7; register markov_context_selector_stream_compression_savings_v1 empirical anchors). $0, minutes."
+  - "op-routable #4 (HIGH): approve the NSCS06 v8 #1 dispatch per T3 #1335 RANKED ORDERING #1 — all sister REVISION 1+2 blockers cleared; ready for the 4-arm paired auth_eval. $0.50-1.00, 30-60 min, plateau_adjacent."
+  - "op-routable #5 (MEDIUM): approve the V22 Cascade C' WAVE-3 paired-CUDA rc=0 explicit per-axis-hardware-score row verification per Catalog #127 (PROVISIONAL until row-verified). $0, 15 min."
+  - "Operator-attention-budget acknowledgment: 7 T3s in a single day = STOP-AND-CONSOLIDATE alert STILL active. The operator-frontier-override was scoped to THIS deliberation; subsequent T3s today require a fresh operator-frontier-override OR a cadence-recovery period."
+  - "30-day score-impact retrospective scheduled per Catalog #300 Mission-alignment Consequence 3 (deferred_substrate_retrospective_due_utc 2026-06-25, recorded above)."
 deferred_substrate_id: null
 deferred_substrate_retrospective_due_utc: 2026-06-25
 horizon_class: plateau_adjacent

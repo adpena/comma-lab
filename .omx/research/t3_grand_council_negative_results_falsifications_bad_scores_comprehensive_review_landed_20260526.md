@@ -63,6 +63,47 @@ council_override_consequences_acknowledged:
   - "PRESERVES maximum-signal preservation (per-member assumption surfacing + dissent + assumption-adversary classification + Round 3 self-reflection per Catalog #363 + continual-learning anchor emission)"
   - "TRIGGERS 30-day score-impact retrospective per Catalog #300 Mission alignment Consequence 3 (deferred_substrate_retrospective_due_utc set below)"
   - "EXTENDS sister T3 OPERATOR-OVERRIDE 23:59Z (32-event Round 2) to Round 3 self-reflection per Catalog #363 + 4 NEW events landed AFTER (V14-V2 / V15 paired-real / NSCS06v8.1 HALT / DROP-MANY audit) + META-pattern synthesis across 36-event corpus"
+# Catalog #300 v2-frontmatter backfill 2026-08-25: council_dissent +
+# council_assumption_adversary_verdict + council_decisions_recorded are transcribed VERBATIM
+# from THIS memo's own §11 (Final verdict — which literally records "Dissent: zero" and an
+# enumerated "Decisions recorded" list) and §2 (per-member Round-3 operating-within assumption
+# surfacing, 15 seats, each with an inline Assumption-Adversary verdict) + §1.1 (the Round-3
+# verification cycle over Round 2's PROVISIONAL verdicts). Frontmatter-only addition per the
+# CLAUDE.md "Council hierarchy" backward-compatibility clause (NO body mutation).
+council_dissent: []   # §11 verbatim: "Dissent: zero verbatim dissent recorded by Round 3
+                      # (sister T3 23:59Z surfaced 7 revisions; Round 3 EXTENDS those by adding
+                      # 4 NEW events V33-V36 verdicts)." Recorded as an explicit empty list —
+                      # zero-dissent is a MEASURED state here, not an omission.
+council_assumption_adversary_verdict:
+  - assumption: "V14-V2 FRONTIER-CROSSING -7.66e-6 [contest-CPU] ratifies the FEC10 hybrid -13B rate-axis savings prediction; the apparent contradiction with V14's NOT-PR111 verdict resolves at the wrong-baseline level. (Shannon LEAD, §2.1)"
+    classification: HARD-EARNED
+    rationale: "HARD-EARNED-EMPIRICALLY-VERIFIED-AT-INFORMATION-THEORETIC-LEVEL via direct measurement — the apples-to-apples comparison preserved seg+pose+rate components within floating-point noise and the rate-axis delta MATCHES the predicted -8.66e-6 within 1e-6."
+    empirical_verification_status: VERIFIED_VIA_EMPIRICAL_ANCHOR
+  - assumption: "V15's IMPL-FALSIFICATION at the v1 inline-LUT 933KB fixture means the Dykstra-feasibility intersection is statistically indistinguishable from EMPTY at this configuration. (Dykstra CO-LEAD, §2.2)"
+    classification: HARD-EARNED
+    rationale: "HARD-EARNED-EMPIRICALLY-VERIFIED-AT-FEASIBILITY-LEVEL — the empty-intersection finding RECURS across the 5th + 6th + 7th-MLX + V15-paired-real trajectory. Canonical Dykstra-feasibility falsification anchor for the SPECIFIC configuration; PARADIGM-INTACT."
+    empirical_verification_status: VERIFIED_VIA_EMPIRICAL_ANCHOR
+  - assumption: "Round-3 PROMOTE-to-PR111 on a single paired-CPU+CUDA anchor is sufficient. (Contrarian, §2.7)"
+    classification: CARGO-CULTED
+    rationale: "Contrarian CARGO-CULT-RISK flag: structurally permissive. ROUND-3 CONTRARIAN POSITION is PROMOTE-RATIFIED-PENDING-SISTER-REPLICATION-SMOKE (a second paired dispatch on the EXACT V14-V2 archive sha 0a3abfe645c4fac0 reproducing -7.66e-6 CPU / -8.66e-6 CUDA within 1e-6). Assumption-Adversary: HARD-EARNED-AT-CUSTODY-LEVEL — replication smoke is recommended-not-required per Catalog #246."
+    empirical_verification_status: VERIFIED_VIA_EMPIRICAL_ANCHOR
+  - assumption: "Round-2's 4 PROVISIONAL-PENDING-VERIFICATION verdicts can be resolved by the Round-3 verification cycle. (Assumption-Adversary, §2.8 + §1.1)"
+    classification: HARD-EARNED
+    rationale: "HARD-EARNED-AT-CANONICAL-ROUND-3-PROTOCOL-LEVEL — the cycle PROMOTED 2 to RATIFIED (V14->V14-V2; V22->WAVE-7 APPROACHING), DOWNGRADED 1 to IMPLEMENTATION-LEVEL-FALSIFIED (V15), and PRESERVED 1 PROVISIONAL (V25 DRIFT-VS-DEPTH — no NEW anchor at the 3000-5000ep extrapolation range). SEAL-PROGRESS: clean-pass counter 1 of 3."
+    empirical_verification_status: VERIFIED_VIA_SOURCE_INSPECTION
+  - assumption: "Full §2 per-seat Round-3 record — 15 seats (Shannon / Dykstra / Rudin / Daubechies / Yousfi / Fridrich / Contrarian / Assumption-Adversary / Carmack / Hassabis / PR95Author / Mallat / Hinton / TimeTraveler / Boyd), each with an inline Assumption-Adversary classification and Catalog #363 empirical_verification_status."
+    classification: SEE_BODY
+    rationale: "Not condensable without signal loss; the body is authoritative. This entry exists so a machine consumer knows the complete record lives at §2 of this memo rather than being absent."
+    empirical_verification_status: VERIFIED_VIA_SOURCE_INSPECTION
+council_decisions_recorded:   # §11 "Decisions recorded" — transcribed verbatim, items 1-8
+  - "V14-V2 FRONTIER-CROSSING PR111 CANDIDATE PROMOTE-RATIFIED (Round 3 PROMOTE per Catalog #313)"
+  - "V15 paired-real-fixture IMPL-LEVEL FALSIFIED at v1 inline-LUT 933KB; PARADIGM-INTACT (Round 3 DEFER per Catalog #307 + #313)"
+  - "WAVE-7 APPROACHING band (5-50); routes to WAVE-8 multi-axis optimization (Round 3 PARTIAL per Catalog #313)"
+  - "NSCS06v8.1 HALT canonical MVP-first phasing exemplar; PARADIGM-INTACT; awaits arith-coding alternative reducer (Round 3 DEFER per Catalog #313)"
+  - "DROP-MANY apparatus state audit RATIFIED; routes to BUILD-1 + BUILD-4 sister subagents (Round 3 PARTIAL per Catalog #313)"
+  - "3 canonical-equation FORMALIZATION_PENDING candidates proposed (wrong_baseline_substitution_score_amplification_v1 / operating_point_pose_seg_marginal_crossover_threshold_v1 / implementation_level_falsification_recovery_iteration_cadence_v1)"
+  - "5 operator-routable next steps priority-ranked (V14-V2 PR111 candidacy / WAVE-8 multi-axis / NSCS06v8.1 arith-coding / V15 finer LUT granularity / 5D canvas BUILD-1+BUILD-4)"
+  - "6 META-patterns synthesized across the 36-event corpus (WRONG-BASELINE / OPERATING-POINT-SATURATION / RECIPE-vs-TRAINER-STATE-DIVERGENCE / SYNTHETIC-FALLBACK CARGO-CULT / PREDICTED-BAND-FROM-RANDOM-INIT / IMPLEMENTATION-FALSIFIED-MISTAKEN-FOR-PARADIGM-KILL)"
 deferred_substrate_id: null
 deferred_substrate_retrospective_due_utc: 2026-06-25
 horizon_class: plateau_adjacent

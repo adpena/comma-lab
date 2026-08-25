@@ -1,3 +1,24 @@
+---
+# Catalog #300 v2-frontmatter backfill 2026-08-25. Every field below is transcribed VERBATIM
+# from this memo's own header prose ("Council tier" / "Council attendees" / "Council quorum met"
+# / "Council verdict") and its per-member assumption-surfacing sections. Nothing is invented.
+# Frontmatter-only addition per the CLAUDE.md "Council hierarchy" backward-compatibility clause
+# (NO body mutation). T1 working group: the T2+ fields (assumption-adversary verdict, mission
+# contribution, override) are not required by Catalog #300 at this tier; the memo does carry an
+# AssumptionAdversary seat whose classifications live in the body.
+council_tier: T1
+council_topic: "Slot RR remediation per Slot EEE 6-axis honesty audit finding 1 FAKE classification — rename apply_pose_axis_null_projection_to_pr110_archive to build_pose_axis_null_projection_menu_for_pr110_archive + add a NEW canonical bind helper for REAL frame perturbation on REAL upstream/videos/0.mkv decoded frames via tac.inverse_steganalysis_real_video_mlx"
+council_attendees: [Shannon, Dykstra, Fridrich, AssumptionAdversary]
+council_quorum_met: true      # memo verbatim: "true (4-of-4 attendees)"
+council_verdict: PROCEED      # memo verbatim: "PROCEED-unconditional (no dissent; ...)"
+council_dissent: []           # memo verbatim: "no dissent" — an explicit empty list, not an omission
+council_decisions_recorded:
+  - "Rename `apply_pose_axis_null_projection_to_pr110_archive` -> `build_pose_axis_null_projection_menu_for_pr110_archive` so the function name reflects its actual menu-builder behavior (Slot EEE finding 1 FAKE classification, NO-FAKE class 1: returns-canonical-markers-without-doing-work)."
+  - "Add a NEW canonical bind helper `apply_pose_axis_null_projection_via_canonical_real_video_mlx_to_pr110_archive` routed through the canonical shared helper `tac.inverse_steganalysis_real_video_mlx`, so the APPLY name performs REAL frame perturbation on REAL upstream/videos/0.mkv decoded frames."
+  - "Follow the canonical 2-part migration template proven by Slot YY HILL (commit 32a70c051, 2026-05-29)."
+  - "Classification per Catalog #307: IMPLEMENTATION-LEVEL false-authority at the function-name-vs-behavior contract; the PARADIGM (Fridrich-Yousfi inverse-steganalysis pose-axis null-projection) is INTACT."
+---
+
 # Council T1 working group: Slot RR FAKE rename + REAL perturbation via canonical helper
 
 **Council tier:** T1 working group (4-voice; PROCEED-unconditional per Slot EEE
