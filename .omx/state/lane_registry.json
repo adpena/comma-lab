@@ -2604,8 +2604,9 @@
       "id": "lane_zeta_self_compress_renderer",
       "level": 1,
       "name": "\u03b6 Full-Renderer Self-Compression NN",
-      "notes": "",
-      "phase": 1.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 1.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -4524,7 +4525,7 @@
       "id": "lane_12_v2_nerv_as_renderer",
       "level": 1,
       "name": "Lane 12-v2 NeRV-as-renderer",
-      "notes": "Re-scoped from Lane 12 mask-only per HNeRV retrospective lesson 5. Phase A: design + scaffold. Phase B (deferred): $40 CUDA dispatch on score-aware loss. 5 reactivation preconditions documented in design memo .omx/research/lane_12_v2_nerv_as_renderer_phase_a_design_20260509.md $6. archive_grammar=L12V_monolithic_single_file_0_bin parser_section_manifest=ARCHIVE_GRAMMAR_constant_in_module inflate_runtime_loc_budget=100 runtime_dep_closure=torch+brotli export_format=monolithic_single_file_0_bin_with_int8_per_tensor_fp16_scales score_aware_loss=gradient_through_FastViT-T12_PoseNet_and_EfficientNet-B2_SegNet_on_upstream_videos_0_mkv bolt_on_loc_budget=350 no_op_detector_planned=true_via_test_archive_roundtrip_via_inflate_module",
+      "notes": "Re-scoped from Lane 12 mask-only per HNeRV retrospective lesson 5. Phase A: design + scaffold. Phase B (deferred): $40 CUDA dispatch on score-aware loss. 5 reactivation preconditions documented in design memo .omx/research/lane_12_v2_nerv_as_renderer_phase_a_design_20260509.md $6. archive_grammar=L12V_monolithic_single_file_0_bin parser_section_manifest=ARCHIVE_GRAMMAR_constant_in_module inflate_runtime_loc_budget=100 runtime_dep_closure=torch+brotli export_format=monolithic_single_file_0_bin_with_int8_per_tensor_fp16_scales score_aware_loss=gradient_through_FastViT-T12_PoseNet_and_EfficientNet-B2_SegNet_on_upstream_videos_0_mkv bolt_on_loc_budget=350 no_op_detector_planned=true_via_test_archive_roundtrip_via_inflate_module | research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
       "phase": 1.0,
       "reactivation_criteria": [
         "self-contained contest runtime",
@@ -4532,7 +4533,8 @@
         "PR95 PR100 training-stack parity or documented deviation",
         "exact packet builder plus no-op proof",
         "paired contest-CUDA and contest-CPU once shippable"
-      ]
+      ],
+      "research_only": true
     },
     {
       "gates": {
@@ -6317,8 +6319,9 @@
       "lane_class": "calibration_diagnostic",
       "level": 1,
       "name": "Non-HNeRV cluster drift calibrations (9 classes)",
-      "notes": "Beyond-Phase-4 #3. SKETCH-only (tools/calibrate_non_hnerv_drift_class.py FUTURE). 9 uncalibrated arch classes carry 4x wider drift bands.",
-      "phase": 4.0
+      "notes": "Beyond-Phase-4 #3. SKETCH-only (tools/calibrate_non_hnerv_drift_class.py FUTURE). 9 uncalibrated arch classes carry 4x wider drift bands. | research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 4.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -17011,8 +17014,9 @@
       "id": "lane_fields_medal_substrate_design_wave_20260512",
       "level": 1,
       "name": "Fields-medal grand council substrate design + implementation wave (GGG)",
-      "notes": "",
-      "phase": 3.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 3.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -18912,8 +18916,9 @@
       "id": "lane_fix_i_d2_modal_upload_race_policy_20260512",
       "level": 1,
       "name": "FIX-I (D2): Modal upload-race policy + STRICT gate",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -19117,8 +19122,9 @@
       "id": "lane_fix_j_substrate_compressai_inventory_wire_in_20260512",
       "level": 1,
       "name": "FIX-J: substrate + CompressAI canonical inventory wire-in",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -19158,8 +19164,9 @@
       "id": "lane_wave_a_1_canonical_scorer_helper_14_substrate_migration_20260512",
       "level": 1,
       "name": "WAVE-A-1: canonical scorer-loss helper + 14 sister real-scorer regression tests",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -19363,8 +19370,9 @@
       "id": "lane_wave_b_substrate_ranking_sweep_20260512",
       "level": 1,
       "name": "WAVE-B: 17-substrate first-anchor empirical ranking sweep",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -19551,8 +19559,9 @@
       "id": "lane_wave1_self_compress_nn_trainer_build_20260512",
       "level": 1,
       "name": "WAVE-1-B self_compress_nn trainer + recipe + driver build",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -22589,8 +22598,9 @@
       "id": "lane_a1_plus_lapose_composition_20260513",
       "level": 1,
       "name": "A1 + LAPose composition substrate",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -22879,8 +22889,9 @@
       "id": "lane_a1_plus_wavelet_residual_retarget_20260513",
       "level": 1,
       "name": "A1 + wavelet residual sidecar retarget",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -23168,8 +23179,9 @@
       "id": "lane_beat_pr95_curriculum_substrate_training_design_20260513",
       "level": 1,
       "name": "Beat-PR95 curriculum+substrate+training design",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -23291,8 +23303,9 @@
       "id": "lane_pr95_artifact_lora_dora_surgery_20260513",
       "level": 1,
       "name": "PR95 artifact LoRA/DoRA surgery + mathematical decomposition",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -23824,8 +23837,9 @@
       "id": "lane_time_traveler_l5_autonomy_substrate_20260513",
       "level": 1,
       "name": "Time-traveler L5 autonomy substrate (95-110 KB, active planning band null)",
-      "notes": "active_planning_band=null; retired_predicted_band=0.150-0.170; prediction_band_rank_reward_suppressed=true; requires L5 v2 C1/Z5/TT5L probe, paired CPU/CUDA axis plan, and empirical anchor before architecture lock or score/rank authority",
-      "phase": 2.0
+      "notes": "active_planning_band=null; retired_predicted_band=0.150-0.170; prediction_band_rank_reward_suppressed=true; requires L5 v2 C1/Z5/TT5L probe, paired CPU/CUDA axis plan, and empirical anchor before architecture lock or score/rank authority | research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -24357,8 +24371,9 @@
       "id": "lane_5_parallel_substrate_dispatch_orchestrator_20260513",
       "level": 1,
       "name": "5-parallel substrate dispatch orchestrator",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -24686,8 +24701,9 @@
       "id": "lane_sar_coherent_pose_pairs_substrate_20260513",
       "level": 1,
       "name": "L2 SAR coherent pose-pair integration",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -24727,8 +24743,9 @@
       "id": "lane_wyner_ziv_cooperative_receiver_substrate_20260513",
       "level": 1,
       "name": "Wyner-Ziv cooperative-receiver substrate",
-      "notes": "Registered during recursive hardening so WZ is visible to composition rankers and operator inventory; no contest score claim.",
-      "phase": 2.0
+      "notes": "Registered during recursive hardening so WZ is visible to composition rankers and operator inventory; no contest score claim. | research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -25280,8 +25297,9 @@
       "id": "lane_yucr_yousfi_uniward_cooperative_receiver_20260514",
       "level": 1,
       "name": "YUCR Yousfi-UNIWARD-Cooperative-Receiver substrate",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -25616,8 +25634,9 @@
       "id": "lane_d4_wyner_ziv_frame_0_substrate_20260514",
       "level": 1,
       "name": "D4 Wyner-Ziv frame-0 substrate (sub-0.188 path #3, strongest single bet)",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -25781,8 +25800,9 @@
       "id": "lane_d4_oom_fix_minibatch_reconstruct_20260514",
       "level": 1,
       "name": "D4 OOM fix: mini-batch reconstruct_pair + no_grad archive-build pass",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -26314,8 +26334,9 @@
       "id": "lane_c6_e4_mdl_ibps_substrate_20260514",
       "level": 1,
       "name": "C6 E4 MDL-IBPS substrate (zen-Z1 LARGEST single bet; substrate-class shift)",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -26478,8 +26499,9 @@
       "id": "lane_catalog_221_auth_eval_gate_plus_d4_timeout_investigation_20260514",
       "level": 1,
       "name": "Catalog #221 trainer auth_eval canonical helper enforcement + D4 timeout root-cause",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "gates": {
@@ -26724,8 +26746,9 @@
       "id": "lane_z3_balle_hyperprior_bolton_recover_20260514",
       "level": 1,
       "name": "Z3 Ball\u00e9 hyperprior bolt-on RESUMED from crashed predecessor a9c9d0c44a401eebc",
-      "notes": "",
-      "phase": 2.0
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "phase": 2.0,
+      "research_only": true
     },
     {
       "id": "lane_c6_smoke_harvest_z1_ablation_auto_fire_full_20260514",
@@ -26889,7 +26912,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_oss_release_v0_2_0_rc1_comma_openpilot_style_alex_pena_20260514",
@@ -27668,7 +27692,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_mdl_ablation_tier_c_ibps1_extension_20260514",
@@ -28776,7 +28801,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_canonicalize_substrate_contest_chain_20260515",
@@ -28817,7 +28843,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_wire_and_integrate_all_cross_stack_20260515",
@@ -28899,7 +28926,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_meta_layer_adversarial_review_round_1_2_20260515",
@@ -31419,7 +31447,8 @@
           "evidence": "scripts/remote_lane_substrate_nscs06_carmack_hotz_strip_everything.sh inherited from parent lane; recipe substrate_nscs06_carmack_hotz_strip_everything_modal_t4_dispatch flipped research_only=false dispatch_enabled=true with path_a_redesign=true annotation"
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_high_risk_5_substrate_unwind_implementations_20260516",
@@ -31460,7 +31489,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_premortem_consolidation_wave_5_items_20260516",
@@ -31665,7 +31695,8 @@
           "evidence": "scripts/remote_lane_substrate_stc_v2.sh + .omx/operator_authorize_recipes/substrate_stc_v2_modal_t4_dispatch.yaml"
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_atw_codec_v2_substrate_build_20260516",
@@ -31829,7 +31860,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_tishby_ib_pure_substrate_scoping_design_20260516",
@@ -31870,7 +31902,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_time_traveler_l5_z6_z7_z8_predictive_coding_world_models_scoping_design_20260516",
@@ -32527,7 +32560,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_nscs03_phase_2_sextet_council_20260516",
@@ -32609,7 +32643,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_t4_symposium_substrate_design_class_shift_20260517",
@@ -32650,7 +32685,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_scorer_response_surface_analysis_20260517",
@@ -33266,7 +33302,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_dp1_plus_fec6_dual_stacking_build_20260517",
@@ -34422,7 +34459,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_super_additive_lane_g_v3_siren_topology_integration_20260517",
@@ -34590,7 +34628,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_z6_phase_2_sextet_council_proceed_unconditional_unlock_20260517",
@@ -35207,7 +35246,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_c6_ibps_reactivation_path_b_latent_dim_sweep_build_20260518",
@@ -35331,7 +35371,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_driver_fix_smoke_hardcode_plus_new_catalog_gate_cross_substrate_audit_20260518",
@@ -35372,7 +35413,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_c6_ibps_beta_ib_sweep_build_per_symposium_parallel_path_a_20260518",
@@ -35454,7 +35496,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_signal_loss_audit_20260517",
@@ -35951,7 +35994,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_deep_research_wave_20260518",
@@ -37101,7 +37145,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_tt5l_v2_redesign_vggt_dreamerv3_vrss2_design_20260518",
@@ -39616,7 +39661,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_cable_b1_e7_e8_combined_dispatch_20260519",
@@ -41830,7 +41876,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_t3_grand_council_upstream_contest_compliance_conformance_symposium_20260519",
@@ -42774,7 +42821,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_master_gradient_xray_viz_tool_797_20260519",
@@ -46159,7 +46207,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_overnight_x1_build_sensitivity_weighted_foveation_params_generator_20260521",
@@ -47431,7 +47480,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_codex_grayscale_lut_export_recovery_hardening_20260522",
@@ -50794,7 +50844,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_codex_ssh_bounded_parallel_executor_20260524",
@@ -56336,7 +56387,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_t3_grand_council_active_exploration_conv2d_drift_unexplored_paths_20260525",
@@ -59585,7 +59637,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_class_shift_inflate_numpy_portability_audit_20260527",
@@ -60036,7 +60089,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_pact_nerv_selector_v4_l1_long_run_mlx_local_20260528",
@@ -60245,7 +60299,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_slot_2_wave_n5_z6_v2_cargo_cult_unwind_hinton_distill_600pair_long_mlx_orthogonal_pose_axis_candidate_b_20260528",
@@ -60327,7 +60382,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_wyner_ziv_pipeline_stage_codec_cross_substrate_composition_y_fec6_for_pr101_20260528",
@@ -61861,7 +61917,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_wave_6_pr110_opt_cluster_math_audit_plus_fix_20260529",
@@ -61984,7 +62041,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_wave_10_z8_hierarchical_predictive_coding_math_audit_plus_fix_20260529",
@@ -64251,7 +64309,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_canonical_equation_falsification_ratification_wave_n6_triple_wave_n11_quad_recovery_20260530",
@@ -64539,7 +64598,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_codex_contract_first_adversarial_review_20260531",
@@ -65154,7 +65214,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_z5_rao_ballard_paired_cuda_ratification_wave2a_20260531",
@@ -66304,7 +66365,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_mlx_pytorch_render_parity_crux_20260601",
@@ -66550,7 +66612,8 @@
           "evidence": ""
         }
       },
-      "notes": "2026-06-02 Codex: fail-closed planning/control seam landed for SNeRV + HiNeRV top-priority stacks against PR95/HNeRV baseline; GO local stack optimization only; NO-GO exact/promotion/score while PR101/Z5 claims and full-600 receiver/paired CPU-CUDA gates remain open."
+      "notes": "2026-06-02 Codex: fail-closed planning/control seam landed for SNeRV + HiNeRV top-priority stacks against PR95/HNeRV baseline; GO local stack optimization only; NO-GO exact/promotion/score while PR101/Z5 claims and full-600 receiver/paired CPU-CUDA gates remain open. | research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_hinerv_60kb_mps_fit_probe_20260602",
@@ -67083,7 +67146,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_snerv_official_mfu_shape_primitive_20260603",
@@ -69994,7 +70058,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_snerv_source_forward_proof_burndown_20260606",
@@ -70076,7 +70141,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_live_mlx_exact_receiver_projection_20260606",
@@ -70611,7 +70677,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "hi_nerv_target_region_birth_v31_action_payload",
@@ -70652,7 +70719,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "hi_nerv_target_region_birth_v32_unsolved_component_action_payload",
@@ -70898,7 +70966,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "hi_nerv_target_region_birth_v34_score_per_margin_planner",
@@ -70939,7 +71008,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "hi_nerv_target_region_birth_v36_compressed_forced_positive",
@@ -71021,7 +71091,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "hi_nerv_target_region_birth_v37_quantum_gain",
@@ -72812,7 +72883,8 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #298 retirement discipline (bulk disposition 2026-08-25, preflight r15 adjudication): dormant pre-DDM-campaign L1 lane, stale >=75 days; substrate lanes fall under the 2026-07-23 no-old-lineage ban (lessons-only), apparatus/fix lanes completed or superseded by DDM-era apparatus. Reactivation: only via a full-vehicle race vs the live frontier lineage with a measured n600 row.",
+      "research_only": true
     },
     {
       "id": "lane_compute_heavy_weight_tied_decoder_20260611",
@@ -94826,5 +94898,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-08-25T19:16:15Z"
+  "updated_at": "2026-08-25T19:43:06Z"
 }
