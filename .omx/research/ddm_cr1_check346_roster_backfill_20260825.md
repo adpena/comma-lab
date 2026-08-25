@@ -4,7 +4,13 @@
 **Date:** 2026-08-25. **Cost:** $0, local only.
 **Gate:** `check_council_dispatch_roster_complete_per_canonical_helper`
 (`src/tac/preflight.py`), demoted warn-only at its `preflight_all` callsite by
-`de942ec9b6`; **re-flipped `strict=True` in this landing at live count 0.**
+`de942ec9b6`; **re-flipped `strict=True` at live count 0 in `25bbd07055`** —
+one atomic commit carrying the detector cures, the controls, the 16 waivers and
+the flip, per the strict-flip atomicity rule (no warn-only purgatory).
+
+**Verified on the landed commit:** the 16 memo diffs are **384 additions / 0
+deletions** with **zero removed lines**; `council_attendees` appears in the diff
+only inside the appended note's own prose, never as a changed line.
 
 ## Headline
 
