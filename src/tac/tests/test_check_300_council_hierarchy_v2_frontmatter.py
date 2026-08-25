@@ -332,18 +332,41 @@ def test_string_repo_root_accepted(preflight_module, tmp_path: Path):
     assert out == []
 
 
-def test_orchestrator_callsite_warn_only_regression_guard(preflight_module):
-    """Catalog #300 wired into preflight_all() at strict=False per the
-    Strict-flip atomicity rule until 5 deliberations land in v2 format.
-    Regression-guard the warn-only state explicitly so the flip is a
-    visible deliberate change (not a silent drift)."""
+def test_orchestrator_callsite_strict_regression_guard(preflight_module):
+    """Catalog #300 is wired into preflight_all() at strict=True.
+
+    History: the gate landed warn-only per the Strict-flip atomicity rule
+    ("until 5 deliberations land in v2 format"), strict-flipped 2026-05-16,
+    was demoted back to warn-only 2026-08-25 when the #842 window surfaced 22
+    council memos that had accrued without v2 frontmatter, and was re-flipped
+    the same day once that backfill (task #1274) drove the live count to 0.
+    Guard the strict state explicitly so any future demotion is a visible
+    deliberate change, not silent drift.
+    """
     src = Path(preflight_module.__file__).read_text(encoding="utf-8")
     assert "check_council_deliberation_declares_tier_in_frontmatter(" in src
-    # Find the callsite block and confirm strict=False.
+    # Find the callsite block and confirm strict=True.
     idx = src.find("check_council_deliberation_declares_tier_in_frontmatter(")
     snippet = src[idx : idx + 200]
-    assert "strict=False" in snippet, (
-        "Catalog #300 must be wired strict=False until 5 v2 deliberations land"
+    assert "strict=True" in snippet, (
+        "Catalog #300 must stay strict; live count is 0 after the task #1274 "
+        "backfill. A demotion needs its own memo + a named cure."
+    )
+
+
+def test_300_live_repo_regression_guard(preflight_module):
+    """The live repo must carry zero Catalog #300 violations.
+
+    This is the condition the strict wire-in above rides on: if a new council
+    memo lands without v2 frontmatter, this fails BEFORE preflight_all raises,
+    naming the offending file directly.
+    """
+    violations = preflight_module.check_council_deliberation_declares_tier_in_frontmatter(
+        strict=False, verbose=False
+    )
+    assert violations == [], (
+        f"{len(violations)} live Catalog #300 violation(s):\n  "
+        + "\n  ".join(v[:200] for v in violations[:10])
     )
 
 

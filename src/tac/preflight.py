@@ -76733,8 +76733,39 @@ def check_substrate_codec_no_closed_form_cdf_without_empirical_bit_spend_proof(
 # Cutoff date suffix; memos dated before this are exempt.
 _CHECK_305_CUTOFF_DATE_SUFFIX_INT = 20260516
 
-# Literal section header (case-insensitive substring match).
+# Literal section header (case-insensitive substring match). RETAINED as the
+# canonical spelling the discipline asks authors to use, and still matched.
 _CHECK_305_REQUIRED_SECTION_HEADER = "## observability surface"
+
+# Heading-line matcher (2026-08-25 scanner-defect fix, task #1275).
+#
+# The bare-substring test above produced FALSE POSITIVES on memos that carry a
+# real, Catalog-#305-explicit observability section written with a NUMBERED or
+# DECORATED heading. Seven in-repo design memos were flagged while already
+# satisfying the discipline -- several of them naming Catalog #305 in the
+# heading itself:
+#
+#     ## 6. Observability surface
+#     ## 5. Observability surface (Catalog #305)
+#     ## 6. Observability surface per Catalog #305
+#     ## §5 — 6-facet observability surface per Catalog #305
+#     ### 3.5 Observability surface (Catalog #305)
+#
+# The DISCIPLINE is "the memo carries a section documenting its observability
+# surface", not "the memo's heading is byte-identical to one string". Matching
+# on the heading LINE fixes the false positives and simultaneously TIGHTENS the
+# test in the other direction: the phrase must now appear in an actual markdown
+# heading (`^#{2,6} ... observability surface`), where the old bare-substring
+# test would also have accepted the phrase buried in body prose.
+#
+# The two-word phrase "observability surface" is still required, so a heading
+# that merely mentions observability (e.g. a measured finding headed
+# "... mechanism REFINED to WRONG-FLOW-OBSERVABILITY ...") does NOT satisfy the
+# gate and stays flagged.
+_CHECK_305_SECTION_HEADING_RE = re.compile(
+    r"^[ \t]*#{2,6}[ \t]+.*observability[ \t]+surface",
+    re.IGNORECASE | re.MULTILINE,
+)
 
 # Filename patterns scoping which memos are subject to this gate.
 _CHECK_305_SUBSTRATE_FILENAME_RE = re.compile(
@@ -76918,7 +76949,13 @@ def check_substrate_design_memo_has_observability_surface_section(
                 body = entry.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
-            # Acceptance path 1: literal section header (case-insensitive).
+            # Acceptance path 1: an "Observability surface" section HEADING
+            # (case-insensitive; numbered / decorated headings accepted, see
+            # `_CHECK_305_SECTION_HEADING_RE`). The bare canonical substring is
+            # kept as a fallback so the exact spelling always passes even if it
+            # is not at the start of its line.
+            if _CHECK_305_SECTION_HEADING_RE.search(body):
+                continue
             if _CHECK_305_REQUIRED_SECTION_HEADER in body.lower():
                 continue
             # Acceptance path 2: same-line waiver with non-placeholder rationale.

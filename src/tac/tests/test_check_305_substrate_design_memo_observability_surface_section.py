@@ -212,6 +212,101 @@ def test_305_section_with_mixed_case_accepted(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Numbered / decorated section headings (2026-08-25 scanner-defect fix, #1275)
+#
+# Seven in-repo design memos carried a real, Catalog-#305-explicit observability
+# section but were flagged because the gate did a byte-exact
+# `## observability surface` substring test. The discipline is "the memo carries
+# a section documenting its observability surface", not "the heading is
+# byte-identical to one string".
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "heading",
+    [
+        "## 6. Observability surface",
+        "## 5. Observability surface (Catalog #305)",
+        "## 6. Observability surface per Catalog #305",
+        "## §5 — 6-facet observability surface per Catalog #305",
+        "### 3.5 Observability surface (Catalog #305)",
+        "#### Observability surface — 6 facets",
+        "  ## Observability surface",
+    ],
+)
+def test_305_numbered_or_decorated_heading_accepted(
+    tmp_path: Path, heading: str
+) -> None:
+    """A real observability section is accepted however its heading is decorated."""
+    research = tmp_path / "research"
+    _write(
+        research,
+        "my_substrate_design_20260516.md",
+        _frontmatter() + f"# Design\n\n{heading}\n\nSix facets documented here.\n",
+    )
+    violations = check_substrate_design_memo_has_observability_surface_section(
+        research_dir=research, strict=False, verbose=False
+    )
+    assert violations == [], heading
+
+
+def test_305_observability_word_in_heading_without_surface_still_flagged(
+    tmp_path: Path,
+) -> None:
+    """The two-word phrase is still required: a heading that merely says
+    'observability' does NOT satisfy the gate.
+
+    Live anchor: `pose_legible_witness_aperture_design_20260708.md` heads a
+    measured finding with '... mechanism REFINED to WRONG-FLOW-OBSERVABILITY ...'
+    and correctly remains flagged.
+    """
+    research = tmp_path / "research"
+    _write(
+        research,
+        "my_substrate_design_20260516.md",
+        _frontmatter()
+        + "# Design\n\n"
+        "## 0a. MEASURED: mechanism REFINED to WRONG-FLOW-OBSERVABILITY\n\n"
+        "Body without an observability-surface section.\n",
+    )
+    violations = check_substrate_design_memo_has_observability_surface_section(
+        research_dir=research, strict=False, verbose=False
+    )
+    assert len(violations) == 1
+
+
+def test_305_phrase_in_body_prose_is_not_a_section(tmp_path: Path) -> None:
+    """The fix TIGHTENS the test in the other direction: the phrase must appear
+    in an actual markdown heading, not buried mid-paragraph."""
+    research = tmp_path / "research"
+    _write(
+        research,
+        "my_substrate_design_20260516.md",
+        _frontmatter()
+        + "# Design\n\n"
+        "We intend to write an observability surface section later on.\n",
+    )
+    violations = check_substrate_design_memo_has_observability_surface_section(
+        research_dir=research, strict=False, verbose=False
+    )
+    assert len(violations) == 1
+
+
+def test_305_heading_regex_requires_heading_marker(tmp_path: Path) -> None:
+    """A bare line naming the section, with no `#` marker, is not a heading."""
+    research = tmp_path / "research"
+    _write(
+        research,
+        "my_substrate_design_20260516.md",
+        _frontmatter() + "# Design\n\nObservability surface\n\nBody.\n",
+    )
+    violations = check_substrate_design_memo_has_observability_surface_section(
+        research_dir=research, strict=False, verbose=False
+    )
+    assert len(violations) == 1
+
+
+# ---------------------------------------------------------------------------
 # Cutoff (date) filter
 # ---------------------------------------------------------------------------
 
