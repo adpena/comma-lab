@@ -11708,6 +11708,11 @@ _MINI_SHAI_HULUD_PLANTED_PATHS = {
     ".vscode/tasks.json",
     ".github/workflows/format-check.yml",
 }
+# Planted paths that are ALSO legitimate tooling files: judged by CONTENT
+# (IOC digest / planted-runtime reference), never by bare existence.
+_MINI_SHAI_HULUD_CONTENT_SCOPED_PLANTED_PATHS = {
+    ".claude/settings.json",
+}
 _LIGHTNING_BAD_VERSION_RE = re.compile(
     r"(?i)(?:^|[^A-Za-z0-9_.-])(?:lightning(?:\[[^\]]+\])?|pytorch-lightning)"
     r"\s*(?:==|=)\s*2\.6\.[23](?:[^0-9]|$)"
@@ -12475,11 +12480,37 @@ def _scan_repo_for_mini_shai_hulud_iocs(repo_root: Path) -> list[str]:
     violations: list[str] = []
     for rel_s in sorted(_MINI_SHAI_HULUD_PLANTED_PATHS):
         path = repo_root / rel_s
-        if path.exists():
-            violations.append(
-                f"{rel_s}: Mini Shai-Hulud planted path is present; "
-                "treat repository as compromised until reviewed."
-            )
+        if not path.exists():
+            continue
+        if rel_s in _MINI_SHAI_HULUD_CONTENT_SCOPED_PLANTED_PATHS:
+            # 2026-08-25 adjudication: `.claude/settings.json` is ALSO the
+            # legitimate Claude Code project-hooks config, so bare existence
+            # made this gate structurally red on any repo using that tooling
+            # (reviewed clean here: our tracked hooks file, sha not in the IOC
+            # set, zero payload references, all sibling planted paths absent).
+            # For this path the worm's tell is CONTENT — a known-IOC digest or
+            # a hook that invokes the planted payloads — so flag on that, not
+            # on existence. The other planted paths stay existence-only: none
+            # has a legitimate reason to be in this repo.
+            try:
+                raw = path.read_bytes()
+            except OSError:
+                raw = b""
+            digest = hashlib.sha256(raw).hexdigest()
+            text = raw.decode("utf-8", errors="replace")
+            if digest in _MINI_SHAI_HULUD_IOC_SHA256 or (
+                "router_runtime" in text or "setup.mjs" in text
+            ):
+                violations.append(
+                    f"{rel_s}: Mini Shai-Hulud payload signature inside the "
+                    "settings file (IOC digest or planted-runtime reference); "
+                    "treat repository as compromised until reviewed."
+                )
+            continue
+        violations.append(
+            f"{rel_s}: Mini Shai-Hulud planted path is present; "
+            "treat repository as compromised until reviewed."
+        )
 
     candidate_paths = _rg_file_list(
         repo_root,
