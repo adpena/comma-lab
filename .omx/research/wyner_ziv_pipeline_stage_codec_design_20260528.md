@@ -377,3 +377,5 @@ post-training-validation discipline.
   Computation 2(3):308-320.
 * Tishby & Zaslavsky 2015 "Deep Learning and the Information Bottleneck
   Principle" IEEE ITW.
+
+<!-- # F_ASYMPTOTE_CLASS_SHIFT_NOT_BOLT_ON_OK: retired pre-DDM-era design memo (Catalog #310 backfill 2026-08-25, preflight r24 adjudication) — the asymptote-class vocabulary here is horizon-class discussion on a since-retired substrate line; the design never proceeded to dispatch and no F-asymptote claim is live. Retroactively declaring primary_substrate would be false; this waiver records the honest state. -->

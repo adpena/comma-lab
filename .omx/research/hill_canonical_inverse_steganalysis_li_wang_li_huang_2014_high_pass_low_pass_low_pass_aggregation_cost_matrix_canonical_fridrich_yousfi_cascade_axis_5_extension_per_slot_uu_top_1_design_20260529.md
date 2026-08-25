@@ -192,3 +192,5 @@ NO new Catalog # gate claimed per Slot CC STRATEGIC RESET #1 self-application + 
 ---
 
 End of Slot YY canonical HILL L0 SCAFFOLD design memo. Verdict: PROCEED_WITH_REVISIONS per T1 working-group.
+
+<!-- # F_ASYMPTOTE_CLASS_SHIFT_NOT_BOLT_ON_OK: retired pre-DDM-era design memo (Catalog #310 backfill 2026-08-25, preflight r24 adjudication) — the asymptote-class vocabulary here is horizon-class discussion on a since-retired substrate line; the design never proceeded to dispatch and no F-asymptote claim is live. Retroactively declaring primary_substrate would be false; this waiver records the honest state. -->

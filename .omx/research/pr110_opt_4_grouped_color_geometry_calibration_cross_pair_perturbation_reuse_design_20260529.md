@@ -126,3 +126,5 @@ Per the 4-theme operator directive 2026-05-29:
 - (b) MLX-FIRST: ✅ $0 macOS-CPU advisory smoke per Catalog #192 (non-promotable).
 - (c) FOCUS SCORE LOWERING: ✅ Alternative reducer enumeration provides 4 op-routable paths; PR110 attack vector diversification (cross-pair perturbation reuse DISTINCT from Slot R SYNTHESIZE_FRAME + Slot Q macOS-CPU-advisory).
 - (d) WHY HAVEN'T WE PRODUCED ORIGINAL FRONTIER YET: Sister Slot V meta-diagnostic; THIS L0 SCAFFOLD's contribution to (d) is the explicit IMPLEMENTATION_FALSIFIED anchoring + reactivation criteria so future agents do NOT re-discover Wave N+34's verdict via another paid GPU dispatch.
+
+<!-- # F_ASYMPTOTE_CLASS_SHIFT_NOT_BOLT_ON_OK: retired pre-DDM-era design memo (Catalog #310 backfill 2026-08-25, preflight r24 adjudication) — the asymptote-class vocabulary here is horizon-class discussion on a since-retired substrate line; the design never proceeded to dispatch and no F-asymptote claim is live. Retroactively declaring primary_substrate would be false; this waiver records the honest state. -->

@@ -213,3 +213,5 @@ Every cell in this matrix carries:
 - `score_claim = False`
 
 This memo IS the canonical scaffold; the canonical posterior at `.omx/state/substrate_composition_matrix.json` receives the typed JSON rows in Phase C.
+
+<!-- # F_ASYMPTOTE_CLASS_SHIFT_NOT_BOLT_ON_OK: retired pre-DDM-era design memo (Catalog #310 backfill 2026-08-25, preflight r24 adjudication) — the asymptote-class vocabulary here is horizon-class discussion on a since-retired substrate line; the design never proceeded to dispatch and no F-asymptote claim is live. Retroactively declaring primary_substrate would be false; this waiver records the honest state. -->

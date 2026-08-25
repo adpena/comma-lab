@@ -177,3 +177,5 @@ Rationale: predicted band [-0.000146, +0.000079] falls into the [0.180, 0.200] p
 - **CLAUDE.md "Quantizr intelligence"** section (PR110 frame-0 catalog context)
 - **PR110-OPT canonical task #1319** PR110-OPT-7 (Fridrich UNIWARD analog for PR110 frame-0 catalog)
 - **Slot H Phase B 84-cell composition_alpha matrix** (4 SUPER_ADDITIVE composition cells with α=1.10)
+
+<!-- # F_ASYMPTOTE_CLASS_SHIFT_NOT_BOLT_ON_OK: retired pre-DDM-era design memo (Catalog #310 backfill 2026-08-25, preflight r24 adjudication) — the asymptote-class vocabulary here is horizon-class discussion on a since-retired substrate line; the design never proceeded to dispatch and no F-asymptote claim is live. Retroactively declaring primary_substrate would be false; this waiver records the honest state. -->
