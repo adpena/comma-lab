@@ -761,3 +761,5 @@ Phase 1 + 2 + 3 + 4 + 5 complete. Slot GG T3 grand council canonical-design symp
 <!-- # HISTORICAL_SCORE_LITERAL_OK:slot_gg_design_symposium_references_pr95_canonical_8_stage_29650_epoch_curriculum_per_profile_pr95_hnerv_muon_intake_md_baseline_anchor_2026_05_29 -->
 
 <!-- # PREDICTIVE_CODING_EGO_MOTION_CONDITIONED_OK: retired pre-DDM-era design memo (Catalog #311 backfill 2026-08-25, preflight r25 adjudication) -- the cooperative-receiver / Atick-Redlich vocabulary here is framing on a since-retired substrate line; the design never proceeded to dispatch and no cooperative-receiver mechanism is live. Retroactively authoring an ego-motion-conditioned prediction section would be false; this waiver records the honest state. -->
+
+**STORES CONSULTED:** (2026-08-25 waiver-append only — the original 2026-05-29 memo predates the recall-before-decide discipline and recorded none) src/tac/preflight.py Catalog #311 gate source + waiver contract · .omx/tmp/preflight_full_r25_20260825/PREFLIGHT_RESULT.json · the sibling #310 waiver precedent (commit ac02882a26) · task ledger #842 enumeration rows.
