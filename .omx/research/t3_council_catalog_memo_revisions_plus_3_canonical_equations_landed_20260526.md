@@ -1,3 +1,4 @@
+<!-- # COUNCIL_TIER_FRONTMATTER_WAIVED:execution landing memo, not the deliberation record. Its own frontmatter carries council_verdict_being_executed PROCEED_WITH_REVISIONS plus sister_t3_council_anchor t3_council_on_entropy_position_cascade_exploit_catalog_landed_20260526T191300Z and sister_t3_council_commit b65484cc5 - this memo LANDS the revisions a sister T3 council decided. The roster, quorum, dissent and assumption-adversary record belong to that sister anchor; restating them here would attribute a deliberation to a file that did not hold one. Catalog #300 backfill 2026-08-25. -->
 # T3 Council Catalog Memo Revisions + 3 NEW Canonical Equations Landed 2026-05-26
 
 <!-- SPDX-License-Identifier: MIT -->

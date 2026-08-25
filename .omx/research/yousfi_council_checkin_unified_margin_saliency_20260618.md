@@ -1,3 +1,4 @@
+<!-- # COUNCIL_TIER_FRONTMATTER_WAIVED:informal two-voice check-in, not a tiered deliberation. Written to the operator instruction 'check in with Yousfi'; it channels Yousfi plus Fridrich and records a strategy redirect, but no council was convened, no quorum was taken and no verdict was cast. Assigning it a tier and a verdict would be invention, not transcription. Catalog #300 backfill 2026-08-25. -->
 # Yousfi council check-in — the unified margin-saliency seam (2026-06-18)
 
 **Operator: "check in with Yousfi."** Channeled Yousfi (LEAD, built the comma10k SegNet d_seg detector) +

@@ -1,3 +1,4 @@
+<!-- # COUNCIL_TIER_FRONTMATTER_WAIVED:not a council deliberation record. This file is a DRAFT PROPOSAL prepared as an INPUT to a grand-council symposium; its own first line states 'Status: DRAFT ONLY - binds nothing' and it was written for the council 'to review and edit and tear apart and use or not however it wishes.' No council convened here, so there is no tier, roster, quorum, verdict or dissent to transcribe, and authoring one would be an invented deliberation. It matches the Catalog #300 filename regex only because the word 'council' appears in the filename. Catalog #300 backfill 2026-08-25. -->
 # DRAFT — derived-optimal next-run proposal (INPUT to the grand-council symposium)
 
 **Status: DRAFT ONLY — binds nothing.** Prepared per operator directive for the council "to

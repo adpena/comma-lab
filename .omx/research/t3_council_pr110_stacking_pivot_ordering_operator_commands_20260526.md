@@ -1,3 +1,4 @@
+<!-- # COUNCIL_TIER_FRONTMATTER_WAIVED:operator-facing command sheet, not the deliberation record. This file's own header declares it a 'COMPANION to .omx/research/t3_council_pr110_stacking_pivot_ordering_landed_20260526.md' and contains only runnable command blocks for the decisions that memo already adjudicated. The v2 frontmatter lives on the source memo; duplicating it here would create a second authority for one deliberation. Catalog #300 backfill 2026-08-25. -->
 # SPDX-License-Identifier: MIT
 <!-- Catalog #110/#113 APPEND-ONLY HISTORICAL_PROVENANCE — DO NOT mutate after landing. -->
 <!-- # FORMALIZATION_PENDING:operator_facing_command_sheet_companion_to_t3_council_pr110_stacking_pivot_ordering_landed_20260526_no_new_canonical_equation_needed -->

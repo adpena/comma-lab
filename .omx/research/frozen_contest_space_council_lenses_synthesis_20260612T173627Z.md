@@ -1,3 +1,4 @@
+<!-- # COUNCIL_TIER_FRONTMATTER_WAIVED:lens synthesis, not a convened deliberation. This memo self-declares 'Type: DEEP RESEARCH + SYNTHESIS memo' authored by a single synthesis subagent; it GATHERS council lenses on frozen-space exploitation from prior work rather than convening a council. There is no seating, no quorum, no vote and no verdict in the body, so tier and verdict fields could only be invented. Catalog #300 backfill 2026-08-25. -->
 # FROZEN CONTEST SPACE — the council-lens synthesis + the Layer-1 carrier reframe (2026-06-12)
 
 **Author:** frozen-contest-space council-lens synthesis subagent (`frozen_contest_space_council_lenses_20260612`).
