@@ -61,6 +61,9 @@ Operator directive 2026-05-29 ~00:30Z: *"keep three running, staggered starts, f
 
 Per Catalog #296 (Dykstra-feasibility) + first-principles bounds: **[−0.0030, +0.0080] per cell** (predicted delta range across all 84 cells; floor at Catalog #219 MDL-density cluster −0.005; ceiling at +0.008 reflects worst-case archive-bytes growth from operator emission).
 
+
+horizon_class: plateau_adjacent (backfill 2026-08-25, Catalog #309: the per-cell band [-0.0030, +0.0080] applied to the era frontier ~0.192 lands inside PLATEAU-ADJACENT [0.180, 0.200])
+
 Composition_alpha range: **[0.0, 2.0]** (saturating at 2.0× per `adjust_predicted_delta_for_composition_alpha_v2` SUPER_ADDITIVE cap).
 
 ## Canonical-equation cross-reference per Catalog #344

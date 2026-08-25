@@ -60,7 +60,7 @@ This is META-META structural fix — no direct score-delta. Predicted indirect c
 
 ## Horizon class
 
-`plateau_adjacent` per CLAUDE.md HORIZON-CLASS standing directive — this is META-META APPARATUS_MAINTENANCE that protects the canonical state currency invariant; not a direct frontier-breaking class-shift contribution but a structural enabler that the operator's 7th META AUTOMATED+COMPOUNDING+OPTIMAL directive requires for frontier-breaking work to compound rather than reactively re-discover.
+horizon_class: plateau_adjacent (canonical token backfill 2026-08-25, Catalog #309 — normalizes the declaration already present in this section) — `plateau_adjacent` per CLAUDE.md HORIZON-CLASS standing directive — this is META-META APPARATUS_MAINTENANCE that protects the canonical state currency invariant; not a direct frontier-breaking class-shift contribution but a structural enabler that the operator's 7th META AUTOMATED+COMPOUNDING+OPTIMAL directive requires for frontier-breaking work to compound rather than reactively re-discover.
 
 ## Empirical evidence inventory
 
