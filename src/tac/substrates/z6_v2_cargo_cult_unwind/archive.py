@@ -299,8 +299,13 @@ def pack_archive_v2_int8(
     * Header: same Z6V2_HEADER_FMT (version field = 2 instead of 1)
     * Meta: JSON with `_decoder_int8_scales_header` + `_lat_int8_*` + `_ego_int8_*`
 
-    Empirical archive size at 600 pairs / canonical Z6V2Config defaults:
+    Projected archive size at 600 pairs / canonical Z6V2Config defaults:
     ~320 KB (vs ~580 KB for schema v1; ~45% reduction). Rate term = 25*N/37545489.
+    [prediction] — DERIVED from the int16->int8 width halving on latents/ego plus
+    INT8+fp16-scale decoder packing, NOT a measured archive. Corrected 2026-08-25
+    (Catalog #287 backfill): the prior "Empirical" label had no retained artifact
+    behind it; a repo-wide search for a measured Z6V2 archive-byte receipt found
+    none. Re-label to MEASURED only against a real byte-closed archive.
 
     Per CLAUDE.md "Complexity + LOC + boundaries UNCONSTRAINED within contest
     compliance" + "INDIVIDUALLY-FRACTAL" + "UNIQUE-AND-COMPLETE-PER-METHOD"

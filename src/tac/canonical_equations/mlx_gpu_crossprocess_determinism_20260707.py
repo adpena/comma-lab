@@ -52,6 +52,8 @@ _TESTS = "src/tac/tests/test_mlx_gpu_determinism.py"
 N_PROCESSES_PER_CELL = 10
 WITNESS_DIVERGED_REFERENCE_R = 28   # /28 tensors, epochs>=1, reference R (gather backward)
 WITNESS_DIVERGED_FUSED_R = 0        # /28 tensors, N=10 (+ Muon arm N=5)
+# [empirical:.omx/research/deterministic_gpu_accum_348_20260707.md] 200-ep n=1 96x128
+# timing smoke: reference 25.35s vs fused-R 23.44s. [macOS-CPU advisory] — never a score.
 FUSED_R_SPEEDUP_RATIO = 25.35 / 23.44  # ~1.08x FASTER (negative determinism overhead)
 
 

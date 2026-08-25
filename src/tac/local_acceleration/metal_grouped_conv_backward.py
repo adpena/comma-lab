@@ -13,7 +13,9 @@ indexing — native grad cosine ~0.025, magnitude 5-25x too large). The repo
 therefore forced these layers onto a Python-loop reference backward
 (``mlx_reference_conv2d_nhwc``) which is correct but is the dominant backward cost:
 swapping the custom kernel in makes the full-scorer (SegNet+PoseNet) backward
-**~18x faster** (11,149 ms -> 621 ms at B=4) and the SegNet backward 12.9x (B=4) ->
+**~18x faster** (11,149 ms -> 621 ms at B=4; measured 17.96x
+[empirical:.omx/research/mlx_custom_grouped_backward_kernel_makes_mlx_gpu_fast_20260612.md])
+and the SegNet backward 12.9x (B=4) ->
 35.5x (B=8) faster. The backward is >97% of the training step, so this is the
 throughput lever that makes MLX-GPU the fast local backward backend. (Measured
 2026-06-12, ``.omx/research/mlx_custom_grouped_backward_kernel_makes_mlx_gpu_fast_20260612.md``.)

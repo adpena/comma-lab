@@ -39,6 +39,8 @@ Two laws, one measurement
    resolvable." That reads the residual scatter as a detection threshold. It is not: a new
    arm's residual must BEAT the scatter to be distinguishable. The detection arithmetic:
    the band arm DELIVERED 6.14% improvement over the law (residual -0.871 sigma), while a
+   [empirical:.omx/research/ddm_r6j_realized_adam_step_cosine_verdict_20260816.md §detection
+   arithmetic table; [macOS-CPU advisory] retained-optimizer-state read-back, NEVER a score]
    single new arm needs 13.55% to clear 2 sigma, and a law-vs-law comparison still needs
    8.53% even at n=8 band arms (SE(dlog A) ~ sigma*sqrt(1/n1+1/n2), leverage ignored — an
    OPTIMISTIC bound, so the real bars are higher). The measured effect is ~0.45x the
@@ -46,6 +48,9 @@ Two laws, one measurement
    the shape (``instrument_capacity_caveat``: "this bar detects a LARGE direction change
    only. A 20% improvement is inside the noise") — then section 6.6 proposed the same
    statistic as the cheap route. It is cheap; it is also blind at this effect size.
+   That parenthetical is rg1b's OWN claim quoted, not an independent measurement here
+   [empirical:.omx/research/ddm_rg1b_band_objective_build_20260816.md L269, which reads
+   "A 20% improvement sits inside the noise"].
 
 Consequence for R6: the blocker is the JUDGE and the WINDOW, not the optimiser. The
 long-window judge (rg1b 6.6 item b) is promoted to rank 1 — a per-step direction advantage

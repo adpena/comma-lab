@@ -1296,7 +1296,10 @@ def torch_conv2d_to_mlx(torch_conv: Any) -> Any:
         _log_custom_backward_decision_once()  # one-time runtime confirmation (log-only; bit-identical)
         if _custom_metal_backward_enabled():
             # Fast path: native forward + custom Metal backward kernels (same
-            # descent direction, ~18x faster full-scorer backward). Opt-in.
+            # descent direction, ~18x faster full-scorer backward — measured
+            # 17.96x, 11,149 ms -> 621 ms at B=4, [macOS-MLX research-signal]
+            # [empirical:.omx/research/mlx_custom_grouped_backward_kernel_makes_mlx_gpu_fast_20260612.md]).
+            # Opt-in.
             return MLXCustomKernelStridedGroupedConvAdapter(torch_conv)
         # Default: the fixed-order reference path preserves forward parity and
         # CPU/GPU gradient parity for this narrow downsample class while leaving

@@ -9,7 +9,9 @@ expensive NO-FAKE near-miss:
 
   The custom MLX grouped/depthwise-conv backward was validated at **n8 / 40
   epochs on d_seg ONLY** (gradient cosine ~1.0, descent-equivalent on d_seg,
-  5.5x faster) and wired into an n600 basin run. It then **DIVERGED at n600 on
+  5.5x faster
+  [empirical:.omx/research/mlx_custom_backward_DIVERGES_at_n600_pose_gradient_20260612.md])
+  and wired into an n600 basin run. It then **DIVERGED at n600 on
   the POSE axis** (d_pose 0.835 -> 6.94 -> 36.46) because its PoseNet gradient
   was wrong — a divergence the d_seg-only validation could never see. A 5.5x
   kernel that diverges is WORSE than useless: unwatched it manufactures a fake

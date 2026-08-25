@@ -1617,7 +1617,9 @@ def list_canonical_paired_cuda_ratification_targets() -> list[dict[str, Any]]:
 #   1. **Baseline cache** per pair: SegNet/PoseNet baseline output is purely a
 #      function of (frame_0, frame_1_baseline), so the canonical pair-baseline
 #      tuple is computed ONCE per pair and reused across all N modes -> O((M)
-#      baseline + N*M perturbed) scorer calls instead of O(2*N*M). ~50% reduction.
+#      baseline + N*M perturbed) scorer calls instead of O(2*N*M). ~50% reduction
+#      [prediction] — DERIVED call-count arithmetic ((M + N*M) / (2*N*M) -> 1/2 as
+#      N*M dominates), not a measured wall-clock or scorer-call profile.
 #
 #   2. **Multi-strategy unified menu**: build_canonical_frame1_pose_axis_null_
 #      projection_menu is called per strategy; the scale-up entry point

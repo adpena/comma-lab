@@ -612,7 +612,10 @@ def _pose_fisher_batched_vjp(
     ``(6, 1, 2, 3, H, W)`` = J^T applied to each e_k = the rows of the input
     Jacobian. Summing the squares over the 6 rows gives diag(J^T J) — exactly the
     Fisher surface, numerically identical to the loop but ~3-6x faster because
-    the forward graph is traversed once (vmap) instead of 6x.
+    the forward graph is traversed once (vmap) instead of 6x. The ~3-6x is a
+    [prediction] DERIVED from the backward call count (6 traversals collapse to
+    1; the 6x ceiling is degraded by vmap overhead), NOT a measured wall-clock
+    ratio — no timing artifact backs it.
     """
     pair = pair.detach().clone().requires_grad_(True)  # (1, 2, 3, H, W)
     pose_in = posenet.preprocess_input(pair)  # (1, 12, 192, 256)
