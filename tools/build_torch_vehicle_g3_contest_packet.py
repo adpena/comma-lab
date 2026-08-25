@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# DETERMINISTIC_COMPILER_OK: retired torch_vehicle bc20-era G3 packet builder (June 2026 lineage); only consumer is its own test; the live shipping path is the E4/candidate-seal chain, which routes through the canonical compiler surfaces (Catalog #158 backfill 2026-08-25)
 """Assemble a SELF-CONTAINED, RUNNABLE contest submission_dir for the torch-vehicle
 bc20 small-basis vehicle — the G3 dual CPU+CUDA exact-eval input packet.
 
