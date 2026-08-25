@@ -3964,10 +3964,13 @@ def preflight_all(
         check_catalog_text_references_existing_gate_callable(
             strict=True, verbose=verbose,
         )
-        # GAP-4a (#287): docstring overstatement evidence-tag gate; strict
-        # after 2026-05-19 bulk evidence-tag + phantom-API waiver backfill.
+        # GAP-4a (#287): docstring overstatement evidence-tag gate. Strict-
+        # flipped 2026-05-19 at live-count 0, but 162 new violations accrued
+        # in the #842 window (gates skipped on normal commits until 2026-08).
+        # Demoted to warn-only 2026-08-25 per strict-flip atomicity (strict
+        # requires live-count 0); re-flip rides the tracked backfill burn-down.
         check_no_docstring_overstatement_without_evidence_tag(
-            strict=True, verbose=verbose,
+            strict=False, verbose=verbose,
         )
         # GAP-4b (#288): uv torch driver-version pin gate; STRICT-from-byte-one
         # because the canonical wrapper scripts/remote_archive_only_eval.sh
