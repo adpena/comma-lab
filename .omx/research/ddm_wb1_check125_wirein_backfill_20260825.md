@@ -203,8 +203,13 @@ memory directory (759 post-cutover memos scanned, 76 research-only opt-outs, 0 m
 - **Scope limit worth naming:** the gate reads an operator-local memory directory outside
   the repo, so these 57 appended blocks are **not committable** and are not covered by
   git history. The strict flip therefore protects *future* landings; the backfilled state
-  lives only on this machine (and in the pre-edit copy under this session's scratchpad).
-  A CI runner without that directory takes the documented GitHub-Actions skip path.
+  lives only on this machine. A CI runner without that directory takes the documented
+  GitHub-Actions skip path. **The pre-edit state stays recoverable without any transient
+  custody**: every appended block is delimited by the unique marker
+  `## 6-hook wire-in declaration - Catalog #125 backfill (2026-08-25, ddm_wb1)`, and the
+  append-only property (verified: all 57 originals are exact byte prefixes) means
+  truncating each file at the `---` immediately preceding that marker restores the
+  original bytes exactly.
 - **The rejected cure-4 population is real.** Some historical memos genuinely hard-wrap
   their declarations. Those memos are now green because they received an appended block,
   not because the wrap was parsed. If a future agent wants wrapped declarations parsed,
@@ -230,4 +235,4 @@ memory directory (759 post-cutover memos scanned, 76 research-only opt-outs, 0 m
 | `c570ce03e4` | detector cure 1 + 16 controls (124 → 62) |
 | `344c4b32fc` | detector cure 2 + 10 controls (62 → 59) |
 | `d2105a64e9` | detector cure 3 + 7 controls incl. the cure-4 design guard (59 → 57) |
-| *(this commit)* | strict re-flip at both call sites + this ledger |
+| `abb2cf3eb6` | strict re-flip at both call sites + this ledger |
