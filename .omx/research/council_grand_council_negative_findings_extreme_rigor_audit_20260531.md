@@ -326,3 +326,12 @@ Verified by `tac.canonical_council_roster.validate_council_dispatch_roster` afte
 detector cures (attendee-name normalization + seat-availability era filter), so the seats named
 above are genuinely absent — not spelling variants and not anachronistic demands.
 Ledger: `.omx/research/ddm_cr1_check346_roster_backfill_20260825.md`.
+
+<!-- STORES CONSULTED: (appended 2026-08-25, per the #713 per-append recall-evidence discipline)
+The original deliberation above predates the recall-before-decide enforcement (#713, landed
+2026-07-25) and recorded no store consultation at authoring time — stated honestly, not backfilled.
+For the 2026-08-25 Catalog #346 roster-waiver append (ddm_cr1), the stores actually consulted were:
+tac.canonical_council_roster (seat ids + provenance) · git history via `git log -S` on the roster
+module (seat-availability timeline, cross-checked to the CLAUDE.md council sections) · the Catalog
+#346 gate source in src/tac/preflight.py · the task ledger row #1278 · the cr1 ledger
+.omx/research/ddm_cr1_check346_roster_backfill_20260825.md. -->
