@@ -16,11 +16,14 @@ from __future__ import annotations
 import pytest
 
 from tac.canonical_council_roster import (
+    CANONICAL_ROSTER_LANDING_UTC_YYYYMMDD,
     CouncilSeat,
     GRAND_COUNCIL,
     INNER_COUNCIL,
     RosterValidationVerdict,
+    canonical_seat_key,
     required_attendees_for_topic,
+    seat_available_at,
     validate_council_dispatch_roster,
 )
 
@@ -605,3 +608,183 @@ class TestEdgeCases:
         names_upper = frozenset(s.name for s in result_upper)
         names_lower = frozenset(s.name for s in result_lower)
         assert names_upper == names_lower
+
+
+# ===========================================================================
+# Catalog #346 detector-scope cures (arm cr1, 2026-08-25).
+#
+# Two detector defects were curing 20 -> 16 live violations WITHOUT touching a
+# single historical attendee list:
+#   (1) EXACT-STRING attendee matching reported a seated person as ABSENT when
+#       the memo recorded a legitimate spelling variant (`Ballé` / `PR95-author`
+#       / `MacKay_Memorial` / `AssumptionAdversary`).
+#   (2) ANACHRONISTIC demand: a memo was required to seat roster members that
+#       were appended to the canonical roster AFTER it was convened.
+# Both directions are asserted below: the cure must recognize real attendance
+# AND must still catch real absence.
+# ===========================================================================
+
+
+class TestCanonicalSeatKeyNormalization:
+    """Identity-preserving decoration folds; identity-bearing qualifiers do not."""
+
+    @pytest.mark.parametrize(
+        "variant,canonical",
+        [
+            ("Ballé", "Balle"),                     # accent folding (live: ce_plateau)
+            ("PR95-author", "PR95Author"),          # punctuation + case (live: gc5)
+            ("MacKay_Memorial", "MacKay"),          # role annotation (live: nscs06_v8)
+            ("AssumptionAdversary", "Assumption-Adversary"),  # live: pr101_lc_v2
+            ("Schmidhuber-LEAD", "Schmidhuber"),    # role annotation (live: gc5)
+            ("Tishby (memorial seat)", "Tishby"),   # parenthetical qualifier
+            ("Tishby-memorial", "Tishby"),          # live: gc5
+            ("  Shannon  ", "Shannon"),             # whitespace
+            ("Time-Traveler", "TimeTraveler"),      # live: curriculum_derivation
+            ("Shannon CO-LEAD", "Shannon"),         # co-lead consumed before lead
+        ],
+    )
+    def test_variant_resolves_to_canonical_seat(self, variant: str, canonical: str) -> None:
+        assert canonical_seat_key(variant) == canonical_seat_key(canonical)
+
+    @pytest.mark.parametrize(
+        "left,right",
+        [
+            ("Ballard", "Balle"),                       # distinct people
+            ("Rudin", "Rudin_Grand"),                   # sister seats stay distinct
+            ("Daubechies", "Daubechies_Grand"),
+            ("TimeTraveler", "TimeTravelerProtege"),    # mentor vs protege
+            ("Time-Traveler_Mentor", "TimeTravelerProtege"),
+            ("Nielsen", "FrankNielsen"),                # no surname-prefix matching
+            ("Rao", "RaoBallard"),                      # compound never split
+        ],
+    )
+    def test_distinct_identities_never_collapse(self, left: str, right: str) -> None:
+        assert canonical_seat_key(left) != canonical_seat_key(right)
+
+    def test_key_is_injective_over_canonical_roster(self) -> None:
+        """The structural guard: no two canonical seats may share a key."""
+        seen: dict[str, str] = {}
+        for seat in INNER_COUNCIL + GRAND_COUNCIL:
+            key = canonical_seat_key(seat.name)
+            assert key, f"{seat.name} folded to an empty key"
+            assert key not in seen, f"collision: {seen.get(key)} vs {seat.name}"
+            seen[key] = seat.name
+
+    def test_pure_decoration_matches_no_seat(self) -> None:
+        """A bare role word must satisfy no seat.
+
+        (A separator-less "LEAD" folds to the key "lead" rather than "" — the
+        role rules only consume a SEPARATED suffix. The property that matters
+        is the one asserted here: it resolves to no canonical seat.)
+        """
+        all_keys = {
+            canonical_seat_key(s.name) for s in INNER_COUNCIL + GRAND_COUNCIL
+        }
+        for decoration in ("LEAD", "CO-LEAD", "memorial", "", "   "):
+            assert canonical_seat_key(decoration) not in all_keys
+
+
+class TestValidateRosterNormalizationBothDirections:
+    def test_variant_spellings_satisfy_full_t2_roster(self) -> None:
+        """POSITIVE: a memo that seated everyone under variant spellings passes."""
+        rename = {
+            "Balle": "Ballé",
+            "PR95Author": "PR95-author",
+            "MacKay": "MacKay_Memorial",
+            "Assumption-Adversary": "AssumptionAdversary",
+            "Shannon": "Shannon (LEAD)",
+        }
+        attendees = [rename.get(s.name, s.name) for s in INNER_COUNCIL]
+        verdict = validate_council_dispatch_roster(attendees, ["any"], "T2")
+        assert verdict.missing_inner_council == ()
+        assert verdict.complete is True
+        assert verdict.unknown_attendees == ()
+
+    def test_normalization_does_not_mask_real_absence(self) -> None:
+        """NEGATIVE control: genuinely absent seats are still reported."""
+        attendees = [
+            ("Ballé" if s.name == "Balle" else s.name)
+            for s in INNER_COUNCIL
+            if s.name not in ("Quantizr", "Selfcomp")
+        ]
+        verdict = validate_council_dispatch_roster(attendees, ["any"], "T2")
+        assert verdict.complete is False
+        assert "Quantizr" in verdict.missing_inner_council
+        assert "Selfcomp" in verdict.missing_inner_council
+        assert "Balle" not in verdict.missing_inner_council
+
+    def test_near_miss_name_does_not_satisfy_a_seat(self) -> None:
+        """NEGATIVE control: `Ballard` must not satisfy the `Balle` seat."""
+        attendees = [
+            s.name for s in INNER_COUNCIL if s.name != "Balle"
+        ] + ["Ballard"]
+        verdict = validate_council_dispatch_roster(attendees, ["any"], "T2")
+        assert verdict.complete is False
+        assert "Balle" in verdict.missing_inner_council
+
+    def test_missing_co_lead_still_blocking_under_normalization(self) -> None:
+        attendees = [s.name for s in INNER_COUNCIL if s.name != "Daubechies"]
+        verdict = validate_council_dispatch_roster(attendees, ["any"], "T2")
+        assert verdict.complete is False
+        assert "Daubechies" in verdict.missing_co_leads
+
+
+class TestSeatAvailabilityTimeline:
+    def test_seat_added_after_memo_is_unavailable(self) -> None:
+        # HaoChen_NeRV landed 2026-06-01 (git 4b7db346a6).
+        assert seat_available_at("HaoChen_NeRV", "20260520") is False
+        assert seat_available_at("HaoChen_NeRV", "20260601") is True
+        assert seat_available_at("HaoChen_NeRV", "20260615") is True
+
+    def test_founding_seats_available_at_roster_landing(self) -> None:
+        for name in ("Shannon", "Rudin", "Daubechies", "PR95Author", "Balle"):
+            assert seat_available_at(name, CANONICAL_ROSTER_LANDING_UTC_YYYYMMDD) is True
+
+    def test_none_as_of_means_current_roster(self) -> None:
+        for seat in INNER_COUNCIL + GRAND_COUNCIL:
+            assert seat_available_at(seat.name, None) is True
+
+    def test_frank_nielsen_gated_at_20260706(self) -> None:
+        assert seat_available_at("FrankNielsen", "20260705") is False
+        assert seat_available_at("FrankNielsen", "20260706") is True
+
+    def test_required_attendees_excludes_post_dated_grand_seat(self) -> None:
+        tokens = ["hnerv", "nerv"]
+        current = frozenset(
+            s.name for s in required_attendees_for_topic(tokens, "T3")
+        )
+        as_of_0520 = frozenset(
+            s.name for s in required_attendees_for_topic(
+                tokens, "T3", as_of_utc_yyyymmdd="20260520",
+            )
+        )
+        assert "HaoChen_NeRV" in current
+        assert "HaoChen_NeRV" not in as_of_0520
+        assert as_of_0520 < current
+
+    def test_era_filter_never_weakens_inner_council(self) -> None:
+        """All 14 inner seats existed at the 2026-05-19 roster landing."""
+        for as_of in (CANONICAL_ROSTER_LANDING_UTC_YYYYMMDD, "20260520", "20260728"):
+            required = required_attendees_for_topic(
+                ["any"], "T2", as_of_utc_yyyymmdd=as_of,
+            )
+            assert len(required) == len(INNER_COUNCIL)
+
+    def test_validate_honors_as_of(self) -> None:
+        attendees = [s.name for s in INNER_COUNCIL]
+        # 4 tokens so that 5 post-dated grand seats match — the T3 advisory rule
+        # only refuses at 5+ missing grand seats ("Grand Council (advisory)":
+        # missing 1-4 may be acceptable), so a 3-seat delta would NOT flip the
+        # verdict and would not exercise the era filter end-to-end.
+        tokens = ["hnerv", "nerv", "rnerv", "carrier_architecture"]
+        early = validate_council_dispatch_roster(
+            attendees, tokens, "T3", as_of_utc_yyyymmdd="20260520",
+        )
+        assert early.missing_relevant_grand_council == ()
+        assert early.complete is True
+        # Same roster, later date: the 5 NeRV/SNeRV/HiNeRV seats now exist.
+        late = validate_council_dispatch_roster(
+            attendees, tokens, "T3", as_of_utc_yyyymmdd="20260615",
+        )
+        assert len(late.missing_relevant_grand_council) == 5
+        assert late.complete is False

@@ -5145,8 +5145,20 @@ def preflight_all(
         # roster expansions). Backfill arm owns the honest adjudication —
         # NEVER invented attendance, byte-preserving waivers/appends per
         # #110/#113. Re-flip rides live-count 0.
+        # 2026-08-25 RE-FLIPPED strict (arm cr1) at live count 0. Burn-down
+        # 20 -> 0, NO attendee list mutated (16 memo diffs are 384 additions /
+        # 0 deletions; `council_attendees` appears in none of them):
+        #   4 cured as DETECTOR defects, both-direction controls executed --
+        #     1 DAG-FEED companion out of scope (parent memo still validated);
+        #     1 anachronistic demand (2026-05-20 memo charged for grand seats
+        #       appended 2026-06-01) via `seat_available_at`;
+        #     2 name-normalization FPs (`MacKay_Memorial`, `AssumptionAdversary`)
+        #       via `canonical_seat_key` -- the memo HAD seated them.
+        #   16 GENUINE post-expansion under-rosterings -> honest append-only
+        #     `# COUNCIL_ROSTER_INCOMPLETE_OK` notes naming the absent seats.
+        # Ledger: .omx/research/ddm_cr1_check346_roster_backfill_20260825.md
         check_council_dispatch_roster_complete_per_canonical_helper(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
         # 2026-05-09 proactive META-class custody+concurrency audit (#130):
         # extends catalog #127 (`AUTHORITATIVE_TAGS` membership) to also catch
@@ -84835,6 +84847,19 @@ _CHECK_346_COUNCIL_FILENAME_GLOBS = (
     "skunkworks_council_*_2026*.md",
     "reunion_*_symposium_*_2026*.md",
 )
+# Scope exclusion (2026-08-25, arm cr1). The filename globs above are a
+# HEURISTIC over `.omx/research/`. `council_*_DAG_FEED_*.md` documents are
+# triality DAG-FEED companions — synthesis-only trajectory records OF a
+# deliberation, not the deliberation dispatch itself; they routinely decline to
+# re-enumerate the seated roster and point at the parent council memo instead.
+# Demanding a dispatch roster from a companion is a scope defect, not
+# under-rostering. Coverage is preserved because the parent deliberation memo
+# is itself matched by `council_*_2026*.md` and validated independently — the
+# 2026-08-25 live case `council_gc5_micro_macro_bridge_DAG_FEED_20260728.md`
+# names its parent `council_gc5_schmidhuber_micro_macro_bridge_20260728.md`,
+# which IS in scope. Deliberation records must live in a council memo; a DAG
+# FEED never substitutes for one.
+_CHECK_346_COMPANION_FILENAME_MARKERS = ("_DAG_FEED_",)
 _CHECK_346_WAIVER_TOKEN = "# COUNCIL_ROSTER_INCOMPLETE_OK"
 _CHECK_346_PLACEHOLDER_RATIONALES = (
     "<rationale>", "<reason>", "<rationale_here>", "<reason_here>",
@@ -84954,6 +84979,24 @@ def check_council_dispatch_roster_complete_per_canonical_helper(
         (c) memo predates the 2026-05-19 cutoff (legacy exemption per the
             "Strict-flip atomicity rule")
 
+    Scope (2026-08-25, arm cr1 — two anti-false-positive rules; neither can
+    excuse a real under-rostering, and both carry both-direction controls in
+    `src/tac/tests/test_preflight_check_346_scope.py`):
+        * `council_*_DAG_FEED_*.md` companions are OUT OF SCOPE — they are
+          synthesis records of a deliberation, not the dispatch. The parent
+          council memo carries the roster obligation and is validated.
+        * the memo's own date is passed to the canonical helper as
+          `as_of_utc_yyyymmdd`, so a memo is never charged for a roster seat
+          appended AFTER it was convened. The roster is APPEND-ONLY per
+          Catalog #110/#113, and all 14 inner-council seats landed with the
+          2026-05-19 roster, so this can only ever relax a post-dated GRAND
+          seat — never an inner-council or co-lead obligation.
+
+    Attendee matching runs on `canonical_council_roster.canonical_seat_key`, so
+    a memo that recorded `Ballé` / `PR95-author` / `MacKay_Memorial` is credited
+    with seating that person. The key is injectivity-guarded at import, so one
+    seat's attendance can never satisfy a different seat.
+
     Args:
         strict: if True, raise PreflightError on any violation
         verbose: if True, print per-violation summary
@@ -84982,6 +85025,14 @@ def check_council_dispatch_roster_complete_per_canonical_helper(
     candidates = sorted(set(candidates))
 
     for memo_path in candidates:
+        # Scope filter — DAG-FEED companions are synthesis records of a
+        # deliberation, not the dispatch; the parent council memo carries the
+        # roster obligation and is validated separately.
+        if any(
+            marker in memo_path.name
+            for marker in _CHECK_346_COMPANION_FILENAME_MARKERS
+        ):
+            continue
         # Date filter — only memos dated >= cutoff are in scope
         date_suffix = _check_346_date_suffix_in_filename(memo_path.name)
         if date_suffix is None or date_suffix < cutoff:
@@ -85002,8 +85053,14 @@ def check_council_dispatch_roster_complete_per_canonical_helper(
             # parseable but roster is incomplete.
             continue
 
+        # `as_of_utc_yyyymmdd` = the memo's own date, so the gate never demands
+        # a seat that was appended to the canonical roster AFTER the memo was
+        # convened (anachronistic demand, not under-rostering). Per Catalog
+        # #110/#113 the roster is APPEND-ONLY, so this can only ever remove a
+        # post-dated seat from the requirement.
         verdict = validate_council_dispatch_roster(
             list(attendees), list(topic_tokens), tier,
+            as_of_utc_yyyymmdd=date_suffix,
         )
         if not verdict.complete:
             violations.append(

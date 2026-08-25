@@ -300,3 +300,27 @@ ready_for_exact_eval_dispatch = False   (operator-routable after reactivation cr
 **Status:** PROCEED_WITH_REVISIONS pending reactivation criteria (a)+(b) co-delivery
 **Operator-routable paid-dispatch:** $0.06 paired-CUDA + paired-CPU after (a)+(b) land
 **Sister symposia:** PR110 × SYNTHESIZE_FRAME (SYMPOSIUM 1 landed) + DQS1 × SYNTHESIZE_FRAME (SYMPOSIUM 3 to land next)
+
+---
+
+<!-- # COUNCIL_ROSTER_INCOMPLETE_OK:under_rostered_T2_convocation_20260529_acknowledged_not_repaired_missing_inner_selfcomp_mackay_balle_postdates_20260519_roster_landing_so_no_era_exemption_applies_historical_attendee_list_preserved_unmutated_append_only_per_catalog_110_113_no_invented_attendance_arm_cr1_20260825 -->
+
+## Catalog #346 roster note — appended 2026-08-25, APPEND-ONLY
+
+**Honest record, not a repair.** This T2 deliberation (2026-05-29) was convened AFTER the
+2026-05-19 canonical-roster landing, so no era exemption applies: every seat it owed already
+existed. It did not seat 3 mandatory inner-council voice(s): **Selfcomp, MacKay, Balle**.
+
+The absent seats are inner-council sister voices (not co-leads); the 4-co-lead shared-leadership core WAS seated.
+
+The `council_attendees` list above is the HISTORICAL RECORD of who actually deliberated and is
+**NOT mutated** — no attendance is added retroactively (fabricated attendance would be a fake
+council record per the CLAUDE.md NO-FAKE supreme rule). Per Catalog #110/#113 APPEND-ONLY
+HISTORICAL_PROVENANCE the gap is recorded here rather than papered over. Per CLAUDE.md
+"Forbidden premature KILL without research exhaustion" this is an acknowledgement, not a
+retraction of the deliberation's content.
+
+Verified by `tac.canonical_council_roster.validate_council_dispatch_roster` after the 2026-08-25
+detector cures (attendee-name normalization + seat-availability era filter), so the seats named
+above are genuinely absent — not spelling variants and not anachronistic demands.
+Ledger: `.omx/research/ddm_cr1_check346_roster_backfill_20260825.md`.

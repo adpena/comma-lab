@@ -74,6 +74,8 @@ Cross-references:
 """
 from __future__ import annotations
 
+import re
+import unicodedata
 from dataclasses import dataclass
 from typing import Iterable, Literal
 
@@ -955,6 +957,157 @@ _ALL_SEATS_BY_NAME: dict[str, CouncilSeat] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Attendee-name normalization (Catalog #346 detector-scope cure, 2026-08-25).
+#
+# BUG CLASS: the roster matcher compared attendee strings to seat names by EXACT
+# equality. Council memos legitimately record the SAME canonical person under a
+# spelling variant — `Ballé` (the person's actual spelling) vs the ASCII seat id
+# `Balle`; `PR95-author` vs `PR95Author`; `MacKay_Memorial` vs `MacKay`;
+# `AssumptionAdversary` vs `Assumption-Adversary`; `Schmidhuber-LEAD` vs
+# `Schmidhuber`. Exact matching reported those seats as ABSENT although the memo
+# seated them — a FALSE under-rostering report, i.e. a detector defect, not a
+# roster defect.
+#
+# The cure normalizes IDENTITY-PRESERVING decoration only:
+#   * unicode accent folding (Ballé -> balle)
+#   * case folding
+#   * parenthetical qualifiers  ("Tishby (memorial seat)" -> tishby)
+#   * ROLE annotations as separated suffix tokens (LEAD / CO-LEAD / memorial /
+#     seat) — a role is not an identity
+#   * punctuation/whitespace ( `PR95-author` / `Assumption-Adversary` )
+#
+# It deliberately does NOT strip IDENTITY-BEARING qualifiers. In particular
+# `mentor` is NOT stripped, because `TimeTraveler` (mentor) and
+# `TimeTravelerProtege` are DISTINCT canonical seats per CLAUDE.md "Grand
+# Council (advisory)"; folding `mentor` would risk collapsing them. Likewise the
+# `_Grand` sister-seat suffix is preserved so `Rudin` never satisfies
+# `Rudin_Grand`. `_check_seat_key_injectivity` (asserted at import) refuses any
+# rule set that maps two distinct canonical seats onto one key — the structural
+# guard against the collapse-per-key-distinctions failure class.
+# ---------------------------------------------------------------------------
+
+# ORDER IS LOAD-BEARING: every "co-lead" spelling must be consumed before the
+# bare "lead" rule runs, otherwise "shannon co-lead" would strip to "shannon co"
+# and fold to the wrong key "shannonco".
+_SEAT_KEY_ROLE_ANNOTATIONS: tuple[str, ...] = (
+    "co-lead",
+    "co lead",
+    "colead",
+    "lead",
+    "memorial",
+    "seat",
+)
+
+
+def canonical_seat_key(name: str) -> str:
+    """Return the identity key for a council attendee/seat name.
+
+    Folds accents, case, parenthetical qualifiers, separated ROLE annotations
+    (LEAD / CO-LEAD / memorial / seat), and punctuation. Identity-bearing
+    qualifiers (`mentor`, the `_Grand` sister-seat suffix) are PRESERVED.
+
+    Returns "" for empty/whitespace input. Note that the role rules consume a
+    SEPARATED suffix only, so a standalone role word folds to itself (bare
+    "LEAD" -> "lead"), not to "". Either way it resolves to no canonical seat,
+    which is the property callers rely on; `_check_seat_key_injectivity`
+    guarantees no real seat can be reached by decoration alone.
+    """
+    if not name or not isinstance(name, str):
+        return ""
+    folded = unicodedata.normalize("NFKD", name)
+    folded = "".join(ch for ch in folded if not unicodedata.combining(ch))
+    folded = folded.lower()
+    # Parenthetical qualifiers are annotation, never identity.
+    folded = re.sub(r"\([^)]*\)", " ", folded)
+    for annotation in _SEAT_KEY_ROLE_ANNOTATIONS:
+        folded = re.sub(
+            rf"[-_\s]{re.escape(annotation)}(?![a-z0-9])", " ", folded,
+        )
+    return re.sub(r"[^a-z0-9]+", "", folded)
+
+
+def _check_seat_key_injectivity() -> None:
+    """Refuse a normalization rule set that collapses two canonical seats.
+
+    Import-time structural guard: `canonical_seat_key` MUST be injective over
+    the canonical roster, otherwise attendance for one seat would silently
+    satisfy a different seat.
+    """
+    seen: dict[str, str] = {}
+    for seat in INNER_COUNCIL + GRAND_COUNCIL:
+        key = canonical_seat_key(seat.name)
+        if not key:
+            raise ValueError(
+                f"canonical_seat_key collapsed seat {seat.name!r} to an empty key"
+            )
+        if key in seen:
+            raise ValueError(
+                "canonical_seat_key is NOT injective over the canonical roster: "
+                f"{seen[key]!r} and {seat.name!r} both map to {key!r}"
+            )
+        seen[key] = seat.name
+
+
+_check_seat_key_injectivity()
+
+# Key-addressed view of `_ALL_SEATS_BY_NAME` (kept in lockstep with it, so the
+# name-addressed map does not become orphaned by the key-addressed lookup).
+_ALL_SEAT_KEYS: dict[str, CouncilSeat] = {
+    canonical_seat_key(name): seat
+    for name, seat in _ALL_SEATS_BY_NAME.items()
+}
+
+
+# ---------------------------------------------------------------------------
+# Seat availability timeline (Catalog #346 anachronism cure, 2026-08-25).
+#
+# The roster GREW over time per Catalog #110/#113 APPEND-ONLY. A deliberation
+# memo cannot owe attendance from a seat that did not exist when it was
+# convened; demanding one is an anachronistic requirement, not under-rostering.
+#
+# Provenance — first commit introducing each seat into THIS module
+# (`git log --reverse -S'name="<seat>"' -- src/tac/canonical_council_roster.py`):
+#   06feeecf17 / 77a2d0f38f  2026-05-19  module landing; all 14 INNER_COUNCIL
+#       seats (incl. PR95Author, Rudin, Daubechies) + the 2026-05-19 grand
+#       additions (TimeTraveler, TimeTravelerProtege, Rudin_Grand,
+#       Daubechies_Grand). Cross-ref CLAUDE.md "Grand Council (advisory)"
+#       2026-05-19 roster-maintenance-v2 + "Council conduct" 4-co-lead amendment.
+#   4b7db346a6  2026-06-01  HaoChen_NeRV, Shrivastava_INR, Gwilliam_RNeRV
+#   153f228232  2026-06-01  Kang_SNeRV, Bull_HiNeRV
+#   002257c665  2026-07-06  FrankNielsen (per operator directive 2026-07-06)
+#
+# Seats absent from this map default to the module-landing date, so the map
+# only ever RESTRICTS a demand for a post-landing seat; it can never excuse a
+# seat that existed at convocation time.
+# ---------------------------------------------------------------------------
+
+CANONICAL_ROSTER_LANDING_UTC_YYYYMMDD = "20260519"
+
+SEAT_FIRST_AVAILABLE_UTC: dict[str, str] = {
+    "HaoChen_NeRV": "20260601",
+    "Shrivastava_INR": "20260601",
+    "Gwilliam_RNeRV": "20260601",
+    "Kang_SNeRV": "20260601",
+    "Bull_HiNeRV": "20260601",
+    "FrankNielsen": "20260706",
+}
+
+
+def seat_available_at(seat_name: str, as_of_utc_yyyymmdd: str | None) -> bool:
+    """True iff `seat_name` existed on the canonical roster at the given date.
+
+    `as_of_utc_yyyymmdd=None` means "evaluate against the current roster" —
+    every seat is available (the pre-2026-08-25 behavior).
+    """
+    if as_of_utc_yyyymmdd is None:
+        return True
+    first = SEAT_FIRST_AVAILABLE_UTC.get(
+        seat_name, CANONICAL_ROSTER_LANDING_UTC_YYYYMMDD,
+    )
+    return str(as_of_utc_yyyymmdd) >= first
+
+
 @dataclass(frozen=True)
 class RosterValidationVerdict:
     """Verdict returned by `validate_council_dispatch_roster`.
@@ -1011,6 +1164,8 @@ class RosterValidationVerdict:
 def required_attendees_for_topic(
     topic_tokens: Iterable[str],
     council_tier: str,
+    *,
+    as_of_utc_yyyymmdd: str | None = None,
 ) -> tuple[CouncilSeat, ...]:
     """Return canonical mandatory roster for a deliberation on the given topic.
 
@@ -1030,6 +1185,11 @@ def required_attendees_for_topic(
 
     Per CLAUDE.md "Council hierarchy: 4-tier protocol" + "Experiment design —
     non-negotiable" + "Grand Council (advisory)".
+
+    `as_of_utc_yyyymmdd` (keyword-only, default None = current roster) restricts
+    the requirement to seats that already existed on the canonical roster at
+    that date, per `seat_available_at`. A deliberation cannot owe attendance
+    from a seat appended after it was convened.
     """
     if council_tier not in ("T1", "T2", "T3", "T4"):
         raise ValueError(
@@ -1038,13 +1198,20 @@ def required_attendees_for_topic(
     tokens = frozenset(t.strip().lower() for t in topic_tokens if t and isinstance(t, str))
     if council_tier == "T1":
         return ()
-    required: list[CouncilSeat] = list(INNER_COUNCIL)
+    required: list[CouncilSeat] = [
+        seat for seat in INNER_COUNCIL
+        if seat_available_at(seat.name, as_of_utc_yyyymmdd)
+    ]
     if council_tier == "T2":
         return tuple(required)
+    grand_available = tuple(
+        seat for seat in GRAND_COUNCIL
+        if seat_available_at(seat.name, as_of_utc_yyyymmdd)
+    )
     if council_tier == "T4":
-        return tuple(required) + tuple(GRAND_COUNCIL)
+        return tuple(required) + grand_available
     # T3: inner council + topically-relevant grand council seats.
-    for seat in GRAND_COUNCIL:
+    for seat in grand_available:
         seat_tokens = frozenset(seat.relevance_tokens)
         if "any" in seat_tokens or seat_tokens & tokens:
             required.append(seat)
@@ -1055,6 +1222,8 @@ def validate_council_dispatch_roster(
     dispatched_attendees: Iterable[str],
     topic_tokens: Iterable[str],
     council_tier: str,
+    *,
+    as_of_utc_yyyymmdd: str | None = None,
 ) -> RosterValidationVerdict:
     """Validate a council dispatch's attendee list against the canonical roster.
 
@@ -1084,8 +1253,17 @@ def validate_council_dispatch_roster(
             f"council_tier must be T1/T2/T3/T4: {council_tier!r}"
         )
     attendees = frozenset(a.strip() for a in dispatched_attendees if a and isinstance(a, str))
+    # Match on the canonical identity key, not the raw string: a memo that
+    # seated `Ballé` / `PR95-author` / `MacKay_Memorial` DID seat the canonical
+    # person. `canonical_seat_key` is injectivity-guarded at import so this can
+    # never let one seat's attendance satisfy a different seat.
+    attendee_keys = frozenset(
+        key for key in (canonical_seat_key(a) for a in attendees) if key
+    )
     tokens = tuple(t.strip().lower() for t in topic_tokens if t and isinstance(t, str))
-    required = required_attendees_for_topic(tokens, council_tier)
+    required = required_attendees_for_topic(
+        tokens, council_tier, as_of_utc_yyyymmdd=as_of_utc_yyyymmdd,
+    )
     required_inner = tuple(
         seat for seat in required
         if seat.role in ("inner_council_sextet", "inner_council")
@@ -1094,10 +1272,12 @@ def validate_council_dispatch_roster(
         seat for seat in required if seat.role == "grand_council"
     )
     missing_inner = tuple(
-        seat.name for seat in required_inner if seat.name not in attendees
+        seat.name for seat in required_inner
+        if canonical_seat_key(seat.name) not in attendee_keys
     )
     missing_grand = tuple(
-        seat.name for seat in required_grand if seat.name not in attendees
+        seat.name for seat in required_grand
+        if canonical_seat_key(seat.name) not in attendee_keys
     )
     # Per CLAUDE.md "Council conduct" 2026-05-19 amendment: compute the 4-co-lead
     # subset of missing inner seats so the operator-facing verdict surfaces them
@@ -1107,11 +1287,11 @@ def validate_council_dispatch_roster(
     # co-lead omission is a structurally distinct alert.
     missing_co_leads = tuple(
         seat.name for seat in required_inner
-        if seat.is_co_lead and seat.name not in attendees
+        if seat.is_co_lead and canonical_seat_key(seat.name) not in attendee_keys
     )
     unknown = tuple(
         name for name in sorted(attendees)
-        if name not in _ALL_SEATS_BY_NAME
+        if canonical_seat_key(name) not in _ALL_SEAT_KEYS
     )
     # Complete: no inner missing (T2+ always blocking; includes co-leads which
     # are a subset); no co-leads missing (T2+ BLOCKING per 2026-05-19 amendment);
@@ -1142,6 +1322,10 @@ __all__ = [
     "RosterValidationVerdict",
     "INNER_COUNCIL",
     "GRAND_COUNCIL",
+    "CANONICAL_ROSTER_LANDING_UTC_YYYYMMDD",
+    "SEAT_FIRST_AVAILABLE_UTC",
+    "canonical_seat_key",
+    "seat_available_at",
     "required_attendees_for_topic",
     "validate_council_dispatch_roster",
 ]
