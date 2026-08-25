@@ -5078,10 +5078,21 @@ def preflight_all(
         # feedback_unified_lagrangian_action_principle_GR_style_20260509.md
         # 2026-08-25 DEMOTED warn-only (r31 full-enumeration): 124 era-debt
         # landing memos missing 1+ wire-in declarations accrued while #842 hid
-        # the gate. Backfill arm owns the burn-down (per-memo honest
-        # adjudication, #287/#300/#305 pattern); re-flip strict=True rides
-        # live-count 0.
-        check_subagent_landing_has_solver_wire_in(strict=False, verbose=verbose)
+        # the gate. 2026-08-25 RE-FLIPPED strict (ddm_wb1 backfill arm, live
+        # count 124 -> 0). Burn-down: 67 memos cleared by three evidence-gated
+        # DETECTOR cures (multi-word hook labels whose marker sits after the
+        # trailing label noun; em/en-dash declaration separators; the one-line
+        # bare-ACTIVE convention) - each with positive AND negative controls in
+        # test_check_subagent_landing_has_solver_wire_in.py, and each verified
+        # to only ADD acceptance (the post-cure violation set is a subset of
+        # the pre-cure set). A fourth candidate cure (joining hard-wrapped
+        # lines) was MEASURED to manufacture 49 false accepts - a bare
+        # "hook #3 bit-allocator: N/A" borrowing the next bullet's text as its
+        # missing rationale - and was rejected; a design guard test pins that.
+        # The remaining 57 memos were backfilled per-memo with APPEND-ONLY
+        # declaration blocks adjudicated from each memo's own body.
+        # Ledger: .omx/research/ddm_wb1_check125_wirein_backfill_20260825.md
+        check_subagent_landing_has_solver_wire_in(strict=True, verbose=verbose)
         # 2026-05-09 Subagent coherence-by-default (#126): subagent commits
         # 2026-05-09 STRICT-FLIP per "fix all yourself" operator approval -
         # 30 -> 0 violations after backfilling 8 alias lanes (lane_t11_lovasz +
@@ -8561,10 +8572,13 @@ def preflight_developer(
             (
                 "check_subagent_landing_has_solver_wire_in",
                 "[subagent-landing-solver-wire-in]",
-                # 2026-08-25 DEMOTED warn-only (r31): 124 era-debt memos;
-                # backfill arm owns burn-down; re-flip rides live-count 0.
+                # 2026-08-25 DEMOTED warn-only (r31): 124 era-debt memos.
+                # 2026-08-25 RE-FLIPPED strict (ddm_wb1): live count 124 -> 0
+                # via 3 evidence-gated detector cures + 57 APPEND-ONLY per-memo
+                # backfills. Sister call site in preflight_all carries the full
+                # burn-down note.
                 lambda: check_subagent_landing_has_solver_wire_in(
-                    strict=False, verbose=False
+                    strict=True, verbose=False
                 ),
             ),
             (
