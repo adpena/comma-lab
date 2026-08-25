@@ -71,8 +71,8 @@ from tac.boundary_math.margin_conditional_residual import (  # noqa: E402
     log2_choose,
 )
 
-_D_RATE_DENOM = 37_545_489
-_SEG_WEIGHT = 100.0
+_D_RATE_DENOM = 37_545_489  # [contest-defined] rate denominator, upstream/evaluate.py score formula
+_SEG_WEIGHT = 100.0  # [contest-defined] seg coefficient in S = 100*d_seg + sqrt(10*d_pose) + 25*bytes/denom (upstream/evaluate.py:92)
 _FORBIDDEN_TMP = ("/tmp/", "/var/tmp/", "/private/tmp/", "/private/var/tmp/")
 # d_pose of the byte-closed luma+chroma carrier composed with the witness (FEED context anchor).
 _D_POSE_REF = 3.4e-5
