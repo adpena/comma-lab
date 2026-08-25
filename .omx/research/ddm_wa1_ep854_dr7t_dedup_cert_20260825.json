@@ -1,0 +1,13 @@
+{
+  "record": "certify-or-block dedup certification (wa1 route-table item, repo-root stray payload)",
+  "date_utc": "2026-08-25",
+  "original_path": "ep854_tokens.dr7t (repo root, untracked)",
+  "bytes": 271494,
+  "sha256": "1bab7aef76b634165d3befa689d97503d7292da83b5dcfa38657eb7e3cae7abb",
+  "cold_store_destination": "/Volumes/APDataStore/pact/vertigo_coldstore/pact/ddm_pfs1_20260729/d1/eval_root/submissions/v4d_cr2_ep854/archive/state/tokens.dr7t",
+  "cold_store_sha256": "1bab7aef76b634165d3befa689d97503d7292da83b5dcfa38657eb7e3cae7abb",
+  "byte_identical": true,
+  "reason_rebuildable_or_externalized": "byte-identical copy retained in vertigo_coldstore custody (ddm_pfs1 v4d_cr2_ep854 submission tree); the repo-root file was a stray working copy of the same payload, never cited as evidence by any memo (verified in the wa1 audit)",
+  "action": "repo-root stray DELETED after this certification landed; cold-store bytes untouched",
+  "audit_source": ".omx/research/ddm_wa1_week_audit_gestalt_toy_orphan_synergy_20260825.md §3 item 4"
+}
