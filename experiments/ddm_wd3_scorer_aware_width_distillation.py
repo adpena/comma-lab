@@ -1391,7 +1391,12 @@ def prepare_teacher_scorer_cache(config: Mapping[str, Any]) -> dict[str, Any]:
     if config["action"] != "prepare_teacher_scorer_cache":
         raise WD3Error("cache builder received a non-cache config")
     assert_governed_admission("ddm_wd3_prepare_teacher_scorer_cache")
-    storage = storage_preflight(Path(config["output"]), int(config["minimum_free_bytes"]))
+    stage_a = _stage_a_binding(config)
+    storage = storage_preflight(
+        Path(config["output"]),
+        int(config["minimum_free_bytes"]),
+        allowed_root=STAGE_A_OUTPUT_ROOT if stage_a is not None else OUTPUT_ROOT,
+    )
     seed_everything(int(config["seed"]))
     device = _device(str(config["device"]))
     posenet, segnet = load_differentiable_scorers(REPO / "upstream", device=device)
@@ -2504,7 +2509,12 @@ def train(config: Mapping[str, Any]) -> dict[str, Any]:
         raise WD3Error("trainer received a non-training config")
     _verify_launch_sources(config)
     assert_governed_admission("ddm_wd3_scorer_aware_width_distillation_train")
-    storage = storage_preflight(Path(config["output"]), int(config["minimum_free_bytes"]))
+    stage_a = _stage_a_binding(config)
+    storage = storage_preflight(
+        Path(config["output"]),
+        int(config["minimum_free_bytes"]),
+        allowed_root=STAGE_A_OUTPUT_ROOT if stage_a is not None else OUTPUT_ROOT,
+    )
     seed_everything(int(config["seed"]))
     device = _device(str(config["device"]))
     cache_receipt, cache = _load_cache_result(Path(config["teacher_cache_result"]))
@@ -2524,7 +2534,6 @@ def train(config: Mapping[str, Any]) -> dict[str, Any]:
         controller,
         allocation,
     ) = _initialize_training_state(config, device)
-    stage_a = _stage_a_binding(config)
     cheap = cheap_to_shrink_config(config)
     output = Path(config["output"]) / str(config["arm"])
     if controller is None or allocation is None:
