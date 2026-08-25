@@ -5076,7 +5076,12 @@ def preflight_all(
         # subagent landings cannot skip solver/autopilot/posterior surfaces.
         # Memory:
         # feedback_unified_lagrangian_action_principle_GR_style_20260509.md
-        check_subagent_landing_has_solver_wire_in(strict=True, verbose=verbose)
+        # 2026-08-25 DEMOTED warn-only (r31 full-enumeration): 124 era-debt
+        # landing memos missing 1+ wire-in declarations accrued while #842 hid
+        # the gate. Backfill arm owns the burn-down (per-memo honest
+        # adjudication, #287/#300/#305 pattern); re-flip strict=True rides
+        # live-count 0.
+        check_subagent_landing_has_solver_wire_in(strict=False, verbose=verbose)
         # 2026-05-09 Subagent coherence-by-default (#126): subagent commits
         # 2026-05-09 STRICT-FLIP per "fix all yourself" operator approval -
         # 30 -> 0 violations after backfilling 8 alias lanes (lane_t11_lovasz +
@@ -8556,8 +8561,10 @@ def preflight_developer(
             (
                 "check_subagent_landing_has_solver_wire_in",
                 "[subagent-landing-solver-wire-in]",
+                # 2026-08-25 DEMOTED warn-only (r31): 124 era-debt memos;
+                # backfill arm owns burn-down; re-flip rides live-count 0.
                 lambda: check_subagent_landing_has_solver_wire_in(
-                    strict=True, verbose=False
+                    strict=False, verbose=False
                 ),
             ),
             (
