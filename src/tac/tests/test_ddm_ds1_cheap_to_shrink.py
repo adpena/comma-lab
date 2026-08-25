@@ -23,6 +23,7 @@ from experiments.ddm_ds1_cheap_to_shrink import (  # noqa: E402
     DS1Error,
     apply,
     derive_rung_ladder,
+    derive_uniform_rung_ladder,
     is_inert,
     rungs_for_step,
     select_rung_for_step,
@@ -139,6 +140,54 @@ def test_reference_uniform_weighting_is_the_default() -> None:
     assert config.base_weight == 1.0
 
 
+def test_uniform_ladder_requires_declared_uniform_rungs() -> None:
+    with pytest.raises(DS1Error, match="requires at least one uniform bit rung"):
+        CheapToShrinkConfig(mode="sampled", allocation_family="uniform_bits")
+
+
+def test_uniform_ladder_refuses_waterfill_multipliers() -> None:
+    with pytest.raises(DS1Error, match="may not declare waterfill"):
+        CheapToShrinkConfig(
+            mode="sampled",
+            allocation_family="uniform_bits",
+            uniform_bits=(3, 2),
+            ceiling_multipliers=(2.0, 4.0),
+        )
+
+
+def test_uniform_ladder_is_real_byte_ordered() -> None:
+    config = CheapToShrinkConfig(
+        mode="sampled",
+        allocation_family="uniform_bits",
+        uniform_bits=(3, 2),
+        seed=20260815,
+    )
+    costs = {"uniform4": 400, "uniform3": 320, "uniform2": 240}
+    ladder = derive_uniform_rung_ladder(
+        base_allocation="uniform4",
+        allocation_for_bits=lambda bits: f"uniform{bits}",
+        config=config,
+        byte_cost=lambda allocation: costs[allocation],
+    )
+    assert ladder.cheaper_allocations == ("uniform3", "uniform2")
+    assert ladder.diagnostics["rung_byte_savings"] == [80, 160]
+
+
+def test_uniform_ladder_refuses_nonprogressive_real_bytes() -> None:
+    config = CheapToShrinkConfig(
+        mode="sampled",
+        allocation_family="uniform_bits",
+        uniform_bits=(3, 2),
+    )
+    with pytest.raises(DS1Error, match="not progressively cheaper"):
+        derive_uniform_rung_ladder(
+            base_allocation="uniform4",
+            allocation_for_bits=lambda bits: f"uniform{bits}",
+            config=config,
+            byte_cost=lambda allocation: {"uniform4": 400, "uniform3": 250, "uniform2": 260}[allocation],
+        )
+
+
 # ── ladder derivation reuses the trainer's own waterfill ──────────────────────
 
 
@@ -234,9 +283,7 @@ def test_sampled_selection_is_deterministic_in_step() -> None:
 def test_sampled_selection_depends_on_the_seed() -> None:
     a = CheapToShrinkConfig(mode="sampled", ceiling_multipliers=(2.0, 4.0), seed=1)
     b = CheapToShrinkConfig(mode="sampled", ceiling_multipliers=(2.0, 4.0), seed=2)
-    assert [select_rung_for_step(a, s, 2) for s in range(64)] != [
-        select_rung_for_step(b, s, 2) for s in range(64)
-    ]
+    assert [select_rung_for_step(a, s, 2) for s in range(64)] != [select_rung_for_step(b, s, 2) for s in range(64)]
 
 
 def test_sampled_selection_covers_every_rung() -> None:
@@ -305,9 +352,7 @@ def test_sampled_estimator_is_unbiased_for_the_full_sum() -> None:
 
 def test_base_weight_scales_the_shipped_rung() -> None:
     config = CheapToShrinkConfig(mode="sandwich", ceiling_multipliers=(2.0,), base_weight=0.5)
-    total, _ = apply(
-        base_loss=torch.tensor(4.0), rung_losses=((0, torch.tensor(3.0)),), config=config
-    )
+    total, _ = apply(base_loss=torch.tensor(4.0), rung_losses=((0, torch.tensor(3.0)),), config=config)
     assert float(total) == pytest.approx(0.5 * 4.0 + 3.0)
 
 

@@ -66,6 +66,7 @@ from __future__ import annotations
 import hashlib
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from itertools import pairwise
 from typing import Any, Protocol, TypeVar
 
 __all__ = [
@@ -75,6 +76,7 @@ __all__ = [
     "RungLadder",
     "apply",
     "derive_rung_ladder",
+    "derive_uniform_rung_ladder",
     "is_inert",
     "rungs_for_step",
     "select_rung_for_step",
@@ -127,26 +129,48 @@ class CheapToShrinkConfig:
     # Weight of the shipped rung a_0. Reference form keeps it at 1.0.
     base_weight: float = 1.0
     seed: int = 0
+    # R0 found that WD3's measured component gate ships the uniform ladder and
+    # rejects the sensitivity-waterfill proposal 0/3 times.  The original
+    # waterfill-ceiling family remains the default; Stage A may instead declare
+    # the exact ordered uniform bit depths it evaluates.
+    allocation_family: str = "waterfill_ceiling"
+    uniform_bits: tuple[int, ...] = ()
 
     def __post_init__(self) -> None:
         if self.mode not in ADMITTED_MODES:
             raise DS1Error(f"mode must be one of {ADMITTED_MODES}, got {self.mode!r}")
         if self.base_weight < 0.0:
             raise DS1Error("base_weight is negative")
+        if self.allocation_family not in {"waterfill_ceiling", "uniform_bits"}:
+            raise DS1Error("allocation_family must be 'waterfill_ceiling' or 'uniform_bits'")
         if self.mode == "off":
-            if self.ceiling_multipliers or self.rung_weights:
+            if self.ceiling_multipliers or self.rung_weights or self.uniform_bits:
                 raise DS1Error("mode='off' must declare no rungs and no weights")
             return
-        if not self.ceiling_multipliers:
-            raise DS1Error(f"mode={self.mode!r} requires at least one ceiling multiplier")
-        if any(not (multiplier > 1.0) for multiplier in self.ceiling_multipliers):
-            raise DS1Error("every ceiling multiplier must be > 1.0 (a looser ceiling is a cheaper rung)")
-        if list(self.ceiling_multipliers) != sorted(self.ceiling_multipliers):
-            raise DS1Error("ceiling multipliers must be ordered cheapest-last")
-        if len(set(self.ceiling_multipliers)) != len(self.ceiling_multipliers):
-            raise DS1Error("ceiling multipliers must be distinct")
-        if self.rung_weights and len(self.rung_weights) != len(self.ceiling_multipliers):
-            raise DS1Error("rung_weights length differs from ceiling_multipliers length")
+        if self.allocation_family == "waterfill_ceiling":
+            if self.uniform_bits:
+                raise DS1Error("waterfill_ceiling may not declare uniform_bits")
+            if not self.ceiling_multipliers:
+                raise DS1Error(f"mode={self.mode!r} requires at least one ceiling multiplier")
+            if any(not (multiplier > 1.0) for multiplier in self.ceiling_multipliers):
+                raise DS1Error("every ceiling multiplier must be > 1.0 (a looser ceiling is a cheaper rung)")
+            if list(self.ceiling_multipliers) != sorted(self.ceiling_multipliers):
+                raise DS1Error("ceiling multipliers must be ordered cheapest-last")
+            if len(set(self.ceiling_multipliers)) != len(self.ceiling_multipliers):
+                raise DS1Error("ceiling multipliers must be distinct")
+        else:
+            if self.ceiling_multipliers:
+                raise DS1Error("uniform_bits may not declare waterfill ceiling multipliers")
+            if not self.uniform_bits:
+                raise DS1Error(f"mode={self.mode!r} requires at least one uniform bit rung")
+            if any(not 2 <= bit <= 8 for bit in self.uniform_bits):
+                raise DS1Error("every uniform bit rung must be in [2, 8]")
+            if tuple(sorted(self.uniform_bits, reverse=True)) != self.uniform_bits:
+                raise DS1Error("uniform bit rungs must be ordered progressively cheaper")
+            if len(set(self.uniform_bits)) != len(self.uniform_bits):
+                raise DS1Error("uniform bit rungs must be distinct")
+        if self.rung_weights and len(self.rung_weights) != self.rung_count:
+            raise DS1Error("rung_weights length differs from the declared rung count")
         if any(weight < 0.0 for weight in self.rung_weights):
             raise DS1Error("rung weights must be non-negative")
         if self.base_weight == 0.0:
@@ -154,11 +178,15 @@ class CheapToShrinkConfig:
                 "base_weight=0 abandons the SHIPPED allocation and trains only the cheap rungs; "
                 "that is not a cheap-to-shrink objective. Use mode='off' to disable the lever."
             )
-        if self.mode == "sandwich" and len(self.ceiling_multipliers) != 1:
+        if self.mode == "sandwich" and self.rung_count != 1:
             raise DS1Error(
                 "mode='sandwich' is the two-end form and admits exactly one cheaper rung; "
                 "declaring more would leave the middle rungs untrained. Use 'all' or 'sampled'."
             )
+
+    @property
+    def rung_count(self) -> int:
+        return len(self.uniform_bits) if self.allocation_family == "uniform_bits" else len(self.ceiling_multipliers)
 
     @property
     def weights(self) -> tuple[float, ...]:
@@ -166,7 +194,7 @@ class CheapToShrinkConfig:
 
         if self.rung_weights:
             return self.rung_weights
-        return tuple(REFERENCE_UNIFORM_WEIGHT for _ in self.ceiling_multipliers)
+        return tuple(REFERENCE_UNIFORM_WEIGHT for _ in range(self.rung_count))
 
     def provenance(self) -> dict[str, Any]:
         """Machine-readable declaration for the run receipt."""
@@ -175,6 +203,8 @@ class CheapToShrinkConfig:
             "lever": "ddm_ds1_cheap_to_shrink",
             "mode": self.mode,
             "ceiling_multipliers": list(self.ceiling_multipliers),
+            "allocation_family": self.allocation_family,
+            "uniform_bits": list(self.uniform_bits),
             "rung_weights": list(self.weights),
             "base_weight": self.base_weight,
             "seed": self.seed,
@@ -198,7 +228,7 @@ def is_inert(config: CheapToShrinkConfig) -> bool:
 
     if config.mode == "off":
         return True
-    if not config.ceiling_multipliers:
+    if config.rung_count == 0:
         return True
     return all(weight == 0.0 for weight in config.weights)
 
@@ -231,6 +261,8 @@ def derive_rung_ladder(
     discrete waterfill returns when its predicted-error ceiling is loosened.
     """
 
+    if config.allocation_family != "waterfill_ceiling":
+        raise DS1Error("derive_rung_ladder requires allocation_family='waterfill_ceiling'")
     if base_ceiling <= 0.0:
         raise DS1Error("base predicted-error ceiling must be positive")
     if is_inert(config):
@@ -258,8 +290,7 @@ def derive_rung_ladder(
         # A rung that saves nothing cannot teach the model anything about shrinking.
         if any(saving <= 0 for saving in diagnostics["rung_byte_savings"]):
             raise DS1Error(
-                "a declared rung is not cheaper than the shipped allocation; "
-                f"base={base_bytes} rungs={rung_bytes}"
+                f"a declared rung is not cheaper than the shipped allocation; base={base_bytes} rungs={rung_bytes}"
             )
 
     return RungLadder(
@@ -268,6 +299,48 @@ def derive_rung_ladder(
         ceilings=tuple(ceilings),
         base_ceiling=base_ceiling,
         diagnostics=diagnostics,
+    )
+
+
+def derive_uniform_rung_ladder(
+    *,
+    base_allocation: Any,
+    allocation_for_bits: Callable[[int], Any],
+    config: CheapToShrinkConfig,
+    byte_cost: Callable[[Any], int],
+) -> RungLadder:
+    """Build the measured R0-corrected ordered uniform-bit ladder.
+
+    This is not a waterfill projection.  Every rung is the trainer's real uniform
+    allocation and the real packet serializer must prove it is strictly cheaper
+    than the shipped/base allocation before the treatment can run.
+    """
+
+    if config.allocation_family != "uniform_bits":
+        raise DS1Error("derive_uniform_rung_ladder requires allocation_family='uniform_bits'")
+    if is_inert(config):
+        return RungLadder(base_allocation=base_allocation)
+    allocations = tuple(allocation_for_bits(bit) for bit in config.uniform_bits)
+    base_bytes = int(byte_cost(base_allocation))
+    rung_bytes = [int(byte_cost(allocation)) for allocation in allocations]
+    savings = [base_bytes - value for value in rung_bytes]
+    if any(saving <= 0 for saving in savings):
+        raise DS1Error(
+            f"a declared uniform rung is not cheaper than the shipped allocation; base={base_bytes} rungs={rung_bytes}"
+        )
+    if any(later >= earlier for earlier, later in pairwise(rung_bytes)):
+        raise DS1Error(f"uniform rung packet bytes are not progressively cheaper: {rung_bytes}")
+    return RungLadder(
+        base_allocation=base_allocation,
+        cheaper_allocations=allocations,
+        diagnostics={
+            "allocation_family": "uniform_bits",
+            "uniform_bits": list(config.uniform_bits),
+            "byte_cost_checked": True,
+            "base_bytes": base_bytes,
+            "rung_bytes": rung_bytes,
+            "rung_byte_savings": savings,
+        },
     )
 
 

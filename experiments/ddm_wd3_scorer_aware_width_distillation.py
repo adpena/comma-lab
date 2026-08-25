@@ -39,6 +39,7 @@ for root in (REPO, SRC):
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
 
+from experiments import ddm_ds1_cheap_to_shrink as ds1
 from experiments import ddm_wd2_width_distillation_build as wd2_build
 from experiments import ddm_wd3_student_receiver as receiver
 from tac.admission_guard import assert_governed_admission
@@ -59,6 +60,8 @@ BASE_DPOSE = 0.00014747
 DECODE_MSE_CEILING = 50.6728233448345
 MAX_CHUNK = 120
 OUTPUT_ROOT = Path("/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation")
+STAGE_A_OUTPUT_ROOT = Path("/Volumes/APDataStore/pact/ddm_s1a_stage_a_adapter")
+STAGE_A_SEEDS = (20260815, 20260816)
 LANE_LEDGER = REPO / ".omx/state/active_lane_dispatch_claims.md"
 BASE_RECEIPT = Path("/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json")
 TEACHER_MASTER = Path(
@@ -203,9 +206,14 @@ def atomic_torch(path: Path, value: object) -> dict[str, Any]:
     return file_record(path)
 
 
-def storage_preflight(output: Path, minimum_free_bytes: int) -> dict[str, Any]:
+def storage_preflight(
+    output: Path,
+    minimum_free_bytes: int,
+    *,
+    allowed_root: Path = OUTPUT_ROOT,
+) -> dict[str, Any]:
     resolved = output.resolve()
-    root = OUTPUT_ROOT.resolve()
+    root = allowed_root.resolve()
     if resolved != root and root not in resolved.parents:
         raise WD3Error(f"WD3 bulk output must stay under {root}")
     output.mkdir(parents=True, exist_ok=True)
@@ -320,7 +328,84 @@ CONFIG_FIELDS = {
     "source_pins",
     "expected_builder_sha256",
     "expected_receiver_sha256",
+    "stage_a",
+    "cheap_to_shrink",
 }
+
+STAGE_A_FIELDS = {
+    "schema",
+    "enabled",
+    "base_archive",
+    "base_archive_sha256",
+    "base_runtime",
+    "initializer",
+    "initializer_sha256",
+    "custody_receipt",
+    "adapter_module",
+    "adapter_sha256",
+    "registered_seeds",
+    "renderer_only_mutable",
+    "untouched_sections",
+}
+
+CHEAP_TO_SHRINK_FIELDS = {
+    "mode",
+    "allocation_family",
+    "uniform_bits",
+    "rung_weights",
+    "base_weight",
+    "sampler_seed",
+}
+
+
+def _stage_a_binding(config: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    value = config.get("stage_a")
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise WD3Error("stage_a binding is not a mapping")
+    _strict_fields(value, STAGE_A_FIELDS, "stage_a")
+    if value["schema"] != "ddm_s1a_stage_a_binding.v1" or value["enabled"] is not True:
+        raise WD3Error("stage_a binding schema/enabled flag differs")
+    if tuple(map(int, value["registered_seeds"])) != STAGE_A_SEEDS:
+        raise WD3Error("stage_a registered seeds differ")
+    if value["renderer_only_mutable"] is not True:
+        raise WD3Error("stage_a must seal renderer_only_mutable")
+    if tuple(value["untouched_sections"]) != ("hpac", "carrier", "fixed_residual", "token_stream", "framing"):
+        raise WD3Error("stage_a untouched-section contract differs")
+    expected = {
+        "base_archive": value["base_archive_sha256"],
+        "initializer": value["initializer_sha256"],
+        "adapter_module": value["adapter_sha256"],
+    }
+    for field, digest in expected.items():
+        path = Path(value[field])
+        if not path.is_file() or sha256_file(path) != digest:
+            raise WD3Error(f"stage_a {field} custody differs")
+    if not Path(value["base_runtime"]).is_dir():
+        raise WD3Error("stage_a base runtime is absent")
+    receipt = Path(value["custody_receipt"])
+    if not receipt.is_file():
+        raise WD3Error("stage_a custody re-proof receipt is absent")
+    return value
+
+
+def cheap_to_shrink_config(config: Mapping[str, Any]) -> ds1.CheapToShrinkConfig:
+    value = config.get("cheap_to_shrink")
+    if not isinstance(value, Mapping):
+        raise WD3Error("cheap_to_shrink binding is absent")
+    _strict_fields(value, CHEAP_TO_SHRINK_FIELDS, "cheap_to_shrink")
+    try:
+        return ds1.CheapToShrinkConfig(
+            mode=str(value["mode"]),
+            allocation_family=str(value["allocation_family"]),
+            uniform_bits=tuple(map(int, value["uniform_bits"])),
+            rung_weights=tuple(map(float, value["rung_weights"])),
+            base_weight=float(value["base_weight"]),
+            seed=int(value["sampler_seed"]),
+        )
+    except ds1.DS1Error as error:
+        raise WD3Error(f"cheap_to_shrink config differs: {error}") from error
 
 
 def _validate_arm(config: Mapping[str, Any]) -> None:
@@ -399,8 +484,13 @@ def validate_compiled_config(
         "train",
     }:
         raise WD3Error("compiled schema/action differs")
-    if int(config["seed"]) != SEED:
-        raise WD3Error("WD3 seed differs from the sealed seed")
+    stage_a = _stage_a_binding(config)
+    allowed_seeds = STAGE_A_SEEDS if stage_a is not None else (SEED,)
+    if int(config["seed"]) not in allowed_seeds:
+        raise WD3Error(f"WD3 seed differs from the sealed seeds {allowed_seeds}")
+    cheap = cheap_to_shrink_config(config)
+    if stage_a is None and not ds1.is_inert(cheap):
+        raise WD3Error("cheap_to_shrink treatment is admitted only through the reviewed Stage-A binding")
     if not 1 <= int(config["chunk_pairs"]) <= MAX_CHUNK:
         raise WD3Error("chunk size exceeds 120 or is nonpositive")
     if config["retain_all_payloads"] is not True:
@@ -408,8 +498,9 @@ def validate_compiled_config(
     if not 1 <= int(config["checkpoint_every_epochs"]) <= 5:
         raise WD3Error("checkpoint cadence must be at most five epochs")
     output = Path(config["output"]).resolve()
-    if output != OUTPUT_ROOT.resolve() and OUTPUT_ROOT.resolve() not in output.parents:
-        raise WD3Error("WD3 output is outside the APDataStore consumer root")
+    allowed_output_root = STAGE_A_OUTPUT_ROOT if stage_a is not None else OUTPUT_ROOT
+    if output != allowed_output_root.resolve() and allowed_output_root.resolve() not in output.parents:
+        raise WD3Error("WD3 output is outside the sealed APDataStore consumer root")
     if Path(config["base_receipt"]) != BASE_RECEIPT:
         raise WD3Error("same-instrument base receipt path differs")
     pins = verify_pins(facts=facts)
@@ -552,11 +643,12 @@ def compile_fire_order(
         if ready
         else "BLOCKED_NOT_LAUNCHABLE"
     )
+    consumer_root = STAGE_A_OUTPUT_ROOT if config.get("stage_a") is not None else OUTPUT_ROOT
     return {
         "schema": "ddm_wd3_fire_order.v1",
         "disposition": disposition,
         "owner": "MAIN",
-        "consumer_store": str(OUTPUT_ROOT) + "/",
+        "consumer_store": str(consumer_root) + "/",
         "fire_trigger": (
             "G0-G5 pass; r5 exited; distinct scorer and Metal lanes claimed; reviewed WD3 code/config dry-run landed"
         ),
@@ -1477,11 +1569,23 @@ def _retain_packet_archive(
     root: Path,
     model: receiver.StudentSemanticRenderer,
     allocation: receiver.AdaptiveQuantizationAllocation,
+    stage_a: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     packet = receiver.pack_student(model, allocation)
     parsed = receiver.unpack_student(packet)
     if receiver.pack_student(parsed, allocation) != packet:
         raise WD3Error("WD3 packet is not byte-idempotent")
+    if stage_a is not None:
+        from experiments import ddm_s1a_stage_a_adapter as s1a
+
+        if sha256_file(Path(s1a.__file__).resolve()) != stage_a["adapter_sha256"]:
+            raise WD3Error("Stage-A packet adapter source differs from the compiled binding")
+        return s1a.retain_renderer_candidate(
+            root=root,
+            packet=packet,
+            allocation=receiver.allocation_telemetry(model, allocation),
+            binding=stage_a,
+        )
     semantic_stream = brotli.compress(packet, mode=brotli.MODE_GENERIC, quality=11)
     hpac, _, carrier = wd2_build._source_streams()
     model_blob = wd2_build._pack_rx1_model(hpac, semantic_stream, carrier)
@@ -1529,6 +1633,7 @@ def evaluate_subset_and_retain(
     segnet: nn.Module,
     device: torch.device,
     chunk_pairs: int,
+    stage_a: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     ids = np.asarray(pair_ids, dtype=np.int64)
     if ids.size < 1 or np.unique(ids).size != ids.size or chunk_pairs > MAX_CHUNK:
@@ -1664,7 +1769,7 @@ def evaluate_subset_and_retain(
         segnet_argmax_u8=student_argmax.numpy().astype("u1"),
         posenet_first6_f32=pose6.numpy().astype("<f4"),
     )
-    packet_archive = _retain_packet_archive(root / "candidate", model, allocation)
+    packet_archive = _retain_packet_archive(root / "candidate", model, allocation, stage_a)
     result = {
         "schema": "ddm_wd3_retained_subset_evaluation.v1",
         "axis": f"[{platform.system()}-{device.type} frozen-scorer advisory]",
@@ -1722,6 +1827,8 @@ def materialize_stage_controller(
     segnet: nn.Module,
     device: torch.device,
     chunk_pairs: int,
+    stage_a: Mapping[str, Any] | None = None,
+    cheap_to_shrink: ds1.CheapToShrinkConfig | None = None,
 ) -> tuple[dict[str, Any], receiver.AdaptiveQuantizationAllocation, StageThresholds]:
     """Build measured cells, frozen calibration, and adaptive packet allocation."""
 
@@ -1744,10 +1851,15 @@ def materialize_stage_controller(
     result_path = root / "STAGE_CONTROLLER_RESULT.json"
     if result_path.is_file():
         prior = json.loads(result_path.read_text(encoding="utf-8"))
+        cheap = cheap_to_shrink or ds1.DEFAULT_CONFIG
         if (
             prior.get("schema") != STAGE_SCHEMA
             or prior.get("complete") is not True
             or prior.get("controller_binding") != controller_binding
+            or (
+                (stage_a is not None or "cheap_to_shrink" in prior)
+                and prior.get("cheap_to_shrink") != cheap.provenance()
+            )
         ):
             raise WD3Error("stage-controller resume receipt is incomplete")
         if file_record(Path(prior["selection"]["path"])) != prior["selection"]:
@@ -1756,6 +1868,9 @@ def materialize_stage_controller(
         allocation.validate(model)
         if canonical_sha256(allocation.as_dict()) != prior.get("chosen_allocation_sha256"):
             raise WD3Error("stage-controller chosen allocation binding differs")
+        _, ladder = _training_rung_allocations(model, allocation, cheap)
+        if (stage_a is not None or "cheap_to_shrink_ladder" in prior) and prior.get("cheap_to_shrink_ladder") != ladder:
+            raise WD3Error("stage-controller cheap-to-shrink ladder binding differs")
         thresholds = StageThresholds(**prior["thresholds"])
         return prior, allocation, thresholds
     selection_path = root / "selective_cell_mask.u8"
@@ -1859,6 +1974,7 @@ def materialize_stage_controller(
         segnet=segnet,
         device=device,
         chunk_pairs=chunk_pairs,
+        stage_a=stage_a,
     )
     with np.load(Path(baseline_evaluation["scorer_bundle"]["path"]), allow_pickle=False) as baseline_scorer:
         logits_all = torch.from_numpy(baseline_scorer["segnet_logits_f32"].astype(np.float32))
@@ -2002,6 +2118,7 @@ def materialize_stage_controller(
                 segnet=segnet,
                 device=device,
                 chunk_pairs=chunk_pairs,
+                stage_a=stage_a,
             )
         )
     baseline = evaluations["uniform4"]
@@ -2022,6 +2139,8 @@ def materialize_stage_controller(
         )
     winner = choose_cheapest_passing_quantization(rows)
     chosen = allocations[str(winner["allocation_id"])]
+    cheap = cheap_to_shrink or ds1.DEFAULT_CONFIG
+    rung_ladder = _training_rung_allocations(model, chosen, cheap)
     result = {
         "schema": STAGE_SCHEMA,
         "complete": True,
@@ -2035,6 +2154,8 @@ def materialize_stage_controller(
         "quantization_race": rows,
         "chosen_allocation": chosen.as_dict(),
         "chosen_allocation_sha256": canonical_sha256(chosen.as_dict()),
+        "cheap_to_shrink": cheap.provenance(),
+        "cheap_to_shrink_ladder": rung_ladder[1],
         "all_payloads_retained": True,
         "negative_claim": False,
     }
@@ -2042,11 +2163,44 @@ def materialize_stage_controller(
     return result, chosen, thresholds
 
 
+def _training_rung_allocations(
+    model: receiver.StudentSemanticRenderer,
+    base: receiver.AdaptiveQuantizationAllocation,
+    config: ds1.CheapToShrinkConfig,
+) -> tuple[tuple[receiver.AdaptiveQuantizationAllocation, ...], dict[str, Any]]:
+    """Materialize the exact ordered packet ladder used by the training objective."""
+
+    if ds1.is_inert(config):
+        return (), {
+            "allocation_family": config.allocation_family,
+            "active": False,
+            "byte_cost_checked": True,
+            "base_bytes": len(receiver.pack_student(model, base)),
+            "rung_bytes": [],
+        }
+    if config.allocation_family != "uniform_bits":
+        raise WD3Error("Stage-A cheap-to-shrink admits only the R0-corrected uniform ladder")
+    ladder = ds1.derive_uniform_rung_ladder(
+        base_allocation=base,
+        allocation_for_bits=lambda bits: receiver.uniform_allocation(
+            model,
+            bits,
+            selection_sha256=base.selection_sha256,
+        ),
+        config=config,
+        byte_cost=lambda allocation: len(receiver.pack_student(model, allocation)),
+    )
+    return tuple(ladder.cheaper_allocations), {**ladder.diagnostics, "active": True}
+
+
 def _verify_launch_sources(config: Mapping[str, Any]) -> None:
     if sha256_file(Path(__file__).resolve()) != config["expected_builder_sha256"]:
         raise WD3Error("sealed WD3 builder SHA changed")
     if sha256_file(Path(receiver.__file__).resolve()) != config["expected_receiver_sha256"]:
         raise WD3Error("sealed WD3 receiver SHA changed")
+    stage_a = _stage_a_binding(config)
+    if stage_a is not None and sha256_file(Path(stage_a["adapter_module"])) != stage_a["adapter_sha256"]:
+        raise WD3Error("sealed Stage-A adapter SHA changed")
 
 
 def _optimizer_config(config: Mapping[str, Any]) -> dict[str, float]:
@@ -2100,6 +2254,10 @@ def _birth_contract(config: Mapping[str, Any]) -> dict[str, Any]:
         "source_pins": dict(config["source_pins"]),
         "expected_builder_sha256": config["expected_builder_sha256"],
         "expected_receiver_sha256": config["expected_receiver_sha256"],
+        # The ON/OFF pair at seed 20260815 deliberately shares this birth.  The
+        # treatment is excluded so identical weights, optimizer moments and RNG
+        # make the treatment the only changed mechanism.
+        "stage_a": dict(config["stage_a"]) if config["stage_a"] is not None else None,
     }
 
 
@@ -2113,8 +2271,19 @@ def prepare_arm_birth(config: Mapping[str, Any]) -> dict[str, Any]:
         raise WD3Error("W0 arms must migrate the pinned matched WD2 checkpoint")
     _verify_launch_sources(config)
     seed_everything(int(config["seed"]))
-    storage = storage_preflight(Path(config["output"]), int(config["minimum_free_bytes"]))
     model = receiver.StudentSemanticRenderer(ARM_SPECS[str(config["arm"])])
+    stage_a = _stage_a_binding(config)
+    storage = storage_preflight(
+        Path(config["output"]),
+        int(config["minimum_free_bytes"]),
+        allowed_root=STAGE_A_OUTPUT_ROOT if stage_a is not None else OUTPUT_ROOT,
+    )
+    initialization = None
+    if stage_a is not None:
+        initialization = torch.load(Path(stage_a["initializer"]), map_location="cpu", weights_only=False)
+        if not isinstance(initialization, Mapping):
+            raise WD3Error("Stage-A initializer is not a state dictionary")
+        model.load_state_dict(initialization, strict=True)
     optimizer, scheduler = _new_optimizer_scheduler(model, config)
     updates = max(
         3,
@@ -2137,6 +2306,8 @@ def prepare_arm_birth(config: Mapping[str, Any]) -> dict[str, Any]:
         "scorer_invocations": 0,
         "metal_invocations": 0,
         "training_launched": False,
+        "stage_a_initializer": file_record(Path(stage_a["initializer"])) if stage_a is not None else None,
+        "initializer_loaded_strict": stage_a is not None,
     }
     checkpoint_path = Path(config["resume_root"]) / f"{config['arm']}_birth.pt"
     checkpoint = atomic_torch(checkpoint_path, payload)
@@ -2263,42 +2434,68 @@ def _batch_objective(
     device: torch.device,
     thresholds: StageThresholds,
     duals: DualState,
+    cheap_to_shrink: ds1.CheapToShrinkConfig = ds1.DEFAULT_CONFIG,
+    rung_allocations: Sequence[receiver.AdaptiveQuantizationAllocation] = (),
+    step: int = 0,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
-    pair, frame1 = paired_receiver_tensor(
-        model=model,
-        allocation=allocation,
-        tokens=tokens[torch.from_numpy(ids)].to(device),
-        pair_indices=torch.from_numpy(ids).to(device),
-        fixed_frame0=_load_fixed_frames(ids, device),
-    )
-    pose6, logits = scorer_forward(pair, posenet, segnet)
-    return score_native_objective(
-        student_logits=logits,
-        student_pose6=pose6,
-        student_frame1=frame1,
-        teacher_logits=torch.from_numpy(np.asarray(cache["teacher_segnet_logits_f16"][ids]).copy()).to(
+    target = {
+        "teacher_logits": torch.from_numpy(np.asarray(cache["teacher_segnet_logits_f16"][ids]).copy()).to(
             device=device, dtype=torch.float32
         ),
-        teacher_argmax=torch.from_numpy(np.asarray(cache["teacher_segnet_argmax_u8"][ids]).copy()).to(
+        "teacher_argmax": torch.from_numpy(np.asarray(cache["teacher_segnet_argmax_u8"][ids]).copy()).to(
             device=device, dtype=torch.long
         ),
-        teacher_margin=torch.from_numpy(np.asarray(cache["teacher_top1_runnerup_margin_f16"][ids]).copy()).to(
+        "teacher_margin": torch.from_numpy(np.asarray(cache["teacher_top1_runnerup_margin_f16"][ids]).copy()).to(
             device=device, dtype=torch.float32
         ),
-        teacher_pose6=torch.from_numpy(np.asarray(cache["teacher_posenet_first6_f32"][ids]).copy()).to(
+        "teacher_pose6": torch.from_numpy(np.asarray(cache["teacher_posenet_first6_f32"][ids]).copy()).to(
             device=device, dtype=torch.float32
         ),
-        original_argmax=torch.from_numpy(np.asarray(cache["original_gt_segnet_argmax_u8"][ids]).copy()).to(
+        "original_argmax": torch.from_numpy(np.asarray(cache["original_gt_segnet_argmax_u8"][ids]).copy()).to(
             device=device, dtype=torch.long
         ),
-        original_pose6=torch.from_numpy(np.asarray(cache["original_gt_posenet_first6_f32"][ids]).copy()).to(
+        "original_pose6": torch.from_numpy(np.asarray(cache["original_gt_posenet_first6_f32"][ids]).copy()).to(
             device=device, dtype=torch.float32
         ),
-        teacher_frame1=_load_teacher_frames(ids, device),
-        selected_cells=torch.from_numpy(np.asarray(selection[ids]).copy()).to(device=device, dtype=torch.bool),
-        thresholds=thresholds,
-        duals=duals,
+        "teacher_frame1": _load_teacher_frames(ids, device),
+        "selected_cells": torch.from_numpy(np.asarray(selection[ids]).copy()).to(device=device, dtype=torch.bool),
+        "thresholds": thresholds,
+        "duals": duals,
+    }
+    batch_tokens = tokens[torch.from_numpy(ids)].to(device)
+    pair_indices = torch.from_numpy(ids).to(device)
+    fixed_frame0 = _load_fixed_frames(ids, device)
+
+    def objective_at(
+        candidate: receiver.AdaptiveQuantizationAllocation,
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+        pair, frame1 = paired_receiver_tensor(
+            model=model,
+            allocation=candidate,
+            tokens=batch_tokens,
+            pair_indices=pair_indices,
+            fixed_frame0=fixed_frame0,
+        )
+        pose6, logits = scorer_forward(pair, posenet, segnet)
+        return score_native_objective(
+            student_logits=logits,
+            student_pose6=pose6,
+            student_frame1=frame1,
+            **target,
+        )
+
+    base_loss, components = objective_at(allocation)
+    requested = ds1.rungs_for_step(cheap_to_shrink, step, len(rung_allocations))
+    rung_losses = [(index, objective_at(rung_allocations[index])[0]) for index in requested]
+    total, telemetry = ds1.apply(
+        base_loss=base_loss,
+        rung_losses=rung_losses,
+        config=cheap_to_shrink,
     )
+    components = dict(components)
+    components["cheap_to_shrink_active"] = total.new_tensor(float(telemetry["ds1_active"]))
+    components["cheap_to_shrink_rungs_evaluated"] = total.new_tensor(float(telemetry["ds1_rungs_evaluated"]))
+    return total, components
 
 
 def train(config: Mapping[str, Any]) -> dict[str, Any]:
@@ -2327,6 +2524,8 @@ def train(config: Mapping[str, Any]) -> dict[str, Any]:
         controller,
         allocation,
     ) = _initialize_training_state(config, device)
+    stage_a = _stage_a_binding(config)
+    cheap = cheap_to_shrink_config(config)
     output = Path(config["output"]) / str(config["arm"])
     if controller is None or allocation is None:
         stage_number = len(tuple(config["completed_arms"]))
@@ -2340,6 +2539,8 @@ def train(config: Mapping[str, Any]) -> dict[str, Any]:
             segnet=segnet,
             device=device,
             chunk_pairs=int(config["chunk_pairs"]),
+            stage_a=stage_a,
+            cheap_to_shrink=cheap,
         )
         controller = WD3ResumeController(
             duals=DualState(),
@@ -2356,6 +2557,7 @@ def train(config: Mapping[str, Any]) -> dict[str, Any]:
         if file_record(Path(selection_record["path"])) != selection_record:
             raise WD3Error("resume selective-cell payload drifted")
     selection = _selection_memmap(Path(selection_record["path"]))
+    rung_allocations, rung_ladder = _training_rung_allocations(model, allocation, cheap)
     optimizer_values = _optimizer_config(config)
     controller_ids = list(map(int, config["subsets"]["controller_n60"]))
     negative_ids = list(map(int, config["subsets"]["negative_n120"]))
@@ -2382,6 +2584,9 @@ def train(config: Mapping[str, Any]) -> dict[str, Any]:
                 device=device,
                 thresholds=controller.thresholds,
                 duals=controller.duals,
+                cheap_to_shrink=cheap,
+                rung_allocations=rung_allocations,
+                step=(epoch - 1) * math.ceil(receiver.N / int(config["batch_pairs"])) + batches,
             )
             total.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), optimizer_values["grad_clip"])
@@ -2427,6 +2632,7 @@ def train(config: Mapping[str, Any]) -> dict[str, Any]:
                     segnet=segnet,
                     device=device,
                     chunk_pairs=int(config["chunk_pairs"]),
+                    stage_a=stage_a,
                 )
             row["controller_n60"] = {
                 "hard_d_seg": evaluation["hard_d_seg"],
@@ -2483,6 +2689,8 @@ def train(config: Mapping[str, Any]) -> dict[str, Any]:
         "stage_checkpoint": stage_checkpoint,
         "selection": selection_record,
         "allocation": allocation.as_dict(),
+        "cheap_to_shrink": cheap.provenance(),
+        "cheap_to_shrink_ladder": rung_ladder,
         "resumable_from_disk": True,
         "all_stage_checkpoints_preserved": True,
         "all_evaluated_payloads_retained": True,
@@ -2707,6 +2915,15 @@ def blocked_config_template() -> dict[str, Any]:
         "source_pins": source_pin_contract(),
         "expected_builder_sha256": sha256_file(Path(__file__).resolve()),
         "expected_receiver_sha256": sha256_file(Path(receiver.__file__).resolve()),
+        "stage_a": None,
+        "cheap_to_shrink": {
+            "mode": "off",
+            "allocation_family": "waterfill_ceiling",
+            "uniform_bits": [],
+            "rung_weights": [],
+            "base_weight": 1.0,
+            "sampler_seed": SEED,
+        },
     }
 
 
