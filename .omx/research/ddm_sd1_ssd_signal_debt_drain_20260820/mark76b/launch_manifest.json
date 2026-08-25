@@ -1,0 +1,44 @@
+{
+  "actual_nice": 0,
+  "argv": [
+    ".venv/bin/python",
+    ".omx/research/ddm_sd1_ssd_signal_debt_drain_20260820/mark76/mark76.py",
+    ".omx/research/ddm_sd1_ssd_signal_debt_drain_20260820/mark76/the76.txt"
+  ],
+  "authority": "local detached execution; downstream artifacts decide authority",
+  "cwd": "/Users/adpena/Projects/pact",
+  "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+  "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/sd1_mark76b.done",
+  "dry_run": false,
+  "effective_argv": [
+    ".venv/bin/python",
+    ".omx/research/ddm_sd1_ssd_signal_debt_drain_20260820/mark76/mark76.py",
+    ".omx/research/ddm_sd1_ssd_signal_debt_drain_20260820/mark76/the76.txt"
+  ],
+  "fresh_roots": [],
+  "generated_utc": "2026-08-20T12:44:47Z",
+  "git_sha": "b3182d701b306a393af532d8a40aaf39dabd0542",
+  "launch_id": {
+    "manifest_path": "/Users/adpena/Projects/pact/.omx/research/ddm_sd1_ssd_signal_debt_drain_20260820/mark76b/launch_manifest.json",
+    "monotonic_launch_counter": 341,
+    "pid": 72654
+  },
+  "log_path": "/Users/adpena/Projects/pact/.omx/research/ddm_sd1_ssd_signal_debt_drain_20260820/mark76b/run.log",
+  "output_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_sd1_ssd_signal_debt_drain_20260820/mark76b",
+  "pid": 72654,
+  "pid_path": "/Users/adpena/Projects/pact/.omx/research/ddm_sd1_ssd_signal_debt_drain_20260820/mark76b/run.pid",
+  "purpose": "detached local long run",
+  "reaper_name_match_allowed": false,
+  "reaper_predicate_hits": [],
+  "receipt_arm_tombstone": null,
+  "receipt_tombstone": null,
+  "requested_nice": null,
+  "resource_budget": {
+    "mode": "child_owned",
+    "note": "launcher did not invent an RSS or thread limit without measured demand"
+  },
+  "schema": "detached_local_process_launch.v2",
+  "watcher_config_derivation": null,
+  "watchers": [],
+  "watchers_requested": false
+}

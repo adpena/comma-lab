@@ -1,0 +1,44 @@
+{
+  "actual_nice": 0,
+  "argv": [
+    ".venv/bin/python",
+    "tools/audit_ssd_authored_signal.py",
+    "--write-cache"
+  ],
+  "authority": "byte/custody apparatus; scorer-free",
+  "cwd": "/Users/adpena/Projects/pact",
+  "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+  "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ddm_rvf1_ssd_cache_refresh.done",
+  "dry_run": false,
+  "effective_argv": [
+    ".venv/bin/python",
+    "tools/audit_ssd_authored_signal.py",
+    "--write-cache"
+  ],
+  "fresh_roots": [],
+  "generated_utc": "2026-08-20T16:39:35Z",
+  "git_sha": "edf4fc06086315ea1d34d0a40a5d4bb4266d47cd",
+  "launch_id": {
+    "manifest_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rvf1_ssd_cache_refresh_20260820/launch/launch_manifest.json",
+    "monotonic_launch_counter": 365,
+    "pid": 31984
+  },
+  "log_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rvf1_ssd_cache_refresh_20260820/launch/run.log",
+  "output_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_rvf1_ssd_cache_refresh_20260820/launch",
+  "pid": 31984,
+  "pid_path": "/Users/adpena/Projects/pact/.omx/research/ddm_rvf1_ssd_cache_refresh_20260820/launch/run.pid",
+  "purpose": "rvf1 resolving SSD authored-signal cache refresh after certification-source cure",
+  "reaper_name_match_allowed": false,
+  "reaper_predicate_hits": [],
+  "receipt_arm_tombstone": null,
+  "receipt_tombstone": null,
+  "requested_nice": null,
+  "resource_budget": {
+    "mode": "child_owned",
+    "note": "launcher did not invent an RSS or thread limit without measured demand"
+  },
+  "schema": "detached_local_process_launch.v2",
+  "watcher_config_derivation": null,
+  "watchers": [],
+  "watchers_requested": false
+}

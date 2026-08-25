@@ -1,0 +1,8 @@
+status: DONE_WITH_GIT_WRITE_BLOCKER
+done_utc: 2026-08-05T22:12:26Z
+scope: ddm_ekh1 worktree residue harvest audit plus EK canonical-equations registry row
+normal_status_inventory: empty
+branch_merge: not performed; branch remains provenance-only never-merge
+scorer_or_launch: none
+commit: blocked by managed-sandbox Git object/index write failure
+frontier: S = 0.7539807296911207 @ 357,836 B [macOS-CPU advisory]

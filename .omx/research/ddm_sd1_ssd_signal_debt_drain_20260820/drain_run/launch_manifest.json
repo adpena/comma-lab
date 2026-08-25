@@ -1,0 +1,42 @@
+{
+  "actual_nice": 0,
+  "argv": [
+    ".venv/bin/python",
+    ".omx/research/ddm_sd1_ssd_signal_debt_drain_20260820/drain.py"
+  ],
+  "authority": "local detached execution; downstream artifacts decide authority",
+  "cwd": "/Users/adpena/Projects/pact",
+  "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+  "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/sd1_drain.done",
+  "dry_run": false,
+  "effective_argv": [
+    ".venv/bin/python",
+    ".omx/research/ddm_sd1_ssd_signal_debt_drain_20260820/drain.py"
+  ],
+  "fresh_roots": [],
+  "generated_utc": "2026-08-20T12:56:47Z",
+  "git_sha": "ef46ed13a4c558ae117a66cff0e2c0d41478d0e7",
+  "launch_id": {
+    "manifest_path": "/Users/adpena/Projects/pact/.omx/research/ddm_sd1_ssd_signal_debt_drain_20260820/drain_run/launch_manifest.json",
+    "monotonic_launch_counter": 348,
+    "pid": 89879
+  },
+  "log_path": "/Users/adpena/Projects/pact/.omx/research/ddm_sd1_ssd_signal_debt_drain_20260820/drain_run/run.log",
+  "output_dir": "/Users/adpena/Projects/pact/.omx/research/ddm_sd1_ssd_signal_debt_drain_20260820/drain_run",
+  "pid": 89879,
+  "pid_path": "/Users/adpena/Projects/pact/.omx/research/ddm_sd1_ssd_signal_debt_drain_20260820/drain_run/run.pid",
+  "purpose": "detached local long run",
+  "reaper_name_match_allowed": false,
+  "reaper_predicate_hits": [],
+  "receipt_arm_tombstone": null,
+  "receipt_tombstone": null,
+  "requested_nice": null,
+  "resource_budget": {
+    "mode": "child_owned",
+    "note": "launcher did not invent an RSS or thread limit without measured demand"
+  },
+  "schema": "detached_local_process_launch.v2",
+  "watcher_config_derivation": null,
+  "watchers": [],
+  "watchers_requested": false
+}

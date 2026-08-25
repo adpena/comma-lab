@@ -1,0 +1,8 @@
+{
+  "launch_id": {
+    "manifest_path": "/Users/adpena/Projects/pact/.omx/research/ddm_sd1_ssd_signal_debt_drain_20260820/mark76/launch_manifest.json",
+    "monotonic_launch_counter": 339,
+    "pid": 62402
+  },
+  "schema": "detached_local_process_start_gate.v1"
+}
