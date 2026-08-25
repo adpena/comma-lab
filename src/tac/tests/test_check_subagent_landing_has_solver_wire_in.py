@@ -568,3 +568,143 @@ def test_explicit_research_only_false_negates_other_optout_mentions(
         memory_dir=tmp_path, strict=False, verbose=False,
     )
     assert violations == [], f"got: {violations}"
+
+
+# ── Test 13: 2026-08-25 detector cure (ddm_wb1) — multi-word hook labels ──
+#
+# The six CLAUDE.md hook labels are multi-word ("Continual-learning POSTERIOR
+# update", "Sensitivity-map CONTRIBUTION", ...). When a memo writes the FULL
+# label, the declaration marker sits AFTER the trailing label noun rather than
+# adjacent to the matched alias. The trailing nouns of hooks #1-#4 were already
+# inside the marker keyword set; hook #5's ("posterior") was not, so 101 of 124
+# era memos failed on hook #5 alone while carrying a fully substantive
+# "hook #5 continual-learning posterior = ACTIVE (...)" declaration.
+#
+# POSITIVE controls: the real corpus forms must now be accepted.
+# NEGATIVE controls: narrative mention, bare N/A, and explicit absence must
+# still be refused — the cure only adds acceptance paths for genuine
+# declarations, it does not weaken the gate.
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        # Verbatim forms harvested from the 2026-05/06 landing-memo corpus.
+        "* **Hook #5 continual-learning posterior**: ACTIVE via canonical "
+        "equation registration; anchors auto-append per Catalog #371.",
+        "- **hook #5 continual-learning posterior** = ACTIVE — the A/B "
+        "reproduction and this verdict are the anchors.",
+        "5. **Continual-learning posterior** — ACTIVE: the canonical equation "
+        "gains EmpiricalAnchor #4.",
+        "- hook #5 continual-learning posterior = **ACTIVE** (probe outcome "
+        "row appended via the canonical helper)",
+        "continual_learning_posterior: ACTIVE",
+    ],
+)
+def test_cure_accepts_full_label_hook5_declarations(line: str) -> None:
+    """POSITIVE: real corpus declarations of hook #5 are recognised."""
+    aliases = dict(_UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS)["continual_learning"]
+    assert _memo_declares_hook(line + "\n", "continual_learning", aliases)
+
+
+@pytest.mark.parametrize(
+    ("hook", "line"),
+    [
+        (
+            "sensitivity_map",
+            "1. **Sensitivity-map** — ACTIVE: the per-op drift table is the "
+            "per-op sensitivity contribution.",
+        ),
+        (
+            "probe_disambiguator",
+            "6. **Probe-disambiguator** — ACTIVE: the harness IS the "
+            "disambiguator between the two readings.",
+        ),
+    ],
+)
+def test_cure_accepts_em_dash_declaration_separator(hook: str, line: str) -> None:
+    """POSITIVE: '**Label** — STATUS: evidence' is a declaration, not prose."""
+    aliases = dict(_UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS)[hook]
+    assert _memo_declares_hook(line + "\n", hook, aliases)
+
+
+def test_cure_preserves_table_form_declaration() -> None:
+    """POSITIVE (regression): the continuation strip must be ADDITIVE.
+
+    "| #2 Pareto constraint | ACTIVE | ..." is accepted through the UNSTRIPPED
+    window via the 'constraint' keyword. An earlier draft of the cure consumed
+    'constraint' destructively and broke this form.
+    """
+    aliases = dict(_UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS)["pareto"]
+    line = "| #2 Pareto constraint | ACTIVE | rate <= 180_215 B |\n"
+    assert _memo_declares_hook(line, "pareto", aliases)
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        # Narrative mention: no declaration marker anywhere after the label.
+        "The continual-learning posterior rows accumulate over successive "
+        "waves and future agents inherit them.",
+        # Bare N/A with no rationale: still refused (CLAUDE.md requires one).
+        "- hook #5 continual-learning posterior = N/A",
+        # Explicit absence: acknowledging a hook is unwired is not a wire-in.
+        "- hook #5 continual-learning posterior — not wired",
+        "- hook #5 continual-learning posterior: deferred",
+        # Label alone as a heading tail.
+        "## Continual-learning posterior",
+    ],
+)
+def test_cure_still_refuses_non_declarations(line: str) -> None:
+    """NEGATIVE: the cure must not accept prose, bare N/A, or absence."""
+    aliases = dict(_UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS)["continual_learning"]
+    assert not _memo_declares_hook(line + "\n", "continual_learning", aliases)
+
+
+def test_cure_still_refuses_hyphenated_continuation() -> None:
+    """NEGATIVE: an ASCII hyphen is NOT a declaration separator.
+
+    'sensitivity-map-based' must not be read as '**Sensitivity-map** - ...'.
+    """
+    aliases = dict(_UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS)["sensitivity_map"]
+    line = "We used a sensitivity-map-based heuristic to pick the tensors.\n"
+    assert not _memo_declares_hook(line, "sensitivity_map", aliases)
+
+
+def test_cure_end_to_end_memo_with_full_labels_passes(tmp_path: Path) -> None:
+    """POSITIVE end-to-end: a memo in the corpus's own convention passes."""
+    body = (
+        "# Landing\n\n"
+        "## 6-hook wire-in (Catalog #125)\n"
+        "- **hook #1 sensitivity-map contribution** = ACTIVE (per-op table)\n"
+        "- **hook #2 Pareto constraint** = ACTIVE (rate bound tightened)\n"
+        "- **hook #3 bit-allocator hook** = ACTIVE (per-tensor importance)\n"
+        "- **hook #4 cathedral autopilot dispatch** = ACTIVE (recipe landed)\n"
+        "- **hook #5 continual-learning posterior** = ACTIVE (anchor appended)\n"
+        "- **hook #6 probe-disambiguator** = ACTIVE (two readings arbitrated)\n"
+    )
+    _make_memo(tmp_path, 20260530, "full_label_convention", body)
+    violations = check_subagent_landing_has_solver_wire_in(
+        memory_dir=tmp_path, strict=False, verbose=False,
+    )
+    assert violations == [], f"got: {violations}"
+
+
+def test_cure_end_to_end_memo_without_declarations_still_fires(
+    tmp_path: Path,
+) -> None:
+    """NEGATIVE end-to-end: a memo that only NARRATES the hooks still fires."""
+    body = (
+        "# Landing\n\n"
+        "We touched the sensitivity-map-based heuristic and watched the\n"
+        "continual-learning posterior rows accumulate. The Pareto frontier\n"
+        "moved. A bit-allocator exists. The cathedral autopilot ran. The\n"
+        "probe-disambiguator concept is interesting.\n"
+    )
+    _make_memo(tmp_path, 20260530, "narration_only", body)
+    violations = check_subagent_landing_has_solver_wire_in(
+        memory_dir=tmp_path, strict=False, verbose=False,
+    )
+    assert len(violations) == 1, f"got: {violations}"
+    assert "sensitivity_map" in violations[0]
+    assert "continual_learning" in violations[0]

@@ -42255,6 +42255,37 @@ _UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS: tuple[tuple[str, tuple[str, ...]], ...] = (
     )),
 )
 
+# Canonical trailing label-nouns of the six CLAUDE.md hook names. A landing
+# memo that writes the FULL label ("Continual-learning posterior update",
+# "Sensitivity-map contribution", "Bit-allocator hook", "Cathedral autopilot
+# dispatch hook", "Pareto constraint") places its declaration marker AFTER
+# these nouns, not adjacent to the matched alias. `_memo_declares_hook` skips
+# them before testing for the marker. Closed set on purpose: a token here must
+# be part of a canonical hook LABEL, never an arbitrary noun, so narrative
+# prose ("continual-learning posterior rows grow over time") still fails.
+_WIRE_IN_LABEL_CONTINUATION_TOKENS: tuple[str, ...] = (
+    "posterior",
+    "update",
+    "updates",
+    "contribution",
+    "contributions",
+    "constraint",
+    "constraints",
+    "dispatch",
+    "hook",
+    "hooks",
+    "map",
+    "probe",
+    "wire-in",
+    "wiring",
+    "surface",
+)
+
+# Em-dash / en-dash: markdown declaration separators ("**Label** - ACTIVE: x").
+# ASCII hyphen is deliberately EXCLUDED - it would false-accept hyphenated
+# continuations such as "sensitivity-map-based saliency".
+_WIRE_IN_DASH_SEPARATORS: tuple[str, ...] = ("—", "–")
+
 # Opt-out tokens: the memo declares it is research-only (no wire-in expected).
 _RESEARCH_ONLY_OPTOUT_TOKENS: tuple[str, ...] = (
     "research_only=true",
@@ -42372,61 +42403,104 @@ def _memo_declares_hook(text: str, hook_label: str, aliases: tuple[str, ...]) ->
             # before looking for the declaration colon so the guard enforces
             # substance instead of prose style.
             after = line_lower[idx + len(alias_lower):].lstrip(" *_")
-            if not after:
-                # Alias is the entire line tail - reject (likely a header).
-                continue
-            # Look for declaration-form markers in the next ~80 chars.
-            window = after[:120]
-            is_na_form = (
-                "n/a" in window
-                or window.lstrip(" :=--").lower().startswith("na")
-            )
-            negative_phrases = (
-                "not wired",
-                "not wire",
-                "not integrated",
-                "not implemented",
-                "not routed",
-                "not connected",
-                "no wire",
-                "no hook",
-                "missing",
-                "unwired",
-                "deferred",
-                "todo",
-            )
-            if not is_na_form and any(p in window for p in negative_phrases):
-                # Acknowledging absence is not a wire-in declaration.
-                continue
-            if (
-                window.startswith(":")
-                or window.startswith("=")
-                or "wire" in window
-                or "wiring" in window
-                or "hook" in window
-                or "contribution" in window
-                or "update" in window
-                or "constraint" in window
-                or "dispatch" in window
-                or "n/a" in window
-                or "na " in window
-                or "na-" in window
-                or "na-" in window
-            ):
-                # Strong signal: the line is genuinely declaring the hook.
-                # If the form is ``<alias>: N/A``, require a non-empty
-                # rationale on the same line.
-                if is_na_form:
-                    # Look for trailing rationale after "N/A"
-                    na_pos = window.find("n/a")
-                    if na_pos < 0:
-                        na_pos = window.lower().find("na")
-                    rationale_tail = window[na_pos:].lstrip("n/aNA").strip()
-                    rationale_tail = rationale_tail.lstrip(" :=--,;").strip()
-                    if not rationale_tail:
-                        # N/A with no rationale -> reject this line; keep scanning.
-                        continue
-                return True
+            # 2026-08-25 detector cure (ddm_wb1 backfill arm). The six
+            # CLAUDE.md hook labels are MULTI-WORD: "Sensitivity-map
+            # CONTRIBUTION", "Pareto CONSTRAINT", "Bit-allocator HOOK",
+            # "Cathedral autopilot DISPATCH hook", "Continual-learning
+            # POSTERIOR update", "Probe-disambiguator". Landing memos write the
+            # full label, so the declaration marker sits AFTER the trailing
+            # label noun rather than adjacent to the matched alias. The
+            # trailing nouns for hooks #1-#4 ("contribution" / "constraint" /
+            # "hook" / "dispatch") happen to be inside the marker keyword set
+            # below, so those declarations passed; hook #5's trailing noun
+            # ("posterior") was NOT, which is why 101 of 124 era memos failed
+            # on hook #5 alone while carrying a fully substantive
+            # "hook #5 continual-learning posterior = ACTIVE (...)" line.
+            #
+            # The continuation-stripped text is an ADDITIONAL candidate window,
+            # never a replacement: table-form declarations such as
+            # "| #2 Pareto constraint | ACTIVE | ..." are accepted through the
+            # UNSTRIPPED window via the "constraint" keyword, so destroying it
+            # would trade one false negative for another. Evaluate both.
+            after_variants: list[str] = [after]
+            stripped = after
+            for _ in range(3):
+                for cont in _WIRE_IN_LABEL_CONTINUATION_TOKENS:
+                    if stripped.startswith(cont) and (
+                        len(stripped) == len(cont)
+                        or not stripped[len(cont)].isalpha()
+                    ):
+                        stripped = stripped[len(cont):].lstrip(" *_")
+                        if stripped and stripped not in after_variants:
+                            after_variants.append(stripped)
+                        break
+                else:
+                    break
+            for after_variant in after_variants:
+                if not after_variant:
+                    # Alias is the entire line tail - reject (likely a header).
+                    continue
+                # Look for declaration-form markers in the next ~80 chars.
+                window = after_variant[:120]
+                is_na_form = (
+                    "n/a" in window
+                    or window.lstrip(" :=--").lower().startswith("na")
+                )
+                negative_phrases = (
+                    "not wired",
+                    "not wire",
+                    "not integrated",
+                    "not implemented",
+                    "not routed",
+                    "not connected",
+                    "no wire",
+                    "no hook",
+                    "missing",
+                    "unwired",
+                    "deferred",
+                    "todo",
+                )
+                if not is_na_form and any(p in window for p in negative_phrases):
+                    # Acknowledging absence is not a wire-in declaration.
+                    continue
+                if (
+                    window.startswith(":")
+                    or window.startswith("=")
+                    # 2026-08-25 detector cure (ddm_wb1): markdown landing
+                    # memos separate the hook label from its status with an
+                    # em/en dash, e.g.
+                    # "1. **Sensitivity-map** - ACTIVE: <evidence>". That is a
+                    # declaration form, not prose. Only the true dash
+                    # characters are accepted (an ASCII hyphen would
+                    # false-accept hyphenated continuations such as
+                    # "sensitivity-map-based").
+                    or window[:1] in _WIRE_IN_DASH_SEPARATORS
+                    or "wire" in window
+                    or "wiring" in window
+                    or "hook" in window
+                    or "contribution" in window
+                    or "update" in window
+                    or "constraint" in window
+                    or "dispatch" in window
+                    or "n/a" in window
+                    or "na " in window
+                    or "na-" in window
+                    or "na-" in window
+                ):
+                    # Strong signal: the line is genuinely declaring the hook.
+                    # If the form is ``<alias>: N/A``, require a non-empty
+                    # rationale on the same line.
+                    if is_na_form:
+                        # Look for trailing rationale after "N/A"
+                        na_pos = window.find("n/a")
+                        if na_pos < 0:
+                            na_pos = window.lower().find("na")
+                        rationale_tail = window[na_pos:].lstrip("n/aNA").strip()
+                        rationale_tail = rationale_tail.lstrip(" :=--,;").strip()
+                        if not rationale_tail:
+                            # N/A with no rationale -> reject; keep scanning.
+                            continue
+                    return True
     return False
 
 
