@@ -70221,6 +70221,16 @@ def check_catalog_text_references_existing_gate_callable(
 
     # Lazy import of self - we ARE tac.preflight. Use module-level globals().
     module_globals = globals()
+    # Sister gate modules CLAUDE.md documents as canonical homes for numbered
+    # gates (the #397-#404 confound family lives in tac.confound_gates per the
+    # "Confound self-protection" section) — a row resolving there is NOT phantom.
+    sister_namespaces: list[dict[str, object]] = []
+    try:
+        from tac import confound_gates as _confound_gates_mod
+
+        sister_namespaces.append(vars(_confound_gates_mod))
+    except ImportError:
+        pass
 
     for m in _CHECK_286_CATALOG_ROW_RE.finditer(section_text):
         num = int(m.group(1))
@@ -70229,12 +70239,18 @@ def check_catalog_text_references_existing_gate_callable(
         if num in seen:
             continue
         seen[num] = fn_name
-        # Check callable via module globals
+        # Check callable via module globals, then documented sister modules
         fn = module_globals.get(fn_name)
+        if fn is None:
+            for ns in sister_namespaces:
+                fn = ns.get(fn_name)
+                if fn is not None:
+                    break
         if fn is None:
             violations.append(
                 f"CLAUDE.md catalog row #{num} `{fn_name}` is PHANTOM — "
-                f"function `{fn_name}` does NOT exist in src/tac/preflight.py. "
+                f"function `{fn_name}` does NOT exist in src/tac/preflight.py "
+                "or a documented sister gate module (tac.confound_gates). "
                 "Per Catalog #286 (OMNIBUS GAP-2): every numbered catalog row "
                 "MUST reference an importable + callable gate function. Fix: "
                 "either land the gate function OR remove the catalog row."
