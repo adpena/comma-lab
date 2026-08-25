@@ -70736,15 +70736,15 @@
       "id": "hi_nerv_target_region_birth_v33_archive_action_materializer",
       "name": "HiNeRV target-region birth v33 archive action materializer",
       "phase": 0.0,
-      "level": 2,
+      "level": 1,
       "gates": {
         "impl_complete": {
           "status": true,
           "evidence": "/Users/adpena/Projects/pact/tools/run_compact_renderer_mlx_spine_runner.py"
         },
         "real_archive_empirical": {
-          "status": true,
-          "evidence": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_target_region_birth_real_smoke_20260606/hinerv_witness_readiness_short_smoke_v33_archive_action_materializer_20260607T021349Z/compact_renderer_mlx_spine_runner_report.json"
+          "status": false,
+          "evidence": ""
         },
         "contest_cuda": {
           "status": false,
@@ -70771,7 +70771,7 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "Demoted L2->L1 2026-08-25 (PCC9): v33 smoke evidence self-declares diagnostic_only + byte_cap_rejected; real_archive_empirical over-claimed. Reactivation: a receiver-proof-passing byte-closed row on this lane. HiNeRV lineage = lessons-only per the no-old-lineage ban."
     },
     {
       "id": "hi_nerv_target_region_birth_v33_archive_closed_action_payload",
@@ -94822,5 +94822,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-08-14T16:37:23Z"
+  "updated_at": "2026-08-25T18:17:50Z"
 }
