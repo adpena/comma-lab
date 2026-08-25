@@ -19,14 +19,23 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+try:  # package import keeps exception identity stable under pytest/importlib
+    from tools.fleet_reaper_guard import (
+        REAPER_KEEPALIVE_TOKEN,
+        FleetReaperLaunchRefusal,
+        assert_detached_argv_reaper_safe,
+    )
+except ModuleNotFoundError:  # script-mode fallback (tools/ is sys.path[0])
+    from fleet_reaper_guard import (  # type: ignore[no-redef]
+        REAPER_KEEPALIVE_TOKEN,
+        FleetReaperLaunchRefusal,
+        assert_detached_argv_reaper_safe,
+    )
+
 SCHEMA = "detached_local_process_launch.v2"
 DONE_RECEIPT_SCHEMA = "detached_local_process_done.v2"
 CONSUMED_RECEIPT_SCHEMA = "detached_local_process_done_consumed.v1"
 
-# See the v1 history for the measured 300-360s fleet-reaper incidents.  A
-# detached argv containing either standalone word is not safe without the
-# explicit fleet carve-out.
-_REAPER_NAME_PREDICATE = re.compile(r"\b(claude|codex)\b")
 _RECEIPT_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
 _THREAD_ENV_KEYS = (
     "OMP_NUM_THREADS",
@@ -370,6 +379,11 @@ def _supervisor_main(argv: list[str]) -> int:
     parser.add_argument("--done", type=Path)
     parser.add_argument("--armed", type=Path)
     parser.add_argument("--receipt-name", default="")
+    parser.add_argument(
+        "--fleet-reaper-keepalive",
+        required=True,
+        choices=(REAPER_KEEPALIVE_TOKEN,),
+    )
     parser.add_argument("cmd", nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
     if args.cmd and args.cmd[0] == "--":
@@ -413,8 +427,14 @@ def _supervisor_main(argv: list[str]) -> int:
         detail = f"signal_before_exec={caught_signal}"
     else:
         try:
+            assert_detached_argv_reaper_safe(args.cmd)
             child = subprocess.Popen(args.cmd)
             rc = int(child.wait())
+        except FleetReaperLaunchRefusal as exc:
+            rc = 125
+            detail = "fleet_reaper_guard_refusal=" + json.dumps(
+                exc.assessment.as_dict(), sort_keys=True
+            )
         except FileNotFoundError as exc:
             rc = 127
             detail = f"exec_error=FileNotFoundError:{exc.filename}"
@@ -991,7 +1011,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--liveness-config", type=Path)
     parser.add_argument("--quality-config", type=Path)
     parser.add_argument("--verify-alive-secs", type=float, default=3.0)
-    parser.add_argument("--allow-reaper-name-match", action="store_true")
+    parser.add_argument(
+        "--allow-reaper-name-match",
+        action="store_true",
+        help="Deprecated compatibility flag; unsafe name matches are still refused.",
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("cmd", nargs=argparse.REMAINDER)
     args = parser.parse_args()
@@ -1060,18 +1084,6 @@ def main() -> int:
             if not candidate.exists():
                 return _print_refusal(LaunchRefusal(f"script not found at cwd: {candidate}"))
             break
-    reaper_hits = sorted({m.group(0) for part in cmd for m in _REAPER_NAME_PREDICATE.finditer(part)})
-    if reaper_hits and not args.allow_reaper_name_match:
-        return _print_refusal(
-            LaunchRefusal(
-                "argv matches the fleet reaper predicate; child would be SIGTERMed at ~300-360s",
-                rc=5,
-                matched_tokens=reaper_hits,
-                matching_argv_parts=[part for part in cmd if _REAPER_NAME_PREDICATE.search(part)],
-                cure="move script/output paths outside standalone claude/codex path components",
-            )
-        )
-
     env = os.environ.copy()
     env.update(dict(item.split("=", 1) for item in env_items))
     try:
@@ -1083,6 +1095,23 @@ def main() -> int:
         )
     except LaunchRefusal as exc:
         return _print_refusal(exc)
+    try:
+        reaper_assessment = assert_detached_argv_reaper_safe(effective_cmd)
+    except FleetReaperLaunchRefusal as exc:
+        return _print_refusal(
+            LaunchRefusal(
+                "stable argv matches the fleet reaper predicate; detached child would be "
+                "SIGTERMed after the grace window",
+                rc=5,
+                **exc.assessment.as_dict(),
+                allow_reaper_name_match_requested=bool(args.allow_reaper_name_match),
+                cure=(
+                    "remove claude/codex-bearing command arguments, pass environment values via "
+                    "--env instead of an argv-visible wrapper, or use the canonical PTY launcher "
+                    "for an intentionally named interactive agent"
+                ),
+            )
+        )
     liveness_config = _rewrite_path(args.liveness_config, mapping) if args.liveness_config else None
     quality_config = _rewrite_path(args.quality_config, mapping) if args.quality_config else None
     watcher_derivations: dict[str, Any] = {}
@@ -1189,8 +1218,10 @@ def main() -> int:
         "argv": cmd,
         "effective_argv": effective_cmd,
         "dry_run": bool(args.dry_run),
-        "reaper_predicate_hits": reaper_hits,
-        "reaper_name_match_allowed": bool(args.allow_reaper_name_match),
+        "reaper_predicate_hits": list(reaper_assessment.matched_tokens),
+        "reaper_name_match_allowed": False,
+        "reaper_name_match_allow_requested": bool(args.allow_reaper_name_match),
+        "fleet_reaper_guard": reaper_assessment.as_dict(),
         "fresh_roots": fresh_rows,
         "requested_nice": args.nice,
         "actual_nice": None,
@@ -1227,6 +1258,8 @@ def main() -> int:
         str(manifest_path),
         "--counter",
         str(counter),
+        "--fleet-reaper-keepalive",
+        REAPER_KEEPALIVE_TOKEN,
     ]
     if done_path is not None:
         supervisor_argv.extend(
