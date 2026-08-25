@@ -77,6 +77,11 @@ from pathlib import Path
 
 import numpy as np
 
+from tac.canonical_equations.ddm_fs1_coordinate_fit_staleness_20260802 import (
+    FIT_CONTEXT_KEY,
+    stamp_fit_context,
+)
+
 REPO = Path("/Users/adpena/projects/pact")
 SCHEMA = "ddm_pj2_pose_scale_joint_solve.v1"
 N_PAIRS = 600
@@ -728,6 +733,17 @@ def mode_solve(args) -> None:
             "stop": res["stop"], "census": res["census"],
             "trace": res["trace"], "n_evals": int(res["n_evals"]),
             "source": "pj2_joint",
+            # (a, b) is re-solved here JOINTLY with pose: the held partners the
+            # solve saw are {selector, beta_mag, s_t} + base/archive identity.
+            # pose is co-solved, so it is deliberately NOT stamped as a held
+            # partner (that would manufacture a freshness claim); the emitted
+            # "p" field records the co-solved state (a, b) is valid at.
+            FIT_CONTEXT_KEY: stamp_fit_context(
+                coefficient="ab_gain_bias",
+                partners={"selector": sel, "beta_mag": g, "s_t": s_t},
+                base=str(args.base),
+                vehicle=args.archive.name,
+                fit_sign=(1.0 if pose[5] >= 0.0 else -1.0)),
         }
         fj.write(json.dumps(row) + "\n")
         fj.flush()
@@ -837,6 +853,10 @@ def mode_emit(args) -> None:
             row["b"] = r["b"]
             row["d_final"] = r["d_final"]
             row["source"] = "pj2_joint"
+            # This stage carries a solved row forward without re-solving (a, b):
+            # CARRY the upstream fit context rather than re-stamping.
+            if FIT_CONTEXT_KEY in r:
+                row[FIT_CONTEXT_KEY] = r[FIT_CONTEXT_KEY]
             replaced += 1
         out.append(row)
     args.emit_jsonl.parent.mkdir(parents=True, exist_ok=True)
