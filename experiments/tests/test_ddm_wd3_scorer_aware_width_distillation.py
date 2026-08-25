@@ -550,3 +550,39 @@ def test_nonmonotone_rung_byte_cost_is_data_not_a_crash() -> None:
     assert min(depths) >= 2 and max(depths) <= 8
     # The dominant free rung was taken: group 0 sits at >= 3 bits.
     assert allocation.bits[first_name][0] >= 3
+
+
+def test_gradient_waterfill_escapes_non_monotone_trap_via_bit4_snap() -> None:
+    # Regression for the s1a stage-A r6 launch death ("adaptive quantization has no
+    # positive next rung"): non-monotone real-coder error rows can strand the climb
+    # greedy above the ceiling even though the uniform-4 reference state meets it by
+    # construction.  Every group's error is FLAT from bit 2 to 3 (no positive saving
+    # anywhere for the greedy's first move) yet strictly lower at bit 4, so the old
+    # code raised at the first iteration; the snap escape must reach a feasible state.
+    model = tiny_model()
+    sensitivity = {}
+    for name, value in model.state_dict().items():
+        if value.ndim < 2:
+            continue
+        axis = value.ndim - 1 if name.endswith("embed.weight") else 0
+        rows = []
+        for group in range(value.shape[axis]):
+            errors = {"2": 2.0, "3": 2.0, "4": 1.0, "5": 1.5, "6": 1.5, "7": 1.5, "8": 1.5}
+            bytes_by_bit = {str(bit): (bit + group + 1) * 3 for bit in range(2, 9)}
+            rows.append({"group": group, "errors": errors, "bytes": bytes_by_bit})
+        sensitivity[name] = rows
+    ceiling = sum(row["errors"]["4"] for rows in sensitivity.values() for row in rows)
+    allocation = wd3.adaptive_allocation_from_sensitivity(
+        model,
+        sensitivity,
+        maximum_predicted_error=ceiling,
+        selection_sha256="b" * 64,
+    )
+    total = sum(
+        float(sensitivity[name][index]["errors"][str(bit)])
+        for name, values in allocation.bits.items()
+        for index, bit in enumerate(values)
+    )
+    assert total <= ceiling
+    depths = {bit for values in allocation.bits.values() for bit in values}
+    assert min(depths) >= 2 and max(depths) <= 8

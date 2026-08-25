@@ -1027,11 +1027,28 @@ def adaptive_allocation_from_sensitivity(
                 choices.append((saving / extra_bytes, saving, name, index))
         if took_free_upgrade:
             continue
-        if not choices:
-            raise WD3Error("even int8 allocation cannot meet the predicted-error ceiling")
-        _, saving, name, index = max(choices, key=lambda row: (row[0], row[1], row[2], -row[3]))
-        if saving <= 0:
-            raise WD3Error("adaptive quantization has no positive next rung")
+        best = max(choices, key=lambda row: (row[0], row[1], row[2], -row[3])) if choices else None
+        if best is None or best[1] <= 0.0:
+            # Non-monotone real-coder error rows can strand the climb greedy above the
+            # ceiling even though the uniform-4 reference state meets it by construction
+            # (the ceiling IS the uniform-4 error sum).  While total > ceiling, some group
+            # must sit above its own bit-4 reference error; snap the worst such group to
+            # bit 4 — total error strictly falls toward the feasible all-4 state, so the
+            # loop terminates (every accepted operation strictly reduces total error).
+            snap: tuple[float, str, int] | None = None
+            for name, values in depths.items():
+                for index, bit in enumerate(values):
+                    if bit == 4:
+                        continue
+                    row = rows_by_key[(name, index)]
+                    excess = float(row["errors"][str(bit)]) - float(row["errors"]["4"])
+                    if excess > 0.0 and (snap is None or excess > snap[0]):
+                        snap = (excess, name, index)
+            if snap is None:
+                raise WD3Error("even int8 allocation cannot meet the predicted-error ceiling")
+            depths[snap[1]][snap[2]] = 4
+            continue
+        _, saving, name, index = best
         depths[name][index] += 1
     allocation = receiver.AdaptiveQuantizationAllocation(
         bits={name: tuple(values) for name, values in depths.items()},
