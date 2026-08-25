@@ -1045,3 +1045,5 @@ curvature-blindness the GN-spectrum signal fixes (same need the queued λ(t)-dec
 phenomenologically). **Net for the crucible:** D-2 dead, D-1 corpus-gated; the live deep-math lever
 is the GN/Fisher 2nd-order state feeding the costate DECIDE layer, and the build-decision is the $0
 HVP-Lanczos probe FIRST, then wire only if it pays. §19 is now complete — all five axes verdicted.
+
+<!-- STORES CONSULTED (2026-08-25 backfill append; this 2026-07-07 memo predates the recall-evidence discipline #713): graph_memory_recall (catalog/backfill context) · .omx/state/operator_p0_ledger.jsonl · MEMORY.md index · task ledger #1271/#1274/#1275. Consulted for the waiver-append pass only; the memo body's original decisions are historical and unchanged. -->

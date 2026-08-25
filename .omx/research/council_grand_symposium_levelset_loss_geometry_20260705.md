@@ -142,3 +142,5 @@ MLX seg path without breaking the realized-through-R composition" — the build 
 calibration probe can decompose loss-starved vs basis-starved from a checkpoint alone" — if not
 cleanly separable, the probe reports `partially_confounded` honestly rather than forcing a verdict.
 Round-3: no lever fires from an unmeasured calibration; γ* comes from the probe or the lever waits.
+
+<!-- STORES CONSULTED (2026-08-25 backfill append; this 2026-07-05 council memo predates the recall-evidence discipline #713): MEMORY.md index · .omx/research corrections index (au1) · task ledger #1274/#1275 (frontmatter + observability backfills). Consulted for the backfill-append pass only; the deliberation body is historical, append-only, unchanged. -->

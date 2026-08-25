@@ -137,3 +137,5 @@ No verdict from an unrun probe.
 frontier_breaking: the battery either dissolves the plateau (unblocking the pointer-mover run cheaply)
 or correctly aims the A/B spend. It serves the exact-score mission by refusing to spend GPU on a
 capacity story that four prior "walls" suggest could be an artifact. Pointer 0.19110 UNMOVED.
+
+<!-- STORES CONSULTED (2026-08-25 backfill append; this 2026-07-04 council memo predates the recall-evidence discipline #713): MEMORY.md index · .omx/research corrections index (au1) · task ledger #1274 (#300 v2-frontmatter backfill). Consulted for the frontmatter/waiver-append pass only; the deliberation body is historical, append-only, unchanged. -->
