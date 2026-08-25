@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# HISTORICAL_RECIPE_ONLY: frozen launcher record for a completed lane; not a live deploy path (codebase-drift relocation 2026-08-25).
 # SPDX-License-Identifier: MIT
 """From-EPOCH-0 decisive A/B(/C) for the Track-A distortion lever stack (#116).
 

@@ -102,6 +102,65 @@ def test_codebase_drift_prefilter_skips_harmless_python_parse(
     assert calls == 0
 
 
+def test_codebase_drift_historical_glob_exempt_file_not_flagged(tmp_path: Path) -> None:
+    repo = _stub_repo(tmp_path)
+    # A named member of the frozen historical exemption set: the launch_*.py
+    # NAME rule yields, and harmless content produces no scan violation.
+    _write(repo / "experiments/launch_taper_ab.py", "VALUE = 1\n")
+
+    violations = check_codebase_drift(strict=False, repo_root=repo, verbose=False)
+
+    assert violations == []
+
+
+def test_codebase_drift_new_launcher_still_refused(tmp_path: Path) -> None:
+    repo = _stub_repo(tmp_path)
+    # Any NEW launch_*.py outside the frozen exemption set still refuses —
+    # the exemption cannot grow without a reviewed preflight.py edit.
+    _write(repo / "experiments/launch_brand_new_thing.py", "VALUE = 1\n")
+
+    violations = check_codebase_drift(strict=False, repo_root=repo, verbose=False)
+
+    assert any("launch_brand_new_thing.py" in v for v in violations)
+
+
+def test_codebase_drift_historical_bash_exempt_skips_allowlist_rule(
+    tmp_path: Path,
+) -> None:
+    repo = _stub_repo(tmp_path)
+    _write(
+        repo / "experiments/stage_wr1_realized_gate.sh",
+        "#!/bin/bash\necho ok\n",
+    )
+
+    violations = check_codebase_drift(strict=False, repo_root=repo, verbose=False)
+
+    assert violations == []
+
+
+def test_codebase_drift_bash_exempt_still_content_scanned(tmp_path: Path) -> None:
+    repo = _stub_repo(tmp_path)
+    # The exemption yields only the name/location rule; forbidden CONTENT
+    # (the nohup+pgrep watcher pattern) inside an exempt file still refuses.
+    _write(
+        repo / "experiments/stage_wr1_realized_gate.sh",
+        "#!/bin/bash\nnohup python train.py &\nwhile pgrep -f train.py; do sleep 5; done\n",
+    )
+
+    violations = check_codebase_drift(strict=False, repo_root=repo, verbose=False)
+
+    assert any("watcher pattern" in v for v in violations)
+
+
+def test_codebase_drift_non_exempt_bash_still_refused(tmp_path: Path) -> None:
+    repo = _stub_repo(tmp_path)
+    _write(repo / "experiments/random_helper.sh", "#!/bin/bash\necho hi\n")
+
+    violations = check_codebase_drift(strict=False, repo_root=repo, verbose=False)
+
+    assert any("random_helper.sh" in v for v in violations)
+
+
 def test_codebase_drift_uses_rg_prefilter_for_python_scan(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

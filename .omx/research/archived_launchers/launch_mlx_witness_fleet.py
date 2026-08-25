@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# HISTORICAL_RECIPE_ONLY: frozen launcher record for a completed lane; not a live deploy path (codebase-drift relocation 2026-08-25).
 """Launch the PARALLEL FLEET of MLX through-R witness arms (operator 2026-06-25).
 
 Decisive saturation test (probe_mlx_fleet_concurrency_scaling.py) verdict:

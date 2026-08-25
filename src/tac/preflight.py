@@ -8804,6 +8804,37 @@ ALLOWED_BASH_PATHS = {
     "submissions/robust_current/compress.sh",
 }
 
+# 2026-08-25 codebase-drift debt paydown (task #842 context: full preflight only
+# ever ran under PREFLIGHT_FULL=1, so these files accumulated for months against
+# the 2026-04-25 name rules). Both sets are FROZEN historical exemptions for
+# reviewed, referenced files whose bytes must stay untouched (several are
+# fire-chain receipt scripts; in-file waiver comments would churn their shas).
+# The lists live HERE — like the public_runtime_adapters scoped exemption —
+# so growing them requires an edit to preflight.py under review; any NEW
+# launch_*/run_* file in experiments/ still refuses. Exempt files remain fully
+# subject to the bash/python CONTENT scans; only the name/location rule yields.
+CODEBASE_DRIFT_HISTORICAL_GLOB_EXEMPT = frozenset({
+    # retired-era launchers, each pinned in place by a live test or consumer:
+    "experiments/launch_cool_chic_mps_smoke.py",  # train_substrate_cool_chic.py
+    "experiments/launch_oomph_finetune_disambiguator.py",  # test_oomph_disambiguator_helper.py
+    "experiments/launch_l2_combined_attacks.py",  # test_from_scratch_launcher.py
+    "experiments/launch_taper_ab.py",  # test_configurable_taper_decoder.py
+    "experiments/launch_split_by_head_basin.py",  # CLAUDE.md canonical MPS-train/CPU-authority reference
+    "experiments/launch_bind_all_taper_ab.py",  # experiments/tests/test_launch_bind_all_taper_ab.py
+    "experiments/launch_pose_film_basin.py",  # launch_l2_combined_attacks.py
+})
+CODEBASE_DRIFT_HISTORICAL_BASH_EXEMPT = frozenset({
+    # completed-lane stage/eval scripts still read by live tools or tests:
+    "experiments/ddm_et4_overlay_inflate.sh",  # ddm_et4_solve_within_cvp_n600.py
+    "experiments/ddm_pu2_stage_and_eval.sh",  # tools/submission_chain_cli.py (canonical chain)
+    "experiments/manim_levelset/render.sh",  # manim viz render entrypoint, not a deploy script
+    "experiments/stage_ck1_composed_gate.sh",  # test_followon_ledger.py + ddm_ck1_build_composed_archive.py
+    "experiments/stage_v4b_realized_gate.sh",  # ddm_v4b_build_composed_archive.py
+    "experiments/stage_v4c_realized_gate.sh",  # ddm_v4c_build_composed_archive.py
+    "experiments/stage_v4d_realized_gate.sh",  # tools/mt1_menu_triage.py + canonical_equations pw1
+    "experiments/stage_wr1_realized_gate.sh",  # src/tac/followon_ledger.py
+})
+
 
 class CodebaseDriftError(Exception):
     """An ad-hoc pattern reappeared in the codebase. Block all deployment."""
@@ -9241,6 +9272,12 @@ def check_codebase_drift(
             {
                 "allowed_bash_paths": sorted(ALLOWED_BASH_PATHS),
                 "forbidden_file_patterns": FORBIDDEN_FILE_PATTERNS,
+                "historical_glob_exempt": sorted(
+                    CODEBASE_DRIFT_HISTORICAL_GLOB_EXEMPT
+                ),
+                "historical_bash_exempt": sorted(
+                    CODEBASE_DRIFT_HISTORICAL_BASH_EXEMPT
+                ),
                 "scanner_version": "codebase_drift.v1",
             },
             sort_keys=True,
@@ -9268,6 +9305,9 @@ def check_codebase_drift(
     # 1. Forbidden file patterns
     for pattern in FORBIDDEN_FILE_PATTERNS:
         for found in root.glob(pattern):
+            rel_posix = found.relative_to(root).as_posix()
+            if rel_posix in CODEBASE_DRIFT_HISTORICAL_GLOB_EXEMPT:
+                continue  # frozen historical exemption; content scans still apply
             all_violations.append(
                 f"{found.relative_to(root)}: forbidden ad-hoc launcher. "
                 f"Use scripts/deploy_vastai.py + pipeline.py instead."
@@ -9298,7 +9338,10 @@ def check_codebase_drift(
             # is for the path-allowlist, not for the bash-pattern check.
             all_violations.extend(_scan_bash_text_for_forbidden(sh_path))
             continue
-        if rel not in ALLOWED_BASH_PATHS:
+        if (
+            rel not in ALLOWED_BASH_PATHS
+            and rel not in CODEBASE_DRIFT_HISTORICAL_BASH_EXEMPT
+        ):
             all_violations.append(
                 f"{rel}: bash script in experiments/ - only contest submission "
                 f"scripts allowed (inflate.sh, compress.sh in submissions/)"

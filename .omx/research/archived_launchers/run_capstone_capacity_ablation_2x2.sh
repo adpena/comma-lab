@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# HISTORICAL_RECIPE_ONLY: frozen launcher record for a completed lane; not a live deploy path (codebase-drift relocation 2026-08-25).
 # SPDX-License-Identifier: MIT
 # 2x2 capacity-confirm ablation (capstone spec section 6 step 6): the decisive
 # capacity-vs-data read BEFORE the multi-day 600-pair bet.

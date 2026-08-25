@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# HISTORICAL_RECIPE_ONLY: frozen launch-command record for the completed 2026-07-30 lane; not a live deploy path (Catalog codebase-drift relocation 2026-08-25).
 # ddm_tt1 QA71 — detached (ppid-1) joint payload gradient-TTO, all 3 ablation
 # modes on the ~50-pair stratified subset (worst-joint pairs + controls),
 # resumable.  tac-HIJACK guard + PATH export (the bare-python death).
