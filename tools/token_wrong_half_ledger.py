@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""Retain and decompose the GB1 token stream's binary wrong-indicator cost.
+"""Retain and decompose a GB1-lineage token stream's wrong-indicator cost.
 
-This scorer-free instrument replays a copied GB1 Python receiver.  For every
+This scorer-free instrument replays a copied, fingerprint-bound Python receiver.  For every
 decoded token it retains the exact RC64 integer-frequency decomposition
 
     selected-symbol bits = is-coder-argmax-wrong bits + which-class-given-wrong bits.
 
 Twenty-pair stages retain the full per-position ledger and complete receiver
-state.  The n600 analysis adds G4 image/xi-proxy stationarity tags and prices a
+state.  GB1 inputs are the defaults; explicit custody flags let Stage B bind a
+selected moved object without editing code.  The n600 analysis adds G4
+image/xi-proxy stationarity tags and prices a
 decoder-known class x margin x fixed-tile oracle bound.  It never edits the
 sealed GB1 tree, emits a candidate, invokes a scorer, or changes counted bytes.
 """
@@ -904,12 +906,48 @@ def verify_result(store: Path, binding: dict[str, Any]) -> None:
     print(json.dumps({"status": "PASS", "result": file_fact(result_path), "cleanup": file_fact(cleanup)}, sort_keys=True))
 
 
+def configure_inputs(args: argparse.Namespace) -> None:
+    """Bind one runtime/object without requiring code edits for Stage B."""
+    global SOURCE_RUNTIME, TRUTH, GT_FIELD, V12_RECEIPT
+    SOURCE_RUNTIME = args.source_runtime.resolve()
+    TRUTH = args.truth.resolve()
+    GT_FIELD = args.gt_field.resolve()
+    V12_RECEIPT = args.v12_receipt.resolve()
+    EXPECTED.update(
+        {
+            "archive_sha256": args.archive_sha256,
+            "archive_bytes": args.archive_bytes,
+            "stream_sha256": args.stream_sha256,
+            "stream_bytes": args.stream_bytes,
+            "tokens_sha256": args.truth_sha256,
+            "tokens_bytes": args.truth_bytes,
+            "gt_sha256": args.gt_sha256,
+            "gt_bytes": args.gt_bytes,
+            "v12_receipt_sha256": args.v12_receipt_sha256,
+        }
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--store", type=Path, default=DEFAULT_STORE)
     parser.add_argument("--max-new-stages", type=int)
+    parser.add_argument("--source-runtime", type=Path, default=SOURCE_RUNTIME)
+    parser.add_argument("--archive-sha256", default=EXPECTED["archive_sha256"])
+    parser.add_argument("--archive-bytes", type=int, default=EXPECTED["archive_bytes"])
+    parser.add_argument("--stream-sha256", default=EXPECTED["stream_sha256"])
+    parser.add_argument("--stream-bytes", type=int, default=EXPECTED["stream_bytes"])
+    parser.add_argument("--truth", type=Path, default=TRUTH)
+    parser.add_argument("--truth-sha256", default=EXPECTED["tokens_sha256"])
+    parser.add_argument("--truth-bytes", type=int, default=EXPECTED["tokens_bytes"])
+    parser.add_argument("--gt-field", type=Path, default=GT_FIELD)
+    parser.add_argument("--gt-sha256", default=EXPECTED["gt_sha256"])
+    parser.add_argument("--gt-bytes", type=int, default=EXPECTED["gt_bytes"])
+    parser.add_argument("--v12-receipt", type=Path, default=V12_RECEIPT)
+    parser.add_argument("--v12-receipt-sha256", default=EXPECTED["v12_receipt_sha256"])
     parser.add_argument("command", choices=("prepare", "replay", "analyze", "verify", "all"))
     args = parser.parse_args()
+    configure_inputs(args)
     store = args.store.resolve()
     runtime_copy = prepare_runtime_copy(store)
     binding = source_binding(store, runtime_copy)
