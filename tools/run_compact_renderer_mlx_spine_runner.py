@@ -1072,7 +1072,7 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         "architecture_priors": [
             "spectra_preserving_wavelet_low_frequency_encoding",
             "implicit_high_frequency_restoration_only_when_score_priced",
-            "aligns_with_z8_wavelet_findings_without_bulk_float_coeff_storage",
+            "aligns_with_z8_wavelet_findings_without_bulk_float_coeff_storage",  # SLIM_FLOAT_COEF_OK: negated prose — this architecture-prior string records that the design AVOIDS bulk float-coeff storage
         ],
         "allowed_enhancers": [
             "sr_nerv_lowres_encode_superresolve_resolution_deadzone",

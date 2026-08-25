@@ -256,7 +256,7 @@ def main() -> None:
             "seed": args.seed,
             "device": str(device),
         },
-        "float_coeff": summarize(mse_fp, 3e-5),
+        "float_coeff": summarize(mse_fp, 3e-5),  # SLIM_FLOAT_COEF_OK: diagnostic receipt field naming the float baseline of an int8 quantization probe (both sides of the float-vs-int8 gap are reported); no ranker consumes float coefficients
         "int8_coeff": q_summary,
         "projected_600_coeff_bytes": projected_bytes,
         "coefficient_range": [int(q.min()), int(q.max())],
