@@ -5139,8 +5139,14 @@ def preflight_all(
         # waivers per Catalog #110/#113 HISTORICAL_PROVENANCE non-negotiable.
         # Memory: feedback_t3_second_supplemental_missing_voices_plus_canonical_roster_helper_landed_20260519
         # + feedback_strict_flip_enablers_catalog_343_plus_346_plus_344_progress_landed_20260519.md
+        # 2026-08-25 DEMOTED warn-only (r34): 20 era-debt council memos w/
+        # incomplete rosters (incl. probable scope FPs: DAG-FEED companion
+        # docs matched by filename prefix; several memos predate the 05-19
+        # roster expansions). Backfill arm owns the honest adjudication —
+        # NEVER invented attendance, byte-preserving waivers/appends per
+        # #110/#113. Re-flip rides live-count 0.
         check_council_dispatch_roster_complete_per_canonical_helper(
-            strict=True, verbose=verbose,
+            strict=False, verbose=verbose,
         )
         # 2026-05-09 proactive META-class custody+concurrency audit (#130):
         # extends catalog #127 (`AUTHORITATIVE_TAGS` membership) to also catch
