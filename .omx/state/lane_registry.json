@@ -60077,7 +60077,11 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "research_only=true per Catalog #220 (109.5 KB declared, no operational score-improvement mechanism) + #298 retirement discipline: dormant L1 scaffold since 2026-05-28, retired NeRV lineage; typed research_only field ALSO set (the #220 gate matches the token in notes, not the typed field \u2014 seam noted); disposition at preflight r11 adjudication 2026-08-25",
+      "research_only": true,
+      "reactivation_criteria": [
+        "NeRV-selector lineage reactivation only via a full-vehicle race vs the live PR130-lineage frontier (races-not-reputation); the 112143-B MLX-local archive never had an operational inflate-side score mechanism (Catalog 220 path-2 disposition 2026-08-25)"
+      ]
     },
     {
       "id": "lane_wyner_ziv_pipeline_stage_codec_l1_long_mlx_600pair_20260528",
@@ -94822,5 +94826,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-08-25T18:17:50Z"
+  "updated_at": "2026-08-25T19:16:15Z"
 }
