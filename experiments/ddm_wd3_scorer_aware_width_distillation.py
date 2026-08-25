@@ -1224,6 +1224,21 @@ def save_checkpoint(
     return atomic_torch(path, payload)
 
 
+def _resume_config_identity(config: Mapping[str, Any]) -> dict[str, Any]:
+    """Config identity for crash-resume comparison, with `resume_from` masked.
+
+    `resume_from` is the one self-referential field: resuming a killed run
+    requires pointing it at a WD3 checkpoint that did not exist when that
+    checkpoint stored its as-run config, so full-dict equality is
+    unsatisfiable by construction (surfaced by the 2026-08-25 s1a seed-2
+    external SIGKILL — the first real crash on this trainer). Every other
+    field stays strict.
+    """
+    masked = dict(config)
+    masked.pop("resume_from", None)
+    return masked
+
+
 def load_checkpoint(
     path: Path,
     *,
@@ -1237,7 +1252,10 @@ def load_checkpoint(
     payload = torch.load(path, map_location="cpu", weights_only=False)
     if payload.get("schema") != CHECKPOINT_SCHEMA:
         raise WD3Error("resume checkpoint schema differs")
-    if payload.get("config") != dict(expected_config):
+    stored_config = payload.get("config")
+    if not isinstance(stored_config, Mapping) or _resume_config_identity(
+        stored_config
+    ) != _resume_config_identity(expected_config):
         raise WD3Error("resume checkpoint config/source identity differs")
     if payload.get("scaler") != {"enabled": False, "state_dict": {}}:
         raise WD3Error("resume scaler state differs")
