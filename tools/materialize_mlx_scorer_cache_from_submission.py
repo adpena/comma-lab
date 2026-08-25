@@ -513,6 +513,7 @@ def main(argv: list[str] | None = None) -> int:
     }
     write_json(report_output, report)
     if not args.keep_raw and inflate_executed and not receiver_direct_cache:
+        _assert_rmtree_safe(inflated_dir, work_dir=work_dir)
         shutil.rmtree(inflated_dir, ignore_errors=True)
     print(
         json.dumps(
@@ -525,6 +526,28 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     return 0
+
+
+def _assert_rmtree_safe(target: Path, *, work_dir: Path) -> None:
+    """Refuse ``shutil.rmtree(target)`` unless it is THIS run's scratch.
+
+    The one delete site (post-cache raw-frame cleanup) is gated on
+    ``inflate_executed``, which by construction implies
+    ``preinflated_output_dir is None`` — so the target must be the
+    ``work_dir/'inflated'`` directory this run itself created. A
+    user-supplied ``--preinflated-output-dir`` must never be deletable;
+    this makes that cross-branch invariant a runtime refusal instead of
+    an implicit property (Catalog #207/#154 pattern, sister of
+    build_pr101_nonlocal_sweep_packets._assert_rmtree_safe).
+    """
+    resolved = target.resolve()
+    if resolved != (work_dir / "inflated").resolve():
+        raise SystemExit(
+            f"refusing rmtree of non-scratch path: {resolved} "
+            f"(expected {work_dir / 'inflated'})"
+        )
+    if resolved in (Path.home().resolve(), Path("/")):
+        raise SystemExit(f"refusing rmtree of protected path: {resolved}")
 
 
 def _local_acquisition_is_partial_raw(
