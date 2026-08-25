@@ -60218,7 +60218,11 @@
           "evidence": ""
         }
       },
-      "notes": "L1 LONG-RUN MLX-LOCAL closure; FIRST orthogonal-paradigm (discrete-tokens VQ-VAE) L1 promotion from PACT-NeRV family; saturates SELECTOR-PARADIGM cascade pivot; van den Oord 1711.00937 \u00a73.1-3.2 canonical; non-promotable [macOS-MLX research-signal] per Catalog #192/#317/#341; research_only=true"
+      "notes": "L1 LONG-RUN MLX-LOCAL closure; FIRST orthogonal-paradigm (discrete-tokens VQ-VAE) L1 promotion from PACT-NeRV family; saturates SELECTOR-PARADIGM cascade pivot; van den Oord 1711.00937 \u00a73.1-3.2 canonical; non-promotable [macOS-MLX research-signal] per Catalog #192/#317/#341; research_only=true",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #124 backfill 2026-08-25"
+      ]
     },
     {
       "id": "lane_z6_v2_cargo_cult_unwind_hinton_distill_600pair_long_mlx_20260528",
@@ -61262,7 +61266,11 @@
           "evidence": ""
         }
       },
-      "notes": "research_only=true STAND_DOWN_PER_SLOT_NN_PP_CANONICAL_PATTERN canonical_predecessor_landings=feedback_slot_u_wave_n_plus_33_super_additive_alpha_4_74_lane_g_v3_siren_empirical_validation_landed_20260529.md+feedback_wave_n33_super_additive_alpha_4_74_empirical_validation_landed_20260528.md canonical_anti_pattern_id=synthesis_vs_empirical_phantom_alpha_from_research_sidecar_v1 canonical_verdict=IMPLEMENTATION_LEVEL_FALSIFICATION_per_Catalog_307 canonical_paradigm_status=INTACT canonical_byte_identity_artifact_sha=08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529 mission_predicted_contribution=apparatus_maintenance"
+      "notes": "research_only=true STAND_DOWN_PER_SLOT_NN_PP_CANONICAL_PATTERN canonical_predecessor_landings=feedback_slot_u_wave_n_plus_33_super_additive_alpha_4_74_lane_g_v3_siren_empirical_validation_landed_20260529.md+feedback_wave_n33_super_additive_alpha_4_74_empirical_validation_landed_20260528.md canonical_anti_pattern_id=synthesis_vs_empirical_phantom_alpha_from_research_sidecar_v1 canonical_verdict=IMPLEMENTATION_LEVEL_FALSIFICATION_per_Catalog_307 canonical_paradigm_status=INTACT canonical_byte_identity_artifact_sha=08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529 mission_predicted_contribution=apparatus_maintenance",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #124 backfill 2026-08-25"
+      ]
     },
     {
       "id": "lane_slot_ww_canonical_l28_pr98_patch_wave_build_only_top_4_canonical_frontier_candidates_paired_cuda_ratification_operator_routable_prep_20260529",
@@ -66174,7 +66182,11 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #124 backfill 2026-08-25"
+      ]
     },
     {
       "id": "lane_rnerv_rabbit_nerv_inverse_steganalysis_carrier_candidate_20260601",
@@ -67735,7 +67747,11 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #124 backfill 2026-08-25"
+      ]
     },
     {
       "id": "lane_snerv_official_source_forward_parity_20260604_codex",
@@ -67858,7 +67874,11 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #124 backfill 2026-08-25"
+      ]
     },
     {
       "id": "lane_hinerv_official_control_parity_guard_20260604",
@@ -69744,7 +69764,11 @@
           "evidence": ""
         }
       },
-      "notes": "HiNeRV/SNeRV family-specific strategy contracts surfaced in campaign rows and blocked queue rows retain commands without launch steps."
+      "notes": "HiNeRV/SNeRV family-specific strategy contracts surfaced in campaign rows and blocked queue rows retain commands without launch steps.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #124 backfill 2026-08-25"
+      ]
     },
     {
       "id": "lane_snerv_lf_hf_runtime_binding_20260606",
@@ -70857,7 +70881,11 @@
           "evidence": ""
         }
       },
-      "notes": "Demoted L2->L1 2026-08-25 (PCC9): v33 smoke evidence self-declares diagnostic_only + byte_cap_rejected; real_archive_empirical over-claimed. Reactivation: a receiver-proof-passing byte-closed row on this lane. HiNeRV lineage = lessons-only per the no-old-lineage ban."
+      "notes": "Demoted L2->L1 2026-08-25 (PCC9): v33 smoke evidence self-declares diagnostic_only + byte_cap_rejected; real_archive_empirical over-claimed. Reactivation: a receiver-proof-passing byte-closed row on this lane. HiNeRV lineage = lessons-only per the no-old-lineage ban.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #124 backfill 2026-08-25"
+      ]
     },
     {
       "id": "hi_nerv_target_region_birth_v33_archive_closed_action_payload",
@@ -71557,7 +71585,11 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #124 backfill 2026-08-25"
+      ]
     },
     {
       "id": "lane_b1_hinerv_pr95_229k_full_curriculum_20260609",
@@ -72815,7 +72847,11 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #124 backfill 2026-08-25"
+      ]
     },
     {
       "id": "lane_cool_chic_score_aware_basis_20260611",
@@ -72856,7 +72892,11 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #124 backfill 2026-08-25"
+      ]
     },
     {
       "id": "lane_cool_chic_residual_flip_delta_20260611",
@@ -72939,7 +72979,11 @@
           "evidence": ""
         }
       },
-      "notes": ""
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #124 backfill 2026-08-25"
+      ]
     },
     {
       "id": "lane_capstone_advisory_exact_custody_gate_15_20260611",
@@ -73272,7 +73316,11 @@
           "evidence": ""
         }
       },
-      "notes": "Infrastructure/enabler: --train-device mps split mirrors launch_split_by_head_basin.py. MPS 28.8x faster/epoch than CPU on the Cool-Chic gradient. MPS is NEVER score authority (CPU authority for BEST-selection + auth-eval). research_only=true; NON-PROMOTABLE; no score claim (latents un-entropy-coded => 18.4MB archive dominates rate). Reactivation: AR-prior arithmetic-coding of latents (the deferred #1 optimization). Commit 7e103ad76."
+      "notes": "Infrastructure/enabler: --train-device mps split mirrors launch_split_by_head_basin.py. MPS 28.8x faster/epoch than CPU on the Cool-Chic gradient. MPS is NEVER score authority (CPU authority for BEST-selection + auth-eval). research_only=true; NON-PROMOTABLE; no score claim (latents un-entropy-coded => 18.4MB archive dominates rate). Reactivation: AR-prior arithmetic-coding of latents (the deferred #1 optimization). Commit 7e103ad76.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #124 backfill 2026-08-25"
+      ]
     },
     {
       "id": "lane_l2_combined_seg_pose_ab_20260612",
@@ -73395,7 +73443,11 @@
           "evidence": ""
         }
       },
-      "notes": "TRACK B step 1; reuses tac.lossless.range_coder; full-stack synergy with Layer2 rate surrogate + Layer3 T1/T8; research_only=true advisory"
+      "notes": "TRACK B step 1; reuses tac.lossless.range_coder; full-stack synergy with Layer2 rate surrogate + Layer3 T1/T8; research_only=true advisory",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #124 backfill 2026-08-25"
+      ]
     },
     {
       "id": "lane_variable_level_waterfill_allocator_20260612",
@@ -94912,5 +94964,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-08-25T19:47:43Z"
+  "updated_at": "2026-08-25T21:55:46Z"
 }
