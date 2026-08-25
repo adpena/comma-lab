@@ -775,3 +775,72 @@ def test_cure2_still_refuses_absence_in_status_slot(hook: str, line: str) -> Non
     """NEGATIVE: absence in the status slot is refused, cure notwithstanding."""
     aliases = dict(_UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS)[hook]
     assert not _memo_declares_hook(line + "\n", hook, aliases)
+
+
+# ── Test 15: 2026-08-25 detector cure #3 (ddm_wb1) — bare ACTIVE status ──
+#
+# The one-line 6-hook convention writes the status word with no punctuation:
+#   "**6-hook wire-in (Catalog #125):** #1 sensitivity-map ACTIVE (<evidence>);
+#    #2 Pareto ACTIVE (<evidence>); #3 bit-allocator ACTIVE (<evidence>); ..."
+
+
+@pytest.mark.parametrize(
+    "hook",
+    ["sensitivity_map", "pareto", "bit_allocator", "probe_disambiguator"],
+)
+def test_cure3_accepts_one_line_bare_active_convention(hook: str) -> None:
+    """POSITIVE: bare ACTIVE directly after the label is a declaration.
+
+    The line is the verbatim corpus form from
+    feedback_boundary_aware_rd_g2_g3_adjoint_hprc_saliency_wire_in_landed_20260601.md.
+    """
+    line = (
+        "**6-hook wire-in (Catalog #125):** #1 sensitivity-map ACTIVE "
+        "(`push_pixel_saliency_to_residual_grid` IS the pixel->coeff "
+        "transform); #2 Pareto ACTIVE (G2 bounds rate term, advisory traces "
+        "RD frontier); #3 bit-allocator ACTIVE (importance feeds EXISTING "
+        "`transcode_compact_receiver_importance_weighted_residual_tokens`); "
+        "#4 cathedral autopilot N/A (advisory non-promotable, paired-eval "
+        "operator-gated); #5 continual-learning ACTIVE (durable JSON anchor); "
+        "#6 probe-disambiguator ACTIVE (advisory re-measure disambiguates "
+        "the two readings).\n"
+    )
+    aliases = dict(_UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS)[hook]
+    assert _memo_declares_hook(line, hook, aliases)
+
+
+@pytest.mark.parametrize(
+    ("hook", "line"),
+    [
+        # 'registered' / 'wired' are NOT accepted bare: they read as narrative
+        # verbs and would widen the gate into prose.
+        ("bit_allocator", "The bit-allocator registered five tensors today."),
+        # NOTE: "<label> wired ..." is accepted by the PRE-EXISTING "wire"
+        # keyword, not by this cure; it is out of scope here.
+        # A status word that is not at the window start stays prose.
+        ("pareto", "We think the Pareto surface is still active research."),
+    ],
+)
+def test_cure3_does_not_widen_into_narrative(hook: str, line: str) -> None:
+    """NEGATIVE: only an anchored bare ACTIVE counts; verbs stay prose."""
+    aliases = dict(_UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS)[hook]
+    assert not _memo_declares_hook(line + "\n", hook, aliases)
+
+
+def test_line_wrap_join_is_deliberately_not_implemented() -> None:
+    """NEGATIVE (design guard): a bare N/A must NOT borrow the next line.
+
+    A tempting 'cure' for hard-wrapped memos is to evaluate each line joined
+    with its successor. Measured on the real corpus that manufactures 49 false
+    accepts: a bare "- hook #3 bit-allocator: N/A" line joined with the next
+    bullet "- hook #4 cathedral autopilot dispatch: ACTIVE (...)" makes the
+    NEXT hook's text read as bit-allocator's missing rationale. CLAUDE.md
+    requires a rationale per hook, so the bare N/A must keep failing.
+    """
+    aliases = dict(_UNIFIED_LAGRANGIAN_WIRE_IN_HOOKS)["bit_allocator"]
+    body = (
+        "- **hook #3 bit-allocator**: N/A\n"
+        "- **hook #4 cathedral autopilot dispatch**: **ACTIVE** (Phase E "
+        "recommendations feed the cathedral ranker)\n"
+    )
+    assert not _memo_declares_hook(body, "bit_allocator", aliases)

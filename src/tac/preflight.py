@@ -42289,6 +42289,11 @@ _WIRE_IN_LABEL_CONTINUATION_TOKENS: tuple[str, ...] = (
 _WIRE_IN_POSITIVE_STATUS_RE = re.compile(r"\b(active|wired|registered)\b")
 _WIRE_IN_STATUS_SLOT_CHARS = 40
 
+# A bare status word directly after the hook label, with no punctuation:
+# "#1 sensitivity-map ACTIVE (<evidence>); #2 Pareto ACTIVE (<evidence>)".
+# Anchored, and deliberately narrower than the status-slot regex above.
+_WIRE_IN_BARE_ACTIVE_RE = re.compile(r"active\b")
+
 # Em-dash / en-dash: markdown declaration separators ("**Label** - ACTIVE: x").
 # ASCII hyphen is deliberately EXCLUDED - it would false-accept hyphenated
 # continuations such as "sensitivity-map-based saliency".
@@ -42503,6 +42508,15 @@ def _memo_declares_hook(text: str, hook_label: str, aliases: tuple[str, ...]) ->
                     # false-accept hyphenated continuations such as
                     # "sensitivity-map-based").
                     or window[:1] in _WIRE_IN_DASH_SEPARATORS
+                    # 2026-08-25 detector cure (ddm_wb1): the one-line 6-hook
+                    # convention writes the status word with no punctuation at
+                    # all -- "#1 sensitivity-map ACTIVE (<evidence>); #2 Pareto
+                    # ACTIVE (<evidence>); ...". A status word ANCHORED at the
+                    # start of the window is a declaration. Only "active" is
+                    # accepted here: "registered" / "wired" read naturally as
+                    # narrative verbs ("the bit-allocator registered 5
+                    # tensors") and would widen this into prose.
+                    or _WIRE_IN_BARE_ACTIVE_RE.match(window) is not None
                     or "wire" in window
                     or "wiring" in window
                     or "hook" in window
