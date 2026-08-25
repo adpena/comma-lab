@@ -70515,6 +70515,98 @@ def _check_287b_module_is_importable(name: str) -> bool:
     return spec is not None
 
 
+# ---------------------------------------------------------------------------
+# Catalog #287-B FALSE-POSITIVE CURE (2026-08-25, task #1271 backfill)
+#
+# The sub-scope B regex captures any ``tac.<ident>[.<ident>...]`` token and then
+# asks whether the 2-component prefix is an importable MODULE. Three prose forms
+# match that regex while making no module claim at all, so the "phantom API"
+# verdict is structurally wrong for them:
+#
+#   1. PACKAGE DUNDER ATTRIBUTE — ``tac.__file__`` / ``tac.__version__``. These
+#      are real attributes on the real ``tac`` package (``tac.__file__`` is the
+#      canonical venv-hijack check). ``find_spec("tac.__file__")`` is False
+#      because a dunder is never a submodule, not because the name is phantom.
+#   2. FAMILY-GLOB TRUNCATION — ``tac.pareto_*`` / ``tac.lane_mark_{pose,speed}``.
+#      The regex stops at the trailing ``_`` (the glob/brace char is not a word
+#      char), yielding a truncated non-module. The FAMILY is real.
+#   3. METASYNTACTIC PLACEHOLDER — ``from tac.X import ClassName`` in prose that
+#      describes a detection PATTERN. ``X`` is a variable, not a module name.
+#
+# Each cure requires POSITIVE evidence before it suppresses (the attribute must
+# actually exist on ``tac``; the glob family must actually have real members;
+# the placeholder must be a single capital letter), so the gate keeps full
+# detection power over genuine phantom citations. Per CLAUDE.md "Bugs must be
+# permanently fixed AND self-protected against" + the structural-beats-
+# procedural discipline: a detector false positive is cured at the detector,
+# never by 19 waivers that would let the same false positive re-accrue forever.
+# ---------------------------------------------------------------------------
+
+_CHECK_287B_DUNDER_RE = re.compile(r"^__\w+__$")
+_CHECK_287B_METASYNTACTIC_RE = re.compile(r"^[A-Z]$")
+_CHECK_287B_GLOB_SUFFIX_CHARS: tuple[str, ...] = ("*", "{")
+_CHECK_287B_TAC_SUBMODULE_CACHE: list[frozenset[str]] = []
+
+
+def _check_287b_tac_submodule_names() -> frozenset[str]:
+    """Return (cached) the set of real top-level ``tac.*`` submodule names."""
+    if _CHECK_287B_TAC_SUBMODULE_CACHE:
+        return _CHECK_287B_TAC_SUBMODULE_CACHE[0]
+    names: set[str] = set()
+    try:
+        import pkgutil
+
+        import tac as _tac
+
+        names = {m.name for m in pkgutil.iter_modules(_tac.__path__)}
+    except Exception:
+        names = set()
+    frozen = frozenset(names)
+    _CHECK_287B_TAC_SUBMODULE_CACHE.append(frozen)
+    return frozen
+
+
+def _check_287b_tac_package_has_attr(attr: str) -> bool:
+    """Return True iff the real ``tac`` package exposes ``attr``."""
+    try:
+        import tac as _tac
+    except Exception:
+        return False
+    return hasattr(_tac, attr)
+
+
+def _check_287b_is_non_module_citation(
+    dotted: str,
+    line: str,
+    match_end: int,
+) -> bool:
+    """Return True when a regex hit makes no module claim (see the block above).
+
+    Evidence-gated: a dunder must resolve on the real package, a glob family
+    must have real members, a placeholder must be a bare capital letter.
+    Anything else falls through to the normal phantom-module verdict.
+    """
+    parts = dotted.split(".")
+    if len(parts) < 2 or parts[0] != "tac":
+        return False
+    second = parts[1]
+    # (1) package dunder attribute, only when it really exists on ``tac``
+    if _CHECK_287B_DUNDER_RE.match(second) and len(parts) == 2:
+        return _check_287b_tac_package_has_attr(second)
+    # (3) metasyntactic placeholder (``tac.X``)
+    if _CHECK_287B_METASYNTACTIC_RE.match(second):
+        return True
+    # (2) family-glob truncation, only when the family really has members
+    if second.endswith("_"):
+        next_char = line[match_end:match_end + 1]
+        if next_char in _CHECK_287B_GLOB_SUFFIX_CHARS:
+            return any(
+                name.startswith(second)
+                for name in _check_287b_tac_submodule_names()
+            )
+    return False
+
+
 def _check_287b_module_has_attr(
     module_name: str,
     attr_name: str,
@@ -70733,6 +70825,11 @@ def _check_287b_scan_research_memos(
                 continue
             for match in _CHECK_287B_TAC_MODULE_NAME_RE.finditer(line):
                 dotted = match.group(0)
+                # Structural false-positive cure: the regex hit is a package
+                # dunder attribute, a real family glob, or a metasyntactic
+                # placeholder — no module claim is being made at all.
+                if _check_287b_is_non_module_citation(dotted, line, match.end()):
+                    continue
                 if _check_287b_manifest_waives(
                     manifest_waivers,
                     rel,

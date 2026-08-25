@@ -35,6 +35,7 @@ from tac.preflight import (
     _check_287b_line_waived,
     _check_287b_load_waiver_manifest,
     _check_287b_module_is_importable,
+    _check_287b_is_non_module_citation,
     _check_287b_module_has_attr,
     _check_287b_strip_code_fences_and_html_comments,
     check_no_docstring_overstatement_without_evidence_tag,
@@ -561,3 +562,147 @@ class TestLiveRepoRegressionGuard:
         # exempt files do not pollute the live repo count).
         for v in violations:
             assert "test_check_287_phantom_api_research_md_extension" not in v
+
+
+# =============================================================================
+# Catalog #287-B FALSE-POSITIVE CURE (2026-08-25, task #1271 backfill)
+#
+# Three prose forms match the `tac.<ident>` regex while making NO module claim:
+# package dunder attributes, family globs, and metasyntactic placeholders.
+# Each cure is evidence-gated, so genuine phantom citations still fire.
+# =============================================================================
+
+
+class TestNonModuleCitationHelper:
+    """Unit tests for `_check_287b_is_non_module_citation`."""
+
+    def test_real_package_dunder_is_non_module(self):
+        line = "custody check: `tac.__file__` resolves in-repo"
+        dotted = "tac.__file__"
+        end = line.index(dotted) + len(dotted)
+        assert _check_287b_is_non_module_citation(dotted, line, end) is True
+
+    def test_real_package_version_dunder_is_non_module(self):
+        line = "`tac.__version__` is 0.2.0rc2"
+        dotted = "tac.__version__"
+        end = line.index(dotted) + len(dotted)
+        assert _check_287b_is_non_module_citation(dotted, line, end) is True
+
+    def test_nonexistent_dunder_is_not_excused(self):
+        line = "we call `tac.__not_a_real_dunder__` here"
+        dotted = "tac.__not_a_real_dunder__"
+        end = line.index(dotted) + len(dotted)
+        assert _check_287b_is_non_module_citation(dotted, line, end) is False
+
+    def test_dunder_with_trailing_component_is_not_excused(self):
+        # `tac.__file__.parent` claims structure below the attribute; the
+        # 2-component-dunder cure must not swallow it.
+        line = "see `tac.__file__.parent` for the root"
+        dotted = "tac.__file__.parent"
+        end = line.index(dotted) + len(dotted)
+        assert _check_287b_is_non_module_citation(dotted, line, end) is False
+
+    def test_metasyntactic_placeholder_is_non_module(self):
+        line = "the `from tac.X import ClassName` pattern"
+        dotted = "tac.X"
+        end = line.index(dotted) + len(dotted)
+        assert _check_287b_is_non_module_citation(dotted, line, end) is True
+
+    def test_family_glob_with_real_members_is_non_module(self):
+        line = "re-implement natively in `tac.witness_*` per the grant"
+        dotted = "tac.witness_"
+        end = line.index(dotted) + len(dotted)
+        assert _check_287b_is_non_module_citation(dotted, line, end) is True
+
+    def test_brace_family_with_real_members_is_non_module(self):
+        line = "`tac.lane_mark_{pose,speed}` (mask centroids)"
+        dotted = "tac.lane_mark_"
+        end = line.index(dotted) + len(dotted)
+        assert _check_287b_is_non_module_citation(dotted, line, end) is True
+
+    def test_family_glob_without_real_members_still_flagged(self):
+        # No `tac.pufferlib_*` module was ever built — the glob is real debt.
+        line = "any tac.pufferlib_* package created without the checklist"
+        dotted = "tac.pufferlib_"
+        end = line.index(dotted) + len(dotted)
+        assert _check_287b_is_non_module_citation(dotted, line, end) is False
+
+    def test_trailing_underscore_without_glob_char_still_flagged(self):
+        # A bare truncated name with no glob/brace marker is not a family
+        # citation; it must fall through to the phantom verdict.
+        line = "we call tac.witness_ directly"
+        dotted = "tac.witness_"
+        end = line.index(dotted) + len(dotted)
+        assert _check_287b_is_non_module_citation(dotted, line, end) is False
+
+    def test_ordinary_phantom_name_not_excused(self):
+        line = "use `tac.definitely_not_a_real_module` here"
+        dotted = "tac.definitely_not_a_real_module"
+        end = line.index(dotted) + len(dotted)
+        assert _check_287b_is_non_module_citation(dotted, line, end) is False
+
+    def test_non_tac_dotted_not_excused(self):
+        line = "use `numpy.__file__` here"
+        dotted = "numpy.__file__"
+        end = line.index(dotted) + len(dotted)
+        assert _check_287b_is_non_module_citation(dotted, line, end) is False
+
+
+class TestNonModuleCitationEndToEnd:
+    def test_venv_hijack_check_not_flagged(self, synthetic_repo_with_phantom):
+        memo = (
+            synthetic_repo_with_phantom / ".omx" / "research"
+            / "custody_20260825.md"
+        )
+        memo.write_text(
+            "# Custody\n\n| venv hijack check | `tac.__file__` "
+            "resolves in-repo — CLEAN |\n"
+        )
+        violations = check_no_docstring_overstatement_without_evidence_tag(
+            repo_root=synthetic_repo_with_phantom,
+            strict=False,
+            scan_research_memos=True,
+        )
+        assert not any("tac.__file__" in v for v in violations)
+
+    def test_real_family_glob_not_flagged(self, synthetic_repo_with_phantom):
+        memo = (
+            synthetic_repo_with_phantom / ".omx" / "research"
+            / "glob_20260825.md"
+        )
+        memo.write_text("# Glob\n\nHooks: `tac.witness_*` and `tac.lane_mark_{pose,speed}`.\n")
+        violations = check_no_docstring_overstatement_without_evidence_tag(
+            repo_root=synthetic_repo_with_phantom,
+            strict=False,
+            scan_research_memos=True,
+        )
+        assert not any("tac.witness_" in v for v in violations)
+        assert not any("tac.lane_mark_" in v for v in violations)
+
+    def test_unbuilt_family_glob_still_flagged(self, synthetic_repo_with_phantom):
+        memo = (
+            synthetic_repo_with_phantom / ".omx" / "research"
+            / "unbuilt_glob_20260825.md"
+        )
+        memo.write_text("# Sweep\n\nDetection: any tac.pufferlib_* package created.\n")
+        violations = check_no_docstring_overstatement_without_evidence_tag(
+            repo_root=synthetic_repo_with_phantom,
+            strict=False,
+            scan_research_memos=True,
+        )
+        assert any("tac.pufferlib_" in v for v in violations)
+
+    def test_genuine_phantom_still_flagged_after_cure(
+        self, synthetic_repo_with_phantom
+    ):
+        memo = (
+            synthetic_repo_with_phantom / ".omx" / "research"
+            / "regression_20260825.md"
+        )
+        memo.write_text("# Test\n\nWe use `tac.definitely_not_a_real_module` helper.\n")
+        violations = check_no_docstring_overstatement_without_evidence_tag(
+            repo_root=synthetic_repo_with_phantom,
+            strict=False,
+            scan_research_memos=True,
+        )
+        assert any("tac.definitely_not_a_real_module" in v for v in violations)
