@@ -1,4 +1,5 @@
 # AGENTS
+<!-- # CATALOG_QUOTA_EXCEEDED_OK: gates 401,402,404,406,407,408 each landed as the enforcement half of an operator-directed two-landing cure (confound self-protection family, operator binding 2026-07-05; telemetry/provenance P0 gates, operator 2026-07-10; timed-shell-wrapper group-kill class, operator determinization mandate 2026-08-14) during the 842 enforcement-blind window, so the quota brake never fired at their landing time. Retirement would remove live protection (408 caught a real orphan-grandchild bug on 2026-08-25). Consolidation review of the full catalog remains owed and is tracked in the task ledger (filed 2026-08-25). -->
 
 > # ⛔ SUPREME RULE — NO FAKE IMPLEMENTATIONS ⛔
 > **This is the #1 non-negotiable, ABOVE EVERY OTHER RULE in this file. Highest possible emphasis.**
