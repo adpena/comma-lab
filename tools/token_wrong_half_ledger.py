@@ -199,7 +199,7 @@ def source_binding(store: Path, runtime_copy: Path) -> dict[str, Any]:
     archive = verify_file(
         runtime_copy / "archive.zip", EXPECTED["archive_sha256"], EXPECTED["archive_bytes"]
     )
-    return {
+    binding = {
         "schema": "ddm_wh1_source_binding.v1",
         "axis": AXIS,
         "shape": [N, HEIGHT, WIDTH],
@@ -218,6 +218,35 @@ def source_binding(store: Path, runtime_copy: Path) -> dict[str, Any]:
         },
         "store": str(store),
     }
+    # Analysis-only fixes must not force a 600-pair re-decode.  If a contiguous
+    # replay already exists, retain its exact source binding after proving that
+    # every non-implementation source is unchanged and that the old instrument
+    # bytes remain available in Git custody.
+    first_receipt = stage_paths(store, 0, STAGE_FRAMES)["receipt"]
+    if first_receipt.is_file():
+        prior = json.loads(first_receipt.read_text(encoding="utf-8"))["source_binding"]
+        candidate = json.loads(json.dumps(binding))
+        candidate["sources"]["implementation"] = prior["sources"]["implementation"]
+        if candidate != prior:
+            raise Wh1Error("existing replay sources changed beyond the analysis implementation")
+        expected = prior["sources"]["implementation"]
+        commits = subprocess.run(
+            ["git", "log", "--all", "--format=%H", "--", "tools/token_wrong_half_ledger.py"],
+            cwd=REPO, check=True, capture_output=True, text=True,
+        ).stdout.splitlines()
+        historical_match = False
+        for commit in commits:
+            content = subprocess.run(
+                ["git", "show", f"{commit}:tools/token_wrong_half_ledger.py"],
+                cwd=REPO, check=True, capture_output=True,
+            ).stdout
+            if len(content) == int(expected["bytes"]) and hashlib.sha256(content).hexdigest() == expected["sha256"]:
+                historical_match = True
+                break
+        if not historical_match:
+            raise Wh1Error("stage implementation bytes are not recoverable from Git custody")
+        return prior
+    return binding
 
 
 def build_decoder(store: Path, runtime_copy: Path) -> Path:
@@ -547,8 +576,9 @@ def analyze(store: Path, binding: dict[str, Any]) -> Path:
     if predicted.shape != (N, HEIGHT, WIDTH) or decoded.shape != predicted.shape:
         raise Wh1Error("assembled categorical ledger shape drift")
     gt = np.load(GT_FIELD, mmap_mode="r", allow_pickle=False)
-    if not np.array_equal(decoded, gt):
-        raise Wh1Error("decoded tokens do not equal the SHA-bound DALI GT argmax field")
+    if gt.shape != decoded.shape or gt.dtype != np.uint8:
+        raise Wh1Error("SHA-bound DALI GT class field shape/dtype drift")
+    token_gt_mismatch_positions = int(np.count_nonzero(decoded != gt))
     codes = transition_codes(predicted, decoded)
     transition_counts = np.empty((CLASSES * CLASSES, HEIGHT, WIDTH), dtype=np.uint16)
     for code in range(CLASSES * CLASSES):
@@ -613,6 +643,10 @@ def analyze(store: Path, binding: dict[str, Any]) -> Path:
     class_wrong_positions = np.zeros(CLASSES, dtype=np.int64)
     class_wrong_bits = np.zeros(CLASSES, dtype=np.float64)
     class_which_bits = np.zeros(CLASSES, dtype=np.float64)
+    token_positions = np.zeros(CLASSES, dtype=np.int64)
+    token_wrong_positions = np.zeros(CLASSES, dtype=np.int64)
+    token_wrong_bits = np.zeros(CLASSES, dtype=np.float64)
+    token_which_bits = np.zeros(CLASSES, dtype=np.float64)
     pred_positions = np.zeros(CLASSES, dtype=np.int64)
     pred_wrong_positions = np.zeros(CLASSES, dtype=np.int64)
     pred_wrong_bits = np.zeros(CLASSES, dtype=np.float64)
@@ -635,7 +669,7 @@ def analyze(store: Path, binding: dict[str, Any]) -> Path:
     oracle_count = np.zeros(tile_shape, dtype=np.int64)
     oracle_wrong = np.zeros(tile_shape, dtype=np.int64)
     oracle_actual = np.zeros(tile_shape, dtype=np.float64)
-    top_position_heap: list[tuple[float, int, int, int, int, int, int, int, float]] = []
+    top_position_heap: list[tuple[float, int, int, int, int, int, int, int, int, float]] = []
     total_indicator = total_which = total_wrong_bits = 0.0
     total_wrong_positions = 0
     for receipt, stationarity_fact in zip(receipts, stationarity_facts, strict=True):
@@ -648,6 +682,7 @@ def analyze(store: Path, binding: dict[str, Any]) -> Path:
         stationarity = np.load(stationarity_fact["path"], mmap_mode="r", allow_pickle=False)
         for local, frame in enumerate(range(start, end)):
             actual = decoded[frame]
+            gt_class = np.asarray(gt[frame], dtype=np.uint8)
             pred = predicted[frame]
             wrong = pred != actual
             wrong_indicator = np.where(wrong, indicator[local], 0.0)
@@ -656,7 +691,8 @@ def analyze(store: Path, binding: dict[str, Any]) -> Path:
             total_wrong_bits += float(wrong_indicator.sum(dtype=np.float64))
             total_wrong_positions += int(wrong.sum())
             for values, arrays in (
-                (actual, (class_positions, class_wrong_positions, class_wrong_bits, class_which_bits)),
+                (gt_class, (class_positions, class_wrong_positions, class_wrong_bits, class_which_bits)),
+                (actual, (token_positions, token_wrong_positions, token_wrong_bits, token_which_bits)),
                 (pred, (pred_positions, pred_wrong_positions, pred_wrong_bits, pred_which_bits)),
                 (bucket[local], (bucket_positions, bucket_wrong_positions, bucket_wrong_bits, bucket_which_bits)),
                 (stationarity[local], (g4_positions, g4_wrong_positions, g4_wrong_bits, g4_which_bits)),
@@ -694,7 +730,7 @@ def analyze(store: Path, binding: dict[str, Any]) -> Path:
                     y, x = divmod(int(flat), WIDTH)
                     entry = (
                         float(indicator[local, y, x]), frame, y, x,
-                        int(actual[y, x]), int(pred[y, x]), int(bucket[local, y, x]),
+                        int(actual[y, x]), int(gt_class[y, x]), int(pred[y, x]), int(bucket[local, y, x]),
                         int(stationarity[local, y, x]), float(which[local, y, x]),
                     )
                     if len(top_position_heap) < 1000:
@@ -736,20 +772,24 @@ def analyze(store: Path, binding: dict[str, Any]) -> Path:
     top_positions = [
         {
             "pair": frame, "row": y, "column": x,
-            "actual_class": actual, "predicted_class": predicted_class,
+            "decoded_token_class": actual, "dali_gt_class": gt_class,
+            "predicted_class": predicted_class,
             "margin_bucket": margin_bucket, "g4_stationarity": G4_NAMES[stationarity],
             "wrong_indicator_bits": indicator_bits, "which_bits": which_class_bits,
         }
         for (
-            indicator_bits, frame, y, x, actual, predicted_class,
+            indicator_bits, frame, y, x, actual, gt_class, predicted_class,
             margin_bucket, stationarity, which_class_bits,
         ) in sorted(top_position_heap, reverse=True)
     ]
     total_which_bits = total_which
     tables = {
-        "actual_class": _axis_rows(np.arange(CLASSES), CLASS_NAMES, class_positions,
+        "dali_gt_class": _axis_rows(np.arange(CLASSES), CLASS_NAMES, class_positions,
                                    class_wrong_positions, class_wrong_bits, class_which_bits,
                                    total_wrong_positions, total_wrong_bits, total_which_bits),
+        "decoded_token_class": _axis_rows(np.arange(CLASSES), CLASS_NAMES, token_positions,
+                                          token_wrong_positions, token_wrong_bits, token_which_bits,
+                                          total_wrong_positions, total_wrong_bits, total_which_bits),
         "predicted_class": _axis_rows(np.arange(CLASSES), CLASS_NAMES, pred_positions,
                                       pred_wrong_positions, pred_wrong_bits, pred_which_bits,
                                       total_wrong_positions, total_wrong_bits, total_which_bits),
@@ -774,6 +814,7 @@ def analyze(store: Path, binding: dict[str, Any]) -> Path:
         "score_claim": False,
         "pointer_moved": False,
         "source_binding": binding,
+        "analysis_implementation": file_fact(Path(__file__)),
         "accounting": {
             "positions_numerator": POSITIONS,
             "positions_denominator_n600": POSITIONS,
@@ -789,6 +830,8 @@ def analyze(store: Path, binding: dict[str, Any]) -> Path:
             "which_class_bytes": total_which_bits / 8.0,
             "wrong_positions_numerator": total_wrong_positions,
             "wrong_positions_denominator": POSITIONS,
+            "decoded_token_vs_dali_gt_mismatch_positions_numerator": token_gt_mismatch_positions,
+            "decoded_token_vs_dali_gt_mismatch_positions_denominator": POSITIONS,
         },
         "margin_bucket_edges_bits": [float(value) if np.isfinite(value) else None for value in MARGIN_EDGES],
         "tables": tables,
