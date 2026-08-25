@@ -94955,6 +94955,141 @@
       "reactivation_criteria": [
         "parsed multi-token candidate beats HC1 Seg survival at matched CP135 pose carrier on stratified-random n>=32; sealed T4 sign gate clears with zero pose damage"
       ]
+    },
+    {
+      "id": "lane_compact_renderer_mlx_spine_runner_pr95_hnerv_20260601",
+      "name": "Compact renderer MLX spine runner (pr95_hnerv vehicle; retired lineage)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #126 registration backfill 2026-08-25"
+      ]
+    },
+    {
+      "id": "lane_compact_renderer_mlx_spine_runner_hi_nerv_20260601",
+      "name": "Compact renderer MLX spine runner (hi_nerv vehicle; retired lineage)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #126 registration backfill 2026-08-25"
+      ]
+    },
+    {
+      "id": "lane_compact_renderer_mlx_spine_runner_pact_nerv_vq_20260601",
+      "name": "Compact renderer MLX spine runner (pact_nerv_vq vehicle; retired lineage)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "",
+      "research_only": true,
+      "reactivation_criteria": [
+        "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #126 registration backfill 2026-08-25"
+      ]
     }
   ],
   "level_rules": {
@@ -94964,5 +95099,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-08-25T21:55:46Z"
+  "updated_at": "2026-08-25T22:29:11Z"
 }
