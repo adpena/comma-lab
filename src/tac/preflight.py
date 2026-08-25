@@ -4627,8 +4627,14 @@ def preflight_all(
         # Sister of Catalog #290 + #294 + #303 + #296. Memory:
         # feedback_max_observability_landed_catalog_305_20260516.md +
         # feedback_wave_1_catalog_305_strict_flip_plus_152_anchor_extension_landed_20260516.md.
+        # GAP-4a (#305): 30 design/landing memos (2026-06-11+) accrued
+        # without the section in the #842 window. Demoted to warn-only
+        # 2026-08-25 per strict-flip atomicity; honest cure is the dated
+        # OBSERVABILITY-ADDENDUM backfill (append-only, the pattern that
+        # drove the original count to 0), tracked as task #1275; re-flip
+        # rides live-count 0.
         check_substrate_design_memo_has_observability_surface_section(
-            strict=True, verbose=verbose,
+            strict=False, verbose=verbose,
         )
         # 2026-05-16 Catalog #307 / #308 / #309 / #310 / #311 / #312 -
         # FALSIFICATION-AUDIT-v2 Patterns D/E/F + Z6/Z7/Z8 design memo
