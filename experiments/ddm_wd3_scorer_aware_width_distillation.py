@@ -1225,17 +1225,22 @@ def save_checkpoint(
 
 
 def _resume_config_identity(config: Mapping[str, Any]) -> dict[str, Any]:
-    """Config identity for crash-resume comparison, with `resume_from` masked.
+    """Config identity for crash-resume comparison, self-referential fields masked.
 
-    `resume_from` is the one self-referential field: resuming a killed run
-    requires pointing it at a WD3 checkpoint that did not exist when that
-    checkpoint stored its as-run config, so full-dict equality is
-    unsatisfiable by construction (surfaced by the 2026-08-25 s1a seed-2
-    external SIGKILL — the first real crash on this trainer). Every other
-    field stays strict.
+    Two fields cannot be known by a checkpoint ahead of time and so make
+    full-dict equality unsatisfiable for a legitimate crash resume (surfaced
+    by the 2026-08-25 s1a seed-2 external SIGKILL — the first real crash on
+    this trainer): `resume_from` names the checkpoint itself, and
+    `expected_builder_sha256` names the trainer code doing the resuming —
+    which necessarily differs when the crash's cure edited this file. Source
+    custody is NOT weakened: `_verify_launch_sources` still refuses unless
+    the LIVE trainer matches the continuation config's pin, so a pin update
+    is an explicit, committed act. Receiver/adapter pins and every other
+    field stay strict.
     """
     masked = dict(config)
     masked.pop("resume_from", None)
+    masked.pop("expected_builder_sha256", None)
     return masked
 
 

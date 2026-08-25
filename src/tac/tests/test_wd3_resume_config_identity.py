@@ -46,6 +46,8 @@ _BASE = {
     "epochs": 139,
     "output": "/tmp/out",
     "resume_from": "/tmp/births/W96_flattened_birth.pt",
+    "expected_builder_sha256": "a" * 64,
+    "expected_receiver_sha256": "b" * 64,
 }
 
 
@@ -53,6 +55,20 @@ def test_resume_from_repoint_passes_identity() -> None:
     resumed = dict(_BASE, resume_from="/tmp/out/checkpoints/wd3_epoch_0030.pt")
 
     assert _identity(_BASE) == _identity(resumed)
+
+
+def test_builder_sha_repin_passes_identity() -> None:
+    # The trainer's SELF-hash necessarily changes when a crash's cure edits
+    # this file; _verify_launch_sources still pins the live trainer.
+    repinned = dict(_BASE, expected_builder_sha256="c" * 64)
+
+    assert _identity(_BASE) == _identity(repinned)
+
+
+def test_receiver_sha_drift_breaks_identity() -> None:
+    drifted = dict(_BASE, expected_receiver_sha256="d" * 64)
+
+    assert _identity(_BASE) != _identity(drifted)
 
 
 def test_any_other_field_drift_breaks_identity() -> None:
