@@ -1,9 +1,9 @@
 {
   "audit": "AU1 measurement-integrity audit",
   "corrections_index": {
-    "memos_matched": 3600,
-    "memos_scanned": 9213,
-    "rows_emitted": 15501
+    "memos_matched": 3636,
+    "memos_scanned": 9255,
+    "rows_emitted": 15820
   },
   "decode_read_coverage": {
     "by_classification": {
@@ -19,18 +19,18 @@
     "source_sites_verified": 25
   },
   "headline_vs_body": {
-    "git_subjects_scanned": 226,
-    "memos_scanned": 9213,
+    "git_subjects_scanned": 227,
+    "memos_scanned": 9255,
     "negative_control_931_caught": false,
     "positive_control_933_caught": true,
-    "rows_emitted": 10009,
-    "task_rows_scanned": 585
+    "rows_emitted": 10201,
+    "task_rows_scanned": 586
   },
   "if_budget_checks": {
     "rows_emitted": 2,
     "task_867_module_referents": 2,
-    "task_885_current_git_log_oneline_wc_l": 15972,
-    "task_885_current_git_rev_list_count": 15972
+    "task_885_current_git_log_oneline_wc_l": 16054,
+    "task_885_current_git_rev_list_count": 16054
   },
   "registry_first_extension": {
     "rows_emitted": 1,
@@ -40,13 +40,13 @@
   },
   "scope_vs_object": {
     "advisory_only": true,
-    "closure_sentences_already_scoped": 449,
-    "memos_scanned": 9213,
+    "closure_sentences_already_scoped": 455,
+    "memos_scanned": 9255,
     "negative_control_caught": false,
     "negative_control_recognised_as_scoped": true,
     "positive_control_caught": true,
-    "rows_emitted": 753,
-    "sources_flagged": 528
+    "rows_emitted": 780,
+    "sources_flagged": 546
   },
   "scorer_evaluate_launch": "not_run"
 }

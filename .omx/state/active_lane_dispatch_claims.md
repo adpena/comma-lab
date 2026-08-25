@@ -6,6 +6,8 @@
 
 | timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |
 |---|---|---|---|---|---|---|---|
+| 2026-08-25T14:45:04Z | MAIN | ddm_s1a_stagea_scorer_20260825 | macos-cpu | s1a_stagea_verdict_scorer |  | eval | wd3 stage-A verdict scorer lane, paired with metal claim |
+| 2026-08-25T14:45:04Z | MAIN | ddm_s1a_stagea_metal_20260825 | macos-mps | s1a_stagea_off_sequential |  | eval | wd3 stage-A OFF-15->OFF-16 sequential training per sealed MAIN_LAUNCH_ORDER 708eae6a |
 | 2026-08-25T04:47:02Z | MAIN | ddm_gb1_groupbin8_20260825 | modal | fc-01M0VKA8RTDSNT6K3XVMDPRH1H | 2026-08-25T04:47:02Z | completed_contest_cuda_exact_eval_harvested | auto-closed by modal_harvest_poller at harvest; call fc-01M0VKA8RTDSNT6K3XVMDPRH1H rc=0; score_recomputed_from_components=0.14811799921260607 |
 | 2026-08-25T04:37:04Z | MAIN | ddm_gb1_groupbin8_20260825 | modal | gb1_groupbin8_r1 | 2026-08-25T07:37:04Z | active_modal_auth_eval_spawned | Modal CUDA auth eval detached spawn accepted; call_id=fc-01M0VKA8RTDSNT6K3XVMDPRH1H; output_dir=/Users/adpena/Projects/pact/.omx/tmp/fires/gb1_groupbin8 |
 | 2026-08-25T04:37:02Z | MAIN | ddm_gb1_groupbin8_20260825 | modal | gb1_groupbin8_r1 | 2026-08-25T07:37:02Z | active_modal_auth_eval_spawning | Modal CUDA auth eval; exact archive path; axis=contest_cuda; archive_sha256=ba1f3830cd51b820d7f9b834a1dcc12e8776a0260f9da57a4e8e0944b988e3a4; pair_group_id=None; single_axis_waiver=True |
