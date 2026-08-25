@@ -21,6 +21,16 @@ council_assumption_adversary_verdict:
     # Neither verdict is trusted-until-MEASURED; the resolution is op-routable #4 (measure
     # the taper A/B), which is measure-don't-dismiss, not magnitude-based orphaning.
     rationale: "UNRECONCILED: table rel_sig 73% (~0.030 S of the 0.0411 remaining gap) CONTRADICTS #121's WEAK downgrade (frontier saliency 5.5x FLAT — a PROXY-saliency read, never a byte-closed n600 A/B). Neither is a measured through-R verdict → resolve by MEASUREMENT (op-routable #4), do not trust either estimate."
+# Catalog #300 v2-frontmatter backfill 2026-08-25: council_decisions_recorded transcribed
+# VERBATIM from this memo's own section "Verdict (the either/or dissolves)" items 1-4 +
+# the recorded Contrarian revision. Frontmatter-only addition per the CLAUDE.md
+# "Council hierarchy" backward-compatibility clause (NO body mutation).
+council_decisions_recorded:
+  - "First relaunch = CLEAN BASELINE arm — sealed v7.5.2 config + the FREE score-neutral speedups (micro-batch-pairs + verdict-batch bump: headroom spent on wall-clock only, bit-identical) + #408 telemetry. NOT blindly-folded rungs."
+  - "Pass the readiness gate HONESTLY via its defer hatch: `# LAUNCH_READINESS_DEFER:HorizonWeightedMargin=terminal-band A/B fork per its converged-n600 fire criterion` + the same for StepNativeActivation. Deferred-with-reason, not skipped."
+  - "MEASURE the two rungs as A/B warm-start forks from the converged baseline — SEQUENTIALLY now (pre-#173), promoted to CONCURRENT once #173's 2 HIGH clear (on the fork, not the from-scratch run)."
+  - "Resolve the DsegAwareTaper 73%-vs-#121-WEAK contradiction (a #405 table-freshness bug) before trusting the table ranking further."
+  - "Revision (Contrarian): bit-identity-smoke the micro-batch twin at n600 BEFORE it rides the pointer run."
 ---
 
 # T2 — v7.5.2 relaunch shape: concurrent A/B arms vs single updated arm

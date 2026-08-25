@@ -17,6 +17,15 @@ council_assumption_adversary_verdict:
   - assumption: "Amplifying gradient onto islands is net-positive for TOTAL d_seg."
     classification: CARGO-CULTED
     rationale: "The #274 margin/spike-reweight lever measured an AA-washout caveat, and the lane-edge lever's own decision metric was TOTAL d_seg because lane is only ~19% of flips vs class-0's 50% (DAG). Focal-γ up-weights ALL low-margin pixels including bulk boundaries — that may be fine (bulk boundaries are also scored) but the claim 'more island gradient ⟹ lower total d_seg' is unproven; γ must be calibrated against TOTAL d_seg, not island recall."
+# Catalog #300 v2-frontmatter backfill 2026-08-25: council_decisions_recorded transcribed
+# VERBATIM from this memo's own section "Debate resolution → the program
+# (PROCEED_WITH_REVISIONS)" items 1-4. Frontmatter-only addition per the CLAUDE.md
+# "Council hierarchy" backward-compatibility clause (NO body mutation).
+council_decisions_recorded:
+  - "CALIBRATE NOW, $0 (the revision — measurement before surgery): on the live run's ep25/ep50 EMA checkpoint MEASURE (a) island-pixel share of the base-loss gradient under the CURRENT loss, (b) the same under focal γ∈{0.5,1,2,3}, (c) d_seg[islands] vs d_seg[bulk] decomposition and whether island gradient is already large-but-ineffective (→ basis binds, not loss). Output: γ* by Shannon's equalization + the loss-vs-basis verdict. CPU-side, memory-light, NO touch of the live run."
+  - "BUILD focal-γ + boundary-distance as default-OFF flags (--seg-focal-gamma 0 = byte-identical; --boundary-distance-weight 0), tested + byte-identity-proven, READY but NOT deployed. Pre-registered fire criterion: ep50→100 witness-alone slope FLATTENS (|Δd_seg| < 0.02 per 25ep window with islands still >50% of residual). If the slope is steep — HOLD (Contrarian)."
+  - "Active-contour energy-as-loss = run-3/θ* design item (the unification) under the #218/#78 lineage, NOT a hot patch."
+  - "KD-from-teacher on the island band = banked third rung (Hinton), after focal, before the capacity A/B (#299 stays shelved behind BOTH)."
 ---
 
 # GRAND COUNCIL SYMPOSIUM — the loss geometry of the level-set witness

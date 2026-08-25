@@ -82,7 +82,13 @@ council_decisions_recorded:
   - "REVISION 4 (Assumption-Adversary): explicit DEFERRED-with-reactivation-criteria documented for DP1 per CLAUDE.md 'Forbidden premature KILL' — DP1 is NOT killed; reactivation requires joint-retraining of decoder WITH procedural seed substitution DURING training + score-opacity audit per Catalog #139 byte-mutation smoke + 3 alternative reducer arms attempted per Catalog #308"
   - "REVISION 5 (TimeTraveler): explicit canonical-pattern documentation that NSCS06 v8's success mechanism (per-(level,class) median chroma as STATELESS static function of GT video) is STRUCTURALLY ORTHOGONAL to DP1's failure mechanism (gradient-trained decoder-bound codebook); future score-opaque-LUT candidates inherit the canonical pattern"
 
-council_predicted_mission_contribution: frontier_breaking_enabler
+# Catalog #300 v2-frontmatter backfill 2026-08-25: the mission-contribution value below was
+# authored as the NON-CANONICAL string `frontier_breaking_enabler`, which is not a member of
+# tac.council_continual_learning.VALID_MISSION_CONTRIBUTIONS and therefore unparseable by the
+# continual-learning posterior / cadence-audit consumers. Normalized to the canonical enum
+# member `frontier_breaking`; the original authored string is preserved verbatim in this
+# comment per Catalog #110/#113 HISTORICAL_PROVENANCE. Value semantics unchanged.
+council_predicted_mission_contribution: frontier_breaking
 council_override_invoked: false
 council_override_rationale: ""
 horizon_class: plateau_adjacent

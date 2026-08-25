@@ -17,6 +17,15 @@ council_assumption_adversary_verdict:
   - assumption: "d_seg=0.0287 is boundary/lane-dominated."
     classification: ASSUMED_AWAITING_VERIFICATION
     rationale: "Not decomposed per-class. Could be bulk-class boundaries (road/undrivable) still coarse, which is a different fix than lane. $0 on the ep50 ckpt."
+# Catalog #300 v2-frontmatter backfill 2026-08-25: council_decisions_recorded transcribed
+# VERBATIM from this memo's own sections "The REVISION (what the council changes)" +
+# "Recursive self-reflection (Catalog #363, Round 2)". Frontmatter-only addition per the
+# CLAUDE.md "Council hierarchy" backward-compatibility clause (NO body mutation).
+council_decisions_recorded:
+  - "REVISION: do NOT fire the n192 A/B yet — insert a $0 disambiguator battery on the live ep50/ep75 checkpoints FIRST: D1 gradient-flow (Rudin) / D2 overfit-one-pair mod-19-vs-mod-32 (Dykstra+Hotz) / D3 per-class d_seg decomposition of the 0.0287 (Yousfi) / D4 seed-shield comparability audit (Hotz+Assumption-Adversary) / D5 margin-weighted-CE micro-probe (Shannon+Yousfi)"
+  - "Conditional routing on the battery: D1 shows dead-grad -> FIX THE BUG, no A/B; D2 shows mod-19 overfits fine -> convergence, pivot to convergence-support (margin-CE / freq-warmup) not the capacity A/B; D2 walls at 19 AND D3 says lane AND D4 confirms comparable -> fire arm B (cheap) before arm C (rate)"
+  - "Re-point the primary watch from CE-floor to tau-onset boundary mass (per-class mass above the critical nucleus), NOT total CE d_seg (Tishby + Contrarian)"
+  - "Round-3 resolution: the disambiguator agent VERIFIES each probe is runnable before claiming its verdict; any probe that cannot run on existing surfaces is downgraded to pending_harness rather than asserted. No verdict from an unrun probe."
 ---
 
 # GRAND COUNCIL SYMPOSIUM — deep-math + engineering review AGAINST the CE plateau

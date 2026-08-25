@@ -16,6 +16,16 @@ council_assumption_adversary_verdict:
   - assumption: "storing only the ~6-12-dim pose residual (not the full δframe0 image) reaches low d_pose at decode"
     classification: CARGO-CULTED-UNTIL-MEASURED
     rationale: "the min-norm solution LIVES in the 6-dim row space, but whether a FEW stored coefficients + a decode-recomputed basis + Gauss-Newton + uint8-STE actually lands ~0 d_pose is the exact thing the retracted claim got wrong at n=3. GATE it."
+# Catalog #300 v2-frontmatter backfill 2026-08-25: council_decisions_recorded transcribed
+# VERBATIM from this memo's own sections §6 (VERDICT + the decisive $0 GATE) and §7
+# (Mission framing). Frontmatter-only addition per the CLAUDE.md "Council hierarchy"
+# backward-compatibility clause (NO body mutation).
+council_decisions_recorded:
+  - "PROCEED_WITH_REVISIONS: the image-store pose carrier is dead (correct); L1 (Jacobian-coefficient + free basis) is the candidate cheapest legal pose optimum and is UNMEASURED. Do NOT build a carrier yet."
+  - "THE $0 GATE (next pose action, n600, NO-FAKE, CPU-torch authority): store ONLY the ~6-12 Jacobian coefficients of r (NOT the δframe0 image); at decode recompute the rank-6 J = ∂PoseNet6/∂frame0 basis from (frozen PoseNet, frame1, frame0_base=warp(frame1,ξ)); apply k Gauss-Newton steps; measure the resulting d_pose through the frozen authority, all 600 pairs."
+  - "Gate must report: (1) d_pose vs coefficient-count K∈{6,8,12,18} and GN steps k — does K≈6-12 reach ≪0.0011 at ~0.01-0.02 rate; (2) decode-side wall-clock (basis recompute + GN, ×600) vs the 30-min budget — L1's real risk is decode COMPUTE, not rate; (3) the d_seg cost of applying δframe0 (should be ~0 by seg⊥pose null — VERIFY); (4) GO / NO-GO."
+  - "The running n600 MLX --pf-generic sweep uses a DCT/low-rank basis — the WRONG basis (not pose-sensitive). It does NOT answer L1; the Jacobian basis is the right one, so L1 needs its own probe."
+  - "Mission framing until L1's gate returns: plan for pose = 0.105 (R1) as the conservative floor; the binding fight remains d_seg + rate and #205 is the pointer-mover, unchanged by any of this."
 ---
 
 # GRAND COUNCIL OPTIMAL-FORM SYMPOSIUM — POSE CARRIER (#250)

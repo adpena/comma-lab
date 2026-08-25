@@ -59,7 +59,13 @@ council_decisions_recorded:
   - "op-routable #3: paired-CUDA Modal T4 smoke + paired-CPU per CLAUDE.md 'Submission auth eval' (PAID; operator-decision-required)"
   - "op-routable #4: post-training Tier-C density re-measurement per Catalog #324 on landed paired smoke archive sha"
   - "op-routable #5: canonical equation #344 anchor registration via tools/register_atick_redlich_asymmetric_scorer_channel_canonical_equation_20260526.py (sister pattern commits 7ab5f58ae + 04f34ea40)"
-council_predicted_mission_contribution: frontier_breaking_enabler
+# Catalog #300 v2-frontmatter backfill 2026-08-25: the mission-contribution value below was
+# authored as the NON-CANONICAL string `frontier_breaking_enabler`, which is not a member of
+# tac.council_continual_learning.VALID_MISSION_CONTRIBUTIONS and therefore unparseable by the
+# continual-learning posterior / cadence-audit consumers. Normalized to the canonical enum
+# member `frontier_breaking`; the original authored string is preserved verbatim in this
+# comment per Catalog #110/#113 HISTORICAL_PROVENANCE. Value semantics unchanged.
+council_predicted_mission_contribution: frontier_breaking
 council_override_invoked: false
 council_override_rationale: null
 deferred_substrate_retrospective_due_utc: 2026-06-25T00:00:00Z

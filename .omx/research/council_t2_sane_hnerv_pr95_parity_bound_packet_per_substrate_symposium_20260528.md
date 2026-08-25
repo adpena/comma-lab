@@ -16,7 +16,13 @@ council_decisions_recorded:
   - "op-routable #2: per-substrate symposium memo registered to canonical posterior via tac.council_continual_learning.append_council_anchor (this memo)"
   - "op-routable #3: probe outcome PROCEED via tac.probe_outcomes_ledger.register_probe_outcome (30-day expires per Catalog #313); reactivation = post-paired-CUDA-RATIFICATION ratification"
   - "op-routable #4: Wave N+46 retrospective extends the L7-bolt-on-split refactor across TOP-15 PR-95-parity candidates (planning only; no GPU spend)"
-council_predicted_mission_contribution: frontier_breaking_enabler
+# Catalog #300 v2-frontmatter backfill 2026-08-25: the mission-contribution value below was
+# authored as the NON-CANONICAL string `frontier_breaking_enabler`, which is not a member of
+# tac.council_continual_learning.VALID_MISSION_CONTRIBUTIONS and therefore unparseable by the
+# continual-learning posterior / cadence-audit consumers. Normalized to the canonical enum
+# member `frontier_breaking`; the original authored string is preserved verbatim in this
+# comment per Catalog #110/#113 HISTORICAL_PROVENANCE. Value semantics unchanged.
+council_predicted_mission_contribution: frontier_breaking
 council_override_invoked: false
 council_override_rationale: null
 related_deliberation_ids:

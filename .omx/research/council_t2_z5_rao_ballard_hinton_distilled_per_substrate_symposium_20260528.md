@@ -36,7 +36,13 @@ council_decisions_recorded:
   - "op-routable #4: 2000ep+ extended horizon — $0 MLX-LOCAL; per Wave N+28 finding the 600ep band may not be Z5's asymptotic floor; 2000ep+ extends per CLAUDE.md MLX-FIRST 8th standing directive"
   - "op-routable #5: per-substrate symposium re-convene PROCEED-unconditional THEN paired CPU + CUDA T4 paid-dispatch RATIFICATION per Catalog #246 1:1 contest-compliant hardware per CLAUDE.md 'Submission auth eval — BOTH CPU AND CUDA' non-negotiable; OPERATOR-GATED per blanket auth + Modal envelope"
   - "op-routable #6: Wave N+11 quad composition queue (Z6-v2 + Z7-Mamba-2 + NSCS06 v8 + Compound C composition candidate) IF Z5 anchor 3/3 + sweep + 2000ep extension reveal empirically distinct per-axis signature; Pareto polytope intersection via Catalog #372 Dykstra solver per Catalog #373 anti-pattern acknowledgment Layer 5"
-council_predicted_mission_contribution: frontier_breaking_enabler
+# Catalog #300 v2-frontmatter backfill 2026-08-25: the mission-contribution value below was
+# authored as the NON-CANONICAL string `frontier_breaking_enabler`, which is not a member of
+# tac.council_continual_learning.VALID_MISSION_CONTRIBUTIONS and therefore unparseable by the
+# continual-learning posterior / cadence-audit consumers. Normalized to the canonical enum
+# member `frontier_breaking`; the original authored string is preserved verbatim in this
+# comment per Catalog #110/#113 HISTORICAL_PROVENANCE. Value semantics unchanged.
+council_predicted_mission_contribution: frontier_breaking
 council_override_invoked: false
 council_override_rationale: ""
 deferred_substrate_retrospective_due_utc: 2026-06-27T23:30:00Z
