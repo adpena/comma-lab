@@ -205,3 +205,18 @@ short (2×~300ep from a checkpoint) — well within a machine window; $0 CPU byt
    attribution surface it should be measured against, not a patch to the live config.
 
 **Pointer delta: none. Launches: none. Dispatches: none. Runs touched: none.**
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — "The DSL lever (leg 1) — REUSED, not duplicated" names the composable lever (`SegChromaBoundary`) and its trainer flags (`--seg-chroma-boundary-margin-band`, `--seg-chroma-boundary-start-epoch`, `--chroma` / `--no-chroma`), each independently inspectable at compile time via `curriculum_dsl.py` / `gauge.py`.
+2. **Per-signal decomposition** — "The prior measured add-back receipt (the one P0-4 demands)" is the per-signal chroma attribution; "The rung, DERIVED not vibed" carries the derivation of the rung's weight.
+3. **Run-to-run diff** — "The A/B measurement plan (deliverable 4)" pre-registers the exact OFF arm (sealed v7.5.3(off) trunk, chroma add-back explicitly 0.0) against the ON arm (`SegChromaBoundary(weight=0.05, margin_band=1.0, start_epoch=0)`) — a matched two-arm diff, not a single-arm read.
+4. **Post-hoc query** — `.omx/state/lever_relative_significance.jsonl` and `.omx/state/canonical_equations_registry.jsonl`; the trainer is `experiments/train_levelset_witness_realized_through_R_mlx.py`, resumable via `--resume-from`.
+5. **Cite-chain** — the "STORES CONSULTED" section is the recall chain; "Triality" records the DAG/DSL/equations legs.
+6. **Counterfactual hooks** — the lever is default-OFF (weight 0.0 = byte-identical), so ON/OFF is the counterfactual; "Honest gaps" enumerates what the A/B cannot yet decide.

@@ -118,3 +118,18 @@ demands frontier-class compute (paid) is the empirical fork the latent-heavy tes
 vehicle either way; the fork sets its compute price. We are not stuck in a local minimum — we have a clean
 design and the banked ingredients (rate, codec, loss, pose) to build it; the open question is the capacity
 price of the argmax-stable render, measured against the exact oracle.
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — §2 "THE ARCHITECTURE (the full stack, scorer-shaped)" separates the stack into named layers; §5 "BYTE-ENCODING (firmware-grade) + INFLATE" separates encode from decode.
+2. **Per-signal decomposition** — §1 "WHAT WE KNOW (the measured design constraints)" is the per-term measured decomposition (10 MEASURED anchors); §3 "THE OBJECTIVE (the loss IS the scorer geometry)" maps each loss term to a score term.
+3. **Run-to-run diff** — §4 "CAPACITY ALLOCATION (the optimal-capacity solve)" makes capacity an explicit knob, so two builds differ by a stated allocation rather than by drift; the archive layout (`0.bin`) fixes the diff granularity.
+4. **Post-hoc query** — the counted artifact is `0.bin` inside the archive; the authority is `upstream/evaluate.py`; the scorer contract is `modules.py`.
+5. **Cite-chain** — §7 "INNOVATION ACCOUNTING (NO-FAKE)" is the borrowed-vs-ours ledger; §0 "THE BAGGAGE WE SHED (explicit — the local minima we refuse to inherit)" cites what is deliberately NOT inherited.
+6. **Counterfactual hooks** — §0 is itself the counterfactual against the inherited stack; §9 "HONEST BOTTOM LINE (non-sycophantic)" states what would falsify the design; §8 "THE MOVE" is the build ladder that would measure it.

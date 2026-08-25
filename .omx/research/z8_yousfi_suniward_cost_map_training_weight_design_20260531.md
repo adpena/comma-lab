@@ -142,3 +142,20 @@ an additive claim.
   (the DEFERRED scorer-finite-difference; NOT this lever).
 
 <!-- # HIERARCHICAL_PREDICTIVE_CODING_QUADRUPLE_OK: retired pre-DDM-era design memo (Catalog #312 backfill 2026-08-25, preflight r26 adjudication) -- the hierarchical-predictive-coding vocabulary here is framing on a since-retired substrate line; the design never proceeded to dispatch and no hierarchical-predictive-coding mechanism is live. Retroactively authoring the Rao-Ballard + Mallat-CDF + DreamerV3 + Wyner-Ziv quadruple would be false; this waiver records the honest state. -->
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — "The wire-in (next-iteration A/B)" specifies the exact insertion point in the loss (`src/tac/substrates/_shared/mlx_score_aware/loss.py`), so the weighted and unweighted terms are separable at that layer.
+2. **Per-signal decomposition** — the design decomposes the weight into a seg-boundary weight `(1 - normalized_cost)` and its inverted textured-interior counterpart, and states which of the two SegNet is blind to.
+3. **Run-to-run diff** — the weight map is computed ONCE at decode time (not per-step) and broadcast (B,H,W,1), so it is a fixed, reproducible tensor: two runs differ only by whether it is applied.
+4. **Post-hoc query** — the weight map is a pre-computable function of the FROZEN target plus teacher argmax (no per-step scorer forward), so it can be materialized and queried offline.
+5. **Cite-chain** — "The canonical Yousfi/Fridrich lever" attributes the primitive, and "API verified live (SEARCH-BEFORE-EDIT)" records that the call surface was checked against the real code before writing the wire-in.
+6. **Counterfactual hooks** — the wire-in is framed as an A/B (weighted vs unweighted); "The empirical motivation (from the real-teacher long run)" is the observation the A/B would confirm or refute.
+
+**Scope honesty:** the memo's own closing section is "Why this is DESIGN, not done-this-run" — no arm was run here.

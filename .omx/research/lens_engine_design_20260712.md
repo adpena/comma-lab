@@ -64,3 +64,20 @@ The engine is the campaign's double one-object made COMPUTABLE (witness physics 
 representational views, one substrate). Module `tac.lens_engine`. New capability → DSL surfacing where a
 query becomes a lever/telemetry; measured witness-geometry facts → equations/DAG. Reuses, does not
 duplicate: #411 graph memory, #180 Morse-Smale, #284 Laguerre, #141 margin, #277 anisotropy, #415 query-tools.
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — §2 "The 8 lenses (typed operations on `T`) + what each REUSES" makes every lens a separately-invocable typed operation over the Typed Attributed Complex `T` defined in §1.
+2. **Per-signal decomposition** — §1's typed attributes ARE the decomposition: each lens reads named attributes of `T` rather than a composite headline.
+3. **Run-to-run diff** — `T` is a typed complex, so two campaign states are diffable node-by-node under the same type; §3 "The 2 adapters (expose existing data as `T`)" is what makes existing stores comparable.
+4. **Post-hoc query** — §4 "Query API (composable)" is precisely the post-hoc query interface; the adapters in §3 are what it queries.
+5. **Cite-chain** — §6 "Triality + double-use" ties the engine to the DAG / DSL / equations legs, which carry the citations.
+6. **Counterfactual hooks** — §5 "Build increments (MVP-first)" stages the engine so each lens can be added or withheld independently.
+
+**Scope honesty:** this memo designs an ANALYZER over campaign state, not a substrate that contributes archive bytes. It has no runtime forward pass and names no trainer flags; facets 1-3 above describe the analyzer's own structure, not a training run's.

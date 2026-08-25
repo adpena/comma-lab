@@ -225,3 +225,18 @@ the reduced C0 capacity — the build measures it.
 Folds into the DAG (`sub015_DAG_topaiml_reopen_and_pursuit_plan_20260611.md`) as the THREAD-B capstone
 carrier; B1 (Cool-Chic uniform) is the baseline this scorer-shaped design must beat; A2' (full-Jacobian
 postfilter) is a refinement layer on top of C0–C2.
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — §3 "THE ARCHITECTURE — three factored carriers, each scorer-shaped" decomposes the carrier into three separately-inspectable factors; §3b adds the Cool-Chic-family realization + capacity split.
+2. **Per-signal decomposition** — §1 "THE MEASURED ECONOMICS" is the per-term decomposition the design is built against (the d_seg / d_pose / rate marginals); §5b restates the corrected d_seg bar (~0.001, not the basin).
+3. **Run-to-run diff** — §4 "THE FULL STACK" + §4b "FIRMWARE-GRADE BYTE-ENCODING" fix the archive layout (`0.bin` inside `archive.zip`), so two builds are diffable at the section-byte level.
+4. **Post-hoc query** — the counted artifact is `archive.zip` / `0.bin`; the authority query is `upstream/evaluate.py` on those exact bytes. Named helpers: `block_fp_jfg.py`, `hessian_block_fp.py`.
+5. **Cite-chain** — §1 tags every economic constant MEASURED (18 occurrences), each carrying its source memo inline; §5 "INNOVATION ACCOUNTING (NO-FAKE originality gate)" is the borrowed-vs-ours ledger.
+6. **Counterfactual hooks** — §6 "WHY IT'S CHEAPER THAN THE FRONTIER" is explicitly labelled [DERIVED — to be MEASURED], and §7 "RECURSIVE-GREENUP + BUILD PLAN" is the ablation/build ladder that would measure it.

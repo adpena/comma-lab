@@ -1,3 +1,4 @@
+<!-- # OBSERVABILITY_SURFACE_SECTION_WAIVED:short framing note, not a built substrate design. Fifty-one lines that place the score-aware taper as the second water-fill axis of the pivot and describe how it would compose with the capacity pivot and QAT. It names no trainer flag, no run artifact, no archive section and no measurement, and its fold-in plan is explicitly conditional on a $0 desk-calc gate that had not returned - so there is nothing yet to inspect, decompose, diff, query or ablate. Documenting six facets would describe a build that does not exist. Catalog #305 backfill 2026-08-25. -->
 # Score-aware taper / channel-allocation — the second water-fill axis of the pivot (2026-06-18)
 
 **Operator: "may need to update the taper too / channel alloc."** Correct — and it's a first-class lever, not

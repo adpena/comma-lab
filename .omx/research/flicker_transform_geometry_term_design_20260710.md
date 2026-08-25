@@ -179,3 +179,18 @@ Verdict scopes: (1) is n600-full-support (the entire scored population, cached a
 - $0, CPU-only, no SegNet/PoseNet forward anywhere (cached `lstars`/`margins` are the frozen CPU-torch authority's outputs; the R ops run on synthetic strips + cached uint8 frames). Live run pid 88030 and the scorer probe untouched.
 - All fresh numbers `[macOS-CPU advisory · NON-PROMOTABLE]`; nothing here is a score. **Pointer 0.19108282 UNMOVED.** The terms are MEANS; they move the pointer only via a trained arm → byte-close → `upstream/evaluate.py` exact row.
 - The "witness residual = spike rate" identification is a numerical coincidence-with-mechanism at n600; the witness-side decomposition of ITS residual into spike/coherent parts needs the witness argmax (first telemetry row of the T2 arm — pre-registered above).
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — §1 "The AUTHORITATIVE transform chain (line-referenced; paraphrase corrections)" walks the chain stage by stage with line references, which is the per-layer surface this design attributes against.
+2. **Per-signal decomposition** — §2 is a four-part decomposition measured separately: Part A synthetic phase-transfer function of the exact chain, Part B GT argmax churn on the scored sequence (n600, 599 transitions), Part C real-frame temporal input jitter at the SegNet grid, Part D spike structure (n600). §2.6 decomposes the jitter budget.
+3. **Run-to-run diff** — §4's terms are default-OFF trainer flags (`--seg-phase-advect-band`, `--seg-phase-advect-classes`, `--seg-phase-advect-gap-xi`, `--seg-phase-advect-start-epoch`, `--seg-coherent-upweight`), so an ON arm diffs against a byte-identical OFF arm.
+4. **Post-hoc query** — `reports/delta_R_noise_floor.json` is the retained noise-floor artifact; the authority is `upstream/evaluate.py` on `archive.zip`; the chain surfaces are `frame_utils.py` / `modules.py`.
+5. **Cite-chain** — §2's measurements are labelled with their cached inputs (n600 `lstars` / `margins`); §5 "Candidate equations (MEASURED here, NOT yet registered — flag for the equations leg)" keeps the equation debt visible; §6 is the honesty block.
+6. **Counterfactual hooks** — §4 specifies two branches at one locus (T1 cross-pair phase-advection consistency, T2 fire #274 with derived values) plus §4's T3 "measured NON-designs (scope-honest negatives)" — the explicit did-not-work counterfactuals.

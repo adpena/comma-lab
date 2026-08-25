@@ -109,3 +109,18 @@ generator is the open d_seg half. Same verdict as the 4-line convergence, now wi
 bit-allocator: Fisher-√ magnitude bits + #99 firmware packing. #4 cathedral: N/A (design). #5
 continual-learning: this memo + the two §6 measurements. #6 probe-disambiguator: §6.1 (which basis
 compresses islands) + §6.2 (inverse-solve vs flat) ARE the format-viability disambiguators.
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — §2 "The format (bitmask + magnitudes + ops — a domain-specific bytecode)" specifies each stored layer separately (bitmask / magnitudes / op stream), so each is inspectable in isolation at decode.
+2. **Per-signal decomposition** — §5 "The honest unification (what moves S, and how the pieces compose)" decomposes which piece moves which score term.
+3. **Run-to-run diff** — the format is a fixed bytecode, so two builds diff at the section level; §1 "Existence proof — L13 already validated the FORMAT half" is the matched prior build to diff against.
+4. **Post-hoc query** — the interpreter is `inflate.py` (FREE, unsized); the counted payload is the format's own sections. §6 "Decisive next measurements ($0)" names the queries that resolve the design.
+5. **Cite-chain** — §7 "Honest ledger / NO-FAKE" plus the "6-hook wire-in" section carry the provenance and consumer chain.
+6. **Counterfactual hooks** — §3 "Why this beats the two SOLID failures" is an explicit against-two-baselines counterfactual; §4 "Firmware bit-packing + edge-compute exploits" is the constant-factor ablation axis.

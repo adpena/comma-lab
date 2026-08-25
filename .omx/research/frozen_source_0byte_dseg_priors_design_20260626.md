@@ -91,3 +91,18 @@ Cross-refs: CLAUDE.md "THE CURRENT FRONTIER … WITNESS CAPSTONE" (the measured 
 as a d_seg lever) + "inflate.py is a FREE interpreter" (the free-algorithm/counted-data boundary) +
 task #138 (lane-polynomial/ground-plane IoU) + task #139 (ego-hood static region — re-measured here:
 hood = rows≥297, 100% static class 4 below row 336).
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — "STATIC-REGION MEASUREMENT (temporal: GT argmax constant across ALL 600 frames)" is a per-region read of the frozen source, inspectable prior by prior.
+2. **Per-signal decomposition** — "d_seg-CAPACITY BENEFIT (allocation gain — re-routing non-binding capacity)" decomposes the benefit into the capacity it frees rather than reporting one aggregate.
+3. **Run-to-run diff** — "BYTE-CLOSEABILITY VERDICT (per prior)" is a per-prior table, so adding or removing a prior is a bounded, attributable delta.
+4. **Post-hoc query** — `.omx/research/frozen_source_0byte_dseg_priors_20260626.json` is the retained measurement artifact; `targets_meta.json` and `inflate.py` are the decode-side surfaces.
+5. **Cite-chain** — "What '0-byte prior' means here (NO-FAKE boundary)" fixes the rule-118 boundary the measurement is cited under.
+6. **Counterfactual hooks** — the priors are 0-byte and decode-side, so each folds in or out independently; "0-BYTE FOLD DESIGN (byte-closed, no scorer at decode)" specifies the fold and "RECOMMENDATION" records which subset is taken.

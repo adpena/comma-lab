@@ -1,3 +1,4 @@
+<!-- # OBSERVABILITY_SURFACE_SECTION_WAIVED:audit memo, not a substrate design. It audits a competitor-canonical 3-stack (EMA 0.997, KL T=2.0, eval_roundtrip=True) against our existing trainers and lands a per-substrate-trainer gap inventory plus deferred canonical-equation and anti-pattern candidates. It designs no substrate, adds no archive bytes and introduces no runtime, so the six facets would describe the audited trainers rather than this document. Note also that the EMA 0.997 constant this memo treats as canonical is now superseded by the derived LawRef ema_decay_run_geometry_v1 per CLAUDE.md, which is a further reason not to build a fresh observability claim on top of it. Catalog #305 backfill 2026-08-25. -->
 # Quantizr Canonical 3-Stack Audit — EMA 0.997 + KL T=2.0 + eval_roundtrip=True
 
 **Date**: 2026-05-29T07:54Z

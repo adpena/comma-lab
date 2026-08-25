@@ -273,3 +273,18 @@ kills are made or implied by this design.
 ## FINAL STATE
 Design memo only; no trainer edits; no launches; run-1 untouched; pointer **0.19110 UNMOVED** (this unit is
 means — the pointer moves only through a byte-closed `upstream/evaluate.py` n600 exact row).
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — §1 "The reconciliation operator" and §2 "Two-stage reconciliation: mask-space (exact, free) -> appearance-space (the paint problem)" separate the two stages, each inspectable on its own; per-class carriers are separable by construction.
+2. **Per-signal decomposition** — §3 "Heterogeneous carriers + rate (the per-class waterfill)" is a per-class rate decomposition; §4 "Pose composition (the honest coupling)" separates the pose coupling from the seg term.
+3. **Run-to-run diff** — because carriers are per class, an arm that changes one class's carrier differs from its base on that class only, which is what makes the §5 EV-ranked increments attributable.
+4. **Post-hoc query** — named surfaces are `lever_b_levelset_generator.py`, `aa_sdf_observation_render.py`, `hood_static_component.py`, `legal_frame_bridge.py`; the authority is `upstream/evaluate.py`.
+5. **Cite-chain** — the "STORES CONSULTED" section is the recall chain; §6 "Candidate canonical equations (council-FLAGGED, not registered)" keeps the equation debt visible rather than silently registered.
+6. **Counterfactual hooks** — §7 "Hostile round-1 self-review (own; findings + resolutions)" is the adversarial counterfactual pass; §5 "Build scoping — the incremental path from v7 (EV-ranked)" orders the ablations.

@@ -150,3 +150,18 @@ ego-GT + lead depth), tac.lie (ξ), `warp_real_luma_frame0.py` (the warp op M2/M
 `depth_motion.py` (existing depth-motion surface — audit for reuse). It is the top rung of the #248
 pose-carrier ladder and the concrete form of Option A from FEED-poseresearch. Canonical equation
 `morse_smale_stratified_parallax_dpose_v1` COUNCIL-FLAGGED (anchor owed to M2/M3 + byte-close).
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — §3 "THE PER-REGION WARP LAW (what falls out)" is per-region by construction, so each stratum's warp is inspectable alone; §2 "THE UNIFICATION" states which layers are being identified.
+2. **Per-signal decomposition** — §4 "BYTE ACCOUNTING (why it beats Quantizr/HNeRV)" decomposes the byte cost per component; §1 decomposes the store-nothing result into its right-for-the-ground-plane and wrong-off-plane parts.
+3. **Run-to-run diff** — §0c "MEASUREMENT CONFIRMATION — the fork is RESOLVED (`pose_carrier_arms_measured_20260708`, `16030e6bf`)" is a multi-arm comparison; the arms are what make two builds diffable.
+4. **Post-hoc query** — named surfaces are `src/tac/boundary_math/warp_real_luma_frame0.py`, `src/tac/boundary_math/xi_pose_coder.py`, `src/tac/depth_motion.py`; the authority is `upstream/evaluate.py` through the frozen CPU-torch PoseNet.
+5. **Cite-chain** — §0b "REVIEW-HARDENED DELTA (fresh-eyes adversarial pass, review memo `5711a4fdf`)" supersedes conflicting claims while keeping the original derivation intact per append-only provenance; §7 "RELATION TO EXISTING WORK (build-on, don't rebuild)" attributes the reused surfaces.
+6. **Counterfactual hooks** — §5 "RISKS (honest; each has a measurement)" pairs every risk with the measurement that would fire it; §6 "THE DECISIVE $0 MEASUREMENT LADDER (read-only through frozen CPU-torch PoseNet; no GPU/paid)" is the ordered ablation ladder.

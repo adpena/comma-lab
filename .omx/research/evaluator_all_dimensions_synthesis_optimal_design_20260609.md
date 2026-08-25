@@ -1,3 +1,4 @@
+<!-- # OBSERVABILITY_SURFACE_SECTION_WAIVED:synthesis memo, not a substrate design. It aggregates already-measured evaluator structure from sister artifacts (segnet_margin_field.v2, evaluator_cell_tolerance, segnet_fragile_support_codec_budget) into one reading and derives an architecture; it introduces no substrate, no archive grammar, no runtime and no artifact of its own, and its own header section is PRECISION EDITS that SUPERSEDE over-claims in its body plus a NOT YET PROVEN guard. The observability surfaces belong to the cited sister artifacts, and restating them here would create a second authority for measurements this memo did not make. Catalog #305 backfill 2026-08-25. -->
 # All-dimensions evaluator synthesis → the optimal witness design (full analysis)
 
 UTC 2026-06-09 · claude · operator: "analysis + engineering + design after full research vs the FULL

@@ -100,3 +100,18 @@ Goal: turn unlimited compression-time compute + MLX into a theoretical-floor sea
 witness as the KKT/waterfilling solution of the exact evaluator response surface on the contest video.
 This subsumes V1/V2/V3: any witness (NeRV/SNeRV/direct grammar) is scored by the same atlas; the
 waterfilling picks the representation that spends the fewest bytes for the required margin + pose fidelity.
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — "Atlas families (each a typed sub-artifact; ALL over 600 pairs)" makes every family a separately-inspectable typed artifact rather than one opaque sweep.
+2. **Per-signal decomposition** — "Official asymmetry that shapes every family (verified `upstream/modules.py`)" and "Sensitivity math (adapted high-dim tooling)" are the per-signal decomposition of the evaluator's response.
+3. **Run-to-run diff** — the "Canonical row schema (`evaluator_response_atlas_row.v1`)" is exactly the run-to-run diff manifest: rows from two runs are comparable field-by-field because the schema is fixed and versioned.
+4. **Post-hoc query** — the atlas is a queryable row store keyed by that schema; the engine is the MLX section ("saturate the M5 Max 128GB unified memory"); the authority remains `upstream/evaluate.py`.
+5. **Cite-chain** — the schema is versioned (`.v1`) and "Build order (incremental detached daemons; each lands a typed artifact)" ties each artifact to the daemon that produced it.
+6. **Counterfactual hooks** — "Why not brute-force every raw pixel" states the rejected alternative explicitly; "Solve order (the final representation compiler)" is the ablation ordering over families.

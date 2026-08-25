@@ -326,3 +326,18 @@ carried into build-item 1).
 
 **Pointer contest-CPU 0.19110 UNMOVED — this synthesis is MEANS (design-only, no launch, dual-chain wall
 stands). Only a byte-closed `upstream/evaluate.py` n600 exact row < 0.19110 moves it.**
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — §1 "PER-VEHICLE CLICKABLE-CODE INVENTORY (Q1)" enumerates every per-(pair|frame|class-pair) quantized stored quantity for each of the three vehicles (§1.1 v7.5.2, §1.2 v7.5.3/two-trunk, §1.3 v8 per-class), which is the per-layer inventory this design is polished against.
+2. **Per-signal decomposition** — §2 "PAIR-LOCALITY VERDICTS (Q2)" gives proven/refuted per code type from the actual forward; §6 "EV table — honest bands, derivation-labelled" decomposes expected value per candidate.
+3. **Run-to-run diff** — §3 "EXACT-GATED TERMINAL POLISH AS A PIPELINE STAGE" places the polish as a named stage (§3.1 where it slots in both vehicles), so a polished build differs from its base at exactly that stage.
+4. **Post-hoc query** — `tools/levelset_byte_close_and_eval.py` produces the byte-closed `archive.zip`; `canonical_frontier_pointer.json` is the frontier query surface; `lever_b_levelset_generator.py` / `harness.py` are the named code surfaces.
+5. **Cite-chain** — §5 "THE CPU-AXIS SELECTION LESSON (Q5)" records the grep verdict (CLEAN, no violating surface); the closing "Triality legs + honesty" section carries the DAG/DSL/equations chain.
+6. **Counterfactual hooks** — §3.2 "#396 vs the click-polish — understand both before claiming subsumption" is an explicit two-mechanism counterfactual; §7 "BUILD LIST" tags every item {READY | needs-build | gated-on}.

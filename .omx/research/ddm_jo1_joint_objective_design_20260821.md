@@ -330,3 +330,18 @@ prevent a stale three-step fire.
   contest-CUDA authority.
 
 Own-vehicle frontier: **rc2 S 0.14827847122030852 @ 180,456 B [contest-CUDA T4 n600]**, archive `df7fd266…`; **UNMOVED**.
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — "Differentiable solve and stage authority" separates the objective's stages and states which stage is authoritative; "Units and measured constants" fixes each term's units so a per-stage read is unambiguous.
+2. **Per-signal decomposition** — "Derived objective" decomposes the joint objective into its named terms; "Preregistration and arithmetic correction" records the per-term arithmetic and its correction.
+3. **Run-to-run diff** — the retained seal r4 pins `compiled_config.json` under `/Volumes/APDataStore/pact/ddm_jo1_joint_objective_design/seal_r4/`, and dispatch is gated on `--expected-config-sha256`, so any two runs are diffable by compiled-config hash rather than by prose.
+4. **Post-hoc query** — the seal directory carries `compiled_config.json`, `FIRE_ORDER.json` and `READINESS.json`; the runner is `experiments/ddm_jo1_modal_joint_objective.py`; task state is in `canonical_task_status.jsonl`.
+5. **Cite-chain** — "RECALL EVIDENCE" (with its scopes-and-queries subsection) is the explicit recall chain; "Build and custody status" carries the artifact custody; "Verification" carries the checks actually run.
+6. **Counterfactual hooks** — "LIVE-HYPOTHESES" and "DEAD-ENDS" are the standing counterfactual ledger; "Actuation adjudication" and "Fire disposition" record which branch was taken and why the others were not.

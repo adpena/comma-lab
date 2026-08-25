@@ -100,3 +100,20 @@ consume depth (lead distance, road plane, 3D lanes), what per-cell depth we can 
 parallax literature for the minimal sufficient depth per cell. (c) WITNESS-TERM: the Morse-Smale-native
 formulation of the texture layer (within-cell = interior of the complex, does not touch separatrices),
 interaction with tau-anneal/eikonal terms, v8 coupling.
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — §2 "THE DESIGN — three layers that only work TOGETHER (each alone measured/known insufficient)" names the three layers and records that each was measured alone.
+2. **Per-signal decomposition** — §0b decomposes the measured floor per arm (best 2.608 vs A0 1.685 vs A2+ 1.223; per-cell flow 183.5 vs global-H 165.6 on the self-pair) rather than reporting one composite.
+3. **Run-to-run diff** — §0b records a matched `s·ξ` sweep monotone toward the flat floor as s->0, which is exactly the run-to-run control that ruled out a convention bug.
+4. **Post-hoc query** — the authority surfaces are `upstream/evaluate.py` and `modules.py` (frozen CPU-torch PoseNet); the measurements are cited by commit (`c2adba9aa`, `7d2784fc9`).
+5. **Cite-chain** — §3 "WHY THIS IS CONSISTENT WITH EVERY MEASURED NEGATIVE (no anchor discarded)" is the explicit reconciliation chain across prior anchors.
+6. **Counterfactual hooks** — §4 "THE DECISIVE $0 PROBE (T-alone, before any witness-term build)" is the pre-registered discriminator, and §5's GREEN gate is recorded as having returned RED.
+
+**Scope honesty (from the memo's own §0a/§0b):** the aperture hypothesis is FALSIFIED and A1T is ALSO falsified; `verdict_scope: formulation`. This memo is retained as a superseded design plus its measured refutation, not as a live design.

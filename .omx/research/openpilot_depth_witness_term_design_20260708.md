@@ -256,3 +256,18 @@ This memo is DESIGN — no measured anchor, so `morse_smale_stratified_parallax_
 COUNCIL-FLAGGED (anchor owed to A0T + byte-close). Commit tagged `[no-triality]` (design memo, no lever
 fired yet); the DSL Lever + canonical-equation registration are OWED at the build phase per the obligations
 above. Pointer **0.19110 UNMOVED — MEANS**.
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — §A.3 "THE PER-CELL DEPTH TABLE" and §B.1 "Formalization — texture lives in the cell INTERIOR, d_seg-safe BY CONSTRUCTION" separate the depth layer from the texture layer, each inspectable per cell.
+2. **Per-signal decomposition** — §D "RATE ACCOUNTING (honest) + the hide-data-in-code firewall" decomposes the term's byte cost; §B.3 "The R-survival two-sided amplitude window (MEASURED constraints)" decomposes the survivable amplitude range.
+3. **Run-to-run diff** — §B.2 "PLACEMENT — decode-side first, in-training only on measured evidence" fixes where the term enters, so a build with the term differs from one without at exactly that placement; §C gives the minimal schema that makes two builds comparable.
+4. **Post-hoc query** — named surfaces are `stratified_depth_warp.py`, `frame_utils.py`, `inflate.py` and openpilot's `common/transformations/camera.py`; the authority is `upstream/evaluate.py`.
+5. **Cite-chain** — §A.1 "The geometry openpilot actually gives us (source-confirmed)" is source-confirmed rather than asserted, and 20 claims in this memo carry an explicit MEASURED label.
+6. **Counterfactual hooks** — §B.4 "INTERACTION AUDIT — every term the texture layer could destabilize + its guard" is a per-interaction counterfactual with a named guard each; §E "THE GATE + BUILD OBLIGATIONS" is the pre-registered gate.

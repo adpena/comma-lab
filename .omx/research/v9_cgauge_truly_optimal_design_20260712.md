@@ -340,3 +340,18 @@ Required before any launch:
 What this audit did **not** do: it did not launch or resume the dead run; did not train; did not dispatch; did not mutate an archive; did not run an evaluator; did not claim a score; did not change a pointer; did not edit Python; did not commit; and did not turn speculative weights on in a confounded arm.
 
 Final caveat: even F0 and the future corrected T0 are not claimed pointer movers. They become evidence only after complete custody, byte-close, receiver parse-back, deterministic inflate, and exact `upstream/evaluate.py` replay on the exact archive bytes, with CPU and CUDA axes reported separately. Until then, “truly optimal” is a design objective, not a result.
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — §2 "SHOULD-BE-ON: built but off, inert, or not actually actuated" and §3 "MISSING: unbuilt or not yet correctly conceived" are a per-lever inspection of the live surface, distinguishing built-but-off from unbuilt from built-but-inert.
+2. **Per-signal decomposition** — §5 "OPTIMAL CONFIG: score first, speed second" separates the score objective from the wall-clock objective; §4 "EVENT-DRIVEN CURRICULUM: audit and redesign" decomposes the schedule stage by stage.
+3. **Run-to-run diff** — §5's F0 (present-surface containment program, compile-verified but not launched) and T0 (target score-optimal program) are two named, compiled configs, so the intended change is a config diff rather than prose; §6 "MULTI-BASIN SOLVE" makes the multi-run comparison explicit with a stated protocol.
+4. **Post-hoc query** — `constants_manifest.json`, `costate_shadow.jsonl`, `levelset_best.json`, and `experiments/results/mlx_fleet_gt_cache/gt_n600.npz`; the trainer is `experiments/train_levelset_witness_realized_through_R_mlx.py` with its closed-loop flags (`--closed-loop-control`, `--closed-loop-eikonal-*`, `--aa-supersample`).
+5. **Cite-chain** — §5's "Flag verification receipt" ties every flag in the compiled program to a verified consumer; 42 claims in this memo carry an explicit MEASURED label.
+6. **Counterfactual hooks** — §6 "Why multiple basins can beat one" is the explicit multi-arm counterfactual; the memo's fail-closed firing specification is the pre-registered refusal condition.

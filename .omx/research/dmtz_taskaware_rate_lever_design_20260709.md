@@ -234,3 +234,20 @@ a dominated lever is orphan-generating anti-signal). The triality legs are:
   `waterfill_annulus_through_r_store_vs_capacity_20260701` (λ* = 1.2731; recovery-adjusted 0.65).
   This memo's contribution is a corroborating `EmpiricalAnchor` (n8 edit-diff 1.254 B/flip > bar)
   that could be appended to that equation's anchor list — recorded as owed, not force-added here.
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — §2 "The thesis (both -> one lever)" and §4 "FREE vs COUNTED split (rule-118 firewall — binding)" separate the lever into its free (in-`inflate.py`) and counted (in-`archive.zip`) layers, each inspectable on its own side of the firewall.
+2. **Per-signal decomposition** — §3 "The break-even is the whole game — and it is ALREADY the canonical KKT water level" decomposes the lever's value against the water level; §5 reports the probe's per-term result.
+3. **Run-to-run diff** — §5 "The $0 probe and its n8 result (MEASURED)" is a runnable probe (`experiments/probe_ms_edit_sidecar_rate.py`, with `--sweep`), so re-running reproduces a comparable row.
+4. **Post-hoc query** — `reports/dmtz_probe_n8_20260709.json` is the retained probe output; `tools/levelset_byte_close_and_eval.py` is the byte-close path; `src/tac/boundary_math/contour_codec.py` is the codec surface.
+5. **Cite-chain** — §7 "Canonical-vs-unique decision per layer" and §9 "Owed follow-ups (named blockers — NOT run here)" carry the decision and debt chain; §11 "Triality" records that a DOMINATED formulation lands no new surface by design.
+6. **Counterfactual hooks** — §8 "Pre-registered go/no-go bar (corrected to the recovery-adjusted admit level)" is the pre-registered falsifier; §10 "Adversarial self-review (round 1)" is the hostile counterfactual pass; §6 "Composition with existing lanes" is the with/without-composition axis.
+
+**Scope honesty:** §5's result is n8, not n600. It is a probe row, not a family verdict.

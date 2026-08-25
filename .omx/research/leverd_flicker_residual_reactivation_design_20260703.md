@@ -215,3 +215,18 @@ rate/d_seg KKT admission; bit-allocator = the temporal coder is a new allocator 
 the 7th COUNTED block is archive-deployable; continual-learning = the Stage-0 realized B/flip + `r` are the
 empirical anchors to register; probe-disambiguator = Stage-0 IS the disambiguator between the memory-spec
 optimistic corner and the pessimistic corner. All N/A until Stage-0 lands real numbers.
+
+---
+
+## Observability surface
+
+*(OBSERVABILITY-ADDENDUM 2026-08-25 — APPEND-ONLY per Catalog #110/#113. This
+section is an INDEX into this memo's own content per Catalog #305's 6 facets;
+it adds no new claim. Facets with no counterpart in this memo say so plainly.)*
+
+1. **Per-layer inspection** — §1 "WHAT to store — the segment-level temporal flip-residual" and §2 "HOW to induce — detector-informed, decode-time, scorer-free" separate the stored layer from the induction layer, each inspectable alone.
+2. **Per-signal decomposition** — §4 "HONEST rate / recovery accounting — the band" decomposes the lever into its rate cost and its recovery, as a band rather than a point.
+3. **Run-to-run diff** — §3 "BYTE-CLOSE path — the 7th COUNTED block + inflate consumer" makes the lever exactly one added archive block, so an ON build diffs against OFF by that block; the flags are `--seg-flip-residual` and `--palette-anchor`.
+4. **Post-hoc query** — the byte-close path is `tools/levelset_byte_close_and_eval.py` producing `archive.zip`; the coder surfaces are `charm_range_coder.py` and `contour_codec.py`; the consumer is `inflate.py`.
+5. **Cite-chain** — §0 "What is already built (reactivation, not new build)" attributes every reused surface, which is what makes this a reactivation rather than a new build.
+6. **Counterfactual hooks** — §5 "MINIMAL first build + A/B plan (await GO)" is the pre-registered A/B; §6 "Risks / NO-FAKE / means" enumerates what would falsify the lever.
