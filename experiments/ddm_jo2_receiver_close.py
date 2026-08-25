@@ -40,6 +40,7 @@ from safetensors.torch import load_file
 from experiments import ddm_jo2_residual_runtime as residual_runtime
 from experiments import ddm_rx1_rate_representation_attack as rx1
 from tac.pr130_lift.pose.lifted.carrier_codec import encode_compact_carrier
+from tac.process_group_kill import run_in_process_group
 
 REPO: Final = Path(__file__).resolve().parents[1]
 FX5_RUNTIME: Final = Path("/Volumes/APDataStore/pact/ddm_fx5/candidate_runtime_fx5")
@@ -1074,7 +1075,10 @@ def validate_staged_receiver(runtime_root: Path, output: Path) -> dict[str, Any]
     }
     started = time.monotonic()
     try:
-        process = subprocess.run(
+        # inflate.sh spawns a python worker; a plain subprocess timeout kills
+        # only the shell and orphans the grandchild (Catalog #408) — the
+        # group-kill runner escalates SIGTERM/SIGKILL against the whole tree.
+        process = run_in_process_group(
             command,
             cwd=runtime_root,
             env=environment,
