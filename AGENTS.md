@@ -2106,8 +2106,9 @@ When your dispatch completes (success or fail): append a terminal row with the
 same `lane_id` and `instance/job_id` via `tools/claim_lane_dispatch.py claim
 --force --status completed_...`, `--status failed_...`,
 `--status stopped_...`, `--status refused_dispatch...`, or a precise
-`--status stale_superseded...` row. Do not leave completed jobs as phantom
-active claims.
+`--status stale_superseded...` row. The helper treats a newer terminal row as closing
+the matching older nonterminal row for conflict detection. Do not leave completed jobs
+as phantom active claims.
 
 This rule exists because 2026-05-01 ~23:50 UTC the user reported a possible Q-FAITHFUL dispatch conflict between Claude (H100 SXM via Vast.ai) and codex (Lightning) — no formal cross-agent coordination existed and we may have burned $5-10 of duplicate GPU spend. Level 2 is now the norm: use the helper script and strict submitter checks, not manual table edits except for emergency recovery.
 
