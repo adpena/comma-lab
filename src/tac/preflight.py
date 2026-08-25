@@ -62988,6 +62988,9 @@ _CHECK_245_CANONICAL_FILES: tuple[str, ...] = (
     "src/tac/deploy/modal/call_id_ledger.py",
     "src/tac/deploy/modal/auth_eval.py",  # provides function_call_id helper
     "src/tac/preflight.py",  # this gate's own pattern literals
+    # anti-pattern registry docstrings QUOTE forbidden predicates (e.g. the
+    # Catalog #360 "sys.exit BEFORE fn.spawn()" text) — description, not dispatch
+    "src/tac/canonical_anti_patterns/pattern_matcher.py",
     "tools/backfill_modal_call_id_ledger.py",  # historical backfill helper
 )
 
