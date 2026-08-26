@@ -19860,6 +19860,18 @@ _MPS_DECISION_EXEMPT_PATH_PARTS: tuple[str, ...] = (
     ".omx/research/",       # research findings (catalog, not decisions)
     ".omx/auto_memory_snapshot_",  # frozen memory-file backups (operator-side, not deployable)
     ".omx/state/orphans_preserved/",  # preserved orphan scripts/configs (signal-loss prevention)
+    ".omx/tmp/",            # explicitly-ephemeral scratch (CLAUDE.md canonical
+                            # scratch location; /tmp paths are already forbidden
+                            # as evidence). Measured 2026-08-26: 1,436 of 1,469
+                            # gate violations were ONE fallback repo copy under
+                            # .omx/tmp/arm_receipts_local/ — duplicates of files
+                            # scanned at their canonical locations. Scratch is
+                            # never a decision-record surface.
+    ".omx/state/graph_memory/",  # GENERATED graph-memory artifacts (synthesized
+                                 # edges/nodes machine-built from /memory/ +
+                                 # .omx/research/ sources that are themselves
+                                 # exempt above; rescanning the derivative only
+                                 # re-surfaces exempted content as duplicates)
     "reports/raw/",      # raw provider/download evidence snapshots, not current decision records
     "reports/graphs/",      # judging surface; figure captions cite history
     "/uv_project_env/",     # vendored Python deps in remote eval workspaces (numpy/distutils ccompiler_opt etc.)
