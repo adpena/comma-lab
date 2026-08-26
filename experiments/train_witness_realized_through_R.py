@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# TORCH_EMA_WARMUP_WAIVED: historical June-2026 witness-lever-2 research trainer, frozen so its retained runs stay byte-reproducible; NOT on the launch path (the live levelset trainer imports the _mlx base, not this file); new runs must use tac.training.EMA
 """CAPSTONE LEVER #2 — the never-done WITNESS trained THROUGH the round-trip R with
 BOTH frozen scorers IN-LOOP, optimizing the REALIZED (post-R, post-scorer) d_seg AND
 d_pose JOINTLY.
