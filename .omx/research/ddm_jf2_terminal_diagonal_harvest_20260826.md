@@ -98,3 +98,56 @@ Verdict scope: `INSTANCE` for each measured row and `FAMILY-ALIVE AT TERMINAL BY
 `GESTALT-DELTA: terminal training changed the diagonal from an epoch-2 all-negative diagnostic into a measured three-winner byte family; the remaining uncertainty is no longer whether the coupled representation fits under 127,292 B, but whether k002500/k040000/k060000 preserve enough realized Seg/Pose quality to beat the null control and the complete-score frontier.`
 
 `[contest-CUDA T4 n600] own-vehicle frontier: GB1 — S=0.14811799921260607, archive=180,215 B, d_seg=0.00020139, d_pose=6.37e-6, SHA-256=ba1f3830cd51b820d7f9b834a1dcc12e8776a0260f9da57a4e8e0944b988e3a4; JF2 measured no score and did not move the pointer.`
+
+## MAIN ADDENDUM (2026-08-26, append-only) — DISTORTION VERDICT: the trained diagonal is DEAD; the #1215 2×2 is COMPLETE
+
+The named next measurement (realized d_seg/d_pose for the null control + 3 byte winners) ran
+as a serial CPU advisory chain (tools/fire_local_advisory.py, n600, PyAV GT,
+[macOS-CPU advisory] — never authority). Two execution defects were cured first, receipts at
+`scorer/runtime_fix/FIX_NOTE.json`: (1) all four arm-authored runtimes carried a HALF-UPDATED
+PIN (#1237 instance 2: per-candidate ARCHIVE_SHA256 correct, ARCHIVE_BYTES=180_368 inherited
+from the dx2 template) — cured by sha-verified scorer-side copies, retained originals
+untouched; (2) the v1 chain assumed the fire tool was synchronous — v2 polls each run to
+completion (serial per SCORER_FIRE_ORDER 70e12f6b…).
+
+The table (per-candidate, same axis, null = same-training k=0 control; net ΔS vs null =
+distortion delta + rate delta at 25/37,545,489 per byte):
+
+| tag | archive B | ΔB vs gb1 | d_seg | d_pose | pose ×null | net ΔS vs null |
+|---|---|---|---|---|---|---|
+| null    | 180,682 | +467   | 0.00034740 | 0.00014701 | 1.00× | 0 (baseline) |
+| k002500 | 180,200 | −15    | 0.00037005 | 0.00101264 | 6.89× | **+0.064232** |
+| k040000 | 179,426 | −789   | 0.00067540 | 0.02521067 | 171.49× | **+0.495724** |
+| k060000 | 178,792 | −1,423 | 0.00083204 | 0.05056445 | 343.95× | **+0.719950** |
+
+**VERDICT — TRAINED-DIAGONAL FAMILY CLOSED at TERMINAL+DISTORTION scope.** Every byte
+winner is monotonically distortion-dead: the mildest rate pressure (k=0.0025, −482 B vs
+null) already costs 194× its byte credit; the best byte winner (−1,890 B vs null) costs
+~572× . Damage is POSE-DOMINATED (≥93% of each net) — the same signature as the SOLVE
+entry's refusal (#1239: 686×, pose 93.3%). Axis honesty: the CPU/PyAV axis fork (~23×
+pose vs T4) applies equally to all four candidates including the control; the BETWEEN-
+candidate ratios (6.9×/171×/344×) are same-axis clean and cannot be an axis artifact. No
+candidate admits; no seal; no T4 row.
+
+**The #1215 2×2 is now FULLY POPULATED**: off-diagonal cells closed (five arms, sharp-
+optimum law) · diagonal SOLVE entry refused 686× (#1239) · diagonal TRAINED entry refused
+here at terminal epoch-60 with per-candidate realized receipts. The mi1/sharp-optimum law
+gains its final leg: the HPAC field+model joint optimum is sharp in EVERY measured
+direction, including joint retraining. Mechanism (consistent with #1222): the RENDERER
+carries pose — rate pressure on the joint fit perturbs the field, and the renderer
+amplifies field perturbation into pose catastrophe before any byte credit matters.
+
+CAMPAIGN CONSEQUENCE: the 42,229 B sub-0.12 demand cannot be extracted from this body by
+ANY measured mechanism — coder (0 B, jt23), model-axis micro-moves (~2,009 B ceiling),
+factorization (+207 B best, d3b), field edits (closed), trained diagonal (this). The m144
+gestalt stands strengthened: sub-0.12 requires a DIFFERENT OBJECT. #1295 (lossless
+field-for-coder co-opt) survives as a distinct mechanism but its prior drops — the
+dose-response here shows even k=0.0025-scale field drift is pose-fatal without
+compensation; any #1295 firing must carry qs5-style in-compile Schur compensation and a
+pose gate from the start. WJ1_TARGET_CONSUMER_REFIT (fire-order f7607371…) is MOOTED at
+the consumer level: its target (byte-winner refinement) no longer has a live consumer.
+
+GESTALT-DELTA: the last live route INTO this body is measured dead; probability mass moves
+entirely to different-object routes (born-small lineage receipts, renderer-corner #1231
+two-requirement trade, or a genuinely new representation). Receipts:
+`/Volumes/APDataStore/pact/ddm_jf2_terminal_diagonal_harvest/scorer/{null,k002500,k040000,k060000}_r2/contest_auth_eval.json`.
