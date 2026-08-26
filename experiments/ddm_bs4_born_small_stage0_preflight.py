@@ -185,6 +185,27 @@ def atomic_json_once(path: Path, value: Any) -> dict[str, Any]:
     return expected
 
 
+def additive_checkpoint_path(path: Path, value: Any) -> Path:
+    payload = (json.dumps(value, indent=2, sort_keys=True, allow_nan=False) + "\n").encode()
+    expected = {
+        "bytes": len(payload),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+    }
+    revision = 1
+    while True:
+        candidate = (
+            path
+            if revision == 1
+            else path.with_name(f"{path.stem}_r{revision}{path.suffix}")
+        )
+        if not candidate.is_file():
+            return candidate
+        observed = file_fact(candidate)
+        if all(observed[key] == expected[key] for key in expected):
+            return candidate
+        revision += 1
+
+
 def _run_receipt(argv: list[str]) -> dict[str, Any]:
     completed = subprocess.run(
         argv,
@@ -477,7 +498,8 @@ def run(output: Path = OUTPUT) -> dict[str, Any]:
             "runner": file_fact(Path(__file__).resolve()),
         },
     }
-    checkpoint = atomic_json_once(output / CHECKPOINT.relative_to(OUTPUT), result)
+    checkpoint_base = output / CHECKPOINT.relative_to(OUTPUT)
+    checkpoint = atomic_json_once(additive_checkpoint_path(checkpoint_base, result), result)
     result["checkpoint"] = checkpoint
     return result
 
