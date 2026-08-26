@@ -52946,13 +52946,19 @@ _CHECK_204_TRAINER_PATH = (
 )
 _CHECK_204_MODAL_DISPATCHER_PATH = "experiments/modal_train_lane.py"
 _CHECK_204_SUBSTRATE_DRIVER_GLOB = "scripts/remote_lane_substrate_*.sh"
-# Canonical 3-branch shape: an elif MODAL_RUNTIME=="1" block whose body
-# assigns OUTPUT_DIR to /modal_results/<job>/output. Allows optional
-# `&& [ -d "/modal_results" ]` clause and whitespace/comments between the
-# elif and the OUTPUT_DIR assignment.
+# Canonical 3-branch shape: an if/elif MODAL_RUNTIME=="1" block whose body
+# assigns OUTPUT_DIR to /modal_results/<job>/output. Allows any number of
+# additional `&& [ ... ]` guard clauses (e.g. `-d "/modal_results"`,
+# `-n "${DISPATCH_INSTANCE_JOB_ID:-}"`) and whitespace/comments between the
+# opener and the OUTPUT_DIR assignment. 2026-08-25 (r41/#842, detector-shape
+# FP cure): the prior regex allowed ONLY the optional `-d` clause and only
+# `elif`, so drivers that HARDENED the branch with an extra non-empty-job-id
+# guard (cascade_c_prime / pr110_opt11 / time_traveler_l5_z4 — all of which
+# do route Modal output under /modal_results/) were flagged — the #1002
+# genus: a detector punishing a stronger form of the contract it enforces.
 _CHECK_204_CROSS_DRIVER_THREE_BRANCH_RE = re.compile(
-    r'elif\s*\[\s*"\$\{MODAL_RUNTIME:-0\}"\s*=\s*"1"\s*\]'
-    r'(?:\s*&&\s*\[\s*-d\s*"/modal_results"\s*\])?'
+    r'(?:el)?if\s*\[\s*"\$\{MODAL_RUNTIME:-0\}"\s*=\s*"1"\s*\]'
+    r'(?:\s*&&\s*\[\s*[^\]]{1,120}\])*'
     r'\s*;\s*then[\s\S]{0,400}?OUTPUT_DIR\s*=\s*"?/modal_results/',
     re.MULTILINE,
 )
