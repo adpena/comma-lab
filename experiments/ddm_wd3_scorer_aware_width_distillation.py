@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import importlib.util
 import json
 import math
 import os
@@ -64,12 +65,15 @@ OUTPUT_ROOT = Path("/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distill
 STAGE_A_OUTPUT_ROOT = Path("/Volumes/APDataStore/pact/ddm_s1a_stage_a_adapter")
 ALIGNED_OUTPUT_ROOT = Path("/Volumes/APDataStore/pact/ddm_w96a_aligned_window")
 ALIGNED_CAS_ROOT = ALIGNED_OUTPUT_ROOT / "content_addressed_store"
+RB1_OUTPUT_ROOT = Path("/Volumes/APDataStore/pact/ddm_or1_orthogonal_sweep/next_renderer_born_small")
+RB1_CAS_ROOT = RB1_OUTPUT_ROOT / "content_addressed_store"
 SEG_LOSS_CALIBRATED_TARGET_PROBABILITY = "calibrated_target_probability"
 SEG_LOSS_EXPECTED_FLIP_MARGIN = "expected_flip_margin"
 ALIGNED_TAU_START = 0.15
 ALIGNED_TAU_END = 0.05
 ALIGNED_FULL_WINDOW_EPOCHS = 65
 STAGE_A_SEEDS = (20260815, 20260816)
+RB1_SEEDS = (20260826, 20260827)
 LANE_LEDGER = REPO / ".omx/state/active_lane_dispatch_claims.md"
 BASE_RECEIPT = Path("/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json")
 TEACHER_MASTER = Path(
@@ -349,6 +353,31 @@ CONFIG_FIELDS = {
     "cheap_to_shrink",
 }
 
+TARGET_OBJECT_FIELDS = {
+    "schema",
+    "body_result",
+    "body_result_sha256",
+    "body_archive",
+    "body_archive_bytes",
+    "body_archive_sha256",
+    "direct_tokens",
+    "parsed_tokens",
+    "tokens_bytes",
+    "tokens_sha256",
+    "semantic_renderer",
+    "semantic_renderer_bytes",
+    "semantic_renderer_sha256",
+    "gb1_runtime",
+    "gb1_receiver_files",
+    "candidate_exporter",
+    "candidate_exporter_sha256",
+    "teacher_master",
+    "teacher_master_receipt",
+    "admitted_arms",
+    "complete_archive_ceiling_bytes",
+    "minimum_complete_archive_credit_bytes",
+}
+
 OBJECTIVE_FIELDS = {
     "scoreaware",
     "seg_score_coefficient",
@@ -373,6 +402,12 @@ EVALUATION_RETENTION_FIELDS = {
     "cas_root",
     "compact_after_verify",
 }
+
+RB1_RECEIVER_RELATIVE_FILES = (
+    "cpr1/inflate.py",
+    "runtime/f26_inflate.py",
+    "runtime/residual_archive.py",
+)
 
 STAGE_A_FIELDS = {
     "schema",
@@ -432,6 +467,83 @@ def objective_profile(config: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def target_object_binding(config: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    """Validate the exact retained born-small object without re-deriving it."""
+
+    value = config.get("target_object")
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise WD3Error("target_object binding is not a mapping")
+    _strict_fields(value, TARGET_OBJECT_FIELDS, "target_object")
+    if value["schema"] != "ddm_rb1_born_small_target_object.v1":
+        raise WD3Error("target_object schema differs")
+    exact = {
+        "body_result_sha256": "ea3ce5b18ec88d1451c5cd90cd49afc97ee1e52b67cebfe1524aa7abf49f84f3",
+        "body_archive_bytes": 101_150,
+        "body_archive_sha256": "5743f0ac7e8881e970ef8ba53c4bee3fd2a7a6157d2a50d381fd609ae624fea6",
+        "tokens_bytes": 117_964_800,
+        "tokens_sha256": "2884c5701dc2b2059df0e9f8e4ee3ed81809457b127a48ad3fd3fb6f7a17152b",
+        "semantic_renderer_bytes": 30_856,
+        "semantic_renderer_sha256": "39d1be52ba62933498395c48ce4d9482f37db097d504da76c2a321efe3e4a76f",
+        "complete_archive_ceiling_bytes": 137_986,
+        "minimum_complete_archive_credit_bytes": 2_000,
+    }
+    for field, expected in exact.items():
+        if value[field] != expected:
+            raise WD3Error(f"target_object exact binding differs: {field}")
+    paths = {
+        "body_result": (value["body_result_sha256"], None),
+        "body_archive": (value["body_archive_sha256"], value["body_archive_bytes"]),
+        "direct_tokens": (value["tokens_sha256"], value["tokens_bytes"]),
+        "parsed_tokens": (value["tokens_sha256"], value["tokens_bytes"]),
+        "semantic_renderer": (
+            value["semantic_renderer_sha256"],
+            value["semantic_renderer_bytes"],
+        ),
+    }
+    records: dict[str, dict[str, Any]] = {}
+    for field, (expected_sha, expected_bytes) in paths.items():
+        record = file_record(Path(value[field]))
+        if record["sha256"] != expected_sha or (
+            expected_bytes is not None and record["bytes"] != expected_bytes
+        ):
+            raise WD3Error(f"target_object retained payload drifted: {field}")
+        records[field] = record
+    receipt = json.loads(Path(value["body_result"]).read_text(encoding="utf-8"))
+    if (
+        receipt.get("body", {}).get("archive") != records["body_archive"]
+        or receipt.get("body", {}).get("direct_decode") != records["direct_tokens"] | {"corrections": 0}
+        or receipt.get("body", {}).get("archive_parseback_decode")
+        != records["parsed_tokens"] | {"corrections": 0}
+        or receipt.get("body", {}).get("generated_field_exact") is not True
+        or receipt.get("retained_sources", {}).get("semantic_renderer") != records["semantic_renderer"]
+    ):
+        raise WD3Error("target_object BODY_RESULT parse-back binding differs")
+    runtime = Path(value["gb1_runtime"])
+    if not runtime.is_dir():
+        raise WD3Error("target_object shipped GB1 runtime is absent")
+    receiver_files = value["gb1_receiver_files"]
+    if not isinstance(receiver_files, Mapping) or tuple(sorted(receiver_files)) != tuple(
+        sorted(RB1_RECEIVER_RELATIVE_FILES)
+    ):
+        raise WD3Error("target_object shipped GB1 receiver file set differs")
+    for relative in RB1_RECEIVER_RELATIVE_FILES:
+        if receiver_files[relative] != file_record(runtime / relative):
+            raise WD3Error(f"target_object shipped GB1 receiver drifted: {relative}")
+    exporter = Path(value["candidate_exporter"])
+    if not exporter.is_file() or sha256_file(exporter) != value["candidate_exporter_sha256"]:
+        raise WD3Error("target_object RB1 candidate exporter drifted")
+    for field in ("teacher_master", "teacher_master_receipt"):
+        path = Path(value[field])
+        if not path.is_absolute() or RB1_OUTPUT_ROOT.resolve() not in path.resolve().parents:
+            raise WD3Error(f"target_object {field} is outside the RB1 consumer store")
+    admitted = tuple(value["admitted_arms"])
+    if not admitted or any(arm not in {"D56", "F64"} for arm in admitted) or len(set(admitted)) != len(admitted):
+        raise WD3Error("target_object admitted arms differ from the byte-gated D56/F64 family")
+    return value
+
+
 def evaluation_retention_config(config: Mapping[str, Any]) -> Mapping[str, Any] | None:
     value = config.get("evaluation_retention")
     if value is None:
@@ -439,10 +551,11 @@ def evaluation_retention_config(config: Mapping[str, Any]) -> Mapping[str, Any] 
     if not isinstance(value, Mapping):
         raise WD3Error("evaluation_retention binding is not a mapping")
     _strict_fields(value, EVALUATION_RETENTION_FIELDS, "evaluation_retention")
+    expected_cas_root = RB1_CAS_ROOT if target_object_binding(config) is not None else ALIGNED_CAS_ROOT
     if (
         value["schema"] != "ddm_w96b_evaluation_retention.v1"
         or value["mode"] != "content_addressed_chunks_v1"
-        or Path(value["cas_root"]).resolve() != ALIGNED_CAS_ROOT.resolve()
+        or Path(value["cas_root"]).resolve() != expected_cas_root.resolve()
         or value["compact_after_verify"] is not True
     ):
         raise WD3Error("aligned evaluation retention contract differs")
@@ -450,6 +563,8 @@ def evaluation_retention_config(config: Mapping[str, Any]) -> Mapping[str, Any] 
 
 
 def _allowed_output_root(config: Mapping[str, Any]) -> Path:
+    if target_object_binding(config) is not None:
+        return RB1_OUTPUT_ROOT
     if objective_profile(config)["seg_loss_law"] == SEG_LOSS_EXPECTED_FLIP_MARGIN:
         return ALIGNED_OUTPUT_ROOT
     return STAGE_A_OUTPUT_ROOT if config.get("stage_a") is not None else OUTPUT_ROOT
@@ -515,6 +630,13 @@ def _validate_arm(config: Mapping[str, Any]) -> None:
         return
     if arm not in ARM_SPECS:
         raise WD3Error(f"unknown WD3 arm: {arm}")
+    target = target_object_binding(config)
+    if target is not None:
+        if arm not in tuple(target["admitted_arms"]):
+            raise WD3Error("RB1 arm did not pass the sealed complete-archive byte gate")
+        if completed or negatives or config["capacity_pressure_confirmed"]:
+            raise WD3Error("RB1 changed-object arms must not inherit old-object WD3 verdict state")
+        return
     if arm in ARM_ORDER:
         position = ARM_ORDER.index(arm)
         if tuple(completed) != ARM_ORDER[:position]:
@@ -573,7 +695,12 @@ def validate_compiled_config(
 ) -> dict[str, Any]:
     """Validate G0--G5 without loading a scorer or model."""
 
-    _strict_fields_with_optional(config, CONFIG_FIELDS, {"evaluation_retention"}, "compiled config")
+    _strict_fields_with_optional(
+        config,
+        CONFIG_FIELDS,
+        {"evaluation_retention", "target_object"},
+        "compiled config",
+    )
     exists = path_exists or Path.is_file
     if config["schema"] != SCHEMA or config["action"] not in {
         "prepare_arm_birth",
@@ -582,7 +709,8 @@ def validate_compiled_config(
     }:
         raise WD3Error("compiled schema/action differs")
     stage_a = _stage_a_binding(config)
-    allowed_seeds = STAGE_A_SEEDS if stage_a is not None else (SEED,)
+    target = target_object_binding(config)
+    allowed_seeds = RB1_SEEDS if target is not None else STAGE_A_SEEDS if stage_a is not None else (SEED,)
     if int(config["seed"]) not in allowed_seeds:
         raise WD3Error(f"WD3 seed differs from the sealed seeds {allowed_seeds}")
     cheap = cheap_to_shrink_config(config)
@@ -660,6 +788,8 @@ def validate_compiled_config(
                 cache_receipt.get("schema") != CACHE_SCHEMA
                 or cache_receipt.get("complete") is not True
                 or list(map(int, subsets["negative_n120"])) != list(map(int, cache_receipt.get("negative_n120", [])))
+                or cache_receipt.get("cache_binding", {}).get("target_object_sha256")
+                != (canonical_sha256(target) if target is not None else None)
             ):
                 raise WD3Error("training n120 is not the cache-derived stratified population subset")
     for resource in ("scorer", "metal"):
@@ -1475,13 +1605,211 @@ def _fixed_frame0_memmap() -> np.memmap:
     )
 
 
-def _teacher_master_memmap() -> np.memmap:
+def _teacher_master_path(config: Mapping[str, Any] | None = None) -> Path:
+    target = target_object_binding(config or {})
+    return Path(target["teacher_master"]) if target is not None else TEACHER_MASTER
+
+
+def _teacher_master_memmap(config: Mapping[str, Any] | None = None) -> np.memmap:
     return np.memmap(
-        TEACHER_MASTER,
+        _teacher_master_path(config),
         mode="r",
         dtype=np.uint8,
         shape=(receiver.N, 3, receiver.CAMERA_H, receiver.CAMERA_W),
     )
+
+
+def _load_training_tokens(config: Mapping[str, Any]) -> torch.Tensor:
+    target = target_object_binding(config)
+    if target is None:
+        return wd2_build._load_tokens()
+    mapped = np.memmap(
+        Path(target["parsed_tokens"]),
+        mode="c",
+        dtype=np.uint8,
+        shape=(receiver.N, receiver.EVAL_H, receiver.EVAL_W),
+    )
+    return torch.from_numpy(mapped)
+
+
+def _load_gb1_semantic_renderer(target: Mapping[str, Any]) -> nn.Module:
+    """Load the exact shipped GB1 decoder implementation and retained renderer bytes."""
+
+    runtime_module = Path(target["gb1_runtime"]) / "cpr1/inflate.py"
+    module_name = f"_ddm_rb1_gb1_renderer_{target['semantic_renderer_sha256'][:12]}"
+    module_spec = importlib.util.spec_from_file_location(module_name, runtime_module)
+    if module_spec is None or module_spec.loader is None:
+        raise WD3Error("could not load the shipped GB1 semantic receiver")
+    module = importlib.util.module_from_spec(module_spec)
+    cpr1 = str(runtime_module.parent)
+    sys.path.insert(0, cpr1)
+    try:
+        module_spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(cpr1)
+    blob = Path(target["semantic_renderer"]).read_bytes()
+    semantic = module.SemanticTokenRenderer(96)
+    state = module.unpack_variant_semantic_or_none(blob, semantic.state_dict())
+    if state is None:
+        state = module.unpack_semantic(blob, semantic.state_dict())
+    semantic.load_state_dict(state, strict=True)
+    return semantic.eval()
+
+
+def _materialize_target_teacher_master(
+    config: Mapping[str, Any],
+    *,
+    device: torch.device,
+) -> dict[str, Any] | None:
+    """Crash-resumably render the fixed BS3 parse-back field through shipped GB1."""
+
+    target = target_object_binding(config)
+    if target is None:
+        return None
+    destination = Path(target["teacher_master"])
+    receipt_path = Path(target["teacher_master_receipt"])
+    partial = destination.with_name(f".{destination.name}.in_progress")
+    progress_path = destination.with_name(f".{destination.name}.progress.json")
+    binding = {
+        "schema": "ddm_rb1_teacher_master_binding.v1",
+        "target_object_sha256": canonical_sha256(target),
+        "tokens": file_record(Path(target["parsed_tokens"])),
+        "semantic_renderer": file_record(Path(target["semantic_renderer"])),
+        "gb1_receiver_files": dict(target["gb1_receiver_files"]),
+        "geometry": [receiver.N, 3, receiver.CAMERA_H, receiver.CAMERA_W],
+        "rounding": "bilinear_align_corners_false_clamp_0_255_round_uint8",
+    }
+    expected_bytes = receiver.N * 3 * receiver.CAMERA_H * receiver.CAMERA_W
+    if receipt_path.is_file():
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        if (
+            receipt.get("schema") != "ddm_rb1_teacher_master_receipt.v1"
+            or receipt.get("complete") is not True
+            or receipt.get("binding") != binding
+            or receipt.get("payload") != file_record(destination)
+            or receipt["payload"]["bytes"] != expected_bytes
+        ):
+            raise WD3Error("RB1 teacher master receipt or payload drifted")
+        return receipt
+    if destination.exists():
+        if not progress_path.is_file():
+            raise WD3Error("RB1 teacher master exists without its resumable progress checkpoint")
+        progress = json.loads(progress_path.read_text(encoding="utf-8"))
+        payload = file_record(destination)
+        if (
+            progress.get("schema") != "ddm_rb1_teacher_master_progress.v1"
+            or progress.get("binding") != binding
+            or progress.get("completed_pairs") != receiver.N
+            or progress.get("complete") is not True
+            or payload["bytes"] != expected_bytes
+        ):
+            raise WD3Error("RB1 teacher master post-rename recovery proof differs")
+        receipt = {
+            "schema": "ddm_rb1_teacher_master_receipt.v1",
+            "complete": True,
+            "binding": binding,
+            "payload": payload,
+            "progress_checkpoint": file_record(progress_path),
+            "resumable_from_disk": True,
+            "stage_complete": "teacher_master",
+            "all_materialized_payloads_retained": True,
+            "scorer_invocations": 0,
+            "recovered_after_atomic_rename": True,
+        }
+        atomic_json(receipt_path, receipt)
+        return receipt
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if partial.is_file():
+        if partial.stat().st_size != expected_bytes or not progress_path.is_file():
+            raise WD3Error("RB1 teacher master partial payload is not resumable")
+        progress = json.loads(progress_path.read_text(encoding="utf-8"))
+        if progress.get("binding") != binding:
+            raise WD3Error("RB1 teacher master resume binding differs")
+        completed = int(progress["completed_pairs"])
+    else:
+        mapped = np.memmap(
+            partial,
+            mode="w+",
+            dtype=np.uint8,
+            shape=(receiver.N, 3, receiver.CAMERA_H, receiver.CAMERA_W),
+        )
+        mapped.flush()
+        del mapped
+        completed = 0
+        atomic_json(
+            progress_path,
+            {
+                "schema": "ddm_rb1_teacher_master_progress.v1",
+                "binding": binding,
+                "completed_pairs": completed,
+                "complete": False,
+            },
+        )
+    if not 0 <= completed <= receiver.N:
+        raise WD3Error("RB1 teacher master resume cursor differs")
+    semantic = _load_gb1_semantic_renderer(target).to(device)
+    tokens = np.memmap(
+        Path(target["parsed_tokens"]),
+        mode="r",
+        dtype=np.uint8,
+        shape=(receiver.N, receiver.EVAL_H, receiver.EVAL_W),
+    )
+    output = np.memmap(
+        partial,
+        mode="r+",
+        dtype=np.uint8,
+        shape=(receiver.N, 3, receiver.CAMERA_H, receiver.CAMERA_W),
+    )
+    chunk_pairs = int(config["chunk_pairs"])
+    with torch.no_grad():
+        for start in range(completed, receiver.N, chunk_pairs):
+            end = min(receiver.N, start + chunk_pairs)
+            for inner in range(start, end, 8 if device.type == "cuda" else 1):
+                inner_end = min(end, inner + (8 if device.type == "cuda" else 1))
+                batch = torch.from_numpy(np.asarray(tokens[inner:inner_end]).copy()).to(device=device, dtype=torch.long)
+                indices = torch.arange(inner, inner_end, device=device)
+                master = (
+                    F.interpolate(
+                        semantic(batch, indices),
+                        size=(receiver.CAMERA_H, receiver.CAMERA_W),
+                        mode="bilinear",
+                        align_corners=False,
+                    )
+                    .clamp(0.0, 255.0)
+                    .round()
+                    .to(torch.uint8)
+                    .cpu()
+                    .numpy()
+                )
+                output[inner:inner_end] = master
+            output.flush()
+            atomic_json(
+                progress_path,
+                {
+                    "schema": "ddm_rb1_teacher_master_progress.v1",
+                    "binding": binding,
+                    "completed_pairs": end,
+                    "complete": end == receiver.N,
+                },
+            )
+    del output, tokens
+    os.replace(partial, destination)
+    payload = file_record(destination)
+    if payload["bytes"] != expected_bytes:
+        raise WD3Error("RB1 teacher master byte count differs")
+    receipt = {
+        "schema": "ddm_rb1_teacher_master_receipt.v1",
+        "complete": True,
+        "binding": binding,
+        "payload": payload,
+        "progress_checkpoint": file_record(progress_path),
+        "resumable_from_disk": True,
+        "stage_complete": "teacher_master",
+        "all_materialized_payloads_retained": True,
+        "scorer_invocations": 0,
+    }
+    atomic_json(receipt_path, receipt)
+    return receipt
 
 
 def _atomic_npz(path: Path, **arrays: np.ndarray) -> dict[str, Any]:
@@ -1585,19 +1913,19 @@ def prepare_teacher_scorer_cache(config: Mapping[str, Any]) -> dict[str, Any]:
     if config["action"] != "prepare_teacher_scorer_cache":
         raise WD3Error("cache builder received a non-cache config")
     assert_governed_admission("ddm_wd3_prepare_teacher_scorer_cache")
-    stage_a = _stage_a_binding(config)
     storage = storage_preflight(
         Path(config["output"]),
         int(config["minimum_free_bytes"]),
-        allowed_root=STAGE_A_OUTPUT_ROOT if stage_a is not None else OUTPUT_ROOT,
+        allowed_root=_allowed_output_root(config),
     )
     seed_everything(int(config["seed"]))
     device = _device(str(config["device"]))
+    teacher_master_receipt = _materialize_target_teacher_master(config, device=device)
     posenet, segnet = load_differentiable_scorers(REPO / "upstream", device=device)
     posenet.eval()
     segnet.eval()
     fixed = _fixed_frame0_memmap()
-    teacher = _teacher_master_memmap()
+    teacher = _teacher_master_memmap(config)
     cache_root = Path(config["resume_root"])
     cache_root.mkdir(parents=True, exist_ok=True)
     chunk_pairs = int(config["chunk_pairs"])
@@ -1607,6 +1935,11 @@ def prepare_teacher_scorer_cache(config: Mapping[str, Any]) -> dict[str, Any]:
         "source_pins": config["source_pins"],
         "chunk_pairs": chunk_pairs,
         "seed": int(config["seed"]),
+        "target_object_sha256": (
+            canonical_sha256(target_object_binding(config))
+            if target_object_binding(config) is not None
+            else None
+        ),
     }
     binding_path = cache_root / "CACHE_BINDING.json"
     if binding_path.is_file():
@@ -1710,6 +2043,7 @@ def prepare_teacher_scorer_cache(config: Mapping[str, Any]) -> dict[str, Any]:
         },
         "chunk_pairs": chunk_pairs,
         "cache_binding": cache_binding,
+        "target_teacher_master": teacher_master_receipt,
         "repeats": repeats,
         "aggregate_sha256": canonical_sha256(repeats[0]),
         "determinism_repeat_byte_identical": True,
@@ -1757,8 +2091,17 @@ def _load_fixed_frames(pair_ids: np.ndarray, device: torch.device) -> torch.Tens
     return torch.from_numpy(array).permute(0, 3, 1, 2).to(device=device, dtype=torch.float32)
 
 
-def _load_teacher_frames(pair_ids: np.ndarray, device: torch.device) -> torch.Tensor:
-    mapped = _teacher_master_memmap()
+def _load_teacher_frames(
+    pair_ids: np.ndarray,
+    device: torch.device,
+    teacher_master_path: Path = TEACHER_MASTER,
+) -> torch.Tensor:
+    mapped = np.memmap(
+        teacher_master_path,
+        mode="r",
+        dtype=np.uint8,
+        shape=(receiver.N, 3, receiver.CAMERA_H, receiver.CAMERA_W),
+    )
     array = np.asarray(mapped[pair_ids]).copy()
     del mapped
     return torch.from_numpy(array).to(device=device, dtype=torch.float32)
@@ -2110,6 +2453,7 @@ def materialize_stage_controller(
     segnet: nn.Module,
     device: torch.device,
     chunk_pairs: int,
+    teacher_master_path: Path = TEACHER_MASTER,
     stage_a: Mapping[str, Any] | None = None,
     cheap_to_shrink: ds1.CheapToShrinkConfig | None = None,
 ) -> tuple[dict[str, Any], receiver.AdaptiveQuantizationAllocation, StageThresholds]:
@@ -2270,7 +2614,11 @@ def materialize_stage_controller(
     )
     frame_all = torch.from_numpy(np.asarray(baseline_pairs[:, 1]).copy()).float()
     del baseline_pairs
-    teacher_frame_all = _load_teacher_frames(controller_ids, torch.device("cpu"))
+    teacher_frame_all = _load_teacher_frames(
+        controller_ids,
+        torch.device("cpu"),
+        teacher_master_path,
+    )
     gradients = {name: torch.zeros_like(value, device="cpu") for name, value in model.named_parameters()}
     gt_argmax = torch.from_numpy(np.asarray(cache["original_gt_segnet_argmax_u8"][controller_ids]).copy()).long()
     calibration = calibrate_soft_disagreement(logits_all, gt_argmax)
@@ -2341,7 +2689,7 @@ def materialize_stage_controller(
             teacher_pose6=torch.from_numpy(np.asarray(cache["teacher_posenet_first6_f32"][ids]).copy()).to(device),
             original_argmax=gt_argmax[sl].to(device),
             original_pose6=torch.from_numpy(np.asarray(cache["original_gt_posenet_first6_f32"][ids]).copy()).to(device),
-            teacher_frame1=_load_teacher_frames(ids, device),
+            teacher_frame1=_load_teacher_frames(ids, device, teacher_master_path),
             selected_cells=selection_controller[sl].to(device),
             thresholds=thresholds,
             duals=DualState(),
@@ -2546,6 +2894,11 @@ def _birth_contract(config: Mapping[str, Any]) -> dict[str, Any]:
         # treatment is excluded so identical weights, optimizer moments and RNG
         # make the treatment the only changed mechanism.
         "stage_a": dict(config["stage_a"]) if config["stage_a"] is not None else None,
+        "target_object": (
+            dict(target_object_binding(config))
+            if target_object_binding(config) is not None
+            else None
+        ),
     }
 
 
@@ -2564,7 +2917,7 @@ def prepare_arm_birth(config: Mapping[str, Any]) -> dict[str, Any]:
     storage = storage_preflight(
         Path(config["output"]),
         int(config["minimum_free_bytes"]),
-        allowed_root=STAGE_A_OUTPUT_ROOT if stage_a is not None else OUTPUT_ROOT,
+        allowed_root=_allowed_output_root(config),
     )
     initialization = None
     if stage_a is not None:
@@ -2727,6 +3080,7 @@ def _batch_objective(
     step: int = 0,
     loss_profile: Mapping[str, Any] | None = None,
     total_steps: int | None = None,
+    teacher_master_path: Path = TEACHER_MASTER,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     profile = dict(
         loss_profile
@@ -2768,7 +3122,7 @@ def _batch_objective(
         "original_pose6": torch.from_numpy(np.asarray(cache["original_gt_posenet_first6_f32"][ids]).copy()).to(
             device=device, dtype=torch.float32
         ),
-        "teacher_frame1": _load_teacher_frames(ids, device),
+        "teacher_frame1": _load_teacher_frames(ids, device, teacher_master_path),
         "selected_cells": torch.from_numpy(np.asarray(selection[ids]).copy()).to(device=device, dtype=torch.bool),
         "thresholds": thresholds,
         "duals": duals,
@@ -2828,7 +3182,8 @@ def train(config: Mapping[str, Any]) -> dict[str, Any]:
     seed_everything(int(config["seed"]))
     device = _device(str(config["device"]))
     cache_receipt, cache = _load_cache_result(Path(config["teacher_cache_result"]))
-    tokens = wd2_build._load_tokens()
+    tokens = _load_training_tokens(config)
+    teacher_master_path = _teacher_master_path(config)
     posenet, segnet = load_differentiable_scorers(REPO / "upstream", device=device)
     posenet.eval()
     segnet.eval()
@@ -2858,6 +3213,7 @@ def train(config: Mapping[str, Any]) -> dict[str, Any]:
             segnet=segnet,
             device=device,
             chunk_pairs=int(config["chunk_pairs"]),
+            teacher_master_path=teacher_master_path,
             stage_a=stage_a,
             cheap_to_shrink=cheap,
         )
@@ -2915,6 +3271,7 @@ def train(config: Mapping[str, Any]) -> dict[str, Any]:
                 step=(epoch - 1) * batches_per_epoch + batches,
                 loss_profile=profile,
                 total_steps=total_steps,
+                teacher_master_path=teacher_master_path,
             )
             total.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), optimizer_values["grad_clip"])
