@@ -39,18 +39,27 @@ DISTINCT (legacy or conditional) branch that must die. Pay the two-landing rule:
 
 ## PRIOR NEGATIVE SIGNAL
 
-- #1293/#1300: the denial class is real and recurrent (6 instances) — the bundle path
-  is proven; this arm must not regress it.
-- #1219: a PREVENTION cure never repairs — the guard (landing 2) prevents; landing 1 is
-  the repair; both are owed, neither substitutes for the other.
+- #1293/#1300 (memo `.omx/research/ddm_hd1_apparatus_two_landings_20260826.md`): the
+  denial class is real and recurrent (6 instances) — the bundle path is proven; this
+  arm must not regress it.
+- #1219 (the #1122 recurrence row; cure receipts in the AppleDouble incident notes of
+  the harness ledger): a PREVENTION cure never repairs — the guard (landing 2)
+  prevents; landing 1 is the repair; both are owed, neither substitutes for the other.
+- #1302 (this task's incident receipts): the bs3 arm final message
+  `.omx/research/arm_final_messages/ddm_bs3_born_small_resolved_carrier_20260826T203546Z.md`
+  dead-end line + fb2's certificate above.
 - m102: control-plane failures are silent — the storage-reserve refusal must be LOUD
   (typed rc + receipt), never a silent skip.
 
 ## OPTIMAL FORM
 
-- Reference: hd1's bundle-fallback implementation + its test file
-  (`src/tac/tests/test_subagent_commit_serializer_bundle_fallback.py`) + the executed
-  synthetic + LIVE denial controls in its landing receipts.
+- Family REFERENCE exemplars w/ provenance pins: hd1's bundle-fallback implementation,
+  commit `a08ea28d77` (`tools/subagent_commit_serializer.py` +
+  `src/tac/tests/test_subagent_commit_serializer_bundle_fallback.py`) + hd1's landing
+  memo `.omx/research/ddm_hd1_apparatus_two_landings_20260826.md` (commit `f3d6aba3e1`)
+  carrying the executed synthetic + LIVE denial controls + fb2's cleanup certificate
+  (pinned tree `26b27dce163fa2be966b980aa651d8b828e83f1e`, memo
+  `.omx/research/ddm_fb2_route_table_gb1_20260826.md`).
 - SCOPE: the serializer + direct sister landing tools only. MECHANISM reductions
   FORBIDDEN: the positive control is executed, not asserted; the reserve constant is
   read from the canonical storage-waterfall source.
