@@ -208,3 +208,21 @@ Root: `/Volumes/APDataStore/pact/ddm_d3_alphabet_merge/`.
 
 Own-vehicle frontier: **S = 0.14811799921260607 @ 180,215 B [contest-CUDA T4 n600]**, GB1 archive
 sha `ba1f3830cd51b820d7f9b834a1dcc12e8776a0260f9da57a4e8e0944b988e3a4`; **UNMOVED** by D3.
+
+## MAIN ADDENDUM (2026-08-26, append-only) — s2_t4 carrier verdict + the convergent repaint law
+
+MAIN executed d3's fire-order 1 (block_s2_t4, the precision-1.0 carrier) through the
+instrument's own render+score stages (detached run, receipt ddm_d3_s2t4_score). VERDICT:
+DEAD. RESULT.json (store retained/scorer/block_s2_t4/, archive sha `fa7dceb17cdd…`,
+172,233 B): advisory composed S 8.8127, Δd_seg +0.0034301, Δd_pose +6.9471 vs the gb1
+reference [macOS-CPU advisory; DALI-GT pinned n600; mixed-axis triage only]. Precision 1.0
+did NOT rescue carriage — with zero Road false paint, the pose catastrophe persists.
+
+CONVERGENT LAW (three deaths, one mechanism): s3_t3 (IoU-selected block carrier, this
+memo) · s2_t4 (precision-1.0 block carrier, this addendum) · d3a's analytic chart
+(4/4 rungs, memo ddm_d3a_analytic_lane_carrier_20260826.md, commit `05548b5dce`) all die
+because PIXEL REPAINT on rendered frames destroys PoseNet regardless of paint precision or
+paint source. The carrier-by-repaint family is CLOSED at FAMILY scope on this body. The
+surviving route is d3b's lossless coding factorization (charter
+charters/ddm_d3b_lossless_lane_factorization_20260826.md): zero repainted pixels by
+construction, frames byte-identical, verdict purely rate vs the 127,292 B joint subsystem.
