@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# TORCH_COMPILE_WAIVED:retired-era-CUDA-capable-substrate-trainer-not-on-any-live-launch-path-(substrate-era-closed-per-the-no-old-lineage-ban);-torch.compile-enablement-deferred-to-reactivation-so-archived-run-numerics-stay-comparable
 # SPDX-License-Identifier: MIT
 """NSCS02 downsampled-renderer + inflate-upsample trainer (UNIQUE-AND-COMPLETE-PER-METHOD).
 

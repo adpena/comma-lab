@@ -1,3 +1,4 @@
+# TORCH_COMPILE_WAIVED:MLX-substrate-trainer-(torch.compile/Inductor-inapplicable-on-the-MLX/Metal-path;-MLX-uses-mx.compile;-lineage-lessons-only)
 # TF32_WAIVED:MLX-substrate-trainer-(torch-CUDA-TF32-matmul-flag-inapplicable-on-the-MLX/Metal-path-per-the-train/authority-split;-lineage-lessons-only)
 # SPDX-License-Identifier: MIT
 """Z6 L2 long-training trainer — canonical proof-of-pattern.

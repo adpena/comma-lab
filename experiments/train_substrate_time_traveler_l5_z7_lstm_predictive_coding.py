@@ -1,3 +1,4 @@
+# TORCH_COMPILE_WAIVED:retired-era-CUDA-capable-substrate-trainer-not-on-any-live-launch-path-(substrate-era-closed-per-the-no-old-lineage-ban);-torch.compile-enablement-deferred-to-reactivation-so-archived-run-numerics-stay-comparable
 # TF32_WAIVED:retired-era-CUDA-capable-substrate-trainer-not-on-any-live-launch-path-(substrate-era-closed-per-the-no-old-lineage-ban);-TF32-enablement-deferred-to-reactivation-so-archived-run-numerics-stay-comparable
 # SPDX-License-Identifier: MIT
 """Z7 GRU recurrent predictive-coding trainer/export scaffold.
