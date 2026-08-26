@@ -16,6 +16,9 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 REPO = Path(__file__).resolve().parents[3]
 SERIALIZER = REPO / "tools" / "subagent_commit_serializer.py"
@@ -123,6 +126,9 @@ def test_positive_read_only_objects_emits_verified_bundle_and_typed_receipt(
     row = json.loads(receipts[0].read_text(encoding="utf-8"))
     assert row["schema"] == "subagent_commit_bundle_fallback.v1"
     assert row["status"] == "BUNDLE_READY_MAIN_MUST_LAND"
+    assert row["construction_mode"] == "isolated_git_plumbing_no_checkout"
+    assert row["projected_artifact_bytes"] <= row["artifact_cap_bytes"]
+    assert row["storage_reserve"]["selected"]["eligible"] is True
     assert row["failure"]["serializer_rc"] != 0
     assert row["environment"]["cwd"] == str(repo)
     assert row["environment"]["uid"] == os.getuid()
@@ -152,6 +158,129 @@ def test_positive_read_only_objects_emits_verified_bundle_and_typed_receipt(
     assert fetched.returncode == 0, fetched.stderr
     landed = _git(harvest, "show", f"FETCH_HEAD:{target.name}").stdout
     assert landed == "the exact intended content\n"
+
+
+def test_storage_reserve_refuses_before_creating_ssd_receipt_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _make_repo(tmp_path / "reserve-refusal")
+    module = _load_module()
+    monkeypatch.setattr(module, "REPO_ROOT", repo)
+    reserve = module._canonical_storage_reserve_bytes()
+    monkeypatch.setattr(
+        module.shutil,
+        "disk_usage",
+        lambda _path: SimpleNamespace(total=reserve * 2, used=reserve, free=reserve - 1),
+    )
+    requested_parent = tmp_path / "ssd-receipts"
+
+    with pytest.raises(module.BundleFallbackStorageRefusal) as caught:
+        module._author_bundle_fallback(
+            files=["intended.txt"],
+            final_message="reserve refusal control",
+            label="ddm_fc1x_control",
+            original_rc=128,
+            original_output="Operation not permitted: failed to insert into database",
+            fallback_receipt_dir=str(requested_parent),
+            intended_snapshot={"intended.txt": (b"bounded intent\n", "100644")},
+            patch_bytes=None,
+            allow_empty=False,
+        )
+
+    assert not requested_parent.exists()
+    receipt = caught.value.receipt_path
+    assert receipt.is_file()
+    assert str(receipt).startswith(str(repo / ".omx" / "state"))
+    row = json.loads(receipt.read_text(encoding="utf-8"))
+    assert row["status"] == "BUNDLE_FALLBACK_STORAGE_REFUSED"
+    assert row["serializer_rc"] == 19
+    assert row["storage_candidates"][0]["eligible"] is False
+
+
+def test_main_returns_loud_typed_rc19_for_storage_refusal(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repo = _make_repo(tmp_path / "typed-refusal")
+    target = repo / "intended.txt"
+    target.write_text("typed refusal\n", encoding="utf-8")
+    module = _load_module()
+    monkeypatch.setattr(module, "REPO_ROOT", repo)
+    monkeypatch.setattr(module, "LOCK_PATH", repo / ".omx" / "state" / ".commit-lock")
+    monkeypatch.setattr(module, "LOG_PATH", repo / ".omx" / "state" / "commit-serializer.log")
+    reserve = module._canonical_storage_reserve_bytes()
+    monkeypatch.setattr(
+        module.shutil,
+        "disk_usage",
+        lambda _path: SimpleNamespace(total=reserve * 2, used=reserve, free=reserve - 1),
+    )
+    monkeypatch.setenv("REVIEW_GATE_OVERRIDE", "1")
+    monkeypatch.chdir(repo)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "subagent_commit_serializer.py",
+            "--message",
+            "typed reserve refusal [no-triality] [p0-ledger-ok]",
+            "--files",
+            target.name,
+            "--expected-content-sha256",
+            f"{target.name}={hashlib.sha256(target.read_bytes()).hexdigest()}",
+            "--fallback-receipt-dir",
+            str(tmp_path / "typed-ssd-receipts"),
+            "--no-sister-checkpoint-check",
+            "--label",
+            "ddm_fc1x_typed_control",
+        ],
+    )
+    objects = repo / ".git" / "objects"
+    _set_object_directories_writable(objects, writable=False)
+    try:
+        rc = module.main()
+    finally:
+        _set_object_directories_writable(objects, writable=True)
+
+    captured = capsys.readouterr()
+    assert rc == 19
+    assert "BUNDLE_FALLBACK_STORAGE_REFUSED rc=19 phase=git_add" in captured.err
+    assert not (tmp_path / "typed-ssd-receipts").exists()
+
+
+def test_patch_intent_uses_same_clone_free_bundle_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _make_repo(tmp_path / "patch-intent")
+    (repo / "seed.txt").write_text("patched through exact intent\n", encoding="utf-8")
+    patch_bytes = _git(repo, "diff", "--binary", "--", "seed.txt").stdout.encode()
+    module = _load_module()
+    monkeypatch.setattr(module, "REPO_ROOT", repo)
+
+    row = module._author_bundle_fallback(
+        files=["seed.txt"],
+        final_message="patch intent control",
+        label="ddm_fc1x_patch_control",
+        original_rc=128,
+        original_output="Operation not permitted: failed to insert into database",
+        fallback_receipt_dir=str(tmp_path / "patch-receipts"),
+        intended_snapshot=None,
+        patch_bytes=patch_bytes,
+        allow_empty=False,
+    )
+
+    assert row["construction_mode"] == "isolated_git_plumbing_no_checkout"
+    harvest = tmp_path / "patch-harvest"
+    _git(tmp_path, "clone", "--quiet", "--shared", str(repo), str(harvest))
+    fetched = _git(
+        harvest,
+        "fetch",
+        str(row["bundle_path"]),
+        "refs/heads/serializer-fallback",
+        check=False,
+    )
+    assert fetched.returncode == 0, fetched.stderr
+    assert _git(harvest, "show", "FETCH_HEAD:seed.txt").stdout == "patched through exact intent\n"
 
 
 def test_negative_normal_commit_is_unchanged_and_emits_no_fallback(tmp_path: Path) -> None:

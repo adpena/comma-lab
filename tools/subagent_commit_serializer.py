@@ -111,7 +111,8 @@ Two structural additions close/mitigate these:
     11 corrupt-checkpoint · 12 review-gate override attempted on Python ·
     13 gitignored path · 14 protected append-doc shrink · 15 undeclared staged file ·
     17 git-object write denial captured as an SSD bundle fallback ·
-    18 git-object write denial detected but fallback construction failed.
+    18 git-object write denial detected but fallback construction failed ·
+    19 bundle fallback refused by its artifact cap or canonical storage reserve.
 
 Behaviour
 ─────────
@@ -145,6 +146,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -179,6 +181,17 @@ except ImportError:
     bare_override_attempted = None  # type: ignore[assignment]
     parse_override_env = None  # type: ignore[assignment]
     CorruptCheckpointError = RuntimeError  # type: ignore[misc, assignment]
+
+try:
+    from comma_lab.storage_tiers import DEFAULT_RESERVE_FREE_GB, bytes_from_gib
+    _STORAGE_WATERFALL_AVAILABLE = True
+except ImportError:
+    # Focused fixtures may copy this file without the repository's ``src``
+    # tree. Ordinary commits remain usable; the SSD fallback fails loudly if
+    # its canonical reserve source is unavailable.
+    DEFAULT_RESERVE_FREE_GB = None  # type: ignore[assignment]
+    bytes_from_gib = None  # type: ignore[assignment]
+    _STORAGE_WATERFALL_AVAILABLE = False
 
 LOCK_PATH = REPO_ROOT / ".omx/state/.commit-lock"
 LOG_PATH = REPO_ROOT / ".omx/state/commit-serializer.log"
@@ -1361,11 +1374,15 @@ def _git_commit(message: str, env: dict, allow_empty: bool = False) -> tuple[int
 # ordinary workspace/SSD writes remained available.  The intended tree already
 # exists outside Git (whole-file mode) or as the caller's exact patch
 # (``--patch-file``), so losing it is avoidable: reproduce that tree in a
-# throwaway SSD clone, commit there, retain a bundle + format-patch + typed
-# receipt, and return a distinct rc.  The expensive fallback runs only AFTER the
-# caller releases the serializer lock; helpers below contain no lock operations.
+# tiny isolated Git object store, commit there with the source object database
+# read-only, retain a bundle + format-patch + typed receipt, and return a
+# distinct rc. The fallback runs only AFTER the caller releases the serializer
+# lock; helpers below contain no lock operations.
 BUNDLE_FALLBACK_RC = 17
 BUNDLE_FALLBACK_FAILED_RC = 18
+BUNDLE_FALLBACK_STORAGE_REFUSAL_RC = 19
+BUNDLE_FALLBACK_MAX_ARTIFACT_BYTES = 64 * 1024**2
+BUNDLE_FALLBACK_RECEIPT_ALLOWANCE_BYTES = 128 * 1024
 _GIT_OBJECT_PERMISSION_TOKENS = (
     "operation not permitted",
     "permission denied",
@@ -1391,10 +1408,33 @@ def _is_git_object_write_denial(output: str) -> bool:
     )
 
 
-def _git_output(args: list[str], *, cwd: Path, text_mode: bool = True) -> str | bytes:
+class BundleFallbackStorageRefusal(RuntimeError):
+    """The bounded fallback cannot safely write its retained SSD artifacts."""
+
+    def __init__(self, message: str, *, receipt_path: Path) -> None:
+        super().__init__(message)
+        self.receipt_path = receipt_path
+
+
+def _git_output(
+    args: list[str],
+    *,
+    cwd: Path,
+    text_mode: bool = True,
+    env: dict[str, str] | None = None,
+    input_data: str | bytes | None = None,
+) -> str | bytes:
     """Run a fallback-construction Git command or raise with its real output."""
 
-    proc = subprocess.run(args, cwd=cwd, capture_output=True, text=text_mode, check=False)
+    proc = subprocess.run(
+        args,
+        cwd=cwd,
+        capture_output=True,
+        text=text_mode,
+        check=False,
+        env=env,
+        input=input_data,
+    )
     if proc.returncode != 0:
         stdout = proc.stdout if text_mode else proc.stdout.decode("utf-8", errors="replace")
         stderr = proc.stderr if text_mode else proc.stderr.decode("utf-8", errors="replace")
@@ -1413,28 +1453,108 @@ def _safe_label_component(label: str) -> str:
     return safe.strip("._") or "anonymous"
 
 
-def _fallback_receipt_parent(explicit: str | None, label: str) -> Path:
-    """Choose the arm receipt tier: explicit/env, then the mandated SSD waterfall."""
+def _fallback_receipt_candidates(explicit: str | None, label: str) -> tuple[Path, ...]:
+    """Return candidate receipt tiers without writing to any of them."""
 
     configured = explicit or os.environ.get("SUBAGENT_SERIALIZER_FALLBACK_RECEIPT_DIR")
     if configured:
-        parent = Path(configured).expanduser().resolve()
-        parent.mkdir(parents=True, exist_ok=True)
-        return parent
+        return (Path(configured).expanduser().resolve(),)
 
     arm = _safe_label_component(label)
+    candidates: list[Path] = []
     for volume in (Path("/Volumes/VertigoDataTier/pact"), Path("/Volumes/APDataStore/pact")):
         if not volume.is_dir():
             continue
-        parent = volume / arm / "receipts" / "commit_serializer_fallbacks"
-        try:
-            parent.mkdir(parents=True, exist_ok=True)
-        except OSError:
-            continue
-        return parent
+        candidates.append(volume / arm / "receipts" / "commit_serializer_fallbacks")
+    if candidates:
+        return tuple(candidates)
     raise RuntimeError(
         "no writable SSD receipt tier for bundle fallback; tried "
         "/Volumes/VertigoDataTier/pact then /Volumes/APDataStore/pact"
+    )
+
+
+def _canonical_storage_reserve_bytes() -> int:
+    if not _STORAGE_WATERFALL_AVAILABLE or bytes_from_gib is None:
+        raise RuntimeError(
+            "canonical storage reserve unavailable: comma_lab.storage_tiers did not import"
+        )
+    return int(bytes_from_gib(DEFAULT_RESERVE_FREE_GB))
+
+
+def _nearest_existing_parent(path: Path) -> Path:
+    current = path
+    while not current.exists() and current != current.parent:
+        current = current.parent
+    if not current.exists():
+        raise RuntimeError(f"no existing parent for fallback receipt path {path}")
+    return current
+
+
+def _local_fallback_refusal_receipt(row: dict[str, object]) -> Path:
+    """Persist a small refusal receipt locally without consuming SSD reserve."""
+
+    stamp = _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%S.%fZ")
+    parent = REPO_ROOT / ".omx" / "state" / "commit_serializer_fallback_refusals"
+    attempt = parent / f"{stamp}-{os.getpid()}"
+    attempt.mkdir(parents=True, exist_ok=False)
+    receipt = attempt / "receipts.jsonl"
+    receipt.write_text(json.dumps(row, sort_keys=True) + "\n", encoding="utf-8")
+    return receipt
+
+
+def _select_fallback_receipt_parent(
+    candidates: tuple[Path, ...], *, projected_bytes: int
+) -> tuple[Path, dict[str, object]]:
+    """Select the first tier that remains above the canonical reserve."""
+
+    reserve_bytes = _canonical_storage_reserve_bytes()
+    statuses: list[dict[str, object]] = []
+    for candidate in candidates:
+        try:
+            probe = _nearest_existing_parent(candidate)
+            usage = shutil.disk_usage(probe)
+            writable = os.access(probe, os.W_OK)
+            free_bytes: int | None = usage.free
+            eligible = writable and usage.free - projected_bytes >= reserve_bytes
+            error = None
+        except OSError as exc:
+            probe = candidate
+            writable = False
+            free_bytes = None
+            eligible = False
+            error = f"{type(exc).__name__}: {exc}"
+        status: dict[str, object] = {
+            "candidate": str(candidate),
+            "probe_path": str(probe),
+            "free_bytes": free_bytes,
+            "projected_bytes": projected_bytes,
+            "reserve_bytes": reserve_bytes,
+            "writable": writable,
+            "eligible": eligible,
+            "error": error,
+        }
+        statuses.append(status)
+        if eligible:
+            return candidate, {"selected": status, "candidates": statuses}
+
+    refusal = {
+        "schema": "subagent_commit_bundle_fallback.v1",
+        "event_type": "git_object_write_denial_bundle_fallback",
+        "status": "BUNDLE_FALLBACK_STORAGE_REFUSED",
+        "written_at_utc": _now_iso(),
+        "serializer_rc": BUNDLE_FALLBACK_STORAGE_REFUSAL_RC,
+        "projected_bytes": projected_bytes,
+        "artifact_cap_bytes": BUNDLE_FALLBACK_MAX_ARTIFACT_BYTES,
+        "reserve_bytes": reserve_bytes,
+        "storage_candidates": statuses,
+        "reason": "projected fallback artifacts would breach every candidate tier's reserve",
+    }
+    receipt = _local_fallback_refusal_receipt(refusal)
+    raise BundleFallbackStorageRefusal(
+        f"fallback storage reserve refused projected_bytes={projected_bytes} "
+        f"reserve_bytes={reserve_bytes}",
+        receipt_path=receipt,
     )
 
 
@@ -1514,29 +1634,102 @@ def _snapshot_intended_files(
     return snapshot
 
 
-def _materialize_snapshot(
-    clone: Path, snapshot: dict[str, tuple[bytes | None, str]]
-) -> None:
-    for rel, (payload, mode) in snapshot.items():
-        target = clone / rel
-        if payload is None:
-            if target.is_symlink() or target.is_file():
-                target.unlink()
-            elif target.exists():
-                raise RuntimeError(f"refusing fallback deletion of non-file target {rel!r}")
-            continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if target.is_symlink() or target.is_file():
-            target.unlink()
-        if mode == "120000":
-            target.symlink_to(payload.decode("utf-8"))
-        else:
-            target.write_bytes(payload)
-            target.chmod(0o755 if mode == "100755" else 0o644)
-
-
 def _sha256_path(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _fallback_git_environment(git_dir: Path) -> dict[str, str]:
+    source_name = str(
+        _git_output(["git", "config", "--get", "user.name"], cwd=REPO_ROOT)
+    ).strip()
+    source_email = str(
+        _git_output(["git", "config", "--get", "user.email"], cwd=REPO_ROOT)
+    ).strip()
+    env = os.environ.copy()
+    env.update(
+        {
+            "GIT_DIR": str(git_dir),
+            "GIT_INDEX_FILE": str(git_dir / "fallback.index"),
+            "GIT_AUTHOR_NAME": source_name or "Pact Serializer Fallback",
+            "GIT_AUTHOR_EMAIL": source_email or "serializer-fallback@localhost.invalid",
+            "GIT_COMMITTER_NAME": source_name or "Pact Serializer Fallback",
+            "GIT_COMMITTER_EMAIL": source_email or "serializer-fallback@localhost.invalid",
+        }
+    )
+    return env
+
+
+def _write_snapshot_to_fallback_index(
+    snapshot: dict[str, tuple[bytes | None, str]], env: dict[str, str]
+) -> None:
+    """Write only the declared blobs into the isolated fallback object store."""
+
+    for rel, (payload, mode) in snapshot.items():
+        if payload is None:
+            _git_output(["git", "update-index", "--force-remove", "--", rel], cwd=REPO_ROOT, env=env)
+            continue
+        oid = str(
+            _git_output(
+                ["git", "hash-object", "-w", "--stdin"],
+                cwd=REPO_ROOT,
+                text_mode=False,
+                env=env,
+                input_data=payload,
+            )
+            .decode("ascii")
+            .strip()
+        )
+        _git_output(
+            ["git", "update-index", "--add", "--cacheinfo", f"{mode},{oid},{rel}"],
+            cwd=REPO_ROOT,
+            env=env,
+        )
+
+
+def _fallback_file_shas(
+    fallback_commit: str, files: list[str], env: dict[str, str]
+) -> dict[str, str]:
+    shas: dict[str, str] = {}
+    for rel in files:
+        exists = subprocess.run(
+            ["git", "cat-file", "-e", f"{fallback_commit}:{rel}"],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            check=False,
+        )
+        if exists.returncode != 0:
+            shas[rel] = "DELETED"
+            continue
+        payload = _git_output(
+            ["git", "cat-file", "blob", f"{fallback_commit}:{rel}"],
+            cwd=REPO_ROOT,
+            env=env,
+            text_mode=False,
+        )
+        assert isinstance(payload, bytes)
+        shas[rel] = hashlib.sha256(payload).hexdigest()
+    return shas
+
+
+def _artifact_cap_refusal(*, projected_bytes: int, label: str) -> None:
+    row: dict[str, object] = {
+        "schema": "subagent_commit_bundle_fallback.v1",
+        "event_type": "git_object_write_denial_bundle_fallback",
+        "status": "BUNDLE_FALLBACK_STORAGE_REFUSED",
+        "written_at_utc": _now_iso(),
+        "label": label,
+        "serializer_rc": BUNDLE_FALLBACK_STORAGE_REFUSAL_RC,
+        "projected_bytes": projected_bytes,
+        "artifact_cap_bytes": BUNDLE_FALLBACK_MAX_ARTIFACT_BYTES,
+        "reason": "fallback artifacts exceed the bounded artifact cap",
+    }
+    receipt = _local_fallback_refusal_receipt(row)
+    raise BundleFallbackStorageRefusal(
+        f"fallback artifact cap refused projected_bytes={projected_bytes} "
+        f"cap_bytes={BUNDLE_FALLBACK_MAX_ARTIFACT_BYTES}",
+        receipt_path=receipt,
+    )
 
 
 def _author_bundle_fallback(
@@ -1551,98 +1744,122 @@ def _author_bundle_fallback(
     patch_bytes: bytes | None,
     allow_empty: bool,
 ) -> dict[str, object]:
-    """Build and retain the intended commit in an SSD scratch clone."""
+    """Build a thin bundle without cloning or copying the checkout."""
 
-    parent = _fallback_receipt_parent(fallback_receipt_dir, label)
     stamp = _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%S.%fZ")
-    attempt = parent / f"{stamp}-{os.getpid()}"
-    attempt.mkdir(parents=True, exist_ok=False)
     base_head = _head_full_sha()
-    bundle_path = attempt / "intended-commit.bundle"
-    format_patch_path = attempt / "intended-commit.format-patch"
-    intended_patch_path = attempt / "intended-tree.patch"
-    receipt_path = attempt / "receipts.jsonl"
-    committed_file_shas: dict[str, str] = {}
+    attempt: Path | None = None
+    receipt_path: Path | None = None
 
     try:
-        with tempfile.TemporaryDirectory(
-            prefix=".bundle-build-", dir=attempt, ignore_cleanup_errors=True
-        ) as scratch_text:
-            clone = Path(scratch_text) / "repo"
-            _git_output(
-                ["git", "clone", "--quiet", "--shared", "--no-checkout", str(REPO_ROOT), str(clone)],
-                cwd=attempt,
-            )
-            _git_output(["git", "checkout", "--quiet", "--detach", base_head], cwd=clone)
+        with tempfile.TemporaryDirectory(prefix=".serializer-bundle-build-") as scratch_text:
+            scratch = Path(scratch_text)
+            git_dir = scratch / "fallback.git"
+            object_format = str(
+                _git_output(["git", "rev-parse", "--show-object-format"], cwd=REPO_ROOT)
+            ).strip()
+            init_cmd = ["git", "init", "--quiet", "--bare"]
+            if object_format and object_format != "sha1":
+                init_cmd.append(f"--object-format={object_format}")
+            init_cmd.append(str(git_dir))
+            _git_output(init_cmd, cwd=scratch)
+
+            common_dir = _git_common_dir()
+            if common_dir is None:
+                raise RuntimeError("cannot resolve source Git common directory")
+            source_objects = (common_dir / "objects").resolve()
+            alternates = git_dir / "objects" / "info" / "alternates"
+            alternates.parent.mkdir(parents=True, exist_ok=True)
+            alternates.write_text(str(source_objects) + "\n", encoding="utf-8")
+            env = _fallback_git_environment(git_dir)
+            _git_output(["git", "read-tree", base_head], cwd=REPO_ROOT, env=env)
+
+            local_intended_patch = scratch / "intended-tree.patch"
             if patch_bytes is not None:
-                intended_patch_path.write_bytes(patch_bytes)
+                local_intended_patch.write_bytes(patch_bytes)
                 _git_output(
-                    ["git", "apply", "--index", "--binary", str(intended_patch_path)], cwd=clone
+                    ["git", "apply", "--cached", "--binary", str(local_intended_patch)],
+                    cwd=REPO_ROOT,
+                    env=env,
                 )
             elif intended_snapshot is not None:
-                _materialize_snapshot(clone, intended_snapshot)
-                _git_output(["git", "add", "--all", "--", *files], cwd=clone)
-                patch = _git_output(
-                    ["git", "diff", "--cached", "--binary", "HEAD", "--", *files],
-                    cwd=clone,
+                _write_snapshot_to_fallback_index(intended_snapshot, env)
+                intended_patch = _git_output(
+                    ["git", "diff", "--cached", "--binary", base_head, "--", *files],
+                    cwd=REPO_ROOT,
                     text_mode=False,
+                    env=env,
                 )
-                assert isinstance(patch, bytes)
-                intended_patch_path.write_bytes(patch)
+                assert isinstance(intended_patch, bytes)
+                local_intended_patch.write_bytes(intended_patch)
             else:
                 raise RuntimeError("fallback has neither an intended snapshot nor a patch")
 
-            source_name = str(
-                _git_output(["git", "config", "--get", "user.name"], cwd=REPO_ROOT)
+            tree = str(_git_output(["git", "write-tree"], cwd=REPO_ROOT, env=env)).strip()
+            parent_tree = str(
+                _git_output(["git", "rev-parse", f"{base_head}^{{tree}}"], cwd=REPO_ROOT)
             ).strip()
-            source_email = str(
-                _git_output(["git", "config", "--get", "user.email"], cwd=REPO_ROOT)
+            if tree == parent_tree and not allow_empty:
+                raise RuntimeError("fallback intended commit is empty without --allow-empty")
+            fallback_commit = str(
+                _git_output(
+                    ["git", "commit-tree", tree, "-p", base_head, "-m", final_message],
+                    cwd=REPO_ROOT,
+                    env=env,
+                )
             ).strip()
             _git_output(
-                ["git", "config", "user.name", source_name or "Pact Serializer Fallback"], cwd=clone
+                ["git", "update-ref", "refs/heads/serializer-fallback", fallback_commit],
+                cwd=REPO_ROOT,
+                env=env,
             )
-            _git_output(
-                ["git", "config", "user.email", source_email or "serializer-fallback@localhost.invalid"],
-                cwd=clone,
-            )
-            commit_cmd = ["git", "commit", "--quiet", "-m", final_message]
-            if allow_empty:
-                commit_cmd.append("--allow-empty")
-            _git_output(commit_cmd, cwd=clone)
-            fallback_commit = str(_git_output(["git", "rev-parse", "HEAD"], cwd=clone)).strip()
-            for rel in files:
-                committed_path = clone / rel
-                if committed_path.is_symlink():
-                    committed_file_shas[rel] = hashlib.sha256(
-                        os.readlink(committed_path).encode("utf-8")
-                    ).hexdigest()
-                elif committed_path.is_file():
-                    committed_file_shas[rel] = _sha256_path(committed_path)
-                elif not committed_path.exists():
-                    committed_file_shas[rel] = "DELETED"
-                else:
-                    committed_file_shas[rel] = "NON_FILE"
-            _git_output(
-                ["git", "branch", "--force", "serializer-fallback", fallback_commit], cwd=clone
-            )
+
+            local_bundle = scratch / "intended-commit.bundle"
             _git_output(
                 [
-                    "git", "bundle", "create", str(bundle_path),
+                    "git", "bundle", "create", str(local_bundle),
                     "refs/heads/serializer-fallback", f"^{base_head}",
                 ],
-                cwd=clone,
+                cwd=REPO_ROOT,
+                env=env,
             )
+            local_format_patch = scratch / "intended-commit.format-patch"
             format_patch = _git_output(
                 [
                     "git", "format-patch", "--binary", "--stdout", "--no-signature",
                     f"{base_head}..{fallback_commit}",
                 ],
-                cwd=clone,
+                cwd=REPO_ROOT,
                 text_mode=False,
+                env=env,
             )
             assert isinstance(format_patch, bytes)
-            format_patch_path.write_bytes(format_patch)
-            _git_output(["git", "bundle", "verify", str(bundle_path)], cwd=clone)
+            local_format_patch.write_bytes(format_patch)
+            _git_output(["git", "bundle", "verify", str(local_bundle)], cwd=REPO_ROOT)
+            committed_file_shas = _fallback_file_shas(fallback_commit, files, env)
+
+            projected_bytes = (
+                local_bundle.stat().st_size
+                + local_format_patch.stat().st_size
+                + local_intended_patch.stat().st_size
+                + BUNDLE_FALLBACK_RECEIPT_ALLOWANCE_BYTES
+            )
+            if projected_bytes > BUNDLE_FALLBACK_MAX_ARTIFACT_BYTES:
+                _artifact_cap_refusal(projected_bytes=projected_bytes, label=label)
+            parent, storage_check = _select_fallback_receipt_parent(
+                _fallback_receipt_candidates(fallback_receipt_dir, label),
+                projected_bytes=projected_bytes,
+            )
+
+            attempt = parent / f"{stamp}-{os.getpid()}"
+            attempt.mkdir(parents=True, exist_ok=False)
+            bundle_path = attempt / local_bundle.name
+            format_patch_path = attempt / local_format_patch.name
+            intended_patch_path = attempt / local_intended_patch.name
+            receipt_path = attempt / "receipts.jsonl"
+            shutil.copyfile(local_bundle, bundle_path)
+            shutil.copyfile(local_format_patch, format_patch_path)
+            shutil.copyfile(local_intended_patch, intended_patch_path)
 
         git_dir = _git_common_dir()
         objects = git_dir / "objects" if git_dir is not None else None
@@ -1663,6 +1880,10 @@ def _author_bundle_fallback(
             "intended_patch_path": str(intended_patch_path),
             "intended_patch_bytes": intended_patch_path.stat().st_size,
             "intended_patch_sha256": _sha256_path(intended_patch_path),
+            "construction_mode": "isolated_git_plumbing_no_checkout",
+            "artifact_cap_bytes": BUNDLE_FALLBACK_MAX_ARTIFACT_BYTES,
+            "projected_artifact_bytes": projected_bytes,
+            "storage_reserve": storage_check,
             "files": [
                 {"path": rel, "content_sha256": committed_file_shas.get(rel, "UNKNOWN")}
                 for rel in files
@@ -1698,6 +1919,8 @@ def _author_bundle_fallback(
         receipt_path.write_text(json.dumps(row, sort_keys=True) + "\n", encoding="utf-8")
         row["receipt_path"] = str(receipt_path)
         return row
+    except BundleFallbackStorageRefusal:
+        raise
     except Exception as exc:
         failure = {
             "schema": "subagent_commit_bundle_fallback.v1",
@@ -1707,9 +1930,12 @@ def _author_bundle_fallback(
             "label": label,
             "base_head": base_head,
             "error": f"{type(exc).__name__}: {exc}",
-            "attempt_dir": str(attempt),
+            "attempt_dir": None if attempt is None else str(attempt),
         }
-        receipt_path.write_text(json.dumps(failure, sort_keys=True) + "\n", encoding="utf-8")
+        if receipt_path is None:
+            receipt_path = _local_fallback_refusal_receipt(failure)
+        else:
+            receipt_path.write_text(json.dumps(failure, sort_keys=True) + "\n", encoding="utf-8")
         raise RuntimeError(f"{failure['error']} (receipt {receipt_path})") from exc
 
 
@@ -1879,7 +2105,7 @@ def main(rebind_root: bool = False) -> int:
         help=(
             "#1293 git-object denial custody root. On an object-store write denial, "
             "the serializer releases its lock, authors the intended commit in a "
-            "throwaway clone, and retains a bundle + format-patch + typed receipt "
+            "isolated Git object store, and retains a bundle + format-patch + typed receipt "
             "under this directory (rc=17). Default: "
             "$SUBAGENT_SERIALIZER_FALLBACK_RECEIPT_DIR, then the arm label under "
             "/Volumes/VertigoDataTier/pact, then /Volumes/APDataStore/pact."
@@ -2506,7 +2732,7 @@ def main(rebind_root: bool = False) -> int:
         except Exception as exc:
             snapshot_error = f"{type(exc).__name__}: {exc}"
 
-        # The diagnosis + clone/bundle work can be slow and touches no shared
+        # The diagnosis + isolated bundle work can be slow and touches no shared
         # index.  Release before it, as required by the lock discipline.
         _release_lock(lock_fh)
         lock_fh = None
@@ -2525,6 +2751,24 @@ def main(rebind_root: bool = False) -> int:
                 patch_bytes=patch_payload,
                 allow_empty=args.allow_empty,
             )
+        except BundleFallbackStorageRefusal as exc:
+            _append_log(
+                {
+                    **base_record,
+                    "outcome": "bundle_fallback_storage_refused",
+                    "failure_phase": phase,
+                    "git_rc": rc,
+                    "error": str(exc),
+                    "receipt_path": str(exc.receipt_path),
+                }
+            )
+            print(
+                f"BUNDLE_FALLBACK_STORAGE_REFUSED "
+                f"rc={BUNDLE_FALLBACK_STORAGE_REFUSAL_RC} "
+                f"phase={phase} receipt={exc.receipt_path} error={exc}",
+                file=sys.stderr,
+            )
+            return BUNDLE_FALLBACK_STORAGE_REFUSAL_RC
         except Exception as exc:
             _append_log(
                 {
