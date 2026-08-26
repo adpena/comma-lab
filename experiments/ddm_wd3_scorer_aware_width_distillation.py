@@ -42,6 +42,7 @@ for root in (REPO, SRC):
 from experiments import ddm_ds1_cheap_to_shrink as ds1
 from experiments import ddm_wd2_width_distillation_build as wd2_build
 from experiments import ddm_wd3_student_receiver as receiver
+from tac import content_addressed_retention as cas_retention
 from tac.admission_guard import assert_governed_admission
 from tac.scorer import load_differentiable_scorers
 from tac.witness_control.resume_registry import ResumeRegistry
@@ -61,6 +62,13 @@ DECODE_MSE_CEILING = 50.6728233448345
 MAX_CHUNK = 120
 OUTPUT_ROOT = Path("/Volumes/APDataStore/pact/ddm_wd3_scorer_aware_width_distillation")
 STAGE_A_OUTPUT_ROOT = Path("/Volumes/APDataStore/pact/ddm_s1a_stage_a_adapter")
+ALIGNED_OUTPUT_ROOT = Path("/Volumes/APDataStore/pact/ddm_w96a_aligned_window")
+ALIGNED_CAS_ROOT = ALIGNED_OUTPUT_ROOT / "content_addressed_store"
+SEG_LOSS_CALIBRATED_TARGET_PROBABILITY = "calibrated_target_probability"
+SEG_LOSS_EXPECTED_FLIP_MARGIN = "expected_flip_margin"
+ALIGNED_TAU_START = 0.15
+ALIGNED_TAU_END = 0.05
+ALIGNED_FULL_WINDOW_EPOCHS = 65
 STAGE_A_SEEDS = (20260815, 20260816)
 LANE_LEDGER = REPO / ".omx/state/active_lane_dispatch_claims.md"
 BASE_RECEIPT = Path("/Volumes/APDataStore/pact/ddm_hv1_base_advisory_n600_cpu/contest_auth_eval.json")
@@ -297,6 +305,15 @@ def _strict_fields(value: Mapping[str, Any], allowed: set[str], label: str) -> N
         raise WD3Error(f"{label} fields differ; missing={missing}, unknown={unknown}")
 
 
+def _strict_fields_with_optional(
+    value: Mapping[str, Any], required: set[str], optional: set[str], label: str
+) -> None:
+    unknown = sorted(set(value) - required - optional)
+    missing = sorted(required - set(value))
+    if unknown or missing:
+        raise WD3Error(f"{label} fields differ; missing={missing}, unknown={unknown}")
+
+
 CONFIG_FIELDS = {
     "schema",
     "action",
@@ -332,6 +349,31 @@ CONFIG_FIELDS = {
     "cheap_to_shrink",
 }
 
+OBJECTIVE_FIELDS = {
+    "scoreaware",
+    "seg_score_coefficient",
+    "pose_exact_nonlinear",
+    "temperature",
+    "adaptive_duals",
+    "decode_mse_ceiling",
+    "packet_quantizer_in_loop",
+}
+
+ALIGNED_OBJECTIVE_FIELDS = OBJECTIVE_FIELDS | {
+    "seg_loss_law",
+    "expected_flip_tau_start",
+    "expected_flip_tau_end",
+    "full_window_epochs",
+    "pose_start_step",
+}
+
+EVALUATION_RETENTION_FIELDS = {
+    "schema",
+    "mode",
+    "cas_root",
+    "compact_after_verify",
+}
+
 STAGE_A_FIELDS = {
     "schema",
     "enabled",
@@ -356,6 +398,61 @@ CHEAP_TO_SHRINK_FIELDS = {
     "base_weight",
     "sampler_seed",
 }
+
+
+def objective_profile(config: Mapping[str, Any]) -> dict[str, Any]:
+    objective = config.get("objective")
+    if not isinstance(objective, Mapping):
+        raise WD3Error("objective binding is absent")
+    fields = set(objective)
+    if fields == OBJECTIVE_FIELDS:
+        return {
+            "seg_loss_law": SEG_LOSS_CALIBRATED_TARGET_PROBABILITY,
+            "expected_flip_tau_start": None,
+            "expected_flip_tau_end": None,
+            "full_window_epochs": int(config["epochs"]),
+            "pose_start_step": 0,
+        }
+    if fields != ALIGNED_OBJECTIVE_FIELDS:
+        _strict_fields(objective, ALIGNED_OBJECTIVE_FIELDS, "aligned objective")
+    if (
+        objective["seg_loss_law"] != SEG_LOSS_EXPECTED_FLIP_MARGIN
+        or float(objective["expected_flip_tau_start"]) != ALIGNED_TAU_START
+        or float(objective["expected_flip_tau_end"]) != ALIGNED_TAU_END
+        or int(objective["full_window_epochs"]) != ALIGNED_FULL_WINDOW_EPOCHS
+        or int(objective["pose_start_step"]) != 0
+    ):
+        raise WD3Error("aligned expected-flip law, tau schedule, full window, or STEP-ZERO pose differs")
+    return {
+        "seg_loss_law": SEG_LOSS_EXPECTED_FLIP_MARGIN,
+        "expected_flip_tau_start": ALIGNED_TAU_START,
+        "expected_flip_tau_end": ALIGNED_TAU_END,
+        "full_window_epochs": ALIGNED_FULL_WINDOW_EPOCHS,
+        "pose_start_step": 0,
+    }
+
+
+def evaluation_retention_config(config: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    value = config.get("evaluation_retention")
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise WD3Error("evaluation_retention binding is not a mapping")
+    _strict_fields(value, EVALUATION_RETENTION_FIELDS, "evaluation_retention")
+    if (
+        value["schema"] != "ddm_w96b_evaluation_retention.v1"
+        or value["mode"] != "content_addressed_chunks_v1"
+        or Path(value["cas_root"]).resolve() != ALIGNED_CAS_ROOT.resolve()
+        or value["compact_after_verify"] is not True
+    ):
+        raise WD3Error("aligned evaluation retention contract differs")
+    return value
+
+
+def _allowed_output_root(config: Mapping[str, Any]) -> Path:
+    if objective_profile(config)["seg_loss_law"] == SEG_LOSS_EXPECTED_FLIP_MARGIN:
+        return ALIGNED_OUTPUT_ROOT
+    return STAGE_A_OUTPUT_ROOT if config.get("stage_a") is not None else OUTPUT_ROOT
 
 
 def _stage_a_binding(config: Mapping[str, Any]) -> Mapping[str, Any] | None:
@@ -476,7 +573,7 @@ def validate_compiled_config(
 ) -> dict[str, Any]:
     """Validate G0--G5 without loading a scorer or model."""
 
-    _strict_fields(config, CONFIG_FIELDS, "compiled config")
+    _strict_fields_with_optional(config, CONFIG_FIELDS, {"evaluation_retention"}, "compiled config")
     exists = path_exists or Path.is_file
     if config["schema"] != SCHEMA or config["action"] not in {
         "prepare_arm_birth",
@@ -497,10 +594,21 @@ def validate_compiled_config(
         raise WD3Error("non-retaining WD3 config is forbidden")
     if not 1 <= int(config["checkpoint_every_epochs"]) <= 5:
         raise WD3Error("checkpoint cadence must be at most five epochs")
+    profile = objective_profile(config)
+    retention = evaluation_retention_config(config)
     output = Path(config["output"]).resolve()
-    allowed_output_root = STAGE_A_OUTPUT_ROOT if stage_a is not None else OUTPUT_ROOT
+    allowed_output_root = _allowed_output_root(config)
     if output != allowed_output_root.resolve() and allowed_output_root.resolve() not in output.parents:
         raise WD3Error("WD3 output is outside the sealed APDataStore consumer root")
+    if profile["seg_loss_law"] == SEG_LOSS_EXPECTED_FLIP_MARGIN:
+        if retention is None:
+            raise WD3Error("aligned runs require lossless content-addressed evaluation retention")
+        if int(config["epochs"]) != ALIGNED_FULL_WINDOW_EPOCHS:
+            raise WD3Error("aligned run must declare the complete 65-epoch window")
+        if float(config["optimizer"]["lr"]) != 2.0e-5:
+            raise WD3Error("aligned run learning rate differs from CE1's 2e-5 law")
+    elif retention is not None:
+        raise WD3Error("content-addressed aligned retention is not admitted on the legacy OFF law")
     if Path(config["base_receipt"]) != BASE_RECEIPT:
         raise WD3Error("same-instrument base receipt path differs")
     pins = verify_pins(facts=facts)
@@ -528,19 +636,6 @@ def validate_compiled_config(
     ):
         raise WD3Error("negative confirmation must be seeded stratified nonprefix n120")
     objective = config["objective"]
-    _strict_fields(
-        objective,
-        {
-            "scoreaware",
-            "seg_score_coefficient",
-            "pose_exact_nonlinear",
-            "temperature",
-            "adaptive_duals",
-            "decode_mse_ceiling",
-            "packet_quantizer_in_loop",
-        },
-        "objective",
-    )
     if (
         objective["scoreaware"] is not True
         or float(objective["seg_score_coefficient"]) != 100.0
@@ -643,7 +738,10 @@ def compile_fire_order(
         if ready
         else "BLOCKED_NOT_LAUNCHABLE"
     )
-    consumer_root = STAGE_A_OUTPUT_ROOT if config.get("stage_a") is not None else OUTPUT_ROOT
+    try:
+        consumer_root = _allowed_output_root(config)
+    except (WD3Error, KeyError, TypeError, ValueError):
+        consumer_root = OUTPUT_ROOT
     return {
         "schema": "ddm_wd3_fire_order.v1",
         "disposition": disposition,
@@ -811,6 +909,39 @@ def calibrate_soft_disagreement(student_logits: torch.Tensor, original_argmax: t
     }
 
 
+def expected_flip_target_margin(
+    student_logits: torch.Tensor, original_argmax: torch.Tensor
+) -> torch.Tensor:
+    """CE1 target-vs-best-other margin on the original SegNet argmax cell."""
+
+    if student_logits.ndim != 4 or original_argmax.shape != (
+        student_logits.shape[0],
+        student_logits.shape[2],
+        student_logits.shape[3],
+    ):
+        raise WD3Error("expected-flip logits/targets differ")
+    target = original_argmax[:, None].long()
+    target_logit = student_logits.gather(1, target).squeeze(1)
+    other = student_logits.clone()
+    other.scatter_(1, target, -1.0e9)
+    return target_logit - other.amax(dim=1)
+
+
+def expected_flip_tau(
+    step: int,
+    total_steps: int,
+    *,
+    start: float = ALIGNED_TAU_START,
+    end: float = ALIGNED_TAU_END,
+) -> float:
+    """Linear 0.15 -> 0.05 schedule with exact endpoints over a full window."""
+
+    if total_steps < 1 or step < 0 or step >= total_steps or not (start > end > 0):
+        raise WD3Error("expected-flip tau schedule geometry differs")
+    progress = step / max(total_steps - 1, 1)
+    return start + (end - start) * progress
+
+
 def score_native_objective(
     *,
     student_logits: torch.Tensor,
@@ -827,6 +958,8 @@ def score_native_objective(
     thresholds: StageThresholds,
     duals: DualState,
     temperature: float = 2.0,
+    seg_loss_law: str = SEG_LOSS_CALIBRATED_TARGET_PROBABILITY,
+    expected_flip_temperature: float | None = None,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     """Exact WD3 train objective; hard components remain selection authority."""
 
@@ -844,10 +977,21 @@ def score_native_objective(
     selected = selected_cells.bool()
     if not torch.any(selected):
         raise WD3Error("selective objective has zero measured cells")
-    probabilities = student_logits.softmax(dim=1)
-    target_probability = probabilities.gather(1, original_argmax[:, None].long()).squeeze(1)
-    soft_disagreement = (1.0 - target_probability)[selected].mean()
-    calibrated_seg = 100.0 * thresholds.calibration_scale * soft_disagreement
+    if seg_loss_law == SEG_LOSS_CALIBRATED_TARGET_PROBABILITY:
+        if expected_flip_temperature is not None:
+            raise WD3Error("legacy calibrated law cannot carry an expected-flip temperature")
+        probabilities = student_logits.softmax(dim=1)
+        target_probability = probabilities.gather(1, original_argmax[:, None].long()).squeeze(1)
+        seg_axis_train_loss = (1.0 - target_probability)[selected].mean()
+        seg_score_quantity = 100.0 * thresholds.calibration_scale * seg_axis_train_loss
+    elif seg_loss_law == SEG_LOSS_EXPECTED_FLIP_MARGIN:
+        if expected_flip_temperature is None or not expected_flip_temperature > 0:
+            raise WD3Error("expected-flip margin law requires a positive scheduled tau")
+        target_margin = expected_flip_target_margin(student_logits, original_argmax)
+        seg_axis_train_loss = torch.sigmoid(-target_margin[selected] / expected_flip_temperature).mean()
+        seg_score_quantity = 100.0 * seg_axis_train_loss
+    else:
+        raise WD3Error(f"unknown segmentation loss law: {seg_loss_law}")
 
     winner = student_logits.gather(1, teacher_argmax[:, None].long()).squeeze(1)
     competitor_differences = winner[:, None] - student_logits
@@ -872,7 +1016,7 @@ def score_native_objective(
     kl_violation = F.relu(teacher_kl - thresholds.teacher_kl_ceiling)
     decode_violation = F.relu(decode_mse - thresholds.decode_ceiling)
     total = (
-        calibrated_seg
+        seg_score_quantity
         + pose_score
         + duals.margin * margin_violation
         + duals.teacher_kl * kl_violation
@@ -880,8 +1024,8 @@ def score_native_objective(
         + duals.teacher_pose * teacher_pose_mse
     )
     components = {
-        "seg_axis_train_loss_proxy": soft_disagreement,
-        "seg_axis_stage_calibrated_score_proxy": calibrated_seg,
+        "seg_axis_train_loss_proxy": seg_axis_train_loss,
+        "seg_axis_stage_calibrated_score_proxy": seg_score_quantity,
         "teacher_impostor_complete_margin_hinge_loss": margin_loss,
         "teacher_t2_kl_loss": teacher_kl,
         "pose_original_target_mse_train_quantity": pose_mse,
@@ -893,6 +1037,9 @@ def score_native_objective(
         "teacher_kl_constraint_violation": kl_violation,
         "decode_constraint_violation": decode_violation,
     }
+    if seg_loss_law == SEG_LOSS_EXPECTED_FLIP_MARGIN:
+        components["seg_axis_expected_flip_margin_score"] = seg_score_quantity
+        components["seg_axis_expected_flip_tau"] = seg_score_quantity.new_tensor(expected_flip_temperature)
     return total, components
 
 
@@ -1686,6 +1833,7 @@ def evaluate_subset_and_retain(
     device: torch.device,
     chunk_pairs: int,
     stage_a: Mapping[str, Any] | None = None,
+    evaluation_retention: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     ids = np.asarray(pair_ids, dtype=np.int64)
     if ids.size < 1 or np.unique(ids).size != ids.size or chunk_pairs > MAX_CHUNK:
@@ -1698,6 +1846,63 @@ def evaluate_subset_and_retain(
         "cache_surface_sha256": canonical_sha256(_cache_surface_identity(cache)),
     }
     result_path = root / "EVALUATION_RESULT.json"
+    retention_manifest_path = root / "CAS_RETENTION_MANIFEST.json"
+
+    def cas_record_matches(manifest: Mapping[str, Any], record: Mapping[str, Any]) -> bool:
+        try:
+            relative = Path(record["path"]).resolve().relative_to(root.resolve()).as_posix()
+        except (KeyError, TypeError, ValueError):
+            return False
+        return any(
+            item.get("path") == relative
+            and int(item.get("bytes", -1)) == int(record.get("bytes", -2))
+            and item.get("sha256") == record.get("sha256")
+            for item in manifest.get("files", [])
+        )
+
+    def retained_result_from_manifest() -> dict[str, Any]:
+        manifest = cas_retention.verify_manifest(retention_manifest_path, deep=False)
+        prior = json.loads(
+            cas_retention.read_logical_bytes(
+                retention_manifest_path, "EVALUATION_RESULT.json"
+            ).decode("utf-8")
+        )
+        required_records = (
+            prior["receiver_pairs"],
+            prior["scorer_bundle"],
+            prior["packet_archive"]["payloads"]["student_packet"],
+            prior["packet_archive"]["payloads"]["archive"],
+        )
+        if not all(cas_record_matches(manifest, record) for record in required_records):
+            raise WD3Error(f"CAS manifest does not retain every required evaluation payload: {root}")
+        cas_retention.compact_retained_tree(
+            retention_manifest_path,
+            root=root,
+            keep_relative=(retention_manifest_path.name,),
+        )
+        prior["content_addressed_retention"] = {
+            "schema": "ddm_w96b_retained_evaluation_receipt.v1",
+            "manifest": file_record(retention_manifest_path),
+            "cas_root": manifest["cas_root"],
+            "logical_bytes": manifest["logical_bytes"],
+            "unique_object_bytes_within_tree": manifest["unique_object_bytes_within_tree"],
+            "all_payloads_recoverable": True,
+            "physical_copies_compacted_after_cas_verification": True,
+            "symlinks_used": False,
+        }
+        atomic_json(result_path, prior)
+        return prior
+
+    if retention_manifest_path.is_file():
+        prior = retained_result_from_manifest()
+        if (
+            prior.get("schema") != "ddm_wd3_retained_subset_evaluation.v1"
+            or prior.get("pair_ids") != ids.tolist()
+            or prior.get("evaluation_binding") != evaluation_binding
+            or prior.get("all_payloads_retained") is not True
+        ):
+            raise WD3Error(f"content-addressed subset evaluation resume differs: {result_path}")
+        return prior
     if result_path.is_file():
         prior = json.loads(result_path.read_text(encoding="utf-8"))
         if (
@@ -1713,6 +1918,15 @@ def evaluate_subset_and_retain(
             != prior["packet_archive"]["payloads"]["archive"]
         ):
             raise WD3Error(f"retained subset evaluation resume differs: {result_path}")
+        if evaluation_retention is not None:
+            cas_retention.retain_tree(
+                root,
+                store=Path(evaluation_retention["cas_root"]),
+                manifest_path=retention_manifest_path,
+                compact=True,
+                exclude_relative=(retention_manifest_path.name,),
+            )
+            return retained_result_from_manifest()
         return prior
     pair_path = root / "receiver_pairs.rgb.u8"
     temporary = root / "receiver_pairs.in_progress.u8"
@@ -1841,6 +2055,23 @@ def evaluate_subset_and_retain(
         "all_payloads_retained": True,
     }
     atomic_json(result_path, result)
+    if evaluation_retention is not None:
+        _strict_fields(evaluation_retention, EVALUATION_RETENTION_FIELDS, "evaluation_retention")
+        if (
+            evaluation_retention["schema"] != "ddm_w96b_evaluation_retention.v1"
+            or evaluation_retention["mode"] != "content_addressed_chunks_v1"
+            or evaluation_retention["compact_after_verify"] is not True
+            or Path(evaluation_retention["cas_root"]).resolve() != ALIGNED_CAS_ROOT.resolve()
+        ):
+            raise WD3Error("evaluation retention invocation differs from the aligned contract")
+        cas_retention.retain_tree(
+            root,
+            store=Path(evaluation_retention["cas_root"]),
+            manifest_path=retention_manifest_path,
+            compact=True,
+            exclude_relative=(retention_manifest_path.name,),
+        )
+        return retained_result_from_manifest()
     return result
 
 
@@ -2287,8 +2518,13 @@ def _new_optimizer_scheduler(
         )
     else:
         optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=values["weight_decay"])
+        eta_min_fraction = (
+            0.01
+            if objective_profile(config)["seg_loss_law"] == SEG_LOSS_EXPECTED_FLIP_MARGIN
+            else 0.02
+        )
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=max(1, int(config["epochs"])), eta_min=lr * 0.02
+            optimizer, T_max=max(1, int(config["epochs"])), eta_min=lr * eta_min_fraction
         )
     return optimizer, scheduler
 
@@ -2489,7 +2725,30 @@ def _batch_objective(
     cheap_to_shrink: ds1.CheapToShrinkConfig = ds1.DEFAULT_CONFIG,
     rung_allocations: Sequence[receiver.AdaptiveQuantizationAllocation] = (),
     step: int = 0,
+    loss_profile: Mapping[str, Any] | None = None,
+    total_steps: int | None = None,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    profile = dict(
+        loss_profile
+        or {
+            "seg_loss_law": SEG_LOSS_CALIBRATED_TARGET_PROBABILITY,
+            "expected_flip_tau_start": None,
+            "expected_flip_tau_end": None,
+            "pose_start_step": 0,
+        }
+    )
+    tau = None
+    if profile["seg_loss_law"] == SEG_LOSS_EXPECTED_FLIP_MARGIN:
+        if total_steps is None:
+            raise WD3Error("aligned batch objective lacks its full-window step count")
+        tau = expected_flip_tau(
+            step,
+            total_steps,
+            start=float(profile["expected_flip_tau_start"]),
+            end=float(profile["expected_flip_tau_end"]),
+        )
+    if int(profile["pose_start_step"]) != 0:
+        raise WD3Error("pose supervision must be active from step zero")
     target = {
         "teacher_logits": torch.from_numpy(np.asarray(cache["teacher_segnet_logits_f16"][ids]).copy()).to(
             device=device, dtype=torch.float32
@@ -2533,6 +2792,8 @@ def _batch_objective(
             student_logits=logits,
             student_pose6=pose6,
             student_frame1=frame1,
+            seg_loss_law=str(profile["seg_loss_law"]),
+            expected_flip_temperature=tau,
             **target,
         )
 
@@ -2557,10 +2818,12 @@ def train(config: Mapping[str, Any]) -> dict[str, Any]:
     _verify_launch_sources(config)
     assert_governed_admission("ddm_wd3_scorer_aware_width_distillation_train")
     stage_a = _stage_a_binding(config)
+    profile = objective_profile(config)
+    retention = evaluation_retention_config(config)
     storage = storage_preflight(
         Path(config["output"]),
         int(config["minimum_free_bytes"]),
-        allowed_root=STAGE_A_OUTPUT_ROOT if stage_a is not None else OUTPUT_ROOT,
+        allowed_root=_allowed_output_root(config),
     )
     seed_everything(int(config["seed"]))
     device = _device(str(config["device"]))
@@ -2618,7 +2881,14 @@ def train(config: Mapping[str, Any]) -> dict[str, Any]:
     controller_ids = list(map(int, config["subsets"]["controller_n60"]))
     negative_ids = list(map(int, config["subsets"]["negative_n120"]))
     subset_ids = {"controller_n60": controller_ids, "negative_n120": negative_ids}
-    end_epoch = start_epoch + int(config["epochs"])
+    if profile["seg_loss_law"] == SEG_LOSS_EXPECTED_FLIP_MARGIN:
+        end_epoch = int(profile["full_window_epochs"])
+        if start_epoch >= end_epoch:
+            raise WD3Error("aligned resume is already at or past the sealed terminal epoch")
+    else:
+        end_epoch = start_epoch + int(config["epochs"])
+    batches_per_epoch = math.ceil(receiver.N / int(config["batch_pairs"]))
+    total_steps = int(profile["full_window_epochs"]) * batches_per_epoch
     checkpoint_root = output / "checkpoints"
     for epoch in range(start_epoch + 1, end_epoch + 1):
         model.train()
@@ -2642,7 +2912,9 @@ def train(config: Mapping[str, Any]) -> dict[str, Any]:
                 duals=controller.duals,
                 cheap_to_shrink=cheap,
                 rung_allocations=rung_allocations,
-                step=(epoch - 1) * math.ceil(receiver.N / int(config["batch_pairs"])) + batches,
+                step=(epoch - 1) * batches_per_epoch + batches,
+                loss_profile=profile,
+                total_steps=total_steps,
             )
             total.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), optimizer_values["grad_clip"])
@@ -2689,6 +2961,7 @@ def train(config: Mapping[str, Any]) -> dict[str, Any]:
                     device=device,
                     chunk_pairs=int(config["chunk_pairs"]),
                     stage_a=stage_a,
+                    evaluation_retention=retention,
                 )
             row["controller_n60"] = {
                 "hard_d_seg": evaluation["hard_d_seg"],
