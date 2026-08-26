@@ -26,13 +26,22 @@ false-paint flips, pose 0.7546) is the measured warning that carriage can fail 4
    score; the render stage Road-gates Lane paint; store
    `/Volumes/APDataStore/pact/ddm_d3_alphabet_merge/` — READ-ONLY except your own
    per-candidate outputs; note MAIN's live s2_t4 run writes retained/render|scorer/
-   block_s2_t4/ — do not touch); (b) the ALREADY-BUILT witness Lane machinery this carrier
-   inherits: the analytic lane render band in `tools/levelset_byte_close_and_eval.py`
+   block_s2_t4/ — do not touch); (b) the ALREADY-BUILT Lane machinery this carrier inherits
+   ACROSS THE WITNESS LINEAGE (operator 08-26: "a lot of related work and findings from past
+   such as v7, 7.5, 8, 9, 10 and beyond" — recall these AT SOURCE, do not rebuild):
+   the analytic lane render band in `tools/levelset_byte_close_and_eval.py`
    (`lane_render_band` manifest section, `tac.boundary_math.analytic_lane_render_band`) ·
-   the bit-exact Rust AA-SDF lane rasterizer (`runtime-rs/`, task #283 lineage) · Hungarian
-   slot-tracking + coherent multi-frame lane fit (#234) + lane-coeff jitter/denoising (#233,
-   Wave-F) · openpilot lane-polynomial geometry + ground-plane homography custody
-   (`.omx/research/` op1/#325/#326/#327 lineage); (c) cb1's byte-closed Lane band rows
+   the bit-exact Rust AA-SDF lane rasterizer (`runtime-rs/`) · the v8 per-class carrier
+   design `.omx/research/SPEC_v8_perclass_decomposition_20260708.md` (Lane carrier is its
+   core object) · the v10 lane-program DOF lift with BYTE-IDENTICAL round-trip
+   (`.omx/research/ddm_j2_366_consumer_build_DAG_FEED_20260723.md` + receipt json —
+   differentiable track/knot + lane-program DOF) · rg1's Lane as counted program member,
+   24 isolated one-quantum receiver-effective DOFs
+   (`.omx/research/ddm_rg1_receiver_grammar_extension_DAG_FEED_20260724T080402Z.md`) ·
+   Wave-F lane band RD code + coherent multi-frame lane fitting
+   (`.omx/research/wave_f_lane_band_build_design_20260702.md` +
+   `.omx/research/wave_f_lane_band_rd_code_LANDED_stage1_measured_20260702.md` +
+   `.omx/research/lane_coeff_tracking_denoising_optimal_survey_20260702.md`); (c) cb1's byte-closed Lane band rows
    (memo dir `.omx/research/ddm_cb1_perclass_carrier_byteclose_20260725/` +
    `..._DAG_FEED_20260725.md`) — recall its MEASURED Δd_seg and bytes, and d3's caveat:
    cb1's 2,052 B marginal figure depended on a video-derived Lane chart absent from GB1 —
@@ -82,11 +91,16 @@ false-paint flips, pose 0.7546) is the measured warning that carriage can fail 4
 
 ## OPTIMAL FORM
 
-- Family exemplars: d3's instrument stages (render Road-gating + per-candidate scorer path)
-  + cb1's e5a/E4 byte-closed adapter lineage + the #283 bit-exact Rust AA-SDF rasterizer +
-  #234/#233 coherent multi-frame lane fitting. Reuse these; do NOT rebuild lane fitting from
-  scratch — the m165/recall law: the machinery exists, the new work is the COUNTED-CHART
-  accounting + the composed realized measurement.
+- Family exemplars w/ provenance pins: d3's instrument stages (render Road-gating +
+  per-candidate scorer path), commit `7856ad4e68`, store
+  `/Volumes/APDataStore/pact/ddm_d3_alphabet_merge/` · lm1's landing commit `6feae0ac6b`
+  (score_rung screen) · cb1's e5a/E4 byte-closed adapter lineage (memo dir
+  `.omx/research/ddm_cb1_perclass_carrier_byteclose_20260725/`) · the v10 lane-program
+  lift receipt `.omx/research/ddm_j2_366_consumer_build_receipt_20260723.json` · the
+  bit-exact Rust AA-SDF rasterizer under `runtime-rs/` · Wave-F lane RD code (memos pinned
+  in SCOPE 1b). Reuse these; do NOT rebuild lane fitting from scratch — the recall law:
+  the machinery exists, the new work is the COUNTED-CHART accounting + the composed
+  realized measurement.
 - SCOPE reductions declared per row (rung count, band-width sweep bounds). MECHANISM
   reductions FORBIDDEN: no toy coder, no proxy d_seg, no uncounted video-derived inputs,
   no single-point verdict where the charter demands the frontier curve.
