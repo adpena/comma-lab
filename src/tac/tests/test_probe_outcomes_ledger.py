@@ -960,8 +960,13 @@ def test_backfill_atw_v2_d4_anchor_correctness(tmp_ledger: tuple[Path, Path]) ->
         path=ledger,
         lock_path=lock,
     )
+    # Pin now_utc inside the 30-day staleness window of the hardcoded
+    # adjudicated_at_utc. Without the pin this test is a TIME BOMB: it queried
+    # real wall-clock now, so it silently went RED once 2026-06-15 passed —
+    # the row EXPIRED (non-blocking by design, Catalog #298), not a ledger bug.
     view = latest_blocking_outcome_by_recipe(
         ".omx/operator_authorize_recipes/substrate_atw_codec_v2_modal_a100_dispatch.yaml",
+        now_utc=_dt.datetime(2026, 5, 20, tzinfo=_dt.UTC),
         path=ledger,
     )
     assert view is not None
