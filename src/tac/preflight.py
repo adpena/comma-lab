@@ -59310,12 +59310,24 @@ _CHECK_208_LOCAL_PATH_RE = re.compile(
 )
 
 _CHECK_208_WAIVER_RE = re.compile(
-    r"(?:<!--\s*DOCS_LOCAL_PATH_OK\s*:\s*\S|#\s*DOCS_LOCAL_PATH_OK\s*:\s*\S)"
+    r"(?:<!--|#)\s*DOCS_LOCAL_PATH_OK\s*:\s*(\S+)"
 )
-_CHECK_208_WAIVER_PLACEHOLDER_RE = re.compile(
-    r"DOCS_LOCAL_PATH_OK\s*:\s*<reason>",
-    re.IGNORECASE,
-)
+_CHECK_208_WAIVER_PLACEHOLDER_REASON = "<reason>"
+
+
+def _check_208_line_has_real_waiver(line: str) -> bool:
+    """True when the line carries >=1 waiver with a non-placeholder reason.
+
+    Per-match evaluation (not line-global): a line that DOCUMENTS the
+    literal `<reason>` placeholder (e.g. this gate's own catalog row) can
+    still be waived by a separate real-reason waiver on the same line.
+    A line whose only waivers are the `<reason>` placeholder is rejected.
+    """
+    for match in _CHECK_208_WAIVER_RE.finditer(line):
+        reason = match.group(1)
+        if not reason.lower().startswith(_CHECK_208_WAIVER_PLACEHOLDER_REASON):
+            return True
+    return False
 _CHECK_208_DEMO_BLOCK_RE = re.compile(
     r"<!--\s*DEMO_LOCAL_PATH_OK(?:\s*:\s*\S+)?\s*-->",
 )
@@ -59389,7 +59401,7 @@ def check_docs_no_local_absolute_paths(
                 continue
             if not _CHECK_208_LOCAL_PATH_RE.search(line):
                 continue
-            if _CHECK_208_WAIVER_RE.search(line) and not _CHECK_208_WAIVER_PLACEHOLDER_RE.search(line):
+            if _check_208_line_has_real_waiver(line):
                 continue
             violations.append(
                 f"{rel}:{line_no}: local absolute path leak. Replace with "

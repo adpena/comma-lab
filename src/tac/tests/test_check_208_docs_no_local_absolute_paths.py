@@ -409,3 +409,53 @@ def test_live_repo_d2_files_are_clean():
             f"D-2 regression: {d2} re-introduced a local-absolute-path leak.\n"
             f"Violations: {[v[:200] for v in vs if d2 in v]}"
         )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Documented-placeholder + real-waiver coexistence (2026-08-25 detector fix)
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def test_real_waiver_beside_documented_placeholder_is_accepted(tmp_path):
+    """A real waiver wins even when the line DOCUMENTS the placeholder.
+
+    Anchor: docs/meta_bug_class_catalog.md's own #208 catalog row carries
+    the literal ``# DOCS_LOCAL_PATH_OK:<reason>`` as documentation. The
+    old line-global placeholder veto made that row structurally
+    unwaivable. Per-match evaluation cures it; acceptance is otherwise
+    unchanged.
+    """
+    root = _make_corpus(tmp_path, {
+        "docs/catalog.md":
+            "Gate docs: waiver form `# DOCS_LOCAL_PATH_OK:<reason>`; "
+            "pattern `/Users/alice/` refused. "
+            "<!-- DOCS_LOCAL_PATH_OK:row_documents_the_pattern_it_guards -->\n",
+    })
+    vs = check_docs_no_local_absolute_paths(
+        repo_root=root, strict=False, verbose=False,
+    )
+    assert vs == []
+
+
+def test_placeholder_only_waiver_still_rejected(tmp_path):
+    """Acceptance unchanged: placeholder-only waivers still refuse."""
+    root = _make_corpus(tmp_path, {
+        "docs/example.md":
+            "Path /Users/alice/data.txt <!-- DOCS_LOCAL_PATH_OK:<reason> -->\n",
+    })
+    vs = check_docs_no_local_absolute_paths(
+        repo_root=root, strict=False, verbose=False,
+    )
+    assert len(vs) == 1
+
+
+def test_hash_form_placeholder_only_still_rejected(tmp_path):
+    """Acceptance unchanged for the ``#`` waiver form too."""
+    root = _make_corpus(tmp_path, {
+        "docs/example.md":
+            "Path /tmp/scratch.txt # DOCS_LOCAL_PATH_OK:<reason>\n",
+    })
+    vs = check_docs_no_local_absolute_paths(
+        repo_root=root, strict=False, verbose=False,
+    )
+    assert len(vs) == 1

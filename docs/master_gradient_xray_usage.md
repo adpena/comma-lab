@@ -266,7 +266,7 @@ Top-3 actionable findings from the sample run:
 ## Discipline
 
 - Per CLAUDE.md "Forbidden /tmp paths in any persisted artifact" + Catalog
-  #208: `--output` and `--output-dir` reject `/tmp/...` paths.
+  #208: `--output` and `--output-dir` reject `/tmp/...` paths. <!-- DOCS_LOCAL_PATH_OK:documents_the_tmp_refusal_guard_contract_not_a_live_path -->
 - Per CLAUDE.md "MPS auth eval is NOISE" + Catalog #192: plots from
   `darwin_arm64_*` advisory anchors render with an `[advisory: ...]`
   watermark on every figure title.

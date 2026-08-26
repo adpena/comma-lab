@@ -7,7 +7,7 @@
 > The `oss-v0.2.0-rc1` annotated tag is LOCAL-ONLY at `82ecc2a0c`. Pushing
 > to the public remote (`git@github.com:adpena/comma-lab.git`) would
 > publish 1,285 tracked files containing local absolute paths
-> (`/Users/adpena/...`) plus 4 files leaking private Tailscale IPs.
+> (`/Users/adpena/...`) plus 4 files leaking private Tailscale IPs. <!-- DOCS_LOCAL_PATH_OK:oss_audit_report_quotes_the_leak_pattern_it_audited_and_remediated -->
 > See "Hygiene Sweep 2 — pre-publish blockers" below for the remediation
 > plan. This notes file is committed as the artifact that lets the
 > operator confirm intent **before** the public push.
@@ -183,7 +183,7 @@ Live findings at the tagged commit (`82ecc2a0c`) on 2026-05-14:
 
 | Check                                               | Files leaking | Lines |
 |-----------------------------------------------------|---------------|-------|
-| Local absolute paths `/Users/adpena/...`            | 1,285         | ~308+ |
+| Local absolute paths `/Users/adpena/...`            | 1,285         | ~308+ | <!-- DOCS_LOCAL_PATH_OK:oss_audit_report_quotes_the_leak_pattern_it_audited_and_remediated -->
 | Tailscale IP `100.x.x.x` (private fleet)            | 4             | ~14   |
 | Credentials (api key / password / bearer)           | 0             | 0     |
 | Provider tokens (Vast.ai / Modal / Lightning)       | 0             | 0     |
@@ -195,7 +195,7 @@ Files leaking Tailscale IPs (top of list):
 - `scripts/bat00.py` + `scripts/bat00_wsl_setup.ps1` — operator helpers.
 - `.omx/research/domain_exploitation_catalog_20260509.md`.
 
-Files leaking `/Users/adpena/...` paths by top-level directory:
+Files leaking `/Users/adpena/...` paths by top-level directory: <!-- DOCS_LOCAL_PATH_OK:oss_audit_report_quotes_the_leak_pattern_it_audited_and_remediated -->
 
 | Directory             | Count |
 |-----------------------|-------|
@@ -222,7 +222,7 @@ every leak above.
 
 **Option A — sanitize-broader-scope-then-retag (recommended).**
 Run a Hygiene-Sweep-2 lane that sanitizes the 1,285 files leaking
-`/Users/adpena/...` and the 4 files leaking Tailscale IPs. Replace
+`/Users/adpena/...` and the 4 files leaking Tailscale IPs. Replace <!-- DOCS_LOCAL_PATH_OK:oss_audit_report_quotes_the_leak_pattern_it_audited_and_remediated -->
 absolute paths with `<repo-root>` placeholders or repo-relative paths
 (per the Catalog #208 pattern). Once `git grep -E '/Users/[a-zA-Z]+/'`
 returns 0 across the relevant scope, delete the LOCAL `oss-v0.2.0-rc1`
@@ -233,7 +233,7 @@ repo.**
 **Option B — public-mirror-with-sanitization (CI-rebuilt).**
 Establish a separate `oss-public/` worktree (or a CI workflow) that
 filters every commit pushed to the public remote through a
-sanitization pass (`sed -E 's|/Users/adpena/Projects/pact/|<repo-root>/|g'`,
+sanitization pass (`sed -E 's|/Users/adpena/Projects/pact/|<repo-root>/|g'`, <!-- DOCS_LOCAL_PATH_OK:oss_audit_report_quotes_the_leak_pattern_it_audited_and_remediated -->
 strip CLAUDE.md sections matching the fleet table, etc.). The public
 remote becomes a derived-output of the private `main`. **Cost: 1-2 days
 to set up; ongoing maintenance; preserves private operator state under

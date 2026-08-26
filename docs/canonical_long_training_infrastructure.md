@@ -167,7 +167,7 @@ After L2-INFRA-BUILD lands:
 - **Substrate-coupled trainer infrastructure**: training helper hard-codes substrate-specific architecture details (e.g. `dreamer_v3_specific_training_loop()`) → BREAKS COMPOSABILITY.
 - **Skip-L2-infra-and-spawn-L2-training**: each substrate gets ad-hoc training code → DUPLICATIVE + non-production-hardened + non-OSS-clean.
 - **`device='mps'`**: REFUSED at LongTrainingConfig construction per CLAUDE.md "MPS auth eval is NOISE" non-negotiable. Use `'mlx'` for Apple Silicon (acceptable as research-signal) or `'cuda'` for promotion-grade.
-- **`output_dir` under `/tmp/`**: REFUSED at LongTrainingConfig construction per CLAUDE.md "Forbidden /tmp paths in any persisted artifact" + Catalog #220 transient-evidence trap. Use `experiments/results/<lane_id>_<timestamp>/`.
+- **`output_dir` under `/tmp/`**: REFUSED at LongTrainingConfig construction per CLAUDE.md "Forbidden /tmp paths in any persisted artifact" + Catalog #220 transient-evidence trap. Use `experiments/results/<lane_id>_<timestamp>/`. <!-- DOCS_LOCAL_PATH_OK:documents_the_tmp_refusal_guard_contract_not_a_live_path -->
 
 ## Cross-references
 

@@ -66,8 +66,8 @@ Modal CPU replay command from the evidence JSON:
 
 ```bash
 /usr/local/bin/python -u /workspace/pact/experiments/contest_auth_eval.py \
-  --archive /tmp/modal_auth_eval_cpu/archive.zip \
-  --inflate-sh /tmp/modal_auth_eval_cpu/submission_dir/inflate.sh \
+  --archive /tmp/modal_auth_eval_cpu/archive.zip \ <!-- DOCS_LOCAL_PATH_OK:historical_modal_container_workdir_in_reproduction_transcript_not_local_environment -->
+  --inflate-sh /tmp/modal_auth_eval_cpu/submission_dir/inflate.sh \ <!-- DOCS_LOCAL_PATH_OK:historical_modal_container_workdir_in_reproduction_transcript_not_local_environment -->
   --upstream-dir /workspace/pact/upstream \
   --video-names-file /workspace/pact/upstream/public_test_video_names.txt \
   --device cpu \
