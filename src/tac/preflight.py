@@ -3351,6 +3351,14 @@ def preflight_all(
             ),
             strict=False,
         )
+        _parallel.run(
+            "check_no_clone_based_serializer_fallbacks",
+            "[serializer-fallback-no-clone]",
+            lambda: check_no_clone_based_serializer_fallbacks(
+                strict=True, verbose=verbose,
+            ),
+            strict=True,
+        )
         check_claude_md_catalog_no_duplicate_numbers(strict=True, verbose=verbose)
         # Catalog #119 INVERTED 2026-05-31 (operator NON-NEGOTIABLE): commits
         # must NOT carry a Co-Authored-By trailer. STRICT-from-flip per the
@@ -79981,6 +79989,145 @@ def check_subagent_commit_serializer_invokes_sister_checkpoint_guard(
             "(sister of #117 / #157 / #174 / #216 / #230 / #248 / #289 / "
             "#302 / #314).\n  "
             + "\n  ".join(v[:500] for v in violations[:3])
+        )
+    return violations
+
+
+# ============================================================================
+# Task #1302 — clone-based serializer fallback prevention.
+#
+# BS3's #1293 recovery path allocated 8.4 GiB because the serializer used a
+# checkout clone as its denial fallback. Landing 1 replaced that mechanism
+# with an isolated object store and a thin bundle. This strict guard scans the
+# serializer plus its direct landing-tool sisters and refuses any reintroduced
+# Git clone command. Legitimate clone use in a direct sister requires an
+# explicit same-expression waiver with a substantive rationale.
+# ============================================================================
+_CHECK_1302_TARGETS = (
+    "tools/subagent_commit_serializer.py",
+    "tools/auto_commit.sh",
+    "tools/claim_catalog_number.py",
+    "tools/codex_harvest_commit.py",
+    "tools/commit_autosha.sh",
+    "tools/modal_endpoint_close.py",
+    "tools/promote_frontier_archive.py",
+    "tools/register_prereg.py",
+    "tools/sync_agents_md.py",
+)
+_CHECK_1302_WAIVER = "# SERIALIZER_FALLBACK_CLONE_OK:"
+_CHECK_1302_PLACEHOLDERS = {"<rationale>", "<reason>", "todo", "tbd", "legitimate use"}
+
+
+def _check_1302_has_real_waiver(lines: list[str], node: ast.AST) -> bool:
+    start = max(0, int(getattr(node, "lineno", 1)) - 1)
+    end = min(len(lines), int(getattr(node, "end_lineno", start + 1)))
+    for line in lines[start:end]:
+        if _CHECK_1302_WAIVER not in line:
+            continue
+        rationale = line.split(_CHECK_1302_WAIVER, 1)[1].strip()
+        folded = rationale.casefold()
+        if len(rationale) >= 16 and not any(
+            folded.startswith(placeholder) or placeholder in folded
+            for placeholder in _CHECK_1302_PLACEHOLDERS
+        ):
+            return True
+    return False
+
+
+def _check_1302_node_is_git_clone_command(node: ast.AST) -> bool:
+    if not isinstance(node, (ast.Call, ast.List, ast.Tuple)):
+        return False
+    constants = [
+        child.value.strip().casefold()
+        for child in ast.walk(node)
+        if isinstance(child, ast.Constant) and isinstance(child.value, str)
+    ]
+    if any(re.search(r"\bgit\s+clone\b", value) for value in constants):
+        return True
+    try:
+        git_at = constants.index("git")
+        clone_at = constants.index("clone", git_at + 1)
+    except ValueError:
+        return False
+    return clone_at > git_at
+
+
+def check_no_clone_based_serializer_fallbacks(
+    *,
+    repo_root: Path | str | None = None,
+    strict: bool = False,
+    verbose: bool = False,
+) -> list[str]:
+    """Refuse clone commands in the serializer and direct landing tools."""
+
+    root = Path(repo_root).resolve() if repo_root is not None else REPO_ROOT
+    violations: list[str] = []
+    for rel in _CHECK_1302_TARGETS:
+        path = root / rel
+        if not path.is_file():
+            if rel == "tools/subagent_commit_serializer.py":
+                violations.append(f"#1302 canonical serializer missing: {rel}")
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            violations.append(f"#1302 could not inspect {rel}: {type(exc).__name__}: {exc}")
+            continue
+        lines = text.splitlines()
+        if path.suffix != ".py":
+            for lineno, line in enumerate(lines, start=1):
+                if not re.search(r"\bgit\s+clone\b", line, flags=re.IGNORECASE):
+                    continue
+                if _CHECK_1302_WAIVER in line:
+                    rationale = line.split(_CHECK_1302_WAIVER, 1)[1].strip()
+                    folded = rationale.casefold()
+                    if len(rationale) >= 16 and not any(
+                        folded.startswith(placeholder) or placeholder in folded
+                        for placeholder in _CHECK_1302_PLACEHOLDERS
+                    ):
+                        continue
+                violations.append(
+                    f"#1302 clone-based landing fallback forbidden at {rel}:{lineno}; "
+                    "use isolated Git plumbing plus a thin bundle, or add "
+                    f"{_CHECK_1302_WAIVER}<substantive rationale> on the command line"
+                )
+            continue
+        try:
+            tree = ast.parse(text, filename=rel)
+        except SyntaxError as exc:
+            violations.append(f"#1302 could not inspect {rel}: SyntaxError: {exc}")
+            continue
+        covered_spans: set[tuple[int, int]] = set()
+        for node in ast.walk(tree):
+            if not _check_1302_node_is_git_clone_command(node):
+                continue
+            span = (
+                int(getattr(node, "lineno", 1)),
+                int(getattr(node, "end_lineno", getattr(node, "lineno", 1))),
+            )
+            if any(
+                outer_start <= span[0] and span[1] <= outer_end
+                for outer_start, outer_end in covered_spans
+            ):
+                continue
+            covered_spans.add(span)
+            if _check_1302_has_real_waiver(lines, node):
+                continue
+            violations.append(
+                f"#1302 clone-based landing fallback forbidden at {rel}:{span[0]}; "
+                "use isolated Git plumbing plus a thin bundle, or add "
+                f"{_CHECK_1302_WAIVER}<substantive rationale> on the command expression"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "CLONE_BASED_SERIALIZER_FALLBACK_FORBIDDEN (#1302):\n  "
+            + "\n  ".join(violations)
+        )
+    if verbose:
+        print(
+            "  [check_no_clone_based_serializer_fallbacks] "
+            + (f"{len(violations)} violation(s)" if violations else "OK")
         )
     return violations
 
