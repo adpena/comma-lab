@@ -2,6 +2,8 @@
 # Remote lane: pact_nerv_selector_v3 L0 SCAFFOLD smoke (Rice-Golomb selector).
 # WAVE-3-PACT-NERV-G3-SELECTOR-EXTENSIONS-L0-BUILD 2026-05-20.
 # Trainer _full_main raises NotImplementedError per Catalog #240.
+# TIER_REQUIRED_FLAG_WAIVED_OK:--decoder-quant:retired-lineage pact_nerv substrate (no-old-lineage ban 2026-07-23, lessons-only; trainer exemption-listed per #1279) and the trainer's _full_main raises NotImplementedError — this L0 smoke driver never runs the full path these flags govern
+# TIER_REQUIRED_FLAG_WAIVED_OK:--fp4-qat-epochs:retired-lineage pact_nerv substrate (no-old-lineage ban 2026-07-23, lessons-only); _full_main raises NotImplementedError — FP4-QAT fine-tune unreachable from this smoke driver
 set -euo pipefail
 
 # Catalog #244 canonical Modal/CUDA env hygiene (3-export NVML block).
