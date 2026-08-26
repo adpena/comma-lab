@@ -127,3 +127,25 @@ family-closing verdict drawn from a lesser member:
    a verdict row is either derived from measured structure or swept — stated per row.
 4. The FALSIFIER only closes the factorization family if it fires on the REFERENCE-FORM
    member. A generic-only member firing it is an INSTANCE result, not a family closure.
+
+## AMENDMENT 2 (operator 2026-08-26 "No naive or toy or signal suppression due to less
+than optimal design and engineering and optimization against frozen contest information
+space" — BINDING, enforced at MAIN harvest)
+
+The arithmetic is knife-edge (d3c's mid-flight read: stream 49,696 + Lane plane ~64,276 +
+models ≈ the 127,292 B break-even), so ENGINEERING QUALITY IS THE VERDICT. Therefore:
+
+1. A NEAR-MISS (factorized total within ~5,000 B above 127,292) at anything short of the
+   full Amendment-1 reference form is NOT a closure — it is an OPTIMIZATION DEBT. The
+   NSCS06 v6→v7 precedent binds (44% improvement in ONE cargo-cult-unwind iteration): a
+   near-miss triggers an iterate-to-optimal-form round (context radii swept, mixer raced,
+   geometry features derived not generic) BEFORE any FORMULATION verdict.
+2. The 4-CLASS MODEL side owes the SAME optimal-form treatment as the Lane plane: the
+   gb1/jt-family conditioning collection (groupbin8-class decode-scan families, the mi1
+   law) was measured on the 5-CLASS model — the 4-class model is a NEW object whose
+   conditioning ceiling is unmeasured. A verdict that carries the 4-class model at naive
+   form while the bar is ~13 KB away is suppression by construction.
+3. The d3c screen's chain ORDERING is itself crude-context-conditioned: any pyramid
+   successor must reference-form re-rank the top chains, never inherit the crude winner.
+4. MAIN refuses at harvest any family closure whose per-component form-grade table is
+   absent or shows a sub-reference component on the critical path.
