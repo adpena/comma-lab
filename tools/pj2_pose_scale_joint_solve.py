@@ -528,8 +528,9 @@ def load_shipped(archive: Path) -> dict:
     import inflate_runner_v4d as rv4d
     with tempfile.TemporaryDirectory() as td:
         d = Path(td)
-        with zipfile.ZipFile(archive) as z:
-            z.extractall(d)
+        from tac.submission_archive import safe_extract_zip
+
+        safe_extract_zip(archive, d)
         dec = rv4d.Decoder(d)
         out = {
             "n_pairs": int(dec.n_pairs),

@@ -2825,8 +2825,13 @@ def run_inflate(packet_dir: Path, n_pairs_total: int, max_pairs: int | None) -> 
     # archive's BYTES here — this fires in main, every worktree, and every subagent.
     from tac.artifact_quarantine import assert_not_quarantined_archive
     assert_not_quarantined_archive(packet_dir / "archive.zip", context="levelset_byte_close decode")
-    with zipfile.ZipFile(packet_dir / "archive.zip") as zf:
-        zf.extractall(archive_dir)
+    import shutil
+
+    from tac.submission_archive import safe_extract_zip
+
+    if archive_dir.exists():
+        shutil.rmtree(archive_dir)
+    safe_extract_zip(packet_dir / "archive.zip", archive_dir)
     src_bin = archive_dir / "0.bin"
 
     eval_pairs = n_pairs_total if max_pairs is None else min(int(max_pairs), n_pairs_total)

@@ -4145,6 +4145,38 @@ class TestArchiveBuildersUseDeterministicZip:
             )
         assert indexed == v
 
+    def test_check_skips_vendored_site_packages_but_catches_first_party(
+        self, tmp_path: Path
+    ) -> None:
+        # 2026-08-26 r50 class-39 pin: vendored virtualenv trees retained inside
+        # experiments/results custody dirs (uv_project_env/**/site-packages/**)
+        # are third-party code and out of scanner scope; a first-party sibling
+        # with the same violation must still be caught.
+        root = _stub_repo(tmp_path)
+        bad_source = """
+            import zipfile
+            def main():
+                with zipfile.ZipFile("archive.zip", "r") as zf:
+                    zf.""" + """extractall("out")
+        """
+        _write(
+            root
+            / "experiments"
+            / "results"
+            / "run_x"
+            / "uv_project_env"
+            / "lib"
+            / "python3.12"
+            / "site-packages"
+            / "setuptools"
+            / "vendor_mod.py",
+            bad_source,
+        )
+        _write(root / "experiments" / "first_party_probe.py", bad_source)
+        v = check_no_raw_zip_extractall(repo_root=root, strict=False, verbose=False)
+        assert any("first_party_probe.py" in s for s in v), v
+        assert not any("site-packages" in s for s in v), v
+
     def test_check_allows_canonical_safe_zip_extractor(self, tmp_path: Path) -> None:
         root = _stub_repo(tmp_path)
         helper_source = """

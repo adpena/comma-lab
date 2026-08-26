@@ -98,8 +98,9 @@ def main() -> int:
         shutil.copy(RECEIVER, stage / "inflate_runner_v4c.py")
         arch_dir = stage / "archive"
         arch_dir.mkdir()
-        with zipfile.ZipFile(archive) as z:
-            z.extractall(arch_dir)
+        from tac.submission_archive import safe_extract_zip
+
+        safe_extract_zip(archive, arch_dir)
         sys.path.insert(0, str(stage))
         import inflate_runner_v4c as rc
 

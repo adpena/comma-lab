@@ -971,8 +971,9 @@ def _extract_submission(archive: Path, output_dir: Path) -> None:
     if output_dir.exists():
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(archive) as zf:
-        zf.extractall(output_dir)
+    from tac.submission_archive import safe_extract_zip
+
+    safe_extract_zip(archive, output_dir)
 
 
 def _read_archive_member(archive: Path, member: str) -> bytes:

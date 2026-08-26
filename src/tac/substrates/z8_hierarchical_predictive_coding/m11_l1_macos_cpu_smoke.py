@@ -740,8 +740,13 @@ def run_z8_m11_l1_smoke(
     # Mimic the canonical upstream/evaluate.sh dance: unzip archive.zip,
     # then invoke inflate.sh with (archive_dir, output_dir, file_list).
     archive_dir.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(archive_zip, "r") as zf:
-        zf.extractall(archive_dir)
+    import shutil
+
+    from tac.submission_archive import safe_extract_zip
+
+    if archive_dir.exists():
+        shutil.rmtree(archive_dir)
+    safe_extract_zip(archive_zip, archive_dir)
     inflated_dir = submission_dir / "inflated"
     inflated_dir.mkdir(parents=True, exist_ok=True)
 

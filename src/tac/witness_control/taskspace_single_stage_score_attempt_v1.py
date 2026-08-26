@@ -1601,7 +1601,7 @@ def _safe_extract_archive(archive: Path, output: Path) -> None:
                     raise SingleStageScoreAttemptError(
                         "counted archive member is unsafe"
                     )
-            handle.extractall(output)
+            handle.extractall(output)  # RAW_EXTRACTALL_OK: per-member absolute/dotdot/dir validation loop directly above
     except (OSError, zipfile.BadZipFile) as exc:
         raise SingleStageScoreAttemptError(
             "counted archive could not be extracted"

@@ -84,8 +84,9 @@ def stage_receiver(stage: Path, archive: Path, template: Path) -> Path:
     if arch_dir.exists():
         shutil.rmtree(arch_dir)
     arch_dir.mkdir()
-    with zipfile.ZipFile(archive) as zf:
-        zf.extractall(arch_dir)
+    from tac.submission_archive import safe_extract_zip
+
+    safe_extract_zip(archive, arch_dir)
     sys.path.insert(0, str(stage))
     return arch_dir
 

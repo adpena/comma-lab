@@ -133,8 +133,9 @@ def main() -> int:
     if archive_dir.exists():
         shutil.rmtree(archive_dir)
     archive_dir.mkdir(parents=True)
-    with zipfile.ZipFile(archive) as zf:
-        zf.extractall(archive_dir)
+    from tac.submission_archive import safe_extract_zip
+
+    safe_extract_zip(archive, archive_dir)
     receipt["archive_members"] = sorted(p.name for p in archive_dir.iterdir())
 
     inf = run_inflate(sub, archive_dir=archive_dir, out_dir=args.inflate_out,

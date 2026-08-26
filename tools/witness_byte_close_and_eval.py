@@ -425,8 +425,13 @@ def run_inflate(packet_dir: Path, n_pairs_total: int, max_pairs: int | None) -> 
     inflated_dir = packet_dir / "inflated"
     archive_dir.mkdir(exist_ok=True)
     inflated_dir.mkdir(exist_ok=True)
-    with zipfile.ZipFile(packet_dir / "archive.zip") as zf:
-        zf.extractall(archive_dir)
+    import shutil
+
+    from tac.submission_archive import safe_extract_zip
+
+    if archive_dir.exists():
+        shutil.rmtree(archive_dir)
+    safe_extract_zip(packet_dir / "archive.zip", archive_dir)
     src_bin = archive_dir / "0.bin"
 
     eval_pairs = n_pairs_total if max_pairs is None else min(int(max_pairs), n_pairs_total)

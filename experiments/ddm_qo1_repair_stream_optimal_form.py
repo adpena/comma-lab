@@ -248,8 +248,9 @@ def _stage_and_accept(
     if ext.exists():
         shutil.rmtree(ext)
     ext.mkdir()
-    with zipfile.ZipFile(archive) as zf:
-        zf.extractall(ext)
+    from tac.submission_archive import safe_extract_zip
+
+    safe_extract_zip(archive, ext)
 
     sys.path.insert(0, str(archive_dest))
     sys.modules.pop("inflate_runner", None)

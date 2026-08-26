@@ -881,8 +881,9 @@ def _audit_submission_tree(
         data_dir.mkdir()
         out_dir.mkdir()
         list_path.write_text(config.video_name + "\n", encoding="utf-8")
-        with zipfile.ZipFile(archive_path) as archive:
-            archive.extractall(data_dir)
+        from tac.submission_archive import safe_extract_zip
+
+        safe_extract_zip(archive_path, data_dir)
         env_python = config.python_bin or Path("python3")
         old_python_bin = os.environ.get("PACT_PYTHON_BIN")
         os.environ["PACT_PYTHON_BIN"] = str(env_python)

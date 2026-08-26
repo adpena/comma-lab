@@ -19147,7 +19147,20 @@ def check_no_raw_zip_extractall(
         rel = path.relative_to(root).as_posix()
         if rel in _RAW_EXTRACTALL_ALLOWED:
             continue
-        if any(part in path.parts for part in ("__pycache__", ".pytest_cache", "tests")):
+        # `site-packages` / `uv_project_env`: vendored third-party virtualenv
+        # trees retained inside experiments/results custody dirs (setuptools,
+        # torch, ...). Not our code; the indexed scan path never reaches them —
+        # this keeps the index-less fallback scope-consistent (2026-08-26 r50).
+        if any(
+            part in path.parts
+            for part in (
+                "__pycache__",
+                ".pytest_cache",
+                "tests",
+                "site-packages",
+                "uv_project_env",
+            )
+        ):
             continue
         try:
             text = path.read_text(encoding="utf-8")

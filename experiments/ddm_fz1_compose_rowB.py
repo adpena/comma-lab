@@ -163,7 +163,13 @@ def main() -> int:
     # ---- acceptance through the ACTUAL receiver --------------------------------------------
     ext = args.dest / "archive"
     ext.mkdir(exist_ok=True)
-    zipfile.ZipFile(archive).extractall(ext)
+    import shutil
+
+    from tac.submission_archive import safe_extract_zip
+
+    if ext.exists():
+        shutil.rmtree(ext)
+    safe_extract_zip(archive, ext)
     sys.path.insert(0, str(args.runtime))
     import inflate_runner as RUN
     dec = RUN.Decoder(ext)

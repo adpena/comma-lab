@@ -227,8 +227,9 @@ def verify_receiver(rungs: dict[str, bytes], work: pathlib.Path) -> dict[str, An
             shutil.rmtree(case_dir)
         case_dir.mkdir(parents=True, exist_ok=True)
         (case_dir / "_in.zip").write_bytes(blob)
-        with zipfile.ZipFile(case_dir / "_in.zip") as archive:
-            archive.extractall(case_dir)
+        from tac.submission_archive import safe_extract_zip
+
+        safe_extract_zip(case_dir / "_in.zip", case_dir)
         (case_dir / "_in.zip").unlink()
         try:
             decoder = module.Decoder(case_dir)

@@ -394,8 +394,9 @@ def run_packet_member_merge_receiver_smoke(
         tmp_root = Path(tmp)
         archive_dir = Path(tmp) / "archive"
         archive_dir.mkdir()
-        with zipfile.ZipFile(archive, "r") as zf:
-            zf.extractall(archive_dir)
+        from tac.submission_archive import safe_extract_zip
+
+        safe_extract_zip(archive, archive_dir)
         file_list_path, file_list_entries, file_list_fixture_kind = _smoke_file_list_path(
             file_list,
             tmp_root=tmp_root,

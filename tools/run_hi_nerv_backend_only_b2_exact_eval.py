@@ -478,7 +478,7 @@ def _inflate_only_validation(
             p = Path(name)
             if p.is_absolute() or any(part in {"", ".."} for part in p.parts):
                 raise SystemExit(f"unsafe archive member: {name!r}")
-        zf.extractall(archive_dir)
+        zf.extractall(archive_dir)  # RAW_EXTRACTALL_OK: per-member absolute/dotdot validation loop directly above
     if inflated_dir.exists():
         shutil.rmtree(inflated_dir, ignore_errors=True)
     inflated_dir.mkdir(parents=True, exist_ok=True)

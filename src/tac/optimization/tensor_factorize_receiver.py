@@ -402,8 +402,9 @@ def run_tensor_factorize_receiver_smoke(
     with tempfile.TemporaryDirectory(prefix="tensor-factorize-smoke-") as tmp:
         archive_dir = Path(tmp) / "archive"
         archive_dir.mkdir()
-        with zipfile.ZipFile(archive, "r") as zf:
-            zf.extractall(archive_dir)
+        from tac.submission_archive import safe_extract_zip
+
+        safe_extract_zip(archive, archive_dir)
         command = [
             str(runtime / WRAPPER_SH),
             str(archive_dir),

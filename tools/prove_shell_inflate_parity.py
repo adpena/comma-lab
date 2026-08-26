@@ -144,7 +144,7 @@ def _safe_extract_zip(archive_path: Path, output_dir: Path) -> None:
             target = (output_dir / info.filename).resolve()
             if root not in target.parents and target != root:
                 raise ValueError(f"refusing unsafe zip member path: {info.filename!r}")
-        archive.extractall(output_dir)
+        archive.extractall(output_dir)  # RAW_EXTRACTALL_OK: per-member path-containment loop directly above in this local _safe_extract_zip
 
 
 def _validate_overwrite_output_dir(output_dir: Path) -> None:

@@ -340,8 +340,9 @@ def _stage_candidate(
     if archive_dir.exists():
         shutil.rmtree(archive_dir)
     archive_dir.mkdir(parents=True)
-    with zipfile.ZipFile(archive) as zf:
-        zf.extractall(archive_dir)
+    from tac.submission_archive import safe_extract_zip
+
+    safe_extract_zip(archive, archive_dir)
 
     row: dict[str, Any] = {
         "name": name,

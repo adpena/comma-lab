@@ -1761,7 +1761,7 @@ def run_receiver(*, stage_root: Path, receiver_result: Mapping[str, Any]) -> tup
     with zipfile.ZipFile(receiver_close.verify_record(receiver_result["archive"])) as archive:
         if archive.namelist() != ["p"]:
             raise JO3EntrypointError("receiver archive member census differs")
-        archive.extractall(archive_dir)
+        archive.extractall(archive_dir)  # RAW_EXTRACTALL_OK: member census validated == ["p"] two lines above
     atomic_bytes(names, b"0.mp4\n")
     receiver_root = Path(str(receiver_result["archive"]["path"])).resolve().parent
     inflate_sh = receiver_root / "submission/inflate.sh"

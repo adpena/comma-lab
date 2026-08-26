@@ -70,8 +70,13 @@ def _inflate_archive(archive: Path, work_dir: Path, inflate_sh: Path) -> Path:
     inflated_dir.mkdir(parents=True, exist_ok=True)
     # Unpack archive.zip into archive_dir (contest contract)
     import zipfile
-    with zipfile.ZipFile(archive, "r") as zf:
-        zf.extractall(archive_dir)
+    import shutil
+
+    from tac.submission_archive import safe_extract_zip
+
+    if archive_dir.exists():
+        shutil.rmtree(archive_dir)
+    safe_extract_zip(archive, archive_dir)
     # Build file_list: contest expects per-video filenames (no extension)
     file_list_path = work_dir / "file_list.txt"
     # Use the contest's canonical video list

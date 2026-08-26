@@ -205,8 +205,9 @@ def _cmd_close(args: argparse.Namespace) -> int:
         arch_dir.mkdir(parents=True)
         import zipfile
 
-        with zipfile.ZipFile(archive) as zf:
-            zf.extractall(arch_dir)
+        from tac.submission_archive import safe_extract_zip
+
+        safe_extract_zip(archive, arch_dir)
         inflate_res = run_inflate(
             submission_dir,
             archive_dir=arch_dir,

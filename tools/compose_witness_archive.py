@@ -855,8 +855,13 @@ def _inflate_and_realize(
     inflated_dir = packet_dir / "inflated"
     archive_dir.mkdir(exist_ok=True)
     inflated_dir.mkdir(exist_ok=True)
-    with zipfile.ZipFile(packet_dir / "archive.zip") as zf:
-        zf.extractall(archive_dir)
+    import shutil
+
+    from tac.submission_archive import safe_extract_zip
+
+    if archive_dir.exists():
+        shutil.rmtree(archive_dir)
+    safe_extract_zip(packet_dir / "archive.zip", archive_dir)
     src_bin = archive_dir / "0.bin"
     dst_raw = inflated_dir / "0.raw"
     cmd = [sys.executable, str(packet_dir / "inflate.py"), str(src_bin), str(dst_raw)]

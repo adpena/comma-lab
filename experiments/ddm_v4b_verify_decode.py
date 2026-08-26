@@ -59,8 +59,9 @@ def _unzip(archive: Path, dest: Path) -> None:
     if dest.exists():
         shutil.rmtree(dest)
     dest.mkdir(parents=True)
-    with zipfile.ZipFile(archive) as z:
-        z.extractall(dest)
+    from tac.submission_archive import safe_extract_zip
+
+    safe_extract_zip(archive, dest)
 
 
 def _setup_decode_root() -> tuple[Path, Path]:

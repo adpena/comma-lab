@@ -119,9 +119,14 @@ def _import_sparse_inflate(submission_dir: Path) -> Any:
 
 
 def _extract_archive(path: Path, target: Path) -> dict[str, bytes]:
-    target.mkdir(parents=True, exist_ok=True)
+    import shutil
+
+    from tac.submission_archive import safe_extract_zip
+
+    if target.exists():
+        shutil.rmtree(target)
+    safe_extract_zip(path, target)
     with zipfile.ZipFile(path) as archive:
-        archive.extractall(target)
         return {info.filename: archive.read(info.filename) for info in archive.infolist()}
 
 

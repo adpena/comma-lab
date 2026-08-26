@@ -350,8 +350,14 @@ def _run_inflate(
     runtime_dir.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(archive_path) as zf:
         member_payload = zf.read(member_name)
-        if runtime.get("source") == "archive_embedded":
-            zf.extractall(runtime_dir)
+    if runtime.get("source") == "archive_embedded":
+        import shutil
+
+        from tac.submission_archive import safe_extract_zip
+
+        if runtime_dir.exists():
+            shutil.rmtree(runtime_dir)
+        safe_extract_zip(archive_path, runtime_dir)
     if runtime.get("source") == "archive_embedded":
         inflate_sh = runtime_dir / "inflate.sh"
     else:
