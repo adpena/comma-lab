@@ -50766,6 +50766,8 @@ def _check_154_manifestless_cleanup_identity(repo_root: Path) -> list[str]:
         if not top.is_dir():
             continue
         for path in sorted(top.rglob("*.py")):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = path.relative_to(repo_root).as_posix()
             if (
                 rel in _CHECK_154_SELF_EXEMPT_PATHS
@@ -57719,6 +57721,8 @@ def _check_199_iter_candidate_files(root: Path) -> list[Path]:
         if not sub_path.is_dir():
             continue
         for path in sub_path.rglob("*"):
+            if _is_oss_export_mirror_path(path):
+                continue
             if not path.is_file():
                 continue
             if path.suffix not in _CHECK_199_SCAN_EXTS:
@@ -59646,6 +59650,8 @@ def _check_209_iter_target_files(repo_root: Path) -> Iterator[Path]:
         if not scope_dir.exists():
             continue
         for path in scope_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = path.relative_to(repo_root).as_posix()
             if any(frag in rel for frag in _CHECK_209_EXEMPT_PATH_FRAGMENTS):
                 continue
@@ -59832,6 +59838,8 @@ def _check_210_iter_target_files(repo_root: Path) -> Iterator[Path]:
         if not scope_dir.exists():
             continue
         for path in scope_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = path.relative_to(repo_root).as_posix()
             if any(frag in rel for frag in _CHECK_210_EXEMPT_PATH_FRAGMENTS):
                 continue
@@ -60016,6 +60024,8 @@ def _check_211_iter_target_files(repo_root: Path) -> Iterator[Path]:
         if not scope_dir.exists():
             continue
         for path in scope_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = path.relative_to(repo_root).as_posix()
             if any(frag in rel for frag in _CHECK_211_EXEMPT_PATH_FRAGMENTS):
                 continue
@@ -63556,6 +63566,8 @@ def check_modal_dispatches_register_call_id(
         if not scan_dir.is_dir():
             continue
         for py in scan_dir.rglob("*.py"):
+            if _is_oss_export_mirror_path(py):
+                continue
             if py in excluded_files:
                 continue
             # Skip tests
@@ -67297,6 +67309,8 @@ def check_slim_ranker_consumes_canonical_taylor_proxies(
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.py")):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = str(path.relative_to(root))
             if any(marker in rel for marker in _CHECK_250_SELF_EXEMPT_PATHS):
                 continue
@@ -67375,6 +67389,8 @@ def check_falling_rule_list_canonical_use(
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.py")):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = str(path.relative_to(root))
             if any(marker in rel for marker in _CHECK_251_SELF_EXEMPT_PATHS):
                 continue
@@ -67449,6 +67465,8 @@ def check_rashomon_ensemble_continual_update_locked(
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.py")):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = str(path.relative_to(root))
             if any(marker in rel for marker in _CHECK_252_SELF_EXEMPT_PATHS):
                 continue
@@ -67528,6 +67546,8 @@ def check_compressive_landscape_canonical_use(
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.py")):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = str(path.relative_to(root))
             if any(marker in rel for marker in _CHECK_253_SELF_EXEMPT_PATHS):
                 continue
@@ -67600,6 +67620,8 @@ def check_wavelet_multi_scale_ranker_contract(
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.py")):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = str(path.relative_to(root))
             if any(marker in rel for marker in _CHECK_254_SELF_EXEMPT_PATHS):
                 continue
@@ -67672,6 +67694,8 @@ def check_gosdt_dispatcher_whiteboard_discipline(
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.py")):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = str(path.relative_to(root))
             if any(marker in rel for marker in _CHECK_255_SELF_EXEMPT_PATHS):
                 continue
@@ -67769,6 +67793,8 @@ def check_preflight_slim_risk_scorer_canonical_use(
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.py")):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = str(path.relative_to(root))
             if any(marker in rel for marker in _CHECK_273_SELF_EXEMPT_PATHS):
                 continue
@@ -67848,6 +67874,8 @@ def check_preflight_falling_rule_list_canonical_use(
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.py")):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = str(path.relative_to(root))
             if any(marker in rel for marker in _CHECK_274_SELF_EXEMPT_PATHS):
                 continue
@@ -67926,6 +67954,8 @@ def check_preflight_rashomon_ensemble_continual_update_locked(
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.py")):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = str(path.relative_to(root))
             if any(marker in rel for marker in _CHECK_275_SELF_EXEMPT_PATHS):
                 continue
@@ -68006,6 +68036,8 @@ def check_preflight_compressive_landscape_canonical_use(
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.py")):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = str(path.relative_to(root))
             if any(marker in rel for marker in _CHECK_276_SELF_EXEMPT_PATHS):
                 continue
@@ -68088,6 +68120,8 @@ def check_preflight_wavelet_multi_scale_contract(
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.py")):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = str(path.relative_to(root))
             if any(marker in rel for marker in _CHECK_277_SELF_EXEMPT_PATHS):
                 continue
@@ -68169,6 +68203,8 @@ def check_preflight_gosdt_dispatcher_whiteboard_discipline(
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.py")):
+            if _is_oss_export_mirror_path(path):
+                continue
             rel = str(path.relative_to(root))
             if any(marker in rel for marker in _CHECK_278_SELF_EXEMPT_PATHS):
                 continue
@@ -90701,6 +90737,8 @@ def check_residual_override_has_coverage_proof(
         if not sroot.is_dir():
             continue
         for entry in sorted(sroot.rglob("*.py")):
+            if _is_oss_export_mirror_path(entry):
+                continue
             rel = entry.relative_to(root).as_posix()
             if "/tests/" in rel or entry.name.startswith("test_") or "_intake_" in rel:
                 continue
@@ -91497,6 +91535,8 @@ def check_codex_exec_spawn_paths_are_reaper_immune(
         if not base.is_dir():
             continue
         for py in sorted(base.rglob("*.py")):
+            if _is_oss_export_mirror_path(py):
+                continue
             rel = py.relative_to(root).as_posix()
             if "/tests/" in rel or rel.startswith("tests/") or "_intake_" in rel:
                 continue
