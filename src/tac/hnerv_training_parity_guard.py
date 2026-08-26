@@ -197,6 +197,91 @@ def _assigned_string_literals(text: str, function_name: str) -> dict[str, str]:
     return values
 
 
+def _module_string_literals(text: str) -> dict[str, str]:
+    """Return top-level string-constant assignments of a module.
+
+    Sister of :func:`_assigned_string_literals` at module scope. The Wave
+    N+45 sane_hnerv refactor moved the runtime templates out of
+    ``_write_runtime`` into module constants (``_INFLATE_SH_TEMPLATE``);
+    the guard must resolve that shape too — the CONTRACT is "emits literal
+    templates that satisfy the parity rules", not "assigns them inside the
+    function body".
+    """
+
+    module = _parse_module(text)
+    if module is None:
+        return {}
+    values: dict[str, str] = {}
+    for node in module.body:
+        target_names: list[str] = []
+        value_node: ast.AST | None = None
+        if isinstance(node, ast.Assign):
+            target_names = [
+                target.id for target in node.targets if isinstance(target, ast.Name)
+            ]
+            value_node = node.value
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            target_names = [node.target.id]
+            value_node = node.value
+        if value_node is None:
+            continue
+        try:
+            value = ast.literal_eval(value_node)
+        except (ValueError, SyntaxError):
+            continue
+        if not isinstance(value, str):
+            continue
+        for target in target_names:
+            values[target] = value
+    return values
+
+
+def _write_runtime_written_templates(text: str) -> dict[str, str]:
+    """Resolve inflate.sh/inflate.py template text written by ``_write_runtime``.
+
+    Walks ``_write_runtime`` for ``<path-expr>.write_text(ARG, ...)`` calls
+    whose path expression carries an ``"inflate.sh"`` / ``"inflate.py"``
+    string constant, then resolves ARG either as an inline string literal or
+    as a reference to a module-level string constant. Returns at most
+    ``{"inflate_sh": ..., "inflate_py": ...}`` so the caller can run the SAME
+    per-template inspections on the resolved text (extraction is widened;
+    acceptance is unchanged).
+    """
+
+    module = _parse_module(text)
+    if module is None:
+        return {}
+    runtime_fn = _top_level_function(module, "_write_runtime")
+    if runtime_fn is None:
+        return {}
+    module_constants = _module_string_literals(text)
+    resolved: dict[str, str] = {}
+    for node in ast.walk(runtime_fn):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not (isinstance(func, ast.Attribute) and func.attr == "write_text"):
+            continue
+        target_key: str | None = None
+        for sub in ast.walk(func.value):
+            if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
+                if sub.value.endswith("inflate.sh"):
+                    target_key = "inflate_sh"
+                elif sub.value.endswith("inflate.py"):
+                    target_key = "inflate_py"
+        if target_key is None or not node.args:
+            continue
+        arg = node.args[0]
+        value: str | None = None
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            value = arg.value
+        elif isinstance(arg, ast.Name):
+            value = module_constants.get(arg.id)
+        if value:
+            resolved.setdefault(target_key, value)
+    return resolved
+
+
 def _shell_tokens_by_line(script: str) -> list[tuple[str, list[str]]]:
     tokenized: list[tuple[str, list[str]]] = []
     for raw_line in script.splitlines():
@@ -526,6 +611,9 @@ def inspect_hnerv_training_parity_source(
             )
 
     templates = _assigned_string_literals(text, "_write_runtime")
+    if "inflate_sh" not in templates or "inflate_py" not in templates:
+        for key, value in _write_runtime_written_templates(text).items():
+            templates.setdefault(key, value)
     inflate_sh = templates.get("inflate_sh", "")
     inflate_py = templates.get("inflate_py", "")
     emitted_runtime = "\n".join(value for value in (inflate_sh, inflate_py) if value)

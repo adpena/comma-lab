@@ -335,3 +335,24 @@ def _full_main(args):
     )
     provenance = {"ready_for_exact_eval_dispatch": False}
 '''
+
+
+def test_guard_inspects_module_level_template_constants() -> None:
+    """Module-constant templates (Wave N+45 sane_hnerv shape) are RESOLVED, not skipped.
+
+    Extraction is widened to module-level string constants written by
+    ``_write_runtime``'s ``write_text`` calls; acceptance is unchanged — a
+    non-conformant module-level template must still flag.
+    """
+
+    src = (REPO_ROOT / "experiments" / "train_substrate_sane_hnerv.py").read_text(
+        encoding="utf-8"
+    )
+    # Cure direction: the live module-constant shape resolves and passes.
+    clean = inspect_hnerv_training_parity_source(src, path_label="sane_hnerv_live")
+    assert not any("emits no literal" in v for v in clean.violations)
+    # Acceptance direction: a bad module-level sh template still flags
+    # through the new resolution path.
+    bad = src.replace("set -euo pipefail", "true")
+    report = inspect_hnerv_training_parity_source(bad, path_label="sane_hnerv_bad_sh")
+    assert any("set -e/pipefail" in v for v in report.violations)
