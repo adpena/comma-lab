@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# AUTOCAST_FP16_WAIVED:macOS-CPU-local-scorer-loop/QAT-harness-(TRAINER_AUTHORITY-declares-macos_cpu,-no-CUDA-path)-torch-CUDA-autocast-inapplicable
 """SNeRV local scorer-loop decoder/QAT trainer harness.
 
 This wraps the existing receiver-priced SNeRV scorer-loop implementation with

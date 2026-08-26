@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# AUTOCAST_FP16_WAIVED:MLX-local-substrate-trainer-torch-CUDA-autocast-inapplicable-(MLX-fp32-per-the-train/authority-split;-lineage-lessons-only)
 """HiNeRV MLX-local score-aware trainer.
 
 This is a real MLX harness binding for the current local HiNeRV archive family.
