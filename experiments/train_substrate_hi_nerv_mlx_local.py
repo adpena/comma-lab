@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# NO_GRAD_WAIVED:MLX-substrate-trainer-(torch.no_grad-inapplicable:-MLX-has-no-autograd-tape-to-disable;-gradients-only-via-explicit-mx.value_and_grad)
 # TORCH_COMPILE_WAIVED:MLX-substrate-trainer-(torch.compile/Inductor-inapplicable-on-the-MLX/Metal-path;-MLX-uses-mx.compile;-lineage-lessons-only)
 # TF32_WAIVED:MLX-substrate-trainer-(torch-CUDA-TF32-matmul-flag-inapplicable-on-the-MLX/Metal-path-per-the-train/authority-split;-lineage-lessons-only)
 # SPDX-License-Identifier: MIT

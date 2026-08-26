@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# NO_GRAD_WAIVED:retired-era-macOS-CPU-smoke-scale-scorer-loop-(TRAINER_AUTHORITY-macos_cpu,-not-on-any-live-launch-path);-no_grad-eval-wrap-deferred-to-reactivation
 # TORCH_COMPILE_WAIVED:macOS-CPU-local-scorer-loop/QAT-harness-(TRAINER_AUTHORITY-declares-macos_cpu,-smoke-scale,-not-on-any-live-launch-path);-Inductor-enablement-deferred-to-reactivation
 # TF32_WAIVED:macOS-CPU-local-scorer-loop/QAT-harness-(TRAINER_AUTHORITY-declares-macos_cpu,-no-CUDA-path);-torch-CUDA-TF32-inapplicable
 # SPDX-License-Identifier: MIT
