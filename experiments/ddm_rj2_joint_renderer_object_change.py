@@ -682,6 +682,13 @@ def prepare(output: Path) -> dict[str, Any]:
 
 
 def load_checkpoint(path: Path) -> dict[str, Any]:
+    with open(path, "rb") as fh:
+        magic = fh.read(4)
+    if not (magic.startswith(b"PK\x03\x04") or magic[:1] == b"\x80"):
+        raise RJ2Error(
+            f"resume checkpoint {path} is not a PyTorch pickle/zip "
+            f"(magic {magic!r}); refusing torch.load"
+        )
     payload = torch.load(path, map_location="cpu", weights_only=False)
     if (
         not isinstance(payload, Mapping)

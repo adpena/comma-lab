@@ -1254,6 +1254,13 @@ def load_checkpoint(
     generator: torch.Generator,
     expected_config: Mapping[str, Any],
 ) -> tuple[dict[str, Any], WD3ResumeController, receiver.AdaptiveQuantizationAllocation]:
+    with open(path, "rb") as fh:
+        magic = fh.read(4)
+    if not (magic.startswith(b"PK\x03\x04") or magic[:1] == b"\x80"):
+        raise WD3Error(
+            f"resume checkpoint {path} is not a PyTorch pickle/zip "
+            f"(magic {magic!r}); refusing torch.load"
+        )
     payload = torch.load(path, map_location="cpu", weights_only=False)
     if payload.get("schema") != CHECKPOINT_SCHEMA:
         raise WD3Error("resume checkpoint schema differs")

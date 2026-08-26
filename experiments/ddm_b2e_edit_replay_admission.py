@@ -219,6 +219,13 @@ def load_checkpoint_state(
     non-negotiable); falls back to live weights only if no shadow is present, and
     records which one it used.
     """
+    with open(checkpoint, "rb") as fh:
+        magic = fh.read(4)
+    if not (magic.startswith(b"PK\x03\x04") or magic[:1] == b"\x80"):
+        raise B2EError(
+            f"checkpoint {checkpoint} is not a PyTorch pickle/zip "
+            f"(magic {magic!r}); refusing torch.load"
+        )
     payload = torch.load(checkpoint, map_location="cpu", weights_only=False)
     if not isinstance(payload, Mapping):
         raise B2EError(f"checkpoint is not a mapping: {checkpoint}")

@@ -1246,6 +1246,13 @@ def _load_torch_or_mlx_checkpoint_for_verdict(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     if path.suffix == ".npz":
         return _load_mlx_npz_checkpoint_for_torch(path, lifted=lifted)
+    with open(path, "rb") as fh:
+        magic = fh.read(4)
+    if not (magic.startswith(b"PK\x03\x04") or magic[:1] == b"\x80"):
+        raise ValueError(
+            f"verdict checkpoint {path} is not a PyTorch pickle/zip "
+            f"(magic {magic!r}); refusing torch.load"
+        )
     checkpoint = torch.load(path, map_location="cpu", weights_only=False)
     if "config" not in checkpoint or "state_dict" not in checkpoint:
         raise ValueError("torch verdict checkpoint must contain config and state_dict")

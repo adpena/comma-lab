@@ -312,7 +312,19 @@ def load_checkpoint(out_dir: str | os.PathLike[str], *, map_location: str = "cpu
     """
     out = Path(out_dir)
     manifest = read_manifest(out)
-    blob = torch.load(out / _STATE_NAME, map_location=map_location, weights_only=False)
+    state_path = out / _STATE_NAME
+    # Content-detect before torch.load (DEN-V2 2026-04-26 bug class): refuse
+    # loudly on non-pickle bytes instead of crashing cryptically inside the
+    # legacy pickle path. PyTorch zip serialization starts PK\x03\x04; legacy
+    # torch.save pickles start with the PROTO opcode \x80.
+    with open(state_path, "rb") as fh:
+        magic = fh.read(4)
+    if not (magic.startswith(b"PK\x03\x04") or magic[:1] == b"\x80"):
+        raise ValueError(
+            f"checkpoint state {state_path} is not a PyTorch pickle/zip "
+            f"(magic {magic!r}); refusing torch.load"
+        )
+    blob = torch.load(state_path, map_location=map_location, weights_only=False)
     merged = dict(blob)
     merged["manifest"] = manifest
     merged["position"] = TorchCheckpointPosition(

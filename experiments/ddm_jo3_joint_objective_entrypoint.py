@@ -1161,8 +1161,17 @@ def restore_checkpoint(
     ema_raw = torch.load(checkpoint / "ema.pt", map_location="cpu", weights_only=True)
     optimizer.load_state_dict(torch.load(checkpoint / "optimizer.pt", map_location="cpu", weights_only=True))
     # This payload is produced locally by save_checkpoint_bundle and is
-    # content-bound by CHECKPOINT.json before deserialization.
-    rng = torch.load(checkpoint / "rng.pt", map_location="cpu", weights_only=False)
+    # content-bound by CHECKPOINT.json before deserialization. Defense in
+    # depth: refuse non-pickle bytes loudly before the legacy pickle path.
+    rng_path = checkpoint / "rng.pt"
+    with open(rng_path, "rb") as fh:
+        magic = fh.read(4)
+    if not (magic.startswith(b"PK\x03\x04") or magic[:1] == b"\x80"):
+        raise JO3EntrypointError(
+            f"rng state {rng_path} is not a PyTorch pickle/zip "
+            f"(magic {magic!r}); refusing torch.load"
+        )
+    rng = torch.load(rng_path, map_location="cpu", weights_only=False)
     random.setstate(rng["python"])
     np.random.set_state(rng["numpy"])
     torch.random.set_rng_state(rng["torch_cpu"])

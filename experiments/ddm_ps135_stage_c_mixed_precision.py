@@ -306,6 +306,13 @@ def source_bindings() -> dict[str, object]:
 
 
 def load_checkpoint_state() -> OrderedDict[str, torch.Tensor]:
+    with open(CHECKPOINT, "rb") as fh:
+        magic = fh.read(4)
+    if not (magic.startswith(b"PK\x03\x04") or magic[:1] == b"\x80"):
+        raise StageCError(
+            f"semantic checkpoint {CHECKPOINT} is not a PyTorch pickle/zip "
+            f"(magic {magic!r}); refusing torch.load"
+        )
     checkpoint = torch.load(CHECKPOINT, map_location="cpu", weights_only=False)
     if not isinstance(checkpoint, dict) or not isinstance(checkpoint.get("state_dict"), Mapping):
         raise StageCError("semantic checkpoint lacks a state_dict mapping")
