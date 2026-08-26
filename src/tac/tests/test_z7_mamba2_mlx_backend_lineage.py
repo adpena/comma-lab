@@ -135,11 +135,11 @@ def test_z7_full_mlx_trainer_threads_backend_lineage_into_harness_bundle() -> No
     assignments = [
         node
         for node in ast.walk(tree)
-        if isinstance(node, ast.Assign)
+        if isinstance(node, (ast.Assign, ast.AnnAssign))
         and any(
             isinstance(target, ast.Name)
             and target.id == "z7_substrate_artifact_metadata"
-            for target in node.targets
+            for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
         )
     ]
     assert assignments, "Z7 metadata dict must exist next to cfg construction"

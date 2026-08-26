@@ -21,9 +21,9 @@ def _load_timeout_contract():
         "MODAL_FINALIZATION_GRACE_SECONDS",
     }
     for node in tree.body:
-        is_contract_constant = isinstance(node, ast.Assign) and any(
+        is_contract_constant = isinstance(node, (ast.Assign, ast.AnnAssign)) and any(
             isinstance(target, ast.Name) and target.id in names
-            for target in node.targets
+            for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
         )
         is_contract_function = (
             isinstance(node, ast.FunctionDef)

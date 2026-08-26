@@ -21,9 +21,10 @@ def _load_pure_helpers() -> dict[str, Any]:
     }
     body: list[ast.stmt] = []
     for node in tree.body:
-        if (isinstance(node, ast.Assign)
+        if (isinstance(node, (ast.Assign, ast.AnnAssign))
+                and getattr(node, "value", None) is not None
                 and any(isinstance(t, ast.Name) and t.id == "HWM_V9_BOUNDARY_RECEIPT_SCHEMA"
-                        for t in node.targets)):
+                        for t in (node.targets if isinstance(node, ast.Assign) else [node.target]))):
             body.append(node)
         elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name in wanted:
             body.append(node)

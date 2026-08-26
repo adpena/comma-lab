@@ -485,9 +485,12 @@ def _scope_bindings(
 ) -> dict[str, list[tuple[tuple[int, int], list[_PayloadCall]]]]:
     bindings: dict[str, list[tuple[tuple[int, int], list[_PayloadCall]]]] = {}
     for node in nodes:
-        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target = node.targets[0]
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            target = node.target
+        else:
             continue
-        target = node.targets[0]
         if not isinstance(target, ast.Name):
             continue
         payloads = _bound_payload_calls(node.value)
@@ -570,8 +573,13 @@ def _propagate_carriers(
         changed = False
         for node in nodes:
             position = _position(node)
+            assign_target = None
             if isinstance(node, ast.Assign) and len(node.targets) == 1:
-                target = node.targets[0]
+                assign_target = node.targets[0]
+            elif isinstance(node, ast.AnnAssign) and node.value is not None:
+                assign_target = node.target
+            if assign_target is not None:
+                target = assign_target
                 if not isinstance(target, ast.Name):
                     continue
                 inherited: list[_PayloadCall] = []

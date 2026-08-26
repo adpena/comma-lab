@@ -252,12 +252,13 @@ def _run_local_modal_app_definition_preflight() -> None:
 
     assignments: dict[str, ast.AST] = {}
     for node in tree.body:
-        if (
-            isinstance(node, ast.Assign)
-            and len(node.targets) == 1
-            and isinstance(node.targets[0], ast.Name)
-        ):
-            assignments[node.targets[0].id] = node.value
+        target = None
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target = node.targets[0]
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            target = node.target
+        if isinstance(target, ast.Name):
+            assignments[target.id] = node.value
     expected_literals = {
         "RESULTS_VOL": "comma-train-lane-results",
         "MODAL_PREFLIGHT_HARD_TIMEOUT_SECONDS": 600,

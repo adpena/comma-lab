@@ -348,6 +348,9 @@ def _module_level_constants(path: Path) -> set[str]:
     for node in tree.body:
         if isinstance(node, ast.Assign):
             names.update(t.id for t in node.targets if isinstance(t, ast.Name))
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            if isinstance(node.target, ast.Name):
+                names.add(node.target.id)
     return names
 
 

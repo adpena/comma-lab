@@ -1869,6 +1869,7 @@ def _check_351_gate_debt_top_level_bindings(
     duplicates: set[str] = set()
     for statement_index, statement in enumerate(function.body):
         if not (
+            # ASSIGN_ONLY_OK: this pattern requires a TUPLE/LIST unpack target `(a, b) = _canonical_producer_reference(...)` — Python grammar forbids annotations on tuple targets (SyntaxError), so ast.AnnAssign is structurally impossible here.
             isinstance(statement, ast.Assign)
             and len(statement.targets) == 1
             and isinstance(statement.targets[0], (ast.Tuple, ast.List))
@@ -20893,10 +20894,14 @@ def _ema_script_constructs_ema(tree: ast.Module) -> bool:
     # `ema = copy.deepcopy(model).eval()` — a real EMA shadow (saved as the
     # deploy authority in the checkpoint blob), just not the EMA() class.
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Assign):
+        if isinstance(node, ast.Assign):
+            ema_targets = node.targets
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            ema_targets = [node.target]
+        else:
             continue
         targets_ema = any(
-            isinstance(t, ast.Name) and "ema" in t.id.lower() for t in node.targets
+            isinstance(t, ast.Name) and "ema" in t.id.lower() for t in ema_targets
         )
         if not targets_ema:
             continue

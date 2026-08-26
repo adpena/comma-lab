@@ -101,8 +101,11 @@ def test_cpu_remote_call_site_matches_signature_arity() -> None:
     tuples = [
         node.value
         for node in ast.walk(tree)
-        if isinstance(node, ast.Assign)
-        and any(getattr(t, "id", "") == "call_args" for t in node.targets)
+        if isinstance(node, (ast.Assign, ast.AnnAssign))
+        and any(
+            getattr(t, "id", "") == "call_args"
+            for t in (node.targets if isinstance(node, ast.Assign) else [node.target])
+        )
         and isinstance(node.value, ast.Tuple)
     ]
     assert len(tuples) == 1, "expected exactly one call_args construction"

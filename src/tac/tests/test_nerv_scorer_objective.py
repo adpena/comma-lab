@@ -25,9 +25,12 @@ def _source(path: str) -> str:
 def _top_level_assignments(source: str) -> dict[str, object]:
     assignments: dict[str, object] = {}
     for node in ast.parse(source).body:
-        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target = node.targets[0]
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            target = node.target
+        else:
             continue
-        target = node.targets[0]
         if isinstance(target, ast.Name):
             try:
                 assignments[target.id] = ast.literal_eval(node.value)
@@ -39,9 +42,13 @@ def _top_level_assignments(source: str) -> dict[str, object]:
 def _numeric_constants_in_score_assignment(source: str) -> set[float]:
     constants: set[float] = set()
     for node in ast.walk(ast.parse(source)):
-        if not isinstance(node, ast.Assign):
+        if isinstance(node, ast.Assign):
+            score_targets = node.targets
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            score_targets = [node.target]
+        else:
             continue
-        if not any(isinstance(target, ast.Name) and target.id == "score" for target in node.targets):
+        if not any(isinstance(target, ast.Name) and target.id == "score" for target in score_targets):
             continue
         for child in ast.walk(node.value):
             if isinstance(child, ast.Constant) and isinstance(child.value, (int, float)):

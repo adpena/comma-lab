@@ -122,9 +122,18 @@ def test_raw_contract_is_derived_from_frozen_frame_utils() -> None:
             isinstance(node, ast.Assign)
             and len(node.targets) == 1
             and isinstance(node.targets[0], ast.Name)
-            and node.targets[0].id in {"seq_len", "camera_size"}
         ):
-            assignments[node.targets[0].id] = ast.literal_eval(node.value)
+            target = node.targets[0]
+        elif (
+            isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and node.value is not None
+        ):
+            target = node.target
+        else:
+            continue
+        if target.id in {"seq_len", "camera_size"}:
+            assignments[target.id] = ast.literal_eval(node.value)
     width, height = assignments["camera_size"]
     frames = closure.EXPECTED_N_PAIRS * assignments["seq_len"]
     assert frames == closure.EXPECTED_N_FRAMES == 1200

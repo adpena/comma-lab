@@ -1377,8 +1377,14 @@ def _upstream_scorer_batch_shape(upstream_dir: Path) -> dict:
         shape["seq_len_parse_error"] = f"{type(exc).__name__}: {exc}"
         return shape
     for node in ast.walk(fu):
-        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant):
-            for target in node.targets:
+        if isinstance(node, ast.Assign):
+            seq_targets = node.targets
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            seq_targets = [node.target]
+        else:
+            continue
+        if isinstance(node.value, ast.Constant):
+            for target in seq_targets:
                 if isinstance(target, ast.Name) and target.id == "seq_len":
                     shape["seq_len"] = node.value.value
     return shape

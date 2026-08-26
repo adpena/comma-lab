@@ -400,8 +400,14 @@ def selected_archive_from_scorer_region_chain_report(
 def _literal_tuple_from_python(path: Path, name: str) -> tuple[Any, ...]:
     tree = ast.parse(path.read_text(encoding="utf-8"))
     for node in tree.body:
-        if isinstance(node, ast.Assign) and any(
-            isinstance(target, ast.Name) and target.id == name for target in node.targets
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            targets = [node.target]
+        else:
+            continue
+        if any(
+            isinstance(target, ast.Name) and target.id == name for target in targets
         ):
             value = ast.literal_eval(node.value)
             if not isinstance(value, tuple):

@@ -382,9 +382,12 @@ def _frame_utils_constants(path: Path) -> dict[str, Any]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=path.as_posix())
     constants: dict[str, Any] = {}
     for node in tree.body:
-        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target = node.targets[0]
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            target = node.target
+        else:
             continue
-        target = node.targets[0]
         if not isinstance(target, ast.Name):
             continue
         if target.id not in {"seq_len", "camera_size", "segnet_model_input_size"}:

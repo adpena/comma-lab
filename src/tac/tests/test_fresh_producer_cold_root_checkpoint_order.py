@@ -61,11 +61,11 @@ def test_direct_checkpoint_closure_loads_have_prior_textual_bindings() -> None:
     cold_root_lines = [
         node.lineno
         for node in ast.walk(run_train)
-        if isinstance(node, ast.Assign)
+        if isinstance(node, (ast.Assign, ast.AnnAssign))
         and any(
             isinstance(target, ast.Name)
             and target.id == "_cold_root_checkpoint"
-            for target in node.targets
+            for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
         )
     ]
     assert len(cold_root_lines) == 1

@@ -5071,11 +5071,17 @@ def _pl1_serialized_names(stmt: ast.stmt, roles: Mapping[str, str]) -> set[str]:
 
 def _pl1_record_names(stmt: ast.stmt) -> set[str]:
     """Names bound HERE to a dict literal of at least :data:`_MIN_RECORD_KEYS`."""
-    if not isinstance(stmt, ast.Assign) or not isinstance(stmt.value, ast.Dict):
+    if isinstance(stmt, ast.Assign):
+        targets = stmt.targets
+    elif isinstance(stmt, ast.AnnAssign):
+        targets = [stmt.target]
+    else:
+        return set()
+    if not isinstance(stmt.value, ast.Dict):
         return set()
     if len(stmt.value.keys) < _MIN_RECORD_KEYS:
         return set()
-    return {t.id for t in stmt.targets if isinstance(t, ast.Name)}
+    return {t.id for t in targets if isinstance(t, ast.Name)}
 
 
 def _pl1_block_violations(

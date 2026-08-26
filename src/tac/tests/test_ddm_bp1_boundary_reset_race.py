@@ -578,12 +578,12 @@ def test_trainer_actually_wires_the_arm_into_its_optimizer():
 
     lr_assigns = [
         n for n in ast.walk(tree)
-        if isinstance(n, ast.Assign)
+        if isinstance(n, (ast.Assign, ast.AnnAssign))
         and any(isinstance(t, ast.Attribute)
                 and t.attr == "learning_rate"
                 and isinstance(t.value, ast.Name)
                 and t.value.id == "optimizer"
-                for t in n.targets)
+                for t in (n.targets if isinstance(n, ast.Assign) else [n.target]))
     ]
     assert lr_assigns, "JD1 LR anneal must reach optimizer.learning_rate in main()"
     assert any("jd1_lr_current" in ast.dump(n.value) for n in lr_assigns), (

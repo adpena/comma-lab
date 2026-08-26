@@ -113,9 +113,12 @@ def test_both_matched_loops_include_candidate_update_in_complete_step_timer() ->
     tree = ast.parse(TOOL_PATH.read_text(encoding="utf-8"))
     assignments = []
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Assign) or len(node.targets) != 1:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1:
+            target = node.targets[0]
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            target = node.target
+        else:
             continue
-        target = node.targets[0]
         call = node.value
         if not isinstance(target, ast.Name) or target.id != "operational_elapsed":
             continue

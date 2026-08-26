@@ -18,8 +18,12 @@ def _worker_image_chain() -> list[tuple[str, ast.Call]]:
     assignment = next(
         node
         for node in tree.body
-        if isinstance(node, ast.Assign)
-        and any(isinstance(target, ast.Name) and target.id == "worker_image" for target in node.targets)
+        if isinstance(node, (ast.Assign, ast.AnnAssign))
+        and getattr(node, "value", None) is not None
+        and any(
+            isinstance(target, ast.Name) and target.id == "worker_image"
+            for target in (node.targets if isinstance(node, ast.Assign) else [node.target])
+        )
     )
 
     def flatten(node: ast.AST) -> list[tuple[str, ast.Call]]:

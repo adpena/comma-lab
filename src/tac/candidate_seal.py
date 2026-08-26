@@ -254,6 +254,7 @@ def read_receiver_pin(receiver_path: Path) -> ReceiverPin:
     sha_line: int | None = None
     size_line: int | None = None
     for node in tree.body:
+        # ASSIGN_ONLY_OK: the pin reader accepts ONLY the exact single-line `NAME = <const>` shape the rewriter at write_receiver_pin (:484-485) EMITS via whole-line replacement — a read/write round-trip contract on a sealed surface. Any other shape, including an annotated pin, reads as pin-absent and the consistency check refuses FAIL-CLOSED (never silently wrong); all receiver pins are machine-emitted in this shape by our own writers.
         if not isinstance(node, ast.Assign) or len(node.targets) != 1:
             continue
         target = node.targets[0]

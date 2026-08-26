@@ -326,8 +326,12 @@ def test_tool_base_order_excludes_free_bank_and_pose_carrier() -> None:
     tree = ast.parse(src_text)
     # find the base_order list-comp in build_levelset_blob and confirm it filters _B + pose_carrier.
     found = any(
-        isinstance(n, ast.Assign)
-        and any(getattr(t, "id", "") == "base_order" for t in n.targets)
+        isinstance(n, (ast.Assign, ast.AnnAssign))
+        and n.value is not None
+        and any(
+            getattr(t, "id", "") == "base_order"
+            for t in (n.targets if isinstance(n, ast.Assign) else [n.target])
+        )
         and "endswith" in ast.dump(n.value)
         and "pose_carrier." in ast.dump(n.value)
         for n in ast.walk(tree)

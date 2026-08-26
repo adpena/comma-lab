@@ -86,9 +86,13 @@ def read_pin(inflate_path: Path) -> tuple[str | None, int | None]:
     sha: str | None = None
     size: int | None = None
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Assign):
+        if isinstance(node, ast.Assign):
+            targets = node.targets
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            targets = [node.target]
+        else:
             continue
-        for target in node.targets:
+        for target in targets:
             if not isinstance(target, ast.Name):
                 continue
             if target.id == SHA_CONST and isinstance(node.value, ast.Constant):
