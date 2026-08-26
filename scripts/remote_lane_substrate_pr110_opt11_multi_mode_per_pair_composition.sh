@@ -35,6 +35,16 @@ export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:T
 # sourced from the Modal worker the wrapper provides REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1
 # so the bootstrap function loads its env-fixups but does NOT run its main
 # eval flow (Catalog #163 canonical pattern from sister 5bcb53070).
+# PCC2 backing assertion for the wrapper contract above: under the Modal
+# runtime the sentinel MUST have been provided, else the bootstrap would have
+# run its full eval flow silently — fail loud instead of trusting the comment.
+check_modal_wrapper_sentinel() {
+    if [ "${MODAL_RUNTIME:-0}" = "1" ] && [ "${REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY:-}" != "1" ]; then
+        echo "FATAL: Modal wrapper did not export REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 (Catalog #163 contract violated)" >&2
+        exit 78
+    fi
+}
+check_modal_wrapper_sentinel
 WORKSPACE="${WORKSPACE:-${HOME:-/workspace}/pact}"
 if [ "${MODAL_RUNTIME:-0}" = "1" ]; then
     WORKSPACE="/tmp/pact"
