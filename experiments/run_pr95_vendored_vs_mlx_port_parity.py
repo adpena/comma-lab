@@ -177,8 +177,7 @@ def _torch_forward_loss(
     down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
     decoded_bhwc = down.reshape(B, 2, 3, 384, 512).permute(0, 1, 3, 4, 2)
     decoded_clamped = decoded_bhwc.clamp(0, 255)
-    decoded_rounded = decoded_clamped.round()
-    decoded_bhwc = decoded_clamped + (decoded_rounded - decoded_clamped).detach()
+    decoded_bhwc = decoded_clamped + (decoded_clamped.round() - decoded_clamped).detach()
 
     posenet_in, segnet_in = dnet.preprocess_input(decoded_bhwc)
     seg_out = dnet.segnet(segnet_in)

@@ -72,14 +72,10 @@ def _roundtrip_to_eval_bhwc(decoded: torch.Tensor) -> torch.Tensor:
     flat = decoded.reshape(b * 2, 3, _EVAL_H, _EVAL_W)
     up = F.interpolate(flat, size=(_CAMERA_H, _CAMERA_W), mode="bicubic", align_corners=False)
     down = F.interpolate(up, size=(_EVAL_H, _EVAL_W), mode="bilinear", align_corners=False)
-    bhwc = (
-        down.reshape(b, 2, 3, _EVAL_H, _EVAL_W)
-        .permute(0, 1, 3, 4, 2)
-        .clamp(0, 255)
-        .round()
-        .to(torch.uint8)
-    )
-    return bhwc
+    bhwc = down.reshape(b, 2, 3, _EVAL_H, _EVAL_W).permute(0, 1, 3, 4, 2)
+    clamped = bhwc.clamp(0, 255)
+    rounded = clamped + (clamped.round() - clamped).detach()
+    return rounded.detach().to(torch.uint8)
 
 
 def _roundtrip_to_eval_bhwc_differentiable(decoded: torch.Tensor) -> torch.Tensor:
@@ -92,8 +88,7 @@ def _roundtrip_to_eval_bhwc_differentiable(decoded: torch.Tensor) -> torch.Tenso
     down = F.interpolate(up, size=(_EVAL_H, _EVAL_W), mode="bilinear", align_corners=False)
     bhwc = down.reshape(b, 2, 3, _EVAL_H, _EVAL_W).permute(0, 1, 3, 4, 2)
     clamped = bhwc.clamp(0, 255)
-    rounded = clamped.round()
-    return clamped + (rounded - clamped).detach()  # STE uint8 round
+    return clamped + (clamped.round() - clamped).detach()  # STE uint8 round
 
 
 # ---------------------------------------------------------------------------

@@ -20659,6 +20659,8 @@ _BARE_ROUND_READONLY_FILES: set[str] = {
     "src/tac/scorer.py",                     # compute_proxy_score read-only
     "experiments/pair_difficulty_map.py",    # measurement tool
     "experiments/profile_fp4_layer_sensitivity.py",  # measurement tool
+    "experiments/measure_r_cap_r_surv.py",   # inference-only R-survival measurement
+    "experiments/probe_polynomial_fill_survival_gate.py",  # forward-only fill probe
 }
 
 

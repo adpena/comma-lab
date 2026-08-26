@@ -116,8 +116,7 @@ def _roundtrip(decoded_pair: torch.Tensor) -> torch.Tensor:
     down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
     decoded_bhwc = down.reshape(B, 2, 3, 384, 512).permute(0, 1, 3, 4, 2)
     decoded_clamped = decoded_bhwc.clamp(0, 255)
-    decoded_rounded = decoded_clamped.round()
-    return decoded_clamped + (decoded_rounded - decoded_clamped).detach()
+    return decoded_clamped + (decoded_clamped.round() - decoded_clamped).detach()
 
 
 def _build_decoder() -> torch.nn.Module:

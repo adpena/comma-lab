@@ -96,19 +96,15 @@ def _roundtrip_to_eval_bhwc(decoded: torch.Tensor) -> torch.Tensor:
     """``decoded`` is (B, 2, 3, 384, 512) float [0,255]. Return the (B, 2, 874, 1164, 3)
     uint8 tensor the scorer reads — bicubic up to camera res, clamp/round/uint8. This
     is EXACTLY ``score.evaluate_decoder``'s ``_decoded_to_camera`` + the
-    ``.clamp(0,255).round().to(uint8)`` it applies before ``compute_distortion``
+    clamp/round/cast-to-uint8 sequence it applies before ``compute_distortion``
     (verified against the vendored source this session)."""
     b = decoded.shape[0]
     flat = decoded.reshape(b * 2, 3, _EVAL_H, _EVAL_W)
     up = F.interpolate(flat, size=(_CAMERA_H, _CAMERA_W), mode="bicubic", align_corners=False)
-    bhwc = (
-        up.reshape(b, 2, 3, _CAMERA_H, _CAMERA_W)
-        .permute(0, 1, 3, 4, 2)
-        .clamp(0, 255)
-        .round()
-        .to(torch.uint8)
-    )
-    return bhwc
+    bhwc = up.reshape(b, 2, 3, _CAMERA_H, _CAMERA_W).permute(0, 1, 3, 4, 2)
+    clamped = bhwc.clamp(0, 255)
+    rounded = clamped + (clamped.round() - clamped).detach()
+    return rounded.detach().to(torch.uint8)
 
 
 def _roundtrip_to_eval_bhwc_differentiable(decoded: torch.Tensor) -> torch.Tensor:
@@ -120,8 +116,7 @@ def _roundtrip_to_eval_bhwc_differentiable(decoded: torch.Tensor) -> torch.Tenso
     up = F.interpolate(flat, size=(_CAMERA_H, _CAMERA_W), mode="bicubic", align_corners=False)
     bhwc = up.reshape(b, 2, 3, _CAMERA_H, _CAMERA_W).permute(0, 1, 3, 4, 2)
     clamped = bhwc.clamp(0, 255)
-    rounded = clamped.round()
-    return clamped + (rounded - clamped).detach()  # STE uint8 round
+    return clamped + (clamped.round() - clamped).detach()  # STE uint8 round
 
 
 # ---------------------------------------------------------------------------

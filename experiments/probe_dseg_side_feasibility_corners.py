@@ -131,7 +131,8 @@ def _segnet_argmax_via_384_roundtrip(segnet, frame_384_hwc):
 
     t = torch.from_numpy(np.asarray(frame_384_hwc, dtype=np.float64)).permute(2, 0, 1)[None].float()
     up = F.interpolate(t, size=(CAM_H, CAM_W), mode="bicubic", align_corners=False)
-    q = up.clamp(0, 255).round()  # uint8 quant at camera res
+    clamped = up.clamp(0, 255)
+    q = (clamped + (clamped.round() - clamped).detach()).detach()  # uint8 quant at camera res
     cam = q[0].permute(1, 2, 0).numpy()
     return _segnet_argmax_cam(segnet, cam)
 

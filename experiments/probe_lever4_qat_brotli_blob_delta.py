@@ -114,8 +114,7 @@ def _real_sensitivity_and_advisory_distortion(
     down = F.interpolate(up, size=(_EVAL_H, _EVAL_W), mode="bilinear", align_corners=False)
     decoded_bhwc = down.reshape(n, 2, 3, _EVAL_H, _EVAL_W).permute(0, 1, 3, 4, 2)
     dc = decoded_bhwc.clamp(0, 255)
-    dr = dc.round()
-    decoded_bhwc = dc + (dr - dc).detach()
+    decoded_bhwc = dc + (dc.round() - dc).detach()
 
     net = ctx.distortion_net
     posenet_in, segnet_in = net.preprocess_input(decoded_bhwc)

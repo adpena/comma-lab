@@ -128,8 +128,7 @@ def _roundtrip(decoder, latents, idx):
     down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
     decoded_bhwc = down.reshape(B, 2, 3, 384, 512).permute(0, 1, 3, 4, 2)
     clamped = decoded_bhwc.clamp(0, 255)
-    rounded = clamped.round()
-    return clamped + (rounded - clamped).detach()
+    return clamped + (clamped.round() - clamped).detach()
 
 
 def _film_and_shared(driver, decoder, latents):

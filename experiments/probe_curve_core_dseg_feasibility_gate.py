@@ -245,10 +245,8 @@ def _eval_roundtrip_t(frame_chw, ste=False):
     up = F.interpolate(x, size=(874, 1164), mode="bicubic", align_corners=False)
     down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
     clamped = down.clamp(0, 255)
-    if ste:
-        rounded = clamped.round()
-        return clamped + (rounded - clamped).detach()
-    return clamped.round()
+    rounded = clamped + (clamped.round() - clamped).detach()
+    return rounded if ste else rounded.detach()
 
 
 def _segnet_argmax_of_frame(segnet, frame_chw):

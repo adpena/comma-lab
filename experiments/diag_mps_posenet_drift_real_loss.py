@@ -76,8 +76,7 @@ def _roundtrip(decoded_pair, B, device):
     down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
     bhwc = down.reshape(B, 2, 3, 384, 512).permute(0, 1, 3, 4, 2)
     clamped = bhwc.clamp(0, 255)
-    rounded = clamped.round()
-    return clamped + (rounded - clamped).detach()
+    return clamped + (clamped.round() - clamped).detach()
 
 
 def _frame_grad(net, frames_leaf, seg_targets, pose_targets, *, mode, seg_w, pose_w):

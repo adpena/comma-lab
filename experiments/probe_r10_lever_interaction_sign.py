@@ -93,8 +93,7 @@ def _render_roundtrip(decoder, latents, idx, *, film: bool):
     down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
     decoded_bhwc = down.reshape(B, 2, 3, 384, 512).permute(0, 1, 3, 4, 2)
     dc = decoded_bhwc.clamp(0, 255)
-    dr = dc.round()
-    return dc + (dr - dc).detach()  # straight-through round
+    return dc + (dc.round() - dc).detach()  # straight-through round
 
 
 def _grad_vec(params, loss):

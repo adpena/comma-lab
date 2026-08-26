@@ -127,8 +127,8 @@ def _eval_roundtrip(decoded_pair_bthwc):
     flat = decoded_pair_bthwc.reshape(b * 2, 3, 384, 512)
     up = F.interpolate(flat, size=(874, 1164), mode="bicubic", align_corners=False)
     down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
-    out = down.reshape(b, 2, 3, 384, 512).clamp(0, 255).round()
-    return out
+    clamped = down.reshape(b, 2, 3, 384, 512).clamp(0, 255)
+    return (clamped + (clamped.round() - clamped).detach()).detach()
 
 
 def _measure_dseg(decoder, latents, segnet, seg_targets, frame_indices, device):
@@ -289,8 +289,7 @@ def main() -> int:
             down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
             rt = down.reshape(1, 2, 3, 384, 512)
             clamped = rt.clamp(0, 255)
-            rounded = clamped.round()
-            ste = clamped + (rounded - clamped).detach()  # STE round
+            ste = clamped + (clamped.round() - clamped).detach()  # STE round
             x = einops.rearrange(ste, "b t c h w -> b t h w c").contiguous()
             x = einops.rearrange(x, "b t h w c -> b t c h w").contiguous()
             seg_in = segnet_train.preprocess_input(x)  # uses x[:, -1] = rgb_1

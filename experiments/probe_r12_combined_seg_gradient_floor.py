@@ -101,8 +101,7 @@ def _render_roundtrip(decoder, latents, idx):
     down = F.interpolate(up, size=(384, 512), mode="bilinear", align_corners=False)
     decoded_bhwc = down.reshape(B, 2, 3, 384, 512).permute(0, 1, 3, 4, 2)
     dc = decoded_bhwc.clamp(0, 255)
-    dr = dc.round()
-    return dc + (dr - dc).detach()
+    return dc + (dc.round() - dc).detach()
 
 
 def _combined_seg_grad_norm(spec, seg_out, seg_targets_hard, temperature, params, render_fn):
