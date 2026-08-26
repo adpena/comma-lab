@@ -23,16 +23,20 @@ convex with the shipped model past its knee (local −1.15 [hm1] · global −5.
    (token field `cc10a7b0…`); (b) no1 memo
    `.omx/research/ddm_no1_new_object_derivation_20260826.md` row 3 + §CORRECTION (commit
    `4257fa1006` — use the corrected bars: break-even 127,292 − W · demand-closing
-   85,064 − W); (c) hc1 (#1259 / memory token-stream-is-one-binary-question): the token
+   85,064 − W); (c) hc1 (memo `.omx/research/ddm_hc1_hpac_calibration_reliability_20260824.md`, harness #1259): the token
    stream is 97.80% ONE BINARY QUESTION — IDENTIFY whether that question is Lane-membership;
    if yes, D3 attacks it directly, if no, record what it is; (d) m131: Lane = 0.59% area but
-   33.56% of model bits; (e) #1236 recall: the alphabet is NOT a parameter anywhere in the
-   HPAC stack — D3 is a MECHANISM build; (f) the COUNTER-EVIDENCE to reconcile, ld1 (#1212):
+   33.56% of model bits; (e) the D3 recall (harness #1236, from the dg2 line — memo
+   `.omx/research/ddm_dg2_diagonal_distortion_verdict_20260824.md`): the alphabet is NOT a
+   parameter anywhere in the HPAC stack — D3 is a MECHANISM build; (f) the COUNTER-EVIDENCE to reconcile, ld1 (memo
+   `.omx/research/ddm_ld1_lane_lossy_drop_exchange_20260822.md`, harness #1212):
    every LOSSY Lane rung made the archive BIGGER — but ld1 degraded Lane INSIDE the 5-class
    stream; D3 REMOVES Lane from the stream and re-carries it separately (different object);
    address this distinction explicitly, never ignore it; (g) Lane-carriage candidates already
-   built: cb1 (#722) analytic Lane render band 1–2 KB byte-closed through the e5a/E4 adapter +
-   rl1 (#939) per-class Lane crop @ brotli-q11 (~26,500 B) + the witness analytic lane band in
+   built: cb1 (memo dir `.omx/research/ddm_cb1_perclass_carrier_byteclose_20260725/` +
+   `..._DAG_FEED_20260725.md`, harness #722) analytic Lane render band 1–2 KB byte-closed
+   through the e5a/E4 adapter + rl1 (harness #939, priced in the ld1 memo above) per-class
+   Lane crop @ brotli-q11 (~26,500 B) + the witness analytic lane band in
    `tools/levelset_byte_close_and_eval.py` (`lane_render_band` manifest section).
 2. MECHANISM BUILD (rate leg): make the alphabet a parameter of the F26/HPAC stack; produce
    the Lane→Road 4-class field from the retained `cc10a7b0…` field; REAL re-encode of the
@@ -68,7 +72,8 @@ convex with the shipped model past its knee (local −1.15 [hm1] · global −5.
 - ld1 (#1212): lossy-Lane-inside-the-stream DEAD (archive grows every rung) — D3's removal +
   re-carriage is the distinct object; the reconciliation paragraph is owed.
 - cm1 (1e42871e1b): no trainable rate surrogate — price every rung with real re-encodes.
-- msr1 (#1235): zero-byte boundary family closed at a one-pixel oracle ceiling — Lane
+- msr1 (memo `.omx/research/ddm_msr1_manufactured_seg_reduction_20260823.md`, harness #1235):
+  zero-byte boundary family closed at a one-pixel oracle ceiling — Lane
   carriage must SHIP bytes; do not resurrect zero-byte boundary repair.
 
 ## OPTIMAL FORM
