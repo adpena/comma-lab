@@ -95131,6 +95131,170 @@
         }
       },
       "notes": "HISTORICAL BACKFILL 2026-08-25 per Check 126 (backfill-when-discovered lifecycle clause): lane id referenced at experiments/train_substrate_hi_nerv_mlx_local.py:1536 since 2026-06-02 but never pre-registered. Retired lineage (no-old-lineage ban, lessons-only); trainer carries AUTOCAST_FP16_WAIVED + false-authority MLX markers. research_only: true."
+    },
+    {
+      "id": "lane_path_3_k_coin_pp_implicit_neural_representation_20260526",
+      "name": "COIN++ implicit neural representation (path 3-K, historical)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "HISTORICAL BACKFILL 2026-08-25 per Check 126 (backfill-when-discovered lifecycle clause): lane_id referenced by its retired-era substrate trainer, surfaced when the #178 TF32-waiver commit c7ba9f6d20 made the file recent to the incremental gate. research_only: true"
+    },
+    {
+      "id": "lane_pact_nerv_selector_v3_l1_long_run_mlx_local_20260528",
+      "name": "pact-nerv selector v3 L1 long-run MLX local (historical)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "HISTORICAL BACKFILL 2026-08-25 per Check 126 (backfill-when-discovered lifecycle clause): lane_id referenced by its retired-era substrate trainer, surfaced when the #178 TF32-waiver commit c7ba9f6d20 made the file recent to the incremental gate. research_only: true"
+    },
+    {
+      "id": "lane_slot_1_z7_mamba2_hinton_distill_600pair_long_mlx_20260528",
+      "name": "Z7 mamba2 Hinton-distill 600-pair long MLX (slot 1, historical)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "HISTORICAL BACKFILL 2026-08-25 per Check 126 (backfill-when-discovered lifecycle clause): lane_id referenced by its retired-era substrate trainer, surfaced when the #178 TF32-waiver commit c7ba9f6d20 made the file recent to the incremental gate. research_only: true"
+    },
+    {
+      "id": "lane_z6_v2_cargo_cult_unwind_l1_long_run_mlx_local_20260528",
+      "name": "Z6 v2 cargo-cult-unwind L1 long-run MLX local (historical)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "HISTORICAL BACKFILL 2026-08-25 per Check 126 (backfill-when-discovered lifecycle clause): lane_id referenced by its retired-era substrate trainer, surfaced when the #178 TF32-waiver commit c7ba9f6d20 made the file recent to the incremental gate. research_only: true"
     }
   ],
   "level_rules": {
@@ -95140,5 +95304,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-08-26T01:36:23Z"
+  "updated_at": "2026-08-26T01:47:45Z"
 }
