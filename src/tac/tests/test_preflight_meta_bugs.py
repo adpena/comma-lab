@@ -2449,6 +2449,70 @@ class TestTrainingAuthEvalAstUpgrade:
         v = _scan_training_script_for_auth_eval(script, root)
         assert v == [], v
 
+    # ── r49 class-38 false-positive pins (2026-08-26): the Catalog #226
+    # canonical `gate_auth_eval_call` routing (usually under an import
+    # alias) IS the auth-eval invocation. 8 pact_nerv trainers were flagged
+    # as "dead import" while each called the canonical gate. Both-direction
+    # pins: aliased + direct canonical calls pass; canonical import WITHOUT
+    # a call still fires (dead-import direction preserved).
+
+    def test_save_renderer_with_canonical_gate_aliased_call_passes(
+        self, tmp_path: Path,
+    ) -> None:
+        """The exact pact_nerv shape: canonical gate under an import alias,
+        called after the renderer save — satisfied (r49 class-38 pin)."""
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "train_canon_alias.py"
+        _write(script, """
+            import torch
+            from tac.substrates._shared.smoke_auth_eval_gate import (
+                gate_auth_eval_call as _canon_gate_auth_eval_call,
+            )
+            def go():
+                torch.save(model.state_dict(), "renderer_best.pt")
+                _canon_gate_auth_eval_call(
+                    archive_zip=archive_zip_path,
+                    upstream_dir=upstream_dir,
+                )
+        """)
+        v = _scan_training_script_for_auth_eval(script, root)
+        assert v == [], v
+
+    def test_save_renderer_with_canonical_gate_direct_call_passes(
+        self, tmp_path: Path,
+    ) -> None:
+        """Unaliased `gate_auth_eval_call(...)` — satisfied."""
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "train_canon_direct.py"
+        _write(script, """
+            import torch
+            from tac.substrates._shared.smoke_auth_eval_gate import gate_auth_eval_call
+            def go():
+                torch.save(model.state_dict(), "renderer_best.pt")
+                gate_auth_eval_call(archive_zip=archive_zip_path)
+        """)
+        v = _scan_training_script_for_auth_eval(script, root)
+        assert v == [], v
+
+    def test_save_renderer_canonical_gate_import_without_call_still_flags(
+        self, tmp_path: Path,
+    ) -> None:
+        """Importing the canonical gate but never calling it is STILL the
+        dead-import violation — the cure must not widen the pass set."""
+        root = _stub_repo(tmp_path)
+        script = root / "experiments" / "train_canon_dead.py"
+        _write(script, """
+            import torch
+            from tac.substrates._shared.smoke_auth_eval_gate import (
+                gate_auth_eval_call as _canon_gate_auth_eval_call,
+            )
+            def go():
+                torch.save(model.state_dict(), "renderer_best.pt")
+        """)
+        v = _scan_training_script_for_auth_eval(script, root)
+        assert len(v) == 1, v
+        assert "dead import" in v[0].lower() or "imports" in v[0].lower()
+
     def test_save_renderer_imports_but_never_calls_auth_eval_flags(
         self, tmp_path: Path,
     ) -> None:

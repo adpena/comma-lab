@@ -15676,14 +15676,36 @@ def _call_is_auth_eval_subprocess(node: ast.Call) -> bool:
 
 def _call_is_auth_eval_helper(node: ast.Call) -> bool:
     """True if `node` calls `auth_eval_renderer.main(...)`, `run_auth_eval(...)`,
-    `auth_eval(...)`, or any function whose unparse ends with these names."""
+    `auth_eval(...)`, the Catalog #226 canonical `gate_auth_eval_call(...)`,
+    or any function whose unparse ends with these names."""
     func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
     targets = ("auth_eval_renderer.main", "run_auth_eval", "auth_eval",
-               "auth_eval_renderer", "auth_eval_on_best")
+               "auth_eval_renderer", "auth_eval_on_best", "gate_auth_eval_call")
     for t in targets:
         if func_str == t or func_str.endswith("." + t):
             return True
     return False
+
+
+def _collect_canonical_auth_eval_gate_aliases(tree: ast.Module) -> frozenset[str]:
+    """Local binding names for the Catalog #226 canonical auth-eval gate.
+
+    Substrate trainers route auth eval through
+    `tac.substrates._shared.smoke_auth_eval_gate.gate_auth_eval_call`
+    (Catalog #226), typically under an import alias
+    (`... import gate_auth_eval_call as _canon_gate_auth_eval_call`).
+    A call through that binding IS the auth-eval invocation; without this
+    collection the scan mislabels the canonical routing as a dead import
+    (the 2026-08-25 r49 false-positive class: 8 pact_nerv trainers flagged
+    while each called the canonical gate).
+    """
+    aliases: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                if alias.name == "gate_auth_eval_call":
+                    aliases.add(alias.asname or alias.name)
+    return frozenset(aliases)
 
 
 def _argparse_defines_no_auth_eval_optout(tree: ast.Module) -> bool:
@@ -15755,6 +15777,7 @@ def _scan_training_script_for_auth_eval(path: Path, repo_root: Path) -> list[str
 
     saves_renderer = False
     has_auth_eval_call = False
+    canonical_gate_aliases = _collect_canonical_auth_eval_gate_aliases(tree)
     for node in ast.walk(tree):
         if isinstance(node, ast.Call):
             func_str = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
@@ -15768,7 +15791,11 @@ def _scan_training_script_for_auth_eval(path: Path, repo_root: Path) -> list[str
                     if _node_references_renderer_path(arg):
                         saves_renderer = True
                         break
-            if _call_is_auth_eval_subprocess(node) or _call_is_auth_eval_helper(node):
+            if (
+                _call_is_auth_eval_subprocess(node)
+                or _call_is_auth_eval_helper(node)
+                or func_str in canonical_gate_aliases
+            ):
                 has_auth_eval_call = True
 
     if not saves_renderer:
