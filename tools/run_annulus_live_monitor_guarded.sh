@@ -12,7 +12,7 @@
 #   ONE bounded smoke:   tools/run_annulus_live_monitor_guarded.sh --once
 #   Continuous loop:     tools/run_annulus_live_monitor_guarded.sh          (ticks every INTERVAL_SEC)
 #   env overrides: RUN_DIR, GT_CACHE, PAIRS, FLOOR_MB, INTERVAL_SEC, THREADS
-set -uo pipefail
+set -euo pipefail
 cd /Users/adpena/Projects/pact
 
 RUN_DIR="${RUN_DIR:-experiments/results/levelset_n600_witness_mod32cap_20260706T115554Z}"
@@ -41,12 +41,12 @@ run_one_guarded() {
     AVAIL=$(.venv/bin/python -c "from tools.mem_basis import conservative_free_gib as f; g=f(default=float('inf'));print(99999 if g==float('inf') else int(g*1024))" 2>/dev/null || echo 99999)
     if [ "$AVAIL" -lt "$FLOOR_MB" ]; then
       echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) WATCHDOG: avail ${AVAIL}MB < ${FLOOR_MB}MB — killing monitor group -$MON to protect the box" | tee -a "$GUARD_LOG"
-      kill -9 -- "-$MON" 2>/dev/null
+      kill -9 -- "-$MON" 2>/dev/null || true
       break
     fi
     sleep 4
   done
-  wait "$MON" 2>/dev/null
+  wait "$MON" 2>/dev/null || true
   echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) monitor tick done; avail now $(.venv/bin/python -c 'from tools.mem_basis import conservative_free_gib as f; g=f(default=float('inf'));print(99999 if g==float('inf') else int(g*1024))')MB" | tee -a "$GUARD_LOG"
 }
 

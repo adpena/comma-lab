@@ -22,7 +22,7 @@
 #            --posenet-yuv6-geometry-tether-weight / --posenet-temporal-signal-floor-weight
 #
 # Run detached:  nohup bash scripts/launch_b1_clean_stabilized_pr95.sh </dev/null >/dev/null 2>&1 & disown
-set -uo pipefail
+set -euo pipefail
 cd /Users/adpena/Projects/pact
 RUN_ID="b1_229k_clean_$(date -u +%Y%m%dT%H%M%SZ)"
 SSD_RUN="/Volumes/VertigoDataTier/pact/${RUN_ID}"
@@ -34,7 +34,7 @@ mkdir -p .omx/tmp
     sleep 60
   done ) &
 HB_PID=$!
-trap "kill ${HB_PID} 2>/dev/null" EXIT
+trap "kill ${HB_PID} 2>/dev/null || true" EXIT
 echo "CLEAN_B1_RUN_ID=${RUN_ID}" >> "${SSD_RUN}/run_id.txt"
 
 # === BLOCKER 2 PRE-LAUNCH GATE ============================================
@@ -43,6 +43,7 @@ echo "CLEAN_B1_RUN_ID=${RUN_ID}" >> "${SSD_RUN}/run_id.txt"
 # clean run does NOT launch unless manifest_complete_and_self_consistent.
 # rc=2 from the emitter => gate fail => abort (do NOT burn GPU hours).
 MANIFEST=".omx/research/b1_clean_pr95_baseline_launch_manifest_${RUN_ID}.json"
+MANIFEST_RC=0
 .venv/bin/python tools/build_b1_launch_manifest.py \
   --clean-baseline \
   --run-id "${RUN_ID}" \
@@ -52,8 +53,7 @@ MANIFEST=".omx/research/b1_clean_pr95_baseline_launch_manifest_${RUN_ID}.json"
   --telemetry-path "${SSD_RUN}/telemetry.jsonl" \
   --best-checkpoint-manifest-path "${MANIFEST%.json}_best_checkpoint.json" \
   --superseded-run-id "b1_229k_pilot_20260609T055851Z" \
-  --output "${MANIFEST}"
-MANIFEST_RC=$?
+  --output "${MANIFEST}" || MANIFEST_RC=$?
 if [ "${MANIFEST_RC}" -ne 0 ]; then
   printf '%s MANIFEST_GATE_FAILED rc=%s run=%s — ABORT, NOT launching\n' \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${MANIFEST_RC}" "${RUN_ID}" >> "${HEARTBEAT}"
@@ -63,6 +63,7 @@ fi
 echo "MANIFEST_GATE_PASS manifest=${MANIFEST}" >> "${SSD_RUN}/run_id.txt"
 # ==========================================================================
 
+RC=0
 .venv/bin/python experiments/train_substrate_hi_nerv_mlx_local.py \
   --full \
   --allow-direct-research-full-launch \
@@ -89,7 +90,6 @@ echo "MANIFEST_GATE_PASS manifest=${MANIFEST}" >> "${SSD_RUN}/run_id.txt"
   --upstream-dir upstream \
   --checkpoint-dir "${SSD_RUN}/checkpoints" \
   --checkpoint-interval-epochs 250 \
-  --output-dir "${SSD_RUN}"
-RC=$?
+  --output-dir "${SSD_RUN}" || RC=$?
 printf '%s TRAIN_EXIT rc=%s run=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${RC}" "${RUN_ID}" >> "${HEARTBEAT}"
 exit ${RC}

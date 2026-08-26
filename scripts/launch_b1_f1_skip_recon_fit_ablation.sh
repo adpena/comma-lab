@@ -14,7 +14,7 @@
 # recon-fit probe is ALWAYS MSE, so a PSNR break here is purely the residual-path effect.
 #
 # Run detached: nohup bash scripts/launch_b1_f1_skip_recon_fit_ablation.sh </dev/null >/dev/null 2>&1 & disown
-set -uo pipefail
+set -euo pipefail
 cd "$(dirname "$0")/.."
 PY=.venv/bin/python
 TIER=/Volumes/VertigoDataTier/pact
@@ -27,14 +27,15 @@ run_arm() {
   local work="${TIER}/recon_fit_f1_${label}_${TS}"
   mkdir -p "$work"
   echo "[$(date -u +%H:%M:%SZ)] START arm=${label} -> ${work}"
+  local rc=0
   "$PY" tools/run_hi_nerv_recon_fit_capacity.py \
     --num-pairs "$N" --epochs "$EPOCHS" --batch-pairs 16 \
     --eval-every-epochs 50 --eval-sample-pairs 32 \
     "$@" \
     --work-dir "$work" \
     --out "${work}/recon_fit_f1_${label}.json" \
-    > "${work}/stdout.log" 2>&1
-  echo "[$(date -u +%H:%M:%SZ)] DONE  arm=${label} rc=$? -> ${work}/recon_fit_f1_${label}.json"
+    > "${work}/stdout.log" 2>&1 || rc=$?
+  echo "[$(date -u +%H:%M:%SZ)] DONE  arm=${label} rc=${rc} -> ${work}/recon_fit_f1_${label}.json"
 }
 
 # Arm A: skip ON, w=30 (single-variable skip add at the current frequency).

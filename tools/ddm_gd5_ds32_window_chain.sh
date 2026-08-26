@@ -19,7 +19,7 @@
 #   ... or with overrides:
 #   GD5_MAX_WINDOWS=4 bash tools/ddm_gd5_ds32_window_chain.sh
 
-set -uo pipefail
+set -euo pipefail
 
 REPO="${GD5_REPO:-/Users/adpena/Projects/pact}"
 ROOT="${GD5_ROOT:-/Volumes/VertigoDataTier/pact/ddm_gd4_ds32_20260803}"
@@ -152,11 +152,11 @@ for ((w = 2; w <= MAX_WINDOWS + 1; w++)); do
   # Fire through the GOVERNED launcher. rc=4 is a REFUSE -> wait, never force.
   tries=0
   while true; do
+    rc=0
     "$PY" tools/launch_tr1_run.py \
       --ticket "$TICKET" --out-dir "$OUT" --resume-from "$CKPT" \
       --allow-outdir-drift --purpose "ddm_gd5 ds32 continuation window $w" \
-      >>"$DRIVER_LOG" 2>&1
-    rc=$?
+      >>"$DRIVER_LOG" 2>&1 || rc=$?
     if [[ $rc -eq 0 ]]; then break; fi
     if [[ $rc -eq 4 ]]; then
       tries=$((tries + 1))

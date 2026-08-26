@@ -22,7 +22,7 @@
 # Usage:
 #   tools/codex_companion_spawn.sh spawn  <label> <effort:low|medium|high|xhigh> <prompt_file>
 #   tools/codex_companion_spawn.sh status
-set -uo pipefail
+set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 LEDGER="$REPO/.omx/state/codex_companion_ledger.jsonl"
@@ -50,7 +50,7 @@ case "${1:-}" in
     # (temp-broker collision guard for simultaneous spawns).
     LOCK="$RUNDIR/.spawn_serialize.lock"
     for _ in $(seq 1 30); do
-      if mkdir "$LOCK" 2>/dev/null; then trap 'rmdir "$LOCK" 2>/dev/null' EXIT; break; fi
+      if mkdir "$LOCK" 2>/dev/null; then trap 'rmdir "$LOCK" 2>/dev/null || true' EXIT; break; fi
       sleep 2
     done
     ledger_row spawn "$LABEL" "$TS" "\"effort\":\"$EFFORT\"" "\"log\":\"$LOG\"" "\"prompt_sha256\":\"$PSHA\""

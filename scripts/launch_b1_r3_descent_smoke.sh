@@ -17,7 +17,7 @@
 # DESCEND (d_seg << 0.50) -> launch the full staged B1-R3. FLAT -> fork to PR95-faithful / SNeRV carrier.
 #
 # Run detached: nohup bash scripts/launch_b1_r3_descent_smoke.sh </dev/null >/dev/null 2>&1 & disown
-set -uo pipefail
+set -euo pipefail
 cd /Users/adpena/Projects/pact
 RUN_ID="b1_r3_descent_smoke_$(date -u +%Y%m%dT%H%M%SZ)"
 SSD_RUN="/Volumes/VertigoDataTier/pact/${RUN_ID}"
@@ -29,9 +29,10 @@ mkdir -p .omx/tmp
     sleep 60
   done ) &
 HB_PID=$!
-trap "kill ${HB_PID} 2>/dev/null" EXIT
+trap "kill ${HB_PID} 2>/dev/null || true" EXIT
 echo "B1_R3_RUN_ID=${RUN_ID}" >> "${SSD_RUN}/run_id.txt"
 
+RC=0
 .venv/bin/python experiments/train_substrate_hi_nerv_mlx_local.py \
   --full \
   --allow-direct-research-full-launch \
@@ -59,7 +60,6 @@ echo "B1_R3_RUN_ID=${RUN_ID}" >> "${SSD_RUN}/run_id.txt"
   --upstream-dir upstream \
   --checkpoint-dir "${SSD_RUN}/checkpoints" \
   --checkpoint-interval-epochs 250 \
-  --output-dir "${SSD_RUN}"
-RC=$?
+  --output-dir "${SSD_RUN}" || RC=$?
 printf '%s TRAIN_EXIT rc=%s run=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${RC}" "${RUN_ID}" >> "${HEARTBEAT}"
 exit ${RC}
