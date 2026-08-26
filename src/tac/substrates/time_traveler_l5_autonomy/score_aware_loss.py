@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# SCORER_PREPROCESS_HANDLED_OK:routes-loss-through-tac.codec.cooperative_receiver.cooperative_receiver_loss-which-calls-score_pair_components-at-atick_redlich.py-per-Catalog-164
 """Score-aware Lagrangian for the Time-Traveler L5 Autonomy substrate.
 
 L = alpha * B / N + beta * d_seg + gamma * sqrt(d_pose) + delta * H_pred

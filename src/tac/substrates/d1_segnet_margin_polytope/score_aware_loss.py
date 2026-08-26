@@ -155,7 +155,7 @@ class D1PolytopeScoreAwareLoss(nn.Module):
         pair_pred = stage_frame_pair(rgb_0_rt, rgb_1_rt)
         # Canonical SegNet preprocess: slices frame 1, resamples to (384, 512).
         seg_input = self.seg_scorer.preprocess_input(pair_pred)
-        logits = self.seg_scorer(seg_input)
+        logits = self.seg_scorer(seg_input)  # SCORER_PREPROCESS_HANDLED_OK:preprocess_input-called-on-the-line-above-raw-top1-minus-top2-logit-margin-needed-which-score_pair_components-does-not-expose
         if logits.dim() != 4 or logits.shape[1] < 2:
             raise ValueError(
                 "SegNet logits shape unexpected (need (B, C>=2, H, W)); "

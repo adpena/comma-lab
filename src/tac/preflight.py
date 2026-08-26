@@ -15237,6 +15237,36 @@ def _check_164_imports_canonical_entry_point(tree: ast.AST) -> bool:
     return False
 
 
+def _check_164_file_level_waiver_rationale(lines: list[str]) -> str | None:
+    """Return the file-level SCORER_PREPROCESS_HANDLED_OK rationale, if valid.
+
+    A score-aware-loss module that satisfies the scorer contract by
+    DELEGATION (a helper that itself calls a canonical entry point, e.g.
+    ``cooperative_receiver_loss`` -> ``score_pair_components`` at
+    atick_redlich.py, or ``scorer_loss_terms_btchw`` -> ``scorer_forward_pair``
+    which calls ``preprocess_input`` on both scorers) — or that loads NO
+    scorer at all (a scalar facade) — cannot honestly import-and-call
+    ``score_pair_components``. Forcing it to would be marker-without-work
+    (NO-FAKE #1). Such a module declares a file-level
+    ``# SCORER_PREPROCESS_HANDLED_OK:<substantive rationale>`` comment in its
+    header (first 60 lines). Placeholder rationales are rejected per the
+    Catalog #287 sister discipline. The file-level waiver covers ONLY the
+    missing-canonical-call mode; a direct scorer forward still requires its
+    own same-line waiver, preserving per-line accountability.
+    """
+    for line in lines[:60]:
+        stripped = line.strip()
+        if not stripped.startswith("#"):
+            continue
+        idx = stripped.find(_CHECK_164_WAIVER_TOKEN)
+        if idx < 0:
+            continue
+        rationale = stripped[idx + len(_CHECK_164_WAIVER_TOKEN):].strip()
+        if len(rationale) >= 10 and "<" not in rationale:
+            return rationale
+    return None
+
+
 def check_substrate_score_aware_losses_use_canonical_scorer_contract(
     repo_root: Path | None = None,
     strict: bool = True,
@@ -15298,14 +15328,18 @@ def check_substrate_score_aware_losses_use_canonical_scorer_contract(
         )
         imports_canonical = _check_164_imports_canonical_entry_point(tree)
         has_canonical_call = calls_canonical_name and imports_canonical
-        if not has_canonical_call:
+        lines = text.splitlines()
+        if not has_canonical_call and (
+            _check_164_file_level_waiver_rationale(lines) is None
+        ):
             violations.append(
                 f"{rel}: missing AST call to a canonical scorer entry point "
                 f"({', '.join(sorted(_CHECK_164_CANONICAL_ENTRY_POINTS))}) imported "
                 f"from {_CHECK_164_CANONICAL_MODULE}; comments/strings do not "
-                "satisfy the scorer contract"
+                "satisfy the scorer contract (delegating/scorer-free modules "
+                f"may carry a file-level header `# {_CHECK_164_WAIVER_TOKEN}"
+                "<substantive rationale>` waiver)"
             )
-        lines = text.splitlines()
         for node in ast.walk(tree):
             if not isinstance(node, ast.FunctionDef):
                 continue

@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# SCORER_PREPROCESS_HANDLED_OK:routes-through-tac.losses.scorer_loss_terms_btchw-whose-scorer_forward_pair-calls-preprocess_input-on-both-scorers-the-same-primitive-score_pair_components-wraps-documented-principled-fork-in-module-docstring
 """NSCS01 split-head score-aware Lagrangian.
 
 L = alpha * B/N

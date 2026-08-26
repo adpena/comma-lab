@@ -262,6 +262,131 @@ class ConstOnlyScoreAwareLoss:
     assert "missing AST call to a canonical scorer entry point" in violations[0]
 
 
+# ── file-level delegation waiver (r48 class-36 successor, 2026-08-25) ──────
+# Live shape: atw_codec_v2 / time_traveler delegate through
+# cooperative_receiver_loss (which calls score_pair_components at
+# atick_redlich.py:245); nscs01 through scorer_loss_terms_btchw (whose
+# scorer_forward_pair calls preprocess_input on both scorers); tishby_ib_pure
+# loads no scorer at all. Forcing those files to import-and-call
+# score_pair_components would be marker-without-work, so the missing-import
+# mode honors a file-level header waiver with a substantive rationale.
+# Direct scorer forwards are deliberately NOT covered by the file waiver.
+
+
+def test_score_aware_loss_contract_accepts_file_level_delegation_waiver(tmp_path):
+    _write(
+        tmp_path / "src/tac/substrates/delegating/score_aware_loss.py",
+        """
+# SCORER_PREPROCESS_HANDLED_OK:routes-through-a-canonical-delegating-helper-that-calls-score_pair_components
+class DelegatingScoreAwareLoss:
+    def forward(self):
+        return helper_that_calls_canonical(x)
+""",
+    )
+
+    assert (
+        check_substrate_score_aware_losses_use_canonical_scorer_contract(
+            repo_root=tmp_path,
+            strict=True,
+            verbose=False,
+        )
+        == []
+    )
+
+
+def test_score_aware_loss_contract_rejects_placeholder_file_waiver(tmp_path):
+    _write(
+        tmp_path / "src/tac/substrates/placeholder/score_aware_loss.py",
+        """
+# SCORER_PREPROCESS_HANDLED_OK:<reason>
+class PlaceholderScoreAwareLoss:
+    def forward(self):
+        return helper(x)
+""",
+    )
+
+    violations = check_substrate_score_aware_losses_use_canonical_scorer_contract(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+
+    assert len(violations) == 1
+    assert "missing AST call" in violations[0]
+
+
+def test_score_aware_loss_contract_rejects_string_smuggled_file_waiver(tmp_path):
+    """The file-level waiver must be a COMMENT line, never a string literal."""
+    _write(
+        tmp_path / "src/tac/substrates/smuggled/score_aware_loss.py",
+        """
+note = "SCORER_PREPROCESS_HANDLED_OK:this-is-a-string-not-a-comment-and-must-not-waive"
+class SmuggledScoreAwareLoss:
+    def forward(self):
+        return helper(x)
+""",
+    )
+
+    violations = check_substrate_score_aware_losses_use_canonical_scorer_contract(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+
+    assert len(violations) == 1
+    assert "missing AST call" in violations[0]
+
+
+def test_score_aware_loss_contract_file_waiver_does_not_cover_direct_forwards(tmp_path):
+    """A file-level waiver clears ONLY the missing-import mode.
+
+    A direct scorer forward keeps the per-line waiver requirement so per-line
+    accountability survives the delegation route.
+    """
+    _write(
+        tmp_path / "src/tac/substrates/directfwd/score_aware_loss.py",
+        """
+# SCORER_PREPROCESS_HANDLED_OK:delegation-waiver-must-not-launder-a-direct-scorer-forward
+class DirectFwdScoreAwareLoss:
+    def forward(self):
+        return self.seg_scorer(x)
+""",
+    )
+
+    violations = check_substrate_score_aware_losses_use_canonical_scorer_contract(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+
+    assert len(violations) == 1
+    assert "direct seg_scorer scorer forward" in violations[0]
+
+
+def test_score_aware_loss_contract_rejects_file_waiver_below_header_window(tmp_path):
+    """The waiver must live in the module header (first 60 lines)."""
+    filler = "\n".join(f"x{i} = {i}" for i in range(70))
+    _write(
+        tmp_path / "src/tac/substrates/latewaiver/score_aware_loss.py",
+        f"""
+{filler}
+# SCORER_PREPROCESS_HANDLED_OK:too-late-in-the-file-to-count-as-a-header-declaration
+class LateWaiverScoreAwareLoss:
+    def forward(self):
+        return helper(x)
+""",
+    )
+
+    violations = check_substrate_score_aware_losses_use_canonical_scorer_contract(
+        repo_root=tmp_path,
+        strict=False,
+        verbose=False,
+    )
+
+    assert len(violations) == 1
+    assert "missing AST call" in violations[0]
+
+
 def test_score_aware_loss_contract_accepts_relative_canonical_import(tmp_path):
     """`from .score_aware_common import X` is the same canonical import.
 

@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# SCORER_PREPROCESS_HANDLED_OK:no-scorer-is-loaded-or-forwarded-in-this-module-scalar-IB-facade-over-precomputed-terms-with-score_claim-false-the-preprocess-bug-class-cannot-occur
 """Score-aware loss facade for the Tishby IB-pure L1 scaffold."""
 
 from __future__ import annotations
