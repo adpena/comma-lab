@@ -246,14 +246,13 @@ was `8b00b5a70ae0e57b0e8fad6261e02f10d625ebe67aefbe61cdc1f137edf4ca2c` and the d
 ## Ledger receipts
 
 Three canonical registrations were appended under actor `ddm_or1`, session
-`ddm_or1_20260826`: `ddm_or1_orthogonal_representation_regime` (moved to `in_progress` while the
-serializer receipt is built), `ddm_or1_renderer_born_small` (`pending`), and
+`ddm_or1_20260826`: `ddm_or1_orthogonal_representation_regime` (`completed`, green, receipt commit
+`e493c73054`), `ddm_or1_renderer_born_small` (`pending`), and
 `ddm_or1_global_region_grammar_reference` (`pending`). The canonical validator returned exit 0 and
-`{"rows": 672, "status": "valid"}` after these writes. It repeated two pre-existing unrelated
+`{"rows": 673, "status": "valid"}` after the completion write. It repeated two pre-existing unrelated
 unreadable-history warnings (`1079_pv1_pose_floor_and_admission_bar_audit_20260816` and
 `1082_ddm_hm1_hpac_model_byte_derivative_20260816`); OR1 did not alter or claim those rows. The
-main completion event is intentionally appended only after the serializer supplies the landed
-commit SHA.
+main completion event cites the landed memo, source, and initial ledger receipt.
 
 ## GESTALT-DELTA
 
