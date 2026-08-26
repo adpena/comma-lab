@@ -177,6 +177,8 @@ The validator continues to report two pre-existing unreadable task histories
 - Stage-0 execution: expected exit 2 with retained typed refusal; **PASS**.
 - `git diff --check`: **PASS**.
 - `upstream/`: unchanged by BS4.
+- Mandatory serializer landing: **PASS** at commit `d82500f19c`; the post-commit
+  content checks passed and no fallback clone or bundle was needed.
 
 ## GESTALT-DELTA
 
@@ -207,11 +209,6 @@ progress, not score progress, and the exact pointer did not move.
   store: `checkpoints/stage_50_learned_implicit_screen.json`; fire trigger: Stage 4 has
   retained same-instrument exact deltas and real-byte arithmetic that remain live; then
   run the deterministic one-hidden-layer holdout screen and label it SCREEN only.
-- **BLOCKED-WITH-A-LANDING-ORDER** — owner: `MAIN repository custodian`; consumer store:
-  the serializer receipt or serializer-authored bundle named in this memo's final
-  custody update; fire trigger: run the mandatory serializer with post-edit hashes and
-  retain bundle-only fallback if Git-object writes are denied; never start the known
-  fat-clone fallback.
 
 ## LIVE-HYPOTHESES
 
