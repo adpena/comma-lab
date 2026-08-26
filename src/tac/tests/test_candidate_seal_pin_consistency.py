@@ -338,6 +338,8 @@ def test_live_pointer_supplies_a_usable_bar() -> None:
 _REPO = Path(__file__).resolve().parents[3]
 _PQ2 = _REPO / "experiments" / "ddm_pq2_compress_e2e.py"
 _FIRE = _REPO / "tools" / "fire_modal_auth_eval.py"
+_LOCAL_FIRE = _REPO / "tools" / "fire_local_advisory.py"
+_SEAL_PRODUCER = _REPO / "tools" / "make_candidate_seal.py"
 
 
 def _module_level_constants(path: Path) -> set[str]:
@@ -348,9 +350,12 @@ def _module_level_constants(path: Path) -> set[str]:
     for node in tree.body:
         if isinstance(node, ast.Assign):
             names.update(t.id for t in node.targets if isinstance(t, ast.Name))
-        elif isinstance(node, ast.AnnAssign) and node.value is not None:
-            if isinstance(node.target, ast.Name):
-                names.add(node.target.id)
+        elif (
+            isinstance(node, ast.AnnAssign)
+            and node.value is not None
+            and isinstance(node.target, ast.Name)
+        ):
+            names.add(node.target.id)
     return names
 
 
@@ -391,3 +396,23 @@ def test_the_fire_path_consumes_the_seal_check() -> None:
     # Brick 2 — the seal DOCUMENT, validated before any other stage and refused on its own rc.
     assert "validate_seal" in source
     assert re.search(r"refuse_seal\(\s*seal_path,\s*out_dir,\s*7,", source), "a seal refusal owns rc=7"
+
+
+def test_local_advisory_refuses_a_broken_pin_before_scorer_or_fire() -> None:
+    """The free row must reject the same broken object before it can spend evaluator work."""
+    source = _LOCAL_FIRE.read_text()
+
+    assert "check_pin_consistency" in source
+    assert "pin-consistency preflight refused before scorer/fire" in source
+    assert source.index("pin = check_pin_consistency") < source.index("sweep_upstream_bytecode(upstream)")
+    assert source.index("pin = check_pin_consistency") < source.index("inner = [")
+
+
+def test_seal_producer_refuses_a_broken_pin_before_writing_a_seal() -> None:
+    """A mismatch is a producer-time error, not a later paid-fire surprise."""
+    source = _SEAL_PRODUCER.read_text()
+
+    assert "check_pin_consistency" in source
+    assert "pin-consistency preflight refused before seal creation" in source
+    assert source.index("pin = check_pin_consistency") < source.index("measured = measure_archive_identity")
+    assert source.index("pin = check_pin_consistency") < source.index("write_seal(document, out_path)")

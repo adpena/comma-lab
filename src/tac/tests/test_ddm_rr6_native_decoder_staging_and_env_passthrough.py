@@ -25,6 +25,7 @@ Why these two surfaces are worth a regression guard:
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import sys
@@ -55,6 +56,19 @@ def stager():
         REPO / "experiments" / "ddm_wc2c_stage_native_split_runtime.py",
         "_rr6_stage_native_split_runtime",
     )
+
+
+def _stage_pinned_runtime(runtime: Path) -> None:
+    """Create the smallest runtime accepted by the shared pin preflight."""
+    runtime.mkdir()
+    archive = runtime / "archive.zip"
+    archive.write_bytes(b"archive")
+    (runtime / "inflate.py").write_text(
+        f'ARCHIVE_SHA256 = "{hashlib.sha256(archive.read_bytes()).hexdigest()}"\n'
+        f"ARCHIVE_BYTES = {archive.stat().st_size}\n",
+        encoding="utf-8",
+    )
+    (runtime / "inflate.sh").write_text("#!/bin/sh\n", encoding="utf-8")
 
 
 # --------------------------------------------------------------------------
@@ -121,10 +135,8 @@ def test_dry_run_leaves_absent_attempt_dir_absent(firer, tmp_path, monkeypatch, 
     """rv15 F14: planning must not materialize an attempt, shim, or manifest."""
     runtime = tmp_path / "runtime"
     upstream = tmp_path / "upstream"
-    runtime.mkdir()
+    _stage_pinned_runtime(runtime)
     upstream.mkdir()
-    (runtime / "archive.zip").write_bytes(b"archive")
-    (runtime / "inflate.sh").write_text("#!/bin/sh\n", encoding="utf-8")
     (upstream / "public_test_video_names.txt").write_text("x.mp4\n", encoding="utf-8")
     attempt = tmp_path / "attempt"
     monkeypatch.setattr(
@@ -153,11 +165,9 @@ def test_dry_run_keeps_existing_empty_attempt_byte_identical(
     runtime = tmp_path / "runtime"
     upstream = tmp_path / "upstream"
     attempt = tmp_path / "attempt"
-    runtime.mkdir()
+    _stage_pinned_runtime(runtime)
     upstream.mkdir()
     attempt.mkdir()
-    (runtime / "archive.zip").write_bytes(b"archive")
-    (runtime / "inflate.sh").write_text("#!/bin/sh\n", encoding="utf-8")
     (upstream / "public_test_video_names.txt").write_text("x.mp4\n", encoding="utf-8")
     before = attempt.stat()
     monkeypatch.setattr(

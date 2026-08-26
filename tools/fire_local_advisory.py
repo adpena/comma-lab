@@ -58,6 +58,10 @@ import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
+
+from tac.candidate_seal import check_pin_consistency  # noqa: E402
+
 DEFAULT_UPSTREAM_MIRROR = Path("/Volumes/APDataStore/pact/upstream_eval_mirror_20260815")
 # The proven PATH tail from the successful keep01/V-series advisory launches.
 PATH_TAIL = (
@@ -197,8 +201,16 @@ def main() -> int:
     video_names = upstream / "public_test_video_names.txt"
 
     for what, path in (("runtime dir", runtime), ("archive", archive),
-                       ("inflate.sh", inflate_sh), ("upstream mirror", upstream),
-                       ("video names file", video_names)):
+                       ("inflate.sh", inflate_sh)):
+        if not path.exists():
+            return _refuse(f"{what} missing: {path}")
+    pin = check_pin_consistency(runtime, archive_path=archive)
+    if not pin.ok:
+        return _refuse(
+            "candidate runtime pin-consistency preflight refused before scorer/fire: "
+            f"{pin.summary()}"
+        )
+    for what, path in (("upstream mirror", upstream), ("video names file", video_names)):
         if not path.exists():
             return _refuse(f"{what} missing: {path}")
     # Repair, do not merely prevent.  Swept in dry-run too: a dry run exists to

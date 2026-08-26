@@ -51,6 +51,7 @@ from tac.candidate_seal import (  # noqa: E402
     AdmitBar,
     SealContractError,
     build_seal,
+    check_pin_consistency,
     measure_archive_identity,
     read_pointer_state,
     validate_seal,
@@ -138,7 +139,7 @@ def compose_bound_falsifier(base_receipt_path: str) -> str:
     absence caused all three defects. ``tools/report_8dp_delta_bound.py``
     composes the full two-row sentence at adjudication time.
     """
-    from tac.report_8dp_bounds import row_bound_from_result  # noqa: PLC0415
+    from tac.report_8dp_bounds import row_bound_from_result
 
     path = Path(base_receipt_path)
     if not path.is_file():
@@ -167,6 +168,12 @@ def main(argv: list[str] | None = None) -> int:
     out_path = Path(args.out)
 
     try:
+        pin = check_pin_consistency(runtime_dir, archive_path=archive_path)
+        if not pin.ok:
+            raise SealContractError(
+                "candidate runtime pin-consistency preflight refused before seal creation: "
+                f"{pin.summary()}"
+            )
         measured = measure_archive_identity(archive_path)
         if args.verify_archive_sha and args.verify_archive_sha.strip().lower() != measured.sha256:
             print(
@@ -190,7 +197,7 @@ def main(argv: list[str] | None = None) -> int:
         receivers = tuple(args.receiver) if args.receiver else ("inflate.py", "inflate.sh")
         falsifiers = tuple(args.falsifier)
         if args.bound_base_receipt:
-            falsifiers = falsifiers + (compose_bound_falsifier(args.bound_base_receipt),)
+            falsifiers = (*falsifiers, compose_bound_falsifier(args.bound_base_receipt))
         document = build_seal(
             candidate_id=args.candidate_id,
             runtime_dir=runtime_dir,
