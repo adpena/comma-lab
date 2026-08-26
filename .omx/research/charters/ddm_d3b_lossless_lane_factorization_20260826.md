@@ -107,3 +107,23 @@ design (Lane-plane bytes, counted params, total vs 127,292 and vs 85,064) + the
 decode-identity proof (field sha match) + rule-118 accounting + ledger receipts +
 GESTALT-DELTA line + payload paths w/ sha256s + (if clearing) byte-closed archive + sealed
 fire-order for MAIN. Commit via the serializer. End with the own-vehicle frontier line.
+
+## AMENDMENT 1 (operator 2026-08-26 "No naive or toy or generic" — BINDING, enforced at harvest)
+
+The optimal-form reference for THIS problem is named explicitly; MAIN will REFUSE any
+family-closing verdict drawn from a lesser member:
+
+1. REFERENCE FORM for the verdict-bearing context design: (a) shipped HPAC/F26 model as the
+   base conditional (already in the instrument, correct) COMPOSED WITH (b) DERIVED geometric
+   context — the d3a lane-band distance/angle features (commit `05548b5dce` machinery), not
+   generic square radii alone; (c) temporal/cross-frame context; (d) adaptive MIXING of
+   these predictors — the proven fixed-point log-odds mixer lineage
+   (`experiments/ddm_fx1_logistic_mixer_corrector.py`, task #1109) or measured-equivalent —
+   RACED, never presumed.
+2. Crude tables (KT/Laplace, small-radius-only neighborhoods) are SCREEN/BOUND instruments
+   ONLY — admissible for ordering candidates, NEVER as verdict rows, NEVER for family
+   closure (the lm1 discipline: crude KT was a bound, not a verdict).
+3. Generic defaults derived-or-raced (m47): every radius/context-bit/quantization choice in
+   a verdict row is either derived from measured structure or swept — stated per row.
+4. The FALSIFIER only closes the factorization family if it fires on the REFERENCE-FORM
+   member. A generic-only member firing it is an INSTANCE result, not a family closure.
