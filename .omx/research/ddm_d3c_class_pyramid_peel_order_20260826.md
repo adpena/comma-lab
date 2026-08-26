@@ -184,8 +184,10 @@ All are evidence artifacts, so cleanup is certify-or-block: none was deleted or 
 - `ddm_d3c_class_pyramid_peel_order` was registered at
   `2026-08-26T17:32:02.990693Z`, actor/owner `ddm_d3c`, session `ddm_d3c_20260826`.
 - It moved to `in_progress` at `2026-08-26T17:32:03.126133Z` after recall and custody resolution.
-- Completion receipt: pending serializer landing; the completion row will name the landing commit
-  and green validation state.
+- `ddm_d3c_reference_form_successor` was registered `pending` at
+  `2026-08-26T17:43:33.632355Z`, owner `d3b-successor`, with the consumer store and fire gate below.
+- `ddm_d3c_class_pyramid_peel_order` completed at `2026-08-26T17:44:12.871245Z`, test status
+  `green`, with serializer landing `514fdb603e` recorded in the completion row.
 
 `QUEUED-WITH-A-FIRE-ORDER`: the D3B successor owns reference-form confirmation of the rank-1 chain.
 Its consumer store is `/Volumes/APDataStore/pact/ddm_d3c_class_pyramid/successor_reference/`. Fire
