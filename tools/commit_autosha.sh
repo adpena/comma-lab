@@ -36,4 +36,4 @@ for f in "$@"; do
 done
 
 exec .venv/bin/python tools/subagent_commit_serializer.py \
-    --message "$MSG" --files "$@" "${ARGS[@]}"
+    --message "$MSG" --files "$@" "${ARGS[@]}"  # ARGS carries per-file --expected-content-sha256 pairs built above

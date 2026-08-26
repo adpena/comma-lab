@@ -54179,6 +54179,31 @@ def _check_174_is_real_invocation(block: str) -> bool:
     return False
 
 
+_CHECK_174_ARRAY_EXPANSION_RE: re.Pattern[str] = re.compile(
+    r"\$\{(?P<name>[A-Za-z_][A-Za-z0-9_]*)\[@\]\}"
+)
+
+
+def _check_174_shell_array_supplies_flag(block: str, text: str) -> bool:
+    """True iff the invocation block expands a shell array (``"${NAME[@]}"``)
+    that is built elsewhere in the SAME file with the required flag on the
+    append/assignment line — the ``tools/commit_autosha.sh`` idiom, where
+    ``ARGS+=(--expected-content-sha256 "$f=$SHA")`` lives in a loop above
+    the invocation and the flag literal is invisible to the block-local
+    scan. One-hop, same-array, same-file only: an array built WITHOUT the
+    flag never satisfies this."""
+    for m in _CHECK_174_ARRAY_EXPANSION_RE.finditer(block):
+        name = m.group("name")
+        build_re = re.compile(
+            rf"^\s*{re.escape(name)}\+?=\(.*"
+            rf"{re.escape(_CHECK_174_REQUIRED_FLAG)}",
+            re.MULTILINE,
+        )
+        if build_re.search(text):
+            return True
+    return False
+
+
 def _check_174_collect_serializer_invocations(
     text: str,
 ) -> list[tuple[int, str]]:
@@ -54308,6 +54333,14 @@ def check_subagent_commit_serializer_always_uses_expected_content_sha256(
                 if not _check_174_is_real_invocation(block):
                     continue
                 if _CHECK_174_REQUIRED_FLAG in block:
+                    continue
+                # Shell-array indirection (.sh only): the flag pairs are
+                # built into an array above the call and expanded as
+                # "${NAME[@]}" — accept iff the SAME file builds that SAME
+                # array with the flag literal on the build line.
+                if suffix == ".sh" and _check_174_shell_array_supplies_flag(
+                    block, text
+                ):
                     continue
                 # Same-line waiver: check the WHOLE invocation block for the
                 # waiver token (reason required).
