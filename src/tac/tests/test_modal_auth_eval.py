@@ -1242,7 +1242,7 @@ def test_main_calls_single_flight_guard(
         "main() no longer calls assert_modal_single_flight before dispatch — "
         "the #513 pre-spawn guard wire-in has been dropped"
     )
-    assert _hermetic_single_flight[0]["lane_id"] == "lane_unit_single_flight"
+    assert _hermetic_single_flight[0]["lane_id"] == "lane_unit_single_flight"  # FAKE_LANE_OK:synthetic lane id inside a hermetic single-flight unit test
 
 
 def test_modal_cuda_inflate_env_request_is_diagnostic_only(mod, tmp_path, monkeypatch):

@@ -95090,6 +95090,47 @@
       "reactivation_criteria": [
         "operator directive reopening the retired NeRV/SIREN/Cool-Chic lineage (no-old-lineage ban 2026-07-23); Catalog #126 registration backfill 2026-08-25"
       ]
+    },
+    {
+      "id": "lane_hi_nerv_mlx_score_aware_local_20260602",
+      "name": "HiNeRV MLX score-aware local trainer (retired lineage)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "HISTORICAL BACKFILL 2026-08-25 per Check 126 (backfill-when-discovered lifecycle clause): lane id referenced at experiments/train_substrate_hi_nerv_mlx_local.py:1536 since 2026-06-02 but never pre-registered. Retired lineage (no-old-lineage ban, lessons-only); trainer carries AUTOCAST_FP16_WAIVED + false-authority MLX markers. research_only: true."
     }
   ],
   "level_rules": {
@@ -95099,5 +95140,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-08-25T22:29:11Z"
+  "updated_at": "2026-08-26T01:36:23Z"
 }

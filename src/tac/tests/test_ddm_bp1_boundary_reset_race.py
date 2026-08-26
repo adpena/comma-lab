@@ -202,7 +202,7 @@ def test_config_roundtrips_through_a_checkpoint(tmp_path):
 _TAIL = [
     {"event": "a1_gate", "epoch": 940, "realized_gate_dseg_mean": 0.00430,
      "gate_params": "ema_shadow"},
-    {"event": "lane_guard", "epoch": 944},                       # no gate reading -> ignored
+    {"event": "lane_guard", "epoch": 944},                       # no gate reading -> ignored  # FAKE_LANE_OK:telemetry EVENT name in a test fixture (the lane_guard alarm), not a lane_id
     {"event": "a1_gate", "epoch": 945, "realized_gate_dseg_mean": 0.004201253255208332,
      "gate_params": "ema_shadow"},
 ]
