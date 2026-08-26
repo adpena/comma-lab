@@ -42993,6 +42993,26 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     "lane_hdr",  # globals key: lane header/geometry paired with lane_pairs
     "lane_cls",  # config field: the SegNet Lane class INDEX (canonical 1)
     "lane_rgb_mode",  # config field: lane paint RGB mode for the render band
+    # Lane-CLASS (SegNet class 1) receipt/packet schema keys in the ddm_d3b
+    # lossless Lane chain-rule factorization instrument
+    # (experiments/ddm_d3b_lossless_lane_factorization.py; Check 126
+    # adjudication 2026-08-26). These are JSON receipt keys and counted-packet
+    # field names about the Lane bitplane being factorized — NOT dispatch
+    # lane_ids. Renaming would desync the code from the retained
+    # ENCODE_RESULT/RESULT receipts on APDataStore and break the
+    # completed_result_if_current resume path (same class as the gd5/levelset
+    # blocks above).
+    "lane_packet",  # receipt key + packet builder: the counted Lane packet
+    "lane_packet_repeat",  # receipt key: determinism-repeat packet fact
+    "lane_symbols",  # receipt/packet field: coded Lane symbol count
+    "lane_rc64_body",  # receipt key: range-coded Lane body fact
+    "lane_receivers",  # receipt key: decode-identity receiver facts
+    "lane_support_fraction",  # receipt stat: Lane support fraction of plane
+    "lane_one_fraction_within_support",  # receipt stat: P(lane=1 | support)
+    # Sister instrument ddm_d3c class-pyramid peel-order screen
+    # (experiments/ddm_d3c_class_pyramid_peel_order.py, commit 514fdb60) —
+    # same receipt-key class, same adjudication.
+    "lane_plane_kt_bound_bytes",  # receipt key: KT bound of the Lane plane
     # Common helper / tool / function names
     "lane_id",
     "lane_id_matches",
