@@ -257,7 +257,9 @@ model. A learned parametric model is a different hypothesis CLASS: its parameter
 field and **shipped as counted bytes**, which is also a new archive block (L4).
 
 **Arithmetic — and it must reclaim the old model.** Replace the 13,515 B HPAC model with a `W`-byte
-learned model and cut the token stream by fraction `r`. Net = `13,515 − W − r·113,777`, and the demand
+learned model and cut the token stream by fraction `r`. Net = `13,515 − W + r·113,777` *(corrected
+2026-08-26, see §CORRECTION — the original wrote `− r·113,777`; the inequality and table below were
+always derived from the correct form and are unchanged)*, and the demand
 is 42,228 B, so `r ≥ (42,228 + W − 13,515) / 113,777`:
 
 | `W` (model bytes) | required cut `r` |
@@ -282,7 +284,8 @@ coding, not in any measurement on this field.
 
 **Pre-registered falsifier (no scorer needed, so it is cheap).** Fit the model on a frame split and
 measure held-out conditional code length on the pinned field. **Kill number: held-out cost
-≥ 113,777 − 13,515 + W bytes ⇒ no net, family closed at that capacity.** Because it is lossless, the
+≥ 113,777 + 13,515 − W bytes ⇒ no net, family closed at that capacity** *(corrected 2026-08-26,
+see §CORRECTION — the original flipped both signs)*. Because it is lossless, the
 falsifier needs no scorer, no renderer and no authority row — it is a byte comparison against a
 retained field.
 
@@ -483,7 +486,7 @@ UNMOVED by this arm.** Gap to 0.12 = 0.028118 ⇒ shed **42,228 B** at fixed dis
 - **QUEUED-WITH-A-FIRE-ORDER — row 2, the learned probability model.** Owner: next $0/cheap-CPU arm.
   Fire trigger: none — its falsifier needs **no scorer, no Modal and no authority row**, only a
   train/test frame split on the retained field, so it is the cheapest decisive purchase in §4. Bar:
-  held-out cost < `113,777 − 13,515 + W` bytes. Consumer store:
+  held-out cost < `113,777 + 13,515 − W` bytes *(corrected 2026-08-26, see §CORRECTION)*. Consumer store:
   `.omx/tmp/ddm_no1_lattice_floor/`'s sibling under the successor's own arm id.
 - **QUEUED — row 1, the three-term objective.** Owner: MAIN / next training slot. Fire trigger: a
   coder-matched rate surrogate exists (NOT the `entropy` form — `rsf1` measured it anti-correlated),
@@ -495,3 +498,36 @@ UNMOVED by this arm.** Gap to 0.12 = 0.028118 ⇒ shed **42,228 B** at fixed dis
 - **FOLDED — the §1 screen.** Any charter aimed at a new object should publish its target
   `distortion_only_S` and `B_max` in its OPTIMAL FORM block. It costs two multiplications and it is
   the only test in this memo that is exact.
+
+---
+
+## CORRECTION (2026-08-26, appended — reported by ddm_lm1, adjudicated by MAIN)
+
+Three sites in this memo mis-stated the row-2 replacement arithmetic. The original text is
+preserved verbatim below (#110/#113 append-only); the body lines above now carry corrected
+forms with pointers here.
+
+**The correct arithmetic.** Replace the 13,515 B HPAC model with a `W`-byte learned model and
+code the stream to `stream'` bytes (`stream' = (1−r)·113,777`):
+
+- Net saving = (113,777 + 13,515) − (stream' + W) = `13,515 − W + r·113,777`.
+- Break-even (net > 0): `stream' < 113,777 + 13,515 − W = 127,292 − W`.
+- Demand-closing (net ≥ 42,228): `stream' ≤ 85,064 − W` — exactly what the Row-2 r-table encodes.
+
+**The three originals (verbatim):**
+
+1. Line ~260: "Net = `13,515 − W − r·113,777`" — the sign of the `r·113,777` term was flipped.
+   The inequality `r ≥ (42,228 + W − 13,515) / 113,777` and the entire r-table were always
+   derived from the CORRECT net and are unchanged.
+2. Line ~285 (pre-registered falsifier): "Kill number: held-out cost ≥ 113,777 − 13,515 + W
+   bytes ⇒ no net" — both remaining signs flipped; the correct break-even bar is
+   `113,777 + 13,515 − W`. The written bar differs from the true bar by `27,030 − 2W`:
+   STRICTER for W < 13,515 (false-kill risk only), LOOSER for W > 13,515 (false-survival
+   risk). No measurement was borderline under either form, so no verdict changes.
+3. Line ~486 (§5 fire-order): "Bar: held-out cost < `113,777 − 13,515 + W` bytes" — same flip;
+   corrected to `113,777 + 13,515 − W`.
+
+**Consistency check against the executing arm.** ddm_lm1's Stage-2 accounting already used the
+CORRECT bar: at W = 2,233 B its reported net −67,059.1 B equals 192,118.1 − (127,292 − 2,233).
+The lm1 charter quoted the wrong prose form, but the arm reconciled against mi1's break-even as
+mandated and computed with the correct arithmetic — nothing downstream consumed the wrong bars.
