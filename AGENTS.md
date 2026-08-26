@@ -223,7 +223,7 @@ that at bc20 that was not enough capacity"* + *"you're basically just running pr
 implementation of what was supposed to be our capstone"* + *"Build the witness capstone"* + *"Chroma too"*
 + *"implementations are not optimal yet"* + *"establish as new frontier and focus and priority."* This
 section is subordinate ONLY to the NO-FAKE supreme rule and THE GOAL (sub-0.15). Pointer UNMOVED at
-contest-CPU **0.19110** (a borrowed PR101/PR110 recode) — that is the honest state until a measured
+contest-CPU **0.19110** (a borrowed PR101/PR110 recode) — that is the honest state until a measured <!-- HISTORICAL_SCORE_LITERAL_OK:borrowed_PR101_PR110_recode_pointer_value_as_of_the_2026-06-25_directive_superseded_by_canonical_frontier_pointer_json -->
 witness row moves it. Cross-refs (durable, compaction-survivable): memory
 `[[muonjump-segplateau-pivot-to-step-nonlinear-CURRENT-STATE]]` +
 `[[dont-rerun-pr95-reskinned-as-capstone-beware-looping-same-wrong-vehicle]]` +
@@ -380,7 +380,7 @@ no decisive new EXACT-relevant signal, STOP and pivot.
 
 Witness d_seg → ~0.001 at low rate → compose with the already-built Quantizr-style stored-pose sidecar
 (pose solved, ~1–5KB) → byte-close in the L13 task-space format → exact eval (`tac.contest_score` /
-`upstream/evaluate.py`, contest-CPU/CUDA, NEVER MPS as authority) = a real row below 0.19110, then toward
+`upstream/evaluate.py`, contest-CPU/CUDA, NEVER MPS as authority) = a real row below 0.19110, then toward <!-- HISTORICAL_SCORE_LITERAL_OK:then_current_borrowed_pointer_bar_in_the_2026-06-25_capstone_directive_superseded_by_canonical_frontier_pointer_json -->
 0.15. Every unit MEASURES a byte-closed row that sharpens d_seg(H)/bytes(H) OR tightens the crux with a
 deep-math lens + existence-proof cross-check, then appends to the DAG — never a chat-only insight.
 
@@ -458,7 +458,7 @@ Be **absolutely allergic** to naive/toy implementations, smokes, probes, and n96
 - **The measured error = the LANE long-tail = ERASURE (not shift):** the witness DROPS the lowest-persistence / finest-scale features (lane **dashes** = birth-death pairs; the **car/hood outline**) below the argmax margin (prominence failure, spectral bias, error ∝ 1/persistence), with **RINGING** (Gibbs) as the spatial dual. Fix (all ONE axis): curvelet finest-scale + step-native/hosc + persistence-preserving loss + margin/UNIWARD.
 - **The three objectives — lowest-S × max-synergy × shortest-train — collapse onto this ONE object.**
 - **THE TRIALITY (the representational meta-layer):** the CAMPAIGN is ALSO one object, seen through THREE consistent views — **DAG** (`.omx/research/sub015_DAG_*`, trajectory/history) ↔ **DSL** (`tac.witness_dsl`, the program that compiles to the trainer CLI, flag-validated) ↔ **equations** (`tac.canonical_equations`, the S_τ math/law). Keep all three CONSISTENT (every refinement propagated, no drift = campaign-level non-forgetfulness); the cycle DAG→DSL→run→measured-rows→equations→next-DAG is how the program COMPOUNDS. "Triality" in the Spin(8) sense — three representations of one object, cyclically related. TWO LAYERS of one-object: the witness (physics facets) + the campaign (representational views) = the same pattern, and that double-unification IS the "Understand"-mind. Anchor: `project_witness_dsl_and_dag_dsl_duality`.
-- **BLOCKER:** the level-set witness has NO exact-eval path yet — no ΔS is EXACT until `tools/levelset_byte_close_and_eval.py` lands (#202). The pointer (0.19110) moves ONLY through it.
+- **BLOCKER:** the level-set witness has NO exact-eval path yet — no ΔS is EXACT until `tools/levelset_byte_close_and_eval.py` lands (#202). The pointer (0.19110) moves ONLY through it. <!-- HISTORICAL_SCORE_LITERAL_OK:then_current_borrowed_pointer_value_in_the_2026-07-01_operator_priority_section_superseded_by_canonical_frontier_pointer_json -->
 - Anchors: `unified-variational-levelset-flow-everything-is-facets`, `project_gr_unified_action_full_witness_architecture`.
 
 ### 4. BE THE "UNDERSTAND" (Ted Chiang) MIND — genius, unifying, sandbox-playful, never naive/pessimistic
@@ -506,7 +506,7 @@ to the numpy-fp32 authority, benchmarked + recursively-reviewed + confirmed). Sa
 other unit: automated · world-class · recursively-adversarial-reviewed · deep-math-solved · CONFIRMED
 (n600-real, byte-closed, MPS-NEVER). Memory `all-automated-worldclass-recursive-review-deepmath-confirmed`.
 
-**Everything here is MEANS.** The pointer (0.19110) moves only through a byte-closed
+**Everything here is MEANS.** The pointer (0.19110) moves only through a byte-closed <!-- HISTORICAL_SCORE_LITERAL_OK:then_current_borrowed_pointer_value_in_the_triality_section_superseded_by_canonical_frontier_pointer_json -->
 `upstream/evaluate.py` n600 exact row. **Comprehensive deep-math + meta version:
 `docs/triality_dag_dsl_equations_deepmath.md`.**
 
@@ -708,7 +708,7 @@ frontier score wasn't actually lowered, what is the new sub 0.15 goal non negoti
 rule, the closed-spec/boundary-math/waterfilling architecture, the seg-core + boundary-solver + Rust
 runtime-less decoder + the MEASURED information-theoretic floor (S_floor=0.11797) + five honest
 score-native experiments + the deferral-recovery ledger + a running decisive d_seg-loss test — and the
-**exact frontier score did NOT move (0.19110 unchanged, still above even T_1).** A large, disciplined,
+**exact frontier score did NOT move (0.19110 unchanged, still above even T_1).** A large, disciplined, <!-- HISTORICAL_SCORE_LITERAL_OK:2026-06-10_session_empirical_anchor_the_then_frontier_value_that_session_failed_to_move -->
 honest body of work that did not lower the exact score is a MISS, not a success. This section makes that
 verdict structural.
 
@@ -751,7 +751,7 @@ plainly** and aim the next unit DIRECTLY at an exact-eval row that crosses the t
 *"Let's replace the pointer with our current own frontier and only print that at the end of each turn"*:
 the PER-TURN sign-off prints the own-vehicle frontier (S + archive bytes + axis label, e.g.
 `[macOS-CPU advisory]`, + Δ when it moved that turn) — NOT the borrowed contest pointer. Rationale: the
-0.19108-lineage pointer is a borrowed PR110 recode, HARVEST-ONLY, never ships (only our own vehicle
+0.19108-lineage pointer is a borrowed PR110 recode, HARVEST-ONLY, never ships (only our own vehicle <!-- HISTORICAL_SCORE_LITERAL_OK:lineage_label_naming_the_borrowed_PR110_recode_per_the_2026-08-03_end_of_turn_amendment -->
 ships, operator 2026-08-01); repeating it each turn tracks a number the campaign does not move by
 design. The borrowed pointer is quoted ONLY when (a) it actually moves, or (b) a
 promotion/submission/exact-authority claim is made. Consequence 5 above continues to bind SESSION-level
