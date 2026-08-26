@@ -197,7 +197,7 @@ entropy characterization.**
 
 Root: `/Volumes/APDataStore/pact/ddm_d3_alphabet_merge/`.
 
-- `PREPARE_RESULT.json`: sha `3686a0226ab7b173e661e7e545af766cd4f66c416801acd6ad29af06b048f087`.
+- `PREPARE_RESULT.json`: sha `32a05677a570a2e67ff9868cda23125e1cd35df71d88d035403d73c3aaeb1f5b`.
 - `CARRIER_RACE_RESULT.json`: sha `d1ce4dba8f334f3a88547061cc1a5c46a47a8360bd259911e7aea552ef47af6a`.
 - `ENCODE_RESULT.json`: sha `b6ad58341891421a678ea537bb0ab5e49ee67bef425a84017ccad33fa4c7e6ec`.
 - `DECODE_RESULT.json`: sha `b5c71ad772aa9c3c0d18d22a84a13a69906fb528f629b8937fe7ba1d8899c728`.

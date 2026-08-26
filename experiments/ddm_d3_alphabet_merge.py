@@ -156,8 +156,8 @@ def retained_paths(store: Path) -> dict[str, Path]:
     return {
         "merged": root / "fields/tokens_lane_to_road_canonical.u8",
         "dense": root / "fields/tokens_lane_to_road_dense4.u8",
-        "lane_mask": root / "carriers/lane_mask_exact.packbits",
-        "lane_mask_q11": root / "carriers/lane_mask_exact.packbits.br",
+        "class1_mask": root / "carriers/lane_mask_exact.packbits",
+        "class1_mask_q11": root / "carriers/lane_mask_exact.packbits.br",
         "manifest": root / "carriers/lane_mask_exact.json",
     }
 
@@ -171,10 +171,10 @@ def stage_prepare(args: argparse.Namespace) -> dict[str, Any]:
 
     merged_tmp = paths["merged"].with_suffix(".u8.partial")
     dense_tmp = paths["dense"].with_suffix(".u8.partial")
-    mask_tmp = paths["lane_mask"].with_suffix(".packbits.partial")
+    mask_tmp = paths["class1_mask"].with_suffix(".packbits.partial")
     source = np.memmap(SOURCE_FIELD, dtype=np.uint8, mode="r", shape=(N, H, W))
     lane_pixels = 0
-    if not (paths["merged"].is_file() and paths["dense"].is_file() and paths["lane_mask"].is_file()):
+    if not (paths["merged"].is_file() and paths["dense"].is_file() and paths["class1_mask"].is_file()):
         with merged_tmp.open("wb") as merged_out, dense_tmp.open("wb") as dense_out, mask_tmp.open("wb") as mask_out:
             for frame in range(N):
                 plane = np.asarray(source[frame], dtype=np.uint8)
@@ -192,7 +192,7 @@ def stage_prepare(args: argparse.Namespace) -> dict[str, Any]:
                 mask_out.write(np.packbits(lane.reshape(-1), bitorder="little").tobytes())
         os.replace(merged_tmp, paths["merged"])
         os.replace(dense_tmp, paths["dense"])
-        os.replace(mask_tmp, paths["lane_mask"])
+        os.replace(mask_tmp, paths["class1_mask"])
     else:
         lane_pixels = int((source == LANE).sum())
 
@@ -200,12 +200,12 @@ def stage_prepare(args: argparse.Namespace) -> dict[str, Any]:
         if paths[name].stat().st_size != FIELD_BYTES:
             raise D3Error(f"retained {name} field has the wrong size")
     expected_mask_bytes = (FIELD_BYTES + 7) // 8
-    if paths["lane_mask"].stat().st_size != expected_mask_bytes:
+    if paths["class1_mask"].stat().st_size != expected_mask_bytes:
         raise D3Error("retained exact Lane mask has the wrong size")
 
     command = [
         "/opt/homebrew/bin/brotli", "-f", "-q", "11",
-        "-o", str(paths["lane_mask_q11"]), str(paths["lane_mask"]),
+        "-o", str(paths["class1_mask_q11"]), str(paths["class1_mask"]),
     ]
     subprocess.run(command, check=True)
     manifest = {
@@ -214,9 +214,9 @@ def stage_prepare(args: argparse.Namespace) -> dict[str, Any]:
         "bit_order": "little",
         "frame_order": "pair-major raster",
         "meaning": "1 restores canonical Lane class 1 over quotient Road class 0",
-        "lane_pixels": lane_pixels,
-        "payload_raw": file_fact(paths["lane_mask"]),
-        "payload_brotli_q11": file_fact(paths["lane_mask_q11"]),
+        "class1_pixels": lane_pixels,
+        "payload_raw": file_fact(paths["class1_mask"]),
+        "payload_brotli_q11": file_fact(paths["class1_mask_q11"]),
         "coder_argv": command,
         "lossless": True,
         "axis": AXIS,
@@ -229,7 +229,7 @@ def stage_prepare(args: argparse.Namespace) -> dict[str, Any]:
         "custody": custody,
         "merged_field": file_fact(paths["merged"]),
         "dense4_field": file_fact(paths["dense"]),
-        "lane_carrier_exact": manifest,
+        "class1_carrier_exact": manifest,
         "axis": AXIS,
         "score_claim": False,
     }
@@ -238,7 +238,7 @@ def stage_prepare(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def exact_lane_mask(store: Path) -> np.ndarray:
-    path = retained_paths(store)["lane_mask"]
+    path = retained_paths(store)["class1_mask"]
     packed = np.frombuffer(path.read_bytes(), dtype=np.uint8)
     mask = np.unpackbits(packed, bitorder="little")[:FIELD_BYTES]
     return mask.reshape(N, H, W).astype(bool, copy=False)
