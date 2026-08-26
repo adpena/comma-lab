@@ -267,8 +267,8 @@ def build_atom_from_optimizer_wire_in(
     """Build one canonical planning Atom from an optimizer wire-in payload.
 
     The returned Atom deliberately uses a neutral score-impact interval.  Any
-    proxy objective, local CPU, or MLX signal remains in metadata until a
-    byte-closed archive and exact CPU/CUDA auth artifact can promote it.
+    proxy objective, local CPU, or MLX signal must never be promoted until a
+    byte-closed archive and exact CPU/CUDA auth artifact exists.
     """
 
     _validate_wire_in(payload)

@@ -94,7 +94,7 @@ def main():
     print(f"[overall convergence rate] {overall_conv:.2f} ({sum(r['n_converged_restarts'] for r in rows.values())}/"
           f"{sum(r['n_restarts'] for r in rows.values())} restarts)")
     if best_s < FRONTIER_S:
-        print("[fork] -> GREEN candidate (S < frontier); byte-close + paired CPU/CUDA next")
+        print("[fork] -> FOLLOW-UP candidate (S < frontier); byte-close + paired CPU/CUDA next")
     elif best_s < 0.19 and overall_conv >= 0.5:
         print("[fork] -> AMBER (reliable + shared-rule holds, S in [0.15,0.19))")
     else:

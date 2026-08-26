@@ -109,8 +109,8 @@ class MLXGpuScorerBridge:
     behind a flag. The difference: forward AND backward run in MLX on the GPU.
 
     **NOT an authority.** Every number this bridge returns is
-    ``[macOS-MLX research-signal]`` — a fast training signal. The trainer must
-    re-score on the torch-CPU bridge for any reported/promoted metric (the
+    ``[macOS-MLX research-signal]`` — a fast training signal. The trainer must never promote
+    a metric from this bridge; it must re-score on the torch-CPU bridge (the
     ``authority_recheck_every`` cadence). Near the frontier, ``exact_d_pose`` MUST
     come from the torch-CPU bridge (the GPU pose drift ~2.76e-4 can swamp a
     frontier d_pose ~3.4e-5).

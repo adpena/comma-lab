@@ -2,7 +2,7 @@
 """ddm_js1 Stage 0: retained n600 per-edge decomposition on the resealed objects.
 
 This runner compares the exact CP135 base archive with the T1R1 C1-composed
-archive on one matched local CPU receiver/scorer axis.  The promoted F26 entrypoint
+archive on one matched local CPU receiver/scorer axis.  The pointer F26 entrypoint
 is CUDA-locked, so this diagnostic imports its custodied parser, HPAC decoder, and
 renderer directly and changes only the execution device to CPU.  It fails closed
 unless that local surface reproduces the terminal CP135 Seg row; a mismatched

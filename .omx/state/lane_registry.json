@@ -35583,7 +35583,7 @@
     },
     {
       "id": "lane_per_substrate_symposium_stc_clean_source_20260517",
-      "name": "Per-substrate symposium #857: stc_clean_source FALSIFIED-via-MPS-PROXY reactivation (cheapest re-probe in inventory)",
+      "name": "[HISTORICAL] Per-substrate symposium #857: stc_clean_source FALSIFIED-via-MPS-PROXY reactivation (cheapest re-probe in inventory)",
       "phase": 4.0,
       "level": 0,
       "gates": {
@@ -72250,7 +72250,7 @@
           "evidence": ""
         }
       },
-      "notes": "research_only=true; FALSIFIED-AT-IMPL (Catalog #307); [macOS-CPU advisory] kill-gate fired at +0.056 (best of sweep, ~9x rate gain); no Modal eval (MVP-first kill-gate fired); frontier remains 0.19198534. DEFER-pending-research reactivation: per-weight free-int8+entropy-penalty quant / latent-axis / full-decoder smaller-arch retrain.",
+      "notes": "[HISTORICAL] advisory-only 2026-06-10 record; not current rank/kill authority. research_only=true; FALSIFIED-AT-IMPL (Catalog #307); [macOS-CPU advisory] kill-gate fired at +0.056 (best of sweep, ~9x rate gain); no Modal eval (MVP-first kill-gate fired); frontier remains 0.19198534. DEFER-pending-research reactivation: per-weight free-int8+entropy-penalty quant / latent-axis / full-decoder smaller-arch retrain.",
       "research_only": true
     },
     {
@@ -95304,5 +95304,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-08-26T01:47:45Z"
+  "updated_at": "2026-08-26T21:19:02Z"
 }

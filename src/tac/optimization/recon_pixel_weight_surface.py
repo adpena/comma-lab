@@ -8,7 +8,7 @@ training. It is deliberately substrate-agnostic: the output is a file-backed
 carriers can consume the same P18/P19 surface without duplicating scorer math.
 
 Authority boundary: this is a local MLX acquisition signal, not an exact score.
-Only byte-closed local CPU replay and exact contest auth eval can promote.
+It must never be promoted without byte-closed local CPU replay and exact contest auth eval.
 """
 
 from __future__ import annotations

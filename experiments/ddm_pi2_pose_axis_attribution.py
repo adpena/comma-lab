@@ -47,8 +47,8 @@ The decomposition rests on the measurements this tool makes:
   5. `segaxis` -- the same cross-axis test on the seg half, which is the control everyone leaned
      on when they concluded the instrument was sound.
 
-Every number here is `[macOS-CPU advisory]`.  Nothing in this file is a score, and no row may
-promote, rank, or kill.  Instrument pins are rn1-identical (frozen CPU torch scorers from
+Every number here is `[macOS-CPU advisory]`.  Nothing in this file is a score; these rows must
+never promote, rank, or kill.  Instrument pins are rn1-identical (frozen CPU torch scorers from
 upstream/models/*.safetensors, batch = 1 pair, upstream preprocess verbatim, threads = 8, seeded
 random pairs at seed 20260816) so every row is leg-to-leg comparable with rn1's ledger.
 """

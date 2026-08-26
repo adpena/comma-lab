@@ -25,7 +25,7 @@ Test discipline:
 Authority: synthetic scorer (RESEARCH-ONLY, no score claim). The boundary weight-delta
 is the FAITHFUL proxy for the d_pose kick: the kick is caused by the LR-driven trunk
 weight perturbation; a real-scorer d_pose run is deliberately NOT used here (it would
-consume the CPU authority lane the live GREEN 600-pair eval needs — the contention
+consume the CPU authority lane the live full 600-pair eval needs — the contention
 discipline). ``[contest-CPU advisory]`` NON-PROMOTABLE.
 """
 from __future__ import annotations

@@ -501,7 +501,7 @@ def build_l5_v2_tt5l_lightning_route_unblock_packet(
             "Architecture lock is deliberately downstream of this packet; do not hash it here.",
             "The old single-cell Lightning alternate-provider plan remains preserved as historical provider-blocker evidence.",
             "The 10-cell bundle and dry-run verifier are the current sideinfo effect-curve command authority.",
-            "No CPU/CUDA axis may be promoted from this packet; harvested contest_auth_eval artifacts are still required.",
+            "A CPU/CUDA axis must not be promoted from this packet; harvested contest_auth_eval artifacts are still required.",
         ],
     }
 
@@ -638,7 +638,7 @@ def render_l5_v2_tt5l_lightning_route_unblock_packet_markdown(
             "- `dispatch_attempted=false`",
             "- `provider_spend_attempted=false`",
             "",
-            "No CPU/CUDA axis may be promoted from this packet. Promotion "
+            "A CPU/CUDA axis must not be promoted from this packet. Promotion "
             "requires harvested contest-auth-eval artifacts with custody, "
             "adjudication, and terminal lane claims.",
             "",

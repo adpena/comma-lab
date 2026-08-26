@@ -29,8 +29,8 @@ THE SOLVE (all REAL — NO-FAKE), no fragile finetune (deterministic PTQ + close
 
 AUTHORITY: every score is ``[contest-CPU advisory]`` NON-PROMOTABLE; pointer UNMOVED
 0.19110. If a byte-closed S beats the pointer → FLAG for paired CPU/CUDA exact eval (the
-pointer-mover) + borrowed_substrate_accounting (frontier is PR101/106-derived) — do NOT
-self-promote. $0 (local MPS gradient for the saliency backward; CPU authority eval).
+pointer-mover) + borrowed_substrate_accounting (frontier is PR101/106-derived); it must never promote
+itself. $0 (local MPS gradient for the saliency backward; CPU authority eval).
 """
 from __future__ import annotations
 

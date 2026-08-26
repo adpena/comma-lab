@@ -1139,8 +1139,8 @@ class MLXCustomKernelStridedGroupedConvAdapter:
       * re-derivation trigger: re-run ``tools/probe_real_frame_dseg_grouped_conv_routing.py
         --pairs 600 --with-torch-authority`` and re-decide if EITHER (a) the routing-
         attributable net exceeds its counting noise in favour of the reference, or (b) the
-        measured throughput ratio of the hybrid falls below 1.10x, or (c) the MLX forward is
-        ever promoted to compute a REPORTED d_seg (today the verdict path is torch-CPU:
+        measured throughput ratio of the hybrid falls below 1.10x, or (c) the MLX forward ever
+        becomes the source of a REPORTED d_seg (today the verdict path is torch-CPU:
         ``_verdict_dseg_dpose_chunked(seg_cpu, posenet_cpu, ...)``, so no reported number
         flows through this routing at all -- it shapes only the training gradient).
 

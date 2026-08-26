@@ -47,7 +47,7 @@ is exactly the geometric-prior representation those tasks want; this gate measur
 survives the scorer at byte-cheap order.
 
 ALL numbers `[contest-CPU advisory]` NON-PROMOTABLE. Exact pointer UNMOVED at 0.19110.
-$0, CPU only, no paid GPU, no PR, no self-promote.
+$0, CPU only, no paid GPU, no PR; this probe must never promote itself.
 """
 
 from __future__ import annotations

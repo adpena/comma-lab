@@ -141,7 +141,7 @@ TIER_PRESETS: dict[str, TierPreset] = {
         # cells = 8 bands * 2 orient * 2 amp * (yuv:2 + rgb:1 = 3 ch) * 2 inc = 192
         note="actionable bands (~192 cells, ~1-2h); 2 amp x 2 orient x 2 inc x {Y,U,RGB} x 8 log bands",
     ),
-    # The full cross-product (the killed run's scale) for CI. ~days on CPU.
+    # POST-MORTEM: the full cross-product used by the retired run. ~days on CPU.
     "exhaustive": TierPreset(
         name="exhaustive",
         n_pairs=12,

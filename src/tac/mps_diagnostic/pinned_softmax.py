@@ -108,7 +108,7 @@ def pinned_softmax(
         original = _ORIGINAL_SOFTMAX if _ORIGINAL_SOFTMAX is not None else F.softmax
         return original(logits, dim=dim)
 
-    # MPS does not natively support fp64; promote to CPU for the
+    # MPS does not natively support fp64; move to CPU for the
     # stabilization phase, then move back to MPS for the final demotion.
     # This is the canonical pattern per Apple MPSGraph docs (Float64 is
     # CPU-only on MPS as of torch 2.11). We must call .cpu() FIRST then

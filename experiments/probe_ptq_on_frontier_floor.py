@@ -218,7 +218,7 @@ def main(argv: list[str] | None = None) -> int:
         verdict["headline_part1"] = (
             f"PTQ-ALREADY-BEATS-FRONTIER: modes {sorted(beats_frontier)} score below 0.19110 "
             f"byte-closed (best {best_mode} S={best['score']:.4f}, ΔS {best['score'] - _FRONTIER_S:+.4f}) "
-            f"→ POSSIBLE $0 POINTER-MOVER. FLAG for paired dual CPU/CUDA exact eval (do NOT self-promote)."
+            f"→ POSSIBLE $0 POINTER-MOVER. FLAG for paired dual CPU/CUDA exact eval; it must not promote itself."
         )
     else:
         verdict["headline_part1"] = (

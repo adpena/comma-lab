@@ -4,8 +4,8 @@
 PAIRED-DISPATCH-SKIP-IF-ANCHOR-EXISTS-ENHANCEMENT 2026-05-15.
 
 Coverage matrix:
-1. Anchor exists for CUDA only -> CPU dispatched, CUDA skipped, log + repointer
-2. Anchor exists for CPU only -> CUDA dispatched, CPU skipped
+1. Anchor exists for CUDA only -> CPU launched, CUDA skipped, log + repointer
+2. Anchor exists for CPU only -> CUDA launched, CPU skipped
 3. Anchor exists for both -> no dispatch fires; rc=0; both repointers written
 4. Anchor exists for neither -> both dispatch, preserving current behavior
 5. Custody-chain incomplete, missing evidence_grade -> no anchor; dispatch fires

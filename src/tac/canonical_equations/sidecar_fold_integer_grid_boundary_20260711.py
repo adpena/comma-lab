@@ -88,9 +88,9 @@ def build_pr110_lineage_sidecar_fold_integer_grid_boundary_v1() -> CanonicalEqua
         provenance=build_provenance_for_research_sidecar(
             sidecar_path=_MEMO,
             reactivation_criteria=(
-                "a click-search round run ON THE FOLDED table recovering > 2.75e-5 flips the fold "
-                "to net-GREEN (then the -607 B is free); or an exact contest-CPU row on a folded "
-                "candidate supersedes the advisory margin"
+                "a click-search round run ON THE FOLDED table recovering > 2.75e-5 makes the fold "
+                "locally rate-beneficial (then the -607 B is free); or an exact contest-CPU row "
+                "on a folded candidate supersedes the advisory margin"
             ),
             measurement_axis=_ADVISORY,
             hardware_substrate="macos_arm64",

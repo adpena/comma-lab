@@ -7,7 +7,9 @@ equations + Catalog #287 HONEST verdict recording + Catalog #371 auto-recalibrat
 
 HONEST scope (per Catalog #229 premise verification): the Wave N+6 TRIPLE empirical
 FALSIFICATION (92.48 paired CUDA+CPU, residual 92.320194) was ALREADY RATIFIED on
-2026-05-28 by a sister subagent as anchor
+2026-05-28 from the retained ``[contest-CUDA]`` artifact
+``experiments/results/modal_auth_eval/triple_wave_n6_paired_ratification_retry_corrected_archive_16917_20260528T215841Z_cuda/harvest_result_essentials.json``
+by a sister subagent as anchor
 ``wave_n6_triple_z6_v2_nscs06_v8_compound_c_paired_cuda_cpu_empirical_falsification_20260528``.
 This lane appends ONLY the genuinely-missing Wave N+11 QUAD HALT anchor and verifies
 the already-ratified Wave N+6 falsification is present + coherent (no duplication).
