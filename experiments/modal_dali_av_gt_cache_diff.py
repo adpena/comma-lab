@@ -172,9 +172,9 @@ gt_diff_image = (
         remote_path=str(REMOTE_UPSTREAM / "models"),
         copy=True,
     )
-    .add_local_file(str(LOCAL_UPSTREAM / "frame_utils.py"), remote_path=str(REMOTE_UPSTREAM / "frame_utils.py"))
-    .add_local_file(str(LOCAL_UPSTREAM / "modules.py"), remote_path=str(REMOTE_UPSTREAM / "modules.py"))
-    .add_local_file(
+    .add_local_file(str(LOCAL_UPSTREAM / "frame_utils.py"), remote_path=str(REMOTE_UPSTREAM / "frame_utils.py"))  # MODAL_MANUAL_MOUNT_OK:frozen upstream scorer module, per the precise-mount derivation above
+    .add_local_file(str(LOCAL_UPSTREAM / "modules.py"), remote_path=str(REMOTE_UPSTREAM / "modules.py"))  # MODAL_MANUAL_MOUNT_OK:frozen upstream scorer module, per the precise-mount derivation above
+    .add_local_file(  # MODAL_MANUAL_MOUNT_OK:frozen upstream video-name list the builder reads
         str(LOCAL_UPSTREAM / "public_test_video_names.txt"),
         remote_path=str(REMOTE_UPSTREAM / "public_test_video_names.txt"),
     )

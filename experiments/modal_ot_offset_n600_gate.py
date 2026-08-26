@@ -115,18 +115,18 @@ image = (
         extra_index_url="https://download.pytorch.org/whl/cpu",
     )
     .env({"PYTHONPATH": REMOTE_PYTHONPATH})
-    .add_local_dir(  # src at the repo-relative path so seg_core.REPO_ROOT resolves
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:CPU-only probe image (not the training stack); src at the repo-relative path so seg_core.REPO_ROOT resolves
         "src", remote_path=str(REMOTE_REPO / "src"), copy=True, ignore=_ignore_src,
     )
-    .add_local_dir(  # upstream: modules.py, frame_utils.py, models/*.safetensors
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:frozen upstream scorer files the probe consumes (modules.py, frame_utils.py, models/*.safetensors)
         "upstream", remote_path=str(REMOTE_REPO / "upstream"), copy=True,
     )
-    .add_local_dir(  # experiments *.py (probe + train_witness base), exclude results/
+    .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:probe + train_witness base modules only, results/ excluded via _ignore_heavy
         "experiments", remote_path=str(REMOTE_REPO / "experiments"), copy=True,
         ignore=_ignore_heavy,
     )
-    .add_local_file(CKPT_LOCAL, remote_path=CKPT_REMOTE, copy=True)
-    .add_local_file(SLIM_CACHE_LOCAL, remote_path=SLIM_CACHE_REMOTE, copy=True)
+    .add_local_file(CKPT_LOCAL, remote_path=CKPT_REMOTE, copy=True)  # MODAL_MANUAL_MOUNT_OK:pinned witness checkpoint, the probe's model input
+    .add_local_file(SLIM_CACHE_LOCAL, remote_path=SLIM_CACHE_REMOTE, copy=True)  # MODAL_MANUAL_MOUNT_OK:pinned slim lstars cache, the probe's data input
 )
 
 
