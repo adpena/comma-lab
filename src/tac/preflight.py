@@ -42979,6 +42979,20 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     # already on disk.
     "lane_betti0_realized",
     "lane_components_erased",
+    # Witness Lane-CLASS (SegNet class 1) domain identifiers in
+    # tools/levelset_byte_close_and_eval.py — the analytic lane render band
+    # (`tac.boundary_math.analytic_lane_render_band`). Config keys, archive
+    # manifest section names, and rate-accounting dict keys about ROAD LANE
+    # MARKINGS, not dispatch lane_ids (Check 126 class-40 adjudication,
+    # 2026-08-26: all first-RED sites were these seven tokens — 18 displayed
+    # plus 2 masked by the one-violation-per-line break).
+    "lane_edge_weight",  # trainer cfg key: lane-edge lever weight (provenance)
+    "lane_render_band",  # archive manifest section name for the AA lane band
+    "lane_band_counted_bytes",  # rate-accounting key: counted lane-band bytes
+    "lane_pairs",  # globals key: per-pair lane geometry for the render band
+    "lane_hdr",  # globals key: lane header/geometry paired with lane_pairs
+    "lane_cls",  # config field: the SegNet Lane class INDEX (canonical 1)
+    "lane_rgb_mode",  # config field: lane paint RGB mode for the render band
     # Common helper / tool / function names
     "lane_id",
     "lane_id_matches",

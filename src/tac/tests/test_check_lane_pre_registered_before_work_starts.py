@@ -714,3 +714,67 @@ def test_tracked_worktree_changed_lane_line_still_fails(tmp_path: Path) -> None:
     )
 
     assert any("lane_new_unregistered_wip" in v for v in violations)
+
+
+# ── Test 17: class-40 witness Lane-CLASS domain tokens (2026-08-26) ──────
+
+
+def test_witness_lane_class_tokens_are_blocklisted() -> None:
+    """The seven levelset_byte_close witness Lane-CLASS tokens stay blocklisted.
+
+    Class-40 adjudication (2026-08-26): all first-RED sites in
+    tools/levelset_byte_close_and_eval.py were these seven tokens (18
+    displayed + 2 masked by the one-violation-per-line break) — config
+    keys / manifest section names / rate-accounting keys about ROAD LANE
+    MARKINGS (SegNet class 1), not dispatch lane_ids. A parametrized sweep
+    over the blocklist cannot catch their REMOVAL (the parametrization just
+    shrinks), so membership is pinned by name here.
+    """
+    for token in (
+        "lane_edge_weight",
+        "lane_render_band",
+        "lane_band_counted_bytes",
+        "lane_pairs",
+        "lane_hdr",
+        "lane_cls",
+        "lane_rgb_mode",
+    ):
+        assert token in _LANE_ID_REFERENCE_BLOCKLIST, token
+
+
+def test_witness_lane_class_usage_shape_not_flagged(tmp_path: Path) -> None:
+    """Real usage shapes from levelset_byte_close_and_eval.py do not fire."""
+    repo = _init_repo(tmp_path, [{"id": "lane_g_v3", "name": "g v3"}])
+    _commit_file(
+        repo, "tools/levelset_fixture.py",
+        (
+            'cfg["lane_edge_weight"] = float(raw.get("__cfg_lane_edge_weight", 0.0))\n'
+            'manifest["lane_render_band"] = lane_manifest\n'
+            'stats = {"lane_band_counted_bytes": 0}\n'
+            'lane_pairs, lane_hdr = _G.get("lane_pairs"), _G.get("lane_hdr")\n'
+            'row = {"lane_cls": int(cfg.lane_cls), "lane_rgb_mode": str(cfg.lane_rgb_mode)}\n'
+        ),
+        "witness lane-class domain keys",
+    )
+    violations = check_lane_pre_registered_before_work_starts(
+        repo_root=repo, n_commits=10, strict=False, verbose=False,
+    )
+    assert violations == [], f"witness Lane-class tokens flagged: {violations}"
+
+
+def test_witness_lane_class_blocklist_does_not_mask_real_lanes(tmp_path: Path) -> None:
+    """A genuine unregistered dispatch lane_id in the SAME file still fires."""
+    repo = _init_repo(tmp_path, [{"id": "lane_g_v3", "name": "g v3"}])
+    _commit_file(
+        repo, "tools/levelset_fixture.py",
+        (
+            'manifest["lane_render_band"] = lane_manifest\n'
+            'LANE_ID = "lane_ddm_zz9_new_dispatch_20260826"\n'
+        ),
+        "domain key plus real unregistered lane",
+    )
+    violations = check_lane_pre_registered_before_work_starts(
+        repo_root=repo, n_commits=10, strict=False, verbose=False,
+    )
+    assert any("lane_ddm_zz9_new_dispatch_20260826" in v for v in violations)
+    assert not any("lane_render_band" in v for v in violations)
