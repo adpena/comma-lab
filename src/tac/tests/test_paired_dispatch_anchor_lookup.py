@@ -501,6 +501,7 @@ def test_lookup_refuses_sha_mismatch(tmp_path):
 def test_lookup_refuses_incomplete_custody(tmp_path):
     """Missing evidence_grade means no anchor."""
     sha = "deadc0de" * 8
+    # FAKE_LANE_OK: synthetic tmp_path fixture lane, never registered by design
     lane_dir = tmp_path / "experiments" / "results" / "lane_partial_modal" / "harvested_artifacts"
     lane_dir.mkdir(parents=True, exist_ok=True)
     (lane_dir / "contest_auth_eval.json").write_text(
