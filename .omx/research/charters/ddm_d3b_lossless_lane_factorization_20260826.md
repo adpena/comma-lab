@@ -83,7 +83,7 @@ is one number: total bytes vs the 127,292 B joint token subsystem (stream 113,77
 
 ## OPTIMAL FORM
 
-- Family exemplars w/ provenance pins: the d3 alphabet-parameter coder mechanism + store,
+- Family REFERENCE exemplars w/ provenance pins (receipt-backed): the d3 alphabet-parameter coder mechanism + store,
   commit `7856ad4e68` · lm1's exact prequential screens, commit `6feae0ac6b` · d3a's
   lane-band geometric features as context inputs, commit `05548b5dce` · the jt-family
   joint re-encode rigor (gb1 verdict memo
