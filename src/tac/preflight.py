@@ -42898,6 +42898,13 @@ _LANE_ID_REFERENCE_RE = re.compile(
 # as lane_id references. These are common Python identifiers / method names
 # that happen to share the prefix.
 _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
+    # Per-class telemetry field names where "lane" = the SegNet Lane CLASS
+    # (canonical class 1), not a dispatch lane_id. These are JSON ledger keys
+    # (ddm_gd5 chain: tools/ddm_gd5_ds32_window_chain.sh writes them to
+    # gd5_chain_ledger.jsonl); renaming would break key continuity with rows
+    # already on disk.
+    "lane_betti0_realized",
+    "lane_components_erased",
     # Common helper / tool / function names
     "lane_id",
     "lane_id_matches",
