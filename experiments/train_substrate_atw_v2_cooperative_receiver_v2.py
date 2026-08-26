@@ -1,3 +1,4 @@
+# TF32_WAIVED:no-module-level-torch-import-(numpy/scaffold-level-trainer;-no-torch-CUDA-matmul-path-for-TF32-to-affect)
 # SPDX-License-Identifier: MIT
 """ATW V2 cooperative-receiver V2 — MLX score-aware trainer (Path 3 candidate H).
 # NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mlx_value_and_grad_lazy_eval_no_pytorch_autograd_per_mlx_first_canonical_doctrine_8th_standing_directive

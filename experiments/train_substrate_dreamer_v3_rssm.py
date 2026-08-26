@@ -1,3 +1,4 @@
+# TF32_WAIVED:MLX-substrate-trainer-(torch-CUDA-TF32-matmul-flag-inapplicable-on-the-MLX/Metal-path-per-the-train/authority-split;-lineage-lessons-only)
 # SPDX-License-Identifier: MIT
 """Train DreamerV3 RSSM categorical posterior substrate — L0 MLX-LOCAL SCAFFOLD.
 

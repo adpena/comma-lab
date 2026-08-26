@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# TF32_WAIVED:macOS-CPU-local-scorer-loop/QAT-harness-(TRAINER_AUTHORITY-declares-macos_cpu,-no-CUDA-path);-torch-CUDA-TF32-inapplicable
 # SPDX-License-Identifier: MIT
 # AUTOCAST_FP16_WAIVED:macOS-CPU-local-scorer-loop/QAT-harness-(TRAINER_AUTHORITY-declares-macos_cpu,-no-CUDA-path)-torch-CUDA-autocast-inapplicable
 """SNeRV local scorer-loop decoder/QAT trainer harness.

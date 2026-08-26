@@ -1,3 +1,4 @@
+# TF32_WAIVED:MLX-substrate-trainer-(torch-CUDA-TF32-matmul-flag-inapplicable-on-the-MLX/Metal-path-per-the-train/authority-split;-lineage-lessons-only)
 # SPDX-License-Identifier: MIT
 """E=BoostNeRV-PR110-residual L2 long-training trainer — L1-PROMOTION-CASCADE entry-point.
 # NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mx_no_grad_or_substrate_uses_lazy_eval_no_autograd_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_eval_uses_alternate_memory_management_per_comprehensive_bug_audit_cascade_20260526

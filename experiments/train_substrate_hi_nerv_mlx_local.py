@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# TF32_WAIVED:MLX-substrate-trainer-(torch-CUDA-TF32-matmul-flag-inapplicable-on-the-MLX/Metal-path-per-the-train/authority-split;-lineage-lessons-only)
 # SPDX-License-Identifier: MIT
 # AUTOCAST_FP16_WAIVED:MLX-local-substrate-trainer-torch-CUDA-autocast-inapplicable-(MLX-fp32-per-the-train/authority-split;-lineage-lessons-only)
 """HiNeRV MLX-local score-aware trainer.

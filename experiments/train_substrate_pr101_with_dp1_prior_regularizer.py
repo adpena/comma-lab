@@ -1,3 +1,4 @@
+# TF32_WAIVED:retired-era-CUDA-capable-substrate-trainer-not-on-any-live-launch-path-(substrate-era-closed-per-the-no-old-lineage-ban);-TF32-enablement-deferred-to-reactivation-so-archived-run-numerics-stay-comparable
 # SPDX-License-Identifier: MIT
 """PATH 2 scaffold: pr101_lc_v2_clone trainer with DP1 frame-prior regularizer.
 # NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mx_no_grad_or_substrate_uses_lazy_eval_no_autograd_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_eval_uses_alternate_memory_management_per_comprehensive_bug_audit_cascade_20260526

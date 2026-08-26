@@ -1,3 +1,4 @@
+# TF32_WAIVED:no-module-level-torch-import-(numpy/scaffold-level-trainer;-no-torch-CUDA-matmul-path-for-TF32-to-affect)
 # SPDX-License-Identifier: MIT
 # CHECKPOINT_DISCIPLINE_WAIVED:L0-mlx-scaffold-smoke-trainer-only-no-real-training-loop-_full_main-raises-NotImplementedError-per-catalog-240-acceptance-cascade-c-pre-build-substrate-engineering-no-paid-dispatch-from-this-file
 # NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mx_no_grad_or_substrate_uses_lazy_eval_no_autograd_per_mlx_first_canonical_doctrine_4107bbf8d_or_substrate_eval_uses_alternate_memory_management_per_comprehensive_bug_audit_cascade_20260526

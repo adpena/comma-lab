@@ -1,3 +1,4 @@
+# TF32_WAIVED:MLX-substrate-trainer-(torch-CUDA-TF32-matmul-flag-inapplicable-on-the-MLX/Metal-path-per-the-train/authority-split;-lineage-lessons-only)
 # SPDX-License-Identifier: MIT
 """Z7-Mamba-2-v2 MLX-local L1 EMPIRICAL trainer — FAIR-SHAKE per UNIQUE-AND-COMPLETE-PER-METHOD.
 # NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mx_no_grad_or_substrate_uses_lazy_eval_no_autograd_per_mlx_first_canonical_doctrine_fair_shake_20260526

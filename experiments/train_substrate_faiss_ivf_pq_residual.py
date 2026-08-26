@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# TF32_WAIVED:no-module-level-torch-import-(numpy/scaffold-level-trainer;-no-torch-CUDA-matmul-path-for-TF32-to-affect)
 # SPDX-License-Identifier: MIT
 # NO_GRAD_WAIVED:faiss_substrate_training_is_kmeans_codebook_fitting_not_gradient_descent_no_autograd_per_mlx_first_canonical_doctrine_8th_standing_directive
 # AUTOCAST_FP16_WAIVED:faiss_substrate_trainer_does_not_use_PyTorch_CUDA_autocast_fp16_primitive_per_mlx_first_canonical_doctrine_8th_standing_directive

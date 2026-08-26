@@ -1,3 +1,4 @@
+# TF32_WAIVED:MLX-substrate-trainer-(torch-CUDA-TF32-matmul-flag-inapplicable-on-the-MLX/Metal-path-per-the-train/authority-split;-lineage-lessons-only)
 # SPDX-License-Identifier: MIT
 """PACT-NeRV-SELECTOR-V2 MLX-first score-aware trainer — L1 LONG-RUN MLX-LOCAL.
 # NO_GRAD_WAIVED:MLX_substrate_trainer_uses_mlx_value_and_grad_lazy_eval_no_pytorch_autograd_per_mlx_first_canonical_doctrine_8th_standing_directive
