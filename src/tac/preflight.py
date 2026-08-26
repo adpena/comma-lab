@@ -49976,6 +49976,18 @@ def check_operator_wrapper_validates_required_input_files_pre_dispatch(
                 continue
             if data.get("platform") != "modal":
                 continue
+            # 2026-08-25 (r40/#842 loop, detector-scope cure): a recipe that
+            # structurally CANNOT dispatch (`dispatch_enabled: false` or
+            # `research_only: true`, the Catalog #240/#298 opt-out states) has
+            # no PRE-DISPATCH staging obligation — this gate's whole purpose.
+            # The exemption is fail-safe: the gate re-evaluates every run, so
+            # flipping either flag back to dispatchable immediately re-exposes
+            # any Modal-IGNORED default_path. Anchor: the retired PR110-lineage
+            # recipe substrate_pr110_opt7_..._modal_t4_dispatch.yaml (declared
+            # dispatch_enabled: false + research_only: true per its own #240
+            # coherence note) fail-closed the full enumeration here.
+            if data.get("dispatch_enabled") is False or data.get("research_only") is True:
+                continue
             required_inputs = data.get("required_input_files") or []
             if not isinstance(required_inputs, list) or not required_inputs:
                 continue
