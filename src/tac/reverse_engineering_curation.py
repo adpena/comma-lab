@@ -374,6 +374,15 @@ def classify_file(path: Path, repo_root: Path, reverse_root: Path) -> ReverseEng
                 "Curated source-sized public-runtime reference under public_frontier; "
                 "forensic evidence only, not score evidence or active experiment output."
             )
+        elif path.suffix.lower() == ".py" and (path.parent / "ANATOMY.md").is_file():
+            category = "public_pr_deconstruction_source"
+            disposition = "track_in_git"
+            target = rel
+            reason = (
+                "Public-PR deconstruction source with a co-located ANATOMY.md review note; "
+                "the anatomy note IS the explicit review this tree's charter demands, so the "
+                "source is curated forensic reference, not raw clone material."
+            )
         elif path.name == ".gitignore" or path.suffix.lower() in {".md", ".json"}:
             category = "curated_reverse_engineering_surface"
             disposition = "track_in_git"
