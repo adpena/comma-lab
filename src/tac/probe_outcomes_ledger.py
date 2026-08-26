@@ -1262,7 +1262,7 @@ def _routing_semantic_projection(record: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in record.items() if k not in _ROUTING_VOLATILE_FIELDS}
 
 
-def _save_appended_events_preserving_existing_text(
+def _save_appended_events_preserving_existing_text(  # STATE_WRITER_STRICT_LOAD_OK: raw-text-preserving append — read_text carries existing bytes forward VERBATIM (no parse, no []-fallback, structurally cannot reset/drop rows; corrupt bytes are preserved for inspection and a failed read raises OSError); requires _ledger_lock, and the sole caller strict-loads via load_outcomes_strict inside the same lock (:1316)
     records: list[dict[str, Any]],
     *,
     path: Path,
