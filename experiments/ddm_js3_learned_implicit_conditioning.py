@@ -968,6 +968,10 @@ def parser() -> argparse.ArgumentParser:
     value.add_argument("--grad-clip", type=float, default=5.0)
     value.add_argument("--max-wall-seconds", type=float, default=1_800.0)
     value.add_argument("--resume", action="store_true")
+    # Callers (e.g. ddm_sa1) supply target_bindings via a hand-built
+    # Namespace, not a CLI flag; declare the default so the attribute
+    # always exists on args.
+    value.set_defaults(target_bindings=None)
     return value
 
 

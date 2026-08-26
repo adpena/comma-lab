@@ -10615,13 +10615,35 @@ def _module_top_level_names_cached(
     if err is not None or tree is None:
         return frozenset()
     names: set[str] = set()
+    all_literals: set[str] = set()
+    has_module_getattr = False
+
+    def _add_assign_target(tgt: ast.AST) -> None:
+        if isinstance(tgt, ast.Name):
+            names.add(tgt.id)
+        elif isinstance(tgt, ast.Starred):
+            _add_assign_target(tgt.value)
+        elif isinstance(tgt, (ast.Tuple, ast.List)):
+            for elt in tgt.elts:
+                _add_assign_target(elt)
+
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             names.add(node.name)
+            if node.name == "__getattr__":
+                has_module_getattr = True
         elif isinstance(node, ast.Assign):
             for tgt in node.targets:
-                if isinstance(tgt, ast.Name):
-                    names.add(tgt.id)
+                _add_assign_target(tgt)
+            if (
+                len(node.targets) == 1
+                and isinstance(node.targets[0], ast.Name)
+                and node.targets[0].id == "__all__"
+                and isinstance(node.value, (ast.List, ast.Tuple))
+            ):
+                for elt in node.value.elts:
+                    if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                        all_literals.add(elt.value)
         elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             names.add(node.target.id)
         elif isinstance(node, ast.ImportFrom):
@@ -10632,14 +10654,22 @@ def _module_top_level_names_cached(
         elif isinstance(node, ast.Import):
             for alias in node.names:
                 names.add(alias.asname or alias.name.split(".")[0])
+    if has_module_getattr:
+        # PEP 562: a module-level __getattr__ resolves names at runtime that
+        # no static assignment defines. Trust only the module's own declared
+        # public API (__all__ string literals) — an undeclared name still
+        # flags, so precision holds for ordinary modules.
+        names |= all_literals
     return frozenset(names)
 
 
 def _module_top_level_names(mod_path: Path) -> set[str]:
     """Return every name defined or re-exported at module top level.
 
-    Handles: function/class defs, simple assignments, AnnAssign, ImportFrom
-    re-exports, and Import. Does NOT execute the module.
+    Handles: function/class defs, simple + tuple/list-unpacking assignments,
+    AnnAssign, ImportFrom re-exports, Import, and — for modules with a
+    PEP 562 module-level ``__getattr__`` — the string literals of a static
+    ``__all__``. Does NOT execute the module.
     """
     try:
         stat = mod_path.stat()
@@ -10940,7 +10970,7 @@ def preflight_dead_resolvers(
     cache_key = hashlib.sha256(
         json.dumps(
             {
-                "scanner_version": "dead_resolvers.v1",
+                "scanner_version": "dead_resolvers.v2",
                 "target_dirs": target_dirs,
             },
             sort_keys=True,
@@ -10950,7 +10980,7 @@ def preflight_dead_resolvers(
     source_fingerprint = _fingerprint_paths(
         tuple(target_files),
         root,
-        salt="dead_resolvers.v1",
+        salt="dead_resolvers.v2",
     )
     cache_row = cache_rows.get(cache_key)
     if (

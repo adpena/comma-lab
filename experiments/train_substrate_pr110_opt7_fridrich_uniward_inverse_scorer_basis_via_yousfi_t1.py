@@ -653,6 +653,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Use canonical Yousfi-T1 600-pair fp64 anchor (default: synthetic)",
     )
     parser.add_argument("--rng-seed", type=int, default=42)
+    parser.add_argument(
+        "--auth-eval-skipped-reason",
+        type=str,
+        default="",
+        help="Optional reason for skipping auth eval (canonical helper "
+        "overwrites on refusal; carried into stats).",
+    )
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument(
         "--pr110-base-archive-path",

@@ -741,3 +741,79 @@ def test_preflight_all_invokes_dead_resolvers_strict() -> None:
         f"codex R5-2 Finding #2 requires strict=True (warn-only defeats the "
         f"silent-default bug class the scanner exists to catch)."
     )
+
+
+def test_dead_import_satisfied_by_tuple_unpacking_assignment(tmp_path: Path) -> None:
+    """`_EVAL_H, _EVAL_W = 384, 512` defines both names at top level — the
+    r44 false-positive class (14 of 21 violations were this shape)."""
+    root = _stub_repo(tmp_path)
+    _write(root / "src" / "tac" / "driver.py", """
+        _EVAL_H, _EVAL_W = 384, 512
+    """)
+    script = root / "experiments" / "tuple_import.py"
+    _write(script, """
+        from tac.driver import _EVAL_H, _EVAL_W
+    """)
+    v = _scan_python_for_dead_imports(script, root)
+    assert v == [], v
+
+
+def test_dead_import_satisfied_by_pep562_getattr_with_all(tmp_path: Path) -> None:
+    """A module-level __getattr__ with a static __all__ resolves declared
+    names at runtime (the nirvana lazy-export class — 5 of 21 r44 rows)."""
+    root = _stub_repo(tmp_path)
+    _write(root / "src" / "tac" / "lazy_pkg.py", """
+        __all__ = ["LazyThing", "eager_thing"]
+
+        eager_thing = 1
+
+        def __getattr__(name):
+            if name == "LazyThing":
+                return object
+            raise AttributeError(name)
+    """)
+    script = root / "experiments" / "lazy_import.py"
+    _write(script, """
+        from tac.lazy_pkg import LazyThing, eager_thing
+    """)
+    v = _scan_python_for_dead_imports(script, root)
+    assert v == [], v
+
+
+def test_dead_import_still_flags_name_missing_from_pep562_all(tmp_path: Path) -> None:
+    """__getattr__ presence does NOT blanket-whitelist: a name absent from
+    the static __all__ still flags (precision negative control)."""
+    root = _stub_repo(tmp_path)
+    _write(root / "src" / "tac" / "lazy_pkg.py", """
+        __all__ = ["LazyThing"]
+
+        def __getattr__(name):
+            if name == "LazyThing":
+                return object
+            raise AttributeError(name)
+    """)
+    script = root / "experiments" / "undeclared_import.py"
+    _write(script, """
+        from tac.lazy_pkg import NotDeclared
+    """)
+    v = _scan_python_for_dead_imports(script, root)
+    assert len(v) == 1
+    assert "NotDeclared" in v[0]
+
+
+def test_dead_import_all_without_getattr_does_not_whitelist(tmp_path: Path) -> None:
+    """A stale __all__ entry in a PLAIN module (no __getattr__) grants
+    nothing — the __all__ trust is scoped to the PEP 562 pattern only."""
+    root = _stub_repo(tmp_path)
+    _write(root / "src" / "tac" / "plain_pkg.py", """
+        __all__ = ["Ghost"]
+
+        real_name = 1
+    """)
+    script = root / "experiments" / "ghost_import.py"
+    _write(script, """
+        from tac.plain_pkg import Ghost
+    """)
+    v = _scan_python_for_dead_imports(script, root)
+    assert len(v) == 1
+    assert "Ghost" in v[0]
