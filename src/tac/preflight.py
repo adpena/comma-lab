@@ -43419,6 +43419,18 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     "lane_curve_prior",  # homotopy-class dict key: the #323 curve-prior family
     "lane_erosion",  # burn-4 supervisor key: Lane-class erosion watch
     "lane_guard",  # supervisor key: the #808 lane-guard layer (not a lane_id)
+    # Modal dispatcher diagnostic vocabulary in experiments/modal_train_lane.py
+    # (Check 126 adjudication 2026-08-27, pf2x r90 — the r89 guidance-string
+    # commit refreshed source attribution, pulling these pre-existing strings
+    # into scan scope; same cascade genus as the r83 block above). Both are
+    # strings ABOUT the lane SCRIPT (the dispatch shell script), not dispatch
+    # lane_ids, and both are EMITTED vocabulary: helper_source labels land in
+    # the pre-spawn-fatal ledger rows and trainer_metadata_source lands in
+    # dispatch metadata — renaming would desync records already on disk. The
+    # # FAKE_LANE_OK waiver is test-fixture-only by design, so these non-test
+    # emitters route through the blocklist (the documented mechanism).
+    "lane_script_existence_check",  # helper_source label: lane-script exists gate
+    "lane_script_derived",  # trainer_metadata_source enum value (vs explicit_recipe)
     # Canonical-equation / anti-pattern REGISTRY IDs that begin with lane_
     # because they are about the Lane band / lane-kill class — fixed
     # non-lane vocabulary in tac.canonical_equations (same adjudication).
