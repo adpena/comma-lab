@@ -1072,6 +1072,205 @@ def test_gate8_explicit_non_claim_row_passes(tmp_path: Path) -> None:
     assert findings == []
 
 
+def _legacy_auth_eval_payload(
+    tmp_path: Path,
+    *,
+    runtime_tree_sha256: str,
+) -> tuple[Path, float, int]:
+    """A contest_auth_eval JSON in the LEGACY schema: provenance=None, custody
+    at TOP LEVEL (expected_archive_sha256 / expected_runtime_tree_sha256 /
+    gpu_model / command). r97 adjudication: rows 198/249 of the live evidence
+    ledger point at artifacts of exactly this shape."""
+    report = tmp_path / "report.txt"
+    report.write_text("ok\n", encoding="utf-8")
+    archive_bytes = 178000
+    seg = 0.0006
+    pose = 0.001
+    rate = 25.0 * archive_bytes / 37_545_489
+    score = 100.0 * seg + math.sqrt(10.0 * pose) + rate
+    auth_eval = tmp_path / "legacy_auth_eval.json"
+    auth_eval.write_text(
+        json.dumps(
+            {
+                "provenance": None,
+                "archive_size_bytes": archive_bytes,
+                "n_samples": 600,
+                "avg_segnet_dist": seg,
+                "avg_posenet_dist": pose,
+                "score_rate_contribution": rate,
+                "score_recomputed_from_components": score,
+                "report_path": str(report),
+                "expected_archive_sha256": "c4f40c05" * 8,
+                "expected_runtime_tree_sha256": runtime_tree_sha256,
+                "gpu_model": "Tesla T4",
+                "command": ["python", "experiments/contest_auth_eval.py"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return auth_eval, score, archive_bytes
+
+
+def test_gate8_legacy_auth_eval_schema_supplies_custody(tmp_path: Path) -> None:
+    """r97 mechanism 2: legacy top-level custody enriches the claim row, and
+    empty-string placeholders in the row are fillable (not treated as set)."""
+    auth_eval, score, archive_bytes = _legacy_auth_eval_payload(
+        tmp_path, runtime_tree_sha256="a" * 64
+    )
+    _write_evidence_jsonl(
+        tmp_path,
+        [
+            {
+                "technique": "legacy_schema_claim",
+                "score_claim_valid": True,
+                "score_contest_cuda": score,
+                "archive_sha256": "",
+                "empirical_archive_bytes": archive_bytes,
+                "auth_eval_json": str(auth_eval),
+                "dispatch_claim_status": "completed",
+            }
+        ],
+    )
+    mod = _load_scanner("check_gate8_exact_evidence.py")
+    findings = mod.scan(tmp_path)
+    assert findings == []
+
+
+def test_gate8_legacy_schema_undocumented_runtime_gap_still_fires(
+    tmp_path: Path,
+) -> None:
+    """Never-weaken: a legacy artifact whose runtime custody is empty AND
+    undocumented must still fire."""
+    auth_eval, score, archive_bytes = _legacy_auth_eval_payload(
+        tmp_path, runtime_tree_sha256=""
+    )
+    _write_evidence_jsonl(
+        tmp_path,
+        [
+            {
+                "technique": "legacy_schema_runtime_gap",
+                "score_claim_valid": True,
+                "score_contest_cuda": score,
+                "empirical_archive_bytes": archive_bytes,
+                "auth_eval_json": str(auth_eval),
+                "dispatch_claim_status": "completed",
+            }
+        ],
+    )
+    mod = _load_scanner("check_gate8_exact_evidence.py")
+    findings = mod.scan(tmp_path)
+    assert len(findings) == 1
+    assert "runtime" in findings[0].reason
+
+
+def test_gate8_audit_documented_missing_custody_gap_passes(tmp_path: Path) -> None:
+    """r97 mechanism 3: a typed engineering_forensic_audit entry ending
+    `_missing` IS the documented lowered grade for that custody gap."""
+    auth_eval, score, archive_bytes = _legacy_auth_eval_payload(
+        tmp_path, runtime_tree_sha256=""
+    )
+    _write_evidence_jsonl(
+        tmp_path,
+        [
+            {
+                "technique": "audit_documented_runtime_gap",
+                "score_claim_valid": True,
+                "score_contest_cuda": score,
+                "empirical_archive_bytes": archive_bytes,
+                "auth_eval_json": str(auth_eval),
+                "dispatch_claim_status": "completed",
+                "engineering_forensic_audit": {
+                    "audit_blockers": [
+                        "runtime_manifest_missing",
+                        "runtime_payload_closure_missing",
+                    ]
+                },
+            }
+        ],
+    )
+    mod = _load_scanner("check_gate8_exact_evidence.py")
+    findings = mod.scan(tmp_path)
+    assert findings == []
+
+
+def test_gate8_audit_documenting_wrong_field_still_fires(tmp_path: Path) -> None:
+    """Never-weaken: an audit entry documenting a DIFFERENT field does not
+    excuse the runtime custody gap."""
+    auth_eval, score, archive_bytes = _legacy_auth_eval_payload(
+        tmp_path, runtime_tree_sha256=""
+    )
+    _write_evidence_jsonl(
+        tmp_path,
+        [
+            {
+                "technique": "audit_wrong_field",
+                "score_claim_valid": True,
+                "score_contest_cuda": score,
+                "empirical_archive_bytes": archive_bytes,
+                "auth_eval_json": str(auth_eval),
+                "dispatch_claim_status": "completed",
+                "engineering_forensic_audit": {
+                    "audit_blockers": ["log_path_missing"]
+                },
+            }
+        ],
+    )
+    mod = _load_scanner("check_gate8_exact_evidence.py")
+    findings = mod.scan(tmp_path)
+    assert len(findings) == 1
+    assert "runtime" in findings[0].reason
+
+
+def _nonpromotable_review_row() -> dict:
+    """Row shaped like the live paired score-response review row (ledger row
+    298): a `contest cuda` marker substring but NO protected claim."""
+    return {
+        "technique": "paired_score_response_review",
+        "evidence_grade": "[contest-CUDA paired score-response review]",
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "falsification_scope": "measured config only",
+        "dispatch_blockers": ["paired_cpu_axis_pending"],
+        "empirical_archive_bytes": 178000,
+    }
+
+
+def test_gate8_documented_nonpromotable_review_row_passes(tmp_path: Path) -> None:
+    """r97 mechanism 1: a review row that affirmatively disclaims every
+    protected claim is exempt from full exact custody."""
+    _write_evidence_jsonl(tmp_path, [_nonpromotable_review_row()])
+    mod = _load_scanner("check_gate8_exact_evidence.py")
+    findings = mod.scan(tmp_path)
+    assert findings == []
+
+
+def test_gate8_review_exemption_never_covers_real_claims(tmp_path: Path) -> None:
+    """Never-weaken: each protected claim re-arms the gate on an otherwise
+    exempt review row."""
+    claim_variants = []
+    for mutation in (
+        {"score_claim_valid": True},
+        {"score_contest_cuda": 0.15},
+        {"promotion_eligible": True},
+        {"contest_dispatch_verdict": "frontier candidate"},
+        {"falsification_scope": "full family"},
+    ):
+        row = _nonpromotable_review_row()
+        row["technique"] = "review_" + next(iter(mutation))
+        row.update(mutation)
+        claim_variants.append(row)
+    _write_evidence_jsonl(tmp_path, claim_variants)
+    mod = _load_scanner("check_gate8_exact_evidence.py")
+    findings = mod.scan(tmp_path)
+    assert {f.technique for f in findings} == {
+        "review_score_claim_valid",
+        "review_score_contest_cuda",
+        "review_promotion_eligible",
+        "review_contest_dispatch_verdict",
+        "review_falsification_scope",
+    }
+
+
 # ── Gate 9: blocker ownership ────────────────────────────────────────────
 
 

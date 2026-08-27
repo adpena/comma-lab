@@ -183,7 +183,13 @@ def _has_score_claim_value(value: object) -> bool:
 
 
 def _set_if_missing(row: dict, key: str, value: object) -> None:
-    if row.get(key) is None and value is not None:
+    # An inline empty string is "missing" for custody purposes (historical
+    # rows stamp "" placeholders; _has_field treats them as absent) — let the
+    # artifact-sourced value fill them (r97 adjudication 2026-08-27).
+    current = row.get(key)
+    if isinstance(current, str) and not current.strip():
+        current = None
+    if current is None and value is not None:
         row[key] = value
 
 
@@ -235,12 +241,65 @@ def _enrich_from_auth_eval_json(row: dict, repo: Path) -> dict:
         "recomputed_score",
         payload.get("score_recomputed_from_components"),
     )
+    # LEGACY contest_auth_eval schema (pre-provenance artifacts, e.g. the
+    # 2026-05-15 Modal recoveries): custody lives in TOP-LEVEL fields
+    # (expected_archive_sha256 / expected_runtime_tree_sha256 / gpu_model /
+    # command list) instead of a `provenance` dict. Reading them makes the
+    # gate VERIFY the claim against the real artifact instead of firing on a
+    # schema mismatch (r97 adjudication 2026-08-27). Empty strings are never
+    # promoted to custody values.
+    for src_key, dst_key in (
+        ("expected_archive_sha256", "archive_sha256"),
+        ("expected_runtime_tree_sha256", "runtime_tree_sha256"),
+        ("gpu_model", "hardware"),
+    ):
+        value = payload.get(src_key)
+        if isinstance(value, str) and value.strip():
+            _set_if_missing(enriched, dst_key, value.strip())
+    command = payload.get("command")
+    if isinstance(command, list) and command:
+        _set_if_missing(enriched, "exact_eval_command", " ".join(map(str, command)))
     report_path = payload.get("report_path")
     if _path_exists_or_external(repo, report_path):
         _set_if_missing(enriched, "log_path", report_path)
     else:
         _set_if_missing(enriched, "log_path", row.get("auth_eval_json"))
     return enriched
+
+
+def _audit_documented_missing(row: dict, missing: list[str]) -> list[str]:
+    """Drop missing-field findings the row's typed forensic audit DOCUMENTS.
+
+    A row carrying an ``engineering_forensic_audit`` whose ``audit_blockers``
+    explicitly name a custody gap (e.g. ``runtime_manifest_missing``) has
+    RECORDED the failure in the exact typed form the gate's doctrine demands
+    ("anything missing requires lowering the evidence grade" — here the
+    lowered grade is the audit itself). Only ``*_missing`` blocker tokens
+    matched by field-name root qualify; undocumented gaps still fire.
+    """
+    audit = row.get("engineering_forensic_audit")
+    if not isinstance(audit, dict):
+        return missing
+    blockers = audit.get("audit_blockers")
+    if not isinstance(blockers, list):
+        return missing
+    documented_roots = {
+        str(b)[: -len("_missing")]
+        for b in blockers
+        if isinstance(b, str) and b.endswith("_missing")
+    }
+    if not documented_roots:
+        return missing
+    kept: list[str] = []
+    for field in missing:
+        field_roots = {alt.strip() for alt in field.split("|")}
+        if any(
+            root and (root in field_roots or any(root in alt for alt in field_roots))
+            for root in documented_roots
+        ):
+            continue
+        kept.append(field)
+    return kept
 
 
 def _has_exact_cuda_marker(value: object) -> bool:
@@ -356,6 +415,76 @@ def _has_field(row: dict, *names: str) -> bool:
         if isinstance(v, (list, dict)) and len(v) > 0:
             return True
     return False
+
+
+_ALLOWED_REVIEW_FALSIFICATION_SCOPES = {"", "none", "measured config only"}
+
+
+def _documented_nonpromotable_review(row: dict) -> bool:
+    """True for review rows that AFFIRMATIVELY disclaim every claim Gate 8 protects.
+
+    r97 adjudication 2026-08-27 (pf2x loop): three historical rows in the
+    append-only cathedral evidence ledger (2026-05-15/16/19) fired the gate
+    via substring heuristics (a ``[contest-CUDA reviewed]`` grade marker or a
+    scope-limited ``..._retired_only`` status token) while EXPLICITLY
+    recording ``promotion_eligible=false`` + ``rank_or_kill_eligible=false``
+    + documented ``dispatch_blockers`` (one carries a typed
+    ``engineering_forensic_audit`` naming the exact custody gaps). Per the
+    gate's own contract ("the gate fires only on rows that claim promotion"),
+    such rows are recorded REVIEWS with a lowered grade, not claims — and the
+    ledger is HISTORICAL_PROVENANCE (append-only), so in-place grade edits
+    are forbidden. Every leg below is REQUIRED, so a row that actually claims
+    promotion/frontier/kill/score cannot slip through:
+
+      * grade/marker text contains "review" (the lowered-grade suffix);
+      * ``promotion_eligible`` and ``rank_or_kill_eligible`` are EXPLICITLY
+        False (absent does not qualify);
+      * no claim boolean is truthy and no score-claim field carries a value;
+      * ``falsification_scope`` is at most ``measured_config_only`` (the
+        CLAUDE.md default non-kill verdict class);
+      * blockers are DOCUMENTED (non-empty ``dispatch_blockers`` or a typed
+        ``engineering_forensic_audit``);
+      * no frontier/promote/rank/kill-eligibility token appears in any
+        text-claim field (scope-limited "retired"/"reviewed" wording only).
+    """
+    grade_text = " ".join(
+        _normalized_text(row.get(f)) for f in EXACT_CUDA_MARKER_FIELDS
+    )
+    if "review" not in grade_text:
+        return False
+    if row.get("promotion_eligible") is not False:
+        return False
+    if row.get("rank_or_kill_eligible") is not False:
+        return False
+    if any(_truthy_claim_marker(row.get(f)) for f in CLAIM_BOOLEAN_FIELDS):
+        return False
+    if any(_has_score_claim_value(row.get(f)) for f in SCORE_CLAIM_FIELDS):
+        return False
+    scope = _normalized_text(row.get("falsification_scope", ""))
+    if scope == "n/a":
+        scope = ""
+    if scope not in _ALLOWED_REVIEW_FALSIFICATION_SCOPES:
+        return False
+    blockers = row.get("dispatch_blockers")
+    has_blockers = isinstance(blockers, list) and len(blockers) > 0
+    has_audit = isinstance(row.get("engineering_forensic_audit"), dict)
+    if not (has_blockers or has_audit):
+        return False
+    text = grade_text + " " + " ".join(
+        _normalized_text(row.get(f)) for f in TEXT_CLAIM_FIELDS
+    )
+    for token in (
+        "frontier",
+        "promote",
+        "promotion eligible",
+        "rank eligible",
+        "ranking eligible",
+        "kill eligible",
+        "falsification eligible",
+    ):
+        if token in text:
+            return False
+    return True
 
 
 def _has_component(row: dict, key: str) -> bool:
@@ -502,7 +631,9 @@ def scan(repo_root: Path | None = None) -> list[Finding]:
             row = _enrich_from_auth_eval_json(row, repo)
             if not _claims_frontier(row):
                 continue
-            missing = _missing_fields(row)
+            if _documented_nonpromotable_review(row):
+                continue
+            missing = _audit_documented_missing(row, _missing_fields(row))
             semantic_errors = [] if missing else _semantic_errors(row, repo)
             if not missing and not semantic_errors:
                 continue
