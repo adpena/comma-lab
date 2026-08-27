@@ -9,28 +9,28 @@ from pathlib import Path
 
 import pytest
 
-from src.comma_lab.scheduler import dqs1_local_first_queue as dqs1_queue
-from src.comma_lab.scheduler.dqs1_local_first_harvest import (
+from comma_lab.scheduler import dqs1_local_first_queue as dqs1_queue
+from comma_lab.scheduler.dqs1_local_first_harvest import (
     EXACT_AUTH_ANCHOR_REQUEST_SCHEMA,
     HARVEST_SCHEMA,
     build_dqs1_harvest_result,
     candidate_experiment_ids,
 )
-from src.comma_lab.scheduler.dqs1_local_first_queue import (
+from comma_lab.scheduler.dqs1_local_first_queue import (
     build_queue_from_action_summary,
     build_queue_from_pairset_acquisition,
     candidate_slug,
     find_latest_cross_family_action_summary,
 )
-from src.comma_lab.scheduler.experiment_queue import ExperimentQueueError, load_queue_definition
-from src.tac.optimization.archive_bound_candidate_adapter_spine import (
+from comma_lab.scheduler.experiment_queue import ExperimentQueueError, load_queue_definition
+from tac.optimization.archive_bound_candidate_adapter_spine import (
     ARCHIVE_BOUND_CANDIDATE_ADAPTER_PACKAGE_SCHEMA,
 )
-from src.tac.optimization.archive_bound_candidate_contract import (
+from tac.optimization.archive_bound_candidate_contract import (
     ARCHIVE_BOUND_CANDIDATE_CONTRACT_SCHEMA,
     archive_bound_candidate_contracts_from_payload,
 )
-from src.tac.optimization.local_cpu_contest_drift import EUREKA_FALSE_AUTHORITY_FIELDS
+from tac.optimization.local_cpu_contest_drift import EUREKA_FALSE_AUTHORITY_FIELDS
 from tools import build_dqs1_local_first_queue as queue_cli
 from tools.harvest_dqs1_local_first_result import _write_json as write_harvest_json
 

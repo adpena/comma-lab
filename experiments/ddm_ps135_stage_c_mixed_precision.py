@@ -38,7 +38,7 @@ if str(REPO) not in sys.path:
 
 from experiments import ddm_ps135_pose_resolve as pose
 from experiments import ddm_sd1_semantic_rd_curve as sd1
-from src.tac.witness_dsl.jrd_priors import JrdReusablePriorPolicy
+from tac.witness_dsl.jrd_priors import JrdReusablePriorPolicy
 
 AXIS = "[macOS-CPU advisory]"
 N = 600

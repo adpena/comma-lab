@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from src.tac.optimization.local_cpu_contest_drift import (
+from tac.optimization.local_cpu_contest_drift import (
     EUREKA_FALSE_AUTHORITY_FIELDS,
     TRUST_REGION_DQS1_FEC6,
     LocalCPUContestDriftError,

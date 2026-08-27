@@ -203,7 +203,7 @@ def test_run_tier_c_dp1_no_renderer_state_dict_mismatch_after_caching():
     from tools.mdl_scorer_conditional_ablation import _run_tier_c_dp1
 
     try:
-        from src.tac.tests.test_mdl_ablation_tier_c_dp1 import (
+        from tac.tests.test_mdl_ablation_tier_c_dp1 import (
             _build_tiny_dp1_archive_bytes,
             _FakeDistortionNet,
         )

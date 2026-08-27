@@ -163,7 +163,7 @@ def test_helper_parse_operator_override_short_rationale_rejected(tmp_path):
 
 def test_gate_operator_override_accepted_with_memo(tmp_path):
     """Cascade (e) ACCEPT: rationale + memo present + memo file resolves."""
-    from src.tac.preflight import (
+    from tac.preflight import (
         check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor,
     )
     # Build a minimal repo with canonical override structure
@@ -187,7 +187,7 @@ def test_gate_operator_override_accepted_with_memo(tmp_path):
 
 def test_gate_operator_override_rejected_when_memo_missing(tmp_path):
     """Cascade (e) REJECT: rationale present but memo path absent on disk."""
-    from src.tac.preflight import (
+    from tac.preflight import (
         check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor,
     )
     recipe_dir = tmp_path / ".omx" / "operator_authorize_recipes"
@@ -209,7 +209,7 @@ def test_gate_operator_override_rejected_when_memo_missing(tmp_path):
 
 def test_gate_operator_override_rejected_when_memo_outside_canonical_dir(tmp_path):
     """Cascade (e) REJECT: memo not under .omx/research/operator_authorizations/."""
-    from src.tac.preflight import (
+    from tac.preflight import (
         check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor,
     )
     recipe_dir = tmp_path / ".omx" / "operator_authorize_recipes"
@@ -233,7 +233,7 @@ def test_gate_operator_override_rejected_when_memo_outside_canonical_dir(tmp_pat
 
 def test_gate_operator_override_rejected_when_only_one_field_declared(tmp_path):
     """Cascade (e) REJECT: only operator_override_rationale, no memo."""
-    from src.tac.preflight import (
+    from tac.preflight import (
         check_substrate_dispatch_has_per_substrate_optimal_form_symposium_anchor,
     )
     recipe_dir = tmp_path / ".omx" / "operator_authorize_recipes"
