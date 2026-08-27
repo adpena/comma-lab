@@ -74,6 +74,7 @@ FIRE_ORDER_SHA256: Final = "d684c9bc859f825e5d5341c822dcd8c989f91d3a8e7aef1a4431
 
 PAIR_COUNT: Final = 600
 SAMPLE_PAIRS: Final = 32
+SOLVE_ORDER_SEED: Final = 20260827
 DIMENSIONS: Final = 12
 POSE_DIMENSIONS: Final = 6
 CAMERA_H: Final = 874
@@ -683,25 +684,52 @@ def stage_20_solves(stage_10: dict[str, Any]) -> dict[str, Any]:
     semantic_field = stage_10["semantic_field"]
     by_pair = {int(row["pair"]): row for row in stage_10["rows"]}
 
+    # The sealed selection is sorted by pair id, so solving it in order would make
+    # any storage-bounded partial a PREFIX of the video -- and prefix bias is
+    # anti-conservative on exactly the pose axis this arm measures (pose prefixes
+    # measure 2.54-4.21x harder than the population).  A seeded shuffle makes any
+    # completed subset a uniform random subsample of the sealed sample instead.
+    order = np.asarray(stage_10["selection_pairs"], dtype=np.int64).copy()
+    np.random.default_rng(SOLVE_ORDER_SEED).shuffle(order)
+
     rows: list[dict[str, Any]] = []
-    for pair in stage_10["selection_pairs"]:
-        rows.append(
-            solve_one_pair(
-                pair=int(pair),
-                surface=surface,
-                posenet=posenet,
-                solver=solver,
-                master_row=by_pair[int(pair)],
-                semantic_field=semantic_field,
-                carrier_archive_sha256=carrier_archive_sha256,
+    storage_stop: dict[str, Any] | None = None
+    for pair in order.tolist():
+        try:
+            rows.append(
+                solve_one_pair(
+                    pair=int(pair),
+                    surface=surface,
+                    posenet=posenet,
+                    solver=solver,
+                    master_row=by_pair[int(pair)],
+                    semantic_field=semantic_field,
+                    carrier_archive_sha256=carrier_archive_sha256,
+                )
             )
-        )
+        except BS4YError as failure:
+            if "storage waterfall refuses" not in str(failure):
+                raise
+            # Fail closed on capacity, but keep every completed solve and let the
+            # later stages measure the subsample that was actually retained.
+            storage_stop = {
+                "stopped_before_pair": int(pair),
+                "message": str(failure),
+                "free_bytes": shutil.disk_usage(OUTPUT).free,
+            }
+            break
+    rows.sort(key=lambda row: int(row["pair"]))
     moved = sum(1 for row in rows if any(row["solve"]["final_code_delta"]))
     result = {
         "schema": "ddm_bs4y_stage_20_qs5_exact_pair_solves.v1",
         "stage": 2,
-        "status": "SOLVED",
+        "status": "SOLVED" if storage_stop is None else "PARTIAL_STORAGE_BOUNDED",
         "axis": AXIS,
+        "solve_order_seed": SOLVE_ORDER_SEED,
+        "solve_order": [int(value) for value in order.tolist()],
+        "sealed_sample_pairs": len(stage_10["selection_pairs"]),
+        "subsample_is_uniform_random_not_prefix": True,
+        "storage_stop": storage_stop,
         "carrier_archive": file_fact(rj2.DX2_ARCHIVE),
         "carrier_geometry": [int(value) for value in state.codes.shape],
         "joint_solver": file_fact(qs1.JOINT_SOLVER_SOURCE),
@@ -887,8 +915,16 @@ def stage_40_three_way(
     masters_by_pair = {int(row["pair"]): row for row in stage_10["rows"]}
     legs = ("gb1_dx2_base", "born_small_stale_carrier", "born_small_fresh_solve")
     per_pair: list[dict[str, Any]] = []
+    # Measure exactly the pairs Stage 2 actually solved.  A pair without a fresh
+    # solve has no third leg, and a three-way table missing one leg is not a
+    # three-way measurement.
+    measured_pairs = sorted(solved_by_pair)
+    if not measured_pairs:
+        raise BS4YError(
+            "Stage 2 retained no solved pair; there is no third leg to measure"
+        )
 
-    for pair in stage_10["selection_pairs"]:
+    for pair in measured_pairs:
         pair = int(pair)
         master_row = masters_by_pair[pair]
         solve_row = solved_by_pair[pair]
@@ -997,7 +1033,15 @@ def stage_40_three_way(
             "INSTANCE: sealed BS3 random-n32 born-small object through the exact "
             "DX2 receiver, carrier and scorers"
         ),
-        "selection_pairs": stage_10["selection_pairs"],
+        "sealed_selection_pairs": stage_10["selection_pairs"],
+        "measured_pairs": measured_pairs,
+        "measured_pair_count": len(measured_pairs),
+        "sealed_sample_pairs": len(stage_10["selection_pairs"]),
+        "subsample_mode": (
+            "complete sealed sample"
+            if len(measured_pairs) == len(stage_10["selection_pairs"])
+            else "seeded uniform random subsample of the sealed sample; NOT a prefix"
+        ),
         "prefix": False,
         "legs": aggregate,
         "per_pair": per_pair,
