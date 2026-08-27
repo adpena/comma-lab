@@ -86,3 +86,18 @@ No archive-level ΔS asserted — this gate measures the OBJECTIVE on rendered f
 ## 6-hook wire-in (Catalog #125)
 
 1. Sensitivity-map — ACTIVE (`rho_i` = oracle saliency drives the allocation). 2. Pareto — ACTIVE (the rate/margin-budget trade is the polytope; the canonical `joint_p18_p19_waterfill` KKT-Dykstra solver is the production sister). 3. Bit-allocator — ACTIVE (the L-inf reverse-water-fill IS a bit-allocator). 4. Cathedral autopilot — N/A here (advisory $0 gate; the result feeds open council decision #4, not a dispatch ranking row). 5. Continual-learning posterior — N/A here (no contest-axis anchor; `[macOS-CPU advisory]` non-promotable, FORMALIZATION_PENDING). 6. Probe-disambiguator — ACTIVE (this gate IS the §7 probe-disambiguator that resolves the L-inf-vs-L2 objective; the shuffle control is the no-fake disambiguator within it).
+---
+
+*(ERA-DEBT DISPOSITION 2026-08-27 — APPEND-ONLY per Catalog #110/#113; the
+original body above is unmodified. pf2x r87: this landing memo predates
+EXECUTED Catalog #373 enforcement — the #842 window, when preflight_all gates
+did not run on commits — and is a frozen historical record of a superseded
+work era, not a live compound-stack proposal. Authoring an acknowledgment
+section retroactively would fabricate deliberation that never happened
+(NO-FAKE), so the honest exit is the gate's own waiver below. The prospective
+class fix — temporal scoping of matched anti-patterns to those registered
+strictly before the memo date — landed in
+check_compound_stack_proposal_acknowledges_known_anti_patterns in the same
+commit.)*
+
+# ANTI_PATTERN_MATCH_INTENTIONAL_OK:era-debt frozen historical memo (pf2x r87 2026-08-27) — predates executed Catalog #373 enforcement (the #842 window); superseded work era, not a live compound-stack proposal; a retro-authored acknowledgment section would fabricate deliberation (NO-FAKE)

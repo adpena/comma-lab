@@ -143,3 +143,18 @@ The probe verdict carries canonical Tier A non-promotable markers: `predicted_de
 ## STAND_DOWN declaration (Catalog #340)
 
 I **STAND_DOWN on rebuilding any STC codec or STC substrate** — the canonical `tac.codec.syndrome_trellis_codec` + `pose_filler_stc_codec` + STC-Dasher + STC v2 + clean-source build tool already cover that scope. Convergent honest reporting, NOT manufactured duplicate work. The genuinely-missing artifact (the symposium §6 clean-source mask-delta probe) is the only new code added. Sister-DISJOINT: only `tools/probe_stc_clean_source_mask_delta_*` + `src/tac/codec/tests/test_probe_stc_clean_source_mask_delta_*` + this memo + lane/probe-outcome — no composition/bit_allocator/dreamer_v3/z7_mamba2/pr110_opt11/CLAUDE.md/preflight.
+---
+
+*(ERA-DEBT DISPOSITION 2026-08-27 — APPEND-ONLY per Catalog #110/#113; the
+original body above is unmodified. pf2x r87: this landing memo predates
+EXECUTED Catalog #373 enforcement — the #842 window, when preflight_all gates
+did not run on commits — and is a frozen historical record of a superseded
+work era, not a live compound-stack proposal. Authoring an acknowledgment
+section retroactively would fabricate deliberation that never happened
+(NO-FAKE), so the honest exit is the gate's own waiver below. The prospective
+class fix — temporal scoping of matched anti-patterns to those registered
+strictly before the memo date — landed in
+check_compound_stack_proposal_acknowledges_known_anti_patterns in the same
+commit.)*
+
+# ANTI_PATTERN_MATCH_INTENTIONAL_OK:era-debt frozen historical memo (pf2x r87 2026-08-27) — predates executed Catalog #373 enforcement (the #842 window); superseded work era, not a live compound-stack proposal; a retro-authored acknowledgment section would fabricate deliberation (NO-FAKE)

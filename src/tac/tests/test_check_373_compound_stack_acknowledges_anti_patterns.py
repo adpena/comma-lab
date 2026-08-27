@@ -399,3 +399,95 @@ def test_canonical_helper_module_token_constants_pinned():
     assert "compound stack" in _CHECK_373_TRIGGER_TOKENS
     assert "stacking" in _CHECK_373_TRIGGER_TOKENS
     assert "stack-of-stacks" in _CHECK_373_TRIGGER_TOKENS
+
+
+# ──────────────────────────────────────────────────────────────────────
+# Temporal scoping (pf2x r87, 2026-08-27) — both-direction controls
+# ──────────────────────────────────────────────────────────────────────
+
+_TRIGGER_MATCH_BODY = (
+    "We propose a compound stack chaining brotli + lzma — "
+    "compounding entropy coders that operate on similar redundancy "
+    "domains. The expected ratio gain is small."
+)
+
+
+def _all_matched_dates(monkeypatch, yyyymmdd: str) -> None:
+    """Monkeypatch the registration-date map to a constant date for every id."""
+    import tac.preflight as pf
+
+    class _ConstMap(dict):
+        def get(self, key, default=None):  # noqa: A003 — dict-protocol shim
+            return yyyymmdd
+
+        def __bool__(self) -> bool:
+            return True
+
+    monkeypatch.setattr(
+        pf, "_check_373_pattern_registration_yyyymmdd", lambda: _ConstMap()
+    )
+
+
+def test_temporal_scoping_drops_post_registration_patterns(tmp_path, monkeypatch):
+    """NEGATIVE direction: patterns registered AFTER the memo date cannot bind.
+
+    A frozen memo dated 20260530 cannot cite an anti_pattern_id registered
+    20260805 — without temporal scoping every future registry addition
+    retroactively re-fires the gate on frozen history (the r87 red: 30
+    era-debt memos matching August-registered patterns).
+    """
+    research_dir = tmp_path / ".omx" / "research"
+    _write_memo(research_dir, "timetravel_landed_20260530.md", _TRIGGER_MATCH_BODY)
+    _all_matched_dates(monkeypatch, "20260805")  # every pattern post-dates the memo
+    out = check_compound_stack_proposal_acknowledges_known_anti_patterns(
+        repo_root=tmp_path, strict=False
+    )
+    assert out == []
+
+
+def test_temporal_scoping_keeps_pre_registration_patterns(tmp_path, monkeypatch):
+    """POSITIVE direction: patterns registered BEFORE the memo date still bind.
+
+    Temporal scoping is scanner PRECISION, not weakening — a memo written
+    after a pattern's registration day is fully enforced.
+    """
+    research_dir = tmp_path / ".omx" / "research"
+    _write_memo(research_dir, "bound_landed_20260530.md", _TRIGGER_MATCH_BODY)
+    _all_matched_dates(monkeypatch, "20260501")  # every pattern predates the memo
+    out = check_compound_stack_proposal_acknowledges_known_anti_patterns(
+        repo_root=tmp_path, strict=False
+    )
+    assert len(out) >= 1
+    assert "compound-stack proposal matches registered anti-pattern" in out[0]
+
+
+def test_temporal_scoping_unknown_date_binds(tmp_path, monkeypatch):
+    """FAIL-DIRECTION pin: a matched id with NO known registration date binds.
+
+    The caller's per-id default is "00000000" (always-binding) — an
+    unparseable/missing date can never silently exempt a pattern.
+    """
+    import tac.preflight as pf
+
+    research_dir = tmp_path / ".omx" / "research"
+    _write_memo(research_dir, "unknown_date_landed_20260530.md", _TRIGGER_MATCH_BODY)
+    # Non-empty map (so filtering engages) that knows NO matched id.
+    monkeypatch.setattr(
+        pf,
+        "_check_373_pattern_registration_yyyymmdd",
+        lambda: {"__no_such_pattern__": "20260101"},
+    )
+    out = check_compound_stack_proposal_acknowledges_known_anti_patterns(
+        repo_root=tmp_path, strict=False
+    )
+    assert len(out) >= 1
+
+
+def test_temporal_scoping_real_registry_dates_parse():
+    """Structural: the real registry yields 8-digit dates incl. builtins 20260528."""
+    from tac.preflight import _check_373_pattern_registration_yyyymmdd
+
+    reg = _check_373_pattern_registration_yyyymmdd()
+    assert len(reg) >= 1
+    assert all(len(v) == 8 and v.isdigit() for v in reg.values())
+    assert reg.get("lzma_on_already_brotli_saturated_compounding_v1") == "20260528"

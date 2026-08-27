@@ -445,3 +445,18 @@ Catalog #246 (from `O(43 modes × cost-per-mode)` to
 - Catalog #287 placeholder-rationale rejection
 
 <!-- HISTORICAL_SCORE_LITERAL_OK:slot_ggg_yousfi_fridrich_real_scorer_verification_landing_2026-05-29_macos_cpu_advisory_only_no_contest_score_literals -->
+---
+
+*(ERA-DEBT DISPOSITION 2026-08-27 — APPEND-ONLY per Catalog #110/#113; the
+original body above is unmodified. pf2x r87: this landing memo predates
+EXECUTED Catalog #373 enforcement — the #842 window, when preflight_all gates
+did not run on commits — and is a frozen historical record of a superseded
+work era, not a live compound-stack proposal. Authoring an acknowledgment
+section retroactively would fabricate deliberation that never happened
+(NO-FAKE), so the honest exit is the gate's own waiver below. The prospective
+class fix — temporal scoping of matched anti-patterns to those registered
+strictly before the memo date — landed in
+check_compound_stack_proposal_acknowledges_known_anti_patterns in the same
+commit.)*
+
+# ANTI_PATTERN_MATCH_INTENTIONAL_OK:era-debt frozen historical memo (pf2x r87 2026-08-27) — predates executed Catalog #373 enforcement (the #842 window); superseded work era, not a live compound-stack proposal; a retro-authored acknowledgment section would fabricate deliberation (NO-FAKE)

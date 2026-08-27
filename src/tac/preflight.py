@@ -33880,6 +33880,39 @@ def _check_373_safely_match_stack_for_memo(
     return True, matched_ids, None
 
 
+def _check_373_pattern_registration_yyyymmdd() -> dict[str, str]:
+    """Map anti_pattern_id -> registration date (YYYYMMDD) for temporal scoping.
+
+    TEMPORAL SCOPING (pf2x r87, 2026-08-27). The gate's own semantics are
+    "proposals acknowledge KNOWN anti-patterns" — known AT PROPOSAL TIME. A
+    frozen landing memo dated D cannot cite an anti_pattern_id registered
+    after D; without this map, every future registry addition retroactively
+    re-fires the gate on frozen history (registry-growth-vs-frozen-memo time
+    travel — the r86 canonical_task_status genus at a sister surface).
+    Registration date source: each builder module stamps its landing date
+    into ``AntiPattern.provenance.captured_at_utc`` (builtins 2026-05-28 ·
+    d7_d8_d9 2026-05-30 · na3/na5 2026-08-05 · hd1 2026-08-18 — verified
+    2026-08-27).
+
+    FAIL DIRECTION (precision-not-weakening): on ANY failure return {} and
+    the caller skips filtering entirely — every matched id binds. The
+    caller's per-id default is "00000000" (always-binding), so a pattern
+    with an unparseable date can never be silently exempted.
+    """
+    try:
+        from tac.canonical_anti_patterns.registry import query_anti_patterns
+
+        out: dict[str, str] = {}
+        for ap in query_anti_patterns():
+            raw = getattr(getattr(ap, "provenance", None), "captured_at_utc", "")
+            digits = str(raw)[:10].replace("-", "")
+            if len(digits) == 8 and digits.isdigit():
+                out[ap.anti_pattern_id] = digits
+        return out
+    except Exception:  # noqa: BLE001 — defensive: unfiltered = stricter, never weaker
+        return {}
+
+
 def check_compound_stack_proposal_acknowledges_known_anti_patterns(
     *,
     repo_root: Path | None = None,
@@ -33947,6 +33980,9 @@ def check_compound_stack_proposal_acknowledges_known_anti_patterns(
         )
 
     violations: list[str] = []
+    # Registration-date map computed ONCE per gate run (temporal scoping,
+    # pf2x r87 — see _check_373_pattern_registration_yyyymmdd).
+    reg_dates = _check_373_pattern_registration_yyyymmdd()
     for path in memos:
         try:
             body = path.read_text(encoding="utf-8")
@@ -33970,6 +34006,21 @@ def check_compound_stack_proposal_acknowledges_known_anti_patterns(
                     f"skipping ({import_err})"
                 )
             continue
+        # TEMPORAL SCOPING (pf2x r87): require acknowledgment ONLY of
+        # anti-patterns registered STRICTLY BEFORE the memo's date suffix.
+        # A memo cannot cite an id that did not exist when it was written;
+        # strict-before (not <=) because day-granularity dates cannot order
+        # same-day events (d7_d8_d9 registered 22:00Z on the same day as its
+        # era's memos). Full enforcement is UNCHANGED for a memo written
+        # after a pattern's registration day. reg_dates empty (registry
+        # unreadable) => no filtering: every matched id binds (stricter).
+        memo_ymd = _check_373_extract_yyyymmdd(path)
+        if memo_ymd is not None and reg_dates:
+            matched_ids = [
+                mid
+                for mid in matched_ids
+                if reg_dates.get(mid, "00000000") < memo_ymd
+            ]
         if not matched_ids:
             continue
         if _check_373_has_valid_waiver(body):

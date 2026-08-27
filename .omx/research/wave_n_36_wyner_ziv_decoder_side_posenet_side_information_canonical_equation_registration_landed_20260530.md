@@ -169,3 +169,18 @@ Verified at PV time (15:46Z → 16:04Z):
 * Wyner & Ziv (1976) "The rate-distortion function for source coding with side information at the decoder" IEEE Trans. Inf. Theory IT-22(1):1-10
 * Cover & Thomas (2006) Elements of Information Theory, 2nd ed., § 15.9 Rate Distortion with Side Information at Decoder
 * Pradhan & Ramchandran (2003) "Distributed source coding using syndromes (DISCUS)" IEEE Trans. Inf. Theory 49(3):626-643
+---
+
+*(ERA-DEBT DISPOSITION 2026-08-27 — APPEND-ONLY per Catalog #110/#113; the
+original body above is unmodified. pf2x r87: this landing memo predates
+EXECUTED Catalog #373 enforcement — the #842 window, when preflight_all gates
+did not run on commits — and is a frozen historical record of a superseded
+work era, not a live compound-stack proposal. Authoring an acknowledgment
+section retroactively would fabricate deliberation that never happened
+(NO-FAKE), so the honest exit is the gate's own waiver below. The prospective
+class fix — temporal scoping of matched anti-patterns to those registered
+strictly before the memo date — landed in
+check_compound_stack_proposal_acknowledges_known_anti_patterns in the same
+commit.)*
+
+# ANTI_PATTERN_MATCH_INTENTIONAL_OK:era-debt frozen historical memo (pf2x r87 2026-08-27) — predates executed Catalog #373 enforcement (the #842 window); superseded work era, not a live compound-stack proposal; a retro-authored acknowledgment section would fabricate deliberation (NO-FAKE)
