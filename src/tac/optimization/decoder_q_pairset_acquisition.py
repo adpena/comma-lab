@@ -181,10 +181,10 @@ def _predicted_score_mean(row: Mapping[str, Any], *, label: str) -> float | None
     if row.get("predicted_score_mean") is not None:
         return _as_optional_float(row.get("predicted_score_mean"), label=f"{label} predicted_score_mean")
     estimate = row.get("exact_cpu_calibrated_estimate")
-    if isinstance(estimate, Mapping) and estimate.get("predicted_score") is not None:
+    if isinstance(estimate, Mapping) and estimate.get("predicted_score") is not None:  # DUAL_AXIS_RANKING_WAIVED:reads the exact_cpu_calibrated_estimate whose parent key/schema names the axis (contest-CPU-calibrated single-axis estimate, FALSE_AUTHORITY-marked); not a dual-axis ranking row
         return _as_optional_float(
-            estimate.get("predicted_score"),
-            label=f"{label} exact_cpu_calibrated_estimate.predicted_score",
+            estimate.get("predicted_score"),  # DUAL_AXIS_RANKING_WAIVED:reads the exact_cpu_calibrated_estimate whose parent key/schema names the axis (contest-CPU-calibrated single-axis estimate, FALSE_AUTHORITY-marked); not a dual-axis ranking row
+            label=f"{label} exact_cpu_calibrated_estimate.predicted_score",  # DUAL_AXIS_RANKING_WAIVED:reads the exact_cpu_calibrated_estimate whose parent key/schema names the axis (contest-CPU-calibrated single-axis estimate, FALSE_AUTHORITY-marked); not a dual-axis ranking row
         )
     return None
 

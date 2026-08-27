@@ -1039,7 +1039,7 @@ def _codec_param_manifest_candidates(
                 "score_claim": False,
                 "promotion_eligible": False,
                 "rank_score": _as_float(
-                    cand.get("predicted_score")
+                    cand.get("predicted_score")  # DUAL_AXIS_RANKING_WAIVED:planning-only single-axis prediction; dual-axis CPU/CUDA companion lives on the exact-eval row, not the planning queue row
                 ),  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
                 "rank_score_field": "predicted_score",  # DUAL_AXIS_RANKING_WAIVED: planning-only single-axis prediction; dual-axis CPU/CUDA companion lives at empirical-anchor / posterior_update_locked layer per CLAUDE.md auth-eval-everywhere
                 "evidence_semantics": cand.get("evidence_semantics")

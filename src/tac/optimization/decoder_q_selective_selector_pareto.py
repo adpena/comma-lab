@@ -249,11 +249,11 @@ def _candidate_row(
     if calibration is not None and calibration.get("component_gain_per_mlx_gain") is not None:
         scale = float(calibration["component_gain_per_mlx_gain"])
         predicted_component_gain = normalized_gain * scale
-        predicted_score = float(calibration["base_score"]) - predicted_component_gain + stats["rate_delta"]
+        predicted_score = float(calibration["base_score"]) - predicted_component_gain + stats["rate_delta"]  # DUAL_AXIS_RANKING_WAIVED:feeds the exact_cpu_calibrated_estimate v1 schema (axis named in the schema string, allowed_use=non_authoritative_selector_ranking_only, FALSE_AUTHORITY)
         row["exact_cpu_calibrated_estimate"] = {
             "schema": "decoder_q_selective_selector_exact_cpu_calibrated_estimate.v1",
             "predicted_component_gain": predicted_component_gain,
-            "predicted_score": predicted_score,
+            "predicted_score": predicted_score,  # DUAL_AXIS_RANKING_WAIVED:feeds the exact_cpu_calibrated_estimate v1 schema (axis named in the schema string, allowed_use=non_authoritative_selector_ranking_only, FALSE_AUTHORITY)
             "predicted_delta_vs_base": predicted_score - float(calibration["base_score"]),
             "calibration_score_axis": calibration["score_axis"],
             "allowed_use": "non_authoritative_selector_ranking_only",
@@ -265,7 +265,7 @@ def _candidate_row(
 def _dominance_score(row: dict[str, Any]) -> float:
     estimate = row.get("exact_cpu_calibrated_estimate")
     if isinstance(estimate, dict):
-        return float(estimate["predicted_score"])
+        return float(estimate["predicted_score"])  # DUAL_AXIS_RANKING_WAIVED:reads the exact_cpu_calibrated_estimate whose parent key/schema names the axis (contest-CPU-calibrated single-axis estimate, FALSE_AUTHORITY-marked); not a dual-axis ranking row
     return -float(row["net_mlx_gain_after_rate_non_authoritative"])
 
 
@@ -302,7 +302,7 @@ def _annotate_pareto_frontier(rows: list[dict[str, Any]]) -> None:
             "minimize": ["payload_bytes", "planning_score"],
             "planning_score": row_score,
             "score_source": (
-                "exact_cpu_calibrated_estimate.predicted_score"
+                "exact_cpu_calibrated_estimate.predicted_score"  # DUAL_AXIS_RANKING_WAIVED:reads the exact_cpu_calibrated_estimate whose parent key/schema names the axis (contest-CPU-calibrated single-axis estimate, FALSE_AUTHORITY-marked); not a dual-axis ranking row
                 if isinstance(row.get("exact_cpu_calibrated_estimate"), dict)
                 else "-net_mlx_gain_after_rate_non_authoritative"
             ),
@@ -386,7 +386,7 @@ def build_selector_pareto_plan(
         estimate = row.get("exact_cpu_calibrated_estimate")
         if isinstance(estimate, dict):
             return (
-                float(estimate["predicted_score"]),
+                float(estimate["predicted_score"]),  # DUAL_AXIS_RANKING_WAIVED:reads the exact_cpu_calibrated_estimate whose parent key/schema names the axis (contest-CPU-calibrated single-axis estimate, FALSE_AUTHORITY-marked); not a dual-axis ranking row
                 int(row["payload_bytes"]),
                 str(row["selector_id"]),
             )

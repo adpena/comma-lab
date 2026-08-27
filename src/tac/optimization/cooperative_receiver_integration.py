@@ -82,7 +82,7 @@ def build_autopilot_rows(rows: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
             "lane_class": str(row.get("lane_class") or ""),
             "campaign_tier": str(row.get("campaign_tier") or ""),
             "family": "cooperative_receiver_campaign",
-            "predicted_score_delta": float(row["predicted_score_delta"]),
+            "predicted_score_delta": float(row["predicted_score_delta"]),  # DUAL_AXIS_RANKING_WAIVED:re-emission of the cooperative-receiver planning row (predicted_delta_evidence = prediction_only_cross_domain_derivation, notes tagged planning-only); non-promotable planning surface, not a dual-axis score row
             "expected_information_gain": abs(float(row["predicted_score_delta"])),
             "estimated_dispatch_cost_usd": float(row["estimated_dispatch_cost_usd"]),
             "estimated_cost_usd_band": list(row.get("estimated_cost_usd_band") or []),
@@ -105,7 +105,7 @@ def build_autopilot_rows(rows: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _campaign_row_to_atom(row: Mapping[str, Any]) -> dict[str, Any]:
-    predicted_total_delta = float(row["predicted_score_delta"])
+    predicted_total_delta = float(row["predicted_score_delta"])  # DUAL_AXIS_RANKING_WAIVED:re-emission of the cooperative-receiver planning row (predicted_delta_evidence = prediction_only_cross_domain_derivation, notes tagged planning-only); non-promotable planning surface, not a dual-axis score row
     return {
         "atom_id": f"cooperative_receiver:{row['campaign_id']}",
         "family": "cooperative_receiver",
@@ -175,7 +175,7 @@ def build_pareto_constraint_rows(rows: list[Mapping[str, Any]]) -> list[dict[str
                     "and exact eval evidence"
                 ),
                 "objectives": {
-                    "predicted_score_delta": float(row["predicted_score_delta"]),
+                    "predicted_score_delta": float(row["predicted_score_delta"]),  # DUAL_AXIS_RANKING_WAIVED:re-emission of the cooperative-receiver planning row (predicted_delta_evidence = prediction_only_cross_domain_derivation, notes tagged planning-only); non-promotable planning surface, not a dual-axis score row
                     "estimated_dispatch_cost_usd": float(row["estimated_dispatch_cost_usd"]),
                     "ev_per_dollar_proxy": float(row["ev_per_dollar_proxy"]),
                 },
@@ -340,7 +340,7 @@ def render_markdown(manifest: Mapping[str, Any]) -> str:
             "| {idx} | `{campaign}` | `{delta:.6f}` | `${cost:.2f}` | {surface} | {gate} |".format(
                 idx=idx,
                 campaign=row["source_campaign_id"],
-                delta=float(row["predicted_score_delta"]),
+                delta=float(row["predicted_score_delta"]),  # DUAL_AXIS_RANKING_WAIVED:re-emission of the cooperative-receiver planning row (predicted_delta_evidence = prediction_only_cross_domain_derivation, notes tagged planning-only); non-promotable planning surface, not a dual-axis score row
                 cost=float(row["estimated_dispatch_cost_usd"]),
                 surface=surface,
                 gate=row["notes"].split("promotion_gate=", 1)[-1],

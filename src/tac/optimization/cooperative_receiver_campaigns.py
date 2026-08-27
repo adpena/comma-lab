@@ -92,7 +92,7 @@ class CooperativeReceiverCandidate:
             "source_commit": self.source_commit,
             "source_memo": self.source_memo,
             "hypothesis": self.hypothesis,
-            "predicted_score_delta": midpoint,
+            "predicted_score_delta": midpoint,  # DUAL_AXIS_RANKING_WAIVED:prediction-only planning band; the row's predicted_delta_evidence field carries the honesty label (prediction_only_cross_domain_derivation), axis-agnostic and non-promotable
             "predicted_delta_band": [
                 self.predicted_delta_low,
                 self.predicted_delta_high,

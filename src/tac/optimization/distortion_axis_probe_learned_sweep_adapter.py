@@ -257,7 +257,7 @@ def _candidate_from_uniward_threshold_break(
     aggressive_delta = min(delta_band)
     conservative_gain = abs(conservative_delta)
     aggressive_gain = abs(aggressive_delta)
-    predicted_score = incumbent_score + conservative_delta
+    predicted_score = incumbent_score + conservative_delta  # DUAL_AXIS_RANKING_WAIVED:local calibrated-mean variable in the learned-sweep research-signal adapter schema (false-authority non-promotable rows); not a dual-axis ranking key
     sigma = max((aggressive_gain - conservative_gain) / 2.0, 0.0)
     variance = max(variance_floor, sigma * sigma)
     budget_bytes = conservative_gain / RATE_SCORE_PER_BYTE
@@ -270,7 +270,7 @@ def _candidate_from_uniward_threshold_break(
         "source_schema": SCHEMA,
         "source_probe_id": str(verdict.get("probe_id") or ""),
         "adapter_tool": CLI_TOOL,
-        "calibrated_score_mean": predicted_score,
+        "calibrated_score_mean": predicted_score,  # DUAL_AXIS_RANKING_WAIVED:local calibrated-mean variable in the learned-sweep research-signal adapter schema (false-authority non-promotable rows); not a dual-axis ranking key
         "calibrated_gain_mean": normalized_gain,
         "calibrated_delta_mean": conservative_delta,
         "calibration_scope": (
@@ -307,7 +307,7 @@ def _candidate_from_uniward_threshold_break(
         "source_probe_id": str(verdict.get("probe_id") or ""),
         "family": "distortion_axis_segnet_uniward",
         "rank_score_field": "distortion_axis_predicted_score_mean",
-        "predicted_score_mean": predicted_score,
+        "predicted_score_mean": predicted_score,  # DUAL_AXIS_RANKING_WAIVED:local calibrated-mean variable in the learned-sweep research-signal adapter schema (false-authority non-promotable rows); not a dual-axis ranking key
         "predicted_score_variance": variance,
         "predicted_score_source": (
             "distortion_axis_probe9_threshold_break_conservative_predicted_delta"

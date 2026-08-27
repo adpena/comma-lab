@@ -169,7 +169,7 @@ def _require_quality_evidence(row: Mapping[str, Any], *, label: str) -> None:
     if (
         row.get("exact_cpu_calibrated_estimate_scope") == "candidate_specific"
         and isinstance(estimate, Mapping)
-        and estimate.get("predicted_score") is not None
+        and estimate.get("predicted_score") is not None  # DUAL_AXIS_RANKING_WAIVED:reads the exact_cpu_calibrated_estimate whose parent key/schema names the axis (contest-CPU-calibrated single-axis estimate, FALSE_AUTHORITY-marked); not a dual-axis ranking row
     ):
         _require_false_authority(estimate, label=f"{label} exact_cpu_calibrated_estimate")
         return
@@ -497,16 +497,16 @@ def _selector_pareto_candidates(
         estimate = row.get("exact_cpu_calibrated_estimate")
         if (
             isinstance(estimate, Mapping)
-            and estimate.get("predicted_score") is not None
+            and estimate.get("predicted_score") is not None  # DUAL_AXIS_RANKING_WAIVED:reads the exact_cpu_calibrated_estimate whose parent key/schema names the axis (contest-CPU-calibrated single-axis estimate, FALSE_AUTHORITY-marked); not a dual-axis ranking row
             and _exact_estimate_is_candidate_specific(row)
         ):
-            predicted_score = _as_float(
-                estimate["predicted_score"],
-                label=f"{row.get('selector_id')} predicted_score",
+            predicted_score = _as_float(  # DUAL_AXIS_RANKING_WAIVED:reads the exact_cpu_calibrated_estimate whose parent key/schema names the axis (contest-CPU-calibrated single-axis estimate, FALSE_AUTHORITY-marked); not a dual-axis ranking row
+                estimate["predicted_score"],  # DUAL_AXIS_RANKING_WAIVED:reads the exact_cpu_calibrated_estimate whose parent key/schema names the axis (contest-CPU-calibrated single-axis estimate, FALSE_AUTHORITY-marked); not a dual-axis ranking row
+                label=f"{row.get('selector_id')} predicted_score",  # DUAL_AXIS_RANKING_WAIVED:reads the exact_cpu_calibrated_estimate whose parent key/schema names the axis (contest-CPU-calibrated single-axis estimate, FALSE_AUTHORITY-marked); not a dual-axis ranking row
             )
             mean_source = "exact_cpu_calibrated_estimate"
         else:
-            predicted_score = _as_float(
+            predicted_score = _as_float(  # DUAL_AXIS_RANKING_WAIVED:local mean variable in the MLX research-signal sweep schema (_require_false_authority enforced in-module, score_claim=false); not a dual-axis ranking key
                 row.get("predicted_score_mean"),
                 label=f"{row.get('selector_id')} predicted_score_mean",
             )
@@ -521,7 +521,7 @@ def _selector_pareto_candidates(
                 "selected_pair_indices": row.get("selected_pair_indices"),
                 "payload_bytes": row.get("payload_bytes"),
                 "pair_encoding": row.get("pair_encoding"),
-                "predicted_score_mean": predicted_score,
+                "predicted_score_mean": predicted_score,  # DUAL_AXIS_RANKING_WAIVED:local mean variable in the MLX research-signal sweep schema (_require_false_authority enforced in-module, score_claim=false); not a dual-axis ranking key
                 "predicted_score_variance": _variance_from_candidate(
                     row,
                     default_score_variance=default_score_variance,
@@ -645,7 +645,7 @@ def _explicit_candidates(
         row_label = str(row.get("candidate_id") or row.get("id") or f"candidate {index}")
         _validate_normalized_gain_sum(row, label=row_label)
         _require_quality_evidence(row, label=row_label)
-        predicted_score = _as_float(
+        predicted_score = _as_float(  # DUAL_AXIS_RANKING_WAIVED:local mean variable in the MLX research-signal sweep schema (_require_false_authority enforced in-module, score_claim=false); not a dual-axis ranking key
             row.get("predicted_score_mean", row.get("score_mean")),
             label=f"candidate {index} predicted_score_mean",
         )
@@ -654,7 +654,7 @@ def _explicit_candidates(
                 "candidate_id": str(row.get("candidate_id") or row.get("id") or f"candidate_{index:04d}"),
                 "family": str(row.get("family") or row.get("family_id") or "unknown"),
                 "source_schema": payload.get("schema"),
-                "predicted_score_mean": predicted_score,
+                "predicted_score_mean": predicted_score,  # DUAL_AXIS_RANKING_WAIVED:local mean variable in the MLX research-signal sweep schema (_require_false_authority enforced in-module, score_claim=false); not a dual-axis ranking key
                 "predicted_score_variance": _variance_from_candidate(
                     row,
                     default_score_variance=default_score_variance,

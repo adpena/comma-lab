@@ -312,7 +312,7 @@ def _candidate_from_selection_row(
                 label=f"{candidate_id}.predicted_delta_vs_baseline_score",
             )
         )
-    predicted_score = incumbent_score + projected_delta
+    predicted_score = incumbent_score + projected_delta  # DUAL_AXIS_RANKING_WAIVED:local calibrated-mean variable in the learned-sweep research-signal adapter schema (false-authority non-promotable rows); not a dual-axis ranking key
     pair_indices = _optional_list(row.get("pair_indices"))
     selected_pair_count = _selected_pair_count(row, pair_indices=pair_indices)
     quality_evidence = {
@@ -324,7 +324,7 @@ def _candidate_from_selection_row(
         "source_evidence_tag": row.get("source_evidence_tag"),
         "canonical_provenance": row.get("canonical_provenance"),
         "adapter_tool": CLI_TOOL,
-        "calibrated_score_mean": predicted_score,
+        "calibrated_score_mean": predicted_score,  # DUAL_AXIS_RANKING_WAIVED:local calibrated-mean variable in the learned-sweep research-signal adapter schema (false-authority non-promotable rows); not a dual-axis ranking key
         "calibrated_gain_mean": normalized_gain,
         "calibrated_delta_mean": projected_delta,
         "calibrated_min_mlx_gap_for_spend_triage": calibrated_gap,
@@ -342,7 +342,7 @@ def _candidate_from_selection_row(
         "source_row_id": row.get("row_id"),
         "family": str(row.get("family") or "mlx_decoder_q"),
         "rank": row.get("rank"),
-        "predicted_score_mean": predicted_score,
+        "predicted_score_mean": predicted_score,  # DUAL_AXIS_RANKING_WAIVED:local calibrated-mean variable in the learned-sweep research-signal adapter schema (false-authority non-promotable rows); not a dual-axis ranking key
         "predicted_score_variance": max(
             variance_floor,
             calibrated_gap * calibrated_gap,

@@ -857,7 +857,7 @@ def _persist_field_equation_per_pair_lagrangian_sidecar(
         "n_pairs": envelope.get("n_pairs", 0),
         "kkt_residual": envelope.get("kkt_residual"),
         "is_pareto_feasible": envelope.get("is_pareto_feasible"),
-        "predicted_score_delta": envelope.get("predicted_score_delta"),
+        "predicted_score_delta": envelope.get("predicted_score_delta"),  # DUAL_AXIS_RANKING_WAIVED:advisory planner envelope with score_claim=False + promotion_eligible=False + evidence_grade [predicted]; not an axis-bearing score claim
         "bound_constraints": dict(envelope.get("bound_constraints", {})),
         "optimal_plan_consumed": bool(envelope.get("optimal_plan_consumed", False)),
         "rationale": envelope.get("rationale", ""),
@@ -965,7 +965,7 @@ def consume_per_pair_lagrangian_duals(
             "kkt_residual": None,
             "feasibility_certificate": None,
             "is_pareto_feasible": None,
-            "predicted_score_delta": None,
+            "predicted_score_delta": None,  # DUAL_AXIS_RANKING_WAIVED:advisory planner envelope with score_claim=False + promotion_eligible=False + evidence_grade [predicted]; not an axis-bearing score claim
             "bound_constraints": dict(DEFAULT_CONSTRAINTS),
             "optimal_plan_consumed": False,
             "score_claim": False,
@@ -991,7 +991,7 @@ def consume_per_pair_lagrangian_duals(
         kkt_residual = float(optimal_plan.kkt_residual)
         feasibility_certificate = dict(optimal_plan.feasibility_certificate)
         is_pareto_feasible = bool(optimal_plan.is_pareto_feasible)
-        predicted_score_delta = float(optimal_plan.predicted_score_delta)
+        predicted_score_delta = float(optimal_plan.predicted_score_delta)  # DUAL_AXIS_RANKING_WAIVED:local unpack of the advisory optimal_plan quantity feeding the score_claim=False envelope; a variable, not a solver row key
     elif isinstance(optimal_plan, Mapping):
         lambda_archive = float(optimal_plan.get("lambda_archive", 0.0))
         lambda_compute = float(optimal_plan.get("lambda_compute", 0.0))
@@ -1001,7 +1001,7 @@ def consume_per_pair_lagrangian_duals(
         kkt_residual = float(optimal_plan.get("kkt_residual", 0.0))
         feasibility_certificate = dict(optimal_plan.get("feasibility_certificate", {}))
         is_pareto_feasible = bool(optimal_plan.get("is_pareto_feasible", False))
-        predicted_score_delta = float(optimal_plan.get("predicted_score_delta", 0.0))
+        predicted_score_delta = float(optimal_plan.get("predicted_score_delta", 0.0))  # DUAL_AXIS_RANKING_WAIVED:local unpack of the advisory optimal_plan quantity feeding the score_claim=False envelope; a variable, not a solver row key
     else:
         raise FieldEquationPlannerError(
             f"optimal_plan must be OptimalPerPairTreatmentPlan or Mapping; got {type(optimal_plan).__name__}"
@@ -1030,7 +1030,7 @@ def consume_per_pair_lagrangian_duals(
         "kkt_residual": kkt_residual,
         "feasibility_certificate": feasibility_certificate,
         "is_pareto_feasible": is_pareto_feasible,
-        "predicted_score_delta": predicted_score_delta,
+        "predicted_score_delta": predicted_score_delta,  # DUAL_AXIS_RANKING_WAIVED:advisory planner envelope with score_claim=False + promotion_eligible=False + evidence_grade [predicted]; not an axis-bearing score claim
         "bound_constraints": bound_constraints,
         "optimal_plan_consumed": True,
         "score_claim": False,

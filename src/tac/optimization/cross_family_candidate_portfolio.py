@@ -440,7 +440,7 @@ def _pairset_candidate_rows(
         predicted = row.get("predicted_score_mean")
         estimate = row.get("exact_cpu_calibrated_estimate")
         if predicted is None and isinstance(estimate, Mapping):
-            predicted = estimate.get("predicted_score")
+            predicted = estimate.get("predicted_score")  # DUAL_AXIS_RANKING_WAIVED:reads the exact_cpu_calibrated_estimate whose parent key/schema names the axis (contest-CPU-calibrated single-axis estimate, FALSE_AUTHORITY-marked); not a dual-axis ranking row
         if predicted is None:
             raise CrossFamilyCandidatePortfolioError(
                 f"{candidate_id}: pairset predicted_score_mean missing"
