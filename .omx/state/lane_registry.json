@@ -95336,6 +95336,457 @@
         }
       },
       "notes": "BACKFILL-when-discovered (pf2x r81, 2026-08-27, Check 126): 2026-06-09 launcher tools/launch_snerv_mistake_b_g1a.py declared this LANE_ID but never registered it; surfaced when an r80 waiver edit refreshed the file's source attribution. Historical/dormant \u2014 SNeRV lineage is lessons-only per the no-old-lineage ban."
+    },
+    {
+      "id": "lane_7_psd",
+      "name": "Lane 7 PSD substrate (killed-or-deferred 2026-04-30)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "BACKFILL-when-discovered (pf2x r83, 2026-08-27, Check 126): historical lane_id referenced by a dormant one-shot script whose source attribution was refreshed by the r82 waiver commit. Historical/dormant."
+    },
+    {
+      "id": "lane_li_posenet_domain_learned_image_fork",
+      "name": "Slot-K op-routable: PoseNet-domain learned-image fork lane",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "BACKFILL-when-discovered (pf2x r83, 2026-08-27, Check 126): historical lane_id referenced by a dormant one-shot script whose source attribution was refreshed by the r82 waiver commit. Historical/dormant."
+    },
+    {
+      "id": "lane_dqs1_top32_selective_decoderq_exact_cpu_20260522",
+      "name": "DQS1 top32 selective decoder-quant exact-CPU lane",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "BACKFILL-when-discovered (pf2x r83, 2026-08-27, Check 126): historical lane_id referenced by a dormant one-shot script whose source attribution was refreshed by the r82 waiver commit. Historical/dormant."
+    },
+    {
+      "id": "lane_local_hardware_aggressive_sweep_20260513_20260513T212901Z",
+      "name": "Local-hardware aggressive sweep lane (2026-05-13)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "BACKFILL-when-discovered (pf2x r83, 2026-08-27, Check 126): historical lane_id referenced by a dormant one-shot script whose source attribution was refreshed by the r82 waiver commit. Historical/dormant."
+    },
+    {
+      "id": "lane_pr101_frame_exploit_selector_fec8_static_second_order_k",
+      "name": "PR101 frame-exploit selector FEC8 static 2nd-order-k lane",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "BACKFILL-when-discovered (pf2x r83, 2026-08-27, Check 126): historical lane_id referenced by a dormant one-shot script whose source attribution was refreshed by the r82 waiver commit. Historical/dormant."
+    },
+    {
+      "id": "lane_pr106_format0d_latent_score_table_20260516_contest_cuda",
+      "name": "PR106 format0d latent score-table lane (contest-CUDA)",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "BACKFILL-when-discovered (pf2x r83, 2026-08-27, Check 126): historical lane_id referenced by a dormant one-shot script whose source attribution was refreshed by the r82 waiver commit. Historical/dormant."
+    },
+    {
+      "id": "lane_pr106_hdm8_inner_headerless_fmt08_20260515",
+      "name": "PR106 HDM8 inner headerless fmt08 lane",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "BACKFILL-when-discovered (pf2x r83, 2026-08-27, Check 126): historical lane_id referenced by a dormant one-shot script whose source attribution was refreshed by the r82 waiver commit. Historical/dormant."
+    },
+    {
+      "id": "lane_slot_h_cascade_item_3_cross_archive_composition_matrix_7_archive_drop_many_canvas_20260529",
+      "name": "Slot-H cascade item-3 cross-archive composition matrix lane",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "BACKFILL-when-discovered (pf2x r83, 2026-08-27, Check 126): historical lane_id referenced by a dormant one-shot script whose source attribution was refreshed by the r82 waiver commit. Historical/dormant."
+    },
+    {
+      "id": "lane_uniward_6th_order_integration_into_boostnerv_pr110_residual_20260526",
+      "name": "UNIWARD 6th-order integration into BoostNeRV PR110 residual lane",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "BACKFILL-when-discovered (pf2x r83, 2026-08-27, Check 126): historical lane_id referenced by a dormant one-shot script whose source attribution was refreshed by the r82 waiver commit. Historical/dormant."
+    },
+    {
+      "id": "lane_uniward_per_pixel_n_plus_1_real_scorer_empirical_20260526",
+      "name": "UNIWARD per-pixel N+1 real-scorer empirical lane",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "BACKFILL-when-discovered (pf2x r83, 2026-08-27, Check 126): historical lane_id referenced by a dormant one-shot script whose source attribution was refreshed by the r82 waiver commit. Historical/dormant."
+    },
+    {
+      "id": "lane_v14_v2_cascade_a_fec10_substitution_onto_dqs1_frontier",
+      "name": "V14v2 cascade-A FEC10 substitution onto DQS1 frontier lane",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "BACKFILL-when-discovered (pf2x r83, 2026-08-27, Check 126): historical lane_id referenced by a dormant one-shot script whose source attribution was refreshed by the r82 waiver commit. Historical/dormant."
     }
   ],
   "level_rules": {
@@ -95345,5 +95796,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-08-27T07:38:47Z"
+  "updated_at": "2026-08-27T08:26:58Z"
 }

@@ -43333,6 +43333,34 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     "lane_claim_refused",  # manifest key: claim_lane_dispatch refused (bool)
     "lane_claim_rc",  # manifest key: claim_lane_dispatch return code
     "lane_claim_instance_job_id",  # manifest key: claimed instance/job id
+    # Lane-CLASS (SegNet class 1) metric/telemetry/config vocabulary in the
+    # witness measurement tools + dashboard test fixtures (Check 126
+    # adjudication 2026-08-27, pf2x r83 — the r82 waiver commits refreshed
+    # source attribution on 81 dormant tools, pulling their historical
+    # Lane-class keys into scan scope). Same genus as the gd5/levelset/TR1
+    # blocks above: keys ABOUT road-lane markings, not dispatch lane_ids.
+    "lane_recall",  # metric key: Lane-class recall through R+SegNet
+    "lane_fn_frac",  # metric key: Lane-class false-negative fraction
+    "lane_fp_frac",  # metric key: Lane-class false-positive fraction
+    "lane_fn_unseeded",  # dashboard fixture key: unseeded Lane FN projection
+    "lane_fn_seeded",  # dashboard fixture key: seeded Lane FN projection
+    "lane_mean_iou",  # telemetry key: Lane-class mean IoU
+    "lane_px",  # telemetry key: Lane-class pixel count
+    "lane_band_px",  # telemetry key: lane render-band pixel count
+    "lane_part_frac",  # telemetry key: Lane partition fraction
+    "lane_prior_phi1",  # config/telemetry key: lane prior phi1 mode (#291)
+    "lane_static_mask_px",  # telemetry key: static-mask Lane pixel count
+    "lane_n",  # stats key: Lane-class sample count
+    "lane_sd",  # stats key: Lane-class standard deviation
+    "lane_curve_prior",  # homotopy-class dict key: the #323 curve-prior family
+    "lane_erosion",  # burn-4 supervisor key: Lane-class erosion watch
+    "lane_guard",  # supervisor key: the #808 lane-guard layer (not a lane_id)
+    # Canonical-equation / anti-pattern REGISTRY IDs that begin with lane_
+    # because they are about the Lane band / lane-kill class — fixed
+    # non-lane vocabulary in tac.canonical_equations (same adjudication).
+    "lane_band_ego_factorization_source_reparam_v1",  # equation ID (Wave-F)
+    "lane_band_source_reparam_measured_resolution_v1",  # equation ID (Wave-F)
+    "lane_killed_aggressively_actually_engineering_bug_not_paradigm_failure_class_v1",  # anti-pattern class ID
     "lane_id",
     "lane_id_matches",
     "lane_ids",
