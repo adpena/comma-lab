@@ -169,6 +169,7 @@ def pose_null_projector() -> np.ndarray:
     return p
 
 
+# PROJECT_PARITY_WAIVED: encode-side realizer delta projection; output stored post-projection, inflate reads it as-is
 def project_scorer_delta_to_pose_null(delta: np.ndarray) -> np.ndarray:
     """Project one 2x2 RGB scorer-lattice delta to sq1's pose-null subspace."""
 
@@ -364,6 +365,7 @@ def dykstra_integer_realize(
     cc_t = c @ c.T
     c_pinv = c.T @ np.linalg.pinv(cc_t)
 
+    # PROJECT_PARITY_WAIVED: nested Dykstra-solve iterate projection (encode side); solution stored post-projection
     def project_pose_null(z_flat: np.ndarray) -> np.ndarray:
         return z_flat - c_pinv @ (c @ z_flat)
 

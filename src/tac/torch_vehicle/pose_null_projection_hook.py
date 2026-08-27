@@ -93,6 +93,7 @@ def _as_flat_residual(residual_chw, spectrum: PoseSubspaceSpectrum) -> tuple[np.
     return flat, arr.shape
 
 
+# PROJECT_PARITY_WAIVED: training-hook residual filter (strips pose-sensitive component of the FiLM residual); nothing stored raw and read transformed
 def project_residual_onto_pose_null(residual_chw, spectrum: PoseSubspaceSpectrum) -> PoseNullProjectionResult:
     """Return the frame-residual with its pose-SENSITIVE component removed (the pose-null part only).
 

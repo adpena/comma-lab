@@ -241,6 +241,7 @@ def measure_pose_subspace_spectrum(
     )
 
 
+# PROJECT_PARITY_WAIVED: measurement instrument decomposing perturbations into sensitive/null components; no stored artifact
 def project_onto_pose_null(spectrum: PoseSubspaceSpectrum, delta_flat: np.ndarray) -> dict[str, np.ndarray | float]:
     """Decompose a flat frame perturbation into its pose-SENSITIVE and pose-NULL components.
 

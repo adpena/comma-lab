@@ -490,6 +490,7 @@ POSE_SIDE_INFO_DIM: int = 6
 architectures": "Distortion = MSE on first 6 pose dimensions"."""
 
 
+# PROJECT_PARITY_WAIVED: reshapes the 6-dim pose vector to side-info tensor shape inside the z8 substrate training binding; not a stored-tensor transform
 def _project_pose_6dim_to_side_info_shape(
     pose_6dim_batch: np.ndarray,
     side_info_shape: tuple[int, int, int],

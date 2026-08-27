@@ -454,6 +454,7 @@ def project_pixelwise_seg_relaxation(
     return result
 
 
+# PROJECT_PARITY_WAIVED: encode-side constructive-solver constraint projection; solution stored post-projection
 def project_rank6_pose_ellipsoid(
     value: np.ndarray,
     pose_j_y: np.ndarray,

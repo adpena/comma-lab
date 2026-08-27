@@ -1369,6 +1369,7 @@ def pose_null_projector_np() -> np.ndarray:
     return p
 
 
+# PROJECT_PARITY_WAIVED: training frame-DELTA constraint applied before storage; receiver decodes post-projection bytes (parity by construction)
 def project_frame1_pose_null_nhwc_np(delta: np.ndarray,
                                      projector: np.ndarray | None = None) -> np.ndarray:
     """Project an NHWC scorer-lattice frame delta blockwise through sq1's P."""
@@ -1386,6 +1387,7 @@ def project_frame1_pose_null_nhwc_np(delta: np.ndarray,
     return y.reshape(x.shape).astype(x.dtype, copy=False)
 
 
+# PROJECT_PARITY_WAIVED: MLX cotangent (gradient-path) twin of the np projector; gradients are never stored
 def project_frame1_pose_null_nhwc_mlx(delta, projector=None):
     """MLX twin of project_frame1_pose_null_nhwc_np for cotangent projection."""
     import mlx.core as mx

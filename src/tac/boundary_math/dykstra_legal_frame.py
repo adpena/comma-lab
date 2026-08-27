@@ -264,6 +264,7 @@ def project_onto_margin_cell(
     return d + step
 
 
+# PROJECT_PARITY_WAIVED: encode-side Dykstra constraint projection; the projected frame IS the stored object, inflate reads it as-is
 def project_onto_pose_tube(
     delta_chw: np.ndarray,
     pose6: np.ndarray,

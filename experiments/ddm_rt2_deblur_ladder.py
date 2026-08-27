@@ -102,6 +102,7 @@ def lift_matrix(n_seg: int, n_cam: int) -> np.ndarray:
 K_YUV = np.array([0.299, 0.587, 0.114], dtype=np.float64)
 
 
+# PROJECT_PARITY_WAIVED: analysis-probe perturbation projector (PoseNet null space); nothing stored, inflate reads no transformed tensor
 def project_pose_null(delta: np.ndarray) -> np.ndarray:
     """Orthogonal projection of a scorer-resolution RGB perturbation onto PoseNet's null space.
 
