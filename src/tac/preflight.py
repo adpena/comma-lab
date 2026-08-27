@@ -25913,6 +25913,12 @@ def check_no_off_manifold_pose_zeros(
         "/comma_lab_public_export/",
         "/vast_harvest/",
         "/public_pr_archive_release_view/",
+        # Frozen packet snapshots under experiments/results/ (forensic captures
+        # of src trees; editing them to add waivers would mutate provenance) +
+        # public-PR source clones (pristine-clone rule: NEVER edited in place,
+        # not even comment waivers). pf2x r77 adjudication, 2026-08-27.
+        "/submission_dir/",
+        "/source/submissions/",
     )
 
     # Match `torch.zeros(<anything>, 6` (with the 6 as 2nd positional arg).

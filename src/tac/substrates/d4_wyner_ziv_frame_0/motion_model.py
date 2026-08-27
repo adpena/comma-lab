@@ -336,7 +336,7 @@ class MotionModelModule(nn.Module):
         if mode == MotionModelMode.SE3_PARAMETRIC:
             # 6 trainable parameters per pair, initialized near identity.
             self.se3_flat = nn.Parameter(
-                torch.zeros(num_pairs, 6) + 1e-4 * torch.randn(num_pairs, 6)
+                torch.zeros(num_pairs, 6) + 1e-4 * torch.randn(num_pairs, 6)  # OFF_MANIFOLD_OK: trainable se(3) Parameter init near identity (exp(0)=I); all 6 dims noised + trained jointly, not a fixed rank-1 pose fill
             )
             self.flow_uv = None
         elif mode == MotionModelMode.OPTICAL_FLOW:

@@ -164,7 +164,7 @@ class _DummyScorer:
     research_only = True
     n_pairs = 6
     seg_targets_hard = torch.zeros(6, 384, 512, dtype=torch.int64)
-    pose_targets = torch.zeros(6, 6)
+    pose_targets = torch.zeros(6, 6)  # OFF_MANIFOLD_OK: dummy-scorer fixture for a byte-effect probe; never rendered or scored (forward raises NotImplementedError)
 
     def seg_pose_forward(self, x):  # pragma: no cover - not used for the byte probe
         raise NotImplementedError
