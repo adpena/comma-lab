@@ -10612,19 +10612,63 @@ def _scan_python_for_dead_resolvers(
 
 
 @functools.lru_cache(maxsize=1024)
-def _module_top_level_names_cached(
+def _module_top_level_info_cached(
     resolved_path: str,
     mtime_ns: int,
     size_bytes: int,
-) -> frozenset[str]:
-    """Cached implementation for ``_module_top_level_names``."""
+) -> tuple[frozenset[str], frozenset[str] | None, tuple[str, ...]]:
+    """Cached ``(names, all_declared, star_imports)`` for one module file.
+
+    - ``names``: every name statically defined/re-exported at module top level.
+    - ``all_declared``: the module's ``__all__`` set when it is statically
+      recognizable (literal list/tuple OR ``list/sorted/tuple/set(<literal
+      collection name>)``), else None. Star-imports honor ``__all__`` at
+      runtime, so consumers need it separately from ``names``.
+    - ``star_imports``: dotted module names star-imported at top level
+      (relative imports carry their leading dots, e.g. ``".sibling"``).
+    """
     del mtime_ns, size_bytes  # cache-key only
     _text, tree, err = _read_python_text_and_tree(Path(resolved_path))
     if err is not None or tree is None:
-        return frozenset()
+        return (frozenset(), None, ())
+    return _module_top_level_info_from_tree(tree)
+
+
+def _top_level_names_from_tree(tree: ast.Module) -> frozenset[str]:
+    """Every name defined or re-exported at module top level, from a parsed tree.
+
+    Thin view over ``_module_top_level_info_from_tree`` (the ONE authoritative
+    collector). Star re-exports need a path context to resolve and are NOT
+    included here — path-aware consumers must use ``_module_top_level_names``.
+    """
+    names, _all_declared, _star_imports = _module_top_level_info_from_tree(tree)
+    return names
+
+
+def _module_top_level_info_from_tree(
+    tree: ast.Module,
+) -> tuple[frozenset[str], frozenset[str] | None, tuple[str, ...]]:
+    """The authoritative static export-surface collector for one module tree.
+
+    Handles (each a measured false-positive class from the r62 chain):
+    - tuple/list/starred unpacking targets (``SEG_H, SEG_W = 384, 512``);
+    - assignments/defs/imports inside top-level ``try/except``/``if``/``for``/
+      ``while``/``with`` blocks (``NUMBA_AVAILABLE = True`` in a try/except);
+    - PEP 562 lazy exports: a module-level ``__getattr__`` admits the declared
+      ``__all__`` — including the COMPUTED form ``__all__ = sorted(_EXPORTS)``
+      resolved against module-level literal collections (dict keys / sequence
+      string elements). Undeclared names still flag, so precision holds;
+    - ``from X import *`` recorded as a star-import for path-aware resolution.
+    """
     names: set[str] = set()
     all_literals: set[str] = set()
+    all_recognized = False
     has_module_getattr = False
+    star_imports: list[str] = []
+    # Module-level literal collections (dict → string keys; list/tuple/set →
+    # string elements), recorded in statement order so a later computed
+    # __all__ = sorted(<name>) resolves exactly as the interpreter would.
+    literal_collections: dict[str, frozenset[str]] = {}
 
     def _add_assign_target(tgt: ast.AST) -> None:
         if isinstance(tgt, ast.Name):
@@ -10635,7 +10679,59 @@ def _module_top_level_names_cached(
             for elt in tgt.elts:
                 _add_assign_target(elt)
 
-    for node in tree.body:
+    def _literal_strings(value: ast.AST) -> frozenset[str] | None:
+        """String constants a literal collection exposes to iteration."""
+        if isinstance(value, ast.Dict):
+            return frozenset(
+                k.value
+                for k in value.keys
+                if isinstance(k, ast.Constant) and isinstance(k.value, str)
+            )
+        if isinstance(value, (ast.List, ast.Tuple, ast.Set)):
+            return frozenset(
+                e.value
+                for e in value.elts
+                if isinstance(e, ast.Constant) and isinstance(e.value, str)
+            )
+        return None
+
+    def _resolve_all_value(value: ast.AST) -> frozenset[str] | None:
+        """Statically resolve an ``__all__`` right-hand side, else None."""
+        direct = _literal_strings(value)
+        if direct is not None:
+            return direct
+        # list/sorted/tuple/set(<name>) or (<name>.keys()) over a recorded
+        # module-level literal collection — the PEP 562 idiom
+        # ``__all__ = sorted(_EXPORTS)``.
+        if (
+            isinstance(value, ast.Call)
+            and isinstance(value.func, ast.Name)
+            and value.func.id in ("list", "sorted", "tuple", "set")
+            and len(value.args) == 1
+            and not value.keywords
+        ):
+            arg = value.args[0]
+            if isinstance(arg, ast.Name):
+                return literal_collections.get(arg.id)
+            if (
+                isinstance(arg, ast.Call)
+                and isinstance(arg.func, ast.Attribute)
+                and arg.func.attr == "keys"
+                and isinstance(arg.func.value, ast.Name)
+                and not arg.args
+                and not arg.keywords
+            ):
+                return literal_collections.get(arg.func.value.id)
+        return None
+
+    # Flatten top-level compound statements: a name assigned in ANY branch of
+    # a module-level try/if/for/while/with is a module attribute at runtime
+    # (the try/except-ImportError idiom guarantees one branch executes).
+    # Function/class BODIES are deliberately not recursed — their locals are
+    # not module attributes.
+    stack: list[ast.stmt] = list(reversed(tree.body))
+    while stack:
+        node = stack.pop()
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
             names.add(node.name)
             if node.name == "__getattr__":
@@ -10647,46 +10743,139 @@ def _module_top_level_names_cached(
                 len(node.targets) == 1
                 and isinstance(node.targets[0], ast.Name)
                 and node.targets[0].id == "__all__"
-                and isinstance(node.value, (ast.List, ast.Tuple))
             ):
-                for elt in node.value.elts:
-                    if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
-                        all_literals.add(elt.value)
+                resolved = _resolve_all_value(node.value)
+                if resolved is not None:
+                    all_literals |= resolved
+                    all_recognized = True
+            elif (
+                len(node.targets) == 1
+                and isinstance(node.targets[0], ast.Name)
+                and isinstance(node.value, (ast.Dict, ast.List, ast.Tuple, ast.Set))
+            ):
+                strings = _literal_strings(node.value)
+                if strings is not None:
+                    literal_collections[node.targets[0].id] = strings
         elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
             names.add(node.target.id)
+            # Annotated forms carry values too: `_EXPORTS: dict[...] = {...}`
+            # (the live PEP 562 idiom) and `__all__: list[str] = [...]`.
+            if node.value is not None:
+                if node.target.id == "__all__":
+                    resolved = _resolve_all_value(node.value)
+                    if resolved is not None:
+                        all_literals |= resolved
+                        all_recognized = True
+                else:
+                    strings = _literal_strings(node.value)
+                    if strings is not None:
+                        literal_collections[node.target.id] = strings
         elif isinstance(node, ast.ImportFrom):
             for alias in node.names:
                 if alias.name == "*":
+                    prefix = "." * (node.level or 0)
+                    star_imports.append(prefix + (node.module or ""))
                     continue
                 names.add(alias.asname or alias.name)
         elif isinstance(node, ast.Import):
             for alias in node.names:
                 names.add(alias.asname or alias.name.split(".")[0])
+        elif isinstance(node, ast.If):
+            stack.extend(reversed(node.body))
+            stack.extend(reversed(node.orelse))
+        elif isinstance(node, ast.Try):
+            stack.extend(reversed(node.body))
+            for handler in node.handlers:
+                stack.extend(reversed(handler.body))
+            stack.extend(reversed(node.orelse))
+            stack.extend(reversed(node.finalbody))
+        elif isinstance(node, (ast.For, ast.AsyncFor, ast.While)):
+            stack.extend(reversed(node.body))
+            stack.extend(reversed(node.orelse))
+        elif isinstance(node, (ast.With, ast.AsyncWith)):
+            stack.extend(reversed(node.body))
     if has_module_getattr:
         # PEP 562: a module-level __getattr__ resolves names at runtime that
         # no static assignment defines. Trust only the module's own declared
-        # public API (__all__ string literals) — an undeclared name still
+        # __all__ (literal OR statically-computed) — an undeclared name still
         # flags, so precision holds for ordinary modules.
         names |= all_literals
-    return frozenset(names)
+    return (
+        frozenset(names),
+        frozenset(all_literals) if all_recognized else None,
+        tuple(star_imports),
+    )
 
 
-def _module_top_level_names(mod_path: Path) -> set[str]:
-    """Return every name defined or re-exported at module top level.
-
-    Handles: function/class defs, simple + tuple/list-unpacking assignments,
-    AnnAssign, ImportFrom re-exports, Import, and — for modules with a
-    PEP 562 module-level ``__getattr__`` — the string literals of a static
-    ``__all__``. Does NOT execute the module.
-    """
+def _module_top_level_info(
+    mod_path: Path,
+) -> tuple[frozenset[str], frozenset[str] | None, tuple[str, ...]]:
+    """Cached ``(names, all_declared, star_imports)`` for a module path."""
     try:
         stat = mod_path.stat()
         resolved = str(mod_path.resolve())
     except OSError:
+        return (frozenset(), None, ())
+    return _module_top_level_info_cached(resolved, stat.st_mtime_ns, stat.st_size)
+
+
+def _resolve_star_import_path(spec: str, importer: Path) -> Path | None:
+    """Resolve a recorded star-import spec to a .py file, else None.
+
+    ``spec`` carries leading dots for relative imports (``".sibling"``);
+    absolute specs resolve through the repo's module→path convention.
+    """
+    level = len(spec) - len(spec.lstrip("."))
+    module = spec[level:]
+    if level == 0:
+        return _resolve_module_to_path(module, REPO_ROOT)
+    base = importer.parent
+    for _ in range(level - 1):
+        base = base.parent
+    target = base.joinpath(*module.split(".")) if module else base
+    for candidate in (target.with_suffix(".py"), target / "__init__.py"):
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _module_top_level_names(
+    mod_path: Path,
+    _seen: set[str] | None = None,
+) -> set[str]:
+    """Return every name defined or re-exported at module top level.
+
+    Handles everything ``_module_top_level_info_from_tree`` collects PLUS
+    ``from X import *`` re-exports, resolved recursively with runtime
+    semantics: a star-import binds the target's declared ``__all__`` when it
+    is statically recognizable, else the target's public (non-underscore)
+    top-level names. Does NOT execute any module. Cycle-guarded.
+    """
+    seen = _seen if _seen is not None else set()
+    try:
+        resolved = str(mod_path.resolve())
+    except OSError:
         return set()
-    return set(
-        _module_top_level_names_cached(resolved, stat.st_mtime_ns, stat.st_size)
-    )
+    if resolved in seen:
+        return set()
+    seen.add(resolved)
+    tree_names, _all_declared, star_imports = _module_top_level_info(mod_path)
+    names = set(tree_names)
+    for spec in star_imports:
+        target = _resolve_star_import_path(spec, mod_path)
+        if target is None:
+            continue
+        t_names, t_all, _t_stars = _module_top_level_info(target)
+        del t_names
+        if t_all is not None:
+            names |= t_all
+        else:
+            names |= {
+                n
+                for n in _module_top_level_names(target, seen)
+                if not n.startswith("_")
+            }
+    return names
 
 
 def _resolve_tac_module_path(module: str, repo_root: Path) -> Path | None:
@@ -22794,21 +22983,15 @@ def _resolve_module_to_path(module: str, repo_root: Path) -> Path | None:
 
 
 def _collect_module_top_level_names(tree: ast.Module) -> set[str]:
-    """Names defined at module top level (functions, classes, assignments)."""
-    out: set[str] = set()
-    for node in tree.body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-            out.add(node.name)
-        elif isinstance(node, ast.Assign):
-            for t in node.targets:
-                if isinstance(t, ast.Name):
-                    out.add(t.id)
-        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
-            out.add(node.target.id)
-        elif isinstance(node, (ast.Import, ast.ImportFrom)):
-            for alias in node.names:
-                out.add(alias.asname or alias.name.split(".")[0])
-    return out
+    """Names defined at module top level — delegates to the ONE authoritative
+    collector (``_top_level_names_from_tree``).
+
+    The previous inline duplicate missed tuple-unpacking targets
+    (``SEG_H, SEG_W = 384, 512``) and PEP 562 lazy ``__getattr__``/``__all__``
+    exports, producing false "import does not resolve" REDs on imports that
+    resolve fine at runtime (r62 chain, 16/16 false positives).
+    """
+    return set(_top_level_names_from_tree(tree))
 
 
 def _collect_importorskip_modules(tree: ast.Module) -> set[str]:
@@ -23050,6 +23233,13 @@ def _scan_test_file_for_dead_imports(
             # submodule file exists.
             sub_path = _resolve_module_to_path(f"{mod}.{name}", repo_root)
             if sub_path is not None and sub_path.exists():
+                continue
+            # Python-authoritative re-verify before flagging: the cached
+            # `defined` set may come from the optional Rust indexer (or a
+            # stale incremental cache) whose binding model can be narrower
+            # than Python's. A violation must survive the authoritative
+            # collector; only suspected violations pay this re-parse.
+            if name in _module_top_level_names(mod_path):
                 continue
             violations.append(
                 f"{rel}:{node.lineno}: imports {name!r} from {mod!r} "

@@ -459,6 +459,89 @@ def test_module_top_level_names_handles_def_class_assign_reexport(tmp_path: Path
     assert "SomeClass" in names
 
 
+def test_module_top_level_names_tuple_unpack_targets(tmp_path: Path) -> None:
+    """r62 mechanism 1: tuple-unpacking assignments are module attributes."""
+    root = _stub_repo(tmp_path)
+    mod = root / "src" / "tac" / "sample_tuple.py"
+    _write(mod, """
+        SEG_H, SEG_W = 384, 512
+        A, (B, C) = 1, (2, 3)
+    """)
+    names = _module_top_level_names(mod)
+    assert {"SEG_H", "SEG_W", "A", "B", "C"} <= names
+
+
+def test_module_top_level_names_try_except_assignments(tmp_path: Path) -> None:
+    """r62 mechanism 4: names assigned inside top-level try/except count
+    (the ``NUMBA_AVAILABLE`` optional-dependency idiom)."""
+    root = _stub_repo(tmp_path)
+    mod = root / "src" / "tac" / "sample_try.py"
+    _write(mod, """
+        try:
+            import numba
+            NUMBA_AVAILABLE = True
+        except ImportError:
+            NUMBA_AVAILABLE = False
+        if NUMBA_AVAILABLE:
+            IN_IF_BRANCH = 1
+        else:
+            IN_ELSE_BRANCH = 2
+    """)
+    names = _module_top_level_names(mod)
+    assert {"NUMBA_AVAILABLE", "IN_IF_BRANCH", "IN_ELSE_BRANCH", "numba"} <= names
+
+
+def test_module_top_level_names_pep562_computed_all(tmp_path: Path) -> None:
+    """r62 mechanism 2: ``__all__ = sorted(_EXPORTS)`` under a module-level
+    ``__getattr__`` admits the dict's string keys (the tac.optimization lazy
+    idiom, AnnAssign form) — and an UNDECLARED name still flags."""
+    root = _stub_repo(tmp_path)
+    mod = root / "src" / "tac" / "sample_lazy.py"
+    _write(mod, '''
+        _EXPORTS: dict = {
+            "LazyThing": ("tac.other", "LazyThing"),
+            "lazy_func": ("tac.other", "lazy_func"),
+        }
+        __all__ = sorted(_EXPORTS)
+        def __getattr__(name):
+            raise AttributeError(name)
+    ''')
+    names = _module_top_level_names(mod)
+    assert "LazyThing" in names
+    assert "lazy_func" in names
+    # Precision holds: a name the module never declares stays absent.
+    assert "undeclared_name" not in names
+
+
+def test_module_top_level_names_star_reexport(tmp_path: Path) -> None:
+    """r62 mechanism 3: ``from .sibling import *`` binds the target's public
+    names (no ``__all__``) or exactly its declared ``__all__`` when present."""
+    root = _stub_repo(tmp_path)
+    pkg = root / "src" / "tac" / "starpkg"
+    pkg.mkdir()
+    _write(pkg / "__init__.py", "")
+    _write(pkg / "curation_no_all.py", """
+        def public_fn(): pass
+        _private_fn = 1
+        PUBLIC_CONST = 2
+    """)
+    _write(pkg / "curation_with_all.py", """
+        __all__ = ["exported_one"]
+        def exported_one(): pass
+        def not_exported(): pass
+    """)
+    facade_a = pkg / "facade_no_all.py"
+    _write(facade_a, "from .curation_no_all import *\n")
+    names_a = _module_top_level_names(facade_a)
+    assert {"public_fn", "PUBLIC_CONST"} <= names_a
+    assert "_private_fn" not in names_a
+    facade_b = pkg / "facade_with_all.py"
+    _write(facade_b, "from .curation_with_all import *\n")
+    names_b = _module_top_level_names(facade_b)
+    assert "exported_one" in names_b
+    assert "not_exported" not in names_b
+
+
 def test_is_resolvable_submodule_detects_pyfile(tmp_path: Path) -> None:
     root = _stub_repo(tmp_path)
     (root / "src" / "tac" / "pkg").mkdir()
