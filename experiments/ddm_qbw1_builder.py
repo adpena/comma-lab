@@ -1026,6 +1026,16 @@ def sealed_fire_order(stage2: dict[str, Any]) -> dict[str, Any]:
 
 
 def custody_manifest() -> dict[str, Any]:
+    manifest_path = STORE / "CUSTODY_MANIFEST.json"
+    if manifest_path.exists():
+        retained = json.loads(manifest_path.read_text())
+        if retained.get("schema") != "ddm_qbw1_payload_custody_manifest.v1":
+            raise QBW1BuildError("existing custody manifest has the wrong schema")
+        for fact in retained.get("files", []):
+            path = Path(fact["path"])
+            if not path.is_file() or file_fact(path) != fact:
+                raise QBW1BuildError(f"custody manifest payload drift: {path}")
+        return retained
     files = []
     for path in sorted(STORE.rglob("*")):
         if (
@@ -1049,7 +1059,7 @@ def custody_manifest() -> dict[str, Any]:
         "upstream": upstream_identity(),
         "platform": platform.platform(),
     }
-    atomic_json_once(STORE / "CUSTODY_MANIFEST.json", manifest)
+    atomic_json_once(manifest_path, manifest)
     return manifest
 
 
