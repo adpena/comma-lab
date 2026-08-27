@@ -756,6 +756,47 @@ def stage_20_solves(stage_10: dict[str, Any]) -> dict[str, Any]:
 # Stage 3 -- RJ2 production carrier re-encode, carrier section only
 # --------------------------------------------------------------------------- #
 
+_RECEIVER_SEMANTIC_PROGRAM: Final = r"""
+import hashlib, sys
+from pathlib import Path
+runtime, archive = sys.argv[1:]
+sys.path.insert(0, runtime)
+sys.path.insert(0, runtime + "/cpr1")
+from runtime.residual_archive import read_residual_archive
+parts = read_residual_archive(Path(archive))
+print(hashlib.sha256(parts.semantic_blob).hexdigest())
+"""
+
+
+def receiver_semantic_sha(runtime: Path, archive: Path) -> str:
+    # The parse-back contract compares RECEIVER-MATERIALIZED semantic blobs
+    # (read_residual_archive decompresses the section and re-attaches packet
+    # headers), never raw packed section bytes -- hashing the compressed
+    # container section here refuses every well-formed archive.
+    completed = subprocess.run(
+        [
+            str(REPO / ".venv/bin/python"),
+            "-c",
+            _RECEIVER_SEMANTIC_PROGRAM,
+            str(runtime.resolve()),
+            str(archive.resolve()),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={
+            "PATH": "/usr/bin:/bin:/usr/sbin:/sbin",
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONHASHSEED": "0",
+        },
+    )
+    if completed.returncode:
+        raise BS4YError(
+            "source receiver semantic read failed: "
+            + completed.stderr.strip()[-500:]
+        )
+    return completed.stdout.strip().splitlines()[-1]
+
 
 def stage_30_container(stage_20: dict[str, Any]) -> dict[str, Any]:
     checkpoint = CHECKPOINTS / "stage_30_resolved_carrier_container.json"
@@ -849,11 +890,16 @@ def stage_30_container(stage_20: dict[str, Any]) -> dict[str, Any]:
     archive_record = atomic_bytes_once(root / "archive.zip", archive)
     repeat_record = atomic_bytes_once(root / "archive.repeat.zip", repeat)
 
+    # Same-reader equality contract: the expected pin is the SOURCE archive's
+    # receiver-materialized semantic blob, re-derived in-compile on THIS object
+    # (never a carried constant); the parse-back then proves the resolved
+    # archive materializes the identical semantic through the same receiver.
+    source_semantic_sha = receiver_semantic_sha(rj2.DX2_RUNTIME, rj2.DX2_ARCHIVE)
     parseback = rj2.fresh_process_parseback(
         runtime=rj2.DX2_RUNTIME,
         archive=Path(archive_record["path"]),
         expected_codes=Path(codes_record["path"]),
-        semantic_sha256=hashlib.sha256(container["semantic"]).hexdigest(),
+        semantic_sha256=source_semantic_sha,
         output=root / "parseback_transcript.txt",
     )
 
