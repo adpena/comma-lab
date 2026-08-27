@@ -30976,6 +30976,19 @@ def check_lane_scripts_set_up_inflate_environment(
         # Skip scripts that do NOT invoke contest_auth_eval at all
         if "contest_auth_eval" not in text:
             continue
+        # Comment-only mentions cannot INVOKE contest_auth_eval — a bash line
+        # whose first non-whitespace character is '#' executes nothing. Require
+        # the token on at least one code line before treating the script as an
+        # eval caller (pf2x r84 adjudication 2026-08-27: z7_mamba_2 mentions
+        # the tool only in an output-routing comment, and its trainer is
+        # diagnostic-only with no Stage-3 eval — the F5 crash cannot occur).
+        # Trigger-precision only; the acceptance paths (a)-(d) are unchanged.
+        if not any(
+            "contest_auth_eval" in line
+            for line in text.splitlines()
+            if not line.lstrip().startswith("#")
+        ):
+            continue
         # Acceptance path (a): calls the canonical experiments/contest_auth_eval.py
         # which has the F5 guard built in.
         if canonical_module_substr in text:
