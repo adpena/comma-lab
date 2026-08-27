@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Register Wave N+11 Z7-Mamba-2 stabilizer empirical anchor.
 
 Per Catalog #344 canonical equations registry + Catalog #371 auto-recalibrator

@@ -1,3 +1,4 @@
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Self-protect tests for ``dashboard_trajectory_model._stage_segments`` (fixed 2026-07-03).
 
 Regression guard for the overlapping-windows bug: the old static CE→tau→l7→Muon boundary

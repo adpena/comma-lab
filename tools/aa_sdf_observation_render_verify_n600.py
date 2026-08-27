@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """$0 n600 verify of the AA-SDF observation-map render (the MEASURED #1 representation lever).
 
 [macOS-CPU advisory] NON-PROMOTABLE. Frozen CPU-torch SegNet authority, NEVER MPS. Realized

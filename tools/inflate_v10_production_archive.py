@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: positional-only argv passed through to the production inflate entry; no flags of its own
 """Scorer-free V10 production inflater using the contest three-argument API."""
 
 from __future__ import annotations

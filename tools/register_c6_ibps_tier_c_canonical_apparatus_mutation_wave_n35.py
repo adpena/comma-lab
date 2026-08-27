@@ -1,5 +1,6 @@
 #!/usr/bin/env -S uv run --quiet python
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Wave N+35 canonical apparatus mutation per RANK 4 highest-EV-shortest-WC slot directive.
 
 Registers BOTH:

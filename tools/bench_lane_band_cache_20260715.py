@@ -1,3 +1,4 @@
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """M3 (#509 burn-down 3): lane-band static-cache ON/OFF per-call timing.
 
 Micro-bench of make_lane_band_compose_fn at the real geometry (384x512, dict

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """ddm_fd2 Q1 post-analysis: seg-only (pose-veto-removed) pricing + derived d_pose.
 
 The pose-null projection's stated purpose is to make "joint ΔS ≈ seg ΔS by

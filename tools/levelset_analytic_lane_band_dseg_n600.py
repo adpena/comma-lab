@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """$0 n600 Delta d_seg of the NON-NAIVE analytic-lane render-band (FEED-dv, #203/#213/#215).
 
 [macOS-CPU advisory] NON-PROMOTABLE. Question: does the NON-NAIVE analytic-lane band

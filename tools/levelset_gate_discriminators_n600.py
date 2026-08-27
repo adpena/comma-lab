@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Two decisive $0 discriminators for the level-set witness d_seg tail.
 
 [macOS-CPU advisory] NON-PROMOTABLE. Realized through the ACTUAL contest R operator

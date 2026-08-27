@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: one-shot dated registration script; single optional positional (sweep path, pinned default)
 """Register the 2nd EMPIRICAL anchor (3rd lifecycle event) on canonical
 equation #2 ``hinton_kl_distill_enables_qat_catalyst_composition_savings_v1``
 from the Cascade B CATALYST sister wave 2 production-scale 600f x 1000ep +

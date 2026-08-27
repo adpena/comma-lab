@@ -1,3 +1,4 @@
+# no-argparse-OK: single optional positional (chunk dir, pinned default); no flags to discover
 """Aggregate ddm_fd1 S0 box-solve probe chunks into the n600 band receipt.
 
 Read-only aggregation of `chunk_boxsolve_*.json` (schema ddm_rp1_rangeA_cell_probe_chunk.v2).

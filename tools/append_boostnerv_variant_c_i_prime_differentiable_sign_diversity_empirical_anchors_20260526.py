@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Append Variant C-i' DIFFERENTIABLE-tanh-proxy 5TH-ORDER empirical anchors
 to canonical equation #347.
 

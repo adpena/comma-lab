@@ -1,3 +1,4 @@
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Tests for ``tools/dashboard_control_telemetry.py`` (DASHBOARD PASS 2026-07-04).
 
 Covers the pure control-system telemetry fns the dashboards render: stage-row parsing

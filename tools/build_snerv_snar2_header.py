@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: thin wrapper — argv delegated to minimize_snerv_snar_header's argparse (--help passes through)
 """Compatibility wrapper for the canonical SNeRV SNAR2 minimizer route.
 
 The executable implementation lives in ``tools/minimize_snerv_snar_header.py``.

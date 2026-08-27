@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Operator-P0 demand-update — a Claude Code ``Stop`` hook (landing 2 of two).
 
 Operator binding 2026-07-15 (verbatim): "Do we need a hook or gate or something

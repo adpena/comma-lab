@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """One-shot canonical equation registration (T3 council binding revisions 2026-05-26).
 
 Per operator directive 2026-05-26 verbatim *"all are approved"* on T3 council

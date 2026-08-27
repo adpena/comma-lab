@@ -1,3 +1,4 @@
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """ddm_fd1 S1 smoke: one GN/CG proposal on the W_joint warm-start block.
 
 Measures (not asserts): loss_and_grad cost, one HVP cost (mx.jvp+vjp through

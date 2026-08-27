@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Register 11 NEW canonical equations from Slot E2 axis-5-minor findings.
 
 Per CLAUDE.md "Canonical equations + models registry" non-negotiable + Catalog

@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Append Variant C-ii centered_base_recolor empirical anchors to canonical equation #347.
 
 Per operator NON-NEGOTIABLE 2026-05-26 cascade follow-up + Catalog #344 sister

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """$0 n600 measurement of the lane-IPM v_horizon reconciliation (task #327, read-only).
 
 Audit #326 found `lane_sdf_component._V_HORIZON=174.0` is the SALIENCY-VP row, wrongly

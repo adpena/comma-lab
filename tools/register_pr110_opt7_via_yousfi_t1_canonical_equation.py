@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Register canonical equation for PR110-OPT-7 via Yousfi-T1 L1 PROMOTION substrate.
 
 Per Catalog #344 canonical equations registry + the canonical 5-helper

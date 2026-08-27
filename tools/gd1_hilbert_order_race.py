@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """ddm_gd1 QA82 scan-order race: Hilbert vs raster serialization of the token lattice.
 
 Operator escalation (2026-07-31, "Maybe hilbert curve"): the SMEVR token coder scans the

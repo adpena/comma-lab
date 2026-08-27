@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """ddm_r1c rung-1 DETACHED window-loop SUPERVISOR (task #803; gc12 §3 rung-1 / §5 seal).
 
 The daemon+marker pattern: this script runs DETACHED (nohup+disown) and supervises the

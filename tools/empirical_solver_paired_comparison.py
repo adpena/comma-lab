@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Empirical paired comparison: more-optimal solvers vs canonical helpers.
 
 Per the synthesis memo amendment (commit ``7b231f4fa``) and operator standing

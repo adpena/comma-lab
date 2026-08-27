@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """$0 gate for the LADDER island-birth lever: is lane/movable WINNABLE via a
 difficulty homotopy? (read-only; cached GT argmax; no training, no GPU.)
 

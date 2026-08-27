@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """$0 RENDER-SIDE d_seg SIZING of the l7-best level-set witness (task #221 opener).
 
 [macOS-CPU advisory] NON-PROMOTABLE. Question: how much d_seg can we grab from the

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: single required positional; usage error printed on misuse, no flags
 """Stream 4 — MLX BitNet 1.58-bit ternary pilot on Apple Silicon.
 
 Operator directive 2026-05-13 AGGRESSIVE LOCAL HARDWARE SWEEP Stream 4.

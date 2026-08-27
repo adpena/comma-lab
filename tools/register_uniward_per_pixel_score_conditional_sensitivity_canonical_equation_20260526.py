@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """One-shot canonical equation registration for UNIWARD per-pixel score-conditional sensitivity.
 
 Per Catalog #344 + operator NON-NEGOTIABLE 2026-05-26 ("we need to formalize all

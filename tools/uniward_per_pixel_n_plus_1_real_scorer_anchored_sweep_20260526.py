@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 # ruff: noqa: E402
 """UNIWARD per-pixel N+1 real-scorer-anchored empirical sweep (MLX-local).
 

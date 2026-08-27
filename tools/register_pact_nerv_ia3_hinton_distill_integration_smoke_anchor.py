@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: one-shot registration script; single optional positional (smoke dir, pinned default)
 """Register the 7th anchor on canonical equation
 ``hinton_distilled_scorer_surrogate_savings_via_kl_t2_v1`` from the
 PACT-NeRV-IA3 + Hinton-distilled scorer surrogate integration smoke 2026-05-28.

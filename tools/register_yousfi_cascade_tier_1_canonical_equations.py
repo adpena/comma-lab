@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Register 3 canonical equations for the Yousfi-cascade tier-1 pose-axis landing.
 
 Per Catalog #344 + canonical equations registry + CLAUDE.md "Canonical

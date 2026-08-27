@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Stop hook: refuse to end a turn whose last assistant output is not plain text.
 
 The swallowed-output defect (operator x5, 2026-08-12): a turn that ends on a

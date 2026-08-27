@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """SLOT P closure of Slot N Round 1 corrective actions M1 + M4 + M5.
 
 Registers TWO canonical anti-patterns:

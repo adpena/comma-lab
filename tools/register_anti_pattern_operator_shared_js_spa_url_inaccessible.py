@@ -1,3 +1,4 @@
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Register the canonical anti-pattern for operator-shared JS-rendered SPA URLs
 inaccessible to WebFetch.
 

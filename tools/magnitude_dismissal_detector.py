@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Magnitude-dismissal detector — a Claude Code ``Stop`` hook.
 
 Fires at the end of each main-agent turn. Detects the **MAGNITUDE-DISMISSAL**

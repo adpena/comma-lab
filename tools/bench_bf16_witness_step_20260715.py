@@ -1,3 +1,4 @@
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """M5-unconstrained constraint-1 $0 gate (charter item 2, MVP-first): does bf16/fp16
 COMPUTE speed up the REAL witness value_and_grad step on MLX M5 Max at all?
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """$0 GEOMETRY-ONLY n600 IPM-horizon sweep (de-risk (a) T0 SCREEN for #205 Phase-3).
 
 [macOS-CPU advisory] NON-PROMOTABLE. Question (seeding audit R1): does moving the

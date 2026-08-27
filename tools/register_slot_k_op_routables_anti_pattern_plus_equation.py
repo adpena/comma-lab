@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """SLOT K closure of Slot I op-routables #3 + #2 (sister-equation form).
 
 Registers:

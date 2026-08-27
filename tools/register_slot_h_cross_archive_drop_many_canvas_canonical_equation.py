@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """SLOT H cascade item 3 — register `cross_archive_drop_many_canvas_composition_alpha_v1`.
 
 Per Catalog #344 canonical equations registry sister discipline + operator

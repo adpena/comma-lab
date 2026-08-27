@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Adversarial / detection-evasion (UNIWARD dual) probe on the frozen-SegNet Fisher field.
 
 FRAME (operator P0 2026-07-15). The witness = PROJECTION onto the correct argmax

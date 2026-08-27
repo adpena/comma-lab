@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Stop hook: keep AGENTS.md a byte-identical copy of CLAUDE.md.
 
 Operator directive 2026-07-25 ("make it a stop hook that recopies on CLAUDE.md

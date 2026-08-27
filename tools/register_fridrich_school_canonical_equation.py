@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Register canonical equation `fridrich_school_inverse_steganalysis_patterns_v1`.
 
 Per CLAUDE.md Catalog #344 "Canonical equations + models registry"

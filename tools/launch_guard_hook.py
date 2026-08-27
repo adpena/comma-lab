@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Launch-guard PreToolUse hook — the P0 machine-crash admission gate (#254)
 lifted to the Claude Code harness surface (#338).
 

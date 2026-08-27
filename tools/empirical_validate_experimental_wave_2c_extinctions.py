@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Empirical validation smoke for Wave 2C experimental-sweep extinctions.
 
 Per the Wave 2C landing prompt + CLAUDE.md "Max observability" + Catalog #192/#317:

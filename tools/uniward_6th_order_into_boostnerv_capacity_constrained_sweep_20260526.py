@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 # ruff: noqa: E402
 """UNIWARD 6th-order integration into BoostNeRV-PR110-residual capacity-
 constrained substrate empirical sweep (MLX-local).

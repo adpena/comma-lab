@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """ddm_b4s burn-4 DETACHED window-loop SUPERVISOR (task #807; gc12 §3 terminal deliverable).
 
 Burn-4 is the ladder's terminal deliverable: a bounded GOVERNED CONTINUATION from the

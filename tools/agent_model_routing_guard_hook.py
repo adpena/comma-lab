@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Agent-model routing guard — PreToolUse hook on the ``Agent`` tool.
 
 THE INCIDENT (2026-08-04, operator): weeks of Fable-5 rate limit burned in a

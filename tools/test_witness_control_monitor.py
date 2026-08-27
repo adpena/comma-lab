@@ -1,3 +1,4 @@
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Tests for tools/witness_control_monitor.py — the self-converging control monitor (facet-5).
 
 Proves the two certificates on synthetic + real-#205-shaped verdict trajectories: the tau-CREEP

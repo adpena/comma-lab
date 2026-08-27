@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Model-identity HARD-FAIL gate (operator 2026-07-21: "if you're not fable, it hard
 fails, and I know instantly").
 

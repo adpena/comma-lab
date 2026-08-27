@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: argv only forwarded on venv re-exec; no options consumed
 """Fail-closed PRIMARY consumer plus local Task #603 custody runner.
 
 The current PRIMARY spec seals ``execution_allowed=false``.  ``preflight``

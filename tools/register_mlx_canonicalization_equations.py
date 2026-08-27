@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Register canonical equations for MLX canonicalization audit + tinygrad bridge.
 
 Per CLAUDE.md "Canonical equations + models registry" non-negotiable +

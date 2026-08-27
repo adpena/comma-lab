@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """#224 CONSOLIDATED WIRE-IN — default-off BYTE-IDENTICAL regression smoke.
 
 The non-negotiable acceptance bar for the #224 wire-in is: with ALL new lever flags at

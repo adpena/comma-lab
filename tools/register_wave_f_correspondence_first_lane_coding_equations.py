@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Register the Wave-F Stage-2 correspondence-first canonical equations (triality: EQUATIONS leg).
 
 Registers the 4 MEASURED/DERIVED equations from the 2026-07-02 Wave-F unified-xi BUILD + optimal-

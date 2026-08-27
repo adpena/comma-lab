@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Register canonical equation ``fec8_3rd_order_markov_static_variant_c_savings_v1``.
 
 Wave N+24 Option A next-iteration depth-axis extension per CLAUDE.md "Final rate

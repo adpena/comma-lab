@@ -1,3 +1,4 @@
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Tests for ``dashboard_trajectory_model.build_fresh_run_projection`` (2026-07-04).
 
 The fresh-run A/B projection must be MEASURED-ANCHORED and honestly labeled: the #205

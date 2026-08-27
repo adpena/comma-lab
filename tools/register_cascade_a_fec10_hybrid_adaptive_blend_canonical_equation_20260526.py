@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """One-shot canonical equation registration for Cascade A FEC10 hybrid adaptive-blend savings.
 
 Per operator-approved Cascade A pure-rate-attack spawn (entropy-position cascade exploit catalog

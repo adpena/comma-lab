@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Duty-ticket revision materializer (#563, 2026-07-19): real ep725-fork compile evidence.
 
 Resolves the four blockers of the sealed BLOCKED handoff

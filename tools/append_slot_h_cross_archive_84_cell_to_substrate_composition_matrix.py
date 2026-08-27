@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """SLOT H cascade item 3 — append 84-cell cross-archive composition matrix.
 
 Reads the SLOT H design memo's 7-archive × 12-operator α matrix and emits

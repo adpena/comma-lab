@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: two fixed invocations (--driver <base> <head> <out> | --resolve-index); prints usage docstring on misuse
 """Union merge for `.omx/state/lane_registry.json` (git merge driver + mid-merge CLI).
 
 THE SHARP EDGE THIS REMOVES (2026-07-19 incident, twice in one session): every

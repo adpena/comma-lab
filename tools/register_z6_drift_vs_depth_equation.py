@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """One-shot registration of canonical equation `mlx_pytorch_drift_vs_training_depth_z6_v1`.
 
 Per CLAUDE.md "Canonical equations + models registry" non-negotiable + Catalog #344

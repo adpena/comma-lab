@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Register canonical equation `multiop_composition_pareto_optimal_savings_v1`.
 
 FORMALIZATION_PENDING per Catalog #344. Predicted-only; macOS-CPU advisory

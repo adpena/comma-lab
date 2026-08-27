@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """$0 n600 validation of the eased-target homotopy operators (task #323, read-only).
 
 Adversarially verifies the operators' load-bearing INVARIANTS against cached GT argmax

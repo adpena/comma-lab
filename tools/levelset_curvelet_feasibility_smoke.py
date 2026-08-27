@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Compatibility entry point for the renamed directional-Fourier smoke."""
 
 from __future__ import annotations
