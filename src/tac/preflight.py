@@ -27303,6 +27303,14 @@ def _scan_remote_lane_scripts_missing_heartbeat(repo_root: Path) -> list[str]:
         ">> heartbeat.log",
         '"heartbeat.log"',
         "'heartbeat.log'",
+        # Truncate-write form (docstring contract: "any heartbeat.log write").
+        # 10 lane scripts run `date -u +%FT%TZ > "$LOG_DIR/heartbeat.log"`
+        # inside the canonical 5-min while-loop — a genuine heartbeat the
+        # append-only patterns above missed (pf2x r72, 2026-08-26).
+        '> "$LOG_DIR/heartbeat.log"',
+        # $HEARTBEAT_FILE variable form (z4_atick_redlich: heartbeat_${TAG}.log
+        # appended in the canonical loop with PID capture + EXIT trap).
+        '>> "$HEARTBEAT_FILE"',
     )
     for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
         name = sh.name

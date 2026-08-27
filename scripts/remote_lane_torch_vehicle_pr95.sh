@@ -61,6 +61,15 @@ bash "$_nvdec_probe" || { echo "FATAL: NVDEC probe failed" >&2; exit 2; }
 export COMMA_CHALLENGE_ROOT="${COMMA_CHALLENGE_ROOT:-$REPO_ROOT/upstream}"
 
 mkdir -p "$OUT_DIR"
+# Heartbeat writer (canonical remote-lane watchdog contract, Check 41).
+# Self-terminates via kill -0 $$ when the parent exits - no EXIT trap needed.
+HEARTBEAT="$OUT_DIR/heartbeat.log"
+mkdir -p "$OUT_DIR"
+( while kill -0 $$ 2>/dev/null; do
+    echo "[$(date -u +%FT%TZ)] heartbeat alive" >> "$HEARTBEAT"
+    sleep 300
+  done ) &
+HEARTBEAT_PID=$!
 
 # If a previous run already completed, this is a no-op (the DONE marker idempotency).
 if [[ -f "$OUT_DIR/torch_vehicle_run.DONE" ]]; then

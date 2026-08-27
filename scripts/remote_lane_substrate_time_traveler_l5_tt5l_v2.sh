@@ -174,6 +174,15 @@ TT5L_V2_FULL_CPU="${TT5L_V2_FULL_CPU:-false}"
 TT5L_V2_ADVISORY_CPU_EXPLICITLY_WAIVED="${TT5L_V2_ADVISORY_CPU_EXPLICITLY_WAIVED:-false}"
 
 mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
+# Heartbeat writer (canonical remote-lane watchdog contract, Check 41).
+# Self-terminates via kill -0 $$ when the parent exits - no EXIT trap needed.
+HEARTBEAT="$LOG_DIR/heartbeat.log"
+mkdir -p "$LOG_DIR"
+( while kill -0 $$ 2>/dev/null; do
+    echo "[$(date -u +%FT%TZ)] heartbeat alive" >> "$HEARTBEAT"
+    sleep 300
+  done ) &
+HEARTBEAT_PID=$!
 
 # Catalog #163 sentinel + delegated bootstrap (skip if local non-Modal)
 if [ "${MODAL_RUNTIME:-0}" = "1" ]; then

@@ -88,6 +88,44 @@ def test_passes_with_quoted_log_dir_heartbeat(tmp_path: Path) -> None:
     ) == []
 
 
+def test_passes_with_truncate_write_heartbeat(tmp_path: Path) -> None:
+    """Truncate-write `> "$LOG_DIR/heartbeat.log"` in a loop → pass.
+
+    10 live lane scripts use this form (date-stamp overwrite every 5 min);
+    the docstring contract accepts "any heartbeat.log write" (pf2x r72).
+    """
+    _setup_fake_repo(tmp_path)
+    good = tmp_path / "scripts" / "remote_lane_xyz.sh"
+    good.write_text(textwrap.dedent('''\
+        #!/bin/bash
+        LOG_DIR=/tmp/lane_xyz
+        ( while true; do
+            date -u +%FT%TZ > "$LOG_DIR/heartbeat.log"
+            sleep 300
+          done ) &
+    '''))
+    assert check_remote_lane_scripts_have_heartbeat(
+        repo_root=tmp_path, strict=False, verbose=False,
+    ) == []
+
+
+def test_passes_with_heartbeat_file_variable(tmp_path: Path) -> None:
+    """`>> "$HEARTBEAT_FILE"` variable form (z4_atick_redlich) → pass."""
+    _setup_fake_repo(tmp_path)
+    good = tmp_path / "scripts" / "remote_lane_xyz.sh"
+    good.write_text(textwrap.dedent('''\
+        #!/bin/bash
+        HEARTBEAT_FILE="${HEARTBEAT_FILE:-/tmp/heartbeat_xyz.log}"
+        ( while true; do
+            echo "$(date -u +%FT%TZ) heartbeat" >> "$HEARTBEAT_FILE"
+            sleep 300
+          done ) &
+    '''))
+    assert check_remote_lane_scripts_have_heartbeat(
+        repo_root=tmp_path, strict=False, verbose=False,
+    ) == []
+
+
 def test_sweep_orchestrator_exempt(tmp_path: Path) -> None:
     """*_sweep.sh files are exempt (delegate to per-trial scripts)."""
     _setup_fake_repo(tmp_path)

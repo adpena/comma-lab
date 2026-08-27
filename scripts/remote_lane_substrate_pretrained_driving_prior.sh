@@ -119,6 +119,15 @@ HEARTBEAT_PID=""
 log() { echo "[lane-dpp] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
 mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
+# Heartbeat writer (canonical remote-lane watchdog contract, Check 41).
+# Self-terminates via kill -0 $$ when the parent exits - no EXIT trap needed.
+HEARTBEAT="$LOG_DIR/heartbeat.log"
+mkdir -p "$LOG_DIR"
+( while kill -0 $$ 2>/dev/null; do
+    echo "[$(date -u +%FT%TZ)] heartbeat alive" >> "$HEARTBEAT"
+    sleep 300
+  done ) &
+HEARTBEAT_PID=$!
 cd "$WORKSPACE"
 
 DPP_PROCEDURAL_ARGS=()

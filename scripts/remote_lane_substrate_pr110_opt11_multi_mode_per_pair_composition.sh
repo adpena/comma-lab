@@ -75,6 +75,15 @@ else
     OUTPUT_DIR="${PR110_OPT11_OUTPUT_DIR:-${WORKSPACE}/experiments/results/pr110_opt11_l0_scaffold_${INSTANCE_JOB_ID:-local}/output}"
 fi
 mkdir -p "${OUTPUT_DIR}"
+# Heartbeat writer (canonical remote-lane watchdog contract, Check 41).
+# Self-terminates via kill -0 $$ when the parent exits - no EXIT trap needed.
+HEARTBEAT="${OUTPUT_DIR}/heartbeat.log"
+mkdir -p "${OUTPUT_DIR}"
+( while kill -0 $$ 2>/dev/null; do
+    echo "[$(date -u +%FT%TZ)] heartbeat alive" >> "$HEARTBEAT"
+    sleep 300
+  done ) &
+HEARTBEAT_PID=$!
 echo "[pr110-opt11-driver] OUTPUT_DIR=${OUTPUT_DIR} TRAINER_MODE=${TRAINER_MODE} MODAL_RUNTIME=${MODAL_RUNTIME:-0}"
 
 # Provenance (feedback_canonical_remote_bootstraps): every remote run emits
