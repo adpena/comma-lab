@@ -205,6 +205,16 @@ PYBIN_RESOLVED="$CLAIM_PYTHON"
     --smoke \
     2>&1 | tee -a "$LOG_DIR/trainer.log"
 
+# Score self-tagging per CLAUDE.md score-tag rule (Catalog #249-safe:
+# device-CONDITIONAL — the [contest-CUDA] literal prints ONLY when the run's
+# device is actually cuda; any other device gets an explicit non-authority label).
+if [ "$C1_WORLD_MODEL_FOVEATION_DEVICE" = "cuda" ]; then
+    AUTH_AXIS_IF_ANY="[contest-CUDA]"
+else
+    AUTH_AXIS_IF_ANY="[diagnostic-$C1_WORLD_MODEL_FOVEATION_DEVICE NOT-contest-CUDA]"
+fi
+log "auth_eval_axis_if_any=$AUTH_AXIS_IF_ANY (axis label for any score produced under this run's --device; not a claim a score exists)"
+
 # Stage 5: emit completion marker.
 log "LANE_C1_WMF_DONE [smoke-no-scorer] output_dir=$C1_WORLD_MODEL_FOVEATION_OUTPUT_DIR"
 cat >> "$LOG_DIR/completion.log" <<EOF

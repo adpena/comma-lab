@@ -351,5 +351,15 @@ else
     log "DPP scaffold smoke complete; DPP_RUN_FULL=0 — skipping Phase 2 full training"
     log "To run Phase 2 full training, the operator-authorize wrapper sets DPP_RUN_FULL=1 + DPP_COMMA2K19_CHUNKS_DIR"
 fi
+# Score self-tagging per CLAUDE.md score-tag rule (Catalog #249-safe:
+# device-CONDITIONAL — the [contest-CUDA] literal prints ONLY when the run's
+# device is actually cuda; any other device gets an explicit non-authority label).
+if [ "$DPP_DEVICE" = "cuda" ]; then
+    AUTH_AXIS_IF_ANY="[contest-CUDA]"
+else
+    AUTH_AXIS_IF_ANY="[diagnostic-$DPP_DEVICE NOT-contest-CUDA]"
+fi
+log "auth_eval_axis_if_any=$AUTH_AXIS_IF_ANY (axis label for any score produced under this run's --device; not a claim a score exists)"
+
 log "Exiting cleanly (rc=0)."
 exit 0

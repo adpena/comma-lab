@@ -300,11 +300,16 @@ try:
 except Exception:
     print("score_axis=unknown lane_tag=unknown score_claim_valid=false")
 else:
+    # Canonical bracketed axis literal ONLY when the artifact metadata itself
+    # says contest-CUDA (metadata-is-truth per Catalog #249; never hardcoded).
+    axis = payload.get("score_axis", "unknown")
+    suffix = " [contest-CUDA]" if axis == "contest-CUDA" else ""
     print(
-        "score_axis={axis} lane_tag={tag} score_claim_valid={valid}".format(
-            axis=payload.get("score_axis", "unknown"),
+        "score_axis={axis} lane_tag={tag} score_claim_valid={valid}{suffix}".format(
+            axis=axis,
             tag=payload.get("lane_tag", "unknown"),
             valid=str(payload.get("score_claim_valid") is True).lower(),
+            suffix=suffix,
         )
     )
 PY

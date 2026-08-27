@@ -144,7 +144,7 @@ if [ -z "$RESEARCH_ONLY_BYPASS" ]; then
     echo "[Z4ATR DRIVER] L2 promotion contract per Catalog #233 4-gate:" >&2
     echo "  1. smoke green (Modal T4 100ep)" >&2
     echo "  2. Tier-C density measurement post-training" >&2
-    echo "  3. 100ep auth-eval anchor (byte-deterministic archive)" >&2
+    echo "  3. 100ep auth-eval anchor [contest-CUDA] (byte-deterministic archive; the axis the anchor must carry)" >&2
     echo "  4. custody validated per Catalog #127 (paired CUDA + CPU)" >&2
     echo "[Z4ATR DRIVER] Author trainer first:" >&2
     echo "  experiments/train_substrate_time_traveler_l5_z4_atick_redlich.py" >&2

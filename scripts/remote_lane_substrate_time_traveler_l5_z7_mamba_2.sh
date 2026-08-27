@@ -545,6 +545,16 @@ if bad:
     raise SystemExit(1)
 PY
 
+# Score self-tagging per CLAUDE.md score-tag rule (Catalog #249-safe:
+# device-CONDITIONAL — the [contest-CUDA] literal prints ONLY when the run's
+# device is actually cuda; any other device gets an explicit non-authority label).
+if [ "$Z7_MAMBA2_DEVICE" = "cuda" ]; then
+    AUTH_AXIS_IF_ANY="[contest-CUDA]"
+else
+    AUTH_AXIS_IF_ANY="[diagnostic-$Z7_MAMBA2_DEVICE NOT-contest-CUDA]"
+fi
+echo "auth_eval_axis_if_any=$AUTH_AXIS_IF_ANY (axis label for any score produced under this run's --device; not a claim a score exists)"
+
 echo "[lane-z7-mamba2] DONE [no-auth-eval-pending-wave-N+1-council per Catalog #325]"
 echo "[lane-z7-mamba2] artifacts under: $OUTPUT_DIR"
 exit 0

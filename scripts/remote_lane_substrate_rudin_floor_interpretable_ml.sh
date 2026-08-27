@@ -263,4 +263,14 @@ else
     log "LANE_RUDIN_FLOOR_FAILED rc=$TRAINER_RC (L1 SCAFFOLD; expected at landing per Catalog #240)"
 fi
 
+# Score self-tagging per CLAUDE.md score-tag rule (Catalog #249-safe:
+# device-CONDITIONAL — the [contest-CUDA] literal prints ONLY when the run's
+# device is actually cuda; any other device gets an explicit non-authority label).
+if [ "$RUDIN_FLOOR_DEVICE" = "cuda" ]; then
+    AUTH_AXIS_IF_ANY="[contest-CUDA]"
+else
+    AUTH_AXIS_IF_ANY="[diagnostic-$RUDIN_FLOOR_DEVICE NOT-contest-CUDA]"
+fi
+log "auth_eval_axis_if_any=$AUTH_AXIS_IF_ANY (axis label for any score produced under this run's --device; not a claim a score exists)"
+
 exit "$TRAINER_RC"

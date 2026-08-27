@@ -462,6 +462,9 @@ if stats.get("ready_for_paid_dispatch") is not False:
     print("Z7 remote driver refuses stats without ready_for_paid_dispatch=false", file=sys.stderr)
     raise SystemExit(36)
 if stats.get("evidence_grade"):
+    # Renders the artifact evidence_grade verbatim; the canonical
+    # [contest-CUDA] literal appears ONLY when the metadata itself says so
+    # (metadata-is-truth per Catalog #249).
     marker = f"[{stats['evidence_grade']}]"
 print(f"{marker} {score_claim}")
 PY

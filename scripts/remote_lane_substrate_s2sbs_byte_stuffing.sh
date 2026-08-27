@@ -231,5 +231,15 @@ set -e
 TRAIN_END_UTC=$(date -u +%FT%TZ)
 log "stage_4_trainer_invoke_done rc=$TRAIN_RC start=$TRAIN_START_UTC end=$TRAIN_END_UTC"
 
+# Score self-tagging per CLAUDE.md score-tag rule (Catalog #249-safe:
+# device-CONDITIONAL — the [contest-CUDA] literal prints ONLY when the run's
+# device is actually cuda; any other device gets an explicit non-authority label).
+if [ "$S2SBS_DEVICE" = "cuda" ]; then
+    AUTH_AXIS_IF_ANY="[contest-CUDA]"
+else
+    AUTH_AXIS_IF_ANY="[diagnostic-$S2SBS_DEVICE NOT-contest-CUDA]"
+fi
+log "auth_eval_axis_if_any=$AUTH_AXIS_IF_ANY (axis label for any score produced under this run's --device; not a claim a score exists)"
+
 log "LANE_S2SBS_DONE [smoke-only-no-score-claim] rc=$TRAIN_RC output_dir=$S2SBS_OUTPUT_DIR"
 exit "$TRAIN_RC"

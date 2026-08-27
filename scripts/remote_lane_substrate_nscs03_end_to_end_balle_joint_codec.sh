@@ -233,4 +233,14 @@ else
     log "stats_artifact_missing path=$STATS_JSON (trainer may have failed before writing stats)"
 fi
 
+# Score self-tagging per CLAUDE.md score-tag rule (Catalog #249-safe:
+# device-CONDITIONAL — the [contest-CUDA] literal prints ONLY when the run's
+# device is actually cuda; any other device gets an explicit non-authority label).
+if [ "$NSCS03_DEVICE" = "cuda" ]; then
+    AUTH_AXIS_IF_ANY="[contest-CUDA]"
+else
+    AUTH_AXIS_IF_ANY="[diagnostic-$NSCS03_DEVICE NOT-contest-CUDA]"
+fi
+log "auth_eval_axis_if_any=$AUTH_AXIS_IF_ANY (axis label for any score produced under this run's --device; not a claim a score exists)"
+
 exit "$TRAIN_RC"
