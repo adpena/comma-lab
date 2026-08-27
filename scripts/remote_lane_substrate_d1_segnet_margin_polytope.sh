@@ -73,6 +73,8 @@ log() { echo "[lane-d1-polytope] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.l
 
 mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
 cd "$WORKSPACE"
+# Stage 0a: strip macOS AppleDouble resource forks before any auth eval path.
+rm -f upstream/videos/._*.mkv
 
 # Stage 0: dispatch claim verification.
 if [ -z "$DISPATCH_INSTANCE_JOB_ID" ]; then

@@ -76,6 +76,8 @@ _nvdec_probe="${WORKSPACE:-$PWD}/scripts/probe_nvdec.sh"
 bash "$_nvdec_probe" || { echo "FATAL: NVDEC probe failed" >&2; exit 2; }
 
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
+# Stage 0a: strip macOS AppleDouble resource forks before any auth eval path.
+( cd "$WORKSPACE" && rm -f upstream/videos/._*.mkv )
 PYBIN="${PYBIN:-}"
 DEFAULT_LANE_ID="lane_tt5l_v2_redesign_vggt_dreamerv3_vrss2_design_20260518"
 LANE_ID="${TT5L_V2_LANE_ID:-${PACT_DISPATCH_LANE_ID:-$DEFAULT_LANE_ID}}"

@@ -104,6 +104,8 @@ PROVENANCE="$LOG_DIR/provenance.json"
 
 mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
 cd "$WORKSPACE"
+# Stage 0a: strip macOS AppleDouble resource forks before any auth eval path.
+rm -f upstream/videos/._*.mkv
 
 CLAIM_PYTHON="${PYBIN:-}"
 if [ -z "$CLAIM_PYTHON" ] && [ -x "$WORKSPACE/.venv/bin/python" ]; then

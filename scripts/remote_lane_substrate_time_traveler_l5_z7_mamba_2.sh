@@ -488,6 +488,8 @@ echo "[lane-z7-mamba2] trainer args: ${TRAINER_ARGS[*]}"
 # Run the trainer
 TRAINER_LOG="$LOG_DIR/trainer_$(date -u +%Y%m%dT%H%M%SZ).log"
 cd "$WORKSPACE"
+# Stage 0a: strip macOS AppleDouble resource forks before any auth eval path.
+rm -f upstream/videos/._*.mkv
 set +e
 "$PYBIN" -u experiments/train_substrate_time_traveler_l5_z7_mamba2.py "${TRAINER_ARGS[@]}" 2>&1 | tee "$TRAINER_LOG"
 TRAINER_RC="${PIPESTATUS[0]}"

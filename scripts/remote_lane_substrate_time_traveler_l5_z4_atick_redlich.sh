@@ -57,6 +57,8 @@ _nvdec_probe="${WORKSPACE:-$PWD}/scripts/probe_nvdec.sh"
 bash "$_nvdec_probe" || { echo "FATAL: NVDEC probe failed" >&2; exit 2; }
 
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
+# Stage 0a: strip macOS AppleDouble resource forks before any auth eval path.
+( cd "$WORKSPACE" && rm -f upstream/videos/._*.mkv )
 PYBIN="${PYBIN:-}"
 LANE_ID="lane_z4_atick_redlich_l1_scaffold_resume_20260530"
 TAG="${TAG:-substrate_time_traveler_l5_z4_atick_redlich}"

@@ -162,6 +162,8 @@ log() { echo "[lane-z7-gru] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; 
 
 mkdir -p "$LOG_DIR" "$Z7_GRU_OUTPUT_DIR"
 cd "$WORKSPACE"
+# Stage 0a: strip macOS AppleDouble resource forks before any auth eval path.
+rm -f upstream/videos/._*.mkv
 
 if [ -z "$DISPATCH_INSTANCE_JOB_ID" ]; then
     log "FATAL: Z7_GRU_DISPATCH_INSTANCE_JOB_ID or DISPATCH_INSTANCE_JOB_ID is required for active lane-claim verification"

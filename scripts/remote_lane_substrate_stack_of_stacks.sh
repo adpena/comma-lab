@@ -82,6 +82,8 @@ log() { echo "[lane-stack-of-stacks] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/r
 
 mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
 cd "$WORKSPACE"
+# Stage 0a: strip macOS AppleDouble resource forks before any auth eval path.
+rm -f upstream/videos/._*.mkv
 
 write_remote_record() {
     local status="$1"

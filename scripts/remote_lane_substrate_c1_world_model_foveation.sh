@@ -92,6 +92,8 @@ log() { echo "[lane-c1-wmf] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; 
 
 mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
 cd "$WORKSPACE"
+# Stage 0a: strip macOS AppleDouble resource forks before any auth eval path.
+rm -f upstream/videos/._*.mkv
 
 # Stage 0: dispatch claim verification (Catalog #157 / Cross-agent dispatch coordination).
 if [ -z "$DISPATCH_INSTANCE_JOB_ID" ]; then
