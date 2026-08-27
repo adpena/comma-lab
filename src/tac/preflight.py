@@ -43318,7 +43318,21 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     "lane_guard_state",  # resume-snapshot key: lane-guard controller state
     "lane_sensitivity_ratio",  # lane-guard config field (head-metric ratio)
     "lane_pool_topology_loss_race",  # lever-ledger id: Lane topology-loss race
-    # Common helper / tool / function names
+    # Dispatch-claim OUTCOME manifest field names in
+    # tools/launch_snerv_mistake_b_g1a.py (Check 126 adjudication 2026-08-27,
+    # pf2x r81). JSON keys recording the claim_lane_dispatch.py claim result —
+    # field names ABOUT a lane claim, not lane_ids. lane_claim_instance_job_id
+    # is a live cross-module manifest contract (consumed by
+    # tools/run_monolithic_candidate_preflight.py +
+    # src/tac/monolithic_packet_closure_gate.py +
+    # src/tac/monolithic_packet_candidate.py, with blocker labels
+    # lane_claim_instance_job_id_missing/_mismatch) and appears in historical
+    # manifests on disk — renaming would break both. The # FAKE_LANE_OK
+    # waiver is test-fixture-only by design, so non-test emitters of these
+    # keys have no per-site exit; the blocklist is the documented mechanism.
+    "lane_claim_refused",  # manifest key: claim_lane_dispatch refused (bool)
+    "lane_claim_rc",  # manifest key: claim_lane_dispatch return code
+    "lane_claim_instance_job_id",  # manifest key: claimed instance/job id
     "lane_id",
     "lane_id_matches",
     "lane_ids",
