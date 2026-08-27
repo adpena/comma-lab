@@ -29210,6 +29210,52 @@ def check_subprocess_run_checked(
             continue
         n_scanned += 1
         lines = text.splitlines()
+        # ── AST precision layer (pf2x r80, 2026-08-27) ──────────────────
+        # The pure-text scan flags THREE shapes outside the silent-success
+        # bug class (all found live in the r80 full-preflight round):
+        #   1. docstring / string-literal MENTIONS of "subprocess.run(" —
+        #      not call sites at all (process_group_kill.py module doc);
+        #   2. long multi-line calls whose check= sits past the 8-line
+        #      window (modal_click_polish_cpu.py: check=True 12 lines in);
+        #   3. `return subprocess.run(...)` thin wrappers — the
+        #      CompletedProcess is PROPAGATED to the caller, not captured-
+        #      and-ignored or discarded (auto_push_main._git + 8 sisters).
+        # Parse once per file; on SyntaxError keep the pure-text behaviour
+        # (never fail open on unparseable files).
+        call_linenos: set[int] | None = None
+        checked_kw_linenos: set[int] = set()
+        returned_call_linenos: set[int] = set()
+        try:
+            _tree = ast.parse(text)
+        except SyntaxError:
+            _tree = None
+        if _tree is not None:
+            call_linenos = set()
+            for _node in ast.walk(_tree):
+                if isinstance(_node, ast.Call):
+                    _fn = _node.func
+                    if (
+                        isinstance(_fn, ast.Attribute)
+                        and _fn.attr == "run"
+                        and isinstance(_fn.value, ast.Name)
+                        and _fn.value.id == "subprocess"
+                    ):
+                        call_linenos.add(_node.lineno)
+                        # An explicit check= kwarg AT ANY DISTANCE inside
+                        # the call is an active choice (True raises;
+                        # False = the opt-out this gate already accepts;
+                        # a variable = the caller explicitly threads it).
+                        if any(_kw.arg == "check" for _kw in _node.keywords):
+                            checked_kw_linenos.add(_node.lineno)
+                if isinstance(_node, ast.Return) and isinstance(_node.value, ast.Call):
+                    _rfn = _node.value.func
+                    if (
+                        isinstance(_rfn, ast.Attribute)
+                        and _rfn.attr == "run"
+                        and isinstance(_rfn.value, ast.Name)
+                        and _rfn.value.id == "subprocess"
+                    ):
+                        returned_call_linenos.add(_node.value.lineno)
         for i, line in enumerate(lines):
             if "subprocess.run(" not in line:
                 continue
@@ -29217,6 +29263,13 @@ def check_subprocess_run_checked(
             stripped = line.lstrip()
             if stripped.startswith("#"):
                 continue
+            if call_linenos is not None:
+                if (i + 1) not in call_linenos:
+                    continue  # docstring/string mention, not a call site
+                if (i + 1) in checked_kw_linenos:
+                    continue  # explicit check= kwarg at any distance
+                if (i + 1) in returned_call_linenos:
+                    continue  # CompletedProcess returned to the caller
             # Same-line waiver
             if "# subprocess-no-check-OK" in line:
                 continue

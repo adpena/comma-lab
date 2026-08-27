@@ -67,7 +67,7 @@ def _sha256(path: Path) -> str:
 
 def _git_sha() -> str:
     try:
-        return subprocess.run(["git", "rev-parse", "HEAD"], cwd=_REPO, capture_output=True,
+        return subprocess.run(["git", "rev-parse", "HEAD"], cwd=_REPO, capture_output=True,  # subprocess-no-check-OK: git-sha provenance capture; except arm records 'unknown'
                               text=True, timeout=10).stdout.strip()
     except Exception:
         return "unknown"

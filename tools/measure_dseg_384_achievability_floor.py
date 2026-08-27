@@ -70,7 +70,7 @@ _SEG_H, _SEG_W = 384, 512  # SegNet model input size (segnet_model_input_size = 
 
 
 def _utc() -> str:
-    return subprocess.run(
+    return subprocess.run(  # subprocess-no-check-OK: timestamp capture; date(1) failure yields empty string in a receipt, never a decision
         ["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"], capture_output=True, text=True
     ).stdout.strip()
 

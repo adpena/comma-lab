@@ -44,7 +44,7 @@ def _utc() -> str:
 
 def _pids_on_port(port: int) -> list[int]:
     """uvicorn child pids running dashboard_server.py --port <port> (the OLD generation)."""
-    out = subprocess.run(["ps", "-axww", "-o", "pid=,command="], capture_output=True, text=True).stdout
+    out = subprocess.run(["ps", "-axww", "-o", "pid=,command="], capture_output=True, text=True).stdout  # subprocess-no-check-OK: best-effort ps snapshot; empty output means no old-generation pids
     pids = []
     needle = "dashboard_server.py"
     for line in out.splitlines():
@@ -57,7 +57,7 @@ def _pids_on_port(port: int) -> list[int]:
 
 
 def _safe_run_wrappers_for(port: int) -> list[int]:
-    out = subprocess.run(["ps", "-axww", "-o", "pid=,command="], capture_output=True, text=True).stdout
+    out = subprocess.run(["ps", "-axww", "-o", "pid=,command="], capture_output=True, text=True).stdout  # subprocess-no-check-OK: best-effort ps snapshot; empty output means no wrapper pids
     pids = []
     for line in out.splitlines():
         if "safe_run.py" in line and "dashboard_server.py" in line and f"--port {port}" in line:

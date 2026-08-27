@@ -409,7 +409,7 @@ def main(argv: list[str] | None = None) -> int:
         f"nohup bash -c {shlex.quote(quoted)} "
         f"< /dev/null > {shlex.quote(log_path.as_posix())} 2>&1 & echo $!"
     )
-    proc = subprocess.run(
+    proc = subprocess.run(  # subprocess-no-check-OK: success judged by pid parse below; launched=false surfaces failure in the emitted JSON
         ["bash", "-lc", daemon_cmd],
         cwd=REPO_ROOT,
         capture_output=True,

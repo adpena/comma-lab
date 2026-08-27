@@ -2343,7 +2343,7 @@ def main(rebind_root: bool = False) -> int:
         _dsl_files = [f for f in files if str(f).startswith("src/tac/witness_dsl/")]
         _dsl_diff = ""
         if _dsl_files:
-            _dsl_diff = subprocess.run(
+            _dsl_diff = subprocess.run(  # subprocess-no-check-OK: advisory drift-detector diff; the detector is fail-open by design
                 ["git", "diff", "HEAD", "--", *_dsl_files],
                 cwd=str(REPO_ROOT),
                 capture_output=True,

@@ -1260,7 +1260,7 @@ def _training_alive(pid: int, sig: str) -> bool:
         return False
     try:
         import subprocess
-        out = subprocess.run(["ps", "-axww", "-o", "command="],
+        out = subprocess.run(["ps", "-axww", "-o", "command="],  # subprocess-no-check-OK: best-effort ps probe; failure degrades to False via the except arm
                              capture_output=True, text=True, timeout=5).stdout
         return any(sig in line for line in out.splitlines())
     except Exception:

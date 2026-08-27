@@ -229,7 +229,7 @@ def main() -> None:
             "projections": projections,
         }
 
-    git_head = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], cwd=REPO,
+    git_head = subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], cwd=REPO,  # subprocess-no-check-OK: git-head provenance capture; empty-on-failure is visible in the receipt
                               capture_output=True, text=True).stdout.strip()
     result = {
         "schema": "ddm_wc3_step_profile.v2",

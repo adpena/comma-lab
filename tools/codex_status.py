@@ -142,7 +142,7 @@ def _worktree_progress_within(worktree: str | None, hours: float) -> bool:
         pass
     try:  # file-write leg (first hit short-circuits)
         mins = max(1, int(hours * 60))
-        r = subprocess.run(
+        r = subprocess.run(  # subprocess-no-check-OK: recent-write probe; failure/no-match reads False (advisory status)
             ["find", str(wt), "-path", str(wt / ".git"), "-prune", "-o",
              "-type", "f", "-newermt", f"-{mins} minutes", "-print", "-quit"],
             capture_output=True, text=True, timeout=60)

@@ -67,7 +67,7 @@ def _concurrent_load_note() -> dict:
     RELATIVE comparison stays valid because all backends are measured under the
     same load in the same run, but absolute numbers are depressed."""
     try:
-        out = subprocess.run(
+        out = subprocess.run(  # subprocess-no-check-OK: best-effort ps load census; failure degrades via the except arm
             ["ps", "-Ao", "pid,pcpu,comm,args"],
             capture_output=True,
             text=True,

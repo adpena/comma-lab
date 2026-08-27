@@ -590,7 +590,7 @@ def _governed_metal_burn_pids() -> list[str]:
     pids: list[str] = []
     for sig in _GOVERNED_METAL_TRAINER_SIGNATURES:
         try:
-            out = subprocess.run(["pgrep", "-f", sig], capture_output=True, text=True,
+            out = subprocess.run(["pgrep", "-f", sig], capture_output=True, text=True,  # subprocess-no-check-OK: pgrep rc=1 = no match, a valid answer; failure skips the signature via the except arm
                                  timeout=10)
         except Exception:
             continue
@@ -606,7 +606,7 @@ def _record_ci_blind_deferral(selected: list[str], burn_pids: list[str]) -> None
     an address, not a silence.
     """
     try:
-        head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
+        head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,  # subprocess-no-check-OK: git-head provenance capture; except arm records 'unknown'
                               text=True, cwd=REPO_ROOT, timeout=10).stdout.strip()
     except Exception:
         head = "unknown"

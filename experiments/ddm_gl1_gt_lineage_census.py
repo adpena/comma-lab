@@ -717,7 +717,7 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "artifacts": rows,
                 "utc_finished": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                "git_head": subprocess.run(
+                "git_head": subprocess.run(  # subprocess-no-check-OK: git-head provenance capture; empty-on-failure is visible in the registry row
                     ["git", "rev-parse", "HEAD"],
                     capture_output=True,
                     text=True,
@@ -821,7 +821,7 @@ def main(argv: list[str] | None = None) -> int:
         "axis": "[macOS-CPU advisory] lineage classification -- NEVER a score",
         "score_claim": False,
         "promotable": False,
-        "git_head": subprocess.run(
+        "git_head": subprocess.run(  # subprocess-no-check-OK: git-head provenance capture; empty-on-failure is visible in the receipt
             ["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=REPO_ROOT
         ).stdout.strip(),
         "rulers": {

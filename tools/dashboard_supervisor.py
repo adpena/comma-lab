@@ -59,7 +59,7 @@ SUPERVISOR_LABEL = "levelset_dash_supervisor"
 # ───────────────────────── process discovery (pure-ish) ─────────────────────────
 def _ps_rows() -> list[tuple[int, int, str]]:
     """Return [(pid, pgid, cmd)] for all processes."""
-    out = subprocess.run(["ps", "-axww", "-o", "pid=,pgid=,command="],
+    out = subprocess.run(["ps", "-axww", "-o", "pid=,pgid=,command="],  # subprocess-no-check-OK: best-effort ps snapshot; empty output yields no rows
                          capture_output=True, text=True).stdout
     rows: list[tuple[int, int, str]] = []
     for line in out.splitlines():
@@ -151,7 +151,7 @@ def _spawn_daemon(label: str, log: str, cmd: list[str], env: dict | None = None,
 
 def _stop_daemon(label: str) -> None:
     with contextlib.suppress(Exception):
-        subprocess.run([sys.executable, os.path.join(HERE, "spawn_durable_daemon.py"),
+        subprocess.run([sys.executable, os.path.join(HERE, "spawn_durable_daemon.py"),  # subprocess-no-check-OK: best-effort daemon stop, suppressed by design (contextlib.suppress)
                         "--stop", label], capture_output=True, text=True, timeout=30)
 
 

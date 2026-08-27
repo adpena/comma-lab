@@ -285,7 +285,7 @@ def _parse_vm_stat(out: str) -> dict[str, int]:
 
 
 def _vm_stat_fields() -> dict[str, int]:
-    out = subprocess.run(["vm_stat"], capture_output=True, text=True, timeout=10).stdout
+    out = subprocess.run(["vm_stat"], capture_output=True, text=True, timeout=10).stdout  # subprocess-no-check-OK: rc!=0 yields empty fields -> available reads 0 -> fails toward shedding, the module's declared OOM-safe direction
     return _parse_vm_stat(out)
 
 

@@ -46,7 +46,7 @@ for _p in (str(_REPO / "src"), str(_REPO / "upstream"), str(_REPO / "tools")):
 def _utc() -> str:
     import subprocess
 
-    return subprocess.run(["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"], capture_output=True, text=True).stdout.strip()
+    return subprocess.run(["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"], capture_output=True, text=True).stdout.strip()  # subprocess-no-check-OK: timestamp capture; date(1) failure yields empty string in a receipt, never a decision
 
 
 def main(argv: list[str] | None = None) -> int:

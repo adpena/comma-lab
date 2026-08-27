@@ -152,6 +152,83 @@ def test_check_52_check_false_is_explicit_optout(fake_repo):
     assert violations == []
 
 
+def test_check_52_ignores_docstring_mention(fake_repo):
+    # AST precision layer (pf2x r80): a docstring MENTIONING subprocess.run(
+    # is not a call site (process_group_kill.py's module doc, live FP).
+    f = fake_repo / "src/tac/doc_mention.py"
+    f.write_text(
+        '"""Helper notes.\n'
+        "\n"
+        "``subprocess.run(cmd, timeout=N)`` kills only the direct child.\n"
+        '"""\n'
+        "X = 1\n"
+    )
+    violations = check_subprocess_run_checked(repo_root=fake_repo, strict=False, verbose=False)
+    assert violations == []
+
+
+def test_check_52_accepts_check_true_beyond_text_window(fake_repo):
+    # AST precision layer: check=True 12 lines into a long arg list sits
+    # past the 8-line text window (modal_click_polish_cpu.py, live FP).
+    args = "".join(f"        'arg{i}',\n" for i in range(10))
+    f = fake_repo / "src/tac/long_call.py"
+    f.write_text(
+        "import subprocess\n"
+        "def go():\n"
+        "    subprocess.run(\n"
+        "        [\n"
+        f"{args}"
+        "        ],\n"
+        "        check=True,\n"
+        "    )\n"
+    )
+    violations = check_subprocess_run_checked(repo_root=fake_repo, strict=False, verbose=False)
+    assert violations == []
+
+
+def test_check_52_accepts_returned_completed_process(fake_repo):
+    # AST precision layer: `return subprocess.run(...)` propagates the
+    # CompletedProcess to the caller — not captured-and-ignored, not
+    # discarded (auto_push_main._git wrapper shape, live FP).
+    f = fake_repo / "src/tac/thin_wrapper.py"
+    f.write_text(
+        "import subprocess\n"
+        "def _git(*args):\n"
+        "    return subprocess.run(['git', *args], capture_output=True, text=True)\n"
+    )
+    violations = check_subprocess_run_checked(repo_root=fake_repo, strict=False, verbose=False)
+    assert violations == []
+
+
+def test_check_52_accepts_check_kwarg_passthrough(fake_repo):
+    # AST precision layer: check=<variable> is an active choice threaded by
+    # the caller (public_repo_hygiene_census check=check w/ default True).
+    f = fake_repo / "src/tac/passthrough.py"
+    f.write_text(
+        "import subprocess\n"
+        "def _run(argv, check=True):\n"
+        "    r = subprocess.run(argv, check=check, capture_output=True)\n"
+        "    return r.stdout\n"
+    )
+    violations = check_subprocess_run_checked(repo_root=fake_repo, strict=False, verbose=False)
+    assert violations == []
+
+
+def test_check_52_still_catches_unchecked_after_ast_layer(fake_repo):
+    # POSITIVE CONTROL for the AST layer: a genuinely unchecked, captured,
+    # stdout-consumed call must STILL be flagged (the bug class itself).
+    f = fake_repo / "src/tac/still_bad.py"
+    f.write_text(
+        "import subprocess\n"
+        "def go():\n"
+        "    out = subprocess.run(['ls'], capture_output=True, text=True).stdout\n"
+        "    return out\n"
+    )
+    violations = check_subprocess_run_checked(repo_root=fake_repo, strict=False, verbose=False)
+    assert len(violations) == 1
+    assert "without check=True" in violations[0]
+
+
 # ── Check 53 ─────────────────────────────────────────────────────────────
 
 

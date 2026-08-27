@@ -54,7 +54,9 @@ def main() -> int:
                 text=True,
                 timeout=30,
             )
-            if not status.stdout.strip():
+            # rc gate: a FAILED git status must not masquerade as "in sync +
+            # committed" — fall through to the serializer, which fails loudly.
+            if status.returncode == 0 and not status.stdout.strip():
                 return 0  # in sync + committed — silent
         else:
             shutil.copyfile(CLAUDE_MD, AGENTS_MD)

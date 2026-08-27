@@ -85,7 +85,7 @@ def training_arm_alive() -> tuple[bool, str]:
     """
 
     try:
-        out = subprocess.run(
+        out = subprocess.run(  # subprocess-no-check-OK: best-effort ps collision census; failure degrades via the except arm
             ["ps", "-axww", "-o", "pid,command"],
             capture_output=True,
             text=True,

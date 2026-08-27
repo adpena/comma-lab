@@ -83,7 +83,7 @@ def probe_health(port: int, timeout: float = 4.0) -> dict | None:
 def _ps_rows() -> list[tuple[int, int, str]]:
     """[(pid, pgid, cmd)] for every process (best-effort; [] on error)."""
     try:
-        out = subprocess.run(["ps", "-axww", "-o", "pid=,pgid=,command="],
+        out = subprocess.run(["ps", "-axww", "-o", "pid=,pgid=,command="],  # subprocess-no-check-OK: best-effort ps snapshot; failure degrades to [] via the except arm
                              capture_output=True, text=True).stdout
     except Exception:
         return []

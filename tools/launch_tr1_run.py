@@ -237,9 +237,14 @@ def main() -> int:
                       f"{need:.1f} GiB (= measured T2 peak {MEASURED_T2_PEAK_RSS_GIB} "
                       f"GiB x {SAFETY_FACTOR})")
 
-    # G4 — scorer slot (ONE n600 job at a time).
-    ps = subprocess.run(["ps", "-axo", "pid,command"], capture_output=True,
-                        text=True).stdout
+    # G4 — scorer slot (ONE n600 job at a time). A failed ps must REFUSE, not
+    # vacuously pass: empty output would read as "slot free" (m50 vacuity==pass).
+    ps_proc = subprocess.run(["ps", "-axo", "pid,command"], capture_output=True,
+                             text=True)
+    if ps_proc.returncode != 0:
+        return refuse(f"scorer-slot census unavailable (ps rc={ps_proc.returncode}) "
+                      "— cannot verify the ONE-n600 invariant")
+    ps = ps_proc.stdout
     holders, mentions = slot_holders(ps, os.getpid())
     if holders:
         return refuse("scorer slot busy (ONE n600 job at a time):\n" +
@@ -252,9 +257,9 @@ def main() -> int:
 
     # G5 — detached launch + receipt.
     args.out_dir.mkdir(parents=True, exist_ok=True)
-    head = subprocess.run(["git", "-C", str(cwd), "rev-parse", "HEAD"],
+    head = subprocess.run(["git", "-C", str(cwd), "rev-parse", "HEAD"],  # subprocess-no-check-OK: git-head provenance capture; empty-on-failure is visible in the launch receipt
                           capture_output=True, text=True).stdout.strip()
-    dirty = subprocess.run(["git", "-C", str(cwd), "status", "--short"],
+    dirty = subprocess.run(["git", "-C", str(cwd), "status", "--short"],  # subprocess-no-check-OK: git-dirty provenance capture; empty-on-failure is visible in the launch receipt
                            capture_output=True, text=True).stdout.strip()
     launch_argv = list(sealed_argv)
     launch_argv[launch_argv.index("--out-dir") + 1] = str(args.out_dir)

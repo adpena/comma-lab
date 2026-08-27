@@ -96,7 +96,7 @@ def _physical_core_count() -> int:
     try:
         import subprocess
 
-        out = subprocess.run(
+        out = subprocess.run(  # subprocess-no-check-OK: best-effort sysctl read; int-parse failure falls through to the except default
             ["sysctl", "-n", "hw.physicalcpu"],
             capture_output=True,
             text=True,

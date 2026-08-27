@@ -101,7 +101,7 @@ def _known_ids() -> set[str]:
                 continue
     # grep is far faster than reading ~10k files in python
     for root in (str(MEMORY_DIR), str(REPO / ".omx" / "research")):
-        r = subprocess.run(["grep", "-rhoE", r"\b[0-9]{4}\.[0-9]{4,5}\b", root],
+        r = subprocess.run(["grep", "-rhoE", r"\b[0-9]{4}\.[0-9]{4,5}\b", root],  # subprocess-no-check-OK: grep rc=1 means no-match (expected); an rc check would misread it as failure
                            capture_output=True, text=True)
         ids.update(m for m in r.stdout.split() if _ARXIV_ID.match(m))
     return ids

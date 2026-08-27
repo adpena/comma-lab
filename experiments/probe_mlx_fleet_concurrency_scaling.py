@@ -44,7 +44,7 @@ def _free_gb() -> float:
     """AVAILABLE (reclaimable) memory in GB. On macOS raw 'Pages free' is kept near
     zero by design; the true headroom = free + inactive + speculative + purgeable
     (all reclaimable without paging out anonymous memory)."""
-    out = subprocess.run(["vm_stat"], capture_output=True, text=True).stdout
+    out = subprocess.run(["vm_stat"], capture_output=True, text=True).stdout  # subprocess-no-check-OK: best-effort vm_stat read; failure degrades to zero-headroom (conservative)
     m = re.search(r"page size of (\d+) bytes", out)
     pg = int(m.group(1)) if m else 16384
     vals = {"free": 0, "inactive": 0, "speculative": 0, "purgeable": 0}
@@ -65,7 +65,7 @@ def _peak_rss_gb(pids: list[int]) -> float:
     if not pids:
         return 0.0
     try:
-        out = subprocess.run(
+        out = subprocess.run(  # subprocess-no-check-OK: best-effort ps RSS sample; failure degrades via the except arm
             ["ps", "-o", "rss=", "-p", ",".join(str(p) for p in pids)],
             capture_output=True, text=True,
         ).stdout

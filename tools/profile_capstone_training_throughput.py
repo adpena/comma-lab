@@ -280,7 +280,7 @@ def _thread_sweep(max_pairs, base_channels, codebook_size, seed, threads, repeat
             "xs.append(time.perf_counter()-t0)\n"
             f"print('RESULT', {th}, statistics.median(xs)*1000)\n"
         )
-        proc = subprocess.run(
+        proc = subprocess.run(  # subprocess-no-check-OK: RESULT parsed from stdout below; a missing marker records null in the receipt
             [sys.executable, "-c", snippet],
             capture_output=True,
             text=True,

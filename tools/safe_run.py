@@ -139,7 +139,7 @@ def _group_rss_kib(pgid: int) -> int:
     Dependency-free; works on macOS + Linux. Returns 0 if `ps` reports nothing
     (e.g. the group already exited)."""
     try:
-        out = subprocess.run(
+        out = subprocess.run(  # subprocess-no-check-OK: ps -g empty/failure means the group already exited (documented: returns 0)
             ["ps", "-o", "rss=", "-g", str(pgid)],
             capture_output=True,
             text=True,

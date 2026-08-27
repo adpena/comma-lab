@@ -406,7 +406,7 @@ def reconcile_claims(
         cmd += ["--claims-path", str(claims_path)]
     if modal_ledger is not None:
         cmd += ["--modal-ledger", str(modal_ledger)]
-    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO)
+    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO)  # subprocess-no-check-OK: success judged by JSON-parse of stdout below; unparseable reconcile closes NOTHING (fail-safe)
     action: dict = {"closed": [], "exempt": []}
     try:
         report = json.loads(proc.stdout)
@@ -745,7 +745,7 @@ def main(argv: list[str] | None = None) -> int:
         print(write_fire_manifest(out_dir, manifest))
         return 0
 
-    disp = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True)
+    disp = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True)  # subprocess-no-check-OK: success judged by the spawn-record effect check below (refuse rc=5 when absent)
     sys.stdout.write(disp.stdout[-2000:])
     sys.stderr.write(disp.stderr[-2000:])
     # Persist the FULL dispatch output: the 2000-char echo above is a courtesy tail, and
@@ -778,7 +778,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"DISPATCHED: call {call_id}")
 
     receipt = _done_receipt_name(args.instance_job_id)
-    arm = subprocess.run(
+    arm = subprocess.run(  # subprocess-no-check-OK: armed-or-not adjudicated from stdout JSON below; failure recorded in manifest, non-fatal by design (job already live)
         [
             VENV_PY, str(REPO / "tools" / "launch_detached_process.py"),
             "--output-dir", str(out_dir),

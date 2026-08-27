@@ -90,7 +90,7 @@ def _pid_alive(pid: int) -> bool:
 def _live_cmdline(pid: int) -> str | None:
     """The live process's command line via ps -p (kernel truth; empty/dead -> None)."""
     try:
-        out = subprocess.run(["ps", "-p", str(int(pid)), "-o", "command="],
+        out = subprocess.run(["ps", "-p", str(int(pid)), "-o", "command="],  # subprocess-no-check-OK: best-effort ps probe; empty/dead reads None via the except arm
                              capture_output=True, text=True, timeout=5).stdout.strip()
         return out or None
     except Exception:  # noqa: BLE001
@@ -132,7 +132,7 @@ def _pid_alive_cmd(pid, expect_tokens: list[str]) -> tuple[bool, str | None]:
 
 def _ps_children_map() -> dict[int, list[int]]:
     """ppid -> [pids] from one ``ps`` snapshot (cross-session; no psutil dependency)."""
-    out = subprocess.run(["ps", "ax", "-o", "pid=,ppid="], capture_output=True,
+    out = subprocess.run(["ps", "ax", "-o", "pid=,ppid="], capture_output=True,  # subprocess-no-check-OK: best-effort ps snapshot; empty output yields no children map
                          text=True, timeout=10).stdout
     kids: dict[int, list[int]] = {}
     for ln in out.splitlines():

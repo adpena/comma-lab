@@ -174,7 +174,7 @@ def main() -> None:
             edges.append(edge)
     edges.sort(key=lambda r: -r["flips"])
 
-    git_head = subprocess.run(
+    git_head = subprocess.run(  # subprocess-no-check-OK: git-head provenance capture; empty-on-failure is visible in the receipt
         ["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True
     ).stdout.strip()
 

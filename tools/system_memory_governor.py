@@ -991,7 +991,7 @@ def page_size_bytes() -> int:
         return int(raw.strip())
     # last-resort: parse the page size vm_stat prints in its header, else the M-series default.
     try:
-        out = subprocess.run(["vm_stat"], capture_output=True, text=True, timeout=5).stdout
+        out = subprocess.run(["vm_stat"], capture_output=True, text=True, timeout=5).stdout  # subprocess-no-check-OK: rc!=0 degrades to the same empty-output fallback the except arm handles
         m = re.search(r"page size of (\d+)", out)
         if m:
             return int(m.group(1))
@@ -1004,7 +1004,7 @@ def _read_vm_stat_counters() -> dict[str, int]:
     """Parse the vm_stat page counts we need for accounting + closure. Programmatic-field parse (each
     field grabbed by its exact label), NOT an ad-hoc guess — unit-tested via ``reconcile_memory_accounting``."""
     try:
-        out = subprocess.run(["vm_stat"], capture_output=True, text=True, timeout=10).stdout
+        out = subprocess.run(["vm_stat"], capture_output=True, text=True, timeout=10).stdout  # subprocess-no-check-OK: rc!=0 degrades to the same empty-output fallback the except arm handles
     except (OSError, subprocess.SubprocessError):
         out = ""
 
@@ -1040,7 +1040,7 @@ def _read_memory_pressure_total_bytes() -> int | None:
     """The physical total macOS ``memory_pressure`` reports in its header (independent of hw.memsize).
     Used to cross-validate page_size * page_total == hw.memsize."""
     try:
-        out = subprocess.run(["memory_pressure"], capture_output=True, text=True, timeout=6).stdout
+        out = subprocess.run(["memory_pressure"], capture_output=True, text=True, timeout=6).stdout  # subprocess-no-check-OK: rc!=0 degrades to the no-match None path
     except (OSError, subprocess.SubprocessError):
         return None
     m = re.search(r"The system has (\d+)", out)
@@ -1773,7 +1773,7 @@ def _process_state(pid: int) -> str:
     if pid <= 0:
         return ""
     try:
-        out = subprocess.run(["ps", "-o", "state=", "-p", str(pid)],
+        out = subprocess.run(["ps", "-o", "state=", "-p", str(pid)],  # subprocess-no-check-OK: rc!=0 degrades to empty state string, same as the except arm
                              capture_output=True, text=True, timeout=5)
     except (OSError, subprocess.SubprocessError):
         return ""
@@ -2556,7 +2556,7 @@ def pgid_only_rss_gib(pgid: int) -> float:
     if pgid <= 0:
         return 0.0
     try:
-        out = subprocess.run(["ps", "-o", "rss=", "-g", str(pgid)],
+        out = subprocess.run(["ps", "-o", "rss=", "-g", str(pgid)],  # subprocess-no-check-OK: rc!=0 degrades to 0.0, same as the except arm
                              capture_output=True, text=True, timeout=5)
     except (OSError, subprocess.SubprocessError):
         return 0.0

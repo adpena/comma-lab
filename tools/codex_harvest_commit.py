@@ -55,6 +55,13 @@ def _changed_files() -> set[str]:
     """Repo-relative paths with uncommitted working-tree changes (staged or not)."""
     r = subprocess.run(["git", "-C", str(REPO), "status", "--short"],
                        capture_output=True, text=True)
+    if r.returncode != 0:
+        # A failed status must not read as "nothing changed" — the harvest
+        # would silently see an empty tree and mis-dispose the landing.
+        raise SystemExit(
+            f"git status failed (rc={r.returncode}): {r.stderr.strip()} — "
+            "cannot reason about the working tree"
+        )
     out: set[str] = set()
     for line in r.stdout.splitlines():
         # format: XY <path>  (XY = status codes); path starts at col 3
@@ -134,7 +141,7 @@ def harvest(
         return 0 if not safe or committed_any else 1
     if code and code_reviewed:
         for f in code:
-            subprocess.run([str(VENV_PY), str(REVIEW_TRACKER), "mark-file", f,
+            subprocess.run([str(VENV_PY), str(REVIEW_TRACKER), "mark-file", f,  # subprocess-no-check-OK: best-effort mark; the serializer review gate downstream fail-closes on unmarked files
                             "--status", "reviewed"], cwd=REPO)
         rc = _serializer_commit(
             label, stamp, code,
@@ -144,7 +151,7 @@ def harvest(
 
     # 3) disposition the landing as reviewed_committed IFF everything present is now committed
     if committed_any and not (code and not code_reviewed):
-        head = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"],
+        head = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"],  # subprocess-no-check-OK: provenance capture; empty-on-failure visible in the disposition row
                               capture_output=True, text=True).stdout.strip()
         disposition = subprocess.run(
             [

@@ -93,7 +93,7 @@ def main() -> int:
         REPO / f"experiments/results/verdict_parallel_bench_{utc}/receipt.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     try:
-        git = subprocess.run(["git", "-C", str(REPO), "rev-parse", "HEAD"],
+        git = subprocess.run(["git", "-C", str(REPO), "rev-parse", "HEAD"],  # subprocess-no-check-OK: git-head provenance capture; except arm records 'unknown'
                              capture_output=True, text=True, timeout=10).stdout.strip()
     except OSError:
         git = "unknown"

@@ -877,7 +877,7 @@ def live_arm_names() -> set[str]:
     A liveness detector that always reports zero makes the cap vacuous.
     """
     try:
-        proc = subprocess.run(
+        proc = subprocess.run(  # subprocess-no-check-OK: best-effort ps liveness snapshot; failure degrades to empty set via the except arm
             ["ps", "-eo", "pid,command"], capture_output=True, text=True, timeout=15
         )
     except Exception:

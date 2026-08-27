@@ -88,7 +88,7 @@ def _run_alive(token: str | None) -> bool | None:
     if not token:
         return None
     try:
-        r = subprocess.run(["pgrep", "-f", token], capture_output=True, text=True, timeout=5)
+        r = subprocess.run(["pgrep", "-f", token], capture_output=True, text=True, timeout=5)  # subprocess-no-check-OK: pgrep rc=1 = no match, a valid answer; failure degrades to None
         return bool(r.stdout.strip())
     except Exception:
         return None

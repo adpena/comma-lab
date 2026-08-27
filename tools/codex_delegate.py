@@ -138,7 +138,7 @@ committing is cleaner. Never force, never touch main directly.
 
 
 def _uncommitted_pile_size() -> int:
-    r = subprocess.run(["git", "-C", str(REPO), "status", "--short"],
+    r = subprocess.run(["git", "-C", str(REPO), "status", "--short"],  # subprocess-no-check-OK: advisory pile-size census; failure reads 0
                        capture_output=True, text=True)
     return sum(1 for ln in r.stdout.splitlines() if ln.strip())
 

@@ -41,7 +41,7 @@ URL_RE = re.compile(r"https://[a-z0-9.-]+\.trycloudflare\.com")
 
 
 def _ps_rows() -> list[tuple[int, str]]:
-    out = subprocess.run(
+    out = subprocess.run(  # subprocess-no-check-OK: best-effort ps snapshot; empty output yields no rows
         ["ps", "-axww", "-o", "pid=,command="], capture_output=True, text=True
     ).stdout
     rows: list[tuple[int, str]] = []

@@ -47,7 +47,7 @@ def _repo_root() -> Path:
     if env and Path(env, ".git").exists():
         return Path(env)
     try:
-        out = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True,
+        out = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True,  # subprocess-no-check-OK: best-effort repo-root discovery; empty output falls through to the path fallback
                              text=True, timeout=10).stdout.strip()
         if out:
             return Path(out)
