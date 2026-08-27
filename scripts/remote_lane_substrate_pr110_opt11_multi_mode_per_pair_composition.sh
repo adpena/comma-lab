@@ -72,6 +72,7 @@ echo "[pr110-opt11-driver] OUTPUT_DIR=${OUTPUT_DIR} TRAINER_MODE=${TRAINER_MODE}
 GIT_HASH=$(git -C "${WORKSPACE}" rev-parse HEAD 2>/dev/null || echo no-git)
 cat > "${OUTPUT_DIR}/provenance.json" <<EOF
 {
+  "predicted_band": ${PREDICTED_BAND:-null},
   "schema": "remote_run_provenance.v1",
   "started_at_utc": "$(date -u +%FT%TZ)",
   "git_hash": "$GIT_HASH",

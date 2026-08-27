@@ -279,6 +279,7 @@ HEARTBEAT_PID=$!
 
 cat > "$PROVENANCE" <<EOF
 {
+  "predicted_band": ${PREDICTED_BAND:-null},
   "lane_id": "$LANE_ID",
   "tag": "$TAG",
   "trainer": "experiments/train_substrate_time_traveler_l5_z7_lstm_predictive_coding.py",

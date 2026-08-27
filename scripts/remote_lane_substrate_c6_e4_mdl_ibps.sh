@@ -218,6 +218,7 @@ HEARTBEAT_PID=$!
 # Stage 3: write provenance.
 cat > "$PROVENANCE" <<EOF
 {
+  "predicted_band": ${PREDICTED_BAND:-null},
   "lane_id": "$LANE_ID",
   "tag": "$TAG",
   "trainer": "experiments/train_substrate_c6_e4_mdl_ibps.py",

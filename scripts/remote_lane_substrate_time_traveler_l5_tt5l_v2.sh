@@ -195,6 +195,7 @@ fi
 # Wave N+1 prerequisites for forensic audit.
 cat > "$PROVENANCE" <<EOF
 {
+  "predicted_band": ${PREDICTED_BAND:-null},
   "schema_version": 1,
   "name": "tt5l_v2_scaffold_dispatch_provenance",
   "lane_id": "$LANE_ID",

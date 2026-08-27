@@ -216,6 +216,7 @@ DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | 
 "$PYBIN" -c "
 import json, time, torch, pathlib
 prov = {
+    'predicted_band': json.loads('${PREDICTED_BAND:-null}'),
     'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
     'lane_id': '$LANE_ID',
     'dispatch_instance_job_id': '$DISPATCH_INSTANCE_JOB_ID',

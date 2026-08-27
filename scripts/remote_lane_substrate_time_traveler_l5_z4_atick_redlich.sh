@@ -96,6 +96,37 @@ SMOKE_ONLY="${SMOKE_ONLY:-1}"
 
 mkdir -p "$LOG_DIR" "$OUTPUT_DIR"
 
+# Provenance (feedback_canonical_remote_bootstraps): every remote run emits
+# provenance.json so a fresh agent can reconstruct the experiment. Written
+# BEFORE the research-only gate so even refused dispatches leave a record.
+# (This script previously declared $PROVENANCE without ever writing it —
+# the substring-satisfying-but-not-emitting defect, cured 2026-08-26.)
+GIT_HASH=$(git -C "$WORKSPACE" rev-parse HEAD 2>/dev/null || echo no-git)
+cat > "$PROVENANCE" <<EOF
+{
+  "predicted_band": ${PREDICTED_BAND:-null},
+  "lane_id": "$LANE_ID",
+  "lane_script": "scripts/remote_lane_substrate_time_traveler_l5_z4_atick_redlich.sh",
+  "trainer": "experiments/train_substrate_time_traveler_l5_z4_atick_redlich.py",
+  "git_hash": "$GIT_HASH",
+  "video_path": "$Z4ATR_VIDEO_PATH",
+  "output_dir": "$Z4ATR_OUTPUT_DIR",
+  "epochs": "$Z4ATR_EPOCHS",
+  "batch_size": "$Z4ATR_BATCH_SIZE",
+  "lr": "$Z4ATR_LR",
+  "latent_dim": "$Z4ATR_LATENT_DIM",
+  "embed_dim": "$Z4ATR_EMBED_DIM",
+  "beta_seg": "$Z4ATR_BETA_SEG",
+  "gamma_pose": "$Z4ATR_GAMMA_POSE",
+  "delta_coop_receiver": "$Z4ATR_DELTA_COOP_RECEIVER",
+  "beta_atick_redlich": "$Z4ATR_BETA_ATICK_REDLICH",
+  "device": "$Z4ATR_DEVICE",
+  "trainer_mode": "$Z4ATR_TRAINER_MODE",
+  "smoke_only": "$SMOKE_ONLY",
+  "started_at_utc": "$(date -u +%FT%TZ)"
+}
+EOF
+
 # Bootstrap canonical helper per CLAUDE.md "Forbidden re-implementing
 # remote bootstrap inline" non-negotiable + Catalog #163 sentinel
 # (REMOTE_ARCHIVE_ONLY_EVAL_SOURCE_ONLY=1 stops the sourced main flow).

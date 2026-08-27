@@ -111,6 +111,7 @@ log "    .omx/state/variational_ib_tractability_tishby_ib_pure.json (VIB verdict
 # Stage 3: emit provenance JSON so harvest tooling can see the lane state
 cat > "$PROVENANCE" <<EOF
 {
+  "predicted_band": ${PREDICTED_BAND:-null},
   "lane_id": "$LANE_ID",
   "tag": "$TAG",
   "research_only": true,

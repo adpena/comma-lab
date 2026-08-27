@@ -216,6 +216,7 @@ log "Stage 1b: required input files validated"
 log "Stage 2: write provenance.json"
 cat > "$PROVENANCE" <<EOF
 {
+  "predicted_band": ${PREDICTED_BAND:-null},
   "lane_id": "$LANE_ID",
   "tag": "$TAG",
   "started_at_utc": "$(date -u +%FT%TZ)",

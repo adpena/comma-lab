@@ -95,6 +95,7 @@ GIT_HASH=$(cd "$WORKSPACE" && git rev-parse HEAD 2>/dev/null || echo "no-git")
 "$PYBIN" -c "
 import json, time
 prov = {
+    'predicted_band': json.loads('${PREDICTED_BAND:-null}'),
     'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
     'lane_id': '$LANE_ID',
     'dispatch_instance_job_id': '$DISPATCH_INSTANCE_JOB_ID',

@@ -199,6 +199,7 @@ HEARTBEAT_PID=$!
 log "Stage 3: writing provenance"
 cat > "$PROVENANCE" <<EOF
 {
+  "predicted_band": ${PREDICTED_BAND:-null},
   "lane_id": "$LANE_ID",
   "tag": "$TAG",
   "instance_job_id": "$DISPATCH_INSTANCE_JOB_ID",

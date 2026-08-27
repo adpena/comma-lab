@@ -68,6 +68,7 @@ BUDGET_FLAG=()
 GIT_HASH=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo no-git)
 cat > "$OUT_DIR/provenance.json" <<EOF
 {
+  "predicted_band": ${PREDICTED_BAND:-null},
   "schema": "remote_run_provenance.v1",
   "started_at_utc": "$(date -u +%FT%TZ)",
   "git_hash": "$GIT_HASH",

@@ -225,6 +225,7 @@ log "Stage 2 DONE: trainer rc=$TRAINER_RC"
 log "Stage 3: write provenance.json"
 cat > "$PROVENANCE" <<EOF
 {
+  "predicted_band": ${PREDICTED_BAND:-null},
   "lane_id": "$LANE_ID",
   "substrate_tag": "$TAG",
   "design_memo": ".omx/research/rudin_floor_interpretable_ml_substrate_asymptotic_pursuit_scoping_design_20260516.md",

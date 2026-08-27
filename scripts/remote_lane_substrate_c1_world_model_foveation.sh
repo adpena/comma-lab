@@ -166,6 +166,7 @@ HEARTBEAT_PID=$!
 # Stage 3: write provenance (Catalog #166 source-parity sentinel anchor).
 cat > "$PROVENANCE" <<EOF
 {
+  "predicted_band": ${PREDICTED_BAND:-null},
   "lane_id": "$LANE_ID",
   "tag": "$TAG",
   "trainer": "experiments/train_substrate_c1_world_model_foveation.py",

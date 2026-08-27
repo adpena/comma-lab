@@ -353,6 +353,7 @@ fi
 # Provenance manifest per Catalog L "remote scripts write provenance"
 cat > "$PROVENANCE" <<EOF
 {
+  "predicted_band": ${PREDICTED_BAND:-null},
   "schema": "z7_mamba2_remote_lane_provenance_v1",
   "lane_id": "$LANE_ID",
   "tag": "$TAG",

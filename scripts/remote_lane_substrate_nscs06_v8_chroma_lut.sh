@@ -174,6 +174,7 @@ log "trainer exit code: $TRAINER_RC"
 # Stage 4: write provenance + completion marker.
 cat > "$PROVENANCE" <<EOF
 {
+  "predicted_band": ${PREDICTED_BAND:-null},
   "lane_id": "$LANE_ID",
   "tag": "$TAG",
   "trainer_path": "experiments/train_substrate_nscs06_v8_chroma_lut.py",

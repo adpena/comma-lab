@@ -306,6 +306,7 @@ print(json.dumps(payload, sort_keys=True))
 # Provenance (feedback_canonical_remote_bootstraps): every remote run emits
 # provenance.json so a fresh agent can reconstruct the experiment.
 provenance = {
+    "predicted_band": json.loads(os.environ.get("PREDICTED_BAND", "null")),
     "schema": "remote_run_provenance.v1",
     "started_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     "git_hash": git_hash,

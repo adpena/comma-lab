@@ -125,7 +125,7 @@ GIT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "no-git")
 GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>&1 | head -1 || echo "no-gpu")
 DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | head -1 || echo "no-driver")
 "$PYBIN" - "$PROVENANCE" "$LANE_ID" "$DISPATCH_INSTANCE_JOB_ID" "$DISPATCH_PLATFORM" "$GIT_HASH" "$GPU_NAME" "$DRIVER_VER" "$PR95PLUS_VIDEO_PATH" "$PR95PLUS_UPSTREAM_DIR" "$PR95PLUS_DEVICE" "$PR95PLUS_CURRICULUM" "$PR95PLUS_EPOCHS_MULTIPLIER" "$PR95PLUS_GPU" "$PR95PLUS_CODEBOOK_PATH" "$PR95PLUS_SKIP_AUTH_EVAL" <<'PY'
-import json, pathlib, sys, time
+import json, os, pathlib, sys, time
 import torch
 
 (
@@ -146,6 +146,7 @@ import torch
     skip_auth_eval,
 ) = sys.argv[1:16]
 payload = {
+    "predicted_band": json.loads(os.environ.get("PREDICTED_BAND", "null")),
     "started_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     "lane_id": lane_id,
     "dispatch_instance_job_id": dispatch_instance_job_id,
