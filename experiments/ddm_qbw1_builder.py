@@ -928,6 +928,12 @@ def memory_preflight_and_schedule() -> dict[str, Any]:
 
 
 def sealed_fire_order(stage2: dict[str, Any]) -> dict[str, Any]:
+    order_path = STORE / "sealed_main_fire_order" / "FIRE_ORDER.json"
+    if order_path.exists():
+        sealed = json.loads(order_path.read_text())
+        if sealed.get("schema") != "ddm_qbw1_sealed_main_fire_order.v1" or sealed.get("sealed") is not True:
+            raise QBW1BuildError("existing MAIN fire order is malformed or unsealed")
+        return sealed
     memory = memory_preflight_and_schedule()
     config = {
         "schema": "ddm_qbw1_main_stage03_05_config.v1",
@@ -1015,7 +1021,7 @@ def sealed_fire_order(stage2: dict[str, Any]) -> dict[str, Any]:
         "training_launched": False,
         "scorer_gate_run": False,
     }
-    atomic_json_once(STORE / "sealed_main_fire_order" / "FIRE_ORDER.json", order)
+    atomic_json_once(order_path, order)
     return order
 
 
