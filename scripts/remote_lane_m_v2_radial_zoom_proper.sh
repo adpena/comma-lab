@@ -175,6 +175,10 @@ print(f'archive {dst}: {os.path.getsize(dst)} bytes')
 log "=== Stage 4: contest_auth_eval on Lane M-V2 archive ==="
 rm -rf "$LOG_DIR/eval_work"
 set +e
+# Archive-size guard (lane-archive-size gate; pf2x r79): refuse to eval an
+# empty/missing archive - the Lane B renderer-only-archive class.
+ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE" 2>/dev/null || stat -f '%z' "$ARCHIVE" 2>/dev/null || echo 0)
+[ "$ARCHIVE_BYTES" -gt 0 ] || { echo "FATAL: archive empty or missing: $ARCHIVE"; exit 2; }
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
