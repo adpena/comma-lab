@@ -26052,6 +26052,21 @@ def check_python_heredocs_no_undefined_names(
 
                 # Collect imported names + assigned names + function/class defs
                 defined: set[str] = set()
+
+                def _bind_names(t):
+                    # Binding targets nest arbitrarily: `for (a, b), c in ...`,
+                    # `(a, b), c = ...`, `with ctx() as (a, b):`, `*rest` — a
+                    # one-level walk under-counts bindings and manufactures
+                    # false "undefined name" alarms (pf2x r76, 2026-08-27:
+                    # codex_companion_spawn.sh's `for (label, ts), ev in ...`).
+                    if isinstance(t, ast.Name):
+                        defined.add(t.id)
+                    elif isinstance(t, (ast.Tuple, ast.List)):
+                        for e in t.elts:
+                            _bind_names(e)
+                    elif isinstance(t, ast.Starred):
+                        _bind_names(t.value)
+
                 # First pass: imports + top-level assignments + function/class defs
                 for node in ast.walk(tree):
                     if isinstance(node, ast.ImportFrom):
@@ -26062,12 +26077,7 @@ def check_python_heredocs_no_undefined_names(
                             defined.add((n.asname or n.name).split(".")[0])
                     elif isinstance(node, ast.Assign):
                         for tgt in node.targets:
-                            if isinstance(tgt, ast.Name):
-                                defined.add(tgt.id)
-                            elif isinstance(tgt, (ast.Tuple, ast.List)):
-                                for elt in tgt.elts:
-                                    if isinstance(elt, ast.Name):
-                                        defined.add(elt.id)
+                            _bind_names(tgt)
                     elif isinstance(node, ast.AugAssign) and isinstance(node.target, ast.Name):
                         defined.add(node.target.id)
                     elif isinstance(node, ast.AnnAssign):
@@ -26085,36 +26095,17 @@ def check_python_heredocs_no_undefined_names(
                     elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                         defined.add(node.name)
                     elif isinstance(node, ast.For):
-                        if isinstance(node.target, ast.Name):
-                            defined.add(node.target.id)
-                        elif isinstance(node.target, (ast.Tuple, ast.List)):
-                            for elt in node.target.elts:
-                                if isinstance(elt, ast.Name):
-                                    defined.add(elt.id)
+                        _bind_names(node.target)
                     elif isinstance(node, ast.With):
                         for item in node.items:
-                            if item.optional_vars and isinstance(item.optional_vars, ast.Name):
-                                defined.add(item.optional_vars.id)
+                            if item.optional_vars:
+                                _bind_names(item.optional_vars)
                     elif isinstance(node, ast.comprehension):
-                        # Comprehension target: name OR tuple/list of names
-                        def _capture_target(t):
-                            if isinstance(t, ast.Name):
-                                defined.add(t.id)
-                            elif isinstance(t, (ast.Tuple, ast.List)):
-                                for e in t.elts:
-                                    _capture_target(e)
-                        _capture_target(node.target)
+                        _bind_names(node.target)
                     elif isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp,
                                             ast.GeneratorExp)):
-                        # Walk all generators to capture their targets
                         for gen in node.generators:
-                            def _capture_target2(t):
-                                if isinstance(t, ast.Name):
-                                    defined.add(t.id)
-                                elif isinstance(t, (ast.Tuple, ast.List)):
-                                    for e in t.elts:
-                                        _capture_target2(e)
-                            _capture_target2(gen.target)
+                            _bind_names(gen.target)
                     elif isinstance(node, ast.ExceptHandler) and node.name:
                         defined.add(node.name)
                 # Function-arg names
