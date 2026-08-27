@@ -604,3 +604,96 @@ def test_append_note_carries_forward_without_re_demanding_custody(tmp_path: Path
         "memo::ITEM_OP3D", "operator reviewed", actor="t", session_id="s1", repo_root=tmp_path
     )
     assert note.actual_delta_s == pytest.approx(-0.01)
+
+
+def test_memo_custody_reads_latest_row_and_correction_note_cures(tmp_path: Path) -> None:
+    """pf2x r86 both-direction controls: bad citation fires; append-only correction cures.
+
+    The ledger is append-only (``append_fields: []``) so the ONLY correction
+    channel for a mis-registered ``source_design_memo`` is a note row carrying
+    the corrected citation, and the check must read the latest row per task.
+    """
+    (tmp_path / ".omx/research").mkdir(parents=True)
+    (tmp_path / ".omx/research/real_memo.md").write_text("# Real\n")
+    register_task(
+        "memo::BAD_CITE",
+        ".omx/research/never_existed.md",
+        "Mis-registered task",
+        "codex",
+        actor="t",
+        session_id="s1",
+        repo_root=tmp_path,
+    )
+    # Positive control: the bad citation FIRES on the latest (only) row.
+    violations = check_canonical_task_status_no_dangling_transitions(
+        repo_root=tmp_path, strict=False
+    )
+    assert any("never_existed.md" in v for v in violations)
+    # Fail-closed control: a correction citing a MISSING file is refused —
+    # the correction channel cannot launder a bad citation.
+    with pytest.raises(ValueError, match="does not resolve"):
+        append_note(
+            "memo::BAD_CITE",
+            "attempted bad correction",
+            actor="t",
+            session_id="s1",
+            repo_root=tmp_path,
+            corrected_source_design_memo=".omx/research/also_missing.md",
+        )
+    # Cure: an append-only note carrying a REAL corrected citation goes green
+    # without mutating the historical registration row.
+    append_note(
+        "memo::BAD_CITE",
+        "corrected citation",
+        actor="t",
+        session_id="s1",
+        repo_root=tmp_path,
+        corrected_source_design_memo=".omx/research/real_memo.md",
+    )
+    assert check_canonical_task_status_no_dangling_transitions(repo_root=tmp_path) == []
+    history = query_task_history("memo::BAD_CITE", repo_root=tmp_path)
+    assert history[0].source_design_memo == ".omx/research/never_existed.md"
+    assert history[-1].source_design_memo == ".omx/research/real_memo.md"
+
+
+def test_memo_custody_resolves_tilde_and_bare_filename_forms(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """pf2x r86 resolver precision: the two non-repo citation forms resolve
+    when the file EXISTS and still fire when it does not (both directions)."""
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    repo = tmp_path / "repo"
+    (repo / ".omx/research").mkdir(parents=True)
+    (repo / ".omx/research/anchor.md").write_text("# Anchor\n")
+    (home / "tilde_memo.md").write_text("# Tilde\n")
+    memory_dir = (
+        home / ".claude" / "projects" / str(repo.resolve()).replace("/", "-") / "memory"
+    )
+    memory_dir.mkdir(parents=True)
+    (memory_dir / "bare_memo.md").write_text("# Bare\n")
+
+    register_task(
+        "memo::TILDE_OK", "~/tilde_memo.md", "Tilde citation", "codex",
+        actor="t", session_id="s1", repo_root=repo,
+    )
+    register_task(
+        "memo::BARE_OK", "bare_memo.md", "Bare-filename citation", "codex",
+        actor="t", session_id="s1", repo_root=repo,
+    )
+    assert check_canonical_task_status_no_dangling_transitions(repo_root=repo) == []
+
+    register_task(
+        "memo::TILDE_MISSING", "~/no_such_memo.md", "Missing tilde", "codex",
+        actor="t", session_id="s1", repo_root=repo,
+    )
+    register_task(
+        "memo::BARE_MISSING", "no_such_bare.md", "Missing bare", "codex",
+        actor="t", session_id="s1", repo_root=repo,
+    )
+    violations = check_canonical_task_status_no_dangling_transitions(
+        repo_root=repo, strict=False
+    )
+    assert any("no_such_memo.md" in v for v in violations)
+    assert any("no_such_bare.md" in v for v in violations)

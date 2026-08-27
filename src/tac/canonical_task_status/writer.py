@@ -21,6 +21,7 @@ from .contract import (
     delta_s_custody_findings,
 )
 from .loader import (
+    REPO_ROOT,
     latest_status_by_task_id,
     ledger_path,
     load_canonical_task_status_strict,
@@ -249,20 +250,42 @@ def append_note(
     actor: str,
     session_id: str,
     repo_root: str | Path | None = None,
+    corrected_source_design_memo: str | Path | None = None,
 ) -> CanonicalTaskStatusRow:
-    """Append an audit note without changing current status."""
+    """Append an audit note without changing current status.
+
+    ``corrected_source_design_memo`` is the ledger's ONLY correction channel
+    for a mis-registered memo citation (pf2x r86, 2026-08-27): the ledger is
+    registered append-only (``append_fields: []``) so historical rows are never
+    mutated — instead the note row carries the corrected citation, and the
+    memo-custody check reads the latest row per task.  FAIL-CLOSED: the
+    corrected citation must itself resolve to an existing file through the same
+    resolver the check uses, so a correction can never launder a bad citation.
+    """
 
     with _ledger_lock(repo_root):
         prev = latest_status_by_task_id(task_id, repo_root)
         if prev is None:
             raise KeyError(f"unknown canonical task_id: {task_id}")
+        memo = prev.source_design_memo
+        if corrected_source_design_memo is not None:
+            from .checks import _resolve_source_design_memo
+
+            root = Path(repo_root) if repo_root is not None else REPO_ROOT
+            if _resolve_source_design_memo(root, corrected_source_design_memo) is None:
+                raise ValueError(
+                    "corrected_source_design_memo does not resolve to an existing "
+                    f"file: {corrected_source_design_memo!r} — a correction must "
+                    "cite a real memo (fail-closed; see checks._resolve_source_design_memo)"
+                )
+            memo = str(corrected_source_design_memo)
         event_notes = notes
         if prev.actual_delta_s is not None and "[empirical:" not in event_notes:
             event_notes = f"{notes}; carried_forward_empirical_evidence: {prev.event_notes}"
         event_ts = _monotonic_event_timestamp(prev)
         row = CanonicalTaskStatusRow(
             task_id=prev.task_id,
-            source_design_memo=prev.source_design_memo,
+            source_design_memo=memo,
             title=prev.title,
             status=prev.status,
             owner=prev.owner,

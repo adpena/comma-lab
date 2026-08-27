@@ -6,6 +6,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from .contract import CanonicalTaskStatusRow
 from .loader import load_canonical_task_status_strict
 
 # ── SPECIFICATION WITHOUT REGISTRATION (ddm_rg5, task #825, 2026-07-31) ───────────────────────
@@ -74,14 +75,69 @@ def unregistered_task_refs_in_current_focus(
     ]
 
 
+def _resolve_source_design_memo(root: Path, memo: str | Path) -> Path | None:
+    """Resolve a ``source_design_memo`` citation to an existing file, or ``None``.
+
+    Three citation forms are REAL conventions in this ledger's history and all
+    three must resolve (pf2x r86 adjudication, 2026-08-27).  This is scanner
+    PRECISION, not weakening: a citation matching none of the forms is still a
+    violation, and each form demands an actual file on disk.
+
+    1. Repo-relative path — the common case.
+    2. ``~``-prefixed home path — 2026-05-30 rows cite the durable Claude
+       memory dir by home-relative path.  ``pathlib`` treats ``~/x`` as a
+       RELATIVE path, so the pre-r86 ``root / memo`` join produced
+       ``<repo>/~/x`` and misread EXISTING memos as missing.
+    3. Bare filename — the memory-dir convention (CLAUDE.md and 2026-05-30
+       rows cite ``feedback_*.md`` memos by name alone).  Resolved against the
+       Claude project memory dir DERIVED from the repo root (the projects-dir
+       naming convention: ``/`` → ``-``), never a hardcoded absolute path —
+       this file is on a public surface.
+    """
+    raw = str(memo)
+    if raw.startswith("~"):
+        cand = Path(raw).expanduser()
+        return cand if cand.is_file() else None
+    rel = Path(raw)
+    cand = root / rel
+    if cand.is_file():
+        return cand
+    if rel.parent == Path("."):
+        memory_dir = (
+            Path.home()
+            / ".claude"
+            / "projects"
+            / str(Path(root).resolve()).replace("/", "-")
+            / "memory"
+        )
+        cand = memory_dir / rel
+        if cand.is_file():
+            return cand
+    return None
+
+
 def canonical_task_status_violations(repo_root: str | Path | None = None) -> list[str]:
-    """Return strict ledger violations not already covered by schema loading."""
+    """Return strict ledger violations not already covered by schema loading.
+
+    The memo-custody check reads the LATEST row per task, not every historical
+    row (pf2x r86, 2026-08-27).  The ledger is registered append-only with
+    ``append_fields: []`` — history is never mutated — so a checker that pins
+    EVERY row makes correction structurally impossible: a task whose
+    registration mis-cited its memo could never become clean.  The task's
+    canonical claim is its latest row (the same latest-row-wins semantics the
+    loader applies to status); a correction lands as an append-only note row
+    carrying the corrected citation, and the citation must itself resolve
+    (``append_note`` refuses unresolvable corrections, so no violation can be
+    laundered away).  A task whose LATEST row cites a missing memo still fires.
+    """
 
     root = Path(repo_root) if repo_root is not None else Path(__file__).resolve().parents[3]
     violations: list[str] = []
+    latest: dict[str, CanonicalTaskStatusRow] = {}
     for row in load_canonical_task_status_strict(root):
-        memo = root / row.source_design_memo
-        if not memo.is_file():
+        latest[row.task_id] = row
+    for row in latest.values():
+        if _resolve_source_design_memo(root, row.source_design_memo) is None:
             violations.append(
                 f"{row.task_id}: source_design_memo missing: {row.source_design_memo}"
             )
