@@ -9,6 +9,10 @@ batch-independent mock scorer to isolate the required functional loss/gradient p
 policy admits the training-only lever only when that parity and measured end-to-end speedup both
 pass. Exact byte-closed scoring authority is unchanged. The suite also checks that the extracted
 per-pair base math matches the canonical importable ``make_loss_fn`` op-for-op.
+
+# LOSS_CONVERGENCE_NOT_REQUIRED: this is a gradient-PARITY suite (batched twin vs canonical
+# make_loss_fn, op-for-op, mock scorer by design) — a mock-scorer convergence assertion would
+# be a toy; convergence of the canonical loss is owned by the real trainer runs (pf2x r78).
 """
 
 from __future__ import annotations
