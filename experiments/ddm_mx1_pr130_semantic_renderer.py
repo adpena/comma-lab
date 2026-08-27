@@ -656,9 +656,10 @@ def _system_available_bytes() -> int | None:
     try:
         import psutil
 
-        # RAW_VM_BASIS_OK: telemetry-only load-phase receipt/default limit hint,
-        # not an admission guard or launch clearance.
-        return int(psutil.virtual_memory().available)
+        # Telemetry-only load-phase receipt/default limit hint, not an admission
+        # guard or launch clearance; the derived default budget errs CONSERVATIVE
+        # (raw available understates free RAM on macOS).
+        return int(psutil.virtual_memory().available)  # RAW_VM_BASIS_OK: telemetry receipt + conservative default-budget hint, not an admission gate
     except Exception:
         return None
 

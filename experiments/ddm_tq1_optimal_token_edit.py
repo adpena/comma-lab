@@ -586,13 +586,19 @@ def phase_b_psutil_preflight(limit_gb: float = 20.0) -> dict[str, Any]:
 
 
 def phase_b_runtime_preflight(limit_gb: float = 20.0, min_available_gb: float = 25.0) -> dict[str, Any]:
-    import psutil
+    try:
+        from tools.mem_basis import conservative_free_gib
+    except ImportError:
+        from mem_basis import conservative_free_gib  # type: ignore
 
     preflight = dict(phase_b_psutil_preflight(limit_gb))
-    available = int(psutil.virtual_memory().available)
+    # Reclaimable-aware basis: raw psutil .available understates free RAM on
+    # macOS and would falsely pause/refuse a healthy run at this admission gate.
+    available = int(conservative_free_gib(default=0.0) * (1024**3))
     minimum = int(min_available_gb * (1024**3))
     preflight.update(
         {
+            "available_memory_basis": "conservative_free_gib",
             "available_memory_bytes": available,
             "minimum_available_memory_bytes": minimum,
             "minimum_available_memory_gb": min_available_gb,
