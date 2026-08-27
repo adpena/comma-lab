@@ -275,10 +275,12 @@ else
     exit 66
   fi
 fi
-"$PYBIN" - "$GT_CUSTODY_RECEIPT" "$GT_CACHE" "$GT_CACHE_SHA256" "$OUT_DIR" <<'PY'
-import json, os, pathlib, sys
+GIT_HASH="$(git -C "$WORKSPACE" rev-parse HEAD 2>/dev/null || echo no-git)"
+"$PYBIN" - "$GT_CUSTODY_RECEIPT" "$GT_CACHE" "$GT_CACHE_SHA256" "$OUT_DIR" "$GIT_HASH" <<'PY'
+import json, os, pathlib, sys, time
 receipt = json.loads(sys.argv[1])
 source, expected, out = pathlib.Path(sys.argv[2]), sys.argv[3].lower(), pathlib.Path(sys.argv[4])
+git_hash = sys.argv[5]
 if (
     receipt.get("schema") != "witness_remote_file_custody.v1"
     or receipt.get("verdict") != "SHA256_VALID"
@@ -301,6 +303,26 @@ tmp = target.with_suffix(".json.tmp")
 tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 os.replace(tmp, target)
 print(json.dumps(payload, sort_keys=True))
+# Provenance (feedback_canonical_remote_bootstraps): every remote run emits
+# provenance.json so a fresh agent can reconstruct the experiment.
+provenance = {
+    "schema": "remote_run_provenance.v1",
+    "started_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    "git_hash": git_hash,
+    "lane_script": "scripts/remote_v9_cgauge_cuda.sh",
+    "dsl_config": os.environ.get("WITNESS_DSL_CONFIG"),
+    "trainer_mode": os.environ.get("WITNESS_TRAINER_MODE"),
+    "epochs": os.environ.get("WITNESS_EPOCHS"),
+    "num_pairs": os.environ.get("WITNESS_NUM_PAIRS"),
+    "resume_from": os.environ.get("WITNESS_RESUME_FROM") or None,
+    "gt_cache_sha256": receipt["sha256"],
+    "out_dir": str(out),
+}
+prov_target = out / "provenance.json"
+prov_tmp = prov_target.with_suffix(".json.tmp")
+prov_tmp.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n")
+os.replace(prov_tmp, prov_target)
+print(json.dumps(provenance, sort_keys=True))
 PY
 exec timeout --foreground --signal=TERM --kill-after="${TRAINER_KILL_AFTER_SECONDS}s" \
   "${TRAINER_TERM_SECONDS}s" "$PYBIN" \

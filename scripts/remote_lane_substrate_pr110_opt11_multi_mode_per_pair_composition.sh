@@ -67,6 +67,26 @@ fi
 mkdir -p "${OUTPUT_DIR}"
 echo "[pr110-opt11-driver] OUTPUT_DIR=${OUTPUT_DIR} TRAINER_MODE=${TRAINER_MODE} MODAL_RUNTIME=${MODAL_RUNTIME:-0}"
 
+# Provenance (feedback_canonical_remote_bootstraps): every remote run emits
+# provenance.json so a fresh agent can reconstruct the experiment.
+GIT_HASH=$(git -C "${WORKSPACE}" rev-parse HEAD 2>/dev/null || echo no-git)
+cat > "${OUTPUT_DIR}/provenance.json" <<EOF
+{
+  "schema": "remote_run_provenance.v1",
+  "started_at_utc": "$(date -u +%FT%TZ)",
+  "git_hash": "$GIT_HASH",
+  "lane_script": "scripts/remote_lane_substrate_pr110_opt11_multi_mode_per_pair_composition.sh",
+  "lane_name": "lane_pr110_opt11_multi_mode_per_pair_composition_l0_scaffold_20260530",
+  "trainer_mode": "${TRAINER_MODE}",
+  "modal_runtime": "${MODAL_RUNTIME:-0}",
+  "instance_job_id": "${INSTANCE_JOB_ID:-local}",
+  "n_pairs": "${PR110_OPT11_N_PAIRS:-600}",
+  "modes_per_pair": "${PR110_OPT11_MODES_PER_PAIR:-2}",
+  "rng_seed": "${PR110_OPT11_RNG_SEED:-42}",
+  "output_dir": "${OUTPUT_DIR}"
+}
+EOF
+
 # Trainer invocation (canonical Catalog #226 + #205 routing; trainer handles
 # smoke vs full mode resolution per Catalog #326).
 TRAINER_ARGS=(

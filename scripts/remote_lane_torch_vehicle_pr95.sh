@@ -61,6 +61,27 @@ fi
 BUDGET_FLAG=()
 [[ -n "$TOTAL_EPOCH_BUDGET" ]] && BUDGET_FLAG=(--total-epoch-budget "$TOTAL_EPOCH_BUDGET")
 
+# Provenance (feedback_canonical_remote_bootstraps): every remote run emits
+# provenance.json so a fresh agent can reconstruct the experiment. Written at
+# each (re)launch; the trainer's per-epoch torch_vehicle_summary.json is the
+# run_record and torch_vehicle_run.DONE is the completion marker.
+GIT_HASH=$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo no-git)
+cat > "$OUT_DIR/provenance.json" <<EOF
+{
+  "schema": "remote_run_provenance.v1",
+  "started_at_utc": "$(date -u +%FT%TZ)",
+  "git_hash": "$GIT_HASH",
+  "lane_script": "scripts/remote_lane_torch_vehicle_pr95.sh",
+  "base_channels": "$BASE_CHANNELS",
+  "latent_dim": "$LATENT_DIM",
+  "total_epoch_budget": "${TOTAL_EPOCH_BUDGET:-full}",
+  "ema_decay": "$EMA_DECAY",
+  "device": "$DEVICE",
+  "seed": "$SEED",
+  "out_dir": "$OUT_DIR"
+}
+EOF
+
 echo "[torch-vehicle] launching/resuming run in $OUT_DIR"
 echo "  base_channels=$BASE_CHANNELS ema_decay=$EMA_DECAY device=$DEVICE budget=${TOTAL_EPOCH_BUDGET:-full}"
 

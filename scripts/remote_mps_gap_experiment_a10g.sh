@@ -57,6 +57,26 @@ done
 
 mkdir -p "$MPS_GAP_OUTPUT_DIR"
 
+# Provenance (feedback_canonical_remote_bootstraps): every remote run emits
+# provenance.json so a fresh agent can reconstruct the experiment.
+GIT_HASH=$(git -C "$WORKSPACE" rev-parse HEAD 2>/dev/null || echo no-git)
+cat > "$MPS_GAP_OUTPUT_DIR/provenance.json" <<EOF
+{
+  "schema": "remote_run_provenance.v1",
+  "started_at_utc": "$(date -u +%FT%TZ)",
+  "git_hash": "$GIT_HASH",
+  "lane_script": "scripts/remote_mps_gap_experiment_a10g.sh",
+  "experiment": "mps_gap_experiment_tiny_renderer_modal_a10g",
+  "target_device": "cuda",
+  "modal_runtime": "${MODAL_RUNTIME:-0}",
+  "instance_job_id": "${INSTANCE_JOB_ID:-local}",
+  "checkpoint_input": "$MPS_GAP_CHECKPOINT_INPUT",
+  "frame_cache_input": "$MPS_GAP_FRAME_CACHE_INPUT",
+  "include_scorer": "$MPS_GAP_INCLUDE_SCORER",
+  "output_dir": "$MPS_GAP_OUTPUT_DIR"
+}
+EOF
+
 SCORER_FLAG=""
 if [ "$MPS_GAP_INCLUDE_SCORER" = "1" ]; then
     SCORER_FLAG="--include-scorer"
