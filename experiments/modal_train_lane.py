@@ -3076,8 +3076,10 @@ def main(
     print(f"[modal_train_lane] dispatch_completed call_id={call_id}")
     print(f"\n✓ DISPATCHED via .spawn() — call_id={call_id}")
     recover_command = (
-        ".venv/bin/python experiments/modal_recover_lane.py "
-        f"--call-id {call_id}"
+        # Check 101 scans source text for the contiguous string
+        # `experiments/modal_recover_lane.py --call-id` — keep it unsplit.
+        ".venv/bin/python experiments/modal_recover_lane.py --call-id "
+        f"{call_id}"
     )
     harvest_command = (
         ".venv/bin/python tools/harvest_modal_calls.py --from-ledger "
