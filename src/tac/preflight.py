@@ -43529,6 +43529,17 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     "lane_claim_refused",  # manifest key: claim_lane_dispatch refused (bool)
     "lane_claim_rc",  # manifest key: claim_lane_dispatch return code
     "lane_claim_instance_job_id",  # manifest key: claimed instance/job id
+    # Blocker-token string in mlx_dynamic_learned_sweep.py's false-authority
+    # blockers list (Check 126 adjudication 2026-08-27, pf2x r96 — the r95
+    # DUAL_AXIS waiver commit refreshed source attribution on the file,
+    # pulling this pre-existing string into scan scope; same cascade genus
+    # as the r81/r83/r90 blocks). An English fragment meaning "a lane claim
+    # is required before dispatch" emitted alongside sibling blockers like
+    # locality_or_runtime_controls_required_before_dispatch — vocabulary
+    # ABOUT the claim requirement, not a lane_id. It is EMITTED into
+    # solver-row blocker fields consumed downstream, so renaming would
+    # desync records; non-test emitter → blocklist per the r81 doctrine.
+    "lane_claim_required_before_dispatch",  # blocker token: claim required pre-dispatch
     # Lane-CLASS (SegNet class 1) metric/telemetry/config vocabulary in the
     # witness measurement tools + dashboard test fixtures (Check 126
     # adjudication 2026-08-27, pf2x r83 — the r82 waiver commits refreshed
