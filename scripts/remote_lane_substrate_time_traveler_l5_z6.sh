@@ -51,6 +51,10 @@ export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:T
 
 # Stage 0: NVDEC/CUDA preflight (fail-closed before any GPU-cost stage).
 echo "=== Stage 0: NVDEC and CUDA preflight ==="
+if [[ "${LOCAL_CUDA_WORKER:-0}" != "1" ]]; then
+    echo "FATAL: LOCAL_CUDA_WORKER=1 must be set on the remote CUDA provider before NVDEC/CUDA probing" >&2
+    exit 13
+fi
 _nvdec_probe="${WORKSPACE:-$PWD}/scripts/probe_nvdec.sh"
 [ -f "$_nvdec_probe" ] || _nvdec_probe="$(cd "$(dirname "$0")/.." && pwd)/scripts/probe_nvdec.sh"
 bash "$_nvdec_probe" || { echo "FATAL: NVDEC probe failed" >&2; exit 2; }
