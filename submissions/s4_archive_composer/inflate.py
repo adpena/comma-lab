@@ -430,7 +430,7 @@ def decode_events(payload: bytes, codec: str, expected_raw: int) -> list[list[tu
 def _decode_component_raw(raw: bytes) -> tuple[int, int, np.ndarray]:
     if len(raw) < 12:
         raise DecodeError("PCOMP3 component header is truncated")
-    frame, class_id, _stratum, count, first = struct.unpack_from("<HBBII", raw)
+    frame, class_id, _stratum, count, first = struct.unpack_from("<HBBII", raw)  # DEAD_BYTES_AUDIT_OK:stratum byte is PCOMP3 stream metadata consumed by sibling receivers (predictor_r4_tailrace routes streams by (class_id, stratum_id)); this receiver reconstructs by (frame, class_id) alone, the byte stays charged in the 12B header
     if frame >= PAIR_COUNT or class_id >= 5 or count == 0:
         raise DecodeError("PCOMP3 component metadata is invalid")
     cursor, values = 12, [first]

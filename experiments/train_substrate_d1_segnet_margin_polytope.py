@@ -955,7 +955,7 @@ def _decode_overlay(
     if len(raw) < PLY_SIZE:
         raise ValueError(f'polytope payload too short: {{len(raw)}}')
     magic, version, num_pixels, _lambda, lattice_levels, lipschitz = (
-        struct.unpack(PLY_FMT, raw[:PLY_SIZE])
+        struct.unpack(PLY_FMT, raw[:PLY_SIZE])  # DEAD_BYTES_AUDIT_OK:lambda is encode-time provenance in the PLY header, charged but unused at decode
     )
     if magic != PLY_MAGIC:
         raise ValueError(f'bad polytope magic: {{magic!r}}')

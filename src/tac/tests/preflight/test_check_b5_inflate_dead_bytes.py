@@ -99,6 +99,50 @@ def main(buf):
     assert findings == []
 
 
+_VIOLATION_BODY = '''
+import struct
+def main(buf):
+    audit_token = struct.unpack("<I", buf[4:8])[0]
+    return []
+'''
+
+
+def test_b5_skips_frozen_d1_20260515_sweep_artifacts(tmp_path: Path) -> None:
+    # r94 adjudication 2026-08-27: the 2026-05-15 d1 sweep population is
+    # frozen custody — its `_lambda` template defect is cured at the
+    # GENERATOR, and the stamped artifacts are excluded by (d1_ prefix AND
+    # 20260515 date) path components.
+    mod = _load_module()
+    rel = (
+        "experiments/results/d1_payload_budget_sweep_real_a1_20260515_codex/"
+        "arm_x/submission_dir/inflate.py"
+    )
+    _make_inflate(tmp_path, rel, _VIOLATION_BODY)
+    findings = mod.scan(tmp_path)
+    assert findings == []
+
+
+def test_b5_exclusion_is_precision_scoped_not_blanket(tmp_path: Path) -> None:
+    # Negative direction: the frozen-population rule must NOT swallow live
+    # coverage — a d1 dir from another date, and a same-date dir without the
+    # d1_ prefix, are both still scanned and flagged.
+    mod = _load_module()
+    _make_inflate(
+        tmp_path,
+        "experiments/results/d1_new_sweep_20260901_codex/a/submission_dir/inflate.py",
+        _VIOLATION_BODY,
+    )
+    _make_inflate(
+        tmp_path,
+        "experiments/results/other_lane_20260515_codex/b/submission_dir/inflate.py",
+        _VIOLATION_BODY,
+    )
+    findings = mod.scan(tmp_path)
+    flagged_dirs = {f.rel_path.split("/")[2] for f in findings}
+    assert "d1_new_sweep_20260901_codex" in flagged_dirs
+    assert "other_lane_20260515_codex" in flagged_dirs
+
+
 def test_b5_strict_exits_nonzero(tmp_path: Path) -> None:
     mod = _load_module()
     _make_inflate(

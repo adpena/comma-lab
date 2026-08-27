@@ -198,6 +198,19 @@ def scan(repo_root: Path | None = None) -> list[Finding]:
             # also exclude paths whose any-component contains _intake_ marker
             if any("_intake_" in part for part in p.parts):
                 continue
+            # Frozen 2026-05-15 d1 sweep artifacts (r94 adjudication 2026-08-27,
+            # the #821 one-fact-counted-N-times genus): 411 stamped copies of ONE
+            # template `_lambda` read. The cure lives at the GENERATOR
+            # (experiments/train_substrate_d1_segnet_margin_polytope.py template
+            # now carries the DEAD_BYTES_AUDIT_OK waiver inline, so future
+            # stamps are clean at birth); the frozen artifacts are custody and
+            # are never edited in place. Scope is exactly the d1 2026-05-15
+            # population — every OTHER artifact dir stays scanned.
+            if any(
+                part.startswith("d1_") and "20260515" in part
+                for part in p.parts
+            ):
+                continue
             candidates.append(p)
 
     for c in candidates:
