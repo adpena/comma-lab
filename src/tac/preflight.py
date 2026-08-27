@@ -9594,6 +9594,7 @@ def _parse_argparse_signature(path: Path) -> dict[str, dict] | None:
 
     flags: dict[str, dict] = {}
     has_argparse = False
+    has_dynamic_flag_arg = False
 
     for node in ast.walk(tree):
         if not isinstance(node, ast.Call):
@@ -9611,6 +9612,10 @@ def _parse_argparse_signature(path: Path) -> dict[str, dict] | None:
             if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
                 if arg.value.startswith("--"):
                     long_forms.append(arg.value)
+            else:
+                # Non-literal flag name (loop variable / f-string / *args):
+                # the parser's flag set is NOT statically enumerable.
+                has_dynamic_flag_arg = True
         if not long_forms:
             continue
         spec = {"required": False, "action": None, "type": None,
@@ -9627,6 +9632,16 @@ def _parse_argparse_signature(path: Path) -> dict[str, dict] | None:
         for f in long_forms:
             flags[f] = spec
 
+    # Fully-dynamic parser (every add_argument flag is a variable, e.g. the
+    # z7_mamba2 TIER_1_OPERATOR_REQUIRED_FLAGS loop): an EMPTY enumeration is
+    # incompleteness, not absence — returning {} made Rule A flag every passed
+    # flag as unknown (pf2x r75, 2026-08-27). Return None so consumers treat
+    # the target as not-statically-known and skip. Positional-only parsers
+    # (all-literal args, no `--` long forms) keep their {} signature so Rule A
+    # still fires on them. Mixed literal+dynamic parsers keep their partial
+    # signature (no live case; revisit if a mixed parser false-positives).
+    if has_argparse and not flags and has_dynamic_flag_arg:
+        return None
     return flags if has_argparse else None
 
 
@@ -26236,7 +26251,10 @@ def check_remote_lane_argparse_arity(
                     break
             shell_array_flags.setdefault(array_start.group("name"), set()).update(
                 f"--{token}"
-                for token in re.findall(r'\B--([a-z][a-z0-9-]+)', block)
+                # Mixed-case flags are real (nscs03 --lambda-R); a lowercase-only
+                # token class TRUNCATES them ('--lambda-') into phantom unknowns
+                # (pf2x r75, 2026-08-27).
+                for token in re.findall(r'\B--([a-z][a-zA-Z0-9-]+)', block)
             )
             j += 1
         i = 0
@@ -26302,7 +26320,9 @@ def check_remote_lane_argparse_arity(
 
             # Extract flag tokens from full_cmd; target_sig keys are stored
             # WITH `--` prefix, so prepend `--` when comparing.
-            flag_tokens = re.findall(r'\B--([a-z][a-z0-9-]+)', full_cmd)
+            # Mixed-case flags are real (nscs03 --lambda-R); see the array-block
+            # extractor above for the truncation false-positive this prevents.
+            flag_tokens = re.findall(r'\B--([a-z][a-zA-Z0-9-]+)', full_cmd)
             passed = {f"--{t}" for t in flag_tokens}
             for array_name in re.findall(
                 r'\$\{?([A-Za-z_][A-Za-z0-9_]*)\[@\]\}?',
