@@ -895,12 +895,20 @@ def stage_30_container(stage_20: dict[str, Any]) -> dict[str, Any]:
     # (never a carried constant); the parse-back then proves the resolved
     # archive materializes the identical semantic through the same receiver.
     source_semantic_sha = receiver_semantic_sha(rj2.DX2_RUNTIME, rj2.DX2_ARCHIVE)
+    # Additive _rN naming (the bs3 lineage collision cure): a prior attempt's
+    # retained transcript is a payload and must never be clobbered or deleted,
+    # so each attempt writes the first unused versioned name.
+    transcript_path = root / "parseback_transcript.txt"
+    attempt = 2
+    while transcript_path.exists():
+        transcript_path = root / f"parseback_transcript_r{attempt}.txt"
+        attempt += 1
     parseback = rj2.fresh_process_parseback(
         runtime=rj2.DX2_RUNTIME,
         archive=Path(archive_record["path"]),
         expected_codes=Path(codes_record["path"]),
         semantic_sha256=source_semantic_sha,
-        output=root / "parseback_transcript.txt",
+        output=transcript_path,
     )
 
     result = {
