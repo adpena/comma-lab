@@ -177,19 +177,100 @@ def test_kill_file_too_few_council_members_violates(tmp_path: Path) -> None:
 
 def test_falsified_in_body_triggers_check(tmp_path: Path) -> None:
     """A file with `FALSIFIED` literal but no kill-glob filename still
-    must comply."""
+    must comply — dated AT the narrative era-debt cutoff (dates == cutoff
+    are NOT grandfathered; the exemption is strictly `<`)."""
+    from tac.preflight import _PCC4_NARRATIVE_ERA_DEBT_CUTOFF
+
+    fname = f"project_lane_pd_v2_audit_{_PCC4_NARRATIVE_ERA_DEBT_CUTOFF}.md"
     body = (
         "The Lane PD-V2 hypothesis is FALSIFIED on Lane G v3 anchor.\n"
         "No further sections."
     )
+    mem = _write_kill_file(tmp_path, fname, body=body)
+    violations = check_kill_memory_files_have_council_review(
+        strict=False, verbose=False, memory_dir=mem,
+    )
+    assert len(violations) == 1
+    assert fname in violations[0]
+
+
+def test_pre_cutoff_narrative_falsified_is_era_grandfathered(tmp_path: Path) -> None:
+    """2026-08-27 re-baseline: a file whose ONLY trigger is a narrative
+    FALSIFIED/RETIRED token and whose date predates the era cutoff is
+    exempt (measured population: 143 such files, all research narrative,
+    none a kill recording)."""
+    body = (
+        "The Lane PD-V2 hypothesis is FALSIFIED on Lane G v3 anchor.\n"
+        "This RETIRED lane's lesson transfers to the successor.\n"
+    )
     mem = _write_kill_file(
-        tmp_path, "project_lane_pd_v2_audit_20260430.md", body=body,
+        tmp_path, "feedback_lane_pd_v2_narrative_20260516.md", body=body,
+    )
+    violations = check_kill_memory_files_have_council_review(
+        strict=False, verbose=False, memory_dir=mem,
+    )
+    assert violations == []
+
+
+def test_pre_cutoff_glob_named_kill_memo_still_binds(tmp_path: Path) -> None:
+    """The era-debt grandfather does NOT extend to kill-glob-named files:
+    the naming convention is the author's own declaration of a kill
+    verdict, and it binds at all dates >= the protocol start."""
+    body = "No sections — glob-named kill memo inside the era window."
+    mem = _write_kill_file(
+        tmp_path, "project_lane_era_killed_20260601.md", body=body,
     )
     violations = check_kill_memory_files_have_council_review(
         strict=False, verbose=False, memory_dir=mem,
     )
     assert len(violations) == 1
-    assert "project_lane_pd_v2_audit_20260430.md" in violations[0]
+
+
+def test_pre_cutoff_plain_verdict_kill_still_binds(tmp_path: Path) -> None:
+    """The era-debt grandfather does NOT extend to plain-line
+    `VERDICT: KILL` — the strongest verdict literal binds at all dates
+    >= the protocol start."""
+    body = "VERDICT: KILL\n\nNo other sections.\n"
+    mem = _write_kill_file(
+        tmp_path, "feedback_lane_era_audit_20260601.md", body=body,
+    )
+    violations = check_kill_memory_files_have_council_review(
+        strict=False, verbose=False, memory_dir=mem,
+    )
+    assert len(violations) == 1
+
+
+def test_blockquoted_verdict_kill_is_citation_not_trigger(tmp_path: Path) -> None:
+    """A `VERDICT: KILL` inside a blockquote is citation markup (quoting
+    another document — the one live instance quoted CLAUDE.md's own
+    protocol text) and does not trigger the check, at ANY date."""
+    from tac.preflight import _PCC4_NARRATIVE_ERA_DEBT_CUTOFF
+
+    fname = f"feedback_lane_quote_audit_{_PCC4_NARRATIVE_ERA_DEBT_CUTOFF}.md"
+    body = (
+        "> The verdict line SHOULD say DEFERRED-pending-research, "
+        "NOT `VERDICT: KILL`.\n"
+        "\nDiscussion of the protocol, no verdict recorded here.\n"
+    )
+    mem = _write_kill_file(tmp_path, fname, body=body)
+    violations = check_kill_memory_files_have_council_review(
+        strict=False, verbose=False, memory_dir=mem,
+    )
+    assert violations == []
+
+
+def test_underscore_date_suffix_is_extracted_for_grandfather(tmp_path: Path) -> None:
+    """Files dated `_YYYY_MM_DD.md` (e.g. MEMORY_archive_pre_2026_05_26.md)
+    encode a real date and participate in the date-based grandfathers;
+    previously they were misread as undated."""
+    body = "Index archive quoting FALSIFIED and RETIRED lanes.\n"
+    mem = _write_kill_file(
+        tmp_path, "MEMORY_archive_pre_2026_05_26.md", body=body,
+    )
+    violations = check_kill_memory_files_have_council_review(
+        strict=False, verbose=False, memory_dir=mem,
+    )
+    assert violations == []
 
 
 def test_verdict_kill_in_body_triggers_check(tmp_path: Path) -> None:

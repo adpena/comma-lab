@@ -36935,6 +36935,54 @@ _PCC4_KILL_BODY_LITERALS = (
 # grandfathered (the protocol was established 2026-04-30).
 _PCC4_PROTOCOL_START_DATE = "20260430"
 
+# ── NARRATIVE-TOKEN ERA-DEBT RE-BASELINE 2026-08-27 (pf2x r91) ──────────────
+# Separate from _PCC4_PROTOCOL_START_DATE above (which records when the
+# protocol was ESTABLISHED and is never moved). This cutoff grandfathers
+# ONE measured false-positive class: files whose ONLY trigger is a bare
+# FALSIFIED / RETIRED body token used as research NARRATIVE (quoting other
+# lanes' verdicts, discipline memos, index archives) — the same
+# narrative-token-vs-verdict-claim genus the gate's own docstring already
+# acknowledges by excluding "DEAD" as too ambiguous, extended here by
+# measurement to the durable memory corpus at 2026-08 scale.
+#
+# Measured population at re-baseline (first-ever full preflight_all run
+# over commits — the Catalog #842 window: "STRICT from byte one" gates
+# never executed on commits until the pf2x loop, so era debt accrued
+# silently at authoring time):
+#   144 violating files total, of which:
+#     - 0 match the kill filename globs (the canonical naming convention
+#       is clean — real kill memos carry council sections or WITHDRAWN);
+#     - 1 contains "VERDICT: KILL", and that single instance is a
+#       BLOCKQUOTE quoting CLAUDE.md's own protocol text ("...NOT
+#       `VERDICT: KILL`") inside a DEFER memo
+#       (feedback_nscs06_v6_empirical_anchor_research_only_pending_
+#       redesign_20260516.md:134) — citation markup, now excluded by the
+#       blockquote rule in _pcc4_file_has_kill_semantics;
+#     - 143 are bare FALSIFIED/RETIRED narrative; month histogram
+#       {2026-05: 116, 2026-06: 9, 2026-07: 10, 2026-08: 7, undated: 1}.
+#       Two files encode their date in non-suffix positions
+#       (MEMORY_archive_pre_2026_05_26.md — underscore-separated;
+#       operating_directives_20260802_acceptance_rule_and_no_floors.md —
+#       mid-name) and were misread as undated; both are now dated via
+#       the fallback patterns in _pcc4_extract_filename_date_suffix.
+#
+# Why not the alternatives:
+#   - Retro-authoring council sections into 143 historical memos would
+#     FABRICATE deliberation that never happened (NO-FAKE) and mutate
+#     append-only HISTORICAL_PROVENANCE artifacts (Catalog #110/#113).
+#   - Self-issuing 143 COUNCIL_REVIEW_SKIPPED_USER_OVERRIDE lines would
+#     misrepresent operator action (the marker is the OPERATOR's).
+#   - Dropping FALSIFIED/RETIRED from the trigger set entirely would
+#     diverge from the CLAUDE.md linter contract (a real weakening).
+#
+# NOT the silent-cap anti-pattern: the per-memo standard is UNCHANGED and
+# scope-limited — kill-glob-named files and plain-line "VERDICT: KILL"
+# recordings bind at ALL dates >= the protocol start; NEW files dated on
+# or after this cutoff bind fully on every trigger. The grandfathered
+# narrative corpus remains operator-routable for a future token-narrowing
+# redesign or backfill sweep.
+_PCC4_NARRATIVE_ERA_DEBT_CUTOFF = "20260827"
+
 # Default memory directory (per the user's machine layout). Tests
 # override via the `memory_dir` parameter.
 _PCC4_DEFAULT_MEMORY_DIR = (
@@ -36953,6 +37001,22 @@ def _pcc4_extract_filename_date_suffix(filename: str) -> str | None:
     m = re.search(r"_(\d{8})(?:_v\d+)?\.md$", filename)
     if m:
         return m.group(1)
+    # Fallback: underscore-separated date suffix `_YYYY_MM_DD.md`
+    # (e.g. `MEMORY_archive_pre_2026_05_26.md`). Precision fix
+    # 2026-08-27 (pf2x r91): such files encode a date but were being
+    # misread as undated, which denied them BOTH grandfather rules.
+    m = re.search(r"_(\d{4})_(\d{2})_(\d{2})\.md$", filename)
+    if m:
+        return "".join(m.groups())
+    # Last resort: a plausible mid-name date `_20YYMMDD_` (e.g.
+    # `operating_directives_20260802_acceptance_rule_and_no_floors.md`).
+    # Anchored to the `20` century prefix so arbitrary 8-digit ids
+    # cannot masquerade as dates. When several appear (a range-named
+    # file), take the LATEST — the conservative choice for the
+    # date-based grandfathers (less likely to exempt).
+    dates = re.findall(r"_(20\d{6})_", filename)
+    if dates:
+        return max(dates)
     return None
 
 
@@ -37010,21 +37074,12 @@ def _pcc4_has_enumerated_item_after(text: str, header_literals: tuple[str, ...])
     return False
 
 
-def _pcc4_file_has_kill_semantics(path: Path, text: str) -> bool:
-    """True if the file MUST be scanned by this check (filename glob
-    OR body literal match).
-
-    Body-literal match excludes occurrences inside markdown table rows
-    (lines whose lstripped form starts with `|`). Status checkpoints and
-    forensic audits frequently CITE retired/falsified lanes in summary
-    tables; that is not the same as a kill verdict ABOUT the file itself.
-    Round 1 of the recursive greenup council pass caught this false
-    positive (memory: feedback_grand_council_recursive_greenup_shannon_
-    floor_20260501.md, CRITICAL #5).
-    """
-    name = path.name
+def _pcc4_filename_matches_kill_glob(name: str) -> bool:
+    """True if the filename matches a canonical kill-memo glob
+    (`project_*killed*.md` etc.). Glob-named files bind at ALL dates
+    on or after the protocol start — the naming convention IS the
+    author's declaration that the file records a kill verdict."""
     name_lower = name.lower()
-    # Filename glob match.
     for pat in _PCC4_KILL_FILENAME_GLOBS:
         # Convert glob to regex-friendly: `project_*killed*.md` ->
         # check substring `killed` in lowercased name with `project_`
@@ -37034,10 +37089,25 @@ def _pcc4_file_has_kill_semantics(path: Path, text: str) -> bool:
             kw = pat_lower.replace("project_*", "").replace("*.md", "")
             if name_lower.startswith("project_") and kw in name_lower:
                 return True
-    # Body literal match (case-sensitive). Per Round 1 council greenup,
-    # exclude markdown table rows + lines inside fenced code blocks
-    # (`” ”` / `” ”python` etc.) - those are SELF-CITATIONS of other
-    # files' kill verdicts, not a verdict about the current file.
+    return False
+
+
+def _pcc4_scannable_body_literal_hits(text: str) -> set[str]:
+    """Return the set of kill body literals present on SCANNABLE lines.
+
+    Excluded as citation markup (not a verdict ABOUT the current file):
+      - markdown table rows (lines starting with `|`) — status
+        checkpoints and forensic audits CITE retired/falsified lanes in
+        summary tables; Round 1 of the recursive greenup council pass
+        caught this false positive (memory: feedback_grand_council_
+        recursive_greenup_shannon_floor_20260501.md, CRITICAL #5);
+      - fenced code blocks;
+      - blockquote lines (starting with `>`) — added 2026-08-27
+        (pf2x r91): a blockquote QUOTES another document by definition;
+        the one live instance was a DEFER memo quoting CLAUDE.md's own
+        protocol text containing `VERDICT: KILL` verbatim.
+    """
+    hits: set[str] = set()
     in_code_fence = False
     for line in text.splitlines():
         stripped = line.lstrip()
@@ -37050,10 +37120,21 @@ def _pcc4_file_has_kill_semantics(path: Path, text: str) -> bool:
         # Skip markdown table rows (lines that begin with `|`).
         if stripped.startswith("|"):
             continue
+        # Skip blockquote lines (citation markup).
+        if stripped.startswith(">"):
+            continue
         for lit in _PCC4_KILL_BODY_LITERALS:
             if lit in line:
-                return True
-    return False
+                hits.add(lit)
+    return hits
+
+
+def _pcc4_file_has_kill_semantics(path: Path, text: str) -> bool:
+    """True if the file MUST be scanned by this check (filename glob
+    OR body literal match on a scannable line)."""
+    return _pcc4_filename_matches_kill_glob(path.name) or bool(
+        _pcc4_scannable_body_literal_hits(text)
+    )
 
 
 def _pcc4_audit_one_file(path: Path) -> list[str]:
@@ -37077,8 +37158,25 @@ def _pcc4_audit_one_file(path: Path) -> list[str]:
         return []
 
     # Trigger condition: filename or body indicates kill semantics.
-    if not _pcc4_file_has_kill_semantics(path, text):
+    glob_hit = _pcc4_filename_matches_kill_glob(path.name)
+    body_hits = _pcc4_scannable_body_literal_hits(text)
+    if not glob_hit and not body_hits:
         return []
+
+    # Era-debt grandfather (2026-08-27, pf2x r91 — see the
+    # _PCC4_NARRATIVE_ERA_DEBT_CUTOFF comment block): a file whose ONLY
+    # trigger is narrative-token body literals (FALSIFIED / RETIRED,
+    # never "VERDICT: KILL", never a kill-glob filename) and whose
+    # filename date predates the re-baseline is measured research
+    # narrative, not an un-councilled kill recording. Glob-named files
+    # and plain-line "VERDICT: KILL" recordings bind at ALL dates.
+    if not glob_hit and "VERDICT: KILL" not in body_hits:
+        date_suffix = _pcc4_extract_filename_date_suffix(path.name)
+        if (
+            date_suffix is not None
+            and date_suffix < _PCC4_NARRATIVE_ERA_DEBT_CUTOFF
+        ):
+            return []
 
     missing: list[str] = []
 
