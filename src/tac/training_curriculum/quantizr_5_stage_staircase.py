@@ -40,6 +40,10 @@ Canonical-vs-unique decision per layer (Catalog #290)
 * FP4 codebook → ADOPT canonical ``fake_quant_fp4`` /
   :class:`tac.fp4_quantize.FakeQuantFP4` primitives (per FP4 hardware
   disclosure discipline).
+  # FP4_HARDWARE_DISCLOSED: this module is a curriculum SPEC — the FP4
+  # references above and in stage ``notes`` strings are prose, not
+  # instantiations; any consumer that actually inserts fakequant is
+  # simulated FP4 per project_cosmos_deep_dive_addendum_20260428.
 
 Cargo-cult audit per assumption
 ───────────────────────────────

@@ -780,6 +780,10 @@ def apply_fp4_qat_finetune_on_top_k_tensors(
     """
     from tac.fp4_quantize import DEFAULT_BLOCK_SIZE, DEFAULT_CODEBOOK, fake_quant_fp4
 
+    # FP4_HARDWARE_DISCLOSED: QAT fake-quant is simulation by design (STE
+    # grid-settle on float tensors, any device); no hardware-FP4 claim is
+    # made — archive bytes are real FP4, the training-time quantizer is
+    # simulated per project_cosmos_deep_dive_addendum_20260428.
     if qat_epochs < 0:
         raise ValueError(f"qat_epochs must be >= 0; got {qat_epochs}")
     torch.manual_seed(int(seed))
