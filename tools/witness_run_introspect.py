@@ -1,3 +1,4 @@
+# no-argparse-OK: no argv consumed — __main__ runs on pinned inputs/env; nothing for --help to discover
 """Schema-driven RUN INTROSPECTION for the live dashboard LIVE tab (task #352).
 
 Operator directive 2026-07-08: the LIVE tab must render the run's ACTUAL schedule,
