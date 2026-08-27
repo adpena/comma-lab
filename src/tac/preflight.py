@@ -38750,10 +38750,19 @@ def check_evidence_row_has_falsification_scope_when_negative(
 
     reviewed_keys: set[tuple[str, str, str, str]] = set()
     reviewed_key_reasons: dict[tuple[str, str, str, str], str] = {}
+    # Fallback supersession join for KEYLESS pre-audit-era rows: historical
+    # evidence rows (e.g. the 2026-05 cathedral score-response era) carry no
+    # lane_id/job_name, so the 4-part forensic key is None and NO sibling
+    # review row can ever clear them — while the JSONL itself is registered
+    # HISTORICAL_PROVENANCE line-append-only with append_fields: [], so the
+    # in-row audit can never be added either (jointly unsatisfiable, the
+    # #1216 genus). The fallback key (technique, archive_sha256) is exact
+    # custody: technique strings are timestamped-unique and the sha pins the
+    # measured bytes. The RIGOR is unchanged — a fallback review row must
+    # itself carry a VALID six-field engineering_forensic_audit.
+    reviewed_fallback_keys: set[tuple[str, str]] = set()
+    reviewed_fallback_reasons: dict[tuple[str, str], str] = {}
     for rel, lineno, row in evidence_rows:
-        key = _evidence_row_forensic_key(row)
-        if key is None:
-            continue
         audit_ok = False
         audit_reason = ""
         audit = row.get("engineering_forensic_audit")
@@ -38764,11 +38773,21 @@ def check_evidence_row_has_falsification_scope_when_negative(
                 root,
                 row.get("exact_result_review_packet"),
             )
+        key = _evidence_row_forensic_key(row)
+        if key is not None:
+            if audit_ok:
+                reviewed_keys.add(key)
+                reviewed_key_reasons[key] = f"{rel}:{lineno}"
+            elif audit_reason:
+                reviewed_key_reasons.setdefault(key, audit_reason)
         if audit_ok:
-            reviewed_keys.add(key)
-            reviewed_key_reasons[key] = f"{rel}:{lineno}"
-        elif audit_reason:
-            reviewed_key_reasons.setdefault(key, audit_reason)
+            fkey = (
+                str(row.get("technique") or ""),
+                str(row.get("archive_sha256") or ""),
+            )
+            if all(fkey):
+                reviewed_fallback_keys.add(fkey)
+                reviewed_fallback_reasons[fkey] = f"{rel}:{lineno}"
 
     for rel, lineno, row in evidence_rows:
         if "family_falsified" not in row:
@@ -38805,6 +38824,21 @@ def check_evidence_row_has_falsification_scope_when_negative(
             if not audit_ok and key is not None and key in reviewed_keys:
                 audit_ok = True
                 audit_reason = f"superseded_by_reviewed_duplicate:{reviewed_key_reasons[key]}"
+            if not audit_ok and key is None:
+                # Keyless-row fallback: only rows that CANNOT carry the 4-part
+                # forensic key (no lane_id/job_name — pre-audit-era rows in
+                # line-append-only HISTORICAL_PROVENANCE files) may be cleared
+                # by an audit-valid sibling sharing (technique, archive_sha256).
+                fkey = (
+                    str(row.get("technique") or ""),
+                    str(row.get("archive_sha256") or ""),
+                )
+                if all(fkey) and fkey in reviewed_fallback_keys:
+                    audit_ok = True
+                    audit_reason = (
+                        "superseded_by_reviewed_fallback:"
+                        f"{reviewed_fallback_reasons[fkey]}"
+                    )
             if not audit_ok:
                 technique = row.get("technique", "<unknown>")
                 violations.append(

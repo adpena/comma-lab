@@ -5304,3 +5304,85 @@ class TestEvidenceFalsificationScopeGuard:
                 strict=True,
                 verbose=False,
             )
+
+    # --- keyless-row fallback supersession (r92, the #1216 genus cure) ---
+
+    _VALID_AUDIT = (
+        '{"custody_reviewed":true,"axis_reviewed":true,'
+        '"runtime_config_reviewed":true,'
+        '"archive_runtime_closure_reviewed":true,'
+        '"score_formula_reviewed":true,"dispatch_claim_reviewed":true,'
+        '"engineering_or_config_bug_found":false,'
+        '"classification_after_audit":"instance_negative_confirmed"}'
+    )
+
+    def test_keyless_negative_row_cleared_by_audit_valid_fallback_sibling(
+        self, tmp_path: Path
+    ) -> None:
+        """A pre-audit-era row with NO lane_id/job_name (forensic key None) in a
+        line-append-only file is cleared by an audit-VALID sibling review row
+        sharing (technique, archive_sha256)."""
+        root = _stub_repo(tmp_path)
+        _write(root / "reports" / "cathedral_autopilot_evidence.jsonl", f"""
+            {{"technique":"legacy_score_response","archive_sha256":"aa11","evidence_grade":"[exact-CUDA-negative]","family_falsified":false,"falsification_scope":"measured_config_only"}}
+            {{"technique":"legacy_score_response","archive_sha256":"aa11","lane_id":"r92_backfill","job_name":"review_row","engineering_forensic_audit":{self._VALID_AUDIT}}}
+        """)
+        assert check_evidence_row_has_falsification_scope_when_negative(
+            repo_root=root,
+            strict=True,
+            verbose=False,
+        ) == []
+
+    def test_keyless_row_not_cleared_when_sibling_audit_invalid(
+        self, tmp_path: Path
+    ) -> None:
+        """A fallback sibling whose audit is INVALID (missing required-true
+        field) must NOT clear the keyless row — the rigor bar is unchanged."""
+        root = _stub_repo(tmp_path)
+        bad_audit = self._VALID_AUDIT.replace(
+            '"custody_reviewed":true', '"custody_reviewed":false'
+        )
+        _write(root / "reports" / "cathedral_autopilot_evidence.jsonl", f"""
+            {{"technique":"legacy_score_response","archive_sha256":"aa11","evidence_grade":"[exact-CUDA-negative]","family_falsified":false,"falsification_scope":"measured_config_only"}}
+            {{"technique":"legacy_score_response","archive_sha256":"aa11","lane_id":"r92_backfill","job_name":"review_row","engineering_forensic_audit":{bad_audit}}}
+        """)
+        with pytest.raises(PreflightError, match="FALSIFICATION SCOPE"):
+            check_evidence_row_has_falsification_scope_when_negative(
+                repo_root=root,
+                strict=True,
+                verbose=False,
+            )
+
+    def test_keyless_row_not_cleared_on_fallback_key_mismatch(
+        self, tmp_path: Path
+    ) -> None:
+        """A fallback sibling with a DIFFERENT archive_sha256 must NOT clear
+        the keyless row — the join is exact custody, not technique-only."""
+        root = _stub_repo(tmp_path)
+        _write(root / "reports" / "cathedral_autopilot_evidence.jsonl", f"""
+            {{"technique":"legacy_score_response","archive_sha256":"aa11","evidence_grade":"[exact-CUDA-negative]","family_falsified":false,"falsification_scope":"measured_config_only"}}
+            {{"technique":"legacy_score_response","archive_sha256":"bb22","lane_id":"r92_backfill","job_name":"review_row","engineering_forensic_audit":{self._VALID_AUDIT}}}
+        """)
+        with pytest.raises(PreflightError, match="FALSIFICATION SCOPE"):
+            check_evidence_row_has_falsification_scope_when_negative(
+                repo_root=root,
+                strict=True,
+                verbose=False,
+            )
+
+    def test_fully_keyed_row_never_uses_fallback(self, tmp_path: Path) -> None:
+        """PRECISION GUARANTEE: a row that CAN carry the 4-part forensic key
+        must be cleared by a full-key match only — a (technique,
+        archive_sha256) fallback sibling with a different lane/job does NOT
+        clear it."""
+        root = _stub_repo(tmp_path)
+        _write(root / "reports" / "cathedral_autopilot_evidence.jsonl", f"""
+            {{"technique":"legacy_score_response","archive_sha256":"aa11","lane_id":"orig_lane","job_name":"orig_job","evidence_grade":"[exact-CUDA-negative]","family_falsified":false,"falsification_scope":"measured_config_only"}}
+            {{"technique":"legacy_score_response","archive_sha256":"aa11","lane_id":"other_lane","job_name":"other_job","engineering_forensic_audit":{self._VALID_AUDIT}}}
+        """)
+        with pytest.raises(PreflightError, match="FALSIFICATION SCOPE"):
+            check_evidence_row_has_falsification_scope_when_negative(
+                repo_root=root,
+                strict=True,
+                verbose=False,
+            )
