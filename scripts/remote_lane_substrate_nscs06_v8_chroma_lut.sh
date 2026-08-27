@@ -37,6 +37,12 @@ export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"
 export DALI_DISABLE_NVML="${DALI_DISABLE_NVML:-1}"
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 
+# Stage 0: NVDEC/CUDA preflight (fail-closed before any GPU-cost stage).
+echo "=== Stage 0: NVDEC and CUDA preflight ==="
+_nvdec_probe="${WORKSPACE:-$PWD}/scripts/probe_nvdec.sh"
+[ -f "$_nvdec_probe" ] || _nvdec_probe="$(cd "$(dirname "$0")/.." && pwd)/scripts/probe_nvdec.sh"
+bash "$_nvdec_probe" || { echo "FATAL: NVDEC probe failed" >&2; exit 2; }
+
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-}"
 LANE_ID="lane_wave_3_nscs06_v8_chroma_lut_substrate_build_20260521"
