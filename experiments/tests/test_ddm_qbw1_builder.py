@@ -8,6 +8,8 @@ from pathlib import Path
 
 import numpy as np
 
+from tac.payload_retention_gate import check_no_measure_and_discard_payload
+
 REPO = Path(__file__).resolve().parents[2]
 
 
@@ -79,3 +81,64 @@ def test_preregistered_selection_is_seeded_stratified_n32() -> None:
     assert all(row["pair_id"] in by_id[row["stratum_id"]]["population_pair_ids"] for row in selected)
     _strata_repeat, selected_repeat = builder.selection_rows(field)
     assert selected_repeat == selected
+
+
+def test_qbw2_real_field_conditional_and_road_topology_roundtrip() -> None:
+    packet = _load("ddm_qbw1_packet_qbw2", REPO / "experiments/ddm_qbw1_packet.py")
+    sys.modules["ddm_qbw1_packet"] = packet
+    builder = _load("ddm_qbw1_builder_qbw2", REPO / "experiments/ddm_qbw1_builder.py")
+    field = np.memmap(
+        builder.SOURCE_FIELD,
+        dtype=np.uint8,
+        mode="r",
+        shape=(builder.N, builder.H, builder.W),
+    )
+    previous = np.asarray(field[0]).copy()
+    current = np.asarray(field[1]).copy()
+    prediction = builder.shift_with_colocated_fallback(previous, 0, 0)
+    innovation = builder.innovation_pair_blob(1, current, prediction)
+    pair_id, restored = builder.decode_innovation_pair(innovation, prediction)
+    assert pair_id == 1
+    assert np.array_equal(restored, current)
+
+    topology = builder.road_topology_pair_blob(1, current)
+    pair_id, restored = builder.decode_road_topology_pair(topology)
+    assert pair_id == 1
+    assert np.array_equal(restored, current)
+    total, road_touch = builder.road_interface_facts(current)
+    assert 0 < road_touch < total
+
+
+def test_qbw2_bit_packing_and_carried_state_shift_are_canonical() -> None:
+    packet = _load("ddm_qbw1_packet_qbw2_pack", REPO / "experiments/ddm_qbw1_packet.py")
+    sys.modules["ddm_qbw1_packet"] = packet
+    builder = _load("ddm_qbw1_builder_qbw2_pack", REPO / "experiments/ddm_qbw1_builder.py")
+    values = np.arange(35, dtype=np.uint8) % 5
+    packed = builder.pack_unsigned(values, 3)
+    assert np.array_equal(builder.unpack_unsigned(packed, values.size, 3), values)
+
+    field = np.memmap(
+        builder.SOURCE_FIELD,
+        dtype=np.uint8,
+        mode="r",
+        shape=(builder.N, builder.H, builder.W),
+    )
+    ys, xs = np.indices((24, 32), dtype=np.uint8)
+    carrier = np.stack((np.asarray(field[0, :24, :32]), ys, xs), axis=2)
+    shifted_rgb = np.stack(
+        [builder.shift_with_colocated_fallback(carrier[:, :, channel], 1, -2) for channel in range(3)],
+        axis=2,
+    )
+    assert builder.estimate_carrier_shift(carrier, shifted_rgb, radius=3) == (1, -2)
+
+
+def test_qbw2_sources_pass_payload_retention_gate() -> None:
+    findings = check_no_measure_and_discard_payload(
+        repo_root=REPO,
+        strict=False,
+        roots=(
+            "experiments/ddm_qbw1_builder.py",
+            "experiments/tests/test_ddm_qbw1_builder.py",
+        ),
+    )
+    assert findings == []

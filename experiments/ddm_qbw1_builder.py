@@ -10,20 +10,26 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
 import io
 import json
+import lzma
 import math
 import os
 import platform
 import shutil
+import struct
 import subprocess
+import sys
 import time
 import uuid
 import zipfile
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import brotli
 import ddm_qbw1_packet as packet
 import numpy as np
 import psutil
@@ -54,6 +60,19 @@ GB1_ARCHIVE = Path(
 GB1_SHA256 = "ba1f3830cd51b820d7f9b834a1dcc12e8776a0260f9da57a4e8e0944b988e3a4"
 GB1_BYTES = 180_215
 GB1_SCORE = 0.14811799921260607
+QBW2_ROOT = STORE / "qbw2_temporal_bound"
+QBW2_CLEARING_BOUND_BYTES = 68_000
+GB1_RUNTIME = Path(
+    "/Volumes/APDataStore/pact/ddm_gb1_groupbin8_conditioning/"
+    "runtime_groupbin8_surprise"
+)
+
+_BOUND_STREAM_HEADER = struct.Struct(">4sBHHH")
+_QBW_OBJECT_PAIR_HEADER = struct.Struct(">HIII")
+_INNOVATION_PAIR_HEADER = struct.Struct(">HI")
+_ROAD_TOPOLOGY_PAIR_HEADER = struct.Struct(">HI")
+_MASK_BYTES = (H * W + 7) // 8
+_CODER_NAMES = ("brotli_q11", "lzma9e", "zlib9")
 
 
 class QBW1BuildError(RuntimeError):
@@ -530,6 +549,300 @@ def raw_sections(obj: dict[str, Any]) -> tuple[tuple[int, bytes], ...]:
         (packet.SECTION_REGION_SEEDS, packet.encode_seed_labels(obj["seed_labels"])),
         (packet.SECTION_LANE_DASH_EVENTS, packet.encode_lane_events(obj["lane_events"])),
     )
+
+
+def pack_unsigned(values: np.ndarray, bits: int) -> bytes:
+    """Pack a flat unsigned integer array in little-bit order."""
+    flat = np.asarray(values, dtype=np.uint8).reshape(-1)
+    if not 1 <= bits <= 8:
+        raise QBW1BuildError("packed symbol width is outside 1..8")
+    if flat.size and int(flat.max()) >= 1 << bits:
+        raise QBW1BuildError("packed symbol exceeds declared width")
+    bit_rows = ((flat[:, None] >> np.arange(bits, dtype=np.uint8)) & 1).reshape(-1)
+    return np.packbits(bit_rows, bitorder="little").tobytes()
+
+
+def unpack_unsigned(payload: bytes, count: int, bits: int) -> np.ndarray:
+    """Inverse of :func:`pack_unsigned`, with canonical padding checks."""
+    expected = (count * bits + 7) // 8
+    if len(payload) != expected:
+        raise QBW1BuildError("packed symbol payload length differs")
+    unpacked = np.unpackbits(np.frombuffer(payload, dtype=np.uint8), bitorder="little")
+    if np.any(unpacked[count * bits :]):
+        raise QBW1BuildError("packed symbol payload has non-zero padding")
+    rows = unpacked[: count * bits].reshape(count, bits).astype(np.uint16)
+    weights = (1 << np.arange(bits, dtype=np.uint16))[None, :]
+    return np.sum(rows * weights, axis=1, dtype=np.uint16).astype(np.uint8)
+
+
+def encode_qbw_object_pair(pair_id: int, sections: tuple[tuple[int, bytes], ...]) -> bytes:
+    by_id = dict(sections)
+    if tuple(sorted(by_id)) != packet.SECTION_IDS:
+        raise QBW1BuildError("QBW object pair lacks a frozen v1 section")
+    ordered = [by_id[section_id] for section_id in packet.SECTION_IDS]
+    return _QBW_OBJECT_PAIR_HEADER.pack(pair_id, *(len(raw) for raw in ordered)) + b"".join(ordered)
+
+
+def decode_qbw_object_pair(payload: bytes) -> tuple[int, tuple[tuple[int, bytes], ...]]:
+    if len(payload) < _QBW_OBJECT_PAIR_HEADER.size:
+        raise QBW1BuildError("truncated QBW object pair")
+    pair_id, *lengths = _QBW_OBJECT_PAIR_HEADER.unpack_from(payload)
+    offset = _QBW_OBJECT_PAIR_HEADER.size
+    sections = []
+    for section_id, length in zip(packet.SECTION_IDS, lengths, strict=True):
+        end = offset + length
+        if end > len(payload):
+            raise QBW1BuildError("truncated QBW object section")
+        raw = payload[offset:end]
+        if section_id == packet.SECTION_BASE_CRACK_CHAINS:
+            packet.decode_chains(raw)
+        elif section_id == packet.SECTION_REGION_SEEDS:
+            packet.decode_seed_labels(raw)
+        else:
+            packet.decode_lane_events(raw)
+        sections.append((section_id, raw))
+        offset = end
+    if offset != len(payload):
+        raise QBW1BuildError("QBW object pair has trailing bytes")
+    return pair_id, tuple(sections)
+
+
+def encode_bound_stream(magic: bytes, pair_blobs: list[bytes]) -> bytes:
+    if len(magic) != 4 or len(pair_blobs) > 0xFFFF:
+        raise QBW1BuildError("invalid bound stream header")
+    return _BOUND_STREAM_HEADER.pack(magic, 1, len(pair_blobs), H, W) + b"".join(pair_blobs)
+
+
+def _compress_bound_payload(raw: bytes, coder: str) -> bytes:
+    if coder == "brotli_q11":
+        return brotli.compress(raw, mode=brotli.MODE_GENERIC, quality=11)
+    if coder == "lzma9e":
+        return lzma.compress(raw, format=lzma.FORMAT_XZ, preset=9 | lzma.PRESET_EXTREME)
+    if coder == "zlib9":
+        return zlib.compress(raw, level=9)
+    raise QBW1BuildError(f"unknown bound coder: {coder}")
+
+
+def _decompress_bound_payload(payload: bytes, coder: str) -> bytes:
+    if coder == "brotli_q11":
+        return brotli.decompress(payload)
+    if coder == "lzma9e":
+        return lzma.decompress(payload, format=lzma.FORMAT_XZ)
+    if coder == "zlib9":
+        return zlib.decompress(payload)
+    raise QBW1BuildError(f"unknown bound coder: {coder}")
+
+
+def retain_coder_race(root: Path, raw: bytes) -> dict[str, Any]:
+    """Persist one real input and every real-coder primary/repeat payload."""
+    input_fact = atomic_bytes_once(root / "input.bin", raw)
+    rows = []
+    for coder in _CODER_NAMES:
+        encoded = _compress_bound_payload(raw, coder)
+        repeat = _compress_bound_payload(raw, coder)
+        if encoded != repeat:
+            raise QBW1BuildError(f"{coder} repeat differs")
+        if _decompress_bound_payload(encoded, coder) != raw:
+            raise QBW1BuildError(f"{coder} decode differs")
+        primary_fact = atomic_bytes_once(root / f"payload.{coder}", encoded)
+        repeat_fact = atomic_bytes_once(root / f"payload.repeat.{coder}", repeat)
+        rows.append(
+            {
+                "coder": coder,
+                "payload": primary_fact,
+                "repeat": repeat_fact,
+                "decode_exact": True,
+                "repeat_byte_identical": True,
+            }
+        )
+    winner = min(rows, key=lambda row: (row["payload"]["bytes"], row["coder"]))
+    result = {
+        "schema": "ddm_qbw2_real_coder_race.v1",
+        "input": input_fact,
+        "rows": rows,
+        "winner": winner,
+    }
+    atomic_json_once(root / "RACE.json", result)
+    return result
+
+
+def shift_with_colocated_fallback(field: np.ndarray, dy: int, dx: int) -> np.ndarray:
+    """Translate a field while retaining the co-located prior outside overlap."""
+    if field.ndim != 2:
+        raise QBW1BuildError("translation expects a two-dimensional field")
+    height, width = field.shape
+    result = field.copy()
+    src_y0, src_y1 = max(0, -dy), min(height, height - dy)
+    src_x0, src_x1 = max(0, -dx), min(width, width - dx)
+    dst_y0, dst_y1 = src_y0 + dy, src_y1 + dy
+    dst_x0, dst_x1 = src_x0 + dx, src_x1 + dx
+    if src_y0 < src_y1 and src_x0 < src_x1:
+        result[dst_y0:dst_y1, dst_x0:dst_x1] = field[src_y0:src_y1, src_x0:src_x1]
+    return result
+
+
+def estimate_carrier_shift(previous: np.ndarray, current: np.ndarray, radius: int = 4) -> tuple[int, int]:
+    """Find the deterministic integer translation minimizing carried-state RGB error."""
+    if previous.shape != current.shape or previous.ndim != 3:
+        raise QBW1BuildError("GB1 carried-state pair geometry differs")
+    height, width, _channels = previous.shape
+    best: tuple[int, int, int, int] | None = None
+    for dy in range(-radius, radius + 1):
+        for dx in range(-radius, radius + 1):
+            src_y0, src_y1 = max(0, -dy), min(height, height - dy)
+            src_x0, src_x1 = max(0, -dx), min(width, width - dx)
+            dst_y0, dst_y1 = src_y0 + dy, src_y1 + dy
+            dst_x0, dst_x1 = src_x0 + dx, src_x1 + dx
+            source = previous[src_y0:src_y1, src_x0:src_x1].astype(np.int32)
+            target = current[dst_y0:dst_y1, dst_x0:dst_x1].astype(np.int32)
+            squared_error = int(np.square(source - target, dtype=np.int64).sum(dtype=np.int64))
+            count = int(source.size)
+            candidate = (squared_error, count, dy, dx)
+            if best is None:
+                best = candidate
+                continue
+            if squared_error * best[1] < best[0] * count or (
+                squared_error * best[1] == best[0] * count and (dy, dx) < (best[2], best[3])
+            ):
+                best = candidate
+    if best is None:
+        raise QBW1BuildError("GB1 carried-state translation search was empty")
+    return best[2], best[3]
+
+
+def load_gb1_carried_state() -> tuple[np.ndarray, dict[str, Any]]:
+    """Decode the actual GB1 12-D pose-carrier state; never substitute GT Pose6."""
+    if sha256_file(GB1_ARCHIVE) != GB1_SHA256:
+        raise QBW1BuildError("GB1 archive drift before carried-state decode")
+    runtime_path = str(GB1_RUNTIME)
+    cpr1_path = str(GB1_RUNTIME / "cpr1")
+    for entry in (runtime_path, cpr1_path):
+        if entry not in sys.path:
+            sys.path.insert(0, entry)
+    inflate = importlib.import_module("runtime.f26_inflate")
+    carrier_repack = importlib.import_module("runtime.carrier_repack")
+    parts = inflate.read_residual_archive(GB1_ARCHIVE)
+    renderer = inflate._load_renderer(GB1_RUNTIME / "cpr1")
+    carrier_blob, _selector = carrier_repack.split_frame0_selector_carrier(parts.carrier_blob)
+    canonical = carrier_repack.materialize_cpr1(carrier_blob, renderer)
+    semantic_pose = (
+        struct.pack("<II", len(parts.semantic_blob), len(canonical))
+        + parts.semantic_blob
+        + canonical
+    )
+    _semantic, basis_t, coefficients_t = renderer.unpack_semantic_pose(semantic_pose)
+    basis = basis_t.detach().cpu().numpy().astype(np.float32, copy=False)
+    coefficients = coefficients_t.detach().cpu().numpy().astype(np.float32, copy=False)
+    if basis.shape != (12, 3, 24, 32) or coefficients.shape != (N, 12):
+        raise QBW1BuildError("GB1 carried pose-carrier tensors have unexpected geometry")
+    lowres = np.einsum("nd,dchw->nchw", coefficients, basis, optimize=False) / math.sqrt(12.0)
+    lowres = np.clip(np.rint(127.5 + 64.0 * lowres), 0, 255).astype(np.uint8)
+    lowres = np.transpose(lowres, (0, 2, 3, 1)).copy()
+    retained = atomic_npz_once(
+        QBW2_ROOT / "inputs" / "gb1_carried_pose_state.npz",
+        carrier_lowres_u8=lowres,
+        coefficients_f32=coefficients,
+        basis_f32=basis,
+    )
+    return lowres, {
+        "archive": file_fact(GB1_ARCHIVE),
+        "runtime_root": str(GB1_RUNTIME),
+        "retained_decoded_state": retained,
+        "source_kind": "GB1 decoded 12-D pose-carrier state",
+        "geometric_pose6_available_in_gb1": False,
+        "gt_pose_substituted": False,
+    }
+
+
+def carried_state_shifts(lowres: np.ndarray) -> tuple[list[tuple[int, int]], list[dict[str, Any]]]:
+    shifts = [(0, 0)]
+    rows = [{"pair_id": 0, "carrier_dy": 0, "carrier_dx": 0, "field_dy": 0, "field_dx": 0}]
+    scale_y, scale_x = H // lowres.shape[1], W // lowres.shape[2]
+    if (scale_y, scale_x) != (16, 16):
+        raise QBW1BuildError("GB1 carried-state grid does not scale exactly to quotient field")
+    for pair_id in range(1, N):
+        dy, dx = estimate_carrier_shift(lowres[pair_id - 1], lowres[pair_id])
+        field_shift = (dy * scale_y, dx * scale_x)
+        shifts.append(field_shift)
+        rows.append(
+            {
+                "pair_id": pair_id,
+                "carrier_dy": dy,
+                "carrier_dx": dx,
+                "field_dy": field_shift[0],
+                "field_dx": field_shift[1],
+            }
+        )
+    atomic_bytes_once(
+        QBW2_ROOT / "inputs" / "gb1_carried_pose_shifts.jsonl",
+        b"".join(canonical_json_bytes(row) for row in rows),
+    )
+    return shifts, rows
+
+
+def innovation_pair_blob(pair_id: int, current: np.ndarray, prediction: np.ndarray) -> bytes:
+    mismatch = np.asarray(current != prediction, dtype=np.uint8).reshape(-1)
+    mask = pack_unsigned(mismatch, 1)
+    labels = np.asarray(current, dtype=np.uint8).reshape(-1)[mismatch.astype(bool)]
+    return _INNOVATION_PAIR_HEADER.pack(pair_id, labels.size) + mask + pack_unsigned(labels, 3)
+
+
+def decode_innovation_pair(payload: bytes, prediction: np.ndarray) -> tuple[int, np.ndarray]:
+    if len(payload) < _INNOVATION_PAIR_HEADER.size + _MASK_BYTES:
+        raise QBW1BuildError("truncated temporal innovation pair")
+    pair_id, mismatch_count = _INNOVATION_PAIR_HEADER.unpack_from(payload)
+    offset = _INNOVATION_PAIR_HEADER.size
+    mismatch = unpack_unsigned(payload[offset : offset + _MASK_BYTES], H * W, 1).astype(bool)
+    if int(mismatch.sum()) != mismatch_count:
+        raise QBW1BuildError("temporal innovation mismatch count differs")
+    offset += _MASK_BYTES
+    labels = unpack_unsigned(payload[offset:], mismatch_count, 3)
+    if labels.size and int(labels.max()) > 4:
+        raise QBW1BuildError("temporal innovation contains a noncanonical label")
+    restored = np.asarray(prediction, dtype=np.uint8).copy().reshape(-1)
+    restored[mismatch] = labels
+    return pair_id, restored.reshape(H, W)
+
+
+def road_topology_pair_blob(pair_id: int, current: np.ndarray) -> bytes:
+    flat = np.asarray(current, dtype=np.uint8).reshape(-1)
+    road = flat == 0
+    exceptions = flat[~road]
+    if exceptions.size and not set(np.unique(exceptions).tolist()).issubset({1, 2, 3, 4}):
+        raise QBW1BuildError("Road topology exception contains a noncanonical label")
+    return (
+        _ROAD_TOPOLOGY_PAIR_HEADER.pack(pair_id, exceptions.size)
+        + pack_unsigned(road.astype(np.uint8), 1)
+        + pack_unsigned(exceptions - 1, 2)
+    )
+
+
+def decode_road_topology_pair(payload: bytes) -> tuple[int, np.ndarray]:
+    if len(payload) < _ROAD_TOPOLOGY_PAIR_HEADER.size + _MASK_BYTES:
+        raise QBW1BuildError("truncated Road topology pair")
+    pair_id, exception_count = _ROAD_TOPOLOGY_PAIR_HEADER.unpack_from(payload)
+    offset = _ROAD_TOPOLOGY_PAIR_HEADER.size
+    road = unpack_unsigned(payload[offset : offset + _MASK_BYTES], H * W, 1).astype(bool)
+    if int((~road).sum()) != exception_count:
+        raise QBW1BuildError("Road topology exception count differs")
+    offset += _MASK_BYTES
+    exceptions = unpack_unsigned(payload[offset:], exception_count, 2) + 1
+    restored = np.zeros(H * W, dtype=np.uint8)
+    restored[~road] = exceptions
+    return pair_id, restored.reshape(H, W)
+
+
+def road_interface_facts(field: np.ndarray) -> tuple[int, int]:
+    left, right = field[:, :-1], field[:, 1:]
+    top, bottom = field[:-1, :], field[1:, :]
+    right_diff = left != right
+    down_diff = top != bottom
+    total = int(right_diff.sum(dtype=np.int64) + down_diff.sum(dtype=np.int64))
+    road_touch = int(
+        (right_diff & ((left == 0) | (right == 0))).sum(dtype=np.int64)
+        + (down_diff & ((top == 0) | (bottom == 0))).sum(dtype=np.int64)
+    )
+    return total, road_touch
 
 
 def stage_01() -> dict[str, Any]:
@@ -1025,6 +1338,303 @@ def sealed_fire_order(stage2: dict[str, Any]) -> dict[str, Any]:
     return order
 
 
+def _qbw2_pair_blobs(
+    pair_ids: list[int],
+    field: np.memmap,
+    shifts: list[tuple[int, int]],
+) -> tuple[dict[str, list[bytes]], list[dict[str, Any]]]:
+    blobs: dict[str, list[bytes]] = {"joint": [], "conditional": [], "road_topology": []}
+    rows = []
+    for pair_id in pair_ids:
+        current = np.asarray(field[pair_id]).copy()
+        obj = extract_object(current)
+        sections = raw_sections(obj)
+        object_blob = encode_qbw_object_pair(pair_id, sections)
+        restored_pair, restored_sections = decode_qbw_object_pair(object_blob)
+        if restored_pair != pair_id or restored_sections != sections:
+            raise QBW1BuildError(f"pair {pair_id} QBW logical stream differs")
+
+        if pair_id == 0:
+            prediction = np.zeros((H, W), dtype=np.uint8)
+        else:
+            previous = np.asarray(field[pair_id - 1]).copy()
+            prediction = shift_with_colocated_fallback(previous, *shifts[pair_id])
+        conditional_blob = innovation_pair_blob(pair_id, current, prediction)
+        decoded_pair, conditional_restored = decode_innovation_pair(conditional_blob, prediction)
+        if decoded_pair != pair_id or not np.array_equal(conditional_restored, current):
+            raise QBW1BuildError(f"pair {pair_id} temporal innovation decode differs")
+
+        topology_blob = road_topology_pair_blob(pair_id, current)
+        topology_pair, topology_restored = decode_road_topology_pair(topology_blob)
+        if topology_pair != pair_id or not np.array_equal(topology_restored, current):
+            raise QBW1BuildError(f"pair {pair_id} Road topology decode differs")
+        total_interfaces, road_touch = road_interface_facts(current)
+        mismatch_count = int(np.count_nonzero(current != prediction))
+        blobs["joint"].append(object_blob)
+        blobs["conditional"].append(conditional_blob)
+        blobs["road_topology"].append(topology_blob)
+        rows.append(
+            {
+                "pair_id": pair_id,
+                "joint_raw_bytes": len(object_blob),
+                "conditional_raw_bytes": len(conditional_blob),
+                "road_topology_raw_bytes": len(topology_blob),
+                "conditional_mismatch_count": mismatch_count,
+                "conditional_mismatch_fraction": mismatch_count / (H * W),
+                "field_shift_dy": shifts[pair_id][0],
+                "field_shift_dx": shifts[pair_id][1],
+                "source_interface_count": total_interfaces,
+                "road_touch_interface_count": road_touch,
+                "road_topology_determinism_fraction": road_touch / total_interfaces,
+                "conditional_decode_exact": True,
+                "road_topology_decode_exact": True,
+            }
+        )
+    return blobs, rows
+
+
+def _retain_n32_bound(
+    blobs: dict[str, list[bytes]],
+    pair_rows: list[dict[str, Any]],
+    selection: list[dict[str, Any]],
+) -> dict[str, Any]:
+    selection_by_pair = {int(row["pair_id"]): row for row in selection}
+    pair_row_by_pair = {int(row["pair_id"]): row for row in pair_rows}
+    leg_results: dict[str, Any] = {}
+    leg_magic = {"joint": b"QBJ2", "conditional": b"QBC2", "road_topology": b"QBT2"}
+    for leg, leg_blobs in blobs.items():
+        races = []
+        for blob in leg_blobs:
+            if leg == "joint":
+                pair_id, _sections = decode_qbw_object_pair(blob)
+            else:
+                pair_id = struct.unpack_from(">H", blob)[0]
+            race = retain_coder_race(
+                QBW2_ROOT / "n32" / "per_pair" / f"pair_{pair_id:04d}" / leg,
+                blob,
+            )
+            winner_bytes = int(race["winner"]["payload"]["bytes"])
+            selection_row = selection_by_pair[pair_id]
+            pair_row_by_pair[pair_id][f"{leg}_independent_winner_coder"] = race["winner"]["coder"]
+            pair_row_by_pair[pair_id][f"{leg}_independent_winner_bytes"] = winner_bytes
+            pair_row_by_pair[pair_id]["stratum_id"] = selection_row["stratum_id"]
+            pair_row_by_pair[pair_id]["ht_weight"] = (
+                selection_row["population_size"] / selection_row["sample_size"]
+            )
+            races.append((pair_id, winner_bytes, race))
+        joint_stream = encode_bound_stream(leg_magic[leg], leg_blobs)
+        joint_race = retain_coder_race(QBW2_ROOT / "n32" / "joint_races" / leg, joint_stream)
+        selected_independent = sum(row[1] for row in races)
+        ht_independent = sum(
+            pair_row_by_pair[pair_id]["ht_weight"] * winner_bytes
+            for pair_id, winner_bytes, _race in races
+        )
+        context_ratio = joint_race["winner"]["payload"]["bytes"] / selected_independent
+        leg_results[leg] = {
+            "selected_independent_winner_bytes": selected_independent,
+            "ht_independent_projection_bytes": ht_independent,
+            "joint_context_winner": joint_race["winner"],
+            "joint_context_ratio_vs_independent": context_ratio,
+            "n600_ratio_ht_projection_bytes": math.ceil(context_ratio * ht_independent),
+            "projection_method": (
+                "HT independent per-pair real-coder bytes multiplied by the n32 joint-context/"
+                "independent ratio; ratio estimator, not a codec or theorem"
+            ),
+        }
+    pair_rows.sort(key=lambda row: row["pair_id"])
+    atomic_bytes_once(
+        QBW2_ROOT / "n32" / "pair_rows.jsonl",
+        b"".join(canonical_json_bytes(row) for row in pair_rows),
+    )
+    result = {
+        "schema": "ddm_qbw2_n32_bound.v1",
+        "axis": "[macOS-CPU scorer-free advisory, seeded-stratified random n32]",
+        "score_claim": False,
+        "pair_rows": pair_rows,
+        "legs": leg_results,
+    }
+    atomic_json_once(QBW2_ROOT / "n32" / "RESULT.json", result)
+    return result
+
+
+def _retain_n600_bound(
+    blobs: dict[str, list[bytes]], pair_rows: list[dict[str, Any]]
+) -> dict[str, Any]:
+    leg_magic = {"joint": b"QBJ2", "conditional": b"QBC2", "road_topology": b"QBT2"}
+    legs = {}
+    for leg, leg_blobs in blobs.items():
+        stream = encode_bound_stream(leg_magic[leg], leg_blobs)
+        race = retain_coder_race(QBW2_ROOT / "n600" / "joint_races" / leg, stream)
+        legs[leg] = {
+            "input_bytes": len(stream),
+            "winner": race["winner"],
+            "n600_quotient_bound_bytes": int(race["winner"]["payload"]["bytes"]),
+            "all_coder_rows": race["rows"],
+            "decode_exact": True,
+        }
+    interface_total = sum(row["source_interface_count"] for row in pair_rows)
+    road_touch_total = sum(row["road_touch_interface_count"] for row in pair_rows)
+    mismatch_total = sum(row["conditional_mismatch_count"] for row in pair_rows)
+    atomic_bytes_once(
+        QBW2_ROOT / "n600" / "pair_rows.jsonl",
+        b"".join(canonical_json_bytes(row) for row in pair_rows),
+    )
+    result = {
+        "schema": "ddm_qbw2_n600_bound.v1",
+        "axis": "[macOS-CPU scorer-free advisory, full n600]",
+        "score_claim": False,
+        "legs": legs,
+        "pair_count": len(pair_rows),
+        "conditional_mismatch_count": mismatch_total,
+        "conditional_mismatch_fraction": mismatch_total / (N * H * W),
+        "source_interface_count": interface_total,
+        "road_touch_interface_count": road_touch_total,
+        "road_topology_determinism_fraction": road_touch_total / interface_total,
+        "pair_rows_path": str(QBW2_ROOT / "n600" / "pair_rows.jsonl"),
+    }
+    atomic_json_once(QBW2_ROOT / "n600" / "RESULT.json", result)
+    return result
+
+
+def qbw2_custody_manifest() -> dict[str, Any]:
+    manifest_path = QBW2_ROOT / "QBW2_CUSTODY_MANIFEST.json"
+    if manifest_path.exists():
+        retained = json.loads(manifest_path.read_text())
+        if retained.get("schema") != "ddm_qbw2_payload_custody_manifest.v1":
+            raise QBW1BuildError("existing QBW2 custody manifest has the wrong schema")
+        for fact in retained.get("files", []):
+            path = Path(fact["path"])
+            if not path.is_file() or file_fact(path) != fact:
+                raise QBW1BuildError(f"QBW2 custody payload drift: {path}")
+        return retained
+    files = []
+    for path in sorted(QBW2_ROOT.rglob("*")):
+        if (
+            not path.is_file()
+            or path.name.startswith("._")
+            or ".part" in path.name
+            or path.name == manifest_path.name
+        ):
+            continue
+        files.append(file_fact(path))
+    manifest = {
+        "schema": "ddm_qbw2_payload_custody_manifest.v1",
+        "root": str(QBW2_ROOT),
+        "files": files,
+        "file_count": len(files),
+        "total_bytes": sum(row["bytes"] for row in files),
+        "all_payloads_retained": True,
+        "cleanup_policy": "success-only atomic .part files are removed; material payloads are never deleted",
+        "command": ".venv/bin/python experiments/ddm_qbw1_builder.py run-qbw2-bound",
+        "git_head": git_head(),
+        "upstream": upstream_identity(),
+        "platform": platform.platform(),
+    }
+    atomic_json_once(manifest_path, manifest)
+    return manifest
+
+
+def run_qbw2_bound() -> dict[str, Any]:
+    checkpoint = QBW2_ROOT / "QBW2_BOUND_CHECKPOINT.json"
+    storage = storage_preflight()
+    require_sources()
+    resumed = load_checkpoint(checkpoint, "ddm_qbw2_temporal_bound.v1")
+    if resumed is not None:
+        qbw2_custody_manifest()
+        return resumed
+    stage0 = stage_00()
+    stage_01()
+    stage_02()
+    started = time.time()
+    lowres, carried_state = load_gb1_carried_state()
+    shifts, shift_rows = carried_state_shifts(lowres)
+    field = source_memmap()
+    selected_ids = [int(row["pair_id"]) for row in stage0["selected"]]
+    n32_blobs, n32_rows = _qbw2_pair_blobs(selected_ids, field, shifts)
+    n32_result = _retain_n32_bound(n32_blobs, n32_rows, stage0["selected"])
+    n600_blobs, n600_rows = _qbw2_pair_blobs(list(range(N)), field, shifts)
+    n600_result = _retain_n600_bound(n600_blobs, n600_rows)
+    bound_rows = []
+    names = {
+        "joint": "joint context compression of time-ordered QBW1 logical sections",
+        "conditional": (
+            "exact innovations after GB1 carried pose-carrier translation proxy; "
+            "not a QA39 ground-homography warp"
+        ),
+        "road_topology": "exact Road topology plus categorical exception stream",
+    }
+    for leg in ("joint", "conditional", "road_topology"):
+        qa39_contract_pass = leg != "conditional"
+        bound_rows.append(
+            {
+                "leg": leg,
+                "mechanism": names[leg],
+                "n32_ratio_ht_projection_bytes": n32_result["legs"][leg][
+                    "n600_ratio_ht_projection_bytes"
+                ],
+                "n600_measured_bound_bytes": n600_result["legs"][leg][
+                    "n600_quotient_bound_bytes"
+                ],
+                "allowance_bytes": QUOTIENT_ALLOWANCE_BYTES,
+                "clearing_margin_bar_bytes": QBW2_CLEARING_BOUND_BYTES,
+                "clears_allowance": n600_result["legs"][leg]["n600_quotient_bound_bytes"]
+                <= QUOTIENT_ALLOWANCE_BYTES,
+                "clears_v2_fire_bar": n600_result["legs"][leg]["n600_quotient_bound_bytes"]
+                <= QBW2_CLEARING_BOUND_BYTES,
+                "gate_eligible": qa39_contract_pass,
+                "qa39_contract_pass": qa39_contract_pass,
+            }
+        )
+    eligible_rows = [row for row in bound_rows if row["gate_eligible"]]
+    best = min(eligible_rows, key=lambda row: (row["n600_measured_bound_bytes"], row["leg"]))
+    result = {
+        "schema": "ddm_qbw2_temporal_bound.v1",
+        "complete": True,
+        "axis": "[macOS-CPU scorer-free advisory, full n600 plus seeded-stratified random n32]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "pointer_moved": False,
+        "git_head": git_head(),
+        "source_field": file_fact(SOURCE_FIELD),
+        "storage_preflight_at_write": storage,
+        "qbw1_commit_pin": "55aa812a3ce794f8a9eadd5d81d3cfd580fbb8d6",
+        "carried_state": carried_state,
+        "carried_state_contract": {
+            "source": "actual decoded GB1 12-D pose-carrier state",
+            "warp": "deterministic low-resolution carrier RGB translation with co-located fallback",
+            "qa39_reuse": "receiver-side previous-field warp precedent",
+            "qa39_ground_homography_not_claimed": True,
+            "reason": "GB1 carries no geometric Pose6; the older 7.2KB Pose6 plane was not substituted",
+            "marginal_pose_bytes": 0,
+            "charter_leg_b_contract_pass": False,
+            "gate_treatment": "proxy retained and reported, but excluded from the schema-v2 fire gate",
+        },
+        "shift_rows": shift_rows,
+        "bound_rows": bound_rows,
+        "best_bound": best,
+        "quotient_allowance_bytes": QUOTIENT_ALLOWANCE_BYTES,
+        "v2_fire_bar_bytes": QBW2_CLEARING_BOUND_BYTES,
+        "step_2_fires": best["n600_measured_bound_bytes"] <= QBW2_CLEARING_BOUND_BYTES,
+        "step_2_outcome": (
+            "SCHEMA_V2_REQUIRED"
+            if best["n600_measured_bound_bytes"] <= QBW2_CLEARING_BOUND_BYTES
+            else "CURRENT_GB1_QUOTIENT_FAMILY_CLOSURE_AT_MEASURED_SCOPE"
+        ),
+        "n32_result": file_fact(QBW2_ROOT / "n32" / "RESULT.json"),
+        "n600_result": file_fact(QBW2_ROOT / "n600" / "RESULT.json"),
+        "distortion_not_measured": True,
+        "training_launched": False,
+        "scorer_run": False,
+        "modal_run": False,
+        "metal_run": False,
+        "elapsed_seconds": time.time() - started,
+    }
+    atomic_json_once(QBW2_ROOT / "RESULT.json", result)
+    atomic_json_once(checkpoint, result)
+    qbw2_custody_manifest()
+    return result
+
+
 def custody_manifest() -> dict[str, Any]:
     manifest_path = STORE / "CUSTODY_MANIFEST.json"
     if manifest_path.exists():
@@ -1100,7 +1710,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "action",
-        choices=("stage-00", "stage-01", "stage-02", "seal-fire-order", "run-00-02", "audit"),
+        choices=(
+            "stage-00",
+            "stage-01",
+            "stage-02",
+            "seal-fire-order",
+            "run-00-02",
+            "run-qbw2-bound",
+            "audit",
+            "audit-qbw2",
+        ),
     )
     return parser
 
@@ -1117,6 +1736,10 @@ def main(argv: list[str] | None = None) -> int:
         result = sealed_fire_order(stage_02())
     elif args.action == "run-00-02":
         result = run_00_02()
+    elif args.action == "run-qbw2-bound":
+        result = run_qbw2_bound()
+    elif args.action == "audit-qbw2":
+        result = qbw2_custody_manifest()
     else:
         result = custody_manifest()
     print(json.dumps(result, indent=2, sort_keys=True))
