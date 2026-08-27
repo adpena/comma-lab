@@ -155,12 +155,38 @@ def test_live_binding_unconditionally_dominates_cold_root() -> None:
 
 
 def test_cold_root_causal_boundary_cannot_claim_weights_stepped() -> None:
-    source = _run_train_source()
-    checkpoint_start = source.index("def _do_checkpoint(")
-    checkpoint_end = source.index(
-        "# ---- RESUME restore",
-        checkpoint_start,
+    """Every checkpoint writer that records a causal boundary with a
+    boundary kind must refuse weights_stepped on cold_root. Selected by
+    behavior (calls _record_causal_boundary AND handles
+    causal_boundary_kind), not by source position: _do_checkpoint is now a
+    G111-barrier wrapper delegating to _do_checkpoint_impl, so a positional
+    window anchored at the wrapper misses the guard."""
+
+    source = TRAINER.read_text()
+    tree = ast.parse(source)
+    run_train = next(
+        item
+        for item in tree.body
+        if isinstance(item, ast.FunctionDef) and item.name == "run_train"
     )
-    checkpoint_source = source[checkpoint_start:checkpoint_end]
-    assert 'if causal_boundary_kind == "cold_root"' in checkpoint_source
-    assert "weights_stepped=(\n                False" in checkpoint_source
+    writers = []
+    for item in run_train.body:
+        if not isinstance(item, ast.FunctionDef):
+            continue
+        if item.name == "_record_causal_boundary":
+            continue
+        segment = ast.get_source_segment(source, item)
+        if segment is None:
+            continue
+        if (
+            "_record_causal_boundary(" in segment
+            and "causal_boundary_kind" in segment
+        ):
+            writers.append((item.name, segment))
+    assert writers, (
+        "no nested run_train function both calls _record_causal_boundary and"
+        " handles causal_boundary_kind — the checkpoint writer moved; rebind"
+    )
+    for name, segment in writers:
+        assert 'if causal_boundary_kind == "cold_root"' in segment, name
+        assert "weights_stepped=(\n                False" in segment, name
