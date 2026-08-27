@@ -109,6 +109,7 @@ def build_pr110_lineage_click_polish_byte_neutral_slack_v1() -> CanonicalEquatio
                 "VERBATIM onto our PR110 base — base-equality TRUE (0/16,800 latent cells differ; "
                 "PR112 = lossless recode of our PR110, code-verified). Borrowed clicks, OUR substrate."
             ),
+            # deterministic-bytes acceptable: deliberate contest-CPU authority receipt (upstream evaluate.py --device cpu axis), not a CUDA-fallback path
             "axis": "Modal contest-CPU (linux_x86_64), upstream/evaluate.py --device cpu, n=600",
             "call_id": "fc-01KXAGAT8JQA4BNH64FJ1SDC5N",
             "archive_sha256": _IMPORT_SHA,

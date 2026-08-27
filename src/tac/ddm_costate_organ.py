@@ -1798,6 +1798,7 @@ def _pn1_nodes(repo_root: Path, band_parents: Mapping[str, Any]) -> dict[str, An
                 "status": "READY_QUIET_SLOT_ZERO_DOLLARS",
                 "spec": (
                     "sh1 protocol on the eg1 rehearsal packet (504,736 B ZIP): resumable "
+                    # deterministic-bytes acceptable: deliberate contest-CPU authority receipt (upstream evaluate.py --device cpu axis), not a CUDA-fallback path
                     "inflate -> upstream evaluate.py --device cpu, all 600 samples, "
                     "recompute S from components; drift row #1 = evaluator d_seg vs tb1 "
                     "full-confirm 0.013833 on the SAME weights, green band |delta| <= 5e-4; "

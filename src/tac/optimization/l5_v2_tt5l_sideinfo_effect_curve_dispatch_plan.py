@@ -1303,6 +1303,7 @@ def render_l5_v2_tt5l_sideinfo_effect_curve_lightning_paired_axis_plan_markdown(
             "## Axis Invariants Verified",
             "",
             "- CPU cells are `exact_cpu_eval`, adjudicate with `required_device=cpu`, "
+            # deterministic-bytes acceptable: deliberate contest-CPU authority receipt (upstream evaluate.py --device cpu axis), not a CUDA-fallback path
             "contain `--device cpu`, omit `--device cuda`, and omit "
             "`INFLATE_REQUIRE_CUDA=1`.",
             "- CUDA cells are `exact_cuda_eval`, adjudicate with "

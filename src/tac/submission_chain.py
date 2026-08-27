@@ -223,6 +223,7 @@ def axis_and_authority(device: str) -> tuple[str, str]:
     if dev == "mps":
         raise SubmissionChainError(
             "MPS is NEVER a score authority (CLAUDE.md 'MPS auth eval is NOISE'). "
+            # deterministic-bytes acceptable: this branch REFUSES MPS and requires an explicit cpu/cuda choice - the anti-fallback guard itself
             "Use --device cpu or --device cuda."
         )
     if dev == "cuda":

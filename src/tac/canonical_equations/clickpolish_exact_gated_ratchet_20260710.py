@@ -19,6 +19,7 @@ anchor of ``exact_metric_mc_finisher_v1``.
 EMPIRICAL ANCHOR — the first pointer-beating exact row since 2026-06-10 (this IS the measured evidence,
 [contest-CPU] authoritative). Candidate archive sha ``ad02b012…`` (177,169 B; our frontier +
 8 exact-gated ``±1`` latent clicks over the incumbent ``b46897…``) evaluated by ``upstream/evaluate.py
+(deterministic-bytes acceptable: deliberate contest-CPU authority receipt (upstream evaluate.py --device cpu axis), not a CUDA-fallback path.)
 --device cpu`` over 600 samples in a Modal Linux x86_64 gVisor container (torch 2.5.1+cpu; selection +
 eval in the SAME container per the determinism mandate): SegNet 0.00055961 · PoseNet 0.00002942 ·
 rate 0.00471878 → S = 0.19108282419209976 (canonical ``tac.contest_score.compute_contest_score``),
@@ -112,6 +113,7 @@ def build_clickpolish_exact_gated_discrete_latent_ratchet_v1() -> CanonicalEquat
         residual=0.0,
         source_artifact=_HARVEST,
         measurement_method=(
+            # deterministic-bytes acceptable: deliberate contest-CPU authority receipt (upstream evaluate.py --device cpu axis), not a CUDA-fallback path
             "upstream/evaluate.py --device cpu, 600 samples, exact archive bytes; Modal Linux "
             "x86_64 gVisor container, torch 2.5.1+cpu; selection+eval SAME container "
             "(determinism mandate). S recomputed via tac.contest_score.compute_contest_score."

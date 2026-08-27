@@ -129,6 +129,7 @@ def build_ddm_v4b_composed_gate_instrument_fidelity_v1(
         residual=3e-06,
         source_artifact=str(MEMO.relative_to(REPO)),
         measurement_method=(
+            # deterministic-bytes acceptable: deliberate contest-CPU authority receipt (upstream evaluate.py --device cpu axis), not a CUDA-fallback path
             "real upstream/evaluate.py n600 --device cpu on the exact archive bytes "
             "(sha-pinned) in the pfs1 D1 eval_root protocol; prediction = shipped "
             "d_seg (exact, tokens byte-identical to the wr1 Knee-A gate) + per-pair "
@@ -161,6 +162,7 @@ def build_ddm_v4b_composed_gate_instrument_fidelity_v1(
         residual=1.38e-04,
         source_artifact=str(MEMO.relative_to(REPO)),
         measurement_method=(
+            # deterministic-bytes acceptable: deliberate contest-CPU authority receipt (upstream evaluate.py --device cpu axis), not a CUDA-fallback path
             "real upstream/evaluate.py n600 --device cpu, exact archive bytes, same "
             "eval_root protocol; the STANDING RE-ANCHOR DUTY's first exercise: "
             "residual 1.38e-4 < the 1e-3 falsification threshold and lies entirely "
@@ -193,6 +195,7 @@ def build_ddm_v4b_composed_gate_instrument_fidelity_v1(
         residual=1.8179186275224524e-06,
         source_artifact=str(MEMO.relative_to(REPO)),
         measurement_method=(
+            # deterministic-bytes acceptable: deliberate contest-CPU authority receipt (upstream evaluate.py --device cpu axis), not a CUDA-fallback path
             "real upstream/evaluate.py n600 --device cpu, exact archive bytes, same "
             "eval_root protocol; THIRD anchor, tightest yet (1.82e-6 < v4b 3e-6 < "
             "v4c 1.38e-4): the v4d refinement stack (QA66 per-pair beta + QA65 dim0 "
@@ -225,6 +228,7 @@ def build_ddm_v4b_composed_gate_instrument_fidelity_v1(
                 "own-vehicle composed line: Knee-A token base + 6dof f16 pose field + "
                 "selector + s_r=1 static-horizon two-plane receiver (v4b grammar)"
             ),
+            # deterministic-bytes acceptable: deliberate contest-CPU authority receipt (upstream evaluate.py --device cpu axis), not a CUDA-fallback path
             "evaluator": "real upstream/evaluate.py n600 --device cpu, exact archive bytes",
             "evidence_axis": "[macOS-CPU advisory] — NOT contest-CPU (Apple Silicon host)",
             "fidelity_scope": (

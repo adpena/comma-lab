@@ -11,6 +11,7 @@ Example (base_ch=20 rate-win config, faithful PR95 curriculum, $0 local smoke)::
         --base-channels 20 --ema-decay 0.999 \\
         --total-epoch-budget 200 --eval-every 25 \\
         --out-dir experiments/results/torch_vehicle_n600_bc20 \\
+        (deterministic-bytes acceptable: documented deliberate --device cpu advisory/smoke command (no score claim), not a CUDA-fallback.)
         --device cpu
 
 For the $100 Modal run (post-symposium) the same command runs on CUDA with the

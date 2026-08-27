@@ -819,6 +819,7 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
             "Z8 archive sha256 stable across two builds (deterministic)",
             "inflate.py produces canonical 3,662,409,600 bytes on macOS-"
             "CPU advisory smoke",
+            # deterministic-bytes acceptable: deliberate contest-CPU authority receipt (upstream evaluate.py --device cpu axis), not a CUDA-fallback path
             "upstream/evaluate.py --device cpu produces finite score "
             "(NOT NaN, NOT inf; > 100 at L1 fixture scope is expected "
             "per the per-pair cycling at inflate from 4 trained pairs "
@@ -838,6 +839,7 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
         notes=(
             "LANDED 2026-05-30 (operator-routed Yousfi-cascade TOP-1 post-"
             "M10). Canonical 5-stage cycle through upstream/evaluate.py "
+            # deterministic-bytes acceptable: deliberate contest-CPU authority receipt (upstream evaluate.py --device cpu axis), not a CUDA-fallback path
             "--device cpu validated per CLAUDE.md 'Auth eval EVERYWHERE' "
             "non-negotiable. Empirical [macOS-CPU advisory] result on real "
             "upstream/videos/0.mkv at 4 pairs x 5 epochs x (32, 32) "
@@ -858,6 +860,7 @@ Z8_PHASE_2_BUILD_MILESTONES: tuple[BuildMilestone, ...] = (
             "build_z8hpc1_archive_bytes_from_canonical_quadruple -> M11 "
             "packet write (canonical archive.zip + inflate.sh per Catalog "
             "#146 + inflate.py shim per Catalog #205+#295) -> M10 inflate "
+            # deterministic-bytes acceptable: deliberate contest-CPU authority receipt (upstream evaluate.py --device cpu axis), not a CUDA-fallback path
             "via main_cli -> upstream/evaluate.py --device cpu -> "
             "[macOS-CPU advisory] result. 27 dedicated tests in tests/test_"
             "m11_l1_macos_cpu_smoke.py covering canonical Provenance non-"

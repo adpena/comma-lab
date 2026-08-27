@@ -179,6 +179,7 @@ def build_f32_receiver_arithmetic_law_v1() -> CanonicalEquation:
             "row": (
                 "first byte-closed v10 capstone: archive.zip 409,526,925 B "
                 "(sha e4cd154f79a3...) -> inflate.sh -> exact factor-2 receiver -> "
+                # deterministic-bytes acceptable: deliberate contest-CPU authority receipt (upstream evaluate.py --device cpu axis), not a CUDA-fallback path
                 "UNMODIFIED upstream/evaluate.py --device cpu, 600 samples, seed 1234"
             ),
             "preimage_policy": "predictor-residual-u8.v1 exact planes (C1 prepare custody)",
@@ -198,6 +199,7 @@ def build_f32_receiver_arithmetic_law_v1() -> CanonicalEquation:
         residual=1.5196e-4,
         source_artifact=".omx/research/v10_capstone_first_byteclosed_row_20260719.md",
         measurement_method=(
+            # deterministic-bytes acceptable: deliberate contest-CPU authority receipt (upstream evaluate.py --device cpu axis), not a CUDA-fallback path
             "official upstream/evaluate.py --device cpu on the byte-closed C1 archive "
             "(capstone_eval/report.txt)"
         ),

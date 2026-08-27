@@ -144,6 +144,7 @@ def runtime_contracts() -> tuple[RuntimeContract, ...]:
                 ".venv/bin/python experiments/train_substrate_siren.py "
                 "--video-path upstream/videos/0.mkv --output-dir "
                 "experiments/results/siren_smoke_<utc> --epochs 3 "
+                # deterministic-bytes acceptable: documented deliberate --device cpu advisory/smoke command (no score claim), not a CUDA-fallback
                 "--device cpu --smoke --skip-archive-build --skip-auth-eval"
             ),
             dispatch_blockers=(

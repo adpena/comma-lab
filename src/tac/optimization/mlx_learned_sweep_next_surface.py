@@ -199,6 +199,7 @@ def _next_surface(
                     "queue_owner": "comma_lab.scheduler.mlx_learned_sweep_autopilot_queue",
                     "actuator": (
                         "tools/run_mlx_dynamic_learned_sweep_autopilot.py "
+                        # deterministic-bytes acceptable: documented deliberate --device cpu advisory/smoke command (no score claim), not a CUDA-fallback
                         "--sweep-config-id macos_cpu_advisory --device cpu"
                     ),
                     "required_helper": (

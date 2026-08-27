@@ -6,6 +6,7 @@
 THIS module IS the M11 milestone landing per ``build_progress.py``
 ``l1_macos_cpu_smoke_landed`` (operator-routed Yousfi-cascade TOP-1 post-M10;
 2026-05-30). Chains the canonical compose pattern from M9 + M10 through
+(deterministic-bytes acceptable: documented deliberate --device cpu advisory/smoke command (no score claim), not a CUDA-fallback.)
 ``upstream/evaluate.py --device cpu`` per CLAUDE.md "Auth eval EVERYWHERE"
 non-negotiable.
 
@@ -25,6 +26,7 @@ contest evaluator with REAL ``upstream/videos/0.mkv`` frames:
        <file_list>`` invoking ``inflate_one_video_from_archive_bytes``
        (M10) to produce 1200 frames raw output at 1164×874×3 per
        Catalog #367.
+    (deterministic-bytes acceptable: documented deliberate --device cpu advisory/smoke command (no score claim), not a CUDA-fallback.)
     5. **Evaluate** via ``python upstream/evaluate.py --device cpu`` (the
        canonical contest CPU evaluator) producing per-component PoseNet
        distortion + SegNet distortion + rate term + final score per
@@ -47,6 +49,7 @@ contest evaluator with REAL ``upstream/videos/0.mkv`` frames:
   loading per Catalog #213.
 - **ADOPT_CANONICAL**: M10 ``inflate_one_video_from_archive_bytes`` +
   M10 ``main_cli`` for inflate (no re-implementation).
+(deterministic-bytes acceptable: documented deliberate --device cpu advisory/smoke command (no score claim), not a CUDA-fallback.)
 - **ADOPT_CANONICAL**: ``upstream/evaluate.py --device cpu`` for the
   contest evaluator (zero modification to upstream per CLAUDE.md
   "Non-Negotiable Upstream Rule").
@@ -132,6 +135,7 @@ value is the cycle-closure validation, NOT the score literal.
 [verified-against: src/tac/substrates/z8_hierarchical_predictive_coding/canonical_quadruple_binding.py M9 helpers]
 [verified-against: src/tac/substrates/z8_hierarchical_predictive_coding/inflate.py M10 main_cli + inflate_one_video_from_archive_bytes]
 [verified-against: src/tac/substrates/z8_hierarchical_predictive_coding/build_progress.py M11 acceptance criteria]
+(deterministic-bytes acceptable: documented deliberate --device cpu advisory/smoke command (no score claim), not a CUDA-fallback.)
 [verified-against: upstream/evaluate.py --device cpu canonical contest CPU evaluator signature]
 [verified-against: feedback_z8_m10_inflate_consumes_real_trained_weights_per_catalog_369_landed_20260530.md M10 cycle-closure precedent]
 """
@@ -284,6 +288,7 @@ class Z8M11L1SmokeResult:
     inflate_total_videos: int
     inflate_first_video_sha256_sample_first_4096_bytes: str
 
+    # deterministic-bytes acceptable: documented deliberate --device cpu advisory/smoke command (no score claim), not a CUDA-fallback
     # upstream/evaluate.py --device cpu stage
     evaluator_wall_clock_seconds: float
     evaluator_posenet_distortion: float
@@ -323,6 +328,7 @@ class Z8M11L1SmokeResult:
                 "per Catalog #192 (M12 paired-CUDA + Linux x86_64 required first)"
             )
         # Bound finite numerics: per build_progress.py M11 acceptance #3
+        # deterministic-bytes acceptable: documented deliberate --device cpu advisory/smoke command (no score claim), not a CUDA-fallback
         # "upstream/evaluate.py --device cpu produces finite score (NOT NaN,
         # NOT inf, NOT > 100)".
         if not (0.0 <= self.evaluator_final_score < 1000.0):
@@ -564,6 +570,7 @@ def run_z8_m11_l1_smoke(
     """Canonical Z8 M11 L1 macOS-CPU end-to-end smoke runner.
 
     Chains the canonical M9 + M10 cycle through ``upstream/evaluate.py
+    (deterministic-bytes acceptable: documented deliberate --device cpu advisory/smoke command (no score claim), not a CUDA-fallback.)
     --device cpu`` per CLAUDE.md "Auth eval EVERYWHERE" non-negotiable.
 
     Args:
@@ -798,6 +805,7 @@ def run_z8_m11_l1_smoke(
         )
     first_video_sha_sample = _sha256_first_n_bytes(first_raw_path, 4096)
 
+    # deterministic-bytes acceptable: documented deliberate --device cpu advisory/smoke command (no score claim), not a CUDA-fallback
     # --- Step 5: upstream/evaluate.py --device cpu ---------------------------
     report_path = submission_dir / "report.txt"
     evaluator_start = time.time()
@@ -836,6 +844,7 @@ def run_z8_m11_l1_smoke(
             evaluator_result.stderr, encoding="utf-8"
         )
         raise RuntimeError(
+            # deterministic-bytes acceptable: documented deliberate --device cpu advisory/smoke command (no score claim), not a CUDA-fallback
             f"upstream/evaluate.py --device cpu failed rc={evaluator_result.returncode}\n"
             f"stdout (truncated to 4KB):\n{evaluator_result.stdout[:4096]}\n"
             f"stderr (truncated to 4KB):\n{evaluator_result.stderr[:4096]}\n"
