@@ -84987,7 +84987,29 @@ _CHECK_344_RESEARCH_RELPATH = ".omx/research"
 # fix. Undated memos (filename lacking the `_YYYYMMDD` suffix) do not match the
 # date regex below and are SKIPPED (the documented conservative default: do not
 # flag what cannot be date-classified).
-_CHECK_344_CUTOFF_DATE_SUFFIX_INT = 20260709  # apparatus-hygiene re-baseline
+#
+# SECOND APPARATUS-HYGIENE RE-BASELINE 2026-08-27 (was 20260709), pf2x r88.
+# WHY: the identical accumulation mechanism recurred at the same scale. Between
+# 2026-07-10 and 2026-08-26 the campaign corpus accrued 469 violating memos
+# (month histogram: 321 in 2026-07, 148 in 2026-08; min 20260710, max 20260826,
+# zero dated 20260827) — all research-NARRATIVE carriers of the broad trigger
+# tokens, none a new formalizable claim left unregistered (verified: the one
+# genuine new-law memo in the 20260826 tail, ddm_lm1's token/model exchange-
+# curve convexity, was resolved directly via an APPEND-ONLY
+# `# FORMALIZATION_PENDING:` footer, mirroring the 2 direct-footer debts of the
+# 2026-07-09 precedent). MECHANISM: the #842 window — "STRICT from byte one"
+# gates never actually executed on commits (preflight_all ran only under
+# PREFLIGHT_FULL=1, which nothing invoked), so era debt accrued silently at
+# authoring time. That window is now CLOSED by the pf2x full-preflight loop:
+# preflight_all runs at a regular cadence, so post-re-baseline re-accrual
+# surfaces within one round instead of one month. Same adjudication as
+# 2026-07-09: footer-mutating hundreds of historical memos does NOT scale and
+# would corrupt the research record (Catalog #110/#113); this is a grandfather
+# re-baseline, NOT the silent-cap anti-pattern (the threshold is unchanged; a
+# NEW post-cutoff memo still binds). The grandfathered 2026-07/08 corpus
+# remains operator-routable for a future backfill sweep (or a trigger-token-
+# narrowing redesign).
+_CHECK_344_CUTOFF_DATE_SUFFIX_INT = 20260827  # apparatus-hygiene re-baseline (2nd)
 _CHECK_344_DESIGN_FILENAME_RE = re.compile(r".*_(\d{8})(?:T\d{6}Z)?(?:_codex)?\.md$")
 
 # Empirical-finding tokens that trigger the gate. Case-insensitive substring match.

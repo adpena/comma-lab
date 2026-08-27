@@ -565,3 +565,9 @@ row 3's binding risk and remains open.
 **gb1 — S 0.14811799921260607 @ 180,215 B `[contest-CUDA T4, n600]`, archive sha `ba1f3830…` —
 UNMOVED by this arm.** Gap to 0.12 = 0.028118 ⇒ shed **42,228 B** at fixed distortion (target archive
 **≤ 137,986 B**), or 150 B at zero distortion.
+
+---
+
+## ADDENDUM (pf2x r88, 2026-08-27) — formalization-track disposition
+
+# FORMALIZATION_PENDING:token/model exchange-curve convexity law (slope −1.15 at the shrink margin per ddm_hm1, −5.87 to the origin per this arm, 5.1× steepening ⇒ shipped model past its own knee) is a genuine two-anchor law owed a canonical_equations registration; flagged at the r88 Catalog #344 re-baseline per the 2026-07-09 precedent's direct-footer discipline
