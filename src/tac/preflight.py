@@ -43233,6 +43233,21 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     # (experiments/ddm_d3c_class_pyramid_peel_order.py, commit 514fdb60) —
     # same receipt-key class, same adjudication.
     "lane_plane_kt_bound_bytes",  # receipt key: KT bound of the Lane plane
+    # Lane-CLASS (SegNet class 1) telemetry/config keys in the TR1 trainer
+    # (experiments/train_tr1_partition_renderer_mlx.py; Check 126 adjudication
+    # 2026-08-27, pf2x r74). Basin-plateau telemetry over the Lane class's
+    # topology (betti0_realized[1] / gt_components_erased[1]) + the #808
+    # lane-guard (lambda_Lane protection layer) event/config/state keys +
+    # one lever-ledger id — NOT dispatch lane_ids. Renaming would desync
+    # run telemetry JSONL and resume snapshots already on disk.
+    "lane_b0",  # basin telemetry key: Lane-class Betti-0 count
+    "lane_b0_delta_max",  # basin threshold: max Lane Betti-0 delta per window
+    "lane_er",  # basin telemetry key: Lane-class erased GT components
+    "lane_erased_delta_max",  # basin threshold: max Lane erased-comp delta
+    "lane_guard_init",  # tlog event name: lane-guard engagement
+    "lane_guard_state",  # resume-snapshot key: lane-guard controller state
+    "lane_sensitivity_ratio",  # lane-guard config field (head-metric ratio)
+    "lane_pool_topology_loss_race",  # lever-ledger id: Lane topology-loss race
     # Common helper / tool / function names
     "lane_id",
     "lane_id_matches",

@@ -965,10 +965,7 @@ def run_canonical_quadruple_training_loop(
     *,
     epochs: int,
     substrate_id: str = "z8_hierarchical_predictive_coding",
-    lane_id: str = (
-        "lane_z8_m9_full_main_notimplementederror_lift_canonical_quadruple"
-        "_binding_integration_20260530"
-    ),
+    lane_id: str = "lane_z8_m9_full_main_notimplementederror_lift_canonical_quadruple_binding_integration_20260530",  # noqa: E501
     hardware_substrate: str = "macos_arm64",
     notes: str = "",
     pose_side_info_canonical_equation_150_enabled: bool = False,
