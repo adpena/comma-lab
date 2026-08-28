@@ -532,6 +532,23 @@ def joint_objective(
     }
 
 
+def derive_balanced_class_weights(pair_ids: Sequence[int], device: torch.device) -> torch.Tensor:
+    """Balanced inverse-frequency class weights derived from the sealed selection's REAL targets.
+
+    w_c = total_pixels / (num_classes * count_c), so a class carrying f of the pixel mass
+    receives 1/(K*f) gradient scale — the standard balanced heuristic, derived at runtime
+    from the actual GT (no hand-typed area constants). Fails closed if any class is absent
+    from the selection, because a zero-count weight would be infinite.
+    """
+
+    target_argmax, _unused_pose = _target_arrays(pair_ids, torch.device("cpu"))
+    counts = torch.bincount(target_argmax.reshape(-1), minlength=qbf1.N_CLASSES).to(torch.float64)
+    if int((counts == 0).sum()) != 0:
+        raise QBT1Error("balanced class weights need every class present in the selection targets")
+    weights = counts.sum() / (float(qbf1.N_CLASSES) * counts)
+    return weights.to(dtype=torch.float32, device=device)
+
+
 def realized_ce_birth_objective(
     camera_pair: torch.Tensor,
     scorer_pose6: torch.Tensor,
@@ -539,11 +556,18 @@ def realized_ce_birth_objective(
     target_argmax: torch.Tensor,
     target_pose6: torch.Tensor,
     sample_weights: torch.Tensor | None = None,
+    class_weights: torch.Tensor | None = None,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     """Class-birth CE through the real scorer path, with pose active from step zero."""
 
-    per_pixel = F.cross_entropy(scorer_logits, target_argmax.long(), reduction="none")
-    ce_per_sample = per_pixel.mean(dim=(1, 2))
+    per_pixel = F.cross_entropy(
+        scorer_logits, target_argmax.long(), weight=class_weights, reduction="none"
+    )
+    if class_weights is None:
+        ce_per_sample = per_pixel.mean(dim=(1, 2))
+    else:
+        pixel_weight = class_weights[target_argmax.long()]
+        ce_per_sample = per_pixel.sum(dim=(1, 2)) / pixel_weight.sum(dim=(1, 2))
     pose_per_sample = (scorer_pose6 - target_pose6).square().mean(dim=1)
     if sample_weights is None:
         realized_ce = ce_per_sample.mean()
@@ -1753,6 +1777,7 @@ def compile_qbt2b_config(
     initialization_state: Path,
     birth_max_steps: int = QBT2B_BIRTH_MAX_STEPS,
     margin_steps: int = QBT2B_MARGIN_STEPS,
+    birth_class_weight_mode: str = "none",
 ) -> dict[str, Any]:
     total_steps = int(birth_max_steps) + int(margin_steps)
     config = compile_config(
@@ -1771,6 +1796,7 @@ def compile_qbt2b_config(
             "birth_verdict_every_steps": max(1, min(5, int(birth_max_steps))),
             "birth_stability_verdicts": 2,
             "birth_within_class_error_max": BIRTH_WITHIN_CLASS_ERROR_MAX,
+            "birth_class_weight_mode": str(birth_class_weight_mode),
             "initialization_state_path": initialization["path"],
             "initialization_state_sha256": initialization["sha256"],
             "consolidate_checkpoint_reencodes": True,
@@ -1793,7 +1819,7 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
         "precision_probe_bits", "source_pins",
         "curriculum_mode", "birth_max_steps", "margin_steps", "birth_verdict_every_steps",
         "birth_stability_verdicts", "birth_within_class_error_max", "initialization_state_path",
-        "initialization_state_sha256", "consolidate_checkpoint_reencodes",
+        "initialization_state_sha256", "consolidate_checkpoint_reencodes", "birth_class_weight_mode",
     }
     if unknown:
         raise QBT1Error(f"compiled config has unknown fields: {sorted(unknown)}")
@@ -1850,6 +1876,8 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
     ):
         raise QBT1Error("heavy training must use the sealed no2 n32 selection in equal chunks")
     curriculum_mode = str(config.get("curriculum_mode", "legacy_margin_only"))
+    if str(config.get("birth_class_weight_mode", "none")) not in ("none", "balanced"):
+        raise QBT1Error("QBT2B birth class-weight mode differs")
     if curriculum_mode == "ce_birth_then_margin":
         required = {
             "birth_max_steps",
@@ -2003,6 +2031,13 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
         "birth_handoff_authorized", False
     ):
         birth_max_steps = int(config["birth_max_steps"])
+        birth_class_weight_mode = str(config.get("birth_class_weight_mode", "none"))
+        birth_class_weights = None
+        if birth_class_weight_mode == "balanced":
+            birth_class_weights = derive_balanced_class_weights(pair_ids, device)
+            curriculum_state["birth_class_weights"] = [
+                float(value) for value in birth_class_weights.detach().cpu()
+            ]
         for birth_index in range(int(curriculum_state["birth_step"]), birth_max_steps):
             chunk_ids = optimizer_chunks[birth_index % len(optimizer_chunks)]
             ids_tensor = torch.tensor(chunk_ids, dtype=torch.long, device=device)
@@ -2019,6 +2054,7 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
                 target_argmax,
                 target_pose6,
                 sample_weights,
+                class_weights=birth_class_weights,
             )
             total.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)

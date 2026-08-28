@@ -86,6 +86,82 @@ def test_realized_ce_birth_keeps_pose_active() -> None:
     assert logits.grad is not None and pose.grad is not None
 
 
+def test_balanced_class_weights_keep_weighted_mean_normalized() -> None:
+    torch.manual_seed(11)
+    camera = torch.zeros((2, 2, 3, 4, 4))
+    logits = torch.randn((2, 5, 2, 2))
+    pose = torch.zeros((2, 6))
+    target_argmax = torch.tensor([[[0, 1], [2, 3]], [[4, 3], [2, 1]]])
+    target_pose = torch.zeros((2, 6))
+    unweighted, _parts = qbt1.realized_ce_birth_objective(
+        camera, pose, logits, target_argmax, target_pose
+    )
+    uniform = torch.ones(qbf1.N_CLASSES)
+    uniform_total, _uniform_parts = qbt1.realized_ce_birth_objective(
+        camera, pose, logits, target_argmax, target_pose, class_weights=uniform
+    )
+    assert torch.allclose(unweighted, uniform_total, atol=1.0e-6)
+    balanced = torch.tensor([4.0, 1.0, 1.0, 1.0, 1.0])
+    _total, parts = qbt1.realized_ce_birth_objective(
+        camera, pose, logits, target_argmax, target_pose, class_weights=balanced
+    )
+    per_pixel = torch.nn.functional.cross_entropy(
+        logits, target_argmax.long(), weight=balanced, reduction="none"
+    )
+    pixel_weight = balanced[target_argmax.long()]
+    expected = (per_pixel.sum(dim=(1, 2)) / pixel_weight.sum(dim=(1, 2))).mean()
+    assert torch.allclose(parts["seg_ce_realized"], expected, atol=1.0e-6)
+
+
+def test_derive_balanced_class_weights_from_real_targets(monkeypatch) -> None:
+    full = torch.tensor([[[0, 1], [2, 3]], [[4, 0], [0, 0]]])
+    monkeypatch.setattr(qbt1, "_target_arrays", lambda ids, device: (full, torch.zeros((2, 6))))
+    weights = qbt1.derive_balanced_class_weights((0, 1), torch.device("cpu"))
+    counts = torch.tensor([4.0, 1.0, 1.0, 1.0, 1.0])
+    assert torch.allclose(weights, counts.sum() / (5.0 * counts))
+    missing_lane = torch.where(full == 1, torch.zeros_like(full), full)
+    monkeypatch.setattr(
+        qbt1, "_target_arrays", lambda ids, device: (missing_lane, torch.zeros((2, 6)))
+    )
+    with pytest.raises(qbt1.QBT1Error, match="every class present"):
+        qbt1.derive_balanced_class_weights((0, 1), torch.device("cpu"))
+
+
+def test_birth_class_weight_mode_is_config_gated(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(qbt1, "verify_pins", lambda: {})
+    initialization = tmp_path / "initialized.pt"
+    initialization.write_bytes(b"custody-only validation payload")
+    balanced = qbt1.compile_qbt2b_config(
+        action="smoke",
+        output=tmp_path / "balanced",
+        pair_ids=(qbt1.SELECTION_IDS[0],),
+        device="cpu",
+        initialization_state=initialization,
+        birth_max_steps=3,
+        margin_steps=7,
+        birth_class_weight_mode="balanced",
+    )
+    assert balanced["birth_class_weight_mode"] == "balanced"
+    qbt1.validate_config(balanced)
+    default = qbt1.compile_qbt2b_config(
+        action="smoke",
+        output=tmp_path / "default",
+        pair_ids=(qbt1.SELECTION_IDS[0],),
+        device="cpu",
+        initialization_state=initialization,
+        birth_max_steps=3,
+        margin_steps=7,
+    )
+    assert default["birth_class_weight_mode"] == "none"
+    legacy = dict(default)
+    legacy.pop("birth_class_weight_mode")
+    qbt1.validate_config(legacy)
+    bogus = dict(default)
+    bogus["birth_class_weight_mode"] = "area_sqrt"
+    with pytest.raises(qbt1.QBT1Error, match="class-weight mode"):
+        qbt1.validate_config(bogus)
+
+
 def test_birth_gate_uses_derived_threshold_and_all_five_classes() -> None:
     rows = [
         {
