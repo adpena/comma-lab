@@ -1,8 +1,11 @@
 # ddm_qbt2b r7 — Lane/Movable constrained margin law built, byte-closed n1 smoke repeated, r7 treatment sealed; n32 fire BLOCKED by live storage preflight
 
-Date: 2026-08-28  
-Arm: `ddm_qbt2b_r7_lane_constrained_margin`  
-Disposition: **IMPLEMENTED + SEALED; QUEUED-WITH-A-FIRE-ORDER; NOT LAUNCHED**  
+Date: 2026-08-28
+
+Arm: `ddm_qbt2b_r7_lane_constrained_margin`
+
+Disposition: **IMPLEMENTED + SEALED; QUEUED-WITH-A-FIRE-ORDER; NOT LAUNCHED**
+
 Score claim: `false`
 
 The per-class primal-dual law is live in the real qbt1 margin stage. The
@@ -207,10 +210,13 @@ then rerun the compiler/preflight before claiming lanes.
 
 ## 7. READY_TO_FIRE handoff — QUEUED-WITH-A-FIRE-ORDER
 
-Disposition: **QUEUED-WITH-A-FIRE-ORDER**  
-Owner: **MAIN**  
+Disposition: **QUEUED-WITH-A-FIRE-ORDER**
+
+Owner: **MAIN**
+
 Consumer store:
-`/Volumes/APDataStore/pact/ddm_qbflow_implicit_boundary_flow/qbt1_trainer/governed_n32_r7`  
+`/Volumes/APDataStore/pact/ddm_qbflow_implicit_boundary_flow/qbt1_trainer/governed_n32_r7`
+
 Fire trigger: a fresh storage receipt has `passes_live_df=true`; the exact
 treatment/config identity is unchanged; MAIN has written active, non-duplicate
 r7 scorer and Metal claims; `launch_authorized=true` and those real claim IDs
