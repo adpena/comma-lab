@@ -578,7 +578,9 @@ def realized_within_class_error(
     if not bool(target_mask.any()):
         raise QBT1Error(f"realized within-class target class is absent: {class_id}")
     predicted = logits.detach().argmax(dim=1)
-    return float((predicted[target_mask] != int(class_id)).to(torch.float64).mean().cpu())
+    # CPU hop BEFORE the float64 cast: MPS has no float64, and the realized werr
+    # must be the exact float64 mean regardless of the training device.
+    return float((predicted[target_mask] != int(class_id)).cpu().to(torch.float64).mean())
 
 
 def dual_ascent_margin_constraints(
