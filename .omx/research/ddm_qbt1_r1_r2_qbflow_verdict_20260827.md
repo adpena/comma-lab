@@ -91,6 +91,10 @@ MyCar. Road paints as Undrivable above (8.48% of all px) and MyCar below
 (14.64%). The two largest classes were born in the first 130 steps
 (0.50 → 0.25); no third class was ever born. The hood hypothesis (0.2504 ≈
 MyCar area) is REFUTED — MyCar is nearly perfect.
+verdict_scope: instance — the hood-area explanation of qbt1's frozen 0.2504
+(stage-03 config, n32 seeded-stratified, single seed); refuted by the full
+32-pair decomposition above (MyCar within-class error 0.06%), not a claim
+about any other vehicle or scale.
 
 Mechanism attribution (labeled):
 - **[DERIVED] The expected-flip-margin law cannot BIRTH a class.** For
