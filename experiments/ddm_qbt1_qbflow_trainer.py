@@ -3367,6 +3367,128 @@ def compile_r7_authorized_config(
     }
 
 
+# r8 continuation: extend the PROVEN constrained margin law from the r7 stage-03
+# endpoint.  margin_steps=15_000 is DERIVED from the r7 trajectory fit (flip
+# follows a power law ~9.94*t^-0.781 over the second-half window means with a
+# zero-floor exponential fit; verdict memo
+# ddm_qbt2b_r7_constrained_margin_verdict_20260828.md): the extension buys
+# three more power-law doublings toward the half-r6 milestone flip~0.005 at
+# cumulative 20k steps and tests exponent stability before any n600 decision.
+R8_MARGIN_STEPS = 15_000
+R7_STAGE3_END_CHECKPOINT = (
+    TRAIN_ROOT
+    / "governed_n32_r7/stage_03_joint_boundary_interior_birth/checkpoints/stage_03_end.pt"
+)
+R8_INITIALIZATION_STATE = (
+    TRAIN_ROOT / "governed_n32_r7/initialized_r8_from_r7_stage03_end_ema_state.pt"
+)
+R8_RETENTION_ROOT = Path(
+    "/Volumes/APDataStore/pact/ddm_qbt2b_r8_constrained_margin_continuation"
+)
+
+
+def build_r8_initialized_state(
+    source_checkpoint: Path = R7_STAGE3_END_CHECKPOINT,
+    output_path: Path = R8_INITIALIZATION_STATE,
+) -> dict[str, Any]:
+    """Extract the r7 stage-03 endpoint EMA shadow as the r8 initialization state.
+
+    The lineage always initializes from the EMA shadow, never live weights.
+    The emitted schema is the exact loader contract, so the strict=True load at
+    model construction is the round-trip proof.
+    """
+
+    checkpoint = torch.load(source_checkpoint, map_location="cpu", weights_only=False)
+    if checkpoint.get("stage") != "stage_03_joint_boundary_interior_birth_end":
+        raise QBT1Error("r8 init source is not the r7 stage-03 end checkpoint")
+    shadow = checkpoint["ema"]["shadow"]
+    reference = load_initial_model(torch.device("cpu"))
+    if set(shadow) != set(reference.state_dict()):
+        raise QBT1Error("r7 EMA shadow keys differ from the QBF1 model state")
+    state = {
+        "schema": "ddm_qbt2b_initialized_qbf1_state.v1",
+        "state_dict": {
+            name: value.detach().cpu().clone() for name, value in shadow.items()
+        },
+        "provenance": {
+            "source_checkpoint": file_fact(source_checkpoint),
+            "source_stage": str(checkpoint.get("stage")),
+            "source_step": int(checkpoint.get("step", -1)),
+            "basis": "ema_shadow",
+            "shadowed_tensors": sorted(shadow),
+        },
+    }
+    return atomic_torch(output_path, state)
+
+
+def compile_r8_authorized_config(
+    path: Path,
+    *,
+    smoke_result_path: Path = R7_RETENTION_ROOT / "smoke_n1/RESULT.json",
+) -> dict[str, Any]:
+    """Seal the r8 continuation config; MAIN must add live claims before firing it.
+
+    r8 differs from r7 in exactly two SCOPE fields: the initialization state
+    (the r7 stage-03 EMA endpoint) and margin_steps (5,000 -> 15,000, derived
+    from the r7 trajectory fit).  Every mechanism pin — the constraint tuple,
+    birth law, and curriculum — is identical to r7's.
+    """
+
+    if not R8_INITIALIZATION_STATE.exists():
+        raise QBT1Error("r8 initialization state is absent; run build-r8-init first")
+    config = compile_qbt2b_config(
+        action="train",
+        output=TRAIN_ROOT / "governed_n32_r8",
+        pair_ids=SELECTION_IDS,
+        device="mps",
+        initialization_state=R8_INITIALIZATION_STATE,
+        birth_max_steps=20,
+        margin_steps=R8_MARGIN_STEPS,
+        birth_class_weight_mode="balanced",
+        birth_event_mode="existence_majority",
+        margin_constraint_mode=MARGIN_CONSTRAINT_LANE_MOVABLE,
+    )
+    config["launch_authorized"] = False
+    config["scorer_lane"] = {"claimed": False, "claim_id": None}
+    config["metal_lane"] = {"claimed": False, "claim_id": None}
+    validate_config(config, require_launch_authority=False)
+    config_fact = atomic_json(path, config)
+    roundtrip = json.loads(path.read_text(encoding="utf-8"))
+    validate_config(roundtrip, require_launch_authority=False)
+    if roundtrip != config or canonical_sha256(roundtrip) != canonical_sha256(config):
+        raise QBT1Error("r8 authorized config JSON round-trip differs")
+    smoke_result = json.loads(smoke_result_path.read_text(encoding="utf-8"))
+    storage_projection = project_on_disk_storage(
+        smoke_result,
+        output=TRAIN_ROOT / "governed_n32_r8",
+        total_steps=20 + R8_MARGIN_STEPS,
+        checkpoint_every_steps=int(config["checkpoint_every_steps"]),
+        birth_max_steps=20,
+        birth_verdict_every_steps=int(config["birth_verdict_every_steps"]),
+    )
+    storage_projection_fact = atomic_json(
+        R8_RETENTION_ROOT / "R8_STORAGE_PROJECTION_20260828.json", storage_projection
+    )
+    return {
+        "schema": "ddm_qbt2b_r8_authorized_config_compile.v1",
+        "status": (
+            "SEALED_AWAITING_MAIN_LIVE_CLAIMS"
+            if storage_projection["passes_live_df"]
+            else "SEALED_BLOCKED_LIVE_STORAGE_PREFLIGHT"
+        ),
+        "config": config_fact,
+        "config_identity_sha256": canonical_sha256(config_identity(config)),
+        "config_canonical_sha256": canonical_sha256(config),
+        "json_roundtrip_identical": True,
+        "validated_before_write": True,
+        "validated_after_read": True,
+        "storage_projection": storage_projection_fact,
+        "storage_projection_passed": bool(storage_projection["passes_live_df"]),
+        "launch_authorized": False,
+        "score_claim": False,
+    }
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="action", required=True)
@@ -3415,6 +3537,25 @@ def build_parser() -> argparse.ArgumentParser:
         default=TRAIN_ROOT / "AUTHORIZED_N32_R7_5020_20260828.json",
     )
     compile_r7.add_argument(
+        "--smoke-result",
+        type=Path,
+        default=R7_RETENTION_ROOT / "smoke_n1/RESULT.json",
+    )
+    build_r8 = sub.add_parser(
+        "build-r8-init", help="extract the r7 stage-03 EMA endpoint as the r8 init state"
+    )
+    build_r8.add_argument("--source", type=Path, default=R7_STAGE3_END_CHECKPOINT)
+    build_r8.add_argument("--output", type=Path, default=R8_INITIALIZATION_STATE)
+    compile_r8 = sub.add_parser(
+        "compile-r8-config",
+        help="seal the unlaunched r8 continuation config for MAIN claim binding",
+    )
+    compile_r8.add_argument(
+        "--output",
+        type=Path,
+        default=TRAIN_ROOT / "AUTHORIZED_N32_R8_15020_20260828.json",
+    )
+    compile_r8.add_argument(
         "--smoke-result",
         type=Path,
         default=R7_RETENTION_ROOT / "smoke_n1/RESULT.json",
@@ -3481,6 +3622,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.action == "compile-r7-config":
         receipt = compile_r7_authorized_config(
+            args.output, smoke_result_path=args.smoke_result
+        )
+        print(json.dumps(receipt, indent=2, sort_keys=True, default=str))
+        return 0
+    if args.action == "build-r8-init":
+        receipt = build_r8_initialized_state(args.source, args.output)
+        print(json.dumps(receipt, indent=2, sort_keys=True, default=str))
+        return 0
+    if args.action == "compile-r8-config":
+        receipt = compile_r8_authorized_config(
             args.output, smoke_result_path=args.smoke_result
         )
         print(json.dumps(receipt, indent=2, sort_keys=True, default=str))

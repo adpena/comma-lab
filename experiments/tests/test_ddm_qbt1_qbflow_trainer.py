@@ -590,3 +590,63 @@ def test_storage_projection_birth_verdict_selection_survives_margin_tail() -> No
     assert qbt1.latest_birth_verdict_pair_ids(history) == (62,)
     with pytest.raises(qbt1.QBT1Error, match="lacks a retained birth verdict"):
         qbt1.latest_birth_verdict_pair_ids(history[-1:])
+
+
+def test_r8_config_geometry_and_identity_excludes_dispatch_fields(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(qbt1, "verify_pins", lambda: {})
+    initialization = tmp_path / "initialized_r8.pt"
+    initialization.write_bytes(b"custody-only validation payload")
+    config = qbt1.compile_qbt2b_config(
+        action="train",
+        output=tmp_path / "governed_n32_r8",
+        pair_ids=qbt1.SELECTION_IDS,
+        device="mps",
+        initialization_state=initialization,
+        birth_max_steps=20,
+        margin_steps=qbt1.R8_MARGIN_STEPS,
+        birth_class_weight_mode="balanced",
+        birth_event_mode="existence_majority",
+        margin_constraint_mode=qbt1.MARGIN_CONSTRAINT_LANE_MOVABLE,
+    )
+    assert qbt1.R8_MARGIN_STEPS == 15_000
+    assert config["steps"] == 15_020
+    assert config["margin_constraint_mode"] == qbt1.MARGIN_CONSTRAINT_LANE_MOVABLE
+    qbt1.validate_config(config, require_launch_authority=False)
+    identity = qbt1.canonical_sha256(qbt1.config_identity(config))
+    claimed = copy.deepcopy(config)
+    claimed["launch_authorized"] = True
+    claimed["scorer_lane"] = {"claimed": True, "claim_id": "test"}
+    claimed["metal_lane"] = {"claimed": True, "claim_id": "test"}
+    assert qbt1.canonical_sha256(qbt1.config_identity(claimed)) == identity
+
+
+def test_build_r8_init_refuses_non_stage3_end_source(tmp_path) -> None:
+    source = tmp_path / "wrong.pt"
+    torch.save({"stage": "stage_03a_ce_class_birth"}, source)
+    with pytest.raises(qbt1.QBT1Error, match="stage-03 end"):
+        qbt1.build_r8_initialized_state(source, tmp_path / "out.pt")
+
+
+def test_build_r8_init_emits_loader_schema_and_strict_round_trips(tmp_path) -> None:
+    reference = _initial_model()
+    shadow = {
+        name: value.detach().clone() for name, value in reference.state_dict().items()
+    }
+    source = tmp_path / "stage_03_end.pt"
+    torch.save(
+        {
+            "stage": "stage_03_joint_boundary_interior_birth_end",
+            "step": 5020,
+            "ema": {"shadow": shadow},
+        },
+        source,
+    )
+    out = tmp_path / "initialized_r8.pt"
+    fact = qbt1.build_r8_initialized_state(source, out)
+    assert "sha256" in fact
+    state = torch.load(out, map_location="cpu", weights_only=False)
+    assert state["schema"] == "ddm_qbt2b_initialized_qbf1_state.v1"
+    assert state["provenance"]["basis"] == "ema_shadow"
+    assert state["provenance"]["source_step"] == 5020
+    fresh = _initial_model()
+    fresh.load_state_dict(state["state_dict"], strict=True)
