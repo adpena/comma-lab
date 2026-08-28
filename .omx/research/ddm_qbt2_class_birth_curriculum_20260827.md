@@ -1,8 +1,11 @@
 # ddm_qbt2 class-birth curriculum — early formulation falsifier
 
-Date: 2026-08-27  
-Disposition: **EARLY FORMULATION FALSIFIER; TYPED REFUSAL; NO BUILD; NO FIRE ORDER**  
-Verdict scope: **FORMULATION** — the chartered frozen-terminal-head, closed-form RGB-prototype initialization through the real SegNet path. The QBFLOW family and a birth-first curriculum using an honestly nonlinear prototype solve remain open.  
+Date: 2026-08-27
+
+Disposition: **EARLY FORMULATION FALSIFIER; TYPED REFUSAL; NO BUILD; NO FIRE ORDER**
+
+Verdict scope: **FORMULATION** — the chartered frozen-terminal-head, closed-form RGB-prototype initialization through the real SegNet path. The QBFLOW family and a birth-first curriculum using an honestly nonlinear prototype solve remain open.
+
 Authority: structural/source proof on the frozen real-path implementation; no scorer row, training, Metal, Modal, contest evaluation, or score claim.
 
 ## RESULT
