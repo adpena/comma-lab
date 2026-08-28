@@ -109,6 +109,15 @@ Mechanism attribution (labeled):
   knows the boundaries (0.0174); the interior head's RGB never evokes
   Road/Lane/Movable through the frozen SegNet. v14's margin-optimal prototype
   colors (closed-form from the frozen head) are the corpus's measured cure.
+  **ERRATUM (appended 2026-08-28, from ddm_qbt2's source trace — d638d0c5ae):
+  the parenthetical "closed-form from the frozen head" is WRONG. No closed-form
+  RGB solve exists in the corpus: FP1's (5,3) palette is a 32-pair/100-step
+  Adam/CE solve through the full frozen SegNet; SQ1's paint is an Adam solve;
+  v14 hard-codes only the Movable triple. The genuine closed-form bank
+  (build_frozen_rank4_prototype_bank) lives in the terminal head's 4-dim
+  feature quotient, not RGB, and has no head-only RGB inverse. The CURE claim
+  survives with corrected provenance: FP1's real-path CE-TRAINED palette is
+  the measured paint precedent; "closed-form" does not.**
 - **[INFERRED, unmeasured] Pose–seg interior conflict.** Pose descends by
   shaping interior photometry (tv1/tv2: pose lives in interiors); Road-class
   evocation also lives in interiors. The working pose gradient may pin the
