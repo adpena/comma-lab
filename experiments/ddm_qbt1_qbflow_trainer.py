@@ -227,7 +227,9 @@ def atomic_torch(path: Path, value: object) -> dict[str, Any]:
 
 def atomic_npz(path: Path, **arrays: np.ndarray) -> dict[str, Any]:
     payload = io.BytesIO()
-    np.savez(payload, **arrays)
+    # Deflate the retained payloads (measured 2.07x on real verdict frames);
+    # np.load reads STORED and DEFLATED members identically, arrays unchanged.
+    np.savez_compressed(payload, **arrays)
     return atomic_bytes(path, payload.getvalue())
 
 
