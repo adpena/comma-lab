@@ -32,6 +32,7 @@ import random
 import resource
 import shutil
 import sys
+import tarfile
 import time
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
@@ -52,6 +53,7 @@ from experiments import ddm_qbflow_packet as qbf1
 from tac.boundary_math.power_diagram_witness import open_stored_npy_memmap
 from tac.scorer import load_differentiable_scorers
 from tac.training import EMA
+from tac.witness_control.birth_completion import DEFAULT_TAU_PERSIST
 from tac.witness_dsl.curriculum_dsl import EmaDecayCalibrated
 
 SCHEMA = "ddm_qbt1_qbflow_compiled_config.v1"
@@ -60,6 +62,7 @@ RESULT_SCHEMA = "ddm_qbflow_observability.v1"
 CONTROL_SCHEMA = "ddm_qbt1_same_budget_qbw1_control.v1"
 MEMORY_SCHEMA = "ddm_qbt1_materialization_memory_projection.v1"
 LAUNCH_SCHEMA = "ddm_qbt1_compiled_launch_request.v1"
+PALETTE_INIT_SCHEMA = "ddm_qbt2b_inherited_palette_init.v1"
 SEED = 20260827
 N = 600
 EVAL_H, EVAL_W = 384, 512
@@ -110,6 +113,7 @@ SELECTION_WEIGHTS = (15.0,) * 24 + (30.0,) * 8
 
 STORE = Path("/Volumes/APDataStore/pact/ddm_qbflow_implicit_boundary_flow")
 TRAIN_ROOT = STORE / "qbt1_trainer"
+QBT2B_ROOT = TRAIN_ROOT / "qbt2b_inherited_palette_birth"
 FIRE_ORDER = STORE / "SEALED_TRAINING_FIRE_ORDER.json"
 INITIAL_PARAMS = STORE / "stage_01_initialize_quantize/initialized_float_params.npz"
 INITIAL_LATENTS = STORE / "stage_01_initialize_quantize/initialized_float_latents.npz"
@@ -125,6 +129,33 @@ NO2_MEMO = REPO / ".omx/research/ddm_no2_quotient_born_object_20260827.md"
 W96B_VERDICT = REPO / ".omx/research/ddm_w96b_seed20260816_aligned_verdict_and_family_closure_20260827.md"
 POSENET = REPO / "upstream/models/posenet.safetensors"
 SEGNET = REPO / "upstream/models/segnet.safetensors"
+FP1_PALETTE = Path("/Volumes/VertigoDataTier/pact/ddm_fp1_20260731/prototypes.npz")
+R1_CHECKPOINT = (
+    TRAIN_ROOT
+    / "governed_n32/stage_05_same_budget_admission/checkpoints/stage_05_end.pt"
+)
+R1_RETAINED = TRAIN_ROOT / "governed_n32/stage_05_same_budget_admission/retained"
+R2_REPACK_REFERENCE_TAR = (
+    TRAIN_ROOT
+    / "governed_n32_r2/stage_03_joint_boundary_interior_birth/reencoded/step_004860.tar"
+)
+R2_FIRST_CHECKPOINT = (
+    TRAIN_ROOT
+    / "governed_n32_r2/stage_03_joint_boundary_interior_birth/checkpoints/periodic_step_000005.pt"
+)
+R2_FINAL_CHECKPOINT = (
+    TRAIN_ROOT
+    / "governed_n32_r2/stage_03_joint_boundary_interior_birth/checkpoints/periodic_step_004865.pt"
+)
+FP1_PALETTE_SHA256 = "19e6524b75724f0b19f0e2e49a827d9f28b40d087b1e5504c3a85577a9e76f0b"
+R1_CHECKPOINT_SHA256 = "7e3fb97199eca5cd03eac8c2b858bdcea3b6ddad83eba9c410161252455084cd"
+PALETTE_CLASSES = ("Road", "Lane", "Undrivable", "Movable", "MyCar")
+READOUT_FIT_SAMPLES_PER_PAIR_CLASS = 512
+READOUT_RESIDUAL_VARIANCE_RATIO_MAX = 0.95
+BIRTH_WITHIN_CLASS_ERROR_MAX = 1.0 - DEFAULT_TAU_PERSIST
+QBT2B_BIRTH_MAX_STEPS = 100
+QBT2B_MARGIN_STEPS = 5_000
+QBT2B_TOTAL_STEPS = QBT2B_BIRTH_MAX_STEPS + QBT2B_MARGIN_STEPS
 
 PINNED_SHA256 = {
     "packet_module": "cdf90d1a4d7d13001118f50a76692c04605f8e5ae9a7816c80f6e346160c7b9c",
@@ -400,6 +431,7 @@ class QBFLOWTorch(nn.Module):
             "signed_interfaces": signed_interfaces.reshape(batch, height, width, qbf1.N_INTERFACES),
             "class_logits": class_logits.reshape(batch, height, width, qbf1.N_CLASSES),
             "rgb_pair_01": rgb.reshape(batch, height, width, 2, 3).permute(0, 3, 4, 1, 2),
+            "render_state": render_state.reshape(batch, height, width, -1),
             "pose12": pose12,
             "coarse_road_probability": road_probability,
             "road_tangent": torch.stack((tangent_x, tangent_y), dim=-1),
@@ -500,6 +532,146 @@ def joint_objective(
     }
 
 
+def realized_ce_birth_objective(
+    camera_pair: torch.Tensor,
+    scorer_pose6: torch.Tensor,
+    scorer_logits: torch.Tensor,
+    target_argmax: torch.Tensor,
+    target_pose6: torch.Tensor,
+    sample_weights: torch.Tensor | None = None,
+) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    """Class-birth CE through the real scorer path, with pose active from step zero."""
+
+    per_pixel = F.cross_entropy(scorer_logits, target_argmax.long(), reduction="none")
+    ce_per_sample = per_pixel.mean(dim=(1, 2))
+    pose_per_sample = (scorer_pose6 - target_pose6).square().mean(dim=1)
+    if sample_weights is None:
+        realized_ce = ce_per_sample.mean()
+        pose_mse = pose_per_sample.mean()
+    else:
+        weights = sample_weights.to(ce_per_sample)
+        if weights.shape != ce_per_sample.shape or not bool(torch.all(weights > 0)):
+            raise QBT1Error("birth-stage sample weights differ")
+        realized_ce = (ce_per_sample * weights).sum() / weights.sum()
+        pose_mse = (pose_per_sample * weights).sum() / weights.sum()
+    pose_score = torch.sqrt(torch.clamp(10.0 * pose_mse, min=1.0e-20))
+    total = 100.0 * realized_ce + pose_score
+    return total, {
+        "loss_total": total,
+        "seg_ce_realized": realized_ce,
+        "pose_mse_realized": pose_mse,
+        "pose_score_realized": pose_score,
+        "camera_min": camera_pair.detach().amin(),
+        "camera_max": camera_pair.detach().amax(),
+    }
+
+
+def birth_gate_from_table(
+    per_class: Sequence[Mapping[str, Any]],
+    *,
+    within_class_error_max: float = BIRTH_WITHIN_CLASS_ERROR_MAX,
+) -> dict[str, Any]:
+    if len(per_class) != qbf1.N_CLASSES or not 0.0 < within_class_error_max < 1.0:
+        raise QBT1Error("birth gate geometry differs")
+    classes = []
+    for row in per_class:
+        within_error = row.get("within_class_error")
+        passed = bool(
+            int(row.get("predicted_pixels", 0)) > 0
+            and within_error is not None
+            and float(within_error) < within_class_error_max
+        )
+        classes.append(
+            {
+                "class_id": int(row["class_id"]),
+                "class_name": str(row["class_name"]),
+                "predicted_pixel_share": float(row["predicted_pixel_share"]),
+                "within_class_error": within_error,
+                "passed": passed,
+            }
+        )
+    return {
+        "derived_from": (
+            "1 - tac.witness_control.birth_completion.DEFAULT_TAU_PERSIST "
+            f"({DEFAULT_TAU_PERSIST})"
+        ),
+        "within_class_error_max_exclusive": within_class_error_max,
+        "all_five_classes_pass": all(row["passed"] for row in classes),
+        "classes": classes,
+    }
+
+
+def evaluate_birth_verdict(
+    root: Path,
+    *,
+    model: QBFLOWTorch,
+    ema: EMA,
+    posenet: nn.Module,
+    segnet: nn.Module,
+    pair_ids: Sequence[int],
+    chunk_pairs: int,
+    step: int,
+    verdict_index: int,
+    within_class_error_max: float,
+) -> dict[str, Any]:
+    """Evaluate and retain one event verdict on the realized argmax surface."""
+
+    arrays: dict[str, list[np.ndarray]] = {
+        "camera_pair_u8": [],
+        "segnet_logits_f16": [],
+        "segnet_argmax_u8": [],
+        "target_argmax_u8": [],
+        "posenet_pose6_f32": [],
+        "target_pose6_f32": [],
+    }
+    with ema_scope(model, ema), torch.no_grad():
+        for chunk_ids in pair_chunks(pair_ids, chunk_pairs):
+            ids_tensor = torch.tensor(chunk_ids, dtype=torch.long, device=next(model.parameters()).device)
+            target_argmax, target_pose6 = _target_arrays(chunk_ids, ids_tensor.device)
+            outputs = model(ids_tensor, height=EVAL_H, width=EVAL_W)
+            camera = roundtrip_to_camera_uint8_ste(outputs["rgb_pair_01"])
+            pose6, logits = scorer_forward(camera, posenet, segnet)
+            arrays["camera_pair_u8"].append(
+                camera.round().clamp(0, 255).cpu().to(torch.uint8).numpy()
+            )
+            arrays["segnet_logits_f16"].append(logits.cpu().numpy().astype("<f2"))
+            arrays["segnet_argmax_u8"].append(
+                logits.argmax(dim=1).cpu().numpy().astype(np.uint8)
+            )
+            arrays["target_argmax_u8"].append(target_argmax.cpu().numpy().astype(np.uint8))
+            arrays["posenet_pose6_f32"].append(pose6.cpu().numpy().astype("<f4"))
+            arrays["target_pose6_f32"].append(target_pose6.cpu().numpy().astype("<f4"))
+    retained_arrays = {name: np.concatenate(parts) for name, parts in arrays.items()}
+    retained_arrays["pair_ids_i64"] = np.asarray(pair_ids, dtype=np.int64)
+    payload = atomic_npz(
+        root / f"verdict_{verdict_index:04d}_step_{step:06d}.npz", **retained_arrays
+    )
+    table = per_class_argmax_table(
+        retained_arrays["segnet_argmax_u8"], retained_arrays["target_argmax_u8"]
+    )
+    pose_mse = float(
+        np.square(
+            retained_arrays["posenet_pose6_f32"].astype(np.float64)
+            - retained_arrays["target_pose6_f32"].astype(np.float64)
+        ).mean()
+    )
+    return {
+        "schema": "ddm_qbt2b_realized_birth_verdict.v1",
+        "axis": "[macOS frozen-scorer advisory]",
+        "score_claim": False,
+        "step": int(step),
+        "verdict_index": int(verdict_index),
+        "pair_ids": list(map(int, pair_ids)),
+        "per_class": table,
+        "pose_mse_realized": pose_mse,
+        "gate": birth_gate_from_table(
+            table, within_class_error_max=within_class_error_max
+        ),
+        "retained_payload": payload,
+        "all_materialized_frames_and_scorer_outputs_retained": True,
+    }
+
+
 def load_initial_model(device: torch.device) -> QBFLOWTorch:
     with np.load(INITIAL_PARAMS, allow_pickle=False) as params_npz:
         params = {name: np.asarray(params_npz[name], dtype=np.float32) for name in params_npz.files}
@@ -507,6 +679,438 @@ def load_initial_model(device: torch.device) -> QBFLOWTorch:
         boundary = np.asarray(latents_npz["boundary"], dtype=np.float32)
         interior = np.asarray(latents_npz["interior"], dtype=np.float32)
     return QBFLOWTorch(params, boundary, interior).to(device)
+
+
+def verify_qbt2b_inputs() -> dict[str, dict[str, Any]]:
+    """Verify the two inherited, video-derived inputs without changing QBF1 pins."""
+
+    rows = {
+        "fp1_palette": file_fact(FP1_PALETTE),
+        "qbt1_r1_checkpoint": file_fact(R1_CHECKPOINT),
+    }
+    expected = {
+        "fp1_palette": FP1_PALETTE_SHA256,
+        "qbt1_r1_checkpoint": R1_CHECKPOINT_SHA256,
+    }
+    for name, row in rows.items():
+        if row["sha256"] != expected[name]:
+            raise QBT1Error(f"QBT2B inherited input drifted: {name}")
+    return rows
+
+
+def load_fp1_inherited_palette() -> tuple[np.ndarray, np.ndarray]:
+    with np.load(FP1_PALETTE, allow_pickle=False) as payload:
+        if "proto_solved" not in payload or "sample_ids" not in payload:
+            raise QBT1Error("FP1 palette artifact lacks the documented trained values or sample IDs")
+        palette = np.asarray(payload["proto_solved"], dtype=np.float32).copy()
+        sample_ids = np.asarray(payload["sample_ids"], dtype=np.int64).copy()
+    if palette.shape != (qbf1.N_CLASSES, 3) or not np.isfinite(palette).all():
+        raise QBT1Error("FP1 inherited palette geometry differs")
+    if float(palette.min()) < 0.0 or float(palette.max()) > 255.0:
+        raise QBT1Error("FP1 inherited palette lies outside uint8 RGB range")
+    if sample_ids.shape != (32,) or len(set(map(int, sample_ids))) != 32:
+        raise QBT1Error("FP1 palette training sample lineage differs")
+    return palette, sample_ids
+
+
+def load_r1_ema_model(device: torch.device) -> tuple[QBFLOWTorch, Mapping[str, Any]]:
+    verify_qbt2b_inputs()
+    payload = torch.load(R1_CHECKPOINT, map_location="cpu", weights_only=False)
+    if payload.get("schema") != CHECKPOINT_SCHEMA or "ema" not in payload:
+        raise QBT1Error("QBT1 r1 checkpoint schema or EMA payload differs")
+    model = load_initial_model(device)
+    shadow = payload["ema"].get("shadow")
+    if set(shadow or ()) != set(model.state_dict()):
+        raise QBT1Error("QBT1 r1 EMA tensor set differs from the immutable QBF1 twin")
+    model.load_state_dict(
+        {name: value.detach().clone().to(device) for name, value in shadow.items()}, strict=True
+    )
+    return model, payload
+
+
+def _evenly_spaced_rows(indices: np.ndarray, maximum: int) -> np.ndarray:
+    if indices.size <= maximum:
+        return indices
+    positions = np.linspace(0, indices.size - 1, num=maximum, dtype=np.int64)
+    return indices[positions]
+
+
+def collect_readout_fit_samples(
+    model: QBFLOWTorch,
+    pair_ids: Sequence[int],
+    *,
+    samples_per_pair_class: int = READOUT_FIT_SAMPLES_PER_PAIR_CLASS,
+) -> dict[str, np.ndarray]:
+    """Collect deterministic observed render states stratified by pair and native class."""
+
+    if samples_per_pair_class < 1:
+        raise QBT1Error("readout fit sample cap must be positive")
+    states: list[np.ndarray] = []
+    classes: list[np.ndarray] = []
+    pairs: list[np.ndarray] = []
+    model.eval()
+    with torch.no_grad():
+        for chunk_ids in pair_chunks(pair_ids, 4):
+            outputs = model(torch.tensor(chunk_ids, dtype=torch.long), height=EVAL_H, width=EVAL_W)
+            render_state = outputs["render_state"].detach().cpu().numpy().astype(np.float32)
+            native_class = outputs["class_logits"].argmax(dim=-1).detach().cpu().numpy()
+            for local_index, pair_id in enumerate(chunk_ids):
+                flat_state = render_state[local_index].reshape(-1, render_state.shape[-1])
+                flat_class = native_class[local_index].reshape(-1)
+                for class_id in range(qbf1.N_CLASSES):
+                    indices = np.flatnonzero(flat_class == class_id)
+                    chosen = _evenly_spaced_rows(indices, samples_per_pair_class)
+                    if chosen.size == 0:
+                        continue
+                    states.append(flat_state[chosen].copy())
+                    classes.append(np.full(chosen.size, class_id, dtype=np.uint8))
+                    pairs.append(np.full(chosen.size, pair_id, dtype=np.uint16))
+    if not states:
+        raise QBT1Error("QBT1 r1 produced no native regions for the readout fit")
+    return {
+        "render_state_f32": np.concatenate(states, axis=0),
+        "native_class_u8": np.concatenate(classes, axis=0),
+        "pair_id_u16": np.concatenate(pairs, axis=0),
+    }
+
+
+def fit_inherited_palette_readout(
+    model: QBFLOWTorch,
+    palette_rgb: np.ndarray,
+    pair_ids: Sequence[int],
+    *,
+    samples: Mapping[str, np.ndarray] | None = None,
+) -> tuple[dict[str, Any], dict[str, np.ndarray]]:
+    """Fit only last-frame render readout values to the CE-trained inherited palette."""
+
+    samples = dict(samples) if samples is not None else collect_readout_fit_samples(model, pair_ids)
+    states = samples["render_state_f32"].astype(np.float64)
+    classes = samples["native_class_u8"].astype(np.int64)
+    clipped = np.clip(np.asarray(palette_rgb, dtype=np.float64) / 255.0, 1.0e-5, 1.0 - 1.0e-5)
+    palette_logits = np.log(clipped / (1.0 - clipped))
+    targets = palette_logits[classes]
+    design = np.concatenate((states, np.ones((states.shape[0], 1), dtype=np.float64)), axis=1)
+    coefficients, _residuals, rank, singular_values = np.linalg.lstsq(
+        design, targets, rcond=1.0e-6
+    )
+    predicted_logits = np.einsum("ni,ij->nj", design, coefficients, optimize=False)
+    predicted_rgb = 255.0 / (1.0 + np.exp(-predicted_logits))
+    residual = predicted_logits - targets
+    total_variance = float(np.square(targets - targets.mean(axis=0, keepdims=True)).sum())
+    residual_variance = float(np.square(residual).sum())
+    variance_ratio = residual_variance / total_variance if total_variance > 0.0 else math.inf
+    class_rows = []
+    for class_id, class_name in enumerate(PALETTE_CLASSES):
+        mask = classes == class_id
+        class_rows.append(
+            {
+                "class_id": class_id,
+                "class_name": class_name,
+                "sample_count": int(mask.sum()),
+                "target_rgb": palette_rgb[class_id].astype(float).tolist(),
+                "predicted_rgb_mean": predicted_rgb[mask].mean(axis=0).astype(float).tolist()
+                if bool(mask.any())
+                else None,
+                "rgb_rmse": np.sqrt(
+                    np.square(predicted_rgb[mask] - palette_rgb[class_id]).mean(axis=0)
+                ).astype(float).tolist()
+                if bool(mask.any())
+                else None,
+                "logit_rmse": np.sqrt(np.square(residual[mask]).mean(axis=0)).astype(float).tolist()
+                if bool(mask.any())
+                else None,
+            }
+        )
+    expected_rank = design.shape[1]
+    degenerate_reasons = []
+    if int(rank) < expected_rank:
+        degenerate_reasons.append(f"rank_deficient:{rank}/{expected_rank}")
+    if not math.isfinite(variance_ratio) or variance_ratio >= READOUT_RESIDUAL_VARIANCE_RATIO_MAX:
+        degenerate_reasons.append(
+            f"residual_approximately_variance:{variance_ratio:.9g}>={READOUT_RESIDUAL_VARIANCE_RATIO_MAX}"
+        )
+    before = {name: value.detach().cpu().clone() for name, value in model.state_dict().items()}
+    if not degenerate_reasons:
+        with torch.no_grad():
+            model.params["render_out_w"][:, 3:6].copy_(
+                torch.from_numpy(coefficients[:-1].astype(np.float32)).to(
+                    model.params["render_out_w"]
+                )
+            )
+            model.params["render_out_b"][3:6].copy_(
+                torch.from_numpy(coefficients[-1].astype(np.float32)).to(
+                    model.params["render_out_b"]
+                )
+            )
+    after = model.state_dict()
+    changed = [name for name in before if not torch.equal(before[name], after[name].detach().cpu())]
+    if not degenerate_reasons and set(changed) != {
+        "params.render_out_w",
+        "params.render_out_b",
+    }:
+        raise QBT1Error(f"palette init changed tensors outside the permitted QBF1 readout: {changed}")
+    if not torch.equal(before["params.render_out_w"][:, :3], after["params.render_out_w"][:, :3].cpu()):
+        raise QBT1Error("palette init changed the pose-facing frame-0 RGB readout")
+    if not torch.equal(before["params.render_out_b"][:3], after["params.render_out_b"][:3].cpu()):
+        raise QBT1Error("palette init changed the pose-facing frame-0 RGB bias")
+    receipt = {
+        "schema": "ddm_qbt2b_data_dependent_readout_fit.v1",
+        "axis": "[macOS-CPU scorer-free data-dependent fit]",
+        "score_claim": False,
+        "provenance_label": "VIDEO-DERIVED, CE-TRAINED, INHERITED PALETTE; DATA-DEPENDENT READOUT FIT",
+        "pair_ids": list(map(int, pair_ids)),
+        "selection": "same seeded stratified qbt1/no2 n32",
+        "fit_target": "last-frame RGB logit(palette[class]) over observed r1 native-class regions",
+        "fit_method": "deterministic pair-by-class evenly-spaced samples; unregularized least squares",
+        "lstsq_relative_singular_cutoff": 1.0e-6,
+        "sample_count": int(states.shape[0]),
+        "feature_count_with_bias": expected_rank,
+        "matrix_rank": int(rank),
+        "singular_value_max": float(singular_values[0]),
+        "singular_value_min": float(singular_values[-1]),
+        "condition_number": float(singular_values[0] / singular_values[-1])
+        if singular_values[-1] > 0.0
+        else math.inf,
+        "residual_variance_ratio": variance_ratio,
+        "residual_gate_max_exclusive": READOUT_RESIDUAL_VARIANCE_RATIO_MAX,
+        "per_class_residual_matrix": class_rows,
+        "changed_tensors": changed,
+        "frame0_readout_bit_identical": True,
+        "qbf1_shapes_unchanged": {
+            "render_out_w": list(model.params["render_out_w"].shape),
+            "render_out_b": list(model.params["render_out_b"].shape),
+        },
+        "degenerate": bool(degenerate_reasons),
+        "degenerate_reasons": degenerate_reasons,
+    }
+    samples["target_palette_logit_f64"] = targets
+    samples["fitted_palette_logit_f64"] = predicted_logits
+    samples["fit_coefficients_f64"] = coefficients
+    return receipt, samples
+
+
+def per_class_argmax_table(
+    predicted: np.ndarray, target: np.ndarray
+) -> list[dict[str, Any]]:
+    predicted = np.asarray(predicted, dtype=np.uint8).reshape(-1)
+    target = np.asarray(target, dtype=np.uint8).reshape(-1)
+    if predicted.shape != target.shape or predicted.size == 0:
+        raise QBT1Error("per-class receipt arrays differ")
+    rows = []
+    for class_id, class_name in enumerate(PALETTE_CLASSES):
+        target_mask = target == class_id
+        target_count = int(target_mask.sum())
+        predicted_count = int((predicted == class_id).sum())
+        within_error = (
+            float(np.mean(predicted[target_mask] != class_id)) if target_count else None
+        )
+        rows.append(
+            {
+                "class_id": class_id,
+                "class_name": class_name,
+                "target_pixel_share": target_count / predicted.size,
+                "predicted_pixel_share": predicted_count / predicted.size,
+                "within_class_error": within_error,
+                "target_pixels": target_count,
+                "predicted_pixels": predicted_count,
+                "present_and_below_60pct_error": bool(
+                    predicted_count > 0 and within_error is not None and within_error < 0.60
+                ),
+            }
+        )
+    return rows
+
+
+def _load_retained_eval_bank(
+    root: Path, pair_ids: Sequence[int]
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list[dict[str, Any]]]:
+    predicted: list[np.ndarray] = []
+    target: list[np.ndarray] = []
+    poses: list[np.ndarray] = []
+    target_poses: list[np.ndarray] = []
+    custody: list[dict[str, Any]] = []
+    for pair_id in pair_ids:
+        path = root / f"pair_{pair_id:04d}.npz"
+        fact = file_fact(path)
+        with np.load(path, allow_pickle=False) as payload:
+            predicted.append(np.asarray(payload["segnet_argmax_u8"], dtype=np.uint8).copy())
+            target_key = "target_argmax_u8" if "target_argmax_u8" in payload else "target_argmax"
+            pose_key = "posenet_pose6_f32" if "posenet_pose6_f32" in payload else "posenet_pose6"
+            target_pose_key = (
+                "target_pose6_f32" if "target_pose6_f32" in payload else "target_pose6"
+            )
+            target.append(np.asarray(payload[target_key], dtype=np.uint8).copy())
+            poses.append(np.asarray(payload[pose_key], dtype=np.float32).copy())
+            target_poses.append(np.asarray(payload[target_pose_key], dtype=np.float32).copy())
+        custody.append({"pair_id": int(pair_id), "payload": fact})
+    return (
+        np.stack(predicted),
+        np.stack(target),
+        np.stack(poses),
+        np.stack(target_poses),
+        custody,
+    )
+
+
+def prepare_inherited_palette_initialization(output: Path) -> dict[str, Any]:
+    """Materialize the charter's retained fit and real n32 before/after init receipt."""
+
+    storage = storage_preflight(output, 8 * 1024**3)
+    seed_everything(SEED)
+    inherited_inputs = verify_qbt2b_inputs()
+    palette, fp1_sample_ids = load_fp1_inherited_palette()
+    copied_palette = atomic_bytes(output / "palette/inherited_fp1_prototypes_exact.npz", FP1_PALETTE.read_bytes())
+    palette_values = atomic_npz(
+        output / "palette/inherited_fp1_palette_values.npz",
+        palette_rgb_f32=palette,
+        fp1_training_sample_ids_i64=fp1_sample_ids,
+    )
+    model, r1_payload = load_r1_ema_model(torch.device("cpu"))
+    raw_samples = collect_readout_fit_samples(model, SELECTION_IDS)
+    raw_samples_fact = atomic_npz(output / "fit/readout_fit_samples.npz", **raw_samples)
+    fit_receipt, samples = fit_inherited_palette_readout(
+        model, palette, SELECTION_IDS, samples=raw_samples
+    )
+    samples_fact = atomic_npz(output / "fit/readout_fit_samples_and_predictions.npz", **samples)
+    fit_receipt["retained_raw_fit_samples"] = raw_samples_fact
+    fit_receipt["retained_fit_samples_and_predictions"] = samples_fact
+    fit_receipt["source_inputs"] = inherited_inputs
+    fit_receipt["palette_exact_copy"] = copied_palette
+    fit_receipt["palette_values"] = palette_values
+    fit_receipt_fact = atomic_json(output / "fit/READOUT_FIT_RECEIPT.json", fit_receipt)
+    if fit_receipt["degenerate"]:
+        blocker = {
+            "schema": PALETTE_INIT_SCHEMA,
+            "status": "BLOCKED_DEGENERATE_READOUT_FIT",
+            "disposition": "STOPPED_PER_CHARTER_BEFORE_CE_BUILD",
+            "axis": "[macOS-CPU scorer-free data-dependent fit]",
+            "score_claim": False,
+            "inherited_palette_provenance": "VIDEO-DERIVED, CE-TRAINED, INHERITED",
+            "fit_receipt": fit_receipt_fact,
+            "storage": storage,
+            "training_launched": False,
+            "metal_invocations": 0,
+            "modal_invocations": 0,
+            "contest_eval_invocations": 0,
+        }
+        atomic_json(output / "INITIALIZATION_RESULT.json", blocker)
+        return blocker
+
+    initialized_state = {
+        "schema": "ddm_qbt2b_initialized_qbf1_state.v1",
+        "source_r1_checkpoint": inherited_inputs["qbt1_r1_checkpoint"],
+        "source_r1_ema_updates": int(r1_payload["ema"]["num_updates"]),
+        "palette": palette_values,
+        "fit_receipt": fit_receipt_fact,
+        "state_dict": {
+            name: value.detach().cpu().clone() for name, value in model.state_dict().items()
+        },
+    }
+    initialized_state_fact = atomic_torch(output / "initialized/initialized_r3_state.pt", initialized_state)
+    params, boundary, interior = model.packet_state()
+    qbf1.validate_param_shapes(params)
+    if boundary.shape != (N, qbf1.BOUNDARY_LATENT_DIM) or interior.shape != (
+        N,
+        qbf1.INTERIOR_LATENT_DIM,
+    ):
+        raise QBT1Error("palette initialized state changed QBF1 latent shapes")
+
+    before_pred, before_target, before_pose, before_target_pose, before_custody = (
+        _load_retained_eval_bank(R1_RETAINED, SELECTION_IDS)
+    )
+    before_table = per_class_argmax_table(before_pred, before_target)
+    before_pose_mse = float(
+        np.square(before_pose.astype(np.float64) - before_target_pose.astype(np.float64)).mean()
+    )
+
+    posenet, segnet = load_differentiable_scorers(REPO / "upstream", device=torch.device("cpu"))
+    posenet.eval()
+    segnet.eval()
+    after_predicted: list[np.ndarray] = []
+    after_target: list[np.ndarray] = []
+    after_pose: list[np.ndarray] = []
+    after_target_pose: list[np.ndarray] = []
+    after_rows: list[dict[str, Any]] = []
+    with torch.no_grad():
+        for chunk_ids in pair_chunks(SELECTION_IDS, 4):
+            ids_tensor = torch.tensor(chunk_ids, dtype=torch.long)
+            target_argmax, target_pose6 = _target_arrays(chunk_ids, torch.device("cpu"))
+            outputs = model(ids_tensor, height=EVAL_H, width=EVAL_W)
+            camera = roundtrip_to_camera_uint8_ste(outputs["rgb_pair_01"])
+            pose6, logits = scorer_forward(camera, posenet, segnet)
+            retained = _retain_eval_outputs(
+                output / "init_receipt/after/retained",
+                pair_ids=chunk_ids,
+                camera=camera,
+                pose6=pose6,
+                logits=logits,
+                target_argmax=target_argmax,
+                target_pose6=target_pose6,
+            )
+            after_rows.extend(retained["rows"])
+            after_predicted.append(logits.argmax(dim=1).cpu().numpy().astype(np.uint8))
+            after_target.append(target_argmax.cpu().numpy().astype(np.uint8))
+            after_pose.append(pose6.cpu().numpy().astype(np.float32))
+            after_target_pose.append(target_pose6.cpu().numpy().astype(np.float32))
+    after_pred = np.concatenate(after_predicted)
+    after_gt = np.concatenate(after_target)
+    after_pose_np = np.concatenate(after_pose)
+    after_target_pose_np = np.concatenate(after_target_pose)
+    after_table = per_class_argmax_table(after_pred, after_gt)
+    after_pose_mse = float(
+        np.square(after_pose_np.astype(np.float64) - after_target_pose_np.astype(np.float64)).mean()
+    )
+    gate_count = sum(bool(row["present_and_below_60pct_error"]) for row in after_table)
+    init_gate = {
+        "threshold": "at least 4 of 5 classes have predicted share > 0 and within-class error < 0.60",
+        "passing_class_count": gate_count,
+        "passed": gate_count >= 4,
+        "miss_does_not_block_ce_birth": True,
+    }
+    receipt = {
+        "schema": PALETTE_INIT_SCHEMA,
+        "status": "COMPLETE_NONDEGENERATE_FIT",
+        "axis": "[macOS-CPU frozen-scorer advisory]",
+        "score_claim": False,
+        "selection": "same seeded stratified qbt1/no2 n32",
+        "pair_ids": list(SELECTION_IDS),
+        "inherited_palette_provenance": "VIDEO-DERIVED, CE-TRAINED, INHERITED",
+        "palette_rgb": palette.astype(float).tolist(),
+        "palette_custody": {
+            "source": inherited_inputs["fp1_palette"],
+            "exact_copy": copied_palette,
+            "values": palette_values,
+            "fp1_training_sample_ids": fp1_sample_ids.astype(int).tolist(),
+        },
+        "fit_receipt": fit_receipt_fact,
+        "initialized_state": initialized_state_fact,
+        "qbf1_abi": {
+            "immutable": True,
+            "render_out_w_shape": list(model.params["render_out_w"].shape),
+            "render_out_b_shape": list(model.params["render_out_b"].shape),
+            "only_values_changed": True,
+        },
+        "before": {
+            "source": "existing qbt1 r1 retained exact scorer bank",
+            "per_class": before_table,
+            "pose_mse": before_pose_mse,
+            "retained_payloads": before_custody,
+        },
+        "after": {
+            "per_class": after_table,
+            "pose_mse": after_pose_mse,
+            "retained_payloads": after_rows,
+        },
+        "init_gate": init_gate,
+        "storage": storage,
+        "all_receipt_frames_and_scorer_outputs_retained": True,
+        "training_launched": False,
+        "metal_invocations": 0,
+        "modal_invocations": 0,
+        "contest_eval_invocations": 0,
+    }
+    atomic_json(output / "INITIALIZATION_RESULT.json", receipt)
+    return receipt
 
 
 def _ema_payload(ema: EMA) -> dict[str, Any]:
@@ -559,6 +1163,7 @@ def save_checkpoint(
     step: int,
     stage: str,
     history: Sequence[Mapping[str, Any]],
+    curriculum_state: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload = {
         "schema": CHECKPOINT_SCHEMA,
@@ -571,6 +1176,7 @@ def save_checkpoint(
         "optimizer_state_dict": optimizer.state_dict(),
         "rng": _rng_payload(),
         "history": list(history),
+        "curriculum_state": copy.deepcopy(dict(curriculum_state or {})),
     }
     return atomic_torch(path, payload)
 
@@ -616,12 +1222,107 @@ def _retain_section(root: Path, section_id: int, raw: bytes) -> qbf1.EncodedSect
     return qbf1.choose_section(candidates)
 
 
+def _containerize_file_facts(value: object, root: Path, container: Path) -> object:
+    if isinstance(value, list):
+        return [_containerize_file_facts(item, root, container) for item in value]
+    if isinstance(value, dict):
+        converted = {
+            name: _containerize_file_facts(item, root, container) for name, item in value.items()
+        }
+        raw_path = converted.get("path")
+        if isinstance(raw_path, str):
+            path = Path(raw_path)
+            try:
+                member = path.resolve().relative_to(root.resolve())
+            except ValueError:
+                return converted
+            converted["path"] = f"{container.resolve()}::{member.as_posix()}"
+            converted["container"] = str(container.resolve())
+            converted["container_member"] = member.as_posix()
+        return converted
+    return value
+
+
+def consolidate_reencode_payloads(root: Path, manifest: Mapping[str, Any]) -> dict[str, Any]:
+    """Pack one re-encode's retained payloads into one deterministic tar plus one manifest."""
+
+    manifest_path = root / "REENCODE_MANIFEST.json"
+    container = root / "reencode_payloads.tar"
+    source_files = sorted(
+        path for path in root.rglob("*") if path.is_file() and path not in {manifest_path, container}
+    )
+    if not source_files:
+        raise QBT1Error("re-encode consolidation found no retained payloads")
+    source_rows = [
+        {
+            **file_fact(path),
+            "relative_path": path.relative_to(root).as_posix(),
+        }
+        for path in source_files
+    ]
+    temporary = container.with_name(f".{container.name}.{os.getpid()}.tmp")
+    with tarfile.open(temporary, mode="w", format=tarfile.PAX_FORMAT) as archive:
+        for path, row in zip(source_files, source_rows, strict=True):
+            info = tarfile.TarInfo(row["relative_path"])
+            info.size = int(row["bytes"])
+            info.mtime = 0
+            info.uid = info.gid = 0
+            info.uname = info.gname = ""
+            info.mode = 0o644
+            with path.open("rb") as stream:
+                archive.addfile(info, stream)
+    with temporary.open("rb") as stream:
+        os.fsync(stream.fileno())
+    os.replace(temporary, container)
+    with tarfile.open(container, mode="r") as archive:
+        members = {member.name: member for member in archive.getmembers() if member.isfile()}
+        if set(members) != {row["relative_path"] for row in source_rows}:
+            raise QBT1Error("re-encode tar member set differs before cleanup")
+        for row in source_rows:
+            extracted = archive.extractfile(members[row["relative_path"]])
+            if extracted is None:
+                raise QBT1Error("re-encode tar member is unreadable")
+            digest = hashlib.sha256(extracted.read()).hexdigest()
+            if digest != row["sha256"]:
+                raise QBT1Error(f"re-encode tar member sha differs: {row['relative_path']}")
+    container_fact = file_fact(container)
+    consolidated = _containerize_file_facts(copy.deepcopy(dict(manifest)), root, container)
+    assert isinstance(consolidated, dict)
+    consolidated.update(
+        {
+            "retention_mode": "ONE_DETERMINISTIC_TAR_PER_REENCODE",
+            "retention_container": container_fact,
+            "retention_member_count": len(source_rows),
+            "retention_members_logical_bytes": sum(int(row["bytes"]) for row in source_rows),
+            "cleanup_certification": {
+                "original_root": str(root.resolve()),
+                "original_files": source_rows,
+                "container": container_fact,
+                "reproducibility": "all original bytes and relative paths are SHA-bound in the verified deterministic tar",
+                "reason": "avoid measured AP ExFAT 128-KiB cluster amplification",
+            },
+        }
+    )
+    for path in sorted(source_files, key=lambda item: len(item.parts), reverse=True):
+        path.unlink()
+    for directory in sorted(
+        (path for path in root.rglob("*") if path.is_dir()),
+        key=lambda item: len(item.parts),
+        reverse=True,
+    ):
+        if directory != root and not any(directory.iterdir()):
+            directory.rmdir()
+    atomic_json(manifest_path, consolidated)
+    return consolidated
+
+
 def reencode_inference_state(
     root: Path,
     *,
     model: QBFLOWTorch,
     state: Mapping[str, torch.Tensor],
     selected_pair_ids: Sequence[int],
+    consolidate: bool = False,
 ) -> dict[str, Any]:
     """Retain every real coder payload and complete QBF1 framing for one EMA state."""
 
@@ -706,7 +1407,24 @@ def reencode_inference_state(
         "ht_projection_ready": ht_ready,
     }
     atomic_json(root / "REENCODE_MANIFEST.json", manifest)
-    return manifest
+    return consolidate_reencode_payloads(root, manifest) if consolidate else manifest
+
+
+def compact_reencode_history(manifest: Mapping[str, Any]) -> dict[str, Any]:
+    """Keep checkpoint history resumable without recursively embedding coder inventories."""
+
+    compact = {
+        "schema": manifest["schema"],
+        "archive": copy.deepcopy(manifest["archive"]),
+        "B_hat": manifest.get("B_hat"),
+        "ht_projection_ready": manifest.get("ht_projection_ready"),
+    }
+    container = manifest.get("retention_container")
+    if container is not None:
+        compact["retention_container"] = copy.deepcopy(container)
+        manifest_path = Path(container["path"]).parent / "REENCODE_MANIFEST.json"
+        compact["manifest"] = file_fact(manifest_path)
+    return compact
 
 
 def state_tensor_role(name: str) -> str:
@@ -758,6 +1476,7 @@ def precision_sensitivity_and_reencode(
     gradients: Mapping[str, torch.Tensor],
     selected_pair_ids: Sequence[int],
     probe_bits: Sequence[int],
+    consolidate: bool = False,
 ) -> dict[str, Any]:
     """Retain real QBF1 options and a labelled first-order sensitivity table.
 
@@ -767,7 +1486,11 @@ def precision_sensitivity_and_reencode(
 
     roles = tuple(sorted({state_tensor_role(name) for name in state}))
     baseline = reencode_inference_state(
-        root / "baseline", model=model, state=state, selected_pair_ids=selected_pair_ids
+        root / "baseline",
+        model=model,
+        state=state,
+        selected_pair_ids=selected_pair_ids,
+        consolidate=consolidate,
     )
     rows: list[dict[str, Any]] = []
     for role in roles:
@@ -793,6 +1516,7 @@ def precision_sensitivity_and_reencode(
                 model=model,
                 state=candidate,
                 selected_pair_ids=selected_pair_ids,
+                consolidate=consolidate,
             )
             rows.append(
                 {
@@ -1020,6 +1744,43 @@ def compile_config(*, action: str, output: Path, pair_ids: Sequence[int], steps:
     return config
 
 
+def compile_qbt2b_config(
+    *,
+    action: str,
+    output: Path,
+    pair_ids: Sequence[int],
+    device: str,
+    initialization_state: Path,
+    birth_max_steps: int = QBT2B_BIRTH_MAX_STEPS,
+    margin_steps: int = QBT2B_MARGIN_STEPS,
+) -> dict[str, Any]:
+    total_steps = int(birth_max_steps) + int(margin_steps)
+    config = compile_config(
+        action=action,
+        output=output,
+        pair_ids=pair_ids,
+        steps=total_steps,
+        device=device,
+    )
+    initialization = file_fact(initialization_state)
+    config.update(
+        {
+            "curriculum_mode": "ce_birth_then_margin",
+            "birth_max_steps": int(birth_max_steps),
+            "margin_steps": int(margin_steps),
+            "birth_verdict_every_steps": max(1, min(5, int(birth_max_steps))),
+            "birth_stability_verdicts": 2,
+            "birth_within_class_error_max": BIRTH_WITHIN_CLASS_ERROR_MAX,
+            "initialization_state_path": initialization["path"],
+            "initialization_state_sha256": initialization["sha256"],
+            "consolidate_checkpoint_reencodes": True,
+        }
+    )
+    config["ema"] = resolve_ema_law(total_steps)
+    validate_config(config, require_launch_authority=action != "train")
+    return config
+
+
 def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool = True) -> None:
     if config.get("schema") != SCHEMA:
         raise QBT1Error("compiled config schema differs")
@@ -1030,6 +1791,9 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
         "pose_start_step", "ema", "minimum_free_bytes", "retain_all_payloads", "resume_from",
         "launch_authorized", "scorer_lane", "metal_lane", "same_budget_qbw1_control_receipt",
         "precision_probe_bits", "source_pins",
+        "curriculum_mode", "birth_max_steps", "margin_steps", "birth_verdict_every_steps",
+        "birth_stability_verdicts", "birth_within_class_error_max", "initialization_state_path",
+        "initialization_state_sha256", "consolidate_checkpoint_reencodes",
     }
     if unknown:
         raise QBT1Error(f"compiled config has unknown fields: {sorted(unknown)}")
@@ -1085,6 +1849,42 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
         or int(config["chunk_pairs"]) != REAL_TRAIN_CHUNK_PAIRS
     ):
         raise QBT1Error("heavy training must use the sealed no2 n32 selection in equal chunks")
+    curriculum_mode = str(config.get("curriculum_mode", "legacy_margin_only"))
+    if curriculum_mode == "ce_birth_then_margin":
+        required = {
+            "birth_max_steps",
+            "margin_steps",
+            "birth_verdict_every_steps",
+            "birth_stability_verdicts",
+            "birth_within_class_error_max",
+            "initialization_state_path",
+            "initialization_state_sha256",
+            "consolidate_checkpoint_reencodes",
+        }
+        missing = required - set(config)
+        if missing:
+            raise QBT1Error(f"QBT2B config lacks additive fields: {sorted(missing)}")
+        if int(config["steps"]) != int(config["birth_max_steps"]) + int(config["margin_steps"]):
+            raise QBT1Error("QBT2B total step geometry differs")
+        if (
+            int(config["birth_max_steps"]) < 1
+            or int(config["margin_steps"]) < 1
+            or not 1 <= int(config["birth_verdict_every_steps"]) <= int(config["birth_max_steps"])
+            or int(config["birth_stability_verdicts"]) != 2
+            or not math.isclose(
+                float(config["birth_within_class_error_max"]),
+                BIRTH_WITHIN_CLASS_ERROR_MAX,
+                rel_tol=0.0,
+                abs_tol=1.0e-12,
+            )
+            or config["consolidate_checkpoint_reencodes"] is not True
+        ):
+            raise QBT1Error("QBT2B CE-birth/event/retention law differs")
+        initialization = file_fact(Path(config["initialization_state_path"]))
+        if initialization["sha256"] != config["initialization_state_sha256"]:
+            raise QBT1Error("QBT2B initialized state custody differs")
+    elif curriculum_mode != "legacy_margin_only":
+        raise QBT1Error(f"unsupported curriculum mode: {curriculum_mode}")
 
 
 def _load_control(config: Mapping[str, Any]) -> Mapping[str, Any] | None:
@@ -1129,7 +1929,23 @@ def _load_control(config: Mapping[str, Any]) -> Mapping[str, Any] | None:
 
 
 def _model_and_optimizer(config: Mapping[str, Any], device: torch.device) -> tuple[QBFLOWTorch, torch.optim.AdamW, EMA]:
-    model = load_initial_model(device)
+    if config.get("curriculum_mode", "legacy_margin_only") == "ce_birth_then_margin":
+        initialization_path = Path(config["initialization_state_path"])
+        if sha256_file(initialization_path) != config["initialization_state_sha256"]:
+            raise QBT1Error("QBT2B initialized state drifted before model construction")
+        initialization = torch.load(initialization_path, map_location="cpu", weights_only=False)
+        if initialization.get("schema") != "ddm_qbt2b_initialized_qbf1_state.v1":
+            raise QBT1Error("QBT2B initialized state schema differs")
+        model = load_initial_model(device)
+        model.load_state_dict(
+            {
+                name: value.detach().clone().to(device)
+                for name, value in initialization["state_dict"].items()
+            },
+            strict=True,
+        )
+    else:
+        model = load_initial_model(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(config["learning_rate"]))
     ema = EMA(model, decay=float(config["ema"]["value"]), warmup=True)
     return model, optimizer, ema
@@ -1155,10 +1971,21 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
     step = 0
     history: list[dict[str, Any]] = []
     resume_identity = None
+    curriculum_mode = str(config.get("curriculum_mode", "legacy_margin_only"))
+    consolidate_reencodes = bool(config.get("consolidate_checkpoint_reencodes", False))
+    curriculum_state: dict[str, Any] = {
+        "phase": "stage_03_joint_boundary_interior_birth",
+        "birth_step": 0,
+        "margin_step": 0,
+        "birth_stable_verdicts": 0,
+        "birth_verdict_count": 0,
+        "birth_handoff_authorized": curriculum_mode == "legacy_margin_only",
+    }
     if config.get("resume_from"):
         step, ema, history, payload = load_checkpoint(
             Path(config["resume_from"]), model=model, optimizer=optimizer, config=config
         )
+        curriculum_state.update(payload.get("curriculum_state", {}))
         resume_identity = {
             "checkpoint": file_fact(Path(config["resume_from"])),
             "live_state_sha256": canonical_sha256(
@@ -1169,7 +1996,237 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
             ),
         }
 
-    for current in range(step, int(config["steps"])):
+    stage03a_checkpoint = None
+    stage03a_reencode = None
+    boundary_resume_identity = None
+    if curriculum_mode == "ce_birth_then_margin" and not curriculum_state.get(
+        "birth_handoff_authorized", False
+    ):
+        birth_max_steps = int(config["birth_max_steps"])
+        for birth_index in range(int(curriculum_state["birth_step"]), birth_max_steps):
+            chunk_ids = optimizer_chunks[birth_index % len(optimizer_chunks)]
+            ids_tensor = torch.tensor(chunk_ids, dtype=torch.long, device=device)
+            target_argmax, target_pose6 = _target_arrays(chunk_ids, device)
+            sample_weights = no2_sample_weights(chunk_ids, device)
+            optimizer.zero_grad(set_to_none=True)
+            outputs = model(ids_tensor, height=EVAL_H, width=EVAL_W)
+            camera = roundtrip_to_camera_uint8_ste(outputs["rgb_pair_01"])
+            pose6, logits = scorer_forward(camera, posenet, segnet)
+            total, components = realized_ce_birth_objective(
+                camera,
+                pose6,
+                logits,
+                target_argmax,
+                target_pose6,
+                sample_weights,
+            )
+            total.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            optimizer.step()
+            ema.update(model)
+            step += 1
+            curriculum_state["birth_step"] = birth_index + 1
+            row = {
+                "step": step,
+                "stage": "stage_03a_ce_class_birth",
+                "stage_step": birth_index + 1,
+                "pair_ids": list(chunk_ids),
+                "materialized_pairs": len(chunk_ids),
+                "objective": {
+                    name: float(value.detach().cpu()) for name, value in components.items()
+                },
+                "ema_effective_decay": ema.effective_decay(),
+            }
+            history.append(row)
+            checkpoint_due = (birth_index + 1) % int(config["checkpoint_every_steps"]) == 0
+            verdict_due = (birth_index + 1) % int(config["birth_verdict_every_steps"]) == 0
+            handoff_now = False
+            if verdict_due or birth_index + 1 == birth_max_steps:
+                verdict_index = int(curriculum_state["birth_verdict_count"]) + 1
+                verdict = evaluate_birth_verdict(
+                    output / "stage_03a_ce_class_birth/verdicts",
+                    model=model,
+                    ema=ema,
+                    posenet=posenet,
+                    segnet=segnet,
+                    pair_ids=pair_ids,
+                    chunk_pairs=int(config["chunk_pairs"]),
+                    step=step,
+                    verdict_index=verdict_index,
+                    within_class_error_max=float(config["birth_within_class_error_max"]),
+                )
+                curriculum_state["birth_verdict_count"] = verdict_index
+                if verdict["gate"]["all_five_classes_pass"]:
+                    curriculum_state["birth_stable_verdicts"] = int(
+                        curriculum_state["birth_stable_verdicts"]
+                    ) + 1
+                else:
+                    curriculum_state["birth_stable_verdicts"] = 0
+                verdict["consecutive_passing_verdicts"] = int(
+                    curriculum_state["birth_stable_verdicts"]
+                )
+                verdict["required_consecutive_passing_verdicts"] = int(
+                    config["birth_stability_verdicts"]
+                )
+                row["birth_verdict"] = verdict
+                if int(curriculum_state["birth_stable_verdicts"]) >= int(
+                    config["birth_stability_verdicts"]
+                ):
+                    curriculum_state["birth_handoff_authorized"] = True
+                    curriculum_state["phase"] = "stage_03_joint_boundary_interior_birth"
+                    handoff_now = True
+            if checkpoint_due or verdict_due or birth_index + 1 == birth_max_steps:
+                checkpoint = save_checkpoint(
+                    output
+                    / "stage_03a_ce_class_birth/checkpoints"
+                    / f"periodic_step_{birth_index + 1:06d}.pt",
+                    model=model,
+                    optimizer=optimizer,
+                    ema=ema,
+                    config=config,
+                    step=step,
+                    stage="stage_03a_ce_class_birth",
+                    history=history,
+                    curriculum_state=curriculum_state,
+                )
+                checkpoint_reencode = reencode_inference_state(
+                    output
+                    / "stage_03a_ce_class_birth/reencoded"
+                    / f"step_{birth_index + 1:06d}",
+                    model=model,
+                    state=ema.shadow,
+                    selected_pair_ids=pair_ids,
+                    consolidate=consolidate_reencodes,
+                )
+                row["checkpoint"] = checkpoint
+                row["reencode"] = compact_reencode_history(checkpoint_reencode)
+            if handoff_now:
+                break
+
+        stage03a_checkpoint = save_checkpoint(
+            output
+            / "stage_03a_ce_class_birth/checkpoints"
+            / (
+                "stage_03a_end.pt"
+                if curriculum_state["birth_handoff_authorized"]
+                else "stage_03a_cap_without_handoff.pt"
+            ),
+            model=model,
+            optimizer=optimizer,
+            ema=ema,
+            config=config,
+            step=step,
+            stage=(
+                "stage_03a_ce_class_birth_end"
+                if curriculum_state["birth_handoff_authorized"]
+                else "stage_03a_ce_class_birth_cap_without_handoff"
+            ),
+            history=history,
+            curriculum_state=curriculum_state,
+        )
+        stage03a_reencode = reencode_inference_state(
+            output
+            / "stage_03a_ce_class_birth/reencoded"
+            / (
+                "stage_03a_end"
+                if curriculum_state["birth_handoff_authorized"]
+                else "stage_03a_cap_without_handoff"
+            ),
+            model=model,
+            state=ema.shadow,
+            selected_pair_ids=pair_ids,
+            consolidate=consolidate_reencodes,
+        )
+        boundary_model, boundary_optimizer, _unused_boundary_ema = _model_and_optimizer(config, device)
+        boundary_step, boundary_ema, boundary_history, boundary_payload = load_checkpoint(
+            Path(stage03a_checkpoint["path"]),
+            model=boundary_model,
+            optimizer=boundary_optimizer,
+            config=config,
+        )
+        live_identical = all(
+            torch.equal(value.detach().cpu(), boundary_model.state_dict()[name].detach().cpu())
+            for name, value in model.state_dict().items()
+        )
+        ema_identical = all(
+            torch.equal(value.detach().cpu(), boundary_ema.shadow[name].detach().cpu())
+            for name, value in ema.shadow.items()
+        )
+        boundary_resume_identity = {
+            "bit_faithful": bool(
+                boundary_step == step
+                and boundary_history == history
+                and live_identical
+                and ema_identical
+                and boundary_payload.get("curriculum_state") == curriculum_state
+            ),
+            "checkpoint": stage03a_checkpoint,
+            "archive_before_reload": stage03a_reencode["archive"],
+            "rng_restored": boundary_payload.get("rng") is not None,
+            "handoff_authorized_by_realized_event": bool(
+                curriculum_state["birth_handoff_authorized"]
+            ),
+        }
+        boundary_reencode = reencode_inference_state(
+            output / "stage_03a_ce_class_birth/reencoded/resume_identity",
+            model=boundary_model,
+            state=boundary_ema.shadow,
+            selected_pair_ids=pair_ids,
+            consolidate=consolidate_reencodes,
+        )
+        boundary_resume_identity["archive_after_reload"] = boundary_reencode["archive"]
+        boundary_resume_identity["bit_faithful"] = bool(
+            boundary_resume_identity["bit_faithful"]
+            and boundary_reencode["archive"]["sha256"]
+            == stage03a_reencode["archive"]["sha256"]
+        )
+        if not boundary_resume_identity["bit_faithful"]:
+            raise QBT1Error("resume identity across the 03a/03 boundary differs")
+        model, optimizer, ema = boundary_model, boundary_optimizer, boundary_ema
+        if not curriculum_state["birth_handoff_authorized"]:
+            peak_rss = _maximum_rss_bytes()
+            memory = project_memory(
+                baseline_rss_bytes=baseline_rss,
+                observed_peak_rss_bytes=peak_rss,
+                observed_pairs=max(map(len, chunks)),
+                real_chunk_pairs=REAL_TRAIN_CHUNK_PAIRS,
+            )
+            result = {
+                "schema": RESULT_SCHEMA,
+                "complete": True,
+                "arm": "ddm_qbt2b_ce_birth_stage_smoke_or_cap",
+                "status": "BIRTH_STAGE_CAPPED_WITHOUT_EVENT_HANDOFF",
+                "axis": "[macOS-CPU bounded mechanism smoke; not a verdict]"
+                if config["action"] == "smoke"
+                else "[macOS-MPS governed n32 research row; not contest authority]",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "pointer_moved": False,
+                "pins": pins,
+                "storage": storage,
+                "history": history,
+                "stage_03a_checkpoint": stage03a_checkpoint,
+                "stage_03a_reencode": stage03a_reencode,
+                "resume_identity_across_03a_03": boundary_resume_identity,
+                "memory_projection": memory,
+                "all_payloads_retained": True,
+                "training_launch": config["action"] == "train",
+                "metal_invocations": int(config["action"] == "train"),
+                "modal_invocations": 0,
+                "contest_eval_invocations": 0,
+                "boundary": "margin stage did not run because the realized five-class event was not stable twice",
+            }
+            atomic_json(output / "RESULT.json", result)
+            return result
+
+    if curriculum_mode == "ce_birth_then_margin":
+        margin_start = int(curriculum_state["margin_step"])
+        margin_steps = int(config["margin_steps"])
+    else:
+        margin_start = step
+        margin_steps = int(config["steps"])
+
+    for current in range(margin_start, margin_steps):
         chunk_ids = optimizer_chunks[current % len(optimizer_chunks)]
         ids_tensor = torch.tensor(chunk_ids, dtype=torch.long, device=device)
         target_argmax, target_pose6 = _target_arrays(chunk_ids, device)
@@ -1180,7 +2237,7 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
         pose6, logits = scorer_forward(camera, posenet, segnet)
         tau = tau_for_step(
             current,
-            int(config["steps"]),
+            margin_steps,
             float(config["expected_flip_tau_start"]),
             float(config["expected_flip_tau_end"]),
         )
@@ -1198,17 +2255,19 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         optimizer.step()
         ema.update(model)
+        step += 1
+        curriculum_state["margin_step"] = current + 1
         row = {
-            "step": current + 1,
+            "step": step,
+            "stage": "stage_03_joint_boundary_interior_birth",
+            "stage_step": current + 1,
             "pair_ids": list(chunk_ids),
             "materialized_pairs": len(chunk_ids),
             "objective": {name: float(value.detach().cpu()) for name, value in components.items()},
             "ema_effective_decay": ema.effective_decay(),
         }
         history.append(row)
-        checkpoint_due = (current + 1) % int(config["checkpoint_every_steps"]) == 0 or current + 1 == int(
-            config["steps"]
-        )
+        checkpoint_due = (current + 1) % int(config["checkpoint_every_steps"]) == 0 or current + 1 == margin_steps
         if checkpoint_due:
             checkpoint = save_checkpoint(
                 output / "stage_03_joint_boundary_interior_birth/checkpoints" / f"periodic_step_{current + 1:06d}.pt",
@@ -1216,18 +2275,24 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
                 optimizer=optimizer,
                 ema=ema,
                 config=config,
-                step=current + 1,
+                step=step,
                 stage="stage_03_joint_boundary_interior_birth",
                 history=history,
+                curriculum_state=curriculum_state,
             )
             checkpoint_reencode = reencode_inference_state(
                 output / "stage_03_joint_boundary_interior_birth/reencoded" / f"step_{current + 1:06d}",
                 model=model,
                 state=ema.shadow,
                 selected_pair_ids=pair_ids,
+                consolidate=consolidate_reencodes,
             )
             row["checkpoint"] = checkpoint
-            row["reencode"] = checkpoint_reencode
+            row["reencode"] = (
+                compact_reencode_history(checkpoint_reencode)
+                if curriculum_mode == "ce_birth_then_margin"
+                else checkpoint_reencode
+            )
 
     stage3_checkpoint = save_checkpoint(
         output / "stage_03_joint_boundary_interior_birth/checkpoints/stage_03_end.pt",
@@ -1235,15 +2300,17 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
         optimizer=optimizer,
         ema=ema,
         config=config,
-        step=int(config["steps"]),
+        step=step,
         stage="stage_03_joint_boundary_interior_birth_end",
         history=history,
+        curriculum_state=curriculum_state,
     )
     stage3_reencode = reencode_inference_state(
         output / "stage_03_joint_boundary_interior_birth/reencoded/stage_03_end",
         model=model,
         state=ema.shadow,
         selected_pair_ids=pair_ids,
+        consolidate=consolidate_reencodes,
     )
 
     # Reload the atomic stage boundary and prove live/EMA/optimizer/RNG identity
@@ -1255,7 +2322,7 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
         optimizer=resumed_optimizer,
         config=config,
     )
-    if resumed_step != int(config["steps"]) or resumed_history != history:
+    if resumed_step != step or resumed_history != history:
         raise QBT1Error("resume cursor/history differs")
     for name, value in model.state_dict().items():
         if not torch.equal(value.detach().cpu(), resumed_model.state_dict()[name].detach().cpu()):
@@ -1268,6 +2335,7 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
         model=resumed_model,
         state=resumed_ema.shadow,
         selected_pair_ids=pair_ids,
+        consolidate=consolidate_reencodes,
     )
     if resumed_reencode["archive"]["sha256"] != stage3_reencode["archive"]["sha256"]:
         raise QBT1Error("resume re-encoded archive differs")
@@ -1316,6 +2384,7 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
         gradients=stage4_gradients,
         selected_pair_ids=pair_ids,
         probe_bits=config["precision_probe_bits"],
+        consolidate=consolidate_reencodes,
     )
     stage4_checkpoint = save_checkpoint(
         output / "stage_04_precision_waterfill_and_byteclose/checkpoints/stage_04_end.pt",
@@ -1323,15 +2392,17 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
         optimizer=resumed_optimizer,
         ema=resumed_ema,
         config=config,
-        step=int(config["steps"]),
+        step=step,
         stage="stage_04_precision_waterfill_and_byteclose_end",
         history=history,
+        curriculum_state=curriculum_state,
     )
     stage4_reencode = reencode_inference_state(
         output / "stage_04_precision_waterfill_and_byteclose/reencoded/stage_04_end",
         model=resumed_model,
         state=resumed_ema.shadow,
         selected_pair_ids=pair_ids,
+        consolidate=consolidate_reencodes,
     )
 
     retained_rows: list[dict[str, Any]] = []
@@ -1363,15 +2434,17 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
         optimizer=resumed_optimizer,
         ema=resumed_ema,
         config=config,
-        step=int(config["steps"]),
+        step=step,
         stage="stage_05_same_budget_admission_end",
         history=history,
+        curriculum_state=curriculum_state,
     )
     stage5_reencode = reencode_inference_state(
         output / "stage_05_same_budget_admission/reencoded/stage_05_end",
         model=resumed_model,
         state=resumed_ema.shadow,
         selected_pair_ids=pair_ids,
+        consolidate=consolidate_reencodes,
     )
     peak_rss = _maximum_rss_bytes()
     memory = project_memory(
@@ -1415,6 +2488,10 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
         "storage": storage,
         "config_sha256": canonical_sha256(config),
         "history": history,
+        "curriculum_mode": curriculum_mode,
+        "stage_03a_checkpoint": stage03a_checkpoint,
+        "stage_03a_reencode": stage03a_reencode,
+        "resume_identity_across_03a_03": boundary_resume_identity,
         "stage_03_checkpoint": stage3_checkpoint,
         "stage_03_reencode": stage3_reencode,
         "stage_04_checkpoint": stage4_checkpoint,
@@ -1484,6 +2561,153 @@ def project_memory(
         "headroom_bytes": MEMORY_CEILING_BYTES - projected_peak,
         "passes_ceiling": projected_peak <= MEMORY_CEILING_BYTES,
         "live_preflight_required_at_fire": True,
+    }
+
+
+def project_on_disk_storage(
+    smoke_result: Mapping[str, Any],
+    *,
+    output: Path,
+    total_steps: int,
+    checkpoint_every_steps: int,
+    birth_max_steps: int,
+    birth_verdict_every_steps: int,
+) -> dict[str, Any]:
+    """Project AP on-disk allocation using the charter's cluster-aware formula."""
+
+    output.mkdir(parents=True, exist_ok=True)
+    fs = os.statvfs(output)
+    cluster_size = int(fs.f_frsize)
+    live_free = int(fs.f_bavail * fs.f_frsize)
+    r2_first_checkpoint = file_fact(R2_FIRST_CHECKPOINT)
+    r2_final_checkpoint = file_fact(R2_FINAL_CHECKPOINT)
+    r2_history_growth_per_step = (
+        int(r2_final_checkpoint["bytes"]) - int(r2_first_checkpoint["bytes"])
+    ) / (4865 - 5)
+    projected_final_checkpoint_bytes = math.ceil(
+        int(r2_first_checkpoint["bytes"]) + r2_history_growth_per_step * (int(total_steps) - 5)
+    )
+    checkpoint_bytes = max(
+        int(smoke_result["stage_03a_checkpoint"]["bytes"]),
+        R1_CHECKPOINT.stat().st_size,
+        projected_final_checkpoint_bytes,
+    )
+    smoke_reencode = smoke_result["stage_03a_reencode"]
+    smoke_manifest = file_fact(
+        Path(smoke_reencode["retention_container"]["path"]).parent / "REENCODE_MANIFEST.json"
+    )
+    repack_reference = file_fact(R2_REPACK_REFERENCE_TAR)
+    theoretical_smoke_members = 36 + 4 + 1 + 8 * len(
+        smoke_result["history"][-1]["birth_verdict"]["pair_ids"]
+    )
+    theoretical_full_members = 36 + 4 + 1 + 8 * len(SELECTION_IDS)
+    full_member_count = math.ceil(
+        int(smoke_reencode["retention_member_count"])
+        * theoretical_full_members
+        / theoretical_smoke_members
+    )
+    projected_manifest_bytes = math.ceil(
+        int(smoke_manifest["bytes"])
+        * full_member_count
+        / int(smoke_reencode["retention_member_count"])
+    )
+    projected_tar_bytes = max(
+        int(smoke_reencode["retention_container"]["bytes"]), int(repack_reference["bytes"])
+    )
+    # AP is ExFAT under macOS: each ordinary file has a measured 4-KiB AppleDouble
+    # companion, and every file consumes one 128-KiB allocation cluster.  A periodic
+    # unit is checkpoint + tar + manifest plus their three companions => six files.
+    files_per_periodic_unit = 6
+    per_checkpoint_logical_bytes = (
+        checkpoint_bytes + projected_tar_bytes + projected_manifest_bytes + 3 * 4096
+    )
+    periodic_count = math.ceil(int(total_steps) / int(checkpoint_every_steps))
+    periodic_projection = (
+        per_checkpoint_logical_bytes + files_per_periodic_unit * cluster_size
+    ) * periodic_count
+
+    smoke_verdict = smoke_result["history"][-1]["birth_verdict"]["retained_payload"]
+    smoke_pairs = len(smoke_result["history"][-1]["birth_verdict"]["pair_ids"])
+    verdict_logical = math.ceil(int(smoke_verdict["bytes"]) * len(SELECTION_IDS) / smoke_pairs)
+    verdict_count = math.ceil(int(birth_max_steps) / int(birth_verdict_every_steps))
+    verdict_projection = (verdict_logical + 2 * 4096 + 2 * cluster_size) * verdict_count
+
+    reencode_unit = projected_tar_bytes + projected_manifest_bytes + 2 * 4096 + 4 * cluster_size
+    checkpoint_unit = checkpoint_bytes + 4096 + 2 * cluster_size
+    # stage03a end; stage03 end; stage04 resume; 8 roles x 4 bits + baseline;
+    # stage04 end; stage05 end = 38 additional re-encodes.  Four stage-end
+    # checkpoints are additional to periodic checkpoints.
+    extra_reencode_count = 38
+    extra_checkpoint_count = 4
+    stage_boundary_projection = (
+        extra_reencode_count * reencode_unit + extra_checkpoint_count * checkpoint_unit
+    )
+    final_eval_projection = verdict_logical + 2 * cluster_size
+    fixed_metadata_reserve = 128 * 1024**2
+    projected_bytes = (
+        periodic_projection
+        + verdict_projection
+        + stage_boundary_projection
+        + final_eval_projection
+        + fixed_metadata_reserve
+    )
+    safety_reserve = math.ceil(projected_bytes * 0.10)
+    required_post_run_free = 8 * 1024**3
+    required_live_free = projected_bytes + safety_reserve + required_post_run_free
+    return {
+        "schema": "ddm_qbt2b_cluster_aware_storage_projection.v1",
+        "axis": "[macOS APDataStore on-disk projection; no score claim]",
+        "score_claim": False,
+        "filesystem": {
+            "path": str(output.resolve()),
+            "cluster_size_bytes": cluster_size,
+            "live_free_bytes": live_free,
+            "measured_appledouble_bytes_per_file": 4096,
+        },
+        "real_schedule": {
+            "birth_max_steps": int(birth_max_steps),
+            "margin_steps": int(total_steps) - int(birth_max_steps),
+            "total_steps": int(total_steps),
+            "checkpoint_every_steps": int(checkpoint_every_steps),
+            "periodic_checkpoint_count": periodic_count,
+            "birth_verdict_every_steps": int(birth_verdict_every_steps),
+            "birth_verdict_count_max": verdict_count,
+        },
+        "measured_inputs": {
+            "smoke_checkpoint": smoke_result["stage_03a_checkpoint"],
+            "r1_checkpoint": file_fact(R1_CHECKPOINT),
+            "r2_first_checkpoint": r2_first_checkpoint,
+            "r2_final_checkpoint": r2_final_checkpoint,
+            "r2_measured_history_growth_bytes_per_step": r2_history_growth_per_step,
+            "projected_worst_case_final_checkpoint_bytes": projected_final_checkpoint_bytes,
+            "smoke_reencode_tar": smoke_reencode["retention_container"],
+            "smoke_reencode_manifest": smoke_manifest,
+            "r2_repacked_n32_tar": repack_reference,
+            "smoke_verdict_payload": smoke_verdict,
+        },
+        "checkpoint_formula": {
+            "literal": "(per_checkpoint_logical_bytes + n_files * fs_cluster_size) * ceil(total_steps / checkpoint_every_steps)",
+            "per_checkpoint_logical_bytes": per_checkpoint_logical_bytes,
+            "checkpoint_component_uses_worst_case_final_size_for_every_period": True,
+            "n_files": files_per_periodic_unit,
+            "fs_cluster_size": cluster_size,
+            "checkpoint_count": periodic_count,
+            "projected_bytes": periodic_projection,
+        },
+        "other_retained_demand": {
+            "birth_verdicts_bytes": verdict_projection,
+            "stage_boundary_and_precision_bytes": stage_boundary_projection,
+            "final_n32_evaluation_bytes": final_eval_projection,
+            "fixed_metadata_reserve_bytes": fixed_metadata_reserve,
+        },
+        "projected_bytes": projected_bytes,
+        "ten_percent_safety_reserve_bytes": safety_reserve,
+        "required_post_run_free_bytes": required_post_run_free,
+        "required_live_free_bytes": required_live_free,
+        "live_headroom_after_requirement_bytes": live_free - required_live_free,
+        "passes_live_df": live_free >= required_live_free,
+        "reencode_retention_default": "one deterministic tar plus one manifest per re-encode",
+        "fail_closed": True,
     }
 
 
@@ -1590,6 +2814,155 @@ def compiled_launch_request(
     return request
 
 
+def compiled_qbt2b_launch_request(
+    *,
+    initialization_result_path: Path,
+    smoke_result_path: Path,
+    review_receipt_path: Path,
+    output_path: Path,
+) -> dict[str, Any]:
+    initialization = json.loads(initialization_result_path.read_text(encoding="utf-8"))
+    smoke = json.loads(smoke_result_path.read_text(encoding="utf-8"))
+    review = json.loads(review_receipt_path.read_text(encoding="utf-8"))
+    expected_review_files = {
+        "experiments/ddm_qbt1_qbflow_trainer.py",
+        "experiments/tests/test_ddm_qbt1_qbflow_trainer.py",
+    }
+    if (
+        initialization.get("schema") != PALETTE_INIT_SCHEMA
+        or initialization.get("status") != "COMPLETE_NONDEGENERATE_FIT"
+        or initialization.get("score_claim") is not False
+        or initialization.get("inherited_palette_provenance")
+        != "VIDEO-DERIVED, CE-TRAINED, INHERITED"
+    ):
+        raise QBT1Error("QBT2B launch request received an invalid initialization receipt")
+    fit = json.loads(Path(initialization["fit_receipt"]["path"]).read_text(encoding="utf-8"))
+    if fit.get("degenerate") is not False:
+        raise QBT1Error("QBT2B readout fit is degenerate")
+    if (
+        smoke.get("schema") != RESULT_SCHEMA
+        or smoke.get("status") != "BIRTH_STAGE_CAPPED_WITHOUT_EVENT_HANDOFF"
+        or smoke.get("score_claim") is not False
+        or smoke.get("training_launch") is not False
+        or smoke.get("resume_identity_across_03a_03", {}).get("bit_faithful") is not True
+        or smoke.get("all_payloads_retained") is not True
+    ):
+        raise QBT1Error("QBT2B launch request received a stale or invalid bounded smoke")
+    if (
+        review.get("schema") != "ddm_qbt1_two_pass_review_receipt.v1"
+        or set(review.get("python_files", ())) != expected_review_files
+        or review.get("passes_per_file") != 2
+        or review.get("status") != "PASS"
+    ):
+        raise QBT1Error("QBT2B launch request lacks the required two-pass Python review receipt")
+    initialized_state = Path(initialization["initialized_state"]["path"])
+    config = compile_qbt2b_config(
+        action="train",
+        output=TRAIN_ROOT / "governed_n32_r3",
+        pair_ids=SELECTION_IDS,
+        device="mps",
+        initialization_state=initialized_state,
+        birth_max_steps=QBT2B_BIRTH_MAX_STEPS,
+        margin_steps=QBT2B_MARGIN_STEPS,
+    )
+    config["launch_authorized"] = False
+    config["scorer_lane"] = {"claimed": False, "claim_id": None}
+    config["metal_lane"] = {"claimed": False, "claim_id": None}
+    config_path = output_path.parent / "COMPILED_N32_R3_CONFIG.json"
+    atomic_json(config_path, config)
+    storage = project_on_disk_storage(
+        smoke,
+        output=output_path.parent,
+        total_steps=QBT2B_TOTAL_STEPS,
+        checkpoint_every_steps=int(config["checkpoint_every_steps"]),
+        birth_max_steps=QBT2B_BIRTH_MAX_STEPS,
+        birth_verdict_every_steps=int(config["birth_verdict_every_steps"]),
+    )
+    memory = smoke["memory_projection"]
+    smoke_steps = max(1, len(smoke["history"]))
+    smoke_pairs = max(1, max(int(row["materialized_pairs"]) for row in smoke["history"]))
+    projected_wall = (
+        float(smoke["elapsed_seconds"])
+        / smoke_steps
+        * QBT2B_TOTAL_STEPS
+        * REAL_TRAIN_CHUNK_PAIRS
+        / smoke_pairs
+    )
+    blockers = []
+    if not memory["passes_ceiling"]:
+        blockers.append("projected materialization peak exceeds 116 GiB")
+    if not storage["passes_live_df"]:
+        blockers.append("cluster-aware retained-output demand exceeds live AP free space")
+    blockers.append(
+        "stage-05 same-budget QBW1 control remains absent; stages 03a/03/04 may fire, but stage 05 cannot admit without the real retained control"
+    )
+    request = {
+        "schema": "ddm_qbt2b_sealed_r3_fire_order.v1",
+        "disposition": (
+            "QUEUED_R3_STAGE03A_03_04_FIRE_STAGE05_BLOCKED"
+            if len(blockers) == 1
+            else "BLOCKED_NOT_LAUNCHABLE"
+        ),
+        "owner": "MAIN QBFLOW r3 inherited-palette CE-birth owner",
+        "consumer_store": str((TRAIN_ROOT / "governed_n32_r3").resolve()),
+        "fire_trigger": (
+            "MAIN verifies the committed serializer hashes and two-pass review receipt, re-reads live AP df, confirms no duplicate full-scorer or Metal lane, claims both lanes, then writes launch_authorized=true plus the real claim IDs into a copied config and fires stage 03a"
+        ),
+        "stage_03_handoff_trigger": (
+            "all five classes are present with within-class error <0.20 for two consecutive realized n32 verdicts; otherwise stop at the 100-step safety cap without entering margin training"
+        ),
+        "stage_05_fire_trigger": (
+            "the governed n32 r3 result exists and a real retained same-budget QBW1 control passes custody, pair-set, budget, and score-arithmetic validation"
+        ),
+        "compiled_config": file_fact(config_path),
+        "initialization_receipt": file_fact(initialization_result_path),
+        "palette_custody": initialization["palette_custody"],
+        "readout_fit_receipt": initialization["fit_receipt"],
+        "init_gate": initialization["init_gate"],
+        "bounded_smoke": file_fact(smoke_result_path),
+        "two_pass_review_receipt": file_fact(review_receipt_path),
+        "memory_projection": memory,
+        "on_disk_storage_projection": storage,
+        "schedule_estimate": {
+            "birth_safety_cap_updates": QBT2B_BIRTH_MAX_STEPS,
+            "margin_updates_after_event": QBT2B_MARGIN_STEPS,
+            "maximum_optimizer_updates": QBT2B_TOTAL_STEPS,
+            "wall_seconds_upper_projection": projected_wall,
+            "basis": "n1 CPU birth-smoke elapsed scaled linearly to 16-pair chunks and the maximum 5,100-update schedule; not a Metal measurement",
+            "status": "DERIVED_CONSERVATIVE_PROJECTION_REMEASURE_ON_METAL_BEFORE_FIRE",
+        },
+        "fire_order_checklist": {
+            "frozen_qbf1_abi_verified": True,
+            "inherited_palette_sha_pinned_and_labeled": True,
+            "data_dependent_readout_fit_nondegenerate": True,
+            "init_n32_realized_receipt_retained": True,
+            "init_gate_passed": bool(initialization["init_gate"]["passed"]),
+            "init_gate_miss_is_nonblocking": True,
+            "realized_ce_birth_before_margin": True,
+            "pose_active_during_birth": True,
+            "realized_event_handoff_stable_twice": True,
+            "chunk_pairs_le_30_structural": True,
+            "ema_lawref_resolved_for_5100_max_updates": True,
+            "resume_identity_across_03a_03": True,
+            "checkpoint_reencode_one_tar_default": True,
+            "cluster_aware_storage_projection_passed": bool(storage["passes_live_df"]),
+            "memory_projection_under_116_gib": bool(memory["passes_ceiling"]),
+            "same_budget_qbw1_control_bound": False,
+            "metal_lane_claimed": False,
+            "scorer_lane_claimed": False,
+            "arm_two_pass_review_complete": True,
+        },
+        "blockers": blockers,
+        "training_launched": False,
+        "metal_invocations": 0,
+        "modal_invocations": 0,
+        "contest_eval_invocations": 0,
+        "score_claim": False,
+    }
+    atomic_json(output_path, request)
+    return request
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="action", required=True)
@@ -1597,10 +2970,32 @@ def build_parser() -> argparse.ArgumentParser:
     smoke.add_argument("--output", type=Path, default=TRAIN_ROOT / "smoke_n1")
     smoke.add_argument("--pairs", type=int, default=1, choices=range(1, SMOKE_MAX_PAIRS + 1))
     smoke.add_argument("--steps", type=int, default=1)
+    palette_init = sub.add_parser(
+        "prepare-inherited-palette-init",
+        help="fit and retain the QBT2B inherited-palette initialization receipt",
+    )
+    palette_init.add_argument("--output", type=Path, default=QBT2B_ROOT / "initialization")
+    birth_smoke = sub.add_parser(
+        "birth-smoke", help="run a bounded n<=4 CE-birth stage and 03a/03 resume-identity smoke"
+    )
+    birth_smoke.add_argument("--output", type=Path, default=QBT2B_ROOT / "birth_smoke_n1")
+    birth_smoke.add_argument("--pairs", type=int, default=1, choices=range(1, SMOKE_MAX_PAIRS + 1))
+    birth_smoke.add_argument(
+        "--initialization-state",
+        type=Path,
+        default=QBT2B_ROOT / "initialization/initialized/initialized_r3_state.pt",
+    )
     compile_request = sub.add_parser("compile-launch-request")
     compile_request.add_argument("--smoke-result", type=Path, required=True)
     compile_request.add_argument("--review-receipt", type=Path, required=True)
     compile_request.add_argument("--output", type=Path, default=TRAIN_ROOT / "COMPILED_LAUNCH_REQUEST.json")
+    compile_qbt2b = sub.add_parser("compile-qbt2b-launch-request")
+    compile_qbt2b.add_argument("--initialization-result", type=Path, required=True)
+    compile_qbt2b.add_argument("--smoke-result", type=Path, required=True)
+    compile_qbt2b.add_argument("--review-receipt", type=Path, required=True)
+    compile_qbt2b.add_argument(
+        "--output", type=Path, default=QBT2B_ROOT / "sealed_r3/SEALED_R3_FIRE_ORDER.json"
+    )
     run_config = sub.add_parser("run-config", help="MAIN-only governed execution of an authorized config")
     run_config.add_argument("config", type=Path)
     validate = sub.add_parser("validate-config")
@@ -1610,6 +3005,26 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    if args.action == "prepare-inherited-palette-init":
+        result = prepare_inherited_palette_initialization(args.output)
+        print(json.dumps(result, indent=2, sort_keys=True, default=str))
+        return 0
+    if args.action == "birth-smoke":
+        started = time.monotonic()
+        config = compile_qbt2b_config(
+            action="smoke",
+            output=args.output,
+            pair_ids=SELECTION_IDS[: args.pairs],
+            device="cpu",
+            initialization_state=args.initialization_state,
+            birth_max_steps=1,
+            margin_steps=1,
+        )
+        result = run_training(config)
+        result["elapsed_seconds"] = time.monotonic() - started
+        atomic_json(Path(config["output"]) / "RESULT.json", result)
+        print(json.dumps(result, indent=2, sort_keys=True, default=str))
+        return 0
     if args.action == "smoke":
         started = time.monotonic()
         config = compile_config(
@@ -1628,6 +3043,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         smoke_result = json.loads(args.smoke_result.read_text(encoding="utf-8"))
         request = compiled_launch_request(
             smoke_result, args.output, review_receipt_path=args.review_receipt
+        )
+        print(json.dumps(request, indent=2, sort_keys=True, default=str))
+        return 0
+    if args.action == "compile-qbt2b-launch-request":
+        request = compiled_qbt2b_launch_request(
+            initialization_result_path=args.initialization_result,
+            smoke_result_path=args.smoke_result,
+            review_receipt_path=args.review_receipt,
+            output_path=args.output,
         )
         print(json.dumps(request, indent=2, sort_keys=True, default=str))
         return 0

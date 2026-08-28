@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import tarfile
 
 import numpy as np
 import pytest
@@ -70,6 +71,80 @@ def test_expected_flip_margin_rewards_positive_margin() -> None:
     )
 
 
+def test_realized_ce_birth_keeps_pose_active() -> None:
+    camera = torch.zeros((2, 2, 3, 4, 4), requires_grad=True)
+    logits = torch.randn((2, 5, 2, 2), requires_grad=True)
+    pose = torch.randn((2, 6), requires_grad=True)
+    target_argmax = torch.tensor([[[0, 1], [2, 3]], [[4, 3], [2, 1]]])
+    target_pose = torch.zeros((2, 6))
+    total, parts = qbt1.realized_ce_birth_objective(
+        camera, pose, logits, target_argmax, target_pose
+    )
+    total.backward()
+    assert parts["seg_ce_realized"] > 0
+    assert parts["pose_mse_realized"] > 0
+    assert logits.grad is not None and pose.grad is not None
+
+
+def test_birth_gate_uses_derived_threshold_and_all_five_classes() -> None:
+    rows = [
+        {
+            "class_id": class_id,
+            "class_name": name,
+            "predicted_pixels": 1,
+            "predicted_pixel_share": 0.2,
+            "within_class_error": 0.19,
+        }
+        for class_id, name in enumerate(qbt1.PALETTE_CLASSES)
+    ]
+    assert qbt1.birth_gate_from_table(rows)["all_five_classes_pass"] is True
+    rows[1]["within_class_error"] = 0.20
+    assert qbt1.birth_gate_from_table(rows)["all_five_classes_pass"] is False
+
+
+def test_data_dependent_readout_fit_changes_only_last_frame_values() -> None:
+    model = _initial_model()
+    baseline_w = model.params["render_out_w"].detach().clone()
+    baseline_b = model.params["render_out_b"].detach().clone()
+    rng = np.random.default_rng(17)
+    classes = np.arange(260, dtype=np.uint8) % qbf1.N_CLASSES
+    states = rng.normal(0.0, 1.0e-4, size=(260, qbf1.COARSE_DIM)).astype(np.float32)
+    states[np.arange(260), classes] = 1.0
+    samples = {
+        "render_state_f32": states,
+        "native_class_u8": classes,
+        "pair_id_u16": np.zeros(260, dtype=np.uint16),
+    }
+    palette = np.asarray(
+        [[20, 30, 40], [60, 70, 80], [100, 110, 120], [140, 150, 160], [180, 190, 200]],
+        dtype=np.float32,
+    )
+    receipt, retained = qbt1.fit_inherited_palette_readout(
+        model, palette, (0,), samples=samples
+    )
+    assert receipt["degenerate"] is False
+    assert set(receipt["changed_tensors"]) == {"params.render_out_w", "params.render_out_b"}
+    assert torch.equal(model.params["render_out_w"][:, :3], baseline_w[:, :3])
+    assert torch.equal(model.params["render_out_b"][:3], baseline_b[:3])
+    assert np.isfinite(retained["fit_coefficients_f64"]).all()
+
+
+def test_reencode_consolidation_keeps_verified_single_tar(tmp_path) -> None:
+    root = tmp_path / "reencode"
+    first = qbt1.atomic_bytes(root / "sections/a.bin", b"alpha")
+    second = qbt1.atomic_bytes(root / "packet.qbf", b"beta")
+    manifest = {"schema": "test", "archive": first, "packet": second}
+    qbt1.atomic_json(root / "REENCODE_MANIFEST.json", manifest)
+    consolidated = qbt1.consolidate_reencode_payloads(root, manifest)
+    assert consolidated["retention_mode"] == "ONE_DETERMINISTIC_TAR_PER_REENCODE"
+    assert sorted(path.name for path in root.iterdir()) == [
+        "REENCODE_MANIFEST.json",
+        "reencode_payloads.tar",
+    ]
+    with tarfile.open(root / "reencode_payloads.tar", "r") as archive:
+        assert {member.name for member in archive.getmembers()} == {"packet.qbf", "sections/a.bin"}
+
+
 def test_role_prequantization_preserves_frozen_tensor_shapes() -> None:
     model = _initial_model()
     baseline = model.state_dict()
@@ -105,6 +180,7 @@ def test_checkpoint_restores_live_optimizer_rng_and_ema(tmp_path) -> None:
         step=3,
         stage="test",
         history=[{"step": 3}],
+        curriculum_state={"phase": "stage_03a_ce_class_birth", "birth_step": 3},
     )
     with torch.no_grad():
         next(iter(model.parameters())).add_(1.0)
@@ -114,6 +190,10 @@ def test_checkpoint_restores_live_optimizer_rng_and_ema(tmp_path) -> None:
     assert receipt["bytes"] > 0
     assert step == 3 and history == [{"step": 3}]
     assert payload["rng"] is not None
+    assert payload["curriculum_state"] == {
+        "phase": "stage_03a_ce_class_birth",
+        "birth_step": 3,
+    }
     assert restored_ema._num_updates == ema._num_updates
     for name, value in original.items():
         assert torch.equal(model.state_dict()[name], value)
@@ -157,3 +237,26 @@ def test_train_config_can_be_compiled_as_unclaimed_draft(monkeypatch, tmp_path) 
     with pytest.raises(qbt1.QBT1Error, match="not authorized"):
         qbt1.validate_config(config)
     qbt1.validate_config(config, require_launch_authority=False)
+
+
+def test_qbt2b_schema_is_additive_and_ema_uses_total_schedule(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(qbt1, "verify_pins", lambda: {})
+    initialization = tmp_path / "initialized.pt"
+    initialization.write_bytes(b"custody-only validation payload")
+    legacy = qbt1.compile_config(
+        action="smoke", output=tmp_path / "legacy", pair_ids=(qbt1.SELECTION_IDS[0],), steps=1, device="cpu"
+    )
+    qbt1.validate_config(legacy)
+    assert "curriculum_mode" not in legacy
+    qbt2b = qbt1.compile_qbt2b_config(
+        action="smoke",
+        output=tmp_path / "qbt2b",
+        pair_ids=(qbt1.SELECTION_IDS[0],),
+        device="cpu",
+        initialization_state=initialization,
+        birth_max_steps=3,
+        margin_steps=7,
+    )
+    assert qbt2b["steps"] == 10
+    assert qbt2b["ema"] == qbt1.resolve_ema_law(10)
+    qbt1.validate_config(qbt2b)
