@@ -153,6 +153,18 @@ PALETTE_CLASSES = ("Road", "Lane", "Undrivable", "Movable", "MyCar")
 READOUT_FIT_SAMPLES_PER_PAIR_CLASS = 512
 READOUT_RESIDUAL_VARIANCE_RATIO_MAX = 0.95
 BIRTH_WITHIN_CLASS_ERROR_MAX = 1.0 - DEFAULT_TAU_PERSIST
+# r6 gate revision (ddm_qbt2b_r5_balanced_ce_verdict_20260828.md §5): the birth EVENT is
+# EXISTENCE — every class majority-correct (within-class error < 0.50) means each class's
+# plurality basin exists in the realized argmax, so the expected-flip margin objective has
+# gradient support at every class boundary (the precondition r2's frozen run lacked). The
+# legacy accuracy bar (werr < 0.20) demotes to a WATCH metric under this mode; the
+# validator pins (mode, threshold) as a PAIR so a loosened threshold cannot ride in under
+# the legacy mode label.
+BIRTH_EXISTENCE_ERROR_MAX = 0.50
+BIRTH_EVENT_MODE_THRESHOLDS = {
+    "accuracy_020": BIRTH_WITHIN_CLASS_ERROR_MAX,
+    "existence_majority": BIRTH_EXISTENCE_ERROR_MAX,
+}
 QBT2B_BIRTH_MAX_STEPS = 100
 QBT2B_MARGIN_STEPS = 5_000
 QBT2B_TOTAL_STEPS = QBT2B_BIRTH_MAX_STEPS + QBT2B_MARGIN_STEPS
@@ -616,15 +628,39 @@ def birth_gate_from_table(
                 "passed": passed,
             }
         )
-    return {
-        "derived_from": (
+    if math.isclose(
+        within_class_error_max, BIRTH_EXISTENCE_ERROR_MAX, rel_tol=0.0, abs_tol=1.0e-12
+    ):
+        derived_from = (
+            "majority-correct existence event: within-class error < 0.50 means the class's "
+            "plurality basin exists in the realized argmax, so the expected-flip margin "
+            "objective has gradient support at every class boundary "
+            "(ddm_qbt2b_r5_balanced_ce_verdict_20260828.md §5)"
+        )
+    else:
+        derived_from = (
             "1 - tac.witness_control.birth_completion.DEFAULT_TAU_PERSIST "
             f"({DEFAULT_TAU_PERSIST})"
-        ),
+        )
+    gate = {
+        "derived_from": derived_from,
         "within_class_error_max_exclusive": within_class_error_max,
         "all_five_classes_pass": all(row["passed"] for row in classes),
         "classes": classes,
     }
+    if within_class_error_max > BIRTH_WITHIN_CLASS_ERROR_MAX:
+        # The legacy accuracy bar rides along as a WATCH metric (never a gate) so
+        # margin-stage sharpening stays observable in every existence-mode verdict.
+        gate["accuracy_watch"] = {
+            "error_max_exclusive": BIRTH_WITHIN_CLASS_ERROR_MAX,
+            "classes_passing": sum(
+                1
+                for row in classes
+                if row["within_class_error"] is not None
+                and float(row["within_class_error"]) < BIRTH_WITHIN_CLASS_ERROR_MAX
+            ),
+        }
+    return gate
 
 
 def evaluate_birth_verdict(
@@ -1780,7 +1816,10 @@ def compile_qbt2b_config(
     birth_max_steps: int = QBT2B_BIRTH_MAX_STEPS,
     margin_steps: int = QBT2B_MARGIN_STEPS,
     birth_class_weight_mode: str = "none",
+    birth_event_mode: str = "accuracy_020",
 ) -> dict[str, Any]:
+    if birth_event_mode not in BIRTH_EVENT_MODE_THRESHOLDS:
+        raise QBT1Error(f"unsupported QBT2B birth event mode: {birth_event_mode}")
     total_steps = int(birth_max_steps) + int(margin_steps)
     config = compile_config(
         action=action,
@@ -1797,7 +1836,8 @@ def compile_qbt2b_config(
             "margin_steps": int(margin_steps),
             "birth_verdict_every_steps": max(1, min(5, int(birth_max_steps))),
             "birth_stability_verdicts": 2,
-            "birth_within_class_error_max": BIRTH_WITHIN_CLASS_ERROR_MAX,
+            "birth_within_class_error_max": BIRTH_EVENT_MODE_THRESHOLDS[birth_event_mode],
+            "birth_event_mode": str(birth_event_mode),
             "birth_class_weight_mode": str(birth_class_weight_mode),
             "initialization_state_path": initialization["path"],
             "initialization_state_sha256": initialization["sha256"],
@@ -1822,6 +1862,7 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
         "curriculum_mode", "birth_max_steps", "margin_steps", "birth_verdict_every_steps",
         "birth_stability_verdicts", "birth_within_class_error_max", "initialization_state_path",
         "initialization_state_sha256", "consolidate_checkpoint_reencodes", "birth_class_weight_mode",
+        "birth_event_mode",
     }
     if unknown:
         raise QBT1Error(f"compiled config has unknown fields: {sorted(unknown)}")
@@ -1880,6 +1921,9 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
     curriculum_mode = str(config.get("curriculum_mode", "legacy_margin_only"))
     if str(config.get("birth_class_weight_mode", "none")) not in ("none", "balanced"):
         raise QBT1Error("QBT2B birth class-weight mode differs")
+    birth_event_mode = str(config.get("birth_event_mode", "accuracy_020"))
+    if birth_event_mode not in BIRTH_EVENT_MODE_THRESHOLDS:
+        raise QBT1Error("QBT2B birth event mode differs")
     if curriculum_mode == "ce_birth_then_margin":
         required = {
             "birth_max_steps",
@@ -1903,7 +1947,7 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
             or int(config["birth_stability_verdicts"]) != 2
             or not math.isclose(
                 float(config["birth_within_class_error_max"]),
-                BIRTH_WITHIN_CLASS_ERROR_MAX,
+                BIRTH_EVENT_MODE_THRESHOLDS[birth_event_mode],
                 rel_tol=0.0,
                 abs_tol=1.0e-12,
             )

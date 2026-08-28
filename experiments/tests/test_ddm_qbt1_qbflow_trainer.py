@@ -162,6 +162,73 @@ def test_birth_class_weight_mode_is_config_gated(monkeypatch, tmp_path) -> None:
         qbt1.validate_config(bogus)
 
 
+def test_birth_event_mode_pins_mode_threshold_pair(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(qbt1, "verify_pins", lambda: {})
+    initialization = tmp_path / "initialized.pt"
+    initialization.write_bytes(b"custody-only validation payload")
+    kwargs = {
+        "action": "smoke",
+        "pair_ids": (qbt1.SELECTION_IDS[0],),
+        "device": "cpu",
+        "initialization_state": initialization,
+        "birth_max_steps": 3,
+        "margin_steps": 7,
+    }
+    default = qbt1.compile_qbt2b_config(output=tmp_path / "default", **kwargs)
+    assert default["birth_event_mode"] == "accuracy_020"
+    assert default["birth_within_class_error_max"] == qbt1.BIRTH_WITHIN_CLASS_ERROR_MAX
+    qbt1.validate_config(default)
+    legacy = dict(default)
+    legacy.pop("birth_event_mode")
+    qbt1.validate_config(legacy)
+    existence = qbt1.compile_qbt2b_config(
+        output=tmp_path / "existence", birth_event_mode="existence_majority", **kwargs
+    )
+    assert existence["birth_within_class_error_max"] == qbt1.BIRTH_EXISTENCE_ERROR_MAX
+    qbt1.validate_config(existence)
+    with pytest.raises(qbt1.QBT1Error, match="birth event mode"):
+        qbt1.compile_qbt2b_config(
+            output=tmp_path / "bogus", birth_event_mode="werr_040", **kwargs
+        )
+    for mode, wrong_threshold in (
+        ("accuracy_020", qbt1.BIRTH_EXISTENCE_ERROR_MAX),
+        ("existence_majority", qbt1.BIRTH_WITHIN_CLASS_ERROR_MAX),
+    ):
+        inconsistent = dict(default)
+        inconsistent["birth_event_mode"] = mode
+        inconsistent["birth_within_class_error_max"] = wrong_threshold
+        with pytest.raises(qbt1.QBT1Error, match="event/retention law"):
+            qbt1.validate_config(inconsistent)
+
+
+def test_existence_gate_majority_threshold_and_accuracy_watch() -> None:
+    rows = [
+        {
+            "class_id": class_id,
+            "class_name": name,
+            "predicted_pixels": 1,
+            "predicted_pixel_share": 0.2,
+            "within_class_error": 0.30,
+        }
+        for class_id, name in enumerate(qbt1.PALETTE_CLASSES)
+    ]
+    rows[0]["within_class_error"] = 0.10
+    gate = qbt1.birth_gate_from_table(
+        rows, within_class_error_max=qbt1.BIRTH_EXISTENCE_ERROR_MAX
+    )
+    assert gate["all_five_classes_pass"] is True
+    assert gate["accuracy_watch"]["classes_passing"] == 1
+    assert "existence" in gate["derived_from"]
+    rows[2]["within_class_error"] = 0.50
+    refused = qbt1.birth_gate_from_table(
+        rows, within_class_error_max=qbt1.BIRTH_EXISTENCE_ERROR_MAX
+    )
+    assert refused["all_five_classes_pass"] is False
+    legacy_gate = qbt1.birth_gate_from_table(rows)
+    assert "accuracy_watch" not in legacy_gate
+    assert "DEFAULT_TAU_PERSIST" in legacy_gate["derived_from"]
+
+
 def test_birth_gate_uses_derived_threshold_and_all_five_classes() -> None:
     rows = [
         {
