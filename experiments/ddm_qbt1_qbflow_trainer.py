@@ -1892,6 +1892,15 @@ def stable_ema_law_identity(value: Mapping[str, Any]) -> dict[str, Any]:
     return identity
 
 
+# Periodic-checkpoint cadence law: every run keeps >= ~300 periodic saves, so the
+# worst-case crash loss is <= ~1/300 of the run (~0.33%; ~126 s at r7's measured
+# 2.51 s/step).  The validator bound is max(5, steps // denominator): legacy short
+# runs keep the historical every-5 cadence, long runs may coarsen up to the law's
+# ceiling -- retention-only, never a treatment variable (saves gate save_checkpoint
+# + reencode_inference_state exclusively; verdict cadence is a separate key).
+CHECKPOINT_CRASH_LOSS_DENOMINATOR = 300
+
+
 def compile_config(*, action: str, output: Path, pair_ids: Sequence[int], steps: int, device: str) -> dict[str, Any]:
     ids = tuple(map(int, pair_ids))
     if not ids or len(ids) > N or len(set(ids)) != len(ids):
@@ -1948,6 +1957,7 @@ def compile_qbt2b_config(
     birth_class_weight_mode: str = "none",
     birth_event_mode: str = "accuracy_020",
     margin_constraint_mode: str = MARGIN_CONSTRAINT_UNCONSTRAINED,
+    checkpoint_every_steps: int | None = None,
 ) -> dict[str, Any]:
     if birth_event_mode not in BIRTH_EVENT_MODE_THRESHOLDS:
         raise QBT1Error(f"unsupported QBT2B birth event mode: {birth_event_mode}")
@@ -1961,6 +1971,8 @@ def compile_qbt2b_config(
         steps=total_steps,
         device=device,
     )
+    if checkpoint_every_steps is not None:
+        config["checkpoint_every_steps"] = int(checkpoint_every_steps)
     initialization = file_fact(initialization_state)
     margin_constraint_pin = MARGIN_CONSTRAINT_MODE_PINS[margin_constraint_mode]
     config.update(
@@ -2013,10 +2025,11 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
         raise QBT1Error("chunk_pairs exceeds the hard-coded ceiling of 30")
     if config["retain_all_payloads"] is not True or int(config["pose_start_step"]) != 0:
         raise QBT1Error("payload retention or step-zero pose binding differs")
+    checkpoint_cadence_ceiling = max(5, int(config["steps"]) // CHECKPOINT_CRASH_LOSS_DENOMINATOR)
     if (
         int(config["seed"]) != SEED
         or int(config["minimum_free_bytes"]) < 8 * 1024**3
-        or not 1 <= int(config["checkpoint_every_steps"]) <= 5
+        or not 1 <= int(config["checkpoint_every_steps"]) <= checkpoint_cadence_ceiling
     ):
         raise QBT1Error("seed, storage preflight, or checkpoint cadence differs")
     if (
@@ -3431,11 +3444,16 @@ def compile_r8_authorized_config(
     r8 differs from r7 in exactly two SCOPE fields: the initialization state
     (the r7 stage-03 EMA endpoint) and margin_steps (5,000 -> 15,000, derived
     from the r7 trajectory fit).  Every mechanism pin — the constraint tuple,
-    birth law, and curriculum — is identical to r7's.
+    birth law, and curriculum — is identical to r7's.  One RETENTION-only field
+    also moves: checkpoint_every_steps rides the crash-loss cadence law
+    (steps // CHECKPOINT_CRASH_LOSS_DENOMINATOR = 50) because r7's every-5
+    cadence projects ~146 GB of retained checkpoints at 15,020 steps against
+    ~50 GB free — retention cadence gates saves only, never training dynamics.
     """
 
     if not R8_INITIALIZATION_STATE.exists():
         raise QBT1Error("r8 initialization state is absent; run build-r8-init first")
+    r8_total_steps = 20 + R8_MARGIN_STEPS
     config = compile_qbt2b_config(
         action="train",
         output=TRAIN_ROOT / "governed_n32_r8",
@@ -3447,6 +3465,7 @@ def compile_r8_authorized_config(
         birth_class_weight_mode="balanced",
         birth_event_mode="existence_majority",
         margin_constraint_mode=MARGIN_CONSTRAINT_LANE_MOVABLE,
+        checkpoint_every_steps=r8_total_steps // CHECKPOINT_CRASH_LOSS_DENOMINATOR,
     )
     config["launch_authorized"] = False
     config["scorer_lane"] = {"claimed": False, "claim_id": None}
@@ -3461,7 +3480,7 @@ def compile_r8_authorized_config(
     storage_projection = project_on_disk_storage(
         smoke_result,
         output=TRAIN_ROOT / "governed_n32_r8",
-        total_steps=20 + R8_MARGIN_STEPS,
+        total_steps=r8_total_steps,
         checkpoint_every_steps=int(config["checkpoint_every_steps"]),
         birth_max_steps=20,
         birth_verdict_every_steps=int(config["birth_verdict_every_steps"]),

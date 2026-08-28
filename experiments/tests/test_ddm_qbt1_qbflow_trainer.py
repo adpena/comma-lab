@@ -620,6 +620,49 @@ def test_r8_config_geometry_and_identity_excludes_dispatch_fields(monkeypatch, t
     assert qbt1.canonical_sha256(qbt1.config_identity(claimed)) == identity
 
 
+def test_checkpoint_cadence_law_scales_with_steps_and_refuses_past_ceiling(
+    monkeypatch, tmp_path
+) -> None:
+    monkeypatch.setattr(qbt1, "verify_pins", lambda: {})
+    initialization = tmp_path / "initialized_r8.pt"
+    initialization.write_bytes(b"custody-only validation payload")
+    kwargs = {
+        "action": "train",
+        "output": tmp_path / "governed_n32_r8",
+        "pair_ids": qbt1.SELECTION_IDS,
+        "device": "mps",
+        "initialization_state": initialization,
+        "birth_max_steps": 20,
+        "margin_steps": qbt1.R8_MARGIN_STEPS,
+        "birth_class_weight_mode": "balanced",
+        "birth_event_mode": "existence_majority",
+        "margin_constraint_mode": qbt1.MARGIN_CONSTRAINT_LANE_MOVABLE,
+    }
+    derived = (20 + qbt1.R8_MARGIN_STEPS) // qbt1.CHECKPOINT_CRASH_LOSS_DENOMINATOR
+    assert derived == 50
+    config = qbt1.compile_qbt2b_config(**kwargs, checkpoint_every_steps=derived)
+    assert config["checkpoint_every_steps"] == 50
+    qbt1.validate_config(config, require_launch_authority=False)
+    with pytest.raises(qbt1.QBT1Error, match="checkpoint cadence"):
+        qbt1.compile_qbt2b_config(**kwargs, checkpoint_every_steps=derived + 1)
+    legacy = qbt1.compile_qbt2b_config(**kwargs)
+    assert legacy["checkpoint_every_steps"] == 5
+    qbt1.validate_config(legacy, require_launch_authority=False)
+    short = qbt1.compile_qbt2b_config(
+        action="smoke",
+        output=tmp_path / "short",
+        pair_ids=(qbt1.SELECTION_IDS[0],),
+        device="cpu",
+        initialization_state=initialization,
+        birth_max_steps=3,
+        margin_steps=7,
+    )
+    with pytest.raises(qbt1.QBT1Error, match="checkpoint cadence"):
+        mutated = copy.deepcopy(short)
+        mutated["checkpoint_every_steps"] = 6
+        qbt1.validate_config(mutated, require_launch_authority=False)
+
+
 def test_build_r8_init_refuses_non_stage3_end_source(tmp_path) -> None:
     source = tmp_path / "wrong.pt"
     torch.save({"stage": "stage_03a_ce_class_birth"}, source)
