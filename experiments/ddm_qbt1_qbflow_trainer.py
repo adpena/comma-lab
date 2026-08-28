@@ -114,6 +114,7 @@ SELECTION_WEIGHTS = (15.0,) * 24 + (30.0,) * 8
 STORE = Path("/Volumes/APDataStore/pact/ddm_qbflow_implicit_boundary_flow")
 TRAIN_ROOT = STORE / "qbt1_trainer"
 QBT2B_ROOT = TRAIN_ROOT / "qbt2b_inherited_palette_birth"
+R7_RETENTION_ROOT = Path("/Volumes/APDataStore/pact/ddm_qbt2b_r7_lane_constrained_margin")
 FIRE_ORDER = STORE / "SEALED_TRAINING_FIRE_ORDER.json"
 INITIAL_PARAMS = STORE / "stage_01_initialize_quantize/initialized_float_params.npz"
 INITIAL_LATENTS = STORE / "stage_01_initialize_quantize/initialized_float_latents.npz"
@@ -164,6 +165,35 @@ BIRTH_EXISTENCE_ERROR_MAX = 0.50
 BIRTH_EVENT_MODE_THRESHOLDS = {
     "accuracy_020": BIRTH_WITHIN_CLASS_ERROR_MAX,
     "existence_majority": BIRTH_EXISTENCE_ERROR_MAX,
+}
+# r7 constrained-margin law (ddm_qbt2b_r6_born_field_margin_verdict_20260828.md
+# §§4-5).  Bounds preserve the born r5/r6 handoff field rather than shifting its
+# optimum: Lane was 0.0980 at the r5 endpoint and 0.116328/0.119581 at the two
+# retained r6 birth verdicts, so 0.12 is their measured upper envelope rounded
+# outward; Movable was 0.0065 at r5 and 0.007490/0.008856 at r6 birth, so its
+# outward envelope is 0.009.  The shared eta is derived from the retained r6
+# endpoint Lane werr 0.9981336319522209: one natural class-loss unit after ten
+# persistent endpoint-sized violations, eta = 1/(10*(0.9981336319522209-0.12)).
+# lambda_max=5 reuses the reviewed ddm_lg1 (#808) natural-unit ceiling; reaching
+# it is a fail-loud infeasibility signal, never a license to dominate the primal.
+MARGIN_CONSTRAINT_UNCONSTRAINED = "unconstrained"
+MARGIN_CONSTRAINT_LANE_MOVABLE = "lane_movable_werr_primal_dual"
+MARGIN_CONSTRAINT_LANE_BOUND = 0.12
+MARGIN_CONSTRAINT_MOVABLE_BOUND = 0.009
+MARGIN_CONSTRAINT_ETA_LAMBDA = 0.11387788414126129
+MARGIN_CONSTRAINT_LAMBDA_MAX = 5.0
+MARGIN_CONSTRAINT_MODE_PINS = {
+    MARGIN_CONSTRAINT_UNCONSTRAINED: {
+        "bounds": {},
+        "eta_lambda": 0.0,
+    },
+    MARGIN_CONSTRAINT_LANE_MOVABLE: {
+        "bounds": {
+            "Lane": MARGIN_CONSTRAINT_LANE_BOUND,
+            "Movable": MARGIN_CONSTRAINT_MOVABLE_BOUND,
+        },
+        "eta_lambda": MARGIN_CONSTRAINT_ETA_LAMBDA,
+    },
 }
 QBT2B_BIRTH_MAX_STEPS = 100
 QBT2B_MARGIN_STEPS = 5_000
@@ -272,9 +302,12 @@ def verify_pins() -> dict[str, dict[str, Any]]:
 
 def storage_preflight(output: Path, minimum_free_bytes: int) -> dict[str, Any]:
     resolved = output.resolve()
-    root = STORE.resolve()
-    if resolved != root and root not in resolved.parents:
-        raise QBT1Error(f"QBT1 output must remain under the AP custody root {root}")
+    allowed_roots = (STORE.resolve(), R7_RETENTION_ROOT.resolve())
+    if not any(resolved == root or root in resolved.parents for root in allowed_roots):
+        raise QBT1Error(
+            "QBT1 output must remain under an authorized AP custody root: "
+            + ", ".join(map(str, allowed_roots))
+        )
     output.mkdir(parents=True, exist_ok=True)
     usage = shutil.disk_usage(output)
     if usage.free < int(minimum_free_bytes):
@@ -504,6 +537,79 @@ def expected_flip_margin_loss(
     return (per_sample * weights).sum() / weights.sum()
 
 
+def per_class_expected_flip_margin_loss(
+    logits: torch.Tensor,
+    target: torch.Tensor,
+    tau: float,
+    class_id: int,
+    sample_weights: torch.Tensor | None = None,
+) -> torch.Tensor:
+    """Expected flip restricted to real target pixels of one scorer class."""
+
+    if logits.ndim != 4 or target.shape != (logits.shape[0], logits.shape[2], logits.shape[3]):
+        raise QBT1Error("per-class expected-flip logits/target geometry differs")
+    if not tau > 0 or not 0 <= int(class_id) < logits.shape[1]:
+        raise QBT1Error("per-class expected-flip tau/class differs")
+    target_index = target[:, None].long()
+    target_logit = logits.gather(1, target_index).squeeze(1)
+    other = logits.clone()
+    other.scatter_(1, target_index, -1.0e9)
+    flip_probability = torch.sigmoid(-(target_logit - other.amax(dim=1)) / tau)
+    target_mask = target == int(class_id)
+    if not bool(target_mask.any()):
+        raise QBT1Error(f"per-class expected-flip target class is absent: {class_id}")
+    pixel_weights = target_mask.to(flip_probability)
+    if sample_weights is not None:
+        weights = sample_weights.to(flip_probability)
+        if weights.shape != (logits.shape[0],) or not bool(torch.all(weights > 0)):
+            raise QBT1Error("per-class expected-flip sample weights differ")
+        pixel_weights = pixel_weights * weights[:, None, None]
+    return (flip_probability * pixel_weights).sum() / pixel_weights.sum()
+
+
+def realized_within_class_error(
+    logits: torch.Tensor, target: torch.Tensor, class_id: int
+) -> float:
+    """Realized render->R->uint8->SegNet argmax error on target class pixels."""
+
+    if logits.ndim != 4 or target.shape != (logits.shape[0], logits.shape[2], logits.shape[3]):
+        raise QBT1Error("realized within-class logits/target geometry differs")
+    target_mask = target == int(class_id)
+    if not bool(target_mask.any()):
+        raise QBT1Error(f"realized within-class target class is absent: {class_id}")
+    predicted = logits.detach().argmax(dim=1)
+    return float((predicted[target_mask] != int(class_id)).to(torch.float64).mean().cpu())
+
+
+def dual_ascent_margin_constraints(
+    lambdas: Mapping[str, float],
+    realized_werr: Mapping[str, float],
+    bounds: Mapping[str, float],
+    *,
+    eta_lambda: float,
+    lambda_max: float = MARGIN_CONSTRAINT_LAMBDA_MAX,
+) -> dict[str, float]:
+    """Projected per-class dual ascent on realized within-class error constraints."""
+
+    if set(lambdas) != set(bounds) or set(realized_werr) != set(bounds):
+        raise QBT1Error("margin-constraint class sets differ")
+    if eta_lambda <= 0.0 or lambda_max <= 0.0:
+        raise QBT1Error("margin-constraint dual geometry differs")
+    updated: dict[str, float] = {}
+    for class_name, bound in bounds.items():
+        previous = float(lambdas[class_name])
+        werr = float(realized_werr[class_name])
+        if not 0.0 <= previous <= lambda_max or not 0.0 <= float(bound) < 1.0:
+            raise QBT1Error("margin-constraint state/bound differs")
+        if not 0.0 <= werr <= 1.0:
+            raise QBT1Error("realized within-class error is outside [0,1]")
+        updated[class_name] = max(
+            0.0,
+            min(lambda_max, previous + eta_lambda * (werr - float(bound))),
+        )
+    return updated
+
+
 def tau_for_step(step: int, total_steps: int, start: float = 0.15, end: float = 0.05) -> float:
     if total_steps < 1 or not 0 <= step < total_steps or not start > end > 0:
         raise QBT1Error("expected-flip schedule geometry differs")
@@ -519,6 +625,7 @@ def joint_objective(
     target_pose6: torch.Tensor,
     tau: float,
     sample_weights: torch.Tensor | None = None,
+    margin_constraint_lambdas: Mapping[str, float] | None = None,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     realized_seg = expected_flip_margin_loss(scorer_logits, target_argmax, tau, sample_weights)
     native_logits = outputs["class_logits"].permute(0, 3, 1, 2)
@@ -534,7 +641,7 @@ def joint_objective(
     # makes the ABI's signed-interface head real while the realized term alone
     # remains the score-facing quantity.  Pose is active from the first step.
     total = 100.0 * (realized_seg + interface_seg) + pose_score
-    return total, {
+    components = {
         "loss_total": total,
         "seg_expected_flip_realized": realized_seg,
         "seg_expected_flip_native_interface": interface_seg,
@@ -544,6 +651,27 @@ def joint_objective(
         "camera_min": camera_pair.detach().amin(),
         "camera_max": camera_pair.detach().amax(),
     }
+    if margin_constraint_lambdas is not None:
+        expected_names = set(MARGIN_CONSTRAINT_MODE_PINS[MARGIN_CONSTRAINT_LANE_MOVABLE]["bounds"])
+        if set(margin_constraint_lambdas) != expected_names:
+            raise QBT1Error("margin-constraint lambda class set differs")
+        penalty = total.new_zeros(())
+        for class_name, class_id in (("Lane", 1), ("Movable", 3)):
+            class_flip = per_class_expected_flip_margin_loss(
+                scorer_logits,
+                target_argmax,
+                tau,
+                class_id,
+                sample_weights,
+            )
+            class_penalty = 100.0 * float(margin_constraint_lambdas[class_name]) * class_flip
+            penalty = penalty + class_penalty
+            components[f"margin_constraint_expected_flip_{class_name}"] = class_flip
+            components[f"margin_constraint_penalty_score_{class_name}"] = class_penalty
+        total = total + penalty
+        components["margin_constraint_penalty_score"] = penalty
+        components["loss_total"] = total
+    return total, components
 
 
 def derive_balanced_class_weights(pair_ids: Sequence[int], device: torch.device) -> torch.Tensor:
@@ -1817,9 +1945,12 @@ def compile_qbt2b_config(
     margin_steps: int = QBT2B_MARGIN_STEPS,
     birth_class_weight_mode: str = "none",
     birth_event_mode: str = "accuracy_020",
+    margin_constraint_mode: str = MARGIN_CONSTRAINT_UNCONSTRAINED,
 ) -> dict[str, Any]:
     if birth_event_mode not in BIRTH_EVENT_MODE_THRESHOLDS:
         raise QBT1Error(f"unsupported QBT2B birth event mode: {birth_event_mode}")
+    if margin_constraint_mode not in MARGIN_CONSTRAINT_MODE_PINS:
+        raise QBT1Error(f"unsupported QBT2B margin constraint mode: {margin_constraint_mode}")
     total_steps = int(birth_max_steps) + int(margin_steps)
     config = compile_config(
         action=action,
@@ -1829,6 +1960,7 @@ def compile_qbt2b_config(
         device=device,
     )
     initialization = file_fact(initialization_state)
+    margin_constraint_pin = MARGIN_CONSTRAINT_MODE_PINS[margin_constraint_mode]
     config.update(
         {
             "curriculum_mode": "ce_birth_then_margin",
@@ -1839,6 +1971,9 @@ def compile_qbt2b_config(
             "birth_within_class_error_max": BIRTH_EVENT_MODE_THRESHOLDS[birth_event_mode],
             "birth_event_mode": str(birth_event_mode),
             "birth_class_weight_mode": str(birth_class_weight_mode),
+            "margin_constraint_mode": str(margin_constraint_mode),
+            "margin_constraint_bounds": copy.deepcopy(margin_constraint_pin["bounds"]),
+            "margin_constraint_eta_lambda": float(margin_constraint_pin["eta_lambda"]),
             "initialization_state_path": initialization["path"],
             "initialization_state_sha256": initialization["sha256"],
             "consolidate_checkpoint_reencodes": True,
@@ -1863,6 +1998,7 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
         "birth_stability_verdicts", "birth_within_class_error_max", "initialization_state_path",
         "initialization_state_sha256", "consolidate_checkpoint_reencodes", "birth_class_weight_mode",
         "birth_event_mode",
+        "margin_constraint_mode", "margin_constraint_bounds", "margin_constraint_eta_lambda",
     }
     if unknown:
         raise QBT1Error(f"compiled config has unknown fields: {sorted(unknown)}")
@@ -1924,6 +2060,34 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
     birth_event_mode = str(config.get("birth_event_mode", "accuracy_020"))
     if birth_event_mode not in BIRTH_EVENT_MODE_THRESHOLDS:
         raise QBT1Error("QBT2B birth event mode differs")
+    margin_constraint_mode = str(
+        config.get("margin_constraint_mode", MARGIN_CONSTRAINT_UNCONSTRAINED)
+    )
+    if margin_constraint_mode not in MARGIN_CONSTRAINT_MODE_PINS:
+        raise QBT1Error("QBT2B margin constraint mode differs")
+    margin_constraint_pin = MARGIN_CONSTRAINT_MODE_PINS[margin_constraint_mode]
+    margin_constraint_bounds = config.get("margin_constraint_bounds", {})
+    margin_constraint_eta = float(config.get("margin_constraint_eta_lambda", 0.0))
+    expected_bounds = margin_constraint_pin["bounds"]
+    if not isinstance(margin_constraint_bounds, Mapping) or set(margin_constraint_bounds) != set(
+        expected_bounds
+    ):
+        raise QBT1Error("QBT2B margin constraint mode/bounds/eta group differs")
+    if any(
+        not math.isclose(
+            float(margin_constraint_bounds[name]),
+            float(expected_bounds[name]),
+            rel_tol=0.0,
+            abs_tol=1.0e-12,
+        )
+        for name in expected_bounds
+    ) or not math.isclose(
+        margin_constraint_eta,
+        float(margin_constraint_pin["eta_lambda"]),
+        rel_tol=0.0,
+        abs_tol=1.0e-12,
+    ):
+        raise QBT1Error("QBT2B margin constraint mode/bounds/eta group differs")
     if curriculum_mode == "ce_birth_then_margin":
         required = {
             "birth_max_steps",
@@ -2069,6 +2233,31 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
                 {name: hashlib.sha256(value.numpy().tobytes()).hexdigest() for name, value in payload["ema"]["shadow"].items()}
             ),
         }
+
+    margin_constraint_mode = str(
+        config.get("margin_constraint_mode", MARGIN_CONSTRAINT_UNCONSTRAINED)
+    )
+    margin_constraint_enabled = margin_constraint_mode == MARGIN_CONSTRAINT_LANE_MOVABLE
+    margin_constraint_bounds = {
+        name: float(value) for name, value in config.get("margin_constraint_bounds", {}).items()
+    }
+    margin_constraint_eta = float(config.get("margin_constraint_eta_lambda", 0.0))
+    if margin_constraint_enabled:
+        stored_constraint_state = curriculum_state.get("margin_constraint_state")
+        if stored_constraint_state is None:
+            stored_constraint_state = {
+                "mode": margin_constraint_mode,
+                "lambdas": dict.fromkeys(margin_constraint_bounds, 0.0),
+            }
+            curriculum_state["margin_constraint_state"] = stored_constraint_state
+        if (
+            stored_constraint_state.get("mode") != margin_constraint_mode
+            or set(stored_constraint_state.get("lambdas", {})) != set(margin_constraint_bounds)
+        ):
+            raise QBT1Error("resumed margin-constraint state differs")
+        for value in stored_constraint_state["lambdas"].values():
+            if not 0.0 <= float(value) <= MARGIN_CONSTRAINT_LAMBDA_MAX:
+                raise QBT1Error("resumed margin-constraint lambda differs")
 
     stage03a_checkpoint = None
     stage03a_reencode = None
@@ -2323,6 +2512,52 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
             float(config["expected_flip_tau_start"]),
             float(config["expected_flip_tau_end"]),
         )
+        margin_constraint_telemetry = None
+        margin_constraint_lambdas = None
+        if margin_constraint_enabled:
+            margin_constraint_state = curriculum_state["margin_constraint_state"]
+            lambda_before = {
+                name: float(value)
+                for name, value in margin_constraint_state["lambdas"].items()
+            }
+            realized_werr = {
+                "Lane": realized_within_class_error(logits, target_argmax, 1),
+                "Movable": realized_within_class_error(logits, target_argmax, 3),
+            }
+            margin_constraint_lambdas = dual_ascent_margin_constraints(
+                lambda_before,
+                realized_werr,
+                margin_constraint_bounds,
+                eta_lambda=margin_constraint_eta,
+            )
+            margin_constraint_state["lambdas"] = copy.deepcopy(margin_constraint_lambdas)
+            margin_constraint_telemetry = {
+                "mode": margin_constraint_mode,
+                "bounds": copy.deepcopy(margin_constraint_bounds),
+                "eta_lambda": margin_constraint_eta,
+                "lambda_max": MARGIN_CONSTRAINT_LAMBDA_MAX,
+                "realized_within_class_error": realized_werr,
+                "constraint_residual": {
+                    name: realized_werr[name] - margin_constraint_bounds[name]
+                    for name in margin_constraint_bounds
+                },
+                "binding": {
+                    name: realized_werr[name] > margin_constraint_bounds[name]
+                    for name in margin_constraint_bounds
+                },
+                "lambda_before": lambda_before,
+                "lambda_after": copy.deepcopy(margin_constraint_lambdas),
+                "lambda_at_ceiling": {
+                    name: math.isclose(
+                        value,
+                        MARGIN_CONSTRAINT_LAMBDA_MAX,
+                        rel_tol=0.0,
+                        abs_tol=1.0e-12,
+                    )
+                    for name, value in margin_constraint_lambdas.items()
+                },
+                "realization_path": "render->R->uint8->frozen_SegNet_argmax",
+            }
         total, components = joint_objective(
             outputs,
             camera,
@@ -2332,6 +2567,7 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
             target_pose6,
             tau,
             sample_weights,
+            margin_constraint_lambdas,
         )
         total.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -2348,6 +2584,8 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
             "objective": {name: float(value.detach().cpu()) for name, value in components.items()},
             "ema_effective_decay": ema.effective_decay(),
         }
+        if margin_constraint_telemetry is not None:
+            row["margin_constraint"] = margin_constraint_telemetry
         history.append(row)
         checkpoint_due = (current + 1) % int(config["checkpoint_every_steps"]) == 0 or current + 1 == margin_steps
         if checkpoint_due:
@@ -2404,7 +2642,11 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
         optimizer=resumed_optimizer,
         config=config,
     )
-    if resumed_step != step or resumed_history != history:
+    if (
+        resumed_step != step
+        or resumed_history != history
+        or resumed_payload.get("curriculum_state") != curriculum_state
+    ):
         raise QBT1Error("resume cursor/history differs")
     for name, value in model.state_dict().items():
         if not torch.equal(value.detach().cpu(), resumed_model.state_dict()[name].detach().cpu()):
@@ -2646,6 +2888,17 @@ def project_memory(
     }
 
 
+def latest_birth_verdict(history: Sequence[Mapping[str, Any]]) -> Mapping[str, Any]:
+    rows = [row for row in history if "birth_verdict" in row]
+    if not rows:
+        raise QBT1Error("storage projection smoke lacks a retained birth verdict row")
+    return rows[-1]["birth_verdict"]
+
+
+def latest_birth_verdict_pair_ids(history: Sequence[Mapping[str, Any]]) -> tuple[int, ...]:
+    return tuple(map(int, latest_birth_verdict(history)["pair_ids"]))
+
+
 def project_on_disk_storage(
     smoke_result: Mapping[str, Any],
     *,
@@ -2679,8 +2932,9 @@ def project_on_disk_storage(
         Path(smoke_reencode["retention_container"]["path"]).parent / "REENCODE_MANIFEST.json"
     )
     repack_reference = file_fact(R2_REPACK_REFERENCE_TAR)
+    smoke_birth_pair_ids = latest_birth_verdict_pair_ids(smoke_result["history"])
     theoretical_smoke_members = 36 + 4 + 1 + 8 * len(
-        smoke_result["history"][-1]["birth_verdict"]["pair_ids"]
+        smoke_birth_pair_ids
     )
     theoretical_full_members = 36 + 4 + 1 + 8 * len(SELECTION_IDS)
     full_member_count = math.ceil(
@@ -2708,8 +2962,9 @@ def project_on_disk_storage(
         per_checkpoint_logical_bytes + files_per_periodic_unit * cluster_size
     ) * periodic_count
 
-    smoke_verdict = smoke_result["history"][-1]["birth_verdict"]["retained_payload"]
-    smoke_pairs = len(smoke_result["history"][-1]["birth_verdict"]["pair_ids"])
+    smoke_birth_verdict = latest_birth_verdict(smoke_result["history"])
+    smoke_verdict = smoke_birth_verdict["retained_payload"]
+    smoke_pairs = len(smoke_birth_verdict["pair_ids"])
     verdict_logical = math.ceil(int(smoke_verdict["bytes"]) * len(SELECTION_IDS) / smoke_pairs)
     verdict_count = math.ceil(int(birth_max_steps) / int(birth_verdict_every_steps))
     verdict_projection = (verdict_logical + 2 * 4096 + 2 * cluster_size) * verdict_count
@@ -3045,6 +3300,71 @@ def compiled_qbt2b_launch_request(
     return request
 
 
+def compile_r7_authorized_config(
+    path: Path,
+    *,
+    smoke_result_path: Path = R7_RETENTION_ROOT / "smoke_n1/RESULT.json",
+) -> dict[str, Any]:
+    """Seal the r7 treatment config; MAIN must add live claims before firing it."""
+
+    config = compile_qbt2b_config(
+        action="train",
+        output=TRAIN_ROOT / "governed_n32_r7",
+        pair_ids=SELECTION_IDS,
+        device="mps",
+        initialization_state=(
+            TRAIN_ROOT / "governed_n32_r5/initialized_r6_from_r5_cap_ema_state.pt"
+        ),
+        birth_max_steps=20,
+        margin_steps=QBT2B_MARGIN_STEPS,
+        birth_class_weight_mode="balanced",
+        birth_event_mode="existence_majority",
+        margin_constraint_mode=MARGIN_CONSTRAINT_LANE_MOVABLE,
+    )
+    # The arm owns the sealed treatment tuple, not dispatch authority.  These
+    # fields are excluded from config_identity, so MAIN can bind real claims
+    # without changing the single treatment variable or cross-mode resume law.
+    config["launch_authorized"] = False
+    config["scorer_lane"] = {"claimed": False, "claim_id": None}
+    config["metal_lane"] = {"claimed": False, "claim_id": None}
+    validate_config(config, require_launch_authority=False)
+    config_fact = atomic_json(path, config)
+    roundtrip = json.loads(path.read_text(encoding="utf-8"))
+    validate_config(roundtrip, require_launch_authority=False)
+    if roundtrip != config or canonical_sha256(roundtrip) != canonical_sha256(config):
+        raise QBT1Error("r7 authorized config JSON round-trip differs")
+    smoke_result = json.loads(smoke_result_path.read_text(encoding="utf-8"))
+    storage_projection = project_on_disk_storage(
+        smoke_result,
+        output=TRAIN_ROOT / "governed_n32_r7",
+        total_steps=20 + QBT2B_MARGIN_STEPS,
+        checkpoint_every_steps=int(config["checkpoint_every_steps"]),
+        birth_max_steps=20,
+        birth_verdict_every_steps=int(config["birth_verdict_every_steps"]),
+    )
+    storage_projection_fact = atomic_json(
+        R7_RETENTION_ROOT / "R7_STORAGE_PROJECTION_20260828.json", storage_projection
+    )
+    return {
+        "schema": "ddm_qbt2b_r7_authorized_config_compile.v1",
+        "status": (
+            "SEALED_AWAITING_MAIN_LIVE_CLAIMS"
+            if storage_projection["passes_live_df"]
+            else "SEALED_BLOCKED_LIVE_STORAGE_PREFLIGHT"
+        ),
+        "config": config_fact,
+        "config_identity_sha256": canonical_sha256(config_identity(config)),
+        "config_canonical_sha256": canonical_sha256(config),
+        "json_roundtrip_identical": True,
+        "validated_before_write": True,
+        "validated_after_read": True,
+        "storage_projection": storage_projection_fact,
+        "storage_projection_passed": bool(storage_projection["passes_live_df"]),
+        "launch_authorized": False,
+        "score_claim": False,
+    }
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="action", required=True)
@@ -3066,6 +3386,36 @@ def build_parser() -> argparse.ArgumentParser:
         "--initialization-state",
         type=Path,
         default=QBT2B_ROOT / "initialization/initialized/initialized_r3_state.pt",
+    )
+    constraint_smoke = sub.add_parser(
+        "constraint-smoke",
+        help="run the bounded n1 real constrained-margin law and resume-identity smoke",
+    )
+    constraint_smoke.add_argument(
+        "--output",
+        type=Path,
+        default=R7_RETENTION_ROOT / "smoke_n1",
+    )
+    constraint_smoke.add_argument(
+        "--pair-id", type=int, default=62, choices=SELECTION_IDS
+    )
+    constraint_smoke.add_argument(
+        "--initialization-state",
+        type=Path,
+        default=(TRAIN_ROOT / "governed_n32_r5/initialized_r6_from_r5_cap_ema_state.pt"),
+    )
+    compile_r7 = sub.add_parser(
+        "compile-r7-config", help="seal the unlaunched r7 config for MAIN claim binding"
+    )
+    compile_r7.add_argument(
+        "--output",
+        type=Path,
+        default=TRAIN_ROOT / "AUTHORIZED_N32_R7_5020_20260828.json",
+    )
+    compile_r7.add_argument(
+        "--smoke-result",
+        type=Path,
+        default=R7_RETENTION_ROOT / "smoke_n1/RESULT.json",
     )
     compile_request = sub.add_parser("compile-launch-request")
     compile_request.add_argument("--smoke-result", type=Path, required=True)
@@ -3106,6 +3456,32 @@ def main(argv: Sequence[str] | None = None) -> int:
         result["elapsed_seconds"] = time.monotonic() - started
         atomic_json(Path(config["output"]) / "RESULT.json", result)
         print(json.dumps(result, indent=2, sort_keys=True, default=str))
+        return 0
+    if args.action == "constraint-smoke":
+        started = time.monotonic()
+        config = compile_qbt2b_config(
+            action="smoke",
+            output=args.output,
+            pair_ids=(args.pair_id,),
+            device="cpu",
+            initialization_state=args.initialization_state,
+            birth_max_steps=10,
+            margin_steps=2,
+            birth_class_weight_mode="balanced",
+            birth_event_mode="existence_majority",
+            margin_constraint_mode=MARGIN_CONSTRAINT_LANE_MOVABLE,
+        )
+        atomic_json(args.output / "SMOKE_CONFIG.json", config)
+        result = run_training(config)
+        result["elapsed_seconds"] = time.monotonic() - started
+        atomic_json(Path(config["output"]) / "RESULT.json", result)
+        print(json.dumps(result, indent=2, sort_keys=True, default=str))
+        return 0
+    if args.action == "compile-r7-config":
+        receipt = compile_r7_authorized_config(
+            args.output, smoke_result_path=args.smoke_result
+        )
+        print(json.dumps(receipt, indent=2, sort_keys=True, default=str))
         return 0
     if args.action == "smoke":
         started = time.monotonic()

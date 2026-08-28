@@ -71,6 +71,79 @@ def test_expected_flip_margin_rewards_positive_margin() -> None:
     )
 
 
+def test_margin_constraint_default_off_is_bit_identical() -> None:
+    torch.manual_seed(7)
+    outputs = {"class_logits": torch.randn((2, 2, 2, 5))}
+    camera = torch.zeros((2, 2, 3, 4, 4))
+    pose = torch.randn((2, 6))
+    scorer_logits = torch.randn((2, 5, 2, 2))
+    target_argmax = torch.tensor([[[0, 1], [2, 3]], [[4, 3], [2, 1]]])
+    target_pose = torch.zeros((2, 6))
+    legacy_total, legacy_parts = qbt1.joint_objective(
+        outputs,
+        camera,
+        pose,
+        scorer_logits,
+        target_argmax,
+        target_pose,
+        0.1,
+    )
+    off_total, off_parts = qbt1.joint_objective(
+        outputs,
+        camera,
+        pose,
+        scorer_logits,
+        target_argmax,
+        target_pose,
+        0.1,
+        margin_constraint_lambdas=None,
+    )
+    assert torch.equal(legacy_total, off_total)
+    assert legacy_parts.keys() == off_parts.keys()
+    assert all(torch.equal(legacy_parts[name], off_parts[name]) for name in legacy_parts)
+
+
+def test_margin_constraint_dual_ascent_rises_and_decays_to_zero() -> None:
+    bounds = {"Lane": 0.12, "Movable": 0.009}
+    risen = qbt1.dual_ascent_margin_constraints(
+        {"Lane": 0.0, "Movable": 0.0},
+        {"Lane": 0.62, "Movable": 0.109},
+        bounds,
+        eta_lambda=1.0,
+    )
+    assert risen == pytest.approx({"Lane": 0.5, "Movable": 0.1})
+    decayed = qbt1.dual_ascent_margin_constraints(
+        risen,
+        {"Lane": 0.0, "Movable": 0.0},
+        bounds,
+        eta_lambda=20.0,
+    )
+    assert decayed == {"Lane": 0.0, "Movable": 0.0}
+
+
+def test_margin_constraint_penalty_is_live_on_realized_class_pixels() -> None:
+    target = torch.tensor([[[1, 1], [3, 3]]])
+    logits = torch.zeros((1, 5, 2, 2), requires_grad=True)
+    with torch.no_grad():
+        logits[:, 0] = 0.2
+    outputs = {"class_logits": logits.permute(0, 2, 3, 1)}
+    total, parts = qbt1.joint_objective(
+        outputs,
+        torch.zeros((1, 2, 3, 4, 4)),
+        torch.zeros((1, 6)),
+        logits,
+        target,
+        torch.zeros((1, 6)),
+        1.0,
+        margin_constraint_lambdas={"Lane": 0.5, "Movable": 0.25},
+    )
+    total.backward()
+    assert parts["margin_constraint_penalty_score"] > 0
+    assert parts["margin_constraint_penalty_score_Lane"] > 0
+    assert parts["margin_constraint_penalty_score_Movable"] > 0
+    assert logits.grad is not None and bool(torch.any(logits.grad != 0))
+
+
 def test_realized_ce_birth_keeps_pose_active() -> None:
     camera = torch.zeros((2, 2, 3, 4, 4), requires_grad=True)
     logits = torch.randn((2, 5, 2, 2), requires_grad=True)
@@ -199,6 +272,60 @@ def test_birth_event_mode_pins_mode_threshold_pair(monkeypatch, tmp_path) -> Non
         inconsistent["birth_within_class_error_max"] = wrong_threshold
         with pytest.raises(qbt1.QBT1Error, match="event/retention law"):
             qbt1.validate_config(inconsistent)
+
+
+def test_margin_constraint_mode_pins_mode_bounds_eta_group(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(qbt1, "verify_pins", lambda: {})
+    initialization = tmp_path / "initialized.pt"
+    initialization.write_bytes(b"custody-only validation payload")
+    kwargs = {
+        "action": "smoke",
+        "pair_ids": (qbt1.SELECTION_IDS[0],),
+        "device": "cpu",
+        "initialization_state": initialization,
+        "birth_max_steps": 3,
+        "margin_steps": 7,
+    }
+    default = qbt1.compile_qbt2b_config(output=tmp_path / "default", **kwargs)
+    assert default["margin_constraint_mode"] == qbt1.MARGIN_CONSTRAINT_UNCONSTRAINED
+    assert default["margin_constraint_bounds"] == {}
+    assert default["margin_constraint_eta_lambda"] == 0.0
+    qbt1.validate_config(default)
+    legacy = dict(default)
+    for name in (
+        "margin_constraint_mode",
+        "margin_constraint_bounds",
+        "margin_constraint_eta_lambda",
+    ):
+        legacy.pop(name)
+    qbt1.validate_config(legacy)
+    constrained = qbt1.compile_qbt2b_config(
+        output=tmp_path / "constrained",
+        margin_constraint_mode=qbt1.MARGIN_CONSTRAINT_LANE_MOVABLE,
+        **kwargs,
+    )
+    assert constrained["margin_constraint_bounds"] == {
+        "Lane": qbt1.MARGIN_CONSTRAINT_LANE_BOUND,
+        "Movable": qbt1.MARGIN_CONSTRAINT_MOVABLE_BOUND,
+    }
+    assert constrained["margin_constraint_eta_lambda"] == qbt1.MARGIN_CONSTRAINT_ETA_LAMBDA
+    qbt1.validate_config(constrained)
+    mode_only = copy.deepcopy(default)
+    mode_only["margin_constraint_mode"] = qbt1.MARGIN_CONSTRAINT_LANE_MOVABLE
+    with pytest.raises(qbt1.QBT1Error, match="mode/bounds/eta group"):
+        qbt1.validate_config(mode_only)
+    values_only = copy.deepcopy(default)
+    values_only["margin_constraint_bounds"] = copy.deepcopy(
+        qbt1.MARGIN_CONSTRAINT_MODE_PINS[qbt1.MARGIN_CONSTRAINT_LANE_MOVABLE]["bounds"]
+    )
+    values_only["margin_constraint_eta_lambda"] = qbt1.MARGIN_CONSTRAINT_ETA_LAMBDA
+    with pytest.raises(qbt1.QBT1Error, match="mode/bounds/eta group"):
+        qbt1.validate_config(values_only)
+    wrong_eta = copy.deepcopy(constrained)
+    wrong_eta["margin_constraint_eta_lambda"] *= 2.0
+    with pytest.raises(qbt1.QBT1Error, match="mode/bounds/eta group"):
+        qbt1.validate_config(wrong_eta)
+    assert qbt1.config_identity(default) != qbt1.config_identity(constrained)
 
 
 def test_existence_gate_majority_threshold_and_accuracy_watch() -> None:
@@ -342,6 +469,55 @@ def test_checkpoint_restores_live_optimizer_rng_and_ema(tmp_path) -> None:
         assert torch.equal(model.state_dict()[name], value)
 
 
+def test_checkpoint_refuses_cross_margin_constraint_mode_resume(tmp_path) -> None:
+    qbt1.seed_everything(qbt1.SEED)
+    model = _initial_model()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=2e-4)
+    ema = qbt1.EMA(model, decay=0.9, warmup=True)
+    off_config = {
+        "schema": qbt1.SCHEMA,
+        "action": "smoke",
+        "resume_from": None,
+        "margin_constraint_mode": qbt1.MARGIN_CONSTRAINT_UNCONSTRAINED,
+        "margin_constraint_bounds": {},
+        "margin_constraint_eta_lambda": 0.0,
+    }
+    qbt1.save_checkpoint(
+        tmp_path / "off.pt",
+        model=model,
+        optimizer=optimizer,
+        ema=ema,
+        config=off_config,
+        step=1,
+        stage="test",
+        history=[{"step": 1}],
+    )
+    constrained_config = copy.deepcopy(off_config)
+    constrained_config.update(
+        {
+            "margin_constraint_mode": qbt1.MARGIN_CONSTRAINT_LANE_MOVABLE,
+            "margin_constraint_bounds": copy.deepcopy(
+                qbt1.MARGIN_CONSTRAINT_MODE_PINS[qbt1.MARGIN_CONSTRAINT_LANE_MOVABLE]["bounds"]
+            ),
+            "margin_constraint_eta_lambda": qbt1.MARGIN_CONSTRAINT_ETA_LAMBDA,
+        }
+    )
+    assert "margin_constraint_mode" not in {
+        "action",
+        "resume_from",
+        "launch_authorized",
+        "scorer_lane",
+        "metal_lane",
+    }
+    with pytest.raises(qbt1.QBT1Error, match="config identity differs"):
+        qbt1.load_checkpoint(
+            tmp_path / "off.pt",
+            model=model,
+            optimizer=optimizer,
+            config=constrained_config,
+        )
+
+
 def test_no2_gate_refuses_missing_control_and_accepts_real_same_budget_control() -> None:
     rows = [{"pair_id": pair_id, "d_seg": 0.0, "d_pose": 0.0} for pair_id in qbt1.SELECTION_IDS]
     refused = qbt1.no2_gate(pair_rows=rows, archive_bytes=100_000, b_hat=100_000, control=None)
@@ -403,3 +579,14 @@ def test_qbt2b_schema_is_additive_and_ema_uses_total_schedule(monkeypatch, tmp_p
     assert qbt2b["steps"] == 10
     assert qbt2b["ema"] == qbt1.resolve_ema_law(10)
     qbt1.validate_config(qbt2b)
+
+
+def test_storage_projection_birth_verdict_selection_survives_margin_tail() -> None:
+    history = [
+        {"step": 5, "birth_verdict": {"pair_ids": [62]}},
+        {"step": 10, "birth_verdict": {"pair_ids": [62]}},
+        {"step": 11, "margin_constraint": {"binding": {"Lane": True}}},
+    ]
+    assert qbt1.latest_birth_verdict_pair_ids(history) == (62,)
+    with pytest.raises(qbt1.QBT1Error, match="lacks a retained birth verdict"):
+        qbt1.latest_birth_verdict_pair_ids(history[-1:])
