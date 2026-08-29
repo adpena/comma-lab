@@ -156,6 +156,92 @@ def _import_runtime(runtime_dir: Path):
     return residual_archive, carrier_repack, ar1_codec, predictor
 
 
+def _import_entropy_riders(
+    runtime_dir: Path, *, require_rr5: bool, require_dx2: bool
+):
+    """Import the shipped RR5/DX2 forward and inverse byte transforms.
+
+    These riders are optional receiver layers selected by RX1 reserved bits.  Keeping
+    the imports runtime-bound makes the splice use the exact algorithms carried by the
+    archive it is rebuilding instead of a recalled copy from another generation.
+    """
+    runtime_dir = runtime_dir.resolve()
+    sys.path.insert(0, str(runtime_dir))
+    try:
+        if require_rr5:
+            from runtime import rr5_arith_basis as rr5
+        else:
+            rr5 = None
+        if require_dx2:
+            from runtime import dx2_cabac_coefficients as dx2
+        else:
+            dx2 = None
+    finally:
+        sys.path.pop(0)
+    return rr5, dx2
+
+
+def _restore_entropy_riders(
+    body: bytes, *, reserved: int, runtime_dir: Path, residual_archive: Any
+) -> bytes:
+    """Follow the receiver's RR5-then-DX2 inverse order when those bits are set."""
+    rr5_bit = int(getattr(residual_archive, "RR5_RESERVED_ARITH_BASIS", 0))
+    dx2_bit = int(
+        getattr(residual_archive, "DX2_RESERVED_CABAC_COEFFICIENTS", 0)
+    )
+    if not (reserved & (rr5_bit | dx2_bit)):
+        return body
+    rr5, dx2 = _import_entropy_riders(
+        runtime_dir,
+        require_rr5=bool(reserved & rr5_bit),
+        require_dx2=bool(reserved & dx2_bit),
+    )
+    restored = body
+    if reserved & rr5_bit:
+        if rr5 is None:
+            raise Up3Error("RR5 rider bit is set but its runtime module is absent")
+        restored = rr5.restore_carrier_body(restored)
+    if reserved & dx2_bit:
+        if dx2 is None:
+            raise Up3Error("DX2 rider bit is set but its runtime module is absent")
+        restored = dx2.restore_carrier_body(restored)
+    return restored
+
+
+def _apply_entropy_riders(
+    body: bytes, *, reserved: int, runtime_dir: Path, residual_archive: Any
+) -> bytes:
+    """Apply DX2 then RR5, the exact inverse of the receiver's restore order."""
+    rr5_bit = int(getattr(residual_archive, "RR5_RESERVED_ARITH_BASIS", 0))
+    dx2_bit = int(
+        getattr(residual_archive, "DX2_RESERVED_CABAC_COEFFICIENTS", 0)
+    )
+    if not (reserved & (rr5_bit | dx2_bit)):
+        return body
+    rr5, dx2 = _import_entropy_riders(
+        runtime_dir,
+        require_rr5=bool(reserved & rr5_bit),
+        require_dx2=bool(reserved & dx2_bit),
+    )
+    encoded = body
+    if reserved & dx2_bit:
+        if dx2 is None:
+            raise Up3Error("DX2 rider bit is set but its runtime module is absent")
+        encoded = bytes(dx2.apply_cabac_to_carrier_body(encoded)["body"])
+    if reserved & rr5_bit:
+        if rr5 is None:
+            raise Up3Error("RR5 rider bit is set but its runtime module is absent")
+        encoded = bytes(rr5.apply_rider_to_carrier_body(encoded)["body"])
+    if _restore_entropy_riders(
+        encoded,
+        reserved=reserved,
+        runtime_dir=runtime_dir,
+        residual_archive=residual_archive,
+    ) != body:
+        raise Up3Error("RR5/DX2 carrier forward-inverse identity failed")
+    return encoded
+
+
 def _pack_unsigned(values: Sequence[int], count: int, bits: int) -> bytes:
     """Forward of ``residual_archive._unpack_unsigned`` (little-endian bit packing)."""
     values = [int(v) for v in values]
@@ -371,6 +457,12 @@ def parse_shipped_body(
         if reserved & ra.CK2_RESERVED_CARRIER_PLANE2
         else carrier_raw
     )
+    carrier_body = _restore_entropy_riders(
+        carrier_body,
+        reserved=reserved,
+        runtime_dir=runtime_dir,
+        residual_archive=ra,
+    )
 
     basis_bits = int.from_bytes(carrier_body[0:3], "little")
     residual_bits = int.from_bytes(carrier_body[3:6], "little")
@@ -553,6 +645,12 @@ def build_archive(
     magic, version, codec, table_mode, reserved, hpac_bytes, semantic_bytes, _old = (
         body.rx1_header
     )
+    encoded_carrier_body = _apply_entropy_riders(
+        carrier_body,
+        reserved=reserved,
+        runtime_dir=runtime_dir,
+        residual_archive=ra,
+    )
     options = (
         CONTAINER_OPTIONS
         if container_search
@@ -561,7 +659,11 @@ def build_archive(
     chosen: tuple[bool, int, int] | None = None
     carrier_stream = b""
     for use_ck2, quality, lgwin in options:
-        raw = _ck2_interleave_planes(carrier_body) if use_ck2 else carrier_body
+        raw = (
+            _ck2_interleave_planes(encoded_carrier_body)
+            if use_ck2
+            else encoded_carrier_body
+        )
         stream = brotli.compress(raw, quality=quality, lgwin=lgwin)
         if brotli.decompress(stream) != raw:
             raise Up3Error(f"brotli round-trip failed for q={quality} lgwin={lgwin}")
@@ -623,6 +725,7 @@ def build_archive(
         "rice_bits": residual_bits,
         "rice_payload_bytes": len(rice_payload),
         "carrier_body_bytes": len(carrier_body),
+        "encoded_carrier_body_bytes": len(encoded_carrier_body),
         "carrier_stream_bytes": len(carrier_stream),
         "packed_metadata_identical": packed_metadata == body.packed_metadata,
         "rice_payload_identical": rice_payload == body.rice_payload,
@@ -652,6 +755,12 @@ def parse_back_codes(archive_bytes: bytes, *, runtime_dir: Path = DEFAULT_RUNTIM
     body = ra._decompress_brotli(carrier_stream)
     if reserved & ra.CK2_RESERVED_CARRIER_PLANE2:
         body = ra._ck2_uninterleave_planes(body)
+    body = _restore_entropy_riders(
+        body,
+        reserved=reserved,
+        runtime_dir=runtime_dir,
+        residual_archive=ra,
+    )
     basis_bits = int.from_bytes(body[0:3], "little")
     residual_bits = int.from_bytes(body[3:6], "little")
     packed_portion = (

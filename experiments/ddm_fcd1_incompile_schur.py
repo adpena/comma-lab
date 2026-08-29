@@ -356,15 +356,6 @@ def run_publish(args: argparse.Namespace) -> int:
     d_pose_base = float(base_control["d_pose_mean"])
     d_pose_after = float(best["d_pose_final"])
     pose_gate = validate_pose_gate(d_pose_after=d_pose_after, d_pose_base=d_pose_base, band=args.pose_band)
-    # This assertion is inside the compile/publish path by design.  The explicit
-    # exception below preserves fail-closed behaviour even under ``python -O``.
-    assert d_pose_after <= d_pose_base + args.pose_band, (
-        f"fresh Schur pose gate failed: {d_pose_after} > {d_pose_base} + {args.pose_band}"
-    )
-    if not pose_gate:
-        raise Fcd1SchurError(f"fresh Schur pose gate failed: {d_pose_after} > {d_pose_base} + {args.pose_band}")
-
-    published = stage_published_runtime(body_runtime, archive, Path(args.destination).resolve())
     result = {
         "schema": "ddm_fcd1_incompile_schur.v1",
         "axis": AXIS,
@@ -381,7 +372,7 @@ def run_publish(args: argparse.Namespace) -> int:
             "d_pose_base": d_pose_base,
             "d_pose_after": d_pose_after,
             "band": args.pose_band,
-            "passed": True,
+            "passed": pose_gate,
         },
         "determinism_repeat": {
             "archive": archive_fact,
@@ -389,8 +380,27 @@ def run_publish(args: argparse.Namespace) -> int:
             "byte_identical": True,
             "d_pose_identical": True,
         },
-        "published": published,
+        "disposition": "PUBLISHABLE" if pose_gate else "REFUSED_POSE_GATE",
+        "published": None,
     }
+    if not pose_gate:
+        # A refusal is a measured terminal result, not an exception-shaped absence.
+        # Persist the bound inputs, repeat proof, and failed inequality before raising.
+        atomic_json(Path(args.receipt), result)
+        print(json.dumps(result, indent=2, sort_keys=True))
+        raise Fcd1SchurError(
+            f"fresh Schur pose gate failed: {d_pose_after} > "
+            f"{d_pose_base} + {args.pose_band}"
+        )
+    # This assertion is inside the compile/publish path by design.  The explicit
+    # exception below preserves fail-closed behaviour even under ``python -O``.
+    assert d_pose_after <= d_pose_base + args.pose_band, (
+        f"fresh Schur pose gate failed: {d_pose_after} > {d_pose_base} + {args.pose_band}"
+    )
+
+    published = stage_published_runtime(body_runtime, archive, Path(args.destination).resolve())
+    result["disposition"] = "PUBLISHED"
+    result["published"] = published
     atomic_json(Path(args.receipt), result)
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
