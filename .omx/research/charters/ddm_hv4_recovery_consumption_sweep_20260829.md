@@ -1,4 +1,4 @@
-# ddm_hv4_recovery_consumption_sweep — the RECOVERY half: drain the 357-row plan surface + the local-disk-only memo orphans to owned exits (task #1323; owning memos `ddm_hv2_harvest_consumption_sweep_20260827.md` (the prior sweep, which produced the fcd1 chain) + task #1190's orphan-signal finding)
+# ddm_hv4_recovery_consumption_sweep — the RECOVERY half: drain the 357-row plan surface + the local-disk-only memo orphans to owned exits (task #1323; owning memos `ddm_hv2_harvest_consumption_sweep_20260826.md` (the prior sweep, which produced the fcd1 chain) + task #1190's orphan-signal finding)
 
 ## MANDATE
 
@@ -7,7 +7,7 @@ The RECOVER half has a measured surface. `tools/codex_arm_queue.py next` reports
 NEXT_IF_RESUMED plan rows** across the arm corpus, and task #1190 recorded **42 research memos
 that existed only on local disk — invisible to git, the graph, and the corpus** (so invisible to
 every recall step, which is the m44 never-recall-from-working-memory failure made structural).
-The precedent is exact and it PAID: `ddm_hv2_harvest_consumption_sweep_20260827.md` ran this sweep
+The precedent is exact and it PAID: `ddm_hv2_harvest_consumption_sweep_20260826.md` ran this sweep
 once and its FIRE-NOW head produced the jf2→fcd1 chain — i.e. today's only live rate opening came
 out of a consumption sweep, not out of a new mechanism. This arm runs it again over the
 post-fcd2 state, loop-until-dry, and hands MAIN a ranked FIRE-NOW head.
@@ -50,7 +50,7 @@ post-fcd2 state, loop-until-dry, and hands MAIN a ranked FIRE-NOW head.
 
 ## PRIOR NEGATIVE SIGNAL (bearing dead-ends this charter consumes)
 
-- `ddm_hv2_harvest_consumption_sweep_20260827.md`: the prior sweep — do NOT re-drain rows it
+- `ddm_hv2_harvest_consumption_sweep_20260826.md`: the prior sweep — do NOT re-drain rows it
   already exited; start from its exit table and sweep the DELTA plus everything landed since.
 - `ddm_os1_orphan_signal_reconciliation_20260822.md`: the PRIOR OWNER of the orphan-signal class
   (#1190). Its disposition table is this arm's baseline — re-deriving it from scratch is the
@@ -66,9 +66,14 @@ post-fcd2 state, loop-until-dry, and hands MAIN a ranked FIRE-NOW head.
 
 ## OPTIMAL FORM
 
-- Family exemplar: `ddm_hv2_harvest_consumption_sweep_20260827.md` is the reference form (its
-  FIRE-NOW rank 1 became ddm_jf2 → the fcd1 chain → today's −3,729 B opening); reference receipts
-  in its consumer store. Run that landed form over the post-fcd2 delta.
+- Family exemplar: `ddm_hv2_harvest_consumption_sweep_20260826.md` (commit `88ecc0a9b1`) is the
+  reference form — its FIRE-NOW rank 1 became `ddm_jf2` (charter commit `1decc4d0bc`) → the fcd1
+  chain (`ddm_fcd1_field_for_coder_diagonal_20260829.md`, commit `6df3b4ea9b`) → today's −3,729 B
+  opening; reference receipts in its consumer store, and its sister ledger
+  `.omx/research/ddm_hv2_harvest_consumption_ledger_20260826.jsonl` carries the typed exit rows.
+  The orphan baseline is `ddm_os1_orphan_signal_reconciliation_20260822.md` (commit `384ace13ad`,
+  26/9119 untracked births custodied + a producer-side fail-closed gate). Run that landed form
+  over the post-fcd2 delta.
 - SCOPE reductions declared per row (a row whose object is off-disk is screened at REDUCED scope
   and labelled). MECHANISM reductions FORBIDDEN: no sampling the plan surface — all 357 rows get
   an exit, or the uncovered remainder is named with its exact count.
