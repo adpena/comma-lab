@@ -2134,6 +2134,13 @@ Operator {date}: *"<FILL: operator verbatim, or the routed finding + its source 
 ## HARD CONSTRAINTS
 
 - `upstream/` READ-ONLY. NO Modal fire from the arm (MAIN owns dispatch + single-flight).
+- The local SCORER LANE belongs to MAIN, always. Do NOT write who currently holds it into a
+  charter: an occupancy claim goes stale the moment that holder exits, and the arm has no way
+  to learn it did (the #1210 stale-precondition genus — MEASURED 2026-08-29, when
+  `ddm_bz2_bornsmall_capacity_ceiling` correctly refused to claim a capacity ceiling because
+  a charter told it a since-released lane was taken). If this arm's work needs a scorer run,
+  emit a typed fire order naming its trigger and let MAIN fire it; landing an honest partial
+  plus a fire order is the CORRECT outcome, never a failure.
 - Serializer commits w/ post-edit `--expected-content-sha256`; `.py` = 2 genuine review passes.
 - ALWAYS KEEP THE PAYLOAD; bulky receipts to `/Volumes/APDataStore/pact/{name}/`.
 - <FILL: charter-specific constraints — file-ownership boundaries vs parallel arms, etc.>
