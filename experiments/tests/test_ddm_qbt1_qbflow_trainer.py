@@ -717,3 +717,211 @@ def test_build_r8_init_emits_loader_schema_and_strict_round_trips(tmp_path) -> N
     assert state["provenance"]["source_step"] == 5020
     fresh = _initial_model()
     fresh.load_state_dict(state["state_dict"], strict=True)
+
+
+def _sidecar_checkpoint_fixture(tmp_path):
+    qbt1.seed_everything(qbt1.SEED)
+    model = _initial_model()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=2e-4)
+    ema = qbt1.EMA(model, decay=0.9, warmup=True)
+    config = {
+        "schema": qbt1.SCHEMA,
+        "action": "smoke",
+        "resume_from": None,
+        "checkpoint_history_mode": "sidecar",
+    }
+    journal = qbt1.HistorySidecarJournal(tmp_path / "history_journal.jsonl", events=0)
+    history: list[dict] = []
+    row = {"step": 1, "stage": "stage_03a"}
+    history.append(dict(row))
+    journal.append_row(history[-1])
+    history[-1]["birth_verdict"] = {"born": False, "within_class_error": {"Lane": 0.4}}
+    journal.patch_last_row({"birth_verdict": history[-1]["birth_verdict"]})
+    save_time_history = copy.deepcopy(history)
+    receipt = qbt1.save_checkpoint(
+        tmp_path / "periodic.pt",
+        model=model,
+        optimizer=optimizer,
+        ema=ema,
+        config=config,
+        step=1,
+        stage="test",
+        history=history,
+        history_journal=journal,
+    )
+    # Mirror the trainer: the checkpoint fact attaches AFTER the save, so its
+    # patch event sits past the stored history_journal_events prefix.
+    history[-1]["checkpoint"] = {"bytes": receipt["bytes"]}
+    journal.patch_last_row({"checkpoint": history[-1]["checkpoint"]})
+    return model, optimizer, config, journal, save_time_history
+
+
+def test_sidecar_checkpoint_round_trips_journal_mirrored_history(tmp_path) -> None:
+    model, optimizer, config, journal, save_time_history = _sidecar_checkpoint_fixture(tmp_path)
+    assert journal.events == 3
+    original = {name: value.detach().clone() for name, value in model.state_dict().items()}
+    with torch.no_grad():
+        next(iter(model.parameters())).add_(1.0)
+    step, _, loaded_history, payload = qbt1.load_checkpoint(
+        tmp_path / "periodic.pt",
+        model=model,
+        optimizer=optimizer,
+        config=copy.deepcopy(config),
+    )
+    assert step == 1
+    assert payload["history_mode"] == "sidecar"
+    assert "history" not in payload
+    assert payload["history_journal_events"] == 2
+    assert payload["history_rows"] == 1
+    # The reconstruction is the SAVE-TIME state: the post-save checkpoint
+    # patch (event 3) is beyond the stored prefix and correctly ignored.
+    assert loaded_history == save_time_history
+    for name, value in original.items():
+        assert torch.equal(model.state_dict()[name], value)
+
+
+def test_sidecar_reanchor_truncates_journal_and_retains_pre_reanchor_copy(tmp_path) -> None:
+    model, optimizer, config, journal, save_time_history = _sidecar_checkpoint_fixture(tmp_path)
+    journal.append_row({"step": 2, "stage": "stage_03a"})
+    assert journal.events == 4
+    pre_reanchor_bytes = journal.path.read_bytes()
+    _, _, loaded_history, payload = qbt1.load_checkpoint(
+        tmp_path / "periodic.pt",
+        model=model,
+        optimizer=optimizer,
+        config=copy.deepcopy(config),
+        reanchor_sidecar=True,
+    )
+    assert loaded_history == save_time_history
+    retained = tmp_path / "history_journal.jsonl.pre_reanchor_step000001"
+    assert retained.read_bytes() == pre_reanchor_bytes
+    kept_lines = journal.path.read_text(encoding="utf-8").splitlines()
+    assert len(kept_lines) == int(payload["history_journal_events"]) == 2
+    # A resumed journal anchored at the replayed prefix appends cleanly.
+    resumed = qbt1.HistorySidecarJournal(journal.path, events=2)
+    resumed.append_row({"step": 2, "stage": "stage_03a"})
+    events = qbt1.read_history_journal_events(journal.path)
+    assert len(events) == resumed.events == 3
+
+
+def test_sidecar_load_refuses_corruption_and_loss(tmp_path) -> None:
+    import json as _json
+
+    model, optimizer, config, journal, _ = _sidecar_checkpoint_fixture(tmp_path)
+    lines = journal.path.read_text(encoding="utf-8").splitlines()
+
+    # A torn FINAL line is the crash signature: tolerated, prefix survives.
+    journal.path.write_text(lines[0] + "\n" + '{"kind": "row", "payl' , encoding="utf-8")
+    assert len(qbt1.read_history_journal_events(journal.path)) == 1
+
+    # Interior corruption refuses.
+    journal.path.write_text(
+        lines[0] + "\n" + "garbage\n" + lines[1] + "\n", encoding="utf-8"
+    )
+    with pytest.raises(qbt1.QBT1Error, match="corrupt interior line"):
+        qbt1.read_history_journal_events(journal.path)
+
+    # Fewer events than the checkpoint recorded refuses.
+    journal.path.write_text(lines[0] + "\n", encoding="utf-8")
+    with pytest.raises(qbt1.QBT1Error, match="lost journal events"):
+        qbt1.load_checkpoint(
+            tmp_path / "periodic.pt",
+            model=model,
+            optimizer=optimizer,
+            config=copy.deepcopy(config),
+        )
+
+    # A tampered payload fails the canonical-hash verification.
+    tampered = _json.loads(lines[0])
+    tampered["payload"]["step"] = 99
+    journal.path.write_text(
+        _json.dumps(tampered, sort_keys=True, separators=(",", ":")) + "\n" + lines[1] + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(qbt1.QBT1Error, match="reconstruction differs"):
+        qbt1.load_checkpoint(
+            tmp_path / "periodic.pt",
+            model=model,
+            optimizer=optimizer,
+            config=copy.deepcopy(config),
+        )
+
+    # An absent journal refuses.
+    journal.path.unlink()
+    with pytest.raises(qbt1.QBT1Error, match="journal is absent"):
+        qbt1.load_checkpoint(
+            tmp_path / "periodic.pt",
+            model=model,
+            optimizer=optimizer,
+            config=copy.deepcopy(config),
+        )
+
+
+def test_history_journal_replay_refuses_malformed_event_order() -> None:
+    with pytest.raises(qbt1.QBT1Error, match="patch precedes"):
+        qbt1.replay_history_journal([{"kind": "patch", "payload": {"a": 1}}])
+    with pytest.raises(qbt1.QBT1Error, match="event kind differs"):
+        qbt1.replay_history_journal([{"kind": "snapshot", "payload": {}}])
+    history = qbt1.replay_history_journal(
+        [
+            {"kind": "row", "payload": {"step": 1}},
+            {"kind": "patch", "payload": {"birth_verdict": {"born": True}}},
+        ]
+    )
+    assert history == [{"step": 1, "birth_verdict": {"born": True}}]
+
+
+def test_checkpoint_history_mode_is_config_gated(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(qbt1, "verify_pins", lambda: {})
+    initialization = tmp_path / "initialized.pt"
+    initialization.write_bytes(b"custody-only validation payload")
+    kwargs = {
+        "action": "smoke",
+        "pair_ids": (qbt1.SELECTION_IDS[0],),
+        "device": "cpu",
+        "initialization_state": initialization,
+        "birth_max_steps": 3,
+        "margin_steps": 7,
+    }
+    default = qbt1.compile_qbt2b_config(output=tmp_path / "default", **kwargs)
+    # Legacy configs stay byte-stable: the key only appears when non-default.
+    assert "checkpoint_history_mode" not in default
+    qbt1.validate_config(default)
+    sidecar = qbt1.compile_qbt2b_config(
+        output=tmp_path / "sidecar", checkpoint_history_mode="sidecar", **kwargs
+    )
+    assert sidecar["checkpoint_history_mode"] == "sidecar"
+    qbt1.validate_config(sidecar)
+    bogus = dict(default)
+    bogus["checkpoint_history_mode"] = "external"
+    with pytest.raises(qbt1.QBT1Error, match="history mode differs"):
+        qbt1.validate_config(bogus)
+    # The mode is treatment-identity-bearing: cross-mode crash-resume refuses.
+    assert qbt1.config_identity(default) != qbt1.config_identity(sidecar)
+
+
+def test_cross_history_mode_resume_refuses_at_config_identity(tmp_path) -> None:
+    qbt1.seed_everything(qbt1.SEED)
+    model = _initial_model()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=2e-4)
+    ema = qbt1.EMA(model, decay=0.9, warmup=True)
+    embedded_config = {"schema": qbt1.SCHEMA, "action": "smoke", "resume_from": None}
+    qbt1.save_checkpoint(
+        tmp_path / "embedded.pt",
+        model=model,
+        optimizer=optimizer,
+        ema=ema,
+        config=embedded_config,
+        step=1,
+        stage="test",
+        history=[{"step": 1}],
+    )
+    sidecar_config = dict(embedded_config)
+    sidecar_config["checkpoint_history_mode"] = "sidecar"
+    with pytest.raises(qbt1.QBT1Error, match="config identity differs"):
+        qbt1.load_checkpoint(
+            tmp_path / "embedded.pt",
+            model=model,
+            optimizer=optimizer,
+            config=sidecar_config,
+        )

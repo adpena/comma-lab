@@ -1345,6 +1345,96 @@ def config_identity(config: Mapping[str, Any]) -> dict[str, Any]:
     return {name: copy.deepcopy(value) for name, value in config.items() if name not in ignored}
 
 
+# History-slimming law (the r8 O(steps^2) retention wall, memo item 3.2): every
+# periodic checkpoint that embeds the full per-step history grows ~2,925 B/step,
+# so retained bytes grow quadratically across the checkpoint set.  In sidecar
+# mode the append-only journal below is the history's source of truth: periodic
+# checkpoints store only (event count, canonical hash, relpath) and stage-end
+# checkpoints keep the full embedded history so every existing stage-boundary
+# identity check is unchanged.  The journal mirrors the in-memory mutation order
+# exactly -- a row event at history.append time, then a patch event for every
+# post-append attachment on the SAME row (birth_verdict, checkpoint, reencode)
+# -- so replaying the first K events reconstructs the save-time history under
+# JSON round-trip, verified fail-closed by the stored canonical hash.
+class HistorySidecarJournal:
+    def __init__(self, path: Path, *, events: int = 0) -> None:
+        self.path = path
+        self.events = int(events)
+
+    def append_row(self, row: Mapping[str, Any]) -> None:
+        self._write({"kind": "row", "payload": dict(row)})
+
+    def patch_last_row(self, fields: Mapping[str, Any]) -> None:
+        self._write({"kind": "patch", "payload": dict(fields)})
+
+    def _write(self, event: Mapping[str, Any]) -> None:
+        line = json.dumps(event, sort_keys=True, separators=(",", ":"), default=str)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open("a", encoding="utf-8") as stream:
+            stream.write(line + "\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        self.events += 1
+
+
+def replay_history_journal(events: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    history: list[dict[str, Any]] = []
+    for event in events:
+        if event.get("kind") == "row":
+            history.append(dict(event["payload"]))
+        elif event.get("kind") == "patch":
+            if not history:
+                raise QBT1Error("history sidecar patch precedes any row")
+            history[-1].update(event["payload"])
+        else:
+            raise QBT1Error("history sidecar event kind differs")
+    return history
+
+
+def read_history_journal_events(path: Path) -> list[dict[str, Any]]:
+    if not path.is_file():
+        raise QBT1Error(f"history sidecar journal is absent: {path}")
+    raw_lines = path.read_text(encoding="utf-8").splitlines()
+    events: list[dict[str, Any]] = []
+    for index, line in enumerate(raw_lines):
+        try:
+            events.append(json.loads(line))
+        except json.JSONDecodeError:
+            if index == len(raw_lines) - 1:
+                break  # a torn final line is the crash signature; earlier corruption refuses
+            raise QBT1Error("history sidecar has a corrupt interior line") from None
+    return events
+
+
+def load_history_from_sidecar(
+    checkpoint_path: Path, payload: Mapping[str, Any], *, reanchor: bool = False
+) -> list[dict[str, Any]]:
+    sidecar = (checkpoint_path.parent / str(payload["history_sidecar_relpath"])).resolve()
+    events = read_history_journal_events(sidecar)
+    journal_events = int(payload["history_journal_events"])
+    if len(events) < journal_events:
+        raise QBT1Error("history sidecar lost journal events")
+    history = replay_history_journal(events[:journal_events])
+    if len(history) != int(payload["history_rows"]):
+        raise QBT1Error("history sidecar row count differs")
+    if canonical_sha256(history) != payload["history_sha256"]:
+        raise QBT1Error("history sidecar reconstruction differs")
+    if reanchor and len(events) > journal_events:
+        # KEEP THE PAYLOAD: retain the pre-reanchor journal (rows past this
+        # checkpoint belong to steps the resume will redo), then rewrite the
+        # live journal to exactly the replayed prefix so appends continue clean.
+        atomic_bytes(
+            sidecar.with_name(f"{sidecar.name}.pre_reanchor_step{int(payload['step']):06d}"),
+            sidecar.read_bytes(),
+        )
+        kept = "".join(
+            json.dumps(event, sort_keys=True, separators=(",", ":"), default=str) + "\n"
+            for event in events[:journal_events]
+        )
+        atomic_bytes(sidecar, kept.encode("utf-8"))
+    return history
+
+
 def save_checkpoint(
     path: Path,
     *,
@@ -1356,6 +1446,7 @@ def save_checkpoint(
     stage: str,
     history: Sequence[Mapping[str, Any]],
     curriculum_state: Mapping[str, Any] | None = None,
+    history_journal: HistorySidecarJournal | None = None,
 ) -> dict[str, Any]:
     payload = {
         "schema": CHECKPOINT_SCHEMA,
@@ -1367,9 +1458,20 @@ def save_checkpoint(
         "ema": _ema_payload(ema),
         "optimizer_state_dict": optimizer.state_dict(),
         "rng": _rng_payload(),
-        "history": list(history),
         "curriculum_state": copy.deepcopy(dict(curriculum_state or {})),
     }
+    if history_journal is None:
+        payload["history_mode"] = "embedded"
+        payload["history"] = list(history)
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload["history_mode"] = "sidecar"
+        payload["history_journal_events"] = int(history_journal.events)
+        payload["history_rows"] = len(history)
+        payload["history_sha256"] = canonical_sha256(list(history))
+        payload["history_sidecar_relpath"] = os.path.relpath(
+            history_journal.path.resolve(), start=path.parent.resolve()
+        )
     return atomic_torch(path, payload)
 
 
@@ -1379,6 +1481,7 @@ def load_checkpoint(
     model: QBFLOWTorch,
     optimizer: torch.optim.Optimizer,
     config: Mapping[str, Any],
+    reanchor_sidecar: bool = False,
 ) -> tuple[int, EMA, list[dict[str, Any]], dict[str, Any]]:
     payload = torch.load(path, map_location="cpu", weights_only=False)
     if payload.get("schema") != CHECKPOINT_SCHEMA:
@@ -1389,7 +1492,11 @@ def load_checkpoint(
     ema = _restore_ema(model, payload["ema"])
     optimizer.load_state_dict(payload["optimizer_state_dict"])
     _restore_rng(payload["rng"])
-    return int(payload["step"]), ema, list(payload["history"]), payload
+    if payload.get("history_mode", "embedded") == "sidecar":
+        history = load_history_from_sidecar(path, payload, reanchor=reanchor_sidecar)
+    else:
+        history = list(payload["history"])
+    return int(payload["step"]), ema, history, payload
 
 
 @contextlib.contextmanager
@@ -1958,6 +2065,7 @@ def compile_qbt2b_config(
     birth_event_mode: str = "accuracy_020",
     margin_constraint_mode: str = MARGIN_CONSTRAINT_UNCONSTRAINED,
     checkpoint_every_steps: int | None = None,
+    checkpoint_history_mode: str = "embedded",
 ) -> dict[str, Any]:
     if birth_event_mode not in BIRTH_EVENT_MODE_THRESHOLDS:
         raise QBT1Error(f"unsupported QBT2B birth event mode: {birth_event_mode}")
@@ -1973,6 +2081,8 @@ def compile_qbt2b_config(
     )
     if checkpoint_every_steps is not None:
         config["checkpoint_every_steps"] = int(checkpoint_every_steps)
+    if checkpoint_history_mode != "embedded":
+        config["checkpoint_history_mode"] = str(checkpoint_history_mode)
     initialization = file_fact(initialization_state)
     margin_constraint_pin = MARGIN_CONSTRAINT_MODE_PINS[margin_constraint_mode]
     config.update(
@@ -2013,9 +2123,12 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
         "initialization_state_sha256", "consolidate_checkpoint_reencodes", "birth_class_weight_mode",
         "birth_event_mode",
         "margin_constraint_mode", "margin_constraint_bounds", "margin_constraint_eta_lambda",
+        "checkpoint_history_mode",
     }
     if unknown:
         raise QBT1Error(f"compiled config has unknown fields: {sorted(unknown)}")
+    if str(config.get("checkpoint_history_mode", "embedded")) not in {"embedded", "sidecar"}:
+        raise QBT1Error("checkpoint history mode differs")
     if int(config["num_pairs"]) != N or int(config["chunk_pairs_hard_ceiling"]) != MAX_CHUNK_PAIRS:
         raise QBT1Error("frozen population or chunk ceiling differs")
     ids = tuple(map(int, config["pair_ids"]))
@@ -2236,7 +2349,11 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
     }
     if config.get("resume_from"):
         step, ema, history, payload = load_checkpoint(
-            Path(config["resume_from"]), model=model, optimizer=optimizer, config=config
+            Path(config["resume_from"]),
+            model=model,
+            optimizer=optimizer,
+            config=config,
+            reanchor_sidecar=True,
         )
         curriculum_state.update(payload.get("curriculum_state", {}))
         resume_identity = {
@@ -2248,6 +2365,22 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
                 {name: hashlib.sha256(value.numpy().tobytes()).hexdigest() for name, value in payload["ema"]["shadow"].items()}
             ),
         }
+
+    history_mode = str(config.get("checkpoint_history_mode", "embedded"))
+    history_journal = None
+    if history_mode == "sidecar":
+        journal_path = output / "history_journal.jsonl"
+        if config.get("resume_from"):
+            if payload.get("history_mode", "embedded") != "sidecar":
+                raise QBT1Error("resume history mode differs")
+            history_journal = HistorySidecarJournal(
+                journal_path, events=int(payload["history_journal_events"])
+            )
+        else:
+            atomic_bytes(journal_path, b"")
+            history_journal = HistorySidecarJournal(journal_path, events=0)
+    elif config.get("resume_from") and payload.get("history_mode", "embedded") != "embedded":
+        raise QBT1Error("resume history mode differs")
 
     margin_constraint_mode = str(
         config.get("margin_constraint_mode", MARGIN_CONSTRAINT_UNCONSTRAINED)
@@ -2324,6 +2457,8 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
                 "ema_effective_decay": ema.effective_decay(),
             }
             history.append(row)
+            if history_journal is not None:
+                history_journal.append_row(row)
             checkpoint_due = (birth_index + 1) % int(config["checkpoint_every_steps"]) == 0
             verdict_due = (birth_index + 1) % int(config["birth_verdict_every_steps"]) == 0
             handoff_now = False
@@ -2355,6 +2490,8 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
                     config["birth_stability_verdicts"]
                 )
                 row["birth_verdict"] = verdict
+                if history_journal is not None:
+                    history_journal.patch_last_row({"birth_verdict": verdict})
                 if int(curriculum_state["birth_stable_verdicts"]) >= int(
                     config["birth_stability_verdicts"]
                 ):
@@ -2374,6 +2511,7 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
                     stage="stage_03a_ce_class_birth",
                     history=history,
                     curriculum_state=curriculum_state,
+                    history_journal=history_journal,
                 )
                 checkpoint_reencode = reencode_inference_state(
                     output
@@ -2386,6 +2524,10 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
                 )
                 row["checkpoint"] = checkpoint
                 row["reencode"] = compact_reencode_history(checkpoint_reencode)
+                if history_journal is not None:
+                    history_journal.patch_last_row(
+                        {"checkpoint": row["checkpoint"], "reencode": row["reencode"]}
+                    )
             if handoff_now:
                 break
 
@@ -2602,6 +2744,8 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
         if margin_constraint_telemetry is not None:
             row["margin_constraint"] = margin_constraint_telemetry
         history.append(row)
+        if history_journal is not None:
+            history_journal.append_row(row)
         checkpoint_due = (current + 1) % int(config["checkpoint_every_steps"]) == 0 or current + 1 == margin_steps
         if checkpoint_due:
             checkpoint = save_checkpoint(
@@ -2614,6 +2758,7 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
                 stage="stage_03_joint_boundary_interior_birth",
                 history=history,
                 curriculum_state=curriculum_state,
+                history_journal=history_journal,
             )
             checkpoint_reencode = reencode_inference_state(
                 output / "stage_03_joint_boundary_interior_birth/reencoded" / f"step_{current + 1:06d}",
@@ -2628,6 +2773,10 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
                 if curriculum_mode == "ce_birth_then_margin"
                 else checkpoint_reencode
             )
+            if history_journal is not None:
+                history_journal.patch_last_row(
+                    {"checkpoint": row["checkpoint"], "reencode": row["reencode"]}
+                )
 
     stage3_checkpoint = save_checkpoint(
         output / "stage_03_joint_boundary_interior_birth/checkpoints/stage_03_end.pt",
@@ -2922,6 +3071,7 @@ def project_on_disk_storage(
     checkpoint_every_steps: int,
     birth_max_steps: int,
     birth_verdict_every_steps: int,
+    history_mode: str = "embedded",
 ) -> dict[str, Any]:
     """Project AP on-disk allocation using the charter's cluster-aware formula."""
 
@@ -2937,11 +3087,23 @@ def project_on_disk_storage(
     projected_final_checkpoint_bytes = math.ceil(
         int(r2_first_checkpoint["bytes"]) + r2_history_growth_per_step * (int(total_steps) - 5)
     )
-    checkpoint_bytes = max(
+    base_checkpoint_bytes = max(
         int(smoke_result["stage_03a_checkpoint"]["bytes"]),
         R1_CHECKPOINT.stat().st_size,
-        projected_final_checkpoint_bytes,
     )
+    checkpoint_bytes = max(base_checkpoint_bytes, projected_final_checkpoint_bytes)
+    # Sidecar mode breaks the O(steps^2) wall: periodic checkpoints carry no
+    # embedded history (base size only) and the history's bytes are paid ONCE in
+    # the append-only journal (2x safety factor for JSON-vs-pickle row size,
+    # doubled again for one retained pre-reanchor copy).  Stage-end checkpoints
+    # still embed the full history, so checkpoint_unit keeps the worst case.
+    periodic_checkpoint_bytes = (
+        base_checkpoint_bytes if history_mode == "sidecar" else checkpoint_bytes
+    )
+    sidecar_projection = 0
+    if history_mode == "sidecar":
+        sidecar_logical = math.ceil(2 * r2_history_growth_per_step * int(total_steps))
+        sidecar_projection = 2 * (sidecar_logical + 4096 + 2 * cluster_size)
     smoke_reencode = smoke_result["stage_03a_reencode"]
     smoke_manifest = file_fact(
         Path(smoke_reencode["retention_container"]["path"]).parent / "REENCODE_MANIFEST.json"
@@ -2970,7 +3132,7 @@ def project_on_disk_storage(
     # unit is checkpoint + tar + manifest plus their three companions => six files.
     files_per_periodic_unit = 6
     per_checkpoint_logical_bytes = (
-        checkpoint_bytes + projected_tar_bytes + projected_manifest_bytes + 3 * 4096
+        periodic_checkpoint_bytes + projected_tar_bytes + projected_manifest_bytes + 3 * 4096
     )
     periodic_count = math.ceil(int(total_steps) / int(checkpoint_every_steps))
     periodic_projection = (
@@ -3001,6 +3163,7 @@ def project_on_disk_storage(
         + verdict_projection
         + stage_boundary_projection
         + final_eval_projection
+        + sidecar_projection
         + fixed_metadata_reserve
     )
     safety_reserve = math.ceil(projected_bytes * 0.10)
@@ -3040,7 +3203,8 @@ def project_on_disk_storage(
         "checkpoint_formula": {
             "literal": "(per_checkpoint_logical_bytes + n_files * fs_cluster_size) * ceil(total_steps / checkpoint_every_steps)",
             "per_checkpoint_logical_bytes": per_checkpoint_logical_bytes,
-            "checkpoint_component_uses_worst_case_final_size_for_every_period": True,
+            "checkpoint_component_uses_worst_case_final_size_for_every_period": history_mode != "sidecar",
+            "history_mode": history_mode,
             "n_files": files_per_periodic_unit,
             "fs_cluster_size": cluster_size,
             "checkpoint_count": periodic_count,
@@ -3050,6 +3214,7 @@ def project_on_disk_storage(
             "birth_verdicts_bytes": verdict_projection,
             "stage_boundary_and_precision_bytes": stage_boundary_projection,
             "final_n32_evaluation_bytes": final_eval_projection,
+            "history_sidecar_bytes": sidecar_projection,
             "fixed_metadata_reserve_bytes": fixed_metadata_reserve,
         },
         "projected_bytes": projected_bytes,
@@ -3471,6 +3636,7 @@ def compile_continuation_config(
     storage_projection_path: Path,
     smoke_result_path: Path = R7_RETENTION_ROOT / "smoke_n1/RESULT.json",
     receipt_schema: str = "ddm_qbt2b_continuation_authorized_config_compile.v1",
+    checkpoint_history_mode: str = "embedded",
 ) -> dict[str, Any]:
     """Seal a warm-start continuation config (the generalized r7->r8->r9... round).
 
@@ -3497,6 +3663,7 @@ def compile_continuation_config(
         birth_event_mode="existence_majority",
         margin_constraint_mode=MARGIN_CONSTRAINT_LANE_MOVABLE,
         checkpoint_every_steps=max(1, total_steps // CHECKPOINT_CRASH_LOSS_DENOMINATOR),
+        checkpoint_history_mode=checkpoint_history_mode,
     )
     config["launch_authorized"] = False
     config["scorer_lane"] = {"claimed": False, "claim_id": None}
@@ -3515,6 +3682,7 @@ def compile_continuation_config(
         checkpoint_every_steps=int(config["checkpoint_every_steps"]),
         birth_max_steps=20,
         birth_verdict_every_steps=int(config["birth_verdict_every_steps"]),
+        history_mode=str(config.get("checkpoint_history_mode", "embedded")),
     )
     storage_projection_fact = atomic_json(storage_projection_path, storage_projection)
     return {
@@ -3622,6 +3790,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=R7_RETENTION_ROOT / "smoke_n1/RESULT.json",
     )
+    compile_cont.add_argument(
+        "--history-mode",
+        choices=("embedded", "sidecar"),
+        default="embedded",
+        help="sidecar drops embedded history from periodic checkpoints (O(steps^2) wall cure)",
+    )
     compile_request = sub.add_parser("compile-launch-request")
     compile_request.add_argument("--smoke-result", type=Path, required=True)
     compile_request.add_argument("--review-receipt", type=Path, required=True)
@@ -3706,6 +3880,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             run_name=args.run_name,
             storage_projection_path=args.storage_projection,
             smoke_result_path=args.smoke_result,
+            checkpoint_history_mode=args.history_mode,
         )
         print(json.dumps(receipt, indent=2, sort_keys=True, default=str))
         return 0
