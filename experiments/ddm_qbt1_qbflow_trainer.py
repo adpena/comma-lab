@@ -3451,21 +3451,52 @@ def compile_r8_authorized_config(
     ~50 GB free — retention cadence gates saves only, never training dynamics.
     """
 
-    if not R8_INITIALIZATION_STATE.exists():
-        raise QBT1Error("r8 initialization state is absent; run build-r8-init first")
-    r8_total_steps = 20 + R8_MARGIN_STEPS
+    return compile_continuation_config(
+        path,
+        initialization_state=R8_INITIALIZATION_STATE,
+        margin_steps=R8_MARGIN_STEPS,
+        run_name="governed_n32_r8",
+        storage_projection_path=R8_RETENTION_ROOT / "R8_STORAGE_PROJECTION_20260828.json",
+        smoke_result_path=smoke_result_path,
+        receipt_schema="ddm_qbt2b_r8_authorized_config_compile.v1",
+    )
+
+
+def compile_continuation_config(
+    path: Path,
+    *,
+    initialization_state: Path,
+    margin_steps: int,
+    run_name: str,
+    storage_projection_path: Path,
+    smoke_result_path: Path = R7_RETENTION_ROOT / "smoke_n1/RESULT.json",
+    receipt_schema: str = "ddm_qbt2b_continuation_authorized_config_compile.v1",
+) -> dict[str, Any]:
+    """Seal a warm-start continuation config (the generalized r7->r8->r9... round).
+
+    Every continuation round differs from its predecessor in exactly two SCOPE
+    fields — the initialization state (the predecessor's stage-03 EMA endpoint)
+    and margin_steps — plus the RETENTION-only cadence, which is derived here
+    from the crash-loss law (steps // CHECKPOINT_CRASH_LOSS_DENOMINATOR).  Every
+    mechanism pin (constraint tuple, birth law, curriculum) is held fixed by
+    compile_qbt2b_config; the storage projection gates the seal fail-closed.
+    """
+
+    if not initialization_state.exists():
+        raise QBT1Error("continuation initialization state is absent; build the init first")
+    total_steps = 20 + int(margin_steps)
     config = compile_qbt2b_config(
         action="train",
-        output=TRAIN_ROOT / "governed_n32_r8",
+        output=TRAIN_ROOT / run_name,
         pair_ids=SELECTION_IDS,
         device="mps",
-        initialization_state=R8_INITIALIZATION_STATE,
+        initialization_state=initialization_state,
         birth_max_steps=20,
-        margin_steps=R8_MARGIN_STEPS,
+        margin_steps=int(margin_steps),
         birth_class_weight_mode="balanced",
         birth_event_mode="existence_majority",
         margin_constraint_mode=MARGIN_CONSTRAINT_LANE_MOVABLE,
-        checkpoint_every_steps=r8_total_steps // CHECKPOINT_CRASH_LOSS_DENOMINATOR,
+        checkpoint_every_steps=max(1, total_steps // CHECKPOINT_CRASH_LOSS_DENOMINATOR),
     )
     config["launch_authorized"] = False
     config["scorer_lane"] = {"claimed": False, "claim_id": None}
@@ -3475,21 +3506,19 @@ def compile_r8_authorized_config(
     roundtrip = json.loads(path.read_text(encoding="utf-8"))
     validate_config(roundtrip, require_launch_authority=False)
     if roundtrip != config or canonical_sha256(roundtrip) != canonical_sha256(config):
-        raise QBT1Error("r8 authorized config JSON round-trip differs")
+        raise QBT1Error("continuation authorized config JSON round-trip differs")
     smoke_result = json.loads(smoke_result_path.read_text(encoding="utf-8"))
     storage_projection = project_on_disk_storage(
         smoke_result,
-        output=TRAIN_ROOT / "governed_n32_r8",
-        total_steps=r8_total_steps,
+        output=TRAIN_ROOT / run_name,
+        total_steps=total_steps,
         checkpoint_every_steps=int(config["checkpoint_every_steps"]),
         birth_max_steps=20,
         birth_verdict_every_steps=int(config["birth_verdict_every_steps"]),
     )
-    storage_projection_fact = atomic_json(
-        R8_RETENTION_ROOT / "R8_STORAGE_PROJECTION_20260828.json", storage_projection
-    )
+    storage_projection_fact = atomic_json(storage_projection_path, storage_projection)
     return {
-        "schema": "ddm_qbt2b_r8_authorized_config_compile.v1",
+        "schema": receipt_schema,
         "status": (
             "SEALED_AWAITING_MAIN_LIVE_CLAIMS"
             if storage_projection["passes_live_df"]
@@ -3579,6 +3608,20 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=R7_RETENTION_ROOT / "smoke_n1/RESULT.json",
     )
+    compile_cont = sub.add_parser(
+        "compile-continuation-config",
+        help="seal an unlaunched warm-start continuation config (generalized r-round)",
+    )
+    compile_cont.add_argument("--init-state", type=Path, required=True)
+    compile_cont.add_argument("--margin-steps", type=int, required=True)
+    compile_cont.add_argument("--run-name", required=True)
+    compile_cont.add_argument("--output", type=Path, required=True)
+    compile_cont.add_argument("--storage-projection", type=Path, required=True)
+    compile_cont.add_argument(
+        "--smoke-result",
+        type=Path,
+        default=R7_RETENTION_ROOT / "smoke_n1/RESULT.json",
+    )
     compile_request = sub.add_parser("compile-launch-request")
     compile_request.add_argument("--smoke-result", type=Path, required=True)
     compile_request.add_argument("--review-receipt", type=Path, required=True)
@@ -3652,6 +3695,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.action == "compile-r8-config":
         receipt = compile_r8_authorized_config(
             args.output, smoke_result_path=args.smoke_result
+        )
+        print(json.dumps(receipt, indent=2, sort_keys=True, default=str))
+        return 0
+    if args.action == "compile-continuation-config":
+        receipt = compile_continuation_config(
+            args.output,
+            initialization_state=args.init_state,
+            margin_steps=args.margin_steps,
+            run_name=args.run_name,
+            storage_projection_path=args.storage_projection,
+            smoke_result_path=args.smoke_result,
         )
         print(json.dumps(receipt, indent=2, sort_keys=True, default=str))
         return 0

@@ -663,6 +663,30 @@ def test_checkpoint_cadence_law_scales_with_steps_and_refuses_past_ceiling(
         qbt1.validate_config(mutated, require_launch_authority=False)
 
 
+def test_continuation_geometry_r9_shape_derives_cadence(monkeypatch, tmp_path) -> None:
+    monkeypatch.setattr(qbt1, "verify_pins", lambda: {})
+    initialization = tmp_path / "initialized_r9.pt"
+    initialization.write_bytes(b"custody-only validation payload")
+    config = qbt1.compile_qbt2b_config(
+        action="train",
+        output=tmp_path / "governed_n32_r9",
+        pair_ids=qbt1.SELECTION_IDS,
+        device="mps",
+        initialization_state=initialization,
+        birth_max_steps=20,
+        margin_steps=10_000,
+        birth_class_weight_mode="balanced",
+        birth_event_mode="existence_majority",
+        margin_constraint_mode=qbt1.MARGIN_CONSTRAINT_LANE_MOVABLE,
+        checkpoint_every_steps=max(
+            1, 10_020 // qbt1.CHECKPOINT_CRASH_LOSS_DENOMINATOR
+        ),
+    )
+    assert config["steps"] == 10_020
+    assert config["checkpoint_every_steps"] == 33
+    qbt1.validate_config(config, require_launch_authority=False)
+
+
 def test_build_r8_init_refuses_non_stage3_end_source(tmp_path) -> None:
     source = tmp_path / "wrong.pt"
     torch.save({"stage": "stage_03a_ce_class_birth"}, source)
