@@ -136,3 +136,96 @@ The required serializer was invoked with both explicit files, `base=new`, each p
 - Do not defer current-body model work to more LB1 conditioning charts; OC2 drained the tested family to 2 B against a 30 B bar.
 
 Own-vehicle frontier **UNMOVED by NA11**: **S 0.14803010583079396 @ 180,083 B `[contest-CUDA T4 n600]`**, LB1 archive SHA-256 `5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9`.
+
+---
+
+## MAIN ADJUDICATION (2026-08-29, append-only per Catalog #110/#113 — the arm's body above is untouched)
+
+**Verdict: ACCEPTED with ONE row corrected.** The prediction is CONFIRMED and the audit is
+sound; 16 of 17 rows survive MAIN's source verification. One RE-OPEN is STALE-CLOSED.
+
+### What I verified at source (not from the memo's own summary)
+
+| check | result |
+|---|---|
+| every row's `owning_memo.sha256` vs the file on disk | **17/17 match** — the arm read what it graded |
+| swept DENOMINATOR published (the vacuity==PASS law) | **yes** — 9,396 md · 728 probe rows · 724 task rows · 39,327/161,063 graph |
+| the load-bearing negative-existence claim (JF2/OE1 never B/H/W-screened) | **CONFIRMED at source** — `ddm_bhw1_winwin_cone_rescreen_20260829.md` records both as `REDUCED-UNSCREENED`, "family final coding argmax absent" |
+| DG2 double-count | **correctly folded into JF2** — bhw1 itself says DG2's rows "are already contained in JF2" |
+| bhw1's 176,913 B headline routed as a live row? | **correctly NOT routed** — it is fcd1's inherited cone with distortion UNMEASURED, and bhw1 names "the prior fcd2 pose refusal is a warning" |
+| the 3 RE-OPEN rows attributed to L1–L8, not only the toy-grading L9 | **yes** — SA1 (L2/L3/L6/L7), JF2 (L5/L6), OE1 (L4/L5) |
+| ≥1 wrong-object witness | **yes** — 3 rows under L2 |
+
+The arm also declined to collapse `WRONG-OBJECT` into `RE-OPEN` to beat its own threshold (§18)
+and stated so explicitly. That is the right discipline and I am recording it as such.
+
+### The one correction — SA1 is STALE-CLOSED, do NOT fire its measurement
+
+Row `sa1_uncompensated_semantic_film_family` re-opens under L6 because SA1's memo names
+QS5-style in-compile compensation as its reactivation. **That criterion was already executed
+eleven days earlier and the family ceiling was already derived:**
+
+- `ddm_sa2_compensated_semantic_edit_20260818.md` — STAGE-0 FEASIBLE by a wide margin:
+  **99.942%** cancellation of S2 pose damage (bar ≥99.34%), mean residual per-pair d_pose
+  **4.89e-7** (bar ≤5.40e-6), compensation cost **+36 B** (bar ≤~1,069 B).
+- `ddm_sa3_compensated_edit_rebased_verdict_20260818.md` — **ADMITTED, the eighth pointer
+  move**: net **ΔS −5.506320e-05** vs the sz1 pointer (d_seg 0.00029815, d_pose 7.33e-06).
+- sa3 §5 already derived the ceiling: closing the then-gap alone needs **52.1× mass = 41,160 B**
+  of rate credit against a **34,243 B** `semantic_blob` — **1.20× the whole section**, so the
+  family "is arithmetically incapable of closing the gap by itself at any mass." Registered as
+  `compensated_semantic_edit_exchange_v1`; `family_cannot_close_alone()` is the guard a
+  successor must call.
+
+So na11's "cheapest resolving measurement #3" (~3 h solve/compile + one ~20 min advisory row)
+would **redo sa2/sa3**. It is withdrawn. SA1's correct disposition is **RE-SCOPE → already
+reactivated, admitted, and ceiling-derived** — a CONTRIBUTOR, not a route.
+
+**Population of this defect: 1 of 17.** na11 performed the successor check CORRECTLY for MI1
+(verifying `ddm_oc2` had consumed MI1's deferred conditioning headroom, §79). This is a slipped
+row, not a broken method, and I am recording it at that scope rather than inflating it into a
+class. Method rule banked as memory
+`a_reopen_must_check_whether_the_successor_already_fired_20260829`.
+
+### Corrected tally
+
+**2 live RE-OPEN · 3 WRONG-OBJECT · 4 RE-SCOPE (SA1 joins) · 8 STANDS.** The prediction
+(**≥3 distinct rows re-open under L1–L8, ≥1 under a wrong-object law**) still lands: 2 literal
+RE-OPENs plus 3 premise-invalidating L2 rows.
+
+### Why the LD1 prior does NOT kill JF2/OE1 (the reason these are worth firing)
+
+bhw1 measured LD1's family-specific cone at **14 cells / +1 B** — a strong-looking prior against
+any family-specific win-win. It does not transfer. bhw1's own inventory says LD1's "model
+remained DX2, so retained DX2 final coding argmax is the exact family surface": LD1 measures
+**field-change at FIXED model**. JF2 and OE1 carry **different refit models** (JF2 seven refit
+models retained; OE1 an online mixture), so their coding argmax — and therefore their B/H/W
+labels — is a different object. These two screens are a fresh read of the **#1215 diagonal**
+through the win-win lens rather than the trade lens that #1239 refused at 686×.
+
+### Fire-orders (all MAIN-owned; both are $0 and scorer-free)
+
+1. **RANK 1 — JF2 k060 B/H/W screen.** Adapt the JF2 producer to emit + persist one
+   model-matched final coding-argmax trajectory, then apply the B/H/W split. DF1-reference cost
+   ~923.5 s / 2.03 GB. Consumer: the BHW1 win-win-cone store. AP has headroom.
+2. **RANK 2 — OE1 B/H/W screen.** Extend OE1's checkpoint schema to persist the final
+   online-mixture coding argmax (~590 MB floor; prior five-rung run 1,869.164006 s), then screen.
+   Gated behind rank 1 per na11's own trigger.
+3. **AE1** stays UNRANKED — its prerequisite physical RC64 candidate does not exist, and na11
+   correctly refused to invent a replay price for it. Build prerequisite, not a measurement.
+4. **SA1 — WITHDRAWN** per the correction above.
+
+### GESTALT-DELTA
+
+The gestalt is **unchanged in structure and slightly firmer in one clause**. §8's amendment held
+that the 42,097 B demand is 99.995% confined to renderer + carrier once the model axis closed.
+na11 tested the whole closed corpus against nine laws and produced **zero new routes** — every
+re-open is a *screen of an already-measured object*, not a new representation. That is the
+falsifier na11 itself pre-registered ("the corpus was already correctly graded… the campaign's
+problem is the absence of live routes, not the mis-grading of dead ones") landing in its
+*useful* direction: 8 STANDS on their own arithmetic, 3 wrong-object corrections that create no
+retries, and 2 cheap screens. The route table stays empty; the confinement claim gets stronger,
+not weaker.
+
+**Own-vehicle frontier UNMOVED by this adjudication: S 0.14803010583079396 @ 180,083 B
+`[contest-CUDA T4 n600]`** (lb1, archive sha
+`5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9`).
