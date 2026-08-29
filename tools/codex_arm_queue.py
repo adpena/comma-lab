@@ -1852,6 +1852,22 @@ def _lint_bare_task_ids(text: str) -> list[str]:
     Reported independently by gx1, pv1 and sx1 on 2026-08-16: the harness task
     list and the repo's canonical_task_status.jsonl are different ledgers, and
     arms only see the repo.
+
+    Two precision defects cured 2026-08-29 (task #1327; the leg false-fired on
+    a charter whose memos WERE named on the same lines):
+
+    * memo filenames are not always ``.md``.  ``ddm_ny1_..._20260823.jsonl`` is
+      a real owning memo, and the old ``\\.md`` anchor could not see it, so any
+      id anchored to a JSONL memo was reported unanchored.  Recognize the
+      machine-readable memo extensions the corpus actually uses.
+    * ``Catalog #110`` is a meta-bug-class number whose canonical home is
+      ``docs/meta_bug_class_catalog.md`` / CLAUDE.md, NOT a harness task id.
+      Demanding a per-line memo association for it is a category error, so an
+      id introduced by the literal word ``Catalog`` is out of scope.
+
+    Both changes only ever REMOVE false positives; neither can hide a genuinely
+    bare harness id (an id with no memo of any recognized extension on its line
+    and no ``Catalog`` prefix still reports).
     """
 
     ids = set(re.findall(r"#\d{3,4}\b", text))
@@ -1867,10 +1883,21 @@ def _lint_bare_task_ids(text: str) -> list[str]:
     unanchored: set[str] = set()
     for line in text.splitlines():
         line_ids = set(re.findall(r"#\d{3,4}\b", line))
-        memo_matches = tuple(re.finditer(r"\b[\w./-]+\.md\b", line))
+        memo_matches = tuple(re.finditer(r"\b[\w./-]+\.(?:md|jsonl|json)\b", line))
+        # `Catalog #NNN` is a meta-bug-class number, not a harness task id.  The
+        # corpus also writes runs like `Catalog #110/#113`, so shield every id in
+        # the run, not just the one the word `Catalog` directly precedes (control
+        # caught that on the first cure attempt).
+        catalog_ids: set[str] = set()
+        for run in re.finditer(
+            r"\bcatalog\s+(#\d{3,4}(?:\s*/\s*#\d{3,4})*)", line, re.IGNORECASE
+        ):
+            catalog_ids.update(re.findall(r"#\d{3,4}\b", run.group(1)))
         for task_id in line_ids:
             id_match = re.search(re.escape(task_id) + r"\b", line)
             assert id_match is not None
+            if task_id in catalog_ids:
+                continue
             associated = False
             for memo_match in memo_matches:
                 left = min(id_match.end(), memo_match.end())
