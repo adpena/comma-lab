@@ -14,7 +14,9 @@ post-fcd2 state, loop-until-dry, and hands MAIN a ranked FIRE-NOW head.
 
 ## SCOPE
 
-1. **Orphan recovery (the #1190 class)**: re-measure the population — memos/receipts present on
+1. **Orphan recovery (the #1190 class, PRIOR OWNER = `ddm_os1_orphan_signal_reconciliation_20260822.md`
+   — READ IT FIRST and treat its table as the BASELINE; this arm sweeps the DELTA since, and any
+   row os1 already exited is FOLDED, not re-drained)**: re-measure the population — memos/receipts present on
    local disk or the SSD tiers but absent from git AND absent from the corpus/graph index. For
    each: {path, sha, bytes, birth, is it signal or scratch?} → commit-or-certify per the
    certify-or-block rule (never delete; MOVE to the SSD tier with a machine-readable cert if
@@ -50,6 +52,9 @@ post-fcd2 state, loop-until-dry, and hands MAIN a ranked FIRE-NOW head.
 
 - `ddm_hv2_harvest_consumption_sweep_20260827.md`: the prior sweep — do NOT re-drain rows it
   already exited; start from its exit table and sweep the DELTA plus everything landed since.
+- `ddm_os1_orphan_signal_reconciliation_20260822.md`: the PRIOR OWNER of the orphan-signal class
+  (#1190). Its disposition table is this arm's baseline — re-deriving it from scratch is the
+  rediscovery sin. Sweep only what it did not cover, and say plainly what it already closed.
 - Task #1210: a stale capacity note in a routing memo KILLED three arms; routing claims must be
   re-derived at consumption time, never carried (the m143 cross-regime transfer law).
 - Task #1191: the verdict-scope detector produced 194 false positives from ONE template header
