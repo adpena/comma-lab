@@ -182,3 +182,51 @@ raises the object's value, it does not pre-judge its distortion.
 **§4's rb1 rows are unaffected** (they are genuinely stubs, storage-blocked at 36.9 GiB).
 `qbz1` remains UNVERIFIED — and given this correction, "unverified" now means *nobody has parsed it*,
 not *it lacks a receiver*.
+
+---
+
+## §8 — THE RENDER PATH IS THE SHIPPING RUNTIME, NOT rb1 (MAIN, 2026-08-30, APPEND-ONLY)
+
+§7 named the measurement path as `ddm_rb1_born_small_receiver.unpack_renderer` → `.render_camera_uint8`.
+**That naming is WRONG and is corrected here.** §7's *substantive* claim — that bz2 carries the live
+lineage's own renderer and pose carrier — is **CONFIRMED at the strongest available level**; only the
+named reader was wrong. Three measured corrections, all re-derived at source:
+
+**1. rb1's `unpack_renderer` REFUSES this stream.** Executed: it raises
+`RB1ReceiverError("RB1 WD3 renderer stream is invalid")`. Cause isolated by unwrapping the guard —
+`wd3_receiver.packet_allocation` raises `WD3ReceiverError("unsupported WD3 header")` because rb1's
+`HEADER` requires `MAGIC = b"WD3Q"`. So §7's "every piece is named ... already implement it for the
+sibling body" was a *plausible-looking composition that does not execute*. Counted plainly.
+
+**2. bz2's `SOURCE_ROOT` is bs3, not the live lineage.** `ddm_bz2_bornsmall_capacity_ceiling.py:48`:
+`SOURCE_ROOT = /Volumes/APDataStore/pact/ddm_bs3_born_small_resolved/retained`. §7 said the sections
+were "byte-identical to the LIVE lineage's own" — read literally off bz2's own constants, that is a
+**born-small** path, and the claim would be the #1260 genus a third time.
+
+**3. It is byte-identical ANYWAY — proven by substring, not by size.** The live lb1 archive
+(`runtime_joint22_patch192/archive.zip`) has ONE member `p`, 180,092 B. Both bz2 sections occur
+**VERBATIM inside it**:
+
+| section | bytes | sha256[:16] | offset in live `p` |
+|---|---:|---|---:|
+| semantic_renderer | 30,856 | `39d1be52ba629334` | **13,529** |
+| pose_carrier | 22,010 | `932b979f5181b331` | **44,385** |
+
+bs3 inherited them from the dx2/lb1 lineage (its own filename says `inherited_pose_carrier.bin`), so
+the identity is transitive and real. Size-agreement with ar1b (30,856 / 22,010) was *not* the proof —
+the substring hit is. **§7's conclusion stands; its named function does not.**
+
+**THE ACTUAL READER** is the shipping runtime itself, `runtime_joint22_patch192/cpr1/inflate.py`:
+`unpack_semantic_pose` → magic test `startswith((b"SD1M", b"SM3R"))`; bz2's blob matches NEITHER, so it
+takes the else-branch `SEMANTIC_WIDTH_BY_PAYLOAD_BYTES[semantic_bytes]` → `SemanticTokenRenderer(width)`
+→ `unpack_semantic(semantic_blob, template)` → `load_state_dict(strict=True)`. **No brotli step.** My
+probe's `brotli.decompress` on this blob "succeeded" and produced an `S3\x01\x01`-headed 36,130 B buffer
+that matches no magic in the corpus — that output is off the live path entirely and must not be cited.
+
+**FIRE ORDER (unchanged trigger, corrected mechanism).** Render bz2 via: parse bz2 archive
+(`hg1.parse_complete_archive`) → `hg1.decode_packet_to_file` for tokens → **live cpr1**
+`SemanticTokenRenderer` + `unpack_semantic` on `sections["semantic_renderer"]` → frames → R → uint8 →
+frozen SegNet/PoseNet at n600, `[macOS-CPU frozen-scorer advisory]`. Pre-registered falsifier UNCHANGED:
+realized seg+pose ≤ **0.052840** ⇒ intersection NON-EMPTY at n=4 and bz2 is a sub-0.12 candidate outright.
+
+**Own-vehicle frontier: lb1 — S 0.14803010583079396 @ 180,083 B [contest-CUDA T4, n600], UNMOVED.**
