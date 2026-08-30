@@ -230,3 +230,108 @@ frozen SegNet/PoseNet at n600, `[macOS-CPU frozen-scorer advisory]`. Pre-registe
 realized seg+pose ≤ **0.052840** ⇒ intersection NON-EMPTY at n=4 and bz2 is a sub-0.12 candidate outright.
 
 **Own-vehicle frontier: lb1 — S 0.14803010583079396 @ 180,083 B [contest-CUDA T4, n600], UNMOVED.**
+
+## §9 — the render path RESOLVED at source; §8's reader claim WITHDRAWN, the identity claim PROVEN EXACTLY
+
+Two more corrections, and then the path executes. This is the fifth and sixth restatement of one
+genus (`#1260`: a retained field does not carry its own reading semantics) inside a single
+adjudication, so the genus is the real finding, not any one instance.
+
+### §9.1 — CORRECTION 4: `cpr1/inflate.py::unpack_semantic_pose` is NOT the archive's semantic reader
+
+§8 named it. It is wrong. The real chain, read at source:
+
+`runtime/f26_inflate.py::inflate_archive` → `runtime/residual_archive.py::read_residual_archive`
+→ `_decode_rx1_models(outer)` → per-stream **brotli** → CK2/RR5/DX2 riders → then
+`renderer.SemanticTokenRenderer(96)` + `renderer.unpack_variant_semantic_or_none(parts.semantic_blob, …)`
+(`decode_wans1` fallback) → `load_state_dict(strict=True)`.
+
+`unpack_semantic_pose` **is** called (`f26_inflate.py:453-458`) — but only on a **synthetic** buffer:
+
+```python
+semantic_width_marker = bytes(40_252)                      # 40,252 ZERO bytes
+semantic_pose = struct.pack("<II", len(semantic_width_marker), len(canonical_carrier)) \
+              + semantic_width_marker + canonical_carrier
+_, basis, coefficients = renderer.unpack_semantic_pose(semantic_pose)
+```
+
+Its only job is to hit `SEMANTIC_WIDTH_BY_PAYLOAD_BYTES[40_252] → 96` and pull basis/coefficients out
+of the carrier. **That is why no `<II` header with a mapped size exists anywhere in `p`: the framing
+is manufactured at decode time and never stored.** My scan reporting "NO live semantic_pose header
+with a mapped size found in the first 60k" was CORRECT; its correct reading is *none by design*, not
+*wrong runtime*. I drew the second conclusion from the first observation — the genus again.
+
+Also WITHDRAWN from §8: "there is **no brotli step** on the live path." False. `codec == 2 ==
+RX1_CODEC_BROTLI`; every model stream is brotli. rb1's `brotli.decompress` would have **succeeded**;
+what failed is the next line, because bz2's renderer is an **SM3R** semantic renderer (cpr1 lineage,
+`b'SM3R\x01\x06'`), not a `WD3Q` student packet. rb1 is the wrong receiver for a precise reason.
+
+### §9.2 — CORRECTION 5 (custody): §8's offsets were measured on the BASE archive, not the pointer
+
+§8's substring hits came from `runtime_joint22_patch192/archive.zip` = **180,192 B / `ec0dd68f…`**.
+The lb1 pointer is **180,083 B / `5b856e66…`**, which lives in `runtime_candidate_native/`. That tree
+is *internally consistent* — its `inflate.py` pins exactly the archive beside it — so this is **not**
+the `#1237` pin-mismatch class. I simply read the wrong tree and would have published offsets for the
+base while claiming them for the pointer.
+
+**Re-measured on the true pointer bytes, the identity holds at the identical offsets**, and this time
+it is proven from the container header rather than from `bytes.find`:
+
+| RX1M field | value | stream offset in pointer `p` | bz2 file | identical |
+|---|---:|---:|---|---|
+| header | 14 B | 0 | — | — |
+| `hpac_bytes` | 13,515 | 14 | *(not in bz2)* | — |
+| `semantic_bytes` | **30,856** | **13,529** | `semantic_renderer.bin` | **yes** |
+| `carrier_bytes` | **22,010** | **44,385** | `inherited_pose_carrier.bin` | **yes** |
+| models block | **66,395** | ends at 66,395 | — | — |
+
+The header's own lengths equal bz2's file sizes exactly, at the offsets the header dictates. And
+`13,515 / 30,856 / 22,010` reproduces **ar1b's decomposition** (`#1213`) to the byte — that arm mapped
+the 66,591 B residue as renderer 30,856 · carrier 22,010 · HPAC 13,515, and this is the same object
+seen through the container.
+
+One loose end, stated rather than papered over: `brotli(semantic_stream)` and `parts.semantic_blob`
+are both 36,130 B but **not byte-identical** — a rider inside `_decode_rx1_models` transforms it
+(`reserved = 0b11010`). Not load-bearing for the identity claim above, and it is precisely why the
+render must go through the runtime's own parser instead of any hand-rolled brotli path.
+
+### §9.3 — what bz2 actually is, exactly
+
+bz2 keeps the pointer's **stored** semantic stream and **stored** carrier stream verbatim, and
+replaces `{RX1 header + hpac stream}` **13,529 B** + `token_stream` **113,492 B** = **127,021 B**
+with a **47,779 B** GT-fit generator packet: **−79,242 B** on that block, **−79,221 B** at the archive
+level (container +21 B). That is **1.88× the entire 42,097 B demand**, on the pointer's own
+realization stack. Rate 0.067160 @ 100,862 B, **37,124 B under the sub-0.12 cap**, distortion budget
+**0.052840** — wide enough to contain lb1's measured 0.028120.
+
+### §9.4 — #1333 fire order, now fully specified (was blocked on exactly this)
+
+Render bz2 through the runtime's own parser, not a hand-composed path:
+
+1. `sys.path.insert(0, runtime_candidate_native_tree)`; parse bz2's archive with `hg1.parse_complete_archive`
+   → `hg1.decode_packet_to_file` for the token field.
+2. Splice bz2's `semantic_renderer.bin` / `inherited_pose_carrier.bin` back into an **RX1M container**
+   (header 14 B, `codec=2`, `reserved=0b11010`, the measured lengths) so `read_residual_archive` and
+   its riders run unmodified — this is what makes the renderer/carrier legs byte-identical **by
+   construction**, not by assertion.
+3. `_decode_rx1_models` → `SemanticTokenRenderer(96)` + `unpack_variant_semantic_or_none` ·
+   `split_frame0_selector_carrier` → `materialize_cpr1` → synthetic `<II` pack → basis/coefficients.
+4. `render_video` → exact `R` → uint8 → frozen DALI-lineage SegNet/PoseNet at real n600.
+5. Label `[macOS-CPU frozen-scorer advisory]`, `score_claim=false`, `promotable=false`; recompute S
+   FROM COMPONENTS (`#877`).
+
+**Pre-registered falsifier UNCHANGED:** realized seg+pose ≤ **0.052840** ⇒ THE CROSS intersection is
+non-empty at n=4 and bz2 is a sub-0.12 candidate outright. d_pose has a construction-based reason to
+sit near lb1's 6.37e-6 (the pose machinery is not swapped) — a HYPOTHESIS, not a transfer (`m143`);
+**d_seg is the genuine unknown** (native token mismatch 1.12%).
+
+### §9.5 — the lesson, sharpened by its own recurrence
+
+Six corrections in one adjudication, one mechanism: **a right total with a wrong meaning.** The zip
+listing (§7), the size agreement (§8), the missing header (§9.1), the wrong tree (§9.2) — every one
+gave a number that reconciled and a reading that did not. §8's lesson stands and gets a corollary:
+*a composition that reads plausibly is not one that executes* — **and neither a retained field nor a
+runtime directory announces which object it belongs to. Execute the parser; read the container header.**
+
+**Own-vehicle frontier: lb1 — S 0.14803010583079396 @ 180,083 B [contest-CUDA T4, n600], UNMOVED.**
+Sub-0.12 gap 0.028030; demand 42,097 B at current distortion, or 312.0× better distortion at current bytes.
