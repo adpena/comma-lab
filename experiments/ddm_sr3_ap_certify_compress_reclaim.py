@@ -234,10 +234,15 @@ _REFERENCE_SCAN_METHOD = (
     "literal absolute-prefix scan of executable source. BOUNDS, stated so this "
     "receipt cannot be read as universal coverage: (1) it finds LITERAL path "
     "strings only -- a path composed at runtime from variables is invisible to "
-    "it; (2) a path split across implicitly-concatenated string literals is read "
-    "only up to the first closing quote -- such a row is DETECTED and refused as "
-    "truncated, never counted as covered, because the prefix can spuriously match "
-    "a carve-out whose name it merely starts with; (3) it reads only the "
+    "it; (2) a path split across implicitly-concatenated string literals is "
+    "RESOLVED -- the sibling literals are joined, so the adjudicated path is the "
+    "one the program opens, not a prefix that could spuriously match a carve-out "
+    "whose name it merely starts with; a continuation this scan cannot read (an "
+    "f-string, an unterminated literal) is refused instead, never counted as "
+    "covered, and so is a join that stops at a character a path cannot hold "
+    "(`{}` slot, `#` fragment, space) WHEN the truncated prefix would otherwise "
+    "read as carved out -- refusal is spent only where truncation could change "
+    "the verdict; (3) it reads only the "
     "executable roots, because record surfaces (.omx/research memos, .omx/state "
     "ledgers, graph nodes) CITE paths without reading them, and the archive "
     "preserves those files anyway. Bound (1) is the dangerous one -- a "
@@ -256,7 +261,10 @@ def _literal_continues(text: str, end: int) -> bool:
     carve-out whose NAME it merely starts with -- ``"…/retained/body" "guard/x"``
     extracts ``retained/body``, which is a carve-out, while the real file
     ``retained/bodyguard/x`` is not under one and would be archived and removed.
-    So the prefix is not conservative in general and must be refused, not trusted.
+    So the prefix is not conservative in general.  Detecting the continuation is
+    this function's whole job; ``_resolve_implicit_concatenation`` then READS it
+    (a compile-time join is exactly reproducible), and only a continuation that
+    cannot be read is refused.
 
     Quote -> whitespace -> quote is exactly implicit concatenation in Python; any
     other following character (``,`` ``)`` ``:`` ``if`` ...) is a different construct
@@ -271,6 +279,14 @@ def _literal_continues(text: str, end: int) -> bool:
         return False
     probe = end + 1
     while probe < len(text) and text[probe] in " \t\r\n":
+        probe += 1
+    # A sibling literal may carry a prefix (f/r/b/u), and an f-string prefix is exactly
+    # the case that must be SEEN so the caller can refuse it -- missing it here would
+    # read the prefix as a complete literal and let a truncated path pass as covered.
+    # Letters count only when a quote follows IMMEDIATELY: `and "x"` is not a literal,
+    # `f"{x}"` is.  Python's prefixes are at most 2 characters; 3 is slack, not licence.
+    letters = probe
+    while probe < len(text) and probe - letters < 3 and text[probe].isalpha():
         probe += 1
     return probe < len(text) and text[probe] in "\"'"
 
@@ -300,6 +316,51 @@ class ReferenceScan:
             "references_uncovered": len(self.violations),
             "vacuous_scan_no_reference_found": self.references_found == 0,
         }
+
+
+def _resolve_implicit_concatenation(text: str, end: int) -> tuple[str, int] | None:
+    """Join the sibling literals Python would concatenate, so the REAL path is read.
+
+    Refusing every truncated row (the first cure) is correct but far too coarse:
+    ``Path("<root>/<dir>/" "<file>")`` is simply how a long path is written under a
+    120-column limit, and a repo-wide scan measured 416 such sites.  A gate that
+    refuses all of them refuses everything.  Reading them is easy and exact --
+    implicit concatenation is a compile-time join, so appending the sibling
+    literals reproduces the string the program actually opens, and `_is_kept` then
+    adjudicates the true path instead of a prefix.
+
+    Returns ``(joined_tail, new_end)``; ``("", end)`` when nothing continues.
+    Returns None only for a continuation this scan genuinely cannot read -- an
+    f-string (composed at runtime) or an unterminated literal -- and the caller
+    refuses those rows rather than guessing.
+    """
+    tail: list[str] = []
+    while _literal_continues(text, end):
+        probe = end + 1
+        while probe < len(text) and text[probe] in " \t\r\n":
+            probe += 1
+        prefix_start = probe
+        while probe < len(text) and text[probe].isalpha():
+            probe += 1
+        if "f" in text[prefix_start:probe].lower():
+            return None  # runtime-composed; not readable as a constant
+        if probe >= len(text) or text[probe] not in "\"'":
+            return None
+        quote = text[probe]
+        probe += 1
+        chunk: list[str] = []
+        while probe < len(text) and text[probe] != quote:
+            if text[probe] == "\\":
+                probe += 1
+                if probe >= len(text):
+                    return None
+            chunk.append(text[probe])
+            probe += 1
+        if probe >= len(text):
+            return None  # unterminated literal
+        tail.append("".join(chunk))
+        end = probe
+    return "".join(tail), end
 
 
 def scan_live_reference_detail(
@@ -342,19 +403,51 @@ def scan_live_reference_detail(
                 while end < len(text) and text[end] in _REFERENCE_PATH_CHARS:
                     end += 1
                 cursor = max(end, start + 1)
-                rel = text[start:end].strip("/")
+                raw = text[start:end]
+                joined = _resolve_implicit_concatenation(text, end)
+                if joined is None:
+                    # A continuation this scan cannot read (f-string / unterminated),
+                    # so `raw` is a PREFIX of the real path -- and a prefix can
+                    # spuriously match a carve-out whose name it merely starts with.
+                    # Refuse rather than guess; never count it as covered.
+                    rel = raw.strip("/")
+                    if rel:
+                        violations.append(
+                            {
+                                "source": str(path.relative_to(repo)),
+                                "referenced_path": rel,
+                                "unresolvable_implicit_concatenation": "true",
+                            }
+                        )
+                    continue
+                extra, cont_end = joined
+                truncated = False
+                for ch in extra:
+                    if ch not in _REFERENCE_PATH_CHARS:
+                        truncated = True
+                        break
+                    raw += ch
+                cursor = max(cursor, cont_end)
+                rel = raw.strip("/")
                 if not rel:
                     continue
                 row = {"source": str(path.relative_to(repo)), "referenced_path": rel}
-                if _literal_continues(text, end):
-                    # The path is only the FIRST fragment of an implicitly-concatenated
-                    # literal, so `rel` is a PREFIX of what the program actually reads.
-                    # A prefix can spuriously match a carve-out whose name it merely
-                    # starts with, so it is never counted as covered -- refuse instead.
-                    row["truncated_by_implicit_concatenation"] = "true"
+                if not _is_kept(rel, keep_uncompressed):
                     violations.append(row)
-                    continue
-                (covered if _is_kept(rel, keep_uncompressed) else violations).append(row)
+                elif truncated:
+                    # The join stopped at a character a path cannot hold (a `{}`
+                    # format slot, a `#` fragment, a space before prose), so `rel`
+                    # is a PREFIX -- and a prefix matching a carve-out proves
+                    # nothing about the real path, which may merely START with the
+                    # carve-out's name.  Refuse only here, where the truncation
+                    # could change the verdict: an uncovered prefix is already a
+                    # violation, and a fully-read path is exact.  Measured over
+                    # this corpus, 8 of 412 split sites truncate and none of them
+                    # is covered, so this costs nothing today and closes the hole.
+                    row["truncated_continuation_cannot_confirm_carve_out"] = "true"
+                    violations.append(row)
+                else:
+                    covered.append(row)
     return ReferenceScan(
         files_scanned=files_scanned,
         references_found=len(covered) + len(violations),

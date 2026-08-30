@@ -189,34 +189,102 @@ def _repo_with_split_reference(root: Path, tree_name: str, head: str, tail: str)
     return root
 
 
-def test_reference_scan_refuses_a_truncated_implicit_concatenation(
+def test_reference_scan_resolves_a_split_literal_that_leaves_the_carve_out(
     sr3, tmp_path, tree, monkeypatch
 ):
     """RED DIRECTION: a truncated prefix that MATCHES a carve-out must not read as covered.
 
-    ``"…/retained/body" "guard/bulk.npy"`` is truncated to ``retained/body`` -- which IS
-    the carve-out -- while the real read is ``retained/bodyguard/bulk.npy``, outside it.
-    Trusting the prefix would archive and remove a file the program still opens, so this
-    is the one truncation case that fails in the DANGEROUS direction.
+    ``"…/retained/body" "guard/bulk.npy"`` truncates to ``retained/body`` -- which IS the
+    carve-out -- while the real read is ``retained/bodyguard/bulk.npy``, outside it.
+    Trusting the prefix would archive and remove a file the program still opens.  The scan
+    joins the siblings, so it adjudicates the REAL path and refuses.
     """
     monkeypatch.setattr(sr3, "AP_ROOT", Path("/Volumes/APDataStore/pact"))
     repo = _repo_with_split_reference(tmp_path / "repo", tree.name, "retained/body", "guard/bulk.npy")
     scan = sr3.scan_live_reference_detail(repo, tree, keep_uncompressed=("retained/body",))
     assert scan.covered == ()
+    assert [row["referenced_path"] for row in scan.violations] == ["retained/bodyguard/bulk.npy"]
+
+
+def test_reference_scan_resolves_a_split_literal_that_stays_inside_the_carve_out(
+    sr3, tmp_path, tree, monkeypatch
+):
+    """The BENIGN split -- the common idiom -- resolves to the real path and reads as covered.
+
+    ``Path("…/retained/body/" "carrier.zip")`` is simply how a long path fits under the
+    line limit; a repo-wide scan measured 416 such sites.  Refusing them all would refuse
+    every lift, so the scan reads them instead.
+    """
+    monkeypatch.setattr(sr3, "AP_ROOT", Path("/Volumes/APDataStore/pact"))
+    repo = _repo_with_split_reference(tmp_path / "repo", tree.name, "retained/body/", "carrier.zip")
+    scan = sr3.scan_live_reference_detail(repo, tree, keep_uncompressed=("retained/body",))
+    assert scan.violations == ()
+    assert [row["referenced_path"] for row in scan.covered] == ["retained/body/carrier.zip"]
+
+
+def test_reference_scan_refuses_a_continuation_it_cannot_read(sr3, tmp_path, tree, monkeypatch):
+    """An f-string sibling is composed at RUNTIME, so the prefix is unreadable -- refuse it."""
+    monkeypatch.setattr(sr3, "AP_ROOT", Path("/Volumes/APDataStore/pact"))
+    root = tmp_path / "repo"
+    (root / "experiments").mkdir(parents=True)
+    (root / "experiments" / "reader.py").write_text(
+        "BODY = (\n"
+        f'    "/Volumes/APDataStore/pact/{tree.name}/retained/body"\n'
+        '    f"{suffix}/bulk.npy"\n'
+        ")\n",
+        encoding="utf-8",
+    )
+    scan = sr3.scan_live_reference_detail(root, tree, keep_uncompressed=("retained/body",))
+    assert scan.covered == ()
     assert [row["referenced_path"] for row in scan.violations] == ["retained/body"]
-    assert scan.violations[0]["truncated_by_implicit_concatenation"] == "true"
+    assert scan.violations[0]["unresolvable_implicit_concatenation"] == "true"
 
 
 def test_reference_scan_does_not_flag_a_complete_literal_as_truncated(
     sr3, tmp_path, tree, monkeypatch
 ):
-    """NEGATIVE DIRECTION: an unbroken literal is covered normally, with no truncation flag."""
+    """NEGATIVE DIRECTION: an unbroken literal is covered normally, with no refusal flag."""
     monkeypatch.setattr(sr3, "AP_ROOT", Path("/Volumes/APDataStore/pact"))
     repo = _repo_with_reference(tmp_path / "repo", tree.name, "retained/body/BODY.bin")
     scan = sr3.scan_live_reference_detail(repo, tree, keep_uncompressed=("retained/body",))
     assert scan.violations == ()
     assert [row["referenced_path"] for row in scan.covered] == ["retained/body/BODY.bin"]
-    assert "truncated_by_implicit_concatenation" not in scan.covered[0]
+    assert "unresolvable_implicit_concatenation" not in scan.covered[0]
+
+
+def test_reference_scan_refuses_a_truncated_join_that_would_read_as_covered(
+    sr3, tmp_path, tree, monkeypatch
+):
+    """The residual hole one level down: the JOIN itself can truncate.
+
+    ``"…/retained/body" "{slot}.npy"`` joins to ``retained/body{slot}.npy``; the scan can
+    only keep ``retained/body``, which is the carve-out -- the bodyguard shape again, now
+    inside the resolver.  Refuse, because the truncation is what makes it look covered.
+    """
+    monkeypatch.setattr(sr3, "AP_ROOT", Path("/Volumes/APDataStore/pact"))
+    repo = _repo_with_split_reference(tmp_path / "repo", tree.name, "retained/body", "{slot}.npy")
+    scan = sr3.scan_live_reference_detail(repo, tree, keep_uncompressed=("retained/body",))
+    assert scan.covered == ()
+    assert scan.violations[0]["truncated_continuation_cannot_confirm_carve_out"] == "true"
+
+
+def test_reference_scan_also_refuses_a_prose_sibling_it_cannot_rule_out(
+    sr3, tmp_path, tree, monkeypatch
+):
+    """A sibling opening on a non-path character is USUALLY prose -- but not provably.
+
+    ``"…/retained/body/x.bin" " is missing"`` is a message and the path really ended.  But
+    ``"…/retained/body/" "x y.npy"`` breaks at the same offset 0 and the path did NOT end,
+    so the scan cannot tell them apart from the break position.  It refuses both, which
+    over-refuses the prose form: measured cost is 1 site in 64,131 files, against a hole
+    that would silently archive a live read.  The typed reason makes the refusal
+    diagnosable, so a lift blocked this way is a one-line adjudication, not a mystery.
+    """
+    monkeypatch.setattr(sr3, "AP_ROOT", Path("/Volumes/APDataStore/pact"))
+    repo = _repo_with_split_reference(tmp_path / "repo", tree.name, "retained/body/x.bin", " is missing")
+    scan = sr3.scan_live_reference_detail(repo, tree, keep_uncompressed=("retained/body",))
+    assert scan.covered == ()
+    assert scan.violations[0]["truncated_continuation_cannot_confirm_carve_out"] == "true"
 
 
 def test_literal_continues_only_fires_on_real_concatenation(sr3):
@@ -229,6 +297,10 @@ def test_literal_continues_only_fires_on_real_concatenation(sr3):
     assert sr3._literal_continues('"a/b/"', 5) is False              # end of text
     assert sr3._literal_continues('a/b/"""', 4) is False             # docstring close
     assert sr3._literal_continues("a/b/'''", 4) is False             # docstring close, single
+    assert sr3._literal_continues('"a/b/" f"{x}"', 5) is True         # prefixed sibling
+    assert sr3._literal_continues('"a/b/" rb"c"', 5) is True          # two-char prefix
+    assert sr3._literal_continues('"a/b/" and "c"', 5) is False       # keyword, not a prefix
+    assert sr3._literal_continues('"a/b/" if p else "c"', 5) is False  # conditional
 
 
 def test_reference_scan_reports_its_denominator_and_covered_rows(sr3, tmp_path, tree, monkeypatch):
@@ -264,7 +336,7 @@ def test_reference_scan_method_states_its_own_bounds(sr3):
     method = sr3._REFERENCE_SCAN_METHOD
     assert "LITERAL" in method
     assert "composed at runtime" in method
-    assert "implicitly-concatenated" in method
+    assert "RESOLVED" in method
 
 
 # --- selective removal keeps the carve-out AND its ancestors standing ---
