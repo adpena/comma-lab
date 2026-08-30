@@ -168,6 +168,29 @@ precedent, and it unblocks ~31.8 GiB without touching the local tier.
 Sister gap, still open: the mover is **Vertigo-source-only by invariant** (`:179` equivalent), so an
 AP→local move needs a different tool. Neither gap is a workaround; both are real absences.
 
+## 6b-CORRECTION (append-only, same day) — §6(b) read the constant backwards
+
+§6(b) says SR3 "lists `ddm_bs3_born_small_resolved` (`:43`) and `ddm_w96a_aligned_window` (`:44`)
+**as candidates**." Verified at source before building the cure: those two names are the
+`PROTECTED_TREES` set (`:42-45`), and `validate_tree` **REFUSES** them —
+
+```
+if tree in PROTECTED_TREES and not lift_protection:
+    raise CertifyError(f"explicitly protected live store: {tree}")
+```
+
+They were not candidates SR3 skipped for want of a target; they were candidates SR3 **forbade**.
+The line numbers were right and the reading was inverted. That does not change §6(c)'s blocker or
+§6's cure — it *sharpens* both: the carve-out is not merely a tar-shape extension, it must also
+carry a **gated lift of the protection**, or the tool refuses before it ever reaches the archiver.
+
+Landed accordingly (this window): `--keep-uncompressed` carve-outs + `--lift-protection RATIONALE`,
+where the lift is admitted only when a machine-checked scan of executable source finds **zero**
+live references into the tree that no carve-out covers. The scan states its own bounds in the
+certificate (literal strings only; executable roots only) so the receipt cannot be read as
+universal coverage, and the reclaim re-verifies every carve-out's sha256 AFTER removal rather than
+merely recording it. 38 controls, both directions.
+
 ## 7. Honesty
 
 No score is claimed. §2's arithmetic is derived from measured inputs (rb1's own byte table,

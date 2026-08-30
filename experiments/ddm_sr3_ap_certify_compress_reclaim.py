@@ -168,7 +168,7 @@ def allocated_bytes(path: Path) -> int:
     return int(result.stdout.split()[0]) * 1024
 
 
-def validate_tree(raw: str) -> Path:
+def validate_tree(raw: str, *, lift_protection: str | None = None) -> Path:
     raw_tree = Path(raw)
     if not raw_tree.is_absolute():
         raise CertifyError("--tree must be an absolute path")
@@ -180,11 +180,151 @@ def validate_tree(raw: str) -> Path:
         raise CertifyError(f"tree must be a direct child of {AP_ROOT}: {tree}")
     if tree.is_symlink() or not tree.is_dir():
         raise CertifyError(f"tree must be a real directory: {tree}")
-    if tree in PROTECTED_TREES:
+    if tree in PROTECTED_TREES and not lift_protection:
         raise CertifyError(f"explicitly protected live store: {tree}")
     if tree.name.startswith(CUSTODY_PREFIXES):
         raise CertifyError(f"custody namespace requires separate certificate adjudication: {tree}")
     return tree
+
+
+def validate_keep_paths(tree: Path, raw_keeps: Iterable[str]) -> tuple[str, ...]:
+    """Normalise --keep-uncompressed into safe, existing, tree-relative POSIX paths."""
+    keeps: list[str] = []
+    resolved_tree = tree.resolve()
+    for raw in raw_keeps:
+        if not raw.strip():
+            raise CertifyError("--keep-uncompressed must not be empty")
+        if Path(raw.strip()).is_absolute():
+            raise CertifyError(f"--keep-uncompressed must be tree-relative: {raw!r}")
+        text = raw.strip().strip("/")
+        if not text:
+            raise CertifyError("--keep-uncompressed must not be empty")
+        parts = PurePosixPath(text).parts
+        if not parts or any(part in {"", ".", ".."} for part in parts):
+            raise CertifyError(f"unsafe --keep-uncompressed path: {raw!r}")
+        if parts[0] in RESERVED_NAMES:
+            raise CertifyError(f"--keep-uncompressed may not name SR3 custody: {raw!r}")
+        rel = PurePosixPath(*parts).as_posix()
+        target = tree / rel
+        if not target.exists() and not target.is_symlink():
+            raise CertifyError(f"--keep-uncompressed path does not exist: {target}")
+        parent = target.parent.resolve()
+        if parent != resolved_tree and resolved_tree not in parent.parents:
+            raise CertifyError(f"--keep-uncompressed escapes the tree: {raw!r}")
+        if rel not in keeps:
+            keeps.append(rel)
+    ordered = tuple(sorted(keeps))
+    for outer in ordered:
+        for inner in ordered:
+            if inner != outer and _is_kept(inner, (outer,)):
+                raise CertifyError(
+                    f"--keep-uncompressed {inner!r} is already covered by {outer!r}"
+                )
+    return ordered
+
+
+_REFERENCE_ROOTS = ("tools", "experiments", "src", "scripts", "runtime-rs")
+_REFERENCE_SUFFIXES = {".py", ".sh", ".json", ".yaml", ".yml", ".toml"}
+_REFERENCE_PATH_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_./-"
+)
+
+
+_REFERENCE_SCAN_METHOD = (
+    "literal absolute-prefix scan of executable source. BOUNDS, stated so this "
+    "receipt cannot be read as universal coverage: (1) it finds LITERAL path "
+    "strings only -- a path composed at runtime from variables is invisible to "
+    "it; (2) it reads only the executable roots, because record surfaces "
+    "(.omx/research memos, .omx/state ledgers, graph nodes) CITE paths without "
+    "reading them, and the archive preserves those files anyway."
+)
+
+
+@dataclass(frozen=True)
+class ReferenceScan:
+    """What the protection-lift scan looked at, and what it found.
+
+    ``files_scanned`` and ``references_found`` are the DENOMINATORS.  Without them
+    a scan that examined nothing reports a clean result indistinguishable from a
+    genuinely clean one -- the vacuous-pass failure mode.
+    """
+
+    files_scanned: int
+    references_found: int
+    covered: tuple[dict[str, str], ...]
+    violations: tuple[dict[str, str], ...]
+
+    def receipt(self) -> dict[str, object]:
+        return {
+            "method": _REFERENCE_SCAN_METHOD,
+            "reference_roots": list(_REFERENCE_ROOTS),
+            "reference_suffixes": sorted(_REFERENCE_SUFFIXES),
+            "files_scanned": self.files_scanned,
+            "references_found": self.references_found,
+            "references_covered_by_carve_out": len(self.covered),
+            "references_uncovered": len(self.violations),
+            "vacuous_scan_no_reference_found": self.references_found == 0,
+        }
+
+
+def scan_live_reference_detail(
+    repo: Path, tree: Path, keep_uncompressed: tuple[str, ...]
+) -> ReferenceScan:
+    """Scan executable source for references INTO the tree, covered and not.
+
+    This is the machine-checked half of a protection lift.  A protected live store
+    may be compressed only AROUND the exact sub-paths live code still reads, so the
+    reference set is derived from the source instead of asserted by hand -- the same
+    check that, run by hand, is what distinguishes a safe reclaim from a silent
+    breakage of an open task.  Its bounds are stated in ``_REFERENCE_SCAN_METHOD``
+    and carried into the certificate; they are real, and a reader must see them.
+    """
+    prefix = f"{AP_ROOT}/{tree.name}/"
+    covered: list[dict[str, str]] = []
+    violations: list[dict[str, str]] = []
+    files_scanned = 0
+    for root_name in _REFERENCE_ROOTS:
+        root = repo / root_name
+        if not root.is_dir():
+            continue
+        for path in sorted(root.rglob("*")):
+            if not path.is_file() or path.suffix not in _REFERENCE_SUFFIXES:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="ignore")
+            except OSError as exc:
+                raise CertifyError(
+                    f"unreadable source during reference scan: {path}: {exc}"
+                ) from exc
+            files_scanned += 1
+            cursor = 0
+            while True:
+                hit = text.find(prefix, cursor)
+                if hit < 0:
+                    break
+                start = hit + len(prefix)
+                end = start
+                while end < len(text) and text[end] in _REFERENCE_PATH_CHARS:
+                    end += 1
+                cursor = max(end, start + 1)
+                rel = text[start:end].strip("/")
+                if not rel:
+                    continue
+                row = {"source": str(path.relative_to(repo)), "referenced_path": rel}
+                (covered if _is_kept(rel, keep_uncompressed) else violations).append(row)
+    return ReferenceScan(
+        files_scanned=files_scanned,
+        references_found=len(covered) + len(violations),
+        covered=tuple(covered),
+        violations=tuple(violations),
+    )
+
+
+def scan_live_references(
+    repo: Path, tree: Path, keep_uncompressed: tuple[str, ...]
+) -> list[dict[str, str]]:
+    """The uncovered references only -- the ones that block a protection lift."""
+    return list(scan_live_reference_detail(repo, tree, keep_uncompressed).violations)
 
 
 def assert_fleet_idle(repo: Path) -> str:
@@ -210,8 +350,29 @@ def _path_kind(path: Path, st: os.stat_result) -> str:
     raise CertifyError(f"unsupported filesystem object: {path} mode={oct(st.st_mode)}")
 
 
-def scan_tree(tree: Path) -> list[Entry]:
-    """Return every original descendant, excluding only exact SR3 custody names."""
+def _keep_ancestor_dirs(keep_uncompressed: tuple[str, ...]) -> frozenset[str]:
+    """Directories that MUST survive removal because they hold a carve-out."""
+    ancestors: set[str] = set()
+    for keep in keep_uncompressed:
+        parts = PurePosixPath(keep).parts
+        for depth in range(1, len(parts)):
+            ancestors.add(PurePosixPath(*parts[:depth]).as_posix())
+    return frozenset(ancestors)
+
+
+def _is_kept(rel: str, keep_uncompressed: tuple[str, ...]) -> bool:
+    """True when a tree-relative path is a declared carve-out or lives under one."""
+    return any(rel == keep or rel.startswith(f"{keep}/") for keep in keep_uncompressed)
+
+
+def scan_tree(tree: Path, keep_uncompressed: tuple[str, ...] = ()) -> list[Entry]:
+    """Return every original descendant, excluding SR3 custody names and carve-outs.
+
+    A carve-out is never manifested, never archived, and never removed.  The tree
+    keeps it uncompressed and resolvable so live readers of that exact path keep
+    working while the surrounding bulk is reclaimed.  Callers scanning an EXTRACTED
+    tree must pass no carve-outs: the extraction contains exactly the archived set.
+    """
     entries: list[Entry] = []
     for dirpath, dirnames, filenames in os.walk(tree, topdown=True, followlinks=False):
         at_root = Path(dirpath) == tree
@@ -219,13 +380,23 @@ def scan_tree(tree: Path) -> list[Entry]:
             dirnames[:] = sorted(name for name in dirnames if name not in RESERVED_NAMES)
         else:
             dirnames[:] = sorted(dirnames)
+        if keep_uncompressed:
+            dirnames[:] = [
+                name
+                for name in dirnames
+                if not _is_kept(
+                    (Path(dirpath) / name).relative_to(tree).as_posix(), keep_uncompressed
+                )
+            ]
         for name in sorted(dirnames + filenames):
             if at_root and name in RESERVED_NAMES:
                 continue
             path = Path(dirpath) / name
+            rel = path.relative_to(tree).as_posix()
+            if _is_kept(rel, keep_uncompressed):
+                continue
             st = path.lstat()
             kind = _path_kind(path, st)
-            rel = path.relative_to(tree).as_posix()
             if kind == "symlink" and name in dirnames:
                 dirnames.remove(name)
             entries.append(
@@ -561,9 +732,46 @@ def verify_receipt_matches(receipt: dict[str, object], archive: Path, tree_hash:
     )
 
 
-def remove_original_top_level(
-    tree: Path, entries: list[Entry], *, allow_already_absent: bool = False
+def _remove_archived_entries_selectively(
+    tree: Path, entries: list[Entry], *, allow_already_absent: bool
 ) -> list[str]:
+    """Remove exactly the manifested entries, deepest first, keeping carve-outs.
+
+    Used when carve-outs exist: a top-level ``rmtree`` would take the kept paths
+    with it, so removal walks the manifest bottom-up and leaves any directory that
+    still holds a carve-out (or its ancestors) standing.
+    """
+    removed: list[str] = []
+    for row in sorted(entries, key=lambda e: len(PurePosixPath(e.path).parts), reverse=True):
+        first = PurePosixPath(row.path).parts[0]
+        if first in RESERVED_NAMES or first in {"", ".", ".."}:
+            raise CertifyError(f"refusing unsafe original top-level name: {first!r}")
+        target = tree / row.path
+        if target.is_symlink() or target.is_file():
+            target.unlink()
+        elif target.is_dir():
+            if any(target.iterdir()):
+                continue  # a carve-out (or its ancestor) still lives here
+            target.rmdir()
+        elif allow_already_absent and not target.exists():
+            continue
+        else:
+            raise CertifyError(f"original path vanished before reclaim: {target}")
+        removed.append(str(target))
+    return removed
+
+
+def remove_original_top_level(
+    tree: Path,
+    entries: list[Entry],
+    *,
+    allow_already_absent: bool = False,
+    keep_uncompressed: tuple[str, ...] = (),
+) -> list[str]:
+    if keep_uncompressed:
+        return _remove_archived_entries_selectively(
+            tree, entries, allow_already_absent=allow_already_absent
+        )
     top_names = sorted({PurePosixPath(row.path).parts[0] for row in entries})
     removed: list[str] = []
     for name in top_names:
@@ -582,6 +790,101 @@ def remove_original_top_level(
     return removed
 
 
+def build_keep_records(tree: Path, keep_uncompressed: tuple[str, ...]) -> list[dict[str, object]]:
+    """Per-carve-out custody: what each kept path held BEFORE the reclaim ran."""
+    records: list[dict[str, object]] = []
+    for rel in keep_uncompressed:
+        target = tree / rel
+        if target.is_symlink():
+            records.append({"path": rel, "kind": "symlink", "link_target": os.readlink(target)})
+        elif target.is_file():
+            records.append(
+                {
+                    "path": rel,
+                    "kind": "file",
+                    "bytes": target.stat().st_size,
+                    "sha256": sha256_file(target),
+                }
+            )
+        else:
+            files = sorted(q for q in target.rglob("*") if q.is_file())
+            records.append(
+                {
+                    "path": rel,
+                    "kind": "dir",
+                    "file_count": len(files),
+                    "bytes": sum(q.stat().st_size for q in files),
+                    "files": [
+                        {
+                            "path": q.relative_to(tree).as_posix(),
+                            "bytes": q.stat().st_size,
+                            "sha256": sha256_file(q),
+                        }
+                        for q in files
+                    ],
+                }
+            )
+    return records
+
+
+def verify_keep_records(tree: Path, keep_records: list[dict[str, object]]) -> dict[str, object]:
+    """Re-verify every carve-out AFTER removal against its pre-removal custody.
+
+    The carve-out exists so live readers keep working; recording its sha256 and
+    never checking it again would let a future removal defect damage the exact
+    paths the carve-out protects while the certificate still said VERIFIED.
+    A live store may legitimately GAIN files here, so extra files are not drift --
+    only a vanished or byte-changed carve-out is.
+    """
+    vanished: list[str] = []
+    changed: list[str] = []
+    checked = 0
+    for record in keep_records:
+        rel = str(record["path"])
+        target = tree / rel
+        if record["kind"] == "symlink":
+            if not target.is_symlink() or os.readlink(target) != record["link_target"]:
+                (vanished if not target.is_symlink() else changed).append(rel)
+            checked += 1
+        elif record["kind"] == "file":
+            if not target.is_file():
+                vanished.append(rel)
+            elif sha256_file(target) != record["sha256"]:
+                changed.append(rel)
+            checked += 1
+        else:
+            for row in record["files"]:  # type: ignore[union-attr]
+                sub = tree / str(row["path"])
+                if not sub.is_file():
+                    vanished.append(str(row["path"]))
+                elif sha256_file(sub) != row["sha256"]:
+                    changed.append(str(row["path"]))
+                checked += 1
+    return {
+        "paths_checked": checked,
+        "vanished": vanished,
+        "changed": changed,
+        "clean": not vanished and not changed,
+    }
+
+
+def unreclaimed_originals(tree: Path, keep_uncompressed: tuple[str, ...]) -> list[Entry]:
+    """Rows that must be GONE after removal -- the reclaim gate's residue.
+
+    A carve-out's ancestor directories legitimately survive: they are what holds
+    the kept path resolvable.  Everything else the manifest named must be gone,
+    or the reclaim did not do what the certificate is about to claim.  This is the
+    single definition of that predicate -- ``main`` and its controls both call it,
+    so the gate cannot drift away from the test that pins it.
+    """
+    expected_survivors = _keep_ancestor_dirs(keep_uncompressed)
+    return [
+        row
+        for row in scan_tree(tree, keep_uncompressed)
+        if not (row.kind == "dir" and row.path in expected_survivors)
+    ]
+
+
 def original_top_level_paths(tree: Path, entries: list[Entry]) -> list[str]:
     return [
         str(tree / name)
@@ -596,11 +899,57 @@ def main() -> int:
     parser.add_argument("--closure-note", required=True)
     parser.add_argument("--repo", default="/Users/adpena/Projects/pact")
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument(
+        "--keep-uncompressed",
+        action="append",
+        default=[],
+        metavar="REL_PATH",
+        help=(
+            "tree-relative path to carve OUT of the archive: never manifested, "
+            "never archived, never removed, so live readers keep resolving it. "
+            "Repeatable."
+        ),
+    )
+    parser.add_argument(
+        "--lift-protection",
+        default=None,
+        metavar="RATIONALE",
+        help=(
+            "operate on an explicitly protected live store. Requires a non-empty "
+            "--keep-uncompressed set AND a clean live-reference scan; the lift is "
+            "recorded in the certificate."
+        ),
+    )
     args = parser.parse_args()
 
     try:
-        tree = validate_tree(args.tree)
+        tree = validate_tree(args.tree, lift_protection=args.lift_protection)
         repo = Path(args.repo).resolve()
+        keep_uncompressed = validate_keep_paths(tree, args.keep_uncompressed)
+        keep_records = build_keep_records(tree, keep_uncompressed)
+        protection_lift: dict[str, object] | None = None
+        if args.lift_protection is not None:
+            if len(args.lift_protection.strip()) < 20:
+                raise CertifyError("a substantive --lift-protection rationale is required")
+            if not keep_uncompressed:
+                raise CertifyError(
+                    "--lift-protection requires at least one --keep-uncompressed carve-out"
+                )
+            scan = scan_live_reference_detail(repo, tree, keep_uncompressed)
+            if scan.violations:
+                shown = [
+                    f"{row['source']} -> {row['referenced_path']}" for row in scan.violations[:10]
+                ]
+                raise CertifyError(
+                    f"{len(scan.violations)} live reference(s) into {tree.name} "
+                    f"are not carved out: {shown}"
+                )
+            protection_lift = {
+                "rationale": args.lift_protection.strip(),
+                "reference_scan": scan.receipt(),
+                "references_covered": [dict(row) for row in scan.covered],
+            }
+            progress(f"PROTECTION LIFTED for {tree} around {list(keep_uncompressed)}")
         closure_path = Path(args.closure_citation)
         if not closure_path.is_absolute():
             closure_path = repo / closure_path
@@ -639,7 +988,7 @@ def main() -> int:
         manifest_path = tree / MANIFEST_NAME
         if manifest_path.exists():
             entries, tree_hash = read_manifest(manifest_path)
-            observed = scan_tree(tree)
+            observed = scan_tree(tree, keep_uncompressed)
             if prior_certificate:
                 archive = tree / ARCHIVE_NAME
                 verify_path = tree / VERIFY_NAME
@@ -654,9 +1003,15 @@ def main() -> int:
                 assert_entry_metadata_equal(entries, observed)
                 progress("resuming from durable source manifest")
         else:
-            observed = scan_tree(tree)
+            observed = scan_tree(tree, keep_uncompressed)
             if not observed:
-                raise CertifyError("source tree is empty")
+                raise CertifyError(
+                    "nothing to archive: source tree is empty"
+                    + (" once the carve-outs are excluded" if keep_uncompressed else "")
+                )
+            # Quiescence is checked over the ARCHIVED set only.  A carve-out is never
+            # read into the tar and never removed, so a live writer inside it does not
+            # make this archive inconsistent -- scope declared, not assumed.
             newest = max(tree.lstat().st_mtime_ns, *(row.mtime_ns for row in observed)) / 1e9
             age = time.time() - newest
             if age < RECENT_SECONDS:
@@ -671,6 +1026,8 @@ def main() -> int:
             "updated_at_utc": utcnow(),
             "tree": str(tree),
             "closure_citation": closure_record,
+            "keep_uncompressed": keep_records,
+            "protection_lift": protection_lift,
             "fleet_receipt": fleet_receipt,
             "source_allocated_bytes": allocated_before,
             "source_logical_bytes": logical_bytes,
@@ -763,7 +1120,7 @@ def main() -> int:
 
         # The second complete source read is the final deletion gate.
         deletion_fleet_receipt = assert_fleet_idle(repo)
-        current_meta = scan_tree(tree)
+        current_meta = scan_tree(tree, keep_uncompressed)
         if prior_certificate:
             assert_source_subset_equal(tree, entries, current_meta)
         else:
@@ -771,19 +1128,24 @@ def main() -> int:
             current_hashed = hash_entries(tree, current_meta)
             assert_hashes_equal(entries, current_hashed)
         removed = remove_original_top_level(
-            tree, entries, allow_already_absent=prior_certificate is not None
+            tree,
+            entries,
+            allow_already_absent=prior_certificate is not None,
+            keep_uncompressed=keep_uncompressed,
         )
-        remaining_originals = scan_tree(tree)
+        remaining_originals = unreclaimed_originals(tree, keep_uncompressed)
         if remaining_originals:
             raise CertifyError(
                 f"original path set remains after exact-target removal: "
                 f"{[row.path for row in remaining_originals[:10]]}"
             )
 
+        keep_verification = verify_keep_records(tree, keep_records)
         df_after = fs_bytes(AP_ROOT)
         final = {
             **pre_certificate,
-            "status": "RECLAIMED_VERIFIED",
+            "status": "RECLAIMED_VERIFIED" if keep_verification["clean"] else "CARVE_OUT_DRIFT",
+            "keep_uncompressed_verification": keep_verification,
             "completed_at_utc": utcnow(),
             "original_top_level_paths": original_top_level_paths(tree, entries),
             "removed_original_top_level_paths_this_attempt": removed,
@@ -796,9 +1158,16 @@ def main() -> int:
             "reconstruction_verified": True,
         }
         atomic_json(cert_path, final)
-        progress_record.update({"phase": "RECLAIMED_VERIFIED", "updated_at_utc": utcnow()})
+        progress_record.update({"phase": str(final["status"]), "updated_at_utc": utcnow()})
         atomic_json(tree / PROGRESS_NAME, progress_record)
         emit_json(final)
+        if not keep_verification["clean"]:
+            # The receipt is written FIRST: removal already happened, so losing the
+            # certificate would cost more than the drift itself.  Then fail closed.
+            raise CertifyError(
+                f"carve-out drift after removal: vanished={keep_verification['vanished'][:5]} "
+                f"changed={keep_verification['changed'][:5]}"
+            )
         return 0
     except (CertifyError, OSError, subprocess.CalledProcessError, json.JSONDecodeError) as exc:
         progress(f"BLOCK: {exc}")
