@@ -1,0 +1,121 @@
+# MAIN adjudication of ddm_xo1 — the intersection verdict CONFIRMED, the demand figure CORRECTED BY A SIGN, and three of the four "byte-feasible" cells are payload counts without a receiver
+
+**Date:** 2026-08-30
+**Adjudicates:** `.omx/research/ddm_xo1_cross_successor_object_20260830.md` + `.jsonl`
+(commits `f1fe706408` / `f417bf967d`, rc=0, 987 s, 21 rows).
+**Axis discipline:** every cross-object sum below is DERIVED-FEASIBILITY, never a score. The lb1 row
+is `[contest-CUDA T4 n600]` authority; born/qbz1/bz2/rb1 rows are advisory or scorer-free.
+
+## 1. What I re-derived independently (not quoted)
+
+xo1's headline arithmetic reproduces EXACTLY:
+
+```
+zero-distortion archive ceiling = 0.12 · 37,545,489 / 25 = 180,218.3472 B
+lb1 ships 180,083 B                     → slack = +135.3472 B  (UNDER the ceiling)
+lb1 rate = 25·180,083/37,545,489        = 0.11990987785509999  (< 0.12 ✓)
+distortion budget at lb1's bytes        = 0.12 − 0.11990988 = 0.000090122
+lb1 actual distortion 0.028120          → needs 312.0× better
+```
+
+**This is a SIGN FLIP from the figure I handed the arm.** Memory
+`the-demand-has-two-readings-distortion-is-worth-42235-bytes` (MEASURED 2026-08-22) recorded the
+zero-distortion gap as **≈150 B OVER** on the then-pointer of 180,368 B. lb1's rate work has since
+shed 285 B, and that carried the object across the line: **lb1's rate ALREADY clears sub-0.12 at zero
+distortion, by 135 B.** The arm caught this because its charter told it to re-derive against the LIVE
+pointer rather than consume the memory's number. That instruction is the only reason the correction
+exists; a charter that had said "use 150 B" would have propagated a stale sign all day.
+
+The demand therefore reads, on the live pointer:
+- **42,097 B** at current distortion 0.028120, or
+- **312× better distortion** at current bytes, or
+- any point on the line between, priced at 6.658e-7 S/B.
+
+## 2. The intersection verdict — CONFIRMED at n=3
+
+| body | archive B | vs 137,986 cap | measured distortion (seg+pose) | axis |
+|---|---:|---:|---:|---|
+| bz2 direct-GT-fit | 100,862 | **−37,124** | **UNMEASURED** | scorer-free byte measurement |
+| born-small (qbt2b r10) | 121,928 | −16,058 | 0.327712 | `[macOS-MPS n32-HT advisory]` |
+| NR1 K32 | 122,250 | −15,736 | **27.716026** | `[macOS-CPU frozen-scorer advisory]` |
+| lb1 pointer | 180,083 | +42,097 | **0.028120** | `[contest-CUDA T4 n600]` authority |
+
+No measured body is both byte-feasible and in the dx2 distortion regime. THE CROSS's two halves are
+still held by two different objects. xo1's pre-registered falsifier fired and overshot — recorded
+plainly in `ddm_ni1r_nr1_k32_distortion_measured_20260830.md`.
+
+xo1's sharper corollary also holds: born-small and NR1 sit **322 B apart in rate (0.26%) and 84.57×
+apart in distortion.** Byte feasibility does not predict distortion among small bodies. There is no
+small-body R–D trend to extrapolate along; n=2 spanning two orders of magnitude is not a trend.
+
+## 3. MAIN's own finding — the `byte_feasible` boolean is stronger than the axis label it sits beside
+
+xo1 marks four bodies `byte_feasible: true` with `measured_distortion: "UNMEASURED"`. I opened all
+four. **Three of them have no receiver**, so their byte count is a PAYLOAD size, not a contest
+archive size:
+
+- **`bz2_direct_fit_bornsmall`** — `archive.zip` (100,862 B, sha `773c7ae3…`) contains exactly ONE
+  stored member, `p`, at 100,762 B. There is no `inflate.py`, no runtime dir, and the runtime its
+  own fire order names (the bo2/HG1 semantic renderer at
+  `…/ddm_tv1_tolerance_curve/runtimes/dx2_shipped`) **no longer exists on disk**. Its own
+  `FULL_PACKAGE_RESULT.json` says so honestly: *"native field and bytes close; render/R/uint8/
+  frozen-scorer realization is unmeasured."*
+- **`rb1_d56_stub` / `rb1_f64_stub`** — the row names say STUB. No trained body exists; the archive
+  bytes are a construction estimate.
+- `qbz1_fitted_qbt_body` — not separately opened this turn; inherits the same question.
+
+To be fair to the arm: its AXIS labels carry the caveat (`"scorer-free exact byte measurement"`),
+and it never claimed these were closed archives. The defect is that a reader consuming the BOOLEAN
+column alone gets a stronger claim than the axis supports. Same genus as `#1260` (a retained field
+does not carry its own reading semantics) — the column is right, and it is readable wrong.
+
+**Consequence for the census:** the honest count of measured byte-feasible-AND-decodable bodies is
+**two** (born-small, NR1), not five. The other three are payload sizes pending a receiver.
+
+## 4. Disposition of the four UNMEASURED bodies
+
+| body | blocker (exact) | owner | disposition |
+|---|---|---|---|
+| **bz2** | **RENDERER RUNTIME ABSENT** — not storage. Its fire order's trigger conditions are otherwise MET (fcd3 released the scorer lane 22:12Z; archive sha `773c7ae3…` and parseback-field sha `968ffca2…` both re-verified byte-exact by me this turn; AP 11 GiB free vs 3.66 GB needed). What is missing is the decode path. | MAIN | **QUEUED-WITH-FIRE-ORDER, blocker named.** Rank 1 of the four — see §5. |
+| **rb1_d56** | **STORAGE, exact shortfall:** trigger requires ≥60,380,026,816 B (56.2 GiB) retained capacity; AP 11 GiB + Vertigo 8.3 GiB = 19.3 GiB → **~36.9 GiB short.** Stub — no archive to score cheaply. | MAIN | **STORAGE-BLOCKED → routes to #1165** (Vertigo reclaim round 2; pk4 cold-move was due 08-27, now past). |
+| **rb1_f64** | same as D56 | MAIN | same |
+| **qbz1** | receiver status unverified this turn | MAIN | **UNVERIFIED — do not cite as byte-feasible-and-decodable** until its receiver is opened. |
+
+## 5. Why bz2 is rank 1, and what it would decide
+
+bz2 is not merely another census point. It is a **direct GT fit** with native token mismatch
+**1.12%** (`FULL_PACKAGE_RESULT.json` `native_full_n.mismatch_fraction = 0.011229510837131076`) —
+the best-fitted small body we have, by construction rather than by training luck. And its rate is
+0.067160, so its sub-0.12 distortion budget is **0.052840** — the whole target, not half a cross:
+
+- lb1's distortion 0.028120 is INSIDE that budget. If bz2 realized lb1-regime distortion it would
+  score ≈ **0.0953**.
+- born-small's 0.327712 and NR1's 27.716026 are both far outside it.
+
+So bz2 decides the campaign's live open question in one row: **is small-body distortion a FIT
+problem or a RENDER problem?** A near-perfect field that still realizes bad d_seg says RENDER — and
+that would kill "build a better small body" as a family by mechanism, not by instance, consistent
+with `#1205` (90.47% of dx2's seg error is manufactured) and `#1211` (78.71% appears at the native
+render). A near-perfect field that realizes good d_seg says FIT — and bz2 is then a sub-0.12 body.
+
+**Pre-registered prediction (before any measurement exists):** the manufactured-error law predicts
+bz2's 1.12% native fit will NOT yield dx2-regime d_seg; the render, not the fit, sets realized
+distortion. **FALSIFIER:** bz2's realized seg+pose ≤ 0.052840 ⇒ the fit WAS the problem, the
+intersection is NON-EMPTY at n=4, and bz2 is a sub-0.12 candidate outright.
+
+**Cost:** the bo2 predecessor measured 839.5 s / $0 / 3.66 GB inflated raws. bz2 is NOT that cheap
+today because the renderer runtime must be rebuilt first — that build is the fire order's real
+precondition and it should be priced before it is authorized.
+
+## 6. Successor charter — xo1 wrote none, correctly
+
+xo1 declined to author a successor build charter on the ground that RB1 already owns the distinct
+changed-object construction. I adjudicate that REFUSAL CORRECT: writing a second charter for the
+same construction would be the duplicate-SoT defect (Catalog #533), and RB1's blocker is storage,
+not design. The right next action is the bz2 measurement above plus #1165's reclaim — not a new
+object derivation.
+
+**Own-vehicle frontier: lb1 — S 0.14803010583079396 @ 180,083 B [contest-CUDA T4, n600], UNMOVED.**
+Sub-0.12 gap 0.028030. Demand, corrected this turn: 42,097 B at current distortion, OR 312× better
+distortion at current bytes (lb1's rate already clears 0.12 at zero distortion with 135.3472 B to
+spare).
