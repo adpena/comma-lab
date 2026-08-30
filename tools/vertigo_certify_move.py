@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
-"""Certify-or-block cold move of a Vertigo subtree to the APDataStore cold store.
+"""Certify-or-block cold move of a Vertigo subtree to a cold store.
+
+The destination is whatever ``--dest-root`` names; every headroom number and
+ledger ``df`` row is measured on the filesystem that will actually hold it. An
+earlier revision hardcoded ``/Volumes/APDataStore`` for the headroom gate while
+``--dest-root`` (required) drove the paths — so a caller naming any other tier
+was gated against a volume it never asked about, and ``dest_df_before`` in the
+ledger named the wrong filesystem. Per the CLAUDE.md storage waterfall
+(Vertigo -> APDataStore -> local only by explicit opt-in), a destination off the
+external ``/Volumes`` tiers now requires ``--allow-local-tier <rationale>``
+before ``--apply``, and a destination on the SOURCE filesystem is refused
+outright because such a "move" reclaims nothing while the cert would claim
+freed bytes.
 
 Implements the CLAUDE.md "Local Disk, SSD Spill, Auto-Cleanup, And Provenance"
 certify-or-block rule and the ALWAYS-KEEP-THE-PAYLOAD non-negotiable: no source
@@ -245,10 +257,50 @@ def append_ledger(ledger: Path, row: dict) -> None:
 
 
 def df_kib(mount: str) -> dict:
+    """``df -k`` for ``mount``, as a typed row.
+
+    ``device`` (field 0) and the KiB counts (fields 2-3) are positional from the
+    left and unambiguous. ``mounted_on`` is the LAST field and is DISPLAY-ONLY:
+    a volume name containing spaces truncates it to the final word. Decide on
+    ``device``; never on ``mounted_on``.
+    """
     out = subprocess.run(
         ["df", "-k", mount], capture_output=True, text=True, check=True
     ).stdout.strip().splitlines()[-1].split()
-    return {"mount": mount, "used_kib": int(out[2]), "avail_kib": int(out[3])}
+    return {
+        "mount": mount,
+        "device": out[0],
+        "mounted_on": out[-1],
+        "used_kib": int(out[2]),
+        "avail_kib": int(out[3]),
+    }
+
+
+def existing_ancestor(path: Path) -> Path:
+    """Nearest existing ancestor of ``path``; ``df`` needs a path that exists.
+
+    The destination subtree is created by the copy, so it is absent at
+    headroom-check time. What must be measured is the FILESYSTEM that will hold
+    it, never a literal mount chosen at authoring time.
+    """
+    current = path.resolve()
+    while not current.exists() and current != current.parent:
+        current = current.parent
+    return current
+
+
+def df_kib_for_path(path: Path) -> dict:
+    """``df`` for the filesystem that will actually hold ``path``."""
+    return df_kib(str(existing_ancestor(path)))
+
+
+def is_external_tier(path: Path) -> bool:
+    """True when ``path`` resolves onto a mounted external volume (``/Volumes/...``).
+
+    CLAUDE.md's storage waterfall makes local disk a destination only by explicit
+    operator opt-in, so the tier is classified before any bulk copy is planned.
+    """
+    return Path("/Volumes") in path.resolve().parents
 
 
 def main() -> int:
@@ -268,6 +320,13 @@ def main() -> int:
         default="",
         help="Substantive reason no citing manifest/receipt is known; required for --apply "
         "when --referenced-by is empty.",
+    )
+    ap.add_argument(
+        "--allow-local-tier",
+        default="",
+        help="Substantive operator rationale for a --dest-root that is NOT on an "
+        "external /Volumes tier. CLAUDE.md's storage waterfall makes local disk a "
+        "destination only by explicit opt-in, so --apply refuses without it.",
     )
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument(
@@ -324,7 +383,34 @@ def main() -> int:
         flush=True,
     )
 
-    dest_df = df_kib("/Volumes/APDataStore")
+    dest_root = Path(args.dest_root)
+    dest_df = df_kib_for_path(dest_root)
+    source_df = df_kib(str(vertigo_root))
+
+    if dest_df["device"] == source_df["device"]:
+        return _block(
+            f"destination {dest_root} is on the SOURCE filesystem "
+            f"({dest_df['device']} mounted at {dest_df['mounted_on']}): a move within "
+            "one filesystem reclaims nothing, so the freed-bytes cert would be false"
+        )
+
+    dest_is_external = is_external_tier(dest_root)
+    local_tier_rationale = args.allow_local_tier.strip()
+    if not dest_is_external:
+        if args.apply and len(local_tier_rationale) < 12:
+            return _block(
+                f"destination {dest_root} is NOT on an external /Volumes tier "
+                f"(filesystem {dest_df['mounted_on']}); CLAUDE.md's storage waterfall "
+                "makes local disk a destination only by explicit opt-in — pass "
+                "--allow-local-tier '<substantive operator rationale>' (>=12 chars)"
+            )
+        print(
+            f"[{utcnow()}] NOTICE: destination tier is LOCAL ({dest_df['mounted_on']}), "
+            "not an external /Volumes volume; --apply requires --allow-local-tier",
+            file=sys.stderr,
+            flush=True,
+        )
+
     projected_avail_gib = (dest_df["avail_kib"] - src_du) / 2**20
     plan = {
         "phase": "PLAN",
@@ -336,16 +422,20 @@ def main() -> int:
         "no_known_references_rationale": no_refs_rationale or None,
         "census": census.as_dict(),
         "source_allocated_kib": src_du,
+        "dest_tier": "external" if dest_is_external else "local",
+        "local_tier_rationale": local_tier_rationale or None,
         "dest_df_before": dest_df,
         "projected_dest_avail_gib_after": round(projected_avail_gib, 3),
-        "vertigo_df_before": df_kib("/Volumes/VertigoDataTier"),
+        "vertigo_df_before": source_df,
     }
 
     if projected_avail_gib < args.min_dest_avail_gib:
         plan["phase"] = "BLOCKED_DEST_HEADROOM"
         append_ledger(ledger, plan)
         return _block(
-            f"destination headroom: {projected_avail_gib:.1f} GiB after copy "
+            f"destination headroom on {dest_df['mounted_on']} "
+            f"({dest_df['device']}, {dest_df['avail_kib']/2**20:.1f} GiB free): "
+            f"{projected_avail_gib:.1f} GiB after copy "
             f"< floor {args.min_dest_avail_gib} GiB"
         )
 
@@ -456,8 +546,8 @@ def main() -> int:
 
     shutil.rmtree(tmp_old)
     after = {
-        "vertigo_df_after": df_kib("/Volumes/VertigoDataTier"),
-        "apdatastore_df_after": df_kib("/Volumes/APDataStore"),
+        "vertigo_df_after": df_kib(str(vertigo_root)),
+        "dest_df_after": df_kib_for_path(dest),
     }
     append_ledger(
         ledger,

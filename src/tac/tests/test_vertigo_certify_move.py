@@ -89,3 +89,58 @@ def test_apply_refuses_unaccounted_reference_surface(mover, monkeypatch, capsys)
     )
     assert mover.main() == 2
     assert "requires --referenced-by" in capsys.readouterr().err
+
+
+# --- headroom must measure the volume the caller named, not a literal mount ---
+#
+# The defect this pins: --dest-root (required) drove the destination PATHS while
+# the headroom gate and the ledger's dest_df_before measured a hardcoded
+# /Volumes/APDataStore. A caller naming any other tier was gated against a volume
+# it never asked about, and the ledger row named the wrong filesystem while
+# reporting a correct-looking number.
+
+
+def test_existing_ancestor_walks_up_to_a_path_that_exists(mover, tmp_path):
+    """df needs a real path; the destination subtree does not exist until the copy."""
+    absent = tmp_path / "not" / "yet" / "created"
+    assert mover.existing_ancestor(absent) == tmp_path.resolve()
+
+
+def test_existing_ancestor_is_identity_for_a_path_that_exists(mover, tmp_path):
+    assert mover.existing_ancestor(tmp_path) == tmp_path.resolve()
+
+
+def test_df_for_path_measures_the_callers_filesystem_not_a_literal_mount(mover, tmp_path):
+    """The regression in behavioural form: a local dest reports the LOCAL filesystem."""
+    row = mover.df_kib_for_path(tmp_path / "dest" / "subtree")
+    assert row["mounted_on"] != "/Volumes/APDataStore"
+    assert row["avail_kib"] == mover.df_kib(str(tmp_path))["avail_kib"]
+    assert row["device"] and row["mounted_on"]
+
+
+def test_external_tier_classification_splits_volumes_from_local_disk(mover, tmp_path):
+    assert mover.is_external_tier(Path("/Volumes/APDataStore/pact/coldstore")) is True
+    assert mover.is_external_tier(Path("/Volumes/VertigoDataTier")) is True
+    assert mover.is_external_tier(tmp_path / "coldstore") is False
+    assert mover.is_external_tier(Path.home() / "coldstore") is False
+
+
+def test_headroom_gate_derives_the_destination_volume_from_dest_root(mover):
+    """Structural pin: no literal mount may stand in for --dest-root's filesystem.
+
+    Kept as a source assertion because the defect was structural — a literal where
+    a variable belonged — and the runtime path needs a real Vertigo source tree.
+    The two Vertigo literals are correct BY INVARIANT (main refuses a source that
+    is not under /Volumes/VertigoDataTier), so only the destination side is pinned.
+    """
+    source = (REPO / "tools" / "vertigo_certify_move.py").read_text(encoding="utf-8")
+    assert 'df_kib("/Volumes/APDataStore")' not in source
+    assert "df_kib_for_path(dest_root)" in source
+    assert "df_kib_for_path(dest)" in source
+
+
+def test_local_tier_destination_requires_an_explicit_opt_in_flag(mover):
+    """CLAUDE.md storage waterfall: local disk is a destination only by opt-in."""
+    source = (REPO / "tools" / "vertigo_certify_move.py").read_text(encoding="utf-8")
+    assert "--allow-local-tier" in source
+    assert "allow_local_tier" in source
