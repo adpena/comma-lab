@@ -146,6 +146,36 @@ Leg B survives bz2's death as a candidate: it is a fact about *representations*,
 bit-identical field. **71.0% of the rate advantage is representational, not field-quality.** A
 successor body that wants born-small's rate should inherit the generator FORM, not the GT-fit field.
 
+## 7b. PER-CLASS: the failure is UNIFORM, not localized — no targeted repair exists
+
+Run on the matched bo2 instrument (`experiments/ddm_bo2_perclass_seg_decomposition.py`) with
+`--gt-argmax-cache` pointing at bo2's own `gt_argmax_n600.u8`, so both rows share the **same GT
+object**, the same code, and the same lineage string. **Positive control PASSED**: recomputed
+`avg_segnet_dist` = 0.012995223999023437 vs the advisory's reported 0.01299522 —
+`abs_delta 4.0e-9`, inside the 8-dp report half-width, `pixel_delta_beyond_report_rounding = 0.0`.
+The instrument reproduces the row it is decomposing.
+
+| class | bz2 flips | dx2 flips | ratio | bz2 share | dx2 share | bz2 within-class | dx2 within-class |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Road | 548,970 | 16,984 | **32.3×** | 35.81% | 41.44% | 2.003% | 0.062% |
+| Lane | 321,133 | 8,182 | **39.2×** | 20.95% | 19.97% | **46.498%** | 1.185% |
+| Undrivable | 229,140 | 7,630 | **30.0×** | 14.95% | 18.62% | 0.392% | 0.013% |
+| Movable | 321,146 | 4,460 | **72.0×** | 20.95% | 10.88% | 21.991% | 0.305% |
+| MyCar | 112,590 | 3,725 | **30.2×** | 7.34% | 9.09% | 0.375% | 0.012% |
+| **total** | **1,532,979** | **40,981** | **37.4×** | | | | |
+
+**The structural finding: four of five classes degrade inside a 1.31× band (30.0–39.2×).** The
+share profile is nearly preserved — Road/Lane/Undrivable/MyCar shares move by at most 3.7 points.
+This is a **uniform field-quality deficit**, not a class-localized failure. There is no class to
+fix and recover: a successor cannot buy its way out of 37× by repairing one stratum.
+
+Movable is the single outlier at **72.0×** — 2.2× worse than the band, and its share nearly
+doubles (10.88% → 20.95%). Lane's within-class rate is the most striking absolute number:
+**46.5% of Lane pixels are wrong** in bz2 versus 1.185% in dx2-base — consistent with Lane being
+thin, rare (0.59% area) and the hardest thing for a GT fit to place.
+
+Receipts: `store/perclass/perclass_bz2.json` · `bz2_per_pair.json` · `bz2_comp_argmax_n600.u8`.
+
 ## 8. What is NOT claimed
 
 No score. PyAV GT lineage, not the DALI table (#1142): d_seg primary (seg fork 1.43×), d_pose
