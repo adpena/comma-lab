@@ -262,3 +262,31 @@ That is a scoped absence over the listed roots, not a claim that such arrays can
 - Re-racing coders is closed by JT23 and out of scope: this is a field result.
 
 Own-vehicle frontier: gb1 — S 0.14811799921260607 @ 180,215 B [contest-CUDA T4, n600], UNMOVED.
+
+## BHW2 APPEND-ONLY DISPOSITION — 2026-08-29
+
+Task #1330 consumed BHW1's queued JF2 k060 extension without altering any BHW1 measurement above.
+The model-matched JF2 coding argmax is now retained at
+`/Volumes/APDataStore/pact/ddm_bhw2_jf2_oe1_argmax_screen/jf2/base_argmax_replay/retained/argmax/jf2_k060000.coding_argmax.u8.bin`,
+117,964,800 B, SHA-256
+`d3dfc1c8b3816fcd609d4b64682e8d9a1c73825d5a91ba703af2255502e424ab`.
+
+The full n600 screen measured B/H/W = **8,301 / 207,809 / 920** over 217,030 disagreements
+(3.824816846% B). Its native receiver-trajectory re-encode produced a 174,582 B archive,
+SHA-256 `5e217b85bae8687ea37f80f151a5ee68f3df0a2927609510d0dc58272b61287c`: **−4,210 B** versus
+the 178,792 B JF2 base and **−4.057342489 bits/edit**. Production decode identity passed. This
+updates JF2 k060 from `REDUCED-UNSCREENED` to `BYTE-ADMITTED-FIRE-MAIN` at INSTANCE / byte-only
+scope; the other six JF2 rows remain unscreened.
+
+BHW1's queued JF2 action is **FIRED AND TERMINAL**. BHW1's conditional OE1 action is **FOLDED by
+the BHW2 rank-1 STOP** and was not run. The new scorer follow-on is
+**QUEUED-WITH-A-FIRE-ORDER** to MAIN at
+`/Volumes/APDataStore/pact/ddm_bhw2_jf2_oe1_argmax_screen/jf2/scorer_n600`; trigger: MAIN owns the
+sole idle n600 scorer lane and revalidates the exact base/candidate/runtime/storage custody. No
+distortion or score is inferred here: `d_seg`/`d_pose` remain UNMEASURED.
+
+Owning receipt: `.omx/research/ddm_bhw2_jf2_oe1_argmax_screen_20260829.md`; machine-readable rows:
+`.omx/research/ddm_bhw2_jf2_oe1_argmax_screen_20260829.jsonl`; retained manifest SHA-256
+`f0fdbec7a511a916b8af59968d1170ca9b7568916e55d947490a548642384c30`.
+
+Own-vehicle frontier: lb1 — S 0.14803010583079396 @ 180,083 B [contest-CUDA T4, n600], UNMOVED.
