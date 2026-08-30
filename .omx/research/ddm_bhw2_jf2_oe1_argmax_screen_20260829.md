@@ -158,3 +158,105 @@ payload beyond the listed JF2/OE1 sources was used.
   explicitly unmeasured.
 
 Own-vehicle frontier: lb1 — S 0.14803010583079396 @ 180,083 B [contest-CUDA T4, n600], UNMOVED.
+
+---
+
+## MAIN ADJUDICATION (appended 2026-08-29, append-only per Catalog #110/#113)
+
+This section is MAIN's verification and routing of the arm's landed verdict above. It does not
+mutate a single measurement. Adjudicated against `ddm_fcd1`, `ddm_fcd2`, `ddm_fcd3`, `ddm_jf1`,
+`ddm_jf2`, and `ddm_bhw1` read at source.
+
+### 1. Verification — every number re-derived independently, all reproduce
+
+| claim | re-derived | agrees |
+|---|---|---|
+| B+H+W = disagreements | 8,301 + 207,809 + 920 = 217,030 | ✓ exact |
+| B share 3.824816846% | 8,301 / 217,030 = 0.03824816845597383 | ✓ |
+| 459.437× LD1 | 0.03824816845597383 / 8.325e-05 = 459.4374589306165 | ✓ |
+| archive Δ −4,210 B | 174,582 − 178,792 | ✓ |
+| **stream Δ == archive Δ** | 108,108 − 112,318 = −4,210 | ✓ framing byte-identical both sides |
+| bits/edit −4.057342489 | −4,210 × 8 / 8,301 | ✓ |
+| rate-only S −0.002803266193 | −4,210 × 25 / 37,545,489 | ✓ |
+
+**The NO-FAKE boundary held.** The charter forbade substituting DX2's argmax for a family that
+lacks its own, calling that "a fake object." The base replay regenerated JF2 k060's native stream
+at SHA-256 `90d85c19df03d35c055aaf68e559910104485de9257c9662b1a764067f4aa424` — byte-identical to
+the value `ddm_jf2_terminal_diagonal_harvest_20260826.md` recorded for that arm in its own payload
+table. The 117,964,800-byte coding argmax is therefore JF2's OWN model's, regenerated, not borrowed.
+`scorer_ran_here=False`, `seal_created_here=False`, `d_seg`/`d_pose` UNMEASURED — all three honest.
+
+### 2. The prediction is CONFIRMED, and the law it establishes is real
+
+Bar was ≥10× LD1's 0.008325% share. Measured 459.437× — 45.9× past the bar. **Moving the coding
+model changes the B/H/W labels by two orders of magnitude.** fcd1's win-win cone is NOT a
+model-invariant property of the DX2 field; it is a property of the field×model PAIR. That is a
+genuine law and it is the arm's real product.
+
+### 3. The fire order is REFUSED AS WRITTEN — three measured reasons
+
+The arm queued `JF2_TERMINAL_WINNERS_REALIZED_COMPONENTS_N600` asking MAIN for the sole n600
+scorer lane. MAIN declines to fire it in that form. Not because the arm erred — it followed its
+charter's STOP exactly — but because the routing question was already answered on the live body:
+
+**(a) This exact edit class has been realized TWICE on the pointer body, and refused BOTH times,
+on two DIFFERENT axes.**
+
+| arm | what it did | outcome |
+|---|---|---|
+| `fcd1` | B/H/W screen on DX2 field×model | 5,268 B-cells, **−3,756 B** — byte-positive |
+| `fcd2` | realize that union | `INSTANCE-REFUSED-POSE-GATE`: uncompensated d_pose 1.6055e-3 (252× the jt21 base 6.3657e-6); even with **full in-compile Schur compensation** d_pose_after 2.7348e-4 = **42.96× base** |
+| `fcd3` | pose-SCREEN the population, then re-solve | pose FIXED (d_pose 5.8496e-6 ≤ base ✓) and −2,940 B kept — **but realized d_seg REGRESSED +4.006279e-5**, net **+0.0019433 S**, `INSTANCE-REFUSED-SEG-BAND` |
+
+Priced on the live lb1 pointer (d_seg 0.00020139, d_pose 6.37e-6, 180,083 B):
+fcd2's compensated 42.96× pose ratio costs **+0.044332 S** against a −0.002803 S rate gain —
+**15.81× underwater.** fcd3 then bought the pose back and the seg bill arrived instead: a seg
+regression **2.05×** the rate gain it purchased.
+
+**(b) The B/H/W label is a token-space GT-agreement label, and fcd3 measured that it does not
+predict realized seg.** fcd3's 4,194 exact B positions — 100% GT-benefit by label — produced a
+seg regression. bhw2's own boundaries section says this correctly ("B/H/W token labels are not
+SegNet or PoseNet outcomes"); fcd3 is the measurement that shows the gap is not merely unmeasured
+but **adverse in sign**. That is the campaign-level finding of this arc.
+
+**(c) JF2's base has itself never been distortion-measured.** `ddm_jf2` (2026-08-26) queued
+`JF2_TERMINAL_WINNERS_REALIZED_COMPONENTS_N600` and it has never fired. So a scorer row on the
+candidate would cost **two** n600 runs (base + candidate) to produce a delta on an object that is
+not the pointer, whose lineage's positive control failed by 7,554 B at epoch-2 scope (`ddm_jf1`),
+and whose edit class the pointer body has already refused twice.
+
+For completeness, the byte arithmetic that would tempt a fire: JF2's candidate at 174,582 B sits
+5,501 B under the lb1 pointer = **13.07% of the 42,097 B sub-0.12 demand** — but only if its
+distortion were free, and the two rows above measure that it is not.
+
+### 4. OE1 is NOT closed — na11's rank 2 remains genuinely unscreened
+
+The arm stopped OE1 per the charter's explicit STOP-on-admit, and said so honestly: "OE1 is
+unnecessary to decide that law and was stopped rather than spent after admission." Correct for the
+LAW. But na11's rank-2 row asked for a SCREEN, and OE1 has none. Its disposition is
+`FOLDED-RANK1-STOP`, not measured. Given §3, the value of buying it is now low: the law it would
+test is confirmed, and the realization price of the whole class is measured and refused. **Recorded
+as: OE1 SCREEN OUTSTANDING, priced ~1,869 s + 590 MB, LOW priority, no fire order.** It is not
+signal loss; it is a measurement whose consumer just closed.
+
+### 5. What this arm is worth, stated plainly
+
+The rate opening is real and byte-verified. The score claim does not exist and the arm never made
+one. What the campaign gets is a **law**, not a route: the win-win cone survives a model change and
+grows 459×, while the realization of that cone has now been refused three times on the live body
+(fcd2 pose, fcd3 seg, and by inheritance here). The cone is a property of the *coder*, and the
+score is a property of the *scorer* — and this arc measured that those two are not the same object.
+
+### 6. GESTALT-DELTA
+
+The 2×2 of #1215 (field moves × model moves) is now fully populated on the byte axis and the
+diagonal is byte-positive in both its measured instances (DX2 −3,756 B, JF2 −4,210 B). But the
+**distortion axis of that same 2×2 is refused in every cell that has been realized.** Adding to the
+gestalt: *a byte-positive edit set defined by agreement with GT in TOKEN space is not a
+distortion-safe edit set in SCORER space, and the sign of the seg error is not predicted by the
+token label.* That joins `m144` (dx2 lossless remaining ≈2,009 B, all model-axis) and the
+sharp-optimum law as the third independent statement that the sub-0.12 gap is not reachable by
+re-coding this object — it requires a different object.
+
+**Own-vehicle frontier: lb1 — S 0.14803010583079396 @ 180,083 B [contest-CUDA T4, n600], UNMOVED.**
+Sub-0.12 gap 0.028030; demand 42,097 B at current distortion.
