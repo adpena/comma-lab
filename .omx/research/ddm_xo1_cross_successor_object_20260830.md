@@ -1,7 +1,8 @@
 # ddm_xo1 cross-successor object — measured intersection empty; NR1 diagnostic falsifies the predicted construction
 
-Date: 2026-08-30  
-Status: **DERIVATION COMPLETE; POINTER UNMOVED**  
+Date: 2026-08-30
+
+Status: **DERIVATION COMPLETE; POINTER UNMOVED**
 Verdict scope: the landed sub-0.12 successor-body corpus and the historical receiver-closed
 below-cap controls recovered by the full-corpus recall described below. This is not a family
 nonexistence claim.
