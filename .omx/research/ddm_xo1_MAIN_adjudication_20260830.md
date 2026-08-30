@@ -119,3 +119,66 @@ object derivation.
 Sub-0.12 gap 0.028030. Demand, corrected this turn: 42,097 B at current distortion, OR 312× better
 distortion at current bytes (lb1's rate already clears 0.12 at zero distortion with 135.3472 B to
 spare).
+
+---
+
+## 7. CORRECTION — §3 IS WRONG ABOUT bz2, AND WRONG IN THE EXACT GENUS §3 CITES
+
+Appended by MAIN 2026-08-30, ~1 h after landing, on re-verification. APPEND-ONLY per Catalog
+#110/#113 — §3 above is preserved as written and is SUPERSEDED for bz2 by this section.
+
+**What §3 claimed:** *"bz2's `archive.zip` contains exactly ONE stored member, `p` … There is no
+inflate.py, no runtime dir"* ⇒ *"three of them have no receiver, so their byte count is a PAYLOAD
+size, not a contest archive size"* ⇒ *"honest count of byte-feasible-AND-decodable bodies is TWO."*
+
+**What is actually true, parsed at source** (`ddm_hg1_heterogeneous_analytic_generator_gate.parse_complete_archive`,
+the function bz2's own packer round-trip-asserts against):
+
+| section | bytes |
+|---|---:|
+| generator packet (`bornsmall_gt_fit`) | 47,779 |
+| **semantic_renderer** | **30,856** |
+| **pose_carrier** | **22,010** |
+| compact_residual | 96 |
+| container overhead | 121 |
+| **total** | **100,862** |
+
+The single member `p` is a **packed multi-section body**, not a blob. And the renderer and carrier are
+**byte-identical to the live lineage's own** — sha `39d1be52ba629334…` (30,856 B) and
+`932b979f5181b331…` (22,010 B), matching `source_sections/semantic_renderer.bin` and
+`source_sections/inherited_pose_carrier.bin` exactly. Those are precisely the ar1b figures (`#1213`:
+renderer 30,856 · carrier 22,010).
+
+**How I got it wrong:** I read a `zipfile.infolist()` listing, saw one member, and concluded "no
+receiver" — without opening the packer that writes it. That is the **`#1260` genus** (*a retained
+field does not carry its own reading semantics*) committed **in the same memo that invokes `#1260`
+against xo1's boolean column.** The zip listing gave a right total and a wrong meaning. xo1's
+`byte_feasible: true` was correct for bz2 and my caution against it was not.
+
+**What bz2 actually is:** lb1's own renderer + lb1's own pose carrier + a **47,779 B GT-fit
+generator** replacing dx2's ~127,007 B {token stream + HPAC model}. A **−79,228 B** rate change,
+**1.88× the entire 42,097 B demand**, on an object that keeps the pointer's own realization stack.
+
+**Consequences, stated as predictions and not as measurements:**
+- Its rate is REAL: 100,862 B = rate 0.067160, **37,124 B under the cap**, sub-0.12 distortion
+  budget **0.052840**.
+- Because the pose carrier AND renderer are byte-identical to the pointer's, its **d_pose has a
+  reason to sit near lb1's 6.37e-6** — the pose machinery is not swapped, only the field it renders.
+  That is a hypothesis from shared construction, NOT a transfer (`m143`), and must be measured.
+- Its **d_seg is the genuine unknown**, and the generator's native token mismatch is 1.12%.
+
+**Disposition CHANGED: bz2 is rank-1 and its blocker is SMALLER than §4 stated.** Not "renderer
+absent" — the renderer is *inside the archive* and on disk. The measurement path is
+parse → `unpack_renderer(sections['semantic_renderer'])` → render → R → uint8 → frozen scorers,
+and every piece is named: `ddm_rb1_born_small_receiver.unpack_renderer` / `.render_camera_uint8`
+already implement it for the sibling body. Fire-order trigger conditions from bz2's own
+`FIRE_ORDER.json` are otherwise MET (scorer lane free; archive sha `773c7ae3…` and parseback field
+sha `968ffca2…` both re-verified byte-exact; 3.66 GB needed vs 11 GiB AP free; predecessor cost
+839.5 s / $0).
+
+**The pre-registered prediction and falsifier in §5 are UNCHANGED and still bind** — this correction
+raises the object's value, it does not pre-judge its distortion.
+
+**§4's rb1 rows are unaffected** (they are genuinely stubs, storage-blocked at 36.9 GiB).
+`qbz1` remains UNVERIFIED — and given this correction, "unverified" now means *nobody has parsed it*,
+not *it lacks a receiver*.
