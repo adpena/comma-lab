@@ -314,3 +314,40 @@ trained object. Those are scoped absences in the searched corpus, not global non
   distinct changed-object construction, so another charter would be duplicate custody.
 
 OWN-VEHICLE FRONTIER: **UNMOVED — LB1 S=0.14803010583079396 @ 180,083 B [contest-CUDA T4 n600], archive SHA-256 `5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9`; XO1 produced no candidate archive or score.**
+
+---
+
+## APPEND-ONLY DISPOSITION — 2026-08-30, BZ2 census row now MEASURED
+
+Catalog #110/#113: the census table above is **not mutated**. Its BZ2 row (line ~118) reads
+`UNMEASURED` and was correct when written. This row supersedes it.
+
+`ddm_bz2d` (memo `ddm_bz2d_distortion_verdict_20260830.md`, commit `e47f0c4658`) bought the
+measurement, rendering BZ2's field through lb1's own semantic renderer at n600:
+
+| BZ2 direct-fit born-small, 100,862 B | measured |
+|---|---:|
+| argmax errors vs GT | 1,532,979 / 117,964,800 |
+| **d_seg** | **0.012995223999023437** → seg S term **1.2995224** |
+| **d_pose** | **1.5740242** → pose S term **3.9673974** (√(10·d_pose)) |
+| rate S term (25·100,862/37,545,489) | 0.0671599 |
+| **S (recomputed from components, #877)** | **5.334079649308256** |
+
+**Verdict: REFUSED at 99.68×.** Own combined distortion 1.2995224 + 3.9673974 = **5.2669198**
+S-units against this row's own recorded allowance **0.05284013427019155** ⇒ **99.676×** over —
+reproducing bz2d's banked joint falsifier exactly from the census's own arithmetic.
+
+So BZ2's census cell flips `UNMEASURED` → **MEASURED-REFUSED**, and it does not enter
+{distortion-feasible}. THE CROSS's measured-empty intersection is unchanged; the n is now firmer,
+not larger.
+
+Two sisters landed the same day, both closing BRIDGES rather than adding bodies:
+- `ddm_gf1_generator_form_capacity_verdict_20260830.md` — the generator FORM cannot carry lb1's
+  field either (5.09× over the 85,020 B bar; capacity gap target-INDEPENDENT at ~1.12%). So
+  "borrow BZ2's form, keep lb1's field" is closed too.
+- [[token-error-amplifies-to-argmax-error-no-attenuation]] — the affine transfer law, which also
+  measured that **lb1's own field is already inside the sub-0.12 token-accuracy bar (0.0176% vs
+  0.0212%)**. lb1 has a pure RATE problem.
+
+OWN-VEHICLE FRONTIER: **UNMOVED — LB1 S=0.14803010583079396 @ 180,083 B [contest-CUDA T4 n600];
+this disposition is a scorer-free/advisory bookkeeping close, no candidate and no score.**
