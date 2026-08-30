@@ -123,7 +123,52 @@ test first, and it is **~4.2× cheaper in storage**.
    through this tool's ledger**. My earlier phrasing ("already-certified cold store") was an
    assumption; it is withdrawn. Each candidate needs its own certification check.
 
-## 6. Honesty
+## 6. The AP compression path — MEASURED, and BLOCKED on a tool gap
+
+I took the permission-free path as far as measurement allows. Both quiescence checks passed
+(`ddm_bs3` 0 files written since 08-29; `ddm_qbflow`'s 4,928 recent files are r9/r10, last write
+08-29 11:50, both adjudicated). Then three measurements:
+
+**(a) The compressible mass — and a correction to my own first read.** My first sample hit the
+`.u8` token fields at **99.5%** and I wrote that the gain was "concentrated exactly where the
+bytes are." **Wrong, and withdrawn:** `.u8` is 3 files / 0.33 GiB. The mass is **`.npy`, 5,016
+files, 59.17 GiB** — I had extrapolated a ratio from 0.5% of the population, the same genus as
+[[m88]] (a prefix of a skewed population is a different population).
+
+Re-measured on a seeded random sample of the real population (seed 20260830, n=8, spread
+11.6%–69.4%): **53.8% saved**. Projection: bs3 alone frees **~31.8 GiB**, taking AP from 7.65 to
+**~39.5 GiB** — which clears rb1's ONE-config probe (13.3 GiB) with 26 GiB to spare, and is
+16.7 GiB short of the four-config 56.24 GiB.
+
+**(b) SR3's tool EXISTS and already declares bs3.** `experiments/ddm_sr3_ap_certify_compress_reclaim.py`
+lists `ddm_bs3_born_small_resolved` (`:43`) and `ddm_w96a_aligned_window` (`:44`) as candidates;
+SR3's run stopped at two other trees because its target was met. Interface (grepped, not guessed):
+`--tree --closure-citation --closure-note --repo [--apply]`, dry-run by default, direct-child-of-AP
+enforced (`:179`), per-file SHA-256, verification receipt, abort floor.
+
+**(c) THE BLOCKER, measured: the tool archives MONOLITHICALLY, and both remaining candidates
+carry LIVE path references.** `ARCHIVE_NAME = "SR3_ORIGINAL_TREE.tar.zst"` at the tree root
+(`:55`), one deterministic tar stream (`:8`). But:
+
+| candidate | GiB | live references |
+|---|---:|---|
+| `ddm_bs3_born_small_resolved` | 65.0 | `ddm_bd1_decode_time_structure.py:57,65` reads `retained/body/` + `BODY_RESULT.json`; **rb1 pins its 101,150 B training body inside this tree** |
+| `ddm_w96a_aligned_window` | 27.6 | **`ddm_rb1_born_small_renderer_build.py:44`** reads `launch_requests/aligned_seed_20260815.json`; active `OUTPUT_ROOT` for `ddm_w96b_*` and `ddm_wd3_*` |
+
+Compressing either would bury the very reads rb1's fire needs inside a 65 GiB (or 27.6 GiB)
+archive. **This is the same genus as §1's mis-aim** — pointing a reclaim at a tree whose consumers
+I had not checked. I stopped rather than run it.
+
+**The nameable cure (a tool gap, not a hand-run):** SR3 needs a **carve-out** — a declared
+keep-uncompressed path set (here: `retained/body/`, `BODY_RESULT.json`, `launch_requests/`, all
+small; bs3's `body/` is ≈0.33 GiB of 65) archived around, so the bulk `.npy` cache compresses while
+every live path stays resolvable. That is a bounded extension to a reviewed tool with an executed
+precedent, and it unblocks ~31.8 GiB without touching the local tier.
+
+Sister gap, still open: the mover is **Vertigo-source-only by invariant** (`:179` equivalent), so an
+AP→local move needs a different tool. Neither gap is a workaround; both are real absences.
+
+## 7. Honesty
 
 No score is claimed. §2's arithmetic is derived from measured inputs (rb1's own byte table,
 lb1's pose contribution, bz2d's d_seg, gf1's correction price); §3 is a source read with file and
