@@ -40,9 +40,21 @@ moved bytes more than the coder choice did:
 while carrying 7.4% more raw bytes. Within the winner, coders spread only 18.5%
 (lzma2_extreme 385,448 · brotli_q11 392,957 · zlib_9 456,693).
 
-This independently reproduces [[#1201]] (**reordering substitutes for a context model**) on an
-object that law was not derived from. Two of the three orders here have never been raced on the
-live body's streams.
+⚠ **SCOPE — this does NOT transfer to the live body, and recall caught me writing that it did.**
+My first draft closed §3a with "two of the three orders have never been raced on the live body's
+streams." [[#1244]]/`ddm_rr9_reorder_refit_20260824.md` already measured that race:
+**`reorder_delta` = 0 B = 0.000000% = ΔS 0.0** against the shipped 113,777 B token stream. The
+mechanism is exact — HPAC's group index is a **trained weight**, so the model is *order-invariant*;
+reordering cannot touch the information content, only the model's approximation error.
+
+So both measurements are [[#1201]] read correctly, in opposite directions:
+
+> **Reordering pays exactly where the coder has no context model, and exactly zero where it does.**
+
+gf1's residual is coded by GENERIC LZ coders (lzma2/brotli/zlib), whose match structure *is*
+order-sensitive → 15.5%. The live token stream is coded by a TRAINED context model → 0 B, measured.
+The §3a product is scoped to **generic-coder streams only**; treating it as a live-body rate lever
+would burn an arm on an axis rr9 closed six days ago.
 
 ## 2. The bar, re-derived (never quoted)
 
@@ -104,8 +116,9 @@ corrections: 0` is a tautology — bz2 DEFINED its field as the generator's outp
   1. the affine law's corrected bar (token error ≤ 0.0212% for sub-0.12) and the measurement
      that **lb1's own field already clears it at 0.0176%** — lb1 has a pure RATE problem, not a
      token-accuracy problem;
-  2. **the order race (§3a)** — `tile16_time` beats `frame_raster` by 15.5% coded on a third
-     independent object, and two of its three orders have never been raced on the live streams;
+  2. **the order race (§3a), scoped to GENERIC-CODER streams** — `tile16_time` beats
+     `frame_raster` by 15.5% coded; paired with rr9's measured 0 B on the trained-context live
+     stream it sharpens [[#1201]] into a two-sided law (pays iff no context model);
   3. the measured **0.2909 coded B per correction** on clustered residuals — a real price for
      any future "code the exceptions" proposal, replacing the 0.5–2.0 B/correction guesses that
      several charters (including my own) have been assuming.
