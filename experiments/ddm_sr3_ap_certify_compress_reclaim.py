@@ -234,10 +234,45 @@ _REFERENCE_SCAN_METHOD = (
     "literal absolute-prefix scan of executable source. BOUNDS, stated so this "
     "receipt cannot be read as universal coverage: (1) it finds LITERAL path "
     "strings only -- a path composed at runtime from variables is invisible to "
-    "it; (2) it reads only the executable roots, because record surfaces "
-    "(.omx/research memos, .omx/state ledgers, graph nodes) CITE paths without "
-    "reading them, and the archive preserves those files anyway."
+    "it; (2) a path split across implicitly-concatenated string literals is read "
+    "only up to the first closing quote -- such a row is DETECTED and refused as "
+    "truncated, never counted as covered, because the prefix can spuriously match "
+    "a carve-out whose name it merely starts with; (3) it reads only the "
+    "executable roots, because record surfaces (.omx/research memos, .omx/state "
+    "ledgers, graph nodes) CITE paths without reading them, and the archive "
+    "preserves those files anyway. Bound (1) is the dangerous one -- a "
+    "runtime-composed path is not seen AT ALL, so it cannot even be refused -- "
+    "which is why a lift is a judgement about THIS scan's denominators, never a "
+    "proof of safety on its own."
 )
+
+
+def _literal_continues(text: str, end: int) -> bool:
+    """True when the string literal holding this path continues in a sibling literal.
+
+    Python's implicit concatenation (``"a/b/" "c.bin"``) is invisible to a raw-text
+    scan: it reads only up to the first closing quote, so the extracted path is a
+    PREFIX of the real one.  That matters because a prefix can spuriously match a
+    carve-out whose NAME it merely starts with -- ``"…/retained/body" "guard/x"``
+    extracts ``retained/body``, which is a carve-out, while the real file
+    ``retained/bodyguard/x`` is not under one and would be archived and removed.
+    So the prefix is not conservative in general and must be refused, not trusted.
+
+    Quote -> whitespace -> quote is exactly implicit concatenation in Python; any
+    other following character (``,`` ``)`` ``:`` ``if`` ...) is a different construct
+    and reads as a complete literal.
+    """
+    if end >= len(text) or text[end] not in "\"'":
+        return False
+    if text[end : end + 3] == text[end] * 3:
+        # A triple-quote DELIMITER closing a docstring that happened to end on a path,
+        # not a sibling literal.  Without this the scan would over-refuse on any
+        # docstring citing a tree path -- safe, but a lift blocked by a comment.
+        return False
+    probe = end + 1
+    while probe < len(text) and text[probe] in " \t\r\n":
+        probe += 1
+    return probe < len(text) and text[probe] in "\"'"
 
 
 @dataclass(frozen=True)
@@ -311,6 +346,14 @@ def scan_live_reference_detail(
                 if not rel:
                     continue
                 row = {"source": str(path.relative_to(repo)), "referenced_path": rel}
+                if _literal_continues(text, end):
+                    # The path is only the FIRST fragment of an implicitly-concatenated
+                    # literal, so `rel` is a PREFIX of what the program actually reads.
+                    # A prefix can spuriously match a carve-out whose name it merely
+                    # starts with, so it is never counted as covered -- refuse instead.
+                    row["truncated_by_implicit_concatenation"] = "true"
+                    violations.append(row)
+                    continue
                 (covered if _is_kept(rel, keep_uncompressed) else violations).append(row)
     return ReferenceScan(
         files_scanned=files_scanned,

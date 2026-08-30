@@ -46,12 +46,27 @@ GT_ARGMAX: Final = Path(
     "/Volumes/VertigoDataTier/pact/ddm_qs3_20260813/retained/inputs/gt_argmax_n600.npy"
 )
 GT_ARGMAX_SHA256: Final = "91d3ff11a904c476b56a8be8af2225fb4a390d02fac9d3b09ef4704ad6e77248"
-SOURCE_ROOT: Final = Path("/Volumes/APDataStore/pact/ddm_bs3_born_small_resolved/retained")
-SEMANTIC: Final = SOURCE_ROOT / "source_sections/semantic_renderer.bin"
-POSE_CARRIER: Final = SOURCE_ROOT / "source_sections/inherited_pose_carrier.bin"
-COMPACT_RESIDUAL: Final = SOURCE_ROOT / "source_sections/compact_residual.bin"
-ZERO_RESIDUAL: Final = SOURCE_ROOT / "generators/residual_zero.raw"
-ANCESTOR_TOKENS: Final = SOURCE_ROOT / "source_payloads/generated_tokens.u8"
+# Spelled as full literals, matching the BO2_* convention below.  These were once
+# built by joining a bare ``SOURCE_ROOT`` handle, which named the whole 65 GiB bs3
+# tree while this module only ever reads these five files.  A static reader -- the
+# reclaim tool's live-reference scan, or a human auditing what may be archived --
+# could see only the handle, so it had to treat the entire tree as live.  The paths
+# are unchanged; what changes is that each read is now visible to the reader.
+SEMANTIC: Final = Path(
+    "/Volumes/APDataStore/pact/ddm_bs3_born_small_resolved/retained/source_sections/semantic_renderer.bin"
+)
+POSE_CARRIER: Final = Path(
+    "/Volumes/APDataStore/pact/ddm_bs3_born_small_resolved/retained/source_sections/inherited_pose_carrier.bin"
+)
+COMPACT_RESIDUAL: Final = Path(
+    "/Volumes/APDataStore/pact/ddm_bs3_born_small_resolved/retained/source_sections/compact_residual.bin"
+)
+ZERO_RESIDUAL: Final = Path(
+    "/Volumes/APDataStore/pact/ddm_bs3_born_small_resolved/retained/generators/residual_zero.raw"
+)
+ANCESTOR_TOKENS: Final = Path(
+    "/Volumes/APDataStore/pact/ddm_bs3_born_small_resolved/retained/source_payloads/generated_tokens.u8"
+)
 BO2_RESULT: Final = Path(
     "/Volumes/APDataStore/pact/ddm_bo2_born_small_distortion/rows/"
     "hg1_generator_field/contest_auth_eval.json"
