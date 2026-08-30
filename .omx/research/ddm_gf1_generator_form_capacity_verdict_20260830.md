@@ -1,8 +1,16 @@
 # ddm_gf1 — the generator FORM on lb1's OWN field: REFUSED, and the mechanism is a CAPACITY CEILING
 
 `axis: [macOS-CPU scorer-free exact byte measurement]` · `score_claim: false` · `promotable: false`
-`verdict_scope: FAMILY` (the HG1 analytic generator family, against any 5-class field)
+`verdict_scope: FORMULATION` — the **HG1 four-stream analytic generator** (horizon interp ·
+lane fit · movable boxes · mycar), measured against **two targets** (GT and lb1's own field).
 Task #1334. Instrument `experiments/ddm_gf1_generator_form_on_lb1_field.py`.
+
+⚠ **SCOPE CORRECTED, same day, at source.** This memo first declared `verdict_scope: FAMILY`.
+That was over-declared and the scope gate caught it. Two TARGETS is not two FORMULATIONS: I
+measured one generator's ceiling against two fields, which licenses **target-independence**
+(the strong, genuinely measured part) but says nothing about a structurally different
+generator. No theorem is in hand. The honest level is FORMULATION, and §7 states the exact
+bar a successor formulation must clear — which is the product the correction generates.
 
 ## 1. The verdict
 
@@ -83,7 +91,8 @@ Two completely different targets, and the generator lands **548 mismatches apart
 117,964,800**. The ~1.12% is not a property of GT, nor of lb1's field — it is the **expressive
 ceiling of the four analytic streams** (horizon interp · lane fit · movable boxes · mycar).
 
-**Consequence, and it closes the route:** bz2's packet is small *because it is allowed to be
+**Consequence, and it closes THIS route** (formulation-scoped; §7 states what a different
+generator formulation would have to do to reopen it): bz2's packet is small *because it is allowed to be
 wrong on 1.12% of positions*. Its 47,779 B and its 1.32M errors are the same fact. You cannot
 inherit the FORM without inheriting the FIT — making the form exact costs 1,325,033 corrections
 at a MEASURED 0.2909 coded B each = 385,448 B, which is 4.53× the entire bar by itself, before
@@ -132,3 +141,35 @@ corrections: 0` is a tautology — bz2 DEFINED its field as the generator's outp
 - No score is claimed. This is a byte measurement with no scorer in the loop.
 - Payloads retained under `/Volumes/APDataStore/pact/ddm_gf1_generator_form_on_lb1_field/retained/`
   per the ALWAYS-KEEP-THE-PAYLOAD rule.
+
+## 7. The REACTIVATION FRONTIER — what a different generator formulation must clear
+
+Because the verdict is FORMULATION-scoped, it owes a bar rather than a closure. The two
+measured quantities compose into a straight line in (packet bytes, mismatch count) space:
+
+> **`packet_B + 0.2909 × mismatches < 85,020`**
+
+Every byte spent on a richer packet buys **3.438 corrections** of headroom, and vice versa.
+Three points on that line, all arithmetic from §1 and §2:
+
+| packet | max mismatches | as fraction of 117,964,800 |
+|---:|---:|---:|
+| 20,000 B | 223,431 | 0.1894% |
+| **47,603 B** (HG1's own) | **128,625** | **0.1090%** |
+| 70,000 B | 51,633 | 0.0438% |
+| 85,020 B | 0 | — a packet at the bar must be **exact** |
+
+HG1 sits at **(47,603 B, 1,325,033)** — outside on the mismatch axis by **10.30×**. So the
+reactivation criterion for the analytic-generator FAMILY is crisp and cheap to test:
+*any successor formulation whose capacity gap on lb1's own field is ≤ 0.109% at a comparable
+packet, or which trades along the line above.* One `count_nonzero` against the retained field
+decides it — no scorer, no training, ~45 s on the existing instrument.
+
+**Which direction the projection errs, stated.** The 0.2909 B/correction price was measured on
+HG1's residual, which is spatially and temporally clustered (that clustering is exactly what
+§3a's order race exploits). A different generator's errors could be *less* clustered, which
+would make corrections cost MORE and the bar HARDER. Reusing 0.2909 for a successor is
+therefore the **generous** direction — conservative for a refusal, and the right way round.
+
+**What the correction does NOT change:** the 5.09× verdict, the target-independence mechanism
+(§3), or the retraction in §4. It changes the LABEL and adds the bar.
