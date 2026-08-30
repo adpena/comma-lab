@@ -132,3 +132,29 @@ the campaign has been asking each object to fix the half it is structurally wors
 
 **Own-vehicle frontier: lb1 — S 0.14803010583079396 @ 180,083 B [contest-CUDA T4, n600], UNMOVED.**
 Sub-0.12 gap 0.028030; demand 42,097 B at current distortion.
+
+---
+
+## SUPERSESSION NOTICE (appended by MAIN 2026-08-29, same session, ~20 min after landing)
+
+**This memo is a DUPLICATE and is superseded.** The r10 endpoint had ALREADY been adjudicated
+twice before it was written:
+
+- `8dfdc2b198` — `ddm_qbt2b_r10_third_doubling_stop_verdict_20260829.md` (11:55Z): the
+  pre-registered STOP verdict, e = −0.602 already fired.
+- `925760f81c` — `ddm_qbt2b_r10_doubling_adjudication_20260829.md` (15:02Z): **the canonical
+  adjudication** — four-point series, byte-feasible-but-distortion-priced-out, the 8.44× / 4.90×
+  reduction table, and TWO extrapolations priced in Metal wall-clock (~9 days to tie the pointer,
+  ~23 days to cross 0.12). It also already states the rate-axis half of "THE CROSS": *"Every route
+  that died on the rate axis … died on the axis this object already wins."*
+
+**Cause:** MAIN read task-ledger row #1318 ("endpoint adjudication owed"), which was STALE, and did
+not check `.omx/research/` for an existing r10 memo before writing. That is the failure mode
+memory `m44` names ("NEVER RECALL FROM WORKING MEMORY ALONE") and Catalog #533 (anti-duplicate-SoT)
+exists to catch — the ledger row is working memory, the corpus is the store.
+
+**Genuinely additive content, carried forward** into an addendum on the canonical memo:
+(a) rate + pose ALONE = 0.157065 > 0.12 — the object misses the target even at d_seg = 0;
+(b) the receding-target series in STEPS (85,192 → 148,536 → 190,557 cumulative under the r8/r9/r10
+laws), complementary to the canonical's wall-clock pricing.
+Everything else here restates `925760f81c`. **Cite the canonical memo, not this one.**

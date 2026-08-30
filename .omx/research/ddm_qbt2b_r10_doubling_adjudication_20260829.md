@@ -116,3 +116,35 @@ and re-ranks below any route with a shorter path to an exact row.
 
 Own-vehicle frontier UNMOVED this turn: **S 0.14811799921260607 @ 180,215 B [contest-CUDA T4 n600]**
 (gb1, archive sha `ba1f3830cd51b820d7f9b834a1dcc12e8776a0260f9da57a4e8e0944b988e3a4`).
+
+---
+
+## MAIN ADDENDUM (appended 2026-08-29T19:5xZ) — two facts from a duplicate pass, carried forward
+
+A later MAIN pass wrote a third r10 memo before checking this one exists
+(`ddm_qbt2b_r10_third_doubling_verdict_20260829.md`, `7fb4d70002`, now marked SUPERSEDED — cause:
+a stale task-ledger row read as authority instead of the corpus). ~80% of it restates this memo.
+Two facts were NOT here and are carried forward:
+
+**(A) The object misses sub-0.12 EVEN AT d_seg = 0.** Recomputing S_hat from components (#877,
+agrees to 0.00e+00): rate 0.081186850 + pose √(10·5.757456e-4) = 0.075877903 ⇒ **rate + pose alone
+= 0.157065 > 0.12**. So the distortion gap is not purely a seg problem, and the §3 "8.44× on
+distortion" understates the constraint on its pose half:
+
+| assumed seg | pose budget under 0.12 | implied d_pose ceiling | r10 over by |
+|---|---:|---:|---:|
+| seg = 0 (unreachable best) | 0.038813 | 1.506461e-04 | **3.8×** |
+| seg at the gb1/lb1 pointer's 0.020139 | 0.018674 | 3.487239e-05 | **16.5×** |
+
+Against the absolute pose-budget law (memory `m110`, d_pose ≤ 1.25e-4) the born object is
+**4.6× over budget**. The chase's remaining 2.559× on flip could never have been sufficient alone.
+
+**(B) The target RECEDES in STEP units** (complementary to §4's wall-clock pricing). Box-class flip
+0.00116, projected cumulative steps under each successive segment law:
+**85,192 (r8) → 148,536 (r9) → 190,557 (r10)**. 40,020 steps of measurement moved the target 2.2×
+further out. Both r8 and r9 projections are superseded; do not cite either as the cost to reach
+box-class.
+
+Also re-derived independently here and matching: the r10 tail-25 flip **0.002968813** from the
+10,000 raw `run.log` samples → segment exponent **−0.602178**, reproducing the STOP verdict
+(`8dfdc2b198`) to six significant figures.
