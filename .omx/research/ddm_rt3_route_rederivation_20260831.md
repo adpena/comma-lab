@@ -388,3 +388,107 @@ Receipts (retained, P0, `/Volumes/APDataStore/pact/ddm_rt3_route_rederivation/`)
 `[contest-CUDA T4 n600] own-vehicle frontier: LB1 — S=0.14803010583079396, archive=180,083 B,`
 `d_seg=0.00020139, d_pose=6.37e-6, SHA-256=5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9.`
 `This memo did not move the pointer and made no attempt to.`
+
+---
+
+## 8. APPENDED — coordinator follow-ups, and a DOWNGRADE of my own §0.4 headline
+
+APPEND-ONLY (Catalog #110/#113). §0.4 / §2-F4 / §5.3 are **not mutated**; this section supersedes
+their ranking. No new measurement was run. Where the answer is not in my loaded evidence I write
+**ABSENT** rather than reconstruct it.
+
+### 8a. THE D3 RE-OPEN IS WEAKER THAN I CLAIMED — I ranked it wrong
+
+**The provenance, stated honestly first.** I did **not** read `d3`/`d3b` at source. The −63,928 B,
+the 49,696 B stream, the 71,549 B bar, the +3.349 S Lane-carriage refusal and the +207 B factorization
+all reached me through a delegated read. My §7 already said *"carried, not re-measured."* Under your
+questions that carry does not hold up.
+
+**Receipt path + sha for the −63,928 B: ABSENT.** I never held it.
+**What "receiver-closed" was verified against: ABSENT.** I have the phrase, not the artifact.
+
+**And there is a prior problem that outranks the missing receipt.** `ddm_af1` §7 — which I *did* read
+in full — prices the same direction (`tba1`-D3, Lane folded into its dominant neighbour, 5→4 + refit)
+at a **ceiling of 38,649.8 B = 91.19% of demand**, and states flatly at §6.4 that **no implementation
+existed anywhere in the tree** on 2026-08-24. The carried realized figure is **−63,928 B**.
+
+> **A realization that exceeds its own predicted ceiling by 1.65× is not a strong re-open. It is an
+> unreconciled pair of numbers.** Either tba1's ceiling was scoped to the token stream (113,777 B)
+> while −63,928 B is a whole-archive delta including model and carrier restructure, or they are
+> different quantities wearing one label. This is the [[m99]] genus — the exact class I spent §2-F2
+> and §4 flagging in other people's rows, and I put it in my own §0 as the headline. **Downgraded.**
+
+**Separable? DERIVED: no — not as "the rate leg alone".** D3 *is* the deletion of Lane from the
+alphabet. The rate credit is not bundled with the Lane problem; **it is produced by it.** Lane is
+0.59% of area and 33.56% of model bits ([[m131]]) / 33.97% of token bits (af1 §6). An archive with
+D3's rate leg and no Lane carriage is simply an archive missing Lane, whose `d_seg` is catastrophic by
+construction. There is no object to route.
+
+**Separable in the form that matters: same deletion, different carrier.** That question is real, and
+it collapses onto a route I marked CLOSED-FIRMER — **`gf1`'s lane stream**, which carries Lane
+parametrically at **36,044 coded B (75.7% of the packet) for 318,406 mismatches (24.03% of the gap)**.
+So D3 and gf1 are **two prices for one object**: D3 pays for Lane inside the token alphabet, gf1 pays
+for it parametrically outside. Nobody has put those two prices in one table. That is the genuine
+finding here, and it is smaller than "1.51× the demand".
+
+**Smallest measurement that would put a D3-rate candidate on the pointer path.** Scorer-free, existing
+instrument, no retrain: on lb1's own retained field
+(`ddm_dc1_20260816/retained/redecoded_tokens_n600.u8`, sha `9ba2e52b…`), fold Lane into its dominant
+neighbour and run the **same `count_nonzero`** gf1 uses
+(`experiments/ddm_gf1_generator_form_on_lb1_field.py`) to price what a Lane-only carrier must restore.
+That yields Lane's carriage bar in gf1's own currency and makes the two prices comparable. **Before
+that: reconcile 38,649.8 vs 63,928.** Routing the larger number first would repeat the error I just
+made.
+
+### 8b. THE REFRAME — what survives, and who owns it
+
+**M and P: the letters are CARRIED, the mechanism is ABSENT.** I did not read
+`ddm_fb2_route_table_gb1_20260826.md` at source. "M = manufactured-seg repair" and "P = pose-to-zero"
+are a delegated gloss. **§2-F/§5.3 should be read as INFERRED, not MEASURED.** What I read myself is
+the hot state, which names route 1 = r8 burn, route 3 = rb1, route 2 = born-small **B+C** DEAD — it
+uses **B and C, not M and P**. I cannot confirm from loaded evidence that fb2's open pairs are the
+corner-2 axes. **Do not route on my letters; read fb2.**
+
+**What does NOT depend on fb2, and is mine, verified, exact:** the corner-2 arithmetic reproduces the
+pointer bit-identically (`RT3_FRONTIER_ARITHMETIC.json`) and stands whatever fb2's letters mean —
+distortion is **100.32% of the demand**; seg leg **30,245.1 B (71.8%)**, pose leg **11,986.4 B
+(28.5%)**; lb1 at zero distortion is **S = 0.1199099, sub-0.12 with 135.3 B to spare**.
+
+**Live measurable vs design.** The **pose sub-axis is live and has an existence proof**: `fcd3`
+measured `Δd_pose = −8.066e-07` — a **785 B-equivalent credit, obtained free** while doing something
+else (`RT3_FCD3_EXCHANGE_RATIO.json`). And the Q3/bo1 exact-kernel projection **holds pose exactly**,
+confirmed empirically this window (`d_pose 0.000787122 → 0.000787077`, hot-state MONITOR_TASKS). The
+**seg sub-axis is a design** — I hold no mechanism for lowering lb1's `d_seg` at constant bytes;
+`fcd3` moved it the wrong way (`+4.006e-05`).
+
+**Does the pose wall bind them? DERIVED, and the answer differs by axis.**
+
+| | the wall (`Δd_pose ≤ +1.25e-4`, n=5 overran by 10⁴) |
+|---|---|
+| **pose-to-zero** | **Does NOT bind.** The wall is a ceiling on *increase*; this axis moves *down*. The same √-steepness that makes `∂S/∂d_pose = 626.5` a wall against increase makes it a **lever** toward zero — that is why 6.37e-6 → 0 is worth 11,986 B. **This is the one family the wall does not reach**, and it is the reason it is worth naming separately from every rung the wall killed. |
+| **seg-repair** | **Binds INDIRECTLY, through coupling — and this is exactly what killed `fcd3`.** `fcd2` hit the pose gate at **26,710.49×** its band; `fcd3` repaired pose, passed, and then lost on seg (`+4.006e-05`). Any field edit that fixes seg perturbs pose through the render. The constraint is **joint**, not a ceiling on seg's own axis. |
+
+**Honest ceiling on the good news:** pose-to-zero is worth **28.5%** of the demand, not 100%. It cannot
+reach 0.12 alone. It must compose — and composition is where this campaign's measured record is worst.
+
+### 8c. Which route is better — and it is not the one I headlined
+
+> **(2) beats (1).** The corner-2 arithmetic is **mine, verified, and reproduces the pointer exactly**;
+> it depends on no carried number. D3 rests on a figure that **exceeds its own ceiling by 1.65×** with
+> no receipt in my hands, and its rate leg is **structurally inseparable** from the Lane problem — so
+> it reduces to a Lane-carrier question already sitting inside `gf1`, priced at 36,044 B / 318,406
+> mismatches.
+
+Ranked, cheapest-first, both scorer-free:
+1. **Reconcile 38,649.8 vs 63,928** (desk, $0). Until it closes, D3 is not a route.
+2. **Price Lane's carriage on lb1's field** with gf1's existing `count_nonzero` (§8a) — makes D3 and
+   gf1 one table.
+3. **Read `ddm_fb2` at source** and confirm or kill my M/P gloss before routing corner 2.
+
+**What I got wrong and am recording as mine:** I applied the [[m99]] genus rigorously to five other
+people's rows and not to my own headline, and I let a delegated number carry a §0 claim. The corrected
+ranking is above; the original §0.4 is left standing per append-only so the two are visible together
+rather than silently replaced.
+
+`[contest-CUDA T4 n600] own-vehicle frontier: LB1 — S=0.14803010583079396, archive=180,083 B,`
+`d_seg=0.00020139, d_pose=6.37e-6, SHA-256=5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9.`
