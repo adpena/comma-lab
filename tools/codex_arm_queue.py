@@ -2132,6 +2132,11 @@ Operator {date}: *"<FILL: operator verbatim, or the routed finding + its source 
   plus a fire order is the CORRECT outcome, never a failure.
 - Serializer commits w/ post-edit `--expected-content-sha256`; `.py` = 2 genuine review passes.
 - ALWAYS KEEP THE PAYLOAD; bulky receipts to `/Volumes/APDataStore/pact/{name}/`.
+- CLOSED-FORM-FIRST (operator 2026-08-31 "All upstream can be closed form"): the scoring
+  chain is frozen piecewise-analytic math with every non-analytic locus exactly known —
+  derive/solve against the EXACT upstream operators (atlas:
+  ddm_cfa1_closed_form_atlas_20260831.md) before any fit, surrogate, or sampled estimate;
+  a fitted stage owes a one-line reason the closed form was not usable.
 - <FILL: charter-specific constraints — file-ownership boundaries vs parallel arms, etc.>
 
 ## PRIOR NEGATIVE SIGNAL (bearing dead-ends this charter consumes)
