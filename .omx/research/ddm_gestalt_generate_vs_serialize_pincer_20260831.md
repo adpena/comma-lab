@@ -159,3 +159,52 @@ mismatch, NOT d_seg, so it can never be conflated downstream).
 `[contest-CUDA T4 n600] own-vehicle frontier: LB1 — S=0.14803010583079396, archive=180,083 B,`
 `d_seg=0.00020139, d_pose=6.37e-6, SHA-256=5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9;`
 `this memo did not move the pointer and made no attempt to.`
+
+---
+
+## §7 — UNITS CORRECTION (append-only; gti1 `180cbc534e`). §1's 0.0178% and §6's 63.1× are WITHDRAWN.
+
+`axis: [derived from measured bars + measured transfer]` · `score_claim: false` · `promotable: false`
+
+This memo compared **token-field mismatch percentages** against a bar that is a **d_seg** quantity,
+and used **one bar for objects of different sizes**. Both are errors; both are now measured.
+
+**(a) The bar's unit.** `0.0212%` traces to no producer (the #878 genus) but is IDENTIFIABLE: the
+`d_seg` allowance at the 137,986 B corner is **0.020140% of sites**, matching to 5.3%. A *token* bar
+at that same corner is **smaller** — 0.017403% — because the measured transfer amplifies, so the
+sign of the error is unambiguous.
+
+**(b) The bar is not a constant.** It is a function of **the object's own rate**. Restated per
+object, token-to-token — each against the allowance its own bytes buy:
+
+| object | bytes | its OWN token bar | measured | over |
+|---|---:|---:|---:|---:|
+| HG1 packet (§1, §6) | 47,603 | 0.0694% | 1.1232% | **16.2×** |
+| bz2 package (§6) | 100,865 | 0.0388% | 1.1230% | **29.0×** |
+| born-small @ cap | 122,336 | 0.0264% | 0.9619% | **36.4×** |
+
+**16.2–36.4×, not 63.1×** — the multiple IMPROVES by up to 3.3× under the generous reading. The
+29.0× row independently reproduces bz2d's own 29.0× (positive control on the method).
+
+**§1's ladder line is affected in the same direction.** "horizon+lane must reach 0.0178%" was that
+same cross-unit comparison at HG1's corner; the honest same-unit statement is horizon+lane against
+HG1's own **0.0694%** token bar. The 78.5× improvement factor is correspondingly optimistic and is
+withdrawn pending recomputation in one unit.
+
+**WHAT SURVIVES, AND IT SURVIVES BETTER.** §3's class-bar reading and §6's cross-family convergence
+are UNCHANGED in kind: two structurally unrelated families still land 0.0005 percentage points apart
+at 1.123%, and still fail their own per-object bars by **more than an order of magnitude** on the
+reading most favourable to them. §2's pincer table is byte-vs-byte and carries no unit error at all.
+
+**AND ONE NEW LAW, which is worth more than the correction.** The through-origin transfer is
+REFUTED at lb1 (`×1.157` predicts `d_seg` 0.001684%; actual 0.020139% — **12.0× wrong**). Fitting
+both measured points gives `d_seg = 1.8479e-4 + 1.14078 · token_err` — an **intercept**, i.e. a
+**round-trip floor of 0.018479%** that no token accuracy can remove. That is `td1`'s "95% of seg
+error is manufactured" expressed as a number, and it yields a hard bound:
+
+> **Above ~140,477 B, NO token accuracy whatsoever reaches sub-0.12 on this renderer.**
+
+lb1 ships at **180,083 B — above that bound.** So "lb1 is 1.305× over on bytes" is not one of two
+symmetric halves it could trade between: at its current size the accuracy half is **unreachable in
+principle**, and the byte move is the only move. The chasm memo's `[#1339]` headline stands; this
+sharpens WHY.
