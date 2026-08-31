@@ -654,6 +654,83 @@ def test_runtime_dependency_manifest_hashes_transitive_tac_imports(cae, tmp_path
     assert manifest_a["runtime_tree_sha256"] != manifest_b["runtime_tree_sha256"]
 
 
+@pytest.mark.parametrize(
+    "forbidden_reference",
+    [
+        'Path("upstream") / "models" / "segnet.safetensors"',
+        'Path("upstream") / "videos" / "0.mkv"',
+    ],
+)
+def test_runtime_dependency_manifest_refuses_decode_time_scorer_or_source_reference(
+    cae,
+    tmp_path: Path,
+    forbidden_reference: str,
+) -> None:
+    runtime = tmp_path / "submission"
+    upstream = tmp_path / "upstream"
+    runtime.mkdir()
+    upstream.mkdir()
+    inflate_sh = runtime / "inflate.sh"
+    inflate_py = runtime / "inflate.py"
+    inflate_sh.write_text("#!/bin/sh\npython inflate.py\n", encoding="utf-8")
+    inflate_py.write_text(
+        "from pathlib import Path\n"
+        f"FORBIDDEN = {forbidden_reference}\n",
+        encoding="utf-8",
+    )
+    (upstream / "evaluate.py").write_text("print('eval')\n", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="decode-time scorer/source dependency forbidden"):
+        cae._runtime_dependency_manifest(inflate_sh, upstream)
+
+
+def test_runtime_dependency_manifest_allows_encoder_side_scorer_and_source_references(
+    cae,
+    tmp_path: Path,
+) -> None:
+    runtime = tmp_path / "submission"
+    upstream = tmp_path / "upstream"
+    encoder = tmp_path / "encoder.py"
+    runtime.mkdir()
+    upstream.mkdir()
+    inflate_sh = runtime / "inflate.sh"
+    inflate_py = runtime / "inflate.py"
+    inflate_sh.write_text("#!/bin/sh\npython inflate.py\n", encoding="utf-8")
+    inflate_py.write_text("print('decode without scorers or source')\n", encoding="utf-8")
+    encoder.write_text(
+        "from pathlib import Path\n"
+        'SCORER = Path("upstream") / "models" / "segnet.safetensors"\n'
+        'SOURCE = Path("upstream") / "videos" / "0.mkv"\n',
+        encoding="utf-8",
+    )
+    (upstream / "evaluate.py").write_text("print('eval')\n", encoding="utf-8")
+
+    manifest = cae._runtime_dependency_manifest(inflate_sh, upstream)
+
+    guard = manifest["decode_runtime_forbidden_reference_guard"]
+    assert guard["passed"] is True
+    assert guard["violations"] == []
+    assert all(Path(row["path"]).name != "encoder.py" for row in guard["scanned_files"])
+
+
+def test_runtime_dependency_manifest_refuses_forbidden_binary_inside_runtime(
+    cae,
+    tmp_path: Path,
+) -> None:
+    runtime = tmp_path / "submission"
+    upstream = tmp_path / "upstream"
+    models = runtime / "models"
+    models.mkdir(parents=True)
+    upstream.mkdir()
+    inflate_sh = runtime / "inflate.sh"
+    inflate_sh.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    (models / "segnet.safetensors").write_bytes(b"forbidden scorer bytes")
+    (upstream / "evaluate.py").write_text("print('eval')\n", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="upstream_scorer_weights"):
+        cae._runtime_dependency_manifest(inflate_sh, upstream)
+
+
 def test_record_inflate_runtime_artifacts_captures_packed_payload_summary(cae, tmp_path: Path):
     extracted = tmp_path / "extracted"
     extracted.mkdir()

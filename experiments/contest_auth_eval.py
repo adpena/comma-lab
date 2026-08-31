@@ -104,6 +104,16 @@ _RUNTIME_DEPENDENCY_ROOT_DIRECTIVE_RE = re.compile(
 _INFLATE_ENV_KEY_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 _ALLOWED_INFLATE_ENV_PREFIXES = ("PACT_", "INFLATE_")
 _ALLOWED_INFLATE_ENV_KEYS = {"CUDA_VISIBLE_DEVICES"}
+_FORBIDDEN_DECODE_RUNTIME_REFERENCE_PATTERNS = {
+    "contest_source_video": re.compile(
+        r"upstream.{0,160}videos.{0,160}0\.mkv",
+        re.IGNORECASE | re.DOTALL,
+    ),
+    "upstream_scorer_weights": re.compile(
+        r"models.{0,160}\.safetensors",
+        re.IGNORECASE | re.DOTALL,
+    ),
+}
 
 
 def _repo_root() -> Path:
@@ -464,6 +474,137 @@ def _repo_local_tac_import_manifest(runtime_root: Path, repo_root: Path) -> dict
     }
 
 
+def _decode_runtime_forbidden_reference_guard(
+    runtime_root: Path,
+    external_dependency_roots: list[dict],
+    repo_local_tac: dict,
+    repo_root: Path,
+) -> dict:
+    """Refuse scorer/source dependencies reachable from ``inflate.sh``.
+
+    The strict scorer rule is about the decode-time dependency closure, not a
+    repository-wide token search.  Scan the selected ``--inflate-sh`` root,
+    every explicitly declared external runtime root, and the recursively
+    resolved repo-local ``tac`` import closure.  Encoder-side tools elsewhere
+    in the repository are deliberately outside this surface.
+
+    The patterns tolerate common source spellings such as ``Path(root) /
+    "models" / "segnet.safetensors"`` and ``os.path.join(...)``.  A textual
+    occurrence inside reachable runtime source is refused even when guarded by
+    an environment flag: shipping that branch still makes the forbidden object
+    part of the decoder program's dependency surface.
+    """
+
+    candidates: dict[Path, str] = {}
+    direct_artifact_violations: list[dict[str, str]] = []
+
+    def scan_forbidden_artifact_paths(root: Path, role: str) -> None:
+        if not root.exists():
+            return
+        for path in sorted(root.rglob("*")):
+            if not path.is_file():
+                continue
+            relative_parts = tuple(part.lower() for part in path.relative_to(root).parts)
+            if any(part in _RUNTIME_DEPENDENCY_SKIP_DIRS for part in relative_parts):
+                continue
+            full_parts = tuple(part.lower() for part in path.resolve().parts)
+            reference_kind = None
+            if path.suffix.lower() == ".safetensors" and "models" in full_parts:
+                reference_kind = "upstream_scorer_weights"
+            if len(full_parts) >= 3 and full_parts[-3:] == (
+                "upstream",
+                "videos",
+                "0.mkv",
+            ):
+                reference_kind = "contest_source_video"
+            if reference_kind is not None:
+                direct_artifact_violations.append(
+                    {
+                        "path": _repo_rel(path, repo_root),
+                        "role": role,
+                        "reference_kind": reference_kind,
+                    }
+                )
+
+    def add_manifest_files(root: Path, files: list[dict], role: str) -> None:
+        for entry in files:
+            relative = entry.get("relative_path")
+            if not isinstance(relative, str) or not relative:
+                continue
+            candidates.setdefault((root / relative).resolve(), role)
+
+    add_manifest_files(
+        runtime_root,
+        _runtime_root_file_manifest(runtime_root, repo_root),
+        "inflate_runtime_root",
+    )
+    scan_forbidden_artifact_paths(runtime_root, "inflate_runtime_root")
+    for external in external_dependency_roots:
+        raw_root = external.get("root")
+        if not isinstance(raw_root, str) or not raw_root:
+            continue
+        add_manifest_files(
+            Path(raw_root).resolve(),
+            list(external.get("files", [])),
+            "declared_external_runtime_root",
+        )
+        scan_forbidden_artifact_paths(
+            Path(raw_root).resolve(),
+            "declared_external_runtime_root",
+        )
+    for entry in repo_local_tac.get("files", []):
+        relative = entry.get("relative_path")
+        if isinstance(relative, str) and relative:
+            candidates.setdefault(
+                (repo_root / relative).resolve(),
+                "repo_local_tac_import_closure",
+            )
+
+    violations: list[dict[str, str]] = list(direct_artifact_violations)
+    scanned: list[dict[str, str]] = []
+    for path, role in sorted(candidates.items(), key=lambda item: str(item[0])):
+        try:
+            source = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            raise RuntimeError(
+                f"decode-time dependency could not be scanned: {path}: {exc}"
+            ) from exc
+        scanned.append({"path": _repo_rel(path, repo_root), "role": role})
+        for reference_kind, pattern in (
+            _FORBIDDEN_DECODE_RUNTIME_REFERENCE_PATTERNS.items()
+        ):
+            if pattern.search(source):
+                violations.append(
+                    {
+                        "path": _repo_rel(path, repo_root),
+                        "role": role,
+                        "reference_kind": reference_kind,
+                    }
+                )
+
+    receipt = {
+        "schema": "contest_auth_eval_decode_runtime_forbidden_reference_guard_v1",
+        "selection": "actual_inflate_root_plus_declared_roots_plus_recursive_tac_imports",
+        "scanned_file_count": len(scanned),
+        "scanned_files": scanned,
+        "direct_forbidden_artifact_count": len(direct_artifact_violations),
+        "forbidden_reference_kinds": sorted(
+            _FORBIDDEN_DECODE_RUNTIME_REFERENCE_PATTERNS
+        ),
+        "violations": violations,
+        "passed": not violations,
+    }
+    if violations:
+        compact = ", ".join(
+            f"{row['reference_kind']}@{row['path']}" for row in violations
+        )
+        raise RuntimeError(
+            "decode-time scorer/source dependency forbidden by strict scorer rule: "
+            + compact
+        )
+    return receipt
+
+
 def _runtime_dependency_manifest(
     inflate_sh: Path,
     upstream_dir: Path,
@@ -494,6 +635,12 @@ def _runtime_dependency_manifest(
         )
 
     repo_local_tac = _repo_local_tac_import_manifest(root, repo_root)
+    forbidden_reference_guard = _decode_runtime_forbidden_reference_guard(
+        root,
+        external_dependency_roots,
+        repo_local_tac,
+        repo_root,
+    )
     evaluate_py = (upstream_dir / "evaluate.py").resolve()
     upstream_eval = None
     if evaluate_py.exists():
@@ -582,6 +729,7 @@ def _runtime_dependency_manifest(
         "files": files,
         "external_dependency_roots": external_dependency_roots,
         "repo_local_tac_import_manifest": repo_local_tac,
+        "decode_runtime_forbidden_reference_guard": forbidden_reference_guard,
         "upstream_evaluate_py": upstream_eval,
     }
 
