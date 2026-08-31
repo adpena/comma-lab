@@ -90,11 +90,31 @@ and report what you found before you measure. Known priors you MUST reconcile ag
 If a verb's surface is already fully settled, **say so and spend the time on the ones that aren't.**
 A charter row closed by recall at $0 is a better outcome than a re-measurement.
 
+## PRIOR NEGATIVE SIGNAL (bearing dead-ends this charter consumes)
+
+Restated here under its own header because the PRE-CHECK above is binding, not advisory. Every row
+is a MEASURED closure you must reconcile against before spending a measurement:
+
+- `ddm_mz2_*` (#1060) — 38/38 semantic tensors receiver-required, **0 derive-at-decode**; exact
+  dense/sparse/row-dict/hybrid ALL +340 B. That tree-shake is DONE on the e480b/hv1 lineage.
+- `ddm_rr9_*` (#1244) — reorder is **EXACTLY 0 B** by order-invariance; architecturally fused to the
+  trained HPAC group index. Permutation-class factorizations are dead before measurement.
+- `#1200` (dx2) — addressing is **ALREADY FREE**. Flattening must look above the address layer.
+- `#1124` — section-coding axis CLOSED; the carrier "rank/refit" rung was aimed at the WRONG OBJECT.
+- `ddm_jt23_*` / `ddm_oc2_*` (#1283/#1326) — coder axis CLOSED at 0 B; decode-derived conditioning
+  DRAINED (2 B of a 2,162 B ceiling).
+- `ddm_ds1_*` (#1246) — only **30,856 B** of the archive are D-coupled AT ALL.
+- `ddm_oe1_*` (#1214) — the HPAC optimum is measured SHARP in every direction across five arms.
+- `ddm_gf1_capacity_gap_decomposition_20260831.md` §8 — the PACKET axis is SPENT; best available
+  packet reduction is **14 B**.
+
 ## OPTIMAL FORM
 
 - Family exemplar: `ddm_ar1b` — the **reference** form for this class: a decomposition with **ZERO
   REMAINDER** and every component bound to a receipt. Match that bar: your census must SUM to the
   archive, and you must say so with the arithmetic shown.
+  Provenance pin: charter custody commit `e7e330d12a` (the gestalt §8 landing, same lineage);
+  frontier archive sha `5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9`.
 - SCOPE reductions declared per row (n<600 for exploration is legal). MECHANISM reductions FORBIDDEN
   — a factorization priced with a toy coder produces no verdict.
 - **PRIOR-LAW PREDICTION (falsifiable).** The sharp-optimum law (#1214, five arms) predicts the
