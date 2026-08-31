@@ -1751,62 +1751,24 @@ def _lint_falsified_premises(text: str) -> list[str]:
     registry must never block a spawn.
     """
 
-    registries = [p for p in _falsified_premise_registries() if p.is_file()]
-    if not registries:
-        return []
-    # Normalise unicode dashes so "13-23%" and "13-23%" match one pattern.
-    haystack = text.replace("–", "-").replace("—", "-").lower()
-    warnings: list[str] = []
+    # CANONICAL matcher extracted to tools/premise_lint.py (fpr1/ea1 arc, 2026-08-31):
+    # the MEMO surface needed the same matcher (jt1 propagated a do-not-cite number
+    # through a MAIN-authored memo that crossed no lint), so ONE implementation now
+    # serves both this spawn path and the serializer's staged-memo advisory. Registry
+    # RESOLUTION stays HERE so test overrides of FALSIFIED_PREMISE_REGISTRY keep
+    # working; any failure (import included) degrades to the documented silent [].
     try:
-        rows: list[str] = []
-        for registry in registries:
-            rows.extend(registry.read_text(encoding="utf-8").splitlines())
-        for line in rows:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    row = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                patterns = row.get("claim_patterns") or []
-                if not isinstance(patterns, list):
-                    continue
-                hit = next(
-                    (
-                        p
-                        for p in patterns
-                        if isinstance(p, str)
-                        and p
-                        and p.replace("–", "-").replace("—", "-").lower() in haystack
-                    ),
-                    None,
-                )
-                if hit is None:
-                    continue
-                origin = row.get("origin")
-                if not isinstance(origin, dict):
-                    origin = {}
-                falsifications = row.get("falsifications") or []
-                measured = "; ".join(
-                    f"{Path(str(f.get('path', '?'))).name} -> {f.get('measured', '?')}"
-                    f" ({f.get('scale', '?')})"
-                    for f in falsifications
-                    if isinstance(f, dict)
-                )
-                warnings.append(
-                    f"RECALL: charter restates {hit!r} ({row.get('topic', '?')}) — FALSIFIED "
-                    f"premise. Origin {Path(str(origin.get('path', '?'))).name} "
-                    f"n={origin.get('n_pairs', '?')} authority={origin.get('authority_mode', '?')}"
-                    f", score_claim={origin.get('score_claim', '?')}. Later measurements: "
-                    f"{measured or 'see registry'}. verdict_scope="
-                    f"{row.get('verdict_scope', '?')}. Re-derive before citing."
-                )
-                if len(warnings) >= 5:
-                    break
-    except OSError:
+        import importlib.util as _ilu
+
+        _pl_path = Path(__file__).resolve().parent / "premise_lint.py"
+        _pl_spec = _ilu.spec_from_file_location("_caq_premise_lint", _pl_path)
+        _pl = _ilu.module_from_spec(_pl_spec)
+        _pl_spec.loader.exec_module(_pl)
+        return _pl.lint_text(
+            text, _falsified_premise_registries(), subject="charter"
+        )
+    except Exception:
         return []
-    return warnings
 
 
 def _lint_frontier_literals(text: str) -> list[str]:

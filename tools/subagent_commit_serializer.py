@@ -2356,6 +2356,37 @@ def main(rebind_root: bool = False) -> int:
     except Exception:
         pass
 
+    # FALSIFIED-PREMISE memo advisory (fpr1/ea1 arc, 2026-08-31): the curated
+    # registry guarded charter SPAWNS while the day's propagation vector was
+    # MAIN-authored MEMOS (jt1 restated a number its owning memo had published a
+    # do-not-cite list against, and crossed no lint — memos never touch the spawn
+    # path). This runs the SAME canonical matcher (tools/premise_lint.py) over
+    # staged .omx/research/*.md content BEFORE the commit. Advisory + fail-open:
+    # never blocks, never mutates; a correction memo quoting a wrong usage to
+    # document it will fire honestly — the warning is a re-derive prompt, not a
+    # veto.
+    try:
+        import importlib.util as _ilu_pl
+
+        _pl_path = Path(__file__).resolve().parent / "premise_lint.py"
+        _pl_spec = _ilu_pl.spec_from_file_location("_serializer_premise_lint", _pl_path)
+        _pl = _ilu_pl.module_from_spec(_pl_spec)
+        _pl_spec.loader.exec_module(_pl)
+        for _memo in files:
+            _m = str(_memo)
+            if not (_m.startswith(".omx/research/") and _m.endswith(".md")):
+                continue
+            _memo_path = REPO_ROOT / _m
+            if not _memo_path.is_file():
+                continue
+            for _warn in _pl.lint_text(
+                _memo_path.read_text(encoding="utf-8"),
+                subject=f"staged memo {_memo_path.name}",
+            ):
+                print(f"[subagent-commit-serializer] PREMISE-LINT {_warn}", file=sys.stderr)
+    except Exception:
+        pass
+
     started_iso = _now_iso()
     pid = os.getpid()
     host = socket.gethostname()
