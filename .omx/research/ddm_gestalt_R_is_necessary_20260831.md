@@ -201,6 +201,28 @@ different objective on the same block. w96b is adjacent evidence about renderer-
 it is NOT a verdict on R+C, and treating it as one would be the cross-regime transfer this campaign
 has already been bitten by ([[m143]]).
 
+> ⚠ **§9 APPEND — CORRECTION 2026-08-31, same day, by the pre-check this section mandated.**
+> APPEND-ONLY per Catalog #110/#113; the table above is preserved, not rewritten.
+> **"mechanism UNBUILT, no storage gate" is HALF WRONG on both clauses.** See
+> `.omx/research/ddm_rc_precheck_folded_never_fired_20260831.md`:
+> (1) **R+C has a gate and I recorded its absence.** `w96b`'s closure memo carries a
+> REACTIVATION CRITERION binding *every* aligned-family trained renderer: re-entry only as a
+> **pose-carrying object change** — `d_pose` within ~4× of gb1's 6.37e-6 at n≥60, or
+> `composed_delta` within +0.028 of renderer break-even; **explicitly no re-fire on seg-axis
+> improvement alone.** Pose is the axis every measured renderer move destroys (w72 303,989× /
+> #1239 686×).
+> (2) **The mechanism is unbuilt for a reason worth naming:** `fb2` line 201 FOLDED R+C's leg
+> ("one short W96 window with carrier conditioning ablated/absorbed") into W96A to avoid a
+> duplicate launch; W96A blocked, W96B re-aimed and closed a *different* configuration, and
+> R+C's own leg never ran. No carrier-ablation switch exists in the codebase (grep: 0 matches).
+> Class: **FOLDED-BUT-NEVER-FIRED**, [[m56]] one level up.
+> (3) **What survives, and it is the good half:** *nothing has ever deleted the carrier.* w72
+> left it untouched; rj2 kept and re-solved it (archive still 179,274 B). The 10,637.84 B cell
+> is genuinely empty.
+> **Routing: do NOT charter R+C.** Its cheapest bounding question — *what does `d_pose` do if
+> the 22,010 B carrier is deleted and nothing replaces it?* — is verbatim the central question
+> of `ddm_dcf1_duplicate_carry_factorization`, already in flight. Fire-trigger = dcf1's answer.
+
 ### OWED, routed
 (a) apparatus gap — `content_addressed_retention` is wired to `retained/evaluations/` but **never**
 to `stage_controllers/`, which holds the same payload kinds and ~9.2 GB;
