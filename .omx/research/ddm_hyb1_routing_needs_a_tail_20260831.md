@@ -109,6 +109,46 @@ recovers only 6.1% — the band must carry real information.
 
 Chartered as **`ddm_hzb1`** (see §6). Not measured here; named with its arithmetic and handed on.
 
+### 4a. APPENDED, same session — the spatial cell closes too, and the routing FAMILY closes with it
+
+Before chartering `ddm_hzb1` I priced it, and it does not survive. Recorded here rather than spent as
+an arm. **Append-only: §4 above stands as written; this section supersedes its "live" disposition.**
+
+The general form of any hybrid is: generator over region **A**, real tokens over region **B**. The
+byte saving scales with |A|; the accuracy requirement caps A's error contribution. lb1's whole error
+budget is **~1,722** token errors. Give the generator its two ACCURATE streams — mycar (8.47% of gap)
+and movable (0.08%) — the best spatial split available:
+
+```
+A = mycar + movable          area ≈ 26.6% (MyCar 25.4% + Movable 1.24%, canonical n600 areas)
+A's mismatches               8.55% × 1,325,033            =  113,290
+generator packet for A       95 (mycar) + 6,624 (movable) =    6,719 B
+tokens for B (73.4%)         0.734 × 113,492              =   83,303 B   ← LOWER BOUND, see below
+repair A at 0.2909 B/corr    113,290 × 0.2909             =   32,956 B
+                                                    total ≈  122,978 B
+token budget                                                  71,395 B
+                                                            **1.72× over**
+```
+
+⚠ **Honesty on the one modelled term.** `0.734 × 113,492` prices B's tokens by AREA. B holds the
+horizon and lane — the *hard* content — so a content-weighted price is **higher**, not lower. The
+1.72× is therefore a **LOWER BOUND on the overage**; the sign is safe and the verdict only hardens.
+And A's 113,290 residual errors are already **66× lb1's entire error budget** before a byte is spent.
+
+> **THE GENERAL LAW, now covering both axes.** A hybrid's saving is proportional to the generator's
+> COVERAGE; its distortion is proportional to the generator's ERROR over that coverage. `gf1` measured
+> error at **1.12324%** against lb1's **0.00146%** — a **769× gap**. Driving A's error under lb1's
+> budget forces |A| → ~0.13% of the field, at which point B costs the full token stream and the saving
+> is zero. **No partition of any kind — temporal or spatial — escapes this**, because the constraint
+> is a ratio between two measured error rates, not a property of the partition.
+
+**ROUTING FAMILY CLOSED. verdict_scope: FORMULATION** — the HG1 generator paired with the RC64 token
+stream, on lb1's field. The reactivation criterion is `gf1`'s own, unchanged: a successor generator
+formulation reaching **≤0.109%** capacity gap on lb1's field. At that error rate the ratio argument
+weakens and partitions become worth re-pricing; below it, they do not.
+
+**`ddm_hzb1` is NOT chartered.** §6's fire order is withdrawn — an arm PREVENTED, not deferred.
+
 ## 5. Denominator
 
 Cells entered: **1** (per-pair generator/token routing). Closed with mechanism: **1**. Granularities
