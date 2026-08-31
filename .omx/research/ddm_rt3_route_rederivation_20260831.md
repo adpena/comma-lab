@@ -597,3 +597,46 @@ confirmed, so fb2's pair table is directly consumable. What survives as live is 
 priced on gf1's instrument, plus the newly-legible question fb2 poses: **which of the 90 open pairs
 has both halves reachable?** — with the honest prior that R and C are byte-block ceilings whose
 "removal" has no mechanism yet, and M is the 95.9%-manufactured-seg axis.
+
+## §11 — THE PAIR TABLE READ: **R IS NECESSARY** (append-only; MAIN, $0, source read of fb2:139-165)
+
+§10 left the live question as *"which of the 90 open pairs has both halves reachable?"*. Reading
+fb2's own two-axis table answers the first cut immediately, and the answer is a single word.
+
+| pair | status | ideal S / margin | the NAMED unmeasured member |
+|---|---|---|---|
+| `R+B` | **OPEN** | **0.0954718611** | no genuinely trained smaller renderer measured on the exact born-small/GB1 object |
+| `R+M` | **OPEN** | 0.1093524664 (half-R/full-M 0.1196) | S1E evidence is n60, one-seed, MPS-advisory OFF-config — not a population closure |
+| `R+C` | **OPEN** | 0.1129166998 · **10,637.84 B margin** | **a renderer trained to absorb carrier function** (PC2 closed frozen-carrier *purchases*, not this) |
+| `R+P` | **OPEN** | 0.1195910274 · 614.20 B margin | **an admissible aligned-config W96 run with pose gate** |
+| `R+T` | CLOSED | — | JT23/JF2/LM1/D3B + RJ2 |
+| `R+D` | CLOSED | — | DC1S Family A closed, B has no priced packet |
+| `M+P` | CLOSED | 0.1219169822 — **misses by 2,878.96 B** | closed by ARITHMETIC before any mechanism |
+| `M+C` | CLOSED | 0.1152426547 ideal | MSR1 (one net pixel) + PC2 |
+| `M+T` | CLOSED | — | JF2 monotone pose death + MSR1 + JT23/LM1 |
+
+> **EVERY arithmetically-open pair contains `R`. EVERY `R`-free pair is CLOSED.**
+> The renderer block — 30,856 B, `ar1b`'s largest residue component, and per `ds1`/#1246 the *only*
+> D-coupled bytes in the archive — is a **NECESSARY** factor of every live route.
+
+That is the routing statement the campaign has been missing. It also explains today's convergence
+without appeal to any law: the accuracy half closed (§7 of the pincer + lbx1), M+P closed on pure
+arithmetic, and what remains is a **byte axis that is simultaneously the distortion-coupled one**.
+
+**Two consequences that change what fires next.**
+
+1. **`R+P`'s named unmeasured member is ALREADY BUILT.** "An admissible aligned-config W96 run with
+   pose gate" is `w96b` (#1301) — the exact expected-flip margin law with a step-zero pose gate,
+   default-off byte-identical, tests + 2 reviews landed. It is **storage-gated**, not
+   design-blocked (#1304). Margin is thin — 614.20 B — so it needs the pose gate to hold exactly,
+   which is precisely what w96b built. This is the cheapest live R-pair to settle.
+2. **`R+C` carries 17× more margin (10,637.84 B) and a mechanism nobody has built:** *a renderer
+   trained to absorb carrier function.* PC2's closure is scoped to frozen-carrier purchases and
+   does not touch it. Two blocks (30,856 + 22,010 B) collapsing into one trained object is the
+   largest-margin open pair with a nameable build.
+
+**Honest limits.** "ARITHMETICALLY-OPEN" is fb2's own careful phrase: a sub-0.12 point exists on the
+**ideal** surface and no receipt closes the named member. R-as-necessary is therefore a statement
+about the *open set*, not a promise any member is reachable — `R` itself is a perfected-axis ceiling
+(renderer bytes → 0 preserving useful cells) with no mechanism attached. And `B`'s distortion is
+separately refused (bo2, 209×), so `R+B`'s 0.0954 headline inherits that problem.
