@@ -402,6 +402,64 @@ def test_the_unconditional_scan_still_passes_a_covered_reference(
     assert "closure citation is not a file" in err
 
 
+# --- a reference to an ABSENT path is recorded, not refused ---
+
+
+def test_a_reference_to_an_absent_path_does_not_block_the_archive(
+    sr3, tmp_path, tree, monkeypatch, capsys
+):
+    """The deadlock the unconditional scan created, and its cure.
+
+    Measured 2026-08-31 on ddm_fs3: live code references FS3_REOPEN_PRICE.json, a path
+    the intact tree does not hold.  The scan refused the uncovered reference while
+    ``validate_keep_paths`` refuses a carve-out for a path that does not exist -- so the
+    tree was unarchivable in BOTH directions over bytes that are already gone.  Absent
+    bytes cannot be read, so this must proceed; reaching the closure-citation error is
+    the proof the scan did not refuse.
+    """
+    monkeypatch.setattr(sr3, "AP_ROOT", tree.parent)
+    monkeypatch.setattr(sr3, "PROTECTED_TREES", set())
+    repo = tmp_path / "repo"
+    (repo / "experiments").mkdir(parents=True)
+    (repo / "experiments" / "reader.py").write_text(
+        f'PRICE = "{tree.parent}/{tree.name}/GHOST_PRICE.json"\n', encoding="utf-8"
+    )
+    assert _run_main(sr3, monkeypatch, tree, repo) == 2
+    err = capsys.readouterr().err
+    assert "are not carved out" not in err
+    assert "closure citation is not a file" in err
+
+
+def test_the_absent_class_is_recorded_never_silently_dropped(sr3, tmp_path, tree, monkeypatch):
+    """Non-blocking must not mean invisible -- the receipt carries the row and a count."""
+    monkeypatch.setattr(sr3, "AP_ROOT", Path("/Volumes/APDataStore/pact"))
+    repo = _repo_with_reference(tmp_path / "repo", tree.name, "GHOST_PRICE.json")
+    scan = sr3.scan_live_reference_detail(repo, tree, keep_uncompressed=())
+    assert scan.violations == ()
+    assert [row["referenced_path"] for row in scan.absent] == ["GHOST_PRICE.json"]
+    assert scan.receipt()["references_absent_from_tree"] == 1
+    assert scan.receipt()["references_found"] == 1  # the denominator still counts it
+
+
+def test_an_absent_fstring_PREFIX_is_still_a_violation(sr3, tmp_path, tree, monkeypatch):
+    """RED DIRECTION: exactness is what makes the absent class safe.
+
+    A literal that stops on an f-string ``{`` slot yields a PREFIX, not the real path.
+    An absent prefix proves nothing -- the path the program actually opens may well
+    exist -- so these must keep refusing.  Drop the ``exact_read`` conjunct and this
+    test fails while the two green-direction tests still pass; that is the control.
+    """
+    monkeypatch.setattr(sr3, "AP_ROOT", Path("/Volumes/APDataStore/pact"))
+    root = tmp_path / "repo"
+    (root / "experiments").mkdir(parents=True)
+    (root / "experiments" / "reader.py").write_text(
+        f'P = f"/Volumes/APDataStore/pact/{tree.name}/ghost/{{name}}.json"\n', encoding="utf-8"
+    )
+    scan = sr3.scan_live_reference_detail(root, tree, keep_uncompressed=())
+    assert scan.absent == ()
+    assert [row["referenced_path"] for row in scan.violations] == ["ghost"]
+
+
 # --- selective removal keeps the carve-out AND its ancestors standing ---
 
 

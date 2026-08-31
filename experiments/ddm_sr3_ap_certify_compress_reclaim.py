@@ -304,6 +304,7 @@ class ReferenceScan:
     references_found: int
     covered: tuple[dict[str, str], ...]
     violations: tuple[dict[str, str], ...]
+    absent: tuple[dict[str, str], ...] = ()
 
     def receipt(self) -> dict[str, object]:
         return {
@@ -314,6 +315,7 @@ class ReferenceScan:
             "references_found": self.references_found,
             "references_covered_by_carve_out": len(self.covered),
             "references_uncovered": len(self.violations),
+            "references_absent_from_tree": len(self.absent),
             "vacuous_scan_no_reference_found": self.references_found == 0,
         }
 
@@ -378,6 +380,7 @@ def scan_live_reference_detail(
     prefix = f"{AP_ROOT}/{tree.name}/"
     covered: list[dict[str, str]] = []
     violations: list[dict[str, str]] = []
+    absent: list[dict[str, str]] = []
     files_scanned = 0
     for root_name in _REFERENCE_ROOTS:
         root = repo / root_name
@@ -432,7 +435,29 @@ def scan_live_reference_detail(
                 if not rel:
                     continue
                 row = {"source": str(path.relative_to(repo)), "referenced_path": rel}
-                if not _is_kept(rel, keep_uncompressed):
+                # A reference the scan read EXACTLY (the literal closed on its own
+                # quote and every joined character was path-legal) and that names a
+                # path the tree does not hold is not a live read: the bytes are
+                # already gone, so archiving cannot break a read that is already
+                # broken.  Record it -- never silently drop it -- and let the reclaim
+                # proceed.  Exactness is the load-bearing half: a row that stopped on
+                # an f-string `{` slot is a PREFIX, and an absent prefix says nothing
+                # about the real path, so those stay violations.  Measured 2026-08-31
+                # over the six terminal-lane trees: 1 absent row of 61 references
+                # (ddm_fs3 -> FS3_REOPEN_PRICE.json), and that one row made its tree
+                # unarchivable in BOTH directions -- the scan refused the reference
+                # while validate_keep_paths refused a carve-out for a path that does
+                # not exist.
+                exact_read = not truncated and end < len(text) and text[end] in "\"'"
+                if (
+                    not _is_kept(rel, keep_uncompressed)
+                    and exact_read
+                    and not (tree / rel).exists()
+                    and not (tree / rel).is_symlink()
+                ):
+                    row["absent_from_tree_cannot_be_a_live_read"] = "true"
+                    absent.append(row)
+                elif not _is_kept(rel, keep_uncompressed):
                     violations.append(row)
                 elif truncated:
                     # The join stopped at a character a path cannot hold (a `{}`
@@ -450,9 +475,10 @@ def scan_live_reference_detail(
                     covered.append(row)
     return ReferenceScan(
         files_scanned=files_scanned,
-        references_found=len(covered) + len(violations),
+        references_found=len(covered) + len(violations) + len(absent),
         covered=tuple(covered),
         violations=tuple(violations),
+        absent=tuple(absent),
     )
 
 
@@ -1090,6 +1116,7 @@ def main() -> int:
         live_reference_scan = {
             "reference_scan": scan.receipt(),
             "references_covered": [dict(row) for row in scan.covered],
+            "references_absent_from_tree": [dict(row) for row in scan.absent],
         }
         if args.lift_protection is not None:
             protection_lift = {
