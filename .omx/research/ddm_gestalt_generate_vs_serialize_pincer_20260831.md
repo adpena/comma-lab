@@ -69,9 +69,18 @@ prices what that route would have to achieve.
 
 ## 3. WHY THIS IS A CLASS BAR, NOT A FIT BAR
 
-gf1 §3 measured HG1's capacity gap as **target-INDEPENDENT**: 1,325,581 mismatches against GT vs
-1,325,033 against lb1's own field — **548 apart out of 117,964,800 (0.04%)**. Its 1.4% is therefore a
-property of the generator **class**, not of which field it was aimed at, and not of fit quality.
+> ⚠ **CORRECTED SAME DAY (see §6). The argument first written here was UNSOUND and is withdrawn.**
+> It read: *gf1 §3 measured HG1's capacity gap as target-INDEPENDENT — 1,325,581 mismatches against GT
+> vs 1,325,033 against lb1's own field, 548 apart out of 117,964,800 — therefore its error is a
+> property of the generator class, not of the target.* Both numbers are real. The **inference** is not:
+> `|lb1 − GT| = 1,717` positions (0.00146%), so Hamming's triangle inequality **forces**
+> `||A−lb1| − |A−GT|| ≤ 1,717` for *any* field A. Every observed spread (548 · 57 · 80 · 155–184) sits
+> inside a bound the two targets' own closeness set. **Those are not two targets; they are one target
+> measured twice.** The test could not have failed, so it carried no information — the vacuity genus
+> ([[m50]]) in a form I propagated from gf1 without checking the denominators.
+>
+> **The conclusion survives on different and better evidence** — §6's cross-family convergence.
+> gf1's own 5.09× REFUSAL is untouched: it rests on the mismatch count against the bar, not on this.
 
 Composed with §1: a successor cannot be a *better fit* of the same analytic form. It must be a
 different class whose bulk-curve error is ~0.018% — two orders below where this class sits — while
@@ -107,6 +116,45 @@ Receipts (retained, P0, all from gf1's OWN payloads — keep-the-payload is why 
 `GF1_JOINT_CEILING_LADDER.json` · `GF1_CLASS_DECOMPOSITION.json` · `GF1_HORIZON_GEOMETRY.json` ·
 `GF1_ORDER_SWEEP.json` · `GF1_MOVABLE_CEILING.json`. Every one reproduces gf1's 1,325,033 as a
 control before measuring anything.
+
+---
+
+## 6. THE OWED MEASUREMENT, RUN — and it converges
+
+§5 asked for same-kind token-field mismatch across families. The payloads were already retained, so it
+cost 27 s. Same `count_nonzero`, same two targets, all n600:
+
+| field | construction | vs lb1 field | vs DALI GT |
+|---|---|---:|---:|
+| HG1 (gf1) | analytic four-stream fit | 1,325,033 (**1.123%**) | 1,324,976 (1.123%) |
+| bz2 full package | trained born-small, packaged parse-back | 1,324,866 (**1.123%**) | 1,324,687 (1.123%) |
+| bs3 body (direct decode) | trained born-small, re-solved carrier | 1,333,267 (1.130%) | 1,333,187 (1.130%) |
+| bs3 body (archive parse-back) | ″ (byte-identical to the above) | 1,333,267 (1.130%) | 1,333,187 (1.130%) |
+| bz2 spatial-holdout fit | trained born-small, held-out spatially | 1,361,937 (1.155%) | 1,361,782 (1.154%) |
+| bz2 pair-holdout fit | trained born-small, held-out by pair | 1,445,816 (1.226%) | 1,445,645 (1.225%) |
+| bz2d comp argmax | composition on the lb1 body | 1,532,441 (**1.299%**) | 1,532,257 (1.299%) |
+
+**Two structurally unrelated construction families — a hand-built analytic four-stream generator and a
+trained born-small body — land 0.0005 percentage points apart (1.1232% vs 1.1237%).** Across all seven
+fields the spread is **1.16×**, min 1.123% / max 1.299%. The bulk-curve tolerance the byte budget
+demands is **0.0178%**; the best object measured is **63.1×** away.
+
+That is the class-bar evidence §3 needed and did not have. It is *earned*: the families differ in
+construction, in training, and in holdout regime — nothing forces them to agree, and they do.
+
+**What it means, stated at its own scope:** the bottleneck is not generator engineering. Two families
+that share no machinery converge to the same accuracy level while the sub-0.12 byte budget demands two
+orders better, and explicit serialization of the shortfall costs 2.224× the same allowance (§2). A
+successor is not "a better generator" — it must be an object whose *distortion* is structurally lower,
+which is where #1267's "mechanism → OBJECT" turn already pointed.
+
+**Honest limits.** Seven fields, two families — not a theorem, and the bz2 variants are lineage
+siblings rather than independent draws. gf1's frontier stays open. And the two targets remain 1,717
+positions apart, so the vs-lb1/vs-GT columns still carry no independent information; they are printed
+for completeness, not as evidence.
+
+Receipt: `…/GF1_FAMILY_CAPACITY_CROSSCHECK.json` (records the quantity explicitly as token-field
+mismatch, NOT d_seg, so it can never be conflated downstream).
 
 `[contest-CUDA T4 n600] own-vehicle frontier: LB1 — S=0.14803010583079396, archive=180,083 B,`
 `d_seg=0.00020139, d_pose=6.37e-6, SHA-256=5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9;`
