@@ -69,9 +69,95 @@ _MANAGED = (
     "set via --set-section NAME (--content-file F | stdin) -->"
 )
 
+#: Per-section staleness sidecar (ea1 arc, 2026-08-31): LIVE_PROCESSES sat 4 days past its
+#: consumption undetected because the manifest carries ONE file-level `_updated` — any write
+#: to any section refreshed the global stamp while sibling sections rotted silently. The
+#: sidecar records each section's OWN last-write time; thresholds are derived from each
+#: section's natural cadence (live process/arm/monitor state churns daily; the pointer and
+#: boundary charters at pointer-move cadence; receipts and operator decisions persist).
+_SECTION_TIMES_PATH = _REPO / ".omx" / "state" / ".main_hot_state.section_times.json"
+_STALE_DAYS: dict[str, float] = {
+    "pointer_line": 3.0,
+    "live_processes": 1.0,
+    "live_arms": 1.0,
+    "open_operator_decisions": 7.0,
+    "monitor_tasks": 1.0,
+    "next_boundaries": 2.0,
+    "freshest_receipts": 7.0,
+}
+
 
 def _now_iso() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
+
+
+def _load_section_times() -> dict[str, str]:
+    """Read the per-section timestamp sidecar (empty dict if absent/corrupt). Fail-open."""
+    try:
+        data = json.loads(_SECTION_TIMES_PATH.read_text(encoding="utf-8"))
+        return {k: v for k, v in data.items() if k in SECTIONS and isinstance(v, str)}
+    except Exception:
+        return {}
+
+
+def _save_section_times(times: dict[str, str]) -> None:
+    """Atomic write of the sidecar (callers hold the manifest lock). Fail-open."""
+    try:
+        tmp = _SECTION_TIMES_PATH.with_name(_SECTION_TIMES_PATH.name + f".tmp.{os.getpid()}")
+        tmp.write_text(json.dumps(times, indent=2, sort_keys=True), encoding="utf-8")
+        os.replace(tmp, _SECTION_TIMES_PATH)
+    except Exception:
+        pass
+
+
+def _age_days(stamp_iso: str) -> float | None:
+    try:
+        stamp = datetime.fromisoformat(stamp_iso)
+        return (datetime.now(UTC) - stamp).total_seconds() / 86400.0
+    except Exception:
+        return None
+
+
+def staleness_rows() -> list[dict]:
+    """One row per typed section: {section, age_days|None, threshold_days, stale|None}.
+
+    ``stale`` is None for a section never stamped since the sidecar landed — age unknown,
+    honestly reported as such rather than assumed fresh (it gets a stamp on its next write).
+    """
+    times = _load_section_times()
+    rows: list[dict] = []
+    for name in SECTIONS:
+        threshold = _STALE_DAYS.get(name, 7.0)
+        stamp = times.get(name)
+        age = _age_days(stamp) if stamp else None
+        rows.append(
+            {
+                "section": name,
+                "age_days": round(age, 2) if age is not None else None,
+                "threshold_days": threshold,
+                "stale": (age > threshold) if age is not None else None,
+            }
+        )
+    return rows
+
+
+def _staleness_banner() -> str:
+    """One-line banner naming stale/unstamped sections ('' when all fresh). Fail-open."""
+    try:
+        stale = [
+            f"{r['section']}({r['age_days']}d>{r['threshold_days']}d)"
+            for r in staleness_rows()
+            if r["stale"]
+        ]
+        unstamped = [r["section"] for r in staleness_rows() if r["stale"] is None]
+        parts: list[str] = []
+        if stale:
+            parts.append("STALE: " + ", ".join(stale))
+        if unstamped:
+            parts.append("unstamped (age unknown): " + ", ".join(unstamped))
+        return " · ".join(parts)
+    except Exception:
+        return ""
 
 
 def _header(name: str) -> str:
@@ -103,7 +189,11 @@ def parse_manifest(text: str) -> dict[str, str]:
 
 def render_manifest(sections: dict[str, str], *, updated: str | None = None) -> str:
     """Render the full manifest markdown from a section map (missing sections seeded)."""
-    parts: list[str] = [_TITLE, _MANAGED, f"_updated: {updated or _now_iso()}_", ""]
+    parts: list[str] = [_TITLE, _MANAGED, f"_updated: {updated or _now_iso()}_"]
+    banner = _staleness_banner()
+    if banner:
+        parts.append(f"_staleness: {banner}_")
+    parts.append("")
     for name, purpose in SECTIONS.items():
         parts.append(_header(name))
         body = (sections.get(name) or "").strip()
@@ -175,7 +265,13 @@ def set_section(name: str, content: str) -> None:
         raise ValueError(
             f"unknown section {name!r} — typed sections are: {', '.join(SECTIONS)}"
         )
-    _locked_read_modify_write(lambda sections: sections.__setitem__(key, content.strip()))
+    def _mutate(sections: dict[str, str]) -> None:
+        sections[key] = content.strip()
+        times = _load_section_times()
+        times[key] = _now_iso()
+        _save_section_times(times)
+
+    _locked_read_modify_write(_mutate)
 
 
 def seed_if_absent(force: bool = False) -> bool:
@@ -216,6 +312,9 @@ def digest_block(max_lines: int = 40, max_line_chars: int | None = None) -> str:
                 for ln in head
             ]
         out = ["[main-hot-state] MAIN retained-reasoning manifest (tools/main_hot_state.py):"]
+        live_banner = _staleness_banner()
+        if "STALE:" in live_banner:
+            out.append(f"  ⚠ section staleness — {live_banner}")
         out.extend(head)
         if len(lines) > max_lines:
             out.append(f"  ... (+{len(lines) - max_lines} more lines; read the file)")
@@ -237,6 +336,11 @@ def main(argv: list[str] | None = None) -> int:
         metavar="F",
         help="file with the new section content (else read stdin)",
     )
+    ap.add_argument(
+        "--staleness",
+        action="store_true",
+        help="per-section age vs cadence threshold; rc=1 when any section is stale",
+    )
     ap.add_argument("--seed", action="store_true", help="write the initial manifest if absent")
     ap.add_argument(
         "--force-seed",
@@ -244,6 +348,20 @@ def main(argv: list[str] | None = None) -> int:
         help="re-seed empty sections even when the manifest exists",
     )
     args = ap.parse_args(argv)
+
+    if args.staleness:
+        rows = staleness_rows()
+        any_stale = False
+        for r in rows:
+            if r["stale"]:
+                mark, any_stale = "STALE", True
+            elif r["stale"] is None:
+                mark = "unstamped"
+            else:
+                mark = "fresh"
+            age = f"{r['age_days']}d" if r["age_days"] is not None else "?"
+            print(f"[main-hot-state] {r['section']:24s} {age:>8s} / {r['threshold_days']}d  {mark}")
+        return 1 if any_stale else 0
 
     if args.seed or args.force_seed:
         wrote = seed_if_absent(force=args.force_seed)
