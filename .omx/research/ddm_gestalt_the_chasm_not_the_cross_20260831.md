@@ -74,11 +74,34 @@ escape route now has a measured shape instead of a hope, and the shape is a conv
   insensitive to it: at 2× either way the byte-half objects are still 22–91× outside.
 - rd2's curve is the **born-small + correction-residual composite**, one family. It does not bound
   representations that are not "small body + coded corrections."
-- lb1's token error (0.0176%) was measured on the matched PYAV instrument; the cross-family counts in
-  §1 came from this window's `count_nonzero` against the retained field. Both are token-field
-  mismatch — same kind — but they are not the same instrument, and I have not cross-validated them
-  against each other. That is the one join worth checking before anyone leans hard on the 45× figure.
+- **§4a below: I checked that join immediately and it FIRED.** The two instruments disagree 12.1×.
 - Nothing here is a score. No pointer movement was attempted.
+
+## 4a. THE INSTRUMENT JOIN FIRED — 12.1×, two instruments, one label
+
+I flagged the lb1-error instrument join as "the one thing worth checking." I checked it in the same
+window and it disagrees:
+
+| "lb1's token error" | mismatches | % of field | slack under the 0.0212% bar |
+|---|---:|---:|---:|
+| vs DALI GT (MEASURED here, `count_nonzero`) | 1,717 | **0.00146%** | **93.1%** |
+| PYAV instrument (carried in hot-state) | 20,762 | **0.01760%** | **17.0%** |
+
+**12.1× apart, both labelled the same thing.** This is the [[m99]] / #1260 genus — a retained number
+does not carry its own reading semantics — and the known cause is the GT-lineage fork (#1142: DALI on
+the CUDA axis, PyAV/`frame_utils` on CPU).
+
+**What it does NOT change:** the families sit at 1.123–1.299%, i.e. **53–61× the bar**. A 12.1×
+instrument shift cannot close a 53× gap in either direction, so §1's box arithmetic and the 45–53×
+headline survive whichever instrument is authoritative.
+
+**What it DOES change, and it is not small:** lb1's *accuracy slack* is **93.1% or 17.0% depending on
+the instrument — a 5.5× swing.** Every calculation that trades lb1 accuracy for bytes inherits that
+factor. The frontier is scored on **contest-CUDA**, whose GT decode is **DALI**, which suggests the
+0.00146% row is the axis-matched one and lb1 has 5.5× more slack than the campaign has assumed — but
+I have not traced the 0.0176% figure to its producing instrument, so I am NAMING this, not resolving
+it. **Owed:** identify what generated 0.0176%, then re-derive any slack-dependent quantity on the
+axis-matched GT. The tolerance ladder (#1255/#1257, best 33.7× over) is the first consumer to re-check.
 
 `[contest-CUDA T4 n600] own-vehicle frontier: LB1 — S=0.14803010583079396, archive=180,083 B,`
 `d_seg=0.00020139, d_pose=6.37e-6, SHA-256=5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9.`
