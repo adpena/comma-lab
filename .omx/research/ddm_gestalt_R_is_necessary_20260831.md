@@ -132,3 +132,79 @@ with both SSD tiers full there is nowhere to move *to* inside the sanctioned tie
 `[contest-CUDA T4 n600] own-vehicle frontier: LB1 — S=0.14803010583079396, archive=180,083 B,`
 `d_seg=0.00020139, d_pose=6.37e-6, SHA-256=5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9;`
 `UNMOVED — this memo is synthesis and made no attempt to move it.`
+
+---
+
+## §8 — **§5 AND §6 ARE REFUTED BY `ddm_w96s` (`3b70840354`). `R+P` IS CLOSED, AND THE ASK WAS ALREADY WITHDRAWN.**
+
+`axis: [MEASURED 2026-08-27, two seeds]` · `score_claim: false` · `promotable: false`
+
+**1. `R+P`'s "named unmeasured member" IS MEASURED.** `w96b` fired **2026-08-27**, ran BOTH seeds,
+and **CLOSED the family**: seed 20260815 at **1.186×**, seed 20260816 at **1.5796×** — both inside
+the `<2×` closure zone against a `≥5×` gate. Memo
+`ddm_w96b_seed20260816_aligned_verdict_and_family_closure_20260827.md`. §5's "BUILT — storage-gated,
+not design-blocked" and §6's entire premise are **WRONG**. The aligned-loss W96 hypothesis is not
+waiting on disk; it ran and lost.
+
+**2. THE ASK WAS WITHDRAWN BEFORE I MADE IT.**
+`ddm_rb1_pose_arithmetic_closure_and_storage_no_consumer_20260831.md` (**today, 01:43**) killed all
+three legs: *"the AP reclaim has no live consumer… No operator storage decision is owed."* That is
+**task #1335, in my own ledger, marked completed.** I escalated a withdrawn ask to the operator
+because I recalled from working memory instead of consulting the store — the [[m44]] law, and
+[[a_reopen_must_check_whether_the_successor_already_fired]] firing for the second time in three days.
+The arm notes the structural cure: the successor-check lived in my mandate's PROSE, not at the SPAWN
+SITE — [[m122]] (recall is apparatus, not volition) applies and is owed.
+
+**3. The reconciliation, settled at source.** `22,319,071,232 B` = **recorded FREE bytes** at w96a's
+08-26 preflight. `45,521,567,744 B` = projected two-seed demand (`36,931,633,152`) + exactly 8 GiB
+reserve. My §6 role-inversion correction was right in direction. The retention measurement the
+charter demanded **did run** (`tac_content_addressed_cohort_inventory.v1`, 35 trees) — NOT a #878 case.
+
+**4. My prediction confirmed 134× beyond its own bound.** Realized tree **29,662,904,320 B**;
+verdict-critical **37,198,539 B** — **797×**. Traced at source: `s1a_off_floor_adjudicator.py` opens
+only `epoch_*_n60.json` and `STAGE_CONTROLLER_RESULT.json`; it never touches the 4.6 GB/seed of
+`quantization_race`/`gradient_chunks`. Checkpoints are 1.06 MB each. The falsifier did not fire.
+
+**5. My 60 GB supply-side hope does NOT survive — and my own warning is the reason it died.** I
+flagged that a superseded ARM does not imply superseded ARTIFACTS; that is exactly what the census
+found. **Zero of the 60 GB is certified-rebuildable scratch.** `wd2` = **KEEP_CITED** (the LIVE
+successor `wd3` consumes four paths inside it, all verified present, including a **1,831,204,800 B**
+teacher camera cache; 116 SSD-path citations; the wd4-warm-start counter-hypothesis was checked and
+rejected). `w96a` = **KEEP_CITED 37.2 MB + MOVE_ONLY 29.63 GB** — sole-copy materialized payload,
+rebuild is 4 h of Metal, one subtree already carries another arm's RETENTION_CERT; the arm declined
+to certify delete and recorded `cold_dest: ABSENT` rather than invent one. **Correct refusal.**
+
+**6. CAUSAL INVERSION worth more than the reclaim.** AP hit 100% **because w96b ran** — SR3 freed
+32.75 GiB → trigger green → 29.66 GB consumed. **Disk pressure was a LAGGING INDICATOR of work
+completing, not a blocker standing in front of it.** I read a symptom as a cause.
+
+**NEW SUPPLY the arm surfaced:** SR3 *protected* w96a on 08-26 precisely because w96b was about to
+fire into it. **That reason expired at closure** — w96a now meets SR3's own "terminal, superseded
+owner" test. That is a real, earned change of state, not an inference from arm status.
+
+### CONSEQUENCE FOR §4–§5 (the part that still stands, and the part that moves)
+
+§4's **"R is NECESSARY"** is UNAFFECTED — it is a statement about which pairs are open, and `R+P`
+closing REMOVES an R-pair without adding a non-R one. The R-pair table is now:
+
+| pair | ideal S | margin | state after w96s |
+|---|---:|---:|---|
+| `R+B` | 0.0954718611 | largest | OPEN — but `B`'s distortion REFUSED 209× (bo2) |
+| `R+M` | 0.1093524664 | — | OPEN — S1E's counter-evidence is n60/one-seed/MPS; a RE-MEASUREMENT |
+| `R+C` | 0.1129166998 | **10,637.84 B** | **OPEN — largest margin, mechanism UNBUILT, no storage gate** |
+| ~~`R+P`~~ | ~~0.1195910274~~ | ~~614.20 B~~ | **CLOSED 2026-08-27, two seeds, <2× vs a ≥5× gate** |
+
+**`R+C` is now the head**: *a renderer trained to absorb carrier function* (30,856 + 22,010 B
+collapsing into one trained object). **Adjacency caveat, stated so it is not silently transferred:**
+w96b closed **width distillation under an aligned loss**. `R+C` is **carrier absorption** — a
+different objective on the same block. w96b is adjacent evidence about renderer-training capacity;
+it is NOT a verdict on R+C, and treating it as one would be the cross-regime transfer this campaign
+has already been bitten by ([[m143]]).
+
+### OWED, routed
+(a) apparatus gap — `content_addressed_retention` is wired to `retained/evaluations/` but **never**
+to `stage_controllers/`, which holds the same payload kinds and ~9.2 GB;
+(b) [[m122]] cure — move the successor-already-fired check to the SPAWN SITE, where recall is
+apparatus rather than something I have to remember.
+Denominator: 11 components enumerated, 11 measured, 5 sub-quantities ABSENT (the full 256-tree `du`
+died rc=144 on ExFAT; the arm used my relay census rather than re-deriving — correct).
