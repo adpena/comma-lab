@@ -6,6 +6,7 @@
 
 | timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |
 |---|---|---|---|---|---|---|---|
+| 2026-08-31T21:21:16Z | MAIN | ddm_afr1_tile48_groupbin8_cuda_n600_20260831 | modal | modal:ddm_afr1_tile48_groupbin8_cuda_n600_20260831 |  | completed_contest_cuda_exact_eval_harvested | harvested exact contest-CUDA authority; call fc-01M1C2ZZQEQWNE0FT06R3WZJCS rc=0; archive_sha256=cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25; runtime_tree_sha256=6cdfa27dd1e9b46fc2bbbe88774c78d95ed3605fee7a15ba3861f96e24041e58; S=0.14797617125559104 from components |
 | 2026-08-28T20:06:44Z | MAIN | ddm_qbt2b_r7_metal_20260828 | local_metal | counter695_pid36502 |  | completed_r7_constrained_margin_endpoint_adjudicated | counter 695 exit 0 elapsed 12586s peak 2305MiB; Metal slot FREE |
 | 2026-08-28T20:06:43Z | MAIN | ddm_qbt2b_r7_scorer_20260828 | local_metal | counter695_pid36502 |  | completed_r7_constrained_margin_endpoint_adjudicated | counter 695 exit 0; falsifier NOT fired; verdict memo ddm_qbt2b_r7_constrained_margin_verdict_20260828 |
 | 2026-08-28T16:27:50Z | claude_main | ddm_qbt2b_r7_scorer_20260828 | local_metal | qbt2b_r7_frozen_scorer_verdicts |  | eval | r7 frozen-scorer verdict lane (realized werr through render->R->uint8->SegNet), child of the r7 metal lane |
