@@ -556,3 +556,44 @@ of the demand** — and now, 100% of the reason D3's real credit cannot be spent
 on gf1's instrument — is upgraded to the live head of this line, and is adjacent to (not
 duplicated by) the live `ddm_hzs1_horizon_shape` arm: gf1 §1's ladder needs horizon **and** lane
 perfect to clear at k=2, so hzs1 owns one half and this owns the other. Fire after hzs1 lands.
+
+## §10 — fb2 READ AT SOURCE BY MAIN (append-only; confirms §8's gloss, CORRECTS its ranking)
+
+`axis: [source read]` · `score_claim: false` · `promotable: false` · $0, one file read.
+Source: `ddm_fb2_route_table_gb1_20260826.md:102-110` (gb1 body, 180,215 B — 132 B from lb1, so it transfers).
+
+§8 said its M/P letters were INFERRED and told MAIN not to route on them until fb2 was read at
+source. Read. **The gloss is CORRECT** — but the table it comes from inverts §8's emphasis.
+
+| isolated PERFECTED axis | bytes | S | miss to 0.12 | rank |
+|---|---:|---:|---:|:--:|
+| **R** renderer removed | 149,359 | 0.1275722554 | **+0.0075722554** | **best** |
+| **M** all measured manufactured errors repaired | 180,215 | 0.1298982102 | +0.0098982102 | 2nd |
+| **C** carrier removed | 158,205 | 0.1334624437 | +0.0134624437 | 3rd |
+| **P** pose set to zero | 180,215 | 0.1401367712 | **+0.0201367712** | **worst** |
+| T current-body token change | ≥180,215 | ≥0.1481179992 | ≥+0.0281179992 | closed (JT23/JF2/LM1/D3B) |
+| B born-small whole object | repr-dependent | repr-dependent | changed-object escape | — |
+| D decode-time compute | no positive credit | unchanged or larger | no clearing row | closed/blocked |
+
+**THE CORRECTION TO TODAY'S FRAMING.** §8 elevated pose-to-zero because `∂S/∂d_pose = 626.5` is a
+ceiling on *increase* and therefore a lever downward. That mechanism claim stands. But fb2 measures
+**pose-to-zero as the WEAKEST of the four separable axes** — miss +0.0201, 2.66× worse than R's
++0.0076. The wall not binding pose makes it **reachable**, not **best**. Both statements are true
+and they were being conflated: *reachability ≠ magnitude.* §8's own honest ceiling (pose = 28.5% of
+the demand) already said this; the table makes it a ranking.
+
+**R+M+C are the byte-side axes** (R −30,856 B = exactly ar1b's renderer block; C −22,010 B = exactly
+its carrier block — the same decomposition, independently reached). **P is the only pure-distortion
+axis and it is last.**
+
+**The two-axis arithmetic that follows immediately** (mine, from fb2's own rows, DERIVED not
+measured): R+P = 149,359 B → rate 0.0994367 + seg 0.020139 + pose 0 = **0.1195757 < 0.12.** A pair
+that clears — which is exactly why fb2's own §"Complete two-axis table" enumerates 120 subsets with
+90 open, and why "the route table is EMPTY" was never true. These are PERFECTED-axis ceilings, not
+achievable moves; the pair clearing on paper is the start of a route question, not a route.
+
+**Routing:** §8's ranked (a) is CLOSED by §9. (c) is CLOSED by this section — the letters are
+confirmed, so fb2's pair table is directly consumable. What survives as live is (b), Lane's carriage
+priced on gf1's instrument, plus the newly-legible question fb2 poses: **which of the 90 open pairs
+has both halves reachable?** — with the honest prior that R and C are byte-block ceilings whose
+"removal" has no mechanism yet, and M is the 95.9%-manufactured-seg axis.
