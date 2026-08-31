@@ -169,3 +169,71 @@ precision/recall dial — a real (non-oracle) point on this curve costs one re-f
 is now known to be 3.523×.
 
 Receipt: `…/GF1_MOVABLE_CEILING.json` (control: shipped reproduces 1,325,033 before any variant).
+
+---
+
+## 8. APPENDED — a CORRECTION of my own arithmetic, and the law it exposed
+
+### 8a. What I got wrong, twice, the same way
+
+Chasing the ladder's binding constraint I noticed HG1 misses **112,159 MyCar** positions on a class
+CLAUDE.md records as measured-static (temporal IoU 0.994, the #139 static core), and tested whether a
+single static majority mask could replace the stream. Two errors followed, both **raw-vs-coded**:
+
+1. I compared the mask's **coded** 81 B to the mycar stream's **raw** 24,589 B and called it a
+   "303.6× mispricing." The mycar stream's **coded** size in the actual packet is **95 B** — brotli
+   had already found the static structure. The real swap is worth **14 B**, not 24,508.
+2. I then subtracted raw-stream "savings" from the **compressed** 47,603 B packet and printed a
+   **negative packet**. The four raw streams are 228,946 B; the packet is their coded sum plus 304 B
+   of framing. Different denominators — [[m99]] (units × level × aggregation are part of the claim)
+   and [[m90]] (the floor you divide by decides the answer), both live, both mine.
+
+Neither error survived its own output: a negative packet is impossible on its face, and the packet's
+row table settles it. Recorded because the *genus* is what generalises, not the instance.
+
+### 8b. What is TRUE and was worth finding
+
+**HG1's mycar render IS a static majority mask — byte-identically.** Rendering `horizon → lane →
+movable`, then painting `(tgt==MyCar).mean(axis=0) >= 0.5` in mycar's slot, reproduces HG1's full
+output **sha-identical** (`4026c4e2c805beb5` both). Its 24,589 raw bytes are an encoding of one
+384×512 bitmask, which the coder already prices at 95 B. The static-class structure is real; the
+generator was never paying for it.
+
+### 8c. The per-stream CODED decomposition — nobody had this
+
+The packet is `header 8 + 4×row 74 + Σ coded`, framing **304 B**. From the packet's own rows:
+
+| stream | CODED B | % of packet | % of gap | coding its realized output costs | parametric form is |
+|---|---:|---:|---:|---:|---:|
+| lane | 36,044 | **75.7%** | 24.03% | 141,588 B | 3.93× better |
+| movable | 6,624 | 13.9% | 0.08% | 12,845 B | 1.94× better |
+| **horizon** | **4,536** | **9.5%** | **67.43%** | 169,960 B | **37.47× better** |
+| mycar | 95 | 0.2% | 8.47% | 107 B | 1.13× better |
+
+The §1 inversion survives translation into the currency that actually pays: **lane holds 75.7% of the
+packet for 24% of the failure; horizon holds 9.5% for 67%.** And the generator as a whole codes its
+own output field 6.82× cheaper than coding it directly (47,603 vs 324,500 B).
+
+### 8d. The law, and what it does to the frontier
+
+> **The parametric generator beats direct field coding on EVERY stream — 1.13× to 37.47× — and by far
+> the most on the stream carrying the most failure.** The packet is not mispriced. There is no free
+> rate win inside it.
+
+That is decisive for gf1's bar `packet_B + 0.2909 × mismatches < 85,020`:
+
+```
+budget headroom above the packet   37,417 B  =  128,624 mismatches allowed
+mismatches present              1,325,033     ->  10.30x over
+best available packet reduction        14 B   (the mask swap; 0.03% of the headroom)
+```
+
+**The packet axis is spent; the entire 10.30× must come from mismatches.** gf1's frontier is a pure
+DISTORTION problem, not a rate-and-distortion trade — which composes exactly with §4's ladder and
+with the pincer memo's §2: generation must reach ~0.018% on the bulk curves, and the explicit
+alternative costs 2.224× the same allowance.
+
+Receipt: `…/GF1_STATIC_MYCAR.json` + `…/GF1_STREAM_PRICING.json` (both reproduce 1,325,033 first;
+the stream-pricing receipt records the raw-vs-coded error in its own `packet_after` field, left
+uncorrected in the JSON and corrected here, so the artifact and its adjudication disagree visibly
+rather than silently).
