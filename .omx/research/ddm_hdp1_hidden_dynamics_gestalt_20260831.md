@@ -124,8 +124,11 @@ now so the landing triggers them (na11's lesson, [[a_reopen_must_check_whether_t
 3. **rr9 (#1244)** "reorder architecturally fused to the model" — closed on tokens×HPAC as one
    object; a class-split stream is a new coder object; the reorder-iff-no-context-model law
    ([[reordering-pays-iff-the-coder-has-no-context-model]]) gets a fresh instance.
-4. **hc1's 97.80% one-binary-question** + the ~2,009 B model-axis remainder ([[m144]]) — the
-   stream composition changes when Lane exits; the mixer context (jt22 family) re-prices.
+4. **hc1's 97.80% one-binary-question** + the model-axis remainder — the stream composition
+   changes when Lane exits; the mixer context (jt22 family) re-prices.
+   ⚠ CORRECTION (same-day, ddm_nu1 §1): "~2,009 B" as originally written here was 9.6×-stale —
+   recall5 had already corrected the free seam to **≤211.13 B** (= mi1's held-out context, ONE
+   object). The stale figure came from the m144 INDEX row, now also fixed.
 5. **Second-order model release (OPEN QUESTION, not a claim):** m131 says Lane holds 33.56% of
    HPAC model bits — a carrier that removes Lane contexts may shrink the MODEL beyond the
    21,699 B carrier bar. Not counted in lc3's race arithmetic; measure at the boundary, never
