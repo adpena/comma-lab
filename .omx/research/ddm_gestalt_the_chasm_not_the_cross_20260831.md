@@ -103,5 +103,47 @@ I have not traced the 0.0176% figure to its producing instrument, so I am NAMING
 it. **Owed:** identify what generated 0.0176%, then re-derive any slack-dependent quantity on the
 axis-matched GT. The tolerance ladder (#1255/#1257, best 33.7× over) is the first consumer to re-check.
 
+## 4b. RESOLUTION OF §4a — APPEND-ONLY, 2026-08-31, by `ddm_gti1`
+
+§4a above is preserved verbatim; nothing in it is rewritten. This block records what the owed
+measurement found. Full write-up: `.omx/research/ddm_gti1_gt_instrument_resolution_20260831.md`.
+Receipt: `/Volumes/APDataStore/pact/ddm_gti1_gt_instrument/GTI1_GT_INSTRUMENT_TRIPLE.json`.
+
+**Both figures were real; the reading was missing.** All three pairwise counts, same n600 field,
+both positive controls PASS, five-cell partition sums exactly:
+
+| pair | mismatches | % of field |
+|---|---:|---:|
+| lb1 vs **DALI** GT | 1,717 | 0.0014555% |
+| lb1 vs **PyAV** GT | **20,764** | **0.0176019%** |
+| DALI GT vs PyAV GT | 20,673 | 0.0175247% |
+
+The carried 0.0176% reproduces to three significant figures — the back-solved 20,762 was within 2 of
+the true 20,764. It has **no producing receipt anywhere in the corpus**, and `main_hot_state.md` is
+untracked, so it is the record-censored genus (#878), not a fabrication.
+
+**DALI is axis-correct, confirmed at source.** `upstream/evaluate.py:31-42`: `device.type == "cuda"`
+→ `DaliVideoDataset`, `else` → `AVVideoDataset`; line 58 builds `ds_gt` from it. The frontier is
+contest-CUDA. No CLAUDE.md conflict — `frame_utils.py:201` shows `AVVideoDataset` uses the canonical
+`yuv420_to_rgb`, not the forbidden `rgb24`.
+
+**The structural finding §4a could not see.** Agreement partition: all-equal 117,943,223 ·
+`lb1==DALI, PyAV differs` **19,860** · `lb1==PyAV, DALI differs` 813 · `DALI==PyAV, lb1 differs`
+**904** · all-three-distinct **0**. So **95.65% of lb1's PyAV error is a property of the GT PAIR**,
+and lb1's lineage-invariant error — both GTs agree, lb1 still wrong — is **904 = 0.000766%**.
+
+**Corrections to §4a.** (1) lb1's slack is **93.1%** (96.4% lineage-invariant), not 17.0%; §4a's
+5.5× arithmetic was correct, only the attribution needed fixing. (2) §4a routed the re-check to the
+tolerance ladder (#1255/#1257); **that routing was misdirected** — `ddm_tv2` declares
+`verdict_scope: the dx2 object` (archive `976f706d…`, 180,368 B, not lb1) and self-declares PyAV
+lineage. It is not a consumer of lb1's slack. (3) The **0.0212% bar is now the only untraced number
+in §1's box**, with a named units risk: `ddm_td1` measured 1,717 token errors coexisting with
+34,930.6 scored flips, so token error and `d_seg` are not proportional, and 0.0212% is close to the
+sub-0.12 `d_seg` allowance expressed as a percentage of sites (0.0201399%). Flagged, not closed.
+
+**§1, §2 and §3 are UNCHANGED, and now for a measured reason.** `ddm_tv2` priced this trade on this
+token stream: moving 100,000 tokens releases **87.8 B**. The whole slack is worth ~20 B against the
+42,097 B demand. The 5.5× is a correctness fix, not a byte route. THE CROSS stands.
+
 `[contest-CUDA T4 n600] own-vehicle frontier: LB1 — S=0.14803010583079396, archive=180,083 B,`
 `d_seg=0.00020139, d_pose=6.37e-6, SHA-256=5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9.`
