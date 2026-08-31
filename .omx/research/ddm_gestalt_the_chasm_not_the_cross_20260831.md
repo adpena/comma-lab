@@ -1,0 +1,84 @@
+# THE CHASM, NOT THE CROSS — every object is byte-feasible-and-45×-inaccurate, except one that is accurate and 1.305× over
+
+`axis: [byte-exact real coders + macOS-CPU scorer-free exact count]` · `score_claim: false` · `promotable: false`
+`verdict_scope: RE-READS existing measured artifacts (rd2's phase-A byte curve + this window's`
+`cross-family counts) onto ONE plane. Opens nothing, closes nothing, escalates nothing. The`
+`contribution is that the campaign's remaining problem is now stated as a single ratio.`
+Date: 2026-08-31 · Owner: MAIN · Consumers: THE CROSS · #1267 · #1332 (xo1) · #1247/#1262 · [[m144]]
+
+## STORES CONSULTED
+
+`ddm_rd2_hg1_rate_distortion_curve/retained/rd2_phaseA_byte_curve.json` (READ AT SOURCE — 33 rows,
+full-set to 100% corrections, real coders, its own 4 controls green incl. `coder_race_reproduces_
+shipped_359280` and `base_flip_count_matches_bo2_40981`) · this window's
+`GF1_FAMILY_CAPACITY_CROSSCHECK.json` · hot-state POINTER_LINE (the 0.0212% bar, provenance noted
+in §4) · the pincer memo (same day).
+
+## 1. ONE PLANE, FIVE OBJECTS, ONE BOX
+
+Sub-0.12 requires **bytes ≤ 137,986** AND token error ≤ **~0.0212%**. Every object we have measured:
+
+| object | bytes | byte half | token error | accuracy half |
+|---|---:|:---:|---:|:---:|
+| HG1 analytic packet (gf1) | 47,603 | IN | 1.1232% | **OUT (53×)** |
+| born-small @ the cap (rd2 best-ordering) | 122,336 | IN | 0.9619% | **OUT (45×)** |
+| *the sub-0.12 box corner* | *137,986* | — | *0.0212%* | — |
+| **lb1 SHIPPED POINTER** | **180,083** | **OUT (1.305×)** | **0.0176%** | **IN** |
+| born-small @ zero error (rd2, measured) | 460,652 | OUT (3.34×) | 0.0000% | IN |
+
+**Zero of rd2's 11 frontier points are inside both halves.** Seven are inside the byte half — best
+accuracy there 0.9619%, **45.4× the bar**. Exactly one is inside the accuracy half — cheapest there
+460,652 B, **3.34× the cap**.
+
+> **lb1 is the ONLY object inside the accuracy half, and it misses the byte half by 42,097 B — 1.305×.**
+> Everything else is comfortably inside the byte half and 45–53× outside the accuracy half.
+
+## 2. WHY "THE CROSS" IS THE WRONG PICTURE
+
+The standing read is *born holds RATE, lb1 holds DISTORTION; cross them and you land sub-0.12*, with
+`{byte-feasible} ∩ {distortion-feasible}` measured EMPTY at n=4–5 sampled points. The rd2 curve
+replaces those points with a **continuum**, and the emptiness turns out not to be a sampling accident:
+
+```
+marginal bits/correction along the measured curve
+  0.220  ->  0.422  ->  0.626  ->  0.830  ->  0.831  ->  0.984
+        ->  1.187  ->  1.756  ->  2.240  ->  3.639            = 16.5x rise
+```
+
+The cheap corrections are the ones that buy almost no accuracy; the corrections that reach the bar
+cost **3.639 bits each**. Born-small's rate advantage is therefore **not a half of the answer that
+composition can pair with lb1's other half** — it exists *only* at accuracy levels 45× too coarse,
+and buying the accuracy back costs 3.34× the cap. Two populations separated by a convex wall is a
+**chasm**, not a cross: there is no meeting point to compose toward.
+
+Same-object cross-check: born-small reaching **lb1's own accuracy** costs ~451,000 B (interpolated
+between rd2's measured 308,840 B @ 0.2829% and 460,652 B @ 0.0000%) — **2.5× more than lb1 pays for
+the same accuracy.** Where the two families can be compared at all, lb1 wins by 2.5×.
+
+## 3. WHAT THAT MAKES THE REMAINING PROBLEM
+
+**1.305× on one object.** Not "find a different object" — every different object measured is *worse
+where it counts*, and the pincer memo (same day) showed the analytic-generator family converges at
+1.12% across two unrelated constructions while the budget demands 0.018%.
+
+This sharpens what a successor must be. Not *cheaper* — born-small is already 1.47× cheaper than lb1
+and it does not help. It must be **cheaper at lb1's accuracy**, and rd2 prices that requirement for
+the one alternative family we can price: 460,652 B, i.e. 2.56× worse than lb1 at better accuracy.
+
+The 42,097 B demand on lb1 stands exactly where it was; what changed is that the *alternative-object*
+escape route now has a measured shape instead of a hope, and the shape is a convex wall.
+
+## 4. HONEST LIMITS
+
+- The **0.0212% accuracy bar** is carried from hot-state, not re-derived here. The conclusion is
+  insensitive to it: at 2× either way the byte-half objects are still 22–91× outside.
+- rd2's curve is the **born-small + correction-residual composite**, one family. It does not bound
+  representations that are not "small body + coded corrections."
+- lb1's token error (0.0176%) was measured on the matched PYAV instrument; the cross-family counts in
+  §1 came from this window's `count_nonzero` against the retained field. Both are token-field
+  mismatch — same kind — but they are not the same instrument, and I have not cross-validated them
+  against each other. That is the one join worth checking before anyone leans hard on the 45× figure.
+- Nothing here is a score. No pointer movement was attempted.
+
+`[contest-CUDA T4 n600] own-vehicle frontier: LB1 — S=0.14803010583079396, archive=180,083 B,`
+`d_seg=0.00020139, d_pose=6.37e-6, SHA-256=5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9.`
