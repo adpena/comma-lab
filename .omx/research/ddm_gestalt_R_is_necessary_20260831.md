@@ -89,8 +89,22 @@ gate that holds exactly — the thing w96b built.
 ```
 /Volumes/APDataStore     7.5 GiB free   100% capacity
 /Volumes/VertigoDataTier 8.3 GiB free   100% capacity
-w96b two-seed retention demand (post-dedup, measured on the real OFF trees):  22.32 GB
 ```
+
+⚠ **ROLE-INVERSION CORRECTED same-turn (MAIN, before propagation).** The line originally
+published here read *"w96b two-seed retention demand (post-dedup, measured on the real OFF trees):
+22.32 GB."* **That is wrong and it is the third instance of this genus today.** `#1298`'s own text
+is *"storage (45.52 GB two-seed retention vs AP 22.32 GB free)"* — **45.52 GB is the DEMAND and
+22.32 GB was the FREE SPACE at the time.** I read a two-number phrase and assigned the wrong role
+to each, exactly the [[m99]] units×level×role class that fired twice on me earlier today.
+
+**The corrected arithmetic makes the ask LARGER, not smaller:** demand **45.52 GB** (w96a's
+two-seed figure; the post-dedup remeasure `w96b` was chartered to run is of UNVERIFIED status)
+against **7.5 GiB** free — a shortfall near **38 GB**, not ~15 GB. The `>22.32 GB` figure in
+w96b's charter was a FALSIFIER THRESHOLD set at the then-free space, not a measured demand.
+
+`ddm_w96s` (spawned this turn) is auditing the demand itself before the operator ask stands —
+its first task is this reconciliation, and the ask is re-stated only on its verdict.
 
 Both tiers are **at capacity and worse than when the gate was filed** (#1304, #1314, #1165). The
 storage waterfall is Vertigo → APDataStore → local, and **local disk is a destination only by
