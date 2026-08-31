@@ -103,3 +103,37 @@ formulation with ≤0.109% capacity gap on lb1's field at a comparable packet.
 `[contest-CUDA T4 n600] own-vehicle frontier: LB1 — S=0.14803010583079396, archive=180,083 B,`
 `d_seg=0.00020139, d_pose=6.37e-6, SHA-256=5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9;`
 `this memo did not move the pointer and made no attempt to.`
+
+---
+
+## 6. APPENDED — the ZERO-BYTE composite-order DOF is EXHAUSTED (all 24 swept)
+
+`render_generators` (hg1:401-404) hardcodes `horizon → lane → movable → mycar`. The order is a
+constant in receiver CODE — generic algorithm, rule-118 FREE, **0 archive bytes** — and it had never
+been swept. Movable's 482× over-paint lands *third*, on top of streams that were already correct,
+which made re-ordering look like a free win.
+
+**It is not.** All 24 permutations re-rendered from gf1's own retained streams and counted against
+the same target. Positive control first: the shipped order reproduces **1,325,033 exactly**, so the
+harness is measuring the same object gf1 did.
+
+| rank | order | mismatches | vs shipped | ratio/bar |
+|---:|---|---:|---:|---:|
+| **1** | **road>lane>mova>myca** | **1,325,033** | **+0** | 5.094× ← SHIPPED |
+| 2 | road>lane>myca>mova | 1,326,410 | +1,377 | 5.098× |
+| 3 | road>mova>lane>myca | 1,330,499 | +5,466 | 5.112× |
+| 4 | road>myca>lane>mova | 1,399,663 | +74,630 | 5.349× |
+| 5 | road>mova>myca>lane | 1,403,752 | +78,719 | 5.363× |
+| 6 | road>myca>mova>lane | 1,405,129 | +80,096 | 5.368× |
+
+**The shipped order is already optimal**, and every alternative is worse. Mechanism: painting Movable
+earlier does suppress its over-spray, but lane/mycar then paint over Movable's *correct* pixels —
+Movable's 99.92% recall is the thing the current order protects. The 497,126 false paints are not
+recoverable by ordering; they are the price of that recall.
+
+**This is a THIRD granularity for the sharp-optimum law** ([[#1214]], [[#1212]]): the HPAC model+field
+optimum is sharp in every direction on the live body; the generator's composite order is sharp too.
+Two different objects, same signature. Receipt: `…/GF1_ORDER_SWEEP.json` (all 24 rows retained).
+
+`verdict_scope: INSTANCE` — the HG1 four-stream composite on lb1's field. A different stream set
+would need its own sweep; the sweep costs 28 s.
