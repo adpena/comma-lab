@@ -146,4 +146,68 @@ spawning a fifth arm against a cell whose gate I had recorded as absent and whos
 already in flight — after two premise failures earlier the same day. The gestalt's "R+C is the
 head" survives; "no gate" does not.
 
+## 8. THE FIRE-TRIGGER RESOLVED — same day, by `dcf1` (commit `9263a9c1e0`)
+
+§5 said R+C's fire-trigger was dcf1's duplicate-carry answer. **dcf1 landed rc=0 and answered it.**
+
+**The answer is CARRIER-CARRIES-SOMETHING-REAL, and it splits R+C cleanly in two.**
+
+dcf1 enumerated all 15 unordered pairs of LB1's six stored quantities and mapped every one of the
+180,083 physical bytes to a receiver read. On the renderer × carrier pair:
+
+> The carrier does **not** encode pose information that makes the semantic renderer disposable, and
+> the semantic renderer does not make the carrier disposable. … Exact derivability is **NO** in both
+> directions; any renderer/carrier collapse is a **changed-representation, joint-descent hypothesis,
+> not a lossless tree-shake.**
+
+The receiver uses the carrier to build **frame 0** and the semantic state + tokens to build **frame
+1**; PoseNet scores the pair. C × T is **COMPLEMENTARY, not duplicate** — the only non-NONE cell in
+the whole table. Tree-shake: **0 inert bytes** in the 22,010 B carrier stream. My charter's
+≥1,000 B prediction is **FALSIFIED in scope**; dcf1's one lossless find is **14 B** (the RX1 header
+is derivable from three Brotli end markers — research-only, the shipped receiver still needs
+`RX1M`), which closes **0.033%** of the demand.
+
+### The control I had not recalled, and it is the sharpest number here
+
+> The strongest same-object control is **BZ2D**: its body retained the semantic stream
+> `39d1be52ba629334…` and carrier stream `932b979f5181b331…` **byte-identically to LB1**, yet
+> changing the token/generator field made pose about **1,603.5× worse.**
+
+That is not adjacent evidence. It is **LB1's own two streams, held byte-identical, with the
+generator field moved** — and moving the generator field is *exactly* what a renderer-absorbs-carrier
+change must do. So R+C's surviving half now faces three independent constraints:
+
+| constraint | source | what it demands of R+C |
+|---|---|---|
+| exact derivability NO both ways | `dcf1`, this day | it must be a CHANGED representation — deletion is not available |
+| pose within ~4× of 6.37e-6 | `w96b` REACTIVATION CRITERION (§2) | a 4×-tight pose bar, no seg-only re-entry |
+| **1,603.5× pose damage** | **`BZ2D`, same body, streams byte-identical** | the required move is measured, on this body, to miss that bar by ~400× |
+
+Plus §4's five S1 interface blockers, on a body the pointer has since left.
+
+**VERDICT: R+C is CLOSED in its lossless reading (dcf1, exact, zero-remainder census) and BOUNDED to
+the point of non-viability in its joint reading** (a 4×-tight pose gate against a same-body 1,603.5×
+measurement of the move it requires). It closes on MEASUREMENT, not on the arithmetic §5 offered.
+Charter it only if some future arm moves the generator field WITHOUT paying BZ2D's pose cost — and
+that is a different finding, not this route.
+
+### What this does and does NOT say about the route table
+
+`bd1` closed B+D and declared the fb2 route table **EMPTY**; `rt3` (#1342) **corrected** that as
+premature — emptiness was never measured. With R+C now closed, fb2's minimal open set
+`{R+M, R+P, R+C, R+B, M+B, P+B, C+B, B+D}` stands as: R+M closed (`mst1`/`msr1`) · R+P closed
+(`w96b`) · **R+C closed (this section)** · B+D closed (`bd1`). **bd1's conclusion is now much better
+supported than bd1's argument was** — but for reasons bd1 did not have.
+
+⚠ **I am NOT declaring the table empty, and rt3's correction is why.** The four remaining pairs —
+`R+B`, `M+B`, `P+B`, `C+B` — all contain **B (born-small)**, and B is closed *as a standalone body*
+(`bo2`, 209× on distortion), **not as a pairing**. Whether pairing B's 36,858 B byte-margin with a
+perfected distortion axis changes B's distortion is a question **nobody has measured**. The nearest
+evidence is the CROSS/CHASM result (0 of 11 R-D points inside both halves, #1339) — a point-set
+emptiness, which is strong but is not the pairing measurement. Naming that gap is the honest exit;
+asserting emptiness from it would be the elimination-is-not-proof error again.
+
+**Routing:** the four B-pairs are the named residue, owner MAIN, unmeasured. `afc1` (address-free
+census) is live and adjacent — its class is exactly the representation-change B belongs to.
+
 `[contest-CUDA T4 n600] own-vehicle frontier: LB1 — S=0.14803010583079396, archive=180,083 B, d_seg=0.00020139, d_pose=6.37e-6, SHA-256=5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9.`
