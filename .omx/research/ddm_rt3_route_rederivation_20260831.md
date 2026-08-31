@@ -492,3 +492,67 @@ rather than silently replaced.
 
 `[contest-CUDA T4 n600] own-vehicle frontier: LB1 — S=0.14803010583079396, archive=180,083 B,`
 `d_seg=0.00020139, d_pose=6.37e-6, SHA-256=5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9.`
+
+---
+
+## §9 — THE D3 RECONCILE, RUN AT SOURCE BY MAIN (append-only; corrects §0.4 AND §8)
+
+`axis: [source read of retained arm receipts]` · `score_claim: false` · `promotable: false`
+Date: 2026-08-31 · Owner: MAIN · $0, no measurement — two file reads.
+
+§8 asked for 38,649.8 vs 63,928 to be reconciled at the desk before D3 is routed. Done. **Both
+of this memo's readings of D3 were wrong, and the ORIGINAL "alphabet merge closed" label was
+CORRECT.**
+
+### The two numbers are different quantities — the ceiling cannot arbitrate
+
+| figure | what it actually is | source |
+|---|---|---|
+| **63,928 B** | *"Gross archive saving **before carriage**"* — d3's own words | `arm_final_messages/ddm_d3_alphabet_merge_20260826T142008Z.md:4` |
+| **38,649.8 B** | a tba1-**derived CEILING**, labelled `seg-only, derived` · **`not placeable`** · **`unmeasured`** | `ddm_af1_address_free_class_law_20260824.md:229` |
+
+A measured gross-before-carriage credit and a derived, not-placeable, unmeasured seg-only
+ceiling are not the same quantity, so "exceeds its own ceiling 1.65×" is not a valid
+comparison — [[m99]] one level up, in the reconcile §8 proposed. Worse for the ceiling side:
+that exact row carries the **21.62×** multiplier which task #1264 already measured to be a
+**PHANTOM**. It cannot arbitrate anything.
+
+### D3 did not go unfired — it FIRED and LOST, on its own measured row
+
+d3 reports the whole chain, not just the gross:
+
+```
+true four-symbol stream        49,696 B   vs GB1's 113,624 B
+gross saving before carriage   63,928 B
+receiver proof                 117,964,800 symbols byte-identical   <- REAL
+selected carrier block_s3_t3   52,531 B
+ACTUAL composed archive       168,826 B
+full n600 [macOS-CPU advisory; DALI-GT pinned]
+    d_seg 0.006373087565104167 · d_pose 0.7545628308192127 · S 3.496653766972336
+route-triage delta vs GB1     +3.34853576775973
+```
+
+**D3 was composed, measured, and refused by +3.35 S.** Nothing was mislabeled; the closure was
+honest. §0.4's "strongest re-open" and §8's "unreconciled pair" are both withdrawn.
+
+### What actually survives, and it is the campaign's known object
+
+The four-symbol stream (49,696 B, receiver-proven byte-identical) is real. What kills it is the
+**carrier**: `block_s3_t3` costs 52,531 B and destroys both scorers. §8's structural point stands
+and is the binding one — D3 *is* the deletion of Lane, so the credit is produced by the Lane
+problem. The live question is therefore **not** "route D3" but:
+
+> **Is there a Lane carrier cheaper than block_s3_t3's 52,531 B whose mismatches are affordable?**
+
+Two priced answers exist and neither clears: `block_s3_t3` 52,531 B → S +3.35; gf1's lane stream
+36,044 coded B → 318,406 mismatches (24.03% of gf1's gap), which is gf1's own refusal. Arithmetic
+if the second were free: 63,928 − 36,044 = **27,884 B net = 66.2% of the 42,097 B demand** — real
+if and only if those mismatches are affordable, and they measurably are not.
+
+This is [[m131]] restated from the rate side: **Lane is 0.59% of area, 33.56% of model bits, 90.1%
+of the demand** — and now, 100% of the reason D3's real credit cannot be spent.
+
+**Consequence for routing:** rt3's ranked (a) is CLOSED by this read. (b) — price Lane's carriage
+on gf1's instrument — is upgraded to the live head of this line, and is adjacent to (not
+duplicated by) the live `ddm_hzs1_horizon_shape` arm: gf1 §1's ladder needs horizon **and** lane
+perfect to clear at k=2, so hzs1 owns one half and this owns the other. Fire after hzs1 lands.
