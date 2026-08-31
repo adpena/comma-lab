@@ -137,3 +137,35 @@ Two different objects, same signature. Receipt: `…/GF1_ORDER_SWEEP.json` (all 
 
 `verdict_scope: INSTANCE` — the HG1 four-stream composite on lb1's field. A different stream set
 would need its own sweep; the sweep costs 28 s.
+
+## 7. APPENDED — the MOVABLE-PRECISION ceiling, and a correction to §1's own table
+
+§3 flagged that §1's per-stream table credits each mismatch to the stream owning the TRUE class,
+which **under-credits Movable**: its 497,126 false paints appear as *other* classes' misses. Followed
+through with an ORACLE bound — render without movable, then paint Movable only where it truly is
+(unachievable by construction, which is what makes it a *bar*):
+
+| variant | mismatches | vs shipped | total | vs bar |
+|---|---:|---:|---:|---:|
+| SHIPPED | 1,325,033 | +0 | 433,055 B | 5.094× |
+| movable stream REMOVED | 2,325,302 | **+1,000,269** | 724,033 B | 8.52× |
+| **movable ORACLE-GATED** | **866,015** | **−459,018** | 299,527 B | **3.523×** |
+
+**Movable precision is the single largest addressable sub-mass in the generator: 34.64% of the gap.**
+It beats horizon-perfection (2.04× is a *different* accounting — that table's "if perfect" credits
+only the stream's own misses; this one credits the collateral it stops causing). And removing the
+stream costs a MILLION mismatches, so the over-spray is genuinely the price of its 99.92% recall —
+consistent with the §6 order sweep, which found the shipped order protects exactly that recall.
+
+**But the ceiling does not clear the bar: 3.523×.** Even a Movable generator with perfect precision
+at unchanged recall leaves the family 3.5× short. Combined with §2 (horizon is SHAPE, per-frame shift
+worth 6.1%) and §6 (ordering exhausted), the measured picture is: the largest lever is bounded at
+34.64%, the second is bounded at 6.1% of 67.43%, and the composite order is already optimal.
+
+Successor implication, stated as a bar not a plan: any analytic-generator successor must find
+~10.3× overall; the two largest single directions are now measured and jointly insufficient. The
+`minimum_component_area=10` / `tracking_gate_px=60` fit parameters are the cheapest untested
+precision/recall dial — a real (non-oracle) point on this curve costs one re-fit, and its ceiling
+is now known to be 3.523×.
+
+Receipt: `…/GF1_MOVABLE_CEILING.json` (control: shipped reproduces 1,325,033 before any variant).
