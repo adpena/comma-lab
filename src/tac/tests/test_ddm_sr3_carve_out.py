@@ -339,6 +339,69 @@ def test_reference_scan_method_states_its_own_bounds(sr3):
     assert "RESOLVED" in method
 
 
+# --- the scan is unconditional: an UNDECLARED tree is scanned too ---
+
+
+def _run_main(sr3, monkeypatch, tree, repo, keeps=()):
+    """Drive main() far enough to reach (or pass) the reference scan."""
+    argv = [
+        "sr3",
+        "--tree",
+        str(tree),
+        "--repo",
+        str(repo),
+        "--closure-citation",
+        "does/not/exist.md",  # checked AFTER the scan, so it marks how far we got
+        "--closure-note",
+        "a substantive closure note for the test",
+    ]
+    for keep in keeps:
+        argv += ["--keep-uncompressed", keep]
+    monkeypatch.setattr(sr3.sys, "argv", argv)
+    return sr3.main()
+
+
+def test_unprotected_tree_with_a_live_read_is_refused(sr3, tmp_path, tree, monkeypatch, capsys):
+    """RED DIRECTION: protection is a DECLARATION, not what makes a tree readable.
+
+    Before the cure the scan ran only inside the ``--lift-protection`` branch, so a
+    tree nobody had declared was archived and its originals removed with no live-read
+    check at all.  Measured over the six un-archived terminal-lane trees -- none of
+    them protected -- 61 live references, every tree non-zero.  The refusal must fire
+    without any declaration.
+    """
+    monkeypatch.setattr(sr3, "AP_ROOT", tree.parent)
+    monkeypatch.setattr(sr3, "PROTECTED_TREES", set())  # explicitly NOT protected
+    repo = tmp_path / "repo"
+    (repo / "experiments").mkdir(parents=True)
+    (repo / "experiments" / "reader.py").write_text(
+        f'BODY = "{tree.parent}/{tree.name}/retained/body/BODY.bin"\n', encoding="utf-8"
+    )
+    assert _run_main(sr3, monkeypatch, tree, repo) == 2
+    assert "are not carved out" in capsys.readouterr().err
+
+
+def test_the_unconditional_scan_still_passes_a_covered_reference(
+    sr3, tmp_path, tree, monkeypatch, capsys
+):
+    """The cure must not become a blanket refusal: a carved-out read still proceeds.
+
+    Reaching the closure-citation error (the NEXT check after the scan) is the proof
+    the scan did not refuse -- a gate that refuses everything protects nothing.
+    """
+    monkeypatch.setattr(sr3, "AP_ROOT", tree.parent)
+    monkeypatch.setattr(sr3, "PROTECTED_TREES", set())
+    repo = tmp_path / "repo"
+    (repo / "experiments").mkdir(parents=True)
+    (repo / "experiments" / "reader.py").write_text(
+        f'BODY = "{tree.parent}/{tree.name}/retained/body/BODY.bin"\n', encoding="utf-8"
+    )
+    assert _run_main(sr3, monkeypatch, tree, repo, keeps=("retained/body",)) == 2
+    err = capsys.readouterr().err
+    assert "are not carved out" not in err
+    assert "closure citation is not a file" in err
+
+
 # --- selective removal keeps the carve-out AND its ancestors standing ---
 
 

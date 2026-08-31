@@ -1071,19 +1071,30 @@ def main() -> int:
                 raise CertifyError(
                     "--lift-protection requires at least one --keep-uncompressed carve-out"
                 )
-            scan = scan_live_reference_detail(repo, tree, keep_uncompressed)
-            if scan.violations:
-                shown = [
-                    f"{row['source']} -> {row['referenced_path']}" for row in scan.violations[:10]
-                ]
-                raise CertifyError(
-                    f"{len(scan.violations)} live reference(s) into {tree.name} "
-                    f"are not carved out: {shown}"
-                )
+        # The scan runs on EVERY tree, protected or not.  Protection marks a store we
+        # already KNOW is live; it is not what makes a tree readable, and the tree
+        # nobody declared is exactly where an unchecked "nothing reads this" hides.
+        # Measured 2026-08-31 over the six un-archived terminal-lane trees, none of
+        # them protected: 61 live references, every tree non-zero.  Gating the scan on
+        # a declaration would have archived and removed all six unchecked.
+        scan = scan_live_reference_detail(repo, tree, keep_uncompressed)
+        if scan.violations:
+            shown = [
+                f"{row['source']} -> {row['referenced_path']}" for row in scan.violations[:10]
+            ]
+            raise CertifyError(
+                f"{len(scan.violations)} live reference(s) into {tree.name} are not "
+                f"carved out (add --keep-uncompressed for each path live code reads, "
+                f"or leave the tree alone): {shown}"
+            )
+        live_reference_scan = {
+            "reference_scan": scan.receipt(),
+            "references_covered": [dict(row) for row in scan.covered],
+        }
+        if args.lift_protection is not None:
             protection_lift = {
                 "rationale": args.lift_protection.strip(),
-                "reference_scan": scan.receipt(),
-                "references_covered": [dict(row) for row in scan.covered],
+                **live_reference_scan,
             }
             progress(f"PROTECTION LIFTED for {tree} around {list(keep_uncompressed)}")
         closure_path = Path(args.closure_citation)
@@ -1163,6 +1174,7 @@ def main() -> int:
             "tree": str(tree),
             "closure_citation": closure_record,
             "keep_uncompressed": keep_records,
+            "live_reference_scan": live_reference_scan,
             "protection_lift": protection_lift,
             "fleet_receipt": fleet_receipt,
             "source_allocated_bytes": allocated_before,
