@@ -74,6 +74,12 @@ step of the proven-unique design" — and predicts (PREDICTION, falsifier = lc3'
 carrier wins not by cleverness but because parametric form is the representation the Lane class's
 concentration demands (§4), the same way bz2d measured generator FORM 2.178× cheaper on a
 bit-identical field ([[generator-form-is-2x-cheaper-than-model-plus-coded-tokens]]).
+⚠ PREDICTION OUTCOME (same-day, lc3 harvest): **REFUTED.** The falsifier fired — cheapest exact
+carrier 137,670 B = 6.34× the bar; GF1's parametric form carries an inseparable 1.12% fit error
+whose exactness costs 385,448 B (form-and-fit ONE object, #1334 confirmed at the carrier scale);
+the BZ2D 2.178× ratio measured NON-transferable to a foreign exact target. The archetype's
+parametric-Lane layer survives only as the GATED generator hypothesis (floor <36,044 B), not as
+a proven design. §5's lc3 clause (bit-identity made the transfer question vacuous) HELD.
 
 ## 4. ONE CONCENTRATION LAW AT FIVE GRANULARITIES — the score's information geometry is atomic, not diffuse
 
