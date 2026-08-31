@@ -145,5 +145,70 @@ sub-0.12 `d_seg` allowance expressed as a percentage of sites (0.0201399%). Flag
 token stream: moving 100,000 tokens releases **87.8 B**. The whole slack is worth ~20 B against the
 42,097 B demand. The 5.5× is a correctness fix, not a byte route. THE CROSS stands.
 
+## 4c. THE BAR IS CROSS-UNIT — APPEND-ONLY, 2026-08-31, by `ddm_gti1`
+
+§1, §4a and §4b are preserved verbatim. **The headline HELD. The multiples did not, and neither did
+§4b's slack figure — which was mine.** Answer first, then the derivation.
+
+**(1) Trace.** `0.0212%` has **no producing receipt**. It appears only in hot-state and this memo; the
+single corpus hit (`ddm_ds1`) is an unrelated quantity — the ΔS a seed floor cannot resolve. Same #878
+genus as 0.0176%. But unlike that one it is **identifiable**: the `d_seg` allowance at this memo's own
+137,986 B corner is **0.020140% of sites**, and 0.0212% is that number to within 5.3%. **It is a
+`d_seg` bar.** A *token* bar at the same corner would be **smaller** (0.0174%), because the measured
+transfer amplifies. So token-field percentages have been divided by a `d_seg` denominator all day.
+
+**(2) The bar, derived, in both units.**
+
+- **At lb1's own 180,083 B there is no bar at all.** Holding lb1's pose, the seg allowance is
+  **−0.007891 S — negative**. The total distortion budget at those bytes is `0.12 − 0.1199099 =`
+  **0.0000901 S**, and lb1's **pose term alone (0.007981) is 88.6× that budget**. Sub-0.12 is
+  unreachable at lb1's byte count at any accuracy, seg or token.
+- **At the 137,986 B corner:** `d_seg` allowance **0.020140%**; token bar **0.017403%** under bz2d's
+  through-origin `/1.157`; token bar **0.001456% = 1,718 sites** under the affine law below.
+
+**Reconciliation with bz2d's ~99.96% (0.0388–0.0457% token).** They are not reconcilable as one
+number and never were: bz2d computed at **bz2's own ~100,865 B** (allowance 0.04486% `d_seg` →
+0.0388% token). **The bar is a function of the object's own rate, not a constant.** A single accuracy
+bar applied across objects of different size is the second error in §1's box.
+
+**The through-origin transfer is REFUTED at lb1's operating point.** `×1.157` predicts lb1's `d_seg`
+at 0.001684%; it is **0.020139% — 12.0× wrong**. Fitting both measured points gives
+`d_seg = 1.8479e-4 + 1.14078 · token_err`, i.e. a **round-trip floor of 0.018479%** at zero token
+error. That is `ddm_td1`'s *"~95% is round-trip loss our labels did not cause"* as a number, and it
+yields a hard bound: **above ~140,477 B, no token accuracy whatsoever reaches sub-0.12 on this
+renderer.** (Two-point fit across two bodies — [[m143]] applies; treat the floor as a level, the
+structure as sound.)
+
+**(3) The box, re-stated per object** — each judged against the allowance **its own rate buys**
+(bz2d's method), token-to-token:
+
+| object | bytes | its own token bar | measured token error | over |
+|---|---:|---:|---:|---:|
+| HG1 analytic packet | 47,603 | 0.0694% | 1.1232% | **16.2×** |
+| bz2 full package | 100,865 | 0.0388% | 1.1230% | **29.0×** |
+| born-small @ the cap | 122,336 | 0.0264% | 0.9619% | **36.4×** |
+
+**16–36×, not 45–61×** — the multiple improves by up to 3.3×. My 29.0× reproduces bz2d's own 29.0×
+exactly, which is the positive control on the method. Note the per-object bar is the **generous**
+direction, and the families still fail by more than an order of magnitude.
+
+**§4b's slack figure is WITHDRAWN — it was mine and it was cross-unit.** Like-for-like: lb1's `d_seg`
+0.020139% against the 0.020140% allowance is **~0.005% slack**; token-to-token it is **0**. The
+accuracy half is definitionally satisfied by lb1 with **zero margin**, because 137,986 B was derived
+by holding lb1's distortion fixed. It is the byte target restated, not evidence about lb1.
+
+**(4) THE HEADLINE HELD.** Zero objects sit inside both halves: lb1 is OUT on bytes at 1.305× and sits
+*at* the accuracy bar with no margin; every cheap object is IN on bytes and OUT on accuracy by 16–36×;
+born-small @ zero error (460,652 B) has a **negative** allowance, so it is infeasible at any accuracy.
+§1's conclusion, §2's convex wall and §3's 1.305× all stand — and they now stand on the *generous*
+reading rather than an inflated one. §4b's "nothing flips" strengthens too: with zero like-for-like
+slack, the tolerance-for-bytes route is worth **0 B**, not ~20 B.
+
+**Two errors named, both structural.** (a) **Cross-unit** — token numerators over a `d_seg`
+denominator, throughout §1's accuracy column. (b) **Sufficient read as necessary** — "requires
+`B ≤ 137,986` AND error ≤ bar" is one *corner* of the line `100·d_seg + √(10·d_pose) + 6.6586e-7·B <
+0.12`, so it under-credits cheap objects by up to 4×. `ddm_rt3` §5 independently named (b) the same
+day; (a) is new here and is the one that moved the numbers.
+
 `[contest-CUDA T4 n600] own-vehicle frontier: LB1 — S=0.14803010583079396, archive=180,083 B,`
 `d_seg=0.00020139, d_pose=6.37e-6, SHA-256=5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9.`

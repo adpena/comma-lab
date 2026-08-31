@@ -172,6 +172,31 @@ stands; the 42,097 B demand stands; the route table stays empty. Three correctio
 - The `~20 B` tolerance figure in §4 transfers tv2's dx2 price to lb1. Same pinned token field, but
   a different archive — treat it as an order-of-magnitude, not a measured lb1 row ([[m143]]).
 
+## 9. SELF-CORRECTION — APPEND-ONLY, same day: my §4 slack figure was ITSELF cross-unit
+
+§1–§8 above are preserved verbatim. §5 flagged a units risk in the bar; I then chased it, and it
+fires **on my own number**. The bar is a `d_seg` bar. I compared lb1's **token-field** error to it and
+reported 93.1% slack. That is the same cross-unit error I flagged, one level in.
+
+**Like-for-like, lb1's accuracy slack is ZERO, not 93.1% and not 17.0%.**
+
+| comparison | lb1 | bar | slack |
+|---|---:|---:|---:|
+| `d_seg` vs `d_seg` allowance @ 137,986 B | 0.020139% | 0.020140% | **~0.005%** |
+| token vs token bar (affine) @ 137,986 B | 0.001456% (1,717) | 0.001456% (1,718) | **0** |
+
+The reason is structural, not arithmetic: **137,986 B was derived by holding lb1's distortion fixed**,
+so the "accuracy half" is definitionally satisfied by lb1 with zero margin. It is not evidence about
+lb1 — it is the byte target restated in distortion units. Both 93.1% and 17.0% were a token numerator
+over a `d_seg` denominator.
+
+**Direction of the correction:** §4's verdict *strengthens*. I said the tolerance-for-bytes route was
+worth ~20 B. Like-for-like there is **no accuracy slack to sell at all**, so it is worth **zero**.
+Nothing flips; the route is deader, not livelier.
+
+Full derivation, per-object bars, and the re-stated box: §4c of
+`ddm_gestalt_the_chasm_not_the_cross_20260831.md`, same commit.
+
 ## CUSTODY
 
 Instrument `experiments/ddm_gti1_gt_instrument_triple.py`. Receipt
