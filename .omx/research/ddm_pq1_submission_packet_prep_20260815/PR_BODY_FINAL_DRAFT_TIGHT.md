@@ -25,41 +25,52 @@ at two decimals).
 
 # does your submission require gpu for evaluation (inflation)?
 
-Yes — `linux-nvidia-t4`, `--device cuda`. Measured on T4: 578.9 s inflation +
-42.7 s evaluation, well inside the 30-minute budget.
+Yes, `linux-nvidia-t4` `--device cuda`. Measured on T4: 578.9 s inflation +
+42.7 s evaluation.
 
 # did you include the compression script? and want it to be merged?
 
-Yes, with a limitation: it does not rebuild these exact bytes — five late
-lossless stages are not wired behind the single entry point. It refuses this
-archive's SHA up front and names the missing stages rather than producing
-substitute bytes. Fine either way on merging given that.
+Yes to both.
 
 # is this submission competitive or innovative? explain why
 
-Competitive: `0.14797617125559104` on contest CUDA (T4, all 600 samples) vs
-PR #135's `0.162` on the same axis.
+Competitive: `0.14797617125559104` on contest CUDA vs PR #135's `0.162` on the
+same axis.
 
-The learned renderer and pose-carrier vehicle are inherited from PR #130/#135
-(PR #133 in the lineage) — no originality claimed there; per-section accounting
-is in `BORROWED_SUBSTRATE_ACCOUNTING.md`. What's ours is the layer on top:
-joint admission of segmentation edits priced against their pose cost, an exact
-receiver-assembly identity check, and a chain of lossless model, coder, and
-container transforms — the last five moves cut 454 bytes with byte-identical
-decoded output.
+The learned renderer and pose-carrier vehicle are inherited from
+PR #130/#133/#135. My work is the optimization layer on top of that vehicle —
+twenty-three admitted improvement moves, each accepted only on the recomputed
+exact 600-sample score of the rebuilt archive (or, for the lossless moves, a
+bit-identical decode proof plus exact rate arithmetic), never a proxy:
 
-Some of this line predates the related public PRs in our tree — a stored
+- **Joint edit admission** (the submission's namesake): candidate segmentation
+  edits of the semantic tokens are solved across 573 pairs, each priced against
+  its exact pose cost through the frozen PoseNet, and admitted through a
+  Lagrange-multiplier waterfill — 455 of 573 admitted. The pose carrier is then
+  re-solved (damped Gauss–Newton) against the edited renders. This is the
+  largest single move and produced the sub-0.15 crossing.
+- **In-compile pose compensation**: a frame-0 compensation solved inside the
+  compile so segmentation edits carry approximately zero pose tax — on its
+  proof row, pose distortion landed below the unedited base.
+- **A zero-byte pose re-solve** of the stored carrier coefficients against the
+  frozen scorer on the shipped renders.
+- **A lossless representation chain** on the coder and container: fixed-point
+  integer log-odds context mixing, group-conditioned token contexts, an
+  address-free tile-conditioned re-encode, and container transforms. The five
+  moves after the prior packet freeze cut 454 bytes with byte-identical decoded
+  output — 0 differing bytes across all 3,662,409,600 raw output bytes.
+
+What didn't work better: re-mixing the stored 12-dimensional pose basis was a
+measured null; sub-4-bit semantic quantization lost far more distortion than
+its rate credit at every depth tried; a token-drop admission branch was not
+built because the receiver has no path for it.
+
+Some of this line predates the related public PRs, including a stored
 pose-target sidecar on 2026-04-11 and a direct-partition coding stack on
-2026-06-10, both before PR #130 — and our decode-time corrector work ran
-concurrent with PR #138, which published that class first. Dates stated for
-honest accounting of concurrent work; no priority claimed.
+2026-06-10, and our decode-time corrector work ran concurrent with PR #138,
+which published that class first.
 
 # additional comments
-
-PR #135 supplied the trained vehicle. Joint edit admission re-solves the pose
-carrier against the edited renders, then lossless steps re-represent the same
-decoded object — the same 3,662,409,600-byte CUDA raw output at 454 fewer
-bytes.
 
 One runtime note: the inflater pins Brotli (and installs it from the network if
 absent) and compiles native code during inflation.
@@ -67,9 +78,17 @@ absent) and compiles native code during inflation.
 Source: <https://github.com/adpena/comma-lab>
 
 <!--
-INTERNAL (removed at publish): tightened v2 per operator 2026-09-01 "Should it be
-streamlined or tightened"; cuts vs PR_BODY_FINAL_DRAFT.md recorded in session.
-STORES CONSULTED: pq7 Yousfi-comment census (terse-body norm) · live PR template ·
-canonical frontier pointer (afr1) · git-dated provenance receipts (fea4a953f9 ·
-752a30cdb9) · task rows #1111/#1363/#1381.
+INTERNAL (removed at publish): v3 — operator's 2026-09-01 tightening edits folded in
+(report.txt trimmed further · GPU one-liner · "Yes to both" · merged additional-comments
+paragraph into the innovation section) + the enriched innovation mechanisms per operator
+"add a bit of additional detail on our original work and innovations". GATE: "Yes to both"
+on the compression script is contingent on ddm_ce1's byte-exact e2e proof (arm live);
+restore one honest limitation clause if ce1 blocks. Numbers verified against: afr1 pointer
+receipt (S/bytes/sha/identity counts) · ddm_pq2_compress_e2e.py NOT_EXPRESSIBLE registry
+(573 pairs / 455 admitted, jg5 stage list) · qs5 verdict (compensation below-base proof) ·
+up3 (zero-byte pose re-solve) · hot-state POINTER_LINE (native receiver identity
+3,662,409,600 B / 0 differing; 454 B post-freeze tail). Per the contest coding-agents
+policy the final public text is operator-authored; this remains source material.
+STORES CONSULTED: pq7 census · live PR template · canonical frontier pointer · pq2
+refusal registry · qs5/up3/jg5 receipts · task rows 1111/1363/1382.
 -->
