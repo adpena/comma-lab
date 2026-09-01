@@ -1,6 +1,11 @@
 # PQ13 PR-body refresh verdict — policy is a prohibition, not a disclosure rule
 
-**PRIOR-LAW PREDICTION: FALSIFIED.** The live contest policy does not merely
+**PRIOR-LAW PREDICTION: FALSIFIED.**
+`verdict_scope: instance — the pq13 charter's pre-registered prediction about the live
+policy's FORM (disclosure-required vs prohibition), resolved completely by
+VERIFIED-VIA-LIVE-SOURCE-INSPECTION of the README policy section; this is a resolved
+prediction about one document's content, not a negative about any technique family.`
+The live contest policy does not merely
 require disclosure of assistance. It expressly bans using coding assistants to
 "write all of the code" and to "write full PR description and public facing
 comments." Operator-authored public prose can cure the second clause only. It

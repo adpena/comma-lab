@@ -111,3 +111,11 @@ and runtime-files digest
 
 Public source repository: <https://github.com/adpena/comma-lab>.
 
+
+<!-- INTERNAL PROPOSAL ANNOTATION (not public text; final body is operator-authored) -->
+STORES CONSULTED: pq7 Yousfi-comment census (81 threads / 76 comments, drafting rules) ·
+retained #137/#138 API receipts + MAIN's 09-01 gh census (#139) · live README + PR template
+(VERIFIED-VIA-LIVE-SOURCE-INSPECTION) · pinned upstream snapshot (drift diff, read-only) ·
+gen-7 packet materials (pq12 reswap memo + compliance table) · canonical frontier pointer
+(afr1 components) · git-dated provenance receipts (fea4a953f9 04-11 · 752a30cdb9 06-10, in
+the companion PROVENANCE_ADDENDUM) · task ledger rows #1111/#1363.
