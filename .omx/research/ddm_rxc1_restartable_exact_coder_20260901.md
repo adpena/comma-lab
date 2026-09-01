@@ -125,3 +125,110 @@ coder gate passes.
 Pointer UNMOVED: AFR1 remains `S = 0.14797617125559104 @ 180,002 B [contest-CUDA T4 n600]`.
 RXC1 is `[macOS-CPU advisory / scorer-free EXACT byte measurement]` and makes no score claim.
 
+## Gen-2 Stage-2 harvest blocker — 2026-09-01
+
+### Result first
+
+**BLOCKED(storage-reserve), verdict scope `INSTANCE`.** The frozen Stage-2 screen advanced from
+5 to **26 sealed rows out of 32** before the shared APDataStore tier lost enough free space that
+finishing would violate the required 1 GiB post-run reserve. The process was interrupted during
+row 26 / pair 470's stride-200 suffix replay, after its full exact result and terminal state had
+been retained. No payload was deleted, moved, or discarded.
+
+`SCREEN.json` and `MANIFEST.json` do **not** exist. Therefore there is no completed n=32 gate
+denominator, no final branch adjudication, and no `GATE-1-PARTIAL` claim. Gate 2 did not fire.
+The machine-readable blocker is
+`/Volumes/APDataStore/pact/ddm_jc1/restartable_exact_coder/BLOCKER.json`, 10,064 bytes, SHA-256
+`581a076846dfdba0164ff5b6ab4c4818258eaa61b2591ab010e27e97885d839b`.
+
+The binding preregistration says:
+
+> If SCREEN.json's incremental leg is an exact suffix re-encode (deltas byte-identical to full):
+> the correlation row is recorded as VACUOUS-BY-CONSTRUCTION and carries NO gate authority.
+> Gate-1 is then adjudicated on the COST criterion alone.
+
+The 26 sealed rows have that **Branch-1 shape**, but this is partial evidence only because the
+named `SCREEN.json` denominator is absent. Their exact-vs-exact correlation is consequently
+vacuous and is not used as gate evidence.
+
+### Partial denominator and cost — not a gate verdict
+
+The sealed partial denominator is 26 seeded pairs from the frozen n=32, seed-20,260,901 sample;
+one retained token edit per pair; two restart strides; 52 full-stream byte comparisons. All
+52/52 incremental streams are byte-identical to their row's full exact stream, archive-delta
+error is 0 bytes, and sign agreement is 26/26 at each stride. Full exact archive deltas span
+the integer set `{1, 2, 3, 4, 5}` bytes.
+
+| stride | sealed n | identical | median s/proposal | mean s/proposal | median frames | physical restarts | physical-restart median s |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+| 200 | 26 | 26/26 | **478.57277050009** | 540.7383064968654 | 400 | 15 | 476.97995079215616 |
+| 300 | 26 | 26/26 | 714.2794453538954 | 580.2944720274268 | 600 | 10 | 366.5510804587975 |
+
+The partial best aggregate row is stride 200 at 478.573 s/proposal. The table includes rows
+whose nearest checkpoint is frame 0 and therefore reuses the row's full exact result, exactly as
+the preregistered screen implementation defines. The physical-restart column separately exposes
+the nonzero restart denominator. These costs already have the expected minutes-per-proposal
+shape, but the missing six rows forbid the chartered final cost adjudication.
+
+### Cheap Branch-2 state-reconvergence measurement — partial scope
+
+At terminal frame 600, **0/26** sealed full-edit rows exactly reconverged to the baseline adaptive
+state across the 147 registered non-ledger arrays. Per row, 57–71 arrays still differed, median
+69; the final `previous` plane was equal in 26/26. This measured scope is only the sealed n=26
+AFR1 instance at frame 600. It supports the narrower statement that the current adaptive state
+did not reconverge by the terminal checkpoint on those rows; it does not establish global or
+family nonexistence and does not build the preregistered splice-on-reconvergence form.
+
+### Storage blocker and exact resume boundary
+
+At blocker capture, APDataStore had 1,263,927,296 bytes free. Four sealed late-edit rows each
+allocated 49,408 KiB on disk. Row 26 had allocated 24,320 KiB; completing it, the five unstarted
+rows, and an 8,192 KiB manifest allowance projects another 280,320 KiB. Preserving the required
+1,073,741,824-byte reserve therefore requires at least 1,360,789,504 bytes free. The fire trigger
+is conservatively **APDataStore free bytes >= 1,400,000,000 with no concurrent decline**.
+
+The interrupted row is restartable without recomputing its completed full leg:
+
+- row-26 full `RESULT.json`: 4,349 bytes, SHA-256
+  `c5f0fed2bca082e7890d25f99feddcf372f0c1d26eea34c07f06da7e5f224cf7`;
+- row-26 terminal frame-600 state: 10,607,745 bytes, SHA-256
+  `19afd7cd5269ee503292004358618f5404bf3dbae3a0161379473925822b344e`;
+- incomplete stride-200 `RUN_SPEC.json`: 878 bytes, SHA-256
+  `d23511b3ea37689bf58d1bb51a837d685e899b7497e05c0689b514e5189b4a81`;
+- no `*.partial` file remained after the fail-closed interrupt.
+
+Once the fire trigger is met, rerun:
+
+```bash
+.venv/bin/python experiments/ddm_rxc1_restartable_exact_coder.py --stage screen
+```
+
+The landed API revalidates and reuses all 26 sealed `ROW.json` receipts plus row 26's full
+`RESULT.json`, then restarts the incomplete stride-200 leg from retained frame 400. After all
+32 rows seal, run `--stage manifest`; only then may the preregistered Branch-1 cost adjudication
+and Stage-3 API/cost finalization be appended.
+
+### RECALL EVIDENCE update
+
+The gen-2 bounded recall searched `.omx/research/`, arm-final messages,
+`CANONICAL_RESEARCH_INDEX*`, `sub015_DAG_*`, `.omx/state/main_hot_state.md`, the task ledgers,
+the experiments/runtime surfaces, and the canonical-equations registry. Queries included
+`rxc1`, `restartable exact coder`, `state reconverg`, `splice-on-reconverg`, `suffix re-encod`,
+`incremental coder`, and `SCMDL`.
+
+Beyond gen-1's seeds, recall found the binding preregistration's splice-on-reconvergence optimal
+form and the live task-1374 / sfp1 generator-ready SCMDL chain. It did not find, in those bounded
+scopes, an existing AFR1 post-edit state-reconvergence receipt. That changed the harvest plan by
+adding the cheap terminal-state comparison above; it did not authorize a splice implementation or
+a coder rebuild.
+
+### Boundaries and frontier
+
+Measured here: 26 sealed one-cell edit rows, 52 exact byte comparisons, partial per-stride CPU
+wall costs, terminal adaptive-state equality, retained hashes, and the fail-closed storage
+waterfall. Not measured here: the six missing rows; `SCREEN.json`; `MANIFEST.json`; a completed
+Gate-1 adjudication; `d_seg`; `d_pose`; any scorer component; any exact contest score; CUDA;
+candidate realization; or an outer-loop search.
+
+Pointer UNMOVED: AFR1 remains `S = 0.14797617125559104 @ 180,002 B [contest-CUDA T4 n600]`,
+archive SHA-256 `cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25`.
