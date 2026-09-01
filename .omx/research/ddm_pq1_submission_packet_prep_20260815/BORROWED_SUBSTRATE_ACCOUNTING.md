@@ -1,3 +1,13 @@
+# Borrowed-substrate accounting — packet generation 7 (AFR1, archive `cbb8d928a8ccdd3f…` / 180,002 B)
+
+> **⚠ READ §11 FIRST.** This document is APPEND-ONLY. Section §11 is the live
+> accounting surface for packet generation 7. It carries every §10 class
+> unchanged, appends the five real rc2→AFR1 pointer states, and restates the two
+> qualifications that do not transfer automatically. Earlier sections remain
+> historical evidence for the candidates they name.
+
+## Preserved generation-6 title and banner (verbatim, append-only)
+
 # Borrowed-substrate accounting — packet generation 6 (the composed rider × native port, archive `df7fd266e1b7488c…` / 180,456 B)
 
 > **⚠ READ §10 FIRST.** This document is APPEND-ONLY and its section numbers count ITS OWN
@@ -614,3 +624,58 @@ covered-citation: `ARCHIVE_MANIFEST.json:21` — the §2 row 3 citation this err
 (Coverage is a declaration, not an inference, since rv17 R11-F1: `verify_citations.py`
 covers a citation only when an explicit line like this one names its exact token inside a
 section whose header leads with "Erratum" — a prose mention no longer covers anything.)
+
+---
+
+## 11. Generation 8 amendment — packet generation 7, AFR1
+
+Archive `cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25`,
+180,002 B, `[contest-CUDA]` T4 n600 S = **0.14797617125559104**.
+
+### 11.1 Ancestry — five exact pointer states appended after rc2
+
+| Step | Mechanism | Archive bytes | Exact CUDA score | Classification |
+|---|---|---:|---:|---|
+| rc2 | §10 packet body: RR5 rider + native free corrector | 180,456 | 0.14827847122030852 | carried from §10 |
+| fx5 e1 | widened causal corrector / zero-byte model-axis re-encode | 180,386 | 0.14823186109359 | `ours-original` lossless coder decision |
+| dx2 | CABAC coefficient fold | 180,368 | 0.14821987563243377 | `ours-original` lossless coder decision |
+| gb1 | groupbin8 causal conditioning | 180,215 | 0.14811799921260607 | `ours-original` lossless coder decision |
+| lb1 | joint patch192×bank re-encode | 180,083 | 0.14803010583079396 | `ours-original` lossless coder/container decision |
+| **AFR1** | **tile48×groupbin8 context interaction** | **180,002** | **0.14797617125559104** | **`ours-original` lossless coder/container decision** |
+
+The charter's seed described `gb1 · jt22/jt23 · lb1 · afr1`; the full
+pointer ledger resolves that shorthand into the five admitted moves above.
+`jt22` and `jt23` are negative/closure receipts in that ancestry, not pointer
+moves. `fx5 e1` and `dx2` are the two pointer states omitted by the shorthand.
+
+### 11.2 Classifications carried unchanged
+
+No post-freeze move changes the borrow/own boundary. Every §10 row carries
+forward unchanged. The five mechanisms change how already-decided content is
+losslessly coded or restored; they add no learned artifact and claim no part of
+the inherited learned vehicle. AFR1's own exact CUDA row emits the same raw
+3,662,409,600-byte scorer input as rc2, SHA-256
+`6bf8acf8d4412e43f8ddf810bcf63feb6435b758196b708fd61e77fe61e79883`.
+That same-axis byte identity is the evidence for carrying the distortion legs,
+not a similarity assumption.
+
+### 11.3 Claim arithmetic
+
+`0.14797617125559104 = 0.020139 + 0.007981227975693965 + 0.11985594327989708`.
+
+Against packet generation 6: −454 B; seg delta 0; pose delta 0; rate delta
+`25 × (−454) / 37,545,489 = −0.0003022999647174658`; measured score delta
+`−0.00030229996471747844`. The residual is floating-point representation, not
+an unpriced component.
+
+### 11.4 Qualifications that remain load-bearing
+
+1. **Re-decision over borrowed content.** The rate improvement is ours-original
+   mechanism work over inherited learned content. It is not a new learned
+   vehicle and does not move the attribution boundary.
+2. **End-to-end rebuild scope.** The single-entry-point VERIFIED label belongs
+   to packet generation 3, the bytes on which it ran. It was not re-run for
+   AFR1. The shipped `compress.py` therefore refuses AFR1 by exact archive name
+   before doing work; candidate custody, deterministic build repeats, receiver
+   identity, the tolerance-zero packet seal, and the exact authority row are
+   separate proofs and are not relabelled as that missing e2e run.

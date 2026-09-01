@@ -2,6 +2,13 @@
 
 Status: `HOLD`, consecutive clean passes: `0/5`.
 
+> **CANDIDATE CHANGED 2026-08-31 — rounds 1–13 reviewed superseded bytes and
+> round 14 was never run.** Generation 7 is AFR1 (`cbb8d928…`, 180,002 B,
+> 38-row runtime `6cdfa27d…`, `[contest-CUDA]` `0.14797617125559104`). The next
+> fresh review is round 14 against AFR1. The counter remains a research-QA
+> ledger; the pq12 publication authority is the operator gate in
+> `FREEZE_CHECKLIST.md`.
+
 > **CANDIDATE CHANGED AGAIN 2026-08-20 (second change that day) — rounds 1–13
 > reviewed SUPERSEDED BYTES.** The packet was re-staged to generation 6, the
 > composed candidate (`df7fd266e1b7488c…` / 180,456 B, 36-row runtime tree

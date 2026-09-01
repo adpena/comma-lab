@@ -3,6 +3,10 @@
 This runbook targets the active candidate in `PACKET_TARGET.json`. It executes
 the real strict checker; it is not a substitute for a green result.
 
+> **ACTIVE SECTION: "Generation 7" at the bottom of this file.** Generation 7
+> is AFR1 (`cbb8d928…`, 180,002 B, 38 runtime rows). All earlier commands and
+> receipts are historical and must refuse if aimed at the live packet.
+
 > **ACTIVE SECTION: "Generation 6" at the bottom of this file.** Everything above
 > it describes superseded candidates and is retained as lineage. **Generation 6 has
 > no compliance receipt yet** — it was deliberately not re-bought at the swap,
@@ -36,7 +40,7 @@ see "Generation 3" below).
   --dispatch-claims-md .omx/state/active_lane_dispatch_claims.md \
   --expected-lane-id lane_ddm_rx2_e480b_hpac_winner_v2_paired_modal_auth_20260815T125117Z_contest_cuda \
   --expected-job-id ddm_rx2_e480b_hpac_winner_v2_paired_modal_auth_20260815T125117Z_cuda \
-  --competitive-or-innovative-statement-file .omx/research/ddm_pq1_submission_packet_prep_20260815/PR_BODY_DRAFT.md \
+  --competitive-or-innovative-statement-file .omx/research/ddm_pq1_submission_packet_prep_20260815/README_PUBLIC.md \
   --public-scan-path .omx/research/ddm_pq1_submission_packet_prep_20260815/PR_BODY_DRAFT.md \
   --json-out /Volumes/VertigoDataTier/pact/ddm_pq1_submission_packet/receipts/pre_submission_compliance.final.json
 ```
@@ -477,3 +481,69 @@ was finally measured on ck1's bytes, which is why this generation measured its o
 inflation killed at 1,800 s, receiver report 2,850.781244341 s, token decode alone
 2,427.166373672 s, decoded token stream bit-identical to the CUDA axis. The axis is
 closed by measurement on the shipping object, and no figure was carried onto it.
+
+## Generation 7 (ACTIVE) — AFR1
+
+Object: archive `cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25`
+at 180,002 B, member `p` 179,902 B, 38-row runtime tree
+`6cdfa27dd1e9b46fc2bbbe88774c78d95ed3605fee7a15ba3861f96e24041e58`,
+`[contest-CUDA]` T4 n600 S `0.14797617125559104`.
+
+```bash
+GEN7=/Volumes/APDataStore/pact/ddm_pq12/generation_7_afr1
+R=/Volumes/APDataStore/pact/ddm_pq12/receipts
+AUTH=/Volumes/APDataStore/pact/ddm_pq12/afr1_authority_materialized/returned_artifacts/contest_auth_eval.json
+
+.venv/bin/python tools/packet_census_guard.py \
+  --packet-dir "$GEN7" \
+  --auth-eval-json "$AUTH" \
+  --prep-dir .omx/research/ddm_pq1_submission_packet_prep_20260815 \
+  --receipts-dir "$R"
+
+.venv/bin/python scripts/pre_submission_compliance_check.py \
+  --contest-final --strict \
+  --submission-dir "$GEN7" \
+  --archive "$GEN7/archive.zip" \
+  --auth-eval-json "$AUTH" \
+  --archive-manifest-json "$GEN7/archive_manifest.json" \
+  --submission-score-axis contest_cuda \
+  --expect-single-member p \
+  --expected-archive-sha256 cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25 \
+  --expected-archive-size-bytes 180002 \
+  --expected-runtime-tree-sha256 6cdfa27dd1e9b46fc2bbbe88774c78d95ed3605fee7a15ba3861f96e24041e58 \
+  --dispatch-claims-md .omx/state/active_lane_dispatch_claims.md \
+  --expected-lane-id ddm_afr1_tile48_groupbin8_cuda_n600_20260831 \
+  --expected-job-id modal:ddm_afr1_tile48_groupbin8_cuda_n600_20260831 \
+  --competitive-or-innovative-statement-file .omx/research/ddm_pq1_submission_packet_prep_20260815/PR_BODY_DRAFT.md \
+  --public-scan-path .omx/research/ddm_pq1_submission_packet_prep_20260815/PR_BODY_DRAFT.md \
+  --json-out "$R/pre_submission_compliance.gen7.r1.json"
+```
+
+The missing hosted manifest is deliberate: this is the real final-mode checker
+run at a freeze-not-publish boundary. Expected residuals before measurement are
+the raw-emitter promotion stamp, AFR1 CPU RECORD-WITH-REASON, the pinned Brotli
+bootstrap, and hosting. Actual results belong in the pq12 freeze memo.
+
+### Generation-7 measured terminal compliance state
+
+Receipt `pre_submission_compliance.gen7.r2.json`: **80 GREEN / 7 RED of 87**.
+The first run was 75/87; five failures were stale checker inputs rather than
+candidate failures and were cured before the terminal run: the private
+operator-input draft was replaced by the factual README as the checker-only
+policy statement, and a canonical harvested terminal ledger row was appended
+with the full archive/runtime hashes. The seven terminal reds are:
+
+| Check | Disposition | Owner |
+|---|---|---|
+| `auth_eval_raw_promotion_policy_blockers_absent` | structural raw-emitter stamp; preserve | MAIN policy adjudicator |
+| `contest_cpu_auth_eval_exists` | RECORD-WITH-REASON; no inherited score | MAIN scorer router |
+| `submission_runtime_has_no_network_install_or_local_paths` | pinned Brotli bootstrap in evaluated receiver | MAIN/runtime policy |
+| `submission_runtime_imports_within_allowlist` | staged non-runtime `compress.py` imports repo `tac`; do not fake it into receiver closure | MAIN/packet policy |
+| `submission_runtime_tree_matches_auth_eval` | expected staged-doc widening; enumerated 38-row tree is proven by stager, but no separate equivalence proof was supplied | MAIN/packet policy |
+| `public_scan_has_no_private_surface` | authority-row `FX5_BUILD_MANIFEST.json` contains three provider-local paths; changing it would change evaluated runtime bytes | MAIN/runtime policy |
+| `hosted_archive_manifest_supplied` | intentionally absent at FREEZE-NOT-PUBLISH | operator |
+
+These are recorded, not waived. The six non-hosting rows require changed bytes,
+a separate equivalence proof, a new CPU policy requirement, or checker-policy
+adjudication; none is silently converted green. Hosting remains the mechanical
+red controlled by the operator's single publication gate.

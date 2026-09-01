@@ -1,136 +1,31 @@
 {
-  "HISTORICAL_SUPERSEDED_BANNER": "SUPERSEDED / HISTORICAL. Refreshed pointer 2026-08-20 (ddm_pq11): the live candidate is packet generation 6, archive df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080 at 180456 B through the 36-row runtime tree fdd5774921319a317a385a9594489aa97e45cebc0f6f20cdc50fe8aaeb08a7f2, [contest-CUDA] 0.14827847122030852. Generation 6 has NO compliance receipt yet; it was not re-bought at the swap because bytes, scanned surfaces and the frontier pointer all moved. Every red disposition below is generation-0 history.",
-  "schema": "pact.pq1.strict_compliance_gap_report.v1",
-  "status": "SUPERSEDED_BY_GENERATION_4",
-  "supersession": {
-    "superseded_utc": "2026-08-19T00:26:00Z",
-    "superseded_by": "generation 4 (ck1 composed row-prune) terminal compliance state",
-    "note": "This report describes GENERATION 2 (rr4 candidate, archive 35ac2b9b.../181,161 B, receipt ba596648...). It was previously superseded by generation 3 (debb025f.../179,930 B, receipt gen3.r5, 82/86) and is now superseded again. The live candidate is GENERATION 4: archive 35c318d541d703708ab06c55473c200bb893491e24bea312e37be42f010677e3 / 177,182 B, [contest-CUDA] 0.15710198138050818, canonical receipt gen4_receipts/pre_submission_compliance.gen4.r1.json (sha 587af0cf78b67858fb044b98e78ac140c62564375504218ad6941d27213ac59b; 83 GREEN / 4 RED of 87; the 4 residual reds are typed and routed in COMPLIANCE_RUNBOOK.md section 'Generation 4'). packet_disposition and submission_authority below are HISTORICAL generation-2 statements, not the current state.",
-    "prior_supersession_generation_3": {
-      "superseded_utc": "2026-08-18T12:34:45Z",
-      "superseded_by": "generation 3 (sz1 composed) terminal compliance state",
-      "note": "Preserved append-only; see git history for the full generation-3 wording."
-    },
-    "generation_4_deltas_vs_generation_3": [
-      "CPU axis WEAKENED: generation 3 held a MEASURED infeasibility receipt on its own bytes; generation 4 has NO contest-CPU row at all and inherits the expectation.",
-      "Reproduction WEAKENED: generation 3's end-to-end single-entry-point rebuild is NOT re-verified for these bytes.",
-      "Round-11 F2 CLOSED BY CONSTRUCTION: the two hv1-lineage JSONs carrying 63 absolute local paths do not exist in this lineage; public_scan_has_no_private_surface is GREEN at 38 files scanned.",
-      "Two generation-3 reds stayed green through the swap (auth_eval_schema_metric_consistency, dispatch_claim_successful_exact_eval_terminal_row) and round-11 F1's fifth red (frontier_no_regression_on_submitted_axis) is GREEN because this candidate IS the pointer."
-    ],
-    "live_counter_authority": "ADVERSARIAL_REVIEW_SCAFFOLD.md header and table"
-  },
-  "swap_generation": 2,
-  "refreshed_by": "ddm_pq2",
-  "refreshed_utc": "2026-08-17T20:10:00Z",
-  "candidate_archive_sha256": "35ac2b9beb7e6fa81075c7d84b5247d8d24c056fe49ce1cbd22a334bc9618956",
-  "candidate_archive_bytes": 181161,
+  "schema": "pact.pq12.strict_compliance_gap_report.v1",
+  "packet_generation": 7,
+  "candidate": "ddm_afr1_tile48_groupbin8",
+  "archive_sha256": "cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25",
+  "archive_bytes": 180002,
+  "runtime_tree_sha256": "6cdfa27dd1e9b46fc2bbbe88774c78d95ed3605fee7a15ba3861f96e24041e58",
   "strict_check": {
     "passed": false,
-    "checks_total": 85,
-    "checks_passed": 81,
-    "checks_failed": 4,
-    "receipt": "/Volumes/APDataStore/pact/ddm_pq2/compliance_rr4_gen2.json",
-    "receipt_sha256": "ba596648e1e1f6a5b8c3eb4e5af28bca8eccc9597f5598a8119de3bbc3c43656",
-    "command": "scripts/pre_submission_compliance_check.py --contest-final against the staged submission dir",
-    "prior_generation_for_comparison": "generation 0 scored 78/86"
+    "checks_total": 87,
+    "checks_passed": 80,
+    "checks_failed": 7,
+    "receipt": "/Volumes/APDataStore/pact/ddm_pq12/receipts/pre_submission_compliance.gen7.r2.json"
   },
-  "packet_disposition": "READY_EXCEPT_OPERATOR_GO",
-  "submission_authority": "OPERATOR_GO_REQUIRED_NOT_GRANTED",
-  "gaps": [
-    {
-      "check": "auth_eval_schema_metric_consistency",
-      "details": "canonical_score_source_not_recomputed_from_components",
-      "disposition": "CHECKER_SCHEMA_DRIFT_NOT_A_ROW_DEFECT",
-      "owner": "MAIN",
-      "analysis": "The recovered receipt records canonical_score_source = report_8dp_components_plus_exact_archive_bytes and carries score_recomputed_from_components only as legacy_canonical_score_source_alias. The score itself is correct and was independently re-derived to 17 digits. Editing the receipt to satisfy the checker would be forging evidence.",
-      "fire_trigger": "MAIN decides whether the checker should accept the newer canonical source name, or whether the emitter should keep the older one"
-    },
-    {
-      "check": "auth_eval_raw_promotion_policy_blockers_absent",
-      "details": "promotion_blockers include raw_auth_eval_does_not_verify_submission_policy_gates, cpu_leaderboard_reproduction_not_adjudicated, pre_submission_compliance_check_not_recorded",
-      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
-      "owner": "MAIN submission-policy adjudicator",
-      "analysis": "pre_submission_compliance_check_not_recorded is circular: it clears once this compliance run is recorded as an adjudicated artifact.",
-      "fire_trigger": "MAIN records this compliance receipt and adjudicates the CPU-vs-CUDA policy review"
-    },
-    {
-      "check": "contest_cpu_auth_eval_exists",
-      "disposition": "QUEUED_WITH_A_FIRE_ORDER",
-      "owner": "MAIN",
-      "analysis": "No contest-CPU row exists on these bytes. The packet answers the GPU-required question as yes precisely because of this. PR135 and PR138 both declare GPU-required evaluation, so the row may be optional.",
-      "fire_order": "CPU_AXIS_SEALED_FIRE_ORDER.json",
-      "economics": "Modal headroom 1.38 USD measured; the row costs about 0.40 USD, roughly 29 percent of what remains",
-      "additional_blocker": "tools/fire_modal_auth_eval.py is CUDA-only; there is no canonical CPU firing path, so a CPU row would have to be hand-assembled",
-      "fire_trigger": "operator GO plus a cured or explicitly waived CPU firing path"
-    },
-    {
-      "check": "submission_runtime_has_no_network_install_or_local_paths",
-      "details": "inflate.sh:27 runs uv pip install --target for the pinned Brotli dependency",
-      "disposition": "HOLD_RUNTIME_AUTHORITY",
-      "owner": "MAIN dependency-closure and compliance owner",
-      "analysis": "Verified working by a bare-venv bootstrap smoke: absent Brotli triggers the path, the pinned wheel installs, the guard then passes, a round trip succeeds, and with uv absent the script exits 69 fail-closed. Only a pinned wheel crosses the network; no model, table, or video-derived payload does, so rule 118 is not implicated. NOTE: the charter's premise that this runtime carries a constriction dependency is FALSIFIED; an AST scan of all 32 runtime files finds brotli, numpy and torch only.",
-      "fire_trigger": "MAIN records acceptance of the pinned fail-closed bootstrap under the existing precedent"
-    }
+  "terminal_reds": [
+    {"check": "auth_eval_raw_promotion_policy_blockers_absent", "owner": "MAIN policy adjudicator", "disposition": "STRUCTURAL_RAW_EMITTER_STAMP"},
+    {"check": "contest_cpu_auth_eval_exists", "owner": "MAIN scorer router", "disposition": "RECORD_WITH_REASON"},
+    {"check": "submission_runtime_has_no_network_install_or_local_paths", "owner": "MAIN runtime policy", "disposition": "EVALUATED_PINNED_BOOTSTRAP"},
+    {"check": "submission_runtime_imports_within_allowlist", "owner": "MAIN packet policy", "disposition": "DECLARED_NON_RUNTIME_COMPRESS_SCRIPT"},
+    {"check": "submission_runtime_tree_matches_auth_eval", "owner": "MAIN packet policy", "disposition": "STAGED_DOC_WIDENING_NO_EQUIVALENCE_PROOF"},
+    {"check": "public_scan_has_no_private_surface", "owner": "MAIN runtime policy", "disposition": "EVALUATED_MANIFEST_PROVIDER_PATHS"},
+    {"check": "hosted_archive_manifest_supplied", "owner": "operator", "disposition": "BLOCKED_ON_OPERATOR_CONFIRM_AND_TEXT"}
   ],
-  "gaps_closed_this_generation": [
-    {
-      "check": "submission_runtime_tree_matches_auth_eval",
-      "cure": "staged exactly the 32 files in the evaluated manifest, excluding __pycache__ and submission custody files; the pinned tree hash 7acedb07 now reproduces"
-    },
-    {
-      "check": "dispatch_claim_terminal_row",
-      "cure": "used the real lane and job ids and appended a terminal row"
-    },
-    {
-      "check": "dispatch_claim_successful_exact_eval_terminal_row",
-      "cure": "terminal row restated in the canonical completed_contest_cuda status vocabulary"
-    },
-    {
-      "check": "dispatch_claim_terminal_archive_sha_bound",
-      "cure": "terminal row notes now bind the archive sha256"
-    },
-    {
-      "check": "dispatch_claim_terminal_runtime_tree_sha_bound",
-      "cure": "terminal row notes now bind the runtime tree sha256"
-    },
-    {
-      "check": "dispatch_claim_prior_active_row",
-      "cure": "resolved with the corrected lane binding"
-    },
-    {
-      "check": "public_source_repo_link_present",
-      "cure": "restored the repo and pinned-revision links to the public README"
-    },
-    {
-      "check": "required_file_present:report.txt and the report/label family",
-      "cure": "staged a real submission directory rather than pointing the checker at the runtime tree"
-    }
-  ],
-  "new_hazards_found_and_closed": [
-    {
-      "hazard": "AppleDouble contamination",
-      "detail": "The ExFAT SSD creates ._* files on every copy. They are non-UTF-8 and CRASHED the compliance checker mid-run with UnicodeDecodeError, silently leaving a stale receipt on disk. They would also have ridden along into a submission directory.",
-      "cure": "COPYFILE_DISABLE=1 plus an explicit strip and a non-UTF-8 scan before every compliance run"
-    },
-    {
-      "hazard": "custody file inside the hashed tree",
-      "detail": "The two inherited stale receipts are INSIDE the evaluated 32-file runtime tree, so writing a CUSTODY_SUPERSEDED.json beside them would have changed the pinned tree hash and broken replay.",
-      "cure": "moved the supersession record to the store root and put the correction in README.md, which the evaluated manifest excludes"
-    }
-  ],
-  "additional_publication_gaps": [
-    {
-      "gap": "friendly_compression_source_bundle",
-      "disposition": "CLOSED",
-      "cure": "experiments/ddm_pq2_compress_e2e.py rebuilds the archive from the retained checkpoint and fails closed unless the bytes hash to the pinned value. No private paths; inputs arrive via --inputs-json or environment variables and are sha256-verified. Verified 2026-08-17: token stream and archive hashes both matched, determinism repeat byte-identical."
-    },
-    {
-      "gap": "hosted_archive_manifest_supplied",
-      "disposition": "BLOCKED_ON_OPERATOR_AUTHORITY",
-      "owner": "operator, then MAIN",
-      "prep_state": "The exact artifact list and shas are recorded in ARCHIVE_MANIFEST.json and PACKET_TARGET.json. Nothing has been published.",
-      "fire_trigger": "operator authorizes hosting after candidate selection and fetched hosted bytes prove SHA-identical"
-    }
-  ],
-  "external_actions_performed": []
+  "one_remaining_gate": {
+    "disposition": "BLOCKED_ON_OPERATOR_CONFIRM_AND_TEXT",
+    "owner": "operator",
+    "consumer_store": "operator-authored public description plus hosted archive manifest and final publication receipt",
+    "fire_trigger": "Operator personally writes and reviews all public text, decides the policy-compatible path, accepts the recorded non-hosting red dispositions, and gives the one-line authorization."
+  },
+  "publish_action": "NONE"
 }

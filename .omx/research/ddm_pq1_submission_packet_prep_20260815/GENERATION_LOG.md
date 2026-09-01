@@ -14,7 +14,35 @@ this directory currently describe.
 | 3 | `fx2_a__tuned` (sz1 composed split) | 179,930 | `debb025f45bb42e3…` | 0.15771357797660338 | superseded, retained |
 | 4 | `ck1_composed_rebased_r4` (SM3R mode-6 row-prune + frame-0 pose compensation) | 177,182 | `35c318d541d70370…` | 0.15710198138050818 | superseded, retained |
 | 5 | `jg5_joint_waterfill_455` (joint admission waterfill + carrier re-solve on own renders) | 180,625 | `f3bce5d259a08183…` | 0.14839100138338618 | superseded, retained |
-| 6 | `ddm_rc2_object_b_clean_port_rr5_rider` (generation-5 body + RR5 lossless carrier rider + clean C port of the free corrector) | 180,456 | `df7fd266e1b7488c…` | **0.14827847122030852** | **ACTIVE, HOLD** |
+| 6 | `ddm_rc2_object_b_clean_port_rr5_rider` (generation-5 body + RR5 lossless carrier rider + clean C port of the free corrector) | 180,456 | `df7fd266e1b7488c…` | 0.14827847122030852 | superseded, retained |
+| 7 | `ddm_afr1_tile48_groupbin8` (five lossless coder/container moves after rc2; final move is tile48×groupbin8) | 180,002 | `cbb8d928a8ccdd3f…` | **0.14797617125559104** | **ACTIVE, HOLD** |
+
+## What changed at generation 7
+
+Generation 7 moves the packet from rc2 to AFR1 through five exact-pointer
+states, all lossless re-encodes of the same decoded CUDA object:
+
+| Pointer state | Archive bytes | Exact `[contest-CUDA]` score | Change from prior |
+|---|---:|---:|---:|
+| rc2 | 180,456 | 0.14827847122030852 | packet generation 6 |
+| fx5 e1 | 180,386 | 0.14823186109359 | −70 B |
+| dx2 | 180,368 | 0.14821987563243377 | −18 B |
+| gb1 | 180,215 | 0.14811799921260607 | −153 B |
+| lb1 | 180,083 | 0.14803010583079396 | −132 B |
+| **AFR1** | **180,002** | **0.14797617125559104** | **−81 B** |
+
+The total change is −454 B and −0.00030229996471747844 score units.
+Both distortion contributions remain `0.020139` and
+`0.007981227975693965`; the entire delta is the rate change
+`25 × (−454) / 37,545,489`. AFR1's own T4 authority row emits the same
+3,662,409,600-byte raw CUDA output as rc2, SHA-256 `6bf8acf8…`.
+
+The runtime expands from 36 to 38 authority rows. Its enumerated tree pin is
+`6cdfa27dd1e9b46fc2bbbe88774c78d95ed3605fee7a15ba3861f96e24041e58`.
+No AFR1 `[contest-CPU]` score exists: the leg is RECORD-WITH-REASON and no
+score is inherited from another archive. The end-to-end rebuild VERIFIED
+label also remains scoped to generation 3; AFR1 is explicitly not re-verified
+by that entry point.
 
 ## What changed at generation 6
 

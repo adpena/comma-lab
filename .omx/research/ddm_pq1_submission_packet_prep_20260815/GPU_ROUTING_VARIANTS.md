@@ -1,3 +1,15 @@
+# GPU-routing variants for packet generation 7 — AFR1
+
+> **LIVE AFR1 OVERRIDE.** Archive `cbb8d928…`, 180,002 B, 38-row runtime tree
+> `6cdfa27d…`. Its T4 authority run measured inflate 578.9354022370001 s and
+> evaluate 42.69640948199992 s; charged total 621.631811719 s passes the
+> projected 822 s cold-cache ceiling by 200.36818828100002 s. The packet remains
+> GPU-routed. No receiver flip is authorized because changed runtime bytes need
+> their own authority row. Routing/hosting is folded into the operator's single
+> publication-confirmation gate.
+
+## Preserved generation-6 analysis
+
 # GPU-routing variants for packet generation 6 — the decision, its cost, and why the two options are NOT symmetric
 
 **Author:** ddm_pq3, refreshed for generation 6 by ddm_pq11 · **Date:** 2026-08-20 · **Status:** PREPARED, DECISION RESERVED TO THE OPERATOR

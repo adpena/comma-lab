@@ -338,3 +338,14 @@ identity claim. It was right, and the cure was the indivisible swap rather than 
 document edit: archive, runtime, 36-row manifest, receipts, axis declarations and every
 packet document moved together, and the reviewer appendix now executes against the
 object it names.
+
+## Generation-7 adjudication (2026-08-31, pq12)
+
+The rc2→AFR1 swap executed through this procedure without hand-copying packet
+files. AFR1 is `cbb8d928…` / 180,002 B through the 38-row enumerated runtime tree
+`6cdfa27d…`. The embedded authority artifacts were first materialized into pq12
+custody; the stager consumed the materialized receipt. Census and strict
+compliance are generation-7-specific. No authority or compliance receipt
+transferred from rc2. The packet stops at FREEZE-NOT-PUBLISH; step 4A and every
+network/public action require the operator's one-line confirmation and
+operator-authored text.

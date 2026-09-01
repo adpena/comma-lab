@@ -1,5 +1,11 @@
 # Contribution-etiquette harvest
 
+> **GENERATION-7 AXIS OVERLAY.** AFR1 carries exact `[contest-CUDA]` T4 n600
+> score `0.14797617125559104`. Its `[contest-CPU]` leg is
+> RECORD-WITH-REASON: no AFR1 CPU score exists and no prior CPU score is
+> inherited. The end-to-end rebuild VERIFIED label remains scoped to generation
+> 3. Any operator-authored public text must preserve both boundaries.
+
 This is a read-only harvest of the contest's actual contribution surface. The
 current repository README and pull-request template were checked locally. The
 comment evidence comes from the retained 2026-05-20 GitHub API harvest of 113

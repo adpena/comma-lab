@@ -1,5 +1,12 @@
 # compress.py — what it rebuilds, and what it structurally cannot
 
+> **GENERATION-7 OVERRIDE.** The selected archive is AFR1,
+> `cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25`
+> at 180,002 B. `compress.py` cannot express the five post-rc2 lossless stages
+> and refuses this SHA by name before doing work. The generation-6 identity in
+> the preserved text below is historical; the verified e2e receipt remains
+> scoped to generation 3 and does not prove AFR1 bytes.
+
 This is the compression-side entry point for the submission. It is included because the challenge
 asks for one and because a submission you cannot inspect is a submission you cannot trust. It is
 **not** a one-command rebuild of the shipped `archive.zip`, and this file says exactly why.

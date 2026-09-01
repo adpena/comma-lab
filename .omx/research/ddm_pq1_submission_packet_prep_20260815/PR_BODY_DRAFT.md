@@ -1,5 +1,18 @@
 # submission name: joint_waterfill_rider
 
+> **GENERATION-7 FACT OVERLAY — OPERATOR INPUT MATERIAL ONLY.** The selected
+> packet is AFR1: archive
+> `cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25`,
+> 180,002 B, member `p` 179,902 B, 38-row runtime tree
+> `6cdfa27dd1e9b46fc2bbbe88774c78d95ed3605fee7a15ba3861f96e24041e58`,
+> `[contest-CUDA]` T4 n600 S `0.14797617125559104` from components. The
+> generation-6 rc2 identity and report embedded below are preserved historical
+> drafting material and must not be posted or treated as live. No AFR1
+> `[contest-CPU]` score exists (RECORD-WITH-REASON), and the e2e VERIFIED label
+> remains generation-3-only. This file remains agent-produced source material;
+> its authorship framing below is unchanged. The operator personally writes all
+> public text and decides the policy-compatible publication path.
+
 > **STATE: PREPARED, NOT SUBMITTED — delete this block before posting.** These
 > archive bytes are **not yet published**: the download field below is blank on
 > purpose, because the only URL we have hosts a superseded archive. Publishing the

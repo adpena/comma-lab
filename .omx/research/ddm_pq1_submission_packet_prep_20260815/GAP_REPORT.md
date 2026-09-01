@@ -1,5 +1,11 @@
 # PQ1 strict-compliance gap report
 
+> **LIVE GENERATION-7 POINTER.** AFR1 is archive `cbb8d928…` / 180,002 B,
+> 38-row runtime `6cdfa27d…`, `[contest-CUDA]` T4 n600
+> `0.14797617125559104`. The historical gap report below is preserved. Current
+> red rows and owners are in the pq12 freeze memo and generation-7 runbook. The
+> only publication gate is operator confirmation plus operator-authored text.
+
 > **SUPERSEDED — HISTORICAL (generation-0, the retired e480b candidate,
 > archive `e3e6f440…`). Written 2026-08-15; preserved append-only.** The live
 > candidate is **generation-6, the composed rider × native port**
