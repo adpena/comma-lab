@@ -67,9 +67,11 @@ current and hands the operator a sign-off-ready draft. NOTHING IS PUBLISHED.
 
 ## OPTIMAL FORM
 
-- Family exemplars: **pq12's afr1 re-swap** (`.omx/research/ddm_pq12_afr1_reswap_20260831.md`,
-  SHA `0bfbb0042fcf5a1364fefb64977b7fbe9ca157918625323489b151a506872b32`) + the existing
-  draft (`.omx/research/ddm_pq1_submission_packet_prep_20260815/PR_BODY_DRAFT.md`, SHA
+- Family exemplars / receipts: the pq-family packet-polish reference form — **pq12's afr1
+  re-swap receipt** (memo `.omx/research/ddm_pq12_afr1_reswap_20260831.md`, SHA
+  `0bfbb0042fcf5a1364fefb64977b7fbe9ca157918625323489b151a506872b32`) + the pq1 packet-prep
+  receipt bundle's existing draft
+  (`.omx/research/ddm_pq1_submission_packet_prep_20260815/PR_BODY_DRAFT.md`, SHA
   `90627a67c353949329c03ff1c11c86e86287d53de5bf07d469eda1e7f67f5a40`) — the object under
   refresh. Provenance pins: afr1 archive SHA
   `cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25` · task rows #1111/#1363.
