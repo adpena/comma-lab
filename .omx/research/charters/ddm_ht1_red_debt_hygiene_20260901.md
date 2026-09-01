@@ -79,8 +79,14 @@ which, with evidence.
 ## OPTIMAL FORM
 
 - Family exemplar: hy1's 08-05 repair wave (15 structural repairs + honest xfails, 1023
-  passing, no silent skips) — same bar. Provenance pins: task rows #1282/#1305/#1005/#1281
-  + the review-gate law (CLAUDE.md "Review gate — non-negotiable").
+  passing, no silent skips) — same bar; receipt
+  `.omx/research/ddm_hy1_20260805/HY1_RECEIPT.md` sha
+  `212e383c059f5452953600b69b705b09b0b69dcdc694091b6930cad48842d298`. Provenance pins:
+  commit `945a9d4b54` (the #1281 cure — AST select-by-behavior + vacuity guard + executed
+  mutation control, the reference behavior-vs-fixture disposition this arm imitates) + the
+  review-gate law (CLAUDE.md "Review gate — non-negotiable") + task rows
+  #1282 (`ddm_hy1_20260805/HY1_RECEIPT.md` is the owning-memo association for the
+  stale-headline precedent) / #1305 / #1005 / #1281.
 - SCOPE reductions legal: the 84-lane #1305 disposition may land as a bulk metadata pass
   with a spot-checked sample (n≥10, seeded random, never a prefix — m88) IF the memo states
   the rule applied uniformly. MECHANISM reductions FORBIDDEN: no xfail without a named
