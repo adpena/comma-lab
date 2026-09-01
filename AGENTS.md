@@ -22,12 +22,18 @@
 > and becomes `effective_frontier`. Refreshing to a better external row moves the target but is NOT our
 > progress. Custody-specific local anchors stay separate from the competitive score-to-beat. Ladder:
 > **T_4 = sub-0.12 (THE target, operator 2026-08-21) · T_3 = sub-0.15 (ACHIEVED 2026-08-20, rc2) · T_1 = sub-0.19 (floor).** Above T_1 = failing.
-> BINDING ARITHMETIC (rc2 body, MEASURED): zeroing ALL distortion leaves S = rate 0.120158 > 0.12 —
-> **sub-0.12 is unreachable by distortion work alone; it REQUIRES rate-representation cuts** (archive
-> ≤ 137,986 B at current distortion 0.028120; each −0.001 S of distortion buys +1,502 B of rate budget).
-> MEASURED (r012, 2026-08-21): the rc2 BODY cannot reach sub-0.12 — composable measured rate ceiling
-> 88 B vs 238 B needed even at ZERO distortion → a NEW rate representation is REQUIRED (−12,225 B if
-> seg is fully won, −42,470 B at fixed distortion; joint table in ddm_r012_rate_representation_20260821.md).
+> BINDING ARITHMETIC (REFRESHED 2026-09-01, operator "Fix CLAUDE.md" — afr1 body, memos ddm_zdc1
+> ab97295218 + ddm_x012_crossing_ledger_20260901.md; re-derive at every pointer move per
+> [[binding-instruction-numbers-expire-and-nobody-rederives-them]]): afr1 rate =
+> 0.11985594327989708 < 0.12 <!-- HISTORICAL_SCORE_LITERAL_OK:afr1_banner_refresh_20260901_rederived_from_components_zdc1 -->
+> — at ZERO distortion the CURRENT archive clears the threshold with 216.347 B margin (B_max
+> 180,218.347 B), so BOTH corners are formally open by arithmetic. The rc2-era clause "unreachable by
+> distortion work alone" carried an expired premise (23 moves took 453.6 B off the body). MEASURED
+> state: the DISTORTION corner is closed on every measured route (sg2b falsifier 3/3 X-alone ·
+> wrong-sign accuracy→byte exchange 7/7 · round-trip intercept ~140,477 B · frozen realized-pixel
+> law gd2) — the LIVE demand is the RATE corner: **−42,016 B at held distortion 0.028120 (archive
+> ≤ 137,986 B)**, exchange 6.658589531221714e-7 S/B, Lane ≈ 90.1% of demand. Door map + the
+> pre-registered fire rule (any composition ≥ 0.027976 S → candidate chain): ddm_x012.
 > **What is NOT goal progress (the failure mode this extincts):** tools, harnesses, solvers, codecs,
 > runtimes, Rust crates; floor derivations, research/design memos, paper inventions; located cruxes,
 > honest negatives, DEFER verdicts, deferral ledgers; holding the existing frontier; a measurement
