@@ -191,6 +191,12 @@ from tac.canonical_equations.ddm_v4b_composed_gate_fidelity_20260730 import (
     composed_gate_fidelity,
     populate_ddm_v4b_composed_gate_instrument_fidelity_v1,
 )
+from tac.canonical_equations.decoder_causal_condition_transport_20260901 import (
+    build_decoder_causal_condition_transport_v1,
+    populate_decoder_causal_condition_transport_v1,
+    receiver_causal_context_is_free,
+    transport_floor_bytes,
+)
 from tac.canonical_equations.deepmath_amortizing_argmax_laws_20260704 import (
     ALL_DEEPMATH_AMORTIZING_ARGMAX_BUILDERS,
     annulus_anisotropy_ratio,
@@ -565,6 +571,7 @@ __all__ = [
     "build_costate_lambda_marginal_ds_v1",
     "build_curriculum_handoff_critical_nucleus_v1",
     "build_dash_erasure_homogenization_v1",
+    "build_decoder_causal_condition_transport_v1",
     "build_defect_network_component_delta_rate_v1",
     "build_dseg_aware_fourier_taper_v1",
     "build_dsl_custodied_scalar_identity_v1",
@@ -691,6 +698,7 @@ __all__ = [
     "populate_costate_lambda_marginal_ds_equation",
     "populate_curriculum_derivation_laws_equations",
     "populate_dash_erasure_homogenization_equation",
+    "populate_decoder_causal_condition_transport_v1",
     "populate_defect_network_component_delta_rate_v1",
     "populate_dseg_aware_fourier_taper_equation",
     "populate_eikonal_retention_couples_to_tau_rung_v1",
@@ -740,6 +748,7 @@ __all__ = [
     "register_canonical_equation",
     "register_evaluator",
     "registered_equation_ids",
+    "receiver_causal_context_is_free",
     "resolve_equation_value",
     "resolve_margin_band_threshold",
     "scorer_input_cache_hash_identity",
@@ -753,6 +762,7 @@ __all__ = [
     "task_rd_dominance_gap",
     "tau_interface_halfwidth",
     "through_r_saliency",
+    "transport_floor_bytes",
     "update_equation_with_anchor_via_conjugate_prior",
     "update_equation_with_domain_refinement",
     "update_equation_with_empirical_anchor",
