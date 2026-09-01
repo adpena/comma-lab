@@ -1011,6 +1011,31 @@ def test_scaffold_template_carries_every_lint_required_section():
         "FALSIFIER",
     ):
         assert header in text, f"template lost required section {header!r}"
+    assert "DETACHED >30-MIN COMPUTE" in text
+    assert "`nohup` + `disown`" in text
+    assert "a pidfile" in text
+    assert "durable done-receipt" in text
+    assert "successor or\n  MAIN harvests" in text
+    assert "in-session multi-hour compute loop is FORBIDDEN" in text
+
+
+def test_sha_transcription_lint_fires_on_actual_sfp1_mistype():
+    mod = _load()
+    memo = _REPO / ".omx/research/ddm_sfp1_scmdl_field_proposal_prep_20260901.md"
+    warnings = mod._lint_sha_prefix_divergent_tails(memo.read_text(encoding="utf-8"))
+
+    assert warnings
+    assert "cbb8d9283f435204800e31250bad7880490658012e2b6d8aa196ac4666bc84f5" in warnings[0]
+    assert "cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25" in warnings[0]
+
+
+def test_sha_transcription_lint_passes_canonical_and_unrelated_hashes():
+    mod = _load()
+    canonical = "cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25"
+    unrelated = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+
+    assert mod._lint_sha_prefix_divergent_tails(canonical) == []
+    assert mod._lint_sha_prefix_divergent_tails(unrelated) == []
 
 
 def test_scaffold_raw_template_is_unspawnable(tmp_path):

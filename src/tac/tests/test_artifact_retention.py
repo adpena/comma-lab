@@ -5,6 +5,8 @@ import hashlib
 import importlib.util
 import json
 import shutil
+import stat
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -721,7 +723,7 @@ def test_retention_move_copy_failure_journals_and_preserves_source(
 
     monkeypatch.setattr(retention, "directory_digest", mismatching_destination_digest)
 
-    with pytest.raises(ArtifactRetentionError, match="copy verification failed"):
+    with pytest.raises(ArtifactRetentionError, match="content/metadata verification failed"):
         execute_retention_plan(
             plan,
             action="move",
@@ -736,6 +738,73 @@ def test_retention_move_copy_failure_journals_and_preserves_source(
         for line in journal.read_text(encoding="utf-8").splitlines()
     ]
     assert events == ["start", "candidate_start", "candidate_error", "candidate_end"]
+
+
+def test_cross_device_metadata_mismatch_routes_to_verified_tar_wrapper(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    executable = source / "run"
+    executable.write_bytes(b"#!/bin/sh\nexit 0\n")
+    executable.chmod(0o751)
+    (source / "python3").symlink_to("run")
+    cold_store = tmp_path / "cold"
+    cold_store.mkdir()
+    destination = cold_store / "wrapped"
+    repo = tmp_path / "repo"
+    fidelity = retention._metadata_fidelity_module()
+
+    def fake_device_id(path: Path) -> int:
+        resolved = path.resolve(strict=False)
+        return 2 if resolved == cold_store or cold_store in resolved.parents else 1
+
+    def unrepresentable_capabilities(
+        destination_root: Path,
+        *,
+        file_modes: set[int],
+        dir_modes: set[int],
+        require_symlink: bool,
+    ):
+        del destination_root, require_symlink
+        return fidelity.DestinationMetadataCapabilities(
+            probe_root="synthetic-unrepresentable",
+            symlink_supported=True,
+            file_mode_results=dict.fromkeys(file_modes, 0o700),
+            dir_mode_results=dict.fromkeys(dir_modes, 0o700),
+        )
+
+    monkeypatch.setattr(retention, "_path_device_id", fake_device_id)
+    monkeypatch.setattr(
+        fidelity,
+        "probe_destination_metadata_capabilities",
+        unrepresentable_capabilities,
+    )
+
+    verification = retention._copy_verify_then_delete(
+        source,
+        destination,
+        repo_root=repo,
+        bytes_estimate=executable.stat().st_size,
+        allowed_source_roots=(tmp_path,),
+    )
+
+    assert verification["method"] == "tar_wrap_verify_delete"
+    assert verification["direct_move_refused"] is True
+    assert verification["restore_verification"]["content_manifest_equal"] is True
+    assert verification["restore_verification"]["metadata_manifest_equal"] is True
+    assert not source.exists()
+    assert (destination / "INNER_MANIFEST.json").is_file()
+    archive = destination / "payload.tar"
+    restore_parent = tmp_path / "restore"
+    restore_parent.mkdir()
+    with tarfile.open(archive, mode="r") as tar:
+        tar.extractall(restore_parent, filter="fully_trusted")
+    restored = restore_parent / "source"
+    assert stat.S_IMODE((restored / "run").stat().st_mode) == 0o751
+    assert (restored / "python3").is_symlink()
+    assert (restored / "python3").readlink() == Path("run")
 
 
 def test_retention_tiered_move_uses_first_cold_store_root(tmp_path: Path) -> None:

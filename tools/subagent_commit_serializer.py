@@ -2049,6 +2049,56 @@ def _review_gate_override_python_targets(
     return sorted(path for path in candidates if Path(path).suffix == ".py")
 
 
+def _venv_integrity_blockers(repo_root: Path) -> list[str]:
+    """LOUD first-commit canary for metadata-loss damage in the live venv."""
+
+    venv = repo_root / ".venv"
+    if not venv.exists():
+        if (repo_root / "tools/subagent_commit_serializer.py").is_file():
+            return ["venv_missing"]
+        return []
+    blockers: list[str] = []
+    python3 = venv / "bin" / "python3"
+    ruff = venv / "bin" / "ruff"
+    try:
+        python3.resolve(strict=True)
+    except OSError as exc:
+        blockers.append(f"python3_does_not_resolve:{type(exc).__name__}:{exc}")
+    else:
+        if not os.access(python3, os.X_OK):
+            blockers.append("python3_not_executable")
+        else:
+            probe = subprocess.run(
+                [str(python3), "-c", "import sys; print(sys.executable)"],
+                cwd=str(repo_root),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=10,
+            )
+            if probe.returncode != 0:
+                blockers.append(f"python3_exec_failed:rc={probe.returncode}:{probe.stderr.strip()}")
+    if not ruff.is_file():
+        blockers.append("ruff_missing")
+    elif not os.access(ruff, os.X_OK):
+        blockers.append("ruff_not_executable")
+    else:
+        probe = subprocess.run(
+            [str(ruff), "--version"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+        if probe.returncode != 0 or not probe.stdout.strip().lower().startswith("ruff "):
+            blockers.append(
+                f"ruff_exec_failed:rc={probe.returncode}:"
+                f"{(probe.stderr or probe.stdout).strip()}"
+            )
+    return blockers
+
+
 def main(rebind_root: bool = False) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -2278,6 +2328,18 @@ def main(rebind_root: bool = False) -> int:
         LOCK_PATH = REPO_ROOT / ".omx/state/.commit-lock"
         LOG_PATH = REPO_ROOT / ".omx/state/commit-serializer.log"
 
+    try:
+        _venv_blockers = _venv_integrity_blockers(REPO_ROOT)
+    except (OSError, subprocess.SubprocessError) as exc:
+        _venv_blockers = [f"probe_failed:{type(exc).__name__}:{exc}"]
+    if _venv_blockers:
+        print(
+            "[subagent-commit-serializer] VENV-INTEGRITY REFUSED: "
+            + "; ".join(_venv_blockers),
+            file=sys.stderr,
+        )
+        return 20
+
     # FIX-CLOBBER (2026-07-08 Catalog #405): patch-file (intent-manifest) mode.
     # When --patch-file is set the working tree is NOT the source of truth; the
     # patch text is. Derive the file set from the patch so logging + the sister
@@ -2361,10 +2423,11 @@ def main(rebind_root: bool = False) -> int:
     # MAIN-authored MEMOS (jt1 restated a number its owning memo had published a
     # do-not-cite list against, and crossed no lint — memos never touch the spawn
     # path). This runs the SAME canonical matcher (tools/premise_lint.py) over
-    # staged .omx/research/*.md content BEFORE the commit. Advisory + fail-open:
-    # never blocks, never mutates; a correction memo quoting a wrong usage to
-    # document it will fire honestly — the warning is a re-derive prompt, not a
-    # veto.
+    # staged .omx/research/*.md content BEFORE the commit. Registered-premise
+    # findings remain advisory. SHA prefix-match/divergent-tail findings are a
+    # separate refusing leg: correction memos must abbreviate a bad historical
+    # token below 16 hex or remove it, never republish the transcription error.
+    _sha_transcription_refusals: list[str] = []
     try:
         import importlib.util as _ilu_pl
 
@@ -2379,13 +2442,32 @@ def main(rebind_root: bool = False) -> int:
             _memo_path = REPO_ROOT / _m
             if not _memo_path.is_file():
                 continue
+            _memo_text = _memo_path.read_text(encoding="utf-8")
             for _warn in _pl.lint_text(
-                _memo_path.read_text(encoding="utf-8"),
+                _memo_text,
                 subject=f"staged memo {_memo_path.name}",
             ):
                 print(f"[subagent-commit-serializer] PREMISE-LINT {_warn}", file=sys.stderr)
-    except Exception:
-        pass
+            _sha_transcription_refusals.extend(
+                _pl.lint_sha_prefix_divergent_tails(
+                    _memo_text,
+                    canonical_shas=_pl.canonical_frontier_shas(
+                        REPO_ROOT / ".omx/state/canonical_frontier_pointer.json"
+                    ),
+                    subject=f"staged memo {_memo_path.name}",
+                )
+            )
+    except Exception as exc:
+        _sha_transcription_refusals.append(
+            f"SHA-transcription lint unavailable ({type(exc).__name__}: {exc})"
+        )
+    if _sha_transcription_refusals:
+        for _refusal in _sha_transcription_refusals:
+            print(
+                f"[subagent-commit-serializer] SHA-LINT REFUSED {_refusal}",
+                file=sys.stderr,
+            )
+        return 21
 
     started_iso = _now_iso()
     pid = os.getpid()

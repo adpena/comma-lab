@@ -9,11 +9,14 @@ certificate proves how to rebuild or audit them later.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
 import shutil
 import subprocess
 import sys
+import tarfile
+import tempfile
 from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
@@ -177,6 +180,40 @@ def _path_digest(path: Path) -> dict[str, Any]:
             "sha256": sha256_file(path),
         }
     raise ArtifactRetentionError(f"cannot digest non-file/non-directory path: {path}")
+
+
+def _metadata_fidelity_module():
+    """Load the one certify-and-move fidelity implementation used by both movers."""
+
+    module_name = "_artifact_retention_metadata_fidelity"
+    cached = sys.modules.get(module_name)
+    if cached is not None:
+        return cached
+    module_path = Path(__file__).resolve().parents[2] / "tools/vertigo_certify_move.py"
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if spec is None or spec.loader is None:
+        raise ArtifactRetentionError(f"cannot load metadata fidelity guard: {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _path_metadata_rows(path: Path) -> list[dict[str, object]]:
+    """Exact basic POSIX metadata needed before any source retirement."""
+
+    if path.is_dir() and not path.is_symlink():
+        fidelity = _metadata_fidelity_module()
+        return fidelity.metadata_manifest_rows(fidelity.take_census(path))
+    if path.is_file() and not path.is_symlink():
+        return [
+            {
+                "path": ".",
+                "type": "regular_file",
+                "mode": int(path.stat().st_mode & 0o7777),
+            }
+        ]
+    raise ArtifactRetentionError(f"cannot inspect metadata for path: {path}")
 
 
 def _remove_path(path: Path) -> None:
@@ -2181,6 +2218,7 @@ def _copy_verify_then_delete(
     destination_device_id = _path_device_id(destination.parent)
     same_device_as_source = source_device_id == destination_device_id
     source_digest = _path_digest(source)
+    source_metadata_rows = _path_metadata_rows(source)
     if same_device_as_source:
         moved_to_partial = False
         finalized = False
@@ -2188,13 +2226,21 @@ def _copy_verify_then_delete(
             source.replace(partial_destination)
             moved_to_partial = True
             destination_digest = _path_digest(partial_destination)
-            if source_digest["sha256"] != destination_digest["sha256"]:
-                raise ArtifactRetentionError("cold-store copy verification failed")
+            destination_metadata_rows = _path_metadata_rows(partial_destination)
+            if (
+                source_digest["sha256"] != destination_digest["sha256"]
+                or source_metadata_rows != destination_metadata_rows
+            ):
+                raise ArtifactRetentionError("cold-store content/metadata verification failed")
             partial_destination.replace(destination)
             finalized = True
             final_digest = _path_digest(destination)
-            if source_digest["sha256"] != final_digest["sha256"]:
-                raise ArtifactRetentionError("cold-store copy verification failed")
+            final_metadata_rows = _path_metadata_rows(destination)
+            if (
+                source_digest["sha256"] != final_digest["sha256"]
+                or source_metadata_rows != final_metadata_rows
+            ):
+                raise ArtifactRetentionError("cold-store content/metadata verification failed")
         except Exception:
             if finalized and destination.exists() and not source.exists():
                 try:
@@ -2216,6 +2262,155 @@ def _copy_verify_then_delete(
             "destination_device_id": destination_device_id,
             "source_digest": source_digest,
             "destination_digest": final_digest,
+            "source_metadata_rows": source_metadata_rows,
+            "destination_metadata_rows": final_metadata_rows,
+            "metadata_manifest_equal": True,
+            "bytes_estimate": int(bytes_estimate),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    fidelity = _metadata_fidelity_module()
+    if source.is_dir() and not source.is_symlink():
+        source_census = fidelity.take_census(source)
+        destination_capabilities = fidelity.probe_destination_metadata_capabilities(
+            destination.parent,
+            file_modes=set(source_census.file_modes.values()),
+            dir_modes=set(source_census.dir_modes.values()),
+            require_symlink=bool(source_census.symlinks),
+        )
+        metadata_blockers = fidelity.direct_move_metadata_blockers(
+            source_census, destination_capabilities
+        )
+    else:
+        source_mode = int(source.stat().st_mode & 0o7777)
+        destination_capabilities = fidelity.probe_destination_metadata_capabilities(
+            destination.parent,
+            file_modes={source_mode},
+            dir_modes=set(),
+            require_symlink=False,
+        )
+        observed_mode = destination_capabilities.file_mode_results.get(source_mode)
+        metadata_blockers = (
+            []
+            if observed_mode == source_mode
+            else [
+                f"regular_file_mode_not_representable:{oct(source_mode)}->"
+                f"{('unavailable' if observed_mode is None else oct(observed_mode))}"
+            ]
+        )
+
+    if metadata_blockers:
+        try:
+            partial_destination.mkdir(parents=True)
+            archive = partial_destination / "payload.tar"
+            tar_receipt = fidelity.create_metadata_preserving_tar(source, archive)
+            post_source_digest = _path_digest(source)
+            post_source_metadata_rows = _path_metadata_rows(source)
+            if (
+                source_digest["sha256"] != post_source_digest["sha256"]
+                or source_metadata_rows != post_source_metadata_rows
+            ):
+                raise ArtifactRetentionError(
+                    "source changed while cold-store tar wrapper was materialized"
+                )
+            with tempfile.TemporaryDirectory(
+                prefix=f".{source.name}.retention-restore-", dir=source.parent
+            ) as restore_dir:
+                restore_parent = Path(restore_dir)
+                with tarfile.open(archive, mode="r") as tar:
+                    tar.extractall(restore_parent, filter="fully_trusted")
+                restored = restore_parent / source.name
+                restore_digest = _path_digest(restored)
+                restore_metadata_rows = _path_metadata_rows(restored)
+            if (
+                source_digest["sha256"] != restore_digest["sha256"]
+                or source_metadata_rows != restore_metadata_rows
+            ):
+                raise ArtifactRetentionError(
+                    "cold-store tar restore content/metadata verification failed"
+                )
+            inner_manifest = partial_destination / "INNER_MANIFEST.json"
+            inner_manifest.write_text(
+                dumps_json(
+                    {
+                        "schema": "comma_lab.artifact_retention_inner_manifest.v1",
+                        "source_digest": source_digest,
+                        "metadata_rows": source_metadata_rows,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            restore_receipt = partial_destination / "RESTORE.json"
+            final_tar_receipt = {
+                **tar_receipt,
+                "path": str(destination / "payload.tar"),
+            }
+            restore_receipt.write_text(
+                dumps_json(
+                    {
+                        "schema": "comma_lab.artifact_retention_tar_restore.v1",
+                        "archive": final_tar_receipt,
+                        "restore_command": [
+                            "tar",
+                            "-xf",
+                            str(destination / "payload.tar"),
+                            "-C",
+                            "<metadata-capable-parent>",
+                        ],
+                        "content_manifest_equal": True,
+                        "metadata_manifest_equal": True,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            partial_destination.replace(destination)
+        except Exception:
+            _remove_path(partial_destination)
+            if destination.exists():
+                _remove_path(destination)
+            raise
+        final_archive = destination / "payload.tar"
+        final_archive_sha256 = sha256_file(final_archive)
+        if final_archive_sha256 != tar_receipt["sha256"]:
+            raise ArtifactRetentionError("cold-store tar changed during finalization")
+        _delete_certified_tree(
+            source,
+            repo_root=repo_root,
+            bytes_estimate=bytes_estimate,
+            allowed_source_roots=allowed_source_roots,
+        )
+        return {
+            "schema": "comma_lab.artifact_retention_cold_store_copy.v2",
+            "method": "tar_wrap_verify_delete",
+            "same_device_as_source": False,
+            "source_device_id": source_device_id,
+            "destination_device_id": destination_device_id,
+            "direct_move_refused": True,
+            "direct_move_metadata_blockers": metadata_blockers,
+            "destination_metadata_capabilities": destination_capabilities.as_dict(),
+            "source_digest": source_digest,
+            "source_metadata_rows": source_metadata_rows,
+            "tar": {
+                "path": str(final_archive),
+                "bytes": final_archive.stat().st_size,
+                "sha256": final_archive_sha256,
+            },
+            "inner_manifest": {
+                "path": str(destination / "INNER_MANIFEST.json"),
+                "bytes": (destination / "INNER_MANIFEST.json").stat().st_size,
+                "sha256": sha256_file(destination / "INNER_MANIFEST.json"),
+            },
+            "restore_receipt": {
+                "path": str(destination / "RESTORE.json"),
+                "bytes": (destination / "RESTORE.json").stat().st_size,
+                "sha256": sha256_file(destination / "RESTORE.json"),
+            },
+            "restore_verification": {
+                "content_manifest_equal": True,
+                "metadata_manifest_equal": True,
+            },
             "bytes_estimate": int(bytes_estimate),
             "score_claim": False,
             "promotion_eligible": False,
@@ -2223,12 +2418,20 @@ def _copy_verify_then_delete(
         }
     try:
         if source.is_dir():
-            shutil.copytree(source, partial_destination, symlinks=False)
+            shutil.copytree(source, partial_destination, symlinks=True)
         else:
             shutil.copy2(source, partial_destination)
+        post_source_digest = _path_digest(source)
+        post_source_metadata_rows = _path_metadata_rows(source)
         destination_digest = _path_digest(partial_destination)
-        if source_digest["sha256"] != destination_digest["sha256"]:
-            raise ArtifactRetentionError("cold-store copy verification failed")
+        destination_metadata_rows = _path_metadata_rows(partial_destination)
+        if (
+            source_digest["sha256"] != post_source_digest["sha256"]
+            or source_digest["sha256"] != destination_digest["sha256"]
+            or source_metadata_rows != post_source_metadata_rows
+            or source_metadata_rows != destination_metadata_rows
+        ):
+            raise ArtifactRetentionError("cold-store content/metadata verification failed")
         partial_destination.replace(destination)
     except Exception:
         _remove_path(partial_destination)
@@ -2236,9 +2439,13 @@ def _copy_verify_then_delete(
             _remove_path(destination)
         raise
     final_digest = _path_digest(destination)
-    if source_digest["sha256"] != final_digest["sha256"]:
+    final_metadata_rows = _path_metadata_rows(destination)
+    if (
+        source_digest["sha256"] != final_digest["sha256"]
+        or source_metadata_rows != final_metadata_rows
+    ):
         _remove_path(destination)
-        raise ArtifactRetentionError("cold-store copy verification failed")
+        raise ArtifactRetentionError("cold-store content/metadata verification failed")
     _delete_certified_tree(
         source,
         repo_root=repo_root,
@@ -2246,13 +2453,18 @@ def _copy_verify_then_delete(
         allowed_source_roots=allowed_source_roots,
     )
     return {
-        "schema": "comma_lab.artifact_retention_cold_store_copy.v1",
+        "schema": "comma_lab.artifact_retention_cold_store_copy.v2",
         "method": "copy_verify_delete",
         "same_device_as_source": False,
         "source_device_id": source_device_id,
         "destination_device_id": destination_device_id,
         "source_digest": source_digest,
         "destination_digest": final_digest,
+        "source_metadata_rows": source_metadata_rows,
+        "destination_metadata_rows": final_metadata_rows,
+        "metadata_manifest_equal": True,
+        "direct_move_refused": False,
+        "destination_metadata_capabilities": destination_capabilities.as_dict(),
         "bytes_estimate": int(bytes_estimate),
         "score_claim": False,
         "promotion_eligible": False,

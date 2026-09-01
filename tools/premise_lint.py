@@ -12,12 +12,14 @@ spawn path). Seven reading-semantics instances in one day, one genus.
 This module extracts the matcher so BOTH surfaces consume one implementation:
 
   * ``tools/codex_arm_queue.py`` delegates here (charter spawns — the original surface);
-  * ``tools/subagent_commit_serializer.py`` runs it advisory-only over staged
+  * ``tools/subagent_commit_serializer.py`` runs the falsified-premise matcher
+    advisory-only and the SHA-transcription matcher refusing over staged
     ``.omx/research/*.md`` files (the memo surface the genus actually used).
 
-CONTRACT (inherited from the keeper's function and BINDING on every consumer):
-advisory only, and silent on every failure — a missing, empty, or malformed registry
-must never block a spawn or a commit. Rows are JSONL with ``claim_patterns`` (substring
+FALSIFIED-PREMISE CONTRACT (inherited from the keeper's function and BINDING on every
+consumer): advisory only, and silent on every registry failure. The independent
+SHA-transcription leg is refusing because its inputs are the edited text plus canonical
+pins, not an optional recall store. Registry rows use ``claim_patterns`` (substring
 match after lowercasing + unicode-dash normalisation) and an ``origin`` naming the
 QUANTITY; this is deliberately a curated store, never the auto-scraped corrections
 index, whose window-adjacency rows cannot carry quantity identity (the retired
@@ -32,6 +34,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -47,6 +50,7 @@ DEFAULT_REGISTRIES: tuple[Path, ...] = (
 )
 
 _WARN_CAP = 5
+_HEX_RUN_RE = re.compile(r"(?<![0-9A-Fa-f])([0-9A-Fa-f]{16,})(?![0-9A-Fa-f])")
 
 
 def _normalise(text: str) -> str:
@@ -67,7 +71,7 @@ def lint_text(
     Silent on EVERY failure per the contract: any exception, missing file, or malformed
     row yields no warning for that row — never an exception to the caller.
     """
-    paths = [p for p in (registries if registries is not None else DEFAULT_REGISTRIES)]
+    paths = list(registries if registries is not None else DEFAULT_REGISTRIES)
     paths = [p for p in paths if isinstance(p, Path) and p.is_file()]
     if not paths:
         return []
@@ -120,6 +124,83 @@ def lint_text(
                 break
     except Exception:
         return warnings
+    return warnings
+
+
+def canonical_frontier_shas(pointer_path: Path | None = None) -> set[str]:
+    """Return full SHA pins recursively present in the canonical frontier pointer.
+
+    A missing or malformed pointer returns an empty set.  This helper is shared by
+    the charter and staged-memo consumers; they must not grow separate pin loaders.
+    """
+
+    path = pointer_path or (_REPO / ".omx" / "state" / "canonical_frontier_pointer.json")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return set()
+    pins: set[str] = set()
+
+    def visit(value: object) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if isinstance(child, str) and "sha" in str(key).lower():
+                    token = child.lower()
+                    if re.fullmatch(r"[0-9a-f]{64}", token):
+                        pins.add(token)
+                visit(child)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child)
+
+    visit(payload)
+    return pins
+
+
+def lint_sha_prefix_divergent_tails(
+    text: str,
+    *,
+    canonical_shas: set[str] | None = None,
+    subject: str = "text",
+    cap: int = _WARN_CAP,
+) -> list[str]:
+    """Refuse likely SHA transcription drift without policing unrelated hashes.
+
+    A token is suspicious only when it shares at least eight leading hex digits
+    with a canonical full SHA but diverges before either token ends.  Exact full
+    matches and honest abbreviated prefixes therefore pass.  Full 64-hex pins in
+    the same document join the frontier-pointer pins, catching an internally
+    inconsistent memo even when the pointer is unavailable.
+    """
+
+    observed = [match.group(1).lower() for match in _HEX_RUN_RE.finditer(text)]
+    document_pins = {token for token in observed if len(token) == 64}
+    pins = set(canonical_shas if canonical_shas is not None else canonical_frontier_shas())
+    pins.update(document_pins)
+    warnings: list[str] = []
+    seen_pairs: set[tuple[str, str]] = set()
+    for token in observed:
+        for pin in sorted(pins):
+            if token == pin or token.startswith(pin) or pin.startswith(token):
+                continue
+            common = 0
+            for left, right in zip(token, pin, strict=False):
+                if left != right:
+                    break
+                common += 1
+            if common < 8:
+                continue
+            pair = tuple(sorted((token, pin)))
+            if pair in seen_pairs:
+                continue
+            seen_pairs.add(pair)
+            warnings.append(
+                f"SHA-TRANSCRIPTION: {subject} carries {token}; its first {common} hex "
+                f"digits match canonical pin {pin}, then the tail diverges. Refuse and "
+                "copy the canonical SHA verbatim."
+            )
+            if len(warnings) >= cap:
+                return warnings
     return warnings
 
 

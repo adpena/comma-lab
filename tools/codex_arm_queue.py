@@ -1808,6 +1808,25 @@ def _lint_frontier_literals(text: str) -> list[str]:
     ]
 
 
+def _lint_sha_prefix_divergent_tails(text: str) -> list[str]:
+    """Refusing SHA-transcription leg shared with the staged-memo consumer."""
+
+    try:
+        import importlib.util as _ilu
+
+        helper_path = Path(__file__).resolve().parent / "premise_lint.py"
+        spec = _ilu.spec_from_file_location("_caq_sha_premise_lint", helper_path)
+        helper = _ilu.module_from_spec(spec)
+        spec.loader.exec_module(helper)
+        return helper.lint_sha_prefix_divergent_tails(
+            text,
+            canonical_shas=helper.canonical_frontier_shas(FRONTIER_POINTER),
+            subject="charter",
+        )
+    except Exception as exc:
+        return [f"SHA-transcription lint unavailable ({type(exc).__name__}: {exc})"]
+
+
 def _lint_bare_task_ids(text: str) -> list[str]:
     """Bare #NNNN ids do not resolve for an arm; memo filenames do.
 
@@ -1973,6 +1992,7 @@ def lint_charter_optimal_form(prompt_path: str) -> list[str]:
         text = Path(prompt_path).read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
         return [f"charter unreadable ({exc})"]
+    problems.extend(_lint_sha_prefix_divergent_tails(text))
     low = text.lower()
     has_block = "## optimal form" in low
     waiver = "optimal_form_na:" in low
@@ -2132,6 +2152,10 @@ Operator {date}: *"<FILL: operator verbatim, or the routed finding + its source 
   plus a fire order is the CORRECT outcome, never a failure.
 - Serializer commits w/ post-edit `--expected-content-sha256`; `.py` = 2 genuine review passes.
 - ALWAYS KEEP THE PAYLOAD; bulky receipts to `/Volumes/APDataStore/pact/{name}/`.
+- DETACHED >30-MIN COMPUTE: any single compute step projected to exceed 30 minutes MUST
+  launch outside the arm session with `nohup` + `disown`, a pidfile, crash-resumable stage
+  checkpoints, and a durable done-receipt. The arm MONITORS that process; a successor or
+  MAIN harvests the done-receipt. An in-session multi-hour compute loop is FORBIDDEN.
 - CLOSED-FORM-FIRST (operator 2026-08-31 "All upstream can be closed form"): the scoring
   chain is frozen piecewise-analytic math with every non-analytic locus exactly known —
   derive/solve against the EXACT upstream operators (atlas:

@@ -465,6 +465,19 @@ def cold_store_superseded_measurements(
     """Copy-verify-delete complete superseded AD2 trees, then leave symlinks."""
     from comma_lab.artifact_retention import _copy_verify_then_delete, directory_digest
 
+    def certified_destination_digest(destination: Path) -> tuple[dict[str, Any], str]:
+        inner_manifest = destination / "INNER_MANIFEST.json"
+        if not inner_manifest.is_file():
+            return directory_digest(destination), "direct_tree"
+        inner = json.loads(inner_manifest.read_text(encoding="utf-8"))
+        if inner.get("schema") != "comma_lab.artifact_retention_inner_manifest.v1":
+            raise RuntimeError(f"cold-store inner manifest schema differs: {inner_manifest}")
+        restore = json.loads((destination / "RESTORE.json").read_text(encoding="utf-8"))
+        archive = destination / "payload.tar"
+        if restore["archive"]["sha256"] != sha256_file(archive):
+            raise RuntimeError(f"cold-store tar drifted: {archive}")
+        return inner["source_digest"], "tar_wrapper"
+
     parent = measurement_parent.resolve()
     keep = keep_root.resolve()
     cold = cold_store_root.resolve()
@@ -483,10 +496,11 @@ def cold_store_superseded_measurements(
         for row in existing["rows"]:
             source = Path(row["source"])
             destination = Path(row["destination"])
+            destination_digest, _kind = certified_destination_digest(destination)
             if (
                 not source.is_symlink()
                 or source.resolve() != destination
-                or directory_digest(destination)["sha256"] != row["source_digest"]["sha256"]
+                or destination_digest["sha256"] != row["source_digest"]["sha256"]
             ):
                 raise RuntimeError(f"retained cold-store execution drifted: {source}")
         return existing
@@ -498,7 +512,7 @@ def cold_store_superseded_measurements(
     for source in selected:
         destination = cold / source.name
         if source.is_symlink():
-            source_digest = directory_digest(destination)
+            source_digest, _kind = certified_destination_digest(destination)
             plan_rows.append(
                 {
                     "source": str(source),
@@ -547,16 +561,20 @@ def cold_store_superseded_measurements(
         source = Path(row["source"])
         destination = Path(row["destination"])
         if source.is_symlink():
+            destination_digest, representation_kind = certified_destination_digest(destination)
             if (
                 source.resolve() != destination
-                or directory_digest(destination)["sha256"] != row["source_digest"]["sha256"]
+                or destination_digest["sha256"] != row["source_digest"]["sha256"]
             ):
                 raise RuntimeError(f"preexisting cold-store link differs: {source}")
             execution_rows.append(
                 {
                     **row,
                     "status": "moved_and_source_symlinked",
-                    "verification": {"method": "preexisting_verified_symlink"},
+                    "verification": {
+                        "method": "preexisting_verified_symlink",
+                        "representation_kind": representation_kind,
+                    },
                     "source_symlink_target": str(source.readlink()),
                 }
             )
@@ -569,7 +587,8 @@ def cold_store_superseded_measurements(
             allowed_source_roots=(parent,),
         )
         source.symlink_to(destination, target_is_directory=True)
-        if directory_digest(destination)["sha256"] != row["source_digest"]["sha256"]:
+        destination_digest, _kind = certified_destination_digest(destination)
+        if destination_digest["sha256"] != row["source_digest"]["sha256"]:
             raise RuntimeError(f"cold-store final digest differs: {destination}")
         execution_rows.append(
             {

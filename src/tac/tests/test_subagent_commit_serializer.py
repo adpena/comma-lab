@@ -85,6 +85,39 @@ def test_review_gate_override_no_stage_inspects_real_staged_targets() -> None:
         ]
 
 
+def test_live_venv_integrity_canary_passes() -> None:
+    mod = _load_module()
+    assert mod._venv_integrity_blockers(REPO) == []
+
+
+def test_venv_integrity_canary_fires_on_broken_python_and_nonexec_ruff(
+    tmp_path: Path,
+) -> None:
+    mod = _load_module()
+    bin_dir = tmp_path / ".venv/bin"
+    bin_dir.mkdir(parents=True)
+    (bin_dir / "python3").symlink_to("missing-python")
+    ruff = bin_dir / "ruff"
+    ruff.write_text("#!/bin/sh\necho ruff synthetic\n", encoding="utf-8")
+    ruff.chmod(0o644)
+
+    blockers = mod._venv_integrity_blockers(tmp_path)
+
+    assert any(item.startswith("python3_does_not_resolve:") for item in blockers)
+    assert "ruff_not_executable" in blockers
+
+
+def test_serializer_source_wires_venv_and_sha_refusals_before_commit() -> None:
+    source = (REPO / "tools/subagent_commit_serializer.py").read_text(encoding="utf-8")
+    main = source.split("def main(", 1)[1]
+
+    assert "VENV-INTEGRITY REFUSED" in main
+    assert "return 20" in main
+    assert "lint_sha_prefix_divergent_tails" in main
+    assert "SHA-LINT REFUSED" in main
+    assert "return 21" in main
+
+
 # ---------------------------------------------------------------------------
 # Lock patience (task #854).
 #
