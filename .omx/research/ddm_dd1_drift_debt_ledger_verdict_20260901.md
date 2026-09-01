@@ -202,6 +202,6 @@ At most five recurring proposals:
 - Adding new drift-detector tools: closed because AU1 and the P0 digest are the narrower existing extension points.
 - Treating all raw duplicate equation IDs as defects: closed because the registry is append-only; only simultaneous live-definition ambiguity is actionable, and that work belongs to `ddm_lv3`.
 - Re-citing #670's 110 lane failures, #860's older 316/231/210 counts, or the SSD count 96: closed by current 0/2,295 lane validation, #860's typed 163 decomposition, and the refreshed SSD count 118.
-- Claiming recursive K=2 completion now: closed because MAIN has not applied generation-1 dispositions, so generation 2 and the zero-unowned-action seal have not occurred.
+- Claiming recursive K=2 completion now: closed because generation 2 produced new disposition rows, MAIN has not yet applied or rejected them, and the dry-generation count is 0/2.
 
 S 0.14797617125559104 @ 180,002 B [contest-CUDA T4 n600], afr1 sha cbb8d928…d405bf25 — UNMOVED
