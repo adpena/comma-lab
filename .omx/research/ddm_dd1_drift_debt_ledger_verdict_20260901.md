@@ -22,7 +22,7 @@ Authority boundaries:
 | 1 | corpus query over research/tasks/DAG/equations/docs with the same terms | Found the existing AU1, premise-lint, P0-digest, corrections-index, charter-lint, triality, and consolidation instruments. This killed the idea of adding parallel detectors. |
 | 1 | AU1 corrections index + canonical-equation recall | Confirmed that task-status-versus-content is not an existing typed output and that equation/organ follow-up belongs to `ddm_lv3`, not DD1. |
 | 2 | graph-memory reconstruct: `closed task stale child orphaned follow-on reparented P0 current campaign` (39,593 nodes / 162,114 edges) | Found the quadrality task-status law, the prior P0 burn-down form, #540's superseded v10 lineage, and DD1's own generation-1 node. This forced a post-application body/premise check, not merely another status count. |
-| 2 | corpus query: `closed task`, `stale child`, `orphaned follow-on`, `reparent`, `P0 premise`, `status drift`, `accepted disposition` across research/state/docs/tools | Found current #1378/#1379 receipts, QXO1's live queue row, the IV1/OQ1 prior backlog dispositions, and the current HT1 gate4 correction. This changed #1363 from the generation-1 supersession proposal to OPERATOR-DECISION and exposed stale bodies in #1111/#1182/#1374. |
+| 2 | corpus query: `closed task`, `stale child`, `orphaned follow-on`, `reparent`, `P0 premise`, `status drift`, `accepted disposition` across research/state/docs/tools | Found current #1378/#1379 receipts, the IV1/OQ1 prior backlog dispositions, and the current HT1 gate4 correction. QXO1 was live during the sweep and then landed concurrently at `b34573e5f0`; its same-object n600 realization is now the successor. This changed #1363 from the generation-1 supersession proposal to OPERATOR-DECISION and exposed stale bodies in #1111/#1182/#1374. |
 | 2 | AU1 corrections index SHA `af60161c...6857` + canonical-equation list (457 current equations) | Corrections were carried into the pending-tail closures; equation/organ work remains routed to `ddm_lv3`. No DD1-owned equation registration was opened. |
 
 Seal statement: **NOT SEALED.** Generation 1 was consumed in part, but generation 2 produced new disposition rows: 110 previously deferred pending-tail rows plus body/premise repairs for #1111, #1182, #1363, and #1374. MAIN must apply or reject those rows before the next generation. There are zero consecutive dry generations, so K=2 is not claimed.
@@ -36,7 +36,7 @@ The current 10-row in-progress denominator was inspected 10/10 and classified 10
 | **LIVE, body current** | #328, #332, #343, #381, #955, #1001 | Existing owners and consumers from generation 1; fire only on their recorded conditions. |
 | **OPERATOR-DECISION** | #1111, #1363 | Operator → submission/policy decision store; fire only on an explicit policy and publish decision. #1363 is not safely superseded by #1111 because its current body contains the unresolved policy choice that blocks #1111. |
 | **LIVE, premise/body repair due** | #1182 | MAIN → sub-0.12 mission umbrella; fire immediately as a ledger-only body correction: replace the rc2 claim that rate is mandatory with afr1's two-open-corners arithmetic from hot state. Keep the goal row live. |
-| **LIVE-REPARENT** | #1374 | MAIN → SCMDL task body and QXO1 consumer; fire immediately because #1378 is completed (task receipt SHA `ec864802...a609`) and `ddm_qxo1_target_overwrite_grammar` is live in the arm queue. Keep the campaign umbrella, but stop naming ccs1 as live. |
+| **LIVE-REPARENT** | #1374 | MAIN → SCMDL task body and QXO1 same-object realization consumer; fire immediately because #1378 is completed (task receipt SHA `ec864802...a609`) and QXO1 landed concurrently at `b34573e5f0` with a 129,309 B scorer-free representation row. Keep the campaign umbrella, stop naming ccs1/QXO1 as live, and route the next gate to the retained same-object n600 Seg/Pose realization. |
 
 The generation-1 draft proposed #1363 → #1111 supersession. MAIN did not accept that proposal, and the post-application source read shows why: #1363 is an operator-policy decision package, not a completed duplicate. Generation 2 corrects that disposition rather than defending the earlier guess.
 
@@ -103,7 +103,7 @@ The 20 rows that remain live need explicit ownership and triggers rather than a 
 | #1273 | Cure resume-within-stage schedule extension and sweep sister trainers. | trainer resumability owner → checkpoint/resume tests | Next WD3/sister-trainer touch. |
 | #1280 | Backfill/waive 14 council memos and strict-flip at zero with the positive control retained. | Council gate owner → Catalog #363 preflight | Free apparatus slot after strict REDs are drained. |
 | #1282 | Adjudicate 13 pre-existing RED tests as stale fixtures versus real regressions. | affected gate/test owners → test and defect ledgers | Before any bound change; each row gets source-level verdict. |
-| #1295 | Re-parent field-for-coder co-optimization to the current changed-coder object. | #1374/QXO1 owner → current SCMDL consumer | QXO1 or another current conditional coder lands with an exact surprise decomposition. |
+| #1295 | Re-parent field-for-coder co-optimization to the current changed-coder object; do not infer viability from QXO1's byte-only landing. | #1374/QXO1 realization owner → current SCMDL consumer | The retained QXO1 object receives same-object n600 distortion and survives its gate, or another current conditional coder lands with an exact surprise decomposition. |
 | #1306 | Replace ps-RSS with physical-footprint authority for Metal workloads and execute a positive control. | resource-safety owner → `safe_run`/liveness stores | Next Metal resource-enforcer landing. |
 | #1380 | Keep the four-arm wave row open only until DD1's serializer landing is consumed; the other three named arms are terminal. | MAIN → TaskList #1380 | DD1 commit lands; then mark this wave FINDING-RECORDED. |
 
@@ -194,6 +194,7 @@ At most five recurring proposals:
 - Joining P0 verification age to watched-task terminal status will explain a large fraction of the 18/32 active P0 premise/status debts. It is plausible because several active rows explicitly watch already-merged or completed work.
 - A future-only LandingDiffManifest strict boundary plus honestly typed legacy rows will stop new purgatory without fabricating historical BASE..HEAD receipts. It is plausible because every row that currently carries the manifest field reports the same missing-receipt blocker.
 - #1256's 18 unresolved L-key claim may be correct but is not closure-grade until a durable external receipt is linked; the detailed task body makes it plausible, while the missing anchor keeps it unverified here.
+- QXO1's 129,309 B target-overwrite representation may survive same-object realization despite BR2's adverse prior because it changes 8,749 semantic sites and sits 8,676 B under the byte gate. This is plausible enough for the retained n600 realization, but no distortion or score transfers from another object.
 
 ## Dead ends
 
@@ -203,5 +204,6 @@ At most five recurring proposals:
 - Treating all raw duplicate equation IDs as defects: closed because the registry is append-only; only simultaneous live-definition ambiguity is actionable, and that work belongs to `ddm_lv3`.
 - Re-citing #670's 110 lane failures, #860's older 316/231/210 counts, or the SSD count 96: closed by current 0/2,295 lane validation, #860's typed 163 decomposition, and the refreshed SSD count 118.
 - Claiming recursive K=2 completion now: closed because generation 2 produced new disposition rows, MAIN has not yet applied or rejected them, and the dry-generation count is 0/2.
+- Treating QXO1's under-gate byte row as a score win: closed because it ran no scorer and BR2's distortion belongs to a different object; only same-object retained realization can answer the score question.
 
 S 0.14797617125559104 @ 180,002 B [contest-CUDA T4 n600], afr1 sha cbb8d928…d405bf25 — UNMOVED
