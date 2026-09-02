@@ -1,0 +1,108 @@
+# PQ14 — adversarial + completeness review, round 1: the Drive PR package (canonical collaboration home)
+
+Date: 2026-09-02. Reviewer: MAIN (verification-by-rederivation, not by reading). Object under
+review: the Google Drive folder **"pact PR package — gen-7 afr1 (2026-09-02)"**
+(folder id `1lb123kwKIym_pNSRoFEJzUltEG3aifxQ`), declared by the operator today as the
+canonical home for collaboration. Method: every numeric claim re-derived from authoritative
+sources; every custody hash compared programmatically against the live artifact; cross-document
+consistency swept; completeness judged against the "collaboration home" role.
+
+## 1. Verified clean — each by re-derivation, not trust
+
+| # | Claim | Method | Result |
+|---|---|---|---|
+| V1 | S = 0.14797617125559104 from components | recompute seg 100·0.00020139 + pose √(10·6.37e-6) + rate 25·180002/37545489 | EXACT match, all three terms to the last digit |
+| V2 | rc2→AFR1 delta appears as 0.00030229996471747844 AND …4658 | both reproduce: S-subtraction vs direct rate formula — float twins at 1e-17 | consistent; see F4 |
+| V3 | Five-state ladder (fx5e1/dx2/gb1/lb1/AFR1) | each S re-derived as rate-only delta from AFR1 | consistent to 1 ulp (≤2.8e-17) |
+| V4 | Worst-case 8dp component error 3.63296497868841e-06 | exact ±half-ULP evaluation of the pose sqrt + seg terms | doc figure = the exact −side max; CORRECT (my first-pass derivative estimate 3.632e-6 was the approximation, not the doc) |
+| V5 | Archive sha `cbb8d928a8ccdd3f…`, 180,002 B; member `p` 179,902 B stored, CRC 4001818643, sha `cf1afed8…` | live shasum + zipfile inspection of the frozen packet archive | ALL match; 8/8 document sources agree programmatically (PR bodies, README, report.txt, both manifests, hot state, frontier pointer) |
+| V6 | 38-file runtime manifest | `sha256sum -c MANIFEST.sha256` on the frozen packet | all files verified |
+| V7 | Provenance addendum git dates | `git log` on `fea4a953f9` (2026-04-11, stored PoseNet-GT targets) and `752a30cdb9` (2026-06-10, boundary_math seg-core) | both exist with exactly the claimed dates and directly on-point subjects |
+| V8 | "573 pairs / 455 admitted" | grep of `experiments/ddm_pq2_compress_e2e.py` registry | verbatim present |
+| V9 | "PR #135 result of 0.162" | pi135 intake receipt | leaderboard display 0.162; author-reported unrounded 0.16226842169958583 — comparison safe either way; see F2 |
+| V10 | Timing 578.935 + 42.696 = 621.632; margin 200.368 vs 822 s ceiling | arithmetic | exact |
+| V11 | Evaluated commit `1c9fbbf587…` publicly visible | `git branch -r --contains` | ON `origin/main` of the public repo — this DISCHARGES the README's "public visibility … has not been re-verified" caveat as of 2026-09-02 |
+
+## 2. Findings (ranked)
+
+**F1 — MUST-FIX BEFORE PUBLISH: the frozen packet's reproduction story is stale against ce1.**
+The PR bodies (refreshed 2026-09-02, post-ce1) correctly say the repo entry point
+`experiments/ddm_pq2_compress_e2e.py` "deterministically rebuilds the exact submitted
+180,002-byte archive" — verified: the `AFR1_CHAIN` registry is live in that script and the ce1
+receipt records two complete chain runs producing `cbb8d928…` byte-identically
+(`ddm_ce1_afr1_compress_chain_20260901.md`, RESULT_pq2_e2e.json). But the FROZEN packet's
+`compress.py` snapshot, `COMPRESS.md` ("refuses this SHA by name"), `README.md` §Reproduction
+boundary ("fails closed by exact AFR1 SHA … that refusal is the honest reproduction result"),
+and `BORROWED_SUBSTRATE_ACCOUNTING.md` §11.4.2 all predate ce1 and still describe the refusal.
+Both statements were true of their objects at their write times; a maintainer reading packet +
+PR body together sees a contradiction. **Fix at the next packet touch (before any publish):
+regenerate the packet's `compress.py` from the repo state and refresh the three doc sections.**
+The Drive copy of COMPRESS.md carries an explicit, labeled review note; the frozen packet on
+disk is untouched (append-only/frozen discipline).
+
+**F2 — RECOMMEND: cite PR #135 both ways.** The docs compare against the leaderboard display
+`0.162`. An adversarial reviewer could note the unrounded author-reported value is
+`0.16226842169958583`. The comparison holds either way (0.14798 < 0.16227); citing both
+pre-empts the objection at zero cost.
+
+**F3 — STANDING DECISION ROW (operator's): the CPU axis.** AFR1's `[contest-CPU]` leg is
+RECORD-WITH-REASON (measured same-lineage: CPU 0.0432 worse on identical bytes, pose ~21×
+degraded — cannot decide the frontier). The docs disclose this honestly. CLAUDE.md's
+dual-axis submission law nominally binds shippable archives; ~$0.15 of Modal buys the exact
+AFR1 CPU row if the letter of that law should be satisfied before the #1111 confirm. Surfaced
+as a decision, not silently waived.
+
+**F4 — NOTE: report.txt's two delta representations.** "improves S by 0.00030229996471747844"
+and "rate: … = −0.0003022999647174658" differ in the last five digits; both are the same
+quantity in two float paths. `BORROWED` §11.3 already carries the one-line explanation
+("the residual is floating-point representation"); report.txt does not. One clause there
+would pre-empt a nit.
+
+**F5 — NOTE: the addendum's companion reference.** `PR_BODY_V2_PROVENANCE_ADDENDUM.md` names
+`PR_BODY_DRAFT_V2.md` as its companion. That draft is repo-only and carries the SUPERSEDED
+pre-ce1 compression-script answer; it is deliberately NOT in the Drive folder. The live body
+is `PR_BODY_FINAL_DRAFT.md` (with `_TIGHT` as the short variant).
+
+**F6 — HYGIENE (conditional): local paths in the folder.** `_FOLDER_CONTENTS.md` and this
+review cite `/Volumes/...` custody paths. Fine for the operator's private Drive; strip or
+relativize if the folder is ever shared beyond the operator.
+
+**F7 — ERRATUM (MAIN's own, conversation-level).** Earlier turn prose cited the archive sha
+as `…ccdd5f…`. Programmatic comparison shows every document AND the live archive read
+`…ccdd3f…` — the slip existed only in MAIN's chat prose, never in any artifact. Logged so it
+cannot propagate.
+
+**F8 — OPEN (pre-existing, operator-gated).** The contest coding-agents policy (#1363): the
+final public text must be operator-authored; the provenance addendum supplies the dated
+human-work record relevant to Yousfi's "show that there was some human work" bar. Unchanged
+by this review.
+
+## 3. Completeness — the folder as canonical collaboration home
+
+Uploaded this round to close gaps found: `BORROWED_SUBSTRATE_ACCOUNTING.md` (50,104 B,
+byte-exact packet copy — cited by every other doc and previously ABSENT),
+`archive_manifest.json` (the archive custody pin), `COMPRESS.md` (with labeled review note),
+and this review. Folder now carries the complete PR DOCUMENT core: 2 PR bodies + provenance
+addendum + README + report.txt + MANIFEST.sha256 + accounting + archive manifest + COMPRESS +
+contents index + review.
+
+Deliberately NOT uploaded, with reasons: `archive.zip` + 38-file runtime tree + `cpr1/`
+(binary/code — the staged one-file bundle
+`/Volumes/APDataStore/pact/ddm_pq12/pact_pr_package_gen7_afr1_20260902.zip` covers them in one
+gesture); `PR_BODY_DRAFT_V2.md` (superseded answer, F5); prep-dir internals
+(GENERATION_LOG, swap procedure, review scaffolds — repo-canonical, not PR-facing).
+
+## 4. Verdict
+
+**DOCUMENTS SOUND.** Every number in the uploaded set re-derives cleanly from authoritative
+sources; custody hashes verify against the live artifact; the honest-qualification structure
+(axis boundaries, projection-vs-measured labels, no-priority claims) survives adversarial
+reading. One substantive pre-publish fix (F1, the ce1-stale packet reproduction docs), one
+recommendation (F2), one operator decision row (F3). This was a FINDING round — the packet
+5-pass review counter stays at 0 clean passes; F1's fix is the named entry condition for the
+next round.
+
+STORES CONSULTED: canonical frontier pointer · afr1 authority receipt chain (hot state) ·
+ddm_ce1 receipt + ddm_pq2_compress_e2e.py at source · ddm_pi135 intake · git object store
+(provenance hashes, origin/main containment) · frozen packet MANIFEST/archive (live hashes) ·
+task rows #1111/#1363/#1381/#1382.
