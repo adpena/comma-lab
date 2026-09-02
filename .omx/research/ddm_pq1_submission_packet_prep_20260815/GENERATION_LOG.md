@@ -279,3 +279,46 @@ exists for this candidate: the candidate seal binding archive to receiver
 (`SEAL_VALID`), the staging proof that this directory is byte-identical to the
 evaluated tree with the tree hash **re-derived from the staged rows**, and the
 authority receipt itself.
+
+## Generation 7 doc regeneration — 2026-09-02 (F1)
+
+The frozen generation-7 packet carried four documents written in the
+refusal era: `compress.py` was the pre-ce1 snapshot whose
+`refuse_if_not_expressible` path rejected AFR1 by exact SHA, and
+`COMPRESS.md`, `README.md`, `report.txt`, and
+`BORROWED_SUBSTRATE_ACCOUNTING.md` all described that refusal as the honest
+reproduction result. That description became FALSE on 2026-09-01 when
+`ddm_ce1` ran two complete `AFR1_CHAIN` runs from the retained pinned base
+and each rebuilt the exact 180,002-byte archive byte-identically
+(receipt `RESULT_pq2_e2e.json`; memo
+`ddm_ce1_afr1_compress_chain_20260901.md`).
+
+**What changed.** `compress.py` was replaced with the live repo entry point
+`experiments/ddm_pq2_compress_e2e.py` (byte-identical copy, sha
+`5fe3a8ca94c4…`; the superseded file retained beside it as
+`.compress_py_pre_ce1_superseded_20260902`). `COMPRESS.md` was rewritten to
+document the five-stage chain with its pinned per-stage output SHAs and the
+real CLI (`--stage chain --chain afr1 --chain-repeats 2`, verified against
+the entry point's argparse, never invented). `README.md`'s reproduction
+boundary and verify-locally block now describe the chain; `report.txt`'s
+reproduction paragraph likewise. The accounting file was amended
+APPEND-ONLY per Catalog #110/#113 — both "not re-verified" qualifications
+keep their original text with a dated supersession note beneath.
+
+**What did NOT change.** `archive.zip` (sha `cbb8d928a8cc…`, 180,002 B) and
+the 38-file runtime tree are untouched; `MANIFEST.sha256` verifies 49/49 OK,
+and it covers the runtime tree and cpr1 rows only — no packet doc is inside
+its scope, so custody is unaffected by construction.
+
+**Receipt re-bought same batch** (r5 freshness law — an edit to a scanned
+surface invalidates the prior receipt):
+`receipts/pre_submission_compliance.gen7.r3.json` (partial flag set) then
+`…r4.json` with the r2-comparable flags. r4 is **79 GREEN / 6 RED** against
+r2's 80 / 7: **zero new reds**, one red cleared
+(`hosted_archive_manifest_supplied`, because r4 passed
+`--archive-manifest-json`). The six survivors are the known set — no CPU
+auth-eval row, the Brotli network-install property, the `tac` import in
+`compress.py`, runtime-tree-vs-auth-eval, raw-promotion policy, and the
+public-surface scan.
+
+Publication state unchanged: **PREPARED HOLD, NOT PUBLISHED.**
