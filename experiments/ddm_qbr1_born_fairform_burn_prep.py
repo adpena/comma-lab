@@ -17,6 +17,7 @@ import json
 import math
 import os
 import subprocess
+import sys
 import time
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -24,6 +25,10 @@ from typing import Any
 
 import numpy as np
 import torch
+
+_IMPORT_REPO = Path(__file__).resolve().parents[1]
+if str(_IMPORT_REPO) not in sys.path:
+    sys.path.insert(0, str(_IMPORT_REPO))
 
 from experiments import ddm_qbt1_qbflow_trainer as qbt
 

@@ -1,11 +1,25 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import torch
 
 from experiments import ddm_qbr1_born_fairform_burn_prep as qbr
+
+
+def test_direct_script_entrypoint_resolves_repo_imports() -> None:
+    completed = subprocess.run(
+        [sys.executable, str(Path(qbr.__file__)), "--help"],
+        cwd=qbr.REPO,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert "run-config" in completed.stdout
 
 
 def test_seeded_schedule_is_balanced_distinct_and_deterministic() -> None:
