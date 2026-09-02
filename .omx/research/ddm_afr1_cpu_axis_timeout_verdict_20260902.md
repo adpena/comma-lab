@@ -3,6 +3,12 @@
 Date: 2026-09-02 · Owner: MAIN · Lane: `ddm_afr1_gen7_cpu_axis_n600_20260902` (closed `completed_modal_auth_eval_harvested_not_passed`)
 Call: `fc-01M1HGRHPMYH0FEX3T751K77ZH` · Modal elapsed 1,804.8 s · Cost ≈ $0.10–0.15 (#381)
 
+verdict_scope: instance — the AFR1 gen-7 archive (`cbb8d928…`, 180,002 B) × its sealed 38-file
+receiver, decoded on the Modal CPU worker class. The budget infeasibility binds THIS object only:
+the predecessor receiver on the same worker decoded in 831.5 s, so the CPU axis is NOT closed for
+the lineage or family — a lighter-decode receiver (e.g. generation 8 without the context-mixing
+stages, or a native-port decode path) could re-open it. GitHub CI-runner transfer is unmeasured.
+
 ## Object identity (exact)
 
 - Archive: `cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25`, 180,002 B — the frozen gen-7 AFR1 bytes, unchanged.
