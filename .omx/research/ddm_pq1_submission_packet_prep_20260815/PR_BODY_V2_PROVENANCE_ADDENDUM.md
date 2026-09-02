@@ -11,10 +11,10 @@ publication priority and never dilutes column-1 credit.
 
 | Mechanism | Source | Role in our packet |
 |---|---|---|
-| HPAC integer arithmetic coder + per-cell context schedule | PR #130 (veigapunk lineage) | The frontier body's token coder — our archive is a recode of this lineage |
-| CPR1 container + semantic-pose carrier AS SHIPPED | PR #130/#135 | Container + pose stream our body descends from |
-| RC64 stream format | PR #130 lineage | The coded-stream substrate our 23 moves edit |
-| Decode-time corrector mechanism CLASS (published first) | PR #138 (opal_v1; closed on policy 08-31) | Concurrent with our micro-edit line; #138 published the class first — credited, no-priority accounting already in pv1/pq12 |
+| HPAC integer arithmetic coder + per-cell context schedule | PR #130, Fesal Fayed (@fesalfayed) | The frontier body's token coder — our archive is a recode of this lineage. (Corrected 2026-09-02, review F9: the earlier "veigapunk lineage" label conflated PR #132's author — VeigaPunk (João Pedro Veiga, @VeigaPunk) authored the closed PR #132 fine-tune of this lineage, not PR #130; census receipt `_census_raw/pr130.json` is the authority) |
+| CPR1 container + semantic-pose carrier AS SHIPPED | PR #130 (@fesalfayed) / PR #135 (Shreyan Mohanty, @codexblack) | Container + pose stream our body descends from |
+| RC64 stream format | PR #130 lineage (@fesalfayed; PR #133 @JasonMo123 transitively) | The coded-stream substrate our 23 moves edit |
+| Decode-time corrector mechanism CLASS (published first) | PR #138, Cristian (@ccastillo1043) — opal_v1; closed on policy 08-31 | Concurrent with our micro-edit line; #138 published the class first — credited, no-priority accounting already in pv1/pq12 |
 
 ## 2 — OURS (original mechanisms, no borrowed ancestor)
 

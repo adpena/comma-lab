@@ -40,10 +40,11 @@ roughly 15–50 minutes of CPU time at compress time (dominated by two full
 # is this submission competitive or innovative? explain why
 
 Competitive: `0.14797617125559104` on contest CUDA vs PR #135's `0.162` on the
-same axis.
+same axis (author-reported unrounded `0.16226842169958583`).
 
-The learned renderer and pose-carrier vehicle are inherited from
-PR #130/#133/#135. My work is the optimization layer on top of that vehicle —
+The learned renderer and pose-carrier vehicle are inherited from PR #130
+(Fesal Fayed, @fesalfayed), PR #133 (@JasonMo123), and PR #135 (Shreyan
+Mohanty, @codexblack). My work is the optimization layer on top of that vehicle —
 twenty-three admitted improvement moves, each accepted only on the recomputed
 exact 600-sample score of the rebuilt archive (or, for the lossless moves, a
 bit-identical decode proof plus exact rate arithmetic), never a proxy:
@@ -72,8 +73,8 @@ built because the receiver has no path for it.
 
 Some of this line predates the related public PRs, including a stored
 pose-target sidecar on 2026-04-11 and a direct-partition coding stack on
-2026-06-10, and our decode-time corrector work ran concurrent with PR #138,
-which published that class first.
+2026-06-10, and our decode-time corrector work ran concurrent with PR #138
+(Cristian, @ccastillo1043), which published that class first.
 
 # additional comments
 

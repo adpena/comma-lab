@@ -106,3 +106,27 @@ STORES CONSULTED: canonical frontier pointer · afr1 authority receipt chain (ho
 ddm_ce1 receipt + ddm_pq2_compress_e2e.py at source · ddm_pi135 intake · git object store
 (provenance hashes, origin/main containment) · frozen packet MANIFEST/archive (live hashes) ·
 task rows #1111/#1363/#1381/#1382.
+
+## 5. Round-1 addendum (2026-09-02, same day) — author-citation audit (operator: "Should we cite the PR authors as well" + "Shouldn't we use @ as well? Every detail must be audited")
+
+**F9 — FOUND + FIXED: provenance-addendum misattribution.** The addendum's column-1 row 1
+labeled PR #130 "veigapunk lineage". Census ground truth (`ddm_pq7_pr_engineering_20260820/
+_census_raw/pr130.json`) reads author `fesalfayed` / "Fesal Fayed"; VeigaPunk (João Pedro
+Veiga, `pr132.json`) authored the CLOSED PR #132 fine-tune of the lineage, not #130. Corrected
+in place with a labeled note. A repo-wide grep found NO other veigapunk misattribution.
+
+**F10 — APPLIED: @-mention author citation across both PR bodies + the addendum.** All five
+cited authors re-verified from census receipts this same pass (login+name fields, one bash
+sweep): PR #130 Fesal Fayed (@fesalfayed) · PR #133 @JasonMo123 (no public name; handle only)
+· PR #135 Shreyan Mohanty (@codexblack) · PR #136 Jacky Li (@JPL11, accounting-only, not
+body-cited) · PR #138 Cristian (@ccastillo1043). Format: "Name, @handle" at first mention,
+bare PR #N after. F2 applied in the same pass (both bodies now cite PR #135 as 0.162 AND the
+author-reported unrounded 0.16226842169958583). Two audit confirmations: (a) the frozen
+BORROWED accounting is CLEAN and complete on authorship (all five named correctly, incl.
+#136); (b) BORROWED line 202's self-imposed obligation — "If t1h ships, PR #133 must be cited
+in the body, not only here" — is now DISCHARGED by the bodies' lineage sentences (t1h's
+zero-byte pose re-solve is in the shipped move list). The frozen packet's own PR-body
+snapshots remain pre-@-format; that refresh rides the F1 packet-touch worklist (packet stays
+frozen until then). Notes: @-mentions are live only on GitHub (inert in drafts/Drive) and
+will notify the named authors at publish — the operator authors the final public text either
+way (#1363).

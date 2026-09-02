@@ -57,10 +57,12 @@ re-encodes); inflation is unchanged.
 # is this submission competitive or innovative? explain why
 
 **Competitive on the claimed axis:** `0.14797617125559104` `[contest-CUDA T4, n600]`
-versus the public PR #135 result of `0.162` on the same axis.
+versus the public PR #135 result of `0.162` on the same axis (author-reported unrounded
+`0.16226842169958583`; the comparison holds either way).
 
 **What is inherited, credited plainly.** The learned semantic renderer and pose-carrier
-vehicle come from PR #130 and PR #135, with PR #133 transitively in the lineage. No
+vehicle come from PR #130 (Fesal Fayed, @fesalfayed) and PR #135 (Shreyan Mohanty,
+@codexblack), with PR #133 (@JasonMo123) transitively in the lineage. No
 originality is claimed for that vehicle; the accounting is itemized section by section in
 `BORROWED_SUBSTRATE_ACCOUNTING.md`.
 
@@ -79,7 +81,7 @@ margin-based region merging — treating the segmentation partition itself as th
 object) was in the tree on 2026-06-10, before PR #130's dense semantic-token vehicle
 appeared. PR #130/#135 shipped working public vehicles for these ideas first, and this
 submission builds on their shipped form; the dates are stated for honest accounting of
-concurrent work, not as priority claims. Likewise PR #138 published the online
+concurrent work, not as priority claims. Likewise PR #138 (Cristian, @ccastillo1043) published the online
 decode-time-corrector mechanism class first; the corresponding work here was concurrent,
 no priority is claimed, and a later refinement used PR #138's state-synchronization
 warning as a design check.
