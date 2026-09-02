@@ -61,6 +61,45 @@ the family; CLADE/SPADE = the per-CLASS spatial members. Route 1's field conditi
 class-spatial (CLADE/SPADE side); ξ/pose conditioning, if any, is the FiLM side with the #118
 stabilization applied.
 
+## 5b. CURVELETS / SHEARLETS / WAVELETS / TROPICAL — the frame-family corpus (operator
+## 2026-09-02: "Also curvelets and shearlets and all")
+
+This family's history has THREE strata, each with a different disposition:
+
+1. **The FAKE era (pre-#502)** — early "curvelet" implementations were unlocalized
+   Fourier-in-disguise; the #501 fake-implementation audit caught it and the live
+   `v9_provenance_gates` now REFUSE a curvelet/shearlet active label on an unlocalized
+   Fourier implementation. Every verdict predating the genuine frames is VOID (fake object,
+   not a family measurement). Do not cite any pre-07-14 curvelet number.
+2. **The GENUINE instruments (#502, 2026-07-14)** — registered canonical equations
+   `windowed_curvelet_parabolic_capacity_20260714` + `compact_shearlet_parabolic_capacity_20260714`
+   (src/tac/canonical_equations/, tested) + the DSL windowed-curvelet basis lever + the #223
+   parabolic-scaling derivation. These are REAL, transferable INSTRUMENTS. Their through-R
+   measurements (codex_findings_curvelet_throughR_p0_20260715) were taken on the V9·CGauge
+   witness — the bolt-on-to-PR95 host — so the VERDICTS are vehicle-scoped, the instruments
+   are not.
+3. **The proxy-poisoned directional number** — the "−48% directional basis" is canonicalized
+   in CLAUDE.md as PROXY-derived and superseded (self-orient production default OFF; re-entry
+   only via matched from-scratch n600 ON/OFF A/B). Neither the win nor the neutral-kill
+   transfers to the conv realizer.
+
+**What SURVIVES with a measured warrant:** the 3.2× along-tangent frequency deficit — and
+vh1 already flagged its MECHANISM as SCORER-SIDE (boundary-tangent frequency response of the
+frozen SegNet), i.e. a cross-vehicle candidate the QBT conv realizer plausibly INHERITS.
+vh1's named cheap re-anchor: **$0 spectral read of the realizer's residual field, along- vs
+cross-tangent.** That diagnostic is the frame family's re-entry gate.
+
+**Route 1 entry points (three, all raced never adopted):**
+- (a) Curvelet/shearlet AS CONDITIONING features (not activation basis) — rv1's registered
+  race slot, matched ON/OFF A/B, joins the §7 conditioning-block race.
+- (b) The $0 along-tangent spectral diagnostic FIRST: if the trained realizer's residual
+  shows the inherited deficit, the anisotropic frame family re-enters with a measured
+  warrant; if not, it stays out with a measured reason.
+- (c) Post-training weight-space reduction (TropNNC-class, #311) at byte-close — a rate
+  technique on the realizer's counted weights, raced against the plain coder stack.
+- Wavelet mask codec (in-tree) stays LESSON-ONLY: it targeted the mask-only slot (the L5
+  anti-pattern era); its coding math may race at byte-close, never as the carrier.
+
 ## 6. Live conditioning arc on the CURRENT body (the nearest evidence)
 
 js2/js3/js4 implicit-edge conditioning (08-12) → ec1/ec2 collateral-suppressed conditioner
