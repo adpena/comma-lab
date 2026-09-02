@@ -100,6 +100,30 @@ cross-tangent.** That diagnostic is the frame family's re-entry gate.
 - Wavelet mask codec (in-tree) stays LESSON-ONLY: it targeted the mask-only slot (the L5
   anti-pattern era); its coding math may race at byte-close, never as the carrier.
 
+## 5c. COOL-CHIC / C3 / COIN++ AND RELATED (operator 2026-09-02: "Also cocochic and cp3
+## and all related")
+
+**The structural fact first:** the CURRENT vehicle is convergently Cool-Chic-SHAPED —
+per-content latents + tiny synthesis net + learned autoregressive entropy model is exactly
+{born-small/QBT tokens + realizer + HPAC}. We arrived independently; the family's training
+mechanics are therefore the most transferable published mechanics for OUR regime
+(per-content overfit at extreme low rate), and the family's verdicts split cleanly:
+
+| Row | Grade | Disposition |
+|---|---|---|
+| cc1 lesson harvest (07-24, `codex_findings_ddm_cc1_...`) | OPTIMAL-FORM harvest (primary papers + pinned OSS, typed table, NO_EXTERNAL_VEHICLE_ADOPTED) | CONSUMABLE — but see next row |
+| cc1's FOUR ADOPT-RACE rows (v2 learned separable upsampling + residual synthesis + ε-STE finish → exact-R realized acceptance · C3 continuation → quantization curriculum · +2) | **ROUTED-NEVER-RUN** — routed "PENDING_J8F_COUNTED_APPLICATION_STREAM"; that consumer is superseded; no race receipts located | RE-HOME to the current vehicle: C3's QAT mechanics (soft-rounding + noise-annealing continuation) race against our uint8-STE in the Route 1 realizer's quantization stage; v2's separable-upsampling + residual-synthesis race in the block ladder — both at equal counted bytes |
+| n48 Cool-Chic byte-close verdicts (#97/#99) | TOY-SCALE (n48 vs the n600 law) | Rankings not inherited; the byte-close MACHINERY was real and its lessons (range-coded latents, numpy inflate) long since absorbed |
+| #115 "d_seg/pose wall" re-validation | UNDER-POWERED BY ITS OWN LABEL ("still descending, NOT a basis limit") — never re-run | SUPERSEDED as a question: qbr1's optimization-vs-capacity discriminator IS this question asked properly on the current body; no separate reopening owed |
+| FP4A export-gate deferrals (CLAUDE.md era) | ERA-SCOPED — the precondition (no export chain) is gone; our own export/byte-close chain exists | Not a live constraint on any current route |
+| COIN++ (modulation INR, L0 scaffold 05-20) | L0-only, never advanced | Its FiLM-modulation half joins §5's FiLM lineage; its meta-learned-init half is already tracked as #211 (pending) — no new row |
+
+**Charter consequence (adds to §8):** the Route 1 realizer's QAT stage is a RACED axis —
+{our uint8-STE (proven in-loop) vs C3 soft-rounding/noise-annealing (cc1 ADOPT-RACE,
+published 15–20% on its own axis)} — same matched-form, sign-discriminator-not-latch rules
+as the conditioning-block race. The cc1 typed table is the reference-form citation for
+this family; nothing older than it binds.
+
 ## 6. Live conditioning arc on the CURRENT body (the nearest evidence)
 
 js2/js3/js4 implicit-edge conditioning (08-12) → ec1/ec2 collateral-suppressed conditioner
