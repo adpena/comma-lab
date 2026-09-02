@@ -67,7 +67,7 @@ ARMS: dict[str, dict[str, Any]] = {
 }
 
 EXPECTED_SHA256 = {
-    "qbt_trainer": "5da466af9f64295d6bc9d1242ed427724faec586c53d450d3e358e7f1c7492c8",
+    "qbt_trainer": "7d14e5bef2772a540ff0619113eb919d5e18a6e0bf19ebc222e46a5d24923a63",
     "ce1_target_margin": "ffdf098801863ff8bffe8bd818ce101928dd75b4937cbbffb2e225bddbc12f4b",
     "w96b_law_module": "053bd12e198bb74a44036e497a1277d9d36638c96acdabba278a2c72f2234923",
     "r10_checkpoint": "09fd416531c74f69ca7033cf3f13b23c9e0472486a97ce9973f62f2fb86c138f",
