@@ -864,7 +864,7 @@ def _r10_timing() -> dict[str, Any]:
 
 def _storage_projection() -> dict[str, Any]:
     status = json.loads(R10_STATUS.read_text(encoding="utf-8"))
-    measured_peak = int(float(status["peak_rss_mib"]) * 1024**2)
+    measured_peak = int(status["peak_rss_kib"]) * 1024
     eval_payload_per_milestone = 121_825_988
     checkpoint_bytes = int(R10_CHECKPOINT.stat().st_size)
     checkpoints_per_cell = math.ceil(TOTAL_STEPS / CHECKPOINT_EVERY) + 1
@@ -888,7 +888,7 @@ def _storage_projection() -> dict[str, Any]:
             "measured_peak_rss_bytes": measured_peak,
             "host_ceiling_bytes": 116 * 1024**3,
             "control_graph_matches_r10_100_100": True,
-            "treatment_graph_removes_one weighted term": True,
+            "treatment_graph_removes_one_weighted_term": True,
             "fresh_scorer_smoke_run_by_arm": False,
             "reason": "the scorer lane belongs to MAIN; retained r10 is the exact B=16 parent graph",
         },
