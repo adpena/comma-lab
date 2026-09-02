@@ -18,12 +18,16 @@ publication priority and never dilutes column-1 credit.
 
 ## 2 — OURS (original mechanisms, no borrowed ancestor)
 
-The 23 pointer-move mechanisms (address-free tile48 × groupbin8 · micro-edit
-realized-acceptance engine · in-compile Schur compensation · tail-override law · fixed-point
-log-odds mixer) · the measured-law layer (conditioning-transport · sharp-optimum ·
-the Cross · round-trip affine) · the witness/level-set solver stack (resize-nullity
-projector · preimage compiler · exact composite-R adjoint · se(3) engine) · the
-seal/fire/byte-identity custody apparatus.
+The 23 pointer-move mechanisms (joint pose-priced edit admission via Lagrange waterfill —
+the submission's namesake and largest single move, 455 of 573 edits admitted · zero-byte
+pose-carrier re-solve, damped Gauss–Newton on the shipped renders · address-free tile48 ×
+groupbin8 · micro-edit realized-acceptance engine · in-compile Schur compensation ·
+tail-override law · fixed-point log-odds mixer) · the measured-law layer
+(conditioning-transport · sharp-optimum · the Cross · round-trip affine) · the
+witness/level-set solver stack (resize-nullity projector · preimage compiler · exact
+composite-R adjoint · se(3) engine) · the seal/fire/byte-identity custody apparatus.
+(Completed 2026-09-02, review F12: the parenthetical previously omitted the namesake
+waterfill admission and the zero-byte pose re-solve.)
 
 ## 3 — OURS-INDEPENDENT, IN-TREE BEFORE THE PRs, UNSUBMITTED (git-dated receipts)
 

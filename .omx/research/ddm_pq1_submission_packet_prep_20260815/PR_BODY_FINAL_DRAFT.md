@@ -67,10 +67,27 @@ originality is claimed for that vehicle; the accounting is itemized section by s
 `BORROWED_SUBSTRATE_ACCOUNTING.md`.
 
 **What is original here.** The decision and lossless-representation layer built on top of
-that vehicle: joint admission of segmentation edits priced against their pose cost, an
-exact receiver-assembly identity check, and a sequence of lossless model, coder, and
-container transforms. The five moves after the prior packet freeze removed 454 bytes with
-byte-identical decoded output, so their entire score improvement is rate.
+that vehicle — twenty-three admitted improvement moves, each accepted only on the
+recomputed exact 600-sample score of the rebuilt archive (or, for the lossless moves, a
+bit-identical decode proof plus exact rate arithmetic), never a proxy:
+
+- **Joint edit admission** (the submission's namesake): candidate segmentation edits of
+  the semantic tokens are solved across 573 pairs, each priced against its exact pose
+  cost through the frozen PoseNet, and admitted through a Lagrange-multiplier
+  waterfill — 455 of 573 admitted. The pose carrier is then re-solved (damped
+  Gauss–Newton) against the edited renders. This is the largest single move and
+  produced the sub-0.15 crossing.
+- **In-compile pose compensation**: a frame-0 compensation solved inside the compile so
+  segmentation edits carry approximately zero pose tax — on its proof row, pose
+  distortion landed below the unedited base.
+- **A zero-byte pose re-solve** of the stored carrier coefficients against the frozen
+  scorer on the shipped renders.
+- **A lossless representation chain** on the coder and container: fixed-point integer
+  log-odds context mixing, group-conditioned token contexts, an address-free
+  tile-conditioned re-encode, an exact receiver-assembly identity check, and container
+  transforms. The five moves after the prior packet freeze removed 454 bytes with
+  byte-identical decoded output — 0 differing bytes across all 3,662,409,600 raw output
+  bytes — so their entire score improvement is rate.
 
 **Independent development, with dates and no priority claims.** Parts of this line were
 developed independently before the PRs that later shipped related ideas publicly: a

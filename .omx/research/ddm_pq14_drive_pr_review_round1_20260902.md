@@ -130,3 +130,38 @@ snapshots remain pre-@-format; that refresh rides the F1 packet-touch worklist (
 frozen until then). Notes: @-mentions are live only on GitHub (inert in drafts/Drive) and
 will notify the named authors at publish — the operator authors the final public text either
 way (#1363).
+
+## 6. Round-1 addendum 2 (2026-09-02, same day) — duplication + innovation-completeness audit (operator: "No duplicative content or signal and also are we fully characterizing our innovations")
+
+**Duplication verdict: CLEAN, measured — not asserted.** Pairwise shared-long-line scan
+across all seven text documents (FULL · TIGHT · addendum · README · BORROWED · COMPRESS ·
+report.txt): the ONLY overlaps are FULL×TIGHT's 8 lines — the contest PR template's own
+section headers plus the custody constants — and the recomputed-score line shared with
+report.txt. Zero prose duplication between the addendum and BORROWED: the three attribution
+layers hold distinct roles (PR-facing summary · factual-proposal table · itemized ledger).
+Deliberate redundancy, kept with reasons: (a) FULL/TIGHT are a variant PAIR — the operator
+picks exactly ONE at publish; (b) custody constants (sha, S, bytes) repeat so each document
+is self-contained, and all 8 sources byte-agree (V5). One STALE index found and fixed:
+`_FOLDER_CONTENTS.md` still described the 7-file initial upload with 4 now-dead file ids;
+replaced on Drive with an 11-file v2 inventory carrying the 2026-09-02 replacement ids.
+
+**F11 — FIXED: the FULL body under-characterized the innovations relative to its own short
+variant.** TIGHT carried the 23-admitted-moves framing, the never-a-proxy admission
+discipline, and four named mechanism families; FULL's "What is original here" was a 5-line
+summary. Inverted completeness (the long variant weaker than the short one). The FULL body
+now carries the full mechanism characterization: joint waterfill admission (455/573, the
+namesake) · in-compile pose compensation (below-base proof row) · zero-byte pose re-solve ·
+the lossless representation chain incl. the receiver-assembly identity check and the
+0-differing-bytes proof.
+
+**F12 — FIXED: the addendum's OURS column omitted the two headline mechanisms.** §2's
+23-move parenthetical named five mechanism families but NOT the joint pose-priced waterfill
+admission (the submission's NAMESAKE and largest single move) nor the zero-byte pose
+re-solve. Both added with a labeled completion note.
+
+**Scope boundary re-affirmed (deliberate, not an omission):** the measured-law layer
+(sharp-optimum · the Cross · round-trip affine · conditioning-transport), the witness/
+level-set solver stack, and the seal/fire custody apparatus stay in the ADDENDUM +
+ACCOUNTING, not the PR body — the body characterizes the shipped submission; the addendum
+characterizes the complete original-work record. The operator draws on both at final
+authoring (#1363).
