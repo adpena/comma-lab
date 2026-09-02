@@ -30,7 +30,10 @@ Yes, `linux-nvidia-t4` `--device cuda`. Measured on T4: 578.9 s inflation +
 
 # did you include the compression script? and want it to be merged?
 
-Yes to both.
+Yes to both. `experiments/ddm_pq2_compress_e2e.py` deterministically rebuilds the
+exact submitted 180,002-byte archive, SHA-asserts every admitted lossless stage
+and a second complete final build, and includes the content-deciding solve stages
+as their own scripts with receipts.
 
 # is this submission competitive or innovative? explain why
 
@@ -78,12 +81,12 @@ absent) and compiles native code during inflation.
 Source: <https://github.com/adpena/comma-lab>
 
 <!--
-INTERNAL (removed at publish): v3 — operator's 2026-09-01 tightening edits folded in
-(report.txt trimmed further · GPU one-liner · "Yes to both" · merged additional-comments
-paragraph into the innovation section) + the enriched innovation mechanisms per operator
-"add a bit of additional detail on our original work and innovations". GATE: "Yes to both"
-on the compression script is contingent on ddm_ce1's byte-exact e2e proof (arm live);
-restore one honest limitation clause if ce1 blocks. Numbers verified against: afr1 pointer
+INTERNAL (removed at publish): v4 — CE1 GATE DISCHARGED: "Yes to both" is now VERIFIED,
+not contingent (ddm_ce1_afr1_compress_chain_20260901.md: two complete chain runs from the
+retained rc2 body → 180,002 B sha cbb8d928…, byte-identical; AFR1 removed from
+NOT_EXPRESSIBLE; receipt RESULT_pq2_e2e.json sha 5814eb93…). v3 was operator's 2026-09-01
+tightening edits (trimmed report.txt · GPU one-liner · merged comments) + the enriched
+innovation mechanisms. Numbers verified against: afr1 pointer
 receipt (S/bytes/sha/identity counts) · ddm_pq2_compress_e2e.py NOT_EXPRESSIBLE registry
 (573 pairs / 455 admitted, jg5 stage list) · qs5 verdict (compensation below-base proof) ·
 up3 (zero-byte pose re-solve) · hot-state POINTER_LINE (native receiver identity

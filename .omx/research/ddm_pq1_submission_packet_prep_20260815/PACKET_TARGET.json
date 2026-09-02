@@ -51,9 +51,13 @@
       "reason": "Same-lineage CPU authority was 0.0432 worse on identical bytes with pose about 21x degraded, so an AFR1 CPU row cannot become effective_frontier; no older CPU score is inherited."
     },
     "reproduction": {
-      "end_to_end_verified_for_this_archive": false,
-      "verified_generation": 3,
-      "disposition": "compress.py refuses AFR1 by exact archive SHA and names the missing stages"
+      "end_to_end_verified_for_this_archive": true,
+      "verified_generation": 7,
+      "disposition": "ddm_pq2_compress_e2e.py --stage chain --chain afr1 rebuilt the exact 180,002 B archive twice from the retained rc2 boundary, byte-identical, all stages SHA-asserted",
+      "verification_receipt": "/Volumes/APDataStore/pact/ddm_ce1_afr1_compress_chain/RESULT_pq2_e2e.json",
+      "verification_receipt_sha256": "5814eb93969d86cf234d95852e617546b2b18fa66fb5c5310f8fcfbe948c9564",
+      "runner_sha256": "5fe3a8ca94c4b16163057c1c6774ebaffac151b8f63b6f6ee93649f7a6ea4add",
+      "verified_memo": ".omx/research/ddm_ce1_afr1_compress_chain_20260901.md"
     },
     "custody": {
       "source_runtime": "/Volumes/VertigoDataTier/pact/ddm_afr1_tile48_receiver_identity/runtime_candidate_native",

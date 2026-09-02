@@ -673,9 +673,10 @@ an unpriced component.
 1. **Re-decision over borrowed content.** The rate improvement is ours-original
    mechanism work over inherited learned content. It is not a new learned
    vehicle and does not move the attribution boundary.
-2. **End-to-end rebuild scope.** The single-entry-point VERIFIED label belongs
-   to packet generation 3, the bytes on which it ran. It was not re-run for
-   AFR1. The shipped `compress.py` therefore refuses AFR1 by exact archive name
-   before doing work; candidate custody, deterministic build repeats, receiver
-   identity, the tolerance-zero packet seal, and the exact authority row are
-   separate proofs and are not relabelled as that missing e2e run.
+2. **End-to-end rebuild scope.** The single-entry-point rebuild is VERIFIED
+   for AFR1 (2026-09-01, ddm_ce1): two complete chain runs from the retained
+   rc2 stage boundary each reproduced the exact submitted 180,002-byte archive
+   byte-identically, with every admitted lossless stage SHA-asserted. The
+   borrowed Stage-A substrate (training, semantic edit solve, pose re-solve)
+   versus ours-original lossless-chain accounting below is unchanged by this
+   verification.

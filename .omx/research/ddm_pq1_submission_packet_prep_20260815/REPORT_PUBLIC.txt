@@ -61,11 +61,15 @@ effective frontier. The obligation is retained for the selected-candidate
 publication boundary; it is not represented here as an exact score.
 
 === Reproduction and attribution boundary ===
-The end-to-end single-entry-point rebuild VERIFIED label belongs to packet
-generation 3. It was not re-run for AFR1 and is not inherited. The shipped
-compress.py refuses this archive by exact SHA before doing work. AFR1 instead
-has deterministic encoder repeats, receiver identity over all 600 pairs, an
-exact authority runtime manifest, and a tolerance-zero packet seal.
+The end-to-end single-entry-point rebuild is VERIFIED for AFR1 (2026-09-01):
+two complete chain runs from the retained rc2 stage boundary each reproduced
+the exact submitted 180,002-byte archive (SHA cbb8d928...), byte-identical,
+with every admitted lossless stage SHA-asserted against its receipt. The scope
+boundary is the retained rc2 body: the content-deciding solve stages (semantic
+edit solve, pose re-solve, training) are included as their own scripts with
+receipts. AFR1 additionally has deterministic encoder repeats, receiver
+identity over all 600 pairs, an exact authority runtime manifest, and a
+tolerance-zero packet seal.
 
 The learned vehicle descends from PR #130 and PR #135, with PR #133 transitively
 in that ancestry. We do not claim it. Our contribution in these bytes is the

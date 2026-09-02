@@ -72,10 +72,11 @@ not a CPU score claim.
 
 ## Reproduction boundary
 
-The end-to-end `compress.py` VERIFIED result is scoped to packet generation 3,
-the bytes on which it ran. AFR1 was not re-run through that entry point.
-`compress.py` therefore fails closed by exact AFR1 SHA before doing work rather
-than pretending the older recipe can reproduce it.
+The end-to-end rebuild is VERIFIED for AFR1 (2026-09-01): two complete chain
+invocations of the single entry point, from the retained rc2 stage boundary
+through all five admitted lossless stages, each produced the exact submitted
+180,002-byte archive (SHA `cbb8d928…`), byte-identical across runs, with every
+intermediate stage SHA-asserted against its landed receipt.
 
 What was verified for AFR1 is separate and concrete: deterministic encoder
 repeat, native/Python receiver identity across all 600 pairs, exact archive and
@@ -104,11 +105,14 @@ From this directory:
 ```bash
 sha256sum archive.zip
 sha256sum -c MANIFEST.sha256
-python3 compress.py --expected-archive-sha256 cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25
+python3 compress.py --stage chain --chain afr1 \
+  --expected-archive-sha256 cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25 \
+  --expected-archive-bytes 180002
 ```
 
-The last command is expected to refuse with the named AFR1 missing-stage list;
-that refusal is the honest reproduction result for this entry point.
+The last command runs the verified AFR1 chain: it rebuilds the exact submitted
+archive from the retained rc2 stage boundary, asserting each stage's SHA, and
+exits nonzero on any divergence rather than producing substitute bytes.
 
 ## Publication state
 

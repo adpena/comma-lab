@@ -47,11 +47,10 @@ is a projection.
 
 # did you include the compression script? and want it to be merged?
 
-Yes, with a stated limitation. The included compression entry point does not rebuild
-these exact bytes, because five late lossless stages are not wired behind the single
-entry point. It refuses this archive's SHA up front and names the missing stages rather
-than producing substitute bytes. Merge is requested only if that limitation and the
-section-level lineage accounting below are acceptable.
+Yes to both. `experiments/ddm_pq2_compress_e2e.py` deterministically rebuilds the
+exact submitted 180,002-byte archive, SHA-asserts every admitted lossless stage and a
+second complete final build, and includes the content-deciding solve stages as their
+own scripts with receipts.
 
 # is this submission competitive or innovative? explain why
 
