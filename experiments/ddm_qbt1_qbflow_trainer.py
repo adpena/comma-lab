@@ -115,6 +115,7 @@ STORE = Path("/Volumes/APDataStore/pact/ddm_qbflow_implicit_boundary_flow")
 TRAIN_ROOT = STORE / "qbt1_trainer"
 QBT2B_ROOT = TRAIN_ROOT / "qbt2b_inherited_palette_birth"
 R7_RETENTION_ROOT = Path("/Volumes/APDataStore/pact/ddm_qbt2b_r7_lane_constrained_margin")
+QBR1_RETENTION_ROOT = Path("/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep")
 FIRE_ORDER = STORE / "SEALED_TRAINING_FIRE_ORDER.json"
 INITIAL_PARAMS = STORE / "stage_01_initialize_quantize/initialized_float_params.npz"
 INITIAL_LATENTS = STORE / "stage_01_initialize_quantize/initialized_float_latents.npz"
@@ -302,7 +303,7 @@ def verify_pins() -> dict[str, dict[str, Any]]:
 
 def storage_preflight(output: Path, minimum_free_bytes: int) -> dict[str, Any]:
     resolved = output.resolve()
-    allowed_roots = (STORE.resolve(), R7_RETENTION_ROOT.resolve())
+    allowed_roots = (STORE.resolve(), R7_RETENTION_ROOT.resolve(), QBR1_RETENTION_ROOT.resolve())
     if not any(resolved == root or root in resolved.parents for root in allowed_roots):
         raise QBT1Error(
             "QBT1 output must remain under an authorized AP custody root: "
