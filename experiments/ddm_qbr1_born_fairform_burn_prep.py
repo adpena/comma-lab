@@ -16,6 +16,7 @@ import hashlib
 import json
 import math
 import os
+import resource
 import subprocess
 import sys
 import time
@@ -636,6 +637,203 @@ def run_config(config_path: Path) -> dict[str, Any]:
     return result
 
 
+def _tensor_state_sha256(state: Mapping[str, torch.Tensor]) -> str:
+    return canonical_sha256(
+        {
+            name: hashlib.sha256(value.detach().cpu().numpy().tobytes()).hexdigest()
+            for name, value in sorted(state.items())
+        }
+    )
+
+
+def _run_resume_smoke_segment(
+    config: Mapping[str, Any],
+    root: Path,
+    *,
+    stop_after: int,
+    resume_from: Path | None = None,
+) -> dict[str, Any]:
+    """Run a real-B=16 CPU prefix while retaining every materialized payload."""
+
+    if not 1 <= stop_after <= 2:
+        raise QBR1Error("resume smoke is capped at two optimizer updates")
+    smoke_config = copy.deepcopy(dict(config))
+    smoke_config["action"] = "resume_smoke"
+    smoke_config["output"] = str(root.resolve())
+    smoke_config["device"] = "cpu"
+    smoke_config["resume_from"] = str(resume_from) if resume_from else None
+    qbt.storage_preflight(root, int(smoke_config["minimum_free_bytes"]))
+    qbt.seed_everything(int(smoke_config["seed"]))
+    device = torch.device("cpu")
+    posenet, segnet = qbt.load_differentiable_scorers(REPO / "upstream", device=device)
+    posenet.eval()
+    segnet.eval()
+    model = qbt.load_initial_model(device)
+    initialization = torch.load(
+        Path(smoke_config["initial_state"]["path"]),
+        map_location="cpu",
+        weights_only=False,
+    )
+    model.load_state_dict(initialization["state_dict"], strict=True)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=float(smoke_config["learning_rate"]))
+    ema = qbt.EMA(model, decay=float(smoke_config["ema"]["value"]), warmup=True)
+    bounds = {name: float(value) for name, value in smoke_config["margin_constraints"]["bounds"].items()}
+    lambdas = dict.fromkeys(bounds, 0.0)
+    completed = 0
+    history_path = root / "history.jsonl"
+    if resume_from is None:
+        qbt.atomic_bytes(history_path, b"")
+    else:
+        completed, ema, lambdas = _load_checkpoint(
+            resume_from,
+            config=smoke_config,
+            model=model,
+            optimizer=optimizer,
+        )
+    schedule = schedule_for_seed(int(smoke_config["seed"]))
+    chunks = qbt.training_chunks(qbt.SELECTION_IDS, 16)
+    for current in range(completed, stop_after):
+        chunk_ids = chunks[schedule[current]]
+        ids = torch.tensor(chunk_ids, dtype=torch.long, device=device)
+        target_argmax, target_pose6 = qbt._target_arrays(chunk_ids, device)
+        sample_weights = qbt.no2_sample_weights(chunk_ids, device)
+        optimizer.zero_grad(set_to_none=True)
+        outputs = model(ids, height=qbt.EVAL_H, width=qbt.EVAL_W)
+        camera = qbt.roundtrip_to_camera_uint8_ste(outputs["rgb_pair_01"])
+        pose6, logits = qbt.scorer_forward(camera, posenet, segnet)
+        qbt._retain_eval_outputs(
+            root / "training_payloads" / f"update_{current + 1:06d}",
+            pair_ids=chunk_ids,
+            camera=camera,
+            pose6=pose6,
+            logits=logits,
+            target_argmax=target_argmax,
+            target_pose6=target_pose6,
+        )
+        tau = qbt.tau_for_step(
+            current,
+            TOTAL_STEPS,
+            float(smoke_config["expected_flip_tau_start"]),
+            float(smoke_config["expected_flip_tau_end"]),
+        )
+        realized_werr = {
+            "Lane": qbt.realized_within_class_error(logits, target_argmax, 1),
+            "Movable": qbt.realized_within_class_error(logits, target_argmax, 3),
+        }
+        lambdas = qbt.dual_ascent_margin_constraints(
+            lambdas,
+            realized_werr,
+            bounds,
+            eta_lambda=float(smoke_config["margin_constraints"]["eta_lambda"]),
+        )
+        total, components = fairform_objective(
+            smoke_config,
+            outputs,
+            camera,
+            pose6,
+            logits,
+            target_argmax,
+            target_pose6,
+            tau,
+            sample_weights,
+            lambdas,
+        )
+        total.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        optimizer.step()
+        ema.update(model)
+        completed = current + 1
+        _append_history(
+            history_path,
+            {
+                "completed_steps": completed,
+                "chunk_index": int(schedule[current]),
+                "pair_ids": list(chunk_ids),
+                "objective": {name: float(value.detach().cpu()) for name, value in components.items()},
+                "realized_within_class_error": realized_werr,
+                "margin_constraint_lambdas": dict(lambdas),
+            },
+        )
+    checkpoint = _save_checkpoint(
+        root / "checkpoints" / f"completed_{completed:06d}.pt",
+        config=smoke_config,
+        model=model,
+        optimizer=optimizer,
+        ema=ema,
+        completed_steps=completed,
+        lambdas=lambdas,
+        history_path=history_path,
+    )
+    reencode = qbt.reencode_inference_state(
+        root / f"endpoint_{completed:06d}/reencoded",
+        model=model,
+        state=ema.shadow,
+        selected_pair_ids=qbt.SELECTION_IDS,
+        consolidate=True,
+    )
+    return {
+        "completed_steps": completed,
+        "live_state_sha256": _tensor_state_sha256(model.state_dict()),
+        "ema_state_sha256": _tensor_state_sha256(ema.shadow),
+        "checkpoint": checkpoint,
+        "archive": reencode["archive"],
+        "history": qbt.file_fact(history_path),
+        "all_training_and_coder_payloads_retained": True,
+    }
+
+
+def run_resume_smoke(config_path: Path, output: Path, scorer_claim_id: str) -> dict[str, Any]:
+    """MAIN-only exact two-update interruption/resume equivalence proof."""
+
+    if not scorer_claim_id.strip() or scorer_claim_id == "SCORER_CLAIM_ID":
+        raise QBR1Error("resume smoke needs MAIN's real live scorer claim ID")
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    validate_config(config, require_launch_authority=False)
+    if config.get("launch_authorized") is not False:
+        raise QBR1Error("resume smoke consumes the immutable unlaunched config")
+    started = time.monotonic()
+    uninterrupted = _run_resume_smoke_segment(config, output / "uninterrupted", stop_after=2)
+    interrupted = _run_resume_smoke_segment(config, output / "resumed", stop_after=1)
+    resumed = _run_resume_smoke_segment(
+        config,
+        output / "resumed",
+        stop_after=2,
+        resume_from=Path(interrupted["checkpoint"]["path"]),
+    )
+    equal = {
+        "completed_steps": uninterrupted["completed_steps"] == resumed["completed_steps"] == 2,
+        "live_state": uninterrupted["live_state_sha256"] == resumed["live_state_sha256"],
+        "ema_state": uninterrupted["ema_state_sha256"] == resumed["ema_state_sha256"],
+        "archive": uninterrupted["archive"]["sha256"] == resumed["archive"]["sha256"],
+    }
+    result = {
+        "schema": "ddm_qbr1_real_b16_resume_smoke.v1",
+        "status": "PASS" if all(equal.values()) else "FAIL",
+        "axis": "[macOS-CPU exact-scorer bounded mechanism smoke; not a verdict]",
+        "score_claim": False,
+        "scorer_claim_id": scorer_claim_id,
+        "real_chunk_pairs": 16,
+        "scheduled_total_steps": 2,
+        "interruption_after_steps": 1,
+        "schedule_completion_not_extension": resumed["completed_steps"] == 2,
+        "equal": equal,
+        "uninterrupted": uninterrupted,
+        "interrupted_prefix": interrupted,
+        "resumed": resumed,
+        "peak_rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+        "elapsed_seconds": time.monotonic() - started,
+        "scorer_invocations": 1,
+        "metal_invocations": 0,
+        "modal_invocations": 0,
+        "contest_eval_invocations": 0,
+        "all_payloads_retained": True,
+    }
+    qbt.atomic_json(output / "RESUME_SMOKE_RESULT.json", result)
+    if result["status"] != "PASS":
+        raise QBR1Error("bounded interruption/resume hashes differ")
+    return result
+
+
 def _r10_timing() -> dict[str, Any]:
     status = json.loads(R10_STATUS.read_text(encoding="utf-8"))
     config = json.loads(R10_CONFIG.read_text(encoding="utf-8"))
@@ -823,6 +1021,17 @@ def build(review_receipt: Path) -> dict[str, Any]:
                 "uninterrupted two-update run; final live/EMA/archive hashes equal and cursor=2"
             ),
             "real_chunk_pairs": 16,
+            "argv": [
+                str(REPO / ".venv/bin/python"),
+                str(Path(__file__).resolve()),
+                "resume-smoke",
+                "--config",
+                configs[0]["config"]["path"],
+                "--output",
+                str(AP_ROOT / "resume_smoke"),
+                "--scorer-claim-id",
+                "SCORER_CLAIM_ID",
+            ],
         },
         "cells": cells,
     }
@@ -904,6 +1113,10 @@ def build_parser() -> argparse.ArgumentParser:
     validate_cmd.add_argument("config", type=Path)
     run_cmd = sub.add_parser("run-config")
     run_cmd.add_argument("config", type=Path)
+    resume_cmd = sub.add_parser("resume-smoke")
+    resume_cmd.add_argument("--config", type=Path, required=True)
+    resume_cmd.add_argument("--output", type=Path, required=True)
+    resume_cmd.add_argument("--scorer-claim-id", required=True)
     adjudicate_cmd = sub.add_parser("adjudicate")
     adjudicate_cmd.add_argument("--output", type=Path, required=True)
     adjudicate_cmd.add_argument("results", nargs=6, type=Path)
@@ -920,6 +1133,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         result = {"status": "PASS", "config_sha256": canonical_sha256(config)}
     elif args.action == "run-config":
         result = run_config(args.config)
+    elif args.action == "resume-smoke":
+        result = run_resume_smoke(args.config, args.output, args.scorer_claim_id)
     else:
         result = adjudicate(args.results, args.output)
     print(json.dumps(result, indent=2, sort_keys=True, default=str))
