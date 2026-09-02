@@ -12,16 +12,18 @@ Attached to this pull request. Verify after download:
 # report.txt
 
 ```text
-=== Evaluation results over 600 samples (device: cuda) ===
+=== Evaluation results over 600 samples ===
   Average PoseNet Distortion: 0.00000637
-  Average SegNet Distortion:  0.00020139
-  Submission file size:       180,002 bytes
+  Average SegNet Distortion: 0.00020139
+  Submission file size: 180,002 bytes
   Original uncompressed size: 37,545,489 bytes
-  Compression Rate:           0.00479424
+  Compression Rate: 0.00479424
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 0.15
 ```
 
-Score recomputed from components: `0.14797617125559104` (the evaluator prints 0.15
-at two decimals).
+Verbatim (config block: `device: cuda`, `num_threads: 2`). Recomputed from the
+report's own components, the exact score is `0.14797617125559104`; the final
+line's two-decimal display rounds to 0.15.
 
 # does your submission require gpu for evaluation (inflation)?
 
@@ -95,6 +97,8 @@ receipt (S/bytes/sha/identity counts) · ddm_pq2_compress_e2e.py NOT_EXPRESSIBLE
 up3 (zero-byte pose re-solve) · hot-state POINTER_LINE (native receiver identity
 3,662,409,600 B / 0 differing; 454 B post-freeze tail). Per the contest coding-agents
 policy the final public text is operator-authored; this remains source material.
+OPERATOR NOTE (#1363): the #135 remediation template's optional "THIS is my llm setup
+and prompts" bullet is not drafted here — operator's call under the coding-agents policy.
 STORES CONSULTED: pq7 census · live PR template · canonical frontier pointer · pq2
 refusal registry · qs5/up3/jg5 receipts · task rows 1111/1363/1382.
 -->

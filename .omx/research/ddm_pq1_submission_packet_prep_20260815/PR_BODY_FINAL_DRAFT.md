@@ -15,22 +15,21 @@ download:
 # report.txt
 
 ```text
-=== Evaluation results over 600 samples (device: cuda) ===
+=== Evaluation results over 600 samples ===
   Average PoseNet Distortion: 0.00000637
-  Average SegNet Distortion:  0.00020139
-  Submission file size:       180,002 bytes
+  Average SegNet Distortion: 0.00020139
+  Submission file size: 180,002 bytes
   Original uncompressed size: 37,545,489 bytes
-  Compression Rate:           0.00479424
-  Seg contribution:            0.020139
-  Pose contribution:           0.007981227975693965
-  Rate contribution:           0.11985594327989708
-  Score recomputed from components: 0.14797617125559104
-  Evaluator display at 2 decimals: 0.15
+  Compression Rate: 0.00479424
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 0.15
 ```
 
-This is a `[contest-CUDA]` result on a Linux x86_64 Tesla T4 over all 600 samples. The
-exact score is recomputed from the components; the evaluator's two-decimal display is not
-the cited value.
+Verbatim from the evaluator's report (its config block records `device: cuda`,
+`num_threads: 2`, `seed: 1234`). This is a `[contest-CUDA]` result on a Linux x86_64
+Tesla T4 over all 600 samples. The final line displays two decimals; recomputed from the
+report's own 8-decimal components, the exact score is `0.14797617125559104`
+(seg `0.020139` + pose `0.007981227975693965` + rate `0.11985594327989708`), and that
+exact value is the cited claim.
 
 There is no `[contest-CPU]` score for this archive. A same-lineage predecessor measured
 `0.20513189128858372` at 186,269 bytes on `[contest-CPU]` Linux x86_64 over 600 samples;
@@ -138,5 +137,10 @@ STORES CONSULTED: pq7 Yousfi-comment census · retained #137/#138 API receipts +
 census (#139) · live README + PR template (source-inspected) · pinned snapshot drift diff ·
 gen-7 packet materials · canonical frontier pointer (afr1 components) · git-dated
 provenance receipts (fea4a953f9 2026-04-11 · 752a30cdb9 2026-06-10) · task rows #1111/#1363.
+OPERATOR NOTE (#1363): Yousfi's #135 remediation template carries an optional bullet —
+"Optionally: THIS is my llm setup and prompts…" — not drafted here; whether and how to
+include that disclosure is the operator's call under the coding-agents policy, in the
+operator's own words. His stated style bar also favors the short variant: "We don't need
+more verbose, we need more precise."
 This comment is invisible when rendered and is removed at publish time.
 -->

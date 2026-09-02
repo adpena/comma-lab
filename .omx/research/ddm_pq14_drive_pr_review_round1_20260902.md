@@ -165,3 +165,47 @@ level-set solver stack, and the seal/fire custody apparatus stay in the ADDENDUM
 ACCOUNTING, not the PR body — the body characterizes the shipped submission; the addendum
 characterizes the complete original-work record. The operator draws on both at final
 authoring (#1363).
+
+## 7. Round-1 addendum 3 (2026-09-02, same day) — canonical Yousfi-requirements audit (operator: "make sure it still follows best practices and canonical yousfi requirements")
+
+Method: verified at SOURCE against three layers — the pinned template
+(`upstream/.github/pull_request_template.md`), the pq7 76-comment behavioral census
+(`YOUSFI_REVIEW_CHECKLIST.md`, incl. live-README deltas + the #135 remediation template),
+and the retained VERBATIM T4 evaluator report
+(`/Volumes/APDataStore/pact/ddm_pq12/afr1_authority_materialized/returned_artifacts/report.txt`).
+
+**Compliance table (his five standing demands + the template):**
+
+| Demand | State | Verdict |
+|---|---|---|
+| 1. No duplication of merged code | CPR1 lineage unmerged; 0 byte-identical copies (DUPLICATION_AUDIT); attribution now fully paid (@-mentions + accounting) | PASS |
+| 2. Coding-agents policy ("show human work"; body human-written) | Final public text OPERATOR-authored (#1363); drafts = source material; provenance addendum = the dated human-work record | OPERATOR-GATED (unchanged, correctly) |
+| 3. Archive hosted outside repo | Body: "attached via the upload feature" — his own accepted mechanism (#102) | PASS |
+| 4. Bytes pay for themselves + novelty | Net −0.0143 S vs the #135 leader; namesake mechanism not on the leaderboard; what IS represented is credited | PASS |
+| 5. Public disputes + runtime call | `linux-nvidia-t4` declared w/ measured times; CUDA precedent = the bot's own #130/#133 runs (config block proves device:cuda, num_threads:2) | PASS |
+| Template filled literally + #135 shape | Name `joint_waterfill_rider` (valid dir-name — the pass-7 F5 class); baseline→change→score + "didn't work better" present; competitive/innovative per the LIVE template (pq13 09-01 refresh) | PASS after F13 |
+| Deps in submission folder | Runtime-tree-scoped (brotli/constriction declared in-tree), no project-level mutation, disclosed | PASS |
+| #118 lesson (conclusion ≤ evidence) | All claims receipt-backed (V1–V11); axis labels; no-priority clauses | PASS |
+
+**F13 — FOUND + FIXED (both variants): the report.txt fence was not verbatim.** The
+template says "copy the report.txt content here"; our fence (a) moved `device: cuda` into
+the header line (the evaluator puts it in the config block), (b) OMITTED the evaluator's
+own `Final score: … = 0.15` line, and (c) injected five recomputed-component lines the
+evaluator never wrote. Adversarially readable as doctoring the report to hide the rounded
+display. Fixed against the RETAINED verbatim T4 report: the fence is now the evaluator's
+exact 7-line results block INCLUDING `Final score: … = 0.15` (comma-formatted sizes
+verified as the evaluator's own `{:,}` formatting, not an edit), with the exact
+component-recomputed score stated OUTSIDE the fence. Strictly more conformant AND more
+honest than the prior form.
+
+**F14 — SURFACED (operator slot, not drafted): the #135 template's optional LLM-setup
+bullet.** Yousfi's dictated remediation shape ends "Optionally: THIS is my llm setup and
+prompts…" — the single most policy-relevant optional disclosure for this submission, and
+the drafts carry no such section. Per the policy's ban on agent-written public-facing
+text, MAIN did NOT draft it; both drafts now carry an internal OPERATOR NOTE naming the
+slot. Companion style note recorded: "We don't need more verbose, we need more precise"
+— the TIGHT variant is the closer match to his stated preference.
+
+**Standing residue (unchanged by this audit):** item 2 remains the one demand that closes
+a PR on sight and remains the operator's #1363 decision; F1 (packet-doc regeneration) and
+F3 (CPU-axis row, ~$0.15) remain the pre-publish worklist.
