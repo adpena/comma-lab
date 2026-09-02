@@ -50,7 +50,9 @@ is a projection.
 Yes to both. `experiments/ddm_pq2_compress_e2e.py` deterministically rebuilds the
 exact submitted 180,002-byte archive, SHA-asserts every admitted lossless stage and a
 second complete final build, and includes the content-deciding solve stages as their
-own scripts with receipts.
+own scripts with receipts. The five lossless post-processing stages add roughly
+15–50 minutes of CPU time at compress time (dominated by two full 600-pair
+re-encodes); inflation is unchanged.
 
 # is this submission competitive or innovative? explain why
 
@@ -97,9 +99,9 @@ Archive SHA-256
 `cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25`.
 
 **What did not work better.** Re-mixing the stored 12-dimensional pose basis was a
-measured null. A token-drop admission branch remains unbuilt because the receiver has no
-path for it. The single-entry-point rebuild is verified only on an older packet
-generation and is not claimed for this archive.
+measured null. Sub-4-bit semantic quantization lost far more distortion than its rate
+credit at every depth tried. A token-drop admission branch remains unbuilt because the
+receiver has no path for it.
 
 **Known runtime limitation.** The evaluated inflater pins Brotli and may install it from
 the network if absent, and it compiles native code during inflation. These are stated

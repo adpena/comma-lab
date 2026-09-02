@@ -33,7 +33,9 @@ Yes, `linux-nvidia-t4` `--device cuda`. Measured on T4: 578.9 s inflation +
 Yes to both. `experiments/ddm_pq2_compress_e2e.py` deterministically rebuilds the
 exact submitted 180,002-byte archive, SHA-asserts every admitted lossless stage
 and a second complete final build, and includes the content-deciding solve stages
-as their own scripts with receipts.
+as their own scripts with receipts. The five lossless post-processing stages add
+roughly 15–50 minutes of CPU time at compress time (dominated by two full
+600-pair re-encodes); inflation is unchanged.
 
 # is this submission competitive or innovative? explain why
 
