@@ -85,7 +85,7 @@ def load_gt_tables(path: Path) -> tuple[np.ndarray, np.ndarray]:
 
     The DALI container (``{"seg", "pose"}``) is the lineage the contest T4
     axis scores against; the npz container (``{"lstars", "gt_poses"}``) is
-    the PyAV control.  They are NOT interchangeable: they disagree on 18,954
+    the PyAV control.  They are NOT interchangeable: they disagree on 20,671
     argmax positions and by 1.4061e-04 in pose MSE.
     """
 

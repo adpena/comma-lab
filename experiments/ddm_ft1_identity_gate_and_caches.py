@@ -92,10 +92,11 @@ GT_CACHE_PYAV = Path(
 #: MEASURED, not assumed: ``experiments/results/mlx_fleet_gt_cache/gt_n600.npz``
 #: is the PYAV lineage, not DALI.  Its ``lstars`` differ from ``gt_cache_av.pt``
 #: at 2 of 117,964,800 positions and its ``gt_poses`` differ by MSE 3.6e-12,
-#: while DALI-vs-PyAV differ by 18,954 argmax positions and pose MSE
+#: while DALI-vs-PyAV differ by 20,671 argmax positions and pose MSE
 #: 1.4061e-04 (exactly the additive fork rf1 records).  Training against it
 #: would aim the renderer at a table that disagrees with the scored table at
-#: 80% of d_seg's whole budget, so it is the CONTROL here, never the target.
+#: 87% of d_seg's whole 23,757-flip budget, so it is the CONTROL here,
+#: never the target.
 GT_CACHE_MLX_FLEET_PYAV = (
     REPO_ROOT / "experiments/results/mlx_fleet_gt_cache/gt_n600.npz"
 )

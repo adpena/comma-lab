@@ -18,11 +18,11 @@ Axis of every measured row below: **`[macOS-CPU advisory]`** unless it cites the
 2. **The charter's training target is the wrong GT lineage, and this would have silently mis-aimed the
    whole arm.** `experiments/results/mlx_fleet_gt_cache/gt_n600.npz` is the **PyAV** lineage, not DALI.
    Measured: its `lstars` differ from `gt_cache_av.pt` at **2** of 117,964,800 positions and its
-   `gt_poses` by MSE **3.6e-12**, while DALI-vs-PyAV differ by **18,954** argmax positions and pose MSE
+   `gt_poses` by MSE **3.6e-12**, while DALI-vs-PyAV differ by **20,671** argmax positions and pose MSE
    **1.4061e-04** — exactly the additive fork `rf1` records. Shipped tokens vs **DALI** = **9,179**
    mismatches (mst1's DALI-gated reference: 9,182); vs PyAV = **28,133**. Training against the PyAV
-   table would have aimed the renderer at ~19,000 positions the contest does not score — **80% of
-   d_seg's entire budget of 23,757 flips**.
+   table would have aimed the renderer at **20,671** positions the contest does not score — **87% of
+   d_seg's entire budget of 23,757 flips**, and **2.25x the shipped token error itself**.
 3. **The charter's promote gate is internally inconsistent by 5.4×.** Its pose guard `d_pose ≤ 1.25e-4`
    costs `√(10·1.25e-4) − √(10·6.37e-6)` = **+0.02737 S**, which is **5.44× the entire credit of the
    25% seg cut it predicts** (0.005035 S). At ΔB = 0 the binding pose ceiling is **≈1.69e-5** (2.66×
@@ -78,7 +78,8 @@ built on a **Tesla T4 with CUDA** per its own `result_summary.json`):
 | comparison | positions differing | rate |
 |---|---:|---:|
 | `gt_cache_av['seg']` vs `gt_n600['lstars']` | **2** | 1.70e-08 |
-| `gt_cache_dali['seg']` vs `gt_cache_av['seg']` | **18,954** | 1.607e-04 |
+| `gt_cache_dali['seg']` vs `gt_cache_av['seg']` | **20,671** | 1.752e-04 |
+| `gt_cache_dali['seg']` vs `gt_n600['lstars']` | **20,671** | 1.752e-04 |
 | shipped tokens vs **DALI** | **9,179** | 7.781e-05 |
 | shipped tokens vs PyAV | 28,133 | 2.385e-04 |
 | pose MSE: `gt_cache_av` vs `gt_n600['gt_poses']` | — | **3.57e-12** |
@@ -86,7 +87,17 @@ built on a **Tesla T4 with CUDA** per its own `result_summary.json`):
 
 `mst1`'s DALI-gated transmitted-error count for this object is **9,182**; I measure **9,179** on the
 AFR1 tokens. Three pixels apart — the token field is essentially unchanged from dx2 to afr1, and the
-28,133 figure was never token error at all. It was **two thirds GT-lineage disagreement**.
+28,133 figure was never token error at all; it is dominated by GT-lineage disagreement.
+
+**Self-correction, recorded rather than quietly fixed.** An earlier draft of this memo and two code
+comments carried **18,954** for the DALI-vs-PyAV fork. That number was never measured: I obtained it as
+`28,133 - 9,179`, the difference of two mismatch COUNTS, which is not the size of the symmetric
+difference between two label tables -- the two disagreement sets overlap. The measured value is
+**20,671**. Corrected in `experiments/ddm_ft1_identity_gate_and_caches.py`,
+`experiments/ddm_ft1_verdict_bhw_pose.py` and here; the superseded figure survives only in commit
+messages `77af37116` and `8865d5e65`, which are append-only history. This is the operating manual's
+Sec 4 failure (recognizing a plausible number instead of re-deriving it) caught by its own Sec 6
+(attack your own conclusion).
 
 **Consequences carried forward:**
 - The target cache is now `gt_cache_dali.pt['seg']` (sha `a91d9825…`); the PyAV table is retained as
