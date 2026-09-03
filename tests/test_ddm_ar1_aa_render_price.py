@@ -72,6 +72,75 @@ def test_supersampled_coords_at_ss1_is_the_base_grid() -> None:
 
 
 # ---------------------------------------------------------------------------
+# the module lattice's registration defect, and the corrected lattice
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    ("ss", "expected_pixels"), [(2, 0.2497), (3, 0.3328), (4, 0.3743)]
+)
+def test_module_lattice_block_centres_drift_from_the_coarse_samples(
+    ss: int, expected_pixels: float
+) -> None:
+    """MEASURED defect: ``linspace(-1,1,n*ss)`` blocks are not centred on ``linspace(-1,1,n)``.
+
+    The drift is inward at both frame edges and exactly zero at the centre, so the module's AA
+    image is a slightly contracted copy of the field.  Pinning the magnitude keeps the memo's
+    registration-vs-blur decomposition honest.
+    """
+    n = 384
+    coarse = np.linspace(-1.0, 1.0, n)
+    block_means = np.linspace(-1.0, 1.0, n * ss).reshape(n, ss).mean(axis=1)
+    pitch = 2.0 / (n - 1)
+    drift_pixels = np.abs(block_means - coarse) / pitch
+    assert drift_pixels.max() == pytest.approx(expected_pixels, abs=1e-4)
+    assert drift_pixels[n // 2] < 1e-3  # zero at the centre
+    assert (block_means - coarse)[0] > 0 and (block_means - coarse)[-1] < 0  # inward at both edges
+
+
+@pytest.mark.parametrize("ss", [1, 2, 3, 4, 5])
+@pytest.mark.parametrize("n", [8, 384, 512])
+def test_footprint_centred_span_blocks_are_exactly_the_coarse_samples(n: int, ss: int) -> None:
+    lo, hi = ar1.footprint_centred_span(n, ss)
+    fine = np.linspace(lo, hi, n * ss)
+    block_means = fine.reshape(n, ss).mean(axis=1)
+    np.testing.assert_allclose(block_means, np.linspace(-1.0, 1.0, n), atol=1e-12)
+
+
+def test_footprint_centred_span_is_the_identity_at_ss1() -> None:
+    assert ar1.footprint_centred_span(384, 1) == (-1.0, 1.0)
+
+
+def test_footprint_centred_span_refuses_degenerate_input() -> None:
+    with pytest.raises(ar1.AR1Error):
+        ar1.footprint_centred_span(1, 2)
+    with pytest.raises(ar1.AR1Error):
+        ar1.footprint_centred_span(8, 0)
+
+
+def test_centred_shim_respans_only_the_two_render_axes_and_is_restored() -> None:
+    saved = torch.linspace
+    shim = ar1._centred_linspace_shim(6, 8, 2)
+    lo_h, hi_h = ar1.footprint_centred_span(6, 2)
+    assert torch.allclose(shim(-1.0, 1.0, 12), torch.linspace(lo_h, hi_h, 12))
+    lo_w, hi_w = ar1.footprint_centred_span(8, 2)
+    assert torch.allclose(shim(-1.0, 1.0, 16), torch.linspace(lo_w, hi_w, 16))
+    # Any other call passes straight through, including a same-length non-(-1,1) span.
+    assert torch.equal(shim(0.0, 5.0, 12), torch.linspace(0.0, 5.0, 12))
+    assert torch.equal(shim(-1.0, 1.0, 7), torch.linspace(-1.0, 1.0, 7))
+    assert torch.linspace is saved  # the shim never installs itself
+
+
+def test_render_rgb_pair_restores_torch_linspace_even_when_the_model_raises() -> None:
+    class _Boom:
+        def __call__(self, *_args: object, **_kwargs: object) -> dict[str, torch.Tensor]:
+            raise RuntimeError("render exploded")
+
+    saved = torch.linspace
+    with pytest.raises(RuntimeError, match="render exploded"):
+        ar1.render_rgb_pair(_Boom(), 0, 2, ar1.LATTICE_CENTRED)  # type: ignore[arg-type]
+    assert torch.linspace is saved
+
+
+# ---------------------------------------------------------------------------
 # footprint integral == exact ss x ss block mean
 # ---------------------------------------------------------------------------
 class _StubModel:
@@ -115,6 +184,11 @@ def test_render_rgb_pair_at_ss1_is_the_untouched_point_sample(
     expected = torch.rand(1, 2, 3, 6, 8, generator=generator)
     assert torch.equal(coarse, expected)
     assert model.calls == [(6, 8)]
+
+
+def test_render_rgb_pair_refuses_an_unknown_lattice() -> None:
+    with pytest.raises(ar1.AR1Error):
+        ar1.render_rgb_pair(_StubModel(4, 4), 0, 2, "nearest_neighbour")  # type: ignore[arg-type]
 
 
 def test_render_rgb_pair_refuses_ss_below_one() -> None:

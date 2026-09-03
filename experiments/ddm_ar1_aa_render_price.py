@@ -32,10 +32,15 @@ TWO HONEST BOUNDS ON THAT CLAIM, both MEASURED, neither load-bearing for the del
    1.52e-05 of one base-grid pixel pitch (2/511).  ``render_rgb_pair`` builds BOTH the ss=1 and
    the ss>1 grids through the trainer's own ``forward``, so the comparison never straddles the
    two implementations and this gap cancels out of the delta entirely.
-2. The endpoint-inclusive fine grid is the module's definition of the footprint integral, not the
-   exact sub-cell-centre quadrature.  The published law
-   ``aa_sdf_observation_footprint_render_dseg_v1`` was measured with THIS lattice, so this
-   instrument measures the same operator the law names.
+2. The endpoint-inclusive fine grid is NOT the exact sub-cell-centre quadrature, and the gap is
+   large enough to matter.  MEASURED: the ss-block means of ``linspace(-1, 1, n*ss)`` drift from
+   ``linspace(-1, 1, n)`` by up to 0.2497 coarse pixels at ss=2 (0.3328 at ss=3, 0.3743 at ss=4),
+   inward at both frame edges and exactly 0 at the centre -- the module's AA image is a slightly
+   CONTRACTED copy of the field.  So a delta measured on this lattice mixes FOOTPRINT AVERAGING
+   with a sub-pixel REGISTRATION shift.  ``--lattice footprint_centred`` supplies the corrected
+   grid (see :func:`footprint_centred_span`) so the two components can be separated.  The published
+   law ``aa_sdf_observation_footprint_render_dseg_v1`` was measured on the module lattice, so
+   ``--lattice module_endpoint`` (the default) is the operator the law names.
 
 ``ss == 1`` is the trainer's current point-sampled path bit-for-bit -- the box downsample is
 skipped outright, so the ss=1 tensor is the object ``forward`` returned.
@@ -218,18 +223,92 @@ def load_ground_truth() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # the render under test
 # ---------------------------------------------------------------------------
-def render_rgb_pair(model: qbt.QBFLOWTorch, pair_id: int, ss: int) -> torch.Tensor:
+LATTICE_MODULE = "module_endpoint"
+LATTICE_CENTRED = "footprint_centred"
+
+
+def footprint_centred_span(n: int, ss: int) -> tuple[float, float]:
+    """``(lo, hi)`` for the fine grid whose ``ss``-blocks are CENTRED on ``linspace(-1, 1, n)``.
+
+    MEASURED DEFECT this repairs: ``build_supersampled_coords`` uses ``linspace(-1, 1, n*ss)``,
+    which shares the coarse grid's endpoints.  Its ``ss``-block means are therefore NOT the coarse
+    sample points -- they drift inward, by 0.2497 coarse pixels at ss=2, 0.3328 at ss=3 and 0.3743
+    at ss=4 at the frame edges (exactly 0 at the centre), so the AA image is a slightly CONTRACTED
+    copy of the field.  Part of any AA-vs-point delta measured on that lattice is registration, not
+    footprint averaging.
+
+    The repair: with coarse pitch ``p = 2/(n-1)``, the sub-cell centres of coarse sample ``i`` are
+    ``-1 + i*p + p*(k + 0.5 - ss/2)/ss`` for ``k in [0, ss)``.  Flattened that is a uniform grid of
+    ``n*ss`` points with pitch ``p/ss`` running from ``-1 - p/2 + p/(2*ss)`` to ``1 + p/2 -
+    p/(2*ss)``, whose ``ss``-block means are the coarse samples EXACTLY.
+    """
+    if n < 2:
+        raise AR1Error(f"footprint span needs at least 2 coarse samples; got {n}")
+    ss = int(ss)
+    if ss < 1:
+        raise AR1Error(f"supersample factor must be >= 1; got {ss}")
+    pitch = 2.0 / (n - 1)
+    inset = pitch / 2.0 - pitch / (2.0 * ss)
+    return -1.0 - inset, 1.0 + inset
+
+
+def _centred_linspace_shim(height: int, width: int, ss: int):
+    """A ``torch.linspace`` stand-in that re-spans ONLY the two render-grid axis calls.
+
+    ``qbt._base_features`` is the trainer's own feature builder and is used unmodified; only the
+    two ``torch.linspace(-1.0, 1.0, n)`` calls that lay down the sample grid are re-spanned, so the
+    field is evaluated at footprint-centred coordinates and every downstream feature follows.  Any
+    other ``linspace`` call passes straight through.
+    """
+    real_linspace = torch.linspace
+    targets = {height * ss: footprint_centred_span(height, ss),
+               width * ss: footprint_centred_span(width, ss)}
+
+    def shim(start, end, steps, **kwargs):
+        try:
+            matched = float(start) == -1.0 and float(end) == 1.0 and int(steps) in targets
+        except (TypeError, ValueError):
+            # Anything whose endpoints are not plain scalars is not the render grid; pass it on
+            # rather than risking a crash mid-run.
+            matched = False
+        if matched:
+            lo, hi = targets[int(steps)]
+            return real_linspace(lo, hi, int(steps), **kwargs)
+        return real_linspace(start, end, steps, **kwargs)
+
+    return shim
+
+
+def render_rgb_pair(
+    model: qbt.QBFLOWTorch, pair_id: int, ss: int, lattice: str = LATTICE_MODULE
+) -> torch.Tensor:
     """Render one pair at supersample factor ``ss`` and footprint-integrate back to the base grid.
 
     Returns ``[1, 2, 3, EVAL_H, EVAL_W]`` float32 in [0, 1] -- the exact shape/scale the trainer's
     ``roundtrip_to_camera_uint8_ste`` consumes.  ``ss == 1`` is the trainer's current path
     unchanged (the box downsample is skipped entirely).
+
+    ``lattice`` selects the fine sample grid: ``module_endpoint`` reproduces
+    ``aa_sdf_observation_render.build_supersampled_coords`` (the operator the published law was
+    measured with); ``footprint_centred`` uses the registration-corrected grid above.  Comparing
+    the two separates the AA delta's blur component from its registration component.
     """
     if ss < 1:
         raise AR1Error(f"supersample factor must be >= 1; got {ss}")
+    if lattice not in (LATTICE_MODULE, LATTICE_CENTRED):
+        raise AR1Error(f"unknown lattice {lattice!r}")
     ids = torch.tensor([int(pair_id)], dtype=torch.long)
+    height, width = qbt.EVAL_H * ss, qbt.EVAL_W * ss
     with torch.no_grad():
-        outputs = model(ids, height=qbt.EVAL_H * ss, width=qbt.EVAL_W * ss)
+        if lattice == LATTICE_CENTRED and ss > 1:
+            saved = qbt.torch.linspace
+            qbt.torch.linspace = _centred_linspace_shim(qbt.EVAL_H, qbt.EVAL_W, ss)
+            try:
+                outputs = model(ids, height=height, width=width)
+            finally:
+                qbt.torch.linspace = saved
+        else:
+            outputs = model(ids, height=height, width=width)
         rgb = outputs["rgb_pair_01"]
     if ss == 1:
         return rgb
@@ -338,10 +417,10 @@ def run(args: argparse.Namespace) -> int:
 
     pair_ids = resolve_pairs(args.pairs)
     ss_values = tuple(int(v) for v in args.ss.split(","))
-    if 1 not in ss_values:
-        raise AR1Error("ss=1 (the trainer's point-sampled baseline) must be measured")
+    lattice = str(args.lattice)
+    suffix = "" if lattice == LATTICE_MODULE else "_centred"
 
-    done: set[tuple[int, int]] = set()
+    done: set[tuple[int, int, str]] = set()
     if args.resume and rows_path.exists():
         with open(rows_path, encoding="utf-8") as handle:
             for line in handle:
@@ -349,29 +428,38 @@ def run(args: argparse.Namespace) -> int:
                 if not line:
                     continue
                 row = json.loads(line)
-                done.add((int(row["pair_id"]), int(row["ss"])))
-        print(f"[ar1] resuming; {len(done)} (pair, ss) rows already on disk", flush=True)
+                # Rows written before the lattice split are module-endpoint by construction.
+                done.add((int(row["pair_id"]), int(row["ss"]), row.get("lattice", LATTICE_MODULE)))
+        print(f"[ar1] resuming; {len(done)} (pair, ss, lattice) rows already on disk", flush=True)
+
+    # ss=1 is the point-sampled baseline every AA delta is measured against, and it is
+    # lattice-free, so a later lattice pass may reuse the baseline already on disk rather than
+    # re-rendering it.  It must exist SOMEWHERE, though, or the pass produces nothing comparable.
+    if 1 not in ss_values and not any(pair_ss == 1 for _pair, pair_ss, _lat in done):
+        raise AR1Error(
+            "ss=1 (the trainer's point-sampled baseline) is neither in --ss nor already on disk"
+        )
 
     started = time.time()
     written = 0
     with open(rows_path, "a", encoding="utf-8") as sink:
         for pair_id in pair_ids:
             for ss in ss_values:
-                if (pair_id, ss) in done:
+                if (pair_id, ss, lattice) in done:
                     continue
                 t_render0 = time.time()
-                rgb = render_rgb_pair(model, pair_id, ss)
+                rgb = render_rgb_pair(model, pair_id, ss, lattice)
                 t_render = time.time() - t_render0
                 t_score0 = time.time()
                 camera = qbt.roundtrip_to_camera_uint8_ste(rgb)
                 argmax, pose6 = score_camera(camera, posenet, segnet)
                 t_score = time.time() - t_score0
 
-                np.save(out / "argmax" / f"pair_{pair_id:04d}_ss{ss}.npy", argmax)
+                np.save(out / "argmax" / f"pair_{pair_id:04d}_ss{ss}{suffix}.npy", argmax)
                 camera_fact = None
                 if pair_ids.index(pair_id) < int(args.retain_camera_pairs):
                     camera_u8 = camera.round().clamp(0, 255)[0].to(torch.uint8).numpy()
-                    camera_path = out / "camera" / f"pair_{pair_id:04d}_ss{ss}.npy"
+                    camera_path = out / "camera" / f"pair_{pair_id:04d}_ss{ss}{suffix}.npy"
                     np.save(camera_path, camera_u8)
                     camera_fact = file_fact(camera_path)
 
@@ -387,6 +475,7 @@ def run(args: argparse.Namespace) -> int:
                     "score_claim": False,
                     "pair_id": int(pair_id),
                     "ss": int(ss),
+                    "lattice": lattice,
                     "render_grid": [qbt.EVAL_H * ss, qbt.EVAL_W * ss],
                     "base_grid": [qbt.EVAL_H, qbt.EVAL_W],
                     "d_seg_dali_authority": d_seg_a,
@@ -429,6 +518,7 @@ def run(args: argparse.Namespace) -> int:
         "aa_module_source": file_fact(REPO / "src/tac/boundary_math/aa_sdf_observation_render.py"),
         "gt_lineage": gt["lineage"],
         "pairs_spec": args.pairs,
+        "lattice": lattice,
         "pair_ids": list(pair_ids),
         "ss_values": list(ss_values),
         "seeded32": list(seeded_random_32()),
@@ -439,7 +529,7 @@ def run(args: argparse.Namespace) -> int:
         "rows_path": str(rows_path.resolve()),
         "all_rendered_argmax_retained": True,
     }
-    (out / "MANIFEST.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    (out / f"MANIFEST{'' if lattice == LATTICE_MODULE else '_centred'}.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     print(f"[ar1] wrote {written} rows; manifest at {out / 'MANIFEST.json'}", flush=True)
     return 0
 
@@ -682,6 +772,7 @@ def _subset_block(
 def aggregate(args: argparse.Namespace) -> int:
     out = Path(args.out)
     rows_path = out / "per_pair_rows.jsonl"
+    lattice = str(args.lattice)
     rows_by_ss: dict[int, dict[int, dict[str, Any]]] = {}
     with open(rows_path, encoding="utf-8") as handle:
         for line in handle:
@@ -689,6 +780,11 @@ def aggregate(args: argparse.Namespace) -> int:
             if not line:
                 continue
             row = json.loads(line)
+            # ss=1 is lattice-free (no supersample, no downsample), so it is the shared baseline
+            # for every lattice.  Rows predating the lattice split are module-endpoint.
+            row_lattice = row.get("lattice", LATTICE_MODULE)
+            if int(row["ss"]) != 1 and row_lattice != lattice:
+                continue
             rows_by_ss.setdefault(int(row["ss"]), {})[int(row["pair_id"])] = row
 
     if 1 not in rows_by_ss or len(rows_by_ss) < 2:
@@ -724,6 +820,7 @@ def aggregate(args: argparse.Namespace) -> int:
         "rate_at_archive_bytes": 25.0 * archive_bytes / float(qbt.RATE_DENOMINATOR),
         "exchange_rate_S_per_byte_reference": 6.658589531221714e-7,
         "gt_lineage": gt["lineage"],
+        "lattice": lattice,
         "ss_measured": sorted(rows_by_ss),
         "population_scope": {
             "burn_trained_pair_ids": list(qbt.SELECTION_IDS),
@@ -754,6 +851,7 @@ def aggregate(args: argparse.Namespace) -> int:
         }
 
     # per-class B/H/W between ss=1 and every ss>1, summed over the measured pairs.
+    argmax_suffix = "" if lattice == LATTICE_MODULE else "_centred"
     bhw: dict[str, Any] = {}
     for ss in sorted(rows_by_ss):
         if ss == 1:
@@ -765,7 +863,7 @@ def aggregate(args: argparse.Namespace) -> int:
         ]
         for pair_id in common:
             base = np.load(out / "argmax" / f"pair_{pair_id:04d}_ss1.npy")
-            aa = np.load(out / "argmax" / f"pair_{pair_id:04d}_ss{ss}.npy")
+            aa = np.load(out / "argmax" / f"pair_{pair_id:04d}_ss{ss}{argmax_suffix}.npy")
             for row in bhw_split(base, aa, gt["dali_seg"][pair_id]):
                 target = totals[row["class_id"]]
                 for key in ("target_sites", "base_wrong", "aa_wrong", "fixed", "broken", "net"):
@@ -780,7 +878,7 @@ def aggregate(args: argparse.Namespace) -> int:
         }
     report["bhw_vs_ss1"] = bhw
 
-    path = out / "AGGREGATE.json"
+    path = out / f"AGGREGATE{'' if lattice == LATTICE_MODULE else '_centred'}.json"
     path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     print(json.dumps(report["subsets"]["dali_authority"], indent=2, sort_keys=True))
     print(f"[ar1] aggregate written to {path}")
@@ -798,6 +896,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     measure.add_argument("--ss", default="1,2", help="comma-separated supersample factors")
     measure.add_argument("--threads", type=int, default=4)
     measure.add_argument("--retain-camera-pairs", type=int, default=4)
+    measure.add_argument(
+        "--lattice", default=LATTICE_MODULE, choices=[LATTICE_MODULE, LATTICE_CENTRED]
+    )
     measure.add_argument("--resume", action="store_true")
 
     cal = sub.add_parser("calibrate", help="three-leg reproduction of the burn's own read")
@@ -810,6 +911,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     agg = sub.add_parser("aggregate", help="aggregate the retained per-pair rows")
     agg.add_argument("--out", required=True)
     agg.add_argument("--archive-bytes", type=int, required=True)
+    agg.add_argument(
+        "--lattice", default=LATTICE_MODULE, choices=[LATTICE_MODULE, LATTICE_CENTRED]
+    )
 
     args = parser.parse_args(list(argv) if argv is not None else None)
     if args.mode == "measure":
