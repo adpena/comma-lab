@@ -68,10 +68,10 @@ arm tests capacity on the generator FORM, scorer-free, at $0.
 ## OPTIMAL FORM
 
 - Family exemplar: GF1's measured generator form, reference
-  `.omx/research/ddm_gf1_generator_form_capacity_verdict_20260830.md` (locate its runner + commit at
-  source and pin both in the memo), and the born-small renderer/carrier builds
-  `experiments/ddm_rb1_born_small_renderer_build.py`, `experiments/ddm_bs3_born_small_resolved_carrier.py`
-  (pin commits via `git log -1 --`).
+  `.omx/research/ddm_gf1_generator_form_capacity_verdict_20260830.md` (commit fed8d428e0; runner
+  `experiments/ddm_gf1_generator_form_on_lb1_field.py` commit 5b884ec957), and the born-small
+  renderer/carrier builds `experiments/ddm_rb1_born_small_renderer_build.py` (commit 42fd8b1e55),
+  `experiments/ddm_bs3_born_small_resolved_carrier.py` (commit 0e74b59d33).
 - SCOPE reductions declared per row (fit budget per capacity point). MECHANISM reductions FORBIDDEN:
   no float parameter counts as "bytes"; no generic 0.2909 B/site as the ONLY residual price; no
   prefix subsets (n600 or seeded random).
