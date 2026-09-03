@@ -356,6 +356,32 @@ def test_ci_blind_timeout_rejects_garbage(monkeypatch) -> None:
     assert preflight_hook._ci_blind_timeout_seconds() == default
 
 
+def test_governed_metal_burn_pids_excludes_observer_flag_values(monkeypatch) -> None:
+    ps_output = (
+        "101 python tools/watch.py --training-sig train_tr1_partition_renderer_mlx.py\n"
+        "202 python experiments/train_tr1_partition_renderer_mlx.py --epochs 10\n"
+    )
+
+    def fake_run(*_args, **_kwargs):
+        return subprocess.CompletedProcess(args=[], returncode=0, stdout=ps_output)
+
+    monkeypatch.setattr(preflight_hook.subprocess, "run", fake_run)
+    assert preflight_hook._governed_metal_burn_pids() == ["202"]
+
+
+def test_governed_metal_burn_pids_ignores_process_table_readers(monkeypatch) -> None:
+    ps_output = (
+        "303 rg train_levelset_witness_realized_through_R_mlx.py tools\n"
+        "404 ps -axo pid=,command=\n"
+    )
+
+    def fake_run(*_args, **_kwargs):
+        return subprocess.CompletedProcess(args=[], returncode=0, stdout=ps_output)
+
+    monkeypatch.setattr(preflight_hook.subprocess, "run", fake_run)
+    assert preflight_hook._governed_metal_burn_pids() == []
+
+
 def test_run_ci_blind_tests_env_skip_is_explicit(monkeypatch) -> None:
     monkeypatch.setenv("PREFLIGHT_SKIP_CI_BLIND_TESTS", "1")
 

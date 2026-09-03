@@ -4,6 +4,8 @@
 """Launch-guard PreToolUse hook — the P0 machine-crash admission gate (#254)
 lifted to the Claude Code harness surface (#338).
 
+# OBSERVER_ROLE_OK:this hook classifies a proposed Bash command and never enumerates live processes
+
 Refuses a RAW heavy witness-trainer launch that bypasses the governed path:
 a Bash command that EXECUTES ``train_levelset_witness*.py`` under a python
 interpreter, without ``safe_run`` / ``launch_witness_run`` /

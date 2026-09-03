@@ -587,15 +587,32 @@ def _governed_metal_burn_pids() -> list[str]:
     DEFERS loudly with a receipt instead of racing the device (an MLX-allocating test
     suite counts as a Metal fire under the one-Metal-fire law).
     """
-    pids: list[str] = []
-    for sig in _GOVERNED_METAL_TRAINER_SIGNATURES:
-        try:
-            out = subprocess.run(["pgrep", "-f", sig], capture_output=True, text=True,  # subprocess-no-check-OK: pgrep rc=1 = no match, a valid answer; failure skips the signature via the except arm
-                                 timeout=10)
-        except Exception:
-            continue
-        pids.extend(p.strip() for p in out.stdout.split() if p.strip())
-    return sorted(set(pids))
+    try:
+        from tools.argv_role import process_table_entrypoint_holders
+    except ModuleNotFoundError:  # script-invoked by git: sys.path[0] is tools/, not the repo root
+        from argv_role import process_table_entrypoint_holders
+
+    try:
+        out = subprocess.run(
+            ["ps", "-axo", "pid=,command="],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except Exception:
+        return []
+    rows: list[tuple[str, str]] = []
+    for line in out.stdout.splitlines():
+        parts = line.strip().split(None, 1)
+        if len(parts) == 2 and parts[0].isdigit():
+            rows.append((parts[0], parts[1]))
+    holders = set(process_table_entrypoint_holders(
+        "\n".join(command for _pid, command in rows),
+        _GOVERNED_METAL_TRAINER_SIGNATURES,
+        self_tokens=("preflight_hook.py",),
+    ))
+    return sorted({pid for pid, command in rows if command in holders})
 
 
 def _record_ci_blind_deferral(selected: list[str], burn_pids: list[str]) -> None:
