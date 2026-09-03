@@ -154,3 +154,17 @@ aligned loss + pose@0 — same bytes, tokens untouched; each 1e-5 of d_seg = −
    window = 51.7 h on CPU (not deliverable while Metal is owned).
 Gestalt consequence: unchanged in kind — and every training-side arm from now on targets `gt_cache_dali.pt`,
 never `gt_n600.npz`; MAIN is checking whether the QBR1 seal itself carries the PyAV table.
+
+## ADDENDUM 5 — 2026-09-03 ~23:1xZ — fold #1's first rung: falsifier FIRED (+31%), INSTANCE scope; the next rung is defined
+
+ft1 step 600 (`aligned_dali_lr2e5_s1800`, seg-only, lr 2e-5, 1,800-step cosine; DALI target; EMA shadow; n600
+advisory): d_seg 2.0387e-4 → **2.6753e-4 (+31.23%, +7,510 flips = 12.4× CE1's 605-flip A/A floor)**; +0.006366 S on
+the seg leg. Not one evaluated point improved on the shipped renderer (commit f505674dd). Three transferred
+constants (LR from CE1's plateau on a different init — the object's own PR130 tail LR is 2e-7; τ 21.7× faster per
+step than w96b's 39,000-step law; DALI asks the renderer to override 9,179 token sites) — INSTANCE, not family.
+Coupling Δd_pose/Δd_seg on the step-600 checkpoint (n200 seeded random) in flight — the number that decides whether
+pose-in-loop is mandatory at this size.
+**Next rung (FOLD-AFTER-BURN, Metal ≈ 104× faster than CPU):** init = shipped 36,130 B SM3R weights; lr 2e-7 (the
+object's own tail; BS16: −3.03% seg in 30 steps); pose term at step 0 (w96b/qbr1 law); τ at w96b's per-step rate
+over its full window; DALI target; EMA per epoch; per-epoch B/H/W. Read against the same-object pose ceiling
+1.69e-5 and promote iff S < the pointer. Until the coupling number lands, fold #1 is a wrong-LR probe, not a verdict.
