@@ -39,7 +39,7 @@ rxc1 = importlib.import_module("experiments.ddm_rxc1_restartable_exact_coder")
 
 
 STORE = Path("/Volumes/VertigoDataTier/pact/ddm_xr1_exchange_ratio_noise_floor")
-RXC1_STORE = Path("/Volumes/APDataStore/pact/ddm_jc1/restartable_exact_coder")
+RXC1_STORE = STORE / "retained/rxc1_runtime"
 JBP1_STORE = Path("/Volumes/APDataStore/pact/ddm_jbp1_joint_batch_price")
 RN1_STORE = Path("/Volumes/APDataStore/pact/ddm_rn1_n600_reopen_sweep")
 FCD1_STORE = Path("/Volumes/APDataStore/pact/ddm_fcd1_field_for_coder_diagonal")
@@ -86,6 +86,11 @@ INPUT_PINS: tuple[tuple[Path, int, str], ...] = (
         REPO / "experiments/ddm_rxc1_restartable_exact_coder.py",
         37_869,
         "115bb907520b0996bca6e3c00be34ed341266185ac3802a05cba5efe628f76e9",
+    ),
+    (
+        REPO / "experiments/ddm_jg2_tail_reencode.py",
+        58_900,
+        "7fe0769d88befc2525b1b12dbf45e1a68a25deabce481740ed634525b11f0404",
     ),
     (
         REPO / "experiments/ddm_jbp1_joint_batch_price.py",
@@ -329,10 +334,23 @@ def scorer_pair_vectors(receipt: Mapping[str, Any]) -> tuple[np.ndarray, np.ndar
     return seg, pose
 
 
+def ensure_rxc1_preflight() -> dict[str, Any]:
+    """Create or validate a fresh RXC1/JG2 custody root without mutating RXC1 history."""
+    receipt_path = RXC1_STORE / "PREFLIGHT.json"
+    if not receipt_path.is_file():
+        original_store = rxc1.STORE
+        try:
+            rxc1.STORE = RXC1_STORE
+            rxc1.preflight()
+        finally:
+            rxc1.STORE = original_store
+    return rxc1.validate_preflight_receipt(receipt_path)
+
+
 def stage_preflight() -> dict[str, Any]:
     STORE.mkdir(parents=True, exist_ok=True)
     facts = [require_file(path, size, digest) for path, size, digest in INPUT_PINS]
-    rxc1.validate_preflight_receipt(RXC1_STORE / "PREFLIGHT.json")
+    rxc1_preflight = ensure_rxc1_preflight()
     free = shutil.disk_usage(STORE).free
     if free - PROJECTED_OUTPUT_BYTES < MANDATORY_RESERVE_BYTES:
         raise Xr1Error(f"storage preflight failed: {free} - {PROJECTED_OUTPUT_BYTES} < {MANDATORY_RESERVE_BYTES}")
@@ -342,6 +360,8 @@ def stage_preflight() -> dict[str, Any]:
         "score_claim": False,
         "source_git_commit": source_commit(Path(__file__)),
         "runner_source": file_fact(Path(__file__)),
+        "rxc1_preflight": file_fact(RXC1_STORE / "PREFLIGHT.json"),
+        "rxc1_retained_executed_sources": rxc1_preflight["retained_executed_sources"],
         "input_pins": facts,
         "storage": {
             "root": str(STORE),
@@ -383,6 +403,8 @@ def stage_preflight() -> dict[str, Any]:
             "score_claim",
             "source_git_commit",
             "runner_source",
+            "rxc1_preflight",
+            "rxc1_retained_executed_sources",
             "input_pins",
             "run_spec",
             "authority_boundaries",
