@@ -2738,6 +2738,17 @@ def export_hi_nerv_mlx_archive(
         "live_receiver_codec_portfolio_selection_schema": (_LIVE_RECEIVER_CODEC_PORTFOLIO_SELECTION_SCHEMA),
         "target_region_action_pack_rent_gate": target_region_action_pack_rent_gate,
     }
+    # PAYLOAD WRITE ORDER (ddm_pl1, cured by ddm_ql2): the already-built
+    # `bitstream_report` is cheap and irreplaceable -- it records the codec
+    # selection this export just decided. The `0.bin` payload is large and
+    # rebuildable, and it is the write most likely to fail. Persist the record
+    # first so a failed payload write cannot strand it. The two paths are
+    # independent (`bin_path` is used nowhere else), so this is order-only.
+    bitstream_report_path = out_dir / _BITSTREAM_PREPARATION_REPORT_NAME
+    bitstream_report_path.write_text(
+        json.dumps(bitstream_report, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
     bin_path = out_dir / "0.bin"
     bin_path.write_bytes(bin_bytes)
     if target_region_action_pack_rent_gate is not None:
@@ -2745,11 +2756,6 @@ def export_hi_nerv_mlx_archive(
             json.dumps(target_region_action_pack_rent_gate, indent=2, sort_keys=True),
             encoding="utf-8",
         )
-    bitstream_report_path = out_dir / _BITSTREAM_PREPARATION_REPORT_NAME
-    bitstream_report_path.write_text(
-        json.dumps(bitstream_report, indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
     live_receiver_export_parity_path = out_dir / _LIVE_RECEIVER_EXPORT_PARITY_NAME
     live_receiver_export_parity_path.write_text(
         json.dumps(live_receiver_export_parity, indent=2, sort_keys=True),

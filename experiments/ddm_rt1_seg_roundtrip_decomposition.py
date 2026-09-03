@@ -324,8 +324,13 @@ def stage_palette(args: argparse.Namespace) -> int:
         "tokens": {"path": str(args.tokens)},
         "wall_s": time.time() - t0,
     }
-    np.save(args.work / "palette.npy", palette)
+    # PAYLOAD WRITE ORDER (ddm_pl1, cured by ddm_ql2): the receipt is the cheap,
+    # irreplaceable product of this stage; `palette.npy` is a rebuildable array
+    # whose values the receipt already carries verbatim (`palette_rgb`). Persist
+    # the receipt first -- `write_receipt` also mkdirs `work`, so this ordering
+    # additionally guarantees the directory exists before `np.save` runs.
     write_receipt(args.work, "RT1_PALETTE", receipt)
+    np.save(args.work / "palette.npy", palette)
     print(json.dumps(receipt, indent=2, sort_keys=True))
     return 0
 

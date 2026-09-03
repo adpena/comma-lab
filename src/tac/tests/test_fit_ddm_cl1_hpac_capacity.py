@@ -260,11 +260,15 @@ def _row(
         "score_claim": False,
     }
     final_save.parent.mkdir(parents=True, exist_ok=True)
+    # This fixture mirrors the trainer's real on-disk layout, so it mirrors the
+    # trainer's write ORDER too: `trainer.json` (cheap, irreplaceable) before
+    # `best_ema.pt` (large, rebuildable). See the matching cure in
+    # `tools/train_ddm_cl1_hpac_capacity.py` (ddm_pl1 incident A2 / ddm_ql2).
+    _write_json(final_out, trainer_result)
     torch.save(
         {"state_dict": checkpoint_payload["state_dict"], "result": trainer_result},
         final_save,
     )
-    _write_json(final_out, trainer_result)
     selected_record = _record(tool, checkpoint_path)
     _write_json(
         final_save.with_suffix(".artifacts.json"),

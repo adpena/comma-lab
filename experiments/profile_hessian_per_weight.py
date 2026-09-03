@@ -539,13 +539,17 @@ def profile_hessian(
 
     out_path = Path(output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    # PAYLOAD WRITE ORDER (ddm_pl1, cured by ddm_ql2): the metadata sidecar is
+    # the cheap, irreplaceable record of a profile that costs a full pass over
+    # the pairs; the importance tensors are large, rebuildable, and the write
+    # most likely to fail. Sidecar first.
+    sidecar = out_path.with_suffix(".meta.json")
+    sidecar.write_text(json.dumps(metadata, indent=2))
     torch.save(
         {"importance": {n: t.contiguous() for n, t in importance.items()},
          "metadata": metadata},
         out_path,
     )
-    sidecar = out_path.with_suffix(".meta.json")
-    sidecar.write_text(json.dumps(metadata, indent=2))
     print(f"[profile] WROTE {out_path} ({out_path.stat().st_size:,} bytes)")
     print(f"[profile] WROTE {sidecar} (metadata sidecar)")
     return metadata

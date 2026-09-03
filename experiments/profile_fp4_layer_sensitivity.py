@@ -427,6 +427,19 @@ def profile_fp4_layer_sensitivity(
 
     out_path = Path(output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    # PAYLOAD WRITE ORDER (ddm_pl1, cured by ddm_ql2): the JSON sidecar carries
+    # every scalar this profile just paid for; the torch payload is the same
+    # content plus rebuildable tensors, and it is the write that fails. Sidecar
+    # first, so a failed `torch.save` cannot strand the whole measurement.
+    sidecar = out_path.with_suffix(".meta.json")
+    sidecar.write_text(json.dumps({
+        "delta": delta,
+        "delta_pose": delta_pose,
+        "delta_seg": delta_seg,
+        "param_count": param_count,
+        "baseline": baseline,
+        "metadata": metadata,
+    }, indent=2))
     torch.save(
         {
             "delta": delta,
@@ -438,15 +451,6 @@ def profile_fp4_layer_sensitivity(
         },
         out_path,
     )
-    sidecar = out_path.with_suffix(".meta.json")
-    sidecar.write_text(json.dumps({
-        "delta": delta,
-        "delta_pose": delta_pose,
-        "delta_seg": delta_seg,
-        "param_count": param_count,
-        "baseline": baseline,
-        "metadata": metadata,
-    }, indent=2))
     print(f"[profile_fp4] WROTE {out_path} ({out_path.stat().st_size:,} bytes)")
     print(f"[profile_fp4] WROTE {sidecar}")
     return {"delta": delta, "baseline": baseline, "metadata": metadata}

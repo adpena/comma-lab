@@ -148,8 +148,11 @@ def stage_trajectory(n_pairs: int):
         ),
     }
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(OUT_DIR / "trajectory.npz", vh=vh, perc=perc)
+    # PAYLOAD WRITE ORDER (ddm_pl1, cured by ddm_ql2): the JSON report is the
+    # cheap, irreplaceable record of this stage; the npz is the rebuildable bulk
+    # array and the write most likely to fail. Record first.
     (OUT_DIR / "trajectory.json").write_text(json.dumps(rep, indent=2))
+    np.savez_compressed(OUT_DIR / "trajectory.npz", vh=vh, perc=perc)
     print(json.dumps(rep, indent=2))
 
 

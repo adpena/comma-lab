@@ -889,7 +889,7 @@ def build_candidates(
         },
     }
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "candidate_summary.json").write_bytes(_json_bytes(summary))
+    (out_dir / "candidate_summary.json").write_bytes(_json_bytes(summary))  # PAYLOAD_WRITE_ORDER_OK:this line IS the record write -- `_json_bytes(summary)` returns encoded JSON, so the record is spelled `write_bytes` while the line the gate reads as the record (`_write_markdown`) is only a human rendering of the same `summary`. Nothing is stranded: the record already goes first, and reordering would put the rendering ahead of its own source.
     _write_markdown(summary, out_dir / "pr85_lossless_pure_rate_candidates.md")
     return summary
 

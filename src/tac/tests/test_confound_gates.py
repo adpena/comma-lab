@@ -1089,11 +1089,17 @@ class TestModule:
             # test ERROR, never as the live-count regression the bound exists to
             # catch. Fixed forward by ddm_pl1; do NOT raise it.
             "check_no_row_contract_error_quarantines_the_ledger": 0,
-            # ddm_pl1: WARN-ONLY at a MEASURED live count of 10 over 11,016
-            # modules (8 runner-context, 2 test-fixture). The bound is the
-            # measured value, not a round number, so ANY new stranded record
-            # fails here. Lower it as the ten sites are cured; never raise it.
-            "check_no_bulk_write_strands_the_ready_record": 10,
+            # ddm_pl1 landed this WARN-ONLY at a MEASURED live count of 10 over
+            # 11,016 modules and said "lower it as the ten sites are cured".
+            # ddm_ql2 cured them: 8 reorders (record before bulk) and 2 waivers
+            # at sites the gate misreads -- one record spelled `write_bytes`,
+            # one test that rewrites its own fixture file. An 11th appeared
+            # meanwhile (`experiments/ddm_ft1_verdict_bhw_pose.py:558`, a live
+            # arm's file that ql2 was not permitted to edit), so the MEASURED
+            # count over 11,533 modules is now 1, and that is the bound. When
+            # ft1's site is cured this goes to 0 and the gate can flip STRICT.
+            # Lower it further as that happens; never raise it.
+            "check_no_bulk_write_strands_the_ready_record": 1,
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"

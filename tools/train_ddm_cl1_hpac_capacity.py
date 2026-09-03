@@ -1444,12 +1444,17 @@ def main() -> None:
             "which must be real-packed, real-encoded, and exactly decoded"
         ),
     }
+    # PAYLOAD WRITE ORDER (ddm_pl1 incident A2, cured by ddm_ql2): the cheap and
+    # IRREPLACEABLE `result` lands before the multi-MB checkpoint. A2 finished 379 s
+    # of compute, then `_atomic_torch_save` raised `IsADirectoryError` and the
+    # `result` write two lines later never ran -- the whole run's readable product
+    # was lost. The checkpoint is rebuildable; the evaluated scalars are not.
+    _atomic_json(args.out, result)
     _atomic_torch_save(
         args.save,
         {"state_dict": best["state_dict"], "result": result},
         immutable=False,
     )
-    _atomic_json(args.out, result)
     manifest_path = _write_success_manifest(
         args=args,
         storage_preflight=storage_preflight,

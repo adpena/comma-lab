@@ -128,7 +128,7 @@ def test_load_ms4d_pair_metric_requires_unique_pair_bucket(tmp_path: Path) -> No
             "direct_blocks": [row],
         }
     ).encode()
-    path.write_bytes(raw)
+    path.write_bytes(raw)  # PAYLOAD_WRITE_ORDER_OK:no run product exists to strand. Both writes target the SAME `tmp_path` fixture file: this one lays down the unique-bucket case, and the later `write_text` deliberately overwrites it with a duplicated row to prove the loader refuses it. `row` is fixture input, not an irreplaceable record, and swapping the two would destroy the test.
     loaded = load_ms4d_pair_metric(
         path=path,
         sha256=hashlib.sha256(raw).hexdigest(),

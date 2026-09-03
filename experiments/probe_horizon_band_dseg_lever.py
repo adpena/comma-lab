@@ -220,14 +220,18 @@ def stage_margin(n_pairs: int):
         "flip_margin_frac_below_0p1": float((fm < 0.1).mean()),
         "flip_margin_frac_below_0p2": float((fm < 0.2).mean()),
     }
-    # save per-row error curve for the memo
+    # PAYLOAD WRITE ORDER (ddm_pl1, cured by ddm_ql2): the record went LAST here,
+    # behind a bulk npz that ran BEFORE `OUT_DIR` was even created -- so on a cold
+    # run the npz raised and `margin.json` never landed. Both bugs die together:
+    # mkdir, then the cheap irreplaceable record, then the rebuildable row curves.
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    (OUT_DIR / "margin.json").write_text(json.dumps(rep, indent=2))
+    # per-row error curve for the memo
     np.savez_compressed(
         OUT_DIR / "margin_rowcurves.npz",
         row_luma_err=row_luma_err,
         row_chroma_err=row_chroma_err,
     )
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    (OUT_DIR / "margin.json").write_text(json.dumps(rep, indent=2))
     print(json.dumps(rep, indent=2))
 
 
