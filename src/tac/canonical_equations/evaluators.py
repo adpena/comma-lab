@@ -192,6 +192,23 @@ def eval_hosc_beta_fireband_pin(inputs: Mapping[str, Any]) -> Any:
     return inputs["beta_end"]
 
 
+def eval_v9_hosc_beta_endpoint(inputs: Mapping[str, Any]) -> Any:
+    """β_end = beta_start * 2**dyadic_refinements (V9 hosc endpoint, derived-at-config).
+
+    inputs: {"beta_start": 1.0, "dyadic_refinements": 3} -> 8.0. Delegates to the
+    defining function so the LawRef and the equation cannot drift apart; the
+    import is lazy because that module imports ``tac.witness_dsl.lawref``.
+    Registered 2026-09-04: ``v9_hosc_beta_endpoint_v1`` had NO evaluator anywhere,
+    so ``resolve_v9_hosc_beta_endpoint()`` could never succeed (red test since
+    fba5361ed; an equation_id naming an evaluator nobody registers is a split bank).
+    """
+    from tac.canonical_equations.v9_hosc_beta_endpoint_20260715 import (
+        v9_hosc_beta_endpoint,
+    )
+
+    return v9_hosc_beta_endpoint(inputs["beta_start"], inputs["dyadic_refinements"])
+
+
 def eval_lr_control_denominator(inputs: Mapping[str, Any]) -> Any:
     """LR-anneal denominator = the CONTROL vehicle's own --epochs den (derived-at-config).
 
@@ -784,6 +801,7 @@ LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     # crucible_v6 migration (#351 follow-up) — CONSUMED trio + LR-hold:
     "tau_end_knee_launch_v1": eval_tau_end_knee_launch,
     "hosc_beta_fireband_pin_v1": eval_hosc_beta_fireband_pin,
+    "v9_hosc_beta_endpoint_v1": eval_v9_hosc_beta_endpoint,
     "lr_control_denominator_v1": eval_lr_control_denominator,
     "lr_hold_frac_no_hold_v1": eval_lr_hold_frac_no_hold,
     # crucible_v6 migration — LIBRARY laws (bit-match tested; not emitted flags):
@@ -892,6 +910,7 @@ __all__ = [
     "eval_tail_cycle_floor",
     "eval_tau_end_knee_launch",
     "eval_tau_star_maslov_quantile",
+    "eval_v9_hosc_beta_endpoint",
     "eval_v9_scientific_declaration",
     "eval_warm_start_schedule_reconstruction",
     "get_evaluator",
