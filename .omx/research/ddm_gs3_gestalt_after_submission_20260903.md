@@ -168,3 +168,19 @@ pose-in-loop is mandatory at this size.
 object's own tail; BS16: −3.03% seg in 30 steps); pose term at step 0 (w96b/qbr1 law); τ at w96b's per-step rate
 over its full window; DALI target; EMA per epoch; per-epoch B/H/W. Read against the same-object pose ceiling
 1.69e-5 and promote iff S < the pointer. Until the coupling number lands, fold #1 is a wrong-LR probe, not a verdict.
+
+## ADDENDUM 6 — 2026-09-03 ~23:3xZ — fold #1 rung 1 CLOSED by the coupling number: Δd_pose/Δd_seg = 217
+
+`retained/verdict_ft1_step600.json` (n200 seeded random, DALI lineage, `[macOS-CPU advisory]`): base d_seg 2.0030e-4 /
+d_pose 9.00e-6; step-600 export realized d_seg 2.6962e-4 (+34.6%) / **d_pose 0.015074 (+1,674×; pose term 0.388)**.
+**coupling Δd_pose/Δd_seg = 217.30** — above rf1's 166.8 ⇒ a seg-only renderer change closes by arithmetic at this
+size: every unit of seg movement drags ~217 units of pose. Realization gap: the trained float weights read d_pose
+0.0837 / d_seg 4.45e-4 while the int4 row-prune export realizes 0.0151 / 2.70e-4 — the export path REPAIRS most of
+what training broke (the "manufactured" mechanism, now measured on this actuator). tv1/tv2's co-location law
+(seg slack and pose damage live in the same pixels) is confirmed on the renderer: they are not separable by a
+seg-only loss.
+**Consequence:** fold #1 survives only as a JOINT rung — pose term at step 0 with a weight derived from this
+coupling (≈217× the seg weight in S units), lr 2e-7, full τ window, on Metal after the burn — and its expected value
+is LOWER than fb1 assumed: the renderer's 2e-4 seg residual may be inseparable from its pose behaviour at 36 KB.
+Read it as: the shipped renderer is at a joint optimum the post-hoc chain already found; the fold-back's real
+targets are the born trainer (qbr1's config) and the population pipeline, where pose is already in the loop.
