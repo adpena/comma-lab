@@ -327,7 +327,7 @@ def test_ideal_manifest_parity_extincts_margin_msafe_duplicate_owner(ideal_ab) -
         assert row["equation_id"] == "margin_band_satisficing_threshold_v1"
         assert float(row["value"]) == float(
             emitted["--seg-margin-satisfice-msafe"]
-        ) == pytest.approx(0.039180326461791926)
+        ) == pytest.approx(0.04376363754272461)
 
 
 def test_ideal_includes_safe_set_and_composed_margin(ideal_ab) -> None:

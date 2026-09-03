@@ -53,6 +53,22 @@ from tools.measure_uint8_lattice_feasibility import (  # noqa: E402
     stored_npy_memmap,
 )
 
+
+def _resolve_m_safe() -> float:
+    """m_safe = headroom * delta_R through the canonical law (n600 artifact, ddm_dr1
+    2026-09-04); the exact n600 fallback keeps the tool runnable without ``tac``."""
+    try:
+        from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (
+            resolve_margin_band_threshold,
+        )
+
+        return float(resolve_margin_band_threshold().m_safe)
+    except Exception:  # tool must stay runnable; the value is the same law's own fallback
+        return 0.04376363754272461
+
+
+_M_SAFE = _resolve_m_safe()
+
 SCHEMA = "joint_seg_pose_inverse_rate_receipt.v1"
 STATE_SCHEMA = "joint_seg_pose_inverse_rate_state.v1"
 BINDINGNESS_SCHEMA = "joint_seg_pose_pair_bindingness.v1"
@@ -694,7 +710,7 @@ def _attribution(rate: dict[str, Any], labels: np.ndarray | None, rival: np.ndar
             cy = min(SCORER_HW[0] - 1, int(tile["y"] + tile["h"] / 2))
             cx = min(SCORER_HW[1] - 1, int(tile["x"] + tile["w"] / 2))
             margin = float(margins[cy, cx])
-            codim = "boundary_codim1" if margin < 0.039180326461791926 else "cell_interior"
+            codim = "boundary_codim1" if margin < _M_SAFE else "cell_interior"
             winner_id, rival_id = int(labels[cy, cx]), int(rival[cy, cx])
             key = f"cell_winner_{winner_id}/hyperplane_{winner_id}-{rival_id}/{codim}/frame1"
         row = sums[key]

@@ -429,7 +429,7 @@ def quantile_stratified_indices(
     seed.
 
     Verified byte-faithful against the originals' own drift guard: with the real
-    ``gt_n600`` fragility at ``m_safe = 0.039180326461791926`` this returns
+    ``gt_n600`` fragility at ``m_safe = 0.04376363754272461`` (n600 law value; 0.039180326461791926 was the n96 prefix) this returns
     ``KNOWN_N6 = (90, 175, 277, 381, 424, 573)``. See
     ``test_quantile_stratified_reproduces_known_n6``.
 

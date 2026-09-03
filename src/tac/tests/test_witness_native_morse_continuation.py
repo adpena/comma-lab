@@ -48,7 +48,7 @@ def test_schedule_is_dsl_native_and_real_argparse_compatible() -> None:
     assert "MorseContinuationSchedule" in schedule_primitive_kinds()
     assert schedule.flags()["--l7-mult"] == 0.0
     assert schedule.flags()["--l7-threshold"] == pytest.approx(
-        0.039180326461791926
+        0.04376363754272461
     )
     assert schedule.canonical_manifest()["equation_id"] == (
         "witness_native_morse_continuation_v1"

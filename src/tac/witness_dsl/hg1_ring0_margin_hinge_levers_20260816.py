@@ -18,7 +18,7 @@ correct**.  The margin field is small ONLY near the decision boundary, so the hi
 already 99.56% ring-0-concentrated at a small target and needs no support mask; what it
 needs is a target that stops pulling safe pixels.
 
-``m_safe = headroom * delta_R`` is that target.  ``delta_R = 0.019590163230895963`` is
+``m_safe = headroom * delta_R`` is that target.  ``delta_R = 0.021881818771362305`` (n600, ddm_dr1; the n96 prefix read 0.019590163230895963, 11.70% low) is
 the MEASURED p95 uint8-induced margin perturbation over the annulus, so a pixel parked
 below it can flip back under the round trip the scorer actually applies.  The trainer
 default sits 25.5x above it.  The value is resolved LIVE from the artifact through the
@@ -45,7 +45,7 @@ from tac.witness_dsl.curriculum_dsl import Lever
 TRAINER_RELPATH = "experiments/train_tr1_partition_renderer_mlx.py"
 
 #: The artifact the hinge target is resolved from (MEASURED; never a literal here).
-DELTA_R_ARTIFACT = "reports/delta_R_noise_floor.json"
+DELTA_R_ARTIFACT = "reports/delta_R_noise_floor_n600.json"  # ddm_dr1 2026-09-04: n600, all pairs
 
 #: R-survival multiplier shared with the sister ``MarginBandSatisficing`` lever, so the
 #: two forces cannot disagree about what "safe" means on the same annulus.

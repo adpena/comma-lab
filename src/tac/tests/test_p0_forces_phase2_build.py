@@ -102,7 +102,7 @@ def test_dsl_margin_satisfice_factory_emits_flags():
     assert lev.name == "margin_band_satisficing"
     delta_r = lev.overrides["--seg-margin-satisfice-delta-r"]
     headroom = lev.overrides["--seg-margin-satisfice-headroom"]
-    assert delta_r == pytest.approx(0.019590163230895963)  # MEASURED artifact floor
+    assert delta_r == pytest.approx(0.021881818771362305)  # MEASURED n600 artifact floor (ddm_dr1)
     assert headroom == pytest.approx(2.0)  # DERIVED minimum covering full-R annulus p95
     assert lev.overrides["--seg-margin-satisfice-msafe"] == pytest.approx(
         headroom * delta_r

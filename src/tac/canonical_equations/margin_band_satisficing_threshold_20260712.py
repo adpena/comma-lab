@@ -5,11 +5,13 @@ The threshold is not an independently tunable constant:
 
     m_safe = headroom * delta_R
 
-``delta_R`` is read from ``reports/delta_R_noise_floor.json``.  The default
+``delta_R`` is read from ``reports/delta_R_noise_floor_n600.json`` (ddm_dr1, 2026-09-04, all
+600 pairs; the 2026-07-12 n96 artifact ``reports/delta_R_noise_floor.json`` is HISTORICAL — its
+contiguous prefix understated the annulus noise floor by 11.70%, see the m88 instance).  The default
 headroom is the smallest integer multiple whose threshold covers the same
 artifact's measured full-R annulus p95.  With the current artifact this is
-DERIVED ``ceil(0.03712034225463867 / 0.019590163230895963) = 2`` and therefore
-DERIVED ``m_safe = 0.039180326461791926``.  A factor of 3 remains a legitimate
+DERIVED ``ceil(0.03887428045272823 / 0.021881818771362305) = 2`` and therefore
+DERIVED ``m_safe = 0.04376363754272461`` (was 0.039180326461791926 on the n96 prefix).  A factor of 3 remains a legitimate
 future treatment, but no measured A/B currently pins it as the default.
 
 The fallback values below are a class-4 WAIVER copied exactly from the current
@@ -40,13 +42,14 @@ from tac.witness_dsl.lawref import (
 )
 
 EQUATION_ID = "margin_band_satisficing_threshold_v1"
-DELTA_R_ARTIFACT = "reports/delta_R_noise_floor.json"
+DELTA_R_ARTIFACT = "reports/delta_R_noise_floor_n600.json"
+DELTA_R_ARTIFACT_N96_HISTORICAL = "reports/delta_R_noise_floor.json"
 
-# WAIVER fallbacks copied exactly from reports/delta_R_noise_floor.json on
-# 2026-07-12.  They are not new measurements or guessed round numbers.
-FALLBACK_DELTA_R = 0.019590163230895963
-FALLBACK_FULL_R_ANNULUS_P95 = 0.03712034225463867
-FALLBACK_N_FRAMES = 96
+# WAIVER fallbacks copied exactly from reports/delta_R_noise_floor_n600.json on
+# 2026-09-04 (ddm_dr1).  They are not new measurements or guessed round numbers.
+FALLBACK_DELTA_R = 0.021881818771362305
+FALLBACK_FULL_R_ANNULUS_P95 = 0.03887428045272823
+FALLBACK_N_FRAMES = 600
 FALLBACK_ANNULUS_BAND = 1.0
 
 # ASSUMED numerical tolerance for checking two deterministic fp64 arithmetic
@@ -150,7 +153,7 @@ def margin_safe_lawref(
                 str(artifact_path),
                 "delta_R",
                 "MEASURED p95 uint8-at-camera SegNet-margin perturbation over the annulus; "
-                "tools/measure_delta_R_noise_floor.py -> reports/delta_R_noise_floor.json",
+                "tools/measure_delta_R_noise_floor.py -> reports/delta_R_noise_floor_n600.json",
             ),
             "headroom": InputRef.literal(
                 factor,
@@ -161,8 +164,8 @@ def margin_safe_lawref(
         ladder_class=LADDER_DERIVED_LIVE,
         fallback=margin_safe_threshold(FALLBACK_DELTA_R, factor),
         fallback_waiver_reason=(
-            "reports/delta_R_noise_floor.json unavailable; use the exact 2026-07-12 "
-            "MEASURED delta_R anchor until the artifact is restored"
+            "reports/delta_R_noise_floor_n600.json unavailable; use the exact 2026-09-04 "
+            "MEASURED n600 delta_R anchor until the artifact is restored"
         ),
     )
 
@@ -255,7 +258,7 @@ def build_margin_band_satisficing_threshold_v1() -> CanonicalEquation:
         captured_at_utc=artifact_utc,
     )
     anchor = EmpiricalAnchor(
-        anchor_id="margin_band_delta_r_noise_floor_n96_20260708",
+        anchor_id="margin_band_delta_r_noise_floor_n600_20260904",
         measurement_utc=artifact_utc,
         inputs={
             "artifact": DELTA_R_ARTIFACT,
@@ -265,6 +268,10 @@ def build_margin_band_satisficing_threshold_v1() -> CanonicalEquation:
             "measurement_tool": "tools/measure_delta_R_noise_floor.py",
             "n_frames": resolution.n_frames,
             "annulus_band": resolution.annulus_band,
+            "supersedes": (
+                "margin_band_delta_r_noise_floor_n96_20260708 (HISTORICAL; the n96 contiguous "
+                "prefix understated the annulus p95 by 11.70%, ddm_dr1 2026-09-04)"
+            ),
         },
         predicted_output={
             "law": "m_safe = headroom * delta_R",
@@ -355,6 +362,7 @@ def populate_margin_band_satisficing_threshold_equation(
 
 __all__ = [
     "DELTA_R_ARTIFACT",
+    "DELTA_R_ARTIFACT_N96_HISTORICAL",
     "EQUATION_ID",
     "FALLBACK_ANNULUS_BAND",
     "FALLBACK_DELTA_R",

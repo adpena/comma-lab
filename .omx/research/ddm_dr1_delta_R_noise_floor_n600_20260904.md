@@ -261,3 +261,17 @@ Pointer honesty: this arm measured a lever constant on an advisory axis. It trai
 bytes, and could not move the frontier.
 
 Own-vehicle frontier: **afr1 S 0.14797617125559104 @ 180,002 B [contest-CUDA T4 n600]** — UNMOVED.
+
+## ADDENDUM (MAIN, 2026-09-04) — NEXT #1 FIRED: the law is repointed, consistently, in one commit
+
+Safe now, not "at the next burn boundary": the QBR1 burn executes from the sealed source snapshot on Vertigo
+(`sealed_source_106d0dd0_v2`), never from the working tree, and its trainer consumes no satisficing cap
+(0 references in the sealed `ddm_qbt1_qbflow_trainer.py`). So the repoint cannot touch the running discriminator.
+Changed together: `DELTA_R_ARTIFACT` → `reports/delta_R_noise_floor_n600.json` with `FALLBACK_DELTA_R`
+0.021881818771362305 / `FALLBACK_FULL_R_ANNULUS_P95` 0.03887428045272823 / `FALLBACK_N_FRAMES` 600 (headroom stays
+DERIVED 2 → m_safe 0.04376363754272461); the n96 path kept as `DELTA_R_ARTIFACT_N96_HISTORICAL`; the builder's anchor
+is now `margin_band_delta_r_noise_floor_n600_20260904` and names what it supersedes; `hg1_ring0_margin_hinge_levers`
+repointed; `tools/measure_joint_seg_pose_rate.py` and `tools/dual_metric_readback.py` now RESOLVE m_safe through the
+law instead of carrying 0.039180326461791926 as a literal ([[m107]] split-banks cure); three pinned tests and two
+docstrings updated. Live resolution verified: delta_r 0.021881818771362305 · headroom 2 · m_safe 0.04376363754272461 ·
+n 600 · fallback False. NEXT #2 (re-measure hg1/nx1 gradient mass at the n600 m_safe) is now unblocked.

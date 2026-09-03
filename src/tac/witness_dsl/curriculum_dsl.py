@@ -5028,8 +5028,8 @@ def MarginBandSatisficing(
     ``margin_band_satisficing_threshold_v1``: ``δ_R`` is read from the MEASURED artifact
     ``reports/delta_R_noise_floor.json`` and the default headroom is the smallest integer factor whose
     threshold covers that artifact's full-R annulus p95. The current artifact gives DERIVED headroom 2
-    and DERIVED ``m_safe = 0.039180326461791926`` from MEASURED
-    ``δ_R = 0.019590163230895963``. Headroom 3 remains an OPEN, UNMEASURED treatment rather than a
+    and DERIVED ``m_safe = 0.04376363754272461`` from MEASURED
+    ``δ_R = 0.021881818771362305`` (n600, ddm_dr1 2026-09-04; the n96 prefix read 0.019590163230895963). Headroom 3 remains an OPEN, UNMEASURED treatment rather than a
     default. A documented WAIVER fallback uses the exact artifact values if the report is unavailable.
 
     ``msafe`` and ``delta_r`` are compatibility overrides only: when supplied, each MUST match the

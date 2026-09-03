@@ -47,6 +47,22 @@ for _p in (str(REPO), str(REPO / "src"), str(REPO / "upstream"), str(REPO / "exp
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+
+def _resolve_m_safe() -> float:
+    """m_safe = headroom * delta_R through the canonical law (n600 artifact, ddm_dr1
+    2026-09-04); the exact n600 fallback keeps the tool runnable without ``tac``."""
+    try:
+        from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (
+            resolve_margin_band_threshold,
+        )
+
+        return float(resolve_margin_band_threshold().m_safe)
+    except Exception:  # tool must stay runnable; the value is the same law's own fallback
+        return 0.04376363754272461
+
+
+_M_SAFE = _resolve_m_safe()
+
 SUPPORTED_TERMS = ("seg", "pose", "weight_entropy", "phase_advect", "margin_satisfice", "subpix")
 
 
@@ -110,7 +126,7 @@ def main() -> None:
     ap.add_argument("--we-sigma", type=float, default=0.2)
     # margin-satisfice params (defaults = the c2 launch flags; Force-2 #360).
     ap.add_argument("--ms-weight", type=float, default=0.2)
-    ap.add_argument("--ms-msafe", type=float, default=0.039180326461791926)
+    ap.add_argument("--ms-msafe", type=float, default=_M_SAFE)
     ap.add_argument("--ms-band", type=float, default=2.0)
     # subpix boundary-placement params (defaults = the c2 launch flags; Force-3 #360).
     ap.add_argument("--subpix-weight", type=float, default=0.3)
