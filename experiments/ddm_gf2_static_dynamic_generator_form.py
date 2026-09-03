@@ -36,7 +36,7 @@ from typing import Final
 import brotli
 import numpy as np
 
-SCHEMA: Final = "ddm_gf2_static_dynamic_generator_form.v1"
+SCHEMA: Final = "ddm_gf2_static_dynamic_generator_form.v2"
 AXIS: Final = "[macOS-CPU scorer-free exact field measurement, n600]"
 N_PAIRS: Final = 600
 HEIGHT: Final = 384
@@ -53,7 +53,7 @@ DEFAULT_FIELD: Final = Path(
     "sfp1_null_empty.u8"
 )
 OUTPUT: Final = Path(
-    "/Volumes/VertigoDataTier/pact/ddm_gf2_static_dynamic_generator_form"
+    "/Volumes/VertigoDataTier/pact/ddm_gf2_static_dynamic_generator_form/converged_v2"
 )
 
 PACKET_CAP_BYTES: Final = 71_404.5
@@ -64,7 +64,7 @@ GENERIC_BYTES_PER_SITE_NUMERATOR: Final = 2_909
 GENERIC_BYTES_PER_SITE_DENOMINATOR: Final = 10_000
 REPLACEMENT_CAP_BYTES: Final = 85_020
 SEARCH_RADIUS: Final = 12
-MAX_ALIGNMENT_ITERATIONS: Final = 5
+MAX_ALIGNMENT_ITERATIONS: Final = 20
 FILL_CLASS: Final = 2
 MINIMUM_FREE_BYTES: Final = 1 << 30
 
