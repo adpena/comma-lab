@@ -2152,6 +2152,9 @@ Operator {date}: *"<FILL: operator verbatim, or the routed finding + its source 
   plus a fire order is the CORRECT outcome, never a failure.
 - Serializer commits w/ post-edit `--expected-content-sha256`; `.py` = 2 genuine review passes.
 - ALWAYS KEEP THE PAYLOAD; bulky receipts to `/Volumes/APDataStore/pact/{name}/`.
+- PER-PAIR RECEIPTS LAW (xr1, 2026-09-03): any realized ΔS you report MUST retain per-pair d_seg AND
+  d_pose beside the byte ledger — the exchange-ratio dispersion is ±6% ≈ 363 B and 0/20 prior
+  near-wins were gradable for lack of per-pair rows; a rate-only row cannot be graded on ΔS.
 - DETACHED >30-MIN COMPUTE: any single compute step projected to exceed 30 minutes MUST
   launch outside the arm session ONLY via `.venv/bin/python tools/launch_detached_process.py
   --output-dir <run_dir> --done-receipt <name> --nice 10 --nice-best-effort -- <cmd...>`
