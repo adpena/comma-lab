@@ -105,3 +105,12 @@ or by a form whose atoms match the classes that fail (gc1: square atoms barely i
 Movable errors → class-protected anisotropic/curve atoms; that is gf2's static/dynamic split with sparse
 Lane/Movable events). Adding capacity to the existing form is closed. GESTALT unchanged in kind, sharpened in
 mechanism: sub-0.12 = born-field accuracy by optimization or by class-matched form, never by size.
+
+## ADDENDUM 2 — 2026-09-03 ~20:2xZ — gf2 closes the static/dynamic form at its static ceiling (10.5×)
+
+`ddm_gf2_static_dynamic_generator_form_20260903.md` (MAIN adjudication): one shared static field + converged rigid
+per-pair alignment leaves 3,072,488 mismatches (2.605%) vs 292,264 plausibly repairable with the whole packet as
+dynamic — the mismatch mass is per-pair boundary MOTION, not sparse events; per-GOP fields are closed by the same
+measured motion (DERIVED). With gc1 (capacity, 9.62×) and gf2 (form, 10.5×) both closed, **the burn is the last
+open door**: sub-0.12 on the small-body route = OPTIMIZATION_LIVE, or the Pareto-shelf conjecture becomes a measured
+family verdict.
