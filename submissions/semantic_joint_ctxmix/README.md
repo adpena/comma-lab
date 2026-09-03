@@ -44,6 +44,21 @@ My contribution is the decision and lossless-representation layer on top:
   (180,002 bytes). One run takes about an hour of CPU; individual stages also
   self-check with in-memory determinism repeats. Pass `--repeats 2` to add a
   full second rebuild as an end-to-end determinism demonstration.
+- **Local process, stated plainly:** the stages that decided the archive's content —
+  training, the segmentation edit solve, and the pose re-solve — did not run on CUDA.
+  They ran on a local Apple-silicon machine, using MLX/Metal ports of the contest's
+  frozen scoring networks, with every accepted change verified against the standard
+  CPU PyTorch scorers. Re-running those stages takes days of compute and would not
+  reproduce the exact bytes on different hardware, so `compress.py` replays their
+  recorded lossless output instead. The code, configs, and logs live in the research
+  repository linked below.
+- **TODO (planned after this submission):** a `--device` flag (cuda / mps / cpu) so
+  the solve stages can run on CUDA as well as on the Apple-silicon stack; a
+  full-pipeline mode that starts from the raw video by running the credited
+  PR #130/#135 training scripts and then these solve and packaging stages
+  (equivalent quality, not identical bytes — neural training does not reproduce
+  bit-for-bit across different GPUs); and per-video auto-configuration so the
+  pipeline can be pointed at any clip, not just this one.
 
 ## Verify
 
