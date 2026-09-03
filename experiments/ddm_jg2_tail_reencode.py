@@ -199,6 +199,41 @@ def atomic_json(path: Path, payload: object) -> None:
     atomic_write(path, json.dumps(payload, indent=2, sort_keys=True).encode())
 
 
+def atomic_npz(path: Path, payload: dict[str, np.ndarray]) -> None:
+    """Atomically persist one numpy checkpoint without suffix ambiguity."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.partial")
+    with temporary.open("wb") as handle:
+        np.savez(handle, **payload)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
+def persist_immutable_bytes(path: Path, payload: bytes, *, label: str) -> None:
+    """Write once; an identical retry reuses bytes and a changed retry refuses."""
+    if path.is_file():
+        if path.read_bytes() != payload:
+            raise Jg2Error(f"immutable {label} changed on retry: {path}")
+        return
+    atomic_write(path, payload)
+
+
+def persist_immutable_npy(path: Path, payload: np.ndarray, *, label: str) -> None:
+    """Numpy counterpart of :func:`persist_immutable_bytes`."""
+    if path.is_file():
+        prior = np.load(path, allow_pickle=False)
+        if not np.array_equal(prior, payload):
+            raise Jg2Error(f"immutable {label} changed on retry: {path}")
+        return
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.partial")
+    with temporary.open("wb") as handle:
+        np.save(handle, payload)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
 def file_fact(path: Path) -> dict[str, object]:
     return {"path": str(path), "bytes": path.stat().st_size, "sha256": sha256_file(path)}
 
@@ -430,6 +465,66 @@ def apply_edits(tokens: np.ndarray, edits_path: Path | None) -> tuple[np.ndarray
     }
 
 
+class EditOverlay:
+    """Read-only token field that overlays retained replacement planes lazily.
+
+    The historical ``apply_edits`` helper materializes all 117,964,800 candidate
+    bytes.  Exact-coder searches only need one plane at a time, so this view keeps
+    the retained ``.npz`` as the candidate payload and never creates a disposable
+    full-field copy.
+    """
+
+    def __init__(self, base: np.ndarray, planes: dict[int, np.ndarray]) -> None:
+        self.base = base
+        self.planes = planes
+        self.shape = base.shape
+        self.dtype = base.dtype
+
+    def __getitem__(self, key: object) -> np.ndarray | np.uint8:
+        if isinstance(key, tuple):
+            pair = key[0]
+            if isinstance(pair, (int, np.integer)) and int(pair) in self.planes:
+                return self.planes[int(pair)][key[1:]]
+            return self.base[key]
+        if isinstance(key, (int, np.integer)) and int(key) in self.planes:
+            return self.planes[int(key)]
+        return self.base[key]
+
+
+def load_edit_overlay(
+    tokens: np.ndarray, edits_path: Path | None
+) -> tuple[np.ndarray | EditOverlay, dict[str, object]]:
+    """Load retained pair-plane edits without materializing a full candidate field."""
+    if edits_path is None:
+        return tokens, {"edited_pairs": [], "tokens_changed": 0}
+    planes: dict[int, np.ndarray] = {}
+    changed = 0
+    with np.load(edits_path, allow_pickle=False) as blob:
+        for key in blob.files:
+            pair = int(key)
+            if pair < 0 or pair >= N_PAIRS:
+                raise Jg2Error(f"edit pair {pair} is outside 0..{N_PAIRS - 1}")
+            plane = np.asarray(blob[key], dtype=np.uint8)
+            if plane.shape != (EVAL_H, EVAL_W):
+                raise Jg2Error(f"edit plane {key} has shape {plane.shape}")
+            if plane.max() >= NUM_CLASSES:
+                raise Jg2Error(
+                    f"edit plane {key} carries a token outside 0..{NUM_CLASSES - 1}"
+                )
+            if pair in planes:
+                raise Jg2Error(f"duplicate edit pair {pair}")
+            retained = plane.copy()
+            retained.setflags(write=False)
+            changed += int((retained != tokens[pair]).sum())
+            planes[pair] = retained
+    return EditOverlay(tokens, planes), {
+        "edited_pairs": sorted(planes),
+        "tokens_changed": changed,
+        "edits_file": file_fact(edits_path),
+        "materialized_full_field": False,
+    }
+
+
 # --------------------------------------------------------------------------------------
 # CORRECTOR STATE.  Captured structurally, so a subclass cannot be forgotten.
 # --------------------------------------------------------------------------------------
@@ -437,12 +532,14 @@ def apply_edits(tokens: np.ndarray, edits_path: Path | None) -> tuple[np.ndarray
 #: Bumped when the capture changes shape.  A v1 checkpoint (``corrector.state_dict()``,
 #: 7 keys, model-mixing half missing) is REFUSED, never resumed: it is not a slower
 #: path to the same answer, it is a different and wrong answer.
-CHECKPOINT_SCHEMA = "ddm_jg4.corrector_state.v2"
+CHECKPOINT_SCHEMA = "ddm_jg4.corrector_state.v3"
 
 #: Ledger keys the checkpoint owns.  Namespaced state keys all contain a ``.``, so
 #: they cannot collide with these -- v1's "every key except these four" filter was
 #: one careless name away from mis-restoring.
-LEDGER_KEYS = frozenset({"schema", "frame", "code_bits", "per_frame", "previous"})
+LEDGER_KEYS = frozenset(
+    {"schema", "frame", "code_bits", "per_frame", "previous", "encoder_sha256"}
+)
 
 
 def state_names(obj: object) -> list[str]:
@@ -589,6 +686,133 @@ def uncaptured_divergent_state(
     return lost
 
 
+def checkpoint_bundle_paths(root: Path, frame: int) -> tuple[Path, Path]:
+    """Return the immutable state/RC64 paths for a pair-boundary checkpoint."""
+    if frame < 0 or frame > N_PAIRS:
+        raise Jg2Error(f"checkpoint frame must be in 0..{N_PAIRS}, found {frame}")
+    return root / f"frame_{frame:04d}.npz", root / f"frame_{frame:04d}.encoder.bin"
+
+
+def persist_checkpoint_bundle(
+    *,
+    checkpoint_path: Path,
+    encoder_path: Path,
+    frame: int,
+    code_bits: float,
+    per_frame: np.ndarray,
+    previous: np.ndarray,
+    corrector: object,
+    encoder: object,
+    cold: object | None,
+    replace: bool = False,
+) -> dict[str, object]:
+    """Persist the complete HPAC/corrector plus RC64 state at one boundary.
+
+    The RC64 snapshot includes the already-emitted prefix bytes and interval.  The
+    numpy side includes every mutable corrector/mixer table, the previous decoded
+    plane, and the exact per-frame ledger.  Together they are the complete state
+    needed to resume the existing physical encoder, not a rate proxy.
+    """
+    state = corrector_state(corrector)
+    if cold is not None:
+        lost = uncaptured_divergent_state(corrector, cold, set(state))
+        if lost:
+            raise Jg2Error(
+                f"checkpoint at frame {frame} would LOSE corrector state that has "
+                f"moved away from cold: {lost}. Extend the capture before writing "
+                "a checkpoint that cannot be resumed faithfully."
+            )
+    encoder_payload = encoder.snapshot()  # type: ignore[attr-defined]
+    checkpoint_payload = {
+        "schema": np.array([CHECKPOINT_SCHEMA]),
+        "frame": np.array([frame], dtype=np.int64),
+        "code_bits": np.array([code_bits], dtype=np.float64),
+        "per_frame": np.asarray(per_frame, dtype=np.float64),
+        "previous": np.asarray(previous, dtype=np.uint8),
+        # Cross-bind the two separately atomic files.  A crash between their
+        # replacements may leave both paths present but from different frames;
+        # load must refuse that mixed bundle instead of silently resuming it.
+        "encoder_sha256": np.array([sha256_bytes(encoder_payload)]),
+        **state,
+    }
+    existing = checkpoint_path.is_file(), encoder_path.is_file()
+    if any(existing) and not all(existing):
+        raise Jg2Error(
+            f"refusing incomplete pre-existing checkpoint bundle: "
+            f"{checkpoint_path} / {encoder_path}"
+        )
+    if all(existing) and not replace:
+        if encoder_path.read_bytes() != encoder_payload:
+            raise Jg2Error(f"immutable RC64 checkpoint changed at frame {frame}")
+        with np.load(checkpoint_path, allow_pickle=False) as prior:
+            if set(prior.files) != set(checkpoint_payload):
+                raise Jg2Error(f"immutable checkpoint key set changed at frame {frame}")
+            for key, value in checkpoint_payload.items():
+                if not np.array_equal(prior[key], value):
+                    raise Jg2Error(
+                        f"immutable checkpoint value {key!r} changed at frame {frame}"
+                    )
+    else:
+        atomic_write(encoder_path, encoder_payload)
+        atomic_npz(checkpoint_path, checkpoint_payload)
+    return {
+        "frame": frame,
+        "state_keys": len(state),
+        "checkpoint": file_fact(checkpoint_path),
+        "encoder_state": file_fact(encoder_path),
+    }
+
+
+def load_checkpoint_bundle(
+    *,
+    checkpoint_path: Path,
+    encoder_path: Path,
+    corrector: object,
+    route_b: object,
+    library: Path,
+) -> tuple[int, float, np.ndarray, np.ndarray, object, dict[str, object]]:
+    """Load and prove one complete boundary checkpoint before returning it."""
+    if not checkpoint_path.is_file() or not encoder_path.is_file():
+        raise Jg2Error(
+            f"checkpoint bundle is incomplete: {checkpoint_path} / {encoder_path}"
+        )
+    encoder_payload = encoder_path.read_bytes()
+    with np.load(checkpoint_path, allow_pickle=False) as blob:
+        schema = (
+            str(np.asarray(blob["schema"]).reshape(-1)[0])
+            if "schema" in blob.files
+            else "v1"
+        )
+        if schema != CHECKPOINT_SCHEMA:
+            raise Jg2Error(
+                f"REFUSING a {schema!r} checkpoint at {checkpoint_path}. Only "
+                f"{CHECKPOINT_SCHEMA!r} carries the full corrector state."
+            )
+        expected_encoder_sha256 = str(np.asarray(blob["encoder_sha256"]).reshape(-1)[0])
+        if sha256_bytes(encoder_payload) != expected_encoder_sha256:
+            raise Jg2Error(
+                f"checkpoint bundle is cross-file inconsistent at frame {int(blob['frame'][0])}: "
+                "the RC64 state digest does not match the numpy checkpoint"
+            )
+        frame = int(blob["frame"][0])
+        code_bits = float(blob["code_bits"][0])
+        per_frame = np.asarray(blob["per_frame"], dtype=np.float64).copy()
+        previous = np.asarray(blob["previous"], dtype=np.uint8).copy()
+        state_keys_restored = len(blob.files) - len(LEDGER_KEYS)
+        load_corrector_state(
+            corrector, {key: blob[key] for key in blob.files if key not in LEDGER_KEYS}
+        )
+    encoder = route_b.NativeRc64Encoder(library, encoder_payload)
+    fact = {
+        "frame": frame,
+        "schema": schema,
+        "state_keys_restored": state_keys_restored,
+        "checkpoint": file_fact(checkpoint_path),
+        "encoder_state": file_fact(encoder_path),
+    }
+    return frame, code_bits, per_frame, previous, encoder, fact
+
+
 # --------------------------------------------------------------------------------------
 # THE MIRROR.
 # --------------------------------------------------------------------------------------
@@ -608,6 +832,11 @@ def encode_tail(
     frames: int,
     checkpoint_every: int,
     resume: bool,
+    resume_checkpoint: Path | None = None,
+    resume_encoder_state: Path | None = None,
+    checkpoint_history: Path | None = None,
+    checkpoint_frames: set[int] | None = None,
+    retain_terminal_checkpoint: bool = False,
 ) -> dict[str, object]:
     """Re-encode the token field along the receiver's own decode trajectory.
 
@@ -643,39 +872,93 @@ def encode_tail(
     previous_seed: np.ndarray | None = None
 
     #: The cold reference the DETECTOR diffs against.  Built once, not per checkpoint.
-    cold = FreeCorrector(renderer.EVAL_H * renderer.EVAL_W) if checkpoint_every else None
+    keep_state = bool(
+        checkpoint_every
+        or checkpoint_history is not None
+        or retain_terminal_checkpoint
+        or resume_checkpoint is not None
+    )
+    cold = FreeCorrector(renderer.EVAL_H * renderer.EVAL_W) if keep_state else None
+    resumed_from: dict[str, object] | None = None
 
     if resume and checkpoint_path.is_file() and encoder_state.is_file():
-        blob = np.load(checkpoint_path, allow_pickle=False)
-        schema = str(np.asarray(blob["schema"]).reshape(-1)[0]) if "schema" in blob.files else "v1"
-        if schema != CHECKPOINT_SCHEMA:
-            raise Jg2Error(
-                f"REFUSING a {schema!r} checkpoint at {checkpoint_path}. Only "
-                f"{CHECKPOINT_SCHEMA!r} carries the full corrector state; a v1 "
-                "checkpoint drops the mixer weights and every family table, so "
-                "resuming from it silently restarts the model cold and emits a "
-                "stream that is NOT the one a straight-through encode produces. "
-                "Delete the checkpoint and re-run without --resume."
-            )
-        start_frame = int(blob["frame"][0])
-        code_bits = float(blob["code_bits"][0])
-        per_frame = np.asarray(blob["per_frame"], dtype=np.float64).copy()
-        previous_seed = np.asarray(blob["previous"], dtype=np.uint8).copy()
-        load_corrector_state(
-            corrector, {k: blob[k] for k in blob.files if k not in LEDGER_KEYS}
+        (
+            start_frame,
+            code_bits,
+            per_frame,
+            previous_seed,
+            encoder,
+            resumed_from,
+        ) = load_checkpoint_bundle(
+            checkpoint_path=checkpoint_path,
+            encoder_path=encoder_state,
+            corrector=corrector,
+            route_b=route_b,
+            library=library,
         )
-        encoder = route_b.NativeRc64Encoder(library, encoder_state.read_bytes())
         progress(
             {
                 "stage": f"encode_{tag}",
                 "event": "resumed",
                 "frame": start_frame,
-                "schema": schema,
-                "state_keys_restored": len(blob.files) - len(LEDGER_KEYS),
+                "schema": resumed_from["schema"],
+                "state_keys_restored": resumed_from["state_keys_restored"],
+            }
+        )
+    elif resume_checkpoint is not None or resume_encoder_state is not None:
+        if resume_checkpoint is None or resume_encoder_state is None:
+            raise Jg2Error("explicit resume requires both checkpoint and encoder state")
+        (
+            start_frame,
+            code_bits,
+            per_frame,
+            previous_seed,
+            encoder,
+            resumed_from,
+        ) = load_checkpoint_bundle(
+            checkpoint_path=resume_checkpoint,
+            encoder_path=resume_encoder_state,
+            corrector=corrector,
+            route_b=route_b,
+            library=library,
+        )
+        progress(
+            {
+                "stage": f"encode_{tag}",
+                "event": "resumed_explicit",
+                "frame": start_frame,
+                "schema": resumed_from["schema"],
+                "state_keys_restored": resumed_from["state_keys_restored"],
             }
         )
     else:
         encoder = route_b.NativeRc64Encoder(library)
+
+    immutable_checkpoints: list[dict[str, object]] = []
+    requested_frames = set(checkpoint_frames or set())
+    if any(frame < 0 or frame > frames for frame in requested_frames):
+        raise Jg2Error(f"checkpoint frames must be in 0..{frames}: {sorted(requested_frames)}")
+    if checkpoint_history is not None and start_frame in requested_frames:
+        history_checkpoint, history_encoder = checkpoint_bundle_paths(
+            checkpoint_history, start_frame
+        )
+        immutable_checkpoints.append(
+            persist_checkpoint_bundle(
+                checkpoint_path=history_checkpoint,
+                encoder_path=history_encoder,
+                frame=start_frame,
+                code_bits=code_bits,
+                per_frame=per_frame,
+                previous=(
+                    previous_seed
+                    if previous_seed is not None
+                    else np.zeros((EVAL_H, EVAL_W), dtype=np.uint8)
+                ),
+                corrector=corrector,
+                encoder=encoder,
+                cold=cold,
+            )
+        )
 
     started = time.perf_counter()
     with torch.inference_mode():
@@ -728,38 +1011,65 @@ def encode_tail(
             corrector.end_frame(frame_tokens.reshape(-1))
             previous = current
 
-            if checkpoint_every and (frame + 1) % checkpoint_every == 0 and frame + 1 < frames:
-                state = corrector_state(corrector)
-                lost = uncaptured_divergent_state(corrector, cold, set(state))
-                if lost:
-                    raise Jg2Error(
-                        f"checkpoint at frame {frame + 1} would LOSE corrector state "
-                        f"that has moved away from cold: {lost}. Extend the capture "
-                        "before writing a checkpoint that cannot be resumed faithfully."
-                    )
-                atomic_write(encoder_state, encoder.snapshot())
-                np.savez(
-                    work / f"encode_{tag}.checkpoint.npz.partial.npz",
-                    schema=np.array([CHECKPOINT_SCHEMA]),
-                    frame=np.array([frame + 1], dtype=np.int64),
-                    code_bits=np.array([code_bits], dtype=np.float64),
+            boundary = frame + 1
+            if checkpoint_every and boundary % checkpoint_every == 0 and boundary < frames:
+                saved = persist_checkpoint_bundle(
+                    checkpoint_path=checkpoint_path,
+                    encoder_path=encoder_state,
+                    frame=boundary,
+                    code_bits=code_bits,
                     per_frame=per_frame,
                     previous=frame_tokens,
-                    **state,
-                )
-                os.replace(
-                    work / f"encode_{tag}.checkpoint.npz.partial.npz", checkpoint_path
+                    corrector=corrector,
+                    encoder=encoder,
+                    cold=cold,
+                    replace=True,
                 )
                 progress(
                     {
                         "stage": f"encode_{tag}",
                         "event": "checkpoint",
-                        "frame": frame + 1,
+                        "frame": boundary,
                         "code_bytes_so_far": code_bits / 8.0,
-                        "state_keys_saved": len(state),
+                        "state_keys_saved": saved["state_keys"],
                         "elapsed_seconds": time.perf_counter() - started,
                     }
                 )
+            if checkpoint_history is not None and boundary in requested_frames:
+                history_checkpoint, history_encoder = checkpoint_bundle_paths(
+                    checkpoint_history, boundary
+                )
+                immutable_checkpoints.append(
+                    persist_checkpoint_bundle(
+                        checkpoint_path=history_checkpoint,
+                        encoder_path=history_encoder,
+                        frame=boundary,
+                        code_bits=code_bits,
+                        per_frame=per_frame,
+                        previous=frame_tokens,
+                        corrector=corrector,
+                        encoder=encoder,
+                        cold=cold,
+                    )
+                )
+
+    terminal_checkpoint: dict[str, object] | None = None
+    if retain_terminal_checkpoint:
+        terminal_root = work / f"encode_{tag}.terminal"
+        terminal_checkpoint_path, terminal_encoder_path = checkpoint_bundle_paths(
+            terminal_root, frames
+        )
+        terminal_checkpoint = persist_checkpoint_bundle(
+            checkpoint_path=terminal_checkpoint_path,
+            encoder_path=terminal_encoder_path,
+            frame=frames,
+            code_bits=code_bits,
+            per_frame=per_frame,
+            previous=np.asarray(target[frames - 1], dtype=np.uint8),
+            corrector=corrector,
+            encoder=encoder,
+            cold=cold,
+        )
 
     payload = encoder.finish()
     if not payload.startswith(route_b.TOKEN_MAGIC):
@@ -773,9 +1083,9 @@ def encode_tail(
     # ALWAYS KEEP THE PAYLOAD: the stream and the per-frame ledger are both
     # materialized here, so both are persisted rather than reduced to a length.
     stream_path = work / f"tail_{tag}.bin"
-    atomic_write(stream_path, body)
+    persist_immutable_bytes(stream_path, body, label="RC64 stream")
     ledger_path = work / f"bits_per_frame_{tag}.npy"
-    np.save(ledger_path, per_frame)
+    persist_immutable_npy(ledger_path, per_frame, label="per-frame bit ledger")
 
     return {
         "tag": tag,
@@ -785,6 +1095,10 @@ def encode_tail(
         "stream": file_fact(stream_path),
         "bits_per_frame_ledger": file_fact(ledger_path),
         "elapsed_seconds": time.perf_counter() - started,
+        "start_frame": start_frame,
+        "resumed_from": resumed_from,
+        "immutable_checkpoints": immutable_checkpoints,
+        "terminal_checkpoint": terminal_checkpoint,
     }
 
 

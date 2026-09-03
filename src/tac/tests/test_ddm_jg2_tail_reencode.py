@@ -224,6 +224,27 @@ def test_apply_edits_reports_sorted_pairs(tmp_path):
     assert report["edited_pairs"] == [283, 513]
 
 
+def test_load_edit_overlay_changes_only_retained_pair_plane(tmp_path):
+    base = _tokens()
+    plane = np.array(base[7])
+    plane[2, 3] = 4
+    path = tmp_path / "e.npz"
+    np.savez(path, **{"7": plane})
+    field, report = jg2.load_edit_overlay(base, path)
+    assert isinstance(field, jg2.EditOverlay)
+    assert report["materialized_full_field"] is False
+    assert report["tokens_changed"] == 1
+    assert field[7, 2, 3] == 4
+    assert np.array_equal(field[6], base[6])
+
+
+def test_load_edit_overlay_refuses_pair_outside_full_clip(tmp_path):
+    path = tmp_path / "e.npz"
+    np.savez(path, **{"600": np.zeros((jg2.EVAL_H, jg2.EVAL_W), dtype=np.uint8)})
+    with pytest.raises(jg2.Jg2Error, match="outside"):
+        jg2.load_edit_overlay(_tokens(), path)
+
+
 # --- token field loading ----------------------------------------------------
 
 
@@ -265,13 +286,9 @@ def test_rc64_base_sha_matches_the_ddm_rr2_pin():
     )
 
 
-def test_pointer_constants_match_the_frontier_pointer():
-    assert (
-        jg2.POINTER_ARCHIVE_SHA
-        == "7ce46fd7a845d5987903a0d85a56581961eb7716a55c38a7361e3b5ecae94b5f"
-    )
-    assert jg2.POINTER_ARCHIVE_BYTES == 176_420
-    assert jg2.POINTER_MEMBER_BYTES == 176_320
+def test_default_pointer_archive_is_derived_from_the_runtime_root(tmp_path):
+    """The mirror follows the named runtime body rather than a stale pointer literal."""
+    assert jg2.default_pointer_archive(tmp_path) == tmp_path / "archive.zip"
 
 
 def test_resolve_rc64_base_refuses_an_override_with_a_wrong_sha(tmp_path, monkeypatch):
@@ -323,9 +340,117 @@ def test_atomic_write_leaves_no_partial_file(tmp_path):
     assert not list(tmp_path.glob("*.partial"))
 
 
+def test_atomic_npz_round_trips_and_leaves_no_partial_file(tmp_path):
+    target = tmp_path / "x.npz"
+    jg2.atomic_npz(target, {"x": np.arange(7, dtype=np.int64)})
+    with np.load(target, allow_pickle=False) as blob:
+        assert np.array_equal(blob["x"], np.arange(7, dtype=np.int64))
+    assert not list(tmp_path.glob("*.partial"))
+
+
 def test_file_fact_records_bytes_and_sha(tmp_path):
     target = tmp_path / "x.bin"
     jg2.atomic_write(target, b"abc")
     fact = jg2.file_fact(target)
     assert fact["bytes"] == 3
     assert fact["sha256"] == jg2.sha256_bytes(b"abc")
+
+
+def test_checkpoint_bundle_paths_are_frame_encoded(tmp_path):
+    checkpoint, encoder = jg2.checkpoint_bundle_paths(tmp_path, 25)
+    assert checkpoint.name == "frame_0025.npz"
+    assert encoder.name == "frame_0025.encoder.bin"
+
+
+def test_checkpoint_bundle_paths_refuse_out_of_range_frame(tmp_path):
+    with pytest.raises(jg2.Jg2Error, match=r"0\.\.600"):
+        jg2.checkpoint_bundle_paths(tmp_path, 601)
+
+
+def test_persist_and_load_checkpoint_bundle_round_trip(tmp_path):
+    class Family:
+        def __init__(self):
+            self.counts = np.array([3, 5], dtype=np.int64)
+
+    class Corrector:
+        __slots__ = ("count", "families")
+
+        def __init__(self):
+            self.count = 11
+            self.families = [Family()]
+
+    class Encoder:
+        def snapshot(self):
+            return b"encoder-state"
+
+    class RestoredEncoder:
+        def __init__(self, _library, payload):
+            self.payload = payload
+
+    class Route:
+        NativeRc64Encoder = RestoredEncoder
+
+    checkpoint, encoder = jg2.checkpoint_bundle_paths(tmp_path, 25)
+    source = Corrector()
+    saved = jg2.persist_checkpoint_bundle(
+        checkpoint_path=checkpoint,
+        encoder_path=encoder,
+        frame=25,
+        code_bits=12.5,
+        per_frame=np.arange(jg2.N_PAIRS, dtype=np.float64),
+        previous=np.full((jg2.EVAL_H, jg2.EVAL_W), 2, dtype=np.uint8),
+        corrector=source,
+        encoder=Encoder(),
+        cold=None,
+    )
+    restored = Corrector()
+    restored.count = 0
+    restored.families[0].counts[:] = 0
+    frame, bits, ledger, previous, rc64, fact = jg2.load_checkpoint_bundle(
+        checkpoint_path=checkpoint,
+        encoder_path=encoder,
+        corrector=restored,
+        route_b=Route(),
+        library=tmp_path / "unused",
+    )
+    assert saved["state_keys"] == 2
+    assert frame == 25
+    assert bits == 12.5
+    assert ledger[-1] == jg2.N_PAIRS - 1
+    assert previous.shape == (jg2.EVAL_H, jg2.EVAL_W)
+    assert restored.count == 11
+    assert np.array_equal(restored.families[0].counts, [3, 5])
+    assert rc64.payload == b"encoder-state"
+    assert fact["state_keys_restored"] == 2
+
+
+def test_immutable_checkpoint_refuses_a_changed_second_write(tmp_path):
+    class Corrector:
+        def __init__(self, count):
+            self.count = count
+            self.families = []
+
+    class Encoder:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def snapshot(self):
+            return self.payload
+
+    checkpoint, encoder = jg2.checkpoint_bundle_paths(tmp_path, 5)
+    common = {
+        "checkpoint_path": checkpoint,
+        "encoder_path": encoder,
+        "frame": 5,
+        "code_bits": 3.0,
+        "per_frame": np.zeros(jg2.N_PAIRS),
+        "previous": np.zeros((jg2.EVAL_H, jg2.EVAL_W), dtype=np.uint8),
+        "cold": None,
+    }
+    jg2.persist_checkpoint_bundle(
+        **common, corrector=Corrector(1), encoder=Encoder(b"first")
+    )
+    with pytest.raises(jg2.Jg2Error, match="immutable RC64"):
+        jg2.persist_checkpoint_bundle(
+            **common, corrector=Corrector(2), encoder=Encoder(b"second")
+        )

@@ -186,10 +186,15 @@ def test_state_round_trips_into_a_fresh_corrector(corrector, tool):
 
 
 def test_legacy_checkpoint_schema_is_refused(tool):
-    """A v1 checkpoint is a wrong answer, not a slow one: it must refuse, not resume."""
-    assert tool.CHECKPOINT_SCHEMA.endswith(".v2")
+    """A pre-v3 checkpoint is a wrong answer, not a slow one: refuse it."""
+    assert tool.CHECKPOINT_SCHEMA.endswith(".v3")
     assert set(tool.LEDGER_KEYS) == {
-        "schema", "frame", "code_bits", "per_frame", "previous",
+        "schema",
+        "frame",
+        "code_bits",
+        "per_frame",
+        "previous",
+        "encoder_sha256",
     }
     # Namespaced state keys can never collide with the ledger keys.
     assert all("." not in key for key in tool.LEDGER_KEYS)
