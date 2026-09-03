@@ -2159,6 +2159,14 @@ Operator {date}: *"<FILL: operator verbatim, or the routed finding + its source 
 - PER-PAIR RECEIPTS LAW (xr1, 2026-09-03): any realized ΔS you report MUST retain per-pair d_seg AND
   d_pose beside the byte ledger — the exchange-ratio dispersion is ±6% ≈ 363 B and 0/20 prior
   near-wins were gradable for lack of per-pair rows; a rate-only row cannot be graded on ΔS.
+- EQUATIONS-LEG LAW (MAIN, 2026-09-04; Catalog #344 live count reached 29 memos unnoticed): every memo
+  that states a MEASURED finding MUST name the canonical equation it anchors or refines, in a form
+  the gate reads — the literal token `tac.canonical_equations` beside the `<equation_id>` (register a
+  new law or append an anchor through `register_canonical_equation` /
+  `update_equation_with_empirical_anchor`, never by hand-editing the JSONL) — OR carry a same-line
+  `# FORMALIZATION_PENDING:<substantive rationale>` (placeholders refused). Before the final message
+  run `.venv/bin/python -c "from tac.preflight import check_empirical_finding_memo_references_canonical_equation as c; c(strict=True)"`
+  and make it pass for YOUR memos; a finding that is not in the equations leg is not known.
 - DETACHED >30-MIN COMPUTE: any single compute step projected to exceed 30 minutes MUST
   launch outside the arm session ONLY via `.venv/bin/python tools/launch_detached_process.py
   --output-dir <run_dir> --done-receipt <name> --nice 10 --nice-best-effort -- <cmd...>`
