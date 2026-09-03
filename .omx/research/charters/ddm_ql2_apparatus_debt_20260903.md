@@ -10,7 +10,7 @@ APPEND-ONLY supersession (new receipt file + a provenance row naming the pin-ref
 
 ## SCOPE
 
-1. **Gate live-count 11 > 10** (`src/tac/preflight.py::check_no_bulk_write_strands_the_ready_record`): enumerate the
+1. **Gate live-count 11 > 10** (locate at source: `grep -rn check_no_bulk_write_strands_the_ready_record src tools` — it is NOT in tac.preflight's namespace; found in: src/tac/confound_gates.py src/tac/tests/test_payload_write_order_gate.py ): enumerate the
    11 violations with file:line; for each, decide FIX (route the write through the canonical ready-record path)
    or WAIVE with the gate's own same-line waiver and a real rationale; drive the live count under the cap and
    record before/after. Do not raise the cap.
