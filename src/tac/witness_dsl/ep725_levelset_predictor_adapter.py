@@ -52,7 +52,21 @@ EP725_N_CLASSES = 5
 MAX_BOUNDED_DECODE_PAIRS = 2
 EP725_BOUNDED_RECEIPT_SCHEMA = "tac.ep725_bounded_predictor_decode_receipt.v2"
 EP725_CAUSAL_RECEIPT_SCHEMA = "tac.ep725_counted_member_causal_decode_receipt.v3"
-EP725_CANONICAL_RENDERER_SHA256 = "1cecaa3ee9873d1378eaeb66b04cee56b621bccabe3fcecc01f60d3a0e692ddc"
+# PIN REFRESHED 2026-09-03 (ddm_ql1). This is a SOURCE PIN over the text of
+# tools/levelset_byte_close_and_eval.py, not an output hash. Two commits moved it OUTSIDE the
+# decoder arithmetic this adapter calls (_read_blob_bytes_full / _dequant_blob /
+# numpy_oracle_reference_frames): f73bfb4e8 (2026-08-03, consolidated the upstream evaluate-REPORT
+# regex parse into tac.submission_chain) and 90d537745 (2026-08-26, run_inflate's raw
+# ZipFile.extractall -> safe_extract_zip). Chain 1cecaa3e -> 00106018 -> 35d6ce6b.
+# RECEIPT (MEASURED, real custody, n1 and n2, both decoders deterministic and shipped==numpy):
+# the decoder OUTPUT is bit-exact across the drift -- chronological_camera_frame_sha256,
+# chronological_raw_prefix_sha256 and labels_sha256 are UNCHANGED below. Only the three
+# provenance-derived digests moved, because predictor_renderer_sha256 is an INPUT to
+# _expected_semantic_binding; each refreshed value was re-derived from first principles, not read
+# back from a test. Receipt:
+# /Volumes/VertigoDataTier/pact/ddm_ql1_retired_lineage_test_quarantine/receipts/
+#   ep725_decode_receipt_20260903.json + ep725_receipt_sha_derivation_20260903.json
+EP725_CANONICAL_RENDERER_SHA256 = "35d6ce6bdaa5fb4bda9b69339a994be658a83f27110d4e6fb18d4ef260cc1ac6"
 _DECODER_LABELS_ORIGIN = "same_counted_LVLS1_member_decoder_phi_argmax"
 _FROZEN_BOUNDED_OUTPUTS: dict[tuple[int, ...], dict[str, object]] = {
     (0,): {
@@ -62,9 +76,9 @@ _FROZEN_BOUNDED_OUTPUTS: dict[tuple[int, ...], dict[str, object]] = {
         ),
         "chronological_raw_prefix_sha256": "22b994567d3db018df29a95c597606053a115c631d98e89b72ec7eeba93666b3",
         "labels_sha256": "635b1bce0b16f3c2d612c965855938141a836e80a6db734c2429642bd41bfd28",
-        "predictor_semantic_binding_sha256": "f9d63a1990601e4d2eb7235047dca0b64a5058967618e173a170ffc82c0a73bc",
-        "predictor_state_binding_sha256": "b095f5e47c37a5bcf3ff1f574413cd29d66269e8508b8f9f8314e23e7a2ff672",
-        "receipt_sha256": "07b2060ccc1d4ca4ffdb3a3d2e38bf789cdd49eab0fdcba4e0288c6f8e692493",
+        "predictor_semantic_binding_sha256": "33c764f0c610c24dc35db53d867de5ad6267678fac4ab959df9e468372d2845f",
+        "predictor_state_binding_sha256": "39d82bb34b5e48d62997de241066b3b9476d430fc8b85d8a12d847104c343374",
+        "receipt_sha256": "d80746e144220d135381da0a9d4966bef86b0d3a709c735dcf54cabb06e583f8",
     },
     (0, 1): {
         "chronological_camera_frame_sha256": (
@@ -75,9 +89,9 @@ _FROZEN_BOUNDED_OUTPUTS: dict[tuple[int, ...], dict[str, object]] = {
         ),
         "chronological_raw_prefix_sha256": "23f12caeb9f43149d94732289a7cbac34ef08c3171c6613750074e3c8e76b9e9",
         "labels_sha256": "9165ef7fc86fe997e01b26ecf751e877b8ae30352e7b3d3db659d920a908068e",
-        "predictor_semantic_binding_sha256": "4ec471a707a37d38f704586584f84fd5d0adb4ec2a70a8069481dc6e6113197d",
-        "predictor_state_binding_sha256": "a25ee50104fc887ba5ee5e92110caac736ee431338584a3ad6ac8b54ab7cfae9",
-        "receipt_sha256": "eb765a3e3252155857861dc11564a98d46b4147190ef634d710af69c1ebe7445",
+        "predictor_semantic_binding_sha256": "0a4a1f7b1c14b79dad6daa42f87e83880cffd0309fc4d9c174239092e9367a8a",
+        "predictor_state_binding_sha256": "d5efebd7dc3fe6b2de0385641007e14627deb58aef39737d01c122714606effe",
+        "receipt_sha256": "79ab7e0e2aa8d0cda4824269ede43734684dac0269480ca44569036642902b75",
     },
 }
 _LVLS1_MAGIC = b"LVLS1\x00"

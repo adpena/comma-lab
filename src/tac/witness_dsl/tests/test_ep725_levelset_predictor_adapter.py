@@ -360,6 +360,7 @@ def test_bounded_receipt_is_canonical_recomposable_and_truth_closed() -> None:
 
 
 @pytest.mark.skipif(not EP725_SOURCE_DIRECTORY.is_dir(), reason="frozen ep725 source SSD is unavailable")
+@pytest.mark.timeout(180)  # ddm_ql1 2026-09-03: cold ep725 decode = 4 decodes, 65.6 s measured
 def test_real_explicit_member_runtime_decode_is_source_independent_and_causally_bound(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -412,6 +413,7 @@ def test_real_explicit_member_runtime_decode_is_source_independent_and_causally_
 
 
 @pytest.mark.skipif(not EP725_SOURCE_DIRECTORY.is_dir(), reason="frozen ep725 source SSD is unavailable")
+@pytest.mark.timeout(180)  # ddm_ql1 2026-09-03: cold ep725 decode = 4 decodes, 65.6 s measured
 def test_real_ep725_n2_double_decode_is_hash_bound_bit_exact_and_label_owned() -> None:
     surface = decode_ep725_prefix_ephemeral_surface(pair_count=2, timeout_seconds=120.0)
     result = surface.bounded_decode
@@ -423,7 +425,7 @@ def test_real_ep725_n2_double_decode_is_hash_bound_bit_exact_and_label_owned() -
     assert result.counted_predictor_bytes == 84_536
     assert result.source_archive_bytes == 83_838
     assert result.source_pair_ids == (0, 1)
-    assert result.canonical_renderer_sha256 == "1cecaa3ee9873d1378eaeb66b04cee56b621bccabe3fcecc01f60d3a0e692ddc"
+    assert result.canonical_renderer_sha256 == "35d6ce6bdaa5fb4bda9b69339a994be658a83f27110d4e6fb18d4ef260cc1ac6"
     assert result.labels_sha256 == "9165ef7fc86fe997e01b26ecf751e877b8ae30352e7b3d3db659d920a908068e"
     assert result.chronological_raw_prefix_sha256 == "23f12caeb9f43149d94732289a7cbac34ef08c3171c6613750074e3c8e76b9e9"
     assert result.chronological_camera_frame_sha256 == (
@@ -464,9 +466,9 @@ def test_real_ep725_n2_double_decode_is_hash_bound_bit_exact_and_label_owned() -
 
     receipt_bytes = result.to_receipt_bytes()
     parsed_receipt = parse_ep725_bounded_decode_receipt(receipt_bytes)
-    assert result.receipt_sha256 == "eb765a3e3252155857861dc11564a98d46b4147190ef634d710af69c1ebe7445"
-    assert state.semantic_binding_sha256 == "4ec471a707a37d38f704586584f84fd5d0adb4ec2a70a8069481dc6e6113197d"
-    assert state.binding_sha256 == "a25ee50104fc887ba5ee5e92110caac736ee431338584a3ad6ac8b54ab7cfae9"
+    assert result.receipt_sha256 == "79ab7e0e2aa8d0cda4824269ede43734684dac0269480ca44569036642902b75"
+    assert state.semantic_binding_sha256 == "0a4a1f7b1c14b79dad6daa42f87e83880cffd0309fc4d9c174239092e9367a8a"
+    assert state.binding_sha256 == "d5efebd7dc3fe6b2de0385641007e14627deb58aef39737d01c122714606effe"
     assert parsed_receipt.predictor_state_binding_sha256 == state.binding_sha256
     assert parsed_receipt.predictor_semantic_binding_sha256 == state.semantic_binding_sha256
     assert parsed_receipt.receipt_sha256 == result.receipt_sha256

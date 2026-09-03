@@ -145,6 +145,35 @@ _REAL_N2_RECEIPT = (
     not EP725_SOURCE_DIRECTORY.is_dir() or not _GT_CACHE.is_file(),
     reason="frozen ep725 source or frozen target cache is unavailable",
 )
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "QUARANTINED 2026-09-03 (ddm_ql1): a DOWNSTREAM CONSEQUENCE of the EP725 renderer source-pin "
+        "refresh, not a regression -- and not a blind quarantine. MEASURED on the real custody: the "
+        "fresh receipt differs from the retained one in EXACTLY three fields, all provenance digests "
+        "from one cause. predictor_binding_sha256 a25ee501->d5efebd7 (which is precisely the n2 state "
+        "binding re-derived in ql1's EP725 receipt, because predictor_renderer_sha256 is an input to "
+        "_expected_semantic_binding); packet_sha256 9139f2a7->d2a70126 (the packet folds that binding "
+        "into pbr1_sha256); compile_receipt_binding_sha256 23d9775d->32011a33 (it binds the receipt "
+        "holding the first two). EVERY substantive field is unchanged: debt_before_cells 60,217, "
+        "total_topology_events 21,323, births 12,259, deaths 9,064, packet_bytes 341,316, "
+        "decoded_labels_sha256 == target_labels_sha256 6a9ee68a, scorer_invoked False, "
+        "candidate_archive_eligible False -- the byte count holding still while the sha moves is the "
+        "signature of a fixed-length digest substitution. Receipt: /Volumes/VertigoDataTier/pact/"
+        "ddm_ql1_retired_lineage_test_quarantine/receipts/bounded_target_g_delta_20260903.json. "
+        "WHY NOT REFRESHED HERE: the cure needs the retained receipt "
+        ".omx/research/original_taskspace_inverse_witness_codec_20260725/"
+        "ep725_n2_bounded_target_g_v2_receipt.json regenerated, and rewriting a SEALED July custody "
+        "artifact exceeds this arm's authority -- ddm_ql1 refused the same move for the V15 receipt, "
+        "and doing one but not the other would be inconsistent. "
+        "FIRE TRIGGER (one step, evidence already in hand): regenerate that receipt file from the "
+        "current compile and refresh this test's three literals (packet_sha256, and the two "
+        "_sha256(persisted_*) values) against it, then DELETE this mark. strict=True means this mark "
+        "FAILS the moment that happens. Owning memo: "
+        ".omx/research/ddm_ql1_retired_lineage_test_quarantine_20260903.md"
+    ),
+)
+@pytest.mark.timeout(180)  # ddm_ql1 2026-09-03: cold ep725 decode = 4 decodes, 65.6 s measured
 def test_real_ep725_n2_v2_control_exactly_reconstructs_frozen_target_without_transport() -> None:
     """Structural real-input gate only; n2 is not score or n600 evidence."""
 

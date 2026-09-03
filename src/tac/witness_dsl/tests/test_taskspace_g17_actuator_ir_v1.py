@@ -45,6 +45,20 @@ from tac.witness_dsl.taskspace_predictor_v2_consumer_seam import (
     compile_generative_taskspace_correction_v2,
 )
 
+# TIMEOUT BUDGET 2026-09-03 (ddm_ql1). These tests drive the ep725 COLD decode, which runs four
+# full decodes (canonical NumPy x2 then shipped-runtime subprocess x2, adapter
+# _decode_executable_source_materialized). MEASURED: one shipped n2 decode costs 15.6-16.7 s and the
+# whole cold path 65.6 s on an idle machine -- over the repo-wide pytest-timeout ceiling of 60 s
+# (pyproject.toml). The cold surface is a module-scoped cache, so ANY test in this module can be the
+# one that pays for filling it; the budget therefore belongs at module scope, not on one test.
+# This module decodes at pair_count=1 (timeout_seconds=90.0), roughly half the n2 cost, so it sits
+# right on the 60 s line rather than over it -- it went red only while the ep725 pin was stale and
+# is a latent flake under load. 180 s is the value already established for this cold path by
+# test_taskspace_monolithic_pga_receiver.py's pre-existing @pytest.mark.timeout(180); it is applied
+# here for one budget across one shared cold path. This raises a harness watchdog only -- every
+# assertion still runs unchanged.
+pytestmark = pytest.mark.timeout(180)
+
 
 @dataclass(frozen=True)
 class _RealPairBundle:

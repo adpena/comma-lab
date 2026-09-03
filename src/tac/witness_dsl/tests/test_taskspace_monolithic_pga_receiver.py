@@ -95,6 +95,18 @@ def _nested_zip() -> bytes:
     return output.getvalue()
 
 
+# TIMEOUT BUDGET 2026-09-03 (ddm_ql1). These tests drive the ep725 COLD decode, which runs four
+# full decodes (canonical NumPy x2 then shipped-runtime subprocess x2, adapter
+# _decode_executable_source_materialized). MEASURED: one shipped n2 decode costs 15.6-16.7 s and the
+# whole cold path 65.6 s on an idle machine -- over the repo-wide pytest-timeout ceiling of 60 s
+# (pyproject.toml). The cold surface is a module-scoped cache, so ANY test in this module can be the
+# one that pays for filling it; the budget therefore belongs at module scope, not on one test.
+# 180 s is not a new number: it is what this module's own decode call already asks for
+# (timeout_seconds=180.0) and what the single pre-existing @pytest.mark.timeout(180) in this file
+# already used. This raises a harness watchdog only -- every assertion still runs unchanged.
+pytestmark = pytest.mark.timeout(180)
+
+
 def test_strict_member_roundtrip_has_exact_p_g_a_and_optional_t_directory() -> None:
     predictor, correction, preimage = _structural_packets()
     for terminal in (None, b"terminal-quotient"):

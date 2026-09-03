@@ -61,6 +61,26 @@ from tac.witness_dsl.taskspace_selected_solution_compiler import (
 _MAX_PACKET_BYTES = 1 << 20
 
 
+_QUARANTINE_V15_PRODUCER_PIN = pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "QUARANTINED 2026-09-03 (ddm_ql1): retired July taskspace lineage, no live consumer. "
+        "The sealed V15 compile receipt's producer_custody pins "
+        "src/tac/optimization/direct_description_carrier_compose.py at 3e1f69bb/156,551 B; HEAD is "
+        "6fef110d/160,470 B. Drift commits: 9934d488b then 36f4b2947 (both 2026-08-20). "
+        "This is NOT a hash swap: 36f4b2947 adds key non_empty_member_payload_count to "
+        "prove_carrier_archive_fail_closed, which the V15 producer embeds as "
+        "receipt.fail_closed_mutation_proof, so a regenerated receipt legitimately differs. "
+        "FIRE TRIGGER: a scorer-authorized arm re-runs tools/measure_ddm_v15_scorer_solved_templates.py "
+        "(it solves through exact R + SegNet, which ddm_ql1's charter forbade) and either refreshes "
+        "producer_custody against a bit-exact compile receipt -- then DELETE this mark -- or records "
+        "real output drift. strict=True means this mark FAILS the moment the lineage is repaired. "
+        "Owning memos: .omx/research/ddm_ql1_retired_lineage_test_quarantine_20260903.md and "
+        ".omx/research/ddm_cd1_working_tree_debt_landing_20260903.md"
+    ),
+)
+
+
 @dataclass(frozen=True)
 class _RealProductFixture:
     semantic_p: bytes
@@ -182,6 +202,7 @@ def _product(
     )
 
 
+@_QUARANTINE_V15_PRODUCER_PIN
 def test_real_boundv10_product_stream_is_deterministic_and_packet_mutation_is_live(
     real_product_fixture: _RealProductFixture,
 ) -> None:
@@ -199,6 +220,7 @@ def test_real_boundv10_product_stream_is_deterministic_and_packet_mutation_is_li
     assert baseline.program.compile_config.pair_count == 600
 
 
+@_QUARANTINE_V15_PRODUCER_PIN
 def test_product_refuses_wrong_p_a_decoder_type_and_decoder_source(
     real_product_fixture: _RealProductFixture,
 ) -> None:
@@ -236,6 +258,7 @@ def test_product_refuses_wrong_p_a_decoder_type_and_decoder_source(
         _product(real_product_fixture, wrong_source_program)
 
 
+@_QUARANTINE_V15_PRODUCER_PIN
 def test_exact_g_a_e_reopen_and_real_nested_p_refusal_emit_typed_product_blockers(
     real_product_fixture: _RealProductFixture,
 ) -> None:

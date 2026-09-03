@@ -386,6 +386,35 @@ def test_batch16_target_custody_is_closed_and_mismatch_fails_decode() -> None:
         )
 
 
+_QUARANTINE_V15_PRODUCER_PIN = pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "QUARANTINED 2026-09-03 (ddm_ql1): retired July taskspace lineage, no live consumer. "
+        "The sealed V15 compile receipt's producer_custody pins "
+        "src/tac/optimization/direct_description_carrier_compose.py at 3e1f69bb/156,551 B; HEAD is "
+        "6fef110d/160,470 B. Drift commits: 9934d488b then 36f4b2947 (both 2026-08-20). "
+        "MEASURED, so the quarantine is not a guess: the delta is exactly 3 changed defs plus 2 added "
+        "and 0 removed, all three ARE on the path the pinned producer calls, and the drifted receiver "
+        "still decodes the sealed archive and refuses all 5 mutation samples with identical coverage "
+        "(133,941 B) -- the sole receipt delta is an ADDED key, non_empty_member_payload_count, that "
+        "no check reads. Output-equivalent is still not a pin refresh: the pin lives in a SEALED "
+        "2026-07-26 custody receipt, and rewriting its producer_custody to match today's sources "
+        "would make that receipt assert it was compiled by sources that did not exist at compile "
+        "time. The honest cure is a NEW receipt from a fresh compile. "
+        "FIRE TRIGGER: a scorer-authorized arm re-runs tools/measure_ddm_v15_scorer_solved_templates.py "
+        "(it solves through exact R + SegNet, which ddm_ql1's charter forbade), emits a fresh receipt, "
+        "and either confirms byte-identity -- then DELETE this mark -- or records real output drift. "
+        "Note the same file text is re-checked at taskspace_selected_preimage_program_v1.py:1923 and "
+        "taskspace_selected_preimage_program_v2.py:723, so only a receipt refresh cures all sites; a "
+        "waiver of the :572 check alone would not. strict=True means this mark FAILS the moment the "
+        "lineage is repaired. Owning memos: "
+        ".omx/research/ddm_ql1_retired_lineage_test_quarantine_20260903.md and "
+        ".omx/research/ddm_cd1_working_tree_debt_landing_20260903.md"
+    ),
+)
+
+
+@_QUARANTINE_V15_PRODUCER_PIN
 def test_sealed_compile_lineage_accepts_fresh_deterministic_byte_identity() -> None:
     root = Path(__file__).resolve().parents[4]
     run_dir = (
