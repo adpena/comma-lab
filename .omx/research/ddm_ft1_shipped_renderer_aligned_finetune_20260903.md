@@ -32,10 +32,15 @@ Axis of every measured row below: **`[macOS-CPU advisory]`** unless it cites the
    weights" — is **2,123 net pixels = 8.94% of d_seg**. The charter fires its falsifier below a **10%**
    fall. On prior evidence the falsifier is more likely than not to fire, and I record that **before**
    the result, not after.
-5. **The run is aimed and moving.** Step-0 n600 advisory baseline on the DALI table is
-   **d_seg = 0.00020386589898003471** against the contest-CUDA T4 receipt's **0.00020139** — **1.23%
-   agreement**, independent confirmation that the DALI target, the exact-R path and the identity gate
-   are all right. The per-epoch table is in §5.
+5. **The run is correctly aimed, and its first epoch is a NEGATIVE.** Step-0 n600 advisory baseline on
+   the DALI table is **0.00020386589898003471** against the contest-CUDA T4 receipt's **0.00020139** —
+   **1.23% agreement**, independent confirmation that the DALI target, the exact-R path and the
+   identity gate are all right. At **step 600 d_seg ROSE to 0.00026752895779079860, +31.23%**
+   (+7,510 flips, 12.4× the measured 605-flip A/A noise floor; +0.006366 S on the seg leg). **The
+   charter's falsifier fired at the first evaluated epoch**, in the worse direction than it
+   anticipated, exactly as §8 pre-registered. Scope is **INSTANCE** — this init, lr 2e-5, 1,800-step
+   cosine, seg-only loss — **not** a family verdict, because the pose term was never built and the LR
+   is the leading suspect (§5.1).
 
 **Pointer: UNMOVED.** No exact row was bought by this arm.
 
@@ -166,9 +171,14 @@ Run: `/Volumes/VertigoDataTier/pact/ddm_ft1_shipped_renderer_aligned_finetune/ru
 `quantized_exact_seg` = the trainer's own n600 advisory d_seg through the exact-R path against the
 DALI table, on the EMA shadow. **Advisory, `[macOS-CPU advisory]`, never a score.**
 
-| step | epoch | advisory d_seg (DALI, n600) | vs step 0 |
-|---:|---:|---|---:|
-| 0 | 0 | **0.00020386589898003471** | — |
+| step | epoch | advisory d_seg (DALI, n600) | flips | vs step 0 |
+|---:|---:|---|---:|---:|
+| 0 | 0 | 0.00020386589898003471 | 24,049 | — |
+| 600 | 1 | **0.00026752895779079860** | 31,559 | **+31.23%** |
+
+At step 600 the expected-flip loss is 0.0012238547 and the cosine has annealed lr to 1.505e-05.
+`best_quantized_exact_seg` is still **step 0's** value: not one evaluated point improved on the
+shipped renderer.
 
 *(contest-CUDA T4 reference for the same object: 0.00020139)*
 
@@ -183,6 +193,40 @@ which is written, syntax-checked and flag-verified against each tool's real argp
 I chose to hand off the corrections in Sec 1-2 and Sec 7 rather than hold them for 3 more hours: any
 other arm currently training against `gt_n600.npz`, or gating on `d_pose <= 1.25e-4`, is wrong right
 now, and those are cheap to act on immediately.
+
+### 5.1 The charter's falsifier FIRED at epoch 1 — and in the worse direction
+
+The charter's falsifier reads "advisory d_seg does not fall >= 10% at any kept epoch". What happened is
+stronger than that: d_seg **ROSE 31.23%**, +7,510 flips, **12.4x** CE1's measured 605-flip A/A noise
+floor at step 600. That is a real move, not noise, and it costs **+0.006366 S** on the seg leg alone.
+
+I pre-registered in §8 that I expected the falsifier to fire. It did, at the first evaluated epoch.
+
+**What this does and does not close.** It is an **INSTANCE** result — this init, lr 2e-5, an 1,800-step
+cosine, seg-only loss — not a family verdict, and I will not narrate it as one. Three causes are live,
+and all three were declared as risks in §4 *before* the run:
+
+1. **The LR did not transfer, and the direction of the error is now measured.** CE1's 2e-5 "plateau"
+   was measured on a *different* init (d_seg 2.86e-4 against the TOKENS). The shipped renderer is a
+   converged object at 2.04e-4, and its own PR130 stage-08 tail LR is **2e-7** (the BS16 receipt:
+   −3.03% in 30 steps at batch 16). `hr1` says 2e-7 is "an ancestor anchor, not an automatic value" —
+   true, but 2e-5 is equally borrowed, and this run measures which direction the borrowing failed in.
+   CE1's own EF0 at 600 steps was ALSO a rise (+636 flips); mine is 11.8x larger, on an object 1.4x
+   closer to its optimum. This is the leading suspect.
+2. **The target is harder than CE1's.** Training against DALI GT asks the renderer to OVERRIDE its
+   input at 9,179 sites; CE1's target was the tokens themselves, which the renderer already reproduces.
+3. **τ anneals 21.7x faster per step** in an 1,800-step window than in w96b's 39,000, so this run
+   reaches the sharp small-τ regime far earlier in optimization than the schedule was calibrated for.
+
+Causes 1 and 3 are both *"the window and the rate were borrowed"*, which is the same class as §1's
+stale identifiers and §2's mislabelled lineage: **a constant that was correct for its own vehicle,
+transferred without re-derivation.** That is three independent instances of one failure mode inside a
+single charter.
+
+**Not stopped.** The run continues to steps 1,200 and 1,800. CE1's ladder shows the aligned objective
+opening with an excursion and recovering only by 3,000–6,000 steps, so the remaining rows measure
+whether this excursion turns — at 1,800 steps, probably not, but the rows are nearly free now and
+their absence would be a guess.
 
 ## 6. THE REALIZATION GAP — and the fix I had to make to my own instrument
 
