@@ -501,7 +501,7 @@ def WitnessNativeMorseContinuationSchedule(
     trust_region_kl: float,
     fisher_curvature_upper: float,
     margin_headroom: float | None = None,
-    delta_r_artifact: str | Path = "reports/delta_R_noise_floor.json",
+    delta_r_artifact: str | Path | None = None,
 ) -> MorseContinuationSchedule:
     """Derive the #302 schedule from local action geometry and the R-safe margin law.
 
@@ -511,12 +511,16 @@ def WitnessNativeMorseContinuationSchedule(
     """
 
     from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (
+        DELTA_R_ARTIFACT,
         resolve_margin_band_threshold,
     )
     from tac.canonical_equations.witness_native_morse_continuation_20260715 import (
         derive_morse_continuation_controls,
     )
 
+    if delta_r_artifact is None:
+        # ONE source for the artifact path: the law's constant (ddm_dr1 n600 repoint).
+        delta_r_artifact = DELTA_R_ARTIFACT
     margin = resolve_margin_band_threshold(
         headroom=margin_headroom,
         artifact_path=delta_r_artifact,
@@ -5012,7 +5016,7 @@ def TemporalScrewConsistency(
 def MarginBandSatisficing(
     weight: float = 0.2, msafe: float | None = None, delta_r: float | None = None,
     headroom: float | None = None, start_epoch: int = 0, band: float = 2.0, window: int = 0,
-    delta_r_artifact: str | Path = "reports/delta_R_noise_floor.json",
+    delta_r_artifact: str | Path | None = None,
 ) -> Lever:
     """P0 FORCE 2 — MARGIN-BAND SATISFICING (derivation
     ``.omx/research/p0_forces_derivation_20260708.md`` §FORCE 2; task #360). DEFAULT-OFF.
@@ -5026,7 +5030,7 @@ def MarginBandSatisficing(
 
     ``m_safe = headroom·δ_R``. Both values are resolved at config compile time by canonical law
     ``margin_band_satisficing_threshold_v1``: ``δ_R`` is read from the MEASURED artifact
-    ``reports/delta_R_noise_floor.json`` and the default headroom is the smallest integer factor whose
+    the law's ``DELTA_R_ARTIFACT`` (``reports/delta_R_noise_floor_n600.json``) and the default headroom is the smallest integer factor whose
     threshold covers that artifact's full-R annulus p95. The current artifact gives DERIVED headroom 2
     and DERIVED ``m_safe = 0.04376363754272461`` from MEASURED
     ``δ_R = 0.021881818771362305`` (n600, ddm_dr1 2026-09-04; the n96 prefix read 0.019590163230895963). Headroom 3 remains an OPEN, UNMEASURED treatment rather than a
@@ -5050,11 +5054,15 @@ def MarginBandSatisficing(
         raise ValueError(f"MarginBandSatisficing: band must be > 0, got {band!r}")
 
     from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (
+        DELTA_R_ARTIFACT,
         INVARIANT_FP_TOL,
         margin_safe_lawref,
         resolve_margin_band_threshold,
     )
 
+    if delta_r_artifact is None:
+        # ONE source for the artifact path: the law's constant (ddm_dr1 n600 repoint).
+        delta_r_artifact = DELTA_R_ARTIFACT
     resolved = resolve_margin_band_threshold(
         headroom=headroom,
         artifact_path=delta_r_artifact,

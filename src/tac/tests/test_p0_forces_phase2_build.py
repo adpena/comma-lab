@@ -114,6 +114,24 @@ def test_dsl_margin_satisfice_factory_emits_flags():
     assert row["value"] == pytest.approx(lev.overrides["--seg-margin-satisfice-msafe"])
 
 
+def test_delta_r_artifact_has_one_source():
+    # ddm_dr1 2026-09-04: the n96 -> n600 repoint surfaced THREE copies of the artifact
+    # path (law, hg1 lever, two DSL factory defaults). One bank: every consumer must
+    # resolve the law's constant, and the DSL default must emit the law's delta_R.
+    from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (
+        DELTA_R_ARTIFACT,
+        resolve_margin_band_threshold,
+    )
+    from tac.witness_dsl import hg1_ring0_margin_hinge_levers_20260816 as hg1
+
+    assert DELTA_R_ARTIFACT.endswith("delta_R_noise_floor_n600.json")
+    assert hg1.DELTA_R_ARTIFACT == DELTA_R_ARTIFACT
+    lev = MarginBandSatisficing()
+    assert lev.overrides["--seg-margin-satisfice-delta-r"] == pytest.approx(
+        resolve_margin_band_threshold().delta_r
+    )
+
+
 def test_dsl_margin_satisfice_rejects_msafe_not_derived_from_delta_r():
     # Any independently supplied m_safe must equal headroom*delta_R; merely
     # sitting above/below the floor is no longer sufficient provenance.
