@@ -72,3 +72,23 @@ status RE-RACE; item 5 has landed code + n600 receipts; item 6 has a backtested 
 Composition caution (m164): rows 1/3/4/6 act on the same per-pixel budget — ONE lever per race, B/H/W reported.
 Rows 8–11 (costate schedule, along-tangent ladder, v8 atoms, warm-start law) are FOLD-AFTER-BURN so the running
 discriminator is not confounded.
+
+## ADDENDUM 3 (2026-09-04, MAIN) — ar1 verdict: the post-hoc footprint render REVERSES sign on the born field
+
+MEASURED (ddm_ar1, memo 6fa21dce8; sealed QBR1 control checkpoint step 5,000; n600 with the trained n32 selection read
+separately; DALI authority; frozen CPU-torch scorers): ss=2 footprint render vs the trainer's point render →
+d_seg 0.002857 → 0.003753 (ratio **0.7612**, 32/32 pairs worse), d_pose +1.563e-3 (156× the +1e-5 bound), ΔS_HT
+**+0.161213** = +242,113 B-equivalent (2.27× the whole cell archive). B/H/W: AA breaks 2.67 sites per site fixed; Lane
+net −8,578. All three pre-registered falsifier clauses fired. The module's `build_supersampled_coords` lattice is
+misregistered by 0.2497 coarse px at ss=2 (a real defect) but the centred lattice recovers only 1.6% — the cost is
+footprint averaging itself. Dose-response: trained pairs lose 1.314×, unfitted 1.118× → the field LEARNED its own
+point sampling. My charter carried two expired premises (m143 genus, ×2 more): the 6.39× law is an achievable-signal
+upper bound that does not transfer to a learned field, and the burn trains n32 (`SELECTION_IDS`), not n600.
+
+Consequence for the fold-back: **the render's sampling is part of the born field's identity; no post-hoc render swap
+survives on a trained field** (sister of ft1's "training and export fight each other"). vr1 row 2 is DOWNGRADED from
+FOLD-NOW to FOLD-AFTER-BURN as an in-loop RACE only (ss=2 costs 1.78× wall/pair ≈ 5.2 h per matched cell; falsifier:
+AA-trained d_seg must beat the point-trained control at equal steps and bytes or the family closes at FORMULATION+1),
+queued BEHIND the loss levers (rows 1/3/4/7), whose prior is untouched by this result. Owed and landed by MAIN: the
+equation's `domain_of_validity` gains a `signal` key (real_frame_achievable IN-DOMAIN; point_trained_learned_field
+EXCLUDED). Owed later, named trigger: re-anchor the law on the centred lattice only if AA-in-loop is ever raced.

@@ -184,3 +184,13 @@ coupling (≈217× the seg weight in S units), lr 2e-7, full τ window, on Metal
 is LOWER than fb1 assumed: the renderer's 2e-4 seg residual may be inseparable from its pose behaviour at 36 KB.
 Read it as: the shipped renderer is at a joint optimum the post-hoc chain already found; the fold-back's real
 targets are the born trainer (qbr1's config) and the population pipeline, where pose is already in the loop.
+
+## ADDENDUM 7 (2026-09-04) — two post-hoc doors on trained objects closed the same way
+
+ft1 (renderer weights, coupling 217) and ar1 (render sampling, 0.76× with sign reversed) close by the SAME mechanism:
+a trained object has adapted to every deterministic choice made in its loop (its export, its sampling lattice, its
+LR), and a post-hoc change of any of them is paid in full at the scorer. The accuracy half of sub-0.12 therefore has
+exactly one open door — **changes made INSIDE the born trainer's loop**, raced one lever at a time from the same warm
+start (vr1 rows 1/3/4/7 first, AA-in-loop last). The burn (QBR1 → qn1 n600 realization) remains the only vehicle.
+Calibration side-benefit from ar1: the MPS↔CPU axis gap on this vehicle is 0.06% (d_seg) / 0.14% (d_pose) — the
+burn's own MPS readings are trustworthy to that bound (MPS is still never authority).
