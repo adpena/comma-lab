@@ -195,6 +195,37 @@ def per_class_pool(
     return out
 
 
+def pool_by_token_agreement(
+    incumbent: np.ndarray,
+    candidate: np.ndarray,
+    gt: np.ndarray,
+    tokens: np.ndarray,
+) -> dict[str, dict[str, int]]:
+    """Split B/H/W by whether the renderer's INPUT token already matched GT.
+
+    This is the aligned objective's own premise, made measurable.  Training
+    against the GT table instead of against the tokens changes the target at
+    exactly the positions where ``token != GT`` -- 9,179 of them on this object.
+    At those sites the renderer is asked to OVERRIDE its input; everywhere else
+    the two objectives agree.  If the alignment is working, benefit should
+    concentrate on the override sites.  If instead harm concentrates on the
+    agreeing sites, the renderer has learned to distrust its input in general,
+    which is the failure mode this split exists to catch.
+    """
+
+    override = tokens != gt
+    return {
+        "token_disagrees_with_gt": {
+            **classify_pool(incumbent[override], candidate[override], gt[override]),
+            "positions": int(override.sum()),
+        },
+        "token_agrees_with_gt": {
+            **classify_pool(incumbent[~override], candidate[~override], gt[~override]),
+            "positions": int((~override).sum()),
+        },
+    }
+
+
 def select_pair_ids(pairs: int, seed: int) -> tuple[list[int], str]:
     """Choose which pairs to score -- all 600, or a SEEDED RANDOM draw.
 
@@ -463,6 +494,9 @@ def main(argv: list[str] | None = None) -> int:
     gt_labels = labels[pair_ids]
     pool = classify_pool(base["argmax"], candidate["argmax"], gt_labels)
     per_class = per_class_pool(base["argmax"], candidate["argmax"], gt_labels)
+    by_agreement = pool_by_token_agreement(
+        base["argmax"], candidate["argmax"], gt_labels, tokens[pair_ids]
+    )
 
     positions = len(pair_ids) * EVAL_H * EVAL_W
     delta_seg = candidate["d_seg"] - base["d_seg"]
@@ -548,6 +582,7 @@ def main(argv: list[str] | None = None) -> int:
             "note": "W is correctness-unchanged within CHANGED, never the untouched count",
         },
         "bhw_per_gt_class": per_class,
+        "bhw_by_token_agreement": by_agreement,
         "export": export,
     }
     # ALWAYS KEEP THE PAYLOAD: the exported section is written BEFORE the

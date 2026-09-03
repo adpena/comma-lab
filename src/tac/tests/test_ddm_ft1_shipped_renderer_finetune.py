@@ -540,3 +540,40 @@ def test_select_pair_ids_is_seeded_and_reproducible() -> None:
 def test_select_pair_ids_refuses_a_nonpositive_count() -> None:
     with pytest.raises(ValueError, match="must be positive"):
         verdict.select_pair_ids(0, 1)
+
+
+# --------------------------------------------------------------------------
+# The aligned objective's own premise: did the override sites get bought?
+# --------------------------------------------------------------------------
+
+
+def test_pool_by_token_agreement_partitions_on_token_vs_gt() -> None:
+    gt = np.array([0, 0, 1, 1], dtype=np.uint8)
+    tokens = np.array([0, 3, 1, 4], dtype=np.uint8)  # sites 1 and 3 need an override
+    incumbent = np.array([2, 2, 2, 2], dtype=np.uint8)
+    candidate = np.array([0, 0, 1, 2], dtype=np.uint8)
+    split = verdict.pool_by_token_agreement(incumbent, candidate, gt, tokens)
+    assert split["token_disagrees_with_gt"]["positions"] == 2
+    assert split["token_agrees_with_gt"]["positions"] == 2
+    # site 1 (token 3, gt 0): 2 -> 0 is a benefit on an override site
+    assert split["token_disagrees_with_gt"]["B_benefit"] == 1
+    # site 3 (token 4, gt 1): 2 -> 2 is unchanged, so outside the population
+    assert split["token_disagrees_with_gt"]["changed"] == 1
+    # sites 0 and 2 agree with GT and were both fixed
+    assert split["token_agrees_with_gt"]["B_benefit"] == 2
+
+
+def test_pool_by_token_agreement_totals_match_the_whole_field() -> None:
+    rng = np.random.default_rng(4)
+    gt = rng.integers(0, 5, 2048).astype(np.uint8)
+    tokens = gt.copy()
+    tokens[rng.choice(2048, 200, replace=False)] = 4
+    incumbent = rng.integers(0, 5, 2048).astype(np.uint8)
+    candidate = rng.integers(0, 5, 2048).astype(np.uint8)
+    whole = verdict.classify_pool(incumbent, candidate, gt)
+    split = verdict.pool_by_token_agreement(incumbent, candidate, gt, tokens)
+    for key in ("B_benefit", "H_harm", "W_wash", "changed"):
+        assert (
+            split["token_disagrees_with_gt"][key] + split["token_agrees_with_gt"][key]
+            == whole[key]
+        )
