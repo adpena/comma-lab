@@ -48,14 +48,13 @@ import pytest
 
 import tac.preflight as preflight
 from tac.preflight import (
-    PreflightError,
     _LANE_ID_REFERENCE_BLOCKLIST,
     _LANE_ID_REFERENCE_RE,
+    PreflightError,
     _is_test_path,
     _line_or_window_has_fake_waiver,
     check_lane_pre_registered_before_work_starts,
 )
-
 
 # ── Helpers: make a fake git repo with a registry + commit history ──────
 
@@ -778,3 +777,23 @@ def test_witness_lane_class_blocklist_does_not_mask_real_lanes(tmp_path: Path) -
     )
     assert any("lane_ddm_zz9_new_dispatch_20260826" in v for v in violations)
     assert not any("lane_render_band" in v for v in violations)
+
+
+def test_qbt_margin_mode_does_not_mask_real_dispatch_lane(tmp_path: Path) -> None:
+    """The QBT policy enum is not a lane ID; a neighboring real ID still binds."""
+    assert "lane_movable_werr_primal_dual" in _LANE_ID_REFERENCE_BLOCKLIST
+    repo = _init_repo(tmp_path, [{"id": "lane_g_v3", "name": "g v3"}])
+    _commit_file(
+        repo,
+        "experiments/qbt_fixture.py",
+        (
+            'MARGIN_MODE = "lane_movable_werr_primal_dual"\n'
+            'LANE_ID = "lane_ddm_wc3_unregistered_control_20260903"\n'
+        ),
+        "qbt policy enum plus real dispatch lane",
+    )
+    violations = check_lane_pre_registered_before_work_starts(
+        repo_root=repo, n_commits=10, strict=False, verbose=False,
+    )
+    assert any("lane_ddm_wc3_unregistered_control_20260903" in v for v in violations)
+    assert not any("lane_movable_werr_primal_dual" in v for v in violations)

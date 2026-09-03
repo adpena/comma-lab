@@ -1069,7 +1069,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     ema_policy = resolve_ema_policy(
         args.steps, target_seed_fraction=args.ema_target_seed_fraction
     )
-    ema = EMA(model, decay=float(ema_policy["decay"]), warmup=True)
+    ema = EMA(
+        model,
+        decay=float(ema_policy["decay"]),
+        warmup=bool(ema_policy["warmup"]),
+    )
     generator = torch.Generator().manual_seed(args.seed)
     active_pair_ids = _smoke_pair_ids(args.smoke_pairs, args.seed)
     order = active_pair_ids[
@@ -1426,7 +1430,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "would silently report as an active lever"
         )
 
-    deployment_ema = EMA(model, decay=float(ema_policy["decay"]), warmup=True)
+    deployment_ema = EMA(
+        model,
+        decay=float(ema_policy["decay"]),
+        warmup=bool(ema_policy["warmup"]),
+    )
     deployment_ema.shadow = {
         key: value.detach().to(device).clone() for key, value in best_state.items()
     }

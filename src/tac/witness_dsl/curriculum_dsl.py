@@ -4494,8 +4494,14 @@ def SegSpikeReweight(downweight: float = 0.5, coherent_upweight: float = 1.0,
                        "measured optimum)")
 
 
-def EmaDecayCalibrated(updates_per_run: int, target_seed_fraction: float | None = 0.01,
-                       warmup_fraction: float | None = None, window: int = 0) -> Lever:  # noqa: N802
+def EmaDecayCalibrated(
+    updates_per_run: int,
+    target_seed_fraction: float | None = 0.01,
+    warmup_fraction: float | None = None,
+    window: int = 0,
+    *,
+    execution_mode: str = "constant_decay",
+) -> Lever:
     """ARM-C p0_ema_calibration (SPEC_v10 §13.3): ``--ema-decay`` DERIVED from RUN GEOMETRY via
     the registered law ``ema_decay_run_geometry_v1`` (LawRef-resolved at DSL-compile time —
     value-provenance rung ``derived_at_config``). Exactly ONE of ``target_seed_fraction``
@@ -4506,7 +4512,14 @@ def EmaDecayCalibrated(updates_per_run: int, target_seed_fraction: float | None 
     live c2 run: warmup 667 updates ~ ep1318/1400; ~64% warm-start seed @ep800). NOT composing
     this Lever leaves the trainer default 0.997 untouched (byte-identical default path). The
     d_seg effect of the calibrated decay is RUN-GATED (shadow-vs-live byte-close A/B decides,
-    SPEC_v10 §13.5)."""
+    SPEC_v10 §13.5).
+
+    ``execution_mode`` is part of this typed Lever's policy contract.  The registered
+    equation is a constant-decay law, so ``constant_decay`` is the canonical mode and
+    compiles to ``warmup=False`` at the consumer.  ``warmup_ablation`` is the only
+    supported warmup mode and remains explicit in the compiled config; silently applying
+    the generic EMA warmup to a constant-decay LawRef changes the sealed intervention.
+    """
     from tac.witness_dsl.lawref import (
         LADDER_DERIVED_AT_CONFIG,
         InputRef,
@@ -4517,6 +4530,10 @@ def EmaDecayCalibrated(updates_per_run: int, target_seed_fraction: float | None 
         raise ValueError(
             "EmaDecayCalibrated: exactly ONE of target_seed_fraction / warmup_fraction must be "
             "set (the law inverts for d from one pinned quantity)")
+    if execution_mode not in {"constant_decay", "warmup_ablation"}:
+        raise ValueError(
+            "EmaDecayCalibrated: execution_mode must be constant_decay or warmup_ablation"
+        )
     u = int(updates_per_run)
     if target_seed_fraction is not None:
         mode_code, mode_name = 1, "decay_from_seed_fraction"
@@ -4544,14 +4561,27 @@ def EmaDecayCalibrated(updates_per_run: int, target_seed_fraction: float | None 
     d = float(rc.value)
     if not 0.0 < d < 1.0:
         raise ValueError(f"EmaDecayCalibrated: resolved decay {d} outside (0,1) — check inputs")
-    return Lever("ema_decay_calibrated",
-                 overrides={"--ema-decay": d},
-                 epochs_delta=window,
-                 lawrefs={"--ema-decay": ref},
-                 constant_manifest={"--ema-decay": rc.to_dict()},
-                 notes=f"ema_decay DERIVED from run geometry ({mode_name}, U={u}) via "
-                       f"ema_decay_run_geometry_v1 -> {d:.6f}; incumbent 0.997 provenance does "
-                       "not transfer to full-batch (SPEC_v10 §13.3); effect RUN-GATED")
+    execution = {
+        "mode": execution_mode,
+        "warmup": execution_mode == "warmup_ablation",
+        "ablation_declared": execution_mode == "warmup_ablation",
+        "sealed_law": "constant_decay" if execution_mode == "constant_decay" else "warmup",
+        "source": "tac.witness_dsl.curriculum_dsl.EmaDecayCalibrated",
+    }
+    return Lever(
+        "ema_decay_calibrated",
+        overrides={"--ema-decay": d},
+        epochs_delta=window,
+        lawrefs={"--ema-decay": ref},
+        constant_manifest={"--ema-decay": rc.to_dict()},
+        policy_contracts={"ema_execution": execution},
+        notes=(
+            f"ema_decay DERIVED from run geometry ({mode_name}, U={u}) via "
+            f"ema_decay_run_geometry_v1 -> {d:.6f}; execution={execution_mode} is "
+            "typed in the Lever policy contract; incumbent 0.997 provenance does not "
+            "transfer to full-batch (SPEC_v10 §13.3); effect RUN-GATED"
+        ),
+    )
 
 
 def EmaDecayFinisher(decay: float = 0.999, start_epoch: int | None = None,
@@ -5929,7 +5959,7 @@ def StageTransitionSoftVelocityBlend(
     shape: str = "linear",
     clip_rms: float | None = None,
 ) -> Lever:
-    """FA1/FB1 default-off DSL stub for the soft first-moment boundary blend.
+    """FA1/FB1 default-off declaration for the soft first-moment boundary blend.
 
     The treatment is the named optimizer-state arithmetic
     ``m_new=(1-alpha(t))*m_mapped+alpha(t)*m_fresh`` over a beta2-derived optimizer-step
@@ -5961,7 +5991,7 @@ def StageTransitionSoftVelocityBlend(
         "stage_transition_soft_velocity_blend_off",
         overrides={},
         notes=(
-            "ddm_fb1 FA1 soft velocity blend DESIGNED-STUB default OFF; no trainer flags emitted "
+            "ddm_fb1 FA1 soft velocity blend default OFF; no trainer flags emitted "
             f"(never-invent-flags). Arithmetic: m_new=(1-a(t))*m_mapped+a(t)*m_fresh over "
             f"{cfg.window_steps} optimizer steps derived as ceil({c}/(1-{beta2})); "
             f"alpha={cfg.alpha_start}->{cfg.alpha_end} shape={cfg.shape}; clip_rms={clip_note}. "

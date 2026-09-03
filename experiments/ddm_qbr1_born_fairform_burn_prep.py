@@ -34,7 +34,8 @@ if str(_IMPORT_REPO) not in sys.path:
 from experiments import ddm_qbt1_qbflow_trainer as qbt
 
 REPO = Path(__file__).resolve().parents[1]
-AP_ROOT = Path("/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep")
+AP_ROOT = Path("/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure")
+VERTIGO_ROOT = Path("/Volumes/VertigoDataTier/pact")
 CONFIG_ROOT = AP_ROOT / "sealed_configs"
 RUN_ROOT = AP_ROOT / "runs"
 R10_ROOT = Path("/Volumes/APDataStore/pact/ddm_qbflow_implicit_boundary_flow/qbt1_trainer/governed_n32_r10")
@@ -67,7 +68,7 @@ ARMS: dict[str, dict[str, Any]] = {
 }
 
 EXPECTED_SHA256 = {
-    "qbt_trainer": "7d14e5bef2772a540ff0619113eb919d5e18a6e0bf19ebc222e46a5d24923a63",
+    "qbt_trainer": "6eda9c202b3aee008d457373813ae07992e73902438cca114abb4c84bb8d980b",
     "ce1_target_margin": "ffdf098801863ff8bffe8bd818ce101928dd75b4937cbbffb2e225bddbc12f4b",
     "w96b_law_module": "053bd12e198bb74a44036e497a1277d9d36638c96acdabba278a2c72f2234923",
     "r10_checkpoint": "09fd416531c74f69ca7033cf3f13b23c9e0472486a97ce9973f62f2fb86c138f",
@@ -392,6 +393,11 @@ def _load_checkpoint(
         raise QBR1Error("resume checkpoint scientific identity differs")
     model.load_state_dict(payload["live_state_dict"], strict=True)
     ema = qbt._restore_ema(model, payload["ema"])
+    qbt.verify_ema_executable_law(
+        ema,
+        config["ema"],
+        total_updates=int(config["total_steps"]),
+    )
     optimizer.load_state_dict(payload["optimizer_state_dict"])
     qbt._restore_rng(payload["rng"])
     history_path = Path(payload["history_prefix"]["path"])
@@ -493,7 +499,11 @@ def run_config(config_path: Path) -> dict[str, Any]:
         strict=True,
     )
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(config["learning_rate"]))
-    ema = qbt.EMA(model, decay=float(config["ema"]["value"]), warmup=True)
+    ema, ema_law_provenance = qbt.construct_ema_from_config(
+        model,
+        config["ema"],
+        total_updates=int(config["total_steps"]),
+    )
     completed = 0
     bounds = {name: float(value) for name, value in config["margin_constraints"]["bounds"].items()}
     lambdas = dict.fromkeys(bounds, 0.0)
@@ -626,6 +636,7 @@ def run_config(config_path: Path) -> dict[str, Any]:
         "elapsed_seconds_this_process": time.monotonic() - started,
         "storage_preflight": storage,
         "stage_end_checkpoint": stage_end,
+        "ema_law_provenance": ema_law_provenance,
         "milestones": complete_milestones,
         "history": qbt.file_fact(history_path),
         "all_payloads_retained": True,
@@ -676,7 +687,11 @@ def _run_resume_smoke_segment(
     )
     model.load_state_dict(initialization["state_dict"], strict=True)
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(smoke_config["learning_rate"]))
-    ema = qbt.EMA(model, decay=float(smoke_config["ema"]["value"]), warmup=True)
+    ema, ema_law_provenance = qbt.construct_ema_from_config(
+        model,
+        smoke_config["ema"],
+        total_updates=int(smoke_config["total_steps"]),
+    )
     bounds = {name: float(value) for name, value in smoke_config["margin_constraints"]["bounds"].items()}
     lambdas = dict.fromkeys(bounds, 0.0)
     completed = 0
@@ -778,6 +793,7 @@ def _run_resume_smoke_segment(
         "checkpoint": checkpoint,
         "archive": reencode["archive"],
         "history": qbt.file_fact(history_path),
+        "ema_law_provenance": ema_law_provenance,
         "all_training_and_coder_payloads_retained": True,
     }
 
@@ -909,6 +925,8 @@ def _storage_projection() -> dict[str, Any]:
 
 def build(review_receipt: Path) -> dict[str, Any]:
     inputs = verify_inputs()
+    if int(inputs["qbt_gt_cache"]["bytes"]) != 5_078_017_610:
+        raise QBR1Error("gt_n600.npz byte count drifted from the cured-seal precondition")
     review = json.loads(review_receipt.read_text(encoding="utf-8"))
     if review.get("two_genuine_passes") is not True:
         raise QBR1Error("two-pass review receipt is absent")
@@ -942,8 +960,8 @@ def build(review_receipt: Path) -> dict[str, Any]:
                 "owner": "MAIN",
                 "consumer_store": str(Path(config_path).parent.parent / "runs"),
                 "fire_trigger": (
-                    "MAIN has consumed qxr1/QXO1 realized distortion, confirms this row "
-                    "remains non-dominated, then binds unique live scorer and Metal claims"
+                    "the cured-seal resume smoke is PASS and MAIN binds unique live scorer "
+                    "and Metal claims while both storage preconditions remain satisfied"
                 ),
                 "claim_mutation": (
                     "copy config to an authorized path; set launch_authorized=true and bind "
@@ -993,9 +1011,16 @@ def build(review_receipt: Path) -> dict[str, Any]:
         "selection_mode": "fixed no2 stratified Horvitz-Thompson",
     }
     adjudication_fact = qbt.atomic_json(AP_ROOT / "ADJUDICATION_SCHEMA.json", adjudication)
+    vertigo_usage = os.statvfs(VERTIGO_ROOT)
+    vertigo_free_bytes = int(vertigo_usage.f_bavail * vertigo_usage.f_frsize)
+    result_paths = [
+        str(RUN_ROOT / f"seed_{seed}" / arm_name / "RESULT.json")
+        for seed in SEEDS
+        for arm_name in ARMS
+    ]
     fire_order = {
-        "schema": "ddm_qbr1_sealed_main_fire_order.v1",
-        "status": "SEALED_AWAITING_MAIN_LIVE_CLAIMS_AND_RESUME_SMOKE",
+        "schema": "ddm_qbr1_sealed_main_fire_order.v2",
+        "status": "CURED_SEAL_AWAITING_MAIN_SCORER_RESUME_SMOKE_AND_LIVE_CLAIMS",
         "score_claim": False,
         "training_launched": False,
         "scorer_invocations": 0,
@@ -1010,6 +1035,19 @@ def build(review_receipt: Path) -> dict[str, Any]:
         "real_config_preflight": preflight_fact,
         "timing": timing_fact,
         "adjudication": adjudication_fact,
+        "preconditions": {
+            "unique_live_scorer_claim": "required before resume smoke and every cell",
+            "metal_slot_free_and_uniquely_claimed": "required before every cell",
+            "ap_free_bytes_at_seal": preflight["storage"]["available_bytes"],
+            "ap_required_post_projection_reserve_bytes": preflight["storage"][
+                "required_post_projection_reserve_bytes"
+            ],
+            "vertigo_free_bytes_at_seal": vertigo_free_bytes,
+            "source_pins_reverify_at_fire": True,
+            "gt_n600": inputs["qbt_gt_cache"],
+            "gt_n600_expected_bytes": 5_078_017_610,
+            "gt_n600_bytes_match": int(inputs["qbt_gt_cache"]["bytes"]) == 5_078_017_610,
+        },
         "bounded_resume_smoke": {
             "status": "OWED_TO_MAIN_SCORER_LANE",
             "disposition": "SEALED_BLOCKED_ON_MAIN_SCORER_LANE",
@@ -1034,12 +1072,20 @@ def build(review_receipt: Path) -> dict[str, Any]:
             ],
         },
         "cells": cells,
+        "adjudication_argv": [
+            str(REPO / ".venv/bin/python"),
+            str(Path(__file__).resolve()),
+            "adjudicate",
+            "--output",
+            str(AP_ROOT / "ADJUDICATION_RESULT.json"),
+            *result_paths,
+        ],
     }
     fire_fact = qbt.atomic_json(AP_ROOT / "SEALED_MAIN_FIRE_ORDER.json", fire_order)
     receipt = {
         "schema": "ddm_qbr1_build_receipt.v1",
         "complete": False,
-        "status": "BUILD_COMPLETE_SEAL_CONDITIONAL_ON_MAIN_RESUME_SMOKE_BURN_NOT_FIRED",
+        "status": "CURED_BUILD_COMPLETE_SEAL_CONDITIONAL_ON_MAIN_RESUME_SMOKE_BURN_NOT_FIRED",
         "score_claim": False,
         "training_launched": False,
         "configs": configs,

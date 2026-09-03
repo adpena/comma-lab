@@ -116,6 +116,7 @@ TRAIN_ROOT = STORE / "qbt1_trainer"
 QBT2B_ROOT = TRAIN_ROOT / "qbt2b_inherited_palette_birth"
 R7_RETENTION_ROOT = Path("/Volumes/APDataStore/pact/ddm_qbt2b_r7_lane_constrained_margin")
 QBR1_RETENTION_ROOT = Path("/Volumes/APDataStore/pact/ddm_qbr1_born_fairform_burn_prep")
+WC3_QBR1_RETENTION_ROOT = Path("/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure")
 FIRE_ORDER = STORE / "SEALED_TRAINING_FIRE_ORDER.json"
 INITIAL_PARAMS = STORE / "stage_01_initialize_quantize/initialized_float_params.npz"
 INITIAL_LATENTS = STORE / "stage_01_initialize_quantize/initialized_float_latents.npz"
@@ -303,7 +304,12 @@ def verify_pins() -> dict[str, dict[str, Any]]:
 
 def storage_preflight(output: Path, minimum_free_bytes: int) -> dict[str, Any]:
     resolved = output.resolve()
-    allowed_roots = (STORE.resolve(), R7_RETENTION_ROOT.resolve(), QBR1_RETENTION_ROOT.resolve())
+    allowed_roots = (
+        STORE.resolve(),
+        R7_RETENTION_ROOT.resolve(),
+        QBR1_RETENTION_ROOT.resolve(),
+        WC3_QBR1_RETENTION_ROOT.resolve(),
+    )
     if not any(resolved == root or root in resolved.parents for root in allowed_roots):
         raise QBT1Error(
             "QBT1 output must remain under an authorized AP custody root: "
@@ -1491,6 +1497,10 @@ def load_checkpoint(
         raise QBT1Error("resume config identity differs")
     model.load_state_dict(payload["live_state_dict"], strict=True)
     ema = _restore_ema(model, payload["ema"])
+    if "ema" in config or "steps" in config:
+        if "ema" not in config or "steps" not in config:
+            raise QBT1Error("resume config has incomplete EMA law provenance")
+        verify_ema_executable_law(ema, config["ema"], total_updates=int(config["steps"]))
     optimizer.load_state_dict(payload["optimizer_state_dict"])
     _restore_rng(payload["rng"])
     if payload.get("history_mode", "embedded") == "sidecar":
@@ -1985,12 +1995,60 @@ def no2_gate(
     }
 
 
-def resolve_ema_law(total_updates: int) -> dict[str, Any]:
-    lever = EmaDecayCalibrated(total_updates, target_seed_fraction=0.01)
+EMA_LAW_RELATIVE_TOLERANCE = 1.0e-12
+
+
+def ema_terminal_seed_coefficient(
+    decay: float,
+    total_updates: int,
+    *,
+    warmup: bool,
+) -> float:
+    """Return the initialized-shadow coefficient after ``total_updates``.
+
+    The sealed run-geometry law is constant decay, ``d**U``.  The explicit
+    warmup ablation follows :class:`tac.training.EMA` exactly: update ``t`` uses
+    ``min(d, (1+t)/(10+t))`` for one-based ``t``.
+    """
+
+    d = float(decay)
+    updates = int(total_updates)
+    if not 0.0 < d < 1.0 or updates < 1:
+        raise QBT1Error("EMA terminal-coefficient inputs differ")
+    if not warmup:
+        return d**updates
+    coefficient = 1.0
+    for update in range(1, updates + 1):
+        coefficient *= min(d, (1.0 + update) / (10.0 + update))
+    return coefficient
+
+
+def resolve_ema_law(
+    total_updates: int,
+    *,
+    execution_mode: str = "constant_decay",
+) -> dict[str, Any]:
+    lever = EmaDecayCalibrated(
+        total_updates,
+        target_seed_fraction=0.01,
+        execution_mode=execution_mode,
+    )
+    execution = copy.deepcopy(lever.policy_contracts["ema_execution"])
+    decay = float(lever.overrides["--ema-decay"])
     return {
-        "value": float(lever.overrides["--ema-decay"]),
+        "value": decay,
         "lawref": lever.constant_manifest["--ema-decay"],
         "factory": "tac.witness_dsl.curriculum_dsl.EmaDecayCalibrated",
+        "execution": execution,
+        "ema_law_sealed": {
+            "name": str(execution["sealed_law"]),
+            "terminal_seed_coefficient": ema_terminal_seed_coefficient(
+                decay,
+                total_updates,
+                warmup=bool(execution["warmup"]),
+            ),
+            "total_updates": int(total_updates),
+        },
     }
 
 
@@ -1998,6 +2056,107 @@ def stable_ema_law_identity(value: Mapping[str, Any]) -> dict[str, Any]:
     identity = copy.deepcopy(dict(value))
     identity.get("lawref", {}).pop("resolved_at", None)
     return identity
+
+
+def verify_ema_executable_law(
+    ema: EMA,
+    sealed: Mapping[str, Any],
+    *,
+    total_updates: int,
+) -> dict[str, Any]:
+    """Emit ``confound_alarm(ema_law_mismatch)`` and halt on law drift."""
+
+    execution = sealed.get("execution")
+    sealed_law = sealed.get("ema_law_sealed")
+    if not isinstance(execution, Mapping) or not isinstance(sealed_law, Mapping):
+        raise QBT1Error("EMA config lacks its typed execution policy or sealed law")
+    if not isinstance(execution.get("warmup"), bool):
+        raise QBT1Error("EMA execution policy lacks its typed warmup choice")
+    expected_warmup = bool(execution.get("warmup"))
+    if expected_warmup and execution.get("mode") != "warmup_ablation":
+        raise QBT1Error("EMA warmup is not an explicit config-declared ablation")
+    if not expected_warmup and execution.get("mode") != "constant_decay":
+        raise QBT1Error("EMA constant-decay execution mode differs")
+    decay = float(sealed["value"])
+    decay_matched = math.isclose(float(ema.decay), decay, rel_tol=0.0, abs_tol=0.0)
+    warmup_matched = bool(ema.warmup) is expected_warmup
+    expected_law_name = "warmup" if expected_warmup else "constant_decay"
+    recomputed_sealed_coefficient = ema_terminal_seed_coefficient(
+        decay,
+        total_updates,
+        warmup=expected_warmup,
+    )
+    recorded_sealed_coefficient = float(sealed_law["terminal_seed_coefficient"])
+    sealed_record_matched = (
+        sealed_law.get("name") == expected_law_name
+        and int(sealed_law.get("total_updates", -1)) == int(total_updates)
+        and math.isclose(
+            recorded_sealed_coefficient,
+            recomputed_sealed_coefficient,
+            rel_tol=EMA_LAW_RELATIVE_TOLERANCE,
+            abs_tol=0.0,
+        )
+    )
+    executed_coefficient = ema_terminal_seed_coefficient(
+        float(ema.decay),
+        total_updates,
+        warmup=bool(ema.warmup),
+    )
+    coefficient_matched = math.isclose(
+        executed_coefficient,
+        recomputed_sealed_coefficient,
+        rel_tol=EMA_LAW_RELATIVE_TOLERANCE,
+        abs_tol=0.0,
+    )
+    matched = decay_matched and warmup_matched and sealed_record_matched and coefficient_matched
+    provenance = {
+        "ema_law_sealed": {
+            **dict(sealed_law),
+            "warmup": expected_warmup,
+            "recomputed_terminal_seed_coefficient": recomputed_sealed_coefficient,
+        },
+        "ema_law_executed": {
+            "name": "warmup" if ema.warmup else "constant_decay",
+            "warmup": bool(ema.warmup),
+            "decay": float(ema.decay),
+            "total_updates": int(total_updates),
+            "terminal_seed_coefficient": executed_coefficient,
+        },
+        "decay_matched": decay_matched,
+        "warmup_matched": warmup_matched,
+        "sealed_record_matched": sealed_record_matched,
+        "coefficient_matched": coefficient_matched,
+        "relative_tolerance": EMA_LAW_RELATIVE_TOLERANCE,
+        "matched": matched,
+    }
+    if not matched:
+        alarm = {
+            "stage": "confound_alarm",
+            "alarm": "ema_law_mismatch",
+            **provenance,
+        }
+        print(json.dumps(alarm, sort_keys=True), flush=True)
+        raise QBT1Error("confound_alarm(ema_law_mismatch): executable EMA law differs")
+    return provenance
+
+
+def construct_ema_from_config(
+    model: nn.Module,
+    sealed: Mapping[str, Any],
+    *,
+    total_updates: int,
+) -> tuple[EMA, dict[str, Any]]:
+    """Construct EMA only from the typed DSL-compiled execution policy."""
+
+    execution = sealed.get("execution")
+    if not isinstance(execution, Mapping) or not isinstance(execution.get("warmup"), bool):
+        raise QBT1Error("EMA execution choice was not compiled by its typed Lever")
+    ema = EMA(
+        model,
+        decay=float(sealed["value"]),
+        warmup=bool(execution["warmup"]),
+    )
+    return ema, verify_ema_executable_law(ema, sealed, total_updates=total_updates)
 
 
 # Periodic-checkpoint cadence law: every run keeps >= ~300 periodic saves, so the
@@ -2009,7 +2168,15 @@ def stable_ema_law_identity(value: Mapping[str, Any]) -> dict[str, Any]:
 CHECKPOINT_CRASH_LOSS_DENOMINATOR = 300
 
 
-def compile_config(*, action: str, output: Path, pair_ids: Sequence[int], steps: int, device: str) -> dict[str, Any]:
+def compile_config(
+    *,
+    action: str,
+    output: Path,
+    pair_ids: Sequence[int],
+    steps: int,
+    device: str,
+    ema_execution_mode: str = "constant_decay",
+) -> dict[str, Any]:
     ids = tuple(map(int, pair_ids))
     if not ids or len(ids) > N or len(set(ids)) != len(ids):
         raise QBT1Error("compiled pair IDs must be unique and nonempty")
@@ -2017,7 +2184,7 @@ def compile_config(*, action: str, output: Path, pair_ids: Sequence[int], steps:
         raise QBT1Error("compiled steps must be positive")
     chunk_pairs = REAL_TRAIN_CHUNK_PAIRS if action == "train" else len(ids)
     total_updates = int(steps)
-    ema = resolve_ema_law(total_updates)
+    ema = resolve_ema_law(total_updates, execution_mode=ema_execution_mode)
     config = {
         "schema": SCHEMA,
         "action": action,
@@ -2155,7 +2322,11 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
         raise QBT1Error("QBF1 scorer grid differs")
     if (int(config["camera_height"]), int(config["camera_width"])) != (CAMERA_H, CAMERA_W):
         raise QBT1Error("camera round-trip grid differs")
-    resolved_ema = resolve_ema_law(int(config["steps"]))
+    execution = config.get("ema", {}).get("execution", {})
+    resolved_ema = resolve_ema_law(
+        int(config["steps"]),
+        execution_mode=str(execution.get("mode", "")),
+    )
     if stable_ema_law_identity(config["ema"]) != stable_ema_law_identity(resolved_ema):
         raise QBT1Error("EMA decay is not resolved through the canonical run-geometry LawRef")
     probe_bits = tuple(map(int, config["precision_probe_bits"]))
@@ -2314,7 +2485,11 @@ def _model_and_optimizer(config: Mapping[str, Any], device: torch.device) -> tup
     else:
         model = load_initial_model(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=float(config["learning_rate"]))
-    ema = EMA(model, decay=float(config["ema"]["value"]), warmup=True)
+    ema, _ema_law_provenance = construct_ema_from_config(
+        model,
+        config["ema"],
+        total_updates=int(config["steps"]),
+    )
     return model, optimizer, ema
 
 
@@ -2335,6 +2510,11 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
     posenet.eval()
     segnet.eval()
     model, optimizer, ema = _model_and_optimizer(config, device)
+    ema_law_provenance = verify_ema_executable_law(
+        ema,
+        config["ema"],
+        total_updates=int(config["steps"]),
+    )
     step = 0
     history: list[dict[str, Any]] = []
     resume_identity = None
@@ -2632,6 +2812,7 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
                 "promotion_eligible": False,
                 "pointer_moved": False,
                 "pins": pins,
+                "ema_law_provenance": ema_law_provenance,
                 "storage": storage,
                 "history": history,
                 "stage_03a_checkpoint": stage03a_checkpoint,
@@ -2974,6 +3155,7 @@ def run_training(config: Mapping[str, Any]) -> dict[str, Any]:
             }
         ),
         "pins": pins,
+        "ema_law_provenance": ema_law_provenance,
         "storage": storage,
         "config_sha256": canonical_sha256(config),
         "history": history,

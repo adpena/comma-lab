@@ -87,18 +87,13 @@ def _rationale_ok(rationale: str) -> bool:
     r = rationale.strip()
     if len(r) < 3:
         return False
-    if _PLACEHOLDER_RATIONALE_RE.match(r):
-        return False
-    return True
+    return not _PLACEHOLDER_RATIONALE_RE.match(r)
 
 
 def _waiver_present(text: str, marker: str) -> bool:
     """True iff ``# <marker>:<non-placeholder rationale>`` appears in ``text``."""
     rx = re.compile(r"#[ \t]*" + re.escape(marker) + r":[ \t]*(\S.*)")
-    for m in rx.finditer(text):
-        if _rationale_ok(m.group(1)):
-            return True
-    return False
+    return any(_rationale_ok(m.group(1)) for m in rx.finditer(text))
 
 
 def _existing_trainers(root: Path) -> list[Path]:
@@ -3590,6 +3585,27 @@ class PositiveControl:
 
 POSITIVE_CONTROLS: tuple[PositiveControl, ...] = (
     PositiveControl(
+        gate="check_no_row_contract_error_quarantines_the_ledger",
+        files={
+            "src/tac/planted_row_contract_quarantine.py": (
+                "import shutil\n"
+                "class RowBad(Exception): pass\n"
+                "def validate_row(row):\n"
+                "    if not row: raise RowBad('missing row')\n"
+                "def load(path, row):\n"
+                "    try:\n"
+                "        validate_row(row)\n"
+                "    except RowBad:\n"
+                "        shutil.move(path, str(path) + '.bad')\n"
+            )
+        },
+        must_mention="planted_row_contract_quarantine.py",
+        why=(
+            "#1081: a per-row validation error must isolate that row; moving the shared "
+            "ledger destroys valid siblings. This fixture proves the refusal detector fires."
+        ),
+    ),
+    PositiveControl(
         gate="check_no_raw_virtual_memory_safety_basis",
         files={
             "tools/planted.py": (
@@ -4918,6 +4934,171 @@ POSITIVE_CONTROLS = (
             "ddm_mb1 Leg C2: the EXACT pre-fix run_daemon shape — the SIGSTOP actuator ON by a "
             "hardcoded default, so every auto-start re-arms it with no operator adjudication and "
             "no recorded reason. 'Off' must be a tracked, armed state, never a forgotten default."
+        ),
+    ),
+)
+
+
+# ===========================================================================
+# Catalog #412 (ddm_wc3, 2026-09-03) — a literal EMA warmup mode silently
+# changed the averaging intervention sealed by an ema_decay_* LawRef.
+
+_EMA_WARMUP_ABLATION_WAIVER = "EMA_WARMUP_ABLATION_OK"
+_EMA_WARMUP_PLACEHOLDERS = frozenset({"todo", "tbd", "fixme", "placeholder"})
+
+
+def _ema_warmup_ablation_waived(line: str) -> bool:
+    match = re.search(
+        r"#[ \t]*" + re.escape(_EMA_WARMUP_ABLATION_WAIVER) + r":[ \t]*(\S.*)",
+        line,
+    )
+    if match is None or not _rationale_ok(match.group(1)):
+        return False
+    rationale = match.group(1).strip().lower()
+    return rationale not in _EMA_WARMUP_PLACEHOLDERS
+
+
+def _ema_lawref_resolution_evidence(tree: ast.AST) -> str | None:
+    """Name the AST evidence that this module resolves an ema_decay_* LawRef."""
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            called = _dotted_call_name(node).split(".")[-1]
+            if called in {"EmaDecayCalibrated", "resolve_ema_law"}:
+                return called
+        if (
+            isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and node.value.startswith("ema_decay_")
+        ):
+            return node.value
+    return None
+
+
+def _ema_executable_law_sources(root: Path) -> list[Path]:
+    paths: list[Path] = []
+    for subtree in ("src/tac", "tools"):
+        base = root / subtree
+        if base.is_dir():
+            paths.extend(base.rglob("*.py"))
+    experiments = root / "experiments"
+    if experiments.is_dir():
+        paths.extend(experiments.glob("*.py"))
+    return sorted(
+        {
+            path
+            for path in paths
+            if "tests" not in path.parts
+            and "results" not in path.parts
+            and ".venv" not in path.parts
+        }
+    )
+
+
+def check_ema_executable_law_matches_sealed_law(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Refuse literal ``EMA(..., warmup=<bool>)`` beside an EMA LawRef.
+
+    WC2-F1 anchor: QBR1 sealed ``ema_decay_run_geometry_v1`` at 5,000
+    constant-decay updates, terminal seed coefficient 0.01, but its two burn
+    constructors passed literal ``warmup=True``.  The executable coefficient
+    was 1.838e-27, so milestones measured a different intervention.
+
+    The warmup choice must come from the typed DSL-compiled config.  A genuine
+    literal ablation requires a substantive same-line
+    ``# EMA_WARMUP_ABLATION_OK:<rationale>`` waiver; TODO/TBD/FIXME/placeholder
+    rationales and the generic angle-bracket placeholders are rejected.
+
+    Catalog #412.  Live count is zero after the ddm_wc3 cure and the positive
+    control reproduces the original QBR1 line-496 form, so this gate strict-
+    flips in the same commit batch.
+    """
+
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    considered = parsed = lawref_modules = constructors = 0
+    for path in _ema_executable_law_sources(root):
+        considered += 1
+        text = _read(path)
+        if text is None or "EMA(" not in text:
+            continue
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            continue
+        parsed += 1
+        evidence = _ema_lawref_resolution_evidence(tree)
+        if evidence is None:
+            continue
+        lawref_modules += 1
+        lines = text.splitlines()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            called = _dotted_call_name(node).split(".")[-1]
+            if called != "EMA":
+                continue
+            constructors += 1
+            for keyword in node.keywords:
+                if (
+                    keyword.arg != "warmup"
+                    or not isinstance(keyword.value, ast.Constant)
+                    or not isinstance(keyword.value.value, bool)
+                ):
+                    continue
+                line_number = int(keyword.value.lineno)
+                line = lines[line_number - 1] if line_number <= len(lines) else ""
+                if _ema_warmup_ablation_waived(line):
+                    continue
+                rel = path.relative_to(root).as_posix()
+                violations.append(
+                    f"{rel}:{line_number}: EMA warmup={keyword.value.value!r} is a literal "
+                    f"inside an EMA-LawRef module (resolution evidence {evidence!r}); thread "
+                    "the choice from the typed DSL-compiled config, or add a substantive "
+                    "same-line # EMA_WARMUP_ABLATION_OK:<rationale> waiver for a declared "
+                    "ablation"
+                )
+    return _finish(
+        name="check_ema_executable_law_matches_sealed_law",
+        tag="ema-executable-law-matches-sealed-law",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=(
+            f"{considered} maintained modules considered, {parsed} EMA candidates parsed, "
+            f"{lawref_modules} EMA-LawRef modules, {constructors} EMA constructors"
+        ),
+    )
+
+
+CONFOUND_GATES = (
+    *CONFOUND_GATES,
+    check_ema_executable_law_matches_sealed_law,
+)
+
+POSITIVE_CONTROLS = (
+    *POSITIVE_CONTROLS,
+    PositiveControl(
+        gate="check_ema_executable_law_matches_sealed_law",
+        files={
+            "experiments/planted_qbr1.py": (
+                "from tac.training import EMA\n"
+                "from tac.witness_dsl.curriculum_dsl import EmaDecayCalibrated\n"
+                "def compile_config():\n"
+                "    return EmaDecayCalibrated(5000, target_seed_fraction=0.01)\n"
+                "def run(model):\n"
+                "    return EMA(model, decay=0.9990793899844618, warmup=True)\n"
+            )
+        },
+        must_mention="planted_qbr1.py",
+        why=(
+            "Catalog #412: exact WC2-F1 shape — a module resolves the run-geometry "
+            "LawRef but a burn constructor silently replaces its constant-decay law with "
+            "literal warmup=True."
         ),
     ),
 )

@@ -523,8 +523,13 @@ class EMA:
     to the target averaging window once enough updates justify it. Correct
     for a WEIGHT-INIT EMA; the Adam-style ``/(1 - decay^t)`` bias
     correction assumes a ZERO init and would be wrong here. Pass
-    ``warmup=False`` ONLY for an explicit constant-decay ablation (which
-    re-introduces the short-run freeze).
+    ``warmup=False`` only when a typed config explicitly seals a constant-decay
+    law (for example ``ema_decay_run_geometry_v1`` in seed-fraction mode), or
+    for an explicit constant-decay ablation.  A LawRef-derived decay and the
+    generic warmup schedule are different averaging laws: callers must stamp
+    which law they execute and fail closed if it differs from the sealed law.
+    Constant decay can re-introduce short-run lag, so it must never be selected
+    by an unrecorded literal at the construction site.
     """
 
     def __init__(
@@ -546,7 +551,7 @@ class EMA:
         Returns ``min(self.decay, (1 + t)/(10 + t))`` where ``t`` is the
         number of ``update()`` calls so far, when ``self.warmup`` is True;
         otherwise the constant ``self.decay``. See the class docstring for
-        the EMA-shadow-LAG artifact this extincts (commit ``f771e6e00``).
+        the EMA-shadow-LAG artifact and the typed constant-law exception.
         """
         if not self.warmup:
             return self.decay

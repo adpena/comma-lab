@@ -8127,6 +8127,14 @@ def preflight_all(
             # than into warn-only purgatory. Carries a live positive control.
             # CLAUDE_MD_ENTRY_OK: rides the confound-gate 3-layer immune-system row (L2 STRICT preflight gates); standalone numbered catalog row deferred per Catalog #299 post-#400 consolidation
             "check_no_dead_conditional_retest_after_early_return",
+            # 2026-09-03 Catalog #412, ddm_wc3: the QBR1 seal declared the
+            # constant-decay ema_decay_run_geometry_v1 intervention while two
+            # constructors hardcoded warmup=True, changing the terminal seed
+            # coefficient from 0.01 to 1.838e-27.  The cure threads execution
+            # mode from the typed Lever policy, live count is zero, and the
+            # registered positive control reproduces the original line-496
+            # form.  Strict-flipped in the same commit batch.
+            "check_ema_executable_law_matches_sealed_law",
         }
         for _confound_gate in _CONFOUND_GATES:
             _confound_gate(
@@ -39920,10 +39928,9 @@ def check_gate4_export_first(
     export format BEFORE long training. Non-FP4A / non-int4 variants are
     research-only until packet exporter exists.
 
-    Live count on landing: 2 (lane_12_nerv_mask_codec, lane_alpha_nerv_mask
-    in .omx/state/lane_registry.json). Ships warn-only; flip to STRICT
-    after backfilling ``research_only=true`` (or
-    ``export_format=research_only_no_export``) on those lanes.
+    The 2026-09-01 hygiene pass dispositioned every legacy violator with an
+    explicit ``research_only=true`` token and a reactivation criterion.  New
+    representation lanes must declare an export format before activation.
     """
     return _run_bugclass_scanner(
         helper_relpath="tools/check_gate4_export_first.py",
@@ -43514,6 +43521,12 @@ _LANE_ID_REFERENCE_BLOCKLIST: frozenset[str] = frozenset({
     "lane_guard_state",  # resume-snapshot key: lane-guard controller state
     "lane_sensitivity_ratio",  # lane-guard config field (head-metric ratio)
     "lane_pool_topology_loss_race",  # lever-ledger id: Lane topology-loss race
+    # QBT1/QBR1 margin-constraint mode. This is a typed optimizer-policy enum
+    # selecting primal-dual penalties for the SegNet Lane and Movable classes,
+    # not a dispatch lane_id. It is persisted in governed configs/checkpoints,
+    # so renaming it would break scientific identity. Check 126 adjudication
+    # 2026-09-03; a same-file negative control still catches real lane IDs.
+    "lane_movable_werr_primal_dual",
     # Dispatch-claim OUTCOME manifest field names in
     # tools/launch_snerv_mistake_b_g1a.py (Check 126 adjudication 2026-08-27,
     # pf2x r81). JSON keys recording the claim_lane_dispatch.py claim result —
