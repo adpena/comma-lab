@@ -21,7 +21,7 @@ separators=(",", ":"), and the evaluate.py entry's relative_path is the
 literal string "evaluate.py" regardless of where the file lives on disk.
 
 EXPECTED_DIGEST and EXPECTED_ROWS are pinned to THIS packet generation
-(gen6, archive df7fd266...). The packet stager must regenerate both if the
+(gen7, archive cbb8d928...). The packet stager must regenerate both if the
 runtime tree ever changes.
 """
 
@@ -32,8 +32,8 @@ import json
 import sys
 from pathlib import Path
 
-EXPECTED_DIGEST = "e8dcbc6542d6f4752559726a6b88bd645f5974a2d941a0bbaef6f9932dc8cb8f"
-EXPECTED_ROWS = 36
+EXPECTED_DIGEST = "b2638b491371fd0961382b99f1dfacb42b2b22ae37c28ee4306f7e0ae1b32ffc"
+EXPECTED_ROWS = 38
 EVALUATE_PY_CANDIDATES = (
     "../../evaluate.py",   # contest-repo checkout: submissions/<name>/ -> repo root
     "../evaluate.py",
