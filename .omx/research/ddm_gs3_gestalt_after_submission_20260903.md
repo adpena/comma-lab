@@ -76,3 +76,32 @@ The walls that could still be fake are the ones WW1 §3 names — and the first 
 capacity-vs-optimization) is exactly the experiment now on the critical path.
 
 Own-vehicle frontier: **afr1 S 0.14797617125559104 @ 180,002 B [contest-CUDA T4 n600]** — unmoved.
+
+## ADDENDUM 2026-09-03 ~21:5xZ — gc1 closes CAPACITY on the GF1 form; the residual is the wall, not the count
+
+`ddm_gc1_generator_capacity_control_20260903.md` (commit 226a7fecf; strict full-n600, 365 retained files,
+all four residual-closed fields reproduce the exact 117,964,800-byte target):
+
+| packet | mismatches | ACTUAL residual (domain-matched coder) | combined | vs 85,020 B cap |
+|---:|---:|---:|---:|---:|
+| 47,971 B | 1,334,939 | 359,280 B | 407,251 B | 4.79× |
+| 53,277 B | 985,100 | 348,260 B | **401,537 B** | 4.72× |
+| 65,093 B | 822,610 | 343,128 B | 408,221 B | 4.80× |
+| 76,113 B | 725,965 | 340,552 B | 416,665 B | 4.90× |
+
+Three facts the section table did not have:
+1. **Capacity buys little:** 1.59× bytes → 1.84× fewer mismatches (local exponent −1.228); the crossing at
+   46,804 mismatches extrapolates to a **686,618 B packet = 9.62× the cap**. CAPACITY-CLOSED for this form.
+2. **The residual is priced by its HARD sites, not its count:** removing 608,974 mismatches saved only
+   18,728 B of actual residual. The generic 0.2909 B/site law UNDERPRICES the endpoint by 129,369 B — it was
+   calibrated on a different residual population (m111/m118 genus: price the ceiling on the real object).
+3. **Generator + honest residual = ~400 KB vs the HPAC's 113 KB for the same exact field.** The context mixer
+   beats "generate then correct" by 3.5× even at 1.6× generator capacity, because the generator's residual is
+   the same SegNet-jitter "wrong half" the mixer already prices best, spread over MORE sites.
+
+**Consequence for the small-body route:** the born object can reach sub-0.12 ONLY if its OWN field is nearly
+exact without corrections (≤ ~0.05% wrong sites) — i.e., by OPTIMIZATION (qbr1's zero-native treatment, burning)
+or by a form whose atoms match the classes that fail (gc1: square atoms barely improve Lane and add ~39,000
+Movable errors → class-protected anisotropic/curve atoms; that is gf2's static/dynamic split with sparse
+Lane/Movable events). Adding capacity to the existing form is closed. GESTALT unchanged in kind, sharpened in
+mechanism: sub-0.12 = born-field accuracy by optimization or by class-matched form, never by size.
