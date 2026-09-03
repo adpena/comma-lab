@@ -287,7 +287,10 @@ def _normalize_argv(argv: list[Any]) -> list[str]:
         "--attestation",
     }
     if output:
-        output[0] = str(Path(output[0]).expanduser().resolve())
+        # abspath, NOT resolve(): `.venv/bin/python` is a symlink to `python3.13`
+        # (rebuilt 2026-08-31); following it breaks the `PYTHON_PATH` identity that
+        # `_expected_training_argv` deliberately leaves unresolved (site-packages).
+        output[0] = str(Path(os.path.abspath(Path(output[0]).expanduser())))
     if len(output) > 1:
         output[1] = str(Path(output[1]).expanduser().resolve())
     for position, item in enumerate(output[:-1]):

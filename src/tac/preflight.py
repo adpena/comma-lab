@@ -8135,6 +8135,12 @@ def preflight_all(
             # registered positive control reproduces the original line-496
             # form.  Strict-flipped in the same commit batch.
             "check_ema_executable_law_matches_sealed_law",
+            # 2026-09-03 ddm_ql2 + MAIN: check_no_bulk_write_strands_the_ready_record
+            # landed WARN-ONLY at live count 10 (ddm_pl1). ql2 cured 8 sites + 2
+            # waivers (11 -> 1); MAIN guarded the 11th (ddm_ft1_verdict_bhw_pose.py,
+            # try-wrapped bulk write). Fresh strict re-measurement: 11,535 modules,
+            # 0 violations. Strict-flipped in the same commit batch (atomicity rule).
+            "check_no_bulk_write_strands_the_ready_record",
         }
         for _confound_gate in _CONFOUND_GATES:
             _confound_gate(

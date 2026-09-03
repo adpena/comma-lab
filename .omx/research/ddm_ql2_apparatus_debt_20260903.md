@@ -254,3 +254,16 @@ drives a real subprocess decode, and neither arm has looked for siblings rather 
 Own-vehicle frontier: **S 0.14797617125559104 @ 180,002 B [contest-CUDA T4 n600]** (afr1) — UNMOVED by this
 arm, as expected: this is apparatus work. Its value is that a gate the suite could not enforce at 11 can be
 enforced at 1, a tool that could not run can run, and a receipt that could only be asserted can now be rebuilt.
+
+## ADDENDUM (MAIN, 2026-09-03) — the owed items closed same day
+
+- **11th site cured + STRICT flip.** `experiments/ddm_ft1_verdict_bhw_pose.py` (released when ft1 finished): the
+  bulk section write is now try-guarded so the built receipt is persisted even if the save raises
+  (`retained_path=None` + `retained_error`), then re-raised. Both laws hold (payload-before-receipt on success;
+  record survives a failed save). Fresh strict re-measurement: **11,535 modules, 0 violations** →
+  `check_no_bulk_write_strands_the_ready_record` added to `_CONFOUND_STRICT` in `tac.preflight`; test bound 1 → 0.
+- **Pre-existing red cured** (`test_fit_ddm_cl1_hpac_capacity.py` 15F at HEAD, "row 0 training receipt names the
+  wrong trainer"): root cause MEASURED — `_normalize_argv` called `.resolve()` on argv[0], following the venv
+  symlink `.venv/bin/python → python3.13` (rebuilt 2026-08-31), while `_expected_training_argv` deliberately
+  leaves `PYTHON_PATH` unresolved (site-packages). Cure: `os.path.abspath` (normalize, never follow) — 17/17 pass.
+  Genus: [[m35]] venv-symlink identity; sister of m123 (env-coupled digest).

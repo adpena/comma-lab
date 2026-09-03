@@ -590,9 +590,20 @@ def main(argv: list[str] | None = None) -> int:
     # bytes that were never persisted.
     args.out.parent.mkdir(parents=True, exist_ok=True)
     section_path = args.out.with_name(f"{args.label}_semantic_section.bin")
-    section_path.write_bytes(payload)
-    receipt["export"]["retained_path"] = str(section_path)
     receipt["export"]["retained_sha256"] = hashlib.sha256(payload).hexdigest()
+    # PAYLOAD WRITE ORDER (ddm_pl1 gate, cured by MAIN after ddm_ql2): the bulk
+    # write is guarded so the already-built receipt is persisted EVEN IF the save
+    # raises -- with `retained_path=None` and the error, never citing bytes that
+    # were not written. Both laws hold: payload-before-receipt on success, and
+    # the record survives a failed save.
+    try:
+        section_path.write_bytes(payload)
+    except Exception as exc:
+        receipt["export"]["retained_path"] = None
+        receipt["export"]["retained_error"] = repr(exc)
+        args.out.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+        raise
+    receipt["export"]["retained_path"] = str(section_path)
     args.out.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
     print(json.dumps(receipt, indent=2, sort_keys=True))
     return 0

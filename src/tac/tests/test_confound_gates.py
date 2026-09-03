@@ -1099,7 +1099,7 @@ class TestModule:
             # count over 11,533 modules is now 1, and that is the bound. When
             # ft1's site is cured this goes to 0 and the gate can flip STRICT.
             # Lower it further as that happens; never raise it.
-            "check_no_bulk_write_strands_the_ready_record": 1,
+            "check_no_bulk_write_strands_the_ready_record": 0,
         }
         v = fn(strict=False, verbose=False)
         assert len(v) <= bounds[fn.__name__], f"{fn.__name__} live-count grew: {v[:3]}"
