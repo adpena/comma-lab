@@ -20,6 +20,36 @@ MIN_FREE_BYTES = int(1.5 * 1024**3)
 PAIR_SEQUENCE_LENGTH = 2
 
 
+@dataclasses.dataclass(frozen=True)
+class TargetLineage:
+    """Explicit decoder lineage for every target consumed by the pipeline.
+
+    The selected PR130 object is intentionally mixed *by target kind*: semantic
+    targets came from the AV/PyAV path, while carrier, HPAC, and token targets
+    came from the retained DALI path.  Making those four choices explicit is
+    the #1142 cure; accepting one untyped cache for all four targets is refused.
+    """
+
+    semantic: str = "av"
+    carrier: str = "dali"
+    hpac: str = "dali"
+    token: str = "dali"
+
+    def __post_init__(self) -> None:
+        if self.semantic not in {"av", "dali"}:
+            raise ValueError("semantic target lineage must be 'av' or 'dali'")
+        fixed = {"carrier": self.carrier, "hpac": self.hpac, "token": self.token}
+        invalid = {name: value for name, value in fixed.items() if value != "dali"}
+        if invalid:
+            raise PipelineBlocked(
+                "silent target-lineage mixing refused: carrier/hpac/token are "
+                f"pinned to DALI, got {invalid}"
+            )
+
+    def as_dict(self) -> dict[str, str]:
+        return dataclasses.asdict(self)
+
+
 class PipelineBlocked(RuntimeError):
     """A fail-closed pipeline boundary with an operator-actionable reason."""
 

@@ -325,7 +325,12 @@ def render_frame0_float(
     from torch.nn import functional
 
     rounder = _round_ste if differentiable else torch.round
-    carrier = torch.einsum("bk,kchw->bchw", coefficients, basis_norm)
+    # A non-CPU device is used only for the differentiable proposal surface.
+    # Realized scoring continues to call this with CPU tensors and the frozen
+    # CPU scorer.  Moving the fixed basis here keeps the canonical receiver
+    # arithmetic identical while making the requested gradient device real.
+    basis = basis_norm.to(device=coefficients.device, dtype=coefficients.dtype)
+    carrier = torch.einsum("bk,kchw->bchw", coefficients, basis)
     carrier = carrier / math.sqrt(CARRIER_DIM)
     low = rounder((127.5 + CARRIER_AMPLITUDE * carrier).clamp(0.0, 255.0))
     slave = functional.interpolate(
@@ -410,8 +415,8 @@ def render_frame0(
 # --------------------------------------------------------------------------
 
 
-def load_posenet():
-    """The frozen upstream PoseNet on CPU. Never MPS, never CUDA."""
+def load_posenet(device: str = "cpu"):
+    """Load frozen PoseNet on ``device``; score callers use the CPU default."""
     from safetensors.torch import load_file
 
     sys.path.insert(0, str(UPSTREAM))
@@ -419,11 +424,29 @@ def load_posenet():
         from modules import PoseNet, posenet_sd_path  # type: ignore[import-not-found]
     finally:
         sys.path.pop(0)
-    network = PoseNet().eval().cpu()
+    network = PoseNet().eval().to(device)
     network.load_state_dict(load_file(posenet_sd_path, device="cpu"))
     for parameter in network.parameters():
         parameter.requires_grad_(False)
     return network
+
+
+_GRADIENT_DEVICE = "cpu"
+_GRADIENT_POSENET = None
+
+
+def configure_gradient_device(device: str) -> dict[str, str]:
+    """Select the proposal-gradient device without moving score authority.
+
+    Realized candidates are still rescored by the CPU ``posenet`` passed to
+    :func:`jacobian_and_residual`'s callers.  The optional accelerator is used
+    only to form the local Jacobian that proposes lattice moves.
+    """
+
+    global _GRADIENT_DEVICE, _GRADIENT_POSENET
+    _GRADIENT_DEVICE = device
+    _GRADIENT_POSENET = None if device == "cpu" else load_posenet(device)
+    return {"gradient_device": device, "score_device": "cpu"}
 
 
 def enable_posenet_gradients() -> dict[str, Any]:
@@ -548,18 +571,32 @@ def jacobian_and_residual(
     """
     import torch
 
-    coefficients = coefficients_batch.clone().detach().requires_grad_(True)
+    gradient_device = _GRADIENT_DEVICE
+    gradient_net = posenet if gradient_device == "cpu" else _GRADIENT_POSENET
+    if gradient_net is None:
+        raise Up2Error("gradient device was selected without a scorer instance")
+    coefficients = (
+        coefficients_batch.clone()
+        .detach()
+        .to(gradient_device)
+        .requires_grad_(True)
+    )
     frame0 = render_frame0(coefficients, state, pair_indices, differentiable=True)
-    pose = pose_from_frames(posenet, frame0, frame1_batch)
+    pose = pose_from_frames(
+        gradient_net,
+        frame0,
+        frame1_batch.to(gradient_device),
+    )
     rows = []
     for component in range(POSE_DIMS):
         grad = torch.autograd.grad(
             pose[:, component].sum(), coefficients, retain_graph=component < POSE_DIMS - 1
         )[0]
         rows.append(grad)
-    jacobian = torch.stack(rows, dim=1)  # (B, 6, 12)
-    residual = (pose.detach() - targets_batch)  # (B, 6)
-    return jacobian.detach(), residual, pose.detach()
+    jacobian = torch.stack(rows, dim=1).detach().cpu()  # (B, 6, 12)
+    pose_cpu = pose.detach().cpu()
+    residual = pose_cpu - targets_batch.cpu()  # (B, 6)
+    return jacobian, residual, pose_cpu
 
 
 def measure_pose(
@@ -1078,6 +1115,7 @@ def build_parser() -> argparse.ArgumentParser:
     validate.add_argument("--runtime-dir", type=Path, default=DEFAULT_RUNTIME)
     validate.add_argument("--raw", type=Path, default=DEFAULT_RAW)
     validate.add_argument("--out", type=Path, default=None)
+    validate.add_argument("--device", choices=("cpu", "mps", "cuda"), default="cpu")
 
     solve = sub.add_parser("solve", help="uncapped realized pose solve on the shipping GT")
     solve.add_argument("--pairs", type=int, default=N_PAIRS_TOTAL)
@@ -1089,11 +1127,16 @@ def build_parser() -> argparse.ArgumentParser:
     solve.add_argument("--out", type=Path, required=True)
     solve.add_argument("--seed", type=int, default=1234, help="sampling seed when pairs < 600")
     solve.add_argument("--no-verify-sha", action="store_true")
+    solve.add_argument("--device", choices=("cpu", "mps", "cuda"), default="cpu")
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    from tac.semantic_pipeline.contracts import require_device
+
+    args.device_binding = require_device(args.device).as_dict()
+    args.device_binding.update(configure_gradient_device(args.device))
     if args.command == "validate":
         state = load_carrier_state(args.runtime_dir)
         raw = open_raw(args.raw, verify_sha=False)

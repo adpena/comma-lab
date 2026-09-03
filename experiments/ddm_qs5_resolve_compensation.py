@@ -40,6 +40,13 @@ from experiments import ddm_qs2_compensation_overlay_runtime as overlay_codec
 from experiments import ddm_qs2_compensation_rate_rung as qs2
 from experiments import ddm_qs3_saturation_compose as qs3
 from experiments import ddm_qs4_collateral_suppression as qs4
+from tac.semantic_pipeline.contracts import ClipConfig, require_device
+from tac.semantic_pipeline.stages.compensation import (
+    CompensationRequest,
+)
+from tac.semantic_pipeline.stages.compensation import (
+    restore_neutral_connective_support as _ported_restore_neutral_connective_support,
+)
 
 OUTPUT: Final = Path("/Volumes/VertigoDataTier/pact/ddm_qs5_20260813")
 QS4_RESULT: Final = (
@@ -318,30 +325,7 @@ def restore_neutral_connective_support(
     site_rows: Sequence[dict[str, Any]],
 ) -> tuple[np.ndarray, dict[str, int]]:
     """Keep strict-positive sites and restore only zero-net priced connectors."""
-
-    sites = []
-    counts = {
-        "strict_sites": 0,
-        "neutral_restored_sites": 0,
-        "negative_sites_excluded": 0,
-        "model_B": 0,
-        "model_H": 0,
-        "model_W": 0,
-    }
-    for row in site_rows:
-        strict = bool(row["strict_support_keep"])
-        neutral = int(row["B"]) == int(row["H"]) and int(row["W"]) == 0
-        keep = strict or neutral
-        if keep:
-            sites.append(int(row["site_flat"]))
-            counts["model_B"] += int(row["B"])
-            counts["model_H"] += int(row["H"])
-            counts["model_W"] += int(row["W"])
-            counts["strict_sites"] += int(strict)
-            counts["neutral_restored_sites"] += int(neutral and not strict)
-        else:
-            counts["negative_sites_excluded"] += 1
-    return np.asarray(sorted(sites), dtype=np.int64), counts
+    return _ported_restore_neutral_connective_support(site_rows)
 
 
 def build_partial_detrim_object(output: Path) -> dict[str, Any]:
@@ -1035,11 +1019,33 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=OUTPUT)
     parser.add_argument("--resume-from", type=Path, default=OUTPUT)
+    parser.add_argument("--device", choices=("cpu", "mps", "cuda"), default="cpu")
+    parser.add_argument("--archive", type=Path)
+    parser.add_argument("--clip-config", type=Path)
+    parser.add_argument("--pair-scope", type=str)
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
+    require_device(args.device)
+    port_args = (args.archive, args.clip_config, args.pair_scope)
+    if any(value is not None for value in port_args):
+        if not all(value is not None for value in port_args):
+            raise QS5Error("--archive, --clip-config, and --pair-scope must be supplied together")
+        clip_payload = json.loads(args.clip_config.read_text(encoding="utf-8"))
+        clip_payload["video"] = Path(clip_payload["video"])
+        clip = ClipConfig(**clip_payload)
+        pair_ids = tuple(int(value) for value in args.pair_scope.split(",") if value.strip())
+        archive_record = qs1.file_record(args.archive)
+        CompensationRequest(
+            archive=args.archive,
+            archive_sha256=archive_record["sha256"],
+            archive_bytes=archive_record["bytes"],
+            clip=clip,
+            device=args.device,
+            pair_ids=pair_ids,
+        ).validate()
     if args.resume_from.resolve() != args.output.resolve():
         raise QS5Error("--resume-from must equal --output")
     args.output.mkdir(parents=True, exist_ok=True)

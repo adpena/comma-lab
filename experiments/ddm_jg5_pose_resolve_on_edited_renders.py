@@ -690,7 +690,7 @@ def run_baseline(args) -> int:
         "candidate_raw": str(CANDIDATE_RAW),
         "codes_source": codes_source,
         "batch_size": args.batch_size,
-        "pairs": int(len(pairs)),
+        "pairs": len(pairs),
         "d_pose_mean": d_pose,
         "d_pose_median": float(np.median(cand_per_pair)),
         "d_pose_p95": float(np.percentile(cand_per_pair, 95)),
@@ -1153,7 +1153,7 @@ def run_close(args) -> int:
     base_score = composed_score(d_seg_t4, d_pose_start, body_bytes)
 
     levels = sorted(
-        {max(1, int(round(len(improving) * f))) for f in (0.1, 0.25, 0.5, 0.75, 1.0)}
+        {max(1, round(len(improving) * f)) for f in (0.1, 0.25, 0.5, 0.75, 1.0)}
     )
     results: list[dict[str, Any]] = []
     best: dict[str, Any] | None = None
@@ -1403,6 +1403,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="mode", required=True)
 
+    def add_device(command: argparse.ArgumentParser) -> None:
+        command.add_argument("--device", choices=("cpu", "mps", "cuda"), default="cpu")
+
     select = sub.add_parser("select", help="per-pair best of two lattices, one shape")
     select.add_argument("--codes-a", required=True)
     select.add_argument("--pose-a", required=True)
@@ -1411,11 +1414,13 @@ def build_parser() -> argparse.ArgumentParser:
     select.add_argument("--batch-size", type=int, default=8)
     select.add_argument("--out", required=True)
     select.set_defaults(func=run_select)
+    add_device(select)
 
     codes = sub.add_parser("codes", help="merge rows into a (600,12) code lattice")
     codes.add_argument("--rows", nargs="+", required=True)
     codes.add_argument("--out", required=True)
     codes.set_defaults(func=run_codes)
+    add_device(codes)
 
     control = sub.add_parser("control", help="forward-model + codes-identity controls")
     control.add_argument("--out", required=True)
@@ -1426,6 +1431,7 @@ def build_parser() -> argparse.ArgumentParser:
         "br1_candidate_codes.npy",
     )
     control.set_defaults(func=run_control)
+    add_device(control)
 
     refine = sub.add_parser("refine", help="re-solve to diminishing returns, not a budget")
     refine.add_argument("--rows", nargs="+", required=True)
@@ -1443,6 +1449,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     refine.add_argument("--expect-raw-sha256", default=None)
     refine.set_defaults(func=run_refine)
+    add_device(refine)
 
     baseline = sub.add_parser("baseline", help="exact n600 d_pose of the stale carrier")
     baseline.add_argument("--out", required=True)
@@ -1460,6 +1467,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="base decode, scored with the SAME carrier so only frame 1 differs",
     )
     baseline.set_defaults(func=run_baseline)
+    add_device(baseline)
 
     gn = sub.add_parser("gn", help="damped Gauss-Newton re-solve on candidate renders")
     gn.add_argument("--out", required=True)
@@ -1470,6 +1478,7 @@ def build_parser() -> argparse.ArgumentParser:
     gn.add_argument("--no-polish", action="store_true")
     gn.add_argument("--expect-raw-sha256", default=None)
     gn.set_defaults(func=run_gn)
+    add_device(gn)
 
     water = sub.add_parser("waterfill", help="joint edit+carrier admission sweep")
     water.add_argument("--rows", nargs="+", required=True)
@@ -1512,6 +1521,7 @@ def build_parser() -> argparse.ArgumentParser:
         "bits_per_frame_control_600.npy",
     )
     water.set_defaults(func=run_waterfill)
+    add_device(water)
 
     close = sub.add_parser("close", help="merge shards, splice, prove, price")
     close.add_argument("--rows", nargs="+", required=True)
@@ -1542,6 +1552,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="the body's seg leg on the jg1 instrument; defaults to the full-edit value",
     )
     close.set_defaults(func=run_close)
+    add_device(close)
 
     retain = sub.add_parser("retain", help="sha256 + size receipt for every payload")
     retain.add_argument("--root", required=True)
@@ -1550,11 +1561,16 @@ def build_parser() -> argparse.ArgumentParser:
     retain.add_argument("--headline", default="")
     retain.add_argument("--include-logs", action="store_true")
     retain.set_defaults(func=run_retain)
+    add_device(retain)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    from tac.semantic_pipeline.contracts import require_device
+
+    args.device_binding = require_device(args.device).as_dict()
+    args.device_binding.update(up2.configure_gradient_device(args.device))
     return args.func(args)
 
 

@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
@@ -12,13 +11,15 @@ from tac.semantic_pipeline import (
     FullPipelineConfig,
     PipelineBlocked,
     SemanticPipeline,
+    TargetLineage,
     probe_clip,
     require_device,
 )
 from tac.semantic_pipeline.contracts import atomic_copy, run_payload_stage
-from tac.semantic_pipeline.pipeline import DEFAULT_VIDEO, FINAL_BYTES, FINAL_SHA256
+from tac.semantic_pipeline.pipeline import DEFAULT_VIDEO, FINAL_ARCHIVE, FINAL_BYTES, FINAL_SHA256
+from tac.semantic_pipeline.receiver import ReceiverRequest, inflate
 
-TEST_STORE = Path("/Volumes/VertigoDataTier/pact/ddm_fpc1_full_pipeline_compress/acceptance_v1")
+TEST_STORE = Path("/Volumes/VertigoDataTier/pact/ddm_fpc2_full_pipeline_ports/acceptance_v2")
 
 
 def test_auto_config_probe_matches_real_zero_clip() -> None:
@@ -109,25 +110,75 @@ def test_requested_unavailable_device_is_refused() -> None:
         require_device(unavailable[0])
 
 
-def test_full_mode_refuses_before_a_fake_completion_claim() -> None:
-    store = TEST_STORE / "full_blocker_contract"
-    with pytest.raises(PipelineBlocked, match="full mode refused before training"):
-        SemanticPipeline(
-            FullPipelineConfig(
-                mode="full",
-                device="cpu",
-                store=store,
-                smoke_pairs=2,
-                smoke_steps=2,
-            )
-        ).run()
-    result_path = store / "full" / "RESULT.json"
-    result = json.loads(result_path.read_text(encoding="utf-8"))
-    assert result["status"] == "BLOCKED_PORT_REQUIRED"
-    assert result["archive"] is None
-    assert result["score_claim"] is False
-    assert {row["code"] for row in result["blockers"]} >= {
-        "QS5_INSTANCE_PINNED",
-        "SHIPPED_RECEIVER_FRESH_ARCHIVE_REFUSAL",
-        "PREFIX_RUNTIME_UNREACHABLE",
-    }
+def test_receiver_matches_shipped_afr1_prefix_bytes() -> None:
+    fact = {"bytes": FINAL_ARCHIVE.stat().st_size, "sha256": FINAL_SHA256}
+    root = TEST_STORE / "receiver_afr1_identity"
+    report = inflate(
+        ReceiverRequest(
+            archive=FINAL_ARCHIVE,
+            archive_sha256=fact["sha256"],
+            archive_bytes=fact["bytes"],
+            destination=root / "afr1_n2.raw",
+            runtime_root=root / "runtime_copy",
+            checkpoint_dir=root / "checkpoint",
+            device="cpu",
+            pair_count=2,
+        )
+    )
+    assert report["raw_bytes"] == 12_208_032
+    assert report["raw_sha256"] == "8ef6939b2041cee988a9484ed7c5c30be94ff7dec0fef8aed85c8d80c0999497"
+
+
+def test_full_mode_real_n2_smoke_is_receiver_closed() -> None:
+    result = SemanticPipeline(
+        FullPipelineConfig(
+            mode="full",
+            device="cpu",
+            store=TEST_STORE / "full_contract",
+            smoke_pairs=2,
+            smoke_steps=2,
+            smoke=True,
+            resume=True,
+        )
+    ).run()
+    assert result["status"] == "PASS"
+    assert result["fresh_archive"] is True
+    assert result["archive"]["sha256"] != FINAL_SHA256
+    assert result["receiver_identity"]["byte_identical"] is True
+    assert result["receiver_identity"]["pair_count"] == 2
+    assert result["receiver_identity"]["driver"]["path"].endswith(
+        "direct_driver_render_n2.raw"
+    )
+    assert result["stages"][0]["outputs"][4]["path"].endswith(
+        "semantic_quantized_state.pt"
+    )
+    assert result["advisory_score"]["axis"] == "[macOS-CPU advisory]"
+    assert result["advisory_score"]["score_claim"] is False
+    assert [row["stage"] for row in result["stages"]] == [
+        "scorer_aware_train",
+        "qs5_compensation_kernel_port",
+        "direct_driver_render",
+        "receiver_receiver_render",
+        "upstream_evaluate_n2_advisory",
+    ]
+
+
+def test_target_lineage_refuses_silent_mixing() -> None:
+    with pytest.raises(PipelineBlocked, match="silent target-lineage mixing refused"):
+        TargetLineage(semantic="av", carrier="av", hpac="dali", token="dali")
+
+
+def test_ported_cli_device_flag_subsets_parse() -> None:
+    from experiments import ddm_fcd1_incompile_schur as fcd1
+    from experiments import ddm_jg5_pose_resolve_on_edited_renders as jg5
+    from experiments import ddm_qs5_resolve_compensation as qs5
+    from experiments import ddm_up2_shipping_pose_solve as up2
+
+    assert fcd1.build_parser().parse_args(
+        ["decode", "--runtime", "r", "--output", "o", "--device", "cpu"]
+    ).device == "cpu"
+    assert jg5.build_parser().parse_args(
+        ["retain", "--root", "r", "--out", "o", "--device", "cpu"]
+    ).device == "cpu"
+    assert qs5.parse_args(["--device", "cpu"]).device == "cpu"
+    assert up2.build_parser().parse_args(["validate", "--device", "cpu"]).device == "cpu"

@@ -228,6 +228,12 @@ def run_instrument(args: argparse.Namespace) -> int:
         rest = rest[1:]
     if not rest:
         raise Fcd1SchurError("no jg5 mode supplied after --")
+    if "--device" not in rest:
+        rest.extend(["--device", args.device])
+    else:
+        device_index = rest.index("--device")
+        if device_index + 1 >= len(rest) or rest[device_index + 1] != args.device:
+            raise Fcd1SchurError("FCD1 and delegated JG5 --device values differ")
     return_code = int(jg5.main(rest))
     if return_code:
         return return_code
@@ -414,6 +420,7 @@ def build_parser() -> argparse.ArgumentParser:
     decode.add_argument("--runtime", required=True)
     decode.add_argument("--output", required=True)
     decode.add_argument("--timeout", type=int, default=5400)
+    decode.add_argument("--device", choices=("cpu", "mps", "cuda"), default="cpu")
     decode.set_defaults(func=run_decode)
 
     instrument = sub.add_parser("instrument")
@@ -421,6 +428,7 @@ def build_parser() -> argparse.ArgumentParser:
     instrument.add_argument("--archive-sha256", required=True)
     instrument.add_argument("--raw", required=True)
     instrument.add_argument("--raw-sha256", default=None)
+    instrument.add_argument("--device", choices=("cpu", "mps", "cuda"), default="cpu")
     instrument.add_argument("jg5_argv", nargs=argparse.REMAINDER)
     instrument.set_defaults(func=run_instrument)
 
@@ -432,12 +440,16 @@ def build_parser() -> argparse.ArgumentParser:
     publish.add_argument("--pose-band", type=float, default=DEFAULT_BAND)
     publish.add_argument("--destination", required=True)
     publish.add_argument("--receipt", required=True)
+    publish.add_argument("--device", choices=("cpu", "mps", "cuda"), default="cpu")
     publish.set_defaults(func=run_publish)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    from tac.semantic_pipeline.contracts import require_device
+
+    args.device_binding = require_device(args.device).as_dict()
     return int(args.func(args))
 
 
