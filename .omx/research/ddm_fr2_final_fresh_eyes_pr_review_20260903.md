@@ -7,6 +7,10 @@ at commit `dba0d7a951`. Read-only. Nothing was published, hosted, or edited.
 
 ## Verdict
 
+verdict_scope: instance — the falsified object is ONE pre-registered prediction (the
+pq10-derived "zero blockers remain" claim about THIS packet's prose layer at snapshot
+b8077b02/tree dba0d7a951); no formulation, family, or method is closed by this finding.
+
 **The PRIOR-LAW PREDICTION IS FALSIFIED. Two BLOCKERs remain.** Both are
 cross-consistency defects between the PR body and the frozen README, not
 measurement errors. Every number I could bind to a receipt is correct — the
