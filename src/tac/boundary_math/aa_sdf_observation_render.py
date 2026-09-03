@@ -105,6 +105,17 @@ def build_supersampled_coords(render_h: int, render_w: int, ss: int) -> np.ndarr
     downstream witness render + R is byte-identical to the current point-sampled path). The fine
     grid spans the SAME ``[-1, 1]`` box, so box-downsampling ss x ss fine samples integrates each
     coarse pixel's footprint (standard supersampling; matches torch ``area`` for integer factors).
+
+    LATTICE REGISTRATION CAVEAT (MEASURED, ddm_ar1 2026-09-04): ``linspace(-1, 1, n*ss)`` blocks
+    are NOT centred on the ``linspace(-1, 1, n)`` coarse pixels — the fine lattice is contracted
+    by 0.2497 coarse px at ss=2 (0.3328 at ss=3, 0.3743 at ss=4), so "integrates each coarse
+    pixel's footprint" is approximate, worst near the frame edges. The footprint-centred span and
+    a 1e-12 test live in ``experiments/ddm_ar1_aa_render_price.py::footprint_centred_span``. The
+    lattice is left as-is here because the registered law
+    ``aa_sdf_observation_footprint_render_dseg_v1`` was ANCHORED on this lattice; changing it
+    re-opens that anchor (re-measure ``tools/aa_sdf_observation_render_verify_n600.py`` on the
+    centred span before adopting). On the point-trained born field the centred lattice recovered
+    only 1.6% of the AA damage — the cost there is footprint averaging itself, not registration.
     """
     ss = _check_ss(ss)
     return build_render_coords(render_h * ss, render_w * ss)

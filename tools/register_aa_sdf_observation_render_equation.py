@@ -94,18 +94,24 @@ def build_equation(result: dict, result_path: str) -> CanonicalEquation:
         equation_id="aa_sdf_observation_footprint_render_dseg_v1",
         name="AA-SDF observation-map (footprint-integrated) render lowers d_seg at fixed rate",
         one_line_summary=(
-            "Footprint-integrated (supersample->box / mip-NeRF IPE) render recovers finest-scale "
-            "lanes that point-sampling erases through R, lowering d_seg at ~0 rate."
+            "Footprint (AA) render lowers d_seg at ~0 rate on the REAL-FRAME achievable signal "
+            "(legibility upper bound); sign REVERSES on a point-trained learned field (ddm_ar1)."
         ),
         latex_form=(
             r"\hat{c}(p)=\frac{1}{|F_p|}\int_{F_p} g(x)\,dx \approx \frac{1}{s^2}\sum_{s\times s} g "
-            r"\;\Rightarrow\; d_{\mathrm{seg}}(\mathrm{AA}) \le d_{\mathrm{seg}}(\mathrm{point});\;"
+            r"\;\Rightarrow\; d_{\mathrm{seg}}(\mathrm{AA}) \le d_{\mathrm{seg}}(\mathrm{point})"
+            r"\;\text{[real-frame achievable signal only; reversed on a point-trained learned field]};\;"
             r"\mathbb{E}[\sin(2\pi b\cdot x)]=\sin(2\pi b\cdot\mu)e^{-2\pi^2 b^\top\Sigma b}"
         ),
         python_callable_module_path="tac.boundary_math.aa_sdf_observation_render:box_downsample_np",
         domain_of_validity={"scorer": ["frozen_cpu_torch_segnet"], "R": ["contest_faithful_uint8_at_camera"],
                             "aa_mode": ["supersample_box", "mip_nerf_ipe"],
-                            "render_grid": [int(g) for g in curve], "n_pairs_range": [1, 600]},
+                            "render_grid": [int(g) for g in curve], "n_pairs_range": [1, 600],
+                            # ddm_ar1 2026-09-04: the signal dimension was missing; a reader routing
+                            # off the domain transferred this real-frame law onto a learned field.
+                            "signal": ["real_frame_achievable_through_R"],
+                            "domain_of_validity_included": ["signal:real_frame_achievable_through_R"],
+                            "domain_of_validity_excluded": ["signal:point_trained_learned_field"]},
         units_in={"witness_rgb": "0_255", "supersample_ss": "integer", "footprint_sigma": "coord_units"},
         units_out={"d_seg": "fraction", "lane_recall": "fraction"},
         empirical_anchors=(anchor,),
