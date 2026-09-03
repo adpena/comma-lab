@@ -55,6 +55,15 @@ PROJECTED_OUTPUT_BYTES = 128 << 20
 MANDATORY_RESERVE_BYTES = 1 << 30
 AXIS = "[macOS-CPU advisory / scorer-free exact byte replay plus retained-score bootstrap]"
 
+# The RN1 re-grade probes retained custody for same-object per-pair receipts.  It
+# keys on the `ddm_<slug>` store-naming convention, so a store filed under a
+# different name is a KNOWN blind spot of this probe, recorded in the receipt.
+GRADABILITY_SEARCH_ROOTS = (
+    Path("/Volumes/VertigoDataTier/pact"),
+    Path("/Volumes/APDataStore/pact"),
+)
+JSON_PROBE_MAX_BYTES = 64 << 20
+
 NULL_OVERLAY = JBP1_STORE / "retained/overlays/null.pair_planes.npz"
 JBP1_BASE_LEDGER = JBP1_STORE / "retained/exact/null/bits_per_frame_exact.npy"
 JBP1_CANDIDATE_LEDGER = JBP1_STORE / "retained/exact/xov1_bhw5506/bits_per_frame_exact.npy"
@@ -77,11 +86,10 @@ INPUT_PINS: tuple[tuple[Path, int, str], ...] = (
         5_977,
         "f811f0c5aa063e98446c82917fb32e0c8534e0cab8667f89be0f6b19cee75ab9",
     ),
-    (
-        REPO / ".omx/tmp/codex_runs/_common_contract.md",
-        4_124,
-        "eeae9e0035582e6bdd65fd837e4aa35a65e064fd09900b9c212d41ac02086771",
-    ),
+    # NOTE: the arm-dispatch contract under `.omx/tmp/` is deliberately NOT pinned.
+    # `.omx/tmp/` is sanctioned ephemeral scratch; making an ephemeral file a hard
+    # input gate would block every future re-run of this instrument once it is
+    # cleaned.  The charter above is the binding document and IS pinned.
     (
         REPO / "experiments/ddm_rxc1_restartable_exact_coder.py",
         37_869,
@@ -416,6 +424,42 @@ def stage_preflight() -> dict[str, Any]:
     return payload
 
 
+def summarize_physical_repeats(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Reduce physical null repeats to sigma_B and the byte-identity verdict.
+
+    The charter's PRIOR-LAW PREDICTION is sigma_B = 0 with every repeat
+    byte-identical.  A non-identical repeat is THE finding this stage exists to
+    catch, so it is RECORDED, never raised: an arm may not make its own falsifier
+    unreachable by refusing to emit the result that would refute it.
+    """
+    if not rows:
+        raise Xr1Error("physical repeat summary needs at least one retained repeat")
+    byte_counts = np.asarray([int(row["stream"]["bytes"]) for row in rows], dtype=np.int64)
+    sample_sigma = (
+        float(np.std(byte_counts.astype(np.float64), ddof=1)) if len(rows) > 1 else 0.0
+    )
+    spread = int(byte_counts.max() - byte_counts.min())
+    stream_identical = [bool(row["stream_vs_repeat_0"]["byte_identical"]) for row in rows]
+    archive_identical = [bool(row["archive_vs_repeat_0"]["byte_identical"]) for row in rows]
+    return {
+        "schema": "ddm_xr1.physical_byte_noise.v2",
+        "axis": "[macOS-CPU advisory / scorer-free exact RC64 byte replay]",
+        "object": "same null field, shipped model, shipped causal schedule",
+        "repeat_unit": "one complete physical n600 RC64 re-encode",
+        "repeat_count": len(rows),
+        "stream_byte_counts": byte_counts.tolist(),
+        "sigma_b_sample_bytes": sample_sigma,
+        "spread_max_minus_min_bytes": spread,
+        "all_streams_byte_identical": bool(all(stream_identical)),
+        "all_archives_byte_identical": bool(all(archive_identical)),
+        "stream_byte_identical_per_repeat": stream_identical,
+        "archive_byte_identical_per_repeat": archive_identical,
+        "prior_law_prediction": "sigma_B = 0 and every repeat byte-identical to repeat 0",
+        "prior_law_prediction_held": bool(all(stream_identical) and sample_sigma == 0.0),
+        "rows": list(rows),
+    }
+
+
 def stage_physical_repeats() -> dict[str, Any]:
     stage_preflight()
     api = rxc1.RestartableExactCoder(store=RXC1_STORE)
@@ -447,23 +491,7 @@ def stage_physical_repeats() -> dict[str, Any]:
                 "wall_seconds": float(run["wall_seconds"]),
             }
         )
-    byte_counts = np.asarray([int(row["stream"]["bytes"]) for row in rows], dtype=np.int64)
-    sample_sigma = float(np.std(byte_counts.astype(np.float64), ddof=1))
-    spread = int(byte_counts.max() - byte_counts.min())
-    if any(not row["stream_vs_repeat_0"]["byte_identical"] for row in rows):
-        raise Xr1Error("physical null stream repeats are not byte-identical")
-    payload = {
-        "schema": "ddm_xr1.physical_byte_noise.v1",
-        "axis": "[macOS-CPU advisory / scorer-free exact RC64 byte replay]",
-        "object": "same null field, shipped model, shipped causal schedule",
-        "repeat_unit": "one complete physical n600 RC64 re-encode",
-        "repeat_count": PHYSICAL_REPEATS,
-        "stream_byte_counts": byte_counts.tolist(),
-        "sigma_b_sample_bytes": sample_sigma,
-        "spread_max_minus_min_bytes": spread,
-        "all_streams_byte_identical": True,
-        "rows": rows,
-    }
+    payload = summarize_physical_repeats(rows)
     atomic_json(STORE / "PHYSICAL_REPEATS.json", payload)
     return payload
 
@@ -553,9 +581,18 @@ def stage_bootstrap() -> dict[str, Any]:
     delta_s_distortion = delta_s_seg + delta_s_pose
     delta_s_rate = RATE_NUMERATOR * fcd3_byte_samples / RATE_DENOMINATOR_BYTES
     delta_s = delta_s_distortion + delta_s_rate
-    if np.any(np.isclose(delta_s_distortion, 0.0, atol=1e-15)):
-        raise Xr1Error("FCD3 bootstrap produced a zero exchange-ratio denominator")
-    exchange_ratio = delta_s_rate / delta_s_distortion
+    # r(E) = dS_rate / dS_dist is only a well-defined interval when the
+    # denominator keeps one sign across every resample.  A denominator that
+    # crosses zero makes the percentile interval of the ratio meaningless, so it
+    # is REPORTED UNDEFINED rather than raised away: the sign instability is
+    # itself the measurement the campaign lacked.
+    denominator_sign_stable = bool(
+        np.all(delta_s_distortion > 0.0) or np.all(delta_s_distortion < 0.0)
+    )
+    if denominator_sign_stable:
+        exchange_ratio = delta_s_rate / delta_s_distortion
+    else:
+        exchange_ratio = np.full_like(delta_s_rate, np.nan)
 
     atomic_npz(
         STORE / "retained/fcd3_bootstrap.npz",
@@ -635,7 +672,15 @@ def stage_bootstrap() -> dict[str, Any]:
             "delta_s_distortion_interval_95": percentile_interval(delta_s_distortion),
             "delta_s_rate_interval_95": percentile_interval(delta_s_rate),
             "delta_s_interval_95": fcd3_interval,
-            "exchange_ratio_interval_95": percentile_interval(exchange_ratio),
+            "exchange_ratio_denominator_sign_stable": denominator_sign_stable,
+            "exchange_ratio_interval_95": (
+                percentile_interval(exchange_ratio) if denominator_sign_stable else None
+            ),
+            "exchange_ratio_undefined_reason": (
+                None
+                if denominator_sign_stable
+                else "delta_s_distortion changes sign across resamples; the ratio has no finite interval"
+            ),
             "delta_s_95_point_radius": point_radius,
             "acceptance_rule": "ADMISSIBLE iff delta_s_interval_95.high < 0",
             "admissible": bool(fcd3_interval["high"] < 0.0),
@@ -647,6 +692,128 @@ def stage_bootstrap() -> dict[str, Any]:
     return payload
 
 
+def arm_store_prefix(source: str) -> str:
+    """The retained-store name prefix implied by an RN1 memo path (`ddm_<slug>`)."""
+    stem = Path(source).stem
+    return "_".join(stem.split("_")[:2])
+
+
+def _per_pair_vector_lengths(node: Any, key_name: str) -> list[int]:
+    """Lengths of every list found under an EXACT `key_name` key, at any depth."""
+    found: list[int] = []
+    if isinstance(node, Mapping):
+        for key, value in node.items():
+            if key == key_name and isinstance(value, list):
+                found.append(len(value))
+            else:
+                found.extend(_per_pair_vector_lengths(value, key_name))
+    elif isinstance(node, list):
+        for item in node:
+            found.extend(_per_pair_vector_lengths(item, key_name))
+    return found
+
+
+def probe_per_pair_custody(store: Path) -> dict[str, Any]:
+    """MEASURE whether a retained store holds n600 per-pair byte and distortion vectors.
+
+    Substring matching over-reports: `d_seg_per_pair_max` is a scalar summary, not a
+    per-pair vector.  This probe therefore requires an EXACT key whose list lengths
+    cover exactly `PAIR_COUNT` pairs, and a `.npy` byte ledger of shape (600,).
+    """
+    byte_ledgers: list[str] = []
+    for path in sorted(store.rglob("*bits_per_frame*.npy")):
+        try:
+            array = np.load(path, allow_pickle=False)
+        except (OSError, ValueError):
+            continue
+        if array.shape == (PAIR_COUNT,):
+            byte_ledgers.append(str(path))
+    seg_receipts: list[str] = []
+    pose_receipts: list[str] = []
+    json_files_scanned = 0
+    for path in sorted(store.rglob("*.json")):
+        try:
+            if path.stat().st_size > JSON_PROBE_MAX_BYTES:
+                continue
+            text = path.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        json_files_scanned += 1
+        if "_per_pair" not in text:
+            continue
+        try:
+            blob = json.loads(text)
+        except json.JSONDecodeError:
+            continue
+        if sum(_per_pair_vector_lengths(blob, "d_seg_per_pair")) == PAIR_COUNT:
+            seg_receipts.append(str(path))
+        if sum(_per_pair_vector_lengths(blob, "d_pose_per_pair")) == PAIR_COUNT:
+            pose_receipts.append(str(path))
+    return {
+        "store": str(store),
+        "json_files_scanned": json_files_scanned,
+        "n600_byte_ledgers": byte_ledgers,
+        "n600_d_seg_receipts": seg_receipts,
+        "n600_d_pose_receipts": pose_receipts,
+    }
+
+
+def grade_row_custody(source: str) -> dict[str, Any]:
+    """Grade one RN1 row by MEASURED availability of same-object per-pair receipts."""
+    prefix = arm_store_prefix(source)
+    stores = sorted(
+        {
+            path
+            for root in GRADABILITY_SEARCH_ROOTS
+            if root.is_dir()
+            for path in root.glob(f"{prefix}*")
+            if path.is_dir()
+        }
+    )
+    probes = [probe_per_pair_custody(store) for store in stores]
+    has_bytes = any(probe["n600_byte_ledgers"] for probe in probes)
+    has_seg = any(probe["n600_d_seg_receipts"] for probe in probes)
+    has_pose = any(probe["n600_d_pose_receipts"] for probe in probes)
+    if not stores:
+        grade, reason = (
+            "UNGRADABLE_NO_STORE",
+            f"no retained store matches `{prefix}*` under either custody root",
+        )
+    elif has_bytes and has_seg and has_pose:
+        grade, reason = (
+            "GRADABLE",
+            "matched n600 per-pair byte ledger and per-pair d_seg and d_pose receipts exist",
+        )
+    elif has_bytes:
+        grade, reason = (
+            "UNGRADABLE_RATE_ONLY",
+            "n600 per-pair byte ledger exists but no n600 per-pair d_seg/d_pose receipt; "
+            "no distortion denominator, so no delta_s interval can be formed",
+        )
+    elif has_seg or has_pose:
+        grade, reason = (
+            "UNGRADABLE_DISTORTION_ONLY",
+            "n600 per-pair distortion receipt exists but no n600 per-pair byte ledger; "
+            "no rate numerator, so no delta_s interval can be formed",
+        )
+    else:
+        grade, reason = (
+            "UNGRADABLE_NO_PER_PAIR_DATA",
+            "retained store exists but holds no n600 per-pair byte ledger and no n600 "
+            "per-pair d_seg/d_pose receipt",
+        )
+    return {
+        "store_prefix": prefix,
+        "stores_found": [str(store) for store in stores],
+        "custody_probe": probes,
+        "has_n600_byte_ledger": has_bytes,
+        "has_n600_d_seg": has_seg,
+        "has_n600_d_pose": has_pose,
+        "grade": grade,
+        "reason": reason,
+    }
+
+
 def near_win_top20(rows: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
     """Rank RN1 scalar candidates by distance of their closest ratio to one."""
 
@@ -656,12 +823,17 @@ def near_win_top20(rows: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
 
     ranked = sorted(rows, key=key)[:20]
     output = []
+    custody_cache: dict[str, dict[str, Any]] = {}
     for rank, row in enumerate(ranked, start=1):
         source = REPO / str(row["source"])
         if not source.is_file() or sha256_file(source) != str(row["source_sha256"]):
             raise Xr1Error(f"RN1 top-20 source custody drifted: {source}")
         ratios = [float(value) for value in row["ratios_le_2x"]]
         closest = min(ratios, key=lambda value: abs(value - 1.0))
+        prefix = arm_store_prefix(str(row["source"]))
+        if prefix not in custody_cache:
+            custody_cache[prefix] = grade_row_custody(str(row["source"]))
+        custody = custody_cache[prefix]
         output.append(
             {
                 "rank": rank,
@@ -673,11 +845,12 @@ def near_win_top20(rows: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
                 "ratios_le_2x": row["ratios_le_2x"],
                 "closest_ratio_to_one": closest,
                 "absolute_margin_from_one": abs(closest - 1.0),
-                "grade": "UNGRADABLE",
-                "reason": (
-                    "RN1's scalar candidate row has no foreign keys to matched same-object "
-                    "n600 pair_delta_bytes plus base/candidate d_seg and d_pose vectors. "
-                    "FCD3's measured interval is object-specific and cannot be transferred."
+                "grade": custody["grade"],
+                "reason": custody["reason"],
+                "custody": custody,
+                "transfer_refusal": (
+                    "FCD3's measured interval belongs to FCD3's physical object and pair "
+                    "population; it may not be transferred to a different edit set."
                 ),
             }
         )
@@ -690,12 +863,26 @@ def stage_top20() -> dict[str, Any]:
     if len(rows) != 300:
         raise Xr1Error(f"RN1 near-win denominator drifted: {len(rows)} != 300")
     top20 = near_win_top20(rows)
+    grade_counts: dict[str, int] = {}
+    for row in top20:
+        grade = str(row["grade"])
+        grade_counts[grade] = grade_counts.get(grade, 0) + 1
     payload = {
-        "schema": "ddm_xr1.rn1_top20_regrade.v1",
+        "schema": "ddm_xr1.rn1_top20_regrade.v2",
         "population_rows": 300,
         "ranking": "ascending absolute distance of the nearest extracted ratio to 1.0; source path and line break ties",
         "top_k": 20,
-        "grade_counts": {"ADMISSIBLE": 0, "NOT_ADMISSIBLE": 0, "UNGRADABLE": 20},
+        "grade_counts": dict(sorted(grade_counts.items())),
+        "grade_probe": (
+            "MEASURED custody probe, not an assertion: for each row's `ddm_<slug>` store "
+            "prefix, every matching retained store under both custody roots is scanned for "
+            "a (600,)-shaped bits_per_frame ledger and for JSON receipts carrying an EXACT "
+            "`d_seg_per_pair` / `d_pose_per_pair` key whose list lengths cover all 600 pairs."
+        ),
+        "grade_probe_blind_spot": (
+            "a retained store filed under a name that does not start with the memo's "
+            "`ddm_<slug>` prefix is invisible to this probe"
+        ),
         "transfer_rule": "an interval is valid only for its same physical object and pair population",
         "rows": top20,
     }
