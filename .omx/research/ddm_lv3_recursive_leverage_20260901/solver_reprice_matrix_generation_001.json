@@ -1,0 +1,93 @@
+{
+  "schema": "ddm_lv3_solver_reprice_matrix.v1",
+  "generation": 1,
+  "successors": {
+    "S1": "CCS1 fixed-X causal G/M scorer-free rate rung",
+    "S2": "QX decoded-QBT target-overwrite grammar",
+    "S3": "QBW1/QBMIX causal quotient topology plus joint renderer",
+    "S4": "RB1 exact changed-object renderer"
+  },
+  "assets": [
+    {
+      "asset": "#580 full resize-kernel projector",
+      "source": ".omx/research/null_compiler_full_kernel_build_spec_20260720.md",
+      "source_sha256": "25e0f228ea1653c12f48ce9312a27778470b069d948f45bbde94a1f9736bdf69",
+      "at_source_receipt": "820728-dimensional exact kernel specification; bounded uint8 reach is a lower bound until measured",
+      "synthesis_candidate_enabled": "AFR1 semantic field target expanded through a born-form generator, then projected into the exact scorer-resize affine preimage before coding residuals",
+      "cells": {"S1": "DORMANT_UNCHANGED_X", "S2": "DORMANT_NO_RGB_OBJECT", "S3": "ADOPT_AFTER_TOPOLOGY_EXISTS", "S4": "ADOPT_AS_EXACT_PREIMAGE_APPARATUS"}
+    },
+    {
+      "asset": "#49/S12 resize-null preimage compiler",
+      "source": ".omx/research/t1_s12_lossless_stack_verdict_20260610.md",
+      "source_sha256": "a6e150762f32bd9e394bac75991f094a5163627248adc4a2ac53f49a9efa2bf3",
+      "at_source_receipt": "not addressable when the archive stores no camera-frame planes",
+      "synthesis_candidate_enabled": "A synthesis object that materializes stored uint8 camera planes can apply lossless resize-null filling after generator expansion; it enables nothing on weight-only or token-only bodies",
+      "cells": {"S1": "NOT_ADDRESSABLE", "S2": "NOT_ADDRESSABLE", "S3": "RACE_IF_OBJECT_STORES_PLANES", "S4": "RACE_IF_OBJECT_STORES_PLANES"}
+    },
+    {
+      "asset": "MS3-MS7 metric custody bundles",
+      "source": ".omx/research/ddm_ms4d_direct_metric_completion_20260724T155932Z/BUNDLE-COMPLETE.json",
+      "source_sha256": "d670eff3dd01d61a24bdebedf045fa8cde2528953660dc6d1e64ba9c2fa94e25",
+      "at_source_receipt": "complete n600 direct rank-4 Seg/Pose/composite-R geometry; no automatic archive-coordinate ownership",
+      "synthesis_candidate_enabled": "A frontier-target plus born-form changed object can use the complete metric bundle as its scorer trust-region and pose/Seg allocation instrument after it owns counted coordinates",
+      "cells": {"S1": "DORMANT_SCORER_FREE_GATE", "S2": "DORMANT_UNTIL_RATE_PASS", "S3": "ADOPT_FOR_SERIALIZED_SCORER_GATE", "S4": "ADOPT_FOR_OWNED_SCORER_GATE"}
+    },
+    {
+      "asset": "exact composite-R Hessian/adjoint",
+      "source": ".omx/research/ddm_zc1_20260807/LEG_P1A_PHI_COMPOSITE_R_ADJOINT_RECEIPT.md",
+      "source_sha256": "4660c6d28c0b889112ea77de82060bb3b7affbfe796d75c35283afeeefe1accc",
+      "at_source_receipt": "adjoint exists; phi scalar and counted actuator basis are missing",
+      "synthesis_candidate_enabled": "An exact-R-constrained residual compiler around a born-form generator targeting AFR1 cells, once generator parameters are mapped to a counted actuator basis",
+      "cells": {"S1": "DORMANT_FIXED_X_RATE_ONLY", "S2": "DORMANT_EVENT_GRAMMAR_RATE_ONLY", "S3": "RACE_AFTER_COUNTED_BASIS", "S4": "RACE_AFTER_COUNTED_BASIS"}
+    },
+    {
+      "asset": "tac.lie se(3)/SE(3)",
+      "source": ".omx/research/mlx_se3_lie_library_landed_20260630T223927Z.md",
+      "source_sha256": "597d3ff69847e4454297b9775a1df2abb048a8032dcc0376d1e30a24c75d6443",
+      "at_source_receipt": "49 tests green in source memo; enabling geometry only, no archive row",
+      "synthesis_candidate_enabled": "A causal SE(3) trajectory sufficient statistic that drives a generic receiver-side renderer while the archive carries only video-derived trajectory and residual parameters",
+      "cells": {"S1": "DORMANT_NO_GEOMETRY", "S2": "DORMANT_NO_GEOMETRY", "S3": "RACE_IF_QUOTIENT_DECLARES_SE3", "S4": "RACE_IF_RENDERER_DECLARES_SE3"}
+    },
+    {
+      "asset": "#547 exact uint8 lattice",
+      "source": ".omx/research/v10_lattice_rate_verdict_and_composition_20260719.md",
+      "source_sha256": "602acbec38214045519cd488a1875aef958687aba663970a3a8658dbea6d8374",
+      "at_source_receipt": "n600 exact realization has 114 of 117964800 fp32-tie mismatches; pose interaction remains separate",
+      "synthesis_candidate_enabled": "A born-form or quotient generator whose output is repaired onto the exact uint8 resize lattice while preserving AFR1 target cells up to the measured fp32 tie floor",
+      "cells": {"S1": "DORMANT_UNCHANGED_X", "S2": "DORMANT_EVENT_GRAMMAR", "S3": "ADOPT_AS_REALIZATION_SOLVER", "S4": "ADOPT_AS_REALIZATION_SOLVER"}
+    },
+    {
+      "asset": "G4 decoder-derived charts",
+      "source": ".omx/research/ddm_g4_spatial_stationarity_n600_20260722T212138Z/summary.json",
+      "source_sha256": "1e522f92014388454ee0b01d3e4a6abd8c740cac7a4ddcbf341935cdde3a1361",
+      "at_source_receipt": "aggregate prior saves 89161 B but remains a 401633 B partial stream; predictor-boundary chart loses 192417 B",
+      "synthesis_candidate_enabled": "A new generator can use causally decoded neighbor state as a free feature class, but inherits no byte credit from either measured G4 stream",
+      "cells": {"S1": "CLOSED_UNCHANGED_ON_MAGNITUDE", "S2": "CLOSED_UNCHANGED_ON_MAGNITUDE", "S3": "DORMANT_FEATURE_PRIOR_NO_BYTE_CREDIT", "S4": "DORMANT_FEATURE_PRIOR_NO_BYTE_CREDIT"}
+    },
+    {
+      "asset": "SP1 contour support coder",
+      "source": ".omx/research/ddm_sp1_contour_support_coder_20260728.md",
+      "source_sha256": "6bf5dcfd8398236cd46028fed0994d12811e2f90747245af3bbf442a7db1bbda",
+      "at_source_receipt": "lossless contour support 444394 B versus LZMA 421366 B; floor-dead for tested support object",
+      "synthesis_candidate_enabled": "NONE for the unchanged contour-support object; only a different topology object could reuse the codec implementation without inheriting this floor",
+      "cells": {"S1": "REJECT_UNCHANGED_SUPPORT_FORM", "S2": "REJECT_UNCHANGED_SUPPORT_FORM", "S3": "REJECT_UNCHANGED_SUPPORT_FORM", "S4": "REJECT_UNCHANGED_SUPPORT_FORM"}
+    },
+    {
+      "asset": "QX enumerative coding on decoded conditioning",
+      "source": ".omx/research/ddm_qx4_decodable_conditioning_reprice_20260901.md",
+      "source_sha256": "bb98fe45060491599d39e4f3f9ffdb00587518b362ed6563c071cb0742c762d8",
+      "at_source_receipt": "six decoded-QBT forms close at 33435-38778 B; target-overwrite semantics are a distinct untested object",
+      "synthesis_candidate_enabled": "A decoded-QBT target-overwrite object that carries only the 8749 actual target changes while the receiver uses causal traversal and the AFR1 target defines the semantic half",
+      "cells": {"S1": "DORMANT_DIFFERENT_FIELD", "S2": "ADOPT_MACHINERY_RACE_NEW_OBJECT", "S3": "DORMANT_NO_CROSS_OBJECT_CREDIT", "S4": "DORMANT_NO_CROSS_OBJECT_CREDIT"}
+    }
+  ],
+  "asset_denominator": 9,
+  "cell_denominator": 36,
+  "at_source_receipts_present": 9,
+  "new_successor_order": ["S1", "S2", "S3", "S4"],
+  "binding_synthesis_directive": {
+    "path": ".omx/research/ddm_directive_synthesis_path_20260901.md",
+    "interpretation": "frontier distortion target times born generator form times deterministic witness solver; enabled does not mean measured viable"
+  },
+  "score_claim": false
+}

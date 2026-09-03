@@ -1,0 +1,24 @@
+{
+  "schema": "ddm_lv3_recursive_generation.v1",
+  "generation": 2,
+  "tracks": {
+    "recall": {"receipt": "recall/generation_002.json", "new_consumable_rows": 0, "refinement": "full-kernel and phi counted-basis history already consumed"},
+    "costate_organ": {"surface": "tac.ddm_costate_organ.round10", "legacy_rows_re_adjudicated": 28, "legacy_denominator": 28, "new_consumable_rows": 0, "duty_ranking_changed": false, "maturity": "_dev", "actuation": "NONE", "containment": "UNCHANGED"},
+    "equations": {"receipt": "equations_table_generation_001.json", "registered_ids_present": 9, "new_consumable_rows": 0, "equation_or_anchor_change": false},
+    "solver_reprice": {"receipt": "solver_reprice_matrix_generation_001.json", "assets_rechecked": 9, "cells_rechecked": 36, "new_consumable_rows": 0, "successor_ranking_changed": false},
+    "artifact_routing": {"canonical_store": ".omx/state/probe_outcomes.jsonl", "routed_rows": 20, "route_id_prefix": "ddm_lv3_g02_", "new_consumable_rows": 0, "reason": "each row was already folded by the VH2 at-source drain"}
+  },
+  "new_consumable_rows": 0,
+  "dry_generation": true,
+  "consecutive_dry_generations": 1,
+  "successor_ranking": [
+    "CCS1_FIXED_X_CAUSAL_GM_RATE_RUNG",
+    "QX_QBT_TARGET_OVERWRITE_GRAMMAR",
+    "QBW1_QBMIX_CAUSAL_QUOTIENT_RENDERER",
+    "RB1_EXACT_CHANGED_OBJECT_RENDERER"
+  ],
+  "frontier_moved": false,
+  "score_claim": false,
+  "modal_calls": 0,
+  "scorer_runs": 0
+}

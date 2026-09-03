@@ -1,0 +1,19 @@
+{
+  "schema": "ddm_lv3_graph_recall_receipt.v1",
+  "generation": 3,
+  "query": "decoded QBT target overwrite actual 8749 changes consumer semantics QX synthesis generator AFR1",
+  "derived_from": "generation 2 left QX target-overwrite as the next distinct synthesis object after the fixed-X control",
+  "max_depth": 2,
+  "max_nodes": 24,
+  "graph_counts": {"nodes": 39567, "edges": 161875, "equations": 457, "research": 9561},
+  "seed_ids": [
+    "lane:lane_c0b_predictor_bound_residual_20260726",
+    "research:arm_final_messages/ddm_ltg1_lane_topology_generator_floor_20260831T201222Z.md",
+    "research:cargo_cult_unwind_audit_procedural_codebook_generator_consumer_20260519.md",
+    "research:codex_findings_pr95_mlx_pair_indexing_fix_20260527T003443Z_codex.md"
+  ],
+  "recursive_finding": "The predictor-bound ABI already requires exact consumer and receiver semantics. LTG1 closes its finite exact-shape topology formulation at 233262 B, not the distinct QBT target-overwrite object. These corroborate the existing changed-object and semantic-proof gates; they do not create a new candidate, owner, equation, or ranking change.",
+  "new_consumable_rows": 0,
+  "score_claim": false,
+  "actuation": "NONE"
+}

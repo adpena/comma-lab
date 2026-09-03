@@ -1,0 +1,19 @@
+{
+  "schema": "ddm_lv3_graph_recall_receipt.v1",
+  "generation": 2,
+  "query": "full resize kernel phi counted actuator basis synthesis candidate AFR1 generator form exact-R",
+  "derived_from": "generation 1 synthesis inventory: composite-R adjoint is blocked on a counted actuator basis",
+  "max_depth": 2,
+  "max_nodes": 24,
+  "graph_counts": {"nodes": 39567, "edges": 161875, "equations": 457, "research": 9561},
+  "seed_ids": [
+    "research:ddm_zc1_20260807/LEG_P1A_PHI_COMPOSITE_R_ADJOINT_RECEIPT.md",
+    "research:r1b2_mdl_xi0_compile_build_spec_20260720.md",
+    "eq:separable_resize_full_kernel_direct_sum_v1",
+    "research:null_compiler_full_kernel_20260720T163500Z.md"
+  ],
+  "recursive_finding": "The full-kernel equation and implementation already exist, and a prior n64 MDL member search preserved outputs but found no rate win. The composite-R phi route remains blocked on the same counted-coordinate basis. This refines the synthesis inventory but creates no new consumable row or successor.",
+  "new_consumable_rows": 0,
+  "score_claim": false,
+  "actuation": "NONE"
+}

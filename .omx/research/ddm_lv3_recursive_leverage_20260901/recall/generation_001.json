@@ -1,0 +1,23 @@
+{
+  "schema": "ddm_lv3_graph_recall_receipt.v1",
+  "generation": 1,
+  "query": "decoder-causal conditioning sharp optimum Cross affine round-trip BHW current DCC1 successor leverage",
+  "derived_from": "charter seed plus live DCC1 rank-1 owner",
+  "max_depth": 2,
+  "max_nodes": 24,
+  "graph_counts": {
+    "nodes": 39541,
+    "edges": 161841,
+    "equations": 450,
+    "research": 9560
+  },
+  "seed_ids": [
+    "research:arm_final_messages/ddm_dcc1_decoder_causal_conditioning_20260901T193940Z.md",
+    "research:charters/ddm_ccs1_causal_schedule_builder_20260901.md",
+    "research:charters/ddm_dcc1_decoder_causal_conditioning_20260901.md",
+    "research:ddm_dcc1_decoder_causal_conditioning_verdict_20260901.md"
+  ],
+  "recursive_finding": "The top seed is the already-owned CCS1 fixed-X causal schedule. The graph also resolves the parent Wyner-Ziv equation but not the newer transport extension, so the equation work must extend the parent operational domain and must not create a second schedule owner.",
+  "score_claim": false,
+  "actuation": "NONE"
+}

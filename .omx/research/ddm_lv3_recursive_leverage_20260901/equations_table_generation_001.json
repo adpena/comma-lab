@@ -1,0 +1,19 @@
+{
+  "schema": "ddm_lv3_current_arc_equations_table.v1",
+  "generation": 1,
+  "rows": [
+    {"equation_id": "decoder_causal_condition_transport_v1", "action": "REUSED_EXISTING", "evaluator": "transport_floor_bytes", "anchor_scope": "QX3 plus GMF1 receiver-causal source closure"},
+    {"equation_id": "same_basin_sharp_optimum_v1", "action": "REGISTERED", "evaluator": "eval_same_basin_sharp_optimum", "anchor_scope": "six same-basin direction families; new basins excluded"},
+    {"equation_id": "byte_distortion_cross_intersection_count_v1", "action": "REGISTERED", "evaluator": "eval_byte_distortion_cross_intersection_count", "anchor_scope": "four-body complete-byte plus matched-distortion Cross"},
+    {"equation_id": "roundtrip_token_to_argmax_affine_v1", "action": "REGISTERED", "evaluator": "eval_roundtrip_token_to_argmax_affine", "anchor_scope": "n=2 matched-PYAV; 17241 intercept and 1.1435 marginal slope"},
+    {"equation_id": "field_change_bhw_decomposition_v1", "action": "REGISTERED", "evaluator": "eval_field_change_bhw_decomposition", "anchor_scope": "117964800 positions; FCD1 B/H/W and real byte-only union"},
+    {"equation_id": "context_model_reorder_savings_v1", "action": "REGISTERED", "evaluator": "eval_context_model_reorder_savings", "anchor_scope": "generic LZ order win versus trained-context zero"},
+    {"equation_id": "generator_form_fit_error_entanglement_v1", "action": "REGISTERED", "evaluator": "eval_generator_form_fit_error_entanglement", "anchor_scope": "2.178 ratio inseparable from about 1.12 percent fit error"},
+    {"equation_id": "decoder_derivable_ideal_savings_ceiling_v1", "action": "REGISTERED", "evaluator": "eval_decoder_derivable_ideal_savings_ceiling", "anchor_scope": "DDS1 refusal-only ideal ceilings: about 613 B and 2.08 B"},
+    {"equation_id": "pose_stack_exact_budget_v1", "action": "ANCHOR_APPENDED_NOT_DUPLICATED", "evaluator": "eval_pose_stack_exact_budget", "anchor_scope": "1.25e-4 is a current-operating-point corner, not a universal budget"}
+  ],
+  "registered_new_equations": 7,
+  "extended_existing_equations": 1,
+  "reused_existing_equations": 1,
+  "score_claim": false
+}
