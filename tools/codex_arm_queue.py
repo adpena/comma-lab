@@ -2152,6 +2152,10 @@ Operator {date}: *"<FILL: operator verbatim, or the routed finding + its source 
   plus a fire order is the CORRECT outcome, never a failure.
 - Serializer commits w/ post-edit `--expected-content-sha256`; `.py` = 2 genuine review passes.
 - ALWAYS KEEP THE PAYLOAD; bulky receipts to `/Volumes/APDataStore/pact/{name}/`.
+- VERIFIED-AT-SOURCE LAW (ft1, 2026-09-03; m143 ×4): every numeric premise this charter hands you
+  (section ids/sizes, GT lineage, LR, τ, thresholds) is either marked `verified-at-source: <path:line>`
+  or is TRANSFERRED — re-derive a TRANSFERRED constant on THIS object before using it; three
+  transferred constants in one charter cost a wrong-LR run (+31% d_seg).
 - PER-PAIR RECEIPTS LAW (xr1, 2026-09-03): any realized ΔS you report MUST retain per-pair d_seg AND
   d_pose beside the byte ledger — the exchange-ratio dispersion is ±6% ≈ 363 B and 0/20 prior
   near-wins were gradable for lack of per-pair rows; a rate-only row cannot be graded on ΔS.
