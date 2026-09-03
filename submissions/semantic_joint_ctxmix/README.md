@@ -17,7 +17,8 @@ The learned vehicle descends from public contest work, and I do not claim it:
 - **PR #135** (Shreyan Mohanty, @codexblack) — the CPR1-polished form of that vehicle
   (0.162 on contest-CUDA), whose receiver structure this submission's runtime carries
   forward.
-- **PR #133** (@JasonMo123) — earlier work that PR #130 and PR #135 build on.
+- **PR #133** (@JasonMo123) — a refinement of PR #130's vehicle that PR #135
+  carries forward.
 
 My contribution is the decision and lossless-representation layer on top:
 
