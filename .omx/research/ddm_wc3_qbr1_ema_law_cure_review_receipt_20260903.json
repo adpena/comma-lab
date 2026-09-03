@@ -1,0 +1,42 @@
+{
+  "schema": "ddm_wc3_qbr1_two_pass_review.v1",
+  "arm": "ddm_wc3_qbr1_ema_law_cure",
+  "reviewed_at_utc": "2026-09-03T17:25:59Z",
+  "reviewer": "ddm_wc3",
+  "two_genuine_passes": true,
+  "passes": [
+    {
+      "name": "correctness_dataflow_20260903",
+      "focus": "typed DSL to sealed config to construction to checkpoint restore to run provenance"
+    },
+    {
+      "name": "adversarial_resume_gate_storage_20260903",
+      "focus": "independent coefficient recomputation, stale or tampered seal refusal, literal-warmup gate controls, resume identity, sacred-run isolation, and retained-payload custody",
+      "finding_fixed": "the sealed coefficient is now independently recomputed at EMA construction instead of trusted from config storage"
+    }
+  ],
+  "python_files": {
+    "experiments/ddm_qbt1_qbflow_trainer.py": "6eda9c202b3aee008d457373813ae07992e73902438cca114abb4c84bb8d980b",
+    "experiments/ddm_qbr1_born_fairform_burn_prep.py": "429d7ad52dbec918498f6476420d91552d8c762ecc5adfa47b294979ee7fc855",
+    "experiments/ddm_wc2_qbr1_stage_timing.py": "adebbf008d1221c1d74b8bd50b2e3e840ea30f7bb2b0bf180e750168bb7df678",
+    "experiments/tests/test_ddm_wc2_qbr1_stage_timing.py": "204df087496bd06c4210ece4474eaf0ad97bbeb2dcafa2e66af8bd8b192b334d",
+    "experiments/tests/test_ddm_wc3_qbr1_ema_law_cure.py": "a7cab7f7ae33139ade9e4f6bb602655ed3fb178388d04bb12dd9a071924e6dd7",
+    "src/tac/training.py": "b54b296d4491bb88edca02103509e13e347c1c687bc43854903d4a4d552190fa",
+    "src/tac/confound_gates.py": "26f1b69055d2543eb2e930b77e007c2a4442f99106abff507f2ee4b2f350b441",
+    "src/tac/preflight.py": "5baeb097faa00ba557ad070250582b7acf18cef55ea8d34e3e8a4ca03cd82e2e",
+    "src/tac/tests/test_confound_gates.py": "e52e5afb1ca4b3628621d9dbc3b379da2593a912513f7b0aac5268569a10c68c",
+    "src/tac/tests/test_check_lane_pre_registered_before_work_starts.py": "02bf329df4a9b203e799f0e10658d8c54af35dd88d198282d2c9adcc51d878fd",
+    "src/tac/witness_dsl/curriculum_dsl.py": "9fd3f832b3c120cc39f0b0adf772535e98ef17386c00ae202e32eccef22d5496",
+    "src/tac/pr130_lift/train_semantic_quantized_resumable.py": "8ed7105e7e8ce82ad27f21db8c66a2becdc7a71d92197e15f333af8737f6aae1"
+  },
+  "verification": {
+    "focused_wc2_wc3": "31 passed",
+    "qbt_wc3_after_adversarial_fix": "61 passed",
+    "broad_relevant": "333 passed, 2 pre-existing SyntaxWarning warnings",
+    "lane_gate": "204 passed",
+    "ruff": "green on every owned Python change; curriculum checked with pre-existing I001, UP037, and RUF100 debt ignored",
+    "strict_gate": "0 live violations across 6812 maintained modules considered, 122 EMA candidates parsed, 6 EMA-LawRef modules, and 6 EMA constructors",
+    "developer_preflight": "passed, 25 of 27 declared developer gates examined",
+    "preflight_all": "BLOCKED_ENVIRONMENT_CAPABILITY: managed sandbox denied ps -axo pid=,command= at check_no_live_mcp_processes; no mock, skip, or gate weakening used"
+  }
+}
