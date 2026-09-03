@@ -104,6 +104,21 @@ def test_placeholder_rationale_rejected(tmp_path: Path):
     assert len(out) == 1
 
 
+def test_html_comment_placeholder_rationale_rejected_and_real_one_accepted():
+    # 2026-09-04 (ddm_eq1 pinned gap, MAIN cure): the corpus writes waivers inside
+    # HTML comments, so the captured rationale carries a trailing ``-->``; the
+    # exact-match placeholder test never fired on ``<rationale> -->``. The
+    # normaliser must strip the comment close and refuse any bare ``<...>`` token.
+    from tac.preflight import _check_344_text_has_valid_waiver as ok
+
+    assert ok("x\n<!-- # FORMALIZATION_PENDING:<rationale> -->\n") is False
+    assert ok("x\n<!-- # FORMALIZATION_PENDING: <reason> -->\n") is False
+    assert ok("x\n<!-- # FORMALIZATION_PENDING:<todo> -->\n") is False
+    assert ok("x\n<!-- # FORMALIZATION_PENDING: needs the coupling law before it can anchor -->\n") is True
+    assert ok("x\n# FORMALIZATION_PENDING:<rationale>\n") is False
+
+
+
 def test_empty_rationale_rejected(tmp_path: Path):
     _write_memo(
         tmp_path,

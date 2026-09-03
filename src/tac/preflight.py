@@ -85277,9 +85277,17 @@ def _check_344_text_has_valid_waiver(text: str) -> bool:
     """True iff text carries a well-formed FORMALIZATION_PENDING waiver."""
     for m in _CHECK_344_WAIVER_RE.finditer(text):
         rationale = m.group("rationale").strip()
+        # 2026-09-04 (ddm_eq1 pinned gap): the corpus writes waivers inside HTML
+        # comments (``<!-- # FORMALIZATION_PENDING:<rationale> -->``), so the
+        # captured rationale carried a trailing ``-->`` and an exact-match
+        # placeholder test never fired. Normalise the comment close and reject
+        # ANY bare angle-bracket token, not only the two spelled-out literals.
+        rationale = re.sub(r"\s*-->\s*$", "", rationale).strip().strip("`").strip()
         if not rationale:
             continue
         if rationale in _CHECK_344_PLACEHOLDER_RATIONALES:
+            continue
+        if re.fullmatch(r"<[^<>]*>", rationale):
             continue
         if len(rationale) < _CHECK_344_MIN_RATIONALE_LEN:
             continue

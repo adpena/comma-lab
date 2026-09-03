@@ -932,21 +932,15 @@ def test_catalog_344_scan_rejects_a_bare_placeholder_waiver(tmp_path, monkeypatc
     assert preflight_hook.run_canonical_equation_reference_scan([rel]) == 1
 
 
-def test_catalog_344_placeholder_rejection_is_exact_match_only_MEASURED_GAP(
+def test_catalog_344_placeholder_rejection_covers_the_html_comment_form(
     tmp_path, monkeypatch
 ) -> None:
-    """MEASURED 2026-09-04 (ddm_eq1): the placeholder check is EXACT-match, so the
-    canonical HTML-comment form smuggles a placeholder past it.
-
-    ``_CHECK_344_PLACEHOLDER_RATIONALES`` is compared with ``rationale in (...)`` after a
-    ``strip()``, and the waiver regex captures ``[^\\n]+`` -- so inside the corpus's own
-    ``<!-- # FORMALIZATION_PENDING:... -->`` form the captured rationale is
-    ``"<rationale> -->"``, which is neither an exact placeholder nor shorter than the
-    4-char floor. It is ACCEPTED.
-
-    This test does not assert that the behaviour is right; it PINS it, so the gap is a
-    recorded finding rather than an assumption. Widening the check would change the
-    STRICT gate's semantics for the whole corpus and belongs to a charter that owns it.
+    """MEASURED 2026-09-04 (ddm_eq1) then CURED the same day (MAIN): the placeholder check
+    was EXACT-match, so inside the corpus's own ``<!-- # FORMALIZATION_PENDING:... -->``
+    form the captured rationale ``"<rationale> -->"`` was neither an exact placeholder nor
+    under the 4-char floor and was ACCEPTED. ``_check_344_text_has_valid_waiver`` now
+    normalises the comment close and refuses any bare ``<...>`` token, so the hook's
+    scan must REFUSE this memo (nonzero) while a substantive rationale still passes.
     """
     rel = _write_memo(
         tmp_path,
@@ -954,7 +948,14 @@ def test_catalog_344_placeholder_rejection_is_exact_match_only_MEASURED_GAP(
         "ddm_zz4b_thing_20260901.md",
         "# zz4b\n\nFALSIFIED.\n<!-- # FORMALIZATION_PENDING: <rationale> -->\n",
     )
-    assert preflight_hook.run_canonical_equation_reference_scan([rel]) == 0
+    assert preflight_hook.run_canonical_equation_reference_scan([rel]) != 0
+    ok = _write_memo(
+        tmp_path,
+        monkeypatch,
+        "ddm_zz4c_thing_20260901.md",
+        "# zz4c\n\nFALSIFIED.\n<!-- # FORMALIZATION_PENDING: needs the coupling law registered first -->\n",
+    )
+    assert preflight_hook.run_canonical_equation_reference_scan([ok]) == 0
 
 
 def test_catalog_344_scan_honours_the_gates_own_date_cutoff(tmp_path, monkeypatch) -> None:
