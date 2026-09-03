@@ -49,6 +49,43 @@ the loop from step zero and the carrier terminally re-solved (jg5/up2 law); pose
    --gt-cache --axis`) → re-spliced carrier; (c) the T4 buy (`tools/fire_modal_auth_eval.py --seal`) with the
    pre-registered decision: promote iff exact S < 0.14797617125559104 AND d_pose ≤ 1.25e-4.
 
+
+## RECALL — DYNAMICS, INTERACTIONS, SOURCE (binding pre-read; operator 2026-09-03: "we have extensive research … understanding dynamics and interactions and source")
+
+Do NOT design the loss, LR, τ, or the stop rule from the headlines above. Read these first and cite what you
+consume; each carries a mechanism the fine-tune must respect:
+- **What the render path manufactures and where:** `ddm_mst1_manufactured_stage_split_20260822.md` (78.71% of
+  seg error at the native render; R + uint8 are net REPAIRERS), `ddm_rt2_manufactured_seg_mechanism_20260817.md`,
+  `ddm_ms9_dx2_seg_manufactured_fraction_20260822.md`, `ddm_msr1_manufactured_seg_reduction_20260823.md`,
+  `ddm_mf1_manufactured_seg_repair_20260823.md` — the sites the renderer gets wrong are NOT random; the fine-tune
+  should target the manufactured class, and the memos say what those sites look like.
+- **Seg ↔ pose coupling geometry:** `ddm_tv1_evaluator_tolerance_curve_20260824.md`, `ddm_tv2_…` (seg slack and
+  pose damage are CO-LOCATED: boundaries no-slack vs interiors 47% slack — a seg-driven render change hits
+  pose where the interiors move); `ddm_jg1_joint_solve_20260819.md` (104.6–822.7× pose damage before a joint
+  solve); `ddm_pk4_optimal_form_frame0_pose_verdict_20260813.md` (frame-0 is the pose place);
+  `collateral_coupling_geometry_and_film_flicker_sidecar_20260718.md` — the pose term's weight and step-zero
+  placement follow from these, not from a default.
+- **Collateral, not targeting, is what kills seg moves:** `ddm_qs3_saturation_compose_20260813.md` (loss is
+  COLLATERAL; 97.4% of edits realize), `ddm_a1_bounded_collateral_realized_n64_20260723T031500Z/`, memory m132
+  (B/H decomposition mandatory, collateral priced in) — report per-epoch B/H/W: sites fixed / newly broken /
+  unchanged, never a headline d_seg alone.
+- **The judge's source geometry:** CLAUDE.md "Exact scorer architectures" (SegNet reads frame_1 only; stride-2
+  stem; ~85 px ERF; the canonical class order; PoseNet and SegNet share the SAME resize `D` — `ddm_pz1` in
+  CLAUDE.md), `ddm_cfa1_closed_form_atlas_20260831.md` (the frozen piecewise-analytic chain; every non-analytic
+  locus), `ddm_ce1_allocation_ladder_verdict_20260817.md` (the exact expected-flip margin law and its ladder).
+- **Realization and the exchange rates:** `ddm_bz2d_distortion_verdict_20260830.md` (token error → argmax 1.157×;
+  pose 152× worse on the PyAV fork), `ddm_dd1_displacement_dimensionality_20260803.md` (Lane ±1 px width =
+  ±40% area), `ddm_r2s_stratified_and_sparse_residual_20260728.md` (warp-predict closed; flips are codim-1
+  sub-pixel boundary shifts), `ddm_sg2b_falsifier_verdict_20260901.md` (X-alone falsifier 3/3), memory m65/m108
+  (Euclid-vs-Fisher cosine sign-flips; the margin field IS the Fisher surrogate — use the margin table in
+  `gt_n600.npz['margins']`), `ddm_dc1_correction_label_cost_and_qa03_censoring_20260801.md` (error sites are
+  class-skewed; Lane error-rate dominates).
+- **Renderer-specific prior art:** `ddm_rf1_renderer_film_rung_20260824.md` (FiLM rung; BAR-SEG Δd_seg <
+  7.18e-6 for the seg leg alone — the admissibility bar you must beat per leg), `ddm_rj1_renderer_joint_move_20260823.md`,
+  `ddm_wd2_ep60_advisory_refusal_verdict_20260815.md`, `ddm_w96b_aligned_loss_implementation_20260826.md` (the
+  τ schedule and cosine floor with their derivations), `ddm_xs1_cross_section_conditioning_20260822.md`.
+Run `tools/graph_memory_recall.py "<your query>"` before each design decision and record what changed.
+
 ## HARD CONSTRAINTS
 
 - `upstream/` and `submissions/semantic_joint_ctxmix/` READ-ONLY (import the receiver; never edit the PR tree).
@@ -77,7 +114,7 @@ the loop from step zero and the carrier terminally re-solved (jg5/up2 law); pose
 
 ## OPTIMAL FORM
 
-- Family exemplar: the lifted PR130 trainer `src/tac/pr130_lift/train_semantic_quantized_resumable.py` (commit
+- Family exemplar (reference): the lifted PR130 trainer `src/tac/pr130_lift/train_semantic_quantized_resumable.py` (receipt `/Volumes/VertigoDataTier/pact/ddm_pr130_train_20260809/reports/BS16.json`, verdict PASS; commit
   42d322db5) with its deployed pack/parse parity gate; the aligned loss law `ddm_w96b_aligned_loss_implementation_20260826.md`
   (commit 3d9e021d0); the terminal pose re-solve `experiments/ddm_up2_shipping_pose_solve.py` (commit 2079b4bb9).
 - SCOPE reductions: epochs capped by wall-clock; the identity gate's 8-pair render check (legal). MECHANISM
