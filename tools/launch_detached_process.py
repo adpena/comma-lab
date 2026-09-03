@@ -458,11 +458,19 @@ def _supervisor_main(argv: list[str]) -> int:
     return rc
 
 
-def _apply_and_verify_nice(pid: int, requested: int) -> int:
+def _apply_and_verify_nice(pid: int, requested: int, *, best_effort: bool = False) -> int | None:
+    """Apply + verify a niceness. STRICT (default): any failure is a LaunchRefusal rc=8 —
+    a launch that cannot be de-prioritized beside a governed burn must not silently steal CPU.
+    ``best_effort=True`` (``--nice-best-effort``, for sandboxed callers whose kernel refuses
+    setpriority): record the failure in the manifest and continue at the inherited priority —
+    MEASURED 2026-09-03: an arm refused at rc=8 then ran the same compute IN-SESSION at default
+    priority, which is strictly worse than a recorded best-effort launch."""
     try:
         os.setpriority(os.PRIO_PROCESS, pid, requested)
         actual = os.getpriority(os.PRIO_PROCESS, pid)
     except (OSError, PermissionError) as exc:
+        if best_effort:
+            return None
         raise LaunchRefusal(
             "requested niceness could not be applied",
             rc=8,
@@ -471,6 +479,8 @@ def _apply_and_verify_nice(pid: int, requested: int) -> int:
             error=f"{type(exc).__name__}: {exc}",
         ) from exc
     if actual != requested:
+        if best_effort:
+            return int(actual)
         raise LaunchRefusal(
             "requested niceness did not verify",
             rc=8,
@@ -997,6 +1007,14 @@ def parse_args() -> argparse.Namespace:
         help="If a declared fresh root is nonempty, mint PATH_<utc> and rewrite declared paths.",
     )
     parser.add_argument("--nice", type=int, default=None, metavar="N")
+    parser.add_argument(
+        "--nice-best-effort",
+        action="store_true",
+        help=(
+            "do not refuse the launch when --nice cannot be applied/verified (sandboxed callers); "
+            "the manifest records nice_status=unapplied instead"
+        ),
+    )
     parser.add_argument("--derive-resource-budgets", action="store_true")
     parser.add_argument("--measured-peak-rss-gib", type=float)
     parser.add_argument("--measured-thread-need", type=int)
@@ -1336,7 +1354,14 @@ def main() -> int:
     pid_path.write_text(f"{proc.pid}\n", encoding="utf-8")
     try:
         if args.nice is not None:
-            payload["actual_nice"] = _apply_and_verify_nice(proc.pid, args.nice)
+            applied = _apply_and_verify_nice(
+                proc.pid, args.nice, best_effort=bool(args.nice_best_effort)
+            )
+            payload["actual_nice"] = applied
+            payload["nice_status"] = (
+                "applied" if applied == args.nice
+                else f"unapplied:best_effort (requested {args.nice}, actual {applied})"
+            )
         else:
             try:
                 payload["actual_nice"] = int(os.getpriority(os.PRIO_PROCESS, proc.pid))

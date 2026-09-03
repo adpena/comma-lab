@@ -2153,8 +2153,11 @@ Operator {date}: *"<FILL: operator verbatim, or the routed finding + its source 
 - Serializer commits w/ post-edit `--expected-content-sha256`; `.py` = 2 genuine review passes.
 - ALWAYS KEEP THE PAYLOAD; bulky receipts to `/Volumes/APDataStore/pact/{name}/`.
 - DETACHED >30-MIN COMPUTE: any single compute step projected to exceed 30 minutes MUST
-  launch outside the arm session with `nohup` + `disown`, a pidfile, crash-resumable stage
-  checkpoints, and a durable done-receipt. The arm MONITORS that process; a successor or
+  launch outside the arm session ONLY via `.venv/bin/python tools/launch_detached_process.py
+  --output-dir <run_dir> --done-receipt <name> --nice 10 --nice-best-effort -- <cmd...>`
+  (sandboxes cannot setpriority; without --nice-best-effort the launcher refuses rc=8 and arms
+  fall back to in-session compute — measured 2026-09-03), with crash-resumable stage
+  checkpoints and the durable done-receipt the fleet watcher delivers. The arm MONITORS that process; a successor or
   MAIN harvests the done-receipt. An in-session multi-hour compute loop is FORBIDDEN.
 - CLOSED-FORM-FIRST (operator 2026-08-31 "All upstream can be closed form"): the scoring
   chain is frozen piecewise-analytic math with every non-analytic locus exactly known —

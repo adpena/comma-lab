@@ -737,3 +737,17 @@ def test_capability_lint_warns_and_names_main_handoff(tmp_path: Path) -> None:
     assert "charter-lint WARN [nice_fixture]" in result.stdout
     assert "process_priority_control" in result.stdout
     assert "MAIN-handoff" in result.stdout
+
+
+def test_nice_best_effort_degrades_instead_of_refusing(monkeypatch):
+    """--nice-best-effort: a sandbox that refuses setpriority must not refuse the LAUNCH
+    (measured 2026-09-03: rc=8 pushed an arm into in-session compute at default priority)."""
+    import tools.launch_detached_process as launch_mod
+
+    def _deny(*_a, **_k):
+        raise PermissionError("Operation not permitted")
+
+    monkeypatch.setattr(launch_mod.os, "setpriority", _deny)
+    assert launch_mod._apply_and_verify_nice(12345, 10, best_effort=True) is None
+    with pytest.raises(launch_mod.LaunchRefusal):
+        launch_mod._apply_and_verify_nice(12345, 10)
