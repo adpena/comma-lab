@@ -78,12 +78,20 @@ built on a **Tesla T4 with CUDA** per its own `result_summary.json`):
 | comparison | positions differing | rate |
 |---|---:|---:|
 | `gt_cache_av['seg']` vs `gt_n600['lstars']` | **2** | 1.70e-08 |
+| shipped-weight base d_seg, n24 **seeded random** draw | 2.0239e-04 | **0.50%** from the T4 receipt |
+| shipped-weight base d_seg, n8 **prefix** draw (superseded) | 1.7230e-04 | 14.5% off — the prefix trap, measured |
 | `gt_cache_dali['seg']` vs `gt_cache_av['seg']` | **20,671** | 1.752e-04 |
 | `gt_cache_dali['seg']` vs `gt_n600['lstars']` | **20,671** | 1.752e-04 |
 | shipped tokens vs **DALI** | **9,179** | 7.781e-05 |
 | shipped tokens vs PyAV | 28,133 | 2.385e-04 |
 | pose MSE: `gt_cache_av` vs `gt_n600['gt_poses']` | — | **3.57e-12** |
 | pose MSE: DALI vs PyAV | — | **1.4061e-04** (= rf1's stated additive fork, to 5 s.f.) |
+
+**Independent corroboration inside the repo.** `experiments/ddm_up2_shipping_pose_solve.py:76-79` —
+the terminal pose solver this arm's own fire order calls — already draws exactly this distinction:
+`DEFAULT_DALI_GT = /Volumes/VertigoDataTier/.../gt_cache_dali.pt` and
+`DEFAULT_AV_GT = experiments/results/mlx_fleet_gt_cache/gt_n600.npz`. **The shipping pose solver calls
+gt_n600.npz the AV cache.** The repo already knew; only the charter's label was wrong.
 
 `mst1`'s DALI-gated transmitted-error count for this object is **9,182**; I measure **9,179** on the
 AFR1 tokens. Three pixels apart — the token field is essentially unchanged from dx2 to afr1, and the
