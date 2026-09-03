@@ -97,3 +97,11 @@ No additional under-36,044 B exact Lane carrier was found in the searched corpus
 - Transferring BZ2D's 2.178× ratio as if it were a Lane packet: GF1 measured that the existing generator form and fit error are inseparable on the exact target.
 
 `[contest-CUDA T4 n600] own-vehicle frontier: AFR1 — S=0.14797617125559104, archive=180,002 B, d_seg=0.00020139, d_pose=6.37e-6, SHA-256=cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25; LC3 ran no scorer and did not move the pointer.`
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `static_packet_custody_byte_delta_score_savings_v1` — `tac.canonical_equations (registry: static-packet custody byte-delta)` (`tac.canonical_equations`). **Relation:** IN-DOMAIN ANCHOR (rate-only ΔS arithmetic, `score_claim: false`).
+
+The 137,670 B exact carrier is priced by ΔS = 25·ΔB/37,545,489: +115,971 B over the 21,699 B Lane allowance = +0.07722032865253134 S. The BZ2D row is an in-domain refusal under `generator_form_fit_error_entanglement_v1` — the 16,549.13 B `36,044/2.178` projection is a ratio, not byte evidence.

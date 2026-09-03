@@ -115,3 +115,13 @@ fa9abaf66d65… (r3) / 4f5326a4c77b… (r4), launch counters 688/689. Counterfac
 checkpoint cadence enables any-window replay.
 
 — end —
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `logit_adjustment_class_prior_law_v1` — `tac.canonical_equations.logit_adjustment_class_prior_20260707` (`tac.canonical_equations`). **Relation:** DOMAIN-EXTENSION CANDIDATE (law's lever is the level-set witness trainer; QBFLOW is a different vehicle).
+
+Realized flip 0.5165 → 0.0680 in 100 CE steps births 4 of 5 classes and leaves Lane unborn — the rare-class failure this law's zero-byte τ·log(prior_c) offset exists to cure. r4/r5 carry the premise and the cure measured on this same vehicle.
+
+This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.

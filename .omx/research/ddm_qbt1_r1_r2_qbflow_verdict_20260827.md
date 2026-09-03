@@ -163,3 +163,13 @@ Citeable: config shas 545662e6ad… (r1) / 2a98385ef7… (r2), launch counters
 684/685. Counterfactual: checkpoints every 5 steps enable any-window replay.
 
 — end —
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `islands_necessity_floor_big3_only_v1` — `tac.canonical_equations.t5_crucible_measured_laws_20260707` (`tac.canonical_equations`). **Relation:** DOMAIN-EXTENSION CANDIDATE (the law's vehicle is `softmax_of_sdf_levelset_witness`; QBFLOW is a different vehicle).
+
+The seg leg is blocked by CLASS BIRTH — 2 of 5 classes born, three never predicted — which is the same shape as the law's measured claim that un-born classes carry 63.9% of d_seg and make birth NECESSARY. Stated as an extension CANDIDATE, not an anchor: transferring a vehicle-scoped law without a matched re-measure is the cross-regime-constant defect ([[m143]]) this memo's own STORES CONSULTED names.
+
+This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.

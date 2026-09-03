@@ -870,3 +870,158 @@ def test_ci_blind_reports_nothing_verified_when_every_module_collects_nothing(
     )
     monkeypatch.setattr(preflight_hook.subprocess, "run", lambda cmd, **kw: _Result())
     assert preflight_hook.run_ci_blind_tests(["x.py"]) == 0
+
+
+# --------------------------------------------------------------------------
+# ddm_eq1 (2026-09-04): Catalog #344 on the COMMIT PATH.
+#
+# The gate is registered strict=True in preflight_all() at src/tac/preflight.py:7510,
+# inside `if check_codebase:`. This hook's default mode is `--no-codebase`, which
+# examines 0 of 27 codebase gates -- so a STRICT gate ran at release time and never
+# once at commit time, and 29 memos accumulated in a week. These tests pin the cure.
+# --------------------------------------------------------------------------
+def _write_memo(tmp_path: Path, monkeypatch, name: str, body: str) -> str:
+    research = tmp_path / ".omx" / "research"
+    research.mkdir(parents=True, exist_ok=True)
+    (research / name).write_text(body, encoding="utf-8")
+    monkeypatch.setattr(preflight_hook, "REPO_ROOT", tmp_path)
+    return f".omx/research/{name}"
+
+
+def test_catalog_344_scan_blocks_a_post_cutoff_memo_with_no_equation(
+    tmp_path, monkeypatch
+) -> None:
+    rel = _write_memo(
+        tmp_path,
+        monkeypatch,
+        "ddm_zz1_thing_20260901.md",
+        "# zz1\n\nThe prior law is FALSIFIED at n600: the ratio is 3.14.\n",
+    )
+    assert preflight_hook.run_canonical_equation_reference_scan([rel]) == 1
+
+
+def test_catalog_344_scan_accepts_an_equation_citation(tmp_path, monkeypatch) -> None:
+    rel = _write_memo(
+        tmp_path,
+        monkeypatch,
+        "ddm_zz2_thing_20260901.md",
+        "# zz2\n\nFALSIFIED at n600. Anchors `some_law_v1` "
+        "(`tac.canonical_equations`).\n",
+    )
+    assert preflight_hook.run_canonical_equation_reference_scan([rel]) == 0
+
+
+def test_catalog_344_scan_accepts_a_substantive_waiver(tmp_path, monkeypatch) -> None:
+    rel = _write_memo(
+        tmp_path,
+        monkeypatch,
+        "ddm_zz3_review_20260901.md",
+        "# zz3\n\nThe claim is FALSIFIED.\n"
+        "<!-- # FORMALIZATION_PENDING: process review, no measured row of its own -->\n",
+    )
+    assert preflight_hook.run_canonical_equation_reference_scan([rel]) == 0
+
+
+def test_catalog_344_scan_rejects_a_bare_placeholder_waiver(tmp_path, monkeypatch) -> None:
+    rel = _write_memo(
+        tmp_path,
+        monkeypatch,
+        "ddm_zz4_thing_20260901.md",
+        "# zz4\n\nFALSIFIED.\n# FORMALIZATION_PENDING: <rationale>\n",
+    )
+    assert preflight_hook.run_canonical_equation_reference_scan([rel]) == 1
+
+
+def test_catalog_344_placeholder_rejection_is_exact_match_only_MEASURED_GAP(
+    tmp_path, monkeypatch
+) -> None:
+    """MEASURED 2026-09-04 (ddm_eq1): the placeholder check is EXACT-match, so the
+    canonical HTML-comment form smuggles a placeholder past it.
+
+    ``_CHECK_344_PLACEHOLDER_RATIONALES`` is compared with ``rationale in (...)`` after a
+    ``strip()``, and the waiver regex captures ``[^\\n]+`` -- so inside the corpus's own
+    ``<!-- # FORMALIZATION_PENDING:... -->`` form the captured rationale is
+    ``"<rationale> -->"``, which is neither an exact placeholder nor shorter than the
+    4-char floor. It is ACCEPTED.
+
+    This test does not assert that the behaviour is right; it PINS it, so the gap is a
+    recorded finding rather than an assumption. Widening the check would change the
+    STRICT gate's semantics for the whole corpus and belongs to a charter that owns it.
+    """
+    rel = _write_memo(
+        tmp_path,
+        monkeypatch,
+        "ddm_zz4b_thing_20260901.md",
+        "# zz4b\n\nFALSIFIED.\n<!-- # FORMALIZATION_PENDING: <rationale> -->\n",
+    )
+    assert preflight_hook.run_canonical_equation_reference_scan([rel]) == 0
+
+
+def test_catalog_344_scan_honours_the_gates_own_date_cutoff(tmp_path, monkeypatch) -> None:
+    """Pre-cutoff memos are grandfathered by the gate; the hook must not re-open them."""
+    rel = _write_memo(
+        tmp_path, monkeypatch, "ddm_zz5_thing_20260101.md", "# zz5\n\nFALSIFIED.\n"
+    )
+    assert preflight_hook.run_canonical_equation_reference_scan([rel]) == 0
+
+
+def test_catalog_344_scan_ignores_docs_outside_omx_research(tmp_path, monkeypatch) -> None:
+    (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "docs" / "ddm_zz6_thing_20260901.md").write_text(
+        "# zz6\n\nFALSIFIED.\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(preflight_hook, "REPO_ROOT", tmp_path)
+    assert (
+        preflight_hook.run_canonical_equation_reference_scan(
+            ["docs/ddm_zz6_thing_20260901.md"]
+        )
+        == 0
+    )
+
+
+def test_catalog_344_scan_is_silent_and_passing_on_an_empty_stage() -> None:
+    assert preflight_hook.run_canonical_equation_reference_scan([]) == 0
+
+
+def test_catalog_344_scan_fails_open_when_a_memo_cannot_be_read(
+    tmp_path, monkeypatch
+) -> None:
+    """A broken guard must not block every commit -- fail OPEN and loud, like its siblings."""
+    monkeypatch.setattr(preflight_hook, "REPO_ROOT", tmp_path)
+    assert (
+        preflight_hook.run_canonical_equation_reference_scan(
+            [".omx/research/ddm_zz7_missing_20260901.md"]
+        )
+        == 0
+    )
+
+
+def test_catalog_344_scan_env_disable_is_named_not_silent(tmp_path, monkeypatch, capsys) -> None:
+    rel = _write_memo(
+        tmp_path, monkeypatch, "ddm_zz8_thing_20260901.md", "# zz8\n\nFALSIFIED.\n"
+    )
+    monkeypatch.setenv("CANONICAL_EQUATION_REFERENCE_SCAN_ENABLED", "0")
+    assert preflight_hook.run_canonical_equation_reference_scan([rel]) == 0
+    assert "DISABLED by env" in capsys.readouterr().err
+
+
+def test_catalog_344_scan_reuses_the_gates_own_predicates_not_a_second_copy() -> None:
+    """One law, two statements drift. The hook step must import, never restate."""
+    source = Path(preflight_hook.__file__).read_text(encoding="utf-8")
+    body = source[source.index("def run_canonical_equation_reference_scan") :]
+    body = body[: body.index("\ndef _staged_added_lines")]
+    assert "from tac.preflight import (" in body
+    assert "_check_344_text_has_empirical_finding" in body
+    assert "_check_344_text_has_canonical_equation_reference" in body
+    assert "_check_344_text_has_valid_waiver" in body
+    # No re-declared trigger/acceptance vocabulary in the hook.
+    assert "empirical anchor" not in body.lower().replace("_check_344", "")
+
+
+def test_catalog_344_scan_is_wired_into_main_before_run_preflight() -> None:
+    """run_preflight() early-returns on failure, so the step must precede it."""
+    source = Path(preflight_hook.__file__).read_text(encoding="utf-8")
+    main_body = source[source.index("def main() -> int:") :]
+    step = main_body.index("run_canonical_equation_reference_scan(staged_docs)")
+    preflight_call = main_body.index("rc = run_preflight()")
+    assert step < preflight_call

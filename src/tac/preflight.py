@@ -85200,6 +85200,21 @@ _CHECK_344_EMPIRICAL_FINDING_TOKENS: tuple[str, ...] = (
     "empirical residual",
 )
 
+# ddm_eq1 2026-09-04, MEASURED: "ratified" is a SUBSTRING of "stratified", and
+# "stratified" is how this campaign describes the seeded draws it uses INSTEAD of a
+# contiguous prefix ([[m88]]). Over the whole `.omx/research` corpus: 704 occurrences of
+# "stratified" against 29 of "unratified" and no bare-"ratified" collisions of any other
+# kind. Of the 29 memos live on this gate at commit d3212bed1, 16 (55.2%) tripped it
+# ONLY through that substring -- the gate was systematically flagging the memos that did
+# their sampling RIGHT, and the "week of drift" it reported was more than half
+# instrument. The fix is the narrowest one the measurement supports: refuse the match
+# only when "ratified" is the tail of "stratified". "unratified" (a real ratification-
+# status claim) still triggers; every other token keeps plain substring semantics, so
+# this changes NO other trigger's behaviour.
+_CHECK_344_TOKEN_OVERRIDE_RE: dict[str, re.Pattern[str]] = {
+    "ratified": re.compile(r"(?<!st)ratified"),
+}
+
 # Acceptance tokens that satisfy the gate (case-insensitive substring).
 _CHECK_344_CANONICAL_EQUATION_REFERENCE_TOKENS: tuple[str, ...] = (
     "tac.canonical_equations",
@@ -85233,9 +85248,21 @@ _CHECK_344_SELF_EXEMPT_PATHS: tuple[str, ...] = (
 
 
 def _check_344_text_has_empirical_finding(text: str) -> bool:
-    """True iff text contains any empirical-finding trigger token."""
+    """True iff text contains any empirical-finding trigger token.
+
+    Tokens match as plain case-insensitive substrings, except those with an entry in
+    ``_CHECK_344_TOKEN_OVERRIDE_RE`` (see that constant for the measured reason).
+    """
     low = text.lower()
-    return any(token in low for token in _CHECK_344_EMPIRICAL_FINDING_TOKENS)
+    for token in _CHECK_344_EMPIRICAL_FINDING_TOKENS:
+        override = _CHECK_344_TOKEN_OVERRIDE_RE.get(token)
+        if override is not None:
+            if override.search(low):
+                return True
+            continue
+        if token in low:
+            return True
+    return False
 
 
 def _check_344_text_has_canonical_equation_reference(text: str) -> bool:

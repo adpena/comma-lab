@@ -70,3 +70,13 @@ trigger WAS this run's terminal state). Own-vehicle frontier UNMOVED this unit: 
 pointer stands at gb1 S 0.14811799921260607 @ 180,215 B [contest-CUDA T4 n600] — this unit
 produced the pre-registered trajectory close of the n32 chase, the at-scale retention-wall
 proof, and the freed surfaces the fcd1 opening's distortion adjudication now runs on.
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `trajectory_derived_stopping_law_v1` — `tac.canonical_equations.trajectory_derived_stopping_20260805` (`tac.canonical_equations`). **Relation:** IN-DOMAIN ANCHOR (the law's STOP verdict, fired).
+
+The memo already names it in prose ('the trajectory-stopping law (caps=genus)'); this line puts the id in the equations leg. The pre-registered exponent rule fired on the 30,020 → 40,020 segment and STOPPED the n32 constrained-margin chase.
+
+This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.

@@ -74,3 +74,11 @@ today's read-the-source genus, caught before build). Fake-precision builds avoid
 Dollars: **0**.
 
 `[contest-CUDA T4 n600] own-vehicle frontier: AFR1 — S=0.14797617125559104, archive=180,002 B, d_seg=0.00020139, d_pose=6.37e-6, SHA-256=cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25; sub-0.12 gap 0.027976171255591042.`
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+<!-- # FORMALIZATION_PENDING:registration pass that records already-falsified premises so future charters cannot cite them; it registers verdicts other arms measured and produces none. Sister of hp1, same owed premise-decay law, same reason it is not yet derivable. -->
+
+**No canonical equation.** Registration pass that records already-falsified premises so future charters cannot cite them; it registers verdicts other arms measured and produces none. Sister of hp1, same owed premise-decay law, same reason it is not yet derivable.

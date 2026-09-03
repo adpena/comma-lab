@@ -229,3 +229,11 @@ not weaker.
 **Own-vehicle frontier UNMOVED by this adjudication: S 0.14803010583079396 @ 180,083 B
 `[contest-CUDA T4 n600]`** (lb1, archive sha
 `5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9`).
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `compensated_semantic_edit_exchange_v1` — `tac.canonical_equations.compensated_semantic_edit_exchange_20260818` (`tac.canonical_equations`). **Relation:** IN-DOMAIN ANCHOR (the law the regrade is drawn against).
+
+The nine changed dispositions are re-graded against this law's measured exchange (per S of rate credit: 0.508 back as pose, 0.388 as seg, 0.105 net; retention RISES with mass). The eight standing closures are the ones the law does not reach.

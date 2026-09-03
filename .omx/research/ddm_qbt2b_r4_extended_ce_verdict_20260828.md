@@ -116,3 +116,13 @@ Counterfactual: 5-step checkpoint cadence enables any-window replay; r5's balanc
 is pre-built into the config gate.
 
 — end —
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `logit_adjustment_class_prior_law_v1` — `tac.canonical_equations.logit_adjustment_class_prior_20260707` (`tac.canonical_equations`). **Relation:** DOMAIN-EXTENSION CANDIDATE — the law's PREMISE, measured.
+
+Lane NEVER births under UNWEIGHTED CE (pred 0.0051% vs GT 0.60%, within-err 99.76%; Movable 27.84%). That is the exact failure the class-prior offset is Fisher-consistent against, measured here on the QBFLOW vehicle at a 1,000-step censored cap.
+
+This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.

@@ -53,3 +53,11 @@ decodable conditioning, gp2/gp3) is strengthened to a measured family verdict.
   measured per-pair motion (DERIVED). Sparse dynamic events on top of a static scene: cannot reach the cap.
 
 Own-vehicle frontier: **afr1 S 0.14797617125559104 @ 180,002 B [contest-CUDA T4 n600]** — unmoved.
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `decoder_derivable_ideal_savings_ceiling_v1` — `tac.canonical_equations.ddm_lv3_current_arc_laws_20260901` (`tac.canonical_equations`). **Relation:** IN-DOMAIN ANCHOR (ceiling-first refusal).
+
+GF2 is that law's method executed on a new object: an optimistic repair ceiling (292,264 repairable sites at 0.2909 B/site with the ENTIRE 71,404.5 B packet as dynamic) used to REFUSE, never as a build target. Measured excess 2,780,224 sites. Sister law for the inherited-form leg: `generator_form_fit_error_entanglement_v1` (the 2.178x ratio does not transfer without its ~1.12% fit error).

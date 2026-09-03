@@ -1261,6 +1261,132 @@ def run_negative_verdict_scan(staged_docs: list[str]) -> int:
     return 0
 
 
+def run_canonical_equation_reference_scan(staged_docs: list[str]) -> int:
+    """`ddm_eq1` — refuse a NEWLY-STAGED empirical-finding memo with no equation leg.
+
+    WHY THIS EXISTS, answered at source (2026-09-04).  Catalog #344
+    (`check_empirical_finding_memo_references_canonical_equation`) is registered
+    `strict=True` in `preflight_all()` at `src/tac/preflight.py:7510` — inside the
+    `if check_codebase:` block.  `--no-codebase` is THIS hook's default mode
+    (`_preflight_command`, :909), and it examines 0 of 27 codebase gates.  So a STRICT gate ran
+    at release time and never once at commit time, and 29 memos dated 2026-08-27..09-03
+    accumulated unnoticed — a full week of arm output that drifted past the equations
+    leg of the triality.  Same structural cause as the #184, subset-selection and
+    negative-verdict steps above; same cure: make it a hook STEP.
+
+    ONE LAW, NOT TWO.  This step imports Catalog #344's own module-level predicates
+    rather than restating them.  Two statements of one law drift; the sibling
+    `tac.canonical_equations` drift guard exists because of exactly that.  What differs
+    here is only SCOPE: the gate walks every `.omx/research/*.md`, this step reads the
+    staged ones.  Staged scope is what makes it honestly STRICT from byte one and keeps
+    it at ~ms instead of the gate's ~0.96 s corpus walk.
+
+    Fail-OPEN and LOUD on a broken guard, matching every sibling above: blocking every
+    commit because the guard itself broke is worse than the bug it guards.
+    """
+    if os.environ.get("CANONICAL_EQUATION_REFERENCE_SCAN_ENABLED", "1") == "0":
+        print(
+            "[preflight-hook] canonical-equation-reference scan DISABLED by env "
+            "— NOT a pass.",
+            file=sys.stderr,
+        )
+        return 0
+    if not staged_docs:
+        return 0
+    try:
+        from tac.preflight import (
+            _CHECK_344_CUTOFF_DATE_SUFFIX_INT,
+            _CHECK_344_DESIGN_FILENAME_RE,
+            _CHECK_344_RESEARCH_RELPATH,
+            _CHECK_344_SELF_EXEMPT_PATHS,
+            _check_344_text_has_canonical_equation_reference,
+            _check_344_text_has_empirical_finding,
+            _check_344_text_has_valid_waiver,
+        )
+    except Exception as exc:  # pragma: no cover - guard-broken path
+        print(
+            f"[preflight-hook] canonical-equation-reference scan UNAVAILABLE "
+            f"(failing OPEN): {exc}",
+            file=sys.stderr,
+        )
+        return 0
+
+    try:
+        in_scope: list[str] = []
+        violations: list[str] = []
+        for rel in staged_docs:
+            # The gate's own scope: top-level .omx/research/*.md, dated filename,
+            # on or after the re-baseline cutoff, not self-exempt.
+            parent = str(Path(rel).parent).replace("\\", "/")
+            if parent != _CHECK_344_RESEARCH_RELPATH:
+                continue
+            if any(exempt in rel for exempt in _CHECK_344_SELF_EXEMPT_PATHS):
+                continue
+            match = _CHECK_344_DESIGN_FILENAME_RE.match(Path(rel).name)
+            if not match:
+                continue
+            try:
+                date_int = int(match.group(1))
+            except (TypeError, ValueError):
+                continue
+            if date_int < _CHECK_344_CUTOFF_DATE_SUFFIX_INT:
+                continue
+            in_scope.append(rel)
+            text = (REPO_ROOT / rel).read_text(encoding="utf-8", errors="replace")
+            if not _check_344_text_has_empirical_finding(text):
+                continue
+            if _check_344_text_has_canonical_equation_reference(text):
+                continue
+            if _check_344_text_has_valid_waiver(text):
+                continue
+            violations.append(rel)
+    except Exception as exc:  # pragma: no cover - guard-internal bug path
+        print(
+            f"[preflight-hook] canonical-equation-reference scan CRASHED (failing "
+            f"OPEN): {exc.__class__.__name__}: {exc} — 0 memos examined. This is "
+            f"NOT a pass.",
+            file=sys.stderr,
+        )
+        return 0
+
+    if violations:
+        print(
+            f"\n{RED}{BOLD}[preflight-hook] BLOCKED: empirical-finding memo with no "
+            f"canonical-equation reference{RST}",
+            file=sys.stderr,
+        )
+        print(
+            "  A finding is KNOWN only when DAG, DSL and equations AGREE. A memo that "
+            "states a\n  measured result and names no law leaves the equations leg "
+            "behind, and the drift is\n  silent — 29 memos accumulated in one week "
+            "before anyone looked (ddm_eq1, 2026-09-04).\n"
+            "  Fix EITHER by citing the law (`tac.canonical_equations` + its "
+            "equation_id; register a\n  new one via the registry helpers if none "
+            "covers it) OR, for a review/process memo with\n  no measured row of its "
+            "own, with a same-line "
+            "`# FORMALIZATION_PENDING:<substantive rationale>`.\n"
+            "  Catalog #344 is STRICT in preflight_all(), but `--no-codebase` (this "
+            "hook's default)\n  examines 0 of 27 codebase gates, so it never fired at "
+            "commit time until this step.",
+            file=sys.stderr,
+        )
+        for rel in violations:
+            print(f"[preflight-hook]   {rel}", file=sys.stderr)
+        return 1
+    if not in_scope:
+        # Silent by design: a commit that stages no dated research memo is not an
+        # equations-leg event, and a line here would be pure noise.
+        return 0
+    # State the DENOMINATOR on success (m50): a silent instrument is
+    # indistinguishable from one that examined nothing.
+    print(
+        f"{GREEN}[preflight-hook] canonical-equation reference: {len(in_scope)} staged "
+        f"research memo(s) in scope, all cite a law or carry a waiver{RST}",
+        file=sys.stderr,
+    )
+    return 0
+
+
 def _staged_added_lines(files: list[str]) -> list[tuple[str, str]]:
     """Return staged added lines as ``(path, line)`` pairs for exact diff scope."""
     if not files:
@@ -1869,6 +1995,16 @@ def main() -> int:
     # 1b/1c — before run_preflight(), which early-returns on failure. This one
     # additionally covers .md, the surface no commit-time check read before.
     rc = run_negative_verdict_scan(staged_docs)
+    if rc != 0:
+        return rc
+
+    # Step 1d2: `ddm_eq1` canonical-equation reference guard. Same placement
+    # rationale as 1b/1c/1d — before run_preflight(), which early-returns on failure.
+    # Catalog #344 is STRICT in preflight_all() but sits inside `if check_codebase:`,
+    # and this hook's default `--no-codebase` mode examines 0 of 27 codebase gates,
+    # so the gate had never executed at commit time. 29 memos drifted past the
+    # equations leg in one week before anyone looked.
+    rc = run_canonical_equation_reference_scan(staged_docs)
     if rc != 0:
         return rc
 

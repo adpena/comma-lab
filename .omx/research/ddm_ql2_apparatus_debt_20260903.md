@@ -267,3 +267,11 @@ enforced at 1, a tool that could not run can run, and a receipt that could only 
   symlink `.venv/bin/python → python3.13` (rebuilt 2026-08-31), while `_expected_training_argv` deliberately
   leaves `PYTHON_PATH` unresolved (site-packages). Cure: `os.path.abspath` (normalize, never follow) — 17/17 pass.
   Genus: [[m35]] venv-symlink identity; sister of m123 (env-coupled digest).
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+<!-- # FORMALIZATION_PENDING:apparatus-debt ledger: it enumerates and owns debt rows and runs no measurement. Sister of ht1; the debt-decay law both would anchor needs a time series, not a snapshot. -->
+
+**No canonical equation.** Apparatus-debt ledger: it enumerates and owns debt rows and runs no measurement. Sister of ht1; the debt-decay law both would anchor needs a time series, not a snapshot.

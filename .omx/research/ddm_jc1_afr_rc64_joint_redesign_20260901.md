@@ -175,3 +175,13 @@ discarded. No Modal call, scorer job, exact evaluation, or `upstream/` write occ
 - **QUEUED-CONDITIONAL** — owner: `MAIN` evaluation scheduler; consumer store: canonical candidate/evaluation ledgers plus `/Volumes/APDataStore/pact/ddm_jc1/scmdl_projection/`; fire trigger: a receiver-closed repeat-identical archive is at most 140,479.86 B, has measured full-n600 pose/Seg components satisfying the exact score law, and passes the normal content-derived seals; only then request sequential contest authority evaluation.
 
 **OWN-VEHICLE FRONTIER: UNMOVED — S = 0.14797617125559104 @ 180,002 B [contest-CUDA T4, n600], AFR1 archive SHA-256 `cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25`; JC1 named an unmeasured mechanism and produced no score row.**
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `decoder_causal_condition_transport_v1` — `tac.canonical_equations.decoder_causal_condition_transport_20260901` (`tac.canonical_equations`). **Relation:** IN-DOMAIN ANCHOR (the surviving mechanism class IS this law).
+
+JC1's own stated law — 'changing the decoded conditioning field can reorder coder rankings' — is this equation: conditioning is free only when the decoder reproduces the exact CDF/parse equivalence class before use. The memo names a mechanism and measures no candidate, so it anchors the law's REFUSAL side, not a byte claim.
+
+This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.

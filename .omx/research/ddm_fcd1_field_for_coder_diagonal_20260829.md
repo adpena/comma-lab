@@ -187,3 +187,13 @@ Beyond the charter seeds:
   budget, while a future native speed port must be versioned as generation 21.
 
 Own-vehicle frontier: **S = 0.14811799921260607 @ 180,215 B `[contest-CUDA T4 n600]` — UNMOVED.**
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `field_change_bhw_decomposition_v1` — `tac.canonical_equations.ddm_lv3_current_arc_laws_20260901` (`tac.canonical_equations`). **Relation:** IN-DOMAIN ANCHOR (this memo IS the law's anchor).
+
+The B/H/W decomposition and the B-only union's −3,756 B (180,192 → 176,436 B) are the law's registered anchor. The law's own `excluded` clause carries this memo's caveat verbatim: token-label benefit does NOT infer survival through R or PoseNet.
+
+This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.

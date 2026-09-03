@@ -65,6 +65,12 @@ from tac.canonical_equations.anisotropic_basis_two_regime_allocation_20260707 im
     freq_along_for_regime,
     populate_anisotropic_basis_two_regime_allocation_equation,
 )
+from tac.canonical_equations.annulus_restricted_prefix_bias_detector_20260904 import (
+    bias_amplification,
+    build_annulus_restricted_prefix_bias_detector_v1,
+    global_check_is_blind,
+    prefix_constant_is_suspect,
+)
 from tac.canonical_equations.bayesian_posterior_update import (
     DEFAULT_NIG_PRIOR,
     BayesianPosterior,
@@ -423,6 +429,11 @@ from tac.canonical_equations.registry import (
     update_equation_with_domain_refinement,
     update_equation_with_empirical_anchor,
 )
+from tac.canonical_equations.renderer_seg_pose_coupling_20260903 import (
+    build_renderer_seg_pose_coupling_shipped_object_v1,
+    payable_pose_ceiling,
+    seg_only_move_is_payable,
+)
 from tac.canonical_equations.resize_exploit_flip_fix_frontier_20260709 import (
     build_resize_exploit_flip_fix_frontier_v1,
     populate_resize_exploit_flip_fix_frontier_equation,
@@ -515,6 +526,9 @@ __all__ = [
     "ALL_DEEPMATH_AMORTIZING_ARGMAX_BUILDERS",
     "ALL_LV3_CURRENT_ARC_BUILDERS",
     "AWAY_TRUST_VS_ACTUAL_PRICE_BAND",
+    "bias_amplification",
+    "build_annulus_restricted_prefix_bias_detector_v1",
+    "build_renderer_seg_pose_coupling_shipped_object_v1",
     "CANONICAL_EQUATIONS_REGISTRY_LOCK",
     "CANONICAL_EQUATIONS_REGISTRY_PATH",
     "CANONICAL_EQUATION_SCHEMA_VERSION",
@@ -524,13 +538,17 @@ __all__ = [
     "EVENT_DOMAIN_REFINED",
     "EVENT_RECALIBRATED",
     "EVENT_REGISTERED",
+    "global_check_is_blind",
     "JG1_LOGIT_RANKER_BITS_PER_TOKEN",
     "JG3_ACTUAL_FLAT_PRICE_BITS_PER_TOKEN",
     "LAWREF_BUILTIN_EVALUATORS",
+    "payable_pose_ceiling",
+    "prefix_constant_is_suspect",
     "RECALIBRATE_NEVER_AUTO",
     "RECALIBRATE_ON_NEW_ANCHORS",
     "RECALIBRATE_ON_PARAMETER_REFIT",
     "RECALIBRATE_ON_RESIDUAL_DRIFT",
+    "seg_only_move_is_payable",
     "TOWARD_TRUST_VS_MODEL_U7P75",
     "TOWARD_TRUST_VS_MODEL_U12",
     "VALID_EVENT_TYPES",

@@ -168,3 +168,11 @@ PR #130 material (2026-07-25) sitting well after both priority commits, which is
 sufficient for the claim but is an inference, not a receipt.
 
 No scorer ran. No archive was mutated. No dispatch fired. Nothing was published.
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+<!-- # FORMALIZATION_PENDING:fresh-eyes PR review of an already-submitted packet; every number it handles is quoted from the arms that measured it, and it produces no measured row of its own. The law it would need is a review-efficacy law (defects-found per reviewer-pass, by defect class); that is not derivable until review outcomes are recorded as typed rows rather than prose findings. -->
+
+**No canonical equation.** Fresh-eyes PR review of an already-submitted packet; every number it handles is quoted from the arms that measured it, and it produces no measured row of its own. The law it would need is a review-efficacy law (defects-found per reviewer-pass, by defect class); that is not derivable until review outcomes are recorded as typed rows rather than prose findings.

@@ -242,3 +242,13 @@ source module, tests, and aligned verdict receipt. No broader claim of absence i
 frontier remains AFR1 at `S=0.14797617125559104`, `180,002 B`, archive SHA-256
 `cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25`
 `[contest-CUDA T4 n600]`.
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `ema_decay_run_geometry_v1` — `tac.canonical_equations.ema_decay_run_geometry_20260717` (`tac.canonical_equations`). **Relation:** IN-DOMAIN (the build resolves its decay through this law).
+
+The sealed fair-form burn takes its EMA decay from run geometry rather than the legacy 0.997 constant — the law's whole point ([[m21]] constants→laws). BUILD-COMPLETE and BURN-NOT-FIRED, so this memo consumes the law and adds no anchor to it.
+
+This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.

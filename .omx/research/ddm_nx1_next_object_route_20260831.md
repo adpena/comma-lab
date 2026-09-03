@@ -156,3 +156,13 @@ NX1 produced **no new score and no pointer movement**. It narrowed the next-obje
 - **Do not stack qbt's rate half with LB1's distortion half or reuse the four-object cross as a global theorem.** That score is cross-object and fake; the measured cross covers only four inherited/current bodies.
 - **Do not reopen born-small trained renderers, W96 R+P, HG1+RC64 routing, or WWC1's post-hoc selector cone without changing the object.** Their measured failures are respectively scorer/Pose, insufficient matched gain, systematic tail, and non-transfer/additivity failure.
 - **Do not use the old task-space directional-basis or byte projections as evidence.** The roadmap is research-only and not n600 receiver-closed; the production directional-basis premise was superseded.
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `procedural_predictor_plus_residual_correction_savings_v1` — `tac.canonical_equations.procedural_predictor_residual_savings` (`tac.canonical_equations`). **Relation:** CONSULTED, NOT ANCHORED — nx1 is a route memo; it queried the registry for this form and found no NX1-specific prior.
+
+Recorded honestly: nx1 measures nothing and adds no anchor. It names three feasible objects and prices them at the canonical rate constants (25.0 / 37,545,489) this law carries. Its rank-3 candidate — a joint scorer/coder redesign of the AFR1 RC64 field — is the object `ddm_jc1` then adjudicated under `decoder_causal_condition_transport_v1`, so the route's downstream equations leg is that law, not this one.
+
+This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.

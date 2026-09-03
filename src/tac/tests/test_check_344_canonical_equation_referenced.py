@@ -394,3 +394,70 @@ def test_undated_memo_skipped_documented_default(tmp_path: Path):
         repo_root=tmp_path, strict=True
     )
     assert out == [], "undated memo must be skipped (documented default)"
+
+
+# ---------------------------------------------------------------------------
+# ddm_eq1 2026-09-04: the "stratified" substring false positive.
+#
+# MEASURED: 16 of the 29 memos live on this gate at commit d3212bed1 (55.2%) tripped it
+# ONLY because "ratified" is a substring of "stratified" -- the word this campaign uses
+# for the seeded draws it takes INSTEAD of a contiguous prefix ([[m88]]). Corpus counts:
+# 704 "stratified" against 29 "unratified". The gate was penalising the memos that did
+# their sampling right, and more than half the reported "week of drift" was instrument.
+# ---------------------------------------------------------------------------
+def test_stratified_alone_does_not_trigger_the_ratified_token(tmp_path: Path):
+    """The cure. A seeded stratified draw is a SAMPLING statement, not a verdict."""
+    _write_memo(
+        tmp_path,
+        f"strat_{_CUTOFF + 1}.md",
+        "Rows come from a seeded stratified draw of 200/600 (seed 20260903), not a prefix.",
+    )
+    out = check_empirical_finding_memo_references_canonical_equation(
+        repo_root=tmp_path, strict=True
+    )
+    assert out == [], "'stratified' must not be read as the 'ratified' trigger"
+
+
+def test_bare_ratified_still_triggers(tmp_path: Path):
+    """The cure must not blunt the token it narrows."""
+    _write_memo(tmp_path, f"rat_{_CUTOFF + 1}.md", "The prior law was RATIFIED at n600.")
+    out = check_empirical_finding_memo_references_canonical_equation(repo_root=tmp_path)
+    assert len(out) == 1
+
+
+def test_unratified_still_triggers(tmp_path: Path):
+    """'unratified' is a real ratification-status claim; only 'stratified' is excluded."""
+    _write_memo(tmp_path, f"unrat_{_CUTOFF + 1}.md", "The verdict remains unratified.")
+    out = check_empirical_finding_memo_references_canonical_equation(repo_root=tmp_path)
+    assert len(out) == 1
+
+
+def test_stratified_memo_that_also_carries_a_real_trigger_still_binds(tmp_path: Path):
+    """Narrowing one token must not let a co-occurring real trigger through."""
+    _write_memo(
+        tmp_path,
+        f"both_{_CUTOFF + 1}.md",
+        "A seeded stratified draw; the prior law is FALSIFIED at n600.",
+    )
+    out = check_empirical_finding_memo_references_canonical_equation(repo_root=tmp_path)
+    assert len(out) == 1
+
+
+def test_only_the_ratified_token_carries_an_override(tmp_path: Path):
+    """Pin the blast radius: every other trigger keeps plain substring semantics."""
+    from tac.preflight import _CHECK_344_TOKEN_OVERRIDE_RE
+
+    assert set(_CHECK_344_TOKEN_OVERRIDE_RE) == {"ratified"}
+
+
+def test_ddm_eq1_registered_both_backfilled_equations_upstream():
+    """The two laws this backfill registered must be resolvable from the registry."""
+    from tac.canonical_equations.registry import get_equation_by_id
+
+    for equation_id in (
+        "renderer_seg_pose_coupling_shipped_object_v1",
+        "annulus_restricted_prefix_bias_detector_v1",
+    ):
+        equation = get_equation_by_id(equation_id)
+        assert equation is not None, f"{equation_id} missing from the registry"
+        assert equation.empirical_anchors, f"{equation_id} registered with no anchor"

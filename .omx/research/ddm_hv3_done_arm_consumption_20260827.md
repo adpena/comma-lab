@@ -169,3 +169,11 @@ was falsified rather than satisfied by a stale final-message headline.
 - Counting a clean `.done` receipt as an unowned frontier action is closed on this cohort: all 18 have content-routed exits and zero unknown residue.
 
 Own-vehicle frontier: **GB1 — S 0.14811799921260607 @ 180,215 B [contest-CUDA T4 n600]; unchanged by this consumption-only arm.**
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+<!-- # FORMALIZATION_PENDING:done-arm consumption sweep: an audit of whether landed arm output reached a consumer. Its numbers are counts of the audit's own scope, not a physical measurement. The law it would need is a consumption-rate law over the split-banks defect ([[m107]]); it needs matched before/after consumption censuses, and this memo is the first one. -->
+
+**No canonical equation.** Done-arm consumption sweep: an audit of whether landed arm output reached a consumer. Its numbers are counts of the audit's own scope, not a physical measurement. The law it would need is a consumption-rate law over the split-banks defect ([[m107]]); it needs matched before/after consumption censuses, and this memo is the first one.

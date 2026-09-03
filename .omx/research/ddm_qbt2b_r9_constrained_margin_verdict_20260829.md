@@ -115,3 +115,13 @@ Terminal rows appended for `ddm_qbt2b_r9_scorer_20260829` + `ddm_qbt2b_r9_metal_
 S 0.14811799921260607 @ 180,215 B [contest-CUDA T4 n600] — this unit produced a
 law-flattening measurement, an honest advisory-gate refusal, and the retention-wall
 cure, not an exact row.
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `trajectory_derived_stopping_law_v1` — `tac.canonical_equations.trajectory_derived_stopping_20260805` (`tac.canonical_equations`). **Relation:** IN-DOMAIN (trajectory segment, second doubling; §5 pre-registers the STOP rule).
+
+r9's §5 records the decision rule BEFORE the next run ends — e ≤ −0.85 → chase credible, e > −0.85 → STOP — which is this law's projected-tail-gain test written as a pre-registered exponent bar.
+
+This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.

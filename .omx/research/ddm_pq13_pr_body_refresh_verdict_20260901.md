@@ -261,3 +261,11 @@ Beyond the charter seeds:
   from the generation-7 packet facts.
 
 `[contest-CUDA T4 n600] own-vehicle frontier: AFR1 — S=0.14797617125559104, archive=180,002 B, d_seg=0.00020139, d_pose=6.37e-6, SHA-256=cbb8d928a8ccdd3f5103da1d4a8d38d0662a5e5615266b923b5f8350d405bf25; UNMOVED by this prepare-only arm.`
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+<!-- # FORMALIZATION_PENDING:PR-body refresh adjudication; it decides what the public body should SAY about rows other arms measured, and measures nothing itself. The law it would need is a disclosure-staleness law (how far a public body may lag the pointer before it misleads); not derivable without a measured cost of staleness, which we have never paid or priced. -->
+
+**No canonical equation.** PR-body refresh adjudication; it decides what the public body should SAY about rows other arms measured, and measures nothing itself. The law it would need is a disclosure-staleness law (how far a public body may lag the pointer before it misleads); not derivable without a measured cost of staleness, which we have never paid or priced.

@@ -51,3 +51,11 @@ walls" (the no-walls steer upgraded this from duplicate-with-note to ONE canonic
 Files: 1 new + 2 edited (.py ×3, two review passes each via review_tracker). Dead code deleted:
 2,687 chars. Registry rows patched: 7 (receipts). Tests: 11/11 keeper + module import + executed
 controls. Dollars: 0. Pointer: UNMOVED (apparatus).
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+<!-- # FORMALIZATION_PENDING:canonicalization of the premise linter: an apparatus change plus its lint counts. The counts are the tool's own scope, not a physical row. The law it would need is a premise-decay law (how fast a charter's premises go stale); not derivable until premises carry measured expiry evidence rather than dates. -->
+
+**No canonical equation.** Canonicalization of the premise linter: an apparatus change plus its lint counts. The counts are the tool's own scope, not a physical row. The law it would need is a premise-decay law (how fast a charter's premises go stale); not derivable until premises carry measured expiry evidence rather than dates.

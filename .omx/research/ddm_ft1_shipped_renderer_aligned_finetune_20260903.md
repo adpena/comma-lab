@@ -565,3 +565,11 @@ worth the window is a `ddm_fb1` prioritization call, not this arm's to make.
 ## Own-vehicle frontier
 
 **afr1 S 0.14797617125559104 @ 180,002 B [contest-CUDA T4 n600] — UNMOVED by this arm.**
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `renderer_seg_pose_coupling_shipped_object_v1` — `tac.canonical_equations.renderer_seg_pose_coupling_20260903` (`tac.canonical_equations`). **Relation:** IN-DOMAIN ANCHOR (registered by this arm; ft1 is anchor 2 of 2).
+
+§5.2's `coupling_dpose_over_dseg = 217.30366224024704` (retained `verdict_ft1_step600.json`) is the trained-change anchor of the law; rf1's 166.80837961844966 is the structural one. The law carries the closing arithmetic (`payable_pose_ceiling`, `seg_only_move_is_payable`) and it refuses a 25% seg cut at BOTH band ends, so the FORMULATION closure here no longer rests on one arm's number.

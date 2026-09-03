@@ -118,3 +118,13 @@ Counterfactual: any-window replay via 5-step ckpt cadence; the §5 gate revision
 testable from the retained r5 cap checkpoint without retraining.
 
 — end —
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `logit_adjustment_class_prior_law_v1` — `tac.canonical_equations.logit_adjustment_class_prior_20260707` (`tac.canonical_equations`). **Relation:** DOMAIN-EXTENSION CANDIDATE — a REFINEMENT: the cure has a measured majority-class cost.
+
+Inverse-frequency CE births Lane (werr 99.76% → 9.80%) and the failure INVERTS: Road degrades 1.28% → 25.77%, with 86.6% of Road errors Road→Lane over-paint. The prior shift is not free; its cost lands on the majority class. That is the sharpest thing this family says about the law and it is owed to the law's domain if the vehicle extension is ever measured.
+
+This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.

@@ -211,3 +211,11 @@ asserting emptiness from it would be the elimination-is-not-proof error again.
 census) is live and adjacent — its class is exactly the representation-change B belongs to.
 
 `[contest-CUDA T4 n600] own-vehicle frontier: LB1 — S=0.14803010583079396, archive=180,083 B, d_seg=0.00020139, d_pose=6.37e-6, SHA-256=5b856e667961dd9ab68ddd7166384662bfb5912fabc8c9270098ea63a8ad28c9.`
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+<!-- # FORMALIZATION_PENDING:precheck census of folded-but-never-fired rows; it is a query over the ledgers, not an experiment. The law it would need is the activation-ledger law that CLAUDE.md's 'off is a tracked queue' section describes in prose — it is not derivable until `{ever_fired, last_measured_verdict}` is a typed field on every lever rather than a reconstructed audit. -->
+
+**No canonical equation.** Precheck census of folded-but-never-fired rows; it is a query over the ledgers, not an experiment. The law it would need is the activation-ledger law that CLAUDE.md's 'off is a tracked queue' section describes in prose — it is not derivable until `{ever_fired, last_measured_verdict}` is a typed field on every lever rather than a reconstructed audit.

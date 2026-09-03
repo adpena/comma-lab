@@ -578,3 +578,11 @@ rows.
   opening, live object, cheap deciding step, and no current owner simultaneously.
 
 Own-vehicle frontier: **GB1 — S 0.14811799921260607 @ 180,215 B [contest-CUDA T4, n600]; unchanged by hv4.**
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+<!-- # FORMALIZATION_PENDING:sister sweep of hv3 over recovered artifacts; same class, same reason. It re-grades consumption status and measures no object. The consumption-rate law it would anchor is not yet derivable for the same reason: two censuses do not make a rate without a matched denominator of arm output between them. -->
+
+**No canonical equation.** Sister sweep of hv3 over recovered artifacts; same class, same reason. It re-grades consumption status and measures no object. The consumption-rate law it would anchor is not yet derivable for the same reason: two censuses do not make a rate without a matched denominator of arm output between them.

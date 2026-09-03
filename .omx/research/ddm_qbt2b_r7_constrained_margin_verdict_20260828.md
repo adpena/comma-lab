@@ -123,3 +123,13 @@ Terminal rows appended for `ddm_qbt2b_r7_scorer_20260828` + `ddm_qbt2b_r7_metal_
 (completed). Own-vehicle frontier UNMOVED this unit: the exact pointer stands at
 gb1 S 0.14811799921260607 @ 180,215 B [contest-CUDA T4 n600] — this unit produced a
 constrained-training LAW result + an honest advisory gate refusal, not an exact row.
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `trajectory_derived_stopping_law_v1` — `tac.canonical_equations.trajectory_derived_stopping_20260805` (`tac.canonical_equations`). **Relation:** IN-DOMAIN (recorded objective trajectory with a monotone compute coordinate).
+
+The constrained-margin endpoint is one segment of the trajectory the r10 STOP rule is computed on. The law's own `excluded` clause binds here: an iteration cap is not a convergence certificate.
+
+This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.

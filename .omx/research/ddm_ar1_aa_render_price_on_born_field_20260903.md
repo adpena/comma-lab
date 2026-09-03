@@ -373,3 +373,11 @@ the charter's pins.
 Nothing was written under the burn's `runs/`. The live treatment cell was untouched and stayed healthy
 throughout. No Metal, no MPS, no Modal, no contest evaluation, no `upstream/` edit, no
 `submissions/semantic_joint_ctxmix/` edit. No `/tmp` path appears in any retained artifact.
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `aa_sdf_observation_footprint_render_dseg_v1` — `tac.canonical_equations (registered via tools/register_aa_sdf_observation_render_equation.py)` (`tac.canonical_equations`). **Relation:** REFINES — the refinement this memo asked for was landed FOR it at commit d3212bed1.
+
+AR1 §332 named the change and said plainly it did not write it. The law's `domain_of_validity` now carries it: the `signal` dimension, with `real_frame_achievable_through_R` IN-DOMAIN and `point_trained_learned_field` EXCLUDED, `last_domain_refinement_rationale` naming this memo. This line closes the loop by putting the reference token in the memo; it asserts nothing new.

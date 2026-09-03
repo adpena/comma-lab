@@ -201,3 +201,13 @@ packet, and decoded-field SHAs re-matched · `--output` equal to the sealed root
 **Own-vehicle frontier: S 0.14797617125559104 @ 180,002 B `[contest-CUDA T4 n600]` (afr1) — UNMOVED
 this unit.** This arm produced a fire order, not a score; that is a MEANS, and the END is still a lower
 exact row.
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `gap_decomposition_against_demonstrated_floor_v1` — `tac.canonical_equations.gap_decomposition_against_floor_20260802` (`tac.canonical_equations`). **Relation:** REFINES the law's m66 clause (a ΔS without its gap denominator is unanchored).
+
+QN1's own correction is exactly that clause firing on a FALSIFIER: at d_seg = 0.01 the seg term alone is 1.0, S at the falsifier corner = 1.106353215794932, and the d_seg 0.12 actually needs at the falsifier pose is 1.3646784205e-4 — the falsifier is 73.28× looser than the target. Scope honesty: these are DERIVED on a bound archive, not the two matched MEASURED triples the law's `included` clause requires, so this is a refinement of the reading rule, not a new in-domain anchor.
+
+This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.

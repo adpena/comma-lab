@@ -88,3 +88,13 @@ Main remains dirty by design; unrelated concurrent canonical-equation, costate, 
 - Claiming serializer commits landed on main is closed: both attempts returned rc=17. Only the retained fallback commits/bundles exist.
 
 S 0.14797617125559104 @ 180,002 B [contest-CUDA T4 n600], afr1 sha cbb8d928…d405bf25 — UNMOVED
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+<!-- # FORMALIZATION_PENDING:red-debt hygiene census: it counts and dispositions existing debt rows and runs no experiment. The law it would need is a debt-decay law (how apparatus debt accrues and is retired per unit of arm output); not derivable from one census — it needs a time series this repo has only just begun to record. -->
+
+**No canonical equation.** Red-debt hygiene census: it counts and dispositions existing debt rows and runs no experiment. The law it would need is a debt-decay law (how apparatus debt accrues and is retired per unit of arm output); not derivable from one census — it needs a time series this repo has only just begun to record.
+
+This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.

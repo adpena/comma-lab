@@ -165,3 +165,13 @@ checkpoint must be reserialized; initialized bytes never transfer as a trained r
 
 Failure closes only this QBFLOW v1 initialized first-rung formulation. It does not prove an implicit
 boundary-flow family lower bound.
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `static_packet_custody_byte_delta_score_savings_v1` — `tac.canonical_equations (registry: static-packet custody byte-delta)` (`tac.canonical_equations`). **Relation:** IN-DOMAIN (the schema's gate is this law's rate-only arithmetic).
+
+The frozen packet's only gate is byte-side: both the pre-registered projected `B_hat` and the exact full archive must be ≤ 137,986 B, and the memo says plainly that neither is a distortion or score measurement — which is this law's `NOT a score claim until paired CUDA` clause stated at the schema surface.
+
+This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.

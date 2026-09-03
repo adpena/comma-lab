@@ -129,3 +129,13 @@ replay via periodic ckpts; the §5 constraint law is testable from the same r5-c
 without retraining the birth stage.
 
 — end —
+
+---
+
+## ADDENDUM (ddm_eq1, 2026-09-04) — the equations leg
+
+**Law:** `mcf_minority_erasure_inevitability_v1` — `tac.canonical_equations.deepmath_amortizing_argmax_laws_20260704` (`tac.canonical_equations`). **Relation:** DOMAIN-EXTENSION CANDIDATE (law's vehicle is `softmax_of_sdf_levelset_witness`).
+
+The margin law descends 9.7× on a born field (flip 0.0945 → 0.00972) and the unweighted flip objective RE-ERASES the born Lane (9.80% → 99.81%) — the memo names the mechanism as σ_cc′/MCF thin-structure collateral, which is this law: the perimeter-gradient flow is motion by mean curvature, so high-curvature thin Lanes erase FIRST and inevitably. The law's registered cure (a per-class area/volume constraint) is what r7's lane-CONSTRAINED margin is.
+
+This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.
