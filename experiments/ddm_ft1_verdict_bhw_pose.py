@@ -332,16 +332,40 @@ def export_section(
 
 
 def load_state_from_checkpoint(path: Path) -> tuple[dict[str, torch.Tensor], str]:
-    """Prefer the EMA shadow; fall back to live weights only when absent."""
+    """Load the weights that DEPLOY -- the EMA shadow, never the live weights.
+
+    The PR130 resumable trainer declares which tensors deploy in
+    ``deployment_weights`` and puts them at the top-level ``state_dict``; the
+    live weights sit at ``training_state.model_state_dict``.  Honour that
+    declaration explicitly rather than falling through a key-preference list:
+    a silent pick of the live weights would violate the EMA non-negotiable and
+    would be invisible in the receipt.
+    """
 
     payload = torch.load(path, map_location="cpu", weights_only=False)
+    declared = payload.get("deployment_weights")
+    if declared is not None:
+        if declared != "ema_shadow":
+            raise ValueError(
+                f"checkpoint declares deployment_weights={declared!r}; this arm "
+                "only scores an EMA-shadow deployment"
+            )
+        block = payload.get("state_dict")
+        if not isinstance(block, Mapping):
+            raise ValueError(
+                "checkpoint declares an ema_shadow deployment but carries no state_dict"
+            )
+        return (
+            {k: v.detach().cpu().clone() for k, v in block.items()},
+            "state_dict (declared deployment_weights=ema_shadow)",
+        )
     for key in ("ema", "ema_state"):
         block = payload.get(key)
         if isinstance(block, Mapping) and isinstance(block.get("shadow"), Mapping):
             return {k: v.detach().cpu().clone() for k, v in block["shadow"].items()}, (
                 f"{key}.shadow"
             )
-    for key in ("ema_shadow", "state_dict", "model_state_dict"):
+    for key in ("ema_shadow", "state_dict"):
         block = payload.get(key)
         if isinstance(block, Mapping):
             return {k: v.detach().cpu().clone() for k, v in block.items()}, key

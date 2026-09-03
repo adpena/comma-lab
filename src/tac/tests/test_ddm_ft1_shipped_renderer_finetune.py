@@ -439,3 +439,71 @@ def test_export_section_realizes_a_perturbed_state_differently() -> None:
     assert nonzero_rows == record["kept_rows"][pruned], (
         "the export must keep exactly keep_percent of the pruned rows"
     )
+
+
+# --------------------------------------------------------------------------
+# EMA custody: the verdict must score the DEPLOYING weights, never the live
+# ones.  The PR130 trainer declares which is which.
+# --------------------------------------------------------------------------
+
+
+def test_load_state_honours_the_declared_ema_deployment(tmp_path: Path) -> None:
+    shadow = {"w": torch.tensor([1.0, 2.0])}
+    live = {"w": torch.tensor([9.0, 9.0])}
+    path = tmp_path / "ckpt.pt"
+    torch.save(
+        {
+            "deployment_weights": "ema_shadow",
+            "state_dict": shadow,
+            "training_state": {"model_state_dict": live},
+        },
+        path,
+    )
+    state, source = verdict.load_state_from_checkpoint(path)
+    assert torch.equal(state["w"], shadow["w"]), "must not pick the live weights"
+    assert "ema_shadow" in source
+
+
+def test_load_state_refuses_a_non_ema_deployment_declaration(tmp_path: Path) -> None:
+    path = tmp_path / "ckpt.pt"
+    torch.save({"deployment_weights": "live", "state_dict": {"w": torch.zeros(1)}}, path)
+    with pytest.raises(ValueError, match="only scores an EMA-shadow deployment"):
+        verdict.load_state_from_checkpoint(path)
+
+
+def test_load_state_refuses_a_declared_deployment_with_no_weights(tmp_path: Path) -> None:
+    path = tmp_path / "ckpt.pt"
+    torch.save({"deployment_weights": "ema_shadow", "training_state": {}}, path)
+    with pytest.raises(ValueError, match="carries no state_dict"):
+        verdict.load_state_from_checkpoint(path)
+
+
+def test_load_state_reads_a_plain_init_checkpoint(tmp_path: Path) -> None:
+    """The identity-gate init checkpoint has no deployment declaration."""
+
+    path = tmp_path / "init.pt"
+    torch.save({"state_dict": {"w": torch.tensor([3.0])}}, path)
+    state, source = verdict.load_state_from_checkpoint(path)
+    assert torch.equal(state["w"], torch.tensor([3.0]))
+    assert source == "state_dict"
+
+
+@pytest.mark.skipif(
+    not Path(
+        "/Volumes/VertigoDataTier/pact/ddm_ft1_shipped_renderer_aligned_finetune/runs"
+        "/timing_smoke/ckpt.stage-expected_flip.step000006.full_state.pt"
+    ).exists(),
+    reason="no retained trainer checkpoint",
+)
+def test_load_state_on_a_real_trainer_checkpoint_picks_the_shadow() -> None:
+    path = Path(
+        "/Volumes/VertigoDataTier/pact/ddm_ft1_shipped_renderer_aligned_finetune/runs"
+        "/timing_smoke/ckpt.stage-expected_flip.step000006.full_state.pt"
+    )
+    payload = torch.load(path, map_location="cpu", weights_only=False)
+    state, source = verdict.load_state_from_checkpoint(path)
+    assert "ema_shadow" in source
+    live = payload["training_state"]["model_state_dict"]
+    assert set(state) == set(live)
+    moved = max(float((state[k] - live[k]).abs().max()) for k in state)
+    assert moved > 0.0, "EMA shadow must differ from the live weights after training"
