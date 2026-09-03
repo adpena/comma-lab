@@ -669,6 +669,113 @@ def eval_receiver_lattice_leakage_exponent(inputs: Mapping[str, Any]) -> float:
     return numerator / denominator
 
 
+def eval_same_basin_sharp_optimum(inputs: Mapping[str, Any]) -> float:
+    """Return the least measured objective displacement inside one declared basin.
+
+    A non-negative result means none of the supplied same-basin directions improved
+    the objective.  Basin identity is deliberately not inferred by this evaluator;
+    the producer must establish it in the empirical anchor.
+    """
+
+    values = [float(value) for value in inputs["objective_deltas"]]
+    if not values or any(not math.isfinite(value) for value in values):
+        raise EvaluatorError(
+            "same_basin_sharp_optimum_v1: objective_deltas must be a non-empty finite sequence"
+        )
+    return min(values)
+
+
+def eval_byte_distortion_cross_intersection_count(inputs: Mapping[str, Any]) -> int:
+    """Count bodies satisfying both declared byte and distortion predicates."""
+
+    byte_feasible = list(inputs["byte_feasible"])
+    distortion_feasible = list(inputs["distortion_feasible"])
+    if len(byte_feasible) != len(distortion_feasible):
+        raise EvaluatorError(
+            "byte_distortion_cross_intersection_count_v1: predicate sequences must have equal length"
+        )
+    return sum(bool(byte_ok) and bool(distortion_ok) for byte_ok, distortion_ok in zip(byte_feasible, distortion_feasible, strict=True))
+
+
+def eval_roundtrip_token_to_argmax_affine(inputs: Mapping[str, Any]) -> float:
+    """Evaluate the matched-PYAV affine token-error to argmax-error transfer."""
+
+    intercept = float(inputs["intercept_argmax_errors"])
+    slope = float(inputs["marginal_argmax_errors_per_token_error"])
+    token_errors = float(inputs["token_errors"])
+    if any(not math.isfinite(value) for value in (intercept, slope, token_errors)):
+        raise EvaluatorError("roundtrip_token_to_argmax_affine_v1: inputs must be finite")
+    if intercept < 0.0 or slope < 0.0 or token_errors < 0.0:
+        raise EvaluatorError("roundtrip_token_to_argmax_affine_v1: inputs must be non-negative")
+    return intercept + slope * token_errors
+
+
+def eval_field_change_bhw_decomposition(inputs: Mapping[str, Any]) -> dict[str, int]:
+    """Partition changed labels into benefit, harm, and wash against ground truth.
+
+    ``before_labels`` are the transmitted token labels and ``after_labels`` are
+    the proposed coding-field labels.  Only changed positions are admitted.
+    """
+
+    before = list(inputs["before_labels"])
+    after = list(inputs["after_labels"])
+    truth = list(inputs["ground_truth_labels"])
+    if not (len(before) == len(after) == len(truth)):
+        raise EvaluatorError("field_change_bhw_decomposition_v1: label sequences must have equal length")
+    benefit = harm = wash = 0
+    for old, new, gt in zip(before, after, truth, strict=True):
+        if old == new:
+            raise EvaluatorError("field_change_bhw_decomposition_v1: unchanged positions are outside the domain")
+        old_ok, new_ok = old == gt, new == gt
+        if not old_ok and new_ok:
+            benefit += 1
+        elif old_ok and not new_ok:
+            harm += 1
+        else:
+            wash += 1
+    return {"benefit": benefit, "harm": harm, "wash": wash}
+
+
+def eval_context_model_reorder_savings(inputs: Mapping[str, Any]) -> int:
+    """Return measured reorder savings, refusing transfer across coder class."""
+
+    has_context_model = bool(inputs["has_context_model"])
+    generic_savings = int(inputs.get("generic_coder_savings_bytes", 0))
+    context_savings = int(inputs.get("context_model_savings_bytes", 0))
+    if generic_savings < 0 or context_savings < 0:
+        raise EvaluatorError("context_model_reorder_savings_v1: savings must be non-negative")
+    return context_savings if has_context_model else generic_savings
+
+
+def eval_generator_form_fit_error_entanglement(inputs: Mapping[str, Any]) -> dict[str, Any]:
+    """Report generator byte ratio together with its inseparable fit error."""
+
+    reference_bytes = int(inputs["reference_bytes"])
+    generator_bytes = int(inputs["generator_bytes"])
+    fit_error_fraction = float(inputs["fit_error_fraction"])
+    if reference_bytes <= 0 or generator_bytes <= 0:
+        raise EvaluatorError("generator_form_fit_error_entanglement_v1: byte counts must be positive")
+    if not math.isfinite(fit_error_fraction) or not 0.0 <= fit_error_fraction <= 1.0:
+        raise EvaluatorError("generator_form_fit_error_entanglement_v1: fit_error_fraction must be in [0,1]")
+    return {
+        "byte_ratio": reference_bytes / generator_bytes,
+        "fit_error_fraction": fit_error_fraction,
+        "transferable_as_lossless_credit": fit_error_fraction == 0.0,
+    }
+
+
+def eval_decoder_derivable_ideal_savings_ceiling(inputs: Mapping[str, Any]) -> float:
+    """Scale a sampled conditional-codelength gain into an optimistic byte ceiling."""
+
+    sampled_gain_bits = float(inputs["sampled_gain_bits"])
+    sampled_fraction = float(inputs["sampled_fraction"])
+    if not math.isfinite(sampled_gain_bits) or sampled_gain_bits < 0.0:
+        raise EvaluatorError("decoder_derivable_ideal_savings_ceiling_v1: gain must be finite and non-negative")
+    if not math.isfinite(sampled_fraction) or not 0.0 < sampled_fraction <= 1.0:
+        raise EvaluatorError("decoder_derivable_ideal_savings_ceiling_v1: sampled_fraction must be in (0,1]")
+    return sampled_gain_bits / sampled_fraction / 8.0
+
+
 # Canonical equation_id -> evaluator for the built-in laws.
 LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "forfeit_matched_exit_v1": eval_forfeit_matched_exit_s_star,
@@ -733,6 +840,15 @@ LAWREF_BUILTIN_EVALUATORS: dict[str, Callable[[Mapping[str, Any]], Any]] = {
     "receiver_pose_semantic_preservation_ratio_v1": eval_receiver_pose_semantic_preservation_ratio,
     "pose_stack_exact_budget_v1": eval_pose_stack_exact_budget,
     "receiver_lattice_leakage_exponent_v1": eval_receiver_lattice_leakage_exponent,
+    # ddm_lv3 current-arc law wave (2026-09-01). These are advisory/source-law
+    # evaluators; none dispatches a scorer or promotes a score row.
+    "same_basin_sharp_optimum_v1": eval_same_basin_sharp_optimum,
+    "byte_distortion_cross_intersection_count_v1": eval_byte_distortion_cross_intersection_count,
+    "roundtrip_token_to_argmax_affine_v1": eval_roundtrip_token_to_argmax_affine,
+    "field_change_bhw_decomposition_v1": eval_field_change_bhw_decomposition,
+    "context_model_reorder_savings_v1": eval_context_model_reorder_savings,
+    "generator_form_fit_error_entanglement_v1": eval_generator_form_fit_error_entanglement,
+    "decoder_derivable_ideal_savings_ceiling_v1": eval_decoder_derivable_ideal_savings_ceiling,
 }
 
 

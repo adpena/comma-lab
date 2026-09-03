@@ -51,6 +51,14 @@ MATURITY = "_dev"
 LEGACY_AUTHORITY_OWED_ROWS = 115
 REPO = Path(__file__).resolve().parents[2]
 
+ROUND10_CURRENT_SOURCES = (
+    ".omx/state/main_hot_state.md",
+    ".omx/research/ddm_dcc1_decoder_causal_conditioning_verdict_20260901.md",
+    ".omx/research/ddm_x012_crossing_ledger_20260901.md",
+    ".omx/research/ddm_dds1_ceiling_readjudication_20260901.md",
+    "src/tac/canonical_equations/decoder_causal_condition_transport_20260901.py",
+)
+
 
 @dataclass(frozen=True)
 class SourceSpec:
@@ -2014,6 +2022,7 @@ def consumed_evidence_registry() -> dict[str, Any]:
         )
     )
     paths.update(spec.path for spec in CAMPAIGN_SOURCES)
+    paths.update(ROUND10_CURRENT_SOURCES)
     globs = [".omx/research/" + spec.glob for spec in SOURCE_SPECS]
     globs += [".omx/research/" + spec.glob for spec in PENDING_PRODUCER_SPECS]
     globs += [".omx/research/" + DEFERRAL_LEDGER_GLOB]  # QA37: the organ's declared consumed source
@@ -2022,6 +2031,124 @@ def consumed_evidence_registry() -> dict[str, Any]:
         "schema": "ddm_costate_consumed_evidence_registry.v1",
         "paths": sorted(paths),
         "globs": sorted(set(globs)),
+    }
+
+
+def _round10_recursive_leverage(
+    repo_root: Path,
+    open_gate_ownership: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Re-adjudicate the stale 07-28 queue against the AFR1/DCC1 campaign.
+
+    This is an advisory SENSE/DECIDE surface only.  It does not mutate the old
+    ledger, dispatch a producer, or claim that a reparented duty has fired.
+    Every input row remains visible with one typed disposition.
+    """
+
+    sources: list[dict[str, Any]] = []
+    for relative in ROUND10_CURRENT_SOURCES:
+        path = repo_root / relative
+        sources.append(
+            {
+                "path": relative,
+                "available": path.is_file(),
+                "sha256": _sha256(path) if path.is_file() else None,
+            }
+        )
+
+    # Old vehicle-specific work is not silently called complete.  It is either
+    # retained as standing apparatus, explicitly superseded, or reparented to a
+    # current DCC1 successor whose owner and consumer are named here.
+    dispositions: dict[str, tuple[str, str, str, str]] = {
+        "QA09": ("REPARENTED", "task #1378 CCS1", "/Volumes/APDataStore/pact/ddm_gmf1_fitted_crossgroup_gm/", "lossless order/context evidence belongs in the fixed-X causal-schedule rate rung"),
+        "QA25": ("SUPERSEDED", "MAIN organ custodian", ".omx/state/main_hot_state.md", "the v10/TR1 specification is not the AFR1/DCC1 object or queue"),
+        "QA40": ("REPARENTED", "future QBW1/QBMIX owner", "/Volumes/APDataStore/pact/ddm_no2_quotient_born_body/", "temporal innovation is admissible only inside decoder-causal quotient topology"),
+        "QA47": ("REPARENTED", "RB1 renderer owner", "/Volumes/APDataStore/pact/ddm_rb1/", "pose steering is changed-object renderer work, not a fixed-field rate rung"),
+        "QA48": ("REPARENTED", "RB1 renderer owner", "/Volumes/APDataStore/pact/ddm_rb1/", "plane/parallax belongs to the exact changed-object renderer"),
+        "QA49": ("REPARENTED", "RB1 renderer owner", "/Volumes/APDataStore/pact/ddm_rb1/", "the dual-use Seg check consumes a realized changed-object renderer"),
+        "QA54": ("REPARENTED", "RB1 renderer owner", "/Volumes/APDataStore/pact/ddm_rb1/", "photometric gain is renderer-local and cannot precede the changed object"),
+        "QD04": ("RETAINED_APPARATUS", "MAIN lane-registry custodian", ".omx/state/main_hot_state.md", "registry reconciliation remains a standing apparatus duty independent of candidate rank"),
+        "QD08": ("SUPERSEDED", "MAIN landing-review custodian", ".omx/state/main_hot_state.md", "the r7/eg1 production handoff is outside the current AFR1/DCC1 build chain"),
+        "QD10": ("RETAINED_APPARATUS", "apparatus owner", ".omx/state/probe_outcomes.jsonl", "realized-d_pose and identity-canary requirements remain generally applicable"),
+        "QD11": ("RETAINED_APPARATUS", "every active arm", ".omx/research/ddm_deferral_queue_ledger_20260729.md", "defer-at-source remains a process invariant; it is not a candidate duty"),
+        "QD15": ("RETAINED_APPARATUS", "every tac consumer", "src/tac", "editable-install source identity remains a standing import-custody precondition"),
+        "QE09": ("RETAINED_APPARATUS", "rule-118 compliance owner", ".omx/state/canonical_task_status.jsonl", "pretrained-receiver compliance is still required if that family is consumed"),
+        "QA60": ("REPARENTED", "RB1 renderer owner", "/Volumes/APDataStore/pact/ddm_rb1/", "the static two-plane extension is a changed-renderer option"),
+        "QA61": ("REPARENTED", "QBW1/QBMIX owner", "/Volumes/APDataStore/pact/ddm_no2_quotient_born_body/", "a rank-1 motion carrier must be counted inside a causal quotient object"),
+        "QA68": ("REPARENTED", "RB1 renderer owner", "/Volumes/APDataStore/pact/ddm_rb1/", "per-pair experts are renderer options and require their own counted grammar"),
+        "QA69": ("REPARENTED", "QBW1/QBMIX owner", "/Volumes/APDataStore/pact/ddm_no2_quotient_born_body/", "bit allocation must be realized inside the counted quotient object"),
+        "QA70": ("REPARENTED", "task #1378 CCS1", "/Volumes/APDataStore/pact/ddm_gmf1_fitted_crossgroup_gm/", "minimum-entropy selection is admissible only through a receiver-causal rate model"),
+        "QA72": ("SUPERSEDED", "MAIN organ custodian", ".omx/state/main_hot_state.md", "stage-attribution and old pose-floor framing do not own a current DCC1 successor"),
+        "QA77": ("REPARENTED", "RB1 renderer owner", "/Volumes/APDataStore/pact/ddm_rb1/", "bilevel composed descent belongs to a changed object, not the fixed-X rate test"),
+        "QA65": ("REPARENTED", "QBW1/QBMIX owner", "/Volumes/APDataStore/pact/ddm_no2_quotient_born_body/", "the offset lattice must be part of a decoder-causal counted object"),
+        "QA66": ("SUPERSEDED", "MAIN organ custodian", ".omx/state/main_hot_state.md", "the historical rung-A live-base promise is not transferable to AFR1"),
+        "QA79": ("REPARENTED", "RB1 renderer owner", "/Volumes/APDataStore/pact/ddm_rb1/", "interpolation order is a renderer-owned exact-R choice"),
+        "QA81": ("REPARENTED", "QBW1/QBMIX owner", "/Volumes/APDataStore/pact/ddm_no2_quotient_born_body/", "a lane carrier must be represented inside causal topology and counted parse state"),
+        "QA82": ("RETAINED_APPARATUS", "MAIN default-census custodian", ".omx/state/canonical_task_status.jsonl", "generic-default census remains a cross-arm process check"),
+        "QA90": ("REPARENTED", "task #1378 CCS1", "/Volumes/APDataStore/pact/ddm_gmf1_fitted_crossgroup_gm/", "temporal token coherence is a candidate causal schedule context, not a separate scorer arm"),
+        "QA91": ("REPARENTED", "future QX representation owner", "/Volumes/APDataStore/pact/ddm_qx4/", "erased-lane events may matter only in a decoder-QBT target-overwrite grammar"),
+        "QA92": ("CLOSED_CURRENT_INSTANCE", "MAIN organ custodian", ".omx/research/ddm_x012_crossing_ledger_20260901.md", "its own row is instance-dead and the current Cross remains empty; no token-grammar retry"),
+    }
+
+    rows: list[dict[str, Any]] = []
+    for legacy in open_gate_ownership.get("open_gate_unfired_rows") or []:
+        row_id = str(legacy.get("row_id"))
+        disposition = dispositions.get(row_id)
+        if disposition is None:
+            rows.append(
+                {
+                    **dict(legacy),
+                    "round10_disposition": "UNRESOLVED_FAIL_CLOSED",
+                    "current_owner": "MAIN organ custodian",
+                    "consumer_store": ".omx/state/main_hot_state.md",
+                    "reason": "no current-campaign join was proved",
+                }
+            )
+            continue
+        state, owner, consumer, reason = disposition
+        rows.append(
+            {
+                **dict(legacy),
+                "round10_disposition": state,
+                "current_owner": owner,
+                "consumer_store": consumer,
+                "reason": reason,
+            }
+        )
+
+    counts: dict[str, int] = {}
+    for row in rows:
+        key = str(row["round10_disposition"])
+        counts[key] = counts.get(key, 0) + 1
+
+    return {
+        "schema": "ddm_costate_recursive_leverage_round10.v1",
+        "available": all(row["available"] for row in sources),
+        "maturity": "_dev",
+        "evidence_axis": "[source-inspected advisory]",
+        "sources": sources,
+        "legacy_queue_source": open_gate_ownership.get("source"),
+        "legacy_open_denominator": int(open_gate_ownership.get("open_gate_count") or 0),
+        "re_adjudicated_count": len(rows),
+        "re_adjudications": rows,
+        "disposition_counts": dict(sorted(counts.items())),
+        "sense_laws": [
+            "decoder_causal_condition_transport_v1",
+            "same_basin_sharp_optimum_v1",
+            "byte_distortion_cross_intersection_count_v1",
+            "roundtrip_token_to_argmax_affine_v1",
+        ],
+        "duty_ranking": [
+            {"rank": 1, "duty": "CCS1_FIXED_X_CAUSAL_GM_RATE_RUNG", "owner": "task #1378 CCS1", "status": "ACTIVE_OWNED"},
+            {"rank": 2, "duty": "QX_QBT_TARGET_OVERWRITE_GRAMMAR", "owner": "future MAIN-assigned QX representation owner", "status": "FOLDED_BEHIND_RANK_1"},
+            {"rank": 3, "duty": "QBW1_QBMIX_CAUSAL_QUOTIENT_RENDERER", "owner": "existing NO2 successor owner", "status": "FOLDED_BEHIND_NEARER_EXACT_ROWS"},
+            {"rank": 4, "duty": "RB1_EXACT_CHANGED_OBJECT_RENDERER", "owner": "existing RB1 owner", "status": "STILL_ADMISSIBLE_EXISTING_OWNER"},
+        ],
+        "containment": "UNCHANGED",
+        "actuation": "NONE",
+        "execution_allowed": False,
+        "score_claim": False,
+        "promotion_eligible": False,
     }
 
 
@@ -2890,6 +3017,7 @@ def build_live_ddm_costate(
     pn1_nodes = _pn1_nodes(repo_root, band_parents)
     ledger_source = _deferral_ledger_source(repo_root)
     open_gate_ownership = _open_gate_ownership_scan(repo_root)
+    round10 = _round10_recursive_leverage(repo_root, open_gate_ownership)
     sense_laws = _sense_laws(
         arc_index,
         pn1_source=pn1_nodes.get("source") if pn1_nodes.get("available") else None,
@@ -3040,6 +3168,7 @@ def build_live_ddm_costate(
         "band_position_parents": band_parents,
         "sense_laws": sense_laws,
         "open_gate_ownership": open_gate_ownership,
+        "round10": round10,
         "pending_producers": pending_producers,
         "conditional_validity": conditional_validity,
         "rv1_table": rv1_table,
@@ -3160,6 +3289,17 @@ def digest_lines(report: Mapping[str, Any]) -> list[str]:
             "actuation=NONE MAIN-review=REQUIRED"
         ),
     ]
+    round10 = report.get("round10") or {}
+    if round10.get("available"):
+        ranking = round10.get("duty_ranking") or []
+        lines.append(
+            "DDM-round10[current AFR1/DCC1]: "
+            f"re-adjudicated={round10.get('re_adjudicated_count', 0)}/"
+            f"{round10.get('legacy_open_denominator', 0)} "
+            "head="
+            + (str(ranking[0]["duty"]) if ranking else "NONE")
+            + " maturity=_dev containment=UNCHANGED actuation=NONE"
+        )
     # ── co7 lines: endgame chain · SENSE laws · per-parent band · conditional validity ·
     # pending producers. Advisory; every row cites committed content-hashed artifacts.
     chain = report.get("duties_endgame") or {}
