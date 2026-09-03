@@ -11,12 +11,13 @@ the public PR #135 result of 0.162 on that same axis.
 
 The learned vehicle descends from public contest work, and I do not claim it:
 
-- **PR #130** — the semantic-token renderer family: a dense per-pair semantic token
-  grid decoded by a small learned renderer, integer HPAC arithmetic coding of the
-  token stream, and the pose-carrier format.
-- **PR #135** — the CPR1-polished form of that vehicle (0.162 on contest-CUDA), whose
-  receiver structure this submission's runtime carries forward.
-- **PR #133** — transitively in the ancestry via the above.
+- **PR #130** (Fesal Fayed, @fesalfayed) — the semantic-token renderer family: a dense
+  per-pair semantic token grid decoded by a small learned renderer, integer HPAC
+  arithmetic coding of the token stream, and the pose-carrier format.
+- **PR #135** (Shreyan Mohanty, @codexblack) — the CPR1-polished form of that vehicle
+  (0.162 on contest-CUDA), whose receiver structure this submission's runtime carries
+  forward.
+- **PR #133** (@JasonMo123) — transitively in the ancestry via the above.
 
 My contribution is the decision and lossless-representation layer on top:
 
