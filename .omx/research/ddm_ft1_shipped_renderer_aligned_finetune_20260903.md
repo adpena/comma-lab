@@ -170,7 +170,19 @@ DALI table, on the EMA shadow. **Advisory, `[macOS-CPU advisory]`, never a score
 |---:|---:|---|---:|
 | 0 | 0 | **0.00020386589898003471** | — |
 
-*(rows appended as the run reports; contest-CUDA T4 reference for the same object: 0.00020139)*
+*(contest-CUDA T4 reference for the same object: 0.00020139)*
+
+**The run is IN FLIGHT at hand-off and this table has one row. Stated plainly rather than padded.**
+Measured CPU rate `r = 3.6315 s/step` puts the step-600 row at ~48 min of wall clock plus an 11.4 min
+n600 eval, and the full 1,800-step window at ~2.6-3.3 h depending on contention from the co-resident
+governed Metal burn. The run is detached, `--nice 10`, writes a preserved EMA checkpoint every 600
+steps, and is `--resume-from`-able. Its rows land in `<RUN>/result.json` and its log line for each
+eval is `{"step": N, "quantized_exact_seg": ...}`. **Harvest is FO-1 in `$STORE/FIRE_ORDER.sh`**,
+which is written, syntax-checked and flag-verified against each tool's real argparse.
+
+I chose to hand off the corrections in Sec 1-2 and Sec 7 rather than hold them for 3 more hours: any
+other arm currently training against `gt_n600.npz`, or gating on `d_pose <= 1.25e-4`, is wrong right
+now, and those are cheap to act on immediately.
 
 ## 6. THE REALIZATION GAP — and the fix I had to make to my own instrument
 
@@ -363,6 +375,8 @@ FO-3  splice + T4 buy  (ONLY if FO-2 clears its gate)
 
 ## NEXT_IF_RESUMED
 
+0. The run may still be live: check `pgrep -f train_semantic_quantized_resumable` and
+   `<RUN>/run.log`. If it died, `--resume-from <RUN>/ckpt.resume.latest.pt` continues it bit-faithfully.
 1. Read `<RUN>/result.json` and the §5 rows. If no kept epoch lowered realized d_seg by ≥10%,
    **count the charter's falsifier as FIRED** and say so plainly; that closes "renderer fine-tune at
    this size, seg-only loss" at FORMULATION scope — not the family, because the pose term was never
