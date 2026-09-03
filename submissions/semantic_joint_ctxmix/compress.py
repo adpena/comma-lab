@@ -6,9 +6,9 @@ the supplied base archive, then runs the real RC64 encoder through the five
 lossless stages in order: FX5, DX2, GB1, LB1, and AFR1.  Every generated payload
 is retained and every stage is checked against its receipt-pinned SHA-256.
 
-Place the pinned base beside this file as ``base_archive.zip``, pass
-``--base-archive PATH``, or pass ``--base-url URL`` to fetch it into the retained
-store.  The base is an input and is deliberately not embedded in this tree.
+Place the pinned base beside this file as ``base_archive.zip`` or pass
+``--base-archive PATH``.  The base is an input and is deliberately not embedded
+in this tree; this encoder never performs a network request.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import importlib.metadata
 import importlib.util
 import io
 import json
@@ -25,11 +26,13 @@ import shutil
 import subprocess
 import sys
 import time
-import urllib.request
 import zipfile
 import zlib
 from pathlib import Path
 from typing import Any
+
+sys.dont_write_bytecode = True
+os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
 
 
 HERE = Path(__file__).resolve().parent
@@ -1320,6 +1323,14 @@ EMBEDDED_SOURCES: dict[str, tuple[str, bytes]] = {
     ),
 }
 
+# The JG2 source is retained as the exact located mechanism-bearing artifact,
+# then deterministically made public-tree-relative at materialization time.  The
+# wrapper always supplied these arguments already; requiring them removes two
+# unused lab-absolute defaults without changing the executed encoder mechanism.
+MATERIALIZED_SOURCE_PINS = {
+    "jg2_tail_reencode.py": "6e2b72e5738eb2dfa82f2ef36be50bc3d56d7c2dfd4473f825f70b6f3802d6dc",
+}
+
 BASE_SHA256 = "df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080"
 BASE_BYTES = 180_456
 TOKENS_SHA256 = "cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb"
@@ -1376,7 +1387,7 @@ def atomic_json(path: Path, payload: object) -> None:
 def atomic_copy(source: Path, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(destination.suffix + ".partial")
-    shutil.copy2(source, temporary)
+    shutil.copyfile(source, temporary)
     os.replace(temporary, destination)
 
 
@@ -1387,16 +1398,69 @@ def atomic_bytes(path: Path, payload: bytes) -> None:
     os.replace(temporary, path)
 
 
+def adapt_embedded_source(name: str, payload: bytes) -> bytes:
+    if name != "jg2_tail_reencode.py":
+        return payload
+    lines = payload.decode("utf-8").splitlines(keepends=True)
+    output: list[str] = []
+    counts = {
+        "runtime_default": 0,
+        "tokens_default": 0,
+        "runtime_argument": 0,
+        "tokens_argument": 0,
+    }
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        if line.startswith("DEFAULT_RUNTIME_ROOT = Path("):
+            output.append("DEFAULT_RUNTIME_ROOT: Path | None = None\n")
+            counts["runtime_default"] += 1
+            index += 1
+            continue
+        if line == "DEFAULT_TOKENS = Path(\n":
+            output.append("DEFAULT_TOKENS: Path | None = None\n")
+            counts["tokens_default"] += 1
+            index += 1
+            while index < len(lines) and lines[index] != ")\n":
+                index += 1
+            if index == len(lines):
+                raise CompressionError("unterminated JG2 token-path default")
+            index += 1
+            continue
+        if line == '    parser.add_argument("--runtime-root", default=str(DEFAULT_RUNTIME_ROOT))\n':
+            output.append('    parser.add_argument("--runtime-root", required=True)\n')
+            counts["runtime_argument"] += 1
+            index += 1
+            continue
+        if line == '    parser.add_argument("--tokens", default=str(DEFAULT_TOKENS))\n':
+            output.append('    parser.add_argument("--tokens", required=True)\n')
+            counts["tokens_argument"] += 1
+            index += 1
+            continue
+        output.append(line)
+        index += 1
+    if set(counts.values()) != {1}:
+        raise CompressionError(f"JG2 public-path adaptation match counts differ: {counts}")
+    return "".join(output).encode("utf-8")
+
+
 def materialize_encoder_sources(store: Path) -> Path:
-    """Restore the exact located encoder sources into the retained work store."""
+    """Restore and pin the located encoder sources in the retained work store."""
     root = store / "work" / "embedded_encoder_sources" / "compress_vendor"
     root.mkdir(parents=True, exist_ok=True)
-    for name, (expected_sha256, encoded) in EMBEDDED_SOURCES.items():
+    for name, (embedded_sha256, encoded) in EMBEDDED_SOURCES.items():
         payload = zlib.decompress(base64.b85decode(encoded))
+        observed_embedded = hashlib.sha256(payload).hexdigest()
+        if observed_embedded != embedded_sha256:
+            raise CompressionError(
+                f"embedded source {name} decoded as {observed_embedded}, expected {embedded_sha256}"
+            )
+        payload = adapt_embedded_source(name, payload)
+        expected_sha256 = MATERIALIZED_SOURCE_PINS.get(name, embedded_sha256)
         observed = hashlib.sha256(payload).hexdigest()
         if observed != expected_sha256:
             raise CompressionError(
-                f"embedded source {name} decoded as {observed}, expected {expected_sha256}"
+                f"materialized source {name} adapted as {observed}, expected {expected_sha256}"
             )
         destination = root / name
         if destination.is_file():
@@ -1406,6 +1470,20 @@ def materialize_encoder_sources(store: Path) -> Path:
         temporary.write_bytes(payload)
         os.replace(temporary, destination)
         require_pin(destination, expected_sha256, len(payload))
+    actual = {
+        path.relative_to(root).as_posix()
+        for path in root.rglob("*")
+        if path.is_file()
+    }
+    expected = set(EMBEDDED_SOURCES)
+    if actual != expected:
+        raise CompressionError(
+            "embedded-source inventory differs: "
+            f"missing={sorted(expected - actual)}, unexpected={sorted(actual - expected)}"
+        )
+    for path in root.rglob("*"):
+        if path.is_symlink() or (not path.is_file() and not path.is_dir()):
+            raise CompressionError(f"embedded-source tree contains a special path: {path}")
     return root
 
 
@@ -1428,13 +1506,77 @@ def vendor_file(name: str) -> Path:
     return _ACTIVE_VENDOR / name
 
 
-def verify_sources() -> list[dict[str, Any]]:
+def _forbidden_state(relative: str) -> bool:
+    parts = Path(relative).parts
+    return any(
+        part == "__pycache__"
+        or part == ".DS_Store"
+        or part.startswith("._")
+        or part.endswith((".pyc", ".pyo"))
+        for part in parts
+    )
+
+
+def verify_tree_manifest() -> list[dict[str, Any]]:
+    manifest = HERE / "MANIFEST.sha256"
+    if not manifest.is_file():
+        raise CompressionError(f"source manifest is absent: {manifest}")
+    declared: dict[str, str] = {}
+    for line_number, raw in enumerate(manifest.read_text().splitlines(), 1):
+        fields = raw.split("  ", 1)
+        if len(fields) != 2 or len(fields[0]) != 64:
+            raise CompressionError(f"malformed source manifest row {line_number}")
+        expected_sha256, relative = fields
+        try:
+            int(expected_sha256, 16)
+        except ValueError as error:
+            raise CompressionError(
+                f"non-hex source manifest digest on row {line_number}"
+            ) from error
+        relative_path = Path(relative)
+        if (
+            relative_path.is_absolute()
+            or relative_path.as_posix() != relative
+            or ".." in relative_path.parts
+            or _forbidden_state(relative)
+        ):
+            raise CompressionError(f"unsafe source manifest path on row {line_number}: {relative}")
+        if relative in declared:
+            raise CompressionError(f"duplicate source manifest path: {relative}")
+        declared[relative] = expected_sha256
+
+    actual: set[str] = set()
+    for path in HERE.rglob("*"):
+        if path.is_symlink() or (not path.is_file() and not path.is_dir()):
+            raise CompressionError(f"source tree contains a special path: {path}")
+        if not path.is_file():
+            continue
+        relative = path.relative_to(HERE).as_posix()
+        if _forbidden_state(relative):
+            raise CompressionError(f"source tree contains forbidden hidden state: {relative}")
+        if relative not in {"MANIFEST.sha256", "base_archive.zip"}:
+            actual.add(relative)
+    expected = set(declared)
+    if actual != expected:
+        raise CompressionError(
+            "source-tree inventory differs from MANIFEST.sha256: "
+            f"missing={sorted(expected - actual)}, unexpected={sorted(actual - expected)}"
+        )
+
     rows = []
-    for relative, expected in TREE_SOURCE_PINS.items():
-        fact = require_pin(HERE / relative, expected)
+    for relative, expected_sha256 in sorted(declared.items()):
+        fact = require_pin(HERE / relative, expected_sha256)
         fact["relative_path"] = relative
         rows.append(fact)
-    for name, (expected, _) in EMBEDDED_SOURCES.items():
+    return rows
+
+
+def verify_sources(tree_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = list(tree_rows)
+    for relative, expected in TREE_SOURCE_PINS.items():
+        require_pin(HERE / relative, expected)
+    for name, (embedded_sha256, _) in EMBEDDED_SOURCES.items():
+        expected = MATERIALIZED_SOURCE_PINS.get(name, embedded_sha256)
         fact = require_pin(vendor_file(name), expected)
         fact["relative_path"] = f"compress.py::embedded/{name}"
         rows.append(fact)
@@ -1452,42 +1594,102 @@ def compiler_path() -> str:
 
 
 def dependency_fingerprint() -> dict[str, Any]:
+    expected_python = (3, 13, 12)
+    observed_python = sys.version_info[:3]
+    if platform.python_implementation() != "CPython" or observed_python != expected_python:
+        raise CompressionError(
+            "compression requires CPython 3.13.12; "
+            f"observed {platform.python_implementation()} {'.'.join(map(str, observed_python))}"
+        )
     try:
+        import brotli
         import numpy
         import torch
     except ImportError as error:
         raise CompressionError(
-            "compression requires the runtime's declared numpy and torch dependencies"
+            "compression requires Brotli, numpy, and torch"
         ) from error
+    versions = {
+        "brotli": importlib.metadata.version("Brotli"),
+        "numpy": numpy.__version__,
+        "torch": torch.__version__,
+    }
+    expected_versions = {
+        "brotli": "1.2.0",
+        "numpy": "1.26.4",
+        "torch": "2.12.1",
+    }
+    if versions != expected_versions:
+        raise CompressionError(
+            f"dependency versions differ: observed={versions}, expected={expected_versions}"
+        )
+    compiler = Path(compiler_path()).resolve()
     return {
         "python": sys.version,
         "implementation": platform.python_implementation(),
         "platform": platform.platform(),
-        "numpy": numpy.__version__,
-        "torch": torch.__version__,
-        "compiler": compiler_path(),
+        "dependencies": versions,
+        "brotli_module": file_fact(Path(brotli.__file__).resolve()),
+        "python_executable": file_fact(Path(sys.executable).resolve()),
+        "compiler": file_fact(compiler),
     }
 
 
-def obtain_base(args: argparse.Namespace, store: Path) -> Path:
+def obtain_base(args: argparse.Namespace) -> Path:
     requested = Path(args.base_archive).expanduser().resolve()
     if requested.is_file():
         require_pin(requested, BASE_SHA256, BASE_BYTES)
         return requested
-    if not args.base_url:
+    raise CompressionError(
+        f"pinned base archive not found at {requested}; place base_archive.zip "
+        "beside compress.py or pass --base-archive"
+    )
+
+
+def verify_staged_runtime(
+    root: Path,
+    archive: Path,
+    fx2_source: str,
+    residual_source: str,
+) -> None:
+    expected: dict[str, tuple[str, int]] = {}
+    for source_root_name in ("cpr1", "runtime"):
+        source_root = HERE / source_root_name
+        for source in source_root.rglob("*"):
+            if source.is_file():
+                relative = source.relative_to(HERE).as_posix()
+                fact = file_fact(source)
+                expected[relative] = (fact["sha256"], fact["bytes"])
+    for name in ("inflate.py", "inflate.sh"):
+        fact = file_fact(HERE / name)
+        expected[name] = (fact["sha256"], fact["bytes"])
+    for relative, source in (
+        ("runtime/fx2_model_axis_corrector.py", vendor_file(fx2_source)),
+        ("runtime/residual_archive.py", vendor_file(residual_source)),
+    ):
+        fact = file_fact(source)
+        expected[relative] = (fact["sha256"], fact["bytes"])
+    archive_fact = file_fact(archive)
+    expected["archive.zip"] = (archive_fact["sha256"], archive_fact["bytes"])
+
+    actual: set[str] = set()
+    for path in root.rglob("*"):
+        if path.is_symlink() or (not path.is_file() and not path.is_dir()):
+            raise CompressionError(f"staged runtime contains a special path: {path}")
+        if not path.is_file():
+            continue
+        relative = path.relative_to(root).as_posix()
+        if _forbidden_state(relative):
+            raise CompressionError(f"staged runtime contains forbidden hidden state: {relative}")
+        actual.add(relative)
+    if actual != set(expected):
         raise CompressionError(
-            f"pinned base archive not found at {requested}; place base_archive.zip "
-            "beside compress.py, pass --base-archive, or pass --base-url"
+            "staged-runtime inventory differs: "
+            f"missing={sorted(set(expected) - actual)}, "
+            f"unexpected={sorted(actual - set(expected))}"
         )
-    destination = store / "retained" / "inputs" / "base_archive.zip"
-    if not destination.is_file():
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        temporary = destination.with_suffix(".zip.partial")
-        with urllib.request.urlopen(args.base_url) as response, temporary.open("wb") as out:
-            shutil.copyfileobj(response, out)
-        os.replace(temporary, destination)
-    require_pin(destination, BASE_SHA256, BASE_BYTES)
-    return destination
+    for relative, (expected_sha256, expected_bytes) in sorted(expected.items()):
+        require_pin(root / relative, expected_sha256, expected_bytes)
 
 
 def stage_runtime(
@@ -1497,32 +1699,41 @@ def stage_runtime(
     residual_source: str,
 ) -> Path:
     """Materialize one exact receiver state for the real encoder."""
+    temporary = destination.with_name(destination.name + ".partial")
+    if destination.exists() and not destination.is_dir():
+        raise CompressionError(f"staged runtime destination is not a directory: {destination}")
+    if destination.exists() and temporary.exists():
+        raise CompressionError(f"unexpected sibling staging directory exists: {temporary}")
+    staging = destination if destination.exists() else temporary
+    staging.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(
+        HERE / "cpr1",
+        staging / "cpr1",
+        dirs_exist_ok=True,
+        copy_function=shutil.copyfile,
+    )
+    shutil.copytree(
+        HERE / "runtime",
+        staging / "runtime",
+        dirs_exist_ok=True,
+        copy_function=shutil.copyfile,
+    )
+    atomic_copy(HERE / "inflate.py", staging / "inflate.py")
+    atomic_copy(HERE / "inflate.sh", staging / "inflate.sh")
+    atomic_copy(vendor_file(fx2_source), staging / "runtime" / "fx2_model_axis_corrector.py")
+    atomic_copy(vendor_file(residual_source), staging / "runtime" / "residual_archive.py")
+    atomic_copy(archive, staging / "archive.zip")
+    verify_staged_runtime(staging, archive, fx2_source, residual_source)
     if not destination.exists():
-        temporary = destination.with_name(destination.name + ".partial")
-        if temporary.exists():
-            raise CompressionError(f"incomplete runtime staging exists: {temporary}")
-        temporary.mkdir(parents=True)
-        shutil.copytree(HERE / "cpr1", temporary / "cpr1")
-        shutil.copytree(HERE / "runtime", temporary / "runtime")
-        atomic_copy(HERE / "inflate.py", temporary / "inflate.py")
-        atomic_copy(HERE / "inflate.sh", temporary / "inflate.sh")
-        atomic_copy(vendor_file(fx2_source), temporary / "runtime" / "fx2_model_axis_corrector.py")
-        atomic_copy(vendor_file(residual_source), temporary / "runtime" / "residual_archive.py")
-        atomic_copy(archive, temporary / "archive.zip")
-        os.replace(temporary, destination)
-    else:
-        atomic_copy(vendor_file(fx2_source), destination / "runtime" / "fx2_model_axis_corrector.py")
-        atomic_copy(vendor_file(residual_source), destination / "runtime" / "residual_archive.py")
-        atomic_copy(archive, destination / "archive.zip")
+        os.replace(staging, destination)
     return destination
 
 
 def compile_decoder(runtime_root: Path, build: Path) -> Path:
     library = build / "rc64_decoder.so"
     source = runtime_root / "runtime" / "entropy" / "rc64_backend.c"
-    if library.is_file() and library.stat().st_mtime_ns >= source.stat().st_mtime_ns:
-        return library
     build.mkdir(parents=True, exist_ok=True)
+    temporary = library.with_suffix(library.suffix + ".partial")
     command = [
         compiler_path(),
         "-O3",
@@ -1531,9 +1742,10 @@ def compile_decoder(runtime_root: Path, build: Path) -> Path:
         "-fPIC",
         str(source),
         "-o",
-        str(library),
+        str(temporary),
     ]
     subprocess.run(command, check=True)
+    os.replace(temporary, library)
     return library
 
 
@@ -1985,12 +2197,8 @@ def parse_args() -> argparse.Namespace:
         help="generation-6 rc2 archive; default is base_archive.zip beside this script",
     )
     parser.add_argument(
-        "--base-url", default="",
-        help="optional operator-supplied URL used only when --base-archive is absent",
-    )
-    parser.add_argument(
-        "--store", type=Path, default=HERE / "compress_artifacts",
-        help="durable work, checkpoints, intermediate archives, and receipts",
+        "--store", type=Path, required=True,
+        help="durable SSD work, checkpoints, intermediate archives, and receipts",
     )
     parser.add_argument("--repeats", type=int, default=2)
     parser.add_argument("--resume", action="store_true")
@@ -2003,26 +2211,30 @@ def main() -> int:
     if args.repeats != 2:
         raise CompressionError("the public determinism gate requires exactly two complete runs")
     args.store = args.store.expanduser().resolve()
+    if args.store == HERE or HERE in args.store.parents:
+        raise CompressionError("--store must be outside the public source tree")
     args.store.mkdir(parents=True, exist_ok=True)
     free = shutil.disk_usage(args.store).free
-    if free < 8 << 30:
-        raise CompressionError(f"storage preflight requires 8 GiB free; found {free} bytes")
-    _ACTIVE_VENDOR = materialize_encoder_sources(args.store)
     receipt: dict[str, Any] = {
         "schema": "semantic_joint_ctxmix.compress.v1",
         "status": "RUNNING",
         "axis": "[macOS-CPU advisory / scorer-free exact byte measurement]",
         "score_claim": False,
         "started_unix": time.time(),
-        "environment": dependency_fingerprint(),
         "storage_preflight": {"free_bytes": free, "minimum_bytes": 8 << 30},
-        "source_pins": verify_sources(),
         "runs": [],
     }
     receipt_path = args.store / "RESULT.json"
     atomic_json(receipt_path, receipt)
     try:
-        base = obtain_base(args, args.store)
+        if free < 8 << 30:
+            raise CompressionError(f"storage preflight requires 8 GiB free; found {free} bytes")
+        tree_rows = verify_tree_manifest()
+        receipt["environment"] = dependency_fingerprint()
+        _ACTIVE_VENDOR = materialize_encoder_sources(args.store)
+        receipt["source_pins"] = verify_sources(tree_rows)
+        atomic_json(receipt_path, receipt)
+        base = obtain_base(args)
         receipt["base_archive"] = require_pin(base, BASE_SHA256, BASE_BYTES)
         decode_runtime = stage_runtime(
             args.store / "work" / "decode_runtime",
