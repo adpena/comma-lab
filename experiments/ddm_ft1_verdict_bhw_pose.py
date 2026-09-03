@@ -278,18 +278,44 @@ def evaluate_candidate(
     }
 
 
-def export_section(state: Mapping[str, torch.Tensor], archive_path: Path) -> dict[str, Any]:
-    """Re-encode the candidate through the deployed SM3R encoder."""
+def export_section(
+    state: Mapping[str, torch.Tensor], archive_path: Path
+) -> tuple[dict[str, Any], dict[str, torch.Tensor]]:
+    """Re-encode the candidate through the deployed SM3R encoder.
+
+    Returns the export record AND the state the shipped receiver would actually
+    load back.  The two are NOT the same object: the deployed encoder quantizes
+    to the per-tensor depth table and keeps only ``keep_percent`` of each pruned
+    tensor's rows, while the trainer's QAT models a uniform int4 grid and no
+    pruning at all.  Scoring the trained weights would therefore report a d_seg
+    for a model that never ships -- the realization gap this arm has to measure,
+    not hide.
+    """
 
     sm3 = importlib.import_module("experiments.ddm_sm3_semantic_representation")
     shipped = load_shipped_renderer_module()
     template = shipped.SemanticTokenRenderer(SEMANTIC_WIDTH).state_dict()
     blob = read_semantic_section(archive_path)
     keep_percent, allocation = recover_sm3r_allocation(blob, template)
-    encoded, _expected, meta = sm3.pack_prune_mixed_candidate(
+    encoded, expected, meta = sm3.pack_prune_mixed_candidate(
         dict(state), keep_percent=keep_percent, depths=allocation
     )
-    return {
+    # Decode through the SHIPPED receiver, not through ``expected``: agreement
+    # between the two is itself the parse-back proof.
+    parsed = shipped.unpack_variant_semantic_or_none(encoded, template)
+    if parsed is None:
+        raise ValueError("shipped receiver rejected the exported semantic section")
+    parse_back_max_delta = max(
+        float((parsed[name] - expected[name]).abs().max()) for name in expected
+    )
+    if parse_back_max_delta != 0.0:
+        raise ValueError(
+            f"encoder/receiver disagree by {parse_back_max_delta} on the exported section"
+        )
+    quantization_max_delta = max(
+        float((parsed[name] - state[name]).abs().max()) for name in state
+    )
+    record = {
         "bytes": len(encoded),
         "sha256": sha256_bytes(encoded),
         "shipped_bytes": len(blob),
@@ -297,8 +323,12 @@ def export_section(state: Mapping[str, torch.Tensor], archive_path: Path) -> dic
         "size_preserved": len(encoded) == len(blob),
         "kept_rows": meta["kept_rows"],
         "keep_percent": keep_percent,
+        "bit_allocation": dict(allocation),
+        "parse_back_max_abs_delta": parse_back_max_delta,
+        "trained_vs_realized_max_abs_delta": quantization_max_delta,
         "payload": encoded,
     }
+    return record, {k: v.clone() for k, v in parsed.items()}
 
 
 def load_state_from_checkpoint(path: Path) -> tuple[dict[str, torch.Tensor], str]:
@@ -369,14 +399,20 @@ def main(argv: list[str] | None = None) -> int:
         "pair_ids": pair_ids,
         "modules": modules,
     }
+    # The bytes decide the score, so the CANDIDATE of record is the state the
+    # shipped receiver loads back out of the exported section -- never the
+    # trained weights.  The trained state is evaluated too, and the difference
+    # between them is the realization gap.
+    export, realized_state = export_section(candidate_state, args.archive)
+    payload = export.pop("payload")
+
     base = evaluate_candidate(state=base_state, **common)
-    candidate = evaluate_candidate(state=candidate_state, **common)
+    trained = evaluate_candidate(state=candidate_state, **common)
+    candidate = evaluate_candidate(state=realized_state, **common)
 
     gt_labels = labels[pair_ids]
     pool = classify_pool(base["argmax"], candidate["argmax"], gt_labels)
     per_class = per_class_pool(base["argmax"], candidate["argmax"], gt_labels)
-    export = export_section(candidate_state, args.archive)
-    payload = export.pop("payload")
 
     positions = len(pair_ids) * EVAL_H * EVAL_W
     delta_seg = candidate["d_seg"] - base["d_seg"]
@@ -384,6 +420,9 @@ def main(argv: list[str] | None = None) -> int:
     base_scores = score_components(base["d_seg"], base["d_pose"], args.archive_bytes)
     candidate_scores = score_components(
         candidate["d_seg"], candidate["d_pose"], args.archive_bytes
+    )
+    trained_scores = score_components(
+        trained["d_seg"], trained["d_pose"], args.archive_bytes
     )
 
     receipt = {
@@ -405,10 +444,30 @@ def main(argv: list[str] | None = None) -> int:
         "candidate": {
             "source": str(args.candidate),
             "weights_key": candidate_source,
+            "weights_scored": "export -> shipped-receiver parse-back (the bytes that ship)",
             "d_seg": candidate["d_seg"],
             "d_pose": candidate["d_pose"],
             "elapsed_seconds": candidate["elapsed_seconds"],
             **candidate_scores,
+        },
+        "trained_weights_diagnostic": {
+            "note": (
+                "the trainer's own object, BEFORE the deployed encoder's "
+                "per-tensor depths and row prune; never the score"
+            ),
+            "d_seg": trained["d_seg"],
+            "d_pose": trained["d_pose"],
+            **trained_scores,
+        },
+        "realization_gap": {
+            "d_seg_trained_minus_realized": trained["d_seg"] - candidate["d_seg"],
+            "d_pose_trained_minus_realized": trained["d_pose"] - candidate["d_pose"],
+            "S_trained_minus_realized": trained_scores["S"] - candidate_scores["S"],
+            "note": (
+                "nonzero means the export discarded part of what training bought; "
+                "the trainer models a uniform int4 grid with no row prune, the "
+                "deployed encoder keeps keep_percent of each pruned tensor's rows"
+            ),
         },
         "delta": {
             "d_seg": delta_seg,

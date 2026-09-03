@@ -386,3 +386,56 @@ def test_carrier_frames_are_camera_sized_and_integral() -> None:
     assert out[1].min() == out[1].max() == 128.0
     # pair 0 carries signal, so it must differ from the flat plane
     assert out[0].mean() != out[1].mean()
+
+
+# --------------------------------------------------------------------------
+# Realization: the verdict must score the bytes that ship, not the trained
+# weights.  export_section returns both the record and the parsed-back state.
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(
+    not gate.FRONTIER_ARCHIVE.exists(), reason="frontier archive not mounted"
+)
+def test_export_section_returns_the_receiver_parsed_state() -> None:
+    shipped = gate.load_shipped_renderer_module()
+    template = shipped.SemanticTokenRenderer(gate.SEMANTIC_WIDTH).state_dict()
+    blob = gate.read_semantic_section(gate.FRONTIER_ARCHIVE)
+    state = shipped.unpack_variant_semantic_or_none(blob, template)
+    record, realized = verdict.export_section(state, gate.FRONTIER_ARCHIVE)
+    assert record["size_preserved"] is True
+    assert record["parse_back_max_abs_delta"] == 0.0
+    # the shipped weights are already SM3R-quantized, so export is a fixed point
+    assert record["trained_vs_realized_max_abs_delta"] == 0.0
+    assert set(realized) == set(state)
+    for name in state:
+        assert torch.equal(realized[name], state[name])
+
+
+@pytest.mark.skipif(
+    not gate.FRONTIER_ARCHIVE.exists(), reason="frontier archive not mounted"
+)
+def test_export_section_realizes_a_perturbed_state_differently() -> None:
+    """A trained state must NOT be assumed equal to what the receiver loads."""
+
+    shipped = gate.load_shipped_renderer_module()
+    template = shipped.SemanticTokenRenderer(gate.SEMANTIC_WIDTH).state_dict()
+    blob = gate.read_semantic_section(gate.FRONTIER_ARCHIVE)
+    state = shipped.unpack_variant_semantic_or_none(blob, template)
+    generator = torch.Generator().manual_seed(20260903)
+    perturbed = {
+        name: value + 0.05 * torch.randn(value.shape, generator=generator)
+        for name, value in state.items()
+    }
+    record, realized = verdict.export_section(perturbed, gate.FRONTIER_ARCHIVE)
+    assert record["size_preserved"] is True
+    assert record["parse_back_max_abs_delta"] == 0.0
+    assert record["trained_vs_realized_max_abs_delta"] > 0.0, (
+        "the deployed encoder quantizes and prunes, so realized != trained"
+    )
+    pruned = "blocks.1.film.weight"
+    rows = realized[pruned].reshape(realized[pruned].shape[0], -1)
+    nonzero_rows = int((rows.abs().sum(dim=1) > 0).sum())
+    assert nonzero_rows == record["kept_rows"][pruned], (
+        "the export must keep exactly keep_percent of the pruned rows"
+    )
