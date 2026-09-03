@@ -149,7 +149,14 @@ cost model (CPU, 4 threads, M5 Max, with the governed QBR1 Metal burn co-residen
 
 `total_s = F + r·steps + e·(pair-evals)` with **F = 12.068 s**, **r = 3.6315 s/step** (batch 1),
 **e = 1.1433 s per pair-eval**. Three points, three parameters — **exactly determined, no out-of-sample
-validation**; labelled DERIVED, not MEASURED-with-residual. (CE1's MPS fit was `r = 0.22267 s/step`;
+validation**; labelled DERIVED, not MEASURED-with-residual.
+
+**The out-of-sample check it never had, now cashed:** the model predicted **9,293 s** for the real
+1,800-step window; the run took **7,331 s** (`SAFE_RUN … elapsed=7331.17s`, peak RSS 11,229 MiB,
+exit 0). It **over-predicted by 26.8%**. If `e` held, the implied step rate is **2.542 s/step**, 30%
+faster than fitted — the three timing points were taken under heavier CPU contention than the run
+itself saw. The caveat label was the right one to carry: an exactly-determined fit is a projection,
+not a measurement, and this one was wrong by a quarter in the safe direction. (CE1's MPS fit was `r = 0.22267 s/step`;
 CPU is **16.3×** slower per step.)
 
 Derived budget:
@@ -514,9 +521,12 @@ FO-3  splice + T4 buy  (ONLY if FO-2 clears its gate)
 loop, the shipped 36,130 B SM3R renderer, at its own size, lr 2e-5 over an 1,800-step cosine.
 CLOSED, on two independent measured grounds:**
 
-1. **It never worked.** Four evaluated n600 points; `best_quantized_exact_seg` stayed at step 0's
-   value at every one. Final object +6.54% worse than the renderer it started from. The charter's
-   falsifier ("d_seg does not fall ≥ 10%") is met by a wide margin — d_seg never fell at all.
+1. **It never worked, and the trainer says so itself.** Its own `result.json` closes with
+   **`best_step = 0`** and **`improved_over_init = false`** — the run's machine-readable verdict is
+   that the best object it ever held was the one it started from. (`verdict: PASS` there means the RUN
+   executed correctly, not that the result was good.) Four evaluated n600 points; final object +6.54%
+   worse than its init. The charter's falsifier ("d_seg does not fall ≥ 10%") is met by a wide margin
+   — d_seg never fell at all.
 2. **It could not have paid even if it had worked.** Coupling **217.30** (§5.2). A 25% seg cut drags
    d_pose to 1,718× base; at the best measured n600 carrier recovery it is still **81× over** the
    ceiling the seg win can fund, with no per-pair admission lever available to a renderer change.
