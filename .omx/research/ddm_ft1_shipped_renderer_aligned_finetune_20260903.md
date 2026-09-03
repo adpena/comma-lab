@@ -253,10 +253,25 @@ This arm claims to sit at msr1's own registered falsifier, on two measured groun
 Neither ground is proof. The honest test is the per-epoch B/H/W selectivity against msr1's measured
 36–52× and required 179.4×, which is exactly what the verdict instrument reports.
 
-**Pre-registered, before the result:** msr1's flow-balance ceiling is **2,123 net px = 8.94% of
-d_seg**, which is BELOW the charter's 10% falsifier threshold and far below its 25% prediction. The
-best measured aligned descents anywhere (CE1 EF3000/EF6000) were **6.77%** and **8.16%**. I expect the
-charter's falsifier to fire. Recording that here so the outcome cannot be narrated either way.
+**Verified at source, not via relay** (`ddm_msr1_manufactured_seg_reduction_20260823.md:17-22`):
+
+> "Any actuator that moves the painted boundary of interface (a,b) in one direction over a region
+> fixes the `a→b` flow there and, one for one, deepens the `b→a` flow. Balanced flow inside an
+> actuator's addressing cell is unreachable *by construction*, whatever the actuator is: **learned
+> renderer weights**, a hand-written palette bias, a class-confidence shift, or a shipped mask."
+
+and its own registered assumption-falsifier (`:366-368`):
+
+> "…the assumption is stated, and it is **falsified by any actuator measured to move manufactured
+> deficits without moving correct-pixel margins comparably on the same shell.**"
+
+**Pre-registered, before the result — with the denominator stated, because the floor you divide by
+decides the answer.** msr1's flow-balance ceiling is **2,123 net px**. msr1 states that as **6.38% of
+the 42,382 B rate demand**; against **d_seg's own 23,757 flips** it is **8.94%**. The second
+denominator is the one the charter's falsifier uses, and 8.94% is **below** the charter's 10%
+threshold and far below its 25% prediction. The best measured aligned descents anywhere (CE1
+EF3000/EF6000) were **6.77%** and **8.16%**. **I expect the charter's falsifier to fire.** Recorded
+here, before the rows land, so the outcome cannot be narrated either way.
 
 ## 9. TYPED MAIN FIRE ORDER (not run by this arm)
 
