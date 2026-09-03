@@ -181,6 +181,20 @@ reported in d_seg, d_pose and S. Regression-tested: a perturbed state must come 
 
 **This is the arm's largest live risk** and it is now instrumented rather than hidden.
 
+Two more defects of my own, found by re-reading my own fixes and fixed with regressions:
+
+* **EMA custody (`0546f657d`).** The loader was a key-preference fallthrough that *happened* to land
+  on the shadow. The PR130 trainer declares `deployment_weights="ema_shadow"` and puts the shadow at
+  the top-level `state_dict`, with the live weights at `training_state.model_state_dict`
+  (verified at source, `:1404` `deployment_state=ema.state_dict()`). The loader now reads the
+  declaration and refuses anything else — a silent pick of live weights would have violated the EMA
+  non-negotiable invisibly, inside a receipt.
+* **Prefix bias (`a279c9c6d`).** `--pairs N` took `range(N)`. On this video a prefix measures the
+  POSE axis **2.5–4.2× harder** and seg **~0.96×** — biased in *opposite* directions (memory `m96`).
+  The single quantity this arm exists to produce is the RATIO `Δd_pose/Δd_seg`, so a prefix would
+  compound both biases exactly where it hurts. Subsets are now a seeded random draw, labelled in the
+  receipt, and a prefix is refused by regression.
+
 ## 7. THE ARITHMETIC THAT GOVERNS THE FIRE ORDER (re-derived, replaces the charter's)
 
 From the AFR1 receipt, `experiments/results/modal_auth_eval_mirror/contest_auth_eval_modal-ddm_afr1_tile48_groupbin8_cuda_n600_20260831.json`
@@ -267,6 +281,17 @@ FO-3  splice + T4 buy  (ONLY if FO-2 clears its gate)
       Do NOT use the charter's "AND d_pose <= 1.25e-4" conjunct: it admits candidates
       that are 5.44x worse in S than the seg credit they buy. S < AFR1 is the whole gate.
 ```
+
+## 9b. COMMITS
+
+| sha | what |
+|---|---|
+| `77af37116` | identity gate + aligned caches + B/H/W verdict + 27 tests |
+| `8865d5e65` | score the bytes that ship (realization gap) |
+| `0546f657d` | honour the trainer's EMA deployment declaration |
+| `ac3cb6215` | this memo |
+| `6dedd44b5` | fork correction, 18,954 (inferred) → 20,671 (measured) |
+| `a279c9c6d` | seeded random pair draw, never a prefix |
 
 ## 10. RECALL EVIDENCE (what I consumed, and what it changed)
 
