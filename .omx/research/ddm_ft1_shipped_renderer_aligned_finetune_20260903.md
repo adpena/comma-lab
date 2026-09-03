@@ -286,7 +286,10 @@ FO-1  n600 advisory verdict of the candidate through the real receiver
           --pairs 600 --batch-size 4 --threads 4 --label ft1_epNN \
           --out <RETAINED>/verdict_ft1_epNN.json
       cost ~33 min (3 passes x 660 s). Emits realized d_seg/d_pose, the trained-vs-realized gap,
-      B/H/W overall and per GT class, and the 36,130 B section + sha.
+      B/H/W overall, per GT class, AND split by whether the input token already matched GT
+      (the aligned objective's own premise: benefit should land on the 9,179 override sites,
+      not as harm on the 117.9M agreeing ones), plus the 36,130 B section + sha.
+      Subsets are a seeded random draw; a prefix is refused.
       GATE: size_preserved == true AND parse_back_max_abs_delta == 0.0.
 
 FO-2  terminal pose re-solve on the candidate's renders  (ONLY if FO-1 shows realized d_seg down)
