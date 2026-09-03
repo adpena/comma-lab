@@ -82,6 +82,7 @@ def test_tiny_end_to_end_retains_exact_reconstruction_and_resumes(
     monkeypatch.setattr(gf2, "SEARCH_RADIUS", 1)
     monkeypatch.setattr(gf2, "MAX_ALIGNMENT_ITERATIONS", 2)
     monkeypatch.setattr(gf2, "MINIMUM_FREE_BYTES", 1)
+    monkeypatch.setattr(gf2, "ALIGNMENT_WARM_START", None)
     output = tmp_path / "retained"
     monkeypatch.setattr(gf2, "OUTPUT", output)
     field = np.asarray(

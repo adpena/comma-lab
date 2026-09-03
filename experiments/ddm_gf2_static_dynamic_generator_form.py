@@ -36,7 +36,7 @@ from typing import Final
 import brotli
 import numpy as np
 
-SCHEMA: Final = "ddm_gf2_static_dynamic_generator_form.v2"
+SCHEMA: Final = "ddm_gf2_static_dynamic_generator_form.v3"
 AXIS: Final = "[macOS-CPU scorer-free exact field measurement, n600]"
 N_PAIRS: Final = 600
 HEIGHT: Final = 384
@@ -53,7 +53,14 @@ DEFAULT_FIELD: Final = Path(
     "sfp1_null_empty.u8"
 )
 OUTPUT: Final = Path(
-    "/Volumes/VertigoDataTier/pact/ddm_gf2_static_dynamic_generator_form/converged_v2"
+    "/Volumes/VertigoDataTier/pact/ddm_gf2_static_dynamic_generator_form/converged_v3"
+)
+ALIGNMENT_WARM_START: Final[Path | None] = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_gf2_static_dynamic_generator_form/converged_v2/"
+    "stage_checkpoints/02_align_iter_20_modal.u8"
+)
+ALIGNMENT_WARM_START_SHA256: Final = (
+    "2fb4135139debe4e250f9128e424bac4e823395b6f5e191eaaa8e9354414ad18"
 )
 
 PACKET_CAP_BYTES: Final = 71_404.5
@@ -64,7 +71,7 @@ GENERIC_BYTES_PER_SITE_NUMERATOR: Final = 2_909
 GENERIC_BYTES_PER_SITE_DENOMINATOR: Final = 10_000
 REPLACEMENT_CAP_BYTES: Final = 85_020
 SEARCH_RADIUS: Final = 12
-MAX_ALIGNMENT_ITERATIONS: Final = 20
+MAX_ALIGNMENT_ITERATIONS: Final = 80
 FILL_CLASS: Final = 2
 MINIMUM_FREE_BYTES: Final = 1 << 30
 
@@ -179,6 +186,18 @@ def retain_source_mirror(source: Path, output: Path) -> dict[str, object]:
     if fact["bytes"] != FIELD_BYTES or fact["sha256"] != FIELD_SHA256:
         raise GF2Error(f"retained source mirror identity mismatch: {fact}")
     return fact
+
+
+def alignment_warm_start() -> tuple[np.ndarray | None, dict[str, object] | None]:
+    if ALIGNMENT_WARM_START is None:
+        return None, None
+    fact = file_fact(ALIGNMENT_WARM_START)
+    if fact["bytes"] != HEIGHT * WIDTH or fact["sha256"] != ALIGNMENT_WARM_START_SHA256:
+        raise GF2Error(f"alignment warm-start identity mismatch: {fact}")
+    template = np.fromfile(ALIGNMENT_WARM_START, dtype=np.uint8).reshape(HEIGHT, WIDTH)
+    if np.any(template >= NUM_CLASSES):
+        raise GF2Error("alignment warm-start carries a class outside [0,4]")
+    return template, fact
 
 
 def modal_field(target: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -472,6 +491,7 @@ def run(output: Path, field_path: Path) -> dict[str, object]:
         return prior
     storage = storage_preflight(output)
     source_mirror = retain_source_mirror(field_path, output)
+    warm_template, warm_start_fact = alignment_warm_start()
     source_checkpoint_path = output / "stage_checkpoints/00_source_validated.json"
     if source_checkpoint_path.is_file():
         source_checkpoint = json.loads(source_checkpoint_path.read_text(encoding="utf-8"))
@@ -479,6 +499,7 @@ def run(output: Path, field_path: Path) -> dict[str, object]:
             source_checkpoint.get("schema") != SCHEMA
             or source_checkpoint.get("source_field") != source
             or source_checkpoint.get("source_mirror") != source_mirror
+            or source_checkpoint.get("alignment_warm_start") != warm_start_fact
             or source_checkpoint.get("runner") != runner
         ):
             raise GF2Error("source checkpoint belongs to a different source or runner")
@@ -489,6 +510,7 @@ def run(output: Path, field_path: Path) -> dict[str, object]:
                 "schema": SCHEMA,
                 "source_field": source,
                 "source_mirror": source_mirror,
+                "alignment_warm_start": warm_start_fact,
                 "runner": runner,
                 "storage": storage,
             },
@@ -523,7 +545,7 @@ def run(output: Path, field_path: Path) -> dict[str, object]:
         )
         del initial_counts, initial_predicted
 
-    template = initial
+    template = initial if warm_template is None else warm_template
     alignment_rows: list[dict[str, object]] = []
     offsets = np.zeros((N_PAIRS, 2), dtype=np.int16)
     converged = False
@@ -672,6 +694,8 @@ def run(output: Path, field_path: Path) -> dict[str, object]:
         },
         "alignment": {
             "family": f"per-pair integer translation dy,dx in [-{SEARCH_RADIUS},+{SEARCH_RADIUS}]",
+            "warm_start": warm_start_fact,
+            "warm_start_prior_iterations": 0 if warm_start_fact is None else 20,
             "global_optimum_claim": False,
             "exact_best_per_pair_for_final_static_within_declared_family": True,
             "coordinate_descent_converged": converged,
