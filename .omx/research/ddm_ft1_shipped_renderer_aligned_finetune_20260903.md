@@ -42,6 +42,16 @@ Axis of every measured row below: **`[macOS-CPU advisory]`** unless it cites the
    cosine, seg-only loss — **not** a family verdict, because the pose term was never built and the LR
    is the leading suspect (§5.1).
 
+6. **THE ARM'S RESULT: the renderer→(seg,pose) coupling is MEASURED at 217.30**, and it closes the
+   seg-only formulation by arithmetic. `|Δd_pose|/|Δd_seg| = 217.30` on an n200 seeded-random draw
+   through the shipped receiver — against `rf1`'s independently measured **166.8** for an un-retrained
+   structural change. A 25% seg cut therefore drags d_pose to **1,718× base**; even the best measured
+   n600 carrier recovery (8.0×, jg5) leaves it **81× over** the 1.694e-05 ceiling that the seg win can
+   pay for, and a renderer change has **no per-pair admission lever**. Measured candidate ΔS =
+   **+0.3857**. Scope: FORMULATION (seg-only loss, no pose term). The **joint** formulation stays open
+   — 217.30 is the coupling of the seg-only gradient *direction*, and a pose-priced loss searches for a
+   different one.
+
 **Pointer: UNMOVED.** No exact row was bought by this arm.
 
 ## 1. IDENTITY GATE RECEIPT
@@ -227,6 +237,67 @@ single charter.
 opening with an excursion and recovering only by 3,000–6,000 steps, so the remaining rows measure
 whether this excursion turns — at 1,800 steps, probably not, but the rows are nearly free now and
 their absence would be a guess.
+
+### 5.2 THE COUPLING — the number this arm existed to produce, MEASURED
+
+`retained/verdict_ft1_step600.json`. n200 **seeded random** draw (seed 20260903, not a prefix),
+`[macOS-CPU advisory]`, DALI lineage, through the shipped receiver's composition
+(carrier frame 2p + rendered frame 2p+1) and upstream's own SegNet/PoseNet.
+
+| object | d_seg | d_pose | S @ 180,002 B |
+|---|---|---|---|
+| base (shipped renderer) | 2.00297e-04 | 9.0025e-06 | 0.1493738 |
+| **candidate, REALIZED** (export → receiver parse-back) | 2.69623e-04 | **1.507375e-02** | **0.5350674** |
+| trained weights (diagnostic, never ships) | 4.44590e-04 | 8.368573e-02 | 1.0791140 |
+
+The base row is the calibration check: d_seg 2.00297e-04 is **0.55%** from the contest-CUDA receipt's
+2.0139e-04, and d_pose 9.00e-06 is 1.41x its 6.37e-06 — a CPU-vs-CUDA gap at n200, in the expected
+regime. The base is trustworthy, so the candidate rows are too.
+
+> **`coupling_dpose_over_dseg` = |Δd_pose| / |Δd_seg| = 217.30**
+
+**Two independent measurements now agree on the renderer→(seg, pose) coupling of this object:** `rf1`
+measured **166.8** for an *un-retrained structural* change; ft1 measures **217.30** for a *trained*
+seg-only fine-tune — 1.30x worse, same regime. This is no longer one arm's number.
+
+**The closing arithmetic.** A 25% seg cut is Δd_seg = −5.0348e-05. At coupling 217.30 it drags
+Δd_pose = **+1.0941e-02 = 1,718x** the 6.37e-06 base. Apply the measured n600 carrier-recovery
+ceiling — and remember a renderer change moves all 600 pairs at once, so **there is no per-pair
+admission lever**:
+
+| recovery | post-solve d_pose | × base | × the 1.694e-05 ceiling |
+|---|---|---:|---:|
+| 5.87× (fcd2) | 1.864e-03 | 293× | **110×** |
+| 8.0× (jg5, the best measured) | 1.368e-03 | 215× | **81×** |
+
+**Even a perfect terminal re-solve at the best recovery ever measured lands 81× over the pose budget
+that a 25% seg win can pay for.** The measured step-600 candidate is worse still: d_pose 1.507e-02 =
+2,366× base, 111× the ceiling after an 8× re-solve, and ΔS = **+0.3857**.
+
+**Verdict.** The **seg-only** aligned renderer fine-tune at this size is **CLOSED by measured
+arithmetic**, at `verdict_scope: FORMULATION` — seg-only expected-flip margin loss, no pose term in
+the loop, this object, this size. It is closed not because d_seg failed to fall (though it did fail),
+but because the coupling makes the pose leg unpayable at ANY useful seg gain.
+
+**What stays OPEN, and why the distinction is real.** 217.30 is the coupling *of the seg-only gradient
+direction*. A joint loss does not accept that direction — it explicitly prices pose and searches for a
+lower-coupling one. That is exactly the w96b/qbr1 construction, and it is untested on THIS object from
+THESE weights. The honest prior is not encouraging: w96b ran pose in-loop from step zero and still
+landed d_pose 1.30e-03 = 204× gb1's 6.37e-06, ~80% of its composed delta. But 204× (pose in loop) vs
+2,366× (pose absent) is an order of magnitude, and that gap is the whole remaining question.
+
+### 5.3 The realization gap is LARGE — and here it REPAIRED the damage
+
+`trained_vs_realized_max_abs_delta = 0.00232` (nonzero, as §6 predicted). The trained weights score
+S 1.0791; the object the receiver actually loads scores S 0.5351. **The deployed encoder threw away
+half the damage** — because it discards the 190 of 192 FiLM rows per tensor that training moved, and
+training was moving them the wrong way.
+
+That is a striking and uncomfortable fact: **training and export are fighting each other.** Had I
+scored the checkpoint's own weights, as the first version of this instrument did, every number above
+would have been 2× worse and attributed to the wrong cause. It is also a warning for any successor —
+a fine-tune whose gains live in the pruned FiLM rows will have those gains DELETED at export, silently,
+at unchanged size.
 
 ## 6. THE REALIZATION GAP — and the fix I had to make to my own instrument
 
@@ -427,9 +498,11 @@ FO-3  splice + T4 buy  (ONLY if FO-2 clears its gate)
    built.
 2. Run FO-1 on the best kept checkpoint. The single number to harvest is
    `delta.coupling_dpose_over_dseg`.
-3. If the coupling is ≲ 10, build the pose term into the trainer (carrier composition + PoseNet at
-   weight `∂S/∂d_pose = 626.5` at the DALI operating point, per af1) and re-run the window. If it is
-   ≳ 100 (rf1's 166.8), the arm is closed by arithmetic: report it and pivot.
+3. **DONE — the coupling is 217.30, so the ≳100 branch of this rule fired.** The seg-only formulation
+   is closed by arithmetic (§5.2). The next decision is NOT another seg-only LR: it is whether to build
+   the pose term (carrier composition + PoseNet at `∂S/∂d_pose = 626.5` on the DALI operating point,
+   per af1) and re-run, knowing w96b's pose-in-loop precedent landed 204× over. Price that against
+   `ddm_fb1`'s other folds before spending the window.
 4. Do not re-run anything against `gt_n600.npz` as a target.
 
 ## Own-vehicle frontier
