@@ -546,8 +546,8 @@ def run(args) -> int:
     }
     out = Path(args.output)
     out.mkdir(parents=True, exist_ok=True)
-    np.save(out / "candidate_base_codes.int32.npy", candidate)
-    np.save(out / "shipped_base_codes.int32.npy", base_codes)
+    np.save(out / "candidate_base_codes.int32.npy", candidate)  # PAYLOAD_WRITE_ORDER_OK:the receipt identifies the completed candidate payload
+    np.save(out / "shipped_base_codes.int32.npy", base_codes)  # PAYLOAD_WRITE_ORDER_OK:the receipt identifies the completed shipped payload
     # The sweep operates on the RECEIVER lattice (base + overlay), so a later pass must be
     # seeded with that sum, not with the base the carrier actually encodes.
     from runtime.compensation_overlay import apply_compensation_overlay
@@ -556,7 +556,7 @@ def run(args) -> int:
         apply_compensation_overlay(candidate, compensation_blob)
         if compensation_blob is not None else candidate
     )
-    np.save(out / "candidate_receiver_codes.int32.npy", receiver_codes)
+    np.save(out / "candidate_receiver_codes.int32.npy", receiver_codes)  # PAYLOAD_WRITE_ORDER_OK:the receipt identifies the completed receiver payload
     (out / (args.receipt or "T1H_PASS1_COMPOSE.json")).write_text(
         json.dumps(receipt, indent=2, sort_keys=True) + "\n"
     )

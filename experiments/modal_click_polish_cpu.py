@@ -316,7 +316,7 @@ def click_polish_run(
     candidate = pkt.repack_archive_bytes(search.Q)
     result["candidate_sha256"] = hashlib.sha256(candidate).hexdigest()
     result["candidate_bytes"] = len(candidate)
-    (out_dir / "candidate_archive.zip").write_bytes(candidate)
+    (out_dir / "candidate_archive.zip").write_bytes(candidate)  # PAYLOAD_WRITE_ORDER_OK:the result binds the completed archive's exact bytes and digest
     vol.commit()
 
     # 4) SAME-CONTAINER exact eval (the authoritative [contest-CPU] row)

@@ -500,8 +500,8 @@ def _materialize_candidate(
     out_dir.mkdir(parents=True, exist_ok=True)
     archive_bin = out_dir / "archive.bin"
     archive_zip = out_dir / "archive.zip"
-    archive_bin.write_bytes(replacement)
-    write_stored_archive(archive_zip, replacement)
+    archive_bin.write_bytes(replacement)  # PAYLOAD_WRITE_ORDER_OK:the receipt records this exact payload's post-write size and digest
+    write_stored_archive(archive_zip, replacement)  # PAYLOAD_WRITE_ORDER_OK:the receipt binds the completed ZIP's post-write bytes and digest
     row.update(
         {
             "archive_bin_path": str(archive_bin.resolve()),

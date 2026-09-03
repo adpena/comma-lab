@@ -422,7 +422,7 @@ def main() -> int:
 
     result["elapsed_seconds"] = time.time() - started
     payload_path = args.out / "reach_masks.npz"
-    np.savez_compressed(
+    np.savez_compressed(  # PAYLOAD_WRITE_ORDER_OK:the result records the retained mask bundle's post-write size and digest
         payload_path,
         shell_manufactured=np.packbits(shell_manufactured),
         shell_correct=np.packbits(shell_correct),

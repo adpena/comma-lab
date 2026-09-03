@@ -322,7 +322,7 @@ def run(gt_cache: Path, output_dir: Path, through_r_report: Path | None) -> dict
     candidate_path = output_dir / "selected_candidate.dtub1"
     receipt_path = output_dir / "measurement_receipt.json"
     manifest_path = output_dir / "artifact_manifest.json"
-    candidate_path.write_bytes(selected_blob)
+    candidate_path.write_bytes(selected_blob)  # PAYLOAD_WRITE_ORDER_OK:the receipt and manifest bind the completed candidate's post-write custody
     receipt["artifact_manifest_path"] = str(manifest_path)
     _atomic_json(receipt_path, receipt)
     manifest = {

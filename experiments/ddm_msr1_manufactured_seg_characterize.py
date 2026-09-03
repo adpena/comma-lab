@@ -495,14 +495,14 @@ def main() -> int:
         ("token_boundary_distance", distance.astype(np.uint8)),
     ):
         path = args.out / f"{name}.n600.npy"
-        np.save(path, array)
+        np.save(path, array)  # PAYLOAD_WRITE_ORDER_OK:the result records each retained array's post-write size and digest
         result["payloads"][name] = {
             "path": str(path),
             "bytes": path.stat().st_size,
             "sha256": sha256_of_file(path),
         }
     fidelity_path = args.out / "token_window_fidelity.float32.n600.npy"
-    np.save(fidelity_path, fidelity.astype(np.float32))
+    np.save(fidelity_path, fidelity.astype(np.float32))  # PAYLOAD_WRITE_ORDER_OK:the result records this retained array's post-write size and digest
     result["payloads"]["token_window_fidelity"] = {
         "path": str(fidelity_path),
         "bytes": fidelity_path.stat().st_size,

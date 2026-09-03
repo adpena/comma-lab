@@ -12103,6 +12103,10 @@
         }
       },
       "id": "lane_public_pr_nonhnerv_mechanism_backlog",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "lane_class": "substrate_engineering",
       "level": 1,
       "name": "Public PR97 + PR81/84/91/92/93 + ANR/HPAC non-HNeRV mechanism deep-extraction backlog",
@@ -12482,6 +12486,10 @@
         }
       },
       "id": "lane_cool_chic_residual_pr106_sidecar_dispatch_ready",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "level": 2,
       "name": "Cool-Chic residual basis byte-closed PR106 sidecar dispatch-ready",
       "notes": "research_only=false; lane_class=substrate_engineering; Ladune 2023 + Catalog #124-compliant 8-archive-grammar fields (archive_grammar=pr106_plus_residual_monolithic_v1, parser_section_manifest=magic+format_id+pr106_len+pr106_bytes+residual_len+residual_bytes, inflate_runtime_loc_budget=200, runtime_dep_closure=numpy+torch+brotli, export_format=pr106_plus_residual_per_family_v1, score_aware_loss=research_only_scaffold, bolt_on_loc_budget=350, no_op_detector_planned=true). Per handoff Bottom-line tranche item #6 + operator directive 2026-05-11 pre-stage. Operator-approval-required for exact T4 dispatch.",
@@ -13803,6 +13811,10 @@
         }
       },
       "id": "lane_mnerv_as_renderer",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "level": 1,
       "name": "MNeRV-as-renderer (multi-scale hierarchical NeRV with Mallat scattering)",
       "notes": "research_only=false; lane_class=substrate_engineering. Per HNeRV parity discipline lesson 5 + operator directive 2026-05-11. archive_grammar=monolithic_singlefile_0bin parser_section_manifest=src/tac/mnerv_as_renderer.py inflate_runtime_loc_budget=substrate_engineering runtime_dep_closure=torch+brotli export_format=mnerv_phase_a_monolithic_singlefile_0bin score_aware_loss=mnerv_train_step bolt_on_loc_budget=substrate_engineering no_op_detector_planned=true. Trainer dispatch operator-gated $40-60.",
@@ -14542,6 +14554,10 @@
         }
       },
       "id": "lane_blocknerv_as_renderer",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "level": 1,
       "name": "BlockNeRV-as-renderer (tile-decomposed)",
       "notes": "",
@@ -14583,6 +14599,10 @@
         }
       },
       "id": "lane_ffnerv_as_renderer",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "level": 1,
       "name": "FFNeRV-as-renderer (Fourier features)",
       "notes": "",
@@ -14624,6 +14644,10 @@
         }
       },
       "id": "lane_dsnerv_as_renderer",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "level": 1,
       "name": "DSNeRV-as-renderer (diffusion-supervised)",
       "notes": "",
@@ -14665,6 +14689,10 @@
         }
       },
       "id": "lane_hinerv_as_renderer",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "level": 1,
       "name": "HiNeRV-as-renderer (hierarchical)",
       "notes": "",
@@ -14706,6 +14734,10 @@
         }
       },
       "id": "lane_tcnerv_as_renderer",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "level": 1,
       "name": "TCNeRV-as-renderer (temporal-conv)",
       "notes": "",
@@ -14747,6 +14779,10 @@
         }
       },
       "id": "lane_nerv_enc_dec_separated",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "lane_class": "substrate_engineering",
       "level": 1,
       "name": "NeRV-Enc/Dec separated bolt-on",
@@ -14789,6 +14825,10 @@
         }
       },
       "id": "lane_nerv_pose_conditioning_bolton",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "lane_class": "substrate_engineering",
       "level": 1,
       "name": "NeRV pose-conditioning FiLM bolt-on",
@@ -15613,6 +15653,10 @@
         }
       },
       "id": "lane_nervdc_as_renderer",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "level": 1,
       "name": "NeRVdc (decoder-conditioning) substrate",
       "notes": "research_only=false; lane_class=substrate_engineering. Per operator 'all nerv-family' 2026-05-11. format_id 0x66.",
@@ -17054,6 +17098,10 @@
         }
       },
       "id": "lane_substrate_sane_hnerv_20260512",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "level": 1,
       "name": "Score-Aware NeRV Extended substrate (sane_hnerv) \u2014 council-approved primary substrate",
       "notes": "archive_grammar=monolithic_single_file_0.bin_fixed_offsets parser_section_manifest=parse_archive(bytes)->(decoder_sd,latents,meta) inflate_runtime_loc_budget=<=100_LOC runtime_dep_closure=torch,brotli export_format=brotli_state_dict+int16_latents+utf8_json_meta score_aware_loss=alpha*B/N+beta*d_seg+gamma*sqrt(d_pose) bolt_on_loc_budget=~530_substrate_engineering no_op_detector_planned=Catalog_139_byte_mutation_smoke score_aware_substrate=true research_only=false lane_class=substrate_engineering",
@@ -17630,6 +17678,10 @@
         }
       },
       "id": "lane_substrate_ff_nerv_20260512",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "level": 1,
       "name": "FFNeRV \u2014 Frequency-domain NeRV substrate L0 SKETCH",
       "notes": "research_only=true | L0 SKETCH per KK #522 \u2014 3-of-5 NeRV-family variants. archive_grammar=monolithic single-file 0.bin fixed offsets (FFV1 magic, 25-byte header) | parser_section_manifest=parse_archive() returns 5 sections (HEADER + DECODER_BLOB + LATENT_BLOB + META_BLOB + implicit frequency_band_coefficients subset) | inflate_runtime_loc_budget=<=100 LOC (current 90) | runtime_dep_closure=torch + brotli + numpy(transitive) | export_format=brotli-quality9 pickled fp16 state_dict + int16 latents + utf8-json meta | score_aware_loss=L=alpha*B/N+beta*d_seg+gamma*sqrt(d_pose) (eval-roundtrip wired at L1) | bolt_on_loc_budget=substrate_engineering ~520 LOC total | no_op_detector_planned=Catalog #139 byte-mutation smoke in tests/test_ff_nerv_roundtrip.py | distinctive_prior=2D-DCT band-limited frequency-domain representation | param_target=~200K | ref design memo .omx/research/grand_council_fields_medal_substrate_design_20260512.md",
@@ -17671,6 +17723,10 @@
         }
       },
       "id": "lane_substrate_ds_nerv_20260512",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "level": 1,
       "name": "DSNeRV \u2014 Depth-separable NeRV substrate L0 SKETCH",
       "notes": "research_only=true | L0 SKETCH per KK #522 \u2014 4-of-5 NeRV-family variants. archive_grammar=monolithic single-file 0.bin fixed offsets (DSV1 magic, 21-byte header) | parser_section_manifest=parse_archive() returns 5 sections (HEADER + DECODER_BLOB + LATENT_BLOB + META_BLOB + implicit depthwise_separable_params subset inside DECODER_BLOB) | inflate_runtime_loc_budget=<=100 LOC (current 88) | runtime_dep_closure=torch + brotli + numpy(transitive) | export_format=brotli-quality9 pickled fp16 state_dict + int16 latents + utf8-json meta | score_aware_loss=L=alpha*B/N+beta*d_seg+gamma*sqrt(d_pose) (eval-roundtrip wired at L1) | bolt_on_loc_budget=substrate_engineering ~510 LOC total | no_op_detector_planned=Catalog #139 byte-mutation smoke in tests/test_ds_nerv_roundtrip.py | distinctive_prior=depthwise+pointwise separable convs (Quantizr-paradigm influence) | param_target=~150K (~40 percent reduction vs standard conv) | ref design memo .omx/research/grand_council_fields_medal_substrate_design_20260512.md",
@@ -17712,6 +17768,10 @@
         }
       },
       "id": "lane_substrate_hi_nerv_20260512",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "level": 1,
       "name": "HiNeRV \u2014 Hierarchical multi-scale NeRV substrate L0 SKETCH",
       "notes": "research_only=true | L0 SKETCH per KK #522 \u2014 5-of-5 NeRV-family variants. archive_grammar=monolithic single-file 0.bin fixed offsets (HIV1 magic, 33-byte header carrying 3 latent pyramid lengths) | parser_section_manifest=parse_archive() returns 7 sections (HEADER + DECODER_BLOB + 3x LATENT_BLOB[C/M/F] + META_BLOB + implicit per-scale quant sidecar) | inflate_runtime_loc_budget=<=100 LOC (current 97) | runtime_dep_closure=torch + brotli + numpy(transitive) | export_format=brotli-quality9 pickled fp16 state_dict + 3x int16 latent pyramid + utf8-json meta | score_aware_loss=L=alpha*B/N+beta*d_seg+gamma*sqrt(d_pose) (eval-roundtrip wired at L1) | bolt_on_loc_budget=substrate_engineering ~580 LOC total | no_op_detector_planned=Catalog #139 byte-mutation smoke in tests/test_hi_nerv_roundtrip.py | distinctive_prior=multi-resolution latent pyramid (coarse/mid/fine) with coarse-to-fine injection at decoder blocks | param_target=~240K (3 scales x ~80K decoder share) | ref design memo .omx/research/grand_council_fields_medal_substrate_design_20260512.md",
@@ -18122,6 +18182,10 @@
         }
       },
       "id": "lane_substrate_cool_chic_20260512",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "level": 1,
       "name": "Cool-Chic per-frame AR latent substrate (L0 SKETCH)",
       "notes": "research_only=true; substrate_engineering exception per HNeRV L7; archive_grammar=CCV1 monolithic single-file 0.bin fixed offsets; parser_section_manifest=parse_archive() returns (synthesis_sd, ar_prior_sd, latents_coarse, latents_fine, meta); inflate_runtime_loc_budget<=100 LOC; runtime_dep_closure=torch+brotli; export_format=brotli(state_dicts)+int16(latents)+utf8-json meta; score_aware_loss=alpha*B/N+beta*d_seg+gamma*sqrt(d_pose) plus AR-NLL bits; bolt_on_loc_budget=~530 LOC (substrate_engineering tag); no_op_detector_planned=Catalog #139 byte-mutation smoke (scaffolded in test_byte_mutation_changes_archive_no_op_proof); reactivation: alpha (sane_hnerv) anchor <=0.21 + pose-axis or rate-axis headroom",
@@ -20539,6 +20603,10 @@
         }
       },
       "id": "lane_wave6_followup_cnerv_remote_driver_20260512",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "level": 1,
       "name": "WAVE-6-FOLLOWUP-CNERV: remote driver for cnerv TRADITION 2 substrate",
       "notes": "",
@@ -21195,6 +21263,10 @@
         }
       },
       "id": "lane_sane_hnerv_archive_fix_catalog_161_20260513",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "lane_class": "substrate_engineering",
       "level": 2,
       "name": "SANE-HNERV-ARCHIVE-FIX: apply Catalog #161 degenerate-range pattern",
@@ -21360,6 +21432,10 @@
         }
       },
       "id": "lane_tcnerv_blocknerv_migrate_20260513",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "level": 1,
       "name": "TCNERV-BLOCKNERV-MIGRATE: post-migration sweep gap closure",
       "notes": "",
@@ -21401,6 +21477,10 @@
         }
       },
       "id": "lane_ffnerv_build_20260513",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "lane_class": "substrate_engineering",
       "level": 1,
       "name": "FFNERV-BUILD: closes WAVE-3-HNERV crash gap (trainer canonicalization)",
@@ -37478,6 +37558,10 @@
     },
     {
       "id": "lane_pose_axis_non_hnerv_t3_council_20260518",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "Pose-axis non-HNeRV T3 council symposium",
       "phase": 2.0,
       "level": 1,
@@ -42990,6 +43074,10 @@
     },
     {
       "id": "lane_ego_nerv_l0_scaffold_20260520",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "Ego-NeRV L0 SCAFFOLD (BUILD-1 NeRV-trio queue fill)",
       "phase": 1.0,
       "level": 1,
@@ -43032,6 +43120,10 @@
     },
     {
       "id": "lane_e_nerv_l0_scaffold_20260520",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "E-NeRV L0 SCAFFOLD (BUILD-1 NeRV-trio queue fill)",
       "phase": 1.0,
       "level": 1,
@@ -43074,6 +43166,10 @@
     },
     {
       "id": "lane_nervdc_l0_scaffold_20260520",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "NeRVdc L0 SCAFFOLD (BUILD-1 NeRV-trio queue fill)",
       "phase": 1.0,
       "level": 1,
@@ -43491,6 +43587,10 @@
     },
     {
       "id": "lane_boost_nerv_l0_scaffold_20260520",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "BoostNeRV L0 SCAFFOLD (WAVE-3-NERV-LITERATURE-L0-RESCOPED 2026-05-20)",
       "phase": 2.0,
       "level": 1,
@@ -44374,6 +44474,10 @@
     },
     {
       "id": "lane_wave_3_pact_nerv_g3_selector_extensions_l0_build_20260520",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "WAVE-3 PACT-NERV G3 SELECTOR EXTENSIONS L0 BUILD",
       "phase": 3.0,
       "level": 1,
@@ -44828,6 +44932,10 @@
     },
     {
       "id": "lane_wave_3_pact_nerv_g2_mid_loc_l0_build_20260520",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "WAVE-3-PACT-NERV-G2-MID-LOC-L0-BUILD parent",
       "phase": 3.0,
       "level": 1,
@@ -44911,6 +45019,10 @@
     },
     {
       "id": "lane_pact_nerv_cross_codec_a_l0_scaffold_20260520",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "Pact-NeRV-CROSS-CODEC-A L0 SCAFFOLD (fec6 base + Pact-NeRV-A1 side-info)",
       "phase": 2.0,
       "level": 1,
@@ -44953,6 +45065,10 @@
     },
     {
       "id": "lane_pact_nerv_cross_codec_b_l0_scaffold_20260520",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "Pact-NeRV-CROSS-CODEC-B L0 SCAFFOLD (PR106 base + Pact-NeRV-IA3 side-info)",
       "phase": 2.0,
       "level": 1,
@@ -44995,6 +45111,10 @@
     },
     {
       "id": "lane_pact_nerv_neural_codec_e2e_cross_l0_scaffold_20260520",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "Pact-NeRV-NEURAL-CODEC-E2E-CROSS L0 SCAFFOLD (end-to-end neural composition + Ball\u00e9 hyperprior gate)",
       "phase": 2.0,
       "level": 1,
@@ -45673,6 +45793,10 @@
     },
     {
       "id": "lane_wave_3_pact_nerv_distilled_scorer_x_codex_ll_integration_design_20260520",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "PACT-NERV-DistilledScorer \u00d7 Codex LL \u00d7 #523 Integration Design",
       "phase": 1.0,
       "level": 1,
@@ -51506,6 +51630,10 @@
     },
     {
       "id": "lane_pr95_hnerv_mlx_reproduction",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "PR95 HNeRV MLX reproduction lane",
       "phase": 0.0,
       "level": 2,
@@ -57419,6 +57547,10 @@
     },
     {
       "id": "lane_path_3_e_boost_nerv_against_pr110_20260526",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "Path 3 candidate E: BoostNeRV against PR110 fec6 residual (L0 SCAFFOLD)",
       "phase": 3.0,
       "level": 1,
@@ -58863,6 +58995,10 @@
     },
     {
       "id": "lane_boostnerv_variant_c_i_prime_differentiable_sign_diversity_5th_order_20260526",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "BoostNeRV Variant C-i' 5TH-order differentiable tanh-proxy sign-diversity",
       "phase": 2.0,
       "level": 1,
@@ -60012,6 +60148,10 @@
     },
     {
       "id": "lane_pact_nerv_long_run_mlx_local_closure_20260528",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "PACT-NeRV-IA3 MLX-LOCAL LONG-RUN closure (Stage 1 canonical; ULTIMATE STAIRCASE Variant #1)",
       "phase": 2.0,
       "level": 1,
@@ -66022,6 +66162,10 @@
     },
     {
       "id": "lane_snerv_scorer_loop_decoder_qat_contract_20260601",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV scorer-loop decoder QAT contract",
       "phase": 0.0,
       "level": 1,
@@ -66063,6 +66207,10 @@
     },
     {
       "id": "lane_snerv_scorer_loop_decoder_qat_smoke_20260601",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV scorer-loop decoder QAT smoke",
       "phase": 0.0,
       "level": 1,
@@ -66231,6 +66379,10 @@
     },
     {
       "id": "lane_snerv_inverse_steganalysis_carrier_20260601",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV inverse-steganalysis carrier (LF-store/HF-generate, L-inf pose-Fisher allocation)",
       "phase": 2.0,
       "level": 1,
@@ -66272,6 +66424,10 @@
     },
     {
       "id": "lane_hinerv_inverse_steganalysis_carrier_20260601",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "HiNeRV inverse-steganalysis carrier (Linf latent allocation via decoder-VJP G3)",
       "phase": 2.0,
       "level": 1,
@@ -67177,6 +67333,10 @@
     },
     {
       "id": "lane_snerv_official_mfu_shape_primitive_20260603",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV official MFU shape primitive",
       "phase": 0.0,
       "level": 1,
@@ -67218,6 +67378,10 @@
     },
     {
       "id": "lane_snerv_official_hfr_mlx_primitive_20260603",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV official HFR MLX primitive",
       "phase": 0.0,
       "level": 1,
@@ -67259,6 +67423,10 @@
     },
     {
       "id": "lane_snerv_official_tub_source_pinned_20260603",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV official TUB source-pinned primitive",
       "phase": 0.0,
       "level": 1,
@@ -67300,6 +67468,10 @@
     },
     {
       "id": "lane_snerv_native_mlx_hf_decoder_training_20260603",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV native MLX HF decoder training",
       "phase": 0.0,
       "level": 1,
@@ -67341,6 +67513,10 @@
     },
     {
       "id": "lane_snerv_official_mfu_numeric_primitive_20260603",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV official MFU numeric primitive",
       "phase": 0.0,
       "level": 1,
@@ -67382,6 +67558,10 @@
     },
     {
       "id": "codex_snerv_loss_worsening_guard_20260603",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV MLX loss-worsening export guard",
       "phase": 0.0,
       "level": 1,
@@ -67505,6 +67685,10 @@
     },
     {
       "id": "hinerv_fresh_eyes_blocker_burndown_codex_20260604",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "HiNeRV fresh-eyes blocker burndown",
       "phase": 0.0,
       "level": 1,
@@ -67546,6 +67730,10 @@
     },
     {
       "id": "codex_snerv_official_receiver_source_authority_split_20260604",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV official receiver/source authority split",
       "phase": 0.0,
       "level": 1,
@@ -67587,6 +67775,10 @@
     },
     {
       "id": "codex_hinerv_modelsize_under_ceiling_preference_20260604",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "HiNeRV modelsize under-ceiling preference",
       "phase": 0.0,
       "level": 1,
@@ -67628,6 +67820,10 @@
     },
     {
       "id": "codex_snerv_numeric_replay_authority_hardening_20260604",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV numeric replay authority hardening",
       "phase": 0.0,
       "level": 1,
@@ -67669,6 +67865,10 @@
     },
     {
       "id": "lane_snerv_official_parity_guard_codex_20260604",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV official parity guard Codex 20260604",
       "phase": 0.0,
       "level": 1,
@@ -67755,6 +67955,10 @@
     },
     {
       "id": "lane_snerv_official_source_forward_parity_20260604_codex",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV official source-forward parity harness",
       "phase": 0.0,
       "level": 1,
@@ -67882,6 +68086,10 @@
     },
     {
       "id": "lane_hinerv_official_control_parity_guard_20260604",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "HiNeRV official control parity guard",
       "phase": 0.0,
       "level": 1,
@@ -68005,6 +68213,10 @@
     },
     {
       "id": "snerv_scalarmean_hardpair_successor_20260604",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV scalar-mean hard-pair prioritized local MLX successor",
       "phase": 0.0,
       "level": 1,
@@ -68128,6 +68340,10 @@
     },
     {
       "id": "lane_snerv_mlx_prefilter_saturation_gate_20260604",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV MLX prefilter saturation gate",
       "phase": 0.0,
       "level": 2,
@@ -68169,6 +68385,10 @@
     },
     {
       "id": "lane_snerv_skip_high_mode_comparison_20260604",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV skip-high mode comparison",
       "phase": 0.0,
       "level": 2,
@@ -68210,6 +68430,10 @@
     },
     {
       "id": "hinerv_stage_qat_runner_smoke_20260604_codex",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "HiNeRV stage-QAT runner smoke",
       "phase": 0.0,
       "level": 1,
@@ -68251,6 +68475,10 @@
     },
     {
       "id": "lane_snerv_exact_eval_admission_guard_20260604",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV exact-eval admission guard from scorer-domain and skip-high crux",
       "phase": 1.0,
       "level": 2,
@@ -68292,6 +68520,10 @@
     },
     {
       "id": "lane_snerv_upstream_data_only_eval_20260604_codex",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV upstream data-only eval gate",
       "phase": 1.0,
       "level": 2,
@@ -68415,6 +68647,10 @@
     },
     {
       "id": "lane_hinerv_prelong_renderer_quality_guard_20260604",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "HiNeRV pre-long-run renderer quality guard",
       "phase": 0.0,
       "level": 1,
@@ -68497,6 +68733,10 @@
     },
     {
       "id": "hinerv_dynamic_range_repair_guard_20260605_codex",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "HiNeRV dynamic range repair guard",
       "phase": 1.0,
       "level": 1,
@@ -68538,6 +68778,10 @@
     },
     {
       "id": "lane_snerv_tub_output2_runtime_binding_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV TUB output2 runtime binding",
       "phase": 0.0,
       "level": 1,
@@ -68620,6 +68864,10 @@
     },
     {
       "id": "lane_snerv_hinerv_renderer_queue_gate_20260605_codex",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV HiNeRV renderer queue gate automation",
       "phase": 0.0,
       "level": 1,
@@ -68743,6 +68991,10 @@
     },
     {
       "id": "lane_codex_snerv_export_hard_byte_failclosed_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "Codex SNeRV export hard-byte fail-closed",
       "phase": 1.0,
       "level": 1,
@@ -68825,6 +69077,10 @@
     },
     {
       "id": "lane_hinerv_smoke_output_head_fidelity_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "HiNeRV smoke output-head fidelity guard",
       "phase": 0.0,
       "level": 1,
@@ -68907,6 +69163,10 @@
     },
     {
       "id": "lane_snerv_posenet_yuv6_gradient_reachability_guard_20260605_codex",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV PoseNet YUV6 gradient reachability guard",
       "phase": 0.0,
       "level": 1,
@@ -68989,6 +69249,10 @@
     },
     {
       "id": "lane_codex_snerv_official_learned_replacement_gate_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "Codex SNeRV official learned replacement gate",
       "phase": 0.0,
       "level": 1,
@@ -69030,6 +69294,10 @@
     },
     {
       "id": "lane_hinerv_nondegenerate_control_wiring_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "HiNeRV nondegenerate control wiring",
       "phase": 0.0,
       "level": 1,
@@ -69071,6 +69339,10 @@
     },
     {
       "id": "lane_codex_snerv_receiver_rate_blocker_burndown_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "Codex SNeRV receiver rate blocker burndown",
       "phase": 0.0,
       "level": 1,
@@ -69112,6 +69384,10 @@
     },
     {
       "id": "lane_hinerv_distortion_nondegenerate_guard_codex_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "HiNeRV distortion nondegenerate renderer guard",
       "phase": 0.0,
       "level": 1,
@@ -69153,6 +69429,10 @@
     },
     {
       "id": "lane_snerv_lf_payload_binary_codec_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV LF payload binary codec burndown",
       "phase": 1.0,
       "level": 1,
@@ -69235,6 +69515,10 @@
     },
     {
       "id": "lane_snerv_tub_source_parity_executable_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV TUB source parity executable closure",
       "phase": 0.0,
       "level": 1,
@@ -69276,6 +69560,10 @@
     },
     {
       "id": "lane_snerv_lf_hf_replacement_queue_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV LF/HF replacement queue",
       "phase": 0.0,
       "level": 1,
@@ -69317,6 +69605,10 @@
     },
     {
       "id": "lane_snerv_tether_feedback_bridge_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV scorer tether feedback bridge",
       "phase": 0.0,
       "level": 1,
@@ -69358,6 +69650,10 @@
     },
     {
       "id": "lane_snerv_source_forward_parent_row_authority_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV source-forward parent row authority split",
       "phase": 0.0,
       "level": 1,
@@ -69399,6 +69695,10 @@
     },
     {
       "id": "lane_snerv_native_state_source_forward_mapping_harness_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV native trained state source-forward mapping harness",
       "phase": 0.0,
       "level": 1,
@@ -69563,6 +69863,10 @@
     },
     {
       "id": "lane_snerv_lf_hf_proof_consumed_queue_handoff_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV LF/HF consumed proof queue handoff",
       "phase": 0.0,
       "level": 1,
@@ -69645,6 +69949,10 @@
     },
     {
       "id": "codex_hinerv_pose_yuv6_actuator_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "Codex HiNeRV Pose/YUV6 actuator blocker burndown",
       "phase": 0.0,
       "level": 1,
@@ -69686,6 +69994,10 @@
     },
     {
       "id": "lane_snerv_official_source_forward_lf_hf_blocker_closure_20260605",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV official source-forward LF/HF blocker closure",
       "phase": 2.0,
       "level": 1,
@@ -69977,6 +70289,10 @@
     },
     {
       "id": "lane_hinerv_target_region_score_debt_smoke_20260606",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "HiNeRV target-region score-debt smoke",
       "phase": 0.0,
       "level": 2,
@@ -70637,6 +70953,10 @@
     },
     {
       "id": "lane_hinerv_reverse_order_producer_20260607",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "HiNeRV reverse-order producer ActionEffect arm",
       "phase": 0.0,
       "level": 1,
@@ -71384,6 +71704,10 @@
     },
     {
       "id": "lane_snerv_source_triplet_materializer_20260607",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV source triplet materializer",
       "phase": 0.0,
       "level": 1,
@@ -71425,6 +71749,10 @@
     },
     {
       "id": "lane_swarm_v1_hinerv_export_wire_20260609",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "Swarm V1 HiNeRV action export rent-gate",
       "phase": 2.0,
       "level": 1,
@@ -71880,6 +72208,10 @@
     },
     {
       "id": "lane_snerv_lf_rd_waterfill_20260609",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "SNeRV LF payload rate-distortion waterfill planner",
       "phase": 2.0,
       "level": 1,
@@ -73533,6 +73865,10 @@
     },
     {
       "id": "lane_hinerv_rle_support_parseback_inflate_20260613_codex",
+      "research_only": true,
+      "reactivation_criteria": [
+        "Declare a recognized export_format or receiver parser contract before any training or exact-eval dispatch."
+      ],
       "name": "HiNeRV RLE support parseback inflate survival",
       "phase": 0.0,
       "level": 1,

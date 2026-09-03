@@ -216,7 +216,7 @@ def register(
         return 0
 
     birth_abs.parent.mkdir(parents=True, exist_ok=True)
-    birth_abs.write_bytes(payload)
+    birth_abs.write_bytes(payload)  # PAYLOAD_WRITE_ORDER_OK:provenance intentionally records the completed birth artifact's post-write digest
     prov_abs.write_text(json.dumps(provenance, indent=2) + "\n")
 
     # Post-edit working-tree shas, per the serializer's --expected-content-sha256

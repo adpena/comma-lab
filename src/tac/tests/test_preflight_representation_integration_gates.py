@@ -371,16 +371,9 @@ def test_gate3_rejects_malformed_parser_schema(tmp_path: Path) -> None:
 
 
 def test_gate4_warn_only_on_live_repo() -> None:
-    """Live count is 2 warn (lane_12_nerv_mask_codec, lane_alpha_nerv_mask).
-
-    Ships warn-only; flip strict after backfill."""
+    """Every in-scope legacy lane now has an explicit export-first disposition."""
     violations = check_gate4_export_first(strict=False, verbose=False)
-    # We expect the two known violations; assert that the count stays
-    # bounded so a regression that adds new violators is caught.
-    assert len(violations) <= 4, (
-        f"gate4 live count drift: {len(violations)} violations "
-        f"(expected <= 4): {violations}"
-    )
+    assert violations == []
 
 
 def test_gate4_negative_lane_without_export_format(tmp_path: Path) -> None:

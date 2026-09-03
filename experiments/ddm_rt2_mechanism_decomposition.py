@@ -427,7 +427,7 @@ def score_leg(leg: str, args: argparse.Namespace, pairs: list[int]) -> dict:
     tag = (f"{leg}{lam_tag}_n{len(pairs)}_s{args.seed}"
            + ("_noq" if args.no_quantize else ""))
     npy = args.work / f"argmax_{tag}.npy"
-    np.save(npy, argmax_out)
+    np.save(npy, argmax_out)  # PAYLOAD_WRITE_ORDER_OK:the receipt records this exact retained array's post-write size and digest
     receipt["payload"] = {
         "path": str(npy),
         "bytes": npy.stat().st_size,

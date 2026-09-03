@@ -804,7 +804,7 @@ def test_run_inflate_defaults_python_to_current_interpreter(
     monkeypatch.delenv("PYTHON_BIN", raising=False)
     monkeypatch.delenv("PACT_PYTHON_BIN", raising=False)
     monkeypatch.delenv("UV_PYTHON", raising=False)
-    monkeypatch.setattr(cae.subprocess, "run", fake_run)
+    monkeypatch.setattr(cae, "run_in_process_group", fake_run)
 
     cae._run_inflate(inflate_sh, archive_dir, inflated_dir, video_names, timeout=5)
 
@@ -836,7 +836,7 @@ def test_run_inflate_applies_diagnostic_env_to_inflate_only(
             f.truncate(1164 * 874 * 1200 * 3)
         return subprocess.CompletedProcess(args=cmd, returncode=0)
 
-    monkeypatch.setattr(cae.subprocess, "run", fake_run)
+    monkeypatch.setattr(cae, "run_in_process_group", fake_run)
 
     cae._run_inflate(
         inflate_sh,

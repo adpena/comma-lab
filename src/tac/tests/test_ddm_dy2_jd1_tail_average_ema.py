@@ -22,6 +22,7 @@ from experiments.train_tr1_partition_renderer_mlx import (  # noqa: E402
     jd1_ema_initial_state,
     jd1_ema_tail_average_active,
     jd1_ema_tail_average_live_weight,
+    no_opt_state,
     refuse_declared_vs_resolved_jd1_ema_decay,
     save_checkpoint,
     TR1Config,
@@ -196,7 +197,9 @@ def test_tail_state_persists_through_real_checkpoint_meta_writer(tmp_path):
         path,
         model=_FakeCheckpointModel(),
         ema={"w": np.array([1.5, 2.5], dtype=np.float32)},
-        opt_state_flat={},
+        opt_state_flat=no_opt_state(
+            "test checkpoint exercises JD1 metadata only and is never resumed"
+        ),
         epoch=12,
         stage="joint_pose_finish",
         cfg=_cfg(),

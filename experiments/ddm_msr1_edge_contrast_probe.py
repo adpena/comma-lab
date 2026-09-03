@@ -206,7 +206,7 @@ def main() -> int:
     }
 
     contrast_path = args.out / "cross_boundary_contrast.float32.n600.npy"
-    np.save(contrast_path, contrast)
+    np.save(contrast_path, contrast)  # PAYLOAD_WRITE_ORDER_OK:the result records this retained array's post-write size and digest
     result["payloads"] = {
         "cross_boundary_contrast": {
             "path": str(contrast_path),

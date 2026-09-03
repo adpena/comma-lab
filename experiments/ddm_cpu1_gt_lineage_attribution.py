@@ -237,9 +237,9 @@ def main() -> int:
     pose_path = args.out_dir / f"cpu1_pose_pred_n{n_pairs}.npy"
     argmax_path = args.out_dir / f"cpu1_seg_argmax_n{n_pairs}.npy"
     perpair_path = args.out_dir / f"cpu1_per_pair_n{n_pairs}.npz"
-    np.save(pose_path, pose_pred)
-    np.save(argmax_path, argmax_pred)
-    np.savez(
+    np.save(pose_path, pose_pred)  # PAYLOAD_WRITE_ORDER_OK:result custody records this retained array's post-write size and digest
+    np.save(argmax_path, argmax_pred)  # PAYLOAD_WRITE_ORDER_OK:result custody records this retained array's post-write size and digest
+    np.savez(  # PAYLOAD_WRITE_ORDER_OK:result custody records this retained bundle's post-write size and digest
         perpair_path,
         d_pose_pyav=dpose_pyav_pp, d_pose_dali=dpose_dali_pp,
         d_seg_pyav=dseg_pyav_pp, d_seg_dali=dseg_dali_pp,
