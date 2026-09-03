@@ -186,6 +186,7 @@ DALI table, on the EMA shadow. **Advisory, `[macOS-CPU advisory]`, never a score
 | 0 | 0 | 0.00020386589898003471 | 24,049 | — |
 | 600 | 1 | 0.00026752895779079860 | 31,559 | **+31.23%** |
 | 1200 | 2 | 0.00023271348741319445 | 27,452 | **+14.15%** |
+| 1800 | 3 | 0.00021719190809461804 | 25,621 | **+6.54%** |
 
 `best_quantized_exact_seg` is still **step 0's** value at both rows: not one evaluated point improved
 on the shipped renderer.
@@ -196,11 +197,19 @@ back **54.69% of its excursion** (peak +7,510 flips → +3,403). This is CE1's d
 open-then-recover shape reproducing on this object, and the recovery being *synchronous with the
 anneal* is direct evidence for §5.1 cause 1: **the rate, not the objective, did the damage.**
 
-**Pre-registered extrapolation, so the last row cannot be narrated after the fact:** if the remaining
-600 steps give back a similar fraction as lr anneals to the 2e-07 floor, step 1800 lands near
-**+6 to +8%** — still ABOVE the shipped renderer, still a failed epoch, and far from the −10% the
-charter's falsifier wanted. CE1's ladder agrees: its aligned runs only crossed BELOW their init after
-3,000–6,000 steps. A 1,800-step window at this rate cannot get there.
+**Pre-registered extrapolation, written before the last row landed:** *"if the remaining 600 steps
+give back a similar fraction as lr anneals to the 2e-07 floor, step 1800 lands near +6 to +8%."*
+
+**It landed at +6.54% — inside the predicted band.** The window is complete: lr reached its 2.0e-07
+cosine floor, the excursion gave back **79.1%** of its peak (5,938 of 7,510 flips), and the final
+object still sits **+1,572 flips = +6.54% ABOVE the shipped renderer**. `best_quantized_exact_seg`
+never moved off step 0's value at ANY of the four evaluated points.
+
+A correct pre-registered prediction is worth more here than the row itself: it means the
+open-then-recover shape is not a story fitted to the data, and it pins the mechanism. **d_seg tracked
+the LR anneal, not the objective.** Damage peaked at high lr and unwound as lr fell, ending 6.54% short
+of merely breaking even. That is what a rate-transfer failure looks like, and it is the third instance
+in this charter of a constant that was correct for its own vehicle and wrong for this one.
 
 *(contest-CUDA T4 reference for the same object: 0.00020139)*
 
@@ -245,10 +254,9 @@ stale identifiers and §2's mislabelled lineage: **a constant that was correct f
 transferred without re-derivation.** That is three independent instances of one failure mode inside a
 single charter.
 
-**Not stopped.** The run continues to steps 1,200 and 1,800. CE1's ladder shows the aligned objective
-opening with an excursion and recovering only by 3,000–6,000 steps, so the remaining rows measure
-whether this excursion turns — at 1,800 steps, probably not, but the rows are nearly free now and
-their absence would be a guess.
+**Run COMPLETE** (all four evaluated points above). CE1's ladder shows the aligned objective opening with an
+excursion and recovering only by 3,000–6,000 steps. This window turned at step 600 and recovered 79.1%
+by 1,800, but never reached parity — consistent with CE1's ladder and with the rate diagnosis.
 
 ### 5.2 THE COUPLING — the number this arm existed to produce, MEASURED
 
@@ -500,9 +508,36 @@ FO-3  splice + T4 buy  (ONLY if FO-2 clears its gate)
   reported `trained_vs_realized` deltas. If it is large, `--fixed-zero-mask` (or a prune-row-only mask
   added to the trainer) becomes mandatory.
 
+## 13. FINAL VERDICT
+
+**`verdict_scope: FORMULATION` — seg-only realized expected-flip margin loss, no pose term in the
+loop, the shipped 36,130 B SM3R renderer, at its own size, lr 2e-5 over an 1,800-step cosine.
+CLOSED, on two independent measured grounds:**
+
+1. **It never worked.** Four evaluated n600 points; `best_quantized_exact_seg` stayed at step 0's
+   value at every one. Final object +6.54% worse than the renderer it started from. The charter's
+   falsifier ("d_seg does not fall ≥ 10%") is met by a wide margin — d_seg never fell at all.
+2. **It could not have paid even if it had worked.** Coupling **217.30** (§5.2). A 25% seg cut drags
+   d_pose to 1,718× base; at the best measured n600 carrier recovery it is still **81× over** the
+   ceiling the seg win can fund, with no per-pair admission lever available to a renderer change.
+
+**Ground 2 is the load-bearing one.** Ground 1 is attributable to a transferred learning rate and
+could plausibly be fixed by re-deriving it. Ground 2 is a property of the object and is not fixed by
+any rate.
+
+**NOT closed:** the **joint** formulation. 217.30 is the coupling of the *seg-only gradient direction*;
+a pose-priced loss searches for a different one. That is untested from these weights. The prior is
+sobering — w96b ran pose in-loop from step zero and still landed 204× over — but 204× against this
+run's 2,366× is an order of magnitude, and that gap is the entire remaining question. Whether it is
+worth the window is a `ddm_fb1` prioritization call, not this arm's to make.
+
 ## NEXT_IF_RESUMED
 
-0. The run may still be live: check `pgrep -f train_semantic_quantized_resumable` and
+0. The run is COMPLETE. Retained checkpoints: `ckpt.periodic.step000600`, `ckpt.periodic.step001200`,
+   `ckpt.stage-expected_flip.step001800`, `ckpt.resume.latest`. Nothing here is worth verdicting
+   further — the step-600 checkpoint already gave the coupling, and no later point is better than the
+   shipped renderer.
+0b. The run may still be live: check `pgrep -f train_semantic_quantized_resumable` and
    `<RUN>/run.log`. If it died, `--resume-from <RUN>/ckpt.resume.latest.pt` continues it bit-faithfully.
 1. Read `<RUN>/result.json` and the §5 rows. If no kept epoch lowered realized d_seg by ≥10%,
    **count the charter's falsifier as FIRED** and say so plainly; that closes "renderer fine-tune at
