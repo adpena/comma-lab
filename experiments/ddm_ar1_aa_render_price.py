@@ -769,6 +769,93 @@ def _subset_block(
     return block
 
 
+def octile_shares(values: np.ndarray) -> list[float]:
+    """Split a per-row (or per-column) count profile into 8 equal bands, edge to edge, as shares.
+
+    Both render axes (384, 512) divide by 8 exactly; a length that does not divide drops its tail
+    remainder rather than skewing a band, so the shares stay comparable across profiles.
+    """
+    values = np.asarray(values, dtype=np.float64)
+    band = values.size // 8
+    if band < 1:
+        raise AR1Error(f"profile of length {values.size} cannot be split into 8 bands")
+    sums = np.array([values[i * band : (i + 1) * band].sum() for i in range(8)])
+    total = sums.sum()
+    return [float(v / total) if total > 0 else 0.0 for v in sums]
+
+
+def module_lattice_drift_profile(n: int, ss: int) -> list[float]:
+    """The module lattice's per-row |block-centre - coarse-sample| drift, as octile shares.
+
+    This is the shape the REGISTRATION hypothesis predicts the AA damage would follow if the
+    0.25-px lattice contraction were driving it: maximal at both frame edges, zero at the centre.
+    Comparing it against the measured broken-site profile is what falsifies that hypothesis.
+    """
+    coarse = np.linspace(-1.0, 1.0, n)
+    block_means = np.linspace(-1.0, 1.0, n * ss).reshape(n, ss).mean(axis=1)
+    return octile_shares(np.abs(block_means - coarse))
+
+
+def spatial_profiles(
+    out: Path,
+    common: Sequence[int],
+    selection: set[int],
+    seg_gt: np.ndarray,
+    ss_values: Sequence[int],
+    argmax_suffix: str,
+) -> dict[str, Any]:
+    """Where in the frame AA fixes and breaks sites, against the lattice-drift shape.
+
+    The registration and blur hypotheses make OPPOSITE spatial predictions.  Registration drift is
+    maximal at the frame edges and zero at the centre; the argmax boundaries the field actually has
+    to get right sit in the mid-frame horizon band.  Profiling broken/fixed sites by row band
+    therefore separates the two without rendering anything new.
+    """
+    profiles: dict[str, Any] = {}
+    trained = [p for p in common if p in selection]
+    for ss in ss_values:
+        if ss == 1:
+            continue
+        entry: dict[str, Any] = {
+            "drift_profile_rows_octiles": module_lattice_drift_profile(qbt.EVAL_H, ss),
+            "drift_applies_to_this_lattice": argmax_suffix == "",
+            "note": (
+                "octile bands run edge to edge; a uniform profile is 0.125 per band. The drift "
+                "profile is what the registration hypothesis predicts the damage would follow. "
+                "It is the MODULE lattice's drift; the footprint_centred lattice has none by "
+                "construction, so it is reported there only as the same reference shape."
+            ),
+        }
+        for label, ids in (("trained", trained), ("all_measured", list(common))):
+            if not ids:
+                continue
+            broken_rows = np.zeros(qbt.EVAL_H)
+            fixed_rows = np.zeros(qbt.EVAL_H)
+            broken_cols = np.zeros(qbt.EVAL_W)
+            fixed_cols = np.zeros(qbt.EVAL_W)
+            for pair_id in ids:
+                base = np.load(out / "argmax" / f"pair_{pair_id:04d}_ss1.npy")
+                aa = np.load(out / "argmax" / f"pair_{pair_id:04d}_ss{ss}{argmax_suffix}.npy")
+                target = seg_gt[pair_id]
+                broke = (base == target) & (aa != target)
+                fixed = (base != target) & (aa == target)
+                broken_rows += broke.sum(axis=1)
+                fixed_rows += fixed.sum(axis=1)
+                broken_cols += broke.sum(axis=0)
+                fixed_cols += fixed.sum(axis=0)
+            entry[label] = {
+                "pairs": len(ids),
+                "broken_rows_octiles": octile_shares(broken_rows),
+                "fixed_rows_octiles": octile_shares(fixed_rows),
+                "broken_cols_octiles": octile_shares(broken_cols),
+                "fixed_cols_octiles": octile_shares(fixed_cols),
+                "broken_total": int(broken_rows.sum()),
+                "fixed_total": int(fixed_rows.sum()),
+            }
+        profiles[str(ss)] = entry
+    return profiles
+
+
 def aggregate(args: argparse.Namespace) -> int:
     out = Path(args.out)
     rows_path = out / "per_pair_rows.jsonl"
@@ -877,6 +964,9 @@ def aggregate(args: argparse.Namespace) -> int:
             "total_net": sum(r["net"] for r in totals),
         }
     report["bhw_vs_ss1"] = bhw
+    report["spatial_profile_vs_ss1"] = spatial_profiles(
+        out, common, set(qbt.SELECTION_IDS), gt["dali_seg"], sorted(rows_by_ss), argmax_suffix
+    )
 
     path = out / f"AGGREGATE{'' if lattice == LATTICE_MODULE else '_centred'}.json"
     path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")

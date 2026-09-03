@@ -348,3 +348,26 @@ def test_subset_block_skips_an_ss_that_does_not_cover_the_subset() -> None:
     block = ar1._subset_block(rows_by_ss, [0, 1], 106_643, "dali_authority")
     assert set(block["per_ss"]) == {"1"}
     assert block["deltas_vs_ss1"] == {}
+
+
+# ---------------------------------------------------------------------------
+# spatial profiles (the registration-vs-blur discriminator)
+# ---------------------------------------------------------------------------
+def test_octile_shares_partition_the_axis() -> None:
+    shares = ar1.octile_shares(np.ones(384))
+    assert len(shares) == 8
+    assert sum(shares) == pytest.approx(1.0)
+    assert all(s == pytest.approx(0.125) for s in shares)
+
+
+def test_octile_shares_of_an_empty_profile_are_zero_not_nan() -> None:
+    assert ar1.octile_shares(np.zeros(384)) == [0.0] * 8
+
+
+def test_module_lattice_drift_profile_is_edge_heavy_and_centre_empty() -> None:
+    """The registration hypothesis's predicted damage shape: maximal at the edges, ~0 mid-frame."""
+    profile = ar1.module_lattice_drift_profile(384, 2)
+    assert sum(profile) == pytest.approx(1.0)
+    assert profile[0] == pytest.approx(profile[-1], abs=1e-12)  # symmetric
+    assert profile[0] > profile[3] * 5  # edge band dominates the centre band
+    assert profile[0] + profile[-1] > 0.4
