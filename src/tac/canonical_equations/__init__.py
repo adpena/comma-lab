@@ -270,6 +270,10 @@ from tac.canonical_equations.evaluators import (
     registered_equation_ids,
     resolve_equation_value,
 )
+from tac.canonical_equations.exchange_ratio_noise_floor_20260903 import (
+    build_exchange_ratio_noise_floor_v1,
+    near_win_is_admissible,
+)
 from tac.canonical_equations.focal_gradient_concentration_20260705 import (
     build_focal_gradient_concentration_v1,
     focal_region_share,
@@ -596,6 +600,7 @@ __all__ = [
     "build_dsl_custodied_scalar_identity_v1",
     "build_eikonal_retention_couples_to_tau_rung_v1",
     "build_ema_window_pi_group_v1",
+    "build_exchange_ratio_noise_floor_v1",
     "build_fisher_curvature_equals_categorical_fisher_trace_caustic_v1",
     "build_focal_gradient_concentration_v1",
     "build_frozen_scorer_forward_batch_dependence_v1",
@@ -700,6 +705,7 @@ __all__ = [
     "minimum_integer_headroom",
     "mlx_pytorch_full_decoder_downstream_scorer_drift_bound",
     "muon_cold_start_transition_spike",
+    "near_win_is_admissible",
     "one_sided_carrier_gain",
     "pairset_component_marginal_payload",
     "pairset_component_marginal_score_delta",
