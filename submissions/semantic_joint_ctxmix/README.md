@@ -41,7 +41,11 @@ My contribution is the decision and lossless-representation layer on top:
   The encoder performs no network requests, verifies the complete source-tree
   manifest, retains every payload and checkpoint outside this public tree, and
   refuses unless the rebuilt archive matches the pinned SHA-256 exactly
-  (180,002 bytes). One run takes about an hour of CPU; individual stages also
+  (180,002 bytes). The required base archive is pinned the same way: the script
+  refuses unless `base_archive.zip` matches SHA-256
+  `df7fd266e1b7488cdec02c7b5c1201c40628804260286001f38b51d7ed9e2080`
+  (180,456 bytes). The base is not included in this tree; ask and I will
+  provide it. One run takes about an hour of CPU; individual stages also
   self-check with in-memory determinism repeats. Pass `--repeats 2` to add a
   full second rebuild as an end-to-end determinism demonstration.
 - **Local process, stated plainly:** the stages that decided the archive's content —
@@ -67,21 +71,17 @@ My contribution is the decision and lossless-representation layer on top:
 - Native/Python receiver identity: 600/600 pairs, 3,662,409,600 raw output bytes,
   0 differing.
 - Research-receipt repository: <https://github.com/adpena/comma-lab> (evaluated
-  commit `1c9fbbf58716eb0f26bcdf2a91e3c89d0e4efdde`; public visibility of that exact
-  commit has not been re-verified by this offline preparation).
+  commit `1c9fbbf58716eb0f26bcdf2a91e3c89d0e4efdde`, verified publicly
+  accessible 2026-09-03).
 
-The score above belongs to the exact archive and evaluated contest-CUDA
-receiver at that commit. This prepare-only tree changes the public wrappers to
-fail closed; its lower-level receiver is byte-identical over all 600 pairs on
-macOS CPU, but its public CUDA entrypoint has not been rerun on a T4. The local
-identity result is not a cross-axis CUDA proof, so the current tree must receive
-a contest-CUDA identity/equivalence check before publication.
+The score above belongs to the exact archive bytes. On 2026-09-03 this tree's
+public CUDA entrypoint was rerun end-to-end on a 1:1 Tesla T4 against those
+bytes and reproduced the row exactly: PoseNet 0.00000637, SegNet 0.00020139,
+180,002 bytes, recomputed score 0.14797617125559104 (532.3 s inflation +
+40.6 s evaluation).
 
 `[contest-CPU]` is RECORD-WITH-REASON: no exact AFR1 CPU score was run, and no
 older CPU score is inherited. The prior contest-CPU attempt timed out at the
 1,800-second inflation limit, so this package makes no CPU score claim.
-
-Publication state: PREPARED HOLD, NOT PUBLISHED. There is no hosted archive URL
-in this tree; publication remains an operator decision.
 
 Corrections welcome — if any attribution is incomplete, tell me and I will fix it.
