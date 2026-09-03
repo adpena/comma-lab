@@ -1,0 +1,41 @@
+{
+  "measurement": "delta_R_noise_floor",
+  "axis": "[macOS-CPU advisory . NON-PROMOTABLE]",
+  "gt_npz": "experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+  "n_frames": 600,
+  "band": 1.0,
+  "annulus_area_frac": 0.02670194837782118,
+  "uint8_isolation": {
+    "annulus": {
+      "mean": 0.007383969612419605,
+      "p50": 0.005089759826660156,
+      "p90": 0.016644001007080078,
+      "p95": 0.021881818771362305,
+      "p99": 0.035280756950378356,
+      "max": 0.1588212251663208
+    },
+    "all_px": {
+      "mean": 0.013560148887336254,
+      "p50": 0.00994110107421875,
+      "p90": 0.029737472534179688,
+      "p95": 0.0383458137512207,
+      "p99": 0.060334205627441406,
+      "max": 0.3770451545715332
+    },
+    "note": "|margin(uint8-round(x_c)) - margin(x_c)| ; the pure uint8-at-camera perturbation"
+  },
+  "delta_R": 0.021881818771362305,
+  "delta_R_def": "p95 of |uint8-induced margin perturbation| over annulus (|GT margin|<band)",
+  "cross_check_full_R_vs_gt_direct": {
+    "annulus": {
+      "mean": 0.014134581200778484,
+      "p50": 0.010700702667236328,
+      "p90": 0.030503284931182872,
+      "p95": 0.03887428045272823,
+      "p99": 0.05986139297485327,
+      "max": 0.3023625612258911
+    },
+    "note": "|margin(full-R of 384-content) - margin(GT-direct)| ; includes bicubic up/down + uint8 (upper bound)"
+  },
+  "gt_margin_scale_note": "GT annulus margin p10~0.172 p50~0.897 (run-1 telemetry); compare delta_R to these"
+}
