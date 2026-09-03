@@ -195,6 +195,26 @@ def per_class_pool(
     return out
 
 
+def select_pair_ids(pairs: int, seed: int) -> tuple[list[int], str]:
+    """Choose which pairs to score -- all 600, or a SEEDED RANDOM draw.
+
+    A prefix is never allowed.  The first pairs of this video are not a small
+    version of the video: on the pose axis a contiguous prefix measures
+    2.5-4.2x HARDER than the population (memory ``m96``), so a prefix-based
+    coupling number would be biased in exactly the direction that decides this
+    arm.  Seg prefixes are ~0.96x, i.e. biased the other way, which is worse
+    still because the ratio compounds both errors.
+    """
+
+    if pairs >= N_PAIRS:
+        return list(range(N_PAIRS)), f"all {N_PAIRS} pairs"
+    if pairs < 1:
+        raise ValueError("--pairs must be positive")
+    generator = np.random.default_rng(seed)
+    chosen = sorted(int(v) for v in generator.choice(N_PAIRS, size=pairs, replace=False))
+    return chosen, f"seeded random draw of {pairs}/{N_PAIRS} (seed {seed}); NOT a prefix"
+
+
 def score_components(d_seg: float, d_pose: float, archive_bytes: int) -> dict[str, float]:
     rate = 25.0 * archive_bytes / 37_545_489
     seg_term = 100.0 * d_seg
@@ -382,6 +402,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--challenge-root", type=Path, default=Path("upstream"))
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--pairs", type=int, default=N_PAIRS)
+    parser.add_argument(
+        "--pair-seed",
+        type=int,
+        default=20260903,
+        help="seed for the random pair draw when --pairs < 600 (never a prefix)",
+    )
     parser.add_argument("--archive-bytes", type=int, default=180_002)
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument("--label", default="candidate")
@@ -401,7 +427,7 @@ def main(argv: list[str] | None = None) -> int:
 
     tokens = np.fromfile(args.tokens, dtype=np.uint8).reshape(N_PAIRS, EVAL_H, EVAL_W)
     labels, gt_poses = load_gt_tables(args.gt_cache)
-    pair_ids = list(range(min(args.pairs, N_PAIRS)))
+    pair_ids, pair_selection = select_pair_ids(args.pairs, args.pair_seed)
 
     shipped_blob = read_semantic_section(args.archive)
     shipped = load_shipped_renderer_module()
@@ -458,6 +484,7 @@ def main(argv: list[str] | None = None) -> int:
         "pairs": len(pair_ids),
         "positions": positions,
         "gt_lineage": str(args.gt_cache),
+        "pair_selection": pair_selection,
         "base": {
             "source": base_source,
             "d_seg": base["d_seg"],

@@ -507,3 +507,36 @@ def test_load_state_on_a_real_trainer_checkpoint_picks_the_shadow() -> None:
     assert set(state) == set(live)
     moved = max(float((state[k] - live[k]).abs().max()) for k in state)
     assert moved > 0.0, "EMA shadow must differ from the live weights after training"
+
+
+# --------------------------------------------------------------------------
+# Pair selection: a prefix is biased on exactly the axis this arm measures.
+# --------------------------------------------------------------------------
+
+
+def test_select_pair_ids_returns_every_pair_at_full_scale() -> None:
+    ids, label = verdict.select_pair_ids(600, 1)
+    assert ids == list(range(600))
+    assert "all 600" in label
+
+
+def test_select_pair_ids_is_never_a_prefix() -> None:
+    ids, label = verdict.select_pair_ids(120, 20260903)
+    assert len(ids) == 120
+    assert len(set(ids)) == 120
+    assert ids != list(range(120)), "a contiguous prefix is forbidden"
+    assert max(ids) > 400, "the draw must reach the back of the video"
+    assert "NOT a prefix" in label
+
+
+def test_select_pair_ids_is_seeded_and_reproducible() -> None:
+    first, _ = verdict.select_pair_ids(64, 7)
+    second, _ = verdict.select_pair_ids(64, 7)
+    other, _ = verdict.select_pair_ids(64, 8)
+    assert first == second
+    assert first != other
+
+
+def test_select_pair_ids_refuses_a_nonpositive_count() -> None:
+    with pytest.raises(ValueError, match="must be positive"):
+        verdict.select_pair_ids(0, 1)
