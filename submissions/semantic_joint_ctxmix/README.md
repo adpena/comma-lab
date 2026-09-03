@@ -40,7 +40,10 @@ My contribution is the decision and lossless-representation layer on top:
   `PYTHONDONTWRITEBYTECODE=1 python compress.py --base-archive /path/to/base_archive.zip --store /durable/ssd/path --resume`.
   The encoder performs no network requests, verifies the complete source-tree
   manifest, retains every payload and checkpoint outside this public tree, and
-  refuses unless two complete runs reproduce the exact 180,002 bytes.
+  refuses unless the rebuilt archive matches the pinned SHA-256 exactly
+  (180,002 bytes). One run takes about an hour of CPU; individual stages also
+  self-check with in-memory determinism repeats. Pass `--repeats 2` to add a
+  full second rebuild as an end-to-end determinism demonstration.
 
 ## Verify
 
