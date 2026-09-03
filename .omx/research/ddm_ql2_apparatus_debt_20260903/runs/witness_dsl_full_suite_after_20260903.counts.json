@@ -1,0 +1,38 @@
+{
+  "arm": "ddm_ql2_apparatus_debt",
+  "authority": {
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "score_claim": false
+  },
+  "baseline_for_comparison": {
+    "errors": 0,
+    "failed": 0,
+    "passed": 1354,
+    "source": ".omx/research/ddm_ql1_retired_lineage_test_quarantine_20260903.md",
+    "total": 1375,
+    "wall_s": 1294.38,
+    "xfailed": 21
+  },
+  "command": ".venv/bin/python -m pytest -q -p no:randomly src/tac/witness_dsl",
+  "counts": {
+    "errors": 0,
+    "failed": 0,
+    "passed": 1361,
+    "total": 1381,
+    "xfailed": 20
+  },
+  "final_line": "1361 passed, 20 xfailed in 972.06s (0:16:12)",
+  "launcher": "tools/launch_detached_process.py --nice 10 --nice-best-effort",
+  "log": {
+    "bytes": 1645,
+    "gitignored": false,
+    "path": ".omx/research/ddm_ql2_apparatus_debt_20260903/runs/witness_dsl_full_suite_after_20260903.pytest.txt",
+    "sha256": "71d7f3f961a751a86299cd9d2ee3563098815906aa47996b32bb098434638f0c"
+  },
+  "pid": 16324,
+  "schema": "tac.pytest_suite_count_receipt.v1",
+  "suite": "src/tac/witness_dsl",
+  "wall_s": 972.06,
+  "written_utc": "2026-09-03"
+}

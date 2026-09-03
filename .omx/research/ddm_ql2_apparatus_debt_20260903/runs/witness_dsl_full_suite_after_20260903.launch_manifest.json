@@ -1,0 +1,79 @@
+{
+  "actual_nice": 10,
+  "argv": [
+    ".venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:randomly",
+    "src/tac/witness_dsl"
+  ],
+  "authority": "local detached execution; downstream artifacts decide authority",
+  "cwd": "/Users/adpena/Projects/pact",
+  "detach_method": "gated supervisor + subprocess.Popen(start_new_session=True)",
+  "done_receipt_path": "/Users/adpena/Projects/pact/.omx/tmp/codex_runs/ql2_witness_dsl_suite.done",
+  "dry_run": false,
+  "effective_argv": [
+    ".venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "-p",
+    "no:randomly",
+    "src/tac/witness_dsl"
+  ],
+  "fleet_reaper_guard": {
+    "exemption_hits": [],
+    "matched_tokens": [],
+    "matching_argv_parts": [],
+    "refused": false,
+    "requested_argv": [
+      ".venv/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "-p",
+      "no:randomly",
+      "src/tac/witness_dsl"
+    ],
+    "source_predicate_scope": "command-line name/exemption leg; detached launch supplies the no-TTY/dead-stdin-or-orphan/age legs over time",
+    "stable_argv": [
+      ".venv/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "-p",
+      "no:randomly",
+      "src/tac/witness_dsl"
+    ]
+  },
+  "fresh_roots": [],
+  "generated_utc": "2026-09-03T21:15:22Z",
+  "git_sha": "05307d4260c2df642b12d6a2fae04ae60a4ba433",
+  "launch_id": {
+    "manifest_path": "/Users/adpena/Projects/pact/.omx/tmp/ql2/runs/after_20260903/launch_manifest.json",
+    "monotonic_launch_counter": 751,
+    "pid": 16324
+  },
+  "log_path": "/Users/adpena/Projects/pact/.omx/tmp/ql2/runs/after_20260903/run.log",
+  "nice_status": "applied",
+  "output_dir": "/Users/adpena/Projects/pact/.omx/tmp/ql2/runs/after_20260903",
+  "pid": 16324,
+  "pid_path": "/Users/adpena/Projects/pact/.omx/tmp/ql2/runs/after_20260903/run.pid",
+  "purpose": "ddm_ql2: full src/tac/witness_dsl suite after the payload-write-order cure, the bounded-target-G supersession and the strict_source_reopen flag",
+  "reaper_name_match_allow_requested": false,
+  "reaper_name_match_allowed": false,
+  "reaper_predicate_hits": [],
+  "receipt_arm_tombstone": null,
+  "receipt_tombstone": null,
+  "requested_nice": 10,
+  "resource_budget": {
+    "mode": "child_owned",
+    "note": "launcher did not invent an RSS or thread limit without measured demand"
+  },
+  "schema": "detached_local_process_launch.v2",
+  "watcher_config_derivation": null,
+  "watchers": [],
+  "watchers_requested": false
+}
