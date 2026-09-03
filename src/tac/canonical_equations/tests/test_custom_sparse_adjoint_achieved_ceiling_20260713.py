@@ -43,16 +43,26 @@ def test_basis_reuse_requires_state_stable_amortization() -> None:
     assert k2["minimum_reuse_steps_strict"] == 2
 
 
-def test_equation_is_honest_about_missing_metal_anchor() -> None:
+def test_equation_records_measured_metal_wall_with_history() -> None:
+    # Stale until 2026-09-04: this test still asserted the pre-2026-07-14 state
+    # ("no Metal anchor") after the D43 whole-network Metal-wall replay was
+    # measured and appended (anchor metal_wall_125conv_replay_20260714). The
+    # honest invariant is that the measured status REPLACES the blocked one
+    # while the blocked one survives as history (append-only provenance).
     equation = build_custom_sparse_adjoint_achieved_vs_ceiling_v1()
     assert equation.equation_id == EQUATION_ID
     assert equation.domain_of_validity["flagship_derived_ceiling_x"] == (
         DERIVED_FLAGSHIP_CEILING_X
     )
     assert equation.domain_of_validity["empirical_status"] == (
-        "BLOCKED_NO_METAL_IN_CURRENT_SANDBOX"
+        "METAL_WALL_MEASURED_20260714_WHOLE_NETWORK_SLOWDOWN_0p7078x"
     )
-    assert equation.empirical_anchors == ()
+    assert equation.domain_of_validity["empirical_status_history"] == (
+        "BLOCKED_NO_METAL_IN_CURRENT_SANDBOX",
+    )
+    assert [a.anchor_id for a in equation.empirical_anchors] == [
+        "metal_wall_125conv_replay_20260714"
+    ]
     assert equation.provenance.score_claim_valid is False
 
 

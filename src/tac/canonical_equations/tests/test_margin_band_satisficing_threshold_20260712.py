@@ -77,7 +77,7 @@ def test_default_two_times_delta_covers_full_r_p95() -> None:
 def test_resolver_reads_delta_r_artifact() -> None:
     resolved = resolve_margin_band_threshold()
     assert resolved.artifact_path == DELTA_R_ARTIFACT
-    assert resolved.delta_r == pytest.approx(0.019590163230895963)
+    assert resolved.delta_r == pytest.approx(0.021881818771362305)  # n600 artifact (ddm_dr1)
     assert resolved.artifact_fallback_used is False
     assert resolved.lawref_fallback_used is False
 
@@ -85,7 +85,7 @@ def test_resolver_reads_delta_r_artifact() -> None:
 def test_resolver_derives_default_msafe_from_artifact() -> None:
     resolved = resolve_margin_band_threshold()
     assert resolved.headroom == 2.0
-    assert resolved.m_safe == pytest.approx(0.039180326461791926)
+    assert resolved.m_safe == pytest.approx(0.04376363754272461)
     assert resolved.m_safe == pytest.approx(resolved.headroom * resolved.delta_r)
 
 
@@ -139,11 +139,11 @@ def test_factory_default_emits_artifact_derived_values() -> None:
     lever = MarginBandSatisficing()
     overrides = lever.overrides
     assert overrides["--seg-margin-satisfice-delta-r"] == pytest.approx(
-        0.019590163230895963
+        0.021881818771362305
     )
     assert overrides["--seg-margin-satisfice-headroom"] == 2.0
     assert overrides["--seg-margin-satisfice-msafe"] == pytest.approx(
-        0.039180326461791926
+        0.04376363754272461
     )
 
 
@@ -206,7 +206,7 @@ def test_factory_docstring_relation_is_mutually_consistent() -> None:
     doc = MarginBandSatisficing.__doc__ or ""
     assert "m_safe = headroom·δ_R" in doc
     assert "DERIVED headroom 2" in doc
-    assert "0.039180326461791926" in doc
+    assert "0.04376363754272461" in doc  # n600 (ddm_dr1); the n96 value is named as history
     assert "3·δ_R" not in doc
 
 
@@ -216,7 +216,7 @@ def test_equation_anchor_labels_headroom_three_as_open() -> None:
     assert equation.equation_id == EQUATION_ID
     assert anchor.empirical_output["derived_headroom"] == 2.0
     assert anchor.empirical_output["derived_m_safe"] == pytest.approx(
-        0.039180326461791926
+        0.04376363754272461
     )
     assert anchor.empirical_output["headroom_3_status"] == (
         "OPEN_UNMEASURED_TREATMENT_NOT_DEFAULT"
