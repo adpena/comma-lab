@@ -1,0 +1,145 @@
+{
+  "arm": "ddm_ql2_apparatus_debt",
+  "authority": {
+    "axis": "[macOS-CPU advisory]",
+    "pointer_moved": false,
+    "promotion_eligible": false,
+    "research_only": true,
+    "score_claim": false,
+    "scorer_invoked": false
+  },
+  "git_head": "91ebf77a4d860d4e73578aef9e23e3050062329f",
+  "method": "receive_factorized_v9_predictor(sealed program).decode_all_semantics(batch_size=16) with today's sources, then sha256 of the contiguous uint8 label array, compared against predictor_semantic_sha256 as asserted inside the sealed PBR2 packet header.",
+  "question": "The G1 teacher census refuses with 'exact V9/PBR2 pair window or renderer identity differs'. renderer_source_sha256 is a SOURCE-TEXT hash over 13 declared modules -- an identity claim about the CODE. This measures the OUTPUT: does today's source closure decode the sealed V9 program to the same semantics?",
+  "renderer_identity": {
+    "declared_source_count": 13,
+    "live_sha256": "715e3e575f3ced7784987461fa2c216f24b1ff5a378c9ace14d79574c2cb66cc",
+    "matches": false,
+    "moved_source_count": 3,
+    "sealed_sha256": "92ab2350a644fc21453263d8ecc25011d7e454755f004d52e58be2ac42e5a199",
+    "sources": [
+      {
+        "live_bytes": 20488,
+        "live_sha256": "325ec698bc42aadbcf23a555c523c015f6ebc9e25f1d19836eab4dbc456f0c56",
+        "moved": false,
+        "path": "src/tac/witness_dsl/factorized_v9_predictor.py",
+        "sealed_bytes": 20488,
+        "sealed_sha256": "325ec698bc42aadbcf23a555c523c015f6ebc9e25f1d19836eab4dbc456f0c56"
+      },
+      {
+        "live_bytes": 160470,
+        "live_sha256": "6fef110dce06791aee685957a5156f5c91209963289321fa8eb73fb06c2b9c3a",
+        "moved": true,
+        "path": "src/tac/optimization/direct_description_carrier_compose.py",
+        "sealed_bytes": 155115,
+        "sealed_sha256": "8b097db237264e3a39a60e51170e97eff6d2c7a675f3a4ddaf9d5b4203931a87"
+      },
+      {
+        "live_bytes": 268276,
+        "live_sha256": "1eaf18a831381232c7e60e82c43f994ce75d7e59b927dc40c1e4d9fbebb7a26a",
+        "moved": false,
+        "path": "src/tac/optimization/direct_description_entropy_priced_member.py",
+        "sealed_bytes": 268276,
+        "sealed_sha256": "1eaf18a831381232c7e60e82c43f994ce75d7e59b927dc40c1e4d9fbebb7a26a"
+      },
+      {
+        "live_bytes": 54517,
+        "live_sha256": "251f52ddec666354150243ff3d42a0435ec6e4ec8fba76ee0d8dbe2aba33e7f9",
+        "moved": false,
+        "path": "src/tac/optimization/direct_description_entropy_streams.py",
+        "sealed_bytes": 54517,
+        "sealed_sha256": "251f52ddec666354150243ff3d42a0435ec6e4ec8fba76ee0d8dbe2aba33e7f9"
+      },
+      {
+        "live_bytes": 63156,
+        "live_sha256": "25b0b4574c69ef40625d9368ce2035e47652104d80e2b0a295f22d5858014ce3",
+        "moved": false,
+        "path": "src/tac/optimization/direct_description_measurement_ladder.py",
+        "sealed_bytes": 63156,
+        "sealed_sha256": "25b0b4574c69ef40625d9368ce2035e47652104d80e2b0a295f22d5858014ce3"
+      },
+      {
+        "live_bytes": 28895,
+        "live_sha256": "abd4982b2cbec0be99aa22dae470e3ea8f33c0e0b0e02a7e8c2ba0739500dd9d",
+        "moved": false,
+        "path": "src/tac/optimization/direct_description_g1_worldsheet.py",
+        "sealed_bytes": 28895,
+        "sealed_sha256": "abd4982b2cbec0be99aa22dae470e3ea8f33c0e0b0e02a7e8c2ba0739500dd9d"
+      },
+      {
+        "live_bytes": 71669,
+        "live_sha256": "46901b6042629a08fc930ce2602b4a6effffc080d934d9694ada1e61e8917e26",
+        "moved": true,
+        "path": "src/tac/optimization/predictor_upgrade_xi_chart.py",
+        "sealed_bytes": 57295,
+        "sealed_sha256": "60f19569135da26f6a228e88295ed87ec60c12737a8d05e3849c419ae786a664"
+      },
+      {
+        "live_bytes": 172081,
+        "live_sha256": "980fdcf7e741e112074c1d01fcf5c6f31aefe597445a6e4b376ce4ab571a5687",
+        "moved": true,
+        "path": "src/tac/optimization/direct_description_minimizer.py",
+        "sealed_bytes": 169807,
+        "sealed_sha256": "4029644b8aea5ff363e0d368f28466be5f087cccd8e2da9327a7596de4f842bc"
+      },
+      {
+        "live_bytes": 44027,
+        "live_sha256": "ca9cf9146944db3bba12a0073200bd19808d205cf9f900e01efcbffe4e49a65a",
+        "moved": false,
+        "path": "src/tac/optimization/direct_description_polytope_membership.py",
+        "sealed_bytes": 44027,
+        "sealed_sha256": "ca9cf9146944db3bba12a0073200bd19808d205cf9f900e01efcbffe4e49a65a"
+      },
+      {
+        "live_bytes": 33506,
+        "live_sha256": "0b2fe89ac72ec88cc869ed5a8e9f0c2d6a4c358bb44124c29a0bb57c7ef433ec",
+        "moved": false,
+        "path": "src/tac/optimization/direct_description_receiver_priced_member.py",
+        "sealed_bytes": 33506,
+        "sealed_sha256": "0b2fe89ac72ec88cc869ed5a8e9f0c2d6a4c358bb44124c29a0bb57c7ef433ec"
+      },
+      {
+        "live_bytes": 50546,
+        "live_sha256": "1beb7eb9dab6a5651dd9ff448239c74376cbacb56093b713705db732ad4c1df3",
+        "moved": false,
+        "path": "src/tac/optimization/predictor_r3_causal.py",
+        "sealed_bytes": 50546,
+        "sealed_sha256": "1beb7eb9dab6a5651dd9ff448239c74376cbacb56093b713705db732ad4c1df3"
+      },
+      {
+        "live_bytes": 11296,
+        "live_sha256": "534999c59c1d49c41396e118fdd5b33eb44db0b1f064b0fb279d65cafeb18a3d",
+        "moved": false,
+        "path": "src/tac/optimization/s4_archive_composer.py",
+        "sealed_bytes": 11296,
+        "sealed_sha256": "534999c59c1d49c41396e118fdd5b33eb44db0b1f064b0fb279d65cafeb18a3d"
+      },
+      {
+        "live_bytes": 17063,
+        "live_sha256": "4e7cf4b70e1cb2894c67986626c71ccb0f5ae6e89dca2c76693a9f455f27fd02",
+        "moved": false,
+        "path": "src/tac/witness_dsl/predictor_bound_residual.py",
+        "sealed_bytes": 17063,
+        "sealed_sha256": "4e7cf4b70e1cb2894c67986626c71ccb0f5ae6e89dca2c76693a9f455f27fd02"
+      }
+    ]
+  },
+  "schema": "tac.v9_renderer_source_drift_equivalence.v1",
+  "sealed_manifest_commit": "e153f2031",
+  "semantic_equivalence": {
+    "bit_identical": true,
+    "decode_wall_s": 6.64,
+    "fresh_predictor_semantic_sha256": "735c01a4463f269132855cfe89bc67d2d6a3acad34194e341e287a36b657988a",
+    "pair_count": 64,
+    "predictor_shape": [
+      64,
+      384,
+      512
+    ],
+    "sealed_predictor_semantic_sha256": "735c01a4463f269132855cfe89bc67d2d6a3acad34194e341e287a36b657988a",
+    "source_pair_start": 448
+  },
+  "verdict": "SOURCE_TEXT_DRIFT_WITH_BIT_IDENTICAL_OUTPUT. Three of thirteen declared sources moved; the decoded 64x384x512 label field is byte-for-byte the digest the sealed header asserts. The refusal is a code-identity refusal, not an output disagreement.",
+  "what_this_does_NOT_license": "Narrowing RENDERER_SOURCE_PATHS to make the hash match, or rewriting predictor_renderer_sha256 anywhere. That digest is baked into the sealed PBR2 packet BYTES, so a real rematerialization must re-seal the packet and its custody chain (EXPECTED_PBR2_SHA256, the PBR2 materialization receipt, the n600 grammar cross-close). This receipt is the evidence that such a re-seal would be output-preserving, not a substitute for it.",
+  "written_utc": "2026-09-03"
+}

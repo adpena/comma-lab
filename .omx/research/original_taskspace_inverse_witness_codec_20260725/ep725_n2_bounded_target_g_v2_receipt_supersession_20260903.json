@@ -1,0 +1,74 @@
+{
+  "schema": "tac.bounded_target_g_encoder_receipt_supersession.v1",
+  "written_utc": "2026-09-03",
+  "arm": "ddm_ql2_apparatus_debt",
+  "authority": {
+    "append_only": true,
+    "superseded_receipt_rewritten": false,
+    "score_claim": false,
+    "scorer_invoked": false,
+    "promotion_eligible": false,
+    "pointer_moved": false,
+    "research_only": true
+  },
+  "retained_receipt": {
+    "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/ep725_n2_bounded_target_g_v2_receipt.json",
+    "status": "RETAINED_UNTOUCHED",
+    "file_sha256": "854ffaf3d5102959edaab48f38fa574d4763f289b7b35026bcb9de7d9d1e916f",
+    "receipt_sha256": "eb9ff88cc34ceba87c82e90c003077b50f4e5b84950823b53d93d6840b0bec8e",
+    "sealed": "2026-07-26",
+    "sealing_memo": ".omx/research/original_taskspace_inverse_witness_codec_20260725/SPEC_g3_label_local_transport_amendment_20260726.md"
+  },
+  "superseding_receipt": {
+    "path": ".omx/research/original_taskspace_inverse_witness_codec_20260725/ep725_n2_bounded_target_g_v2_receipt_20260903.json",
+    "status": "CURRENT",
+    "file_sha256": "2a9587412ee1f492e65c0885df1ae599f218d8158c6b45fc9a97742620853069",
+    "receipt_sha256": "e5c9ac76107dc736259ef8e28ea72ad5190b514223fb55f619d67ca4a654c679",
+    "producer": "tools/build_ep725_n2_bounded_target_g_receipt.py",
+    "producer_git_head": "91ebf77a4d860d4e73578aef9e23e3050062329f"
+  },
+  "cause": {
+    "kind": "UPSTREAM_PIN_REFRESH_CONSEQUENCE_NOT_REGRESSION",
+    "summary": "ddm_ql1 refreshed EP725_CANONICAL_RENDERER_SHA256 (the SOURCE-TEXT pin on tools/levelset_byte_close_and_eval.py) from 1cecaa3e to 35d6ce6b, with a bit-exact decode receipt. predictor_renderer_sha256 is an INPUT to _expected_semantic_binding, so the n2 predictor state binding moved; the packet folds that binding into pbr1_sha256; and the compile receipt binds the receipt holding both. One cause, three digests.",
+    "pin_refresh_commits": [
+      "f73bfb4e8 (2026-08-03) _parse_evaluate_report + dropped `import re`",
+      "90d537745 (2026-08-26) run_inflate: extractall -> safe_extract_zip"
+    ],
+    "pin_refresh_memo": ".omx/research/ddm_ql1_retired_lineage_test_quarantine_20260903.md",
+    "neither_commit_touched_the_three_required_callables": true
+  },
+  "measured_delta": {
+    "changed_field_count": 3,
+    "changed_fields": {
+      "predictor_binding_sha256": {
+        "retained": "a25ee50104fc887ba5ee5e92110caac736ee431338584a3ad6ac8b54ab7cfae9",
+        "current": "d5efebd7dc3fe6b2de0385641007e14627deb58aef39737d01c122714606effe"
+      },
+      "packet_sha256": {
+        "retained": "9139f2a7744cc56f822f13dd0155c0e276e474d0c56481772cc089ac5835e0c1",
+        "current": "d2a70126494388b7d012379db8abc3bb0f33715f4ee0e93685a14ddf956cd080"
+      },
+      "compile_receipt_binding_sha256": {
+        "retained": "23d9775d1a422aef0a447a9fcafda67c1174781553220474a25885b848e6d0e6",
+        "current": "32011a336379595d4f235d5bc9ccdacd59f3cb1c05e85cacb061f146b29d00e2"
+      }
+    },
+    "unchanged_substantive_fields": {
+      "debt_before_cells": 60217,
+      "debt_after_cells": 0,
+      "total_topology_events": 21323,
+      "birth_event_count": 12259,
+      "death_event_count": 9064,
+      "packet_bytes": 341316,
+      "target_labels_sha256": "6a9ee68a5d1ec8ec53653216d53b7406575530a2d1abf608d27547e779c6d474",
+      "decoded_labels_sha256": "6a9ee68a5d1ec8ec53653216d53b7406575530a2d1abf608d27547e779c6d474",
+      "event_plan_sha256": "39e100def9d21869fae624b64a9fe8710e547679c5f63f9bc05c7577172b94a2",
+      "target_custody_binding_sha256": "46c4d86ffebba4c723c787e140f022c874d148173f327d32c6206fb7e2f7ec26",
+      "scorer_invoked": false,
+      "candidate_archive_eligible": false
+    },
+    "why_this_is_a_substitution_not_a_regression": "packet_bytes holds at exactly 341316 while packet_sha256 moves. A fixed-length substitution of one 32-byte digest inside the packet is the only shape that produces that pair. The exact-reconstruction assertions (decoded_labels_sha256 == target_labels_sha256, two label-identical replays) still hold.",
+    "independently_reproduced": "ddm_ql1 measured this delta with a probe; ddm_ql2 reproduced all three values from a different code path (tools/build_ep725_n2_bounded_target_g_receipt.py, --dry-run) before publishing."
+  },
+  "authority_note": "Regenerating the sealed July receipt in place was refused. MAIN granted this arm append-only supersession authority only: the July bytes are retained and re-verified, and this row is the pointer from the old artifact to the new one. Anything asserting the July receipt was compiled by today's sources would be a false statement in a canonical data field."
+}
