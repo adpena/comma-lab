@@ -102,8 +102,9 @@ def test_frontier_and_c1_ceiling_are_dynamic_prediction_only(receipt: dict) -> N
 def test_changed_pointer_recomputes_target_and_conditional_ceiling(tmp_path: Path) -> None:
     pointer_path = tmp_path / "canonical_frontier_pointer.json"
     pointer = json.loads((REPO / ".omx/state/canonical_frontier_pointer.json").read_text())
-    pointer["upstream_leaderboard_snapshot"]["best_entry"]["score"] = 0.16
-    pointer["upstream_leaderboard_snapshot"]["entries"][0]["score"] = 0.16
+    changed_target = 0.1
+    pointer["upstream_leaderboard_snapshot"]["best_entry"]["score"] = changed_target
+    pointer["upstream_leaderboard_snapshot"]["entries"][0]["score"] = changed_target
     recomposed = recompute_effective_frontier(CanonicalFrontierPointer.from_dict(pointer))
     assert recomposed is not None
     pointer["effective_frontier"] = recomposed
@@ -114,8 +115,8 @@ def test_changed_pointer_recomputes_target_and_conditional_ceiling(tmp_path: Pat
         strict_source_reopen=False,
     )
     ceiling = changed["body"]["conditional_c1_n600_byte_ceiling"]
-    assert changed["body"]["frontier_join"]["effective_frontier"]["score"] == 0.16
-    assert ceiling["target_score"] == 0.16
+    assert changed["body"]["frontier_join"]["effective_frontier"]["score"] == changed_target
+    assert ceiling["target_score"] == changed_target
     assert ceiling["max_archive_bytes"] < receipt_max_bytes(
         build_stack_receipt(repo_root=REPO, strict_source_reopen=False)
     )
