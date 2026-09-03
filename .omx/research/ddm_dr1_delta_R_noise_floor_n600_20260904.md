@@ -228,7 +228,14 @@ Honest limit: this arm measured a constant. It did not train, byte-close, or sco
 2 covers the n600 full-R annulus p95 with 12.6% slack (0.043764 vs 0.038874) where it covered the n96
 one with only 5.5%.
 
-## NEXT_IF_RESUMED
+## NEXT_IF_RESUMED — every row carries a disposition, an owner and a fire condition ([[m113]])
+
+| # | follow-on | disposition | owner | fire condition |
+|---|---|---|---|---|
+| 1 | **Repoint the law consistently** | **QUEUED-WITH-FIRE-ORDER, fires FIRST** | MAIN (operator call) | fires at the next burn boundary — it changes a live lever default while QBR1 is resident |
+| 2 | **Re-measure hg1/nx1 gradient mass at the n600 m_safe** | **QUEUED-WITH-FIRE-ORDER, fires after #1** | MAIN to assign; $0 local CPU | fires once #1 lands, so the re-measure reads the same constant the trainer will |
+| 3 | **Race per-class `m_safe_c` vs the global cap** | **FOLDED into row 6's race** | row 6 racer, jointly with vr1 row 4 | fires when row 6 is raced; do not fire standalone |
+| 4 | **Re-derive other prefix-measured annulus constants** | **QUEUED, no fire order — needs a census first** | unowned; MAIN to assign or close | fires only if a census finds a second annulus-restricted n96 constant in a live consumer |
 
 1. **Repoint the law, in one commit, consistently.** Set `DELTA_R_ARTIFACT =
    "reports/delta_R_noise_floor_n600.json"` **and** update `FALLBACK_DELTA_R`,
@@ -245,7 +252,8 @@ one with only 5.5%.
 4. **Re-derive any other constant measured on a boundary-restricted n96 prefix.** This arm's sharpest
    transferable result is that a global-pixel sanity check does NOT detect annulus-restricted prefix
    bias (+0.45% global vs +11.70% annulus). Every prefix-measured annulus constant in the corpus is
-   suspect by the same mechanism.
+   suspect by the same mechanism. I did not run that census; naming it without owning it would be the
+   deferral-scatter this repo already extincted ([[m36]]), so it is explicitly UNOWNED above.
 
 ---
 
