@@ -184,11 +184,23 @@ DALI table, on the EMA shadow. **Advisory, `[macOS-CPU advisory]`, never a score
 | step | epoch | advisory d_seg (DALI, n600) | flips | vs step 0 |
 |---:|---:|---|---:|---:|
 | 0 | 0 | 0.00020386589898003471 | 24,049 | — |
-| 600 | 1 | **0.00026752895779079860** | 31,559 | **+31.23%** |
+| 600 | 1 | 0.00026752895779079860 | 31,559 | **+31.23%** |
+| 1200 | 2 | 0.00023271348741319445 | 27,452 | **+14.15%** |
 
-At step 600 the expected-flip loss is 0.0012238547 and the cosine has annealed lr to 1.505e-05.
-`best_quantized_exact_seg` is still **step 0's** value: not one evaluated point improved on the
-shipped renderer.
+`best_quantized_exact_seg` is still **step 0's** value at both rows: not one evaluated point improved
+on the shipped renderer.
+
+**The excursion is recovering, and it tracks the LR anneal.** The expected-flip loss falls
+0.0012238547 → 0.0003395645 (−72.3%) while lr anneals 1.505e-05 → 5.150e-06 (−65.8%), and d_seg gives
+back **54.69% of its excursion** (peak +7,510 flips → +3,403). This is CE1's documented
+open-then-recover shape reproducing on this object, and the recovery being *synchronous with the
+anneal* is direct evidence for §5.1 cause 1: **the rate, not the objective, did the damage.**
+
+**Pre-registered extrapolation, so the last row cannot be narrated after the fact:** if the remaining
+600 steps give back a similar fraction as lr anneals to the 2e-07 floor, step 1800 lands near
+**+6 to +8%** — still ABOVE the shipped renderer, still a failed epoch, and far from the −10% the
+charter's falsifier wanted. CE1's ladder agrees: its aligned runs only crossed BELOW their init after
+3,000–6,000 steps. A 1,800-step window at this rate cannot get there.
 
 *(contest-CUDA T4 reference for the same object: 0.00020139)*
 
