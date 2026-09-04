@@ -203,7 +203,11 @@ QBT2B_TOTAL_STEPS = QBT2B_BIRTH_MAX_STEPS + QBT2B_MARGIN_STEPS
 
 PINNED_SHA256 = {
     "packet_module": "cdf90d1a4d7d13001118f50a76692c04605f8e5ae9a7816c80f6e346160c7b9c",
-    "packet_schema": "5405ccd499d14d28230874059e47d47f1f2818038519f1b27c97ed9377f132aa",
+    # 2026-09-04 re-pin (MAIN): ddm_eq1 (78f97a56f) appended an equations-leg
+    # addendum to the SPEC memo (append-only; schema body unchanged; prior pin
+    # 5405ccd499d14d28230874059e47d47f1f2818038519f1b27c97ed9377f132aa). The sealed
+    # QBR1 tree keeps the old pin; new cells compile from this tree with the new one.
+    "packet_schema": "7fe5285f6bf6e0289fe4323b9c21abf337c421eed3dcfa46856d7246877ae54a",
     "fire_order": "7fa18f51d741b9f079b14c67d1c6560edd534bcaab6e2b8984f5bd0bd4b1ba8a",
     "initialized_float_params": "b2e61092bab168e390572cf3590ab74615f21ec9d6759a45244beaa6b325bc17",
     "initialized_float_latents": "9e9d3fa0792ffc3a47de702e288ec364bebda9f3c6c23451216eda27de449355",
