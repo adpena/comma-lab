@@ -614,3 +614,15 @@ detached `git worktree`. The remaining two were checked individually against HEA
 
 Both are recorded here rather than left as ambient red, because a warning nobody owns is the second
 one that gets ignored.
+
+## LIVE READ (MAIN, 2026-09-04 23:25Z real; cell fired 21:55:39Z, 2,567/5,000 at read time)
+
+| step | S_hat ng4 (τ held 0.05, duals carried) | cold control | Δ | ng3 τ band | Δ | d_seg_hat | d_pose_hat | bytes |
+|---|---|---|---|---|---|---|---|---|
+| 0 | 0.398768 | 0.398768 | 0 | 0.398768 | 0 | 0.0025183 | 5.757e-4 | 106,714 |
+| 1000 | 0.425786 | 0.466875 | **−0.041089 (−8.8%)** | 0.434661 | −0.008875 (−2.0%) | 0.0027667 | 6.098e-4 | 106,676 |
+| 2000 | 0.426085 | 0.485677 | **−0.059592 (−12.3%)** | 0.435601 | −0.009516 (−2.2%) | 0.0028042 | 5.571e-4 | 106,668 |
+
+The continuous objective cuts the excursion further than the τ band: peak +6.8% above the start (cold +21.8%, τ band +9.2%). MEASURED,
+two milestones; the pre-registered rule's @2k leg (< 0.48567678) holds by −12.3%; the @5k leg (< 0.42514878) reads at ~01:10Z. Terminal
+verdict owed there; if it ends below its start like ng3, the composition cell (τ band × continuous objective) is the first two-lever cell.
