@@ -370,3 +370,11 @@ d_seg budget) — the ANE can never be a d_seg authority; CoreML fp32 on CPU+GPU
 accelerator. The shell fire scripts still carry the inline arithmetic (SSD custody, not git): one-line replacement
 `tools/cell_admission.py admit --candidate-peak-gib <P>` for every future fire.
 Equations leg (`tac.canonical_equations`): `exchange_ratio_noise_floor_v1` (4th anchor, first pure-pose case).
+
+**Addendum 14 correction (gv1 final, 17:10Z):** the "+11.7% at N=2" above is a ONE-WINDOW artifact. gv1 measured the same
+concurrency twice, 30 min apart: 31.29 steps/min (1.117×) then 27.00 (0.964×, the digest's live read); spread 4.286
+steps/min = 15.9% of the mean, larger than the effect. **N=2 Metal concurrency is UNRESOLVED** (`metal_concurrency_speedup_gv1_v2`,
+verdict UNRESOLVED_AT_N2; v1 preserved). The guard flipped to REFUSE on the second row — that is the apparatus working.
+Two more gv1 defects found by RUNNING, not reading: the manifest PID is a supervisor (per-PID RSS under-reads the tree 26×);
+an unreached milestone falsifier returned `fired=false` off step-741 data (FALSE SURVIVED; cured to PENDING — the fixture
+test had codified the bug).
