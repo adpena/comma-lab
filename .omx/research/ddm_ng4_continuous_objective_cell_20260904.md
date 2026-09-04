@@ -227,12 +227,64 @@ Endpoint excess **+0.026380811594027 (+6.6156%)**, of which ng1 recomputed **91.
 
 3. **The dual trajectory must be continuous.** `margin_constraint_lambdas` at update 1 within one
    `eta_lambda` step (0.11387788414126129) of `{Lane 0.005040981907324784, Movable 0.017331143732962344}`,
-   and neither class re-warming from 0.
+   and neither class re-warming from 0. **Concretely, PREDICTED before the burn from the shared
+   step-1 field** (§ next section): `{Lane 0.005149361310460459, Movable 0.017413431405350965}` for
+   ng4 against `{Lane 0.00010837940313567591, Movable 8.228767238862249e-05}` for the control.
    *If it fails:* the carried multipliers did not reach the loop — an inert lever, which is the
    fake-implementation class this arm must not ship.
 
 **Read the DECOMPOSITION at every milestone, never the composite.** The control's endpoint excess
 is 91.20% d_seg. A cell that "fixed" S_hat by moving bytes or pose would be a different finding.
+
+## What the two carried states DO at update 1 — MEASURED at $0, on a shared field
+
+The bounded smoke was held by the governor (next section), so I measured the mechanism on a field
+that already exists: **ng3's retained control-arm update-1 payload**, opened READ-ONLY. It is the
+identical cold control config, seed, start state and first chunk, so its step-1 field is the field
+BOTH arms see at update 1 — only the loss read off it differs. The differential code path is the
+sealed one; this is a dry run of it, and it will be re-run on ng4's own payload in the real smoke.
+
+**The DIFFERENTIAL passes, and cross-checks against another arm's independently measured number.**
+At the control's τ = 0.15 with zero duals, all 15 objective components are **bit-identical**
+between the two configs, `loss_total` **1.0765775442123413** on both sides — which is the exact
+value ng3 measured for the same quantity. So the ng4 config changes nothing in the objective
+FUNCTION; it acts only through the two states the caller supplies.
+
+| quantity at update 1, on the shared field | control | ng4 | ratio |
+|---|---|---|---|
+| τ | 0.15 | **0.05** | 3.0× narrower |
+| realized within-class error, Lane | 0.12095171598904345 | same field | — |
+| realized within-class error, Movable | 0.009722595726195155 | same field | — |
+| λ_Lane after update 1 | 0.00010837940313567591 | **0.005149361310460459** | **47.5×** |
+| λ_Movable after update 1 | 8.228767238862249e-05 | **0.017413431405350965** | **211.6×** |
+| margin-constraint penalty | 0.0023067535366863012 | **0.08141779154539108** | **35.3×** |
+| `seg_expected_flip_realized` | 0.005018208175897598 | **0.0029315962456166744** | 0.584× |
+| `loss_total` at its own operating point | 1.078884243965149 | 0.7406730651855469 | — |
+
+**Two things in that table were not what I expected, and both are corrections.**
+
+1. **Both constraints are BINDING at update 1 even though r10 ended with both SLACK.** r10's
+   terminal within-class errors were Lane 0.11357 (bound 0.12, residual −0.0064) and Movable
+   0.006661 (bound 0.009, residual −0.0023). One update after the transition they are Lane
+   0.120952 and Movable 0.009723 — **both ABOVE their bounds**. So the transition itself pushes the
+   two constrained classes past the constraint within a single update. This kills the guess that
+   the carried multipliers are a decaying transient: with the constraint binding, they GROW, and
+   the 47.5× / 211.6× head start persists rather than washing out.
+2. **The dual leg is not small.** The carried multipliers make the cell pay a **35.3×** larger
+   constraint penalty at update 1. τ and λ are therefore both live levers, not one lever plus a
+   rounding term — which is a reason to read the two-state cell as a package and to keep
+   decomposition (follow-on #3) conditional on this cell winning.
+
+**A free by-product: this cell removes ddm_sd1's τ-schedule reporting artefact entirely.** With
+`start == end`, `tau_for_step` returns the same temperature at every update, so the schedule leg of
+the reported surrogate is identically **0%** by construction. ng3 cut that artefact 4.76× (−41.58%
+→ −8.74%); ng4 removes it. MEASURED consequence, visible in the table: the cell's annealed
+`seg_expected_flip_realized` and its fixed-τ ruler `seg_expected_flip_realized_tau_ref` are the
+**same number** (0.0029315962456166744), because the held τ *is* `EXPECTED_FLIP_TAU_REFERENCE`.
+For this cell — and only this cell — a falling reported loss cannot be a schedule artefact.
+
+**Scope:** one frozen 16-pair chunk at update 1, on ng3's retained field. It confirms the mechanism
+and pins falsifier 3's expected values; it says nothing about where step 5,000 lands.
 
 ## Bounded CPU smoke — HELD BY THE GOVERNOR at seal time
 
