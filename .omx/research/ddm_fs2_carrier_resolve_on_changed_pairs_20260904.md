@@ -144,6 +144,34 @@ fixed point.
 changes inside an unchanged byte budget. **A selector re-aim on an already-active pair is a free
 pose actuator.** That is a reusable fact about this receiver, not a fact about this candidate.
 
+### 4.1 The byte-optimal adoption scan, re-run at the re-solved codes
+
+`ddm_fs1` §4 chose the adoption set by scanning `k` (the active count) because the blob length is a
+function of `k` alone. The carrier re-solve changes the per-pair pose values, so that scan is owed
+again — this time as a DROP scan, since the sweep in §4 already showed no pair wants a different
+non-identity mode. **MEASURED**: at the re-solved codes, identity is the best mode for **zero** of
+the 20 swept active pairs. The cost of returning each to identity, cheapest first: 518 (4.196e-07),
+221 (5.188e-07), 95 (5.235e-07), 173 (9.291e-07), 586 (1.373e-06). The blob-length ladder is a
+STAIRCASE, not a line (`selector_blob_length`: k=24→34 B, 23→34, 22→33, 21→31, 20→31), so the byte
+credit for dropping `m` pairs is 0, 1, 3, 3, 4, 5 …
+
+| m dropped | bytes saved | Δ`S`_pose | Δ`S`_rate | **net Δ`S`** | |
+|---:|---:|---:|---:|---:|---|
+| 1 | **0** | +4.464950e-07 | 0 | +4.464950e-07 | LOSS |
+| 2 | 1 | +9.984494e-07 | −6.658590e-07 | +3.325905e-07 | LOSS |
+| **3** | **3** | +1.555379e-06 | −1.997577e-06 | **−4.421979e-07** | win, UNRESOLVABLE |
+| 4 | 3 | +2.543634e-06 | −1.997577e-06 | +5.460574e-07 | LOSS |
+| 5 | 4 | +4.003573e-06 | −2.663436e-06 | +1.340138e-06 | LOSS |
+| 6 | 5 | +6.010757e-06 | −3.329295e-06 | +2.681462e-06 | LOSS |
+
+**m=1 is free for the archive and costs pose** — the k=24→23 step saves ZERO bytes, so dropping one
+pair buys nothing at all. The only positive row is m=3, at **−4.42e-07**: that is **16.7× BELOW** the
+two-row 8-dp report bound (7.376063e-06) and **47×** inside the bootstrap half-width (2.07e-05). It
+is not resolvable, it is not admissible under the registered law, and it would invalidate the
+carrier solve for pair 95 (whose 44× recovery was solved AT mode 3), reopening the alternation for a
+sub-noise gain. **NOT adopted, and the reason is arithmetic rather than taste.** Candidate D's k=24
+is the byte-optimal set to within everything this arm can measure.
+
 ## 5. THE BYTE PRICE — anchored, +1 B, and the anchor is checked before the delta is quoted
 
 `ddm_up2.price_full_resolve_bytes` refuses to return a delta unless its own control reproduces the
