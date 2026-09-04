@@ -617,3 +617,55 @@ def test_the_validator_does_not_read_any_volatile_field():
         _minimal_qbr1_config(band=(start, end), block=with_volatile)
     )
 
+
+def test_recompile_determinism_reports_exactly_what_holds():
+    """The seal must not claim byte-reproducibility it does not have.
+
+    ``ema.lawref.resolved_at`` is a dated LawRef observation the QBR1 lineage has always kept
+    inside the config, and ``qbt.stable_ema_law_identity`` already pops exactly that field --
+    so ng3 compares by the same rule and REPORTS the residual instead of asserting a stronger
+    property.  The half this arm owns (``tau_band``) is byte-stable outright.
+    """
+
+    base = {"ema": {"value": 0.999, "lawref": {"resolved_at": "A", "value": 0.999}},
+            "tau_band": {"start": 1.0}, "other": 1}
+    later = copy.deepcopy(base)
+    later["ema"]["lawref"]["resolved_at"] = "B"
+    report = ng3.recompile_determinism(base, later)
+    assert report["stable_identity_reproduces"] is True
+    assert report["raw_bytes_reproduce"] is False
+    assert report["keys_that_moved_across_two_compiles"] == ["ema"]
+    assert report["volatile_paths_excluded"] == ["ema.lawref.resolved_at"]
+    assert "shasum" in report["what_this_means_for_MAIN"]
+
+    identical = copy.deepcopy(base)
+    clean = ng3.recompile_determinism(base, identical)
+    assert clean["raw_bytes_reproduce"] is True
+    assert clean["keys_that_moved_across_two_compiles"] == []
+
+
+def test_recompile_determinism_refuses_a_real_divergence():
+    base = {"ema": {"lawref": {"resolved_at": "A"}}, "learning_rate": 2e-4}
+    drifted = {"ema": {"lawref": {"resolved_at": "A"}}, "learning_rate": 1e-4}
+    with pytest.raises(ng3.NG3Error, match="not reproducible across two compiles"):
+        ng3.recompile_determinism(base, drifted)
+
+
+def test_recompile_determinism_refuses_a_moving_tau_band_block():
+    """The one block ng3 owns may never be the volatile one."""
+
+    base = {"ema": {"lawref": {"resolved_at": "A"}}, "tau_band": {"start": 1.0}}
+    moved = {"ema": {"lawref": {"resolved_at": "B"}}, "tau_band": {"start": 2.0}}
+    with pytest.raises(ng3.NG3Error, match="must be byte-stable"):
+        ng3.recompile_determinism(base, moved)
+
+
+def test_ng3_uses_the_same_volatile_rule_the_trainer_already_had():
+    """Not a second convention: qbt.stable_ema_law_identity pops the identical field."""
+
+    import inspect
+
+    source = inspect.getsource(qbt.stable_ema_law_identity)
+    assert '"resolved_at"' in source
+    assert ("ema", "lawref", "resolved_at") in ng3.VOLATILE_CONFIG_PATHS
+

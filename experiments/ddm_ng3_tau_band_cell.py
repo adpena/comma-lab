@@ -351,6 +351,69 @@ def bind_sealed_source(manifest_path: Path | None = None) -> dict[str, Any]:
             "pins_verify_inside_the_sealed_tree": manifest["pins_verify_inside_the_sealed_tree"]}
 
 
+#: LawRef observation times a recompile legitimately moves.  ``qbt.stable_ema_law_identity``
+#: already pops exactly this field from the EMA leg -- it is the lineage's sanctioned comparator
+#: -- so ng3 uses the SAME rule rather than inventing a second one.  The ``tau_band`` block does
+#: not appear here: this arm strips its volatile field at the DSL compile boundary instead, so
+#: the block ng3 owns is byte-stable outright.
+VOLATILE_CONFIG_PATHS = (("ema", "lawref", "resolved_at"),)
+
+
+def _without_volatile(config: Mapping[str, Any]) -> dict[str, Any]:
+    stripped = copy.deepcopy(dict(config))
+    for path in VOLATILE_CONFIG_PATHS:
+        node: Any = stripped
+        for key in path[:-1]:
+            node = node.get(key) if isinstance(node, Mapping) else None
+            if node is None:
+                break
+        if isinstance(node, dict):
+            node.pop(path[-1], None)
+    return stripped
+
+
+def recompile_determinism(cell: Mapping[str, Any], recompiled: Mapping[str, Any]) -> dict[str, Any]:
+    """Assert a second compile reproduces the cell, and say EXACTLY how strong that claim is.
+
+    ng3's first seal produced two different shas from two identical compiles, so this check was
+    added.  It found a second volatile field immediately -- ``ema.lawref.resolved_at``, a dated
+    LawRef observation the lineage has always kept inside the config.  Rather than change a
+    shared compile path late in an arm, ng3 compares through the SAME rule the trainer's own
+    ``stable_ema_law_identity`` uses, and REPORTS the residual volatility instead of claiming a
+    property that does not hold:
+
+    * the ``tau_band`` block this arm owns is byte-stable outright (the DSL strips its volatile
+      field at the compile boundary);
+    * everything else is identical up to ``VOLATILE_CONFIG_PATHS``;
+    * therefore the sealed config's sha is a FILE property MAIN verifies by hashing the file, and
+      it is NOT reproducible by recompiling.  Anyone who needs a recompile to match must compare
+      through this function.
+    """
+
+    moved = sorted(key for key in set(cell) | set(recompiled)
+                   if cell.get(key) != recompiled.get(key))
+    # checked FIRST so the specific, actionable message wins over the generic one when the block
+    # this arm owns is the thing that moved.
+    if "tau_band" in moved:
+        raise NG3Error("the tau_band block this arm owns must be byte-stable, and is not")
+    if _without_volatile(cell) != _without_volatile(recompiled):
+        differing = sorted(key for key in set(cell) | set(recompiled)
+                           if _without_volatile(cell).get(key)
+                           != _without_volatile(recompiled).get(key))
+        raise NG3Error(f"seal is not reproducible across two compiles: {differing}")
+    return {
+        "stable_identity_reproduces": True,
+        "raw_bytes_reproduce": moved == [],
+        "keys_that_moved_across_two_compiles": moved,
+        "volatile_paths_excluded": [".".join(path) for path in VOLATILE_CONFIG_PATHS],
+        "tau_band_block_is_byte_stable": True,
+        "what_this_means_for_MAIN": (
+            "the quoted config sha is a FILE hash -- verify it with shasum on the sealed file, "
+            "never by recompiling; a recompile legitimately moves ema.lawref.resolved_at"
+        ),
+    }
+
+
 def seal() -> dict[str, Any]:
     started = time.monotonic()
     resolution_path = ARM_ROOT / "RESOLUTION.json"
@@ -371,15 +434,8 @@ def seal() -> dict[str, Any]:
     )
     if json.loads(Path(cell_fact["path"]).read_text(encoding="utf-8")) != cell:
         raise NG3Error("sealed band-cell JSON round trip differs")
-    # A config sha a memo quotes is only useful if a second compile reproduces it.  ng3's first
-    # seal did NOT: the LawRef manifest carried a `resolved_at` timestamp, so the sha moved
-    # between two identical compiles.  The cure lives in the DSL compiler
-    # (VOLATILE_LAWREF_MANIFEST_FIELDS); this is the receipt that it worked.
     recompiled, _control_again = compile_tau_band_cell()
-    if recompiled != cell:
-        differing = sorted(key for key in set(cell) | set(recompiled)
-                           if cell.get(key) != recompiled.get(key))
-        raise NG3Error(f"seal is not byte-stable across two compiles: {differing}")
+    determinism = recompile_determinism(cell, recompiled)
     receipt = {
         "schema": SEAL_SCHEMA,
         "arm": ARM,
@@ -404,7 +460,7 @@ def seal() -> dict[str, Any]:
         "cold_control_of_record": COLD_CONTROL_S_HAT,
         "falsifiers": falsifiers(),
         "authorized_configs_written": False,
-        "seal_is_byte_stable_across_two_compiles": True,
+        "recompile_determinism": determinism,
         "elapsed_seconds": time.monotonic() - started,
     }
     qbt.atomic_json(ARM_ROOT / "SEAL_RECEIPT.json", receipt)
