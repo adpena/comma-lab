@@ -326,7 +326,7 @@ cells plus ng1 plus ng2 project ≈ 8.25 GB, which clears the reserve but not by
 |---|---|
 | derivation receipt (F_c, δ_c, λ_c, all inputs) | `/Volumes/APDataStore/pact/ddm_ng2_area_cap/DERIVATION.json` |
 | seal receipt (single-lever diff, pin delta, sealed-source binding, falsifiers) | `…/ddm_ng2_area_cap/SEAL_RECEIPT.json` |
-| **sealed cap-cell config** | `…/ddm_ng2_area_cap/sealed_configs/seed_20260902_area_cap_control_native100.json` |
+| **sealed cap-cell config** — sha256 `094040b8fd791a545ba4ef29fd6d419b58f97499c29bd63e9ad7e8e984fe9af0` | `…/ddm_ng2_area_cap/sealed_configs/seed_20260902_area_cap_control_native100.json` |
 | matched control (reference recompile, marked do-not-fire) | `…/sealed_configs/matched_control_of_record_seed_20260902_control_native100.reference.json` |
 | sealed source manifest | `…/ddm_ng2_area_cap/SEALED_SOURCE_MANIFEST.json` |
 | **sealed source tree** (rev `54161c2800…`) | `/Volumes/VertigoDataTier/pact/ddm_ng2_area_cap/sealed_source_54161c2800/` |
