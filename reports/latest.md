@@ -1,20 +1,20 @@
 <!--
 generated_at: 2026-05-23T02:06:56Z
 last_refreshed_at: 2026-09-04T17:40:00Z
-last_refreshed_by: main:catalog316_fs1_pointer24_refresh_20260904
-from_state_hash: canonical_frontier_pointer_20260904_fs1_frame0_selector_pointer24
+last_refreshed_by: main:catalog316_fs2_pointer25_refresh_20260904
+from_state_hash: canonical_frontier_pointer_20260904_fs2_carrier_resolve_pointer25
 -->
 
 > ## ⚠ FRESHNESS BANNER (2026-08-20) — the BODY of this report is a HISTORICAL
 > snapshot generated 2026-05-23 and is STALE. The live frontier is the canonical
 > pointer, not any row below.
 >
-> **CURRENT effective_frontier [contest-CUDA T4, n600]: S 0.14786319521362173 —
-> TWENTY-FOURTH pointer move, 2026-09-04 (fs1 frame-0 selector re-selection: 21/600 pairs,
-> +20 B, d_seg identical, d_pose 6.37e-6 → 6.17e-6).** archive sha
-> `50fcaf1ac3c8504abdf3e0daff7c5bce32104f19d8de4a7ba207816f32e708cf` @ 180,022 B, call
-> `fc-01M1PM1KR3CQN5E5BC62WE4AD7`, recomputed from components (rate 0.11986926045895953 +
-> seg 0.020139 + pose 0.007854934754662192). Memo `.omx/research/ddm_fs1_pointer_move_24_20260904.md`.
+> **CURRENT effective_frontier [contest-CUDA T4, n600]: S 0.14784474152757654 —
+> TWENTY-FIFTH pointer move, 2026-09-04 (fs2 carrier re-solve on fs1's 21 moved-frame-0 pairs: 15/21 pairs,
+> +1 B, d_seg identical, d_pose 6.17e-6 → 6.14e-6).** archive sha
+> `a8f3a3791499b2b62ee4d16bc67f15f819f454dc9b88e3cce04fe50a30427bb6` @ 180,023 B, call
+> `fc-01M1Q6W3R8WWDQPRFYSF7SWTKP`, recomputed from components (rate 0.11986992631791266 +
+> seg 0.020139 + pose 0.007836134). Memo `.omx/research/ddm_fs2_pointer_move_25_20260904.md` (fs1 was the 24th move).
 > PR #140 still carries the prior pointer's bytes (afr1, 180,002 B, S 0.14797617125559104 —
 > superseded locally; public update is the operator's decision).
 >
@@ -42,12 +42,12 @@ pointer because it is the actual ranked surface. This row does not imply local
 archive custody or our progress. The scanner-derived table below is retained
 for custody-specific local comparisons and must not be called the score to beat.
 
-### Current best - last rechecked 2026-09-04T16:44:44Z
+### Current best - last rechecked 2026-09-04T22:12:06Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
 | **`[contest-CPU Linux x86_64]`** | **0.1880443980** | `196acd18e4ca` | linux_x86_64_cpu | `lane_pr128_click_import_NONSUBMISSION_defensive_bank_20260712` |
-| **`[contest-CUDA T4]`** | **0.1478631952** | `50fcaf1ac3c8` | linux_x86_64_t4 | `ddm_fs1_t4_frame0_selector_20260904` |
+| **`[contest-CUDA T4]`** | **0.1478447415** | `a8f3a3791499` | linux_x86_64_t4 | `ddm_fs2_t4_carrier_resolve_20260904` |
 
 ### 2026-05-22 MLX portable-local-substrate refresh
 

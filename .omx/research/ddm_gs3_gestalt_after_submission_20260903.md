@@ -469,3 +469,13 @@ first (0.09 s measured), walking only as a pruned fallback or with `--walk-roots
 rows in 13.7 s; Vertigo seed running detached). Genus: a guard that is slow enough to be skipped is a guard that is not there ([[m102]]).
 Equations leg (`tac.canonical_equations`): fs2's projection will be the second pure-pose authority anchor for `exchange_ratio_noise_floor_v1`
 when the row lands.
+
+## ADDENDUM 19 (2026-09-04 22:15Z real) — THE POINTER MOVED AGAIN (25th): fs2 carrier re-solve S 0.14784474152757654
+
+Two pose-only moves in one day off the same object: afr1 0.14797617 → fs1 0.14786320 (frame-0 selector) → fs2 0.14784474 (carrier
+re-solve on those pairs). fs2 −1.85e-5, realized within +3.69e-6 of the advisory. Both wins came from the same crux: pr1's terminal
+pose re-solve was never byte-closed, and fs1's selector edit made 21 pairs' carrier codes stale — fs2's matched control (0/21 on the
+unmoved base body) proves 100% of the win is selector-induced, not pre-existing slack. Full record `ddm_fs2_pointer_move_25_20260904.md`.
+The pose corner on this object is now nearly drained (fs2 alternation moved one more pair byte-free; the k drop ladder is a staircase).
+Sub-0.12: rate corner −41,817.8 B, distortion corner 215.1×. Equations leg (`tac.canonical_equations`): `exchange_ratio_noise_floor_v1`
+second pure-pose authority anchor.

@@ -96164,6 +96164,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_ddm_fs2_carrier_resolve_20260904",
+      "name": "fs2 carrier re-solve on fs1's moved-frame-0 pairs (25th pointer move)",
+      "phase": 3.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "carrier re-solve (jg5 GN) + alternation + byte-optimal frontier; commits 500189019/60f6a9668; up2 control reproduces 78,628 bits; matched control 0/21"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[empirical:/Volumes/VertigoDataTier/pact/ddm_fs2_carrier_resolve/SEAL_fs2_carrier_resolve_alternation_contest_cuda.json] n600 batch-8 net -2.2145e-5"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "0.14784474152757654 [contest-CUDA T4 n600] call fc-01M1Q6W3R8WWDQPRFYSF7SWTKP mirror experiments/results/modal_auth_eval_mirror/contest_auth_eval_fs2_carrier_resolve_t4_20260904_r2.json"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -96173,5 +96214,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-04T16:44:09Z"
+  "updated_at": "2026-09-04T22:12:34Z"
 }
