@@ -541,3 +541,17 @@ classes** (vs ps1 78/7, pq12 80/7) — all three claim-shape reds GREEN on the a
 seal 60b8d3db… (canonical) → **FIRED by MAIN 23:47Z** (receipt `ps2_t4_custody`; the first real Modal build through hv1's source snapshot).
 The README's `evaluated commit 1c9fbbf5…` pins the public receipts repo, not pact — flagged, unchanged. NOTHING PUBLISHED.
 Equations leg (`tac.canonical_equations`): none new (apparatus constants stay out of the registry by design; ps2 is a byte identity).
+
+## ADDENDUM 23 (2026-09-04 23:55Z real) — ng5 sealed; my charter premise was MEASURED FALSE; ng4 turned up at 3k
+
+ng5 (d54f65c1e / 70f2edc8f / 98a192d4c): the two parents' τ blocks COLLIDE — ng3 and ng4 both write `tau_band` + `expected_flip_tau_start/end`
+— so "ng4's config plus ng3's block" can only mean ng3's band REPLACES ng4's τ half. Composition of record: τ leg = ng3's `msafe_band`
+[0.04376363754272461, 0.021881818771362305] (subsumes ng4's cure: the entry NARROWS 1.1425× instead of re-widening 3.0×; given up: τ continuity at
+the exact terminal float); dual leg = ng4's carried `initial_lambdas`. The third geometry [r10's terminal τ → δ_R] keeps both halves whole and is
+follow-on #1, not smuggled in ([[m164]] UNION≠SUM). Sealed config 1205463b…, re-rooted 93f92fc6…, tree d54f65c1…, ZERO pin movement vs ng4's
+tree; $0 checks (differential + 3-way no-op detector against control/ng3/ng4 step-1 shas) run inside the waiter's smoke and FAIL-CLOSE the fire.
+Queued behind ng4 through gov2's driver (waiter pid 69289; peaks FROM_LEDGER 40.92/49.572 GiB; the argv carries a non-numeric placeholder so a
+failed rewrite is refused by argparse). **ng4 turned UP at 3,000: 0.431595** (0.4258 → 0.4261 → 0.4316) while ng3 fell to 0.403796 — ng3 is the
+stronger parent through three milestones; BELOW-BOTH is judged against ng4's ACTUAL terminal (~01:10Z). Blocker: APDataStore 16 GiB — the next
+generation will not clear the 8 GiB reserve without a cold-store sweep (dk2 chartered). Watchdog: first WARN rows logged (no action at WARN).
+Equations leg (`tac.canonical_equations`): none new (the ng5 cell IS the measurement of gm1's band × the continuous-dual anchor).
