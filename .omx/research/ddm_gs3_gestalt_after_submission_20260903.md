@@ -244,3 +244,31 @@ is the byte-close path to an exact row.
 second anchor.
 
 **What this wave did NOT do:** move the pointer. Said plainly, per the means/ends firewall.
+
+## ADDENDUM 10 (2026-09-04 14:40Z) — md1: the micro→macro bridge closes the accuracy corner on THIS vehicle
+
+MEASURED (ddm_md1 456c74551; 71 checkpoints × live+shadow × 2 cells × 32 pairs; calibration 0 in integers; law
+`checkpoint_trajectory_error_partition_v1`, two anchors): **the cold optimizer's damage is complete after 16 updates**
+(live d_seg_hat 0.0025556 → 0.0060335; Lane painted 1.296× GT; 24,336 sites born wrong, 45.7% Road→Lane) — the
+milestone record "peaks at 2,000" only because the EMA shadow is a 1,086-update low-pass; the live field never returns
+to the init's quality. The run creates 2.21× the error it repairs (removed 4.233% of the inherited error). Warm moments
+REDIRECT rather than damp (prediction 2 falsified 20/20; Jaccard 0.20–0.37 at identical steps).
+
+**The bridge:** PERSISTENT sites = **62.0%** of the terminal d_seg on the shadow (the object the archive re-encodes);
+**delete every optimizer-reachable site and the born field is still 12.75× the sub-0.12 accuracy corner** (persistent
+floor 0.00174 vs the 1.3647e-4 target). The combined credit ceiling of EVERY schedule/optimizer/objective lever is
+**1.61×** on d_seg against **20.57×** needed. The persistent set is named: 11,842 sites, 64.8% on a Lane edge, GT-Lane
+enriched 51.5×, 33.7% deeper than 25 δ_R (the inherited error is DEEP; the error the run creates is shallow, 99.8%
+within 25 δ_R).
+
+**Consequence (gestalt):** with capacity (gc1), form (gf2) and now OPTIMIZATION (md1) closed, the accuracy half of
+sub-0.12 on the small born body is closed on this vehicle by three independent instruments. ng2 (area cap) and ng3 (τ
+band) still measure the schedule's share of the 1.61× — worth having, no longer a path to the target. The qn1 n600
+realization ticket is moot for sub-0.12 on this vehicle. What the persistent set demands is a different
+REPRESENTATION at the Lane-edge sites, and the rate corner (−42,016 B at held distortion; CLAUDE.md banner) remains
+the live demand the corpus already named. Free byte found on the way: the QBF1 pose head is never read by the
+objective (1,836 params, zero gradient across three sealed cells) = **2,014 B = 1.89%** of the cell archive — a
+packet-ABI cut on the born vehicle, not on afr1. Micro lever for the next born generation (md1): clip/ramp the first
+~64 updates rather than substitute another run's moments.
+Equations leg (`tac.canonical_equations`): `checkpoint_trajectory_error_partition_v1` (md1) ·
+`muon_finisher_schedule_warmstart_and_lr_anneal_v1` (negative anchor, ng1) · `chan_vese_area_constraint_birth_balance_v1` (ng2, live).
