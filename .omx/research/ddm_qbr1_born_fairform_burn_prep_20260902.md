@@ -320,3 +320,12 @@ the optimizer moments alone and therefore still restarted the objective (consist
 complete in 16 updates" is what a 3×-wider band does to a converged margin field. Genus: cross-regime constant transfer
 [[m143]] at the STAGE-ENTRY surface; the cure is a CONTINUOUS-OBJECTIVE cell (τ continued at r10's terminal value, λ
 carried, r10's EMA law, r10's batch geometry; optimizer cold or warm as a second lever) — ddm_ng4.
+
+## DALI RE-READ OF EVERY MILESTONE (MAIN, 2026-09-04 16:25Z — bh1 finding 1's $0 cure)
+Retained `segnet_argmax_u8` per pair per milestone re-scored against `gt_cache_dali.pt['seg']` with the sealed HT
+`selection_weights` (receipt `/Volumes/APDataStore/pact/ddm_md1_micro_macro/DALI_REREAD_ALL_MILESTONES.json`). The PyAV
+re-read reproduces every recorded `d_seg_hat` exactly. **DALI = 1.0101–1.0165× the recorded value at every milestone of
+every cell** (start 0.0025546 vs 0.0025183; cold control @5k 0.0028044 vs 0.0027589; ng1 warm @5k 0.0029101; ng2 @2k
+0.0032823) — an OFFSET that preserves every sign, shape and ordering. Falsifier thresholds transfer by the same ~1.3%;
+no verdict moves. The trainer's pinned PyAV target remains a defect for the ABSOLUTE accuracy corner (next generation:
+pin DALI), not for the cell comparisons.
