@@ -149,8 +149,15 @@ def resolve(output: Path | None = None) -> dict[str, Any]:
     """
 
     started = time.monotonic()
+    from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (
+        resolve_margin_band_threshold,
+    )
+
     lever = ExpectedFlipTauBandMsafe()
     block, start, end = compile_qbr1_tau_band_config(lever)
+    # the sealed config drops the LawRef's volatile observation time so its bytes are stable;
+    # this dated receipt is exactly where that timestamp belongs, so it is kept here IN FULL.
+    full_manifest = resolve_margin_band_threshold().lawref_manifest
     legacy_lever = ExpectedFlipTauBandMsafe(mode="legacy")
     legacy_block, legacy_start, legacy_end = compile_qbr1_tau_band_config(legacy_lever)
     receipt = {
@@ -167,6 +174,7 @@ def resolve(output: Path | None = None) -> dict[str, Any]:
             "end": legacy_end / block["delta_r"],
         },
         "tau_band_block": block,
+        "lawref_manifest_full_including_volatile_fields": full_manifest,
         "lever_notes": lever.notes,
         "gm1_measured": GM1_MEASURED,
         "charter_correction_falsifier_3": CHARTER_CORRECTION_FALSIFIER_3,
@@ -363,6 +371,15 @@ def seal() -> dict[str, Any]:
     )
     if json.loads(Path(cell_fact["path"]).read_text(encoding="utf-8")) != cell:
         raise NG3Error("sealed band-cell JSON round trip differs")
+    # A config sha a memo quotes is only useful if a second compile reproduces it.  ng3's first
+    # seal did NOT: the LawRef manifest carried a `resolved_at` timestamp, so the sha moved
+    # between two identical compiles.  The cure lives in the DSL compiler
+    # (VOLATILE_LAWREF_MANIFEST_FIELDS); this is the receipt that it worked.
+    recompiled, _control_again = compile_tau_band_cell()
+    if recompiled != cell:
+        differing = sorted(key for key in set(cell) | set(recompiled)
+                           if cell.get(key) != recompiled.get(key))
+        raise NG3Error(f"seal is not byte-stable across two compiles: {differing}")
     receipt = {
         "schema": SEAL_SCHEMA,
         "arm": ARM,
@@ -387,6 +404,7 @@ def seal() -> dict[str, Any]:
         "cold_control_of_record": COLD_CONTROL_S_HAT,
         "falsifiers": falsifiers(),
         "authorized_configs_written": False,
+        "seal_is_byte_stable_across_two_compiles": True,
         "elapsed_seconds": time.monotonic() - started,
     }
     qbt.atomic_json(ARM_ROOT / "SEAL_RECEIPT.json", receipt)

@@ -5046,6 +5046,16 @@ def ExpectedFlipTauBandMsafe(mode: str = "msafe_band", headroom: float | None = 
                "until byte-closed"))
 
 
+#: LawRef manifest fields that record WHEN a resolution was observed rather than WHAT it
+#: resolved to.  They are dropped from a sealed config because a config is an IDENTITY: a
+#: compile that produced the same numbers must produce the same bytes, or a memo cannot quote
+#: the config sha and MAIN cannot verify it before firing.  Same rule as the #332 bijection
+#: hash ("volatile LawRef observation times are preserved as non-authoritative context outside
+#: that hash"); the full manifest including these fields lives in the arm's dated RESOLUTION
+#: receipt, which is exactly where a timestamp belongs.
+VOLATILE_LAWREF_MANIFEST_FIELDS = ("resolved_at",)
+
+
 def compile_qbr1_tau_band_config(lever: Lever) -> tuple[dict, float, float]:
     """Turn :func:`ExpectedFlipTauBandMsafe`'s dotted overrides into the QBR1 surface.
 
@@ -5054,7 +5064,11 @@ def compile_qbr1_tau_band_config(lever: Lever) -> tuple[dict, float, float]:
     ``ddm_qbr1_born_fairform_burn_prep.py:619-623`` actually reads; the block beside them is the
     provenance the validator re-derives.  Splitting them is deliberate: the trainer must be able
     to run without knowing about the block, and the validator must be able to refuse a config
-    whose scalars and block disagree.  Fails closed on any override outside the namespace."""
+    whose scalars and block disagree.  Fails closed on any override outside the namespace.
+
+    The emitted block is BYTE-STABLE across compiles: ``VOLATILE_LAWREF_MANIFEST_FIELDS`` are
+    stripped from the LawRef manifest, so two compiles of the same lever at the same artifact
+    produce identical bytes and a sealed config's sha can be quoted and verified."""
     block: dict = {}
     for key, value in lever.overrides.items():
         if not key.startswith("expected_flip_tau."):
@@ -5062,6 +5076,13 @@ def compile_qbr1_tau_band_config(lever: Lever) -> tuple[dict, float, float]:
         block[key[len("expected_flip_tau."):]] = value
     if not block:
         raise ValueError("compile_qbr1_tau_band_config: lever declares no expected_flip_tau overrides")
+    manifest = block.get("lawref_manifest")
+    if isinstance(manifest, dict):
+        block["lawref_manifest"] = {
+            key: value for key, value in manifest.items()
+            if key not in VOLATILE_LAWREF_MANIFEST_FIELDS
+        }
+        block["lawref_manifest_volatile_fields_excluded"] = list(VOLATILE_LAWREF_MANIFEST_FIELDS)
     return block, float(block["start"]), float(block["end"])
 
 

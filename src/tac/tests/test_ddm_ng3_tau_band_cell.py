@@ -561,3 +561,59 @@ def test_the_exclusion_did_not_swallow_a_flag_emitting_lever():
 
     assert "StageTransitionSoftVelocityBlend" in lr.name_composable_levers()
 
+
+# ---------------------------------------------------------------------------
+# 9. a sealed config's bytes must be reproducible, or its sha cannot be quoted
+# ---------------------------------------------------------------------------
+def test_the_compiled_band_block_is_byte_stable_across_compiles():
+    """ng3's FIRST seal was not byte-stable: two identical compiles produced two shas.
+
+    The cause was the LawRef manifest's ``resolved_at`` observation time riding inside the
+    config.  A memo that quotes a config sha for MAIN to verify before firing is worthless if
+    the sha moves with the clock, so the volatile fields are stripped at the compile boundary.
+    """
+
+    import time as _time
+
+    from tac.witness_dsl.curriculum_dsl import VOLATILE_LAWREF_MANIFEST_FIELDS
+
+    first, _s1, _e1 = compile_qbr1_tau_band_config(ExpectedFlipTauBandMsafe())
+    _time.sleep(1.05)  # cross a whole-second boundary: the dropped field has 1 s resolution
+    second, _s2, _e2 = compile_qbr1_tau_band_config(ExpectedFlipTauBandMsafe())
+    assert json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True)
+    for field in VOLATILE_LAWREF_MANIFEST_FIELDS:
+        assert field not in first["lawref_manifest"]
+    assert first["lawref_manifest_volatile_fields_excluded"] == list(
+        VOLATILE_LAWREF_MANIFEST_FIELDS)
+
+
+def test_the_dropped_timestamp_is_not_lost_only_moved():
+    """Stripping provenance would be signal loss; the law still reports it, and the arm's dated
+    RESOLUTION receipt is where it is kept."""
+
+    from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (
+        resolve_margin_band_threshold,
+    )
+    from tac.witness_dsl.curriculum_dsl import VOLATILE_LAWREF_MANIFEST_FIELDS
+
+    manifest = resolve_margin_band_threshold().lawref_manifest
+    for field in VOLATILE_LAWREF_MANIFEST_FIELDS:
+        assert field in manifest, f"the law must still report {field}"
+    source = (REPO / "experiments/ddm_ng3_tau_band_cell.py").read_text(encoding="utf-8")
+    assert "lawref_manifest_full_including_volatile_fields" in source
+
+
+def test_the_validator_does_not_read_any_volatile_field():
+    """The gate must be blind to the stripped fields, or a legacy config would refuse."""
+
+    from tac.witness_dsl.curriculum_dsl import VOLATILE_LAWREF_MANIFEST_FIELDS
+
+    block, start, end = compile_qbr1_tau_band_config(ExpectedFlipTauBandMsafe())
+    with_volatile = dict(block)
+    with_volatile["lawref_manifest"] = dict(block["lawref_manifest"])
+    for field in VOLATILE_LAWREF_MANIFEST_FIELDS:
+        with_volatile["lawref_manifest"][field] = "1999-01-01T00:00:00Z"
+    qbr1.validate_tau_band_block(
+        _minimal_qbr1_config(band=(start, end), block=with_volatile)
+    )
+
