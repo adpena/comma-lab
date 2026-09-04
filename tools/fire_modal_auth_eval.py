@@ -100,6 +100,7 @@ from tac.modal_source_snapshot import (  # noqa: E402
     build_snapshot,
     dispatch_env,
     prune_snapshots,
+    verify_dispatch_paths,
 )
 
 VENV_PY = str(REPO / ".venv" / "bin" / "python")
@@ -804,6 +805,14 @@ def main(argv: list[str] | None = None) -> int:
     # Cloning every mounted tree first makes the fire read an immutable instant.
     # Verified fail-closed: an incomplete snapshot REFUSES rather than firing a short
     # mount, because a short mount spends the meter and returns a crash.
+    # THE CWD STAYS THE REPO ROOT. The worker's local half resolves its dispatch claim
+    # from Path.cwd() and tac.deploy.claims then spawns a RELATIVE `.venv/bin/python
+    # tools/claim_lane_dispatch.py`. MEASURED 2026-09-04 (ps2 t4_custody, rc=5): firing
+    # from the snapshot dir raised FileNotFoundError on that interpreter — and had it
+    # resolved, the claim row would have landed in the snapshot's own .omx/state and been
+    # lost, with the single-flight guard then reading an empty ledger. The snapshot is
+    # therefore injected through PACT_MODAL_SOURCE_ROOT, which changes only what the image
+    # MOUNTS. The mounts in the refused fire's log prove the snapshot half already worked.
     dispatch_cwd = REPO
     dispatch_env_vars: dict | None = None
     if args.no_source_snapshot:
@@ -850,8 +859,19 @@ def main(argv: list[str] | None = None) -> int:
                 "source snapshot is not provably complete; refusing to fire a short mount",
                 manifest,
             )
-        dispatch_cwd = snap.root
         dispatch_env_vars = dispatch_env(snap.root, entrypoint=snap.entrypoint)
+
+    # Before the meter: every relative path the dispatch and its local half will spawn
+    # must resolve from the cwd we are about to use. The ps2 rc=5 refusal is what this
+    # costs when it is discovered remotely instead of here.
+    path_problems = verify_dispatch_paths(dispatch_cwd, cmd)
+    manifest["stage4c_dispatch_path_check"] = {"cwd": str(dispatch_cwd), "problems": path_problems}
+    if path_problems:
+        for problem in path_problems:
+            print(f"  - {problem}")
+        return refuse(
+            out_dir, 9, "dispatch paths do not resolve from the dispatch cwd", manifest
+        )
 
     if args.dry_run:
         print(f"AXIS: {spec['axis']} {spec['evidence_axis_tag']} -> {spec['entrypoint']}")

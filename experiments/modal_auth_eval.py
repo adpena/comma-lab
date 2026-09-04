@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from pathlib import Path
 from typing import Any
 
@@ -53,6 +54,31 @@ from tac.deploy.modal.auth_eval import (
 from tac.deploy.modal.call_id_ledger import register_dispatched_call_id_fail_closed
 from tac.deploy.modal.mount_ignore import ignore_generated_mount_path
 from tac.repo_io import json_text, read_json, sha256_file, write_json
+
+# ---------------------------------------------------------------------------------
+# SOURCE-SNAPSHOT MOUNT ROOT (2026-09-04).
+#
+# The dispatcher's CWD must stay the REPO ROOT. This module's LOCAL half resolves the
+# dispatch claim from ``Path.cwd()`` and ``tac.deploy.claims`` then shells out to the
+# RELATIVE ``.venv/bin/python tools/claim_lane_dispatch.py`` with ``cwd=repo_root``.
+# MEASURED: running ``modal run`` from a source-snapshot directory made that spawn raise
+# ``FileNotFoundError: '.venv/bin/python'`` and refuse the fire (rc=5) -- and had the
+# interpreter resolved, the claim row would have been written into the snapshot's own
+# ``.omx/state`` and lost, with the single-flight guard reading an empty ledger. The loud
+# failure was the lucky outcome.
+#
+# So an immutable source snapshot is injected HERE instead of by changing the CWD: it
+# changes only WHAT THE IMAGE MOUNTS, never where the local process reads or writes.
+# Unset (the default) this is a byte-for-byte no-op -- ``_mount_path("src") == "src"``.
+# ---------------------------------------------------------------------------------
+_MODAL_SOURCE_ROOT = os.environ.get("PACT_MODAL_SOURCE_ROOT", "").strip()
+
+
+def _mount_path(rel: str) -> str:
+    """Resolve one local mount path against the optional source snapshot."""
+
+    return str(Path(_MODAL_SOURCE_ROOT) / rel) if _MODAL_SOURCE_ROOT else rel
+
 
 APP_NAME = "comma-auth-eval"
 REMOTE_REPO = Path("/workspace/pact")
@@ -164,13 +190,13 @@ eval_image = (
     # archive.zip -> inflate.sh -> upstream/evaluate.py path. Sister fix in
     # experiments/modal_auth_eval_cpu.py.
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
-        "src",
+        _mount_path("src"),
         remote_path=str(REMOTE_REPO / "src"),
         copy=True,
         ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
-        "upstream",
+        _mount_path("upstream"),
         remote_path=str(REMOTE_REPO / "upstream"),
         copy=True,
         ignore=ignore_generated_mount_path,
@@ -213,24 +239,24 @@ eval_image = (
         " torchvision.__version__, timm.__version__, numpy.__version__)'",
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; submissions subset
-        "submissions/robust_current",
+        _mount_path("submissions/robust_current"),
         remote_path=str(REMOTE_REPO / "submissions/robust_current"),
         copy=True,
         ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; public-PR runtime adapters
-        "experiments/public_runtime_adapters",
+        _mount_path("experiments/public_runtime_adapters"),
         remote_path=str(REMOTE_REPO / "experiments/public_runtime_adapters"),
         copy=True,
         ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; public-PR95 intake clone
-        "experiments/results/public_pr95_intake_20260504_codex",
+        _mount_path("experiments/results/public_pr95_intake_20260504_codex"),
         remote_path=str(REMOTE_REPO / "experiments/results/public_pr95_intake_20260504_codex"),
         ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; public-PR106 intake clone
-        "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source",
+        _mount_path("experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source"),
         remote_path=str(
             REMOTE_REPO
             / "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/source"
@@ -238,11 +264,11 @@ eval_image = (
         ignore=ignore_generated_mount_path,
     )
     .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher; contest_auth_eval entry script
-        "experiments/contest_auth_eval.py",
+        _mount_path("experiments/contest_auth_eval.py"),
         remote_path=str(REMOTE_REPO / "experiments/contest_auth_eval.py"),
     )
-    .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
-    .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
+    .add_local_file(_mount_path("pyproject.toml"), remote_path=str(REMOTE_REPO / "pyproject.toml"))  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
+    .add_local_file(_mount_path("uv.lock"), remote_path=str(REMOTE_REPO / "uv.lock"))  # MODAL_MANUAL_MOUNT_OK:narrow auth-eval dispatcher
     # REGRESSION FIX 2026-06-09 (pr110pp_r1, sister of modal_auth_eval_cpu.py):
     # commit 826cc63ab set ``include_source=False`` which disabled Modal's
     # automatic inclusion of THIS entrypoint module, so the remote container

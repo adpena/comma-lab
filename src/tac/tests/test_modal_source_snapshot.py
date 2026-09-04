@@ -142,3 +142,79 @@ def test_nested_mounts_are_not_double_counted_in_the_digest(tmp_path: Path) -> N
     without, count_b, _ = files_digest(root, ["src", "upstream"])
     assert with_nested == without
     assert count_a == count_b
+
+
+def test_the_snapshot_is_injected_by_env_not_by_changing_the_cwd() -> None:
+    """The regression guard for the ps2 rc=5 refusal.
+
+    Firing with ``cwd`` inside the snapshot made the worker's local half spawn a RELATIVE
+    ``.venv/bin/python`` that a snapshot does not contain — and, had it resolved, would
+    have written the dispatch claim into the snapshot's own ``.omx/state``. The snapshot
+    must therefore reach Modal through the mount root, never through the cwd.
+
+    The REAL app modules are loaded, both ways, because the property under test is what
+    the dispatcher actually does — not what its source says.
+    """
+
+    import importlib.util
+    import subprocess
+    import sys
+
+    from tac.modal_source_snapshot import SOURCE_ROOT_ENV
+
+    assert dispatch_env(Path("/snap"), {}, entrypoint=Path("/snap/x/w.py"))[SOURCE_ROOT_ENV] == "/snap"
+
+    repo = Path(__file__).resolve().parents[3]
+    if importlib.util.find_spec("modal") is None:  # pragma: no cover - env without modal
+        import pytest
+
+        pytest.skip("modal is not installed; the app modules cannot be loaded")
+    probe = (
+        "import importlib.util,sys\n"
+        "sys.path.insert(0,'src'); sys.path.insert(0,'experiments')\n"
+        "spec=importlib.util.spec_from_file_location('m', sys.argv[1])\n"
+        "m=importlib.util.module_from_spec(spec); sys.modules['m']=m; spec.loader.exec_module(m)\n"
+        "print(m._mount_path('src'))\n"
+    )
+    for name in ("modal_auth_eval", "modal_auth_eval_cpu"):
+        module = str(repo / "experiments" / f"{name}.py")
+        plain = subprocess.run(
+            [sys.executable, "-c", probe, module], cwd=repo, capture_output=True, text=True,
+            env={k: v for k, v in __import__("os").environ.items() if k != SOURCE_ROOT_ENV},
+        )
+        assert plain.returncode == 0, plain.stderr[-800:]
+        assert plain.stdout.strip() == "src", f"{name} is not a no-op with the env unset"
+
+        redirected = subprocess.run(
+            [sys.executable, "-c", probe, module], cwd=repo, capture_output=True, text=True,
+            env={**__import__("os").environ, SOURCE_ROOT_ENV: "/snap"},
+        )
+        assert redirected.returncode == 0, redirected.stderr[-800:]
+        assert redirected.stdout.strip() == "/snap/src", f"{name} ignores {SOURCE_ROOT_ENV}"
+
+
+def test_mount_paths_survive_the_helper_wrapper(tmp_path: Path) -> None:
+    module = tmp_path / "app.py"
+    module.write_text(
+        'import modal\n'
+        'image = (modal.Image.debian_slim()\n'
+        '  .add_local_dir(_mount_path("src"), remote_path="/w/src")\n'
+        '  .add_local_file(_mount_path("uv.lock"), remote_path="/w/uv.lock"))\n'
+    )
+    mounts = extract_mount_paths(module)
+    assert mounts.dirs == ("src",)
+    assert mounts.files == ("uv.lock",)
+
+
+def test_dispatch_path_guard_catches_the_ps2_failure() -> None:
+    """Every relative path must resolve from the dispatch cwd, checked before the meter."""
+
+    from tac.modal_source_snapshot import local_relative_spawn_paths, verify_dispatch_paths
+
+    repo = Path(__file__).resolve().parents[3]
+    spawned = local_relative_spawn_paths()
+    assert ".venv/bin/python" in spawned
+    assert "tools/claim_lane_dispatch.py" in spawned
+    assert verify_dispatch_paths(repo, ["experiments/modal_auth_eval.py::main"]) == []
+    problems = verify_dispatch_paths(repo / ".omx/tmp/a_snapshot_that_is_not_a_repo_root", [])
+    assert any(".venv/bin/python" in p for p in problems), problems

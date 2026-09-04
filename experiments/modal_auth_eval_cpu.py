@@ -50,6 +50,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from pathlib import Path
 from typing import Any
 
@@ -74,6 +75,31 @@ from tac.deploy.modal.auth_eval import (
 from tac.deploy.modal.call_id_ledger import register_dispatched_call_id_fail_closed
 from tac.deploy.modal.mount_ignore import ignore_generated_mount_path
 from tac.repo_io import json_text, read_json, sha256_file, write_json
+
+# ---------------------------------------------------------------------------------
+# SOURCE-SNAPSHOT MOUNT ROOT (2026-09-04).
+#
+# The dispatcher's CWD must stay the REPO ROOT. This module's LOCAL half resolves the
+# dispatch claim from ``Path.cwd()`` and ``tac.deploy.claims`` then shells out to the
+# RELATIVE ``.venv/bin/python tools/claim_lane_dispatch.py`` with ``cwd=repo_root``.
+# MEASURED: running ``modal run`` from a source-snapshot directory made that spawn raise
+# ``FileNotFoundError: '.venv/bin/python'`` and refuse the fire (rc=5) -- and had the
+# interpreter resolved, the claim row would have been written into the snapshot's own
+# ``.omx/state`` and lost, with the single-flight guard reading an empty ledger. The loud
+# failure was the lucky outcome.
+#
+# So an immutable source snapshot is injected HERE instead of by changing the CWD: it
+# changes only WHAT THE IMAGE MOUNTS, never where the local process reads or writes.
+# Unset (the default) this is a byte-for-byte no-op -- ``_mount_path("src") == "src"``.
+# ---------------------------------------------------------------------------------
+_MODAL_SOURCE_ROOT = os.environ.get("PACT_MODAL_SOURCE_ROOT", "").strip()
+
+
+def _mount_path(rel: str) -> str:
+    """Resolve one local mount path against the optional source snapshot."""
+
+    return str(Path(_MODAL_SOURCE_ROOT) / rel) if _MODAL_SOURCE_ROOT else rel
+
 
 APP_NAME = "comma-auth-eval-cpu"
 REMOTE_REPO = Path("/workspace/pact")
@@ -205,7 +231,7 @@ eval_image = (
     # two large public-PR intakes below stay lazy (not on this path, keep build
     # fast). Sister fix in experiments/modal_auth_eval.py.
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
-        "upstream",
+        _mount_path("upstream"),
         remote_path=str(REMOTE_REPO / "upstream"),
         copy=True,
         ignore=ignore_generated_mount_path,
@@ -231,13 +257,13 @@ eval_image = (
         " torchvision.__version__, timm.__version__, numpy.__version__)'",
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
-        "submissions/robust_current",
+        _mount_path("submissions/robust_current"),
         remote_path=str(REMOTE_REPO / "submissions/robust_current"),
         copy=True,
         ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
-        "experiments/public_runtime_adapters",
+        _mount_path("experiments/public_runtime_adapters"),
         remote_path=str(REMOTE_REPO / "experiments/public_runtime_adapters"),
         copy=True,
         ignore=ignore_generated_mount_path,
@@ -247,7 +273,7 @@ eval_image = (
     # are mounted; other intakes are intentionally excluded to keep image
     # builds fast. To run a different PR, add its intake source here.
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
-        "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee",
+        _mount_path("experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee"),
         remote_path=str(
             REMOTE_REPO
             / "experiments/results/public_pr_intake_full/public_pr107_intake_20260505_auto/source/submissions/apogee"
@@ -255,7 +281,7 @@ eval_image = (
         ignore=ignore_generated_mount_path,
     )
     .add_local_dir(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
-        "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/source/submissions/hnerv_lc_v2_scale095_rplus1",
+        _mount_path("experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/source/submissions/hnerv_lc_v2_scale095_rplus1"),
         remote_path=str(
             REMOTE_REPO
             / "experiments/results/public_pr_intake_full/public_pr102_intake_20260505_auto/source/submissions/hnerv_lc_v2_scale095_rplus1"
@@ -263,36 +289,36 @@ eval_image = (
         ignore=ignore_generated_mount_path,
     )
     .add_local_file(  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
-        "experiments/contest_auth_eval.py",
+        _mount_path("experiments/contest_auth_eval.py"),
         remote_path=str(REMOTE_REPO / "experiments/contest_auth_eval.py"),
     )
     .add_local_file(  # MODAL_MANUAL_MOUNT_OK:v10 C1 receiver adapter entrypoint; imports tool_bootstrap + comma_lab.storage_tiers + tac (all mounted below/above)
-        "tools/measure_v10_two_plane_receiver_timing.py",
+        _mount_path("tools/measure_v10_two_plane_receiver_timing.py"),
         remote_path=str(REMOTE_REPO / "tools/measure_v10_two_plane_receiver_timing.py"),
     )
     .add_local_file(  # MODAL_MANUAL_MOUNT_OK:v10 C1 receiver bootstrap import (rc=1 2026-07-19: ModuleNotFoundError tool_bootstrap)
-        "tools/tool_bootstrap.py",
+        _mount_path("tools/tool_bootstrap.py"),
         remote_path=str(REMOTE_REPO / "tools/tool_bootstrap.py"),
     )
     .add_local_file(  # MODAL_MANUAL_MOUNT_OK:v10 C1 receiver transitive tools/ import (AST closure verified 2026-07-19: exactly {tool_bootstrap, measure_uint8_lattice_feasibility})
-        "tools/measure_uint8_lattice_feasibility.py",
+        _mount_path("tools/measure_uint8_lattice_feasibility.py"),
         remote_path=str(REMOTE_REPO / "tools/measure_uint8_lattice_feasibility.py"),
     )
     .add_local_file(  # MODAL_MANUAL_MOUNT_OK:v10 C1 receiver _runtime_source_custody requires these at literal repo paths (add_local_python_source mounts tac importably, not under src/)
-        "src/tac/witness_dsl/v10_two_plane_timing_receiver.py",
+        _mount_path("src/tac/witness_dsl/v10_two_plane_timing_receiver.py"),
         remote_path=str(REMOTE_REPO / "src/tac/witness_dsl/v10_two_plane_timing_receiver.py"),
     )
     .add_local_file(  # MODAL_MANUAL_MOUNT_OK:v10 C1 receiver custody (production_receiver)
-        "src/tac/witness_dsl/v10_production_receiver.py",
+        _mount_path("src/tac/witness_dsl/v10_production_receiver.py"),
         remote_path=str(REMOTE_REPO / "src/tac/witness_dsl/v10_production_receiver.py"),
     )
     .add_local_file(  # MODAL_MANUAL_MOUNT_OK:v10 C1 receiver custody (integer_solver)
-        "src/tac/optimization/uint8_lattice_feasibility.py",
+        _mount_path("src/tac/optimization/uint8_lattice_feasibility.py"),
         remote_path=str(REMOTE_REPO / "src/tac/optimization/uint8_lattice_feasibility.py"),
     )
     .add_local_python_source("comma_lab")  # MODAL_MANUAL_MOUNT_OK:v10 C1 receiver imports comma_lab.storage_tiers (same package-source pattern as tac; the 2026-06-09 whole-src-mount poison does NOT apply to add_local_python_source)
-    .add_local_file("pyproject.toml", remote_path=str(REMOTE_REPO / "pyproject.toml"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
-    .add_local_file("uv.lock", remote_path=str(REMOTE_REPO / "uv.lock"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
+    .add_local_file(_mount_path("pyproject.toml"), remote_path=str(REMOTE_REPO / "pyproject.toml"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
+    .add_local_file(_mount_path("uv.lock"), remote_path=str(REMOTE_REPO / "uv.lock"))  # MODAL_MANUAL_MOUNT_OK:narrow CPU auth-eval dispatcher; trainer-discovery N/A
     # REGRESSION FIX 2026-06-09 (pr110pp_r1): commit 826cc63ab set
     # ``include_source=False`` to extinct the fsmonitor-socket crash, but that
     # ALSO disabled Modal's automatic inclusion of THIS entrypoint module. The

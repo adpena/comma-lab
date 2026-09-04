@@ -148,9 +148,21 @@ class SnapshotResult:
 
 
 def _literal_first_arg(call: ast.Call) -> str | None:
+    """The mount path a call names, unwrapping one layer of helper call.
+
+    The app modules resolve every mount through ``_mount_path("src")`` so the snapshot
+    can be injected by env var instead of by changing the dispatcher's CWD (the CWD
+    change broke a real fire: ``record_dispatch_claim`` resolves ``Path.cwd()`` and then
+    spawns a RELATIVE ``.venv/bin/python``). One unwrap layer is deliberate: a deeper or
+    computed expression cannot be snapshotted without executing the module, and
+    ``verify_snapshot`` is what makes such an omission loud rather than a short mount.
+    """
+
     if not call.args:
         return None
     first = call.args[0]
+    if isinstance(first, ast.Call) and len(first.args) == 1:
+        first = first.args[0]
     if isinstance(first, ast.Constant) and isinstance(first.value, str):
         return first.value
     return None
@@ -405,6 +417,14 @@ def resolve_python_source_paths(source_root: Path, modules: Iterable[str]) -> li
     return sorted(set(out))
 
 
+#: Env var the Modal app modules read to resolve their local mount paths. Injecting the
+#: snapshot HERE — rather than by changing the dispatcher's CWD — is the 2026-09-04 cure:
+#: the local half of the dispatcher resolves the claim ledger from ``Path.cwd()`` and
+#: shells out to a RELATIVE ``.venv/bin/python``, so a snapshot CWD refused the fire and
+#: would have written the claim row into the snapshot had the interpreter resolved.
+SOURCE_ROOT_ENV = "PACT_MODAL_SOURCE_ROOT"
+
+
 def dispatch_env(
     snapshot_root: Path,
     base_env: dict[str, str] | None = None,
@@ -424,6 +444,7 @@ def dispatch_env(
     """
 
     env = dict(os.environ if base_env is None else base_env)
+    env[SOURCE_ROOT_ENV] = str(snapshot_root)
     parts = [str(snapshot_root / "src")]
     if entrypoint is not None:
         parts.insert(0, str(Path(entrypoint).parent))
@@ -495,6 +516,63 @@ def assert_python_source_resolves(
                 "the live working tree for it and the snapshot would be half-effective"
             )
     return failures
+
+
+def local_relative_spawn_paths() -> list[str]:
+    """Relative paths the dispatcher's LOCAL half spawns, DERIVED from their defaults.
+
+    ``tac.deploy.claims.dispatch_claim_command`` defaults to ``.venv/bin/python`` and
+    ``tools/claim_lane_dispatch.py`` and runs them with ``cwd=repo_root``. Those two
+    strings are read out of the real signature rather than re-typed here, so a rename
+    over there cannot leave a stale guard over here.
+    """
+
+    import inspect
+
+    from tac.deploy import claims
+
+    out: list[str] = []
+    params = inspect.signature(claims.dispatch_claim_command).parameters
+    for name in ("python_executable", "claim_tool"):
+        default = params[name].default if name in params else None
+        if isinstance(default, (str, Path)) and not str(default).startswith("/"):
+            out.append(str(default))
+    return out
+
+
+def verify_dispatch_paths(cwd: Path, argv: Iterable[str]) -> list[str]:
+    """Refuse a dispatch whose relative paths do not resolve from ``cwd``.
+
+    THE FIRE THIS WOULD HAVE SAVED (2026-09-04, ps2 t4_custody, rc=5). The dispatch ran
+    with ``cwd`` inside the source snapshot. Modal built every mount correctly and got as
+    far as uploading the archive; then the worker's local half called
+    ``record_dispatch_claim(repo_root=Path.cwd())``, which spawned the RELATIVE
+    ``.venv/bin/python`` — absent from a snapshot — and the fire refused after the image
+    build. Worse, had the interpreter resolved, the claim row would have been written to
+    the snapshot's own ``.omx/state`` and lost.
+
+    So the invariant is checked BEFORE the subprocess: every relative path in the argv,
+    and every relative path the local half is known to spawn, must exist under the cwd
+    the dispatch will actually use.
+    """
+
+    problems: list[str] = []
+    cwd = Path(cwd)
+    candidates = [a for a in argv if isinstance(a, str) and ("/" in a or a.endswith(".py"))]
+    candidates += local_relative_spawn_paths()
+    for candidate in candidates:
+        # `modal run path::function` names a file and an entrypoint in one token; only
+        # the file half is a path, and treating the whole token as one is a false alarm.
+        path = Path(candidate.split("::", 1)[0])
+        if path.is_absolute():
+            if not path.exists():
+                problems.append(f"absolute path in the dispatch does not exist: {candidate}")
+            continue
+        if not (cwd / path).exists():
+            problems.append(
+                f"relative path {candidate!r} does not resolve from the dispatch cwd {cwd}"
+            )
+    return problems
 
 
 def prune_snapshots(root: Path, *, retain_days: float, now: float | None = None) -> list[str]:
@@ -589,6 +667,7 @@ def build_snapshot(
 
 __all__ = [
     "SNAPSHOT_ROOT_REL",
+    "SOURCE_ROOT_ENV",
     "MountSpec",
     "SnapshotResult",
     "assert_python_source_resolves",
@@ -598,6 +677,8 @@ __all__ = [
     "extract_mount_paths",
     "files_digest",
     "iter_mount_files",
+    "local_relative_spawn_paths",
     "prune_snapshots",
+    "verify_dispatch_paths",
     "verify_snapshot",
 ]
