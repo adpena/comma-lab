@@ -305,3 +305,18 @@ treatment 0.4274/0.4447/0.4257). The QBR1 lever (`native_interface_weight` 0 vs 
 this cold schedule; the first-order finding of record is the transition. The warm-transition cell (ng1) was FIRED at
 11:10:05Z from the sealed tree (claims `ddm_ng1_scorer_20260904` / `ddm_ng1_metal_20260904`; QBR1 claims closed with
 terminal rows). Equations leg (`tac.canonical_equations`): `muon_finisher_schedule_warmstart_and_lr_anneal_v1`.
+
+## BUG-CLASS FINDING (MAIN, 2026-09-04 16:10Z, operator "likely bugs in a lot of places") — the stage entry RESTARTS the objective
+
+Verified at source: the burn's cells compile with `expected_flip_tau_start 0.15 / end 0.05` over 5,000 steps
+(`ddm_qbr1_born_fairform_burn_prep.py:233-234`; trainer `tau_for_step` :685 default start 0.15) while r10 ended its own
+10,000-step anneal at τ ≈ 0.05 — so at entry the soft band is **3× wider** than the object was trained into (gm1: 85% of
+the seg gradient on already-correct pixels at τ = 0.15). The dual multipliers restart from zero (burn step 1: λ_Lane
+7.2e-5, λ_Movable 7.8e-5 = one η step), the EMA law changes (r10 0.99954 → burn 0.99908), and the objective schema
+differs (r10's `curriculum_mode ce_birth_then_margin`/`margin_steps 10000` vs the burn's `objective.*` block). The
+carried state is the WEIGHTS ONLY (`build_initial_state` :186 from r10's EMA). **The "cold transition" was mostly an
+OBJECTIVE RESTART**: τ, λ, EMA law and batch geometry all re-initialised while the weights were carried — ng1 carried
+the optimizer moments alone and therefore still restarted the objective (consistent with its loss). md1's "damage
+complete in 16 updates" is what a 3×-wider band does to a converged margin field. Genus: cross-regime constant transfer
+[[m143]] at the STAGE-ENTRY surface; the cure is a CONTINUOUS-OBJECTIVE cell (τ continued at r10's terminal value, λ
+carried, r10's EMA law, r10's batch geometry; optimizer cold or warm as a second lever) — ddm_ng4.
