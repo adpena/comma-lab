@@ -425,6 +425,26 @@ class TestDecision:
             {"concurrency": 2, "total_steps_per_min": 10.0, "recorded_utc": "2026-09-04T11:00:00Z"},
             ledger,
         )
+        # One TRAINING cell is live (sealed run-config + step budget), so the candidate would make
+        # concurrency 2 and the N=2 ledger row (10 vs 28 steps/min) must refuse the throughput leg.
+        # (A candidate that would run ALONE is admitted on that leg — see the SOLE_CELL test.)
+        live_training = ca.LiveCell(
+            cell_id="ng2",
+            pid=1,
+            alive=True,
+            declared_peak_gib=41.5,
+            current_rss_gib=0.5,
+            manifest_path=Path("/m"),
+            config_path=Path("/cfg.json"),
+            run_dir=None,
+            total_steps=5000,
+            completed_steps=100,
+            arm_name="ng2",
+            arm_role="control",
+            purpose="cell",
+        )
+        assert live_training.is_cell is True
+        monkeypatch.setattr(ca, "discover_live_cells", lambda *a, **k: [live_training])
         decision = ca.decide_admission(
             1.0, roots=[tmp_path / "none"], ledger_path=ledger, include_naive_contrast=False
         )
@@ -693,3 +713,23 @@ class TestRepoIntegration:
         ]
         assert offenders == [], f"raw psutil.virtual_memory() used at lines {offenders}"
         assert "mem_basis.conservative_free_gib" in _MODULE_PATH.read_text(encoding="utf-8")
+
+
+def test_throughput_verdict_sole_cell_ignores_concurrency_rows() -> None:
+    """A candidate that would run ALONE must not be gated by N=2 contention evidence.
+
+    MEASURED defect 2026-09-04: Metal free, five non-cell jobs live, ledger's latest N=2 row at
+    ratio 0.964 -> the guard refused ng4 for 90 minutes because ``max(2, live_count)`` consulted
+    concurrency-2 rows for a sole cell.
+    """
+    from tools.cell_admission import throughput_verdict
+
+    rows = [
+        {"concurrency": 1, "total_steps_per_min": 28.0, "recorded_utc": "2026-09-04T10:00:00Z"},
+        {"concurrency": 2, "total_steps_per_min": 27.0, "recorded_utc": "2026-09-04T16:00:00Z"},
+    ]
+    sole = throughput_verdict(rows, live_count=1)
+    assert sole.admits is True
+    assert sole.evidence == "SOLE_CELL_NO_CONTENTION"
+    second = throughput_verdict(rows, live_count=2)
+    assert second.admits is False

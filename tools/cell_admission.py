@@ -678,6 +678,20 @@ def throughput_verdict(
     the dimension that can hurt the machine.
     """
     baseline = serial_baseline_steps_per_min(rows)
+    if live_count <= 1:
+        # The candidate would be the ONLY training cell on the Metal: there is no contention to
+        # price, so concurrency-2 evidence must not gate it.  MEASURED defect (2026-09-04): with
+        # the Metal free and five non-cell jobs live, ``max(2, 1)`` consulted the N=2 rows and
+        # refused ng4 for 90 minutes — the guard read the wrong denominator (VACUITY's sibling).
+        return ThroughputVerdict(
+            admits=True,
+            concurrency_observed=None,
+            total_steps_per_min=None,
+            serial_baseline_steps_per_min=baseline,
+            ratio=None,
+            evidence="SOLE_CELL_NO_CONTENTION",
+            reasons=("no training cell is live; the candidate runs alone, so the throughput leg does not apply",),
+        )
     concurrent = [
         row
         for row in rows
