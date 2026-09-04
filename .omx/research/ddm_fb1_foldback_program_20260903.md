@@ -92,3 +92,39 @@ AA-trained d_seg must beat the point-trained control at equal steps and bytes or
 queued BEHIND the loss levers (rows 1/3/4/7), whose prior is untouched by this result. Owed and landed by MAIN: the
 equation's `domain_of_validity` gains a `signal` key (real_frame_achievable IN-DOMAIN; point_trained_learned_field
 EXCLUDED). Owed later, named trigger: re-anchor the law on the centred lattice only if AA-in-loop is ever raced.
+
+## ADDENDUM 4 (2026-09-04, MAIN) — sd1: the surrogate mis-priced the CLOCK, and the excursion is rare-class over-paint
+
+MEASURED (ddm_sd1, retained QBR1 seed-20260902 milestones, arithmetic exact to 0.0 at all 384 pair-milestones):
+`seg_expected_flip_realized` −37.66% = (1 − 0.405364)·(1 + 0.048453) − 1 — a **−40.54% τ-schedule leg** (field frozen,
+τ 0.15→0.05) times a **+4.85% field leg** (τ frozen at 0.05); residual 0.000e+00; both cells to four decimals. At
+fixed τ the surrogate is FAITHFUL: it peaks at step 2,000 with the exact term, net sign matches in 5/5 windows, per-edge
+sign agreement 97.2–99.98% of the excursion mass. The functional form is sound; **the schedule is the defect, and none
+of vr1 rows 1/3/4 touches the schedule.** Pre-registered row-4 prediction FALSIFIED IN DIRECTION: the named edges
+(Road→Lane 1.64, Undriv→Movable 1.44) are the LEAST mis-priced; the ≥2× edges are the long majority boundaries
+(MyCar↔Road 3.8/3.5, Movable→Road 3.2, Road↔Undriv 2.7/2.5) carrying only 3–7% of d_seg each; spread 1.78–2.02× at
+τ=0.15 collapsing to 1.19–1.23× at τ=0.05 (fires the 1.3× falsifier at the terminal τ).
+
+Two facts that rank the rows: (a) **67–85% of the seg gradient sits on already-correct pixels** (τ=0.15 is 6.86 δ_R,
+gradient half-max at 12.08 δ_R — the soft band is 4–12× wider than the undecided band); (b) **the excursion is
+rare-class OVER-PAINT**: Lane predicted/GT area 1.0334→1.0929, Movable 1.0259→1.0580, both maximal at step 2,000,
+mass-conserving (rare +7.550e-4 of the frame, majority −7.550e-4); qbt1's dual ascent is recall-only with no area cap
+(`:593`) — vr1 row 3's precondition MEASURED present. 91.9–95.3% of the excursion lies within |margin| < 25 δ_R (2.0%
+of pixels); the δ_R annulus itself holds 1.5% — DECIDED error, not roundtrip noise.
+
+DERIVED order for the next burn generation (one lever per race, from the same warm start):
+0. **FREE, now:** log `seg_expected_flip_realized` at a FIXED reference τ (0.05) beside the annealed value — the
+   excursion becomes visible live (telemetry-always law, no training change).
+1. **ng1 warm transition** (already sealed) — tests whether cold AdamW moments CAUSE the over-paint.
+2. **ng2 = row 3, one-sided area cap** — covers 75.9–82.6% of the excursion mass, acts on the MECHANISM; λ_c from
+   `derive_balanced_class_weights`' own bincount (no hand-typed areas).
+3. **Row 1 margin weight** (reach 91.9% on 2.0% of pixels, 36× enrichment; attacks the 85%-on-correct-pixels waste)
+   and **τ band at δ_R scale** (row 6 + this measurement: start τ near δ_R, not 6.86 δ_R) — raced after 1–2.
+4. **Row 4 per-edge τ** — demoted: real but ≤1.23× at the terminal τ; second-order.
+Composition caution m164: 1–3 overlap on the same pixels; race singly, then the winning pair.
+Owed (sd1, structural): the live-vs-EMA-shadow half of the run's decoupling is UNMEASURED (milestones retain only the
+shadow forward); unfitted pairs are structurally unavailable at milestones (`_evaluate_milestone` materializes only
+`SELECTION_IDS`). Equations leg (`tac.canonical_equations`): `scalar_top1_top2_margin_is_exact_distance_to_flip_v1` (anchored by sd1,
+038f2d81c), `chan_vese_area_constraint_birth_balance_v1` (row 3, ng2's lever), `muon_finisher_schedule_warmstart_and_
+lr_anneal_v1` (ng1's lever); the τ-schedule deflation identity is a candidate law
+(`expected_flip_surrogate_tau_schedule_deflation_v1`) to be registered when ng2's cell gives it a second anchor.

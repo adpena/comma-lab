@@ -194,3 +194,13 @@ exactly one open door — **changes made INSIDE the born trainer's loop**, raced
 start (vr1 rows 1/3/4/7 first, AA-in-loop last). The burn (QBR1 → qn1 n600 realization) remains the only vehicle.
 Calibration side-benefit from ar1: the MPS↔CPU axis gap on this vehicle is 0.06% (d_seg) / 0.14% (d_pose) — the
 burn's own MPS readings are trustworthy to that bound (MPS is still never authority).
+
+## ADDENDUM 8 (2026-09-04) — the born trainer's excursion has a mechanism, and the loss could not see it
+
+Two arms in one night: ng1 (the QBR1 transition is cold on ONE axis — AdamW moments, first step 6.46× larger; no LR
+schedule exists in this trainer) and sd1 (the loss's fall was the τ anneal deflating the surrogate by 40.5% on a frozen
+field; at fixed τ it tracks the exact term; the excursion is rare-class over-paint peaking at step 2,000, mass-
+conserving, and the trainer has no area cap). The born field did not get harder to fit — the optimizer started cold,
+painted too much Lane and Movable, and the objective's own clock hid it. The accuracy half of sub-0.12 now has an
+ORDERED race inside the loop: warm transition (sealed) → area cap (chartered) → margin weight / τ at δ_R scale. Every
+prior "the surrogate is miscalibrated" reading in this corpus should be re-read against the τ-schedule identity first.
