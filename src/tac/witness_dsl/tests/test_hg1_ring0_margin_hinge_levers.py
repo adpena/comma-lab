@@ -21,11 +21,19 @@ from tac.witness_dsl.curriculum_dsl import (
 )
 from tac.witness_dsl.hg1_ring0_margin_hinge_levers_20260816 import (
     DEFAULT_HEADROOM,
+    DELTA_R_ARTIFACT,
     TRAINER_DEFAULT_MARGIN_TARGET,
     TRAINER_RELPATH,
     lever_hg1_q3_constrained_seg_grad,
     lever_hg1_ring0_margin_hinge,
 )
+
+# The artifact filename comes from the lever module, never a literal here (ddm_ql3, 2026-09-04).
+# These fixtures read ``reports/delta_R_noise_floor.json`` — the n96 CONTIGUOUS-PREFIX artifact the
+# law module names ``DELTA_R_ARTIFACT_N96_HISTORICAL`` — while the lever moved to the n600 artifact
+# on 2026-09-04 (ddm_dr1). Two of them therefore went RED, asserting the retired, 11.70%-too-low
+# m_safe 0.039180326461791926 against the live 0.04376363754272461. A red guard is an ignored
+# guard, and this one guards the very cure that made it red.
 
 TRAINER_PATH = _REPO_ROOT / TRAINER_RELPATH
 
@@ -107,7 +115,7 @@ def test_margin_target_is_resolved_from_the_artifact_not_hardcoded(tmp_path) -> 
     baseline = lever_hg1_ring0_margin_hinge().overrides["--margin-target"]
 
     artifact = tmp_path / "delta_R_noise_floor.json"
-    source = json.loads((_REPO_ROOT / "reports" / "delta_R_noise_floor.json").read_text())
+    source = json.loads((_REPO_ROOT / DELTA_R_ARTIFACT).read_text())
     source["delta_R"] = float(source["delta_R"]) * 2.0
     artifact.write_text(json.dumps(source))
 
@@ -163,7 +171,7 @@ def test_non_positive_headroom_refuses(bad: float) -> None:
 def test_headroom_that_would_not_lower_the_target_refuses(tmp_path) -> None:
     """A resolution at or above the trainer default means the lever is inert."""
     artifact = tmp_path / "delta_R_noise_floor.json"
-    source = json.loads((_REPO_ROOT / "reports" / "delta_R_noise_floor.json").read_text())
+    source = json.loads((_REPO_ROOT / DELTA_R_ARTIFACT).read_text())
     source["delta_R"] = 10.0
     artifact.write_text(json.dumps(source))
     with pytest.raises(ValueError, match="is not below"):
@@ -225,7 +233,7 @@ def test_default_headroom_matches_the_sister_satisficing_lever() -> None:
     )
 
     sister = resolve_margin_band_threshold(
-        headroom=None, artifact_path="reports/delta_R_noise_floor.json", repo_root=_REPO_ROOT
+        headroom=None, artifact_path=DELTA_R_ARTIFACT, repo_root=_REPO_ROOT
     )
     assert pytest.approx(sister.headroom) == DEFAULT_HEADROOM
     assert lever_hg1_ring0_margin_hinge().overrides["--margin-target"] == pytest.approx(

@@ -39,13 +39,27 @@ if str(REPO) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (  # noqa: E402
+    resolve_margin_band_threshold,
+)
 from tac.subset_selection import quantile_stratified_indices  # noqa: E402
 
 SCHEMA = "constructive_inverse_solve.v1"
 STATE_SCHEMA = "constructive_inverse_solve.state.v1"
 PAYLOAD_MAGIC = b"CIS1"
 AXIS = "[macOS-CPU advisory]"
-DEFAULT_M_SAFE = 0.039180326461791926
+# m_safe is DERIVED by the canonical law, never an independent literal (ddm_ql3, 2026-09-04).
+# It was hardcoded here as 0.039180326461791926 — the value derived from the n96 CONTIGUOUS-PREFIX
+# delta_R. ddm_dr1 MEASURED delta_R at n600 = 0.021881818771362305 (the n96 prefix read
+# 0.019590163230895963, 11.70% LOW) and every sister surface — the law module, the DSL, the hg1
+# ring-0 levers, tac.subset_selection — moved to the DERIVED n600 m_safe = 0.04376363754272461.
+# These two harnesses did not, because the literal carried NO provenance comment: no grep for
+# "n96" could find it. Direction matters and it is the unsafe one — m_safe is a satisficing
+# TARGET, so a value 11.70% too low declares pixels/candidates R-SAFE that the real uint8 noise
+# can still flip (law annulus_restricted_prefix_bias_detector_v1 + margin_band_satisficing_threshold_v1).
+# Resolving through the law makes staleness structurally impossible; the law falls back to the
+# same MEASURED n600 constant when the artifact is absent, so this never fails open.
+DEFAULT_M_SAFE = resolve_margin_band_threshold().m_safe
 CAMERA_HW = (874, 1164)
 SCORER_HW = (384, 512)
 

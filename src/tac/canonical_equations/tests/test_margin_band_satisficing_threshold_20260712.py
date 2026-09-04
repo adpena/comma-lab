@@ -255,3 +255,92 @@ def test_package_exports_equation_and_resolver() -> None:
 
     assert exported_builder is build_margin_band_satisficing_threshold_v1
     assert exported_resolver is resolve_margin_band_threshold
+
+
+# ── ddm_ql3 (2026-09-04): the retired n96-prefix m_safe must not survive anywhere live ──────
+# dr1 MEASURED delta_R at n600 = 0.021881818771362305; the n96 CONTIGUOUS PREFIX read
+# 0.019590163230895963, 11.70% LOW (law ``annulus_restricted_prefix_bias_detector_v1``). The
+# census found the derived n96 m_safe still hardcoded in two live harnesses as an argparse
+# default with NO provenance comment — so no grep for "n96" could find it. These two tests are
+# the structural detector: the literal is refused repo-wide outside its documented historical
+# homes, and both harnesses must resolve through the law rather than restate a number.
+_RETIRED_N96_M_SAFE = "0.039180326461791926"
+_RETIRED_N96_DELTA_R = "0.019590163230895963"
+
+
+def test_retired_n96_m_safe_literal_has_no_live_home() -> None:
+    """A retired literal in a live VALUE position is invisible to provenance greps.
+
+    AST, not text: a comment or docstring that names the old value as history is exactly what
+    good provenance looks like, so only real numeric constants count. The one legal way to keep
+    the value live is to say so in the NAME (``*_N96*`` / ``*RETIRED*`` / ``*HISTORICAL*``) — the
+    two harnesses this test was written for held it under the neutral name ``DEFAULT_M_SAFE``.
+    """
+    import ast
+    import warnings
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[4]
+    retired = {float(_RETIRED_N96_M_SAFE), float(_RETIRED_N96_DELTA_R)}
+    labelled = ("N96", "RETIRED", "HISTORICAL", "PREFIX")
+    offenders: list[str] = []
+    for rel_dir in ("src/tac", "tools", "experiments"):
+        for path in sorted((root / rel_dir).rglob("*.py")):
+            rel = path.relative_to(root).as_posix()
+            if "/results/" in rel or "/archive/" in rel:
+                continue
+            if "/tests/" in rel or Path(rel).name.startswith("test_"):
+                continue  # fixtures may pin a retired value on purpose; they launch nothing
+            try:
+                with warnings.catch_warnings():
+                    # a sister file's bad escape sequence is not this gate's finding
+                    warnings.simplefilter("ignore", SyntaxWarning)
+                    tree = ast.parse(path.read_text(encoding="utf-8"))
+            except (SyntaxError, UnicodeDecodeError, OSError):
+                continue
+            for node in ast.walk(tree):
+                if not isinstance(node, ast.Assign):
+                    continue
+                names = [t.id for t in node.targets if isinstance(t, ast.Name)]
+                names += [t.attr for t in node.targets if isinstance(t, ast.Attribute)]
+                if any(tok in n.upper() for n in names for tok in labelled):
+                    continue
+                for leaf in ast.walk(node.value):
+                    if (
+                        isinstance(leaf, ast.Constant)
+                        and isinstance(leaf.value, float)
+                        and leaf.value in retired
+                    ):
+                        offenders.append(f"{rel}:{leaf.lineno}: {names or ['<expr>']} = {leaf.value!r}")
+    assert offenders == [], (
+        "the retired n96-prefix constant is live under a neutral name — it is ANTI-conservative "
+        "(a satisficing target 11.70% too low declares pixels R-safe that uint8 noise still "
+        "flips). Resolve through resolve_margin_band_threshold(), or rename it to say it is "
+        "historical:\n" + "\n".join(offenders)
+    )
+
+
+def test_both_uint8_harnesses_derive_m_safe_from_the_law() -> None:
+    """The two harnesses the ddm_ql3 census caught must stay law-derived, never literal."""
+    import importlib.util
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[4]
+    expected = resolve_margin_band_threshold().m_safe
+    for rel in (
+        "tools/measure_uint8_lattice_feasibility.py",
+        "tools/constructive_inverse_solve_harness.py",
+    ):
+        name = f"_ql3_{Path(rel).stem}"
+        spec = importlib.util.spec_from_file_location(name, root / rel)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        try:
+            spec.loader.exec_module(module)
+            resolved = float(module.DEFAULT_M_SAFE)
+            assert resolved == expected, f"{rel} drifted from the canonical law"
+            assert resolved != float(_RETIRED_N96_M_SAFE)
+        finally:
+            sys.modules.pop(name, None)
