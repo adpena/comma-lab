@@ -373,3 +373,10 @@ sealed decay 0.9990793899844618 and `verify_ema_executable_law` passes on load.
 
 **Own-vehicle frontier:** **NOT MOVED** — this arm designs and seals; it produced no exact
 authority row. `afr1 S 0.14797617125559104 @ 180,002 B [contest-CUDA T4 n600] — UNMOVED`.
+
+## LIVE READ (MAIN, 2026-09-04 11:44Z) — warm cell @1k
+S_hat **0.439328** (control @1k 0.466875; warm start 0.398768) · d_seg_hat 0.0029868 (control 0.0030511) · d_pose_hat
+**0.0004834** (control 0.0008233; BELOW the start's 0.0005757). Below the control at the first milestone (−0.027547 S_hat)
+but still +10.2% above the warm start — the excursion is smaller, not absent: the optimizer state removed part of the
+first-order damage, and the pose leg improved outright. Falsifier 1's second clause (below control at EVERY milestone)
+holds at 1k; the first clause (S_hat(5k) < 0.398768) is open. Next read at 2k (the control's peak).
