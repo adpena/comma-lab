@@ -128,3 +128,28 @@ shadow forward); unfitted pairs are structurally unavailable at milestones (`_ev
 038f2d81c), `chan_vese_area_constraint_birth_balance_v1` (row 3, ng2's lever), `muon_finisher_schedule_warmstart_and_
 lr_anneal_v1` (ng1's lever); the τ-schedule deflation identity is a candidate law
 (`expected_flip_surrogate_tau_schedule_deflation_v1`) to be registered when ng2's cell gives it a second anchor.
+
+## ADDENDUM 5 (2026-09-04, MAIN) — gm1: the τ band is the third race; row 1's headline setting is inert
+
+MEASURED (ddm_gm1 b828ce103, sd1's retained logits, 6 milestones × 2 cells × n32 × 41 τ, d_seg_hat reproduced to
+0.0 at all 12 milestone-cells; `[macOS-CPU advisory · NON-PROMOTABLE]`): sd1's "85% of the seg gradient on correct
+pixels" splits **77.7% WASTE (outside m_safe, R cannot undo) / 7.7% legitimate defence**; the all-correct share has a
+FLOOR at 52.2% (the field's near-boundary correct:wrong ratio — no τ moves it), the WASTED share crosses <50% at
+2.5–3.0 δ_R and <25% at 1.25–1.40 δ_R. **The τ band dominates row 1**: τ alone removes 45.6% (2 δ_R) → 77.7% (1 δ_R) →
+96.8% (0.5 δ_R) of the waste from two default arguments (`ddm_qbt1_qbflow_trainer.py:643`); row 1's best tested
+setting removes 37.3%, its shipped `inverse@1.0` 3.7%, and its headline **`bottom-k@0.05` is EXACTLY inert (0.0%)** — a
+mean-1 mask whose selected set already contains the gradient support is a uniform rescale. The pre-registered "≥50%"
+prediction FAILED under both readings (19.9% all-correct / 45.6% wasted). Levers compose near-multiplicatively (≤2.5 pp)
+and are COUPLED through Lane: lowering τ drops Lane's gradient share 1.6–2.1× and raises a global cap's Lane over-push
+2.76% → 17.45% — so the per-class m_safe_c cap is a dependent leg of the τ band, not an independent row-6 variant.
+Corrections carried: sd1's 85.10% was unweighted (HT 85.385%); hg1's "GT is runner-up on 98.0% of flips" is 90.1% on
+this vehicle (does not transfer).
+
+DERIVED third race (**ng3**): `tau_for_step(start = 2·δ_R = 0.04376363754272461, end = δ_R = 0.021881818771362305)`
+replacing [6.86, 2.29] δ_R — waste 77.7% → 42.3% at start, 44.4% → 16.2% at end; bonus: cuts sd1's schedule-leg
+deflation 4.8× (−41.3% → −8.6%). One lever: the cold control has NO satisficing cap, so the Lane over-push caveat
+binds only when a cap is later added (then co-fire per-class m_safe_c or hold τ_end at 1.5 δ_R). Row 1 is DEMOTED to
+"re-race only with a non-inert setting, after ng3". RACE ORDER NOW: ng1 warm → ng2 area cap → ng3 τ band → (winners
+composed pairwise, m164). Equations leg (`tac.canonical_equations`): `margin_band_satisficing_threshold_v1` (m_safe
+resolved through the law at runtime, n600, fallback False) and `scalar_top1_top2_margin_is_exact_distance_to_flip_v1`;
+the waste-floor identity is FORMALIZATION-owed to the τ-schedule law named in addendum 4.
