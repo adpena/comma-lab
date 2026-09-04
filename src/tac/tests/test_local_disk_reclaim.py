@@ -239,6 +239,59 @@ def test_commit_absent_from_the_main_repo_blocks_deletion(rec, tmp_path):
     assert proof.reconstructible is False
 
 
+def test_bulk_containing_a_retained_subtree_is_blocked_not_moved(rec, tmp_path):
+    """A container of protected bytes is itself protected.
+
+    Regression: ddm_mst1_manufactured_stage_split has an innocuous top-level
+    name and 20.55 GiB living entirely under capture_r2_local/retained/. Judging
+    only the candidate's own path marked it movable.
+    """
+    repo = _seed_repo(tmp_path / "main")
+    bulk = tmp_path / "bulk_arm"
+    (bulk / "capture" / "retained").mkdir(parents=True)
+    (bulk / "capture" / "retained" / "payload.bin").write_bytes(b"\0" * 64)
+    cand = rec.classify(bulk, repo=repo, registered=set(), pinned=set())
+    assert cand.klass == rec.CLASS_BLOCKED_NEVER_TOUCH
+    assert "contains a never-touch path" in cand.reason
+
+
+def test_gt_cache_inside_bulk_blocks_the_whole_container(rec, tmp_path):
+    repo = _seed_repo(tmp_path / "main")
+    bulk = tmp_path / "bulk_arm2"
+    (bulk / "sub").mkdir(parents=True)
+    (bulk / "sub" / "gt_cache.npz").write_bytes(b"\0" * 8)
+    cand = rec.classify(bulk, repo=repo, registered=set(), pinned=set())
+    assert cand.klass == rec.CLASS_BLOCKED_NEVER_TOUCH
+
+
+def test_clean_worktree_is_not_blocked_by_its_own_upstream_directory(rec, tmp_path):
+    """Class A must survive the descendant scan.
+
+    Every checkout contains upstream/ and submissions/. In a clean tree whose
+    refs the main repo holds, those bytes are git's -- blocking on them would
+    make the whole reconstructible class unreachable.
+    """
+    repo = _seed_repo(tmp_path / "main")
+    (repo / "upstream").mkdir()
+    (repo / "upstream" / "evaluate.py").write_text("# pinned\n")
+    _git(repo, "add", "upstream/evaluate.py")
+    _git(repo, "commit", "-qm", "add upstream")
+    wt = tmp_path / "wt"
+    _git(repo, "worktree", "add", "-q", str(wt), "HEAD")
+    assert (wt / "upstream" / "evaluate.py").is_file()
+    cand = rec.classify(wt, repo=repo, registered={str(wt.resolve())}, pinned=set())
+    assert cand.klass == rec.CLASS_GIT_RECONSTRUCTIBLE
+
+
+def test_unscannably_large_bulk_fails_closed(rec, tmp_path):
+    bulk = tmp_path / "wide"
+    bulk.mkdir()
+    for i in range(12):
+        (bulk / f"f{i}").write_bytes(b"x")
+    hit = rec.find_never_touch_descendant(bulk, limit=5)
+    assert hit is not None and "not provably clear" in hit
+
+
 def test_a_non_git_directory_is_never_deletable_here(rec, tmp_path):
     repo = _seed_repo(tmp_path / "main")
     bulk = tmp_path / "bulk"

@@ -121,6 +121,28 @@ def is_never_touch(path: str) -> bool:
     return any(stripped.endswith(sfx) for sfx in NEVER_TOUCH_SUFFIXES)
 
 
+def find_never_touch_descendant(root: Path, *, limit: int = 200_000) -> str | None:
+    """Return the first protected path found INSIDE ``root``, else None.
+
+    ``is_never_touch`` only judges the candidate's own path. A tree whose own
+    name is innocuous can still CONTAIN a protected subtree -- the case that
+    caught this out is ``arm_receipts_local/ddm_mst1_manufactured_stage_split``,
+    whose entire 20.55 GiB lives under ``capture_r2_local/retained/``. Moving it
+    as one unit would have relocated a never-touch tree while every top-level
+    check passed. A container of protected bytes is itself protected.
+    """
+    seen = 0
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+        for name in list(dirnames) + filenames:
+            seen += 1
+            if seen > limit:  # fail-closed: an unscannable tree is not clearable
+                return f"{root} (scan exceeded {limit} entries; not provably clear)"
+            candidate = os.path.join(dirpath, name)
+            if is_never_touch(candidate):
+                return candidate
+    return None
+
+
 def claim_is_terminal(status: str) -> bool:
     """A claim row is terminal when its status starts with a closing prefix."""
     s = status.strip().lower()
@@ -383,6 +405,9 @@ def classify(
     kib = du_kib(tree)
     proof = probe_git_proof(tree, repo, registered)
     if proof.reconstructible:
+        # No descendant scan here, deliberately. Every checkout contains
+        # `upstream/` and `submissions/` paths, but in a clean tree whose refs
+        # the main repo holds, those bytes ARE git's -- nothing is at risk.
         return Candidate(
             tree,
             kib,
@@ -390,6 +415,13 @@ def classify(
             f"clean {proof.kind} at {proof.head[:12]}; all {proof.n_refs} refs present in "
             f"{repo}; tree regenerable from the main object database",
             proof,
+        )
+    # Bulk, on the other hand, is moved verbatim -- so a protected subtree
+    # anywhere inside it makes the whole container protected.
+    protected = find_never_touch_descendant(tree)
+    if protected is not None:
+        return Candidate(
+            tree, kib, CLASS_BLOCKED_NEVER_TOUCH, f"contains a never-touch path: {protected}"
         )
     if not proof.is_git:
         why = "not a git tree; bulk must be certify-MOVED, never deleted here"
