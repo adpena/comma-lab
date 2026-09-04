@@ -604,6 +604,16 @@ def is_external_tier(path: Path) -> bool:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", required=True)
+    ap.add_argument(
+        "--source-root",
+        default="/Volumes/VertigoDataTier",
+        help="Volume root the source must live under; the destination path is built "
+        "from the source's path RELATIVE to this root. Defaults to the Vertigo tier "
+        "this tool was first written for. Name the boot volume "
+        "(e.g. /Users/adpena/Projects/pact) to reclaim local disk under the same "
+        "certify-or-block contract — the destination-on-source-filesystem refusal "
+        "below is what actually keeps a 'move' honest, not the root's identity.",
+    )
     ap.add_argument("--dest-root", required=True)
     ap.add_argument("--ledger", required=True)
     ap.add_argument("--category", required=True)
@@ -656,11 +666,11 @@ def main() -> int:
     if not src.is_dir():
         return _block(f"source is not a directory: {src}")
 
-    vertigo_root = Path("/Volumes/VertigoDataTier")
+    source_root = Path(args.source_root).resolve()
     try:
-        rel_from_vol = src.relative_to(vertigo_root)
+        rel_from_vol = src.relative_to(source_root)
     except ValueError:
-        return _block(f"source is not under {vertigo_root}: {src}")
+        return _block(f"source is not under {source_root}: {src}")
 
     dest = Path(args.dest_root) / rel_from_vol
     ledger = Path(args.ledger)
@@ -684,7 +694,7 @@ def main() -> int:
 
     dest_root = Path(args.dest_root)
     dest_df = df_kib_for_path(dest_root)
-    source_df = df_kib(str(vertigo_root))
+    source_df = df_kib(str(source_root))
 
     if dest_df["device"] == source_df["device"]:
         return _block(
@@ -740,6 +750,9 @@ def main() -> int:
         "local_tier_rationale": local_tier_rationale or None,
         "dest_df_before": dest_df,
         "projected_dest_avail_gib_after": round(projected_avail_gib, 3),
+        "source_root": str(source_root),
+        "source_df_before": source_df,
+        # Legacy key preserved for ledger readers predating --source-root.
         "vertigo_df_before": source_df,
     }
 
@@ -1023,7 +1036,11 @@ def main() -> int:
 
     shutil.rmtree(tmp_old)
     after = {
-        "vertigo_df_after": df_kib(str(vertigo_root)),
+        "source_root": str(source_root),
+        "source_df_after": df_kib(str(source_root)),
+        # Legacy key preserved so ledger readers written against the
+        # Vertigo-only revision keep parsing; it now names --source-root.
+        "vertigo_df_after": df_kib(str(source_root)),
         "dest_df_after": df_kib_for_path(transfer_destination),
     }
     append_ledger(

@@ -257,6 +257,50 @@ def test_headroom_gate_derives_the_destination_volume_from_dest_root(mover):
     assert "df_kib_for_path(transfer_destination)" in source
 
 
+def test_source_root_defaults_to_the_vertigo_tier(mover, monkeypatch, capsys):
+    """The historical Vertigo-only contract survives as the default."""
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "vertigo_certify_move.py",
+            "--source", str(REPO),  # a real dir that is NOT under Vertigo
+            "--dest-root", "/Volumes/APDataStore/pact/vertigo_coldstore",
+            "--ledger", str(REPO / ".omx" / "tmp" / "dk1-unit-ledger.jsonl"),
+            "--category", "rebuildable",
+            "--reason", "unit fixture",
+        ],
+    )
+    assert mover.main() == 2
+    assert "is not under /Volumes/VertigoDataTier" in capsys.readouterr().err
+
+
+def test_source_root_can_name_the_boot_volume_for_local_reclaim(mover, monkeypatch, capsys):
+    """ddm_dk1 extension: the same certify-or-block contract, local source.
+
+    The gate that keeps a 'move' honest is the destination-on-source-filesystem
+    refusal, not the source root's identity -- so naming the boot volume must
+    get past the root check and be stopped (if at all) by a real invariant.
+    """
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "vertigo_certify_move.py",
+            "--source", str(REPO / "tools"),
+            "--source-root", str(REPO),
+            "--dest-root", str(REPO / ".omx" / "tmp" / "dk1_unit_dest"),
+            "--ledger", str(REPO / ".omx" / "tmp" / "dk1-unit-ledger.jsonl"),
+            "--category", "rebuildable",
+            "--reason", "unit fixture",
+        ],
+    )
+    assert mover.main() == 2
+    err = capsys.readouterr().err
+    assert "is not under" not in err  # cleared the source-root gate
+    assert "SOURCE filesystem" in err  # stopped by the invariant that matters
+
+
 def test_local_tier_destination_requires_an_explicit_opt_in_flag(mover):
     """CLAUDE.md storage waterfall: local disk is a destination only by opt-in."""
     source = (REPO / "tools" / "vertigo_certify_move.py").read_text(encoding="utf-8")
