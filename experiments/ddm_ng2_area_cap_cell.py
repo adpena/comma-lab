@@ -446,6 +446,63 @@ def seal() -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 # 3. sealed source snapshot
 # ---------------------------------------------------------------------------
+#: repo paths a sealed tree shares by symlink rather than copying.  Every one of them is
+#: sha-pinned by ``qbt.verify_pins`` / ``qbr1.verify_inputs``, so sharing is exactly what those
+#: gates check; copying 5 GB of GT cache per seal would buy nothing and cost the SSD tier.
+SHARED_INPUT_PATHS = (
+    "upstream",
+    "experiments/results/mlx_fleet_gt_cache",
+)
+
+
+def link_shared_inputs(destination: Path) -> dict[str, str]:
+    """Point the sealed tree's large pinned inputs at the repo, the way wc3's tree does.
+
+    ``git archive`` carries only tracked files, so the frozen scorer weights and the 5 GB GT
+    cache are absent from a fresh extract and the tree could not verify its own pins.  wc3's
+    ``sealed_source_106d0dd0_v2`` -- the tree the live chain runs -- solves this the same way:
+    ``upstream`` and ``experiments/results/mlx_fleet_gt_cache`` are symlinks to the repo.
+    """
+
+    linked: dict[str, str] = {}
+    for relative in (*SHARED_INPUT_PATHS, ".venv"):
+        target = REPO / relative
+        if not target.exists():
+            raise NG2Error(f"shared input is absent from the repo: {target}")
+        link = destination / relative
+        if link.is_symlink():
+            link.unlink()
+        elif link.exists():
+            subprocess.run(["rm", "-rf", str(link)], check=True)
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(target)
+        linked[relative] = str(target)
+    return linked
+
+
+def verify_pins_inside(destination: Path) -> dict[str, Any]:
+    """Prove the SEALED tree can compile a cell -- run its own pin gates in its own process."""
+
+    script = (
+        "import json,sys;"
+        f"sys.path.insert(0, {str(destination)!r});"
+        "from experiments import ddm_qbr1_born_fairform_burn_prep as q;"
+        "r=q.verify_inputs();"
+        "print(json.dumps({'qbt_trainer': r['qbt_trainer']['sha256'],"
+        " 'gt_cache': r['qbt_gt_cache']['sha256'], 'segnet': r['qbt_segnet']['sha256'],"
+        " 'posenet': r['qbt_posenet']['sha256']}))"
+    )
+    completed = subprocess.run(
+        [str(REPO / ".venv/bin/python"), "-c", script],
+        cwd=destination, text=True, capture_output=True, check=False,
+    )
+    if completed.returncode != 0:
+        raise NG2Error(
+            f"the sealed tree cannot verify its own pins:\n{completed.stderr.strip()[-2000:]}"
+        )
+    return {"status": "PASS", **json.loads(completed.stdout.strip().splitlines()[-1])}
+
+
 def snapshot_source(destination: Path | None = None) -> dict[str, Any]:
     """Materialize the sealed source tree the cap cell fires from, at the current commit.
 
@@ -476,15 +533,17 @@ def snapshot_source(destination: Path | None = None) -> dict[str, Any]:
                        cwd=REPO, stdout=stream, check=True)
     subprocess.run(["tar", "-xf", str(archive), "-C", str(destination)], check=True)
     archive.unlink()
-    venv = destination / ".venv"
-    if not venv.exists():
-        venv.symlink_to(REPO / ".venv")
+    shared = link_shared_inputs(destination)
     manifest = {
         "schema": SNAPSHOT_SCHEMA,
         "arm": ARM,
         "revision": revision,
         "root": str(destination),
-        "method": "git archive of the committed revision, extracted; .venv symlinked to the repo",
+        "method": "git archive of the committed revision, extracted; the pinned large inputs "
+                  "and the venv are symlinked to the repo (they are sha-pinned, so sharing them "
+                  "is what verify_pins checks, not what it could be fooled by)",
+        "shared_inputs": shared,
+        "pins_verify_inside_the_sealed_tree": verify_pins_inside(destination),
         "files": {
             name: qbt.file_fact(destination / name)
             for name in (
