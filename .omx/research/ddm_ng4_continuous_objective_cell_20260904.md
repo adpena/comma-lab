@@ -339,11 +339,34 @@ multiply θ-dependent terms (the seg surrogate and the per-class penalty), so th
 cannot coincide and the step-1 states must differ. That is an argument, not a receipt — the sha
 comparison is what settles it, and it is owed.
 
-> **SMOKE RESULT — appended when the governed waiter completes; see
-> `…/ng4_continuous_objective/bounded_smoke/BOUNDED_SMOKE_RESULT.json` and the waiter's receipt
-> `NG4_SMOKE_WAITER2_DONE.json`. At seal time ng2 stood at 2,928/5,000 updates and ng3 at
-> 887/5,000, both contending for the Metal, so admission at 42 GiB was ~35.5 GiB short. Whoever
-> harvests this arm should read that JSON and append its rows here.**
+### SMOKE RESULT — owed, and the hand-off is self-contained
+
+At close-out, MEASURED rates over a 240 s window: ng2 13.3 updates/min (3,167/5,000, ~2.3 h left)
+and ng3 12.0 updates/min (1,127/5,000, ~4 h left once it stops contending). `used_gib` never fell
+below ~105 GiB against the 116 GiB ceiling, so a 42 GiB arm was never admissible.
+
+**The waiter completes this unattended.** It polls the same governor, requires the admission to
+HOLD three consecutive polls, fires arm 1 at 42 GiB and arm 2 at arm 1's MEASURED peak + 15%, runs
+`smoke-finalize`, and then renders the memo rows itself:
+
+| what lands | where |
+|---|---|
+| raw result | `…/ng4_continuous_objective/bounded_smoke/BOUNDED_SMOKE_RESULT.json` |
+| **the markdown rows to paste under this heading** | `…/bounded_smoke/SMOKE_APPENDIX.md` (written by `…/ddm_ng4_continuous_objective/render_smoke_appendix.py`) |
+| per-arm receipts + retained payloads | `…/bounded_smoke/{control,continuous}/` |
+| waiter receipt (this is what notifies the fleet) | `NG4_SMOKE_WAITER4_DONE.json`; log at `…/ddm_ng4_continuous_objective/smoke_waiter_launch4/run.log` |
+
+**Three rows in that appendix are STOP conditions, not decorations.** If the no-op detector reports
+IDENTICAL states, the lever is inert and nothing about this cell may be claimed. If the control's
+step-1 state does NOT reproduce ng1's cold reference `27f51418…`, this landing moved the training
+path and the cell may not be compared against the existing control. If the differential is not
+bit-identical, something leaked out of the `tau_band` / `margin_dual` blocks into the objective.
+The appendix prints each of those verdicts in words, so a harvester cannot skim past a red one.
+
+The appendix also settles a question this arm could only infer: **the measured per-arm peak RSS**
+tells the lineage whether ng2's 41.46 and ng3's 41.48 GiB were one update's high-water (~41.5 GiB
+per arm, as this arm inferred) or two arms summed (~20.7 GiB each). Every future split smoke's
+projection depends on which.
 
 ## MAIN fire command
 
@@ -503,7 +526,7 @@ on this design.
 
 | # | follow-on | disposition | owner | fire condition |
 |---|---|---|---|---|
-| 1 | **`SEALED-AWAITING-SMOKE-THEN-MAIN`** — finish the bounded smoke (the waiter is armed), then copy re-rooted → authorized, bind claims, fire the command above | **SEALED, ready** | this arm for the smoke; MAIN for the burn | the governor admits (a live cell releases) AND ng1/ng2/ng3 are adjudicated |
+| 1 | **`SEALED-AWAITING-SMOKE-THEN-MAIN`** — the armed waiter finishes the bounded smoke and writes `SMOKE_APPENDIX.md`; paste it under the SMOKE RESULT heading and check its three STOP rows. Then copy re-rooted → authorized, bind claims, fire the command above | **SEALED, ready; smoke OWED and armed** | the waiter (autonomous, receipt `NG4_SMOKE_WAITER4_DONE.json`); MAIN for the burn | smoke: the governor admits for 3 consecutive polls, ~4 h out at close-out. Burn: the smoke's STOP rows are clean AND ng1/ng2/ng3 are adjudicated |
 | 2 | **`CONDITIONAL-WARM-AND-CONTINUOUS-TWIN`** — carry r10's AdamW moments AND its objective state | **QUEUED-WITH-FIRE-ORDER** | MAIN to assign | fires ONLY if falsifier 1 PASSES; composing a lost lever (ng1) with a winning one is only legible once the winner is measured alone (`[[m164]]`) |
 | 3 | **`CONDITIONAL-DECOMPOSE-THE-TWO-CARRIED-STATES`** — τ-only and λ-only cells | **QUEUED, no fire order** | unowned; MAIN to assign or close | fires if falsifier 1 PASSES and the effect is large enough that attributing it to one of the two is worth two more cells; if it FAILS, decomposition is wasted |
 | 4 | **`CLOSE-THE-LIVE-SHADOW-GAP`** — start from r10's LIVE weights with its shadow as the EMA state, instead of collapsing both to the shadow | **QUEUED, needs a control** | unowned | fires only with a NEW matched control, because it moves the start point and every existing cell's comparability rests on the pinned same-start |
