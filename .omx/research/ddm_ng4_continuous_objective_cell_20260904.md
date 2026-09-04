@@ -301,11 +301,19 @@ the Metal and system-used sat at **112.1 GiB against the adaptive 116.0 GiB ceil
 **A projection correction I made against my own first plan.** I split the smoke into one arm per
 process (`smoke --arm {control,continuous}`, with `smoke-finalize` paying no forward pass at all —
 it reads the payloads the arms already retained) on the assumption that ng3's **41.48 GiB**
-high-water was two arms summed, so one arm would cost ~half. Then I read ng2's: **41.46 GiB**. Two
-arms with *different* extra computations (ng2 a gradient probe, ng3 a differential) landing within
-0.02 GiB of each other says the high-water is set by the ONE update's forward+backward, which is
-identical in both — **not** by summing arms. So the split buys ISOLATION, not a smaller peak, and
-arm 1 projects the full **42 GiB**. Over-projecting costs wall clock; under-projecting risks an OOM
+high-water was two arms summed, so one arm would cost ~half. Then I read both receipts:
+
+| arm | `peak_rss_bytes` | GiB | arms × updates | the extra in the same process | wall |
+|---|---:|---:|---|---|---:|
+| ng2 | 44,514,918,400 | **41.46** | 2 × 1 | a gradient probe | 74.5 s |
+| ng3 | 44,542,115,840 | **41.48** | 2 × 1 | a differential | 61.1 s |
+
+Two runs whose *extra* computations differ, and whose wall clocks differ by 22%, landing **0.02 GiB
+(27 MB) apart**. A summed high-water would have to track both arms' allocations overlapping in
+time, but the arms run sequentially and each segment's model, optimizer and graph are locals freed
+on return. The one thing identical in both runs is the B=16 forward+backward — so **that** is the
+high-water, and one arm costs ~41.5 GiB, not half of it. The split buys ISOLATION and a per-arm
+attribution, not a smaller peak, and arm 1 projects the full **42 GiB**. Over-projecting costs wall clock; under-projecting risks an OOM
 cascade that would kill two live 3-hour Metal cells. Arm 2's projection is then derived from arm
 1's MEASURED `peak_rss_bytes` + 15%, because by then a measurement exists.
 
