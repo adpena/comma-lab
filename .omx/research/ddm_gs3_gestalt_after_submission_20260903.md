@@ -296,3 +296,22 @@ line, computable before anything is built; lb1's NEXT #2 wires it into the chart
 `centerline_deg>3` truncation in the band coder (23.33 m lateral error) — guard + tests, live count 0.
 Equations leg (`tac.canonical_equations`): `v8_geometric_rate_decomposition_v1` (Lane carrier, new vehicle) ·
 `checkpoint_trajectory_error_partition_v1` (the object scored against).
+
+## ADDENDUM 12 (2026-09-04 15:40Z) — pr1: the re-solve measured; the renderer axis closes on SEG; a −1.03e-4 S candidate
+
+MEASURED (ddm_pr1 c7b537053, n600, jg5's GN solver — up2's ±2 radius would have measured the solver): the terminal
+pose re-solve on ft1's renderer-change candidate recovers **16.42×** (598/600 pairs; jg5's 8× was a token-edit number)
+→ k_post **13.82** (k_pre 228.45); re-solved d_pose 9.43e-4 is still **41.5× over** the payable bar; the carrier
+re-solve costs **+125 B**. The premise the whole closing arithmetic rested on — local linearity — is FALSE: the
+reflected step raises d_seg 21.55× more than the forward step. **The seg-only renderer axis is closed because the seg
+gain is unreachable along the only exportable axis, not because pose is unpayable.** Residue = the int12 carrier's
+representation limit (100% of pairs want a GN step beyond ±2; 9.67% beyond the lattice; ten pairs own 69% of the
+post-solve mean).
+
+**Pointer path found on the LIVE afr1 object:** the receiver's per-pair frame-0 selector — 39/600 pairs beat their
+shipped mode by >1% (pair 85's shipped op is actively harmful); priced through the receiver's own blob formula:
+**+36 B for net −1.032e-4 S** → projected **0.14787295862740366** `[macOS-CPU advisory projection]`. Needs: an encoder
+for the selector op (the runtime is decode-only), a batch-8 re-measure, a byte-closed splice, and a T4 row; promote iff
+exact S < 0.14797617125559104. Small, real, and the first exact-row candidate of the wave (ddm_fs1).
+Equations leg (`tac.canonical_equations`): `renderer_seg_pose_coupling_shipped_object_v1` (domain PRE/POST re-solve, 3
+anchors).
