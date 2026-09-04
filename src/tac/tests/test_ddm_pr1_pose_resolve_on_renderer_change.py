@@ -328,3 +328,109 @@ class TestCodesMergeGate:
             merged.update(pr1.load_done(path))
         assert merged[0]["codes"] == [1, 1]
         assert merged[1]["codes"] == [2, 2]
+
+
+def _measure_stub(tmp_path, name, values, *, batch_size=8, pairs_index=(0, 1, 2),
+                  gt="gt.pt", sha=pr1.FRONTIER_ARCHIVE_SHA256):
+    import json
+
+    arr = np.asarray(values, dtype=np.float64)
+    payload_dir = tmp_path / f"{name}_payload"
+    payload_dir.mkdir(parents=True, exist_ok=True)
+    arr_path = payload_dir / "per_pair_d_pose.npy"
+    np.save(arr_path, arr)
+    doc = {
+        "schema": "tac.ddm_pr1.measure.v1",
+        "batch_size": batch_size,
+        "pairs_index": list(pairs_index),
+        "pair_selection": "full n600",
+        "instrument": {"gt_cache": gt, "archive_sha256": sha},
+        "payload": {"per_pair_d_pose": {"path": str(arr_path)}},
+    }
+    path = tmp_path / f"{name}.json"
+    path.write_text(json.dumps(doc), encoding="utf-8")
+    return path
+
+
+class TestReportGuards:
+    def test_refuses_cross_instrument_differencing(self, tmp_path):
+        a = _measure_stub(tmp_path, "a", [1.0, 1.0, 1.0])
+        b = _measure_stub(tmp_path, "b", [1.0, 1.0, 1.0], batch_size=32)
+        c = _measure_stub(tmp_path, "c", [1.0, 1.0, 1.0])
+        args = pr1.build_parser().parse_args(
+            ["report", "--base-measure", str(a), "--before-measure", str(b),
+             "--after-measure", str(c), "--delta-d-seg", "1e-5",
+             "--delta-d-seg-source", "test", "--out", str(tmp_path / "r.json")]
+        )
+        with pytest.raises(pr1.Pr1Error, match="cross-instrument"):
+            pr1.run_report(args)
+
+    def test_refuses_a_different_pair_set(self, tmp_path):
+        a = _measure_stub(tmp_path, "a", [1.0, 1.0, 1.0])
+        b = _measure_stub(tmp_path, "b", [1.0, 1.0, 1.0], pairs_index=(0, 1, 5))
+        c = _measure_stub(tmp_path, "c", [1.0, 1.0, 1.0])
+        args = pr1.build_parser().parse_args(
+            ["report", "--base-measure", str(a), "--before-measure", str(b),
+             "--after-measure", str(c), "--delta-d-seg", "1e-5",
+             "--delta-d-seg-source", "test", "--out", str(tmp_path / "r.json")]
+        )
+        with pytest.raises(pr1.Pr1Error, match="cross-instrument"):
+            pr1.run_report(args)
+
+    def test_refuses_a_foreign_schema(self, tmp_path):
+        import json
+
+        bad = tmp_path / "bad.json"
+        bad.write_text(json.dumps({"schema": "something.else"}), encoding="utf-8")
+        with pytest.raises(pr1.Pr1Error, match="not a ddm_pr1 measure"):
+            pr1._load_measure(bad)
+
+    def test_coupling_and_payability_are_reported_apart(self, tmp_path):
+        base = _measure_stub(tmp_path, "base", [1e-6, 1e-6, 1e-6])
+        before = _measure_stub(tmp_path, "before", [1e-2, 1e-2, 1e-2])
+        after = _measure_stub(tmp_path, "after", [2e-6, 2e-6, 2e-6])
+        out = tmp_path / "r.json"
+        args = pr1.build_parser().parse_args(
+            ["report", "--base-measure", str(base), "--before-measure", str(before),
+             "--after-measure", str(after), "--delta-d-seg", "6.9e-5",
+             "--delta-d-seg-source", "test", "--out", str(out)]
+        )
+        assert pr1.run_report(args) == 0
+        import json
+
+        got = json.loads(out.read_text(encoding="utf-8"))
+        assert got["recovery"]["mean_based"] == pytest.approx(5000.0)
+        assert got["coupling"]["post_re_solve"] == pytest.approx(
+            (2e-6 - 1e-6) / 6.9e-5
+        )
+        assert got["coupling"]["pre_re_solve"] == pytest.approx(
+            (1e-2 - 1e-6) / 6.9e-5
+        )
+        # the two verdicts are distinct fields, never one conflated flag
+        assert "prediction_holds" in got["charter_prediction"]
+        assert "payable" in got["closing_arithmetic"]
+        assert got["closing_arithmetic"]["k_post_payable_bar"] == pytest.approx(
+            (pr1.payable_pose_ceiling(-0.25 * pr1.AFR1_D_SEG_T4) - pr1.AFR1_D_POSE_T4)
+            / (0.25 * pr1.AFR1_D_SEG_T4)
+        )
+
+    def test_recovery_quantiles_expose_the_tail(self, tmp_path):
+        base = _measure_stub(tmp_path, "base", [1e-6] * 3)
+        before = _measure_stub(tmp_path, "before", [1e-2, 1e-2, 1e-2])
+        after = _measure_stub(tmp_path, "after", [1e-9, 1e-3, 1e-6])
+        out = tmp_path / "r.json"
+        args = pr1.build_parser().parse_args(
+            ["report", "--base-measure", str(base), "--before-measure", str(before),
+             "--after-measure", str(after), "--delta-d-seg", "6.9e-5",
+             "--delta-d-seg-source", "test", "--out", str(out)]
+        )
+        pr1.run_report(args)
+        import json
+
+        got = json.loads(out.read_text(encoding="utf-8"))
+        rec = got["recovery"]
+        assert rec["median_per_pair"] == pytest.approx(1e4)
+        assert rec["mean_based"] < rec["median_per_pair"], (
+            "the mean is a mean of per-pair MSEs; the worst pairs own it"
+        )
+        assert rec["pairs_improved"] == 3

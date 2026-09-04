@@ -541,6 +541,155 @@ def run_codes(args) -> int:
     return 0
 
 
+# --------------------------------------------------------------------------
+# mode=report -- the coupling, the recovery distribution, the closing arithmetic.
+# --------------------------------------------------------------------------
+
+
+def _load_measure(path: Path) -> dict[str, Any]:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if payload.get("schema") != "tac.ddm_pr1.measure.v1":
+        raise Pr1Error(f"{path} is not a ddm_pr1 measure report")
+    return payload
+
+
+def _per_pair(measure: dict[str, Any]) -> np.ndarray:
+    return np.load(measure["payload"]["per_pair_d_pose"]["path"])
+
+
+def _same_instrument(*measures: dict[str, Any]) -> None:
+    """Refuse to difference rows that were not taken on ONE instrument.
+
+    jg5 Sec 4b measured this forward moving with the batch shape, so a
+    before/after pair taken at different shapes, GT lineages, batch sizes or
+    pair sets is a CROSS-instrument comparison wearing a delta's clothes.
+    """
+    keys = {
+        (
+            m["batch_size"],
+            tuple(m["pairs_index"]),
+            m["instrument"]["gt_cache"],
+            m["instrument"]["archive_sha256"],
+        )
+        for m in measures
+    }
+    if len(keys) != 1:
+        raise Pr1Error(
+            "measures differ in batch shape, pair set, GT lineage or body; "
+            "differencing them would be a cross-instrument comparison"
+        )
+
+
+def run_report(args) -> int:
+    base = _load_measure(args.base_measure)
+    before = _load_measure(args.before_measure)
+    after = _load_measure(args.after_measure)
+    _same_instrument(base, before, after)
+    base_pp, before_pp, after_pp = _per_pair(base), _per_pair(before), _per_pair(after)
+    pairs = np.asarray(base["pairs_index"], dtype=np.int64)
+
+    ratio = before_pp / np.maximum(after_pp, 1e-30)
+    improved = after_pp < before_pp
+    mean_before, mean_after = float(before_pp.mean()), float(after_pp.mean())
+    mean_base = float(base_pp.mean())
+    delta_d_seg = float(args.delta_d_seg)
+    k_pre = abs(mean_before - mean_base) / abs(delta_d_seg)
+    k_post = (mean_after - mean_base) / abs(delta_d_seg)
+
+    # The closing arithmetic, re-derived at a named seg cut rather than copied.
+    cut = abs(float(args.seg_cut_fraction)) * AFR1_D_SEG_T4
+    ceiling = payable_pose_ceiling(-cut)
+    predicted_after_at_cut = AFR1_D_POSE_T4 + k_post * cut
+    k_post_payable_bar = (ceiling - AFR1_D_POSE_T4) / cut
+
+    report = {
+        "schema": "tac.ddm_pr1.report.v1",
+        "axis": "[macOS-CPU advisory, frozen CPU-torch PoseNet]",
+        "score_claim": False,
+        "promotable": False,
+        "label": args.label,
+        "pairs": len(pairs),
+        "pair_selection": base["pair_selection"],
+        "batch_size": base["batch_size"],
+        "instrument": base["instrument"],
+        "inputs": {
+            "base_measure": str(args.base_measure),
+            "before_measure": str(args.before_measure),
+            "after_measure": str(args.after_measure),
+        },
+        "d_pose": {
+            "base_as_shipped": mean_base,
+            "candidate_stale_carrier": mean_before,
+            "candidate_re_solved": mean_after,
+            "afr1_t4_receipt": AFR1_D_POSE_T4,
+            "base_vs_t4_relative": mean_base / AFR1_D_POSE_T4 - 1.0,
+        },
+        "recovery": {
+            "mean_based": mean_before / mean_after if mean_after else float("inf"),
+            "median_per_pair": float(np.median(ratio)),
+            "geometric_mean_per_pair": float(np.exp(np.log(np.maximum(ratio, 1e-30)).mean())),
+            "pairs_improved": int(improved.sum()),
+            "pairs_unchanged_or_worse": int((~improved).sum()),
+            "quantiles_per_pair": {
+                str(q): float(np.quantile(ratio, q))
+                for q in (0.0, 0.05, 0.25, 0.5, 0.75, 0.95, 1.0)
+            },
+            "share_of_mean_after_from_worst_10_pairs": float(
+                np.sort(after_pp)[-10:].sum() / after_pp.sum()
+            ) if after_pp.sum() > 0 else None,
+            "jg5_transferred_factor": 8.0,
+            "fcd2_transferred_factor": 5.87,
+        },
+        "coupling": {
+            "delta_d_seg_used": delta_d_seg,
+            "delta_d_seg_source": args.delta_d_seg_source,
+            "pre_re_solve": k_pre,
+            "post_re_solve": k_post,
+            "ft1_pre_re_solve_n200": 217.30366224024704,
+            "rf1_pre_re_solve_n600": 166.80837961844966,
+        },
+        "closing_arithmetic": {
+            "seg_cut_fraction": abs(float(args.seg_cut_fraction)),
+            "seg_cut_d_seg": cut,
+            "payable_pose_ceiling": ceiling,
+            "predicted_d_pose_at_that_cut": predicted_after_at_cut,
+            "overshoot_multiple": predicted_after_at_cut / ceiling,
+            "k_post_payable_bar": k_post_payable_bar,
+            "payable": bool(predicted_after_at_cut <= ceiling),
+            "assumption": (
+                "DIRECTION SYMMETRY: the measured candidate moved d_seg UP; applying "
+                "k_post to a seg DECREASE assumes local linearity of the realized map "
+                "around the shipped weights. Stated, not measured."
+            ),
+        },
+        "charter_prediction": {
+            "predicted_post_re_solve_coupling_below": 20.0,
+            "prediction_holds": bool(k_post < 20.0),
+            "falsifier_recovery_below": 3.0,
+            "falsifier_fired": bool((mean_before / mean_after if mean_after else float("inf")) < 3.0),
+            "note": (
+                "the charter's success band (k_post < 20) and PAYABILITY "
+                "(k_post <= the bar above) are different events and are reported apart"
+            ),
+        },
+    }
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    payload_dir = out.parent / f"{out.stem}_payload"
+    payload_dir.mkdir(parents=True, exist_ok=True)
+    ratio_path = payload_dir / "per_pair_recovery_ratio.npy"
+    np.save(ratio_path, ratio)
+    report["payload"] = {
+        "per_pair_recovery_ratio": {
+            "path": str(ratio_path), "sha256": sha256_array(ratio),
+            "bytes": ratio_path.stat().st_size,
+        }
+    }
+    out.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    print(json.dumps(report, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -579,6 +728,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="mean d_pose at which the DERIVED materiality floor is evaluated",
     )
 
+    report = sub.add_parser("report", help="coupling + recovery + closing arithmetic")
+    report.add_argument("--base-measure", type=Path, required=True)
+    report.add_argument("--before-measure", type=Path, required=True)
+    report.add_argument("--after-measure", type=Path, required=True)
+    report.add_argument("--delta-d-seg", type=float, required=True)
+    report.add_argument("--delta-d-seg-source", required=True)
+    report.add_argument("--seg-cut-fraction", type=float, default=0.25)
+    report.add_argument("--label", default="pr1_report")
+    report.add_argument("--threads", type=int, default=4)
+    report.add_argument("--out", type=Path, required=True)
+
     codes = sub.add_parser("codes", help="merge solved rows into a 600x12 code table")
     codes.add_argument("--runtime", type=Path, required=True)
     codes.add_argument("--rows", nargs="+", required=True)
@@ -601,6 +761,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_solve(args)
     if args.command == "codes":
         return run_codes(args)
+    if args.command == "report":
+        return run_report(args)
     return 2
 
 
