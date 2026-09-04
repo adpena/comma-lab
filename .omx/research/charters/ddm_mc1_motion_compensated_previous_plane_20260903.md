@@ -116,3 +116,13 @@ motion model × per class: IoU, SCREEN bits, ideal-coder ceiling), the retrain r
 model bytes, export sha), the exact RC64 rows (stream, model, archive, Δ, identity, decode delta),
 the typed decision, RECALL EVIDENCE, NEXT_IF_RESUMED, LIVE-HYPOTHESES, DEAD-ENDS. Commit via the
 serializer. Cite `docs/operating_manual_craft_handoff.md`. End with the own-vehicle frontier line.
+
+## RE-SPAWN ADDENDUM (MAIN, 2026-09-04 23:20Z) — routed to a FABLE arm (operator: "use fable for the most crucial frontier score lowering work")
+The 2026-09-03 codex spawn was stranded by the codex quota (row `live`, no process, no result; quota returns Sep 7 06:39). Nothing above
+changes except the pointer numbers: the frontier is now **fs2 — S 0.14784474152757654 @ 180,023 B** (archive sha a8f3a379…0427bb6; the
+fs1 → fs2 moves were pose-only, the token stream and model bytes are UNCHANGED from afr1: stream 113,411 B + model 13,515 B). Demand at
+held distortion: **−41,817.8 B → archive ≤ 138,205.2 B**; exchange 6.658589531221714e-7 S/B. Decision rule §4: read "24th-pointer-move
+CANDIDATE" as "26th". The identity base for the receiver copy is the fs2 fire tree
+`/Volumes/VertigoDataTier/pact/ddm_fs2_carrier_resolve/fire_runtime_D_alternation/` (cpr1 receiver identical to the PR tree's). Retained
+exact AFR1 field: locate via the jbp1 receipt as written above; the field is identical for fs1/fs2 (pose-only edits never touch it).
+Everything else — ceiling first, warm-start retrain, RC64 exact price, payloads retained, no Modal/Metal/scorer — binds verbatim.
