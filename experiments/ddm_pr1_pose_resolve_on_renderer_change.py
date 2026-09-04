@@ -322,6 +322,8 @@ def run_measure(args) -> int:
     instrument, meta = build_instrument(
         runtime=args.runtime, gt_cache=args.gt_cache, axis=args.axis,
         renderer_source=args.renderer, tokens_path=args.tokens,
+        archive_sha256=getattr(args, "expect_archive_sha256", None)
+        or FRONTIER_ARCHIVE_SHA256,
     )
     pairs = select_pairs(args.pairs, args.seed)
     codes = instrument.state.codes.copy()
@@ -420,6 +422,8 @@ def run_solve(args) -> int:
     instrument, meta = build_instrument(
         runtime=args.runtime, gt_cache=args.gt_cache, axis=args.axis,
         renderer_source=args.renderer, tokens_path=args.tokens,
+        archive_sha256=getattr(args, "expect_archive_sha256", None)
+        or FRONTIER_ARCHIVE_SHA256,
     )
     pairs = shard_of(select_pairs(args.pairs, args.seed), args.shard_index, args.shard_count)
     out_dir = Path(args.out)
@@ -806,6 +810,8 @@ def run_selector(args) -> int:
     instrument, meta = build_instrument(
         runtime=args.runtime, gt_cache=args.gt_cache, axis=args.axis,
         renderer_source=args.renderer, tokens_path=args.tokens,
+        archive_sha256=getattr(args, "expect_archive_sha256", None)
+        or FRONTIER_ARCHIVE_SHA256,
     )
     state = instrument.state
     codes = state.codes.copy()
@@ -918,6 +924,16 @@ def build_parser() -> argparse.ArgumentParser:
         command.add_argument("--seed", type=int, default=20260904)
         command.add_argument("--label", default="pr1")
         command.add_argument("--threads", type=int, default=4)
+        command.add_argument(
+            "--expect-archive-sha256", default=FRONTIER_ARCHIVE_SHA256,
+            help=(
+                "body this instrument is allowed to measure; defaults to the afr1 "
+                "frontier this arm was written for. A SUCCESSOR body (ddm_fs1's "
+                "candidate B and beyond) is measured by naming its sha here -- the "
+                "gate stays closed, it just stops being frozen to one generation "
+                "([[binding-instruction-numbers-expire-and-nobody-rederives-them]])."
+            ),
+        )
 
     measure = sub.add_parser("measure", help="per-pair d_pose at one declared batch shape")
     common(measure)

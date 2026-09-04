@@ -594,6 +594,7 @@ def build_archive(
     *,
     runtime_dir: Path = DEFAULT_RUNTIME,
     container_search: bool = False,
+    container_options: Sequence[tuple[bool, int, int]] | None = None,
     verify: bool = True,
 ) -> dict[str, Any]:
     """Rebuild ``archive.zip`` carrying ``codes``, running every layer backwards.
@@ -602,6 +603,15 @@ def build_archive(
     carrier interleave) are searched over ``CONTAINER_OPTIONS`` and the smallest stream
     wins, ties going to the shipped shape.  Every candidate is verified to decompress
     back to the exact carrier bytes before it can be selected.
+
+    ``container_options`` overrides BOTH branches with an explicit ordered list.
+    It exists because ``BROTLI_QUALITY``/``BROTLI_LGWIN`` above are this module's
+    OWN generation's shipped shape, and a later body may ship a different one:
+    ``ddm_fs1`` measured the F26 semantic-joint body at q=9/lgwin=16, where
+    q=11 costs 2 bytes MORE.  Defaulting a successor body to q=11 would silently
+    lose those 2 bytes and, worse, break the byte-identity control the whole
+    splice is anchored on
+    ([[binding-instruction-numbers-expire-and-nobody-rederives-them]]).
 
     With ``verify`` (the default) the finished bytes are parsed back through the
     receiver and refused unless they decode to exactly ``codes``.  The builder must not
@@ -651,11 +661,18 @@ def build_archive(
         runtime_dir=runtime_dir,
         residual_archive=ra,
     )
-    options = (
-        CONTAINER_OPTIONS
-        if container_search
-        else ((body.ck2_carrier, BROTLI_QUALITY, BROTLI_LGWIN),)
-    )
+    if container_options is not None:
+        options = tuple(
+            (bool(a), int(b), int(c)) for a, b, c in container_options
+        )
+        if not options:
+            raise Up3Error("container_options was given but is empty")
+    else:
+        options = (
+            CONTAINER_OPTIONS
+            if container_search
+            else ((body.ck2_carrier, BROTLI_QUALITY, BROTLI_LGWIN),)
+        )
     chosen: tuple[bool, int, int] | None = None
     carrier_stream = b""
     for use_ck2, quality, lgwin in options:
@@ -735,10 +752,10 @@ def build_archive(
             "brotli_quality": chosen[1],
             "brotli_lgwin": chosen[2],
             "rx1_reserved": f"{reserved:#x}",
-            "searched": bool(container_search),
-            "identical_to_shipped_shape": bool(
-                chosen == (body.ck2_carrier, BROTLI_QUALITY, BROTLI_LGWIN)
-            ),
+            "searched": bool(container_search) or container_options is not None,
+            "options_considered": [list(o) for o in options],
+            "identical_to_shipped_shape": bool(chosen == options[0]),
+            "shipped_shape": list(options[0]),
         },
     }
 
