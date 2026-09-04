@@ -272,3 +272,27 @@ packet-ABI cut on the born vehicle, not on afr1. Micro lever for the next born g
 ~64 updates rather than substitute another run's moments.
 Equations leg (`tac.canonical_equations`): `checkpoint_trajectory_error_partition_v1` (md1) ·
 `muon_finisher_schedule_warmstart_and_lr_anneal_v1` (negative anchor, ng1) · `chan_vese_area_constraint_birth_balance_v1` (ng2, live).
+
+## ADDENDUM 11 (2026-09-04 15:05Z) — lb1: the fourth instrument; the accuracy half of sub-0.12 on the small born body is CLOSED
+
+MEASURED (ddm_lb1 1cb05f03d; prereg ced026cdd BEFORE the numbers; md1's argmax reproduced bit-for-bit, d_seg_hat gap 0.0):
+a **perfect-Lane ORACLE** (exact Lane authority both directions) removes 63.12% of md1's persistent set with zero harm
+and still leaves the born field at **8.94× the sub-0.12 corner** (4.70× jointly with perfect optimization). The landed
+lane-band carrier, 162 configurations, improves d_seg in NONE (best +0.008481 S): it recalls 93.5% of the lane but
+its precision ceiling is 0.565 against a break-even of **0.909**, because P(born wrong | GT=Lane) = 0.0996 — the born
+field is already 90% right about the lane; its largest casualty is Lane itself. Bytes were never the constraint
+(2,832 B). Corrections: vr1 row 10's "Lane band d_seg 0.00087" is the witness TARGET (FN 0.00046; FP as full authority
+0.00396; gauge `measured=False`); the carrier's coder is `serialize_lane_band_rd` (LBND2), not the residual sidecar.
+
+**State of the accuracy corner (× the 1.3647e-4 target):** born terminal 20.57× → persistent floor 12.75× (md1) →
+perfect Lane carrier 8.94× → + schedule ceiling 5.55× → perfect carrier AND perfect optimization 4.70×. Four
+independent instruments — capacity (gc1), form (gf2), optimization (md1), class-matched carriers at their ceiling
+(lb1) — close the accuracy half of sub-0.12 on the small born body. The rate corner (−42,016 B at held distortion) is
+the only arithmetic door left, and no lever reaches it. **NOT authorized:** a born trainer with Lane held in-loop.
+
+**Transferable law (lb1):** an authority-substitution lever is priced by the INCUMBENT's per-class accuracy, not by
+the lever's own fidelity — break-even precision = P(inc correct | ¬C) / (P(inc correct | ¬C) + P(inc wrong | C)) is one
+line, computable before anything is built; lb1's NEXT #2 wires it into the charter lint. Also closed: a silent
+`centerline_deg>3` truncation in the band coder (23.33 m lateral error) — guard + tests, live count 0.
+Equations leg (`tac.canonical_equations`): `v8_geometric_rate_decomposition_v1` (Lane carrier, new vehicle) ·
+`checkpoint_trajectory_error_partition_v1` (the object scored against).
