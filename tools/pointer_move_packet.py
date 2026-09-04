@@ -281,6 +281,30 @@ def duplicate_custody(
     return record
 
 
+def next_move_number(repo_root: Path) -> int | None:
+    """One past the highest move number in the events ledger, or None when unseeded.
+
+    Returning None rather than 1 is deliberate: guessing an ordinal would put two memos
+    under one number, and a ledger with a hole in it is worse than an explicit argument.
+    """
+
+    path = repo_root / ".omx/state/pointer_move_events.jsonl"
+    if not path.is_file():
+        return None
+    highest = 0
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            value = json.loads(line).get("move_number")
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, int) and value > highest:
+            highest = value
+    return highest + 1 if highest else None
+
+
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--harvest", required=True, help="MODAL_REMOTE_RESULT.json from the fire")
@@ -289,7 +313,15 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--call-id", default=None, help="Modal call id (default: read from the fire manifest)")
     ap.add_argument("--archive", default=None, help="the scored archive.zip, re-hashed against the row")
     ap.add_argument("--seal", default=None, help="candidate seal JSON pinning the scored archive")
-    ap.add_argument("--move-number", type=int, required=True, help="ordinal of this pointer move")
+    ap.add_argument(
+        "--move-number",
+        type=int,
+        default=None,
+        help="ordinal of this pointer move; default: one past the highest in "
+        ".omx/state/pointer_move_events.jsonl. The ledger has to be seeded once with an "
+        "explicit number because the first 25 moves predate it — after that the ordinal "
+        "is derived and can no longer drift.",
+    )
     ap.add_argument("--memo-path", default=None, help="default: .omx/research/<lane>_pointer_move_<n>_<date>.md")
     ap.add_argument("--custody-subdir", default=None, help="dir name under the second SSD tier")
     ap.add_argument("--headline", default="", help="memo title clause (prose, the arm's claim)")
@@ -322,6 +354,16 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     repo_root = Path(args.repo_root).resolve()
+    if args.move_number is None:
+        derived = next_move_number(repo_root)
+        if derived is None:
+            print(
+                "REFUSED: no --move-number and .omx/state/pointer_move_events.jsonl carries "
+                "none to count from. Pass the ordinal explicitly once; after that it is derived.",
+                file=sys.stderr,
+            )
+            return 7
+        args.move_number = derived
     harvest_path = Path(args.harvest).resolve()
     packet: dict[str, Any] = {
         "schema": "pointer_move_packet.v1",

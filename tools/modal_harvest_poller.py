@@ -19,6 +19,7 @@ import hashlib
 import json
 import pathlib
 import re
+import subprocess
 import sys
 import time
 from collections.abc import Callable
@@ -490,6 +491,95 @@ def _close_terminal_claim(
         return f"CLAIM CLOSE FAILED ({type(exc).__name__}): {exc}"
 
 
+def _stage_pointer_move_packet(
+    *,
+    result: Any,
+    result_path: pathlib.Path,
+    out_dir: pathlib.Path,
+    lane_id: str | None,
+    repo_root: pathlib.Path = REPO_ROOT,
+) -> str | None:
+    """Stage the pointer-move packet when this row beats the pointer on its axis.
+
+    THE STEP THIS REMOVES. On 2026-09-04 two exact rows landed and MAIN hand-executed
+    ~10 consequences for each, mistyping a sha once and mis-computing a corner demand
+    once. The packet computes all of them; the remaining hand step was REMEMBERING to
+    run it, which is the same class of failure one level up.
+
+    PLAN mode, deliberately. The packet writes a memo whose PROSE (the mechanism, the
+    non-claims) is a claim about the world that only the arm that produced the row can
+    make. So the poller computes and stages everything and prints the exact ``--apply``
+    command; it does not publish a memo with placeholder prose over a real frontier
+    move. Failure here NEVER fails a harvest: the payload and the ledger row are
+    already durable.
+    """
+
+    if not isinstance(result, dict) or result.get("passed") is not True:
+        return None
+    try:
+        sys.path.insert(0, REPO_SRC)
+        from tac.canonical_frontier_pointer import load_canonical_frontier_pointer_lenient
+        from tac.pointer_move import score_row_from_harvest
+
+        row = score_row_from_harvest(result, lane_id=lane_id)
+        pointer = load_canonical_frontier_pointer_lenient(repo_root=repo_root)
+        anchor = getattr(pointer, f"our_local_frontier_{row.axis}", None) if pointer else None
+        prior = None
+        if anchor is not None:
+            data = anchor.as_dict() if hasattr(anchor, "as_dict") else dict(anchor)
+            prior = data.get("score")
+        if prior is not None and row.score >= float(prior):
+            return f"POINTER UNMOVED: S {row.score} does not beat the {row.axis} pointer {prior}"
+        cmd = [
+            str(repo_root / ".venv/bin/python"),
+            str(repo_root / "tools/pointer_move_packet.py"),
+            "--harvest", str(result_path),
+            "--lane-id", lane_id or "",
+        ]
+        plan = subprocess.run(  # subprocess-no-check-OK: plan-only; rc recorded into the staged receipt
+            [c for c in cmd if c] + ["--json"],
+            cwd=str(repo_root), capture_output=True, text=True,
+        )
+        (out_dir / "POINTER_MOVE_PLAN.json").write_text(
+            json.dumps(
+                {
+                    "schema": "pointer_move_staged_plan.v1",
+                    "beats_pointer": True,
+                    "prior_pointer_score": prior,
+                    "score": row.score,
+                    "axis": row.axis,
+                    "apply_command": " ".join(cmd) + " --headline '<one clause>' "
+                    "--mechanism-file <file> --equations-leg '<one line>' --apply",
+                    "plan_rc": plan.returncode,
+                    "plan_stdout_tail": plan.stdout[-4000:],
+                    "plan_stderr_tail": plan.stderr[-1000:],
+                    "note": (
+                        "This row BEATS the pointer. The packet writes every consequence; "
+                        "the memo prose (mechanism, non-claims, equations leg) is the arm's "
+                        "and must be supplied before --apply."
+                    ),
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        return f"POINTER MOVE STAGED: {out_dir / 'POINTER_MOVE_PLAN.json'} (S {row.score} beats {prior})"
+    except Exception as exc:  # never fail a real harvest on bookkeeping
+        (out_dir / "POINTER_MOVE_STAGING_FAILED.json").write_text(
+            json.dumps(
+                {
+                    "schema": "pointer_move_staging_failed.v1",
+                    "error_class": type(exc).__name__,
+                    "error": str(exc)[:500],
+                    "consequence": "run tools/pointer_move_packet.py by hand on this harvest",
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        return f"POINTER MOVE STAGING FAILED ({type(exc).__name__}): {exc}"
+
+
 def poll_modal_call(
     *,
     call_id: str,
@@ -637,6 +727,11 @@ def main() -> int:
         )
         if close_note:
             print(close_note)
+        stage_note = _stage_pointer_move_packet(
+            result=r, result_path=result_path, out_dir=out, lane_id=args.lane_id
+        )
+        if stage_note:
+            print(stage_note)
         (out / "poller.done").write_text("ok\n")
         return 0
 
