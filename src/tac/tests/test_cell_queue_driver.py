@@ -305,8 +305,32 @@ class TestReads:
         run_dir = tmp_path / "run"
         _history(run_dir, [{"completed_steps": s, "objective": {"m": s / 10}} for s in (1, 2, 3)])
         assert q.read_history_at_step(run_dir, 2)["completed_steps"] == 2
-        assert q.read_history_at_step(run_dir, 99)["completed_steps"] == 3
         assert q.read_history_at_step(run_dir, 0) is None
+
+    def test_read_history_returns_none_when_the_step_is_not_reached(self, tmp_path):
+        """REGRESSION (caught on the LIVE ng3 run, 2026-09-04): no answering an unreached milestone.
+
+        ng3 stood at 741 steps and the step-5000 falsifier came back EVALUATED/fired=false off
+        step-741 data -- a FALSE SURVIVED for a kill condition the cell had had no chance to trip.
+        """
+        run_dir = tmp_path / "run"
+        _history(run_dir, [{"completed_steps": s, "objective": {"m": 0.1}} for s in (1, 2, 3)])
+        assert q.read_history_at_step(run_dir, 99) is None
+        assert q.read_history_at_step(run_dir, 3)["completed_steps"] == 3
+
+    def test_falsifier_beyond_current_progress_is_pending_not_survived(self, tmp_path):
+        """End-to-end shape of the same bug: the verdict must be PENDING, never SURVIVED."""
+        run_dir = tmp_path / "run"
+        _history(
+            run_dir,
+            [{"completed_steps": s, "objective": {"seg_expected_flip_realized": 0.003}}
+             for s in (740, 741)],
+        )
+        cell = _cell(tmp_path)  # falsifier at_step=2000
+        results = q.evaluate_falsifiers(cell, run_dir)
+        assert results[0]["status"] == "NOT_YET_REACHED"
+        assert results[0]["fired"] is None
+        assert q.cell_verdict(cell, run_dir, [])["verdict"] == "PENDING"
 
     def test_read_history_missing_file(self, tmp_path):
         assert q.read_history_at_step(tmp_path / "absent", 10) is None
@@ -343,12 +367,21 @@ class TestReads:
         assert rows[0]["metrics"]["objective.m"]["control"] is None
 
     def test_milestone_not_yet_reached(self, tmp_path):
+        """A milestone beyond the run's progress is NOT reached, and reports no treatment value.
+
+        This assertion previously read ``is True`` -- it had codified the false-survived bug
+        (a row existed at/below 5000, so the read "succeeded" off step-10 data). The live ng3
+        integration run exposed it; the correct semantics are asserted here.
+        """
         treatment = tmp_path / "t"
         _history(treatment, [{"completed_steps": 10, "objective": {"m": 0.4}}])
         rows = q.milestone_reads(_cell(tmp_path, milestones=[5000]), treatment, ["objective.m"])
-        assert rows[0]["treatment_reached"] is True  # a row at/below 5000 exists
-        rows = q.milestone_reads(_cell(tmp_path, milestones=[5]), treatment, ["objective.m"])
         assert rows[0]["treatment_reached"] is False
+        assert rows[0]["metrics"]["objective.m"]["treatment"] is None
+        # A milestone the run HAS passed still reads normally.
+        rows = q.milestone_reads(_cell(tmp_path, milestones=[10]), treatment, ["objective.m"])
+        assert rows[0]["treatment_reached"] is True
+        assert rows[0]["metrics"]["objective.m"]["treatment"] == 0.4
 
 
 class TestFalsifiers:

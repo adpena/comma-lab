@@ -373,11 +373,23 @@ def _dotted(row: Mapping[str, Any], path: str) -> Any:
 
 
 def read_history_at_step(run_dir: Path, step: int) -> dict[str, Any] | None:
-    """The last history row whose ``completed_steps`` is <= ``step``, or None."""
+    """The history row AT ``step``, or None when the run has not reached ``step`` yet.
+
+    THE BUG THIS FIXES (caught 2026-09-04 by running ``verdict`` against the LIVE ng3 run, not a
+    fixture).  The obvious implementation -- "the last row with ``completed_steps <= step``" --
+    silently answers a milestone the run has not reached: ng3 stood at 741 steps and the step-5000
+    falsifier came back ``status=EVALUATED, fired=false`` off step-741 data.  That is a FALSE
+    SURVIVED: a pre-registered kill condition reported as passed before the cell had any chance to
+    trip it.  A verdict apparatus that does this is worse than none.
+
+    The cure is one extra condition: only answer when the run has actually progressed to at least
+    ``step``.  Otherwise the caller gets None and the falsifier reports ``NOT_YET_REACHED``.
+    """
     history = run_dir / "history.jsonl"
     if not history.is_file():
         return None
     best: dict[str, Any] | None = None
+    max_completed = -1
     try:
         with history.open("r", encoding="utf-8") as handle:
             for line in handle:
@@ -391,11 +403,15 @@ def read_history_at_step(run_dir: Path, step: int) -> dict[str, Any] | None:
                 if not isinstance(row, dict):
                     continue
                 completed = row.get("completed_steps")
-                if isinstance(completed, int) and completed <= step:
+                if not isinstance(completed, int):
+                    continue
+                max_completed = max(max_completed, completed)
+                if completed <= step:
                     best = row
-                elif isinstance(completed, int):
-                    break
     except OSError:
+        return None
+    # NOT REACHED: the run's furthest progress is still short of the milestone.
+    if max_completed < step:
         return None
     return best
 

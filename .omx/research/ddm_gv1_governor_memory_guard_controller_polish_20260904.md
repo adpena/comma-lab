@@ -14,9 +14,22 @@ charged nothing for the growth the live cells still owed. Both are now fixed in 
 function that the queue driver and the digest share, and the Metal-contention question ("does a
 second cell actually make the machine faster?") is now MEASURED rather than assumed.
 
-**The measured law:** at N=2 on this box, concurrency **paid by 11.7%** — 31.2854 steps/min vs a
-28.0 steps/min serial baseline (speedup 1.1173, per-cell efficiency 0.5586). One anchor. Not a
-scaling law. N=3 is unmeasured and must not be extrapolated.
+**The measured result — and it is a NEGATIVE, correcting my own first claim.** I measured N=2
+concurrency twice, identically, 30 minutes apart:
+
+| window | total steps/min | vs 28.0 baseline |
+|---|---:|---|
+| 420 s @ 15:55Z | **31.2854** | ratio 1.117 — concurrency PAYS |
+| 300 s @ 16:25Z | **26.9996** | ratio 0.964 — concurrency **COSTS** |
+
+**It does not replicate.** The between-window spread is 4.286 steps/min = **15.9% of the mean**,
+which is **LARGER than the 3.285 effect the first window appeared to show**. Two windows of the same
+two cells straddle the serial baseline. **The concurrency speedup at N=2 on this box is UNRESOLVED**,
+and my earlier "concurrency paid by 11.7%" was a one-window artifact I over-claimed.
+
+What *is* established: the governor's throughput leg works. It read the second row, computed
+0.964 < 1.0, and **flipped to REFUSE on measured evidence** — exactly the behaviour it exists for.
+A live guard on the latest measured row is real; a *law* that concurrency pays is not.
 
 ---
 
@@ -107,7 +120,10 @@ a 12 GiB non-cell job — and there was one alive on this box while I worked.
 | ng3 tau_band | 111 | 15.8570 |
 | **total, concurrency 2** | 219 | **31.2854** |
 
-Against the serial baseline of 28.0 steps/min: **speedup 1.1173, per-cell efficiency 0.5586.**
+Against the serial baseline of 28.0 steps/min this window gave **speedup 1.1173, per-cell
+efficiency 0.5586** — but see the replication above: a second, identical window gave **26.9996
+steps/min (0.964)**, and the spread between them exceeds the effect. Neither window alone is the
+answer; together they say the effect is **not resolved**.
 
 `throughput_verdict` admits a further cell only while measured concurrent total ≥ the serial
 baseline, and labels its evidence grade honestly: `MEASURED` / `NO_SERIAL_BASELINE` /
@@ -158,7 +174,9 @@ arithmetic nothing extra. The divergence is recorded here rather than silently r
    near-symmetric rates by then, which suggests MAIN's asymmetry was ng3 still ramping. The
    difference (35 vs 31.29, ~12%) is itself **larger than any measured noise floor, because no noise
    floor exists** — one 420 s window gives no variance estimate.
-3. **CPU LOAD IS AN UNCONTROLLED CO-FACTOR, and it confounds my own ratio.** `ddm_bh1` measured ng2
+3. **The replication failed outright (see the headline table).** 31.2854 then 26.9996 steps/min,
+   straddling the baseline. This is the finding that matters most in §2, and it is a negative.
+4. **CPU LOAD IS AN UNCONTROLLED CO-FACTOR, and it confounds my own ratio.** `ddm_bh1` measured ng2
    at ~15.5 steps/min with **four CPU arms live** — essentially my 15.43. So my concurrent row was
    taken under CPU load (`loadavg 4.35 / 18 logical CPUs` at the time of writing), while the
    second-hand 28.0 serial baseline has **no recorded load context at all**. The 1.117 speedup
@@ -166,14 +184,28 @@ arithmetic nothing extra. The divergence is recorded here rather than silently r
    its true value could be higher or lower. Cure landed: `cpu_load_context` (loadavg 1/5/15m +
    logical CPUs) plus `live_job_count` and `training_cell_count` are now recorded on every
    contention row, so future rows are comparable and this one is explicitly marked as the row that
-   is not. Any future comparison of two
+   is not. Note the direction does not obviously rescue the effect: window 2 ran at LOWER load
+   (loadavg 3.114) and was the SLOWER of the two, so CPU pressure alone does not explain the gap. Any future comparison of two
    speedups closer than that unmeasured floor is unresolvable.
 
-**EQUATIONS LEG:** registered as `metal_concurrency_speedup_gv1_v1`
-(`tools/register_metal_concurrency_speedup_equation.py`), one anchor, null hypothesis = "concurrency
-buys nothing", residual +3.2854 steps/min, `concurrency_extrapolation_permitted: False`,
-`RECALIBRATE_ON_NEW_ANCHORS`. Per-cell efficiency at N=2 is already 0.5586, so the marginal third
-cell may be net-negative and **nothing in this anchor predicts it.**
+**EQUATIONS LEG — registered, then SUPERSEDED by my own replication.**
+
+- `metal_concurrency_speedup_gv1_v1` — registered off the first window alone, with
+  `one_line_summary` asserting a 1.1173 speedup. **That claim is overturned.** The failed-replication
+  anchor was appended to it (posterior_std 1.52 on a mean of 2.14 — the registry correctly reports
+  near-total uncertainty).
+- `metal_concurrency_speedup_gv1_v2` — **supersedes v1**, carries both anchors with clean method
+  slugs, `verdict: UNRESOLVED_AT_N2`, and a MEASURED `noise_floor_steps_per_min: 4.286`.
+  HISTORICAL_PROVENANCE respected: v1 is preserved, not mutated.
+
+**Two defects of mine recorded in v2's supersession reason**, rather than left for a reader to trip
+over: (1) v1's summary states an overturned claim; (2) v1 carries a **malformed residual key** — I
+passed a paragraph of prose as `measurement_method` where the registry convention is a short slug
+(median 76 chars across 787 existing anchors; e.g. `pr101_op7_diff`), and the posterior helper used
+that prose as a dict key and as `measurement_axis`.
+
+Per-cell efficiency at N=2 was 0.5586 in the favourable window; with the effect now inside the noise,
+**N=3 is entirely unpredicted** and `concurrency_extrapolation_permitted` stays `False`.
 
 ---
 
@@ -298,16 +330,26 @@ the honest receipt was that the measurement already existed.
 | costate organ live-cell SENSE | `tools/costate_digest.py::section_live_cells` | `src/tac/tests/test_costate_digest_live_cells.py` (12) |
 | equations leg | `tools/register_metal_concurrency_speedup_equation.py` | registry read-back verified |
 
-**131 new tests, all passing; ruff clean on every file.**
+**136 new tests, all passing; ruff clean on every file.**
 
 Regression check (207 passed / 1 failed): the single failure,
 `test_costate_digest_ncde.py::test_section_omitted_on_short_telemetry`, is **PRE-EXISTING** — proved
 by measurement, not inspection: it reproduces identically after `git checkout` of my
 `costate_digest.py` change, and my diff there is `+131/-0` with zero lines touching `ncde`.
 
-### What the second review pass actually found
+### What review + live integration testing actually found
 
-Three real defects, each fixed and pinned by a test:
+Four real defects, each fixed and pinned by a test. The fourth was caught only by running the tool
+against a LIVE run instead of a fixture — worth more than the other three combined:
+
+0. **FALSE SURVIVED — a pre-registered falsifier reported as passed before its step was reached.**
+   `read_history_at_step` returned "the last row with `completed_steps <= step`", so with ng3 at
+   **741 steps** the **step-5000** falsifier came back `status=EVALUATED, fired=false` off step-741
+   data. A verdict apparatus that silently clears kill conditions the cell never had a chance to trip
+   is worse than none. Cured: the read now returns None unless the run has actually progressed to
+   the step, so the falsifier reports `NOT_YET_REACHED` and the verdict is `PENDING`.
+   **My own fixture test had codified the bug** (it asserted `treatment_reached is True` at step 5000
+   with 10 steps of history) — agreeing-with-the-test, caught by real data.
 
 1. **The throughput leg was silently vacuous whenever an unrelated job was alive.** It counted every
    live governed job, so with 2 cells + 1 unrelated job it demanded a concurrency-4 ledger row that
