@@ -294,3 +294,14 @@ cold-transition excursion itself (law `cold_transition_excursion_open_then_recov
 **Seed 3 control (seed 20260904, MAIN read 2026-09-04 08:22Z):** S_hat 0.398768 → 0.453957 @1k → 0.484131 @2k →
 0.479115 @3k → 0.474665 @4k → **0.437829 @5k (+9.80% above the warm start)**; d_seg_hat 0.0025183 → 0.0028996. The
 cold-transition shape held (fifth cell; three seeds). Cell 6 (seed-3 treatment) fired at the terminal; chain end ≈ 11:20Z.
+
+## ADJUDICATION (sealed rule, 2026-09-04 ~11:05Z, `ADJUDICATION_RESULT.json`)
+
+`disposition = OPTIMIZATION_CLOSED_CHANGED_CAPACITY_OBJECT_ONLY` · treatment wins **1/3** (seed 20260904 only:
+0.425652 vs 0.437829, Δ −0.012177; seeds 20260902/03 lost by +0.002275 / +0.008965) · pose corner passes **0/3** ·
+axis `[macOS-MPS n32 stratified advisory; not contest authority]` · `score_claim: False`. Six cells, every one opened
+the cold-transition excursion and ended +6.6% to +11.5% above the shared warm start (control 0.4251/0.4358/0.4378;
+treatment 0.4274/0.4447/0.4257). The QBR1 lever (`native_interface_weight` 0 vs 100) is CLOSED at FORMULATION scope on
+this cold schedule; the first-order finding of record is the transition. The warm-transition cell (ng1) was FIRED at
+11:10:05Z from the sealed tree (claims `ddm_ng1_scorer_20260904` / `ddm_ng1_metal_20260904`; QBR1 claims closed with
+terminal rows). Equations leg (`tac.canonical_equations`): `muon_finisher_schedule_warmstart_and_lr_anneal_v1`.
