@@ -115,6 +115,12 @@ MD1_CALIBRATION_GATE_INTEGER_RESIDUAL = 0
 MD1_PREREGISTERED_PREDICTION = 0.60
 MD1_PREREGISTERED_FALSIFIER = 0.40
 
+# Second measured instance: the ng1 warm-transition cell (same seed, same data order, one lever --
+# r10's AdamW moments carried in), same 71-checkpoint cadence, same shadow forward, same authority.
+MD1_WARM_TERMINAL_NUMERATOR = 343_320
+MD1_WARM_PERSISTENT_NUMERATOR = 202_590
+MD1_WARM_PERSISTENT_TERMINAL_SHARE = 0.5900897589898404
+
 
 def partition_is_exact(
     class_numerators: Mapping[str, Sequence[int]], total_numerator: Sequence[int]
@@ -263,6 +269,74 @@ def build_checkpoint_trajectory_error_partition_v1() -> CanonicalEquation:
         ),
         empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
     )
+    warm_anchor = EmpiricalAnchor(
+        anchor_id="md1_ng1_warm_transition_seed_20260902_shadow_trajectory_partition_20260904",
+        measurement_utc="2026-09-04T14:22:00Z",
+        inputs={
+            "cell": "ng1 warm transition, seed 20260902, 5,000 updates, r10 AdamW moments carried",
+            "forward": "EMA shadow",
+            "checkpoints": MD1_CADENCE_CHECKPOINTS,
+            "sites": 6_291_456,
+            "gt_authority": "DALI gt_cache_dali.pt",
+            "churn_flips": DEFAULT_CHURN_FLIPS,
+            "persistent_fraction": DEFAULT_PERSISTENT_FRACTION,
+            "single_lever": (
+                "optimizer_state_dict only; the step-0 milestone is bit-identical to the cold "
+                "control's, so the two cells share a start and differ in one thing"
+            ),
+        },
+        predicted_output={
+            "prior_law": (
+                "the cold instance measured 62.011%; a same-seed same-data-order twin differing "
+                "only in the optimizer state should land near it if the persistent set is a "
+                "property of the representation rather than of the trajectory"
+            ),
+            "preregistered_prediction": MD1_PREREGISTERED_PREDICTION,
+            "preregistered_falsifier": MD1_PREREGISTERED_FALSIFIER,
+            "preregistration": ".omx/research/ddm_md1_prereg_20260904.md",
+        },
+        empirical_output={
+            "terminal_weighted_wrong_site_numerator": MD1_WARM_TERMINAL_NUMERATOR,
+            "persistent_weighted_wrong_site_numerator": MD1_WARM_PERSISTENT_NUMERATOR,
+            "denominator": MD1_DENOMINATOR,
+            "persistent_terminal_share": MD1_WARM_PERSISTENT_TERMINAL_SHARE,
+            "calibration_gate_integer_residual": MD1_CALIBRATION_GATE_INTEGER_RESIDUAL,
+            "persistent_floor_d_seg_hat": MD1_WARM_PERSISTENT_NUMERATOR / MD1_DENOMINATOR,
+            "persistent_floor_over_target": (
+                MD1_WARM_PERSISTENT_NUMERATOR / MD1_DENOMINATOR / 1.3646784205e-4
+            ),
+            "cold_instance_persistent_share": MD1_PERSISTENT_TERMINAL_SHARE,
+            "two_instance_spread_pp": (
+                100.0 * (MD1_PERSISTENT_TERMINAL_SHARE - MD1_WARM_PERSISTENT_TERMINAL_SHARE)
+            ),
+            "warm_born_absent_from_cold_own_peak": 0.453982167145232,
+            "warm_born_absent_from_cold_same_step_range": [0.3769, 0.6480],
+            "reading": (
+                "the persistent SHARE transfers across the optimizer lever to within 3.0 pp, but "
+                "the SITE SETS the two cells break do not: 37.7-64.8% of the warm cell's born "
+                "sites are absent from the cold cell's at every identical step"
+            ),
+        },
+        residual=abs(MD1_WARM_PERSISTENT_TERMINAL_SHARE - MD1_PREREGISTERED_PREDICTION),
+        source_artifact=_LEDGER,
+        measurement_method=(
+            "same instrument, cadence and authority as the cold anchor, one lever; born-set overlap "
+            "measured both at each cell's own d_seg peak and at ten identical steps"
+        ),
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=(
+                "/Volumes/APDataStore/pact/ddm_md1_micro_macro"
+                "/ANALYSIS_warm_transition_seed_20260902_dali.json"
+            ),
+            reactivation_criteria=(
+                "a DIFFERENT seed at the same cadence turns two same-seed instances into a "
+                "seed-independent reading; until then the share is measured on one seed"
+            ),
+            measurement_axis=_AXIS,
+            hardware_substrate="m5_max_128gib_cpu",
+        ),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    )
     return CanonicalEquation(
         equation_id="checkpoint_trajectory_error_partition_v1",
         name="Checkpoint-trajectory error partition and the optimizer-reachability floor",
@@ -308,8 +382,11 @@ def build_checkpoint_trajectory_error_partition_v1() -> CanonicalEquation:
                 "TOPOLOGICAL sense; this law is persistence in the TRAJECTORY sense",
             ],
             "known_boundary": (
-                "one vehicle, one cell, two forwards.  The generic statement is DERIVED from the "
-                "integer identity; the SIZE of the persistent share is a single measured instance."
+                "one vehicle, one seed, two cells (cold control and ng1 warm transition), two "
+                "forwards each.  The generic statement is DERIVED from the integer identity.  The "
+                "SIZE of the persistent share has two measured instances that agree within 3.0 pp "
+                "on the shadow forward (62.011% cold, 59.009% warm) and 0.44 pp on the live "
+                "forward (35.779% / 35.336%) -- but both are the same seed and the same vehicle."
             ),
         },
         units_in={
@@ -322,10 +399,13 @@ def build_checkpoint_trajectory_error_partition_v1() -> CanonicalEquation:
             "optimizer_reachable_share": "dimensionless_fraction",
             "persistent_share": "dimensionless_fraction",
         },
-        empirical_anchors=(md1_anchor,),
+        empirical_anchors=(md1_anchor, warm_anchor),
         predicted_vs_empirical_residual={
             "md1_qbr1_cold_control_seed_20260902_shadow_trajectory_partition_20260904": (
                 abs(MD1_PERSISTENT_TERMINAL_SHARE - MD1_PREREGISTERED_PREDICTION)
+            ),
+            "md1_ng1_warm_transition_seed_20260902_shadow_trajectory_partition_20260904": (
+                abs(MD1_WARM_PERSISTENT_TERMINAL_SHARE - MD1_PREREGISTERED_PREDICTION)
             ),
         },
         last_calibration_utc=_UTC,

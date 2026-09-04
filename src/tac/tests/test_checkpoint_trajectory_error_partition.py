@@ -126,11 +126,23 @@ def test_floor_clears_target_refuses_a_nonpositive_target() -> None:
 # ---------------------------------------------------------------------------
 # the equation record
 # ---------------------------------------------------------------------------
-def test_equation_builds_with_one_anchor_and_a_nonnegative_residual() -> None:
+def test_equation_builds_with_two_anchors_and_nonnegative_residuals() -> None:
     eq = build_checkpoint_trajectory_error_partition_v1()
     assert eq.equation_id == "checkpoint_trajectory_error_partition_v1"
-    assert len(eq.empirical_anchors) == 1
-    assert eq.empirical_anchors[0].residual >= 0.0
+    assert len(eq.empirical_anchors) == 2
+    assert [a.residual >= 0.0 for a in eq.empirical_anchors] == [True, True]
+    ids = [a.anchor_id for a in eq.empirical_anchors]
+    assert any("cold_control" in i for i in ids) and any("warm_transition" in i for i in ids)
+
+
+def test_the_two_instances_agree_on_the_share_and_disagree_on_the_sites() -> None:
+    eq = build_checkpoint_trajectory_error_partition_v1()
+    warm = next(a for a in eq.empirical_anchors if "warm_transition" in a.anchor_id).empirical_output
+    # the SHARE transfers across the one optimizer lever ...
+    assert abs(warm["two_instance_spread_pp"]) < 5.0
+    # ... while the SITE SETS do not, at every measured step
+    assert min(warm["warm_born_absent_from_cold_same_step_range"]) > 0.30
+    assert warm["warm_born_absent_from_cold_own_peak"] > 0.30
 
 
 def test_equation_axis_is_advisory_and_non_promotable() -> None:
