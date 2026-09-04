@@ -275,3 +275,7 @@ genus in two days. Cells 3–6 continue as pre-registered (the discriminator —
 field the two sealed configs differ in; verified by diffing them — stays a valid second-order read), but the
 NEXT burn generation's FIRST race is the transition itself (warm optimizer state, LR at the object's own tail,
 momentum carried), pre-registered falsifier: the warm-started cell must end BELOW 0.398768 at 5,000 steps.
+**ERRATUM to the addendum above (MAIN, from ng1 d57e49b02, verified at source):** "recover with the LR anneal" was
+TRANSFERRED from ft1 and is wrong here — this trainer has NO LR scheduler (LR 2e-4 set once, `ddm_qbr1_born_fairform_
+burn_prep.py:506`, = r10's own terminal LR); the only annealed quantity is τ 0.15→0.05. The transition is cold on ONE
+axis, AdamW's moments (cold first step 6.458× the warm one). ng1 sealed the warm cell; MAIN fires it after the chain.
