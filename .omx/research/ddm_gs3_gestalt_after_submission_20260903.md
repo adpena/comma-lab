@@ -378,3 +378,14 @@ verdict UNRESOLVED_AT_N2; v1 preserved). The guard flipped to REFUSE on the seco
 Two more gv1 defects found by RUNNING, not reading: the manifest PID is a supervisor (per-PID RSS under-reads the tree 26×);
 an unreached milestone falsifier returned `fired=false` off step-741 data (FALSE SURVIVED; cured to PENDING — the fixture
 test had codified the bug).
+
+## ADDENDUM 15 (2026-09-04 17:30Z) — THE POINTER MOVED (24th): fs1 exact T4 row S 0.14786319521362173
+
+The wave's first exact row landed below the frontier: **−1.1298e-4 S** (pose 6.37e-6 → 6.17e-6, d_seg identical, +20 B),
+realized within −2.6e-6 of the advisory projection. Full record: `ddm_fs1_pointer_move_24_20260904.md`. The lesson for the
+gestalt: the door that opened was not a wall-break — it was an UNBUILT ENCODER on a shipped op (decode-only selector) that
+the operator's "pose resolves after seg cut" reminder exposed. Two closures (rf1/ft1 coupling, ar1 post-hoc) said the
+renderer cannot be re-aimed post hoc; the selector is a DIFFERENT object (a per-pair frame-0 choice the renderer never sees),
+which is the object-change law (m148) paying out. Sub-0.12 arithmetic re-derived at the move: rate corner −41,845.5 B at
+held distortion; distortion corner 214.1× at held bytes. Equations leg (`tac.canonical_equations`):
+`exchange_ratio_noise_floor_v1` first authority anchor.

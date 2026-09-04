@@ -1,80 +1,26 @@
 <!--
 generated_at: 2026-05-23T02:06:56Z
-last_refreshed_at: 2026-08-20T07:35:00Z
-last_refreshed_by: main:catalog316_jg5_sub015_refresh_20260820
-from_state_hash: canonical_frontier_pointer_20260820_jg5_waterfill455
+last_refreshed_at: 2026-09-04T17:40:00Z
+last_refreshed_by: main:catalog316_fs1_pointer24_refresh_20260904
+from_state_hash: canonical_frontier_pointer_20260904_fs1_frame0_selector_pointer24
 -->
 
 > ## ⚠ FRESHNESS BANNER (2026-08-20) — the BODY of this report is a HISTORICAL
 > snapshot generated 2026-05-23 and is STALE. The live frontier is the canonical
 > pointer, not any row below.
 >
-> **CURRENT effective_frontier [contest-CUDA T4, n600]: S 0.14839100138338618 —
-> THE FIRST SUB-0.15 EXACT ROW (THE GOAL's T3 target ACHIEVED, fifteenth pointer
-> move, 2026-08-20).** archive sha
-> `f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e` @ 180,625 B
+> **CURRENT effective_frontier [contest-CUDA T4, n600]: S 0.14786319521362173 —
+> TWENTY-FOURTH pointer move, 2026-09-04 (fs1 frame-0 selector re-selection: 21/600 pairs,
+> +20 B, d_seg identical, d_pose 6.37e-6 → 6.17e-6).** archive sha
+> `50fcaf1ac3c8504abdf3e0daff7c5bce32104f19d8de4a7ba207816f32e708cf` @ 180,022 B, call
+> `fc-01M1PM1KR3CQN5E5BC62WE4AD7`, recomputed from components (rate 0.11986926045895953 +
+> seg 0.020139 + pose 0.007854934754662192). Memo `.omx/research/ddm_fs1_pointer_move_24_20260904.md`.
+> PR #140 still carries the prior pointer's bytes (afr1, 180,002 B, S 0.14797617125559104 —
+> superseded locally; public update is the operator's decision).
+>
+> HISTORY (superseded): jg5 S 0.14839100138338618 @ 180,625 B — the first sub-0.15 exact row
+> (fifteenth move, 2026-08-20), archive sha `f3bce5d259a081839c48d8089c2b43a57cc7cc96cf5b8f787ff85089be8acb7e`
 > (jg5_joint_waterfill_455: 455-of-573 seg token edits kept by per-pair pose-
-> multiplier waterfill on the to1/br1 body; d_seg 0.00020139 · d_pose 6.37e-6 ·
-> rate 0.1202708; call fc-01M0EZ3DR3HVB8HBKWEG2P12CT; beats the best PUBLIC
-> leaderboard entry PR135=0.162 by 0.0136; anchor mirror
-> `experiments/results/modal_auth_eval_mirror/`, custody
-> `/Volumes/APDataStore/pact/ddm_jg5/`). Historical priors: br1
-> 0.15615242950573233 @ `44e9e650…` @ 176,429 B (fourteenth move); to1
-> 0.15659459685822907 @ `50e56145…` @ 176,420 B (twelfth move); ck2
-> 0.1566645120483069 @ `0aa1cada…` (eleventh move).
-> Every score cited in
-> the body (including "0.2053300290" as the CUDA frontier) is HISTORICAL as of
-> 2026-05-23. SoT: `.omx/state/canonical_frontier_pointer.json` via
-> `tools/refresh_canonical_frontier.py`.
-
-<!--
-generated_at: 2026-05-23T02:06:56Z
-from_state_hash: dqs1_pairset_rank009_local_advisory_drop_two_queue_20260523T0206Z
-regenerated_by: codex:dqs1_rank009_local_advisory_drop_two_queue_20260523
-last_refreshed_at: 2026-05-23T02:06:56Z
-last_refreshed_by: codex:dqs1_rank009_local_advisory_drop_two_queue_20260523
-last_refreshed_head: e72c1181f
-last_refreshed_note: |
-  Current frontier/status refresh after DQS1 top32 raw-u16 exact Modal recovery
-  and compact gap-ULEB runtime hardening. The raw-u16 DQS1 top32 archive is now
-  superseded on the contest-CPU axis by the compact gap-ULEB DQS1 archive, then
-  by the pairset drop-one rank021 DQS1 archive at 0.19202828295713675. MLX
-  remains non-authoritative local research signal. The compact gap-ULEB packet
-  passed raw-output locality and exact Modal recovery on both CPU and CUDA; CPU
-  improves the frontier, CUDA regresses. Drop-one rank019/pair0151 has now
-  passed locality and exact Modal CPU eval and regressed to the same
-  SegNet-penalized one-byte class as rank010/rank013/rank020/rank022/rank026/rank027/rank031.
-  Rank023/pair0440, rank024/pair0112, rank018/pair0588, rank017/pair0242,
-  rank016/pair0229, rank025/pair0026, rank015/pair0068, rank001/pair0501,
-  rank002/pair0109, rank003/pair0479, rank004/pair0098, rank005/pair0467,
-  rank006/pair0544, rank014/pair0492, rank007/pair0059, rank029/pair0259,
-  rank008/pair0496, rank028/pair0257, rank030/pair0412, rank012/pair0134,
-  rank011/pair0555, and rank009/pair0459 completed local
-  plan/materialize/locality/advisory and are observe-only by drift/eureka
-  calibration, so the generated local-first queue now routes drop-two
-  r029/r010 pairs 0259/0376
-  for the same local-first custody gate.
--->
-
-# Comma Lab - Current Frontier Snapshot - 2026-05-23 UTC
-
-> **2026-05-22 refresh note**: DQS1 pairset
-> `pairset_drop_one_rank021_pair0371` exact Modal CPU recovery moved the
-> scanner-derived `[contest-CPU]` best to `0.19202828295713675`, improving the
-> compact top32 gap-ULEB anchor by one charged byte with unchanged rounded
-> SegNet/PoseNet components. The compact top32 archive regresses on
-> `[contest-CUDA T4]` at `0.22619043540195719`, so this is a CPU-axis frontier
-> move only.
-> Historical roadmap sections below remain retained for context; use `.omx/state/current_focus.md`,
-> `.omx/state/next_experiments.md`, and the dated `.omx/research/` ledgers for
-> detailed queue routing.
-
-## FRONTIER (scanner-derived from canonical state)
-
-> This section is the scanner-derived citation surface. Catalog #316 checks it
-> against `.omx/state/continual_learning_posterior.json`,
-> `.omx/state/active_lane_dispatch_claims.md`, and
-> `.omx/state/modal_call_id_ledger.jsonl`. Regenerate/check manually with:
 >
 >     .venv/bin/python tools/scan_best_anchor_per_axis.py
 >
@@ -96,12 +42,12 @@ pointer because it is the actual ranked surface. This row does not imply local
 archive custody or our progress. The scanner-derived table below is retained
 for custody-specific local comparisons and must not be called the score to beat.
 
-### Current best - last rechecked 2026-09-03T02:47:01Z
+### Current best - last rechecked 2026-09-04T16:44:44Z
 
 | Axis | Best score | Archive sha256 (first 12) | Hardware | Lane |
 |---|---|---|---|---|
 | **`[contest-CPU Linux x86_64]`** | **0.1880443980** | `196acd18e4ca` | linux_x86_64_cpu | `lane_pr128_click_import_NONSUBMISSION_defensive_bank_20260712` |
-| **`[contest-CUDA T4]`** | **0.1479761713** | `cbb8d928a8cc` | linux_x86_64_t4 | `ddm_afr1_tile48_groupbin8_cuda_n600_20260831` |
+| **`[contest-CUDA T4]`** | **0.1478631952** | `50fcaf1ac3c8` | linux_x86_64_t4 | `ddm_fs1_t4_frame0_selector_20260904` |
 
 ### 2026-05-22 MLX portable-local-substrate refresh
 

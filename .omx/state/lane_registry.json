@@ -96123,6 +96123,47 @@
         }
       },
       "notes": "BACKFILL-when-discovered (pf2x r83, 2026-08-27, Check 126): historical lane_id referenced by a dormant one-shot script whose source attribution was refreshed by the r82 waiver commit. Historical/dormant."
+    },
+    {
+      "id": "lane_ddm_fs1_frame0_selector_20260904",
+      "name": "fs1 frame-0 selector byte-optimal re-selection (24th pointer move)",
+      "phase": 3.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "selector encoder + byte-optimal scan; commits 7ec320551/7f64bd379; encode(decode(shipped)) exact, 300/300 fuzz"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[empirical:/Volumes/VertigoDataTier/pact/ddm_fs1_frame0_selector/SEAL_fs1_frame0_selector_byte_optimal_contest_cuda.json] n600 batch-8 advisory net -1.103610e-4 S"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "0.14786319521362173 [contest-CUDA T4 n600] call fc-01M1PM1KR3CQN5E5BC62WE4AD7 mirror experiments/results/modal_auth_eval_mirror/contest_auth_eval_fs1_frame0_selector_t4_20260904.json"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -96132,5 +96173,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-08-27T08:26:58Z"
+  "updated_at": "2026-09-04T16:44:09Z"
 }
