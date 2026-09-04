@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import resource
 import subprocess
 import sys
 import time
@@ -676,9 +677,16 @@ def _gradient_scales(cell: Mapping[str, Any]) -> dict[str, Any]:
     ids = torch.tensor(chunk_ids, dtype=torch.long, device=device)
     target, target_pose6 = qbt._target_arrays(chunk_ids, device)
     weights = qbt.no2_sample_weights(chunk_ids, device)
-    outputs = model(ids, height=qbt.EVAL_H, width=qbt.EVAL_W)
-    camera = qbt.roundtrip_to_camera_uint8_ste(outputs["rgb_pair_01"])
-    _pose6, logits = qbt.scorer_forward(camera, posenet, segnet)
+    # NO_GRAD on the forward: the comparison is a LOGIT-SPACE one, so the logits become the leaf
+    # below and the model/scorer graph is never differentiated.  Building it anyway retained an
+    # autograd tape nothing reads.  DERIVED, not measured: the smoke's peak RSS is dominated by
+    # the two real training segments in the same address space, so this arm has no matched
+    # before/after peak for the tape alone -- the change is correct on its own terms, and the
+    # process high-water mark (reported as peak_rss_bytes) is what a re-runner should budget.
+    with torch.no_grad():
+        outputs = model(ids, height=qbt.EVAL_H, width=qbt.EVAL_W)
+        camera = qbt.roundtrip_to_camera_uint8_ste(outputs["rgb_pair_01"])
+        _pose6, logits = qbt.scorer_forward(camera, posenet, segnet)
     logits = logits.detach().requires_grad_(True)
     tau = qbt.tau_for_step(0, int(cell["total_steps"]),
                            float(cell["expected_flip_tau_start"]),
@@ -711,6 +719,10 @@ def _gradient_scales(cell: Mapping[str, Any]) -> dict[str, Any]:
     }
     scales["cap_over_recall"] = scales["area_cap"] / scales["recall_dual_penalty"]
     scales["cap_over_realized"] = scales["area_cap"] / scales["realized_seg_x100"]
+    # The multiplier that would put the cap at gradient-norm parity with the recall term it is
+    # arguing with.  Reported, NEVER applied here: re-scaling lambda to a step-0 logit-space
+    # proxy would abandon the derived balance for a tuned constant.  Falsifier 2 is the arbiter.
+    scales["lambda_scale_for_recall_gradient_parity"] = 1.0 / scales["cap_over_recall"]
     scales["pose_target_shape"] = list(target_pose6.shape)
     return scales
 
@@ -785,6 +797,7 @@ def bounded_smoke() -> dict[str, Any]:
         "gradient_scales_at_the_start_state": _gradient_scales(cell),
         "telemetry_rows_update_1": telemetry_rows,
         "all_payloads_retained": True,
+        "peak_rss_bytes": int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss),
         "elapsed_seconds": time.monotonic() - started,
     }
     qbt.atomic_json(SMOKE_ROOT / "BOUNDED_SMOKE_RESULT.json", result)
@@ -792,7 +805,14 @@ def bounded_smoke() -> dict[str, Any]:
 
 
 def _displacement(reference: Mapping[str, torch.Tensor], checkpoint_path: str) -> float:
-    state = torch.load(checkpoint_path, map_location="cpu", weights_only=False)["state_dict"]
+    """L2 displacement of the LIVE weights from the shared start after one update.
+
+    The checkpoint's weight key is ``live_state_dict`` (``_save_checkpoint``); ``state_dict`` is
+    the key on the *initial-state* payload.  Reading the live weights, not the EMA shadow, is
+    what makes this comparable to ng1's measured cold first step.
+    """
+
+    state = torch.load(checkpoint_path, map_location="cpu", weights_only=False)["live_state_dict"]
     total = 0.0
     for name, value in reference.items():
         total += float((state[name].detach().cpu() - value).double().pow(2).sum())
