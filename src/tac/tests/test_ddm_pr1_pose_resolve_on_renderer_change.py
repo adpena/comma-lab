@@ -631,3 +631,17 @@ class TestSelectorSweepSurface:
              "--codes", "/codes.npy"]
         )
         assert str(args.codes) == "/codes.npy"
+
+
+class TestSelectorSweepCarriesItsOwnCaveat:
+    def test_the_module_declares_the_batch_shape_caveat(self):
+        """A screening instrument must ship the reason it cannot be a verdict.
+
+        A single-pair evaluation is batch 1 by construction, and jg5 Sec 4b
+        measured this forward moving with the batch shape. Without the caveat in
+        the artifact, a later reader would difference a batch-1 gain against a
+        batch-8 population mean and call it a score.
+        """
+        source = _MODULE_PATH.read_text(encoding="utf-8")
+        assert "batch_shape_caveat" in source
+        assert "re-measured at the declared batch shape" in source

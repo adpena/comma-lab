@@ -868,6 +868,14 @@ def run_selector(args) -> int:
         "codes_source": str(args.codes) if args.codes else "shipped carrier codes",
         "codes_sha256": sha256_array(codes),
         "batch_size": 1,
+        "batch_shape_caveat": (
+            "a single-pair evaluation is batch 1 BY CONSTRUCTION, and jg5 Sec 4b "
+            "measured this forward moving with the batch shape. Within a pair the "
+            "shipped-mode vs best-mode comparison is same-shape and the GAIN is "
+            "valid; composing that gain against a batch-8 population mean is a "
+            "cross-shape step. Any selector set adopted from this sweep MUST be "
+            "re-measured at the declared batch shape before it is scored."
+        ),
         "modes": [
             {"index": i, "kind": m.kind, "a": m.a, "b": m.b, "c": m.c}
             for i, m in enumerate(modes)
