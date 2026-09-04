@@ -777,6 +777,125 @@ def run_report(args) -> int:
     return 0
 
 
+# --------------------------------------------------------------------------
+# mode=selector -- can the PER-PAIR frame-0 selector reach what the carrier cannot?
+# --------------------------------------------------------------------------
+
+
+def run_selector(args) -> int:
+    """Sweep the shipped selector's 8 modes on the pairs that own the pose leg.
+
+    The re-solve's surviving residue is concentrated on a handful of pairs whose
+    Gauss-Newton step demands thousands of int12 code units -- a correction the
+    12-dim carrier basis cannot represent (see ``solver_diagnostics``).  The
+    frame-0 selector is a DIFFERENT actuator on the same frame: a per-pair
+    integer pixel op (``runtime/frame0_selector.py`` SPARSE_PIXEL_MODES --
+    identity, +-1 luma, a channel tilt, two rolls, two tile dithers), chosen
+    independently per pair and shipped in a sparse combinatorial-rank blob.
+
+    So the question this mode answers is narrow and cheap: on the pairs the
+    carrier cannot reach, does ANY of the 7 non-identity modes lower d_pose?
+    A "no" closes the selector as a rescue for this residue.  A "yes" is a
+    per-pair actuator the renderer axis was told it did not have.
+
+    Nothing here ships: the sweep changes ``selector_choices`` in memory only,
+    and the byte cost of a changed selector is reported, never assumed free.
+    """
+    import ddm_up2_shipping_pose_solve as up2
+
+    instrument, meta = build_instrument(
+        runtime=args.runtime, gt_cache=args.gt_cache, axis=args.axis,
+        renderer_source=args.renderer, tokens_path=args.tokens,
+    )
+    state = instrument.state
+    codes = state.codes.copy()
+    if args.codes:
+        override = np.load(args.codes).astype(np.int32)
+        if override.shape != codes.shape:
+            raise Pr1Error(f"codes {override.shape} != shipped {codes.shape}")
+        codes = override
+    pairs = np.asarray(args.pairs_list, dtype=np.int64)
+    if pairs.size == 0:
+        raise Pr1Error("selector sweep needs at least one pair")
+    if np.any(pairs < 0) or np.any(pairs >= N_PAIRS):
+        raise Pr1Error(f"pair index out of range in {pairs.tolist()}")
+    modes = state.selector_modes
+    if not modes:
+        raise Pr1Error("this body ships no selector mode table to sweep")
+
+    coefficients = up2.codes_to_coefficients(codes, state.coefficient_scales)
+    original_choices = state.selector_choices.copy()
+    rows = []
+    started = time.time()
+    for pair in pairs:
+        per_mode = []
+        for mode_index in range(len(modes)):
+            state.selector_choices[int(pair)] = np.uint8(mode_index)
+            value, _ = up2.measure_pose(
+                instrument.posenet, state, coefficients, instrument.raw,
+                instrument.targets, np.array([int(pair)], dtype=np.int64),
+                batch_size=1,
+            )
+            per_mode.append(float(value[0]))
+        state.selector_choices[int(pair)] = original_choices[int(pair)]
+        shipped_mode = int(original_choices[int(pair)])
+        best_mode = int(np.argmin(per_mode))
+        rows.append({
+            "pair": int(pair),
+            "shipped_mode": shipped_mode,
+            "d_pose_at_shipped_mode": per_mode[shipped_mode],
+            "best_mode": best_mode,
+            "d_pose_at_best_mode": per_mode[best_mode],
+            "gain": per_mode[shipped_mode] - per_mode[best_mode],
+            "ratio": (
+                per_mode[shipped_mode] / per_mode[best_mode]
+                if per_mode[best_mode] > 0 else float("inf")
+            ),
+            "d_pose_per_mode": per_mode,
+        })
+        print(json.dumps(rows[-1]), flush=True)
+    gained = float(sum(r["gain"] for r in rows))
+    newly_active = sum(
+        1 for r in rows if r["best_mode"] != 0 and r["shipped_mode"] == 0
+    )
+    report = {
+        "schema": "tac.ddm_pr1.selector_sweep.v1",
+        "axis": "[macOS-CPU advisory, frozen CPU-torch PoseNet]",
+        "score_claim": False,
+        "promotable": False,
+        "label": args.label,
+        "instrument": meta,
+        "codes_source": str(args.codes) if args.codes else "shipped carrier codes",
+        "codes_sha256": sha256_array(codes),
+        "batch_size": 1,
+        "modes": [
+            {"index": i, "kind": m.kind, "a": m.a, "b": m.b, "c": m.c}
+            for i, m in enumerate(modes)
+        ],
+        "pairs_swept": pairs.tolist(),
+        "rows": rows,
+        "pairs_improved": int(sum(1 for r in rows if r["gain"] > 0)),
+        "total_d_pose_gain_over_swept_pairs": gained,
+        "n600_mean_gain_if_shipped": gained / N_PAIRS,
+        "newly_active_pairs": newly_active,
+        "byte_cost_note": (
+            "the selector blob is a sparse combinatorial-rank encoding "
+            "(runtime/frame0_selector.py): 7 header bytes + ceil(log2 C(600, k)) "
+            "bits of rank + 3k bits of labels. Going from k=5 (14 B shipped) to "
+            "k=15 costs about +12 B; the exact cost of any chosen set must be "
+            "measured by encoding it, never assumed."
+        ),
+        "elapsed_seconds": time.time() - started,
+    }
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, indent=2), encoding="utf-8")
+    print(json.dumps({k: report[k] for k in (
+        "label", "pairs_improved", "total_d_pose_gain_over_swept_pairs",
+        "n600_mean_gain_if_shipped", "newly_active_pairs", "elapsed_seconds")}, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -828,6 +947,13 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("--threads", type=int, default=4)
     report.add_argument("--out", type=Path, required=True)
 
+    selector = sub.add_parser(
+        "selector", help="sweep the per-pair frame-0 selector on named pairs")
+    common(selector)
+    selector.add_argument("--codes", type=Path, default=None)
+    selector.add_argument("--pairs-list", type=int, nargs="+", required=True)
+    selector.add_argument("--out", type=Path, required=True)
+
     codes = sub.add_parser("codes", help="merge solved rows into a 600x12 code table")
     codes.add_argument("--runtime", type=Path, required=True)
     codes.add_argument("--rows", nargs="+", required=True)
@@ -856,6 +982,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_codes(args)
     if args.command == "report":
         return run_report(args)
+    if args.command == "selector":
+        return run_selector(args)
     return 2
 
 

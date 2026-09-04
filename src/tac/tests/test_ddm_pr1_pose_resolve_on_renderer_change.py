@@ -606,3 +606,28 @@ class TestPartialMergeFailsClosed:
         record = json.loads((tmp_path / "codes.json").read_text(encoding="utf-8"))
         assert record["complete_n600"] is True
         assert record["pairs_written"] == pr1.N_PAIRS
+
+
+class TestSelectorSweepSurface:
+    def test_sweep_requires_explicit_pairs(self):
+        with pytest.raises(SystemExit):
+            pr1.build_parser().parse_args(
+                ["selector", "--runtime", "/r", "--gt-cache", "/g", "--renderer", "/c",
+                 "--tokens", "/t", "--out", "/o"]
+            )
+
+    def test_sweep_accepts_a_named_pair_set(self):
+        args = pr1.build_parser().parse_args(
+            ["selector", "--runtime", "/r", "--gt-cache", "/g", "--renderer", "/c",
+             "--tokens", "/t", "--out", "/o", "--pairs-list", "59", "61", "74"]
+        )
+        assert args.pairs_list == [59, 61, 74]
+        assert args.codes is None
+
+    def test_sweep_can_take_the_re_solved_codes(self):
+        args = pr1.build_parser().parse_args(
+            ["selector", "--runtime", "/r", "--gt-cache", "/g", "--renderer", "/c",
+             "--tokens", "/t", "--out", "/o", "--pairs-list", "59",
+             "--codes", "/codes.npy"]
+        )
+        assert str(args.codes) == "/codes.npy"
