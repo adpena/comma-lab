@@ -389,3 +389,20 @@ renderer cannot be re-aimed post hoc; the selector is a DIFFERENT object (a per-
 which is the object-change law (m148) paying out. Sub-0.12 arithmetic re-derived at the move: rate corner −41,845.5 B at
 held distortion; distortion corner 214.1× at held bytes. Equations leg (`tac.canonical_equations`):
 `exchange_ratio_noise_floor_v1` first authority anchor.
+
+## ADDENDUM 16 (2026-09-04 18:15Z) — ng4 sealed: two of my four "restarted objective states" were not restarts
+
+ng4 measured each named state against the quantity that ACTS. τ (0.05 → 0.15, 3.0× band) and the duals (converged → 0) ARE
+restarts and act on the gradient — carried (τ held at 0.05; duals carried, which BIND one update after the transition, so the
+carried pair starts 47.5×/211.6× ahead and the held τ removes sd1's schedule artefact 4.76×). The EMA law is NOT a restart:
+r10 EXECUTED 10011/10020 = 0.99910 (warmup arithmetic) vs the cell's 0.99908 — gap 2.24e-5 — and `ema.update` never writes the
+model (measurement channel). Batch geometry never restarted (same pair ids, chunk 16). A held temperature was structurally
+INEXPRESSIBLE (`tau_for_step` refused start == end) — that geometry contract is the landing (32 tests; control configs
+byte-identical when the blocks are absent). $0 check on ng3's retained field: the differential is bit-identical in all 15
+components (1.0765775442123413 = ng3's number).
+Instrument finding (routed to gv1): `--measured-peak-rss-gib 2.396` is an RSS FICTION on Apple Silicon — machine-wide `ps rss`
+summed 12.9 GiB while the governor's used_gib sat 104.6–113.1; INFERRED ~45 GiB of system availability per concurrent Metal
+cell (~19× the declared number). The admission gate reads the true system state and refuses correctly; the PROJECTION is blind.
+Fire order: ng4's owed B=16 smoke (no-op detector) then the cell, both behind admission once ng2 releases (~20:20Z).
+Lesson (memory erratum 2 on the cold-transition file): compare the quantity that acts, not the config field.
+Equations leg (`tac.canonical_equations`): none new — the ng4 cell is the measurement.
