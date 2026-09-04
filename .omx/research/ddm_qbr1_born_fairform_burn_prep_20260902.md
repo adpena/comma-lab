@@ -279,3 +279,7 @@ momentum carried), pre-registered falsifier: the warm-started cell must end BELO
 TRANSFERRED from ft1 and is wrong here — this trainer has NO LR scheduler (LR 2e-4 set once, `ddm_qbr1_born_fairform_
 burn_prep.py:506`, = r10's own terminal LR); the only annealed quantity is τ 0.15→0.05. The transition is cold on ONE
 axis, AdamW's moments (cold first step 6.458× the warm one). ng1 sealed the warm cell; MAIN fires it after the chain.
+**Seed 2 control (seed 20260903, MAIN read 2026-09-04 ~04:40Z):** S_hat 0.398768 → 0.462164 @1k → 0.447088 @2k →
+0.459802 @3k → 0.437715 @4k → **0.435784 @5k (+9.28% above the warm start)**; d_seg_hat 0.0025183 → 0.0027781. Same
+cold-transition excursion, second seed (fourth instance overall; law `cold_transition_excursion_open_then_recover…`).
+Cell 4 (seed 20260903 treatment) fired automatically at the terminal.
