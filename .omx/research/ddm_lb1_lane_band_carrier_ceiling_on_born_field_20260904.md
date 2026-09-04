@@ -158,7 +158,7 @@ claiming almost nothing (3,302 sites of 6.29 M). It converges on doing nothing, 
 | configuration | recall | precision | FN `d_seg` | FP `d_seg` | ΔS_seg |
 |---|---:|---:|---:|---:|---:|
 | deg 3, dash gate OFF, softness 2.0, threshold 0.05 | **0.9351** | 0.3725 | **0.000387** | **0.009398** | +0.8166 |
-| deg 3, dash gate ON, softness 1.0, threshold 0.75 | 0.5015 | **0.5651** | 0.003338 | 0.002131 | +0.1842 |
+| deg 3, dash gate ON, softness 1.0, threshold 0.75 | 0.5015 | **0.5651** | 0.002974 | 0.002302 | +0.1842 |
 
 **This reproduces FEED-dj on an independent vehicle.** FEED-dj recorded FN `d_seg` 0.00046 (implying
 ~92% recall against a 0.6% lane fraction) and FP `d_seg` **0.00396** as full authority. Measured here:
