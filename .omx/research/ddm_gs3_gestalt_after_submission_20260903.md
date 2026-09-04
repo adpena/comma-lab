@@ -406,3 +406,36 @@ cell (~19× the declared number). The admission gate reads the true system state
 Fire order: ng4's owed B=16 smoke (no-op detector) then the cell, both behind admission once ng2 releases (~20:20Z).
 Lesson (memory erratum 2 on the cold-transition file): compare the quantity that acts, not the config field.
 Equations leg (`tac.canonical_equations`): none new — the ng4 cell is the measurement.
+
+## ADDENDUM 17 (2026-09-04 22:00Z REAL — clock note: addenda 14–16 headers ran ~1 h ahead of UTC) — four landings
+
+**Burn series read (born vehicle, one cold control, seed_20260902, `[macOS-MLX research-signal]`):** the τ band [2δ_R, δ_R] (ng3) is
+the FIRST cell to END BELOW ITS START — S_hat @5k 0.391810 vs start 0.398768 vs control 0.425149 (−7.84%); excursion peak +9.2% vs the
+control's +21.8%; d_seg −1.2% vs start, d_pose −10%, bytes −77 B. The area cap (ng2) passed its pre-registered rule by −0.97% but is
+MARGINAL (@4k +3.8% worse; terminal d_seg +10.8% above start). Ordering @5k: τ band −7.84% ≫ cap −0.97% > cold 0 > warm +4.4%.
+ng4's owed smoke: ALL GREEN (no-op detector DIFFERENT; training path UNMOVED, bit-identical to ng1's cold reference; differential
+bit-identical 1.0765775442123413; peak RSS 40.4 GiB PER ARM — the 41.5 figures were per-arm, not summed). What none of it changes:
+md1's accuracy-corner closure (18.3× on d_seg still owed; schedule levers ≤1.61× — the τ band is 1.012×). The τ band is the burn-QUALITY
+lever of record; the born vehicle is not the pointer object.
+
+**ps1 (70717fb11):** the PR #140 update packet is PREPARED at `/Volumes/APDataStore/pact/ddm_ps1_pr140_update_prep/` — stage-6 selector
+replay REBUILDS fs1's archive bit-exactly from afr1's (3 runs incl. clean state; 4 negative controls refuse); compliance 78 GREEN / 7 RED
+(vs pq12 80/7; 3 NEW reds were claim-ledger SHAPE — cured by MAIN's canonical terminal row with full archive + runtime-tree shas).
+ps1's key finding falsified my charter's prediction: fs1's evaluated tree differs from the live PR tree in FOUR files (inflate.py two pin
+lines + README/compress.py/MANIFEST from the older g8v1 lineage) → the staged packet = live PR tree + two pin lines; its digest
+(ec4c9d19…) ≠ the evaluated fbf4aaf4… → a CUSTODY ROW on the staged tree was sealed (8cfa0c98…) and fired on T4 (~$0.30; same bytes,
+same score expected; binds the public tree). NOTHING PUBLISHED — the operator's one-line confirm gates it.
+
+**fm3:** the fmtools on-device lane beats the #344 regex gate where it matters — F1 0.769 vs 0.303 on eq1's 29-memo adjudication; the
+eq1 `(?<!st)ratified` fix that killed a 55% false-positive rate ALSO killed 15 of 16 true positives (recall 0.25). Landed as an ADVISORY
+column in the commit hook (fail-open, 30 s cap, 2.48 s/memo). GT-lineage gate widened to `.npz`: 2 → 378 findings, 326 in the refusing
+class → REPORT-ONLY by the charter's own rule. Constant-provenance lane: MEASURED NEGATIVE (36%, `unknown` never emitted; binary control
+fails identically → property of the task). fmtools 0.0.219: `classify_batch` + CLI, 691 tests green.
+
+**gv1's governor caught a defect by RUNNING (MAIN, 21:50Z):** with the Metal FREE, `cell_admission` still REFUSED ng4 ("5 live cells") —
+the five are launch/waiter/shard JOBS, not training cells; `contending = cells+1 = 1` then consults concurrency-≥2 evidence
+(`max(2, live_count)`) for a cell that would run ALONE. Patch: no training cell live ⇒ no contention verdict. Sister of [[m50]] VACUITY and
+the FALSE-SURVIVED genus: the guard read the wrong denominator.
+**P0 hygiene (ng4 report):** the boot volume hit 344 MiB free (ENOSPC twice) — `.omx/tmp` 208 GB + `experiments/results` 149 GB; dk1 arm
+spawned for certify-and-MOVE reclaim (never delete uncertified bytes).
+Equations leg (`tac.canonical_equations`): gm1's τ-band law — first full-burn anchor (ng3).
