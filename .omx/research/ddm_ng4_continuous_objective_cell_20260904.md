@@ -371,11 +371,24 @@ $SRC/.venv/bin/python $SRC/tools/launch_detached_process.py \
      run-config /Volumes/APDataStore/pact/ddm_ng4_continuous_objective/authorized_configs/seed_20260902_continuous_objective_control_native100.json
 ```
 
-**Memory-guard admission:** `--measured-peak-rss-gib 2.3959503173828125` is the value ng2's and
-ng3's live cells run under — the MEASURED per-cell Metal footprint of this identical object, not a
-projection. `safe_run` re-runs `system_memory_governor.live_admission_decision` at spawn and
-REFUSES (rc=5) if the system total would exceed the adaptive ceiling. At seal time it was
-refusing, so MAIN should expect to fire after a live cell releases.
+**Memory-guard admission, and a number in it that MAIN should not trust.**
+`--measured-peak-rss-gib 2.3959503173828125` is the value ng2's and ng3's live cells run under, so
+ng4 inherits it for comparability. **It is an RSS projection, and on Apple Silicon RSS does not see
+a Metal cell's real footprint.** MEASURED while both cells were live: the sum of `ps rss` over
+*every* process on the machine was **12.9 GiB**, while the governor's `used_gib` oscillated
+**104.6–113.1 GiB** and `wired_gib` **78.7–96.8 GiB** across reads seconds apart. ng3 recorded
+~59 GiB free with ONE chain cell live; with two, availability sat at 14–23 GiB. **INFERRED from
+that system-total delta (not a per-process attribution): a concurrent QBR1 Metal cell costs on the
+order of 45 GiB of system availability, ~19× the 2.396 GiB the launcher is told.** The admission
+gate itself reads the true system state and is refusing correctly — it is the *projection* that is
+blind, so `--derive-resource-budgets` under-reserves. Consequence for MAIN: two concurrent cells
+already sit near the ceiling; **a third would be launched on a number that does not describe it.**
+
+`safe_run` re-runs `system_memory_governor.live_admission_decision` at spawn and REFUSES (rc=5) if
+the system total would exceed the adaptive ceiling, so the fail-closed behaviour is intact. At seal
+time it was refusing, so MAIN should expect to fire after a live cell releases. This arm's own
+waiter additionally requires the admission to HOLD for three consecutive polls a minute apart,
+because a single-poll gate fires on the oscillation's trough.
 
 **Done-receipt name `ng4_continuous_DONE.json`** — distinct from every reserved name
 (`ng2_area_cap_r2_DONE.json`, `ng3_tau_band_DONE.json`, `NG4_SMOKE_*_DONE.json`); the launcher
