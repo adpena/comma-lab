@@ -280,7 +280,12 @@ def test_band_robustness_the_choice_of_annulus_is_not_the_confound() -> None:
 def test_detector_equation_builds_and_names_its_two_sister_costumes() -> None:
     eq = build_annulus_restricted_prefix_bias_detector_v1()
     assert eq.equation_id == DETECTOR_EQUATION_ID
-    assert len(eq.empirical_anchors) == 1
+    # Anchors pinned by IDENTITY, not by count: a bare count pins nothing about WHICH
+    # measurement backs the law, and it made a legitimate second anchor look like a
+    # regression (ddm_bh1 added the producer re-infection instance 2026-09-04).
+    anchor_ids = {anchor.anchor_id for anchor in eq.empirical_anchors}
+    assert "dr1_delta_r_n600_vs_n96_prefix_annulus_vs_global_20260904" in anchor_ids
+    assert "bh1_producer_default_still_the_prefix_after_consumer_cure_20260904" in anchor_ids
     sisters = " ".join(eq.domain_of_validity["sister_laws"])
     assert "wallclock_fixed_cost_prefix_bias_v1" in sisters
     assert "seed_ensemble_falsifier_band_v1" in sisters

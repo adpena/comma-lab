@@ -85,6 +85,7 @@ _UTC = "2026-09-04T00:00:00Z"
 _AXIS = "[macOS-CPU advisory]"
 _LEDGER = ".omx/research/ddm_dr1_delta_R_noise_floor_n600_20260904.md"
 _RECEIPTS = "reports/delta_R_noise_floor_n600.json"
+_BH1_LEDGER = ".omx/research/ddm_bh1_fresh_eyes_bug_hunt_20260904.md"
 
 # --- MEASURED (ddm_dr1, 2026-09-03) -------------------------------------------------
 PREFIX_N = 96
@@ -183,6 +184,22 @@ def prefix_constant_is_suspect(
     return bool(statistic_is_restricted and cohort_is_contiguous_prefix)
 
 
+def producer_default_reinfects_cured_constant(
+    *, consumers_cured: bool, producer_default_cohort_is_prefix: bool
+) -> bool:
+    """THE RE-INFECTION SCREEN (ddm_bh1, 2026-09-04): curing the consumers is only half a cure.
+
+    A retired prefix constant is RE-INFECTABLE whenever the downstream consumers were moved to
+    the population value while the PRODUCER that measured it still DEFAULTS to the prefix
+    cohort.  The remediation then looks complete by census -- every live consumer carries the
+    right number -- yet one flagless re-run of the producer regenerates the retired value and
+    re-seeds them.  A constant census answers "what do the consumers hold?"; it cannot answer
+    "what will the producer emit next time?", so the two screens are independent and the cure
+    is not finished until BOTH return False.
+    """
+    return bool(consumers_cured and producer_default_cohort_is_prefix)
+
+
 def build_annulus_restricted_prefix_bias_detector_v1() -> CanonicalEquation:
     """Build the restricted-statistic prefix-bias detector equation (ddm_dr1, 2026-09-04)."""
     dr1_anchor = EmpiricalAnchor(
@@ -247,6 +264,59 @@ def build_annulus_restricted_prefix_bias_detector_v1() -> CanonicalEquation:
                 "a second measured instance on a DIFFERENT restriction (per-class, per-margin-"
                 "band, per-region) would turn the annulus result into a family law; until then "
                 "the generic form is a mechanism claim, not a measured one"
+            ),
+            measurement_axis=_AXIS,
+            hardware_substrate="m5_max_128gib_cpu",
+        ),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    )
+
+    bh1_anchor = EmpiricalAnchor(
+        anchor_id="bh1_producer_default_still_the_prefix_after_consumer_cure_20260904",
+        measurement_utc="2026-09-04T00:00:00Z",
+        inputs={
+            "producer": "tools/measure_delta_R_noise_floor.py (the tool that MEASURED both values)",
+            "consumer_census": (
+                "ddm_ql2/ql3 census by VALUE over src/, tools/, experiments/, scripts/ -- every "
+                "live consumer moved off the retired constant"
+            ),
+            "screen": "argparse defaults of the producer, read at source",
+        },
+        predicted_output={
+            "producers_still_defaulting_to_the_prefix": 0,
+            "prior_law": (
+                "the dr1/ql2/ql3 remediation was recorded as complete, so the prediction was "
+                "that the producer of the retired constant also defaults to the population"
+            ),
+            "falsifier": "any producer default still naming the prefix cohort",
+        },
+        empirical_output={
+            "producers_still_defaulting_to_the_prefix": 1,
+            "producer_default_gt_npz": f"gt_n{PREFIX_N}.npz",
+            "producer_default_n": PREFIX_N,
+            "reinfection_open": True,
+            "reading": (
+                "a flagless re-run of the producer regenerated the retired "
+                f"{DELTA_R_N96!r} that the consumers had just been cured of; the constant "
+                "census had no power over the producer's defaults"
+            ),
+            "cure_landed": (
+                f"defaults moved to gt_n{POPULATION_N}.npz / --n {POPULATION_N}; the prefix is "
+                "now reachable only by explicit flags, with three regression tests"
+            ),
+        },
+        residual=1.0,
+        source_artifact=_BH1_LEDGER,
+        measurement_method=(
+            "source read of the producer's argparse defaults, plus a caller census showing no "
+            "programmatic caller supplies the flags -- so the default IS the operating value"
+        ),
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=_BH1_LEDGER,
+            reactivation_criteria=(
+                "a second measured instance in which a cured constant's producer also kept a "
+                "prefix default would make the re-infection screen a family law; today it is "
+                "one measured instance of a mechanism the dilution argument already predicts"
             ),
             measurement_axis=_AXIS,
             hardware_substrate="m5_max_128gib_cpu",
@@ -319,12 +389,14 @@ def build_annulus_restricted_prefix_bias_detector_v1() -> CanonicalEquation:
             "bias_amplification": "dimensionless_ratio",
             "global_check_is_blind": "bool",
             "prefix_constant_is_suspect": "bool",
+            "producer_default_reinfects_cured_constant": "bool",
         },
-        empirical_anchors=(dr1_anchor,),
+        empirical_anchors=(dr1_anchor, bh1_anchor),
         predicted_vs_empirical_residual={
             "dr1_delta_r_n600_vs_n96_prefix_annulus_vs_global_20260904": (
                 abs(RESTRICTED_BIAS) - PREREGISTERED_TOLERANCE
             ),
+            "bh1_producer_default_still_the_prefix_after_consumer_cure_20260904": 1.0,
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
