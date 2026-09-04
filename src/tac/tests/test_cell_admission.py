@@ -572,6 +572,23 @@ class TestCLI:
         assert payload["score_claim"] is False
         assert not ledger.exists()
 
+    def test_sample_records_cpu_load_context(self, tmp_path, capsys):
+        """CPU pressure is a co-factor on Metal throughput (ddm_bh1: ng2 ~15.5/min under 4 CPU arms).
+
+        Without it two contention rows are not comparable and the ratio mixes two machines.
+        """
+        _make_cell(tmp_path, "alpha", history_rows=3)
+        ca.main(
+            ["sample", "--window-s", "0", "--root", str(tmp_path),
+             "--ledger", str(tmp_path / "l.jsonl"), "--no-write"]
+        )
+        payload = json.loads(capsys.readouterr().out)
+        assert "cpu_load_context" in payload
+        assert payload["cpu_load_context"]["logical_cpus"] == os.cpu_count()
+        assert "load_avg_1m" in payload["cpu_load_context"]
+        assert payload["training_cell_count"] == 1
+        assert payload["live_job_count"] == 1
+
     def test_contention_summary_reports_baseline(self, tmp_path, capsys):
         ledger = tmp_path / "ledger.jsonl"
         ca.append_contention_row(
@@ -609,6 +626,55 @@ class TestRepoIntegration:
     def test_default_margin_matches_the_operator_blessed_rule(self):
         """MAIN's hand-written rule was ``reclaimable >= peak + 16``; do not silently loosen it."""
         assert ca.DEFAULT_MARGIN_GIB == 16.0
+
+    def test_bh1_measured_over_trust_case_cannot_come_back(self):
+        """REGRESSION PIN (ddm_bh1 §6, MEASURED 2026-09-04): the shell basis over-trusts 1.204x.
+
+        Queue decomposition measured on this box while the compressor held 7.32 GiB resident::
+
+            free 2.82  inactive 15.70  file_backed 11.77  purgeable 0.79  anon 15.50   (GiB)
+            fire-script basis  free + inactive              = 18.51 GiB
+            canonical basis    free + file_backed + purgeable = 15.38 GiB
+            over-trust = +3.14 GiB = 1.204x
+
+        Admission on the shell number ADMITS a 2.0 GiB candidate (18.51 >= 2.0 + 16.0); admission on
+        the canonical number REFUSES it (15.38 < 18.0). This test pins that exact 1.204x divergence
+        and the resulting flip, so re-introducing the inline arithmetic breaks a test rather than a
+        machine. Sister: ``.omx/research/ddm_bh1_fresh_eyes_bug_hunt_20260904.md`` §6.
+        """
+        free, inactive, file_backed, purgeable = 2.82, 15.70, 11.77, 0.79
+        shell_basis = free + inactive
+        canonical_basis = free + file_backed + purgeable
+        assert shell_basis == pytest.approx(18.51, abs=0.01)
+        assert canonical_basis == pytest.approx(15.38, abs=0.01)
+        assert shell_basis / canonical_basis == pytest.approx(1.204, abs=0.005)
+
+        candidate, margin = 2.0, ca.DEFAULT_MARGIN_GIB
+        assert shell_basis >= candidate + margin, "the shell basis would have ADMITTED"
+        assert canonical_basis < candidate + margin, "the canonical basis must REFUSE"
+
+    def test_resident_footprint_is_not_double_subtracted(self, monkeypatch):
+        """RECONCILIATION with ddm_bh1's cure, which is right for the SHELL basis only.
+
+        "Subtract every live cell's resident footprint" is correct against ``free + ALL inactive``,
+        where a live cell's dirty anon IS counted as headroom. Against the canonical basis it is a
+        DOUBLE-COUNT: anon never enters ``free + file_backed + purgeable``. A live cell sitting AT
+        its declared peak must therefore cost the admission arithmetic nothing extra.
+        """
+        _fixed_basis(monkeypatch, reclaimable=40.0, committed=40.0)
+        at_peak = ca.LiveCell(
+            cell_id="settled", pid=1, alive=True,
+            declared_peak_gib=20.0, current_rss_gib=20.0,
+            manifest_path=Path("/m"), config_path=None, run_dir=None,
+            total_steps=None, completed_steps=None,
+            arm_name=None, arm_role=None, purpose=None,
+        )
+        verdict = ca.memory_verdict(
+            20.0, [at_peak], margin_gib=0.0, ceiling_gib=1e9, include_naive_contrast=False
+        )
+        assert verdict.live_unrealized_gib == 0.0
+        assert verdict.required_gib == pytest.approx(20.0)
+        assert verdict.admits is True
 
     def test_module_does_not_use_raw_psutil_virtual_memory_as_a_basis(self):
         """CLASS-1 discipline: the system basis must come from ``tools/mem_basis.py`` only.

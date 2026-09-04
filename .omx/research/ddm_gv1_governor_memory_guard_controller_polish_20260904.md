@@ -115,6 +115,39 @@ baseline, and labels its evidence grade honestly: `MEASURED` / `NO_SERIAL_BASELI
 until it has data can never collect any — and the memory leg still fail-closes, so the unmeasured
 throughput leg never admits blind on the dimension that can hurt the machine.
 
+### Sister convergence — and one place I do NOT follow bh1's cure
+
+`ddm_bh1`'s fresh-eyes hunt (`.omx/research/ddm_bh1_fresh_eyes_bug_hunt_20260904.md` §6, `0dca1e3b2`)
+reached this same defect independently from the shell side, and measured the over-trust precisely:
+
+```
+free 2.82  inactive 15.70  file_backed 11.77  purgeable 0.79  anon 15.50   (GiB)
+fire-script basis  free + inactive               = 18.51 GiB
+canonical basis    free + file_backed + purgeable = 15.38 GiB
+over-trust = +3.14 GiB = 1.204x  (the law's own anchor measured 4.2x under load)
+```
+
+That exact case is now a **regression pin** (`test_bh1_measured_over_trust_case_cannot_come_back`):
+at a 2.0 GiB candidate with the 16 GiB margin, the shell number ADMITS (18.51 ≥ 18.0) and the
+canonical number REFUSES (15.38 < 18.0). Re-introducing the inline arithmetic now breaks a test
+rather than a machine.
+
+**Where I diverge, deliberately.** bh1's cure says *"subtract every live cell's measured resident
+footprint."* That is right for the **shell** basis, where a running cell's dirty anon sits on the
+inactive queue and is counted as headroom. On the **canonical** basis it would **double-count**.
+Measured on this box:
+
+```
+available_reclaimable = free 3.166 + file_backed 13.670 + purgeable 1.170 = 18.006 GiB
+```
+
+Anonymous memory — which is exactly what a resident footprint is — never enters that sum; it is
+already on the committed side. Subtracting it again would refuse launches the box can take. What the
+canonical basis genuinely does *not* know is memory a live cell has **declared but not yet
+allocated**, so that alone is charged. Pinned by
+`test_resident_footprint_is_not_double_subtracted`: a cell sitting *at* its declared peak costs the
+arithmetic nothing extra. The divergence is recorded here rather than silently resolved.
+
 ### Two honesty caveats, load-bearing
 
 1. **The serial baseline is SECOND-HAND.** 28.0 steps/min was measured by MAIN and stated in the
@@ -124,7 +157,16 @@ throughput leg never admits blind on the dimension that can hurt the machine.
    Both are honest. Mine has a longer, recorded window, and the two cells had converged to
    near-symmetric rates by then, which suggests MAIN's asymmetry was ng3 still ramping. The
    difference (35 vs 31.29, ~12%) is itself **larger than any measured noise floor, because no noise
-   floor exists** — one 420 s window gives no variance estimate. Any future comparison of two
+   floor exists** — one 420 s window gives no variance estimate.
+3. **CPU LOAD IS AN UNCONTROLLED CO-FACTOR, and it confounds my own ratio.** `ddm_bh1` measured ng2
+   at ~15.5 steps/min with **four CPU arms live** — essentially my 15.43. So my concurrent row was
+   taken under CPU load (`loadavg 4.35 / 18 logical CPUs` at the time of writing), while the
+   second-hand 28.0 serial baseline has **no recorded load context at all**. The 1.117 speedup
+   therefore mixes two effects — the second Metal cell *and* whatever CPU pressure differed — and
+   its true value could be higher or lower. Cure landed: `cpu_load_context` (loadavg 1/5/15m +
+   logical CPUs) plus `live_job_count` and `training_cell_count` are now recorded on every
+   contention row, so future rows are comparable and this one is explicitly marked as the row that
+   is not. Any future comparison of two
    speedups closer than that unmeasured floor is unresolvable.
 
 **EQUATIONS LEG:** registered as `metal_concurrency_speedup_gv1_v1`

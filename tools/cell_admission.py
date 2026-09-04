@@ -450,6 +450,21 @@ def memory_verdict(
     * ABSOLUTE ceiling -- ``true_committed + candidate_peak + live unrealized <= operator ceiling``.
 
     Fail-closed: an unmeasurable basis yields ``admits=False`` with ``measurable=False``.
+
+    WHY THE LIVE TERM IS *UNREALIZED GROWTH* AND NOT *RESIDENT FOOTPRINT* -- read before "fixing"
+    this.  The obvious-looking cure for the shell guard is "subtract every live cell's resident
+    footprint", and on the SHELL basis (``free + ALL inactive``) that is right: a running cell's
+    dirty anonymous pages sit on the inactive queue and the shell guard counts them as headroom.
+    On the CANONICAL basis it would DOUBLE-COUNT.  MEASURED on this box 2026-09-04:
+
+        available_reclaimable = free 3.166 + file_backed 13.670 + purgeable 1.170 = 18.006 GiB
+
+    Anonymous memory -- which is what a live cell's resident footprint IS -- never enters that sum;
+    it is already on the committed side.  Subtracting resident footprint again would refuse launches
+    the box could actually take.  What the canonical basis genuinely does NOT know is the memory a
+    live cell has DECLARED but not yet allocated, so that -- and only that -- is charged here.
+    (Sister finding: ``.omx/research/ddm_bh1_fresh_eyes_bug_hunt_20260904.md`` §6, which reached the
+    same defect from the shell side and measured the over-trust at 1.204x idle / 4.2x under load.)
     """
     ceiling = operator_ceiling_gib() if ceiling_gib is None else float(ceiling_gib)
     candidate = max(0.0, float(candidate_peak_gib))
@@ -557,6 +572,26 @@ def sample_cell_rates(cells: Sequence[LiveCell], *, window_s: float) -> list[Cel
             )
         )
     return rates
+
+
+def cpu_load_context() -> dict[str, Any]:
+    """CPU pressure alongside the Metal cells -- the co-factor a cell-count alone hides.
+
+    A steps/min figure is only comparable against another taken under similar CPU load: the cells
+    run a CPU-side scorer, so N concurrent CPU arms slow them even when the Metal is unchanged.
+    Sister measurement (``ddm_bh1``, 2026-09-04) saw ng2 at ~15.5 steps/min with four CPU arms live.
+    Recording ``load_avg_1m`` and ``logical_cpus`` beside the cell count is what makes two
+    contention rows comparable at all; without it the ratio silently mixes two different machines.
+    """
+    context: dict[str, Any] = {"logical_cpus": os.cpu_count()}
+    try:
+        one, five, fifteen = os.getloadavg()
+        context.update(
+            load_avg_1m=round(one, 3), load_avg_5m=round(five, 3), load_avg_15m=round(fifteen, 3)
+        )
+    except (OSError, AttributeError):
+        context.update(load_avg_1m=None, load_avg_5m=None, load_avg_15m=None)
+    return context
 
 
 def append_contention_row(row: Mapping[str, Any], ledger_path: Path | None = None) -> dict[str, Any]:
@@ -858,9 +893,14 @@ def _cmd_sample(args: argparse.Namespace) -> int:
         "schema": THROUGHPUT_ROW_SCHEMA,
         "recorded_utc": utc_text(),
         "concurrency": len(rates),
+        "live_job_count": len(cells),
+        "training_cell_count": sum(1 for cell in cells if cell.is_cell),
         "window_s": round(args.window_s, 3),
         "cells": [rate.as_dict() for rate in rates],
         "total_steps_per_min": round(total, 4),
+        # CPU pressure is a co-factor on Metal-cell throughput; without it two rows are not
+        # comparable and the speedup ratio silently mixes two different machines.
+        "cpu_load_context": cpu_load_context(),
         "note": args.note or "",
         "score_claim": False,
     }
