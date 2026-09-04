@@ -37,8 +37,18 @@ Output tagged [macOS-CPU advisory . NON-PROMOTABLE]. Pointer 0.19110 UNMOVED.
 USAGE
 -----
   .venv/bin/python tools/measure_delta_R_noise_floor.py \
-      --gt-npz experiments/results/mlx_fleet_gt_cache/gt_n96.npz \
-      --band 1.0 --n 96 --out reports/delta_R_noise_floor.json
+      --gt-npz experiments/results/mlx_fleet_gt_cache/gt_n600.npz \
+      --band 1.0 --n 600 --out reports/delta_R_noise_floor.json
+
+POPULATION DEFAULT (ddm_bh1, 2026-09-04): the defaults are the n600 POPULATION, never the
+n96 prefix.  This tool PRODUCED the retired delta_R = 0.019590163230895963; ddm_dr1 measured
+the same chain at n600 and got 0.021881818771362305 -- the prefix was 11.70% LOW, and
+ddm_ql2/ql3 then found live harnesses deciding R-safety with the retired (anti-conservative)
+value.  While the defaults stayed at the prefix, a flagless re-run silently REGENERATED the
+retired constant: the cure was applied to the consumers but not to the producer.  The n96
+prefix is annulus-specific and NOT a scaled-down n600 (law
+``annulus_restricted_prefix_bias_detector_v1``), so pass ``--gt-npz .../gt_n96.npz --n 96``
+explicitly if you want the historical prefix -- it is never what you get by default.
 """
 from __future__ import annotations
 
@@ -96,11 +106,14 @@ def main(argv=None) -> int:
     import torch.nn.functional as F
 
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--gt-npz", default="experiments/results/mlx_fleet_gt_cache/gt_n96.npz")
+    ap.add_argument("--gt-npz", default="experiments/results/mlx_fleet_gt_cache/gt_n600.npz",
+                    help="GT cache; defaults to the n600 POPULATION (never the n96 prefix)")
     ap.add_argument("--upstream", default="upstream")
     ap.add_argument("--band", type=float, default=1.0,
                     help="annulus = |GT margin| < band (matches subpix_band / seg_chroma_boundary margin_band=1.0)")
-    ap.add_argument("--n", type=int, default=96, help="number of frames to use (caps at cache size)")
+    ap.add_argument("--n", type=int, default=600,
+                    help="number of frames to use (caps at cache size); the POPULATION, "
+                         "never the n96 prefix that produced the retired delta_R")
     ap.add_argument("--out", default="reports/delta_R_noise_floor.json")
     ap.add_argument("--receipts-out", default=None,
                     help="RECEIPTS ONLY (does not change delta_R): write per-frame, "

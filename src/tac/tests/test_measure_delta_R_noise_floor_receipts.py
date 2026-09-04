@@ -239,3 +239,57 @@ def test_receipts_omit_per_class_when_cache_lacks_lstars(tool, tmp_path, monkeyp
     assert receipts["per_class_annulus_pooled"] is None
     assert receipts["per_frame"][0]["per_class_annulus"] is None
     assert receipts["retained_payloads"] is None
+
+
+# --- ddm_bh1: the PRODUCER's defaults are the population, never the retired prefix ----------
+#
+# This tool produced the retired delta_R = 0.019590163230895963 on the n96 prefix; ddm_dr1
+# measured 0.021881818771362305 at n600 (the prefix was 11.70% LOW) and ddm_ql2/ql3 found live
+# harnesses still deciding R-safety with the retired value.  The consumers were cured; the
+# PRODUCER's defaults were not, so a flagless re-run silently regenerated the retired constant.
+# These pin the cure at the producer.
+
+
+class _ParserCaptured(Exception):
+    def __init__(self, parser):
+        super().__init__("parser captured")
+        self.parser = parser
+
+
+def _defaults(tool, monkeypatch) -> dict:
+    """Capture the tool's real argparse defaults without running the measurement."""
+
+    import argparse
+
+    def _fake_parse_args(self, argv=None, namespace=None):
+        raise _ParserCaptured(self)
+
+    monkeypatch.setattr(argparse.ArgumentParser, "parse_args", _fake_parse_args)
+    try:
+        tool.main([])
+    except _ParserCaptured as exc:
+        return {
+            action.option_strings[0]: action.default
+            for action in exc.parser._actions
+            if action.option_strings
+        }
+    raise AssertionError("the tool did not build an argparse parser")
+
+
+def test_default_frame_count_is_the_n600_population(tool, monkeypatch):
+    assert _defaults(tool, monkeypatch)["--n"] == 600
+
+
+def test_default_gt_cache_is_the_n600_population(tool, monkeypatch):
+    default = _defaults(tool, monkeypatch)["--gt-npz"]
+    assert default.endswith("gt_n600.npz"), default
+    assert "n96" not in default
+
+
+def test_no_retired_delta_r_literal_in_the_producer(tool):
+    source = Path(tool.__file__).read_text(encoding="utf-8")
+    for retired in ("0.019590163230895963", "0.039180326461791926"):
+        for line in source.splitlines():
+            if retired in line:
+                # only admissible inside the prose that explains WHY it is retired
+                assert "retired" in line.lower(), f"live retired literal: {line.strip()}"
