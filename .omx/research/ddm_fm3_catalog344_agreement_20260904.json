@@ -1,0 +1,611 @@
+{
+  "study": "ddm_fm3 A1 -- Catalog #344 regex vs fmtools advisory lane",
+  "baseline_commit": "d3212bed1",
+  "excerpt_chars": 4000,
+  "ground_truth_source": ".omx/research/ddm_eq1_equations_leg_backfill_20260904.md section 2",
+  "instruction": "You are reading the opening of a research memo from a machine-learning video-compression campaign. Decide what kind of memo it is.\n\nReturn 'states_measured_finding' when the memo's own substantive content is an empirical result THIS memo's author measured or derived about the campaign's OBJECT OF STUDY -- the codec, the model, the score, the encoded bytes, a training run, an experiment, a probe. Verdict memos count when the verdict rests on numbers the author measured from a run.\n\nReturn 'review_or_process' when the memo is instead about the campaign's APPARATUS OR PROCESS: it reviews someone else's pull request or memo, records a submission or registration, audits documentation, sweeps for stale or owed items, reports hygiene or technical debt, or tracks whether steps fired. These memos often quote counts of the things they swept -- counting items is not an empirical result about the object of study.\n\nThe test is what the memo is FOR, not whether numbers appear in it.",
+  "n_memos": 29,
+  "n_positive_truth": 20,
+  "n_negative_truth": 9,
+  "fm_ran": true,
+  "fm_repeats_completed": 3,
+  "fm_not_run_reasons": [],
+  "fm_unstable_memos": [
+    "ddm_qn1_qbr1_n600_realization_ticket_20260903",
+    "SPEC_ddm_qbflow_packet_schema_v1_20260827",
+    "ddm_qbt2b_r9_constrained_margin_verdict_20260829",
+    "ddm_ht1_red_debt_hygiene_verdict_20260901",
+    "ddm_hv4_recovery_consumption_sweep_20260829",
+    "ddm_fpr1_falsified_premise_registrations_20260831",
+    "ddm_ql2_apparatus_debt_20260903"
+  ],
+  "lanes": {
+    "regex_before_fix_FULL": {
+      "tp": 20,
+      "fp": 9,
+      "fn": 0,
+      "tn": 0,
+      "n": 29,
+      "precision": 0.6896551724137931,
+      "recall": 1.0,
+      "f1": 0.8163265306122449,
+      "accuracy": 0.6896551724137931
+    },
+    "regex_after_fix_FULL": {
+      "tp": 5,
+      "fp": 8,
+      "fn": 15,
+      "tn": 1,
+      "n": 29,
+      "precision": 0.38461538461538464,
+      "recall": 0.25,
+      "f1": 0.30303030303030304,
+      "accuracy": 0.20689655172413793
+    },
+    "regex_before_fix_EXCERPT": {
+      "tp": 9,
+      "fp": 7,
+      "fn": 11,
+      "tn": 2,
+      "n": 29,
+      "precision": 0.5625,
+      "recall": 0.45,
+      "f1": 0.5,
+      "accuracy": 0.3793103448275862
+    },
+    "regex_after_fix_EXCERPT": {
+      "tp": 1,
+      "fp": 7,
+      "fn": 19,
+      "tn": 2,
+      "n": 29,
+      "precision": 0.125,
+      "recall": 0.05,
+      "f1": 0.07142857142857144,
+      "accuracy": 0.10344827586206896
+    },
+    "fmtools_majority": {
+      "tp": 15,
+      "fp": 4,
+      "fn": 5,
+      "tn": 5,
+      "n": 29,
+      "precision": 0.7894736842105263,
+      "recall": 0.75,
+      "f1": 0.7692307692307692,
+      "accuracy": 0.6896551724137931
+    },
+    "union_regexafterFULL_or_fm": {
+      "tp": 16,
+      "fp": 9,
+      "fn": 4,
+      "tn": 0,
+      "n": 29,
+      "precision": 0.64,
+      "recall": 0.8,
+      "f1": 0.7111111111111111,
+      "accuracy": 0.5517241379310345
+    },
+    "intersect_regexafterFULL_and_fm": {
+      "tp": 4,
+      "fp": 3,
+      "fn": 16,
+      "tn": 6,
+      "n": 29,
+      "precision": 0.5714285714285714,
+      "recall": 0.2,
+      "f1": 0.29629629629629634,
+      "accuracy": 0.3448275862068966
+    },
+    "intersect_regexbeforeFULL_and_fm": {
+      "tp": 15,
+      "fp": 4,
+      "fn": 5,
+      "tn": 5,
+      "n": 29,
+      "precision": 0.7894736842105263,
+      "recall": 0.75,
+      "f1": 0.7692307692307692,
+      "accuracy": 0.6896551724137931
+    },
+    "fmtools_run_1": {
+      "tp": 15,
+      "fp": 5,
+      "fn": 5,
+      "tn": 4,
+      "n": 29,
+      "precision": 0.75,
+      "recall": 0.75,
+      "f1": 0.75,
+      "accuracy": 0.6551724137931034
+    },
+    "fmtools_run_2": {
+      "tp": 13,
+      "fp": 2,
+      "fn": 7,
+      "tn": 7,
+      "n": 29,
+      "precision": 0.8666666666666667,
+      "recall": 0.65,
+      "f1": 0.7428571428571429,
+      "accuracy": 0.6896551724137931
+    },
+    "fmtools_run_3": {
+      "tp": 16,
+      "fp": 3,
+      "fn": 4,
+      "tn": 6,
+      "n": 29,
+      "precision": 0.8421052631578947,
+      "recall": 0.8,
+      "f1": 0.8205128205128205,
+      "accuracy": 0.7586206896551724
+    }
+  },
+  "rows": [
+    {
+      "memo": "ddm_ft1_shipped_renderer_aligned_finetune_20260903",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "states_measured_finding",
+      "regex_before_fix_excerpt": "review_or_process",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "states_measured_finding",
+        "states_measured_finding",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 40173
+    },
+    {
+      "memo": "ddm_ar1_aa_render_price_on_born_field_20260903",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "states_measured_finding",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "states_measured_finding",
+        "states_measured_finding",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 24314
+    },
+    {
+      "memo": "ddm_fcd1_field_for_coder_diagonal_20260829",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "states_measured_finding",
+        "states_measured_finding",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 13335
+    },
+    {
+      "memo": "ddm_gf2_static_dynamic_generator_form_20260903",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "states_measured_finding",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "states_measured_finding",
+      "fm_labels": [
+        "states_measured_finding",
+        "states_measured_finding",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 4564
+    },
+    {
+      "memo": "ddm_lc3_lane_carriage_rung_20260831",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "states_measured_finding",
+      "regex_before_fix_excerpt": "review_or_process",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "states_measured_finding",
+        "states_measured_finding",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 11696
+    },
+    {
+      "memo": "ddm_jc1_afr_rc64_joint_redesign_20260901",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "review_or_process",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "review_or_process",
+        "review_or_process",
+        "review_or_process"
+      ],
+      "fm_majority": "review_or_process",
+      "excerpt_chars": 4000,
+      "full_chars": 13986
+    },
+    {
+      "memo": "ddm_na11_negative_regrade_20260829",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "states_measured_finding",
+      "regex_before_fix_excerpt": "review_or_process",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "review_or_process",
+        "review_or_process",
+        "review_or_process"
+      ],
+      "fm_majority": "review_or_process",
+      "excerpt_chars": 4000,
+      "full_chars": 23500
+    },
+    {
+      "memo": "ddm_nx1_next_object_route_20260831",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "review_or_process",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "no_advice",
+        "no_advice",
+        "no_advice"
+      ],
+      "fm_majority": "review_or_process",
+      "excerpt_chars": 4000,
+      "full_chars": 25592
+    },
+    {
+      "memo": "ddm_qbr1_born_fairform_burn_prep_20260902",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "review_or_process",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "review_or_process",
+        "review_or_process",
+        "review_or_process"
+      ],
+      "fm_majority": "review_or_process",
+      "excerpt_chars": 4000,
+      "full_chars": 15971
+    },
+    {
+      "memo": "ddm_qn1_qbr1_n600_realization_ticket_20260903",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "review_or_process",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "review_or_process",
+        "review_or_process",
+        "states_measured_finding"
+      ],
+      "fm_majority": "review_or_process",
+      "excerpt_chars": 4000,
+      "full_chars": 14720
+    },
+    {
+      "memo": "SPEC_ddm_qbflow_packet_schema_v1_20260827",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "review_or_process",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "states_measured_finding",
+        "review_or_process",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 8116
+    },
+    {
+      "memo": "ddm_qbt1_r1_r2_qbflow_verdict_20260827",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "states_measured_finding",
+        "states_measured_finding",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 9692
+    },
+    {
+      "memo": "ddm_qbt2b_r3_ce_birth_verdict_20260827",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "states_measured_finding",
+        "states_measured_finding",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 7038
+    },
+    {
+      "memo": "ddm_qbt2b_r4_extended_ce_verdict_20260828",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "states_measured_finding",
+        "states_measured_finding",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 7509
+    },
+    {
+      "memo": "ddm_qbt2b_r5_balanced_ce_verdict_20260828",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "states_measured_finding",
+        "states_measured_finding",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 7949
+    },
+    {
+      "memo": "ddm_qbt2b_r6_born_field_margin_verdict_20260828",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "states_measured_finding",
+        "states_measured_finding",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 8368
+    },
+    {
+      "memo": "ddm_qbt2b_r7_constrained_margin_verdict_20260828",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "review_or_process",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "states_measured_finding",
+        "states_measured_finding",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 7925
+    },
+    {
+      "memo": "ddm_qbt2b_r8_constrained_margin_verdict_20260828",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "review_or_process",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "states_measured_finding",
+        "states_measured_finding",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 7371
+    },
+    {
+      "memo": "ddm_qbt2b_r9_constrained_margin_verdict_20260829",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "review_or_process",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "states_measured_finding",
+        "review_or_process",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 7713
+    },
+    {
+      "memo": "ddm_qbt2b_r10_third_doubling_stop_verdict_20260829",
+      "truth": "states_measured_finding",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "states_measured_finding",
+        "states_measured_finding",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 5055
+    },
+    {
+      "memo": "ddm_fr2_final_fresh_eyes_pr_review_20260903",
+      "truth": "review_or_process",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "states_measured_finding",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "states_measured_finding",
+      "fm_labels": [
+        "review_or_process",
+        "review_or_process",
+        "review_or_process"
+      ],
+      "fm_majority": "review_or_process",
+      "excerpt_chars": 4000,
+      "full_chars": 11615
+    },
+    {
+      "memo": "ddm_pq13_pr_body_refresh_verdict_20260901",
+      "truth": "review_or_process",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "states_measured_finding",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "states_measured_finding",
+      "fm_labels": [
+        "review_or_process",
+        "review_or_process",
+        "review_or_process"
+      ],
+      "fm_majority": "review_or_process",
+      "excerpt_chars": 4000,
+      "full_chars": 19131
+    },
+    {
+      "memo": "ddm_ht1_red_debt_hygiene_verdict_20260901",
+      "truth": "review_or_process",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "review_or_process",
+      "regex_before_fix_excerpt": "review_or_process",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "states_measured_finding",
+        "review_or_process",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 12191
+    },
+    {
+      "memo": "ddm_hv3_done_arm_consumption_20260827",
+      "truth": "review_or_process",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "states_measured_finding",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "states_measured_finding",
+      "fm_labels": [
+        "states_measured_finding",
+        "states_measured_finding",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 16506
+    },
+    {
+      "memo": "ddm_hv4_recovery_consumption_sweep_20260829",
+      "truth": "review_or_process",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "states_measured_finding",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "states_measured_finding",
+      "fm_labels": [
+        "states_measured_finding",
+        "review_or_process",
+        "review_or_process"
+      ],
+      "fm_majority": "review_or_process",
+      "excerpt_chars": 4000,
+      "full_chars": 76844
+    },
+    {
+      "memo": "ddm_rc_precheck_folded_never_fired_20260831",
+      "truth": "review_or_process",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "states_measured_finding",
+      "regex_before_fix_excerpt": "review_or_process",
+      "regex_after_fix_excerpt": "review_or_process",
+      "fm_labels": [
+        "review_or_process",
+        "review_or_process",
+        "review_or_process"
+      ],
+      "fm_majority": "review_or_process",
+      "excerpt_chars": 4000,
+      "full_chars": 12962
+    },
+    {
+      "memo": "ddm_hp1_premise_lint_canonicalization_20260831",
+      "truth": "review_or_process",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "states_measured_finding",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "states_measured_finding",
+      "fm_labels": [
+        "review_or_process",
+        "review_or_process",
+        "review_or_process"
+      ],
+      "fm_majority": "review_or_process",
+      "excerpt_chars": 3750,
+      "full_chars": 3750
+    },
+    {
+      "memo": "ddm_fpr1_falsified_premise_registrations_20260831",
+      "truth": "review_or_process",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "states_measured_finding",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "states_measured_finding",
+      "fm_labels": [
+        "states_measured_finding",
+        "review_or_process",
+        "states_measured_finding"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 4959
+    },
+    {
+      "memo": "ddm_ql2_apparatus_debt_20260903",
+      "truth": "review_or_process",
+      "regex_before_fix_full": "states_measured_finding",
+      "regex_after_fix_full": "states_measured_finding",
+      "regex_before_fix_excerpt": "states_measured_finding",
+      "regex_after_fix_excerpt": "states_measured_finding",
+      "fm_labels": [
+        "states_measured_finding",
+        "states_measured_finding",
+        "review_or_process"
+      ],
+      "fm_majority": "states_measured_finding",
+      "excerpt_chars": 4000,
+      "full_chars": 21229
+    }
+  ]
+}

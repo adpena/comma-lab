@@ -1,0 +1,478 @@
+{
+  "study": "ddm_fm3 A3 -- constant-provenance advisory lane over ql3's fingerprint hits",
+  "retired_literals": [
+    "0.019590163",
+    "0.039180326",
+    "0.03712034",
+    "0.025631957",
+    "0.038173675",
+    "0.01356075"
+  ],
+  "n600_literals": [
+    "0.04376363754272461",
+    "0.021881818771362305"
+  ],
+  "scan_dirs": [
+    "src/tac",
+    "tools",
+    "experiments"
+  ],
+  "window_lines": 6,
+  "fm_ran": true,
+  "fm_reason": null,
+  "n_rows": 48,
+  "by_advisory_class": {
+    "measured_n600": 19,
+    "measured_prefix": 21,
+    "derived": 7,
+    "no_advice": 1
+  },
+  "by_binary_control": {
+    "provenance_is_stated": 46,
+    "no_provenance_stated": 1,
+    "no_advice": 1
+  },
+  "unfindable_retired": [],
+  "rows": [
+    {
+      "path": "src/tac/witness_dsl/curriculum_dsl.py",
+      "line": 5391,
+      "literal": "0.019590163",
+      "fingerprint_verdict": "retired",
+      "text": "``\u03b4_R = 0.021881818771362305`` (n600, ddm_dr1 2026-09-04; the n96 prefix read 0.019590163230895963). Headroom 3 remains an OPEN, UNMEASURED treatment rather than a",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/witness_dsl/hg1_ring0_margin_hinge_levers_20260816.py",
+      "line": 21,
+      "literal": "0.019590163",
+      "fingerprint_verdict": "retired",
+      "text": "``m_safe = headroom * delta_R`` is that target.  ``delta_R = 0.021881818771362305`` (n600, ddm_dr1; the n96 prefix read 0.019590163230895963, 11.70% low) is",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/inc1a_harness/decoupling_screen.py",
+      "line": 48,
+      "literal": "0.019590163",
+      "fingerprint_verdict": "retired",
+      "text": "DELTA_R_PROXY_RETIRED = 0.019590163230895963",
+      "fmtools_advisory": "derived",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/annulus_restricted_prefix_bias_detector_20260904.py",
+      "line": 17,
+      "literal": "0.019590163",
+      "fingerprint_verdict": "retired",
+      "text": "annulus-restricted p95 (delta_R)  0.019590163230895963 -> 0.021881818771362305  +11.698%",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/annulus_restricted_prefix_bias_detector_20260904.py",
+      "line": 94,
+      "literal": "0.019590163",
+      "fingerprint_verdict": "retired",
+      "text": "DELTA_R_N96 = 0.019590163230895963",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "tools/measure_uint8_lattice_feasibility.py",
+      "line": 72,
+      "literal": "0.019590163",
+      "fingerprint_verdict": "retired",
+      "text": "# 0.019590163230895963, 11.70% LOW) and every sister surface \u2014 the law module, the DSL, the hg1",
+      "fmtools_advisory": "derived",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "tools/measure_delta_R_noise_floor.py",
+      "line": 44,
+      "literal": "0.019590163",
+      "fingerprint_verdict": "retired",
+      "text": "n96 prefix.  This tool PRODUCED the retired delta_R = 0.019590163230895963; ddm_dr1 measured",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "tools/constructive_inverse_solve_harness.py",
+      "line": 54,
+      "literal": "0.019590163",
+      "fingerprint_verdict": "retired",
+      "text": "# 0.019590163230895963, 11.70% LOW) and every sister surface \u2014 the law module, the DSL, the hg1",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "experiments/ddm_dr1_register_n600_anchor.py",
+      "line": 38,
+      "literal": "0.019590163",
+      "fingerprint_verdict": "retired",
+      "text": "N96_DELTA_R = 0.019590163230895963",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "experiments/ddm_dr1_register_n600_anchor.py",
+      "line": 137,
+      "literal": "0.019590163",
+      "fingerprint_verdict": "retired",
+      "text": "\"n600 delta_R within +/-10% of the n96 prefix value 0.019590163230895963\"",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/margin_band_satisficing_threshold_20260712.py",
+      "line": 14,
+      "literal": "0.039180326",
+      "fingerprint_verdict": "retired",
+      "text": "DERIVED ``m_safe = 0.04376363754272461`` (was 0.039180326461791926 on the n96 prefix).  A factor of 3 remains a legitimate",
+      "fmtools_advisory": "derived",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/subset_selection.py",
+      "line": 432,
+      "literal": "0.039180326",
+      "fingerprint_verdict": "retired",
+      "text": "``gt_n600`` fragility at ``m_safe = 0.04376363754272461`` (n600 law value; 0.039180326461791926 was the n96 prefix) this returns",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "tools/measure_uint8_lattice_feasibility.py",
+      "line": 70,
+      "literal": "0.039180326",
+      "fingerprint_verdict": "retired",
+      "text": "# It was hardcoded here as 0.039180326461791926 \u2014 the value derived from the n96 CONTIGUOUS-PREFIX",
+      "fmtools_advisory": "derived",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "tools/constructive_inverse_solve_harness.py",
+      "line": 52,
+      "literal": "0.039180326",
+      "fingerprint_verdict": "retired",
+      "text": "# It was hardcoded here as 0.039180326461791926 \u2014 the value derived from the n96 CONTIGUOUS-PREFIX",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/annulus_restricted_prefix_bias_detector_20260904.py",
+      "line": 100,
+      "literal": "0.025631957",
+      "fingerprint_verdict": "retired",
+      "text": "ANNULUS_AREA_FRAC_N96 = 0.025631957583957247",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/annulus_restricted_prefix_bias_detector_20260904.py",
+      "line": 18,
+      "literal": "0.038173675",
+      "fingerprint_verdict": "retired",
+      "text": "all-pixel p95                     0.038173675537109375 -> 0.0383458137512207     + 0.451%",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/annulus_restricted_prefix_bias_detector_20260904.py",
+      "line": 96,
+      "literal": "0.038173675",
+      "fingerprint_verdict": "retired",
+      "text": "ALL_PIXEL_P95_N96 = 0.038173675537109375",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/annulus_restricted_prefix_bias_detector_20260904.py",
+      "line": 19,
+      "literal": "0.01356075",
+      "fingerprint_verdict": "retired",
+      "text": "all-pixel mean                    0.01356075331568718  -> 0.013560148887336254   - 0.004%",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/annulus_restricted_prefix_bias_detector_20260904.py",
+      "line": 98,
+      "literal": "0.01356075",
+      "fingerprint_verdict": "retired",
+      "text": "ALL_PIXEL_MEAN_N96 = 0.01356075331568718",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/witness_dsl/curriculum_dsl.py",
+      "line": 5390,
+      "literal": "0.04376363754272461",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "and DERIVED ``m_safe = 0.04376363754272461`` from MEASURED",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/margin_band_satisficing_threshold_20260712.py",
+      "line": 14,
+      "literal": "0.04376363754272461",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "DERIVED ``m_safe = 0.04376363754272461`` (was 0.039180326461791926 on the n96 prefix).  A factor of 3 remains a legitimate",
+      "fmtools_advisory": "derived",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/subset_selection.py",
+      "line": 432,
+      "literal": "0.04376363754272461",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "``gt_n600`` fragility at ``m_safe = 0.04376363754272461`` (n600 law value; 0.039180326461791926 was the n96 prefix) this returns",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "tools/measure_joint_seg_pose_rate.py",
+      "line": 67,
+      "literal": "0.04376363754272461",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "return 0.04376363754272461",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "tools/dual_metric_readback.py",
+      "line": 61,
+      "literal": "0.04376363754272461",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "return 0.04376363754272461",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "tools/measure_uint8_lattice_feasibility.py",
+      "line": 73,
+      "literal": "0.04376363754272461",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "# ring-0 levers, tac.subset_selection \u2014 moved to the DERIVED n600 m_safe = 0.04376363754272461.",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "tools/constructive_inverse_solve_harness.py",
+      "line": 55,
+      "literal": "0.04376363754272461",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "# ring-0 levers, tac.subset_selection \u2014 moved to the DERIVED n600 m_safe = 0.04376363754272461.",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/witness_dsl/curriculum_dsl.py",
+      "line": 5391,
+      "literal": "0.021881818771362305",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "``\u03b4_R = 0.021881818771362305`` (n600, ddm_dr1 2026-09-04; the n96 prefix read 0.019590163230895963). Headroom 3 remains an OPEN, UNMEASURED treatment rather than a",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/witness_dsl/hg1_ring0_margin_hinge_levers_20260816.py",
+      "line": 21,
+      "literal": "0.021881818771362305",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "``m_safe = headroom * delta_R`` is that target.  ``delta_R = 0.021881818771362305`` (n600, ddm_dr1; the n96 prefix read 0.019590163230895963, 11.70% low) is",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/margin_band_satisficing_threshold_20260712.py",
+      "line": 13,
+      "literal": "0.021881818771362305",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "DERIVED ``ceil(0.03887428045272823 / 0.021881818771362305) = 2`` and therefore",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/margin_band_satisficing_threshold_20260712.py",
+      "line": 50,
+      "literal": "0.021881818771362305",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "FALLBACK_DELTA_R = 0.021881818771362305",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/annulus_restricted_prefix_bias_detector_20260904.py",
+      "line": 17,
+      "literal": "0.021881818771362305",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "annulus-restricted p95 (delta_R)  0.019590163230895963 -> 0.021881818771362305  +11.698%",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/annulus_restricted_prefix_bias_detector_20260904.py",
+      "line": 95,
+      "literal": "0.021881818771362305",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "DELTA_R_N600 = 0.021881818771362305",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/annulus_restricted_prefix_bias_detector_20260904.py",
+      "line": 113,
+      "literal": "0.021881818771362305",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "1.00: 0.021881818771362305,",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "no_provenance_stated"
+    },
+    {
+      "path": "tools/measure_uint8_lattice_feasibility.py",
+      "line": 71,
+      "literal": "0.021881818771362305",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "# delta_R. ddm_dr1 MEASURED delta_R at n600 = 0.021881818771362305 (the n96 prefix read",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "tools/measure_delta_R_noise_floor.py",
+      "line": 45,
+      "literal": "0.021881818771362305",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "the same chain at n600 and got 0.021881818771362305 -- the prefix was 11.70% LOW, and",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "tools/constructive_inverse_solve_harness.py",
+      "line": 53,
+      "literal": "0.021881818771362305",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "# delta_R. ddm_dr1 MEASURED delta_R at n600 = 0.021881818771362305 (the n96 prefix read",
+      "fmtools_advisory": "derived",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "experiments/ddm_sd1_surrogate_exact_map.py",
+      "line": 53,
+      "literal": "0.021881818771362305",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "``delta_R = 0.021881818771362305`` is the n600 R-chain margin noise floor measured by ddm_dr1",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "experiments/ddm_sd1_surrogate_exact_map.py",
+      "line": 101,
+      "literal": "0.021881818771362305",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "DELTA_R_N600 = 0.021881818771362305",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "experiments/ddm_md1_micro_to_macro.py",
+      "line": 1428,
+      "literal": "0.021881818771362305",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "default=[-40.0, -20.0, -10.0, -5.0, -2.0, -1.0, -0.5, -0.25, -0.1, -0.05, -0.021881818771362305,",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "experiments/ddm_md1_micro_to_macro.py",
+      "line": 1429,
+      "literal": "0.021881818771362305",
+      "fingerprint_verdict": "n600_replacement",
+      "text": "0.0, 0.021881818771362305, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 40.0, 80.0],",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/evasion_ceiling_fisher_null_20260715.py",
+      "line": 60,
+      "name": "G_GAIN",
+      "literal": "0.0606",
+      "fingerprint_verdict": "not_a_known_literal",
+      "text": "G_GAIN = 0.0606",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/lane_dash_residual_root_cause_findings_20260703.py",
+      "line": 88,
+      "name": "R_NO_R_DSEG",
+      "literal": "0.00424",
+      "fingerprint_verdict": "not_a_known_literal",
+      "text": "R_NO_R_DSEG = 0.00424",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/lane_dash_residual_root_cause_findings_20260703.py",
+      "line": 89,
+      "name": "R_WITH_R_DSEG",
+      "literal": "0.00423",
+      "fingerprint_verdict": "not_a_known_literal",
+      "text": "R_WITH_R_DSEG = 0.00423",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/lane_dash_residual_root_cause_findings_20260703.py",
+      "line": 100,
+      "name": "CHROMA_REMOVAL_LANE_TO_ROAD_FLIP",
+      "literal": "0.0754",
+      "fingerprint_verdict": "not_a_known_literal",
+      "text": "CHROMA_REMOVAL_LANE_TO_ROAD_FLIP = 0.0754",
+      "fmtools_advisory": "no_advice",
+      "fmtools_binary_control": "no_advice"
+    },
+    {
+      "path": "src/tac/canonical_equations/lane_dash_residual_root_cause_findings_20260703.py",
+      "line": 101,
+      "name": "CHROMA_REMOVAL_MOVABLE_TO_UNDRIV_FLIP",
+      "literal": "0.0438",
+      "fingerprint_verdict": "not_a_known_literal",
+      "text": "CHROMA_REMOVAL_MOVABLE_TO_UNDRIV_FLIP = 0.0438",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/lane_dash_residual_root_cause_findings_20260703.py",
+      "line": 109,
+      "name": "TRIPLE_JUNCTION_PIXEL_FRACTION",
+      "literal": "0.00027",
+      "fingerprint_verdict": "not_a_known_literal",
+      "text": "TRIPLE_JUNCTION_PIXEL_FRACTION = 0.00027",
+      "fmtools_advisory": "measured_n600",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/focal_gradient_concentration_20260705.py",
+      "line": 51,
+      "name": "ISLAND_PX_SHARE_EP50",
+      "literal": "0.0217",
+      "fingerprint_verdict": "not_a_known_literal",
+      "text": "ISLAND_PX_SHARE_EP50 = 0.0217",
+      "fmtools_advisory": "measured_prefix",
+      "fmtools_binary_control": "provenance_is_stated"
+    },
+    {
+      "path": "src/tac/canonical_equations/focal_gradient_concentration_20260705.py",
+      "line": 61,
+      "name": "ISLAND_RESIDUAL_SHARE_EP50",
+      "literal": "0.0186",
+      "fingerprint_verdict": "not_a_known_literal",
+      "text": "ISLAND_RESIDUAL_SHARE_EP50 = 0.0186",
+      "fmtools_advisory": "derived",
+      "fmtools_binary_control": "provenance_is_stated"
+    }
+  ]
+}

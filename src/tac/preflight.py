@@ -2467,6 +2467,71 @@ _GT_LINEAGE_ARTIFACT_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"gt_first6[\w.\-]*\.npy"),
     re.compile(r"gt_cache_[\w.\-]*\.pt"),
 )
+#: THE ``.npz`` WIDENING (ddm_fm3 2026-09-04, warn-only, reported separately).
+#:
+#: The patterns above see only ``.npy`` and ``.pt``. ``gt_n600.npz`` -- the table
+#: the born trainer PINS as authority -- is ``.npz``, and it is the **PyAV**
+#: decode lineage (20,671 argmax sites off DALI; same-object pose ceiling
+#: 1.69e-5). So the one artifact most likely to carry an undeclared objective
+#: sat in this gate's blind spot (ddm_bh1 finding 2).
+#:
+#: This is NOT the ``gt_argmax*.npy`` case the SCOPE note above excludes. That
+#: exclusion rests on the argmax cache being a SINGLE established lineage
+#: (measured DALI by pi2 + gl1), so flagging it would be noise. The ``.npz``
+#: tables are the opposite: two lineages exist, they disagree numerically, and
+#: which one a site reads changes that site's answer.
+#:
+#: THE DISCRIMINATOR: the table NAMES ITS SAMPLE COUNT. A GT cache built over N
+#: pairs from a specific decode carries that N in its filename, and that is
+#: exactly the lineage-sensitive class. Measured against every ``gt_*.npz``
+#: literal in the tree, ``gt_[\w.\-]*n\d[\w.\-]*\.npz`` splits them cleanly:
+#:   IN  gt_n600 / gt_n96 / gt_n24 / gt_n6 / gt_n2 / gt_n8 / gt_strided_n200 /
+#:       gt_heldout_n400 / gt_n600_lstars_slim / gt_n600_sR
+#:   OUT gt_tiny / gt_synth / gt_bad / gt_bad_geometry / gt_nokey / gt_nomargin
+#:       (fixtures), gt_nN (a template placeholder), gt_exact
+#: A bare ``gt_.*\.npz`` would swallow the fixture half, which has no decode
+#: lineage to declare. KNOWN RESIDUAL, named not hidden: ``gt_pose_raw.npz`` (6
+#: sites) and ``gt_cache.npz`` (1 site) carry no count and so stay out of scope;
+#: they are the next widening's business, not this one's.
+#:
+#: MEASURED live counts at landing (ddm_fm3 census, 2026-09-04):
+#:   primary vocabulary  ->     2 findings /   2 files
+#:   + this widening     ->   366 findings / 311 files (309 newly lit)
+#: An advisory fmtools classification of those 309 files read 318 findings as
+#: AUTHORITY-class (a trainer/eval/byte-close whose objective the table IS) and
+#: 28 as label-only (continuity frames, advisory instruments, fixtures, memos).
+#: Because the refusing class's live count is 318 and not 0, this widening lands
+#: REPORT-ONLY: counted and summarised, never raised, and deliberately kept out
+#: of the primary finding list so the standalone strict surface's 2-finding
+#: contract is unchanged. Full table:
+#: ``.omx/research/ddm_fm3_lineage_consumer_census_20260904.json``.
+#:
+#: The class split is NOT shipped as a gate rule. 303 of the 309 classes came
+#: from the advisory on-device lane, and an advisory label may never gate
+#: anything (the never-authority firewall). Turning the split into refusal needs
+#: a DETERMINISTIC authority-consumer predicate; that is the named follow-up.
+_GT_LINEAGE_NPZ_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"gt_[\w.\-]*n\d[\w.\-]*\.npz"),
+)
+#: Ripgrep prefilter, DERIVED from the pattern tuples rather than restated.
+#:
+#: It used to be a hardcoded ``"gt_first6|gt_cache_"`` literal at the call site.
+#: That is a silent-drift hazard of exactly the VACUITY==PASS shape this scanner
+#: was already bitten by once: a pattern added to the tuple but not to the
+#: prefilter would match nothing, and the gate would report a clean 0 while real
+#: findings stood. Deriving it means a new pattern cannot be half-added.
+#: PAIRED WITH ITS PATTERN TUPLE, not a single global list. MEASURED: a global
+#: list makes the PRIMARY scan pay the widening's prefilter cost -- candidates
+#: went 160 -> 676 and the verbose gate 0.5 s -> 3.8 s, a regression on a path
+#: the sp2 landing had deliberately optimised with ripgrep. Each scope now
+#: prefilters on its own stems, so the widening costs only the widening.
+_GT_LINEAGE_PRIMARY_PREFILTER_STEMS: tuple[str, ...] = ("gt_first6", "gt_cache_")
+_GT_LINEAGE_NPZ_PREFILTER_STEMS: tuple[str, ...] = (r"gt_[\w.\-]*n[0-9]",)
+#: The union, for callers scanning the widened vocabulary.
+_GT_LINEAGE_PREFILTER_STEMS: tuple[str, ...] = (
+    *_GT_LINEAGE_PRIMARY_PREFILTER_STEMS,
+    *_GT_LINEAGE_NPZ_PREFILTER_STEMS,
+)
 #: An artifact literal naming the authority lineage declares itself.
 _GT_LINEAGE_DALI_MARKER = "dali"
 _GT_LINEAGE_SCAN_DIRS = ("src", "tools", "experiments", "scripts")
@@ -2505,15 +2570,22 @@ def _gt_lineage_waiver_rationale(line: str) -> str | None:
     return rationale
 
 
-def _gt_artifact_hits_outside_comment(line: str) -> list[str]:
+def _gt_artifact_hits_outside_comment(
+    line: str, patterns: tuple[re.Pattern[str], ...] | None = None
+) -> list[str]:
     """Artifact literals on ``line`` that are NOT inside a trailing comment.
 
     A comment that merely NAMES the PyAV artifact while the code loads the DALI
     one is documentation, not consumption -- flagging it is a false positive
     (measured on ``ddm_mt1_*``, whose comments cite the advisory lineage by name
     directly above a DALI load).
+
+    Args:
+        line: The source line.
+        patterns: Artifact vocabulary; defaults to the primary tuple.
     """
-    hits = [m for pat in _GT_LINEAGE_ARTIFACT_PATTERNS for m in pat.finditer(line)]
+    artifact_patterns = patterns if patterns is not None else _GT_LINEAGE_ARTIFACT_PATTERNS
+    hits = [m for pat in artifact_patterns for m in pat.finditer(line)]
     if not hits:
         return []
     comment_idx = line.find("#")
@@ -2624,13 +2696,36 @@ def _python_imports_gt_lineage_registry(text: str) -> bool:
     return False
 
 
-def _check_351_gt_lineage_objective_custody(repo_root: Path) -> list[str]:
+def _check_351_gt_lineage_objective_custody(
+    repo_root: Path,
+    patterns: tuple[re.Pattern[str], ...] | None = None,
+    prefilter_stems: tuple[str, ...] | None = None,
+) -> list[str]:
     """Scope extension of Catalog #351: GT DECODE-LINEAGE objective custody.
 
     Flags sites consuming a lineage-sensitive ground-truth artifact whose decode
     lineage is neither declared in the path, nor established through the
     canonical ``tac.gt_lineage`` registry, nor waived on the line. WARN-ONLY.
+
+    Args:
+        repo_root: Repository root to scan.
+        patterns: Artifact vocabulary. Defaults to
+            ``_GT_LINEAGE_ARTIFACT_PATTERNS``. The ``.npz`` widening passes a
+            different tuple through THIS function rather than copying the loop,
+            so the two scopes can never drift apart in their exclusions -- the
+            exclusion list is where this scanner's correctness actually lives.
+        prefilter_stems: Ripgrep stems narrowing the candidate files. MUST be
+            able to reach every pattern in ``patterns`` -- a stem set that
+            cannot is the VACUITY==PASS hazard (the scan skips the file and
+            reports a clean 0). Defaults to the primary stems, matching the
+            default vocabulary.
     """
+    artifact_patterns = patterns if patterns is not None else _GT_LINEAGE_ARTIFACT_PATTERNS
+    stems = (
+        prefilter_stems
+        if prefilter_stems is not None
+        else _GT_LINEAGE_PRIMARY_PREFILTER_STEMS
+    )
     violations: list[str] = []
     # ABSOLUTE-ROOT NORMALISATION (ddm_dg1 2026-08-20 -- MEASURED VACUITY FIX).
     # ``_rg_python_files_matching_regex`` returns ABSOLUTE paths regardless of the
@@ -2652,7 +2747,7 @@ def _check_351_gt_lineage_objective_custody(repo_root: Path) -> list[str]:
     # one ripgrep pass removes nearly all of it. Falls back to the pure-Python
     # walker when ripgrep is unavailable, so behaviour is identical either way.
     candidates = _rg_python_files_matching_regex(
-        root, list(_GT_LINEAGE_SCAN_DIRS), r"gt_first6|gt_cache_",
+        root, list(_GT_LINEAGE_SCAN_DIRS), "|".join(stems),
     )
     if candidates is None:
         candidates = tuple(_iter_python_files(root, list(_GT_LINEAGE_SCAN_DIRS)))
@@ -2680,13 +2775,13 @@ def _check_351_gt_lineage_objective_custody(repo_root: Path) -> list[str]:
             text = path.read_text()
         except (UnicodeDecodeError, FileNotFoundError, OSError):
             continue
-        if not any(pat.search(text) for pat in _GT_LINEAGE_ARTIFACT_PATTERNS):
+        if not any(pat.search(text) for pat in artifact_patterns):
             continue
         executable_text = _python_without_docstrings(text)
         if _python_imports_gt_lineage_registry(executable_text):
             continue
         for lineno, line in enumerate(executable_text.splitlines(), 1):
-            hits = _gt_artifact_hits_outside_comment(line)
+            hits = _gt_artifact_hits_outside_comment(line, artifact_patterns)
             if not hits:
                 continue
             if any(_GT_LINEAGE_DALI_MARKER in h.lower() for h in hits):
@@ -2700,8 +2795,47 @@ def _check_351_gt_lineage_objective_custody(repo_root: Path) -> list[str]:
     return violations
 
 
+def gt_lineage_npz_widening_findings(
+    repo_root: Path | None = None,
+    primary_findings: list[str] | None = None,
+) -> list[str]:
+    """Undeclared reads of the ``.npz`` GT tables. REPORT-ONLY, never raised.
+
+    Runs the same scanner with the widened vocabulary (see
+    ``_GT_LINEAGE_NPZ_PATTERNS`` for the measured live counts and why the class
+    split is not shipped as a refusal). Separated from the primary findings on
+    purpose: at 366-vs-2 it would swamp the list, and "a warn-only flood is a
+    gauge nobody reads" is this scanner's own recorded lesson.
+
+    Returns:
+        Findings under the widened vocabulary MINUS the ones the primary
+        vocabulary already reports, so the two lists never double-count.
+
+    Args:
+        repo_root: Repository root to scan.
+        primary_findings: The primary scan's result, when the caller already
+            has it. Supplying it saves a redundant third walk of the tree.
+    """
+    root = Path(repo_root or Path(__file__).resolve().parents[2])
+    widened = _check_351_gt_lineage_objective_custody(
+        root,
+        (*_GT_LINEAGE_ARTIFACT_PATTERNS, *_GT_LINEAGE_NPZ_PATTERNS),
+        _GT_LINEAGE_PREFILTER_STEMS,
+    )
+    known = (
+        set(primary_findings)
+        if primary_findings is not None
+        else set(_check_351_gt_lineage_objective_custody(root))
+    )
+    return [item for item in widened if item not in known]
+
+
 def check_gt_lineage_objective_custody(
-    repo_root: Path | None = None, *, strict: bool = False, verbose: bool = True
+    repo_root: Path | None = None,
+    *,
+    strict: bool = False,
+    verbose: bool = True,
+    report_npz_widening: bool = True,
 ) -> list[str]:
     """Report undeclared GT reads and optionally refuse them.
 
@@ -2709,12 +2843,39 @@ def check_gt_lineage_objective_custody(
     during the two-landing adoption window.  The standalone strict surface is
     the executable positive-control/refusal path: a newly introduced undeclared
     consumption must exit nonzero before the host flips to strict.
+
+    Args:
+        repo_root: Repository root to scan.
+        strict: Raise on primary-vocabulary findings.
+        verbose: Print the status line.
+        report_npz_widening: Print the ``.npz`` widening COUNT. Defaults to True
+            because it is score-neutral observability, and a default-off gauge
+            is orphaned signal by construction. It is a count, not a list, so it
+            informs without flooding; it never affects the return value and is
+            never raised on.
+
+            MEASURED COST, recorded rather than left for someone to rediscover:
+            the widened scope walks ~676 candidate files and costs **~3.2 s**,
+            against the primary scan's 0.47 s. It is paid ONLY on the ``verbose``
+            path -- the human-facing report, where the count is the whole point
+            -- so the quiet aggregate call pays nothing. That is why it stays on
+            by default despite the cost; set this False to skip it.
     """
     root = Path(repo_root or Path(__file__).resolve().parents[2])
     findings = _check_351_gt_lineage_objective_custody(root)
     if verbose:
         status = f"WARN {len(findings)} finding(s)" if findings else "OK"
         print(f"  [gt-lineage-objective-custody] {status} (host WARN-ONLY; standalone strict available)")
+        if report_npz_widening:
+            widened = gt_lineage_npz_widening_findings(root, findings)
+            files = len({item.split(":", 1)[0] for item in widened})
+            print(
+                f"    [.npz widening, REPORT-ONLY] {len(widened)} additional "
+                f"undeclared read(s) across {files} file(s) of the gt_n*.npz "
+                "tables (gt_n600.npz is the PyAV lineage). Not raised, not in "
+                "the return value. Census + class table: "
+                ".omx/research/ddm_fm3_lineage_consumer_census_20260904.json"
+            )
         if findings:
             print(f"    {_GT_LINEAGE_RULE_CHAIN}")
             for item in findings[:_GT_LINEAGE_MAX_PRINTED]:

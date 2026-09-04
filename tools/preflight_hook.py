@@ -1261,6 +1261,122 @@ def run_negative_verdict_scan(staged_docs: list[str]) -> int:
     return 0
 
 
+#: Advisory-lane budget. The lane costs an interpreter start (~1.5 s) plus ~1 s
+#: per memo, so it is capped rather than left unbounded on a commit-time path.
+#: A commit staging more memos than this gets no advice rather than a stall --
+#: the deterministic verdict is complete on its own either way.
+_FM_ADVISORY_MAX_MEMOS = 6
+_FM_ADVISORY_TIMEOUT_S = 30.0
+_FM_ADVISORY_EXCERPT_CHARS = 4000
+_FM_ADVISORY_POSITIVE = "states_measured_finding"
+_FM_ADVISORY_NEGATIVE = "review_or_process"
+_FM_ADVISORY_INSTRUCTION = (
+    "You are reading the opening of a research memo from a machine-learning "
+    "video-compression campaign. Decide what kind of memo it is.\n\n"
+    "Return 'states_measured_finding' when the memo's own substantive content is "
+    "an empirical result THIS memo's author measured or derived about the "
+    "campaign's OBJECT OF STUDY -- the codec, the model, the score, the encoded "
+    "bytes, a training run, an experiment, a probe. Verdict memos count when the "
+    "verdict rests on numbers the author measured from a run.\n\n"
+    "Return 'review_or_process' when the memo is instead about the campaign's "
+    "APPARATUS OR PROCESS: it reviews someone else's pull request or memo, "
+    "records a submission or registration, audits documentation, sweeps for "
+    "stale or owed items, reports hygiene or technical debt, or tracks whether "
+    "steps fired. These memos often quote counts of the things they swept -- "
+    "counting items is not an empirical result about the object of study.\n\n"
+    "The test is what the memo is FOR, not whether numbers appear in it."
+)
+
+
+def _canonical_equation_fm_advisory(in_scope: list[str], violations: list[str]) -> None:
+    """Print the ADVISORY second-lane column for Catalog #344. Never blocks.
+
+    WHY THIS IS WORTH A SECOND LANE (MEASURED, ddm_fm3 2026-09-04, n=29 memos
+    against ddm_eq1's human adjudication, at ``d3212bed1`` before its addenda):
+
+        lane                        precision  recall     F1
+        regex before the fix          0.690     1.000*   0.816
+        regex as it ships today       0.385     0.250    0.303
+        fmtools majority-of-3         0.789     0.750    0.769
+
+    (*tautological -- the corpus IS what the pre-fix regex flagged, so its recall
+    on that corpus cannot be anything else. See the memo for that caveat.)
+
+    The shipped gate's recall of 0.250 is the number that matters here: of the 20
+    memos that genuinely state a measured finding, the token set now reaches 5.
+    The advisory lane recovers 11 of the 15 it misses, and rejects 5 of the 8
+    false positives it still carries. That is complementarity, not replacement --
+    so this prints a column and writes a ledger row, and decides nothing.
+
+    Firewall: fail-open, capped, subprocess under the fmtools venv (this repo's
+    venv gains zero deps), never a verdict. Opt out with
+    ``CANONICAL_EQUATION_FM_ADVISORY=0``.
+    """
+    if os.environ.get("CANONICAL_EQUATION_FM_ADVISORY", "1") == "0":
+        return
+    candidates = [rel for rel in in_scope if rel not in set(violations)]
+    if not candidates or len(candidates) > _FM_ADVISORY_MAX_MEMOS:
+        return
+    try:
+        if str(REPO_ROOT) not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT))
+        from tools.fmtools_advisory import classify_texts, log_disagreements
+
+        texts = {
+            rel: (REPO_ROOT / rel).read_text(encoding="utf-8", errors="replace")[
+                :_FM_ADVISORY_EXCERPT_CHARS
+            ]
+            for rel in candidates
+        }
+        verdict = classify_texts(
+            texts,
+            labels=[_FM_ADVISORY_POSITIVE, _FM_ADVISORY_NEGATIVE],
+            instruction=_FM_ADVISORY_INSTRUCTION,
+            timeout_s=_FM_ADVISORY_TIMEOUT_S,
+            max_chars=_FM_ADVISORY_EXCERPT_CHARS,
+        )
+    except Exception:
+        return  # fail-open, silently: an advisory lane must never break a commit
+    if not verdict.ran:
+        return  # absent lane says nothing; it must not read as agreement
+
+    flagged = [
+        rel
+        for rel in candidates
+        if verdict.labels.get(rel) == _FM_ADVISORY_POSITIVE
+    ]
+    if not flagged:
+        return
+    log_disagreements(
+        "catalog_344",
+        [
+            {
+                "memo": rel,
+                "deterministic": "no_finding_token_or_already_satisfied",
+                "advisory": _FM_ADVISORY_POSITIVE,
+            }
+            for rel in flagged
+        ],
+        repo_root=str(REPO_ROOT),
+    )
+    print(
+        f"{YELLOW}[preflight-hook] ADVISORY (fmtools, on-device, NOT a verdict): "
+        f"{len(flagged)} staged memo(s) read as STATING A MEASURED FINDING that the "
+        f"#344 token set did not flag.{RST}",
+        file=sys.stderr,
+    )
+    for rel in flagged:
+        print(f"[preflight-hook]   advisory: {rel}", file=sys.stderr)
+    print(
+        "  The commit is NOT blocked and this label is NOT authority. It is the "
+        "second lane\n  reporting that the token set's recall on this class was "
+        "measured at 0.250 (ddm_fm3).\n  If the memo does state a measured finding, "
+        "consider citing its law now; if it does not,\n  ignore this line. Logged to "
+        ".omx/state/fmtools_advisory_disagreements.jsonl.",
+        file=sys.stderr,
+    )
+
+
 def run_canonical_equation_reference_scan(staged_docs: list[str]) -> int:
     """`ddm_eq1` — refuse a NEWLY-STAGED empirical-finding memo with no equation leg.
 
@@ -1348,6 +1464,8 @@ def run_canonical_equation_reference_scan(staged_docs: list[str]) -> int:
             file=sys.stderr,
         )
         return 0
+
+    _canonical_equation_fm_advisory(in_scope, violations)
 
     if violations:
         print(

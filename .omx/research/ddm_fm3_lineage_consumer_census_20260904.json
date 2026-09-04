@@ -1,0 +1,6014 @@
+{
+  "study": "ddm_fm3 A2 -- GT .npz lineage-consumer census and widening plan",
+  "widened_pattern": [
+    "gt_[\\w.\\-]*n\\d[\\w.\\-]*\\.npz"
+  ],
+  "scan_dirs": [
+    "src",
+    "tools",
+    "experiments",
+    "scripts"
+  ],
+  "baseline_live_findings": 2,
+  "widened_live_findings": 380,
+  "newly_lit_files": 318,
+  "fm_ran": true,
+  "fm_reason": null,
+  "files_by_class": {
+    "authority_consumer": 269,
+    "unclassified": 19,
+    "continuity_frame": 15,
+    "historical_memo": 8,
+    "test_fixture": 3,
+    "advisory_instrument": 4
+  },
+  "findings_by_class": {
+    "authority_consumer": 326,
+    "unclassified": 19,
+    "continuity_frame": 17,
+    "historical_memo": 8,
+    "test_fixture": 3,
+    "advisory_instrument": 4
+  },
+  "disagreements": [],
+  "rows": [
+    {
+      "path": "experiments/.scratch/ane_venv_20260713/a2_ane_bench.py",
+      "live_findings": 1,
+      "first_line": 44,
+      "artifacts": [
+        "gt_n24.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 44,
+          "text": "\"frames\": \"fixed heldout indices 12..23 from gt_n24.npz['gt_f1']\","
+        }
+      ]
+    },
+    {
+      "path": "experiments/.scratch/ane_venv_20260713/ane_correction_common.py",
+      "live_findings": 1,
+      "first_line": 35,
+      "artifacts": [
+        "gt_n24.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 35,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n24.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/curvelet_vs_fourier_capacity_probe.py",
+      "live_findings": 1,
+      "first_line": 149,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 149,
+          "text": "ap.add_argument(\"--npz\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_ar1_aa_render_price.py",
+      "live_findings": 1,
+      "first_line": 103,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 103,
+          "text": "PYAV_GT = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_b4r_endpoint_extras.py",
+      "live_findings": 1,
+      "first_line": 48,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "continuity_frame",
+      "final_class": "continuity_frame",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 48,
+          "text": "GT_CACHE = \"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_bc1_delta_baseline.py",
+      "live_findings": 1,
+      "first_line": 23,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 23,
+          "text": "_GT = str(_REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_bd1_class_field_receiver.py",
+      "live_findings": 1,
+      "first_line": 86,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 86,
+          "text": "DEFAULT_GT_CACHE: Final = _REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_bf1_band_field_repr_race.py",
+      "live_findings": 1,
+      "first_line": 59,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 59,
+          "text": "DEFAULT_GT_CACHE: Final = _REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_cg1_directed_edge_margin_probe.py",
+      "live_findings": 1,
+      "first_line": 50,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 50,
+          "text": "GT_NPZ = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_cg1_perclass_margin_reach.py",
+      "live_findings": 1,
+      "first_line": 53,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 53,
+          "text": "\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_cg1_precision_vs_enrichment_waterfill_key.py",
+      "live_findings": 1,
+      "first_line": 68,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 68,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_ck1_pose_resolve_kneeA.py",
+      "live_findings": 1,
+      "first_line": 56,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 56,
+          "text": "GT_NPZ = Path(\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_da1_d2_frame0_coupling.py",
+      "live_findings": 1,
+      "first_line": 91,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 91,
+          "text": "ap.add_argument(\"--gt-frames\", type=Path, required=True, help=\"gt_n600.npz with gt_f0/gt_f1/lstars\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_dc1_label_stream_price.py",
+      "live_findings": 1,
+      "first_line": 254,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 254,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_dd1_contour_coherence.py",
+      "live_findings": 2,
+      "first_line": 8,
+      "artifacts": [
+        "gt_n600_lstars_slim.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 8,
+          "text": "Z = np.load(\"experiments/results/ot_offset_n600_modal_20260709/gt_n600_lstars_slim.npz\")"
+        },
+        {
+          "line": 87,
+          "text": "\"substrate\":\"GT lstars n600 (gt_n600_lstars_slim.npz); no decode/vehicle/scorer\","
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_dd1_lane_component_census.py",
+      "live_findings": 1,
+      "first_line": 4,
+      "artifacts": [
+        "gt_n600_lstars_slim.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 4,
+          "text": "Z=np.load(\"experiments/results/ot_offset_n600_modal_20260709/gt_n600_lstars_slim.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_dr1_register_n600_anchor.py",
+      "live_findings": 1,
+      "first_line": 126,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 126,
+          "text": "\"PyAV (gt_n600.npz); 20,671 argmax sites differ from the DALI cache \u2014 \""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_dw1_mini_race.py",
+      "live_findings": 1,
+      "first_line": 26,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 26,
+          "text": "GT = \"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_ep2_endpoint_select.py",
+      "live_findings": 1,
+      "first_line": 227,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 227,
+          "text": "\"n600_convention\": \"frozen CPU-torch SegNet, ema_shadow, gt_n600.npz; the campaign's \""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_et2_projected_phase_field.py",
+      "live_findings": 1,
+      "first_line": 1018,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 1018,
+          "text": "ap.add_argument(\"--gt-cache\", type=Path, default=REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_et3_solve_within_cvp_phase_field.py",
+      "live_findings": 1,
+      "first_line": 972,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 972,
+          "text": "ap.add_argument(\"--gt-cache\", type=Path, default=REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_et4_solve_within_cvp_n600.py",
+      "live_findings": 1,
+      "first_line": 114,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 114,
+          "text": "DEFAULT_GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_fp1_class_field_projection.py",
+      "live_findings": 1,
+      "first_line": 45,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 45,
+          "text": "DEFAULT_GT_CACHE = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_fp1_qa91_erased_lane.py",
+      "live_findings": 1,
+      "first_line": 24,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 24,
+          "text": "GT_CACHE = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_gr1_granularity_rerace.py",
+      "live_findings": 1,
+      "first_line": 72,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 72,
+          "text": "GT = (\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_gt2_gt_tongue_induction.py",
+      "live_findings": 1,
+      "first_line": 1019,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 1019,
+          "text": "\"corpus_identity_verified\": \"gt_argmax_n600.npy == gt_n600.npz::lstars, BIT-IDENTICAL, sha256 f2c8be94774780bd\","
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_jd1_endpoint_verdict.py",
+      "live_findings": 1,
+      "first_line": 61,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 61,
+          "text": "\"mlx_fleet_gt_cache/gt_n600.npz\"))"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_jd4_endpoint_n600_both_bases.py",
+      "live_findings": 1,
+      "first_line": 93,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 93,
+          "text": "\"mlx_fleet_gt_cache/gt_n600.npz\"))"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_js2_instrument_control_on_custody_tensors.py",
+      "live_findings": 1,
+      "first_line": 63,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 63,
+          "text": "default=Path(\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\"),"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_js2b_edge_conditioning_relative_gauge.py",
+      "live_findings": 1,
+      "first_line": 55,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 55,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_ltg1_lane_topology_generator_floor.py",
+      "live_findings": 1,
+      "first_line": 1238,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 1238,
+          "text": "default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_lv1_token_coder_race.py",
+      "live_findings": 1,
+      "first_line": 51,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 51,
+          "text": "\"gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_mf1_margin_morse_probe.py",
+      "live_findings": 1,
+      "first_line": 42,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "continuity_frame",
+      "final_class": "continuity_frame",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 42,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_mg1_barrier_rerank_probe.py",
+      "live_findings": 1,
+      "first_line": 49,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 49,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_mg1_margin_floor_allocation_probe.py",
+      "live_findings": 1,
+      "first_line": 43,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 43,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_mp1_lsb_misplacement_margin_join.py",
+      "live_findings": 1,
+      "first_line": 80,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 80,
+          "text": "DEFAULT_GT = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_p956_class_grad_disagreement.py",
+      "live_findings": 1,
+      "first_line": 60,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 60,
+          "text": "\"mlx_fleet_gt_cache/gt_n600.npz\"))"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_pa1r_endpoint_verdict.py",
+      "live_findings": 1,
+      "first_line": 26,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 26,
+          "text": "GT_CACHE = \"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_pa1r_seal_and_tickets.py",
+      "live_findings": 1,
+      "first_line": 42,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 42,
+          "text": "GT_CACHE = \"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_pe1_per_edge_partition_race.py",
+      "live_findings": 1,
+      "first_line": 81,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 81,
+          "text": "DEFAULT_GT_CACHE: Final = _REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_pi2_posenet_inversion.py",
+      "live_findings": 1,
+      "first_line": 29,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 29,
+          "text": "GT_N96 = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_pj1_token_projection_fit.py",
+      "live_findings": 1,
+      "first_line": 54,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 54,
+          "text": "DEFAULT_GT_CACHE = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_pp1_band_lemma_curve.py",
+      "live_findings": 1,
+      "first_line": 92,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 92,
+          "text": "default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_pp1_direct_partition_coder.py",
+      "live_findings": 1,
+      "first_line": 399,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 399,
+          "text": "default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_pt2_ported_force_behavioural_proof.py",
+      "live_findings": 1,
+      "first_line": 37,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 37,
+          "text": "GT_CACHE = Path(\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_pz1_dseg_window_solve_n600.py",
+      "live_findings": 1,
+      "first_line": 44,
+      "artifacts": [
+        "gt_n600_lstars_slim.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 44,
+          "text": "_LSTARS = Path(\"experiments/results/ot_offset_n600_modal_20260709/gt_n600_lstars_slim.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_qa43_two_plane_parallax_probe.py",
+      "live_findings": 1,
+      "first_line": 46,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 46,
+          "text": "GT_NPZ = Path(\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_qa44_photometric_rungs_probe.py",
+      "live_findings": 1,
+      "first_line": 68,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "historical_memo",
+      "final_class": "historical_memo",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 68,
+          "text": "GT_NPZ = Path(\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_qa45_realizable_mask_probe.py",
+      "live_findings": 1,
+      "first_line": 57,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "continuity_frame",
+      "final_class": "continuity_frame",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 57,
+          "text": "GT_NPZ = Path(\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_qa92_carrier_discriminator.py",
+      "live_findings": 1,
+      "first_line": 62,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 62,
+          "text": "DEFAULT_GT_CACHE = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_qbr1_born_fairform_burn_prep.py",
+      "live_findings": 1,
+      "first_line": 1307,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 1307,
+          "text": "raise QBR1Error(\"gt_n600.npz byte count drifted from the cured-seal precondition\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_qbt1_qbflow_trainer.py",
+      "live_findings": 1,
+      "first_line": 123,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": true,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 123,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_qbw1_builder.py",
+      "live_findings": 1,
+      "first_line": 55,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 55,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_qx2_events_section_redesign.py",
+      "live_findings": 1,
+      "first_line": 65,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 65,
+          "text": "GT_CACHE: Final = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_qx3_receiver_closure.py",
+      "live_findings": 1,
+      "first_line": 58,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 58,
+          "text": "GT_CACHE: Final = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_rj2_joint_renderer_object_change.py",
+      "live_findings": 1,
+      "first_line": 69,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 69,
+          "text": "GT_CACHE: Final = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_s1a_stage_a_adapter.py",
+      "live_findings": 1,
+      "first_line": 60,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "historical_memo",
+      "final_class": "historical_memo",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 60,
+          "text": "GT_CACHE: Final = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_sc1_ep_probe.py",
+      "live_findings": 1,
+      "first_line": 40,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 40,
+          "text": "GT_CACHE = MAIN_REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_sp1_base_transfer_h_contract.py",
+      "live_findings": 1,
+      "first_line": 93,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 93,
+          "text": "default=\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_sp1_contour_support_coder.py",
+      "live_findings": 1,
+      "first_line": 226,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 226,
+          "text": "default=\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_sp1_values_coder.py",
+      "live_findings": 1,
+      "first_line": 130,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 130,
+          "text": "default=\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_sw1_null_basis_phase_solve.py",
+      "live_findings": 1,
+      "first_line": 992,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 992,
+          "text": "ap.add_argument(\"--gt-cache\", type=Path, default=REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_sx2_conditional_mdl.py",
+      "live_findings": 2,
+      "first_line": 39,
+      "artifacts": [
+        "gt_n600.npz",
+        "gt_n600_lstars_slim.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 39,
+          "text": "DEFAULT_LSTARS = \"experiments/results/ot_offset_n600_modal_20260709/gt_n600_lstars_slim.npz\""
+        },
+        {
+          "line": 40,
+          "text": "DEFAULT_FRAMES = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_sx2_displacement_magnitude.py",
+      "live_findings": 1,
+      "first_line": 43,
+      "artifacts": [
+        "gt_n600_lstars_slim.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 43,
+          "text": "DEFAULT_LSTARS = \"experiments/results/ot_offset_n600_modal_20260709/gt_n600_lstars_slim.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_sx2_g2_contour_hitrate.py",
+      "live_findings": 2,
+      "first_line": 40,
+      "artifacts": [
+        "gt_n600.npz",
+        "gt_n600_lstars_slim.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 40,
+          "text": "DEFAULT_LSTARS = \"experiments/results/ot_offset_n600_modal_20260709/gt_n600_lstars_slim.npz\""
+        },
+        {
+          "line": 41,
+          "text": "DEFAULT_FRAMES = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_tf1_partition_innovation_floor.py",
+      "live_findings": 1,
+      "first_line": 70,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 70,
+          "text": "DEFAULT_GT_CACHE: Final = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_tq1_optimal_token_edit.py",
+      "live_findings": 1,
+      "first_line": 63,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 63,
+          "text": "DEFAULT_GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_ub1_pose_family_923_harness.py",
+      "live_findings": 1,
+      "first_line": 28,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 28,
+          "text": "DEFAULT_GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_up1_decode_axis_photometric_probe.py",
+      "live_findings": 1,
+      "first_line": 381,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 381,
+          "text": "default=REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_up2_shipping_pose_solve.py",
+      "live_findings": 1,
+      "first_line": 79,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 79,
+          "text": "DEFAULT_AV_GT = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_v4b_static_transfer.py",
+      "live_findings": 1,
+      "first_line": 52,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 52,
+          "text": "GT_NPZ = Path(\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_wd3_scorer_aware_width_distillation.py",
+      "live_findings": 1,
+      "first_line": 99,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 99,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_wd3_sealed_3d9e021d07_runner.py",
+      "live_findings": 1,
+      "first_line": 95,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 95,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_ws0_worldsheet_grammar_price.py",
+      "live_findings": 1,
+      "first_line": 78,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 78,
+          "text": "DEFAULT_CACHE: Final = _REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/ddm_xp1_exact_p.py",
+      "live_findings": 1,
+      "first_line": 80,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 80,
+          "text": "DEFAULT_GT_CACHE = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/feed_el_structured_decomposition_optimal_form.py",
+      "live_findings": 1,
+      "first_line": 182,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 182,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/island_protection_survival_smoke.py",
+      "live_findings": 2,
+      "first_line": 113,
+      "artifacts": [
+        "gt_n24.npz",
+        "gt_n600.npz",
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 113,
+          "text": "default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        },
+        {
+          "line": 124,
+          "text": "for alt in (\"gt_n600.npz\", \"gt_n96.npz\", \"gt_n24.npz\"):"
+        }
+      ]
+    },
+    {
+      "path": "experiments/manim_levelset/scenes/_prep_hardest_frame.py",
+      "live_findings": 1,
+      "first_line": 32,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 32,
+          "text": "_CACHE = _HERE.parents[2] / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/measure_allclass_decomposition_FEED-et.py",
+      "live_findings": 1,
+      "first_line": 36,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 36,
+          "text": "CACHE = os.path.join(_HERE, \"results\", \"mlx_fleet_gt_cache\", \"gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/measure_hood_static_containment.py",
+      "live_findings": 1,
+      "first_line": 49,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 49,
+          "text": "_GT = Path(\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/measure_lane_perframe_solve_FEED-er.py",
+      "live_findings": 1,
+      "first_line": 42,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 42,
+          "text": "_GT = Path(\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/measure_lane_sdf_containment.py",
+      "live_findings": 1,
+      "first_line": 42,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 42,
+          "text": "_GT = Path(\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/measure_road_horizon_joint_containment.py",
+      "live_findings": 1,
+      "first_line": 61,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 61,
+          "text": "_GT = Path(\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/measure_v8_geocoder_close.py",
+      "live_findings": 1,
+      "first_line": 99,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 99,
+          "text": "return \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/measure_weight_entropy_gradient_conflict.py",
+      "live_findings": 1,
+      "first_line": 62,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 62,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/modal_ot_offset_n600_gate.py",
+      "live_findings": 2,
+      "first_line": 64,
+      "artifacts": [
+        "gt_n600_lstars_slim.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 64,
+          "text": "\"experiments/results/ot_offset_n600_modal_20260709/gt_n600_lstars_slim.npz\""
+        },
+        {
+          "line": 67,
+          "text": "SLIM_CACHE_REMOTE = str(REMOTE_REPO / \"gt_n600_lstars_slim.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/pdw1_fp32_realization_first_inbox_point.py",
+      "live_findings": 1,
+      "first_line": 58,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 58,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/probe_levelset_gpu_reorient_parity.py",
+      "live_findings": 1,
+      "first_line": 62,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "test_fixture",
+      "final_class": "test_fixture",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 62,
+          "text": "ap.add_argument(\"--gt-cache\", type=str, default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/probe_ms_edit_sidecar_rate.py",
+      "live_findings": 1,
+      "first_line": 310,
+      "artifacts": [
+        "gt_n24.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "advisory_instrument",
+      "final_class": "advisory_instrument",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 310,
+          "text": "default=_REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n24.npz\","
+        }
+      ]
+    },
+    {
+      "path": "experiments/probe_msal_reachability_orthogonality_268.py",
+      "live_findings": 2,
+      "first_line": 171,
+      "artifacts": [
+        "gt_n600.npz",
+        "gt_n600_sR.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 171,
+          "text": "default=root / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        },
+        {
+          "line": 173,
+          "text": "default=root / \"experiments/results/mlx_fleet_gt_cache/gt_n600_sR.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/probe_ot_flipweighted_mass_288.py",
+      "live_findings": 1,
+      "first_line": 187,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "continuity_frame",
+      "final_class": "continuity_frame",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 187,
+          "text": "default=root / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/probe_resume_stepping_instability.py",
+      "live_findings": 1,
+      "first_line": 52,
+      "artifacts": [
+        "gt_n24.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 52,
+          "text": "GT_N24 = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n24.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/probe_ripo_categorical_fisher_binary_vs_directional_20260714.py",
+      "live_findings": 1,
+      "first_line": 26,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 26,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/rl_annulus_unlock_gate.py",
+      "live_findings": 1,
+      "first_line": 83,
+      "artifacts": [
+        "gt_strided_n200.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 83,
+          "text": "default=_REPO / \"experiments/results/mlx_fleet_gt_cache/gt_strided_n200.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/shearlet_vs_curvelet_vs_fourier_capacity_probe.py",
+      "live_findings": 1,
+      "first_line": 85,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 85,
+          "text": "ap.add_argument(\"--npz\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/train_levelset_witness_realized_through_R_torch.py",
+      "live_findings": 1,
+      "first_line": 149,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": true,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 149,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/train_tr1_partition_renderer_mlx.py",
+      "live_findings": 1,
+      "first_line": 99,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": true,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 99,
+          "text": "DEFAULT_GT_CACHE = \"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "experiments/verify_persistence_topology_loss_n600.py",
+      "live_findings": 2,
+      "first_line": 33,
+      "artifacts": [
+        "gt_n600.npz",
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 33,
+          "text": "GT_N600 = Path(\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        },
+        {
+          "line": 34,
+          "text": "GT_N96 = Path(\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "experiments/waterfill_boundary_spectrum_probe.py",
+      "live_findings": 1,
+      "first_line": 233,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 233,
+          "text": "ap.add_argument(\"--npz\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "src/tac/boundary_math/persistence_topology_loss.py",
+      "live_findings": 1,
+      "first_line": 723,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 723,
+          "text": "\"dataset\": \"gt_n600.npz lstars/margins (frozen-SegNet argmax authority)\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/blind_coordinate_rate_lever_20260711.py",
+      "live_findings": 2,
+      "first_line": 158,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 158,
+          "text": "\"frames\": \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz['gt_f0','gt_f1'] \""
+        },
+        {
+          "line": 231,
+          "text": "\"labels\": \"n600 real gt camera frames (gt_n600.npz gt_f0/gt_f1)\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/chan_vese_area_constraint_birth_balance_20260708.py",
+      "live_findings": 1,
+      "first_line": 432,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 432,
+          "text": "\"source\": \"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/costate_lambda_marginal_ds_20260705.py",
+      "live_findings": 2,
+      "first_line": 237,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 237,
+          "text": "\"caches\": \"gt_n96.npz margins/lstars + 192 REAL comma10k masks \""
+        },
+        {
+          "line": 304,
+          "text": "\"caches\": \"gt_n96.npz margins/lstars + \u03c3_cc\u2032 #382 + comma10k prior + \""
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/dash_phase_carrier_rate_law_20260717.py",
+      "live_findings": 1,
+      "first_line": 102,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 102,
+          "text": "\"cache\": \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz (frozen CPU-torch \""
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/ddm_b2b_rowband_flip_mass_20260731.py",
+      "live_findings": 1,
+      "first_line": 34,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 34,
+          "text": "GT_CACHE_ARTIFACT = \"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\""
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/junction_young_sigma_and_powerlaw_exit_20260707.py",
+      "live_findings": 1,
+      "first_line": 103,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 103,
+          "text": "\"gt_cache\": \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz (lstars, ALL 600 pairs)\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/lane_gain_chain_composed_20260716.py",
+      "live_findings": 1,
+      "first_line": 135,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 135,
+          "text": "inputs={\"gt_cache\": \"gt_n600.npz lstars+margins (bit-exact frozen SegNet cache)\"},"
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/lane_groundframe_xi_transport_no_collapse_20260709.py",
+      "live_findings": 5,
+      "first_line": 94,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 94,
+          "text": "\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz['lstars'] \""
+        },
+        {
+          "line": 98,
+          "text": "\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz['gt_poses'] (600,6) = REAL \""
+        },
+        {
+          "line": 157,
+          "text": "\"labels\": \"gt_n600.npz['lstars'] (comma10k order Road0/Lane1)\","
+        },
+        {
+          "line": 208,
+          "text": "\"labels\": \"gt_n600.npz argmax; 599 scored transitions; xi = real gt_poses frozen-PoseNet readout\","
+        },
+        {
+          "line": 268,
+          "text": "\"labels\": \"n600 GT argmax (gt_n600.npz['lstars'] + real gt_poses xi); bit-exact roundtrips\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/morse_smale_stratified_parallax_dpose_20260708.py",
+      "live_findings": 1,
+      "first_line": 189,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "continuity_frame",
+      "final_class": "continuity_frame",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 189,
+          "text": "\"target\": \"gt_poses = _cpu_pose_raw(PoseNet, real_f0, real_f1)[:6] (cache gt_n600.npz) => \""
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/palette_realization_ceiling_20260710.py",
+      "live_findings": 1,
+      "first_line": 93,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 93,
+          "text": "\"target\": \"GT L* argmax (gt_n600.npz lstars), 600 pairs\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/partition_temporal_transport_amortization_20260715.py",
+      "live_findings": 1,
+      "first_line": 91,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 91,
+          "text": "\"cache\": \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz (frozen CPU-torch \""
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/perclass_stratum_carrier_taxonomy_20260716.py",
+      "live_findings": 1,
+      "first_line": 115,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 115,
+          "text": "inputs={\"field\": \"cached bit-exact margins (gt_n600.npz)\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/posenet_luma_chroma_asymmetry_20260710.py",
+      "live_findings": 2,
+      "first_line": 73,
+      "artifacts": [
+        "gt_n6.npz",
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 73,
+          "text": "\"data\": \"experiments/results/mlx_fleet_gt_cache/gt_n6.npz real GT pairs (n<=4)\","
+        },
+        {
+          "line": 205,
+          "text": "\"data\": \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz (cached; baseline parity 2.6e-12)\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/resize_exploit_flip_fix_frontier_20260709.py",
+      "live_findings": 2,
+      "first_line": 161,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 161,
+          "text": "\"labels\": \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz['lstars'] (600x384x512 int64)\","
+        },
+        {
+          "line": 306,
+          "text": "\"labels\": \"n600 GT argmax (gt_n600.npz['lstars']); candidate = resize_degraded_gt(192x256)\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/rgb_at_boundaries_20260715.py",
+      "live_findings": 1,
+      "first_line": 80,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 80,
+          "text": "\"gt\": \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz (exact frozen-scorer cache)\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/roadlane_grating_composition_refuted_20260710.py",
+      "live_findings": 1,
+      "first_line": 92,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 92,
+          "text": "\"gt\": \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz lstars (L*)\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/v8_geometric_rate_decomposition_20260709.py",
+      "live_findings": 8,
+      "first_line": 93,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 93,
+          "text": "\"labels\": \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz['lstars'] (600x384x512 int64 argmax)\","
+        },
+        {
+          "line": 142,
+          "text": "\"labels\": \"gt_n600.npz['lstars'] (comma10k order Road0/Lane1/Undriv2/Movable3/MyCar4)\","
+        },
+        {
+          "line": 207,
+          "text": "\"labels\": \"gt_n600.npz['lstars'] (self-detected Road0/Lane1/Undriv2/Movable3/MyCar4)\","
+        },
+        {
+          "line": 261,
+          "text": "\"labels\": \"gt_n600.npz['lstars']; residual measured on the DE-SHARED set (levers compose)\","
+        },
+        {
+          "line": 319,
+          "text": "\"labels\": \"gt_n600.npz['lstars']\","
+        },
+        {
+          "line": 364,
+          "text": "\"labels\": \"gt_n600.npz['lstars'] (600x384x512 int64 argmax)\","
+        },
+        {
+          "line": 427,
+          "text": "\"labels\": \"gt_n600.npz['lstars']\","
+        },
+        {
+          "line": 598,
+          "text": "\"labels\": \"n600 GT argmax (gt_n600.npz['lstars']); real coders, bit-exact roundtrips\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/windowed_curvelet_parabolic_capacity_20260714.py",
+      "live_findings": 1,
+      "first_line": 138,
+      "artifacts": [
+        "gt_n600.npz",
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 138,
+          "text": "\"data\": \"frozen-SegNet argmax boundary annulus, gt_n600.npz / gt_n96.npz\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/canonical_equations/witness_realization_lsb_regime_20260717.py",
+      "live_findings": 1,
+      "first_line": 107,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 107,
+          "text": "\"gt\": \"gt_n600.npz lstars (bit-exact frozen SegNet cache)\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/inc1a_harness/analytic_smoke.py",
+      "live_findings": 1,
+      "first_line": 40,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 40,
+          "text": "DEFAULT_NPZ = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "src/tac/inc1a_harness/decoupling_screen.py",
+      "live_findings": 1,
+      "first_line": 115,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 115,
+          "text": "\"measure\": \"composite_head argmax MASK d_seg vs L* (gt_n600.npz)\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/optimization/seed_compose_b2.py",
+      "live_findings": 1,
+      "first_line": 779,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 779,
+          "text": "\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/through_r/harness.py",
+      "live_findings": 1,
+      "first_line": 51,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 51,
+          "text": "DEFAULT_GT_CACHE = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "src/tac/through_r/mc_finisher.py",
+      "live_findings": 1,
+      "first_line": 2121,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 2121,
+          "text": "DEFAULT_GT_CACHE = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_autoconfig.py",
+      "live_findings": 2,
+      "first_line": 3850,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 3850,
+          "text": "value=\"composite_argmax MASK d_seg vs L* (gt_n600.npz)\","
+        },
+        {
+          "line": 3858,
+          "text": "provenance=\"gt_n600.npz lstars (600,384,512) -> W\u00d7H 512\u00d7384 = post-R SegNet argmax \""
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_control/scorer_geometry.py",
+      "live_findings": 1,
+      "first_line": 38,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 38,
+          "text": "DEFAULT_GT_CACHE = _REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\""
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_dsl/costate_agent_dsl.py",
+      "live_findings": 2,
+      "first_line": 283,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "continuity_frame",
+      "final_class": "continuity_frame",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 283,
+          "text": "corpus=(\"gt_n96.npz margins/lstars (cached Fisher-surrogate field)\",),"
+        },
+        {
+          "line": 289,
+          "text": "corpus=(\"gt_n96.npz frames (Holub-Fridrich inverse-steg cost geometry)\",),"
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_dsl/curriculum_candidate_pool.py",
+      "live_findings": 1,
+      "first_line": 922,
+      "artifacts": [
+        "gt_n600_sR.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 922,
+          "text": "gate=\"ZERO build: gt_n600_sR.npz READY; A/B on the fragile annulus band\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_dsl/curriculum_dsl.py",
+      "live_findings": 3,
+      "first_line": 2063,
+      "artifacts": [
+        "gt_n600.npz",
+        "gt_n96.npz",
+        "gt_strided_n200.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 2063,
+          "text": "gt_cache=\"experiments/results/mlx_fleet_gt_cache/gt_strided_n200.npz\","
+        },
+        {
+          "line": 3297,
+          "text": "\"to gt_n96.npz source custody\""
+        },
+        {
+          "line": 6908,
+          "text": "gt_cache: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_dsl/duty_queue_fire_tickets_20260719.py",
+      "live_findings": 1,
+      "first_line": 905,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 905,
+          "text": "\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_dsl/margin_adaptive_mixed_precision_20260714.py",
+      "live_findings": 1,
+      "first_line": 25,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 25,
+          "text": "gt_cache: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_dsl/optimal_basis_20260714.py",
+      "live_findings": 5,
+      "first_line": 914,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 914,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        },
+        {
+          "line": 991,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        },
+        {
+          "line": 1076,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        },
+        {
+          "line": 1093,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        },
+        {
+          "line": 1110,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_dsl/spec_c1_optimal_form_20260715.py",
+      "live_findings": 2,
+      "first_line": 298,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 298,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        },
+        {
+          "line": 559,
+          "text": "\"without them; gt_n600.npz custody CLEAR)\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_dsl/spec_c1_throughput_20260715.py",
+      "live_findings": 2,
+      "first_line": 151,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 151,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        },
+        {
+          "line": 172,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_dsl/spec_c2_surgical_20260716.py",
+      "live_findings": 1,
+      "first_line": 161,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 161,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_dsl/spec_g111_batch16_v9_semantic_base.py",
+      "live_findings": 1,
+      "first_line": 754,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 754,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_dsl/spec_next_launch_all_levers_20260713.py",
+      "live_findings": 1,
+      "first_line": 331,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 331,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_dsl/spec_throughput_component_timer_20260713.py",
+      "live_findings": 1,
+      "first_line": 59,
+      "artifacts": [
+        "gt_n24.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 59,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n24.npz\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_dsl/spec_v10_capstone_20260717.py",
+      "live_findings": 1,
+      "first_line": 76,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 76,
+          "text": "\"path\": \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_dsl/spec_v9_cgauge.py",
+      "live_findings": 7,
+      "first_line": 423,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 423,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        },
+        {
+          "line": 469,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        },
+        {
+          "line": 635,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        },
+        {
+          "line": 682,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        },
+        {
+          "line": 825,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        },
+        {
+          "line": 1044,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        },
+        {
+          "line": 1367,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "src/tac/witness_dsl/spec_v9c3_duty_ab_20260719.py",
+      "live_findings": 1,
+      "first_line": 143,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 143,
+          "text": "gt_cache_path: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/aa_sdf_observation_render_verify_n600.py",
+      "live_findings": 1,
+      "first_line": 67,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 67,
+          "text": "CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/adversarial_evasion_fisher_null_probe.py",
+      "live_findings": 1,
+      "first_line": 40,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 40,
+          "text": "GT_N96 = Path(\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/apply_amc_saliency_tiered_bitalloc_witness.py",
+      "live_findings": 1,
+      "first_line": 339,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 339,
+          "text": "default=Path(\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\"),"
+        }
+      ]
+    },
+    {
+      "path": "tools/apply_perclass_bitalloc_witness.py",
+      "live_findings": 1,
+      "first_line": 126,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 126,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/apply_sensitivity_bitalloc_witness.py",
+      "live_findings": 1,
+      "first_line": 162,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 162,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/bench_ane_unlock_followup_20260713.py",
+      "live_findings": 1,
+      "first_line": 47,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 47,
+          "text": "GT_N600 = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/bench_fixedpoint_authority_kernels.py",
+      "live_findings": 1,
+      "first_line": 55,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 55,
+          "text": "DEFAULT_GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/bench_integer_r_adjoint_backend.py",
+      "live_findings": 1,
+      "first_line": 34,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 34,
+          "text": "DEFAULT_GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/bench_verdict_parallel_workers.py",
+      "live_findings": 1,
+      "first_line": 35,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 35,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/birth_death_persistence_dseg.py",
+      "live_findings": 1,
+      "first_line": 269,
+      "artifacts": [
+        "gt_strided_n200.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "continuity_frame",
+      "final_class": "continuity_frame",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 269,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_strided_n200.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/blind_coordinate_proof.py",
+      "live_findings": 1,
+      "first_line": 67,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 67,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/build_compander_ground_class_pair_ledger.py",
+      "live_findings": 1,
+      "first_line": 21,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 21,
+          "text": "DEFAULT_GT = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/build_ddm_bp1_arm_tickets.py",
+      "live_findings": 1,
+      "first_line": 213,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 213,
+          "text": "REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\"))"
+        }
+      ]
+    },
+    {
+      "path": "tools/build_ddm_uf1_refresh_registry.py",
+      "live_findings": 1,
+      "first_line": 525,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 525,
+          "text": "4. If `gt_n600.npz` or the d2 pose trace sha changes, re-run the #931 prefix ratio derivation before"
+        }
+      ]
+    },
+    {
+      "path": "tools/build_ep725_n2_bounded_target_g_receipt.py",
+      "live_findings": 1,
+      "first_line": 62,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 62,
+          "text": "GT_CACHE = Path(\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/build_lane_headstart.py",
+      "live_findings": 1,
+      "first_line": 47,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 47,
+          "text": "default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/build_mx2_pose_adapter_caches.py",
+      "live_findings": 1,
+      "first_line": 39,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "historical_memo",
+      "final_class": "historical_memo",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 39,
+          "text": "DEFAULT_GT_REFERENCE_NPZ = Path(\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/build_pa_edge_weights.py",
+      "live_findings": 1,
+      "first_line": 158,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 158,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/build_r1b3_producers.py",
+      "live_findings": 1,
+      "first_line": 41,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 41,
+          "text": "DEFAULT_GT_CACHE: Final = Path(\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/build_strided_subset_gt.py",
+      "live_findings": 1,
+      "first_line": 54,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 54,
+          "text": "default=Path(\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\"),"
+        }
+      ]
+    },
+    {
+      "path": "tools/build_v752_isolation_arms.py",
+      "live_findings": 1,
+      "first_line": 151,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 151,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/build_witness_showcase.py",
+      "live_findings": 1,
+      "first_line": 157,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 157,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/c2_perclass_stratum_carrier_analysis.py",
+      "live_findings": 2,
+      "first_line": 54,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 54,
+          "text": "GT_N600 = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        },
+        {
+          "line": 62,
+          "text": "AXIS = \"[macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)\""
+        }
+      ]
+    },
+    {
+      "path": "tools/calibrate_r1b5_xi0_warp.py",
+      "live_findings": 1,
+      "first_line": 57,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 57,
+          "text": "\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/chernoff_vs_margin_probe.py",
+      "live_findings": 2,
+      "first_line": 306,
+      "artifacts": [
+        "gt_n600.npz",
+        "gt_strided_n200.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 306,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        },
+        {
+          "line": 307,
+          "text": "ap.add_argument(\"--flips-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_strided_n200.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/colocation_fisher_stress_anisotropy_test.py",
+      "live_findings": 1,
+      "first_line": 42,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 42,
+          "text": "DEFAULT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/compare_shadow_vs_live_byte_close.py",
+      "live_findings": 1,
+      "first_line": 167,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": true,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 167,
+          "text": "\"gt_n96.npz)\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/compose_next_launch_all_levers_ticket.py",
+      "live_findings": 1,
+      "first_line": 133,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 133,
+          "text": "default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/compose_predict_project_seed.py",
+      "live_findings": 1,
+      "first_line": 23,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 23,
+          "text": "default=Path(\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\"),"
+        }
+      ]
+    },
+    {
+      "path": "tools/compose_witness_archive.py",
+      "live_findings": 1,
+      "first_line": 81,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 81,
+          "text": "_DEF_CACHE = \"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/conley_persistence_certifier.py",
+      "live_findings": 1,
+      "first_line": 116,
+      "artifacts": [
+        "gt_strided_n200.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 116,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_strided_n200.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/constructive_inverse_solve_harness.py",
+      "live_findings": 1,
+      "first_line": 1144,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 1144,
+          "text": "parser.add_argument(\"--gt-cache\", type=Path, help=\"read-only ZIP_STORED gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/costate_live_ingest.py",
+      "live_findings": 1,
+      "first_line": 52,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 52,
+          "text": "DEFAULT_GT_CACHE = _REPO / \"experiments\" / \"results\" / \"mlx_fleet_gt_cache\" / \"gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/d1_gpu_verdict_agreement_probe_n600.py",
+      "live_findings": 1,
+      "first_line": 70,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 70,
+          "text": "CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/dash_comb_probe_n600.py",
+      "live_findings": 1,
+      "first_line": 91,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 91,
+          "text": "CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/dashboard_flow_sequence.py",
+      "live_findings": 1,
+      "first_line": 454,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "historical_memo",
+      "final_class": "historical_memo",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 454,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/dashboard_server.py",
+      "live_findings": 7,
+      "first_line": 284,
+      "artifacts": [
+        "gt_n6.npz",
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 284,
+          "text": "witness_gt_cache: str = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        },
+        {
+          "line": 308,
+          "text": "oracle_gt_cache: str = \"experiments/results/mlx_fleet_gt_cache/gt_n6.npz\"  # 6 pairs, ~48 MB"
+        },
+        {
+          "line": 321,
+          "text": "whyhow_gt_cache: str = \"experiments/results/mlx_fleet_gt_cache/gt_n6.npz\"  # 6 pairs, ~48 MB"
+        },
+        {
+          "line": 387,
+          "text": "witness_gt_cache=e(\"DASH_WITNESS_GT_CACHE\", \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\"),"
+        },
+        {
+          "line": 402,
+          "text": "oracle_gt_cache=e(\"DASH_ORACLE_GT_CACHE\", \"experiments/results/mlx_fleet_gt_cache/gt_n6.npz\"),"
+        },
+        {
+          "line": 409,
+          "text": "whyhow_gt_cache=e(\"DASH_WHYHOW_GT_CACHE\", \"experiments/results/mlx_fleet_gt_cache/gt_n6.npz\"),"
+        },
+        {
+          "line": 7179,
+          "text": "help=\"GT cache for the 600-pass (needs all 600 pairs: gt_n600.npz)\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/ddm_dw1_seal_windows.py",
+      "live_findings": 1,
+      "first_line": 29,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 29,
+          "text": "GT = \"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/ddm_lr1_teacher_information_probe.py",
+      "live_findings": 1,
+      "first_line": 193,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 193,
+          "text": "default=Path(\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\"),"
+        }
+      ]
+    },
+    {
+      "path": "tools/ddm_sg2_seg_actuator_reductions.py",
+      "live_findings": 4,
+      "first_line": 61,
+      "artifacts": [
+        "gt_heldout_n400.npz",
+        "gt_n600.npz",
+        "gt_n600_sR.npz",
+        "gt_strided_n200.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 61,
+          "text": "GT_N600 = CACHE / \"gt_n600.npz\""
+        },
+        {
+          "line": 62,
+          "text": "SR_N600 = CACHE / \"gt_n600_sR.npz\""
+        },
+        {
+          "line": 63,
+          "text": "GT_HELDOUT = CACHE / \"gt_heldout_n400.npz\""
+        },
+        {
+          "line": 64,
+          "text": "GT_STRIDED = CACHE / \"gt_strided_n200.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/ddm_ti1_teacher_nonredundancy_probe.py",
+      "live_findings": 1,
+      "first_line": 639,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 639,
+          "text": "default=Path(\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\"),"
+        }
+      ]
+    },
+    {
+      "path": "tools/ddm_tl1_scored_dims_reductions.py",
+      "live_findings": 1,
+      "first_line": 33,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 33,
+          "text": "GT_N600 = REPO / \"experiments\" / \"results\" / \"mlx_fleet_gt_cache\" / \"gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/dual_metric_readback.py",
+      "live_findings": 1,
+      "first_line": 99,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 99,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/elm_inr_head_seed.py",
+      "live_findings": 1,
+      "first_line": 82,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 82,
+          "text": "DEFAULT_LABELS = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/erasure_timing_attribution.py",
+      "live_findings": 1,
+      "first_line": 631,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "continuity_frame",
+      "final_class": "continuity_frame",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 631,
+          "text": "default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/fire_curvelet_matched_bytes_ab_p0_497.py",
+      "live_findings": 1,
+      "first_line": 111,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "continuity_frame",
+      "final_class": "continuity_frame",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 111,
+          "text": "\"--gt-cache\", \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/fit_junction_sigma_youngs_law.py",
+      "live_findings": 1,
+      "first_line": 42,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 42,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/gd1_gate_estimator_audit.py",
+      "live_findings": 1,
+      "first_line": 77,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 77,
+          "text": "DEFAULT_GT_CACHE = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/hard_frame_mechanism_atlas.py",
+      "live_findings": 1,
+      "first_line": 89,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 89,
+          "text": "\"(gt_n600.npz); FROZEN mod32cap EMA-best ep650 witness frames through exact R\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/lane_winnability_homotopy_smoke.py",
+      "live_findings": 1,
+      "first_line": 42,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 42,
+          "text": "_CACHE = _REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/launch_witness_cloud.py",
+      "live_findings": 1,
+      "first_line": 720,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 720,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/launch_witness_run.py",
+      "live_findings": 1,
+      "first_line": 2539,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 2539,
+          "text": "ap.add_argument(\"--gt-cache\", required=True, help=\"path to the clip's GT cache (e.g. .../gt_n600.npz)\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/levelset_analytic_lane_band_dseg_n600.py",
+      "live_findings": 1,
+      "first_line": 67,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 67,
+          "text": "CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/levelset_byte_close_and_eval.py",
+      "live_findings": 1,
+      "first_line": 4564,
+      "artifacts": [
+        "gt_n6.npz"
+      ],
+      "deterministic_force_authority": true,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 4564,
+          "text": "ap.add_argument(\"--gt-cache\", type=str, default=None, help=\"shared GT npz for parity (e.g. gt_n6.npz)\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/levelset_gate_discriminators_n600.py",
+      "live_findings": 1,
+      "first_line": 56,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 56,
+          "text": "CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/levelset_heldout_codefit_gate.py",
+      "live_findings": 1,
+      "first_line": 136,
+      "artifacts": [
+        "gt_heldout_n400.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 136,
+          "text": "default=REPO / \"experiments/results/mlx_fleet_gt_cache/gt_heldout_n400.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/levelset_ipm_horizon_geom_sweep_n600.py",
+      "live_findings": 1,
+      "first_line": 27,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 27,
+          "text": "CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/levelset_pose_gate.py",
+      "live_findings": 1,
+      "first_line": 526,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 526,
+          "text": "default=str(_REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\"))"
+        }
+      ]
+    },
+    {
+      "path": "tools/levelset_render_side_sizing_l7best_n600.py",
+      "live_findings": 1,
+      "first_line": 71,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 71,
+          "text": "CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/levelset_torch_inflate_parity.py",
+      "live_findings": 1,
+      "first_line": 263,
+      "artifacts": [
+        "gt_n6.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 263,
+          "text": "ap.add_argument(\"--gt-cache\", type=str, default=str(_REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n6.npz\"))"
+        }
+      ]
+    },
+    {
+      "path": "tools/maxplus_annulus_fit.py",
+      "live_findings": 1,
+      "first_line": 187,
+      "artifacts": [
+        "gt_strided_n200.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 187,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_strided_n200.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_arith_selfcomp_rate_coders.py",
+      "live_findings": 1,
+      "first_line": 818,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 818,
+          "text": "parser.add_argument(\"--gt-cache\", type=Path, required=True, help=\"exact gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_budget_gate_overturn.py",
+      "live_findings": 1,
+      "first_line": 651,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 651,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_c2_integer_plane_emitter.py",
+      "live_findings": 1,
+      "first_line": 69,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "continuity_frame",
+      "final_class": "continuity_frame",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 69,
+          "text": "\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_clean_canonical_warp_through_R.py",
+      "live_findings": 1,
+      "first_line": 555,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 555,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_content_edge_strong.py",
+      "live_findings": 1,
+      "first_line": 116,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 116,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_contour_string_flip_coding.py",
+      "live_findings": 1,
+      "first_line": 601,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 601,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_dash_phase_carrier_n600.py",
+      "live_findings": 1,
+      "first_line": 70,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 70,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_ddm_description_vocabulary.py",
+      "live_findings": 1,
+      "first_line": 409,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 409,
+          "text": "\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_ddm_dv2_sdwl1.py",
+      "live_findings": 1,
+      "first_line": 41,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 41,
+          "text": "DEFAULT_SOURCE_CACHE: Final = Path(\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_ddm_ms1_min_description_lattice_solve.py",
+      "live_findings": 1,
+      "first_line": 79,
+      "artifacts": [
+        "gt_n600_lstars_slim.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 79,
+          "text": "\"gt_n600_lstars_slim.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_ddm_rp1_rangeA_cell_probe.py",
+      "live_findings": 1,
+      "first_line": 78,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 78,
+          "text": "gt = np.load(str(MAIN / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\"))"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_delta_R_noise_floor.py",
+      "live_findings": 1,
+      "first_line": 109,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 109,
+          "text": "ap.add_argument(\"--gt-npz\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_dm3_spatial_grid_vs_global_code.py",
+      "live_findings": 1,
+      "first_line": 65,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 65,
+          "text": "DEFAULT_NPZ = str(_REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_eikonal_sdf_dseg_recovery.py",
+      "live_findings": 1,
+      "first_line": 69,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 69,
+          "text": "DEFAULT_NPZ = str(_REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_free_generator_byte_budget.py",
+      "live_findings": 2,
+      "first_line": 72,
+      "artifacts": [
+        "gt_n600.npz",
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 72,
+          "text": "DEFAULT_POSE_NPZ = str(_REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        },
+        {
+          "line": 73,
+          "text": "DEFAULT_SEG_NPZ = str(_REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_jitter_predictability.py",
+      "live_findings": 1,
+      "first_line": 279,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 279,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_joint_seg_pose_rate.py",
+      "live_findings": 1,
+      "first_line": 78,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 78,
+          "text": "DEFAULT_CACHE = Path(\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_keyframe_ego_residual_coding.py",
+      "live_findings": 1,
+      "first_line": 65,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 65,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_keyframe_pose_sufficiency_ladder.py",
+      "live_findings": 1,
+      "first_line": 167,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 167,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_keyframe_vcm_rate.py",
+      "live_findings": 1,
+      "first_line": 47,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 47,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_lane_ipm_vhorizon_reconciliation.py",
+      "live_findings": 1,
+      "first_line": 43,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 43,
+          "text": "_CACHE = _REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_lane_polynomial_shape_floor.py",
+      "live_findings": 1,
+      "first_line": 251,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 251,
+          "text": "default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_mdl_polytope_member.py",
+      "live_findings": 1,
+      "first_line": 60,
+      "artifacts": [
+        "gt_n600_lstars_slim.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 60,
+          "text": "\"gt_n600_lstars_slim.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_movables_multibody_residual.py",
+      "live_findings": 1,
+      "first_line": 296,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 296,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_pose_warp_dseg.py",
+      "live_findings": 1,
+      "first_line": 521,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 521,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_r1b4_receiver_smoke.py",
+      "live_findings": 1,
+      "first_line": 63,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 63,
+          "text": "DEFAULT_CACHE: Final = Path(\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_rate_law_ladder_owed.py",
+      "live_findings": 1,
+      "first_line": 640,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 640,
+          "text": "default=Path(\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\"))"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_realization_g2_lattice.py",
+      "live_findings": 1,
+      "first_line": 7493,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 7493,
+          "text": "default=Path(\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\"),"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_screw_reach_through_R.py",
+      "live_findings": 1,
+      "first_line": 250,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 250,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_screw_warp_through_R.py",
+      "live_findings": 1,
+      "first_line": 239,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 239,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_seg_secant_rd_curve.py",
+      "live_findings": 1,
+      "first_line": 73,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 73,
+          "text": "\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_segnet_fooling_ladder.py",
+      "live_findings": 1,
+      "first_line": 120,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 120,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_taskspace_pga_n2_macos_cpu.py",
+      "live_findings": 2,
+      "first_line": 54,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 54,
+          "text": "TARGET_CACHE_PATH: Final = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        },
+        {
+          "line": 204,
+          "text": "\"path\": \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_tie_aware_preimage_ab.py",
+      "live_findings": 1,
+      "first_line": 78,
+      "artifacts": [
+        "gt_n24.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 78,
+          "text": "default=str(REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n24.npz\"),"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_uint8_lattice_feasibility.py",
+      "live_findings": 1,
+      "first_line": 87,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 87,
+          "text": "\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_v10_free_predictor_floor.py",
+      "live_findings": 1,
+      "first_line": 104,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 104,
+          "text": "DEFAULT_CACHE = Path(\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_v10_two_plane_receiver_timing.py",
+      "live_findings": 1,
+      "first_line": 104,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 104,
+          "text": "CANONICAL_CACHE = Path(\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_v8_residual_kit_deshare_curverel.py",
+      "live_findings": 1,
+      "first_line": 68,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 68,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_v9_target_partition_grammar.py",
+      "live_findings": 2,
+      "first_line": 48,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 48,
+          "text": "DEFAULT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        },
+        {
+          "line": 376,
+          "text": "\"gt_n600.npz::lstars is encoder-side diagnostic/supervision only; the target label table, \""
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_verdict_memory_reclaim.py",
+      "live_findings": 1,
+      "first_line": 73,
+      "artifacts": [
+        "gt_n24.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 73,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n24.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_warp_dpose_through_R.py",
+      "live_findings": 1,
+      "first_line": 243,
+      "artifacts": [
+        "gt_n6.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 243,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n6.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_warp_real_luma_frame0_dpose.py",
+      "live_findings": 1,
+      "first_line": 69,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 69,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_waterfill_through_R.py",
+      "live_findings": 1,
+      "first_line": 157,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 157,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_yhat_native_equivalence.py",
+      "live_findings": 1,
+      "first_line": 47,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 47,
+          "text": "DEFAULT_CACHE = Path(\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/measure_yhat_rd_ladder.py",
+      "live_findings": 1,
+      "first_line": 72,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 72,
+          "text": "DEFAULT_CACHE = Path(\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/mlx_gpu_determinism_probe.py",
+      "live_findings": 1,
+      "first_line": 481,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 481,
+          "text": "ap.add_argument(\"--comp-gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/necessity_dseg_calibration.py",
+      "live_findings": 2,
+      "first_line": 54,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 54,
+          "text": "GT_N600 = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        },
+        {
+          "line": 62,
+          "text": "AXIS = \"[macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)\""
+        }
+      ]
+    },
+    {
+      "path": "tools/necessity_inverse_factorization_solver.py",
+      "live_findings": 2,
+      "first_line": 59,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 59,
+          "text": "GT_N600 = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        },
+        {
+          "line": 64,
+          "text": "AXIS = \"[macOS-CPU advisory] frozen CPU-torch fp32; bit-exact cached GT (gt_n600.npz)\""
+        }
+      ]
+    },
+    {
+      "path": "tools/north_star_fisher_manifold_dim.py",
+      "live_findings": 1,
+      "first_line": 80,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 80,
+          "text": "ap.add_argument(\"--cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/null_subspace_rate_measure.py",
+      "live_findings": 1,
+      "first_line": 415,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "historical_memo",
+      "final_class": "historical_memo",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 415,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/oracle_dashboard_panels.py",
+      "live_findings": 1,
+      "first_line": 332,
+      "artifacts": [
+        "gt_n6.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 332,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n6.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/pool_channel_jacobian_rd_harness.py",
+      "live_findings": 2,
+      "first_line": 62,
+      "artifacts": [
+        "gt_n600.npz",
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 62,
+          "text": "\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        },
+        {
+          "line": 67,
+          "text": "\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/pose_frame0_inverse_solve_probe.py",
+      "live_findings": 1,
+      "first_line": 1044,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 1044,
+          "text": "default=str(_REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\"))"
+        }
+      ]
+    },
+    {
+      "path": "tools/precompute_sR_reachability.py",
+      "live_findings": 1,
+      "first_line": 210,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 210,
+          "text": "\"e.g. experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/prepare_ane_full_trainer_concurrency_ab_20260713.py",
+      "live_findings": 1,
+      "first_line": 24,
+      "artifacts": [
+        "gt_n24.npz"
+      ],
+      "deterministic_force_authority": true,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 24,
+          "text": "GT_N24 = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n24.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_defect_network_rate_code.py",
+      "live_findings": 1,
+      "first_line": 360,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 360,
+          "text": "default=REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_exact_int64_scorer_forward_n600.py",
+      "live_findings": 1,
+      "first_line": 55,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "test_fixture",
+      "final_class": "test_fixture",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 55,
+          "text": "DEFAULT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_fixedpoint_scorer_forward_n600.py",
+      "live_findings": 1,
+      "first_line": 45,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 45,
+          "text": "DEFAULT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_frozen_replay_convex_head.py",
+      "live_findings": 1,
+      "first_line": 66,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 66,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_frozen_scorer_verdict_wallclock.py",
+      "live_findings": 1,
+      "first_line": 35,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 35,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_instant_projected_adjoint.py",
+      "live_findings": 1,
+      "first_line": 861,
+      "artifacts": [
+        "gt_n6.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "test_fixture",
+      "final_class": "test_fixture",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 861,
+          "text": "gt_path = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n6.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_int8_witness_byteclose_gap.py",
+      "live_findings": 1,
+      "first_line": 35,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 35,
+          "text": "DEFAULT_GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_lane_skipband_bindingness.py",
+      "live_findings": 1,
+      "first_line": 49,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "continuity_frame",
+      "final_class": "continuity_frame",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 49,
+          "text": "help=\"GT npz (gt_f1 camera frames + lstars), e.g. gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_manifold_geometry_slots.py",
+      "live_findings": 1,
+      "first_line": 26,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 26,
+          "text": "DEFAULT_GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_margin_adaptive_mixed_precision_n600.py",
+      "live_findings": 1,
+      "first_line": 67,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 67,
+          "text": "DEFAULT_GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_mixed_int64_scorer_forward_n600.py",
+      "live_findings": 1,
+      "first_line": 53,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "advisory_instrument",
+      "final_class": "advisory_instrument",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 53,
+          "text": "DEFAULT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_mlx_real_n600_precision.py",
+      "live_findings": 1,
+      "first_line": 47,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 47,
+          "text": "DEFAULT_GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_onpolicy_costate_matched_window.py",
+      "live_findings": 1,
+      "first_line": 116,
+      "artifacts": [
+        "gt_n6.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 116,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n6.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_onpolicy_scorer_surrogate.py",
+      "live_findings": 1,
+      "first_line": 56,
+      "artifacts": [
+        "gt_n6.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 56,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n6.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_partition_anisotropy_map.py",
+      "live_findings": 1,
+      "first_line": 36,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 36,
+          "text": "default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_partition_collapse_feasibility.py",
+      "live_findings": 1,
+      "first_line": 283,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 283,
+          "text": "default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_phase_stack_efficacy_road_lane.py",
+      "live_findings": 1,
+      "first_line": 84,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 84,
+          "text": "\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_precision_backend_cpu_sdk.py",
+      "live_findings": 1,
+      "first_line": 32,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 32,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_pythagorean_exact_arithmetic_bitident.py",
+      "live_findings": 1,
+      "first_line": 52,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 52,
+          "text": "DEFAULT_GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_resumability_537_real_smoke.py",
+      "live_findings": 1,
+      "first_line": 37,
+      "artifacts": [
+        "gt_n24.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "continuity_frame",
+      "final_class": "continuity_frame",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 37,
+          "text": "DEFAULT_GT = Path(\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n24.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_segnet_costate_injection.py",
+      "live_findings": 1,
+      "first_line": 44,
+      "artifacts": [
+        "gt_n6.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "historical_memo",
+      "final_class": "historical_memo",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 44,
+          "text": "DEFAULT_GT_CACHE = REPO_ROOT / \"experiments/results/mlx_fleet_gt_cache/gt_n6.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_segnet_validation_certificate.py",
+      "live_findings": 2,
+      "first_line": 487,
+      "artifacts": [
+        "gt_n6.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 487,
+          "text": "\"frame0\": \"gt_n6.npz:gt_f0[0]\","
+        },
+        {
+          "line": 489,
+          "text": "\"target\": \"gt_n6.npz:gt_poses[0]\","
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_sps_gradient_role_conflict.py",
+      "live_findings": 1,
+      "first_line": 495,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 495,
+          "text": "\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_v8_lane_anisotropic_factorization.py",
+      "live_findings": 1,
+      "first_line": 143,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 143,
+          "text": "default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_weight_l1_class_pair_tie_snap_scorer_forward_n600.py",
+      "live_findings": 1,
+      "first_line": 61,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 61,
+          "text": "DEFAULT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_weight_l1_int64_scorer_forward_n600.py",
+      "live_findings": 1,
+      "first_line": 53,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 53,
+          "text": "DEFAULT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_weight_l1_tie_conflicts.py",
+      "live_findings": 1,
+      "first_line": 41,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 41,
+          "text": "DEFAULT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_weight_l1_tie_snap_scorer_forward_n600.py",
+      "live_findings": 1,
+      "first_line": 57,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 57,
+          "text": "DEFAULT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_witness_sensitivity_bitalloc.py",
+      "live_findings": 1,
+      "first_line": 788,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "advisory_instrument",
+      "final_class": "advisory_instrument",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 788,
+          "text": "ap.add_argument(\"--gt-cache\", type=Path, default=Path(\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\"))"
+        }
+      ]
+    },
+    {
+      "path": "tools/probe_yopo_first_layer_costate.py",
+      "live_findings": 2,
+      "first_line": 47,
+      "artifacts": [
+        "gt_n6.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "continuity_frame",
+      "final_class": "continuity_frame",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 47,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n6.npz\""
+        },
+        {
+          "line": 573,
+          "text": "\"target\": \"gt_n6.npz:lstars[0]\","
+        }
+      ]
+    },
+    {
+      "path": "tools/produce_ddm_ms4_metric_custody.py",
+      "live_findings": 1,
+      "first_line": 93,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 93,
+          "text": "DEFAULT_GT = Path(\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/produce_m1_band_manifest.py",
+      "live_findings": 1,
+      "first_line": 71,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 71,
+          "text": "\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/produce_vjp_custody.py",
+      "live_findings": 1,
+      "first_line": 51,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 51,
+          "text": "DEFAULT_CACHE = Path(\"/Users/adpena/Projects/pact/experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/qp1_qa05_structured.py",
+      "live_findings": 1,
+      "first_line": 50,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 50,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/qp1_qa41_acceptance.py",
+      "live_findings": 1,
+      "first_line": 65,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 65,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/quadratic_basin_finisher_probe.py",
+      "live_findings": 1,
+      "first_line": 55,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 55,
+          "text": "GT_CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/r_survival_probe.py",
+      "live_findings": 1,
+      "first_line": 847,
+      "artifacts": [
+        "gt_n96.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "advisory_instrument",
+      "final_class": "advisory_instrument",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 847,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n96.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/render_comma_baseline_vs_ours_viz.py",
+      "live_findings": 1,
+      "first_line": 497,
+      "artifacts": [
+        "gt_strided_n200.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 497,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_strided_n200.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/render_pose_dimension_viz.py",
+      "live_findings": 1,
+      "first_line": 692,
+      "artifacts": [
+        "gt_strided_n200.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 692,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_strided_n200.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/revise_duty_tickets_ep725_fork_20260719.py",
+      "live_findings": 1,
+      "first_line": 220,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "historical_memo",
+      "final_class": "historical_memo",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 220,
+          "text": "f\"--gt-cache experiments/results/mlx_fleet_gt_cache/gt_n600.npz \""
+        }
+      ]
+    },
+    {
+      "path": "tools/rgb_at_boundaries_chroma_jacobian_n600.py",
+      "live_findings": 1,
+      "first_line": 462,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 462,
+          "text": "ap.add_argument(\"--gt-cache\", type=Path, default=REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/run_ddm_hb1_hope_bn_capacity.py",
+      "live_findings": 1,
+      "first_line": 64,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "no_advice",
+      "final_class": "unclassified",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 64,
+          "text": "GT_N600 = MAIN_REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/signed_flip_asymmetry_correlator.py",
+      "live_findings": 2,
+      "first_line": 160,
+      "artifacts": [
+        "gt_n600_sR.npz",
+        "gt_strided_n200.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 160,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_strided_n200.npz\")"
+        },
+        {
+          "line": 161,
+          "text": "ap.add_argument(\"--sr-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600_sR.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/smoke_ddm_fd1_gn_engine.py",
+      "live_findings": 1,
+      "first_line": 56,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 56,
+          "text": "cache = MAIN / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/supervise_ddm_b4s_burn4.py",
+      "live_findings": 1,
+      "first_line": 66,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 66,
+          "text": "GT_CACHE = str(REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/supervise_ddm_r1c_rung1.py",
+      "live_findings": 1,
+      "first_line": 53,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 53,
+          "text": "GT_CACHE = str(REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/temporal_advection_stratified_measure.py",
+      "live_findings": 1,
+      "first_line": 346,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 346,
+          "text": "default=REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/ugc_terminal_polish_ab.py",
+      "live_findings": 1,
+      "first_line": 150,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 150,
+          "text": "\"gt_cache_sha256\": _sha256(GT_CACHE / \"gt_n600.npz\"),"
+        }
+      ]
+    },
+    {
+      "path": "tools/uint8_deadzone_census.py",
+      "live_findings": 1,
+      "first_line": 91,
+      "artifacts": [
+        "gt_strided_n200.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "continuity_frame",
+      "final_class": "continuity_frame",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 91,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_strided_n200.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/validate_eased_target_homotopy.py",
+      "live_findings": 1,
+      "first_line": 26,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 26,
+          "text": "_CACHE = _REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/warp_vs_noise_flip_probe_n600.py",
+      "live_findings": 1,
+      "first_line": 59,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 59,
+          "text": "CACHE = REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/whyhow_deepmath_panels.py",
+      "live_findings": 1,
+      "first_line": 276,
+      "artifacts": [
+        "gt_n6.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 276,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n6.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/witness_annulus_live_monitor.py",
+      "live_findings": 1,
+      "first_line": 668,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "continuity_frame",
+      "final_class": "continuity_frame",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 668,
+          "text": "default=REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/witness_apply_pass.py",
+      "live_findings": 2,
+      "first_line": 91,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 91,
+          "text": "_GT_CACHE_DEFAULT = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        },
+        {
+          "line": 690,
+          "text": "\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\","
+        }
+      ]
+    },
+    {
+      "path": "tools/witness_applypass_batch.py",
+      "live_findings": 1,
+      "first_line": 111,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 111,
+          "text": "_GT_CACHE_DEFAULT = \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\""
+        }
+      ]
+    },
+    {
+      "path": "tools/witness_autoconfig.py",
+      "live_findings": 1,
+      "first_line": 40,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 40,
+          "text": "help=\"path to the clip's GT cache (e.g. .../gt_n600.npz)\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/witness_code_pca_byteclose.py",
+      "live_findings": 1,
+      "first_line": 194,
+      "artifacts": [
+        "gt_strided_n200.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 194,
+          "text": "ap.add_argument(\"--gt-cache\", default=str(REPO / \"experiments/results/mlx_fleet_gt_cache/gt_strided_n200.npz\"))"
+        }
+      ]
+    },
+    {
+      "path": "tools/witness_dashboard_panels.py",
+      "live_findings": 1,
+      "first_line": 333,
+      "artifacts": [
+        "gt_n6.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 333,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n6.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/witness_exact_ab.py",
+      "live_findings": 1,
+      "first_line": 132,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 132,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/witness_speed_stack_audit.py",
+      "live_findings": 1,
+      "first_line": 241,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "historical_memo",
+      "final_class": "historical_memo",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 241,
+          "text": "ap.add_argument(\"--gt-cache\", default=\"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    },
+    {
+      "path": "tools/witness_trace_probes.py",
+      "live_findings": 1,
+      "first_line": 206,
+      "artifacts": [
+        "gt_n600.npz"
+      ],
+      "deterministic_force_authority": false,
+      "fmtools_advisory": "authority_consumer",
+      "final_class": "authority_consumer",
+      "lanes_disagree": false,
+      "lines": [
+        {
+          "line": 206,
+          "text": "default=REPO / \"experiments/results/mlx_fleet_gt_cache/gt_n600.npz\")"
+        }
+      ]
+    }
+  ]
+}
