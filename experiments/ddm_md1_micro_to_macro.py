@@ -120,6 +120,12 @@ ERROR_CLASSES = (
 SITE_CLASSES = (CLASS_ALWAYS_CORRECT, *ERROR_CLASSES)
 CLASS_CODE = {name: index for index, name in enumerate(SITE_CLASSES)}
 
+# The steps at which the sealed burn recorded a MILESTONE (ddm_qbr1_born_fairform_burn_prep
+# MILESTONES).  Only those that are multiples of the 16-step checkpoint period have a retained
+# weight state, and only those can be swept -- 1,000 and 3,000 are not multiples of 16, so the
+# CPU-vs-retained-MPS calibration is available at 0 / 2,000 / 4,000 / 5,000 and nowhere else.
+MILESTONE_STEPS = (0, 1000, 2000, 3000, 4000, 5000)
+
 PERSISTENT_FRACTION = 0.90
 DEFAULT_CHURN_FLIPS = 4
 
@@ -130,6 +136,18 @@ BAND_NAMES = ("within_delta_R", "1_to_2_delta_R", "2_to_25_delta_R", "above_25_d
 # The two rare classes the sealed recall-only dual pushes and nothing caps (sd1 section 4).
 # Canonical comma10k order, never luma-sorted: 0 Road, 1 Lane, 2 Undrivable, 3 Movable, 4 MyCar.
 RARE_CLASS_IDS = (1, 3)
+
+# The sub-0.12 accuracy corner, TRANSFERRED (never re-derived here): the d_seg the born object
+# would need at the QXR1 falsifier pose on its bound 106,626 B archive.  Source:
+# `.omx/research/ddm_qn1_qbr1_n600_realization_ticket_20260903.md`
+# (`d_seg_required_for_0_12_at_the_falsifier_pose`).  It is a DERIVED number on an n600
+# population; the d_seg_hat measured here is an n32 Horvitz-Thompson ESTIMATE of that
+# population, and qn1's own caveat that n32 -> n600 is untested on this vehicle travels with it.
+SUB_012_DSEG_TARGET = 1.3646784205e-4
+SUB_012_DSEG_TARGET_SOURCE = (
+    ".omx/research/ddm_qn1_qbr1_n600_realization_ticket_20260903.md"
+    "::d_seg_required_for_0_12_at_the_falsifier_pose"
+)
 
 
 class MD1Error(RuntimeError):
@@ -146,6 +164,9 @@ def sweep_steps(total_steps: int = 5000) -> tuple[int, ...]:
     steps.extend(range(16, min(512, total_steps) + 1, 16))
     steps.extend(range(576, min(2048, total_steps) + 1, 64))
     steps.extend(range(2304, (total_steps // 16) * 16 + 1, 256))
+    # Fold in every recorded milestone that actually HAS a 16-step checkpoint, so the CPU
+    # reconstruction can be calibrated against the retained MPS argmax at those steps.
+    steps.extend(s for s in MILESTONE_STEPS if s % 16 == 0 or s == total_steps)
     if total_steps not in steps:
         steps.append(total_steps)
     return tuple(sorted({int(s) for s in steps if 0 <= s <= total_steps}))
@@ -812,6 +833,74 @@ def run_analyze(args: argparse.Namespace) -> dict[str, Any]:
                 float((overpaint & born).sum() / overpaint.sum()) if overpaint.any() else 0.0
             ),
         }
+        # Take the terminal total from the BRIDGE's exact integer numerator, not from a second
+        # float sum, so the reachability row and the bridge row can never disagree in the last ulp.
+        denominator = float(bridge["denominator_population_n_times_sites_per_pair"])
+        persistent_numerator = int(
+            bridge["numerator_by_class"][CLASS_PERSISTENT][len(steps) - 1]
+        )
+        terminal_numerator = int(bridge["weighted_wrong_site_numerator_by_step"][-1])
+        terminal_exact = terminal_numerator / denominator
+        persistent_floor = persistent_numerator / denominator
+        reachable = (terminal_numerator - persistent_numerator) / denominator
+        excursion_block["reachability"] = {
+            "target_d_seg": SUB_012_DSEG_TARGET,
+            "target_source": SUB_012_DSEG_TARGET_SOURCE,
+            "terminal_d_seg_hat": terminal_exact,
+            "terminal_weighted_wrong_site_numerator": terminal_numerator,
+            "persistent_weighted_wrong_site_numerator": persistent_numerator,
+            "terminal_over_target": terminal_exact / SUB_012_DSEG_TARGET,
+            "persistent_floor_d_seg_hat": persistent_floor,
+            "persistent_floor_over_target": persistent_floor / SUB_012_DSEG_TARGET,
+            "optimizer_reachable_d_seg_hat": reachable,
+            "optimizer_reachable_share": (
+                (terminal_numerator - persistent_numerator) / terminal_numerator
+                if terminal_numerator > 0
+                else 0.0
+            ),
+            "note": (
+                "persistent_floor is what remains if EVERY non-PERSISTENT terminal error were "
+                "removed by a schedule/optimizer lever; it is a FLOOR on this vehicle at this "
+                "cadence, not a prediction that any lever reaches it."
+            ),
+        }
+        # WHICH PAIRS lead the birth, and which EDGES the born sites take (the charter asks for
+        # both; the per-pair view is what a later arm needs to pick a probe frame).
+        born_pp = born.reshape(n_pairs, per_pair_sites)
+        overpaint_pp = overpaint.reshape(n_pairs, per_pair_sites)
+        gt_pp = gt_flat.reshape(n_pairs, per_pair_sites)
+        peak_pred_pp = peak_pred.reshape(n_pairs, per_pair_sites)
+        excursion_block["per_pair_birth"] = [
+            {
+                "pair_id": int(pid),
+                "ht_weight": float(weights[i]),
+                "born_sites": int(born_pp[i].sum()),
+                "born_site_fraction": float(born_pp[i].mean()),
+                "rare_overpaint_sites": int(overpaint_pp[i].sum()),
+                "gt_lane_area_fraction": float((gt_pp[i] == 1).mean()),
+                "gt_movable_area_fraction": float((gt_pp[i] == 3).mean()),
+                "peak_lane_over_gt": (
+                    float((peak_pred_pp[i] == 1).mean() / (gt_pp[i] == 1).mean())
+                    if (gt_pp[i] == 1).any()
+                    else None
+                ),
+                "peak_movable_over_gt": (
+                    float((peak_pred_pp[i] == 3).mean() / (gt_pp[i] == 3).mean())
+                    if (gt_pp[i] == 3).any()
+                    else None
+                ),
+            }
+            for i, pid in enumerate(pair_ids)
+        ]
+        born_edges = np.bincount(
+            gt_flat[born].astype(np.int64) * 5 + peak_pred[born].astype(np.int64), minlength=25
+        )
+        excursion_block["born_edges_at_peak"] = {
+            f"{ar1.CLASS_NAMES[g]}->{ar1.CLASS_NAMES[c]}": int(born_edges[g * 5 + c])
+            for g in range(5)
+            for c in range(5)
+            if born_edges[g * 5 + c] > 0
+        }
         trajectory_code = (
             at_zero.astype(np.uint8) + 2 * at_peak.astype(np.uint8) + 4 * terminal.astype(np.uint8)
         )
@@ -829,7 +918,8 @@ def run_analyze(args: argparse.Namespace) -> dict[str, Any]:
             "terminal_bands": band_rows,
             "per_pair_terminal": per_pair_rows,
             "excursion": excursion_block,
-            "terminal_d_seg_hat": terminal_total,
+            "terminal_d_seg_hat": bridge["d_seg_hat_by_step"][-1],
+            "terminal_d_seg_hat_from_site_weights": terminal_total,
             "sites": int(sites),
             "class_code_map": {name: int(CLASS_CODE[name]) for name in SITE_CLASSES},
         }
@@ -871,6 +961,24 @@ def gt_area_fractions(gt_seg: np.ndarray, weights: np.ndarray, population_n: int
     return [float(np.sum(weights * per_pair[:, c]) / float(population_n)) for c in range(5)]
 
 
+def first_step_at_or_below(steps: Sequence[int], values: Sequence[float]) -> int | None:
+    """First step whose value is <= 0 -- used for the live-minus-shadow sign change.
+
+    The EMA shadow's parameter update is ``theta_bar <- d*theta_bar + (1-d)*theta``, so the shadow
+    moves toward the live weights and stops moving away from them once the live field is no longer
+    worse.  The step at which ``d_seg(live) - d_seg(shadow)`` first turns non-positive is therefore
+    the MEASURED candidate for where the shadow's own d_seg turns over.  It is a candidate, not an
+    identity: the EMA is on parameters, not on d_seg.
+    """
+
+    if len(steps) != len(values):
+        raise MD1Error("sign-change scan needs one value per swept step")
+    for step, value in zip(steps, values, strict=True):
+        if float(value) <= 0.0:
+            return int(step)
+    return None
+
+
 def first_crossing(steps: Sequence[int], values: Sequence[float], threshold: float) -> int | None:
     """First step whose value is at or above ``threshold`` -- the BIRTH of an over-paint.
 
@@ -887,7 +995,13 @@ def first_crossing(steps: Sequence[int], values: Sequence[float], threshold: flo
 
 
 def milestone_reproduction(
-    store: Path, cell: str, run_root: Path, milestone_steps: Sequence[int], pair_ids: Sequence[int]
+    store: Path,
+    cell: str,
+    run_root: Path,
+    milestone_steps: Sequence[int],
+    pair_ids: Sequence[int],
+    weights: np.ndarray | None = None,
+    population_n: int = 600,
 ) -> list[dict[str, Any]]:
     """CPU reconstruction vs the RETAINED MPS argmax at each milestone -- a named residual.
 
@@ -921,16 +1035,26 @@ def milestone_reproduction(
             retained_d_seg.append(float((reference != target).mean()))
         if total == 0:
             continue
-        out.append(
-            {
-                "step": int(step),
-                "sites_compared": total,
-                "cpu_vs_retained_mps_differing_sites": differing,
-                "cpu_vs_retained_mps_site_fraction": differing / total,
-                "d_seg_per_pair_cpu": mine_d_seg,
-                "d_seg_per_pair_retained_mps": retained_d_seg,
-            }
-        )
+        row: dict[str, Any] = {
+            "step": int(step),
+            "sites_compared": total,
+            "cpu_vs_retained_mps_differing_sites": differing,
+            "cpu_vs_retained_mps_site_fraction": differing / total,
+            "d_seg_per_pair_cpu": mine_d_seg,
+            "d_seg_per_pair_retained_mps": retained_d_seg,
+        }
+        if weights is not None and len(mine_d_seg) == len(weights):
+            cpu_hat = weighted_d_seg(np.asarray(mine_d_seg), weights, population_n)
+            mps_hat = weighted_d_seg(np.asarray(retained_d_seg), weights, population_n)
+            recorded = run_root / f"milestones/step_{step:06d}/MILESTONE.json"
+            row["d_seg_hat_cpu_pyav"] = cpu_hat
+            row["d_seg_hat_retained_mps_pyav"] = mps_hat
+            row["d_seg_hat_relative_gap"] = (cpu_hat - mps_hat) / mps_hat if mps_hat else None
+            if recorded.is_file():
+                sealed = json.loads(recorded.read_text(encoding="utf-8"))
+                row["d_seg_hat_recorded_in_milestone_json"] = float(sealed["d_seg_hat"])
+                row["recomputed_minus_recorded"] = mps_hat - float(sealed["d_seg_hat"])
+        out.append(row)
     return out
 
 
@@ -1009,9 +1133,22 @@ def run_report(args: argparse.Namespace) -> dict[str, Any]:
             "ratio": [
                 float(live[s]["d_seg_hat_dali"] / shadow[s]["d_seg_hat_dali"]) for s in shared
             ],
+            "first_step_live_at_or_below_shadow": first_step_at_or_below(
+                shared,
+                [float(live[s]["d_seg_hat_dali"] - shadow[s]["d_seg_hat_dali"]) for s in shared],
+            ),
+            "max_ratio": max(
+                (float(live[s]["d_seg_hat_dali"] / shadow[s]["d_seg_hat_dali"]) for s in shared),
+                default=None,
+            ),
+            "max_ratio_step": (
+                max(shared, key=lambda s: live[s]["d_seg_hat_dali"] / shadow[s]["d_seg_hat_dali"])
+                if shared
+                else None
+            ),
         }
         block["milestone_reproduction"] = milestone_reproduction(
-            store, cell, run_root, (0, 1000, 2000, 3000, 4000, 5000), pair_ids
+            store, cell, run_root, MILESTONE_STEPS, pair_ids, weights, qbt.N
         )
         report["cells"][cell] = block
 
@@ -1098,9 +1235,175 @@ def run_compare(args: argparse.Namespace) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# tables: render the memo's markdown straight from the JSON, so no number is retyped
+# ---------------------------------------------------------------------------
+def _fmt(value: float, digits: int = 6) -> str:
+    return f"{value:.{digits}g}"
+
+
+def render_tables(store: Path, gt_lineage: str) -> str:
+    from experiments import ddm_ar1_aa_render_price as ar1
+
+    lines: list[str] = []
+    report_path = store / "REPORT.json"
+    report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.is_file() else {}
+
+    for cell, block in sorted(report.get("cells", {}).items()):
+        lines.append(f"### {cell} — trajectory (`d_seg_hat`, DALI authority / PyAV vehicle target)\n")
+        for forward, series in sorted(block["forwards"].items()):
+            steps = series["steps"]
+            lines.append(f"`{forward}` forward — {len(steps)} checkpoints, "
+                         f"steps {steps[0]}..{steps[-1]}\n")
+            lines.append("| step | d_seg_hat (DALI) | d_seg_hat (PyAV) | " + " | ".join(
+                f"{name}/GT" for name in ar1.CLASS_NAMES) + " |")
+            lines.append("|---:|---:|---:|" + "---:|" * 5)
+            ratios = series["predicted_over_gt_area_ratio"]
+            for index, step in enumerate(steps):
+                cells = [f"{step}", _fmt(series["d_seg_hat_dali"][index]),
+                         _fmt(series["d_seg_hat_pyav"][index])]
+                cells.extend(_fmt(ratios[name][index], 6) for name in ar1.CLASS_NAMES)
+                lines.append("| " + " | ".join(cells) + " |")
+            lines.append("")
+            lines.append("over-paint birth (first step at or above the threshold): "
+                         + json.dumps(series["overpaint_birth_step"]) + "\n")
+        if block.get("live_minus_shadow", {}).get("steps"):
+            lms = block["live_minus_shadow"]
+            lines.append(f"### {cell} — live minus EMA shadow (sd1's OWED gap)\n")
+            lines.append("| step | live d_seg_hat | shadow d_seg_hat | live-shadow | live/shadow |")
+            lines.append("|---:|---:|---:|---:|---:|")
+            for index, step in enumerate(lms["steps"]):
+                lines.append("| " + " | ".join([
+                    f"{step}", _fmt(lms["d_seg_hat_dali_live"][index]),
+                    _fmt(lms["d_seg_hat_dali_shadow"][index]),
+                    _fmt(lms["delta"][index]), _fmt(lms["ratio"][index], 5)]) + " |")
+            lines.append(
+                "live first at or below shadow at step "
+                f"**{lms.get('first_step_live_at_or_below_shadow')}**; peak live/shadow ratio "
+                f"**{_fmt(lms.get('max_ratio') or 0.0, 5)}** at step "
+                f"**{lms.get('max_ratio_step')}**\n")
+        if block.get("milestone_reproduction"):
+            lines.append(f"### {cell} — CPU reconstruction vs the retained MPS argmax\n")
+            lines.append(
+                "| milestone | sites compared | differing sites | site fraction | "
+                "d_seg_hat CPU (PyAV) | d_seg_hat retained MPS | relative gap | recorded − recomputed |")
+            lines.append("|---:|---:|---:|---:|---:|---:|---:|---:|")
+            for row in block["milestone_reproduction"]:
+                lines.append("| " + " | ".join([
+                    f"{row['step']}", f"{row['sites_compared']:,}",
+                    f"{row['cpu_vs_retained_mps_differing_sites']:,}",
+                    _fmt(row["cpu_vs_retained_mps_site_fraction"], 4),
+                    _fmt(row.get("d_seg_hat_cpu_pyav") or 0.0, 10),
+                    _fmt(row.get("d_seg_hat_retained_mps_pyav") or 0.0, 10),
+                    f"{100 * (row.get('d_seg_hat_relative_gap') or 0.0):+.4f}%",
+                    _fmt(row.get("recomputed_minus_recorded") or 0.0, 3)]) + " |")
+            lines.append("")
+
+    if report.get("warm_minus_cold"):
+        lines.append("### warm minus cold at IDENTICAL steps (same seed, same data order)\n")
+        for forward, block in sorted(report["warm_minus_cold"].items()):
+            lines.append(f"`{forward}` forward\n")
+            lines.append("| step | cold d_seg_hat | warm d_seg_hat | warm-cold | cold ‖Δθ‖ | warm ‖Δθ‖ |")
+            lines.append("|---:|---:|---:|---:|---:|---:|")
+            for index, step in enumerate(block["steps"]):
+                lines.append("| " + " | ".join([
+                    f"{step}", _fmt(block["cold_d_seg_hat_dali"][index]),
+                    _fmt(block["warm_d_seg_hat_dali"][index]),
+                    _fmt(block["warm_minus_cold"][index]),
+                    _fmt(block["cold_displacement_total"][index], 5),
+                    _fmt(block["warm_displacement_total"][index], 5)]) + " |")
+            lines.append("")
+
+    for path in sorted(store.glob(f"ANALYSIS_*_{gt_lineage}.json")):
+        analysis = json.loads(path.read_text(encoding="utf-8"))
+        lines.append(f"### {analysis['cell']} — site-trajectory classes ({gt_lineage} authority)\n")
+        for forward, block in sorted(analysis["forwards"].items()):
+            gate = block["bridge"]
+            lines.append(
+                f"`{forward}` forward — calibration gate max |Σclasses − total| = "
+                f"**{gate['calibration_gate_max_abs_integer_residual']}** (integer), exact zero: "
+                f"**{gate['calibration_gate_exact_zero']}**; terminal d_seg_hat "
+                f"**{_fmt(block['terminal_d_seg_hat'], 10)}**\n")
+            lines.append("| class | sites | site fraction | terminal wrong sites | terminal d_seg contribution | share of terminal error |")
+            lines.append("|---|---:|---:|---:|---:|---:|")
+            for name in SITE_CLASSES:
+                row = block["classes"][name]
+                lines.append("| " + " | ".join([
+                    name, f"{row['sites']:,}", _fmt(row["site_fraction"], 4),
+                    f"{row['terminal_wrong_sites']:,}",
+                    _fmt(row["terminal_d_seg_contribution"], 6),
+                    f"{100 * row['terminal_share_of_error']:.3f}%"]) + " |")
+            lines.append("")
+            exc = block["excursion"]
+            lines.append(
+                f"excursion (`{forward}`): peak at step **{exc['peak_step']}**, d_seg_hat "
+                f"{_fmt(exc['d_seg_hat_at_zero'], 8)} → {_fmt(exc['d_seg_hat_at_peak'], 8)} → "
+                f"{_fmt(exc['d_seg_hat_terminal'], 8)}; **{exc['born_sites']:,}** sites born wrong, "
+                f"**{100 * exc['born_recovered_fraction']:.2f}%** of them recovered by the terminal "
+                f"checkpoint; **{exc['healed_by_peak_sites']:,}** wrong-at-zero sites healed by the peak; "
+                f"rare-class over-paint at the peak **{exc['rare_overpaint_sites_at_peak']:,}** sites = "
+                f"**{100 * exc['rare_overpaint_share_of_peak_error']:.2f}%** of the peak error, "
+                f"**{100 * exc['rare_overpaint_born_fraction']:.2f}%** of them born during the run, "
+                f"**{100 * exc['rare_overpaint_recovered_fraction']:.2f}%** recovered.\n")
+            reach = exc["reachability"]
+            lines.append(
+                f"reachability (`{forward}`): terminal d_seg_hat "
+                f"**{_fmt(reach['terminal_d_seg_hat'], 8)}** = "
+                f"**{reach['terminal_over_target']:.2f}x** the sub-0.12 target "
+                f"{_fmt(reach['target_d_seg'], 8)}; the PERSISTENT floor is "
+                f"**{_fmt(reach['persistent_floor_d_seg_hat'], 8)}** = "
+                f"**{reach['persistent_floor_over_target']:.2f}x** the target; "
+                f"**{100 * reach['optimizer_reachable_share']:.2f}%** of the terminal error is "
+                "optimizer-reachable (non-PERSISTENT).\n")
+            born_edges = exc.get("born_edges_at_peak", {})
+            if born_edges:
+                top_born = sorted(born_edges.items(), key=lambda kv: -kv[1])[:8]
+                lines.append(f"BORN (GT→predicted) edges at the peak, `{forward}`: "
+                             + ", ".join(f"{k} {v:,}" for k, v in top_born) + "\n")
+            leaders = sorted(
+                exc.get("per_pair_birth", []), key=lambda r: -r["born_sites"]
+            )[:6]
+            if leaders:
+                lines.append(f"pairs leading the birth, `{forward}`: "
+                             + ", ".join(
+                                 f"pair {r['pair_id']} ({r['born_sites']:,} born, Lane×"
+                                 f"{_fmt(r['peak_lane_over_gt'] or 0.0, 4)})"
+                                 for r in leaders) + "\n")
+            edges = block["terminal_edges"]
+            lines.append(f"terminal (GT→predicted) edges by class, `{forward}`:\n")
+            for name in ERROR_CLASSES:
+                top = sorted(edges.get(name, {}).items(), key=lambda kv: -kv[1])[:6]
+                if top:
+                    lines.append(f"* **{name}** — " + ", ".join(f"{k} {v:,}" for k, v in top))
+            lines.append("")
+            bands = block["terminal_bands"]
+            lines.append(f"terminal margin band of each class ({', '.join(BAND_NAMES)}), `{forward}`:\n")
+            for name in SITE_CLASSES:
+                lines.append(f"* **{name}** — " + " / ".join(f"{v:,}" for v in bands[name]))
+            lines.append("")
+
+    compare_path = store / f"COMPARE_{gt_lineage}.json"
+    if compare_path.is_file():
+        compare = json.loads(compare_path.read_text(encoding="utf-8"))
+        if compare.get("forwards"):
+            lines.append("### warm excursion vs cold excursion (prediction 2)\n")
+            lines.append("| forward | cold peak | warm peak | cold born | warm born | intersection | warm-only | warm-only fraction |")
+            lines.append("|---|---:|---:|---:|---:|---:|---:|---:|")
+            for forward, block in sorted(compare["forwards"].items()):
+                lines.append("| " + " | ".join([
+                    forward, f"{block['cold_peak_step']}", f"{block['warm_peak_step']}",
+                    f"{block['cold_born_sites']:,}", f"{block['warm_born_sites']:,}",
+                    f"{block['intersection_sites']:,}", f"{block['warm_only_sites']:,}",
+                    f"{100 * block['warm_born_absent_from_cold_fraction']:.2f}%"]) + " |")
+            lines.append("")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--mode", choices=("sweep", "analyze", "report", "compare"), required=True)
+    parser.add_argument(
+        "--mode", choices=("sweep", "analyze", "report", "compare", "tables"), required=True
+    )
     parser.add_argument("--cell", default=CELL_COLD)
     parser.add_argument("--run-root", default=str(DEFAULT_COLD))
     parser.add_argument("--config", default=str(DEFAULT_COLD_CONFIG))
@@ -1133,6 +1436,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps({"report_path": report["report_path"], "cells": sorted(report["cells"])}, indent=2))
     elif args.mode == "compare":
         print(json.dumps(run_compare(args), indent=2, sort_keys=True))
+    elif args.mode == "tables":
+        print(render_tables(Path(args.store), args.gt_lineage))
     else:
         result = run_analyze(args)
         summary = {

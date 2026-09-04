@@ -39,9 +39,11 @@ def test_sweep_steps_is_dense_through_the_birth_and_coarse_at_the_end() -> None:
     birth = [s for s in steps if 0 < s <= 512]
     assert birth == list(range(16, 513, 16))
     peak = [s for s in steps if 512 < s <= 2048]
-    assert peak == list(range(576, 2049, 64))
+    # the medium ladder PLUS the milestone step 2,000, which is a 16-step checkpoint
+    assert peak == sorted(set(range(576, 2049, 64)) | {2000})
     tail = [s for s in steps if 2048 < s < 5000]
-    assert tail == list(range(2304, 4865, 256))
+    # the coarse ladder PLUS the milestone steps that have a 16-step checkpoint
+    assert tail == sorted(set(range(2304, 4865, 256)) | {4000})
 
 
 def test_sweep_steps_every_nonzero_step_is_a_multiple_of_the_checkpoint_period() -> None:
@@ -56,6 +58,18 @@ def test_sweep_steps_truncates_for_a_shorter_run() -> None:
     assert steps[-1] == 1000
     assert max(steps) <= 1000
     assert 2304 not in steps
+
+
+def test_sweep_steps_folds_in_every_checkpointed_milestone_step() -> None:
+    # the CPU-vs-retained-MPS calibration is only possible at a milestone that has a checkpoint.
+    steps = set(md1.sweep_steps(5000))
+    for milestone in md1.MILESTONE_STEPS:
+        if milestone % 16 == 0 or milestone == 5000:
+            assert milestone in steps, milestone
+        else:
+            assert milestone not in steps, milestone
+    assert {0, 2000, 4000, 5000} <= steps
+    assert 1000 not in steps and 3000 not in steps
 
 
 def test_checkpoint_path_uses_stage_end_for_the_terminal_step() -> None:
@@ -584,3 +598,231 @@ def test_displacement_norms_groups_by_role_and_is_an_l2_over_the_group() -> None
     previous = {"x": torch.tensor([0.0]), "y": torch.tensor([0.0])}
     out = md1._displacement_norms(current, previous, lambda n: "same")
     assert out["same"] == pytest.approx(5.0)
+
+
+# ---------------------------------------------------------------------------
+# tables renderer (the memo's numbers are rendered, never retyped)
+# ---------------------------------------------------------------------------
+def test_fmt_is_significant_digits_not_fixed_decimals() -> None:
+    assert md1._fmt(0.0025193532307942, 6) == "0.00251935"
+    assert md1._fmt(1.0, 6) == "1"
+    assert md1._fmt(1234567.0, 4) == "1.235e+06"
+
+
+def test_render_tables_returns_empty_when_the_store_has_nothing(tmp_path: Path) -> None:
+    assert md1.render_tables(tmp_path, "dali") == ""
+
+
+def test_render_tables_renders_the_report_trajectory_and_the_birth_row(tmp_path: Path) -> None:
+    pytest.importorskip("experiments.ddm_ar1_aa_render_price")
+    report = {
+        "cells": {
+            "cell_x": {
+                "run_root": "/nowhere",
+                "forwards": {
+                    "shadow": {
+                        "steps": [0, 16],
+                        "d_seg_hat_dali": [0.001, 0.002],
+                        "d_seg_hat_pyav": [0.0011, 0.0021],
+                        "pose_mse_hat": [1e-4, 2e-4],
+                        "predicted_over_gt_area_ratio": {
+                            "Road": [1.0, 1.0],
+                            "Lane": [1.0, 1.2],
+                            "Undrivable": [1.0, 1.0],
+                            "Movable": [1.0, 1.0],
+                            "MyCar": [1.0, 1.0],
+                        },
+                        "overpaint_birth_step": {"Lane": 16, "Movable": None},
+                    }
+                },
+                "live_minus_shadow": {
+                    "steps": [16],
+                    "d_seg_hat_dali_live": [0.006],
+                    "d_seg_hat_dali_shadow": [0.002],
+                    "delta": [0.004],
+                    "ratio": [3.0],
+                },
+                "milestone_reproduction": [
+                    {
+                        "step": 0,
+                        "sites_compared": 6291456,
+                        "cpu_vs_retained_mps_differing_sites": 51,
+                        "cpu_vs_retained_mps_site_fraction": 8.106e-6,
+                    }
+                ],
+            }
+        },
+        "warm_minus_cold": {
+            "shadow": {
+                "steps": [16],
+                "cold_d_seg_hat_dali": [0.002],
+                "warm_d_seg_hat_dali": [0.0018],
+                "warm_minus_cold": [-0.0002],
+                "cold_displacement_total": [0.055],
+                "warm_displacement_total": [0.008],
+            }
+        },
+    }
+    (tmp_path / "REPORT.json").write_text(json.dumps(report), encoding="utf-8")
+    out = md1.render_tables(tmp_path, "dali")
+    assert "cell_x" in out
+    assert '"Lane": 16' in out
+    assert "live minus EMA shadow" in out
+    assert "CPU reconstruction vs the retained MPS argmax" in out
+    assert "warm minus cold at IDENTICAL steps" in out
+    assert "51" in out
+
+
+def test_render_tables_renders_the_class_table_and_the_calibration_gate(tmp_path: Path) -> None:
+    pytest.importorskip("experiments.ddm_ar1_aa_render_price")
+    classes = {
+        name: {
+            "sites": 10,
+            "site_fraction": 0.1,
+            "terminal_wrong_sites": 2,
+            "terminal_d_seg_contribution": 0.0005,
+            "terminal_share_of_error": 0.25,
+            "gt_class_histogram": [1, 2, 3, 4, 0],
+        }
+        for name in md1.SITE_CLASSES
+    }
+    analysis = {
+        "cell": "cell_x",
+        "forwards": {
+            "shadow": {
+                "bridge": {
+                    "calibration_gate_max_abs_integer_residual": 0,
+                    "calibration_gate_exact_zero": True,
+                },
+                "terminal_d_seg_hat": 0.00275,
+                "classes": classes,
+                "terminal_edges": {name: {"Road->Lane": 7} for name in md1.ERROR_CLASSES},
+                "terminal_bands": {name: [1, 2, 3, 4] for name in md1.SITE_CLASSES},
+                "excursion": {
+                    "peak_step": 2048,
+                    "d_seg_hat_at_zero": 0.0025,
+                    "d_seg_hat_at_peak": 0.0032,
+                    "d_seg_hat_terminal": 0.00275,
+                    "born_sites": 100,
+                    "born_recovered_fraction": 0.5,
+                    "healed_by_peak_sites": 20,
+                    "rare_overpaint_sites_at_peak": 40,
+                    "rare_overpaint_share_of_peak_error": 0.4,
+                    "rare_overpaint_born_fraction": 0.9,
+                    "rare_overpaint_recovered_fraction": 0.3,
+                    "reachability": {
+                        "target_d_seg": md1.SUB_012_DSEG_TARGET,
+                        "target_source": md1.SUB_012_DSEG_TARGET_SOURCE,
+                        "terminal_d_seg_hat": 0.00275,
+                        "terminal_over_target": 20.15,
+                        "persistent_floor_d_seg_hat": 0.0021,
+                        "persistent_floor_over_target": 15.39,
+                        "optimizer_reachable_d_seg_hat": 0.00065,
+                        "optimizer_reachable_share": 0.2364,
+                        "note": "floor",
+                    },
+                },
+            }
+        },
+    }
+    (tmp_path / "ANALYSIS_cell_x_dali.json").write_text(json.dumps(analysis), encoding="utf-8")
+    out = md1.render_tables(tmp_path, "dali")
+    assert "calibration gate max |Σclasses − total| = **0**" in out
+    assert "exact zero: **True**" in out
+    assert "peak at step **2048**" in out
+    assert "20.15x** the sub-0.12 target" in out
+    assert "23.64%** of the terminal error is optimizer-reachable" in out
+    assert "Road->Lane 7" in out
+    for name in md1.SITE_CLASSES:
+        assert name in out
+
+
+def test_render_tables_skips_an_analysis_of_a_different_gt_lineage(tmp_path: Path) -> None:
+    pytest.importorskip("experiments.ddm_ar1_aa_render_price")
+    (tmp_path / "ANALYSIS_cell_x_pyav.json").write_text(
+        json.dumps({"cell": "cell_x", "forwards": {}}), encoding="utf-8"
+    )
+    assert "cell_x" not in md1.render_tables(tmp_path, "dali")
+
+
+def test_first_step_at_or_below_finds_the_sign_change() -> None:
+    assert md1.first_step_at_or_below([0, 16, 32, 48], [0.004, 0.002, -0.001, 0.003]) == 32
+    assert md1.first_step_at_or_below([0, 16], [0.004, 0.002]) is None
+    assert md1.first_step_at_or_below([0, 16], [0.0, 0.002]) == 0
+
+
+def test_first_step_at_or_below_refuses_ragged_inputs() -> None:
+    with pytest.raises(md1.MD1Error):
+        md1.first_step_at_or_below([0, 16], [0.0])
+
+
+def test_sub_012_target_is_transferred_with_its_source_and_never_re_derived() -> None:
+    assert md1.SUB_012_DSEG_TARGET == 1.3646784205e-4
+    assert md1.SUB_012_DSEG_TARGET_SOURCE.startswith(".omx/research/ddm_qn1_")
+    source = Path(md1.__file__).read_text(encoding="utf-8")
+    # the target must appear exactly once as a constant, never re-typed inside a computation
+    assert source.count("1.3646784205e-4") == 1
+
+
+def test_milestone_reproduction_adds_the_ht_calibration_when_weights_are_given(tmp_path: Path) -> None:
+    payload_root = tmp_path / "payloads" / "cell"
+    payload_root.mkdir(parents=True)
+    mine = np.zeros((2, 2, 2), dtype=np.uint8)
+    mine[0, 0, 0] = 1
+    md1.atomic_npz(
+        payload_root / "shadow_step_000000.npz",
+        argmax_u8=mine,
+        band_u8=np.zeros((2, 2, 2), dtype=np.uint8),
+    )
+    realized = tmp_path / "run" / "milestones" / "step_000000" / "realized"
+    realized.mkdir(parents=True)
+    for pair in (4, 31):
+        md1.atomic_npz(
+            realized / f"pair_{pair:04d}.npz",
+            segnet_argmax_u8=np.zeros((2, 2), dtype=np.uint8),
+            target_argmax_u8=np.zeros((2, 2), dtype=np.uint8),
+        )
+    (tmp_path / "run" / "milestones" / "step_000000" / "MILESTONE.json").write_text(
+        json.dumps({"d_seg_hat": 0.0}), encoding="utf-8"
+    )
+    rows = md1.milestone_reproduction(
+        tmp_path, "cell", tmp_path / "run", (0,), [4, 31], np.asarray([15.0, 30.0]), 600
+    )
+    assert rows[0]["d_seg_hat_cpu_pyav"] == pytest.approx(15.0 * 0.25 / 600.0)
+    assert rows[0]["d_seg_hat_retained_mps_pyav"] == 0.0
+    assert rows[0]["d_seg_hat_relative_gap"] is None
+    assert rows[0]["recomputed_minus_recorded"] == 0.0
+
+
+def test_milestone_reproduction_omits_the_ht_block_without_weights(tmp_path: Path) -> None:
+    payload_root = tmp_path / "payloads" / "cell"
+    payload_root.mkdir(parents=True)
+    md1.atomic_npz(
+        payload_root / "shadow_step_000000.npz",
+        argmax_u8=np.zeros((1, 2, 2), dtype=np.uint8),
+        band_u8=np.zeros((1, 2, 2), dtype=np.uint8),
+    )
+    realized = tmp_path / "run" / "milestones" / "step_000000" / "realized"
+    realized.mkdir(parents=True)
+    md1.atomic_npz(
+        realized / "pair_0004.npz",
+        segnet_argmax_u8=np.zeros((2, 2), dtype=np.uint8),
+        target_argmax_u8=np.zeros((2, 2), dtype=np.uint8),
+    )
+    rows = md1.milestone_reproduction(tmp_path, "cell", tmp_path / "run", (0,), [4])
+    assert "d_seg_hat_cpu_pyav" not in rows[0]
+
+
+def test_reachability_share_is_derived_from_the_integer_numerator(tmp_path: Path) -> None:
+    # the share must be an exact integer ratio, so it can never disagree with the bridge row.
+    cube = np.zeros((3, 4), dtype=bool)
+    cube[:, 0] = True  # PERSISTENT
+    cube[1:, 1] = True  # NEW_PERSISTENT
+    codes = md1.classify_sites(cube, churn_flips=4, persistent_fraction=0.90)
+    bridge = _bridge(cube, codes, 2, np.asarray([15.0, 15.0]))
+    persistent = bridge["numerator_by_class"][md1.CLASS_PERSISTENT][-1]
+    total = bridge["weighted_wrong_site_numerator_by_step"][-1]
+    assert persistent > 0 and total > persistent
+    # PERSISTENT holds site 0 (pair 0), NEW_PERSISTENT holds site 1 (pair 0): both weight 15
+    assert persistent == 15
+    assert total == 30
