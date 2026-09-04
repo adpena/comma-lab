@@ -669,3 +669,67 @@ def test_ng3_uses_the_same_volatile_rule_the_trainer_already_had():
     assert '"resolved_at"' in source
     assert ("ema", "lawref", "resolved_at") in ng3.VOLATILE_CONFIG_PATHS
 
+
+# ---------------------------------------------------------------------------
+# 10. the schedule-leg receipt
+# ---------------------------------------------------------------------------
+def test_schedule_leg_receipt_keeps_prediction_and_measurement_separate():
+    """A receipt that merged gm1's prediction into the measurement would launder confidence."""
+
+    receipt_path = ng3.ARM_ROOT / "SCHEDULE_LEG_RECEIPT.json"
+    if not receipt_path.is_file():
+        pytest.skip("run `schedule-leg` after the smoke")
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert receipt["score_claim"] is False and receipt["promotion_eligible"] is False
+    assert set(receipt["legs"]) == {"legacy", "msafe_band"}
+    assert "gm1_predicted" in receipt and "legs" in receipt
+    assert receipt["gm1_predicted"]["legacy_schedule_leg_pct"] == (
+        ng3.GM1_MEASURED["schedule_leg_legacy_pct"])
+    # the arithmetic is re-derived from the receipt's own stored surrogates, never trusted
+    for leg in receipt["legs"].values():
+        derived = ((leg["surrogate_at_end"] - leg["surrogate_at_start"])
+                   / leg["surrogate_at_start"] * 100.0)
+        assert math.isclose(derived, leg["schedule_leg_pct"], rel_tol=1e-9)
+    # THE MECHANISM CLAIM (pre-registerable, not a fitted number): a band whose endpoints are
+    # closer together in the surrogate's own units must deflate the reported loss LESS.
+    assert abs(receipt["legs"]["msafe_band"]["schedule_leg_pct"]) < abs(
+        receipt["legs"]["legacy"]["schedule_leg_pct"])
+    assert receipt["artefact_reduction_x"] > 1.0
+    # and the scope caveat travels with it
+    assert "SCHEDULE leg only" in receipt["scope"]
+
+
+def test_the_fixed_ruler_is_schedule_independent_by_construction():
+    receipt_path = ng3.ARM_ROOT / "SCHEDULE_LEG_RECEIPT.json"
+    if not receipt_path.is_file():
+        pytest.skip("run `schedule-leg` after the smoke")
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert receipt["tau_ref_fixed_ruler"]["tau"] == qbt.EXPECTED_FLIP_TAU_REFERENCE
+    # tau_ref == the legacy band's END, so the ruler must read the legacy leg's endpoint exactly
+    assert math.isclose(receipt["tau_ref_fixed_ruler"]["surrogate"],
+                        receipt["legs"]["legacy"]["surrogate_at_end"], rel_tol=1e-12)
+
+
+def test_the_smoke_receipt_proves_the_lever_is_exactly_tau():
+    """The differential: at one shared tau the two configs' objectives are bit-identical."""
+
+    smoke_path = (ng3.SMOKE_ROOT / "BOUNDED_SMOKE_RESULT.json")
+    if not smoke_path.is_file():
+        pytest.skip("run `smoke` first")
+    smoke = json.loads(smoke_path.read_text(encoding="utf-8"))
+    differential = smoke["differential_at_a_shared_tau"]
+    assert differential["components_bit_identical_at_shared_tau"] is True
+    assert all(differential["per_component_identical"].values())
+    assert (differential["band_loss_total_at_shared_tau"]
+            == differential["control_loss_total_at_shared_tau"])
+    # ...and the objective is not simply tau-blind, or the test above would be vacuous
+    assert differential["objective_is_not_tau_blind"] is True
+    assert differential["band_loss_total_at_own_tau"] != differential[
+        "band_loss_total_at_shared_tau"]
+    assert smoke["no_op_detector"]["states_differ"] is True
+    assert smoke["no_op_detector"]["archives_differ"] is True
+    assert smoke["training_path_is_unmoved_by_this_landing"][
+        "reproduces_ng1_cold_reference"] is True
+    assert smoke["metal_invocations"] == smoke["modal_invocations"] == 0
+    assert smoke["contest_eval_invocations"] == 0
+

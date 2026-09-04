@@ -744,15 +744,94 @@ def bounded_smoke() -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# 5. schedule leg -- gm1's prediction turned into a measurement on THIS arm's own field
+# ---------------------------------------------------------------------------
+def schedule_leg(output: Path | None = None) -> dict[str, Any]:
+    """Measure the tau-schedule leg of the REPORTED surrogate on a FROZEN field, both bands.
+
+    ddm_sd1 MEASURED that the annealed loss factorizes as (schedule leg x field leg) and that the
+    schedule leg alone is -40.54% on a frozen field -- 8.4x the field's own signal -- which is how
+    a monotone-FALLING reported loss coexisted with a monotone-WORSENING argmax.  ddm_gm1 DERIVED
+    that the band cuts that artefact to -8.57%.  Both are numbers from OTHER instruments on the
+    n32 milestone logits; this reads the same quantity through the TRAINER'S OWN
+    ``expected_flip_margin_loss`` on the payload the bounded smoke already retained, so the
+    prediction becomes a measurement on this arm's own object at $0 and on a different instrument.
+
+    Frozen field = one chunk of 16 pairs at control update 1.  It is a cross-check of the
+    SCHEDULE leg only; it says nothing about where step 5,000 lands.
+    """
+
+    started = time.monotonic()
+    payload_dir = SMOKE_ROOT / "control" / "training_payloads" / "update_000001"
+    if not payload_dir.is_dir():
+        raise NG3Error(f"run `smoke` before `schedule-leg`: {payload_dir} is absent")
+    inputs = _objective_inputs_from_retained(payload_dir)
+    sealed = json.loads((SEALED_CONFIGS / f"{CELL_ID}.json").read_text(encoding="utf-8"))
+
+    def surrogate(tau: float) -> float:
+        with torch.no_grad():
+            return float(qbt.expected_flip_margin_loss(
+                inputs["logits"], inputs["target_argmax"], tau, inputs["sample_weights"]))
+
+    bands = {
+        "legacy": (float(qbt.LEGACY_EXPECTED_FLIP_TAU_BAND[0]),
+                   float(qbt.LEGACY_EXPECTED_FLIP_TAU_BAND[1])),
+        "msafe_band": (float(sealed["expected_flip_tau_start"]),
+                       float(sealed["expected_flip_tau_end"])),
+    }
+    legs: dict[str, Any] = {}
+    for name, (start, end) in bands.items():
+        at_start, at_end = surrogate(start), surrogate(end)
+        legs[name] = {
+            "tau_start": start, "tau_end": end,
+            "surrogate_at_start": at_start, "surrogate_at_end": at_end,
+            "schedule_leg_pct": (at_end - at_start) / at_start * 100.0,
+        }
+    reduction = abs(legs["legacy"]["schedule_leg_pct"]) / abs(legs["msafe_band"]["schedule_leg_pct"])
+    receipt = {
+        "schema": "ddm_ng3_schedule_leg_receipt.v1",
+        "arm": ARM,
+        "axis": "[macOS-CPU advisory . frozen n16 chunk at control update 1 . NON-PROMOTABLE]",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "instrument": "qbt.expected_flip_margin_loss (the trainer's OWN loss), not a re-implementation",
+        "field": {"payload_dir": str(payload_dir), "pairs": inputs["pair_ids"]},
+        "legs": legs,
+        "artefact_reduction_x": reduction,
+        "gm1_predicted": {
+            "legacy_schedule_leg_pct": GM1_MEASURED["schedule_leg_legacy_pct"],
+            "band_schedule_leg_pct": GM1_MEASURED["schedule_leg_band_pct"],
+            "artefact_reduction_x": (abs(GM1_MEASURED["schedule_leg_legacy_pct"])
+                                     / abs(GM1_MEASURED["schedule_leg_band_pct"])),
+        },
+        "tau_ref_fixed_ruler": {
+            "tau": float(qbt.EXPECTED_FLIP_TAU_REFERENCE),
+            "surrogate": surrogate(float(qbt.EXPECTED_FLIP_TAU_REFERENCE)),
+            "why": "this value is schedule-INDEPENDENT by construction; it is the row ng2 added",
+        },
+        "scope": (
+            "SCHEDULE leg only, on ONE frozen 16-pair chunk with a different instrument and a "
+            "different sample from gm1's n32 milestone read.  Agreement is a cross-instrument "
+            "confirmation of the MECHANISM; it is not evidence about d_seg at step 5,000."
+        ),
+        "elapsed_seconds": time.monotonic() - started,
+    }
+    qbt.atomic_json(output or (ARM_ROOT / "SCHEDULE_LEG_RECEIPT.json"), receipt)
+    return receipt
+
+
+# ---------------------------------------------------------------------------
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("resolve", "seal", "snapshot", "smoke"))
+    parser.add_argument(
+        "action", choices=("resolve", "seal", "snapshot", "smoke", "schedule-leg"))
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    handler = {"resolve": resolve, "seal": seal, "snapshot": snapshot_source, "smoke": bounded_smoke}
+    handler = {"resolve": resolve, "seal": seal, "snapshot": snapshot_source,
+               "smoke": bounded_smoke, "schedule-leg": schedule_leg}
     print(json.dumps(handler[args.action](), indent=2, default=str))
     return 0
 
