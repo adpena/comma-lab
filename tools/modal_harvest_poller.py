@@ -346,12 +346,69 @@ def _harvest_outcome_facts(result: Any) -> dict[str, Any]:
     return facts
 
 
+def canonical_terminal_claim_notes(result: Any, call_id: str) -> str:
+    """The terminal claim-row note, in the shape the compliance checker binds on.
+
+    THE DEFECT (2026-09-04, measured by ps1 against the staged PR #140 packet). This
+    poller's note carried no shas at all, so ``pre_submission_compliance_check.py
+    --contest-final`` red-flagged three checks — ``dispatch_claim_terminal_archive_sha_bound``,
+    ``dispatch_claim_terminal_runtime_tree_sha_bound``, ``dispatch_claim_prior_active_row``
+    — and MAIN cured them by hand-typing a second row. Typing 64 hex characters by hand
+    is exactly the step that went wrong the same day: one archive sha was MISTYPED and
+    needed a third, correcting row; and the fs2 row shipped a runtime tree sha
+    TRUNCATED to 12 characters (``915d25f93ad6``), which still fails the checker because
+    ``ARCHIVE_RUNTIME_SHA_BINDING_RE`` demands ``[0-9a-fA-F]{64}``.
+
+    The checker matches on substring, so the requirement is exact and small: the FULL
+    64-hex archive sha and the FULL 64-hex runtime-tree sha must appear in the row text
+    as ``archive_sha256=<sha>`` / ``runtime_tree_sha256=<sha>``. Everything here is
+    COPIED from the harvested receipt; nothing is re-derived and nothing is truncated.
+    A field the receipt does not carry is simply absent — an absent sha is a visible
+    gap the checker will red, while a plausible-looking one would be a forged binding.
+    """
+
+    if not isinstance(result, dict):
+        return f"auto-closed by modal_harvest_poller at harvest; call {call_id} rc=0"
+    parts: list[str] = []
+    archive_sha = result.get("expected_archive_sha256") or result.get("archive_sha256")
+    if isinstance(archive_sha, str) and archive_sha:
+        parts.append(f"archive_sha256={archive_sha}")
+    archive_bytes = result.get("archive_size_bytes") or result.get("expected_archive_size_bytes")
+    if archive_bytes is not None:
+        parts.append(f"archive_bytes={archive_bytes}")
+    runtime_tree = result.get("expected_runtime_tree_sha256") or result.get("runtime_tree_sha256")
+    if isinstance(runtime_tree, str) and runtime_tree:
+        parts.append(f"runtime_tree_sha256={runtime_tree}")
+    parts.append(f"call_id={call_id}")
+    score = result.get("score_recomputed_from_components")
+    if isinstance(score, (int, float)) and not isinstance(score, bool):
+        parts.append(f"score={score}")
+    pose = result.get("avg_posenet_dist")
+    if pose is not None:
+        parts.append(f"pose={pose}")
+    seg = result.get("avg_segnet_dist")
+    if seg is not None:
+        parts.append(f"seg={seg}")
+    n_samples = result.get("n_samples")
+    if n_samples is not None:
+        parts.append(f"n_samples={n_samples}")
+    axis = result.get("score_axis")
+    if axis:
+        parts.append(f"axis={axis}")
+    gpu = _result_gpu(result)
+    if gpu:
+        parts.append(f"gpu={gpu}")
+    parts.append("auto-closed by modal_harvest_poller at harvest (canonical terminal row)")
+    return " ".join(parts)
+
+
 def _close_terminal_claim(
     *,
     lane_id: str | None,
     call_id: str,
     result: Any,
     out_dir: pathlib.Path,
+    instance_job_id: str | None = None,
     repo_root: pathlib.Path = REPO_ROOT,
 ) -> str | None:
     """Append the terminal dispatch-claim row for a harvested fire.
@@ -376,21 +433,33 @@ def _close_terminal_claim(
         from tac.deploy.claims import DispatchClaimSpec, terminal_dispatch_claim
 
         passed = isinstance(result, dict) and result.get("passed") is True
-        status = (
-            "completed_contest_cuda_exact_eval_harvested"
-            if passed
-            else "completed_modal_auth_eval_harvested_not_passed"
-        )
-        score = result.get("score_recomputed_from_components") if isinstance(result, dict) else None
-        note = (
-            f"auto-closed by modal_harvest_poller at harvest; call {call_id} rc=0"
-            + (f"; score_recomputed_from_components={score}" if score is not None else "")
-        )
+        # The status prefix is what `pre_submission_compliance_check.py` reads to decide
+        # whether a SUCCESSFUL exact-eval row closed the lane, and its two prefix tables
+        # are per-axis (`completed_contest_cuda` / `completed_contest_cpu`). Hardcoding
+        # cuda made every CPU-axis harvest close under a status the CPU checker does not
+        # recognise, so the axis is DERIVED from the receipt the same way every other
+        # fact here is. An axis the receipt does not state stays generic rather than
+        # guessing, because a wrong axis label is the one thing worse than no label.
+        axis = str(result.get("score_axis") or "").strip().lower() if isinstance(result, dict) else ""
+        if not passed:
+            status = "completed_modal_auth_eval_harvested_not_passed"
+        elif axis == "contest_cuda":
+            status = "completed_contest_cuda_exact_eval_harvested"
+        elif axis == "contest_cpu":
+            status = "completed_contest_cpu_exact_eval_harvested"
+        else:
+            status = "completed_modal_auth_eval_harvested"
+        note = canonical_terminal_claim_notes(result, call_id)
+        # The row must key on the SAME instance/job id the dispatch claim opened with,
+        # or the compliance checker finds a terminal row with no active predecessor and
+        # reds `dispatch_claim_prior_active_row`. The call_id fallback preserves the
+        # pre-2026-09-04 behaviour for callers that do not pass one.
+        job_id = instance_job_id or call_id
         terminal_dispatch_claim(
             repo_root=repo_root,
             spec=DispatchClaimSpec(
                 lane_id=lane_id,
-                instance_job_id=call_id,
+                instance_job_id=job_id,
                 agent="MAIN",
                 platform="modal",
                 notes=note,
@@ -398,7 +467,7 @@ def _close_terminal_claim(
             status=status,
             notes=note,
         )
-        return f"CLAIM CLOSED: {lane_id} / {call_id} -> {status}"
+        return f"CLAIM CLOSED: {lane_id} / {job_id} -> {status}"
     except Exception as exc:  # never fail a real harvest on bookkeeping
         (out_dir / "CLAIM_CLOSE_FAILED.json").write_text(
             json.dumps(
@@ -480,6 +549,13 @@ def main() -> int:
     ap.add_argument("--poll-s", type=float, default=60)
     ap.add_argument("--lane-id", default=None, help="copied into the anchor mirror")
     ap.add_argument(
+        "--instance-job-id",
+        default=None,
+        help="instance/job id the dispatch claim was opened with; the terminal claim row "
+        "keys on it so the compliance checker can see the active predecessor "
+        "(default: the call_id, the pre-2026-09-04 behaviour)",
+    )
+    ap.add_argument(
         "--mirror-label",
         default=None,
         help="filename stem for the scanner-visible mirror (default: output-dir name)",
@@ -557,6 +633,7 @@ def main() -> int:
             call_id=args.call_id,
             result=r,
             out_dir=out,
+            instance_job_id=args.instance_job_id,
         )
         if close_note:
             print(close_note)

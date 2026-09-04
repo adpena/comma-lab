@@ -70,6 +70,7 @@ explicit --single-axis-waiver-reason, on CPU exactly as on CUDA.
 from __future__ import annotations
 
 import argparse
+import datetime as _dt
 import hashlib
 import json
 import re
@@ -92,6 +93,13 @@ from tac.deploy.modal.paired_dispatch import (  # noqa: E402
     PAIRED_AUTH_EVAL_CPU_WRAPPER,
     PAIRED_AUTH_EVAL_CUDA_WRAPPER,
     PAIRED_AUTH_EVAL_ENTRYPOINT,
+)
+from tac.modal_source_snapshot import (  # noqa: E402
+    SNAPSHOT_ROOT_REL,
+    assert_python_source_resolves,
+    build_snapshot,
+    dispatch_env,
+    prune_snapshots,
 )
 
 VENV_PY = str(REPO / ".venv" / "bin" / "python")
@@ -192,11 +200,39 @@ def write_fire_manifest(out_dir: Path, manifest: dict) -> Path:
         )
     out_dir.mkdir(parents=True, exist_ok=True)
     # A refusal receipt from an earlier attempt into this same dir would otherwise sit
-    # beside a real manifest and make a fire that DID take read as refused.
-    (out_dir / "FIRE_REFUSED.json").unlink(missing_ok=True)
+    # beside a real manifest and make a fire that DID take read as refused. It is
+    # ARCHIVED, never unlinked: the prior refusal is the record of why a re-fire exists.
+    archive_prior_refusal(out_dir)
     path = out_dir / "FIRE_MANIFEST.json"
     path.write_text(json.dumps(manifest, indent=2))
     return path
+
+
+def archive_prior_refusal(out_dir: Path) -> str | None:
+    """Move an existing FIRE_REFUSED.json aside so a re-fire needs no new directory.
+
+    THE DEFECT (2026-09-04, ddm_fs2). The first fs2 fire was refused by Modal
+    ("source modified during build process"). Re-firing into the same --output-dir
+    would have left a stale refusal receipt beside a real manifest, and the rule
+    "presence of FIRE_REFUSED.json means NO call exists" would then be a LIE about the
+    second fire. MAIN's workaround was a whole new directory (`..._r2`), which splits
+    the custody of one candidate across two paths for a bookkeeping reason.
+
+    Archiving keeps both facts: the re-fire proceeds in place, and the refusal survives
+    under ``refusals/<utc>.json`` where the next reader of this candidate will find it.
+    Deleting it would be signal loss; leaving it in place would be a false refusal.
+    """
+
+    receipt = out_dir / "FIRE_REFUSED.json"
+    if not receipt.is_file():
+        return None
+    stamp = _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%S.%fZ")
+    archive_dir = out_dir / "refusals"
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    target = archive_dir / f"{stamp}.json"
+    receipt.replace(target)
+    print(f"PRIOR REFUSAL ARCHIVED: {target}")
+    return str(target)
 
 
 def _sha256(path: Path) -> str:
@@ -525,6 +561,21 @@ def main(argv: list[str] | None = None) -> int:
         help="default: axis-derived (cuda 2400 s, cpu 9600 s — the CPU worker's own "
         "timeout is 9000 s and the watcher must outlive it)",
     )
+    ap.add_argument(
+        "--no-source-snapshot",
+        action="store_true",
+        help="dispatch straight from the live working tree (the pre-2026-09-04 behaviour). "
+        "The default snapshots every mounted source tree first so a concurrent edit "
+        "cannot abort or contaminate the image build; turn it off only to diagnose the "
+        "snapshot itself, never to save 9 seconds.",
+    )
+    ap.add_argument(
+        "--snapshot-retain-days",
+        type=float,
+        default=3.0,
+        help="prune source snapshots older than this at fire time (default 3). Clones cost "
+        "~0 bytes when made and diverge as the tree changes, so they are cheap but not free.",
+    )
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
 
@@ -554,6 +605,11 @@ def main(argv: list[str] | None = None) -> int:
     out_dir = Path(args.output_dir)
     if not out_dir.is_absolute():
         out_dir = REPO / out_dir
+    # A re-fire into a directory that already refused must NOT need a fresh directory
+    # (the fs2 `_r2` split). Archive the prior receipt first so this fire's own refusal —
+    # or its manifest — is the only top-level verdict in the dir, and the old one survives.
+    out_dir.mkdir(parents=True, exist_ok=True)
+    archived_refusal = archive_prior_refusal(out_dir)
 
     # ---- STAGE 0 SEAL --------------------------------------------------------------
     # Runs before every other stage and before any subprocess: a refused seal must cost
@@ -622,6 +678,7 @@ def main(argv: list[str] | None = None) -> int:
     manifest: dict = {
         **seal_manifest,
         "schema": "fire_modal_auth_eval.v2",
+        "archived_prior_refusal": archived_refusal,
         # Self-describing: a dry-run manifest carries no call_id, and a reader must never
         # have to infer from an absence whether a fire actually took.
         "dry_run": bool(args.dry_run),
@@ -739,13 +796,70 @@ def main(argv: list[str] | None = None) -> int:
     manifest["stage5_entrypoint"] = spec["entrypoint"]
     manifest["stage5_dispatch_argv"] = cmd
     manifest["stage6_poller_deadline_s"] = poller_deadline_s
+
+    # ---- STAGE 4b SNAPSHOT ---------------------------------------------------------
+    # The mounts read the LIVE working tree. A concurrent edit during the image build
+    # aborts the dispatch ("source modified during build process", ddm_fs2 2026-09-04,
+    # MAIN's own `ruff format`) or — worse — bakes half-old bytes into a paid image.
+    # Cloning every mounted tree first makes the fire read an immutable instant.
+    # Verified fail-closed: an incomplete snapshot REFUSES rather than firing a short
+    # mount, because a short mount spends the meter and returns a crash.
+    dispatch_cwd = REPO
+    dispatch_env_vars: dict | None = None
+    if args.no_source_snapshot:
+        manifest["stage4b_source_snapshot"] = {
+            "enabled": False,
+            "consequence": "the image build reads the LIVE working tree; a concurrent edit can abort it",
+        }
+        print("SNAPSHOT: DISABLED — the image build will read the live working tree")
+    else:
+        entry_rel = spec["entrypoint"].split("::", 1)[0]
+        pruned = prune_snapshots(
+            REPO / SNAPSHOT_ROOT_REL, retain_days=float(args.snapshot_retain_days)
+        )
+        snap = build_snapshot(
+            source_root=REPO,
+            entrypoint=REPO / entry_rel,
+            label=args.instance_job_id,
+        )
+        probe_failures = (
+            assert_python_source_resolves(
+                snap.root,
+                snap.mounts.python_source_modules,
+                python_executable=VENV_PY,
+                entrypoint=snap.entrypoint,
+            )
+            if snap.complete
+            else ["snapshot incomplete; import probe not attempted"]
+        )
+        snap_record = snap.to_dict()
+        snap_record["pruned_older_snapshots"] = pruned
+        snap_record["python_source_probe_failures"] = probe_failures
+        manifest["stage4b_source_snapshot"] = snap_record
+        print(
+            f"SNAPSHOT: {snap.file_count:,} files / {snap.total_bytes:,} B in "
+            f"{snap.elapsed_s:.1f}s (clonefile={snap.clonefile_used}) "
+            f"digest {snap.files_digest[:16]}…"
+        )
+        if not snap.complete or probe_failures:
+            for reason in [*snap.verify_failures, *snap.missing_in_source, *probe_failures]:
+                print(f"  - {reason}")
+            return refuse(
+                out_dir,
+                8,
+                "source snapshot is not provably complete; refusing to fire a short mount",
+                manifest,
+            )
+        dispatch_cwd = snap.root
+        dispatch_env_vars = dispatch_env(snap.root, entrypoint=snap.entrypoint)
+
     if args.dry_run:
         print(f"AXIS: {spec['axis']} {spec['evidence_axis_tag']} -> {spec['entrypoint']}")
-        print("DRY-RUN: would dispatch:\n  " + " ".join(cmd))
+        print(f"DRY-RUN: would dispatch from cwd={dispatch_cwd}:\n  " + " ".join(cmd))
         print(write_fire_manifest(out_dir, manifest))
         return 0
 
-    disp = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True)  # subprocess-no-check-OK: success judged by the spawn-record effect check below (refuse rc=5 when absent)
+    disp = subprocess.run(cmd, cwd=dispatch_cwd, env=dispatch_env_vars, capture_output=True, text=True)  # subprocess-no-check-OK: success judged by the spawn-record effect check below (refuse rc=5 when absent)
     sys.stdout.write(disp.stdout[-2000:])
     sys.stderr.write(disp.stderr[-2000:])
     # Persist the FULL dispatch output: the 2000-char echo above is a courtesy tail, and
@@ -795,6 +909,12 @@ def main(argv: list[str] | None = None) -> int:
             # them; the P0 payload still stays at --output-dir.
             "--lane-id", args.lane_id,
             "--mirror-label", args.instance_job_id,
+            # The terminal claim row must key on the SAME instance/job id the spawn rows
+            # used, or the compliance checker's dispatch_claim_prior_active_row sees a
+            # lone terminal row with no active predecessor and reds. Without this the
+            # poller keyed the row on the call_id and MAIN appended a second row by hand
+            # (and mistyped a sha doing it, 2026-09-04).
+            "--instance-job-id", args.instance_job_id,
         ],
         cwd=REPO, capture_output=True, text=True,
     )
