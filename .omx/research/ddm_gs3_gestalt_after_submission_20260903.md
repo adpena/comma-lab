@@ -439,3 +439,33 @@ the FALSE-SURVIVED genus: the guard read the wrong denominator.
 **P0 hygiene (ng4 report):** the boot volume hit 344 MiB free (ENOSPC twice) — `.omx/tmp` 208 GB + `experiments/results` 149 GB; dk1 arm
 spawned for certify-and-MOVE reclaim (never delete uncertified bytes).
 Equations leg (`tac.canonical_equations`): gm1's τ-band law — first full-burn anchor (ng3).
+
+## ADDENDUM 18 (2026-09-04 22:00Z real) — fs2 seals the next candidate; the custody row binds the public tree; ng4 fires; two governor defects
+
+**fs2 (500189019 / 60f6a9668): the falsifier did NOT fire.** Re-solving the 12-dim carrier on the 21 pairs whose frame 0 moved: 15/21
+pairs moved 67 int12 coordinates, summed gain 2.147e-5 for **+1 B** (the `up2` control reproduced the shipped 78,628 bits exactly);
+the matched control on the base body (frame 0 unmoved) changed **0/21** coordinates — 100% of the win is selector-induced staleness.
+One alternation sweep moved one selector mode byte-free; the k drop ladder is a staircase (23→24 saves 0 B) so no drops. Candidate D:
+archive a8f3a379…, **180,023 B, projected S 0.14784104973157752 [advisory], net −2.2145e-5 = 1.107× the admit bar, 3.00× the 8-dp
+report bound**; 585 untouched pairs Δd_pose = 0.0; odd-frame sections byte-identical. Two frozen constants un-frozen on the way
+(pr1's hardcoded afr1 body sha; up3's hardcoded q=11/lgwin=24 container — a different generation's, +2 B here). SEALED (532f2482…);
+T4 fire refused once by a TRANSIENT Modal build error ("test_cell_admission.py was modified during build process" — my `ruff format`
+raced the image build; lesson: no source edits while a fire's image is building) and RE-FIRED (receipt `fs2_t4_buy_r2`).
+PROMOTE IFF exact S < 0.14786319521362173.
+
+**ps1's custody row (fc-01M1Q5S91QG8CSTV9458M1S6VE):** the fs1 archive on the STAGED public tree reproduces the pointer row EXACTLY
+(pose 6.17e-06, seg 0.00020139, 180,022 B, S 0.14786319521362173; 554.8 s). The public packet's runtime tree is now an evaluated
+tree (fire-tool tree digest 05b85e1e…); the tree-digest RED is cured. The prepared PR #140 update still waits on the operator's
+one-line confirm — and if fs2's row promotes, the packet needs a seventh stage (carrier re-solve) before it is worth posting.
+
+**ng4 FIRED 21:55:39Z** (receipt `ng4_continuous_DONE.json`, ~4.4 h): the continuous-objective cell (τ held at r10's exact terminal float
+0.05000000074505806, duals carried — head start 57.0×/224.4×).
+
+**Two governor defects found by RUNNING, fixed, tested (4274f7fd5, 349f1fd82):** (1) a candidate that would run ALONE was gated by
+N=2 contention evidence (`max(2, live_count)` with contending=1) — refused ng4 for 90 min with the Metal free; (2) each admission poll
+WALKED both 1.8 TB SSD roots to depth 6 — MEASURED >120 s per poll (the waiter's polls stretched to 100 s, then stalled 10 min in one
+call). Cure: the launcher appends a `detached_launch_registry.v1` row at every launch (fail-open) and the governor reads the registry
+first (0.09 s measured), walking only as a pruned fallback or with `--walk-roots`; registry seeded from a pruned walk (APDataStore 396
+rows in 13.7 s; Vertigo seed running detached). Genus: a guard that is slow enough to be skipped is a guard that is not there ([[m102]]).
+Equations leg (`tac.canonical_equations`): fs2's projection will be the second pure-pose authority anchor for `exchange_ratio_noise_floor_v1`
+when the row lands.
