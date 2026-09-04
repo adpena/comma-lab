@@ -498,3 +498,21 @@ never-touch test judged the candidate's path not its descendants — `ddm_mst1` 
 Routed to gov2: the launcher's storage waterfall must read CONTAINER free space and snapshot-pinned bytes (`tmutil listlocalsnapshots`),
 and the reclaim cadence (`docs/runbooks/local_disk_reclaim_cadence.md`) must thin snapshots first. `experiments/results` 149 GB owed
 its own arm. Equations leg (`tac.canonical_equations`): none — disk hygiene moves no score.
+
+## ADDENDUM 21 (2026-09-04 23:45Z real) — hv1: the harvest→pointer autopilot exists, and its replay graded MAIN's hand work
+
+`tools/pointer_move_packet.py` (10 stages, dry by default) + `src/tac/pointer_move.py` + `src/tac/modal_source_snapshot.py`; the poller now
+stages the canonical terminal claim row with FULL shas and an axis-derived status `completed_contest_{cuda,cpu}_exact_eval_harvested`.
+Replay on today's two harvests in isolated state reproduced every load-bearing number (S, three terms, deltas, corners, margins, projection
+errors, post-move anchors) and found **5 MAIN hand-errors**: fs1 pose-term last digit; fs2 rate term, pose term and gap transcribed wrong;
+fs2 claim row's runtime-tree sha truncated to 12 hex — plus a RED neither ps1 nor I expected: my terminal-row status prefix
+`completed_modal_auth_eval_harvested_S_…` is not a `SUCCESSFUL_EXACT_EVAL_TERMINAL_STATUS_PREFIXES` member (both lanes RED; the old poller
+code hardcoded cuda and would have mis-closed every CPU row). Errata appended to both pointer memos; canonical rows to be re-emitted by the
+apparatus. hv1 also found 5 bugs in its own packet by replay (relative tool paths → silent no-op with a success print; first run wrote real
+custody at the tier root; two tools not repo-root aware; snapshot digest double-counted nested mounts; hardcoded axis label) — all fixed.
+Fire-from-snapshot: `git archive HEAD` is IMPOSSIBLE here (upstream/ 0 of 19,677 files tracked) → APFS clonefile snapshot of the mounted
+paths, 16,060 files / 780 MB in 6.7 s; a 40-rewrite race during the build leaves the manifest digest identical; never carried a real Modal
+build yet (`--no-source-snapshot` reverts). Pre-existing red: `test_claim_lane_dispatch.py::test_terminal_prefixes_constants` (`stale_` vs
+`stale_assumed_dead`/`stale_superseded`) — routed to gov2's owner list. Next move ordinal derives from `.omx/state/pointer_move_events.jsonl` (26).
+Law banked: the number a human typed is the number the apparatus must re-derive ([[m18]] WRITES>READS; the packet is the reader).
+Equations leg (`tac.canonical_equations`): none new — the packet reads the registered laws; it does not add one.

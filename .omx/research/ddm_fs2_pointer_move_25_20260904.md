@@ -47,3 +47,8 @@ carrier re-solve) on top of stage 6, +1 B. Updating the public PR remains the op
 
 Own-vehicle frontier: **fs2 — S 0.14784474152757654 @ 180,023 B [contest-CUDA T4 n600]**, archive sha a8f3a379…0427bb6.
 Equations leg (`tac.canonical_equations`): `exchange_ratio_noise_floor_v1` — second pure-pose authority anchor (projection +3.69e-6).
+
+## ERRATUM (hv1 replay, 2026-09-04 23:45Z) — transcription errors in this memo, found by `tools/pointer_move_packet.py`
+The S value and the delta are correct. Hand-typed terms were not: rate 25·180023/37545489 = **0.11986992631791266** (memo wrote 0.11986992607…);
+pose √(10·6.14e-6) = **0.007835815209663893** (memo wrote 0.007836134…); gap = **0.027844741527576544**. The claim terminal row carried a 12-hex
+runtime-tree sha and a non-canonical status prefix; canonical rows are now apparatus-written. Memo `ddm_hv1_harvest_to_pointer_autopilot_20260904.md`.

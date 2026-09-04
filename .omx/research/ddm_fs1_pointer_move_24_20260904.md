@@ -85,3 +85,9 @@ threshold is now re-derived above). Equations leg (`tac.canonical_equations`):
 
 Own-vehicle frontier: **fs1 — S 0.14786319521362173 @ 180,022 B [contest-CUDA T4 n600]**,
 archive sha 50fcaf1a…708cf.
+
+## ERRATUM (hv1 replay, 2026-09-04 23:45Z) — transcription errors in this memo, found by `tools/pointer_move_packet.py`
+The S values and deltas are correct. Hand-typed term values were not: pose term √(10·6.17e-6) = 0.007854934754662**193** (memo wrote …192).
+The claim terminal rows for this lane carried a status prefix (`completed_modal_auth_eval_harvested_…`) that fails the compliance checker's
+`SUCCESSFUL_EXACT_EVAL_TERMINAL_STATUS_PREFIXES`; canonical rows (`completed_contest_cuda_exact_eval_harvested`, full shas) are now written by
+the poller/packet, never by hand. Memo `ddm_hv1_harvest_to_pointer_autopilot_20260904.md`.
