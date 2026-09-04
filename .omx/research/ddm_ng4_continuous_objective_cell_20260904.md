@@ -315,10 +315,27 @@ by `tools/launch_guard_hook.py` as the rc=144 kill class, and the first attempt 
 that reaper) polls the same admission gate and fires each arm through the launcher the moment it
 admits. It never overrides the governor.
 
-> **SMOKE RESULT — appended by the arm when the waiter completes; see
-> `…/ng4_continuous_objective/bounded_smoke/BOUNDED_SMOKE_RESULT.json`. Until that file exists,
-> this cell's MECHANISM is proven only by the 88 tests and the in-tree seal validation, not by a
-> real update.**
+**What is already MEASURED and what is still owed, stated separately:**
+
+| smoke component | state |
+|---|---|
+| **DIFFERENTIAL** — all 15 objective components bit-identical at τ = 0.15 with zero duals | **MEASURED** (§ previous section), and the value `1.0765775442123413` cross-checks ng3's independently measured number for the same quantity |
+| objective is neither τ-blind nor dual-blind | **MEASURED** |
+| carried duals reach the loop | **MEASURED at the seeder** (`initial_margin_constraint_lambdas`, both executable paths, asserted by tests) — not yet through a real update |
+| **NO-OP DETECTOR** — the two arms' step-1 trained-state sha256 differ | **OWED.** It needs one real B=16 update per arm and nothing smaller is the real path |
+| ng3's training-path-unmoved re-measurement (control step-1 sha vs ng1's cold reference) | **OWED**, same update |
+
+**DERIVED in the meantime, and labelled as such:** on the identical step-1 field the two arms'
+losses at their own operating points are 1.078884243965149 and 0.7406730651855469. Both τ and λ
+multiply θ-dependent terms (the seg surrogate and the per-class penalty), so the two gradients
+cannot coincide and the step-1 states must differ. That is an argument, not a receipt — the sha
+comparison is what settles it, and it is owed.
+
+> **SMOKE RESULT — appended when the governed waiter completes; see
+> `…/ng4_continuous_objective/bounded_smoke/BOUNDED_SMOKE_RESULT.json` and the waiter's receipt
+> `NG4_SMOKE_WAITER2_DONE.json`. At seal time ng2 stood at 2,928/5,000 updates and ng3 at
+> 887/5,000, both contending for the Metal, so admission at 42 GiB was ~35.5 GiB short. Whoever
+> harvests this arm should read that JSON and append its rows here.**
 
 ## MAIN fire command
 
