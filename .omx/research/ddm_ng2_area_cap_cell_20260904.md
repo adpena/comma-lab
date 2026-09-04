@@ -418,3 +418,9 @@ sees no change.
   same-schedule / same-EMA / same-selection with a pin set that moves exactly at the lever's file.
 * **Re-scaling λ to the measured gradient ratio before the burn is CLOSED for this cell** — it would
   make falsifier 2 unfalsifiable. It is the conditional NEXT lever, not this one.
+
+## LIVE READ (MAIN, 2026-09-04 14:59Z) — area-cap cell @1k
+S_hat **0.457666** (control @1k 0.466875; Δ −0.009209) · d_seg_hat **0.0030510** (control 0.0030511 — identical to 4
+decimals) · d_pose_hat 0.0006645 (control 0.0008233). The −0.009 is ALL pose; the cap has not touched seg at 1k —
+consistent with ng2's own caution (cap gradient 1.25% of the recall term). The step-2k read (the over-paint peak; area
+falsifier) decides whether it binds at all.
