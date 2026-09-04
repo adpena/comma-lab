@@ -295,14 +295,25 @@ training-path-unmoved re-measurement.
 
 **It had not run when this memo was written.** `system_memory_governor.live_admission_decision`
 REFUSED every projection — 18, 21, 25 and 42 GiB — because ng2's and ng3's cells were both live on
-the Metal and system-used sat at **110.9 GiB against the adaptive 116.0 GiB ceiling**. That is the
-governor working, and a REFUSE is information, not an obstacle. ng3's equivalent smoke peaked at
-**41.48 GiB** running both arms and the differential in one address space, so ng4 SPLITS the arms:
-`smoke --arm {control,continuous}` runs one arm per process (the high-water is one arm's), and
-`smoke-finalize` pays no forward pass at all — it reads the payloads the smoke already retained.
-A governed waiter (`…/ddm_ng4_continuous_objective/run_bounded_smoke_when_admitted.sh`) polls the
-same admission gate and fires each arm through `tools/launch_detached_process.py` the moment it
-admits; it never overrides the governor.
+the Metal and system-used sat at **112.1 GiB against the adaptive 116.0 GiB ceiling (headroom
+3.9 GiB)**. That is the governor working, and a REFUSE is information, not an obstacle.
+
+**A projection correction I made against my own first plan.** I split the smoke into one arm per
+process (`smoke --arm {control,continuous}`, with `smoke-finalize` paying no forward pass at all —
+it reads the payloads the arms already retained) on the assumption that ng3's **41.48 GiB**
+high-water was two arms summed, so one arm would cost ~half. Then I read ng2's: **41.46 GiB**. Two
+arms with *different* extra computations (ng2 a gradient probe, ng3 a differential) landing within
+0.02 GiB of each other says the high-water is set by the ONE update's forward+backward, which is
+identical in both — **not** by summing arms. So the split buys ISOLATION, not a smaller peak, and
+arm 1 projects the full **42 GiB**. Over-projecting costs wall clock; under-projecting risks an OOM
+cascade that would kill two live 3-hour Metal cells. Arm 2's projection is then derived from arm
+1's MEASURED `peak_rss_bytes` + 15%, because by then a measurement exists.
+
+A governed waiter (`…/ddm_ng4_continuous_objective/run_bounded_smoke_when_admitted.sh`, launched
+through `tools/launch_detached_process.py` — a hand-rolled `nohup … & disown` was correctly refused
+by `tools/launch_guard_hook.py` as the rc=144 kill class, and the first attempt died to exactly
+that reaper) polls the same admission gate and fires each arm through the launcher the moment it
+admits. It never overrides the governor.
 
 > **SMOKE RESULT — appended by the arm when the waiter completes; see
 > `…/ng4_continuous_objective/bounded_smoke/BOUNDED_SMOKE_RESULT.json`. Until that file exists,
