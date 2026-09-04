@@ -826,3 +826,20 @@ def test_reachability_share_is_derived_from_the_integer_numerator(tmp_path: Path
     # PERSISTENT holds site 0 (pair 0), NEW_PERSISTENT holds site 1 (pair 0): both weight 15
     assert persistent == 15
     assert total == 30
+
+
+def test_analyze_refuses_a_cell_with_no_swept_rows(tmp_path: Path) -> None:
+    args = md1.build_parser().parse_args(
+        ["--mode", "analyze", "--cell", "absent_cell", "--store", str(tmp_path)]
+    )
+    with pytest.raises(md1.MD1Error):
+        md1.run_analyze(args)
+
+
+def test_analyze_refuses_an_empty_rows_file(tmp_path: Path) -> None:
+    (tmp_path / "sweep_rows_empty_cell.jsonl").write_text("\n", encoding="utf-8")
+    args = md1.build_parser().parse_args(
+        ["--mode", "analyze", "--cell", "empty_cell", "--store", str(tmp_path)]
+    )
+    with pytest.raises(md1.MD1Error):
+        md1.run_analyze(args)

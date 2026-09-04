@@ -13,7 +13,8 @@ along the trajectory from the retained 16-step checkpoints, and classifies every
   PERSISTENT       wrong at step 0 AND wrong at >= 90% of swept checkpoints
   NEW_PERSISTENT   correct at step 0, wrong at the terminal checkpoint
   TRANSIENT_BORN   correct at step 0, wrong somewhere in between, correct again at the terminal
-  HEALED           wrong at step 0, not persistent, correct at the terminal
+  HEALED           wrong at step 0, not persistent, few flips -- the RESIDUAL class; most of
+                   its members end correct, but the predicate does NOT require it
   CHURN            flips correct<->wrong more than ``--churn-flips`` times
 
 The five error classes PARTITION every site that is ever wrong (falling rule, CHURN first), so the
@@ -681,7 +682,11 @@ def run_analyze(args: argparse.Namespace) -> dict[str, Any]:
 
     store = Path(args.store)
     rows_path = store / f"sweep_rows_{args.cell}.jsonl"
+    if not rows_path.is_file():
+        raise MD1Error(f"no swept rows for cell {args.cell!r}: run --mode sweep first ({rows_path})")
     rows = [json.loads(line) for line in rows_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if not rows:
+        raise MD1Error(f"swept rows for cell {args.cell!r} are empty")
     by_forward: dict[str, dict[int, dict[str, Any]]] = {}
     for row in rows:
         by_forward.setdefault(str(row["forward"]), {})[int(row["step"])] = row

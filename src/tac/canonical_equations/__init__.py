@@ -118,6 +118,12 @@ from tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708 im
     populate_chan_vese_area_constraint_birth_balance_equation,
     populate_isoperimetric_birth_weight_scaling_equation,
 )
+from tac.canonical_equations.checkpoint_trajectory_error_partition_20260904 import (
+    build_checkpoint_trajectory_error_partition_v1,
+    floor_clears_target,
+    partition_is_exact,
+    reachability_floor,
+)
 from tac.canonical_equations.chroma_boundary_match_20260709 import (
     build_chroma_boundary_annulus_match_hinge_v1,
     populate_chroma_boundary_annulus_match_equation,
@@ -528,6 +534,10 @@ __all__ = [
     "AWAY_TRUST_VS_ACTUAL_PRICE_BAND",
     "bias_amplification",
     "build_annulus_restricted_prefix_bias_detector_v1",
+    "build_checkpoint_trajectory_error_partition_v1",
+    "floor_clears_target",
+    "partition_is_exact",
+    "reachability_floor",
     "build_renderer_seg_pose_coupling_shipped_object_v1",
     "CANONICAL_EQUATIONS_REGISTRY_LOCK",
     "CANONICAL_EQUATIONS_REGISTRY_PATH",
