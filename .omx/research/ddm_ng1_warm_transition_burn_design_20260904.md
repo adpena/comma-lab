@@ -387,3 +387,8 @@ remove it — the transition is a contributor, not the sole cause; the objective
 rest, as sd1/gm1 said. Clause 1 of falsifier 1 (S_hat(5k) < 0.398768) is now unlikely; the paired-effect read at 5k is
 the decision: warm S_hat(5k) < 0.425149 by more than 0.005 ⇒ WIN for composition (re-seal ng2/ng3 as WARM twins).
 **@3k (13:16Z):** S_hat **0.461163** (control @3k 0.475383; Δ -0.014220) · d_seg_hat 0.0030496 (control 0.0031392) · d_pose_hat 0.0007258.
+**@4k (13:48Z):** S_hat **0.458423** (control @4k 0.442190; Δ **+0.016233** — the warm cell is now ABOVE the control) ·
+d_seg_hat 0.0030151 (control 0.0029336) · d_pose_hat 0.0007383. Falsifier 1's second clause ("below the control at every
+milestone") FAILS at 4k: the warm optimizer state damps the excursion's onset (−0.027/−0.018 at 1k/2k) but the cold
+control RECOVERS faster from 3k on. Read: the moments change the transient's shape, not its cause; the objective/
+schedule (over-paint; τ band) owns the recovery. The 5k paired read decides the composition rule.
