@@ -434,3 +434,44 @@ class TestReportGuards:
             "the mean is a mean of per-pair MSEs; the worst pairs own it"
         )
         assert rec["pairs_improved"] == 3
+
+
+class TestCarrierPriceIsMeasuredNotAssumed:
+    def test_codes_mode_prices_the_re_solved_carrier(self, tmp_path, monkeypatch):
+        """The re-solve is not free, and the record must say so in bytes.
+
+        ft1's FIRE_ORDER calls the terminal re-solve "0 archive bytes"; jg5
+        measured a mixed splice at +45 B. A record that omits the price would
+        let a successor inherit the free-lunch reading.
+        """
+        import json
+        import types
+
+        runtime = tmp_path / "runtime"
+        runtime.mkdir()
+        (runtime / "archive.zip").write_bytes(b"x")
+        monkeypatch.setattr(pr1, "sha256_file", lambda _p: pr1.FRONTIER_ARCHIVE_SHA256)
+
+        codes = np.zeros((pr1.N_PAIRS, 12), dtype=np.int32)
+        fake_state = types.SimpleNamespace(codes=codes)
+        fake_up2 = types.SimpleNamespace(
+            load_carrier_state=lambda *a, **k: fake_state,
+            price_full_resolve_bytes=lambda _r, _c: (
+                {"delta_bytes": 137, "control_reproduces_shipped_payload": True}, codes
+            ),
+        )
+        monkeypatch.setitem(sys.modules, "ddm_up2_shipping_pose_solve", fake_up2)
+
+        rows = tmp_path / "rows.jsonl"
+        rows.write_text(json.dumps({"pair": 5, "codes": [3] * 12}) + "\n",
+                        encoding="utf-8")
+        out = tmp_path / "codes.npy"
+        args = pr1.build_parser().parse_args(
+            ["codes", "--runtime", str(runtime), "--rows", str(rows), "--out", str(out)]
+        )
+        assert pr1.run_codes(args) == 0
+        record = json.loads(out.with_suffix(".json").read_text(encoding="utf-8"))
+        assert record["carrier_rice_price"]["delta_bytes"] == 137
+        assert record["delta_score_rate"] == pytest.approx(137 * 25.0 / 37_545_489.0)
+        assert record["changed_pairs"] == 1
+        assert record["changed_coordinates"] == 12

@@ -525,11 +525,18 @@ def run_codes(args) -> int:
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     np.save(out, codes)
+    # The re-solve is NOT free. ft1's FIRE_ORDER calls it "0 archive bytes"; jg5
+    # measured a MIXED carrier splice at +45 B. A full 600-pair re-solve rewrites
+    # every Rice residual, so the byte delta is priced here by building the
+    # payload, with the shipped-payload reproduction as the anchor control.
+    price, _ = up2.price_full_resolve_bytes(runtime, codes)
     record = {
         "schema": "tac.ddm_pr1.codes.v1",
         "path": str(out),
         "rows_merged_from": [str(p) for p in args.rows],
         "runtime_archive_sha256": observed,
+        "carrier_rice_price": price,
+        "delta_score_rate": price["delta_bytes"] * 25.0 / 37_545_489.0,
         "pairs_written": len(merged),
         "shipped_codes_sha256": sha256_array(state.codes),
         "codes_sha256": sha256_array(codes),
