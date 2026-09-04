@@ -315,3 +315,32 @@ for the selector op (the runtime is decode-only), a batch-8 re-measure, a byte-c
 exact S < 0.14797617125559104. Small, real, and the first exact-row candidate of the wave (ddm_fs1).
 Equations leg (`tac.canonical_equations`): `renderer_seg_pose_coupling_shipped_object_v1` (domain PRE/POST re-solve, 3
 anchors).
+
+## ADDENDUM 13 (2026-09-04 16:20Z) — bh1: the operator was right; the bugs, ranked by what they corrupt
+
+MEASURED (ddm_bh1 0dca1e3b2; 15 findings, 2 fixed, closures recomputed independently — no verdict moves):
+1. **The born trainer trains AND scores against the PyAV table, pinned by sha** (`ddm_qbt1_qbflow_trainer.py:123,:246,
+   :2067-2073`; milestones via the burn prep :615). Bound: 20,671 sites = 0.017523 S = ≤7% of today's born d_seg_hat
+   but **1.28× the entire sub-0.12 d_seg budget**. Every cell verdict's SIGN survives (same target both arms); the
+   absolute levels and the falsifiers (0.425149 / 0.485677) do NOT transfer to DALI or to the 0.12 target. $0 cure:
+   `_retain_eval_outputs` keeps `segnet_argmax_u8` per pair per milestone — a DALI d_seg_hat for every existing
+   milestone is a re-read of retained bytes (MAIN, below).
+2. **The lineage preflight gate is blind to `.npz`** (`src/tac/preflight.py:2466-2469`, regexes require .npy/.pt) and
+   WARN-ONLY (:2863) — the detector built for this harm cannot see its largest live consumer; widening lights ~372
+   historical consumers → needs a live-count plan (chartered by bh1, not patched).
+3. **The dual constraint measures an UNWEIGHTED within-class error and penalises an HT-weighted one**
+   (`qbt1:598-612`): heavy-stratum share gap 1.60× Lane / 1.39× Movable — the 8 heavy pairs are 40% of the population
+   and get 24–25% of the driver; propagates into ng2's derived λ. Owned by the next trainer generation.
+4. **The memory guard over-trusts inactive pages** (free + ALL inactive counted reclaimable; `tools/mem_basis.py` was
+   written to refuse exactly that): 1.204× over-trust now, 4.2× under load per its own anchor; never subtracts the live
+   cell's footprint → gv1's admission function must use the mem_basis basis and subtract live cells.
+5. A pin that can never fail (`verify_pins` synthesizes `wd3_reference` when absent); four lineage-unlabelled axis strings.
+Fixed: the reseal tool's receipt attested the OUTPUT sha as the input (17 tests); the δ_R PRODUCER still defaulted to
+the n96 prefix that made the retired constant (3 tests; law anchor `producer_default_reinfects_cured_constant`).
+Prose overstatements corrected: md1's 51.5× mixes n32/n600 and its Movable 1.62× is 1.864×; gm1's "EXACTLY inert" is
+0.042%; lb1's 5.55× applies the born-field 1.61× to a post-oracle field. Verified clean: tau_for_step, both STEs,
+build_initial_state (EMA into live AND shadow), balanced schedule, milestone ema_scope, float32 argmax before the f16
+cast, upstream preprocessing order, HT estimators, ng3's band at step 0, ng2's cap caveat. EMA τ = 1,086.24 updates
+confirmed (md1's low-pass): a milestone's shadow still carries 39.8/15.8/6.3/1.0% of the init at 1k/2k/3k/5k.
+Equations leg (`tac.canonical_equations`): `annulus_restricted_prefix_bias_detector_v1` (bh1 anchor) ·
+`checkpoint_trajectory_error_partition_v1` (recomputed 62.0107%).
