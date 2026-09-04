@@ -380,3 +380,9 @@ S_hat **0.439328** (control @1k 0.466875; warm start 0.398768) · d_seg_hat 0.00
 but still +10.2% above the warm start — the excursion is smaller, not absent: the optimizer state removed part of the
 first-order damage, and the pose leg improved outright. Falsifier 1's second clause (below control at EVERY milestone)
 holds at 1k; the first clause (S_hat(5k) < 0.398768) is open. Next read at 2k (the control's peak).
+**@2k (12:21Z):** S_hat **0.467442** (control @2k 0.485677, the control's peak; Δ −0.018235) · d_seg_hat 0.0031367
+(control 0.0032171) · d_pose_hat 0.0006851 (above the start now). Below the control at both milestones so far, but
++17.2% above the warm start: the warm optimizer state DAMPS the excursion (≈ −0.02 S_hat at the peak) and does not
+remove it — the transition is a contributor, not the sole cause; the objective/schedule (over-paint, τ band) carries the
+rest, as sd1/gm1 said. Clause 1 of falsifier 1 (S_hat(5k) < 0.398768) is now unlikely; the paired-effect read at 5k is
+the decision: warm S_hat(5k) < 0.425149 by more than 0.005 ⇒ WIN for composition (re-seal ng2/ng3 as WARM twins).
