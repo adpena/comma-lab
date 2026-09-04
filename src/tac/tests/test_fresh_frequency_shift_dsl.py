@@ -136,10 +136,14 @@ def test_fixed_quality_slice_changes_only_measurement_and_checkpoint_cadence() -
 def test_default_v9_program_does_not_silently_enable_fresh() -> None:
     from tac.witness_dsl.spec_v9_cgauge import derive_v9_cgauge_432_config
 
+    # epochs must satisfy the CURRICULUM EPOCH-BUDGET FEASIBILITY gate
+    # (witness_autoconfig.py:2755; latest stage start is --l7-start-epoch=800):
+    # a 2-epoch program is refused at compile since that gate landed, and this
+    # test only inspects the compiled flag set, so use the v9 default budget.
     typed = derive_v9_cgauge_432_config(
         "experiments/results/mlx_fleet_gt_cache/gt_n24.npz",
         num_pairs=8,
-        epochs=2,
+        epochs=3000,
         out_dir="experiments/results/test_fresh_default_off",
     )
     flags = typed.to_program().flag_dict()

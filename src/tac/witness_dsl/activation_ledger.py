@@ -90,6 +90,7 @@ VALID_SIG_AXES = frozenset({"d_seg", "d_pose", "rate"})
 _SIGNIFICANCE_LEVER_ALIASES: dict[str, str] = {
     "d_seg_aware_taper_121": "DsegAwareTaper",
     "horizon_weighted_margin_169": "HorizonWeightedMargin",
+    "seg_chroma_boundary_276": "SegChromaBoundary",  # 2026-09-04 MAIN: task-#-keyed significance row reconciled onto its held factory (P1 orphan cure)
 }
 
 # canonical event vocabulary
