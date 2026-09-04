@@ -394,6 +394,49 @@ def falsifiers() -> dict[str, Any]:
     }
 
 
+#: the files that gate a run: they are pinned by qbr1.EXPECTED_SHA256 / qbt.PIN_PATHS, so a
+#: sealed tree carrying these bytes can satisfy the sealed config no matter what else moved.
+GATING_FILES = (
+    "experiments/ddm_qbt1_qbflow_trainer.py",
+    "experiments/ddm_qbr1_born_fairform_burn_prep.py",
+    "experiments/ddm_qbflow_packet.py",
+)
+
+
+def bind_sealed_source(manifest_path: Path | None = None) -> dict[str, Any]:
+    """Bind the seal to the sealed source tree MAIN will fire from, and CHECK the binding.
+
+    The seal's own ``source_revision`` is whatever HEAD is when it runs, and later commits that
+    touch nothing pinned (a memo, a ledger row) move HEAD without moving the program.  So the
+    honest binding is not "same revision" but "same GATING BYTES", which this asserts file by
+    file against the snapshot manifest.
+    """
+
+    path = manifest_path or (ARM_ROOT / "SEALED_SOURCE_MANIFEST.json")
+    if not path.is_file():
+        raise NG2Error("run `snapshot` before `seal`: the cell has no tree to fire from")
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    mismatched = {
+        name: {"sealed_tree": manifest["files"][name]["sha256"],
+               "working_tree": qbt.file_fact(REPO / name)["sha256"]}
+        for name in GATING_FILES
+        if manifest["files"][name]["sha256"] != qbt.file_fact(REPO / name)["sha256"]
+    }
+    if mismatched:
+        raise NG2Error(f"the sealed tree's gating bytes differ from this tree: {mismatched}")
+    return {
+        "root": manifest["root"],
+        "revision": manifest["revision"],
+        "gating_files_identical_to_this_tree": sorted(GATING_FILES),
+        "pins_verify_inside_the_sealed_tree": manifest["pins_verify_inside_the_sealed_tree"],
+        "shared_inputs": manifest["shared_inputs"],
+        "binding": (
+            "the seal binds to GATING BYTES, not to a revision: commits that touch nothing "
+            "pinned move HEAD without moving the program MAIN fires"
+        ),
+    }
+
+
 def seal() -> dict[str, Any]:
     started = time.monotonic()
     derivation_path = ARM_ROOT / "DERIVATION.json"
@@ -432,6 +475,7 @@ def seal() -> dict[str, Any]:
         "matched_control_of_record": control_fact,
         "single_lever": diff,
         "pin_delta": control_pin_delta(),
+        "sealed_source": bind_sealed_source(),
         "area_cap": cell["area_cap"],
         "derivation": qbt.file_fact(derivation_path),
         "cold_control_of_record": COLD_CONTROL_S_HAT,
