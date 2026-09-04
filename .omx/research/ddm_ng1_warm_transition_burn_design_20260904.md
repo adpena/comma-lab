@@ -386,3 +386,4 @@ holds at 1k; the first clause (S_hat(5k) < 0.398768) is open. Next read at 2k (t
 remove it — the transition is a contributor, not the sole cause; the objective/schedule (over-paint, τ band) carries the
 rest, as sd1/gm1 said. Clause 1 of falsifier 1 (S_hat(5k) < 0.398768) is now unlikely; the paired-effect read at 5k is
 the decision: warm S_hat(5k) < 0.425149 by more than 0.005 ⇒ WIN for composition (re-seal ng2/ng3 as WARM twins).
+**@3k (13:16Z):** S_hat **0.461163** (control @3k 0.475383; Δ -0.014220) · d_seg_hat 0.0030496 (control 0.0031392) · d_pose_hat 0.0007258.
