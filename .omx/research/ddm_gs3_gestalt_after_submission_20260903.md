@@ -344,3 +344,29 @@ cast, upstream preprocessing order, HT estimators, ng3's band at step 0, ng2's c
 confirmed (md1's low-pass): a milestone's shadow still carries 39.8/15.8/6.3/1.0% of the init at 1k/2k/3k/5k.
 Equations leg (`tac.canonical_equations`): `annulus_restricted_prefix_bias_detector_v1` (bh1 anchor) ·
 `checkpoint_trajectory_error_partition_v1` (recomputed 62.0107%).
+
+## ADDENDUM 14 (2026-09-04 17:00Z) — the first exact-row buy of the wave, and the apparatus that saturates the box
+
+**fs1 (7ec320551):** pr1's selector re-selection byte-closed: the encoder for the per-pair frame-0 selector op now exists
+(the shipped runtime was decode-only; `encode(decode(shipped))` rebuilds the archive's own 14-byte blob exactly; 300/300
+fuzz round-trips through the SHIPPED decoder); the container identity control reproduces `archive.zip` bit-for-bit with the
+tail unchanged. A one-dimensional scan pr1 never ran finds the byte-optimal set: **21 pairs, +20 B, net −1.103610e-4 S
+(MEASURED n600 batch 8, advisory)**, projected **0.1478658102574271** — 16 fewer bytes and 7.0% more score than pr1's
+>1% gate; 579/600 unchanged pairs measure Δd_pose = 0.0; 0/21 adopted pairs worse; d_seg ≡ 0 structurally; ADMISSIBLE under
+`exchange_ratio_noise_floor_v1` (95% [−1.89e-4, −5.66e-5]). Near-misses carried: the pointer row's runtime is the PUBLIC
+PR tree (g8v1), not afr1's native tree; "only archive.zip changed" is impossible because `inflate.py` pins the archive —
+the receiver diff is exactly two pin lines, proved. **T4 buy fired 16:5xZ** (`fire_modal_auth_eval.py --seal`, detached);
+PROMOTE IFF exact S < 0.14797617125559104; the 8-dp report bound 7.32e-6 makes a landed net ΔS inside (−7.3e-6, 0)
+UNRESOLVED. Launcher refusals on the way: an argv carrying "claude" (reaper guard) and seal-owned flags passed by hand
+(hand-assembly hazard) — both cures are the tool doing its job.
+
+**gv1 (c1701128a):** `tools/cell_admission.py` (relative headroom on the canonical reclaimable basis + Σ live UNREALIZED
+growth + 16 GiB margin, and the absolute ceiling; rc 0/2/3), a Metal-contention ledger (N=2 concurrency MEASURED +11.7%
+throughput, per-cell efficiency 0.559 — one anchor, not a law; the serial baseline is second-hand), `tools/cell_queue_driver.py`
+(generalizes the chain driver; its dry-run re-found ng2's un-rerooted pins), `costate_digest.section_live_cells()`;
+divergence from bh1 recorded (resident footprint must NOT be subtracted twice on the canonical basis — charge unrealized
+growth instead). ANE closed by RECALL: the 2026-07-13 lane already measured fp16 flipping argmax at 0.088 on n600 (90× the
+d_seg budget) — the ANE can never be a d_seg authority; CoreML fp32 on CPU+GPU (3.6× forward) is the banked advisory
+accelerator. The shell fire scripts still carry the inline arithmetic (SSD custody, not git): one-line replacement
+`tools/cell_admission.py admit --candidate-peak-gib <P>` for every future fire.
+Equations leg (`tac.canonical_equations`): `exchange_ratio_noise_floor_v1` (4th anchor, first pure-pose case).
