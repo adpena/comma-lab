@@ -295,6 +295,132 @@ def section_live_ddm() -> tuple[list[str], dict | None]:
         }
 
 
+def section_live_cells() -> tuple[list[str], dict | None]:
+    """SENSE for the live LOCAL CELL fleet (ddm_gv1; operator 2026-09-04 "saturate cpu, gpu, ane").
+
+    The digest previously spoke only about TR1-era witness runs and the DDM receipt fleet, so a
+    machine running two concurrent Metal cells looked idle at SessionStart.  This section reads,
+    for each live governed job: its declared peak vs live tree RSS, its step progress and ETA
+    against the step budget in its own sealed config, its last milestone, and how much admission
+    headroom remains for another cell of the same size.
+
+    Read-only and fail-open: it inspects launch manifests, sealed configs, ``history.jsonl`` row
+    counts, and process state.  It never signals, claims, or edits a live run, and any failure
+    degrades to one honest line rather than blanking the digest.
+    """
+    try:
+        import cell_admission as ca  # tools/ is on sys.path
+
+        cells = ca.discover_live_cells()
+        training = [cell for cell in cells if cell.is_cell]
+        rows = ca.read_contention_rows()
+        baseline = ca.serial_baseline_steps_per_min(rows)
+        latest_concurrent = max(
+            (
+                row
+                for row in rows
+                if isinstance(row.get("concurrency"), int) and row["concurrency"] >= 2
+            ),
+            key=lambda row: str(row.get("recorded_utc", "")),
+            default=None,
+        )
+        # Per-cell steps/min from the most recent contention row (never re-sampled here: the
+        # digest must not sleep).
+        rate_by_cell: dict[str, float] = {}
+        if isinstance(latest_concurrent, dict):
+            for entry in latest_concurrent.get("cells", []) or []:
+                if isinstance(entry, dict) and isinstance(
+                    entry.get("steps_per_min"), (int, float)
+                ):
+                    rate_by_cell[str(entry.get("cell_id"))] = float(entry["steps_per_min"])
+
+        if not cells:
+            return ["live cells: NONE (no governed local job is alive)"], {
+                "available": True,
+                "live_job_count": 0,
+                "training_cell_count": 0,
+                "score_claim": False,
+                "actuation": "SENSE_ONLY",
+            }
+
+        lines = [
+            f"live cells: {len(training)} training cell(s) of {len(cells)} governed job(s)"
+        ]
+        cell_rows: list[dict] = []
+        for cell in cells:
+            row = cell.as_dict()
+            rate = rate_by_cell.get(cell.cell_id)
+            eta_min = None
+            if (
+                rate
+                and rate > 0.0
+                and cell.total_steps
+                and cell.completed_steps is not None
+            ):
+                eta_min = max(0.0, (cell.total_steps - cell.completed_steps) / rate)
+            row["steps_per_min"] = rate
+            row["eta_minutes"] = None if eta_min is None else round(eta_min, 1)
+            cell_rows.append(row)
+            if not cell.is_cell:
+                lines.append(
+                    f"  job  {cell.cell_id} pid={cell.pid} "
+                    f"declared_peak={cell.declared_peak_gib:.1f} GiB (not a training cell)"
+                )
+                continue
+            progress = (
+                f"{cell.completed_steps}/{cell.total_steps}"
+                if cell.completed_steps is not None
+                else "steps unknown"
+            )
+            rate_text = f"{rate:.1f}/min" if rate else "rate unmeasured"
+            eta_text = f"ETA {eta_min / 60.0:.1f} h" if eta_min is not None else "ETA unknown"
+            lines.append(
+                f"  cell {cell.cell_id} [{cell.arm_role or 'role?'}] {progress} "
+                f"({rate_text}, {eta_text}) peak {cell.declared_peak_gib:.1f} GiB "
+                f"declared / {cell.current_rss_gib or 0.0:.1f} GiB live"
+            )
+
+        # Admission headroom for ANOTHER cell the size of the largest live one.
+        probe_peak = max((cell.declared_peak_gib for cell in cells), default=0.0)
+        decision = ca.decide_admission(
+            probe_peak, live_cells=cells, include_naive_contrast=False
+        )
+        lines.append(
+            f"  admission: another {probe_peak:.1f} GiB cell -> {decision.verdict} "
+            f"(headroom {decision.memory.headroom_gib:+.1f} GiB, "
+            f"reclaimable {decision.memory.reclaimable_gib:.1f} GiB)"
+        )
+        if latest_concurrent is not None and baseline:
+            total = latest_concurrent.get("total_steps_per_min")
+            if isinstance(total, (int, float)) and baseline > 0:
+                lines.append(
+                    f"  contention: {total:.1f} steps/min at concurrency "
+                    f"{latest_concurrent.get('concurrency')} vs {baseline:.1f} serial "
+                    f"(ratio {total / baseline:.2f}; concurrency "
+                    f"{'PAYS' if total >= baseline else 'COSTS'})"
+                )
+        return lines, {
+            "available": True,
+            "live_job_count": len(cells),
+            "training_cell_count": len(training),
+            "cells": cell_rows,
+            "admission_probe_peak_gib": probe_peak,
+            "admission": decision.as_dict(),
+            "serial_baseline_steps_per_min": baseline,
+            "latest_concurrent_row": latest_concurrent,
+            "score_claim": False,
+            "actuation": "SENSE_ONLY",
+        }
+    except Exception as exc:  # fail-open: never blank the digest on a SENSE failure
+        return [f"live cells: unavailable ({type(exc).__name__}: {exc})"], {
+            "available": False,
+            "status": "FAIL_OPEN",
+            "reason": f"{type(exc).__name__}: {exc}",
+            "score_claim": False,
+            "actuation": "NONE",
+        }
+
+
 def discover_latest_ddm_campaign_run(
     results_roots: tuple[Path, ...] | list[Path] | None = None,
 ) -> Path | None:
@@ -2084,6 +2210,11 @@ def build_digest(*, include_fm: bool = True) -> tuple[list[str], dict]:
         section_ddm_campaign_run()
     )
     lines.extend(campaign_run_lines)
+    # Live LOCAL CELLS are a third independent read-only source (ddm_gv1): the concurrent
+    # Metal/CPU cells the governor admitted, their step rate, ETA, milestone-vs-control state,
+    # and how much admission headroom is left for another one.
+    live_cell_lines, data["live_cells"] = section_live_cells()
+    lines.extend(live_cell_lines)
     routing_line, data["vehicle_routing_coverage"] = (
         section_vehicle_routing_coverage()
     )
