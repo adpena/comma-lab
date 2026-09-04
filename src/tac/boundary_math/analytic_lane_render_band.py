@@ -818,16 +818,39 @@ def derive_rd_base_steps(tol: LaneBandRDTolerance | None = None) -> np.ndarray:
 # --- fixed-slot pack/unpack (L4 canonicalization) --------------------------------
 def _line_to_slot_vec(line: LaneLine) -> np.ndarray:
     """(11,) fixed-schema float64 vector for one LaneLine (centerline right-aligned to
-    deg-3 with leading zeros -> bit-exact via polyval, halfwidth to deg-1)."""
+    deg-3 with leading zeros -> bit-exact via polyval, halfwidth to deg-1).
+
+    NO-FAKE: PADDING a lower-degree fit with leading zeros is polyval-identity and lossless;
+    TRUNCATING a higher-degree fit is not -- it silently DROPS the leading coefficient and
+    changes the geometry the coder ships.  MEASURED (ddm_lb1, 2026-09-04, n32 DALI lstars, the
+    receipt that motivated this guard): a ``centerline_deg=4`` fit round-tripped through LBND2
+    lands **23.33 m** of lateral error over forward in [5, 60] m, against 0.043-0.051 m of
+    honest quantization at deg 2-3.  This is the same failure the ``_RD_MAX_SLOTS`` refusal in
+    ``_pack_pairs_to_matrix`` already prevents on the SLOT axis, missing on the COEFFICIENT axis.
+    Live count at landing: 0 -- no caller routes a deg>3 fit through the RD coder
+    (``tools/measure_third_order_descent_filler.py:167`` fits deg 4 for an analytic derivative
+    bound only and codes deg 2/3 pairs).
+    """
 
     cc = np.asarray(line.centerline_coeffs, np.float64).ravel()
+    if cc.size > 4:
+        raise ValueError(
+            f"centerline has {cc.size} coeffs > the LBND2 slot schema's 4 (deg 3); refusing to "
+            "silently drop the leading coefficient (NO-FAKE: measured 23.33 m lateral corruption "
+            "at deg 4). Fit at centerline_deg <= 3, or widen _RD_D_SLOT and bump the wire format."
+        )
     cc4 = np.zeros(4, np.float64)
     if cc.size:
-        cc4[4 - min(4, cc.size):] = cc[-4:]
+        cc4[4 - cc.size:] = cc
     hc = np.asarray(line.halfwidth_coeffs, np.float64).ravel()
+    if hc.size > 2:
+        raise ValueError(
+            f"halfwidth has {hc.size} coeffs > the LBND2 slot schema's 2 (deg 1); refusing to "
+            "silently drop the leading coefficient (NO-FAKE)."
+        )
     hc2 = np.zeros(2, np.float64)
     if hc.size:
-        hc2[2 - min(2, hc.size):] = hc[-2:]
+        hc2[2 - hc.size:] = hc
     return np.array(
         [cc4[0], cc4[1], cc4[2], cc4[3], hc2[0], hc2[1],
          float(line.dash_period_m), float(line.dash_phase_m), float(line.dash_duty),
