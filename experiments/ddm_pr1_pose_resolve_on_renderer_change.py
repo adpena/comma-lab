@@ -84,6 +84,9 @@ N_PAIRS = 600
 POSE_DIMS = 6
 DEFAULT_BATCH = 8
 
+#: The shipped carrier's signed-int12 lattice (``ddm_up2`` COEFF_CODE_MIN/MAX).
+COEFF_CODE_MIN, COEFF_CODE_MAX = -2048, 2047
+
 
 class Pr1Error(RuntimeError):
     """A ddm_pr1 precondition failed.  Fail closed, never approximate."""
@@ -587,6 +590,71 @@ def _same_instrument(*measures: dict[str, Any]) -> None:
         )
 
 
+def solver_diagnostics(row_paths, after_pp: np.ndarray, pairs: np.ndarray) -> dict[str, Any]:
+    """Why the surviving residue survives, read off the solver's own rows.
+
+    ``demanded_code_units_max`` is the Gauss-Newton step the pose residual asks
+    for, in signed-int12 code units.  The lattice runs [-2048, 2047], so a demand
+    in the thousands says the correction the residual needs is NOT REPRESENTABLE
+    in the shipped 12-dim basis at the shipped quantisation -- a REPRESENTATION
+    limit, not a search limit.  Distinguishing the two is the whole difference
+    between "solve harder" and "the carrier cannot reach it".
+    """
+    if not row_paths:
+        return {"rows_available": False}
+    rows: dict[int, dict[str, Any]] = {}
+    for path in row_paths:
+        rows.update(load_done(Path(path)))
+    ordered = [rows[int(p)] for p in pairs if int(p) in rows]
+    if not ordered:
+        return {"rows_available": False}
+    demanded = np.array(
+        [float(r.get("demanded_code_units_max", float("nan"))) for r in ordered]
+    )
+    finite = demanded[np.isfinite(demanded)]
+    worst = np.argsort(after_pp)[-10:][::-1] if len(after_pp) == len(pairs) else []
+    return {
+        "rows_available": True,
+        "rows": len(ordered),
+        "stop_reasons": {
+            reason: int(sum(1 for r in ordered if r.get("stop_reason") == reason))
+            for reason in sorted({r.get("stop_reason", "unknown") for r in ordered})
+        },
+        "lattice_range": [COEFF_CODE_MIN, COEFF_CODE_MAX],
+        "lattice_span_code_units": COEFF_CODE_MAX - COEFF_CODE_MIN,
+        "up2_search_radius_code_units": 2,
+        "demanded_code_units_max": {
+            "median": float(np.median(finite)) if finite.size else None,
+            "p90": float(np.quantile(finite, 0.9)) if finite.size else None,
+            "max": float(finite.max()) if finite.size else None,
+            "fraction_exceeding_the_lattice_span": (
+                float((finite > (COEFF_CODE_MAX - COEFF_CODE_MIN)).mean())
+                if finite.size else None
+            ),
+            "fraction_exceeding_up2_search_radius": (
+                float((finite > 2).mean()) if finite.size else None
+            ),
+        },
+        "changed_coordinates_mean": float(
+            np.mean([r.get("changed_coordinates", 0) for r in ordered])
+        ),
+        "worst_10_pairs_after_re_solve": [
+            {
+                "pair": int(pairs[i]),
+                "d_pose_after": float(after_pp[i]),
+                "demanded_code_units_max": (
+                    float(rows[int(pairs[i])].get("demanded_code_units_max", float("nan")))
+                    if int(pairs[i]) in rows else None
+                ),
+                "stop_reason": (
+                    rows[int(pairs[i])].get("stop_reason") if int(pairs[i]) in rows else None
+                ),
+            }
+            for i in worst
+        ],
+    }
+
+
 def run_report(args) -> int:
     base = _load_measure(args.base_measure)
     before = _load_measure(args.before_measure)
@@ -655,6 +723,7 @@ def run_report(args) -> int:
             "ft1_pre_re_solve_n200": 217.30366224024704,
             "rf1_pre_re_solve_n600": 166.80837961844966,
         },
+        "why_the_residue_survives": solver_diagnostics(args.rows, after_pp, pairs),
         "closing_arithmetic": {
             "seg_cut_fraction": abs(float(args.seg_cut_fraction)),
             "seg_cut_d_seg": cut,
@@ -741,6 +810,8 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("--after-measure", type=Path, required=True)
     report.add_argument("--delta-d-seg", type=float, required=True)
     report.add_argument("--delta-d-seg-source", required=True)
+    report.add_argument("--rows", nargs="*", default=[],
+                        help="solver rows.jsonl files, for the representation-limit read")
     report.add_argument("--seg-cut-fraction", type=float, default=0.25)
     report.add_argument("--label", default="pr1_report")
     report.add_argument("--threads", type=int, default=4)

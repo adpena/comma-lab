@@ -475,3 +475,71 @@ class TestCarrierPriceIsMeasuredNotAssumed:
         assert record["delta_score_rate"] == pytest.approx(137 * 25.0 / 37_545_489.0)
         assert record["changed_pairs"] == 1
         assert record["changed_coordinates"] == 12
+
+
+class TestSolverDiagnostics:
+    def test_no_rows_is_reported_not_faked(self):
+        got = pr1.solver_diagnostics([], np.array([1.0]), np.array([0]))
+        assert got == {"rows_available": False}
+
+    def test_separates_a_representation_limit_from_a_search_limit(self, tmp_path):
+        """A demand of thousands of code units cannot be reached by solving harder.
+
+        The shipped lattice spans 4,095 signed-int12 code units, so a
+        Gauss-Newton step demanding 18,040 of them is asking for a correction
+        the 12-dim basis cannot represent at the shipped quantisation, and a
+        step demanding 1,865 is one up2's +-2 radius could never have served.
+        The report must say so rather than leave a reader to conclude the
+        search stopped early.
+        """
+        import json
+
+        rows = tmp_path / "rows.jsonl"
+        rows.write_text(
+            "\n".join(
+                json.dumps(
+                    {"pair": p, "demanded_code_units_max": d,
+                     "stop_reason": "no_improving_step", "changed_coordinates": 12}
+                )
+                for p, d in ((0, 1865.0), (1, 1.5), (2, 18040.0))
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        got = pr1.solver_diagnostics(
+            [rows], np.array([2.8e-2, 1e-9, 6e-3]), np.array([0, 1, 2])
+        )
+        assert got["rows_available"] is True
+        assert got["lattice_range"] == [-2048, 2047]
+        assert got["lattice_span_code_units"] == 4095
+        demand = got["demanded_code_units_max"]
+        assert demand["fraction_exceeding_the_lattice_span"] == pytest.approx(1 / 3)
+        assert demand["fraction_exceeding_up2_search_radius"] == pytest.approx(2 / 3)
+        assert demand["max"] == 18040.0
+        assert got["stop_reasons"] == {"no_improving_step": 3}
+        worst = got["worst_10_pairs_after_re_solve"]
+        assert worst[0]["pair"] == 0 and worst[0]["d_pose_after"] == pytest.approx(2.8e-2)
+        assert worst[0]["demanded_code_units_max"] == 1865.0
+
+    def test_report_carries_the_diagnostics_when_rows_are_given(self, tmp_path):
+        import json
+
+        base = _measure_stub(tmp_path, "base", [1e-6] * 3)
+        before = _measure_stub(tmp_path, "before", [1e-2] * 3)
+        after = _measure_stub(tmp_path, "after", [2e-6] * 3)
+        rows = tmp_path / "rows.jsonl"
+        rows.write_text(
+            json.dumps({"pair": 0, "demanded_code_units_max": 9.0,
+                        "stop_reason": "lattice_floor", "changed_coordinates": 2}) + "\n",
+            encoding="utf-8",
+        )
+        out = tmp_path / "r.json"
+        args = pr1.build_parser().parse_args(
+            ["report", "--base-measure", str(base), "--before-measure", str(before),
+             "--after-measure", str(after), "--delta-d-seg", "6.9e-5",
+             "--delta-d-seg-source", "test", "--rows", str(rows), "--out", str(out)]
+        )
+        pr1.run_report(args)
+        got = json.loads(out.read_text(encoding="utf-8"))
+        assert got["why_the_residue_survives"]["rows_available"] is True
+        assert got["why_the_residue_survives"]["stop_reasons"] == {"lattice_floor": 1}
