@@ -134,10 +134,49 @@ with `PYTHONPATH=<snap>/src` — and rather than trust that, the tool EXECUTES t
 resolution with the exact cwd/env the fire will use and refuses any module that resolves
 outside the snapshot. Positive and negative controls both measured.
 
-**Honest limit:** I could not fire, so the snapshot is proved locally (completeness,
-immunity, import resolution, dry-run manifest) but has **never carried a real Modal image
-build**. The first real fire is the remaining test. `--no-source-snapshot` restores the
-old behaviour in one flag if it goes wrong.
+### The first real fire REFUSED, and the fix (ps2 t4_custody, rc=5)
+
+I predicted the first real fire was the remaining test. It was, and it failed — usefully.
+
+MEASURED from `/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/t4_custody_20260904/`:
+Modal built **every mount from the snapshot correctly** and reached the archive upload,
+then died with `FileNotFoundError: '.venv/bin/python'`. The traceback names the cause
+exactly: `modal_auth_eval.py:1449` calls `claim_modal_auth_eval_dispatch(repo_root=Path.cwd())`,
+`tac/deploy/claims.py:183` then runs `subprocess.run(cmd, cwd=repo_root)` where `cmd[0]`
+is the **relative** `.venv/bin/python` — and a snapshot has no `.venv`.
+
+**The refusal was the lucky outcome.** Had that interpreter resolved (a symlinked `.venv`
+would have done it), the dispatch claim would have been written into the snapshot's own
+`.omx/state/active_lane_dispatch_claims.md` and lost, with the single-flight guard then
+reading an empty ledger. My cwd change quietly moved the *local* half of the dispatcher,
+not just the *upload* half. That was the design error: the snapshot must change WHAT IS
+MOUNTED and nothing else.
+
+**Cure (commit `1fbc7c066`).** The dispatch cwd is the repo root again. The snapshot now
+reaches Modal through `PACT_MODAL_SOURCE_ROOT`: both app modules resolve every mount via
+a one-line `_mount_path()` helper, which is a byte-for-byte no-op when the variable is
+unset. VERIFIED by loading the real modules both ways — `_mount_path("src")` returns
+`'src'` unset and `<snap>/src` set. The AST extractor unwraps the helper, so the derived
+mount list is unchanged (6 dirs + 3 files CUDA, 5 + 9 CPU).
+
+**And a guard so this class cannot reach the meter again:** `verify_dispatch_paths` checks,
+before the subprocess, that every relative path in the dispatch argv AND every relative
+path the local half is known to spawn resolves from the cwd about to be used. The two
+spawned paths are read out of `dispatch_claim_command`'s real signature, not re-typed.
+Pointed at a snapshot root it reproduces the ps2 error verbatim; pointed at the repo root
+it is clean. The fire refuses rc=9 rather than dispatching.
+
+Dry-run proof after the fix: `cwd=/Users/adpena/Projects/pact`, path check 0 problems,
+snapshot complete, import probe clean, `PACT_MODAL_SOURCE_ROOT` set to the snapshot.
+
+**Honest limit, restated:** the snapshot has still never completed a real Modal image
+build end to end. It got as far as the upload before the refusal, which proves the mount
+half; the local half is now fixed and dry-run-proved but not fire-proved.
+`--no-source-snapshot` restores the old behaviour in one flag.
+
+One number in this memo is corrected by the fix: the earlier snapshot file count (16,060)
+was inflated by the nested-mount double count; the honest count for the CUDA entrypoint is
+**8,307 files / 642 MB**.
 
 Refusal archiving (item 4) works: a re-fire into a directory holding `FIRE_REFUSED.json`
 moves it to `refusals/<utc>.json`, records the path in the manifest, and proceeds — no
