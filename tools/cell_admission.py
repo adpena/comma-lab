@@ -47,6 +47,7 @@ import datetime as dt
 import fcntl
 import json
 import os
+import subprocess
 import sys
 import time
 from collections.abc import Iterable, Mapping, Sequence
@@ -212,6 +213,15 @@ class LiveCell:
     arm_name: str | None
     arm_role: str | None
     purpose: str | None
+    # (ddm_gov2) provenance of the row itself.  ``discovery_source`` says WHERE the job was found
+    # -- ``process_table`` is the complete-by-construction source, ``registry`` / ``walk`` are the
+    # optional cross-checks.  ``declared_peak_source`` says which declaration the arithmetic
+    # charged, because a manifest and a live ``safe_run --projected-gib`` can disagree and the
+    # fail-closed answer is the LARGER of the two.
+    discovery_source: str = "manifest"
+    declared_peak_source: str = "manifest"
+    safe_run_pid: int | None = None
+    trainer_pid: int | None = None
 
     @property
     def is_cell(self) -> bool:
@@ -253,6 +263,10 @@ class LiveCell:
             "arm_name": self.arm_name,
             "arm_role": self.arm_role,
             "purpose": self.purpose,
+            "discovery_source": self.discovery_source,
+            "declared_peak_source": self.declared_peak_source,
+            "safe_run_pid": self.safe_run_pid,
+            "trainer_pid": self.trainer_pid,
         }
 
 
@@ -398,38 +412,357 @@ def registry_manifest_paths(registry_path: Path | None = None) -> list[Path]:
     return list(seen.values())
 
 
+# ── process-table discovery (ddm_gov2) ──────────────────────────────────────────────────────────
+#
+# THE LAW.  A governed job is a LIVE PROCESS, and its argv already carries its whole identity.  The
+# process table is therefore COMPLETE BY CONSTRUCTION: a job that is running is in it, and a job
+# that is not running cannot hold memory.  A registry can be forgotten (MEASURED 2026-09-04: the
+# ng4 cell fired from a SEALED-SOURCE copy of the launcher that predates the registry, so a live
+# 45 GiB cell was invisible until MAIN backfilled the row by hand) and a filesystem walk can be too
+# slow to run (MEASURED: >120 s per admission poll over the two 1.8 TB SSD roots).  Neither failure
+# mode exists here.
+#
+# The argv shape is the OLD launcher's too, which is why this works for sealed-source copies --
+# MEASURED on the live ng4 cell, 2026-09-04T22:57Z:
+#
+#   33030  ppid 1      … launch_detached_process.py _supervise --start-gate <out>/.launch_start_gate
+#                        --manifest <out>/launch_manifest.json … -- <safe_run argv>
+#   33039  ppid 33030  … safe_run.py --rss-mb 118784 --projected-gib 45.0 --status-receipt <out>/…
+#                        -- <trainer argv>
+#   33374  ppid 33039  … ddm_qbr1_born_fairform_burn_prep.py run-config <authorized_config.json>
+#
+# supervisor -> output dir + manifest;  safe_run -> the DECLARED PEAK;  trainer -> the sealed config
+# and its step budget.  Three facts, one `ps`, no disk walk, no registry.
+
+_SUPERVISOR_SCRIPT = "launch_detached_process.py"
+_SUPERVISOR_TOKEN = "_supervise"
+_SAFE_RUN_SCRIPT = "safe_run.py"
+_RUN_CONFIG_TOKEN = "run-config"
+
+
+@dataclasses.dataclass(frozen=True)
+class ProcessRow:
+    """One row of the process table: pid, parent pid, and the real argv vector."""
+
+    pid: int
+    ppid: int
+    argv: tuple[str, ...]
+
+    def has_script(self, name: str) -> bool:
+        return any(part.endswith(name) for part in self.argv)
+
+
+def _argv_option(argv: Sequence[str], flag: str) -> str | None:
+    """Value of ``--flag VALUE`` or ``--flag=VALUE`` in ``argv``; None when absent."""
+    prefix = f"{flag}="
+    for index, item in enumerate(argv):
+        if item == flag and index + 1 < len(argv):
+            return argv[index + 1]
+        if item.startswith(prefix):
+            return item[len(prefix) :]
+    return None
+
+
+def _argv_float(argv: Sequence[str], flag: str) -> float | None:
+    raw = _argv_option(argv, flag)
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def read_process_table() -> list[ProcessRow]:
+    """Every visible process as (pid, ppid, argv).
+
+    psutil first because it returns the REAL argv vector; ``ps`` is a fallback that joins argv with
+    spaces and therefore cannot represent an argument containing a space.  The fallback is honest
+    about that limitation rather than silently mis-splitting: it is only reached when psutil is
+    unavailable, and the paths this repo launches from contain no spaces (MEASURED on the live
+    fleet).  Both paths swallow per-process permission errors -- another user's process cannot be
+    read, and a governed job of ours always can.
+    """
+    try:
+        import psutil  # type: ignore
+
+        rows: list[ProcessRow] = []
+        for proc in psutil.process_iter(["pid", "ppid", "cmdline"]):
+            try:
+                info = proc.info
+                argv = info.get("cmdline") or []
+                if not argv:
+                    continue
+                rows.append(
+                    ProcessRow(
+                        pid=int(info["pid"]),
+                        ppid=int(info.get("ppid") or 0),
+                        argv=tuple(str(part) for part in argv),
+                    )
+                )
+            except Exception:
+                continue
+        if rows:
+            return rows
+    except Exception:
+        pass
+    try:
+        completed = subprocess.run(
+            ["ps", "-axo", "pid=,ppid=,command="],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    rows = []
+    for line in completed.stdout.splitlines():
+        parts = line.split()
+        if len(parts) < 3:
+            continue
+        try:
+            pid, ppid = int(parts[0]), int(parts[1])
+        except ValueError:
+            continue
+        rows.append(ProcessRow(pid=pid, ppid=ppid, argv=tuple(parts[2:])))
+    return rows
+
+
+def _is_supervisor(row: ProcessRow) -> bool:
+    return row.has_script(_SUPERVISOR_SCRIPT) and _SUPERVISOR_TOKEN in row.argv
+
+
+def _is_safe_run(row: ProcessRow) -> bool:
+    return row.has_script(_SAFE_RUN_SCRIPT)
+
+
+def _is_trainer(row: ProcessRow) -> bool:
+    return _RUN_CONFIG_TOKEN in row.argv
+
+
+def live_cells_from_process_table(rows: Sequence[ProcessRow] | None = None) -> list[LiveCell]:
+    """Every live governed job, read from the process table alone.
+
+    A governed job is rooted at the OUTERMOST of {supervisor, safe_run, trainer} in one process
+    lineage, so a supervisor + its safe_run + its trainer collapse to ONE cell (rooted at the
+    supervisor pid, which is exactly what the launcher records as the manifest ``pid`` -- the two
+    discovery paths therefore agree on the key).  A bare ``safe_run`` with no supervisor (the
+    dashboard server is one, MEASURED) and a bare trainer are each their own root.
+    """
+    table = list(read_process_table()) if rows is None else list(rows)
+    by_pid = {row.pid: row for row in table}
+    governed = {row.pid: row for row in table if _is_supervisor(row) or _is_safe_run(row) or _is_trainer(row)}
+
+    def _root_of(pid: int) -> int:
+        """Outermost governed ancestor of ``pid`` (itself when it has none)."""
+        root = pid
+        seen = {pid}
+        cursor = by_pid.get(pid)
+        while cursor is not None and cursor.ppid > 1 and cursor.ppid not in seen:
+            seen.add(cursor.ppid)
+            if cursor.ppid in governed:
+                root = cursor.ppid
+            cursor = by_pid.get(cursor.ppid)
+        return root
+
+    # group every governed process under its outermost governed ancestor
+    groups: dict[int, list[ProcessRow]] = {}
+    for pid, row in governed.items():
+        groups.setdefault(_root_of(pid), []).append(row)
+
+    cells: list[LiveCell] = []
+    for root_pid, members in groups.items():
+        root = by_pid.get(root_pid)
+        if root is None:
+            continue
+        supervisor = next((m for m in members if _is_supervisor(m)), None)
+        # NOT `_is_safe_run(m)` alone: the supervisor's own argv CONTAINS the whole safe_run argv
+        # after its `--`, so the naive predicate matches the supervisor and reports its pid as the
+        # safe_run pid (MEASURED on live ng4 -- it returned 33030 where the real safe_run is 33039).
+        safe_run = next((m for m in members if _is_safe_run(m) and not _is_supervisor(m)), None)
+        trainer = next((m for m in members if _is_trainer(m) and not _is_safe_run(m) and not _is_supervisor(m)), None)
+
+        manifest_path: Path | None = None
+        if supervisor is not None:
+            raw = _argv_option(supervisor.argv, "--manifest")
+            if raw:
+                manifest_path = Path(raw)
+        if manifest_path is None and safe_run is not None:
+            raw = _argv_option(safe_run.argv, "--status-receipt")
+            if raw:
+                sibling = Path(raw).parent / "launch_manifest.json"
+                if sibling.is_file():
+                    manifest_path = sibling
+        manifest = _read_json(manifest_path) if manifest_path is not None else None
+
+        # DECLARED PEAK, fail-closed: the larger of the manifest budget and the live safe_run
+        # projection.  They can disagree (a hand-edited manifest, an older launcher), and charging
+        # the smaller one is exactly the under-reservation that admitted two ~40 GiB Metal cells.
+        manifest_peak = 0.0
+        if isinstance(manifest, dict):
+            budget = manifest.get("resource_budget")
+            if isinstance(budget, Mapping):
+                try:
+                    manifest_peak = float(budget.get("measured_peak_rss_gib") or 0.0)
+                except (TypeError, ValueError):
+                    manifest_peak = 0.0
+        # The supervisor's argv carries the whole wrapped safe_run command after its `--`, so the
+        # projection is still readable when the safe_run process itself is not visible (it has not
+        # spawned yet, or it already exited while the supervisor lingers).
+        projected = None
+        for source in (safe_run, supervisor):
+            if source is None:
+                continue
+            projected = _argv_float(source.argv, "--projected-gib")
+            if projected is not None:
+                break
+        rss_cap_gib = None
+        if safe_run is not None or supervisor is not None:
+            rss_mb = _argv_float((safe_run or supervisor).argv, "--rss-mb")
+            # the cap is the operator ceiling, not a projection -- only a last-resort declaration
+            rss_cap_gib = None if rss_mb is None else rss_mb / 1024.0
+        candidates: list[tuple[float, str]] = []
+        if manifest_peak > 0.0:
+            candidates.append((manifest_peak, "manifest_resource_budget"))
+        if projected is not None and projected > 0.0:
+            candidates.append((projected, "safe_run_projected_gib"))
+        if candidates:
+            declared_peak, peak_source = max(candidates, key=lambda item: item[0])
+        elif rss_cap_gib:
+            declared_peak, peak_source = rss_cap_gib, "safe_run_rss_cap"
+        else:
+            declared_peak, peak_source = 0.0, "UNDECLARED"
+
+        config_path = None
+        for member in (trainer, safe_run, supervisor):
+            if member is None:
+                continue
+            config_path = _config_path_from_argv(member.argv)
+            if config_path is not None:
+                break
+        config = _read_json(config_path) if config_path is not None else None
+
+        run_dir: Path | None = None
+        total_steps: int | None = None
+        arm_name = arm_role = None
+        cell_id = manifest_path.parent.name if manifest_path is not None else f"pid_{root_pid}"
+        if config is not None:
+            output = config.get("output")
+            if isinstance(output, str) and output:
+                run_dir = Path(output)
+            try:
+                total_steps = int(config["total_steps"]) if "total_steps" in config else None
+            except (TypeError, ValueError):
+                total_steps = None
+            cell_id = str(config.get("cell_id") or cell_id)
+            arm_name = config.get("arm_name")
+            arm_role = config.get("arm_role")
+
+        purpose = None
+        if isinstance(manifest, dict) and isinstance(manifest.get("purpose"), str):
+            purpose = str(manifest["purpose"])
+
+        current_rss = process_tree_rss_gib(root_pid)
+        # An UNDECLARED job still holds memory: charge what it is measurably using so it can never
+        # read as free.  ``unrealized_growth`` then contributes nothing extra, which is correct --
+        # there is no declaration to grow into.
+        if peak_source == "UNDECLARED" and current_rss is not None:
+            declared_peak = current_rss
+
+        cells.append(
+            LiveCell(
+                cell_id=cell_id,
+                pid=root_pid,
+                alive=True,
+                declared_peak_gib=declared_peak,
+                current_rss_gib=current_rss,
+                manifest_path=manifest_path if manifest_path is not None else Path(f"<process:{root_pid}>"),
+                config_path=config_path,
+                run_dir=run_dir,
+                total_steps=total_steps,
+                completed_steps=count_history_steps(run_dir),
+                arm_name=None if arm_name is None else str(arm_name),
+                arm_role=None if arm_role is None else str(arm_role),
+                purpose=purpose,
+                discovery_source="process_table",
+                declared_peak_source=peak_source,
+                safe_run_pid=None if safe_run is None else safe_run.pid,
+                trainer_pid=None if trainer is None else trainer.pid,
+            )
+        )
+    return sorted(cells, key=lambda cell: (cell.cell_id, cell.pid))
+
+
+def registry_cross_check(
+    cells: Sequence[LiveCell],
+    *,
+    registry_path: Path | None = None,
+) -> dict[str, Any]:
+    """Compare process-table discovery against the launch registry (OPTIONAL, never authoritative).
+
+    The registry can only ever be a SUBSET of the truth (a launcher generation that does not write
+    it, a fail-open append that lost a row), so a registry row the process table missed is the only
+    interesting direction -- and it means the ps scan has a blind spot worth naming.  Reported,
+    never acted on: the arithmetic charges the process table.
+    """
+    seen = {cell.pid for cell in cells}
+    missed: list[dict[str, Any]] = []
+    registry_live = 0
+    for manifest_path in registry_manifest_paths(registry_path):
+        manifest = _read_json(manifest_path)
+        if not isinstance(manifest, dict):
+            continue
+        try:
+            pid = int(manifest.get("pid") or 0)
+        except (TypeError, ValueError):
+            continue
+        if not pid_alive(pid):
+            continue
+        registry_live += 1
+        if pid not in seen:
+            missed.append({"pid": pid, "manifest_path": str(manifest_path)})
+    return {
+        "registry_live_rows": registry_live,
+        "process_table_cells": len(cells),
+        "missed_by_process_table": missed,
+        "agrees": not missed,
+    }
+
+
 def discover_live_cells(
     roots: Sequence[Path] | None = None,
     *,
     max_depth: int = _MANIFEST_MAX_DEPTH,
     registry_path: Path | None = None,
     walk_roots: bool | None = None,
+    process_table: bool = True,
 ) -> list[LiveCell]:
-    """Live governed jobs, registry-first.
+    """Live governed jobs, PROCESS-TABLE first (ddm_gov2).
 
-    ``walk_roots=None`` (default) reads the launch registry and walks the SSD roots ONLY when the
-    registry is absent or empty (the fallback keeps a registry-less checkout honest).  ``True``
-    forces the pruned walk in addition to the registry; ``False`` forbids the walk.  Explicit
-    ``roots`` always walk (a caller that names a root wants that root scanned).
+    The default (``roots=None``, ``walk_roots`` falsy) reads the process table and nothing else --
+    complete by construction, MEASURED < 1 s, and correct for sealed-source launcher copies that
+    never write the registry.
+
+    ``walk_roots=True`` (or an explicit ``roots``) additionally performs the pruned SSD walk as an
+    explicit FORENSIC mode: it can only find manifests for pids the process table already covers,
+    so it exists to answer "what manifests are on disk", not "what is running".  It is slow
+    (MEASURED >120 s over both SSD roots) and is never the default again.  The walk is UNIONED with
+    the process table, never substituted for it -- an admission decision must never lose a live job
+    because the caller asked a narrower question.  ``process_table=False`` is the one way to get the
+    disk view alone, for forensic queries and for unit tests that must not see the real fleet.
     """
-    found: dict[int, LiveCell] = {}
+    cells = live_cells_from_process_table() if process_table else []
+    if not (walk_roots is True or roots is not None):
+        return cells
 
-    def _absorb(manifest_path: Path) -> None:
-        cell = live_cell_from_manifest(manifest_path)
-        if cell is None:
-            return
-        previous = found.get(cell.pid)
-        if previous is None or (manifest_path.stat().st_mtime_ns > previous.manifest_path.stat().st_mtime_ns):
-            found[cell.pid] = cell
-
-    registry_paths = registry_manifest_paths(registry_path)
-    for manifest_path in registry_paths:
-        _absorb(manifest_path)
-    do_walk = roots is not None or walk_roots is True or (walk_roots is None and not registry_paths)
-    if do_walk and walk_roots is not False:
-        for root in roots if roots is not None else DEFAULT_MANIFEST_ROOTS:
-            for manifest_path in _walk_manifests(Path(root), max_depth):
-                _absorb(manifest_path)
+    found: dict[int, LiveCell] = {cell.pid: cell for cell in cells}
+    for root in roots if roots is not None else DEFAULT_MANIFEST_ROOTS:
+        for manifest_path in _walk_manifests(Path(root), max_depth):
+            walked = live_cell_from_manifest(manifest_path)
+            if walked is None or walked.pid in found:
+                continue
+            found[walked.pid] = dataclasses.replace(walked, discovery_source="walk")
     return sorted(found.values(), key=lambda cell: (cell.cell_id, cell.pid))
 
 
@@ -723,13 +1056,90 @@ class ThroughputVerdict:
         return payload
 
 
-def throughput_verdict(rows: Sequence[Mapping[str, Any]], *, live_count: int) -> ThroughputVerdict:
-    """Admit a further cell only while measured concurrent throughput >= the serial baseline.
+def concurrency_resolution(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    concurrency: int,
+    baseline: float | None,
+) -> dict[str, Any]:
+    """Is the measured speedup at ``concurrency`` RESOLVED, and does it pay? (ddm_gov2)
 
-    NOT-YET-MEASURED is admitted with an explicit ``evidence="NO_CONCURRENT_OBSERVATION"``: the
-    ledger starts empty and a governor that refuses everything until it has data can never collect
-    any.  The memory leg still fail-closes, so an unmeasured throughput leg never admits blind on
-    the dimension that can hurt the machine.
+    Two independent ways a set of rows fails to resolve, both MEASURED on this box 2026-09-04:
+
+    * **They straddle the baseline.**  gv1 measured the same two cells twice, 30 min apart:
+      31.2854 steps/min (ratio 1.117, PAYS) then 26.9996 (ratio 0.964, COSTS).
+    * **The spread exceeds the effect.**  4.286 steps/min between those windows against a 3.285
+      apparent effect -- the noise is bigger than the signal, so neither window is the answer.
+
+    Either condition returns ``resolved=False``, and the standing rule below refuses on it.
+    """
+    at_n = [
+        row
+        for row in rows
+        if isinstance(row.get("concurrency"), int)
+        and row["concurrency"] >= concurrency
+        and isinstance(row.get("total_steps_per_min"), (int, float))
+    ]
+    totals = [float(row["total_steps_per_min"]) for row in at_n]
+    result: dict[str, Any] = {
+        "concurrency_required": concurrency,
+        "row_count": len(at_n),
+        "totals_steps_per_min": [round(value, 4) for value in totals],
+        "resolved": False,
+        "pays": False,
+        "reason": "",
+    }
+    if not totals:
+        result["reason"] = f"no ledger row at concurrency >= {concurrency}"
+        return result
+    if baseline is None or baseline <= 0:
+        result["reason"] = "no concurrency==1 serial baseline row; the ratio is undefined"
+        return result
+    ratios = [value / baseline for value in totals]
+    result["ratios"] = [round(value, 4) for value in ratios]
+    spread = max(totals) - min(totals)
+    effect = abs((sum(totals) / len(totals)) - baseline)
+    result["spread_steps_per_min"] = round(spread, 4)
+    result["effect_steps_per_min"] = round(effect, 4)
+    if len(totals) >= 2 and min(ratios) < 1.0 <= max(ratios):
+        result["reason"] = (
+            f"{len(totals)} rows STRADDLE the baseline (ratios {min(ratios):.3f}..{max(ratios):.3f}); "
+            "concurrency neither pays nor costs on the evidence"
+        )
+        return result
+    if len(totals) >= 2 and spread > effect:
+        result["reason"] = (
+            f"between-window spread {spread:.3f} steps/min exceeds the {effect:.3f} steps/min effect; "
+            "the noise is larger than the signal"
+        )
+        return result
+    result["resolved"] = True
+    result["pays"] = bool(min(ratios) >= 1.0)
+    result["reason"] = (
+        f"{len(totals)} row(s) at concurrency >= {concurrency}, ratios {min(ratios):.3f}..{max(ratios):.3f} "
+        f"vs serial baseline {baseline:.2f} steps/min"
+    )
+    return result
+
+
+def throughput_verdict(rows: Sequence[Mapping[str, Any]], *, live_count: int) -> ThroughputVerdict:
+    """The STANDING CONCURRENCY LAW of this governor (ddm_gov2 encoded it; do not patch it away).
+
+    1. **A candidate that would run ALONE is never gated on contention.**  ``live_count <= 1``
+       means no training cell is live, so concurrency-N evidence does not apply.  MEASURED defect
+       2026-09-04: ``max(2, live_count)`` with contending=1 consulted the N=2 rows and refused ng4
+       for 90 minutes with the Metal free.
+
+    2. **A SECOND (or later) Metal cell is REFUSED by default.**  It is admitted only when the
+       measured evidence at that concurrency is RESOLVED *and* pays (ratio >= 1.0).  Today's N=2
+       evidence is UNRESOLVED -- 1.117 then 0.964 across two identical windows, spread 4.286 >
+       effect 3.285 -- so two Metal cells REFUSE until an N>=3-window row resolves it.
+
+       This REVERSES gv1's admit-on-no-evidence default, deliberately.  gv1's reason was that a
+       governor which refuses everything can never collect data; the answer is not to admit blind
+       but to make the measurement path EXPLICIT: ``decide_admission(..., concurrency_measurement_
+       override="<rationale>")`` admits and stamps the row as an operator-authorized measurement.
+       "Off" stays a tracked queue with a named way out, not a silent yes.
     """
     baseline = serial_baseline_steps_per_min(rows)
     if live_count <= 1:
@@ -746,57 +1156,59 @@ def throughput_verdict(rows: Sequence[Mapping[str, Any]], *, live_count: int) ->
             evidence="SOLE_CELL_NO_CONTENTION",
             reasons=("no training cell is live; the candidate runs alone, so the throughput leg does not apply",),
         )
+    required = max(2, live_count)
+    resolution = concurrency_resolution(rows, concurrency=required, baseline=baseline)
     concurrent = [
         row
         for row in rows
         if isinstance(row.get("concurrency"), int)
-        and row["concurrency"] >= max(2, live_count)
+        and row["concurrency"] >= required
         and isinstance(row.get("total_steps_per_min"), (int, float))
     ]
-    if not concurrent:
-        return ThroughputVerdict(
-            admits=True,
-            concurrency_observed=None,
-            total_steps_per_min=None,
-            serial_baseline_steps_per_min=baseline,
-            ratio=None,
-            evidence="NO_CONCURRENT_OBSERVATION",
-            reasons=(
-                f"no ledger row at concurrency >= {max(2, live_count)}; "
-                "throughput leg is unconstrained until one is measured",
-            ),
+    latest = max(concurrent, key=lambda row: str(row.get("recorded_utc", ""))) if concurrent else None
+    total = None if latest is None else float(latest["total_steps_per_min"])
+    ratio = None if (total is None or not baseline) else total / baseline
+
+    if not resolution["resolved"]:
+        # RULE 2: refuse, and say exactly which of the two failure modes fired.
+        evidence = (
+            "NO_CONCURRENT_OBSERVATION"
+            if not concurrent
+            else ("NO_SERIAL_BASELINE" if baseline is None else "UNRESOLVED_AT_CONCURRENCY")
         )
-    latest = max(concurrent, key=lambda row: str(row.get("recorded_utc", "")))
-    total = float(latest["total_steps_per_min"])
-    if baseline is None:
         return ThroughputVerdict(
-            admits=True,
-            concurrency_observed=int(latest["concurrency"]),
+            admits=False,
+            concurrency_observed=None if latest is None else int(latest["concurrency"]),
             total_steps_per_min=total,
-            serial_baseline_steps_per_min=None,
-            ratio=None,
-            evidence="NO_SERIAL_BASELINE",
+            serial_baseline_steps_per_min=baseline,
+            ratio=ratio,
+            evidence=evidence,
             reasons=(
-                "concurrent throughput measured but no concurrency==1 baseline row exists; "
-                "cannot say whether concurrency pays",
+                f"a {live_count}-cell Metal configuration is REFUSED by the standing concurrency "
+                f"law: {resolution['reason']}",
+                "cure: resolve it with a measurement launch "
+                "(decide_admission(..., concurrency_measurement_override=<rationale>)) or an "
+                "N>=3-window contention row",
             ),
         )
-    ratio = total / baseline if baseline > 0 else None
-    admits = bool(ratio is not None and ratio >= 1.0)
-    reason = (
-        f"total {total:.2f} steps/min at concurrency {latest['concurrency']} vs serial baseline "
-        f"{baseline:.2f} steps/min (ratio {ratio:.3f})"
-        if ratio is not None
-        else "serial baseline is zero; ratio undefined"
-    )
+    if not resolution["pays"]:
+        return ThroughputVerdict(
+            admits=False,
+            concurrency_observed=None if latest is None else int(latest["concurrency"]),
+            total_steps_per_min=total,
+            serial_baseline_steps_per_min=baseline,
+            ratio=ratio,
+            evidence="MEASURED",
+            reasons=(f"measured concurrency COSTS throughput: {resolution['reason']}",),
+        )
     return ThroughputVerdict(
-        admits=admits,
-        concurrency_observed=int(latest["concurrency"]),
+        admits=True,
+        concurrency_observed=None if latest is None else int(latest["concurrency"]),
         total_steps_per_min=total,
         serial_baseline_steps_per_min=baseline,
         ratio=ratio,
         evidence="MEASURED",
-        reasons=(reason,),
+        reasons=(f"measured concurrency PAYS: {resolution['reason']}",),
     )
 
 
@@ -873,8 +1285,15 @@ def decide_admission(
     ceiling_gib: float | None = None,
     include_naive_contrast: bool = True,
     walk_roots: bool | None = None,
+    concurrency_measurement_override: str | None = None,
 ) -> AdmissionDecision:
-    """Compose the memory and throughput legs into one ADMIT/REFUSE with full arithmetic."""
+    """Compose the memory and throughput legs into one ADMIT/REFUSE with full arithmetic.
+
+    ``concurrency_measurement_override`` is the ONE named way past the standing concurrency law
+    (see :func:`throughput_verdict`): it admits a second Metal cell for the express purpose of
+    MEASURING the contention that the law is refusing on, and stamps the rationale into the
+    decision.  It can never relax the MEMORY leg -- that one has no override at all.
+    """
     cells = list(live_cells) if live_cells is not None else discover_live_cells(roots, walk_roots=walk_roots)
     mem = memory_verdict(
         candidate_peak_gib,
@@ -889,6 +1308,24 @@ def decide_admission(
     # throughput leg vacuous ("VACUITY==PASS").
     contending = sum(1 for cell in cells if cell.is_cell) + 1
     thr = throughput_verdict(read_contention_rows(ledger_path), live_count=contending)
+    if (
+        not thr.admits
+        and thr.evidence != "MEASURED"
+        and isinstance(concurrency_measurement_override, str)
+        and concurrency_measurement_override.strip()
+    ):
+        # A measurement launch: the law refused for want of RESOLVED evidence, and this is the
+        # authorized way to go and get it.  Never applied when the evidence is MEASURED-and-COSTS
+        # -- that is a real negative, not a data gap.
+        thr = dataclasses.replace(
+            thr,
+            admits=True,
+            evidence="MEASUREMENT_OVERRIDE",
+            reasons=(
+                *thr.reasons,
+                f"admitted as an authorized CONTENTION MEASUREMENT: {concurrency_measurement_override.strip()}",
+            ),
+        )
     return AdmissionDecision(
         verdict="ADMIT" if (mem.admits and thr.admits) else "REFUSE",
         memory=mem,
@@ -905,7 +1342,20 @@ def _roots_from_args(values: Sequence[str] | None) -> Sequence[Path] | None:
     return [Path(value) for value in values] if values else None
 
 
+def _warn_forensic_walk(args: argparse.Namespace) -> None:
+    """Print the FORENSIC-MODE warning whenever the caller opts back into the SSD walk."""
+    if getattr(args, "walk_roots", False) or getattr(args, "root", None):
+        print(
+            "[cell_admission] WARNING: --walk-roots/--root is FORENSIC MODE. Discovery is "
+            "complete from the process table alone (MEASURED 0.045 s); the walk adds only "
+            "manifests on disk, costs >120 s over both SSD roots, and is never required for "
+            "admission.",
+            file=sys.stderr,
+        )
+
+
 def _cmd_admit(args: argparse.Namespace) -> int:
+    _warn_forensic_walk(args)
     decision = decide_admission(
         args.candidate_peak_gib,
         margin_gib=args.margin_gib,
@@ -913,6 +1363,7 @@ def _cmd_admit(args: argparse.Namespace) -> int:
         ledger_path=args.ledger,
         ceiling_gib=args.ceiling_gib,
         walk_roots=True if getattr(args, "walk_roots", False) else None,
+        concurrency_measurement_override=getattr(args, "concurrency_measurement_override", None),
     )
     if args.json:
         print(json.dumps(decision.as_dict(), indent=2, sort_keys=True))
@@ -924,9 +1375,11 @@ def _cmd_admit(args: argparse.Namespace) -> int:
 
 
 def _cmd_cells(args: argparse.Namespace) -> int:
+    _warn_forensic_walk(args)
     cells = discover_live_cells(
         _roots_from_args(args.root),
         walk_roots=True if getattr(args, "walk_roots", False) else None,
+        process_table=not getattr(args, "disk_only", False),
     )
     if args.json:
         print(
@@ -953,8 +1406,18 @@ def _cmd_cells(args: argparse.Namespace) -> int:
             f"steps={cell.completed_steps}/{cell.total_steps} "
             f"declared_peak={cell.declared_peak_gib:.2f} GiB "
             f"tree_rss={cell.current_rss_gib if cell.current_rss_gib is None else round(cell.current_rss_gib, 2)} GiB "
-            f"unrealized={cell.unrealized_growth_gib:.2f} GiB"
+            f"unrealized={cell.unrealized_growth_gib:.2f} GiB "
+            f"[{cell.discovery_source}/{cell.declared_peak_source}]"
         )
+    check = registry_cross_check(cells)
+    if not check["agrees"]:
+        print(
+            f"  CROSS-CHECK DISAGREEMENT: the launch registry has {len(check['missed_by_process_table'])} "
+            f"live row(s) the process table missed: {check['missed_by_process_table']}",
+            file=sys.stderr,
+        )
+    else:
+        print(f"  registry cross-check: agrees ({check['registry_live_rows']} live registry row(s))")
     return 0
 
 
@@ -962,6 +1425,7 @@ def _cmd_sample(args: argparse.Namespace) -> int:
     cells = discover_live_cells(
         _roots_from_args(args.root),
         walk_roots=True if getattr(args, "walk_roots", False) else None,
+        process_table=not getattr(args, "disk_only", False),
     )
     rates = sample_cell_rates(cells, window_s=args.window_s)
     total = sum(rate.steps_per_min for rate in rates)
@@ -1009,8 +1473,15 @@ def build_parser() -> argparse.ArgumentParser:
     common_roots: dict[str, Any] = {
         "action": "append",
         "metavar": "PATH",
-        "help": "manifest root to scan for live jobs (repeatable; defaults to the SSD tiers)",
+        "help": (
+            "FORENSIC ONLY: manifest root to scan on disk (repeatable). Discovery does NOT need "
+            "this -- the process table is complete by construction."
+        ),
     }
+    walk_help = (
+        "FORENSIC ONLY: additionally walk the SSD manifest roots. Costs >120 s (MEASURED) and "
+        "cannot find a live job the process table missed; it only lists manifests on disk."
+    )
 
     admit = sub.add_parser("admit", help="ADMIT/REFUSE a candidate cell (rc 0 admit / 2 refuse / 3 unmeasurable)")
     admit.add_argument("--candidate-peak-gib", type=float, required=True)
@@ -1021,7 +1492,16 @@ def build_parser() -> argparse.ArgumentParser:
     admit.add_argument(
         "--walk-roots",
         action="store_true",
-        help="force the pruned SSD manifest walk in addition to the launch registry (slow)",
+        help=walk_help,
+    )
+    admit.add_argument(
+        "--concurrency-measurement-override",
+        default=None,
+        metavar="RATIONALE",
+        help=(
+            "admit a SECOND Metal cell that the standing concurrency law refuses for want of "
+            "RESOLVED evidence, expressly to measure that contention. Never relaxes the memory leg."
+        ),
     )
     admit.add_argument("--json", action="store_true")
     admit.set_defaults(func=_cmd_admit)
@@ -1031,7 +1511,12 @@ def build_parser() -> argparse.ArgumentParser:
     cells.add_argument(
         "--walk-roots",
         action="store_true",
-        help="force the pruned SSD manifest walk in addition to the launch registry (slow)",
+        help=walk_help,
+    )
+    cells.add_argument(
+        "--disk-only",
+        action="store_true",
+        help="FORENSIC ONLY: report manifests on disk WITHOUT the process table (never for admission)",
     )
     cells.add_argument("--json", action="store_true")
     cells.set_defaults(func=_cmd_cells)
@@ -1042,6 +1527,11 @@ def build_parser() -> argparse.ArgumentParser:
     sample.add_argument("--note", default="")
     sample.add_argument("--no-write", action="store_true", help="measure without touching the ledger")
     sample.add_argument("--root", **common_roots)
+    sample.add_argument(
+        "--disk-only",
+        action="store_true",
+        help="FORENSIC ONLY: sample manifests on disk WITHOUT the process table",
+    )
     sample.set_defaults(func=_cmd_sample)
 
     contention = sub.add_parser("contention", help="summarize the Metal-contention ledger")

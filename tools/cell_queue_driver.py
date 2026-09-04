@@ -56,6 +56,7 @@ for _extra in (_REPO, _REPO / "tools", _REPO / "experiments"):
 import cell_admission as admission  # noqa: E402
 import ddm_qbr1_cell_chain as chain  # noqa: E402
 import ddm_reseal_pins_inside_sealed_tree as reseal  # noqa: E402
+import measured_peaks  # noqa: E402
 
 QUEUE_SPEC_SCHEMA = "ddm_gv1_cell_queue_spec.v1"
 QUEUE_PLAN_SCHEMA = "ddm_gv1_cell_queue_plan.v1"
@@ -149,7 +150,10 @@ class QueuedCell:
     done_receipt: str
     scorer_lane_prefix: str
     metal_lane_prefix: str
-    measured_peak_rss_gib: float
+    #: ``None`` means "read it from the measured-peak ledger" (spec value ``"from_ledger"``).
+    #: A NUMBER is a declaration, and a declaration below the family's MEASURED row is REFUSED.
+    measured_peak_rss_gib: float | None
+    peak_family: str | None
     control_run_dir: Path | None
     control_label: str | None
     milestones: tuple[int, ...]
@@ -170,7 +174,12 @@ class QueuedCell:
                 done_receipt=str(payload["done_receipt"]),
                 scorer_lane_prefix=str(payload["scorer_lane_prefix"]),
                 metal_lane_prefix=str(payload["metal_lane_prefix"]),
-                measured_peak_rss_gib=float(payload["measured_peak_rss_gib"]),
+                measured_peak_rss_gib=(
+                    None
+                    if str(payload["measured_peak_rss_gib"]).strip().lower() == "from_ledger"
+                    else float(payload["measured_peak_rss_gib"])
+                ),
+                peak_family=(None if payload.get("peak_family") is None else str(payload["peak_family"])),
                 control_run_dir=None if control is None else Path(str(control)),
                 control_label=(
                     None if payload.get("control_label") is None else str(payload["control_label"])
@@ -337,6 +346,96 @@ def verify_launcher_argv(cell: QueuedCell) -> dict[str, Any]:
     }
 
 
+# ── THE MEASURED-PEAK LAW (ddm_gov2) ────────────────────────────────────────────────────────────
+
+
+def peak_family_of(cell: QueuedCell) -> str | None:
+    """The measured-peak family for this cell: its trainer entry point."""
+    if cell.peak_family:
+        return cell.peak_family
+    for part in cell.launcher_argv:
+        text = str(part)
+        if text.endswith(".py") and "launch_detached_process" not in text and "safe_run" not in text:
+            return Path(text).stem
+    return None
+
+
+def resolve_peak(cell: QueuedCell) -> dict[str, Any]:
+    """``{gib, provenance, family, measured}`` -- and REFUSE a hand-typed under-declaration.
+
+    THE DEFECT (MEASURED 2026-09-04): ng2 and ng3 were both launched under a hand-typed
+    ``--measured-peak-rss-gib 2.3959503173828125`` carried over from an unrelated run, while the
+    same family's measured system-availability cost is **49.572 GiB** -- a 20.7x under-declaration.
+    Two cells admitted on that number drove the VM compressor to 76.978 GiB and jetsam killed
+    background daemons.  A typed number is no longer allowed to be smaller than what the family has
+    been MEASURED to cost.
+
+    A family with NO measured row may still declare a number -- that is the honest bootstrap (run
+    the bounded smoke first, as ng4 did), and the row it produces governs every later launch.
+    """
+    family = peak_family_of(cell)
+    measured = measured_peaks.lookup_family(family) if family else None
+    governing = None if measured is None else float(measured.get("governed_peak_gib") or 0.0)
+
+    if cell.measured_peak_rss_gib is None:
+        if governing is None or governing <= 0.0:
+            raise QueueRefusal(
+                "PEAK_FROM_LEDGER_BUT_NO_MEASURED_ROW",
+                "the cell asks for the ledger's peak but this family has never been measured",
+                cell_id=cell.cell_id,
+                family=family,
+                cure=(
+                    "run the family's bounded smoke first (the ng4 pattern), then "
+                    "`tools/measured_peaks.py harvest --root <store>`"
+                ),
+            )
+        return {
+            "gib": governing,
+            "provenance": "FROM_LEDGER",
+            "family": family,
+            "measured_gib": governing,
+            "attribution_grade": measured.get("attribution_grade"),
+        }
+
+    declared = float(cell.measured_peak_rss_gib)
+    if governing is not None and declared < governing:
+        raise QueueRefusal(
+            "HAND_TYPED_PEAK_BELOW_MEASURED",
+            "the spec declares a memory peak smaller than this family's MEASURED cost",
+            cell_id=cell.cell_id,
+            family=family,
+            declared_peak_gib=declared,
+            measured_peak_gib=governing,
+            under_declaration_factor=round(governing / declared, 3) if declared > 0 else None,
+            attribution_grade=measured.get("attribution_grade"),
+            cure='set "measured_peak_rss_gib": "from_ledger" in the queue spec',
+        )
+    return {
+        "gib": declared,
+        "provenance": "SPEC_DECLARED_NO_MEASURED_ROW" if governing is None else "SPEC_DECLARED_AT_OR_ABOVE_MEASURED",
+        "family": family,
+        "measured_gib": governing,
+        "attribution_grade": None if measured is None else measured.get("attribution_grade"),
+    }
+
+
+def launcher_argv_with_peak(argv: Sequence[str], peak_gib: float) -> tuple[str, ...]:
+    """The launcher argv with ``--measured-peak-rss-gib`` set to the RESOLVED peak.
+
+    The spec owns every scientific value; the memory declaration is the one value the GOVERNOR
+    owns, because it is the value the machine's safety depends on and the one that was wrong.
+    """
+    parts = [str(item) for item in argv]
+    for index, item in enumerate(parts):
+        if item == "--measured-peak-rss-gib" and index + 1 < len(parts):
+            parts[index + 1] = f"{float(peak_gib)}"
+            return tuple(parts)
+        if item.startswith("--measured-peak-rss-gib="):
+            parts[index] = f"--measured-peak-rss-gib={float(peak_gib)}"
+            return tuple(parts)
+    return tuple(parts)
+
+
 def admission_for(
     cell: QueuedCell,
     *,
@@ -352,7 +451,7 @@ def admission_for(
     share a single, consistent snapshot of the machine rather than N snapshots taken seconds apart.
     """
     return admission.decide_admission(
-        cell.measured_peak_rss_gib,
+        resolve_peak(cell)["gib"],
         margin_gib=margin_gib,
         roots=roots,
         ledger_path=ledger_path,
@@ -532,11 +631,21 @@ def plan_cell(
         "notes": cell.notes,
         "measured_peak_rss_gib": cell.measured_peak_rss_gib,
         "done_receipt": cell.done_receipt,
+        "resolved_peak": None,
         "falsifiers": [f.describe() for f in cell.falsifiers],
         "milestones": list(cell.milestones),
         "control_label": cell.control_label,
         "blockers": [],
     }
+    # THE MEASURED-PEAK LAW runs first: a cell whose declared peak is below its family's measured
+    # cost is a blocker, not a launch, and the resolved number is what admission then charges.
+    try:
+        entry["resolved_peak"] = resolve_peak(cell)
+    except QueueRefusal as exc:
+        entry["blockers"].append({"stage": "resolve_peak", **exc.as_dict()})
+        entry["ready"] = False
+        return entry
+
     for label, check in (
         ("launcher_argv", lambda: verify_launcher_argv(cell)),
         (
@@ -693,9 +802,18 @@ def fire_cell(
             underlying_reason=getattr(exc, "reason", None),
             **placed,
         ) from exc
-    completed = subprocess.run(
-        list(cell.launcher_argv), capture_output=True, text=True, check=False
-    )
+    try:
+        resolved = resolve_peak(cell)
+    except QueueRefusal as exc:
+        raise QueueRefusal(
+            "PEAK_REFUSED_AFTER_CLAIMS",
+            f"the measured-peak law refused this cell after the lane claims were placed: {exc}",
+            cell_id=cell.cell_id,
+            underlying_reason=exc.reason,
+            **placed,
+        ) from exc
+    argv = launcher_argv_with_peak(cell.launcher_argv, resolved["gib"])
+    completed = subprocess.run(list(argv), capture_output=True, text=True, check=False)
     if completed.returncode != 0:
         raise QueueRefusal(
             "LAUNCH_FAILED",
@@ -711,6 +829,8 @@ def fire_cell(
         "scorer_claim_id": scorer_id,
         "metal_claim_id": metal_id,
         "authorized_config": authorized,
+        "resolved_peak": resolved,
+        "launcher_argv": list(argv),
         "launcher_stdout": completed.stdout.strip()[-2000:],
     }
 
@@ -744,6 +864,54 @@ def _cmd_verdict(args: argparse.Namespace) -> int:
         return 2
     verdict = cell_verdict(cell, args.run_dir, args.metric or [])
     _emit(verdict)
+    return 0
+
+
+def _cmd_fire(args: argparse.Namespace) -> int:
+    """THE ONE FIRE PATH (ddm_gov2).  Fire one NAMED cell, or the next ready one.
+
+    Nothing else may launch a cell: no bespoke shell script, no hand-run launcher invocation.  The
+    STRICT gate ``check_cell_launches_only_through_queue_driver`` enforces that statically; this is
+    the surface it points at.  Every launch therefore gets, in order: the seal law, the duplicate-
+    receipt check, storage reserve, THE MEASURED-PEAK LAW, memory + concurrency admission, the lane
+    claims, the chain driver's authorize, and the canonical launcher -- with the MEASURED peak.
+    """
+    cells = load_queue_spec(args.queue)
+    plan = plan_queue(
+        cells,
+        roots=[Path(r) for r in args.root] if args.root else None,
+        ledger_path=args.ledger,
+        margin_gib=args.margin_gib,
+        reserve_bytes=args.reserve_bytes,
+        verify_seal=not args.skip_seal_verify,
+    )
+    target_id = args.cell_id or plan["next_cell_id"]
+    if target_id is None:
+        _emit({**plan, "status": "REFUSED", "reason": "NO_READY_CELL"})
+        return 2
+    entry = next((row for row in plan["cells"] if row["cell_id"] == target_id), None)
+    if entry is None:
+        _emit({**plan, "status": "REFUSED", "reason": "UNKNOWN_CELL", "cell_id": target_id})
+        return 2
+    if not entry.get("ready"):
+        _emit({**plan, "status": "REFUSED", "reason": "CELL_NOT_READY", "cell_id": target_id, "entry": entry})
+        return 2
+    if args.dry_run:
+        _emit({**plan, "dry_run": True, "would_fire": target_id, "entry": entry})
+        return 0
+    target = next(cell for cell in cells if cell.cell_id == target_id)
+    try:
+        receipt = fire_cell(
+            target,
+            day=args.day or dt.datetime.now(dt.UTC).strftime("%Y%m%d"),
+            claims_path=args.claims_path,
+            ttl_hours=args.ttl_hours,
+            agent=args.agent,
+        )
+    except (QueueRefusal, chain.ChainRefusal) as exc:
+        _emit(exc.as_dict())
+        return 2
+    _emit({"schema": "ddm_gv1_cell_queue_fire.v1", "plan": plan, "fired": receipt})
     return 0
 
 
@@ -801,6 +969,19 @@ def build_parser() -> argparse.ArgumentParser:
     plan = sub.add_parser("plan", help="verify every cell and report which is ready to fire")
     _shared(plan)
     plan.set_defaults(func=_cmd_plan)
+
+    fire = sub.add_parser(
+        "fire",
+        help="THE ONE FIRE PATH: plan, admit, claim, authorize and launch one cell",
+    )
+    _shared(fire)
+    fire.add_argument("--cell-id", default=None, help="cell to fire (default: the next ready one)")
+    fire.add_argument("--dry-run", action="store_true")
+    fire.add_argument("--claims-path", type=Path, default=DEFAULT_CLAIMS)
+    fire.add_argument("--ttl-hours", type=float, default=8.0)
+    fire.add_argument("--agent", default="ddm_gov2_cell_queue_driver")
+    fire.add_argument("--day", default=None, help="claim-id day suffix (default: today UTC)")
+    fire.set_defaults(func=_cmd_fire)
 
     run = sub.add_parser("run", help="fire the next ready cell (use --dry-run first)")
     _shared(run)

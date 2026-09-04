@@ -694,3 +694,161 @@ class TestReuseNotFork:
         monkeypatch.setattr(q.chain, "write_or_verify_authorized", lambda p, e: {"path": str(p)})
         q.authorize(_cell(tmp_path), "s1", "m1")
         assert seen["args"] == ("s1", "m1")
+
+
+# ── ddm_gov2: THE MEASURED-PEAK LAW + the one fire path ─────────────────────────────────────────
+
+
+def _ledger(tmp_path: Path, family: str, peak: float) -> Path:
+    """A measured-peak ledger with one governing row for ``family``."""
+    path = tmp_path / "measured_peaks.jsonl"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "measured_peak.v1",
+                "family": family,
+                "governed_peak_gib": peak,
+                "attribution_grade": "SOLE_CELL_INFERRED_FROM_LEDGER",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+class TestMeasuredPeakLaw:
+    """MEASURED anchor: ng2 fired at 2.3959503173828125 GiB; the family costs 49.572 GiB."""
+
+    def test_family_is_the_trainer_not_the_launcher(self, tmp_path):
+        cell = _cell(tmp_path)
+        assert q.peak_family_of(cell) == "trainer"
+
+    def test_explicit_peak_family_wins(self, tmp_path):
+        cell = _cell(tmp_path, peak_family="ddm_qbr1_born_fairform_burn_prep")
+        assert q.peak_family_of(cell) == "ddm_qbr1_born_fairform_burn_prep"
+
+    def test_hand_typed_peak_below_the_measured_row_is_refused(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("TAC_MEASURED_PEAKS_LEDGER", str(_ledger(tmp_path, "trainer", 49.572)))
+        cell = _cell(tmp_path, measured_peak_rss_gib=2.3959503173828125)
+        with pytest.raises(q.QueueRefusal) as excinfo:
+            q.resolve_peak(cell)
+        detail = excinfo.value.as_dict()
+        assert detail["reason"] == "HAND_TYPED_PEAK_BELOW_MEASURED"
+        assert detail["under_declaration_factor"] == pytest.approx(20.69, abs=0.01)
+        assert "from_ledger" in detail["cure"]
+
+    def test_a_declaration_at_or_above_the_measured_row_stands(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("TAC_MEASURED_PEAKS_LEDGER", str(_ledger(tmp_path, "trainer", 40.0)))
+        resolved = q.resolve_peak(_cell(tmp_path, measured_peak_rss_gib=45.0))
+        assert resolved["gib"] == 45.0
+        assert resolved["provenance"] == "SPEC_DECLARED_AT_OR_ABOVE_MEASURED"
+
+    def test_from_ledger_resolves_to_the_measured_peak(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("TAC_MEASURED_PEAKS_LEDGER", str(_ledger(tmp_path, "trainer", 49.572)))
+        resolved = q.resolve_peak(_cell(tmp_path, measured_peak_rss_gib="from_ledger"))
+        assert resolved["gib"] == pytest.approx(49.572)
+        assert resolved["provenance"] == "FROM_LEDGER"
+        assert resolved["attribution_grade"] == "SOLE_CELL_INFERRED_FROM_LEDGER"
+
+    def test_from_ledger_without_a_measured_row_is_refused_with_the_bootstrap_cure(
+        self, tmp_path, monkeypatch
+    ):
+        """The honest bootstrap is the ng4 pattern: run the bounded smoke, then harvest."""
+        monkeypatch.setenv("TAC_MEASURED_PEAKS_LEDGER", str(tmp_path / "empty.jsonl"))
+        with pytest.raises(q.QueueRefusal) as excinfo:
+            q.resolve_peak(_cell(tmp_path, measured_peak_rss_gib="from_ledger"))
+        detail = excinfo.value.as_dict()
+        assert detail["reason"] == "PEAK_FROM_LEDGER_BUT_NO_MEASURED_ROW"
+        assert "bounded smoke" in detail["cure"]
+
+    def test_an_unmeasured_family_may_still_declare(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("TAC_MEASURED_PEAKS_LEDGER", str(tmp_path / "empty.jsonl"))
+        resolved = q.resolve_peak(_cell(tmp_path, measured_peak_rss_gib=4.0))
+        assert resolved["gib"] == 4.0
+        assert resolved["provenance"] == "SPEC_DECLARED_NO_MEASURED_ROW"
+
+    def test_admission_charges_the_resolved_peak_not_the_typed_one(self, tmp_path, monkeypatch):
+        """The whole point: the governor must be told 49.572, not 2.396."""
+        monkeypatch.setenv("TAC_MEASURED_PEAKS_LEDGER", str(_ledger(tmp_path, "trainer", 49.572)))
+        seen = {}
+        monkeypatch.setattr(
+            q.admission,
+            "decide_admission",
+            lambda peak, **kw: seen.setdefault("peak", peak),
+        )
+        q.admission_for(_cell(tmp_path, measured_peak_rss_gib="from_ledger"), live_cells=[])
+        assert seen["peak"] == pytest.approx(49.572)
+
+    def test_launcher_argv_is_rewritten_with_the_resolved_peak(self):
+        argv = ("python", "l.py", "--measured-peak-rss-gib", "2.3959503173828125", "--x", "1")
+        out = q.launcher_argv_with_peak(argv, 49.572)
+        assert out[3] == "49.572"
+        assert out[-2:] == ("--x", "1"), "no other argument may move"
+
+    def test_launcher_argv_rewrite_handles_the_equals_form(self):
+        out = q.launcher_argv_with_peak(("python", "--measured-peak-rss-gib=2.4"), 49.572)
+        assert out[1] == "--measured-peak-rss-gib=49.572"
+
+    def test_launcher_argv_without_the_flag_is_returned_unchanged(self):
+        argv = ("python", "l.py", "--output-dir", "/x")
+        assert q.launcher_argv_with_peak(argv, 49.572) == argv
+
+    def test_plan_reports_the_resolved_peak_and_blocks_on_a_refusal(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("TAC_MEASURED_PEAKS_LEDGER", str(_ledger(tmp_path, "trainer", 49.572)))
+        entry = q.plan_cell(
+            _cell(tmp_path, measured_peak_rss_gib=2.3959503173828125),
+            roots=None,
+            ledger_path=tmp_path / "contention.jsonl",
+            margin_gib=16.0,
+            reserve_bytes=0,
+            verify_seal=False,
+            live_cells=[],
+        )
+        assert entry["ready"] is False
+        assert entry["blockers"][0]["stage"] == "resolve_peak"
+        assert entry["blockers"][0]["reason"] == "HAND_TYPED_PEAK_BELOW_MEASURED"
+
+
+class TestFireSubcommand:
+    """``fire`` is THE ONE FIRE PATH; Catalog #413 refuses every other launcher invocation."""
+
+    def test_fire_dry_run_never_touches_the_fire_primitives(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("TAC_MEASURED_PEAKS_LEDGER", str(tmp_path / "empty.jsonl"))
+        monkeypatch.setattr(q, "fire_cell", lambda *a, **k: pytest.fail("fire_cell must not run"))
+        monkeypatch.setattr(q, "place_claims", lambda *a, **k: pytest.fail("place_claims must not run"))
+        spec = _write_spec(tmp_path, [_cell_payload(tmp_path)])
+        rc = q.main(
+            [
+                "fire",
+                "--queue",
+                str(spec),
+                "--cell-id",
+                "cell_a",
+                "--dry-run",
+                "--skip-seal-verify",
+                "--reserve-bytes",
+                "0",
+            ]
+        )
+        assert rc in (0, 2)
+
+    def test_fire_refuses_an_unknown_cell(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setenv("TAC_MEASURED_PEAKS_LEDGER", str(tmp_path / "empty.jsonl"))
+        spec = _write_spec(tmp_path, [_cell_payload(tmp_path)])
+        rc = q.main(
+            ["fire", "--queue", str(spec), "--cell-id", "nope", "--skip-seal-verify", "--reserve-bytes", "0"]
+        )
+        assert rc == 2
+        assert json.loads(capsys.readouterr().out)["reason"] in {"UNKNOWN_CELL", "CELL_NOT_READY"}
+
+    def test_fire_refuses_a_cell_that_is_not_ready(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setenv("TAC_MEASURED_PEAKS_LEDGER", str(_ledger(tmp_path, "trainer", 49.572)))
+        spec = _write_spec(
+            tmp_path, [_cell_payload(tmp_path, measured_peak_rss_gib=2.3959503173828125)]
+        )
+        rc = q.main(
+            ["fire", "--queue", str(spec), "--cell-id", "cell_a", "--skip-seal-verify", "--reserve-bytes", "0"]
+        )
+        assert rc == 2
+        assert json.loads(capsys.readouterr().out)["reason"] == "CELL_NOT_READY"

@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -365,6 +366,172 @@ def _register_launch(manifest_path: Path, *, pid: int, purpose: str, registry_pa
     except OSError as exc:
         print(f"[launch_detached_process] registry append failed (fail-open): {exc}", file=sys.stderr)
         return False
+
+
+# ── storage waterfall (ddm_gov2) ────────────────────────────────────────────────────────────────
+#
+# CLAUDE.md, "Local Disk, SSD Spill, Auto-Cleanup, And Provenance": *fail closed if no SSD/local
+# tier has enough free space.*  That rule had no enforcement point, and on 2026-09-04 the boot
+# volume reached **344 MiB free** and threw ENOSPC twice mid-run.
+#
+# TWO FACTS FROM THE dk1 ARM THAT CHANGE WHAT A REFUSAL MUST SAY (MEASURED):
+#   * Deleting bulk on this machine frees ~0 bytes until APFS local snapshots are thinned -- a
+#     certified 32.97 GiB deletion moved container free space by +1 GiB, and `tmutil
+#     thinlocalsnapshots` then released +65 GiB.  So the refusal reports the snapshot count: the
+#     cure is often a THIN, not a delete, and an operator told only "disk full" will delete for
+#     nothing.
+#   * `df /` reads the sealed SYSTEM volume; the authoritative row is `/System/Volumes/Data`.
+#     (MEASURED here: Python's `shutil.disk_usage` already reports the data volume for both paths
+#     -- 211.1 GiB free from either -- so the hazard is a `df` hazard, not a `disk_usage` one.  We
+#     resolve to the data volume explicitly anyway, so the intent survives a future refactor.)
+#
+# The launcher NEVER thins snapshots.  Thinning is destructive and operator-level (dk1 thinned
+# without being able to verify the remote backup's currency, and said so).  Refuse with the reason.
+
+BOOT_DATA_VOLUME = Path("/System/Volumes/Data")
+#: Boot-volume floor.  DERIVED from the 2026-09-04 ENOSPC: `.omx/tmp` held 208 GB and
+#: `experiments/results` 149 GB while free space reached 344 MiB.  40 GiB is the smallest floor
+#: that leaves room for a full cell's artifacts plus the OS's own swap growth (swap reached 72 GiB
+#: during that day's near-OOM, and swap lives on this volume).
+BOOT_MIN_FREE_GIB = 40.0
+#: Spill tiers in the CLAUDE.md priority order, most free space first at the time of writing.
+SSD_TIERS: tuple[Path, ...] = (Path("/Volumes/VertigoDataTier/pact"), Path("/Volumes/APDataStore/pact"))
+#: Fallback artifact budget when the family has no measured row. NOT a derivation -- a floor.
+#: (MEASURED for reference: the burn-cell family writes 1.17 GiB per completed run.)
+FALLBACK_ARTIFACT_BUDGET_GIB = 2.0
+
+_GIB_BYTES = 1024.0**3
+
+
+def _existing_ancestor(path: Path) -> Path:
+    candidate = path.expanduser()
+    while not candidate.exists() and candidate != candidate.parent:
+        candidate = candidate.parent
+    return candidate
+
+
+def _free_gib(path: Path) -> float | None:
+    try:
+        return shutil.disk_usage(_existing_ancestor(path)).free / _GIB_BYTES
+    except OSError:
+        return None
+
+
+def _is_on_boot_volume(path: Path) -> bool:
+    """True when ``path`` is NOT on an external volume (i.e. it consumes boot free space)."""
+    return not str(path.expanduser().resolve(strict=False)).startswith("/Volumes/")
+
+
+def _local_snapshot_report() -> dict[str, Any]:
+    """APFS local-snapshot census.  Fail-open: a census failure must never block a launch."""
+    try:
+        completed = subprocess.run(
+            ["tmutil", "listlocalsnapshots", "/"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"available": False, "error": f"{type(exc).__name__}: {exc}"}
+    names = [line.strip() for line in completed.stdout.splitlines() if line.strip().startswith("com.apple")]
+    return {
+        "available": True,
+        "count": len(names),
+        "newest": names[-1] if names else None,
+        "note": (
+            "APFS local snapshots PIN deleted bytes: a certified 32.97 GiB delete freed +1 GiB "
+            "until `tmutil thinlocalsnapshots` released +65 GiB (dk1, MEASURED 2026-09-04). "
+            "Thinning is destructive and operator-level; this launcher never does it."
+        ),
+    }
+
+
+def _measured_artifact_budget_gib(cmd: Sequence[str]) -> tuple[float, str]:
+    """``(budget GiB, provenance)`` -- the family's MEASURED artifact size when one exists."""
+    family = None
+    for part in [str(item) for item in cmd]:
+        if part.endswith(".py"):
+            family = Path(part).stem
+            break
+    if family:
+        try:
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            import measured_peaks
+
+            found = measured_peaks.lookup_family(family)
+            if found and float(found.get("artifact_gib") or 0.0) > 0.0:
+                measured = float(found["artifact_gib"])
+                # 2x the measured size: a run that writes more than its last run must still fit.
+                return measured * 2.0, f"MEASURED artifact_gib={measured:.4f} for family {family} (x2 headroom)"
+        except Exception:
+            pass
+    return FALLBACK_ARTIFACT_BUDGET_GIB, "FALLBACK floor (no measured row for this family)"
+
+
+def _storage_waterfall(out: Path, *, cmd: Sequence[str], artifact_budget_gib: float | None) -> dict[str, Any]:
+    """Refuse a launch the target volume cannot hold.  Raises :class:`LaunchRefusal` (rc=11)."""
+    if artifact_budget_gib is None:
+        budget, provenance = _measured_artifact_budget_gib(cmd)
+    else:
+        budget, provenance = float(artifact_budget_gib), "operator-declared --artifact-budget-gib"
+
+    on_boot = _is_on_boot_volume(out)
+    target_free = _free_gib(out)
+    boot_free = _free_gib(BOOT_DATA_VOLUME)
+    tiers = [
+        {"path": str(tier), "free_gib": None if _free_gib(tier) is None else round(_free_gib(tier), 2)}
+        for tier in SSD_TIERS
+    ]
+    record = {
+        "output_dir": str(out),
+        "on_boot_volume": on_boot,
+        "target_free_gib": None if target_free is None else round(target_free, 2),
+        "boot_data_volume_free_gib": None if boot_free is None else round(boot_free, 2),
+        "boot_min_free_gib": BOOT_MIN_FREE_GIB,
+        "artifact_budget_gib": round(budget, 4),
+        "artifact_budget_provenance": provenance,
+        "ssd_tiers": tiers,
+        "measured_on": "/System/Volumes/Data (never `df /`, which reads the sealed system volume)",
+    }
+    best_tier = max(
+        (tier for tier in tiers if tier["free_gib"] is not None),
+        key=lambda tier: tier["free_gib"],
+        default=None,
+    )
+    cure_tier = (
+        f"write to {best_tier['path']} ({best_tier['free_gib']} GiB free)"
+        if best_tier
+        else "no SSD tier is mounted; mount one or free space"
+    )
+
+    if on_boot and boot_free is not None and boot_free < BOOT_MIN_FREE_GIB:
+        raise LaunchRefusal(
+            "output dir is on the boot volume and boot free space is below the floor",
+            rc=11,
+            **record,
+            local_snapshots=_local_snapshot_report(),
+            cure=(
+                f"{cure_tier}; or reclaim with tools/local_disk_reclaim.py (certified DELETE) / "
+                "tools/vertigo_certify_move.py --source-root (certified MOVE), then thin APFS local "
+                "snapshots -- see docs/runbooks/local_disk_reclaim_cadence.md. This launcher never "
+                "thins snapshots for you."
+            ),
+        )
+    if target_free is not None and target_free < budget:
+        raise LaunchRefusal(
+            "target volume free space is below this family's artifact budget",
+            rc=11,
+            **record,
+            local_snapshots=_local_snapshot_report(),
+            cure=(
+                f"{cure_tier}; or declare a smaller --artifact-budget-gib with a reason; or reclaim "
+                "with tools/local_disk_reclaim.py / tools/vertigo_certify_move.py per "
+                "docs/runbooks/local_disk_reclaim_cadence.md."
+            ),
+        )
+    record["verdict"] = "PASS"
+    return record
 
 
 def _launch_identity(manifest_path: Path, pid: int, counter: int) -> dict[str, Any]:
@@ -1032,6 +1199,17 @@ def parse_args() -> argparse.Namespace:
             "the manifest records nice_status=unapplied instead"
         ),
     )
+    parser.add_argument(
+        "--artifact-budget-gib",
+        type=float,
+        default=None,
+        metavar="GIB",
+        help=(
+            "disk this launch may write. Default: 2x the family's MEASURED artifact size from "
+            "tools/measured_peaks.py, else a 2.0 GiB floor. The launch is REFUSED when the target "
+            "volume has less free."
+        ),
+    )
     parser.add_argument("--derive-resource-budgets", action="store_true")
     parser.add_argument("--measured-peak-rss-gib", type=float)
     parser.add_argument("--measured-thread-need", type=int)
@@ -1116,6 +1294,12 @@ def main() -> int:
             if not candidate.exists():
                 return _print_refusal(LaunchRefusal(f"script not found at cwd: {candidate}"))
             break
+    # STORAGE WATERFALL (ddm_gov2): fail closed before anything is spawned or written.
+    try:
+        storage = _storage_waterfall(out, cmd=cmd, artifact_budget_gib=args.artifact_budget_gib)
+    except LaunchRefusal as exc:
+        return _print_refusal(exc)
+
     env = os.environ.copy()
     env.update(dict(item.split("=", 1) for item in env_items))
     try:
@@ -1258,6 +1442,7 @@ def main() -> int:
         "requested_nice": args.nice,
         "actual_nice": None,
         "resource_budget": resource_budget,
+        "storage_waterfall": storage,
         "done_receipt_path": str(done_path) if done_path else None,
         "receipt_tombstone": receipt_tombstone,
         "receipt_arm_tombstone": receipt_arm_tombstone,

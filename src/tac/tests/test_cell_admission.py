@@ -14,6 +14,7 @@ import dataclasses
 import importlib.util
 import json
 import os
+import time
 import sys
 from pathlib import Path
 
@@ -107,7 +108,7 @@ def _fixed_basis(monkeypatch, *, reclaimable: float, committed: float) -> None:
 class TestDiscovery:
     def test_discovers_a_live_cell_with_config_derived_fields(self, tmp_path):
         _make_cell(tmp_path, "alpha", peak_gib=12.5, total_steps=5000, history_rows=137)
-        cells = ca.discover_live_cells([tmp_path])
+        cells = ca.discover_live_cells([tmp_path], process_table=False)
         assert len(cells) == 1
         cell = cells[0]
         assert cell.cell_id == "alpha"
@@ -121,11 +122,11 @@ class TestDiscovery:
     def test_dead_pid_is_not_live(self, tmp_path):
         # PID 2**22 is above the macOS/Linux default pid_max and is reliably absent.
         _make_cell(tmp_path, "dead", pid=4194304)
-        assert ca.discover_live_cells([tmp_path]) == []
+        assert ca.discover_live_cells([tmp_path], process_table=False) == []
 
     def test_non_cell_job_is_discovered_but_not_flagged_a_cell(self, tmp_path):
         _make_cell(tmp_path, "plainjob", with_config=False, peak_gib=12.0)
-        cells = ca.discover_live_cells([tmp_path])
+        cells = ca.discover_live_cells([tmp_path], process_table=False)
         assert len(cells) == 1
         assert cells[0].is_cell is False
         # Still charged: a non-cell job holds real memory.
@@ -133,22 +134,22 @@ class TestDiscovery:
 
     def test_config_without_step_budget_is_not_a_cell(self, tmp_path):
         _make_cell(tmp_path, "nosteps", total_steps=None)
-        assert ca.discover_live_cells([tmp_path])[0].is_cell is False
+        assert ca.discover_live_cells([tmp_path], process_table=False)[0].is_cell is False
 
     def test_foreign_manifest_schema_is_ignored(self, tmp_path):
         _write_json(
             tmp_path / "x" / "launch_manifest.json",
             {"schema": "something_else.v1", "pid": os.getpid()},
         )
-        assert ca.discover_live_cells([tmp_path]) == []
+        assert ca.discover_live_cells([tmp_path], process_table=False) == []
 
     def test_missing_root_is_tolerated(self, tmp_path):
-        assert ca.discover_live_cells([tmp_path / "absent"]) == []
+        assert ca.discover_live_cells([tmp_path / "absent"], process_table=False) == []
 
     def test_same_pid_is_deduplicated(self, tmp_path):
         _make_cell(tmp_path, "one")
         _make_cell(tmp_path, "two")  # same PID (this process)
-        assert len(ca.discover_live_cells([tmp_path])) == 1
+        assert len(ca.discover_live_cells([tmp_path], process_table=False)) == 1
 
     def test_config_path_from_argv_prefers_run_config(self):
         argv = ["python", "trainer.py", "run-config", "/x/cfg.json", "--other", "/y/z.json"]
@@ -364,10 +365,20 @@ class TestThroughputVerdict:
             "total_steps_per_min": total,
         }
 
-    def test_no_observation_admits_but_labels_the_absence(self):
+    def test_no_observation_now_refuses_a_second_metal_cell(self):
+        """ddm_gov2 REVERSES gv1's admit-on-no-evidence default, deliberately.
+
+        gv1 admitted an unmeasured concurrency so the ledger could ever be filled. The measured
+        cost of that default was a near-OOM: two ~40 GiB Metal cells ran concurrently on
+        2026-09-04 and the VM compressor reached 76.978 GiB with 72.0 GiB of swap, at which point
+        jetsam killed background daemons. Absence of evidence is now a REFUSE with a named way
+        out (``concurrency_measurement_override``), not a silent yes.
+        """
         verdict = ca.throughput_verdict([], live_count=2)
-        assert verdict.admits is True
+        assert verdict.admits is False
         assert verdict.evidence == "NO_CONCURRENT_OBSERVATION"
+        assert any("REFUSED by the standing concurrency law" in reason for reason in verdict.reasons)
+        assert any("measurement launch" in reason for reason in verdict.reasons)
 
     def test_concurrency_pays_admits(self):
         """MAIN's measured row: 28 serial -> 20 + 15 = 35 concurrent."""
@@ -398,17 +409,116 @@ class TestThroughputVerdict:
         ]
         assert ca.throughput_verdict(rows, live_count=2).admits is False
 
-    def test_concurrent_without_baseline_is_labelled(self):
+    def test_concurrent_without_baseline_refuses(self):
+        """A concurrent number with nothing to compare it to cannot clear the law."""
         verdict = ca.throughput_verdict([self._row(2, 35.0, "t")], live_count=2)
         assert verdict.evidence == "NO_SERIAL_BASELINE"
-        assert verdict.admits is True
+        assert verdict.admits is False
         assert verdict.serial_baseline_steps_per_min is None
+
+    def test_straddling_rows_are_unresolved_and_refuse(self):
+        """gv1's OWN two windows, verbatim: 31.2854 then 26.9996 against a 28.0 serial baseline.
+
+        MEASURED 2026-09-04, the same two cells 30 minutes apart -- ratios 1.117 and 0.964. They
+        straddle the baseline, so concurrency at N=2 is UNRESOLVED and a second Metal cell is
+        refused until an N>=3-window row resolves it.
+        """
+        rows = [
+            self._row(1, 28.0, "2026-09-04T10:00:00Z"),
+            self._row(2, 31.2854, "2026-09-04T15:55:37Z"),
+            self._row(2, 26.9996, "2026-09-04T16:25:00Z"),
+        ]
+        verdict = ca.throughput_verdict(rows, live_count=2)
+        assert verdict.admits is False
+        assert verdict.evidence == "UNRESOLVED_AT_CONCURRENCY"
+        assert "STRADDLE" in verdict.reasons[0]
+
+    def test_spread_larger_than_the_effect_is_unresolved(self):
+        """The second unresolved mode: noise bigger than signal, both rows on the same side."""
+        rows = [
+            self._row(1, 28.0, "2026-09-04T10:00:00Z"),
+            self._row(2, 40.0, "2026-09-04T11:00:00Z"),
+            self._row(2, 29.0, "2026-09-04T12:00:00Z"),
+        ]
+        verdict = ca.throughput_verdict(rows, live_count=2)
+        assert verdict.admits is False
+        assert verdict.evidence == "UNRESOLVED_AT_CONCURRENCY"
+        assert "spread" in verdict.reasons[0]
+
+    def test_measurement_override_admits_only_the_evidence_gap(self, tmp_path, monkeypatch):
+        """The ONE named way past the law -- and it never touches the memory leg."""
+        _fixed_basis(monkeypatch, reclaimable=500.0, committed=5.0)
+        cell = _training_cell_stub()
+        monkeypatch.setattr(ca, "discover_live_cells", lambda *a, **k: [cell])
+        refused = ca.decide_admission(1.0, ledger_path=tmp_path / "empty.jsonl", include_naive_contrast=False)
+        assert refused.verdict == "REFUSE"
+        allowed = ca.decide_admission(
+            1.0,
+            ledger_path=tmp_path / "empty.jsonl",
+            include_naive_contrast=False,
+            concurrency_measurement_override="measure the N=2 window gv1 could not resolve",
+        )
+        assert allowed.verdict == "ADMIT"
+        assert allowed.throughput.evidence == "MEASUREMENT_OVERRIDE"
+
+    def test_measurement_override_cannot_overturn_a_measured_negative(self, tmp_path, monkeypatch):
+        """MEASURED-and-COSTS is a real negative, not a data gap; the override must not touch it."""
+        _fixed_basis(monkeypatch, reclaimable=500.0, committed=5.0)
+        ledger = tmp_path / "ledger.jsonl"
+        ca.append_contention_row(
+            {"concurrency": 1, "total_steps_per_min": 28.0, "recorded_utc": "2026-09-04T10:00:00Z"}, ledger
+        )
+        ca.append_contention_row(
+            {"concurrency": 2, "total_steps_per_min": 10.0, "recorded_utc": "2026-09-04T11:00:00Z"}, ledger
+        )
+        monkeypatch.setattr(ca, "discover_live_cells", lambda *a, **k: [_training_cell_stub()])
+        decision = ca.decide_admission(
+            1.0,
+            ledger_path=ledger,
+            include_naive_contrast=False,
+            concurrency_measurement_override="try to sneak past a measured negative",
+        )
+        assert decision.verdict == "REFUSE"
+        assert decision.throughput.evidence == "MEASURED"
+
+    def test_measurement_override_never_relaxes_the_memory_leg(self, tmp_path, monkeypatch):
+        _fixed_basis(monkeypatch, reclaimable=1.0, committed=5.0)
+        monkeypatch.setattr(ca, "discover_live_cells", lambda *a, **k: [_training_cell_stub()])
+        decision = ca.decide_admission(
+            41.5,
+            ledger_path=tmp_path / "empty.jsonl",
+            include_naive_contrast=False,
+            concurrency_measurement_override="memory must still fail closed",
+        )
+        assert decision.memory.admits is False
+        assert decision.verdict == "REFUSE"
 
     def test_as_dict_is_json_serializable(self):
         json.dumps(ca.throughput_verdict([], live_count=2).as_dict())
 
 
 # ── composed decision + CLI ─────────────────────────────────────────────────────────────────────
+
+
+def _training_cell_stub(**overrides) -> "ca.LiveCell":
+    """One live TRAINING cell (sealed run-config + step budget) that holds nothing yet."""
+    base = dict(
+        cell_id="stub",
+        pid=1,
+        alive=True,
+        declared_peak_gib=0.0,
+        current_rss_gib=0.0,
+        manifest_path=Path("/m"),
+        config_path=Path("/cfg.json"),
+        run_dir=None,
+        total_steps=5000,
+        completed_steps=1,
+        arm_name=None,
+        arm_role=None,
+        purpose=None,
+    )
+    base.update(overrides)
+    return ca.LiveCell(**base)
 
 
 class TestDecision:
@@ -466,7 +576,7 @@ class TestDecision:
             ledger,
         )
         _make_cell(tmp_path, "cell_one", pid=os.getpid(), history_rows=1)
-        cells = ca.discover_live_cells([tmp_path])
+        cells = ca.discover_live_cells([tmp_path], process_table=False)
         # One discovered cell; synthesise a second training cell and one non-cell job.
         second = dataclasses.replace(cells[0], cell_id="cell_two", pid=cells[0].pid)
         job = dataclasses.replace(cells[0], cell_id="a_job", config_path=None, total_steps=None, declared_peak_gib=0.0)
@@ -484,9 +594,11 @@ class TestDecision:
 
     def test_admit_when_both_legs_pass(self, tmp_path, monkeypatch):
         _fixed_basis(monkeypatch, reclaimable=200.0, committed=5.0)
+        # live_cells=[] isolates the unit from the REAL fleet: process-table discovery is the
+        # default now, so an un-injected call would legitimately see whatever is running.
         decision = ca.decide_admission(
             1.0,
-            roots=[tmp_path / "none"],
+            live_cells=[],
             ledger_path=tmp_path / "empty.jsonl",
             include_naive_contrast=False,
         )
@@ -524,6 +636,7 @@ class TestDecision:
 class TestCLI:
     def test_admit_returns_zero_when_admitted(self, tmp_path, monkeypatch, capsys):
         _fixed_basis(monkeypatch, reclaimable=200.0, committed=5.0)
+        monkeypatch.setattr(ca, "discover_live_cells", lambda *a, **k: [])
         rc = ca.main(
             [
                 "admit",
@@ -573,20 +686,20 @@ class TestCLI:
 
     def test_cells_json_lists_discovered_cells(self, tmp_path, capsys):
         _make_cell(tmp_path, "alpha", history_rows=3)
-        assert ca.main(["cells", "--root", str(tmp_path), "--json"]) == 0
+        assert ca.main(["cells", "--root", str(tmp_path), "--disk-only", "--json"]) == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["count"] == 1
         assert payload["cells"][0]["cell_id"] == "alpha"
         assert payload["cells"][0]["is_cell"] is True
 
     def test_cells_human_mode_reports_none(self, tmp_path, capsys):
-        assert ca.main(["cells", "--root", str(tmp_path / "none")]) == 0
+        assert ca.main(["cells", "--root", str(tmp_path / "none"), "--disk-only"]) == 0
         assert "NONE" in capsys.readouterr().out
 
     def test_sample_measures_without_writing(self, tmp_path, capsys):
         _make_cell(tmp_path, "alpha", history_rows=3)
         ledger = tmp_path / "ledger.jsonl"
-        rc = ca.main(["sample", "--window-s", "0", "--root", str(tmp_path), "--ledger", str(ledger), "--no-write"])
+        rc = ca.main(["sample", "--window-s", "0", "--disk-only", "--root", str(tmp_path), "--ledger", str(ledger), "--no-write"])
         assert rc == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["concurrency"] == 1
@@ -600,7 +713,7 @@ class TestCLI:
         """
         _make_cell(tmp_path, "alpha", history_rows=3)
         ca.main(
-            ["sample", "--window-s", "0", "--root", str(tmp_path), "--ledger", str(tmp_path / "l.jsonl"), "--no-write"]
+            ["sample", "--window-s", "0", "--disk-only", "--root", str(tmp_path), "--ledger", str(tmp_path / "l.jsonl"), "--no-write"]
         )
         payload = json.loads(capsys.readouterr().out)
         assert "cpu_load_context" in payload
@@ -623,14 +736,14 @@ class TestCLI:
 class TestSampling:
     def test_sample_rates_zero_window_yields_zero_rate(self, tmp_path):
         _make_cell(tmp_path, "alpha", history_rows=10)
-        cells = ca.discover_live_cells([tmp_path])
+        cells = ca.discover_live_cells([tmp_path], process_table=False)
         rates = ca.sample_cell_rates(cells, window_s=0.0)
         assert len(rates) == 1
         assert rates[0].steps_delta == 0
 
     def test_sample_rates_skips_cells_without_history(self, tmp_path):
         _make_cell(tmp_path, "nohist", with_config=False)
-        cells = ca.discover_live_cells([tmp_path])
+        cells = ca.discover_live_cells([tmp_path], process_table=False)
         assert ca.sample_cell_rates(cells, window_s=0.0) == []
 
 
@@ -779,19 +892,27 @@ class TestRegistryFirstDiscovery:
         walked = []
         monkeypatch.setattr(ca, "_walk_manifests", lambda root, depth: walked.append(root) or [])
         monkeypatch.setattr(ca, "live_cell_from_manifest", lambda p: None)
+        monkeypatch.setattr(ca, "live_cells_from_process_table", lambda: [])
         ca.discover_live_cells(registry_path=reg)
         assert walked == []
         ca.discover_live_cells(registry_path=reg, walk_roots=True)
         assert len(walked) == len(ca.DEFAULT_MANIFEST_ROOTS)
 
-    def test_empty_registry_falls_back_to_walk(self, tmp_path, monkeypatch):
+    def test_absent_registry_no_longer_triggers_a_walk(self, tmp_path, monkeypatch):
+        """ddm_gov2: the registry-absent fallback is GONE -- the process table is the source.
+
+        gv1 walked the SSD roots whenever the registry was empty. That fallback was MEASURED at
+        >120 s per admission poll and it still could not see the ng4 cell, whose sealed-source
+        launcher never wrote a registry row. Neither the registry nor the walk is consulted by
+        default any more.
+        """
         walked = []
         monkeypatch.setattr(ca, "_walk_manifests", lambda root, depth: walked.append(root) or [])
+        monkeypatch.setattr(ca, "live_cells_from_process_table", lambda: [])
         ca.discover_live_cells(registry_path=tmp_path / "absent.jsonl")
-        assert len(walked) == len(ca.DEFAULT_MANIFEST_ROOTS)
-        walked.clear()
-        ca.discover_live_cells(registry_path=tmp_path / "absent.jsonl", walk_roots=False)
         assert walked == []
+        ca.discover_live_cells(registry_path=tmp_path / "absent.jsonl", walk_roots=True)
+        assert len(walked) == len(ca.DEFAULT_MANIFEST_ROOTS)
 
     def test_walk_prunes_bulk_directories(self, tmp_path):
         keep = self._manifest(tmp_path, "cell", 7)
@@ -821,3 +942,170 @@ def test_launcher_registry_row_is_readable_by_the_governor(tmp_path):
     assert ca.registry_manifest_paths(reg) == [manifest]
     # fail-open: an unwritable registry path returns False, never raises
     assert mod._register_launch(manifest, pid=1, purpose="t", registry_path=tmp_path / "reg.jsonl" / "x") is False
+
+
+# ── ddm_gov2: process-table discovery ───────────────────────────────────────────────────────────
+
+
+_NG4_SUPERVISOR_ARGV = (
+    "/V/sealed_source_50e2cd2808/.venv/bin/python",
+    "/V/sealed_source_50e2cd2808/tools/launch_detached_process.py",
+    "_supervise",
+    "--start-gate",
+    "/A/launch/ng4/.launch_start_gate",
+    "--manifest",
+    "/A/launch/ng4/launch_manifest.json",
+    "--counter",
+    "820",
+    "--done",
+    "/r/.omx/tmp/codex_runs/ng4_continuous_DONE.json.done",
+    "--receipt-name",
+    "ng4_continuous_DONE.json",
+    "--",
+    "/V/sealed_source_50e2cd2808/.venv/bin/python",
+    "/V/sealed_source_50e2cd2808/tools/safe_run.py",
+    "--rss-mb",
+    "118784",
+    "--projected-gib",
+    "45.0",
+    "--",
+    "/V/sealed_source_50e2cd2808/.venv/bin/python",
+    "/V/x.py",
+    "run-config",
+    "/A/authorized_configs/ng4.json",
+)
+_NG4_SAFE_RUN_ARGV = _NG4_SUPERVISOR_ARGV[_NG4_SUPERVISOR_ARGV.index("--") + 1 :]
+_NG4_TRAINER_ARGV = _NG4_SAFE_RUN_ARGV[_NG4_SAFE_RUN_ARGV.index("--") + 1 :]
+
+
+class TestProcessTableDiscovery:
+    """The process table is COMPLETE BY CONSTRUCTION -- the argv shape is MEASURED off live ng4."""
+
+    def _ng4_rows(self):
+        return [
+            ca.ProcessRow(pid=33030, ppid=1, argv=_NG4_SUPERVISOR_ARGV),
+            ca.ProcessRow(pid=33039, ppid=33030, argv=_NG4_SAFE_RUN_ARGV),
+            ca.ProcessRow(pid=33374, ppid=33039, argv=_NG4_TRAINER_ARGV),
+        ]
+
+    def test_three_process_lineage_collapses_to_one_cell(self, monkeypatch):
+        monkeypatch.setattr(ca, "process_tree_rss_gib", lambda pid: 0.8)
+        cells = ca.live_cells_from_process_table(self._ng4_rows())
+        assert len(cells) == 1
+        cell = cells[0]
+        assert cell.pid == 33030, "the cell is rooted at the supervisor, matching the manifest pid"
+        assert cell.safe_run_pid == 33039
+        assert cell.trainer_pid == 33374
+
+    def test_supervisor_argv_containing_safe_run_does_not_masquerade_as_it(self, monkeypatch):
+        """MEASURED bug in my own first pass: the supervisor argv CONTAINS the safe_run argv.
+
+        ``any(part.endswith("safe_run.py"))`` therefore matches the supervisor, and the naive
+        selection reported safe_run_pid=33030 where the real safe_run is 33039.
+        """
+        monkeypatch.setattr(ca, "process_tree_rss_gib", lambda pid: 0.0)
+        cells = ca.live_cells_from_process_table(self._ng4_rows())
+        assert cells[0].safe_run_pid != cells[0].pid
+
+    def test_declared_peak_comes_from_safe_run_when_no_manifest_exists(self, monkeypatch):
+        """Sealed-source launchers that never wrote a registry row still declare their peak."""
+        monkeypatch.setattr(ca, "process_tree_rss_gib", lambda pid: 0.0)
+        cell = ca.live_cells_from_process_table(self._ng4_rows())[0]
+        assert cell.declared_peak_gib == 45.0
+        assert cell.declared_peak_source == "safe_run_projected_gib"
+        assert cell.discovery_source == "process_table"
+
+    def test_declared_peak_is_the_larger_of_manifest_and_projection(self, tmp_path, monkeypatch):
+        """FAIL-CLOSED: charging the smaller of two disagreeing declarations under-reserves."""
+        monkeypatch.setattr(ca, "process_tree_rss_gib", lambda pid: 0.0)
+        manifest = tmp_path / "launch_manifest.json"
+        manifest.write_text(json.dumps({"resource_budget": {"measured_peak_rss_gib": 2.396}}))
+        argv = list(_NG4_SUPERVISOR_ARGV)
+        argv[argv.index("--manifest") + 1] = str(manifest)
+        rows = [ca.ProcessRow(pid=1, ppid=1, argv=tuple(argv))]
+        cell = ca.live_cells_from_process_table(rows)[0]
+        assert cell.declared_peak_gib == 45.0, "the 2.396 GiB RSS fiction must not win over 45 GiB"
+        assert cell.declared_peak_source == "safe_run_projected_gib"
+
+    def test_bare_safe_run_without_a_supervisor_is_its_own_cell(self, monkeypatch):
+        """MEASURED on this box: the dashboard server runs as a bare safe_run with ppid 1."""
+        monkeypatch.setattr(ca, "process_tree_rss_gib", lambda pid: 0.2)
+        rows = [
+            ca.ProcessRow(
+                pid=58074,
+                ppid=1,
+                argv=("python", "tools/safe_run.py", "--rss-mb", "2500", "--", "python", "tools/dashboard_server.py"),
+            )
+        ]
+        cells = ca.live_cells_from_process_table(rows)
+        assert len(cells) == 1
+        assert cells[0].is_cell is False
+        assert cells[0].declared_peak_gib == pytest.approx(2500 / 1024.0)
+        assert cells[0].declared_peak_source == "safe_run_rss_cap"
+
+    def test_undeclared_job_is_charged_its_measured_footprint_not_zero(self, monkeypatch):
+        """A job with no declaration must never read as free."""
+        monkeypatch.setattr(ca, "process_tree_rss_gib", lambda pid: 12.0)
+        rows = [ca.ProcessRow(pid=9, ppid=1, argv=("python", "x.py", "run-config", "/no/such.json"))]
+        cell = ca.live_cells_from_process_table(rows)[0]
+        assert cell.declared_peak_source == "UNDECLARED"
+        assert cell.declared_peak_gib == 12.0
+
+    def test_ungoverned_processes_are_ignored(self, monkeypatch):
+        monkeypatch.setattr(ca, "process_tree_rss_gib", lambda pid: 1.0)
+        rows = [ca.ProcessRow(pid=5, ppid=1, argv=("/usr/bin/ssh", "host")), *self._ng4_rows()]
+        assert len(ca.live_cells_from_process_table(rows)) == 1
+
+    def test_ppid_cycle_cannot_hang_the_ancestor_walk(self, monkeypatch):
+        monkeypatch.setattr(ca, "process_tree_rss_gib", lambda pid: 0.0)
+        rows = [
+            ca.ProcessRow(pid=2, ppid=3, argv=_NG4_SAFE_RUN_ARGV),
+            ca.ProcessRow(pid=3, ppid=2, argv=_NG4_SAFE_RUN_ARGV),
+        ]
+        assert ca.live_cells_from_process_table(rows)  # terminates
+
+    def test_argv_option_handles_equals_form(self):
+        assert ca._argv_option(("--projected-gib=45.0",), "--projected-gib") == "45.0"
+        assert ca._argv_option(("--projected-gib", "45.0"), "--projected-gib") == "45.0"
+        assert ca._argv_option(("--projected-gib",), "--projected-gib") is None
+
+    def test_discovery_default_does_not_walk(self, monkeypatch):
+        walked = []
+        monkeypatch.setattr(ca, "_walk_manifests", lambda root, depth: walked.append(root) or [])
+        monkeypatch.setattr(ca, "live_cells_from_process_table", lambda: [])
+        ca.discover_live_cells()
+        assert walked == [], "the SSD walk (>120 s MEASURED) must never run by default"
+
+    def test_walk_is_unioned_never_substituted(self, tmp_path, monkeypatch):
+        """An explicit forensic root must not DROP a live process-table cell from admission."""
+        monkeypatch.setattr(ca, "process_tree_rss_gib", lambda pid: 0.0)
+        monkeypatch.setattr(ca, "live_cells_from_process_table", lambda: [_training_cell_stub(pid=4242)])
+        cells = ca.discover_live_cells([tmp_path / "empty"])
+        assert [cell.pid for cell in cells] == [4242]
+
+    def test_registry_cross_check_reports_a_missed_live_row(self, tmp_path, monkeypatch):
+        manifest = tmp_path / "launch_manifest.json"
+        manifest.write_text(json.dumps({"pid": os.getpid()}))
+        reg = tmp_path / "reg.jsonl"
+        reg.write_text(json.dumps({"manifest_path": str(manifest)}) + "\n")
+        check = ca.registry_cross_check([], registry_path=reg)
+        assert check["agrees"] is False
+        assert check["missed_by_process_table"][0]["pid"] == os.getpid()
+
+    def test_registry_cross_check_agrees_when_the_pid_is_covered(self, tmp_path):
+        manifest = tmp_path / "launch_manifest.json"
+        manifest.write_text(json.dumps({"pid": os.getpid()}))
+        reg = tmp_path / "reg.jsonl"
+        reg.write_text(json.dumps({"manifest_path": str(manifest)}) + "\n")
+        check = ca.registry_cross_check([_training_cell_stub(pid=os.getpid())], registry_path=reg)
+        assert check["agrees"] is True
+
+    def test_read_process_table_sees_this_very_process(self):
+        rows = ca.read_process_table()
+        assert any(row.pid == os.getpid() for row in rows)
+
+    def test_discovery_is_fast_enough_to_run_on_every_poll(self):
+        """The walk it replaces was MEASURED at >120 s; a guard that slow is a guard that is not there."""
+        start = time.perf_counter()
+        ca.live_cells_from_process_table()
+        assert time.perf_counter() - start < 10.0

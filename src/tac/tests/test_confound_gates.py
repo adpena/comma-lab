@@ -1056,6 +1056,15 @@ class TestModule:
             # again -- make the split an explicit if/else so the shared tail runs
             # on BOTH paths; do NOT raise this bound.
             "check_no_dead_conditional_retest_after_early_return": 0,
+            # 2026-09-04 ddm_gov2 (Catalog #413). STRICT in preflight at live-count 0
+            # (MEASURED: 12,456 files considered, 2 carrying both the launcher and
+            # run-config tokens, 0 violations after the four bespoke shell fire scripts
+            # were converted to experiments/ddm_burn_cells_fire/burn_cells_queue.json and
+            # deleted). Any growth means a NEW bespoke fire path re-created the private
+            # admission rule that let two ~40 GiB Metal cells run concurrently -- fire
+            # through `cell_queue_driver.py fire` or waive with a real rationale; do NOT
+            # raise this bound.
+            "check_cell_launches_only_through_queue_driver": 0,
             # Catalog #412, ddm_wc3: literal EMA warmup mode beside an
             # ema_decay_* LawRef is STRICT at measured live count zero.
             "check_ema_executable_law_matches_sealed_law": 0,

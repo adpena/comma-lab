@@ -8288,6 +8288,24 @@ def preflight_all(
             # than into warn-only purgatory. Carries a live positive control.
             # CLAUDE_MD_ENTRY_OK: rides the confound-gate 3-layer immune-system row (L2 STRICT preflight gates); standalone numbered catalog row deferred per Catalog #299 post-#400 consolidation
             "check_no_dead_conditional_retest_after_early_return",
+            # 2026-09-04 ddm_gov2 (Catalog #413) fix+gate atomic landing. THE LAW: a governed
+            # CELL may be launched by exactly ONE surface, `tools/cell_queue_driver.py fire`.
+            # MEASURED anchor: three bespoke shell fire scripts (ng2/ng3/ng4) each carried a
+            # private admission rule — ng3's was the reclaimable-blind `free + inactive` shell
+            # arithmetic that the Python-AST gate `check_no_raw_virtual_memory_safety_basis`
+            # cannot see, and ng2 declared `--measured-peak-rss-gib 2.3959503173828125` for a
+            # family whose MEASURED cost is 49.572 GiB (20.69x). With two such cells live the VM
+            # compressor reached 76.978 GiB with 72.0 GiB of swap on a 128 GiB box and jetsam
+            # killed background daemons. The detector keys on EXECUTION (a shell command line, or
+            # a Python subprocess call with the launcher as a literal) plus the `run-config`
+            # token, so a file that legitimately COMPOSES a launcher argv without running it
+            # (experiments/ddm_qbr1_born_fairform_burn_prep.py) is not a violation. All four
+            # shell scripts are deleted in this same landing and their information is preserved
+            # losslessly in experiments/ddm_burn_cells_fire/burn_cells_queue.json, so live count
+            # is 0 (12,456 files considered, 2 cell-shaped) and it flips strict here rather than
+            # into warn-only purgatory. Carries a live positive control.
+            # CLAUDE_MD_ENTRY_OK: rides the confound-gate 3-layer immune-system row (L2 STRICT preflight gates); standalone numbered catalog row deferred per Catalog #299 post-#400 consolidation
+            "check_cell_launches_only_through_queue_driver",
             # 2026-09-03 Catalog #412, ddm_wc3: the QBR1 seal declared the
             # constant-decay ema_decay_run_geometry_v1 intervention while two
             # constructors hardcoded warmup=True, changing the terminal seed

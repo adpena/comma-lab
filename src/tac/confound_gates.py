@@ -5726,3 +5726,191 @@ POSITIVE_CONTROLS = (
         ),
     ),
 )
+
+
+# ── Catalog #413 — ONE FIRE PATH for governed cells (ddm_gov2) ───────────────────────────────────
+#
+# THE INCIDENT (MEASURED 2026-09-04).  Three cells (ng2, ng3, ng4) each got a bespoke shell fire
+# script, and each re-implemented admission on its own:
+#
+#   * ng3's script computed reclaimable memory as ``free + inactive`` in inline shell arithmetic --
+#     the reclaimable-BLIND basis that ``check_no_raw_virtual_memory_safety_basis`` already refuses
+#     in PYTHON.  It escaped that gate only because the gate parses Python ASTs and this spelling
+#     was shell.  MEASURED over-trust: 1.204x (ddm_bh1).
+#   * ng2's script declared ``--measured-peak-rss-gib 2.3959503173828125`` for a cell whose family
+#     costs 49.572 GiB MEASURED -- a 20.69x under-declaration.
+#   * With two such cells live the VM compressor reached 76.978 GiB and 72.0 GiB of swap on a
+#     128 GiB box, and jetsam killed background daemons.
+#
+# The cure is not a better shell script.  It is that a cell may be launched by exactly ONE surface,
+# ``tools/cell_queue_driver.py fire``, which runs the seal law, the duplicate-receipt check, the
+# storage waterfall, the MEASURED-PEAK LAW, and memory + concurrency admission before it spends a
+# second of Metal.
+#
+# DETECTOR SIGNATURE.  Not "a file that mentions the launcher" -- ``experiments/
+# ddm_qbr1_born_fairform_burn_prep.py`` legitimately COMPOSES a launcher argv into a fire-order
+# JSON without ever executing it, and a queue spec is composed argv by construction.  The signature
+# is EXECUTION: a shell command line that invokes ``launch_detached_process.py``, or a Python
+# ``subprocess``/``os.system`` call whose literal arguments name it -- in a file that also carries
+# ``run-config``, which is what makes it a CELL launch rather than an ordinary detached job.
+#
+# The queue driver itself is exempt by construction, not by name: it passes ``cell.launcher_argv``
+# from the spec, so the launcher path is never a literal in its source.
+
+_CELL_FIRE_LAUNCHER_TOKEN = "launch_detached_process"
+_CELL_FIRE_CONFIG_TOKEN = "run-config"
+_CELL_FIRE_WAIVER = "CELL_FIRE_PATH_OK"
+_CELL_FIRE_EXEC_FUNCS = frozenset(
+    {"run", "Popen", "call", "check_call", "check_output", "system", "execv", "execvp", "execve"}
+)
+
+
+def _cell_fire_candidate_files(root: Path) -> list[Path]:
+    out: list[Path] = []
+    for base, patterns in (
+        ("experiments", ("*.sh", "*.py")),
+        ("tools", ("*.sh", "*.py")),
+        ("scripts", ("*.sh", "*.py")),
+    ):
+        directory = root / base
+        if not directory.is_dir():
+            continue
+        for pattern in patterns:
+            for path in directory.rglob(pattern):
+                rel = path.relative_to(root).as_posix()
+                if "_intake_" in rel or "/.venv/" in rel or "site-packages" in rel:
+                    continue
+                out.append(path)
+    return sorted(set(out))
+
+
+def _shell_launcher_lines(text: str) -> list[int]:
+    """Line numbers where a shell script INVOKES the launcher (comments excluded)."""
+    hits: list[int] = []
+    for number, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            continue
+        code = stripped.split("#", 1)[0]
+        if _CELL_FIRE_LAUNCHER_TOKEN in code:
+            hits.append(number)
+    return hits
+
+
+def _python_launcher_exec_lines(text: str) -> list[int]:
+    """Line numbers of ``subprocess``/``os`` exec calls whose literals name the launcher."""
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return []
+    hits: list[int] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        name = func.attr if isinstance(func, ast.Attribute) else (func.id if isinstance(func, ast.Name) else "")
+        if name not in _CELL_FIRE_EXEC_FUNCS:
+            continue
+        literals = [
+            sub.value
+            for sub in ast.walk(node)
+            if isinstance(sub, ast.Constant) and isinstance(sub.value, str)
+        ]
+        if any(_CELL_FIRE_LAUNCHER_TOKEN in literal for literal in literals):
+            hits.append(node.lineno)
+    return hits
+
+
+def check_cell_launches_only_through_queue_driver(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Catalog #413 — a governed CELL may only be launched by ``cell_queue_driver.py fire``.
+
+    See the block comment above for the 2026-09-04 anchor (three bespoke fire scripts, three
+    private admission rules, one near-OOM) and for why the detector keys on EXECUTION rather than
+    on any mention of the launcher.
+
+    Waiver (same line): ``# CELL_FIRE_PATH_OK:<rationale>``. Placeholder rationales are rejected
+    per the Catalog #287 discipline.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    violations: list[str] = []
+    n_considered = n_cell_shaped = 0
+    for path in _cell_fire_candidate_files(root):
+        n_considered += 1
+        text = _read(path)
+        if not text:
+            continue
+        if _CELL_FIRE_LAUNCHER_TOKEN not in text or _CELL_FIRE_CONFIG_TOKEN not in text:
+            continue
+        rel = path.relative_to(root).as_posix()
+        if rel == "tools/cell_queue_driver.py" or rel == "tools/launch_detached_process.py":
+            continue
+        n_cell_shaped += 1
+        lines = text.splitlines()
+        hits = (
+            _shell_launcher_lines(text)
+            if path.suffix == ".sh"
+            else _python_launcher_exec_lines(text)
+        )
+        for lineno in hits:
+            line = lines[lineno - 1] if 0 < lineno <= len(lines) else ""
+            if _waiver_present(line, _CELL_FIRE_WAIVER) or _waiver_present(text, _CELL_FIRE_WAIVER):
+                continue
+            violations.append(
+                f"{rel}:{lineno}: this file LAUNCHES a governed cell directly "
+                f"({_CELL_FIRE_LAUNCHER_TOKEN} + {_CELL_FIRE_CONFIG_TOKEN}). A bespoke fire path "
+                f"re-implements admission privately -- on 2026-09-04 three such scripts each had "
+                f"their own memory rule, one of them the reclaimable-blind `free + inactive` shell "
+                f"basis, and one declared a 2.396 GiB peak for a 49.572 GiB family (20.69x). Fire "
+                f"through `tools/cell_queue_driver.py fire --queue <spec> --cell-id <id>` so the "
+                f"seal law, the storage waterfall, the measured-peak law and admission all run, or "
+                f"add a `# {_CELL_FIRE_WAIVER}:<why this launch may bypass the governor>` waiver."
+            )
+    return _finish(
+        name="check_cell_launches_only_through_queue_driver",
+        tag="cell-fire-path",
+        violations=violations,
+        strict=strict,
+        verbose=verbose,
+        ok_detail=(
+            f"{n_considered} file(s) considered, {n_cell_shaped} carrying both the launcher and "
+            f"run-config tokens"
+        ),
+    )
+
+
+CONFOUND_GATES = (
+    *CONFOUND_GATES,
+    check_cell_launches_only_through_queue_driver,
+)
+
+POSITIVE_CONTROLS = (
+    *POSITIVE_CONTROLS,
+    PositiveControl(
+        gate="check_cell_launches_only_through_queue_driver",
+        files={
+            "experiments/planted_fire_cell.sh": (
+                "#!/bin/bash\n"
+                "set -euo pipefail\n"
+                "NG_PEAK_GIB=2.3959503173828125\n"
+                "FREE=$(vm_stat | awk '/Pages free/{print $3}')\n"
+                "$SRC/.venv/bin/python $SRC/tools/launch_detached_process.py \\\n"
+                "  --output-dir /Volumes/APDataStore/pact/x --derive-resource-budgets \\\n"
+                "  --measured-peak-rss-gib $NG_PEAK_GIB --done-receipt x_DONE.json \\\n"
+                "  -- $SRC/.venv/bin/python $SRC/experiments/trainer.py run-config $S/cfg.json\n"
+            )
+        },
+        must_mention="planted_fire_cell.sh",
+        why=(
+            "The EXACT ng2/ng3/ng4 shape: a shell script that invokes the canonical launcher with "
+            "a hand-typed --measured-peak-rss-gib and a trailing `run-config`. If a future change "
+            "drops the .sh scope, stops requiring the run-config token, keys only on Python exec "
+            "calls, or exempts experiments/ wholesale, this control stops firing and the gate "
+            "reports a clean scan over the very incident it exists for."
+        ),
+    ),
+)
