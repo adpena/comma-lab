@@ -359,6 +359,16 @@ refuses a duplicate, which is how ng3's first smoke attempt was caught.
 Cost: one cell, **~2.95 h** measured on the identical object, **~1.375 GB** retained.
 **No control re-burn** — the control is the already-measured seed-20260902 row above.
 
+**A storage fact MAIN should have, and it is trending the wrong way.** APDataStore held **16 GiB
+free** when this arm sealed, against the 8 GiB reserve every cell's `storage_preflight` enforces.
+ng2 recorded 23 GiB at its seal and ng3 recorded 22 GiB — so the tier is losing roughly 7 GiB per
+generation. ng2's and ng3's cells will retain ~1.375 GB each, ng4's smoke ~0.3 GB and ng4's cell
+another ~1.375 GB: about 3.2 GB against ~8 GiB of usable margin. It clears, but the NEXT generation
+will not without a cold-store sweep. This arm's own footprint is 6 MB on APDataStore plus a 2.0 GB
+sealed source tree on VertigoDataTier (166 GiB free), and that tree is exactly reproducible by
+`git archive 50e2cd280810a2ec74c86ba26e923fa52fbcd217` — the revision IS the certificate, so it is
+losslessly deletable once the cell has burned.
+
 ## Custody (ALWAYS KEEP THE PAYLOAD)
 
 | artifact | path |
