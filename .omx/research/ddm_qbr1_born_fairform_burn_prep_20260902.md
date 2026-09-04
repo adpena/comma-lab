@@ -283,3 +283,11 @@ axis, AdamW's moments (cold first step 6.458× the warm one). ng1 sealed the war
 0.459802 @3k → 0.437715 @4k → **0.435784 @5k (+9.28% above the warm start)**; d_seg_hat 0.0025183 → 0.0027781. Same
 cold-transition excursion, second seed (fourth instance overall; law `cold_transition_excursion_open_then_recover…`).
 Cell 4 (seed 20260903 treatment) fired automatically at the terminal.
+**Seed 2 treatment (seed 20260903, MAIN read 2026-09-04 05:35Z):** S_hat 0.398768 → 0.470973 @1k → 0.480962 @2k →
+0.481415 @3k → 0.464399 @4k → **0.444749 @5k** vs control 0.435784 → **treatment LOSES seed 2 by +0.008965** (seed 1:
++0.002275). Same cold-transition excursion (fifth instance). **Adjudication is DECIDED at 2 of 3 seeds:** the sealed
+rule needs ≥2/3 treatment wins for OPTIMIZATION_LIVE; two losses make it unreachable. Cells 5–6 (seed 20260904) run to
+completion anyway — the chain is a sealed burn under the operator's GO and mutating it is outside MAIN's authority; the
+cost is ~6 h of Metal before ng1's warm cell (the first-order question) fires at the chain's end. The formal
+ADJUDICATION_RESULT.json will read NEGATIVE for `native_interface_weight 0`; the finding of record from QBR1 is the
+cold-transition excursion itself (law `cold_transition_excursion_open_then_recover_three_instances_20260904`).
