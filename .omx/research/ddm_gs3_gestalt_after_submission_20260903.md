@@ -516,3 +516,28 @@ build yet (`--no-source-snapshot` reverts). Pre-existing red: `test_claim_lane_d
 `stale_assumed_dead`/`stale_superseded`) — routed to gov2's owner list. Next move ordinal derives from `.omx/state/pointer_move_events.jsonl` (26).
 Law banked: the number a human typed is the number the apparatus must re-derive ([[m18]] WRITES>READS; the packet is the reader).
 Equations leg (`tac.canonical_equations`): none new — the packet reads the registered laws; it does not add one.
+
+## ADDENDUM 22 (2026-09-04 23:45Z real) — gov2 and ps2 landed: the governor is complete by construction; the packet tracks the pointer
+
+**gov2 (f3d6b5ce0 / 7455580b9), six mechanisms, each drilled against the live ng4 cell:** process-table discovery 0.045 s vs >120 s (>2,600×;
+found ng4 pid 33030 declared 45.0, registry a strict subset; the walk survives only as `--walk-roots` unioned, never substituted) ·
+measured-peak ledger `tools/measured_peaks.py` (9 receipts → 9 rows; **ng4's system-availability delta 49.572 GiB, 28.4× its 1.746 GiB RSS** —
+my "~45" was 9.2% low; ng2 ran a full Metal burn declared at 2.396 GiB, **20.69× under**) · memory-pressure watchdog (10-min report-only drill,
+121 polls, 0 alarms, 0.000 GiB from the blackbox daemon) · ONE fire path through the queue driver with all three cells resolving 49.572 GiB
+FROM_LEDGER, four `.sh` deleted git+SSD, **Catalog #413 STRICT in the same landing, live count 0** · storage waterfall at the launcher (rc=11 on a
+simulated 344 MiB boot volume WITH the snapshot census in the refusal; budget = 2× the family's measured artifact_gib) · concurrency law
+`UNRESOLVED_AT_CONCURRENCY` (rows straddle the baseline 0.964..1.117 → two Metal cells refused by default).
+**Two corrections to my record, from the machine's own log:** the compressor peaked at **76.978 GiB** (not 83) and **the collapse happened
+TWICE** — 16:45:56Z and 17:10–17:11Z — peak swap 72.0 GiB; the whole ramp is **16.06 s** (+6.03 then +9.79 GiB/s), so the watchdog acts on the
+first critical sample, no debounce; and `available_gib` NEVER fell below 18.222 GiB during the collapse — **the free-memory guard is blind to
+this failure by construction** (`free < 1 GiB` rejected as a trigger on a 28.99% base rate over 13,235 samples). Untested in anger: no cell fired
+through the driver yet, the watchdog never fired for real. No equation registered, with the reason stated (host-specific apparatus constants
+are the borrowed constants the registry exists to keep out). Pre-existing: `check_no_bulk_write_strands_the_ready_record` fails at HEAD on
+`experiments/ddm_pr1_*` (MAIN's gate from this morning; MAIN fixes).
+
+**ps2 (107e22ea8):** stage 7 (`fold_fs2_stage`) rebuilds the fs2 bytes ×3 incl. from a clean store (a8f3a379…, 180,023 B; Rice bits
+78,628 → 78,634 = the whole +1 B; identity control reproduces fs1); four negative controls refuse; compliance **83 GREEN / 4 RED of 87, ZERO new red
+classes** (vs ps1 78/7, pq12 80/7) — all three claim-shape reds GREEN on the apparatus-written rows; the four survivors are pq12-frozen. Custody
+seal 60b8d3db… (canonical) → **FIRED by MAIN 23:47Z** (receipt `ps2_t4_custody`; the first real Modal build through hv1's source snapshot).
+The README's `evaluated commit 1c9fbbf5…` pins the public receipts repo, not pact — flagged, unchanged. NOTHING PUBLISHED.
+Equations leg (`tac.canonical_equations`): none new (apparatus constants stay out of the registry by design; ps2 is a byte identity).
