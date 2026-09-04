@@ -392,3 +392,17 @@ d_seg_hat 0.0030151 (control 0.0029336) · d_pose_hat 0.0007383. Falsifier 1's s
 milestone") FAILS at 4k: the warm optimizer state damps the excursion's onset (−0.027/−0.018 at 1k/2k) but the cold
 control RECOVERS faster from 3k on. Read: the moments change the transient's shape, not its cause; the objective/
 schedule (over-paint; τ band) owns the recovery. The 5k paired read decides the composition rule.
+
+## VERDICT (MAIN, 2026-09-04 14:15Z) — the warm cell LOSES; the transition is exonerated as the cause
+
+@5k: S_hat **0.443798** (control 0.425149; Δ **+0.018649**) · d_seg_hat 0.0028681 (control 0.0027589) · d_pose_hat
+0.0007401 (control 0.0006123). Trajectory: 0.398768 → 0.439328 @1k → 0.467442 @2k → 0.461163 @3k → 0.458423 @4k →
+0.443798 @5k. Pre-registered falsifier 1: BOTH clauses fail (never below the start; above the control from 4k on).
+Falsifier 2/3 to be read from the retained payload (md1 has the same-seed pair). READ: carrying r10's AdamW moments
+(accumulated around r10's live weights, applied at the EMA shadow, ‖live−shadow‖/‖live‖ 8.4e-3) damps the excursion's
+onset by ≈0.02–0.03 S_hat and then recovers SLOWER than the cold control, ending +4.4% worse. The cold first steps are
+not the cause of the excursion; the schedule/objective is (sd1: over-paint under a recall-only constraint; gm1: τ band
+at 6.86 δ_R). verdict_scope: FORMULATION (one seed, one cell, this warm-state form). Composition rule → LOSE: ng2 (area
+cap) fires AS SEALED (cold twin), then ng3 (τ band). Equations leg (`tac.canonical_equations`):
+`muon_finisher_schedule_warmstart_and_lr_anneal_v1` gains a NEGATIVE anchor on this vehicle (warm-start-by-moments does
+not re-beat the cold control here) — its domain must say WHICH warm-start form.
