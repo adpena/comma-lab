@@ -766,16 +766,23 @@ def run_report(args) -> int:
     }
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
+    # Persist the READY record first, then the bulk payload, then enrich the record: a failed
+    # bulk save must never strand the run's only readable product (write-order gate,
+    # tac.confound_gates.check_no_bulk_write_strands_the_ready_record).
+    out.write_text(json.dumps(report, indent=2), encoding="utf-8")
     payload_dir = out.parent / f"{out.stem}_payload"
     payload_dir.mkdir(parents=True, exist_ok=True)
     ratio_path = payload_dir / "per_pair_recovery_ratio.npy"
-    np.save(ratio_path, ratio)
-    report["payload"] = {
-        "per_pair_recovery_ratio": {
-            "path": str(ratio_path), "sha256": sha256_array(ratio),
-            "bytes": ratio_path.stat().st_size,
+    try:
+        np.save(ratio_path, ratio)
+        report["payload"] = {
+            "per_pair_recovery_ratio": {
+                "path": str(ratio_path), "sha256": sha256_array(ratio),
+                "bytes": ratio_path.stat().st_size,
+            }
         }
-    }
+    except OSError as exc:
+        report["payload_error"] = f"{type(exc).__name__}: {exc}"
     out.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(json.dumps(report, indent=2))
     return 0
