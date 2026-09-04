@@ -204,3 +204,43 @@ conserving, and the trainer has no area cap). The born field did not get harder 
 painted too much Lane and Movable, and the objective's own clock hid it. The accuracy half of sub-0.12 now has an
 ORDERED race inside the loop: warm transition (sealed) → area cap (chartered) → margin weight / τ at δ_R scale. Every
 prior "the surrogate is miscalibrated" reading in this corpus should be re-read against the τ-schedule identity first.
+
+## ADDENDUM 9 (2026-09-04 05:40Z) — the post-submission wave, in one page
+
+**Pointer:** afr1 S 0.14797617125559104 @ 180,002 B [contest-CUDA T4 n600] — UNMOVED since 08-31; PR #140 posted
+09-03 (pointer field now records it). No exact row was bought this wave; every unit below is MEANS toward the one
+door the accuracy half still has.
+
+**What the fifteen arms measured (all $0, all committed, all in the three legs):**
+- ft1 / ar1: on a TRAINED object, changing any in-loop choice post hoc is paid at the scorer — renderer weights
+  (coupling |Δd_pose|/|Δd_seg| = 217, rf1 166.8; law `renderer_seg_pose_coupling_shipped_object_v1`) and render
+  sampling (footprint render 0.76× d_seg, 32/32 worse; the 6.39× law is an achievable-signal upper bound, domain now
+  says so). → Only in-loop levers remain.
+- QBR1 (seeds 1–2 read; 3 running): BOTH cells open a +22% excursion from a cold optimizer transition (AdamW moments
+  are the only cold axis — no LR schedule exists; 2e-4 is r10's own terminal LR) and end +6.6–9.3% above the warm start.
+  The native-interface-OFF treatment loses both seeds → adjudication decided NEGATIVE at second order.
+- sd1: the loss never saw it — the τ anneal deflates the surrogate 40.5% on a frozen field (exact identity); at fixed τ
+  the surrogate is faithful. The excursion is rare-class OVER-PAINT (Lane ×1.09, Movable ×1.06 at step 2k, mass-
+  conserving) and the trainer has no area cap.
+- gm1: 77.7% of the seg gradient is WASTE (correct pixels outside m_safe); the τ band [2δ_R, δ_R] removes 46–97% of it;
+  the pixel-weight lever's headline setting is exactly INERT; levers couple through Lane.
+- dr1 / eq1 / ql2 / ql3: δ_R n600 = 0.021882 (n96 prefix 11.7% low, annulus-specific — a new detector law); the
+  equations gate is on the commit path (29 → 0, 55% of the backlog was `ratified`⊂`stratified`); two harnesses were
+  deciding R-safety with the retired constant (anti-conservative) — census by VALUE, not by comment.
+
+**The ordered race, sealed and staged (each a twin of the measured cold control, one lever, pre-registered):**
+1. **ng1 warm transition** (r10 AdamW state carried; cold first step 6.46× warm) — fires at the chain's end (≈11:45Z)
+   with one reviewed command; falsifier S_hat(5k) < 0.398768 and below control at every milestone.
+2. **ng2 area cap** (λ_Lane 2799.8, λ_Movable 7587.4 from the trainer's own bincount; cap gradient only 1.25% of the
+   recall term — prior lowered honestly) — re-seal as a WARM twin if 1 wins.
+3. **ng3 τ band** [2δ_R → δ_R] (schedule-leg deflation measured 4.76× smaller at $0; peak RSS 41.5 GiB).
+Then winners pairwise (m164). Every cell ≈3 h Metal. If a cell ends below 0.398768 the qn1 n600 realization ticket
+is the byte-close path to an exact row.
+
+**Equations leg (`tac.canonical_equations`):** `renderer_seg_pose_coupling_shipped_object_v1` · `aa_sdf_observation_footprint_render_dseg_v1`
+(domain refined) · `annulus_restricted_prefix_bias_detector_v1` · `margin_band_satisficing_threshold_v1` (n600 anchor) ·
+`muon_finisher_schedule_warmstart_and_lr_anneal_v1` (ng1) · `chan_vese_area_constraint_birth_balance_v1` (ng2) ·
+`scalar_top1_top2_margin_is_exact_distance_to_flip_v1` (sd1/gm1); the τ-schedule deflation identity awaits ng3's cell as its
+second anchor.
+
+**What this wave did NOT do:** move the pointer. Said plainly, per the means/ends firewall.
