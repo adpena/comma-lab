@@ -291,3 +291,6 @@ completion anyway — the chain is a sealed burn under the operator's GO and mut
 cost is ~6 h of Metal before ng1's warm cell (the first-order question) fires at the chain's end. The formal
 ADJUDICATION_RESULT.json will read NEGATIVE for `native_interface_weight 0`; the finding of record from QBR1 is the
 cold-transition excursion itself (law `cold_transition_excursion_open_then_recover_three_instances_20260904`).
+**Seed 3 control (seed 20260904, MAIN read 2026-09-04 08:22Z):** S_hat 0.398768 → 0.453957 @1k → 0.484131 @2k →
+0.479115 @3k → 0.474665 @4k → **0.437829 @5k (+9.80% above the warm start)**; d_seg_hat 0.0025183 → 0.0028996. The
+cold-transition shape held (fifth cell; three seeds). Cell 6 (seed-3 treatment) fired at the terminal; chain end ≈ 11:20Z.
