@@ -479,3 +479,22 @@ unmoved base body) proves 100% of the win is selector-induced, not pre-existing 
 The pose corner on this object is now nearly drained (fs2 alternation moved one more pair byte-free; the k drop ladder is a staircase).
 Sub-0.12: rate corner −41,817.8 B, distortion corner 215.1×. Equations leg (`tac.canonical_equations`): `exchange_ratio_noise_floor_v1`
 second pure-pose authority anchor.
+
+## ADDENDUM 20 (2026-09-04 23:05Z real) — dk1: the disk was not full of bulk; it was full of Time Machine snapshots
+
+Boot data volume 68 GiB → **211 GiB free** (MEASURED on `/System/Volumes/Data`; `df /` reads the sealed system volume). 110.40 GiB
+reclaimed under certificate, zero uncertified bytes deleted, reconstructibility PROVEN (ddm_eu1 rebuilt from its cert row, tree sha
+identical). **The mechanism inverted the charter's prediction:** 21 APFS Time Machine LOCAL SNAPSHOTS pinned every deleted byte —
+a certified 32.97 GiB deletion freed +1 GiB; thinning the snapshots freed +65 GiB; ap1's 56.34 GiB move freed exactly 0 until one more
+thin. The TM destination is a NETWORK share (`smb://bat00-tm.local`); when unreachable, local snapshots accumulate hourly and are never
+thinned. **Law for this machine: no reclaim frees anything until local snapshots are thinned, and they regenerate hourly.** Operator
+item: the TM network backup is unreachable/stale; dk1 thinned all 21 snapshots (gentlest urgency thinned more than intended) WITHOUT
+verifying the network backup's currency — if a lost file's only copy lived in a local snapshot, that path is gone (stated plainly).
+Cert classes: git-reconstructible DELETE 32.97 GiB (12 trees) · ap1 advisory frames MOVE 56.34 GiB · stale codex logs MOVE 21.09 GiB;
+symlinks + `MOVED_TO.json` left; 9 worktrees removed by plain `git worktree remove`. Blocked, correctly: `ddm_mst1` 20.55 GiB (all
+`retained/`), `arm_receipts_local` 39.7 GiB (every store has a `retained/` or `.pt`), 12 dirty worktrees 20.79 GiB, `ddm_lt1` (2 refs
+absent). Four bugs dk1 caught in its own output (vacuous fully-blocked census; deref failure read as absence; DST-wrong UTC parse; the
+never-touch test judged the candidate's path not its descendants — `ddm_mst1` was offered as movable) — all with regression tests (61).
+Routed to gov2: the launcher's storage waterfall must read CONTAINER free space and snapshot-pinned bytes (`tmutil listlocalsnapshots`),
+and the reclaim cadence (`docs/runbooks/local_disk_reclaim_cadence.md`) must thin snapshots first. `experiments/results` 149 GB owed
+its own arm. Equations leg (`tac.canonical_equations`): none — disk hygiene moves no score.
