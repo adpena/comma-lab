@@ -939,6 +939,7 @@ def queue_spec(sealed_tree: Path | None = None) -> dict[str, Any]:
     tree = sealed_tree or Path(manifest["root"])
     receipt = _read_json(ARM_ROOT / "SEAL_RECEIPT.json", "seal receipt")
     cell = _read_json(rerooted, "re-rooted config")
+    authorized = ARM_ROOT / "authorized_configs" / f"{CELL_ID}.json"
     # The driver's falsifiers are DOTTED PATHS INTO A HISTORY ROW, and history rows carry no
     # S_hat -- that lives in MILESTONE.json.  So the driver gets the two MECHANISM falsifiers it
     # can actually see (both are inert-lever detectors: a lever that did not reach the loop), and
@@ -966,12 +967,33 @@ def queue_spec(sealed_tree: Path | None = None) -> dict[str, Any]:
                 "cell_id": CELL_ID,
                 "sealed_config": str(rerooted),
                 "sealed_tree": str(tree),
-                "authorized_config": str(ARM_ROOT / "authorized_configs" / f"{CELL_ID}.json"),
+                "authorized_config": str(authorized),
+                # The FULL launcher command, the shape ``chain.launcher_output_dir`` parses.
+                # ``--measured-peak-rss-gib`` carries a NON-NUMERIC placeholder on purpose: the
+                # queue driver rewrites it from the measured-peak ledger before every fire, and if
+                # it ever reached the launcher unrewritten argparse's ``type=float`` refuses it.
+                # A numeric placeholder would instead launch a 5,000-step Metal cell on a number
+                # nobody measured -- the RSS fiction ng4 named ([[m101]] the governor exists).
                 "launcher_argv": [
+                    str(tree / ".venv/bin/python"),
+                    str(tree / "tools/launch_detached_process.py"),
+                    "--output-dir", str(NG5_RUN_ROOT / "launch" / CELL_ID),
+                    "--cwd", str(tree),
+                    "--purpose", f"NG5 two-lever composition cell {CELL_ID}",
+                    "--authority",
+                    "ddm_ng5 sealed cell, fired through gov2's queue driver; "
+                    "[macOS-MPS n32 stratified advisory] -- not contest authority",
+                    "--derive-resource-budgets",
+                    "--measured-peak-rss-gib",
+                    "REWRITTEN_BY_THE_QUEUE_DRIVER_FROM_THE_MEASURED_PEAK_LEDGER",
+                    "--measured-thread-need", "4",
+                    "--walltime-cap-s", "18000",
+                    "--done-receipt", "ng5_composition_DONE.json",
+                    "--",
                     str(tree / ".venv/bin/python"),
                     str(tree / "experiments/ddm_qbr1_born_fairform_burn_prep.py"),
                     "run-config",
-                    str(ARM_ROOT / "authorized_configs" / f"{CELL_ID}.json"),
+                    str(authorized),
                 ],
                 "done_receipt": "ng5_composition_DONE.json",
                 "scorer_lane_prefix": "ng5_composition_scorer",
