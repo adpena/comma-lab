@@ -252,3 +252,26 @@ frontier remains AFR1 at `S=0.14797617125559104`, `180,002 B`, archive SHA-256
 The sealed fair-form burn takes its EMA decay from run geometry rather than the legacy 0.997 constant — the law's whole point ([[m21]] constants→laws). BUILD-COMPLETE and BURN-NOT-FIRED, so this memo consumes the law and adds no anchor to it.
 
 This memo's Catalog #344 trigger was the word **stratified** — `"ratified"` is a substring of it, and the gate matched plainly. MEASURED by this arm: 16 of the 29 live memos (55.2%) tripped the gate ONLY that way, i.e. the gate was flagging the memos that did their sampling right. Fixed in the same batch (`(?<!st)ratified`); the disposition above stands on its own merit, not on the misfire.
+
+## ADDENDUM (MAIN, 2026-09-04) — seed 1 read: the schedule degrades the warm start; the native-interface term is second-order
+
+MEASURED (n32 stratified HT, sealed cells, `milestones/step_*/MILESTONE.json`; `[macOS-Metal advisory]`, MPS↔CPU gap
+bounded at 0.06%/0.14% by ar1's calibration legs):
+
+| step | control S_hat | treatment S_hat | control d_seg_hat | treatment d_seg_hat |
+|---:|---|---|---|---|
+| 0 | 0.398768 | 0.398768 | 0.0025183 | 0.0025183 |
+| 1,000 | 0.466875 | 0.478718 | 0.0030511 | 0.0031409 |
+| 2,000 | 0.485677 | 0.486779 | 0.0032171 | 0.0032336 |
+| 5,000 | **0.425149** | **0.427424** | 0.0027589 | 0.0027707 |
+
+Seed 20260902: **treatment LOSES** (ΔS_hat +0.002275; pose corner d_pose_hat 6.30e-4 vs 6.12e-4, both far above
+the corner). The first-order fact dwarfs the discriminator: **both arms open a +22% S_hat excursion by step 2,000 and
+recover with the LR anneal, ending +6.6% / +7.2% ABOVE the warm start**, while the loss surrogate
+(`seg_expected_flip_realized` 0.00502 → 0.00325) fell the whole way — the surrogate decoupled from the exact argmax.
+This is ft1's open-then-recover shape (+31% → +6.5%) on a second object, and vr1 row 11's warm-start law predicted it:
+a cold optimizer/LR transition near a piecewise-constant argmax field thrashes the boundary. Third instance of the
+genus in two days. Cells 3–6 continue as pre-registered (the discriminator — `objective.native_interface_weight` 100 vs 0, the ONLY
+field the two sealed configs differ in; verified by diffing them — stays a valid second-order read), but the
+NEXT burn generation's FIRST race is the transition itself (warm optimizer state, LR at the object's own tail,
+momentum carried), pre-registered falsifier: the warm-started cell must end BELOW 0.398768 at 5,000 steps.
