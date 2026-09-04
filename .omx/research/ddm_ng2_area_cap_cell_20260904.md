@@ -432,3 +432,20 @@ S_hat is pose. ng2's own caution (cap gradient 1.25% of the recall term at the l
 the ×80 parity multiplier is the conditional next lever, but md1 bounds ALL schedule levers at 1.61× — race it only if
 a cell slot is otherwise idle. Concurrency measured (operator 09-04 'saturate'): ng2 20 steps/min + ng3 15 steps/min
 = 35/min against 28/min serial (+25% throughput on the Metal).
+
+## TERMINAL READ (MAIN, 2026-09-04 21:45Z real; cell DONE 18:43Z rc0, 15,742 s, all payloads retained)
+
+| step | S_hat cap cell | S_hat cold control | Δ | d_seg_hat | d_pose_hat | bytes |
+|---|---|---|---|---|---|---|
+| 0 | 0.398768 | 0.398768 | 0 | 0.0025183 | 5.757e-4 | 106,714 |
+| 1000 | 0.457666 | 0.466875 | −0.009209 | 0.0030510 | 6.645e-4 | 106,704 |
+| 2000 | 0.482893 | 0.485677 | −0.002784 | 0.0032483 | 7.577e-4 | 106,649 |
+| 3000 | 0.464497 | 0.475383 | −0.010886 | 0.0030658 | 7.547e-4 | 106,704 |
+| 4000 | 0.459034 | 0.442190 | **+0.016844** | 0.0029153 | 9.315e-4 | 106,609 |
+| 5000 | 0.421042 | 0.425149 | −0.004107 | 0.0027912 | 5.032e-4 | 106,603 |
+
+**Pre-registered rule: S_hat(5000) < 0.42514878 AND S_hat(2000) < 0.48567678 — BOTH HOLD, by −0.97% and −0.57%.** MEASURED. But the
+read is MARGINAL: the @4000 row is +3.8% WORSE than the control, the excursion peak (0.4829 @2k) is essentially the control's (0.4857),
+and the terminal d_seg 0.0027912 is +10.8% ABOVE the start (0.0025183) — the cap did not stop the over-paint, it shaved ~0.6% off it.
+Verdict: the area cap is a WEAK lever on this vehicle (≤1% of S_hat; ordering vs ng3's τ band below). Not a composition candidate on
+its own; re-read only inside a composition with the τ band if ng4 also wins.

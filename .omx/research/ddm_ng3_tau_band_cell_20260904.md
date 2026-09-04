@@ -408,3 +408,25 @@ of the cure rather than on this design.
 **Own-vehicle frontier: NOT MOVED** — this arm designs, gates and seals; it trained nothing,
 byte-closed nothing, and could not move the pointer.
 `afr1 S 0.14797617125559104 @ 180,002 B [contest-CUDA T4 n600] — UNMOVED`.
+
+## TERMINAL READ (MAIN, 2026-09-04 21:45Z real; cell DONE 19:53Z rc0, 15,642 s, all payloads retained)
+
+| step | S_hat τ-band cell | S_hat cold control | Δ | d_seg_hat | d_pose_hat | bytes |
+|---|---|---|---|---|---|---|
+| 0 | 0.398768 | 0.398768 | 0 | 0.0025183 | 5.757e-4 | 106,714 |
+| 1000 | 0.434661 | 0.466875 | −0.032214 | 0.0027411 | 8.006e-4 | 106,741 |
+| 2000 | 0.435601 | 0.485677 | −0.050076 | 0.0027546 | 7.933e-4 | 106,739 |
+| 3000 | 0.403796 | 0.475383 | −0.071587 | 0.0025696 | 5.749e-4 | 106,657 |
+| 4000 | 0.401233 | 0.442190 | −0.040957 | 0.0025121 | 6.243e-4 | 106,641 |
+| 5000 | **0.391810** | 0.425149 | **−0.033339 (−7.84%)** | **0.0024881** | 5.184e-4 | 106,637 |
+
+**Pre-registered rule: BOTH HOLD by wide margins (−7.8% @5k, −10.3% @2k). The τ band [2δ_R, δ_R] is the FIRST cell of the entire burn
+series to END BELOW ITS START (0.391810 < 0.398768: −1.74%)**: the excursion peak fell from +21.8% (control @2k) to +9.2% (@2k) and
+terminal d_seg fell 1.2% below the start (0.0024881 vs 0.0025183) while every other cell ended above it. d_pose −10% and bytes −77 B
+also both better than the start. MEASURED, n600 realized-through-R on the born vehicle, seed_20260902, `[macOS-MLX research-signal]`.
+Ordering of the four levers at @5k vs control: τ band −7.84% ≫ area cap −0.97% > cold 0 > warm +4.4% (ng1 +0.018649).
+What it does NOT change: the accuracy corner needs d_seg ≤ 1.36e-4 — 18.3× below this terminal; md1's persistent-partition closure
+(62% of born d_seg optimizer-unreachable; schedule levers ≤1.61×) stands — this lever is 1.012× on d_seg. The τ band is a burn-quality
+lever, not an accuracy-corner opener. Next: ng4 (continuous objective) reads the last single lever; the first COMPOSITION cell is
+τ-band × continuous-objective, fired only if ng4 wins its own rule (four levers, each read alone first — the arm's precondition).
+Equations leg (`tac.canonical_equations`): gm1's τ-band law gains its first full-burn anchor (excursion −58%, terminal −7.84%).
