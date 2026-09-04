@@ -640,6 +640,48 @@ def dual_ascent_margin_constraints(
     return updated
 
 
+#: The expected-flip band this lineage has shipped since it began.  It is TWO FREE LITERALS --
+#: nothing derives them -- which is exactly why ddm_ng3 re-based them on a measured quantity.
+LEGACY_EXPECTED_FLIP_TAU_BAND = (0.15, 0.05)
+_ADMISSIBLE_TAU_BANDS_CACHE: tuple[tuple[float, float], ...] | None = None
+
+
+def admissible_expected_flip_tau_bands() -> tuple[tuple[float, float], ...]:
+    """The expected-flip ``(start, end)`` bands a compiled config may declare.
+
+    This check used to pin the literal pair ``(0.15, 0.05)``.  ddm_gm1 MEASURED at n600 that at
+    ``tau = 0.15`` **77.7% of the seg gradient lands on already-correct pixels outside**
+    ``m_safe = headroom * delta_R`` -- the round trip cannot flip them, so that gradient buys
+    nothing the score can see -- and DERIVED the band ``(m_safe, delta_R)`` as the cure.  The
+    literal pin would have refused the derived band while its own error message called it
+    "derived", so the check is WIDENED by exactly one point rather than bypassed: the second
+    admissible band is not a new literal, it is resolved live through the registered law
+    ``margin_band_satisficing_threshold_v1``.  Any third band is still refused.
+
+    Cached because ``validate_config`` runs on every compile and the law reads an artifact from
+    disk; the cache holds only the law's own deterministic output.  The cache is deliberately
+    NOT invalidated, and the composition is fail-closed in the right direction: this gate is the
+    PERMISSIVE one (it only widens the admissible set), while the QBR1 cell gate
+    ``ddm_qbr1_born_fairform_burn_prep.validate_tau_band_block`` re-resolves the law FRESH on
+    every call and additionally refuses a WAIVER-fallback resolution or a different ``n_frames``.
+    A regenerated artifact therefore makes the strict gate refuse, never the permissive one
+    accept something the strict gate would have caught -- do not "fix" this by caching there too.
+    """
+
+    global _ADMISSIBLE_TAU_BANDS_CACHE
+    if _ADMISSIBLE_TAU_BANDS_CACHE is None:
+        from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (
+            resolve_margin_band_threshold,
+        )
+
+        resolved = resolve_margin_band_threshold()
+        _ADMISSIBLE_TAU_BANDS_CACHE = (
+            LEGACY_EXPECTED_FLIP_TAU_BAND,
+            (float(resolved.m_safe), float(resolved.delta_r)),
+        )
+    return _ADMISSIBLE_TAU_BANDS_CACHE
+
+
 def tau_for_step(step: int, total_steps: int, start: float = 0.15, end: float = 0.05) -> float:
     if total_steps < 1 or not 0 <= step < total_steps or not start > end > 0:
         raise QBT1Error("expected-flip schedule geometry differs")
@@ -2480,7 +2522,7 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
     if (
         float(config["expected_flip_tau_start"]),
         float(config["expected_flip_tau_end"]),
-    ) != (0.15, 0.05):
+    ) not in admissible_expected_flip_tau_bands():
         raise QBT1Error("derived expected-flip schedule differs")
     if (int(config["render_height"]), int(config["render_width"])) != (EVAL_H, EVAL_W):
         raise QBT1Error("QBF1 scorer grid differs")

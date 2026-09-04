@@ -4940,6 +4940,131 @@ def compile_qbr1_area_cap_config(lever: Lever) -> dict:
     return block
 
 
+#: The two expected-flip temperature bands a QBR1-lineage cell may declare.  ``legacy`` is the
+#: literal pair every QBR1 cell has run since the lineage began; ``msafe_band`` is the
+#: law-resolved band ddm_gm1 DERIVED.  Any third band is refused by both validators.
+QBR1_TAU_BAND_MODES = ("legacy", "msafe_band")
+QBR1_LEGACY_TAU_BAND = (0.15, 0.05)
+
+
+def ExpectedFlipTauBandMsafe(mode: str = "msafe_band", headroom: float | None = None,
+                             delta_r_artifact: str | Path | None = None,
+                             window: int = 0) -> Lever:
+    """ddm_ng3 — the expected-flip temperature band at the MEASURED R-noise scale, on the QBR1
+    CONFIG surface (sister of :func:`AreaCapBornRareClass`; same vehicle, same compile target).
+
+    The QBR1 objective's seg term is ``sigmoid(-margin/tau)``
+    (``experiments/ddm_qbt1_qbflow_trainer.py:544-565``) and ``tau`` anneals linearly over the run
+    (``:643`` ``tau_for_step``).  The shipped band ``0.15 -> 0.05`` is **two free literals**: nothing
+    derives them, and in the units the score actually lives in they are ``6.86 -> 2.29`` times the
+    MEASURED round-trip noise floor ``delta_R``.  ddm_gm1 MEASURED what that costs at n600
+    (``.omx/research/ddm_gm1_gradient_mass_at_n600_msafe_20260904.md``): at ``tau = 0.15``,
+    **77.7% of the seg gradient lands on pixels that are already correct AND outside**
+    ``m_safe = 2*delta_R`` -- pixels the uint8 round trip cannot flip, so the gradient spent there
+    buys nothing the score can see.
+
+    This lever replaces the two literals with the law's own output:
+
+    * ``tau_start = m_safe = headroom * delta_R`` -- at ``tau = m_safe`` the surrogate's soft band
+      is MATCHED to the satisficing band instead of being 4-12x wider than it, so the loss stops
+      paying for structure R erases.  Removes 45.6% of the wasted mass at step 0 (MEASURED, gm1 §5).
+    * ``tau_end = delta_R`` -- the physical floor of "decided".  Below ``delta_R`` the loss would be
+      optimizing inside the band where the round trip's own noise picks the class.
+    * the ratio stays 2:1, so the coarse->fine anneal SURVIVES; only its scale is re-based.
+
+    Two consequences travel with it, both MEASURED by gm1 and neither of them a preference:
+
+    * it cuts the tau-schedule leg of the reported surrogate from -41.30% to -8.57% (4.8x), the
+      ddm_sd1 artefact that let a monotone-FALLING loss coexist with a monotone-WORSENING argmax;
+    * it de-prioritizes **Lane** by 1.60-2.08x of relative gradient share, and raises the Lane
+      over-push of a GLOBAL ``m_safe`` cap from 2.76% to 17.45%.  Lane is 0.59% of area but
+      ~90.1% of the rate demand ([[m131]]), so a band race that does not read the per-class share
+      is trading the rate-binding class for the majority class.  The per-class ``m_safe_c`` cap is
+      the FOLDED cure, not an independent race ([[m148]]: the band changes the object the cap acts on).
+
+    ``mode="legacy"`` emits the historical literal pair, so the same factory expresses both arms of
+    the race and a control is never a hand-written config.  ``delta_R`` is NEVER carried as a
+    literal here: it is resolved through ``margin_band_satisficing_threshold_v1`` at compile time
+    and the emitted block carries the law's own manifest, so a sealed config records where its two
+    numbers came from.  ``window=0`` = loss-config lever, no budget of its own.  Advisory until
+    byte-closed."""
+    if mode not in QBR1_TAU_BAND_MODES:
+        raise ValueError(
+            f"ExpectedFlipTauBandMsafe: mode must be one of {QBR1_TAU_BAND_MODES}, got {mode!r}"
+        )
+    from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (
+        DELTA_R_ARTIFACT,
+        INVARIANT_FP_TOL,
+        resolve_margin_band_threshold,
+    )
+
+    if delta_r_artifact is None:
+        delta_r_artifact = DELTA_R_ARTIFACT
+    resolved = resolve_margin_band_threshold(
+        headroom=headroom, artifact_path=delta_r_artifact, repo_root=_REPO_ROOT,
+    )
+    # Self-protect: the emitted band may never disagree with its defining law.
+    if not math.isclose(resolved.m_safe, resolved.headroom * resolved.delta_r,
+                        rel_tol=INVARIANT_FP_TOL, abs_tol=INVARIANT_FP_TOL):
+        raise ValueError(
+            "ExpectedFlipTauBandMsafe: REFUSE inconsistent canonical resolution: "
+            f"m_safe={resolved.m_safe!r}, headroom*delta_R={resolved.headroom * resolved.delta_r!r}"
+        )
+    if mode == "legacy":
+        start, end = QBR1_LEGACY_TAU_BAND
+    else:
+        start, end = resolved.m_safe, resolved.delta_r
+    # tau_for_step refuses anything but a strictly decreasing positive band; refuse it HERE too so
+    # a bad resolution cannot reach a sealed config in the first place.
+    if not start > end > 0.0:
+        raise ValueError(
+            f"ExpectedFlipTauBandMsafe: band must satisfy start > end > 0, got {start!r} > {end!r}"
+        )
+    return Lever(
+        "ng3_expected_flip_tau_band_msafe",
+        overrides={"expected_flip_tau.law": "margin_band_satisficing_threshold_v1",
+                   "expected_flip_tau.mode": mode,
+                   "expected_flip_tau.form": "linear_anneal_start_to_end_over_total_steps",
+                   "expected_flip_tau.start": float(start),
+                   "expected_flip_tau.end": float(end),
+                   "expected_flip_tau.delta_r": float(resolved.delta_r),
+                   "expected_flip_tau.m_safe": float(resolved.m_safe),
+                   "expected_flip_tau.headroom": float(resolved.headroom),
+                   "expected_flip_tau.n_frames": int(resolved.n_frames),
+                   "expected_flip_tau.artifact_path": str(resolved.artifact_path),
+                   "expected_flip_tau.artifact_fallback_used": bool(
+                       resolved.artifact_fallback_used),
+                   "expected_flip_tau.lawref_fallback_used": bool(resolved.lawref_fallback_used),
+                   "expected_flip_tau.lawref_manifest": resolved.lawref_manifest},
+        epochs_delta=window,
+        notes=("ddm_ng3: the expected-flip temperature band re-based on the MEASURED R-noise "
+               "floor -- tau_start=m_safe=headroom*delta_R, tau_end=delta_R, both resolved "
+               "through margin_band_satisficing_threshold_v1 at compile time (no literal in "
+               "source); removes 45.6-77.7% of the wasted seg gradient gm1 MEASURED at n600 and "
+               "cuts sd1's tau-schedule reporting leg 4.8x; costs Lane 1.60-2.08x of relative "
+               "gradient share, so the per-class m_safe_c cap is the FOLDED cure; advisory "
+               "until byte-closed"))
+
+
+def compile_qbr1_tau_band_config(lever: Lever) -> tuple[dict, float, float]:
+    """Turn :func:`ExpectedFlipTauBandMsafe`'s dotted overrides into the QBR1 surface.
+
+    Returns ``(tau_band_block, tau_start, tau_end)``.  The two scalars are TOP-LEVEL QBR1 config
+    keys (``expected_flip_tau_start`` / ``expected_flip_tau_end``) because that is what
+    ``ddm_qbr1_born_fairform_burn_prep.py:619-623`` actually reads; the block beside them is the
+    provenance the validator re-derives.  Splitting them is deliberate: the trainer must be able
+    to run without knowing about the block, and the validator must be able to refuse a config
+    whose scalars and block disagree.  Fails closed on any override outside the namespace."""
+    block: dict = {}
+    for key, value in lever.overrides.items():
+        if not key.startswith("expected_flip_tau."):
+            raise ValueError(f"compile_qbr1_tau_band_config: unexpected override {key!r}")
+        block[key[len("expected_flip_tau."):]] = value
+    if not block:
+        raise ValueError("compile_qbr1_tau_band_config: lever declares no expected_flip_tau overrides")
+    return block, float(block["start"]), float(block["end"])
+
+
 def BirthCompletionEvent(tau_persist: float = 0.8, area_band: float = 0.25,
                          ramp_epochs: int = 50, post_level: float = 0.0,
                          classes: str = "1,3", window: int = 0,

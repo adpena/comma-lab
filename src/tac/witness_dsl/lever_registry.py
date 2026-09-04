@@ -650,6 +650,21 @@ def _composability_check(name: str) -> tuple[object | None, str | None]:
             f"returns {type(lever).__name__} (a composite / non-Lever) — not composable "
             "via --dsl-lever (compose its parts individually, e.g. StiefelW + "
             "CodeSpectralEntropy instead of DM1Minimal)")
+    # ``--dsl-lever NAME`` composes onto the live trainer's ARGV.  A Lever whose overrides are
+    # dotted CONFIG keys targets a compiled-JSON vehicle instead (the QBR1/born cells:
+    # ``AreaCapBornRareClass`` -> ``area_cap.*``, ``ExpectedFlipTauBandMsafe`` ->
+    # ``expected_flip_tau.*``) and cannot be rendered as argv at all -- ``_render_argv`` would
+    # emit bare words the trainer argparse refuses.  Excluding them STRUCTURALLY, by the shape of
+    # what they emit, rather than accidentally by whether their factory happens to take a
+    # required argument: ddm_ng3 found that a config-surface lever with all-default parameters
+    # slips into the composable set and fails the CI parse-test with an unrecognized-argument
+    # error that names neither the lever nor the reason.
+    non_flag = sorted(key for key in lever.overrides if not str(key).startswith("--"))
+    if non_flag:
+        return None, (
+            f"emits CONFIG-surface keys {non_flag[:3]} rather than trainer flags — not "
+            "composable via --dsl-lever (it targets a compiled-JSON cell; compile it through "
+            "its own config compiler, e.g. compile_qbr1_tau_band_config)")
     return lever, None
 
 

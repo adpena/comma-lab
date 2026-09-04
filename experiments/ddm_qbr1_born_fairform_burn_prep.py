@@ -32,6 +32,12 @@ if str(_IMPORT_REPO) not in sys.path:
     sys.path.insert(0, str(_IMPORT_REPO))
 
 from experiments import ddm_qbt1_qbflow_trainer as qbt
+from tac.witness_dsl.curriculum_dsl import (
+    QBR1_LEGACY_TAU_BAND as LEGACY_TAU_BAND,
+)
+from tac.witness_dsl.curriculum_dsl import (
+    QBR1_TAU_BAND_MODES as TAU_BAND_MODES,
+)
 
 REPO = Path(__file__).resolve().parents[1]
 AP_ROOT = Path("/Volumes/APDataStore/pact/ddm_wc3_qbr1_ema_law_cure")
@@ -79,7 +85,19 @@ EXPECTED_SHA256 = {
     # NOTE: 4a7ae5ca0 re-pinned packet_schema INSIDE the trainer and so moved the trainer's own
     # bytes without moving this pin -- verify_inputs() has been refusing in the working tree
     # since then.  This re-pin closes that link as well.
-    "qbt_trainer": "9f74641c888e18403ed0ba10dfcd3a0e6ef8efcef170faa870b8177a5b883f8f",
+    # 2026-09-04 re-pin (ddm_ng3): the trainer's expected-flip tau geometry check was
+    # WIDENED from the literal pair (0.15, 0.05) to the two admissible bands returned by
+    # `admissible_expected_flip_tau_bands()` -- the second resolved live through
+    # margin_band_satisficing_threshold_v1, never carried as a literal.  No training-path
+    # byte moved: the added function is called only from `validate_config`, and the sealed
+    # control's legacy band is still accepted by the same branch it always took.  ng3's
+    # bounded smoke MEASURES that claim (control step-1 state reproduces ng1's pre-telemetry
+    # cold reference sha 27f51418... bit-for-bit).  Prior pins, newest first:
+    # 9f74641c888e18403ed0ba10dfcd3a0e6ef8efcef170faa870b8177a5b883f8f (ddm_ng2, area cap +
+    # fixed-tau telemetry row), 6eda9c202b3aee008d457373813ae07992e73902438cca114abb4c84bb8d980b
+    # (the sealed QBR1 tree at sealed_source_106d0dd0_v2, which the live chain still runs and
+    # which is NOT touched).
+    "qbt_trainer": "c8ff9dbd332b165d2997cd146d661063c8ff193245a21e91f4629ceb6267cb38",
     "ce1_target_margin": "ffdf098801863ff8bffe8bd818ce101928dd75b4937cbbffb2e225bddbc12f4b",
     "w96b_law_module": "053bd12e198bb74a44036e497a1277d9d36638c96acdabba278a2c72f2234923",
     "r10_checkpoint": "09fd416531c74f69ca7033cf3f13b23c9e0472486a97ce9973f62f2fb86c138f",
@@ -300,6 +318,90 @@ def validate_area_cap_block(config: Mapping[str, Any]) -> None:
             raise QBR1Error(f"area cap lambda is not the law's value for {class_name}")
 
 
+def validate_tau_band_block(config: Mapping[str, Any]) -> None:
+    """Fail closed on the expected-flip temperature band -- the gate this path did NOT have.
+
+    ddm_ng3 MEASURED that ``qbt.validate_config`` (which pins the literal pair ``(0.15, 0.05)``
+    at its own ``:2481-2483``) is NEVER called on a QBR1 cell: this module validates through
+    ``validate_config`` below, whose field set is disjoint from qbt's, so until this function
+    existed **any** tau pair reached ``tau_for_step`` unchecked.  That is a hole, not a gate, and
+    it is the reason a band lever must close it rather than route around it.
+
+    Two admissible bands and no third:
+
+    * no ``tau_band`` block  => the config MUST carry the legacy literal pair.  Every sealed QBR1
+      cell that predates ng3 satisfies this branch unchanged, so the live chain's configs and the
+      cold control of record stay valid.
+    * a ``tau_band`` block   => every scalar in it is RE-DERIVED here through
+      ``margin_band_satisficing_threshold_v1``, and the two top-level keys the trainer actually
+      reads must equal the block's own endpoints exactly.  A hand-edited temperature that the
+      block's stated law does not imply is refused, exactly as ``validate_area_cap_block``
+      refuses a hand-edited stiffness.
+    """
+
+    declared = (float(config["expected_flip_tau_start"]), float(config["expected_flip_tau_end"]))
+    tau_band = config.get("tau_band")
+    if tau_band is None:
+        if declared != LEGACY_TAU_BAND:
+            raise QBR1Error(
+                "expected-flip band differs from the sealed literal pair and declares no "
+                f"tau_band provenance block: {declared}"
+            )
+        return
+    if not isinstance(tau_band, Mapping):
+        raise QBR1Error("tau_band must be a mapping")
+    if str(tau_band.get("law")) != "margin_band_satisficing_threshold_v1":
+        raise QBR1Error("tau band must cite the registered margin-band law")
+    if str(tau_band.get("form")) != "linear_anneal_start_to_end_over_total_steps":
+        raise QBR1Error("tau band form differs from the sealed linear anneal")
+    mode = str(tau_band.get("mode"))
+    if mode not in TAU_BAND_MODES:
+        raise QBR1Error(f"tau band mode differs: {mode!r}")
+    missing = [key for key in ("start", "end", "delta_r", "m_safe", "headroom", "n_frames")
+               if key not in tau_band]
+    if missing:
+        raise QBR1Error(f"tau band block is missing required provenance: {missing}")
+    from tac.canonical_equations.margin_band_satisficing_threshold_20260712 import (
+        resolve_margin_band_threshold,
+    )
+
+    # headroom=None => the law DERIVES it (the smallest integer factor covering the artifact's
+    # own full-R annulus p95).  Resolving with the config's declared headroom instead would make
+    # the block self-consistent for ANY headroom -- a free knob wearing a law's name, and the one
+    # the qbt-level gate would not accept.  The law does allow headroom 3 as a future treatment;
+    # taking it is then a visible one-line act here, not a silent config edit ([[m21]] constants
+    # become laws, and a law's treatment values stay a TRACKED queue rather than a default).
+    resolved = resolve_margin_band_threshold()
+    if float(tau_band["headroom"]) != float(resolved.headroom):
+        raise QBR1Error(
+            "tau band headroom is not the law's DERIVED default: "
+            f"{tau_band['headroom']!r} vs {resolved.headroom!r}"
+        )
+    for key, live in (
+        ("delta_r", resolved.delta_r),
+        ("m_safe", resolved.m_safe),
+        ("headroom", resolved.headroom),
+    ):
+        if abs(float(tau_band[key]) - float(live)) > 1.0e-12 * max(1.0, abs(float(live))):
+            raise QBR1Error(f"tau band {key} is not the law's live value")
+    if int(tau_band["n_frames"]) != int(resolved.n_frames):
+        raise QBR1Error("tau band was resolved on a different delta_R population")
+    if bool(tau_band.get("artifact_fallback_used")) or bool(tau_band.get("lawref_fallback_used")):
+        raise QBR1Error("tau band must resolve from the MEASURED artifact, never the WAIVER fallback")
+    expected = LEGACY_TAU_BAND if mode == "legacy" else (resolved.m_safe, resolved.delta_r)
+    if (float(tau_band["start"]), float(tau_band["end"])) != expected:
+        raise QBR1Error(f"tau band endpoints are not the law's {mode} band")
+    if declared != expected:
+        raise QBR1Error(
+            "the trainer-read tau scalars disagree with the tau_band block: "
+            f"{declared} vs {expected}"
+        )
+    # tau_for_step's own geometry contract, asserted before a 5,000-update burn rather than at
+    # update 0 inside it.
+    if not expected[0] > expected[1] > 0.0:
+        raise QBR1Error("tau band violates start > end > 0")
+
+
 def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool = True) -> None:
     if config.get("schema") != SCHEMA or config.get("arm_name") not in ARMS:
         raise QBR1Error("QBR config schema or arm differs")
@@ -332,6 +434,7 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
     if config["source_pins"] != verify_inputs():
         raise QBR1Error("QBR source pins differ from live exact inputs")
     validate_area_cap_block(config)
+    validate_tau_band_block(config)
     if require_launch_authority:
         if config.get("device") != "mps" or config.get("launch_authorized") is not True:
             raise QBR1Error("MAIN has not authorized this Metal burn")
