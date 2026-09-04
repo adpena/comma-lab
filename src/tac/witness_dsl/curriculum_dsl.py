@@ -40,8 +40,15 @@ from typing import TYPE_CHECKING
 
 from tac.witness_dsl.basis_control import normalize_basis_family
 
+# RE-EXPORT, not a use (ddm_ql3, 2026-09-04): the C2 ``IntegerPlaneEmitter`` factory now lives in
+# its own module because it emits flags owned by the dedicated C2 band trainer, and only a module
+# can declare that trainer (``TRAINER_RELPATH``) to the lever registry. Graded here it produced a
+# false ``completeness().stale`` report of its own three live flags. Keeping the name importable
+# from ``curriculum_dsl`` preserves every historical import path; the module scope is one-way
+# (that module never imports this one at module scope) so no cycle is created.
+from tac.witness_dsl.integer_plane_emitter_lever import IntegerPlaneEmitter  # noqa: F401
+
 if TYPE_CHECKING:
-    from tac.witness_dsl.integer_plane_emitter_policy import IntegerPlaneEmitterPolicy
     from tac.witness_dsl.yhat_native_generator_policy import YhatNativeGeneratorPolicy
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -2106,56 +2113,6 @@ def YhatNativeGenerator(*, policy: YhatNativeGeneratorPolicy) -> Lever:
         notes="argv-inert default-OFF policy; n24 receipt closed; receiver/archive gates owed",
         lawrefs={},
         constant_manifest={},
-    )
-
-
-def IntegerPlaneEmitter(*, policy: IntegerPlaneEmitterPolicy) -> Lever:
-    """Typed C2 policy lever for the dedicated band trainer.
-
-    The compatibility mode is deliberately argv-inert. ``BANDED_TRAINING``
-    emits only flags owned by the dedicated C2 parser; it is therefore not
-    composable into the level-set ``BASELINE`` program.
-    """
-
-    from tac.witness_dsl.integer_plane_emitter_policy import (
-        BANDED_TRAINING_RECEIPT_SCHEMA,
-        POLICY_CONTRACT_RECEIPT_KEY,
-        IntegerPlaneEmitterPolicy,
-        PolicyMode,
-    )
-
-    if not isinstance(policy, IntegerPlaneEmitterPolicy):
-        raise TypeError("IntegerPlaneEmitter requires an IntegerPlaneEmitterPolicy")
-    contract = policy.compile_contract()
-    active = policy.mode is PolicyMode.BANDED_TRAINING
-    overrides = (
-        {
-            "--integer-plane-emitter-mode": policy.mode.value,
-            "--integer-plane-emitter-basis": policy.basis.value,
-            "--integer-plane-emitter-policy-sha256": contract["policy_sha256"],
-        }
-        if active
-        else {}
-    )
-    receipts = (
-        {"--integer-plane-emitter-policy-sha256": BANDED_TRAINING_RECEIPT_SCHEMA}
-        if active
-        else {}
-    )
-    return Lever(
-        "IntegerPlaneEmitter",
-        overrides=overrides,
-        epochs_delta=0,
-        notes=(
-            ("argv-effective dedicated C2 band trainer; " if active else "argv-inert default-OFF C2 emitter; ")
-            + "basis="
-            f"{contract['basis']}; policy_sha256={contract['policy_sha256']}; "
-            "launch/score/promotion/pointer authority sealed false"
-        ),
-        lawrefs={},
-        constant_manifest={},
-        runtime_receipt_schemas=receipts,
-        policy_contracts={POLICY_CONTRACT_RECEIPT_KEY: contract},
     )
 
 

@@ -30,8 +30,10 @@ from tac.witness_dsl.integer_plane_emitter_policy import (
 )
 from tac.witness_dsl.lawref import lawref_to_declaration, resolve
 from tac.witness_dsl.lever_registry import (
+    completeness,
     lever_factories,
     name_composable_levers,
+    package_lever_factories,
     resolve_composable_lever,
 )
 from tac.witness_dsl.typed_config import typed_lever_from_dsl
@@ -266,20 +268,71 @@ def test_factory_refuses_missing_or_wrong_policy() -> None:
         IntegerPlaneEmitter(policy=object())  # type: ignore[arg-type]
 
 
+_C2_EMITTER_FLAGS = frozenset(
+    {
+        "--integer-plane-emitter-mode",
+        "--integer-plane-emitter-basis",
+        "--integer-plane-emitter-policy-sha256",
+    }
+)
+
+
 def test_registry_and_activation_surfaces_track_required_policy_factory(tmp_path: Path) -> None:
-    assert "IntegerPlaneEmitter" in lever_factories()
-    assert lever_factories()["IntegerPlaneEmitter"] == frozenset(
-        {
-            "--integer-plane-emitter-mode",
-            "--integer-plane-emitter-basis",
-            "--integer-plane-emitter-policy-sha256",
-        }
+    # The factory is a PACKAGE lever bound to the dedicated C2 trainer, not a ``curriculum_dsl``
+    # one (ddm_ql3, 2026-09-04). ``lever_factories()`` ASTs ``curriculum_dsl.py`` alone and grades
+    # against the level-set trainer pair, which never declared these three flags; the package-wide
+    # surface resolves each module against its OWN declared trainer and is the honest home.
+    rows = [f for f in package_lever_factories() if f.factory == "IntegerPlaneEmitter"]
+    assert len(rows) == 1, "exactly one module may own the C2 emitter factory"
+    (row,) = rows
+    assert row.module == "integer_plane_emitter_lever.py"
+    assert frozenset(row.flags) == _C2_EMITTER_FLAGS
+    assert "IntegerPlaneEmitter" not in lever_factories(), (
+        "the C2 lever must NOT be graded as a curriculum_dsl factory — that binding is what "
+        "reported its three live flags as completeness().stale drift"
     )
     assert "IntegerPlaneEmitter" in known_levers()
     assert "IntegerPlaneEmitter" in duty_to_measure(path=tmp_path / "activation.jsonl")
     assert "IntegerPlaneEmitter" not in name_composable_levers()
     with pytest.raises(ValueError, match="requires explicit args"):
         resolve_composable_lever("IntegerPlaneEmitter")
+
+
+def test_c2_lever_module_declares_the_trainer_that_owns_its_flags() -> None:
+    """The binding is DECLARED, and the C2 parser really declares all three flags.
+
+    Regression for the ddm_ql3 red state: ``completeness().stale`` reported these three live
+    flags as DSL drift purely because the lever was homed in a module bound to the level-set
+    trainer pair. Pins the cure at both ends — the module states its trainer, and that trainer's
+    argparse actually carries every flag the factory emits (so this is not a relabelling).
+    """
+    import re
+
+    from tac.witness_dsl import integer_plane_emitter_lever as lever_mod
+    from tac.witness_dsl.lever_registry import module_declares_trainer, module_trainer_paths
+
+    source = Path(lever_mod.__file__)
+    assert module_declares_trainer(source), "a defaulted binding is indistinguishable from an unconsidered one"
+    trainers = module_trainer_paths(source)
+    assert len(trainers) == 1
+    assert trainers[0].name == "integer_plane_banded_trainer.py"
+    assert trainers[0].is_file()
+    declared = set(re.findall(r'add_argument\(\s*"(--[a-z0-9-]+)"', trainers[0].read_text()))
+    assert declared.issuperset(_C2_EMITTER_FLAGS), "the C2 parser must own every flag the lever emits"
+
+    (row,) = [f for f in package_lever_factories() if f.factory == "IntegerPlaneEmitter"]
+    assert row.missing_flags == (), "flags exist on the declared trainer — not a DESIGNED-STUB"
+    assert not row.is_stub and row.trainer_declared and not row.label_drift
+
+
+def test_c2_lever_reexport_from_curriculum_dsl_is_the_same_object() -> None:
+    """Every historical import path keeps working — and keeps working on the SAME factory."""
+    from tac.witness_dsl import curriculum_dsl as cd
+    from tac.witness_dsl.integer_plane_emitter_lever import IntegerPlaneEmitter as canonical
+
+    assert IntegerPlaneEmitter is canonical
+    assert cd.IntegerPlaneEmitter is canonical
+    assert completeness().stale == [], "no DSL-emitted flag may be absent from its trainer"
 
 
 def test_active_policy_is_argv_effective_while_legacy_policy_stays_inert() -> None:
