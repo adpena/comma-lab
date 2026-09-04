@@ -3,8 +3,8 @@
 **Date:** 2026-09-04
 **Arm:** `ddm_ng4_continuous_objective`
 **Axis:** `[seal + bounded macOS-CPU mechanism smoke only; no Metal, no Modal, no contest eval]`
-**Disposition:** **SEALED / RE-ROOTED / VALIDATED INSIDE THE SEALED TREE / SMOKE HELD BY THE
-GOVERNOR — MAIN fires.**
+**Disposition:** **SEALED / RE-ROOTED / VALIDATED INSIDE THE SEALED TREE / BOUNDED-SMOKE-PASS
+(all three STOP rows clean) — MAIN fires.**
 
 ## Result first
 
@@ -286,7 +286,7 @@ For this cell — and only this cell — a falling reported loss cannot be a sch
 **Scope:** one frozen 16-pair chunk at update 1, on ng3's retained field. It confirms the mechanism
 and pins falsifier 3's expected values; it says nothing about where step 5,000 lands.
 
-## Bounded CPU smoke — HELD BY THE GOVERNOR at seal time
+## Bounded CPU smoke — held by the governor at seal time, RAN 3 h later
 
 The smoke is the charter's: a NO-OP DETECTOR (step-1 state ≠ the control's) and the DIFFERENTIAL
 (at the control's τ = 0.15 and zero duals, the two configs' objectives are bit-for-bit equal),
@@ -323,7 +323,8 @@ by `tools/launch_guard_hook.py` as the rc=144 kill class, and the first attempt 
 that reaper) polls the same admission gate and fires each arm through the launcher the moment it
 admits. It never overrides the governor.
 
-**What is already MEASURED and what is still owed, stated separately:**
+**What was MEASURED at seal time and what was still owed** (the owed half then ran — see the SMOKE
+RESULT section below, which supersedes the "OWED" rows here):
 
 | smoke component | state |
 |---|---|
@@ -339,34 +340,71 @@ multiply θ-dependent terms (the seg surrogate and the per-class penalty), so th
 cannot coincide and the step-1 states must differ. That is an argument, not a receipt — the sha
 comparison is what settles it, and it is owed.
 
-### SMOKE RESULT — owed, and the hand-off is self-contained
+### SMOKE RESULT — RAN 2026-09-04T19:55:36Z–19:56:20Z, ALL THREE STOP ROWS CLEAN
 
-At close-out, MEASURED rates over a 240 s window: ng2 13.3 updates/min (3,167/5,000, ~2.3 h left)
-and ng3 12.0 updates/min (1,127/5,000, ~4 h left once it stops contending). `used_gib` never fell
-below ~105 GiB against the 116 GiB ceiling, so a 42 GiB arm was never admissible.
+The governed waiter admitted at **19:55:36Z**, once ng2 (5,000/5,000) and ng3 (5,000/5,000) had
+both released the Metal — `used_gib` had fallen from ~112 to 17.1. Arm 1 fired at the 42 GiB
+projection; arm 2 at **46.48 GiB**, derived from arm 1's MEASURED peak. Both arms plus
+`smoke-finalize` and the appendix finished in **44 s** of wall clock.
 
-**The waiter completes this unattended.** It polls the same governor, requires the admission to
-HOLD three consecutive polls, fires arm 1 at 42 GiB and arm 2 at arm 1's MEASURED peak + 15%, runs
-`smoke-finalize`, and then renders the memo rows itself:
-
-| what lands | where |
+| check | result |
 |---|---|
-| raw result | `…/ng4_continuous_objective/bounded_smoke/BOUNDED_SMOKE_RESULT.json` |
-| **the markdown rows to paste under this heading** | `…/bounded_smoke/SMOKE_APPENDIX.md` (written by `…/ddm_ng4_continuous_objective/render_smoke_appendix.py`) |
-| per-arm receipts + retained payloads | `…/bounded_smoke/{control,continuous}/` |
-| waiter receipt (this is what notifies the fleet) | `NG4_SMOKE_WAITER4_DONE.json`; log at `…/ddm_ng4_continuous_objective/smoke_waiter_launch4/run.log` |
+| **NO-OP DETECTOR** — continuous vs control step-1 live state | **DIFFERENT** (`8d16b4ce688ab2cd…` vs `27f514180db2b4cd…`) |
+| — and their re-encoded archives differ | yes, 106,686 B vs 106,676 B |
+| **THE TRAINING PATH IS UNMOVED BY THIS LANDING** — control step-1 vs ng1's pre-telemetry cold reference | **BIT-IDENTICAL** (`27f514180db2b4cda57289bbeb4be5ca8daf64e874921c92ba5c08d613c30973`) |
+| **DIFFERENTIAL** — all components at the control's τ = 0.15 with zero duals | **BIT-IDENTICAL** (`loss_total` 1.0765775442123413 both) |
+| — objective is not τ-blind | True (0.6592552661895752 at its own τ) |
+| — objective is not dual-blind | True (0.739250659942627 with the carried duals) |
+| τ reached the loop | control 0.15000000596046448, continuous **0.05000000074505806** |
+| **duals reached the loop** (falsifier 3) | continuous `{Lane 0.0051310126530447146, Movable 0.01740871996437369}`; control `{Lane 9.003074571993031e-05, Movable 7.757623141134608e-05}` |
+| first-update displacement ‖θ₁−θ₀‖₂ | control 0.05588674077623233, continuous 0.05588754892044407 |
+| **peak RSS per arm** | control **40.42 GiB**, continuous **40.37 GiB** |
 
-**Three rows in that appendix are STOP conditions, not decorations.** If the no-op detector reports
-IDENTICAL states, the lever is inert and nothing about this cell may be claimed. If the control's
-step-1 state does NOT reproduce ng1's cold reference `27f51418…`, this landing moved the training
-path and the cell may not be compared against the existing control. If the differential is not
-bit-identical, something leaked out of the `tau_band` / `margin_dual` blocks into the objective.
-The appendix prints each of those verdicts in words, so a harvester cannot skim past a red one.
+**Four things in that table are worth reading rather than skimming.**
 
-The appendix also settles a question this arm could only infer: **the measured per-arm peak RSS**
-tells the lineage whether ng2's 41.46 and ng3's 41.48 GiB were one update's high-water (~41.5 GiB
-per arm, as this arm inferred) or two arms summed (~20.7 GiB each). Every future split smoke's
-projection depends on which.
+1. **The second row is the strongest receipt in this memo, and it is a measurement.** ng1 ran this
+   identical one-update cold segment BEFORE ng2's telemetry row, ng3's validators and ng4's. The
+   trained state after all of it is bit-identical. So the geometry relaxation, the third admissible
+   band, the two new validators and the λ seeder are **MEASURED score-neutral on the training
+   path** — which is what lets a cell built on a moved trainer pin be read against a control that
+   ran under an older one. The control's first-update displacement also reproduces ng2's and ng3's
+   0.05588674077623233 to the last digit.
+
+2. **The cell trains at exactly the number r10's last journal row recorded.** The in-loop τ is
+   `0.05000000074505806`, bit-identical to r10's terminal `objective.tau`. The continuation is not
+   an approximation of r10's temperature; it is that float.
+
+3. **FALSIFIER 3 PASSES.** The continuous arm's multipliers at update 1 are r10's terminal pair plus
+   one dual-ascent step (+9.00e-5 Lane, +7.76e-5 Movable) — continuous, no re-warm from zero —
+   while the control's rise from 0 to 9.00e-5 / 7.76e-5, which is the same order as the burn's own
+   step-1 λ in the bug-class note. **The λ head start is 57.0× / 224.4×.** My $0 pre-registration
+   predicted 0.005149361310460459 / 0.017413431405350965; measured 0.0051310126530447146 /
+   0.01740871996437369 — **0.36% and 0.03% off**. The control's predicted λ was 20% off in relative
+   terms because it sits near the `werr − bound ≈ 0` boundary where a tiny werr change moves λ a
+   lot; the prediction was computed from the retained **f16** logits, and that is the precision
+   limit of predicting from a payload rather than from the live fp32 forward. Worth knowing before
+   the next $0 pre-registration leans on a retained field.
+
+4. **The displacement magnitudes are nearly equal (0.055887 vs 0.055888) while the states differ.**
+   That is ng1's derivation confirmed on the real graph: a fresh AdamW takes a full `lr`-sized sign
+   step whose MAGNITUDE is set by the optimizer, not the loss. The carried objective changes the
+   DIRECTION of the first step, not its size — so this cell and ng1's warm cell act on genuinely
+   different axes, and the warm-AND-continuous twin (follow-on #2) is not a redundant composition.
+
+**The projection question is SETTLED, and my inference was right.** Per-arm peak **40.4 GiB** — so
+ng2's 41.46 and ng3's 41.48 GiB were **one update's forward+backward high-water, not two arms
+summed**. A future split smoke must project ~41 GiB per arm; projecting half would under-reserve by
+2×. (The auto-rendered `SMOKE_APPENDIX.md` still poses this as an open question — it was written
+before the numbers existed. This paragraph is the resolution.)
+
+Custody: `…/ng4_continuous_objective/bounded_smoke/BOUNDED_SMOKE_RESULT.json`, per-arm receipts and
+all retained payloads under `…/bounded_smoke/{control,continuous}/`, launch manifests under
+`…/ng4_continuous_objective/smoke_launch/`. 0 Metal / 0 Modal / 0 contest-eval invocations.
+
+**Scope:** one update per arm. It says the seed is consumed, the bytes change, both carried states
+reach the loop, the objective is the control's plus exactly those two states, and that this landing
+left the training path untouched. It says nothing about where step 5,000 lands.
+
 
 ## MAIN fire command
 
@@ -526,7 +564,8 @@ on this design.
 
 | # | follow-on | disposition | owner | fire condition |
 |---|---|---|---|---|
-| 1 | **`SEALED-AWAITING-SMOKE-THEN-MAIN`** — the armed waiter finishes the bounded smoke and writes `SMOKE_APPENDIX.md`; paste it under the SMOKE RESULT heading and check its three STOP rows. Then copy re-rooted → authorized, bind claims, fire the command above | **SEALED, ready; smoke OWED and armed** | the waiter (autonomous, receipt `NG4_SMOKE_WAITER4_DONE.json`); MAIN for the burn | smoke: the governor admits for 3 consecutive polls, ~4 h out at close-out. Burn: the smoke's STOP rows are clean AND ng1/ng2/ng3 are adjudicated |
+| 1 | **`SEALED-AND-SMOKED — AWAITING MAIN`** — copy re-rooted → authorized, bind claims, fire the command above | **SEALED, smoke PASSED, ready** | MAIN | ng1/ng2/ng3 are adjudicated (four levers, read separately, `[[m164]]`). The Metal is now FREE — ng2 and ng3 both completed 5,000/5,000 at ~19:5xZ |
+| 1b | **`P0 — LOCAL DISK IS FULL`**: the boot volume has **344 MiB free of 1.8 TiB**. `.omx/tmp` holds **208 GB** (`arm_receipts_local` 101 GB, `codex_worktrees` 54 GB, `codex_runs` 30 GB) and `experiments/results` 149 GB. This arm hit ENOSPC on a harness temp file mid-write. Nothing here is ng4's, and the certify-or-block rule forbids deleting another arm's bulk without its reproducibility record — so it is REPORTED, not swept | **BLOCKING the fleet, unowned** | MAIN to assign | fires NOW: commits, receipts and any live CPU arm can fail at any moment |
 | 2 | **`CONDITIONAL-WARM-AND-CONTINUOUS-TWIN`** — carry r10's AdamW moments AND its objective state | **QUEUED-WITH-FIRE-ORDER** | MAIN to assign | fires ONLY if falsifier 1 PASSES; composing a lost lever (ng1) with a winning one is only legible once the winner is measured alone (`[[m164]]`) |
 | 3 | **`CONDITIONAL-DECOMPOSE-THE-TWO-CARRIED-STATES`** — τ-only and λ-only cells | **QUEUED, no fire order** | unowned; MAIN to assign or close | fires if falsifier 1 PASSES and the effect is large enough that attributing it to one of the two is worth two more cells; if it FAILS, decomposition is wasted |
 | 4 | **`CLOSE-THE-LIVE-SHADOW-GAP`** — start from r10's LIVE weights with its shadow as the EMA state, instead of collapsing both to the shadow | **QUEUED, needs a control** | unowned | fires only with a NEW matched control, because it moves the start point and every existing cell's comparability rests on the pinned same-start |
