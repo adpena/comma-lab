@@ -4897,10 +4897,16 @@ def compile_qbr1_area_cap_config(lever: Lever) -> dict:
     return block
 
 
-#: The two expected-flip temperature bands a QBR1-lineage cell may declare.  ``legacy`` is the
+#: The expected-flip temperature bands a QBR1-lineage cell may declare.  ``legacy`` is the
 #: literal pair every QBR1 cell has run since the lineage began; ``msafe_band`` is the
-#: law-resolved band ddm_gm1 DERIVED.  Any third band is refused by both validators.
-QBR1_TAU_BAND_MODES = ("legacy", "msafe_band")
+#: law-resolved band ddm_gm1 DERIVED; ``r10_continuation`` is ddm_ng4's HELD band.  The set is
+#: CLOSED -- a fourth band is refused by both validators.
+QBR1_TAU_BAND_MODES = ("legacy", "msafe_band", "r10_continuation")
+#: ``r10_continuation`` (ddm_ng4) is the HELD band ``(tau_r10_terminal, tau_r10_terminal)``.
+#: It cites no law: its provenance rung is a MEASURED anchor -- r10's own sha-pinned
+#: authorized config -- and the QBR1 validator re-reads that file rather than trusting the
+#: block.  A held temperature is a degenerate linear anneal, which is why ``tau_for_step``
+#: admits ``start >= end > 0`` rather than ``start > end > 0``.
 QBR1_LEGACY_TAU_BAND = (0.15, 0.05)
 
 
@@ -5041,6 +5047,169 @@ def compile_qbr1_tau_band_config(lever: Lever) -> tuple[dict, float, float]:
         }
         block["lawref_manifest_volatile_fields_excluded"] = list(VOLATILE_LAWREF_MANIFEST_FIELDS)
     return block, float(block["start"]), float(block["end"])
+
+
+#: The two QBR1 objective states that ddm_ng4 MEASURED as genuinely discontinuous at the
+#: r10 -> QBR1 stage entry.  The other two the bug-class note named are NOT: the batch
+#: geometry is already identical (``qbt.SELECTION_IDS == r10["pair_ids"]`` and
+#: ``chunk_pairs == 16`` on both sides), and the EMA acts only on the MEASUREMENT channel
+#: (milestones run inside ``qbt.ema_scope``; ``ema.update`` never writes the model), where
+#: the EXECUTED effective decay is continuous to 2.24e-5.  See the ng4 memo.
+QBR1_CONTINUED_OBJECTIVE_STATES = ("expected_flip_tau", "margin_dual")
+
+
+def _linear_anneal_tau(step: int, total_steps: int, start: float, end: float) -> float:
+    """The QBF1 expected-flip anneal, re-implemented here because the DSL cannot import it.
+
+    ``experiments/ddm_qbt1_qbflow_trainer.py`` imports :func:`EmaDecayCalibrated` from this
+    module, so importing ``qbt.tau_for_step`` back would be circular.  The duplication is
+    guarded rather than trusted: ``test_dsl_linear_anneal_equals_the_trainers_tau_for_step``
+    imports BOTH and fails on any disagreement across the schedule.
+    """
+    if total_steps < 1 or not 0 <= step < total_steps or not start >= end > 0.0:
+        raise ValueError(
+            f"_linear_anneal_tau: geometry differs (step={step!r}, total={total_steps!r}, "
+            f"start={start!r}, end={end!r})"
+        )
+    return start + (end - start) * step / max(total_steps - 1, 1)
+
+
+def ContinuousObjectiveFromR10(r10_config_path: str | Path,
+                               r10_checkpoint_path: str | Path,
+                               window: int = 0) -> Lever:
+    """ddm_ng4 -- CONTINUE r10's terminal objective state into the QBR1 finishing stage.
+
+    The QBR1 stage entry carries the WEIGHTS ONLY (``build_initial_state`` loads r10's EMA
+    shadow) and restarts everything else.  MEASURED at source (ng4):
+
+    * **tau restarts UP.**  r10 annealed 0.15 -> 0.05 over its own ``margin_steps`` and ended
+      at 0.05; the cell re-enters at 0.15, a **3x wider** soft band on a converged margin
+      field.  ddm_gm1 MEASURED that at ``tau = 0.15`` 85% of the seg gradient lands on
+      already-correct pixels, and ddm_md1 that the damage is complete within 16 updates.
+    * **the duals restart from ZERO.**  ``run_config`` seeds ``lambdas`` with
+      ``dict.fromkeys(bounds, 0.0)``, so the Lane/Movable within-class-error constraints
+      re-warm from nothing at ``eta_lambda`` per step while r10 ended holding a converged
+      pair.  The dual ascent law, its bounds and its step size are IDENTICAL on both sides
+      (MEASURED), so the multipliers are a pure initial condition -- carrying them changes
+      the state, never the law.
+
+    This lever emits BOTH continued states as one treatment, because "continue the objective"
+    is one act; splitting it into two cells is the follow-on race, not this one.  Nothing else
+    is carried: the optimizer stays COLD (``resume_from`` is null, exactly as the control), so
+    the single lever is objective continuity and ng1's warm-moment lever is not composed with
+    it ([[m164]]: union is not the sum of legs).
+
+    Both values are READ from r10's sha-pinned artifacts, never typed: ``r10_config_path`` is
+    the QBR1 module's ``r10_config`` pin and ``r10_checkpoint_path`` its ``r10_checkpoint``
+    pin.  The terminal temperature is RE-DERIVED through the anneal geometry rather than read
+    off the config's ``expected_flip_tau_end``, so a change to r10's schedule would surface
+    here instead of being silently inherited.  The emitted block records both, plus the source
+    sha256s, and ``ddm_qbr1_born_fairform_burn_prep.validate_tau_band_block`` /
+    ``validate_margin_dual_block`` re-read the same two files at validate time -- the DSL is
+    the permissive side of the ng3 composition, the QBR1 validators are the strict side.
+
+    ``window=0`` = config-surface lever, no epoch budget of its own.  Advisory until
+    byte-closed.
+    """
+    import hashlib
+    import json as _json
+
+    config_path = Path(r10_config_path)
+    checkpoint_path = Path(r10_checkpoint_path)
+    r10 = _json.loads(config_path.read_text(encoding="utf-8"))
+    margin_steps = int(r10["margin_steps"])
+    r10_start = float(r10["expected_flip_tau_start"])
+    r10_end = float(r10["expected_flip_tau_end"])
+    terminal_step = margin_steps - 1
+    terminal_tau = _linear_anneal_tau(terminal_step, margin_steps, r10_start, r10_end)
+
+    import torch as _torch
+
+    checkpoint = _torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    stage = str(checkpoint.get("stage"))
+    if not stage.endswith("_end"):
+        raise ValueError(f"ContinuousObjectiveFromR10: r10 source is not a stage-end checkpoint: {stage!r}")
+    state = checkpoint["curriculum_state"]["margin_constraint_state"]
+    lambdas = {str(name): float(value) for name, value in state["lambdas"].items()}
+    if not lambdas:
+        raise ValueError("ContinuousObjectiveFromR10: r10 checkpoint carries no margin-constraint duals")
+    bounds = {str(name): float(value) for name, value in r10["margin_constraint_bounds"].items()}
+    if set(lambdas) != set(bounds):
+        raise ValueError(
+            f"ContinuousObjectiveFromR10: r10 dual classes {sorted(lambdas)} differ from its "
+            f"bounds {sorted(bounds)}"
+        )
+    if str(state["mode"]) != str(r10["margin_constraint_mode"]):
+        raise ValueError("ContinuousObjectiveFromR10: r10 checkpoint dual mode differs from its config")
+
+    def _sha(path: Path) -> str:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    return Lever(
+        "ng4_continuous_objective_from_r10",
+        overrides={
+            "expected_flip_tau.law": "r10_terminal_objective_state_continuation",
+            "expected_flip_tau.mode": "r10_continuation",
+            "expected_flip_tau.form": "held_at_r10_terminal_tau",
+            "expected_flip_tau.start": float(terminal_tau),
+            "expected_flip_tau.end": float(terminal_tau),
+            "expected_flip_tau.r10_expected_flip_tau_start": r10_start,
+            "expected_flip_tau.r10_expected_flip_tau_end": r10_end,
+            "expected_flip_tau.r10_margin_steps": margin_steps,
+            "expected_flip_tau.r10_terminal_step_index": terminal_step,
+            "expected_flip_tau.r10_terminal_tau": float(terminal_tau),
+            "expected_flip_tau.r10_config_sha256": _sha(config_path),
+            "margin_dual.law": "r10_terminal_objective_state_continuation",
+            "margin_dual.mode": "r10_continuation",
+            "margin_dual.form": "initial_lambdas_are_r10_terminal_duals",
+            "margin_dual.initial_lambdas": dict(sorted(lambdas.items())),
+            "margin_dual.r10_bounds": dict(sorted(bounds.items())),
+            "margin_dual.r10_eta_lambda": float(r10["margin_constraint_eta_lambda"]),
+            "margin_dual.r10_constraint_mode": str(r10["margin_constraint_mode"]),
+            "margin_dual.r10_step": int(checkpoint["step"]),
+            "margin_dual.r10_stage": stage,
+            "margin_dual.r10_checkpoint_sha256": _sha(checkpoint_path),
+            "margin_dual.r10_config_sha256": _sha(config_path),
+        },
+        epochs_delta=window,
+        notes=("ddm_ng4: continue r10's terminal objective state into the QBR1 finishing stage -- "
+               "tau HELD at r10's re-derived terminal temperature instead of restarting 3x wider, "
+               "and the Lane/Movable duals initialised from r10's terminal multipliers instead of "
+               "zero.  Both read from r10's sha-pinned config/checkpoint, never typed.  The "
+               "optimizer stays COLD, so the single lever is objective continuity; advisory until "
+               "byte-closed."),
+    )
+
+
+def compile_qbr1_continuous_objective_config(lever: Lever) -> tuple[dict, float, float, dict, dict]:
+    """Turn :func:`ContinuousObjectiveFromR10`'s dotted overrides into the QBR1 surface.
+
+    Returns ``(tau_band_block, tau_start, tau_end, margin_dual_block, initial_lambdas)``.  As in
+    :func:`compile_qbr1_tau_band_config`, the two tau scalars are separate TOP-LEVEL QBR1 config
+    keys because that is what the trainer reads, and ``initial_lambdas`` is nested inside the
+    cell's existing ``margin_constraints`` block for the same reason: the loop must be able to
+    run without knowing about the provenance block, and the validator must be able to refuse a
+    config whose executable values and provenance disagree.
+
+    The emitted blocks are BYTE-STABLE across compiles -- every value is read from two
+    sha-pinned files and no observation timestamp is carried -- so a sealed config's sha can be
+    quoted in a memo and verified by MAIN with ``shasum``.
+    """
+    tau: dict = {}
+    dual: dict = {}
+    for key, value in lever.overrides.items():
+        namespace, _, field_name = key.partition(".")
+        if namespace == "expected_flip_tau":
+            tau[field_name] = value
+        elif namespace == "margin_dual":
+            dual[field_name] = value
+        else:
+            raise ValueError(f"compile_qbr1_continuous_objective_config: unexpected override {key!r}")
+    missing = [name for name in QBR1_CONTINUED_OBJECTIVE_STATES if not (tau if name == "expected_flip_tau" else dual)]
+    if missing:
+        raise ValueError(f"compile_qbr1_continuous_objective_config: lever declares no {missing} overrides")
+    initial_lambdas = {str(name): float(value) for name, value in dict(dual["initial_lambdas"]).items()}
+    return tau, float(tau["start"]), float(tau["end"]), dual, initial_lambdas
 
 
 def BirthCompletionEvent(tau_persist: float = 0.8, area_band: float = 0.25,

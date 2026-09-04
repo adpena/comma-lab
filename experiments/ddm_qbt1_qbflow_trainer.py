@@ -675,15 +675,35 @@ def admissible_expected_flip_tau_bands() -> tuple[tuple[float, float], ...]:
         )
 
         resolved = resolve_margin_band_threshold()
+        # ddm_ng4's third band is the HELD continuation of r10's terminal temperature.  r10
+        # annealed over its own margin_steps from LEGACY[0] to LEGACY[1] and therefore ENDED at
+        # LEGACY[1] -- so the continuation band introduces no new literal here, it reuses the
+        # end this lineage already ships.  This gate stays the PERMISSIVE one: that r10's
+        # terminal tau really equals LEGACY[1] is proved against r10's own sha-pinned config by
+        # ddm_qbr1_born_fairform_burn_prep.validate_tau_band_block, which re-reads the file on
+        # every call.  A fourth band is still refused.
+        held = float(LEGACY_EXPECTED_FLIP_TAU_BAND[1])
         _ADMISSIBLE_TAU_BANDS_CACHE = (
             LEGACY_EXPECTED_FLIP_TAU_BAND,
             (float(resolved.m_safe), float(resolved.delta_r)),
+            (held, held),
         )
     return _ADMISSIBLE_TAU_BANDS_CACHE
 
 
 def tau_for_step(step: int, total_steps: int, start: float = 0.15, end: float = 0.05) -> float:
-    if total_steps < 1 or not 0 <= step < total_steps or not start > end > 0:
+    """Linear expected-flip anneal from ``start`` to ``end`` across ``total_steps`` updates.
+
+    ddm_ng4 relaxed the geometry contract from ``start > end > 0`` to ``start >= end > 0``.  A
+    HELD temperature (``start == end``) is the degenerate anneal, the closed form is exact for
+    it, and it is the only way to express "continue r10's terminal temperature" -- which is what
+    the QBR1 stage entry failed to do when it re-entered at a 3x wider band.  This is not a
+    loosening of the real gate: the ADMISSIBLE SET is enumerated by
+    :func:`admissible_expected_flip_tau_bands` (three bands, any fourth refused), and the QBR1
+    cell gate re-derives each one from its own source before a burn.  A band that INCREASES
+    (``start < end``) is still refused here.
+    """
+    if total_steps < 1 or not 0 <= step < total_steps or not start >= end > 0:
         raise QBT1Error("expected-flip schedule geometry differs")
     return start + (end - start) * step / max(total_steps - 1, 1)
 

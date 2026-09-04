@@ -169,12 +169,17 @@ def test_a_headroom_that_would_invert_the_band_is_refused():
 # 2. both validators accept exactly two bands
 # ---------------------------------------------------------------------------
 def test_trainer_admits_the_legacy_and_the_law_resolved_band_and_nothing_else(band):
+    # ddm_ng4 added a THIRD admissible band: the HELD continuation of r10's terminal tau,
+    # (LEGACY[1], LEGACY[1]).  ng3's intent is unchanged and still asserted below -- the set is
+    # CLOSED and a band this lineage has not derived is refused.
     admissible = qbt.admissible_expected_flip_tau_bands()
-    assert admissible == (QBR1_LEGACY_TAU_BAND, band)
+    held = (QBR1_LEGACY_TAU_BAND[1], QBR1_LEGACY_TAU_BAND[1])
+    assert admissible == (QBR1_LEGACY_TAU_BAND, band, held)
     assert (0.15, 0.05) in admissible
     assert band in admissible
     assert (0.15, 0.04) not in admissible
     assert (band[0], band[1] / 2.0) not in admissible
+    assert (0.06, 0.06) not in admissible
 
 
 def test_trainer_config_validator_accepts_the_band_and_refuses_a_third(band):
@@ -310,7 +315,9 @@ def test_qbr1_refuses_an_unknown_band_mode():
     tampered["mode"] = "freestyle"
     with pytest.raises(qbr1.QBR1Error, match="tau band mode differs"):
         qbr1.validate_tau_band_block(_minimal_qbr1_config(band=(start, end), block=tampered))
-    assert set(QBR1_TAU_BAND_MODES) == {"legacy", "msafe_band"}
+    # ddm_ng4 added the r10_continuation mode; the set stays CLOSED and "freestyle" is still
+    # refused above, which is what this test is actually about.
+    assert set(QBR1_TAU_BAND_MODES) == {"legacy", "msafe_band", "r10_continuation"}
 
 
 def test_the_sealed_control_of_record_still_validates_unchanged():

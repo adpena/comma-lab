@@ -97,7 +97,20 @@ EXPECTED_SHA256 = {
     # fixed-tau telemetry row), 6eda9c202b3aee008d457373813ae07992e73902438cca114abb4c84bb8d980b
     # (the sealed QBR1 tree at sealed_source_106d0dd0_v2, which the live chain still runs and
     # which is NOT touched).
-    "qbt_trainer": "c8ff9dbd332b165d2997cd146d661063c8ff193245a21e91f4629ceb6267cb38",
+    # 2026-09-04 re-pin (ddm_ng4): the trainer's expected-flip geometry contract was relaxed
+    # from `start > end > 0` to `start >= end > 0` so a HELD temperature -- the continuation of
+    # r10's terminal tau -- is expressible at all, and `admissible_expected_flip_tau_bands()`
+    # gained the held band (LEGACY[1], LEGACY[1]).  No new literal: r10 annealed to LEGACY[1],
+    # and THAT identity is proved against r10's own sha-pinned config by
+    # `validate_tau_band_block`'s r10_continuation branch here, not by the widened qbt gate.
+    # No training-path byte moved: both changes are reached only from validators and from
+    # tau_for_step's own guard, and an INCREASING band is still refused.  Prior pins, newest
+    # first: c8ff9dbd332b165d2997cd146d661063c8ff193245a21e91f4629ceb6267cb38 (ddm_ng3, the
+    # widened two-band tau check), 9f74641c888e18403ed0ba10dfcd3a0e6ef8efcef170faa870b8177a5b883f8f
+    # (ddm_ng2, area cap + fixed-tau telemetry row),
+    # 6eda9c202b3aee008d457373813ae07992e73902438cca114abb4c84bb8d980b (the sealed QBR1 tree at
+    # sealed_source_106d0dd0_v2, which the live chain still runs and which is NOT touched).
+    "qbt_trainer": "8de4112ce0aef8e266960c20d8885935a355ed3da18c6b2520b6f54bc25c23f0",
     "ce1_target_margin": "ffdf098801863ff8bffe8bd818ce101928dd75b4937cbbffb2e225bddbc12f4b",
     "w96b_law_module": "053bd12e198bb74a44036e497a1277d9d36638c96acdabba278a2c72f2234923",
     "r10_checkpoint": "09fd416531c74f69ca7033cf3f13b23c9e0472486a97ce9973f62f2fb86c138f",
@@ -318,6 +331,158 @@ def validate_area_cap_block(config: Mapping[str, Any]) -> None:
             raise QBR1Error(f"area cap lambda is not the law's value for {class_name}")
 
 
+#: ddm_ng4 -- the two r10 terminal objective states a CONTINUOUS-OBJECTIVE cell carries.  Both
+#: are read from artifacts this module already pins by sha256 (``r10_config`` / ``r10_checkpoint``
+#: in ``EXPECTED_SHA256``), so a continuation cell introduces no new trusted input and no retyped
+#: decimal.  The two resolvers are split because the temperature needs only the JSON config while
+#: the duals need the checkpoint: a CONTROL config must never pay a ``torch.load`` to validate.
+R10_CONTINUATION_LAW = "r10_terminal_objective_state_continuation"
+R10_CONTINUATION_MODE = "r10_continuation"
+
+
+def r10_terminal_tau() -> dict[str, Any]:
+    """Re-derive r10's terminal expected-flip temperature from its sha-pinned config.
+
+    RE-DERIVED, not read off ``expected_flip_tau_end``: r10 annealed over ``margin_steps`` and
+    the terminal value is ``tau_for_step(margin_steps - 1, margin_steps, start, end)``.  Reading
+    the endpoint directly would inherit a schedule geometry silently; re-deriving it means a
+    change to r10's geometry surfaces here.  MEASURED 2026-09-04: the two agree bit-for-bit, and
+    r10's own last journal row records the float32 image of the same number.
+    """
+    r10 = json.loads(R10_CONFIG.read_text(encoding="utf-8"))
+    margin_steps = int(r10["margin_steps"])
+    start = float(r10["expected_flip_tau_start"])
+    end = float(r10["expected_flip_tau_end"])
+    terminal_step = margin_steps - 1
+    return {
+        "r10_expected_flip_tau_start": start,
+        "r10_expected_flip_tau_end": end,
+        "r10_margin_steps": margin_steps,
+        "r10_terminal_step_index": terminal_step,
+        "r10_terminal_tau": qbt.tau_for_step(terminal_step, margin_steps, start, end),
+        "r10_config_sha256": qbt.file_fact(R10_CONFIG)["sha256"],
+    }
+
+
+def r10_terminal_duals() -> dict[str, Any]:
+    """Read r10's terminal Lane/Movable multipliers from its sha-pinned stage-end checkpoint."""
+
+    r10 = json.loads(R10_CONFIG.read_text(encoding="utf-8"))
+    checkpoint = torch.load(R10_CHECKPOINT, map_location="cpu", weights_only=False)
+    if checkpoint.get("stage") != "stage_03_joint_boundary_interior_birth_end":
+        raise QBR1Error("r10 source is not the stage-03 end checkpoint")
+    state = checkpoint["curriculum_state"]["margin_constraint_state"]
+    lambdas = {str(name): float(value) for name, value in state["lambdas"].items()}
+    if str(state["mode"]) != str(r10["margin_constraint_mode"]):
+        raise QBR1Error("r10 checkpoint dual mode differs from its own authorized config")
+    return {
+        "initial_lambdas": dict(sorted(lambdas.items())),
+        "r10_bounds": {str(k): float(v) for k, v in sorted(r10["margin_constraint_bounds"].items())},
+        "r10_eta_lambda": float(r10["margin_constraint_eta_lambda"]),
+        "r10_constraint_mode": str(r10["margin_constraint_mode"]),
+        "r10_step": int(checkpoint["step"]),
+        "r10_stage": str(checkpoint["stage"]),
+        "r10_checkpoint_sha256": qbt.file_fact(R10_CHECKPOINT)["sha256"],
+        "r10_config_sha256": qbt.file_fact(R10_CONFIG)["sha256"],
+    }
+
+
+def validate_margin_dual_block(config: Mapping[str, Any]) -> None:
+    """Fail closed on the ddm_ng4 dual-continuation lever; absent block is the control form.
+
+    Two admissible states and no third, the same shape as
+    :func:`validate_tau_band_block` and :func:`validate_area_cap_block`:
+
+    * no ``margin_dual`` block => ``margin_constraints`` must carry NO ``initial_lambdas``, so
+      ``run_config`` seeds the multipliers with zeros and the objective is byte-identical to
+      every QBR1 cell sealed before ng4.
+    * a ``margin_dual`` block => every multiplier is RE-READ here from r10's sha-pinned
+      stage-end checkpoint, the executable ``margin_constraints.initial_lambdas`` must equal it
+      exactly, and r10's dual LAW (mode, bounds, step size) must equal this cell's.  Carrying a
+      multiplier across a change of bound or step size would carry a number whose meaning moved,
+      which is the cross-regime constant transfer this cell exists to cure -- so it is refused.
+    """
+    constraints = config.get("margin_constraints", {})
+    block = config.get("margin_dual")
+    declared = constraints.get("initial_lambdas") if isinstance(constraints, Mapping) else None
+    if block is None:
+        if declared is not None:
+            raise QBR1Error(
+                "margin_constraints.initial_lambdas is set but the config declares no "
+                "margin_dual provenance block"
+            )
+        return
+    if not isinstance(block, Mapping):
+        raise QBR1Error("margin_dual must be a mapping")
+    if declared is None:
+        raise QBR1Error("margin_dual block is present but margin_constraints.initial_lambdas is not")
+    if str(block.get("law")) != R10_CONTINUATION_LAW:
+        raise QBR1Error("margin_dual must cite the r10 terminal-state continuation source")
+    if str(block.get("mode")) != R10_CONTINUATION_MODE:
+        raise QBR1Error(f"margin_dual mode differs: {block.get('mode')!r}")
+    if str(block.get("form")) != "initial_lambdas_are_r10_terminal_duals":
+        raise QBR1Error("margin_dual form differs from the sealed continuation form")
+    live = r10_terminal_duals()
+    missing = [key for key in live if key not in block]
+    if missing:
+        raise QBR1Error(f"margin_dual block is missing required provenance: {sorted(missing)}")
+    for key, value in live.items():
+        if key in ("initial_lambdas", "r10_bounds"):
+            got = {str(name): float(number) for name, number in dict(block[key]).items()}
+            if got != value:
+                raise QBR1Error(f"margin_dual {key} is not r10's live value: {got} vs {value}")
+        elif isinstance(value, float):
+            if float(block[key]) != value:
+                raise QBR1Error(f"margin_dual {key} is not r10's live value")
+        elif isinstance(value, int):
+            if int(block[key]) != value:
+                raise QBR1Error(f"margin_dual {key} is not r10's live value")
+        elif str(block[key]) != value:
+            raise QBR1Error(f"margin_dual {key} is not r10's live value")
+    executable = {str(name): float(number) for name, number in dict(declared).items()}
+    if executable != live["initial_lambdas"]:
+        raise QBR1Error(
+            "the trainer-read margin_constraints.initial_lambdas disagree with the margin_dual "
+            f"block: {executable} vs {live['initial_lambdas']}"
+        )
+    bounds = {str(name): float(value) for name, value in dict(constraints["bounds"]).items()}
+    if bounds != live["r10_bounds"]:
+        raise QBR1Error(
+            "this cell's margin-constraint bounds differ from r10's, so its terminal duals do "
+            f"not transfer: {bounds} vs {live['r10_bounds']}"
+        )
+    if float(constraints["eta_lambda"]) != live["r10_eta_lambda"]:
+        raise QBR1Error("this cell's dual step size differs from r10's; its duals do not transfer")
+    if str(constraints["mode"]) != live["r10_constraint_mode"]:
+        raise QBR1Error("this cell's dual mode differs from r10's; its duals do not transfer")
+    if set(executable) != set(bounds):
+        raise QBR1Error("initial multipliers do not cover exactly the constrained classes")
+    for name, value in executable.items():
+        if not 0.0 <= value <= qbt.MARGIN_CONSTRAINT_LAMBDA_MAX:
+            raise QBR1Error(f"initial multiplier for {name} is outside the dual-ascent domain: {value}")
+
+
+def initial_margin_constraint_lambdas(
+    config: Mapping[str, Any], bounds: Mapping[str, float]
+) -> dict[str, float]:
+    """Seed the dual multipliers: r10's terminal pair when carried, otherwise zeros.
+
+    ddm_ng4.  ``dict.fromkeys(bounds, 0.0)`` was the ONLY seeding this lineage ever had, so
+    every stage entry re-warmed the Lane/Movable constraints from nothing while the object it
+    inherited had already converged them.  An ABSENT ``initial_lambdas`` key reproduces that
+    seeding exactly, which is what keeps a control cell byte-identical.  Both executable paths
+    (``run_config`` and ``_run_resume_smoke_segment``) call this, so the bounded smoke exercises
+    the lever it is supposed to prove -- a lever the smoke could not reach would be inert.
+    """
+    declared = config.get("margin_constraints", {}).get("initial_lambdas")
+    if declared is None:
+        return dict.fromkeys(bounds, 0.0)
+    seeded = {str(name): float(value) for name, value in dict(declared).items()}
+    if set(seeded) != set(bounds):
+        raise QBR1Error("initial margin-constraint multipliers do not cover the constrained classes")
+    return seeded
+
+
 def validate_tau_band_block(config: Mapping[str, Any]) -> None:
     """Fail closed on the expected-flip temperature band -- the gate this path did NOT have.
 
@@ -350,13 +515,45 @@ def validate_tau_band_block(config: Mapping[str, Any]) -> None:
         return
     if not isinstance(tau_band, Mapping):
         raise QBR1Error("tau_band must be a mapping")
+    mode = str(tau_band.get("mode"))
+    if mode not in TAU_BAND_MODES:
+        raise QBR1Error(f"tau band mode differs: {mode!r}")
+    if mode == R10_CONTINUATION_MODE:
+        # ddm_ng4: the HELD band.  Its provenance rung is a MEASURED anchor (r10's sha-pinned
+        # authorized config), not a law, and it is re-derived here through the anneal geometry
+        # on every call rather than read off the block.  The qbt-level gate admits the pair
+        # (LEGACY[1], LEGACY[1]); THIS gate is what proves that pair is really r10's terminal
+        # temperature, so the two together refuse a held band at any other value.
+        if str(tau_band.get("law")) != R10_CONTINUATION_LAW:
+            raise QBR1Error("held tau band must cite the r10 terminal-state continuation source")
+        if str(tau_band.get("form")) != "held_at_r10_terminal_tau":
+            raise QBR1Error("held tau band form differs from the sealed continuation form")
+        live = r10_terminal_tau()
+        absent = [key for key in live if key not in tau_band]
+        if absent:
+            raise QBR1Error(f"held tau band is missing required provenance: {sorted(absent)}")
+        for key, value in live.items():
+            got = tau_band[key]
+            same = int(got) == value if isinstance(value, int) else (
+                float(got) == value if isinstance(value, float) else str(got) == value
+            )
+            if not same:
+                raise QBR1Error(f"held tau band {key} is not r10's live value: {got!r} vs {value!r}")
+        held = float(live["r10_terminal_tau"])
+        if (float(tau_band["start"]), float(tau_band["end"])) != (held, held):
+            raise QBR1Error("held tau band endpoints are not r10's terminal temperature")
+        if declared != (held, held):
+            raise QBR1Error(
+                "the trainer-read tau scalars disagree with the held tau_band block: "
+                f"{declared} vs {(held, held)}"
+            )
+        if not held > 0.0:
+            raise QBR1Error("held tau band violates tau > 0")
+        return
     if str(tau_band.get("law")) != "margin_band_satisficing_threshold_v1":
         raise QBR1Error("tau band must cite the registered margin-band law")
     if str(tau_band.get("form")) != "linear_anneal_start_to_end_over_total_steps":
         raise QBR1Error("tau band form differs from the sealed linear anneal")
-    mode = str(tau_band.get("mode"))
-    if mode not in TAU_BAND_MODES:
-        raise QBR1Error(f"tau band mode differs: {mode!r}")
     missing = [key for key in ("start", "end", "delta_r", "m_safe", "headroom", "n_frames")
                if key not in tau_band]
     if missing:
@@ -435,6 +632,7 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
         raise QBR1Error("QBR source pins differ from live exact inputs")
     validate_area_cap_block(config)
     validate_tau_band_block(config)
+    validate_margin_dual_block(config)
     if require_launch_authority:
         if config.get("device") != "mps" or config.get("launch_authorized") is not True:
             raise QBR1Error("MAIN has not authorized this Metal burn")
@@ -686,7 +884,7 @@ def run_config(config_path: Path) -> dict[str, Any]:
     )
     completed = 0
     bounds = {name: float(value) for name, value in config["margin_constraints"]["bounds"].items()}
-    lambdas = dict.fromkeys(bounds, 0.0)
+    lambdas = initial_margin_constraint_lambdas(config, bounds)
     history_path = output / "history.jsonl"
     if config.get("resume_from"):
         completed, ema, lambdas = _load_checkpoint(
@@ -873,7 +1071,7 @@ def _run_resume_smoke_segment(
         total_updates=int(smoke_config["total_steps"]),
     )
     bounds = {name: float(value) for name, value in smoke_config["margin_constraints"]["bounds"].items()}
-    lambdas = dict.fromkeys(bounds, 0.0)
+    lambdas = initial_margin_constraint_lambdas(smoke_config, bounds)
     completed = 0
     history_path = root / "history.jsonl"
     if resume_from is None:
