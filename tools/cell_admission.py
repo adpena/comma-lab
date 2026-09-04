@@ -85,6 +85,38 @@ DEFAULT_MANIFEST_ROOTS: tuple[Path, ...] = (
 #: ``<root>/<campaign>/<cell>/launch/<run>/launch_manifest.json`` (depth 5).
 _MANIFEST_MAX_DEPTH = 6
 
+#: Registry of launcher-written manifests (``detached_launch_registry.v1`` rows appended by
+#: ``tools/launch_detached_process.py`` at launch, and by the one-time seed walk).  Reading it
+#: is O(launches); the SSD walk was MEASURED at >120 s per admission poll on 2026-09-04 (two
+#: 1.8 TB roots at depth 6), which stalled the ng4 fire waiter for an hour after the Metal freed.
+LAUNCH_REGISTRY = _REPO / ".omx" / "state" / "detached_launch_registry.jsonl"
+
+#: Bulk directories the fallback walk must not descend into: they hold frames, payloads,
+#: checkpoints and sealed source trees, never a ``launch_manifest.json``.
+_WALK_PRUNE_NAMES = frozenset(
+    {
+        "retained",
+        "runs",
+        "milestones",
+        "checkpoints",
+        "frames",
+        "inflated",
+        "extracted",
+        "eval_work",
+        "cold_store",
+        "harvested_artifacts",
+        "payload",
+        "payloads",
+        "source",
+        "repo",
+        "upstream",
+        "node_modules",
+        ".git",
+        ".venv",
+    }
+)
+_WALK_PRUNE_PREFIXES = ("sealed_source_", "stage_", "step_", "shard_")
+
 _GIB = 1024.0**3
 
 # Exit codes (the fire scripts already branch on ``exit 2``).
@@ -210,20 +242,14 @@ class LiveCell:
             "pid": self.pid,
             "alive": self.alive,
             "declared_peak_gib": round(self.declared_peak_gib, 4),
-            "current_rss_gib": (
-                None if self.current_rss_gib is None else round(self.current_rss_gib, 4)
-            ),
+            "current_rss_gib": (None if self.current_rss_gib is None else round(self.current_rss_gib, 4)),
             "unrealized_growth_gib": round(self.unrealized_growth_gib, 4),
             "manifest_path": str(self.manifest_path),
             "config_path": None if self.config_path is None else str(self.config_path),
             "run_dir": None if self.run_dir is None else str(self.run_dir),
             "total_steps": self.total_steps,
             "completed_steps": self.completed_steps,
-            "progress_fraction": (
-                None
-                if self.progress_fraction is None
-                else round(self.progress_fraction, 6)
-            ),
+            "progress_fraction": (None if self.progress_fraction is None else round(self.progress_fraction, 6)),
             "arm_name": self.arm_name,
             "arm_role": self.arm_role,
             "purpose": self.purpose,
@@ -267,9 +293,7 @@ def count_history_steps(run_dir: Path | None) -> int | None:
 def live_cell_from_manifest(manifest_path: Path) -> LiveCell | None:
     """Build a :class:`LiveCell` from a launcher manifest, or None when it is not a live cell."""
     manifest = _read_json(manifest_path)
-    if manifest is None or not str(manifest.get("schema", "")).startswith(
-        "detached_local_process_launch"
-    ):
+    if manifest is None or not str(manifest.get("schema", "")).startswith("detached_local_process_launch"):
         return None
     try:
         pid = int(manifest.get("pid") or 0)
@@ -319,9 +343,7 @@ def live_cell_from_manifest(manifest_path: Path) -> LiveCell | None:
         completed_steps=count_history_steps(run_dir),
         arm_name=None if arm_name is None else str(arm_name),
         arm_role=None if arm_role is None else str(arm_role),
-        purpose=(
-            str(manifest["purpose"]) if isinstance(manifest.get("purpose"), str) else None
-        ),
+        purpose=(str(manifest["purpose"]) if isinstance(manifest.get("purpose"), str) else None),
     )
 
 
@@ -343,27 +365,71 @@ def _walk_manifests(root: Path, max_depth: int) -> Iterable[Path]:
             try:
                 if entry.is_file() and name == "launch_manifest.json":
                     yield Path(entry.path)
-                elif entry.is_dir() and depth < max_depth:
+                elif (
+                    entry.is_dir()
+                    and depth < max_depth
+                    and name not in _WALK_PRUNE_NAMES
+                    and not name.startswith(_WALK_PRUNE_PREFIXES)
+                ):
                     stack.append((Path(entry.path), depth + 1))
             except OSError:
                 continue
 
 
+def registry_manifest_paths(registry_path: Path | None = None) -> list[Path]:
+    """Manifest paths recorded in the launch registry (deduplicated, existing files only)."""
+    path = LAUNCH_REGISTRY if registry_path is None else Path(registry_path)
+    if not path.is_file():
+        return []
+    seen: dict[str, Path] = {}
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        manifest = row.get("manifest_path") if isinstance(row, dict) else None
+        if isinstance(manifest, str) and manifest and manifest not in seen:
+            candidate = Path(manifest)
+            if candidate.is_file():
+                seen[manifest] = candidate
+    return list(seen.values())
+
+
 def discover_live_cells(
-    roots: Sequence[Path] | None = None, *, max_depth: int = _MANIFEST_MAX_DEPTH
+    roots: Sequence[Path] | None = None,
+    *,
+    max_depth: int = _MANIFEST_MAX_DEPTH,
+    registry_path: Path | None = None,
+    walk_roots: bool | None = None,
 ) -> list[LiveCell]:
-    """Every live cell found under ``roots``, de-duplicated by PID (newest manifest wins)."""
+    """Live governed jobs, registry-first.
+
+    ``walk_roots=None`` (default) reads the launch registry and walks the SSD roots ONLY when the
+    registry is absent or empty (the fallback keeps a registry-less checkout honest).  ``True``
+    forces the pruned walk in addition to the registry; ``False`` forbids the walk.  Explicit
+    ``roots`` always walk (a caller that names a root wants that root scanned).
+    """
     found: dict[int, LiveCell] = {}
-    for root in roots if roots is not None else DEFAULT_MANIFEST_ROOTS:
-        for manifest_path in _walk_manifests(Path(root), max_depth):
-            cell = live_cell_from_manifest(manifest_path)
-            if cell is None:
-                continue
-            previous = found.get(cell.pid)
-            if previous is None or (
-                manifest_path.stat().st_mtime_ns > previous.manifest_path.stat().st_mtime_ns
-            ):
-                found[cell.pid] = cell
+
+    def _absorb(manifest_path: Path) -> None:
+        cell = live_cell_from_manifest(manifest_path)
+        if cell is None:
+            return
+        previous = found.get(cell.pid)
+        if previous is None or (manifest_path.stat().st_mtime_ns > previous.manifest_path.stat().st_mtime_ns):
+            found[cell.pid] = cell
+
+    registry_paths = registry_manifest_paths(registry_path)
+    for manifest_path in registry_paths:
+        _absorb(manifest_path)
+    do_walk = roots is not None or walk_roots is True or (walk_roots is None and not registry_paths)
+    if do_walk and walk_roots is not False:
+        for root in roots if roots is not None else DEFAULT_MANIFEST_ROOTS:
+            for manifest_path in _walk_manifests(Path(root), max_depth):
+                _absorb(manifest_path)
     return sorted(found.values(), key=lambda cell: (cell.cell_id, cell.pid))
 
 
@@ -409,9 +475,7 @@ def naive_shell_reclaimable_gib() -> float | None:
     try:
         import subprocess
 
-        out = subprocess.run(
-            ["vm_stat"], capture_output=True, text=True, timeout=10, check=False
-        ).stdout
+        out = subprocess.run(["vm_stat"], capture_output=True, text=True, timeout=10, check=False).stdout
     except Exception:
         return None
     page_size = 4096
@@ -478,15 +542,11 @@ def memory_verdict(
     live_unrealized = sum(cell.unrealized_growth_gib for cell in live_cells)
     required = candidate + live_unrealized + margin
     headroom = (reclaimable - required) if measurable else float("-inf")
-    ceiling_headroom = (
-        (ceiling - (committed + candidate + live_unrealized)) if measurable else float("-inf")
-    )
+    ceiling_headroom = (ceiling - (committed + candidate + live_unrealized)) if measurable else float("-inf")
 
     reasons: list[str] = []
     if not measurable:
-        reasons.append(
-            "memory basis unavailable (mem_basis returned no measurement) -- fail-closed REFUSE"
-        )
+        reasons.append("memory basis unavailable (mem_basis returned no measurement) -- fail-closed REFUSE")
     else:
         if headroom < 0.0:
             reasons.append(
@@ -520,9 +580,7 @@ def memory_verdict(
         ceiling_headroom_gib=ceiling_headroom if measurable else 0.0,
         basis="tools.mem_basis.conservative_free_gib (governor reclaimable-aware snapshot)",
         measurable=measurable,
-        naive_shell_reclaimable_gib=(
-            naive_shell_reclaimable_gib() if include_naive_contrast else None
-        ),
+        naive_shell_reclaimable_gib=(naive_shell_reclaimable_gib() if include_naive_contrast else None),
         reasons=tuple(reasons),
     )
 
@@ -586,9 +644,7 @@ def cpu_load_context() -> dict[str, Any]:
     context: dict[str, Any] = {"logical_cpus": os.cpu_count()}
     try:
         one, five, fifteen = os.getloadavg()
-        context.update(
-            load_avg_1m=round(one, 3), load_avg_5m=round(five, 3), load_avg_15m=round(fifteen, 3)
-        )
+        context.update(load_avg_1m=round(one, 3), load_avg_5m=round(five, 3), load_avg_15m=round(fifteen, 3))
     except (OSError, AttributeError):
         context.update(load_avg_1m=None, load_avg_5m=None, load_avg_15m=None)
     return context
@@ -667,9 +723,7 @@ class ThroughputVerdict:
         return payload
 
 
-def throughput_verdict(
-    rows: Sequence[Mapping[str, Any]], *, live_count: int
-) -> ThroughputVerdict:
+def throughput_verdict(rows: Sequence[Mapping[str, Any]], *, live_count: int) -> ThroughputVerdict:
     """Admit a further cell only while measured concurrent throughput >= the serial baseline.
 
     NOT-YET-MEASURED is admitted with an explicit ``evidence="NO_CONCURRENT_OBSERVATION"``: the
@@ -818,9 +872,10 @@ def decide_admission(
     ledger_path: Path | None = None,
     ceiling_gib: float | None = None,
     include_naive_contrast: bool = True,
+    walk_roots: bool | None = None,
 ) -> AdmissionDecision:
     """Compose the memory and throughput legs into one ADMIT/REFUSE with full arithmetic."""
-    cells = list(live_cells) if live_cells is not None else discover_live_cells(roots)
+    cells = list(live_cells) if live_cells is not None else discover_live_cells(roots, walk_roots=walk_roots)
     mem = memory_verdict(
         candidate_peak_gib,
         cells,
@@ -857,6 +912,7 @@ def _cmd_admit(args: argparse.Namespace) -> int:
         roots=_roots_from_args(args.root),
         ledger_path=args.ledger,
         ceiling_gib=args.ceiling_gib,
+        walk_roots=True if getattr(args, "walk_roots", False) else None,
     )
     if args.json:
         print(json.dumps(decision.as_dict(), indent=2, sort_keys=True))
@@ -868,7 +924,10 @@ def _cmd_admit(args: argparse.Namespace) -> int:
 
 
 def _cmd_cells(args: argparse.Namespace) -> int:
-    cells = discover_live_cells(_roots_from_args(args.root))
+    cells = discover_live_cells(
+        _roots_from_args(args.root),
+        walk_roots=True if getattr(args, "walk_roots", False) else None,
+    )
     if args.json:
         print(
             json.dumps(
@@ -900,7 +959,10 @@ def _cmd_cells(args: argparse.Namespace) -> int:
 
 
 def _cmd_sample(args: argparse.Namespace) -> int:
-    cells = discover_live_cells(_roots_from_args(args.root))
+    cells = discover_live_cells(
+        _roots_from_args(args.root),
+        walk_roots=True if getattr(args, "walk_roots", False) else None,
+    )
     rates = sample_cell_rates(cells, window_s=args.window_s)
     total = sum(rate.steps_per_min for rate in rates)
     row = {
@@ -956,11 +1018,21 @@ def build_parser() -> argparse.ArgumentParser:
     admit.add_argument("--ceiling-gib", type=float, default=None)
     admit.add_argument("--ledger", type=Path, default=None)
     admit.add_argument("--root", **common_roots)
+    admit.add_argument(
+        "--walk-roots",
+        action="store_true",
+        help="force the pruned SSD manifest walk in addition to the launch registry (slow)",
+    )
     admit.add_argument("--json", action="store_true")
     admit.set_defaults(func=_cmd_admit)
 
     cells = sub.add_parser("cells", help="list live cells with their declared peaks and progress")
     cells.add_argument("--root", **common_roots)
+    cells.add_argument(
+        "--walk-roots",
+        action="store_true",
+        help="force the pruned SSD manifest walk in addition to the launch registry (slow)",
+    )
     cells.add_argument("--json", action="store_true")
     cells.set_defaults(func=_cmd_cells)
 

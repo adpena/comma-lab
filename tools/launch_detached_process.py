@@ -144,9 +144,7 @@ def _tombstone_receipt(done_path: Path, *, reason: str) -> dict[str, Any]:
     target = done_path.with_name(f"{done_path.name}.superseded.{stamp}.{digest[:12]}")
     ordinal = 1
     while target.exists():
-        target = done_path.with_name(
-            f"{done_path.name}.superseded.{stamp}.{digest[:12]}.{ordinal}"
-        )
+        target = done_path.with_name(f"{done_path.name}.superseded.{stamp}.{digest[:12]}.{ordinal}")
         ordinal += 1
     done_path.replace(target)
     consumed = _consumed_path(done_path)
@@ -313,9 +311,7 @@ def _resolve_fresh_roots(raw_roots: list[Path], suffix: bool) -> tuple[dict[str,
         raw_text = str(raw_root.expanduser())
         if raw_text != str(root):
             mapping[raw_text] = str(effective)
-        rows.append(
-            {"requested_path": str(root), "effective_path": str(effective), "state": state}
-        )
+        rows.append({"requested_path": str(root), "effective_path": str(effective), "state": state})
     return mapping, rows
 
 
@@ -340,6 +336,35 @@ def _rewrite_value(value: str, mapping: Mapping[str, str]) -> str:
 
 def _rewrite_path(path: Path, mapping: Mapping[str, str]) -> Path:
     return Path(_rewrite_value(str(path.expanduser().resolve(strict=False)), mapping))
+
+
+#: Registry the governor (``tools/cell_admission.py``) reads instead of walking both SSD roots per
+#: admission poll (MEASURED >120 s per walk on 2026-09-04).  Append-only JSONL, fail-open: a
+#: registry failure must never refuse a launch.
+LAUNCH_REGISTRY_PATH = Path(__file__).resolve().parents[1] / ".omx" / "state" / "detached_launch_registry.jsonl"
+
+
+def _register_launch(manifest_path: Path, *, pid: int, purpose: str, registry_path: Path | None = None) -> bool:
+    """Append a ``detached_launch_registry.v1`` row; returns False (and warns) on any failure."""
+    row = {
+        "schema": "detached_launch_registry.v1",
+        "manifest_path": str(manifest_path),
+        "pid": int(pid),
+        "purpose": purpose,
+        "registered_utc": _utc_now(),
+        "source": "launcher",
+    }
+    path = LAUNCH_REGISTRY_PATH if registry_path is None else Path(registry_path)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            fcntl.flock(handle, fcntl.LOCK_EX)
+            handle.write(json.dumps(row, sort_keys=True) + "\n")
+            fcntl.flock(handle, fcntl.LOCK_UN)
+        return True
+    except OSError as exc:
+        print(f"[launch_detached_process] registry append failed (fail-open): {exc}", file=sys.stderr)
+        return False
 
 
 def _launch_identity(manifest_path: Path, pid: int, counter: int) -> dict[str, Any]:
@@ -432,9 +457,7 @@ def _supervisor_main(argv: list[str]) -> int:
             rc = int(child.wait())
         except FleetReaperLaunchRefusal as exc:
             rc = 125
-            detail = "fleet_reaper_guard_refusal=" + json.dumps(
-                exc.assessment.as_dict(), sort_keys=True
-            )
+            detail = "fleet_reaper_guard_refusal=" + json.dumps(exc.assessment.as_dict(), sort_keys=True)
         except FileNotFoundError as exc:
             rc = 127
             detail = f"exec_error=FileNotFoundError:{exc.filename}"
@@ -591,13 +614,11 @@ def _sweep_superseded_values(
     """
     if isinstance(node, dict):
         return {
-            key: _sweep_superseded_values(value, corrections, f"{trail}.{key}", found)
-            for key, value in node.items()
+            key: _sweep_superseded_values(value, corrections, f"{trail}.{key}", found) for key, value in node.items()
         }
     if isinstance(node, list):
         return [
-            _sweep_superseded_values(item, corrections, f"{trail}[{index}]", found)
-            for index, item in enumerate(node)
+            _sweep_superseded_values(item, corrections, f"{trail}[{index}]", found) for index, item in enumerate(node)
         ]
     if isinstance(node, str) and node in corrections:
         found.append({"key": trail.lstrip("."), "declared": node, "derived": corrections[node]})
@@ -742,9 +763,7 @@ def _derive_watcher_config(
             record["log_path"]["source"] = "launch_confirmed"
         else:
             record["log_path"]["source"] = "launch_superseded"
-            record["supersessions"].append(
-                {"key": "log_path", "declared": declared_log, "derived": str(log_path)}
-            )
+            record["supersessions"].append({"key": "log_path", "declared": declared_log, "derived": str(log_path)})
             config["log_path"] = str(log_path)
             changed = True
 
@@ -996,9 +1015,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--cwd", default=".", type=Path)
     parser.add_argument("--purpose", default="detached local long run")
-    parser.add_argument(
-        "--authority", default="local detached execution; downstream artifacts decide authority"
-    )
+    parser.add_argument("--authority", default="local detached execution; downstream artifacts decide authority")
     parser.add_argument("--env", action="append", default=[], metavar="KEY=VALUE")
     parser.add_argument("--fresh-root", action="append", default=[], type=Path, metavar="PATH")
     parser.add_argument(
@@ -1059,15 +1076,12 @@ def parse_args() -> argparse.Namespace:
     )
     if args.derive_resource_budgets and any(value is None for value in resource_values):
         parser.error(
-            "--derive-resource-budgets requires --measured-peak-rss-gib, "
-            "--measured-thread-need, and --walltime-cap-s"
+            "--derive-resource-budgets requires --measured-peak-rss-gib, --measured-thread-need, and --walltime-cap-s"
         )
     if not args.derive_resource_budgets and any(value is not None for value in resource_values):
         parser.error("resource measurement flags require --derive-resource-budgets")
     if args.derive_resource_budgets and (
-        args.measured_peak_rss_gib <= 0
-        or args.measured_thread_need <= 0
-        or args.walltime_cap_s <= 0
+        args.measured_peak_rss_gib <= 0 or args.measured_thread_need <= 0 or args.walltime_cap_s <= 0
     ):
         parser.error("resource measurements and caps must be positive")
     if args.arm_watchers and (args.liveness_config is None or args.quality_config is None):
@@ -1321,6 +1335,7 @@ def main() -> int:
             manifest_path=str(manifest_path),
         )
     identity = _launch_identity(manifest_path, proc.pid, counter)
+    _register_launch(manifest_path, pid=proc.pid, purpose=str(args.purpose))
     try:
         _update_receipt_reservation(receipt_arm_path, identity=identity)
     except (OSError, json.JSONDecodeError, LaunchRefusal) as exc:
@@ -1354,12 +1369,11 @@ def main() -> int:
     pid_path.write_text(f"{proc.pid}\n", encoding="utf-8")
     try:
         if args.nice is not None:
-            applied = _apply_and_verify_nice(
-                proc.pid, args.nice, best_effort=bool(args.nice_best_effort)
-            )
+            applied = _apply_and_verify_nice(proc.pid, args.nice, best_effort=bool(args.nice_best_effort))
             payload["actual_nice"] = applied
             payload["nice_status"] = (
-                "applied" if applied == args.nice
+                "applied"
+                if applied == args.nice
                 else f"unapplied:best_effort (requested {args.nice}, actual {applied})"
             )
         else:

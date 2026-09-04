@@ -263,9 +263,7 @@ class TestMemoryVerdict:
     def test_operator_ceiling_leg_can_refuse_alone(self, monkeypatch):
         """Plenty of reclaimable headroom, but the absolute committed ceiling still binds."""
         _fixed_basis(monkeypatch, reclaimable=200.0, committed=110.0)
-        verdict = ca.memory_verdict(
-            20.0, [], margin_gib=0.0, ceiling_gib=116.0, include_naive_contrast=False
-        )
+        verdict = ca.memory_verdict(20.0, [], margin_gib=0.0, ceiling_gib=116.0, include_naive_contrast=False)
         assert verdict.headroom_gib > 0
         assert verdict.ceiling_headroom_gib == pytest.approx(-14.0)
         assert verdict.admits is False
@@ -284,9 +282,7 @@ class TestMemoryVerdict:
 
     def test_negative_candidate_is_clamped(self, monkeypatch):
         _fixed_basis(monkeypatch, reclaimable=80.0, committed=10.0)
-        assert ca.memory_verdict(
-            -5.0, [], margin_gib=0.0, include_naive_contrast=False
-        ).candidate_peak_gib == 0.0
+        assert ca.memory_verdict(-5.0, [], margin_gib=0.0, include_naive_contrast=False).candidate_peak_gib == 0.0
 
     def test_as_dict_is_json_serializable(self, monkeypatch):
         _fixed_basis(monkeypatch, reclaimable=80.0, committed=10.0)
@@ -336,10 +332,12 @@ class TestContentionLedger:
     def test_read_skips_foreign_schema_and_garbage(self, tmp_path):
         ledger = tmp_path / "ledger.jsonl"
         ledger.write_text(
-            json.dumps({"schema": "other.v1", "concurrency": 1}) + "\n"
+            json.dumps({"schema": "other.v1", "concurrency": 1})
+            + "\n"
             + "not json\n"
             + "\n"
-            + json.dumps(self._row(2, 35.0, "2026-09-04T11:00:00Z")) + "\n",
+            + json.dumps(self._row(2, 35.0, "2026-09-04T11:00:00Z"))
+            + "\n",
             encoding="utf-8",
         )
         rows = ca.read_contention_rows(ledger)
@@ -445,9 +443,7 @@ class TestDecision:
         )
         assert live_training.is_cell is True
         monkeypatch.setattr(ca, "discover_live_cells", lambda *a, **k: [live_training])
-        decision = ca.decide_admission(
-            1.0, roots=[tmp_path / "none"], ledger_path=ledger, include_naive_contrast=False
-        )
+        decision = ca.decide_admission(1.0, roots=[tmp_path / "none"], ledger_path=ledger, include_naive_contrast=False)
         assert decision.memory.admits is True
         assert decision.throughput.admits is False
         assert decision.verdict == "REFUSE"
@@ -473,9 +469,7 @@ class TestDecision:
         cells = ca.discover_live_cells([tmp_path])
         # One discovered cell; synthesise a second training cell and one non-cell job.
         second = dataclasses.replace(cells[0], cell_id="cell_two", pid=cells[0].pid)
-        job = dataclasses.replace(
-            cells[0], cell_id="a_job", config_path=None, total_steps=None, declared_peak_gib=0.0
-        )
+        job = dataclasses.replace(cells[0], cell_id="a_job", config_path=None, total_steps=None, declared_peak_gib=0.0)
         decision = ca.decide_admission(
             1.0,
             live_cells=[cells[0], second, job],
@@ -533,9 +527,12 @@ class TestCLI:
         rc = ca.main(
             [
                 "admit",
-                "--candidate-peak-gib", "1.0",
-                "--root", str(tmp_path / "none"),
-                "--ledger", str(tmp_path / "empty.jsonl"),
+                "--candidate-peak-gib",
+                "1.0",
+                "--root",
+                str(tmp_path / "none"),
+                "--ledger",
+                str(tmp_path / "empty.jsonl"),
                 "--json",
             ]
         )
@@ -548,9 +545,12 @@ class TestCLI:
         rc = ca.main(
             [
                 "admit",
-                "--candidate-peak-gib", "41.5",
-                "--root", str(tmp_path / "none"),
-                "--ledger", str(tmp_path / "empty.jsonl"),
+                "--candidate-peak-gib",
+                "41.5",
+                "--root",
+                str(tmp_path / "none"),
+                "--ledger",
+                str(tmp_path / "empty.jsonl"),
             ]
         )
         assert rc == ca.RC_REFUSE
@@ -560,9 +560,12 @@ class TestCLI:
         rc = ca.main(
             [
                 "admit",
-                "--candidate-peak-gib", "1.0",
-                "--root", str(tmp_path / "none"),
-                "--ledger", str(tmp_path / "empty.jsonl"),
+                "--candidate-peak-gib",
+                "1.0",
+                "--root",
+                str(tmp_path / "none"),
+                "--ledger",
+                str(tmp_path / "empty.jsonl"),
             ]
         )
         assert rc == ca.RC_UNMEASURABLE
@@ -583,9 +586,7 @@ class TestCLI:
     def test_sample_measures_without_writing(self, tmp_path, capsys):
         _make_cell(tmp_path, "alpha", history_rows=3)
         ledger = tmp_path / "ledger.jsonl"
-        rc = ca.main(
-            ["sample", "--window-s", "0", "--root", str(tmp_path), "--ledger", str(ledger), "--no-write"]
-        )
+        rc = ca.main(["sample", "--window-s", "0", "--root", str(tmp_path), "--ledger", str(ledger), "--no-write"])
         assert rc == 0
         payload = json.loads(capsys.readouterr().out)
         assert payload["concurrency"] == 1
@@ -599,8 +600,7 @@ class TestCLI:
         """
         _make_cell(tmp_path, "alpha", history_rows=3)
         ca.main(
-            ["sample", "--window-s", "0", "--root", str(tmp_path),
-             "--ledger", str(tmp_path / "l.jsonl"), "--no-write"]
+            ["sample", "--window-s", "0", "--root", str(tmp_path), "--ledger", str(tmp_path / "l.jsonl"), "--no-write"]
         )
         payload = json.loads(capsys.readouterr().out)
         assert "cpu_load_context" in payload
@@ -683,15 +683,21 @@ class TestRepoIntegration:
         """
         _fixed_basis(monkeypatch, reclaimable=40.0, committed=40.0)
         at_peak = ca.LiveCell(
-            cell_id="settled", pid=1, alive=True,
-            declared_peak_gib=20.0, current_rss_gib=20.0,
-            manifest_path=Path("/m"), config_path=None, run_dir=None,
-            total_steps=None, completed_steps=None,
-            arm_name=None, arm_role=None, purpose=None,
+            cell_id="settled",
+            pid=1,
+            alive=True,
+            declared_peak_gib=20.0,
+            current_rss_gib=20.0,
+            manifest_path=Path("/m"),
+            config_path=None,
+            run_dir=None,
+            total_steps=None,
+            completed_steps=None,
+            arm_name=None,
+            arm_role=None,
+            purpose=None,
         )
-        verdict = ca.memory_verdict(
-            20.0, [at_peak], margin_gib=0.0, ceiling_gib=1e9, include_naive_contrast=False
-        )
+        verdict = ca.memory_verdict(20.0, [at_peak], margin_gib=0.0, ceiling_gib=1e9, include_naive_contrast=False)
         assert verdict.live_unrealized_gib == 0.0
         assert verdict.required_gib == pytest.approx(20.0)
         assert verdict.admits is True
@@ -707,9 +713,7 @@ class TestRepoIntegration:
 
         tree = ast.parse(_MODULE_PATH.read_text(encoding="utf-8"))
         offenders = [
-            node.lineno
-            for node in ast.walk(tree)
-            if isinstance(node, ast.Attribute) and node.attr == "virtual_memory"
+            node.lineno for node in ast.walk(tree) if isinstance(node, ast.Attribute) and node.attr == "virtual_memory"
         ]
         assert offenders == [], f"raw psutil.virtual_memory() used at lines {offenders}"
         assert "mem_basis.conservative_free_gib" in _MODULE_PATH.read_text(encoding="utf-8")
@@ -733,3 +737,87 @@ def test_throughput_verdict_sole_cell_ignores_concurrency_rows() -> None:
     assert sole.evidence == "SOLE_CELL_NO_CONTENTION"
     second = throughput_verdict(rows, live_count=2)
     assert second.admits is False
+
+
+class TestRegistryFirstDiscovery:
+    """The SSD walk was MEASURED at >120 s per poll (2026-09-04); discovery is registry-first."""
+
+    def _manifest(self, tmp_path, name, pid):
+        d = tmp_path / name / "launch"
+        d.mkdir(parents=True)
+        m = d / "launch_manifest.json"
+        m.write_text(
+            json.dumps(
+                {
+                    "schema": "x",
+                    "launch_id": {"pid": pid, "manifest_path": str(m)},
+                    "purpose": name,
+                    "resource_budget": {"measured_peak_rss_gib": 1.0},
+                }
+            )
+        )
+        return m
+
+    def test_registry_paths_dedupe_and_skip_missing(self, tmp_path):
+        m = self._manifest(tmp_path, "a", 1)
+        reg = tmp_path / "reg.jsonl"
+        reg.write_text(
+            json.dumps({"manifest_path": str(m)})
+            + "\n"
+            + json.dumps({"manifest_path": str(m)})
+            + "\n"
+            + json.dumps({"manifest_path": str(tmp_path / "gone.json")})
+            + "\n"
+            + "not json\n"
+        )
+        assert ca.registry_manifest_paths(reg) == [m]
+
+    def test_registry_present_means_no_walk(self, tmp_path, monkeypatch):
+        m = self._manifest(tmp_path, "a", 1)
+        reg = tmp_path / "reg.jsonl"
+        reg.write_text(json.dumps({"manifest_path": str(m)}) + "\n")
+        walked = []
+        monkeypatch.setattr(ca, "_walk_manifests", lambda root, depth: walked.append(root) or [])
+        monkeypatch.setattr(ca, "live_cell_from_manifest", lambda p: None)
+        ca.discover_live_cells(registry_path=reg)
+        assert walked == []
+        ca.discover_live_cells(registry_path=reg, walk_roots=True)
+        assert len(walked) == len(ca.DEFAULT_MANIFEST_ROOTS)
+
+    def test_empty_registry_falls_back_to_walk(self, tmp_path, monkeypatch):
+        walked = []
+        monkeypatch.setattr(ca, "_walk_manifests", lambda root, depth: walked.append(root) or [])
+        ca.discover_live_cells(registry_path=tmp_path / "absent.jsonl")
+        assert len(walked) == len(ca.DEFAULT_MANIFEST_ROOTS)
+        walked.clear()
+        ca.discover_live_cells(registry_path=tmp_path / "absent.jsonl", walk_roots=False)
+        assert walked == []
+
+    def test_walk_prunes_bulk_directories(self, tmp_path):
+        keep = self._manifest(tmp_path, "cell", 7)
+        for bulk in ("retained", "runs", "sealed_source_abc", "step_000100", "shard_1_2"):
+            (tmp_path / bulk / "deep").mkdir(parents=True)
+            (tmp_path / bulk / "deep" / "launch_manifest.json").write_text("{}")
+        found = list(ca._walk_manifests(tmp_path, 6))
+        assert found == [keep]
+
+
+def test_launcher_registry_row_is_readable_by_the_governor(tmp_path):
+    """Launcher appends a registry row; the governor's registry reader consumes it (one contract)."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "launch_detached_process", Path(__file__).resolve().parents[3] / "tools" / "launch_detached_process.py"
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    manifest = tmp_path / "launch" / "launch_manifest.json"
+    manifest.parent.mkdir()
+    manifest.write_text("{}")
+    reg = tmp_path / "reg.jsonl"
+    assert mod._register_launch(manifest, pid=4242, purpose="t", registry_path=reg) is True
+    row = json.loads(reg.read_text().strip())
+    assert row["schema"] == "detached_launch_registry.v1" and row["pid"] == 4242
+    assert ca.registry_manifest_paths(reg) == [manifest]
+    # fail-open: an unwritable registry path returns False, never raises
+    assert mod._register_launch(manifest, pid=1, purpose="t", registry_path=tmp_path / "reg.jsonl" / "x") is False
