@@ -555,3 +555,19 @@ failed rewrite is refused by argparse). **ng4 turned UP at 3,000: 0.431595** (0.
 stronger parent through three milestones; BELOW-BOTH is judged against ng4's ACTUAL terminal (~01:10Z). Blocker: APDataStore 16 GiB — the next
 generation will not clear the 8 GiB reserve without a cold-store sweep (dk2 chartered). Watchdog: first WARN rows logged (no action at WARN).
 Equations leg (`tac.canonical_equations`): none new (the ng5 cell IS the measurement of gm1's band × the continuous-dual anchor).
+
+## ADDENDUM 24 (2026-09-05 00:00Z real) — the snapshot fire path failed in anger, and the refusal was the lucky outcome
+
+The first real Modal build through hv1's source snapshot (ps2's custody fire) REFUSED rc=5: `FileNotFoundError '.venv/bin/python'`. hv1's root cause
+(1fbc7c066) was deeper than the symptom: the cwd change moved the LOCAL half of the dispatcher too — `claim_modal_auth_eval_dispatch(repo_root=Path.cwd())`
+ran the claim writer with `cwd=<snapshot>`, so my third cure option (symlink `.venv` into the snapshot) would have made it SILENTLY WRONG: the dispatch
+claim would have landed in `<snapshot>/.omx/state/active_lane_dispatch_claims.md` and been lost, and the single-flight guard would then read an empty
+ledger. Cure = my second option: dispatch cwd stays the repo root; the snapshot reaches Modal through `PACT_MODAL_SOURCE_ROOT` + a one-line
+`_mount_path()` in both app modules (byte-for-byte no-op when unset; VERIFIED on the real modules); plus `verify_dispatch_paths(cwd, argv)` refuses
+rc=9 BEFORE the subprocess if any relative path in the argv or in the local half's known spawns fails to resolve (the spawned paths are read from
+`dispatch_claim_command`'s real signature via `inspect.signature`, never re-typed). Dry-run proved (11 new tests, 81 across suites); honest snapshot
+count corrected to 8,307 files / 642 MB in 9.8 s (the 16,060 was a nested-mount double count). Still NOT fire-proved end to end → snapshot stays OFF
+for fires (`--no-source-snapshot`); fire-proof it on the next CUSTODY row (known answer), never on a frontier row. The custody row re-fired through
+the proven path (call fc-01M1QDB3R37N2JWWNHW64TZT2P). Lesson for the genus: a refusal that stops a wrong write is the guard WORKING; a "cure" that
+makes the refusal go away can be the cure that makes the failure silent ([[m102]] · [[m100]]).
+Equations leg (`tac.canonical_equations`): none.
