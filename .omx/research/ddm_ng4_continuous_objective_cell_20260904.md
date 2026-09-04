@@ -525,7 +525,16 @@ on this design.
 * **Composing ng1's warm moments, ng2's area cap or ng3's band into this cell is CLOSED** — one
   lever, and the seal refuses a cell that carries an area cap.
 
-## Two failing tests that are NOT this landing's (checked, not assumed)
+## Gate state, and three red rows that are NOT this landing's (checked, not assumed)
+
+`python -m tac.preflight --scope dev` runs clean on every gate except one: **`[lane-pre-registered]`
+(Check 126) reports 22 references to unregistered lane_ids, and all 22 are in
+`experiments/ddm_lb1_lane_band_ceiling.py`** — none in any file this arm touched (verified by
+collecting the finding paths). The flagged names (`lane_class_self_detected`,
+`lane_class_module_default`, `lane_class_agrees_with_module_default`) read as column keys about the
+Lane CLASS, not as lane_ids, so this looks like the gate's `lane_*` prefix matching the class name.
+It belongs to ddm_lb1's surface, and reaching into another arm's file to silence it would be worse
+than reporting it.
 
 The repo-wide DSL/lever sweep after this landing showed 9 failures. Seven reproduce at HEAD in a
 detached `git worktree`. The remaining two were checked individually against HEAD with the live
