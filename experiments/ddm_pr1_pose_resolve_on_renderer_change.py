@@ -525,6 +525,16 @@ def run_codes(args) -> int:
             merged[int(pair)] = row["codes"]
     for pair, row_codes in merged.items():
         codes[pair] = np.asarray(row_codes, dtype=np.int32)
+    # FAIL CLOSED on a partial merge. A missing pair silently keeps the SHIPPED
+    # code, so an incomplete shard would understate the recovery without any
+    # symptom in the output -- the quiet-wrong-number shape this arm exists to
+    # avoid. --allow-partial makes an interim read explicit and labelled.
+    if len(merged) < N_PAIRS and not args.allow_partial:
+        raise Pr1Error(
+            f"merged {len(merged)} of {N_PAIRS} pairs; the missing pairs would keep "
+            "the shipped codes and understate the recovery. Pass --allow-partial "
+            "to read an interim table, and label it partial wherever it is quoted."
+        )
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     np.save(out, codes)
@@ -541,6 +551,7 @@ def run_codes(args) -> int:
         "carrier_rice_price": price,
         "delta_score_rate": price["delta_bytes"] * 25.0 / 37_545_489.0,
         "pairs_written": len(merged),
+        "complete_n600": len(merged) == N_PAIRS,
         "shipped_codes_sha256": sha256_array(state.codes),
         "codes_sha256": sha256_array(codes),
         "changed_pairs": int((codes != state.codes).any(axis=1).sum()),
@@ -822,6 +833,10 @@ def build_parser() -> argparse.ArgumentParser:
     codes.add_argument("--rows", nargs="+", required=True)
     codes.add_argument("--out", type=Path, required=True)
     codes.add_argument("--threads", type=int, default=4)
+    codes.add_argument(
+        "--allow-partial", action="store_true",
+        help="merge fewer than 600 solved pairs (interim read; label it partial)",
+    )
     return parser
 
 

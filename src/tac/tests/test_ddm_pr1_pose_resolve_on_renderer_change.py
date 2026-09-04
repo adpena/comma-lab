@@ -467,7 +467,8 @@ class TestCarrierPriceIsMeasuredNotAssumed:
                         encoding="utf-8")
         out = tmp_path / "codes.npy"
         args = pr1.build_parser().parse_args(
-            ["codes", "--runtime", str(runtime), "--rows", str(rows), "--out", str(out)]
+            ["codes", "--runtime", str(runtime), "--rows", str(rows), "--out", str(out),
+             "--allow-partial"]
         )
         assert pr1.run_codes(args) == 0
         record = json.loads(out.with_suffix(".json").read_text(encoding="utf-8"))
@@ -543,3 +544,65 @@ class TestSolverDiagnostics:
         got = json.loads(out.read_text(encoding="utf-8"))
         assert got["why_the_residue_survives"]["rows_available"] is True
         assert got["why_the_residue_survives"]["stop_reasons"] == {"lattice_floor": 1}
+
+
+class TestPartialMergeFailsClosed:
+    def _args(self, tmp_path, rows, *, allow_partial=False):
+        runtime = tmp_path / "runtime"
+        runtime.mkdir(exist_ok=True)
+        (runtime / "archive.zip").write_bytes(b"x")
+        argv = ["codes", "--runtime", str(runtime), "--rows", str(rows),
+                "--out", str(tmp_path / "codes.npy")]
+        if allow_partial:
+            argv.append("--allow-partial")
+        return pr1.build_parser().parse_args(argv)
+
+    def _patch(self, monkeypatch, codes):
+        import types
+
+        monkeypatch.setattr(pr1, "sha256_file", lambda _p: pr1.FRONTIER_ARCHIVE_SHA256)
+        fake_up2 = types.SimpleNamespace(
+            load_carrier_state=lambda *a, **k: types.SimpleNamespace(codes=codes),
+            price_full_resolve_bytes=lambda _r, _c: ({"delta_bytes": 0}, codes),
+        )
+        monkeypatch.setitem(sys.modules, "ddm_up2_shipping_pose_solve", fake_up2)
+
+    def test_a_short_merge_is_refused(self, tmp_path, monkeypatch):
+        import json
+
+        codes = np.zeros((pr1.N_PAIRS, 12), dtype=np.int32)
+        self._patch(monkeypatch, codes)
+        rows = tmp_path / "rows.jsonl"
+        rows.write_text(json.dumps({"pair": 0, "codes": [1] * 12}) + "\n", encoding="utf-8")
+        with pytest.raises(pr1.Pr1Error, match="understate the recovery"):
+            pr1.run_codes(self._args(tmp_path, rows))
+
+    def test_allow_partial_makes_the_interim_read_explicit(self, tmp_path, monkeypatch):
+        import json
+
+        codes = np.zeros((pr1.N_PAIRS, 12), dtype=np.int32)
+        self._patch(monkeypatch, codes)
+        rows = tmp_path / "rows.jsonl"
+        rows.write_text(json.dumps({"pair": 0, "codes": [1] * 12}) + "\n", encoding="utf-8")
+        assert pr1.run_codes(self._args(tmp_path, rows, allow_partial=True)) == 0
+        record = json.loads(
+            (tmp_path / "codes.json").read_text(encoding="utf-8")
+        )
+        assert record["complete_n600"] is False
+        assert record["pairs_written"] == 1
+
+    def test_a_full_merge_is_marked_complete(self, tmp_path, monkeypatch):
+        import json
+
+        codes = np.zeros((pr1.N_PAIRS, 12), dtype=np.int32)
+        self._patch(monkeypatch, codes)
+        rows = tmp_path / "rows.jsonl"
+        rows.write_text(
+            "\n".join(json.dumps({"pair": p, "codes": [1] * 12})
+                      for p in range(pr1.N_PAIRS)) + "\n",
+            encoding="utf-8",
+        )
+        assert pr1.run_codes(self._args(tmp_path, rows)) == 0
+        record = json.loads((tmp_path / "codes.json").read_text(encoding="utf-8"))
+        assert record["complete_n600"] is True
+        assert record["pairs_written"] == pr1.N_PAIRS
