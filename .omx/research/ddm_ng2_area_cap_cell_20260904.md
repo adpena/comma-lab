@@ -424,3 +424,11 @@ S_hat **0.457666** (control @1k 0.466875; Δ −0.009209) · d_seg_hat **0.00305
 decimals) · d_pose_hat 0.0006645 (control 0.0008233). The −0.009 is ALL pose; the cap has not touched seg at 1k —
 consistent with ng2's own caution (cap gradient 1.25% of the recall term). The step-2k read (the over-paint peak; area
 falsifier) decides whether it binds at all.
+**@2k (15:37Z — the over-paint peak):** S_hat **0.482893** (control 0.485677; Δ −0.002784) · d_seg_hat **0.0032483**
+(control 0.0032171 — WORSE) · d_pose_hat 0.0007577 (control 0.0008644). Predicted/GT area from the retained argmax:
+**Lane 1.1029** (control 1.0929), **Movable 1.0567** (control 1.0580), Road 0.9957, Undriv 0.9994, MyCar 1.0000.
+**Falsifier 2 FIRES at 2k: the cap is NOT binding** — Lane over-paint is slightly LARGER than the control's; the −0.0028
+S_hat is pose. ng2's own caution (cap gradient 1.25% of the recall term at the law-derived λ) is the measured reading;
+the ×80 parity multiplier is the conditional next lever, but md1 bounds ALL schedule levers at 1.61× — race it only if
+a cell slot is otherwise idle. Concurrency measured (operator 09-04 'saturate'): ng2 20 steps/min + ng3 15 steps/min
+= 35/min against 28/min serial (+25% throughput on the Metal).
