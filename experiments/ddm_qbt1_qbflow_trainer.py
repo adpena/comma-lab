@@ -197,6 +197,23 @@ MARGIN_CONSTRAINT_MODE_PINS = {
         "eta_lambda": MARGIN_CONSTRAINT_ETA_LAMBDA,
     },
 }
+# ddm_ng2 one-sided Chan-Vese area cap (vr1 row 3; equation
+# chan_vese_area_constraint_birth_balance_v1).  The dual ascent above is RECALL-ONLY -- it
+# drives Lane/Movable within-class error DOWN and nothing caps the area those classes take.
+# ddm_sd1 MEASURED the consequence on this exact object: Lane predicted/GT area 1.0334 ->
+# 1.0929 and Movable 1.0259 -> 1.0580, both peaking at step 2,000 (the d_seg peak), with the
+# majority classes losing exactly the mass the rare classes gain (+/-7.550e-04 of the frame).
+# The capped classes are the SAME two the dual constrains, so the constraint set becomes
+# two-sided on one class pair instead of one-sided on two.
+AREA_CAP_CLASSES: tuple[tuple[str, int], ...] = (("Lane", 1), ("Movable", 3))
+# Fixed reference temperature for the score-neutral surrogate telemetry row.  ddm_sd1 MEASURED
+# that the annealed reported loss factorizes as (schedule leg x field leg) with the schedule
+# leg -40.54% on a FROZEN field -- 8.4x the field's own +4.85% -- so a monotone-falling loss is
+# compatible with a monotone-worsening argmax.  At tau = 0.05 the surrogate has the correct
+# sign in 5/5 windows and peaks at the same milestone as the exact term.  Read-only, no
+# gradient, no weight effect: this is the observability half of the "off is a tracked queue"
+# law, so it defaults ON.
+EXPECTED_FLIP_TAU_REFERENCE = 0.05
 QBT2B_BIRTH_MAX_STEPS = 100
 QBT2B_MARGIN_STEPS = 5_000
 QBT2B_TOTAL_STEPS = QBT2B_BIRTH_MAX_STEPS + QBT2B_MARGIN_STEPS
@@ -702,6 +719,149 @@ def derive_balanced_class_weights(pair_ids: Sequence[int], device: torch.device)
         raise QBT1Error("balanced class weights need every class present in the selection targets")
     weights = counts.sum() / (float(qbf1.N_CLASSES) * counts)
     return weights.to(dtype=torch.float32, device=device)
+
+
+def selection_gt_area_fractions(pair_ids: Sequence[int]) -> dict[int, float]:
+    """A_GT_c per class over a selection, from the SAME bincount balanced weights use.
+
+    ``derive_balanced_class_weights`` computes ``counts = bincount(target)`` and divides;
+    this returns the raw normalized histogram ``A_GT_c = count_c / total_px`` so the
+    Chan-Vese area cap's stiffness is derived from the trainer's own target read rather
+    than a hand-typed area constant.  Fails closed on an absent class for the same reason
+    the balanced weights do: ``lambda_c = F / (delta * A_GT_c)`` is infinite at zero area.
+    """
+
+    target_argmax, _unused_pose = _target_arrays(pair_ids, torch.device("cpu"))
+    counts = torch.bincount(target_argmax.reshape(-1), minlength=qbf1.N_CLASSES).to(torch.float64)
+    if int((counts == 0).sum()) != 0:
+        raise QBT1Error("selection GT area fractions need every class present in the targets")
+    total = counts.sum()
+    return {index: float(counts[index] / total) for index in range(qbf1.N_CLASSES)}
+
+
+def derive_area_cap_lambdas(
+    pair_ids: Sequence[int],
+    birth_force: Mapping[str, float],
+    tolerance: Mapping[str, float],
+    *,
+    classes: Sequence[tuple[str, int]] = AREA_CAP_CLASSES,
+) -> dict[str, float]:
+    """``lambda_c = F_birth,c / (delta_c * A_GT_c)`` with ``A_GT_c`` from the selection bincount.
+
+    The stiffness is delegated to the REGISTERED law's own callable
+    (``tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708
+    .area_constraint_lambda``) so the trainer never re-implements the balance arithmetic, and
+    ``A_GT_c`` comes from :func:`selection_gt_area_fractions` -- the same bincount the balanced
+    class weights use -- so no area constant is ever typed by hand.  ``birth_force`` and
+    ``tolerance`` are per class because both are MEASURED per class on this vehicle and differ
+    by 3.4x and 1.7x respectively; a single shared knob would impose a different effective
+    constraint on each class, which is the arbitrary choice, not the per-class one.
+    """
+
+    from tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708 import (
+        area_constraint_lambda,
+    )
+
+    expected = {name for name, _index in classes}
+    if set(birth_force) != expected or set(tolerance) != expected:
+        raise QBT1Error("area-cap birth-force/tolerance class set differs")
+    gt_areas = selection_gt_area_fractions(pair_ids)
+    lambdas: dict[str, float] = {}
+    for class_name, class_id in classes:
+        lambdas[class_name] = float(
+            area_constraint_lambda(
+                gt_areas[int(class_id)],
+                birth_force=float(birth_force[class_name]),
+                tolerance=float(tolerance[class_name]),
+            )
+        )
+    return lambdas
+
+
+def realized_class_area_ste(logits: torch.Tensor) -> torch.Tensor:
+    """Per-pair realized class area ``A_c`` with the EXACT argmax value and a soft gradient.
+
+    The Chan-Vese region energy is defined on the HARD region area
+    ``A_c(phi) = INT H(phi_c)``; its differentiable stand-in is the softmax mass, whose
+    boundary-annulus probability biases thin classes badly (MEASURED at this cell's exact
+    start state: softmax(T=1) mass over-states Lane by 2.4336x and Movable by 1.2823x while
+    the realized argmax area is only 1.0407x / 1.0244x of GT).  A soft-only area term would
+    therefore hinge on a quantity that is 2.4x the thing the cap is supposed to cap.
+
+    So the area is a STRAIGHT-THROUGH estimator, native to this vehicle (the realization path
+    already carries ``roundtrip_to_camera_uint8_ste``): the VALUE is the exact argmax area and
+    the GRADIENT is the softmax Jacobian ``softmax_c (1 - softmax_c)``, which is the discrete
+    ``delta(phi_c)`` boundary measure the law's variational gradient asks for.  The softmax is
+    taken at the scorer's own temperature (T = 1), never at the annealed expected-flip ``tau``:
+    ``ddm_sd1`` MEASURED that a moving temperature deflates a frozen field's reported quantity
+    by -40.54%, so an area cap read through ``tau`` would inherit that schedule defect.
+
+    Returns ``(B, K)`` class-area fractions in [0, 1] that sum to 1 along the class axis.
+    """
+
+    if logits.ndim != 4:
+        raise QBT1Error("realized class area needs (B, K, H, W) logits")
+    soft = torch.softmax(logits, dim=1).mean(dim=(2, 3))
+    index = logits.detach().argmax(dim=1)
+    one_hot = torch.zeros_like(logits).scatter_(1, index[:, None], 1.0)
+    hard = one_hot.mean(dim=(2, 3))
+    return hard + (soft - soft.detach())
+
+
+def one_sided_area_cap_penalty(
+    logits: torch.Tensor,
+    target: torch.Tensor,
+    area_lambdas: Mapping[str, float],
+    sample_weights: torch.Tensor | None = None,
+    *,
+    classes: Sequence[tuple[str, int]] = AREA_CAP_CLASSES,
+) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    """Chan-Vese ONE-SIDED area cap ``E_c = (lambda_c / 2) * relu(A_c - A_c^GT)^2``.
+
+    Equations leg: ``chan_vese_area_constraint_birth_balance_v1`` (registered; its numpy
+    reference is ``tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708
+    .area_penalty`` and the stiffness comes from that module's ``area_constraint_lambda``).
+
+    One-sided at ``A_c^GT``: strictly zero whenever the class occupies at most its GT area, so
+    nucleation and recall stay UNOPPOSED below GT and only over-paint is retracted.  The hinge
+    is evaluated PER PAIR against that pair's own GT area and only then averaged with the
+    selection's Horvitz-Thompson weights (the DSL twin forbids a global batch-area hinge, and a
+    pair holding no instance of a class must not be able to paint up to the selection mean for
+    free).  Consumes the SAME realized through-R logits the expected-flip terms already have --
+    no extra scorer forward.
+    """
+
+    if logits.ndim != 4 or target.shape != (logits.shape[0], logits.shape[2], logits.shape[3]):
+        raise QBT1Error("area-cap logits/target geometry differs")
+    expected = {name for name, _index in classes}
+    if set(area_lambdas) != expected:
+        raise QBT1Error("area-cap lambda class set differs")
+    areas = realized_class_area_ste(logits)
+    if sample_weights is None:
+        weights = logits.new_ones(logits.shape[0])
+    else:
+        weights = sample_weights.to(areas)
+        if weights.shape != (logits.shape[0],) or not bool(torch.all(weights > 0)):
+            raise QBT1Error("area-cap sample weights differ")
+    weight_sum = weights.sum()
+    penalty = areas.new_zeros(())
+    components: dict[str, torch.Tensor] = {}
+    for class_name, class_id in classes:
+        lam = float(area_lambdas[class_name])
+        if not lam > 0.0 or not math.isfinite(lam):
+            raise QBT1Error(f"area-cap lambda must be finite and positive: {class_name}")
+        gt_area = (target == int(class_id)).to(areas).mean(dim=(1, 2))
+        over = torch.clamp(areas[:, int(class_id)] - gt_area, min=0.0)
+        class_energy = 0.5 * lam * (over * over * weights).sum() / weight_sum
+        penalty = penalty + class_energy
+        components[f"area_cap_energy_{class_name}"] = class_energy
+        components[f"area_cap_over_{class_name}"] = (over * weights).sum() / weight_sum
+        components[f"area_cap_area_{class_name}"] = (
+            areas[:, int(class_id)].detach() * weights
+        ).sum() / weight_sum
+        components[f"area_cap_gt_area_{class_name}"] = (gt_area * weights).sum() / weight_sum
+    components["area_cap_energy"] = penalty
+    return penalty, components
 
 
 def realized_ce_birth_objective(

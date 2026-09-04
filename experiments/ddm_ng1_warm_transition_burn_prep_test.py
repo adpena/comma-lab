@@ -328,15 +328,27 @@ def test_inherited_pins_are_verified_against_their_own_recorded_paths() -> None:
         ng1.verify_inherited_pins(broken)
 
 
-def test_the_working_tree_packet_schema_has_drifted_from_the_sealed_pin() -> None:
-    """Documents WHY the warm cell inherits pins instead of recompiling them."""
+def test_the_packet_schema_pin_drift_that_forced_pin_inheritance_is_cured() -> None:
+    """Documents WHY the warm cell inherits pins, and that the reason has since been cured.
+
+    At ng1's seal the working tree could not compile a QBR1-lineage cell: the packet-schema
+    memo had drifted from its pin (worktree 7fe5285f6... vs pinned 5405ccd49...), so a fresh
+    compile would have re-pinned the warm cell away from its own control.  MAIN's 4a7ae5ca0
+    re-pinned the trainer to the memo's current bytes (eq1's addendum was append-only), so the
+    working tree verifies again.  ng1's SEALED cell keeps the inherited pins either way -- a
+    sealed config is never re-derived -- but the stated blocker is now HISTORY, and a test that
+    still asserted the drift would be asserting a cured condition.
+    """
 
     import hashlib
 
+    sealed_tree_pin = "5405ccd499d14d28230874059e47d47f1f2818038519f1b27c97ed9377f132aa"
     path = Path(qbt.PIN_PATHS["packet_schema"])
     live = hashlib.sha256(path.read_bytes()).hexdigest()
-    sealed = "5405ccd499d14d28230874059e47d47f1f2818038519f1b27c97ed9377f132aa"
-    assert qbt.PINNED_SHA256["packet_schema"] == sealed
-    if live == sealed:
-        pytest.skip("working-tree packet schema has been restored to its pinned bytes")
-    assert live != sealed
+    assert qbt.PINNED_SHA256["packet_schema"] != sealed_tree_pin, (
+        "4a7ae5ca0's re-pin is expected in the working tree; the sealed QBR1 tree keeps the old one"
+    )
+    assert live == qbt.PINNED_SHA256["packet_schema"], (
+        "the working tree's packet schema must match its own pin, else no cell compiles here"
+    )
+    assert qbt.verify_pins()["packet_schema"]["sha256"] == live

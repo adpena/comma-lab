@@ -68,7 +68,18 @@ ARMS: dict[str, dict[str, Any]] = {
 }
 
 EXPECTED_SHA256 = {
-    "qbt_trainer": "6eda9c202b3aee008d457373813ae07992e73902438cca114abb4c84bb8d980b",
+    # 2026-09-04 re-pin (ddm_ng2): the trainer now carries the one-sided Chan-Vese area cap
+    # (selection_gt_area_fractions / derive_area_cap_lambdas / realized_class_area_ste /
+    # one_sided_area_cap_penalty) plus the fixed reference tau constant.  A NEW loss term
+    # cannot run under the previous pin by construction, so a cap cell is not a same-pins twin
+    # of its control: it is a same-START, same-schedule, same-EMA, same-selection twin whose
+    # pin set moves exactly at the file carrying the lever.  Prior pins, newest first:
+    # 6eda9c202b3aee008d457373813ae07992e73902438cca114abb4c84bb8d980b (the sealed QBR1 tree at
+    # sealed_source_106d0dd0_v2, which the live chain still runs and which is NOT touched).
+    # NOTE: 4a7ae5ca0 re-pinned packet_schema INSIDE the trainer and so moved the trainer's own
+    # bytes without moving this pin -- verify_inputs() has been refusing in the working tree
+    # since then.  This re-pin closes that link as well.
+    "qbt_trainer": "9f74641c888e18403ed0ba10dfcd3a0e6ef8efcef170faa870b8177a5b883f8f",
     "ce1_target_margin": "ffdf098801863ff8bffe8bd818ce101928dd75b4937cbbffb2e225bddbc12f4b",
     "w96b_law_module": "053bd12e198bb74a44036e497a1277d9d36638c96acdabba278a2c72f2234923",
     "r10_checkpoint": "09fd416531c74f69ca7033cf3f13b23c9e0472486a97ce9973f62f2fb86c138f",
@@ -245,6 +256,50 @@ def compile_cell(seed: int, arm_name: str, initial_state: Mapping[str, Any]) -> 
     return config
 
 
+def validate_area_cap_block(config: Mapping[str, Any]) -> None:
+    """Fail closed on a malformed ``area_cap`` block; absent block is the sealed control form.
+
+    Every declared lambda must be REPRODUCIBLE from the block's own measured inputs through
+    the registered law's callable, so a config cannot carry a hand-edited stiffness that its
+    stated birth force and tolerance do not imply.  The classes are pinned to the two the dual
+    ascent already constrains: the cap's whole claim is that it closes the OTHER side of that
+    same constraint set, not that it opens a new one.
+    """
+
+    area_cap = config.get("area_cap")
+    if area_cap is None:
+        return
+    if str(area_cap.get("law")) != "chan_vese_area_constraint_birth_balance_v1":
+        raise QBR1Error("area cap must cite the registered Chan-Vese law")
+    expected = {name for name, _index in qbt.AREA_CAP_CLASSES}
+    for key in ("lambdas", "birth_force", "tolerance", "gt_area"):
+        block = area_cap.get(key)
+        if not isinstance(block, Mapping) or set(block) != expected:
+            raise QBR1Error(f"area cap {key} class set differs")
+        if not all(float(value) > 0.0 and math.isfinite(float(value)) for value in block.values()):
+            raise QBR1Error(f"area cap {key} must be finite and positive")
+    if list(area_cap.get("classes") or ()) != [name for name, _index in qbt.AREA_CAP_CLASSES]:
+        raise QBR1Error("area cap must name exactly the classes the dual ascent constrains")
+    if str(area_cap.get("form")) != "one_sided_relu_quadratic_per_pair_ht_weighted":
+        raise QBR1Error("area cap form differs from the sealed one-sided per-pair hinge")
+    if str(area_cap.get("area_estimator")) != "argmax_value_softmax_jacobian_straight_through":
+        raise QBR1Error("area cap area estimator differs")
+    if float(area_cap.get("softmax_temperature", 0.0)) != 1.0:
+        raise QBR1Error("area cap softmax temperature must be the scorer's own T=1, never tau")
+    from tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708 import (
+        area_constraint_lambda,
+    )
+
+    for class_name in sorted(expected):
+        rederived = area_constraint_lambda(
+            float(area_cap["gt_area"][class_name]),
+            birth_force=float(area_cap["birth_force"][class_name]),
+            tolerance=float(area_cap["tolerance"][class_name]),
+        )
+        if abs(rederived - float(area_cap["lambdas"][class_name])) > 1.0e-9 * max(1.0, rederived):
+            raise QBR1Error(f"area cap lambda is not the law's value for {class_name}")
+
+
 def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool = True) -> None:
     if config.get("schema") != SCHEMA or config.get("arm_name") not in ARMS:
         raise QBR1Error("QBR config schema or arm differs")
@@ -276,6 +331,7 @@ def validate_config(config: Mapping[str, Any], *, require_launch_authority: bool
         raise QBR1Error("QBR same-start state drifted")
     if config["source_pins"] != verify_inputs():
         raise QBR1Error("QBR source pins differ from live exact inputs")
+    validate_area_cap_block(config)
     if require_launch_authority:
         if config.get("device") != "mps" or config.get("launch_authorized") is not True:
             raise QBR1Error("MAIN has not authorized this Metal burn")
@@ -339,7 +395,28 @@ def fairform_objective(
         components[f"margin_constraint_penalty_score_{class_name}"] = class_penalty
     total = total + penalty
     components["margin_constraint_penalty_score"] = penalty
+    # ddm_ng2 row 3: the one-sided Chan-Vese area cap.  Absent config block => this loop does
+    # not run and the objective is byte-identical to the sealed control's.
+    area_cap = config.get("area_cap")
+    if area_cap is not None:
+        area_penalty, area_components = qbt.one_sided_area_cap_penalty(
+            logits,
+            target_argmax,
+            {name: float(value) for name, value in area_cap["lambdas"].items()},
+            sample_weights,
+        )
+        total = total + area_penalty
+        components.update(area_components)
     components["loss_total"] = total
+    # ddm_sd1 telemetry row 0: the SAME surrogate at a FIXED reference temperature, beside the
+    # annealed training value.  Read-only under no_grad -- it touches no parameter, consumes no
+    # RNG, and leaves the trained bytes identical by construction -- so it defaults ON per the
+    # "observability is not gate-able when score-neutral" law.
+    with torch.no_grad():
+        components["seg_expected_flip_realized_tau_ref"] = qbt.expected_flip_margin_loss(
+            logits.detach(), target_argmax, qbt.EXPECTED_FLIP_TAU_REFERENCE, sample_weights
+        )
+        components["tau_ref"] = total.detach().new_tensor(qbt.EXPECTED_FLIP_TAU_REFERENCE)
     return total, components
 
 

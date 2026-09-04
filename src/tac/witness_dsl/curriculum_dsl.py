@@ -4857,6 +4857,89 @@ def AreaConstraintBirth(birth_force: float = 1.0, tolerance: float = 0.25,
                "reuses the realized seg forward; advisory until byte-closed"))
 
 
+def AreaCapBornRareClass(birth_force: dict[str, float], tolerance: dict[str, float],
+                         gt_area: dict[str, float], window: int = 0) -> Lever:
+    """ddm_ng2 — the QBR1/born-vehicle twin of :func:`AreaConstraintBirth`, on the CONFIG surface.
+
+    Same law (``chan_vese_area_constraint_birth_balance_v1``), same one-sided form
+    ``E_c = (lambda_c/2) * relu(A_c - A_c^GT)^2``, same stiffness
+    ``lambda_c = F_birth,c / (delta_c * A_c^GT)``.  Three things differ, and every one of them is
+    a MEASURED difference of vehicle, not a preference:
+
+    * **Surface.** ``ddm_qbr1_born_fairform_burn_prep.py`` cells are compiled JSON configs, not
+      argv.  ``AreaConstraintBirth`` emits ``--area-constraint-*`` flags for the retired MLX
+      level-set trainer and cannot compile to this object at all, so its overrides here are
+      CONFIG KEYS under ``area_cap`` (see :func:`compile_qbr1_area_cap_config`).  Same law, two
+      vehicles, two compile targets -- never a hand-added trainer flag.
+    * **Per-class knobs.** The v7.5 lever shares one ``tolerance`` across classes because its
+      vehicle's classes ran away together (Lane 13.8x GT, Movable 4.6x).  On the born vehicle
+      ddm_sd1 MEASURED a far smaller and UNEQUAL excursion (Lane 1.0334 -> 1.0929, Movable
+      1.0259 -> 1.0580), and the two classes' birth forces differ 3.4x (the dual's measured
+      effective weight ``100*lambda_dual``, median over the excursion window: Lane 0.6793,
+      Movable 2.3064).  A shared knob would therefore impose a DIFFERENT effective constraint
+      per class.  Per-class ``tolerance`` set to each class's own start ratio makes the
+      constraint say one thing for both: do not grow past where you began.
+    * **delta = 0.25 does NOT transfer.** The v7.5 default puts equilibrium at 1.25x GT, which
+      is above every ratio this vehicle ever reaches -- the cap would be inert.  Carrying it
+      would be the constants-over-laws poison ([[m21]], [[m143]]); the FORM transfers, the
+      constant is re-derived at this vehicle's operating point.
+
+    ``birth_force`` / ``tolerance`` / ``gt_area`` are per-class dicts over ``{Lane, Movable}``
+    -- the same two classes ``dual_ascent_margin_constraints`` already bounds, so the live
+    constraint set becomes two-sided on one class pair rather than one-sided on two.  Absent
+    from a config, the block does not exist and the objective is byte-identical to the sealed
+    control's.  window=0 = loss-config lever, no budget of its own."""
+    classes = ("Lane", "Movable")
+    for name, block in (("birth_force", birth_force), ("tolerance", tolerance),
+                        ("gt_area", gt_area)):
+        if set(block) != set(classes):
+            raise ValueError(f"AreaCapBornRareClass: {name} must cover exactly {classes}, "
+                             f"got {sorted(block)}")
+        for key, value in block.items():
+            if not (float(value) > 0.0):
+                raise ValueError(f"AreaCapBornRareClass: {name}[{key}] must be > 0, got {value!r}")
+    from tac.canonical_equations.chan_vese_area_constraint_birth_balance_20260708 import (
+        area_constraint_lambda,
+    )
+    lambdas = {name: float(area_constraint_lambda(float(gt_area[name]),
+                                                  birth_force=float(birth_force[name]),
+                                                  tolerance=float(tolerance[name])))
+               for name in classes}
+    return Lever(
+        "ng2_area_cap_born_rare_class",
+        overrides={"area_cap.law": "chan_vese_area_constraint_birth_balance_v1",
+                   "area_cap.form": "one_sided_relu_quadratic_per_pair_ht_weighted",
+                   "area_cap.area_estimator": "argmax_value_softmax_jacobian_straight_through",
+                   "area_cap.softmax_temperature": 1.0,
+                   "area_cap.classes": list(classes),
+                   "area_cap.birth_force": {k: float(v) for k, v in birth_force.items()},
+                   "area_cap.tolerance": {k: float(v) for k, v in tolerance.items()},
+                   "area_cap.gt_area": {k: float(v) for k, v in gt_area.items()},
+                   "area_cap.lambdas": lambdas},
+        epochs_delta=window,
+        notes=("ddm_ng2 row 3 one-sided Chan-Vese area cap on the born vehicle's config surface; "
+               "lambda_c=F_c/(delta_c*A_GT_c) via the registered law's own callable; A_GT_c from "
+               "the trainer's selection bincount; area = argmax value + softmax-Jacobian STE at "
+               "the scorer's own T=1 (never the annealed tau, per ddm_sd1's schedule-leg finding); "
+               "per-pair hinge before the HT mean; advisory until byte-closed"))
+
+
+def compile_qbr1_area_cap_config(lever: Lever) -> dict:
+    """Turn :func:`AreaCapBornRareClass`'s dotted overrides into the QBR1 ``area_cap`` block.
+
+    The seal path calls this instead of hand-writing config keys, so the DSL is the single
+    source of truth for the lever's shape exactly as ``compile_trainer_argv`` is for argv
+    levers.  Fails closed on any override outside the ``area_cap.`` namespace."""
+    block: dict = {}
+    for key, value in lever.overrides.items():
+        if not key.startswith("area_cap."):
+            raise ValueError(f"compile_qbr1_area_cap_config: unexpected override {key!r}")
+        block[key[len("area_cap."):]] = value
+    if not block:
+        raise ValueError("compile_qbr1_area_cap_config: lever declares no area_cap overrides")
+    return block
+
+
 def BirthCompletionEvent(tau_persist: float = 0.8, area_band: float = 0.25,
                          ramp_epochs: int = 50, post_level: float = 0.0,
                          classes: str = "1,3", window: int = 0,
