@@ -457,20 +457,20 @@ The byte delta is **exactly −1,801 B on both bases**, and rc1's own container-
 (rebuilding rc1's shipped codes reproduces `1438049e…` bit for bit). Additivity here is measured, not
 assumed.
 
-**The one link I did NOT verify — stated plainly because it is load-bearing.** My d_pose was measured
-against **cl2's** frame_1 renders. rc1's *decoded* model blobs are NOT byte-identical to cl2's (the two
-rows in bold above: 17,770→16,267 B and 36,130→31,792 B), because rc1 re-serialised them under a new
-codec. Whether those blobs *deserialise* to the same weights — and therefore whether rc1's frame_1
-renders are bit-identical to cl2's — is rc1's claim, asserted by MAIN as "d_seg/d_pose identical", and I
-did not test it. Consequently:
+**Correction to my own reading of the two differing rows (MAIN, checked against rc1's receipts).** I
+first flagged the differing `hpac_blob`/`semantic_blob` as an unverified link in the pose carry. That
+was a **container-level read taken upstream of the restore**: `read_residual_archive` hands back the
+section body *before* rc1's rider un-does its recode, and the restore happens further in, at the
+renderer seam in `runtime/f26_inflate.py`. rc1's own seal pins the identity three ways — falsifier 0
+records "the receiver restores each section body byte-for-byte before any parsing", proven by a fresh
+decoder reproducing both raw bodies on every race row, by the staged receiver's own modules, and by
+`RESTAGE.json: semantic_restore_byte_identical = true` — and rc1's T4 row then read d_seg and d_pose
+**identical** to the base. **So cl2's renders are rc1's renders, and my d_pose carries to rc1 exactly.**
+Both halves of the rc1 row stand: rate −1.19921e-03 S and pose −2.63736e-04 S.
 
-- The **rate** half of the rc1 row (−1.19921e-03 S) is fully verified by me on the rc1 bytes.
-- The **pose** half (−2.63736e-04 S) carries to rc1 **only if** rc1's renderer output equals cl2's.
-- If it does not, the pose half must be re-measured on rc1's own parse-back; the rate half is unaffected,
-  and V3 would still clear the admit bar by 60× on rate alone.
-
-The T4 fire settles it either way, which is why the seal's falsifier list pins both the byte count and
-the d_seg-must-not-move condition.
+The lesson is worth keeping: *which layer you read a "blob" at decides whether two bodies look the
+same.* A byte comparison one stage upstream of a lossless restore reports a difference that does not
+exist downstream.
 
 **Determinism twin (the solve reproduces its own bytes).** 24 strided pairs re-solved from the same
 start codes at a fixed `OMP_NUM_THREADS=1`, against original rows solved at 1 or 2 threads:
@@ -490,6 +490,55 @@ deterministic; only the diagnostic float print wobbles.**
 
 The cl2-based seal (`SEAL_ddm_pc1_v3_lattice_x4_resolved.json`, archive `512b0e0b…`, 178,181 B) is
 retained as the superseded sibling — same codes, same d_pose, older base.
+
+---
+
+## 7c. PRE-REGISTRATION — lattice ×8 and ×16, written and committed BEFORE the solve
+
+MAIN routed ITEM 5 back as the next exact-row candidate. Per [[m38]] the prediction is recorded before
+the measurement, so it can be wrong in public.
+
+**The bases both rungs are judged against.** rc1 `S 0.14666350774473783 @ 178,249 B`, carrier d_pose
+6.134076407345324e-06 (leg 0.007832034478566424). The incumbent successor is V3 (×4): 176,448 B,
+d_pose 5.727914077570811e-06 (leg 0.007568298406888309). A coarser rung has to beat **both**.
+
+| rung | rate (MEASURED, projected codes) | ΔS_rate | break-even vs BASE | extra vs V3 | break-even vs V3 |
+|---|---:|---:|---:|---:|---:|
+| ×8 (12→9 bits) | −2,693 B | −1.793158e-03 | **9.264433e-06** | −892 B | **6.662224e-06** |
+| ×16 (12→8 bits) | −3,484 B | −2.319853e-03 | **1.030608e-05** | −1,683 B | **7.549766e-06** |
+
+ft1's same-object ceiling 1.694e-05 binds on top of both. (The rate column was measured with projected
+codes; V3's moved +13 B when re-solved, so each rung is re-priced exactly on rc1 after its own solve.)
+
+**A structural prior, DERIVED, that makes the two rungs one question.** The representable coefficient
+sets are NESTED in the operating region: every ×16 point is a ×8 point is a ×4 point, because all are
+multiples of the finer step, and the solved ×4 codes reach only `|code| ≤ 513`, so ×8 solutions sit near
+`|code| ≲ 257` and ×16 near `≲ 129` — far inside the ±2047 field, where the ranges cannot un-nest them.
+**Therefore at the global optimum `d_pose(×4) ≤ d_pose(×8) ≤ d_pose(×16)`, and the MEASURED
+5.727914e-06 is a hard floor for both rungs.** Consequence used as an early stop: **if ×8 fails against
+V3, ×16 cannot pass**, so ×8 is solved first and ×16 only runs if ×8 leaves room.
+
+**PREDICTION (mine, before measuring).** Coefficient rounding error scales as step², and the ×4 anchor
+gives the constant: the no-re-solve start at ×4 is 2.937476e-05, an excess of 2.324e-05 over base.
+Extrapolated, the ×8 start should read ≈ **9.91e-05** and the ×16 start ≈ **3.78e-04**. The re-solved
+floor scales the same way; since ×4 landed 6.6% *below* base, its lattice contribution L₄ is bounded by
+that surplus (≲ 4.1e-07), giving L₈ ≈ 4·L₄ ≲ 1.6e-06 and L₁₆ ≈ 16·L₄ ≲ 6.6e-06. So:
+
+- **×8: d_pose 6.3e-06 – 7.0e-06.** Beats the BASE comfortably (bar 9.26e-06). Against V3 (bar
+  6.66e-06) it is genuinely **borderline — I call it ~50/50, leaning PASS.**
+- **×16: d_pose 8.5e-06 – 1.2e-05.** Beats the base at best **marginally** (bar 1.03e-05) and
+  **FAILS against V3** (bar 7.55e-06). Clears the ft1 ceiling either way.
+- **Named call: the knee of the lattice law sits between ×8 and ×16.**
+
+**Falsifiers, pre-registered.**
+1. ×8 d_pose > 6.662224e-06 → ×8 does not succeed V3; V3 stands as the candidate.
+2. ×8 d_pose > 9.264433e-06 → ×8 fails the base outright, which would also refute the step² model.
+3. ×16 d_pose ≤ 7.549766e-06 → my knee call is WRONG and ×16 is the winner.
+4. **Either rung measuring d_pose < 5.727914e-06 refutes my own nesting argument** — it would mean the
+   solver is not reaching comparable optima across rungs, and the whole rung comparison is confounded.
+   That is an instrument finding, not a rung finding, and it would invalidate the early stop in 3.
+5. Measured start far from the step² extrapolation (say outside 0.5–2× of 9.91e-05 / 3.78e-04) refutes
+   the quantisation-scaling model the prediction rests on, independently of the verdict.
 
 ---
 
