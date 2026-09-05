@@ -45,6 +45,7 @@ import shutil
 import subprocess
 import sys
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -53,6 +54,10 @@ SCHEMA = "local_disk_reclaim_cert.v1"
 CLASS_GIT_RECONSTRUCTIBLE = "git_reconstructible"
 CLASS_CERTIFY_MOVE_REQUIRED = "certify_move_required"
 CLASS_BLOCKED_NEVER_TOUCH = "blocked_never_touch"
+
+#: Reason string for the live-claim / live-process pin. Named once so the
+#: vacuity guard below counts exactly the rows ``classify`` emits.
+REASON_PINNED = "referenced by an active claim or live process"
 
 #: Path substrings that are never reclaimable by any class. Ordered by the
 #: CLAUDE.md / charter boundary list; each entry is matched against the POSIX
@@ -399,9 +404,7 @@ def classify(
     if is_never_touch(str(tree)):
         return Candidate(tree, 0, CLASS_BLOCKED_NEVER_TOUCH, "matches never-touch boundary")
     if path_is_pinned(tree, pinned):
-        return Candidate(
-            tree, 0, CLASS_BLOCKED_NEVER_TOUCH, "referenced by an active claim or live process"
-        )
+        return Candidate(tree, 0, CLASS_BLOCKED_NEVER_TOUCH, REASON_PINNED)
     kib = du_kib(tree)
     proof = probe_git_proof(tree, repo, registered)
     if proof.reconstructible:
@@ -450,6 +453,48 @@ def write_moved_marker(path: Path, row: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
+
+
+def vacuity_report(candidates: Sequence[Candidate]) -> list[str]:
+    """The census denominator, plus a loud warning when nothing is reclaimable.
+
+    A census that classifies every candidate as blocked prints a clean summary
+    ("0.00 GiB in 0 tree(s)") that reads as a considered PASS and is almost
+    always a bug -- dk1 shipped exactly that shape once, from an ancestor-pin
+    defect, and dk2 hit it again from a different door: a concurrent READ-ONLY
+    census (``du -sk <root>/*``) puts every child path on a command line, so
+    the live-process scan pins the entire tree. The pin rule is right; the
+    silence about a 100%-blocked result is not. Reporting the denominator makes
+    the difference between "nothing is reclaimable" and "nothing was measured"
+    visible without weakening a single safety check.
+    """
+    total = len(candidates)
+    if not total:
+        return ["census denominator: 0 candidates under the given --roots"]
+    pinned = sum(1 for c in candidates if c.reason == REASON_PINNED)
+    reclaimable = sum(
+        1
+        for c in candidates
+        if c.klass in (CLASS_GIT_RECONSTRUCTIBLE, CLASS_CERTIFY_MOVE_REQUIRED)
+    )
+    lines = [
+        f"census denominator: {reclaimable} reclaimable / {pinned} pinned / "
+        f"{total - reclaimable - pinned} never-touch / {total} candidates"
+    ]
+    if reclaimable:
+        return lines
+    lines.append(
+        f"WARNING VACUOUS-CENSUS: 0 of {total} candidates are reclaimable. A census that "
+        "blocks everything is a PASS that reclaims nothing -- treat it as a bug signature, "
+        "not as caution."
+    )
+    if pinned * 2 >= total:
+        lines.append(
+            f"  {pinned}/{total} were pinned by a live claim or process. A concurrent "
+            "read-only census (du/ls/find over the same root) names every child on its "
+            "command line and pins the whole tree. Re-run with no such scan in flight."
+        )
+    return lines
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -531,6 +576,14 @@ def main(argv: list[str] | None = None) -> int:
         f"{len(by_class.get(CLASS_CERTIFY_MOVE_REQUIRED, []))} tree(s) "
         f"(executor: tools/vertigo_certify_move.py)"
     )
+    # The denominator belongs in the report itself: a plan is routinely captured
+    # by redirecting stdout, and a denominator hidden on stderr is exactly the
+    # number that goes missing. Only the warning goes to stderr, so it survives
+    # that redirect too.
+    census_lines = vacuity_report(candidates)
+    print(census_lines[0])
+    for line in census_lines[1:]:
+        print(line, file=sys.stderr)
 
     if args.plan:
         return 0

@@ -368,3 +368,67 @@ def test_ledger_rows_are_one_json_object_per_line(rec, tmp_path):
     import json
 
     assert [json.loads(x) for x in lines] == [{"a": 1}, {"b": 2}]
+
+
+# --- ddm_dk2: vacuity guard -------------------------------------------------
+# A census that blocks every candidate prints "0.00 GiB in 0 tree(s)" and reads
+# as a considered PASS. dk1 shipped that shape once (ancestor-pin defect); dk2
+# hit it again from a different door -- a concurrent read-only `du -sk <root>/*`
+# names every child on its command line, so the live-process scan pins the whole
+# tree. These pin the denominator report, not the pin rule itself.
+
+
+def _cand(rec, klass, reason):
+    return rec.Candidate(Path("/x"), 0, klass, reason)
+
+
+def test_vacuity_report_names_the_denominator_when_work_exists(rec):
+    lines = rec.vacuity_report(
+        [
+            _cand(rec, rec.CLASS_CERTIFY_MOVE_REQUIRED, "bulk"),
+            _cand(rec, rec.CLASS_BLOCKED_NEVER_TOUCH, rec.REASON_PINNED),
+            _cand(rec, rec.CLASS_BLOCKED_NEVER_TOUCH, "matches never-touch boundary"),
+        ]
+    )
+    assert lines[0] == (
+        "census denominator: 1 reclaimable / 1 pinned / 1 never-touch / 3 candidates"
+    )
+    assert not any("VACUOUS-CENSUS" in line for line in lines)
+
+
+def test_fully_blocked_census_is_reported_as_vacuous_not_as_a_clean_pass(rec):
+    lines = rec.vacuity_report(
+        [_cand(rec, rec.CLASS_BLOCKED_NEVER_TOUCH, "matches never-touch boundary")] * 4
+    )
+    assert any("VACUOUS-CENSUS" in line for line in lines)
+    assert any("0 of 4 candidates are reclaimable" in line for line in lines)
+
+
+def test_pin_dominated_vacuous_census_names_the_concurrent_census_cause(rec):
+    lines = rec.vacuity_report([_cand(rec, rec.CLASS_BLOCKED_NEVER_TOUCH, rec.REASON_PINNED)] * 5)
+    joined = "\n".join(lines)
+    assert "VACUOUS-CENSUS" in joined
+    assert "5/5 were pinned" in joined
+    assert "du/ls/find" in joined
+
+
+def test_never_touch_dominated_vacuity_does_not_blame_a_concurrent_census(rec):
+    lines = rec.vacuity_report(
+        [_cand(rec, rec.CLASS_BLOCKED_NEVER_TOUCH, "matches never-touch boundary")] * 5
+    )
+    assert not any("du/ls/find" in line for line in lines)
+
+
+def test_empty_root_reports_a_zero_denominator_without_a_bug_claim(rec):
+    lines = rec.vacuity_report([])
+    assert lines == ["census denominator: 0 candidates under the given --roots"]
+
+
+def test_pin_reason_constant_is_the_string_classify_actually_emits(rec, tmp_path):
+    # The guard counts rows by reason; a drift between the constant and the
+    # emitted string would silently zero the "pinned" tally.
+    tree = tmp_path / "pinned_tree"
+    tree.mkdir()
+    cand = rec.classify(tree, repo=tmp_path, registered=set(), pinned={str(tree)})
+    assert cand.reason == rec.REASON_PINNED
+    assert cand.klass == rec.CLASS_BLOCKED_NEVER_TOUCH
