@@ -58,3 +58,10 @@ flat 1.8 GiB, free 17.4→28.1 GiB, md3 at 29 steps/min (serial baseline 28) —
 What STANDS from this instance: the guard admits Metal trainers on RSS alone (the blind spot is real and unmeasured); the watchdog is the only
 tripwire. Governance until ITEM 3 lands: a Metal trainer may run beside one cell ONLY with the watchdog live; any memory_pressure WARN while it
 runs → stop the trainer (epoch-checkpointed), resume after the cell's receipt; each such window is a sample for the N≥3 admission table.
+**THIRD PASS — ATTRIBUTED BY THE ACTOR'S MEASUREMENT (16:40Z; cl3 final report):** the cl3 Metal trainer costs **34.8–38.6 GiB of system
+availability at 1.5 GiB RSS** (ledger governing peak 38.622 GiB; one launch consumed 34.75 GiB in 52.9 s). Every 48 GiB CRITICAL crossing in the
+watchdog log had a cl3 trainer live; md3's cell alone reaches only the 16 GiB WARN line. So the 16:12:53Z CRITICAL alarm IS attributed — to the
+Metal trainer's GPU-side footprint — while the rc=143 stays the arm's own SIGTERM (ExFAT; safe_run receipt `external_signal`, its RSS policy 77× from
+firing). MAIN's second pass ("coincident, unattributed; N=1 window fits") read a 45 s compressor sample and was wrong about the footprint: compressor
+is the wrong instrument — system-availability delta per launch is the right one. ITEM 3 stands as a REAL second instance with a measured number:
+**one Metal occupant at a time until the admission table models Metal footprint**; cl3 is holding its rungs for md3's receipt on its own decision.
