@@ -738,3 +738,10 @@ numbers; the CPU-fp32 CoreML path is the honest 3–5× win for advisory forward
 **MAIN error banked:** three charters told arms to pass `--artifact-budget-gib`, a flag the launcher does NOT have (the waterfall derives the budget) —
 never-invent-flags applies to MAIN's charters too; grep argparse before writing a flag into a charter.
 Equations leg (`tac.canonical_equations`): `scorer_fp16_drift_by_axis_v1` (ane1).
+
+**ERRATUM to ADDENDUM 36 (13:45Z):** the "MAIN error banked" paragraph is WRONG. `--artifact-budget-gib` DOES exist on `tools/launch_detached_process.py`
+(line 1203; in `--help`; landed by gov2 f3d6b5ce0; md2's launch used it and was ACCEPTED with provenance "operator-declared --artifact-budget-gib"). ane1's
+final message claimed it did not exist; MAIN propagated that negative-existence claim to md2 and into memory WITHOUT grepping the argparse — the #1
+false-claim class ([[m53]]) committed by MAIN itself, one hour after banking "grep before writing a flag". md2 caught it (its message quotes the line
+numbers). Corrected: the m140 memory paragraph, the hot-state line, and this addendum. The charters were right. The real lesson: a subagent's
+"X does not exist" is a claim to VERIFY against the primary source before it moves anywhere — especially when it flatters a rule you just wrote down.
