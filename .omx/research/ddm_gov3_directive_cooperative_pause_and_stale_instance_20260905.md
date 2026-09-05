@@ -81,3 +81,10 @@ governor, when it admits CPU arms beside a live cell, must extend the cell's cap
 last stage checkpoint (`--resume-from`; run `…/runs/seed_20260902_different_init_r10_live_control_native100/`) for the remaining 448 steps when CPU frees,
 then the md1 partition read (Jaccard vs cold; J ≥ 0.70 = data-anchored) — MAIN fires it; the cell's claims (`md3_different_init_*_20260905`) get a
 `stopped_timeout_resumable` terminal row and a new job id at resume.
+
+## ITEM 6 — the SUM-over-RAM admission projection was RIGHT and advisory (MEASURED 2026-09-05 21:05Z)
+MAIN launched md3's resume (declared peak 49.6 GiB) beside sj1's five shards (~28 GB RSS) after safe_run printed `WOULD-REFUSE (ADVISORY): projected system-used
+125.2 GiB EXCEEDS adaptive ceiling 116.0 GiB by 9.2 GiB`. Two minutes later: free 3.8 GiB, compressor 47.7 GiB — the near-OOM shape. MAIN killed the resume;
+memory recovered to free 25.9 / compressor 3.8 within 20 s. Cure: when the projection exceeds the ceiling by more than the measured attribution error (~5 GiB),
+the launcher REFUSES (rc≠0) instead of advising — saturation (op 09-04) is about admitting cells that FIT, not overriding a correct projection. MAIN's own
+error is recorded: the advisory was read as noise because the earlier alarm (16:12Z) had been mis-attributed; the projection deserved the benefit of the doubt.
