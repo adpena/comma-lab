@@ -355,13 +355,28 @@ base). The n600 re-solve is running; **no verdict is claimed here until all 600 
 archive is built.**
 
 Interim state, recorded so this memo is honest at any moment it is read — explicitly NOT a verdict, and
-NOT admissible as one (the solved set is a partial, order-biased subset; [[m88]]/[[m96]]):
+NOT admissible as one (the solved set is a partial, order-biased subset; [[m88]]/[[m96]]).
 
-    solved 87/600 · subset ratio (variant / base on the same pairs) 0.9798 · 66 better, 21 worse
-    projection if every unsolved pair merely held its base value: 6.084e-06 vs break-even 8.172e-06
+**The three-way decomposition, over the 192 pairs solved at the time of writing.** This is the arm's
+cleanest demonstration of the composition law [[m148]] — a closed leg survives only if another leg
+changes its object first:
 
-The direction is favourable and the margin is wide, which is why the run is being finished rather than
-stopped early the way V2 was — V2's bound had already crossed, V3's has not.
+| | mean d_pose (192 pairs) | median | vs base |
+|---|---:|---:|---:|
+| A · base: shipped codes, shipped lattice | 1.08020e-05 | 1.4144e-06 | — |
+| B · V3 start: projected onto the coarse lattice, **no re-solve** | 3.15130e-05 | 1.1901e-05 | **+192%** (2.92×) |
+| C · V3 final: **re-solved** on the coarse lattice | 1.03487e-05 | 9.9914e-07 | **−4.2%** (0.958×) |
+
+191 of the 192 pairs get worse at B. That is the jg1 result reproduced exactly: coarsening the lattice
+without re-solving damages pose, here by 2.92×. **The re-solve then recovers 3.0×**, repaying the
+damage in full and landing 4.2% below the base. The cut is only reopened because the object changed.
+
+**And V3's admission does not depend on the attribution.** The surplus below base is worth −9.32e-05 S
+on the pose leg; even if every bit of it were "more solving" rather than "the coarser lattice is free"
+— the ITEM 4 confound — V3 would still land at pose parity with the base and keep its **−1.20787e-03 S**
+of rate. The confound can only make V3 slightly better than parity, never worse than the rate saving.
+That is why this run is being finished rather than stopped early the way V2 was: V2's bound had already
+crossed, V3's cannot.
 
 **The lattice factor is a continuous knob and the charter's ×4 is one rung of it. Priced exactly
 (MEASURED archive builds, shipped codes projected):**
