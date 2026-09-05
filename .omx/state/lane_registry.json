@@ -96401,8 +96401,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_md3_different_initialisation_cell_20260905.md (f65c02c94) + 4th canonical-equations anchor md3_data_order_control_seed_20260903_shadow_trajectory_partition_20260905"
         },
         "deploy_runbook": {
           "status": false,
@@ -96460,5 +96460,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-05T14:50:11Z"
+  "updated_at": "2026-09-05T14:58:18Z"
 }
