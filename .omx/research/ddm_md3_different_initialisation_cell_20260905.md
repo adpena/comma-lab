@@ -1,5 +1,5 @@
 ---
-title: "The born vehicle has no init seed to flip — build_initial_state copies r10's EMA shadow verbatim; so the question was answered a cheaper way: across eight legitimately-produced starts spanning 0.8%–30% relative weight distance, the step-0 wrong POOL moves enormously (Jaccard 0.99 → 0.12) while the incumbent's UNREACHABLE sites stay wrong at 55–334× chance, and over the four comparable-quality starts 83.13% of unreachable sites are wrong at ALL of them against 19.78% of the sites the optimizer DID reach — a 4.20× within-experiment contrast that reproduces at 4.21× on the second GT lineage"
+title: "The born vehicle has no init seed to flip — build_initial_state copies r10's EMA shadow verbatim, so the question was answered a cheaper way: the step-0 wrong POOL moves enormously across eight legitimately-produced starts (Jaccard 0.99 → 0.12) while the UNREACHABLE sites inside it do not — over the four comparable-quality starts 83.13% of unreachable sites are wrong at ALL of them against 19.78% of the sites the optimizer DID reach (4.20×, reproducing 4.21× on the second lineage); and the data-order control lands PERSISTENT 61.606% with J 0.8536, a fourth instance within 1.35 pp that moves the sites LESS than the two-lever schedule does"
 arm: ddm_md3
 charter: .omx/research/charters/ddm_md3_different_initialisation_cell_20260905.md
 parent_arms: [ddm_md1, ddm_md2, ddm_ng5, ddm_qbr1, ddm_gs4]
@@ -14,9 +14,25 @@ tokens: "[no-triality] [p0-ledger-ok]"
 
 The charter's falsifier is stated on a burned different-init cell's persistent-set Jaccard
 (`J >= 0.70` → DATA-ANCHORED). **That cell is sealed and armed but has not fired** — the Metal was
-held by cl2's λ rungs for this arm's whole window — so the pre-registered number is OWED and this
-verdict rests on a different, cheaper measurement that the charter's own step 3 asked for first.
-The verdict word is stated with that limit welded on, and §7 says exactly what would overturn it.
+held by cl2's λ ladder for this arm's whole window — so the pre-registered number is OWED and this
+verdict rests on the two measurements this arm could buy for $0. The verdict word carries that
+limit, and §7 says exactly what would overturn it.
+
+**Three things are settled, all $0:**
+
+1. **The data-order control (§5) removes the confound the charter asked to remove first.**
+   PERSISTENT **61.606%** on the shadow — a fourth instance, all four within 1.35 pp — and the
+   sites overlap the cold control's at **J 0.8536**, *higher* than ng5's two-lever schedule
+   (0.8069). Varying the order the pairs arrive in perturbs the unreachable set **less** than
+   changing the whole schedule does, and neither moves it.
+2. **The step-0 wrong pool is NOT fixed** (§2). Across eight legitimately-produced starts it moves
+   from J 0.99 to J 0.12. md2's bit-identical pools were an artifact of every cell declaring one
+   `initial_state` file, not a property of the vehicle.
+3. **The unreachable sites inside that moving pool ARE fixed** (§3). Over the four starts whose
+   quality is comparable to the incumbent's, **83.13%** of the incumbent's unreachable sites are
+   wrong at all four, against **19.78%** of the sites the optimizer did reach — **4.20×**,
+   reproducing at 4.21× on the second GT lineage, with both groups drawn from the same pool so
+   size artifacts cancel.
 
 ---
 
@@ -54,8 +70,7 @@ persistent class is drawn from.
 
 ---
 
-## 1. Free result #1: the step-0 pool is bit-identical across all three prior cells *by
-construction*, not by finding
+## 1. Free result #1: the prior cells' identical step-0 pool is construction, not finding
 
 MEASURED, from md1's and md2's own retained excursion payloads (`trajectory_code_u8 & 1`):
 
@@ -68,10 +83,17 @@ MEASURED, from md1's and md2's own retained excursion payloads (`trajectory_code
 
 md2 reported this identity for two cells and called it definitional. It is definitional for a
 sharper reason than shared pins: **md1's instrument evaluates step 0 from the config's
-`initial_state` file for every cell**, so three cells declaring one file can only ever produce one
-pool. The **warm** cell is the case that matters — it *resumes from a checkpoint*, so its TRUE
-step-0 weights are not the pinned file, yet its pool is read as the cold one's. That is a
-known-boundary item for md1/md2's warm rows, recorded here and not otherwise acted on.
+`initial_state` file for every cell** (`ddm_md1_micro_to_macro.py:431,441`), so three cells
+declaring one file can only ever produce one pool.
+
+**I first read the warm cell as a hole in that and I was wrong; the check that proves it is worth
+recording.** The warm cell's config carries `resume_from = .../warm_seed_mps.pt`, so its step-0
+weights looked like they could differ from the pinned file — which would have made md1/md2's warm
+rows a mis-read. They do not. `ddm_ng1_warm_transition_burn_prep.verify_warm_seed` loads the seed
+exactly as `run_config` would and **REFUSES if `_load_checkpoint` moves a single weight** — *"warm
+seed changed the start weights; the transition must carry optimizer state only"*. The warm
+transition carries optimizer state, never weights. So the identical pool is correct rather than an
+artifact, and the ng1 refusal is a positive control on it. No known-boundary item is owed here.
 
 ---
 
@@ -126,6 +148,14 @@ its pool is 3.4× the incumbent's, yet only half the incumbent's unreachable sit
 while r7, which is *worse* by step-0 `d_seg` (0.0131 vs 0.0091), holds 86.62%. So r6 is wrong in a
 genuinely *different* place, not merely wrong more. One rung is not a mechanism; it is recorded, not
 explained.
+
+**And the ladder confounds two variables, which I should not let the table hide.** The runs did not
+train equally: r6 and r7 stop at **step 5,010**, r9 and r10 at **10,010**, r8 at **15,010**
+(MEASURED from each `stage_03_end.pt`). So "farther in weight space" and "less trained" move
+together on the low rungs, and the pool-size column tracks training amount at least as well as it
+tracks distance. That is why §3 does not read the ladder as a dose-response at all: it restricts to
+the four starts whose step-0 `d_seg_hat` is comparable to the incumbent's and uses a
+within-experiment contrast instead.
 
 **The null anchors behave as null anchors and that is their whole value.** Both untrained inits —
 the incumbent's own root seed and a genuinely different one — are wrong on 50.1% of the frame, and
@@ -248,7 +278,51 @@ instrument UNCHANGED on the retained `wc3 seed_20260903` control (313 checkpoint
 are filled in below when the sweep, both analyses and both overlaps land; if this section still
 reads RUNNING, the charter's item 1 is **incomplete and is reported as such**, not inferred.
 
-<!-- MD3_DATA_ORDER_SECTION -->
+**STATUS: LANDED.** md1's instrument UNCHANGED on the retained `wc3 seed_20260903` control
+(313 checkpoints; same init sha `991a1cc6…`, `schedule.seed` 20260903 with a different
+`schedule.sha256_u8` — **data order only**), both analyses, both overlaps against md1's own
+cold store. This is the fourth cell on one initialisation and the first that varies nothing
+but the order the pairs arrive in.
+
+### The partition, EMA shadow, DALI authority
+
+| class | data-order sites | terminal-wrong | share | cold share | ng5 share |
+|---|---:|---:|---:|---:|---:|
+| **PERSISTENT** | **11,776** | **11,355** | **61.606%** | 62.011% | 62.954% |
+| CHURN | 10,332 | 4,290 | 24.393% | 24.606% | 24.687% |
+| NEW_PERSISTENT | 1,906 | 1,906 | 10.828% | 10.470% | 9.142% |
+| HEALED | 1,512 | 556 | 3.174% | 2.913% | 3.217% |
+| TRANSIENT_BORN | 7,012 | 0 | 0.000% | 0.000% | 0.000% |
+
+* **dali** — shadow PERSISTENT **61.606%** (cold 62.011%, ng5 62.954%); live PERSISTENT 40.562% (cold 35.779%); terminal `d_seg_hat` 0.0028207143 (cold 0.0028065999).
+* **pyav** — shadow PERSISTENT **61.289%** (cold 61.670%, ng5 62.346%); live PERSISTENT 40.275% (cold 35.409%); terminal `d_seg_hat` 0.0027788798 (cold 0.0027610779).
+
+**Reachability.** Persistent floor `0.0017377218` = **12.734×** the sub-0.12 accuracy corner `d_seg = 1.3646784205e-4` (cold 12.753×, ng5 11.671×). Integer calibration gate: max |Σ classes − total| = 0 at every checkpoint, in integers.
+
+### The site overlap — a different DATA ORDER against the cold control
+
+| forward / lineage | data-order persistent | cold persistent | intersection | **Jaccard** | data-order ⊂ cold |
+|---|---:|---:|---:|---:|---:|
+| **shadow / dali** | 11,776 | 11,842 | 10,876 | **0.8536** | 92.36% |
+| live / dali | 7,478 | 7,396 | 6,906 | 0.8667 | 92.35% |
+| shadow / pyav | 11,558 | 11,621 | 10,664 | 0.8521 | 92.27% |
+| live / pyav | 7,344 | 7,253 | 6,781 | 0.8676 | 92.33% |
+
+**Data order alone moves the persistent sites about as little as the schedule does.** J = 0.8536 on the shadow/DALI reading, against md2's schedule-lever J 0.8069 for ng5 vs the same cold control. Both cells here share the step-0 pool by construction (§1), so the within-pool null applies to this number exactly as it did to md2's, and the comparison that matters is J-to-J: **changing the data order and changing the whole two-lever schedule perturb the unreachable set by a similar amount, and neither is anywhere near moving it.**
+
+**One number here breaks a pattern md2 reported, and it is a finding rather than noise.** md2 said
+the LIVE-forward persistent share agrees across cells within 0.44 pp (35.779% cold / 35.336% warm /
+35.439% ng5). The data-order cell lands **40.562%** (PyAV 40.275%) — **+4.78 pp**, an order of
+magnitude outside that spread, while its SHADOW share sits inside the shadow spread at 61.606%. So
+the live forward is materially more sensitive to data order than to any schedule lever tried,
+and the shadow forward is not. That is consistent with md1's own reason for preferring the
+shadow — the live weights are noisy checkpoint-to-checkpoint and CHURN absorbs most of their
+terminal error — but it is a **new** fact: the live-forward agreement md2 recorded was an
+agreement across three cells that shared a data order, and it does not survive varying it. The
+shipped object is the shadow, so no conclusion in md1/md2/md3 moves; the live-forward
+cross-cell-stability claim should be re-scoped.
+
+**What this control does and does not buy.** It removes the data-order confound from md1/md2's persistent share — the share now has four instances on one initialisation — and it is the measurement the charter asked for first. It cannot speak to initialisation at all: the init sha is `991a1cc6…` here as everywhere else, which is precisely md2 §7's correction and the reason §2 exists.
 
 ---
 
@@ -257,8 +331,12 @@ reads RUNNING, the charter's item 1 is **incomplete and is reported as such**, n
 **Answers.** The step-0 wrong pool is *not* a fixed property of this vehicle — it moves from
 J 0.99 to J 0.12 as the start moves 0.8% → 30% in relative weight distance. And within that moving
 pool, the sites the optimizer cannot reach are the sites other comparable starts also get wrong,
-4.20× over the sites it can reach. On the evidence available for $0, **the unreachable set behaves
-as a property of the DATA (the frozen scorer's hard sites) far more than of the START.**
+4.20× over the sites it can reach. The data-order control adds the fourth leg: order alone moves
+the unreachable SITES (J 0.8536) *less* than the two-lever schedule does (0.8069), and the share
+holds at 61.606% — four instances within 1.35 pp. On the evidence available for $0, **the
+unreachable set behaves as a property of the DATA (the frozen scorer's hard sites) far more than of
+the START, and the two nuisance variables that could have explained it — schedule and data order —
+are both now measured and both fail to move it.**
 
 **Does not answer.** A site wrong at step 0 under start X is not thereby *unreachable* from X.
 The pre-registered falsifier — does a burned cell from a different start leave those same sites
@@ -305,14 +383,29 @@ arm's waiter cures the symptom for one cell; the next reader of `ready: true` ge
 
 ## 8. Equations leg (`tac.canonical_equations`)
 
-**Consumed, unchanged:** `checkpoint_trajectory_error_partition_v1`
-(`src/tac/canonical_equations/checkpoint_trajectory_error_partition_20260904.py`). This arm is the
-reactivation the ng5 anchor's `reactivation_criteria` names — *"a cell with a DIFFERENT
-INITIALISATION"* — and it reports that the named experiment is **not purchasable as stated** (§0),
-which is a correction to the criterion rather than a satisfaction of it. The law's
-`known_boundary` clause *"schedule-invariance is measured and init-invariance is NOT"* is now
-**partially narrowed and not closed**: start-invariance is measured **at step 0 only**, across
-eight starts, and the trajectory half still needs the armed cell.
+**A FOURTH empirical anchor is appended** to `checkpoint_trajectory_error_partition_v1`
+(`src/tac/canonical_equations/checkpoint_trajectory_error_partition_20260904.py`):
+`md3_data_order_control_seed_20260903_shadow_trajectory_partition_20260905`. It is a legitimate
+fourth cell on the law's own terms — same vehicle, same cadence, same authority, the full
+five-class integer partition with residual 0 — and it is the first that varies the DATA ORDER.
+It carries terminal numerator 332,745, persistent numerator 204,990, share 0.6160573412072308,
+floor 12.734× the corner, live share 0.4056160088528219, and site overlap J 0.8535551718725475
+(intersection 10,876) against md2's schedule-lever 0.8069 on the same cold control. Its
+pre-registered band was [0.55, 0.65]; measured 61.606%; residual 0.0039. Every value is read from
+the receipt, none retyped — a review pass asserts each against
+`ANALYSIS_data_order_control_seed_20260903_dali.json` and the overlap JSON.
+
+**The law's `known_boundary` is rewritten, in both directions.** It now records four cells and
+that **data-order-invariance of the shadow share is MEASURED** alongside schedule-invariance —
+and that the **live** forward is *not* order-invariant (40.562% against the 35.3–35.8% of the
+three cells that shared an order), so the earlier live-forward cross-cell agreement must not be
+transferred. It also records that **init-invariance remains UNMEASURED and is not cheaply
+purchasable** for the §0 reason, with the step-0 half (pool J 0.9909 → 0.1175; 83.13% vs 19.78%)
+recorded as anchor context rather than as a term of the law — it is a step-0 statement, not a
+trajectory partition. The ng5 anchor's `reactivation_criteria` named *"a cell with a DIFFERENT
+INITIALISATION"*; this arm reports that the named experiment is **not purchasable as stated**,
+which is a correction to the criterion rather than a satisfaction of it, and the new anchor's own
+criteria name the sealed cell and the r1…r10 pricing that must precede any init search.
 
 **Also consumed, unchanged:** `scalar_top1_top2_margin_is_exact_distance_to_flip_v1` — the per-site
 scalar the wrong/correct indicator is built on. No refinement claimed.

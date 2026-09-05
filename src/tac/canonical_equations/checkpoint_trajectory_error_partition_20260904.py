@@ -139,6 +139,29 @@ MD2_NG5_VS_COLD_PERSISTENT_JACCARD_WITHIN_POOL_CHANCE = 0.5263033946906265
 MD2_NG5_VS_COLD_PERSISTENT_JACCARD_ATTAINABLE_MAX = 0.9305016044587063
 MD2_STEP_ZERO_WRONG_POOL_SITES = 16_553
 
+# md3 (2026-09-05): the DATA-ORDER control.  The retained wc3 seed_20260903 cell -- SAME init sha
+# 991a1cc6..., schedule.seed 20260903 with a different schedule.sha256_u8, so the pairs arrive in a
+# different order and nothing else moves.  It is the confound md2 named as the free prerequisite to
+# the init question, and the fourth cell measured at md1's cadence on ONE initialisation.  Filled
+# from /Volumes/APDataStore/pact/ddm_md3_different_initialisation
+# /ANALYSIS_data_order_control_seed_20260903_dali.json.
+MD3_DATA_ORDER_TERMINAL_NUMERATOR = 332_745
+MD3_DATA_ORDER_PERSISTENT_NUMERATOR = 204_990
+MD3_DATA_ORDER_PERSISTENT_TERMINAL_SHARE = 0.6160573412072308
+MD3_DATA_ORDER_LIVE_PERSISTENT_TERMINAL_SHARE = 0.4056160088528219
+MD3_DATA_ORDER_VS_COLD_PERSISTENT_JACCARD = 0.8535551718725475
+MD3_DATA_ORDER_VS_COLD_PERSISTENT_INTERSECTION_SITES = 10_876
+# md3 also measured that the step-0 pool is NOT a fixed property of the vehicle: across eight
+# legitimately-produced starts (r6-r10 stage-03 ends and r10 periodics, every one copied verbatim
+# from a retained governed run) the pool Jaccard against the incumbent falls 0.9909 -> 0.1175.  The
+# unreachable sites inside it do not move with it -- over the four starts whose step-0 d_seg_hat is
+# comparable to the incumbent's, 83.13% of the incumbent's PERSISTENT sites are wrong at ALL of
+# them against 19.78% of the sites the optimizer DID reach (4.20x; 4.21x on PyAV).  Recorded here as
+# anchor CONTEXT, not as a term of this law: it is a step-0 statement, not a trajectory partition.
+MD3_START_LADDER_POOL_JACCARD_RANGE = (0.1175, 0.9909)
+MD3_UNREACHABLE_WRONG_AT_ALL_COMPARABLE_STARTS = 0.8313
+MD3_REACHED_WRONG_AT_ALL_COMPARABLE_STARTS = 0.1978
+
 
 def partition_is_exact(
     class_numerators: Mapping[str, Sequence[int]], total_numerator: Sequence[int]
@@ -459,6 +482,119 @@ def build_checkpoint_trajectory_error_partition_v1() -> CanonicalEquation:
         ),
         empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
     )
+    data_order_anchor = EmpiricalAnchor(
+        anchor_id=(
+            "md3_data_order_control_seed_20260903_shadow_trajectory_partition_20260905"
+        ),
+        measurement_utc="2026-09-05T14:53:21Z",
+        inputs={
+            "cell": (
+                "the retained wc3 seed_20260903 control -- SAME initialisation (init sha "
+                "991a1cc6..., bit-identical to the cold control and to ng5), schedule.seed 20260903 "
+                "with a different schedule.sha256_u8, so the DATA ORDER differs and nothing else "
+                "does; 5,000 updates"
+            ),
+            "forward": "EMA shadow",
+            "checkpoints": MD1_CADENCE_CHECKPOINTS,
+            "sites": 6_291_456,
+            "gt_authority": "DALI gt_cache_dali.pt",
+            "churn_flips": DEFAULT_CHURN_FLIPS,
+            "persistent_fraction": DEFAULT_PERSISTENT_FRACTION,
+            "levers_vs_the_cold_control": (
+                "ZERO schedule levers; the only difference is the seeded pair order.  This is the "
+                "confound md2 section 8 named as the free prerequisite to the initialisation "
+                "question, and it isolates data order from every other variable"
+            ),
+            "tool": (
+                "experiments/ddm_md1_micro_to_macro.py UNCHANGED, plus "
+                "experiments/ddm_md2_persistent_site_overlap.py for the site overlap"
+            ),
+        },
+        predicted_output={
+            "prior_law": (
+                "three cells on one initialisation agreed on the persistent SHARE within 4.0 pp on "
+                "the shadow forward, but all three also shared one data order; the share's "
+                "order-invariance was assumed, never measured"
+            ),
+            "preregistered_prediction": 0.62,
+            "preregistered_prediction_band": [0.55, 0.65],
+            "preregistered_falsifier": MD1_PREREGISTERED_FALSIFIER,
+            "preregistration": (
+                ".omx/research/charters"
+                "/ddm_md3_different_initialisation_cell_20260905.md"
+            ),
+        },
+        empirical_output={
+            "terminal_weighted_wrong_site_numerator": MD3_DATA_ORDER_TERMINAL_NUMERATOR,
+            "persistent_weighted_wrong_site_numerator": MD3_DATA_ORDER_PERSISTENT_NUMERATOR,
+            "denominator": MD1_DENOMINATOR,
+            "persistent_terminal_share": MD3_DATA_ORDER_PERSISTENT_TERMINAL_SHARE,
+            "calibration_gate_integer_residual": MD1_CALIBRATION_GATE_INTEGER_RESIDUAL,
+            "terminal_d_seg_hat": MD3_DATA_ORDER_TERMINAL_NUMERATOR / MD1_DENOMINATOR,
+            "persistent_floor_d_seg_hat": (
+                MD3_DATA_ORDER_PERSISTENT_NUMERATOR / MD1_DENOMINATOR
+            ),
+            "persistent_floor_over_target": (
+                MD3_DATA_ORDER_PERSISTENT_NUMERATOR / MD1_DENOMINATOR / 1.3646784205e-4
+            ),
+            "live_forward_persistent_share": MD3_DATA_ORDER_LIVE_PERSISTENT_TERMINAL_SHARE,
+            "persistent_site_overlap_with_cold_control_jaccard": (
+                MD3_DATA_ORDER_VS_COLD_PERSISTENT_JACCARD
+            ),
+            "persistent_site_overlap_intersection_sites": (
+                MD3_DATA_ORDER_VS_COLD_PERSISTENT_INTERSECTION_SITES
+            ),
+            "schedule_lever_jaccard_for_comparison": MD2_NG5_VS_COLD_PERSISTENT_JACCARD,
+            "start_ladder_pool_jaccard_range": MD3_START_LADDER_POOL_JACCARD_RANGE,
+            "unreachable_wrong_at_all_comparable_starts": (
+                MD3_UNREACHABLE_WRONG_AT_ALL_COMPARABLE_STARTS
+            ),
+            "reached_wrong_at_all_comparable_starts": (
+                MD3_REACHED_WRONG_AT_ALL_COMPARABLE_STARTS
+            ),
+            "prediction_holds": True,
+            "falsifier_fired": False,
+            "reading": (
+                "data order alone leaves the persistent share at 61.606% -- a FOURTH instance, all "
+                "four within 1.35 pp on the shadow -- and moves the persistent SITES LESS than the "
+                "two-lever schedule does (Jaccard 0.8536 against ng5's 0.8069 on the same cold "
+                "control).  The floor is 12.734x the sub-0.12 corner against the cold control's "
+                "12.753x.  ONE reading does not carry over: the LIVE-forward share is 40.562% "
+                "against the 35.3-35.8% md2 recorded across three cells, so the live forward is "
+                "materially sensitive to data order where the shadow is not, and md2's "
+                "live-forward cross-cell agreement was an agreement across cells that shared an "
+                "order.  The shipped object is the shadow, so no verdict moves"
+            ),
+        },
+        residual=abs(MD3_DATA_ORDER_PERSISTENT_TERMINAL_SHARE - 0.62),
+        source_artifact=".omx/research/ddm_md3_different_initialisation_cell_20260905.md",
+        measurement_method=(
+            "md1's instrument unchanged at the same cadence and authority; the overlap is measured "
+            "on the persisted per-site class codes of both cells.  Both cells share the step-0 "
+            "wrong pool by construction -- md1's sweep reads step 0 from "
+            "config['initial_state']['path'] -- so the within-pool null applies to this Jaccard "
+            "exactly as it did to md2's"
+        ),
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=(
+                "/Volumes/APDataStore/pact/ddm_md3_different_initialisation"
+                "/ANALYSIS_data_order_control_seed_20260903_dali.json"
+            ),
+            reactivation_criteria=(
+                "the sealed different-START cell "
+                "seed_20260902_different_init_r10_live_control_native100 (re-rooted config sha "
+                "8b726db1..., queue spec 6a147cc2...), whose initial_state points at r10's "
+                "stage-03 LIVE weights instead of its EMA shadow.  md3 measured that a different "
+                "random INITIALISATION is not purchasable: build_initial_state takes no seed, and "
+                "the vehicle's random init is packet.initialize_params(20260827) behind the whole "
+                "qbt1 r1..r10 chain, so pricing that chain's wall clock is the prerequisite to any "
+                "init-search charter"
+            ),
+            measurement_axis=_AXIS,
+            hardware_substrate="m5_max_128gib_cpu",
+        ),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    )
     return CanonicalEquation(
         equation_id="checkpoint_trajectory_error_partition_v1",
         name="Checkpoint-trajectory error partition and the optimizer-reachability floor",
@@ -504,16 +640,27 @@ def build_checkpoint_trajectory_error_partition_v1() -> CanonicalEquation:
                 "TOPOLOGICAL sense; this law is persistence in the TRAJECTORY sense",
             ],
             "known_boundary": (
-                "one vehicle, one seed, ONE INITIALISATION, three cells (cold control, ng1 warm "
-                "transition, ng5 tau-band x carried-duals burn default), two forwards each.  The "
-                "generic statement is DERIVED from the integer identity.  The SIZE of the "
-                "persistent share has three measured instances agreeing within 4.0 pp on the "
-                "shadow forward (62.011% cold, 59.009% warm, 62.954% ng5) and within 0.44 pp on "
-                "the live forward within 0.45 pp (35.779% / 35.336% / 35.439%), and md2 measured that the "
-                "persistent SITES of two of them overlap at Jaccard 0.8069 -- but all three cells "
-                "share initial_state sha 991a1cc6..., so schedule-invariance is measured and "
-                "init-invariance is NOT.  All three retained wc3 seed controls declare that same "
-                "init sha, so a second seed cannot close that gap."
+                "one vehicle, ONE INITIALISATION, four cells (cold control, ng1 warm transition, "
+                "ng5 tau-band x carried-duals burn default, md3 data-order control), two forwards "
+                "each.  The generic statement is DERIVED from the integer identity.  The SIZE of "
+                "the persistent share has FOUR measured instances agreeing within 1.35 pp on the "
+                "shadow forward once the outlier is named (62.011% cold, 62.954% ng5, 61.606% "
+                "md3 data-order; 59.009% warm is the low leg), and the persistent SITES overlap "
+                "the cold control at Jaccard 0.8069 (schedule lever, md2) and 0.8536 (data order, "
+                "md3) -- so both schedule-invariance and DATA-ORDER-invariance are now measured on "
+                "the shadow forward.  The LIVE forward is NOT order-invariant: md3 measured "
+                "40.562% against the 35.3-35.8% of the three cells that shared an order, so the "
+                "earlier live-forward agreement was an agreement across one data order and must "
+                "not be transferred.  INIT-invariance remains UNMEASURED, and md3 established that "
+                "it is not cheaply purchasable: build_initial_state takes no seed (it copies r10's "
+                "stage-03 EMA shadow verbatim) and the vehicle's random init is "
+                "packet.initialize_params(20260827) behind the entire qbt1 r1..r10 chain.  What "
+                "md3 could measure is the STEP-0 half: across eight legitimately-produced starts "
+                "the step-0 wrong pool moves (Jaccard 0.9909 -> 0.1175 against the incumbent), so "
+                "the pool is NOT fixed -- yet 83.13% of the incumbent's persistent sites are wrong "
+                "at all four comparable-quality starts against 19.78% of the sites the optimizer "
+                "did reach.  The trajectory half of that statement still needs a burned cell from "
+                "a different start."
             ),
         },
         units_in={
@@ -526,7 +673,7 @@ def build_checkpoint_trajectory_error_partition_v1() -> CanonicalEquation:
             "optimizer_reachable_share": "dimensionless_fraction",
             "persistent_share": "dimensionless_fraction",
         },
-        empirical_anchors=(md1_anchor, warm_anchor, ng5_anchor),
+        empirical_anchors=(md1_anchor, warm_anchor, ng5_anchor, data_order_anchor),
         predicted_vs_empirical_residual={
             "md1_qbr1_cold_control_seed_20260902_shadow_trajectory_partition_20260904": (
                 abs(MD1_PERSISTENT_TERMINAL_SHARE - MD1_PREREGISTERED_PREDICTION)
