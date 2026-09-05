@@ -684,3 +684,13 @@ is waste outside m_safe) is the one that matters at the terminal, and the dual s
 ordering is now complete: τ band −7.84% ≫ continuous ≈ cold ≈ cap (−0.97%) > warm +4.4%. ng5 (band × duals) fires next from admission; expectation
 REDUNDANT (≈ ng3). Burn-quality series conclusion: **the τ band is the burn default; nothing else in the series earned a place.** Not a pointer object.
 Equations leg (`tac.canonical_equations`): gm1's τ-band law — the four-cell ordering is its anchor set (τ band the sole below-start lever).
+
+## ADDENDUM 33 (2026-09-05 01:40Z real) — first queue-driver fire in anger: ng5 is live, with no hand in the loop
+
+ng5's waiter: gate 1 (ng4's receipt) 01:30:58Z → three admission holds a minute apart → bounded smoke (60 s): **3-way no-op detector PASSED** (the
+composition's step-1 state differs from the control AND from both parents' step-1 shas) → cell peak resolved FROM_LEDGER 49.572 GiB (ng4's measured
+system-availability delta; ng3's shape-matched 40.92 GiB for the smoke) → `tools/cell_queue_driver.py run` dry-run rc=0 → fire rc=0 at 01:36:11Z; cell
+`seed_20260902_tau_band_x_continuous_objective_control_native100` live (3 processes), receipt `ng5_composition_DONE.json`, ~4.4 h → ~06:00Z.
+No bespoke shell, no inline vm_stat arithmetic, no hand-typed peak, no MAIN action between ng4's exit and ng5's start — the permanence program's
+first end-to-end proof. Pre-registered expectation after ng4's terminal: REDUNDANT (≈ ng3's 0.391810), possibly slightly ANTAGONISTIC on d_pose; the
+words decide at ~06:00Z. Not a pointer object. Equations leg (`tac.canonical_equations`): none.
