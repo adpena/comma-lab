@@ -1,0 +1,114 @@
+{
+  "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+  "candidate_archive": {
+    "bytes": 179982,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/candidate_archive.zip",
+    "sha256": "08ec85333d13d71344b4482cf261e3b2d508725e49f3ca05971265a81498ad4e"
+  },
+  "container_identity_via_up3": {
+    "container": {
+      "brotli_lgwin": 16,
+      "brotli_quality": 9,
+      "ck2_carrier_plane2": false,
+      "identical_to_shipped_shape": true,
+      "options_considered": [
+        [
+          false,
+          9,
+          16
+        ]
+      ],
+      "rx1_reserved": "0x1a",
+      "searched": true,
+      "shipped_shape": [
+        false,
+        9,
+        16
+      ]
+    },
+    "identical": true,
+    "packed_metadata_identical": true,
+    "rebuilt": {
+      "bytes": 179982,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/container_identity_rebuild.zip",
+      "sha256": "08ec85333d13d71344b4482cf261e3b2d508725e49f3ca05971265a81498ad4e"
+    },
+    "rice_payload_identical": true
+  },
+  "no_op_detector": {
+    "consumed": true,
+    "hpac_section_changed": true,
+    "reading": "the RC64 stream is arithmetic-coded under the candidate model's probabilities; the receiver decoding it to the exact field (price stage, identity PASS) is the proof that the new hpac bytes were read and used -- the shipped model would desynchronise the decoder",
+    "token_stream_changed": true
+  },
+  "only_model_and_stream_moved": true,
+  "receiver_copy_tree": {
+    "differing_files_vs_fs2_tree": [
+      "archive.zip",
+      "inflate.py"
+    ],
+    "inflate_py_line_diff": [
+      {
+        "candidate": "ARCHIVE_SHA256 = \"08ec85333d13d71344b4482cf261e3b2d508725e49f3ca05971265a81498ad4e\"",
+        "line": 18,
+        "shipped": "ARCHIVE_SHA256 = \"a8f3a3791499b2b62ee4d16bc67f15f819f454dc9b88e3cce04fe50a30427bb6\""
+      },
+      {
+        "candidate": "ARCHIVE_BYTES = 179_982",
+        "line": 19,
+        "shipped": "ARCHIVE_BYTES = 180_023"
+      }
+    ],
+    "ok": true,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/receiver_copy_runtime",
+    "pycache_dirs_removed": 0
+  },
+  "rung": "lambda_1p0",
+  "schema": "ddm_cl2_verify.v1",
+  "score_claim": false,
+  "section_census": {
+    "carrier": {
+      "candidate_bytes": 22031,
+      "candidate_sha256": "801a4445956ca5e994a32b01d6aaf5e81c8765f79617bb492af683cf239248bb",
+      "identical": true,
+      "shipped_bytes": 22031,
+      "shipped_sha256": "801a4445956ca5e994a32b01d6aaf5e81c8765f79617bb492af683cf239248bb"
+    },
+    "header": {
+      "candidate_bytes": 14,
+      "candidate_sha256": "459c36fc2b0a33b38c8b381ab5b2755ba20028b0ad620c15b3fa054ffb4b8d94",
+      "identical": false,
+      "shipped_bytes": 14,
+      "shipped_sha256": "8966cbe7aab6bb34779045447fb1cdd6720f4e30ad2349cb3b5392244a39ce9a"
+    },
+    "hpac": {
+      "candidate_bytes": 13466,
+      "candidate_sha256": "66801b10fd4dbfed97e1544a0c7efefe669959058be485ae9957c691ab73abf9",
+      "identical": false,
+      "shipped_bytes": 13515,
+      "shipped_sha256": "602115b323b0e403d08287af9b273a2d4fb23e026d83c1f6e4609ed77ef98f98"
+    },
+    "residual_table": {
+      "candidate_bytes": 96,
+      "candidate_sha256": "8ab2fe748ab7d69d2102ba2292289e22bd7ea503f8ae29938e0854ec46ca3da1",
+      "identical": true,
+      "shipped_bytes": 96,
+      "shipped_sha256": "8ab2fe748ab7d69d2102ba2292289e22bd7ea503f8ae29938e0854ec46ca3da1"
+    },
+    "semantic": {
+      "candidate_bytes": 30856,
+      "candidate_sha256": "39d1be52ba62933498395c48ce4d9482f37db097d504da76c2a321efe3e4a76f",
+      "identical": true,
+      "shipped_bytes": 30856,
+      "shipped_sha256": "39d1be52ba62933498395c48ce4d9482f37db097d504da76c2a321efe3e4a76f"
+    },
+    "token_stream": {
+      "candidate_bytes": 113419,
+      "candidate_sha256": "e07274caeacbb3a6ce00e26b42d7032671af5c8109a2cee3a0697b116ac125cf",
+      "identical": false,
+      "shipped_bytes": 113411,
+      "shipped_sha256": "5601d6fd792c60c176e7cb7478e6033c4ed9a7e87404582340ed3f50ed60cfe3"
+    }
+  },
+  "verdict": "VERIFIED"
+}

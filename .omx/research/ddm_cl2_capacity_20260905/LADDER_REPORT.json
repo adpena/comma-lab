@@ -1,0 +1,65 @@
+{
+  "adjacent_slopes": [
+    {
+      "delta_joint_bytes": 506,
+      "delta_model_bytes": 350,
+      "delta_stream_bytes": 156,
+      "from": "lambda_1p0",
+      "pays": false,
+      "slope_stream_per_model": 0.44571428571428573,
+      "to": "lambda_0p5"
+    }
+  ],
+  "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+  "best_rung": "lambda_1p0",
+  "control_reproduction_gap_joint_bytes": -41,
+  "control_tolerance_bytes": 500,
+  "decision": "READY-FOR-T4-CANDIDATE",
+  "demand_bytes": 41817.8,
+  "rate_corner_archive_bytes": 138205.2,
+  "rows": {
+    "cpu_control_jf2_null": {
+      "candidate_archive_bytes": 180275,
+      "decode_wall_clock_seconds": 1151.8322031251155,
+      "decoded_identity": true,
+      "fraction_of_demand_41818": -0.006026141977818058,
+      "joint_bytes": 127178,
+      "joint_delta_vs_shipped_126926": 252,
+      "model_packed_bytes": 13463,
+      "rate_lambda": 1.0,
+      "stream_bytes": 113715,
+      "two_encodes_identical": true
+    },
+    "lambda_0p5": {
+      "candidate_archive_bytes": 180488,
+      "decode_wall_clock_seconds": 1040.1119544580579,
+      "decoded_identity": true,
+      "fraction_of_demand_41818": -0.01111966674478332,
+      "joint_bytes": 127391,
+      "joint_delta_vs_shipped_126926": 465,
+      "model_packed_bytes": 13816,
+      "rate_lambda": 0.5,
+      "stream_bytes": 113575,
+      "two_encodes_identical": true
+    },
+    "lambda_1p0": {
+      "candidate_archive_bytes": 179982,
+      "decode_wall_clock_seconds": 1299.3179491250776,
+      "decoded_identity": true,
+      "fraction_of_demand_41818": 0.0009804437344862714,
+      "joint_bytes": 126885,
+      "joint_delta_vs_shipped_126926": -41,
+      "model_packed_bytes": 13466,
+      "rate_lambda": 1.0,
+      "stream_bytes": 113419,
+      "two_encodes_identical": true
+    }
+  },
+  "schema": "ddm_cl2_ladder_report.v1",
+  "score_claim": false,
+  "shipped": {
+    "joint_bytes": 126926,
+    "model_bytes": 13515,
+    "stream_bytes": 113411
+  }
+}
