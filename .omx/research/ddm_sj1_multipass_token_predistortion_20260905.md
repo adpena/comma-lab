@@ -357,9 +357,64 @@ Two corrections to what the launch declared, both mine:
    eight are stopped; only the launcher supervisor (which WRITES the receipt) remains on my
    side. The cure is one watcher at the coordinator, not N at the arm.
 
+## 5. PASS 2a — the measured n600 row (`gt` slice of the 36-family)
+
+| quantity | MEASURED |
+|---|---|
+| flips before → after | 23,749 → **14,156** |
+| flips repaired | **9,593 = 40.39%** |
+| tokens changed | **7,804** |
+| **cells per changed token** | **1.229** |
+| break-even bits per changed token | **12.52** |
+| d_seg (instrument, DALI) | 0.00020132277 → **0.00012000190** |
+| seg gain | 12,213 B-equivalent = **0.008132 S** |
+| pairs edited | 600 / 600 |
+| moves accepted | 7,806 |
+| proposals enumerated / realized | 96,764 / 68,782 |
+| realized evaluations | 69,382 |
+| wall clock | 16,580 s on 5 shards |
+
+Field sha `e107b5ab9701f7cc…`.
+
+**Against the charter's PRIOR-LAW PREDICTION** (`20–35%` of remaining flips, `4,750–8,300`
+cells, at `1.3–1.6` cells per changed token): the repair fraction **BEAT** the band —
+**40.39%, 9,593 cells** — while the efficiency came in **BELOW** it at **1.229**. Both
+residuals point the same way: this actuator finds more repairable sites than predicted and
+pays slightly more tokens for each. And this is the `gt` slice alone — 9 of the 36 combos.
+The charter's FALSIFIER (a full pass repairing < 8%) is cleared by **5.0×**.
+
+Accepted moves by offset (all `gt` role), which is a physical signature not a curiosity:
+
+| offset | accepted | flips repaired |
+|---|---:|---:|
+| (−1, 0) | 2,099 | 2,900 |
+| (1, 0) | 1,552 | 1,900 |
+| (0, −1) | 1,105 | 1,282 |
+| (0, 1) | 880 | 991 |
+| (0, 0) | 528 | 735 |
+| (−1,−1) | 473 | 514 |
+| (1, −1) | 456 | 488 |
+| (1, 1) | 365 | 403 |
+| (−1, 1) | 348 | 380 |
+
+The two VERTICAL neighbours carry **46.8%** of all accepts and **50.1%** of all repairs:
+a dashcam's class boundaries run mostly horizontally, so the productive move is to push
+the painted boundary UP or DOWN. The centre cell is only 6.8% of accepts, confirming from
+the other side that the debt is render→re-segment loss and not a wrong stored label.
+
+### The rc=1 that was mine
+
+The pass receipt returned rc=1 with every shard at 120/120 and a clean per-shard receipt.
+The failure was `KeyError: 'local_repaired'` in `cmd_pass_merge`: the engine records the
+realized whole-pair repair as `repaired`, and `local_repaired` was a leftover name from the
+windowed attribution §2's probe had already falsified. The merge is idempotent and re-ran
+from the shard receipts, so no compute was lost — but a summary step that reads a field the
+producer stopped writing is a real defect, and it only surfaced after 4.6 h of shard time.
+Fixed at the reader.
+
 ---
 
-*(Sections 5+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
+*(Sections 6+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
 appended as each lands. Nothing is written here before it is measured.)*
 
 ---

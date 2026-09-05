@@ -1342,9 +1342,13 @@ def cmd_pass_merge(args) -> int:
     for row in rows:
         for entry in row.get("accepted", []):
             key = f"{entry['offset'][0]},{entry['offset'][1]}|{entry['selector']}"
-            cell = selector_table.setdefault(key, {"accepted": 0, "local_repaired": 0})
+            # The engine records the REALIZED whole-pair repair as ``repaired``; the
+            # old ``local_repaired`` name belonged to the windowed attribution the
+            # influence probe falsified, and reading it here crashed the first merge
+            # after every shard had finished (rc=1 on a complete pass).
+            cell = selector_table.setdefault(key, {"accepted": 0, "repaired": 0})
             cell["accepted"] += 1
-            cell["local_repaired"] += int(entry["local_repaired"])
+            cell["repaired"] += int(entry["repaired"])
     report = {
         "schema": "ddm_sj1_pass.v1",
         "pass_index": receipts[0]["pass_index"],
