@@ -637,3 +637,16 @@ boundary and exits resumable → the queue driver re-admits when pressure clears
 Zero processes in state T after reconciliation; ng4 running. Equations leg (`tac.canonical_equations`): none (host apparatus constants stay out).
 
 **Default flipped (gov2 f6f3f03f8, 00:50Z):** `report_only` defaults True; `--act` is the explicit opt-in; `--act --report-only` → report-only wins (fail-safe, drilled); the RECONCILER runs in both modes (rescue is not an actuation). gov2's own words: "the guard I built destroyed work and prevented none; its value tonight was entirely in the alarms and the actor-naming." Owed, named: the cooperative pause protocol (SIGUSR1 → checkpoint → exit resumable → re-admit) and a launcher that refuses an instance older than the tool it runs.
+
+## ADDENDUM 30 (2026-09-05 01:05Z real) — dk2: APDataStore 17 → 55 GiB; the bulk class was not what the charter predicted
+
+dk2 (2130725f8 / 2b9e10b54): **39.00 GiB freed** by certify-and-move of 8 `work/inflated/` trees (32 ledger rows PLAN→COPIED→VERIFIED→MOVED_SYMLINKED,
+zero BLOCKED, zero bytes deleted; the generating archive/provenance/auth-eval stay local; symlinks resolve). APDataStore 17 → 55 GiB; Vertigo 83 → 44
+(the ≥40 floor was the cap, not supply). No TM local snapshots on this volume (dk1's mechanism is boot-volume-only). **Charter prediction falsified ~7×:**
+finished burn-cell generations total 4.44 GiB; the real bulk is **49 `inflated/` trees = 140.30 GiB** (inventory committed). ng5's storage leg: PASS with
+margin (55.52 GiB vs the 49.572 GiB resolved peak; it had passed at 16.69 GiB too — ng5 was blocked on admission, not disk). A vacuous PASS in dk2's own
+first planner run (304 child paths on one `du` argv pinned everything → "0.00 GiB in 0 trees") was made LOUD (denominator on stdout, `VACUOUS-CENSUS`
+warning; +6 tests). Collateral, owned: 7–8 concurrent movers saturated both tiers (`df` 48–120 s; ng4 21 steps in 10 min vs 130) — capped, then
+paused; ng4 recovered to 27 steps/min within a minute of the last move. Not done: ~101 GiB more of the `inflated/` class (needs a destination), the
+247 GiB of `cold_store*` (a retention question), the 4.44 GiB burn trees. Pre-existing reds routed: `[lane-pre-registered]` on mc1's working file
+(`lane_oracle`, `lane_iou` identifiers); orphan-module guard 22 > 10 on unrelated `src/tac/` modules. Equations leg (`tac.canonical_equations`): none.
