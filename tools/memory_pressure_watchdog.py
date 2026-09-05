@@ -31,17 +31,25 @@ THREE THINGS THAT DERIVATION SETTLES, and they are not obvious:
    3.189%, swap >= 4 GiB 4.594%, swap >= 16 GiB 2.199%, pressure >= warn 3.408%, pressure critical
    0.748%.
 
-THE ACTION IS SIGSTOP ON THE BIGGEST RECENT **RSS GROWER** AMONG ALL GOVERNED JOBS -- never SIGKILL,
-and never the oldest live cell.  This CORRECTS the rule this watchdog shipped with ("the newest
-training cell"), which its own first alarms falsified within an hour: see `select_pressure_target`
-for the 2026-09-04 23:47-23:55Z anger-data, where three non-cell `ddm_mc1 --stage ceiling` jobs held
-30.79 GiB while the only training cell held 0.49 GiB.  A stopped job resumes with SIGCONT once the
-machine has been clear of WARN for 60 s, so the intervention costs wall-clock and nothing else.
+**THE DEFAULT IS REPORT-ONLY: THIS GUARD ALARMS, IT DOES NOT SIGNAL** (operator decision
+2026-09-05, on this tool's own measurements).  In one night SIGSTOP hurt twice -- ng4's trainer
+paused three times with only two releases, and mc1's `ceil_block` stranded in state T -- and helped
+**zero** times.  Every measured pause was followed by swap GROWTH, never relief, for a reason that
+is structural rather than incidental: **a stopped process is the ideal eviction victim** (resident,
+dirty, not running), so pausing converts a running job's memory into swap instead of freeing it.
+A SIGSTOP relieves CPU and future allocation; it does not return resident bytes.  Under the
+never-weaker-state law a guard that destroys work is worse than no guard, so the signalling mode is
+now an explicit opt-in (``--act``) and the default is to alarm loudly and NAME THE ACTOR
+(``top_rss_growers`` on every row), which is what a human actually needed both times.
 
-Default-ON observability per CLAUDE.md "off is a tracked queue": ``--report-only`` is the drill
-mode and prints exactly what it WOULD have stopped.
+Opting in with ``--act`` keeps the full safety apparatus: targeting by RSS growth
+(:func:`select_pressure_target`), the bounded pause (:data:`MAX_PAUSE_S`), and the startup
+reconciler.  **The reconciler runs in BOTH modes** -- report-only means "never STOP anything", not
+"never RESCUE anything", and SIGCONT of a stranded process can only restore work.
 
-    memory_pressure_watchdog run --report-only --duration-s 600
+    memory_pressure_watchdog run                     # alarm-only (the default)
+    memory_pressure_watchdog run --act               # opt in to SIGSTOP/SIGCONT
+    memory_pressure_watchdog reconcile               # free anything a dead instance left stopped
     memory_pressure_watchdog once --json
 """
 
@@ -727,7 +735,7 @@ def watch(
     *,
     poll_s: float = DEFAULT_POLL_S,
     duration_s: float | None = None,
-    report_only: bool = False,
+    report_only: bool = True,
     ledger: Path | None = None,
     clear_hold_s: float = CLEAR_HOLD_S,
     max_pause_s: float = MAX_PAUSE_S,
@@ -738,7 +746,11 @@ def watch(
     sleeper=time.sleep,
     now=time.monotonic,
 ) -> dict[str, Any]:
-    """Poll, alarm, and (unless ``report_only``) SIGSTOP/SIGCONT the newest training cell."""
+    """Poll and alarm.  Signals the biggest RSS grower ONLY when ``report_only`` is False.
+
+    ``report_only`` defaults to **True** -- see the module docstring for why the actuator was
+    demoted.  The startup reconciler runs regardless of the mode.
+    """
     started = now()
     previous: PressureSample | None = None
     stopped: dict[str, Any] | None = None
@@ -746,7 +758,9 @@ def watch(
     alarms: list[dict[str, Any]] = []
     polls = 0
     stopped_at: float | None = None
-    reconciled = reconcile_orphaned_pauses(ledger, dry_run=report_only) if reconcile else []
+    # NOT gated on report_only: freeing a process a dead instance left stopped is a REPAIR. The
+    # thing report-only refuses to do is STOP something, not rescue something.
+    reconciled = reconcile_orphaned_pauses(ledger) if reconcile else []
     launch_mtime = source_mtime()
     retired_for_source_change = False
     # Rolling per-job footprints: the growth signal that identifies the ALLOCATOR (see
@@ -901,17 +915,29 @@ def _cmd_once(args: argparse.Namespace) -> int:
         "sample": sample.as_dict(),
         "newest_training_cell": newest_training_cell(),
         "thresholds": thresholds_dict(sample.total_gib),
+        "default_mode": "report_only (signalling requires --act)",
         "score_claim": False,
     }
     print(json.dumps(payload, indent=2, sort_keys=True, default=str))
     return 0 if level == LEVEL_OK else (1 if level == LEVEL_WARN else 2)
 
 
+def _resolve_report_only(args: argparse.Namespace) -> bool:
+    """Alarm-only unless ``--act`` is given; ``--report-only`` always wins if BOTH are passed.
+
+    Fail-safe by construction: no combination of flags can turn signalling on by accident, and the
+    old ``--report-only`` argv (which the live instance was launched with) keeps working unchanged.
+    """
+    if getattr(args, "report_only", False):
+        return True
+    return not getattr(args, "act", False)
+
+
 def _cmd_run(args: argparse.Namespace) -> int:
     summary = watch(
         poll_s=args.poll_s,
         duration_s=args.duration_s,
-        report_only=args.report_only,
+        report_only=_resolve_report_only(args),
         ledger=args.ledger,
         clear_hold_s=args.clear_hold_s,
         max_pause_s=args.max_pause_s,
@@ -989,9 +1015,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run.add_argument("--ledger", type=Path, default=None)
     run.add_argument(
+        "--act",
+        action="store_true",
+        help=(
+            "OPT IN to signalling: SIGSTOP the biggest RSS grower on CRITICAL, bounded by "
+            "--max-pause-s. OFF by default -- SIGSTOP hurt twice and helped zero times on "
+            "2026-09-05 because pausing converts resident memory into swap instead of freeing it."
+        ),
+    )
+    run.add_argument(
         "--report-only",
         action="store_true",
-        help="alarm and name the cell it WOULD pause, without signalling anything",
+        help="the DEFAULT (alarm, name the actor, never signal); accepted explicitly and wins over --act",
     )
     run.set_defaults(func=_cmd_run)
 

@@ -220,6 +220,7 @@ class TestWatchLoop:
         monkeypatch.setattr(wd, "_push", lambda *a: None)
         wd.watch(
             duration_s=0,
+            report_only=False,  # signalling is opt-in since 2026-09-05
             ledger=tmp_path / "a.jsonl",
             sampler=self._fixed_sampler([_sample(level=4)]),
             job_sampler=lambda: [],
@@ -233,6 +234,7 @@ class TestWatchLoop:
         monkeypatch.setattr(wd, "_push", lambda *a: None)
         wd.watch(
             duration_s=0,
+            report_only=False,  # signalling is opt-in since 2026-09-05
             ledger=tmp_path / "a.jsonl",
             sampler=self._fixed_sampler([_sample(level=4)]),
             job_sampler=lambda: [],
@@ -255,6 +257,7 @@ class TestWatchLoop:
         samples = [_sample(level=4), _sample(), _sample(), _sample(), _sample()]
         wd.watch(
             duration_s=100.0,
+            report_only=False,
             clear_hold_s=60.0,
             ledger=tmp_path / "a.jsonl",
             sampler=self._fixed_sampler(samples),
@@ -277,6 +280,7 @@ class TestWatchLoop:
         monkeypatch.setattr(wd, "_push", lambda *a: None)
         wd.watch(
             duration_s=0,
+            report_only=False,  # signalling is opt-in since 2026-09-05
             ledger=tmp_path / "a.jsonl",
             sampler=self._fixed_sampler([_sample(level=4)]),
             job_sampler=lambda: [],
@@ -293,6 +297,7 @@ class TestWatchLoop:
         clock = {"t": 0.0}
         wd.watch(
             duration_s=10.0,
+            report_only=False,
             ledger=tmp_path / "a.jsonl",
             sampler=self._fixed_sampler([_sample(level=4), _sample(level=4)]),
             job_sampler=lambda: [],
@@ -501,6 +506,7 @@ class TestWarnRowNamesTheCause:
         monkeypatch.setattr(wd, "_push", lambda *a: None)
         wd.watch(
             duration_s=0,
+            report_only=False,
             ledger=tmp_path / "a.jsonl",
             sampler=lambda: _sample(level=4),
             job_sampler=lambda: _ANGER_FLEET,
@@ -578,6 +584,7 @@ class TestBoundedPause:
         samples = [_sample(level=4)] + [_sample(swap=10.5, compressor=41.0)] * polls
         wd.watch(
             duration_s=polls * 10.0,
+            report_only=False,
             clear_hold_s=60.0,
             max_pause_s=max_pause_s,
             reconcile=False,
@@ -636,6 +643,7 @@ class TestBoundedPause:
         monkeypatch.setattr(wd, "_push", lambda *a: None)
         wd.watch(
             duration_s=200.0,
+            report_only=False,
             clear_hold_s=60.0,
             max_pause_s=180.0,
             reconcile=False,
@@ -773,3 +781,114 @@ class TestStaleInstanceRetires:
             sleeper=lambda _s: None, now=lambda: 0.0,
         )
         assert summary["retired_for_source_change"] is False
+
+
+# ── the actuator is demoted: alarm by default, signal only on --act (operator 2026-09-05) ───────
+
+
+class TestReportOnlyIsTheDefault:
+    """SIGSTOP hurt twice in one night and helped zero times; a guard that destroys work is worse
+    than no guard. The signalling mode is now an explicit opt-in."""
+
+    def test_watch_defaults_to_report_only(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(wd, "_signal_tree", lambda pid, sig: pytest.fail("must not signal by default"))
+        monkeypatch.setattr(wd, "select_pressure_target", lambda h: {"cell_id": "c", "pid": 9, "stop_pid": 99})
+        monkeypatch.setattr(wd, "_push", lambda *a: None)
+        wd.watch(
+            duration_s=0, ledger=tmp_path / "a.jsonl", reconcile=False, exit_on_source_change=False,
+            sampler=lambda: _sample(level=4), job_sampler=lambda: [],
+            sleeper=lambda _s: None, now=lambda: 0.0,
+        )
+        row = json.loads((tmp_path / "a.jsonl").read_text().strip().splitlines()[0])
+        assert row["action"]["kind"] == "WOULD_SIGSTOP"
+        assert row["report_only"] is True
+
+    def test_the_default_still_names_the_actor(self, tmp_path, monkeypatch):
+        """Alarm-only is only useful if it says WHO -- that is what a human needed both times."""
+        monkeypatch.setattr(wd, "_push", lambda *a: None)
+        wd.watch(
+            duration_s=0, ledger=tmp_path / "a.jsonl", reconcile=False, exit_on_source_change=False,
+            sampler=lambda: _sample(compressor=20.0), job_sampler=lambda: _ANGER_FLEET,
+            sleeper=lambda _s: None, now=lambda: 0.0,
+        )
+        row = json.loads((tmp_path / "a.jsonl").read_text().strip().splitlines()[0])
+        assert len(row["top_rss_growers"]) == 3
+
+    @pytest.mark.parametrize(
+        "argv,expected",
+        [
+            (["run"], True),
+            (["run", "--act"], False),
+            (["run", "--report-only"], True),
+            (["run", "--act", "--report-only"], True),
+        ],
+    )
+    def test_flag_resolution_is_fail_safe(self, argv, expected):
+        """No combination can turn signalling on by accident; --report-only always wins."""
+        assert wd._resolve_report_only(wd.build_parser().parse_args(argv)) is expected
+
+    def test_the_old_report_only_argv_still_works(self):
+        """The live instance was launched with --report-only; the flag must not disappear."""
+        assert wd._resolve_report_only(wd.build_parser().parse_args(["run", "--report-only"])) is True
+
+    def test_act_restores_signalling_with_the_full_safety_apparatus(self, tmp_path, monkeypatch):
+        sent = []
+        monkeypatch.setattr(wd, "_signal_tree", lambda pid, sig: sent.append((pid, sig)) or {"delivered": [pid]})
+        monkeypatch.setattr(wd, "select_pressure_target", lambda h: {"cell_id": "c", "pid": 9, "stop_pid": 99})
+        monkeypatch.setattr(wd, "_push", lambda *a: None)
+        wd.watch(
+            duration_s=0, report_only=False, ledger=tmp_path / "a.jsonl",
+            reconcile=False, exit_on_source_change=False,
+            sampler=lambda: _sample(level=4), job_sampler=lambda: [],
+            sleeper=lambda _s: None, now=lambda: 0.0,
+        )
+        assert sent[0] == (99, signal.SIGSTOP)
+        assert sent[-1] == (99, signal.SIGCONT), "resume-on-exit still guaranteed"
+
+    def test_the_bounded_pause_survives_the_opt_in(self, tmp_path, monkeypatch):
+        sent = []
+        clock = {"t": 0.0}
+        monkeypatch.setattr(wd, "_signal_tree", lambda pid, sig: sent.append((pid, sig)) or {"delivered": [pid]})
+        monkeypatch.setattr(wd, "select_pressure_target", lambda h: {"cell_id": "c", "pid": 9, "stop_pid": 99})
+        monkeypatch.setattr(wd, "_push", lambda *a: None)
+        samples = [_sample(level=4)] + [_sample(swap=10.5, compressor=41.0)] * 8
+        iterator = iter(samples)
+        last = samples[-1]
+
+        def sampler():
+            nonlocal last
+            try:
+                last = next(iterator)
+            except StopIteration:
+                pass
+            return last
+
+        wd.watch(
+            duration_s=80.0, report_only=False, max_pause_s=30.0, clear_hold_s=60.0,
+            ledger=tmp_path / "a.jsonl", reconcile=False, exit_on_source_change=False,
+            sampler=sampler, job_sampler=lambda: [],
+            sleeper=lambda _s: clock.__setitem__("t", clock["t"] + 10.0), now=lambda: clock["t"],
+        )
+        kinds = [(json.loads(line).get("action") or {}).get("kind")
+                 for line in (tmp_path / "a.jsonl").read_text().strip().splitlines()]
+        assert "SIGCONT_MAX_PAUSE" in kinds
+
+
+class TestReconcilerRunsInBothModes:
+    """report-only means "never STOP anything", not "never RESCUE anything"."""
+
+    def test_a_stranded_pid_is_freed_even_in_report_only(self, tmp_path, monkeypatch):
+        ledger = tmp_path / "a.jsonl"
+        wd.emit_alarm(wd.LEVEL_CRITICAL, _sample(), ["x"], {"kind": "SIGSTOP", "stop_pid": 33374}, ledger=ledger)
+        sent = []
+        monkeypatch.setattr(wd, "process_state", lambda pid: "T")
+        monkeypatch.setattr(wd, "_signal_tree", lambda pid, sig: sent.append((pid, sig)) or {"delivered": [pid]})
+        monkeypatch.setattr(wd, "_push", lambda *a: None)
+        summary = wd.watch(
+            duration_s=0, ledger=ledger, exit_on_source_change=False,
+            sampler=lambda: _sample(), job_sampler=lambda: [],
+            sleeper=lambda _s: None, now=lambda: 0.0,
+        )
+        assert summary["report_only"] is True
+        assert summary["reconciled_orphaned_pauses"][0]["outcome"] == "SIGCONT"
+        assert sent == [(33374, signal.SIGCONT)], "a rescue is not a signal report-only forbids"

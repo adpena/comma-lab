@@ -448,3 +448,47 @@ that is why every measured pause was followed by swap growth rather than relief.
 the right actuator at all is now an open question this arm did not settle; the alternative (alarm
 loudly, never signal) is a one-line default change if the next anger-data says so. **+20 tests
 (57 → 77).**
+
+---
+
+## ADDENDUM 3 (2026-09-05 ~00:5xZ) — the actuator is demoted; the guard alarms and names the actor
+
+**Operator decision, on this tool's own numbers: SIGSTOP hurt twice today and helped zero times.**
+ng4's trainer was paused three times with only two releases; mc1's `ceil_block` stranded in state T.
+Every measured pause was followed by swap GROWTH, never relief, and the reason is structural, not
+incidental: **a stopped process is the ideal eviction victim** — resident, dirty, and not running —
+so pausing converts a job's memory into swap rather than freeing it. A SIGSTOP relieves CPU and
+future allocation; it does not return resident bytes. Under **never weaker state**, a guard that
+destroys work is worse than no guard.
+
+**LANDED: `report_only` now defaults to True.** The watchdog alarms, records `top_rss_growers` on
+every row, and signals nothing. `--act` is the explicit opt-in and keeps the full safety apparatus
+(growth-based targeting, the bounded `MAX_PAUSE_S`, resume-on-exit). Flag resolution is fail-safe:
+`--report-only` wins over `--act` if both appear, and the old `--report-only` argv the live instance
+was launched with keeps working unchanged — no combination can turn signalling on by accident.
+
+**One deliberate exception: the reconciler runs in BOTH modes.** Report-only means "never STOP
+anything", not "never RESCUE anything". SIGCONT of a process a dead instance stranded can only
+restore work, and gating it behind `--act` would have left the very orphan this arm found frozen.
+Pinned by a test.
+
+This closes the question ADDENDUM 2 left open honestly rather than by preference: the alternative
+was named there as a one-line default change if the next anger-data said so, and it did, twice, in
+one night.
+
+### OWED, named and NOT built tonight
+
+1. **A COOPERATIVE PAUSE PROTOCOL — the actuator that would actually work.** The guard sends
+   `SIGUSR1`; the governed trainer catches it, **checkpoints at the next step boundary and exits
+   with a resumable receipt**; the queue driver re-admits it when pressure clears. That frees
+   resident bytes (the process is gone, not parked) and loses no work (the checkpoint is the
+   contract this repo already requires of every launch). It is strictly better than SIGSTOP on both
+   axes on which SIGSTOP failed. It needs a trainer-side handler, a receipt schema, and a
+   re-admission path in `cell_queue_driver` — a real unit, not a bolt-on.
+2. **A launcher that refuses to keep an instance older than the tool it runs.** The watchdog now
+   retires *itself* on a source change (ADDENDUM 2), which covers this one tool; the general
+   "fix-in-git is not fix-in-RAM" guard for every long-lived governed process belongs to the
+   launcher's supervision surface and is unowned.
+
+**+10 tests (77 → 87.)** MAIN's live instance (`memory_watchdog_r3`, launched `--report-only` on
+`de7b4229c`) already runs the landed behaviour, so this flip needs no relaunch.
