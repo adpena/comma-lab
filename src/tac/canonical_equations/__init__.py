@@ -71,6 +71,14 @@ from tac.canonical_equations.annulus_restricted_prefix_bias_detector_20260904 im
     global_check_is_blind,
     prefix_constant_is_suspect,
 )
+from tac.canonical_equations.flip_location_component_address_floor_20260905 import (
+    address_count_ratio,
+    boundary_band_is_already_localised,
+    build_flip_location_component_address_floor_v1,
+    clustering_headroom_fraction,
+    component_representation_can_pay,
+    component_representation_headroom_bytes,
+)
 from tac.canonical_equations.motion_compensated_previous_plane_gate_20260904 import (
     build_motion_compensated_previous_plane_alignment_gate_v1,
     carried_motion_breakeven_open,
@@ -546,6 +554,12 @@ __all__ = [
     "ceiling_refused",
     "plane_passes_alignment_gate",
     "temporal_predictability_supports_extrapolation",
+    "address_count_ratio",
+    "boundary_band_is_already_localised",
+    "build_flip_location_component_address_floor_v1",
+    "clustering_headroom_fraction",
+    "component_representation_can_pay",
+    "component_representation_headroom_bytes",
     "build_checkpoint_trajectory_error_partition_v1",
     "floor_clears_target",
     "partition_is_exact",

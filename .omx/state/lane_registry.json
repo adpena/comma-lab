@@ -96333,15 +96333,15 @@
       "id": "lane_ddm_hc2_wrong_half_decomposition_20260905",
       "name": "hc2 wrong-half flip-location decomposition ceiling",
       "phase": 3.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/ddm_hc2_wrong_half_flip_location_decomposition.py (stages control/features/ceiling); n600 run 631 s peak 6.38 GiB"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "[model-ledger code length on the shipped coder's own rows; REFUSAL-ONLY] research_only=true score_claim=false promotable=false. CEILING-REFUSED: best location-set representation 106,555.86 B vs incumbent no-branch 76,266.24 B (+30,289.62 B); .omx/research/ddm_hc2_wrong_half_flip_location_decomposition_20260905.md"
         },
         "contest_cuda": {
           "status": false,
@@ -96360,8 +96360,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_hc2_wrong_half_flip_location_decomposition_20260905.md + tac.canonical_equations flip_location_component_address_floor_v1"
         },
         "deploy_runbook": {
           "status": false,
@@ -96378,5 +96378,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-05T12:48:46Z"
+  "updated_at": "2026-09-05T13:19:53Z"
 }
