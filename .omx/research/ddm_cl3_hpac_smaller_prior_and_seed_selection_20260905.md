@@ -88,6 +88,13 @@ section → encode TWICE with `encode_tail` (streams must be byte-identical) →
 which would corrupt the staged receiver runtime tree's census and sha; and `._*.pt` companions (5 already present)
 pollute the trainer's `rglob("*.pt")` artifact manifest.
 
+**What it would have cost, concretely (traced, not guessed):** `stage_verify` check (c) computes
+`tree_ok = set(differing) <= {"archive.zip", "inflate.py"} and len(inflate_diff) == 2` over `_tree_facts(receiver_copy)`
+against the fs2 fire tree. Forty-four `._*` companions in the receiver copy put 44 extra names into `differing`, so
+**every cl3 rung would have hard-failed the verify gate** — and it would have failed at verify time, an hour of encode
+after the mistake was made. The routing fix is not tidiness; it is the difference between a rung that can be sealed and
+one that cannot.
+
 *Adjudication of the actor (asked by MAIN; MEASURED from the run's own `resource_safe_run_status.json`):*
 `status=killed`, `exit=143`, `kill_action={action: SIGTERM_then_SIGKILL_process_group, reason: "external_signal",
 signal: 15}`, `peak_rss_mib=1525.734` against `rss_limit_mib=118784`, `elapsed_s=455.6` against `timeout_s=7200`.
