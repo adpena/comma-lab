@@ -11,8 +11,8 @@ not hold up … near wins … synergies … recursive fractal optimizations."
 |---|---:|---:|---|---|
 | RC64 token stream | 113,411 | 63.0% | drained on this body: coder axis 0 B (jt23), model axis ≤211 B held-out (mi1), reorder 0 B within the fixed model (rr9), oracle on 21 taps 144,167 B (dc1), generic adaptive CM 3× worse (ef1) | `ddm_mi1_indicator_model_axis_20260824.md`, `ddm_dc1_decode_budget_conditional_coding_20260816.md`, `ddm_ef1_token_entropy_floor_20260822.md` |
 | HPAC integer model | 13,515 | 7.5% | shipped stack already carries a multi-stage ADAPTIVE corrector (mi1 §"heavily engineered"); a paid probability model misses break-even 47× | `ddm_mi1_…` |
-| semantic renderer | ~~30,856~~ **36,130 (ERRATUM addendum 4)** | 20.1% | lossy quantization worse at every depth; distillation's pose cost tens of × the byte credit | PR #140 body; `ddm_wd2_ep60_advisory_refusal_verdict_20260815.md` |
-| pose carrier (CPR1 low-rank luma basis × per-pair coefficients, 12-bit Rice) | ~~22,010~~ **≈16,900 (framing 53,076 − renderer; addendum 4)** | 9.4% | lossless recode ceiling **−18 B** (dx1); rank/precision cuts damage pose 104.6–822.7× (jg1) | `ddm_dx1_dxi_recode_and_fruit_sweep_20260820.md` |
+| semantic renderer | 30,856 (container bytes; RAW SM3R body 36,130 — two bases, see addendum 4 note) | 17.1% | lossy quantization worse at every depth; distillation's pose cost tens of × the byte credit | PR #140 body; `ddm_wd2_ep60_advisory_refusal_verdict_20260815.md` |
+| pose carrier (CPR1 low-rank luma basis × per-pair coefficients, 12-bit Rice) | 22,010 (container bytes; coefficients 9,829 Rice + basis ≈12,181) | 12.2% | lossless recode ceiling **−18 B** (dx1); rank/precision cuts damage pose 104.6–822.7× (jg1) | `ddm_dx1_dxi_recode_and_fruit_sweep_20260820.md` |
 | container + residual | 217 | 0.1% | — | afc1 anatomy |
 
 Demand: −42,016 B at held distortion (23.3%), or a different object. The optimistic SUM of every
@@ -833,3 +833,8 @@ quirk: the plan's `apply_command` carries literal placeholders (`'<one clause>'`
 Honest label repeated: a retrain/pack-size residual (−49 B model, +8 B stream) banked as an exact row; not a capacity win; 0.098 % of the rate
 demand. Three pointer moves in 24 h (fs1, fs2, cl2), all sub-1e-4. PR #140 still carries afr1's bytes (three moves behind); public update =
 operator's decision.
+
+**§1 basis note (MAIN, 09-05 17:55Z):** the §1 table is on the ARCHIVE-BYTES basis (what the rate term charges; the five rows sum to 179,968 ≈ 179,982).
+ft1's addendum-4 figure 36,130 B is the RAW SM3R section body BEFORE the container's Brotli (2-plane, ck2) coding brings it to ≈30,856 B; afc1's 53,076 B
+framing total is likewise raw. Both are correct on their own basis. MAIN briefly struck the table's rows with the raw figures (17:35Z) and reverted them here —
+[[m99]]: units × level × aggregation are part of the claim; name the basis with every byte count.
