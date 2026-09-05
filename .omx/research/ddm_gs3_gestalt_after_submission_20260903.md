@@ -838,3 +838,15 @@ operator's decision.
 ft1's addendum-4 figure 36,130 B is the RAW SM3R section body BEFORE the container's Brotli (2-plane, ck2) coding brings it to ≈30,856 B; afc1's 53,076 B
 framing total is likewise raw. Both are correct on their own basis. MAIN briefly struck the table's rows with the raw figures (17:35Z) and reverted them here —
 [[m99]]: units × level × aggregation are part of the claim; name the basis with every byte count.
+
+## Addendum 3 (2026-09-05 18:15Z) — bd1 CLOSED at family scope: bidirectional temporal context does not transfer to the label field
+
+The $0 counting-model screen (three context ladders, KT and plug-in brackets, instrument cross-checks to 1e-13) measured the B-pyramid family
+(GOP 2…32) at **2.84–5.68 % of the stream (−3,219…−6,442 B)** against the pre-registered 8 % falsifier; even the UNATTAINABLE supremum (every
+pair bidirectional at distance 1) is 7.5–9.0 %. Mechanism, MEASURED: `P(32)/P(1) = 1.069–1.129` — a past plane thirty-two pairs away costs only
+7–13 % more than the adjacent one, because the SegNet argmax field is piecewise-constant over regions that persist for tens of pairs; the past
+plane already carries nearly everything a future plane could add. The video-coding prior (B-frames buy 20–35 %) transferred its CONCLUSION
+without its PREMISE (pixel intensity decorrelates fast; a label field does not). MAIN's prediction (−15…−30 %) was 3–9× high. Law registered
+`bidirectional_pyramid_context_gain_v1`; memo `ddm_bd1_bidirectional_pyramid_context_20260905.md`; commit 232ba9348; nothing trained, Metal never
+requested. Consequence for the map: **the token stream is at its floor under any predictor that reads other frames' labels** (with mc1 and
+hc1 this is now three independent closures of the temporal axis); sub-0.12 must come from the other four pools. Metal order after md3: cl3.
