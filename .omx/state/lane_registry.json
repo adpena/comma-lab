@@ -96865,6 +96865,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "ddm_pc1_t4_lattice_x16_on_rc1_20260905",
+      "name": "ddm_pc1_t4_lattice_x16_on_rc1_20260905",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.14411787458634504 @ 174,786 B; archive sha 1de6c5d7186a0b31e5cc085bb6d2baab8275ee0d9de4d509f4d8add13695a629; harvest /Volumes/APDataStore/pact/ddm_pc1_t4_lattice_x16_on_rc1_20260905/MODAL_REMOTE_RESULT.json"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.14411787458634504 @ 174,786 B; archive sha 1de6c5d7186a0b31e5cc085bb6d2baab8275ee0d9de4d509f4d8add13695a629; harvest /Volumes/APDataStore/pact/ddm_pc1_t4_lattice_x16_on_rc1_20260905/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.14411787458634504 @ 174,786 B; archive sha 1de6c5d7186a0b31e5cc085bb6d2baab8275ee0d9de4d509f4d8add13695a629; harvest /Volumes/APDataStore/pact/ddm_pc1_t4_lattice_x16_on_rc1_20260905/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -96874,5 +96915,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-05T21:27:43Z"
+  "updated_at": "2026-09-05T22:00:09Z"
 }
