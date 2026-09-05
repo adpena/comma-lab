@@ -41,7 +41,7 @@ Write the measured numbers next to these lines in the memo; residuals go to the 
 5. Memo `.omx/research/ddm_cl3_hpac_smaller_prior_and_seed_selection_20260905.md` (prediction lines with measured residuals · verdict_scope on
    every negative · frontier line last); anchors on `hpac_prior_capacity_slope_v1` (new EmpiricalAnchor rows, no new law unless the seed
    result is a distinct law); lane `lane_ddm_cl3_hpac_smaller_prior_and_seed_selection_20260905` (L2 when byte-closed); measured peaks recorded;
-   tasks routed via `tools/register_task.py` if anything is left owed.
+   anything left owed goes into a `## ITEM n — …` section of your memo and is registered with `tools/extract_canonical_tasks_from_directive.py --directive <memo> --register-all --owner ddm_cl3`.
 
 ## OPTIMAL FORM
 Reference form = cl2's ladder itself (full n600 field, 60-epoch cosine to the terminal QAT checkpoint, the exact shipped pack/stage/encode/
