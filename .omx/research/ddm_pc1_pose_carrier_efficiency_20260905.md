@@ -79,6 +79,15 @@ singular values 12.73 … 2.54, cumulative energy 0.9141 at rank 8.
 | per-pair median / max | 1.0593e-06 / 2.1493e-04 |
 | contest-CUDA T4 d_pose for the same body | 6.14e-06 |
 
+**Instrument control (run after the fact, because I had been relying on it implicitly).** The variant
+instrument rebuilds `basis_raw` from the decoded codes and scales rather than reusing the shipped
+tensor, so a variant that changes nothing must reproduce the shipped basis exactly or every delta below
+would be contaminated. MEASURED: for both `v0_base` and `v3_lattice10`, `basis_raw` and `basis_norm` are
+**bit-identical** to the shipped state (max abs difference 0.0 on both). For V3 the coefficient scales
+are exactly 4× the shipped ones, the projected start codes stay inside signed int12 (max |code| 512),
+and they reconstruct the shipped coefficients to within **2.0 shipped lattice steps** — exactly the
+±0.5-coarse-step rounding a ×4 coarsening must produce, so the projection is right by construction.
+
 **The local advisory instrument agrees with the T4 axis to 0.1% on d_pose** (6.134076e-06 vs 6.14e-06).
 That is a control, not a licence: it is one quantity on one body, and it does not make any number here
 a score. But it does mean the pose arithmetic below is not being done on a differently-scaled axis.
