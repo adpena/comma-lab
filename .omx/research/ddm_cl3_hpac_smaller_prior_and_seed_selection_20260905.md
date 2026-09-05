@@ -200,7 +200,15 @@ beat **179,982 B** to be a pointer move, and **≤ 138,205.2 B** would be the ra
 This arm adds no new law. Every cl3 row is an anchor on cl2's registered
 **`hpac_prior_capacity_slope_v1`** (`src/tac/canonical_equations/hpac_prior_capacity_slope_20260905.py`; guards in
 `src/tac/tests/test_ddm_cl2_hpac_prior_capacity_slope.py`): with the field held, the token subsystem's counted bytes are
-`J = B_model + B_stream`, and an adjacent rung pays iff `ΔB_stream/ΔB_model < −1` (`rung_pays`). cl2 anchored the law on
+`J = B_model + B_stream`.
+
+**A precision the charter's one-line framing drops, re-derived here before reading any cl3 number.** "A rung pays iff
+`ΔB_stream/ΔB_model < −1`" is true only when `ΔB_model > 0`. Dividing `ΔB_model + ΔB_stream < 0` by a NEGATIVE
+`ΔB_model` flips the inequality, so on the smaller-model side the same primitive gives `slope > −1`. Reading a cl3 rung
+through the bigger-side rule would invert its verdict. Checked at the source: `rung_pays` already branches correctly
+(`if delta_model_bytes > 0: slope < break_even; else: joint fell`), so the registered law is direction-safe and only the
+prose is bigger-side-only. **Every cl3 rung is therefore judged on the primitive, `ΔJ < 0` against the control** — which
+is also the currency prediction P3 is written in. cl2 anchored the law on
 the BIGGER-model side (secant λ 1.0→0.5, slope +0.446 — does not pay). cl3 anchors it on the SMALLER-model side
 (λ 1.0→2.0, and 1.0→4.0 if the first pays), which is the same law evaluated at the opposite sign of `ΔB_model` and is
 therefore a genuine out-of-sample test of it, not a re-fit.
