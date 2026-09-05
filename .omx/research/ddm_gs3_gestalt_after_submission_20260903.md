@@ -779,3 +779,14 @@ containment). md3 correctly REFUSED the queue driver's `ready: true` while cl2's
 forms are themselves formulation-closed; other forms unpriced) or the joint field+model escape remain. Equations leg (`tac.canonical_equations`): 4th anchor on
 `checkpoint_trajectory_error_partition_v1`; `known_boundary` rewritten (shadow share data-order-invariant MEASURED; live forward NOT; init-invariance owed to the
 armed cell).
+
+## ADDENDUM 39 (2026-09-05 15:35Z real) — cl2: the prior-capacity ladder is FALSIFIED (secant +0.446 vs the −1 bar); the CONTROL is the candidate
+
+cl2 (Fable; equation `hpac_prior_capacity_slope_v1` committed 65fd5ffa1): the λ 1.0 → 0.5 secant Δstream/Δmodel = **+0.446** against cl1's −1 break-even —
+MORE prior capacity does NOT repay itself on this object (the λ=0.5 rung's packed model grew and the exact stream did not fall enough); λ=0.25 is not fired per the
+preregistration. **cl1's prior-law prediction is falsified at FORMULATION scope for the fixed topology.** The remaining door on the shipped mixer is an ARCHITECTURAL
+rung (width/frame-dim/taps), which cl1 explicitly did not admit before the slope was measured — and the slope says the marginal capacity already pays +0.45 B of
+tokens per model byte, so an architectural rung must change the RECEPTIVE FIELD's shape, not its size, to have a prior. What DID land: the re-trained λ=1.0 CONTROL
+prices −41 B under the shipped joint (model 13,466 B, stream 113,419 B; archive 179,982 B; two parse-backs PASS; the render is byte-identical to the shipped render
+at the receiver output, 3,662,409,600 B sha f86bfaf3…) — a **26th-move candidate by pack-size/re-train effect, projected S 0.14781744131049854 [DERIVED, rate-only]**,
+gated on the twin's bit-identity at epoch 60 (now 42/60). Equations leg (`tac.canonical_equations`): `hpac_prior_capacity_slope_v1` (cl2).
