@@ -43,7 +43,7 @@ Axis of every row below: **`[macOS-CPU/ANE advisory]`**, frozen scorers, real fr
 
 6. **SegNet PASSES its bar, at n600, on the operational input — with 18 ops.** The profile-guided
    set `g13` (ops 243:261, **6.1% of the network**) holds **90.8% of ops on the Neural Engine**,
-   costs **~4.9 ms** against the all-fp16 model's 3.26 ms, and measures **3.2188e-05 ≤ 3.3e-05**
+   costs **4.93 ms** against the all-fp16 model's 3.26 ms, and measures **3.2188e-05 ≤ 3.3e-05**
    at n600. The blind tail split reaches the same place with **3.6× more fp32 ops and 4× the
    latency**. `g13stem` (56 ops, 75.5% ANE) clears the bar by 12.6% and is the route I would ship.
    The charter's falsifier therefore **FIRES on the pose axis and does NOT fire on the SegNet
@@ -537,8 +537,8 @@ re-measured at n600 on the same generated decode:
 |---|---:|---:|---:|---:|---:|
 | all fp16 (`k=0`) | 0 | 100.0% | 3.26 | 4.5742e-05 | 1.386x |
 | tail split `k=64` | 64 (21.5%) | 76.7% | 20.12 | 3.1264e-05 | **0.947x PASS** |
-| **profile-guided `g13`** | **18 (6.1%)** | **90.8%** | **~4.9** | **3.2188e-05** | **0.975x PASS** |
-| `g13stem` | 56 (18.9%) | 75.5% | ~21 | 2.8856e-05 | **0.874x PASS** |
+| **profile-guided `g13`** | **18 (6.1%)** | **90.8%** | **4.93** | **3.2188e-05** | **0.975x PASS** |
+| `g13stem` | 56 (18.9%) | 75.5% | 19.37 | 2.8856e-05 | **0.874x PASS** |
 | all fp32 (`k=297`) | 297 | 0.0% | 40.07 | 3.0009e-06 | 0.091x |
 
 **The n120 estimates held.** `k=64` moved 3.1323e-05 → 3.1264e-05 (0.2%); the all-fp16 endpoint
@@ -555,7 +555,7 @@ route **~8x**.
 **Two honest qualifications, both stated rather than buried.**
 
 1. **The margin is 2.5%.** `g13` clears its bar by one part in forty at n600. `g13stem` clears it by
-   12.6% for 4x the latency, and is the route to pick if the bar must not be re-litigated. I would
+   12.6% for 3.9x the latency, and is the route to pick if the bar must not be re-litigated. I would
    ship `g13stem` and keep `g13` as the aggressive option, not the reverse.
 2. **These rates are UPPER BOUNDS** — see section 7. The measured numbers include an fp16 rounding
    of the output logits that a correctly converted model does not have (a plain-converted all-fp32
