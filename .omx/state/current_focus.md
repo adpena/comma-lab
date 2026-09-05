@@ -922,7 +922,7 @@ operator queue when they conflict with this section.
   `0.14784474152757654`
   `[contest-CUDA T4]`, archive
   `a8f3a3791499b2b62ee4d16bc67f15f819f454dc9b88e3cce04fe50a30427bb6`,
-  lane `ddm_fs2_t4_carrier_resolve_20260904`.
+  lane `ddm_ps2_t4_staged_tree_custody_20260904`.
 - A1 remains the Rule #6 control substrate, not the best current axis floor:
   `0.19284757743677347` `[contest-CPU; GHA Linux x86_64 1:1]` and
   `0.2263520234784395` `[contest-CUDA T4]`.
