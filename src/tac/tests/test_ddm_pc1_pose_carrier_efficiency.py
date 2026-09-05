@@ -43,9 +43,19 @@ pc1 = _load_module()
 # --------------------------------------------------------------------------
 
 
-def test_break_even_d_pose_returns_inf_when_rate_is_not_a_saving():
-    assert math.isinf(pc1.break_even_d_pose(6.134076e-06, 0.0))
-    assert math.isinf(pc1.break_even_d_pose(6.134076e-06, +1e-3))
+def test_break_even_at_zero_rate_change_is_the_base_itself():
+    base = 6.134076e-06
+    assert pc1.break_even_d_pose(base, 0.0) == pytest.approx(base)
+
+
+def test_break_even_tightens_below_the_base_for_a_byte_adding_edit():
+    base = 6.134076e-06
+    assert 0.0 < pc1.break_even_d_pose(base, +1e-5) < base
+
+
+def test_break_even_refuses_a_nonpositive_base():
+    with pytest.raises(pc1.Pc1Error):
+        pc1.break_even_d_pose(0.0, -1e-3)
 
 
 def test_break_even_d_pose_is_the_exact_zero_of_the_score_delta():

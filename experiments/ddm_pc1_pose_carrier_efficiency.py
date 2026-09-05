@@ -96,14 +96,18 @@ FT1_POSE_CEILING = 1.694e-5
 
 
 def break_even_d_pose(d_pose_base: float, delta_rate: float) -> float:
-    """The d_pose at which a rate saving is exactly paid back by pose damage.
+    """The largest d_pose a rate change still pays for -- for BOTH signs.
 
-    ``sqrt(10 d_new) = sqrt(10 d_base) - delta_rate`` with ``delta_rate < 0``.
-    Returns ``inf`` when the rate side is not a saving.
+    ``sqrt(10 d_new) <= sqrt(10 d_base) - delta_rate``.  A rate SAVING raises the
+    bar above the base (the edit may cost pose); a byte-ADDING edit lowers it
+    below the base (the edit must IMPROVE pose).  Returns ``0.0`` when the added
+    bytes exceed the whole pose term, so no non-negative d_pose can pay.
     """
-    if delta_rate >= 0.0:
-        return math.inf
+    if d_pose_base <= 0.0:
+        raise Pc1Error("d_pose_base must be positive")
     leg = math.sqrt(10.0 * d_pose_base) - delta_rate
+    if leg <= 0.0:
+        return 0.0
     return leg * leg / 10.0
 
 
