@@ -22,6 +22,23 @@ exactly its own rate term); exchange 6.658589531221714e-7 S/B. **The bar a cl3 r
 126,885 B — not fs2's 180,023 / 126,926.** cl2's measured T4 row also confirms the field-held claim end to end: seg
 0.00020139 and pose 6.14e-06 came back at the base row's values, exactly as its seal pre-registered.
 
+**Pointer re-derived from components, not recalled (MEASURED).** cl2's T4 receipt
+(`…/ddm_cl2_t4_lambda1_control_repack_20260905/MODAL_REMOTE_RESULT.json`, `passed: true`, rc 0,
+`expected_archive_sha256 = 08ec8533…`, `expected_archive_size_bytes = 179982`) carries a `final_score` field reading
+**`0.15`** — the rounded field CLAUDE.md warns never to quote. Recomputing
+`S = 100·d_seg + √(10·d_pose) + 25·bytes/37,545,489` from `seg 0.00020139`, `pose 6.14e-06`, `179,982 B` gives
+**0.14781744131049854**, matching the canonical pointer to `abs diff 0.0`. Decomposition of the live pointer:
+
+| term | value | share |
+|---|---:|---:|
+| rate `25·179,982/37,545,489` | 0.11984262610083464 | **81.1 %** |
+| seg `100·d_seg` | 0.020139 | 13.6 % |
+| pose `√(10·d_pose)` | 0.007835815209663893 | 5.3 % |
+
+The rate term is already **below 0.12 on its own**. Sub-0.12 therefore needs the 0.027975 of seg+pose paid for out of
+rate — the 41,776.8 B demand — which is exactly the corner this ladder is probing, and why a rung is judged purely on
+`ΔJ` with distortion held.
+
 ---
 
 ## 1. PRIOR-LAW PREDICTION (written before any cl3 measurement; charter §"PRIOR-LAW PREDICTION", m38)
