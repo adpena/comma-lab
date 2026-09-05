@@ -31,7 +31,6 @@ from tac.ane_screening import (
     write_json,
 )
 
-
 # --------------------------------------------------------------- backend names
 
 
@@ -56,7 +55,7 @@ def test_unknown_backend_fails_closed() -> None:
 
 def test_authority_flip_bar_is_the_operator_value() -> None:
     # 2026-07-13 preregistration: SegNet argmax flip rate <= 0.0033%.
-    assert SEG_AUTHORITY_FLIP_BAR == pytest.approx(3.3e-5)
+    assert pytest.approx(3.3e-5) == SEG_AUTHORITY_FLIP_BAR
 
 
 # ------------------------------------------------------ the CPU-confirm contract
@@ -315,3 +314,54 @@ def test_pr1_selector_exposes_the_confirm_all_modes_experiment() -> None:
     source = Path(pr1.__file__).read_text()
     # a partial confirm must NOT be reported as rank agreement
     assert "TRUE rank agreement" in source
+
+
+# --------------------------------------------- ddm_ane2 measured axis verdicts
+
+
+def test_measured_verdict_admits_the_backend_ane2_measured_fit_for_ranking():
+    from tac.ane_screening import assert_backend_admissible_for_axis
+
+    assert assert_backend_admissible_for_axis("coreml_cpu_fp32", "pose_rank") == "coreml_cpu_fp32"
+
+
+def test_measured_verdict_refuses_the_fp16_screen_on_the_axis_it_failed():
+    from tac.ane_screening import AneScreeningError, assert_backend_admissible_for_axis
+
+    with pytest.raises(AneScreeningError, match=r"10\.26%"):
+        assert_backend_admissible_for_axis("ane_fp16_screen", "pose_rank")
+
+
+def test_measured_verdict_refusal_names_the_arm_and_the_artifact():
+    from tac.ane_screening import AneScreeningError, assert_backend_admissible_for_axis
+
+    with pytest.raises(AneScreeningError) as excinfo:
+        assert_backend_admissible_for_axis("ane_fp16_screen", "pose_value")
+    message = str(excinfo.value)
+    assert "ddm_ane2" in message
+    assert "units_posenet_fp16.json" in message
+    assert "6.32x" in message
+
+
+def test_an_unmeasured_pairing_is_allowed_through_not_assumed_bad():
+    from tac.ane_screening import assert_backend_admissible_for_axis, backend_axis_verdict
+
+    assert backend_axis_verdict("cpu_torch", "pose_rank") is None
+    assert assert_backend_admissible_for_axis("cpu_torch", "pose_rank") == "cpu_torch"
+
+
+def test_measured_verdict_still_fails_closed_on_an_unknown_backend():
+    from tac.ane_screening import AneScreeningError, assert_backend_admissible_for_axis
+
+    with pytest.raises(AneScreeningError, match="unknown scorer backend"):
+        assert_backend_admissible_for_axis("ane_split_k64", "seg_argmax")
+
+
+def test_every_verdict_row_carries_a_measurement_an_arm_and_an_artifact():
+    from tac.ane_screening import BACKEND_AXIS_VERDICTS
+
+    for (backend, axis), row in BACKEND_AXIS_VERDICTS.items():
+        assert isinstance(row["ok"], bool), (backend, axis)
+        assert row["measured"].strip(), (backend, axis)
+        assert row["arm"].startswith("ddm_"), (backend, axis)
+        assert row["artifact"].endswith(".json"), (backend, axis)

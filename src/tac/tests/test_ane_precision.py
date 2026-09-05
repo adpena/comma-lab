@@ -211,7 +211,7 @@ def test_pose_drift_verdict_refuses_a_shape_mismatch():
 
 
 def test_pose_per_dim_tolerance_is_sqrt_of_the_exact_d_pose():
-    assert POSE_PER_DIM_TOLERANCE == pytest.approx(2.7875e-3, rel=1e-3)
+    assert pytest.approx(2.7875e-3, rel=1e-3) == POSE_PER_DIM_TOLERANCE
 
 
 # --------------------------------------------------------- hybrid geometry
@@ -327,7 +327,7 @@ def test_fixed_crop_boxes_are_all_the_same_size_and_in_bounds():
     assert len(pairs) == 3
     for (cy0, cy1, cx0, cx1), (by0, by1, bx0, bx1) in pairs:
         assert (by1 - by0, bx1 - bx0) == (128, 128)
-        assert 0 <= by0 and by1 <= 384 and 0 <= bx0 and bx1 <= 512
+        assert by0 >= 0 and by1 <= 384 and bx0 >= 0 and bx1 <= 512
         assert by0 <= cy0 and by1 >= cy1 and bx0 <= cx0 and bx1 >= cx1
 
 

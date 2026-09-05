@@ -96251,15 +96251,15 @@
       "id": "lane_ddm_cl2_hpac_prior_capacity_ladder_20260905",
       "name": "ddm_cl2 HPAC prior-capacity lambda ladder on the shipped fs2 mixer (fixed topology; field held)",
       "phase": 3.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "commits e1060eb5c (cl2_shipped_ladder profile) 6139293e6/257b1f9aa (pricer: pack+fx1 mixer+RC64, verify, parseback) 65fd5ffa1 (hpac_prior_capacity_slope_v1)"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_cl2_capacity_20260905/LADDER_REPORT.json"
         },
         "contest_cuda": {
           "status": false,
@@ -96415,11 +96415,11 @@
       "id": "lane_ddm_ane2_engineer_precision_drift_20260905",
       "name": "ddm_ane2 engineer the precision drift",
       "phase": 3.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/ane_precision.py + experiments/ddm_ane2_engineer_precision_drift.py (10 subcommands) + tac.ane_screening BACKEND_AXIS_VERDICTS; 78 tests pass"
         },
         "real_archive_empirical": {
           "status": false,
@@ -96442,12 +96442,12 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_ane2_engineer_the_precision_drift_20260905.md"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "docs/runbook_ane_precision_20260905.md + /Volumes/VertigoDataTier/pact/ddm_ane2_precision/run_*.sh"
         }
       },
       "notes": ""
@@ -96460,5 +96460,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-05T14:58:18Z"
+  "updated_at": "2026-09-05T15:50:15Z"
 }

@@ -203,6 +203,106 @@ def _convert_mixed(traced, shape, fp16_names, out_path: Path, expected_ops=None)
     return mlmodel, observed, elapsed, records
 
 
+def _convert_plain(traced, shape, precision: str, out_path: Path):
+    """Convert with a PLAIN ``compute_precision`` enum -- ane1's path, not the selector's.
+
+    Stage 7 measured that ane1's own fp32 package scores self-MSE 2.448e-12 on
+    this arm's GT reference while this arm's all-fp32 ladder endpoint scores
+    3.835e-06 on the same frames -- 1.57 MILLION times larger, with the
+    compute-unit request already ruled out.  The only remaining difference is
+    the conversion call: ane1 passed ``compute_precision=ct.precision.FLOAT32``;
+    this arm passes ``FP16ComputePrecision(op_selector=...)``, which every MIXED
+    model needs.  This function takes ane1's path so the two can be compared
+    inside one instrument instead of across two arms.
+    """
+    import coremltools as ct
+
+    target, _ = _target(ct)
+    enum = {"fp32": ct.precision.FLOAT32, "fp16": ct.precision.FLOAT16}[precision]
+    started = time.time()
+    mlmodel = ct.convert(
+        traced,
+        inputs=[ct.TensorType(name="x", shape=shape, dtype=np.float32)],
+        convert_to="mlprogram",
+        compute_precision=enum,
+        minimum_deployment_target=target,
+    )
+    elapsed = time.time() - started
+    if out_path.exists():
+        import shutil
+
+        shutil.rmtree(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    mlmodel.save(str(out_path))
+    return mlmodel, elapsed
+
+
+def run_refconvert(args) -> int:
+    """Build the SAME endpoint two ways and measure the difference.
+
+    ``selector`` = ``FP16ComputePrecision`` with an all-False (fp32) or all-True
+    (fp16) op set -- the path every mixed rung must take.
+    ``plain`` = ``compute_precision=ct.precision.FLOAT32/FLOAT16`` -- ane1's path.
+    If the two disagree, every number this arm measured NEAR ITS FLOOR carries a
+    conversion artifact and must say so.
+    """
+    import torch
+
+    torch.set_num_threads(args.threads)
+    traced, shape, _weights = _traced(args.model)
+    names = _enumerated(Path(args.enumerate_json), args.model)
+    raw = _open_raw(Path(args.raw))
+    ref = _load_reference(Path(args.reference), args.eval_pairs)
+    pairs = np.asarray(ref["pairs"])
+    out_dir = Path(args.out).parent
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    report: dict[str, Any] = {
+        "schema": "tac.ddm_ane2.refconvert.v1",
+        "axis": AXIS,
+        "score_claim": False,
+        "model": args.model,
+        "pairs": int(pairs.size),
+        "question": (
+            "does FP16ComputePrecision(op_selector) differ from a plain "
+            "compute_precision enum when the selector transforms the same op set?"
+        ),
+        "rows": {},
+    }
+    for precision in args.precisions:
+        fp16 = frozenset(names) if precision == "fp16" else frozenset()
+        selector_pkg = out_dir / f"{args.model}_refconv_selector_{precision}.mlpackage"
+        plain_pkg = out_dir / f"{args.model}_refconv_plain_{precision}.mlpackage"
+        _m, _o, sel_s, _r = _convert_mixed(traced, shape, fp16, selector_pkg, expected_ops=names)
+        _m2, plain_s = _convert_plain(traced, shape, precision, plain_pkg)
+        row: dict[str, Any] = {
+            "selector_mlpackage": str(selector_pkg),
+            "selector_sha256": sha256_tree(selector_pkg),
+            "selector_convert_seconds": sel_s,
+            "selector_op_census": _mil_op_census(selector_pkg),
+            "plain_mlpackage": str(plain_pkg),
+            "plain_sha256": sha256_tree(plain_pkg),
+            "plain_convert_seconds": plain_s,
+            "plain_op_census": _mil_op_census(plain_pkg),
+        }
+        for label, package in (("selector", selector_pkg), ("plain", plain_pkg)):
+            if args.model == "segnet":
+                row[f"{label}_fidelity"] = _eval_segnet(
+                    package, args.compute_units, raw, pairs, ref
+                )
+                key = f"{row[f'{label}_fidelity']['flip_rate']:.6e}"
+            else:
+                verdict, _got = _eval_posenet(package, args.compute_units, ref)
+                row[f"{label}_fidelity"] = verdict
+                key = f"{verdict['self_mse_median']:.6e}"
+            print(f"[refconvert] {precision} {label}: {key}", flush=True)
+        report["rows"][precision] = row
+
+    digest = write_json(Path(args.out), report)
+    print(json.dumps({"refconvert": args.out, "sha256": digest}))
+    return 0
+
+
 def _io_names(path: Path) -> tuple[str, str]:
     import coremltools as ct
 
@@ -297,9 +397,10 @@ class FrameSource:
 
     def __init__(self, path: Path):
         self.path = Path(path)
+        self._cache: dict[str, np.ndarray] = {}
         if self.path.suffix == ".npz":
             self.kind = "gt_npz"
-            self._data = np.load(self.path, mmap_mode="r")
+            self._data = np.load(self.path)
             if "gt_f0" not in self._data or "gt_f1" not in self._data:
                 raise Ane2Error(f"{self.path} has no gt_f0/gt_f1 arrays")
             self.pairs_available = int(self._data["gt_f0"].shape[0])
@@ -313,14 +414,25 @@ class FrameSource:
             )
             self.pairs_available = N_PAIRS
 
+    def _member(self, key: str) -> np.ndarray:
+        """Materialize one npz member ONCE.
+
+        ``np.load`` ignores ``mmap_mode`` for ``.npz``, so ``data[key][i]`` reads
+        the whole 1.8 GB array on every call.  Caching the member turns a
+        per-frame re-read into one read for the run.
+        """
+        if key not in self._cache:
+            self._cache[key] = np.asarray(self._data[key])
+        return self._cache[key]
+
     def frame0(self, pair: int) -> np.ndarray:
         if self.kind == "gt_npz":
-            return np.asarray(self._data["gt_f0"][int(pair)])[None]
+            return self._member("gt_f0")[int(pair)][None]
         return np.asarray(self._data[2 * int(pair)])[None]
 
     def frame1(self, pair: int) -> np.ndarray:
         if self.kind == "gt_npz":
-            return np.asarray(self._data["gt_f1"][int(pair)])[None]
+            return self._member("gt_f1")[int(pair)][None]
         return np.asarray(self._data[2 * int(pair) + 1])[None]
 
     def describe(self) -> dict[str, Any]:
@@ -402,7 +514,11 @@ def run_reference(args) -> int:
             "sha256": sha256_tree(seg_path),
             "seconds": time.time() - started,
             "total_px": int(argmax.size),
-            "median_forward_ms": (time.time() - started) / pairs.size * 1e3,
+            "mean_ms_per_pair_including_frame_io": (time.time() - started) / pairs.size * 1e3,
+            "field_name_note": (
+                "this is WALL CLOCK per pair with GT decode + resize included, NOT the "
+                "scorer forward; a hybrid speedup must not divide by it"
+            ),
         }
 
     if args.model in ("posenet", "both"):
@@ -423,7 +539,11 @@ def run_reference(args) -> int:
             "payload": str(pose_path),
             "sha256": sha256_tree(pose_path),
             "seconds": time.time() - started,
-            "median_forward_ms": (time.time() - started) / pairs.size * 1e3,
+            "mean_ms_per_pair_including_frame_io": (time.time() - started) / pairs.size * 1e3,
+            "field_name_note": (
+                "wall clock per pair with GT decode + preprocess included, NOT the "
+                "scorer forward"
+            ),
             "prepared_cached": True,
         }
 
@@ -825,6 +945,53 @@ def run_selective(args) -> int:
 # --------------------------------------------------------------------- hybrid
 
 
+def _dense_denominators(raw, pairs, args) -> dict[str, Any]:
+    """Time the two DENSE passes a hybrid would replace, on this machine, now.
+
+    ``cpu_torch`` fp32 1-thread is the authority form and the charter's 3x bar.
+    ``coreml_cpu_fp32`` is the already-admissible bit-exact route (ane1: 0 flips
+    in 117,964,800 px at 3.28x) -- a hybrid that does not beat THAT is not worth
+    building even if it clears 3x.
+    """
+    import coremltools as ct
+    import torch
+
+    net = _torch_net("segnet")
+    prepared = [_seg_prepared(raw.frame1(p)) for p in pairs]
+    with torch.inference_mode():
+        net(prepared[0])
+        torch_times = []
+        for tensor in prepared:
+            started = time.perf_counter()
+            net(tensor)
+            torch_times.append(time.perf_counter() - started)
+
+    coreml_times: list[float] = []
+    if args.fp32_dense_package:
+        model = ct.models.MLModel(
+            str(args.fp32_dense_package), compute_units=ct.ComputeUnit.CPU_ONLY
+        )
+        name, _out = _io_names(Path(args.fp32_dense_package))
+        model.predict({name: prepared[0].numpy()})
+        for tensor in prepared:
+            array = tensor.numpy()
+            started = time.perf_counter()
+            model.predict({name: array})
+            coreml_times.append(time.perf_counter() - started)
+
+    return {
+        "reps": len(prepared),
+        "cpu_torch_fp32_1thread_s": float(np.median(torch_times)),
+        "cpu_torch_fp32_1thread_ms": float(np.median(torch_times) * 1e3),
+        "coreml_cpu_fp32_s": float(np.median(coreml_times)) if coreml_times else float("nan"),
+        "coreml_cpu_fp32_ms": float(np.median(coreml_times) * 1e3) if coreml_times else None,
+        "coreml_cpu_fp32_speedup": (
+            float(np.median(torch_times) / np.median(coreml_times)) if coreml_times else None
+        ),
+        "note": "scorer forward only; frame decode and resize are outside both legs",
+    }
+
+
 def run_hybrid(args) -> int:
     """REALIZED exact-argmax hybrid: fp16 ANE dense pass + crop-batched fp32 recompute.
 
@@ -952,10 +1119,13 @@ def run_hybrid(args) -> int:
 
     payload = out_dir / "hybrid_per_pair_flip_rate.npy"
     np.save(payload, per_pair_hybrid)
-    reference_report = json.loads(Path(args.reference_report).read_text())
-    ref_seconds = float(reference_report["segnet"]["seconds"])
-    ref_pairs = int(reference_report["pair_count"])
-    ref_per_pair = ref_seconds / ref_pairs
+    # Denominators are MEASURED here, on the same machine, in the same run.  The
+    # reference report's per-pair wall clock includes GT decode and resize, so
+    # dividing by it would inflate every speedup; the honest denominators are the
+    # two DENSE SCORER passes a hybrid would actually replace.
+    dense = _dense_denominators(raw, pairs[: min(args.dense_reps, pairs.size)], args)
+    report["dense_denominators"] = dense
+    ref_per_pair = dense["cpu_torch_fp32_1thread_s"]
 
     report["dense"] = seg_flip_verdict(flips_dense, total_px, SEG_AUTHORITY_FLIP_BAR)
     report["hybrid"] = seg_flip_verdict(
@@ -985,8 +1155,15 @@ def run_hybrid(args) -> int:
         recompute_s=recompute_time / pairs.size,
         reference_s=ref_per_pair,
     )
-    report["timing"]["reference_source"] = (
-        "cached CPU-torch fp32 1-thread reference run (dense pass, per pair)"
+    report["timing"]["reference_source"] = "cpu_torch fp32 1-thread DENSE SegNet forward, timed in this run"
+    report["timing_vs_coreml_cpu_fp32"] = hybrid_speedup(
+        ane_s=ane_time / pairs.size,
+        recompute_s=recompute_time / pairs.size,
+        reference_s=dense["coreml_cpu_fp32_s"],
+    )
+    report["timing_vs_coreml_cpu_fp32"]["reference_source"] = (
+        "coreml_cpu_fp32 DENSE pass -- the already-admissible bit-exact route this "
+        "hybrid must BEAT to be worth building"
     )
     report["flips_inside_band"] = int(corrected)
     report["flip_coverage_by_band"] = float(corrected / flips_dense) if flips_dense else 1.0
@@ -994,6 +1171,168 @@ def run_hybrid(args) -> int:
 
     digest = write_json(Path(args.out), report)
     print(json.dumps({"hybrid": args.out, "sha256": digest}))
+    return 0
+
+
+def _device_runs(path: Path, mode: str) -> dict[str, Any]:
+    """Contiguous device RUNS in program order, not just per-device op counts.
+
+    ``ane_op_fraction`` says how many ops sit on the Neural Engine; it cannot say
+    how many times execution CROSSES between devices.  A mixed-precision graph
+    can keep the same ANE op count while shattering it into many segments, and
+    each crossing re-materializes activations.  This is the one candidate left
+    standing after the cast census falsified the boundary-cast explanation, so it
+    is measured rather than asserted.
+    """
+    import coremltools as ct
+    from coremltools.models.compute_plan import MLComputePlan
+
+    plan = MLComputePlan.load_from_path(
+        path=str(_compiled(path)), compute_units=getattr(ct.ComputeUnit, mode)
+    )
+    order: list[str] = []
+    for _name, function in plan.model_structure.program.functions.items():
+        for operation in function.block.operations:
+            usage = plan.get_compute_device_usage_for_mlprogram_operation(operation)
+            if usage is None:
+                continue
+            order.append(type(usage.preferred_compute_device).__name__)
+    runs: list[tuple[str, int]] = []
+    for device in order:
+        if runs and runs[-1][0] == device:
+            runs[-1] = (device, runs[-1][1] + 1)
+        else:
+            runs.append((device, 1))
+    ane_runs = sum(1 for device, _n in runs if device == "MLNeuralEngineComputeDevice")
+    return {
+        "compute_units_requested": mode,
+        "ops_in_order": len(order),
+        "device_runs": len(runs),
+        "ane_segments": ane_runs,
+        "crossings": max(len(runs) - 1, 0),
+        "run_lengths": [{"device": d, "ops": n} for d, n in runs],
+    }
+
+
+def run_segments(args) -> int:
+    """Device-segment census over a set of saved mlpackages."""
+    report: dict[str, Any] = {
+        "schema": "tac.ddm_ane2.segments.v1",
+        "axis": AXIS,
+        "score_claim": False,
+        "compute_units": args.mode,
+        "rows": [],
+    }
+    for spec in args.packages:
+        path = Path(spec)
+        if not path.exists():
+            raise Ane2Error(f"no such mlpackage: {path}")
+        row = _device_runs(path, args.mode)
+        row["mlpackage"] = str(path)
+        row["mlpackage_sha256"] = sha256_tree(path)
+        report["rows"].append(row)
+        print(
+            f"[segments] {path.name}: ane_segments={row['ane_segments']} "
+            f"crossings={row['crossings']} ops={row['ops_in_order']}",
+            flush=True,
+        )
+    digest = write_json(Path(args.out), report)
+    print(json.dumps({"segments": args.out, "sha256": digest}))
+    return 0
+
+
+def run_units(args) -> int:
+    """Same mlpackage, different ``ComputeUnit`` -- does the REQUEST change numerics?
+
+    ane1 measured ``coreml_cpu_fp32`` self-MSE at 2.43e-12 under ``CPU_ONLY``.
+    This arm's all-fp32 ladder endpoint measured 3.84e-06 under ``CPU_AND_NE``
+    while ``MLComputePlan`` reported ZERO ANE ops.  Either the input distribution
+    or the compute-unit REQUEST explains the gap; only this control separates
+    them, and the answer matters to anyone who reaches for ``ComputeUnit.ALL``.
+    """
+    ref = _load_reference(Path(args.reference), args.eval_pairs)
+    report: dict[str, Any] = {
+        "schema": "tac.ddm_ane2.units.v1",
+        "axis": AXIS,
+        "score_claim": False,
+        "model": args.model,
+        "mlpackage": str(args.package),
+        "mlpackage_sha256": sha256_tree(Path(args.package)),
+        "pairs": int(np.asarray(ref["pairs"]).size),
+        "rows": {},
+    }
+    raw = _open_raw(Path(args.raw)) if args.model == "segnet" else None
+    pairs = np.asarray(ref["pairs"])
+    for mode in args.modes:
+        report["rows"][mode] = {
+            "placement": _placement(Path(args.package), mode),
+        }
+        if args.model == "segnet":
+            report["rows"][mode]["fidelity"] = _eval_segnet(
+                Path(args.package), mode, raw, pairs, ref
+            )
+        else:
+            verdict, _got = _eval_posenet(Path(args.package), mode, ref)
+            report["rows"][mode]["fidelity"] = verdict
+        key = (
+            report["rows"][mode]["fidelity"].get("flip_rate")
+            or report["rows"][mode]["fidelity"].get("self_mse_median")
+        )
+        print(f"[units] {mode}: {key:.6e}", flush=True)
+    digest = write_json(Path(args.out), report)
+    print(json.dumps({"units": args.out, "sha256": digest}))
+    return 0
+
+
+# ----------------------------------------------------------------- cast census
+
+
+def _mil_op_census(path: Path) -> dict[str, Any]:
+    """Op-type census of a SAVED mlprogram, read from its MIL proto.
+
+    A split point does not just move dtypes: the fp16 pass inserts a ``cast`` at
+    every fp16/fp32 boundary, and a residual network's skip connections make a
+    topological PREFIX cut many edges rather than one.  Counting the casts turns
+    "the split adds boundary work" from an inference into a measurement.
+    """
+    import coremltools as ct
+
+    spec = ct.models.MLModel(str(path), skip_model_load=True).get_spec()
+    counts: dict[str, int] = {}
+    total = 0
+    for function in spec.mlProgram.functions.values():
+        for block in function.block_specializations.values():
+            for operation in block.operations:
+                counts[operation.type] = counts.get(operation.type, 0) + 1
+                total += 1
+    return {
+        "total_ops": total,
+        "op_type_counts": counts,
+        "cast_ops": counts.get("cast", 0),
+        "const_ops": counts.get("const", 0),
+        "compute_ops": total - counts.get("const", 0) - counts.get("cast", 0),
+    }
+
+
+def run_castcount(args) -> int:
+    """Cast census over a set of saved mlpackages -- the split's boundary cost."""
+    report: dict[str, Any] = {
+        "schema": "tac.ddm_ane2.castcount.v1",
+        "axis": AXIS,
+        "score_claim": False,
+        "rows": [],
+    }
+    for spec in sorted(args.packages):
+        path = Path(spec)
+        if not path.exists():
+            raise Ane2Error(f"no such mlpackage: {path}")
+        row = _mil_op_census(path)
+        row["mlpackage"] = str(path)
+        row["mlpackage_sha256"] = sha256_tree(path)
+        report["rows"].append(row)
+        print(f"[cast] {path.name}: casts={row['cast_ops']} total={row['total_ops']}", flush=True)
+    digest = write_json(Path(args.out), report)
+    print(json.dumps({"castcount": args.out, "sha256": digest}))
     return 0
 
 
@@ -1087,7 +1426,12 @@ def build_parser() -> argparse.ArgumentParser:
     hyb_p = sub.add_parser("hybrid", help="realized crop-batched exact-argmax hybrid")
     hyb_p.add_argument("--fp16-package", required=True)
     hyb_p.add_argument("--reference", required=True)
-    hyb_p.add_argument("--reference-report", required=True)
+    hyb_p.add_argument(
+        "--fp32-dense-package",
+        default=None,
+        help="dense fp32 .mlpackage to time as the second denominator (coreml_cpu_fp32)",
+    )
+    hyb_p.add_argument("--dense-reps", type=int, default=10)
     hyb_p.add_argument("--raw", required=True)
     hyb_p.add_argument("--band", type=float, default=0.4456)
     hyb_p.add_argument("--tile", type=int, default=64)
@@ -1101,6 +1445,39 @@ def build_parser() -> argparse.ArgumentParser:
     )
     hyb_p.add_argument("--out", required=True)
     hyb_p.set_defaults(func=run_hybrid)
+
+    units_p = sub.add_parser("units", help="same package, different ComputeUnit request")
+    units_p.add_argument("--model", choices=("segnet", "posenet"), required=True)
+    units_p.add_argument("--package", required=True)
+    units_p.add_argument("--reference", required=True)
+    units_p.add_argument("--raw", required=True)
+    units_p.add_argument("--modes", nargs="+", default=["CPU_ONLY", "CPU_AND_NE", "ALL"])
+    units_p.add_argument("--eval-pairs", type=int, default=None)
+    units_p.add_argument("--out", required=True)
+    units_p.set_defaults(func=run_units)
+
+    ref_p = sub.add_parser("refconvert", help="selector vs plain compute_precision, same op set")
+    ref_p.add_argument("--model", choices=("segnet", "posenet"), required=True)
+    ref_p.add_argument("--enumerate-json", required=True)
+    ref_p.add_argument("--reference", required=True)
+    ref_p.add_argument("--raw", required=True)
+    ref_p.add_argument("--precisions", nargs="+", default=["fp32", "fp16"])
+    ref_p.add_argument("--threads", type=int, default=1)
+    ref_p.add_argument("--compute-units", default="CPU_ONLY")
+    ref_p.add_argument("--eval-pairs", type=int, default=None)
+    ref_p.add_argument("--out", required=True)
+    ref_p.set_defaults(func=run_refconvert)
+
+    seg_p = sub.add_parser("segments", help="contiguous device-run census in program order")
+    seg_p.add_argument("--packages", nargs="+", required=True)
+    seg_p.add_argument("--mode", default="CPU_AND_NE")
+    seg_p.add_argument("--out", required=True)
+    seg_p.set_defaults(func=run_segments)
+
+    cast_p = sub.add_parser("castcount", help="cast census of saved mlpackages")
+    cast_p.add_argument("--packages", nargs="+", required=True)
+    cast_p.add_argument("--out", required=True)
+    cast_p.set_defaults(func=run_castcount)
 
     return parser
 

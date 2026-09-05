@@ -31,24 +31,28 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 __all__ = [
-    "AneScreeningError",
-    "SCORER_BACKENDS",
     "AUTHORITY_BACKEND",
+    "BACKEND_AXIS_VERDICTS",
+    "SCORER_BACKENDS",
     "SCREENING_BACKENDS",
     "SEG_AUTHORITY_FLIP_BAR",
-    "backend_is_authority",
-    "assert_backend_name",
-    "sha256_tree",
-    "mlpackage_provenance",
+    "AneScreeningError",
     "CoreMLPoseBackend",
-    "load_pose_backend",
+    "assert_backend_admissible_for_axis",
+    "assert_backend_name",
     "assert_cpu_confirm_contract",
+    "backend_axis_verdict",
+    "backend_is_authority",
+    "load_pose_backend",
+    "mlpackage_provenance",
     "screening_receipt",
+    "sha256_tree",
 ]
 
 
@@ -68,6 +72,88 @@ SCREENING_BACKENDS: tuple[str, ...] = ("coreml_cpu_fp32", "ane_fp16_screen")
 #: Operator-set SegNet argmax flip-rate bar for a label-grade backend
 #: (2026-07-13 lane preregistration: <= 0.0033%).
 SEG_AUTHORITY_FLIP_BAR = 3.3e-5
+
+
+#: MEASURED per-backend verdicts, so no caller rediscovers them and none picks a
+#: backend that has already been measured unfit for the axis it is being asked
+#: to read.  "off" is a tracked state with a reason, never a silent default.
+#:
+#: Every row is a MEASUREMENT with its artifact, not a policy opinion.  ``ok``
+#: means the backend was measured fit FOR THAT AXIS; it never means authority --
+#: ``cpu_torch`` remains the only backend whose numbers may leave an instrument.
+BACKEND_AXIS_VERDICTS: dict[tuple[str, str], dict[str, Any]] = {
+    ("coreml_cpu_fp32", "pose_rank"): {
+        "ok": True,
+        "measured": "argmin agreement 38/39 = 97.44%, Kendall tau-b median 1.00",
+        "adoption_gain": "+1.2080e-04 -- reproduces pr1's CPU sweep gain exactly",
+        "speedup_end_to_end": 1.94,
+        "arm": "ddm_ane2",
+        "artifact": (
+            "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/replay/"
+            "ane2_selector_replay_coreml_cpu_fp32_validate39.json"
+        ),
+    },
+    ("ane_fp16_screen", "pose_rank"): {
+        "ok": False,
+        "measured": "argmin agreement 4/39 = 10.26% against a 12.5% chance rate; "
+        "Kendall tau-b median 0.0714",
+        "adoption_gain": "-4.728e-02 -- the wrong direction by 391x",
+        "arm": "ddm_ane1",
+        "artifact": (
+            "/Volumes/VertigoDataTier/pact/ddm_ane1_ane_screening/replay/"
+            "ane1_selector_replay_validate39.json"
+        ),
+    },
+    ("ane_fp16_screen", "pose_value"): {
+        "ok": False,
+        "measured": "self-MSE 1.6630e-03 = 214x the exact d_pose (7.77e-06); "
+        "6.32x of that is the ANE's own arithmetic, not fp16 -- the identical "
+        "package under CPU_ONLY measures 2.6334e-04",
+        "arm": "ddm_ane2",
+        "artifact": (
+            "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/stage2/"
+            "units_posenet_fp16.json"
+        ),
+    },
+    ("ane_fp16_screen", "seg_argmax"): {
+        "ok": False,
+        "measured": "flip rate 4.4039e-05 = 1.33x the 3.3e-05 bar on a generated "
+        "decode; 9.7097e-04 = 29.4x the bar on GT frames -- the INPUT moves this "
+        "22.0x, more than any precision split does",
+        "arm": "ddm_ane2",
+        "artifact": (
+            "/Volumes/VertigoDataTier/pact/ddm_ane2_precision/stage3/"
+            "ladder_segnet_generated_n120.json"
+        ),
+    },
+}
+
+
+def backend_axis_verdict(name: str, axis: str) -> dict[str, Any] | None:
+    """The MEASURED verdict for ``(backend, axis)``, or ``None`` if unmeasured.
+
+    ``None`` is not permission: it means no arm has measured this pairing, which
+    is a duty to measure, not a licence to assume.
+    """
+    return BACKEND_AXIS_VERDICTS.get((assert_backend_name(name), axis))
+
+
+def assert_backend_admissible_for_axis(name: str, axis: str) -> str:
+    """Refuse a backend an arm has already MEASURED unfit for this axis.
+
+    Raises with the measured number and its artifact, so the refusal teaches
+    rather than merely blocks.  An unmeasured pairing is allowed through --
+    this guard extincts rediscovery of known negatives, it does not pretend to
+    know verdicts nobody has taken.
+    """
+    verdict = backend_axis_verdict(name, axis)
+    if verdict is not None and not verdict["ok"]:
+        raise AneScreeningError(
+            f"backend {name!r} was MEASURED unfit for axis {axis!r} by "
+            f"{verdict['arm']}: {verdict['measured']}. Evidence: "
+            f"{verdict['artifact']}"
+        )
+    return name
 
 
 def backend_is_authority(name: str) -> bool:
