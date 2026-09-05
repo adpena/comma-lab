@@ -216,6 +216,52 @@ path this arm is on. The RSS guard cannot substitute for the tripwire here — t
 RSS 1.5 GiB against a 116 GiB cap while the GPU-side pressure was 55 GiB, i.e. **the guard was 77× from firing on a
 condition it structurally cannot see.**
 
+## 4b. THE OBJECT CHANGED UNDER THE LADDER (2026-09-05T22:48Z) — re-grounded, not re-anchored
+
+Between this arm's charter and its first rung the pointer moved **four times** and, more importantly, the OBJECT
+changed. Two changes matter to a capacity ladder:
+
+* **ddm_rc1** replaced the generic Brotli byte coder on both MODEL sections with an adaptive per-group binary-tree
+  range coder (the `RC1H` / `RC1S` riders). The hpac section is no longer `brotli(raw IHS1)`; it is
+  `brotli(ck2_interleave(apply_hpac(raw, row_counts, shift=5)), q11, lgwin24)` and measures **12,343 B**, against
+  cl2's Brotli 13,466 B.
+* **ddm_pc1** shrank the carrier 22,031 → 18,568 B.
+
+Live pointer: **S 0.14411787458634504 @ 174,786 B**, sha `1de6c5d7…`, tree
+`…/ddm_pc1_pose_carrier_efficiency/retained/v3x16_on_rc1_candidate_runtime/`. Section census MEASURED by the
+receiver's own splitter: header 14 · hpac 12,343 · semantic 30,246 · carrier 18,568 · tail 113,515 (= 96 B residual
+table + **113,419 B** token stream) = 174,686 B member.
+
+**Consequence for this arm, stated plainly: cl2's pricer no longer describes the object.** A Brotli-packed IHS1 body
+would produce a section the live receiver refuses to read, so pricing a rung through cl2's `pack_model` would have
+produced a number about nothing. This is the [[m148]] object-change law arriving on my own instrument.
+
+**The re-grounding (MEASURED, and it is an instrument control, not an assertion).** The live tree's own hpac section
+is reproduced **byte for byte** — 12,343 B, sha-identical — by driving cl2's retained λ=1.0 control raw IHS1 body
+(17,770 B, sha `81728190…`) through the recipe above: 517 channels, 20,416 params, RC1H rider 16,267 B, and a fresh
+`restore_hpac` returns the raw body exactly. Two facts fall out of that one control:
+
+1. The recipe is right, so every cl3 rung can be priced on the live object.
+2. **The live pointer carries cl2's λ=1.0 control weights**, re-coded — independently confirmed because
+   `jg2._prepare` on the live tree returns `parts.token_stream` = 113,419 B, sha `e07274ca…`, which is cl2's control
+   stream byte for byte. So the ladder's control IS the pointer, and a cl3 rung competes with it directly.
+
+**The bar, re-derived on the live object:** `J = hpac_container + token_stream`; the pointer's
+J = 12,343 + 113,419 = **125,762 B**. A rung pays iff its J is lower. The archive bar is **< 174,786 B**.
+
+**What this does to the pre-registered predictions.** P1–P5 were written in cl2's Brotli currency, which no longer
+exists on this object. I did NOT restate them — that would be re-anchoring. Instead every rung records BOTH
+containers: the rc1 basis (the decision) and cl2's Brotli q0–q11 race on the same raw body (advisory, so P1/P2/P4/P5
+stay scoreable in the currency they were written in). The joint-byte predictions P3/P6/P7 are currency-independent in
+sign and were always the operative ones.
+
+**Instrument:** `experiments/ddm_cl3_rc1_rung_price.py` (commits `b5bdc20a1`, `3bbc11e52`) — a thin composition over
+cl2's helpers (`_pack_terminal_ihs1`, `replace_hpac_section`, `patch_inflate_pins`, `decode_with_receiver`) and rc1's
+codec (`apply_hpac` / `restore_hpac` / `hpac_row_counts` / `ck2_interleave`). Nothing in either is reimplemented. Each
+rung: pack → rc1 container (rider losslessness proved) → stage the LIVE tree → encode TWICE (streams must be
+byte-identical) → receiver-copy decode to the exact field → section census refusing any move outside the model and
+the stream.
+
 ## 5. The ladder — NOT MEASURED (state as of 2026-09-05T16:35Z)
 
 **No rung has been trained, priced or verified.** There is no ladder table, no residual against P1–P7, and no seal.
