@@ -241,3 +241,63 @@ archive sha `a8f3a379…27bb6`. This arm did not move it.
 
 ## CUSTODY ROW LANDED (MAIN, 2026-09-05 00:04Z)
 fc-01M1QDB3R37N2JWWNHW64TZT2P on the staged tree: pose 6.14e-06 · seg 0.00020139 · 180,023 B · S 0.14784474152757654 — IDENTICAL to the fs2 pointer row; fire-tool tree digest 355e7f95…; 660.2 s. The `submission_runtime_tree_matches_auth_eval` red is cured by this row. Packet fully bound; publish gated on the operator confirm.
+
+---
+
+# APPENDIX (2026-09-05) — the custody row LANDED, and it closes the tree-digest red
+
+MAIN fired the seal. The custody row is on lane `ddm_ps2_t4_staged_tree_custody_20260904` /
+job `ps2_staged_tree_t4_20260904_r2`, and it reproduces the fs2 row **exactly**: pose
+6.14e-06, seg 0.00020139, 180,023 B, S 0.14784474152757654, Tesla T4, n600. Harvest
+`t4_custody_20260904_r2/MODAL_REMOTE_RESULT.json` (`3b73b25c…`), 660.2 s wall. The
+materialized auth-eval JSON
+(`evidence/inputs/contest_auth_eval_ps2_custody_t4_20260905.json`, `2d4f3486…`) is byte-identical
+to the harvest artifact — CHECKED, not assumed.
+
+## Compliance r5 — 84 GREEN / 3 RED of 87, terminal
+
+The r4 command re-run **exactly**, with only the four intended changes: `--auth-eval-json` →
+the custody JSON, `--expected-runtime-tree-sha256` → `355e7f95…` (read out of the harvest's
+`expected_runtime_tree_sha256`), and the lane/job pair → the custody lane's. Same check set
+(87), so r4 and r5 are one-variable comparable.
+
+| | r4 (fs2 row) | **r5 (custody row)** |
+|---|---:|---:|
+| green | 83 | **84** |
+| red | 4 | **3** |
+
+**Exactly one check flipped, RED → GREEN: `submission_runtime_tree_matches_auth_eval`.**
+Nothing flipped the other way.
+
+**That pass is a MEASURED equality, not a vacuous drop-out, and the distinction matters.**
+`--contest-final` sets `require_submission_runtime_match = True`, so the check was REQUIRED;
+it passed on the intersection being non-empty. The custody row's
+`portable_runtime_tree_sha256_without_submission_custody_files` is
+`963955e89d9b761503c4f5c8246174b97d66234426869488d4ad414ccc1a917e` — **byte-identical to the
+staged packet's own portable digest**. The two whole-tree digests still differ (`355e7f95…`
+fired, 40 files, against the staged `18041600…`, 38) because the fired tree carries two
+custody files the receiver never executes. The tree the T4 actually inflated, with those
+pruned, IS the staged packet tree. That is the thing ps1 could only prove by enumeration and
+the custody row now proves by digest.
+
+`dispatch_claim_terminal_runtime_tree_sha_bound` is **GREEN**: the poller's canonical terminal
+row for the custody lane binds `runtime_tree_sha256=355e7f950824d128931b0edb4cb97c6be8591986f162b36e968b5e1f157b1252`
+in full, and that is the same value the custody JSON carries. **The row's sha does not differ
+from the JSON's.** `dispatch_claim_terminal_archive_sha_bound`,
+`dispatch_claim_successful_exact_eval_terminal_row` and `dispatch_claim_prior_active_row` are
+green on the same row.
+
+## The three survivors, one line each
+
+1. `auth_eval_raw_promotion_policy_blockers_absent` — STRUCTURAL-RECORD: the raw authority
+   emitter always stamps its own pre-adjudication blockers (`raw_auth_eval_does_not_verify_submission_policy_gates`,
+   `cpu_leaderboard_reproduction_not_adjudicated`, `pre_submission_compliance_check_not_recorded`),
+   and the raw receipt is preserved rather than laundered.
+2. `contest_cpu_auth_eval_exists` — RECORD-WITH-REASON: no CPU score exists for these bytes,
+   none is inherited, and the prior same-lineage CPU attempt timed out at the 1,800 s
+   inflation limit.
+3. `hosted_archive_manifest_supplied` — BLOCKED-ON-OPERATOR: nothing is hosted yet; release-plan
+   steps 3 and 4 are what clear it.
+
+**No new red class, none waived, and the packet's own claim is now digest-proved rather than
+enumeration-proved.** Nothing published, nothing fired by this arm.
