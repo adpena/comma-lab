@@ -19,3 +19,9 @@ Additive check beside SEAL PIN CONSISTENT; same-line waiver only for custody rep
 
 ## ITEM 3 — the arm-facing charter template names the public-entrypoint smoke as step zero of "receiver identity"
 `tac.subagent_contract.standard_contract()` gains one sentence: "receiver identity means bash inflate.sh on the staged tree, not the library path".
+
+**ITEM 1 refinement (rc1's measurement, 19:25Z):** the contest file_list selects VIDEOS (only "0" is accepted), so a "first 2 pairs" truncation is not
+expressible, and `inflate.py:main` refuses to run without CUDA on this host (the submission's own gate) — so the local smoke receipt a seal must carry is
+the PAIR rc1 realized in `stage_restage`: (a) `f26_inflate.inflate_archive` on the staged tree reaches the token decode within a time bound with no
+exception (candidate AND the current frontier tree as control), and (b) `bash inflate.sh <dir> <out> <file_list>` runs the whole preamble (backend
+build, Brotli gate, file-list dispatch, `_verify_input` against the re-pinned constants) and stops exactly at the CUDA gate. Both receipts, both trees.
