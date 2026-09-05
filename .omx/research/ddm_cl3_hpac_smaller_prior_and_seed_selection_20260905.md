@@ -178,12 +178,20 @@ windows — A 16:05:37–16:13:13, B 16:14:34–16:16:42, C 16:18:0x–16:19:43 
 | 16:19:27Z | CRITICAL | **compressor 55.62 GiB ≥ 48.0**, growing 6.76 GiB/s | yes (C) |
 | 16:19:33Z | WARN | compressor 28.50 GiB | yes (C) |
 
-Reading, plainly: **md3 alone already sits at or over the 16 GiB WARN line** (the 16:04:21Z alarm predates every cl3
-launch, and with no cl3 trainer running the compressor still measures 16.77 GiB now). **Every crossing of the 48 GiB
+Reading, plainly — with one sub-claim of mine corrected below. **Every crossing of the 48 GiB
 CRITICAL line happened with a cl3 Metal trainer live** — twice, independently, ~1.3 min and ~2.6 min after launch,
 reaching 54.89 and 55.62 GiB. Window B is not a counterexample: it lived 2 min 8 s, shorter than the ~2.5 min the ramp
 takes to develop. MAIN's 45-second window was likewise too short to see it — the spot check measured the ramp's
 beginning, not its top.
+
+**Self-correction (MEASURED 16:32:45Z, after every cl3 process was stopped).** I first wrote that "md3 alone already
+sits at or over the 16 GiB WARN line", citing a 16.77 GiB compressor reading taken at 16:26Z. That reading was
+CONTAMINATED: it was the decay tail of my own trainer, 7 minutes after the tripwire killed it. At true steady state
+with md3 alone the machine measures **wired 49.8 GiB, compressor 9.0 GiB** — comfortably under the 16 GiB WARN line.
+What survives is the 16:04:21Z WARN (18.86 GiB), which does predate every cl3 launch and shows md3's own ramp can
+touch the WARN line transiently. The corrected conclusion is STRONGER, not weaker: md3 alone rests near 9 GiB, so the
+54.89 and 55.62 GiB CRITICAL excursions are attributable to the cl3 Metal trainer almost in full. I record the error
+because the number I cited was produced by the very process whose effect I was trying to exclude.
 
 **The campaign's own ledger already held the answer, and it is 16× the charter's number.**
 `tools/measured_peaks.py lookup --family train_ddm_cl1_hpac_capacity` governs at **38.622 GiB
