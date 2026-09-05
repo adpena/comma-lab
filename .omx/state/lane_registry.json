@@ -96665,15 +96665,15 @@
       "id": "lane_ddm_rc1_model_section_adaptive_recode_20260905",
       "name": "RC1 adaptive recode of the two RX1 MODEL sections",
       "phase": 2.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/ddm_rc1_adaptive_section_codec.py (encoder+receiver) + experiments/ddm_rc1_model_section_adaptive_recode.py (extract/entropy/race/build); 22 codec tests pass; staged receiver tree at /Volumes/VertigoDataTier/pact/ddm_rc1_model_section_adaptive_recode/staged_runtime (8 anchored patches applied)"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "[macOS-CPU advisory / scorer-free EXACT byte measurement] candidate archive 178,249 B sha 1438049e3655fbcfa8eb289fa51ac58f834d72d8a09586353663cea68e57c122, -1733 B vs cl2 179,982 B; decoded_identity true (token sha cc10a7b09353c0af...); twin encode byte-identical; BUILD.json + RACE.json at /Volumes/VertigoDataTier/pact/ddm_rc1_model_section_adaptive_recode/"
         },
         "contest_cuda": {
           "status": false,
@@ -96692,8 +96692,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_rc1_adaptive_recode_race_of_the_model_sections_20260905.md + canonical equation model_section_adaptive_recode_ceiling_v1"
         },
         "deploy_runbook": {
           "status": false,
@@ -96710,5 +96710,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-05T17:50:02Z"
+  "updated_at": "2026-09-05T18:28:15Z"
 }
