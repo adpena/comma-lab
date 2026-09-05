@@ -745,3 +745,18 @@ final message claimed it did not exist; MAIN propagated that negative-existence 
 false-claim class ([[m53]]) committed by MAIN itself, one hour after banking "grep before writing a flag". md2 caught it (its message quotes the line
 numbers). Corrected: the m140 memory paragraph, the hot-state line, and this addendum. The charters were right. The real lesson: a subagent's
 "X does not exist" is a claim to VERIFY against the primary source before it moves anywhere — especially when it flatters a rule you just wrote down.
+
+## ADDENDUM 37 (2026-09-05 14:05Z real) — md2: the burn default does NOT change which sites are reachable — PERSISTENT 62.954% (STANDS); the persistent set is the SAME sites
+
+md2 (1c2f35d2f / 7fb218398), md1's instrument unchanged on ng5's 313 retained 16-step checkpoints, 141 forwards, integer bridge exact at all 71: **PERSISTENT
+= 62.954% of the terminal shadow d_seg (cold 62.011%) — my 40–55% prediction FALSIFIED, the share ROSE 0.94 pp** (the band shrank the persistent set
+11,842 → 11,019 sites but shrank the REACHABLE error more). Floor 11.671× the corner (cold 12.753×); terminal 18.539×. **Jaccard 0.8069 against the cold
+control's persistent set** — 92.65% of ng5's persistent sites are cold's; against the honest within-pool null (both sets ⊂ the bit-identical 16,553-site
+step-0 wrong pool; chance J 0.5263, attainable max 0.9305) the measured value sits 69.4% of the way from chance to ceiling (live: 84.3%); the classes the run
+MANUFACTURES overlap at 0.10–0.36 — the inherited class is the same sites. Birth still step 16 (Lane and Movable, both cells); Lane MORE concentrated
+(65.52% touching; GT=Lane enrichment 54.86× vs 51.50×). What the default DID buy: created/repaired 2.21× → 0.91× (2.44× better burn quality), terminal
+−1.00% vs start where cold ended +9.82%. **Verdict STANDS: the born vehicle's unreachable set is fixed by the START, not the schedule — the accuracy corner
+on this vehicle needs a different initialisation or generator, not a better burn.** md2's correction to md1's owed item #5: all three retained seed controls
+share the SAME init sha (991a1cc6…), so a second SEED varies data order only and cannot test init-independence. Priced next step: a DIFFERENT-INITIALISATION
+cell (~2.8 h Metal + 54 min CPU partition, $0, no new code) with the seed_20260903 data-order control as the free prerequisite. n32→n600 transfer caveat
+travels with every row (stratified selection, not a prefix). Equations leg (`tac.canonical_equations`): md2's 3rd anchor on the persistent-partition law.

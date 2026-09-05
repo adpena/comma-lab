@@ -62,3 +62,5 @@ Equations leg (`tac.canonical_equations`): `motion_compensated_previous_plane_al
 Own-vehicle frontier: **fs2 S 0.14784474152757654 @ 180,023 B [contest-CUDA T4 n600]**.
 
 **§3 addendum (09-05 13:25Z):** hc2 — flip-LOCATION half CEILING-REFUSED at FAMILY scope: 81% singletons; every component/boundary representation ≥ +17,775 B worse than the per-site sum; conditional clustering bound +23.82 B (210× under the bar). Rate-corner doors on the shipped object: only cl2 (prior capacity) remains unpriced.
+
+**§4 addendum (09-05 14:05Z):** md2 — PERSISTENT under the burn default 62.954% (STANDS; Jaccard 0.807 with the cold set = the SAME sites; birth still step 16). The born accuracy corner is fixed by the START: the next pricing unit is a different-INITIALISATION cell (all seed controls share init sha 991a1cc6…), not a schedule.
