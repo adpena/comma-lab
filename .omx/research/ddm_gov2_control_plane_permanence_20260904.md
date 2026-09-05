@@ -334,3 +334,55 @@ AND self-protected against", "Local Disk, SSD Spill, Auto-Cleanup, And Provenanc
 ---
 
 fs2 S 0.14784474152757654 @ 180,023 B [contest-CUDA T4 n600]
+
+---
+
+## ADDENDUM (2026-09-05 ~00:0xZ) — the watchdog's own first alarms falsified its targeting rule
+
+**The rule I shipped was wrong, and its own anger-data proved it inside an hour.** Eleven WARN rows
+landed between **23:47Z and 23:55Z** in three bursts — compressor **20.00 → 39.83 GiB**, swap flat at
+~1.01 GiB, OS pressure never left `normal`, **no CRITICAL**. So the thresholds behaved: they fired
+early, they did not escalate on a machine that was coping, and the compressor drained each time
+inside ~15 s (38.47 → 22.33 GiB in one 5 s step).
+
+**But the cause was not the Metal cell, and my rule would have paused the Metal cell.** MEASURED at
+23:58Z:
+
+| job | RSS | governed | `is_cell` |
+|---|---:|---|---|
+| `ceil_planar` pid 81442 | **10.32 GiB** | yes | **False** |
+| `ceil_shift` pid 80930 | **10.14 GiB** | yes | **False** |
+| `ceil_zoom` pid 81089 | **10.33 GiB** | yes | **False** |
+| ng4 cell pid 33030 | **0.49 GiB** | yes | True |
+
+Three `ddm_mc1 --stage ceiling` jobs — launched through the canonical launcher, so governed, but
+carrying no `run-config`, so not cells — held **30.79 GiB**, **62.8×** the training cell. "SIGSTOP
+the newest governed TRAINING cell" would have stopped **two hours of sunk work holding 1.6% of the
+resident footprint** and left every actual allocator running. A guard that pauses the wrong process
+is worse than one that pauses nothing: it destroys work *and* does not help.
+
+**The corrected rule** (`select_pressure_target`): rank **all** governed jobs — cell or not — by RSS
+**growth** over a 6-poll / 30 s window; ties break on **current RSS**, then non-cell, then newest;
+the **oldest live cell is excluded outright**. When the oldest cell is all there is, there is no
+target and the row says so. WARN rows now carry `top_rss_growers` (top 3 with pid, `is_cell`, RSS
+and delta) so the cause is legible **before** anything is critical, and the CRITICAL action records
+the chosen pid, its delta, the selection rule, and the excluded cell.
+
+**A second correction, caught by running the coordinator's proposed rule rather than reading it.**
+Pure growth-ranking degenerates on a quiet machine: across a 4 s window every job's delta was within
+**0.0013 GiB** of zero, and the ranking picked the **0.17 GiB** dashboard server over a **7.08 GiB**
+ceiling job. Pausing 0.17 GiB during a CRITICAL achieves nothing. Hence `GROWTH_TIE_BAND_GIB = 0.5`
+— ~380× above the measured idle drift, ~20× below the 10.3 GiB allocators — so a real grower still
+wins outright and flat jobs fall through to size. Re-drilled live: the rule now selects
+`ceil_shift` (10.02 GiB, non-cell) and excludes ng4 (33030).
+
+Per-poll cost of the new growth signal, MEASURED: **0.168 s for 8 jobs** (0.118 s discovery +
+0.050 s of tree walks) = **3.4%** of a 5 s poll.
+
+Nothing was stopped: mc1's jobs are legitimate and finishing, and ng4 was untouched throughout.
+`newest_training_cell()` survives as a diagnostic query, and a test pins that the watch loop no
+longer calls it. **+20 tests (37 → 57).**
+
+The genus is worth naming: **an L1 alarm that fires and names only the SYMPTOM sends a human to
+`ps`.** The first eleven rows said "compressor 38.47 GiB" — true, and useless for acting. The cure
+is not a better threshold; it is that the alarm carries the actor.

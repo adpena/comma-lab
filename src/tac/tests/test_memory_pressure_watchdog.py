@@ -11,6 +11,7 @@ import importlib.util
 import json
 import signal
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -194,13 +195,14 @@ class TestWatchLoop:
     def test_report_only_never_signals(self, tmp_path, monkeypatch):
         signalled = []
         monkeypatch.setattr(wd, "_signal_tree", lambda pid, sig: signalled.append((pid, sig)) or {})
-        monkeypatch.setattr(wd, "newest_training_cell", lambda: {"cell_id": "c", "pid": 1, "stop_pid": 2})
+        monkeypatch.setattr(wd, "select_pressure_target", lambda h: {"cell_id": "c", "pid": 1, "stop_pid": 2})
         monkeypatch.setattr(wd, "_push", lambda *a: None)
         summary = wd.watch(
             duration_s=0,
             report_only=True,
             ledger=tmp_path / "a.jsonl",
             sampler=self._fixed_sampler([_sample(compressor=60.0)]),
+            job_sampler=lambda: [],
             sleeper=lambda _s: None,
             now=lambda: 0.0,
         )
@@ -213,24 +215,26 @@ class TestWatchLoop:
     def test_critical_stops_the_newest_cell(self, tmp_path, monkeypatch):
         sent = []
         monkeypatch.setattr(wd, "_signal_tree", lambda pid, sig: sent.append((pid, sig)) or {"delivered": [pid]})
-        monkeypatch.setattr(wd, "newest_training_cell", lambda: {"cell_id": "newest", "pid": 9, "stop_pid": 99})
+        monkeypatch.setattr(wd, "select_pressure_target", lambda h: {"cell_id": "grower", "pid": 9, "stop_pid": 99})
         monkeypatch.setattr(wd, "_push", lambda *a: None)
         wd.watch(
             duration_s=0,
             ledger=tmp_path / "a.jsonl",
             sampler=self._fixed_sampler([_sample(level=4)]),
+            job_sampler=lambda: [],
             sleeper=lambda _s: None,
             now=lambda: 0.0,
         )
-        assert sent[0] == (99, signal.SIGSTOP), "the newest cell's TRAINER pid is the target"
+        assert sent[0] == (99, signal.SIGSTOP), "the selected job's stop pid is the target"
 
     def test_no_target_is_alarmed_not_crashed(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(wd, "newest_training_cell", lambda: None)
+        monkeypatch.setattr(wd, "select_pressure_target", lambda h: None)
         monkeypatch.setattr(wd, "_push", lambda *a: None)
         wd.watch(
             duration_s=0,
             ledger=tmp_path / "a.jsonl",
             sampler=self._fixed_sampler([_sample(level=4)]),
+            job_sampler=lambda: [],
             sleeper=lambda _s: None,
             now=lambda: 0.0,
         )
@@ -241,7 +245,7 @@ class TestWatchLoop:
         sent = []
         clock = {"t": 0.0}
         monkeypatch.setattr(wd, "_signal_tree", lambda pid, sig: sent.append((pid, sig)) or {"delivered": [pid]})
-        monkeypatch.setattr(wd, "newest_training_cell", lambda: {"cell_id": "c", "pid": 9, "stop_pid": 99})
+        monkeypatch.setattr(wd, "select_pressure_target", lambda h: {"cell_id": "c", "pid": 9, "stop_pid": 99})
         monkeypatch.setattr(wd, "_push", lambda *a: None)
 
         def sleeper(_s):
@@ -253,6 +257,7 @@ class TestWatchLoop:
             clear_hold_s=60.0,
             ledger=tmp_path / "a.jsonl",
             sampler=self._fixed_sampler(samples),
+            job_sampler=lambda: [],
             sleeper=sleeper,
             now=lambda: clock["t"],
         )
@@ -267,12 +272,13 @@ class TestWatchLoop:
         """A watchdog that pauses a run and then exits is worse than no watchdog at all."""
         sent = []
         monkeypatch.setattr(wd, "_signal_tree", lambda pid, sig: sent.append((pid, sig)) or {"delivered": [pid]})
-        monkeypatch.setattr(wd, "newest_training_cell", lambda: {"cell_id": "c", "pid": 9, "stop_pid": 99})
+        monkeypatch.setattr(wd, "select_pressure_target", lambda h: {"cell_id": "c", "pid": 9, "stop_pid": 99})
         monkeypatch.setattr(wd, "_push", lambda *a: None)
         wd.watch(
             duration_s=0,
             ledger=tmp_path / "a.jsonl",
             sampler=self._fixed_sampler([_sample(level=4)]),
+            job_sampler=lambda: [],
             sleeper=lambda _s: None,
             now=lambda: 0.0,
         )
@@ -281,13 +287,14 @@ class TestWatchLoop:
     def test_a_second_critical_does_not_stop_a_second_cell(self, tmp_path, monkeypatch):
         sent = []
         monkeypatch.setattr(wd, "_signal_tree", lambda pid, sig: sent.append((pid, sig)) or {"delivered": [pid]})
-        monkeypatch.setattr(wd, "newest_training_cell", lambda: {"cell_id": "c", "pid": 9, "stop_pid": 99})
+        monkeypatch.setattr(wd, "select_pressure_target", lambda h: {"cell_id": "c", "pid": 9, "stop_pid": 99})
         monkeypatch.setattr(wd, "_push", lambda *a: None)
         clock = {"t": 0.0}
         wd.watch(
             duration_s=10.0,
             ledger=tmp_path / "a.jsonl",
             sampler=self._fixed_sampler([_sample(level=4), _sample(level=4)]),
+            job_sampler=lambda: [],
             sleeper=lambda _s: clock.__setitem__("t", clock["t"] + 5.0),
             now=lambda: clock["t"],
         )
@@ -302,6 +309,7 @@ class TestWatchLoop:
             duration_s=0,
             ledger=tmp_path / "a.jsonl",
             sampler=self._fixed_sampler([_sample(compressor=20.0)]),
+            job_sampler=lambda: [],
             sleeper=lambda _s: None,
             now=lambda: 0.0,
         )
@@ -347,3 +355,201 @@ class TestLiveIntegration:
 
     def test_newest_cell_helper_never_raises(self):
         wd.newest_training_cell()
+
+
+# ── targeting the ALLOCATOR, not the cell (corrected by anger-data 2026-09-04) ───────────────────
+
+
+def _job(pid, rss, *, is_cell=False, started=1000.0, cell_id=None):
+    return wd.JobFootprint(
+        pid=pid,
+        cell_id=cell_id or f"job_{pid}",
+        is_cell=is_cell,
+        rss_gib=rss,
+        started_epoch=started,
+        stop_pid=pid,
+        declared_peak_gib=0.0,
+    )
+
+
+#: The live fleet at 2026-09-04T23:58Z, verbatim: three non-cell `ddm_mc1 --stage ceiling` jobs
+#: against the one training cell. The old rule would have stopped the 0.49 GiB cell.
+_ANGER_FLEET = [
+    _job(81442, 10.32, cell_id="ceil_planar", started=2000.0),
+    _job(80930, 10.14, cell_id="ceil_shift", started=1900.0),
+    _job(81089, 10.33, cell_id="ceil_zoom", started=1950.0),
+    _job(33030, 0.49, is_cell=True, cell_id="ng4_continuous", started=1000.0),
+    _job(58074, 0.22, cell_id="dashboard", started=500.0),
+]
+
+
+class TestTargetingTheAllocator:
+    def test_the_measured_incident_would_no_longer_stop_the_cell(self):
+        """THE ANGER-DATA. 11 WARN rows at 23:47-23:55Z; the cause was never the Metal cell.
+
+        Three ceiling jobs held 30.79 GiB; the cell held 0.49 GiB -- 62.8x less. The old rule
+        ("newest governed TRAINING cell") would have SIGSTOPped two hours of sunk work and left
+        every actual allocator running.
+        """
+        target = wd.select_pressure_target([_ANGER_FLEET])
+        assert target["is_cell"] is False
+        assert target["pid"] in {81442, 80930, 81089}
+        assert target["excluded_oldest_cell_pid"] == 33030
+
+    def test_the_oldest_cell_is_never_targeted(self):
+        """It holds the most sunk compute and is never the mistake."""
+        only_cell_grew = [
+            _job(33030, 50.0, is_cell=True, started=1000.0),
+            _job(99, 0.1, started=2000.0),
+        ]
+        target = wd.select_pressure_target([only_cell_grew])
+        assert target["pid"] == 99
+        assert target["excluded_oldest_cell_pid"] == 33030
+
+    def test_no_target_when_the_oldest_cell_is_all_there_is(self):
+        assert wd.select_pressure_target([[_job(33030, 50.0, is_cell=True)]]) is None
+
+    def test_growth_outranks_size(self):
+        """A 40 GiB job that is not moving is not the cause; a 5 GiB job that just grew 4 GiB is."""
+        before = [_job(1, 40.0), _job(2, 1.0)]
+        after = [_job(1, 40.0), _job(2, 5.0)]
+        target = wd.select_pressure_target([before, after])
+        assert target["pid"] == 2
+        assert target["rss_delta_gib"] == pytest.approx(4.0)
+
+    def test_flat_growth_falls_through_to_current_rss(self):
+        """MEASURED failure of the pure-growth rule: on a quiet 4 s window every delta was within
+        0.0013 GiB of zero and the ranking picked a 0.17 GiB dashboard over a 7.08 GiB ceiling job.
+        """
+        snapshot = [_job(1, 0.17, cell_id="dashboard"), _job(2, 7.08, cell_id="ceiling")]
+        target = wd.select_pressure_target([snapshot, snapshot])
+        assert target["pid"] == 2
+
+    def test_idle_drift_cannot_beat_a_large_job(self):
+        before = [_job(1, 0.170, cell_id="dashboard"), _job(2, 10.02, cell_id="ceiling")]
+        after = [_job(1, 0.1713, cell_id="dashboard"), _job(2, 10.02, cell_id="ceiling")]
+        assert wd.select_pressure_target([before, after])["pid"] == 2, "0.0013 GiB is noise"
+
+    def test_a_real_grower_beats_a_larger_flat_job(self):
+        before = [_job(1, 30.0, cell_id="big_but_flat"), _job(2, 1.0, cell_id="grower")]
+        after = [_job(1, 30.0, cell_id="big_but_flat"), _job(2, 12.0, cell_id="grower")]
+        assert wd.select_pressure_target([before, after])["pid"] == 2
+
+    def test_ties_prefer_a_non_cell(self):
+        snapshot = [_job(1, 10.0, is_cell=True, started=3000.0), _job(2, 10.0, started=1500.0)]
+        # pid 1 is the ONLY cell, so it is also the oldest cell and excluded; add a second cell.
+        snapshot.append(_job(3, 0.1, is_cell=True, started=100.0))
+        assert wd.select_pressure_target([snapshot])["pid"] == 2
+
+    def test_ties_then_prefer_the_newest(self):
+        snapshot = [_job(1, 10.0, started=1000.0), _job(2, 10.0, started=5000.0)]
+        assert wd.select_pressure_target([snapshot])["pid"] == 2
+
+    def test_a_pid_that_appeared_mid_window_counts_as_pure_growth(self):
+        """A job that arrived DURING a pressure burst is the growth; treating it as zero hides it."""
+        history = [[_job(1, 20.0)], [_job(1, 20.0), _job(2, 9.0)]]
+        assert wd.rss_growth(history)[2] == pytest.approx(9.0)
+        assert wd.select_pressure_target(history)["pid"] == 2
+
+    def test_growth_of_an_absent_job_is_not_reported(self):
+        history = [[_job(1, 20.0), _job(2, 5.0)], [_job(1, 20.0)]]
+        assert 2 not in wd.rss_growth(history)
+
+    def test_empty_history_has_no_target(self):
+        assert wd.select_pressure_target([]) is None
+        assert wd.select_pressure_target([[]]) is None
+        assert wd.rss_growth([]) == {}
+
+    def test_the_target_row_carries_the_arithmetic_that_chose_it(self):
+        target = wd.select_pressure_target([_ANGER_FLEET, _ANGER_FLEET])
+        for key in ("pid", "rss_gib", "rss_delta_gib", "is_cell", "selection_rule",
+                    "growth_window_polls", "excluded_oldest_cell_pid", "runners_up"):
+            assert key in target, f"missing {key}"
+
+    def test_growth_window_spans_one_burst_not_two(self):
+        """DERIVED: the measured bursts rose and drained inside ~15 s at a 5 s poll."""
+        assert pytest.approx(30.0) == wd.GROWTH_WINDOW_POLLS * wd.DEFAULT_POLL_S
+
+
+class TestWarnRowNamesTheCause:
+    def test_top_growers_are_ordered_and_capped(self):
+        rows = wd.top_growers([_ANGER_FLEET])
+        assert len(rows) == wd.TOP_GROWERS_REPORTED
+        assert [r["rss_gib"] for r in rows] == sorted((r["rss_gib"] for r in rows), reverse=True)
+
+    def test_a_warn_row_names_the_top_growers(self, tmp_path, monkeypatch):
+        """The first eleven WARN rows said only "compressor 38.47 GiB"; the cause took a manual ps."""
+        monkeypatch.setattr(wd, "_push", lambda *a: None)
+        wd.watch(
+            duration_s=0,
+            ledger=tmp_path / "a.jsonl",
+            sampler=lambda: _sample(compressor=20.0),
+            job_sampler=lambda: _ANGER_FLEET,
+            sleeper=lambda _s: None,
+            now=lambda: 0.0,
+        )
+        row = json.loads((tmp_path / "a.jsonl").read_text().strip().splitlines()[0])
+        assert row["level"] == wd.LEVEL_WARN
+        growers = row["top_rss_growers"]
+        assert len(growers) == 3
+        assert all(g["is_cell"] is False for g in growers), "the ceiling jobs, not the cell"
+
+    def test_a_critical_row_records_the_chosen_pid_and_why(self, tmp_path, monkeypatch):
+        sent = []
+        monkeypatch.setattr(wd, "_signal_tree", lambda pid, sig: sent.append((pid, sig)) or {"delivered": [pid]})
+        monkeypatch.setattr(wd, "_push", lambda *a: None)
+        wd.watch(
+            duration_s=0,
+            ledger=tmp_path / "a.jsonl",
+            sampler=lambda: _sample(level=4),
+            job_sampler=lambda: _ANGER_FLEET,
+            sleeper=lambda _s: None,
+            now=lambda: 0.0,
+        )
+        row = json.loads((tmp_path / "a.jsonl").read_text().strip().splitlines()[0])
+        action = row["action"]
+        assert action["kind"] == "SIGSTOP"
+        assert action["is_cell"] is False
+        assert action["excluded_oldest_cell_pid"] == 33030
+        assert "selection_rule" in action and "rss_delta_gib" in action
+        assert sent[0][0] != 33030, "the cell with two hours of sunk work must not be stopped"
+
+    def test_the_history_is_sampled_on_ok_polls_too(self, tmp_path, monkeypatch):
+        """A window that only fills once pressure is high has no "before" to measure growth against."""
+        seen = []
+        monkeypatch.setattr(wd, "_push", lambda *a: None)
+        wd.watch(
+            duration_s=0,
+            ledger=tmp_path / "a.jsonl",
+            sampler=lambda: _sample(),
+            job_sampler=lambda: seen.append(1) or [],
+            sleeper=lambda _s: None,
+            now=lambda: 0.0,
+        )
+        assert seen, "job footprints must be sampled even when the level is OK"
+
+
+class TestJobSamplingIsAffordable:
+    def test_sampling_the_real_fleet_is_cheap_enough_for_every_poll(self):
+        """MEASURED 0.168 s for 8 jobs = 3.4% of a 5 s poll. Read-only; signals nothing."""
+        start = time.perf_counter()
+        jobs = wd.sample_governed_jobs()
+        assert time.perf_counter() - start < 2.5
+        assert all(isinstance(job, wd.JobFootprint) for job in jobs)
+
+    def test_newest_training_cell_survives_as_a_query_but_is_not_the_target(self):
+        """Retained for diagnostics; the watch loop must not consult it any more."""
+        import ast
+
+        tree = ast.parse((_REPO / "tools" / "memory_pressure_watchdog.py").read_text())
+        watch_fn = next(
+            node for node in ast.walk(tree)
+            if isinstance(node, ast.FunctionDef) and node.name == "watch"
+        )
+        called = {
+            node.func.id
+            for node in ast.walk(watch_fn)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+        assert "newest_training_cell" not in called
+        assert "select_pressure_target" in called
