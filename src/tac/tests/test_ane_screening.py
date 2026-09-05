@@ -280,15 +280,25 @@ def test_fs1_measure_defaults_to_the_authority_backend() -> None:
     assert args.scorer_backend == AUTHORITY_BACKEND
 
 
-def test_fs1_measure_refuses_a_screening_backend_before_it_measures() -> None:
-    """The refusal must fire on the FLAG, not after six minutes of forwards."""
+def test_fs1_measure_refuses_a_screening_backend_before_it_touches_disk() -> None:
+    """The refusal fires on the FLAG -- not after the instrument build.
+
+    Passing a nonexistent runtime proves the ordering: a screening backend
+    raises AneScreeningError, while the authority backend gets far enough to
+    fail on the missing archive.
+    """
     _experiments_on_path()
     fs1 = pytest.importorskip("ddm_fs1_frame0_selector_reselection")
-    source = Path(fs1.__file__).read_text()
-    # the guard is inside run_measure, ahead of the measure_pose call
-    guard = source.index("backend_is_authority(backend_name)")
-    forward = source.index("up2.measure_pose(")
-    assert guard < forward
+    common = ["--runtime", "/nonexistent", "--gt-cache", "/x", "--renderer", "/x",
+              "--tokens", "/x", "--out", "/x"]
+    screened = fs1.build_parser().parse_args(
+        ["measure", *common, "--scorer-backend", "ane_fp16_screen"]
+    )
+    with pytest.raises(AneScreeningError, match="SCREENING"):
+        fs1.run_measure(screened)
+    authority = fs1.build_parser().parse_args(["measure", *common])
+    with pytest.raises(FileNotFoundError):
+        fs1.run_measure(authority)
 
 
 def test_pr1_selector_exposes_the_confirm_all_modes_experiment() -> None:

@@ -165,8 +165,9 @@ frozen graph, because the fp16 trunk has already spent the precision before the 
 
 `tac.ane_screening` holds the contract; `--scorer-backend {cpu_torch,coreml_cpu_fp32,ane_fp16_screen}`
 is on `ddm_pr1 selector` (which RANKS) and on `ddm_fs1 measure` (which PRICES, and therefore
-**refuses** every non-authority backend before it measures anything — the guard sits ahead of the
-`measure_pose` call, and a test asserts that ordering). The contract:
+**refuses** every non-authority backend before it touches disk — the guard is the first statement in
+`run_measure`, ahead of the archive read and the instrument build, and a test proves the ordering by
+running both paths against a nonexistent runtime). The contract:
 `assert_cpu_confirm_contract` raises unless every ADOPTED pair was re-measured on `cpu_torch`, and
 `screening_receipt` emits both values, the backend name, the `.mlpackage` sha256, the coremltools
 version, and `score_claim=false`.
@@ -298,8 +299,8 @@ wrong in opposite directions.
   superset); receipt content and `score_claim=false`; provenance (file hash, tree hash is
   content-addressed not mtime-addressed, changes on any member byte, refuses a missing path); loader
   identity for `cpu_torch` and refusal without a package; rank agreement; and the wiring — both CLIs'
-  flags, the default being the authority backend, an invented backend name rejected, and a source
-  assertion that fs1's refusal precedes its measurement.
+  flags, the default being the authority backend, an invented backend name rejected, and a runtime
+  proof that fs1's refusal fires before any disk access while the authority path proceeds.
 - Runbook: `/Volumes/VertigoDataTier/pact/ddm_ane1_ane_screening/replay/run_selector_replay.sh`
   (`validate` | `screen` | `cpu`); `docs/runbook_ane_screening_20260905.md`.
 
