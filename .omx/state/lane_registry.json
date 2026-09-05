@@ -96246,6 +96246,129 @@
         }
       },
       "notes": "CEILING-REFUSED 2026-09-05: six decoder-derivable integer motion planes all worse-aligned than co-located; best coder ceiling +159.60 B vs 5,000 B bar; oracle plane +3,420 B < 9,861 B carriage. Steps 2-4 (retrain/RC64/T4) not run by the pre-registered rule. Memo .omx/research/ddm_mc1_motion_compensated_previous_plane_20260904.md; prior codex screen 2026-09-03 replicated (global translation -17.1 B). research_only=true; reactivation: a decoder-derivable plane that beats co-located on Lane IoU AND band agreement."
+    },
+    {
+      "id": "lane_ddm_cl2_hpac_prior_capacity_ladder_20260905",
+      "name": "ddm_cl2 HPAC prior-capacity lambda ladder on the shipped fs2 mixer (fixed topology; field held)",
+      "phase": 3.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_ddm_ane1_ane_screening_20260905",
+      "name": "ddm_ane1 ANE screening lane",
+      "phase": 3.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_ddm_hc2_wrong_half_decomposition_20260905",
+      "name": "hc2 wrong-half flip-location decomposition ceiling",
+      "phase": 3.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -96255,5 +96378,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-05T01:04:54Z"
+  "updated_at": "2026-09-05T12:48:46Z"
 }
