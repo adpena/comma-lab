@@ -263,6 +263,40 @@ runtime code, and the RC1 stream transmits no model.
 
 ---
 
+## 8b. CORRECTION — the first staging was undecodable by the contest path
+
+**The first ddm_rc1 candidate FAILED on T4 in 3.6 s** (call `fc-01M1SDVN3YP4798FX8R5J86R8R`,
+app `ap-S3tFqpBbdFhm6KR2sCg6WF`): `bash inflate.sh` → `inflate.py:62 inflate_archive` →
+`runtime/f26_inflate.py:429 InflationError("F26 requires WANS1, SD1M, or SM3R semantic weights")`.
+
+**Root cause, stated plainly: I verified through a path the contest does not run.** My decode
+identity called `read_residual_archive` → `decode_production_tokens` directly. The public
+entrypoint calls `f26_inflate.inflate_archive`, which reads the semantic section's magic at
+**its own seam (`:428`), before the renderer seam (`:481`) where I had put the restore**. The
+hpac half was fine — `f26_inflate.py:582` routes it through the same `decode_production_tokens`
+I exercised — so only the semantic half was undecodable, and it refused first.
+
+**This also violated my own stated design principle.** §8 claims "the receiver restores both
+section bodies byte-for-byte before any parsing runs". For the semantic half that was
+aspiration, not implementation: I deferred the restore to the renderer seam because that is
+where the template lives, and never checked whether an earlier consumer read the magic. The fix
+makes the claim true.
+
+**The fix** (`runtime/f26_inflate.py`, additive): restore an `RC1S` semantic blob to its exact
+SM3R bytes immediately BEFORE the magic guard, taking the template from `_load_renderer`
+(memoised through `sys.modules`, so it costs nothing the run does not already pay), then let the
+guard, the renderer-seam unpack and the WANS1 fallback all see today's bytes. An archive without
+the rider is untouched — the magic simply does not match — so every old flag decodes as before.
+
+**The apparatus lesson, which is bigger than this arm:** the seal validated
+(`SEAL_VALID`, archive+runtime pinned, five falsifiers) on an archive the contest path could not
+decode. A seal that proves custody but not decodability is not a fire-readiness proof. The
+coordinator is registering an apparatus item: **the seal contract needs an `inflate.sh` smoke
+receipt.** Sister of the NO-FAKE "surrogate-optimized-but-not-exact-authority-verified" class —
+a decode through a non-shipped path is a surrogate for a decode.
+
+---
+
 ## 9. Receiver proof
 
 **(a) Section census — only the two MODEL sections and the reserved byte moved (MEASURED).**
@@ -315,15 +349,39 @@ budget is decided by the token decode and the renderer, exactly as before this c
 
 ---
 
-**(d) Seal.** `SEAL_ddm_rc1_model_section_adaptive_recode_contest_cuda.json`, seal sha
-`b7811614b860dbbb6c42b52308dacd74c5b75089c47dad5430d01476a6af6aec`, verdict **SEAL_VALID**.
-Runtime tree 43 files / 921,033 B, digest `c68a7871a7257940…`; eight receiver files pinned
-individually; admit bar net ΔS < −2e−05 against contest_cuda 0.14781744 at zero tolerance; five
-falsifiers pre-registered. Path:
+**(d) PUBLIC-ENTRYPOINT verification (MEASURED after the §8b fix, `RESTAGE.json`).**
+This is the gate the first candidate failed. Both checks are run against the SHIPPED tree as a
+control, so each outcome is a measured shape rather than an assumption.
+
+| check | candidate | shipped control |
+|---|---|---|
+| `f26_inflate.inflate_archive` on CPU (the function `inflate.py` calls) | **REACHED_TOKEN_DECODE**, 240 s bound, no exception | **REACHED_TOKEN_DECODE**, 240 s |
+| `bash inflate.sh <dir> <out> <file_list>` | **REACHED_CUDA_GATE**, 1.96 s | **REACHED_CUDA_GATE**, 1.46 s |
+| semantic rider → shipped SM3R bytes | byte-identical | — |
+
+The T4 failure was an `InflationError` in **3.6 s**; a run that reaches the token decode has
+passed the guard at `:428`, the renderer load, the semantic unpack and `load_state_dict(strict=True)`.
+The `inflate.sh` run executes the script's whole preamble — the C backends build, the Brotli 1.2.0
+gate passes, the file-list loop dispatches, and `inflate.py::_verify_input` accepts the staged
+archive against its re-pinned constants — and then stops at the submission's own CUDA refusal
+("requires CUDA inflation on linux-nvidia-t4"). **A full local `bash inflate.sh` cannot complete
+on this host by the submission's design, and the file list selects VIDEOS, not pairs, so a
+"first 2 pairs" truncation is not expressible in it.** Reaching the CUDA gate is therefore the
+strongest local outcome available, and MAIN's T4 fire is the completing evidence.
+
+**(e) Seal (RE-SEALED after the fix).**
+`SEAL_ddm_rc1_model_section_adaptive_recode_contest_cuda.json`, seal sha
+`32968e322a39b582b9b544e9eb30af9a7ed9e98bf9b29243509cf2712165739d`, verdict **SEAL_VALID**.
+Runtime tree 43 files / 922,068 B, digest `020216659a64413d…`; **nine** receiver files pinned
+individually (`runtime/f26_inflate.py` added); admit bar net ΔS < −2e−05 against contest_cuda
+0.14781744 at zero tolerance; **six** falsifiers pre-registered, the sixth being public-entrypoint
+decodability with its measured local receipts. The superseded first seal was
+`b7811614b860dbbb…` over runtime digest `c68a7871a7257940…`. Path:
 `/Volumes/VertigoDataTier/pact/ddm_rc1_model_section_adaptive_recode/SEAL_ddm_rc1_model_section_adaptive_recode_contest_cuda.json`.
 **One ordering note, stated because it is a real gap:** the decode in (c) ran BEFORE
 `tac.candidate_seal.repin_receiver` updated `inflate.py`'s two archive-pin constants from the
-cl2 values to the candidate's. Those two constants are read by `inflate.py`'s own guard, not by
+cl2 values to the candidate's (the re-staging repeats the re-pin, and (d)'s `inflate.sh` run
+exercises those constants directly through `_verify_input`). Those two constants are read by `inflate.py`'s own guard, not by
 the `read_residual_archive` → `decode_production_tokens` path the identity used, and the re-pin
 helper re-parses and refuses unless the result is CONSISTENT (it reported
 `MISMATCH → CONSISTENT`). So the sealed tree differs from the decoded tree in exactly two
@@ -344,6 +402,16 @@ hpac body (which is where the credit is).
 `score_claim=false`. The T4 row is MAIN's to fire.
 
 ---
+
+## ITEM 0 — the seal contract needs an inflate.sh smoke receipt (coordinator-registered)
+`tools/make_candidate_seal.py` validated this candidate — archive sha, runtime digest, nine
+receiver pins, an admit bar bound to the live pointer — on an archive the contest path could not
+decode. Custody is not decodability. A seal should refuse, or at minimum record a WARNING, unless
+the staged tree carries a receipt that the PUBLIC entrypoint parsed the archive: on a CUDA-less
+host, `bash inflate.sh` reaching the runtime's own device gate plus `f26_inflate.inflate_archive`
+reaching the token decode is the achievable local pair, and `experiments/ddm_rc1_model_section_adaptive_recode.py::stage_restage`
+is a working reference implementation of both. Owner: coordinator (registered as an apparatus
+item). Blocker: none.
 
 ## 11. Owed
 

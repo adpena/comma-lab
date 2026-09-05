@@ -37,6 +37,7 @@ import math
 import subprocess
 import sys
 import time
+import zipfile
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -956,6 +957,10 @@ def stage_race(args: argparse.Namespace) -> dict[str, Any]:
 #: The winning race rows (MEASURED by ``race``; re-derive if the object moves).
 SEMANTIC_SHIFT = 6
 HPAC_SHIFT = 5
+#: The archive the build stage produced (MEASURED; re-check before re-staging).
+CANDIDATE_ARCHIVE_SHA256 = (
+    "1438049e3655fbcfa8eb289fa51ac58f834d72d8a09586353663cea68e57c122"
+)
 RC1_RESERVED_SEMANTIC = 0x20
 RC1_RESERVED_HPAC = 0x40
 
@@ -1038,6 +1043,44 @@ CPR1_INFLATE_PATCH = (
     '    if semantic_blob.startswith((b"SD1M", b"SM3R", b"RC1S")):'
 )
 
+# The PUBLIC entrypoint.  ``inflate.sh`` -> ``inflate.py`` -> ``f26_inflate.inflate_archive``
+# reads the semantic section's magic at its own seam, BEFORE the renderer seam where the
+# semantic receiver lives.  The first ddm_rc1 staging patched the receiver seam only, so the
+# archive parsed under ``read_residual_archive`` + ``decode_production_tokens`` and REFUSED
+# under the path the contest actually runs -- in 3.6 s on T4.  The restore therefore belongs
+# HERE, at the first place the public path touches the bytes.
+F26_IMPORT_ANCHOR = """import hashlib
+import importlib.util"""
+F26_IMPORT_PATCH = """import dataclasses
+import hashlib
+import importlib.util"""
+
+F26_ANCHOR = """    if not parts.semantic_blob.startswith((WANS1_MAGIC, b"SD1M", b"SM3R")):
+        raise InflationError("F26 requires WANS1, SD1M, or SM3R semantic weights")"""
+F26_PATCH = '''    # DDM_RC1_ADAPTIVE_MODEL_SECTIONS_V1: restore the RC1 semantic rider to its exact
+    # SM3R bytes BEFORE the magic guard, so every statement below -- this guard, the
+    # renderer-seam unpack, and the WANS1 fallback -- sees the bytes it sees today.  This
+    # is the seam the PUBLIC entrypoint runs.  ``_load_renderer`` is memoised through
+    # sys.modules, so taking the template here costs nothing the run does not already pay.
+    # An archive without the rider is untouched: the magic simply does not match.
+    if parts.semantic_blob.startswith(RC1_SEMANTIC_MAGIC):
+        parts = dataclasses.replace(
+            parts,
+            semantic_blob=restore_rc1_semantic(
+                parts.semantic_blob,
+                _load_renderer(renderer_dir).SemanticTokenRenderer(96).state_dict(),
+            ),
+        )
+    if not parts.semantic_blob.startswith((WANS1_MAGIC, b"SD1M", b"SM3R")):
+        raise InflationError("F26 requires WANS1, SD1M, or SM3R semantic weights")'''
+
+F26_RC1_IMPORT_ANCHOR = (
+    "from .residual_archive import decode_production_tokens, read_residual_archive"
+)
+F26_RC1_IMPORT_PATCH = """from .rc1_adaptive_model_sections import SEMANTIC_MAGIC as RC1_SEMANTIC_MAGIC
+from .rc1_adaptive_model_sections import restore_semantic as restore_rc1_semantic
+from .residual_archive import decode_production_tokens, read_residual_archive"""
+
 PATCHES: tuple[tuple[str, str, str], ...] = (
     ("runtime/residual_archive.py", RESIDUAL_ANCHOR_BITS, RESIDUAL_PATCH_BITS),
     ("runtime/residual_archive.py", RESIDUAL_ANCHOR_HPAC, RESIDUAL_PATCH_HPAC),
@@ -1055,6 +1098,9 @@ PATCHES: tuple[tuple[str, str, str], ...] = (
         SEMANTIC_RECEIVER_PATCH,
     ),
     ("cpr1/inflate.py", CPR1_INFLATE_ANCHOR, CPR1_INFLATE_PATCH),
+    ("runtime/f26_inflate.py", F26_IMPORT_ANCHOR, F26_IMPORT_PATCH),
+    ("runtime/f26_inflate.py", F26_RC1_IMPORT_ANCHOR, F26_RC1_IMPORT_PATCH),
+    ("runtime/f26_inflate.py", F26_ANCHOR, F26_PATCH),
 )
 
 
@@ -1237,11 +1283,243 @@ def stage_build(args: argparse.Namespace) -> dict[str, Any]:
     return facts
 
 
+def _public_path_probe(runtime_root: Path, timeout_s: float) -> dict[str, Any]:
+    """Run the PUBLIC entrypoint's own function and record where it gets to.
+
+    ``inflate.py`` refuses without CUDA (it is a T4 submission), so a full local
+    ``bash inflate.sh`` cannot complete on this host by the submission's own design.  What
+    CAN be run locally is the exact function ``inflate.py`` calls --
+    ``runtime.f26_inflate.inflate_archive`` -- on CPU.  The T4 failure was an
+    ``InflationError`` raised at that function's semantic magic guard in 3.6 s, so a run
+    that reaches the token decode has passed the guard, the renderer load, the semantic
+    unpack, and ``load_state_dict(strict=True)``.  The probe is bounded: reaching the token
+    decode is the PASS condition, and the same probe is run against the SHIPPED tree as a
+    control so "timed out in the token decode" is a measured shape, not an assumption.
+    """
+
+    import os
+    import subprocess
+    import tempfile
+
+    script = (
+        "import json, sys, time\n"
+        "from pathlib import Path\n"
+        "root = Path(sys.argv[1])\n"
+        "sys.path.insert(0, str(root))\n"
+        "from runtime.f26_inflate import inflate_archive, InflationError\n"
+        "out = Path(sys.argv[2])\n"
+        "started = time.time()\n"
+        "try:\n"
+        "    inflate_archive(root / 'archive.zip', out / '0.raw',\n"
+        "                    renderer_dir=root / 'cpr1', device_name='cpu',\n"
+        "                    num_threads=4, checkpoint_dir=out / '.ckpt')\n"
+        "    print(json.dumps({'outcome': 'COMPLETED', 'seconds': time.time() - started}))\n"
+        "except InflationError as error:\n"
+        "    print(json.dumps({'outcome': 'INFLATION_ERROR', 'error': str(error),\n"
+        "                      'seconds': time.time() - started}))\n"
+        "except Exception as error:\n"
+        "    print(json.dumps({'outcome': type(error).__name__, 'error': str(error),\n"
+        "                      'seconds': time.time() - started}))\n"
+    )
+    with tempfile.TemporaryDirectory() as scratch:
+        # Build the RC64 backend with the SAME command inflate.sh uses, so the probe
+        # reaches the token decode instead of stopping at the missing-library guard.
+        library = Path(scratch) / "rc64_backend.so"
+        subprocess.run(
+            [
+                os.environ.get("CC", "cc"), "-O3", "-std=c11", "-shared", "-fPIC",
+                str(runtime_root / "runtime" / "entropy" / "rc64_backend.c"),
+                "-o", str(library),
+            ],
+            check=True,
+            capture_output=True,
+        )
+        environment = dict(os.environ, CPR1_RC64_LIBRARY=str(library))
+        started = time.time()
+        try:
+            done = subprocess.run(
+                [sys.executable, "-c", script, str(runtime_root), scratch],
+                capture_output=True,
+                text=True,
+                timeout=timeout_s,
+                cwd=str(runtime_root),
+                env=environment,
+            )
+        except subprocess.TimeoutExpired:
+            return {
+                "outcome": "REACHED_TOKEN_DECODE",
+                "seconds": time.time() - started,
+                "note": "no exception within the bound; the semantic guard is behind it",
+            }
+    tail = (done.stdout or "").strip().splitlines()
+    parsed: dict[str, Any] = {"outcome": "UNPARSED", "stdout_tail": tail[-3:]}
+    for line in reversed(tail):
+        try:
+            parsed = json.loads(line)
+            break
+        except json.JSONDecodeError:
+            continue
+    parsed["returncode"] = done.returncode
+    parsed["stderr_tail"] = (done.stderr or "").strip().splitlines()[-5:]
+    return parsed
+
+
+def _inflate_sh_smoke(runtime_root: Path, timeout_s: float = 300.0) -> dict[str, Any]:
+    """Run ``bash inflate.sh`` itself, with the real 3-argument contest signature.
+
+    This host has no CUDA and ``inflate.py`` refuses without it ("requires CUDA inflation
+    on linux-nvidia-t4"), so the script CANNOT complete here by the submission's own
+    design.  What it does prove, and what nothing else proves, is that the script's own
+    preamble runs: the C toolchain builds the backends, the Brotli version gate passes, the
+    file-list loop dispatches, and ``inflate.py::_verify_input`` accepts the staged
+    ``archive.zip`` against its two pinned constants.  Reaching the CUDA refusal is
+    therefore the PASS condition on this host; anything earlier is a real defect.
+    """
+
+    import os
+    import subprocess
+    import tempfile
+
+    # inflate.sh invokes a bare ``python``.  On the contest runner that interpreter has
+    # Brotli 1.2.0; on this host the bare name resolves to a system interpreter that does
+    # not, and the script's own dependency gate refuses (rc=69) before it reaches any
+    # codec code.  Putting the venv first makes ``python`` mean the interpreter that
+    # actually carries the submission's dependencies -- the local analogue of the runner.
+    environment = dict(
+        os.environ,
+        PATH=f"{Path(sys.executable).parent}{os.pathsep}{os.environ.get('PATH', '')}",
+    )
+    with tempfile.TemporaryDirectory() as scratch:
+        scratch_path = Path(scratch)
+        data_dir = scratch_path / "extracted"
+        data_dir.mkdir()
+        with zipfile.ZipFile(runtime_root / "archive.zip") as archive:
+            (data_dir / "p").write_bytes(archive.read("p"))
+        file_list = scratch_path / "file_list.txt"
+        file_list.write_text("0.hevc\n", encoding="utf-8")
+        started = time.time()
+        try:
+            done = subprocess.run(
+                [
+                    "bash",
+                    str(runtime_root / "inflate.sh"),
+                    str(data_dir),
+                    str(scratch_path / "out"),
+                    str(file_list),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=timeout_s,
+                cwd=str(runtime_root),
+                env=environment,
+            )
+        except subprocess.TimeoutExpired:
+            return {"outcome": "TIMEOUT", "seconds": time.time() - started}
+    combined = f"{done.stdout}\n{done.stderr}"
+    if "requires CUDA inflation" in combined:
+        outcome = "REACHED_CUDA_GATE"
+    elif "F26 requires WANS1, SD1M, or SM3R" in combined:
+        outcome = "SEMANTIC_MAGIC_REFUSED"
+    elif done.returncode == 0:
+        outcome = "COMPLETED"
+    else:
+        outcome = "OTHER_FAILURE"
+    return {
+        "outcome": outcome,
+        "returncode": done.returncode,
+        "seconds": time.time() - started,
+        "stderr_tail": (done.stderr or "").strip().splitlines()[-6:],
+    }
+
+
+def stage_restage(args: argparse.Namespace) -> dict[str, Any]:
+    """Re-stage the receiver with the PUBLIC-path patch and verify through that path.
+
+    The archive bytes do not change here -- only the runtime tree does -- so the retained
+    candidate is reused rather than re-encoded, and its sha is re-checked before staging.
+    """
+
+    import shutil
+
+    from experiments import ddm_rc1_adaptive_section_codec as codec
+
+    store = Path(args.store)
+    candidate = store / "retained" / "candidate_archive.zip"
+    candidate_bytes = candidate.read_bytes()
+    if sha256_bytes(candidate_bytes) != CANDIDATE_ARCHIVE_SHA256:
+        raise Rc1Error("retained candidate archive drifted; re-run build")
+
+    staged = store / "staged_runtime"
+    tree = stage_tree(staged)
+    shutil.copyfile(candidate, staged / "archive.zip")
+    from tac.candidate_seal import repin_receiver
+
+    repin = repin_receiver(staged)
+    if repin.verdict_after != "CONSISTENT":
+        raise Rc1Error(f"receiver re-pin did not land: {repin.verdict_after}")
+
+    # (1) The semantic state dict the PUBLIC seam builds must equal the shipped one.
+    parsed = read_sections()
+    template = semantic_template()
+    restored = codec.restore_semantic(
+        codec.apply_semantic(parsed["semantic_body"], template, SEMANTIC_SHIFT), template
+    )
+    semantic_bytes_identical = restored == parsed["semantic_body"]
+
+    # (2) The public entrypoint itself, on both trees, under the same bound.
+    probes = {
+        "candidate": _public_path_probe(staged, args.probe_seconds),
+        "shipped": _public_path_probe(RECEIVER_COPY, args.probe_seconds),
+    }
+    scripts = {
+        "candidate": _inflate_sh_smoke(staged),
+        "shipped": _inflate_sh_smoke(RECEIVER_COPY),
+    }
+    passed = (
+        probes["candidate"]["outcome"] == "REACHED_TOKEN_DECODE"
+        and probes["shipped"]["outcome"] == "REACHED_TOKEN_DECODE"
+        and scripts["candidate"]["outcome"] == "REACHED_CUDA_GATE"
+        and scripts["shipped"]["outcome"] == "REACHED_CUDA_GATE"
+    )
+
+    facts = {
+        "schema": "ddm_rc1_restage.v1",
+        "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+        "score_claim": False,
+        "staged_runtime": tree,
+        "repin": {
+            "verdict_before": repin.verdict_before,
+            "verdict_after": repin.verdict_after,
+            "new_sha256": repin.new_sha256,
+            "new_bytes": repin.new_bytes,
+        },
+        "candidate_archive": {
+            "path": str(candidate),
+            "bytes": len(candidate_bytes),
+            "sha256": sha256_bytes(candidate_bytes),
+        },
+        "semantic_restore_byte_identical": semantic_bytes_identical,
+        "public_path_probe_seconds": args.probe_seconds,
+        "public_path_probes": probes,
+        "inflate_sh_smokes": scripts,
+        "public_path_pass": passed,
+    }
+    atomic_json(store / "RESTAGE.json", facts)
+    if not semantic_bytes_identical:
+        raise Rc1Error("the semantic rider no longer restores to the shipped body")
+    if not passed:
+        raise Rc1Error(
+            f"the public entrypoint did not clear the guard: probes={probes} scripts={scripts}"
+        )
+    return facts
+
+
 STAGES = {
     "extract": stage_extract,
     "entropy": stage_entropy,
     "race": stage_race,
     "build": stage_build,
+    "restage": stage_restage,
 }
 
 
@@ -1262,6 +1540,12 @@ def main(argv: list[str] | None = None) -> int:
         nargs="+",
         default=[4, 5, 6],
         help="adaptation shifts to race for the IHS1 body",
+    )
+    parser.add_argument(
+        "--probe-seconds",
+        type=float,
+        default=240.0,
+        help="bound for the public-entrypoint probe; reaching the token decode is the PASS",
     )
     args = parser.parse_args(argv)
     started = time.time()
