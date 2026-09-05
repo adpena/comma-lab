@@ -216,9 +216,24 @@ path this arm is on. The RSS guard cannot substitute for the tripwire here — t
 RSS 1.5 GiB against a 116 GiB cap while the GPU-side pressure was 55 GiB, i.e. **the guard was 77× from firing on a
 condition it structurally cannot see.**
 
-## 5. The ladder — MEASURED
+## 5. The ladder — NOT MEASURED (state as of 2026-09-05T16:35Z)
 
-_pending: filled as each rung prices._
+**No rung has been trained, priced or verified.** There is no ladder table, no residual against P1–P7, and no seal.
+Every λ=2.0 launch was stopped in its first 8 minutes (§3), and the arm is now held OFF Metal by MAIN's rule until
+md3's cell finishes (~19:00Z). Saying this plainly: the charter's deliverable is unmet so far. The apparatus, the
+predictions and five measured setup findings are real work, but they are MEANS — the END is a ladder row, and there
+is none.
+
+The one number this arm can already state about the ladder is the bar, re-derived at the live pointer: a cl3 rung must
+land **archive < 179,982 B (joint < 126,885 B)** to move the pointer, and **≤ 138,205.2 B** to reach the rate corner.
+
+## 5b. Ready-to-fire state (resumable from disk)
+
+Runbook `/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection/RUNBOOK.md` carries the exact ten
+steps and the pinned seal command. Rung root is clean (0 dirs). Inputs re-hashed and still pinned at
+16:31Z: field `cc10a7b0…`, init `ff2d3e45…`, fs2 archive `a8f3a379…`. Every module the price and verify stages import
+resolves (`jg2.encode_tail`, `rx2._pack_terminal_ihs1`, `up3.parse_shipped_body/build_archive`). Every flag of the seal
+command was checked against its argparse. Checkpoint `tools/subagent_checkpoint.py read --subagent-id ddm_cl3`.
 
 ## 6. Decision rule (pre-registered)
 
@@ -252,4 +267,6 @@ clause each rung is checked against.
 
 ## 8. Frontier line
 
-_pending._
+**cl2 λ=1.0 control repack — S 0.14781744131049854 @ 179,982 B [contest-CUDA T4 n600]**, archive
+`08ec85333d13d71344b4482cf261e3b2d508725e49f3ca05971265a81498ad4e` — the LIVE `effective_frontier`, moved by cl2 at
+16:08:42Z (superseding fs2's 0.14784474152757654 @ 180,023 B). **ddm_cl3 has moved no pointer.**
