@@ -158,8 +158,45 @@ its own ([[binding-instruction-numbers-expire-and-nobody-rederives-them]]).
   then correctly refused every 6th process at 120.6 GiB used (pc1 holds 4 × 4.6 GB). The
   refusal is information, not an obstacle: the exact-byte pricing runs after pass 2a frees
   its memory. Next launch of this family declares 5.5 GiB per shard.
-* **Throughput MEASURED:** 1.72–1.77 s per realized evaluation per shard at 3 torch threads
-  under contention (load average ~30 on 18 cores), 5 shards → 2.87 evals/s aggregate.
+* **Throughput MEASURED:** 1.40–1.77 s per realized evaluation per shard at 3 torch threads
+  under contention, 5 shards → ~3.6 evals/s aggregate; ~1.8 pairs/min over the field.
+
+### 4a. MEASURED CPU + memory footprint of one pass shard (for the governor's model)
+
+MAIN asked for this after accepting, by decision, that this arm's shards plus pc1's solvers
+would slow md3's Metal cell to 1–2 steps/min. TWO `ps` samples, minutes apart, ~51 min into
+pass 2a on an 18-core / 128 GiB box — reported as a range because one sample of a sawtooth
+allocator is not a footprint:
+
+| | procs | CPU each | CPU sum | RSS each | RSS sum |
+|---|---|---|---|---|---|
+| **ddm_sj1 pass shard** (`--threads 3 --batch 8`), sample A | **5** | 46.5–113.4%, mean **95.8%** | 479% ≈ 4.8 cores | 3,420–5,068 MB, mean 4,509 MB | **22.5 GB** |
+| **ddm_sj1 pass shard**, sample B | 5 | 49.2–228.3%, mean **133.7%** | 668% ≈ 6.7 cores | 2,588–5,671 MB, mean 3,866 MB | **19.3 GB** |
+| ddm_pc1 solver (context, sample A) | 8 | 42.6–71.7%, mean 59.7% | 478% ≈ 4.8 cores | 3,386–5,283 MB, mean 4,377 MB | 35.0 GB |
+
+System at sample A: **load average 19.99 on 18 cores**, 915 free pages (14 MB) with
+35.5 GiB inactive/reclaimable.
+
+**Constant for the governor to model:** one shard of this family at `--threads 3 --batch 8`
+costs **~1.0–1.3 cores and 2.6–5.7 GB RSS (mean ≈ 4.2 GB, peak ≈ 5.7 GB)**. Declare on the
+PEAK, 5.7 GiB, not the mean — the allocator sawtooths with the in-flight batch.
+
+Two corrections to what the launch declared, both mine:
+
+1. I ran **five** shards, not six — the governor refused nine at a declared 36 GiB and I
+   dropped to five after `pgrep -f ddm_pc1` showed pc1 active (the charter caps me at ≤ 6
+   while pc1 runs).
+2. I declared **14 GiB** for those five. The MEASURED peak is **22.5 GB** — a 1.6×
+   under-declaration. I had extrapolated 2.8 GiB/shard from a `--batch 4` smoke; RSS
+   scales with the in-flight batch, so a declaration must be taken at the batch the run
+   will actually use, on a PEAK sample. The governor's later refusals of a sixth process
+   at 120.6 GiB used were therefore CORRECT — my declaration was the wrong number, not
+   the gate.
+3. **Waiter hygiene.** I armed eight artifact-bound waiters on the pass-2a receipt and each
+   one resumed me with no new information, which is the #1121 orphan-waiter genus wearing a
+   different hat: bounded, artifact-bound loops still re-invoke the caller on expiry. All
+   eight are stopped; only the launcher supervisor (which WRITES the receipt) remains on my
+   side. The cure is one watcher at the coordinator, not N at the arm.
 
 ---
 
