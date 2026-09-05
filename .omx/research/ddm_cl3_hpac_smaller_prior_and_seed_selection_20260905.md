@@ -262,6 +262,26 @@ rung: pack → rc1 container (rider losslessness proved) → stage the LIVE tree
 byte-identical) → receiver-copy decode to the exact field → section census refusing any move outside the model and
 the stream.
 
+### 4c. Matched-epoch trainer surrogate, λ=2.0 vs cl2's λ=1.0 control (ADVISORY, never a row)
+
+The trainer's own telemetry is stamped `byte_authority: ADVISORY_ESTIMATE_NOT_SERIALIZED`, so this is a direction
+check, not evidence. It is recorded because it is free and because it says whether the rate multiplier is doing the
+mechanical thing before an hour of encode prices it. `depth-sum` is Σ(depth × channels) over the bit-depth histogram —
+the model's total allocated width.
+
+| epoch | λ=1.0 est. model | λ=2.0 est. model | Δ model | Δ depth-sum | λ=1.0 est. tokens | λ=2.0 est. tokens |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0 | 17,947 | 17,947 | **0** | **0** | 116,544 | 116,544 |
+| 10 | 17,488 | 17,177 | −311 | −53 | 129,606 | 133,626 |
+| 20 | 17,483 | 17,095 | −388 | −53 | 135,510 | 131,993 |
+
+Epoch 0 is byte-identical on both runs, which is the shared warm start doing its job and a free determinism check.
+From there λ=2.0 holds a strictly smaller model — 62 zero-width channels against the control's 54, and mass moved out
+of depths 6–8 — which is exactly the rate multiplier biting on the coordinate it is defined on. The −388 B at epoch 20
+sits inside P1's −250…−400 B band, though on a THIRD basis (the trainer's surrogate) that is neither cl2's Brotli
+container nor rc1's, so it scores nothing; only the exact container price does. The token estimate is noisy epoch to
+epoch (the control itself moved +5,904 B between epochs 10 and 20), so no reading is taken from it here.
+
 ## 5. The ladder — NOT MEASURED (state as of 2026-09-05T16:35Z)
 
 **No rung has been trained, priced or verified.** There is no ladder table, no residual against P1–P7, and no seal.
