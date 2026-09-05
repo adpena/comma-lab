@@ -50,3 +50,11 @@ the admission guard must treat ANY `device mps`/Metal trainer as a Metal occupan
 proves two fit — and the measured-peak ledger must record a Metal footprint column (system-availability delta, as gov2 measured for the cell:
 49.572 GiB at 1.75 GiB RSS) rather than RSS alone. MAIN's cl3 charter sentence "a 2.4 GiB trainer is admitted beside it" was the same
 RSS-for-Metal error and is corrected in the arm's instructions.
+**ATTRIBUTION CORRECTION (16:30Z, same day, lm1 law — ask the actor):** the arm's own tree shows the λ=2.0 rung was ABORTED by the arm for a
+filesystem reason (`aborted/lambda_2p0_exfat_partial_20260905T1612Z` — APDataStore is ExFAT) and relaunched on Vertigo; the rc=143 was the arm's
+SIGTERM, not memory. The CRITICAL compressor alarm (42.4 GiB, 5.2 GiB/s at 16:12:53Z) is COINCIDENT and its cause is NOT attributed (the watchdog's
+top grower was md3's cell itself). MEASURED afterwards (16:29Z, 45 s window) with cl3's relaunched Metal trainer LIVE beside md3's cell: compressor
+flat 1.8 GiB, free 17.4→28.1 GiB, md3 at 29 steps/min (serial baseline 28) — the first N=1 sample that a small Metal trainer and one cell fit.
+What STANDS from this instance: the guard admits Metal trainers on RSS alone (the blind spot is real and unmeasured); the watchdog is the only
+tripwire. Governance until ITEM 3 lands: a Metal trainer may run beside one cell ONLY with the watchdog live; any memory_pressure WARN while it
+runs → stop the trainer (epoch-checkpointed), resume after the cell's receipt; each such window is a sample for the N≥3 admission table.
