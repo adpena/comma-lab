@@ -865,3 +865,13 @@ every few hundred symbols; hence hpac's credit is 1.84× the renderer's off a bo
 REFUSED rc=9 because the waiver text contained "fs2/cl2", which the fire tool's path scanner reads as a relative path — write waivers without slashes).
 Call id appended below at harvest. Also this window: md3's Metal cell fell from 30 to 2 steps/min under CPU load 21 from sj1 (6 shards) + pc1 (8 solvers);
 MAIN reniced the CPU arms to +10 (reversible) — a Metal cell's host thread is a CPU consumer the governor does not model (gov3 ITEM 3, third face).
+
+## Addendum 5 (2026-09-05 19:40Z) — THE 27TH POINTER MOVE: S 0.14666350774473783 @ 178,249 B [contest-CUDA T4 n600] (rc1, −1,733 B, zero distortion)
+
+Call `fc-01M1SG7CY107YXHSFS26NWV69T` (attempt 2; attempt 1 died in `f26_inflate.py` before the codec dispatch — the arm had verified identity through the
+library path, not `inflate.sh`), archive sha `1438049e3655fbcfa8eb289fa51ac58f834d72d8a09586353663cea68e57c122`, d_seg 0.00020139 / d_pose 6.14e-06 IDENTICAL
+to cl2, projection error 0.0, Δ −1.153933565760712e-3 = exactly 1,733 × 6.658589531221714e-7 — **42× the 26th move; the largest since afr1's crossing.**
+Re-derived: gap 0.02666350774473783; rate corner −40,043.8 B at held distortion; zero-distortion margin 1,969.347 B. The packet's first live REFUSAL was a
+tool defect (the recompute and the receipt differed by one ulp from summation order) — fixed with a 1e-15 tolerance + two tests (f569e4c1a). Composition
+law for the live arms: carrier and tail are byte-identical, so pc1's carrier deltas and sj1's field deltas compose additively with rc1's coder; cl3's HPAC
+rungs must be packed through rc1's adaptive coder to compose (their Brotli-packed model bytes no longer describe the object). PR #140 is now FOUR moves behind.
