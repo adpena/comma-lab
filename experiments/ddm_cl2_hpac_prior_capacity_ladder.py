@@ -663,6 +663,50 @@ def stage_parseback(args: argparse.Namespace) -> dict[str, Any]:
         root / "PARSEBACK_START.json",
         {"schema": "ddm_cl2_parseback_start.v1", "rung": rung, "runtime": str(runtime), "archive": file_fact(archive)},
     )
+    # Mirror inflate.sh: build the RC64 backend (required) and the native f26 corrector
+    # (optional there, required here so the parse-back walks the path T4 will walk), and
+    # export the two library variables the receiver reads.
+    import subprocess
+
+    build = root / "build"
+    build.mkdir(exist_ok=True)
+    cc = shutil.which(os.environ.get("CC", "cc"))
+    if cc is None:
+        raise Cl2Error("a C compiler is required for the RC64 backend (inflate.sh contract)")
+    rc64_so = build / "rc64_backend.so"
+    subprocess.run(
+        [
+            cc,
+            "-O3",
+            "-std=c11",
+            "-shared",
+            "-fPIC",
+            str(runtime / "runtime/entropy/rc64_backend.c"),
+            "-o",
+            str(rc64_so),
+        ],
+        check=True,
+    )
+    os.environ["CPR1_RC64_LIBRARY"] = str(rc64_so)
+    corrector_so = build / "f26_corrector_native.so"
+    subprocess.run(
+        [
+            cc,
+            "-O3",
+            "-std=c11",
+            "-shared",
+            "-fPIC",
+            "-ffp-contract=off",
+            "-fno-fast-math",
+            str(runtime / "runtime/f26_corrector_native.c"),
+            "-lm",
+            "-o",
+            str(corrector_so),
+        ],
+        check=True,
+    )
+    os.environ["F26_CORRECTOR_NATIVE_LIBRARY"] = str(corrector_so)
+    os.environ.setdefault("F26_TOKEN_DECODER", "python")
     spec = importlib.util.spec_from_file_location(f"cl2_receiver_inflate_{rung}", runtime / "inflate.py")
     if spec is None or spec.loader is None:
         raise Cl2Error("cannot import the receiver copy's inflate.py")
@@ -697,6 +741,7 @@ def stage_parseback(args: argparse.Namespace) -> dict[str, Any]:
         "inflate_report": report,
         "wall_clock_seconds": elapsed,
         "device": "cpu",
+        "libraries": {"CPR1_RC64_LIBRARY": file_fact(rc64_so), "F26_CORRECTOR_NATIVE_LIBRARY": file_fact(corrector_so)},
         "note": "render retained; rebuildable from archive + receiver tree (certify-or-block: sha + bytes + argv recorded here)",
     }
     atomic_json(result_path, result)
