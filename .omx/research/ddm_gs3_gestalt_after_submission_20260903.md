@@ -674,3 +674,13 @@ row ([[m75]] CHECK REFS before 'lost'). (2) MAIN told mc1 its 23:47Z rc=143 was 
 it was mc1's OWN kill (an in-sample telemetry formula fix). The correlation was coincidence; the causal reading was mine, unmeasured. What WAS real:
 from ~00:05Z dk2's movers froze APDataStore (ExFAT/FSKit) and mc1's ceiling children sat in uninterruptible I/O wait ~50 min (wall-clock lost, nothing else).
 Equations leg (`tac.canonical_equations`): `motion_compensated_previous_plane_alignment_gate_v1` (new, negative-transfer anchor for dc1's mechanism).
+
+## ADDENDUM 32 (2026-09-05 01:33Z real) — ng4 terminal: the continuous objective delays the excursion and returns it; only the τ band ends below its start
+
+ng4 @5k 0.424842 vs cold 0.425149 (−0.07%, a wash; the pre-registered rule "holds" by 3e-4 — inside noise) vs ng3 0.391810 (+0.033 worse). It led at
+@1k/@2k (−8.8%/−12.3% vs cold) then gave it all back: d_pose drifted from 5.76e-4 to 8.12e-4 (worse than start), d_seg +4.7% above start. Reading: holding
+τ at r10's terminal and carrying the duals removes the RESTART shock but not the OVER-PAINT the band removes — sd1/gm1's mechanism (77.7% of the seg gradient
+is waste outside m_safe) is the one that matters at the terminal, and the dual state alone cannot substitute for it. Four single-lever cells read; the
+ordering is now complete: τ band −7.84% ≫ continuous ≈ cold ≈ cap (−0.97%) > warm +4.4%. ng5 (band × duals) fires next from admission; expectation
+REDUNDANT (≈ ng3). Burn-quality series conclusion: **the τ band is the burn default; nothing else in the series earned a place.** Not a pointer object.
+Equations leg (`tac.canonical_equations`): gm1's τ-band law — the four-cell ordering is its anchor set (τ band the sole below-start lever).

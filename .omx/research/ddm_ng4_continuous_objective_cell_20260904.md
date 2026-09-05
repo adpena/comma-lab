@@ -626,3 +626,23 @@ one that gets ignored.
 The continuous objective cuts the excursion further than the τ band: peak +6.8% above the start (cold +21.8%, τ band +9.2%). MEASURED,
 two milestones; the pre-registered rule's @2k leg (< 0.48567678) holds by −12.3%; the @5k leg (< 0.42514878) reads at ~01:10Z. Terminal
 verdict owed there; if it ends below its start like ng3, the composition cell (τ band × continuous objective) is the first two-lever cell.
+
+## TERMINAL READ (MAIN, 2026-09-05 01:33Z real; cell DONE 01:30:46Z rc0, 12,910 s incl. ~10 min of watchdog pauses; all payloads retained)
+
+| step | S_hat ng4 | cold control | Δ | ng3 τ band | Δ | d_seg_hat | d_pose_hat | bytes |
+|---|---|---|---|---|---|---|---|---|
+| 0 | 0.398768 | 0.398768 | 0 | 0.398768 | 0 | 0.0025183 | 5.757e-4 | 106,714 |
+| 1000 | 0.425786 | 0.466875 | −8.80% | 0.434661 | −0.008875 | 0.0027667 | 6.098e-4 | 106,676 |
+| 2000 | 0.426085 | 0.485677 | −12.27% | 0.435601 | −0.009516 | 0.0028042 | 5.571e-4 | 106,668 |
+| 3000 | 0.431595 | 0.475383 | −9.21% | 0.403796 | **+0.027799** | 0.0027392 | 7.495e-4 | 106,780 |
+| 4000 | 0.436081 | 0.442190 | −1.38% | 0.401233 | +0.034848 | 0.0027434 | 8.224e-4 | 106,711 |
+| 5000 | **0.424842** | 0.425149 | **−0.07%** | 0.391810 | **+0.033032** | 0.0026371 | 8.120e-4 | 106,662 |
+
+**Pre-registered rule:** S_hat(5k) < 0.42514878 → TRUE by 3.07e-4 (0.07% — inside any plausible seed noise: a WASH); S_hat(2k) < 0.48567678 → TRUE
+by −12.3%. **Verdict: the continuous objective DELAYS the excursion (peak +6.8% vs the control's +21.8%) but does NOT lower the terminal** — from
+@3k it gives everything back: d_pose drifts UP (5.76e-4 → 8.12e-4, worse than start and worse than ng3's 5.18e-4) and d_seg ends +4.7% above the
+start (ng3: −1.2%). Ordering at @5k: **ng3 τ band 0.391810 ≫ ng4 0.424842 ≈ cold 0.425149 < warm 0.4438 (ng1)**. The τ band remains the ONLY lever
+that ends below its start. Read for ng5 (band × carried duals): the marginal lever over ng3 is exactly the carried duals, which ng4 shows to be
+terminal-neutral with a pose drift → pre-registered expectation REDUNDANT (≈ ng3) or slightly ANTAGONISTIC on d_pose; the $0 cell runs as sealed and
+the words decide. Watchdog pauses (3, ~10 min) did not alter the training path (deterministic steps; only wall-clock). MEASURED, n600 realized-through-R,
+`[macOS-MLX research-signal]`; not a pointer object.
