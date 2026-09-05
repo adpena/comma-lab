@@ -795,7 +795,7 @@ gated on the twin's bit-identity at epoch 60 (now 42/60). Equations leg (`tac.ca
 
 - **cl2 SEALED + FIRED.** The re-trained λ=1.0 HPAC prior control on the shipped fs2 mixer = **179,982 B (−41 B)**, twin-reproduced
   byte-exactly (stream `e07274ca…`, archive `08ec8533…`), parse-back render sha `f86bfaf3…` = the shipped render. Seal
-  `SEAL_ddm_cl2_lambda1_control_repack_contest_cuda.json` (sha `3cf630a6…`) → MAIN fired T4 15:58Z through the canonical launcher:
+  `SEAL_ddm_cl2_lambda1_control_repack_contest_cuda.json` (file sha256 `3cf630a6…`; the seal's own canonical digest field is `e42288fc…` — two different digests of one seal, both correct) → MAIN fired T4 15:58Z through the canonical launcher:
   call `fc-01M1S4PBEPBKQJVEPWVRDJHGNT`, lane `ddm_cl2_t4_lambda1_control_repack_20260905`, job `…20260905T155621Z`, poller armed,
   harvest receipt `ddm_cl2_lambda1_control_repack_20260905T155621Z_harvest`. Predicted S = 0.14784474152757654 − 41×6.658589531221714e-7
   = **0.14781744131049854** (rate-only; distortion held by decoded-field identity). Honest label: a retrain/pack-size residual (−49 B model,
