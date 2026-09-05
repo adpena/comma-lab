@@ -790,3 +790,32 @@ tokens per model byte, so an architectural rung must change the RECEPTIVE FIELD'
 prices −41 B under the shipped joint (model 13,466 B, stream 113,419 B; archive 179,982 B; two parse-backs PASS; the render is byte-identical to the shipped render
 at the receiver output, 3,662,409,600 B sha f86bfaf3…) — a **26th-move candidate by pack-size/re-train effect, projected S 0.14781744131049854 [DERIVED, rate-only]**,
 gated on the twin's bit-identity at epoch 60 (now 42/60). Equations leg (`tac.canonical_equations`): `hpac_prior_capacity_slope_v1` (cl2).
+
+## Addendum 1 (2026-09-05 16:00Z) — 26th-move candidate T4-FIRED; ane2 engineered the drift; md3 fired by hand; cl3 spawned
+
+- **cl2 SEALED + FIRED.** The re-trained λ=1.0 HPAC prior control on the shipped fs2 mixer = **179,982 B (−41 B)**, twin-reproduced
+  byte-exactly (stream `e07274ca…`, archive `08ec8533…`), parse-back render sha `f86bfaf3…` = the shipped render. Seal
+  `SEAL_ddm_cl2_lambda1_control_repack_contest_cuda.json` (sha `3cf630a6…`) → MAIN fired T4 15:58Z through the canonical launcher:
+  call `fc-01M1S4PBEPBKQJVEPWVRDJHGNT`, lane `ddm_cl2_t4_lambda1_control_repack_20260905`, job `…20260905T155621Z`, poller armed,
+  harvest receipt `ddm_cl2_lambda1_control_repack_20260905T155621Z_harvest`. Predicted S = 0.14784474152757654 − 41×6.658589531221714e-7
+  = **0.14781744131049854** (rate-only; distortion held by decoded-field identity). Honest label: a retrain/pack-size residual (−49 B model,
+  +8 B stream), NOT a capacity win — the ladder's bigger direction is FALSIFIED (secant +0.446 vs −1; λ=0.5 = +465 B). Law registered
+  `hpac_prior_capacity_slope_v1`. cl2 also settled the training law: the shipped 13,515 B IHS1 model is the epoch-634 EMA of a 960-epoch
+  rx2_mc36 burn — our own lineage, not a PR135 repack.
+- **cl3 spawned (Opus, charter `charters/ddm_cl3_hpac_smaller_prior_and_seed_selection_20260905.md`):** the untested half of the axis —
+  λ=2.0 (smaller model), λ=4.0 iff 2.0 pays, and two extra seeds at λ=1.0 — with prior-law prediction lines (λ=2.0 predicted −350…−50 B;
+  seeds min-of-3 −40…−90 B beyond the control; whole-axis falsifier if λ=2.0 nets ≥ 0). Serial on Metal beside md3's cell.
+- **ane2 LANDED (memo `ddm_ane2_engineer_the_precision_drift_20260905.md`, commits 769f4e0cd/ceab7d211/a7eb849e6).** The drift is
+  engineerable, as the operator said: PoseNet's fp16 error is ONE place (ops 0:18 = 92.83% of the drift; dim-0 pinned 0.151 at every tail
+  split; the fp32 HEAD cure hd128 = 7.02e-5, 23.7× better, 54% ANE); SegNet's is distributed with one hot spot (g13, 33.8%). **Selective
+  fp32 on 18 profile-chosen ops (`g13`) makes the ANE SegNet PASS the screening bar** (flip rate 3.2188e-05 vs 3.3e-05, 90.8% ANE, 4.93 ms;
+  `g13stem` 0.874× at 75.5% ANE — the one to ship, 12.6% margin). A mixed graph DOES reach the ANE (96.5% of ops at k=8) — ane1's
+  "fp32 never reaches the ANE" holds only for wholly-fp32 graphs. Hybrid crop recompute NO-GO twice (25× worse argmax; 32.1% of recomputed
+  pixels disagree — a U-Net crop is not a window on the result). `coreml_cpu_fp32` (bit-exact, 1.94×) replays fs1/pr1's 39-point sweep at
+  38/39 argmin agreement, tau-b 1.00, and reproduces pr1's gain to the digit. Owed: re-measure the finalist through the fixed conversion
+  path (ane2 found its own instrument declared the OUTPUT fp16 whenever `op_selector` was used — the SegNet rates are upper bounds, the
+  pass is conservative); the tail-worsening mechanism is MEASURED and UNEXPLAINED. Pointer unmoved by ane2 (a means: screening throughput).
+- **md3's cell fired by MAIN by hand at 15:47Z** (the queue driver refused its own just-filed claim 4×; gov3 ITEM 4d); 209 steps by 15:55Z
+  (~28 steps/min → terminal ~18:50Z). Two claim rows mangled by the zsh `$VAR:l` modifier trap were closed; the correct scorer+metal rows are
+  active (job `md3_r10_live_cell_main_20260905T154454Z`). Memory `zsh_parameter_modifier_trap_var_colon_literal_20260905`.
+- Frontier unchanged until the harvest: **fs2 S 0.14784474152757654 @ 180,023 B [contest-CUDA T4 n600]**.
