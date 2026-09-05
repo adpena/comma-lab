@@ -121,6 +121,20 @@ def rc1_hpac_container(raw: bytes) -> dict[str, Any]:
     }
 
 
+def brotli_basis_bytes(raw: bytes) -> dict[str, Any]:
+    """cl2's OLD container (the Brotli q0..q11 race) on the same raw body.
+
+    Advisory only -- the live object no longer uses it.  It is computed so ddm_cl3's
+    PRE-REGISTERED predictions, which were written in cl2's Brotli currency before rc1
+    changed the coder, stay scoreable in the currency they were written in.  The DECISION
+    is always taken on the rc1 basis, which is the object that actually ships.
+    """
+
+    sizes = {q: len(brotli.compress(raw, quality=q, lgwin=24)) for q in range(12)}
+    best_q = min(sizes, key=lambda q: (sizes[q], q))
+    return {"per_quality_bytes": sizes, "winner_quality": best_q, "winner_bytes": sizes[best_q]}
+
+
 def stage_control(args: argparse.Namespace) -> dict[str, Any]:
     """Instrument control: the live pointer's own hpac section, rebuilt from its raw body.
 
@@ -287,6 +301,7 @@ def stage_price(args: argparse.Namespace) -> dict[str, Any]:
         "seed": cl2.RUNG_SEED[rung],
         "checkpoint": ck,
         "model": model,
+        "brotli_basis_advisory": brotli_basis_bytes(raw),
         "model_raw_ihs1_bytes": len(raw),
         "model_raw_ihs1_sha256": sha256_bytes(raw),
         "hpac_container": hpac_fact,
