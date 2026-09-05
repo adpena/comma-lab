@@ -706,15 +706,28 @@ def refresh_canonical_frontier_from_local_state(
     repo_root_path = Path(repo_root)
     payload = build_frontier_scan_payload(repo_root_path)
     best = payload.get("best_per_axis") or {}
-    cpu_anchor: AnchorRecord | None = None
-    cuda_anchor: AnchorRecord | None = None
-    if isinstance(best, Mapping):
-        cpu_raw = best.get("contest_cpu")
-        cuda_raw = best.get("contest_cuda")
-        if isinstance(cpu_raw, Mapping):
-            cpu_anchor = _anchor_from_serialized(cpu_raw)
-        if isinstance(cuda_raw, Mapping):
-            cuda_anchor = _anchor_from_serialized(cuda_raw)
+    ranked = payload.get("top_5_per_axis") or {}
+
+    def _candidates(axis: str) -> list[AnchorRecord]:
+        """Ranked (best-first) candidate anchors for one axis.
+
+        The scan's ``top_5_per_axis`` list is walked so that a refused best row
+        cannot SHADOW an admissible row at the same score (2026-09-05, move 28:
+        the ``…_t4_v3_…`` lane was refused by the maturity gate and the compliant
+        custody twin — identical score — was never considered, so the pointer
+        silently stayed on the prior anchor). Falls back to ``best_per_axis``.
+        """
+        rows: list[AnchorRecord] = []
+        seq = ranked.get(axis) if isinstance(ranked, Mapping) else None
+        if isinstance(seq, list):
+            for raw in seq:
+                if isinstance(raw, Mapping):
+                    rows.append(_anchor_from_serialized(raw))
+        if not rows and isinstance(best, Mapping):
+            raw = best.get(axis)
+            if isinstance(raw, Mapping):
+                rows.append(_anchor_from_serialized(raw))
+        return rows
 
     # Preserve upstream snapshot from prior pointer if not refreshing upstream.
     prior = pre_existing_pointer
@@ -723,23 +736,28 @@ def refresh_canonical_frontier_from_local_state(
 
     # Checkpoint-maturity gate (fail-closed; tac.checkpoint_maturity): a
     # candidate anchor whose provenance names a _dev / untagged-vehicle
-    # checkpoint NEVER becomes the pointer anchor — the prior anchor is kept
-    # and the refusal is recorded in refresh_provenance.
+    # checkpoint NEVER becomes the pointer anchor. Candidates are walked
+    # best-first; the first ADMISSIBLE one wins; every refusal is recorded in
+    # refresh_provenance; if none is admissible the prior anchor is kept.
     maturity_refusals: list[dict[str, Any]] = []
-    cpu_anchor, cpu_refusal = _gate_axis_anchor(
-        cpu_anchor,
-        prior.our_local_frontier_contest_cpu if prior is not None else None,
-        axis_label="contest_cpu",
+
+    def _gate_axis(axis: str, prior_anchor: AnchorRecord | None) -> AnchorRecord | None:
+        candidates = _candidates(axis)
+        if not candidates:
+            return prior_anchor
+        for candidate in candidates:
+            chosen, refusal = _gate_axis_anchor(candidate, prior_anchor, axis_label=axis)
+            if refusal is None:
+                return chosen
+            maturity_refusals.append(refusal)
+        return prior_anchor
+
+    cpu_anchor = _gate_axis(
+        "contest_cpu", prior.our_local_frontier_contest_cpu if prior is not None else None
     )
-    if cpu_refusal is not None:
-        maturity_refusals.append(cpu_refusal)
-    cuda_anchor, cuda_refusal = _gate_axis_anchor(
-        cuda_anchor,
-        prior.our_local_frontier_contest_cuda if prior is not None else None,
-        axis_label="contest_cuda",
+    cuda_anchor = _gate_axis(
+        "contest_cuda", prior.our_local_frontier_contest_cuda if prior is not None else None
     )
-    if cuda_refusal is not None:
-        maturity_refusals.append(cuda_refusal)
 
     upstream_snapshot = None
     upstream_snapshot_at = None
