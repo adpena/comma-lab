@@ -126,8 +126,19 @@ PREREGISTERED_RATE_LAMBDAS_BY_PROFILE = {
     "cl1": frozenset({1.0, 0.5, 0.25}),
     "rx2_mc36": frozenset({1.0}),
     "jf1_joint_refit": frozenset({1.0}),
-    "cl2_shipped_ladder": frozenset({1.0, 0.5, 0.25}),
+    # ddm_cl3 (2026-09-05) widens cl2's bracket by the SMALLER-model direction only.
+    # cl2 MEASURED the bigger direction (lambda 1.0 -> 0.5) at slope +0.446 against the
+    # -1 break-even, so 0.25 stayed unfired; 2.0 and 4.0 are the untested opposite side.
+    # Purely additive: every lambda cl2 fired stays admitted and its config is untouched.
+    "cl2_shipped_ladder": frozenset({4.0, 2.0, 1.0, 0.5, 0.25}),
 }
+#: Seeds each profile admits.  Every profile defaults to exactly the seed pinned in its
+#: preregistered config (so cl1 / rx2_mc36 / jf1_joint_refit are unchanged); only
+#: ``cl2_shipped_ladder`` widens, for ddm_cl3's seed-selection rungs at lambda = 1.0.
+PREREGISTERED_SEEDS_BY_PROFILE = {
+    profile: frozenset({config["seed"]}) for profile, config in PREREGISTERED_CONFIG_BY_PROFILE.items()
+}
+PREREGISTERED_SEEDS_BY_PROFILE["cl2_shipped_ladder"] = frozenset({20260716, 20260717, 20260718})
 #: Profiles whose --cache / --init are pinned by caller-supplied SHA-256 values.
 CALLER_PINNED_INPUT_PROFILES = frozenset({"jf1_joint_refit", "cl2_shipped_ladder"})
 EXPECTED_CACHE_SHA256 = "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195"
@@ -494,7 +505,9 @@ def _assert_preregistered_config(args: argparse.Namespace) -> None:
     differences = {
         key: {"expected": expected, "observed": getattr(args, key)}
         for key, expected in expected_config.items()
-        if getattr(args, key) != expected
+        # ``seed`` is checked against the profile's admitted SET just below, exactly as
+        # ``rate_lambda`` is; every other key stays a strict equality against the config.
+        if key != "seed" and getattr(args, key) != expected
     }
     admitted_lambdas = PREREGISTERED_RATE_LAMBDAS_BY_PROFILE[args.profile]
     if args.rate_lambda not in admitted_lambdas:
@@ -502,6 +515,9 @@ def _assert_preregistered_config(args: argparse.Namespace) -> None:
             "expected": sorted(admitted_lambdas),
             "observed": args.rate_lambda,
         }
+    admitted_seeds = PREREGISTERED_SEEDS_BY_PROFILE[args.profile]
+    if args.seed not in admitted_seeds:
+        differences["seed"] = {"expected": sorted(admitted_seeds), "observed": args.seed}
     if differences:
         raise CL1TrainingError(
             "invocation differs from the receiver-closed preregistration: " + json.dumps(differences, sort_keys=True)

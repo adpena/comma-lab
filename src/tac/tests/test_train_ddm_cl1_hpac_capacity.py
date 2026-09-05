@@ -460,8 +460,60 @@ def test_cl2_profile_is_the_jf1_law_on_metal_with_the_cl1_lambda_bracket(tmp_pat
         tool._assert_preregistered_config(args)
     args.rate_lambda = 1.0
     assert "cl2_shipped_ladder" in tool.CALLER_PINNED_INPUT_PROFILES
-    assert tool.PREREGISTERED_RATE_LAMBDAS_BY_PROFILE["cl2_shipped_ladder"] == frozenset({1.0, 0.5, 0.25})
+    # ddm_cl3 (2026-09-05) widened the bracket by the SMALLER-model direction {2.0, 4.0};
+    # cl2's own three lambdas stay admitted, which is what the loop above proves.
+    assert tool.PREREGISTERED_RATE_LAMBDAS_BY_PROFILE["cl2_shipped_ladder"] == frozenset({4.0, 2.0, 1.0, 0.5, 0.25})
     # No local opt-in for CL2: output must sit on an admitted SSD tier.
     assert tool._storage_root_for_args(args.save, "--save", args) == tool.PRIMARY_SSD_ROOT.resolve()
     with pytest.raises(tool.CL1TrainingError, match="admitted SSD tier"):
         tool._storage_root_for_args(tmp_path / "local.pt", "--save", args)
+
+
+def test_cl3_widens_cl2_only_by_the_smaller_prior_lambdas_and_two_seeds(tmp_path: Path) -> None:
+    """ddm_cl3: the smaller-model direction (lambda 2.0 / 4.0) and seed selection at lambda 1.0.
+
+    cl2 MEASURED the bigger direction closed (lambda 1.0 -> 0.5 slope +0.446 against the -1
+    break-even).  cl3 opens the opposite side plus two extra seeds, and NOTHING else: every
+    other profile keeps exactly the single seed pinned in its own preregistered config, and
+    every non-seed config key stays a strict equality.
+    """
+
+    tool = _load_tool()
+    args = _minimum_args(
+        tool,
+        save=tool.PRIMARY_SSD_ROOT / "ddm_cl3_x/training/model.pt",
+        out=tool.PRIMARY_SSD_ROOT / "ddm_cl3_x/training/result.json",
+    )
+    args.profile = "cl2_shipped_ladder"
+    for key, value in tool.CL2_PREREGISTERED_CONFIG.items():
+        setattr(args, key, value)
+
+    # The smaller-prior direction is admitted; the ladder floor is still refused.
+    for admitted in (2.0, 4.0):
+        args.rate_lambda = admitted
+        tool._assert_preregistered_config(args)
+    args.rate_lambda = 8.0
+    with pytest.raises(tool.CL1TrainingError, match="receiver-closed"):
+        tool._assert_preregistered_config(args)
+    args.rate_lambda = 1.0
+
+    # Seed selection: cl2's seed plus the two cl3 rungs, and nothing else.
+    assert tool.PREREGISTERED_SEEDS_BY_PROFILE["cl2_shipped_ladder"] == frozenset({20260716, 20260717, 20260718})
+    for admitted_seed in (20260716, 20260717, 20260718):
+        args.seed = admitted_seed
+        tool._assert_preregistered_config(args)
+    args.seed = 20260719
+    with pytest.raises(tool.CL1TrainingError, match="receiver-closed"):
+        tool._assert_preregistered_config(args)
+    args.seed = tool.CL2_PREREGISTERED_CONFIG["seed"]
+
+    # Every other profile keeps its single pinned seed -- the widening is cl2-local.
+    for profile, config in tool.PREREGISTERED_CONFIG_BY_PROFILE.items():
+        if profile == "cl2_shipped_ladder":
+            continue
+        assert tool.PREREGISTERED_SEEDS_BY_PROFILE[profile] == frozenset({config["seed"]})
+
+    # A non-seed config key is still a strict equality (the loop skip is seed-only).
+    args.target_mode = "residual"
+    with pytest.raises(tool.CL1TrainingError, match="receiver-closed"):
+        tool._assert_preregistered_config(args)
