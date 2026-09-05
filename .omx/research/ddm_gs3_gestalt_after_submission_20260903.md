@@ -604,3 +604,19 @@ pointer row and to the no-snapshot custody row; tree digest 355e7f95… identica
 Consequence: the edit-race class that refused fs2's first fire ("source modified during build process") is closed STRUCTURALLY — a working-tree
 edit during an image build can no longer refuse or contaminate a fire. Apparatus proved on a known answer, never on a frontier row, as the law
 says. hv1's poller also wrote the fire-proof lane's canonical terminal row itself. Equations leg (`tac.canonical_equations`): none.
+
+## ADDENDUM 28 (2026-09-05 00:40Z real) — the fix in git was not the fix in RAM: the old watchdog paused ng4 three times; ps2 r5 = 84/3 by digest
+
+**Incident (MEASURED from the alarm ledger):** the watchdog instance launched at 23:50Z (pre-fix build) fired CRITICAL on compressor GROWTH RATE
+(5.43 / 6.48 / 6.60 GiB/s ≥ 4.0) at 00:16:45, 00:27:45 and 00:34:20Z and SIGSTOPped ng4's TRAINER (pid 33374) each time — the "newest training
+cell" rule gov2 had already falsified and replaced in 2a24996da (00:08Z), while the actual growers were mc1's four ceiling jobs (26.6 GiB; ng4 0.5
+GiB RSS). Two SIGCONTs followed (00:20:49, 00:29:29); the THIRD pause was never released — the clear hold never came with the compressor parked at
+41 GiB and swap at 10.5 GiB — so ng4 sat in state T until MAIN found it at 00:36:35Z and SIGCONTed it (now R; 3,824/5,000; terminal slips to ~01:25Z).
+MAIN then TERMed the old instance and relaunched on 2a24996da (pids 63765/63766/63811, receipt `memory_watchdog_r2`). Law banked: **a fixed guard is
+not live until the running instance is restarted — the fix in git is not the fix in RAM**; and a SIGSTOP without a guaranteed SIGCONT path (clear
+hold unreachable under sustained-but-stable pressure) is a silent kill of sunk work — gov2 owes a max-pause bound (SIGCONT after N minutes regardless,
+with an alarm) and an on-restart reconciliation that SIGCONTs anything the previous instance left stopped.
+**ps2 r5 (23a2f9329): 84 GREEN / 3 RED of 87** — exactly one flip, `submission_runtime_tree_matches_auth_eval` RED → GREEN on a REAL digest match
+(fired portable custody-pruned tree 963955e8… == staged portable tree), not a vacuity; the three survivors are STRUCTURAL-RECORD (raw promotion-policy
+flags), RECORD-WITH-REASON (no CPU row; the prior attempt timed out at 1,800 s) and BLOCKED-ON-OPERATOR (nothing hosted). The packet is publish-ready
+modulo the operator's confirm. Equations leg (`tac.canonical_equations`): none.
