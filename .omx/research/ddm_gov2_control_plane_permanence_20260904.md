@@ -386,3 +386,65 @@ longer calls it. **+20 tests (37 → 57).**
 The genus is worth naming: **an L1 alarm that fires and names only the SYMPTOM sends a human to
 `ps`.** The first eleven rows said "compressor 38.47 GiB" — true, and useless for acting. The cure
 is not a better threshold; it is that the alarm carries the actor.
+
+---
+
+## ADDENDUM 2 (2026-09-05 ~00:4xZ) — the watchdog stranded a live cell; a pause with no guaranteed release is a silent kill
+
+**This one cost work, and the defect is mine.** The pre-`2a24996da` instance fired CRITICAL on
+compressor GROWTH RATE three times and SIGSTOPped ng4's trainer (pid 33374) each time. The ledger
+holds **three SIGSTOPs and only two SIGCONTs**:
+
+| SIGSTOP | machine went WARN-clear | SIGCONT | paused |
+|---|---|---|---:|
+| 00:16:45Z | 00:18:22Z (97 s) | 00:20:49Z | 244 s |
+| 00:27:45Z | 00:28:07Z (22 s) | 00:29:29Z | 104 s |
+| **00:34:20Z** | **never** | **none — MAIN rescued it by hand at 00:36:35Z** | **∞** |
+
+**THE MECHANISM, and it is a deadlock I built.** Stopping a process does not free its memory. A
+stopped process is an *ideal* eviction victim — resident, dirty, and not running — so macOS swapped
+it out. MEASURED: **swap crossed the 4 GiB WARN threshold at 00:34:32Z, twelve seconds AFTER the
+SIGSTOP**, and stayed above it for **126 samples (4m19s, peaking at 11.29 GiB)** with the compressor
+parked at ~41 GiB. The clear hold could never be met **because the pause itself sustained the
+condition it was waiting on.** The old code could only resume inside the OK branch, so there was no
+exit at all. ~10 minutes of a 2.7 h run were lost and the whole run was at risk.
+
+Three cures, all landed and tested:
+
+1. **BOUNDED MAX-PAUSE — `MAX_PAUSE_S = 180.0`**, checked on **every poll before the level branches**
+   (the old resume lived only in the OK branch — that was the bug). DERIVED: the worst pause that
+   *could* clear went WARN-clear at 97 s, plus the 60 s hold = **157 s**; 180 s leaves 23 s of
+   headroom and would have released the third pause at 00:37:20Z instead of never. It is also
+   shorter than pause 1's 244 s, which bought nothing (the compressor was at 2.50 GiB by then).
+   The forced resume writes `SIGCONT_MAX_PAUSE` with `hold_met: False` and the elapsed pause.
+2. **ON-RESTART RECONCILIATION** — `reconcile_orphaned_pauses()` runs at every `watch()` startup and
+   as `memory_pressure_watchdog reconcile`: it reads the alarm ledger for SIGSTOPs with no later
+   SIGCONT, checks each pid's state, and SIGCONTs the ones still in **T**, logging an
+   `orphaned_pause_reconciled` row. A watchdog process is mortal — TERMed on a landing, crashed,
+   rebooted — and every one of those exits can strand a pause. The ledger already knew; nothing
+   read it.
+3. **THE RATE RULE NOW REQUIRES WEIGHT** — a growth-rate CRITICAL also needs the compressor at or
+   above the WARN level. A 6 GiB/s ramp from 1 GiB to 5 GiB on a 128 GiB box is a program starting
+   up, not a collapse. (All three real triggers — 29.63 / 36.85 / 39.18 GiB — still fire.)
+
+**The reconciler's first run found a live orphan, and it was not hypothetical.** At 00:40Z the
+`ceil_block` tree (pids 57580 → 57582 → 57653) had been in state **T since 00:39:14Z**, stopped by
+the `2a24996da` instance — which has the corrected *targeting* but not the bounded pause. The
+machine sat at WARN held by **swap 5.86 GiB alone**, with the compressor at a healthy 5.42 GiB:
+the identical deadlock, on a sister arm's job, forming again while I wrote the fix. Reconciled for
+real (`SIGCONT` delivered to all three pids); mc1's job is running again. Nothing was stopped.
+
+**THE FIX IN GIT IS NOT THE FIX IN RAM.** The targeting fix landed as `2a24996da` at 00:05Z, and the
+*old build kept running* until MAIN TERMed it — three SIGSTOPs of the wrong process happened after
+the fix existed. A landing does not change a running process. Structural cure landed here: the
+watchdog compares its own source mtime each poll and **retires itself when the file changes**,
+resuming anything it holds on the way out, so a relaunch is the only action a landing needs. The
+sister half — a launcher that refuses to keep an instance older than the tool it runs — is named
+here and NOT built; it belongs to the launcher's own supervision surface.
+
+Honest note on what remains: the bounded pause makes the *release* guaranteed, but it does not make
+the *intervention* effective. A SIGSTOP relieves CPU and future allocation, not resident bytes —
+that is why every measured pause was followed by swap growth rather than relief. Whether pausing is
+the right actuator at all is now an open question this arm did not settle; the alternative (alarm
+loudly, never signal) is a one-line default change if the next anger-data says so. **+20 tests
+(57 → 77).**

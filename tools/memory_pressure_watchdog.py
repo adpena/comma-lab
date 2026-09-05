@@ -100,6 +100,31 @@ CRITICAL_COMPRESSOR_GROWTH_GIB_PER_S = 4.0
 #: ~9 s to fall from 73.99 to 31.74 GiB, and the second event began 25 min later).
 CLEAR_HOLD_S = 60.0
 
+#: HARD CEILING on a pause, whatever the clear hold says.  A SIGSTOP without a GUARANTEED SIGCONT
+#: is a silent kill of sunk work, and this watchdog proved it on its own second night.
+#:
+#: WHAT HAPPENED (MEASURED, `.omx/state/memory_pressure_alarms.jsonl` + the memory blackbox,
+#: 2026-09-05).  Three CRITICALs, three SIGSTOPs of ng4's trainer (pid 33374), and only TWO
+#: SIGCONTs:
+#:
+#:     SIGSTOP 00:16:45 -> WARN-clear at 00:18:22 (97 s) -> SIGCONT 00:20:49   (244 s paused)
+#:     SIGSTOP 00:27:45 -> WARN-clear at 00:28:07 (22 s) -> SIGCONT 00:29:29   (104 s paused)
+#:     SIGSTOP 00:34:20 -> NEVER cleared -> stuck in state T until MAIN rescued it at 00:36:35
+#:
+#: THE MECHANISM, and it is the part that makes this a deadlock rather than bad luck: **stopping a
+#: process does not free its memory.**  A stopped process is an ideal eviction victim -- resident,
+#: dirty, and not running -- so macOS swapped it out.  Swap crossed the 4 GiB WARN threshold at
+#: **00:34:32, twelve seconds AFTER the SIGSTOP**, and stayed above it for 126 samples (4m19s,
+#: peaking at 11.29 GiB) with the compressor parked at ~41 GiB.  The pause CREATED the condition
+#: that prevented its own release.  No clear hold can ever be met against a metric the pause
+#: itself inflates.
+#:
+#: DERIVED bound: the worst pause that COULD clear took 97 s to go WARN-clear, plus the 60 s hold
+#: = 157 s.  180 s leaves 23 s of headroom above that and would have released the third pause at
+#: 00:37:20Z instead of never.  The intervention's value is in the first seconds anyway -- every
+#: measured burst drained in ~15 s.
+MAX_PAUSE_S = 180.0
+
 _PAGE_SIZE_DEFAULT = 16384
 _GIB = 1024.0**3
 
@@ -243,11 +268,20 @@ def classify(sample: PressureSample, previous: PressureSample | None = None) -> 
     if sample.swap_used_gib >= CRITICAL_SWAP_GIB:
         level = LEVEL_CRITICAL
         reasons.append(f"swap {sample.swap_used_gib:.2f} GiB >= {CRITICAL_SWAP_GIB:.1f} GiB")
-    if growth is not None and growth >= CRITICAL_COMPRESSOR_GROWTH_GIB_PER_S:
+    # RATE ALONE IS NOT A COLLAPSE. A 6 GiB/s ramp from 1 GiB to 5 GiB is a program starting up on
+    # a 128 GiB box; the rate rule only means something once the compressor is already carrying
+    # real weight. Added after this watchdog SIGSTOPped a live cell three times on rate.
+    if (
+        growth is not None
+        and growth >= CRITICAL_COMPRESSOR_GROWTH_GIB_PER_S
+        and sample.compressor_fraction >= WARN_COMPRESSOR_FRACTION
+    ):
         level = LEVEL_CRITICAL
         reasons.append(
             f"compressor growing {growth:.2f} GiB/s >= {CRITICAL_COMPRESSOR_GROWTH_GIB_PER_S:.1f} GiB/s "
-            "(the measured ramp was 6.03-9.79 GiB/s)"
+            f"AND already at {sample.compressor_gib:.2f} GiB "
+            f"(>= the {WARN_COMPRESSOR_FRACTION * sample.total_gib:.1f} GiB WARN level; "
+            "the measured ramp was 6.03-9.79 GiB/s)"
         )
 
     if level == LEVEL_CRITICAL:
@@ -515,6 +549,114 @@ def _signal_tree(pid: int, sig: int) -> dict[str, Any]:
     return {"signal": int(sig), "delivered": delivered, "failed": failed}
 
 
+def process_state(pid: int) -> str | None:
+    """POSIX process state letter (``T`` = stopped), or None when the pid is gone/unreadable."""
+    try:
+        import psutil  # type: ignore
+
+        status = psutil.Process(pid).status()
+        return {"stopped": "T", "running": "R", "sleeping": "S", "zombie": "Z"}.get(status, status[:1].upper())
+    except Exception:
+        pass
+    try:
+        completed = subprocess.run(
+            ["ps", "-o", "state=", "-p", str(pid)], capture_output=True, text=True, timeout=10, check=False
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    text = completed.stdout.strip()
+    return text[:1].upper() if text else None
+
+
+def orphaned_pauses(ledger: Path | None = None) -> list[dict[str, Any]]:
+    """Pids whose most recent recorded action was a SIGSTOP with no later SIGCONT.
+
+    This is the ledger read that would have caught the 00:34:20Z pause the moment a fresh instance
+    started, instead of leaving a live cell in state T until a human noticed.
+    """
+    target = ALARM_LEDGER if ledger is None else Path(ledger)
+    if not target.is_file():
+        return []
+    last: dict[int, dict[str, Any]] = {}
+    for line in target.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        action = row.get("action")
+        if not isinstance(action, Mapping):
+            continue
+        kind = str(action.get("kind", ""))
+        pid = action.get("stop_pid")
+        if not isinstance(pid, int) or not kind.startswith(("SIGSTOP", "SIGCONT")):
+            continue
+        last[pid] = {"kind": kind, "row": row}
+    return [
+        {"stop_pid": pid, "since_utc": entry["row"].get("observed_utc"), "action": entry["row"].get("action")}
+        for pid, entry in sorted(last.items())
+        if entry["kind"].startswith("SIGSTOP")
+    ]
+
+
+def reconcile_orphaned_pauses(
+    ledger: Path | None = None,
+    *,
+    dry_run: bool = False,
+) -> list[dict[str, Any]]:
+    """At startup, RESUME anything a previous instance stopped and never released.
+
+    A watchdog process is mortal -- it gets TERMed on a landing, it crashes, the box reboots -- and
+    every one of those exits can strand a SIGSTOP. On 2026-09-05 the strand was a live training
+    cell with 2.7 h of work in it, and only a human noticing recovered it. The ledger already knew;
+    nothing read it.
+    """
+    resumed: list[dict[str, Any]] = []
+    for orphan in orphaned_pauses(ledger):
+        pid = int(orphan["stop_pid"])
+        state = process_state(pid)
+        record = {**orphan, "observed_state": state}
+        if state is None:
+            record["outcome"] = "GONE"
+        elif state != "T":
+            record["outcome"] = "ALREADY_RUNNING"
+        elif dry_run:
+            record["outcome"] = "WOULD_SIGCONT"
+        else:
+            record["outcome"] = "SIGCONT"
+            record.update(_signal_tree(pid, signal.SIGCONT))
+        resumed.append(record)
+        if record["outcome"] in {"SIGCONT", "WOULD_SIGCONT"}:
+            append_alarm(
+                {
+                    "schema": ALARM_SCHEMA,
+                    "event": "confound_alarm",
+                    "alarm": "orphaned_pause_reconciled",
+                    "level": LEVEL_WARN,
+                    "observed_utc": utc_text(),
+                    "reasons": [
+                        f"pid {pid} was SIGSTOPped at {orphan['since_utc']} and never resumed; "
+                        "a previous watchdog instance died holding the pause"
+                    ],
+                    "action": {"kind": f"RECONCILE_{record['outcome']}", "stop_pid": pid, **record},
+                    "report_only": bool(dry_run),
+                    "score_claim": False,
+                },
+                ledger,
+            )
+    return resumed
+
+
+def source_mtime() -> float:
+    """mtime of this tool's own source -- the "fix in git is not the fix in RAM" guard."""
+    try:
+        return Path(__file__).resolve().stat().st_mtime
+    except OSError:
+        return 0.0
+
+
 # ── alarms ──────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -588,6 +730,9 @@ def watch(
     report_only: bool = False,
     ledger: Path | None = None,
     clear_hold_s: float = CLEAR_HOLD_S,
+    max_pause_s: float = MAX_PAUSE_S,
+    reconcile: bool = True,
+    exit_on_source_change: bool = True,
     sampler=sample_pressure,
     job_sampler=sample_governed_jobs,
     sleeper=time.sleep,
@@ -600,6 +745,10 @@ def watch(
     clear_since: float | None = None
     alarms: list[dict[str, Any]] = []
     polls = 0
+    stopped_at: float | None = None
+    reconciled = reconcile_orphaned_pauses(ledger, dry_run=report_only) if reconcile else []
+    launch_mtime = source_mtime()
+    retired_for_source_change = False
     # Rolling per-job footprints: the growth signal that identifies the ALLOCATOR (see
     # select_pressure_target). Sampled EVERY poll, including OK ones -- a window that only fills
     # once pressure is already high has no "before" to measure growth against.
@@ -611,6 +760,30 @@ def watch(
         history.append(job_sampler())
         level, reasons = classify(sample, previous)
         previous = sample
+
+        # THE BOUNDED PAUSE, checked on EVERY poll BEFORE the level branches. The old code could
+        # only resume inside the OK branch, so a pause taken during pressure that the pause itself
+        # sustained had no exit at all (MEASURED 2026-09-05: swap crossed WARN 12 s AFTER the
+        # SIGSTOP and stayed there; the cell was stuck until a human intervened).
+        if stopped is not None and stopped_at is not None and (now() - stopped_at) >= max_pause_s:
+            held = now() - stopped_at
+            resume = {} if report_only else _signal_tree(int(stopped["stop_pid"]), signal.SIGCONT)
+            alarms.append(
+                emit_alarm(
+                    LEVEL_WARN,
+                    sample,
+                    [
+                        f"MAX PAUSE {max_pause_s:.0f}s reached after {held:.0f}s and the clear hold was "
+                        f"NOT met (level {level}); resuming anyway -- a SIGSTOP without a guaranteed "
+                        "SIGCONT is a silent kill of sunk work"
+                    ],
+                    {"kind": "SIGCONT_MAX_PAUSE", **stopped, **resume, "hold_met": False, "paused_s": round(held, 1)},
+                    ledger=ledger,
+                    report_only=report_only,
+                    growers=top_growers(list(history)),
+                )
+            )
+            stopped, stopped_at = None, None
 
         if level == LEVEL_CRITICAL:
             clear_since = None
@@ -629,7 +802,7 @@ def watch(
                     action = {"kind": "WOULD_SIGSTOP", **target}
                 else:
                     action = {"kind": "SIGSTOP", **target, **_signal_tree(int(target["stop_pid"]), signal.SIGSTOP)}
-                    stopped = target
+                    stopped, stopped_at = target, now()
                 alarms.append(
                     emit_alarm(
                         level, sample, reasons, action, ledger=ledger, report_only=report_only,
@@ -674,9 +847,16 @@ def watch(
                         report_only=report_only,
                     )
                 )
-                stopped = None
+                stopped, stopped_at = None, None
 
         if duration_s is not None and (now() - started) >= duration_s:
+            break
+        # THE FIX IN GIT IS NOT THE FIX IN RAM. A running instance keeps the code it was launched
+        # with; on 2026-09-05 a landed targeting fix sat in git while the OLD build kept stopping
+        # the wrong process. A stale instance now retires itself (resuming anything it holds on the
+        # way out) so a relaunch is the only action a landing needs.
+        if exit_on_source_change and launch_mtime and source_mtime() != launch_mtime:
+            retired_for_source_change = True
             break
         sleeper(poll_s)
 
@@ -701,6 +881,9 @@ def watch(
         "levels": sorted({row["level"] for row in alarms}),
         "report_only": bool(report_only),
         "poll_s": poll_s,
+        "max_pause_s": max_pause_s,
+        "reconciled_orphaned_pauses": reconciled,
+        "retired_for_source_change": retired_for_source_change,
         "score_claim": False,
     }
 
@@ -731,8 +914,31 @@ def _cmd_run(args: argparse.Namespace) -> int:
         report_only=args.report_only,
         ledger=args.ledger,
         clear_hold_s=args.clear_hold_s,
+        max_pause_s=args.max_pause_s,
+        reconcile=not args.no_reconcile,
+        exit_on_source_change=not args.no_exit_on_source_change,
     )
     print(json.dumps(summary, indent=2, sort_keys=True))
+    return 0
+
+
+def _cmd_reconcile(args: argparse.Namespace) -> int:
+    """Resume anything a dead watchdog instance left SIGSTOPped. Safe to run any time."""
+    resumed = reconcile_orphaned_pauses(args.ledger, dry_run=args.dry_run)
+    print(
+        json.dumps(
+            {
+                "schema": "memory_pressure_reconcile.v1",
+                "checked_utc": utc_text(),
+                "orphaned_pauses": resumed,
+                "resumed": sum(1 for row in resumed if row["outcome"] == "SIGCONT"),
+                "dry_run": bool(args.dry_run),
+                "score_claim": False,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
     return 0
 
 
@@ -747,6 +953,7 @@ def thresholds_dict(total_gib: float) -> dict[str, Any]:
         "critical_pressure_level": CRITICAL_PRESSURE_LEVEL,
         "critical_compressor_growth_gib_per_s": CRITICAL_COMPRESSOR_GROWTH_GIB_PER_S,
         "clear_hold_s": CLEAR_HOLD_S,
+        "max_pause_s": MAX_PAUSE_S,
         "derived_from": "2026-09-04 near-OOM in .omx/state/memory_blackbox.jsonl (16 s runway)",
         "rejected_trigger": "free < 1 GiB -- 28.99% base rate over 13,235 samples that day",
     }
@@ -764,6 +971,22 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--poll-s", type=float, default=DEFAULT_POLL_S)
     run.add_argument("--duration-s", type=float, default=None)
     run.add_argument("--clear-hold-s", type=float, default=CLEAR_HOLD_S)
+    run.add_argument(
+        "--max-pause-s",
+        type=float,
+        default=MAX_PAUSE_S,
+        help="hard ceiling on any pause; resume even if the clear hold is unmet (see MAX_PAUSE_S)",
+    )
+    run.add_argument(
+        "--no-reconcile",
+        action="store_true",
+        help="skip the startup sweep for pauses a dead instance left behind (NOT recommended)",
+    )
+    run.add_argument(
+        "--no-exit-on-source-change",
+        action="store_true",
+        help="keep running after this tool's source changes (the stale-instance hazard)",
+    )
     run.add_argument("--ledger", type=Path, default=None)
     run.add_argument(
         "--report-only",
@@ -771,6 +994,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="alarm and name the cell it WOULD pause, without signalling anything",
     )
     run.set_defaults(func=_cmd_run)
+
+    rec = sub.add_parser("reconcile", help="SIGCONT any pid a dead watchdog left stopped")
+    rec.add_argument("--ledger", type=Path, default=None)
+    rec.add_argument("--dry-run", action="store_true")
+    rec.set_defaults(func=_cmd_reconcile)
     return parser
 
 

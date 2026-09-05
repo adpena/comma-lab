@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import signal
 import sys
 import time
@@ -553,3 +554,222 @@ class TestJobSamplingIsAffordable:
         }
         assert "newest_training_cell" not in called
         assert "select_pressure_target" in called
+
+
+# ── the bounded pause, reconciliation, and the gated rate rule (anger-data #2, 2026-09-05) ──────
+
+
+class TestBoundedPause:
+    """A SIGSTOP without a GUARANTEED SIGCONT is a silent kill of sunk work.
+
+    MEASURED: three SIGSTOPs of ng4's trainer, only TWO SIGCONTs. The third pause could never
+    clear because **the pause caused the swap that blocked it** -- swap crossed the 4 GiB WARN
+    threshold 12 s AFTER the SIGSTOP (a stopped process is an ideal eviction victim) and stayed
+    above it for 4m19s. A human had to rescue the run.
+    """
+
+    def _stop_then_hold_pressure(self, tmp_path, monkeypatch, *, max_pause_s, polls=10):
+        sent = []
+        clock = {"t": 0.0}
+        monkeypatch.setattr(wd, "_signal_tree", lambda pid, sig: sent.append((pid, sig)) or {"delivered": [pid]})
+        monkeypatch.setattr(wd, "select_pressure_target", lambda h: {"cell_id": "c", "pid": 9, "stop_pid": 99})
+        monkeypatch.setattr(wd, "_push", lambda *a: None)
+        # CRITICAL once, then a machine parked at WARN forever -- the measured 00:34:20Z shape.
+        samples = [_sample(level=4)] + [_sample(swap=10.5, compressor=41.0)] * polls
+        wd.watch(
+            duration_s=polls * 10.0,
+            clear_hold_s=60.0,
+            max_pause_s=max_pause_s,
+            reconcile=False,
+            exit_on_source_change=False,
+            ledger=tmp_path / "a.jsonl",
+            sampler=self._fixed(samples),
+            job_sampler=lambda: [],
+            sleeper=lambda _s: clock.__setitem__("t", clock["t"] + 10.0),
+            now=lambda: clock["t"],
+        )
+        rows = [json.loads(line) for line in (tmp_path / "a.jsonl").read_text().strip().splitlines()]
+        return sent, rows
+
+    def _fixed(self, samples):
+        iterator = iter(samples)
+        last = samples[-1]
+
+        def sampler():
+            nonlocal last
+            try:
+                last = next(iterator)
+            except StopIteration:
+                pass
+            return last
+
+        return sampler
+
+    def test_a_pause_that_can_never_clear_is_still_released(self, tmp_path, monkeypatch):
+        sent, rows = self._stop_then_hold_pressure(tmp_path, monkeypatch, max_pause_s=30.0)
+        assert (99, signal.SIGCONT) in sent, "the cell must not stay stopped forever"
+        forced = [r for r in rows if (r["action"] or {}).get("kind") == "SIGCONT_MAX_PAUSE"]
+        assert forced, "a forced resume must leave a row"
+        assert forced[0]["action"]["hold_met"] is False
+        assert "MAX PAUSE" in forced[0]["reasons"][0]
+
+    def test_the_old_code_path_would_have_hung(self, tmp_path, monkeypatch):
+        """Control: with an effectively infinite bound the pause is never released.
+
+        This is the pre-fix behaviour, pinned so the regression is unmistakable.
+        """
+        sent, _ = self._stop_then_hold_pressure(tmp_path, monkeypatch, max_pause_s=1e9)
+        resumes = [entry for entry in sent if entry[1] == signal.SIGCONT]
+        # only the resume-on-exit safety net fires, and only because the loop ends
+        assert len(resumes) == 1
+
+    def test_the_bound_clears_the_worst_measured_successful_pause(self):
+        """DERIVED: the slowest pause that COULD clear went WARN-clear at 97 s, +60 s hold = 157 s."""
+        assert wd.MAX_PAUSE_S >= 157.0
+        assert wd.MAX_PAUSE_S <= 244.0, "and shorter than the 244 s pause that bought nothing"
+
+    def test_the_clear_hold_path_still_wins_when_the_machine_recovers(self, tmp_path, monkeypatch):
+        sent = []
+        clock = {"t": 0.0}
+        monkeypatch.setattr(wd, "_signal_tree", lambda pid, sig: sent.append((pid, sig)) or {"delivered": [pid]})
+        monkeypatch.setattr(wd, "select_pressure_target", lambda h: {"cell_id": "c", "pid": 9, "stop_pid": 99})
+        monkeypatch.setattr(wd, "_push", lambda *a: None)
+        wd.watch(
+            duration_s=200.0,
+            clear_hold_s=60.0,
+            max_pause_s=180.0,
+            reconcile=False,
+            exit_on_source_change=False,
+            ledger=tmp_path / "a.jsonl",
+            sampler=self._fixed([_sample(level=4), _sample(), _sample(), _sample()]),
+            job_sampler=lambda: [],
+            sleeper=lambda _s: clock.__setitem__("t", clock["t"] + 40.0),
+            now=lambda: clock["t"],
+        )
+        rows = [json.loads(line) for line in (tmp_path / "a.jsonl").read_text().strip().splitlines()]
+        kinds = [(r["action"] or {}).get("kind") for r in rows]
+        assert "SIGCONT" in kinds and "SIGCONT_MAX_PAUSE" not in kinds
+
+
+class TestOrphanReconciliation:
+    def test_a_sigstop_with_no_sigcont_is_an_orphan(self, tmp_path):
+        ledger = tmp_path / "a.jsonl"
+        wd.emit_alarm(wd.LEVEL_CRITICAL, _sample(), ["x"], {"kind": "SIGSTOP", "stop_pid": 4242}, ledger=ledger)
+        assert [o["stop_pid"] for o in wd.orphaned_pauses(ledger)] == [4242]
+
+    def test_a_later_sigcont_closes_it(self, tmp_path):
+        ledger = tmp_path / "a.jsonl"
+        wd.emit_alarm(wd.LEVEL_CRITICAL, _sample(), ["x"], {"kind": "SIGSTOP", "stop_pid": 4242}, ledger=ledger)
+        wd.emit_alarm(wd.LEVEL_OK, _sample(), ["y"], {"kind": "SIGCONT", "stop_pid": 4242}, ledger=ledger)
+        assert wd.orphaned_pauses(ledger) == []
+
+    def test_a_forced_resume_also_closes_it(self, tmp_path):
+        ledger = tmp_path / "a.jsonl"
+        wd.emit_alarm(wd.LEVEL_CRITICAL, _sample(), ["x"], {"kind": "SIGSTOP", "stop_pid": 7}, ledger=ledger)
+        wd.emit_alarm(wd.LEVEL_WARN, _sample(), ["y"], {"kind": "SIGCONT_MAX_PAUSE", "stop_pid": 7}, ledger=ledger)
+        assert wd.orphaned_pauses(ledger) == []
+
+    def test_a_dead_pid_is_reported_not_signalled(self, tmp_path, monkeypatch):
+        ledger = tmp_path / "a.jsonl"
+        wd.emit_alarm(wd.LEVEL_CRITICAL, _sample(), ["x"], {"kind": "SIGSTOP", "stop_pid": 4242}, ledger=ledger)
+        monkeypatch.setattr(wd, "process_state", lambda pid: None)
+        monkeypatch.setattr(wd, "_signal_tree", lambda *a: pytest.fail("must not signal a dead pid"))
+        assert wd.reconcile_orphaned_pauses(ledger)[0]["outcome"] == "GONE"
+
+    def test_a_running_pid_is_left_alone(self, tmp_path, monkeypatch):
+        ledger = tmp_path / "a.jsonl"
+        wd.emit_alarm(wd.LEVEL_CRITICAL, _sample(), ["x"], {"kind": "SIGSTOP", "stop_pid": 4242}, ledger=ledger)
+        monkeypatch.setattr(wd, "process_state", lambda pid: "S")
+        monkeypatch.setattr(wd, "_signal_tree", lambda *a: pytest.fail("must not signal a running pid"))
+        assert wd.reconcile_orphaned_pauses(ledger)[0]["outcome"] == "ALREADY_RUNNING"
+
+    def test_a_stopped_pid_is_resumed_and_logged(self, tmp_path, monkeypatch):
+        """THE 00:34:20Z CASE: a live cell in state T that only a human noticed."""
+        ledger = tmp_path / "a.jsonl"
+        wd.emit_alarm(wd.LEVEL_CRITICAL, _sample(), ["x"], {"kind": "SIGSTOP", "stop_pid": 33374}, ledger=ledger)
+        sent = []
+        monkeypatch.setattr(wd, "process_state", lambda pid: "T")
+        monkeypatch.setattr(wd, "_signal_tree", lambda pid, sig: sent.append((pid, sig)) or {"delivered": [pid]})
+        result = wd.reconcile_orphaned_pauses(ledger)
+        assert result[0]["outcome"] == "SIGCONT"
+        assert sent == [(33374, signal.SIGCONT)]
+        rows = [json.loads(line) for line in ledger.read_text().strip().splitlines()]
+        assert rows[-1]["alarm"] == "orphaned_pause_reconciled"
+
+    def test_dry_run_never_signals(self, tmp_path, monkeypatch):
+        ledger = tmp_path / "a.jsonl"
+        wd.emit_alarm(wd.LEVEL_CRITICAL, _sample(), ["x"], {"kind": "SIGSTOP", "stop_pid": 1}, ledger=ledger)
+        monkeypatch.setattr(wd, "process_state", lambda pid: "T")
+        monkeypatch.setattr(wd, "_signal_tree", lambda *a: pytest.fail("dry run must not signal"))
+        assert wd.reconcile_orphaned_pauses(ledger, dry_run=True)[0]["outcome"] == "WOULD_SIGCONT"
+
+    def test_watch_reconciles_at_startup(self, tmp_path, monkeypatch):
+        ledger = tmp_path / "a.jsonl"
+        wd.emit_alarm(wd.LEVEL_CRITICAL, _sample(), ["x"], {"kind": "SIGSTOP", "stop_pid": 55}, ledger=ledger)
+        monkeypatch.setattr(wd, "process_state", lambda pid: "T")
+        monkeypatch.setattr(wd, "_signal_tree", lambda pid, sig: {"delivered": [pid]})
+        monkeypatch.setattr(wd, "_push", lambda *a: None)
+        summary = wd.watch(
+            duration_s=0, ledger=ledger, exit_on_source_change=False,
+            sampler=lambda: _sample(), job_sampler=lambda: [],
+            sleeper=lambda _s: None, now=lambda: 0.0,
+        )
+        assert summary["reconciled_orphaned_pauses"][0]["outcome"] == "SIGCONT"
+
+    def test_missing_ledger_is_tolerated(self, tmp_path):
+        assert wd.orphaned_pauses(tmp_path / "nope.jsonl") == []
+        assert wd.reconcile_orphaned_pauses(tmp_path / "nope.jsonl") == []
+
+    def test_cli_reconcile_dry_run(self, tmp_path, capsys, monkeypatch):
+        ledger = tmp_path / "a.jsonl"
+        wd.emit_alarm(wd.LEVEL_CRITICAL, _sample(), ["x"], {"kind": "SIGSTOP", "stop_pid": 1}, ledger=ledger)
+        monkeypatch.setattr(wd, "process_state", lambda pid: "T")
+        assert wd.main(["reconcile", "--ledger", str(ledger), "--dry-run"]) == 0
+        assert json.loads(capsys.readouterr().out)["resumed"] == 0
+
+    def test_process_state_reads_this_process_as_running(self):
+        assert wd.process_state(os.getpid()) in {"R", "S"}
+
+    def test_process_state_of_a_dead_pid_is_none(self):
+        assert wd.process_state(2**30) is None
+
+
+class TestRateRuleNeedsWeight:
+    def test_a_fast_ramp_at_a_small_total_is_not_critical(self):
+        """A 6 GiB/s ramp from 1 to 5 GiB on a 128 GiB box is a program starting up."""
+        previous = _sample(compressor=1.0, monotonic=0.0)
+        current = _sample(compressor=5.0, monotonic=0.6)  # 6.6 GiB/s
+        level, _ = wd.classify(current, previous)
+        assert level == wd.LEVEL_OK
+
+    def test_the_same_ramp_above_the_warn_level_is_critical(self):
+        """The measured 00:16:45Z / 00:27:45Z / 00:34:20Z triggers all sat above WARN."""
+        previous = _sample(compressor=25.0, monotonic=0.0)
+        current = _sample(compressor=29.63, monotonic=0.85)  # 5.44 GiB/s at 29.63 GiB
+        level, reasons = wd.classify(current, previous)
+        assert level == wd.LEVEL_CRITICAL
+        assert any("WARN level" in reason for reason in reasons)
+
+
+class TestStaleInstanceRetires:
+    def test_a_changed_source_ends_the_loop(self, tmp_path, monkeypatch):
+        """THE FIX IN GIT IS NOT THE FIX IN RAM: a landed fix sat unused while the old build ran."""
+        monkeypatch.setattr(wd, "_push", lambda *a: None)
+        seq = iter([100.0, 100.0, 200.0])
+        monkeypatch.setattr(wd, "source_mtime", lambda: next(seq, 200.0))
+        summary = wd.watch(
+            duration_s=1000.0, ledger=tmp_path / "a.jsonl", reconcile=False,
+            sampler=lambda: _sample(), job_sampler=lambda: [],
+            sleeper=lambda _s: None, now=lambda: 0.0,
+        )
+        assert summary["retired_for_source_change"] is True
+
+    def test_an_unchanged_source_does_not_retire(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(wd, "_push", lambda *a: None)
+        monkeypatch.setattr(wd, "source_mtime", lambda: 100.0)
+        summary = wd.watch(
+            duration_s=0, ledger=tmp_path / "a.jsonl", reconcile=False,
+            sampler=lambda: _sample(), job_sampler=lambda: [],
+            sleeper=lambda _s: None, now=lambda: 0.0,
+        )
+        assert summary["retired_for_source_change"] is False
