@@ -542,6 +542,42 @@ that surplus (≲ 4.1e-07), giving L₈ ≈ 4·L₄ ≲ 1.6e-06 and L₁₆ ≈ 
 
 ---
 
+## 7d. The ladder re-fitted from the ×8 run — my pre-registered knee call is failing
+
+The ×8 solve is in flight and its running projection is already enough to fit the lattice law's one free
+constant, so I am recording the refit **before** ×16 runs rather than after.
+
+**The law.** `d_pose(f) = ideal + L₄·(f/4)²` — coefficient rounding error scales as the square of the
+step. Fitted on the MEASURED ×4 (5.727914e-06) and the ×8 running projection (5.862e-06 at 249/600):
+
+    ideal = 5.683167e-06     L₄ = 4.474742e-08
+
+**L₄ is 4.47e-08 — nine times smaller than the ≲4.1e-07 I bounded it at in §7c.** The re-solve absorbs
+almost all of the coarsening, so the knee is much further out than I called it.
+
+**Rate for every rung, MEASURED by building the real archive** (×32 and ×64 priced here for the first
+time), with the law's projection on top:
+
+| rung | archive Δ | ΔS_rate | break-even vs base | break-even vs ×4 | **d_pose PREDICTED** | **net ΔS PREDICTED** |
+|---|---:|---:|---:|---:|---:|---:|
+| ×4 (shipped V3) | −1,801 B | −1.19921e-03 | 8.15634e-06 | — | 5.727914e-06 MEASURED | **−1.462948e-03 MEASURED** |
+| ×8 | −2,693 B | −1.79316e-03 | 9.26443e-06 | 6.66222e-06 | 5.86216e-06 | −1.968721e-03 |
+| **×16** | **−3,484 B** | −2.31985e-03 | 1.03061e-05 | 7.54977e-06 | 6.39913e-06 | **−2.152434e-03** |
+| ×32 | −4,074 B | −2.71271e-03 | 1.11192e-05 | 8.24790e-06 | 8.54700e-06 | −1.299745e-03 |
+| ×64 | −4,552 B | −3.03099e-03 | 1.18005e-05 | 8.83614e-06 | 1.71385e-05 | +2.228387e-03 (also breaches ft1) |
+
+**Revised call, stated as a correction to §7c: the knee is at ×16, not between ×8 and ×16.** Falsifier 3
+("×16 d_pose ≤ 7.549766e-06 → my knee call is WRONG and ×16 is the winner") is on course to fire, and I
+expect it to. ×32 turns over because the rate ladder is sub-linear (each doubling buys less: 892 → 791 →
+590 → 478 B) while the pose cost is quadratic — the two curves cross between ×16 and ×32.
+
+**What this table is NOT.** Every d_pose in it except ×4 is PREDICTED from a two-point fit whose second
+point is a partial-subset projection. It is a routing prediction, not a result: it says which rung to
+spend the next n600 solve on, and nothing more. Each rung admitted must carry its own n600 measurement
+and its own exact archive build. The fit is re-run once ×8's n600 lands.
+
+---
+
 ## 8. What this arm did not do
 
 - **No T4 row was fired. Modal was never dispatched; MAIN fires.** Every score-shaped number here is

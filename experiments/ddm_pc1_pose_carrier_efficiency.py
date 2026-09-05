@@ -614,6 +614,8 @@ VARIANTS: dict[str, VariantSpec] = {
     "v3x2_lattice11": VariantSpec("v3x2_lattice11", None, None, None, 2),
     "v3x8_lattice9": VariantSpec("v3x8_lattice9", None, None, None, 8),
     "v3x16_lattice8": VariantSpec("v3x16_lattice8", None, None, None, 16),
+    "v3x32_lattice7": VariantSpec("v3x32_lattice7", None, None, None, 32),
+    "v3x64_lattice6": VariantSpec("v3x64_lattice6", None, None, None, 64),
     "v4_dct_luma": VariantSpec("v4_dct_luma", None, "luma", None, 1),
     "v4_dct_planar": VariantSpec("v4_dct_planar", None, "planar", None, 1),
     "v4_dct_opponent": VariantSpec("v4_dct_opponent", None, "opponent", None, 1),
