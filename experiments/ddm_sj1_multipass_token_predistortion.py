@@ -125,18 +125,77 @@ CL2_PROJECTED_SCORE = 0.14781744131049854
 # jg2's encoder to materialise a model out of a section coded by a codec it has never
 # seen; the byte-identical tail is the proof that the two trees hold the SAME model, so
 # the stream cl2's path emits is the stream rc1's receiver decodes.
-POINTER_TREE = Path(
+RC1_TREE = Path(
     "/Volumes/VertigoDataTier/pact/ddm_rc1_model_section_adaptive_recode/staged_runtime"
+)
+RC1_ARCHIVE_SHA256 = "1438049e3655fbcfa8eb289fa51ac58f834d72d8a09586353663cea68e57c122"
+RC1_ARCHIVE_BYTES = 178_249
+RC1_SCORE_T4 = 0.14666350774473783
+
+# --------------------------------------------------------------------------------------
+# THE LIVE POINTER (MAIN object change #2, 2026-09-05): ddm_pc1's V3 on rc1's body.
+# The CARRIER moved: coefficients re-quantised on a lattice coarsened x4 and RE-SOLVED
+# for all 600 pairs (d_pose 6.14e-06 -> 5.73e-06), carrier section 22,031 -> 20,230 B.
+#
+# MEASURED here before anything was rebased onto it:
+#   * hpac, semantic and tail are BYTE-IDENTICAL to rc1 -- the model sections and the
+#     token stream are untouched, so the renderer, the token field and every seg number
+#     in this memo carry over unchanged and pass 2a needed no restart.
+#   * pc1's codes have absmax 542 / absmean 129.4 against cl2's 2048 / 515.0 -- exactly
+#     the /4 projection -- and pc1's coefficient_scales are exactly x4 cl2's on ALL 12
+#     coordinates.  The CONTAINER is still signed int12 (pc1 clips to -2048..2047 like
+#     everything else); "10-bit" describes the OCCUPIED range, not a new bound, so
+#     ``br1.realize``'s clamp is still the right one.
+#   * up3.parse_shipped_body + build_archive rebuild this body from its OWN codes to
+#     sha 891add546f5cf094... at exactly 176,448 B -- the carrier splice survives.
+#   * 100*0.00020139 + sqrt(10*5.73e-06) + 25*176448/37545489 reproduces MAIN's quoted
+#     score to the last digit.
+#
+# THE TRAP THIS ENCODES (MAIN's warning, and the reason for the guard below): a carrier
+# re-solve that starts from cl2's int12 codes on cl2's scales would silently REVERT the
+# whole V3 move while looking like it succeeded -- the codes are valid int12 either way,
+# so no container check would catch it.  The start codes and the scales must both come
+# from the POINTER tree.  ``assert_carrier_is_pointer`` makes that structural.
+POINTER_TREE = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency/retained"
+    "/v3_on_rc1_candidate_runtime"
 )
 POINTER_ARCHIVE = POINTER_TREE / "archive.zip"
 POINTER_ARCHIVE_SHA256 = (
-    "1438049e3655fbcfa8eb289fa51ac58f834d72d8a09586353663cea68e57c122"
+    "891add546f5cf0943929b566f29dd4318f1d8b2ab76ae05183d8189098880f40"
 )
-POINTER_ARCHIVE_BYTES = 178_249
-POINTER_SCORE_T4 = 0.14666350774473783
-#: rc1 holds the distortion legs of the fs2/cl2 base exactly, by construction.
+POINTER_ARCHIVE_BYTES = 176_448
+POINTER_SCORE_T4 = 0.1451981569076111
+#: pc1's V3 holds the seg leg exactly (token tail untouched) and MOVES the pose leg.
 POINTER_D_SEG_T4 = BASE_D_SEG_T4
-POINTER_D_POSE_T4 = BASE_D_POSE_T4
+POINTER_D_POSE_T4 = 5.73e-06
+
+#: The tree this arm RENDERS and MEASURES d_seg on.  Deliberately NOT the pointer tree:
+#: jg1's semantic loader reads the section in cl2's coding, while rc1/pc1 ship it
+#: adaptively recoded and restore it byte-for-byte inside the receiver.  Reading each
+#: section from the tree whose codec the instrument understands is the same discipline
+#: MAIN prescribed for the token stream -- it is not mixing two bodies, because the
+#: sections involved are byte-identical objects.
+RENDER_TREE = BODY_TREE
+
+
+def assert_carrier_is_pointer(runtime_dir: Path) -> str:
+    """Refuse a carrier solve that is not anchored on the LIVE pointer body.
+
+    A carrier re-solve seeded from a superseded body's codes and scales produces codes
+    that are structurally valid and numerically wrong: it reverts whichever carrier move
+    the pointer last banked, and nothing downstream can see it, because every code still
+    sits inside the signed-int12 container.  So the anchor is checked, not remembered.
+    """
+    observed = _sha256_file(Path(runtime_dir) / "archive.zip")
+    if observed != POINTER_ARCHIVE_SHA256:
+        raise Sj1Error(
+            f"carrier runtime {runtime_dir} has archive sha {observed}, not the live "
+            f"pointer's {POINTER_ARCHIVE_SHA256}. Solving from a superseded body's "
+            "codes and scales silently reverts the carrier move the pointer banked "
+            "(pc1 V3: scales x4, codes /4) while every code stays a valid int12."
+        )
+    return observed
 
 #: MAIN's binding pin 2026-09-05: the T4-scored GT argmax table, and the instrument's
 #: own step-0 reading of it on this body.  The 1.23% gap between them is the INSTRUMENT

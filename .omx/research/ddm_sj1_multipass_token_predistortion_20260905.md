@@ -76,6 +76,59 @@ that reset it would silently produce different bytes. MEASURED: `up3.parse_shipp
 exactly **178,249 B** — byte-identical. The carrier splice survives the recode, and the
 close path's identity control (which refuses unless that holds) is the standing guard.
 
+## 0b. Object change #2 — the pointer is pc1's V3, and the CARRIER lattice moved
+
+MAIN moved the pointer again, this time to `ddm_pc1`'s V3 built on rc1's body:
+**S 0.1451981569076111 @ 176,448 B**, sha `891add546f5cf0943929b566f29dd4318f1d8b2ab76ae05183d8189098880f40`,
+tree `/Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency/retained/v3_on_rc1_candidate_runtime/`.
+The coefficients are re-quantised on a lattice coarsened ×4 and RE-SOLVED for all 600
+pairs: d_pose 6.14e-06 → **5.73e-06**, carrier section 22,031 → **20,230 B** (−1,801).
+
+| section | rc1 | pc1 V3 | identical |
+|---|---:|---:|---|
+| hpac (model) | 12,343 | 12,343 | **yes** |
+| semantic (renderer weights) | 30,246 | 30,246 | **yes** |
+| tail (token stream) | 113,515 | 113,515 | **yes** |
+| carrier | 22,031 | 20,230 | no — ×4 lattice, re-solved |
+| header | 14 | 14 | no |
+| **archive** | **178,249** | **176,448** | −1,801 B |
+
+MEASURED before anything was rebased onto it:
+
+* pc1's codes read **absmax 542 / absmean 129.4** against cl2's 2,048 / 515.0 — exactly
+  the ÷4 projection — and pc1's `coefficient_scales` are **exactly ×4** cl2's on all 12
+  coordinates.
+* The **container is still signed int12**: pc1 clips to `(-2048, 2047)` like everything
+  else (`ddm_pc1_pose_carrier_efficiency.py:1041`), so "10-bit" names the OCCUPIED range,
+  not a new bound, and `br1.realize`'s clamp is still the correct one. That mattered —
+  a coarser *container* would have silently let the GN solve escape the alphabet.
+* `up3.parse_shipped_body` + `build_archive` rebuild pc1's body from its own codes to sha
+  `891add546f5cf094…` at exactly **176,448 B**.
+* `100·0.00020139 + √(10·5.73e-06) + 25·176448/37545489` = 0.14519815690761112, matching
+  MAIN's quoted value to the last digit.
+* hpac, semantic and tail byte-identical to rc1 ⇒ renderer, token field and every seg
+  number above carry over. **Pass 2a needed no restart, again.**
+
+### The silent-revert trap, and the structural cure
+
+MAIN named the failure precisely: a carrier re-solve seeded from cl2's int12 codes on
+cl2's scales would **revert the whole V3 move while looking like it succeeded**. Nothing
+downstream could catch it — every such code is a perfectly valid int12, so no container
+check, no parse-back and no byte count would fire. The number would simply be wrong.
+
+The cure is not to remember: `assert_carrier_is_pointer()` hashes the carrier runtime's
+`archive.zip` and refuses unless it is the live pointer's. Both carrier entry points in
+the joint half call it before `load_carrier_state`. VERIFIED: it accepts pc1's tree and
+REFUSES cl2's and rc1's. The re-solve therefore starts from pc1's coefficients on pc1's
+lattice by construction, because `load_carrier_state` reads both the codes and the scales
+out of the section bytes it is pointed at.
+
+**Split of trees, deliberate:** this arm RENDERS and measures d_seg on cl2's tree (whose
+semantic-section coding jg1's loader understands) and takes the CARRIER, the build and the
+seal from the pointer tree. That is not mixing two bodies — the three sections involved
+are byte-identical objects — it is the same discipline MAIN prescribed for the token
+stream: read each section from the tree whose codec the instrument speaks.
+
 ## 1. Step 0 — the instrument reproduces the frontier body's seg leg (MEASURED)
 
 **Forward-model control:** re-rendering the shipped tokens through the receiver's own
@@ -245,6 +298,6 @@ appended as each lands. Nothing is written here before it is measured.)*
 
 ## Frontier line
 
-`rc1 S 0.14666350774473783 @ 178,249 B [contest-CUDA T4 n600]` (live pointer, sha `1438049e3655fbcf…`)
+`pc1 V3 S 0.1451981569076111 @ 176,448 B [contest-CUDA T4 n600]` (live pointer, sha `891add546f5cf094…`)
 
-Lineage: fs2 0.14784474152757654 @ 180,023 B → cl2 0.14781744131049854 @ 179,982 B → rc1 (above).
+Lineage: fs2 0.14784474152757654 @ 180,023 B → cl2 0.14781744131049854 @ 179,982 B → rc1 0.14666350774473783 @ 178,249 B → pc1 V3 (above).

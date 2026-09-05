@@ -200,7 +200,8 @@ def cmd_render_edits(args) -> int:
 
 def load_pose_instrument(overlay_dir: Path | None):
     """br1's instrument on the cl2 body, reading whichever decode is asked for."""
-    state = up2.load_carrier_state(sj1.BODY_TREE, verify_archive=False)
+    sj1.assert_carrier_is_pointer(sj1.POINTER_TREE)
+    state = up2.load_carrier_state(sj1.POINTER_TREE, verify_archive=False)
     targets, lineage = up2.load_gt_poses(up2.DEFAULT_DALI_GT)
     if lineage != up2.LINEAGE_DALI:
         raise Sj1JointError(
@@ -330,7 +331,8 @@ def cmd_refine(args) -> int:
 
 def cmd_codes(args) -> int:
     """Merge refine shards into a full (600, 12) code table, base codes elsewhere."""
-    state = up2.load_carrier_state(sj1.BODY_TREE, verify_archive=False)
+    sj1.assert_carrier_is_pointer(sj1.POINTER_TREE)
+    state = up2.load_carrier_state(sj1.POINTER_TREE, verify_archive=False)
     codes = np.asarray(state.codes, dtype=np.int32).copy()
     solved = np.zeros(N_PAIRS, dtype=bool)
     resolved = {}
