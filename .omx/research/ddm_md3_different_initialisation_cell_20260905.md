@@ -272,13 +272,7 @@ exclusivity check is named as a follow-on and NOT built here.
 
 ## 5. The data-order control
 
-**STATUS: RUNNING at the time of writing** — `md3_step1_data_order`, launched 14:01:15Z, md1's
-instrument UNCHANGED on the retained `wc3 seed_20260903` control (313 checkpoints; same init sha
-`991a1cc6…`, `schedule.seed 20260903`, different `schedule.sha256_u8` — data order only). Numbers
-are filled in below when the sweep, both analyses and both overlaps land; if this section still
-reads RUNNING, the charter's item 1 is **incomplete and is reported as such**, not inferred.
-
-**STATUS: LANDED.** md1's instrument UNCHANGED on the retained `wc3 seed_20260903` control
+**STATUS: LANDED** (launched 14:01:15Z, all four stages rc=0 by 14:53:21Z). md1's instrument UNCHANGED on the retained `wc3 seed_20260903` control
 (313 checkpoints; same init sha `991a1cc6…`, `schedule.seed` 20260903 with a different
 `schedule.sha256_u8` — **data order only**), both analyses, both overlaps against md1's own
 cold store. This is the fourth cell on one initialisation and the first that varies nothing
