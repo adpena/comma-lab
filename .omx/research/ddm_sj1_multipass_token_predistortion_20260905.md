@@ -412,9 +412,63 @@ from the shard receipts, so no compute was lost — but a summary step that read
 producer stopped writing is a real defect, and it only surfaced after 4.6 h of shard time.
 Fixed at the reader.
 
+## 6. EXACT pricing of the pass-2a field, and the pose damage (MEASURED)
+
+### 6a. The encoder control — the thing that makes every byte below a number
+
+`ddm_jg2 --stage control` re-encoded the UNEDITED field through the shipped decode
+trajectory and emitted **113,419 B, byte-identical** to the shipped token stream
+(`prefix_bytes_matching = 113,419`, `full_run = true`). The encoder inverts the shipping
+decoder, so the deltas below are the pointer's own bytes and not a look-alike's.
+
+### 6b. The rate cost — MEASURED by real re-encode, never by −log2 p
+
+| quantity | MEASURED |
+|---|---|
+| token stream, base → candidate | 113,419 → **119,497 B** |
+| **stream delta** | **+6,078 B** |
+| tokens changed | 7,804 |
+| **bits per changed token (marginal, realized)** | **6.2307** |
+| jg1's modelled bits per changed token | 4.718 |
+| realized / modelled | **1.321** |
+| ΔS rate | **+0.004047090717076558** |
+
+Break-even was **12.52 bits per changed token**. The realized cost is **6.23** — the pass
+pays with a **2.01× margin**, spending less than half its budget. (An interim read on the
+first 25 pairs gave 7.42 bits/token, i.e. the prefix OVERSTATED the cost by 19%; the
+prefix-bias law holds here and, unusually, in the conservative direction.)
+
+**The seg/rate composition, exact on both legs:**
+
+| leg | ΔS |
+|---|---|
+| seg (9,593 cells repaired) | **−0.008132086859809028** |
+| rate (+6,078 B) | **+0.004047090717076558** |
+| **net before pose** | **−0.004084996142732470** |
+
+That is **204×** the 2e-05 admission bar.
+
+### 6c. The pose damage — why the re-solve is not optional
+
+| leg | MEASURED |
+|---|---|
+| base d_pose (x16 carrier, base renders) | **5.7675e-06** |
+| the x16 seal's own d_pose | 5.77e-06 → **ratio 0.99957** |
+| stale d_pose (x16 carrier, CANDIDATE renders) | **2.482268e-03** |
+| damage factor | **430.4×** |
+| pairs damaged | **597 / 600** |
+| pose leg | 0.00759441 → 0.15755214 = **+0.149958 S** |
+
+The base control anchors the pose half on the live pointer to **−0.043%**. The damage
+factor reproduces jg4's independently measured ×387 on a different body — same mechanism,
+same order: frame 2p is a photometric probe solved against the ORIGINAL frame 2p+1, so
+editing tokens strands every edited pair's carrier by construction. Un-resolved, the
++0.14996 S pose damage dwarfs the −0.00408 S seg/rate gain by 37×. The carrier re-solve is
+the whole composition, not a polish step.
+
 ---
 
-*(Sections 6+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
+*(Sections 7+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
 appended as each lands. Nothing is written here before it is measured.)*
 
 ---
