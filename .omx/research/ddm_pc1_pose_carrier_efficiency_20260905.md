@@ -113,6 +113,41 @@ Exchange rate: 1 archive byte = 25/37,545,489 = 6.658589531221714e-07 S.
 
 ---
 
+## 2b. What the carrier is actually doing — the anchor that explains every refusal below
+
+I measured the carrier's own value before judging any attempt to cheapen it, because a lever's
+plausibility depends on how much work the thing it edits is doing.
+
+**MEASURED, n600, same instrument: with the coefficients set to ZERO the body scores d_pose 52.131**
+(per-pair median 48.407, max 142.467; pose leg 22.832). The shipped carrier drives that to 6.134076e-06.
+
+| | d_pose n600 | pose leg (S units) |
+|---|---:|---:|
+| carrier zeroed | 52.131 | 22.832 |
+| shipped carrier | 6.134076e-06 | 0.007832 |
+| **the carrier's work** | **8.50e+06× — 6.93 orders of magnitude** | **−22.824 S** |
+
+The carrier costs 22,031 B = 0.014670 S and returns 22.824 S. **It pays for itself 1,556 times over.**
+(The sister equation `carrier_rate_credit_pose_affordance_v1` recorded the same shape on a different
+body: α=0 there gave d_pose 51.678. Two bodies, same order — this is a property of the vehicle, not of
+one archive.)
+
+That single number reframes every row below. The carrier is not decoration with slack in it: it is a
+12-dimensional subspace positioned so that its reachable box *contains a point* matching PoseNet's six
+outputs per pair to seven decimal places. **Its bytes buy that positioning.** So:
+
+- **V4's generated basis recovers 3.5% of the carrier's work on a log scale.** From 52.131 it reaches a
+  mean of 29.959 over its 20 measured pairs — 0.240 orders out of the shipped basis's 6.929. A generic
+  low-frequency dictionary of the same rank and the same reachable box lands almost exactly where no
+  carrier at all lands. The subspace, not the rank and not the budget, is what the bytes are buying.
+- **V1 and V2's re-quantisations move that subspace**, which is why a 0.97–0.99 per-atom cosine is not
+  reassuring: the solution is a point the box only just contains, and nudging the box walls loses it.
+- **V3 is the only variant that does not move the subspace at all** — it changes the step size *inside*
+  the box while leaving all twelve atoms bit-identical (§2 control). That is why it is the one still
+  standing, and the pattern is the arm's main structural result.
+
+---
+
 ## 3. PRIOR-LAW PREDICTION vs MEASURED
 
 The charter's prediction structure stands; its numbers were DERIVED and are now replaced by
