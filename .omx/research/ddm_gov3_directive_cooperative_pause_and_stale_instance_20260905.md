@@ -18,3 +18,12 @@ tool file's mtime/sha at launch in the manifest; a `reconcile-stale` subcommand 
 changed after launch; an opt-in `--restart-on-stale` restarts them through the same governed path. The watchdog's self-retire (de7b4229c) is the
 per-tool instance of this; this item generalizes it. Tests: stale detection from a touched file; the restart path; the digest line.
 Equations leg (`tac.canonical_equations`): none — apparatus.
+
+## ITEM 3 — Metal occupancy is not modeled: a governed job that is not a `run-config` cell can hold the GPU unseen (MEASURED 2026-09-05 14:46Z)
+`tools/cell_admission.py cells` reported "8 live governed jobs (0 training cells)" while cl2's HPAC trainer (`tools/train_ddm_cl1_hpac_capacity.py`, a Metal/MPS
+training run launched through the launcher, declared peak 1.76 GiB RSS, measured system-availability delta 15.56 GiB) was mid-epoch on the GPU. `is_cell` recognizes
+only the `run-config` argv shape, so the two-Metal-cells refusal (gov2 item 6) would NOT have fired had md3's 49.6 GiB cell been admitted at that moment — md3
+queued behind cl2 by its own discipline (`queued_behind_cl2_ladder` claim row), not by the governor's refusal. Cure: classify Metal OCCUPANCY independently of the
+cell shape — a governed job whose measured-peak ledger row (or a launch flag `--metal`) records a system-availability delta ≫ tree RSS is a Metal occupant; the
+throughput/concurrency leg counts occupants, not cells; the digest's live-cells section names them. Tests: cl2's trainer shape + a `run-config` cell must both
+count as occupants; a CPU pricer must not. Owner: the next governor arm (Opus).
