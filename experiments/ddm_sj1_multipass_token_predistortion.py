@@ -125,50 +125,132 @@ CL2_PROJECTED_SCORE = 0.14781744131049854
 # jg2's encoder to materialise a model out of a section coded by a codec it has never
 # seen; the byte-identical tail is the proof that the two trees hold the SAME model, so
 # the stream cl2's path emits is the stream rc1's receiver decodes.
-RC1_TREE = Path(
-    "/Volumes/VertigoDataTier/pact/ddm_rc1_model_section_adaptive_recode/staged_runtime"
-)
-RC1_ARCHIVE_SHA256 = "1438049e3655fbcfa8eb289fa51ac58f834d72d8a09586353663cea68e57c122"
-RC1_ARCHIVE_BYTES = 178_249
-RC1_SCORE_T4 = 0.14666350774473783
+@dataclass(frozen=True)
+class PointerRow:
+    """One banked contest-CUDA row, with the arithmetic that makes it checkable.
 
-# --------------------------------------------------------------------------------------
-# THE LIVE POINTER (MAIN object change #2, 2026-09-05): ddm_pc1's V3 on rc1's body.
-# The CARRIER moved: coefficients re-quantised on a lattice coarsened x4 and RE-SOLVED
-# for all 600 pairs (d_pose 6.14e-06 -> 5.73e-06), carrier section 22,031 -> 20,230 B.
-#
-# MEASURED here before anything was rebased onto it:
-#   * hpac, semantic and tail are BYTE-IDENTICAL to rc1 -- the model sections and the
-#     token stream are untouched, so the renderer, the token field and every seg number
-#     in this memo carry over unchanged and pass 2a needed no restart.
-#   * pc1's codes have absmax 542 / absmean 129.4 against cl2's 2048 / 515.0 -- exactly
-#     the /4 projection -- and pc1's coefficient_scales are exactly x4 cl2's on ALL 12
-#     coordinates.  The CONTAINER is still signed int12 (pc1 clips to -2048..2047 like
-#     everything else); "10-bit" describes the OCCUPIED range, not a new bound, so
-#     ``br1.realize``'s clamp is still the right one.
-#   * up3.parse_shipped_body + build_archive rebuild this body from its OWN codes to
-#     sha 891add546f5cf094... at exactly 176,448 B -- the carrier splice survives.
-#   * 100*0.00020139 + sqrt(10*5.73e-06) + 25*176448/37545489 reproduces MAIN's quoted
-#     score to the last digit.
-#
-# THE TRAP THIS ENCODES (MAIN's warning, and the reason for the guard below): a carrier
-# re-solve that starts from cl2's int12 codes on cl2's scales would silently REVERT the
-# whole V3 move while looking like it succeeded -- the codes are valid int12 either way,
-# so no container check would catch it.  The start codes and the scales must both come
-# from the POINTER tree.  ``assert_carrier_is_pointer`` makes that structural.
-POINTER_TREE = Path(
+    Three pointer moves landed on this arm inside one session (rc1, then pc1 V3, then
+    pc1 x8) with a fourth signalled.  Five scattered constants re-edited by hand each
+    time is precisely the shape that goes half-applied and is never re-derived
+    ([[binding-instruction-numbers-expire-and-nobody-rederives-them]]), so the pointer
+    is a ROW with a self-check instead: a mistyped byte count or d_pose cannot survive
+    ``verify_arithmetic``, which is run on every row at import.
+    """
+
+    label: str
+    tree: Path
+    archive_sha256: str
+    archive_bytes: int
+    d_seg_t4: float
+    d_pose_t4: float
+    score_t4: float
+
+    def recomputed_score(self) -> float:
+        """S from its three legs, exactly as ``upstream/evaluate.py`` composes them."""
+        import math
+
+        return (
+            100.0 * self.d_seg_t4
+            + math.sqrt(10.0 * self.d_pose_t4)
+            + 25.0 * self.archive_bytes / jg1.SCORE_RATE_DENOMINATOR
+        )
+
+    def verify_arithmetic(self) -> None:
+        if abs(self.recomputed_score() - self.score_t4) > 1e-15:
+            raise Sj1Error(
+                f"pointer row {self.label!r} does not recompute: legs give "
+                f"{self.recomputed_score()!r}, row declares {self.score_t4!r}"
+            )
+
+    @property
+    def archive(self) -> Path:
+        return self.tree / "archive.zip"
+
+
+_PC1_RETAINED = Path(
     "/Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency/retained"
-    "/v3_on_rc1_candidate_runtime"
 )
-POINTER_ARCHIVE = POINTER_TREE / "archive.zip"
-POINTER_ARCHIVE_SHA256 = (
-    "891add546f5cf0943929b566f29dd4318f1d8b2ab76ae05183d8189098880f40"
+
+#: The banked lineage, oldest first.  Every row after cl2 holds the token tail and both
+#: MODEL sections byte-identical, which is why the seg measurements in this memo carry
+#: across all of them and pass 2a never needed a restart.  The moves are: rc1 recodes the
+#: two MODEL sections losslessly; pc1 V3 and pc1 x8 coarsen the CARRIER coefficient
+#: lattice (x4 then x8) and RE-SOLVE all 600 pairs, which is why d_pose falls rather than
+#: merely holding.
+POINTER_LINEAGE: tuple[PointerRow, ...] = (
+    PointerRow(
+        label="fs2_base",
+        tree=Path("/Volumes/APDataStore/pact/ddm_fs2"),
+        archive_sha256=BASE_ARCHIVE_SHA256,
+        archive_bytes=BASE_ARCHIVE_BYTES,
+        d_seg_t4=BASE_D_SEG_T4,
+        d_pose_t4=BASE_D_POSE_T4,
+        score_t4=BASE_SCORE_T4,
+    ),
+    PointerRow(
+        label="cl2_lambda1_repack",
+        tree=BODY_TREE,
+        archive_sha256=BODY_ARCHIVE_SHA256,
+        archive_bytes=CL2_ARCHIVE_BYTES,
+        d_seg_t4=BASE_D_SEG_T4,
+        d_pose_t4=BASE_D_POSE_T4,
+        score_t4=CL2_PROJECTED_SCORE,
+    ),
+    PointerRow(
+        label="rc1_model_section_recode",
+        tree=Path(
+            "/Volumes/VertigoDataTier/pact/ddm_rc1_model_section_adaptive_recode"
+            "/staged_runtime"
+        ),
+        archive_sha256=(
+            "1438049e3655fbcfa8eb289fa51ac58f834d72d8a09586353663cea68e57c122"
+        ),
+        archive_bytes=178_249,
+        d_seg_t4=BASE_D_SEG_T4,
+        d_pose_t4=BASE_D_POSE_T4,
+        score_t4=0.14666350774473783,
+    ),
+    PointerRow(
+        label="pc1_v3_lattice_x4",
+        tree=_PC1_RETAINED / "v3_on_rc1_candidate_runtime",
+        archive_sha256=(
+            "891add546f5cf0943929b566f29dd4318f1d8b2ab76ae05183d8189098880f40"
+        ),
+        archive_bytes=176_448,
+        d_seg_t4=BASE_D_SEG_T4,
+        d_pose_t4=5.73e-06,
+        score_t4=0.1451981569076111,
+    ),
+    #: LIVE (MAIN object change #3, 2026-09-05).  MEASURED against the x4 rung before
+    #: adoption: hpac/semantic/tail byte-identical, carrier 20,230 -> 19,358 B (-872),
+    #: codes absmax 275 / absmean 64.9 against cl2's 2048 / 515.0, coefficient_scales
+    #: exactly x8 cl2's on all 12 coordinates, every code still inside signed int12, and
+    #: up3.build_archive rebuilds the body from its OWN codes byte-identically.
+    PointerRow(
+        label="pc1_v3x8_lattice_x8",
+        tree=_PC1_RETAINED / "v3x8_on_rc1_candidate_runtime",
+        archive_sha256=(
+            "f7e0bb793645894b2f6885fca82b98cab3067837bd66181e222f3d4b1f43e1ff"
+        ),
+        archive_bytes=175_576,
+        d_seg_t4=BASE_D_SEG_T4,
+        d_pose_t4=5.58e-06,
+        score_t4=0.1445177913121716,
+    ),
 )
-POINTER_ARCHIVE_BYTES = 176_448
-POINTER_SCORE_T4 = 0.1451981569076111
-#: pc1's V3 holds the seg leg exactly (token tail untouched) and MOVES the pose leg.
-POINTER_D_SEG_T4 = BASE_D_SEG_T4
-POINTER_D_POSE_T4 = 5.73e-06
+
+for _row in POINTER_LINEAGE:
+    _row.verify_arithmetic()
+
+#: The live pointer is the LAST row, never a name repeated in five places.
+LIVE_POINTER = POINTER_LINEAGE[-1]
+POINTER_TREE = LIVE_POINTER.tree
+POINTER_ARCHIVE = LIVE_POINTER.archive
+POINTER_ARCHIVE_SHA256 = LIVE_POINTER.archive_sha256
+POINTER_ARCHIVE_BYTES = LIVE_POINTER.archive_bytes
+POINTER_SCORE_T4 = LIVE_POINTER.score_t4
+POINTER_D_SEG_T4 = LIVE_POINTER.d_seg_t4
+POINTER_D_POSE_T4 = LIVE_POINTER.d_pose_t4
 
 #: The tree this arm RENDERS and MEASURES d_seg on.  Deliberately NOT the pointer tree:
 #: jg1's semantic loader reads the section in cl2's coding, while rc1/pc1 ship it
@@ -187,7 +269,13 @@ def assert_carrier_is_pointer(runtime_dir: Path) -> str:
     the pointer last banked, and nothing downstream can see it, because every code still
     sits inside the signed-int12 container.  So the anchor is checked, not remembered.
     """
-    observed = _sha256_file(Path(runtime_dir) / "archive.zip")
+    archive = Path(runtime_dir) / "archive.zip"
+    if not archive.is_file():
+        raise Sj1Error(
+            f"carrier runtime {runtime_dir} has no archive.zip to identify; a solve "
+            "cannot be anchored on a body that is not on disk"
+        )
+    observed = _sha256_file(archive)
     if observed != POINTER_ARCHIVE_SHA256:
         raise Sj1Error(
             f"carrier runtime {runtime_dir} has archive sha {observed}, not the live "

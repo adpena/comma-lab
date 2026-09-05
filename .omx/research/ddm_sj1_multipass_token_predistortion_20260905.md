@@ -129,6 +129,48 @@ seal from the pointer tree. That is not mixing two bodies — the three sections
 are byte-identical objects — it is the same discipline MAIN prescribed for the token
 stream: read each section from the tree whose codec the instrument speaks.
 
+## 0c. Object change #3 — pc1's ×8 rung, and the pointer becomes a checkable row
+
+MAIN moved the pointer a third time inside one session, to `ddm_pc1`'s ×8 lattice rung:
+**S 0.1445177913121716 @ 175,576 B**, sha `f7e0bb793645894b2f6885fca82b98cab3067837bd66181e222f3d4b1f43e1ff`,
+tree `…/ddm_pc1_pose_carrier_efficiency/retained/v3x8_on_rc1_candidate_runtime/`. Carrier
+coefficients re-quantised ×8 and re-solved for all 600 pairs: d_pose 5.73e-06 → **5.58e-06**,
+carrier 20,230 → **19,358 B** (−872).
+
+MEASURED before adoption, same drill as ×4: hpac / semantic / tail byte-identical to the
+×4 rung; codes **absmax 275, absmean 64.9** against cl2's 2,048 / 515.0; `coefficient_scales`
+**exactly ×8** cl2's on all 12 coordinates; every code still inside signed int12; up3 rebuilds
+the body from its own codes to `f7e0bb793645894b…` at exactly **175,576 B**; and
+`100·0.00020139 + √(10·5.58e-06) + 25·175576/37545489` = 0.1445177913121716 exactly.
+**Pass 2a needed no restart for the third time.**
+
+### The recurrence is the finding: a pointer is a ROW, not five constants
+
+Three pointer moves landed on this arm in one session and MAIN signalled a fourth (×16).
+Re-editing five scattered constants by hand each time is exactly the shape that goes
+half-applied and is never re-derived ([[binding-instruction-numbers-expire-and-nobody-rederives-them]]).
+So the pointer is now a `PointerRow` in an ordered `POINTER_LINEAGE`, and the live pointer
+is `POINTER_LINEAGE[-1]` — one row to add, nothing to keep in sync:
+
+| row | S | bytes | d_pose | what moved |
+|---|---|---:|---:|---|
+| fs2_base | 0.14784474152757654 | 180,023 | 6.14e-06 | — |
+| cl2_lambda1_repack | 0.14781744131049854 | 179,982 | 6.14e-06 | HPAC prior re-fit |
+| rc1_model_section_recode | 0.14666350774473783 | 178,249 | 6.14e-06 | both MODEL sections, lossless |
+| pc1_v3_lattice_x4 | 0.1451981569076111 | 176,448 | 5.73e-06 | carrier lattice ×4, re-solved |
+| **pc1_v3x8_lattice_x8 (LIVE)** | **0.1445177913121716** | **175,576** | **5.58e-06** | carrier lattice ×8, re-solved |
+
+Two checks now stand between this arm and a wrong number, and both were tested to BITE:
+
+* `PointerRow.verify_arithmetic()` runs on **every row at import** and refuses unless the
+  declared S recomputes from its own three legs. All five rows pass. VERIFIED to fire on a
+  one-byte change to `archive_bytes` and on a one-ULP-ish change to `d_pose`.
+* `assert_carrier_is_pointer()` hashes the carrier runtime's `archive.zip` before any
+  `load_carrier_state`. VERIFIED: accepts the live tree, refuses cl2, rc1 and pc1-×4 on the
+  sha, and refuses a tree that is not on disk rather than raising a bare `FileNotFoundError`.
+
+Together they make the fourth pointer move a one-row edit that cannot land half-applied.
+
 ## 1. Step 0 — the instrument reproduces the frontier body's seg leg (MEASURED)
 
 **Forward-model control:** re-rendering the shipped tokens through the receiver's own
@@ -298,6 +340,6 @@ appended as each lands. Nothing is written here before it is measured.)*
 
 ## Frontier line
 
-`pc1 V3 S 0.1451981569076111 @ 176,448 B [contest-CUDA T4 n600]` (live pointer, sha `891add546f5cf094…`)
+`pc1 x8 S 0.1445177913121716 @ 175,576 B [contest-CUDA T4 n600]` (live pointer, sha `f7e0bb793645894b…`)
 
-Lineage: fs2 0.14784474152757654 @ 180,023 B → cl2 0.14781744131049854 @ 179,982 B → rc1 0.14666350774473783 @ 178,249 B → pc1 V3 (above).
+Lineage: fs2 0.14784474152757654 @ 180,023 B → cl2 0.14781744131049854 @ 179,982 B → rc1 0.14666350774473783 @ 178,249 B → pc1 V3 0.1451981569076111 @ 176,448 B → pc1 x8 (above).
