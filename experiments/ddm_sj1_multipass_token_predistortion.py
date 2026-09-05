@@ -221,7 +221,7 @@ POINTER_LINEAGE: tuple[PointerRow, ...] = (
         d_pose_t4=5.73e-06,
         score_t4=0.1451981569076111,
     ),
-    #: LIVE (MAIN object change #3, 2026-09-05).  MEASURED against the x4 rung before
+    #: MAIN object change #3.  MEASURED against the x4 rung before
     #: adoption: hpac/semantic/tail byte-identical, carrier 20,230 -> 19,358 B (-872),
     #: codes absmax 275 / absmean 64.9 against cl2's 2048 / 515.0, coefficient_scales
     #: exactly x8 cl2's on all 12 coordinates, every code still inside signed int12, and
@@ -236,6 +236,25 @@ POINTER_LINEAGE: tuple[PointerRow, ...] = (
         d_seg_t4=BASE_D_SEG_T4,
         d_pose_t4=5.58e-06,
         score_t4=0.1445177913121716,
+    ),
+    #: LIVE (MAIN object change #4, 2026-09-05).  The first rung where the POSE LEG
+    #: ROSE -- d_pose 5.58e-06 -> 5.77e-06 -- admitted on the exchange, not on the leg:
+    #: pose +1.2611e-04 S against rate -5.2603e-04 S is net -3.9992e-04 S, twenty times
+    #: the 2e-05 bar.  MEASURED before adoption: hpac/semantic/tail byte-identical to
+    #: the x8 rung, carrier 19,358 -> 18,568 B (-790), codes absmax 142 / absmean 32.6
+    #: (half the x8 rung's, as an x2 coarsening should give), coefficient_scales exactly
+    #: x16 cl2's on all 12 coordinates, codes inside signed int12, and up3.build_archive
+    #: rebuilds the body from its OWN codes to 1de6c5d7186a0b31... at exactly 174,786 B.
+    PointerRow(
+        label="pc1_v3x16_lattice_x16",
+        tree=_PC1_RETAINED / "v3x16_on_rc1_candidate_runtime",
+        archive_sha256=(
+            "1de6c5d7186a0b31e5cc085bb6d2baab8275ee0d9de4d509f4d8add13695a629"
+        ),
+        archive_bytes=174_786,
+        d_seg_t4=BASE_D_SEG_T4,
+        d_pose_t4=5.77e-06,
+        score_t4=0.14411787458634504,
     ),
 )
 

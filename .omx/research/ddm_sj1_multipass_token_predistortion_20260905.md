@@ -158,7 +158,8 @@ is `POINTER_LINEAGE[-1]` — one row to add, nothing to keep in sync:
 | cl2_lambda1_repack | 0.14781744131049854 | 179,982 | 6.14e-06 | HPAC prior re-fit |
 | rc1_model_section_recode | 0.14666350774473783 | 178,249 | 6.14e-06 | both MODEL sections, lossless |
 | pc1_v3_lattice_x4 | 0.1451981569076111 | 176,448 | 5.73e-06 | carrier lattice ×4, re-solved |
-| **pc1_v3x8_lattice_x8 (LIVE)** | **0.1445177913121716** | **175,576** | **5.58e-06** | carrier lattice ×8, re-solved |
+| pc1_v3x8_lattice_x8 | 0.1445177913121716 | 175,576 | 5.58e-06 | carrier lattice ×8, re-solved |
+| **pc1_v3x16_lattice_x16 (LIVE)** | **0.14411787458634504** | **174,786** | **5.77e-06** | carrier lattice ×16, re-solved |
 
 Two checks now stand between this arm and a wrong number, and both were tested to BITE:
 
@@ -170,6 +171,31 @@ Two checks now stand between this arm and a wrong number, and both were tested t
   sha, and refuses a tree that is not on disk rather than raising a bare `FileNotFoundError`.
 
 Together they make the fourth pointer move a one-row edit that cannot land half-applied.
+
+## 0d. Object change #4 — ×16, the pose leg rises, and the row design pays for itself
+
+**S 0.14411787458634504 @ 174,786 B**, sha `1de6c5d7186a0b31e5cc085bb6d2baab8275ee0d9de4d509f4d8add13695a629`,
+tree `…/retained/v3x16_on_rc1_candidate_runtime/`. Carrier 19,358 → **18,568 B** (−790).
+
+This rung is the first where **the pose leg ROSE**: d_pose 5.58e-06 → 5.77e-06. It is
+admitted on the EXCHANGE, not on the leg — MEASURED: pose **+1.2611e-04 S** against rate
+**−5.2603e-04 S**, net **−3.9992e-04 S**, twenty times the 2e-05 bar. Worth naming because
+a reader scanning the lineage for a monotone pose column would read this row as a
+regression; it is a priced trade, and the ladder is now past its pose knee (MAIN reports
+×32 is not pre-registered as paying).
+
+Verified before adoption, same drill: hpac / semantic / tail byte-identical to ×8; codes
+**absmax 142 / absmean 32.6** — half the ×8 rung's, as an ×2 coarsening should give;
+`coefficient_scales` **exactly ×16** cl2's on all 12 coordinates; codes inside signed
+int12; up3 rebuilds from its own codes to `1de6c5d7186a0b31…` at exactly **174,786 B**;
+S recomputes to the last digit. **Pass 2a needed no restart for the fourth time.**
+
+**The row design paid for itself immediately.** Adopting this pointer was ONE appended
+`PointerRow` — no other edit anywhere. All six rows passed the import-time arithmetic
+self-check, and `assert_carrier_is_pointer` accepted the new tree and REFUSED all five
+predecessors, including the ×8 rung that had been live minutes earlier. That refusal is
+the whole point: the ×8 tree was the correct answer one message ago, which is exactly the
+condition under which a remembered constant silently ships the wrong one.
 
 ## 1. Step 0 — the instrument reproduces the frontier body's seg leg (MEASURED)
 
@@ -340,6 +366,6 @@ appended as each lands. Nothing is written here before it is measured.)*
 
 ## Frontier line
 
-`pc1 x8 S 0.1445177913121716 @ 175,576 B [contest-CUDA T4 n600]` (live pointer, sha `f7e0bb793645894b…`)
+`pc1 x16 S 0.14411787458634504 @ 174,786 B [contest-CUDA T4 n600]` (live pointer, sha `1de6c5d7186a0b31…`)
 
-Lineage: fs2 0.14784474152757654 @ 180,023 B → cl2 0.14781744131049854 @ 179,982 B → rc1 0.14666350774473783 @ 178,249 B → pc1 V3 0.1451981569076111 @ 176,448 B → pc1 x8 (above).
+Lineage: fs2 0.14784474152757654 @ 180,023 B → cl2 0.14781744131049854 @ 179,982 B → rc1 0.14666350774473783 @ 178,249 B → pc1 ×4 0.1451981569076111 @ 176,448 B → pc1 ×8 0.1445177913121716 @ 175,576 B → pc1 ×16 (above).
