@@ -608,6 +608,12 @@ VARIANTS: dict[str, VariantSpec] = {
     "v1_basis4": VariantSpec("v1_basis4", 4, None, None, 1),
     "v2_basis3": VariantSpec("v2_basis3", 3, None, None, 1),
     "v3_lattice10": VariantSpec("v3_lattice10", None, None, None, 4),
+    # The lattice-factor LADDER.  The charter named x4; the factor is a free
+    # continuous knob, so the neighbours are priced too rather than assumed
+    # ([[m52]]: a bool is a UI over a continuum).
+    "v3x2_lattice11": VariantSpec("v3x2_lattice11", None, None, None, 2),
+    "v3x8_lattice9": VariantSpec("v3x8_lattice9", None, None, None, 8),
+    "v3x16_lattice8": VariantSpec("v3x16_lattice8", None, None, None, 16),
     "v4_dct_luma": VariantSpec("v4_dct_luma", None, "luma", None, 1),
     "v4_dct_planar": VariantSpec("v4_dct_planar", None, "planar", None, 1),
     "v4_dct_opponent": VariantSpec("v4_dct_opponent", None, "opponent", None, 1),

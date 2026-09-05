@@ -311,6 +311,23 @@ NOT admissible as one (the solved set is a partial, order-biased subset; [[m88]]
 The direction is favourable and the margin is wide, which is why the run is being finished rather than
 stopped early the way V2 was — V2's bound had already crossed, V3's has not.
 
+**The lattice factor is a continuous knob and the charter's ×4 is one rung of it. Priced exactly
+(MEASURED archive builds, shipped codes projected):**
+
+| coefficient lattice | archive Δ | ΔS_rate | break-even d_pose | pose budget over base |
+|---|---:|---:|---:|---:|
+| ×2 (12→11 bits) | -903 B | -6.01271e-04 | 7.1121e-06 | +15.9% |
+| ×4 (12→10 bits) | -1,814 B | -1.20787e-03 | 8.1720e-06 | +33.2% |
+| ×8 (12→9 bits) | -2,693 B | -1.79316e-03 | 9.2644e-06 | +51.0% |
+| ×16 (12→8 bits) | -3,484 B | -2.31985e-03 | 1.0306e-05 | +68.0% |
+
+The ladder is sub-linear: each doubling of the step drops every Rice parameter by one (900 B = 7,200
+bits over 600×12 coefficients) but grows the quotient tail, so the marginal saving decays 903 → 911 →
+879 → 791 B. **Since ×4 is measuring pose-POSITIVE so far (ratio 0.974), the ×8 and ×16 rungs are not
+obviously out of reach and are worth ~1.5–1.9× the bytes.** They are not measured and no claim is made
+about them; the ladder exists so the next arm sweeps the factor against ΔS instead of inheriting ×4
+([[m52]]: a chosen value is a UI over a continuum). See ITEM 5.
+
 **An attribution confound is open and is NOT resolved by this row (ITEM 4).** `refine_pair` at 40 outer
 rounds is a more thorough solve than the one that produced the shipped codes, so a V3 pose gain may be
 "more solving" rather than "the coarser lattice is free". That does not affect V3's ΔS against the
@@ -365,6 +382,13 @@ from "more solving helps" for V3, and (b) is itself a candidate: any d_pose it w
 bytes, so its entire ΔS is negative by construction. Owner: unassigned.
 
 ---
+
+## ITEM 5 — sweep the coefficient-lattice factor against ΔS instead of inheriting ×4
+
+The factor is free and continuous, and its rate side is now MEASURED at ×2/×4/×8/×16 (−903 / −1,814 /
+−2,693 / −3,484 B, break-even d_pose 7.116e-06 / 8.172e-06 / 9.264e-06 / 1.031e-05). The charter's ×4
+was a choice, not an optimum. Whichever rung V3 lands on, the neighbouring rung above it is the next
+measurement: one n600 re-solve each, same instrument, same admission test. Owner: unassigned.
 
 ## Frontier
 
