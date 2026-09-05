@@ -526,6 +526,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--archive", default=None, help="default: <runtime-dir>/archive.zip")
     ap.add_argument("--output-dir", required=True)
     ap.add_argument("--lane-id", required=True)
+    ap.add_argument(
+        "--allow-nonpromotable-lane-id",
+        action="store_true",
+        help="fire even if the pointer's checkpoint-maturity gate would refuse this lane id "
+        "(deliberately advisory / custody rows only)",
+    )
     ap.add_argument("--instance-job-id", required=True)
     ap.add_argument("--claim-agent", default="MAIN")
     ap.add_argument(
@@ -583,6 +589,24 @@ def main(argv: list[str] | None = None) -> int:
     # The worker's pairing validation treats these as mutually exclusive; passing both
     # refuses REMOTELY after the image build (the ck1 cpu_row_r1 rc=5, 2026-08-19).
     # A worker-side rule the firer can check must be checked here, before any subprocess.
+    # A lane id the canonical pointer's checkpoint-maturity gate would REFUSE must not
+    # buy a T4 row that can never become the pointer (2026-09-05: lane
+    # ddm_pc1_t4_v3_lattice_x4_on_rc1_20260905 scored S 0.1451981569076111 and was refused
+    # at promotion because "v3" — a VARIANT number — reads as an untagged vehicle token;
+    # the same seal had to be re-fired under a compliant name). Check the pointer's own
+    # rule here, before any subprocess, unless the row is deliberately non-promotable.
+    if not args.allow_nonpromotable_lane_id:
+        from tac.checkpoint_maturity import pointer_promotion_verdict
+
+        _lane_ok, _lane_reason = pointer_promotion_verdict(args.lane_id)
+        if not _lane_ok:
+            ap.error(
+                f"--lane-id would be REFUSED by the canonical pointer's checkpoint-maturity "
+                f"gate and the row could never promote: {_lane_reason}. Rename the lane "
+                f"(avoid vehicle-shaped tokens like v3 unless the lineage is tagged _prod), "
+                f"or pass --allow-nonpromotable-lane-id for a deliberately advisory/custody row."
+            )
+
     if args.single_axis_waiver_reason and args.pair_group_id:
         ap.error(
             "--pair-group-id and --single-axis-waiver-reason are mutually exclusive "
