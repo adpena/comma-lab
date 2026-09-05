@@ -875,3 +875,19 @@ Re-derived: gap 0.02666350774473783; rate corner −40,043.8 B at held distortio
 tool defect (the recompute and the receipt differed by one ulp from summation order) — fixed with a 1e-15 tolerance + two tests (f569e4c1a). Composition
 law for the live arms: carrier and tail are byte-identical, so pc1's carrier deltas and sj1's field deltas compose additively with rc1's coder; cl3's HPAC
 rungs must be packed through rc1's adaptive coder to compose (their Brotli-packed model bytes no longer describe the object). PR #140 is now FOUR moves behind.
+
+## Addendum 6 (2026-09-05 20:20Z) — pc1 LANDED: V3 (lattice ×4 + full re-solve) ADMITTED and T4-FIRED on the rc1 base; the generated-basis door CLOSED with a number that explains the whole carrier
+
+pc1 (Opus, memo `ddm_pc1_pose_carrier_efficiency_20260905.md`, 12 commits, lane L2, law `pose_carrier_basis_rate_fidelity_exchange_v1`). Corrected anatomy
+(parsed from the bytes, sums exactly): carrier stream **22,031 B** = brotli(q9) over a 22,278 B body = **12,277 B basis** (12 atoms × 3 planes × 24×32 at 5 bits —
+NOT luma-only) + **9,830 B** AR1+Rice coefficients + 171 B framing; Brotli removes only 247 B. **The anchor:** zero carrier → d_pose **52.131**; the shipped
+carrier drives that to 6.13e-6 — 6.93 orders, returning 22.82 S for 0.0147 S of bytes (**pays for itself 1,556×**). The bytes buy a SPECIFIC 12-dim
+subspace positioned so its reachable box contains the solution: V1/V2 (basis 5→4/3 bits) move that subspace and fail (V2 d_pose ≥ 2.85e-5, 2.87× past
+break-even); **V4 (generated DCT basis, zero bytes) recovers 3.5 % of the carrier's work on a log scale — d_pose ≥ 0.9986, 39,748× past break-even:
+analytic/generated bases CLOSED at family scope**; V5 (rank-8 SVD) dominated. **V3 — coefficient lattice ×4 (12→10 bits) WITH the full n600 re-solve — is
+the only variant that leaves all twelve atoms bit-identical: −1,801 B AND d_pose 6.14e-6 → 5.728e-6 (−6.6 %), net ΔS −1.462948e-3 (73× the admit bar).**
+Three-way decomposition of the composition law, numerical: coarsening without re-solve costs 4.79×; the re-solve recovers 5.13× and lands below base.
+Sealed on the rc1 base (`SEAL_ddm_pc1_v3_lattice_x4_resolved_on_rc1.json`): **176,448 B, sha 891add546f5cf094…, projected S 0.14520055969848670**; MAIN
+fired T4 at 20:15Z (call id appended at harvest). Follow-on already dispatched to the same arm: lattice ×8 (−2,693 B, break-even d_pose 9.27e-6) and ×16
+(−3,484 B, 1.03e-5) with the full re-solve. Two self-corrections by the arm (basis_scales are not dead bytes; per-atom quantizer step moves 3,731 B at fixed
+alphabet — the registered rate↔fidelity exchange inside the step). SVD spectrum of the 600 realized fields: rank-8 cumulative 0.9869, effective rank 9 at 99 %.
