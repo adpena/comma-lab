@@ -700,6 +700,47 @@ putting the score knee at ×16.** Recorded before the measurement, as before.
 
 ---
 
+## 7g. The ladder is CLOSED — the score knee is ×16, bracketed on both sides
+
+×32 is MEASURED at n600 and it turns the score curve over, so the ladder is no longer open at the top.
+
+| rung | archive B | ΔB vs rc1 | **d_pose n600** | `lattice_floor` | max\|code\| | **net ΔS vs rc1** | verdict |
+|---|---:|---:|---:|---:|---:|---:|---|
+| ×1 shipped | 178,249 | — | 6.134076e-06 | — | 2048 | — | the base |
+| ×4 | 176,448 | −1,801 | 5.727914e-06 | 7 | 513 | −1.462948e-03 | **T4, 28th move** |
+| ×8 | 175,576 | −2,673 | **5.579254e-06** ◄ pose min | 13 | 275 | −2.142435e-03 | **T4, 29th move** |
+| **×16** | **174,786** | **−3,463** | 5.767500e-06 | 27 | 142 | **−2.543498e-03** ◄ **score min** | **SEALED** |
+| ×32 | 174,205 | −4,044 | 6.553272e-06 | 47 | 70 | −2.429540e-03 | **fails vs ×16 by +1.140e-04** |
+
+**The knee is bracketed, not extrapolated.** ×32 was measured because ×16 winning made it a live
+question, and it settles the ladder: the score improves ×4 → ×8 → ×16 and then turns. ×32 still beats
+the *base* (−2.43e-03) and even the current pointer (−2.87e-04), but it loses to ×16, and only the best
+rung is worth firing.
+
+**This prediction I got right, and it is recorded above the measurement.** Before ×32 solved I wrote:
+*"I predict ×32 lands near 6.5e-06, just ABOVE the bar, and FAILS — putting the score knee at ×16."*
+Measured **6.553272e-06** against a bar of **6.379636e-06**. The reason the earlier calls failed and this
+one held is that this one was anchored on three MEASURED rungs and the doubling `lattice_floor` count,
+not on an argument about representable sets.
+
+**The mechanism, now visible across four rungs.** `lattice_floor` stops — the pairs where the solver can
+find no representable improving step at all — go **7 → 13 → 27 → 47**, roughly doubling per rung. That
+count is the lattice binding. It turns the *pose* curve between ×8 and ×16, and the *score* curve one
+rung later at ×32, because the rate ladder keeps paying (−872 → −790 → −581 B) until the pose cost
+(+1.25e-04 → +5.01e-04 S) finally outruns it. **Two knees, one rung apart: distortion turns first, score
+turns second.** Anyone sweeping a precision knob on this vehicle should sweep past the distortion
+minimum, because the score minimum is not there.
+
+**Final ranking of everything this arm measured, by net ΔS against the rc1 base:**
+
+    x16  -2.543498e-03   174,786 B   SEALED, the candidate       <- best
+    x8   -2.142435e-03   175,576 B   T4 29th move (live pointer)
+    x32  -2.429540e-03   174,205 B   beats the base, loses to x16
+    x4   -1.462948e-03   176,448 B   T4 28th move
+    V1/V2/V4/V5                       REFUSED (basis edits; see 4, 5, 5b, 6)
+
+---
+
 ## 8. What this arm did not do
 
 - **No T4 row was fired. Modal was never dispatched; MAIN fires.** Every score-shaped number here is
