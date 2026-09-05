@@ -39,3 +39,14 @@ keeps a finished launch's DECLARED peak reserved while its supervisor lingers; r
 Tests: waiter retries through a simulated refusal; driver adopts a same-job placeholder; supervisor exit releases the reservation. Owner: next governor arm.
 
 **ITEM 4(d) — the driver refuses its OWN claim (MEASURED 15:42:19Z, attempts 4–5):** `cell_queue_driver run` files `active_eval` rows on BOTH lanes (agent = the queue spec's `--agent`), then a later stage re-runs the single-flight check and refuses on "active claim(s) already exist for lane_id=<scorer lane>" — the claim it just filed. Every retry files two more orphaned active rows; MAIN killed the loop and closed 6 rows by hand. Cure: the driver must recognize its own claim (same lane+job+agent within the run) as its lease, not a conflict; add a test that a full `run` on a fresh queue files exactly one active row per lane and fires.
+
+### ITEM 3 — SECOND INSTANCE (MEASURED 2026-09-05 16:12:53Z): a "2.4 GiB" Metal trainer beside a live 49.6 GiB Metal cell
+cl3's λ=2.0 HPAC-prior trainer (`device mps`, declared peak 2.4 GiB from cl2's RSS-based measured-peak ledger) was ADMITTED by the guard
+("admission OK (governed)") beside md3's live Metal cell. Within 8 minutes the watchdog logged a CRITICAL `memory_pressure` alarm: compressor
+42.37 GiB (33.1%), growing 5.20 GiB/s; the trainer died 20 s later (rc=143; actor under attribution — the watchdog is report-only and did not
+act). Root cause is ITEM 3 verbatim: Metal working sets are not RSS, so an RSS-declared peak of 2.4 GiB says nothing about a Metal trainer's
+GPU-side footprint, and two Metal trainers on one 128 GB machine reproduce the 2026-09-04 near-OOM shape. Cure (binding until ITEM 3 lands):
+the admission guard must treat ANY `device mps`/Metal trainer as a Metal occupant — one Metal occupant at a time unless a measured N≥3 window
+proves two fit — and the measured-peak ledger must record a Metal footprint column (system-availability delta, as gov2 measured for the cell:
+49.572 GiB at 1.75 GiB RSS) rather than RSS alone. MAIN's cl3 charter sentence "a 2.4 GiB trainer is admitted beside it" was the same
+RSS-for-Metal error and is corrected in the arm's instructions.
