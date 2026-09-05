@@ -71,6 +71,13 @@ from tac.canonical_equations.annulus_restricted_prefix_bias_detector_20260904 im
     global_check_is_blind,
     prefix_constant_is_suspect,
 )
+from tac.canonical_equations.motion_compensated_previous_plane_gate_20260904 import (
+    build_motion_compensated_previous_plane_alignment_gate_v1,
+    carried_motion_breakeven_open,
+    ceiling_refused,
+    plane_passes_alignment_gate,
+    temporal_predictability_supports_extrapolation,
+)
 from tac.canonical_equations.bayesian_posterior_update import (
     DEFAULT_NIG_PRIOR,
     BayesianPosterior,
@@ -534,6 +541,11 @@ __all__ = [
     "AWAY_TRUST_VS_ACTUAL_PRICE_BAND",
     "bias_amplification",
     "build_annulus_restricted_prefix_bias_detector_v1",
+    "build_motion_compensated_previous_plane_alignment_gate_v1",
+    "carried_motion_breakeven_open",
+    "ceiling_refused",
+    "plane_passes_alignment_gate",
+    "temporal_predictability_supports_extrapolation",
     "build_checkpoint_trajectory_error_partition_v1",
     "floor_clears_target",
     "partition_is_exact",
