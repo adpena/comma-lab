@@ -595,3 +595,12 @@ before a public update is ONLY the operator's one-line confirm (p0_swap_procedur
 single-flight clear, MAIN fired the FIRE-PROOF of hv1's fixed snapshot path (1fbc7c066) on the SAME known-answer seal, snapshot ON (receipt
 `ps2_t4_custody_snapshot_proof`): expected components identical; if it dispatches and harvests, the snapshot becomes the default for frontier fires.
 Equations leg (`tac.canonical_equations`): none.
+
+## ADDENDUM 27 (2026-09-05 00:35Z real) — the source-snapshot fire path is FIRE-PROVED; default ON for every fire from here
+
+Call fc-01M1QE7C0KYRX56GBGX6FAEF6G, snapshot ON (1fbc7c066: cwd stays the repo root; mounts via `PACT_MODAL_SOURCE_ROOT`; `verify_dispatch_paths`
+pre-spawn guard), on the known-answer ps2 custody seal: pose 6.14e-06 · seg 0.00020139 · 180,023 B · **S 0.14784474152757654 — IDENTICAL** to the fs2
+pointer row and to the no-snapshot custody row; tree digest 355e7f95… identical; snapshot 8,307 files, `complete: True`; 542.0 s Modal wall.
+Consequence: the edit-race class that refused fs2's first fire ("source modified during build process") is closed STRUCTURALLY — a working-tree
+edit during an image build can no longer refuse or contaminate a fire. Apparatus proved on a known answer, never on a frontier row, as the law
+says. hv1's poller also wrote the fire-proof lane's canonical terminal row itself. Equations leg (`tac.canonical_equations`): none.
