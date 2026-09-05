@@ -218,6 +218,35 @@ def _persistent_block(analysis: dict[str, Any], forward: str) -> dict[str, Any]:
     }
 
 
+def _within_pool_null_jaccard(
+    n_a: int, n_b: int, pool_a: int, pool_b: int, pool_intersection: int
+) -> dict[str, float]:
+    """Expected Jaccard of two INDEPENDENT uniform draws of the observed sizes from the two
+    STEP-0 WRONG POOLS.
+
+    Both PERSISTENT sets are subsets of their own cell's step-0 pool by the class definition, so
+    the all-sites null (6,291,456 sites) overstates the reading badly.  md2's null assumed one
+    shared pool; here the pools DIFFER, so a site can only be drawn into both sets if it lies in
+    the pool intersection:
+
+        E[|A cap B|] = |pool_a cap pool_b| * (n_a / |pool_a|) * (n_b / |pool_b|)
+
+    which reduces to md2's ``n_a * n_b / |pool|`` exactly when the two pools coincide.
+    """
+
+    if min(pool_a, pool_b) <= 0:
+        raise MD4Error("a step-0 pool is empty; the within-pool null is undefined")
+    if not 0 <= pool_intersection <= min(pool_a, pool_b):
+        raise MD4Error(
+            f"pool intersection {pool_intersection} is not within [0, min(pool)={min(pool_a, pool_b)}]"
+        )
+    expected = pool_intersection * (n_a / pool_a) * (n_b / pool_b)
+    union = n_a + n_b - expected
+    if union <= 0:
+        raise MD4Error("within-pool null union is non-positive")
+    return {"expected_intersection_sites": expected, "jaccard": expected / union}
+
+
 def _verdict_word(jaccard: float) -> str:
     if jaccard >= DATA_ANCHORED_AT_OR_ABOVE:
         return "DATA-ANCHORED"
@@ -257,6 +286,7 @@ def run_verdict(args: argparse.Namespace) -> dict[str, Any]:
     pool_cold = incumbent["pool_sites"]
     persistent_cold_step0 = incumbent["persistent_sites"]
     intersection_cap = start["incumbent_persistent_still_wrong_here"]
+    pool_intersection = start["pool_vs_incumbent"]["intersection"]
 
     share_cold = persistent_cold_step0 / pool_cold
     assumed_persistent_new = int(pool_new * share_cold)
@@ -280,12 +310,35 @@ def run_verdict(args: argparse.Namespace) -> dict[str, Any]:
         )
         cold_overlap = overlap_cold["forwards"][forward]["overlap"]["PERSISTENT"]
         order_overlap = overlap_order["forwards"][forward]["overlap"]["PERSISTENT"]
+        null_vs_cold = _within_pool_null_jaccard(
+            cold_overlap["a_sites"], cold_overlap["b_sites"], pool_new, pool_cold, pool_intersection
+        )
+        null_vs_order = _within_pool_null_jaccard(
+            order_overlap["a_sites"],
+            order_overlap["b_sites"],
+            pool_new,
+            pool_cold,
+            pool_intersection,
+        )
         forwards[forward] = {
             "new_cell": new_block,
             "cold_control": _persistent_block(cold_analysis, forward),
             "data_order_control": _persistent_block(order_analysis, forward),
             "jaccard_vs_cold": cold_overlap["jaccard"],
             "jaccard_vs_data_order": order_overlap["jaccard"],
+            "within_pool_null_jaccard_vs_cold": null_vs_cold["jaccard"],
+            "within_pool_null_expected_intersection_vs_cold": null_vs_cold[
+                "expected_intersection_sites"
+            ],
+            "measured_over_within_pool_null_vs_cold": (
+                cold_overlap["jaccard"] / null_vs_cold["jaccard"] if null_vs_cold["jaccard"] else None
+            ),
+            "within_pool_null_jaccard_vs_data_order": null_vs_order["jaccard"],
+            "measured_over_within_pool_null_vs_data_order": (
+                order_overlap["jaccard"] / null_vs_order["jaccard"]
+                if null_vs_order["jaccard"]
+                else None
+            ),
             "intersection_vs_cold": cold_overlap["intersection_sites"],
             "intersection_over_chance_vs_cold": cold_overlap["intersection_over_chance"],
             "new_covered_by_cold_fraction": cold_overlap["a_covered_by_b_fraction"],
@@ -327,6 +380,13 @@ def run_verdict(args: argparse.Namespace) -> dict[str, Any]:
             "pool_sites_new": pool_new,
             "pool_sites_cold": pool_cold,
             "pool_jaccard": start["pool_vs_incumbent"]["jaccard"],
+            "pool_intersection_sites": pool_intersection,
+            "data_order_pool_assumed_equal_to_cold_pool": (
+                "the data-order control declares the SAME initial_state (sha 991a1cc6...), and "
+                "md1's sweep reads step 0 from config['initial_state']['path'] alone, so its "
+                "step-0 wrong pool is bit-identical to the cold control's (md3 section 1). The "
+                "within-pool null against the data-order control therefore reuses pool_sites_cold"
+            ),
             "cold_persistent_sites_step0_reference": persistent_cold_step0,
             "cold_persistent_still_wrong_at_new_start": intersection_cap,
             "cold_persistent_containment_at_new_start": start["incumbent_persistent_containment"],

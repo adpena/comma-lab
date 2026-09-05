@@ -114,3 +114,35 @@ def test_jaccard_ceiling_rederives_the_value_md3_reported_for_r10_live() -> None
 def test_missing_artifact_refuses_rather_than_returning_an_empty_receipt(tmp_path: Path) -> None:
     with pytest.raises(MD4.MD4Error, match="required artifact absent"):
         MD4._read_json(tmp_path / "not_here.json")
+
+
+# ------------------------------------------------------------------------ within-pool null
+def test_within_pool_null_reduces_to_md2_shared_pool_constant() -> None:
+    # MEASURED md2 inputs: ng5 persistent 11,019 sites, cold persistent 11,842, one shared
+    # step-0 pool of 16,553.  md2 published J_null = 0.5263033946906265 for that pair.
+    null = MD4._within_pool_null_jaccard(11_019, 11_842, 16_553, 16_553, 16_553)
+    assert null["jaccard"] == pytest.approx(0.5263033946906265, rel=0, abs=1e-15)
+
+
+def test_within_pool_null_falls_when_the_pools_share_fewer_sites() -> None:
+    shared = MD4._within_pool_null_jaccard(11_000, 11_842, 17_151, 16_553, 16_553)
+    partial = MD4._within_pool_null_jaccard(11_000, 11_842, 17_151, 16_553, 13_012)
+    assert partial["jaccard"] < shared["jaccard"]
+
+
+def test_within_pool_null_is_far_above_an_all_sites_null() -> None:
+    within = MD4._within_pool_null_jaccard(11_000, 11_842, 17_151, 16_553, 13_012)
+    all_sites = MD4._within_pool_null_jaccard(11_000, 11_842, 6_291_456, 6_291_456, 6_291_456)
+    assert within["jaccard"] > 100 * all_sites["jaccard"]
+
+
+def test_within_pool_null_refuses_an_empty_pool() -> None:
+    with pytest.raises(MD4.MD4Error, match="pool is empty"):
+        MD4._within_pool_null_jaccard(10, 10, 0, 16_553, 0)
+
+
+def test_within_pool_null_refuses_an_impossible_pool_intersection() -> None:
+    with pytest.raises(MD4.MD4Error, match="not within"):
+        MD4._within_pool_null_jaccard(10, 10, 100, 200, 150)
+    with pytest.raises(MD4.MD4Error, match="not within"):
+        MD4._within_pool_null_jaccard(10, 10, 100, 200, -1)
