@@ -850,3 +850,18 @@ without its PREMISE (pixel intensity decorrelates fast; a label field does not).
 `bidirectional_pyramid_context_gain_v1`; memo `ddm_bd1_bidirectional_pyramid_context_20260905.md`; commit 232ba9348; nothing trained, Metal never
 requested. Consequence for the map: **the token stream is at its floor under any predictor that reads other frames' labels** (with mc1 and
 hc1 this is now three independent closures of the temporal axis); sub-0.12 must come from the other four pools. Metal order after md3: cl3.
+
+## Addendum 4 (2026-09-05 18:35Z) — rc1 ADMITTED: the two model sections had never been entropy-coded — −1,733 B at zero distortion, sealed and T4-fired
+
+rc1 (Opus, memo `ddm_rc1_adaptive_recode_race_of_the_model_sections_20260905.md`, commit 8979e18aa, lane L2): an adaptive per-group tree coder over the
+PACKED INTEGER CODES of the SM3R renderer body and the IHS1 HPAC model beats the shipped Brotli q11 by **−610 B (semantic, 30,856→30,246)** and
+**−1,123 B (hpac, 13,466→12,343)**; xz and zstd both LOSE to Brotli. Candidate archive **178,249 B, sha 1438049e3655fbcf…**; decoded field, carrier and
+tail byte-identical to cl2; twin encode byte-identical; +0.11 s inflate. Predicted S = 0.14781744131049854 − 1,733 × 6.658589531221714e-7 =
+**0.14666350774473783** (rate-only). Prediction residuals: SM3R −610 vs predicted −2,050…−4,350 (MAIN's prediction charged the codes for the fp16
+scales/masks — the code stream's own H0 is 3.281 b/param); IHS1 −1,123 inside its band. **Transferable law** (`model_section_adaptive_recode_ceiling_v1`):
+the credit tracks the packing's WIDTH STABILITY — Brotli recovers a constant-width packed stream's order-0 statistics but not a stream whose width changes
+every few hundred symbols; hence hpac's credit is 1.84× the renderer's off a body half the size. Order-1 contexts CLOSED at formulation (context dilution:
+10 B of ~1,139 B of first-order structure converted); semi-static/depth-mixing prior = ITEM 1. MAIN fired T4 at 18:30Z (canonical launcher; first attempt
+REFUSED rc=9 because the waiver text contained "fs2/cl2", which the fire tool's path scanner reads as a relative path — write waivers without slashes).
+Call id appended below at harvest. Also this window: md3's Metal cell fell from 30 to 2 steps/min under CPU load 21 from sj1 (6 shards) + pc1 (8 solvers);
+MAIN reniced the CPU arms to +10 (reversible) — a Metal cell's host thread is a CPU consumer the governor does not model (gov3 ITEM 3, third face).
