@@ -899,3 +899,7 @@ Call `fc-01M1SHRJ45TJRMA9G2YXCE4MTW`, archive sha `891add546f5cf0943929b566f29dd
 (rc1, model sections) + −1,801 B AND better pose (pc1, carrier lattice) = −3,534 B and −2.62e-3 S since cl2 this afternoon. Re-derived: gap 0.0251981569076111.
 Composition for the live arms: **the carrier coefficient block is now pc1's (lattice ×4, re-solved) — sj1's edited pairs must re-solve FROM these coefficients
 on this lattice**, model sections rc1's, tail unchanged. pc1's ×8/×16 rungs run on this base. PR #140 is five moves behind.
+**Pointer advanced (20:35Z):** the compliant twin was itself SHADOWED — the refresh took only the scan's single best row per axis (the refused v3 lane, same
+score) and kept the prior pointer. Fixed: the refresh now walks the ranked candidates and takes the first admissible (ad1f80974, test). Pointer =
+`ddm_pc1_t4_lattice_x4_on_rc1_20260905`, S 0.1451981569076111 @ 176,448 B. Three apparatus defects surfaced by tonight's two moves, all fixed with tests:
+packet ulp cross-check, fire-time lane-id maturity check, refresh ranked fall-through.
