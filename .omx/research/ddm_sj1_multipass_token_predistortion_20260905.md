@@ -108,10 +108,47 @@ Yield by class role (the role, not the class index, because Road is the hub of 8
 `verdict_scope`: SIZING instrument (n = 36 sites). It ORDERS the sweep; no combination was excluded
 from the n600 pass on this evidence.
 
+## 3. The engine, and why it is the shape it is
+
+Greedy realized coordinate descent, per pair, on the pair's whole realized flip count:
+
+```
+A = argmax(render(T));  F = |A != G|
+for each move m in the ordered 36-family:
+    skip m if its SITE already reads GT (an earlier move's FAR FIELD may have repaired it)
+    A' = argmax(render(T + m))            # receiver's own renderer, frozen CPU SegNet
+    if |A' != G| < F:  T += m;  A = A';  F = |A' != G|
+```
+
+Monotone by construction: a pair's flip count never rises. The render runs at batch 1
+(byte-identity contract); SegNet is batched ACROSS pairs, 8 in flight per shard.
+Shards are STRIDED over all 600 pairs, never contiguous blocks.
+
+**Shakedown (4 seeded pairs, `gt` stage only, MEASURED):** 166 flips → 83, i.e. **50.0%
+repaired**, 72 changed tokens, **1.153 cells per changed token**, ~109 realized evaluations
+per pair. The charter's FALSIFIER (a full pass repairing < 8% of remaining flips) is cleared
+by 6× on the `gt` slice alone.
+
+**Close-path identity control (MEASURED, before any candidate exists):**
+`ddm_up3_carrier_splice.parse_shipped_body` + `build_archive` on the cl2 body's OWN carrier
+codes rebuilds `archive.zip` to sha `08ec85333d13d71344b4482cf261e3b2d508725e49f3ca05971265a81498ad4e`
+at exactly **179,982 B** — byte-identical. The carrier splice is therefore byte-anchored on
+this body, so any later byte delta is attributable to the re-solve and not to the rebuild.
+
+## 4. Operating record (honest)
+
+* **RSS under-declaration.** I declared 14 GiB for 5 shards; MEASURED per-shard RSS at
+  `--batch 8` is 5.0–5.5 GB, so the real footprint is ~25 GiB. The system admission gate
+  then correctly refused every 6th process at 120.6 GiB used (pc1 holds 4 × 4.6 GB). The
+  refusal is information, not an obstacle: the exact-byte pricing runs after pass 2a frees
+  its memory. Next launch of this family declares 5.5 GiB per shard.
+* **Throughput MEASURED:** 1.72–1.77 s per realized evaluation per shard at 3 torch threads
+  under contention (load average ~30 on 18 cores), 5 shards → 2.87 evals/s aggregate.
+
 ---
 
-*(Sections 3+ — the pass table, the persistent partition, admission, exact ΔS — are appended as each
-lands. Nothing below is written before it is measured.)*
+*(Sections 5+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
+appended as each lands. Nothing is written here before it is measured.)*
 
 ---
 

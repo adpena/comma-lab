@@ -497,6 +497,116 @@ def cmd_admit(args) -> int:
 
 
 # --------------------------------------------------------------------------------------
+# close -- splice the re-solved carrier into the token-edited body and price it EXACTLY
+# --------------------------------------------------------------------------------------
+
+
+def cmd_close(args) -> int:
+    """Build the composed candidate and price it on measured legs only.
+
+    The pricing arithmetic is this arm's OWN, not ``jg5.run_close``'s, for one measured
+    reason: jg5 carries the seg leg onto T4 with the ratio of the ANCESTOR body's legs
+    (0.00030309 / 0.00030307), and this body's ratio is 0.00020139 / 0.00020132277.  The
+    two differ by 2.8e-4 relative, which is 5.6e-6 in score units -- a quarter of the
+    2e-5 admission bar, so using the wrong one would be a real mispricing, not a rounding
+    detail ([[binding-instruction-numbers-expire-and-nobody-rederives-them]]).  Every
+    other mechanism -- ``splice.parse_shipped_body``, ``splice.build_archive`` with its
+    parse-back verify, ``jg5.section_identity`` -- is jg5's and is reused verbatim.
+    """
+    import ddm_up3_carrier_splice as splice
+
+    runtime = Path(args.body_runtime)
+    base_bytes = (runtime / "archive.zip").read_bytes()
+    observed = hashlib.sha256(base_bytes).hexdigest()
+    if args.expect_body_sha256 and observed != args.expect_body_sha256:
+        raise Sj1JointError(f"body sha256 {observed} != expected {args.expect_body_sha256}")
+    body = splice.parse_shipped_body(runtime, verify_sha=False)
+    base_codes = np.asarray(body.codes, dtype=np.int32)
+
+    # CONTROL: splicing the body's OWN codes back in must reproduce its bytes, or a byte
+    # delta cannot be attributed to the re-solve rather than to the rebuild.
+    identity = splice.build_archive(
+        body, base_codes, runtime_dir=runtime, container_search=True
+    )
+    identity_ok = identity["archive_sha256"] == observed
+    if not identity_ok and not args.allow_identity_drift:
+        raise Sj1JointError(
+            "CONTROL FAILED: rebuilding the body from its own codes gives "
+            f"{identity['archive_sha256']} ({identity['archive_size']} B), not "
+            f"{observed} ({len(base_bytes)} B)"
+        )
+
+    codes = np.load(args.codes).astype(np.int32)
+    if codes.shape != (N_PAIRS, up2.CARRIER_DIM):
+        raise Sj1JointError(f"codes have shape {codes.shape}")
+    admitted = set(json.loads(Path(args.admitted_pairs).read_text()))
+    candidate_codes = base_codes.copy()
+    for pair in sorted(admitted):
+        candidate_codes[pair] = codes[pair]
+
+    built = splice.build_archive(
+        body, candidate_codes, runtime_dir=runtime, container_search=True, verify=True
+    )
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    archive_path = args.out_dir / "candidate_archive.zip"
+    archive_path.write_bytes(built["archive_bytes"])
+    np.save(args.out_dir / "candidate_codes.npy", candidate_codes)
+
+    proof = jg5.section_identity(built["archive_bytes"], base_bytes, runtime=runtime)
+    if not proof["frame1_sections_all_identical"]:
+        raise Sj1JointError(
+            f"a frame-1 section moved ({proof}); refusing to launder a seg leg through "
+            "a changed odd-frame section"
+        )
+
+    d_seg_instrument = args.d_seg_instrument
+    ratio_t4 = sj1.BASE_D_SEG_T4 / args.instrument_base_d_seg
+    d_seg_t4 = d_seg_instrument * ratio_t4
+    d_pose = args.d_pose
+    archive_bytes = int(built["archive_size"])
+    score = composed_score(d_seg_t4, d_pose, archive_bytes)
+    report = {
+        "schema": "ddm_sj1_close.v1",
+        "body_runtime": str(runtime),
+        "body_archive_sha256": observed,
+        "body_archive_bytes": len(base_bytes),
+        "identity_control_passed": identity_ok,
+        "identity_control_sha256": identity["archive_sha256"],
+        "candidate_archive": {
+            "path": str(archive_path),
+            "sha256": built["archive_sha256"],
+            "bytes": archive_bytes,
+        },
+        "carrier_pairs_spliced": len(admitted),
+        "carrier_coordinates_changed": int((candidate_codes != base_codes).sum()),
+        "frame1_section_identity": proof,
+        "d_seg_instrument": d_seg_instrument,
+        "instrument_base_d_seg": args.instrument_base_d_seg,
+        "t4_ratio_applied": ratio_t4,
+        "d_seg_t4_projected": d_seg_t4,
+        "d_pose": d_pose,
+        "archive_bytes": archive_bytes,
+        "score_projected": score,
+        "base_score_t4": sj1.BASE_SCORE_T4,
+        "net_dS_vs_base": score - sj1.BASE_SCORE_T4,
+        "cl2_projected_score": sj1.CL2_PROJECTED_SCORE,
+        "net_dS_vs_cl2": score - sj1.CL2_PROJECTED_SCORE,
+        "admit_bar": -2e-05,
+        "clears_admit_bar_vs_base": bool(score - sj1.BASE_SCORE_T4 <= -2e-05),
+        "axis": (
+            "seg from the jg1 DALI instrument carried onto T4 by the SAME-instrument "
+            "ratio; pose [macOS-CPU advisory, frozen CPU-torch PoseNet, DALI GT]; bytes "
+            "EXACT"
+        ),
+        "score_claim": False,
+        "promotable": False,
+    }
+    (args.out_dir / "CLOSE.json").write_text(json.dumps(report, indent=2, sort_keys=True))
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return 0
+
+
+# --------------------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------------------
 
@@ -562,6 +672,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="MEASURED marginal bytes per changed token from a real re-encode; never an average",
     )
     admit.set_defaults(func=cmd_admit)
+
+    close = sub.add_parser("close", help="splice the re-solved carrier and price exactly")
+    close.add_argument("--body-runtime", type=Path, required=True)
+    close.add_argument("--expect-body-sha256", default=None)
+    close.add_argument("--codes", type=Path, required=True)
+    close.add_argument("--admitted-pairs", type=Path, required=True)
+    close.add_argument("--out-dir", type=Path, required=True)
+    close.add_argument("--allow-identity-drift", action="store_true")
+    close.add_argument("--d-seg-instrument", type=float, required=True)
+    close.add_argument("--instrument-base-d-seg", type=float, required=True)
+    close.add_argument("--d-pose", type=float, required=True)
+    close.set_defaults(func=cmd_close)
 
     return parser
 

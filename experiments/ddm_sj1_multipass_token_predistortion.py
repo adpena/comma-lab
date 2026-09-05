@@ -216,9 +216,28 @@ def argmax_for_tokens(body: Body, tokens_pair: np.ndarray, pair: int) -> np.ndar
 
 
 def argmax_from_raw(body: Body, pair: int) -> np.ndarray:
-    """SegNet argmax of the SHIPPED decode for one pair, read from the receiver's 0.raw."""
+    """SegNet argmax of a DECODE for one pair, read from a receiver's own ``0.raw``."""
     frame = np.asarray(body.raw[2 * int(pair) + 1])[None]
     return jg1.argmax_from_camera_frames(body.net, frame)[0]
+
+
+def open_raw_decode(path: Path):
+    """Memmap any receiver decode at the shipped shape, refusing a wrong size.
+
+    ``up2.open_raw`` pins a sha allow-list built for the OLD pointer body, so a candidate
+    decode -- which by construction has a NEW sha -- could never pass it.  The identity
+    that binds here is the size plus the caller's own recorded sha in the run receipt.
+    """
+    expected = 2 * N_PAIRS * jg1.CAMERA_H * jg1.CAMERA_W * 3
+    actual = path.stat().st_size
+    if actual != expected:
+        raise Sj1Error(f"decode {path} is {actual} B, expected {expected} B")
+    return np.memmap(
+        path,
+        dtype=np.uint8,
+        mode="r",
+        shape=(2 * N_PAIRS, jg1.CAMERA_H, jg1.CAMERA_W, 3),
+    )
 
 
 # --------------------------------------------------------------------------------------
@@ -233,7 +252,11 @@ def cmd_step0(args) -> int:
     bytes cl2 sealed.  The re-render identity is a separate control (``control``).
     """
     _set_threads(args.threads)
-    body = load_body(with_raw=True, verify_shas=not args.no_verify_shas)
+    body = load_body(with_raw=args.raw is None, verify_shas=not args.no_verify_shas)
+    if args.raw is not None:
+        body.raw = open_raw_decode(args.raw)
+        body.receipts["decode_path"] = str(args.raw)
+        body.receipts["decode_sha256"] = _sha256_file(args.raw)
     indices = np.array_split(np.arange(N_PAIRS, dtype=np.int64), args.shard_count)[
         args.shard_index
     ]
@@ -1060,6 +1083,13 @@ def build_parser() -> argparse.ArgumentParser:
     step0.add_argument("--shard-count", type=int, required=True)
     step0.add_argument("--out", type=Path, required=True, help="argmax .npy for this shard")
     step0.add_argument("--receipt", type=Path, required=True)
+    step0.add_argument(
+        "--raw",
+        type=Path,
+        default=None,
+        help="decode to score (default: the cl2 body's own 0.raw); use a CANDIDATE decode "
+        "to re-measure d_seg on the bytes that would actually ship",
+    )
     step0.set_defaults(func=cmd_step0)
 
     merge = sub.add_parser("step0-merge", help="merge shards into the n600 seg leg")
