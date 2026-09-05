@@ -96205,6 +96205,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_ddm_mc1_motion_compensated_previous_plane_20260903",
+      "name": "ddm_mc1 motion-compensated previous plane for the HPAC mixer (ceiling-first)",
+      "phase": 3.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/ddm_mc1_motion_compensated_previous_plane.py (stages rows/motion/oracle/ceiling/verdict/report); commit ebc571397"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[empirical:/Volumes/APDataStore/pact/ddm_mc1_motion_compensated_previous_plane/rows/ROWS_RESULT.json] shipped-encoder re-encode of the fs2 archive stream byte-identical (113,411 B, sha 5601d6fd); ceiling receipts /Volumes/APDataStore/pact/ddm_mc1_motion_compensated_previous_plane/ceiling/CEILING_RESULT.json (CEILING-REFUSED, best derivable +159.60 B)"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "CEILING-REFUSED 2026-09-05: six decoder-derivable integer motion planes all worse-aligned than co-located; best coder ceiling +159.60 B vs 5,000 B bar; oracle plane +3,420 B < 9,861 B carriage. Steps 2-4 (retrain/RC64/T4) not run by the pre-registered rule. Memo .omx/research/ddm_mc1_motion_compensated_previous_plane_20260904.md; prior codex screen 2026-09-03 replicated (global translation -17.1 B). research_only=true; reactivation: a decoder-derivable plane that beats co-located on Lane IoU AND band agreement."
     }
   ],
   "level_rules": {
@@ -96214,5 +96255,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-04T22:12:34Z"
+  "updated_at": "2026-09-05T01:04:54Z"
 }

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import numpy as np
 
-from experiments import ddm_mc1_motion_compensated_previous_plane as mc1
+# The 2026-09-03 codex screen (commit 2c32e2767) was restored verbatim under its own
+# path when the 2026-09-04 arm took the charter's module path; this test binds to it.
+from experiments import ddm_mc1_motion_plane_ceiling_screen_20260903 as mc1
 
 
 def _semantic_scene() -> np.ndarray:

@@ -704,7 +704,7 @@ def stage_oracle(args: argparse.Namespace) -> dict[str, Any]:
         atomic_json(oracle_paths["params"], {"schema": "ddm_mc1_oracle_params.v1", "model": name, "params": params_out})
         atomic_json(STORE_AP / "motion" / f"oracle_params_{name}.json", {"schema": "ddm_mc1_oracle_params.v1", "model": name, "params": params_out})
         results[name] = result
-        progress({"stage": "oracle", "model": name, "event": "done", "band_oracle": result["band_agreement_oracle"], "band_co": result["band_agreement_colocated"], "lane_oracle": result["mean_iou_oracle_by_class"]["Lane"], "lane_co": result["mean_iou_colocated_by_class"]["Lane"]})
+        progress({"stage": "oracle", "model": name, "event": "done", "band_oracle": result["band_agreement_oracle"], "band_co": result["band_agreement_colocated"], "iou_lane_oracle": result["mean_iou_oracle_by_class"]["Lane"], "iou_lane_colocated": result["mean_iou_colocated_by_class"]["Lane"]})
     return results
 
 
@@ -1071,16 +1071,16 @@ def stage_report(args: argparse.Namespace) -> dict[str, Any]:
         candidates.update({f"tilt:{c}": tmin(c) for c in tilt if c.startswith("mc")})
         best_cell = max(candidates, key=candidates.__getitem__)
         motion = r["motion"]
-        lane = motion["mean_iou_mc_by_class"]["Lane"]
+        iou_lane = motion["mean_iou_mc_by_class"]["Lane"]
         band = motion["band_agreement_mc"]
         bare = r["bare"]["ideal_coder_bytes_saved_adding_mc_REFUSAL_ONLY"]
         lines.append(
-            f"| `{name}` | {lane:.4f} | {band:.4f} | {imin('mc'):+.2f} | {imin('agree'):+.2f} | {imin('mc_x_arg'):+.2f} | "
+            f"| `{name}` | {iou_lane:.4f} | {band:.4f} | {imin('mc'):+.2f} | {imin('agree'):+.2f} | {imin('mc_x_arg'):+.2f} | "
             f"{imin('mc_x_coloc_x_arg'):+.2f} | {imin('mc_x_arg_x_bd'):+.2f} | {imin('mc_x_coloc_x_arg_x_bd'):+.2f} | "
             f"{tmin('mc_x_arg'):+.2f} | {tmin('mc_x_coloc_x_arg'):+.2f} | {tmin('mc_x_coloc_x_arg_x_bd'):+.2f} | "
             f"{best_cell} **{candidates[best_cell]:+.2f} B** | {bare:,.0f} |"
         )
-        rows_out[name] = {"best_cell": best_cell, "best_held_out_bytes": candidates[best_cell], "lane_iou": lane, "band": band}
+        rows_out[name] = {"best_cell": best_cell, "best_held_out_bytes": candidates[best_cell], "iou_lane": iou_lane, "band": band}
     text = "\n".join(lines)
     print(text)
     atomic_json(STORE_AP / "ceiling" / "REPORT_TABLE.json", {"markdown": text, "rows": rows_out})

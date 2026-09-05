@@ -197,6 +197,15 @@ through this instrument, and its carriage alone costs 9,861 B.
   carries no aligned information the current-frame causal context does not already hold.
 - `ddm_gb1_groupbin8_verdict_20260824.md`: −153 B lossless from decode-scan conditioning; the scale a
   real conditioning gain looks like on this body.
+- **`ddm_mc1_motion_compensated_previous_plane_20260903.md` (the 2026-09-03 codex screen, commit
+  `2c32e2767`) — an INDEPENDENT REPLICATION I found only at commit time** (the re-spawn addendum
+  recorded it as stranded with no result; its stage receipts, `RESULT.json` and memo exist under the
+  same store, 12:57–12:59Z on 09-03). On the DF1 (dx2-body) rows with contexts {coloc} → {coloc × mc},
+  pair fold seed 20260903, its three planes (global translation, per-64-row-band translation, integer
+  affine block fit) were ALL worse than co-located; best −17.108 B (global translation). My `mc_x_coloc`
+  cell on the fs2 rows gives −7.02 B (shift), −3.55 (zoom), −12.84 (planar): same sign, same magnitude,
+  two bodies, two implementations, two seeds. Its screen is a subset of this arm's (no zoom/planar/
+  block-gated/median, no oracle, no tilt family, no exact fs2 rows); both verdicts are CEILING-REFUSED.
 - Naming note: an unrelated 2026-07-24 arm also used the tag `ddm_mc1`
   (`ddm_mc1_hood_static_reassert`); this memo's file name carries the full object to keep them apart.
 
@@ -212,7 +221,9 @@ through this instrument, and its carriage alone costs 9,861 B.
 | alignment receipts | same dir, `MOTION_*.json`, `ORACLE_*.json`, `iou_*.npy` | — |
 | ceiling receipts | `/Volumes/APDataStore/pact/ddm_mc1_motion_compensated_previous_plane/ceiling/CEILING_*.json`, `CEILING_RESULT.json` | — |
 | receiver copy of the fs2 tree (untouched; the MC-aware decode was never needed) | `/Volumes/VertigoDataTier/pact/ddm_mc1_motion_compensated_previous_plane/receiver_mc/` | — |
-| code | `experiments/ddm_mc1_motion_compensated_previous_plane.py` (stages rows / motion / oracle / ceiling / verdict) | committed |
+| code | `experiments/ddm_mc1_motion_compensated_previous_plane.py` (stages rows / motion / oracle / ceiling / verdict / report) | committed `ebc571397` |
+| prior codex screen (restored verbatim from `2c32e2767`) | `experiments/ddm_mc1_motion_plane_ceiling_screen_20260903.py` + `experiments/tests/test_ddm_mc1_motion_compensated_previous_plane.py` | 2026-09-03 receipts under the same AP store (`RESULT.json`, `stage_0*_complete.json`, `retained/`) |
+| lane | `lane_ddm_mc1_motion_compensated_previous_plane_20260903` (`.omx/state/lane_registry.json`; `impl_complete`, `real_archive_empirical`; research_only) | — |
 
 Reproduce: `.venv/bin/python experiments/ddm_mc1_motion_compensated_previous_plane.py --stage {rows,motion,oracle,ceiling,verdict} [--models …]`.
 
@@ -224,6 +235,14 @@ Reproduce: `.venv/bin/python experiments/ddm_mc1_motion_compensated_previous_pla
 - The receiver copy under `receiver_mc/` is an untouched copy of the fs2 tree; no MC decode was wired.
 - The ceiling ran on the fs2 body's coder (the shipped one); it was NOT run on a retrained model
   (that is step 2, refused).
+- **I overwrote a committed file and restored it.** The charter's module path
+  `experiments/ddm_mc1_motion_compensated_previous_plane.py` already held the 09-03 codex screen
+  (commit `2c32e2767`, 1,171 lines, with `experiments/tests/test_ddm_mc1_motion_compensated_previous_plane.py`);
+  my `Write` replaced it without checking the path first (my error — §4 of the operating manual:
+  re-derive from the artifact, do not assume). The commit `ebc571397` therefore shows 1,085 deletions.
+  Cure in the follow-up commit: the prior module is restored byte-for-byte from `2c32e2767` as
+  `experiments/ddm_mc1_motion_plane_ceiling_screen_20260903.py` and its test now imports that path;
+  nothing of the prior arm is lost, and its `RESULT.json` remains reproducible from its own script.
 - Operational note: the 23:47Z rc=143 on my first ceiling launch was my own `kill` (I stopped it to
   fix a wrong in-sample telemetry formula and relaunched); the compressor ramp the watchdog saw was
   three `load_live` phases coinciding, since cured by a two-pass preallocation. From ~00:05Z the
