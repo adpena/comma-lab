@@ -71,3 +71,13 @@ is the wrong instrument — system-availability delta per launch is the right on
   = 19.3–22.5 GB. The arm declared 14 GiB against a measured 22.5 GB (its own erratum). With pc1's eight GN solvers the machine sat at load 19–21 and
   md3's Metal cell fell from 30 to 1–2 steps/min: **a Metal cell's CPU host thread is starved by CPU arms — model the cell as needing ≥ 2 free cores**,
   and treat `renice` as ineffective (measured: rate unchanged after renice +10 on the arms).
+
+## ITEM 5 — a wall-clock cap sized on the serial rate kills a HEALTHY cell under contention (MEASURED 2026-09-05 20:44Z)
+md3's different-init cell (5,000 steps, 30 steps/min serial → ~2.8 h) ran under CPU load 18–22 from two CPU arms for most of its life at 1–15 steps/min and hit
+safe_run's `--timeout 18000` (5 h) at step **4,552** (`status=timeout`, SIGTERM→SIGKILL, peak RSS 1.7 GiB, nothing wrong with the run). The cap protects against
+a HUNG process; it cannot tell a hung process from a starved one. Cure: (a) the launcher's timeout must be a PROGRESS budget — kill only when `completed_steps`
+has not advanced for N minutes (the history.jsonl is already the heartbeat) — with the wall-clock cap as a far ceiling (≥ 3× the serial estimate); (b) the
+governor, when it admits CPU arms beside a live cell, must extend the cell's cap proportionally to the measured rate drop. Owed now: RESUME md3's cell from its
+last stage checkpoint (`--resume-from`; run `…/runs/seed_20260902_different_init_r10_live_control_native100/`) for the remaining 448 steps when CPU frees,
+then the md1 partition read (Jaccard vs cold; J ≥ 0.70 = data-anchored) — MAIN fires it; the cell's claims (`md3_different_init_*_20260905`) get a
+`stopped_timeout_resumable` terminal row and a new job id at resume.
