@@ -635,3 +635,5 @@ weaker state" the actuator is RETIRED: the live instance runs `--report-only` (r
 signals); gov2 asked to flip the default. Follow-on named, not built: a COOPERATIVE pause (SIGUSR1 → the trainer checkpoints at the next step
 boundary and exits resumable → the queue driver re-admits when pressure clears) — the only actuator that frees resident bytes without losing work.
 Zero processes in state T after reconciliation; ng4 running. Equations leg (`tac.canonical_equations`): none (host apparatus constants stay out).
+
+**Default flipped (gov2 f6f3f03f8, 00:50Z):** `report_only` defaults True; `--act` is the explicit opt-in; `--act --report-only` → report-only wins (fail-safe, drilled); the RECONCILER runs in both modes (rescue is not an actuation). gov2's own words: "the guard I built destroyed work and prevented none; its value tonight was entirely in the alarms and the actor-naming." Owed, named: the cooperative pause protocol (SIGUSR1 → checkpoint → exit resumable → re-admit) and a launcher that refuses an instance older than the tool it runs.
