@@ -621,6 +621,90 @@ def stage_verify(args: argparse.Namespace) -> dict[str, Any]:
 
 
 # --------------------------------------------------------------------------------------
+# stage: parseback (the shipped receiver's own inflate path, CPU, no scorer)
+# --------------------------------------------------------------------------------------
+
+
+def stage_parseback(args: argparse.Namespace) -> dict[str, Any]:
+    """Run the receiver tree's OWN inflate path on CPU and hash the rendered raw output.
+
+    ``inflate.py`` refuses CPU (it pins linux-nvidia-t4 for the 1,800 s budget), so this calls
+    the same ``runtime.f26_inflate.inflate_archive`` it calls, with ``device_name="cpu"``, after
+    running the tree's own ``_verify_input`` pin check (archive sha, bytes, member ``p``).  For
+    the candidate the render must equal the shipped tree's render byte for byte: the token field,
+    semantic and carrier sections are unchanged, so any difference would be a receiver defect.
+    """
+    import importlib
+    import importlib.util
+    import zipfile
+
+    rung = args.rung
+    if rung == "shipped":
+        runtime = STORE / "control" / "retained" / "shipped_runtime"
+        if not runtime.is_dir():
+            raise Cl2Error("run the control stage first (it stages the shipped runtime copy)")
+    else:
+        result_path = STORE / "rungs" / rung / "RUNG_RESULT.json"
+        if not result_path.is_file():
+            raise Cl2Error(f"{rung}: RUNG_RESULT.json is absent; price first")
+        runtime = Path(json.loads(result_path.read_text(encoding="utf-8"))["receiver_copy_runtime"]["path"])
+    archive = runtime / "archive.zip"
+    root = STORE / "parseback" / rung
+    root.mkdir(parents=True, exist_ok=True)
+    result_path = root / "PARSEBACK_RESULT.json"
+    if result_path.is_file() and not args.force:
+        raise Cl2Error(f"parse-back already recorded at {result_path}; pass --force to redo")
+    data_dir = root / "data"
+    data_dir.mkdir(exist_ok=True)
+    with zipfile.ZipFile(archive) as zf:
+        member = zf.read("p")
+    persist_bytes(data_dir / "p", member, label="extracted member p")
+    atomic_json(
+        root / "PARSEBACK_START.json",
+        {"schema": "ddm_cl2_parseback_start.v1", "rung": rung, "runtime": str(runtime), "archive": file_fact(archive)},
+    )
+    spec = importlib.util.spec_from_file_location(f"cl2_receiver_inflate_{rung}", runtime / "inflate.py")
+    if spec is None or spec.loader is None:
+        raise Cl2Error("cannot import the receiver copy's inflate.py")
+    sys.path.insert(0, str(runtime))
+    receiver = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(receiver)
+    receiver._verify_input(data_dir, archive)  # the tree's own pin check (sha, bytes, member p)
+    f26 = importlib.import_module("runtime.f26_inflate")
+    if Path(f26.__file__).resolve() != (runtime / "runtime" / "f26_inflate.py").resolve():
+        raise Cl2Error("parse-back imported a runtime outside the receiver copy")
+    destination = root / "0.raw"
+    started = time.perf_counter()
+    report = f26.inflate_archive(
+        archive,
+        destination,
+        renderer_dir=runtime / "cpr1",
+        device_name="cpu",
+        num_threads=4,
+        checkpoint_dir=root / ".f26_decode_checkpoints",
+    )
+    elapsed = time.perf_counter() - started
+    rendered = file_fact(destination)
+    result = {
+        "schema": "ddm_cl2_parseback.v1",
+        "axis": AXIS,
+        "score_claim": False,
+        "rung": rung,
+        "runtime": str(runtime),
+        "archive": file_fact(archive),
+        "pin_check": "PASS (receiver inflate.py _verify_input)",
+        "rendered_raw": rendered,
+        "inflate_report": report,
+        "wall_clock_seconds": elapsed,
+        "device": "cpu",
+        "note": "render retained; rebuildable from archive + receiver tree (certify-or-block: sha + bytes + argv recorded here)",
+    }
+    atomic_json(result_path, result)
+    print(json.dumps({k: v for k, v in result.items() if k != "inflate_report"}, indent=2, sort_keys=True))
+    return result
+
+
+# --------------------------------------------------------------------------------------
 # stage: report (slopes + decision rule)
 # --------------------------------------------------------------------------------------
 
@@ -732,6 +816,9 @@ def build_parser() -> argparse.ArgumentParser:
     price.add_argument("--force", action="store_true")
     verify = sub.add_parser("verify", help="a priced rung's candidate through the shipped container path")
     verify.add_argument("--rung", required=True, choices=sorted(RUNG_LAMBDA))
+    parseback = sub.add_parser("parseback", help="the receiver tree's own inflate path on CPU; hash the render")
+    parseback.add_argument("--rung", required=True, choices=[*sorted(RUNG_LAMBDA), "shipped"])
+    parseback.add_argument("--force", action="store_true")
     sub.add_parser("report", help="ladder table, adjacent slopes and the pre-registered decision")
     return parser
 
@@ -744,6 +831,8 @@ def main(argv: list[str] | None = None) -> int:
         stage_price(args)
     elif args.stage == "verify":
         stage_verify(args)
+    elif args.stage == "parseback":
+        stage_parseback(args)
     else:
         stage_report(args)
     return 0
