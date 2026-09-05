@@ -27,3 +27,13 @@ queued behind cl2 by its own discipline (`queued_behind_cl2_ladder` claim row), 
 cell shape — a governed job whose measured-peak ledger row (or a launch flag `--metal`) records a system-availability delta ≫ tree RSS is a Metal occupant; the
 throughput/concurrency leg counts occupants, not cells; the digest's live-cells section names them. Tests: cl2's trainer shape + a `run-config` cell must both
 count as occupants; a CPU pricer must not. Owner: the next governor arm (Opus).
+
+## ITEM 4 — fire waiters and queue placeholders (MEASURED 2026-09-05 15:34–15:41Z, two refusals in a row on md3's cell)
+(a) md3's fire waiter polled only for "Metal free 3/3" and EXITED rc=2 on the driver's admission REFUSE (ane2's five idle launches reserved 42 GiB of declared
+peaks at ~1.4 GiB real RSS). A fire waiter must poll the driver's DRY-RUN readiness (admission + storage + seal), not a single device predicate, and must
+RETRY on refusal until a wall cap — MAIN's `wait_admission_then_fire_md3.sh` is the pattern; fold it into `tools/cell_queue_driver.py run --wait-until-ready`.
+(b) On the retry the driver refused itself: `REFUSING_DISPATCH: active claim(s) already exist for lane_id=…` — md3's own QUEUED placeholder claim
+(`queued_behind_cl2_ladder`, same job id) blocked the driver's live claim at fire time. The driver must ADOPT a queued placeholder for the same lane+job id
+(append the terminal `queued→active` transition itself) instead of refusing; a placeholder is the queue's own state, not a foreign dispatch. (c) The launcher
+keeps a finished launch's DECLARED peak reserved while its supervisor lingers; release the reservation (or mark the manifest terminal) when the child exits.
+Tests: waiter retries through a simulated refusal; driver adopts a same-job placeholder; supervisor exit releases the reservation. Owner: next governor arm.
