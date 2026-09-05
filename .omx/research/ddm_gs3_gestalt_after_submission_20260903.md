@@ -704,3 +704,18 @@ held). Series complete: band×duals −9.5% ≫ band −7.8% ≫ continuous ≈ 
 config). Not a pointer object (born vehicle 106.6 KB; accuracy corner still 18.3× away; md1 stands). Fired and read with no hand in the loop.
 Equations leg (`tac.canonical_equations`): gm1's τ-band law + the continuous-dual anchor — the interaction row (duals × band → pose) is a NEW measured
 anchor; register on the next equations pass.
+
+## ADDENDUM 35 (2026-09-05 13:25Z real) — hc2: the flip-LOCATION half is at its address floor (CEILING-REFUSED, FAMILY scope)
+
+hc2 (7b767b5f9 / 9c7dfa8de) re-verified mc1's rows five-sha and byte-inside-the-archive (member `p`, offset 66,512), reproduced hc1's decomposition to
+0.3–0.4% (indicator 110,909.07 B = yes 34,642.82 + no-branch 76,266.24; conditional 2,501.80; 227,555 flips at 2.6812 b/flip — mc1's `base_argmax` was the
+pre-corrector argmax, 0.0275% off), then priced the location half against component representations, held-out 2-fold × 3 seeds: **the flips are 81.1%
+singletons** (172,193 components / 227,555 sites at 8-conn; median 1, p99 5, max 21; only 9 components ≥ 16 sites carrying 52 B). Every explicit
+representation is WORSE than the per-site sum — best (a) β-per-cell seeds + shapes +17,775 B vs the indicator; best overall (b) D=3 boundary geometry
++30,290 B vs the no-branch, −4,353 B vs the full indicator only when the acausal current-frame boundary is used (mi1's causal version: +5.27 B). The
+mi1-family conditional bound over the SAME clustering information: `pat4` **+23.82 B on 110,909 B — 210× under the 5,000 B bar**. Verdict: the falsifier
+fired harder than written — CEILING-REFUSED at FAMILY scope (two independent instruments agree). Fourth instance of the address law ([[m118]]): clustering
+addresses is not an escape from naming them; the shape token is itself an address. Not touched: the joint field+model escape. Equation
+`flip_location_component_address_floor_v1` registered (10 guards); lane L2; 916 MB retained. Equations leg (`tac.canonical_equations`): that equation.
+**Rate-corner ledger on the shipped object is now complete:** coder swaps 0 B · buckets ≤ 211 B · reorder 0 B · 21-tap oracle +32 KB above · MC previous
+plane +160 B (ceiling) · flip-location representations ≥ +17,775 B worse · ONLY cl2's prior-capacity ladder remains unpriced (training now).

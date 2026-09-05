@@ -60,3 +60,5 @@ Equations leg (`tac.canonical_equations`): `motion_compensated_previous_plane_al
 `exchange_ratio_noise_floor_v1` (two pure-pose authority anchors) — all registered this wave.
 
 Own-vehicle frontier: **fs2 S 0.14784474152757654 @ 180,023 B [contest-CUDA T4 n600]**.
+
+**§3 addendum (09-05 13:25Z):** hc2 — flip-LOCATION half CEILING-REFUSED at FAMILY scope: 81% singletons; every component/boundary representation ≥ +17,775 B worse than the per-site sum; conditional clustering bound +23.82 B (210× under the bar). Rate-corner doors on the shipped object: only cl2 (prior capacity) remains unpriced.
