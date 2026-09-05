@@ -623,8 +623,9 @@ of the op count but of WHICH ops, and that on the ANE it is not ε₁₆ at all 
 - **`src/tac/ane_screening.py`** — extended with `BACKEND_AXIS_VERDICTS`, `backend_axis_verdict`
   and `assert_backend_admissible_for_axis`, so a measured negative refuses rather than waits to be
   rediscovered.
-- **Tests**: `src/tac/tests/test_ane_precision.py` (**47**) + 6 added to
-  `src/tac/tests/test_ane_screening.py` (**34** total). All run in the main `.venv` without an ANE.
+- **Tests**: `src/tac/tests/test_ane_precision.py` (**44**) + 6 added to
+  `src/tac/tests/test_ane_screening.py` (**34** total) = **78**. All run in the main `.venv`
+  without an ANE, because the algebra a reviewer needs to falsify does not require the hardware.
 - **Runbook**: `docs/runbook_ane_precision_20260905.md`.
 
 Three guards are worth naming because each caught something:
