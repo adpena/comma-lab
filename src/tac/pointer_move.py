@@ -168,6 +168,11 @@ class ScoreRow:
         }
 
 
+#: Two IEEE-754 sums of the same three score terms differ by summation order only;
+#: 1e-15 is ~36 ulps at S~0.15 and 7 orders below any real component disagreement.
+SCORE_RECOMPUTE_ULP_TOLERANCE = 1e-15
+
+
 class HarvestRefusal(ValueError):
     """A harvest payload that must not become a pointer move."""
 
@@ -194,16 +199,21 @@ def score_row_from_harvest(
             "is never a score (CLAUDE.md)."
         )
     stated = payload.get("score_recomputed_from_components")
-    if (
-        isinstance(stated, (int, float))
-        and not isinstance(stated, bool)
-        and float(stated) != float(recomputed)
-    ):
-        raise HarvestRefusal(
-            "recomputed S disagrees with the receipt's own "
-            f"score_recomputed_from_components: {recomputed!r} vs {stated!r}. "
-            "One of the two is wrong and neither may become the pointer."
-        )
+    if isinstance(stated, (int, float)) and not isinstance(stated, bool):
+        # The receipt's recompute and ours sum the same three terms in a different
+        # order; IEEE-754 leaves them a few ulps apart (measured 2026-09-05, move 27:
+        # 0.1466635077447378 vs 0.14666350774473783). A REAL disagreement — a wrong
+        # byte count, a wrong component — is >= 1e-8 (the components print at 8 dp),
+        # so a tolerance of 1e-15 (~36 ulps at S~0.15) separates the two by 7 orders.
+        if abs(float(stated) - float(recomputed)) > SCORE_RECOMPUTE_ULP_TOLERANCE:
+            raise HarvestRefusal(
+                "recomputed S disagrees with the receipt's own "
+                f"score_recomputed_from_components: {recomputed!r} vs {stated!r}. "
+                "One of the two is wrong and neither may become the pointer."
+            )
+        # Within tolerance the receipt's own value is the pointer value: it is what the
+        # evaluator-side recompute printed, and every prior move carried that number.
+        recomputed = float(stated)
     sha = payload.get("expected_archive_sha256") or payload.get("archive_sha256")
     if not isinstance(sha, str) or len(sha) != 64:
         raise HarvestRefusal(f"payload carries no full 64-hex archive sha256 (got {sha!r})")

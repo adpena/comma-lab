@@ -265,3 +265,28 @@ def test_terminal_claim_note_omits_a_sha_the_receipt_lacks() -> None:
     note = _poller_module().canonical_terminal_claim_notes(payload, "fc-TEST")
     assert "runtime_tree_sha256=" not in note
     assert FS1["expected_archive_sha256"] in note
+
+
+def test_accepts_a_receipt_that_differs_by_summation_order_ulps() -> None:
+    """Move 27 (2026-09-05): the receipt printed 0.14666350774473783 and the packet's
+    own sum gave 0.1466635077447378 — the same number, one ulp apart. That must NOT
+    refuse; the receipt's value becomes the row score."""
+    from tac.pointer_move import score_row_from_harvest
+
+    ours = 25 * FS1["archive_size_bytes"] / 37_545_489 + 100 * FS1["avg_segnet_dist"]
+    ours += (10 * FS1["avg_posenet_dist"]) ** 0.5
+    nudged = ours + 3e-17  # a few ulps
+    payload = dict(FS1, score_recomputed_from_components=nudged)
+    row = score_row_from_harvest(payload, lane_id="lane", call_id="fc-x")
+    assert row.score == nudged
+
+
+def test_still_refuses_a_real_component_disagreement_above_tolerance() -> None:
+    from tac.pointer_move import HarvestRefusal, score_row_from_harvest
+
+    bad = dict(FS1, score_recomputed_from_components=FS1["score_recomputed_from_components"] + 1e-9)
+    try:
+        score_row_from_harvest(bad, lane_id="lane", call_id="fc-x")
+    except HarvestRefusal:
+        return
+    raise AssertionError("a 1e-9 disagreement must refuse")
