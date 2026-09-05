@@ -650,3 +650,27 @@ warning; +6 tests). Collateral, owned: 7–8 concurrent movers saturated both ti
 paused; ng4 recovered to 27 steps/min within a minute of the last move. Not done: ~101 GiB more of the `inflated/` class (needs a destination), the
 247 GiB of `cold_store*` (a retention question), the 4.44 GiB burn trees. Pre-existing reds routed: `[lane-pre-registered]` on mc1's working file
 (`lane_oracle`, `lane_iou` identifiers); orphan-module guard 22 > 10 on unrelated `src/tac/` modules. Equations leg (`tac.canonical_equations`): none.
+
+## ADDENDUM 31 (2026-09-05 01:10Z real) — mc1 (Fable): the motion-compensated plane is CEILING-REFUSED; two of MAIN's claims corrected
+
+**Verdict (MEASURED on the exact fs2 body, receipt `…/ddm_mc1_motion_compensated_previous_plane/ceiling/CEILING_RESULT.json`; commits ebc571397 /
+54f96458d):** the best decoder-derivable motion-compensated previous plane conditions the shipped coder for **+159.60 B held-out** (`block` 48×64,
+tilt `mc_x_coloc_x_arg`; 3-seed indicator minimum +138.49 B) against the pre-registered 5,000 B bar — 31× short, 0.14% of the 113,411 B stream.
+Instrument control: the retained field re-encodes byte-identically through the shipped encoder (113,411 B, sha 5601d6fd…), so every ceiling row sits
+on the coder's own 50,009,121 live positions (mi1 family + 5-way tilt; pair-level two-fold; 3 seeds). Alignment vs field_t: EVERY derivable plane
+is worse than co-located on Lane/Road/MyCar/Undrivable (shift 0.2457, zoom 0.2423, planar 0.2429, block 0.2295, gated 0.2460, median3 0.2180 vs
+co-located 0.2495); only Movable (1.24% of area) gains. Mechanism: rigid/ground-plane oracle alignment buys ≤ +0.025 Lane IoU — the field's inter-pair
+change is NOT rigid motion; block motion is real (oracle +0.074) but NOT extrapolable (derivable-vs-oracle shift correlation 0.09–0.27 in the road
+rows, −0.35 in one). Even the ORACLE block plane (+3,420 B, reads field_t) sits below the bar and below its own 9,861 B carriage → carried motion is
+closed on arithmetic. Steps 2–4 (retrain, RC64 price, fire order) correctly NOT run. Equation `motion_compensated_previous_plane_alignment_gate_v1`
+registered (3 anchors, 8 re-derivation tests); lane L2 research_only; payloads retained (coding rows 2.36 GB, 7 planes, control stream).
+**The rate corner's "unmeasured door on the closest wall" is now measured shut at FORMULATION scope for the shipped receptive field.**
+
+**Two corrections to MAIN (NO-FAKE, on my own claims):** (1) the RE-SPAWN ADDENDUM said the 09-03 codex spawn was "stranded, no process, no result" —
+FALSE: its screen RAN (three planes, DF1 rows, best −17.1 B) and its memo/receipts exist; the queue row was stale, not the work. mc1's `Write` then
+overwrote that committed module at the charter path (mc1's error, restored byte-identically as `experiments/ddm_mc1_motion_plane_ceiling_screen_20260903.py`
+with its 12 tests rebound; cited as an independent replication). Law: before declaring a spawn stranded, read the arm's OWN receipts/memo, not the queue
+row ([[m75]] CHECK REFS before 'lost'). (2) MAIN told mc1 its 23:47Z rc=143 was a memory-cap kill correlated with the watchdog's WARN burst — FALSE:
+it was mc1's OWN kill (an in-sample telemetry formula fix). The correlation was coincidence; the causal reading was mine, unmeasured. What WAS real:
+from ~00:05Z dk2's movers froze APDataStore (ExFAT/FSKit) and mc1's ceiling children sat in uninterruptible I/O wait ~50 min (wall-clock lost, nothing else).
+Equations leg (`tac.canonical_equations`): `motion_compensated_previous_plane_alignment_gate_v1` (new, negative-transfer anchor for dc1's mechanism).

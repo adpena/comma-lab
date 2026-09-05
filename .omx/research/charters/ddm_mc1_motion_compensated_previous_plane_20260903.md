@@ -126,3 +126,6 @@ CANDIDATE" as "26th". The identity base for the receiver copy is the fs2 fire tr
 `/Volumes/VertigoDataTier/pact/ddm_fs2_carrier_resolve/fire_runtime_D_alternation/` (cpr1 receiver identical to the PR tree's). Retained
 exact AFR1 field: locate via the jbp1 receipt as written above; the field is identical for fs1/fs2 (pose-only edits never touch it).
 Everything else — ceiling first, warm-start retrain, RC64 exact price, payloads retained, no Modal/Metal/scorer — binds verbatim.
+
+## ERRATUM (mc1 result, 2026-09-05 01:10Z)
+The RE-SPAWN ADDENDUM's premise "stranded, no process, no result" was WRONG: the 09-03 codex spawn's screen ran (three planes, DF1 rows, best −17.1 B) with memo and receipts; only the queue row was stale. The Fable re-run measured the full ceiling (best derivable plane +159.60 B held-out vs the 5,000 B bar) → CEILING-REFUSED; the 09-03 screen stands as an independent replication (`experiments/ddm_mc1_motion_plane_ceiling_screen_20260903.py`). Memo: `ddm_mc1_motion_compensated_previous_plane_20260904.md`.
