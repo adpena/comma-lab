@@ -91,6 +91,10 @@ RUNG_LAMBDA = {
     "lambda_0p5": 0.5,
     "lambda_0p25": 0.25,
     "cpu_control_jf2_null": 1.0,
+    # cl1 rung 1: the uninterrupted twin of the control (same law, fresh root).  Its packed
+    # model + stream must equal the control's byte for byte, or the control's delta is
+    # run-to-run variance and no candidate may be built from it.
+    "lambda_1p0_twin": 1.0,
 }
 
 
@@ -463,6 +467,160 @@ def stage_price(args: argparse.Namespace) -> dict[str, Any]:
 
 
 # --------------------------------------------------------------------------------------
+# stage: verify (a priced rung's candidate through the SHIPPED container path)
+# --------------------------------------------------------------------------------------
+
+
+def _strip_pycache(root: Path) -> int:
+    removed = 0
+    for cache in sorted(root.rglob("__pycache__")):
+        shutil.rmtree(cache, ignore_errors=True)
+        removed += 1
+    return removed
+
+
+def _tree_facts(root: Path) -> dict[str, dict[str, Any]]:
+    facts: dict[str, dict[str, Any]] = {}
+    for path in sorted(root.rglob("*")):
+        if path.is_file() and "__pycache__" not in path.parts and not path.name.startswith("._"):
+            facts[str(path.relative_to(root))] = {"bytes": path.stat().st_size, "sha256": sha256_file(path)}
+    return facts
+
+
+def stage_verify(args: argparse.Namespace) -> dict[str, Any]:
+    """Prove a priced rung's candidate is the shipped object with ONLY the model + stream moved.
+
+    (a) section census: header / hpac / semantic / carrier / residual table / token stream of the
+        candidate member against the shipped member -- only hpac and the token stream may differ;
+    (b) container identity through fs2's own path: ``up3.parse_shipped_body`` on the receiver copy
+        and ``up3.build_archive`` at fs2's container shape (ck2, q=9, lgwin=16) must reproduce the
+        candidate archive byte for byte;
+    (c) receiver-copy tree census against the fs2 fire tree: only archive.zip and inflate.py's
+        two pin lines may differ (jf2 #1237);
+    (d) no-op detector: the changed sections are CONSUMED -- the arithmetic-coded stream decodes
+        to the exact field only under the model that produced it (the price stage's identity
+        decode), and the hpac section's length + sha differ from the shipped ones.
+    """
+    rung = args.rung
+    root = STORE / "rungs" / rung
+    result_path = root / "RUNG_RESULT.json"
+    if not result_path.is_file():
+        raise Cl2Error(f"{rung}: RUNG_RESULT.json is absent; price first")
+    result = json.loads(result_path.read_text(encoding="utf-8"))
+    if not result.get("decoded_identity") or not result.get("two_encodes_identical", True):
+        raise Cl2Error(f"{rung}: the priced row is not admissible; nothing to verify")
+    candidate = Path(result["candidate_archive"]["path"])
+    receiver_copy = Path(result["receiver_copy_runtime"]["path"])
+    if file_fact(candidate) != result["candidate_archive"]:
+        raise Cl2Error(f"{rung}: candidate archive drifted since pricing")
+
+    # (a) section census.
+    shipped = jg2.split_member(jg2.read_archive_member(FS2_ARCHIVE))
+    cand = jg2.split_member(jg2.read_archive_member(candidate))
+    census: dict[str, Any] = {}
+    for name in ("header", "hpac", "semantic", "carrier"):
+        census[name] = {
+            "shipped_bytes": len(shipped[name]),
+            "candidate_bytes": len(cand[name]),
+            "shipped_sha256": hashlib.sha256(shipped[name]).hexdigest(),
+            "candidate_sha256": hashlib.sha256(cand[name]).hexdigest(),
+            "identical": shipped[name] == cand[name],
+        }
+    for name, (s_bytes, c_bytes) in {
+        "residual_table": (shipped["tail"][: jg2.RESIDUAL_COMPACT_BYTES], cand["tail"][: jg2.RESIDUAL_COMPACT_BYTES]),
+        "token_stream": (shipped["tail"][jg2.RESIDUAL_COMPACT_BYTES :], cand["tail"][jg2.RESIDUAL_COMPACT_BYTES :]),
+    }.items():
+        census[name] = {
+            "shipped_bytes": len(s_bytes),
+            "candidate_bytes": len(c_bytes),
+            "shipped_sha256": hashlib.sha256(s_bytes).hexdigest(),
+            "candidate_sha256": hashlib.sha256(c_bytes).hexdigest(),
+            "identical": s_bytes == c_bytes,
+        }
+    only_model_and_stream_moved = (
+        census["semantic"]["identical"]
+        and census["carrier"]["identical"]
+        and census["residual_table"]["identical"]
+        and not census["hpac"]["identical"]
+    )
+    if census["token_stream"]["candidate_bytes"] != result["stream_bytes"]:
+        raise Cl2Error(f"{rung}: candidate token stream length disagrees with the priced stream")
+
+    # (b) container identity through fs2's own path.
+    from experiments import ddm_up3_carrier_splice as up3
+
+    body = up3.parse_shipped_body(receiver_copy, verify_sha=False)
+    built = up3.build_archive(
+        body,
+        body.codes,
+        runtime_dir=receiver_copy,
+        container_options=((bool(body.ck2_carrier), 9, 16),),
+    )
+    container_identity = built["archive_sha256"] == result["candidate_archive"]["sha256"]
+    rebuilt_fact = persist_bytes(
+        root / "retained" / "container_identity_rebuild.zip", built["archive_bytes"], label="container identity rebuild"
+    )
+    pycache_removed = _strip_pycache(receiver_copy)
+
+    # (c) tree census against the fs2 fire tree.
+    shipped_tree = _tree_facts(FS2_RUNTIME)
+    cand_tree = _tree_facts(receiver_copy)
+    differing = sorted(
+        name for name in set(shipped_tree) | set(cand_tree) if shipped_tree.get(name) != cand_tree.get(name)
+    )
+    inflate_diff = []
+    shipped_lines = (FS2_RUNTIME / "inflate.py").read_text(encoding="utf-8").splitlines()
+    cand_lines = (receiver_copy / "inflate.py").read_text(encoding="utf-8").splitlines()
+    if len(shipped_lines) == len(cand_lines):
+        inflate_diff = [
+            {"line": i + 1, "shipped": a, "candidate": b}
+            for i, (a, b) in enumerate(zip(shipped_lines, cand_lines, strict=True))
+            if a != b
+        ]
+    tree_ok = set(differing) <= {"archive.zip", "inflate.py"} and len(inflate_diff) == 2
+
+    verify = {
+        "schema": "ddm_cl2_verify.v1",
+        "axis": AXIS,
+        "score_claim": False,
+        "rung": rung,
+        "candidate_archive": result["candidate_archive"],
+        "section_census": census,
+        "only_model_and_stream_moved": bool(only_model_and_stream_moved),
+        "container_identity_via_up3": {
+            "identical": bool(container_identity),
+            "rebuilt": rebuilt_fact,
+            "container": built["container"],
+            "packed_metadata_identical": built["packed_metadata_identical"],
+            "rice_payload_identical": built["rice_payload_identical"],
+        },
+        "receiver_copy_tree": {
+            "path": str(receiver_copy),
+            "differing_files_vs_fs2_tree": differing,
+            "inflate_py_line_diff": inflate_diff,
+            "pycache_dirs_removed": pycache_removed,
+            "ok": bool(tree_ok),
+        },
+        "no_op_detector": {
+            "hpac_section_changed": not census["hpac"]["identical"],
+            "token_stream_changed": not census["token_stream"]["identical"],
+            "consumed": bool(result["decoded_identity"]),
+            "reading": (
+                "the RC64 stream is arithmetic-coded under the candidate model's probabilities; the receiver "
+                "decoding it to the exact field (price stage, identity PASS) is the proof that the new "
+                "hpac bytes were read and used -- the shipped model would desynchronise the decoder"
+            ),
+        },
+        "verdict": "VERIFIED" if (only_model_and_stream_moved and container_identity and tree_ok) else "REFUSED",
+    }
+    atomic_json(root / "VERIFY_RESULT.json", verify)
+    print(json.dumps({k: v for k, v in verify.items() if k not in ("section_census",)}, indent=2, sort_keys=True))
+    if verify["verdict"] != "VERIFIED":
+        raise Cl2Error(f"{rung}: candidate verification REFUSED")
+    return verify
+
+
+# --------------------------------------------------------------------------------------
 # stage: report (slopes + decision rule)
 # --------------------------------------------------------------------------------------
 
@@ -572,6 +730,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-repeat", action="store_true", help="skip the second encode (the row is then NOT admissible)"
     )
     price.add_argument("--force", action="store_true")
+    verify = sub.add_parser("verify", help="a priced rung's candidate through the shipped container path")
+    verify.add_argument("--rung", required=True, choices=sorted(RUNG_LAMBDA))
     sub.add_parser("report", help="ladder table, adjacent slopes and the pre-registered decision")
     return parser
 
@@ -582,6 +742,8 @@ def main(argv: list[str] | None = None) -> int:
         stage_control(args)
     elif args.stage == "price":
         stage_price(args)
+    elif args.stage == "verify":
+        stage_verify(args)
     else:
         stage_report(args)
     return 0
