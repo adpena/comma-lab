@@ -97,17 +97,22 @@ container and stat-ing it — never estimated.** Break-even d_pose is computed a
 | variant | rate saving (charter, DERIVED) | rate saving (MEASURED) | ΔS_rate (MEASURED) | break-even d_pose | binding cap | d_pose n600 (MEASURED) | ΔS net |
 |---|---:|---:|---:|---:|---|---:|---:|
 | V1 basis 5→4 bits | −2,440 B | **−392 B** | −2.6102e-04 | 6.550e-06 (+6.8%) | break-even | not solved (see §5) | — |
-| V2 basis 5→3 bits | −4,880 B | **−3,204 B** | −2.13341e-03 | 9.931e-06 (+61.9%) | break-even | *pending* | *pending* |
+| V2 basis 5→3 bits | −4,880 B | **−3,204 B** | −2.13341e-03 | 9.931e-06 (+61.9%) | break-even | **≥ 2.8487e-05** | **REFUSED, §5b** |
 | V3 coefficients, lattice ×4 coarser | −1,200 B | **−1,814 B** | −1.20787e-03 | 8.172e-06 (+33.2%) | break-even | *pending* | *pending* |
 | V4 GENERATED basis (rank 12, zero stored bytes) | −12,200 B | **−12,043 B** | −8.01894e-03 | 2.5125e-05 | **ft1 ceiling 1.694e-05** | **≥ 6.13 per pair** | **REFUSED, §4** |
 | V5 learned rank-8 SVD basis | −4,070 + −3,280 B | **−3,161 B** | −2.10478e-03 | 9.882e-06 | break-even | not solved | **dominated, §6** |
-| V2+V3 composition | — | **−5,018 B** | −3.34128e-03 | 1.2484e-05 (+103.5%) | break-even | *pending* | *pending* |
+| V2+V3 composition | — | **−5,018 B** | −3.34128e-03 | 1.2484e-05 (+103.5%) | break-even | ≥ 2.8487e-05 | refused with V2 |
 | V1+V3 composition | — | **−2,206 B** | −1.46888e-03 | 8.706e-06 | break-even | not solved | — |
 | V4+V3 composition | — | **−13,857 B** | −9.22681e-03 | 2.8657e-05 | ft1 ceiling | — | refused with V4 |
 
-**Compositions are additive to within 2 bytes** (V1+V3: −5,885 measured vs −5,885 summed; V2+V3: −8,929
-vs −8,927 at the naive quantiser; V4+V3: −13,857 vs −13,857). Union ≈ sum here, MEASURED, not assumed
-([[m164]] says check it, and it checks out on this pair of levers because they touch disjoint payloads).
+**Compositions are EXACTLY additive here, MEASURED and not assumed** ([[m164]]: union ≠ sum in general,
+so it gets checked). At the optimal-form quantiser: V1+V3 = −392 + −1,814 = −2,206 measured −2,206;
+V2+V3 = −3,204 + −1,814 = −5,018 measured −5,018. At the naive quantiser the sum is off by 2 B on one
+row (V2+V3 −8,927 summed vs −8,929 measured). V4+V3 = −12,043 + −1,814 = −13,857 measured −13,857.
+The reason additivity holds is structural rather than lucky: V1/V2/V4 rewrite the basis payload and V3
+rewrites the coefficient payload, and the two are disjoint byte ranges of the same carrier body whose
+brotli cell removes only 1.1% of it — there is almost no shared redundancy for the two edits to
+double-count.
 
 **Where ft1's ceiling binds.** ft1's measured same-object pose ceiling is 1.694e-05. For V1, V2, V3 and
 V5 the break-even d_pose is *below* that ceiling, so break-even is the binding constraint and the
@@ -136,37 +141,45 @@ law saying it must do so along the field the incumbent happens to use. The re-so
 change ([[m148]]), so the bound cannot close the question. It had to be measured.
 
 **MEASURED, `luma`, full `jg5.refine_pair` re-solve (40 outer rounds, 400 GN iterations, ±2 polish),
-warm-started from the least-squares projection of the shipped field (explained energy 0.02491):**
+warm-started from the least-squares projection of the shipped field, on 20 STRIDED pairs
+(0, 30, … 570 — never a contiguous prefix, because a pose prefix of this video measures 2.54–4.21×
+harder than the population, [[m96]]). Every one of the 20 stopped at `no_improving_step`: a physical
+stop where the GN direction and the ±2 neighbourhood both refused, not an iteration budget.**
 
-| pair | start d_pose | final d_pose after the full re-solve | stop |
-|---:|---:|---:|---|
-| 0 | 5.6437e+01 | 5.2498e+01 | no_improving_step |
-| 30 | 7.4789e+01 | 2.9235e+01 | no_improving_step |
-| 120 | 1.8492e+01 | 1.1553e+01 | no_improving_step |
-| 150 | 2.7789e+01 | 1.3122e+01 | no_improving_step |
-| 180 | 2.0870e+01 | 6.1320e+00 | no_improving_step |
-| 240 | 5.7396e+01 | 1.7072e+01 | no_improving_step |
-| 270 | 3.3457e+01 | 9.7580e+00 | no_improving_step |
-| 300 | 6.0177e+01 | 3.8361e+01 | no_improving_step |
+| pair | start | final | pair | start | final |
+|---:|---:|---:|---:|---:|---:|
+| 0 | 56.437 | **52.498** | 300 | 60.177 | 38.361 |
+| 30 | 74.789 | 29.235 | 330 | 27.015 | 14.817 |
+| 60 | 120.348 | **117.077** | 360 | 38.004 | 15.300 |
+| 90 | 57.147 | 21.421 | 390 | 37.601 | 14.307 |
+| 120 | 18.492 | 11.553 | 420 | 53.532 | 49.638 |
+| 150 | 27.789 | 13.122 | 450 | 80.304 | 50.594 |
+| 180 | 20.870 | **6.132** | 480 | 27.962 | 11.995 |
+| 210 | 49.792 | 19.705 | 510 | 55.588 | 53.823 |
+| 240 | 57.396 | 17.072 | 540 | 27.121 | 21.304 |
+| 270 | 33.457 | 9.758 | 570 | 57.421 | 31.466 |
 
-**Why eight pairs settle this without an n600 mean.** d_pose is the mean of 600 non-negative per-pair
-values, so the n600 mean is bounded below by *any single pair's value divided by 600* — a strict lower
-bound that no unmeasured pair can reduce. Pair 0 alone forces
+Final d_pose min / median / max = **6.132 / 20.505 / 117.077**. Sum over the 20 = 599.179.
 
-    d_pose_n600 ≥ 52.498 / 600 = 8.750e-02
+**Why 20 pairs settle this without an n600 mean.** d_pose is the mean of 600 *non-negative* per-pair
+values, so the n600 mean is bounded below by the measured pairs' sum divided by 600 — a bound that
+holds for the whole population and that no unmeasured pair can reduce:
 
-which exceeds V4's break-even (2.5125e-05) by **3,483×** and ft1's ceiling (1.694e-05) by **5,166×**.
-This is a completed argument on the population, not a subset verdict: the falsifier fires on a bound
-that holds for all 600 pairs, and it fires with six orders of magnitude to spare.
+    d_pose_n600  ≥  599.179 / 600  =  0.998631
+
+against a break-even of 2.5125e-05 and an ft1 ceiling of 1.694e-05. That is **39,748× past break-even
+and 58,952× past the ceiling**, and 162,808× the base d_pose. This is a completed argument on the
+population, not a subset verdict: the falsifier fires on a lower bound, and it fires with six orders of
+magnitude to spare. Even the single best pair (6.132) exceeds `600 × ceiling = 1.016e-02` by 603×, so
+any *one* of the twenty would have been enough.
 
 **verdict_scope: FAMILY — generated separable-DCT bases at rank 12 on this vehicle's carrier.**
-Every atom set tried is a lowest-total-degree separable 2-D DCT family (achromatic, per-plane, and
-generic-opponent), each re-solved to `no_improving_step` from a least-squares warm start. The mechanism
-is not a solver failure: the solver ran to a physical stop on every pair and still could not move
-d_pose below 6.13. What is NOT closed: non-DCT generated families (Zernike, wavelet, learned-generic,
-steerable), higher-rank generated bases, and generated-plus-small-stored-correction hybrids. The
-measured wall is that a smooth low-frequency 24×32 field cannot produce the PoseNet response the
-carrier needs — the shipped basis spans a direction that the lowest 12 DCT frequencies contain 2.49% of.
+Three generic colour placements were tried (achromatic, per-plane, generic-opponent), each re-solved to
+a physical stop from a least-squares warm start. The mechanism is not a solver failure and not a warm-
+start failure: the solver ran out of improving steps on every pair while still six orders of magnitude
+high. What is NOT closed: non-DCT generated families (Zernike, wavelet, steerable, Gabor), higher-rank
+generated bases, and generated-plus-small-stored-correction hybrids. The measured wall is that a smooth
+low-frequency 24×32 field cannot produce the PoseNet response the carrier needs.
 Since the prize is the largest on the board (−12,043 B = −8.02e-03 S), the family deserves one more
 attempt with a basis chosen to match the *Jacobian* rather than the field. See ITEM 2.
 
@@ -239,7 +252,40 @@ object and is NOT closed by this row. See ITEM 3.
 
 ---
 
-## 7. V2 and V3 — the live rows
+## 5b. V2 — the 3-bit basis is REFUSED, by the same lower-bound argument
+
+V2 kept every atom and quantised at the fidelity-optimal per-atom step (per-atom cosine 0.970–0.992),
+bought −3,204 B, and therefore had **+61.9%** of pose budget: break-even 9.931e-06 against a base of
+6.134076e-06. That is the largest budget any full-rank variant on this board had.
+
+**MEASURED, 48 pairs, full `jg5.refine_pair` re-solve, warm-started from the least-squares field
+projection.** Every pair stopped at `no_improving_step` or `converged_below_materiality_floor` — again a
+physical stop, not a budget. Solved-subset base mean 2.6029e-06; solved-subset variant mean 3.5609e-04.
+**35 of 48 pairs got worse; 13 got better.**
+
+    d_pose_n600  ≥  (sum of the 48 solved finals) / 600  =  0.01709236 / 600  =  2.8487e-05
+
+against a break-even of 9.931e-06 — **2.87× past it** — and past ft1's ceiling (1.694e-05) by 1.68×.
+As with V4, this is a strict lower bound over the whole population: unsolved pairs contribute
+non-negatively and cannot pull the mean down. V2 is refused, and so is the V2+V3 composition that
+inherits its basis.
+
+The run was stopped at 48/600 once the bound crossed, and its CPU was moved to V3. Stopping a solve
+whose admissibility is already decided is not a truncation of the verdict — the verdict is the bound,
+and the bound was complete.
+
+**verdict_scope: INSTANCE — the 3-bit alphabet at the fidelity-optimal per-atom step on this basis.**
+Combined with V1's arithmetic refusal (§5), the honest family-level reading is in the exchange curve,
+not in either bit depth: **on this carrier the basis payload cannot be cut without paying more in pose
+than the bytes are worth, at either end of the quantiser-step curve.** The byte-greedy end (naive
+`codes/2`, −4,071 B) destroys fidelity outright; the fidelity-greedy end (−392 B) barely saves anything;
+and the middle point that actually had budget (3-bit optimal, −3,204 B) was measured and refused. What
+is NOT closed: a step sweep between those points looking for a minimum of ΔS rather than an endpoint,
+and basis families other than a re-quantisation of the shipped atoms.
+
+---
+
+## 7. V3 — the live row
 
 *(filled on completion)*
 
