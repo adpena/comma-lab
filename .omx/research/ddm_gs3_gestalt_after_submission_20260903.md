@@ -911,3 +911,11 @@ Call `fc-01M1SPVVJGAJ5WY373TKQY1Z6A`, archive sha `f7e0bb793645894b2f6885fca82b9
 the band: each coarser lattice lets the re-solve escape a local optimum). Pointer advanced first time (the ranked-candidate refresh fix held). Tonight's ledger on
 one object, no retraining: rc1 −1,733 B · pc1 ×4 −1,801 B & pose −6.6 % · pc1 ×8 −872 B & pose −2.6 % = **−4,406 B and −3.30e-3 S since cl2 this afternoon**;
 gap to sub-0.12 now 0.0245177913121716. ×16 pending (the knee is at or beyond ×8). PR #140 is six moves behind.
+
+## Addendum 9 (2026-09-05 22:05Z) — THE 30TH POINTER MOVE: S 0.14411787458634504 @ 174,786 B [contest-CUDA T4 n600] (pc1 lattice ×16 + re-solve; the pose leg turned)
+
+Call `fc-01M1SRR3JGWRKQKH6GSZ3RVTRS`, archive sha `1de6c5d7186a0b31e5cc085bb6d2baab8275ee0d9de4d509f4d8add13695a629`; d_seg identical; **d_pose 5.58e-06 → 5.77e-06 (+3.4 %)** against −790 B; net
+Δ −3.999167258265657e-4 — the first rung of the lattice lever where the pose leg WORSENED; admitted on the exchange, not on fidelity. Knee located: fidelity turns
+between ×8 and ×16; S still pays at ×16; ×32 extrapolates near break-even (byte leg ≈ −700 B vs a pose leg rising and accelerating) — PRICE before solving. Tonight's
+ledger on one object, no retraining: rc1 −1,733 B · pc1 ×4 −1,801 B (pose −6.6 %) · ×8 −872 B (pose −2.6 %) · ×16 −790 B (pose +3.4 %) = **−5,196 B and −3.70e-3 S
+since cl2 this afternoon**; gap to sub-0.12 now 0.02411787458634504. PR #140 is seven moves behind.
