@@ -578,6 +578,69 @@ and its own exact archive build. The fit is re-run once ×8's n600 lands.
 
 ---
 
+## 7e. V3 landed on T4 — and my nesting prior was REFUTED by ×8
+
+**The 28th pointer move is this arm's V3.** MAIN fired the seal; contest-CUDA T4 n600 read
+**S 0.1451981569076111 @ 176,448 B**, archive `891add54…`, and the pointer now names
+`ddm_pc1_t4_lattice_x4_on_rc1_20260905`.
+
+| | rc1 base | V3 (T4) | delta |
+|---|---:|---:|---:|
+| S | 0.14666350774473783 | **0.1451981569076111** | **−1.4653508371267332e-03** |
+| d_seg | 0.00020139 | 0.00020139 | **0.0 — exactly, as the frame-0 argument required** |
+| d_pose | 6.14e-06 | 5.73e-06 | −4.10e-07 |
+| bytes | 178,249 | 176,448 | −1,801 |
+
+My advisory projection was 0.1452005596984867; realized − projected = **−2.402790875599692e-06**, which
+is the evaluator's 3-significant-figure pose print, not instrument error. **The local cpu_torch
+instrument predicted a T4 row to 2.4e-06.** And d_seg moved by exactly zero, which is the frame-0
+seg-invisibility argument confirmed rather than assumed.
+
+### ×8 — MEASURED at n600, and it REFUTES my own pre-registered prior
+
+**Falsifier 4 fired.** I pre-registered: *"either rung measuring d_pose < 5.727914e-06 refutes my own
+nesting argument."* ×8 measures **5.579253838463433e-06** — below ×4. The nesting argument was sound
+about the *representable sets* and wrong about what the solver reaches in them: `refine_pair`'s ±2
+polish neighbourhood spans **twice the coefficient distance** at ×8, so the coarser lattice gives the
+search a wider local move and it escapes minima the finer lattice traps it in. **Rung comparisons on
+this solver are NOT monotone in the step**, so the early stop I built on nesting is void — ×16 has to be
+measured on its own, and it is running.
+
+That also kills the step² law I fitted in §7d: it needs L₄ > 0 and the measured pair gives L₄ < 0. The
+§7d table's ×16/×32/×64 projections are therefore **withdrawn as predictions**; only their MEASURED rate
+column stands.
+
+| ×8 vs the rc1 base | value |
+|---|---:|
+| archive bytes | **175,576** (−2,673 B) |
+| archive sha256 | `f7e0bb793645894b…` |
+| d_pose n600 (cpu_torch) | **5.579253838463433e-06** |
+| ΔS rate / pose / **net** | −1.779841e-03 / −3.625942e-04 / **−2.142435e-03** |
+
+| ×8 vs V3, the incumbent and current pointer | value |
+|---|---:|
+| bytes | −872 B |
+| ΔS rate / pose / **net** | −5.806289e-04 / −9.885811e-05 / **−6.794871e-04** |
+| **S (advisory projection)** | **0.1445186697928887** |
+
+**×8 succeeds V3** on both legs simultaneously — fewer bytes *and* lower d_pose. It clears the admit bar
+by 34×, clears its break-even against the base (9.264433e-06) with d_pose at 0.60× of it, and clears
+ft1's ceiling at 0.33×.
+
+**SEAL** (contest-CUDA, `SEAL_VALID`, bar bound to the live 0.14519816):
+
+    /Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency/SEAL_ddm_pc1_v3x8_lattice_x8_resolved_on_rc1.json
+      candidate  ddm_pc1_v3x8_lattice_x8_resolved_on_rc1
+      archive    175,576 B  sha f7e0bb793645894b…
+      runtime    43 files, 919,394 B, digest b276b10a5b2b710a…
+      seal sha   abe2c16485bb148dac3b6a9c54a658f2e6f1741a7c0a7856e16e9df60c39e1a0
+
+Solver receipts: 570 pairs stopped at `no_improving_step`, 17 at the materiality floor, **13 at
+`lattice_floor`** (up from 7 at ×4 — the lattice is starting to bind, which is the first sign of the
+knee). Max `|code|` 275, comfortably inside the ±2047 field.
+
+---
+
 ## 8. What this arm did not do
 
 - **No T4 row was fired. Modal was never dispatched; MAIN fires.** Every score-shaped number here is
@@ -648,7 +711,8 @@ measurement: one n600 re-solve each, same instrument, same admission test. Owner
 
 ## Frontier
 
-    rc1 S 0.14666350774473783 @ 178,249 B [contest-CUDA T4 n600]   <- the live pointer
+    ddm_pc1 V3 S 0.1451981569076111 @ 176,448 B [contest-CUDA T4 n600]  <- the live pointer (28th move, THIS arm)
+    rc1        S 0.14666350774473783 @ 178,249 B [contest-CUDA T4 n600]
     cl2 S 0.14781744131049854 @ 179,982 B [contest-CUDA T4 n600]   <- the base this arm solved on
 
     ddm_pc1 candidate (ADVISORY, score_claim=false):
