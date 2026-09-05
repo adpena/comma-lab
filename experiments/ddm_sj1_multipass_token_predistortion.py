@@ -101,6 +101,43 @@ BASE_D_POSE_T4 = 6.14e-06
 CL2_ARCHIVE_BYTES = 179_982
 CL2_PROJECTED_SCORE = 0.14781744131049854
 
+# --------------------------------------------------------------------------------------
+# THE LIVE POINTER (MAIN, 2026-09-05): ddm_rc1's lossless recode of the two RX1 MODEL
+# sections.  This arm BUILDS and SEALS on this tree and admits against this score.
+#
+# Why the token-field work composes onto it additively, VERIFIED not assumed:
+#   * carrier section byte-identical to cl2 (22,031 B both)
+#   * tail byte-identical to cl2 (113,515 B = 96 B residual table + 113,419 B token
+#     stream), so the token CODER and the field it codes are untouched
+#   * hpac 13,466 -> 12,343 B and semantic 30,856 -> 30,246 B are a LOSSLESS recode --
+#     rc1's receiver restores each section body byte-for-byte BEFORE any parsing (rc1
+#     SEAL falsifier 1, proven three ways), so the renderer weights this arm renders
+#     with are the ones rc1 ships, and its distortion legs are zero BY CONSTRUCTION
+#   * RX1 reserved byte 0x1A -> 0x7A (the 14 B header difference)
+#   * MEASURED here: 100*0.00020139 + sqrt(10*6.14e-06) + 25*178249/37545489 reproduces
+#     MAIN's quoted score to the last digit, and up3.parse_shipped_body + build_archive
+#     rebuild this body from its OWN carrier codes byte-identically (sha 1438049e...,
+#     178,249 B) -- so the carrier splice survives the recode.
+#
+# CONSEQUENCE for pricing: the edited field is re-encoded through CL2's tree (whose
+# hpac section carries the model in the coding jg2's encoder mirrors), and the resulting
+# token stream is spliced into RC1's member.  Encoding against rc1's tree would ask
+# jg2's encoder to materialise a model out of a section coded by a codec it has never
+# seen; the byte-identical tail is the proof that the two trees hold the SAME model, so
+# the stream cl2's path emits is the stream rc1's receiver decodes.
+POINTER_TREE = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_rc1_model_section_adaptive_recode/staged_runtime"
+)
+POINTER_ARCHIVE = POINTER_TREE / "archive.zip"
+POINTER_ARCHIVE_SHA256 = (
+    "1438049e3655fbcfa8eb289fa51ac58f834d72d8a09586353663cea68e57c122"
+)
+POINTER_ARCHIVE_BYTES = 178_249
+POINTER_SCORE_T4 = 0.14666350774473783
+#: rc1 holds the distortion legs of the fs2/cl2 base exactly, by construction.
+POINTER_D_SEG_T4 = BASE_D_SEG_T4
+POINTER_D_POSE_T4 = BASE_D_POSE_T4
+
 #: MAIN's binding pin 2026-09-05: the T4-scored GT argmax table, and the instrument's
 #: own step-0 reading of it on this body.  The 1.23% gap between them is the INSTRUMENT
 #: RESIDUAL and is carried explicitly into every projection rather than being absorbed.

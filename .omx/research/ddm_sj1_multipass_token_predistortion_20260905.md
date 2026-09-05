@@ -1,4 +1,4 @@
-# ddm_sj1 — multi-pass token PRE-DISTORTION to convergence on the cl2 frontier body
+# ddm_sj1 — multi-pass token PRE-DISTORTION to convergence (measured on the cl2 body, built and sealed on the rc1 pointer)
 
 Tokens: `[no-triality] [p0-ledger-ok]` · Arm: ddm_sj1 (Opus) · Date: 2026-09-05 · Owner: MAIN dispatches T4.
 Axes: d_seg `[macOS-CPU advisory, jg1 instrument, DALI GT lineage, cpu_torch argmax]`; bytes exact;
@@ -37,6 +37,44 @@ pass 2 has produced its measured decay, not before.
 load. MAIN's pin (2026-09-05) binds this: the PyAV table `experiments/results/mlx_fleet_gt_cache/gt_n600.npz`
 differs from the DALI table at 20,671 argmax sites — 87% of the whole 23,757-flip budget — so acceptance
 computed against it would aim at sites the contest does not score. This arm never opened it.
+
+## 0a. Object change 2026-09-05 — the pointer moved to rc1, and the edits still compose
+
+MAIN moved the pointer to `ddm_rc1`'s lossless recode of the two RX1 MODEL sections:
+**S 0.14666350774473783 @ 178,249 B**, sha `1438049e3655fbcfa8eb289fa51ac58f834d72d8a09586353663cea68e57c122`,
+tree `/Volumes/VertigoDataTier/pact/ddm_rc1_model_section_adaptive_recode/staged_runtime/`.
+This arm now BUILDS and SEALS on that tree and admits against that score. I verified the
+composition premise rather than taking it, because everything measured above was measured
+on cl2's body:
+
+| section | cl2 | rc1 | identical? |
+|---|---:|---:|---|
+| carrier | 22,031 | 22,031 | **yes** |
+| tail (96 B residual + 113,419 B token stream) | 113,515 | 113,515 | **yes** |
+| hpac (model) | 13,466 | 12,343 | no — lossless recode |
+| semantic (renderer weights) | 30,856 | 30,246 | no — lossless recode |
+| header | 14 | 14 | no — RX1 reserved `0x1A` → `0x7A` |
+| **archive** | **179,982** | **178,249** | −1,733 B |
+
+Three MEASURED facts make the composition safe:
+
+1. **The token coder and the field it codes are untouched** — the tail is byte-identical,
+   so the stream cl2's encoder mirrors is the stream rc1's receiver decodes. That is why
+   the edited field is priced through cl2's path (as chartered) and the emitted stream is
+   spliced into rc1's member: asking jg2's encoder to materialise a model out of a section
+   coded by a codec it has never seen would be the mistake.
+2. **The renderer weights are the same object.** rc1's SEAL falsifier 1 states both model
+   sections are restored byte-for-byte BEFORE any parsing, proven three ways, so the
+   distortion legs are zero BY CONSTRUCTION. Every render and every argmax in §1–§3 —
+   taken on cl2's tree — therefore describes rc1's body too. **Pass 2a needed no restart.**
+3. **The score reproduces exactly.** `100·0.00020139 + √(10·6.14e-06) + 25·178249/37545489`
+   = 0.1466635077447378, matching MAIN's quoted value to the last digit.
+
+And one trap, checked before it could bite: rc1 flips the RX1 reserved byte, so a rebuild
+that reset it would silently produce different bytes. MEASURED: `up3.parse_shipped_body` +
+`build_archive` rebuild rc1's body from its OWN carrier codes to sha `1438049e3655fbcf…` at
+exactly **178,249 B** — byte-identical. The carrier splice survives the recode, and the
+close path's identity control (which refuses unless that holds) is the standing guard.
 
 ## 1. Step 0 — the instrument reproduces the frontier body's seg leg (MEASURED)
 
@@ -207,4 +245,6 @@ appended as each lands. Nothing is written here before it is measured.)*
 
 ## Frontier line
 
-`cl2 S 0.14781744131049854 @ 179,982 B [contest-CUDA T4 n600]`
+`rc1 S 0.14666350774473783 @ 178,249 B [contest-CUDA T4 n600]` (live pointer, sha `1438049e3655fbcf…`)
+
+Lineage: fs2 0.14784474152757654 @ 180,023 B → cl2 0.14781744131049854 @ 179,982 B → rc1 (above).

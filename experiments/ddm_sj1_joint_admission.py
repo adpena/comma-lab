@@ -405,7 +405,7 @@ def cmd_admit(args) -> int:
             raise Sj1JointError(f"{name} pose vector has shape {vec.shape}")
 
     # Seg credit in score units, on the T4 axis, carried by the SAME-instrument ratio.
-    ratio_t4 = sj1.BASE_D_SEG_T4 / args.instrument_base_d_seg
+    ratio_t4 = sj1.POINTER_D_SEG_T4 / args.instrument_base_d_seg
     seg_credit = 100.0 * seg_repaired * ratio_t4 / (N_PAIRS * sj1.EVAL_H * sj1.EVAL_W)
     rate_cost = 25.0 * (tokens_changed * args.modelled_bytes_per_changed_token) / SCORE_RATE_DENOMINATOR
     pose_damage = resolved_pose - base_pose
@@ -473,8 +473,9 @@ def cmd_admit(args) -> int:
         "full_edit_set": full,
         "best": best,
         "best_kept_pairs": len(kept),
-        "base_score_t4": sj1.BASE_SCORE_T4,
-        "net_vs_base_modelled": best["score_modelled"] - sj1.BASE_SCORE_T4,
+        "pointer_score_t4": sj1.POINTER_SCORE_T4,
+        "pointer_archive_sha256": sj1.POINTER_ARCHIVE_SHA256,
+        "net_vs_pointer_modelled": best["score_modelled"] - sj1.POINTER_SCORE_T4,
         "admitted_field_npz": str(subset),
         "admitted_field_sha256": _sha256_file(subset),
         "rate_leg_is_modelled_not_measured": True,
@@ -560,7 +561,7 @@ def cmd_close(args) -> int:
         )
 
     d_seg_instrument = args.d_seg_instrument
-    ratio_t4 = sj1.BASE_D_SEG_T4 / args.instrument_base_d_seg
+    ratio_t4 = sj1.POINTER_D_SEG_T4 / args.instrument_base_d_seg
     d_seg_t4 = d_seg_instrument * ratio_t4
     d_pose = args.d_pose
     archive_bytes = int(built["archive_size"])
@@ -587,12 +588,15 @@ def cmd_close(args) -> int:
         "d_pose": d_pose,
         "archive_bytes": archive_bytes,
         "score_projected": score,
-        "base_score_t4": sj1.BASE_SCORE_T4,
-        "net_dS_vs_base": score - sj1.BASE_SCORE_T4,
-        "cl2_projected_score": sj1.CL2_PROJECTED_SCORE,
-        "net_dS_vs_cl2": score - sj1.CL2_PROJECTED_SCORE,
+        "pointer_score_t4": sj1.POINTER_SCORE_T4,
+        "pointer_archive_sha256": sj1.POINTER_ARCHIVE_SHA256,
+        "net_dS_vs_pointer": score - sj1.POINTER_SCORE_T4,
+        "lineage_scores": {
+            "fs2_base": sj1.BASE_SCORE_T4,
+            "cl2_projected": sj1.CL2_PROJECTED_SCORE,
+        },
         "admit_bar": -2e-05,
-        "clears_admit_bar_vs_base": bool(score - sj1.BASE_SCORE_T4 <= -2e-05),
+        "clears_admit_bar_vs_pointer": bool(score - sj1.POINTER_SCORE_T4 <= -2e-05),
         "axis": (
             "seg from the jg1 DALI instrument carried onto T4 by the SAME-instrument "
             "ratio; pose [macOS-CPU advisory, frozen CPU-torch PoseNet, DALI GT]; bytes "
@@ -658,7 +662,12 @@ def build_parser() -> argparse.ArgumentParser:
     admit.add_argument("--stale-pose", type=Path, required=True)
     admit.add_argument("--resolved-pose", type=Path, required=True)
     admit.add_argument("--out-dir", type=Path, required=True)
-    admit.add_argument("--base-archive-bytes", type=float, default=float(sj1.CL2_ARCHIVE_BYTES))
+    admit.add_argument(
+        "--base-archive-bytes",
+        type=float,
+        default=float(sj1.POINTER_ARCHIVE_BYTES),
+        help="archive the edits are priced ON TOP OF; defaults to the LIVE pointer (rc1)",
+    )
     admit.add_argument(
         "--instrument-base-d-seg",
         type=float,
