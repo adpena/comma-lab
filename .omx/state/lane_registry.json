@@ -96369,6 +96369,88 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_ddm_md3_different_init_cell_20260905",
+      "name": "ddm_md3 different-initialisation cell",
+      "phase": 3.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "3 modules landed + 2 review-gate passes each: experiments/ddm_md3_alternate_initial_states.py (4abab1d99), ddm_md3_step0_pool_overlap.py (17193c34a), ddm_md3_different_init_cell.py (905c278ad)"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "[macOS-CPU advisory] step-0 wrong pools across 11 candidate starts; positive controls reproduce md2's integer bridge exactly (numerator 301,470 / denominator 117,964,800; pool 16,553 DALI / 16,327 PyAV). /Volumes/APDataStore/pact/ddm_md3_different_initialisation/STEP0_POOL_OVERLAP.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_ddm_ane2_engineer_precision_drift_20260905",
+      "name": "ddm_ane2 engineer the precision drift",
+      "phase": 3.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -96378,5 +96460,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-05T13:22:27Z"
+  "updated_at": "2026-09-05T14:50:11Z"
 }
