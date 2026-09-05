@@ -819,3 +819,17 @@ gated on the twin's bit-identity at epoch 60 (now 42/60). Equations leg (`tac.ca
   (~28 steps/min → terminal ~18:50Z). Two claim rows mangled by the zsh `$VAR:l` modifier trap were closed; the correct scorer+metal rows are
   active (job `md3_r10_live_cell_main_20260905T154454Z`). Memory `zsh_parameter_modifier_trap_var_colon_literal_20260905`.
 - Frontier unchanged until the harvest: **fs2 S 0.14784474152757654 @ 180,023 B [contest-CUDA T4 n600]**.
+
+## Addendum 2 (2026-09-05 16:12Z) — THE 26TH POINTER MOVE LANDED: S 0.14781744131049854 @ 179,982 B [contest-CUDA T4 n600]
+
+Call `fc-01M1S4PBEPBKQJVEPWVRDJHGNT`, archive sha `08ec85333d13d71344b4482cf261e3b2d508725e49f3ca05971265a81498ad4e`. d_seg 0.00020139 and d_pose
+6.14e-06 IDENTICAL to fs2 — the row is the custody confirmation of a rate-only move, realized − projected = **0.0**. Δ vs fs2 =
+−2.7300217078002342e-5 = exactly 41 × 6.658589531221714e-7. Re-derived at this move: gap 0.027817441310498542; rate corner −41,776.8 B at held
+distortion (archive ≤ 138,205.2 B); distortion corner 177.8×; zero-distortion margin 236.347 B. **First fully-live run of the harvest→pointer
+autopilot (hv1):** the poller staged `POINTER_MOVE_PLAN.json` (beats_pointer=True) and `tools/pointer_move_packet.py --apply` wrote the memo
+(`ddm_cl2_t4_lambda1_control_repack_20260905_pointer_move_26_20260905.md`), the pointer file, the #316 surfaces (gate strict-PASS), the lane, the
+second-tier custody copy (sha verified), the POINTER_LINE, and the events ledger — MAIN reviewed and committed; zero hand-typed shas. One tool
+quirk: the plan's `apply_command` carries literal placeholders (`'<one clause>'`) that break a shell `eval` — MAIN rebuilt the argv by hand.
+Honest label repeated: a retrain/pack-size residual (−49 B model, +8 B stream) banked as an exact row; not a capacity win; 0.098 % of the rate
+demand. Three pointer moves in 24 h (fs1, fs2, cl2), all sub-1e-4. PR #140 still carries afr1's bytes (three moves behind); public update =
+operator's decision.
