@@ -435,3 +435,33 @@ def test_checkpoint_embeds_authoritative_lineage_and_recustodies_parents(
     assert preserved == [{**entry, "preserved_path": str(copied)}]
     with pytest.raises(tool.CL1TrainingError, match="embedded authoritative"):
         tool._checkpoint_lineage({})
+
+
+def test_cl2_profile_is_the_jf1_law_on_metal_with_the_cl1_lambda_bracket(tmp_path: Path) -> None:
+    """ddm_cl2: same reference law as JF1, device mps, cl1's {1, 1/2, 1/4} bracket, SSD output."""
+    tool = _load_tool()
+    args = _minimum_args(
+        tool,
+        save=tool.PRIMARY_SSD_ROOT / "ddm_cl2_x/training/model.pt",
+        out=tool.PRIMARY_SSD_ROOT / "ddm_cl2_x/training/result.json",
+    )
+    args.profile = "cl2_shipped_ladder"
+    for key, value in tool.CL2_PREREGISTERED_CONFIG.items():
+        setattr(args, key, value)
+    assert args.device == "mps"
+    assert {k: v for k, v in tool.CL2_PREREGISTERED_CONFIG.items() if k != "device"} == {
+        k: v for k, v in tool.JF1_PREREGISTERED_CONFIG.items() if k != "device"
+    }
+    for admitted in (1.0, 0.5, 0.25):
+        args.rate_lambda = admitted
+        tool._assert_preregistered_config(args)
+    args.rate_lambda = 0.125
+    with pytest.raises(tool.CL1TrainingError, match="receiver-closed"):
+        tool._assert_preregistered_config(args)
+    args.rate_lambda = 1.0
+    assert "cl2_shipped_ladder" in tool.CALLER_PINNED_INPUT_PROFILES
+    assert tool.PREREGISTERED_RATE_LAMBDAS_BY_PROFILE["cl2_shipped_ladder"] == frozenset({1.0, 0.5, 0.25})
+    # No local opt-in for CL2: output must sit on an admitted SSD tier.
+    assert tool._storage_root_for_args(args.save, "--save", args) == tool.PRIMARY_SSD_ROOT.resolve()
+    with pytest.raises(tool.CL1TrainingError, match="admitted SSD tier"):
+        tool._storage_root_for_args(tmp_path / "local.pt", "--save", args)

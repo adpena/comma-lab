@@ -109,16 +109,27 @@ RX2_PREREGISTERED_CONFIG = {
     "device": "cpu",
 }
 JF1_PREREGISTERED_CONFIG = dict(RX2_PREREGISTERED_CONFIG)
+# ddm_cl2 (2026-09-05): cl1's fixed-topology lambda ladder re-rooted to the SHIPPED
+# fs2 mixer.  Same law as jf1_joint_refit (60-epoch reference, warm start from the
+# shipped epoch-634 EMA init, the current token field), on local Metal so one rung
+# costs ~48 min instead of ~3 days; the lambda bracket {1, 1/2, 1/4} is cl1's.
+# Inputs are pinned by the caller (--expected-cache-content-sha256 /
+# --expected-init-sha256) exactly as JF1 pins them; output lives on the SSD tiers.
+CL2_PREREGISTERED_CONFIG = dict(PREREGISTERED_CONFIG)
 PREREGISTERED_CONFIG_BY_PROFILE = {
     "cl1": PREREGISTERED_CONFIG,
     "rx2_mc36": RX2_PREREGISTERED_CONFIG,
     "jf1_joint_refit": JF1_PREREGISTERED_CONFIG,
+    "cl2_shipped_ladder": CL2_PREREGISTERED_CONFIG,
 }
 PREREGISTERED_RATE_LAMBDAS_BY_PROFILE = {
     "cl1": frozenset({1.0, 0.5, 0.25}),
     "rx2_mc36": frozenset({1.0}),
     "jf1_joint_refit": frozenset({1.0}),
+    "cl2_shipped_ladder": frozenset({1.0, 0.5, 0.25}),
 }
+#: Profiles whose --cache / --init are pinned by caller-supplied SHA-256 values.
+CALLER_PINNED_INPUT_PROFILES = frozenset({"jf1_joint_refit", "cl2_shipped_ladder"})
 EXPECTED_CACHE_SHA256 = "382d7dfe38b37c0cc5017e5645032faa045af6924db66e0b67549cc96c840195"
 EXPECTED_INIT_SHA256 = "0e6c30cef6b36c4e530779c92c56e9128c1d86c62e85e9fc5358a7e9f40ec985"
 EXPECTED_RX2_SPATIAL_TOKEN_SHA256 = "9ba2e52b3096585895970066b389bf1261ebc203d5b828cdea056c13858aea52"
@@ -876,11 +887,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--expected-cache-content-sha256",
-        help="JF1 only: required SHA-256 of the raw uint8 n600 field inside --cache",
+        help="JF1/CL2 only: required SHA-256 of the raw uint8 n600 field inside --cache",
     )
     parser.add_argument(
         "--expected-init-sha256",
-        help="JF1 only: required SHA-256 of the exact warm-start file passed as --init",
+        help="JF1/CL2 only: required SHA-256 of the exact warm-start file passed as --init",
     )
     parser.add_argument(
         "--resume-allow-trainer-drift",
@@ -985,10 +996,12 @@ def main() -> None:
         raise CL1TrainingError("--explicit-local-output-opt-in is admitted only for jf1_joint_refit")
     if args.profile == "jf1_joint_refit" and not args.explicit_local_output_opt_in:
         raise CL1TrainingError("jf1_joint_refit requires --explicit-local-output-opt-in")
-    if args.profile != "jf1_joint_refit" and (
+    if args.profile not in CALLER_PINNED_INPUT_PROFILES and (
         args.expected_cache_content_sha256 is not None or args.expected_init_sha256 is not None
     ):
-        raise CL1TrainingError("JF1 input pins are admitted only for jf1_joint_refit")
+        raise CL1TrainingError(
+            "caller input pins are admitted only for " + ", ".join(sorted(CALLER_PINNED_INPUT_PROFILES))
+        )
     if args.resume_from is not None:
         _storage_root_for_args(args.resume_from, "--resume-from", args)
     if platform.system() != "Darwin":
@@ -1016,13 +1029,13 @@ def main() -> None:
         raise CL1TrainingError(f"cache SHA differs: expected {EXPECTED_CACHE_SHA256}, observed {cache_sha256}")
     if args.profile == "rx2_mc36":
         _verify_rx2_cache_payload(cache_payload)
-    elif args.profile == "jf1_joint_refit":
+    elif args.profile in CALLER_PINNED_INPUT_PROFILES:
         _verify_jf1_cache_payload(cache_payload, args.expected_cache_content_sha256)
     expected_init_sha256 = (
-        args.expected_init_sha256 if args.profile == "jf1_joint_refit" else EXPECTED_INIT_SHA256
+        args.expected_init_sha256 if args.profile in CALLER_PINNED_INPUT_PROFILES else EXPECTED_INIT_SHA256
     )
     if expected_init_sha256 is None:
-        raise CL1TrainingError("JF1 requires --expected-init-sha256")
+        raise CL1TrainingError(f"{args.profile} requires --expected-init-sha256")
     if init_sha256 != expected_init_sha256:
         raise CL1TrainingError(f"init SHA differs: expected {expected_init_sha256}, observed {init_sha256}")
 
