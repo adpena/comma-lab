@@ -563,6 +563,134 @@ def cmd_probe(args) -> int:
 
 
 # --------------------------------------------------------------------------------------
+# partition -- what fraction of the shipped vehicle's flips NO single-cell move repairs
+# --------------------------------------------------------------------------------------
+
+
+def cmd_partition(args) -> int:
+    """Measure the PERSISTENT partition of the shipped vehicle's flipped cells.
+
+    A site is PERSISTENT when no move in the whole 36-family (flipped cell + 8 neighbours
+    x 4 alternative classes), applied ALONE, lowers the pair's realized flip count.  That
+    is the ceiling of this formulation, so it is measured rather than assumed.
+
+    Sites are drawn uniformly from the FULL flip set across all 600 pairs, not one per
+    sampled pair: sampling pairs and then a site within each would weight every site by
+    the inverse of its pair's flip count, under-sampling exactly the crowded pairs that
+    carry most of the debt.  Shards take a disjoint slice of one seeded permutation, so
+    the union of shards is one clean sample and any shard that dies leaves an unbiased
+    partial.
+    """
+    _set_threads(args.threads)
+    body = load_body(with_raw=False, verify_shas=not args.no_verify_shas)
+    argmax_field = np.load(args.argmax)
+    if argmax_field.shape != (N_PAIRS, EVAL_H, EVAL_W):
+        raise Sj1Error(f"argmax field has shape {argmax_field.shape}")
+    prior: dict[int, np.ndarray] = {}
+    if args.field is not None:
+        with np.load(args.field, allow_pickle=False) as blob:
+            for key in blob.files:
+                prior[int(key)] = np.asarray(blob[key], dtype=np.uint8)
+
+    pairs_all, ys, xs = np.nonzero(argmax_field != body.gt)
+    total_sites = int(pairs_all.size)
+    rng = np.random.default_rng(args.seed)
+    order = rng.permutation(total_sites)[: args.sites]
+    order = np.sort(order[args.shard_index :: args.shard_count])
+
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    rows: list[dict[str, Any]] = []
+    started = time.time()
+    cache: dict[int, tuple[np.ndarray, np.ndarray, int]] = {}
+    for count, idx in enumerate(order.tolist()):
+        pair = int(pairs_all[idx])
+        site_y, site_x = int(ys[idx]), int(xs[idx])
+        if pair not in cache:
+            tokens = np.ascontiguousarray(prior.get(pair, body.tokens[pair]))
+            argmax = (
+                argmax_field[pair]
+                if pair not in prior
+                else argmax_for_tokens(body, tokens, pair)
+            )
+            cache[pair] = (tokens, argmax, int((argmax != body.gt[pair]).sum()))
+        tokens, argmax, flips_before = cache[pair]
+        gt_class = int(body.gt[pair, site_y, site_x])
+        our_class = int(argmax[site_y, site_x])
+        best = 0
+        tried = 0
+        winners: list[dict[str, Any]] = []
+        for selector in CLASS_SELECTORS:
+            new_class = resolve_selector(selector, gt_class, our_class)
+            if new_class is None:
+                continue
+            for dy, dx in FAMILY_OFFSETS:
+                ty = min(max(site_y + dy, 0), EVAL_H - 1)
+                tx = min(max(site_x + dx, 0), EVAL_W - 1)
+                if int(tokens[ty, tx]) == new_class:
+                    continue
+                proposal = tokens.copy()
+                proposal[ty, tx] = new_class
+                trial = argmax_for_tokens(body, proposal, pair)
+                tried += 1
+                repaired = flips_before - int((trial != body.gt[pair]).sum())
+                if repaired > 0:
+                    winners.append(
+                        {
+                            "selector": selector,
+                            "offset": [dy, dx],
+                            "new_class": new_class,
+                            "repaired": repaired,
+                        }
+                    )
+                    best = max(best, repaired)
+        rows.append(
+            {
+                "pair": pair,
+                "site_y": site_y,
+                "site_x": site_x,
+                "gt_class": gt_class,
+                "our_class": our_class,
+                "moves_tried": tried,
+                "best_repaired": best,
+                "persistent": best <= 0,
+                "winners": winners,
+            }
+        )
+        if args.progress and (count + 1) % 5 == 0:
+            persistent = sum(1 for r in rows if r["persistent"])
+            print(
+                f"  shard {args.shard_index}: {count + 1}/{len(order)} sites, "
+                f"persistent {persistent}/{len(rows)} "
+                f"({(time.time() - started) / (count + 1):.1f} s/site)",
+                flush=True,
+            )
+    persistent = sum(1 for r in rows if r["persistent"])
+    report = {
+        "schema": "ddm_sj1_persistent_partition_shard.v1",
+        "shard_index": args.shard_index,
+        "shard_count": args.shard_count,
+        "seed": args.seed,
+        "sites_requested_total": args.sites,
+        "sites_in_shard": len(rows),
+        "population_total_flipped_cells": total_sites,
+        "persistent_sites": persistent,
+        "persistent_fraction_shard": persistent / len(rows) if rows else None,
+        "rows": rows,
+        "elapsed_seconds": time.time() - started,
+        "receipts": body.receipts,
+        "axis": "[macOS-CPU advisory, jg1 instrument, DALI GT lineage]",
+        "score_claim": False,
+    }
+    args.out.write_text(json.dumps(report, indent=2, sort_keys=True))
+    print(
+        json.dumps(
+            {k: report[k] for k in ("shard_index", "sites_in_shard", "persistent_sites", "persistent_fraction_shard", "elapsed_seconds")}
+        )
+    )
+    return 0
+
+
+# --------------------------------------------------------------------------------------
 # The pass -- realized coordinate descent on the token lattice
 # --------------------------------------------------------------------------------------
 
@@ -1141,6 +1269,19 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--checkpoint-every", type=int, default=5)
     run.add_argument("--resume", action="store_true")
     run.set_defaults(func=cmd_pass)
+
+    part = sub.add_parser(
+        "partition", help="MEASURE the persistent partition (sites no single move repairs)"
+    )
+    _add_common(part)
+    part.add_argument("--argmax", type=Path, required=True, help="realized argmax field .npy")
+    part.add_argument("--field", type=Path, default=None, help="npz of edited planes")
+    part.add_argument("--sites", type=int, default=300)
+    part.add_argument("--seed", type=int, default=20260905)
+    part.add_argument("--shard-index", type=int, default=0)
+    part.add_argument("--shard-count", type=int, default=1)
+    part.add_argument("--out", type=Path, required=True)
+    part.set_defaults(func=cmd_partition)
 
     pmerge = sub.add_parser("pass-merge", help="merge pass shards into the n600 ledger")
     pmerge.add_argument("--receipts", nargs="+", required=True)
