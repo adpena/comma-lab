@@ -65,3 +65,9 @@ Metal trainer's GPU-side footprint — while the rc=143 stays the arm's own SIGT
 firing). MAIN's second pass ("coincident, unattributed; N=1 window fits") read a 45 s compressor sample and was wrong about the footprint: compressor
 is the wrong instrument — system-availability delta per launch is the right one. ITEM 3 stands as a REAL second instance with a measured number:
 **one Metal occupant at a time until the admission table models Metal footprint**; cl3 is holding its rungs for md3's receipt on its own decision.
+
+### Admission-table data (MEASURED by the arms, 2026-09-05 evening)
+- sj1 pass shard (`--threads 3 --batch 8`, SegNet cpu_torch + renderer): **1.0–1.3 cores, RSS 2.6–5.7 GB (mean 4.2, declare the 5.7 peak)**; five shards
+  = 19.3–22.5 GB. The arm declared 14 GiB against a measured 22.5 GB (its own erratum). With pc1's eight GN solvers the machine sat at load 19–21 and
+  md3's Metal cell fell from 30 to 1–2 steps/min: **a Metal cell's CPU host thread is starved by CPU arms — model the cell as needing ≥ 2 free cores**,
+  and treat `renice` as ineffective (measured: rate unchanged after renice +10 on the arms).
