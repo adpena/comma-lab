@@ -641,6 +641,65 @@ knee). Max `|code|` 275, comfortably inside the ±2047 field.
 
 ---
 
+## 7f. The measured lattice ladder — the pose knee and the SCORE knee are different rungs
+
+×8 landed on T4 as the **29th pointer move** (`S 0.1445177913121716 @ 175,576 B`, sha `f7e0bb79…`,
+lane `ddm_pc1_t4_lattice_x8_on_rc1_20260905`); my advisory projection 0.1445186697928887 was accurate to
+**−8.785e-07**. Two pointer moves from this arm, both projected from the local cpu_torch instrument to
+within one part in 10⁵.
+
+**The ladder, every rung MEASURED at n600 with the full re-solve and an exact archive build on rc1:**
+
+| rung | archive B | ΔB vs rc1 | **d_pose n600** | `lattice_floor` stops | net ΔS vs rc1 base | S (advisory) |
+|---|---:|---:|---:|---:|---:|---:|
+| ×1 (shipped) | 178,249 | — | 6.134076e-06 | — | — | 0.14666351 |
+| ×4 | 176,448 | −1,801 | 5.727914e-06 | 7 | −1.462948e-03 | 0.14519816 **(T4, 28th move)** |
+| ×8 | 175,576 | −2,673 | **5.579254e-06** ← pose min | 13 | −2.142435e-03 | 0.14451779 **(T4, 29th move)** |
+| **×16** | **174,786** | **−3,463** | 5.767500e-06 | 27 | **−2.543498e-03** ← score min | **0.14411761** |
+| ×32 | (−4,074 priced) | | *running* | | | |
+
+**The two knees are at different rungs, and that is the finding.** d_pose bottoms at **×8** and turns up
+at ×16; the SCORE keeps improving to **×16**, because the rate ladder is still paying (−790 B = −5.26e-04
+S) more than the pose turn costs (+1.25e-04 S). *A lattice sweep that stopped at the distortion minimum
+would have left −4.01e-04 S on the table.* The `lattice_floor` stop count — 7 → 13 → 27, doubling per
+rung — is the mechanical signature of the lattice starting to bind, and it turns the pose curve one rung
+before it turns the score curve.
+
+**Scoreboard against my §7c pre-registration.** I got the structure right and the numbers wrong:
+
+| pre-registered | outcome |
+|---|---|
+| ×8 beats the BASE comfortably | **CORRECT** (5.579e-06 vs bar 9.264e-06) |
+| ×8 vs V3 "~50/50, leaning PASS" | **CORRECT** (net −6.79e-04) |
+| ×16 "FAILS against V3" (falsifier 3) | **WRONG — falsifier 3 FIRED.** ×16 beats V3 by −1.08e-03 |
+| "the knee sits between ×8 and ×16" | **WRONG.** The score knee is at ×16 or beyond |
+| falsifier 4: d_pose < 5.727914e-06 refutes nesting | **FIRED.** ×8 measured 5.579e-06 |
+| falsifier 5: start outside 0.5–2× of the step² model | survived (×8 start 5.97e-05 vs 9.91e-05 = 0.60×) |
+
+**Why the nesting prior failed, and it is worth keeping.** The representable-set argument was sound —
+every ×16 point *is* a ×8 point — but it constrains the GLOBAL optimum, and `refine_pair` is a local
+solver. Its ±2 polish neighbourhood spans **twice the coefficient distance** at each doubling, so a
+coarser lattice hands the search a wider local move and it escapes minima the finer lattice traps it in.
+**On a local solver, a coarser quantisation can measure BETTER than a finer one, and rung comparisons
+are not monotone.** That is a reusable warning for any future lattice or precision sweep on this vehicle:
+you cannot order the rungs by argument, only by measurement.
+
+**SEAL for ×16** (contest-CUDA, `SEAL_VALID`, bar bound to the live 0.14451779):
+
+    /Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency/SEAL_ddm_pc1_lattice_x16_resolved_on_rc1.json
+      candidate  ddm_pc1_lattice_x16_resolved_on_rc1
+      archive    174,786 B  sha 1de6c5d7186a0b31…
+      runtime    43 files, 918,604 B, digest 3c3afe5fef25ed05…
+      seal sha   54a59124d49563bf42c3a3f0fbd9158adfe917f6eb1e50d7026775996114bb85
+      vs pointer −790 B, net dS −4.0106325e-04, S projection 0.1441167280638
+
+**×32 is running, with its bar pre-registered before the solve: it beats ×16 only if d_pose ≤
+6.379636e-06** (extra −590 B over ×16). Given the measured turn (5.579 → 5.768e-06 from ×8 to ×16) and
+the doubling `lattice_floor` count, **I predict ×32 lands near 6.5e-06, just ABOVE the bar, and FAILS —
+putting the score knee at ×16.** Recorded before the measurement, as before.
+
+---
+
 ## 8. What this arm did not do
 
 - **No T4 row was fired. Modal was never dispatched; MAIN fires.** Every score-shaped number here is
@@ -711,7 +770,8 @@ measurement: one n600 re-solve each, same instrument, same admission test. Owner
 
 ## Frontier
 
-    ddm_pc1 V3 S 0.1451981569076111 @ 176,448 B [contest-CUDA T4 n600]  <- the live pointer (28th move, THIS arm)
+    ddm_pc1 x8 S 0.1445177913121716 @ 175,576 B [contest-CUDA T4 n600]  <- the live pointer (29th move, THIS arm)
+    ddm_pc1 x4 S 0.1451981569076111 @ 176,448 B [contest-CUDA T4 n600]  <- 28th move, THIS arm
     rc1        S 0.14666350774473783 @ 178,249 B [contest-CUDA T4 n600]
     cl2 S 0.14781744131049854 @ 179,982 B [contest-CUDA T4 n600]   <- the base this arm solved on
 
