@@ -25,3 +25,8 @@ expressible, and `inflate.py:main` refuses to run without CUDA on this host (the
 the PAIR rc1 realized in `stage_restage`: (a) `f26_inflate.inflate_archive` on the staged tree reaches the token decode within a time bound with no
 exception (candidate AND the current frontier tree as control), and (b) `bash inflate.sh <dir> <out> <file_list>` runs the whole preamble (backend
 build, Brotli gate, file-list dispatch, `_verify_input` against the re-pinned constants) and stops exactly at the CUDA gate. Both receipts, both trees.
+
+## ITEM 4 — review_tracker `mark-file` marks without rescanning (vacuity class; MEASURED by md4, 2026-09-05 23:05Z)
+`tools/review_tracker.py mark-file <f> --status reviewed` does not rescan the file: a function added after the last `scan` is marked reviewed VACUOUSLY (md4
+measured 11 entities before `scan`, 12 after). Cure: `mark-file` rescans first (or refuses when the file's entity census differs from the last scan), so the
+two-visible-passes policy binds the CURRENT entities. Acceptance: a test that adds a function and asserts `mark-file` either covers it or refuses.
