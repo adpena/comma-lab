@@ -285,9 +285,29 @@ and basis families other than a re-quantisation of the shipped atoms.
 
 ---
 
-## 7. V3 — the live row
+## 7. V3 — the live row (IN FLIGHT, not a verdict)
 
-*(filled on completion)*
+V3 is the only variant still standing. It changes no basis byte: it multiplies the twelve coefficient
+scales by 4 and re-solves the 600×12 lattice at that coarser step, which shrinks the AR1-predicted Rice
+deltas. MEASURED rate: **−1,814 B = −1.20787e-03 S**, break-even d_pose **8.172e-06** (+33.2% over the
+base). The n600 re-solve is running; **no verdict is claimed here until all 600 pairs are solved and the
+archive is built.**
+
+Interim state, recorded so this memo is honest at any moment it is read — explicitly NOT a verdict, and
+NOT admissible as one (the solved set is a partial, order-biased subset; [[m88]]/[[m96]]):
+
+    solved 87/600 · subset ratio (variant / base on the same pairs) 0.9798 · 66 better, 21 worse
+    projection if every unsolved pair merely held its base value: 6.084e-06 vs break-even 8.172e-06
+
+The direction is favourable and the margin is wide, which is why the run is being finished rather than
+stopped early the way V2 was — V2's bound had already crossed, V3's has not.
+
+**An attribution confound is open and is NOT resolved by this row (ITEM 4).** `refine_pair` at 40 outer
+rounds is a more thorough solve than the one that produced the shipped codes, so a V3 pose gain may be
+"more solving" rather than "the coarser lattice is free". That does not affect V3's ΔS against the
+shipped body, which is what decides shipping. It does mean the control — a v0_base re-solve on the
+shipped lattice — is owed, and that control is independently interesting: any d_pose it wins costs
+**zero** bytes.
 
 ---
 
