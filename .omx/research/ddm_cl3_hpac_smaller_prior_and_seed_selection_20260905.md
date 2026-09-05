@@ -39,6 +39,15 @@ break-even), capacity is already past the point where more prior helps, so the s
 | P6 | seeds 20260717/20260718 at λ=1.0, min-of-3 | −40…−90 B beyond the control | _pending_ | _pending_ |
 | P7 | seed spread | within ±20 B ⇒ the seed lever is at its floor | _pending_ | _pending_ |
 
+**What makes P6/P7 readable at n=2 (MEASURED, from cl2, before any cl3 rung).** cl2 ran the λ=1.0 law TWICE from a
+fresh root (control + twin) and got raw IHS1 sha `81728190…`, packed Brotli-q11 sha `66801b10…` (13,466 B), RC64 stream
+sha `e07274ca…` (113,419 B) and candidate archive sha `08ec8533…` (179,982 B) — **byte-for-byte identical at every
+layer**. So the run-to-run noise floor of `J` at a FIXED law and seed is exactly **0 B**, not "of order 41 B". Two
+consequences: (i) any seed-to-seed spread cl3 measures is a pure seed effect with zero run-noise mixed in, so two extra
+seeds are enough to characterise the lever; (ii) cl2's −41 B is NOT "training noise of that order" — the charter's own
+phrasing for P6 is looser than the evidence. The −41 B is deterministic; the open question is only whether a different
+seed lands lower.
+
 **FALSIFIER (whole-axis, pre-registered):** if λ=2.0 nets ≥ 0 B against the control, the capacity axis is CLOSED IN BOTH
 DIRECTIONS on the shipped object (verdict_scope: this vehicle, this formulation), and λ=4.0 is NOT fired — recorded as
 not-run-because-falsified, not as an untested rung.
