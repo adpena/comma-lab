@@ -12,7 +12,13 @@ No scorer ran; the token FIELD is bit-identical on every row (sha `cc10a7b0…63
 construction and only model bytes + stream bytes move. Labels: MEASURED / DERIVED / INFERRED as marked.
 `score_claim=false` until the decision-rule section says otherwise.
 
-(RESULT SECTIONS ARE FILLED AS THE RUNGS LAND — see §4–§6.)
+**Result first.** cl1's ladder, fired on the shipped object: the λ=1.0 control reproduces the shipped joint at
+**−41 B** (13,466 + 113,419 = 126,885 B vs 126,926; instrument PASS), the **λ=0.5 rung costs +350 B of model for
++156 B of stream (secant +0.446 against the −1 bar; joint +465 B vs shipped)** — the prior law is FALSIFIED at the
+first rung and λ=0.25 is not fired. The only pointer-relevant bytes are the control's −41 B, a retrain/pack-size
+effect, deterministic (twin byte-identical at every layer), VERIFIED through the shipped container path and
+parse-back-identical at the render; it is SEALED for contest-CUDA as a 26th-move candidate (§6). The demand
+(41,818 B) is untouched: 0.098 % of it.
 
 ---
 
@@ -165,7 +171,10 @@ first while my own commits moved HEAD): terminal `qat_stage_end_epoch_0060.pt` �
 files differ (sha `caea8f02…` vs `90f7bc38…`) ONLY through `run_identity.launch_git_sha` (repo HEAD moved between
 launches) — the same provenance-in-the-causal-hash instrument defect cl1's Gate 2 adjudicated on 2026-08-12
 (`SUBSTANCE_PASS_INSTRUMENT_DEFECT`). Training time 3,172 s, peak RSS 1.76 GiB. The packed-bytes and stream identity
-of the twin through the shipped path: (pending — `price --rung lambda_1p0_twin`).
+of the twin through the shipped path — MEASURED: raw IHS1 sha `81728190…` and packed Brotli-q11 sha `66801b10…`
+(13,466 B) identical; RC64 stream sha `e07274ca…` (113,419 B) identical; candidate archive sha `08ec8533…`
+(179,982 B) identical — **byte-for-byte the control's bytes at every layer** (the twin's own receiver decode of those
+same bytes was still running at seal time; the bytes it decodes are the control's, whose identity is proven).
 
 ## 6. Decision rule (pre-registered, charter §4) + MAIN's mid-arm read
 
@@ -180,12 +189,21 @@ path, identity control, no-op detector, parse-back, seal for contest-CUDA with t
 - MAIN's mid-arm read (received while the ladder was in flight): the control is itself a rung; seal it if (a) the twin
   proves the −41 B deterministic (bit-identical packed model + stream) and (b) λ=0.5 prices worse. (b) holds (§5).
   (a): tensors bit-identical (§5b), packed IHS1 raw and Brotli-q11 bytes byte-identical (raw sha `81728190…`,
-  packed sha `66801b10…`, 13,466 B); stream identity: (pending — the twin's encode is running).
+  packed sha `66801b10…`, 13,466 B); stream sha `e07274ca…` and archive sha `08ec8533…` identical (§5b). **(a) holds.**
 - Label, honestly: a **re-train / pack-size effect** (−49 B of model for +8 B of stream), NOT a capacity win; the
   ladder's prior law is FALSIFIED. Projected S if the −41 B holds on T4 (rate-only, DERIVED): 0.14781744131049854.
-- Seal: (pending the twin stream identity) `SEAL_ddm_cl2_lambda1_control_repack_contest_cuda.json` under the arm
-  store, axis contest_cuda, admit bar −2e-5, bound falsifier COMPUTED from fs2's base receipt, single-axis waiver in
-  the notes (the shipped `inflate.py` pins CUDA; the contest-CPU path timed out on this body).
+- **SEAL (READY-FOR-T4, 26th-move candidate; MAIN fires):**
+  `/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/SEAL_ddm_cl2_lambda1_control_repack_contest_cuda.json`
+  (mirror `.omx/research/ddm_cl2_capacity_20260905/`), seal sha `e42288fc72c8e67a3bd7d0002f0fad021917ff0c9acaba85c8100dd6af8afc60`,
+  sealed 2026-09-05T15:52:40Z by `tools/make_candidate_seal.py`: candidate `ddm_cl2_lambda1_control_repack`, axis
+  `contest_cuda`, archive `08ec85333d13d71344b4482cf261e3b2d508725e49f3ca05971265a81498ad4e` (179,982 B) inside the
+  receiver-copy runtime tree (sha `ce20617d…`, 41 files, 878,428 B; pins `inflate.py` `053d4dc7…` / `inflate.sh`
+  `1300e6ee…` = fs2's), admit bar net dS < −2e-5 derived against the fs2 pointer (0.14784474152757654, archive
+  `a8f3a379…`, tolerance 0.0), bound falsifier COMPUTED from fs2's base receipt (3.691128e-06 = seg 5.0e-07 + pose
+  3.191128e-06), four pre-registered falsifiers (field/distortion held; 179,982 B; rate-only −2.7300e-5 / projected S
+  0.14781744131049854; twin determinism), single-axis waiver stated in the notes (the shipped `inflate.py` pins CUDA;
+  contest-CPU timed out on this body). Predicted S = 0.14784474152757654 − 41 × 25/37,545,489 = **0.1478174413…**
+  (rate-only; distortion held by the decoded-field identity and the byte-identical render).
 
 ## 7. What I did NOT do (plainly)
 - λ=0.25 was NOT fired: the pre-registered fire condition (1.0→0.5 slope < −1) failed (slope +0.446).
@@ -200,6 +218,29 @@ path, identity control, no-op detector, parse-back, seal for contest-CUDA with t
 - Decode wall-clock deltas are NOT a mechanism claim: the shipped-archive control decode ran under heavier
   concurrent load than the candidate decodes.
 
-## Equations leg (`tac.canonical_equations`) — (pending: `hpac_prior_capacity_slope_v1` with the rung anchors)
+## Custody (ALWAYS KEEP THE PAYLOAD)
+Store: `/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/` — `inputs/` (ep634 EMA init `ff2d3e45…`,
+cache `f29c479a…`, field `cc10a7b0…`), `smoke_e2/`, `rungs/{lambda_1p0,lambda_1p0_twin,lambda_0p5,cpu_control_jf2_null}/`
+(every training checkpoint incl. `qat_stage_end_epoch_0060.pt`, raw IHS1 + all 12 Brotli representations, both
+streams, candidate archive, receiver-copy runtime, decoded field, RUNG_RESULT / VERIFY_RESULT), `control/`
+(shipped-runtime copy, decoded field, CONTROL_RESULT), `parseback/{shipped,lambda_1p0}/` (the two 3.66 GB renders
+with sha, both retained), `LADDER_REPORT.json`. Small receipts mirrored under `.omx/research/ddm_cl2_capacity_20260905/`.
+Measured peaks recorded in `.omx/state/measured_peaks.jsonl` (families `train_ddm_cl1_hpac_capacity`,
+`ddm_cl2_hpac_prior_capacity_ladder`). Lane `lane_ddm_cl2_hpac_prior_capacity_ladder_20260905` at L2
+(`impl_complete`, `real_archive_empirical`).
 
-## Frontier line — (pending)
+## Equations leg (`tac.canonical_equations`)
+Registered as **`hpac_prior_capacity_slope_v1`** (`src/tac/canonical_equations/hpac_prior_capacity_slope_20260905.py`,
+exported from `tac.canonical_equations`; re-derivation guards in `src/tac/tests/test_ddm_cl2_hpac_prior_capacity_slope.py`;
+commit `65fd5ffa1`). The law: with the field held, the token subsystem's counted bytes are `J = B_model + B_stream`;
+an adjacent rung pays iff `ΔB_stream/ΔB_model < −1` (`rung_pays`); the ladder is admissible only if the λ=1 control
+lands within +500 B of the shipped joint (`control_reproduces_shipped_family`). Two anchors, both
+VERIFIED_VIA_EMPIRICAL_ANCHOR: control (residual 41 B: J(1) = 126,885 vs 126,926) and the λ 1.0→0.5 secant
+(residual 2,006 B: measured net +506 B against the predicted ≤ −1,500 B). `prior_law_prediction_holds(350, 156)`
+is False — the falsifier fired.
+
+## Frontier line
+**fs2 S 0.14784474152757654 @ 180,023 B [contest-CUDA T4 n600]** — unchanged; this arm moved no pointer.
+Candidate line: **ddm_cl2_lambda1_control_repack — 179,982 B, projected S 0.14781744131049854 (rate-only, DERIVED;
+[macOS-CPU advisory] byte measurement) — READY-FOR-T4**, seal `e42288fc…`; the λ ladder itself: prior law FALSIFIED,
+λ=0.25 not fired, capacity door on the multiplier coordinate CLOSED (formulation).

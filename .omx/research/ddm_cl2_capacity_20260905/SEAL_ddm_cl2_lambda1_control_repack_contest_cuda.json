@@ -1,0 +1,69 @@
+{
+  "admit_bar": {
+    "derivation": {
+      "pointer_archive_sha256_at_seal": "a8f3a3791499b2b62ee4d16bc67f15f819f454dc9b88e3cce04fe50a30427bb6",
+      "pointer_axis": "contest_cuda",
+      "pointer_score_at_seal": 0.14784474152757654,
+      "pointer_tolerance_abs": 0.0,
+      "require_pointer_archive_identity": true
+    },
+    "net_dS_threshold": -2e-05,
+    "rule": "net dS = dS_rate + 100*(d_seg_new - d_seg_base) + (sqrt(10*d_pose_new) - sqrt(10*d_pose_base)) < threshold"
+  },
+  "archive": {
+    "bytes": 179982,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/receiver_copy_runtime/archive.zip",
+    "sha256": "08ec85333d13d71344b4482cf261e3b2d508725e49f3ca05971265a81498ad4e"
+  },
+  "axis": "contest_cuda",
+  "candidate_id": "ddm_cl2_lambda1_control_repack",
+  "falsifiers": [
+    "d_seg MUST read the base row's 0.00020139 exactly and d_pose MUST read the base row's 6.14e-06 (3 s.f.): the token FIELD, semantic section, carrier section and residual table are byte-identical to fs2 by the receiver's own parse (VERIFY_RESULT.json section census) and the receiver tree's own inflate path renders 0.raw byte-identical to the shipped render (sha f86bfaf39f83bcccb1df14ed3cf982767dc94d3a91cd956f00be923612fec4e0, 3,662,409,600 B; PARSEBACK_RESULT.json). ANY distortion movement refutes the field-held claim and the row is WITHDRAWN pending diagnosis.",
+    "archive bytes MUST read 179,982 (base 180,023 - 41: hpac section 13,515 -> 13,466 B, token stream 113,411 -> 113,419 B; every other byte identical). Any other size means the fired bytes are not the sealed bytes.",
+    "rate-only prediction (DERIVED at 25/37,545,489 S per byte): net dS -2.7300217078009027e-05, projected S 0.14781744131049854 against the base 0.14784474152757654. A T4 net dS >= 0 refutes the retrain/pack-size effect. This candidate is NOT a capacity win: the lambda ladder's prior law was FALSIFIED (lambda 1.0->0.5 secant +0.446 vs the -1 bar, joint +506 B); the -41 B is the control rung re-fitted and re-packed under the reference law.",
+    "determinism: the uninterrupted twin of the control (fresh root, same law) reproduced every EMA-deploy and live tensor bit-for-bit, the same 13,466 B packed IHS1 (sha 66801b10fd4dbfed97e1544a0c7efefe669959058be485ae9957c691ab73abf9) and the same 113,419 B stream (sha e07274caeacbb3a6ce00e26b42d7032671af5c8109a2cee3a0697b116ac125cf). If either had differed by 1 B the -41 B would be run-to-run variance and this seal would not exist.",
+    "report-8dp bound (COMPUTED, source=published): the base row's bound is 3.691128e-06 = seg 5.000000e-07 + pose 3.191128e-06 (d_pose 6.140000e-06). Bounds ADD for a DELTA, so the admissible margin must be judged against base + candidate, NOT against this row alone -- dividing by one row's bound overstates the margin by exactly 2.00x when the two rows' bounds are equal. Compose the two-row sentence with tools/report_8dp_delta_bound.py once the candidate row lands. Base receipt: /Volumes/APDataStore/pact/ddm_fs2_carrier_resolve_t4_buy_20260904_r2/MODAL_REMOTE_RESULT.json"
+  ],
+  "notes": "SINGLE-AXIS WAIVER, contest-CUDA only: same-object model+stream re-pack with the token field held bit-identical (d_seg/d_pose held by construction; parse-back render byte-identical to the shipped render); the shipped inflate.py pins CUDA and the contest-CPU path timed out at the 1,800 s inflation budget on this body (fs2). Retrain/pack-size effect (-49 B model, +8 B stream), NOT a capacity win. The staged tree is fs2's own fire tree (fire_runtime_D_alternation) with archive.zip replaced and inflate.py's two pin constants re-pinned (diff proved to be those two lines only; VERIFY_RESULT.json tree census). Container identity: up3.parse_shipped_body + build_archive at fs2's shape (q9/lgwin16, ck2 off) rebuilds the candidate byte for byte. Two encodes identical; receiver-copy decode identity PASS; control decode of the shipped archive identity PASS. MAIN owns dispatch.",
+  "receiver_pins": [
+    {
+      "bytes": 2476,
+      "relative_path": "inflate.py",
+      "sha256": "053d4dc7d73a40ab2ee59084e10a33ad63e85f38370b98741deb7dc19eb76a32"
+    },
+    {
+      "bytes": 3219,
+      "relative_path": "inflate.sh",
+      "sha256": "1300e6ee741c316adb335086017c0297c69660c0725a20963ac79e4319a9a0e3"
+    }
+  ],
+  "retained_payload_paths": [
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/candidate_archive.zip",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/terminal_checkpoint.pt",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/model/hpac.ihs1.raw",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/model/hpac.ihs1.br.q11",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/token_stream.rc64.bin",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/decoded_tokens.u8",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/container_identity_rebuild.zip",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/RUNG_RESULT.json",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/VERIFY_RESULT.json",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/parseback/lambda_1p0/PARSEBACK_RESULT.json",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/parseback/shipped/PARSEBACK_RESULT.json",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/token_stream.rc64.bin",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/candidate_archive.zip",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.br.q11",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/terminal_checkpoint.pt",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_0p5/RUNG_RESULT.json",
+    "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/control/CONTROL_RESULT.json"
+  ],
+  "runtime": {
+    "file_count": 41,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/receiver_copy_runtime",
+    "sha256": "ce20617dc7db4ff46e13f7acc725e44ae2833696160af039ab7da8bf4033dfc3",
+    "total_bytes": 878428
+  },
+  "schema": "candidate_seal.v1",
+  "seal_sha256": "e42288fc72c8e67a3bd7d0002f0fad021917ff0c9acaba85c8100dd6af8afc60",
+  "sealed_at_utc": "2026-09-05T15:52:40.291418+00:00",
+  "sealed_by": "ddm_cl2"
+}
