@@ -96533,6 +96533,92 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_ddm_bd1_bidirectional_pyramid_context_20260905",
+      "name": "ddm_bd1 bidirectional (B-pyramid) temporal context for the HPAC label-field coder",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "[empirical:/Volumes/VertigoDataTier/pact/ddm_bd1_bidirectional_pyramid_context/screen_report_v3.json sha256 ed8062cefcb8d551] screen producer experiments/ddm_bd1_bidirectional_context_screen.py complete; KT closed form validated vs sequential sim to 2.3e-13; context builders validated vs slow reference (600 probes, 0 mismatch)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/ddm_bd1_bidirectional_pyramid_context_20260905.md + canonical equation bidirectional_pyramid_context_gain_v1"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "research_only=true. CLOSED at family scope 2026-09-05: falsifier F1 fired at the $0 counting-model screen. Every decode-order-realizable B-pyramid (GOP 2..32) saves 2.84-5.68% of the 113,419 B RC64 stream against an 8% bar; the UNATTAINABLE all-pairs-d1 supremum is only 7.46-9.03%. Mechanism: P(32)/P(1)=1.069-1.129, the label field decorrelates too slowly for a second reference to add information. No training launched, no Metal requested, no Modal dispatched. score_claim=false; frontier UNMOVED. Memo .omx/research/ddm_bd1_bidirectional_pyramid_context_20260905.md; law bidirectional_pyramid_context_gain_v1.",
+      "research_only": true,
+      "reactivation_criteria": [
+        "A MEASURED demonstration that the future plane carries label-field information the past plane does not (conditional mutual information from the next plane materially above the 9.3-11.6% no-branch cut measured here) OR a change of coded object that restores fast temporal decorrelation. A better SCHEDULE of the same two planes does not re-open it: the GOP sweep 2..32 and the unattainable supremum are already priced."
+      ]
+    },
+    {
+      "id": "lane_ddm_pc1_pose_carrier_efficiency_20260905",
+      "name": "ddm_pc1 pose-carrier efficiency: basis precision, coefficient precision, generated basis, learned low rank",
+      "phase": 2.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -96542,5 +96628,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-05T16:10:06Z"
+  "updated_at": "2026-09-05T17:44:27Z"
 }
