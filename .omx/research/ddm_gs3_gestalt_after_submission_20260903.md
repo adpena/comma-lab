@@ -891,3 +891,11 @@ Sealed on the rc1 base (`SEAL_ddm_pc1_v3_lattice_x4_resolved_on_rc1.json`): **17
 fired T4 at 20:15Z (call id appended at harvest). Follow-on already dispatched to the same arm: lattice ×8 (−2,693 B, break-even d_pose 9.27e-6) and ×16
 (−3,484 B, 1.03e-5) with the full re-solve. Two self-corrections by the arm (basis_scales are not dead bytes; per-atom quantizer step moves 3,731 B at fixed
 alphabet — the registered rate↔fidelity exchange inside the step). SVD spectrum of the 600 realized fields: rank-8 cumulative 0.9869, effective rank 9 at 99 %.
+
+## Addendum 7 (2026-09-05 20:05Z) — THE 28TH POINTER MOVE: S 0.1451981569076111 @ 176,448 B [contest-CUDA T4 n600] (pc1 lattice ×4 + re-solve; a POSE-CHANGING authority row)
+
+Call `fc-01M1SHRJ45TJRMA9G2YXCE4MTW`, archive sha `891add546f5cf0943929b566f29dd4318f1d8b2ab76ae05183d8189098880f40`; d_seg 0.00020139 identical; **d_pose 5.73e-06
+(from 6.14e-06)**; Δ vs rc1 −1.4653508371267332e-3; realized − projected −2.4e-6 = the evaluator's 3-sig-fig pose print. Two moves in one evening: −1,733 B
+(rc1, model sections) + −1,801 B AND better pose (pc1, carrier lattice) = −3,534 B and −2.62e-3 S since cl2 this afternoon. Re-derived: gap 0.0251981569076111.
+Composition for the live arms: **the carrier coefficient block is now pc1's (lattice ×4, re-solved) — sj1's edited pairs must re-solve FROM these coefficients
+on this lattice**, model sections rc1's, tail unchanged. pc1's ×8/×16 rungs run on this base. PR #140 is five moves behind.
