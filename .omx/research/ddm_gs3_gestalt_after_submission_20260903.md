@@ -694,3 +694,13 @@ system-availability delta; ng3's shape-matched 40.92 GiB for the smoke) → `too
 No bespoke shell, no inline vm_stat arithmetic, no hand-typed peak, no MAIN action between ng4's exit and ng5's start — the permanence program's
 first end-to-end proof. Pre-registered expectation after ng4's terminal: REDUNDANT (≈ ng3's 0.391810), possibly slightly ANTAGONISTIC on d_pose; the
 words decide at ~06:00Z. Not a pointer object. Equations leg (`tac.canonical_equations`): none.
+
+## ADDENDUM 34 (2026-09-05 04:25Z real) — ng5: BELOW-BOTH; the burn default is now τ band × carried duals
+
+ng5 @5k **0.384833**: −9.48% vs cold, −1.78% below ng3 (0.391810), −9.4% below ng4, −3.5% below its own start; d_seg −1.25% (the band), **d_pose 4.247e-4
+= −26.2% vs start, the series' best** (the duals, which alone drifted pose UP in ng4, bring it DOWN once the band holds the seg gradient inside m_safe —
+complementary through the pose axis, not redundant; MAIN's post-ng4 REDUNDANT expectation was wrong, the charter's sub-additive-same-signed prediction
+held). Series complete: band×duals −9.5% ≫ band −7.8% ≫ continuous ≈ cold ≈ cap > warm. Burn default of record: τ band × carried duals (ng5's sealed
+config). Not a pointer object (born vehicle 106.6 KB; accuracy corner still 18.3× away; md1 stands). Fired and read with no hand in the loop.
+Equations leg (`tac.canonical_equations`): gm1's τ-band law + the continuous-dual anchor — the interaction row (duals × band → pose) is a NEW measured
+anchor; register on the next equations pass.

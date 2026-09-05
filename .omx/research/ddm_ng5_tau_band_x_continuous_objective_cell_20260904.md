@@ -341,3 +341,23 @@ margin. It clears; the NEXT generation will not without a cold-store sweep.
 nothing, byte-closed nothing, and could not move the pointer.
 
 `fs2 S 0.14784474152757654 @ 180,023 B [contest-CUDA T4 n600]`
+
+## TERMINAL READ (MAIN, 2026-09-05 04:25Z real; cell DONE 04:23:43Z rc0, 10,055 s; fired through the queue driver; all payloads retained)
+
+| step | S_hat ng5 (band × duals) | cold | Δ | ng3 τ band | Δ | ng4 continuous | Δ | d_seg_hat | d_pose_hat | bytes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 0 | 0.398768 | 0.398768 | 0 | 0.398768 | 0 | 0.398768 | 0 | 0.0025183 | 5.757e-4 | 106,714 |
+| 1000 | 0.419470 | 0.466875 | −10.15% | 0.434661 | −0.015191 | 0.425786 | −0.006316 | 0.0026623 | 6.758e-4 | 106,683 |
+| 2000 | 0.418570 | 0.485677 | −13.82% | 0.435601 | −0.017031 | 0.426085 | −0.007515 | 0.0026643 | 6.572e-4 | 106,736 |
+| 3000 | 0.405742 | 0.475383 | −14.65% | 0.403796 | +0.001946 | 0.431595 | −0.025853 | 0.0026070 | 5.470e-4 | 106,763 |
+| 4000 | 0.401350 | 0.442190 | −9.24% | 0.401233 | +0.000117 | 0.436081 | −0.034731 | 0.0025567 | 5.568e-4 | 106,714 |
+| 5000 | **0.384833** | 0.425149 | **−9.48%** | 0.391810 | **−0.006977** | 0.424842 | **−0.040009** | **0.0024869** | **4.247e-4** | **106,588** |
+
+**VERDICT: BELOW-BOTH** (pre-registered words; the charter's prior-law prediction held: sub-additive, same-signed). @5k the composition ends −3.5% below its
+own start, −1.78% below ng3 and −9.4% below ng4; d_seg −1.25% vs start (≈ ng3's −1.2% — the band's contribution), **d_pose −26.2% vs start (4.247e-4, the
+best pose of the whole series; ng3 5.18e-4, ng4 8.12e-4)** and −126 B. Interaction, MEASURED: alone, the carried duals drifted pose UP (ng4); with the band
+holding the seg gradient inside m_safe, the same duals bring pose DOWN — the two levers are not redundant, they are complementary through the pose axis.
+MAIN's post-ng4 expectation (REDUNDANT) was wrong; the charter's prediction was right. Excursion peak +5.2% (@1k) vs cold +21.8% / ng3 +9.2% / ng4 +6.8%.
+Honest frame unchanged: S_hat 0.3848 at 106.6 KB is the born vehicle, not the pointer object; the accuracy corner (d_seg 1.36e-4) is still 18.3× away and
+md1's persistent-partition closure stands. **The burn default of record is now τ band × carried duals** (the series' complete ordering: band×duals
+−9.5% ≫ band −7.8% ≫ continuous ≈ cold ≈ cap > warm). `[macOS-MLX research-signal]`, n600 realized-through-R, seed_20260902.
