@@ -838,23 +838,77 @@ def run_selector(args) -> int:
 
     coefficients = up2.codes_to_coefficients(codes, state.coefficient_scales)
     original_choices = state.selector_choices.copy()
+
+    # --- scorer backend (ddm_ane1) -------------------------------------------
+    # The screening backend may only choose WHICH mode is best.  Both numbers
+    # that leave this sweep -- d_pose at the shipped mode and at the chosen mode
+    # -- are always re-measured on cpu_torch fp32, so a screened row is never a
+    # screened NUMBER.  See ``tac.ane_screening`` and CLAUDE.md's MPS
+    # train/authority split, which the ANE inherits verbatim.
+    from tac.ane_screening import (
+        AUTHORITY_BACKEND,
+        assert_backend_name,
+        assert_cpu_confirm_contract,
+        load_pose_backend,
+        rank_agreement,
+    )
+
+    backend_name = assert_backend_name(getattr(args, "scorer_backend", AUTHORITY_BACKEND))
+    screen_net = load_pose_backend(
+        backend_name,
+        torch_posenet=instrument.posenet,
+        mlpackage=getattr(args, "pose_mlpackage", None),
+        batch_size=1,
+    )
+    screening = backend_name != AUTHORITY_BACKEND
+
+    def evaluate(net, mode_index: int, pair_index: int) -> float:
+        state.selector_choices[pair_index] = np.uint8(mode_index)
+        value, _ = up2.measure_pose(
+            net, state, coefficients, instrument.raw, instrument.targets,
+            np.array([pair_index], dtype=np.int64), batch_size=1,
+        )
+        return float(value[0])
+
+    confirm_all = bool(getattr(args, "confirm_all_modes", False))
     rows = []
+    confirmed_pairs: list[int] = []
+    screen_seconds = 0.0
+    confirm_seconds = 0.0
+    agreements: list[dict[str, Any]] = []
+    picks_survive = 0
     started = time.time()
     for pair in pairs:
-        per_mode = []
-        for mode_index in range(len(modes)):
-            state.selector_choices[int(pair)] = np.uint8(mode_index)
-            value, _ = up2.measure_pose(
-                instrument.posenet, state, coefficients, instrument.raw,
-                instrument.targets, np.array([int(pair)], dtype=np.int64),
-                batch_size=1,
-            )
-            per_mode.append(float(value[0]))
-        state.selector_choices[int(pair)] = original_choices[int(pair)]
-        shipped_mode = int(original_choices[int(pair)])
-        best_mode = int(np.argmin(per_mode))
-        rows.append({
-            "pair": int(pair),
+        pair_index = int(pair)
+        shipped_mode = int(original_choices[pair_index])
+        screen_started = time.time()
+        screened = [evaluate(screen_net, m, pair_index) for m in range(len(modes))]
+        screen_seconds += time.time() - screen_started
+        best_mode = int(np.argmin(screened))
+
+        confirm_started = time.time()
+        if screening:
+            # CONFIRM.  Default: only the two modes whose values leave the
+            # instrument -- that is the whole speedup, 8 screened + 2 confirmed
+            # instead of 8 confirmed, so the structural ceiling is 4x.
+            # --confirm-all-modes spends the full 8 to MEASURE the screen's rank
+            # agreement; it buys no time and is the admissibility experiment.
+            wanted = range(len(modes)) if confirm_all else {shipped_mode, best_mode}
+            confirmed = {
+                m: evaluate(instrument.posenet, m, pair_index) for m in sorted(wanted)
+            }
+            per_mode = list(screened)
+            for mode_index, value in confirmed.items():
+                per_mode[mode_index] = value
+            confirmed_pairs.append(pair_index)
+        else:
+            confirmed = {}
+            per_mode = screened
+        confirm_seconds += time.time() - confirm_started
+        state.selector_choices[pair_index] = original_choices[pair_index]
+
+        row = {
+            "pair": pair_index,
             "shipped_mode": shipped_mode,
             "d_pose_at_shipped_mode": per_mode[shipped_mode],
             "best_mode": best_mode,
@@ -865,7 +919,22 @@ def run_selector(args) -> int:
                 if per_mode[best_mode] > 0 else float("inf")
             ),
             "d_pose_per_mode": per_mode,
-        })
+        }
+        if screening:
+            row["scorer_backend"] = backend_name
+            row["screened_d_pose_per_mode"] = screened
+            row["screened_best_mode"] = best_mode
+            row["confirmed_modes"] = sorted(confirmed)
+            # The adoption-relevant question at 2 confirms/pair: does the pick
+            # STILL beat the shipped mode once cpu_torch re-measures it?
+            row["screened_pick_survives_confirm"] = bool(row["gain"] > 0)
+            picks_survive += int(row["gain"] > 0)
+            if confirm_all:
+                # Only a full confirm can state true rank agreement; a partial
+                # confirm would compare the screen against itself on 6 of 8 modes.
+                row["confirmed_d_pose_per_mode"] = [confirmed[m] for m in range(len(modes))]
+                agreements.append(rank_agreement(screened, row["confirmed_d_pose_per_mode"]))
+        rows.append(row)
         print(json.dumps(rows[-1]), flush=True)
     gained = float(sum(r["gain"] for r in rows))
     newly_active = sum(
@@ -880,6 +949,45 @@ def run_selector(args) -> int:
         "instrument": meta,
         "codes_source": str(args.codes) if args.codes else "shipped carrier codes",
         "codes_sha256": sha256_array(codes),
+        "scorer_backend": backend_name,
+        "authority_backend": AUTHORITY_BACKEND,
+        "scorer_backend_provenance": (
+            screen_net.receipt() if screening else {"backend": "cpu_torch_fp32"}
+        ),
+        "cpu_confirm": assert_cpu_confirm_contract(
+            backend=backend_name,
+            adopted=[r["pair"] for r in rows],
+            confirmed=confirmed_pairs if screening else None,
+        ),
+        "backend_timing": {
+            "screen_seconds": screen_seconds,
+            "confirm_seconds": confirm_seconds,
+            "forwards_screened": len(rows) * len(modes),
+            "forwards_confirmed": (2 * len(rows)) if screening else 0,
+        },
+        "screen_rank_agreement": (
+            {
+                "measured_on": "all 8 modes confirmed on cpu_torch (--confirm-all-modes)",
+                "pairs": len(agreements),
+                "argmin_agreements": sum(1 for a in agreements if a["argmin_agrees"]),
+                "argmin_agreement_rate": (
+                    sum(1 for a in agreements if a["argmin_agrees"]) / len(agreements)
+                ),
+                "kendall_tau_b_median": float(
+                    np.median([a["kendall_tau_b"] for a in agreements])
+                ),
+            }
+            if agreements else (
+                {
+                    "measured_on": "2 modes confirmed per pair; TRUE rank agreement "
+                                   "is NOT measurable from this run -- rerun with "
+                                   "--confirm-all-modes to measure it",
+                    "screened_picks_that_survive_confirmation": picks_survive,
+                    "pairs": len(rows),
+                }
+                if screening else None
+            )
+        ),
         "batch_size": 1,
         "batch_shape_caveat": (
             "a single-pair evaluation is batch 1 BY CONSTRUCTION, and jg5 Sec 4b "
@@ -984,6 +1092,27 @@ def build_parser() -> argparse.ArgumentParser:
     selector.add_argument("--codes", type=Path, default=None)
     selector.add_argument("--pairs-list", type=int, nargs="+", required=True)
     selector.add_argument("--out", type=Path, required=True)
+    selector.add_argument(
+        "--scorer-backend", default="cpu_torch",
+        choices=("cpu_torch", "coreml_cpu_fp32", "ane_fp16_screen"),
+        help=(
+            "device that RANKS the 8 modes. Non-default backends are SCREENING "
+            "only: the two values that leave this sweep are always re-measured "
+            "on cpu_torch fp32 (tac.ane_screening.assert_cpu_confirm_contract)."
+        ),
+    )
+    selector.add_argument(
+        "--pose-mlpackage", type=Path, default=None,
+        help="CoreML .mlpackage of the PoseNet trunk; required by a screening backend",
+    )
+    selector.add_argument(
+        "--confirm-all-modes", action="store_true",
+        help=(
+            "re-measure ALL 8 modes on cpu_torch instead of the 2 that leave the "
+            "instrument. Buys no wall-clock; it is the experiment that MEASURES "
+            "whether the screening backend's ranking agrees with the authority."
+        ),
+    )
 
     codes = sub.add_parser("codes", help="merge solved rows into a 600x12 code table")
     codes.add_argument("--runtime", type=Path, required=True)

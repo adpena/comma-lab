@@ -977,6 +977,27 @@ def run_measure(args) -> int:
         tokens_path=Path(args.tokens),
         archive_sha256=observed,
     )
+    # ``measure`` IS the confirm.  Its output is the number that gets priced, so
+    # a screening backend has nothing to screen here -- it would only turn the
+    # authority row into a screened row.  The flag exists so the receipt STATES
+    # the backend instead of implying it, and so a caller cannot hand this path
+    # an fp16 device by habit.  See ``tac.ane_screening`` (ddm_ane1).
+    from tac.ane_screening import (
+        AUTHORITY_BACKEND,
+        AneScreeningError,
+        assert_backend_name,
+        backend_is_authority,
+    )
+
+    backend_name = assert_backend_name(getattr(args, "scorer_backend", AUTHORITY_BACKEND))
+    if not backend_is_authority(backend_name):
+        raise AneScreeningError(
+            f"fs1 measure emits the priced d_pose, so it runs on "
+            f"{AUTHORITY_BACKEND} fp32 only; {backend_name!r} is a SCREENING "
+            "backend. Screen the mode choice in `pr1 selector --scorer-backend`, "
+            "then confirm here."
+        )
+
     state = instrument.state
     codes = state.codes.copy()
     coefficients = up2.codes_to_coefficients(codes, state.coefficient_scales)
@@ -1009,6 +1030,8 @@ def run_measure(args) -> int:
         "label": args.label,
         "instrument": meta,
         "measured_archive_sha256": observed,
+        "scorer_backend": backend_name,
+        "authority_backend": AUTHORITY_BACKEND,
         "batch_size": args.batch_size,
         "pairs": int(pairs.size),
         "pair_selection": "full n600",
@@ -1339,6 +1362,14 @@ def build_parser() -> argparse.ArgumentParser:
     measure.add_argument("--batch-size", type=int, default=8)
     measure.add_argument("--threads", type=int, default=4)
     measure.add_argument("--expect-archive-sha256", default=None)
+    measure.add_argument(
+        "--scorer-backend", default="cpu_torch",
+        choices=("cpu_torch", "coreml_cpu_fp32", "ane_fp16_screen"),
+        help=(
+            "recorded in the receipt; this path emits the PRICED d_pose so it "
+            "refuses every non-authority backend (tac.ane_screening)."
+        ),
+    )
     measure.add_argument("--label", default="measure")
     measure.add_argument("--out", required=True)
     measure.set_defaults(func=run_measure)
