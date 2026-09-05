@@ -421,6 +421,78 @@ half (−1.20e-03 S) is unambiguously the lattice. Even attributing the entire p
 V3 still lands at −1.20e-03 S. And if the pose gain IS the solver, then a v0_base re-solve on the
 shipped lattice wins roughly that much at **zero** bytes — which is why ITEM 4 is worth firing.
 
+## 7b. Re-based onto rc1 (MAIN's pointer move), and the one link I did NOT verify
+
+MAIN moved the pointer mid-arm to rc1 (`S 0.14666350774473783 @ 178,249 B`, sha `1438049e…`, a new
+adaptive codec on the two model sections). I rebuilt and re-sealed on that base rather than assuming
+composition.
+
+**MEASURED by me, comparing the two bodies through the receiver's own RX1 parser:**
+
+| RX1 / decoded section | cl2 | rc1 | identical? |
+|---|---:|---:|:--|
+| carrier stream (stored) | 22,031 B `801a4445…` | 22,031 B `801a4445…` | **YES, byte-identical** |
+| section tail (token stream) | 113,515 B `04fefd62…` | 113,515 B `04fefd62…` | **YES** |
+| decoded carrier body / basis / Rice / codes | — | — | **YES, all four** |
+| decoded `token_stream` | 113,419 B `e07274ca…` | 113,419 B `e07274ca…` | YES |
+| decoded `residual_payload` | 100 B `74775aab…` | 100 B `74775aab…` | YES |
+| hpac stream (stored) | 13,466 B | 11,963 B | no |
+| semantic stream (stored) | 30,856 B | 30,246 B | no |
+| decoded `hpac_blob` | 17,770 B `81728190…` | 16,267 B `59754f40…` | **no** |
+| decoded `semantic_blob` | 36,130 B `17e0fd0b…` | 31,792 B `27906a60…` | **no** |
+
+**The carrier is untouched by rc1, so the carrier edit composes — and I measured the composition rather
+than asserting it:**
+
+| | rc1 base | V3 on rc1 | delta |
+|---|---:|---:|---:|
+| `archive.zip` bytes | 178,249 | **176,448** | **−1,801 B** |
+| archive sha256 | `1438049e…` | **`891add54…`** | |
+| ΔS rate | | | −1.19921e-03 |
+| ΔS pose | | | −2.63736e-04 |
+| **net ΔS** | | | **−1.462948046251146e-03** |
+| **S (advisory projection)** | 0.14666350774473783 | **0.14520055969848670** | |
+
+The byte delta is **exactly −1,801 B on both bases**, and rc1's own container-identity control passes
+(rebuilding rc1's shipped codes reproduces `1438049e…` bit for bit). Additivity here is measured, not
+assumed.
+
+**The one link I did NOT verify — stated plainly because it is load-bearing.** My d_pose was measured
+against **cl2's** frame_1 renders. rc1's *decoded* model blobs are NOT byte-identical to cl2's (the two
+rows in bold above: 17,770→16,267 B and 36,130→31,792 B), because rc1 re-serialised them under a new
+codec. Whether those blobs *deserialise* to the same weights — and therefore whether rc1's frame_1
+renders are bit-identical to cl2's — is rc1's claim, asserted by MAIN as "d_seg/d_pose identical", and I
+did not test it. Consequently:
+
+- The **rate** half of the rc1 row (−1.19921e-03 S) is fully verified by me on the rc1 bytes.
+- The **pose** half (−2.63736e-04 S) carries to rc1 **only if** rc1's renderer output equals cl2's.
+- If it does not, the pose half must be re-measured on rc1's own parse-back; the rate half is unaffected,
+  and V3 would still clear the admit bar by 60× on rate alone.
+
+The T4 fire settles it either way, which is why the seal's falsifier list pins both the byte count and
+the d_seg-must-not-move condition.
+
+**Determinism twin (the solve reproduces its own bytes).** 24 strided pairs re-solved from the same
+start codes at a fixed `OMP_NUM_THREADS=1`, against original rows solved at 1 or 2 threads:
+**24 of 24 reproduce the codes BIT-IDENTICALLY.** The reported per-pair `final_d_pose` matched bit-exactly
+on 20 of 24; the four that differ are float reduction-order wobble on the four *smallest* pairs
+(relative 2.6e-06 to 3.5e-02 on values of 2.4e-08 to 1.7e-05), summing to ~1.3e-09 absolute — about
+**2e-12 on the n600 mean**, six orders below the number it perturbs. **The shipped bytes are
+deterministic; only the diagnostic float print wobbles.**
+
+**SEAL on the rc1 base** (contest-CUDA, `SEAL_VALID`, bar bound to 0.14666351), for MAIN to fire:
+
+    /Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency/SEAL_ddm_pc1_v3_lattice_x4_resolved_on_rc1.json
+      candidate  ddm_pc1_v3_lattice_x4_resolved_on_rc1
+      archive    176,448 B  sha 891add546f5cf0943929b566f29dd4318f1d8b2ab76ae05183d8189098880f40
+      runtime    43 files, 920,266 B, digest f58e7c6d1f4c9aa6…
+      seal sha   cd454d01e8af87e0eb0bd99e961d75e4265388a598354a379456a4c2707f10ae
+
+The cl2-based seal (`SEAL_ddm_pc1_v3_lattice_x4_resolved.json`, archive `512b0e0b…`, 178,181 B) is
+retained as the superseded sibling — same codes, same d_pose, older base.
+
+---
+
 ## 8. What this arm did not do
 
 - **No T4 row was fired. Modal was never dispatched; MAIN fires.** Every score-shaped number here is
@@ -491,4 +563,9 @@ measurement: one n600 re-solve each, same instrument, same admission test. Owner
 
 ## Frontier
 
-    cl2 S 0.14781744131049854 @ 179,982 B [contest-CUDA T4 n600]
+    rc1 S 0.14666350774473783 @ 178,249 B [contest-CUDA T4 n600]   <- the live pointer
+    cl2 S 0.14781744131049854 @ 179,982 B [contest-CUDA T4 n600]   <- the base this arm solved on
+
+    ddm_pc1 candidate (ADVISORY, score_claim=false):
+      S 0.14520055969848670 @ 176,448 B  [macOS-CPU advisory projection: measured d_pose n600
+      cpu_torch + exact archive bytes + d_seg carried from the rc1 row]
