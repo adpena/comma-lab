@@ -96292,11 +96292,11 @@
       "id": "lane_ddm_ane1_ane_screening_20260905",
       "name": "ddm_ane1 ANE screening lane",
       "phase": 3.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/ane_screening.py + experiments/ddm_ane1_ane_screening.py + --scorer-backend on pr1 selector/fs1 measure; 28 tests; commits 397e10038 db0a529e7"
         },
         "real_archive_empirical": {
           "status": false,
@@ -96319,12 +96319,12 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_ane1_ane_screening_lane_20260905.md + memory fp16_drift_is_priced_by_the_reading_axis_not_the_architecture_20260905.md + equation scorer_fp16_drift_by_axis_v1"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "docs/runbook_ane_screening_20260905.md + /Volumes/VertigoDataTier/pact/ddm_ane1_ane_screening/replay/run_selector_replay.sh"
         }
       },
       "notes": ""
@@ -96378,5 +96378,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-05T13:19:53Z"
+  "updated_at": "2026-09-05T13:22:27Z"
 }
