@@ -903,3 +903,11 @@ on this lattice**, model sections rc1's, tail unchanged. pc1's ×8/×16 rungs ru
 score) and kept the prior pointer. Fixed: the refresh now walks the ranked candidates and takes the first admissible (ad1f80974, test). Pointer =
 `ddm_pc1_t4_lattice_x4_on_rc1_20260905`, S 0.1451981569076111 @ 176,448 B. Three apparatus defects surfaced by tonight's two moves, all fixed with tests:
 packet ulp cross-check, fire-time lane-id maturity check, refresh ranked fall-through.
+
+## Addendum 8 (2026-09-05 21:35Z) — THE 29TH POINTER MOVE: S 0.1445177913121716 @ 175,576 B [contest-CUDA T4 n600] (pc1 lattice ×8 + re-solve supersedes ×4)
+
+Call `fc-01M1SPVVJGAJ5WY373TKQY1Z6A`, archive sha `f7e0bb793645894b2f6885fca82b98cab3067837bd66181e222f3d4b1f43e1ff`; d_seg identical; **d_pose 5.73e-06 → 5.58e-06**;
+Δ vs the 28th −6.803655954394916e-4; −872 B. pc1 pre-registered "×8 succeeds V3 on both legs" (predicted d_pose band 6.3–7.0e-6; measured 5.58e-6 — BETTER than
+the band: each coarser lattice lets the re-solve escape a local optimum). Pointer advanced first time (the ranked-candidate refresh fix held). Tonight's ledger on
+one object, no retraining: rc1 −1,733 B · pc1 ×4 −1,801 B & pose −6.6 % · pc1 ×8 −872 B & pose −2.6 % = **−4,406 B and −3.30e-3 S since cl2 this afternoon**;
+gap to sub-0.12 now 0.0245177913121716. ×16 pending (the knee is at or beyond ×8). PR #140 is six moves behind.
