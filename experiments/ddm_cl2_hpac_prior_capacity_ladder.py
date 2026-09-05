@@ -95,7 +95,67 @@ RUNG_LAMBDA = {
     # model + stream must equal the control's byte for byte, or the control's delta is
     # run-to-run variance and no candidate may be built from it.
     "lambda_1p0_twin": 1.0,
+    # ---- ddm_cl3 (2026-09-05) ---------------------------------------------------------
+    # cl2 MEASURED the BIGGER-model direction closed (1.0 -> 0.5 secant +0.446 against the
+    # -1 break-even), so lambda_0p25 stayed unfired.  cl3 fires the untested SMALLER-model
+    # direction (lambda > 1) and seed selection at lambda = 1.0.  Same law, same inputs,
+    # same pricing path; only the rung names, the lambdas and the seeds are new.
+    "lambda_2p0": 2.0,
+    "lambda_4p0": 4.0,
+    "lambda_1p0_s17": 1.0,
+    "lambda_1p0_s18": 1.0,
+    # Twins: a fresh-root retrain of the exact winning law.  Only the winner is twinned,
+    # but every cl3 rung carries a name so whichever wins can be reproduced in place.
+    "lambda_2p0_twin": 2.0,
+    "lambda_4p0_twin": 4.0,
+    "lambda_1p0_s17_twin": 1.0,
+    "lambda_1p0_s18_twin": 1.0,
 }
+#: The training seed each rung pins.  cl2's rungs are all seed 20260716; cl3's seed rungs
+#: are the same law at 20260717 / 20260718.  Checked beside ``rate_lambda`` so a rung can
+#: never be priced from a checkpoint trained under a different seed than its name claims.
+RUNG_SEED = {
+    "lambda_1p0": 20260716,
+    "lambda_0p5": 20260716,
+    "lambda_0p25": 20260716,
+    "cpu_control_jf2_null": 20260716,
+    "lambda_1p0_twin": 20260716,
+    "lambda_2p0": 20260716,
+    "lambda_4p0": 20260716,
+    "lambda_1p0_s17": 20260717,
+    "lambda_1p0_s18": 20260718,
+    "lambda_2p0_twin": 20260716,
+    "lambda_4p0_twin": 20260716,
+    "lambda_1p0_s17_twin": 20260717,
+    "lambda_1p0_s18_twin": 20260718,
+}
+#: ddm_cl3's rungs live on the FALLBACK SSD tier (Vertigo is at 30 GiB free; APDataStore at
+#: 49 GiB).  cl2's rungs stay exactly where cl2 measured them, so ``report`` still sees both
+#: arms' rows and no landed cl2 artifact moves.  Nothing in the pack / stage / encode /
+#: decode path depends on which root a rung sits under.
+# Every rung must pin BOTH a lambda and a seed, or ``price`` would KeyError halfway
+# through a 20-minute encode.  Fail closed at import instead.
+if set(RUNG_SEED) != set(RUNG_LAMBDA):
+    raise RuntimeError(f"RUNG_SEED/RUNG_LAMBDA disagree on: {sorted(set(RUNG_SEED) ^ set(RUNG_LAMBDA))}")
+CL3_STORE = Path("/Volumes/APDataStore/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection")
+CL3_RUNGS = frozenset(
+    {
+        "lambda_2p0",
+        "lambda_4p0",
+        "lambda_1p0_s17",
+        "lambda_1p0_s18",
+        "lambda_2p0_twin",
+        "lambda_4p0_twin",
+        "lambda_1p0_s17_twin",
+        "lambda_1p0_s18_twin",
+    }
+)
+
+
+def rung_root(rung: str) -> Path:
+    """Where a rung's artifacts live: cl3's on APDataStore, cl2's where cl2 wrote them."""
+
+    return (CL3_STORE if rung in CL3_RUNGS else STORE) / "rungs" / rung
 
 
 class Cl2Error(RuntimeError):
@@ -326,7 +386,7 @@ def stage_price(args: argparse.Namespace) -> dict[str, Any]:
     rung = args.rung
     if rung not in RUNG_LAMBDA:
         raise Cl2Error(f"unknown rung {rung}; admitted: {sorted(RUNG_LAMBDA)}")
-    root = STORE / "rungs" / rung
+    root = rung_root(rung)
     result_path = root / "RUNG_RESULT.json"
     if result_path.is_file() and not args.force:
         raise Cl2Error(f"rung already priced at {result_path}; pass --force to redo")
@@ -336,6 +396,8 @@ def stage_price(args: argparse.Namespace) -> dict[str, Any]:
     ck = load_checkpoint_facts(checkpoint, args.expected_profile)
     if ck["rate_lambda"] != RUNG_LAMBDA[rung]:
         raise Cl2Error(f"checkpoint rate_lambda {ck['rate_lambda']} does not match rung {rung}")
+    if ck["seed"] != RUNG_SEED[rung]:
+        raise Cl2Error(f"checkpoint seed {ck['seed']} does not match rung {rung} (expects {RUNG_SEED[rung]})")
     if ck["cache_sha256"] is None or ck["init_sha256"] is None:
         raise Cl2Error("checkpoint carries no input custody")
     atomic_json(
@@ -502,7 +564,7 @@ def stage_verify(args: argparse.Namespace) -> dict[str, Any]:
         decode), and the hpac section's length + sha differ from the shipped ones.
     """
     rung = args.rung
-    root = STORE / "rungs" / rung
+    root = rung_root(rung)
     result_path = root / "RUNG_RESULT.json"
     if not result_path.is_file():
         raise Cl2Error(f"{rung}: RUNG_RESULT.json is absent; price first")
@@ -644,12 +706,12 @@ def stage_parseback(args: argparse.Namespace) -> dict[str, Any]:
         if not runtime.is_dir():
             raise Cl2Error("run the control stage first (it stages the shipped runtime copy)")
     else:
-        result_path = STORE / "rungs" / rung / "RUNG_RESULT.json"
+        result_path = rung_root(rung) / "RUNG_RESULT.json"
         if not result_path.is_file():
             raise Cl2Error(f"{rung}: RUNG_RESULT.json is absent; price first")
         runtime = Path(json.loads(result_path.read_text(encoding="utf-8"))["receiver_copy_runtime"]["path"])
     archive = runtime / "archive.zip"
-    root = STORE / "parseback" / rung
+    root = (CL3_STORE if rung in CL3_RUNGS else STORE) / "parseback" / rung
     root.mkdir(parents=True, exist_ok=True)
     result_path = root / "PARSEBACK_RESULT.json"
     if result_path.is_file() and not args.force:
@@ -779,12 +841,20 @@ def adjacent_slope(left: str, left_row: dict[str, Any], right: str, right_row: d
 def stage_report(_args: argparse.Namespace) -> dict[str, Any]:
     rows: dict[str, dict[str, Any]] = {}
     for rung in RUNG_LAMBDA:
-        path = STORE / "rungs" / rung / "RUNG_RESULT.json"
+        path = rung_root(rung) / "RUNG_RESULT.json"
         if path.is_file():
             rows[rung] = json.loads(path.read_text(encoding="utf-8"))
-    ladder = [rung for rung in ("lambda_1p0", "lambda_0p5", "lambda_0p25") if rung in rows]
+    # Two ladders share the lambda=1.0 control: cl2's BIGGER-model direction (measured
+    # closed) and cl3's SMALLER-model direction.  Seed rungs are NOT ladder steps -- they
+    # hold lambda fixed, so an adjacent secant over them would divide by ~0 model bytes.
+    ladders = (
+        [rung for rung in ("lambda_1p0", "lambda_0p5", "lambda_0p25") if rung in rows],
+        [rung for rung in ("lambda_1p0", "lambda_2p0", "lambda_4p0") if rung in rows],
+    )
     slopes: list[dict[str, Any]] = [
-        adjacent_slope(left, rows[left], right, rows[right]) for left, right in itertools.pairwise(ladder)
+        adjacent_slope(left, rows[left], right, rows[right])
+        for ladder in ladders
+        for left, right in itertools.pairwise(ladder)
     ]
     control = rows.get("lambda_1p0")
     control_gap = None if control is None else control["joint_delta_vs_shipped_126926"]
@@ -834,7 +904,8 @@ def stage_report(_args: argparse.Namespace) -> dict[str, Any]:
         "demand_bytes": DEMAND_BYTES,
         "rate_corner_archive_bytes": RATE_CORNER_ARCHIVE_BYTES,
     }
-    atomic_json(STORE / "LADDER_REPORT.json", report)
+    out = getattr(_args, "out", None) or (STORE / "LADDER_REPORT.json")
+    atomic_json(Path(out), report)
     print(json.dumps(report, indent=2, sort_keys=True))
     return report
 
@@ -864,7 +935,13 @@ def build_parser() -> argparse.ArgumentParser:
     parseback = sub.add_parser("parseback", help="the receiver tree's own inflate path on CPU; hash the render")
     parseback.add_argument("--rung", required=True, choices=[*sorted(RUNG_LAMBDA), "shipped"])
     parseback.add_argument("--force", action="store_true")
-    sub.add_parser("report", help="ladder table, adjacent slopes and the pre-registered decision")
+    report = sub.add_parser("report", help="ladder table, adjacent slopes and the pre-registered decision")
+    report.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="where to write LADDER_REPORT.json (default: cl2's store, so cl2's landed report is never overwritten)",
+    )
     return parser
 
 
