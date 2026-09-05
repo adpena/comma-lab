@@ -741,6 +741,28 @@ minimum, because the score minimum is not there.
 
 ---
 
+## 7h. All three rungs fired — the arm moved the pointer three times
+
+| move | rung | archive | sha | contest-CUDA T4 S | my advisory projection | realized − projected |
+|---|---|---:|---|---:|---:|---:|
+| 28th | ×4 | 176,448 B | `891add54…` | 0.1451981569076111 | 0.1452005596984867 | **−2.403e-06** |
+| 29th | ×8 | 175,576 B | `f7e0bb79…` | 0.1445177913121716 | 0.1445186697928887 | **−8.785e-07** |
+| 30th | ×16 | 174,786 B | `1de6c5d7…` | **0.14411787458634504** | 0.1441167280638 | **+1.147e-06** |
+
+**Total: 0.14666350774473783 → 0.14411787458634504 = −2.545633e-03 S, for −3,463 archive bytes**, all of
+it inside the pose carrier's coefficient block, with the twelve basis atoms bit-identical throughout and
+d_seg unmoved.
+
+Every one of the three projections came from the same local `cpu_torch` instrument and landed within
+**2.4e-06** of the T4 row — the largest error is the evaluator's own 3-significant-figure pose print.
+That is the instrument control this arm leaves behind: on this vehicle, a carrier-only edit's T4 score
+can be predicted locally to about one part in 10⁵ before spending a paid call.
+
+×32 remains measured-and-refused (it beats the *old* base but loses to ×16 by +1.140e-04), so the ladder
+is closed and there is no further rung to fire.
+
+---
+
 ## 8. What this arm did not do
 
 - **No T4 row was fired. Modal was never dispatched; MAIN fires.** Every score-shaped number here is
@@ -811,8 +833,9 @@ measurement: one n600 re-solve each, same instrument, same admission test. Owner
 
 ## Frontier
 
-    ddm_pc1 x8 S 0.1445177913121716 @ 175,576 B [contest-CUDA T4 n600]  <- the live pointer (29th move, THIS arm)
-    ddm_pc1 x4 S 0.1451981569076111 @ 176,448 B [contest-CUDA T4 n600]  <- 28th move, THIS arm
+    ddm_pc1 x16 S 0.14411787458634504 @ 174,786 B [contest-CUDA T4 n600] <- the live pointer (30th move, THIS arm)
+    ddm_pc1 x8  S 0.1445177913121716  @ 175,576 B [contest-CUDA T4 n600] <- 29th move, THIS arm
+    ddm_pc1 x4  S 0.1451981569076111  @ 176,448 B [contest-CUDA T4 n600] <- 28th move, THIS arm
     rc1        S 0.14666350774473783 @ 178,249 B [contest-CUDA T4 n600]
     cl2 S 0.14781744131049854 @ 179,982 B [contest-CUDA T4 n600]   <- the base this arm solved on
 

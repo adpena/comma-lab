@@ -96594,8 +96594,8 @@
           "evidence": "[macOS-CPU advisory] V3 n600: archive 178,181 B sha 512b0e0b, d_pose 5.727914e-06, net dS -1.462948e-03; /Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency/price/v3_lattice10/PRICE.json"
         },
         "contest_cuda": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "[contest-CUDA T4 n600] three pointer moves: x4 0.1451981569076111 @176,448B sha 891add54; x8 0.1445177913121716 @175,576B sha f7e0bb79; x16 0.14411787458634504 @174,786B sha 1de6c5d7"
         },
         "contest_cpu": {
           "status": false,
@@ -96915,5 +96915,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-05T22:00:09Z"
+  "updated_at": "2026-09-05T22:26:42Z"
 }
