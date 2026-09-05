@@ -919,3 +919,21 @@ Call `fc-01M1SRR3JGWRKQKH6GSZ3RVTRS`, archive sha `1de6c5d7186a0b31e5cc085bb6d2b
 between ×8 and ×16; S still pays at ×16; ×32 extrapolates near break-even (byte leg ≈ −700 B vs a pose leg rising and accelerating) — PRICE before solving. Tonight's
 ledger on one object, no retraining: rc1 −1,733 B · pc1 ×4 −1,801 B (pose −6.6 %) · ×8 −872 B (pose −2.6 %) · ×16 −790 B (pose +3.4 %) = **−5,196 B and −3.70e-3 S
 since cl2 this afternoon**; gap to sub-0.12 now 0.02411787458634504. PR #140 is seven moves behind.
+
+## Addendum 10 (2026-09-05 22:20Z) — pc1 COMPLETE: the coefficient-lattice lever is EXHAUSTED at ×16 (×32 measured and refused); three laws banked
+
+| rung | archive | d_pose n600 | net ΔS vs rc1 | outcome |
+|---|---:|---:|---:|---|
+| ×4 | 176,448 | 5.728e-6 | −1.463e-3 | 28th move |
+| ×8 | 175,576 | **5.579e-6** (pose min) | −2.142e-3 | 29th move |
+| ×16 | 174,786 | 5.768e-6 | **−2.543e-3** (score min) | 30th move |
+| ×32 | 174,205 | 6.553e-6 | −2.430e-3 | REFUSED (loses to ×16 by +1.14e-4) |
+
+1. **The distortion knee and the score knee are different rungs** (pose turns between ×8 and ×16; score one rung later, because the rate ladder keeps paying
+   −872 → −790 → −581 B until the pose cost +1.25e-4 → +5.01e-4 S outruns it). A sweep stopping at the distortion minimum leaves −4.0e-4 S on the table.
+2. **On a LOCAL solver, coarser can measure better than finer** — the ±2 polish spans twice the coefficient distance per doubling and escapes minima the finer
+   lattice traps; pc1's own "nesting" prior (×16 fails vs ×4) FIRED as wrong. Rung order is measured, never argued.
+3. **The local cpu_torch instrument predicts a carrier-only edit's T4 row to ≤ 2.4e-6** (three rows; the residual is the evaluator's 3-sig-fig pose print) — a
+   reusable control: carrier-only candidates are predictable to ~1 part in 10⁵ before a paid call.
+The `lattice_floor` stop count (7 → 13 → 27 → 47) IS the lattice binding. Basis edits stay refused (V1/V2/V4/V5). Remaining carrier ITEMs (owned by pc1's
+ledger): per-atom quantizer step (3,731 B at fixed alphabet), packed Rice-k field width, basis_scales blast radius (recoverable, not free: 14/24 frames ±1 uint8).
