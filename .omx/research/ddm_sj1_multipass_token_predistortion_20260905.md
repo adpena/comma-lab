@@ -135,6 +135,22 @@ codes rebuilds `archive.zip` to sha `08ec85333d13d71344b4482cf261e3b2d508725e49f
 at exactly **179,982 B** — byte-identical. The carrier splice is therefore byte-anchored on
 this body, so any later byte delta is attributable to the re-solve and not to the rebuild.
 
+### 3a. The one place the instrument is NOT the receiver, and why it does not leak
+
+`cpr1/inflate.py:312` sets `semantic_batch = 8 if cuda else 1`, and `ddm_up2` sec.6 MEASURED
+that batch shape as byte-changing on this half (1,326 pixels move by ±1 through the
+`clamp/round`). The contest-CUDA row is therefore scored on batch-8 frames, while this
+instrument renders at batch 1 — the only shape that reproduces the CPU decode it is
+controlled against.
+
+That gap is not hidden, it is the residual: this instrument reads 0.00020132277 where the
+T4 row reads 0.00020139, i.e. **−0.033%**, and the batch-shape effect is already inside
+that number. Every projection below carries the seg leg onto T4 through the SAME-INSTRUMENT
+ratio 0.00020139 / 0.00020132277, never by quoting an advisory number as a T4 one. Using
+jg5's ancestor ratio instead (0.00030309 / 0.00030307) would misprice by 2.8e-4 relative =
+5.6e-6 in score units — a quarter of the 2e-5 admission bar, which is why this arm computes
+its own ([[binding-instruction-numbers-expire-and-nobody-rederives-them]]).
+
 ## 4. Operating record (honest)
 
 * **RSS under-declaration.** I declared 14 GiB for 5 shards; MEASURED per-shard RSS at
