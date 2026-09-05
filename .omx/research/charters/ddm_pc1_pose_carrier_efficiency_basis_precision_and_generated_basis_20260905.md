@@ -56,3 +56,10 @@ TOY: refuse it at the typing moment.
   until-loops for waits. Resumable; `tools/subagent_checkpoint.py` every ~10 tool uses. Commits ONLY via the serializer (`[no-triality] [p0-ledger-ok]`,
   post-edit shas); `.py` two review passes; NO co-author trailer; no `/tmp`; grep argparse first. Read CLAUDE.md + `docs/operating_manual_craft_handoff.md`.
   Label every number MEASURED / DERIVED / PREDICTED. End with `cl2 S 0.14781744131049854 @ 179,982 B [contest-CUDA T4 n600]` + any advisory candidate line.
+
+## ERRATUM (MAIN, 17:35Z same day) — the anatomy above is the superseded gb1-era table
+gs3 §1's "carrier 22,010 B / basis ≈ 12.2 KB / renderer 30,856 B" was ERRATA'd by gs3 addendum 4 (ft1, 09-03): the frontier object's renderer
+section is **36,130 B** (SM3R v1 row-prune mixed) and the authoritative non-token framing total is **53,076 B**, so the carrier is ≈ 17 KB with
+Rice-coded coefficients 9,829 B (dx1 — stands) and a basis nearer 7 KB. The arm re-derives every carrier byte figure from the archive with the
+receiver's RX1 parser and recomputes the prediction table's rate column and V4's break-even from the parsed numbers (structure stands). MAIN
+propagated a stale headline table past its own erratum — the m106 law, again; the corrected instruction was sent to the arm at 17:35Z.
