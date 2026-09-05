@@ -719,3 +719,22 @@ addresses is not an escape from naming them; the shape token is itself an addres
 `flip_location_component_address_floor_v1` registered (10 guards); lane L2; 916 MB retained. Equations leg (`tac.canonical_equations`): that equation.
 **Rate-corner ledger on the shipped object is now complete:** coder swaps 0 B · buckets ≤ 211 B · reorder 0 B · 21-tap oracle +32 KB above · MC previous
 plane +160 B (ceiling) · flip-location representations ≥ +17,775 B worse · ONLY cl2's prior-capacity ladder remains unpriced (training now).
+
+## ADDENDUM 36 (2026-09-05 13:35Z real) — ane1: placement PROVED; the ANE is closed for authority AND for pose screening; my prediction was inverted
+
+ane1 (397e10038 … addf3814c): **placement PROVED per op** (`MLComputePlan`, coremltools 9.0): SegNet fp16 298/298 ops and PoseNet fp16 287/287 on the
+Neural Engine; **fp32 never reaches the ANE (0/ops, both scorers)** — the 07-13 lane's fp32 rung was never an ANE rung. Trunk speedups vs 1-thread CPU
+torch: SegNet fp16 63.8×, PoseNet fp16 74.1×. **Fidelity at n600 INVERTS my charter prediction:** SegNet fp16 flip rate 4.818e-5 (fails the 3.3e-5 authority
+bar by only 1.46× — 513× below the 07-13 n24 number; inputs-vs-toolchain not separated, stated); **PoseNet fp16 self-MSE 1.125e-2 vs d_pose 7.77e-6 — fails
+by 1,448×.** Mechanism: fp16 error is RELATIVE (0.83% of a |31| pose dimension = 0.26) while d_pose is ABSOLUTE at 1e-6 — the argmax spends its top-2 margin,
+the regression has no slack. Registered `scorer_fp16_drift_by_axis_v1`. Wired `--scorer-backend {cpu_torch,coreml_cpu_fp32,ane_fp16_screen}` on pr1's
+selector (ranks; CPU-confirmed) and fs1's measure (refuses non-authority backends before any disk access) — then the replay REFUSED the ANE screen by
+measurement: argmin agreement 4/39 (chance 12.5%), 34/39 picks worse than shipped, adopting them moves d_pose −4.73e-2 where the CPU sweep gains
++1.21e-4. End-to-end the 74× trunk becomes 2.06× (76.8 of 160 ms/forward is torch render + preprocess). **The usable finding: `coreml_cpu_fp32` is the
+admissible accelerator — bit-exact SegNet argmax at 3.28×, pose to 3.1e-7 of the axis at 5.12×, no screening contract needed.** Hybrid exact-SegNet:
+priced GO on area (0.357% of pixels in the flip band; 89× headroom) but NO-GO on realization (the parent lane measured tile recompute at 4.27× the dense
+pass). 28 tests; lane L1. Saturation verdict for the operator's "ANE as well": the ANE runs the scorers at 100% placement and is useless for both scorers'
+numbers; the CPU-fp32 CoreML path is the honest 3–5× win for advisory forwards.
+**MAIN error banked:** three charters told arms to pass `--artifact-budget-gib`, a flag the launcher does NOT have (the waterfall derives the budget) —
+never-invent-flags applies to MAIN's charters too; grep argparse before writing a flag into a charter.
+Equations leg (`tac.canonical_equations`): `scorer_fp16_drift_by_axis_v1` (ane1).
