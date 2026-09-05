@@ -963,7 +963,17 @@ def run_selector(args) -> int:
             "screen_seconds": screen_seconds,
             "confirm_seconds": confirm_seconds,
             "forwards_screened": len(rows) * len(modes),
-            "forwards_confirmed": (2 * len(rows)) if screening else 0,
+            # COUNT the confirms actually issued; --confirm-all-modes spends
+            # len(modes) per pair, the production screen spends 2.  Hardcoding 2
+            # here would silently misreport the per-forward cost by 4x.
+            "forwards_confirmed": sum(len(r.get("confirmed_modes", ())) for r in rows),
+            "seconds_per_screened_forward": (
+                screen_seconds / (len(rows) * len(modes)) if rows else None
+            ),
+            "seconds_per_confirmed_forward": (
+                confirm_seconds / sum(len(r.get("confirmed_modes", ())) for r in rows)
+                if screening and rows else None
+            ),
         },
         "screen_rank_agreement": (
             {
