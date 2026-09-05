@@ -6,6 +6,15 @@
 `[macOS-CPU advisory, cpu_torch fp32 authority backend, n600, DALI GT]`. `score_claim=false`,
 `promotable=false` for every row below: no contest-CUDA T4 row exists for any candidate here.
 
+**Canonical equation.** The measured result of this arm is registered as
+`pose_carrier_basis_rate_fidelity_exchange_v1`
+(`tac.canonical_equations.pose_carrier_basis_rate_fidelity_exchange_20260905`, registered through
+`register_canonical_equation` into `canonical_equations_registry`), with two
+anchors: the quantiser-step rate–fidelity exchange (§5) and the generated-basis refusal (§4). The
+affordance arithmetic every row below uses is the already-registered
+`carrier_rate_credit_pose_affordance_v1`; this arm supplies the byte deltas that equation consumes and
+does not duplicate it.
+
 ---
 
 ## 1. The object, re-derived from the bytes (MAIN's correction, honoured)
@@ -53,11 +62,19 @@ the parse is authoritative because it sums to the archive exactly.
 carry real chroma structure. Per-atom `|code|` max is `[15,15,7,15,15,7,15,15,15,7,15,15]`: **three of
 the twelve atoms (2, 5, 9) already fit a 4-bit alphabet with zero loss.**
 
-**`basis_scales` is 48 dead bytes (MEASURED).** `cpr1/inflate.py:245-246` multiplies the basis codes by
-a per-atom scale, and `normalized_basis` then centres and RMS-normalises *per atom*, so a positive
-per-atom scale cancels exactly. All 12 shipped scales are positive; re-rendering the basis from the raw
-codes alone and comparing to the shipped normalised basis gives a max abs difference of **1.9073e-06**
-(float32 epsilon on an RMS-1 field). Those 48 bytes reach nothing. See ITEM 1.
+**`basis_scales` is 48 *nearly* dead bytes — and the word "nearly" is load-bearing (MEASURED, then
+CORRECTED).** `cpr1/inflate.py:245-246` multiplies the basis codes by a per-atom scale, and
+`normalized_basis` then centres and RMS-normalises *per atom*, so in exact arithmetic a positive
+per-atom scale cancels identically. All 12 shipped scales are positive, and re-rendering the basis from
+the raw codes alone reproduces the shipped normalised basis to **1.9073e-06** max abs difference
+(float32 epsilon on an RMS-1 field).
+
+I first wrote that down as "those 48 bytes reach nothing", which was an overclaim, and testing it
+falsified it. The render rounds twice (`cpr1/inflate.py:342` and `:348`), and a 1.9e-06 field residue
+does cross rounding boundaries: over 24 strided pairs, **only 10 of 24 rendered `frame_0` images are
+bit-identical; 14 differ, by at most 1 uint8 level.** So the 48 bytes are recoverable, but dropping
+them is **not** pose-neutral by construction — the change must be measured through the scorer like any
+other. See ITEM 1, which now carries that correction and the blast radius.
 
 **SVD of the 600 realized carrier fields** (`einsum(coeff, basis_norm)/√12` at 3×384×512, via the
 600×600 Gram). Energy share: 0.5734, 0.2959, 0.0414, 0.0259, 0.0247, 0.0106, 0.0091, 0.0060, 0.0049,
@@ -350,13 +367,25 @@ shipped lattice — is owed, and that control is independently interesting: any 
 
 ---
 
-## ITEM 1 — `basis_scales` is 48 dead bytes; delete the field
+## ITEM 1 — `basis_scales` is 48 recoverable bytes, but NOT free by construction
 
-MEASURED: all 12 per-atom basis scales are positive and cancel exactly in `normalized_basis`
-(max abs difference 1.9073e-06, float32 epsilon on an RMS-1 field). The field costs 48 B in the carrier
-body and reaches nothing. 48 B = 3.196e-05 S, which **clears the −2e-5 admit bar on its own**. Removing
-it is a receiver format change (`cpr1/carrier_codec.py` prefix arithmetic plus `inflate.py:246`), i.e.
-free code, and it is provably pose-neutral by construction rather than by measurement. Owner: unassigned.
+MEASURED: all 12 per-atom basis scales are positive and cancel in `normalized_basis` to 1.9073e-06
+(float32 epsilon on an RMS-1 field). 48 B = 3.196e-05 S, which clears the −2e-5 admit bar on its own.
+
+**Correction to my own first draft.** I recorded this as "provably pose-neutral by construction" and
+then tested it: over 24 strided pairs only **10 of 24** rendered `frame_0` images are bit-identical
+when the scales are dropped; 14 differ by ±1 uint8. The residue survives the receiver's two roundings.
+So this needs a real n600 d_pose measurement like anything else — it is a small, cheap, likely-favourable
+measurement, not a free byte.
+
+**Blast radius, so the next arm prices the work honestly.** The 96-byte scales block sits at a FIXED
+offset in the packed CAP1 body: `rr5_arith_basis` pins `SCALES_BYTES = 8*12`, `PACKED_METADATA_OFFSET
+= 102` and `BASIS_OFFSET = 142`, and `residual_archive`, `dx2_cabac_coefficients` and
+`ddm_up3.packed_metadata_layout` all read through those constants. Removing 48 bytes moves every
+downstream offset in the receiver AND in the splice tooling. For 3.2e-05 S that is a wide change; the
+cheaper first move is to check whether the block can be shrunk without moving offsets (for example
+storing the 12 coefficient scales at half precision and leaving the basis half as reserved padding).
+Owner: unassigned.
 
 ## ITEM 2 — one more generated-basis attempt, matched to the Jacobian not the field
 

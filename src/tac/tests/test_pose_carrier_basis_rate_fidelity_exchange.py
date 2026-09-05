@@ -22,6 +22,7 @@ from tac.canonical_equations.pose_carrier_basis_rate_fidelity_exchange_20260905 
     EQUATION_ID,
     FRONTIER_ARCHIVE_BYTES,
     MEASURED_BASIS_RUNGS,
+    NEARLY_DEAD_BASIS_SCALE_BYTES,
     PASS_THROUGH_MAX,
     PASS_THROUGH_MIN,
     PASS_THROUGH_TYPICAL,
@@ -170,10 +171,20 @@ def test_basis_symbol_count_is_the_carrier_geometry():
     assert BASIS_SYMBOLS == 12 * 3 * 24 * 32 == 27_648
 
 
-def test_dead_scale_field_is_recorded_and_clears_the_admit_bar_on_its_own():
-    """48 dead bytes are not a rounding detail: they are worth 3.2e-05 S."""
-    assert DEAD_BASIS_SCALE_BYTES == 48
-    assert rate_credit(DEAD_BASIS_SCALE_BYTES) > 2e-5
+def test_nearly_dead_scale_field_is_recorded_and_clears_the_admit_bar_on_its_own():
+    """48 recoverable bytes are worth 3.2e-05 S -- but they are not free.
+
+    The anchor must keep saying so: an earlier draft called them "dead" and the
+    render test falsified it (10/24 pairs bit-identical, 14 off by one level).
+    """
+    assert NEARLY_DEAD_BASIS_SCALE_BYTES == 48
+    assert DEAD_BASIS_SCALE_BYTES == NEARLY_DEAD_BASIS_SCALE_BYTES
+    assert rate_credit(NEARLY_DEAD_BASIS_SCALE_BYTES) > 2e-5
+    equation = build_pose_carrier_basis_rate_fidelity_exchange_v1()
+    anchor = equation.empirical_anchors[0]
+    text = str(anchor.empirical_output)
+    assert "NOT free by construction" in text
+    assert "10 of 24" in text
 
 
 def test_carrier_stream_is_a_real_share_of_the_archive():

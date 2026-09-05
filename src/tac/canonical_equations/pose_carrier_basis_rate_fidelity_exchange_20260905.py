@@ -16,12 +16,22 @@ re-coded by the RR5 adaptive-arithmetic rider (12,046 B).  ``cpr1/inflate.py:245
 multiplies the decoded codes by a per-atom ``basis_scales`` float, and
 ``normalized_basis`` then centres and RMS-normalises **per atom**.
 
-Consequence 1 -- the per-atom scale CANCELS
--------------------------------------------
+Consequence 1 -- the per-atom scale CANCELS (in exact arithmetic; see the caveat)
+--------------------------------------------------------------------------------
 A positive per-atom scale is divided straight back out by the per-atom RMS.  MEASURED:
 re-rendering the basis from the raw codes alone reproduces the shipped normalised basis
 to ``1.9073e-06`` max abs difference on an RMS-1 field (float32 epsilon).  All twelve
-shipped scales are positive.  **The 48-byte ``basis_scales`` field reaches nothing.**
+shipped scales are positive.
+
+**CAVEAT, measured after an overclaim was caught.**  An earlier draft of this module said
+the 48-byte ``basis_scales`` field "reaches nothing".  That is false at the render: the
+receiver rounds twice, and the 1.9e-06 residue crosses rounding boundaries.  Over 24
+strided pairs only 10 of 24 rendered ``frame_0`` images are bit-identical when the scales
+are dropped; 14 differ by +-1 uint8.  So the field is RECOVERABLE but not free by
+construction -- removing it needs a measured d_pose like any other change.  What the
+cancellation DOES license, and the only thing this module rests on, is the next
+consequence: the per-atom quantiser STEP is free, because a re-quantised atom is
+re-normalised by its own RMS whatever step produced it.
 
 Consequence 2 -- the quantiser STEP is therefore free, and it is the real lever
 -------------------------------------------------------------------------------
@@ -103,8 +113,11 @@ SHIPPED_BASIS_PAYLOAD_BYTES_ARITH = 12_046  # after the RR5 rider
 SHIPPED_RICE_PAYLOAD_BYTES = 9_830
 CARRIER_BODY_BYTES = 22_278
 CARRIER_STREAM_BYTES = 22_031  # what the archive actually stores
-#: basis_scales: 12 f32 that cancel in normalized_basis (max abs diff 1.9073e-06).
-DEAD_BASIS_SCALE_BYTES = 48
+#: basis_scales: 12 f32 whose per-atom effect cancels in normalized_basis to 1.9073e-06,
+#: but NOT to zero at the render (10/24 pairs bit-identical, 14 differ by +-1 uint8).
+#: Recoverable bytes, not free ones -- the name says "nearly" for a reason.
+NEARLY_DEAD_BASIS_SCALE_BYTES = 48
+DEAD_BASIS_SCALE_BYTES = NEARLY_DEAD_BASIS_SCALE_BYTES  # legacy alias, same value
 
 #: label -> (basis payload bytes, archive bytes, min per-atom cosine, max per-atom cosine)
 #: Every archive byte count is a real build through the identity-controlled container.
@@ -245,10 +258,14 @@ def build_pose_carrier_basis_rate_fidelity_exchange_v1() -> CanonicalEquation:
                     "0.899-0.983 vs 0.991-1.000; the bit depth does not price a basis, "
                     "the step does"
                 ),
-                "dead_bytes": (
-                    f"basis_scales is {DEAD_BASIS_SCALE_BYTES} B that cancel exactly in "
-                    "normalized_basis (max abs diff 1.9073e-06 on an RMS-1 field, all "
-                    "twelve scales positive)"
+                "nearly_dead_bytes": (
+                    f"basis_scales is {DEAD_BASIS_SCALE_BYTES} B whose per-atom effect "
+                    "cancels in normalized_basis to 1.9073e-06 on an RMS-1 field (all "
+                    "twelve scales positive) -- but NOT to zero at the render: over 24 "
+                    "strided pairs only 10 of 24 frame_0 images are bit-identical when "
+                    "the scales are dropped, 14 differ by +-1 uint8. Recoverable bytes, "
+                    "NOT free by construction. An earlier draft claimed otherwise and "
+                    "was falsified by this test."
                 ),
                 "pass_through_band": [PASS_THROUGH_MIN, PASS_THROUGH_MAX],
                 "verdict_scope": (
@@ -411,6 +428,7 @@ __all__ = [
     "DEAD_BASIS_SCALE_BYTES",
     "EQUATION_ID",
     "MEASURED_BASIS_RUNGS",
+    "NEARLY_DEAD_BASIS_SCALE_BYTES",
     "PASS_THROUGH_MAX",
     "PASS_THROUGH_MIN",
     "PASS_THROUGH_TYPICAL",
