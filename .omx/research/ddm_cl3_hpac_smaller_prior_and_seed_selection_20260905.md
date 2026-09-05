@@ -282,6 +282,25 @@ sits inside P1's −250…−400 B band, though on a THIRD basis (the trainer's 
 container nor rc1's, so it scores nothing; only the exact container price does. The token estimate is noisy epoch to
 epoch (the control itself moved +5,904 B between epochs 10 and 20), so no reading is taken from it here.
 
+### 4d. A SECOND prediction, pre-registered at 23:33Z — BEFORE the first exact price
+
+The QAT phase closes the surrogate gap monotonically: joint **+1,886 B (ep 40) → +284 B (ep 50)**, the model saving
+growing (−554 → −603) while the token tax collapses (+2,440 → +887). λ=2.0 is on a knife edge on the surrogate, which
+is exactly the case the exact price exists to settle. Two things follow that I want on the record before I can see the
+answer:
+
+* **P8 (new, pre-registered):** the **rc1 basis should show a LARGER model saving than the Brotli basis** for this
+  rung. Reason: λ=2.0 moves mass to low depths and zero-width channels (67 zero-width at ep 40/50 against the
+  control's 54 at start), and rc1's adaptive per-group tree coder models the code alphabet directly whereas Brotli is
+  a generic byte coder that never sees a code boundary — so the structure λ=2.0 creates is precisely the structure the
+  adaptive coder can exploit and the generic one cannot. Both containers are measured per rung, so P8 is scored
+  directly. If it holds, the smaller-prior direction is worth MORE on the live object than cl2's currency would have
+  shown, and a rung could pay on the rc1 basis while losing on the Brotli one.
+* **Honest counterweight:** the surrogate at ep 40 and ep 50 points AGAINST P3 (joint still positive). I record the
+  unfavourable epochs, not only the favourable ep-20 one. If the exact price lands positive, P3 is falsified and the
+  pre-registered whole-axis FALSIFIER fires: the capacity axis closes in BOTH directions on this vehicle and λ=4.0 is
+  NOT run.
+
 ## 5. The ladder — NOT MEASURED (state as of 2026-09-05T16:35Z)
 
 **No rung has been trained, priced or verified.** There is no ladder table, no residual against P1–P7, and no seal.
