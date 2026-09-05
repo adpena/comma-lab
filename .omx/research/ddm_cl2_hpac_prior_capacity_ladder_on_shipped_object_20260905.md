@@ -173,8 +173,8 @@ launches) — the same provenance-in-the-causal-hash instrument defect cl1's Gat
 (`SUBSTANCE_PASS_INSTRUMENT_DEFECT`). Training time 3,172 s, peak RSS 1.76 GiB. The packed-bytes and stream identity
 of the twin through the shipped path — MEASURED: raw IHS1 sha `81728190…` and packed Brotli-q11 sha `66801b10…`
 (13,466 B) identical; RC64 stream sha `e07274ca…` (113,419 B) identical; candidate archive sha `08ec8533…`
-(179,982 B) identical — **byte-for-byte the control's bytes at every layer** (the twin's own receiver decode of those
-same bytes was still running at seal time; the bytes it decodes are the control's, whose identity is proven).
+(179,982 B) identical — **byte-for-byte the control's bytes at every layer**; the twin's own receiver decode of its
+candidate archive returned the exact field (identity PASS, 1,068.1 s; MEASURED after the seal, closing the formality).
 
 ## 6. Decision rule (pre-registered, charter §4) + MAIN's mid-arm read
 

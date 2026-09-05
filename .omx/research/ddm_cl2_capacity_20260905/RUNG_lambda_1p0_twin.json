@@ -1,0 +1,284 @@
+{
+  "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+  "candidate_archive": {
+    "bytes": 179982,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/candidate_archive.zip",
+    "sha256": "08ec85333d13d71344b4482cf261e3b2d508725e49f3ca05971265a81498ad4e"
+  },
+  "candidate_archive_delta_vs_fs2_180023": -41,
+  "candidate_rate_only_delta_S": -2.7300217078009027e-05,
+  "checkpoint": {
+    "best_by_surrogate": {
+      "epoch": 58,
+      "estimated_joint_bytes": 134049,
+      "estimated_model_bytes": 17765,
+      "estimated_token_bytes": 116284
+    },
+    "cache_sha256": "f29c479a7935cd778ae228de920efd68ade009f3d22b4812c36c14e80fab468e",
+    "causal_state_sha256": "9f787da715f96291c44701f6eb1fd42b8516d9844a9d1e3a62e26aadbd9553be",
+    "checkpoint": {
+      "bytes": 1051959,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/training/model.checkpoints/qat_stage_end_epoch_0060.pt",
+      "sha256": "caea8f02da7a9d29e257cfafad18f796a328b868d5d4ebc28c6413e1eb28ac37"
+    },
+    "device": "mps",
+    "epochs": 60,
+    "init_sha256": "ff2d3e45d88a97cc6ae170864d0d6d72fc34c617cf211e94ccff439f23d2afd9",
+    "profile": "cl2_shipped_ladder",
+    "rate_lambda": 1.0,
+    "seed": 20260716
+  },
+  "decode_report": {
+    "adapter_sha256": "",
+    "corrected_cdf_input_sha256": "82dc3e3f067d651ac422e82c070ab1eaba458f79a9dc9116f836ab24cf97106a",
+    "corrected_quantized_logit_sha256": "c913e20ff8e60a676f03826060c8ce7219b60f11e30d7f1e2be2572d59c18f92",
+    "decode_runtime_seconds": 1068.0194590091705,
+    "decoded_token_sha256": "cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb",
+    "decoder_bit_position": 907409,
+    "free_corrector": "FreeCorrector",
+    "token_codec": "rc64"
+  },
+  "decode_wall_clock_delta_seconds": -426.3882643748075,
+  "decode_wall_clock_seconds": 1068.07920633303,
+  "decoded": {
+    "bytes": 117964800,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/decoded_tokens.u8",
+    "sha256": "cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb"
+  },
+  "decoded_identity": true,
+  "distortion": "HELD by construction (field bit-identical); NOT re-measured",
+  "encodes": [
+    {
+      "bits_per_frame_ledger": {
+        "bytes": 4928,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/work/bits_per_frame_cl2_lambda_1p0_twin.npy",
+        "sha256": "252861990d63bc0998129c79a4a60909908cef0843f412c0c9ee6862477e2546"
+      },
+      "code_bits": 907345.4973737652,
+      "code_bytes_ideal": 113418.18717172065,
+      "elapsed_seconds": 865.1782906656154,
+      "frames": 600,
+      "immutable_checkpoints": [],
+      "resumed_from": null,
+      "start_frame": 0,
+      "stream": {
+        "bytes": 113419,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/work/tail_cl2_lambda_1p0_twin.bin",
+        "sha256": "e07274caeacbb3a6ce00e26b42d7032671af5c8109a2cee3a0697b116ac125cf"
+      },
+      "tag": "cl2_lambda_1p0_twin",
+      "terminal_checkpoint": null
+    }
+  ],
+  "fraction_of_demand_41818": 0.0009804437344862714,
+  "inputs": {
+    "field": {
+      "bytes": 117964800,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/inputs/tokens_null.u8",
+      "sha256": "cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb"
+    },
+    "fs2_archive": {
+      "bytes": 180023,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_fs2_carrier_resolve/fire_runtime_D_alternation/archive.zip",
+      "sha256": "a8f3a3791499b2b62ee4d16bc67f15f819f454dc9b88e3cce04fe50a30427bb6"
+    }
+  },
+  "joint_bytes": 126885,
+  "joint_delta_vs_shipped_126926": -41,
+  "model": {
+    "pack": {
+      "activation_bound": 127,
+      "decode_logit_diff": 0.0,
+      "deploy_bound_intersection_enforced": true,
+      "max_logit_diff": 0.0,
+      "max_logit_diff_semantics": "source_master_weights_vs_deployed_quantized_model_QAT_telemetry",
+      "quantized_tensor_count": 28,
+      "raw": {
+        "bytes": 17770,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.raw",
+        "sha256": "817281908d993d89f62349fa466ad53f204b7e83d36e29ba0edc30cf2cb8f085"
+      },
+      "state_dict_exact": false,
+      "state_tensor_count": 37,
+      "training_only_bit_depth_buffers": 9,
+      "verified_exact": true,
+      "verified_exact_semantics": "idempotent_pack_and_deterministic_decode",
+      "weight_bound": 127,
+      "xz": {
+        "bytes": 13528,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.xz",
+        "sha256": "8807606a05e8aa2b98ed67ab2b42c5b27cf2286378ff3f2f984e9c1adb67ef11"
+      }
+    },
+    "raw_bytes": 17770,
+    "representations": [
+      {
+        "payload": {
+          "bytes": 14906,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.br.q0",
+          "sha256": "756d0d00971df25aa239775bb969e0b8f528f30298c14b18f1d7a5fba2a451b7"
+        },
+        "quality": 0
+      },
+      {
+        "payload": {
+          "bytes": 14710,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.br.q1",
+          "sha256": "614102a7eebb84adbd67dca76e43197d7956cdf6c8d35bd259cfd0c0063b3e40"
+        },
+        "quality": 1
+      },
+      {
+        "payload": {
+          "bytes": 14853,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.br.q2",
+          "sha256": "11b07421e72fd4d96ead31a05212f0de91931cea5ab258783a97de993aa13bb8"
+        },
+        "quality": 2
+      },
+      {
+        "payload": {
+          "bytes": 14688,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.br.q3",
+          "sha256": "a45fbf28de115438bad2e352bff3fb4de0d859fd8448be749f5fc207f8673639"
+        },
+        "quality": 3
+      },
+      {
+        "payload": {
+          "bytes": 13846,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.br.q4",
+          "sha256": "047cb81f75bf1830eaa6bee5ae93f4efc3a82f1fa1062fde529c346ea4f95809"
+        },
+        "quality": 4
+      },
+      {
+        "payload": {
+          "bytes": 14073,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.br.q5",
+          "sha256": "e33a4a8571dfc6f8b50012a26c52ead0122900fa57d6f9e8245699c19d6e1b58"
+        },
+        "quality": 5
+      },
+      {
+        "payload": {
+          "bytes": 14069,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.br.q6",
+          "sha256": "28177cc3626846e723c731984039fb4cf0d17857086733a6380a2168e4632f80"
+        },
+        "quality": 6
+      },
+      {
+        "payload": {
+          "bytes": 14058,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.br.q7",
+          "sha256": "df61a843a668666e0ac6621d19b9c6ef1c4b9bbce6647aa7d30c40c87a79388a"
+        },
+        "quality": 7
+      },
+      {
+        "payload": {
+          "bytes": 14059,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.br.q8",
+          "sha256": "4226b0bbfa4cc67fd08128cba0853f0a4deabd8cea464f5818c2c2455f89455c"
+        },
+        "quality": 8
+      },
+      {
+        "payload": {
+          "bytes": 14103,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.br.q9",
+          "sha256": "6f5009a71738a4b1a56338393320598235e1fa3cd8e76a0d0735a56b0f92b7a1"
+        },
+        "quality": 9
+      },
+      {
+        "payload": {
+          "bytes": 13499,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.br.q10",
+          "sha256": "ea0fa2b0c42cf183eb4ed89d863a4f566b40c4be0ad10baa86d9db2af36f9a7a"
+        },
+        "quality": 10
+      },
+      {
+        "payload": {
+          "bytes": 13466,
+          "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.br.q11",
+          "sha256": "66801b10fd4dbfed97e1544a0c7efefe669959058be485ae9957c691ab73abf9"
+        },
+        "quality": 11
+      }
+    ],
+    "winner": {
+      "payload": {
+        "bytes": 13466,
+        "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model/hpac.ihs1.br.q11",
+        "sha256": "66801b10fd4dbfed97e1544a0c7efefe669959058be485ae9957c691ab73abf9"
+      },
+      "quality": 11
+    }
+  },
+  "model_delta_vs_shipped": -49,
+  "model_only_runtime_archive": {
+    "bytes": 179974,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/model_only_runtime_archive.zip",
+    "sha256": "53a459fbe6fb5ccb7efe9c56d2527139eae09630945a0dce0264d29a58100cf6"
+  },
+  "model_packed_bytes": 13466,
+  "model_raw_ihs1_bytes": 17770,
+  "rate_lambda": 1.0,
+  "rc64_build": {
+    "argv": [
+      "/usr/bin/cc",
+      "-O3",
+      "-std=c11",
+      "-shared",
+      "-fPIC",
+      "-ffp-contract=off",
+      "-fno-fast-math",
+      "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/work/rc64_cl2_lambda_1p0_twin/rc64_backend_jg2.c",
+      "-o",
+      "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/work/rc64_cl2_lambda_1p0_twin/librc64_jg2.dylib"
+    ],
+    "base_source": {
+      "bytes": 12222,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/work/rc64_cl2_lambda_1p0_twin/rc64_base.c",
+      "sha256": "5c75e2c70b89f148bc9d117d4dbd39a24dfb2e72ec41b0a7e9b9cf490ca07ee6"
+    },
+    "generated": {
+      "bytes": 14825,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/work/rc64_cl2_lambda_1p0_twin/rc64_backend_jg2.c",
+      "sha256": "1941923a94e4e0a191a43ab2330349195fcb0942756bb03e71e887375bd53eb2"
+    },
+    "library": {
+      "bytes": 34688,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/work/rc64_cl2_lambda_1p0_twin/librc64_jg2.dylib",
+      "sha256": "f51ad7ab552cca235ffc8789ca3ce40d7da3ccb7eeeb0ca31ae9a6e2fb2efab3"
+    }
+  },
+  "receiver_copy_runtime": {
+    "inflate_pins": {
+      "bytes": 2476,
+      "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/receiver_copy_runtime/inflate.py",
+      "sha256": "053d4dc7d73a40ab2ee59084e10a33ad63e85f38370b98741deb7dc19eb76a32"
+    },
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/receiver_copy_runtime"
+  },
+  "retained_checkpoint": {
+    "bytes": 1051959,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/terminal_checkpoint.pt",
+    "sha256": "caea8f02da7a9d29e257cfafad18f796a328b868d5d4ebc28c6413e1eb28ac37"
+  },
+  "rung": "lambda_1p0_twin",
+  "schema": "ddm_cl2_rung_price.v1",
+  "score_claim": false,
+  "shipped_decode_wall_clock_seconds": 1494.4674707078375,
+  "stream": {
+    "bytes": 113419,
+    "path": "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0_twin/retained/token_stream.rc64.bin",
+    "sha256": "e07274caeacbb3a6ce00e26b42d7032671af5c8109a2cee3a0697b116ac125cf"
+  },
+  "stream_bytes": 113419,
+  "stream_delta_vs_shipped": 8,
+  "two_encodes_identical": false
+}
