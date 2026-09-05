@@ -121,6 +121,24 @@ MD1_WARM_TERMINAL_NUMERATOR = 343_320
 MD1_WARM_PERSISTENT_NUMERATOR = 202_590
 MD1_WARM_PERSISTENT_TERMINAL_SHARE = 0.5900897589898404
 
+# Third measured instance (ddm_md2, 2026-09-05): the ng5 tau-band x carried-duals cell -- the burn
+# default of record -- at the SAME 71-checkpoint cadence, same shadow forward, same DALI authority,
+# same initial state.  This is the reactivation the md1 anchor's own criteria named.  Filled from
+# /Volumes/APDataStore/pact/ddm_md2_persistent_under_burn_default
+# /ANALYSIS_ng5_tau_band_seed_20260902_dali.json.
+MD2_NG5_TERMINAL_NUMERATOR = 298_455
+MD2_NG5_PERSISTENT_NUMERATOR = 187_890
+MD2_NG5_PERSISTENT_TERMINAL_SHARE = 0.629542142031462
+MD2_NG5_LIVE_PERSISTENT_TERMINAL_SHARE = 0.35438596491228064
+# Site overlap of the two cells' PERSISTENT sets (shadow, DALI).  The null is two independent draws
+# of the observed sizes from the STEP-0 WRONG POOL -- both sets are subsets of it by the class
+# definition, and the pool is bit-identical across the cells because they share an initialisation.
+# Reporting the all-sites null (492x) instead would overstate the reading.
+MD2_NG5_VS_COLD_PERSISTENT_JACCARD = 0.8069079987353778
+MD2_NG5_VS_COLD_PERSISTENT_JACCARD_WITHIN_POOL_CHANCE = 0.5263033946906265
+MD2_NG5_VS_COLD_PERSISTENT_JACCARD_ATTAINABLE_MAX = 0.9305016044587063
+MD2_STEP_ZERO_WRONG_POOL_SITES = 16_553
+
 
 def partition_is_exact(
     class_numerators: Mapping[str, Sequence[int]], total_numerator: Sequence[int]
@@ -337,6 +355,110 @@ def build_checkpoint_trajectory_error_partition_v1() -> CanonicalEquation:
         ),
         empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
     )
+    ng5_anchor = EmpiricalAnchor(
+        anchor_id=(
+            "md2_ng5_tau_band_x_continuous_objective_seed_20260902_shadow"
+            "_trajectory_partition_20260905"
+        ),
+        measurement_utc="2026-09-05T13:46:33Z",
+        inputs={
+            "cell": (
+                "ng5 tau band x carried duals -- the burn default of record -- seed 20260902, "
+                "5,000 updates"
+            ),
+            "forward": "EMA shadow",
+            "checkpoints": MD1_CADENCE_CHECKPOINTS,
+            "sites": 6_291_456,
+            "gt_authority": "DALI gt_cache_dali.pt",
+            "churn_flips": DEFAULT_CHURN_FLIPS,
+            "persistent_fraction": DEFAULT_PERSISTENT_FRACTION,
+            "levers_vs_the_cold_control": (
+                "two: the ng3 tau band [2*delta_R, delta_R] and ng4's carried margin duals; the "
+                "step-0 state is bit-identical to the cold control's (init sha 991a1cc6..., and "
+                "the reconstruction reproduces d_seg_hat 0.0025555929 and numerator 301,470 on "
+                "both cells)"
+            ),
+            "tool": (
+                "experiments/ddm_md1_micro_to_macro.py UNCHANGED, plus "
+                "experiments/ddm_md2_persistent_site_overlap.py for the site overlap"
+            ),
+        },
+        predicted_output={
+            "prior_law": (
+                "the tau band cuts the excursion peak from +21.8% to +5.2% of S_hat and ends "
+                "d_seg below its start, so the over-paint that BIRTHS the persistent set is "
+                "suppressed; the md2 charter predicted the persistent share falls to 40-55%"
+            ),
+            "preregistered_prediction": 0.475,
+            "preregistered_prediction_band": [0.40, 0.55],
+            "preregistered_falsifier": MD1_PREREGISTERED_FALSIFIER,
+            "preregistration": (
+                ".omx/research/charters"
+                "/ddm_md2_persistent_partition_under_the_burn_default_20260905.md"
+            ),
+        },
+        empirical_output={
+            "terminal_weighted_wrong_site_numerator": MD2_NG5_TERMINAL_NUMERATOR,
+            "persistent_weighted_wrong_site_numerator": MD2_NG5_PERSISTENT_NUMERATOR,
+            "denominator": MD1_DENOMINATOR,
+            "persistent_terminal_share": MD2_NG5_PERSISTENT_TERMINAL_SHARE,
+            "calibration_gate_integer_residual": MD1_CALIBRATION_GATE_INTEGER_RESIDUAL,
+            "terminal_d_seg_hat": MD2_NG5_TERMINAL_NUMERATOR / MD1_DENOMINATOR,
+            "persistent_floor_d_seg_hat": MD2_NG5_PERSISTENT_NUMERATOR / MD1_DENOMINATOR,
+            "persistent_floor_over_target": (
+                MD2_NG5_PERSISTENT_NUMERATOR / MD1_DENOMINATOR / 1.3646784205e-4
+            ),
+            "cold_instance_persistent_floor_over_target": (
+                MD1_PERSISTENT_NUMERATOR / MD1_DENOMINATOR / 1.3646784205e-4
+            ),
+            "live_forward_persistent_share": MD2_NG5_LIVE_PERSISTENT_TERMINAL_SHARE,
+            "persistent_numerator_removed_fraction": 9_900 / 197_790,
+            "created_over_repaired_ratio": 28_815 / 31_830,
+            "cold_created_over_repaired_ratio": (19_380 + 34_665) / (9_075 + 15_360),
+            "persistent_site_overlap_with_cold_control_jaccard": (
+                MD2_NG5_VS_COLD_PERSISTENT_JACCARD
+            ),
+            "persistent_site_overlap_within_pool_chance_jaccard": (
+                MD2_NG5_VS_COLD_PERSISTENT_JACCARD_WITHIN_POOL_CHANCE
+            ),
+            "persistent_site_overlap_attainable_max_jaccard": (
+                MD2_NG5_VS_COLD_PERSISTENT_JACCARD_ATTAINABLE_MAX
+            ),
+            "step_zero_wrong_pool_sites": MD2_STEP_ZERO_WRONG_POOL_SITES,
+            "prediction_holds": False,
+            "falsifier_fired": False,
+            "reading": (
+                "the burn default cuts the created/repaired ratio 2.2118x -> 0.9053x and ends "
+                "1.00% BELOW its start, but the persistent SHARE ROSE 0.943 pp to 62.954% and the "
+                "floor fell only 12.753x -> 11.671x the sub-0.12 corner; the two schedules fail on "
+                "substantially the SAME sites (Jaccard 0.8069 against a within-pool chance of "
+                "0.5263 and an attainable maximum of 0.9305), while the classes the run "
+                "MANUFACTURES overlap at only 0.096-0.360"
+            ),
+        },
+        residual=abs(MD2_NG5_PERSISTENT_TERMINAL_SHARE - 0.475),
+        source_artifact=_LEDGER,
+        measurement_method=(
+            "md1's instrument unchanged at the same cadence and authority; the site overlap is "
+            "measured on the persisted per-site class codes of both cells and reported against a "
+            "null of independent draws from the shared step-0 wrong pool, never the all-sites null"
+        ),
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=(
+                "/Volumes/APDataStore/pact/ddm_md2_persistent_under_burn_default"
+                "/ANALYSIS_ng5_tau_band_seed_20260902_dali.json"
+            ),
+            reactivation_criteria=(
+                "a cell with a DIFFERENT INITIALISATION.  All three retained wc3 seed controls "
+                "declare the same initial_state sha 991a1cc6..., so varying the seed varies the "
+                "data order and not the init, and cannot test whether the persistent POOL is a "
+                "property of the initialisation"
+            ),
+            measurement_axis=_AXIS,
+            hardware_substrate="m5_max_128gib_cpu",
+        ),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    )
     return CanonicalEquation(
         equation_id="checkpoint_trajectory_error_partition_v1",
         name="Checkpoint-trajectory error partition and the optimizer-reachability floor",
@@ -382,11 +504,16 @@ def build_checkpoint_trajectory_error_partition_v1() -> CanonicalEquation:
                 "TOPOLOGICAL sense; this law is persistence in the TRAJECTORY sense",
             ],
             "known_boundary": (
-                "one vehicle, one seed, two cells (cold control and ng1 warm transition), two "
-                "forwards each.  The generic statement is DERIVED from the integer identity.  The "
-                "SIZE of the persistent share has two measured instances that agree within 3.0 pp "
-                "on the shadow forward (62.011% cold, 59.009% warm) and 0.44 pp on the live "
-                "forward (35.779% / 35.336%) -- but both are the same seed and the same vehicle."
+                "one vehicle, one seed, ONE INITIALISATION, three cells (cold control, ng1 warm "
+                "transition, ng5 tau-band x carried-duals burn default), two forwards each.  The "
+                "generic statement is DERIVED from the integer identity.  The SIZE of the "
+                "persistent share has three measured instances agreeing within 4.0 pp on the "
+                "shadow forward (62.011% cold, 59.009% warm, 62.954% ng5) and within 0.44 pp on "
+                "the live forward within 0.45 pp (35.779% / 35.336% / 35.439%), and md2 measured that the "
+                "persistent SITES of two of them overlap at Jaccard 0.8069 -- but all three cells "
+                "share initial_state sha 991a1cc6..., so schedule-invariance is measured and "
+                "init-invariance is NOT.  All three retained wc3 seed controls declare that same "
+                "init sha, so a second seed cannot close that gap."
             ),
         },
         units_in={
@@ -399,7 +526,7 @@ def build_checkpoint_trajectory_error_partition_v1() -> CanonicalEquation:
             "optimizer_reachable_share": "dimensionless_fraction",
             "persistent_share": "dimensionless_fraction",
         },
-        empirical_anchors=(md1_anchor, warm_anchor),
+        empirical_anchors=(md1_anchor, warm_anchor, ng5_anchor),
         predicted_vs_empirical_residual={
             "md1_qbr1_cold_control_seed_20260902_shadow_trajectory_partition_20260904": (
                 abs(MD1_PERSISTENT_TERMINAL_SHARE - MD1_PREREGISTERED_PREDICTION)
@@ -407,6 +534,10 @@ def build_checkpoint_trajectory_error_partition_v1() -> CanonicalEquation:
             "md1_ng1_warm_transition_seed_20260902_shadow_trajectory_partition_20260904": (
                 abs(MD1_WARM_PERSISTENT_TERMINAL_SHARE - MD1_PREREGISTERED_PREDICTION)
             ),
+            (
+                "md2_ng5_tau_band_x_continuous_objective_seed_20260902_shadow"
+                "_trajectory_partition_20260905"
+            ): abs(MD2_NG5_PERSISTENT_TERMINAL_SHARE - 0.475),
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,

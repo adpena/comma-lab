@@ -126,13 +126,53 @@ def test_floor_clears_target_refuses_a_nonpositive_target() -> None:
 # ---------------------------------------------------------------------------
 # the equation record
 # ---------------------------------------------------------------------------
-def test_equation_builds_with_two_anchors_and_nonnegative_residuals() -> None:
+def test_equation_builds_with_three_anchors_and_nonnegative_residuals() -> None:
     eq = build_checkpoint_trajectory_error_partition_v1()
     assert eq.equation_id == "checkpoint_trajectory_error_partition_v1"
-    assert len(eq.empirical_anchors) == 2
-    assert [a.residual >= 0.0 for a in eq.empirical_anchors] == [True, True]
+    assert len(eq.empirical_anchors) == 3
+    assert all(a.residual >= 0.0 for a in eq.empirical_anchors)
     ids = [a.anchor_id for a in eq.empirical_anchors]
-    assert any("cold_control" in i for i in ids) and any("warm_transition" in i for i in ids)
+    assert any("cold_control" in i for i in ids)
+    assert any("warm_transition" in i for i in ids)
+    assert any("ng5_tau_band" in i for i in ids)
+    # every anchor is addressable in the residual map, so no anchor can be added without one
+    assert set(eq.predicted_vs_empirical_residual) == set(ids)
+
+
+def test_ng5_anchor_records_a_missed_prediction_and_the_within_pool_null() -> None:
+    """ddm_md2: the burn default RAISED the share, and the overlap carries its honest null."""
+
+    eq = build_checkpoint_trajectory_error_partition_v1()
+    ng5 = next(a for a in eq.empirical_anchors if "ng5_tau_band" in a.anchor_id)
+    out = ng5.empirical_output
+    # the charter predicted 40-55%; it measured higher than the cold control's 62.011%
+    assert out["prediction_holds"] is False
+    assert out["falsifier_fired"] is False
+    assert out["persistent_terminal_share"] > 0.60
+    # the burn default repairs more than it creates where the cold control did the reverse
+    assert out["created_over_repaired_ratio"] < 1.0
+    assert out["cold_created_over_repaired_ratio"] > 2.0
+    # ... and still leaves the floor an order of magnitude above the corner
+    assert out["persistent_floor_over_target"] > 10.0
+    assert out["persistent_floor_over_target"] < out["cold_instance_persistent_floor_over_target"]
+    # the site overlap must never be quotable without the null it is measured against
+    assert (
+        out["persistent_site_overlap_within_pool_chance_jaccard"]
+        < out["persistent_site_overlap_with_cold_control_jaccard"]
+        < out["persistent_site_overlap_attainable_max_jaccard"]
+    )
+
+
+def test_known_boundary_records_the_shared_initialisation_limit() -> None:
+    """The three cells share one init sha, so init-invariance is NOT measured -- say so."""
+
+    eq = build_checkpoint_trajectory_error_partition_v1()
+    boundary = eq.domain_of_validity["known_boundary"].lower()
+    assert "one initialisation" in boundary
+    assert "init-invariance is not" in boundary
+    ng5 = next(a for a in eq.empirical_anchors if "ng5_tau_band" in a.anchor_id)
+    # build_provenance_for_research_sidecar carries reactivation_criteria in rejection_reason
+    assert "different initialisation" in ng5.provenance.rejection_reason.lower()
 
 
 def test_the_two_instances_agree_on_the_share_and_disagree_on_the_sites() -> None:
