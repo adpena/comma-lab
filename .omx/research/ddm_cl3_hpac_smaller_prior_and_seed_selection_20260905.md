@@ -124,6 +124,57 @@ through `--env` so they are recorded in the launch manifest instead of inherited
 **Co-residency cost, MEASURED before the stop:** ~87 s per epoch with md3 on the GPU against cl2's ~53 s alone
 (1.64×) — so co-residency was not only unsafe, it was slow.
 
+### 4a. Co-residency with md3 is NOT safe — MEASURED, and it supersedes a 45-second spot check
+
+MAIN re-authorised Metal at 16:29Z on a 45-second observation ("compressor flat 1.8 GiB") and armed a tripwire rule:
+SIGTERM the trainer if a `memory_pressure` WARN or CRITICAL fires, then resume after md3's terminal receipt. I relaunched
+(counter 909, trainer 26914) at 16:18Z. **The tripwire fired 100 s later and I SIGTERMed at 16:19:43Z, at epoch 0.**
+That is the rule working exactly as written.
+
+The full alarm ledger (`.omx/tmp/memory_watchdog/launch_r6/run.log`, all `report_only`) against my three trainer
+windows — A 16:05:37–16:13:13, B 16:14:34–16:16:42, C 16:18:0x–16:19:43 — is the decisive evidence:
+
+| observed_utc | level | reason | cl3 trainer live? |
+|---|---|---|---|
+| 16:04:21Z | WARN | compressor 18.86 GiB ≥ 16.0 | **no** (md3 alone) |
+| 16:08:14Z | CRITICAL | growing 4.27 GiB/s, already 31.11 GiB | yes (A, +2.6 min) |
+| 16:08:19Z | CRITICAL | **compressor 54.89 GiB ≥ 48.0** | yes (A) |
+| 16:08:24Z | WARN | compressor 24.00 GiB | yes (A) |
+| 16:12:53Z | CRITICAL | growing 5.20 GiB/s, already 42.37 GiB | yes (A, +7 min) |
+| 16:19:22Z | WARN | compressor 21.07 GiB | yes (C, +1.3 min) |
+| 16:19:27Z | CRITICAL | **compressor 55.62 GiB ≥ 48.0**, growing 6.76 GiB/s | yes (C) |
+| 16:19:33Z | WARN | compressor 28.50 GiB | yes (C) |
+
+Reading, plainly: **md3 alone already sits at or over the 16 GiB WARN line** (the 16:04:21Z alarm predates every cl3
+launch, and with no cl3 trainer running the compressor still measures 16.77 GiB now). **Every crossing of the 48 GiB
+CRITICAL line happened with a cl3 Metal trainer live** — twice, independently, ~1.3 min and ~2.6 min after launch,
+reaching 54.89 and 55.62 GiB. Window B is not a counterexample: it lived 2 min 8 s, shorter than the ~2.5 min the ramp
+takes to develop. MAIN's 45-second window was likewise too short to see it — the spot check measured the ramp's
+beginning, not its top.
+
+**The campaign's own ledger already held the answer, and it is 16× the charter's number.**
+`tools/measured_peaks.py lookup --family train_ddm_cl1_hpac_capacity` governs at **38.622 GiB
+system-availability delta** (RSS 1.656 GiB) — recorded 2026-09-05T13:47Z from cl2's own `lambda_1p0` launch. The
+charter's "a 2.4 GiB trainer is admitted beside it" priced this trainer by its RSS, which is the one number that cannot
+see a Metal working set. I recorded my three partials into the same ledger (row_count 4 → 7; the governing peak is
+unchanged at 38.622 GiB):
+
+| run | elapsed s | peak RSS GiB | **system-availability delta GiB** | attribution |
+|---|---:|---:|---:|---|
+| A (ExFAT) | 455.6 | 1.490 | **37.493** | CONFOUNDED_OVERLAPPING_CELL |
+| B (co-resident) | 127.5 | 1.490 | **16.148** | SOLE_CELL_INFERRED_FROM_LEDGER |
+| C (tripwire) | 52.9 | 1.632 | **34.751** | SOLE_CELL_INFERRED_FROM_LEDGER |
+
+Run C is the decisive one: **34.75 GiB of system availability consumed in 52.9 seconds.** That is the ramp, and it is
+why a 45-second window reads low — it samples the ramp's beginning, not its top. Add md3's declared 49.572 GiB and the
+pair asks ~85–88 GiB of a 116 GiB ceiling, with the compressor measured at 55 GiB. The arithmetic and the alarms agree.
+
+So the honest verdict is MAIN's FIRST correction, not the re-authorisation: **a cl3 Metal trainer must not run while
+md3's cell is live.** The tripwire's own prescription ("resume after `md3_different_init_DONE.json.done` lands") is the
+path this arm is on. The RSS guard cannot substitute for the tripwire here — the aborted run's receipt measured peak
+RSS 1.5 GiB against a 116 GiB cap while the GPU-side pressure was 55 GiB, i.e. **the guard was 77× from firing on a
+condition it structurally cannot see.**
+
 ## 5. The ladder — MEASURED
 
 _pending: filled as each rung prices._
