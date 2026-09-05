@@ -96583,15 +96583,15 @@
       "id": "lane_ddm_pc1_pose_carrier_efficiency_20260905",
       "name": "ddm_pc1 pose-carrier efficiency: basis precision, coefficient precision, generated basis, learned low rank",
       "phase": 2.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/ddm_pc1_pose_carrier_efficiency.py (probe/rate/coverage/solve/measure/price), 51 tests"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "[macOS-CPU advisory] V3 n600: archive 178,181 B sha 512b0e0b, d_pose 5.727914e-06, net dS -1.462948e-03; /Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency/price/v3_lattice10/PRICE.json"
         },
         "contest_cuda": {
           "status": false,
@@ -96610,8 +96610,8 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/ddm_pc1_pose_carrier_efficiency_20260905.md + canonical equation pose_carrier_basis_rate_fidelity_exchange_v1"
         },
         "deploy_runbook": {
           "status": false,
@@ -96701,6 +96701,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "ddm_rc1_t4_model_section_adaptive_recode_20260905",
+      "name": "ddm_rc1_t4_model_section_adaptive_recode_20260905",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.14666350774473783 @ 178,249 B; archive sha 1438049e3655fbcfa8eb289fa51ac58f834d72d8a09586353663cea68e57c122; harvest /Volumes/APDataStore/pact/ddm_rc1_t4_model_section_adaptive_recode_20260905_r2/MODAL_REMOTE_RESULT.json"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.14666350774473783 @ 178,249 B; archive sha 1438049e3655fbcfa8eb289fa51ac58f834d72d8a09586353663cea68e57c122; harvest /Volumes/APDataStore/pact/ddm_rc1_t4_model_section_adaptive_recode_20260905_r2/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.14666350774473783 @ 178,249 B; archive sha 1438049e3655fbcfa8eb289fa51ac58f834d72d8a09586353663cea68e57c122; harvest /Volumes/APDataStore/pact/ddm_rc1_t4_model_section_adaptive_recode_20260905_r2/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -96710,5 +96751,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-05T18:28:15Z"
+  "updated_at": "2026-09-05T19:35:54Z"
 }
