@@ -301,6 +301,46 @@ answer:
   pre-registered whole-axis FALSIFIER fires: the capacity axis closes in BOTH directions on this vehicle and λ=4.0 is
   NOT run.
 
+## 4e. FIRST EXACT NUMBERS — the model half of λ=2.0 (MEASURED 2026-09-05T23:45Z)
+
+The pack stage of the λ=2.0 price, on the terminal epoch-60 QAT checkpoint (sha `fd686915…`, 1,051,959 B; training
+3,357.8 s, 56.0 s/epoch, sole Metal occupant):
+
+| basis | control (= the live pointer's model) | λ=2.0 | Δ |
+|---|---:|---:|---:|
+| raw IHS1 body | 17,770 | 17,165 | **−605** |
+| Brotli race (cl2's currency; advisory) | 13,466 (q11) | 12,807 (**q10**) | **−659** |
+| **rc1 RC1H container (the LIVE object)** | **12,343** | **11,886** | **−457** |
+| RC1H rider (pre-Brotli) | 16,267 | 15,808 | −459 |
+
+**The model half of the rung pays −457 B on the object that ships.** The stream half is still encoding; J is not yet
+known and no verdict is taken here.
+
+### P8 — FALSIFIED, and the mechanism is the interesting part
+
+P8 (pre-registered at 23:33Z, before any of these numbers existed) predicted the rc1 basis would show a **larger**
+model saving than Brotli, because λ=2.0 moves mass into zero-width channels and low depths and rc1's adaptive
+per-group coder models the code alphabet directly while Brotli never sees a code boundary. **MEASURED: rc1 saved
+457 B against Brotli's 659 B — the opposite, by 202 B (rc1 captured 69.3% of what Brotli did).**
+
+The mechanism, stated as the correction it is: **a better coder has LESS to gain from a smaller model, because it was
+already coding the larger model near its entropy.** rc1 had already extracted the per-code redundancy from the
+control's weights — that is exactly what earned it −1,123 B over Brotli in the first place. Much of what λ=2.0 removes
+is redundancy Brotli was *failing* to capture and rc1 had *already* captured, so Brotli gets to book the saving twice
+and rc1 only once. **Coder quality and model-size sensitivity are substitutes, not complements.** My prediction had
+them as complements; that was the error.
+
+This has a consequence beyond this rung: capacity-ladder byte deltas measured on a weak coder OVERSTATE what the same
+weight change is worth once the coder is strong. cl2's ladder was priced on Brotli. Any transfer of a cl2-basis byte
+delta onto the rc1 object should be discounted — here by ~31%.
+
+### P1 — MISSED, in the favourable direction
+
+P1 predicted the model would shrink **−250…−400 B**. In its own (Brotli) currency it shrank **−659 B**, outside the
+band by 259 B; on the rc1 basis −457 B, also outside. The λ=2.0 rate multiplier squeezes the model harder than cl2's
+single measured secant implied. Note the container winner also moved, q11 → q10, so even the Brotli race is not a
+fixed transform across rungs.
+
 ## 5. The ladder — NOT MEASURED (state as of 2026-09-05T16:35Z)
 
 **No rung has been trained, priced or verified.** There is no ladder table, no residual against P1–P7, and no seal.
