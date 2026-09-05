@@ -760,3 +760,22 @@ on this vehicle needs a different initialisation or generator, not a better burn
 share the SAME init sha (991a1cc6…), so a second SEED varies data order only and cannot test init-independence. Priced next step: a DIFFERENT-INITIALISATION
 cell (~2.8 h Metal + 54 min CPU partition, $0, no new code) with the seed_20260903 data-order control as the free prerequisite. n32→n600 transfer caveat
 travels with every row (stratified selection, not a prefix). Equations leg (`tac.canonical_equations`): md2's 3rd anchor on the persistent-partition law.
+
+## ADDENDUM 38 (2026-09-05 15:30Z real) — md3: the born vehicle's unreachable error is DATA-ANCHORED (formulation scope); the "different init" was not purchasable
+
+md3 (six commits): **premise correction first** — `build_initial_state` takes NO seed; every burn cell starts from r10's stage-03 EMA shadow, and the vehicle's random
+init (`packet.initialize_params(20260827)`) sits BEHIND the whole qbt1 r1…r10 chain — a different random initialisation costs the chain's re-derivation, not md2's
+2.8 h (md2's price omitted it). Positive control: the rebuilt init reproduces the pinned `initialized_float_params.npz` byte-for-byte. **Data-order control** (wc3
+seed_20260903, 141 forwards): PERSISTENT **61.606%** — the fourth instance within 1.35 pp (cold 62.011, ng5 62.954, PyAV 61.67) — Jaccard vs cold **0.8536**,
+HIGHER than ng5's schedule (0.8069): data order moves the unreachable sites less than the whole schedule does. Live share +4.78 pp (40.56% vs 35.3–35.8): the live
+forward IS order-sensitive; the shipped object is the shadow, so no verdict moves. **The decisive $0 result:** across eight legitimately-produced starts (r6–r10
+stage ends, r10 periodics; 0.8–30% weight distance) the step-0 wrong POOL moves enormously (J 0.9909 → 0.1175 — md2's "bit-identical pools" were an artifact of
+every cell declaring one file) but the unreachable SITES do not: **83.13% of the incumbent's persistent sites are wrong at ALL FOUR comparable-quality starts vs
+19.78% of the sites the optimizer did reach — 4.20× (4.21× on PyAV)**. Verdict **DATA-ANCHORED at FORMULATION scope**: the sites are scorer-hard for this generator
+FORM, no start reaches them. A different-init cell (r10_live, max attainable J 0.8082; r8/r7/r6 rungs cannot fire their falsifiers by arithmetic) is sealed,
+in-tree validated, armed on a process-table waiter behind cl2's Metal use (~16:40Z) — its harvest is a falsifiable PREDICTION (J ≥ 0.70 expected; 91.01%
+containment). md3 correctly REFUSED the queue driver's `ready: true` while cl2's trainer held the Metal (the gov3 ITEM 3 gap, independently logged).
+**gs4 §5(b) is answered:** the born route's accuracy corner is closed for this generator form by data-anchored sites; only a different generator FORM (gc1/gf2's
+forms are themselves formulation-closed; other forms unpriced) or the joint field+model escape remain. Equations leg (`tac.canonical_equations`): 4th anchor on
+`checkpoint_trajectory_error_partition_v1`; `known_boundary` rewritten (shadow share data-order-invariant MEASURED; live forward NOT; init-invariance owed to the
+armed cell).
