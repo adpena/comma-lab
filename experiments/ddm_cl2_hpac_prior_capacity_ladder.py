@@ -129,15 +129,21 @@ RUNG_SEED = {
     "lambda_1p0_s17_twin": 20260717,
     "lambda_1p0_s18_twin": 20260718,
 }
-#: ddm_cl3's rungs live on the FALLBACK SSD tier (Vertigo is at 30 GiB free; APDataStore at
-#: 49 GiB).  cl2's rungs stay exactly where cl2 measured them, so ``report`` still sees both
-#: arms' rows and no landed cl2 artifact moves.  Nothing in the pack / stage / encode /
-#: decode path depends on which root a rung sits under.
+#: ddm_cl3's rungs sit beside cl2's on the PRIMARY (APFS) tier, in their own root.  The
+#: fallback tier is ExFAT, and MEASURED 2026-09-05: copying the fs2 fire tree onto it makes
+#: macOS write 44 AppleDouble ``._*`` companions (68 files -> 85), which would corrupt the
+#: staged runtime tree's census and sha; ``._*.pt`` companions likewise pollute the
+#: trainer's ``rglob("*.pt")`` artifact manifest.  A rung retains ~172 MB, so eight cost
+#: ~1.4 GiB of the primary tier's 29 GiB free.  The fallback tier carries only the one
+#: 3.66 GB parse-back render: a single file, with no tree census and no ``*.pt`` glob.
+#: cl2's rungs stay exactly where cl2 measured them, so ``report`` sees both arms' rows.
 # Every rung must pin BOTH a lambda and a seed, or ``price`` would KeyError halfway
 # through a 20-minute encode.  Fail closed at import instead.
 if set(RUNG_SEED) != set(RUNG_LAMBDA):
     raise RuntimeError(f"RUNG_SEED/RUNG_LAMBDA disagree on: {sorted(set(RUNG_SEED) ^ set(RUNG_LAMBDA))}")
-CL3_STORE = Path("/Volumes/APDataStore/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection")
+CL3_STORE = Path("/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection")
+#: The winner's parse-back render only (one 3.66 GB file; no tree census, no ``*.pt`` glob).
+CL3_PARSEBACK_STORE = Path("/Volumes/APDataStore/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection")
 CL3_RUNGS = frozenset(
     {
         "lambda_2p0",
@@ -711,7 +717,7 @@ def stage_parseback(args: argparse.Namespace) -> dict[str, Any]:
             raise Cl2Error(f"{rung}: RUNG_RESULT.json is absent; price first")
         runtime = Path(json.loads(result_path.read_text(encoding="utf-8"))["receiver_copy_runtime"]["path"])
     archive = runtime / "archive.zip"
-    root = (CL3_STORE if rung in CL3_RUNGS else STORE) / "parseback" / rung
+    root = (CL3_PARSEBACK_STORE if rung in CL3_RUNGS else STORE) / "parseback" / rung
     root.mkdir(parents=True, exist_ok=True)
     result_path = root / "PARSEBACK_RESULT.json"
     if result_path.is_file() and not args.force:
@@ -859,11 +865,15 @@ def stage_report(_args: argparse.Namespace) -> dict[str, Any]:
     control = rows.get("lambda_1p0")
     control_gap = None if control is None else control["joint_delta_vs_shipped_126926"]
     best = min(rows.values(), key=lambda row: row["joint_bytes"]) if rows else None
+    # The BAR a candidate must beat is the LIVE frontier pointer's archive, which is not
+    # forever fs2: cl2's own lambda_1p0 control landed on T4 at 179,982 B and became the
+    # pointer.  Default preserves cl2's reading; --pointer-archive-bytes re-derives it.
+    pointer_bar = int(getattr(_args, "pointer_archive_bytes", None) or FS2_ARCHIVE_BYTES)
     decision = "NO_ROWS"
     if control is not None:
         if control_gap > 500:
             decision = "INSTRUMENT-REFUSED"
-        elif best is not None and best["candidate_archive"]["bytes"] < FS2_ARCHIVE_BYTES and best["decoded_identity"]:
+        elif best is not None and best["candidate_archive"]["bytes"] < pointer_bar and best["decoded_identity"]:
             decision = (
                 "FIRE-ORDER"
                 if best["candidate_archive"]["bytes"] <= RATE_CORNER_ARCHIVE_BYTES
@@ -897,6 +907,7 @@ def stage_report(_args: argparse.Namespace) -> dict[str, Any]:
         },
         "control_reproduction_gap_joint_bytes": control_gap,
         "control_tolerance_bytes": 500,
+        "pointer_archive_bytes_bar": pointer_bar,
         "rows": table,
         "adjacent_slopes": slopes,
         "best_rung": None if best is None else best["rung"],
@@ -936,6 +947,15 @@ def build_parser() -> argparse.ArgumentParser:
     parseback.add_argument("--rung", required=True, choices=[*sorted(RUNG_LAMBDA), "shipped"])
     parseback.add_argument("--force", action="store_true")
     report = sub.add_parser("report", help="ladder table, adjacent slopes and the pre-registered decision")
+    report.add_argument(
+        "--pointer-archive-bytes",
+        type=int,
+        default=None,
+        help=(
+            "archive bytes of the LIVE frontier pointer that a candidate must beat "
+            f"(default: fs2's {FS2_ARCHIVE_BYTES}; re-derive it at every pointer move)"
+        ),
+    )
     report.add_argument(
         "--out",
         type=Path,
