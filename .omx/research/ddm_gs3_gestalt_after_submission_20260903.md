@@ -620,3 +620,18 @@ with an alarm) and an on-restart reconciliation that SIGCONTs anything the previ
 (fired portable custody-pruned tree 963955e8… == staged portable tree), not a vacuity; the three survivors are STRUCTURAL-RECORD (raw promotion-policy
 flags), RECORD-WITH-REASON (no CPU row; the prior attempt timed out at 1,800 s) and BLOCKED-ON-OPERATOR (nothing hosted). The packet is publish-ready
 modulo the operator's confirm. Equations leg (`tac.canonical_equations`): none.
+
+## ADDENDUM 29 (2026-09-05 00:45Z real) — the pause actuator is retired: SIGSTOP makes the paused process the swap victim
+
+gov2 (de7b4229c) MEASURED the mechanism behind the stuck pause: stopping a process does not free its memory — a stopped process is resident,
+dirty and idle, i.e. the IDEAL eviction victim — so swap crossed the 4 GiB WARN threshold **12 s after** the 00:34:20Z SIGSTOP and stayed above it
+for 4 m 19 s (peak 11.29 GiB) with the compressor parked at ~41 GiB: the clear hold was unreachable BY CONSTRUCTION and the old code could only
+resume inside the OK branch. Three cures landed (MAX_PAUSE_S = 180, DERIVED from the worst clearing pause 97 s + 60 s hold; `reconcile_orphaned_pauses`
+at startup and as a subcommand; rate-CRITICAL requires compressor ≥ WARN) and the reconciler's FIRST run found a live orphan: the corrected 2a24996da
+instance had stopped mc1's `ceil_block` tree at 00:39:14Z (swap 5.86 GiB alone held the WARN) — released for real. The watchdog now retires itself when
+its source mtime changes (fix-in-git ≠ fix-in-RAM, structural half; the launcher-refuses-stale-instance half is named, not built).
+**MAIN's decision:** SIGSTOP hurt twice (ng4 ×3, mc1 ×1) and helped zero times — every pause was followed by swap growth, never relief. Under "never
+weaker state" the actuator is RETIRED: the live instance runs `--report-only` (r3 on de7b4229c: alarms name the actor via `top_rss_growers`, no
+signals); gov2 asked to flip the default. Follow-on named, not built: a COOPERATIVE pause (SIGUSR1 → the trainer checkpoints at the next step
+boundary and exits resumable → the queue driver re-admits when pressure clears) — the only actuator that frees resident bytes without losing work.
+Zero processes in state T after reconciliation; ng4 running. Equations leg (`tac.canonical_equations`): none (host apparatus constants stay out).
