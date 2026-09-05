@@ -571,3 +571,17 @@ for fires (`--no-source-snapshot`); fire-proof it on the next CUSTODY row (known
 the proven path (call fc-01M1QDB3R37N2JWWNHW64TZT2P). Lesson for the genus: a refusal that stops a wrong write is the guard WORKING; a "cure" that
 makes the refusal go away can be the cure that makes the failure silent ([[m102]] · [[m100]]).
 Equations leg (`tac.canonical_equations`): none.
+
+## ADDENDUM 25 (2026-09-05 00:05Z real) — mc1 interim: the motion-compensated plane's ceiling is firing its falsifier
+
+mc1 (Fable), wave 1 on the exact fs2 body, all MEASURED: rows control byte-identical (113,411 B, sha 5601d6fd…) — the coder's own rows; alignment:
+ALL SIX decoder-derivable MC planes align WORSE than co-located on Lane/Road/Undrivable/MyCar (Lane IoU 0.218–0.2457 vs co-located 0.2495); only
+block variants gain on Movable; the oracle (reads field_t, diagnostic) gains +0.018–0.025 Lane IoU rigid, +0.074 block — but block motion is
+temporally UNPREDICTABLE (derivable-vs-oracle dy correlation 0.09–0.27 in the road rows) and carrying it costs 9,861 B; held-out indicator-family
+ceiling: `mc` +5.0–5.8 B, `agree` +3.1–3.9 B, richer cells −149…+30 B — **three orders of magnitude under the 5,000 B refusal bar.** Wave 2
+(block, block_gated, oracle_block) pending; if it holds, the charter's falsifier fires → CEILING-REFUSED at FORMULATION scope for the shipped
+receptive field (dc1's mechanism does not transfer through a decoder-derivable motion estimate: the ego-motion between pairs is not predictable
+enough from two decoded fields to re-align the classes that carry the bits). The rate corner's "unmeasured door on the closest wall" is then
+measured. Side finding: mc1's three parallel ~10.3 GiB ceiling processes drove the watchdog's 11 WARN rows; on CRITICAL the watchdog would have
+paused ng4 (not the cause) — target-policy gap routed to gov2.
+Equations leg (`tac.canonical_equations`): the ceiling table will anchor dc1's learned-receptive-field law with a NEGATIVE transfer row when mc1 lands.
