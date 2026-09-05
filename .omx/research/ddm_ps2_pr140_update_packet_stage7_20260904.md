@@ -238,3 +238,6 @@ BLOCKED-ON-OPERATOR-CONFIRM: nothing pushed, hosted or edited.`
 
 Own-vehicle frontier: **fs2 — S 0.14784474152757654 @ 180,023 B [contest-CUDA T4 n600]**,
 archive sha `a8f3a379…27bb6`. This arm did not move it.
+
+## CUSTODY ROW LANDED (MAIN, 2026-09-05 00:04Z)
+fc-01M1QDB3R37N2JWWNHW64TZT2P on the staged tree: pose 6.14e-06 · seg 0.00020139 · 180,023 B · S 0.14784474152757654 — IDENTICAL to the fs2 pointer row; fire-tool tree digest 355e7f95…; 660.2 s. The `submission_runtime_tree_matches_auth_eval` red is cured by this row. Packet fully bound; publish gated on the operator confirm.

@@ -585,3 +585,13 @@ enough from two decoded fields to re-align the classes that carry the bits). The
 measured. Side finding: mc1's three parallel ~10.3 GiB ceiling processes drove the watchdog's 11 WARN rows; on CRITICAL the watchdog would have
 paused ng4 (not the cause) — target-policy gap routed to gov2.
 Equations leg (`tac.canonical_equations`): the ceiling table will anchor dc1's learned-receptive-field law with a NEGATIVE transfer row when mc1 lands.
+
+## ADDENDUM 26 (2026-09-05 00:05Z real) — the prepared PR #140 update is fully bound; snapshot fire-proof fired
+
+ps2's custody row (call fc-01M1QDB3R37N2JWWNHW64TZT2P, proven no-snapshot path, 660.2 s): the fs2 archive on the STAGED public tree reproduces the
+pointer row EXACTLY — pose 6.14e-06, seg 0.00020139, 180,023 B, S 0.14784474152757654 — fire-tool tree digest 355e7f95…. The prepared update packet
+(`/Volumes/APDataStore/pact/ddm_ps2_pr140_update_prep/`, stages 1–7, compliance 83/4 zero new reds) is now bound to an evaluated tree. What remains
+before a public update is ONLY the operator's one-line confirm (p0_swap_procedure) and the RELEASE_PLAN's six gh steps with fetchback. Then, with
+single-flight clear, MAIN fired the FIRE-PROOF of hv1's fixed snapshot path (1fbc7c066) on the SAME known-answer seal, snapshot ON (receipt
+`ps2_t4_custody_snapshot_proof`): expected components identical; if it dispatches and harvests, the snapshot becomes the default for frontier fires.
+Equations leg (`tac.canonical_equations`): none.
