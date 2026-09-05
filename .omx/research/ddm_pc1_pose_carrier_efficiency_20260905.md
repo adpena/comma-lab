@@ -159,7 +159,7 @@ container and stat-ing it — never estimated.** Break-even d_pose is computed a
 |---|---:|---:|---:|---:|---|---:|---:|
 | V1 basis 5→4 bits | −2,440 B | **−392 B** | −2.6102e-04 | 6.550e-06 (+6.8%) | break-even | not solved (see §5) | — |
 | V2 basis 5→3 bits | −4,880 B | **−3,204 B** | −2.13341e-03 | 9.931e-06 (+61.9%) | break-even | **≥ 2.8487e-05** | **REFUSED, §5b** |
-| V3 coefficients, lattice ×4 coarser | −1,200 B | **−1,814 B** | −1.20787e-03 | 8.172e-06 (+33.2%) | break-even | *pending* | *pending* |
+| V3 coefficients, lattice ×4 coarser | −1,200 B | **−1,801 B** (re-solved) | −1.19921e-03 | 8.1563e-06 (+33.0%) | break-even | **5.727914e-06** | **−1.462948e-03 ADMITTED** |
 | V4 GENERATED basis (rank 12, zero stored bytes) | −12,200 B | **−12,043 B** | −8.01894e-03 | 2.5125e-05 | **ft1 ceiling 1.694e-05** | **≥ 6.13 per pair** | **REFUSED, §4** |
 | V5 learned rank-8 SVD basis | −4,070 + −3,280 B | **−3,161 B** | −2.10478e-03 | 9.882e-06 | break-even | not solved | **dominated, §6** |
 | V2+V3 composition | — | **−5,018 B** | −3.34128e-03 | 1.2484e-05 (+103.5%) | break-even | ≥ 2.8487e-05 | refused with V2 |
@@ -346,68 +346,88 @@ and basis families other than a re-quantisation of the shipped atoms.
 
 ---
 
-## 7. V3 — the live row (IN FLIGHT, not a verdict)
+## 7. V3 — ADMITTED. The one variant that does not move the subspace
 
-V3 is the only variant still standing. It changes no basis byte: it multiplies the twelve coefficient
-scales by 4 and re-solves the 600×12 lattice at that coarser step, which shrinks the AR1-predicted Rice
-deltas. MEASURED rate: **−1,814 B = −1.20787e-03 S**, break-even d_pose **8.172e-06** (+33.2% over the
-base). The n600 re-solve is running; **no verdict is claimed here until all 600 pairs are solved and the
-archive is built.**
+V3 changes no basis byte: it multiplies the twelve coefficient scales by 4 and re-solves the 600×12
+lattice at that coarser step. **All 600 pairs solved with `jg5.refine_pair` verbatim** (570 stopped at
+`no_improving_step`, 23 at the derived materiality floor, 7 at `lattice_floor`; 3,507 coordinates
+changed).
 
-Interim state, recorded so this memo is honest at any moment it is read — explicitly NOT a verdict, and
-NOT admissible as one (the solved set is a partial, order-biased subset; [[m88]]/[[m96]]).
-
-**The three-way decomposition, over the 192 pairs solved at the time of writing.** This is the arm's
-cleanest demonstration of the composition law [[m148]] — a closed leg survives only if another leg
-changes its object first:
-
-| | mean d_pose (192 pairs) | median | vs base |
+| | base (shipped) | candidate (V3) | delta |
 |---|---:|---:|---:|
-| A · base: shipped codes, shipped lattice | 1.08020e-05 | 1.4144e-06 | — |
-| B · V3 start: projected onto the coarse lattice, **no re-solve** | 3.15130e-05 | 1.1901e-05 | **+192%** (2.92×) |
-| C · V3 final: **re-solved** on the coarse lattice | 1.03487e-05 | 9.9914e-07 | **−4.2%** (0.958×) |
+| `archive.zip` bytes | 179,982 | **178,181** | **−1,801 B** |
+| archive sha256 | `08ec8533…` | **`512b0e0b…`** | |
+| **d_pose n600** (cpu_torch fp32, DALI GT) | 6.134076407345324e-06 | **5.727914077570811e-06** | **−6.62%** |
+| pose leg √(10·d_pose) | 0.007832034478566424 | 0.007568298406888309 | −2.63736e-04 |
+| per-pair median | 1.0593e-06 | 7.0971e-07 | |
+| ΔS rate | | | **−1.19921e-03** |
+| ΔS pose | | | **−2.63736e-04** |
+| **net ΔS** | | | **−1.462948046251146e-03** |
 
-191 of the 192 pairs get worse at B. That is the jg1 result reproduced exactly: coarsening the lattice
-without re-solving damages pose, here by 2.92×. **The re-solve then recovers 3.0×**, repaying the
-damage in full and landing 4.2% below the base. The cut is only reopened because the object changed.
+**It clears the −2e-05 admit bar by 73.1×.** It clears its own measured break-even (8.156341e-06) with
+d_pose at 0.702× of it, and ft1's same-object ceiling (1.694e-05) at 0.338×. 397 of 600 pairs improve.
 
-**And V3's admission does not depend on the attribution.** The surplus below base is worth −9.32e-05 S
-on the pose leg; even if every bit of it were "more solving" rather than "the coarser lattice is free"
-— the ITEM 4 confound — V3 would still land at pose parity with the base and keep its **−1.20787e-03 S**
-of rate. The confound can only make V3 slightly better than parity, never worse than the rate saving.
-That is why this run is being finished rather than stopped early the way V2 was: V2's bound had already
-crossed, V3's cannot.
+**d_seg is carried unchanged, and that is structural rather than an assumption:** the carrier renders
+frame_0 only, and SegNet reads the LAST frame (`upstream/modules.py:109`, `x[:, -1, ...]`), which is
+frame_1. A carrier-only edit is seg-invisible by construction on this receiver.
 
-**The lattice factor is a continuous knob and the charter's ×4 is one rung of it. Priced exactly
-(MEASURED archive builds, shipped codes projected):**
+**Controls that stand behind the row.**
+- *Container identity*: rebuilding the SHIPPED codes through `ddm_up3.build_archive` with the shipped
+  container options reproduces `08ec8533…` bit for bit, so the −1,801 B is the carrier's and not the
+  container's.
+- *Parse-back*: the candidate bytes were decoded through the receiver's own path and refused unless
+  they returned exactly the solved codes. They did.
+- *Basis identity*: `basis_raw` and `basis_norm` are bit-identical to the shipped body (§2).
+- *Receiver pin*: the staged runtime's `inflate.py` `ARCHIVE_SHA256`/`ARCHIVE_BYTES` were updated to the
+  candidate and re-checked against the bytes on disk.
 
-| coefficient lattice | archive Δ | ΔS_rate | break-even d_pose | pose budget over base |
-|---|---:|---:|---:|---:|
-| ×2 (12→11 bits) | -903 B | -6.01271e-04 | 7.1121e-06 | +15.9% |
-| ×4 (12→10 bits) | -1,814 B | -1.20787e-03 | 8.1720e-06 | +33.2% |
-| ×8 (12→9 bits) | -2,693 B | -1.79316e-03 | 9.2644e-06 | +51.0% |
-| ×16 (12→8 bits) | -3,484 B | -2.31985e-03 | 1.0306e-05 | +68.0% |
+**Note on the projection.** Before the solve finished, the partial rows projected −1,814 B and
+5.97e-06. The finished row is −1,801 B and 5.728e-06: the re-solved codes cost 13 B more than the
+projected ones (larger Rice deltas) and bought more pose than projected. Both moved, in opposite
+directions, and the net came out **better** than projected. The projection was a monitoring aid; the
+row is the measurement.
 
-The ladder is sub-linear: each doubling of the step drops every Rice parameter by one (900 B = 7,200
-bits over 600×12 coefficients) but grows the quotient tail, so the marginal saving decays 903 → 911 →
-879 → 791 B. **Since ×4 is measuring pose-POSITIVE so far (ratio 0.974), the ×8 and ×16 rungs are not
-obviously out of reach and are worth ~1.5–1.9× the bytes.** They are not measured and no claim is made
-about them; the ladder exists so the next arm sweeps the factor against ΔS instead of inheriting ×4
-([[m52]]: a chosen value is a UI over a continuum). See ITEM 5.
+**The full three-way decomposition at n600** — the arm's central structural result, the composition
+law [[m148]] made numerical:
 
-**An attribution confound is open and is NOT resolved by this row (ITEM 4).** `refine_pair` at 40 outer
-rounds is a more thorough solve than the one that produced the shipped codes, so a V3 pose gain may be
-"more solving" rather than "the coarser lattice is free". That does not affect V3's ΔS against the
-shipped body, which is what decides shipping. It does mean the control — a v0_base re-solve on the
-shipped lattice — is owed, and that control is independently interesting: any d_pose it wins costs
-**zero** bytes.
+| | d_pose n600 | vs base |
+|---|---:|---:|
+| A · base: shipped codes, shipped lattice | 6.134076e-06 | — |
+| B · projected onto the ×4 lattice, **no re-solve** | **2.937476e-05** | **+379%** (4.789×) |
+| C · **re-solved** on the ×4 lattice | **5.727914e-06** | **−6.6%** (0.934×) |
 
----
+Coarsening the lattice without re-solving costs 4.79× — that is the jg1 result reproduced on the whole
+population. The re-solve recovers **5.13×**, repays the damage in full, and lands below the base. The
+cut is only reopened because the object changed.
+
+**Candidate line (advisory, NOT a score):**
+
+    ddm_pc1 v3_lattice_x4_resolved  S 0.14635449326425 @ 178,181 B
+      [macOS-CPU advisory projection: measured d_pose n600 cpu_torch + exact archive bytes
+       + d_seg carried from the cl2 T4 row] · score_claim=false · promotable=false
+
+**SEAL** (contest-CUDA axis, `SEAL_VALID`), for MAIN to fire — **I did not dispatch Modal:**
+
+    /Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency/SEAL_ddm_pc1_v3_lattice_x4_resolved.json
+      candidate  ddm_pc1_v3_lattice_x4_resolved
+      archive    178,181 B  sha 512b0e0b241c9275dcd218fc59c6a07e0cae7eb2afe9bed1162b3f27d686adc5
+      runtime    41 files, 876,626 B, digest b2bb6e62f4f757d6…
+      seal sha   9818a646b421029c86d9c5a67957328959b690f12dd0a9507948c1569d930408
+      admit bar  net dS < -2e-05 vs contest_cuda 0.14781744 (tolerance 0)
+
+**The attribution confound (ITEM 4) does not gate this row** but it does size the follow-up. The pose
+half of the win (−2.64e-04 S) may be "more solving" rather than "the coarser lattice is free"; the rate
+half (−1.20e-03 S) is unambiguously the lattice. Even attributing the entire pose gain to the solver,
+V3 still lands at −1.20e-03 S. And if the pose gain IS the solver, then a v0_base re-solve on the
+shipped lattice wins roughly that much at **zero** bytes — which is why ITEM 4 is worth firing.
 
 ## 8. What this arm did not do
 
-- No T4 row was fired. Modal was never dispatched; MAIN fires.
-- No candidate archive was sealed unless §7 admits one.
+- **No T4 row was fired. Modal was never dispatched; MAIN fires.** Every score-shaped number here is
+  local advisory; the seal in §7 is the object to fire.
+- No full receiver inflate of the candidate was run (that is the 25-minute decode the T4 fire performs
+  anyway). What WAS proved is the receiver's own parse-back to exactly the solved codes, plus the
+  archive-sha pin check on the staged runtime.
 - The V3 attribution confound is open and named in ITEM 4: `refine_pair` with 40 outer rounds is a more
   thorough solve than the one that produced the shipped codes, so part of any V3 pose gain may be
   "more solving" rather than "the coarser lattice is free". The ΔS against the shipped body is
