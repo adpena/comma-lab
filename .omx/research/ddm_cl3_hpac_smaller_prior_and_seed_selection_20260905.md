@@ -354,8 +354,13 @@ by construction. `J = hpac_container + token_stream`, priced through rc1's coder
 | `lambda_1p0_s17` | 1.0 | 20260717 | 12,375 | **+32** | 113,416 | **−3** | **125,791** | **+29** | **NO** |
 | `lambda_1p0_s18` | 1.0 | 20260718 | 12,416 | **+73** | _encoding_ | | | | |
 
-(λ=2.0's row is byte-final on the encode; ADMISSIBILITY — second byte-identical encode + receiver decode identity —
-was still running when this table was written and is reported in §5c.)
+**λ=2.0's row is FULLY ADMISSIBLE (MEASURED 01:53Z):** two encodes byte-identical (114,100 B, both passes);
+`decoded_identity=True` — the receiver-copy decode of the candidate archive returns the exact field; and the section
+census returns `only_model_and_stream_moved=True`, with **semantic, carrier and the residual table each byte-identical
+to the live pointer** and only the hpac section changed. Candidate archive 175,010 B (sha `50e92157…`), **+224 B vs
+the live 174,786 B**; decode 1,923.97 s. So this is a valid, receiver-closed candidate that simply prices ABOVE the
+pointer — the rung lost on exact bytes, not on a defect, and the held-distortion claim is proved by the census rather
+than asserted.
 
 ### 5a. P3 — FALSIFIED. The whole-axis falsifier FIRED.
 
