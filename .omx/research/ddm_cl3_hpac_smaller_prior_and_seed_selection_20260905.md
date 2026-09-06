@@ -394,6 +394,23 @@ of this arm. Two consequences:
    read λ=2.0 as break-even and plausibly chased λ=4.0; on the object we actually ship that would have been chasing a
    lever the coder had already spent.
 
+### 5b-i. A defect I shipped, caught by the instrument an hour late
+
+Both λ=2.0 encodes finished byte-identical (114,100 B, 01:18:38Z) — determinism confirmed — and the price then
+**crashed**: `receiver copy inflate.py pins are absent or ambiguous`. The cause is mine. I reused cl2's
+`patch_inflate_pins` on the live tree; it searches for **fs2's** archive sha and for `ARCHIVE_BYTES = 180_023` written
+with an underscore separator, while the live pc1 tree pins `1de6c5d7…` and writes `ARCHIVE_BYTES = 174786` plain. It
+fails closed, correctly — but only at the receiver-copy step, an hour of encoding after the mistake was made.
+
+My review of the cl3 pricer checked that `replace_hpac_section` generalises to any section bytes and did **not** apply
+the same question to the sister helper next to it. That is the exact shape of miss the operating manual names: I
+verified the helper I was thinking about and inherited the one I was not.
+
+Cure, both halves: a cl3-local `patch_inflate_pins_live` written against the live tree's actual format (tested on a
+real copy — patches exactly once, old pins gone, idempotent on re-run), and `--reuse-encodes`, so recovering from any
+post-encode failure costs one decode instead of two ~50-minute encodes. The two finished streams were already on disk;
+the completion run consumed them byte-identically rather than regenerating them.
+
 ### 5c. Admissibility and custody of the λ=2.0 row
 
 Terminal checkpoint `qat_stage_end_epoch_0060.pt` sha `fd686915…`, 1,051,959 B; training 3,357.8 s at 56.0 s/epoch,
