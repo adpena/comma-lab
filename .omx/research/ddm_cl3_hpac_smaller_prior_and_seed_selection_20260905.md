@@ -352,7 +352,7 @@ by construction. `J = hpac_container + token_stream`, priced through rc1's coder
 | `lambda_2p0` | 2.0 | 20260716 | **11,886** | **−457** | **114,100** | **+681** | **125,986** | **+224** | **NO** |
 | `lambda_4p0` | 4.0 | — | — | — | — | — | — | — | **NOT FIRED — falsifier fired** |
 | `lambda_1p0_s17` | 1.0 | 20260717 | 12,375 | **+32** | 113,416 | **−3** | **125,791** | **+29** | **NO** |
-| `lambda_1p0_s18` | 1.0 | 20260718 | _encoding_ | | | | | | |
+| `lambda_1p0_s18` | 1.0 | 20260718 | 12,416 | **+73** | _encoding_ | | | | |
 
 (λ=2.0's row is byte-final on the encode; ADMISSIBILITY — second byte-identical encode + receiver decode identity —
 was still running when this table was written and is reported in §5c.)
@@ -409,6 +409,11 @@ Put beside the two facts already measured, this is the informative part:
 | λ 1.0 → 2.0 (smaller-prior rung) | 224 | §5 |
 | λ 1.0 → 0.5 (bigger-prior rung, cl2) | 506 | cl2 |
 | the demand to sub-0.12 | **41,776.8** | §4b |
+
+The third seed's MODEL half is in and points the same way: seed 20260718 packs to **12,416 B, +73 B**. So the three
+seeds' model sections are **12,343 (control) / 12,375 (s17) / 12,416 (s18)** — a 73 B range, and **the control seed
+already holds the smallest model of the three.** The seed lever is not merely small; on the model side the incumbent
+is the winner, so there is nothing to select.
 
 Because the fixed-law noise floor is exactly 0 B, the 29 B is **pure seed effect with no run noise mixed in** — the
 measurement is as clean as it can be. It is also 1,440× smaller than the demand. P6 predicted a min-of-3 landing
