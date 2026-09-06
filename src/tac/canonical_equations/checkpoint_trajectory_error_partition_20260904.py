@@ -162,6 +162,33 @@ MD3_START_LADDER_POOL_JACCARD_RANGE = (0.1175, 0.9909)
 MD3_UNREACHABLE_WRONG_AT_ALL_COMPARABLE_STARTS = 0.8313
 MD3_REACHED_WRONG_AT_ALL_COMPARABLE_STARTS = 0.1978
 
+# Fifth measured instance (ddm_md4, 2026-09-06): the cell md3 sealed and armed and could not fire --
+# ng5's composition byte-identical EXCEPT the STARTING POINT, which is r10's stage-03 LIVE weights
+# (state sha 414b7701...) instead of its EMA shadow.  Same 71-checkpoint cadence, same shadow
+# forward, same DALI authority.  This is the burned cell the md3 anchor's own reactivation criteria
+# named, and it is the FIRST cell in this law whose step-0 wrong POOL differs from the cold
+# control's.  Filled from /Volumes/APDataStore/pact/ddm_md3_different_initialisation/terminal_read
+# /ANALYSIS_seed_20260902_different_init_r10_live_control_native100_dali.json.
+MD4_DIFF_START_TERMINAL_NUMERATOR = 289_125
+MD4_DIFF_START_PERSISTENT_NUMERATOR = 187_575
+MD4_DIFF_START_PERSISTENT_SITES = 10_993
+MD4_DIFF_START_PERSISTENT_TERMINAL_SHARE = 0.6487678339818417
+MD4_DIFF_START_LIVE_PERSISTENT_TERMINAL_SHARE = 0.35237195067062743
+# The step-0 pools DIFFER here (17,151 vs the cold control's 16,553, Jaccard 0.6288), so the
+# within-pool null is the DIFFERING-pool generalisation of md2's:
+#   E[|A cap B|] = |pool_a cap pool_b| * (n_a/|pool_a|) * (n_b/|pool_b|)
+# which reduces to md2's n_a*n_b/|pool| exactly when the pools coincide.
+MD4_DIFF_START_VS_COLD_PERSISTENT_JACCARD = 0.7279606507756338
+MD4_DIFF_START_VS_COLD_PERSISTENT_INTERSECTION_SITES = 9_620
+MD4_DIFF_START_VS_COLD_WITHIN_POOL_CHANCE_JACCARD = 0.35370609735969516
+MD4_DIFF_START_VS_COLD_ATTAINABLE_MAX_JACCARD = 0.8937634765301045
+MD4_DIFF_START_VS_DATA_ORDER_PERSISTENT_JACCARD = 0.7379589344324861
+MD4_DIFF_START_STEP_ZERO_POOL_SITES = 17_151
+MD4_DIFF_START_STEP_ZERO_POOL_JACCARD_VS_COLD = 0.6288420645660159
+# The number that closes md3 section 6's own named gap: of the 10,777 cold-persistent sites that are
+# step-0-wrong at this start, 9,620 stayed persistent through 5,000 updates.
+MD4_STEP_ZERO_TO_TRAJECTORY_TRANSFER = 0.8926417370325693
+
 
 def partition_is_exact(
     class_numerators: Mapping[str, Sequence[int]], total_numerator: Sequence[int]
@@ -595,6 +622,139 @@ def build_checkpoint_trajectory_error_partition_v1() -> CanonicalEquation:
         ),
         empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
     )
+    md4_different_start_anchor = EmpiricalAnchor(
+        anchor_id=(
+            "md4_different_start_r10_live_seed_20260902_shadow_trajectory_partition_20260906"
+        ),
+        measurement_utc="2026-09-06T00:43:25Z",
+        inputs={
+            "cell": (
+                "seed_20260902_different_init_r10_live_control_native100 -- ng5's composition "
+                "byte-identical EXCEPT the STARTING POINT: r10's stage-03 LIVE weights (state sha "
+                "414b7701...) in place of its EMA shadow (991a1cc6...), rel L2 0.0084.  5,000 "
+                "updates; killed by a wall-clock cap at step 4,552 and resumed from "
+                "periodic_004544.pt, with the boundary measured as an ordinary 16-step interval"
+            ),
+            "forward": "EMA shadow",
+            "checkpoints": MD1_CADENCE_CHECKPOINTS,
+            "sites": 6_291_456,
+            "gt_authority": "DALI gt_cache_dali.pt",
+            "churn_flips": DEFAULT_CHURN_FLIPS,
+            "persistent_fraction": DEFAULT_PERSISTENT_FRACTION,
+            "levers_vs_the_burn_default": (
+                "ZERO schedule levers and the same data order; the ONLY difference from ng5 is the "
+                "start.  It is a different STARTING POINT, not a different random INITIALISATION: "
+                "all eight probed starts descend from root init seed 20260827 through the qbt1 "
+                "r1..r10 chain, which is why the scope word stays FORMULATION"
+            ),
+            "tool": (
+                "experiments/ddm_md1_micro_to_macro.py and "
+                "experiments/ddm_md2_persistent_site_overlap.py both UNCHANGED; "
+                "experiments/ddm_md4_terminal_read.py adds only the resume-boundary control, the "
+                "differing-pool within-pool null and the verdict arithmetic"
+            ),
+        },
+        predicted_output={
+            "prior_law": (
+                "four cells on one starting state agreed on the persistent share within 4.0 pp and "
+                "overlapped the cold control's persistent SITES at Jaccard 0.8069 (schedule lever) "
+                "and 0.8536 (data order); no cell had ever started anywhere else, so the law could "
+                "not say whether the sites belong to the DATA or to the START"
+            ),
+            "preregistered_prediction": 0.62,
+            "preregistered_prediction_band": [0.55, 0.65],
+            "preregistered_falsifier": (
+                "Jaccard(persistent_new, persistent_cold) >= 0.70 -> the unreachable sites are "
+                "DATA-anchored; <= 0.45 -> they are START-anchored and an init/start search is a "
+                "live lever"
+            ),
+            "preregistration": (
+                ".omx/research/charters"
+                "/ddm_md3_different_initialisation_cell_20260905.md"
+            ),
+        },
+        empirical_output={
+            "terminal_weighted_wrong_site_numerator": MD4_DIFF_START_TERMINAL_NUMERATOR,
+            "persistent_weighted_wrong_site_numerator": MD4_DIFF_START_PERSISTENT_NUMERATOR,
+            "denominator": MD1_DENOMINATOR,
+            "persistent_terminal_share": MD4_DIFF_START_PERSISTENT_TERMINAL_SHARE,
+            "calibration_gate_integer_residual": MD1_CALIBRATION_GATE_INTEGER_RESIDUAL,
+            "terminal_d_seg_hat": MD4_DIFF_START_TERMINAL_NUMERATOR / MD1_DENOMINATOR,
+            "persistent_floor_d_seg_hat": (
+                MD4_DIFF_START_PERSISTENT_NUMERATOR / MD1_DENOMINATOR
+            ),
+            "persistent_floor_over_target": (
+                MD4_DIFF_START_PERSISTENT_NUMERATOR / MD1_DENOMINATOR / 1.3646784205e-4
+            ),
+            "live_forward_persistent_share": MD4_DIFF_START_LIVE_PERSISTENT_TERMINAL_SHARE,
+            "step_zero_pool_sites": MD4_DIFF_START_STEP_ZERO_POOL_SITES,
+            "step_zero_pool_jaccard_with_cold_control": (
+                MD4_DIFF_START_STEP_ZERO_POOL_JACCARD_VS_COLD
+            ),
+            "persistent_site_overlap_with_cold_control_jaccard": (
+                MD4_DIFF_START_VS_COLD_PERSISTENT_JACCARD
+            ),
+            "persistent_site_overlap_intersection_sites": (
+                MD4_DIFF_START_VS_COLD_PERSISTENT_INTERSECTION_SITES
+            ),
+            "persistent_site_overlap_within_pool_chance_jaccard": (
+                MD4_DIFF_START_VS_COLD_WITHIN_POOL_CHANCE_JACCARD
+            ),
+            "persistent_site_overlap_attainable_max_jaccard": (
+                MD4_DIFF_START_VS_COLD_ATTAINABLE_MAX_JACCARD
+            ),
+            "persistent_site_overlap_with_data_order_control_jaccard": (
+                MD4_DIFF_START_VS_DATA_ORDER_PERSISTENT_JACCARD
+            ),
+            "step_zero_to_trajectory_transfer": MD4_STEP_ZERO_TO_TRAJECTORY_TRANSFER,
+            "prediction_holds": True,
+            "falsifier_fired": True,
+            "reading": (
+                "the pre-registered falsifier FIRED: a start whose step-0 wrong POOL overlaps the "
+                "incumbent's at only Jaccard 0.6288 converges on the SAME unreachable sites at "
+                "0.7280 -- 2.06x the differing-pool within-pool null (0.3537) and 81.4% of the "
+                "attainable maximum (0.8938) -- and 0.7380 against the data-order control.  The "
+                "sites are DATA-anchored at FORMULATION scope.  The share rose to 64.877%, the "
+                "highest of the five instances, and the mechanism matters: against ng5, the "
+                "comparator that is byte-identical except the start, the FLOOR moved -0.17% "
+                "(11.652x the corner against 11.671x) while the optimizer-REACHABLE error moved "
+                "-8.15% and the terminal d_seg -3.13%.  A different start helped only where the "
+                "optimizer was already winning.  It also closes md3 section 6's named gap: of the "
+                "10,777 cold-persistent sites that are step-0-wrong at this start, 89.26% stayed "
+                "persistent, so the free step-0 probe predicts unreachability at nine in ten"
+            ),
+        },
+        residual=abs(MD4_DIFF_START_PERSISTENT_TERMINAL_SHARE - 0.62),
+        source_artifact=".omx/research/ddm_md3_different_initialisation_cell_20260905.md",
+        measurement_method=(
+            "md1's instrument unchanged at the same cadence and authority on the cell's own 313 "
+            "retained checkpoints; the overlap is measured on the persisted per-site class codes.  "
+            "Unlike every earlier anchor the two cells do NOT share a step-0 pool, so the null is "
+            "the differing-pool generalisation of md2's within-pool chance, which reproduces md2's "
+            "published 0.5263033946906265 exactly when the pools coincide.  The two-segment resume "
+            "is a MEASURED non-confound: identical config_identity_sha256 on both sides, monotone "
+            "EMA update counter, and a boundary displacement 0.99954x (shadow) / 1.027x (live) of "
+            "the interior mean"
+        ),
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=(
+                "/Volumes/APDataStore/pact/ddm_md3_different_initialisation/terminal_read"
+                "/ANALYSIS_seed_20260902_different_init_r10_live_control_native100_dali.json"
+            ),
+            reactivation_criteria=(
+                "FAMILY scope needs a genuinely different ROOT INIT SEED, not a farther start: md3 "
+                "measured that starts beyond r8 cannot fire a 0.70 set-overlap gate by arithmetic "
+                "(their pool sizes cap the attainable Jaccard below it), so that experiment needs a "
+                "different falsifier as well as a different seed.  Its honest price is the wall "
+                "clock of the full packet.initialize_params(new_seed) -> r1..r10 chain, which "
+                "nobody has measured end to end; pricing that chain is the prerequisite to any "
+                "init-search charter"
+            ),
+            measurement_axis=_AXIS,
+            hardware_substrate="m5_max_128gib_cpu",
+        ),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    )
     return CanonicalEquation(
         equation_id="checkpoint_trajectory_error_partition_v1",
         name="Checkpoint-trajectory error partition and the optimizer-reachability floor",
@@ -640,9 +800,9 @@ def build_checkpoint_trajectory_error_partition_v1() -> CanonicalEquation:
                 "TOPOLOGICAL sense; this law is persistence in the TRAJECTORY sense",
             ],
             "known_boundary": (
-                "one vehicle, ONE INITIALISATION, four cells (cold control, ng1 warm transition, "
-                "ng5 tau-band x carried-duals burn default, md3 data-order control), two forwards "
-                "each.  The generic statement is DERIVED from the integer identity.  The SIZE of "
+                "one vehicle, ONE ROOT INIT SEED, five cells (cold control, ng1 warm transition, "
+                "ng5 tau-band x carried-duals burn default, md3 data-order control, md4 "
+                "different-START r10-live), two forwards each.  The generic statement is DERIVED from the integer identity.  The SIZE of "
                 "the persistent share has FOUR measured instances agreeing within 1.35 pp on the "
                 "shadow forward once the outlier is named (62.011% cold, 62.954% ng5, 61.606% "
                 "md3 data-order; 59.009% warm is the low leg), and the persistent SITES overlap "
@@ -659,8 +819,21 @@ def build_checkpoint_trajectory_error_partition_v1() -> CanonicalEquation:
                 "the step-0 wrong pool moves (Jaccard 0.9909 -> 0.1175 against the incumbent), so "
                 "the pool is NOT fixed -- yet 83.13% of the incumbent's persistent sites are wrong "
                 "at all four comparable-quality starts against 19.78% of the sites the optimizer "
-                "did reach.  The trajectory half of that statement still needs a burned cell from "
-                "a different start."
+                "did reach.  The trajectory half of that statement is now MEASURED (ddm_md4): the "
+                "burned r10-live start, whose step-0 pool overlaps the cold control's at only "
+                "Jaccard 0.6288, converges on the same PERSISTENT sites at Jaccard 0.7280 -- "
+                "2.06x the differing-pool within-pool null and 81.4% of the attainable maximum -- "
+                "and 89.26% of the cold-persistent sites that are step-0-wrong at that start "
+                "stayed persistent through 5,000 updates.  Its floor is 11.652x the sub-0.12 "
+                "corner against ng5's 11.671x, a move of -0.17% under the strongest start lever "
+                "available, so START-invariance of the unreachable set is MEASURED alongside "
+                "schedule- and data-order-invariance.  What remains UNMEASURED is init-invariance "
+                "in the ROOT-SEED sense: all five cells and all eight probed starts descend from "
+                "root init seed 20260827, and md3 established that varying it is not cheaply "
+                "purchasable.  Note also that a farther start cannot simply be substituted -- md3 "
+                "measured that rungs beyond r8 cannot fire a 0.70 set-overlap gate by arithmetic, "
+                "so a FAMILY-scope experiment needs a different falsifier as well as a different "
+                "seed."
             ),
         },
         units_in={
@@ -673,7 +846,13 @@ def build_checkpoint_trajectory_error_partition_v1() -> CanonicalEquation:
             "optimizer_reachable_share": "dimensionless_fraction",
             "persistent_share": "dimensionless_fraction",
         },
-        empirical_anchors=(md1_anchor, warm_anchor, ng5_anchor, data_order_anchor),
+        empirical_anchors=(
+            md1_anchor,
+            warm_anchor,
+            ng5_anchor,
+            data_order_anchor,
+            md4_different_start_anchor,
+        ),
         predicted_vs_empirical_residual={
             "md1_qbr1_cold_control_seed_20260902_shadow_trajectory_partition_20260904": (
                 abs(MD1_PERSISTENT_TERMINAL_SHARE - MD1_PREREGISTERED_PREDICTION)
@@ -685,6 +864,13 @@ def build_checkpoint_trajectory_error_partition_v1() -> CanonicalEquation:
                 "md2_ng5_tau_band_x_continuous_objective_seed_20260902_shadow"
                 "_trajectory_partition_20260905"
             ): abs(MD2_NG5_PERSISTENT_TERMINAL_SHARE - 0.475),
+            (
+                "md3_data_order_control_seed_20260903_shadow_trajectory_partition_20260905"
+            ): abs(MD3_DATA_ORDER_PERSISTENT_TERMINAL_SHARE - 0.62),
+            (
+                "md4_different_start_r10_live_seed_20260902_shadow"
+                "_trajectory_partition_20260906"
+            ): abs(MD4_DIFF_START_PERSISTENT_TERMINAL_SHARE - 0.62),
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,

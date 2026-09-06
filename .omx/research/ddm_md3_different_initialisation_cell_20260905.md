@@ -459,3 +459,234 @@ each with two review-gate passes, ruff clean.
    than fixed.
 
 `fs2 S 0.14784474152757654 @ 180,023 B [contest-CUDA T4 n600]`
+
+---
+
+# Terminal read (md4)
+
+**Arm:** ddm_md4 · **UTC:** 2026-09-06T00:45Z · **Tokens:** `[no-triality] [p0-ledger-ok]`
+**verdict_scope:** `[macOS-CPU advisory . site sets reconstructed by ddm_md1_micro_to_macro from the cell's own retained 16-step checkpoints . frozen CPU-torch SegNet+PoseNet . QBF1-born vehicle . n32 sealed stratified selection . ONE burned cell from ONE different STARTING POINT, same root init seed 20260827 . NON-PROMOTABLE . no score claim . 0 Metal / 0 Modal / 0 contest eval by this arm]`
+**Append-only.** Nothing above this line is rewritten. This section reports what the fired cell measured.
+
+## VERDICT: **DATA-ANCHORED** — the pre-registered falsifier FIRED
+
+`J(persistent_different-start, persistent_cold) = **0.7279606507756338**` on the EMA shadow / DALI
+authority, against the charter's `J >= 0.70 -> DATA-ANCHORED`. PyAV reproduces at **0.7242097147262915**.
+MEASURED. The `<= 0.45` INIT-ANCHORED branch is not close: the measured value clears it by 0.28.
+
+md3 §6 wrote its expectation **before** the burn — *"given 91.01% containment and a 0.8082 ceiling, I
+expect `J >= 0.70` and the falsifier to FIRE"*. That prediction is now MEASURED CORRECT. md3's §0-§5
+formulation-scope verdict is upgraded from *"on the evidence this arm could buy for $0"* to a verdict
+carrying its own pre-registered burned cell. The scope word stays **FORMULATION**, not FAMILY: see §6.
+
+## The md1 table — `seed_20260902_different_init_r10_live_control_native100`, EMA shadow, DALI
+
+| class | sites | terminal wrong | terminal d_seg contribution | share of terminal error |
+|---|---:|---:|---:|---:|
+| ALWAYS_CORRECT | 6,261,145 | 0 | 0 | 0.000% |
+| CHURN | 9,756 | 3,557 | 0.000562032 | 22.931% |
+| **PERSISTENT** | **10,993** | **10,468** | **0.0015900929768880208** | **64.877%** |
+| NEW_PERSISTENT | 1,294 | 1,294 | 0.000204086 | 8.327% |
+| TRANSIENT_BORN | 6,130 | 0 | 0 | 0.000% |
+| HEALED | 2,138 | 600 | 9.47316e-05 | 3.865% |
+
+Integer calibration gate `max_t |Σ classes − total| = **0**` at every checkpoint, in integers, on both
+forwards and both lineages. Terminal `d_seg_hat` **0.0024509429931640625**; persistent floor
+**11.652×** the sub-0.12 accuracy corner `1.3646784205e-4`. **Birth:** over-paint birth step
+`Lane 32` (shadow) / `Lane 16, Movable 16` (live); excursion peak at step **1728** (shadow) / **16**
+(live). **Lane:** lane-touching share of terminal wrong **64.387%**, GT=Lane enrichment **54.578×**.
+PyAV: PERSISTENT 10,742 sites, share **64.568%**, floor 0.0015501658121744792.
+
+Live forward, DALI: PERSISTENT 6,682 sites, share **35.237%**, terminal `d_seg_hat` 0.002825164794921875.
+That share sits inside md2's three-cell live band (35.3–35.8%) and **outside** md3 §5's data-order
+outlier (40.562%) — so the live forward's sensitivity that md3 found is to DATA ORDER, not to the START.
+
+### The five instances of the persistent share (shadow, DALI)
+
+| cell | lever vs the cold control | PERSISTENT share | floor / corner |
+|---|---|---:|---:|
+| cold control seed_20260902 | — | 62.011% | 12.753× |
+| ng1 warm transition | AdamW moments carried in | 59.009% | — |
+| ng5 τ-band × carried duals | two schedule levers | 62.954% | 11.671× |
+| md3 data-order control | pair order only | 61.606% | 12.734× |
+| **md4 different START (this cell)** | **r10 live weights instead of r10 EMA shadow** | **64.877%** | **11.652×** |
+
+## Both Jaccards, with the null the charter asked for
+
+The pools DIFFER here, so the charter required the pools' own Jaccard first and a within-pool null.
+**Step-0 pools: 17,151 (new) vs 16,553 (cold), intersection 13,012, `J_pool = 0.6288`** (MEASURED by
+md3 §2 and unchanged). The within-pool null generalises md2's shared-pool null to differing pools —
+`E[|A∩B|] = |pool_a ∩ pool_b| · (n_a/|pool_a|) · (n_b/|pool_b|)`, which reduces to md2's
+`n_a·n_b/|pool|` exactly when the pools coincide (the general form reproduces md2's published
+0.5263033946906265 to 1e-15; regression-tested).
+
+| comparison | forward | measured J | within-pool null | measured / null | intersection |
+|---|---|---:|---:|---:|---:|
+| **vs COLD control** | shadow | **0.7279606507756338** | 0.3537 | **2.058×** | 9,620 |
+| vs COLD control | live | 0.7917780323278605 | 0.1917 | 4.129× | 6,221 |
+| **vs DATA-ORDER control** | shadow | **0.7379589344324861** | 0.3524 | **2.094×** | — |
+| vs DATA-ORDER control | live | 0.7960426179604262 | 0.1929 | 4.126× | — |
+
+Containment: **87.51%** of this cell's persistent sites are also cold-persistent; **81.24%** of the
+cold cell's are also persistent here.
+
+**Against the ceiling.** md3's `0.8082` is RE-DERIVED here from the measured step-0 pools rather than
+copied: `10,777 / (11,842 + 12,269 − 10,777) = **0.8082345882705865**`, matching to 4 dp — but that
+ceiling assumed the new cell's persistent set would be the same *fraction of its pool* as the cold
+cell's (71.54%). It is not: **10,993/17,151 = 64.10%**. With the now-measured size the true ceiling is
+**0.8937634765301045**. So the measured 0.7280 is **90.07%** of the pre-registered ceiling and
+**81.45%** of the real one. The gate was fireable with genuine headroom in both readings — it did not
+fire on size.
+
+## The number that closes md3's own named gap
+
+md3 §6 stated the gap precisely: *"A site wrong at step 0 under start X is not thereby unreachable
+from X."* It is now measured. Of the **10,777** cold-persistent sites that are step-0-wrong at the new
+start, **9,620 stayed persistent through 5,000 updates** — a step-0 → trajectory transfer rate of
+**89.26%**. The step-0 probe was not merely correlated with unreachability; it predicted it at
+nine-in-ten.
+
+## The mechanism behind the share, stated so it is not misread
+
+64.877% is the highest of the five instances and sits at the very top edge of the pre-registered
+[0.55, 0.65] band. **The floor did not rise — the reachable part shrank.** Against ng5, the comparator
+that is byte-identical except the start:
+
+* persistent floor **0.0015900929768880208** vs ng5's **0.0015927632649739582** → **−0.17%**;
+* optimizer-reachable error **0.00086085** vs ng5's **0.00093727** → **−8.15%**;
+* terminal `d_seg_hat` **0.0024509** vs ng5's **0.0025300** → **−3.13%**.
+
+So the different start bought a real but small terminal improvement, took it **entirely out of the
+reachable class**, and left the floor within 0.17% — 11.652× the corner against 11.671×. A share that
+went UP is here evidence that the start helped only where the optimizer was already winning.
+
+## What this does and does not answer
+
+**Answers.** The trajectory half of md3 §3 is now measured, not inferred: a burned cell from a
+genuinely different starting point — one whose step-0 wrong pool overlaps the incumbent's at only
+J 0.6288 — converges on the *same* unreachable sites at J 0.7280, 2.06× the within-pool null and 81%
+of the attainable ceiling, and leaves a floor 0.17% from the incumbent's. The two nuisance variables
+md1–md3 could vary (schedule, data order) and this third one (starting point) all fail to move the
+unreachable set.
+
+**Does not answer — the scope word is FORMULATION, and here is exactly why.** All four cells and all
+eight probed starts descend from **root init seed 20260827** through the qbt1 r1…r10 chain. This cell
+varies the STARTING POINT (r10's live weights instead of r10's EMA shadow, rel L2 0.0084); it does not
+vary the random INITIALISATION, which md3 §0 established is not purchasable without re-running that
+whole chain. A start 0.84% away in weight space is a weak lever for this question even though its
+step-0 *pool* moved a lot. Calling the born accuracy corner closed at **FAMILY** scope would need
+either a genuinely different root init seed or a start far enough out that its pool Jaccard approaches
+the r7/r6 regime — and md3 §4 showed those rungs cannot fire a 0.70 gate by arithmetic, so that
+experiment needs a *different* falsifier, not a farther rung.
+
+**The n32 caveat, unchanged from md1/md2/md3.** All 32 pairs of the sealed no2 stratified
+Horvitz–Thompson selection, integer weights `(15.0,)*24 + (30.0,)*8`. n32 → n600 transfer is untested
+on this vehicle; the selection is stratified across the video, not a contiguous prefix, so `[[m88]]`
+prefix bias is not the applicable caveat.
+
+## The resume is a measured non-confound, not an assumed one
+
+The cell was killed by a wall-clock cap at step 4,552 and resumed from `periodic_004544.pt`, so the
+partition is read off checkpoints that straddle a restart. MEASURED
+(`terminal_read/RESUME_BOUNDARY_CONTROL.json`):
+
+* `config_identity_sha256` **identical** on both sides (`89887c6d9e8a8ffb…`), all nine checkpoints
+  4,480…4,608;
+* EMA update counter monotone 4,480…4,608 — the replayed steps 4,545–4,552 are not double-counted;
+* EMA-shadow displacement across the boundary **1.215436e-04** against an interior range of
+  1.2136–1.2185e-04 → ratio **0.99954**;
+* live-weight displacement **1.049793e-03**, sitting on the window's own upward trend
+  (0.893–0.962e-03 before, 1.107–1.163e-03 after) → ratio **1.027** to the pooled interior mean;
+* `history.jsonl` monotone 1…5,000 with exactly one row per step; `RESULT.json` `complete: true`,
+  `completed_steps: 5000`, `metal_invocations: 1`.
+
+**Sensitivity, stated honestly:** the EMA shadow at decay 0.99908 attenuates a live discontinuity by
+~10³, so the shadow ratio alone is a weak detector. The live ratio is the sensitive channel — a lost
+optimizer moment would show as a large boundary step, and 1.027× is ordinary. This is a control, not a
+bit-identity proof; bit identity would require re-running the killed segment.
+
+Also verified: the config that fired differs from md3's authorized config **only** in
+`metal_lane.claim_id/claimed`, `scorer_lane.claim_id/claimed` and (for the resume config) `resume_from`.
+Every physics field — `initial_state` sha `414b7701…`, τ band, `initial_lambdas`, schedule — is
+unchanged. The authorized-config sha md3 §4 recorded (`1474f9de…`, 13,588 B) is now the file the driver
+tombstoned as `.unbound_by_driver.20260905T154454Z.json`; the config that actually fired is
+`fb3773f57b2c6813…` (13,649 B) and the resume config is `d2e62e05e640bc29…`.
+
+**Wall clock, for custody:** segment 1 ran at ~11 min per 16 steps under cl2's Metal contention;
+segment 2 at ~35 s per 16 steps with the Metal free — a 19× starvation, visible in the checkpoint
+mtimes and in nothing else. The burn was starved, never broken.
+
+## An apparatus finding, recorded because it is a vacuity class
+
+`tools/review_tracker.py mark-file` does **not** rescan the file. A function added to an
+already-scanned module is therefore marked **vacuously** — this arm's module reported "11 entities
+reviewed" twice while the new function was invisible to the tracker, and only after
+`review_tracker.py scan` did it report 12. A reader who takes the mark-file receipt as coverage gets a
+PASS whose denominator excluded the new code (`[[m50]]`: VACUITY==PASS — report the denominator). The
+cure at this arm's scope was to run `scan` before marking; a `mark-file`-implies-rescan change is
+NAMED as a follow-on and NOT built here.
+
+## Priced next step
+
+The charter's §7 branch is now selected: **the falsifier fired**, so *"no further start-variation is
+worth buying"* on this generator form, and gs4 §5(b) is answered at FORMULATION scope. The route to the
+accuracy corner needs a different GENERATOR (gc1/gf2 territory), not a different start — the floor sat
+at 11.65–12.75× the corner across all five cells and moved by 0.17% under the strongest start lever
+available.
+
+Two things stay owed and neither is this arm's to spend:
+
+1. **FAMILY scope needs a different root init seed**, whose honest price is the wall clock of the full
+   `initialize_params(new_seed)` → r1…r10 chain (r10 stage 03 alone is 10,010 updates). Nobody has
+   measured that chain end to end; **pricing it is the prerequisite**, not the run (`[[m118]]`).
+2. **The subset-constrained Jaccard ceiling** that md3 §8 named as owed is now used a second time, by a
+   second arm, and it changed a reading again (the pre-registered 0.8082 was conservative by 0.086
+   because it assumed a persistent-share-of-pool that the burn did not honour). It now has an
+   independent consumer and is a live registration candidate.
+
+**Free and already persisted:** every site set behind the table above is retained. The 9,620 sites that
+are persistent in BOTH the incumbent and a different start are an enumerated object any arm can read
+rather than re-derive.
+
+## Equations leg (`tac.canonical_equations`)
+
+A **FIFTH** empirical anchor is appended to `checkpoint_trajectory_error_partition_v1`:
+`md4_different_start_r10_live_seed_20260902_shadow_trajectory_partition_20260906`. It is the cell the
+law's own `known_boundary` named as owed — *"The trajectory half of that statement still needs a burned
+cell from a different start"* — and that clause is rewritten to MEASURED. The anchor carries terminal
+numerator 289,125, persistent numerator 187,575, share 0.6487678339818417, floor 11.652× the corner,
+live share 0.3523719506706274, `J` 0.7279606507756338 against the cold control and 0.7379589344324861
+against the data-order control, both with their within-pool nulls, and the 89.26% step-0 → trajectory
+transfer rate. Its pre-registered band was [0.55, 0.65]; measured 64.877%; residual 0.0288 against the
+0.62 prior. Every value is read from the receipt, none retyped.
+
+**Also consumed, unchanged:** `scalar_top1_top2_margin_is_exact_distance_to_flip_v1`. No refinement
+claimed.
+
+**Not registered, deliberately.** The subset-constrained Jaccard ceiling (§ above) — now twice-used and
+consumer-independent, so its registration blocker is gone, but registering a law inside the arm that
+harvests it, on the same day, repeats exactly what md3 declined to do. Named as owed, with the note
+that the blocker md3 cited no longer applies.
+
+## Custody
+
+`$0`. CPU only, `--threads 4`, `nice 10`. **0 Metal, 0 Modal, 0 contest eval by this arm.**
+`upstream/` untouched. No `/tmp` path in any artifact. Instruments
+`experiments/ddm_md1_micro_to_macro.py` and `experiments/ddm_md2_persistent_site_overlap.py`
+**unmodified**; the new module is `experiments/ddm_md4_terminal_read.py` (+18 tests, ruff clean, two
+review-gate passes after a rescan, mutation-tested).
+
+Store `/Volumes/APDataStore/pact/ddm_md3_different_initialisation/terminal_read/`:
+
+| artifact | what it holds |
+|---|---|
+| `sweep_rows_seed_20260902_different_init_r10_live_control_native100.jsonl` | 141 forwards over the 71-checkpoint cadence |
+| `payloads/…/{shadow,live}_step_*.npz` | the retained per-checkpoint argmax + δ_R band — every row above derives from these |
+| `ANALYSIS_…_{dali,pyav}.json` | md1's partition, both lineages, both forwards |
+| `site_classes_…npz`, `excursion_…npz` | the per-site class codes and trajectory codes |
+| `OVERLAP_…_vs_cold_control_seed_20260902_{dali,pyav}.json` | the pre-registered Jaccard |
+| `OVERLAP_…_vs_data_order_control_seed_20260903_{dali,pyav}.json` | the second comparator |
+| `TERMINAL_READ_{dali,pyav}.json` | the verdict arithmetic, nulls, and re-derived ceiling |
+| `RESUME_BOUNDARY_CONTROL.json` | the two-segment resume control |
+| `TABLES_{dali,pyav}.md` | md1's rendered tables |
+| `md4_terminal_read_driver.sh`, `launch/` | the exact recipe and the launch manifest + safe_run receipt |

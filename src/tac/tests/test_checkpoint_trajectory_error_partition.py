@@ -14,6 +14,7 @@ from tac.canonical_equations.checkpoint_trajectory_error_partition_20260904 impo
     DEFAULT_CHURN_FLIPS,
     DEFAULT_PERSISTENT_FRACTION,
     ERROR_CLASSES,
+    MD2_STEP_ZERO_WRONG_POOL_SITES,
     TRAJECTORY_CLASSES,
     build_checkpoint_trajectory_error_partition_v1,
     floor_clears_target,
@@ -126,15 +127,17 @@ def test_floor_clears_target_refuses_a_nonpositive_target() -> None:
 # ---------------------------------------------------------------------------
 # the equation record
 # ---------------------------------------------------------------------------
-def test_equation_builds_with_three_anchors_and_nonnegative_residuals() -> None:
+def test_equation_builds_with_five_anchors_and_nonnegative_residuals() -> None:
     eq = build_checkpoint_trajectory_error_partition_v1()
     assert eq.equation_id == "checkpoint_trajectory_error_partition_v1"
-    assert len(eq.empirical_anchors) == 3
+    assert len(eq.empirical_anchors) == 5
     assert all(a.residual >= 0.0 for a in eq.empirical_anchors)
     ids = [a.anchor_id for a in eq.empirical_anchors]
     assert any("cold_control" in i for i in ids)
     assert any("warm_transition" in i for i in ids)
     assert any("ng5_tau_band" in i for i in ids)
+    assert any("data_order_control" in i for i in ids)
+    assert any("different_start" in i for i in ids)
     # every anchor is addressable in the residual map, so no anchor can be added without one
     assert set(eq.predicted_vs_empirical_residual) == set(ids)
 
@@ -163,13 +166,18 @@ def test_ng5_anchor_records_a_missed_prediction_and_the_within_pool_null() -> No
     )
 
 
-def test_known_boundary_records_the_shared_initialisation_limit() -> None:
-    """The three cells share one init sha, so init-invariance is NOT measured -- say so."""
+def test_known_boundary_records_the_shared_root_init_seed_limit() -> None:
+    """Every cell descends from one root init seed, so init-invariance is NOT measured -- say so.
+
+    ddm_md4 burned a cell from a different STARTING POINT, which is why the boundary no longer
+    claims the starts are shared; what it must still refuse to claim is ROOT-SEED invariance.
+    """
 
     eq = build_checkpoint_trajectory_error_partition_v1()
     boundary = eq.domain_of_validity["known_boundary"].lower()
-    assert "one initialisation" in boundary
-    assert "init-invariance is not" in boundary
+    assert "one root init seed" in boundary
+    assert "init-invariance" in boundary
+    assert "unmeasured" in boundary
     ng5 = next(a for a in eq.empirical_anchors if "ng5_tau_band" in a.anchor_id)
     # build_provenance_for_research_sidecar carries reactivation_criteria in rejection_reason
     assert "different initialisation" in ng5.provenance.rejection_reason.lower()
@@ -288,3 +296,65 @@ def test_floor_does_not_clear_the_sub_012_target_on_the_measured_instance() -> N
         target_distortion=out["sub_012_target_d_seg"],
     )
     assert out["persistent_floor_over_target"] > 12.0
+
+
+# ---------------------------------------------------------------------------
+# ddm_md4: the burned different-START cell
+# ---------------------------------------------------------------------------
+def _md4_anchor():
+    eq = build_checkpoint_trajectory_error_partition_v1()
+    return next(a for a in eq.empirical_anchors if "different_start" in a.anchor_id)
+
+
+def test_md4_anchor_records_the_falsifier_as_FIRED_above_its_pre_registered_bar() -> None:
+    """The whole point of the cell: the 0.70 gate had to be able to fire, and it did."""
+
+    out = _md4_anchor().empirical_output
+    assert out["falsifier_fired"] is True
+    assert out["persistent_site_overlap_with_cold_control_jaccard"] >= 0.70
+
+
+def test_md4_jaccard_sits_strictly_between_its_null_and_its_attainable_maximum() -> None:
+    """A set-overlap number is meaningless without both bounds; a gate pinned at either is fake."""
+
+    out = _md4_anchor().empirical_output
+    assert (
+        out["persistent_site_overlap_within_pool_chance_jaccard"]
+        < out["persistent_site_overlap_with_cold_control_jaccard"]
+        < out["persistent_site_overlap_attainable_max_jaccard"]
+    )
+
+
+def test_md4_is_the_first_anchor_whose_step_zero_pool_differs_from_the_cold_control() -> None:
+    """Earlier cells shared the pool by construction; this one does not, and that is the lever."""
+
+    out = _md4_anchor().empirical_output
+    assert out["step_zero_pool_jaccard_with_cold_control"] < 0.70
+    assert out["step_zero_pool_sites"] != MD2_STEP_ZERO_WRONG_POOL_SITES
+
+
+def test_md4_floor_moves_far_less_than_the_reachable_error_it_shares_a_cell_with() -> None:
+    """The share rose because the REACHABLE part shrank, not because the floor grew."""
+
+    md4 = _md4_anchor().empirical_output
+    ng5 = next(
+        a
+        for a in build_checkpoint_trajectory_error_partition_v1().empirical_anchors
+        if "ng5_tau_band" in a.anchor_id
+    ).empirical_output
+    floor_move = abs(md4["persistent_floor_d_seg_hat"] / ng5["persistent_floor_d_seg_hat"] - 1.0)
+    md4_reach = md4["terminal_d_seg_hat"] - md4["persistent_floor_d_seg_hat"]
+    ng5_reach = ng5["terminal_d_seg_hat"] - ng5["persistent_floor_d_seg_hat"]
+    reach_move = abs(md4_reach / ng5_reach - 1.0)
+    assert floor_move < 0.01
+    assert reach_move > 0.05
+    assert reach_move > 10 * floor_move
+    # and the share still went UP, which is only coherent with the two facts above
+    assert md4["persistent_terminal_share"] > ng5["persistent_terminal_share"]
+
+
+def test_md4_records_the_step_zero_to_trajectory_transfer_rate() -> None:
+    """md3 section 6 named the gap: step-0-wrong is not step-0-UNREACHABLE. This closes it."""
+
+    out = _md4_anchor().empirical_output
+    assert 0.85 < out["step_zero_to_trajectory_transfer"] < 0.95
