@@ -654,9 +654,46 @@ under it. Fixed by separating `tokens_changed_this_pass` from `tokens_changed_vs
 and naming the metric `break_even_bits_per_changed_token_this_pass`; both passes re-merged
 from their shard receipts.
 
+## 11. Pass-3 successor — exact bytes against the LIVE row
+
+The control for this round did not need re-deriving: the live pointer's token stream IS
+the pass-2a encode output, already on disk with its per-frame ledger. The control that
+licenses this encoder at all — the ORIGINAL unedited field re-encoding byte-identical to
+the shipped 113,419 B stream — was passed in the first round and still stands.
+
+| quantity | MEASURED |
+|---|---|
+| live row's stream (banked control) | 119,497 B, sha `c97c78c3…` |
+| pass-3 field, encode | **120,385 B**, sha `4c13538145f916d6…` |
+| pass-3 field, twin encode | **120,385 B, sha `4c13538145f916d6…`, identical `code_bits`** |
+| **stream delta vs the live row** | **+888 B** |
+| tokens changed this pass | 1,339 |
+| **bits per changed token (marginal)** | **5.3055** |
+| break-even for this pass | 11.006 |
+| **margin** | **52%** |
+
+The marginal cost FELL from pass 2a's 6.2307 to **5.3055** bits per changed token. That is
+the opposite of the intuition that later edits get dearer, and it has a mechanism: the
+context model has already absorbed pass 2a's neighbourhood structure, so a pass-3 token
+landing beside those edits is a less surprising symbol than the same token would have been
+on the untouched field. The actuator gets cheaper as it goes, not more expensive.
+
+| leg | ΔS |
+|---|---|
+| seg (1,447 cells repaired) | **−0.00122664** |
+| rate (+888 B) | **+0.00059128** |
+| **net before pose** | **−0.00063535** |
+
+That is 32× the 2e-05 bar before the pose leg is composed.
+
+Stale pose damage this round is **56.18×** (3.032640e-04 against the live row's own
+5.398060e-06), with 433/600 pairs damaged — far milder than pass 2a's 430× over 597 pairs,
+because only 1,339 tokens moved rather than 7,804. The re-solve is still mandatory: 0.0477 S
+of un-resolved pose damage would swamp a 0.00064 S gain by 75×.
+
 ---
 
-*(Section 11+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
+*(Section 12+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
 appended as each lands. Nothing is written here before it is measured.)*
 
 ---
