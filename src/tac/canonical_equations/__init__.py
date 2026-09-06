@@ -79,6 +79,12 @@ from tac.canonical_equations.flip_location_component_address_floor_20260905 impo
     component_representation_can_pay,
     component_representation_headroom_bytes,
 )
+from tac.canonical_equations.coder_strength_substitutes_for_capacity_20260906 import (
+    build_coder_strength_substitutes_for_capacity_v1,
+    coder_capture_fraction,
+    substitution_holds,
+    transfer_capacity_delta,
+)
 from tac.canonical_equations.hpac_prior_capacity_slope_20260905 import (
     build_hpac_prior_capacity_slope_v1,
     control_reproduces_shipped_family,
@@ -555,7 +561,11 @@ __all__ = [
     "AWAY_TRUST_VS_ACTUAL_PRICE_BAND",
     "bias_amplification",
     "build_annulus_restricted_prefix_bias_detector_v1",
+    "build_coder_strength_substitutes_for_capacity_v1",
     "build_hpac_prior_capacity_slope_v1",
+    "coder_capture_fraction",
+    "substitution_holds",
+    "transfer_capacity_delta",
     "build_motion_compensated_previous_plane_alignment_gate_v1",
     "carried_motion_breakeven_open",
     "control_reproduces_shipped_family",
