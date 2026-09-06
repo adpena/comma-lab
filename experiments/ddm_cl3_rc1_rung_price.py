@@ -268,9 +268,11 @@ def stage_price(args: argparse.Namespace) -> dict[str, Any]:
         if repeat.is_file():
             encodes.append({"stream": cl2.file_fact(repeat), "reused_from_previous_attempt": True})
         cl2.progress({"stage": "encode", "rung": rung, "reused": len(encodes)})
-    for pass_index, tag in enumerate((f"cl3_{rung}", f"cl3_{rung}_repeat")):
-        if encodes:
-            break
+    # NOTE the guard is on the FLAG, not on ``encodes`` being non-empty.  Guarding on ``encodes``
+    # looks equivalent and is not: on a fresh run the list becomes non-empty after pass 0, so the
+    # SECOND encode never runs and the row silently loses its determinism proof.  That regression
+    # shipped once (ddm_cl3 lambda_1p0_s18, first attempt) -- it is why this comment exists.
+    for pass_index, tag in enumerate(() if args.reuse_encodes else (f"cl3_{rung}", f"cl3_{rung}_repeat")):
         if pass_index == 1 and args.skip_repeat:
             break
         encodes.append(
