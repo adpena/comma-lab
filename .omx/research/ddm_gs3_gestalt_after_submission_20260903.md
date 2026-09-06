@@ -946,3 +946,16 @@ on both trees — measured), **J +224 B vs the live 125,762 B → NO**. P3 (−3
 The transferable law (`coder_strength_substitutes_for_capacity_v1`): the same weight change is worth 69.3 % as much under the strong coder — a rung that was
 break-even on Brotli (+22 B) is a clear loss on the object that ships (+224 B); cl2's Brotli-priced ladder deltas need a ~31 % model-side discount, and landing
 coder work first REMOVES headroom from downstream capacity levers. Seed selection at λ=1.0 (s17/s18) still in flight — a different question.
+
+## Addendum 12 (2026-09-06 01:05Z) — md4: the born vehicle's unreachable error set is DATA-ANCHORED (measured on the burned different-start cell)
+
+md3's cell (5,000 steps, resumed once — resume measured as a non-confound) partitioned with md1's instrument unchanged: PERSISTENT **64.877 %** of terminal
+error (10,993 sites; floor 11.652× the sub-0.12 corner; Lane 64.4 % of terminal wrong, GT=Lane enrichment 54.6×). **Jaccard vs cold 0.7280, vs data-order
+0.7380 (shadow; live 0.79/0.80) — the pre-registered ≥ 0.70 bar cleared by 0.28; within-pool null 0.35 → 2.06× chance; 81.4 % of the corrected ceiling 0.894.**
+A different start moved the FLOOR −0.17 % and the reachable error −8.15 %: it helps only where the optimizer already wins; 89.26 % of cold-persistent sites
+step-0-wrong at this start stayed persistent through 5,000 updates (the free step-0 probe predicts unreachability at 9 in 10). **verdict_scope FORMULATION**
+(starting point varied at rel-L2 0.0084 within root seed 20260827; FAMILY needs a different root seed and a different falsifier). 5th anchor on
+`checkpoint_trajectory_error_partition_v1`; commits 196630263 / 1f4ca95d4 / 7ad16239b; $0, CPU. Consequence for the map: the born vehicle's accuracy corner
+stays closed for this generator form — sub-0.12 on the born object needs a mechanism that changes WHICH sites are reachable (a different generator form), not a
+different start, schedule, or seed. Owed (md4, not built): `review_tracker mark-file` rescan; a red test elsewhere (`test_resize_exploit_flip_fix_frontier.py`
+asserts 2 anchors against 3 — the anchor-added-without-updating-the-count class).
