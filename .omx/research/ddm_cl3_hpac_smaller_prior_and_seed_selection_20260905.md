@@ -341,16 +341,68 @@ band by 259 B; on the rc1 basis −457 B, also outside. The λ=2.0 rate multipli
 single measured secant implied. Note the container winner also moved, q11 → q10, so even the Brotli race is not a
 fixed transform across rungs.
 
-## 5. The ladder — NOT MEASURED (state as of 2026-09-05T16:35Z)
+## 5. The ladder — MEASURED
 
-**No rung has been trained, priced or verified.** There is no ladder table, no residual against P1–P7, and no seal.
-Every λ=2.0 launch was stopped in its first 8 minutes (§3), and the arm is now held OFF Metal by MAIN's rule until
-md3's cell finishes (~19:00Z). Saying this plainly: the charter's deliverable is unmet so far. The apparatus, the
-predictions and five measured setup findings are real work, but they are MEANS — the END is a ladder row, and there
-is none.
+Axis `[macOS-CPU advisory / scorer-free EXACT byte measurement]`; field held bit-identical, so d_seg / d_pose are held
+by construction. `J = hpac_container + token_stream`, priced through rc1's coder on the LIVE pc1 tree.
 
-The one number this arm can already state about the ladder is the bar, re-derived at the live pointer: a cl3 rung must
-land **archive < 179,982 B (joint < 126,885 B)** to move the pointer, and **≤ 138,205.2 B** to reach the rate corner.
+| rung | λ | seed | model (rc1) B | Δ model | stream B | Δ stream | **J** | **Δ J vs live 125,762** | pays? |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|:--:|
+| **live pointer** (= cl2 λ=1.0 control, rc1-recoded) | 1.0 | 20260716 | 12,343 | — | 113,419 | — | **125,762** | 0 | — |
+| `lambda_2p0` | 2.0 | 20260716 | **11,886** | **−457** | **114,100** | **+681** | **125,986** | **+224** | **NO** |
+| `lambda_4p0` | 4.0 | — | — | — | — | — | — | — | **NOT FIRED — falsifier fired** |
+| `lambda_1p0_s17` | 1.0 | 20260717 | _in flight_ | | | | | | |
+| `lambda_1p0_s18` | 1.0 | 20260718 | _queued_ | | | | | | |
+
+(λ=2.0's row is byte-final on the encode; ADMISSIBILITY — second byte-identical encode + receiver decode identity —
+was still running when this table was written and is reported in §5c.)
+
+### 5a. P3 — FALSIFIED. The whole-axis falsifier FIRED.
+
+P3 predicted λ=2.0 nets **−350…−50 B** against the control. **MEASURED +224 B** — residual 274…574 B, wrong side of
+zero. The pre-registered whole-axis falsifier ("if λ=2.0 nets ≥ 0 B, the capacity axis is CLOSED IN BOTH DIRECTIONS on
+this vehicle") **FIRED**, so **λ=4.0 was NOT run** and is recorded as not-run-because-falsified, not as an untested
+rung. With cl2's +506 B on the bigger side and cl3's +224 B on the smaller side, the rate multiplier is a **local
+optimum at λ = 1.0** on this vehicle: both neighbours cost bytes.
+
+`verdict_scope`: **FORMULATION** — fixed C64/P64/delta2/D8 topology, the 60-epoch warm-start law from the ep-634 EMA
+init, multiplier ∈ {0.5, 1, 2} priced on the rc1-coded object. The mechanism claim "capacity is affordable only as
+learned weights" is untouched; what is closed is that **the trainer's rate multiplier is the coordinate that buys it.**
+
+### 5b. THE HEADLINE: improving the coder CLOSED the capacity axis
+
+The same λ=2.0 weights, priced on the two containers:
+
+| basis | Δ model | Δ stream | **net J** | reading |
+|---|---:|---:|---:|---|
+| cl2's Brotli (the old object) | −659 | +681 | **+22** | essentially break-even — a coin-flip rung |
+| **rc1 (the live object)** | **−457** | **+681** | **+224** | **clearly loses** |
+
+The stream tax is identical in both columns — it is a property of the weights, not of the model coder. Only the model
+saving moved, and it moved because rc1 had already coded the control's weights near their entropy (that is what earned
+rc1 its −1,123 B). **So the better coder returns less for the same weight shrink, and a capacity rung that was
+break-even on a weak coder is a loser on a strong one.**
+
+Stated as the law: **coder quality and capacity-lever value are SUBSTITUTES.** Every byte a coder wins is a byte the
+capacity lever can no longer win. This is P8 inverted — I predicted complements — and it is the generalisable result
+of this arm. Two consequences:
+
+1. **cl2's ladder deltas do not transfer to the live object.** They were priced on Brotli and overstate the model-side
+   value by ~31% here. Any future arm re-using a cl2-basis byte delta must discount it, or re-price.
+2. **Ordering matters between coder work and capacity work.** Doing the coder first (rc1) does not merely bank its own
+   bytes — it *removes* headroom from the capacity lever. An arm that had priced this ladder before rc1 would have
+   read λ=2.0 as break-even and plausibly chased λ=4.0; on the object we actually ship that would have been chasing a
+   lever the coder had already spent.
+
+### 5c. Admissibility and custody of the λ=2.0 row
+
+Terminal checkpoint `qat_stage_end_epoch_0060.pt` sha `fd686915…`, 1,051,959 B; training 3,357.8 s at 56.0 s/epoch,
+sole Metal occupant, zero memory-pressure alarms. Raw IHS1 17,165 B; RC1H rider 15,808 B (rider losslessness proved by
+a fresh `restore_hpac`); container 11,886 B. First encode 114,100 B at 00:35:02Z (≈50 min, against cl2's ≈20 min —
+CPU contention from a sister arm's encode plus the concurrent s17 training; wall-clock only, byte counts unaffected).
+Second encode and receiver decode were in flight at the time of writing; the row is byte-final but formally admissible
+only once both pass. Every payload retained under
+`…/ddm_cl3_hpac_smaller_prior_and_seed_selection/rungs/lambda_2p0/retained_rc1/`.
 
 ## 5b. Ready-to-fire state (resumable from disk)
 
