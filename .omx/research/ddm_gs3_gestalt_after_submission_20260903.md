@@ -937,3 +937,12 @@ since cl2 this afternoon**; gap to sub-0.12 now 0.02411787458634504. PR #140 is 
    reusable control: carrier-only candidates are predictable to ~1 part in 10⁵ before a paid call.
 The `lattice_floor` stop count (7 → 13 → 27 → 47) IS the lattice binding. Basis edits stay refused (V1/V2/V4/V5). Remaining carrier ITEMs (owned by pc1's
 ledger): per-atom quantizer step (3,731 B at fixed alphabet), packed Rice-k field width, basis_scales blast radius (recoverable, not free: 14/24 frames ±1 uint8).
+
+## Addendum 11 (2026-09-06 00:45Z) — cl3: the HPAC capacity axis is CLOSED in both directions; coder strength and capacity value are SUBSTITUTES
+
+λ=2.0 on the live object (exact containers): model 12,343 → 11,886 (−457 B under rc1's coder; −659 B under Brotli), stream 113,419 → 114,100 (+681 B, identical
+on both trees — measured), **J +224 B vs the live 125,762 B → NO**. P3 (−350…−50 B) falsified; the pre-registered whole-axis falsifier fired; λ=4.0 not run
+(recorded as not-run-because-falsified). With cl2's +465/+506 B on the bigger side, **λ=1.0 is a local optimum of the HPAC prior's capacity** (formulation scope).
+The transferable law (`coder_strength_substitutes_for_capacity_v1`): the same weight change is worth 69.3 % as much under the strong coder — a rung that was
+break-even on Brotli (+22 B) is a clear loss on the object that ships (+224 B); cl2's Brotli-priced ladder deltas need a ~31 % model-side discount, and landing
+coder work first REMOVES headroom from downstream capacity levers. Seed selection at λ=1.0 (s17/s18) still in flight — a different question.
