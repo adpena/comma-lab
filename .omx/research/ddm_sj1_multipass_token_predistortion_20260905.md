@@ -534,9 +534,53 @@ Every leg is measured on this body: seg by realized argmax through the receiver'
 renderer, pose by the frozen CPU-torch PoseNet on the DALI table, bytes by a real
 re-encode with a byte-identical control. `score_claim=false` until MAIN fires T4.
 
+## 8. SEALED — `ddm_sj1_token_predistortion_joint`, contest-CUDA
+
+`SEAL_ddm_sj1_token_predistortion_joint_contest_cuda.json`, seal sha
+`6a4eb2a953989d130a539954420aa78321ecdcf2ec21837fd610c4e327dca9a5`, **SEAL_VALID**.
+Archive **180,904 B** sha `42aa84b59f71d83b8f11a26c635a7af8f32dcfdf183e3fea4bb2007e74a5f2f8`;
+runtime 43 files, 924,722 B, digest `4b871196ebc653ce…`.
+
+| leg | pointer (x16) | candidate | ΔS |
+|---|---|---|---|
+| seg (T4-carried, same-instrument ratio 1.0003339539) | 2.0139e-04 | **1.2005045391e-04** | **−0.00813395** |
+| pose (`cpu_torch`, DALI, n600) | 5.77e-06 | **5.398060e-06** | **−0.00024890** |
+| rate | 174,786 B | **180,904 B** | **+0.00407373** |
+| | 0.14411787458634504 | **0.1398087424644421** | **−0.0043091321219029255** |
+
+215× the 2e-05 admission bar.
+
+**The seg leg is measured on the SHIPPED bytes,** not on the encoder's field: SegNet argmax
+over the candidate's own parse-back `0.raw` reads **0.0001200103759765625 = 14,157 flipped
+cells**, against the pass ledger's predicted 14,156 — a **one-cell** difference (+0.0071%).
+That single cell is the residual/corrector path the full inflate walks and the batch-1
+re-render does not; it is carried, not absorbed.
+
+**Every gate that stands behind the row:**
+
+| gate | result |
+|---|---|
+| encoder control (unedited field) | **byte-identical**, 113,419 B |
+| determinism twin (2 independent encodes) | **byte-identical** stream `c97c78c3…`, equal `code_bits` |
+| carrier identity control | **PASS**, rebuilds to `180c64ac…` |
+| frame-1 section identity | **PASS**, only the carrier moved |
+| receiver decode identity | **PASS**, `decoded_field_matches_admitted = true` |
+| full CPU inflate | **2,101.7 s**, `0.raw` sha `5aa5ffe5…`, 3,662,409,600 B |
+| public entrypoint `bash inflate.sh` | reached the receiver's CUDA gate in **1.363 s** |
+| pose instrument vs the x16 seal | **0.99957** |
+| seg instrument vs the T4 base | **−0.033%** |
+
+Nine falsifiers are pre-registered in the seal, including the one this arm cannot supply:
+the report-8dp bound is deliberately NOT a hand-typed number, because this arm does not
+hold the x16 base row's auth-eval receipt path. MAIN composes that two-row sentence with
+`tools/report_8dp_delta_bound.py` once the candidate row lands — bounds ADD for a delta,
+so the margin is judged against base + candidate, never against one row.
+
+`score_claim=false`, `promotable=false` until MAIN fires T4.
+
 ---
 
-*(Sections 8+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
+*(Section 9+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
 appended as each lands. Nothing is written here before it is measured.)*
 
 ---

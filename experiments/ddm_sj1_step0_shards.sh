@@ -7,7 +7,8 @@
 set -euo pipefail
 
 REPO="/Users/adpena/Projects/pact"
-ROOT="/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/step0"
+ROOT="${ROOT:-/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion/step0}"
+RAW="${RAW:-}"   # optional: score a CANDIDATE decode instead of the body's own 0.raw
 SHARDS="${SHARDS:-6}"
 THREADS="${THREADS:-3}"
 
@@ -16,11 +17,20 @@ cd "$REPO"
 
 pids=()
 for i in $(seq 0 $((SHARDS - 1))); do
-    "$REPO/.venv/bin/python" experiments/ddm_sj1_multipass_token_predistortion.py step0 \
-        --shard-index "$i" --shard-count "$SHARDS" --threads "$THREADS" --progress \
-        --out "$ROOT/argmax_shard_${i}.npy" \
-        --receipt "$ROOT/step0_shard_${i}.json" \
-        > "$ROOT/step0_shard_${i}.log" 2>&1 &
+    if [ -n "$RAW" ]; then
+        "$REPO/.venv/bin/python" experiments/ddm_sj1_multipass_token_predistortion.py step0 \
+            --shard-index "$i" --shard-count "$SHARDS" --threads "$THREADS" --progress \
+            --raw "$RAW" \
+            --out "$ROOT/argmax_shard_${i}.npy" \
+            --receipt "$ROOT/step0_shard_${i}.json" \
+            > "$ROOT/step0_shard_${i}.log" 2>&1 &
+    else
+        "$REPO/.venv/bin/python" experiments/ddm_sj1_multipass_token_predistortion.py step0 \
+            --shard-index "$i" --shard-count "$SHARDS" --threads "$THREADS" --progress \
+            --out "$ROOT/argmax_shard_${i}.npy" \
+            --receipt "$ROOT/step0_shard_${i}.json" \
+            > "$ROOT/step0_shard_${i}.log" 2>&1 &
+    fi
     pids+=($!)
 done
 
@@ -35,5 +45,5 @@ fi
 
 "$REPO/.venv/bin/python" experiments/ddm_sj1_multipass_token_predistortion.py step0-merge \
     --shards "$ROOT"/step0_shard_*.json \
-    --out-argmax "$ROOT/argmax_n600_base.npy" \
+    --out-argmax "$ROOT/argmax_n600.npy" \
     --out "$ROOT/STEP0_RESULT.json"
