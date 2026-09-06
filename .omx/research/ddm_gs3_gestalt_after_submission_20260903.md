@@ -959,3 +959,17 @@ step-0-wrong at this start stayed persistent through 5,000 updates (the free ste
 stays closed for this generator form — sub-0.12 on the born object needs a mechanism that changes WHICH sites are reachable (a different generator form), not a
 different start, schedule, or seed. Owed (md4, not built): `review_tracker mark-file` rescan; a red test elsewhere (`test_resize_exploit_flip_fix_frontier.py`
 asserts 2 anchors against 3 — the anchor-added-without-updating-the-count class).
+
+## Addendum 13 (2026-09-06 02:10Z) — THE 31ST POINTER MOVE: S 0.1398140172839628 @ 180,904 B [contest-CUDA T4 n600] (sj1: the seg-debt pool OPENED)
+
+Call `fc-01M1T6TCW2JS1JEW5CSZH3FVBY`, archive sha `42aa84b59f71d83b8f11a26c635a7af8f32dcfdf183e3fea4bb2007e74a5f2f8`. **d_seg 0.00020139 → 0.00012009** (9,593 flips
+repaired by multi-pass single-cell token pre-distortion under REALIZED acceptance: render → re-segment → keep only if flips fall; 7,804 tokens changed, 1.229
+cells/token), **d_pose 5.77e-6 → 5.40e-6** (carrier re-solved on the candidate's own renders: 0.936× base — the composition law on the seg actuator, numerical),
+bytes 174,786 → **180,904 (+6,118)**: token stream +6,078 B at 6.23 bits per changed token against a 12.52-bit break-even (2.0× margin), carrier +40 B. Δ vs the
+30th −4.303857302382225e-3 — **the largest move since afr1's sub-0.15 crossing.** Projection error +5.3e-6 (seg leg +10 cells of 14,167 on the parse-back raw;
+pose at the 3-sig-fig print). Predictions: repair fraction 40.39 % BEAT the charter band (20–35 %); cells/token 1.229 fell BELOW it (1.3–1.6); the stale carrier
+damage 430× reproduced jg1/jg4's ×387. **The map changes shape:** this is a DISTORTION move — bytes went UP; the rate corner at held distortion grows to
+≈ −48 KB while the distortion corner shrinks (d_seg now 0.000120, 12,009 B-eq of seg debt left). Sub-0.12 gap 0.0198140172839628. Tonight since cl2 (15:47Z):
+FIVE moves — rc1 −1,733 B · pc1 ×4/×8/×16 −3,463 B & pose · sj1 seg −0.0081 S — **S 0.14781744 → 0.13981402 = −8.00e-3 in one evening**, all on the shipped object,
+no retraining. Successors already in motion: sj1 pass 3 (residual field; convergence rule < 1 % not reached), the 566-pair admission subset (needs its own encode
+pair). PR #140 is now eight moves behind.
