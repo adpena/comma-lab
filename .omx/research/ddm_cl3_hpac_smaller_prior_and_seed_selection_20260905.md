@@ -507,6 +507,40 @@ the trade was wrong in the term that decided it.
 4. **The transferable result is one I did not predict:** improving the model coder CLOSED this axis. Registered as
    `coder_strength_substitutes_for_capacity_v1` with its transfer rule.
 
+## 8. What is OWED, and what I did NOT do
+
+### ITEM 1 — the λ=4.0 rung was NOT run, by pre-registration
+The whole-axis falsifier fired at λ=2.0 (+224 B ≥ 0), and the charter's rule was explicit: record λ=4.0 as
+not-run-because-falsified, not as an untested rung. Re-opening it needs a reason the falsifier did not anticipate —
+not simply a wish for another data point. Owner: none; this is closed, not deferred.
+
+### ITEM 2 — the multiplier is closed; OTHER capacity coordinates are NOT
+This arm and cl2 between them closed exactly one coordinate: the trainer's **rate multiplier**, on a fixed
+C64/P64/delta2/D8 topology. Width, `frame_dim`, receptive-field shape and depth are UNMEASURED and are a different
+question — dc1's "affordable only as learned weights" is untouched by this closure. Anyone opening one of those should
+price it on the rc1 object from the start and must NOT transfer a cl2-basis byte delta without the ~31% discount from
+`coder_strength_substitutes_for_capacity_v1`.
+
+### ITEM 3 — the substitution law is at INSTANCE scope and wants one more container
+`coder_strength_substitutes_for_capacity_v1` rests on ONE weight change priced through TWO containers. The mechanism
+is stated at family scope but the evidence is not there yet. The cheapest promotion is a THIRD container on the same
+weights, or the same two containers on a different capacity coordinate; both are recorded as the law's reactivation
+criteria. Until then it is a transfer rule with one anchor, and I have labelled it as such rather than as a family law.
+
+### ITEM 4 — my pin-patcher defect is fixed at the instance, NOT at the class
+`patch_inflate_pins_live` cures ddm_cl3. The CLASS — "a cl2 helper silently assumes the fs2 tree's format and fails
+only after an hour of encoding" — is not cured. `experiments/ddm_cl2_hpac_prior_capacity_ladder.py` still hardcodes
+`FS2_ARCHIVE_SHA256` / `FS2_ARCHIVE_BYTES` inside `patch_inflate_pins`, so the next arm that re-roots cl2's pricer on a
+newer tree will hit the same wall in the same place. A class fix would validate the staged tree's pins BEFORE the
+encodes rather than after. I did not do it: it touches a sister arm's landed instrument mid-flight, and my own rungs
+were running through it. Owner: **deferred, with a named blocker** (a landed cl2-pricer change needs its own review
+pass and no arm should edit it while another is mid-price).
+
+### ITEM 5 — seed selection is closed on SCALE at n=3, not on ranking
+The 137 B spread is the durable claim. Which seed wins is not: at n=3 the incumbent leading is a one-in-three
+coincidence and I have refused to read it as a property of seed 20260716. A larger seed sweep would sharpen the tail
+estimate, but the scale already says it cannot reach the demand, so I do not recommend one.
+
 ## 5b. Ready-to-fire state (resumable from disk)
 
 Runbook `/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection/RUNBOOK.md` carries the exact ten
