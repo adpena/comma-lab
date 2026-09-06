@@ -37,6 +37,7 @@ import argparse
 import hashlib
 import json
 import math
+import shutil
 import sys
 import time
 from collections.abc import Sequence
@@ -395,6 +396,35 @@ def cmd_admit(args) -> int:
         tokens_changed[int(row["pair"])] = float(row["tokens_changed"])
     edited = tokens_changed > 0
 
+    # PER-PAIR RATE LEG.  Preferred source is the two per-frame bit ledgers the REAL
+    # re-encodes wrote: their difference is the marginal cost of each pair's edits under
+    # the shipped model, measured rather than apportioned.  The uniform
+    # bytes-per-changed-token fallback exists only for a field that has not been encoded
+    # yet, and it is exactly the average-for-marginal substitution that
+    # ``token_rate_model_direction_dependence_v1`` warns about -- fs3 measured that
+    # substitution wrong by 2.24x -- so the ledgers win whenever they exist.
+    if args.bits_control and args.bits_candidate:
+        bits_c = np.load(args.bits_control).astype(np.float64)
+        bits_e = np.load(args.bits_candidate).astype(np.float64)
+        if bits_c.shape != (N_PAIRS,) or bits_e.shape != (N_PAIRS,):
+            raise Sj1JointError(
+                f"bit ledgers have shapes {bits_c.shape} / {bits_e.shape}"
+            )
+        per_pair_bytes = (bits_e - bits_c) / 8.0
+        rate_source = {
+            "kind": "measured_per_frame_bit_ledgers",
+            "bits_control": str(args.bits_control),
+            "bits_candidate": str(args.bits_candidate),
+            "ledger_total_bytes": float(per_pair_bytes.sum()),
+        }
+    else:
+        per_pair_bytes = tokens_changed * args.modelled_bytes_per_changed_token
+        rate_source = {
+            "kind": "uniform_bytes_per_changed_token",
+            "bytes_per_changed_token": args.modelled_bytes_per_changed_token,
+            "ledger_total_bytes": float(per_pair_bytes.sum()),
+        }
+
     base_pose = np.load(args.base_pose)
     stale_pose = np.load(args.stale_pose)
     resolved_pose = np.load(args.resolved_pose)
@@ -409,7 +439,7 @@ def cmd_admit(args) -> int:
     # Seg credit in score units, on the T4 axis, carried by the SAME-instrument ratio.
     ratio_t4 = sj1.POINTER_D_SEG_T4 / args.instrument_base_d_seg
     seg_credit = 100.0 * seg_repaired * ratio_t4 / (N_PAIRS * sj1.EVAL_H * sj1.EVAL_W)
-    rate_cost = 25.0 * (tokens_changed * args.modelled_bytes_per_changed_token) / SCORE_RATE_DENOMINATOR
+    rate_cost = 25.0 * per_pair_bytes / SCORE_RATE_DENOMINATOR
     pose_damage = resolved_pose - base_pose
 
     def score_subset(keep: np.ndarray) -> dict[str, float]:
@@ -420,9 +450,7 @@ def cmd_admit(args) -> int:
         d_seg_t4 = d_seg_instr * ratio_t4
         pose = np.where(keep, resolved_pose, base_pose)
         d_pose = float(pose.mean())
-        archive_bytes = args.base_archive_bytes + float(
-            (tokens_changed[keep] * args.modelled_bytes_per_changed_token).sum()
-        )
+        archive_bytes = args.base_archive_bytes + float(per_pair_bytes[keep].sum())
         return {
             "pairs_kept": int(keep.sum()),
             "flips_repaired": repaired,
@@ -480,9 +508,8 @@ def cmd_admit(args) -> int:
         "net_vs_pointer_modelled": best["score_modelled"] - sj1.POINTER_SCORE_T4,
         "admitted_field_npz": str(subset),
         "admitted_field_sha256": _sha256_file(subset),
-        "rate_leg_is_modelled_not_measured": True,
-        "score_modelled_is_optimistic_on_rate": True,
-        "modelled_bytes_per_changed_token": args.modelled_bytes_per_changed_token,
+        "rate_leg_source": rate_source,
+        "rate_leg_is_modelled_not_measured": rate_source["kind"] != "measured_per_frame_bit_ledgers",
         "instrument_base_d_seg": args.instrument_base_d_seg,
         "t4_ratio_applied": ratio_t4,
         "axis": (
@@ -496,6 +523,143 @@ def cmd_admit(args) -> int:
     }
     (args.out_dir / "ADMISSION.json").write_text(json.dumps(summary, indent=2, sort_keys=True))
     print(json.dumps({k: v for k, v in summary.items() if k != "trace"}, indent=2))
+    return 0
+
+
+def patch_inflate_pins(runtime_root: Path, archive_sha256: str, archive_bytes: int) -> dict[str, Any]:
+    """Re-pin the receiver's two archive constants, finding them by PATTERN.
+
+    ``ddm_cl2``'s patcher matches the literal it expects to replace and formats the size
+    with ``_`` separators; the pointer tree carries a different sha and writes ``174786``
+    plain, so that helper refuses here.  Binding a patcher to one generation's literals is
+    the same expiring-constant shape this arm already met in the pointer table, so this
+    one reads whatever the tree currently pins, checks there is exactly one of each, and
+    verifies what it wrote.
+    """
+    import re
+
+    path = Path(runtime_root) / "inflate.py"
+    text = path.read_text(encoding="utf-8")
+    sha_pat = re.compile(r'^ARCHIVE_SHA256 = "([0-9a-f]{64})"$', re.MULTILINE)
+    bytes_pat = re.compile(r"^ARCHIVE_BYTES = ([0-9_]+)$", re.MULTILINE)
+    shas, sizes = sha_pat.findall(text), bytes_pat.findall(text)
+    if len(shas) != 1 or len(sizes) != 1:
+        raise Sj1JointError(
+            f"{path} pins are absent or ambiguous: {len(shas)} sha, {len(sizes)} size"
+        )
+    if shas[0] != sj1.POINTER_ARCHIVE_SHA256:
+        raise Sj1JointError(
+            f"{path} currently pins {shas[0]}, not the live pointer "
+            f"{sj1.POINTER_ARCHIVE_SHA256}; this is not the tree it claims to be"
+        )
+    text = sha_pat.sub(f'ARCHIVE_SHA256 = "{archive_sha256}"', text, count=1)
+    text = bytes_pat.sub(f"ARCHIVE_BYTES = {archive_bytes}", text, count=1)
+    path.write_text(text, encoding="utf-8")
+
+    check = path.read_text(encoding="utf-8")
+    if sha_pat.findall(check) != [archive_sha256] or bytes_pat.findall(check) != [
+        str(archive_bytes)
+    ]:
+        raise Sj1JointError("inflate.py pin patch did not land exactly once")
+    return {
+        "path": str(path),
+        "sha256": _sha256_file(path),
+        "bytes": path.stat().st_size,
+        "pinned_archive_sha256": archive_sha256,
+        "pinned_archive_bytes": archive_bytes,
+        "previous_pinned_sha256": shas[0],
+    }
+
+
+# --------------------------------------------------------------------------------------
+# stage-tail -- put the re-encoded token stream into the LIVE POINTER's member
+# --------------------------------------------------------------------------------------
+
+
+def cmd_stage_tail(args) -> int:
+    """Splice the edited field's token stream into the pointer's archive, and stage a tree.
+
+    The stream is produced by cl2's encoder (whose hpac coding jg2 mirrors) but must ship
+    inside the POINTER's member, which carries rc1's recoded MODEL sections and pc1's
+    re-solved carrier.  The byte-identical tail across those bodies is what makes that
+    legal, so it is CHECKED here rather than assumed: the pointer's own tail must equal
+    the tail of the tree the encoder mirrored, or the two are not siblings and the splice
+    is meaningless.
+    """
+    import ddm_jg2_tail_reencode as jg2
+
+    pointer = Path(args.pointer_runtime)
+    mirrored = Path(args.encoder_runtime)
+    sj1.assert_carrier_is_pointer(pointer)
+
+    pointer_member = jg2.read_archive_member(pointer / "archive.zip")
+    mirrored_member = jg2.read_archive_member(mirrored / "archive.zip")
+    p_sections = jg2.split_member(pointer_member)
+    m_sections = jg2.split_member(mirrored_member)
+    if p_sections["tail"] != m_sections["tail"]:
+        raise Sj1JointError(
+            "pointer tail differs from the tail the encoder mirrored "
+            f"({len(p_sections['tail'])} B vs {len(m_sections['tail'])} B); the two "
+            "bodies do not hold the same token stream, so this splice would be a delta "
+            "against a baseline that does not exist"
+        )
+
+    stream = Path(args.stream).read_bytes()
+    residual = p_sections["tail"][: jg2.RESIDUAL_COMPACT_BYTES]
+    p_sections["tail"] = residual + stream
+
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    staged = args.out_dir / "staged_runtime"
+    if staged.exists():
+        shutil.rmtree(staged)
+    shutil.copytree(pointer, staged)
+    for cache in staged.rglob("__pycache__"):
+        shutil.rmtree(cache, ignore_errors=True)
+    archive = staged / "archive.zip"
+    jg2.pack_archive(jg2.join_member(p_sections), archive)
+    facts = {
+        "sha256": _sha256_file(archive),
+        "bytes": archive.stat().st_size,
+    }
+
+    # The receiver refuses an archive whose pinned sha/size do not match its own bytes,
+    # so the two pins move with the archive or the tree is dead on the contest path.
+    pins = patch_inflate_pins(staged, facts["sha256"], facts["bytes"])
+
+    # Only the archive and its two pins may differ from the pointer tree.  Anything else
+    # would mean this candidate is not the pointer body plus a token stream.
+    differing = sorted(
+        str(f.relative_to(staged))
+        for f in staged.rglob("*")
+        if f.is_file()
+        and (pointer / f.relative_to(staged)).is_file()
+        and f.read_bytes() != (pointer / f.relative_to(staged)).read_bytes()
+    )
+    if differing != ["archive.zip", "inflate.py"]:
+        raise Sj1JointError(
+            f"staged tree differs from the pointer in {differing}, expected exactly "
+            "['archive.zip', 'inflate.py']"
+        )
+
+    report = {
+        "schema": "ddm_sj1_stage_tail.v1",
+        "pointer_runtime": str(pointer),
+        "pointer_archive_sha256": sj1.POINTER_ARCHIVE_SHA256,
+        "pointer_archive_bytes": sj1.POINTER_ARCHIVE_BYTES,
+        "encoder_runtime": str(mirrored),
+        "tail_sibling_check": "PASS (pointer tail == mirrored tail)",
+        "stream": {"path": str(args.stream), "bytes": len(stream),
+                   "sha256": hashlib.sha256(stream).hexdigest()},
+        "staged_runtime": str(staged),
+        "staged_archive": facts,
+        "delta_bytes_vs_pointer": facts["bytes"] - sj1.POINTER_ARCHIVE_BYTES,
+        "inflate_pins": pins,
+        "sections": {k: len(v) for k, v in p_sections.items()},
+        "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+        "score_claim": False,
+    }
+    (args.out_dir / "STAGE_TAIL.json").write_text(json.dumps(report, indent=2, sort_keys=True))
+    print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 
 
@@ -612,6 +776,107 @@ def cmd_close(args) -> int:
     return 0
 
 
+def cmd_parseback(args) -> int:
+    """Decode the candidate through the RECEIVER TREE'S OWN inflate path, on CPU.
+
+    This is ``ddm_cl2.stage_parseback``'s contract on this arm's tree: build the RC64
+    backend and the native f26 corrector exactly as ``inflate.sh`` does, run the tree's
+    own ``_verify_input`` pin check, then ``runtime.f26_inflate.inflate_archive`` with
+    ``device_name="cpu"``.  It proves the candidate is decodable by the bytes that ship
+    with it AND produces the ``0.raw`` the seg leg must finally be measured on -- a
+    distortion claim read off the encoder's own field rather than the receiver's render
+    would be measuring the wrong object.
+    """
+    import importlib
+    import importlib.util
+    import os
+    import subprocess
+    import zipfile
+
+    runtime = Path(args.runtime)
+    archive = runtime / "archive.zip"
+    root = args.out_dir
+    root.mkdir(parents=True, exist_ok=True)
+    data_dir = root / "data"
+    data_dir.mkdir(exist_ok=True)
+    with zipfile.ZipFile(archive) as zf:
+        (data_dir / "p").write_bytes(zf.read("p"))
+    build = root / "build"
+    build.mkdir(exist_ok=True)
+    cc = shutil.which(os.environ.get("CC", "cc"))
+    if cc is None:
+        raise Sj1JointError("a C compiler is required for the RC64 backend (inflate.sh contract)")
+    rc64_so = build / "rc64_backend.so"
+    subprocess.run(
+        [cc, "-O3", "-std=c11", "-shared", "-fPIC",
+         str(runtime / "runtime/entropy/rc64_backend.c"), "-o", str(rc64_so)],
+        check=True,
+    )
+    os.environ["CPR1_RC64_LIBRARY"] = str(rc64_so)
+    corrector_so = build / "f26_corrector_native.so"
+    subprocess.run(
+        [cc, "-O3", "-std=c11", "-shared", "-fPIC", "-ffp-contract=off", "-fno-fast-math",
+         str(runtime / "runtime/f26_corrector_native.c"), "-lm", "-o", str(corrector_so)],
+        check=True,
+    )
+    os.environ["F26_CORRECTOR_NATIVE_LIBRARY"] = str(corrector_so)
+    os.environ.setdefault("F26_TOKEN_DECODER", "python")
+
+    spec = importlib.util.spec_from_file_location("sj1_receiver_inflate", runtime / "inflate.py")
+    if spec is None or spec.loader is None:
+        raise Sj1JointError("cannot import the candidate tree's inflate.py")
+    sys.path.insert(0, str(runtime))
+    receiver = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(receiver)
+    receiver._verify_input(data_dir, archive)
+    f26 = importlib.import_module("runtime.f26_inflate")
+    if Path(f26.__file__).resolve() != (runtime / "runtime" / "f26_inflate.py").resolve():
+        raise Sj1JointError("parse-back imported a runtime outside the candidate tree")
+
+    destination = root / "0.raw"
+    started = time.perf_counter()
+    report = f26.inflate_archive(
+        archive, destination, renderer_dir=runtime / "cpr1", device_name="cpu",
+        num_threads=args.threads, checkpoint_dir=root / ".f26_decode_checkpoints",
+    )
+    elapsed = time.perf_counter() - started
+
+    decoded_path = root / ".f26_decode_checkpoints" / "tokens_cpu_stage_complete.u8"
+    field_identity = None
+    if args.expect_field and decoded_path.is_file():
+        expect = load_edit_planes(args.expect_field)
+        base = jg1.load_tokens(sj1.BODY_TOKENS)
+        want = np.array(base, dtype=np.uint8)
+        for pair, plane in expect.items():
+            want[pair] = plane
+        got = np.fromfile(decoded_path, dtype=np.uint8).reshape(want.shape)
+        field_identity = bool(np.array_equal(got, want))
+
+    result = {
+        "schema": "ddm_sj1_parseback.v1",
+        "runtime": str(runtime),
+        "archive": {"path": str(archive), "sha256": _sha256_file(archive),
+                    "bytes": archive.stat().st_size},
+        "pin_check": "PASS (candidate tree's own inflate.py _verify_input)",
+        "rendered_raw": {"path": str(destination), "sha256": _sha256_file(destination),
+                         "bytes": destination.stat().st_size},
+        "decoded_field_matches_admitted": field_identity,
+        "wall_clock_seconds": elapsed,
+        "device": "cpu",
+        "libraries": {"CPR1_RC64_LIBRARY": str(rc64_so),
+                      "F26_CORRECTOR_NATIVE_LIBRARY": str(corrector_so)},
+        "inflate_report": report,
+        "axis": "[macOS-CPU advisory / scorer-free EXACT byte measurement]",
+        "score_claim": False,
+    }
+    (root / "PARSEBACK_RESULT.json").write_text(json.dumps(result, indent=2, sort_keys=True, default=str))
+    print(json.dumps({k: v for k, v in result.items() if k != "inflate_report"},
+                     indent=2, sort_keys=True, default=str))
+    if field_identity is False:
+        raise Sj1JointError("decoded token field does not match the admitted field")
+    return 0
+
+
 # --------------------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------------------
@@ -677,12 +942,41 @@ def build_parser() -> argparse.ArgumentParser:
         help="this instrument's OWN base d_seg, so the T4 carry is same-instrument",
     )
     admit.add_argument(
+        "--bits-control",
+        type=Path,
+        default=None,
+        help="per-frame bit ledger of the UNEDITED field from the real control encode",
+    )
+    admit.add_argument(
+        "--bits-candidate",
+        type=Path,
+        default=None,
+        help="per-frame bit ledger of the EDITED field from the real encode; with "
+        "--bits-control this makes the per-pair rate leg MEASURED, not apportioned",
+    )
+    admit.add_argument(
         "--modelled-bytes-per-changed-token",
         type=float,
-        required=True,
-        help="MEASURED marginal bytes per changed token from a real re-encode; never an average",
+        default=0.0,
+        help="fallback only, used when the bit ledgers are absent",
     )
     admit.set_defaults(func=cmd_admit)
+
+    stage = sub.add_parser(
+        "stage-tail", help="splice the re-encoded token stream into the pointer's member"
+    )
+    stage.add_argument("--pointer-runtime", type=Path, default=sj1.POINTER_TREE)
+    stage.add_argument("--encoder-runtime", type=Path, required=True)
+    stage.add_argument("--stream", type=Path, required=True)
+    stage.add_argument("--out-dir", type=Path, required=True)
+    stage.set_defaults(func=cmd_stage_tail)
+
+    pb = sub.add_parser("parseback", help="decode the candidate through its own receiver")
+    pb.add_argument("--runtime", type=Path, required=True)
+    pb.add_argument("--out-dir", type=Path, required=True)
+    pb.add_argument("--expect-field", type=Path, default=None)
+    pb.add_argument("--threads", type=int, default=4)
+    pb.set_defaults(func=cmd_parseback)
 
     close = sub.add_parser("close", help="splice the re-solved carrier and price exactly")
     close.add_argument("--body-runtime", type=Path, required=True)

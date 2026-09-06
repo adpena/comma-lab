@@ -466,9 +466,77 @@ editing tokens strands every edited pair's carrier by construction. Un-resolved,
 +0.14996 S pose damage dwarfs the −0.00408 S seg/rate gain by 37×. The carrier re-solve is
 the whole composition, not a polish step.
 
+## 7. The carrier re-solve, the admission, and the composed candidate (MEASURED)
+
+### 7a. Re-solve — the composition holds, and then some
+
+`jg5.refine_pair` verbatim, on the candidate's OWN renders, starting from the ×16
+pointer's coefficients on its lattice (`assert_carrier_is_pointer` checked the tree at
+load). 600/600 pairs, 6,300 s on 6 shards, **4,622 of 7,200 coordinates changed**.
+
+| leg (matched batch shape, `cpu_torch`, n600) | d_pose | pose leg |
+|---|---|---|
+| base (×16 carrier, base renders) | 5.767500e-06 | 0.00759441 |
+| stale (×16 carrier, CANDIDATE renders) | 2.482268e-03 | 0.15755214 |
+| **resolved** | **5.398060e-06** | **0.00734715** |
+
+The re-solve does not merely recover the 430× damage — it lands **0.9359× the base**, a
+pose **GAIN of −0.00024726 S**, with 339/600 pairs below their base value. The reason is
+structural, not luck: the ×16 carrier was solved against the BASE frame 1, and this solve
+sees the frame 1 the candidate actually ships. Every stop was PHYSICAL — 552
+`no_improving_step`, 20 `lattice_floor`, 28 `converged_below_materiality_floor`, and
+**zero** iteration-budget backstops, so the stopping rule bound on every pair.
+
+The solver's own `final_d_pose` values were re-measured at the base leg's batch shape
+before being used, per [[batch_shape_is_part_of_the_forward_instrument_20260806]]; the
+matched re-measurement is the number above.
+
+### 7b. Admission — the per-pair rate leg is MEASURED, not apportioned
+
+The first sweep priced each pair's rate at a uniform 0.7788 B per changed token. That is
+the average-for-marginal substitution `token_rate_model_direction_dependence_v1` warns
+about, and the encodes had already written the honest answer: two per-frame bit ledgers
+whose difference is each pair's marginal cost under the shipped model. Their sum is
+**6,078.76 B** against the exact stream delta of **6,078 B** — 0.013% — so the
+decomposition is faithful. The sweep now consumes the ledgers.
+
+| subset | pairs | d_seg (T4-carried) | d_pose | bytes | S |
+|---|---:|---|---|---:|---|
+| drop everything (anchor) | 0 | 2.01390e-04 | 5.767500e-06 | 174,786 | 0.1441162286 |
+| **full edit set** | **600** | **1.20042e-04** | **5.398060e-06** | **180,864.8** | **0.1397817675** |
+| sweep optimum | 566 | 1.22153e-04 | 5.296566e-06 | 180,573.6 | 0.1397296788 |
+
+The anchor row reproduces the pointer's 0.14411787 to 1.7e-06 — that gap is the pose
+instrument's own −0.043% residual, carried openly rather than absorbed.
+
+**I sealed the FULL 600, not the sweep optimum**, and the reason is a measurement fact
+rather than a preference: the 600-set's rate leg is EXACTLY measured (+6,078 B, from a
+real re-encode whose control was byte-identical), while the 566-subset's is a SUM of
+per-pair deltas taken along the full-edit coder trajectory. Dropping 34 pairs changes the
+context the coder carries into every later frame, so that sum is an estimate, not the
+subset's stream. Its 5.21e-05 advantage is real but must be bought with its own encode
+pair; it is recorded here as an available follow-on, not claimed.
+
+### 7c. The composed candidate
+
+| | value |
+|---|---|
+| candidate archive | **180,904 B**, sha `42aa84b59f71d83b8f11a26c635a7af8f32dcfdf183e3fea4bb2007e74a5f2f8` |
+| delta vs pointer | **+6,118 B** = 6,078 (token tail) + 40 (re-solved carrier) |
+| identity control | **PASS** — the tail-staged body rebuilds from its own codes to `180c64ac…` |
+| frame-1 section identity | **PASS** — hpac, semantic and tail byte-identical; only the carrier moved |
+| d_seg (instrument → T4-carried) | 0.00012000190 → 1.20042e-04 |
+| d_pose | 5.398060e-06 |
+| **projected S** | **0.13980789447084238** |
+| **net ΔS vs pointer** | **−0.004309980115502654** |
+
+Every leg is measured on this body: seg by realized argmax through the receiver's own
+renderer, pose by the frozen CPU-torch PoseNet on the DALI table, bytes by a real
+re-encode with a byte-identical control. `score_claim=false` until MAIN fires T4.
+
 ---
 
-*(Sections 7+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
+*(Sections 8+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
 appended as each lands. Nothing is written here before it is measured.)*
 
 ---
