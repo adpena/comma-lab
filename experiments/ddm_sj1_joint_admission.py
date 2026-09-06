@@ -625,16 +625,35 @@ def cmd_stage_tail(args) -> int:
     mirrored_member = jg2.read_archive_member(mirrored / "archive.zip")
     p_sections = jg2.split_member(pointer_member)
     m_sections = jg2.split_member(mirrored_member)
-    if p_sections["tail"] != m_sections["tail"]:
+    residual_len = jg2.RESIDUAL_COMPACT_BYTES
+    if args.expect_pointer_stream:
+        # SUCCESSOR ROUND: the pointer's tail is this encoder's OWN previous output, so it
+        # will NOT equal the encoder tree's tail.  The invariant that still binds is that
+        # the pointer carries exactly the stream we think it carries, checked against the
+        # retained bytes rather than inferred from a sibling comparison.
+        expected = Path(args.expect_pointer_stream).read_bytes()
+        if p_sections["tail"][residual_len:] != expected:
+            raise Sj1JointError(
+                f"pointer tail suffix ({len(p_sections['tail']) - residual_len} B) is not "
+                f"the stream at {args.expect_pointer_stream} ({len(expected)} B); the "
+                "delta would be measured against a baseline the pointer does not ship"
+            )
+        sibling = f"PASS (pointer tail suffix == {Path(args.expect_pointer_stream).name})"
+    elif p_sections["tail"] != m_sections["tail"]:
+        # FIRST ROUND: the pointer and the encoder tree hold the SAME stream, which is what
+        # makes encoding through one and shipping in the other legal at all.
         raise Sj1JointError(
             "pointer tail differs from the tail the encoder mirrored "
             f"({len(p_sections['tail'])} B vs {len(m_sections['tail'])} B); the two "
             "bodies do not hold the same token stream, so this splice would be a delta "
-            "against a baseline that does not exist"
+            "against a baseline that does not exist. On a SUCCESSOR round pass "
+            "--expect-pointer-stream instead."
         )
+    else:
+        sibling = "PASS (pointer tail == mirrored tail)"
 
     stream = Path(args.stream).read_bytes()
-    residual = p_sections["tail"][: jg2.RESIDUAL_COMPACT_BYTES]
+    residual = p_sections["tail"][:residual_len]
     p_sections["tail"] = residual + stream
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -676,7 +695,7 @@ def cmd_stage_tail(args) -> int:
         "pointer_archive_sha256": sj1.POINTER_ARCHIVE_SHA256,
         "pointer_archive_bytes": sj1.POINTER_ARCHIVE_BYTES,
         "encoder_runtime": str(mirrored),
-        "tail_sibling_check": "PASS (pointer tail == mirrored tail)",
+        "tail_baseline_check": sibling,
         "stream": {"path": str(args.stream), "bytes": len(stream),
                    "sha256": hashlib.sha256(stream).hexdigest()},
         "staged_runtime": str(staged),
@@ -1004,6 +1023,12 @@ def build_parser() -> argparse.ArgumentParser:
     stage.add_argument("--pointer-runtime", type=Path, default=sj1.POINTER_TREE)
     stage.add_argument("--encoder-runtime", type=Path, required=True)
     stage.add_argument("--stream", type=Path, required=True)
+    stage.add_argument(
+        "--expect-pointer-stream",
+        type=Path,
+        default=None,
+        help="SUCCESSOR rounds: the retained stream the pointer's tail must already carry",
+    )
     stage.add_argument("--out-dir", type=Path, required=True)
     stage.set_defaults(func=cmd_stage_tail)
 

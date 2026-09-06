@@ -691,9 +691,57 @@ Stale pose damage this round is **56.18×** (3.032640e-04 against the live row's
 because only 1,339 tokens moved rather than 7,804. The re-solve is still mandatory: 0.0477 S
 of un-resolved pose damage would swamp a 0.00064 S gain by 75×.
 
+## 12. The subset question, SETTLED by measurement
+
+Last round I sealed the full edit set and recorded the sweep optimum as an untested
+follow-on, on the argument that a subset's rate is a SUM of per-pair deltas taken along the
+FULL-edit coder trajectory and therefore an estimate. This round I measured it.
+
+| field | stream | archive | ledger-sum PREDICTION | error |
+|---|---:|---:|---:|---|
+| full edit set (445 pairs) | 120,385 B | 181,792 B | — | — |
+| **admitted subset (370 pairs)** | **120,225 B** | **181,632 B** | 181,612.4 B | **+19.6 B (+0.0108%)** |
+
+Both encodes of the subset are byte-identical to their twins. **The ledger sum is a good
+RANKER and a slightly OPTIMISTIC pricer** — it under-charged the real subset stream by 19.6
+bytes, which is 1.3e-05 S: below the 2e-05 admission bar, but the same sign as every other
+residual this arm has measured. So the sweep may choose on the ledger; the seal must not.
+
+The subset still wins on EXACT bytes:
+
+| candidate | exact bytes | d_seg (T4-carried) | d_pose | S | net vs live row |
+|---|---:|---|---|---|---|
+| full edit set | 181,792 | 1.07815e-04 | 5.263729e-06 | 0.1390845360 | −0.00072948 |
+| **admitted subset** | **181,632** | **1.09139e-04** | **5.092802e-06** | **0.1389915600** | **−0.00082246** |
+
+It trades a little seg (dropping 75 pairs' edits) for more pose and rate than it gives up —
+those are the pairs whose carrier re-solve went badly, and dropping them recovers 1.71e-07
+of d_pose.
+
+### A third silent-revert class, caught before it shipped
+
+The subset writer emitted only the ADMITTED pairs' planes. An edit npz is spliced onto the
+ORIGINAL base field, so a pair merely ABSENT reverts all the way back — which on a
+SUCCESSOR round undoes what the live pointer already banked. MEASURED here: **230
+non-admitted pairs would have reverted 2,337 pass-2a tokens**, invisibly, because the
+result is a perfectly valid token field that no byte count, parse-back or size check could
+flag. Cured by making the subset CARRY the live row's plane for every dropped pair, with a
+fail-closed check that every carried pair matches.
+
+The same round surfaced a sibling: `stage-tail`'s baseline check asserted the pointer's
+tail EQUALS the encoder tree's tail. True in round one (both trees held the same stream),
+false the moment the pointer's tail became this encoder's own previous output. Replaced by
+`--expect-pointer-stream`, which checks the pointer's tail suffix against the RETAINED
+bytes it should carry — correct in both rounds, and stronger than the sibling comparison it
+replaces.
+
+That is three silent-revert defects in this family now: the carrier start codes (MAIN
+caught it), the subset writer, and the tail baseline. All three share one shape — **a check
+that encoded a round-one premise, still passing after the premise moved.**
+
 ---
 
-*(Section 12+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
+*(Section 13+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
 appended as each lands. Nothing is written here before it is measured.)*
 
 ---
