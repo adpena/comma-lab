@@ -237,7 +237,7 @@ POINTER_LINEAGE: tuple[PointerRow, ...] = (
         d_pose_t4=5.58e-06,
         score_t4=0.1445177913121716,
     ),
-    #: LIVE (MAIN object change #4, 2026-09-05).  The first rung where the POSE LEG
+    #: MAIN object change #4.  The first rung where the POSE LEG
     #: ROSE -- d_pose 5.58e-06 -> 5.77e-06 -- admitted on the exchange, not on the leg:
     #: pose +1.2611e-04 S against rate -5.2603e-04 S is net -3.9992e-04 S, twenty times
     #: the 2e-05 bar.  MEASURED before adoption: hpac/semantic/tail byte-identical to
@@ -255,6 +255,29 @@ POINTER_LINEAGE: tuple[PointerRow, ...] = (
         d_seg_t4=BASE_D_SEG_T4,
         d_pose_t4=5.77e-06,
         score_t4=0.14411787458634504,
+    ),
+    #: LIVE (MAIN 2026-09-06).  THIS ARM'S OWN candidate, fired on T4 and PROMOTED:
+    #: call fc-01M1T6TCW2JS1JEW5CSZH3FVBY, lane ddm_sj1_t4_token_predistortion_joint_20260906.
+    #: The first row in this lineage whose SEG leg moved -- every predecessor held d_seg
+    #: at 0.00020139 and bought bytes.  Prediction vs measurement, carried openly:
+    #:   projected 0.1398087424644421 -> MEASURED 0.1398140172839628, residual +5.2748e-06
+    #:   (+0.0038%), decomposing as +3.955e-06 S of seg (parse-back read 14,157 flipped
+    #:   cells, T4 read 14,166 -- NINE cells over 117,964,800) and +1.32e-06 S of pose
+    #:   (5.398060e-06 measured here vs the row's 5.4e-06).  Both printed legs reproduce
+    #:   the reported score to 1e-16, so this row needs no rounding allowance.
+    PointerRow(
+        label="sj1_token_predistortion_joint",
+        tree=Path(
+            "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+            "/candidate/candidate_runtime"
+        ),
+        archive_sha256=(
+            "42aa84b59f71d83b8f11a26c635a7af8f32dcfdf183e3fea4bb2007e74a5f2f8"
+        ),
+        archive_bytes=180_904,
+        d_seg_t4=0.00012009,
+        d_pose_t4=5.4e-06,
+        score_t4=0.1398140172839628,
     ),
 )
 

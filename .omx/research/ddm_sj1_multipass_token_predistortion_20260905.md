@@ -159,7 +159,8 @@ is `POINTER_LINEAGE[-1]` — one row to add, nothing to keep in sync:
 | rc1_model_section_recode | 0.14666350774473783 | 178,249 | 6.14e-06 | both MODEL sections, lossless |
 | pc1_v3_lattice_x4 | 0.1451981569076111 | 176,448 | 5.73e-06 | carrier lattice ×4, re-solved |
 | pc1_v3x8_lattice_x8 | 0.1445177913121716 | 175,576 | 5.58e-06 | carrier lattice ×8, re-solved |
-| **pc1_v3x16_lattice_x16 (LIVE)** | **0.14411787458634504** | **174,786** | **5.77e-06** | carrier lattice ×16, re-solved |
+| pc1_v3x16_lattice_x16 | 0.14411787458634504 | 174,786 | 5.77e-06 | carrier lattice ×16, re-solved |
+| **sj1_token_predistortion_joint (LIVE)** | **0.1398140172839628** | **180,904** | **5.4e-06** | **token pre-distortion + carrier re-solve — the first row whose SEG leg moved** |
 
 Two checks now stand between this arm and a wrong number, and both were tested to BITE:
 
@@ -578,9 +579,45 @@ so the margin is judged against base + candidate, never against one row.
 
 `score_claim=false`, `promotable=false` until MAIN fires T4.
 
+## 9. FIRED AND PROMOTED — the row
+
+`ddm_sj1_token_predistortion_joint` fired on contest-CUDA T4 and PROMOTED:
+**S 0.1398140172839628 @ 180,904 B**, d_seg **0.00012009**, d_pose **5.4e-06**,
+call `fc-01M1T6TCW2JS1JEW5CSZH3FVBY`, lane `ddm_sj1_t4_token_predistortion_joint_20260906`.
+The pointer is now this arm's own tree, `…/candidate/candidate_runtime/`, sha `42aa84b5…`.
+
+**Net against the ×16 pointer it replaced: −0.0043038573023822 S**, and it is the first row
+in this lineage whose SEG leg moved — the six rows before it all held d_seg at 0.00020139
+and bought bytes.
+
+### Prediction vs measurement — the calibration this arm owes
+
+| | projected | MEASURED on T4 | residual |
+|---|---|---|---|
+| S | 0.1398087424644421 | **0.1398140172839628** | **+5.2748e-06 (+0.0038%)** |
+| d_seg | 1.2005045391e-04 (14,157 cells) | 0.00012009 (14,166 cells) | **+9 cells** of 117,964,800 |
+| d_pose | 5.398060e-06 | 5.4e-06 | +1.32e-06 S |
+| bytes | 180,904 | 180,904 | 0 |
+
+The residual decomposes exactly: +3.955e-06 S of seg and +1.32e-06 S of pose, summing to
+the +5.2748e-06 observed. So the advisory instrument called the contest row to **four
+significant figures**, and the whole error is nine argmax cells plus a pose print. Both
+printed legs reproduce the reported score to 1e-16, so this row needs no rounding
+allowance — the score and its legs are mutually consistent.
+
+Three instrument residuals are now measured end to end on this body and all point the same
+way — the advisory rig reads very slightly OPTIMISTIC on distortion:
+
+* seg instrument vs the T4 base row: **−0.033%**
+* pose instrument vs the ×16 seal: **−0.043%**
+* composed projection vs the fired row: **−0.0038%**
+
+That is the honest calibration to carry into the successor: expect the T4 row to land a few
+parts in 10⁵ ABOVE the projection, not below.
+
 ---
 
-*(Section 9+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
+*(Section 10+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
 appended as each lands. Nothing is written here before it is measured.)*
 
 ---
