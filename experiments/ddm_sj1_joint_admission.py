@@ -494,8 +494,37 @@ def cmd_admit(args) -> int:
             f"{len(missing)} admitted pairs are absent from {args.field} "
             f"(first: {missing[:5]}); the admission and the edit field disagree"
         )
+    # THE SUBSET MUST BE WRITTEN AGAINST THE CARRY FIELD, NOT AGAINST NOTHING.
+    # An edit npz is spliced onto the ORIGINAL base field, so a pair merely ABSENT from it
+    # reverts all the way to the original -- which on a SUCCESSOR round silently undoes the
+    # edits the live pointer already banked.  Measured on this arm's pass-3 admission: 230
+    # non-admitted pairs would have reverted 2,337 pass-2a tokens, and nothing downstream
+    # could see it, because the result is a perfectly valid field.  Same genus as the
+    # carrier silent-revert: the cure is to write what the pair should HOLD, never to rely
+    # on absence meaning "unchanged".
+    carry: dict[int, np.ndarray] = {}
+    if args.carry_field:
+        carry = load_edit_planes(args.carry_field)
+    planes = {int(pair): source[pair] for pair in kept}
+    for pair, plane in carry.items():
+        planes.setdefault(pair, plane)
     subset = args.out_dir / "field_admitted.npz"
-    np.savez_compressed(subset, **{str(p): source[p] for p in kept})
+    np.savez_compressed(subset, **{str(pair): plane for pair, plane in sorted(planes.items())})
+
+    # Fail closed: every carried pair must ship EXACTLY what the live row ships, and every
+    # admitted pair must ship its new plane.
+    written = load_edit_planes(subset)
+    for pair, plane in carry.items():
+        if pair in kept:
+            continue
+        if not np.array_equal(written.get(pair), plane):
+            raise Sj1JointError(
+                f"pair {pair} is not admitted but the subset field does not carry the "
+                "live row's plane for it; that would revert banked edits"
+            )
+    for pair in kept:
+        if not np.array_equal(written.get(pair), source[pair]):
+            raise Sj1JointError(f"admitted pair {pair} is not written with its new plane")
     summary = {
         "schema": "ddm_sj1_admission.v1",
         "edited_pairs": int(edited.sum()),
@@ -925,6 +954,13 @@ def build_parser() -> argparse.ArgumentParser:
     admit = sub.add_parser("admit", help="Lagrange sweep over pose damage")
     admit.add_argument("--pass-rows", type=Path, required=True)
     admit.add_argument("--field", type=Path, required=True)
+    admit.add_argument(
+        "--carry-field",
+        type=Path,
+        default=None,
+        help="the LIVE ROW's field; pairs the sweep drops revert to THIS, not to the "
+        "original base. Omitting it on a successor round silently undoes banked edits.",
+    )
     admit.add_argument("--base-pose", type=Path, required=True)
     admit.add_argument("--stale-pose", type=Path, required=True)
     admit.add_argument("--resolved-pose", type=Path, required=True)
