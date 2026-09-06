@@ -72,6 +72,8 @@ LIVE_STREAM_BYTES = 113_419
 LIVE_STREAM_SHA256 = "e07274caeacbb3a6ce00e26b42d7032671af5c8109a2cee3a0697b116ac125cf"
 LIVE_JOINT_BYTES = LIVE_HPAC_BYTES + LIVE_STREAM_BYTES  # 125,762
 LIVE_SCORE = 0.14411787458634504
+#: The seed the live pointer's weights were trained under (cl2's lambda = 1.0 control).
+CONTROL_SEED = 20260716
 #: The raw IHS1 body of the weights the live pointer carries (cl2's lambda=1.0 control).
 CONTROL_RAW_IHS1 = Path(
     "/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder/rungs/lambda_1p0/retained/model/hpac.ihs1.raw"
@@ -380,11 +382,20 @@ def stage_report(args: argparse.Namespace) -> dict[str, Any]:
         path = rung_root(rung) / "RC1_RUNG_RESULT.json"
         if path.is_file():
             rows[rung] = json.loads(path.read_text(encoding="utf-8"))
-    ladder = [r for r in ("lambda_1p0", "lambda_2p0", "lambda_4p0") if r in rows]
+    # The ladder's lambda = 1.0 control IS the live pointer -- it carries cl2's control weights,
+    # re-coded by rc1 -- so it has no cl3 row of its own.  Without injecting it the secant that
+    # this whole arm exists to measure would simply not appear in the report.
+    control = {
+        "hpac_container": {"bytes": LIVE_HPAC_BYTES},
+        "stream": {"bytes": LIVE_STREAM_BYTES},
+        "joint_bytes": LIVE_JOINT_BYTES,
+    }
+    priced = {"live_pointer_control_lambda_1p0": control, **rows}
+    ladder = [r for r in ("live_pointer_control_lambda_1p0", "lambda_2p0", "lambda_4p0") if r in priced]
     slopes = []
     for left, right in zip(ladder, ladder[1:], strict=False):
-        d_model = rows[right]["hpac_container"]["bytes"] - rows[left]["hpac_container"]["bytes"]
-        d_stream = rows[right]["stream"]["bytes"] - rows[left]["stream"]["bytes"]
+        d_model = priced[right]["hpac_container"]["bytes"] - priced[left]["hpac_container"]["bytes"]
+        d_stream = priced[right]["stream"]["bytes"] - priced[left]["stream"]["bytes"]
         slopes.append(
             {
                 "from": left,
@@ -395,6 +406,20 @@ def stage_report(args: argparse.Namespace) -> dict[str, Any]:
                 "pays": bool(d_model + d_stream < 0),
             }
         )
+    # Seed rungs hold lambda fixed, so they are NOT ladder steps (a secant over them would divide
+    # by ~0 model bytes).  Their spread against the control is what says whether the lever lives.
+    seed_rows = {r: v for r, v in rows.items() if v["rate_lambda"] == 1.0}
+    seed_spread = None
+    if seed_rows:
+        joints = [LIVE_JOINT_BYTES, *(v["joint_bytes"] for v in seed_rows.values())]
+        seed_spread = {
+            "seeds_priced": [CONTROL_SEED, *(v["seed"] for v in seed_rows.values())],
+            "joint_bytes": joints,
+            "spread_bytes": max(joints) - min(joints),
+            "best_is_the_incumbent_control": min(joints) == LIVE_JOINT_BYTES,
+            "fixed_law_noise_floor_bytes": 0,
+            "note": "the fixed-law noise floor is 0 B (cl2's twin was byte-identical at every layer), so the spread is pure seed effect; with n=3 the incumbent leading is chance, so the SCALE is the claim, not the ranking",
+        }
     best = min(rows.values(), key=lambda row: row["joint_bytes"]) if rows else None
     report = {
         "schema": "ddm_cl3_rc1_ladder_report.v1",
@@ -423,6 +448,7 @@ def stage_report(args: argparse.Namespace) -> dict[str, Any]:
             for rung, row in rows.items()
         },
         "adjacent_slopes": slopes,
+        "seed_spread": seed_spread,
         "best_rung": None if best is None else best["rung"],
         "best_beats_live_pointer": bool(best is not None and best["joint_bytes"] < LIVE_JOINT_BYTES),
     }
