@@ -135,6 +135,37 @@ def brotli_basis_bytes(raw: bytes) -> dict[str, Any]:
     return {"per_quality_bytes": sizes, "winner_quality": best_q, "winner_bytes": sizes[best_q]}
 
 
+def patch_inflate_pins_live(runtime_root: Path, archive_sha256: str, archive_bytes: int) -> dict[str, Any]:
+    """Patch BOTH archive pins in a copy of the LIVE tree's ``inflate.py``.
+
+    cl2's ``patch_inflate_pins`` cannot be reused here: it searches for fs2's sha and for
+    ``ARCHIVE_BYTES = 180_023`` written with an underscore separator, while the live pc1 tree pins
+    ``1de6c5d7...`` and writes ``ARCHIVE_BYTES = 174786`` plain.  Reusing it fails closed with
+    "pins are absent or ambiguous" -- which it did, AFTER an hour of encoding.  Both pins are
+    patched together (jf2 #1237: a half-updated pin is the bug this shape prevents), and the patch
+    must land exactly once or this refuses.
+    """
+
+    path = runtime_root / "inflate.py"
+    text = path.read_text(encoding="utf-8")
+    old_sha = f'ARCHIVE_SHA256 = "{LIVE_ARCHIVE_SHA256}"'
+    old_bytes = f"ARCHIVE_BYTES = {LIVE_ARCHIVE_BYTES}"
+    new_sha = f'ARCHIVE_SHA256 = "{archive_sha256}"'
+    new_bytes = f"ARCHIVE_BYTES = {archive_bytes}"
+    if text.count(old_sha) != 1 or text.count(old_bytes) != 1:
+        if text.count(new_sha) == 1 and text.count(new_bytes) == 1:
+            return cl2.file_fact(path)  # already patched (idempotent re-run)
+        raise Cl3Error(
+            "live receiver copy inflate.py pins are absent or ambiguous: "
+            f"sha_hits={text.count(old_sha)} bytes_hits={text.count(old_bytes)}"
+        )
+    text = text.replace(old_sha, new_sha).replace(old_bytes, new_bytes)
+    path.write_text(text, encoding="utf-8")
+    if text.count(new_sha) != 1 or text.count(new_bytes) != 1:
+        raise Cl3Error("inflate.py pin patch did not land exactly once")
+    return cl2.file_fact(path)
+
+
 def stage_control(args: argparse.Namespace) -> dict[str, Any]:
     """Instrument control: the live pointer's own hpac section, rebuilt from its raw body.
 
@@ -222,8 +253,22 @@ def stage_price(args: argparse.Namespace) -> dict[str, Any]:
     target = jg2.load_tokens(cl2.FIELD)
 
     # 3. encode twice -------------------------------------------------------------------
+    # A resumed run reuses streams the previous attempt already finished.  The encodes cost ~50 min
+    # each; re-running them to recover from a post-encode failure would be pure waste, and the
+    # bytes are what the row is made of, so reuse is byte-identical by construction.
     encodes: list[dict[str, Any]] = []
+    if args.reuse_encodes:
+        work = root / "work"
+        first, repeat = work / f"tail_cl3_{rung}.bin", work / f"tail_cl3_{rung}_repeat.bin"
+        if not first.is_file():
+            raise Cl3Error(f"--reuse-encodes: no finished stream at {first}")
+        encodes.append({"stream": cl2.file_fact(first), "reused_from_previous_attempt": True})
+        if repeat.is_file():
+            encodes.append({"stream": cl2.file_fact(repeat), "reused_from_previous_attempt": True})
+        cl2.progress({"stage": "encode", "rung": rung, "reused": len(encodes)})
     for pass_index, tag in enumerate((f"cl3_{rung}", f"cl3_{rung}_repeat")):
+        if encodes:
+            break
         if pass_index == 1 and args.skip_repeat:
             break
         encodes.append(
@@ -257,7 +302,7 @@ def stage_price(args: argparse.Namespace) -> dict[str, Any]:
     if not receiver_copy.exists():
         shutil.copytree(LIVE_RUNTIME, receiver_copy, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "._*"))
     shutil.copyfile(candidate, receiver_copy / "archive.zip")
-    pin_fact = cl2.patch_inflate_pins(receiver_copy, candidate_fact["sha256"], candidate_fact["bytes"])
+    pin_fact = patch_inflate_pins_live(receiver_copy, candidate_fact["sha256"], candidate_fact["bytes"])
     decoded, decode_report, decode_seconds = cl2.decode_with_receiver(env, receiver_copy / "archive.zip")
     identity = bool(np.array_equal(decoded, np.asarray(target)))
     decoded_fact = cl2.persist_bytes(retained / "decoded_tokens.u8", decoded.tobytes(order="C"), label="decoded field")
@@ -396,6 +441,11 @@ def build_parser() -> argparse.ArgumentParser:
     price.add_argument("--checkpoint", required=True, type=Path)
     price.add_argument("--expected-profile", default="cl2_shipped_ladder", choices=("cl2_shipped_ladder",))
     price.add_argument("--skip-repeat", action="store_true", help="skip the second encode (row is NOT admissible)")
+    price.add_argument(
+        "--reuse-encodes",
+        action="store_true",
+        help="reuse streams a previous attempt already finished, instead of re-encoding (~50 min each)",
+    )
     price.add_argument("--force", action="store_true")
     report = sub.add_parser("report", help="ladder table against the live pointer")
     report.add_argument("--out", type=Path, default=None)
