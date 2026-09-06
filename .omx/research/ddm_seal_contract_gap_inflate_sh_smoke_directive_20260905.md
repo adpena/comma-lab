@@ -30,3 +30,9 @@ build, Brotli gate, file-list dispatch, `_verify_input` against the re-pinned co
 `tools/review_tracker.py mark-file <f> --status reviewed` does not rescan the file: a function added after the last `scan` is marked reviewed VACUOUSLY (md4
 measured 11 entities before `scan`, 12 after). Cure: `mark-file` rescans first (or refuses when the file's entity census differs from the last scan), so the
 two-visible-passes policy binds the CURRENT entities. Acceptance: a test that adds a function and asserts `mark-file` either covers it or refuses.
+
+## ITEM 5 — anchor-count assertions go red when an arm adds an anchor (found by md4, 2026-09-06)
+`src/tac/tests/test_resize_exploit_flip_fix_frontier.py::test_builds_and_is_valid_canonical_equation` asserts 2 anchors against an equation that now carries 3
+(md4 fixed the same class in `test_checkpoint_trajectory_error_partition.py`). Cure: equation tests assert the residual map addresses EVERY anchor (the
+invariant) rather than a literal count; sweep the test suite for literal `len(anchors) == N` assertions. Acceptance: the named test green without weakening the
+addressability invariant.
