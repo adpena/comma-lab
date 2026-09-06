@@ -454,6 +454,43 @@ Second encode and receiver decode were in flight at the time of writing; the row
 only once both pass. Every payload retained under
 `…/ddm_cl3_hpac_smaller_prior_and_seed_selection/rungs/lambda_2p0/retained_rc1/`.
 
+## 6. PREDICTION SCORECARD — every line I could score, with its residual
+
+Written before any measurement (P1–P7 in the charter, P8 by me at 23:33Z before the first exact number). Recorded
+here whether it flattered me or not.
+
+| # | prediction | MEASURED | verdict | residual |
+|---|---|---|---|---|
+| P1 | λ=2.0 model −250…−400 B | −659 B (Brotli, its own currency); −457 B (rc1) | **MISSED**, favourable direction | 259 B |
+| P2 | λ=2.0 stream tax +0…+200 B | **+681 B** | **MISSED**, 3.4× the band | 481 B |
+| P3 | λ=2.0 net −350…−50 B, **PAYS** | **+224 B, does not pay** | **FALSIFIED** | 274 B |
+| P4/P5 | λ=4.0 model/stream | — | **NOT RUN** — falsifier fired (pre-registered) | — |
+| P6 | seeds min-of-3 lands −40…−90 B beyond the control | +29 B and +73 B model: both WORSE | **FALSIFIED**, wrong side | ≥ 69 B |
+| P7 | seeds within ±20 B ⇒ lever at its floor | spread 29 B (J), 73 B (model) | **lever IS at its floor**; the ±20 B guess was tight | 9 B |
+| P8 | rc1 shows a LARGER model saving than Brotli | 457 B vs 659 B — **smaller** | **INVERTED** | 202 B |
+
+**Five falsified or missed, one not-run, and none in my favour.** The two that matter are P3 (the rung does not pay,
+so the axis closes) and P8 (inverted, and its correction is the arm's transferable result). P2 is the quiet one worth
+naming: I under-predicted the stream tax by 3.4×, and since the stream tax is what killed the rung, my whole model of
+the trade was wrong in the term that decided it.
+
+## 7. VERDICT
+
+1. **The capacity axis is CLOSED in both directions on this vehicle.** cl2: λ 1.0 → 0.5 costs +506 B. cl3: λ 1.0 → 2.0
+   costs +224 B. **λ = 1.0 is a local optimum** — both neighbours cost bytes. λ=4.0 was not fired, per the
+   pre-registered falsifier. `verdict_scope`: **FORMULATION** (fixed C64/P64/delta2/D8 topology, 60-epoch warm-start
+   law from the ep-634 EMA init, multiplier ∈ {0.5, 1, 2}). The mechanism claim "capacity is affordable only as
+   learned weights" is untouched; what is closed is that the trainer's **rate multiplier** is the coordinate that buys it.
+2. **The seed lever is at its floor and has nothing to select.** Three seeds' models: 12,343 (control) / 12,375 / 12,416
+   — and the control already holds the smallest. Against a fixed-law noise floor of exactly 0 B, the spread is pure
+   seed effect: ~29 B on J, ~570–1,440× smaller than the 41,776.8 B demand. `verdict_scope`: **INSTANCE** (three seeds,
+   one law, one object).
+3. **No pointer move, and none was available.** Every rung priced ABOVE the live pointer, so no candidate was sealed
+   and none should be. The λ=2.0 row is fully receiver-closed and admissible — it lost on exact bytes, not on a defect,
+   which is what makes the closure trustworthy.
+4. **The transferable result is one I did not predict:** improving the model coder CLOSED this axis. Registered as
+   `coder_strength_substitutes_for_capacity_v1` with its transfer rule.
+
 ## 5b. Ready-to-fire state (resumable from disk)
 
 Runbook `/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection/RUNBOOK.md` carries the exact ten
