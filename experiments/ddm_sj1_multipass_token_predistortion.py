@@ -1347,6 +1347,7 @@ def cmd_pass_merge(args) -> int:
     if len({row["pair"] for row in rows}) != N_PAIRS:
         raise Sj1Error("ledger rows do not cover the full n600 field")
 
+    tokens_changed_this_pass = sum(int(row.get("tokens_changed", 0)) for row in rows)
     base = jg1.load_tokens(BODY_TOKENS)
     tokens_changed = sum(
         int((plane != base[int(key)]).sum()) for key, plane in planes.items()
@@ -1389,10 +1390,9 @@ def cmd_pass_merge(args) -> int:
         "proposals_realized": realized,
         "moves_accepted": accepted,
         "tokens_changed_vs_base": tokens_changed,
+        "tokens_changed_this_pass": tokens_changed_this_pass,
         "cells_per_changed_token_this_pass": (
-            repaired / sum(int(row.get("tokens_changed", 0)) for row in rows)
-            if sum(int(row.get("tokens_changed", 0)) for row in rows)
-            else 0.0
+            repaired / tokens_changed_this_pass if tokens_changed_this_pass else 0.0
         ),
         "realized_evaluations": evaluations,
         "pairs_edited": len(planes),
@@ -1400,9 +1400,13 @@ def cmd_pass_merge(args) -> int:
         "field_npz": str(args.out_field),
         "field_npz_sha256": _sha256_file(args.out_field),
         "seg_gain_bytes_equivalent": repaired * BYTES_PER_SEG_CELL,
-        "break_even_bits_per_changed_token": (
-            8.0 * BYTES_PER_SEG_CELL * repaired / tokens_changed
-            if tokens_changed
+        # THIS PASS's repairs over THIS PASS's tokens.  Dividing a per-pass numerator by
+        # the CUMULATIVE token count (the bug this replaces) mixes two populations and
+        # understated pass 3's break-even by 6.8x -- the same shape as the merge's earlier
+        # `local_repaired` defect: a summary reading a field whose meaning had moved.
+        "break_even_bits_per_changed_token_this_pass": (
+            8.0 * BYTES_PER_SEG_CELL * repaired / tokens_changed_this_pass
+            if tokens_changed_this_pass
             else 0.0
         ),
         "axis": "[macOS-CPU advisory, jg1 instrument, DALI GT lineage]",
@@ -1413,8 +1417,9 @@ def cmd_pass_merge(args) -> int:
     print(
         f"pass {report['pass_index']} stage={report['stage']}: "
         f"repaired {repaired}/{flips_before} ({report['fraction_of_flips_repaired']:.2%}) "
-        f"with {tokens_changed} changed tokens "
-        f"({report['cells_per_changed_token_this_pass']:.3f} cells/token); "
+        f"with {tokens_changed_this_pass} changed tokens this pass "
+        f"({report['cells_per_changed_token_this_pass']:.3f} cells/token, "
+        f"break-even {report['break_even_bits_per_changed_token_this_pass']:.3f} bits/token); "
         f"d_seg {report['d_seg_before']:.8f} -> {report['d_seg_after']:.8f}"
     )
     return 0

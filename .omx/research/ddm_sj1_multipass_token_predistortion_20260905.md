@@ -615,9 +615,48 @@ way — the advisory rig reads very slightly OPTIMISTIC on distortion:
 That is the honest calibration to carry into the successor: expect the T4 row to land a few
 parts in 10⁵ ABOVE the projection, not below.
 
+## 10. PASS 3 — the convergence loop still says CONTINUE
+
+600/600 pairs, 4 shards, 15,041 s. Coverage verified (600 rows, 600 distinct pairs).
+
+| quantity | pass 2a | **pass 3** |
+|---|---|---|
+| flips before → after | 23,749 → 14,156 | **14,157 → 12,710** |
+| flips repaired | 9,593 = **40.39%** | **1,447 = 10.22%** |
+| tokens changed THIS pass | 7,804 | **1,339** |
+| cells per changed token | 1.229 | **1.081** |
+| break-even bits per changed token | 12.520 | **11.006** |
+| d_seg | 0.00020132 → 0.00012000 | 0.00012001 → **0.00010774** |
+| seg gain | 0.008132 S | **0.001227 S** |
+| moves accepted | 7,806 | 1,339 |
+| proposals enumerated / realized | 96,764 / 68,782 | 59,693 / 56,161 |
+
+Cumulative against the original body: **23,749 → 12,710 flipped cells**, d_seg
+0.00020132277 → **0.00010774400**, on 9,121 changed tokens.
+
+**The convergence rule says CONTINUE.** The stop is "a pass repairs < 1% of remaining
+flips"; pass 3 repaired **10.22%**, ten times that. The marginal case is still healthy but
+it IS decaying, and both numbers move together: the repair fraction fell 40.39% → 10.22%
+(3.95×) while efficiency fell only 1.229 → 1.081 cells/token (1.14×). So the loop is
+running out of SITES, not out of leverage per site — each remaining site is nearly as
+repairable as before, there are simply far fewer of them. On that shape pass 4 is worth
+one round: at 1.081 cells/token the break-even is 11.0 bits against a pass-2a marginal of
+6.23, and the rate only has to stay under roughly 1.8× its previous cost to keep paying.
+
+### A second merge bug of the same genus, found and fixed
+
+The merge reported pass 3's break-even as **1.616 bits/token**. That is a per-pass
+numerator over a CUMULATIVE denominator — 1,447 repairs divided by the 9,121 tokens
+changed since the ORIGINAL body — mixing two populations and understating the real figure
+by **6.8×**. The correct value is 11.006 bits/token. This is the same shape as the
+`local_repaired` defect in §5: a summary line reading a field whose meaning had moved
+under it. Fixed by separating `tokens_changed_this_pass` from `tokens_changed_vs_base`
+and naming the metric `break_even_bits_per_changed_token_this_pass`; both passes re-merged
+from their shard receipts.
+
 ---
 
-*(Section 10+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
+*(Section 11+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
 appended as each lands. Nothing is written here before it is measured.)*
 
 ---
