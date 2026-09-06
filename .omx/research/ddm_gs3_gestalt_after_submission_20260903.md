@@ -973,3 +973,15 @@ damage 430× reproduced jg1/jg4's ×387. **The map changes shape:** this is a DI
 FIVE moves — rc1 −1,733 B · pc1 ×4/×8/×16 −3,463 B & pose · sj1 seg −0.0081 S — **S 0.14781744 → 0.13981402 = −8.00e-3 in one evening**, all on the shipped object,
 no retraining. Successors already in motion: sj1 pass 3 (residual field; convergence rule < 1 % not reached), the 566-pair admission subset (needs its own encode
 pair). PR #140 is now eight moves behind.
+
+## Addendum 14 (2026-09-06 04:40Z) — THE 32ND POINTER MOVE: S 0.13900437796841966 @ 181,645 B [contest-CUDA T4 n600] (sj1 pass 3)
+
+Call `fc-01M1TFD35EPY2YZHNV3VKJP6MG`, archive sha `06c44dc464038649f1cc149f04ac03a518294ffcf49b87d8f66df30eb3c63cd3`; **d_seg 0.00012009 → 0.00010913** (1,447 more
+flips; the admission's 12,866 predicted = 12,866 measured on the shipped bytes), **d_pose 5.40e-6 → 5.1e-6** (re-solved on the candidate renders), +741 B (token
+stream +728 at **5.31 bits/changed token — cheaper than pass 2a's 6.23**: the context model absorbs earlier edits' structure; carrier +13). Δ −8.09639315543148e-4;
+projection error +4.2e-6 (the 2-sig-fig pose print). The 370-pair admitted subset beat the full 445-pair set by 1.03e-4 and was priced by a REAL encode pair (the
+ledger-sum estimate under-charged by 19.6 B — so the sweep may choose on the ledger, the seal must not). Three silent-revert classes now cured structurally in this
+arm (carrier start codes; subset writer omitting non-admitted planes — would have reverted 2,337 banked tokens invisibly; stage-tail baseline equal to the encoder
+tree's own previous output): all one shape — **a check that encoded a round-one premise and kept passing after the premise moved.** Six moves since the cl2 row
+(15:47Z yesterday): **S 0.14781744 → 0.13900438 = −8.81e-3 in 13 hours**, all on the shipped object, no retraining. 45.8 % of the flipped cells the wave inherited
+are gone; seg debt 12,866 cells (10.9 KB-eq); gap to sub-0.12 0.01900437796841966. Convergence rule (< 1 %/pass) not reached: pass 4 is a decision on this row.
