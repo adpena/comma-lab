@@ -460,6 +460,31 @@ real copy — patches exactly once, old pins gone, idempotent on re-run), and `-
 post-encode failure costs one decode instead of two ~50-minute encodes. The two finished streams were already on disk;
 the completion run consumed them byte-identically rather than regenerating them.
 
+### 5b-ii. A SECOND defect — and this one my own fix caused
+
+The `--reuse-encodes` patch from §5b-i introduced a regression. I guarded the encode loop with
+`for pass_index, tag in (...): if encodes: break`, meaning "skip the loop when we already reused streams". On a
+**fresh** run the list becomes non-empty after pass 0, so the guard fired on the second iteration and **the second
+encode never ran.** The rung still produced a byte-final row; what it silently lost was its determinism proof.
+
+It shipped exactly once, on `lambda_1p0_s18`, whose first result carried `two_encodes_identical: False` with a single
+encode recorded — **not admissible**. λ=2.0 was priced before the patch (two encodes, identical) and s17's completion
+consumed two already-finished streams, so only s18 was affected.
+
+This is the "your own fixes are unreviewed new code" law arriving on schedule. My review of the reuse patch checked
+that reuse works. It did not check that the path I had not changed *on purpose* still did what it did before — and a
+guard written as `if encodes` instead of `if args.reuse_encodes` reads as equivalent and is not.
+
+Cure: guard on the FLAG, `enumerate(() if args.reuse_encodes else (tag, repeat_tag))`, with the three modes proved by
+direct enumeration — fresh 2 passes, reuse 0, `--skip-repeat` 1 (the old code gave fresh = 1). The comment at that line
+names this incident so the next reader cannot re-derive the "simpler" form. s18 was re-priced: pass 0 resumes the
+finished 113,483 B stream, pass 1 encodes fresh, so the row earns the proof rather than being granted it.
+
+**Both defects share one shape** and it is worth naming once: each was a piece of code I did not change reasoning
+about a context I had changed. The pin patcher assumed fs2's tree; the loop guard assumed the reuse path. Neither
+failed loudly at the point of the mistake — one failed an hour later, one did not fail at all and simply weakened a
+claim. The instrument caught the first; only reading the result JSON caught the second.
+
 ### 5c. Admissibility and custody of the λ=2.0 row
 
 Terminal checkpoint `qat_stage_end_epoch_0060.pt` sha `fd686915…`, 1,051,959 B; training 3,357.8 s at 56.0 s/epoch,
