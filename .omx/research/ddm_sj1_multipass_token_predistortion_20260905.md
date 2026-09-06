@@ -739,9 +739,58 @@ That is three silent-revert defects in this family now: the carrier start codes 
 caught it), the subset writer, and the tail baseline. All three share one shape — **a check
 that encoded a round-one premise, still passing after the premise moved.**
 
+## 13. SEALED — `ddm_sj1_token_predistortion_pass3`, contest-CUDA
+
+`SEAL_ddm_sj1_token_predistortion_pass3_contest_cuda.json`, seal sha
+`748e4737a2137ffbf11148360304da096e472b75ea92d92517bc65963528bc56`, **SEAL_VALID**.
+Archive **181,645 B** sha `06c44dc464038649f1cc149f04ac03a518294ffcf49b87d8f66df30eb3c63cd3`;
+runtime 43 files, 925,463 B, digest `2435dab86725ed8e…`.
+
+| leg | live row | candidate | ΔS |
+|---|---|---|---|
+| seg (T4-carried, ratio 1.0006634762) | 1.2009e-04 | **1.0913879636e-04** | **−0.00109521** |
+| pose (`cpu_torch`, DALI, n600) | 5.398060e-06 | **5.0928018e-06** | **−0.00021076** |
+| rate | 180,904 B | **181,645 B** | **+0.00047217** |
+| | 0.1398140172839628 | **0.13900021608143795** | **−0.0008138012025248609** |
+
+41× the admission bar. Bytes itemised: +728 token stream, +13 re-solved carrier.
+
+**The seg leg matched the admission EXACTLY** — 12,866 flipped cells predicted, 12,866
+measured on the shipped bytes, **zero cells of disagreement**. Round one carried a 9-cell
+gap because its base was a batch-1 re-render; this round's base was itself a parse-back
+measurement, and the gap closed completely. That is the instrument agreeing with itself
+across a full encode → decode → re-segment round trip.
+
+| gate | result |
+|---|---|
+| subset encode twin | **byte-identical**, 120,225 B |
+| full-set encode twin | **byte-identical**, 120,385 B |
+| subset priced by REAL encode, not ledger | 181,632 B measured vs 181,612.4 predicted |
+| carrier identity control | **PASS**, rebuilds to `9157920b…` |
+| frame-1 section identity | **PASS**, only the carrier moved |
+| receiver decode identity | **PASS**, `decoded_field_matches_admitted = true` |
+| full CPU inflate | **705.7 s**, `0.raw` sha `bfe96bac…`, 600 pairs, token cache DISABLED |
+| public entrypoint `bash inflate.sh` | reached the CUDA gate in **0.835 s** |
+
+Ten falsifiers pre-registered, including one that exists only because this round found the
+defect: *non-admitted pairs must still carry the live row's edits* — if the fired d_seg
+lands near the ORIGINAL body's 0.00020139 rather than near 0.00010914, the silent revert is
+the first thing to look for.
+
+### Where the campaign stands
+
+| | d_seg | flipped cells | archive | S |
+|---|---|---:|---:|---|
+| body as this arm found it | 0.00020132277 | 23,749 | 179,982 (cl2) | — |
+| pass 2a candidate (PROMOTED) | 0.00012009 | 14,166 | 180,904 | 0.1398140172839628 |
+| **pass 3 candidate (sealed)** | **1.0913879636e-04** | **12,866** | **181,645** | **0.13900021608143795** |
+
+Cumulative: **45.8% of the flipped argmax cells this arm inherited are gone**, bought with
+741 bytes on top of the first candidate's 6,118.
+
 ---
 
-*(Section 13+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
+*(Section 14+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
 appended as each lands. Nothing is written here before it is measured.)*
 
 ---
