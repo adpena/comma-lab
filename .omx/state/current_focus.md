@@ -919,10 +919,10 @@ operator queue when they conflict with this section.
   `.omx/state/canonical_frontier_pointer.json`; this file is a mirror, not a
   frontier source of truth.
 - Canonical scanner-derived best CUDA anchor:
-  `0.14411787458634504`
+  `0.1398140172839628`
   `[contest-CUDA T4]`, archive
-  `1de6c5d7186a0b31e5cc085bb6d2baab8275ee0d9de4d509f4d8add13695a629`,
-  lane `ddm_pc1_t4_lattice_x16_on_rc1_20260905`.
+  `42aa84b59f71d83b8f11a26c635a7af8f32dcfdf183e3fea4bb2007e74a5f2f8`,
+  lane `ddm_sj1_t4_token_predistortion_joint_20260906`.
 - A1 remains the Rule #6 control substrate, not the best current axis floor:
   `0.19284757743677347` `[contest-CPU; GHA Linux x86_64 1:1]` and
   `0.2263520234784395` `[contest-CUDA T4]`.

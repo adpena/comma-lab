@@ -96456,15 +96456,15 @@
       "id": "lane_ddm_cl3_hpac_smaller_prior_and_seed_selection_20260905",
       "name": "ddm_cl3 HPAC smaller-prior direction + seed selection on the shipped fs2 object",
       "phase": 2.0,
-      "level": 0,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/ddm_cl3_rc1_rung_price.py (commits b5bdc20a1, 3bbc11e52, f3eb816d4): control rebuilds the live pointer's 12,343 B hpac section byte-for-byte from cl2's retained raw; trainer widened purely additively (7fe2cea8c, 19 tests pass)"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "[empirical:.omx/research/ddm_cl3_hpac_smaller_prior_and_seed_selection_20260905.md] two rungs priced as EXACT bytes on the LIVE rc1-coded pointer object: lambda_2p0 J=125,986 (+224 B), seed 20260717 J=125,791 (+29 B) vs the live 125,762 B; both encodes byte-identical on lambda_2p0"
         },
         "contest_cuda": {
           "status": false,
@@ -96906,6 +96906,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "ddm_sj1_t4_token_predistortion_joint_20260906",
+      "name": "ddm_sj1_t4_token_predistortion_joint_20260906",
+      "phase": 8.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.1398140172839628 @ 180,904 B; archive sha 42aa84b59f71d83b8f11a26c635a7af8f32dcfdf183e3fea4bb2007e74a5f2f8; harvest /Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_joint_20260906/MODAL_REMOTE_RESULT.json"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.1398140172839628 @ 180,904 B; archive sha 42aa84b59f71d83b8f11a26c635a7af8f32dcfdf183e3fea4bb2007e74a5f2f8; harvest /Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_joint_20260906/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "contest-CUDA S 0.1398140172839628 @ 180,904 B; archive sha 42aa84b59f71d83b8f11a26c635a7af8f32dcfdf183e3fea4bb2007e74a5f2f8; harvest /Volumes/APDataStore/pact/ddm_sj1_t4_token_predistortion_joint_20260906/MODAL_REMOTE_RESULT.json"
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -96915,5 +96956,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-09-05T22:26:42Z"
+  "updated_at": "2026-09-06T02:05:46Z"
 }
