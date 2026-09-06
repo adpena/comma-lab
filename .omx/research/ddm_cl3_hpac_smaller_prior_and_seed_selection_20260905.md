@@ -351,8 +351,8 @@ by construction. `J = hpac_container + token_stream`, priced through rc1's coder
 | **live pointer** (= cl2 λ=1.0 control, rc1-recoded) | 1.0 | 20260716 | 12,343 | — | 113,419 | — | **125,762** | 0 | — |
 | `lambda_2p0` | 2.0 | 20260716 | **11,886** | **−457** | **114,100** | **+681** | **125,986** | **+224** | **NO** |
 | `lambda_4p0` | 4.0 | — | — | — | — | — | — | — | **NOT FIRED — falsifier fired** |
-| `lambda_1p0_s17` | 1.0 | 20260717 | _in flight_ | | | | | | |
-| `lambda_1p0_s18` | 1.0 | 20260718 | _queued_ | | | | | | |
+| `lambda_1p0_s17` | 1.0 | 20260717 | 12,375 | **+32** | 113,416 | **−3** | **125,791** | **+29** | **NO** |
+| `lambda_1p0_s18` | 1.0 | 20260718 | _encoding_ | | | | | | |
 
 (λ=2.0's row is byte-final on the encode; ADMISSIBILITY — second byte-identical encode + receiver decode identity —
 was still running when this table was written and is reported in §5c.)
@@ -393,6 +393,29 @@ of this arm. Two consequences:
    bytes — it *removes* headroom from the capacity lever. An arm that had priced this ladder before rc1 would have
    read λ=2.0 as break-even and plausibly chased λ=4.0; on the object we actually ship that would have been chasing a
    lever the coder had already spent.
+
+### 5a-ii. The seed lever, first row — and it is TINY
+
+Seed 20260717 under the identical law: model **+32 B**, stream **−3 B**, **J +29 B** against the control seed
+20260716 that the live pointer carries. A different seed lands a marginally BIGGER model that codes the field
+marginally better, and the two effects nearly cancel.
+
+Put beside the two facts already measured, this is the informative part:
+
+| quantity | bytes | source |
+|---|---:|---|
+| run-to-run spread at FIXED law and seed | **0** | cl2's twin: byte-identical at every layer |
+| seed-to-seed spread at fixed law (n=2 so far) | **29** | this row |
+| λ 1.0 → 2.0 (smaller-prior rung) | 224 | §5 |
+| λ 1.0 → 0.5 (bigger-prior rung, cl2) | 506 | cl2 |
+| the demand to sub-0.12 | **41,776.8** | §4b |
+
+Because the fixed-law noise floor is exactly 0 B, the 29 B is **pure seed effect with no run noise mixed in** — the
+measurement is as clean as it can be. It is also 1,440× smaller than the demand. P6 predicted a min-of-3 landing
+**−40…−90 B beyond the control**; the first extra seed came in at **+29 B**, i.e. WORSE than the control, so P6 is
+already outside its band on the wrong side and can only be rescued by s18. P7 predicted the seeds would sit within
+±20 B of one another if the lever were at its floor; at 29 B the spread is just outside that, which reads as "at the
+floor, and the ±20 B guess was slightly tight" rather than as a live lever.
 
 ### 5b-i. A defect I shipped, caught by the instrument an hour late
 
