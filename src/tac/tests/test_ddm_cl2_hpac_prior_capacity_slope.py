@@ -88,12 +88,42 @@ def test_rate_only_delta_s_of_the_control_candidate() -> None:
     assert math.isclose(rate_only_delta_s(-41), -2.7300217078009027e-05, rel_tol=1e-12)
 
 
-def test_builder_carries_two_verified_anchors_with_re_derivable_residuals() -> None:
+def test_builder_carries_verified_anchors_with_re_derivable_residuals() -> None:
+    """ddm_cl2 landed two anchors; ddm_cl3 appended the smaller-model side (append-only)."""
+
     equation = build_hpac_prior_capacity_slope_v1()
     assert equation.equation_id == EQUATION_ID
-    assert len(equation.empirical_anchors) == 2
-    control, slope = equation.empirical_anchors
+    assert len(equation.empirical_anchors) == 3
+    control, slope, smaller = equation.empirical_anchors
     assert control.residual == 41.0
     assert slope.residual == 506.0 + 1_500.0
-    assert set(equation.predicted_vs_empirical_residual) == {control.anchor_id, slope.anchor_id}
+    # cl3: measured net +224 B against a prediction whose BEST case was -50 B.
+    assert smaller.residual == 224.0 - (-50.0)
+    assert set(equation.predicted_vs_empirical_residual) == {
+        control.anchor_id,
+        slope.anchor_id,
+        smaller.anchor_id,
+    }
     assert "capacity" in equation.name.lower()
+
+
+def test_the_ladder_is_now_closed_on_BOTH_sides_of_lambda_equals_one() -> None:
+    """The two secants bracket lambda = 1.0, and both neighbours cost bytes.
+
+    cl2 measured the bigger-model side (+506 B) on the fs2/Brotli object; cl3 measured the
+    smaller-model side (+224 B) on the rc1-coded successor.  Together they make lambda = 1.0 a
+    local optimum, which is a strictly stronger statement than either row alone.
+    """
+
+    equation = build_hpac_prior_capacity_slope_v1()
+    _control, slope, smaller = equation.empirical_anchors
+    bigger_side = slope.empirical_output["joint_delta_vs_control"]
+    smaller_side = smaller.empirical_output["joint_delta_vs_control"]
+    assert bigger_side > 0 and smaller_side > 0
+    assert not rung_pays(
+        smaller.empirical_output["delta_stream_bytes"],
+        smaller.empirical_output["delta_model_bytes"],
+    )
+    # The cl3 anchor must say out loud which object it was priced on -- the coder changed.
+    assert "rc1" in smaller.inputs["object"].lower()
+    assert smaller.empirical_output["lambda_4p0_fired"] is False

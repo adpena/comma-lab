@@ -258,10 +258,63 @@ def _anchor_slope() -> EmpiricalAnchor:
     )
 
 
+# --- ddm_cl3 (2026-09-06): the OTHER side of the ladder, on the SUCCESSOR object ---------------
+# APPEND-ONLY: nothing above is mutated.  cl2 measured the bigger-model side (lambda 1.0 -> 0.5) on
+# the fs2/Brotli object.  cl3 fired the untested smaller-model side (1.0 -> 2.0) after ddm_rc1
+# replaced the model coder, so these bytes are on the rc1-coded object and are labelled as such.
+CL3_LAMBDA_2P0_MODEL_BYTES = 11_886  # rc1 container; the live pointer's control is 12,343
+CL3_LAMBDA_2P0_STREAM_BYTES = 114_100  # the live pointer's control stream is 113,419
+CL3_LAMBDA_2P0_DELTA_MODEL_BYTES = -457
+CL3_LAMBDA_2P0_DELTA_STREAM_BYTES = 681
+CL3_LAMBDA_2P0_JOINT_DELTA_VS_CONTROL_BYTES = 224
+CL3_LEDGER = ".omx/research/ddm_cl3_hpac_smaller_prior_and_seed_selection_20260905.md"
+
+
+def _anchor_smaller_side_secant() -> EmpiricalAnchor:
+    """ddm_cl3: the smaller-model direction also fails -> lambda = 1.0 is a LOCAL OPTIMUM."""
+
+    return EmpiricalAnchor(
+        anchor_id="cl3_lambda_2p0_smaller_side_secant_ladder_closed_both_directions_20260906",
+        measurement_utc="2026-09-06T01:53:36Z",
+        inputs={
+            "rungs": {"control_lambda_1p0": 1.0, "lambda_2p0": 2.0},
+            "object": "the rc1-coded live pointer (pc1 x16 on rc1 model sections), NOT the fs2/Brotli object the rows above were priced on",
+            "same_law": "identical config, init, cache, seed and device; only --rate-lambda differs",
+            "instrument_control": "the rc1 recipe rebuilt the live pointer's 12,343 B hpac section byte-for-byte from cl2's retained control raw body",
+            "producer": "experiments/ddm_cl3_rc1_rung_price.py price --rung lambda_2p0",
+        },
+        predicted_output={
+            "cl3_P3": "lambda 2.0 nets -350..-50 B against the control (the smaller-prior direction PAYS)",
+            "falsifier": "lambda 2.0's net joint >= 0 => the capacity axis is closed in BOTH directions on this vehicle and lambda 4.0 is not fired",
+        },
+        empirical_output={
+            "delta_model_bytes": CL3_LAMBDA_2P0_DELTA_MODEL_BYTES,
+            "delta_stream_bytes": CL3_LAMBDA_2P0_DELTA_STREAM_BYTES,
+            "joint_delta_vs_control": CL3_LAMBDA_2P0_JOINT_DELTA_VS_CONTROL_BYTES,
+            "lambda_4p0_fired": False,
+            "row_admissible": "two encodes byte-identical (114,100 B); receiver decode returns the exact field; census shows semantic, carrier and residual table byte-identical to the pointer and only the hpac section changed",
+            "reading": "the model shrank -457 B and the stream got WORSE by +681 B: net +224 B. With cl2's +506 B on the bigger side, BOTH neighbours of lambda = 1.0 cost bytes -- the multiplier sits at a LOCAL OPTIMUM and the ladder is closed in both directions",
+            "coder_caveat": "on cl2's Brotli container the same weights would have read +22 B (near break-even); the closure is firmer on the object that ships -- see coder_strength_substitutes_for_capacity_v1",
+        },
+        # gap between the prediction's net joint (best case -50 B) and the measured +224 B
+        residual=float(CL3_LAMBDA_2P0_JOINT_DELTA_VS_CONTROL_BYTES - (-50)),
+        source_artifact=CL3_LEDGER,
+        measurement_method="exact adjacent secant of two same-law rungs, priced through rc1's model coder on the live pointer tree with receiver-decode identity",
+        provenance=build_provenance_for_research_sidecar(
+            sidecar_path=CL3_LEDGER,
+            reactivation_criteria="a capacity coordinate other than the trainer's rate multiplier (width, frame_dim, receptive-field shape); the multiplier is now closed on BOTH sides and on two successive objects",
+            measurement_axis=_AXIS,
+            hardware_substrate="m5_max_128gib_metal_and_cpu",
+        ),
+        empirical_verification_status=VERIFIED_VIA_EMPIRICAL_ANCHOR,
+    )
+
+
 def build_hpac_prior_capacity_slope_v1() -> CanonicalEquation:
     """Build the prior-capacity slope law for the shipped HPAC mixer (ddm_cl2, 2026-09-05)."""
     control = _anchor_control()
     slope = _anchor_slope()
+    smaller = _anchor_smaller_side_secant()
     return CanonicalEquation(
         equation_id=EQUATION_ID,
         name=(
@@ -316,10 +369,11 @@ def build_hpac_prior_capacity_slope_v1() -> CanonicalEquation:
             "prior_law_prediction_holds": "bool",
             "rate_only_delta_s": "score_units",
         },
-        empirical_anchors=(control, slope),
+        empirical_anchors=(control, slope, smaller),
         predicted_vs_empirical_residual={
             control.anchor_id: control.residual,
             slope.anchor_id: slope.residual,
+            smaller.anchor_id: smaller.residual,
         },
         last_calibration_utc=_UTC,
         next_recalibration_trigger=RECALIBRATE_ON_NEW_ANCHORS,
