@@ -1302,6 +1302,29 @@ def cmd_pass(args) -> int:
         with np.load(planes_path, allow_pickle=False) as blob:
             planes = {k: np.asarray(blob[k], dtype=np.uint8) for k in blob.files}
 
+    # A row is appended for EVERY completed pair; the planes npz is only rewritten every
+    # ``--checkpoint-every`` pairs.  A kill inside that window (the walltime cap, an OOM,
+    # an operator cut) therefore leaves up to ``checkpoint_every - 1`` pairs per shard
+    # with a ROW but no PLANE.  Resuming past them marks them done, never re-plans them,
+    # and the merged field simply OMITS them -- and an omitted pair does not fall back to
+    # the prior pass, it reverts all the way to the BASE field, because every downstream
+    # consumer splices the npz onto ``BODY_TOKENS``.  That is the silent-revert genus this
+    # arm has already been bitten by three times, here at the resume surface: the row
+    # ledger would still read correct while the shipped field quietly lost every banked
+    # edit for those pairs.  So the disagreement is REFUSED, not repaired by guesswork.
+    if args.resume and done:
+        orphaned = sorted(p for p in done if str(p) not in planes)
+        if orphaned:
+            raise Sj1Error(
+                f"shard {args.shard_index} cannot resume: {len(orphaned)} pair(s) have a "
+                f"row but no plane (first: {orphaned[:8]}). The planes npz is written "
+                f"every {args.checkpoint_every} pairs while rows are written every pair, "
+                "so a kill inside that window loses those planes; resuming would skip the "
+                "pairs and the merged field would revert them to the BASE tokens, losing "
+                "every previously banked edit for them. Delete BOTH "
+                f"{rows_path} and {planes_path} and redo this shard."
+            )
+
     started = time.time()
     todo = [int(p) for p in indices if int(p) not in done]
     completed = 0
@@ -1380,6 +1403,24 @@ def cmd_pass_merge(args) -> int:
                 planes[key] = np.asarray(blob[key], dtype=np.uint8)
     if len({row["pair"] for row in rows}) != N_PAIRS:
         raise Sj1Error("ledger rows do not cover the full n600 field")
+
+    # Sister of the resume refusal above, at the surface where the damage would actually
+    # ship.  The rows covering all 600 pairs is NOT proof the field does: a pair that is
+    # merely ABSENT from the npz reverts to BODY_TOKENS downstream, so a complete-looking
+    # ledger can sit on top of a field that silently dropped a banked pair.  Every pass
+    # from pass 3 onward carries a prior field, so every pair must have a plane; the
+    # escape exists only for a first pass with no prior, where an untouched pair
+    # legitimately has none.
+    missing = sorted(p for p in range(N_PAIRS) if str(p) not in planes)
+    if missing and not args.allow_partial_planes:
+        touched = {int(r["pair"]) for r in rows if int(r.get("tokens_changed", 0)) > 0}
+        raise Sj1Error(
+            f"{len(missing)} pair(s) have a ledger row but NO plane (first: "
+            f"{missing[:8]}; {len(set(missing) & touched)} of them accepted moves). "
+            "A pair absent from the merged npz reverts to the BASE tokens downstream, "
+            "losing every banked edit for it while the ledger still reads complete. "
+            "Pass --allow-partial-planes ONLY for a first pass run with no prior field."
+        )
 
     tokens_changed_this_pass = sum(int(row.get("tokens_changed", 0)) for row in rows)
     base = jg1.load_tokens(BODY_TOKENS)
@@ -1556,6 +1597,15 @@ def build_parser() -> argparse.ArgumentParser:
     pmerge.add_argument("--receipts", nargs="+", required=True)
     pmerge.add_argument("--out-field", type=Path, required=True)
     pmerge.add_argument("--out", type=Path, required=True)
+    pmerge.add_argument(
+        "--allow-partial-planes",
+        action="store_true",
+        help=(
+            "permit a merged field that omits pairs. ONLY legal for a first pass with no "
+            "prior field, where an untouched pair legitimately has no plane. With a prior "
+            "field an omitted pair reverts to the BASE tokens and loses banked edits."
+        ),
+    )
     pmerge.set_defaults(func=cmd_pass_merge)
 
     return parser
