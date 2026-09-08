@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ddm_cl3 -- exact price of one HPAC capacity rung on the LIVE (rc1-coded) pointer object.
+"""ddm_cl3 -- exact price of one HPAC capacity rung on the historical pc1/rc1 control object.
 
 WHY THIS EXISTS.  ddm_cl2 priced its ladder against the fs2 object, where the hpac
 MODEL section reached the archive as ``brotli(raw IHS1 body)``.  Since then the object
@@ -10,15 +10,15 @@ so cl2's ``pack_model`` would price a section the receiver would refuse to read.
 module re-roots the SAME ladder on the live tree and prices the model section through
 rc1's coder, reusing cl2's and rc1's functions rather than reimplementing either.
 
-THE CONTAINER RECIPE (MEASURED against the live pointer, 2026-09-05).  For the hpac
-section the live tree carries::
+THE CONTAINER RECIPE (MEASURED against the then-live pointer, 2026-09-05).  For the hpac
+section the historical pc1/rc1 tree carries::
 
     brotli(ck2_interleave(apply_hpac(raw_ihs1, row_counts, shift=5)), q11, lgwin24)
 
 Driving cl2's retained lambda=1.0 control raw body (17,770 B, sha ``81728190...``) through
-exactly that recipe reproduces the live pointer's hpac section **byte for byte** -- 12,343 B,
-sha-identical -- which is the instrument control that licenses every rung priced here, and
-which also proves the live pointer carries cl2's control weights re-coded.
+exactly that recipe reproduces the historical control's hpac section **byte for byte** --
+12,343 B, sha-identical -- which is the instrument control that licenses every rung priced
+here, and which also proves that object carries cl2's control weights re-coded.
 
 WHAT MOVES AND WHAT IS HELD.  The token FIELD is held bit-identical, so d_seg and d_pose are
 held BY CONSTRUCTION and only two numbers move: the hpac container bytes and the RC64 token
@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import itertools
 import json
 import shutil
 import sys
@@ -60,7 +61,8 @@ from experiments import ddm_rc1_adaptive_section_codec as rc1codec
 from experiments import ddm_rc1_model_section_adaptive_recode as rc1rec
 
 STORE = Path("/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection")
-#: The LIVE frontier pointer tree (pc1's x16 rung on rc1's coded model sections).
+#: Historical ladder control: pc1's x16 rung on rc1's coded model sections.  It was
+#: the live frontier when ddm_cl3 ran, but the current pointer is the sj1 object below.
 LIVE_RUNTIME = Path(
     "/Volumes/VertigoDataTier/pact/ddm_pc1_pose_carrier_efficiency/retained/v3x16_on_rc1_candidate_runtime"
 )
@@ -72,6 +74,26 @@ LIVE_STREAM_BYTES = 113_419
 LIVE_STREAM_SHA256 = "e07274caeacbb3a6ce00e26b42d7032671af5c8109a2cee3a0697b116ac125cf"
 LIVE_JOINT_BYTES = LIVE_HPAC_BYTES + LIVE_STREAM_BYTES  # 125,762
 LIVE_SCORE = 0.14411787458634504
+#: The CURRENT score pointer is a successor of the pc1 object above.  The ladder rows
+#: restore pc1's older token field, so their smaller archives are NOT evidence that they
+#: beat this pointer: distortion is not held across that comparison.  ``stage_report``
+#: verifies these bytes from the retained source archive before writing the report.
+CURRENT_POINTER_RUNTIME = Path(
+    "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+    "/candidate_pass3/candidate_runtime"
+)
+CURRENT_POINTER_ARCHIVE = CURRENT_POINTER_RUNTIME / "archive.zip"
+CURRENT_POINTER_ARCHIVE_BYTES = 181_645
+CURRENT_POINTER_ARCHIVE_SHA256 = "06c44dc464038649f1cc149f04ac03a518294ffcf49b87d8f66df30eb3c63cd3"
+CURRENT_POINTER_SCORE = 0.13900437796841966
+CURRENT_POINTER_HPAC_BYTES = 12_343
+CURRENT_POINTER_STREAM_BYTES = 120_225
+CL2_CONTROL_RESULT = (
+    Path("/Volumes/VertigoDataTier/pact/ddm_cl2_hpac_prior_capacity_ladder")
+    / "rungs/lambda_1p0/RUNG_RESULT.json"
+)
+CL2_CONTROL_VERIFY = CL2_CONTROL_RESULT.with_name("VERIFY_RESULT.json")
+CL3_CONTROL_RESULT = STORE / "control_rc1/CONTROL_RESULT.json"
 #: The seed the live pointer's weights were trained under (cl2's lambda = 1.0 control).
 CONTROL_SEED = 20260716
 #: The raw IHS1 body of the weights the live pointer carries (cl2's lambda=1.0 control).
@@ -93,6 +115,102 @@ def rung_root(rung: str) -> Path:
 
 def sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def row_admissibility(row: dict[str, Any]) -> dict[str, Any]:
+    """Return the three independent legs required for an admissible ladder row."""
+
+    legs = {
+        "twin_encode_byte_identical": bool(row.get("two_encodes_identical")),
+        "receiver_copy_decode_identity": bool(row.get("decoded_identity")),
+        "section_census_only_model_and_stream_moved": bool(row.get("only_model_and_stream_moved")),
+    }
+    return {"legs": legs, "admissible": all(legs.values())}
+
+
+def source_verified_current_pointer() -> dict[str, Any]:
+    """Re-measure the current pointer's container facts from its retained source archive."""
+
+    archive_bytes = CURRENT_POINTER_ARCHIVE.read_bytes()
+    archive_sha256 = sha256_bytes(archive_bytes)
+    if len(archive_bytes) != CURRENT_POINTER_ARCHIVE_BYTES or archive_sha256 != CURRENT_POINTER_ARCHIVE_SHA256:
+        raise Cl3Error(
+            "current pointer archive drifted; re-derive its score and section constants before reporting"
+        )
+    sections = jg2.split_member(jg2.read_archive_member(CURRENT_POINTER_ARCHIVE))
+    stream = sections["tail"][jg2.RESIDUAL_COMPACT_BYTES :]
+    hpac_bytes = len(sections["hpac"])
+    stream_bytes = len(stream)
+    if hpac_bytes != CURRENT_POINTER_HPAC_BYTES or stream_bytes != CURRENT_POINTER_STREAM_BYTES:
+        raise Cl3Error(
+            "current pointer section census drifted: "
+            f"hpac={hpac_bytes} stream={stream_bytes}"
+        )
+    return {
+        "score": CURRENT_POINTER_SCORE,
+        "archive_bytes": len(archive_bytes),
+        "archive_sha256": archive_sha256,
+        "source_archive": str(CURRENT_POINTER_ARCHIVE),
+        "hpac_bytes": hpac_bytes,
+        "stream_bytes": stream_bytes,
+        "joint_bytes": hpac_bytes + stream_bytes,
+        "verified_at_source": True,
+    }
+
+
+def source_verified_ladder_control() -> dict[str, Any]:
+    """Verify the historical pc1 control's three admissibility legs from retained receipts."""
+
+    result = json.loads(CL2_CONTROL_RESULT.read_text(encoding="utf-8"))
+    verify = json.loads(CL2_CONTROL_VERIFY.read_text(encoding="utf-8"))
+    rc1_control = json.loads(CL3_CONTROL_RESULT.read_text(encoding="utf-8"))
+    encodes = result.get("encodes", [])
+    stream_shas = [entry.get("stream", {}).get("sha256") for entry in encodes]
+    twin = len(stream_shas) == 2 and bool(stream_shas[0]) and len(set(stream_shas)) == 1
+    control_row = {
+        "two_encodes_identical": twin,
+        "decoded_identity": result.get("decoded_identity"),
+        "only_model_and_stream_moved": verify.get("only_model_and_stream_moved"),
+    }
+    admission = row_admissibility(control_row)
+    if not admission["admissible"]:
+        raise Cl3Error(f"historical ladder control is not admissible at source: {admission}")
+    live_archive = rc1_control.get("live_archive", {})
+    live_hpac = rc1_control.get("live_hpac", {})
+    live_stream = rc1_control.get("live_stream", {})
+    expected = {
+        "archive_bytes": LIVE_ARCHIVE_BYTES,
+        "archive_sha256": LIVE_ARCHIVE_SHA256,
+        "hpac_bytes": LIVE_HPAC_BYTES,
+        "stream_bytes": LIVE_STREAM_BYTES,
+        "stream_sha256": LIVE_STREAM_SHA256,
+    }
+    observed = {
+        "archive_bytes": live_archive.get("bytes"),
+        "archive_sha256": live_archive.get("sha256"),
+        "hpac_bytes": live_hpac.get("bytes"),
+        "stream_bytes": live_stream.get("bytes"),
+        "stream_sha256": live_stream.get("sha256"),
+    }
+    if observed != expected or not rc1_control.get("hpac_bytes_match") or not rc1_control.get(
+        "hpac_sha_match"
+    ):
+        raise Cl3Error(
+            "historical pc1/rc1 ladder control drifted at source: "
+            f"expected={expected} observed={observed}"
+        )
+    return {
+        "rate_lambda": 1.0,
+        "seed": CONTROL_SEED,
+        "hpac_container_bytes": LIVE_HPAC_BYTES,
+        "stream_bytes": LIVE_STREAM_BYTES,
+        "joint_bytes": LIVE_JOINT_BYTES,
+        "joint_delta_vs_ladder_control": 0,
+        "candidate_archive_bytes": LIVE_ARCHIVE_BYTES,
+        "status": "MEASURED_CONTROL",
+        "verified_at_source": True,
+        **admission,
+    }
 
 
 def rc1_hpac_container(raw: bytes) -> dict[str, Any]:
@@ -384,9 +502,9 @@ def stage_report(args: argparse.Namespace) -> dict[str, Any]:
         path = rung_root(rung) / "RC1_RUNG_RESULT.json"
         if path.is_file():
             rows[rung] = json.loads(path.read_text(encoding="utf-8"))
-    # The ladder's lambda = 1.0 control IS the live pointer -- it carries cl2's control weights,
-    # re-coded by rc1 -- so it has no cl3 row of its own.  Without injecting it the secant that
-    # this whole arm exists to measure would simply not appear in the report.
+    # The ladder's lambda = 1.0 control was the live pointer when cl3 ran -- it carries cl2's
+    # control weights re-coded by rc1 -- so it has no cl3 row of its own.  Without injecting
+    # that historical control, the secant this arm exists to measure would not appear.
     control = {
         "hpac_container": {"bytes": LIVE_HPAC_BYTES},
         "stream": {"bytes": LIVE_STREAM_BYTES},
@@ -395,7 +513,7 @@ def stage_report(args: argparse.Namespace) -> dict[str, Any]:
     priced = {"live_pointer_control_lambda_1p0": control, **rows}
     ladder = [r for r in ("live_pointer_control_lambda_1p0", "lambda_2p0", "lambda_4p0") if r in priced]
     slopes = []
-    for left, right in zip(ladder, ladder[1:], strict=False):
+    for left, right in itertools.pairwise(ladder):
         d_model = priced[right]["hpac_container"]["bytes"] - priced[left]["hpac_container"]["bytes"]
         d_stream = priced[right]["stream"]["bytes"] - priced[left]["stream"]["bytes"]
         slopes.append(
@@ -422,37 +540,72 @@ def stage_report(args: argparse.Namespace) -> dict[str, Any]:
             "fixed_law_noise_floor_bytes": 0,
             "note": "the fixed-law noise floor is 0 B (cl2's twin was byte-identical at every layer), so the spread is pure seed effect; with n=3 the incumbent leading is chance, so the SCALE is the claim, not the ranking",
         }
-    best = min(rows.values(), key=lambda row: row["joint_bytes"]) if rows else None
+    report_rows: dict[str, dict[str, Any]] = {
+        "live_pointer_control_lambda_1p0": source_verified_ladder_control()
+    }
+    for rung in ("lambda_2p0", "lambda_1p0_s17", "lambda_1p0_s18"):
+        if rung not in rows:
+            continue
+        row = rows[rung]
+        admission = row_admissibility(row)
+        report_rows[rung] = {
+            "rate_lambda": row["rate_lambda"],
+            "seed": row["seed"],
+            "hpac_container_bytes": row["hpac_container"]["bytes"],
+            "stream_bytes": row["stream"]["bytes"],
+            "joint_bytes": row["joint_bytes"],
+            "joint_delta_vs_ladder_control": row["joint_bytes"] - LIVE_JOINT_BYTES,
+            "candidate_archive_bytes": row["candidate_archive"]["bytes"],
+            "status": "MEASURED",
+            **admission,
+        }
+    report_rows["lambda_4p0"] = {
+        "rate_lambda": 4.0,
+        "seed": CONTROL_SEED,
+        "hpac_container_bytes": None,
+        "stream_bytes": None,
+        "joint_bytes": None,
+        "joint_delta_vs_ladder_control": None,
+        "candidate_archive_bytes": None,
+        "status": "NOT_RUN_BECAUSE_FALSIFIED",
+        "legs": {
+            "twin_encode_byte_identical": None,
+            "receiver_copy_decode_identity": None,
+            "section_census_only_model_and_stream_moved": None,
+        },
+        "admissible": False,
+    }
+    admissible_rows = [
+        (rung, row)
+        for rung, row in report_rows.items()
+        if row["admissible"] and row["joint_bytes"] is not None
+    ]
+    best_rung, best = min(admissible_rows, key=lambda item: item[1]["joint_bytes"])
+    current_pointer = source_verified_current_pointer()
     report = {
-        "schema": "ddm_cl3_rc1_ladder_report.v1",
+        "schema": "ddm_cl3_rc1_ladder_report.v2",
         "axis": AXIS,
         "score_claim": False,
-        "live_pointer": {
+        "ladder_control": {
             "score": LIVE_SCORE,
             "archive_bytes": LIVE_ARCHIVE_BYTES,
             "archive_sha256": LIVE_ARCHIVE_SHA256,
             "hpac_bytes": LIVE_HPAC_BYTES,
             "stream_bytes": LIVE_STREAM_BYTES,
             "joint_bytes": LIVE_JOINT_BYTES,
+            "role": "historical pc1/rc1 control whose token field every rung restores",
         },
-        "rows": {
-            rung: {
-                "rate_lambda": row["rate_lambda"],
-                "seed": row["seed"],
-                "hpac_container_bytes": row["hpac_container"]["bytes"],
-                "stream_bytes": row["stream"]["bytes"],
-                "joint_bytes": row["joint_bytes"],
-                "joint_delta_vs_live_125762": row["joint_delta_vs_live_125762"],
-                "candidate_archive_bytes": row["candidate_archive"]["bytes"],
-                "decoded_identity": row["decoded_identity"],
-                "two_encodes_identical": row["two_encodes_identical"],
-            }
-            for rung, row in rows.items()
-        },
+        "current_pointer": current_pointer,
+        "rows": report_rows,
         "adjacent_slopes": slopes,
         "seed_spread": seed_spread,
-        "best_rung": None if best is None else best["rung"],
-        "best_beats_live_pointer": bool(best is not None and best["joint_bytes"] < LIVE_JOINT_BYTES),
+        "best_rung": best_rung,
+        "best_beats_ladder_control": bool(best["joint_bytes"] < LIVE_JOINT_BYTES),
+        "best_beats_live_pointer": False,
+        "best_beats_live_pointer_reason": (
+            "no ladder row holds the current sj1 pointer's distortion: each row restores the older "
+            "pc1 control field, so smaller archive bytes are not a score comparison; no scorer ran"
+        ),
     }
     out = Path(args.out) if args.out else STORE / "RC1_LADDER_REPORT.json"
     cl2.atomic_json(out, report)

@@ -609,3 +609,82 @@ clause each rung is checked against.
 **cl2 λ=1.0 control repack — S 0.14781744131049854 @ 179,982 B [contest-CUDA T4 n600]**, archive
 `08ec85333d13d71344b4482cf261e3b2d508725e49f3ca05971265a81498ad4e` — the LIVE `effective_frontier`, moved by cl2 at
 16:08:42Z (superseding fs2's 0.14784474152757654 @ 180,023 B). **ddm_cl3 has moved no pointer.**
+
+## CLOSER (2026-09-08)
+
+`[no-triality] [p0-ledger-ok]` · closer owner `ddm_cl3c` · axis
+`[macOS-CPU advisory / scorer-free EXACT byte measurement]` · `score_claim=false`.
+
+### s18 is now fully admissible
+
+The fixed-path receiver-copy replay completed at 2026-09-08T23:42:19Z (detached launch counter 1027,
+exit 0). It reused the two already-materialized streams, then rebuilt the candidate and re-ran the
+receiver-copy decode and section census after the reuse fix. All three independent legs pass:
+
+1. two encodes are byte-identical: **113,483 B** each, sha256
+   `5f0018581ad15f6303fbfe74cb5c097cbf66684c8c3db2cc1a7256b04dfe88c8`;
+2. the receiver copy decoded the exact **117,964,800-byte** field, sha256
+   `cc10a7b09353c0af1ebe4e52a1640df1fadac4d245a27f41aff8cf0992636efb`;
+3. `only_model_and_stream_moved=true`: semantic **30,246 B**, carrier **18,568 B**, and residual
+   table **96 B** are byte-identical to the historical control; only HPAC (**12,416 B**) and the
+   stream (**113,483 B**) move.
+
+Therefore s18 is **ADMISSIBLE** at **J = 12,416 + 113,483 = 125,899 B**, exactly **+137 B** against
+the 125,762-byte pc1/rc1 ladder control. The closer's preregistered prediction was admissible and
+`+137 ± 0 B`; measured residual is **0 B**. The row lost on exact bytes and is not a candidate.
+
+The fresh second encode is retained at
+`/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection/rungs/lambda_1p0_s18/retained/token_stream.second_encode.rc64.bin`
+beside `SECOND_ENCODE_RECEIPT.json`; the payload and receipt carry the same sha above.
+
+### Complete ladder report
+
+`/Volumes/VertigoDataTier/pact/ddm_cl3_hpac_smaller_prior_and_seed_selection/RC1_LADDER_REPORT.json`
+is regenerated as schema `ddm_cl3_rc1_ladder_report.v2`. The pricer emits only this RC1 report, so
+the historical Brotli-basis `LADDER_REPORT.json` was not rewritten.
+
+| rung | J B | ΔJ vs ladder control | twin | receiver-copy exact | census clean | admissible |
+|---|---:|---:|:--:|:--:|:--:|:--:|
+| control λ=1.0 / seed 20260716 | **125,762** | 0 | PASS | PASS | PASS | YES |
+| λ=2.0 / seed 20260716 | 125,986 | +224 | PASS | PASS | PASS | YES |
+| λ=4.0 | — | — | — | — | — | NOT RUN — falsifier fired |
+| λ=1.0 / seed 20260717 | 125,791 | +29 | PASS | PASS | PASS | YES |
+| λ=1.0 / seed 20260718 | 125,899 | +137 | PASS | PASS | PASS | YES |
+
+The report separates the historical ladder control from the current pointer. The latter was re-read
+from `candidate_pass3/candidate_runtime/archive.zip`: **181,645 B**, sha256
+`06c44dc464038649f1cc149f04ac03a518294ffcf49b87d8f66df30eb3c63cd3`, HPAC **12,343 B**,
+stream **120,225 B**, J **132,568 B**. It carries a different sj1 field, so no ladder archive holds
+distortion against it; `best_beats_live_pointer=false` and no score is inferred from byte size.
+
+### Canonical task registration and dispositions
+
+The exact extractor registered **five** rows from this memo with owner `ddm_cl3c`:
+
+- `.omx/research/ddm_cl3_hpac_smaller_prior_and_seed_selection_20260905.md` —
+  `ddm_cl3_hpac_smaller_prior_and_seed_selection_20260905::ITEM_1` (**COMPLETED**; λ=4 stop rule);
+- same memo — `ddm_cl3_hpac_smaller_prior_and_seed_selection_20260905::ITEM_2` (**PENDING**;
+  non-multiplier capacity coordinate);
+- same memo — `ddm_cl3_hpac_smaller_prior_and_seed_selection_20260905::ITEM_3` (**PENDING**;
+  third-container/different-coordinate law promotion);
+- same memo — `ddm_cl3_hpac_smaller_prior_and_seed_selection_20260905::ITEM_4` (**PENDING**;
+  pre-encode pin-validation class fix);
+- same memo — `ddm_cl3_hpac_smaller_prior_and_seed_selection_20260905::ITEM_5` (**COMPLETED**;
+  seed selection closed on scale).
+
+ITEM_1 and ITEM_5 were explicitly completed after registration so neither closed path can be
+mistaken for queued work. The three genuinely future items remain pending with their original scopes.
+
+### Equations and frontier
+
+Because s18 is admissible, this closer appends it through
+`tac.canonical_equations.registry.update_equation_with_empirical_anchor` only. On
+`coder_strength_substitutes_for_capacity_v1`, the same s18 weights read **+40 B** on the weak Brotli
+container (model −24, stream +64) and **+137 B** on rc1 (model +73, stream +64): a second
+two-container substitution anchor. On `hpac_prior_capacity_slope_v1`, it is a fixed-λ seed-scale
+anchor, not a multiplier secant: n=3 spread **137 B**, deterministic same-seed noise floor **0 B**.
+
+No scorer ran, no candidate was sealed, and no pointer moved. The old §8 line above is historical;
+the current unchanged frontier is:
+
+**sj1 S 0.13900437796841966 @ 181,645 B [contest-CUDA T4 n600]**.
