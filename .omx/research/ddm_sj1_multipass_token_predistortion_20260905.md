@@ -1066,7 +1066,49 @@ left and can reach a few hundred of them per pass at rising cost.
 
 ---
 
-*(Section 17+ — the pass-4 run and its admission — are
+## 17. A FOURTH silent-revert route, closed at the resume surface
+
+Found while pass 4 was in flight, checking whether the 6-hour walltime cap was safe to
+hit. It was not.
+
+**The mechanism.** `cmd_pass` appends a ledger row for every completed pair but rewrites
+`planes_shard_N.npz` only every `--checkpoint-every` pairs (default 5). Any kill inside
+that window — the cap, an OOM, an operator cut — leaves up to 4 pairs per shard with a
+ROW and no PLANE. On resume, `done` is built from the rows, so those pairs are skipped
+and never re-planned. At merge, a pair absent from the npz is simply absent from
+`field_after.npz` — and **an absent pair does not fall back to the prior pass, it reverts
+to `BODY_TOKENS`**, because every downstream consumer splices the npz onto the base. So
+the loss is not this pass's edits for those pairs; it is *every banked pass's* edits.
+
+**Why it is the dangerous shape.** The row ledger stays complete, so every printed number
+stays right. DEMONSTRATED: dropping three planes from a pass-3 shard and re-merging
+reproduces `PASS_RESULT.json` **field for field** — 1,447/14,157 repaired, 1.0807
+cells/token, `d_seg` 0.00012001 → 0.00010774 — on a field that has silently lost three
+pairs. The receipt cannot see it.
+
+This is the same genus as the three already closed on this arm (the carrier silent
+revert, the subset writer that spliced onto the ORIGINAL base, and the stage-tail
+baseline) — a valid-looking artifact that quietly reverts banked work — now at the
+resume/crash surface rather than a writer.
+
+**The cure, fail-closed at both surfaces.**
+
+1. `cmd_pass` REFUSES to resume when any `done` pair lacks a plane, naming both files to
+   delete and redo. Guessing (re-running only the orphans, or carrying the prior plane)
+   would be repair-by-approximation on an inconsistent state.
+2. `pass-merge` REFUSES a merged field that omits any of the 600 pairs, reporting how
+   many of the missing ones accepted moves. `--allow-partial-planes` is the documented
+   escape and is legal ONLY for a first pass with no prior field, where an untouched pair
+   legitimately has no plane.
+
+**Proof both ways.** Re-merging pass 3 under the new checks reproduces `PASS_RESULT.json`
+field-for-field (transparent on complete data); the positive-control resume with rows and
+planes agreeing completes with an empty `todo` in 0.0012 s; and both falsifiers bite with
+actionable messages. Landed at commit `3afe99635`.
+
+---
+
+*(Section 18+ — the pass-4 run and its admission — are
 appended as each lands. Nothing is written here before it is measured.)*
 
 ---
