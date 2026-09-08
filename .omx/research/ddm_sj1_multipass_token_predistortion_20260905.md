@@ -782,21 +782,149 @@ the first thing to look for.
 | | d_seg | flipped cells | archive | S |
 |---|---|---:|---:|---|
 | body as this arm found it | 0.00020132277 | 23,749 | 179,982 (cl2) | — |
-| pass 2a candidate (PROMOTED) | 0.00012009 | 14,166 | 180,904 | 0.1398140172839628 |
-| **pass 3 candidate (sealed)** | **1.0913879636e-04** | **12,866** | **181,645** | **0.13900021608143795** |
+| pass 2a candidate (PROMOTED, move 31) | 0.00012009 | 14,166 | 180,904 | 0.1398140172839628 |
+| **pass 3 candidate (PROMOTED, move 32)** | **0.00010913** | **12,866** | **181,645** | **0.13900437796841966** |
 
 Cumulative: **45.8% of the flipped argmax cells this arm inherited are gone**, bought with
 741 bytes on top of the first candidate's 6,118.
 
 ---
 
-*(Section 14+ — the n600 pass table, the persistent partition, admission, exact ΔS — are
+## 14. FIRED AND PROMOTED — pointer move #32
+
+The pass-3 seal fired on T4 as call `fc-01M1TFD35EPY2YZHNV3VKJP6MG`, lane
+`ddm_sj1_t4_token_predistortion_pass3_20260906`, and was promoted:
+
+**S 0.13900437796841966 @ 181,645 B [contest-CUDA T4 n600]**, archive sha
+`06c44dc464038649f1cc149f04ac03a518294ffcf49b87d8f66df30eb3c63cd3`, −8.096393e-04 S
+against move 31. The three legs move together and sum to exactly that delta:
+
+| leg | move 31 | move 32 | ΔS |
+|---|---:|---:|---:|
+| seg | 0.00012009 | 0.00010913 | −1.0960e-03 |
+| pose | 5.4e-06 | 5.1e-06 | −2.0704e-04 |
+| rate | 180,904 B | 181,645 B (+741) | +4.9340e-04 |
+| | | **total** | **−8.0964e-04** |
+
+### Prediction vs measurement — the calibration, now with two points
+
+| | projected | MEASURED | residual | rel |
+|---|---|---|---:|---:|
+| move 31 (pass 2a) | 0.1398087424644421 | 0.1398140172839628 | +5.2748e-06 | +0.0038% |
+| move 32 (pass 3) | 0.13900021607682325 | 0.13900437796841966 | +4.1619e-06 | +0.0030% |
+
+Both are OPTIMISTIC by the same small amount, and the decomposition differs:
+
+- **seg came in BETTER than projected on move 32** — −8.796e-07 S, about 1.04 cells of
+  117,964,800. On move 31 it came in worse by 9 cells. The seg instrument is therefore
+  accurate to ±10 cells (±8.5e-06 S) on this body, in both directions.
+- **pose came in WORSE both times** — +1.32e-06 S then +5.042e-06 S. The arm measures
+  pose on CPU; T4 reads it on CUDA. This is a one-signed drift, not a print artefact,
+  and it is the larger half of the residual.
+
+The seg leg landed EXACTLY where the admission put it: **12,866 flipped cells predicted
+on the shipped bytes, 12,866 measured, zero disagreement.**
+
+---
+
+## 15. Pass 4 — the CONTINUE/STOP arithmetic, PRE-REGISTERED
+
+Written before anything is launched, so the decision cannot be back-fitted to the result.
+Every input below is MEASURED (`passes/*/PASS_RESULT.json`, the exact re-encodes, and the
+two banked T4 rows); only the pass-4 column is projected.
+
+### The banked passes
+
+| | sites | repaired | frac | tokens | cells/token | bits/token (EXACT encode) | break-even | margin | pose leg (T4) | pose leg (local) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| pass 2a | 23,749 | 9,593 | 40.39% | 7,804 | 1.2292 | 6.2307 | 12.520 | 2.01× | −2.4758e-04 | −1.500e-04 |
+| pass 3 | 14,157 | 1,447 | 10.22% | 1,339 | 1.0807 | 5.3055 | 11.006 | 2.07× | −2.0704e-04 | −9.199e-05 |
+| ratio | | | 0.2530 | | 0.8791 | 0.8515 | | | 0.8363 | 0.6133 |
+
+Two facts the table makes plain, and neither was assumed in advance:
+
+1. **The marginal price FALLS pass to pass** — 6.23 → 5.31 bits per changed token. The
+   context model absorbs the earlier pass's edits as structure, so the next pass's edits
+   sit in a cheaper conditional. This is why the exchange has not closed even though the
+   repair yield collapsed 4×.
+2. **The price margin is stable** — 2.01× then 2.07× against break-even. That is the
+   least risky input in the whole projection.
+
+Break-even is not a constant: it is `cells_per_token × 1.27311 B/cell × 8`, so it falls
+with the yield. Both banked passes reproduce it to 3 decimals, which is the check that
+the formula, not a remembered number, is what is being used.
+
+### The projection on the 12,866-cell residual
+
+| quantity | projected | how |
+|---|---:|---|
+| repair fraction | 2.586% | 10.22% × 0.2530 |
+| cells repaired | 332.8 | 12,866 × 2.586% |
+| cells/token | 0.9500 | 1.0807 × 0.8791 |
+| tokens changed | 350.3 | 332.8 / 0.9500 |
+| bits/token | 4.5176 | 5.3055 × 0.8515 |
+| break-even | 9.6760 | 0.9500 × 1.27311 × 8 → **margin 2.14×** |
+| **stream delta** | **+197.8 B** | 350.3 × 4.5176 / 8, against the LIVE row's own stream |
+| seg ΔS | **−2.8208e-04** | 332.8 × 8.477105e-07 |
+| rate ΔS | **+1.3170e-04** | 197.8 × 6.658590e-07 |
+| seg+rate | **−1.5038e-04** | |
+
+The pose leg is projected four ways rather than one, because the arm has two disagreeing
+estimators for it and one adverse precedent (the ×16 rung, where the leg ROSE):
+
+| pose leg | net ΔS | basis |
+|---:|---:|---|
+| −1.7314e-04 | **−3.2352e-04** | central — T4-realized trend, ×0.8363 |
+| −5.6414e-05 | **−2.0679e-04** | conservative — local CPU trend, ×0.6133 |
+| 0 | **−1.5038e-04** | floor — the re-solve pays nothing |
+| +2.0704e-04 | **+5.6660e-05** | adverse — the leg rises by pass 3's whole magnitude |
+
+### The margin the rule must clear
+
+`projection residual (worst banked) 5.2748e-06` + `pose 3-sig-fig print band 7.143e-06`
+= **1.242e-05 S**. The print band is real: the T4 receipt carries `avg_posenet_dist` to
+three significant figures, and the pointer's S is composed from that print, so half a
+unit in the last place is 7.1e-06 S of unrecoverable quantisation at a pose near 4.9e-06.
+
+### PRE-REGISTERED RULE and verdict
+
+> **CONTINUE iff the predicted net ΔS is negative by more than 1.242e-05 S.**
+
+- central −3.2352e-04 → **26.1× the margin**
+- **floor (pose leg = 0) −1.5038e-04 → 12.1× the margin**
+
+Even with the pose re-solve credited nothing at all, the seg/rate exchange alone clears
+the margin by an order of magnitude. **Verdict: CONTINUE to pass 4.**
+
+The single failure mode that flips the sign is the adverse pose row, and it is **caught
+at admission, not at T4**: the admission prices the actual resolved pose before anything
+is sealed. Pre-registered stop: *if the admission's total is not negative, no candidate
+is built.*
+
+### The convergence rule
+
+The <1%-repaired-per-pass rule does **not** fire at pass 4 (projected 2.586%). Carrying
+the same ratio one step further projects **0.654% at pass 5 — the rule fires there.**
+So pass 4 is, on the current trend, the LAST single-cell pre-distortion pass this object
+supports, and the residual it leaves is what the renderer door inherits.
+
+### Cost, honestly
+
+The search does **not** shrink with the yield. Proposals per flipped cell are *rising*
+(4.074 → 4.217), so pass 4 enumerates ~54,200 proposals ≈ **0.91× pass 3's search** to
+repair ~4.3× fewer cells. Pass 4 costs about what pass 3 cost and returns about a
+quarter as much. That is still 12–26× the bar, but it is the honest shape of the tail:
+the per-pass return is falling much faster than the per-pass cost.
+
+---
+
+*(Section 16+ — the pass-4 run, its admission, and the residual partition census — are
 appended as each lands. Nothing is written here before it is measured.)*
 
 ---
 
 ## Frontier line
 
-`pc1 x16 S 0.14411787458634504 @ 174,786 B [contest-CUDA T4 n600]` (live pointer, sha `1de6c5d7186a0b31…`)
+`sj1 S 0.13900437796841966 @ 181,645 B [contest-CUDA T4 n600]` (live pointer, sha `06c44dc464038649…`)
 
-Lineage: fs2 0.14784474152757654 @ 180,023 B → cl2 0.14781744131049854 @ 179,982 B → rc1 0.14666350774473783 @ 178,249 B → pc1 ×4 0.1451981569076111 @ 176,448 B → pc1 ×8 0.1445177913121716 @ 175,576 B → pc1 ×16 (above).
+Lineage: fs2 0.14784474152757654 @ 180,023 B → cl2 0.14781744131049854 @ 179,982 B → rc1 0.14666350774473783 @ 178,249 B → pc1 ×4 0.1451981569076111 @ 176,448 B → pc1 ×8 0.1445177913121716 @ 175,576 B → pc1 ×16 0.14411787458634504 @ 174,786 B → sj1 pass 2a 0.1398140172839628 @ 180,904 B → sj1 pass 3 (above).
