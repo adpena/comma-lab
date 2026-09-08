@@ -279,6 +279,40 @@ POINTER_LINEAGE: tuple[PointerRow, ...] = (
         d_pose_t4=5.4e-06,
         score_t4=0.1398140172839628,
     ),
+    #: LIVE (MAIN 2026-09-06).  Pass 3 of this arm -- a SECOND single-cell pre-distortion
+    #: pass on the residual the pass-2a row left, restricted to the 370-pair admitted
+    #: subset, plus a carrier re-solve.  Fired on T4 as call fc-01M1TFD35EPY2YZHNV3VKJP6MG,
+    #: lane ddm_sj1_t4_token_predistortion_pass3_20260906, and PROMOTED as pointer move
+    #: #32: -8.096393e-04 S against the row above.  Its three legs move together --
+    #: seg 0.00012009 -> 0.00010913 (-1.096e-03 S), pose 5.4e-06 -> 5.1e-06 (-2.070e-04 S
+    #: from the re-solve), rate 180,904 -> 181,645 B (+741 B, +4.934e-04 S).  The three
+    #: sum to -8.096e-04 S, which is the pointer delta.
+    #:
+    #: Prediction vs measurement, carried openly:
+    #:   projected 0.13900021607682325 -> MEASURED 0.13900437796841966, residual
+    #:   +4.161892e-06 (+0.0030%), decomposing as -8.796e-07 S of seg (1.04 cells of
+    #:   117,964,800 BETTER than the projected leg) and +5.042e-06 S of
+    #:   pose (T4 printed 5.10e-06 against the 5.0928018e-06 this arm measured on CPU --
+    #:   a genuine CPU->CUDA pose drift, not a print artefact).  Both projections in this
+    #:   lineage have now come in OPTIMISTIC by +0.0030% and +0.0038% of S, which is the
+    #:   margin any successor's CONTINUE/STOP arithmetic must clear.
+    #:
+    #: The seg leg landed EXACTLY where the admission put it: 12,866 flipped cells
+    #: predicted on the shipped bytes, 12,866 measured, zero disagreement.
+    PointerRow(
+        label="sj1_token_predistortion_pass3",
+        tree=Path(
+            "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
+            "/candidate_pass3/candidate_runtime"
+        ),
+        archive_sha256=(
+            "06c44dc464038649f1cc149f04ac03a518294ffcf49b87d8f66df30eb3c63cd3"
+        ),
+        archive_bytes=181_645,
+        d_seg_t4=0.00010913,
+        d_pose_t4=5.1e-06,
+        score_t4=0.13900437796841966,
+    ),
 )
 
 for _row in POINTER_LINEAGE:
