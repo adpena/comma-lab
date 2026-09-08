@@ -918,7 +918,155 @@ the per-pass return is falling much faster than the per-pass cost.
 
 ---
 
-*(Section 16+ — the pass-4 run, its admission, and the residual partition census — are
+## 16. The residual partition — a MEASURED census of the 12,866 cells
+
+Measured on the SHIPPED object: `seg_final_pass3/argmax_n600.npy` (the parse-back argmax
+of the promoted archive) against the DALI GT table, with the shipped token field
+`admission_pass3/field_admitted.npz` (sha `192ec469…`, the one the encode receipt names).
+Residual reproduces at exactly **12,866** cells. Everything below is numpy on artifacts
+already on disk; nothing here is projected.
+
+### 16a. Shape — a one-pixel boundary displacement, not a class hallucination
+
+| | measured |
+|---|---:|
+| residual cells lying ON a GT 4-neighbour class edge | **12,824 = 99.67%** |
+| GT boundary cells as a share of the frame | 2.163% |
+| **enrichment** | **46.1×** |
+| our predicted class present in GT within Chebyshev r ≤ 1 | **12,812 = 99.58%** |
+| confusion symmetry index (1 = perfectly reciprocal) | **0.9049** |
+
+The residual is the argmax boundary sitting one pixel off. Road→Lane 2,710 against
+Lane→Road 2,924; Undrivable→Movable 1,401 against Movable→Undrivable 1,080. A class
+collapse would be one-sided; this is reciprocal jitter on a codim-1 curve.
+
+### 16b. Where it lives
+
+**Vertical band.** Rows 128–319 of 384 carry **100.00%** of it. Rows 0–127 (sky) and
+320–383 (ego hood) carry **ZERO**. Row centroid 200.9, column centroid 271.0.
+
+| row band | share | | column band | share |
+|---|---:|---|---|---:|
+| 0–127 | 0.00% | | 0–127 | 14.74% |
+| 128–191 | 54.52% | | 128–255 | 26.92% |
+| 192–255 | 34.83% | | 256–383 | 39.13% |
+| 256–319 | 10.66% | | 384–511 | 19.21% |
+| 320–383 | 0.00% | | | |
+
+**Class**, in the comma10k canonical order (never luma-sorted):
+
+| class | GT-side cells | share | frame area | over-representation |
+|---|---:|---:|---:|---:|
+| Road | 5,289 | 41.11% | 23.234% | 1.77× |
+| **Lane** | **3,025** | **23.51%** | **0.586%** | **40.15×** |
+| Undrivable | 2,388 | 18.56% | 49.517% | 0.37× |
+| **Movable** | **1,740** | **13.52%** | **1.238%** | **10.92×** |
+| MyCar | 424 | 3.30% | 25.426% | 0.13× |
+
+Lane at 40× and Movable at 11× are the whole story; Undrivable and MyCar are 3–8× *under*
+represented. This is the same lane-orbit long tail the campaign has measured elsewhere,
+now read on the residual of a twice-pre-distorted object.
+
+**Per pair — diffuse, not concentrated.** Mean 21.44, median 19, max 100, min 4, and
+**zero pairs are clean**. The worst 100 pairs of 600 carry only **30.87%**. There is no
+"fix the bad pairs" strategy available: the residual is spread over every pair.
+
+### 16c. Granularity — the residual is 11,859 isolated specks
+
+4-connected components, per pair:
+
+| component size | components | cells | share |
+|---|---:|---:|---:|
+| 1 | 11,135 | 11,135 | **86.55%** |
+| 2 | 559 | 1,118 | 8.69% |
+| 3–4 | 145 | 467 | 3.63% |
+| 5–9 | 17 | 104 | 0.81% |
+| 10–24 | 3 | 42 | 0.33% |
+| ≥25 | 0 | 0 | 0.00% |
+
+**Mean component size 1.08 cells.** Pass 3's measured yield was **1.0807 cells per
+changed token.** Those are the same number, and that is not a coincidence: the search
+has converged to repairing exactly one connected speck per token it spends. There is no
+remaining structure for a single move to catch two of.
+
+### 16d. Why single-cell token moves cannot repair them
+
+**(i) It is not unexplored ground.** Pass 3's per-pair rows record `sites_persistent`
+summing to **12,710**, and `flips_after` summing to **12,710** — identical. The search
+enumerated 4.217 proposals per flipped cell and **failed on 100% of what it left behind.**
+Pass 4's projected yield therefore comes ENTIRELY from field-change re-opening — the
+pass-3 edits moved the render, so some sites become newly reachable — and not from sites
+the search has yet to visit. That is a real mechanism (it is what produced pass 3 from
+pass 2a's residual) but it is a decaying one, and this measurement is why.
+
+**(ii) The token is already right at 86.39% of them.** Against the SHIPPED field:
+
+| | cells | share |
+|---|---:|---:|
+| stored token ALREADY equals GT | **11,115** | **86.39%** |
+| stored token is wrong | 1,751 | 13.61% |
+| …of which this arm deliberately set the lie | 388 | |
+| …inherited from the base field, GT tried and rejected | 1,363 | |
+
+At 86% of the residual there is nothing to correct *in the token* — the token says the
+right class and the renderer's output at that cell still argmaxes wrong. The only lever
+the token field has left is to LIE in a neighbour, and that is exactly the move family
+the search has exhausted.
+
+> **Provenance note, and a small correction to a shipped receipt.** The seg-final
+> receipt's `flips_where_stored_token_already_equals_gt` reads **11,447**, not 11,115.
+> Traced: that field is computed against `body.tokens` — the BASE field — because
+> `step0` loads the base body by design. It is not the shipped object's number. The
+> shipped archive stores the pass-3 admitted field, whose number is 11,115 / 1,751
+> (86.39% / 13.61%). Same genus as
+> [[available-field-vs-authoritative-field]]: the field exists, is correctly computed,
+> and names a different object than its name suggests. Use 11,115 for the shipped row.
+
+**(iii) The collateral ratio is the wall.** A token move perturbs the renderer's whole
+influence footprint (r = 9 tokens, DERIVED from `cpr1/inflate.py`: coord_mix 1×1 +
+depthwise 3×3 at dilations 1,1,2,4 + head 3×3). Counting what sits inside that footprint
+around each residual cell:
+
+| footprint | CORRECT boundary cells at risk | other residual cells in reach | ratio |
+|---|---:|---:|---:|
+| r = 1 (3×3) | 5.29 mean / 5 median | 0.225 mean, 17.17% have ≥1 | **23.5 : 1** |
+| r = 9 (19×19) | 68.75 mean / 70 median, min 4 | 1.544 mean, 57.03% have ≥1 | **44.5 : 1** |
+
+Acceptance is a composite re-render whose flip count must go DOWN. So every candidate
+move is a bet that repairs ≥1 speck while breaking none of ~69 equally fragile correct
+boundary cells sitting in the same footprint. Early passes won that bet often because the
+board was full of specks; at 12,866 the correct-to-residual ratio inside the footprint has
+risen to 44.5:1 and the bet is mostly lost. **This ratio, not the search, is what closes
+single-cell pre-distortion.**
+
+### 16e. What this hands the renderer door
+
+The residual is not a token-coding problem. Stated as constraints on any successor:
+
+1. **It is a renderer problem at 86.39%** — the correct token is already stored and the
+   render still argmaxes wrong. A better token code cannot reach these cells.
+2. **It is one-pixel boundary jitter (99.58%) on a codim-1 curve (99.67% on a GT edge,
+   46.1× enriched), reciprocal (symmetry 0.905).** The renderer's boundary is in the
+   right place to within a pixel and lands on the wrong side of it. The lever that fits
+   that shape is sub-pixel boundary placement, not class capacity.
+3. **It is Lane (40.15×) and Movable (10.92×)** and essentially nothing else. Undrivable
+   and MyCar are already at 0.37× and 0.13×.
+4. **It is confined to rows 128–319** — the horizon band. Two thirds of the frame
+   contributes zero, so any capacity spent outside that band is spent on a solved region.
+5. **It is atomised** — 86.55% isolated single cells, mean component 1.08, max 17. Any
+   mechanism whose unit of repair is larger than ~1 cell pays for coverage it cannot use.
+6. **It is diffuse across pairs** — every one of the 600 pairs carries some, worst 100
+   carry 30.87%. Per-pair specialisation buys almost nothing.
+
+The composition that fits all six is a renderer fold-back at optimal form that moves the
+boundary sub-pixel in the horizon band on Lane and Movable edges, with token
+pre-distortion composed on top of it to catch whatever single cells the better renderer
+still leaves. The pre-distortion cannot lead; on this measurement it has ~12,866 cells
+left and can reach a few hundred of them per pass at rising cost.
+
+---
+
+*(Section 17+ — the pass-4 run and its admission — are
 appended as each lands. Nothing is written here before it is measured.)*
 
 ---
