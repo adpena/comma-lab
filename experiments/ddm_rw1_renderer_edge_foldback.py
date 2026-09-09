@@ -101,8 +101,19 @@ LIVE_RAW = SJ1_ROOT / "candidate_pass3/parseback/0.raw"
 LIVE_FIELD = SJ1_ROOT / "admission_pass3/field_admitted.npz"
 LIVE_ARGMAX = SJ1_ROOT / "seg_final_pass3/argmax_n600.npy"
 #: The sections the live decode is shared with, and the fingerprint that says so.
+#:
+#: NARROWED at the 34th move (pc2, carrier-only): the reuse claim this arm actually
+#: needs is about the ODD frames.  Frame 2p+1 is the renderer's output and depends on
+#: the SEMANTIC weights, the TOKEN field and the residual table; frame 2p is the pose
+#: carrier and this arm never reads it -- the seg leg scores only the last frame of the
+#: pair (``upstream/modules.py:105``) and the pose leg RENDERS frame 0 from the carrier
+#: CODES rather than reading it from the raw (``ddm_br1.evaluate_codes`` ->
+#: ``up2.render_frame0``).  So a carrier-only pointer move does not invalidate a
+#: retained decode for either leg, and requiring carrier identity would refuse a body
+#: that is in fact usable.  The carrier is still reported, as information.
 SHARED_SECTION_SOURCE = SJ1_ROOT / "candidate_pass3/candidate_runtime/archive.zip"
-SHARED_SECTIONS = ("semantic_blob", "carrier_blob", "token_stream", "residual_payload")
+SHARED_SECTIONS = ("semantic_blob", "token_stream", "residual_payload")
+SHARED_SECTIONS_INFORMATIONAL = ("carrier_blob", "hpac_blob")
 
 LIVE_ARCHIVE_SHA256 = (
     "c810c2c7f72e57670dc29bde27d584b18aa82feff68b063936a61dca89cf671e"
@@ -250,19 +261,23 @@ def verify_shared_decode_sections() -> dict[str, Any]:
         report[field] = {
             "identical": bool(same),
             "bytes": len(getattr(live, field)),
+            "required": True,
         }
         if not same:
             mismatched.append(field)
     if mismatched:
         raise Rw1Error(
             f"the live tree no longer shares {mismatched} with the tree that produced "
-            f"{LIVE_RAW}; re-inflate before measuring anything against that decode"
+            f"{LIVE_RAW}; those sections determine the ODD frames this arm measures, so "
+            "re-inflate before measuring anything against that decode"
         )
-    report["hpac_blob"] = {
-        "identical": bytes(live.hpac_blob) == bytes(source.hpac_blob),
-        "bytes_live": len(live.hpac_blob),
-        "bytes_source": len(source.hpac_blob),
-    }
+    for field in SHARED_SECTIONS_INFORMATIONAL:
+        report[field] = {
+            "identical": bytes(getattr(live, field)) == bytes(getattr(source, field)),
+            "bytes_live": len(getattr(live, field)),
+            "bytes_source": len(getattr(source, field)),
+            "required": False,
+        }
     report["raw_source_tree"] = str(SHARED_SECTION_SOURCE)
     return report
 
