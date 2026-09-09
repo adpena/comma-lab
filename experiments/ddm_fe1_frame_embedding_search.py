@@ -76,13 +76,24 @@ SJ1_ROOT = Path(
     "/Volumes/VertigoDataTier/pact/ddm_sj1_multipass_token_predistortion"
 )
 RC2_ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_rc2_hpac_semistatic_mixing")
-LIVE_TREE = RC2_ROOT / "candidate_runtime"
+PC2_ROOT = Path("/Volumes/VertigoDataTier/pact/ddm_pc2_carrier_kwidth_rankcut")
+#: Move 34 (2026-09-09) is ddm_pc2's carrier: all twelve basis scales set to 1.0 plus 17
+#: re-solved coordinates, -41 B.  MEASURED here against rc2 with each tree's own reader:
+#: hpac 12,112 B, semantic 30,246 B and token tail 120,321 B all BYTE-IDENTICAL, carrier
+#: 18,621 -> 18,580 B is the whole difference.  So the seg side is untouched -- the
+#: carrier renders frame 2p and SegNet reads the LAST frame -- and this arm's 39 repaired
+#: cells stand.  The POSE side is NOT untouched: the coefficient parametrisation itself
+#: changed, so every re-solve must START from pc2's coefficients and pc2's basis scales.
+#: ``price.build_pose_instrument`` reads them from LIVE_TREE, so re-pointing it is the
+#: whole re-base; ``br1.evaluate_codes`` renders frame 2p FROM THE CODES and reads only
+#: frame 2p+1 out of the decode, which pc2 leaves unchanged, so no re-decode is needed.
+LIVE_TREE = PC2_ROOT / "rebase_scales_resolve/candidate_runtime"
 LIVE_RUNTIME = LIVE_TREE / "runtime"
 LIVE_ARCHIVE = LIVE_TREE / "archive.zip"
 LIVE_ARCHIVE_SHA256 = (
-    "c810c2c7f72e57670dc29bde27d584b18aa82feff68b063936a61dca89cf671e"
+    "e138ee097905902ad6e1d49841b2ff2f043736298079f66c0a1628031bcd8372"
 )
-LIVE_ARCHIVE_BYTES = 181_414
+LIVE_ARCHIVE_BYTES = 181_373
 #: The body this arm's n600 search rendered against: pass 3, whose semantic section rc2
 #: carries byte-identically.  Retained so the transfer stays checkable.
 SEARCH_BODY_TREE = SJ1_ROOT / "candidate_pass3/candidate_runtime"
@@ -99,11 +110,15 @@ LIVE_RAW = SJ1_ROOT / "candidate_pass3/parseback/0.raw"
 #: sj1's own n600 argmax of that decode (its seg leg receipt).
 LIVE_ARGMAX = SJ1_ROOT / "seg_final_pass3/argmax_n600.npy"
 
-LIVE_SCORE_T4 = 0.13885056455024844
+LIVE_SCORE_T4 = 0.13882326433317044
 LIVE_D_SEG_T4 = 1.0913879636e-04
 LIVE_D_SEG_LOCAL = 0.0001090664333767361  # 12,866 cells, cpu_torch argmax on DALI
 LIVE_D_SEG_CELLS = 12_866
-LIVE_D_POSE = 5.0928018072772644e-06
+#: MEASURED on this instrument over all 600 pairs against pc2's carrier (move 34), not
+#: inherited: 5.090164724404211e-06, which is 0.052% below rc2's 5.0928018072772644e-06
+#: -- pc2's 17 re-solved coordinates.  The rc2 value reproduced sj1's seal to the last
+#: digit on the same instrument, so the instrument is anchored on both bodies.
+LIVE_D_POSE = 5.090164724404211e-06
 #: The instrument ratio sj1 used to carry a local seg leg onto T4 (its SEAL falsifier 2).
 SEG_T4_RATIO = 1.0006634761602033
 
