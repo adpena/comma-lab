@@ -436,7 +436,10 @@ weight's own dynamic range** (codes span −7…+7). The linearisation is invali
 the gradient is largest. The gradient is also fully dense — all 12,672 codes have non-zero gradient, `|max| 2.18e-06` against
 `|median| 3.31e-08`, a 66× spread — so there is no sparse subset for the first-order model to be right about.
 
-That is a closure at `verdict_scope: formulation` **that names its own two cures**, neither of which is the charter's widening:
+That is a closure at `verdict_scope: formulation` **that names its own two cures**, neither of which is the charter's widening. Its
+significance at the operating point, stated rather than assumed: the residual is 12,866 cells = **0.010907 S = 57.9 % of the remaining
+0.018823 gap to 0.12**, and the rate this actuator would pay for a full rewrite is 176.7 B = 1.177e-04 S = **0.63 % of that gap**. The
+stake is enormous and the toll is negligible; what fails is the aim.
 
 1. **A finer grid on these tensors.** Depth 4 → 5 or 6 on `head.weight` / `blocks.3.*` shrinks the step to 1/2 or 1/4 and would bring the
    linearisation back into range. The receiver already supports per-tensor depths 2–8 (`_decode_depth_nibbles`), so this is a packer
@@ -475,6 +478,29 @@ So the complete ranking picture, all in cells broken per changed code:
 
 **Not one selection rule repairs anything.** Every dose of every ranking increases the residual. The gradient carries a real and strong
 ORDERING — 238× between its ends — but the ordering is over *how much damage a full int4 step does*, not over *which move helps*.
+
+### The discrete realized search: the actuator's minimum quantum of action is measured
+
+MAIN's directive, and the honest last card: propose ±1 groups down the surrogate's sign, render, score with the frozen SegNet, **accept
+only if realized flips strictly FALL**, bisect a rejected group so a good move is not thrown away with a bad one. Screened on 120 seeded
+random pairs (null 2,646 flips), confirmed at n600. Pre-registered before launch (`receipts/PREREG_DISCRETE_SEARCH.json`): expected 120 /
+340 / 1,500 cells repaired at 66 / 200 / 1,000 accepted codes; falsifier at < 139 cells net.
+
+The search bisected 128 → 64 → 32 → 16 → 8 → 4 → 2 → **1** and kept going. Result at 41 evaluations: **zero accepts**, and the best move
+of any size found was **+48 flips on the screen** (≈ +240 at n600).
+
+That is the arm's closing measurement, and it is a statement about the REPRESENTATION rather than about any search:
+
+> **The smallest action this actuator can take — one int4 code, one step, chosen from the cheapest end of the gradient — already costs
+> on the order of 240–455 flipped cells. There is nothing smaller in the representation to try.**
+
+A search cannot find a move below the grid's own resolution. That is why every rule fails, why `abs_asc` beats `abs_desc` by 238× and
+still never crosses zero, and why AdamW's slow accumulation looked better than a single decisive step: it was approximating a *smaller*
+move than the grid can express, right up until the round made it express a whole one.
+
+**Scored honestly at the operating point** (S 0.13882326433317044, gap to 0.12 = 0.018823264): the residual this arm set out to repair is
+12,866 cells = **0.010907 S = 57.9 % of the whole remaining gap**. Nothing in this arm was dismissed as small — that stake is the reason
+the arm exists. What is closed is one FORMULATION for reaching it.
 
 ## 8c. Counting falsifier (a) plainly
 
