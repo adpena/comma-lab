@@ -2001,6 +2001,161 @@ def cmd_admit(args) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------------------
+# mode=rate-law -- what a changed int4 CODE actually costs in this section
+# ----------------------------------------------------------------------------------
+
+
+def semantic_section_bytes(section: MultiSemanticSection, edits) -> dict[str, Any]:
+    """Container-searched size of the semantic section carrying ``edits``.
+
+    Every other section is byte-identical under this arm's change, so the archive
+    delta IS the semantic-stream delta -- exactly, not approximately.  That is why the
+    rate law can be measured without building a whole archive per point.
+    """
+    import brotli
+    import ddm_fe1_pose_price as price
+    import ddm_up3_carrier_splice as up3
+
+    stream = section.stream_with_codes(edits)
+    interleaved = up3._ck2_interleave_planes(stream)
+    shapes: dict[tuple[str, int, int], bytes] = {}
+    for quality in price.CONTAINER_QUALITIES:
+        for lgwin in price.CONTAINER_LGWINS:
+            shapes[("ck2", quality, lgwin)] = brotli.compress(
+                interleaved, quality=quality, lgwin=lgwin
+            )
+            shapes[("plain", quality, lgwin)] = brotli.compress(
+                stream, quality=quality, lgwin=lgwin
+            )
+    chosen = min(
+        shapes, key=lambda key: (len(shapes[key]), key != price.SHIPPED_SHAPE, key)
+    )
+    shipped = len(shapes[price.SHIPPED_SHAPE])
+    return {
+        "searched_bytes": len(shapes[chosen]),
+        "shipped_shape_bytes": shipped,
+        "container": list(chosen),
+    }
+
+
+def cmd_rate_law(args) -> int:
+    """Measure the archive cost of N changed codes on THIS section.
+
+    fe1 fitted ``0.15*N + 8`` B on the frame_embed run (depth 3, N <= 200).  This arm
+    edits head/blocks.3 (depth 4) at N up to 12,672, so the law is RE-DERIVED at this
+    scope rather than extrapolated 63x past its measured range
+    (``cross-regime constant transfer``, [[m143]]).  The point of the curve is the
+    break-even: one repaired seg cell buys 8.477e-07 S, so the arm is viable only if
+    the marginal cost per code stays well under 8.477e-07 / 6.6586e-07 = 1.273 B.
+    """
+    started = time.perf_counter()
+    pointer = verify_live_pointer()
+    section = load_semantic_section()
+    names = trainable_names(bool(args.widened))
+    check_trainable(section, names)
+    flat = np.concatenate(
+        [np.asarray(section.codes[name], dtype=np.int64).ravel() for name in names]
+    )
+    sizes = [int(section.runs[name].count) for name in names]
+    base_semantic = semantic_section_bytes(
+        section, {n: section.codes[n] for n in names}
+    )
+    if base_semantic["searched_bytes"] != 30_246:
+        raise Rw1Error(
+            f"the unperturbed section prices at {base_semantic['searched_bytes']} B, "
+            "not the shipped 30,246; the null control is broken"
+        )
+
+    rng = np.random.default_rng(int(args.seed))
+    counts = [int(v) for v in str(args.counts).split(",") if v.strip()]
+    rows = []
+    for count in counts:
+        for repeat in range(int(args.repeats)):
+            perturbed = flat.copy()
+            where = rng.choice(flat.size, size=min(count, flat.size), replace=False)
+            # A code must MOVE, and it must stay in the shipped signed-int4 domain.
+            step = rng.choice(np.array([-1, 1]), size=where.size)
+            proposal = np.clip(perturbed[where] + step, CODE_MIN, CODE_MAX)
+            stuck = proposal == perturbed[where]
+            proposal[stuck] = np.clip(perturbed[where][stuck] - step[stuck], CODE_MIN, CODE_MAX)
+            perturbed[where] = proposal
+            changed = int((perturbed != flat).sum())
+            edits = {}
+            cursor = 0
+            for name, size in zip(names, sizes, strict=True):
+                edits[name] = perturbed[cursor : cursor + size].reshape(
+                    section.runs[name].shape
+                )
+                cursor += size
+            priced = semantic_section_bytes(section, edits)
+            rows.append(
+                {
+                    "requested": count,
+                    "repeat": repeat,
+                    "changed_codes": changed,
+                    "searched_bytes": priced["searched_bytes"],
+                    "shipped_shape_bytes": priced["shipped_shape_bytes"],
+                    "delta_searched": priced["searched_bytes"]
+                    - base_semantic["searched_bytes"],
+                    "delta_shipped_shape": priced["shipped_shape_bytes"]
+                    - base_semantic["shipped_shape_bytes"],
+                    "container": priced["container"],
+                }
+            )
+            if args.progress:
+                print(json.dumps(rows[-1]), flush=True)
+
+    by_count: dict[int, list[int]] = {}
+    for row in rows:
+        by_count.setdefault(row["requested"], []).append(row["delta_searched"])
+    summary = {
+        str(count): {
+            "n": len(values),
+            "mean_delta_bytes": float(np.mean(values)),
+            "min": int(min(values)),
+            "max": int(max(values)),
+            "bytes_per_code": float(np.mean(values)) / count,
+            "cells_to_break_even": float(np.mean(values)) * RATE_PER_BYTE / S_PER_SEG_CELL,
+        }
+        for count, values in sorted(by_count.items())
+    }
+    ordered = sorted(by_count)
+    if len(ordered) >= 2:
+        xs = np.array(ordered, dtype=np.float64)
+        ys = np.array([np.mean(by_count[c]) for c in ordered], dtype=np.float64)
+        slope, intercept = np.polyfit(xs, ys, 1)
+    else:
+        slope, intercept = float("nan"), float("nan")
+    result = {
+        "schema": "ddm_rw1_rate_law.v1",
+        "axis": "[exact bytes; container-searched real encode]",
+        "score_claim": False,
+        "pointer": pointer,
+        "base_semantic_bytes": base_semantic,
+        "trainable_codes": int(flat.size),
+        "counts": counts,
+        "repeats": int(args.repeats),
+        "seed": int(args.seed),
+        "summary": summary,
+        "fit_bytes_per_code": float(slope),
+        "fit_fixed_bytes": float(intercept),
+        "fe1_predicted_bytes_per_code": BYTES_PER_CHANGED_CODE,
+        "break_even_cells_per_code_measured": float(slope)
+        * RATE_PER_BYTE
+        / S_PER_SEG_CELL,
+        "break_even_cells_per_code_fe1": BYTES_PER_CHANGED_CODE
+        * RATE_PER_BYTE
+        / S_PER_SEG_CELL,
+        "rows": rows,
+        "elapsed_seconds": time.perf_counter() - started,
+    }
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.out).write_text(json.dumps(result, indent=1, sort_keys=True))
+    print(json.dumps({k: v for k, v in result.items() if k != "rows"}, indent=1))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -2104,6 +2259,15 @@ def build_parser() -> argparse.ArgumentParser:
     admit.add_argument("--weights", default="shadow", choices=("shadow", "latent"))
     common(admit)
     admit.set_defaults(func=cmd_admit)
+
+    rate = sub.add_parser("rate-law")
+    rate.add_argument("--out", type=Path, default=WORK / "receipts/RATE_LAW.json")
+    rate.add_argument("--counts", default="1,10,50,200,1000,3000,6000,12672")
+    rate.add_argument("--repeats", type=int, default=3)
+    rate.add_argument("--seed", type=int, default=20260909)
+    rate.add_argument("--progress", action="store_true", default=True)
+    common(rate)
+    rate.set_defaults(func=cmd_rate_law)
 
     return parser
 
